@@ -37,12 +37,16 @@ src/client/webgpu/
                                     this backend's GPU clock can be
                                     trusted, and the resolve cadence —
                                     its own README.
-  star-attribute-roster.ts          Which WebGL star attribute feeds
-    (+ test)                        which storage table (static record,
-                                    forwarded, per-vertex). The test
-                                    derives the partition from the live
-                                    WebGL geometry, so a new attribute
-                                    there fails CI until it is placed.
+  star-attribute-roster.ts          Which per-star field feeds which
+                                    storage table — interleaved into the
+                                    static record, or forwarded live off
+                                    the shell's array. `stat`,
+                                    `forwardedAttribute` and both source
+                                    builders are typed over these, so a
+                                    field the graph reads without a roster
+                                    entry fails to compile;
+                                    star/star-tables.test.ts pins that
+                                    neither roster silently shrank.
   tonemap-tsl.ts                    TSL mirror of stellata_tonemap's
                                     undithered operator and the sRGB
                                     transfer pair, over tonemap-pure's
@@ -149,16 +153,15 @@ coordinate spheres, the constellation figure, the IAU boundary arcs and
 the Local Group wireframe — each on the chrome line seam, the equator
 through its fat stroke (`../chrome-lines/README.md`).
 The HDR chain runs for real through `hdr/` — MRT target, summation,
-resolve, exposure reduction — behind the same `HdrSeam` interface the
-WebGL pipeline implements (`../hdr/hdr-seam.ts`).
+resolve, exposure reduction — behind the `HdrSeam` interface
+(`../hdr/hdr-seam.ts`).
 
 ### One scene per boot
 
 The shell builds THE scene; the seam owns none, so a new layer cannot
-land in a graph nothing renders. `scene.add(group)` is the call site on
-either backend, bar the star layer and the planet glare, which take the
-scene as an argument (`attachStarLayer` / `attachPlanetGlare`) and parent
-their own meshes.
+land in a graph nothing renders. `scene.add(group)` is the call site, bar
+the star layer and the planet glare, which take the scene as an argument
+(`attachStarLayer` / `attachPlanetGlare`) and parent their own meshes.
 
 **Nothing reachable from that scene may carry a GLSL material.** The
 graph every layer builds into is now the graph the renderer draws, so a
@@ -169,15 +172,12 @@ pipeline discards the whole submit — a black app, not a missing layer
 frame and names any offender on the console; it is the only thing between
 a mis-parented material and a silent black frame.
 
-Two GLSL twins stay **unparented** for that reason — the star pipeline's
-three meshes (`StarPipeline` takes `scene: null`) and the planet body
-field's group. Both still construct: their attributes are the live
-source buffers the TSL layers watch, and the writers keep writing them.
-A `Mesh` in no graph is zero draws with nothing to add a layer to by
-mistake. `0it.14` deletes them with the rest of the GLSL path.
+`scene/glsl-residents-pure.ts` keeps its place with no `ShaderMaterial`
+left in the tree: it is what catches a re-introduction, and the walk runs
+once on the first rendered frame.
 
-The dust voxel volume streams and uploads on both backends
-(`loaders/README.md` § Dust voxel upload); the star vertex stage's
+The dust voxel volume streams and uploads through
+`loaders/README.md` § Dust voxel upload; the star vertex stage's
 fallback march and the extinction prepass (`extinction/README.md`) are
 its first WebGPU samplers, and the band's measured stack joins them at
 `0it.5`. It was ported first on purpose, since each of those is
@@ -227,15 +227,14 @@ full-resolution framebuffer target and running a fullscreen
 colour-transform quad after it (`Renderer._renderOutput`) — an extra
 pass plus a drawing-buffer-sized allocation on every frame, invisible in
 the scene graph. With output pinned to working, three renders straight
-to the canvas and the shaders' encoded values land untouched — the
-WebGL2 semantics.
+to the canvas and the shaders' encoded values land untouched.
 
 The cost lands on three's **built-in materials**, which relied on that
 output transform for their encode: one would render linear-dark on
 anything reaching the canvas. Nothing does — every line overlay is on
 the chrome line seam, whose single-output graph owns the encode and
 selects it on the `uHdrTarget` node mirror, 0 exactly in chart mode
-(`chrome-lines/README.md` § The encode the built-in path lost). Do not
+(`chrome-lines/README.md` § The encode the struct graph does not carry). Do not
 "fix" a dark built-in by unpinning the output space — that re-breaks
 every ported emitter and re-prices the hidden pass; put the material on
 the seam instead.
@@ -244,13 +243,10 @@ the seam instead.
 Chart mode's paper is a `setClearColor` hex, so nothing owns its transfer;
 worse, this backend clears with the *working*-space components and never
 reads `outputColorSpace` (`Background.update` → `_clearColor.getRGB()` at
-its default space), where WebGL passes the canvas clear through
-`getUnlitUniformColorSpace`. The paper is therefore authored in the space
-the renderer clears in — `chart-mode/chart-palette.ts`'s
-`paperClearColour`, which stays correct on both backends only because
-output is pinned to working here. It shipped as a dirtier `#e9e2d2` paper
-under `#renderer=webgpu` until 0it.6; a new clear colour owes the same
-treatment.
+its default space). The paper is therefore authored in the space the
+renderer clears in — `chart-mode/chart-palette.ts`'s `paperClearColour`,
+correct only because output is pinned to working here. A new clear colour
+owes the same treatment.
 
 Cross-copy caveat: `three/webgpu` is a second bundled copy of three's
 core (§ Import boundary), so app objects built from `'three'` (camera,
@@ -364,7 +360,7 @@ to 4 — and for a storage attribute alone it *reassigns*
 `bufferAttribute.itemSize` and `.array` to the padded copy. Anything
 holding the originals then diffs a stride and an array the GPU will never
 see. `DirtyItemUploader` caches both at construction and `iPosition` is
-itemSize 3; it is correct because that attribute stays a WebGL vertex
+itemSize 3; it is correct because that attribute stays a plain vertex
 attribute: the star layer reads positions out of an itemSize-1 storage
 table over the same array (`star/README.md` § Star tables), and the compute
 prepass owns a vec4 position table of its own. No itemSize-3 storage

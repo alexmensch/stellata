@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WebGPURenderer } from 'three/webgpu';
-import { STAR_FORWARDED_ATTRIBUTES } from '../star-attribute-roster';
+import { STAR_FORWARDED_ATTRIBUTES, STAR_STATIC_FIELDS } from '../star-attribute-roster';
 import { StarTables } from './star-tables';
 import { staticElement } from './star-tables-pure';
 import { makeFakeStarRenderer, makeStarLayerSources } from './star-sources-mock';
@@ -30,6 +30,20 @@ describe('StarTables forwarded attributes', () => {
   // Same array, itemSize 1: no copy to keep current, and no itemSize-3
   // storage attribute for three to re-stride behind the uploader
   // (../README.md § One writer per buffer per submit).
+  // The two rosters partition every per-star field, and the partition is
+  // what a new field has to join: `stat`, `forwardedAttribute`,
+  // `StaticFieldSources` and `forwardedSourceAttrs` are all typed over
+  // them, so a field the graph reads without a roster entry fails to
+  // compile. What a type cannot say is that neither roster silently
+  // shrank.
+  it('partition every per-star field, four forwarded and eleven static', () => {
+    expect(STAR_FORWARDED_ATTRIBUTES).toHaveLength(4);
+    expect(STAR_STATIC_FIELDS).toHaveLength(11);
+    const both = STAR_FORWARDED_ATTRIBUTES.filter(
+      (n) => (STAR_STATIC_FIELDS as readonly string[]).includes(n));
+    expect(both, 'a field in both rosters uploads twice and diverges').toEqual([]);
+  });
+
   it('wrap the WebGL attribute arrays by identity as itemSize-1 storage', () => {
     const { sources, tables } = make();
     expect(tables.forwardedAttribute('iPosition').array).toBe(sources.iPositionAttr.array);
