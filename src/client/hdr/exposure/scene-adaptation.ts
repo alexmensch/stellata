@@ -124,7 +124,7 @@ export class SceneAdaptation {
   /**
    * True while the measurement is parked: the reduction's draws and the
    * statistic-attachment emitter writes both stop, the clear and the
-   * readback fence stay (`park/README.md`). False on
+   * readback stay (`park/README.md`). False on
    * a probe frame — a probe reducing the cleared attachment would cost
    * ~3x reducing live content, so its writes must be open.
    */

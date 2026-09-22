@@ -137,7 +137,7 @@ Pinned in `milkyway.test.ts`.
 kernel's own area integral, `Φ(n)·D²`, where Φ is
 `perceptualDiscFluxIntegral` (`../../webgpu/perceptual-disc-tsl.ts`, a
 degree-4 fit in 1/n good to 0.0029 mag) and `D` is the quad's **CSS**
-diameter. `stellataKernelFluxPeak` is that renormalisation, and it is
+diameter. `kernelFluxPeakTsl` is that renormalisation, and it is
 computed per instance in the vertex stage because the exponent morphs on
 `vSoftness` and `vPhysRatio`, both of which are per instance. CSS rather
 than device pixels is what keeps the frame mean

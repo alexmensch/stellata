@@ -30,9 +30,9 @@ combine against this one (§ TSL drift there).
 
 ## Why a buffer reduction and not a source walk
 
-The statistic used to be a CPU walk over every drawn body plus the stars
-near the camera, each contributing `L(m)` analytically. Anything the
-per-source model did not represent was invisible to it — and the airlight
+A CPU walk over every drawn body plus the stars near the camera, each
+contributing `L(m)` analytically, cannot see what its per-source model
+does not represent — and the airlight
 was exactly that: a shader-side quantity with no sample of its own. On a
 backlit Titan the walk saw a body at `φ(α) → 0` contributing ~1e-4 of the
 host's irradiance while the Mie forward peak painted a ring of order the
@@ -81,10 +81,9 @@ Level 0 has no weight channel and needs none: the attachment is **RG16F**,
 so a `texelFetch` returns alpha 1, which is the weight it should carry.
 That is the reason the weight rides alpha rather than blue.
 
-**Only the last level is RGBA32F.** `readPixels` guarantees the
-RGBA/FLOAT pair for that format and not for RGBA16F; the tile level is a
-few tens of kilobytes of it, and the fp16 levels above keep the chain's
-memory in the megabytes.
+**Only the last level is RGBA32F** — the one the CPU reads back. The tile
+level is a few tens of kilobytes of it, and the fp16 levels above keep the
+chain's memory in the megabytes.
 
 ## The tile level, and why the subject is a median
 
@@ -235,15 +234,8 @@ on a cold start is zero — no cut. That direction is deliberate: the
 opposite default would let a frame go dark because a measurement had not
 arrived.
 
-**The pack buffer is orphaned before every `readPixels`.** One `STREAM_READ`
-buffer re-read every other frame otherwise leaves the driver preserving the
-previous contents across the new write; ANGLE stages a shadow copy to make
-the `getBufferSubData` cheap, then discards it, and says so in the console
-once per request. Re-declaring the storage says the old grid is dead —
-nothing reads it after `poll()` has landed it. The buffer is sized to the
-tile level and rebuilt with the level chain on resize, which is safe
-because `measure()` refuses to touch the levels while a readback is in
-flight.
+The level chain rebuilds on resize, which is safe because `measure()`
+refuses to touch the levels while a readback is in flight.
 
 ## Where it runs in the frame
 
@@ -251,20 +243,16 @@ flight.
 attachment never delays the frame it measures. It leaves the render target
 at the canvas, the same contract the local depth pass keeps.
 
-Chart mode and the float-RT fallback render nothing into the target at
-all, so the pass is skipped and its last reading dropped — the statistic
+Chart mode renders nothing into the target at all, so the pass is skipped and its last reading dropped — the statistic
 reports `dm = 0` rather than adapting to a stale frame.
 
 `fenceWhileParked` is the one exception, and it is debug-only: with it
 set, `measure()` still runs across the park with a null source, issuing
-the readback and nothing else. The `hdrChain` frame-cost row needs it,
-because parking the chain otherwise takes the frame's only submission
-barrier with it and the row would price that instead. Production chart
+the readback and nothing else. The `hdrChain` frame-cost row needs it, so both sides of its A/B issue
+the same readbacks and the row prices the draws alone. Production chart
 mode leaves it off — a readback it has no use for is not free.
 
-Perf rows: `submit.reduction` (CPU submission) and, where the driver
-exposes a timer query, `gpu.reduction` — `../../../debug/README.md`
-§ GPU timing. `stellata.reduction.enabled = false` skips the chain's
+Perf row: `submit.reduction` (CPU submission, `../../../debug/README.md`). `stellata.reduction.enabled = false` skips the chain's
 draws while FREEZING the statistic at its last reading (unlike chart
 mode's reset-and-drop) — a frame-cost measurement lever
 (`../../../debug/frame-cost/README.md`). `measure()`'s `parked` argument
@@ -273,10 +261,8 @@ is the same skip driven per frame by the adaptation park
 everything below about the disabled path — readback kept, landing
 dropped — holds for it verbatim.
 
-**The readback keeps running while disabled, and must.** It is the
-frame's own submission barrier: drop it and the driver batches deeper, so
-a timer span covers more overlapped work and the frame reads *slower*
-with the pass off. The disabled path therefore still reads the last
+**The readback keeps running while disabled**, so a disabled row prices
+the draws and not the readback: the disabled path still reads the last
 level — same round trip, only the draws removed.
 
 **The cadence is emergent in the app, and a caller may pin it.**

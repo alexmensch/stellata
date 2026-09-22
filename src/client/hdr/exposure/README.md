@@ -16,7 +16,7 @@ src/client/hdr/exposure/
   exposure-epoch.ts          The model as pure functions: instrument
     (+ test)                 limit → uExposure, the EV-trim constants,
                              and the threshold / cull / draw-cutoff
-                             magnitudes. No GLSL side — the shaders only
+                             magnitudes. No shader side — the shaders only
                              ever read the resulting scalars.
   exposure-controller.ts     ExposureController — sole writer of
     (+ test)                 uExposure and the three magnitude bounds,
@@ -91,7 +91,7 @@ so only an instrument change may write it. The derivation is
 
 **There is no `uThresholdMag` analogue on the extended side.** The
 point-source pair ships an anchor *and* a trimmed edge; the extended side
-ships only the anchor, so the `S_lim` that `stellataExtendedThresholdSb`
+ships only the anchor, so the `S_lim` that `extendedThresholdSbTsl`
 recovers is always the untrimmed 22.0. Harmless while the only consumer is
 the MW chart isobar, which inherits no exposure state **and has never
 drawn at all** (`../../milkyway/README.md` § Chart mode + warp) — but a
@@ -398,7 +398,7 @@ is the third mechanism, and the readout's regime row is how to tell the
 three apart before blaming the filter.
 
 **No slider may reach `L_THRESH` or `LUMA_CEIL`.** Both are compile-time
-GLSL constants in seven emitter shaders, and `L_THRESH` is the *unit's own
+shader constants in seven emitter graphs, and `L_THRESH` is the *unit's own
 anchor* — `SB_ZERO_POINT`, the band's ρ₀ solve, `L_ADAPT`, `L_TARGET` and the
 floor are all expressed against it, so a live one would invalidate the
 calibration it was reached for.

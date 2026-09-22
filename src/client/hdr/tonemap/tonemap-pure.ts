@@ -114,7 +114,7 @@ export function displayLevel(y: number, whitePoint: number): number {
 }
 
 /** Linear HDR luminance → display sRGB, hue-preserving. Mirrors
- *  `stellataTonemapUndithered`: the dither is 8-bit quantisation noise
+ *  `tonemapUnditheredTsl`: the dither is 8-bit quantisation noise
  *  applied after the operator, not part of it. */
 export function tonemap(hdr: Rgb, whitePoint: number, desat = HIGHLIGHT_DESAT): Rgb {
   const y = relativeLuminance(hdr);

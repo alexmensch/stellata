@@ -63,8 +63,7 @@ describe('the statistic attachment mask', () => {
 
   it('routes the star quad\'s TSL mask per pass, disc core against glow zero', () => {
     // The two colour passes share one fragment builder, so the claim is the
-    // argument each hands it — the GLSL twin's two `starEmission` call sites
-    // expressed as a node. Same core threshold the depth-only mask stamps.
+    // argument each hands it. Same core threshold the depth-only mask stamps.
     expect(read('../../webgpu/star/star-disc-tsl.ts'))
       .toContain('step(deps.u.uCoreThreshold, glow)');
     expect(read('../../webgpu/star/star-glow-tsl.ts'))
@@ -73,7 +72,7 @@ describe('the statistic attachment mask', () => {
 
   it('writes no statistic at all from the TSL probe glyph', () => {
     // Chrome, so the slot takes the blend's identity element rather than a
-    // masked texel — the WebGL gate's `[0, NONE, NONE]` in node terms.
+    // masked texel.
     const src = read('../../webgpu/solar-system/probe-tsl.ts');
     expect(src).not.toContain('maskedStatisticTexelTsl');
     expect(src).toContain('statistic: vec4(0.0)');

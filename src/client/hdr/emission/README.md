@@ -32,10 +32,10 @@ neither can drift from the mirror.
 
 ## Unit — what an emitting layer writes
 
-`../../webgpu/emission-tsl.ts` (`stellata_hdr_emission`) is the contract.
+`../../webgpu/emission-tsl.ts` is the contract.
 `L = uExposure · 10^(−0.4·m)` from a physical V-band apparent magnitude,
 clamped at `LUMA_CEIL` (4096) before the write.
-`stellataPointSourcePeak` adds the flux-vs-surface-brightness rule for
+`pointSourcePeakTsl` adds the flux-vs-surface-brightness rule for
 anything that draws a kernel rather than a surface:
 
 ```
@@ -56,7 +56,7 @@ a distance bound (`../../star-pipeline/perceptual-disc/README.md`
 § Eliding the physical-size branch).
 
 A layer that draws an **extended source** instead of a kernel takes
-`stellataSurfaceBrightnessLuminance` — the flux magnitude inside a solid
+`surfaceBrightnessLuminanceTsl` — the flux magnitude inside a solid
 angle `Ω` is `S − 2.5·log10(Ω)` for a surface brightness `S` in
 mag/arcsec², and the log round-trip through `L(m)` collapses to one
 scalar gain:
@@ -92,7 +92,7 @@ extinction model rather than a physical prediction — it is small, it is in
 the right direction, and it means a palette edit is not free.
 
 **A reflecting body uses both rules, and that is what closes the resolve
-step.** A planet's glare billboard takes `stellataPointSourcePeak` with
+step.** A planet's glare billboard takes `pointSourcePeakTsl` with
 the same `m` the star field would use, while its mesh takes the
 surface-brightness rule with the disc's mean `S` — and past 1 px the two
 are the *same quantity*, so a body crossing from point to resolved mesh
@@ -191,58 +191,43 @@ instrument's `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
 `docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
 
 **The substitution is only the flux in the patch for a source uniform
-across it, so it does not happen here.** `stellataEmitExtendedSource` writes
+across it, so it does not happen here.** `emitExtendedSourceTsl` writes
 the `Ω_sum`-gained value to **attachment 2** and the resolve averages it over
 the patch before it reaches the canvas — which makes uniformity true by
 construction and lets both volumetric emitters take the same anchor.
-`../summation/README.md` owns that pass; the opt-out this used to carry (the
-Local Group passing `Ω_px` twice, 2.695 mag under past 3.6′ to avoid 3.95 at
-M31's nucleus) is retired with it. Statistic: always `Ω_px`, always
+`../summation/README.md` owns that pass, and no layer opts out of it.
+Statistic: always `Ω_px`, always
 unconvolved (`../attachments/README.md`).
 
 Everything after the gain is identical for every volumetric emitter, so
-that chunk owns it: both gains, the clamp at `LUMA_CEIL`, every attachment,
-and off-target the undithered operator. `stellataEmitNothing` is the miss
-case. Both take the attachments as `out` params, making "attachments 1 and 2
-have no default, so every branch must write them" one decision rather than
-one per early return. `../../webgpu/milkyway/milkyway-band-tsl.ts` keeps its own magnitude step
+`../../webgpu/extended-emitter-tsl.ts` owns it: both gains, the clamp at
+`LUMA_CEIL`, every attachment, and off-target the undithered operator.
+`emitNothingTsl` is the miss case. Both return all three members of
+`EmitterOutputs`, making "attachments 1 and 2 have no default, so every
+branch must write them" one decision rather than one per early return. `../../webgpu/milkyway/milkyway-band-tsl.ts` keeps its own magnitude step
 for the chart isobar, which would contour surface brightness against
-`stellataExtendedThresholdSb`, the inverse of the same pair — so contour
+`extendedThresholdSbTsl`, the inverse of the same pair — so contour
 and emission could not disagree about where threshold is. **That contour
 has never drawn** (`../../milkyway/README.md` § Chart mode + warp), so the
 magnitude step is the branch's cost and nothing else's.
 
 **Off-target there is no attachment 2 and no pass, so the anchor is gone
 entirely** and both emitters fall back to `Ω_px`. One rule rather than a
-per-layer choice: the concession *is* the pass. That is the float-RT fallback
-and chart mode (`../README.md` § The inline operator), where the
-band returns to its pre-xypg.34 level.
-
-It `#include`s the unit and the operator — three resolves includes
-recursively and the guards make the extra paste inert.
-`chunk-constant-drift.test.ts` resolves every extended-source stage through
-the real `ShaderChunk` registry, so a misspelled chunk name fails in
-vitest, not on first frame.
-
-**Both chunks are `#ifndef`-guarded**, and each declares the Rec.709
-luma weights behind a *shared* `STELLATA_LUMA_WEIGHTS_DECLARED` guard.
-An emitter that derives a per-pixel magnitude needs the unit and the
-operator in one stage, and three's `resolveIncludes` pastes each
-`#include` textually wherever it appears — without the guards that
-combination fails to compile.
+per-layer choice: the concession *is* the pass. That is chart mode
+(`../README.md` § The inline operator).
 
 ## Footprint — a fragment carries a pixel, not a point
 
 A raymarch evaluates its profile at the **pixel centre**, so a centrally
 peaked profile lands over the pixel's own area average — 3.95 mag at M31's
-nucleus. `stellataFootprintPc` is the radius that fixes it:
+nucleus. `footprintPcTsl` is the radius that fixes it:
 
 ```
 ε = distancePc / (pxPerRadian · √12)
 ```
 
 one pixel's span at that distance, matched on the **second moment** of a
-square footprint, which is the order `stellataSoftenRadius`'s Plummer form
+square footprint, which is the order `softenRadiusTsl`'s Plummer form
 corrects to. No free parameter, and it tracks the exact area average to
 0.1 mag across the whole 10°–120° FOV range
 (`../../local-group/emission/local-group-emission-calibration.test.ts`).
@@ -253,7 +238,7 @@ Two things it must get right, both measured:
   transverse smoothing**, because `|p|²` splits into the parallel and
   perpendicular parts of `p` — the ray direction contributes nothing.
 - **A separable profile needs the axis projection.**
-  `stellataFootprintAlong` is why a face-on disc gets *no* vertical
+  `footprintAlongTsl` is why a face-on disc gets *no* vertical
   softening: `z_d` is finer than the footprint at wide FOV, so smoothing
   along the ray would suppress the column rather than average it.
 

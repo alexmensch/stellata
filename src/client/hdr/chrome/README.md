@@ -61,15 +61,13 @@ drops to a tenth of its authored brightness, a near-white probe marker
 clips to flat white. So every call is recorded in a module-level registry
 and `setChromeOperatorActive(false)` re-authors all of it back to plain
 `setHex`, which is exactly the pre-HDR Color state for both variants.
-`HdrPipeline.syncMode` drives that flag, and every state change routes
-through it: the float-support check in the constructor (**before any
-layer is built**, so a context without a float-renderable target never
-registers a mapped colour), both dev switches, and the chart flip.
-Getting this wrong is not a dev-only concern — the float-support path is
-what real fallback hardware takes, and chart parks the operator too.
+`WebGpuHdrPipeline.syncMode` drives that flag, and every state change
+routes through it: the constructor (**before any layer is built**), both
+dev switches, and the chart flip. Getting this wrong is not a dev-only
+concern — chart parks the operator on every session that enters it.
 
 The registry is keyed by the live `Color`, so a re-attachable layer
-(clouds, Local Group) adds an entry per attach; `HdrPipeline.dispose`
+(clouds, Local Group) adds an entry per attach; `WebGpuHdrPipeline.dispose`
 clears it.
 
 Two consequences worth knowing before touching this:

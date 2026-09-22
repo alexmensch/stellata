@@ -123,7 +123,7 @@ export function markAbsorber(object: THREE.Object3D): void {
  * unconditionally. Same inverted safety as `markAbsorber`: forget it and the
  * object silently stops occluding.
  *
- * The shader's `stellataOccluderTexel` alpha and this mark are one contract —
+ * The shader's `occluderTexelTsl` alpha and this mark are one contract —
  * `planet-mesh-layer.test.ts` pins both halves.
  */
 export function markOccludingEmitter(object: THREE.Object3D): void {

@@ -99,12 +99,10 @@ describe('the target', () => {
     expect(hdr.statisticTexture()).toBe(rt.textures[1]);
   });
 
-  // The boot is what refuses a renderer that lost the flag — it falls back
-  // to WebGL2 before any seam exists, so a WebGPU pipeline that got built
-  // at all is on a reversed-z renderer by construction. A re-check here
-  // could only ever read back `true`, which is what made the throw it
-  // replaced unreachable.
-  it('leaves the reversed-z refusal to the boot, where a fallback exists', () => {
+  // The boot refuses a renderer that lost the flag before any seam exists,
+  // so a pipeline that got built at all is on a reversed-z renderer by
+  // construction; a re-check here could only ever read back `true`.
+  it('leaves the reversed-z refusal to the boot', () => {
     const boot = readFileSync(
       fileURLToPath(new URL('../boot-webgpu.ts', import.meta.url)),
       'utf8',

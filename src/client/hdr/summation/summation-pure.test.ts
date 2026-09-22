@@ -82,7 +82,7 @@ describe('the downsample factor that bounds the tap count', () => {
     expect(summationDownsample(radiusFor(FOV_MIN_DEG))).toBe(3);
   });
 
-  // The GLSL loop bound is a constant, so a factor that let the kernel run
+  // The shader's loop bound is a constant, so a factor that let the kernel run
   // past it would TRUNCATE the disc — a silently lopsided average, not a
   // compile error. This is the invariant that makes the constant safe.
   it('never lets the kernel reach past the shader’s loop bound', () => {

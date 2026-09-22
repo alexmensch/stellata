@@ -124,7 +124,7 @@ describe('formatExposureReadout', () => {
   });
 
   // Lw is the live uniform, and the DR_MAG slider sits two rows under it —
-  // printing it beside the two compile-time GLSL constants would call the
+  // printing it beside the two compile-time shader constants would call the
   // one number on the panel that the panel itself moves a baked one.
   it('follows a swept white point', () => {
     const swept = formatExposureReadout({
