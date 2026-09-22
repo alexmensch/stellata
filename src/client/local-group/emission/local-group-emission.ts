@@ -3,7 +3,7 @@
 // § The two passes.
 
 import * as THREE from 'three';
-import type { HdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import {
   makeGlslLgEmissionMaterials, type LgEmissionMaterials,

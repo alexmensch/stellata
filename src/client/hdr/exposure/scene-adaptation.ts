@@ -3,7 +3,7 @@
 
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { dimBlendFactor } from '../../binaries/eclipse/eclipse-photometry-pure';
-import type { ReducedStatistic } from './reduction/reduction-pass';
+import type { ReducedStatistic } from '../hdr-seam';
 import { rescaleToBaseExposure } from './reduction/reduction-pure';
 import {
   type AdaptationBranches,

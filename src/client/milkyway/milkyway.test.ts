@@ -63,7 +63,7 @@ import {
 import { buildHoleCells, holeLight } from '../../../scripts/milkyway-calibration/resolved-light-pure';
 import { fluxNumber } from '../hdr/emission/density0-solver-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
-import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import {
   DEFAULT_INSTRUMENT,
   extendedThresholdSbFor,

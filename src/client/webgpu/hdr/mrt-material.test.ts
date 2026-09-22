@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NodeMaterial } from 'three/webgpu';
 import { vec4 } from 'three/tsl';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { makeTslCloudMaterials } from '../molecular-clouds/tsl-cloud-materials';

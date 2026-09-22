@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';

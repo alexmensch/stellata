@@ -33,7 +33,7 @@ import {
 import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
-} from '../../hdr/hdr-pipeline';
+} from '../../hdr/hdr-emitter-uniforms';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import {
   phaseAngleFor,

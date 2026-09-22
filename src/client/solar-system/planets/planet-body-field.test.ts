@@ -36,7 +36,7 @@ import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
 import {
   makeHdrEmitterUniforms,
   type HdrEmitterUniforms,
-} from '../../hdr/hdr-pipeline';
+} from '../../hdr/hdr-emitter-uniforms';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
 import { cullMagFor, exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
 

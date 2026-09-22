@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
-import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import { OccluderSet } from '../occlusion/occluder-set';
 import type { KindContext } from './kind-module';

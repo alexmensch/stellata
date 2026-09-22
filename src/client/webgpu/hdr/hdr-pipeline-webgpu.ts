@@ -13,7 +13,7 @@ import type * as THREE from 'three';
 import {
   applyHdrAttachmentState, makeHdrEmitterUniforms,
   HDR_ATTACHMENT_COUNT, type HdrEmitterUniforms,
-} from '../../hdr/hdr-pipeline';
+} from '../../hdr/hdr-emitter-uniforms';
 import type { HdrSeam } from '../../hdr/hdr-seam';
 import {
   clearChromeBindings, setChromeOperatorActive, setChromeWhitePoint,

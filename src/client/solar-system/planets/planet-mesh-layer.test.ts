@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { glslCallArgs } from '../../util/glsl-call-args';
-import { pickHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { pickHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
 import { makeMockHdrEmitterUniforms } from '../../kinds/kind-context-mock';
 import { SOL_BODIES } from '../planet-system';

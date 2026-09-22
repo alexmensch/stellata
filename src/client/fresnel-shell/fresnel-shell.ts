@@ -9,10 +9,6 @@ import { angularToPx } from '../camera/controls/star-geometry';
 import type { ShellRegistry } from './shell-registry';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import { DEPTH_DIM_POWER, rimDistancesForExtent } from './shell-distance-pure';
-import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
-import fresnelShellVert from './fresnel-shell.vert.glsl?raw';
-import fresnelShellFrag from './fresnel-shell.frag.glsl?raw';
-import fresnelRimChunk from './fresnel-rim.glsl?raw';
 
 (THREE.ShaderChunk as Record<string, string>)['stellata_fresnel_rim'] =
   fresnelRimChunk;
@@ -83,49 +79,6 @@ export function applyRimParams(
  */
 export interface ShellMaterials {
   fresnelShell(opts: FresnelShellMaterialOptions): EmitterMaterial;
-}
-
-/** The WebGL2 implementation. A `ShaderMaterial`'s own `uniforms` map is
- *  already the slot record the contract asks for. */
-export function makeGlslShellMaterials(): ShellMaterials {
-  return {
-    fresnelShell(opts) {
-      const material = createFresnelShellMaterial(opts);
-      return {
-        material,
-        uniforms: material.uniforms,
-        dispose: () => material.dispose(),
-      };
-    },
-  };
-}
-
-/** Build the shared Fresnel-shell `ShaderMaterial`. `FrontSide` is the
- *  hide-when-inside contract: with outward-oriented winding the shell
- *  back-face-culls when the camera sits inside it, so the near-wall glow
- *  doesn't wash the scene — it appears only from beyond the boundary. */
-function createFresnelShellMaterial(
-  opts: FresnelShellMaterialOptions,
-): THREE.ShaderMaterial {
-  const reach = rimDistancesForExtent(opts.extentPc);
-  return new THREE.ShaderMaterial({
-    glslVersion: THREE.GLSL3,
-    vertexShader: fresnelShellVert,
-    fragmentShader: fresnelShellFrag,
-    transparent: true,
-    depthWrite: false,
-    blending: opts.blending ?? THREE.NormalBlending,
-    side: THREE.FrontSide,
-    uniforms: {
-      uColour: { value: setRawChromeColour(new THREE.Color(), opts.colourHex) },
-      uAlphaLimb: { value: opts.alphaLimb },
-      uFaceOnFloor: { value: opts.faceOnFloor ?? DEFAULT_FACE_ON_FLOOR },
-      uFresnelPower: { value: opts.fresnelPower ?? DEFAULT_FRESNEL_POWER },
-      uNearFadePc: { value: reach.nearFadePc },
-      uDepthDimRefPc: { value: reach.depthDimRefPc },
-      uDepthPower: { value: DEPTH_DIM_POWER },
-    },
-  });
 }
 
 /** Base for a Sol-anchored translucent shell layer. Owns the group, the

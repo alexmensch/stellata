@@ -1,9 +1,8 @@
-// The renderer-neutral contract the two band components are built
-// through, and the WebGL2 implementation. See README.md § The material seam.
+// The contract the two band components are built through.
+// See README.md § The material seam.
 
 import * as THREE from 'three';
 import type { EmitterMaterial } from '../scene/emitter-material';
-import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
 import {
@@ -14,12 +13,7 @@ import {
   DEFAULT_EXTINCTION_STRENGTH,
   REDDENING_RGB,
 } from './milkyway-column-pure';
-import {
-  makeResolvedHoleTexture,
-  writeResolvedHoleTexture,
-} from './calibration/resolved-hole-texture';
-import milkywayVert from './milkyway.vert.glsl?raw';
-import milkywayFrag from './milkyway.frag.glsl?raw';
+import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
 
 /**
  * The slots the disc and the bulge hold **by reference to each other**, so
@@ -103,74 +97,4 @@ export interface BandMaterials {
   /** Releases what the factory allocated outside any one material — the
    *  resolution-hole texture. Each component disposes its own. */
   dispose(): void;
-}
-
-export interface GlslBandConfig {
-  /** Exposure, both solid angles, and the inline-operator branch. */
-  hdr: HdrEmitterUniforms;
-  /** The instrument limit the chart isobar would contour against. Plumbed
-   *  but unread in practice — the contour has never drawn (README.md
-   *  § Chart mode + warp). */
-  uLimitMag: THREE.IUniform;
-}
-
-export function makeGlslBandMaterials(cfg: GlslBandConfig): BandMaterials {
-  const shared: BandSharedSlots = {
-    uDustAvPerDensityPc: { value: 0 },
-    uDustEnabled: { value: 0 },
-    uExtinctionStrength: { value: 0 },
-    uAnalyticalDustScaleLengthPc: { value: 0 },
-    uAnalyticalDustScaleHeightPc: { value: 0 },
-    uAnalyticalDustNormPerPc: { value: 0 },
-    uReddeningRGB: { value: new THREE.Vector3() },
-    uWorldOffset: { value: new THREE.Vector3() },
-    uIcrsToGal: { value: new THREE.Matrix3() },
-    uGalCenter: { value: new THREE.Vector3() },
-    uR0Pc: { value: 0 },
-    uUnresolvedLight: { value: makeResolvedHoleTexture() },
-    uGlowMagOffset: { value: 0 },
-    uChartIsobar: { value: 0 },
-    uChartInkColor: { value: new THREE.Color() },
-  };
-  seedBandSharedSlots(shared);
-  return {
-    shared,
-    dispose() {
-      (shared.uUnresolvedLight.value as THREE.Data3DTexture).dispose();
-    },
-    component(spec) {
-      const material = new THREE.ShaderMaterial({
-        glslVersion: THREE.GLSL3,
-        vertexShader: milkywayVert,
-        fragmentShader: milkywayFrag,
-        // BackSide so each ray that intersects the volume produces exactly
-        // one fragment — the back-face surface point IS the natural exit of
-        // the volumetric integration; entry is computed analytically.
-        side: THREE.BackSide,
-        // depthTest on so the star core depth-mask (renderOrder −4) can
-        // occlude this layer behind close-range disc stars; depthWrite off
-        // so the mesh never occludes anything itself.
-        depthTest: true,
-        depthWrite: false,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        uniforms: {
-          ...shared,
-          ...cfg.hdr,
-          uLimitMag: cfg.uLimitMag,
-          uIsBulge: { value: spec.isBulge },
-          uMeshScalePc: { value: spec.meshScalePc },
-          uDensity0: { value: spec.density0 },
-          uColor: { value: spec.tint },
-          uDiscScaleLengthPc: { value: spec.discScaleLengthPc },
-          uDiscScaleHeightPc: { value: spec.discScaleHeightPc },
-          uDiscThickScaleHeightPc: { value: spec.discThickScaleHeightPc },
-          uDiscThickFraction: { value: spec.discThickFraction },
-          uBulgeScaleRadiusPc: { value: spec.bulgeScaleRadiusPc },
-          uBulgeAxisRatio: { value: spec.bulgeAxisRatio },
-        },
-      });
-      return { material, uniforms: material.uniforms, dispose: () => material.dispose() };
-    },
-  };
 }

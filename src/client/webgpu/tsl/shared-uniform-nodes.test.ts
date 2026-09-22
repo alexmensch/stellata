@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { MIRROR_CAPACITY } from '../../star-pipeline/local-pass/star-mirror-slots';
 import { STAR_RENDER_DEFAULTS } from '../../filters/filter-state';

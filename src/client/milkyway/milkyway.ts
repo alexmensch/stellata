@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
-import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { markDiffuseEmitter } from '../hdr/attachments/attachment-gate';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {

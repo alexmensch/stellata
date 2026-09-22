@@ -45,7 +45,7 @@ import type { CameraMode, StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
 import { RollController } from '../controls/input/roll-controller';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 
 interface WarpStub {
   isActive: ReturnType<typeof vi.fn>;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../filters/filter-state';
 import { BASE_EPOCH_EXPOSURE, cullMagFor } from '../hdr/exposure/exposure-epoch';
-import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import {
   PERCEPTUAL_DISC_UNIFORM_KEYS,
   pickPerceptualDiscUniforms,

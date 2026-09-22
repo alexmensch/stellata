@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Matrix4, PerspectiveCamera, Vector3, type BufferAttribute } from 'three';
 import type { ComputeNode, StorageBufferAttribute, WebGPURenderer } from 'three/webgpu';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
 import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';

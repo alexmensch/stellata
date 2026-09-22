@@ -7,7 +7,7 @@ import type { FocusableProvider } from '../camera/focus/focus-target';
 import { parkDistance } from '../camera/focus/focus-transition';
 import { createLgFocusProvider } from '../focus-card/lg-focus-provider';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
-import { pickHdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { pickHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { formatLocalGroupHover } from '../hover/formatters/local-group-hover-format';
 import type { HoverHit, HoverProvider } from '../hover/hover-types';
 import { absCameraDistancePc } from '../kinds/kind-geometry';

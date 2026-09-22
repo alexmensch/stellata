@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
-import type { ReducedStatistic } from './reduction/reduction-pass';
+import type { ReducedStatistic } from '../hdr-seam';
 import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 import { SceneAdaptation } from './scene-adaptation';
 import {

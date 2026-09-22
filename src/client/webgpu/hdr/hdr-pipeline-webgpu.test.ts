@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { RenderTarget, type WebGPURenderer } from 'three/webgpu';
 import { WebGpuHdrPipeline } from './hdr-pipeline-webgpu';
-import { HDR_ATTACHMENT_COUNT } from '../../hdr/hdr-pipeline';
+import { HDR_ATTACHMENT_COUNT } from '../../hdr/hdr-emitter-uniforms';
 
 function fakeRenderer() {
   const bound: (RenderTarget | null)[] = [];

@@ -24,7 +24,7 @@ import {
 import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
-} from '../../hdr/hdr-pipeline';
+} from '../../hdr/hdr-emitter-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {

@@ -3,7 +3,7 @@
 // behind the import boundary.
 
 import type * as THREE from 'three';
-import type { HdrEmitterUniforms } from './hdr-pipeline';
+import type { HdrEmitterUniforms } from './hdr-emitter-uniforms';
 import type { ReadbackCadence } from './exposure/reduction/readback-cadence';
 import type { TileReduction } from './exposure/reduction/reduction-pure';
 
