@@ -711,6 +711,7 @@ async function main() {
   const multiplesRows = existsSync(MULTIPLES_TSV)
     ? readMultiplesTsv(MULTIPLES_TSV)
     : null;
+  const synthGaiaBridges = syntheticGaiaBridges(loadStoredEdges());
   if (multiplesRows !== null) {
     // Intra-system radial coherence BEFORE promotion, so minted members
     // project off already-coherent anchor positions.
@@ -739,8 +740,7 @@ async function main() {
     const tProm = Date.now();
     const { newStars, stats: ps } = promoteCompanions(
       multiplesRows, stars, conAssignment, dustGrid,
-      parkedRefusals(stats.parked), directions.gaiaAstrometry,
-      syntheticGaiaBridges(loadStoredEdges()),
+      parkedRefusals(stats.parked), directions.gaiaAstrometry, synthGaiaBridges,
     );
     for (const ns of newStars) stars.push(ns);
     console.log(
@@ -931,9 +931,7 @@ async function main() {
 
   // Built here (not at the sidecar write below) so the wings pass resolves
   // multiples.tsv rows exactly as the runtime binaries loader will.
-  const rowIndexMap = buildCatalogRowIndexMap(
-    stars, syntheticGaiaBridges(loadStoredEdges()),
-  );
+  const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
 
   let componentDesignations = new Map<number, ComponentDesignation>();
   let multiplesMemberIndices = new Set<number>();
