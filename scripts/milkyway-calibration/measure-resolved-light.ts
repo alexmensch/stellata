@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import {
   decodeRecordColumn,
   readCatalogHeader,
+  wholeRecordSpan,
 } from '../catalog/record/catalog-pure';
 import { DEFAULT_CATALOG_MANIFEST, readCatalogBuffer } from '../catalog/catalog-lookup';
 import { REPO_ROOT } from '../util/paths';
@@ -48,9 +49,10 @@ async function loadColumns(manifestPath: string): Promise<StarColumns> {
   const buffer = await readCatalogBuffer(manifestPath);
   const header = readCatalogHeader(buffer);
   const view = new DataView(buffer);
+  const span = wholeRecordSpan(header);
   const column = (field: 'x' | 'y' | 'z' | 'absmag') => {
     const out = new Float32Array(header.count);
-    decodeRecordColumn(view, header.count, field, out);
+    decodeRecordColumn(view, span, field, out);
     return out;
   };
   return { x: column('x'), y: column('y'), z: column('z'), absmag: column('absmag'), count: header.count };
