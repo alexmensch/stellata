@@ -69,9 +69,8 @@ branches differ again: a phone has neither a hardware-acceleration switch
 nor a driver to update, and Firefox gets Chrome on this verdict too
 (§ UA picks the wording).
 
-The parameter is **required, with no default**. A default is what let the
-verdict go unread in the first place: the lead sentence branched on it
-while the advice did not, so the page contradicted itself.
+The parameter is **required, with no default**, so the advice cannot
+ignore a verdict the lead sentence branches on.
 
 ## UA picks the wording, never the verdict
 
@@ -103,7 +102,7 @@ Two branches carry the whole subtlety:
   the fix on Chrome, not here.
 - **The Firefox detail names no version.** The reader of that copy is a
   Firefox *without* WebGPU, so a version number is one they may already be
-  past — the copy told a user on 141 that 141 is where it arrives. Per-OS
+  past. Per-OS
   facts that are not version numbers (Linux's `dom.webgpu.enabled`,
   Android's absence) stay, because those a reader can act on.
 
@@ -144,8 +143,7 @@ it is checked ahead of the capability probe.
 `no-api` (spelled `force` too) and `no-adapter` each show their own page.
 Both spellings exist because a developer's browser fails *neither* probe,
 so without naming the verdict the `no-adapter` copy could not be read on a
-real browser at all — which is how its advice came to contradict its own
-lead sentence for a release.
+real browser at all.
 
 ## Smoke
 

@@ -1,5 +1,6 @@
-// The four per-star buffers the shell rewrites and the star layer
-// forwards to the GPU.
+// The four per-star buffers the shell rewrites, as the three.js attributes
+// their writers flag. They exist because the writers sit outside the import
+// boundary and the storage tables that upload them are built past it.
 
 import * as THREE from 'three';
 

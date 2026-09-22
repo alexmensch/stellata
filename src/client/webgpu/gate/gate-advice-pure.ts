@@ -129,8 +129,9 @@ function missingApiAdvice(platform: GateAdvice['platform'], hints: UaHints): Cop
   }
 }
 
-/** The API is present and no device started, so every "install this
- *  browser" line is wrong by construction — this browser already has it. */
+/** The API is present and no device started, so no line may tell the
+ *  reader to update the browser they are running. Firefox still names
+ *  another browser (README.md § UA picks the wording). */
 function noDeviceAdvice(platform: GateAdvice['platform'], hints: UaHints): Copy {
   if (platform === 'firefox') return firefoxAdvice(hints.userAgent, 'no-adapter');
   if (platform === 'ios' || platform === 'android') {
