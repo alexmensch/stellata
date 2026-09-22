@@ -1,6 +1,6 @@
-// ./planet-mesh-tsl.ts on the TSL path: equirect sample, terminator, DEM
-// relief and its cast shadows, casters, umbral glow, disc airlight.
-// Physics: ../../solar-system/planets/README.md; port notes: README.md.
+// The lit spheroid: equirect sample, terminator, DEM relief and its cast
+// shadows, casters, umbral glow, disc airlight.
+// Physics: ../../solar-system/planets/README.md.
 
 import {
   If, Loop, atan, clamp, cross, dot, float, floor, fract, length, max, min,

@@ -130,7 +130,7 @@ In chart mode the vertex shader replaces `max(appSize, physSize)` with
 a **linear-in-magnitude** mapping (= log10-in-flux by definition of
 magnitude). **Planet bodies take the identical treatment** (uadc.3
 decision: magnitude disc + star-style name label, no glyph
-vocabulary): `../webgpu/solar-system/planet-mesh-tsl.ts` carries the same chart branch driven
+vocabulary): `../webgpu/solar-system/planet-glare-tsl.ts` carries the same chart branch driven
 by the same shared uniforms, the reflected-light appMag feeds the same
 formula, and `PlanetBodyField.setMonochrome` swaps blending exactly
 like the star pipeline's `setMonochromeBlend` (the spheroid mesh LOD

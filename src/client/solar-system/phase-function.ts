@@ -143,8 +143,8 @@ export function phaseAngleFromLegs(
  * vectors. Computes α via `phaseAngleFor` and dispatches into the
  * empirical polynomial (when the body has one) or Lambertian (the
  * fallback wherever a body carries no published curve). Mirrors the
- * `if (alphaMaxDeg > 0.0 && alphaDeg <= alphaMaxDeg)` branch in
- * `../webgpu/solar-system/planet-mesh-tsl.ts` exactly through the shared helpers above.
+ * `alphaMaxDeg` branch in `../webgpu/solar-system/planet-glare-tsl.ts`
+ * exactly through the shared helpers above.
  * Degenerate zero-length legs land at α = 0 ⇒ φ = 1.
  */
 export function phaseFactorFor(
@@ -171,7 +171,7 @@ export function phaseFactorAt(
 
 /** Illuminated fraction of a sphere seen at phase angle α: (1 + cos α)/2
  *  — 1 at full phase (α = 0), 0 at new (α = 180). CPU mirror of
- *  `illumFrac` in ../webgpu/solar-system/planet-mesh-tsl.ts, which drives the glare photocentre
+ *  `illumFrac` in ../webgpu/solar-system/planet-glare-tsl.ts, which drives the glare photocentre
  *  shift (`../webgpu/solar-system/README.md` § Reflected glare); no TS
  *  caller, so the mirror is what the
  *  vitest pin holds. α clamped to [0, π]. */

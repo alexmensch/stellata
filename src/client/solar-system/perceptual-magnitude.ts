@@ -31,7 +31,7 @@ export function apparentMagnitude(absmag: number, dPc: number): number {
 
 /**
  * Reflected-light apparent magnitude of a planet seen by a viewer. CPU
- * mirror of the integrated formula in ../webgpu/solar-system/planet-mesh-tsl.ts.
+ * mirror of the integrated formula in ../webgpu/solar-system/planet-glare-tsl.ts.
  *
  *   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
  *   m_planet         = m_host_at_planet

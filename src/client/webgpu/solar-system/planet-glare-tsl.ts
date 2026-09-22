@@ -1,6 +1,5 @@
-// ./planet-mesh-tsl.ts / ./planet-mesh-tsl.ts on the TSL path: the reflected-glare
-// billboard over ./planet-glare-geometry.ts's packed layout. Physics:
-// README.md § Reflected glare.
+// The reflected-glare billboard's vertex and fragment graphs over
+// ./planet-glare-geometry.ts's packed layout. Physics: README.md § Reflected glare.
 
 import {
   Discard, Fn, If, acos, atan, clamp, cos, dot, exp, float, instanceIndex, int,
