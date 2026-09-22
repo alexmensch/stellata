@@ -1489,6 +1489,7 @@ function recurateExistingMember(
     member.vy = inheritAnchor.vy;
     member.vz = inheritAnchor.vz;
   }
+  member.distVia = inheritAnchor?.distVia ?? null;
   const spectral = recordSpectralInfo(member);
   const imputed = imputeCompanionAbsmag(row, anchorPrimaryRow, spectral);
   if (imputed !== null) {

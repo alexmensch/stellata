@@ -3097,12 +3097,16 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
 
   it('takes the pair geometry, the systemic velocity and the curated brightness', () => {
     const a = siriusA();
+    a.distVia = 'hip2_parallax';
     const b = siriusB();
     const { newStars, stats } = promoteCompanions(
       siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.existingMemberRecurated).toBe(1);
+    // Placed at the anchor's distance, so it claims the anchor's tier — the
+    // optical-double suppression reads distVia as the placement's provenance.
+    expect(b.distVia).toBe('hip2_parallax');
     // 11.1" at 2.637061 pc is 29.27 AU, against the 19.1 its own fit gave.
     const sepAu = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z) * AU_PER_PC;
     expect(sepAu).toBeCloseTo(29.27, 1);

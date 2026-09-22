@@ -110,7 +110,8 @@ Per-row gates and resolution:
   Stage 3 gave its own per-component fit has no curated geometry to apply
   and its placement is the cascade's answer, not the rejected solution's.
   What it takes: the WDS (ρ, θ) tangent projection off the anchor, the
-  anchor's systemic velocity,
+  anchor's `distVia` (as a minted member does — it now sits at the anchor's
+  distance, not its own fit's), the anchor's systemic velocity,
   and the Δmag/`wds_mag` brightness with its Ballesteros colour. Photometry
   travels with the astrometry here because ONE cause rejects both — the
   brighter star's light inside the detection window — and BP/RP see more of
