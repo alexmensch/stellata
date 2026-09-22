@@ -92,14 +92,13 @@ describe('softwareRenderer — nothing measured on one counts', () => {
 });
 
 describe('describeProbe', () => {
-  it('spells out an absent timer query rather than printing a bare false', () => {
-    const text = describeProbe(probe({ renderer: 'Apple GPU' }));
-    expect(text).toContain('EXT_disjoint_timer_query_webgl2 present');
-    expect(describeProbe({ webgl: { renderer: 'x', vendor: 'y', timerQuery: false }, webgpu: null }))
-      .toContain('ABSENT');
+  it('prints the WebGL strings the pin slug is named by, and no timer-query verdict', () => {
+    const text = describeProbe({ webgl: { renderer: 'Apple GPU', vendor: 'Apple', timerQuery: false }, webgpu: null });
+    expect(text).toContain('webgl : Apple GPU · Apple');
+    expect(text).not.toMatch(/timer|ABSENT/);
   });
 
-  it('says a WebGL2 boot has no WebGPU timestamp answer, rather than false', () => {
+  it('says an unread timestamp answer rather than false', () => {
     const text = describeProbe({
       webgl: null,
       webgpu: {

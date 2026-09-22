@@ -32,9 +32,9 @@ scripts/perf/
                             check over the flags actually typed. All three
                             parsers here, including the survivors one, because
                             survivors.ts cannot be imported by a test.
-  run-pure.ts (+ test)      The decisions around a launch: which clock a
-                            backend request gets, which adapters disqualify a
-                            run, how the probe reads, whether a marker arms,
+  run-pure.ts (+ test)      The decisions around a launch: the order contexts
+                            run in, which adapters disqualify a run, how the
+                            probe reads, whether a marker arms,
                             why a boot produced no page. Also the Chromium
                             channel both launches pass and the `run` block
                             both instruments write, assembled in one place so
@@ -293,14 +293,13 @@ neither modal ever shows:
    A mounted gate is a `BootError` naming its `data-verdict` instead.
    Then check `stellata.webgpu`: **a page that came up without the seam
    fails the scenario** rather than yielding a mislabelled measurement.
-2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`
-   and `EXT_disjoint_timer_query_webgl2` presence, off a throwaway context
-   dropped via `WEBGL_lose_context` before the sweep so the instrument
-   leaves no second GPU context alive in the page it is about to price.
-   Nothing measures on it: the unmasked renderer string is what
-   `adapterSlug` names the committed pin file by. Then WebGPU
-   `requestAdapter().info`,
-   the fallback flag, and `stellata.webgpu.timestampsAvailable`. A software
+2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`,
+   off a throwaway context dropped via `WEBGL_lose_context` before the sweep
+   so the instrument leaves no second GPU context alive in the page it is
+   about to price. Nothing measures on it: the unmasked renderer string is
+   what `adapterSlug` names the committed pin file by. Then WebGPU
+   `requestAdapter().info`, the fallback flag, and
+   `stellata.webgpu.timestampsAvailable`. A software
    renderer (`/swiftshader|llvmpipe|software/i`, or a fallback adapter)
    **aborts the whole run** — nothing measured on it counts.
 3. **Settle.** Poll `stellata.renderGate.debugState` every 250 ms until no

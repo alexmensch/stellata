@@ -86,8 +86,8 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 
 - `pnpm run perf -- --scenario sol --passes localDepth,reduction --budget-ms 90000`
 - `pnpm run perf -- --scenario all --backend webgpu`
-- `pnpm run perf -- --mode probe` — adapter strings, timer-query presence and
-  the rAF period, no sweep.
+- `pnpm run perf -- --mode probe` — adapter strings, the timestamp-query
+  verdict and the rAF period, no sweep.
 - `pnpm run perf -- --mode dwell --scenario mw120 --frames 240` — the whole
   frame rather than per-pass prices. Cheap; the one to reach for when the
   question is "did the frame get slower". A WebGPU dwell prints three

@@ -95,7 +95,7 @@ export function bufferShortfall(
 
 export function describeProbe(p: AdapterProbe): string {
   const webgl = p.webgl
-    ? `${p.webgl.renderer} · ${p.webgl.vendor} · EXT_disjoint_timer_query_webgl2 ${p.webgl.timerQuery ? 'present' : 'ABSENT'}`
+    ? `${p.webgl.renderer} · ${p.webgl.vendor}`
     : 'no WebGL2 context';
   const webgpu = p.webgpu
     ? `${p.webgpu.description || p.webgpu.device || '(unnamed)'} · ${p.webgpu.vendor}/${p.webgpu.architecture} · ` +
@@ -125,9 +125,9 @@ export const GATE_BOOT_PREFIX = 'gate:';
  * The requires-WebGPU gate is the case worth naming. `showWebGpuGate` hides
  * the boot's elements rather than removing them and never sets
  * `window.stellata`, so every predicate the wait polls stays false and the
- * scenario used to die on the Playwright timeout with nothing said about
- * why. Not reachable on the machine the pin is taken on, where both
- * backends work — this is about a legible failure anywhere else.
+ * scenario would otherwise die on the Playwright timeout with nothing said
+ * about why. Not reachable on the machine the pin is taken on — this is
+ * about a legible failure anywhere else.
  */
 export function bootFailure(text: string): string | null {
   if (text === 'ok') return null;
