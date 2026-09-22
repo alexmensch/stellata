@@ -690,7 +690,7 @@ export class PlanetMeshLayer {
   /** Request one colour rung, and report whether it is drawable yet. */
   private ensureRung(body: string, width: number): boolean {
     const key = textureKey(body, `-${width}`);
-    this.rungOf.set(key, { body, width });
+    if (!this.textures.has(key)) this.rungOf.set(key, { body, width });
     return this.requireTexture(key, { ext: 'jpg' })?.state === 'ready';
   }
 
