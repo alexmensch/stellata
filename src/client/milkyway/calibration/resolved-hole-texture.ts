@@ -24,7 +24,7 @@ export function makeResolvedHoleTexture(): THREE.Data3DTexture {
   return tex;
 }
 
-/** In place, never by reassignment: both backends hold the texture object
+/** In place, never by reassignment: both components' graphs hold the texture object
  *  by reference from the moment the material graph is built. */
 export function writeResolvedHoleTexture(
   tex: THREE.Data3DTexture,

@@ -41,9 +41,9 @@ imported here for the GC-anchored mesh placement.
 ## The material seam
 
 Both components take their material from a `BandMaterials` factory rather
-than building one inline, so the shader side moves with no second copy of
-the mesh placement, the per-frame galactic-centre rebase, the debug levers
-or the chart handoff. The factory is `../webgpu/milkyway/README.md`;
+than building one inline: the layer owns the mesh placement, the per-frame
+galactic-centre rebase, the debug levers and the chart handoff, and never
+sees the graph. The factory is `../webgpu/milkyway/README.md`;
 `stellata.ts` passes `webgpu.bandMaterials` and adds the group to
 `scene`.
 
@@ -144,7 +144,7 @@ Two more consequences a future session needs:
   picker cannot move flux. `getValues()` returns the *authored* colour, not
   the tint, because the tint's channels exceed 1 (the disc's red sits at
   1.13) and an `<input type="color">` cannot round-trip that.
-- **The Local Group layer no longer seeds from here.** It derives its own
+- **The Local Group layer does not seed from here.** It derives its own
   two family indices (`../local-group/emission/README.md` § Population tints),
   sharing only the SSP spheroid constant and the solve — so this palette
   is the band's alone.
@@ -381,8 +381,8 @@ so a band filling the frame can never reach the exposure's resolved-surface
 pin (`../hdr/attachments/README.md`). Neither writes attachment 0
 on-target: the resolve owns that pixel once it has averaged the diffuse
 attachment over the summation patch. Off-target both apply the operator
-themselves over the pixel solid angle (`uHdrTarget = 0`, the float-RT
-fallback and the A/B — `../hdr/README.md` § The inline operator), in the **undithered**
+themselves over the pixel solid angle (`uHdrTarget = 0`, chart mode's
+path — `../hdr/README.md` § The inline operator), in the **undithered**
 variant: the two components overlap on every band pixel and the dither is a
 function of `fragCoord` alone, so it would land twice.
 

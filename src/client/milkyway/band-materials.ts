@@ -22,7 +22,7 @@ import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
  *
  * These are the layer's own objects, NOT the frame-wide shared map's, even
  * where a name collides: `Stellata.setExtinctionStrength` writes the frame
- * map and this one separately. The TSL twin therefore mirrors them as its
+ * map and this one separately. The factory therefore builds them as its
  * own nodes rather than taking the shared uniform-node mirror's, whose
  * per-frame `sync()` copies from the frame map and would overwrite a write
  * made here.
@@ -40,8 +40,8 @@ export interface BandSharedSlots {
   uGalCenter: THREE.IUniform;
   uR0Pc: THREE.IUniform;
   /** The `Data3DTexture`, written in place through
-   *  `writeResolvedHoleTexture` and never reassigned — both graphs hold it
-   *  from build time. */
+   *  `writeResolvedHoleTexture` and never reassigned — both components'
+   *  graphs hold it from build time. */
   uUnresolvedLight: THREE.IUniform;
   uGlowMagOffset: THREE.IUniform;
   uChartIsobar: THREE.IUniform;
@@ -50,11 +50,9 @@ export interface BandSharedSlots {
 
 /**
  * A TSL `uniform()` node is constructed on a literal rather than on the
- * layer's constant, so without this the WebGPU band marches a placeholder
- * dust model. Both factories call it, which is what makes
- * `BandMaterials.shared` live the moment it is handed out — and what keeps
- * a slot added to only one backend's record from rendering the placeholder.
- * Every key is written here; `band-materials.test.ts` fails if one is not.
+ * layer's constant, so without this the band marches a placeholder dust
+ * model. The factory calls it, which is what makes `BandMaterials.shared`
+ * live the moment it is handed out. Every key is written here; `band-materials.test.ts` fails if one is not.
  */
 export function seedBandSharedSlots(s: BandSharedSlots): void {
   s.uDustAvPerDensityPc.value = DEFAULT_DUST_AV_PER_DENSITY_PC;

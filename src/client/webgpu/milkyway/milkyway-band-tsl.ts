@@ -43,8 +43,6 @@ export function buildMilkyWayBandMaterial(
   material.blending = AdditiveBlending;
   material.side = BackSide;
 
-  // The GLSL vertex stage is the default model-view-projection plus two
-  // varyings, both TSL built-ins — so this material carries no vertexNode.
   const vMeshLocalPos = varying(positionGeometry, 'vMwMeshLocalPos');
   const vWorldPos = varying(positionWorld, 'vMwWorldPos');
 
@@ -69,7 +67,8 @@ export function buildMilkyWayBandMaterial(
       .mul(vertical);
   };
 
-  /** Transcribes the GLSL `unresolvedBandLight`. */
+  /** `unresolvedBandLightAt`'s fetch (../../milkyway/calibration/README.md
+   *  § The resolution hole). */
   const unresolvedBandLight = (posGalCentric: N3): NF => {
     const fromSol = posGalCentric.add(vec3(s.uR0Pc, 0.0, 0.0)).toVar();
     return s.uUnresolvedLight.sample(
@@ -107,7 +106,6 @@ export function buildMilkyWayBandMaterial(
     const worldPerT = length(vWorldPos.sub(cameraPosition)).toVar();
     const sStart = max(tEnter.mul(worldPerT), S_MIN_PC).toVar();
 
-    // The GLSL's three early returns, as one predicate.
     const covered = disc.greaterThanEqual(0.0)
       .and(tEnter.lessThan(1.0))
       .and(sStart.lessThan(worldPerT));

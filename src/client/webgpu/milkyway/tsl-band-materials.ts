@@ -1,4 +1,4 @@
-// The WebGPU implementation of the band material seam
+// The band material seam's factory
 // (../../milkyway/README.md § The material seam).
 
 import {
@@ -19,8 +19,7 @@ export interface TslBandConfig {
 /**
  * The shared nodes are built ONCE here and handed to both components, so
  * the disc and the bulge take the same objects and one write through
- * either's slot record reaches both draws — the WebGL layout, transcribed.
- * A factory per component would give two independent dust models that
+ * either's slot record reaches both draws. A factory per component would give two independent dust models that
  * happened to agree until the first slider move.
  */
 export function makeTslBandMaterials(cfg: TslBandConfig): BandMaterials {
@@ -41,8 +40,7 @@ export function makeTslBandMaterials(cfg: TslBandConfig): BandMaterials {
       return {
         material: built.material,
         // Both records, so a layer that writes a per-component slot and a
-        // shared one through the same handle reaches each — exactly what
-        // the WebGL uniforms map does by spreading them together.
+        // shared one through the same handle reaches each.
         uniforms: { ...sharedSlots, ...uniformSlotsOf(componentNodes) },
         dispose() {
           unregister();

@@ -93,7 +93,7 @@ export const DEFAULT_EXTINCTION_STRENGTH = 1.0;
 
 export const MAG_PER_TAU = 1.0857;
 
-// --- Raymarch resolution (mirrors the GLSL consts) ---------------------
+// --- Raymarch resolution (the band graph imports these) ----------------
 
 export const STEPS = 32;
 export const S_MIN_PC = 1;
