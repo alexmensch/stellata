@@ -85,10 +85,10 @@ of them in the kept set, so 602,228 rows are the term's own and the union is
 973,222 source_ids. The record total that implies, once promotion and parking
 apply: § The record total the floor implies, below.
 
-Run at `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
+At `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
 those 602,228 — and every primaries-side count holds byte for byte, which is
-what says the term adds and moves nothing. Reproduce by setting the floor and
-running `pnpm run build:membership`; nothing else changes.
+what says the term adds and moves nothing on the manifest side. The record side
+is not additive: § What the floor moves that was already there.
 
 ## The column is the ledger
 
@@ -170,9 +170,44 @@ anyway. The floor bounds the magnitude term, never the catalogue.
 
 Reproduce the projection by streaming the pull through `rielloVMagnitude` and
 intersecting the kept `source_id`s against the manifest's `gaia_source_id`
-column; reproduce the measurement by setting `MAGNITUDE_FLOOR_V` to 11 and
-running `build:membership` then `build:catalog`. **Key on strings**: a Gaia
-`source_id` runs to 19 digits and loses precision silently as a float64.
+column; the measurement is what `build:membership` then `build:catalog` emit.
+**Key on strings**: a Gaia `source_id` runs to 19 digits and loses precision
+silently as a float64.
+
+### What the floor moves that was already there
+
+**The manifest side is additive; the record side is not.** Measured sid-keyed
+against a floor-off build of the same tree
+(`../../validate/README.md` § Additive-mode record parity), the flip moves
+**about 3,000 of the 388,071 records that were already there** — `vx/vy/vz`
+3,085, `x/y/z` 3,035, `absmag` 2,857, `physRadius` 2,856, `ci` 2,408, `flags`
+1,905, the companion 1,690, `multiplicityStatus` 1,139, `lumClass` 1,101,
+`spectClass` 590, the display name 3. Some are large: sid 1406 moves about
+46 pc.
+
+The cause is that three build stages read the record SET, not the manifest —
+companion promotion, anchor-flux conservation
+(`../../companions/README.md`) and system distance coherence. A deeper
+catalogue gives a system a nearer or better-measured anchor, and every member
+follows it.
+
+Two identity consequences, both handled in `data/sid/`:
+
+- **Five synthetic components stop promoting**, because the component's own
+  Gaia source is now an ordinary record or the system's anchor changed:
+  `09174+2339 B`, `17067-4350 B`, `10444-6000 D` retire onto the record that
+  now carries their source (sids 245097 · 224486 · 1798), and `05239-0052 B`
+  and `06583-3525 D` retire with no successor.
+- **Two retired components reappear** — `19059+3502 B` and `00392+6207 C` —
+  because the floor admits each pair's anchor, so the id-less pair-row primary
+  has something to promote against again. Both resume their original sid
+  through `data/sid/reinstatements.tsv`.
+
+**One object is drawn twice** and is not resolved here: sid 232194,
+`synth:20450+1244-B`, whose same-as bridge names a Gaia source the deep
+population now admits as its own record. The promotion's already-in-catalog
+test matches on the row's own identifiers and cannot see the bridge, so both
+records ship — `stellata-cns.18`.
 
 ### What that costs on the wire
 
