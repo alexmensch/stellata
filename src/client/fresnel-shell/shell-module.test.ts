@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { GLOBAL_MIN_DIST_PC } from '../camera/focus/focus-controller';
 import type { KindContext } from '../kinds/kind-module';
-import type { WebGpuSeam } from '../webgpu/seam';
+import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { HELIOPAUSE_EXTENT_PC } from '../solar-system/heliopause/heliopause';
 import { fakeShellMaterials } from './shell-materials-mock';
@@ -55,7 +55,7 @@ function stubDocument(): void {
 
 function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
   const ctx = makeKindContext({
-    webgpu: { shellMaterials: fakeShellMaterials() } as unknown as WebGpuSeam,
+    webgpu: fakeWebGpuSeam({ shellMaterials: fakeShellMaterials() }),
     ...overrides,
   });
   ctx.camera.position.set(50, 0, 300);

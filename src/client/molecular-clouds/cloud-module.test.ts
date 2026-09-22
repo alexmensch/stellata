@@ -11,7 +11,7 @@ import { makeFrameCtx } from '../scene/frame-ctx-mock';
 import { makeLabelDom } from '../overlays/label-dom-mock';
 import { CLOUD_LABELS_GROUP_ID } from './cloud-labels';
 import { createCloudKindModule } from './cloud-module';
-import type { WebGpuSeam } from '../webgpu/seam';
+import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import { fakeCloudMaterials } from './cloud-mock';
 
 function rawCloud(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -66,7 +66,7 @@ function stubFetch(present: boolean): void {
 
 function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
   const ctx = makeKindContext({
-    webgpu: { cloudMaterials: fakeCloudMaterials() } as unknown as WebGpuSeam,
+    webgpu: fakeWebGpuSeam({ cloudMaterials: fakeCloudMaterials() }),
     ...overrides,
   });
   ctx.camera.position.set(0, 0, 30);

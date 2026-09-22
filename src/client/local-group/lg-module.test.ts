@@ -8,7 +8,7 @@ import type { KindContext } from '../kinds/kind-module';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeFrameCtx } from '../scene/frame-ctx-mock';
 import { createLgKindModule, designationVariants } from './lg-module';
-import type { WebGpuSeam } from '../webgpu/seam';
+import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import { fakeLgEmissionMaterials } from './emission/lg-emission-materials-mock';
 
 function rawObject(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -59,9 +59,7 @@ function stubFetch(present: boolean): void {
 
 function makeCtx(): KindContext {
   const ctx = makeKindContext({
-    webgpu: {
-      lgEmissionMaterials: fakeLgEmissionMaterials(),
-    } as unknown as WebGpuSeam,
+    webgpu: fakeWebGpuSeam({ lgEmissionMaterials: fakeLgEmissionMaterials() }),
   });
   ctx.camera.position.set(0, 0, 0);
   ctx.camera.lookAt(1, 0, 0);
