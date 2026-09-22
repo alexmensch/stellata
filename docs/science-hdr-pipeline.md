@@ -614,7 +614,7 @@ these inputs:
 | resolved Venus filling 20% of the frame (`S₀` = +0.78, so `L_surf` 3.6e5) | 7.1e4 |
 | Sol's disc at 1 AU (m −26.74; 0.53° = 11.4 px across, 103 px² of 2.07e6) | 6.3e5 |
 | the frame's share of 100 000 threshold-magnitude stars, 1 px each | 1.0e-4 |
-| Milky Way band at 23.47 mag/arcsec² over the full frame | 3.0e-4 |
+| Milky Way band at 22.70 mag/arcsec² over the full frame | 6.1e-4 |
 | Venus unresolved from Earth (m −4.4, on the 1 px floor) | 7.3e-4 |
 
 **The two aggregate rows are per-frame, and an earlier draft of this
@@ -627,10 +627,12 @@ own gradient derives (`src/client/milkyway/calibration/README.md`), not a
 round 22:
 the band is what a frame pointed at it actually contains, and the layer is
 the authority on how bright that is. The test reads it out of the layer
-rather than copying it, because it has moved twice — 22.55 under the
-retired 20.0 anchor, 23.47 once the dust was normalised. The diffuse field
-is therefore **Milky-Way-dominated by 2.9×**, where the earliest rows had
-the two within 25% of each other.
+rather than copying it, because it has moved four times — 22.55 under the
+retired 20.0 anchor, 23.47 once the dust was normalised, 22.06 on the
+luminosity solve, 22.70 once the resolution hole took the catalogue's share
+back out (`src/client/milkyway/calibration/README.md` § The resolution
+hole). The diffuse field is therefore **Milky-Way-dominated by 5.8×**,
+where the earliest rows had the two within 25% of each other.
 
 Nearly eight decades separate the cases that must adapt from the cases
 that must not, and the aggregate field sits **two** decades below
@@ -1734,12 +1736,17 @@ summation diameter (§ 1, *Extended sources*), so a panorama pixel and
 the model's display anchor average over nearly the same solid angle.
 Levels below are 8-bit sRGB — the panorama is itself a display-referred
 image, which is what the model's pinned levels are. Model rows are the
-shipped table (`src/client/milkyway/calibration/README.md`
-§ *The gradient*),
-FOV-invariant by construction and computed at `DR_MAG` 7.5 through the
-shipped operator (C1 toe → extended Reinhard → sRGB encode); the two
-Leinert columns shift the model's `S` by the pinned disagreements
-(+1.02 GC-anchored, +1.68 pole-anchored), which bracket that scale.
+band table as it stood before the resolution hole
+(`src/client/milkyway/calibration/README.md` § *The gradient* carries the
+current one), FOV-invariant by construction and computed at `DR_MAG` 7.5
+through the shipped operator (C1 toe → extended Reinhard → sRGB encode);
+the two Leinert columns shift that table's `S` by the disagreements pinned
+at the time (+1.02 GC-anchored, +1.68 pole-anchored), which bracket that
+scale. **The panorama's pixels hold the resolved stars too**, so once the
+hole moved their light out of the band the model row to grade is the band
+plus the catalogue's patch sum, not the band alone — the re-grade is
+stellata-xypg.43, and until it lands the pre-hole table below remains the
+like-for-like comparison.
 
 Scope: the Milky Way band only, at the unaided-eye instrument, base
 epoch, no EV trim — the only shipping instrument (the per-preset framing

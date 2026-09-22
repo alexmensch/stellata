@@ -28,8 +28,8 @@ disables. Hidden in chart mode.
   from a camera position, as a bound (§ The brightest rendered sightline).
 - `calibration/` — the published photometry the solve runs on (M_V, B/T,
   the two components' B−V), the light ratio and the disc colour derived
-  from it, and the two sightline checks it is graded against. Its own
-  README.
+  from it, the resolution hole the march multiplies the emissivity by, and
+  the two sightline checks it is graded against. Its own README.
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
@@ -106,6 +106,13 @@ populations' (B−V) rather than authored (`calibration/README.md`
 § Population colours). Neither carries flux at emission, and neither
 component has a hand-set weight any more: both `density0` values are
 solved.
+
+**Both components are multiplied by one minus the resolution hole** — the
+star catalogue's measured share of the model's light at each step,
+applied ahead of the dust step. It reaches both shaders as one filtered
+fetch of the shared `uUnresolvedLight` grid, and the CPU mirror through
+`unresolvedBandLightAt` over the same cube
+(`calibration/README.md` § The resolution hole, § The table is a 3D grid).
 
 ### Population tints carry hue, never flux
 
@@ -207,8 +214,9 @@ the brightness skip compares against the live extended threshold
 - `bandPeakFan(cameraGalPc)` — the dusty peak from the live camera: a polar
   fan around the Galactic-centre direction out to the cone that still meets
   the disc proxy (24 rings × 36 azimuths, then three 7×7 refinements at a
-  third of the spacing each) — 976 marched sightlines, **3.8–6.0 ms** per
-  recompute on a 2024 M-series laptop under node, and CPU work on the frame
+  third of the spacing each) — 976 marched sightlines, **11.8 ms** per
+  recompute on a 2024 M-series laptop under node, three quarters of it the
+  resolution-hole lookup at every step, and CPU work on the frame
   thread, which is why the brightness skip takes it as a thunk and calls it
   only past the refusals that do not need it
   (`../hdr/exposure/visibility/README.md` § Skipping an emitter the display
@@ -422,9 +430,12 @@ camera flies past the GC is the realism payoff.
 ## Dev levers
 
 `milkyway-tuning.ts` registers the panel section — sliders for
-`glowMagOffset`, `discDensity`, `bulgeDensity`, `extinctionStrength` and the
-three reddening RGB multipliers, plus both palette colour pickers. Every one
-is also callable as `stellata.milkyway.set<Name>(...)`.
+`glowMagOffset`, `discDensity`, `bulgeDensity`, `extinctionStrength`,
+`resolvedHole` and the three reddening RGB multipliers, plus both palette
+colour pickers. Every one is also callable as
+`stellata.milkyway.set<Name>(...)`. `resolvedHole` scales the hole table
+in place through its one writer: 0 is the A/B against a band that draws
+the resolved stars' light twice, 1 the shipped table.
 
 Two are not knobs despite the slider: `setGlowMagOffset` desynchronises the
 band from the Local Group layer (both read the one zero point), and

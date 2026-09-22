@@ -4,14 +4,18 @@
 
 import { AdditiveBlending, BackSide } from 'three';
 import {
-  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, length,
-  log, log2, max, positionGeometry, positionWorld, select, smoothstep, sqrt,
-  varying, vec3, vec4,
+  Break, If, Loop, abs, cameraPosition, dFdx, dFdy, dot, exp, float, int, length, log,
+  log2,
+  max, positionGeometry, positionWorld, select, smoothstep, sqrt, varying,
+  vec3, vec4,
 } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
 } from '../../milkyway/milkyway-column-pure';
+import {
+  RESOLVED_HOLE_GRID_HALF_PC,
+} from '../../milkyway/calibration/resolved-fraction-pure';
 import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
 import { MAG_PER_STOP } from '../../hdr/emission/emission-pure';
 import {
@@ -63,6 +67,14 @@ export function buildMilkyWayBandMaterial(
       .mul(exp(softenRadiusTsl(R, footprintPc).sub(s.uR0Pc).negate()
         .div(c.uDiscScaleLengthPc)))
       .mul(vertical);
+  };
+
+  /** Transcribes the GLSL `unresolvedBandLight`. */
+  const unresolvedBandLight = (posGalCentric: N3): NF => {
+    const fromSol = posGalCentric.add(vec3(s.uR0Pc, 0.0, 0.0)).toVar();
+    return s.uUnresolvedLight.sample(
+      fromSol.mul(0.5 / RESOLVED_HOLE_GRID_HALF_PC).add(0.5),
+    ).level(int(0)).r;
   };
 
   const bulgeDensityVal = (R: NF, zVal: NF, footprintPc: NF): NF => {
@@ -143,9 +155,9 @@ export function buildMilkyWayBandMaterial(
         const R = length(posGalCentric.xy).toVar();
         const zVal = posGalCentric.z.toVar();
         const footprintPc = footprintPcTsl(sMid, u.uOmegaPxArcsec2).toVar();
-        const densityVal = isBulge
+        const densityVal = unresolvedBandLight(posGalCentric).mul(isBulge
           ? bulgeDensityVal(R, zVal, footprintPc)
-          : discDensityVal(R, zVal, footprintPc, footprintPc.mul(zFootprintScale));
+          : discDensityVal(R, zVal, footprintPc, footprintPc.mul(zFootprintScale)));
 
         const dTauRGB = dustTauStepRGB(R, zVal, dsPc, dustEffective).toVar();
         // Beer-Lambert with half-step self-shielding for the slab approx.

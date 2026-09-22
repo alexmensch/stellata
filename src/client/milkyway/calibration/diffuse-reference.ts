@@ -7,6 +7,7 @@ import {
   OLD_SPHEROID_COLOUR_INDEX_BV,
   discColourIndex,
 } from '../../hdr/emission/population-colour-pure';
+import { RESOLVED_CATALOGUE_CAP } from './resolved-hole-table';
 
 /**
  * Integrated V-band absolute magnitude of the Galaxy, Bland-Hawthorn &
@@ -140,31 +141,10 @@ export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
   northGalacticPole: 23.83,
 } as const;
 
-/**
- * Surface brightness of the stars **Stellata already draws** — the
- * catalogue summed as Σ10^(−0.4·V) inside a 10° cap and divided by the
- * cap's solid angle, from `public/catalog.bin.*` at build v9 (388,068
- * records, `recordCount` in scripts/catalog/build-catalog-expected.json).
- * The caps centre on the ICRS J2000 galactic poles — (266.404988,
- * −28.936178) and (192.859508, +27.128336) — and 10° is 9.5456e−2 sr.
- *
- * Measured rather than computed at runtime: the client has no reason to
- * carry a whole-sky photometric reduction, and the catalogue is frozen
- * per release. A catalogue rebuild that moves membership or photometry
- * moves these — re-derive, don't loosen. **A record has to land INSIDE a
- * cap to move one**, so the count moving is not the trigger; a record
- * arriving within 10° of a centre is. Re-derived 2026-09-07 over the
- * widened SIMBAD value cohort: of the ~4k rows it places that used to
- * park, 113 fall in the Galactic-centre cap — 11,662 stars to 11,775 —
- * and brighten it 0.006 mag, while the pole gains a single star and
- * holds at three decimals.
- *
- * `V = absmag + 5·log10(d/10)`, so these are **de-extincted**. That is
- * why only the NGP row is differenced below.
- */
+/** De-extincted — only the NGP row is differenced below. */
 export const RESOLVED_CATALOGUE_MAG_ARCSEC2 = {
-  galacticCentre: 22.368,
-  northGalacticPole: 24.275,
+  galacticCentre: RESOLVED_CATALOGUE_CAP.galacticCentre.magArcsec2,
+  northGalacticPole: RESOLVED_CATALOGUE_CAP.northGalacticPole.magArcsec2,
 } as const;
 
 /** Surface brightness left for the diffuse layer once an already-drawn

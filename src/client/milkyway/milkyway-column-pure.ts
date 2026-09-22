@@ -20,6 +20,11 @@ import {
   DISC_COLOUR_INDEX_BV,
   GALAXY_TOTAL_ABSMAG_V,
 } from './calibration/diffuse-reference';
+import {
+  type ResolvedHoleGrid,
+  shippedResolvedHoleGrid,
+  unresolvedGridLight,
+} from './calibration/resolved-fraction-pure';
 import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
 import { type Rgb, relativeLuminance } from '../hdr/tonemap/tonemap-pure';
@@ -351,6 +356,17 @@ export function foregroundDustTauRgb(
   return tau;
 }
 
+/** Mirrors the shaders' `unresolvedBandLight`; every CPU march of the band
+ *  multiplies by it. */
+export function unresolvedBandLightAt(pGal: Vec3, grid: ResolvedHoleGrid): number {
+  return unresolvedGridLight(
+    pGal[0] - SOL_GALACTOCENTRIC_PC[0],
+    pGal[1] - SOL_GALACTOCENTRIC_PC[1],
+    pGal[2] - SOL_GALACTOCENTRIC_PC[2],
+    grid,
+  );
+}
+
 // --- Emission column ---------------------------------------------------
 
 export interface ColumnOptions {
@@ -366,6 +382,8 @@ export interface ColumnOptions {
    *  march with no plate scale — a sightline column is defined without one,
    *  and from Sol the footprint is metres against a 300 pc scale height. */
   readonly omegaPxArcsec2?: number;
+  /** `null` marches the whole emissivity, resolved stars included. */
+  readonly resolvedHole?: ResolvedHoleGrid | null;
 }
 
 /**
@@ -384,6 +402,7 @@ export function componentColumnRgb(
     steps = STEPS,
     foregroundSteps = FOREGROUND_DUST_STEPS,
     omegaPxArcsec2 = 0,
+    resolvedHole = shippedResolvedHoleGrid(),
   } = options;
   const dustEffective = dustEnabled ? extinctionStrength : 0;
 
@@ -425,12 +444,10 @@ export function componentColumnRgb(
 
     const { rPc, zPc } = cylindrical(p);
     const footprintPc = omegaPxArcsec2 > 0 ? footprintRadiusPc(sMid, omegaPxArcsec2) : 0;
-    const density = component.density(
-      rPc,
-      zPc,
-      footprintPc,
-      footprintPc * zFootprintScale,
-    );
+    const unresolved = resolvedHole === null ? 1 : unresolvedBandLightAt(p, resolvedHole);
+    const density =
+      unresolved *
+      component.density(rPc, zPc, footprintPc, footprintPc * zFootprintScale);
     const dTau = tauStepRgb(rPc, zPc, dsPc, dustEffective);
 
     for (let k = 0; k < 3; k++) {

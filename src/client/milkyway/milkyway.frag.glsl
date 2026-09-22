@@ -72,6 +72,16 @@ uniform vec3  uColor;               // population palette
 
 uniform float uR0Pc;  // Sol galactocentric radius
 
+// The resolution hole — the share of the model's light the star catalogue
+// already draws, removed here so the two do not add. The texture holds
+// what the band still owes; layout in
+// calibration/resolved-fraction-pure.ts, why in calibration/README.md
+// § The resolution hole.
+const float RESOLVED_HOLE_GRID_HALF_PC = 4000.0;
+const float RESOLVED_HOLE_GRID_INV_SPAN =
+  0.5 / RESOLVED_HOLE_GRID_HALF_PC;
+uniform sampler3D uUnresolvedLight;
+
 // Analytical disc dust profile.
 uniform float uAnalyticalDustScaleLengthPc;
 uniform float uAnalyticalDustScaleHeightPc;
@@ -137,6 +147,18 @@ float bulgeDensityVal(float R, float zVal, float footprintPc) {
   float zEff = zVal / uBulgeAxisRatio;
   float rPrime = stellataSoftenRadius(sqrt(R * R + zEff * zEff), footprintPc);
   return uDensity0 * exp(-rPrime / uBulgeScaleRadiusPc);
+}
+
+// Sol sits at (−R₀, 0, 0) in this frame, which is what the offset undoes.
+float unresolvedBandLight(vec3 posGalCentric) {
+  vec3 fromSol = posGalCentric + vec3(uR0Pc, 0.0, 0.0);
+  // One multiply-add into a Sol-centred cube. Clamp-to-edge is the outside
+  // rule and the edge cells are already ~0, so nothing branches.
+  vec3 uvw = fromSol * RESOLVED_HOLE_GRID_INV_SPAN + 0.5;
+  // Level 0 explicitly. The grid carries no mips, so an implicit LOD only
+  // buys the sampler's derivatives — inside the march's Break, where they
+  // are non-uniform. Keep both shaders on the same fetch.
+  return textureLod(uUnresolvedLight, uvw, 0.0).r;
 }
 
 float analyticalDustDensity(float R, float zVal) {
@@ -260,9 +282,9 @@ void main() {
     float zVal = posGalCentric.z;
 
     float footprintPc = stellataFootprintPc(sMid, uOmegaPxArcsec2);
-    float densityVal = uIsBulge
+    float densityVal = unresolvedBandLight(posGalCentric) * (uIsBulge
       ? bulgeDensityVal(R, zVal, footprintPc)
-      : discDensityVal(R, zVal, footprintPc, footprintPc * zFootprintScale);
+      : discDensityVal(R, zVal, footprintPc, footprintPc * zFootprintScale));
 
     vec3 dTauRGB = dustTauStepRGB(R, zVal, dsPc, dustEffective);
 

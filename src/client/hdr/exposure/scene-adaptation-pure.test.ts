@@ -58,7 +58,7 @@ const THRESHOLD_STAR_L = luminanceForMagnitude(EXPOSURE, 7.8);
  *  the frame's share of the threshold-star population plus the Milky Way
  *  band. Both are measured out of the buffer now; this is what they sum
  *  to, and it is the floor the must-not-adapt cases sit on. */
-const AGGREGATE_FIELD_L = 1.201e-3;
+const AGGREGATE_FIELD_L = 7.1686e-4;
 
 /** What a source of apparent magnitude `m` adds to `L̄` once the frame has
  *  drawn it: its whole flux spread over the frame. The buffer reduction
@@ -184,17 +184,17 @@ describe('§ 3.1 contribution table', () => {
     // The band's anticentre-plane surface brightness, taken from the layer
     // rather than copied: the Milky Way layer is the authority on how
     // bright the band is, and a literal here goes stale the next time its
-    // calibration moves. It has, twice.
+    // calibration moves. It has, three times.
     const bandAnticentreSb = sightlineSurfaceBrightness(
       SB_ZERO_POINT,
       SOL_GALACTOCENTRIC_PC,
       galacticDirection(180, 0),
     );
     const milkyWayBand = surfaceBrightnessLuminance(EXPOSURE, bandAnticentreSb, OMEGA_PX);
-    expect(bandAnticentreSb).toBeCloseTo(22.061, 3);
+    expect(bandAnticentreSb).toBeCloseTo(22.693, 3);
     expect(thresholdStars).toBeCloseTo(1.04e-4, 5);
-    expect(milkyWayBand).toBeCloseTo(1.097e-3, 5);
-    expect(milkyWayBand / thresholdStars).toBeCloseTo(10.56, 2);
+    expect(milkyWayBand).toBeCloseTo(6.1295e-4, 5);
+    expect(milkyWayBand / thresholdStars).toBeCloseTo(5.899, 2);
     // Both rows are drawn light now, so both land in the buffer rather
     // than in a constant — and both are inert either way: their sum
     // cannot reach the anchor on its own, with two decades to spare.
@@ -205,7 +205,7 @@ describe('§ 3.1 contribution table', () => {
   it('separates the two regimes by more than seven decades', () => {
     const mustAdapt = surfaceBrightnessLuminance(EXPOSURE, 0.78, OMEGA_PX) * 0.2;
     const mustNot = contribution(-4.4) + AGGREGATE_FIELD_L;
-    expect(Math.log10(mustAdapt / mustNot)).toBeCloseTo(7.6, 1);
+    expect(Math.log10(mustAdapt / mustNot)).toBeCloseTo(7.7, 1);
   });
 });
 

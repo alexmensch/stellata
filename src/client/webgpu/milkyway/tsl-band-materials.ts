@@ -30,6 +30,9 @@ export function makeTslBandMaterials(cfg: TslBandConfig): BandMaterials {
 
   return {
     shared: sharedSlots,
+    dispose() {
+      sharedNodes.uUnresolvedLight.value.dispose();
+    },
     component(spec): EmitterMaterial {
       const componentNodes = bandComponentUniformNodes(spec);
       const built = buildMilkyWayBandMaterial(

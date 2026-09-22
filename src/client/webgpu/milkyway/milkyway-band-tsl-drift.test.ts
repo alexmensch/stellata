@@ -8,6 +8,9 @@ import { describe, expect, it } from 'vitest';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
 } from '../../milkyway/milkyway-column-pure';
+import {
+  RESOLVED_HOLE_GRID_HALF_PC,
+} from '../../milkyway/calibration/resolved-fraction-pure';
 import { literalDriftOffenders, type PinnedConstant } from '../tsl/literal-drift-pure';
 
 const src = readFileSync(
@@ -25,6 +28,7 @@ const PINNED: readonly PinnedConstant[] = [
   { identifier: 'S_MIN_PC', values: [S_MIN_PC] },
   { identifier: 'UNIT_BALL_SLACK', values: [UNIT_BALL_SLACK] },
   { identifier: 'MAG_PER_TAU', values: [MAG_PER_TAU] },
+  { identifier: 'RESOLVED_HOLE_GRID_HALF_PC', values: [RESOLVED_HOLE_GRID_HALF_PC] },
 ];
 
 describe('the TSL band reads the mirror its bound is taken from', () => {
@@ -34,8 +38,17 @@ describe('the TSL band reads the mirror its bound is taken from', () => {
     });
   }
 
-  it('takes them from milkyway-column-pure rather than restating them', () => {
+  it('takes them from milkyway-column-pure and the hole layout from its wrapper', () => {
     expect(src).toMatch(/from '\.\.\/\.\.\/milkyway\/milkyway-column-pure'/);
+    expect(src).toMatch(/from '\.\.\/\.\.\/milkyway\/calibration\/resolved-fraction-pure'/);
+  });
+
+  // The GLSL's textureLod twin (../../milkyway/milkyway.test.ts pins that
+  // side). Dropping it here re-arms the sampler's derivatives on one backend
+  // only, which reads as a WebGPU-versus-WebGL2 cost gap with no diff to
+  // explain it.
+  it('fetches the hole at level 0, as the GLSL does', () => {
+    expect(src).toContain('.level(int(0))');
   });
 });
 

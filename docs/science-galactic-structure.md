@@ -85,32 +85,53 @@ measured 1.5 for the local disc column. There is no free parameter left;
 `src/client/milkyway/calibration/README.md` § The light ratio carries the
 closed form and the metallicity brackets.
 
+**The band marches the model minus the stars the catalogue draws.** The
+solve above is the light of *every* star, resolved or not, and the star
+field draws the resolved ones itself, so a band marching the whole
+emissivity counts them twice. The band therefore multiplies the emissivity
+at each step by one minus the catalogue's measured share of the model's
+light there — a table over distance from Sol and |sin b|, read off the
+built catalogue (`src/client/milkyway/calibration/README.md` § The
+resolution hole). At V ≤ 11 the hole removes **0.35 %** of the model's
+light over the tabulated volume — 1.03× the catalogue's own light there,
+the shell average being blind to structure in longitude — while the
+catalogue carries **77 %** of Leinert's total starlight at the pole, where
+the column is almost entirely local. In the plane the hole keeps half the
+model's light resolved out to 500 pc and a third at 1 kpc, and the dusty
+column toward the centre — the nearest two kiloparsecs, the dust takes the
+rest — dims 0.68 mag when that share comes out.
+
 **The model cannot also satisfy the sightline it used to be anchored on,
 and no shape parameter bridges the gap.** The earlier calibration pinned
 the north galactic pole to Leinert's total starlight there *minus* the
-catalogue stars Stellata draws itself — a defensible target that removes
-56 % of the pole's light but only 0.2 % of the Galaxy's, because the
-catalogue is a local sample and the pole column is almost entirely local.
-A single emissivity field anchored on the subtracted pole therefore runs
-a factor of three low everywhere else, and the shipped solve is 1.68 mag
-brighter than that residual at the pole and 1.02 mag brighter than
-Leinert's total toward the Galactic centre.
+catalogue stars — a defensible target for the pole column, which is almost
+entirely local, but one that says nothing about the Galaxy's total, of
+which the catalogue is a third of a percent. A single emissivity field
+anchored on the subtracted pole therefore runs a factor of three low
+everywhere else. With the hole taking the resolved share out of both
+sides, the shipped solve is 1.35 mag brighter than that residual at the
+pole and 0.37 mag brighter than Leinert's total toward the Galactic
+centre; band plus catalogue at the pole is 0.43 mag over Leinert's total,
+where band-without-hole plus catalogue was 0.88 over.
 
-Two things make that a scale disagreement between published sources
-rather than a shape error in the model. The two checks have the **same
-sign and the same order**, which a wrong profile would not produce; and
-0.5–0.9 mag is the real spread across M_V determinations, which BHG16's
-own figure carries — its value comes from Milky Way analogues rather than
-direct integration, and it flags an internal SDSS-vs-colour-index
-inconsistency.
+Two things make what remains a scale disagreement between published
+sources rather than a shape error in the model. The two checks have the
+**same sign and the same order**, which a wrong profile would not
+produce; and 0.5–0.9 mag is the real spread across M_V determinations,
+which BHG16's own figure carries — its value comes from Milky Way
+analogues rather than direct integration, and it flags an internal
+SDSS-vs-colour-index inconsistency.
 
 The total wins because it is what the camera sees from outside: the
 Galaxy viewed from M31 has to be at least as bright as M31 viewed from
-here, and under the sightline anchor it was 1.11 mag fainter. A
-vertical-profile change cannot substitute — the pole column and the
-integrated total are both vertical integrals, and adding the thick disc
-moved their ratio by 0.09 mag. `src/client/milkyway/calibration/README.md`
-§ Two checks carries the numbers and the pins.
+here, and under the sightline anchor it was 1.11 mag fainter. The hole
+costs the band 0.004 mag from M31, so the ordering stands at the deeper
+floor, and the residual anchor re-run there would put the Galaxy a
+magnitude *fainter* than M31. A vertical-profile change cannot substitute
+— the pole column and the integrated total are both vertical integrals,
+and adding the thick disc moved their ratio by 0.09 mag.
+`src/client/milkyway/calibration/README.md` § Two checks carries the
+numbers and the pins.
 
 ## Interstellar dust extinction
 

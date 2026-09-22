@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "4.3.9",
+  "version": "4.4.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -55,6 +55,7 @@
     "analyse:prefilter": "tsx scripts/dust/prefilter/measure.ts",
     "analyse:prefilter-cost": "tsx scripts/dust/prefilter/cost.ts",
     "analyse:march-taps": "tsx scripts/dust/march-taps/measure.ts",
+    "measure:band-resolved": "tsx scripts/milkyway-calibration/measure-resolved-light.ts",
     "build:local-group": "tsx scripts/local-group/build-local-group.ts && tsx scripts/sid/stamp-sibling-sids.ts local-group",
     "build:dust-sync": "tsx scripts/dust/sync-dust.ts",
     "build:probes-sync": "tsx scripts/probes/sync-probes.ts",

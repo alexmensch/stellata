@@ -88,10 +88,11 @@ cannot is a **uniform array** — it has no `.value`, so the helper puts an
 `IUniform` face over `UniformArrayNode.array`, which the layer mutates in
 place and the node re-packs every render.
 
-It lives here rather than beside any one subsystem because three of them
+It lives here rather than beside any one subsystem because four of them
 now build slot records through it — the solar-system surfaces, the
-boundary shells, the dust sprite. The per-subsystem `*-uniform-nodes.ts`
-modules stay with their layers; only the face is shared.
+boundary shells, the dust sprite, the Milky Way band. The per-subsystem
+`*-uniform-nodes.ts` modules stay with their layers; only the face is
+shared.
 
 ## Storage attributes
 
