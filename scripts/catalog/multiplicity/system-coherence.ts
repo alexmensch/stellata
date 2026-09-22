@@ -7,20 +7,9 @@ import type {
   GaiaAstrometryCatalogRow,
   Hip2AstrometryRow,
 } from '../distance/direction-cascade';
-import { GAIA_RUWE_UNRELIABLE_THRESHOLD } from '../distance/direction-cascade';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { wdsRootOf } from '../companions/companion-promotion';
-
-/** Gaia saturates brighter than G ≈ 3; a brighter source's 5p parallax
- *  is not trustworthy enough to anchor a system's distance. */
-export const GAIA_UNSATURATED_G_MIN = 3.0;
-
-/** Gaia's ipd_frac_multi_peak is a PERCENT (0–100), not a fraction —
- *  AU Mic carries 1 (1%, clean). Distinct from direction-cascade's
- *  GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD, which compares the same column on
- *  the fraction scale; there the NSS-membership requirement masks the
- *  difference, so do not read the two as one threshold. */
-export const ANCHOR_IPD_MAX_PERCENT = 2.0;
+import { isCoherenceAnchorGrade } from './anchor-grade-pure';
 
 /** A member snaps to the anchor distance only when the radial gap is
  *  NOT significant at this many sigma of the combined parallax error —
@@ -54,6 +43,7 @@ export interface SystemCoherenceStats {
   memberAnchorWins: number;
   significantDepthKept: number;
   anchorPlacementInconsistent: number;
+  memberAnchorPrecisionVetoed: number;
 }
 
 export interface CoherenceSources {
@@ -66,17 +56,14 @@ export interface CoherenceSources {
 
 const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;
 
-/** The clean-Gaia bar a 5p solution must clear to carry a whole system's
- *  distance — its own parallax, unsaturated, un-blended and with a RUWE the
- *  fit itself stands behind. Shared with the parallax cascade's
- *  `pair_member_parallax` tier, which lends a sibling's distance to a member
- *  Gaia fitted no parallax for at all. */
-export function isCoherenceAnchorGrade(g: GaiaAstrometryCatalogRow): boolean {
-  return g.parallaxMas !== null && g.parallaxMas > 0
-    && (g.ruwe === null || g.ruwe <= GAIA_RUWE_UNRELIABLE_THRESHOLD)
-    && (g.ipdFracMultiPeak === null
-      || g.ipdFracMultiPeak <= ANCHOR_IPD_MAX_PERCENT)
-    && g.gMag !== null && g.gMag >= GAIA_UNSATURATED_G_MIN;
+/** Anchor tier, pair-primary side, WDS-canonical letter. */
+type AnchorRank = [number, number, string];
+
+function rankBeats(rank: AnchorRank, best: AnchorRank | null): boolean {
+  if (best === null) return true;
+  if (rank[0] !== best[0]) return rank[0] < best[0];
+  if (rank[1] !== best[1]) return rank[1] < best[1];
+  return rank[2] < best[2];
 }
 
 function anchorTier(
@@ -101,6 +88,28 @@ function anchorTier(
     return ANCHOR_TIER_BAILER_JONES;
   }
   return ANCHOR_TIER_INHERITED;
+}
+
+/** Null where nothing clears the bar. See README.md § System distance
+ *  coherence. */
+export function trustedParallaxPrecision(
+  star: Star, sources: CoherenceSources, hostsSubsystem = false,
+): number | null {
+  if (!hostsSubsystem && star.gaiaSourceId !== null) {
+    const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
+    if (g !== undefined && isCoherenceAnchorGrade(g)
+      && g.parallaxMas !== null && g.parallaxErrorMas !== null) {
+      return g.parallaxErrorMas / g.parallaxMas;
+    }
+  }
+  if (star.hip !== null) {
+    const h = sources.hip2.get(star.hip);
+    if (h !== undefined && h.plxMas !== null && h.plxMas > 0
+      && h.plxErrorMas !== null) {
+      return h.plxErrorMas / h.plxMas;
+    }
+  }
+  return null;
 }
 
 /** Best available (distance_pc, sigma_pc) measurement for the record,
@@ -177,6 +186,7 @@ export function applySystemDistanceCoherence(
     memberAnchorWins: 0,
     significantDepthKept: 0,
     anchorPlacementInconsistent: 0,
+    memberAnchorPrecisionVetoed: 0,
   };
 
   const byGaia = new Map<string, number>();
@@ -243,7 +253,11 @@ export function applySystemDistanceCoherence(
     };
 
     let anchorIdx: number | null = null;
-    let anchorRank: [number, number, string] | null = null;
+    let anchorRank: AnchorRank | null = null;
+    let anchorHostsSubsystem = false;
+    let primaryIdx: number | null = null;
+    let primaryRank: AnchorRank | null = null;
+    let primaryHostsSubsystem = false;
     for (const [idx, info] of members) {
       // Tier, then pair-primary side, then the WDS-canonical letter
       // (the record holding 'A' beats one holding 'C' — catalog index
@@ -252,22 +266,38 @@ export function applySystemDistanceCoherence(
       for (const t of info.tokens) {
         if (minToken === '' || t < minToken) minToken = t;
       }
-      const rank: [number, number, string] = [
-        anchorTier(stars[idx], sources, hostsSubsystem(info)),
+      const subsystem = hostsSubsystem(info);
+      const rank: AnchorRank = [
+        anchorTier(stars[idx], sources, subsystem),
         info.isPrimary ? 0 : 1, minToken,
       ];
-      if (
-        anchorRank === null
-        || rank[0] < anchorRank[0]
-        || (rank[0] === anchorRank[0] && rank[1] < anchorRank[1])
-        || (rank[0] === anchorRank[0] && rank[1] === anchorRank[1]
-          && rank[2] < anchorRank[2])
-      ) {
+      if (rankBeats(rank, anchorRank)) {
         anchorRank = rank;
         anchorIdx = idx;
+        anchorHostsSubsystem = subsystem;
+      }
+      if (info.isPrimary && rankBeats(rank, primaryRank)) {
+        primaryRank = rank;
+        primaryIdx = idx;
+        primaryHostsSubsystem = subsystem;
       }
     }
     if (anchorIdx === null) continue;
+    // see README.md § System distance coherence, Precision veto
+    if (anchorRank !== null && anchorRank[1] === 1 && primaryIdx !== null) {
+      const memberPrecision = trustedParallaxPrecision(
+        stars[anchorIdx], sources, anchorHostsSubsystem,
+      );
+      const primaryPrecision = trustedParallaxPrecision(
+        stars[primaryIdx], sources, primaryHostsSubsystem,
+      );
+      if (memberPrecision !== null && primaryPrecision !== null
+        && primaryPrecision < memberPrecision) {
+        anchorIdx = primaryIdx;
+        anchorRank = primaryRank;
+        stats.memberAnchorPrecisionVetoed++;
+      }
+    }
     const anchorStar = stars[anchorIdx];
     const anchorDist = starDist(anchorStar);
     if (!(anchorDist > 0) || !Number.isFinite(anchorDist)) continue;

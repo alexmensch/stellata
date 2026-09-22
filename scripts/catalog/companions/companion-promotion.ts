@@ -37,6 +37,8 @@ import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations';
 import type { Star } from '../parse/stars-parse';
+import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
+import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
@@ -447,6 +449,11 @@ export interface PromotionStats {
    *  took the anchor's designation constellation because they carried none of
    *  their own. See {@link inheritAnchorDesignationCon}. */
   existingDesigConFromAnchor: number;
+  /** See README.md § Re-curation of an already-in-catalog member. */
+  existingMemberRecurated: number;
+  /** Ratchets DOWN. See README.md § Same-as bridge to an already-admitted
+   *  source. */
+  existingViaSameasBridge: number;
   /** Pair rows refused because the distance they state IS a parallax a tier
    *  above refused — mostly the parked primary's siblings, which inherit its
    *  blended source_id or HIP along with its distance, rather than the parked
@@ -599,6 +606,8 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
     existingDesigConFromAnchor: 0,
+    existingMemberRecurated: 0,
+    existingViaSameasBridge: 0,
     droppedParkedRecord: 0,
     droppedParkedRecordViaGaia5p: 0,
     droppedParkedRecordOwnedFit: 0,
@@ -1339,6 +1348,11 @@ interface PromotionState {
   /** `<anchorIdx> <memberIdx>` pairs already registered off an existing catalog
    *  record, so a member reached from two cursors subtracts its flux once. */
   existingDimMembers: Set<string>;
+  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  synthGaiaBridges: Map<string, string>;
+  /** Members already re-curated this run, so a member reached from two
+   *  cursors is repositioned once. */
+  recuratedMembers: Set<number>;
 }
 
 interface AnchorDimCandidate {
@@ -1417,6 +1431,76 @@ function registerExistingMemberForAnchorDim(
     ...anchorDimGeometry(row, anchorPrimaryRow.comp),
     av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
   });
+}
+
+/** Observed-photometry absmag embeds A_V and gets it subtracted so the runtime
+ *  raymarch re-adds it without double-counting; a spectral-derived one
+ *  (class→M_V) is already intrinsic. */
+function deExtinctCompanionAbsmag(imputed: CompanionAbsmag, av: number): number {
+  return imputed.source === 'spectral' ? imputed.absmag : imputed.absmag - av;
+}
+
+/** The two tiers that place a record ON its own Gaia 5p solution. */
+const DIST_VIA_OWN_GAIA_FIT: ReadonlySet<string> = new Set([
+  'bailer_jones', 'gaia_dr3_inversion',
+]);
+
+/** See README.md § Re-curation of an already-in-catalog member. */
+function ownFitFailsAnchorGrade(
+  star: Star, gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>,
+): boolean {
+  if (star.gaiaSourceId === null) return false;
+  if (star.distVia === null || !DIST_VIA_OWN_GAIA_FIT.has(star.distVia)) {
+    return false;
+  }
+  const g = gaiaAstrometry.get(star.gaiaSourceId);
+  return g !== undefined && !isCoherenceAnchorGrade(g);
+}
+
+/** Applied in place, so this adds no star and retires none.
+ *  See README.md § Re-curation of an already-in-catalog member. */
+function recurateExistingMember(
+  ctx: PromoteRowContext,
+  state: PromotionState,
+  stats: PromotionStats,
+  dustGrid: DustGrid | null,
+  memberIdx: number,
+): boolean {
+  const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, position,
+          isPairRowPrimary } = ctx;
+  if (isPairRowPrimary || position === null) return false;
+  if (hasIndependentFitRoute(
+    row, anchorPrimaryRow.gaiaSourceId, anchorPrimaryRow.hip,
+  )) {
+    return false;
+  }
+  if (state.recuratedMembers.has(memberIdx)) return false;
+  const member = state.existingStars[memberIdx];
+  if (!ownFitFailsAnchorGrade(member, state.gaiaAstrometry)) return false;
+  state.recuratedMembers.add(memberIdx);
+
+  member.x = position.x;
+  member.y = position.y;
+  member.z = position.z;
+  member.conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
+  const inheritAnchor = anchorStar ?? systemAnchorStar;
+  if (inheritAnchor !== null) {
+    member.vx = inheritAnchor.vx;
+    member.vy = inheritAnchor.vy;
+    member.vz = inheritAnchor.vz;
+  }
+  const spectral = recordSpectralInfo(member);
+  const imputed = imputeCompanionAbsmag(row, anchorPrimaryRow, spectral);
+  if (imputed !== null) {
+    const av = dustGrid
+      ? avSolToStar(dustGrid, position.x, position.y, position.z) : 0;
+    member.absmag = deExtinctCompanionAbsmag(imputed, av);
+    member.physicalRadius = physicalRadius(member.absmag, spectral);
+    member.ci = imputeCompanionCi(row, spectral);
+    if (companionCiIsObserved(row)) member.ci -= av / R_V;
+  }
+  stats.existingMemberRecurated++;
+  return true;
 }
 
 /** A record a pair row resolves to displays a name composed off the anchor
@@ -1510,6 +1594,7 @@ function promoteRow(
       inheritAnchorDesignationCon(
         state.existingStars[existingIdx], anchorStar ?? systemAnchorStar, stats,
       );
+      recurateExistingMember(ctx, state, stats, dustGrid, existingIdx);
       registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid);
       return null;
     }
@@ -1577,6 +1662,19 @@ function promoteRow(
       stats.alreadyInCatalog++;
       return null;
     }
+    const bridged = state.synthGaiaBridges.get(synthId);
+    const bridgedIdx = bridged === undefined
+      ? undefined : state.existing.byGaia.get(bridged);
+    if (bridgedIdx !== undefined) {
+      stats.alreadyInCatalog++;
+      stats.existingViaSameasBridge++;
+      inheritAnchorDesignationCon(
+        state.existingStars[bridgedIdx], anchorStar ?? systemAnchorStar, stats,
+      );
+      recurateExistingMember(ctx, state, stats, dustGrid, bridgedIdx);
+      registerExistingMemberForAnchorDim(ctx, state, bridgedIdx, dustGrid);
+      return null;
+    }
   }
   if (position === null) {
     stats.droppedNoPosition++;
@@ -1596,15 +1694,11 @@ function promoteRow(
   if (imputed.source === 'wds_mag') stats.absmagWdsMagDerived++;
   if (imputed.source === 'anchor_collocated') stats.absmagAnchorCollocated++;
   if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
-  // Build-time de-extinction along the companion's sightline. A
-  // spectral-derived absmag (class→M_V) is already intrinsic, so leave
-  // it; observed-photometry absmag (dmag-imputed / own / inherited-twin)
-  // embeds A_V and gets it subtracted so the runtime raymarch re-adds it
-  // without double-counting. Runs before the MS re-derivation below,
-  // whose MV_MS_TABLE calibration is intrinsic M_V.
+  // Runs before the MS re-derivation below, whose MV_MS_TABLE calibration
+  // is intrinsic M_V.
   const av = dustGrid
     ? avSolToStar(dustGrid, position.x, position.y, position.z) : 0;
-  if (imputed.source !== 'spectral') absmag -= av;
+  absmag = deExtinctCompanionAbsmag(imputed, av);
   if (!PER_COMPONENT_SPECT_VIA.has(row.spectVia)
       && OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)) {
     spectral = { info: spectralFromAbsmag(absmag), display: null };
@@ -1773,6 +1867,8 @@ export function promoteCompanions(
   conAssignment: ConstellationAssignment,
   dustGrid: DustGrid | null = null,
   parked: ParkedRefusals = emptyParkedRefusals(),
+  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow> = new Map(),
+  synthGaiaBridges: Map<string, string> = new Map(),
 ): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
@@ -1800,6 +1896,9 @@ export function promoteCompanions(
     gaiaPhotometryByBackingSource: new Map(),
     anchorDimCandidates: [],
     existingDimMembers: new Set(),
+    gaiaAstrometry,
+    synthGaiaBridges,
+    recuratedMembers: new Set(),
   };
   const getStarAt = (idx: number): Star =>
     idx < existingStars.length

@@ -278,3 +278,78 @@ describe('applySystemDistanceCoherence', () => {
     expect(member.x).toBeCloseTo(176.6, 6);
   });
 });
+
+describe('member-anchor precision veto', () => {
+  function polarisShape(
+    memberPlx: { parallaxMas: number; parallaxErrorMas: number },
+    primaryPlx: { plxMas: number; plxErrorMas: number },
+  ) {
+    const primary = star({ hip: 11767, x: 132.626 });
+    const member = star({ gaiaSourceId: '576', x: 137.233 });
+    const rows = [
+      pairRow({ systemId: '02318+8916-AB', comp: 'A', hip: 11767 }),
+      pairRow({
+        systemId: '02318+8916-AB', comp: 'B', gaiaSourceId: '576',
+        orbitRole: 'secondary',
+      }),
+    ];
+    const src = sources({
+      hip2: new Map([[11767, hip2Row(primaryPlx)]]),
+      gaiaAstrometry: new Map([['576', gaiaRow(memberPlx)]]),
+    });
+    return {
+      primary, member,
+      stats: applySystemDistanceCoherence(rows, [primary, member], src),
+    };
+  }
+
+  it('lets a better-measured member take the anchor (Polaris B)', () => {
+    const { primary, stats } = polarisShape(
+      { parallaxMas: 7.2869, parallaxErrorMas: 0.0178 },
+      { plxMas: 7.54, plxErrorMas: 0.11 },
+    );
+    expect(stats.memberAnchorWins).toBe(1);
+    expect(stats.memberAnchorPrecisionVetoed).toBe(0);
+    expect(primary.x).toBeCloseTo(137.233, 6);
+  });
+
+  it('vetoes a member whose own parallax is looser than the primary', () => {
+    const { primary, member, stats } = polarisShape(
+      { parallaxMas: 7.2869, parallaxErrorMas: 0.2915 },
+      { plxMas: 7.54, plxErrorMas: 0.11 },
+    );
+    expect(stats.memberAnchorWins).toBe(0);
+    expect(stats.memberAnchorPrecisionVetoed).toBe(1);
+    expect(primary.x).toBeCloseTo(132.626, 6);
+    expect(member.x).toBeCloseTo(132.626, 6);
+  });
+
+  it('never credits a primary with a parallax its own sub-pair corrupts', () => {
+    // HIP2's 2.0% is what the primary can stand behind, not its own 0.01%.
+    const primary = star({ hip: 300, gaiaSourceId: '1', x: 50 });
+    const member = star({ gaiaSourceId: '2', x: 50.2 });
+    const rows = [
+      pairRow({ systemId: '00002+0002-AB', comp: 'A', hip: 300, gaiaSourceId: '1' }),
+      pairRow({
+        systemId: '00002+0002-AB', comp: 'B', gaiaSourceId: '2',
+        orbitRole: 'secondary',
+      }),
+      pairRow({ systemId: '00002+0002-Aa,Ab', comp: 'Aa', gaiaSourceId: '1' }),
+      pairRow({
+        systemId: '00002+0002-Aa,Ab', comp: 'Ab', gaiaSourceId: '1',
+        orbitRole: 'secondary',
+      }),
+    ];
+    const src = sources({
+      hip2: new Map([[300, hip2Row({ plxMas: 20, plxErrorMas: 0.4 })]]),
+      gaiaAstrometry: new Map([
+        ['1', gaiaRow({ parallaxMas: 20, parallaxErrorMas: 0.002 })],
+        ['2', gaiaRow({ parallaxMas: 19.9203, parallaxErrorMas: 0.0996 })],
+      ]),
+    });
+    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    expect(stats.memberAnchorWins).toBe(1);
+    expect(stats.memberAnchorPrecisionVetoed).toBe(0);
+    expect(primary.x).toBeCloseTo(50.2, 6);
+  });
+});

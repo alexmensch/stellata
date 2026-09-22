@@ -5,7 +5,7 @@
 import type { GaiaAstrometryCatalogRow } from '../direction-cascade';
 import type { MultiplesTsvRow } from '../../companions/companion-promotion';
 import { wdsRootOf } from '../../companions/companion-promotion';
-import { isCoherenceAnchorGrade } from '../../multiplicity/system-coherence';
+import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor, parallaxSignalToNoise } from './parallax-cascade';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */

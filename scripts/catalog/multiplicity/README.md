@@ -17,6 +17,15 @@ scripts/catalog/multiplicity/
   system-coherence.ts (+ test)    Post-pass forcing one distance per
                                   physical system, so a pair never
                                   straddles two distance layers.
+  anchor-grade-pure.ts            isCoherenceAnchorGrade and its two
+                                  thresholds. Pure, and imported by three
+                                  folders — the coherence pass here, the
+                                  parallax cascade's pair_member tier, and
+                                  companion promotion. Its own module
+                                  because the coherence pass reads
+                                  wdsRootOf out of ../companions/, so a
+                                  promotion-side import of it through
+                                  system-coherence.ts would close a cycle.
 ```
 
 ## Multiplicity status
@@ -217,7 +226,8 @@ camera-anywhere failure the single-star distance stack can't see.
 Per WDS root with ≥2 resolved own-record members:
 
 - **Anchor pick — purpose-aware, not recency-aware.** Best tier wins:
-  clean unsaturated Gaia 5p (`isCoherenceAnchorGrade` — parallax > 0,
+  clean unsaturated Gaia 5p (`isCoherenceAnchorGrade`, in
+  `anchor-grade-pure.ts` — parallax > 0,
   RUWE ≤ 1.4, ipd_frac_multi_peak ≤ 2 **percent**, the column being
   0–100 here unlike direction-cascade's fraction-scale threshold, and
   G ≥ 3.0), then HIP2 coverage, then Bailer-Jones membership, then
@@ -233,6 +243,22 @@ Per WDS root with ≥2 resolved own-record members:
   photocentre wobble on periods beyond Gaia's baseline corrupts the 5p
   parallax without tripping RUWE. Ties break pair-primary first, then
   the WDS-canonical letter.
+- **Precision veto on a member anchor.** Tier ranks PROVENANCE, and it is
+  the pair primary's placement every member is about to be moved onto, so
+  a member displacing the primary must also be the better MEASUREMENT:
+  `trustedParallaxPrecision` compares fractional parallax error and the
+  primary keeps the anchor when it wins. Only a fit clearing the
+  anchor-grade bar counts — a fit that bar rejects publishes a formal
+  sigma understating its own error — and `hostsSubsystem` bars the Gaia
+  branch here exactly as it does in the tier pick, so a sub-pair's
+  photocentre wobble cannot be read as precision. Counted
+  `systemCoherenceMemberAnchorPrecisionVetoed`. Polaris is the case the
+  veto stands aside for: A is Gaia-saturated at HIP2's 1.46% while B, which
+  a V ≤ 11 floor admits, measures 0.24% clean — the member is six times
+  better and takes the anchor, moving the system to 136.965 pc. A member
+  that outranks a MEASURED primary is always measured itself (nothing below
+  the HIP2 tier carries a trusted fit), so the veto turns on the comparison
+  alone.
 - **Anchor placement-consistency gate.** A picked anchor whose rendered
   catalog distance contradicts its own best parallax — by >3σ AND >20%
   of the anchor distance — poisons the whole system, so the system is
@@ -262,6 +288,7 @@ already-coherent anchors, and the baked pair geometry in catalog.bin
 matches what `binaries.bin` renders. Pinned in build-counts as
 `systemCoherenceSystems` / `systemCoherenceRepositioned` /
 `systemCoherenceMemberAnchorWins` /
-`systemCoherenceSignificantDepthKept`.
+`systemCoherenceSignificantDepthKept` /
+`systemCoherenceMemberAnchorPrecisionVetoed`.
 `docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
 carries the science framing.
