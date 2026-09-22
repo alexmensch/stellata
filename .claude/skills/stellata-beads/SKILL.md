@@ -3,9 +3,8 @@ name: stellata-beads
 description: >
   How beads works in stellata specifically — Dolt persistence and when a manual
   `bd dolt push` is required, the concurrent-session ownership rule, recovering
-  a field a bad write wiped, the P0–P4 prioritisation framework, and the three
-  things every `bd create` must carry (parent epic, priority, model-routing
-  label). Use when running `bd` in this repo: filing or closing beads, setting
+  a field a bad write wiped, the P0–P4 prioritisation framework, and the two
+  things every `bd create` must carry (parent epic, priority). Use when running `bd` in this repo: filing or closing beads, setting
   a priority, picking up work, or closing out a session — including a bead
   filed mid-task for a bug found in review or smoke, or for follow-up work.
   Load the `beads` skill alongside this one: it carries the never-orphan filing
@@ -65,35 +64,16 @@ dolt sql -q "select description from issues as of '<hash>' where id='<id>'" -r c
 Read the result back through a CSV parser, not by eye — the `bd show` render
 re-wraps lines.
 
-## `bd create` carries three arguments, not one
+## `bd create` carries two arguments, not one
 
-Every one of these is set **at creation**, and getting any of them wrong is
-silent — nothing prompts you, the bead just looks filed:
+Both are set **at creation**, and getting either wrong is silent — nothing
+prompts you, the bead just looks filed:
 
 - `--parent <epic-id>` — § Choosing the parent epic below, and `beads` skill
   § Never create a bead outside an epic for the escalation path when none fits.
 - `--priority` — § Prioritisation below.
-- **one** of `needs-fable` / `opus5-ok` on any implementation bead —
-  § Model-routing labels below.
 
 Audit: `bd list --status=open --no-parent --exclude-type=epic`.
-
-### Model-routing labels
-
-- **`needs-fable`** — diagnosis, design gates, numerics under uncertainty.
-  The work is deciding *what* to do: mechanism-hunting a perf cost, deriving
-  a precision bound, weighing a tradeoff with no written recipe.
-- **`opus5-ok`** — well-specified implementation. The work is *doing* a known
-  thing carefully: porting a shader against an established pattern, wiring a
-  knob, a mechanical deletion, a UI surface, running a framed measurement.
-
-Split rather than hedge — a bead needing both is the decompose-along-a-seam
-signal from `beads` skill § Sizing a bead.
-
-**Never on an epic**, and **strip it the moment a task becomes one.** Children
-inherit parent labels at creation, so an epic-level label silently mislabels
-every child filed afterwards, and the roster then looks complete with nothing
-prompting a re-read.
 
 ### Choosing the parent epic
 
