@@ -65,9 +65,10 @@ sentence on the page.
 
 So `no-api` names a newer browser or OS, and `no-adapter` names whatever
 is withholding the GPU — hardware acceleration switched off, a driver the
-browser blocks, a remote or virtual session with no GPU to hand out. The
-mobile branch differs again, because a phone has neither a
-hardware-acceleration switch nor a driver to update.
+browser blocks, a remote or virtual session with no GPU to hand out. Two
+branches differ again: a phone has neither a hardware-acceleration switch
+nor a driver to update, and Firefox gets Chrome on this verdict too
+(§ UA picks the wording).
 
 The parameter is **required, with no default**. A default is what let the
 verdict go unread in the first place: the lead sentence branched on it
@@ -91,11 +92,16 @@ Two branches carry the whole subtlety:
 - **Firefox is matched before macOS Safari.** A Mac Firefox UA contains
   `Macintosh`, so checking the Safari branch first would tell a Firefox
   user to update a browser they are not running.
-- **Firefox then splits again by operating system.** It shipped WebGPU on
-  Windows and Apple-silicon macOS, so "update Firefox" is the fix there —
-  but on Android it has not shipped at all and on Linux it sits behind
-  `dom.webgpu.enabled`, where updating is advice the detail sentence
-  itself contradicts. Those two get Chrome, or the flag, instead.
+- **Firefox always names Chrome, whatever the OS and whatever the
+  verdict.** No Firefox configuration has been observed reaching a running
+  app — Linux keeps WebGPU behind `dom.webgpu.enabled`, Android has not
+  shipped it at all, and the Windows / Apple-silicon builds that have
+  still reach this page. Chrome does run on every platform tested. So the
+  action is Chrome and the per-OS fact moves to the **detail**, phrased as
+  a possibility ("a newer Firefox may work") rather than an instruction:
+  the reader gets the route that works first, and the Firefox route
+  second. This is also the one branch where `no-adapter` does not name
+  hardware acceleration — that setting is the fix on Chrome, not here.
 
 The version numbers come from the support audit in the `stellata-0it`
 epic body, which is **dated** — the page says so in as many words, so a
