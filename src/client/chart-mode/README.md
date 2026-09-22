@@ -139,12 +139,13 @@ are hidden on paper). Planet name labels ride the chart-labels engine
 (`kind-planet`, proper-name priority tier); `planet-labels.ts` stays
 chart-hidden as before.
 
-```glsl
-chartT = clamp(
-  (appMag - uChartMagBright) / max(uLimitMag - uChartMagBright, 0.001),
-  0, 1);
-pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
-vPhysRatio = 1.0;  // force the frag shader's disc-pass branch
+```ts
+// ../webgpu/star/star-vertex-tsl.ts, the chart arm
+const chartT = clamp(
+  appMag.sub(u.uChartMagBright)
+    .div(max(u.uLimitMag.sub(u.uChartMagBright), 0.001)),
+  0.0, 1.0);
+pxSize.assign(mix(u.uChartDiscMaxPx, u.uChartDiscMinPx, chartT));
 ```
 
 Three tunable uniforms shared with JS via `getChartDiscParams()`:
@@ -162,14 +163,15 @@ crowding everything to one corner. Variability magMod is added to
 
 ## Chart-mode disc rendering — flat hard-edged + per-vertex AA
 
-The fragment shader's `uMonochrome > 0.5` branch renders a flat
-disc (no super-Gaussian profile, no halo, no luminosity-class
-softening) with a **one-pixel antialiased outer edge**:
+The fragment's chart branch (`chartDiscCoverage` + `chartInkColour`,
+`../webgpu/star/star-emission-tsl.ts`) renders a flat disc (no
+super-Gaussian profile, no halo, no luminosity-class softening) with a
+**one-pixel antialiased outer edge**:
 
-```glsl
-float aa = max(vAaWidth, 1e-3);
-float disc = 1.0 - smoothstep(0.5 - aa, 0.5, r);
-outColor = vec4(vec3(1.0 - disc), 1.0);  // black ink under MultiplyBlending
+```ts
+const aa = max(v.vAaWidth, 1e-3);
+const disc = float(1.0).sub(smoothstep(float(0.5).sub(aa), 0.5, length(v.vUv)));
+vec4(vec3(float(1.0).sub(disc)), 1.0); // black ink under MultiplyBlending
 ```
 
 The ink only lands because the material is in `MultiplyBlending` — and
