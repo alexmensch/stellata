@@ -1,7 +1,6 @@
 # GPU timing — how a frame's real GPU cost is measured
 
-Where the `gpu.*` rows come from, and why the two backends give a
-different number of them. The HUD that displays them is
+Where the `gpu.*` rows come from. The HUD that displays them is
 [`../README.md`](../README.md); the harness that prices one pass is
 [`../frame-cost/README.md`](../frame-cost/README.md).
 
@@ -9,86 +8,38 @@ different number of them. The HUD that displays them is
 
 ```
 src/client/debug/gpu-timing/
-  gpu-timer.ts (+ test)          EXT_disjoint_timer_query_webgl2 wrapper —
-                                 one rotating scope per frame. WebGL2 only.
   gpu-frame-samples.ts (+ test)  Fan-out channels for the GPU durations the
                                  render loop measures itself: the render
                                  passes (`gpu.frame`) and the compute passes
-                                 (`gpu.compute`), resolved in one cycle.
-                                 Publishes on WebGPU; the HUD and the
-                                 pricing harness both subscribe.
-  fake-gl.ts                     Test-only WebGL2 timer-query stub, shared
-                                 by gpu-timer + perf-hud tests. The WebGPU
-                                 path needs no equivalent — its double is a
-                                 host with `rendererGL: null` plus a call to
+                                 (`gpu.compute`), resolved in one cycle. The
+                                 HUD and the pricing harness both subscribe.
+                                 A suite's double is a host plus a call to
                                  `publishGpuFrameSample`.
 ```
 
 ## `gpu.frame` is the only row that prices anything
 
-`GPU_WHOLE_FRAME_SCOPE` (`gpu.frame`) exists on both backends and means
-the same thing on both: real GPU milliseconds for one frame's **render
-passes**. The perf HUD's headline says `gpu` whenever that row exists and
-`submit` (CPU wall-time around the render calls) when it does not —
-**presence of the row, never which timer object exists**, because the two
-backends produce it by unrelated means.
+`GPU_WHOLE_FRAME_SCOPE` (`gpu.frame`) is real GPU milliseconds for one
+frame's **render passes**. The perf HUD's headline says `gpu` whenever
+that row exists and `submit` (CPU wall-time around the render calls) when
+it does not — **presence of the row, never which timer object exists**.
 
-**A compute pass is not in it.** On WebGPU the frame also dispatches
+**A compute pass is not in it.** The frame also dispatches
 compute — the star compaction every rendered frame, the extinction
 prepass on the frames it recomputes — and those land on their own row,
-`gpu.compute` (§ WebGPU). The two are never summed into one figure: every
+`gpu.compute`. The two are never summed into one figure: every
 committed pin row and every archived dwell reads `gpu.frame` as the render
 passes, and folding compute in would re-price all of them. Read the two
 rows side by side; a change that moves work from a render pass into a
 compute kernel shows as the frame row falling and the compute row rising.
 
-**To price a single pass, disable it and difference `gpu.frame`.** That
-is true on both backends, for different reasons (§ WebGL2, § WebGPU), and
+**To price a single pass, disable it and difference `gpu.frame`.**
 `../frame-cost/` automates it. This README owns the clocks; the canon
 they feed — wall clock is the total, slots are attribution, same buffer
 and same clock or no comparison — is `docs/render-rules.md`
 § Measurement canon.
 
-## WebGL2 — one query at a time, and it over-attributes
-
-`gpu-timer.ts` wraps `EXT_disjoint_timer_query_webgl2`. The extension is
-feature-detected at panel open; absent it (Safari exposes none)
-`gpuBegin`/`gpuEnd` stay no-ops and no `gpu.*` row appears at all.
-
-**One query at a time — this shapes everything.** WebGL2 permits exactly
-one active `TIME_ELAPSED` query per context and exposes no timestamp
-queries, so scopes cannot nest or overlap within a frame. Each frame
-times a single scope and rotates to the next, so **N scopes sample at 1/N
-the frame rate**. The ring-buffer averages stay meaningful; the per-frame
-histogram is still driven by `frame.total`, never by these.
-
-**Never add the per-pass `gpu.*` rows together, and never ratio one
-against `gpu.frame`.** Two problems compound. Rotation means two scopes
-never sample the same frame, so their averages describe different work.
-Worse, the per-pass scopes **over-attribute** on ANGLE/Metal: measured on
-an M4, `gpu.main` came within 1 % of `gpu.frame` while `gpu.localDepth`
-was a further 83 % of the frame on top of it — a sum of 42.7 ms against a
-measured frame of 23.4 ms. Elapsed time is derived from pass boundaries,
-and on a tile-based deferred renderer a pass's fragment work executes
-when that pass is finalised, not necessarily inside the query that
-encoded it. The per-pass rows are a relative signal — does this scope
-respond to this change — and nothing more.
-
-Because `gpu.frame` encloses the inner scopes, `begin()` refuses the inner
-ones on its turn and their `end()` calls must leave the enclosing query
-running — `endQuery` takes no handle, so closing on a label mismatch would
-stop the clock early. Pinned in `gpu-timer.test.ts`.
-
-Two further properties a reader will otherwise get wrong:
-
-- **Results are async** — a query resolves some frames after submission,
-  so `gpu.*` rows lag the scene by a frame or two.
-- **A disjoint event invalidates everything in flight.** Reading
-  `GPU_DISJOINT_EXT` clears it, so it is read exactly once per drain and
-  applied to every result in that pass; those samples are dropped, not
-  reported low.
-
-## WebGPU — an exact frame total, and no per-pass rows at all
+## An exact frame total, and no per-pass rows at all
 
 The renderer boots with `trackTimestamp: true`, and three then allocates a
 timestamp query **pair per pass**, automatically, with no scope calls from
@@ -96,9 +47,9 @@ us — into one of **two pools**, keyed by pass type. `gpu.frame` is
 `resolveTimestampsAsync('render')`: the summed real duration of every
 render pass tagged with the newest frame. `gpu.compute` is
 `resolveTimestampsAsync('compute')`, the same sum over that frame's
-compute passes. So `gpu.frame` here is a sum of true per-pass
-measurements rather than one derived elapsed span — strictly better than
-the WebGL2 figure, and available wherever the adapter grants the feature.
+compute passes. So `gpu.frame` is a sum of true per-pass measurements
+rather than one derived elapsed span, available wherever the adapter
+grants the feature.
 
 **The two pools answer for the same frame.** three tags every query
 `<type>:<call>:<id>:f<frame>` off the renderer's frame counter, whichever
@@ -106,7 +57,7 @@ pool it lands in, and each resolve returns the newest frame's total. Both
 are resolved from one call at the end of `animate()`, after the frame's
 last pass, so a render sample and the compute sample published beside it
 describe one frame. A frame that dispatched no compute — no pool exists
-yet — publishes a render sample alone; a WebGL2 boot publishes neither.
+yet — publishes a render sample alone.
 
 **`trackTimestamp: true` is a request, not a grant.** three ANDs it with
 `hasFeature('timestamp-query')` at backend init and clears it silently
@@ -193,8 +144,7 @@ Three consequences, none of them a limitation to work around:
   concurrently, so nothing samples at 1/N the frame rate.
 - **A timestamp resolve is not an exclusive resource.** The render loop
   resolves every rendered frame and `gpu-frame-samples.ts` fans the result
-  out, so the HUD and a pricing sweep can read the same frames. The
-  closed-panel precondition in `../frame-cost/README.md` is WebGL2-only.
+  out, so the HUD and a pricing sweep can read the same frames.
 - **Per-pass durations exist but are not public API.** three keys them by
   an internal `timestampUID` (`<uid>:f<frameId>`) reachable only through
   `renderer.backend.get(renderContext)`. Naming our passes off that would

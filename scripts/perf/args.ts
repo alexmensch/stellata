@@ -2,7 +2,7 @@
 
 import { parseArgs, type ParseArgsConfig } from 'node:util';
 import {
-  GPU_FRAME_METHODS,
+  REQUESTABLE_GPU_FRAME_METHODS,
   type GpuFrameMethod,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
@@ -155,7 +155,7 @@ export function usage(): string {
     '  --pre-disable <keys>     differential: switch these passes OFF for the whole sweep (restored after)',
     '  --no-park                differential: keep the adaptation measurement unparked for the sweep',
     '  --force-recompute        differential and dwell: run the extinction kernel every frame (a parked camera skips it)',
-    `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the adapter\'s best; a pin run, ${DWELL_METHOD})`,
+    `  --method <clock>         ${REQUESTABLE_GPU_FRAME_METHODS.join('|')}       (default: the adapter\'s best; a pin run, ${DWELL_METHOD})`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
     `  --empty-passes <n>       emptyPass row: empty passes added; savedMs bounds all n, never n× one (default ${EMPTY_PASSES_DEFAULT})`,
@@ -186,7 +186,7 @@ export function usage(): string {
  * error rather than a no-op: the in-app instrument refuses a pin it cannot
  * honour rather than switching clocks underneath the caller
  * (`src/client/debug/frame-cost/README.md` § Preconditions), and a table
- * stamped `raf-delta` after `--method timer-query` was asked for is the same
+ * stamped `raf-delta` after `--method timestamp` was asked for is the same
  * lie with a typed command line in front of it.
  */
 const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
@@ -392,7 +392,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     preDisable,
     noPark: values['no-park'] as boolean,
     forceRecompute: values['force-recompute'] as boolean,
-    method: optionalOneOf('method', GPU_FRAME_METHODS),
+    method: optionalOneOf('method', REQUESTABLE_GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),
     dwellFrames: optionalNum('dwell-frames'),
     emptyPasses: optionalNum('empty-passes'),

@@ -11,8 +11,9 @@ import {
   type RingStats,
   type RowDatum,
 } from './perf-hud-pure';
-import { GPU_WHOLE_FRAME_SCOPE, GpuTimer } from './gpu-timing/gpu-timer';
-import { GPU_COMPUTE_SCOPE, onGpuComputeSample, onGpuFrameSample } from './gpu-timing/gpu-frame-samples';
+import {
+  GPU_COMPUTE_SCOPE, GPU_WHOLE_FRAME_SCOPE, onGpuComputeSample, onGpuFrameSample,
+} from './gpu-timing/gpu-frame-samples';
 
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;
@@ -42,8 +43,6 @@ let frameCounter = 0;
 // often one lands.
 const frameDeltas: RingStats = { ring: new Float32Array(RING_SIZE), idx: 0, count: 0 };
 let lastFrameNowMs = 0;
-
-let gpuTimer: GpuTimer | null = null;
 
 let installed = false;
 let visible = false;
@@ -120,7 +119,6 @@ function realFrame(): void {
     if (frameDeltas.count < RING_SIZE) frameDeltas.count++;
   }
   lastFrameNowMs = nowMs;
-  gpuTimer?.advanceFrame(recordGpuSample);
   // Drop sections that haven't reported in a full ring-window. Without
   // this, the HUD averages stale data forever (chart.* entries persisted
   // in navigate mode after exiting chart mode).
@@ -134,71 +132,16 @@ function realFrame(): void {
   renderPanel();
 }
 
-function realGpuBegin(label: string): void { gpuTimer?.begin(label); }
-function realGpuEnd(label: string): void { gpuTimer?.end(label); }
-
 let _mark: (l: string) => void = () => {};
 let _measure: (l: string) => void = () => {};
 let _frame: () => void = () => {};
-let _gpuBegin: (l: string) => void = () => {};
-let _gpuEnd: (l: string) => void = () => {};
 
 export function mark(label: string): void { _mark(label); }
 export function measure(label: string): void { _measure(label); }
 export function frame(): void { _frame(); }
 
-/** Bracket a GPU scope. Records under `gpu.<label>` when the driver
- *  exposes a timer query; otherwise nothing is recorded and the CPU-side
- *  `submit.<label>` measure is all the HUD shows. */
-export function gpuBegin(label: string): void { _gpuBegin(label); }
-export function gpuEnd(label: string): void { _gpuEnd(label); }
-
 let unsubGpuFrame: (() => void) | null = null;
 let unsubGpuCompute: (() => void) | null = null;
-
-/**
- * Exclusive whole-frame GPU sampler for the pricing sweep.
- *
- * WebGL2 only — the WebGPU renderer measures its own frames and the
- * harness subscribes to `onGpuFrameSample` instead
- * (`frame-cost/gpu-frame-source.ts`).
- *
- * Installs a single-scope timer into the swappable hooks so EVERY frame
- * samples `gpu.frame` — no rotation, unlike the panel's multi-scope timer.
- * Returns null while the panel is open (its timer holds the context's
- * single TIME_ELAPSED slot) or when the driver exposes no timer query.
- *
- * The returned release() restores the no-op hooks only if they are still
- * this sampler's own — a panel opened mid-hold owns them now, and its
- * queries must not be clobbered. Samples stop arriving in that case;
- * callers must treat a dried-up sample stream as an abort, not a zero.
- */
-export function acquireGpuFrameSampler(
-  gl: WebGL2RenderingContext,
-  onSample: (ms: number) => void,
-): (() => void) | null {
-  if (installed) return null;
-  const timer = GpuTimer.create(gl);
-  if (timer === null) return null;
-  const begin = (label: string): void => {
-    if (label === GPU_WHOLE_FRAME_SCOPE) timer.begin(label);
-  };
-  const end = (label: string): void => {
-    if (label === GPU_WHOLE_FRAME_SCOPE) timer.end(label);
-  };
-  const drain = (): void => timer.advanceFrame((_label, ms) => onSample(ms));
-  _gpuBegin = begin;
-  _gpuEnd = end;
-  _frame = drain;
-  return () => {
-    if (_gpuBegin === begin) {
-      _gpuBegin = () => {};
-      _gpuEnd = () => {};
-      _frame = () => {};
-    }
-    timer.dispose();
-  };
-}
 
 /** True while the debug panel holds the real instrumentation. A raf-delta
  *  sweep measures wall time, so the panel's per-tick work lands inside its
@@ -209,17 +152,12 @@ export function perfInstrumentationInstalled(): boolean {
 
 import { type DebugSection, setReadoutText } from './debug-panel';
 
-export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSection {
+export function buildPerfSection(): DebugSection {
   if (!installed) {
     installed = true;
     _mark = realMark;
     _measure = realMeasure;
     _frame = realFrame;
-    gpuTimer = gl ? GpuTimer.create(gl) : null;
-    if (gpuTimer) {
-      _gpuBegin = realGpuBegin;
-      _gpuEnd = realGpuEnd;
-    }
     unsubGpuFrame = onGpuFrameSample(
       (ms) => recordGpuSample(GPU_WHOLE_FRAME_SCOPE, ms),
     );
@@ -352,15 +290,11 @@ export function buildPerfSection(gl: WebGL2RenderingContext | null): DebugSectio
       _mark = () => {};
       _measure = () => {};
       _frame = () => {};
-      _gpuBegin = () => {};
-      _gpuEnd = () => {};
       unsubGpuFrame?.();
       unsubGpuFrame = null;
       unsubGpuCompute?.();
       unsubGpuCompute = null;
       installed = false;
-      gpuTimer?.dispose();
-      gpuTimer = null;
       sections.clear();
       starts.clear();
       frameCounter = 0;

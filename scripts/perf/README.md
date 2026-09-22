@@ -107,7 +107,7 @@ pnpm run survivors -- [--url http://localhost:5173] [--json <path>]
 It visits every canon vantage on WebGPU at the runner's own default viewport
 and device pixel ratio, so there is nothing to select. An unknown flag is a
 usage error, exit 2 — `parseArgs` runs `strict` here for the same reason the
-runner's does. Exit 1 is a boot that came up on the other backend.
+runner's does. Exit 1 is a boot that came up without the seam.
 
 **`--json` writes schema `stellata-survivors/1`**: the `run` provenance block
 a perf file carries — timestamps, argv, the commit pair and dirty flag,
@@ -128,7 +128,7 @@ the page they came off.
 pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
                  [--pre-disable a,b] [--no-park] [--force-recompute]
-                 [--method timer-query|timestamp|raf-delta]
+                 [--method timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
                  [--frames 240] [--readback-every 4|4,1,2] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
@@ -230,8 +230,8 @@ refused. An explicit `--method` overrides the pin, and the run says it
 did.
 
 **A flag the chosen mode does not read is an error, not a no-op.**
-`--mode dwell --method timer-query` is refused rather than quietly stamping
-the table `raf-delta`, and the same goes for `--passes`, `--pre-disable`,
+`--mode dwell --method timestamp` is refused rather than quietly stamping
+the table with the clock the mode actually used, and the same goes for `--passes`, `--pre-disable`,
 `--no-park`, `--budget-ms`, `--dwell-frames`, `--settle-frames` and
 `--no-interleave` outside `differential`, `--force-recompute` outside
 `differential` and `dwell`, `--frames` and `--readback-every` outside dwell and
@@ -375,7 +375,7 @@ too: `diff/README.md`.
 
 ## Pinning
 
-`--pin pins/<slug>.json` summarises a whole-canon, both-backend dwell run
+`--pin pins/<slug>.json` summarises a whole-canon dwell run
 as the committed perf pin; `--against-pin <path>` prints the verdicts for
 the rows this run measured, lists the pin rows it did not, and exits 1 on
 a `✗` or a refused row. A run refused for one row is not re-armed:

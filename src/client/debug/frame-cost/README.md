@@ -88,9 +88,12 @@ src/client/debug/frame-cost/
   anything) — and `raf-delta` wall time otherwise: any adapter that
   withheld the timestamp feature, and any that granted it but resolves
   durations no frame can have, which is Chrome today
-  (`../gpu-timing/README.md` § WebGPU, § A granted feature can still
+  (`../gpu-timing/README.md` § A granted feature can still
   resolve garbage). `timer-query` remains in `GpuFrameMethod` so an
-  archived run that names it still parses; pinning it now refuses.
+  archived run that names it still parses; it is absent from
+  `REQUESTABLE_GPU_FRAME_METHODS`, so `--method timer-query` is refused at
+  parse time rather than after the arm is spent, and a console caller that
+  reaches past that still meets the runtime refusal.
   Under `raf-delta` a differential below the vsync quantum reads as zero
   unless the frame is already over budget *and* not itself pinned to a
   higher multiple of the refresh — so every row whose dwells the display

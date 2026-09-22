@@ -40,10 +40,7 @@ import {
   mark as perfMark,
   measure as perfMeasure,
   frame as perfFrame,
-  gpuBegin as perfGpuBegin,
-  gpuEnd as perfGpuEnd,
 } from './debug/perf-hud';
-import { GPU_WHOLE_FRAME_SCOPE } from './debug/gpu-timing/gpu-timer';
 import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples';
 import { RenderGate } from './render-gate/render-gate';
 import { TrackballSettle } from './camera/controls/input/trackball-settle';
@@ -2736,9 +2733,7 @@ export class Stellata implements FrameAnchor {
       this.renderGate.invalidate('exposure-cut');
     }
     perfMeasure('pre-render');
-    perfGpuBegin(GPU_WHOLE_FRAME_SCOPE);
     perfMark('submit.main');
-    perfGpuBegin('main');
     this.hdr.bind();
     // Ahead of the node sync that copies it: the window moves with FOV,
     // viewport and the two distN sliders, so a stale one would elide the
@@ -2767,27 +2762,19 @@ export class Stellata implements FrameAnchor {
       }
     }
     this.renderer.render(this.scene, this.camera);
-    perfGpuEnd('main');
     perfMeasure('submit.main');
     perfMark('submit.localDepth');
-    perfGpuBegin('localDepth');
     this.localDepthPass.render(this.renderer, this.camera);
-    perfGpuEnd('localDepth');
     perfMeasure('submit.localDepth');
     perfMark('submit.tonemap');
-    perfGpuBegin('tonemap');
     this.hdr.resolve();
-    perfGpuEnd('tonemap');
     perfMeasure('submit.tonemap');
     // After the resolve, so reducing the statistic attachment never delays
     // the frame it measures. The readback lands a frame or two later, far
     // inside the slew (hdr/exposure/reduction/README.md § Latency).
     perfMark('submit.reduction');
-    perfGpuBegin('reduction');
     this.measureAdaptationStatistic(measurementParked);
-    perfGpuEnd('reduction');
     perfMeasure('submit.reduction');
-    perfGpuEnd(GPU_WHOLE_FRAME_SCOPE);
     // After the frame's LAST pass, whatever is listening: a pool nothing
     // resolves overruns and stops sampling.
     resolveAndPublishGpuFrame(this.webgpu.renderer, this.webgpu.timestampsAvailable);

@@ -63,7 +63,7 @@ adapter resolves believable durations, and reported as a second row
 (`gpu-timestamp`, the render passes) — and the compute stream from the same
 resolve cycle as a third (`gpu-compute`: the star compaction every frame,
 plus the extinction prepass on the frames it recomputes;
-`src/client/debug/gpu-timing/README.md` § WebGPU). The three are different
+`src/client/debug/gpu-timing/README.md` § An exact frame total, and no per-pass rows at all). The three are different
 instruments: read them side by side, never differenced, and never sum the
 two GPU rows into a frame total — `gpu.frame` means the render passes in
 every pin row and every archived dwell. Each stream is subscribed on its own

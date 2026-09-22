@@ -2,9 +2,10 @@
 // passes on one channel, the compute passes on another — fanned out to
 // every consumer that wants them. See README.md § GPU timing.
 
-import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timer';
-
 type Subscriber = (ms: number) => void;
+
+/** README.md § `gpu.frame` is the only row that prices anything. */
+export const GPU_WHOLE_FRAME_SCOPE = 'frame';
 
 /** three keeps one timestamp pool per pass type and resolves them
  *  separately; a resolve of one recycles nothing in the other. */
@@ -68,7 +69,7 @@ export function publishGpuFrameSample(ms: number): void {
   publish('render', ms);
 }
 
-/** Never folded into `gpu.frame`: README.md § WebGPU. */
+/** Never folded into `gpu.frame`: README.md § `gpu.frame` is the only row that prices anything. */
 export function publishGpuComputeSample(ms: number): void {
   publish('compute', ms);
 }
@@ -111,7 +112,7 @@ function publishResolved(pool: TimestampPool, ms: number | undefined): void {
  * each pool's duration to its own channel.
  *
  * Why at most one cycle is in flight, and why one guard covers both pools
- * rather than one each: README.md § WebGPU.
+ * rather than one each: README.md § An exact frame total, and no per-pass rows at all.
  *
  * `timestampsLive` is the boot probe's verdict
  * (`../../webgpu/seam.ts` `timestampsAvailable`); false skips the backend

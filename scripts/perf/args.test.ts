@@ -237,8 +237,11 @@ describe('parseRunArgs', () => {
   it.each([
     [['--scenario', 'mars'], /--scenario/],
     [['--backend', 'metal'], /--backend/],
+    [['--backend', 'both'], /--backend/],
+    [['--backend', 'webgl2'], /--backend/],
     [['--mode', 'stopwatch'], /--mode/],
     [['--method', 'stopwatch'], /--method/],
+    [['--mode', 'differential', '--method', 'timer-query'], /--method/],
     [['--mode', 'dwell', '--frames', '0'], /--frames/],
     [['--mode', 'sweep', '--scales', '0'], /--scales/],
     [['--mode', 'sweep', '--scales', 'half'], /--scales/],

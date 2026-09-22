@@ -7,6 +7,8 @@ export const GPU_FRAME_METHODS = ['timer-query', 'timestamp', 'raf-delta'] as co
 
 export type GpuFrameMethod = (typeof GPU_FRAME_METHODS)[number];
 
+export const REQUESTABLE_GPU_FRAME_METHODS = ['timestamp', 'raf-delta'] as const;
+
 /** Frames discarded before the first dwell of a measurement. Long enough to
  *  absorb the cold-clock ramp and NOT the slow rise over the minutes after
  *  it — README.md § The instrument drifts names both directions, and
