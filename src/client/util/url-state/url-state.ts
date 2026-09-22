@@ -20,7 +20,7 @@ import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/f
 import { APP_PATH, buildSharePath, pickShareBlob } from './share-path-pure';
 import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
-} from './pose-change-pure';
+} from './pose-change/pose-change-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import type {
   CoordSphereFrame,
@@ -51,7 +51,7 @@ const SCHEMA_VERSION_V3 = 3;
 const SCHEMA_VERSION = 4;
 // Quantised-scalar slots only — `fov` in degrees and `ev` in stops, each far
 // coarser than this. Pose vectors carry no absolute threshold at all; they go
-// through `pose-change-pure.ts`.
+// through `pose-change/pose-change-pure.ts`.
 const SCALAR_EPS = 1e-3;
 
 // Default values that the encoder uses to decide whether to omit a field.
@@ -1139,8 +1139,8 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   const t = encodeTgt;
   anchoredPose(stellata, focused, c, t);
   const u = stellata.camera.up;
-  // README.md#what-counts-as-a-camera-move owns every gate below — each a
-  // fraction of the orbit radius, none a distance.
+  // pose-change/README.md#what-counts-as-a-camera-move owns every gate
+  // below — each a fraction of the orbit radius, none a distance.
   //
   // Don't collapse this to one predicate: vec3FieldV3.isPresent re-checks at
   // strict equality, and that inner layer is what keeps sub-µpc floating-origin
@@ -1671,8 +1671,9 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
     const u = stellata.camera.up;
     // Steady-state path: one scale-free comparison against the snapshot
-    // (`pose-change-pure.ts`). No allocations on the no-change path — this
-    // used to be 10+ string allocations per frame from a toFixed(3)×9 hash.
+    // (`pose-change/pose-change-pure.ts`). No allocations on the no-change
+    // path — this used to be 10+ string allocations per frame from a
+    // toFixed(3)×9 hash.
     if (poseChanged(lastCam, frameCam, frameTgt, u)) {
       snapshotCam(lastCam, frameCam, frameTgt, u);
       changed = true;
