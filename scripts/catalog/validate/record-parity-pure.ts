@@ -157,8 +157,10 @@ export function compareRecordParity(
   };
 }
 
+/** Moved fields are reported, never failed: README.md § Additive-mode record
+ *  parity. */
 export function parityHolds(report: ParityReport): boolean {
-  return report.droppedSids.length === 0 && report.deltasByField.size === 0;
+  return report.droppedSids.length === 0 && report.currentSharedSids === 0;
 }
 
 export function formatParityReport(report: ParityReport, samples = 20): string {

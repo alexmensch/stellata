@@ -62,12 +62,12 @@ describe('record parity — additive mode', () => {
     expect(report.droppedSids).toEqual([]);
   });
 
-  it('names a field that moved on a shared sid', () => {
+  it('names a field that moved on a shared sid, and reports rather than fails it', () => {
     const baseline = buildCatalog([{ sid: 10, absmag: 1 }]);
     const current = buildCatalog([{ sid: 10, absmag: 1.5 }]);
 
     const report = compareRecordParity(baseline, current);
-    expect(parityHolds(report)).toBe(false);
+    expect(parityHolds(report)).toBe(true);
     expect(report.deltasByField.get('absmag')).toBe(1);
     expect(report.deltas).toEqual([
       { sid: 10, field: 'absmag', baseline: '1', current: '1.5' },
@@ -111,6 +111,20 @@ describe('record parity — additive mode', () => {
     expect(report.currentSharedSids).toBe(1);
     expect(report.deltasByField.size).toBe(0);
     expect(report.droppedSids).toEqual([]);
+  });
+
+  it('fails when the current build draws one object twice', () => {
+    const baseline = buildCatalog([{ sid: 10 }]);
+    const current = buildCatalog([{ sid: 10 }, { sid: 10, x: 9 }]);
+
+    expect(parityHolds(compareRecordParity(baseline, current))).toBe(false);
+  });
+
+  it('a baseline drawing one object twice is not the current build failing', () => {
+    const baseline = buildCatalog([{ sid: 10 }, { sid: 10, x: 9 }]);
+    const current = buildCatalog([{ sid: 10 }]);
+
+    expect(parityHolds(compareRecordParity(baseline, current))).toBe(true);
   });
 
   it('NO_SID records are counted, never keyed', () => {

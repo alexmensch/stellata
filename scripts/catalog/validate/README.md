@@ -126,18 +126,29 @@ Three tiers, all snapshot-pinned:
 ## Additive-mode record parity
 
 `docs/catalog-driver.md` § 8 holds a deeper magnitude pull to **additive**
-mode: existing records must not move — same sids, zero field deltas — and new
-records only add. `pnpm run validate:record-parity --baseline=<dir>
-[--current=<dir>]` is the measurement, over two directories of built artifacts
-(`catalog-manifest.json` + its chunks); `--current` defaults to `public/`.
+mode on identity: every baseline sid survives, and no object is drawn twice.
+`pnpm run validate:record-parity --baseline=<dir> [--current=<dir>]` is the
+measurement, over two directories of built artifacts (`catalog-manifest.json`
++ its chunks); `--current` defaults to `public/`.
+
+**It fails on two things only**: a baseline sid the current build lacks, and a
+sid two current records carry. A retirement declared in
+`data/sid/retirements.tsv` is honoured by a same-tree baseline too, so it never
+reads as a drop; an undeclared one does. **Field deltas on a shared sid are
+reported, never failed** — companion promotion, anchor-flux conservation and
+system distance coherence read the record set, so a deeper catalogue
+re-anchors systems already there, and that is § 8's sanctioned behaviour. Read
+the moved-field table as the review surface: a field moving on an unexpected
+population is the signal.
 
 **Keyed on `sid`, never on record index.** Records sort by apparent V from Sol,
 so any membership change re-sorts the whole array and every existing record's
 index moves (`../record/README.md` § Record order). An index diff would report
 the whole catalogue. The two derived fields follow the same rule: `companion`
 compares as the companion's **sid**, and `nameOffset` as the resolved **name**.
-A sid on two records is one object drawn twice — reported and skipped, since
-which of the two the comparison lands on is arbitrary. `NO_SID` records are
+A sid on two records is one object drawn twice — skipped by the field
+comparison, since which of the two it would land on is arbitrary, and a
+failure when the current build carries it. `NO_SID` records are
 counted, never keyed, so the gate is meaningful against a pre-mint build.
 
 ## Adding to the known-stars corpus
