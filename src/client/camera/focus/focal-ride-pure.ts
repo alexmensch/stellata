@@ -38,8 +38,8 @@ export interface FocalRideInputs {
   /** Perturbation already baked into camera / target / pose caches. */
   lastAppliedPert: Vec3;
   /** Focal star's live local position from the star buffer — the point the
-   *  focus ring, disc pin, and picker all resolve to. The seed frame snaps
-   *  `target` onto this. */
+   *  focus ring, disc pin, and picker all resolve to, and what the seed
+   *  frame snaps onto. */
   liveLocal: Vec3;
   /** Current orbit target. */
   target: Vec3;
@@ -70,14 +70,9 @@ export interface FocalRideStep {
  * - **Steady focal** (same star, no warp): translate by the perturbation
  *   change since last frame, so orbital drift accumulates onto the pose
  *   while any user pan offset is preserved.
- * - **Seed frame** (focal just changed, no warp): snap the point that is
- *   supposed to sit ON the star onto its live buffer position — `target` in
- *   navigate, `cameraPosition` in observe. `setFocus` sampled the
- *   perturbation at focus-event time, but sim-time may have advanced before
- *   this frame (fast scrub), so trusting that snap leaves a fixed residual
- *   offset and the star lands off-centre. The observe leg additionally
- *   catches a park taken while the binary field was still unattached, where
- *   the sample was the bare baseline and no later delta ever repairs it.
+ * - **Seed frame** (focal just changed, no warp): snap the point parked on
+ *   the star — `target` in navigate, `cameraPosition` in observe — onto its
+ *   live buffer position.
  * - **Warp / unfocus**: no translate; just resync the baseline.
  */
 export function focalRideStep(i: FocalRideInputs): FocalRideStep {
