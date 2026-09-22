@@ -216,6 +216,23 @@ describe('pinFromRuns — one run', () => {
     expect(refusals).toEqual([`sol|webgpu: ${RUN}: taken at position 1; the pin run takes sol|webgpu at 2`]);
   });
 
+  it('leaves a row at no canon position out of the pin and names it in dropped', () => {
+    const archived = {
+      ...scenario('sol', 'webgpu', dwell(stats(24.0), stats(20.0))),
+      backend: { requested: 'webgl2', actual: 'webgl2' },
+      position: 7,
+    } as unknown as ScenarioRecord;
+    const { pin, merged, refusals, dropped } = pinFromRuns([runOf(file([SOL_GPU, archived]))], SOURCE);
+    expect(refusals).toEqual([]);
+    expect(pin!.rows.map((r) => r.key)).toEqual(['sol|webgpu']);
+    expect(merged!.scenarios).toEqual([SOL_GPU]);
+    expect(dropped).toEqual(['sol|webgl2']);
+  });
+
+  it('drops nothing from a run holding canon rows alone', () => {
+    expect(pinFromRuns([runOf(file([SOL_GPU, MW120_GPU]))], SOURCE).dropped).toEqual([]);
+  });
+
   // A dwell under --force-recompute marches every star every frame, which lands
   // on the compute row. Pinned, that lever's cost would ride in every later
   // run's verdict — the ratchet RELEASING.md § Perf pin exists to stop.
