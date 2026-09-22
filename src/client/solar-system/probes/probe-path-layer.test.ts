@@ -176,7 +176,7 @@ describe('local depth pass membership', () => {
     expect(h.layer.localGroup.visible).toBe(false);
   });
 
-  it('mirrors each trail\'s visibility and anchor drift onto its local twin', () => {
+  it('mirrors each trail\'s visibility and anchor drift onto its local mirror', () => {
     // The mirror shares the geometry but not the transform, so a missed
     // position copy detaches the local-pass trail from its marker.
     const h = makeHarness();

@@ -1,14 +1,12 @@
 # The solar-system material seam
 
-Which shader backend the solar-system surfaces are built on, and which
-surfaces the family asks for. The contract both sides implement —
-`EmitterMaterial` — is shared with the boundary shells and the dust
+Which surfaces the solar-system family asks for, and the contract they
+arrive through — `EmitterMaterial`, shared with the boundary shells and the dust
 sprite and lives in `../../scene/README.md` § The material seam. The
 layers above (`../planets/`, `../probes/`) keep every line of their CPU
 logic — ephemeris walk, LOD
 band, texture ladder, per-frame uniform writes — and take their materials
-from here, so the shader side moves without a second copy of any of that.
-The port child that added this folder is `../../webgpu/README.md`'s.
+from here.
 
 ## Files in this area
 
@@ -45,7 +43,7 @@ unchanged.
 Two slot kinds need a word here:
 
 - **Textures.** A `texture()` node's `.value` is its texture, so a rung
-  swap is the same assignment on both sides.
+  swap is one assignment.
 - **`uCasters`.** WebGPU has no uniform-array-of-vec4 node carrying
   `.value`; `uniformSlotsOf` (`../../webgpu/tsl/README.md` § Uniform
   slots, shared with the boundary shells and the dust sprite) puts an
@@ -91,7 +89,7 @@ with its own readiness test and `uHas*` flag:
 - `planet-mesh-layer.test.ts` source-scans the layer for one
   `slotFallbacks.<slot>` write per mesh roster row. This is the direction
   that stays silent: a roster row with no release site builds and disposes
-  correctly on both backends and throws nothing.
+  correctly and throws nothing.
 
 ## Neutral defaults, then the body's own values
 
@@ -121,9 +119,5 @@ in render order and parent group, never in shading.
 
 ## The one surface that is NOT here
 
-The reflected-glare billboard. Its 13 per-instance attributes exceed
-WebGPU's 8 vertex buffers, so it cannot share a geometry across backends
-and ports as its own packed layer instead
-(`../../webgpu/solar-system/README.md` § The glare packs). Everything
-else in the family — the spheroid mesh, its ring annulus, its atmosphere
-shell, the probe glyph — has a geometry that crosses unchanged.
+The reflected-glare billboard packs a geometry of its own
+(`../../webgpu/solar-system/README.md` § The glare packs).

@@ -11,7 +11,7 @@ import {
 import type { PlanetSystem } from './planet-system';
 
 /** The PlanetBodyField surface this provider reads — structural so
- *  tests fake it without a WebGL field. `isCollapsedOntoParent` closes
+ *  tests fake it without a real field. `isCollapsedOntoParent` closes
  *  over the live camera in the integration shell. */
 export interface PlanetMembershipSource {
   getAttachedPlanetSystem(hostStarIdx: number): PlanetSystem | null;

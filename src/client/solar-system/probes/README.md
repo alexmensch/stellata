@@ -195,8 +195,8 @@ depth, and a probe behind a planet shows through. No `renderOrder` reaches
 across that boundary; the mirror is the only fix
 (`../../local-depth/README.md`).
 
-Two things make the mirror cheap where `star-local-mirror.ts` needed real
-machinery:
+Two things make the mirror cheap where the star cluster's needs real
+machinery (`../../star-pipeline/local-pass/README.md`):
 
 - **It shares its source's geometry outright.** The instance buffers
   `ProbeField.update` writes and the trail's `setDrawRange` prefix are the
@@ -220,10 +220,8 @@ and the marker's mirror draws the same material as its main-pass mesh
 Neither surface writes a fragment depth, and neither may: a static write
 costs the whole draw its early-z, and nothing carries one
 (`../../webgpu/README.md` § Early-z, pinned by
-`tests/shader-frag-depth.test.ts`). The marker is a non-raw
-`ShaderMaterial`, so in the main pass three's `logdepthbuf_fragment`
-writes the depth; in the local pass fixed-function depth is already
-exactly `gl_FragCoord.z`.
+`tests/tsl-frag-depth.test.ts`). Reversed-z makes fixed-function depth
+correct in both passes.
 
 ## Trails
 

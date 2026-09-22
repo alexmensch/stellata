@@ -55,8 +55,7 @@ export function buildProbeMarkerMaterial(
     // no claim on the light already in the target and no occlusion of the
     // diffuse field (../../hdr/attachments/README.md § Known residuals).
     // Both extra attachments take the blend's identity element — alpha 0
-    // under this alpha-composited blend leaves the destination exactly as
-    // the WebGL gate's NONE did.
+    // under this alpha-composited blend leaves the destination untouched.
     return {
       colour: vec4(p.uColour, vAlpha.mul(mask)),
       statistic: vec4(0.0),

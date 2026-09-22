@@ -853,7 +853,7 @@ export class PlanetBodyField {
 
   /** The live per-instance arrays and slot state the WebGPU glare layer
    *  packs from — the same objects this field writes, so no writer learns
-   *  about the port (`../../webgpu/solar-system/README.md`). */
+   *  about the layer (`../../webgpu/solar-system/README.md`). */
   glareSources(): PlanetGlareSources {
     return {
       buffers: () => this.bufs,

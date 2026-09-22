@@ -37,10 +37,9 @@ const PINNED: readonly PinnedConstant[] = [
   { identifier: 'ATMO_N_VIEW', values: [ATMO_N_VIEW] },
   { identifier: 'ATMO_N_LIGHT', values: [ATMO_N_LIGHT] },
   { identifier: 'LIGHT_JITTER_STRIDE', values: [LIGHT_JITTER_STRIDE] },
-  // The ray-start jitter is the shared helper now, so what these surfaces
-  // must reference is the helper rather than the numbers it reads off
-  // tonemap-pure (../tsl/jitter-tsl.ts) — and the numbers must still not
-  // reappear here as literals, which is what retired ATMO_JITTER_*.
+  // The ray-start jitter is the shared helper, so these surfaces must
+  // reference it rather than the numbers it reads off tonemap-pure
+  // (../tsl/jitter-tsl.ts) — and the numbers must not reappear as literals.
   {
     identifier: 'interleavedGradientNoiseTsl',
     values: [DITHER_IGN_SCALE, ...DITHER_IGN_DOT],

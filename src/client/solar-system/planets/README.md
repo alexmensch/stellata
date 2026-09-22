@@ -100,11 +100,9 @@ src/client/solar-system/planets/
                                   build-generated table it reads, and the
                                   VRAM budget that releases the rest. Its
                                   own README.
-  glare/                          Reflected-glare billboard shaders: the
-                                  shared star-perceptual point and the
-                                  photocentre shift. Its own README.
-  rings/                          Ring-annulus shaders, the radial strip,
-                                  and a ring system's share of appMag.
+  rings/                          The ring annulus's photometry, the
+                                  radial strip, and a ring system's share
+                                  of appMag. Its own README.
   rotation/                       Pole + prime-meridian elements and the
                                   texture-UV orientation chain — its own
                                   README (§ Planet rotation).
@@ -210,8 +208,8 @@ visibility cutoff applies **to the glare** — sub-cutoff planets fade
 naturally, no unconditional pixel floor — and never to the mesh
 (§ Planet mesh LOD). The glare is one pass (main-pass draw +
 **local-pass mirror draw** over the active cluster's slot range, gated
-by the shared `uLocalPassRange` uniform — opposite sense under the
-`LOCAL_DEPTH_PASS` define). While the system is locally active
+by `uLocalPassRange` — the mirror's vertex stage reads it in the opposite
+sense). While the system is locally active
 (`../local-cluster.ts`) the main-pass instances collapse and every body
 renders through the mirror in the bracketed local depth pass, where the
 **mesh** writes depth so the additive glare is occluded to a lit-limb

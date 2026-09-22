@@ -221,7 +221,7 @@ describe('the WebGPU reflected-glare layer', () => {
   });
 
   // Glare last, so a transiting body's glare adds over everything behind
-  // it — a parent mesh included (../../solar-system/local-depth/README.md).
+  // it — a parent mesh included (../../local-depth/README.md).
   it('draws both meshes last, unculled', () => {
     const { layer } = makeLayer();
     for (const m of [layer.mesh, layer.mirrorMesh]) {
@@ -241,8 +241,7 @@ describe('the WebGPU reflected-glare layer', () => {
     layer.setMonochrome(true);
     expect(blends()).toEqual([THREE.MultiplyBlending, THREE.MultiplyBlending]);
     // three declines MultiplyBlending without it and silently leaves the
-    // previous blend func in place — the star pipeline shipped exactly that
-    // as white chart discs.
+    // previous blend func in place, which draws white chart discs.
     expect(premultiplied()).toEqual([true, true]);
     layer.setMonochrome(false);
     expect(blends()).toEqual([THREE.AdditiveBlending, THREE.AdditiveBlending]);

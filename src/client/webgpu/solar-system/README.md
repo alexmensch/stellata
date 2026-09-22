@@ -1,13 +1,13 @@
-# Solar-system surfaces on WebGPU
+# Solar-system surfaces
 
-The TSL half of the solar-system shader family: the spheroid mesh, its
+The solar-system shader family: the spheroid mesh, its
 ring annulus and atmosphere shell, the reflected-glare billboard, the
 probe glyph, and the single-scattering integrator two of them share.
 These are the family's only surfaces; the physics they implement is
 `../../solar-system/`'s, and that is where it is argued.
 
-**Four of the five are a material swap, not a layer.** The CPU
-layers keep every line they had and take their surfaces through
+**Four of the five are materials over their CPU layer's own geometry.**
+The layers take their surfaces through
 `../../solar-system/materials/README.md` — that README owns which
 surfaces this family asks for, the neutral-defaults rule, and why the
 probe glyph is split out; the `EmitterMaterial` contract they are handed
@@ -39,8 +39,8 @@ src/client/webgpu/solar-system/
                               re-pack, the chart blend swap, dispose.
   planet-glare-uniforms.ts    The four slots PlanetBodyField owns rather
                               than shares through the frame map.
-  uniform-nodes.ts            TSL uniform-node twins of the seam's
-                              uniform blocks, texture slots seeded from
+  uniform-nodes.ts            The uniform-node record behind each
+                              surface's slots, texture slots seeded from
                               the shared roster
                               (`../../solar-system/materials/README.md`
                               § Texture-slot rosters).
@@ -69,11 +69,11 @@ swap correctly and is simply never read, which is why it looks innocent.
 **Only a magnified slot shows it, which is what makes it hard to see.**
 Point-sampling is invisible on a minified map, so the 8192 colour map
 hides it and a body carrying nothing else — Jupiter, Venus, Callisto —
-looks right on both backends. It surfaces on the relief bodies at the
+looks right. It surfaces on the relief bodies at the
 orbit floor, in slot-width order: the horizon pair at 2048 (~2.25 device
 px per texel) gives hard axis-aligned staircase edges on the cast-shadow
 outlines, and the 4096 normal map reads as over-sharp lit terrain. So the
-first suspect for a WebGPU-only staircase on Moon or Mercury terrain is
+first suspect for a staircase on Moon or Mercury terrain is
 this pair, not the horizon map's width or its 8-bit encoding.
 
 The rule generalises past this folder: **a stand-in carries the filter
@@ -112,10 +112,9 @@ writes nothing but still swaps (§ Every fragment writes the whole output
 struct). The glare and the glyph project their own screen-space quads and
 carry a `vertexNode`.
 
-`normalView` normalises after interpolation where the GLSL normalises at
-use; the drawn value is the same, and the oblate mesh scale is handled
-the same way in both (three's `modelNormalMatrix` is the inverse
-transpose, exactly what GLSL's `normalMatrix` was).
+`normalView` normalises after interpolation, and three's
+`modelNormalMatrix` is the inverse transpose, so the oblate mesh scale
+reaches the normal correctly.
 
 ## Every fragment writes the whole output struct
 
@@ -124,9 +123,8 @@ all three attachment outputs and swaps to a single output when the target
 is not bound (`../hdr/README.md` § The gate becomes the output struct,
 `../hdr/mrt-material.ts`). The depth pre-stamp included: its colour writes
 are off, so the swap is irrelevant to validity and mandatory for three's
-pipeline cache — the same argument the star core mask carries. A slot the
-WebGL gate would have masked off
-writes `vec4(0)`: alpha 0 is the identity under both blends used here —
+pipeline cache — the same argument the star core mask carries. A slot a
+draw does not write carries `vec4(0)`: alpha 0 is the identity under both blends used here —
 additive leaves the destination because the source is zero, and
 alpha-composited leaves it because the alpha went to zero with the rest.
 
@@ -138,8 +136,8 @@ an additive writer; the mesh, annulus and shell composite, so a texel of
 ## The glare packs
 
 The billboard's 13 per-instance attributes exceed WebGPU's 8 vertex
-buffers, so it is the one surface that cannot share a geometry with the
-WebGL path. `planet-glare-geometry.ts` builds exactly 8:
+buffers, so it is the one surface that builds a geometry of its own.
+`planet-glare-geometry.ts` builds exactly 8:
 
 | buffer | contents | source |
 | --- | --- | --- |
@@ -150,9 +148,8 @@ WebGL path. `planet-glare-geometry.ts` builds exactly 8:
 | `iBody` | `radiusPc`, `albedoP`, `hostAbsmag`, `c7` | packed |
 | `iDyn` | `ringFlux`, `eclipseDim` | packed, per frame |
 
-`iPhaseCoefsC` is gone: only Mercury carries a degree-7 term and the
-other three slots were reserved, so `c7` rides `iBody.w` and a whole
-buffer with it. That is what brings 9 down to 8.
+Only Mercury carries a degree-7 phase term, so `c7` rides `iBody.w`
+rather than a buffer of its own — which is what fits the table in 8.
 
 **Four attributes are the field's own arrays wrapped in a second
 `InstancedBufferAttribute`** — no copy, and a `PlanetBodyField` write
@@ -244,7 +241,7 @@ the body is small and bright. The full-Moon calibration
 so the magnitude — and therefore visibility — is correct for any host
 star. CPU mirror for the hover footprint: `max(physSize, appSize)`.
 
-That occlusion is the local depth pass; the old core mask is gone.
+That occlusion is the local depth pass.
 
 The billboard writes no fragment depth, and may not: a static write costs
 the whole draw its early-z, and nothing carries one
@@ -255,29 +252,19 @@ The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
 channel (`../../hdr/attachments/README.md`).
 
-### The one surface that does not swap materials
+The layer packs from `PlanetBodyField.glareSources()` (§ The glare packs);
+the field writes the arrays and owns nothing on the GPU, and its `drawn`
+getter is the layer's visibility.
 
-Every other close-range surface ports to WebGPU by handing its layer a
-different material over the same geometry (`../../solar-system/materials/README.md`).
-This one cannot: its **13** per-instance attributes exceed WebGPU's 8
-vertex buffers, so it builds a packed geometry of its own over
-`PlanetBodyField.glareSources()` — the field's live arrays, four of them
-shared by reference and three interleaved
-(`README.md` § The glare packs). The field
-writes the arrays and owns nothing on the GPU; its `drawn` getter is the
-layer's visibility.
-
-**There is no gain on the peak, and adding one would break the invariant
-above.** A `uGlareGain` debug multiplier rode both channels until the
-emission rule was physical; at 1 it did nothing, and at anything else it made
-a planet read as a star of a *different* magnitude. `mesh-crossfade.test.ts`
-pins its absence from the graph. Calibration lives in `../../solar-system/planets/emission/README.md`.
+**There is no gain on the peak**, because any multiplier other than 1 makes
+a planet read as a star of a *different* magnitude, breaking the invariant
+above. `mesh-crossfade.test.ts` pins that the graph carries none.
+Calibration lives in `../../solar-system/planets/emission/README.md`.
 
 ## Which pass draws them
 
 The mesh, the annulus and the shell render in the local depth pass
-(`../../local-depth/README.md`), which runs on this boot since its port
-child landed. So do the pass's line layers — orbit rings, binary orbit
+(`../../local-depth/README.md`). So do the pass's line layers — orbit rings, binary orbit
 paths, probe trails — through the chrome line seam
 (`../chrome-lines/README.md`), which is what gave their built-in
 `LineBasicMaterial` a fragment that can create a WGSL pipeline against the

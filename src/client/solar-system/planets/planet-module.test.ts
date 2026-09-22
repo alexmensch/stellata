@@ -97,11 +97,10 @@ describe('planet kind module', () => {
     expect(sids.every((s) => s > 0)).toBe(true);
   });
 
-  // The field's group is what survives the port, and this forwarding is
-  // the only thing that carries its visibility to the TSL draw. Chart mode
-  // and an empty roster both gate on it, so an unforwarded hide leaves the
-  // main-pass billboard drawn with every other suite green.
-  it('forwards the field group\'s visibility to the glare draw each frame', async () => {
+  // This forwarding is the only thing that carries the field's visibility
+  // to the glare draw, so an unforwarded hide leaves the main-pass billboard
+  // drawn with every other suite green.
+  it('forwards the field\'s visibility to the glare draw each frame', async () => {
     const m = createPlanetKindModule();
     await m.load('/');
     const { ctx, glare } = makeCtxWithGlare();

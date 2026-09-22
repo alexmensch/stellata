@@ -15,7 +15,7 @@ import { buildPlanetGlareMaterial } from './planet-glare-tsl';
 import { glareUniformNodes, type GlareUniformNodes } from './planet-glare-uniforms';
 
 /** Glare last (4) so a transiting body's glare adds over everything,
- *  including a parent mesh behind it — the WebGL stack's own order. */
+ *  including a parent mesh behind it. */
 const GLARE_RENDER_ORDER = 4;
 
 export class PlanetGlareLayer implements MrtOutputLayer {
@@ -74,8 +74,7 @@ export class PlanetGlareLayer implements MrtOutputLayer {
     for (const m of this.materials) m.setMrtOutputs(on);
   }
 
-  /** Chart mode's flat-ink blend, the swap `PlanetBodyField` applies to
-   *  the WebGL material. */
+  /** Chart mode's flat-ink blend. */
   setMonochrome(on: boolean): void {
     if (on === this.mono) return;
     this.mono = on;

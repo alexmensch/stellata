@@ -299,8 +299,6 @@ export class PlanetMeshLayer {
     hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: (reason: string) => void,
     maxTextureSize: number,
-    /** The TSL surfaces on a WebGPU boot; absent = the shipped GLSL ones
-     *  (`../materials/README.md`). */
     materials: (placeholder: THREE.Texture) => SolarSystemMaterials,
   ) {
     this.field = field;
@@ -962,7 +960,7 @@ export class PlanetMeshLayer {
   private createEntry(idx: number, planet: Planet): MeshEntry {
     const material = this.materials.planetMesh();
     // The per-body constants, over the factory's neutral defaults —
-    // written here so neither backend's factory needs a `Planet`.
+    // written here so the factory needs no `Planet`.
     material.uniforms.uReliefHorizon.value = reliefHorizonOf(planet);
     material.uniforms.uTerrainAlbedo.value = planet.albedo;
     material.uniforms.uTermSoftness.value = planet.terminatorSoftness ?? 0;
@@ -1047,10 +1045,10 @@ export class PlanetMeshLayer {
 
   /** `format` narrows the GPU upload below RGBA8 where channels carry no
    *  signal. Two maps qualify: the normal, whose blue is a constant and
-   *  whose alpha is unused (`stellataReliefNormal` samples `.rg` and
-   *  reconstructs z), and the sky-view factor, which is one scalar written
-   *  to a grayscale file. WebGL2 RG8 and R8 are both colour-renderable and
-   *  filterable, so mipmaps and anisotropy carry over unchanged. */
+   *  whose alpha is unused (the mesh graph samples `.rg` and reconstructs
+   *  z), and the sky-view factor, which is one scalar written to a
+   *  grayscale file. RG8 and R8 are both filterable, so mipmaps and
+   *  anisotropy carry over unchanged. */
   private ensureTexture(
     key: string,
     { ext, format }: { ext: TextureExt; format?: THREE.PixelFormat },
@@ -1088,8 +1086,8 @@ export class PlanetMeshLayer {
         // WebGPU backend rebuilds a bind group only when the new object's
         // version differs from the old one's — two version-1 textures
         // alias and the draw keeps sampling the replaced GPU texture.
-        // Uploads still happen exactly once on either backend (both
-        // compare the version per texture object, not per slot).
+        // Uploads still happen exactly once: the version is compared per
+        // texture object, not per slot.
         tex.version = tex.id + 1;
         const bytesPerTexel =
           texelBytes(format ?? THREE.RGBAFormat, THREE.UnsignedByteType) ?? 4;
