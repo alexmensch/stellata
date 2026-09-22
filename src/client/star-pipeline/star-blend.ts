@@ -3,11 +3,6 @@
 
 import * as THREE from 'three';
 
-// Disc-pass blending state. Applied at material construction and re-applied
-// on chart-mode -> colour-mode swap-back, since chart mode swaps the disc
-// material to MultiplyBlending. Single source of truth for the four
-// CustomBlending fields plus the depth flags, so a change to the blend
-// equation only needs to touch one site.
 export function applyDiscBlendDefaults(m: THREE.Material) {
   m.blending = THREE.CustomBlending;
   m.blendSrc = THREE.OneFactor;
@@ -18,14 +13,6 @@ export function applyDiscBlendDefaults(m: THREE.Material) {
   m.depthTest = true;
 }
 
-// Glow-pass blending state — the additive sibling of
-// applyDiscBlendDefaults, shared by the star layer, the planet body field
-// and the planet glare (hence THREE.Material — every field set here lives
-// on the base class) so the four fields live in one place. Additive so
-// overlapping distant glows accumulate; no depth write so co-located glows
-// all contribute; depth test on so a glow behind a disc drawn earlier is
-// occluded. Re-applied on chart-mode -> colour-mode swap-back (chart flips
-// glow to MultiplyBlending).
 export function applyGlowBlendDefaults(m: THREE.Material) {
   m.transparent = true;
   m.depthWrite = false;
@@ -34,9 +21,6 @@ export function applyGlowBlendDefaults(m: THREE.Material) {
   m.premultipliedAlpha = false;
 }
 
-// Chart-mode ink blending — the swap every emitter drawing flat ink on
-// paper takes, shared so the call sites cannot diverge.
-//
 // `premultipliedAlpha` is load-bearing, not cosmetic: three.js REFUSES
 // MultiplyBlending without it, and the refusal is silent-ish — it logs,
 // issues no blendFunc at all, then caches the swap as applied so it

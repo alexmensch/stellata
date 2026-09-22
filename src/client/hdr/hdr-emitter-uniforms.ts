@@ -97,8 +97,9 @@ export function applyHdrAttachmentState(textures: readonly THREE.Texture[]): voi
   if (textures.length > 2) {
     // Linear to match the downsample target, though inert at factor 1: the
     // resolve reads this attachment directly there, at integer offsets from
-    // gl_FragCoord, so every tap lands on a texel centre where bilinear and
-    // nearest agree. It stops being inert the moment a tap is off-centre.
+    // the fragment position, so every tap lands on a texel centre where
+    // bilinear and nearest agree. It stops being inert the moment a tap is
+    // off-centre.
     textures[2].minFilter = THREE.LinearFilter;
     textures[2].magFilter = THREE.LinearFilter;
     textures[2].colorSpace = THREE.LinearSRGBColorSpace;

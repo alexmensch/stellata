@@ -43,7 +43,7 @@ type NF = Node<'float'>;
 /** How far inside the reversed-z near clip bound (z_ndc = 1) the member
  *  stamp lands. Exactly z = +w risks the primitive clipping on float
  *  rounding; one ulp-scale step inside is depth-indistinguishable from
- *  the GLSL build's absolute-nearest gl_FragDepth = 0.0 stamp. */
+ *  an absolute-nearest stamp. */
 export const CORE_MASK_NEAR_PIN_EPS = 1e-6;
 
 const ballesterosBvFromTeffTsl = /* @__PURE__ */ Fn(([teff]: [NF]) => {
@@ -384,9 +384,9 @@ export function buildStarVertexNode(
         clipOut.assign(centreClip.add(vec4(ndcOffset.mul(centreClip.w), 0.0, 0.0)));
 
         if (pass === STAR_PASS_CORE_MASK && isMember !== null) {
-          // The member stamp, moved from the GLSL fragment stage
-          // (gl_FragDepth = 0.0) to the vertex: per-instance, so the whole
-          // quad pins to the near end of the reversed-z clip convention and
+          // The member stamp rides the vertex stage, not the fragment: it
+          // is per-instance, so the whole quad pins to the near end of the
+          // reversed-z clip convention and
           // fixed-function depth writes the nearest value — no fragment
           // depth output, which is what keeps early-z alive
           // (../README.md § Early-z). The mirror's own mask never pins:

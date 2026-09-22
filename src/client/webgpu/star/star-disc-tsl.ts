@@ -21,8 +21,7 @@ import {
  *  sites share `applyDiscBlendDefaults`. The `depthWrite` override is what
  *  makes it more than that helper: the core mask stamped every core at
  *  renderOrder −4, so a second write here would be the same value, and a
- *  halo must not write at all — which is the whole reason the GLSL build
- *  needed `gl_FragDepth` in this pass (README.md § The disc draw writes no
+ *  halo must not write at all (README.md § The disc draw writes no
  *  depth). Losing it on swap-back would put the halo's depth back. */
 export function applyStarDiscTslBlend(m: THREE.Material) {
   applyDiscBlendDefaults(m);
