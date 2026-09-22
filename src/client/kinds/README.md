@@ -63,10 +63,8 @@ its catalog load blocks first paint and may reject) — and are only
   pipeline poisons the whole submit, taking every planet surface, ring
   and star mirror with it. A kind contributing any group must take its
   material off the seam; overlay lines take theirs from
-  `KindContext.chromeLines`
-  (`../chrome-lines/README.md`), which resolves to the backend for them.
-  The probe trail is the live example — it was parked out of the pass
-  scene until that seam existed.
+  `KindContext.webgpu.chromeLineMaterials` (`../chrome-lines/README.md`),
+  as the probe trail does.
 - **No self-registration.** `attach` *returns* its scene layer; the
   shell registers it at the kind's roster position. Update order is
   draw-dependency-load-bearing: module layers register in `KIND_ROSTER`

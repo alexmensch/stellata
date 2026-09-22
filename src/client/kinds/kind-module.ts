@@ -2,7 +2,6 @@
 // every kind module consumes. See ./README.md.
 
 import type * as THREE from 'three';
-import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { WebGpuSeam } from '../webgpu/seam';
 import type { FocusableProvider, Target, TargetKind } from '../camera/focus/focus-target';
 import type { ConstellationOfKind } from '../focus-card/constellation-row';
@@ -74,11 +73,6 @@ export interface KindContext {
    *  its groups to `scene` — the seam owns no scene of its own
    *  (`../webgpu/README.md` § One scene per boot). */
   readonly webgpu: WebGpuSeam;
-  /** The chrome line strokes for this boot, already resolved to the
-   *  backend — a kind that draws overlay lines takes them from here
-   *  rather than reading `webgpu` itself
-   *  (`../chrome-lines/README.md`). */
-  readonly chromeLines: ChromeLineMaterials;
 }
 
 export type KindPick = HoverProvider['pick'];

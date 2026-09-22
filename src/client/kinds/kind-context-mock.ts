@@ -48,8 +48,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     } as unknown as HTMLElement,
     sharedUniforms,
     maxTextureSize: 8192,
-    webgpu: fakeWebGpuSeam(),
-    chromeLines: fakeChromeLineMaterials(),
+    webgpu: fakeWebGpuSeam({ chromeLineMaterials: fakeChromeLineMaterials() }),
     solIndex: 0,
     solAbsInto: (out) => {
       out.set(0, 0, 0);

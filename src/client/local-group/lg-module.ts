@@ -106,7 +106,7 @@ export function createLgKindModule(): LgKindModule {
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
       if (!catalog || catalog.objects.length === 0) return null;
-      layer = new LocalGroupLayer(catalog, kindCtx.chromeLines);
+      layer = new LocalGroupLayer(catalog, kindCtx.webgpu.chromeLineMaterials);
       layer.setMonochrome(kindCtx.getMonochrome());
       kindCtx.scene.add(layer.group);
       emission = new LocalGroupEmission(catalog.objects, kindCtx.webgpu.lgEmissionMaterials);

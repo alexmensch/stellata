@@ -112,12 +112,11 @@ needs no mirror variant).
 
 ## One factory per boot
 
-`stellata.ts` takes `webgpu.chromeLineMaterials` once and injects it into
-every consumer; kind modules read it off `KindContext.chromeLines` rather
-than reaching for the seam themselves. Each stroke is independent — the
-factory holds no slots two consumers could share — so a second factory
-would be harmless, but the single one is what keeps the injection sites
-uniform.
+`webgpu.chromeLineMaterials` is built on first read and cached for the
+boot, so the shell's layers and the kind modules (through
+`KindContext.webgpu`) all hold the same factory. Each stroke is
+independent — the factory holds no slots two consumers could share — so
+the cache buys one set of injection semantics rather than correctness.
 
 **That read has to sit AFTER `bindSharedUniforms`.** Reading
 `webgpu.chromeLineMaterials` is what builds the TSL graphs, and they

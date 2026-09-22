@@ -716,7 +716,6 @@ export class Stellata implements FrameAnchor {
       occluders: this.occluders,
       requestRender: (reason) => this.renderGate.invalidate(`kind:${reason}`),
       webgpu: this.webgpu,
-      chromeLines: this.chromeLines,
     };
     for (const kind of KIND_ROSTER) {
       const layer = this.kinds[kind]?.attach(kindCtx);
