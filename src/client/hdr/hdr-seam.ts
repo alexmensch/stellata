@@ -14,11 +14,6 @@ export interface ReducedStatistic extends TileReduction {
 }
 
 export interface HdrSeam {
-  /** Whether a float-renderable colour buffer exists; constant true, since
-   *  float targets are core to the shipped backend (README.md § Chart
-   *  mode). `wantsTarget()` keeps it as a term so the ship gate stays a
-   *  conjunction rather than a bare chart test. */
-  readonly supported: boolean;
   readonly emitterUniforms: HdrEmitterUniforms;
   bind(): void;
   resolve(): void;

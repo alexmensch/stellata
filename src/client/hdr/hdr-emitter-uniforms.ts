@@ -23,14 +23,22 @@ export interface HdrEmitterUniforms {
   uOmegaSummationArcsec2: THREE.IUniform<number>;
 }
 
-export const HDR_EMITTER_UNIFORM_KEYS = [
-  'uHdrTarget',
-  'uWhitePoint',
-  'uHighlightDesat',
-  'uExposure',
-  'uOmegaPxArcsec2',
-  'uOmegaSummationArcsec2',
-] as const satisfies readonly (keyof HdrEmitterUniforms)[];
+/** Exhaustive both ways: `Record<keyof HdrEmitterUniforms, true>` refuses
+ *  a key that is not a slot AND a slot that is not a key. A one-directional
+ *  list would let a new slot compile while `pickHdrEmitterUniforms` dropped
+ *  it, and the emitter would read `undefined` for that uniform. */
+const HDR_EMITTER_UNIFORM_SET: Record<keyof HdrEmitterUniforms, true> = {
+  uHdrTarget: true,
+  uWhitePoint: true,
+  uHighlightDesat: true,
+  uExposure: true,
+  uOmegaPxArcsec2: true,
+  uOmegaSummationArcsec2: true,
+};
+
+export const HDR_EMITTER_UNIFORM_KEYS = Object.keys(
+  HDR_EMITTER_UNIFORM_SET,
+) as (keyof HdrEmitterUniforms)[];
 
 /** Pick the seam's slots out of a wider shared-uniforms object, keeping
  *  each `{ value }` slot's identity — an emitter that copied the values
@@ -41,11 +49,14 @@ export const HDR_EMITTER_UNIFORM_KEYS = [
 export function pickHdrEmitterUniforms<T extends HdrEmitterUniforms>(
   src: T,
 ): HdrEmitterUniforms {
-  const out: Record<string, THREE.IUniform> = {};
-  for (const key of HDR_EMITTER_UNIFORM_KEYS) {
-    out[key] = src[key];
-  }
-  return out as unknown as HdrEmitterUniforms;
+  return {
+    uHdrTarget: src.uHdrTarget,
+    uWhitePoint: src.uWhitePoint,
+    uHighlightDesat: src.uHighlightDesat,
+    uExposure: src.uExposure,
+    uOmegaPxArcsec2: src.uOmegaPxArcsec2,
+    uOmegaSummationArcsec2: src.uOmegaSummationArcsec2,
+  };
 }
 
 /** `uHdrTarget` seeds to 0 and the pipeline's constructor rewrites it
@@ -71,7 +82,9 @@ export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
 export const HDR_ATTACHMENT_COUNT = 3;
 
 /** Per-attachment format and filter state the seam's target carries
- *  (README.md § Three attachments). */
+ *  (README.md § Three attachments). Takes fewer than
+ *  `HDR_ATTACHMENT_COUNT` textures: the extra-attachments frame-cost lever
+ *  rebuilds the target with attachment 0 alone. */
 export function applyHdrAttachmentState(textures: readonly THREE.Texture[]): void {
   textures[0].colorSpace = THREE.LinearSRGBColorSpace;
   if (textures.length > 1) {

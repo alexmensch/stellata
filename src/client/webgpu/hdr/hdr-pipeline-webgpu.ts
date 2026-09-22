@@ -34,10 +34,6 @@ export interface MrtOutputLayer {
 }
 
 export class WebGpuHdrPipeline implements HdrSeam {
-  /** Float render targets are core WebGPU — no extension verdict exists,
-   *  so the only path off the target is chart mode. */
-  readonly supported = true;
-
   readonly emitterUniforms: HdrEmitterUniforms = makeHdrEmitterUniforms();
 
   /** The statistic-write mask the star materials multiply
@@ -226,8 +222,10 @@ export class WebGpuHdrPipeline implements HdrSeam {
     clearChromeBindings();
   }
 
+  /** Chart mode is the only path off the target: float render targets are
+   *  core WebGPU, so no capability verdict enters. */
   private wantsTarget(): boolean {
-    return this.supported && !this.chart;
+    return !this.chart;
   }
 
   private mrtOutputsOn(): boolean {

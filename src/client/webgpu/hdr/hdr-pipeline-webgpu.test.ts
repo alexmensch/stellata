@@ -23,16 +23,51 @@ function makeLayerRecorder() {
   return { calls, layer: { setMrtOutputs: (on: boolean) => calls.push(on) } };
 }
 
-// The WebGL seam's "no off switch" pin, same shape: supported is constant
-// true here (float targets are core WebGPU), so chart is the ONLY input.
+const readSelf = (): string => readFileSync(
+  fileURLToPath(new URL('./hdr-pipeline-webgpu.ts', import.meta.url)),
+  'utf8',
+);
+
 describe('the seam has no off switch', () => {
-  it('wantsTarget stays two-input', () => {
-    const src = readFileSync(
-      fileURLToPath(new URL('./hdr-pipeline-webgpu.ts', import.meta.url)),
-      'utf8',
-    );
-    expect(src).not.toMatch(/setEnabled|HDR_DEFAULT_ENABLED/);
-    expect(src).toContain('return this.supported && !this.chart;');
+  // Chart mode is the ONLY input to whether a target is bound. Asserted on
+  // the behaviour rather than the expression, so a rename cannot fail CI
+  // and a second input cannot pass it.
+  it('binds a target out of chart mode and none in it', () => {
+    const { renderer, bound } = fakeRenderer();
+    const hdr = new WebGpuHdrPipeline(renderer);
+
+    hdr.bind();
+    expect(bound.at(-1)).not.toBeNull();
+
+    hdr.setChartMode(true);
+    hdr.bind();
+    expect(bound.at(-1)).toBeNull();
+
+    hdr.setChartMode(false);
+    hdr.bind();
+    expect(bound.at(-1)).not.toBeNull();
+  });
+
+  it('carries no enable switch to reach past chart mode', () => {
+    expect(readSelf()).not.toMatch(/setEnabled|HDR_DEFAULT_ENABLED/);
+  });
+});
+
+// The resolve is the only path a diffuse emitter's light reaches the canvas
+// by, and each of these four is a silent failure: light dropped, light
+// tonemapped twice, a pass-through that dims, or a premultiplied canvas
+// compositing the band as nothing.
+describe('the resolve composites the diffuse mean in', () => {
+  it('adds the summation mean, ahead of the operator', () => {
+    const src = readSelf();
+    expect(src).toContain('hdr.rgb.add(summationMeanTsl(');
+    expect(src.indexOf('hdr.rgb.add(')).toBeLessThan(src.indexOf('tonemapTsl('));
+  });
+
+  it('writes alpha 1, never attachment 0\'s', () => {
+    const src = readSelf();
+    expect(src).toContain('vec4(linear, 1.0),');
+    expect(src).not.toMatch(/hdr\.a\b/);
   });
 });
 
