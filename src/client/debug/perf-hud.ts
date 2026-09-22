@@ -328,13 +328,9 @@ function renderPanel(): void {
   const fpsAvg = deltaStats.avg > 0 ? 1000 / deltaStats.avg : 0;
   const fpsLow = deltaStats.max > 0 ? 1000 / deltaStats.max : 0;
 
-  // The headline is a whole-frame measurement, never a sum of the
-  // per-scope rows: WebGL2 scopes rotate one per frame, so their averages
-  // describe disjoint frame sets and adding them yields a total that can
-  // exceed the frame period. The whole-frame row is keyed the same on both
-  // backends — a GL frame-scope query, or the WebGPU renderer's timestamp
-  // resolve — so its presence, not which timer object exists, is what
-  // decides whether the headline can say `gpu` at all.
+  // The headline is the whole-frame row, never a sum of rows, and that
+  // row's presence is what decides whether it can say `gpu` at all
+  // (gpu-timing/README.md § `gpu.frame` is the only row that prices anything).
   const whole = sections.get(`gpu.${GPU_WHOLE_FRAME_SCOPE}`);
   let busyLabel = 'submit';
   let busyMs = 0;

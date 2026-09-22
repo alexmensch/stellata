@@ -131,8 +131,8 @@ describe('perf-hud / install → dispose teardown', () => {
   });
 
   it('records a published frame sample as the whole-frame scope only while open', () => {
-    // The WebGPU boot has no GL timer object. animate() resolves the
-    // renderer's timestamps every rendered frame regardless — the resolve
+    // animate() resolves the renderer's timestamps every rendered frame
+    // regardless — the resolve
     // is what recycles the query pool — so a sample arrives whether or not
     // anything is listening, and an unsubscribed HUD must drop it rather
     // than accumulate one.
@@ -203,7 +203,7 @@ describe('perf-hud / install → dispose teardown', () => {
     section.dispose();
   });
 
-  it('headline stays submit where no backend produces a whole-frame row', () => {
+  it('headline stays submit where nothing publishes a whole-frame row', () => {
     // Presence of `gpu.frame` is the ONLY gate. Nothing publishes here —
     // an adapter without timestamp-query — so the headline must report CPU
     // submission wall-time and say so.

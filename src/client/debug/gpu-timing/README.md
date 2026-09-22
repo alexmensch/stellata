@@ -75,7 +75,7 @@ timestamps the headline stays `submit` and a pricing sweep degrades to
 ### The resolved duration is quantised — a floor under every differential
 
 **Chrome does not hand back a continuous number.** Measured 2026-08-25 on
-an M4 over a `#renderer=webgpu` boot: across **310 distinct resolved frame
+an M4: across **310 distinct resolved frame
 durations**, every one is an exact multiple of **65,536 ns** (2¹⁶,
 ≈ 65.5 µs), and their greatest common divisor is exactly that. The browser
 is quantising the timestamp; it is not a property of the work measured.
@@ -117,7 +117,7 @@ a pass's timestamp pair resolves unwritten while the other holds an
 absolute counter. Safari 26 grants the same feature and then rejects the
 query set, taking every submit down with it
 (`../../webgpu/timestamps/README.md` § The flag is a request, and a grant
-is not proof) — so of the two backends measured, one grants and lies and
+is not proof) — so of the two browsers measured, one grants and lies and
 the other grants and breaks. The grant is a backend claim about itself,
 not a property of the API.
 
@@ -149,7 +149,7 @@ Three consequences, none of them a limitation to work around:
   an internal `timestampUID` (`<uid>:f<frameId>`) reachable only through
   `renderer.backend.get(renderContext)`. Naming our passes off that would
   pin an internal representation for a number the differential already
-  gives us honestly, so **there are no per-pass `gpu.*` rows on WebGPU** —
+  gives us honestly, so **there are no per-pass `gpu.*` rows** —
   the `submit.*` CPU rows and `debug.priceFrame()` cover that ground.
 
 **The resolve must run on EVERY rendered frame that has a clock, and it
@@ -207,7 +207,7 @@ sampling term binds, gained samples — but a row that loses enough of them
 widens its own band, so read a sample count as part of a dwell rather than
 as bookkeeping.
 
-**Soundness latches per pool, not per backend.** A pool resolving a
+**Soundness latches per pool, not for the whole clock.** A pool resolving a
 duration no frame can have stops that pool's samples alone: `gpu.frame` is
 what every committed pin row gates on, and an unsound verdict there empties
 the run's whole GPU stream, leaving ungated rows that exit 0 — a gate gone
@@ -233,7 +233,7 @@ reads it**: `resolveQueriesAsync` computes its total from the mapped result
 buffer and its own offset list, never from the Map, and the only readers
 are `Backend.getTimestamp` / `hasTimestampQuery` — which three itself never
 calls and stellata never calls either, since there are no per-pass `gpu.*`
-rows on this backend by design (above).
+rows by design (above).
 
 Two properties the tests pin. It runs **after** the resolve settles, never
 before — trimming early would race the write three does inside

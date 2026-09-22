@@ -62,9 +62,6 @@ function publish(pool: TimestampPool, ms: number): void {
   for (const s of subscribers[pool]) s(ms);
 }
 
-/** WebGPU only — a WebGL2 frame is timed by whichever GL timer owns the
- *  context's single query slot, so publishing here too would record
- *  `gpu.frame` twice per frame. */
 export function publishGpuFrameSample(ms: number): void {
   publish('render', ms);
 }
@@ -145,8 +142,8 @@ export function resolveAndPublishGpuFrame(
 }
 
 /** Subscribe to the render-pass samples; the return value unsubscribes.
- *  Several consumers may listen at once — unlike a WebGL2 timer query, a
- *  timestamp resolve is not an exclusive resource. */
+ *  Several consumers may listen at once — a timestamp resolve is not an
+ *  exclusive resource. */
 export function onGpuFrameSample(fn: Subscriber): () => void {
   subscribers.render.add(fn);
   return () => { subscribers.render.delete(fn); };

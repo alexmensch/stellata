@@ -24,9 +24,8 @@ describe('whole-frame GPU samples fan out', () => {
     offB();
     publishGpuFrameSample(5);
 
-    // Two listeners at once is the WebGPU-side point of the channel: the
-    // HUD and the pricing harness can both read the same resolve, where a
-    // WebGL2 timer query would have to be handed from one to the other.
+    // Two listeners at once is the point of the channel: the HUD and the
+    // pricing harness both read the same resolve.
     expect(a).toEqual([3]);
     expect(b).toEqual([3, 4]);
   });
