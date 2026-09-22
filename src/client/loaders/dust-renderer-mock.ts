@@ -37,7 +37,6 @@ export function webGpuRendererMock(
   const copies: VoxelCopy[] = [];
   const reads: Array<[number, number, number]> = [];
   const renderer = {
-    isWebGPURenderer: true,
     initTexture: (t: THREE.Texture) => {
       initTextures.push(t);
       initVersions.push(t.version);

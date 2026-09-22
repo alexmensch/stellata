@@ -273,9 +273,8 @@ of leaving its caller awaiting a reply that can no longer come.
 ## Dust voxel upload
 
 `DustField` owns the ~128 MiB volume texture, the priority-ordered fetch,
-the progress listeners and the dispose. The only backend-specific step is
-writing one chunk's bytes inside the volume, and
-`createVoxelChunkUploader` picks that per renderer.
+the progress listeners and the dispose; `createVoxelChunkUploader` owns
+writing one chunk's bytes inside the volume.
 
 **The factory marks the volume for update and then calls
 `renderer.initTexture`, in that order, and owns both halves so a caller
@@ -288,30 +287,25 @@ per-chunk catch swallows it, and every chunk logs
 `dust chunk … failed` while the sky stays dust-free.
 
 An uploader also stops writing once disposed. Chunk fetches outlive a
-`DustField.dispose()`, and on WebGPU a write to a released texture walks
-three's create-on-demand path and resurrects the whole volume.
+`DustField.dispose()`, and a write to a released texture walks three's
+create-on-demand path and resurrects the whole volume.
 
-three's backend exposes no sub-region texture write, so a
-  chunk-sized staging `Data3DTexture` takes the bytes as a whole upload
-  and `renderer.copyTextureToTexture` moves them into the volume's
-  region. That staging texture is reused across chunks and **must be
-  re-marked `needsUpdate` every time** — three's texture cache
-  short-circuits on an unchanged version, and the copy would then re-land
-  the previous chunk's bytes at the new offset. Both it and the volume come
-from `createVoxelTexture`, because WebGPU rejects a copy between differing
+three's backend exposes no sub-region texture write, so a chunk-sized
+staging `Data3DTexture` takes the bytes as a whole upload and
+`renderer.copyTextureToTexture` moves them into the volume's region. That
+staging texture is reused across chunks and **must be re-marked
+`needsUpdate` every time** — three's texture cache short-circuits on an
+unchanged version, and the copy would then re-land the previous chunk's
+bytes at the new offset. Both it and the volume come from
+`createVoxelTexture`, because WebGPU rejects a copy between differing
 formats and a hand-copied format is a format that can drift.
 
 Chunk bytes are z-major with x innermost per the Python writer, which is
 what the volume reads as width/height/depth.
 
-The star vertex raymarch and the extinction prepass sample the volume on
-a WebGPU boot as of `0it.4.6` / `0it.20`
-(`../webgpu/extinction/README.md`); the band's measured dust stack joins
-them at `0it.5`. Before those landed a WebGPU boot streamed a texture no
-pixel read — the migration's intended ordering, since each port is
-smoke-blind without dust already in the texture — and § Dust voxel
-readback is still how the upload itself is verified, independently of any
-sampler.
+The star vertex raymarch and the extinction prepass sample the volume
+(`../webgpu/extinction/README.md`); § Dust voxel readback is how the
+upload itself is verified, independently of any sampler.
 
 **The marking rule above binds every 3D texture bound in a TSL graph, not
 just the volume.** A `texture3D()` node over an unmarked placeholder gets
@@ -328,9 +322,8 @@ placeholder from it marks its own.
 ## Dust voxel readback
 
 `stellata.verifyDust()` answers "is the dust actually in the texture, at
-the offset the uploader claimed?" numerically, because on a WebGPU boot no
-pixel can answer it — a dim sky looks the same whether one chunk or
-sixty landed. It re-fetches chunk
+the offset the uploader claimed?" numerically, because no pixel can answer
+it — a dim sky looks the same whether one chunk or sixty landed. It re-fetches chunk
 files (served from cache) and compares sampled voxels against what the GPU
 holds.
 

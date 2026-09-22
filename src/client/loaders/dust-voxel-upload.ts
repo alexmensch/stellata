@@ -38,10 +38,10 @@ export function createVoxelChunkUploader(
   // factory owns both halves of it. README.md § Dust voxel upload.
   texture.needsUpdate = true;
   renderer.initTexture(texture);
-  return new WebGpuVoxelChunkUploader(renderer, texture, chunkSize);
+  return new StagedVoxelChunkUploader(renderer, texture, chunkSize);
 }
 
-class WebGpuVoxelChunkUploader implements VoxelChunkUploader {
+class StagedVoxelChunkUploader implements VoxelChunkUploader {
   // three's WebGPU backend exposes no sub-region texture write, so a chunk
   // reaches the volume as a whole upload of this chunk-sized scratch
   // texture plus a region copy. README.md § Dust voxel upload.
@@ -65,15 +65,6 @@ class WebGpuVoxelChunkUploader implements VoxelChunkUploader {
   upload(ix: number, iy: number, iz: number, data: Uint8Array) {
     if (this.disposed) return;
     const c = this.chunkSize;
-    this.write(ix * c, iy * c, iz * c, data);
-  }
-
-  dispose() {
-    this.disposed = true;
-    this.staging.dispose();
-  }
-
-  private write(x: number, y: number, z: number, data: Uint8Array) {
     this.staging.image.data = data;
     // three's texture cache short-circuits on an unchanged version, and the
     // copy would then re-land the previous chunk's bytes at the new offset.
@@ -82,7 +73,12 @@ class WebGpuVoxelChunkUploader implements VoxelChunkUploader {
       this.staging,
       this.texture,
       this.srcRegion,
-      this.dstPosition.set(x, y, z),
+      this.dstPosition.set(ix * c, iy * c, iz * c),
     );
+  }
+
+  dispose() {
+    this.disposed = true;
+    this.staging.dispose();
   }
 }
