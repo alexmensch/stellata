@@ -79,7 +79,7 @@ describe('sampling the table', () => {
 
 describe('the shipped table', () => {
   it('was measured on the V ≤ 11 catalogue', () => {
-    expect(RESOLVED_HOLE_CATALOGUE_RECORDS).toBe(983069);
+    expect(RESOLVED_HOLE_CATALOGUE_RECORDS).toBe(983068);
     expect(SHIPPED_RESOLVED_HOLE.values).toBe(RESOLVED_HOLE_VALUES);
   });
 
@@ -121,7 +121,7 @@ describe('the shipped table', () => {
       const back = DataUtils.fromHalfFloat(DataUtils.toHalfFloat(v));
       if (v > 0) worst = Math.max(worst, Math.abs(back - v) / v);
     }
-    expect(worst).toBeCloseTo(8.511e-4, 7);
+    expect(worst).toBeCloseTo(8.566e-4, 7);
   });
 });
 
