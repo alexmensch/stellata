@@ -121,7 +121,7 @@ themselves.
 (`loaders/README.md` § Progressive catalog load). Wave 1 ends at first
 paint, on the catalogue's FIRST chunk; wave 2 waits on
 `kinds.star.ready` — the complete record set plus the search index.
-Three things follow, and each has cost a defect:
+Four things follow, and each has cost a defect:
 
 - **A wave-1 consumer sees a prefix, not the catalogue.** Anything
   walking records, or reading a table built from them, either bounds
