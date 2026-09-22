@@ -52,7 +52,10 @@ its catalog load blocks first paint and may reject) — and are only
   by `kind-modules.test.ts`.
 - **`KindContext.webgpu` is the seam every kind reads its surfaces
   from.** It owns no scene, so every group a kind builds goes into
-  `KindContext.scene` (`../webgpu/README.md` § One scene per boot).
+  `KindContext.scene` (`../webgpu/README.md` § One scene per boot). It is
+  non-nullable, and the fixture keeps it honest: `fakeWebGpuSeam`
+  (`../webgpu/seam-mock.ts`) carries every member and refuses by name until
+  a suite overrides the leg it exercises.
 - **NOTHING a kind contributes is immune to an unported material.** Both
   graphs a kind can reach are drawn — `KindContext.scene` and the local
   depth pass (`../local-depth/README.md`) — so a hand-written GLSL

@@ -27,10 +27,16 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 - `emitter-material.ts` — `EmitterMaterial` (§ The material seam).
   Type-only.
 - `emitter-material-mock.ts` — `fakeEmitterMaterial`, the double every
-  layer suite's own factory fake is built from. Its slot record answers
-  any name, minting one on first touch, so a suite on it pins the layer's
-  behaviour and never the uniform roster — that roster belongs to the
-  factory, and the factory's own suite is where a missing slot fails.
+  layer suite's own factory fake is built from, and `expectSlotsServedBy`.
+  Its slot record answers any name, minting one on first touch, so a suite
+  on it pins the layer's behaviour and never the uniform roster — that
+  roster belongs to the factory, and the factory's own suite is where a
+  missing slot fails. **Answering any name is also what a misspelled write
+  rides through**, so the double records `touchedSlots` and a factory suite
+  asserts every name its layer touched is one the shipped factory serves
+  (`expectSlotsServedBy`). Worth adding wherever the layer's slot names and
+  the factory's are written out separately; not where one shared function
+  applies them to both, as `applyRimParams` does for the shells.
 - `scene-layer.test.ts` — fan-out order, optional-hook semantics, the
   contribution skip path, and the cadence reduction (§ Declaring how time
   moves a layer).

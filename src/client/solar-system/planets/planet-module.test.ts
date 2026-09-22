@@ -16,8 +16,9 @@ import { R_SUN_PC } from '../../util/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES } from '../planet-system';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { createPlanetKindModule, type PlanetKindModule } from './planet-module';
-import type { WebGpuSeam } from '../../webgpu/seam';
+import { fakePlanetGlare, fakeWebGpuSeam, type FakePlanetGlare } from '../../webgpu/seam-mock';
 import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mock';
+import { makeFrameCtx } from '../../scene/frame-ctx-mock';
 
 const SOL_PHOTOMETRY = { absMag: 4.83, radiusPc: R_SUN_PC };
 const MARS = SOL_BODIES.findIndex((b) => b.name === 'Mars');
@@ -27,7 +28,10 @@ const DECOY_HOST = 41;
  *  the pick test's camera, so the decoy never enters a pick or a draw. */
 const DECOY_HOST_POS = new THREE.Vector3(0, 0, 1e4);
 
-function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
+function makeCtxWithGlare(
+  overrides: Partial<KindContext> = {},
+): { ctx: KindContext; glare: FakePlanetGlare } {
+  const glare = fakePlanetGlare();
   // Same viewport / FOV as the mock's camera and canvas rect, so pick
   // projections and screen-centre coordinates agree across both maps.
   const sharedUniforms = buildSharedUniforms({
@@ -37,23 +41,23 @@ function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
     viewportH: MOCK_VIEWPORT_H,
     hdr: makeMockHdrEmitterUniforms(),
   });
-  return makeKindContext({
-    webgpu: {
+  const ctx = makeKindContext({
+    webgpu: fakeWebGpuSeam({
       solarSystemMaterials: () => fakeSolarSystemMaterials(),
       // The glare is the one surface that ports as a layer, so the seam
       // hands back a handle rather than a material.
-      attachPlanetGlare: () => ({
-        setVisible: () => {},
-        setMonochrome: () => {},
-        update: () => {},
-        dispose: () => {},
-      }),
-    } as unknown as WebGpuSeam,
+      attachPlanetGlare: () => glare.glare,
+    }),
     sharedUniforms,
     solIndex: 0,
     starPhotometry: (idx) => (idx === 0 ? SOL_PHOTOMETRY : null),
     ...overrides,
   });
+  return { ctx, glare };
+}
+
+function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
+  return makeCtxWithGlare(overrides).ctx;
 }
 
 /** Attach, but slip a decoy host in ahead of the module's own Sol
@@ -91,6 +95,28 @@ describe('planet kind module', () => {
     const sids = Array.from(m.sids()!);
     expect(sids).toEqual(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()]));
     expect(sids.every((s) => s > 0)).toBe(true);
+  });
+
+  // The field's group is what survives the port, and this forwarding is
+  // the only thing that carries its visibility to the TSL draw. Chart mode
+  // and an empty roster both gate on it, so an unforwarded hide leaves the
+  // main-pass billboard drawn with every other suite green.
+  it('forwards the field group\'s visibility to the glare draw each frame', async () => {
+    const m = createPlanetKindModule();
+    await m.load('/');
+    const { ctx, glare } = makeCtxWithGlare();
+    const layer = m.attach(ctx)!;
+    const fc = makeFrameCtx(ctx.camera);
+
+    // Sol lands on a microtask, so this frame has an empty roster.
+    layer.update!(fc);
+    expect(m.field.group.visible).toBe(false);
+    expect(glare.visible.at(-1)).toBe(false);
+
+    await m.systemsReady;
+    layer.update!(fc);
+    expect(m.field.group.visible).toBe(true);
+    expect(glare.visible.at(-1)).toBe(true);
   });
 
   it('attaches Sol at boot and answers every leg from the field', async () => {

@@ -10,6 +10,11 @@ import { DEPTH_DIM_POWER } from '../../fresnel-shell/shell-distance-pure';
 import { CLOUD_RIM_DISTANCES } from '../../molecular-clouds/cloud-rim-pure';
 import type { CloudAbsorptionSpec } from '../../molecular-clouds/cloud-materials';
 import { makeTslCloudMaterials } from './tsl-cloud-materials';
+import { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
+import {
+  fakeCloudMaterials, makeMockCatalog, makeMockCloud,
+} from '../../molecular-clouds/cloud-mock';
+import { expectSlotsServedBy } from '../../scene/emitter-material-mock';
 
 const hdr = makeHdrEmitterUniforms();
 
@@ -124,4 +129,40 @@ it('severs every MRT registration on dispose', () => {
   a.dispose();
   r.dispose();
   expect(live).toBe(0);
+});
+
+// ../../scene/README.md § The material seam.
+describe('the layer writes only slots this factory serves', () => {
+  function driven() {
+    const materials = fakeCloudMaterials();
+    const clouds = new MolecularClouds(makeMockCatalog([makeMockCloud({})]), null, materials);
+    clouds.setMonochrome(true);
+    clouds.setOpacity(2);
+    clouds.setColor(0x8899ff);
+    clouds.setMonoOpacity(0.5);
+    clouds.setMonoColor(0x112233);
+    clouds.setSteps(12);
+    clouds.setRimParams({
+      alphaLimb: SHELL_RIM_ALPHA_LIMB,
+      faceOnFloor: DEFAULT_FACE_ON_FLOOR,
+      fresnelPower: DEFAULT_FRESNEL_POWER,
+      depthPower: DEPTH_DIM_POWER,
+      ...CLOUD_RIM_DISTANCES,
+    });
+    return materials;
+  }
+
+  it('for the rim surface', () => {
+    expectSlotsServedBy(
+      driven().rimSurface.touchedSlots,
+      materials().rim({ inkHex: 0x000000, inkAlpha: 1, opacity: 1 }),
+    );
+  });
+
+  it('for an absorption surface', () => {
+    expectSlotsServedBy(
+      driven().absorptionSurfaces[0]!.touchedSlots,
+      materials().absorption(absorptionSpec(null)),
+    );
+  });
 });

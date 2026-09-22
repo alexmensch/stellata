@@ -6,6 +6,11 @@ import {
 } from './dust-particle-layer';
 import type { DustParticleData } from '../loaders/dust-loader';
 import { fakeDustParticleMaterials } from './dust-materials-mock';
+import { expectSlotsServedBy } from '../scene/emitter-material-mock';
+import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
+import { buildSharedUniforms } from '../frame/shared-uniforms';
+import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
+import { makeTslDustParticleMaterials } from '../webgpu/dust/tsl-dust-materials';
 
 function makeSharedUniforms(): DustParticleSharedUniforms {
   return {
@@ -30,7 +35,7 @@ function makeLayer() {
   const scene = new THREE.Scene();
   const materials = fakeDustParticleMaterials();
   const layer = new DustParticleLayer(scene, makeSharedUniforms(), materials);
-  return { scene, layer, slots: () => materials.surfaces.at(-1)!.uniforms };
+  return { scene, layer, materials, slots: () => materials.surfaces.at(-1)!.uniforms };
 }
 
 describe('DustParticleLayer', () => {
@@ -47,11 +52,21 @@ describe('DustParticleLayer', () => {
     expect(mesh!.frustumCulled).toBe(false);
   });
 
-  it('uParticleStrength is layer-local (not shared)', () => {
-    const { layer, slots } = makeLayer();
+  it('writes only slots the shipped factory serves', () => {
+    const { layer, materials } = makeLayer();
     layer.attach(makeData(1));
+    layer.setStrength(0.5);
 
-    expect(slots().uParticleStrength.value).toBe(0);
+    const shared = makeSharedUniforms();
+    const nodes = buildSharedUniformNodes(buildSharedUniforms({
+      pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600,
+      hdr: makeHdrEmitterUniforms(),
+    })).nodes;
+    const real = makeTslDustParticleMaterials({
+      nodes, registerMrtLayer: () => () => {},
+    }).dustParticles(shared);
+
+    expectSlotsServedBy(materials.surfaces.at(-1)!.touchedSlots, real);
   });
 
   it('setStrength updates uniform and toggles mesh visibility', () => {

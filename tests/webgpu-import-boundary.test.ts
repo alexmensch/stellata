@@ -37,9 +37,11 @@ const EXEMPT_MODULES = ENTRY_BUNDLE_MEMBERS.map((f) => f.replace(/\.ts$/, ''));
 // A module matches whole, a folder by prefix — every file under it is
 // exempt, which is why only the modules take the `$`.
 const EXEMPT_DIRS = ['gate/'];
+// src/client/webgpu/README.md § Import boundary.
+const isMock = (p: string) => p.endsWith('-mock.ts');
 const isWebGpuFolderRef = (spec: string) => new RegExp(
   `(?:^|/)webgpu/(?!${[...EXEMPT_MODULES.map((m) => `${m}$`), ...EXEMPT_DIRS].join('|')})[^'"]+$`,
-).test(spec);
+).test(spec) && !spec.endsWith('-mock');
 
 const CROSSING_NOTE = `(only ${[...EXEMPT_MODULES, ...EXEMPT_DIRS].join(', ')} `
   + 'and type-only imports cross the boundary)';
@@ -65,7 +67,7 @@ describe('webgpu import boundary', () => {
   it('no value import of three/webgpu or three/tsl leaks outside src/client/webgpu/', () => {
     const offenders: string[] = [];
     for (const p of walkFiles(CLIENT, { include: isClientSource })) {
-      const inWebGpuDir = p.startsWith(WEBGPU_DIR);
+      const inWebGpuDir = p.startsWith(WEBGPU_DIR) && !isMock(p);
       for (const v of violationsInSource(readFileSync(p, 'utf8'), inWebGpuDir)) {
         offenders.push(`${relative(ROOT, p)}: ${v}`);
       }
@@ -117,6 +119,7 @@ describe('the detector itself', () => {
   it('leaves the forms that cost the entry bundle nothing', () => {
     expect(outside("import type { WebGPURenderer } from 'three/webgpu';")).toEqual([]);
     expect(outside("import type { WebGpuSeam } from './webgpu/seam';")).toEqual([]);
+    expect(outside("import { fakeWebGpuSeam } from './webgpu/seam-mock';")).toEqual([]);
     expect(outside("import { resolveBootRoute } from './webgpu/boot-route';")).toEqual([]);
     // The gate must render where WebGPU does not exist, so it is in the
     // entry bundle by design (guarded above against pulling three in).

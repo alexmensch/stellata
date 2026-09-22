@@ -1,16 +1,15 @@
 // DustParticleMaterials test double. See README.md § The material seam.
 
-import { fakeEmitterMaterial } from '../scene/emitter-material-mock';
-import type { EmitterMaterial } from '../scene/emitter-material';
+import { fakeEmitterMaterial, type FakeEmitterMaterial } from '../scene/emitter-material-mock';
 import type { DustParticleMaterials } from './dust-particle-layer';
 
 export interface FakeDustParticleMaterials extends DustParticleMaterials {
   /** One per `dustParticles()` call, in build order. */
-  readonly surfaces: EmitterMaterial[];
+  readonly surfaces: FakeEmitterMaterial[];
 }
 
 export function fakeDustParticleMaterials(): FakeDustParticleMaterials {
-  const surfaces: EmitterMaterial[] = [];
+  const surfaces: FakeEmitterMaterial[] = [];
   return {
     surfaces,
     dustParticles() {

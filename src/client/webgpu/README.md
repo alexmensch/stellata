@@ -24,6 +24,9 @@ src/client/webgpu/
   seam.ts                           WebGpuSeam — the type-only contract the
                                     integration shell holds on this boot,
                                     and the StellataRenderer alias.
+  seam-mock.ts                      WebGpuSeam test double: every member
+                                    present, each one a refusal by name
+                                    until a suite overrides it.
   boot-webgpu.ts                    Async boot: construct + init the
                                     WebGPURenderer, build the seam handle.
                                     The dynamic-import boundary.
@@ -277,6 +280,10 @@ rule:
   `three/webgpu` import.
 - A port child's TSL layer module is therefore also loaded dynamically
   — construct it through the seam, never `import` it from `stellata.ts`.
+- **A `*-mock.ts` here is held to the OUTSIDE rule**, not the folder's: it
+  may type-import only. That is what lets a suite anywhere import it —
+  a double carrying no `three/webgpu` value import costs the entry bundle
+  nothing, and the sweep checks it rather than exempting it.
 
 `tests/webgpu-import-boundary.test.ts` scans for violations.
 
