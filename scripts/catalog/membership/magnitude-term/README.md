@@ -179,15 +179,15 @@ silently as a float64.
 
 ### What the floor moves that was already there
 
-**The manifest side is additive; the record side is not.** Measured sid-keyed
-against a floor-off build of the same tree
+**Identity is additive; field values are not.** Measured sid-keyed against a
+floor-off build of the same tree
 (`../../validate/README.md` § Additive-mode record parity), the flip adds
-595,002 sids, drops none, puts no sid on two records, and moves
-**about 3,000 of the 388,071 records that were already there** — `vx/vy/vz`
-3,063/3,060/3,059, `x/y/z` 3,010/3,009/3,009, `physRadius` 2,852, `absmag`
-2,839, `ci` 2,403, `flags` 1,904, the companion 1,689, `multiplicityStatus`
-1,140, `lumClass` 1,102, `spectClass` 591, the display name 3, one
-`gaiaSourceId`. Some are large: sid 1406 moves about 46 pc.
+595,002 sids, drops none, puts no sid on two records — so the gate passes —
+and moves **about 3,000 of the 388,071 records that were already there** —
+`vx/vy/vz` 3,063/3,060/3,059, `x/y/z` 3,010/3,009/3,009, `physRadius` 2,851,
+`absmag` 2,838, `ci` 2,400, `flags` 1,907, the companion 1,689,
+`multiplicityStatus` 1,139, `lumClass` 1,102, `spectClass` 591, the display
+name 3, one `gaiaSourceId`. Some are large: sid 1406 moves about 46 pc.
 
 **Nothing drops** because the five retirements below are DECLARED, so the
 same-tree floor-off baseline honours them too — all five sids are absent from
