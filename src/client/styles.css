@@ -1548,7 +1548,7 @@ body.monochrome .card-strip:hover {
 body.monochrome .topbar {
   background: rgba(255, 255, 255, 0.92);
 }
-body.monochrome .loading {
+body.monochrome:not(.scene-live) .loading {
   background: var(--bg);
 }
 body.monochrome .loading-bar-fill { background: var(--accent); }
