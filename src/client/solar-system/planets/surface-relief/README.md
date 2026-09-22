@@ -67,7 +67,7 @@ quietly:
   whole scene's exposure.
 - `ndotv` — `lambertLimbDiscMean` divides the limb term out in closed form,
   which perturbing it breaks.
-- `stellata_skyIrradiance(sunCos, …)` — solar depression is measured against
+- `skyIrradianceTsl(sunCos, …)` — solar depression is measured against
   the ground observer's true local horizontal, and a mountainside tilted away
   from the sun still sees the whole sky hemisphere.
 - The airlight march's `surf` / shell-entry geometry — the shell is a smooth
@@ -79,7 +79,7 @@ Both halves of `dayside` ride the perturbed cosine — the Lambert term and
 `terminatorSoftness`, a by-eye widening of that same Lambert edge — so a
 sunward slope still catches the sun where the smooth sphere has turned away,
 and the terminator reads as ragged ground rather than a clean arc. Nothing
-atmospheric follows it there: physical twilight is `stellata_skyIrradiance`,
+atmospheric follows it there: physical twilight is `skyIrradianceTsl`,
 additive and strictly geometric (`../../atmosphere/README.md` § Skylight).
 Neither does the exposure pin — light past the geometric terminator carries
 no coverage claim, so it joins the frame mean and leaves the lit-hemisphere

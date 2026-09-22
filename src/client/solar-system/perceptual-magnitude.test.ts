@@ -36,7 +36,7 @@ describe('apparentMagnitude', () => {
 
 describe('planetApparentMagnitude', () => {
   // Jupiter (R = 69,911 km, geometric albedo p = 0.538) at full phase
-  // φ(0) = 1. Reference points are the same three the GLSL shader was
+  // φ(0) = 1. Reference points are the same three the glare graph was
   // hand-verified against.
   const JUPITER_RADIUS_PC = 69911 / 3.0857e13; // km → pc
   const JUPITER_ALBEDO = 0.538;

@@ -212,7 +212,7 @@ describe('the WebGPU reflected-glare layer', () => {
 
   it('parents the mirror into the pass-scene group, visible, out of the seam scene', () => {
     // uLocalPassRange gates the mirror per instance (no cluster → all
-    // collapse), so it stays visible exactly as the GLSL mirror mesh does.
+    // collapse), so the mesh itself stays visible.
     const { layer, scene, mirrorParent } = makeLayer();
     expect(mirrorParent.children).toContain(layer.mirrorMesh);
     expect(scene.children).not.toContain(layer.mirrorMesh);

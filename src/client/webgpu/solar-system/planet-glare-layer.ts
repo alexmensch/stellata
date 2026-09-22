@@ -22,8 +22,8 @@ export class PlanetGlareLayer implements MrtOutputLayer {
   readonly mesh: THREE.Mesh;
   /** The local-pass mirror, parented into `mirrorParent` (the field's
    *  localGroup, which the solar-system cluster carries into the pass
-   *  scene). Gated per instance by `uLocalPassRange`, exactly as the
-   *  GLSL mirror is — it draws nothing while no cluster is active. */
+   *  scene). Gated per instance by `uLocalPassRange`, so it draws
+   *  nothing while no cluster is active. */
   readonly mirrorMesh: THREE.Mesh;
 
   private readonly scene: THREE.Scene;

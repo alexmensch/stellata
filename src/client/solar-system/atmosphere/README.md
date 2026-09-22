@@ -56,7 +56,7 @@ Three species over two exponential density profiles ρ(h) = exp(−h/H):
 
 The night/day terminator falls out of the geometry, and is **solved rather
 than sampled**: the planetary shadow along a view ray is always exactly one
-t-interval (`stellata_shadowSpan` — inside the infinite shadow cylinder, cut
+t-interval (`shadowSpanTsl` — inside the infinite shadow cylinder, cut
 against the terminator half-space), and each march sample is weighted by the
 fraction of its segment outside it. That is the same question as "does the ray
 from this sample toward the host strike the body", which is why the light march
@@ -105,7 +105,7 @@ same term.
 
 Analytic, and view-independent (irradiance must not depend on where you look
 from, so the phase-weighted view-ray in-scatter cannot stand in for it). One
-model, `stellata_skyIrradiance` / `skyIrradianceFrac`, three derived pieces:
+model, `skyIrradianceTsl` / `skyIrradianceFrac`, three derived pieces:
 
 ```
 E_sky/E_host = F_term · tail(h_shadow) · (1 − μ_s)  +  beam(μ_s)
@@ -171,7 +171,7 @@ the band reads much wider near a pole without being wider, and there is no
 obliquity term to add.
 
 `τ_s` is the vertical scattering optical depth
-(`stellata_verticalScatterTau`, absorption excluded), which gives the skylight
+(`verticalScatterTauTsl`, absorption excluded), which gives the skylight
 the air's own hue — though at physical depths the T̄ saturation nearly
 flattens Earth's twilight channels (the strong zenith-blue of real twilight is
 ozone, which this model does not carry). `τ_a` is the absorption column
@@ -307,8 +307,8 @@ Three sources, three fixes.
    faceted interpolated position.
 2. *Sample-count* — the few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`)
    jitters its sample lattice per fragment by an interleaved-gradient-noise
-   offset (`stellataIgn(gl_FragCoord)`, the shared `stellata_ign` chunk —
-   `../../hdr/tonemap/README.md`), and the light march offsets by
+   offset (`interleavedGradientNoiseTsl` over the fragment position —
+   `../../webgpu/tsl/README.md` § Interleaved gradient noise), and the light march offsets by
    a further golden-ratio stride per view sample (`LIGHT_JITTER_STRIDE`) so the
    view and light lattices stay **decorrelated** — otherwise the two beat into a
    moiré rather than dissolving into fine grain. The CPU mirror uses the
@@ -388,7 +388,7 @@ because both mechanisms scale with f:
   shading, which at the limb collapsed the chord to nothing.
 
 Both are one fix: each shader scales the ray's polar component by
-`1/uPolarRadiusR` (`stellata_scalePolar`, with `uPoleView` from the mesh's local
+`1/uPolarRadiusR` (`scalePolarTsl`, with `uPoleView` from the mesh's local
 +Y — the axis `mesh.scale` flattens) **before** any of the geometry above runs.
 In that frame the body IS the unit sphere the march assumes, so shell entry,
 body-strike, the shadow cylinder and `h = |p| − 1` all describe the body
@@ -408,7 +408,7 @@ discards on shell entry.
 The arithmetic of that scaling — and the guarantee that it makes a
 sphere-shaped test *exact* rather than merely closer — is
 `../../util/polar-scale.ts`; `scalePolarComponent` here stays the named CPU
-mirror of `stellata_scalePolar` and delegates to it. The label occluder runs
+mirror of `scalePolarTsl` and delegates to it. The label occluder runs
 the same map for the same reason (`../../occlusion/README.md`).
 
 **`1 − f` has exactly one source: `../planets/spheroid-pure.ts:polarRadiusRatio`.**

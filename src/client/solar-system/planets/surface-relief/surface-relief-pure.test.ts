@@ -134,13 +134,13 @@ describe('the horizon lookup', () => {
   it('stays in range when the turn fraction rounds to a whole turn', () => {
     // A small enough negative azimuth makes 1 - turn round to exactly 1, which
     // puts the channel index one past the last — the wrap is load-bearing, not
-    // defensive, and the same edge exists in the GLSL's fract().
+    // defensive, and the same edge exists in the graph's fract().
     expect(horizonSin(enc, 1, -1e-30)).toBeCloseTo(decode(enc[0]), 12);
   });
 
   it('answers on azimuth 0 with the sun at the local zenith', () => {
     // Both components vanish there and the bearing is meaningless. atan2(0, 0)
-    // is 0 in JS but UNDEFINED in GLSL, where a NaN index would read off the
+    // is 0 in JS but UNDEFINED in WGSL, where a NaN index would read off the
     // end of the array — the shader guards to land on this same answer.
     expect(horizonSin(enc, 0, 0)).toBeCloseTo(decode(enc[0]), 12);
   });

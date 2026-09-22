@@ -67,13 +67,10 @@ inside the silhouette — but the local-pass mesh is an occluding emitter
 compositing at alpha 1 over the same texels, so the final statistic there
 was the mesh's already. The applied cut is unchanged by construction.
 
-## Both backends
+## The material
 
-GLSL: a `MeshBasicMaterial` with colour writes off — non-raw, so the main
-pass's log-depth chunks apply themselves, and unmarked, so the attachment
-gate keeps slots 1 and 2 shut. TSL: a `NodeMaterial` through
-`finishMrtMaterial` with colour writes off, which still needs the
-single↔struct swap for three's pipeline cache
+A `NodeMaterial` through `finishMrtMaterial` with colour writes off, which
+still needs the single↔struct swap for three's pipeline cache
 (`../../../webgpu/hdr/README.md` § The gate becomes the output struct).
 
 ## Priced, not assumed

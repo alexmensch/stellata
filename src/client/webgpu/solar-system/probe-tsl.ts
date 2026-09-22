@@ -27,8 +27,8 @@ export function buildProbeMarkerMaterial(
 
   material.vertexNode = Fn(() => {
     const probeView = modelViewMatrix.mul(vec4(attrVec3('iLocalPos'), 1.0)).toVar();
-    // The GLSL early return's off-screen sentinel; TSL has no
-    // value-carrying return, so the draw path assigns over it.
+    // Off-screen sentinel: TSL has no value-carrying return, so the draw
+    // path assigns over it.
     const clipOut = vec4(2.0, 2.0, 2.0, 1.0).toVar();
     If(attrFloat('iAlpha').greaterThan(0.0).and(probeView.z.lessThan(0.0)), () => {
       // Fixed pixel size at any range: a metre-scale probe has no

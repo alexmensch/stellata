@@ -259,8 +259,8 @@ export function atmosphereRadianceTsl(args: {
       const lit = litFractionTsl(t, segLen.mul(0.5), shadow.x, shadow.y).toVar();
       litSum.addAssign(lit);
       const sExit = farRootTsl(p, sunDir, rAtmo).toVar();
-      // The GLSL's two `continue`s, expressed as the branch they guard —
-      // a jump out of a concise arrow is emitted twice (../tsl/README.md
+      // Two `continue`s expressed as the branch they guard — a jump out of
+      // a concise arrow is emitted twice (../tsl/README.md
       // § TSL test pattern).
       If(lit.greaterThan(0.0).and(sExit.greaterThan(0.0)), () => {
         // Decorrelate the light-march offset from the view-march (and per

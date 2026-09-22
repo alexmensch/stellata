@@ -21,8 +21,8 @@ export const SOFT_TAPER_MARGIN_MAG = 0.5;
  * `M + 5·(log10(d/pc) − 1) = M + 5·log10(d / 10pc)`.
  *
  * Floors `dPc` at 1e-30 so callers don't need to guard against zero
- * distances at the singular focal-star point — matches the GLSL
- * shader's behaviour exactly.
+ * distances at the singular focal-star point — matches the glare graph's
+ * behaviour exactly.
  */
 export function apparentMagnitude(absmag: number, dPc: number): number {
   const d = Math.max(dPc, 1e-30);
