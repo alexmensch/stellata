@@ -1612,10 +1612,9 @@ export class Stellata implements FrameAnchor {
       this.catalog.loadedCount,
     );
     this.absorbedSuppressCount = this.catalog.loadedCount;
-    uploadFull(this.starPipeline.iSuppressPulsationAttr);
+    uploadFull(this.starAttrs.iSuppressPulsationAttr);
 
     this.starFrame.absorbRecords();
-    this.starPipeline.absorbRecords();
     this.webgpuStarLayer?.absorbRecords();
     // Not markDirty — see webgpu/extinction/README.md § The cache gate.
     this.extinctionPrepass?.refreshPositions();

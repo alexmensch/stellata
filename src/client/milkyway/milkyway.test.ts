@@ -53,7 +53,6 @@ import {
   RESOLVED_CATALOGUE_MAG_ARCSEC2,
 } from './calibration/diffuse-reference';
 import {
-  RESOLVED_HOLE_GRID_HALF_PC,
   SHIPPED_RESOLVED_HOLE,
   unresolvedHoleVoxels,
 } from './calibration/resolved-fraction-pure';
