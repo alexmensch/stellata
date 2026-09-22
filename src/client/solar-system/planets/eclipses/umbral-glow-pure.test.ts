@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../planet-system';
@@ -228,11 +227,8 @@ describe('the glow costs nothing outside the shadow', () => {
 });
 
 describe('the shader adds it rather than flooring the shadow', () => {
-  const frag = readFileSync(
-    fileURLToPath(new URL(
-      '../../../webgpu/solar-system/planet-mesh-tsl.ts', import.meta.url)),
-    'utf8',
-  );
+  const frag = readTslSource(
+    new URL('../../../webgpu/solar-system/planet-mesh-tsl.ts', import.meta.url));
 
   it('weights the glow by exactly what the caster removed', () => {
     expect(frag).toContain('.mul(p.uUmbralGlow).mul(reflected));');

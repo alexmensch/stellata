@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../../webgpu/tsl/tsl-source-fixture';
 
 import {
   GLARE_PHOTOCENTRE_SHIFT,
@@ -45,9 +44,8 @@ describe('reflected-glare calibration constants', () => {
   it('has no glare peak multiplier — a planet reads as a star of its mag', () => {
     // The invariant used to be defended by a debug knob defaulting to 1;
     // now nothing can multiply the peak. glare/README.md.
-    const glare = readFileSync(
-      fileURLToPath(new URL(
-        '../../webgpu/solar-system/planet-glare-tsl.ts', import.meta.url)), 'utf8');
+    const glare = readTslSource(
+      new URL('../../webgpu/solar-system/planet-glare-tsl.ts', import.meta.url));
     expect(glare).not.toMatch(/uGlareGain/);
   });
 });

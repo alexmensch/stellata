@@ -45,11 +45,10 @@ const manifest: Record<string, { skyView?: SkyViewRow; horizon?: { width: number
   JSON.parse(readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'));
 
 describe('sky view factor map', () => {
-  it('shares its encoding range with the shader that decodes it', () => {
-    // A range the three disagree on scales every shadow by the ratio, which
+  it('shares its encoding range with the Python generator', () => {
+    // A range the two disagree on scales every shadow by the ratio, which
     // reads as "the fill term is mistuned" rather than as an encoding bug.
     expect(pySource).toContain(`SKY_VIEW_RANGE = ${SKY_VIEW_RANGE}`);
-    // The shader imports the constant, so only the Python copy can drift.
   });
 
   it('decodes a raw channel the way the shader multiplies it', () => {

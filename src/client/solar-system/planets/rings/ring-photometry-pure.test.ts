@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
 
 
 import {
@@ -267,9 +266,8 @@ describe('the annulus phase scalar', () => {
 });
 
 describe('the annulus shader spends the phase factor on flux only', () => {
-  const frag = readFileSync(
-    fileURLToPath(new URL(
-      '../../../webgpu/solar-system/planet-rings-tsl.ts', import.meta.url)), 'utf8');
+  const frag = readTslSource(
+    new URL('../../../webgpu/solar-system/planet-rings-tsl.ts', import.meta.url));
 
   it('scales `light`, never `lit`', () => {
     // `lit` is the coverage mask's gate as well as the shadow term

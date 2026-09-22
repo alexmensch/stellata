@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../../webgpu/tsl/tsl-source-fixture';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mock';
@@ -22,7 +21,7 @@ import type { EmitterMaterial } from '../../scene/emitter-material';
 import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 
 const read = (name: string) =>
-  readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
+  readTslSource(new URL(name, import.meta.url));
 
 // Every surface this layer draws alpha-composites in FRONT of the volumetric
 // emitters, which live in attachment 2 until the resolve convolves them
@@ -33,13 +32,9 @@ const read = (name: string) =>
 // section and the atmosphere limb, exactly where the surface is dim.
 describe('the planet surfaces occlude the diffuse attachment', () => {
   const SURFACES = [
-    { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts', alpha: 'p.uFade' },
-    { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts', alpha: 'alpha' },
-    {
-      label: 'atmosphere shell',
-      src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts',
-      alpha: 'a',
-    },
+    { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts' },
+    { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts' },
+    { label: 'atmosphere shell', src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts' },
   ];
 
   // One blend equation runs over every attachment, so black at the
@@ -47,11 +42,17 @@ describe('the planet surfaces occlude the diffuse attachment', () => {
   // attachment 0 was composited with. A DIFFERENT alpha would occlude the
   // band by a different amount than it occludes everything else — which
   // is the one way this can go wrong without failing to compile.
-  for (const { label, src: path, alpha } of SURFACES) {
+  // Both alphas are READ off the source and compared, never spelled here:
+  // a literal in the test passes whatever the surface renames its alpha to,
+  // and only the two agreeing is the claim.
+  for (const { label, src: path } of SURFACES) {
     it(`dims it with the alpha the ${label} composites attachment 0 with`, () => {
       const src = read(path);
-      expect(src).toContain(`diffuse: occluderTexelTsl(${alpha}),`);
-      expect(src).toMatch(new RegExp(`colour: vec4\\([\\s\\S]*?, ${alpha}\\),`));
+      const occluder = /diffuse: occluderTexelTsl\(([^)]+)\),/.exec(src);
+      expect(occluder, 'no diffuse occluder write').not.toBeNull();
+      const colour = /colour: vec4\([^;]*?, ([A-Za-z0-9_.]+)\),/.exec(src);
+      expect(colour, 'no colour write').not.toBeNull();
+      expect(colour![1]).toBe(occluder![1]);
     });
   }
 

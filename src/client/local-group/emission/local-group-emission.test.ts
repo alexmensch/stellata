@@ -39,7 +39,9 @@ import {
   OLD_SPHEROID_COLOUR_INDEX_BV,
   combinedColourIndex,
 } from '../../hdr/emission/population-colour-pure';
-import { bindAttachmentGate } from '../../hdr/attachments/attachment-gate';
+import {
+  bindAttachmentGate, type GatedAttachments,
+} from '../../hdr/attachments/attachment-gate';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import { fakeLgEmissionMaterials } from './lg-emission-materials-mock';
 
@@ -460,10 +462,13 @@ describe('LocalGroupEmission controller', () => {
     for (const wasCalled of spies) expect(wasCalled()).toBe(true);
   });
 
-  it('marks every pass a physical emitter so it reaches the statistic attachment', () => {
+  // Counting opens is not enough: a `diffuse` → `statistic` swap still
+  // opens once per child, and it discards every diffuse write silently —
+  // M31 and the LMC lose their light with no error anywhere.
+  it('marks every pass a DIFFUSE emitter, not merely a physical one', () => {
     const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
-    let opened = 0;
-    bindAttachmentGate(() => { opened += 1; }, () => {});
+    const opened: GatedAttachments[] = [];
+    bindAttachmentGate((attachments) => { opened.push(attachments); }, () => {});
     for (const child of layer.group.children) {
       child.onBeforeRender(
         null as never, null as never, null as never,
@@ -471,7 +476,7 @@ describe('LocalGroupEmission controller', () => {
       );
     }
     bindAttachmentGate(null, null);
-    expect(opened).toBe(layer.group.children.length);
+    expect(opened).toEqual(layer.group.children.map(() => 'diffuse'));
     layer.dispose();
   });
 

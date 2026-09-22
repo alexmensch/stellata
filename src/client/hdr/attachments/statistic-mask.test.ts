@@ -1,10 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../../webgpu/tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
 import { glslCallArgs } from '../../util/glsl-call-args';
 
 const read = (name: string) =>
-  readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
+  readTslSource(new URL(name, import.meta.url));
 
 // The G channel used to carry peak-correct luminance and now carries a 0/1
 // lit-surface mask, which the reduction divides the masked mean by. Passing a
@@ -90,8 +89,9 @@ describe('the statistic attachment mask', () => {
   it('cuts each mask at the lit share of the surface it covers', () => {
     expect(read('../../webgpu/solar-system/planet-mesh-tsl.ts'))
       .toContain('const lit = step(0.0, sunCos).mul(step(0.5, shadow));');
-    expect(read('../../webgpu/solar-system/planet-rings-tsl.ts'))
-      .toContain('const unshadowed = step(');
+    expect(read('../../webgpu/solar-system/planet-rings-tsl.ts').replace(/\s+/g, ' '))
+      .toContain('const unshadowed = step( bodyFarRoot(frag, p.uSunDirLocal, '
+        + 'p.uEqRadiusPc, p.uPolarRadiusPc), 0.0);');
     const shell = read('../../webgpu/solar-system/planet-atmosphere-tsl.ts');
     expect(shell).toContain('a.assign(float(1.0).sub(atmoLumaTsl(march.transmittance)).mul(p.uFade));');
     expect(shell).toContain('shadowSpanTsl(');

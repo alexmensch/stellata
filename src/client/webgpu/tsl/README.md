@@ -18,6 +18,10 @@ src/client/webgpu/tsl/
   literal-drift-pure.ts (+ test)    Which pinned constants a TSL source
                                     restates as a bare literal — the scan
                                     behind every TSL-side drift guard.
+  tsl-source-fixture.ts             Reads a shipped TSL module as text with
+                                    its comments stripped, for the suites
+                                    that pin expression shapes
+                                    (§ TSL test pattern).
   jitter-tsl.ts                     Interleaved gradient noise over the
                                     fragment position, and the ±0.5-LSB
                                     output dither over that.
@@ -277,23 +281,16 @@ its own table.
 
 ## TSL test pattern — what a port child writes
 
-The WebGL2 build's shader tests are text scans over `.glsl` sources.
-Those keep guarding the live GLSL until the WebGL2 path is deleted; a
-ported layer's TSL variant is covered by three legs, none of which read
-generated code:
+A layer is covered by three legs, none of which read generated code:
 
 1. **Constants can't drift, by construction.** TSL is TypeScript: a
-   shader constant is imported from the same module the test imports.
-   The GLSL-era constant-drift guards (regex-pinning TS mirrors against
-   shader text) have no TSL successor because the mirror IS the shader's
-   own import — when a port child retires a `.glsl` file at cutover, its
-   drift guard retires with it, replaced by direct `toBe(CONSTANT)`
-   pins on the shared module.
-2. **Policy/roster guards scan TS the way they scanned GLSL.** The
+   shader constant is imported from the same module the test imports, so
+   the mirror IS the shader's own import and a direct `toBe(CONSTANT)`
+   pin on the shared module is the whole guard.
+2. **Policy/roster guards scan the TS source.** The
    frag-depth class of invariant ("no pipeline outside the allowlist
-   writes depth") becomes a `walkFiles` scan over `src/**/*.ts` for the
-   TSL equivalents (`depthNode` / `fragDepth` writes), same shape as
-   `tests/shader-frag-depth.test.ts`. The family so far:
+   writes depth") is a `walkFiles` scan over `src/**/*.ts` for
+   `depthNode` / `fragDepth` writes. The family so far:
    `tests/webgpu-import-boundary.test.ts`, `tests/tsl-frag-depth.test.ts`,
    `tests/tsl-loop-control.test.ts` and
    `tests/tsl-standin-filters.test.ts` — the last two pin authoring traps
@@ -304,15 +301,20 @@ generated code:
    around the body and emit no jump at all. And a data texture's
    nearest/nearest default bakes an unfiltered fetch into the WGSL
    (§ Shared uniform nodes), so every construction states its filter pair.
-3. **Behavioural math lives in pure helpers; renders are A/B smoke.**
+3. **Behavioural math lives in pure helpers; renders are smoke.**
    The canonical scalar form of any shader rule belongs in a `*-pure.ts`
    TS function (most already exist as CPU mirrors — tonemap-pure,
    emission-pure, star-physics) with its unit tests; the TSL graph stays
    thin composition over the same constants. What a node graph *renders*
-   is verified by the port child's parity smoke (same `?v=` state, flip
-   the renderer), not by unit tests — executing shaders in vitest
-   remains the hhaw WebGL2-test-seam epic's territory, and no port
-   gates on it.
+   is verified in a browser, not by unit tests — vitest executes no
+   shader.
+
+**A graph's expression SHAPE is pinned as source text**, which is the
+fourth leg where a claim has no scalar form: the shadow-span cut, the
+`litFraction` bounds, which solid angle reaches which attachment. Read the
+module through `tsl-source-fixture.ts` — it strips comments first, because
+these modules quote their own expressions in prose and a `toContain` over
+the raw text can be satisfied by the comment rather than by the graph.
 
 The literal half of leg 1 is `literal-drift-pure.ts`, shared by the
 per-subsystem drift guards. It compares by **value, not by text**: shader

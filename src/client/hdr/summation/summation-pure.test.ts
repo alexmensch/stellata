@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   MAX_DOWNSAMPLE,
   MAX_KERNEL_REACH_TEXELS,
@@ -217,5 +219,36 @@ describe('the patch radius against the design gate', () => {
     const angular = (fovDeg: number) =>
       radiusFor(fovDeg) * Math.sqrt(omegaPxFor(fovDeg, 900)) * ARCSEC_TO_RAD;
     expect(angular(FOV_MIN_DEG)).toBeCloseTo(angular(FOV_MAX_DEG), 12);
+  });
+});
+
+/** The shipped convolution's source, comments stripped — a claim must be
+ *  satisfied by the graph, not by a comment quoting it. */
+const tsl = readFileSync(
+  fileURLToPath(new URL('../../webgpu/hdr/summation-tsl.ts', import.meta.url)),
+  'utf8',
+).replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
+// The exposure model rests on this convolution and nothing ties the CPU
+// mirror above to the graph that runs — `summationMeanTsl` is imported by
+// one module and no test file.
+describe('the shipped convolution tracks the mirror', () => {
+  // A pixel-area weight, not a box: the tap's coverage of the disc.
+  it('weights each tap by its coverage, clamped to [0, 1]', () => {
+    expect(tsl).toContain('clamp(radiusTexels.add(0.5).sub(length(offset)), 0.0, 1.0)');
+  });
+
+  // Dividing by the tap COUNT reads the ragged edge of the disc as light
+  // that is not there, and the mean drifts with the radius.
+  it('normalises by the summed weight, never the tap count', () => {
+    expect(tsl).toContain('acc.div(weight)');
+    expect(tsl).toContain('weight.addAssign(w)');
+  });
+
+  // Edge-clamp, not clamp-to-zero: a tap off the live sub-rect must repeat
+  // the border texel, or the frame edge rings against the band.
+  it('clamps a tap into the live sub-rect', () => {
+    expect(tsl).toContain('clamp(sourceTexel.add(offset), vec2(0.5), hi)');
+    expect(tsl).toContain('extent.sub(0.5)');
   });
 });

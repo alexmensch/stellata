@@ -2,8 +2,7 @@
 // bound is taken from — README.md § The bound is taken off the mirror, and
 // ../solar-system/README.md § Constant drift runs in both directions.
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
@@ -13,8 +12,7 @@ import {
 } from '../../milkyway/calibration/resolved-fraction-pure';
 import { literalDriftOffenders, type PinnedConstant } from '../tsl/literal-drift-pure';
 
-const src = readFileSync(
-  fileURLToPath(new URL('./milkyway-band-tsl.ts', import.meta.url)), 'utf8');
+const src = readTslSource(new URL('./milkyway-band-tsl.ts', import.meta.url));
 
 // The march's own shape — what decides whether the TSL integrates the column
 // the mirror computes. The density and dust parameters are deliberately NOT

@@ -1,16 +1,14 @@
 // The TSL half of the dust sprite's constant-drift guards. See
 // ../solar-system/README.md § Constant drift runs in both directions.
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
 import {
   DUST_TINT, PARTICLE_DIM_FLOOR, PARTICLE_MAX_PX, PARTICLE_MIN_PX,
 } from '../../dust/dust-particle-pure';
 import { literalDriftOffenders, type PinnedConstant } from '../tsl/literal-drift-pure';
 
-const src = readFileSync(
-  fileURLToPath(new URL('./dust-particle-tsl.ts', import.meta.url)), 'utf8');
+const src = readTslSource(new URL('./dust-particle-tsl.ts', import.meta.url));
 
 const PINNED: readonly PinnedConstant[] = [
   { identifier: 'PARTICLE_MIN_PX', values: [PARTICLE_MIN_PX] },
