@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE,
+  ARG_DEFAULTS, ArgError, MODES, ROUNDTRIP_IDLE,
   parsePinArgs, parseRunArgs, parseSurvivorsArgs, pinUsage, usage,
 } from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
-import { SCENARIO_NAMES } from './scenarios';
+import { BACKENDS, SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
   it('fills every default from ARG_DEFAULTS and leaves priceFrame knobs unset', () => {
@@ -229,7 +229,7 @@ describe('parseRunArgs', () => {
 
   it('accepts every mode and backend request it advertises', () => {
     for (const mode of MODES) expect(parseRunArgs(['--mode', mode]).mode).toBe(mode);
-    for (const backend of BACKEND_REQUESTS) {
+    for (const backend of BACKENDS) {
       expect(parseRunArgs(['--backend', backend]).backend).toBe(backend);
     }
   });
@@ -286,7 +286,7 @@ describe('parseRunArgs', () => {
       expect(text).toContain(flag);
     }
     for (const mode of MODES) expect(text).toContain(mode);
-    for (const backend of BACKEND_REQUESTS) expect(text).toContain(backend);
+    for (const backend of BACKENDS) expect(text).toContain(backend);
   });
 });
 

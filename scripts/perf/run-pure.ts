@@ -4,7 +4,6 @@
 
 import type { GpuFrameMethod } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { AdapterProbe, GitProvenance, RunProvenance } from './schema';
-import type { BackendRequest } from './args';
 import type { Backend, ScenarioName } from './scenarios';
 
 /** Names a renderer that is not the GPU. Nothing measured on one counts, so
@@ -43,8 +42,8 @@ export function readbackOrder(cadences: readonly number[]): number[] {
   return cadences.length > 1 ? [...cadences, cadences[0]] : [...cadences];
 }
 
-/** Backend-major, the scenarios as given within each backend
- *  (`pins/README.md` § Run position). */
+/** Backend-major, the scenarios as given within each backend — the order
+ *  a pin row's position is read in (`pins/README.md` § Run position). */
 export function contextOrder(
   scenarios: readonly ScenarioName[],
   backends: readonly Backend[],
@@ -53,17 +52,17 @@ export function contextOrder(
 }
 
 /**
- * The contexts a run visits, in order: `contextOrder` over `BACKENDS`, and —
+ * The contexts a run visits, in order: `contextOrder` over the one backend, and —
  * where more than one cadence was asked for — each scenario once per cadence
  * in `readbackOrder`.
  */
 export function planContexts(
   scenarios: readonly ScenarioName[],
-  request: BackendRequest,
+  backend: Backend,
   cadences: readonly number[],
 ): readonly ContextPlan[] {
   const order = readbackOrder(cadences);
-  return contextOrder(scenarios, [request])
+  return contextOrder(scenarios, [backend])
     .flatMap(({ name, backend }) => order.map((readbackEvery) => ({ name, backend, readbackEvery })));
 }
 

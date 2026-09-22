@@ -13,16 +13,10 @@ import {
 import { COMPUTE_ROW, DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
-import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
+import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
 
 export const MODES = ['differential', 'probe', 'dwell', 'sweep'] as const;
 export type Mode = (typeof MODES)[number];
-
-/** One request per backend, and there is one backend. Kept as its own
- *  alias because `RunArgs.backend` is what reaches a record's `requested`
- *  field (`scenarios.ts`, on `BACKENDS`). */
-export const BACKEND_REQUESTS = BACKENDS;
-export type BackendRequest = (typeof BACKEND_REQUESTS)[number];
 
 /** `--roundtrip idle`: the same frames between the two dwells with nothing
  *  toggled — the time-matched control for a pass round trip. */
@@ -40,7 +34,7 @@ export interface RunArgs {
   readonly help: boolean;
   readonly url: string;
   readonly scenarios: readonly ScenarioName[];
-  readonly backend: BackendRequest;
+  readonly backend: Backend;
   readonly mode: Mode;
   readonly passes: readonly string[] | undefined;
   /** differential: roster passes switched OFF before the sweep and restored
@@ -148,7 +142,7 @@ export function usage(): string {
   return [
     'Usage: pnpm run perf -- [flags]',
     `  --scenario <names>       comma list of ${SCENARIO_NAMES.join('|')}, or all   (default ${ARG_DEFAULTS.scenario})`,
-    `  --backend <name>         ${BACKEND_REQUESTS.join('|')}                         (default ${ARG_DEFAULTS.backend})`,
+    `  --backend <name>         ${BACKENDS.join('|')}                         (default ${ARG_DEFAULTS.backend})`,
     `  --mode <name>            ${MODES.join('|')}   (default ${ARG_DEFAULTS.mode})`,
     '  --passes <keys>          comma list of priceFrame pass keys        (default: every present pass)',
     '  --pre-disable <keys>     differential: switch these passes OFF for the whole sweep (restored after)',
@@ -370,7 +364,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   if (str('pin') !== undefined && str('json') === undefined) {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
   }
-  const backend = oneOf('backend', BACKEND_REQUESTS);
+  const backend = oneOf('backend', BACKENDS);
   if (str('pin') !== undefined && !isCanonOrder(scenarios)) {
     throw new ArgError(
       '--pin needs --scenario all, in canon order: a pin missing a row narrows the gate '
