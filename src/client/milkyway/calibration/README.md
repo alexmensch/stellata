@@ -24,10 +24,9 @@ comes out* is here.
   rows, the record count they were measured on, and the resolution-hole
   table (§ The resolution hole). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
-  two texture coordinates both shaders compute, the CPU mirror of the
-  sampler's own filtering rule, and the texel values the slot is written
-  with.
-- `resolved-hole-texture.ts` (+ test) — the `DataTexture` those texels go
+  rule the table is sampled with, the cube it is resampled onto, and the
+  CPU mirror of the trilinear fetch both shaders make.
+- `resolved-hole-texture.ts` (+ test) — the `Data3DTexture` those voxels go
   into and its filter pair.
 
 ## The zero point is not the band's own — it is the emission unit's

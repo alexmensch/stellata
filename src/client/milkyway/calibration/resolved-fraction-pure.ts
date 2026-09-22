@@ -87,15 +87,6 @@ export function resolvedLightFraction(
     table.values, RESOLVED_HOLE_SHELLS, RESOLVED_HOLE_BANDS, u, v);
 }
 
-/** What the band still owes at a point: the model's emissivity times this. */
-export function unresolvedLightFraction(
-  dSolPc: number,
-  absSinB: number,
-  table: ResolvedHoleTable = SHIPPED_RESOLVED_HOLE,
-): number {
-  return 1 - resolvedLightFraction(dSolPc, absSinB, table);
-}
-
 /** README.md § The table is a 3D grid. */
 export const RESOLVED_HOLE_GRID_N = 64;
 export const RESOLVED_HOLE_GRID_HALF_PC = 4000;
@@ -162,7 +153,7 @@ export function resolvedHoleGridOf(
 }
 
 /** The CPU mirror of the hardware's trilinear fetch. */
-export function sampleVoxelCentres(
+function sampleVoxelCentres(
   voxels: ArrayLike<number>,
   n: number,
   u: number,
@@ -183,7 +174,7 @@ export function sampleVoxelCentres(
 }
 
 /** The whole of what each shader computes before the fetch. */
-export function resolvedHoleUvw(
+function resolvedHoleUvw(
   xFromSolPc: number,
   yFromSolPc: number,
   zFromSolPc: number,
@@ -206,13 +197,4 @@ export function unresolvedGridLight(
 /** See README.md § The resolution hole. */
 export function clampResolvedHoleStrength(k: number): number {
   return Math.min(1, Math.max(0, k));
-}
-
-/** What the shaders fetch. Why the complement and not the hole:
- *  README.md § The table is a texture, not a uniform array. */
-export function unresolvedHoleTexels(strength = 1): Float32Array {
-  const k = clampResolvedHoleStrength(strength);
-  const out = new Float32Array(RESOLVED_HOLE_VALUES.length);
-  for (let i = 0; i < out.length; i++) out[i] = 1 - k * RESOLVED_HOLE_VALUES[i];
-  return out;
 }
