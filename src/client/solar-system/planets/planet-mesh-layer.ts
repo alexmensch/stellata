@@ -438,22 +438,22 @@ export class PlanetMeshLayer {
       if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureColourRung(planet, physPx);
         if (reliefSpanOf(planet)) {
-          this.ensureTexture(textureKey(planet.name, RELIEF_SUFFIX), {
+          this.requireTexture(textureKey(planet.name, RELIEF_SUFFIX), {
             ext: 'webp', format: THREE.RGFormat,
           });
           // Not RG: all four channels of each horizon plane carry an
           // azimuth, alpha included.
           for (const suffix of HORIZON_SUFFIXES) {
-            this.ensureTexture(textureKey(planet.name, suffix), { ext: 'webp' });
+            this.requireTexture(textureKey(planet.name, suffix), { ext: 'webp' });
           }
           // One scalar per texel, so R8 — a quarter of the RGBA8 an
           // ImageBitmap of the same grayscale file would otherwise upload as.
-          this.ensureTexture(textureKey(planet.name, SKY_VIEW_SUFFIX), {
+          this.requireTexture(textureKey(planet.name, SKY_VIEW_SUFFIX), {
             ext: 'webp', format: THREE.RedFormat,
           });
         }
         if (planet.rings) {
-          this.ensureTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
+          this.requireTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
         }
       }
       const fade = meshFadeFromPhysPx(physPx);
@@ -675,8 +675,9 @@ export class PlanetMeshLayer {
     // lands rather than sitting resident and undrawn.
     this.requestedRung.set(body, want);
     const floorReady = this.ensureRung(body, floor);
+    const wantReady = this.ensureRung(body, want);
     if (want === shown) return;
-    if (this.ensureRung(body, want)) {
+    if (wantReady) {
       this.shownRung.set(body, want);
       this.releaseOtherRungs(planet, want);
     } else if (shown === null && floorReady) {
@@ -688,8 +689,21 @@ export class PlanetMeshLayer {
   private ensureRung(body: string, width: number): boolean {
     const key = textureKey(body, `-${width}`);
     this.rungOf.set(key, { body, width });
-    this.ensureTexture(key, { ext: 'jpg' });
-    return this.useTexture(key)?.state === 'ready';
+    return this.requireTexture(key, { ext: 'jpg' })?.state === 'ready';
+  }
+
+  /** Request a map and stamp it used this frame. Every map fetched for a body
+   *  past `TEXTURE_PREFETCH_PX` goes through here, the prefetch half-pixel
+   *  below the crossfade band included: a map fetched but never stamped is an
+   *  eviction candidate the frame it lands, so over budget it is released,
+   *  re-requested and re-decoded every frame, and each landing wakes the
+   *  render gate. */
+  private requireTexture(
+    key: string,
+    opts: { ext: TextureExt; format?: THREE.PixelFormat },
+  ): TextureState | undefined {
+    this.ensureTexture(key, opts);
+    return this.useTexture(key);
   }
 
   /** textures/README.md § Staying inside VRAM. */

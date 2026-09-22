@@ -184,7 +184,10 @@ breaking the tie. **Nothing drawn this frame is ever a candidate**, and no
 pinned floor is either — evicting
 the map on screen flips the body to its placeholder mid-view, which is worse
 than being over budget — so if the drawn set alone exceeds the budget the pass
-sheds what it can and stops. No thrash.
+sheds what it can and stops. No thrash. "Drawn" includes the prefetch
+half-pixel under the crossfade band: every map requested for a body past
+`TEXTURE_PREFETCH_PX` is stamped used that frame, or it would be evicted the
+frame it lands and fetched again the frame after.
 
 **The budget decides how much OFF-screen memory survives, not how sharp
 anything on screen is.** Only undrawn maps can go, so what is on screen may

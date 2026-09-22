@@ -309,6 +309,17 @@ describe('the layer releases what it stops drawing', () => {
     expect(h.pendingFor('ganymede-8192')).toBe(true);
   });
 
+  it('keeps what it prefetched under the crossfade band, however far over budget', () => {
+    const h = harness(['Moon', 'Europa']);
+    const band = (TEXTURE_PREFETCH_PX + MESH_FADE_MIN_PX) / 2;
+    h.frame([band, 3000]);
+    h.resolve('europa-8192', 8192, 8192);
+    const normal = h.resolve('moon-normal', 4096);
+    for (let i = 0; i < 5; i++) h.frame([band, 3000]);
+    expect(normal.close).not.toHaveBeenCalled();
+    expect(h.pendingFor('moon-normal')).toBe(false);
+  });
+
   it('refuses a map wider than the device accepts, without retrying it', () => {
     // Relief and ring maps ship one fixed width each, so the ladder's own clamp
     // cannot cover them — an oversized upload fails and leaves the body white.
