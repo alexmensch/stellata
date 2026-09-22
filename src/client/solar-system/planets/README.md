@@ -24,10 +24,15 @@ src/client/solar-system/planets/
                                   ride, and the SVG labels stay wired
                                   in main.ts (they read the shell's
                                   orbit-rings layer + focus state).
-  planet-body-field.ts (+ test)   Instanced planet-body renderer. One
-                                  additive reflected-glare pass (+ its
-                                  local-pass mirror); the resolved surface
-                                  is the spheroid mesh (planet-mesh-layer).
+  planet-body-field.ts (+ test)   Per-body state for every attached
+                                  host: the arrays the reflected-glare
+                                  billboard packs from (its main pass +
+                                  local-pass mirror,
+                                  ../../webgpu/solar-system/); the resolved
+                                  surface is the spheroid mesh
+                                  (planet-mesh-layer). `drawn` is the
+                                  glare's visibility, which the mesh layer
+                                  and the local cluster follow.
                                   Shares the glow half of the perceptual
                                   disc with stars — see
                                   ../../star-pipeline/README.md.
@@ -128,8 +133,8 @@ airlight over the disc — is
 
 ## The two layers
 
-- **`planet-body-field.ts`** — global, instanced mesh holding every
-  attached host's planet bodies. Sol attaches once at startup; bk5
+- **`planet-body-field.ts`** — the per-body arrays for every attached
+  host's planet bodies. Sol attaches once at startup; bk5
   will iterate exoplanet hosts in. Bodies are physical objects:
   they render whenever attached, regardless of which host the camera
   is focused on. Each frame, for each host:
@@ -384,8 +389,8 @@ crossfade.
   outcome resolving requests a frame (`ctx.requestRender('planet-texture')`):
   a load landing between ticks changes what the body draws, and frames
   are on demand (`../../render-gate/README.md`).
-- **Visibility**: the layer's group mirrors `PlanetBodyField.group`
-  (chart-mono + hidden ride along for free) and skips the field's
+- **Visibility**: the layer's group follows `PlanetBodyField.drawn` and
+  hides in chart mode (`monochrome`), and skips the field's
   `hiddenInstanceIdx` (observe anchor).
 - **Depth pre-stamp**: every fully opaque body also draws a depth-only
   copy of its spheroid first in the MAIN pass, so the background behind

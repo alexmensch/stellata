@@ -83,7 +83,7 @@ export class SolarSystemCluster implements LocalCluster {
 
     // Chart mode inks every body as a flat main-pass disc; suppression
     // and mirrors must stay out of the way entirely.
-    const fieldLive = this.field.group.visible && !this.field.monochrome;
+    const fieldLive = this.field.drawn && !this.field.monochrome;
     let hostMember: number | null = null;
     if (fieldLive) {
       const ringsUp = this.orbitRings.anyOrbitRingVisible();

@@ -183,7 +183,7 @@ describe('PlanetBodyField lifecycle', () => {
 
   it('starts empty and stays hidden', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
-    expect(f.group.visible).toBe(false);
+    expect(f.drawn).toBe(false);
     f.dispose();
   });
 
@@ -192,7 +192,7 @@ describe('PlanetBodyField lifecycle', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     // group becomes visible; positions buffer holds 3 entries.
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     const positions = f.getHostLocalPositions(0);
     expect(positions).not.toBeNull();
     expect(positions!.length).toBe(9); // 3 planets × xyz
@@ -204,7 +204,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.detachHost(0);
     expect(f.getHostLocalPositions(0)).toBeNull();
-    expect(f.group.visible).toBe(false);
+    expect(f.drawn).toBe(false);
     f.dispose();
   });
 
@@ -220,7 +220,7 @@ describe('PlanetBodyField lifecycle', () => {
     // same host with the same absPos and confirm idempotence.
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, hostAbs, 0, 0);
     // Visible (re-attached fresh).
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     f.dispose();
   });
 
@@ -260,7 +260,7 @@ describe('PlanetBodyField lifecycle', () => {
     const stillThere = f.getHostLocalPositions(1);
     expect(stillThere).not.toBeNull();
     expect(stillThere!.length).toBe(9);
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     f.dispose();
   });
 
@@ -277,7 +277,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.setCullMag(15);
     f.setCullMag(cullMagFor(STUB_LIMIT_MAG));
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     f.dispose();
   });
 
@@ -535,18 +535,18 @@ describe('PlanetBodyField lifecycle', () => {
     f.update(camera, 0, 0);
     // Chart mode keeps the bodies drawn — as flat ink discs; only the
     // blending swaps, mirroring the star pipeline.
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     expect(calls).toBe(2);
 
     f.setMonochrome(false);
     f.setHidden(true);
     f.update(camera, 1, 0);
-    expect(f.group.visible).toBe(false);
+    expect(f.drawn).toBe(false);
     expect(calls).toBe(3);
 
     f.setHidden(false);
     f.update(camera, 2, 0);
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     expect(calls).toBe(4);
     f.dispose();
   });

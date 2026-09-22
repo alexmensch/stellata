@@ -179,10 +179,7 @@ export function createPlanetKindModule(): PlanetKindModule {
         contribution: { kind: 'always' },
         update: (fc) => {
           field!.update(fc.camera, fc.t, performance.now());
-          // The field's own visibility gate — chart mode, the observe
-          // hide, and an empty roster all land on it — has no group to
-          // ride on the TSL side.
-          glare?.setVisible(field!.group.visible);
+          glare?.setVisible(field!.drawn);
         },
         setMonochrome: (on) => {
           field!.setMonochrome(on);

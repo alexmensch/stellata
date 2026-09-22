@@ -15,9 +15,10 @@ Rendering, ephemerides, and the clock live in the subfolders.
 
 ## Subfolders
 
-- `planets/` — the two render layers (instanced glare field + close-range
-  spheroid mesh LOD), shaders, rotation elements, inter-body shadows,
-  ring systems (annulus + the ring share of appMag), per-body labels.
+- `planets/` — the body field (per-body state the glare packs from) and
+  the close-range spheroid mesh LOD, rotation elements, inter-body
+  shadows, ring systems (annulus + the ring share of appMag), per-body
+  labels. Their graphs are `../webgpu/solar-system/`.
 - `atmosphere/` — first-principles single-scattering airlight for Venus,
   Earth, Mars, and Titan; the integrator and its CPU mirror.
 - `materials/` — which surfaces the family asks for, and the neutral

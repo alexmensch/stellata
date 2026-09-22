@@ -110,12 +110,12 @@ describe('planet kind module', () => {
 
     // Sol lands on a microtask, so this frame has an empty roster.
     layer.update!(fc);
-    expect(m.field.group.visible).toBe(false);
+    expect(m.field.drawn).toBe(false);
     expect(glare.visible.at(-1)).toBe(false);
 
     await m.systemsReady;
     layer.update!(fc);
-    expect(m.field.group.visible).toBe(true);
+    expect(m.field.drawn).toBe(true);
     expect(glare.visible.at(-1)).toBe(true);
   });
 

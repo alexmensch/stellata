@@ -412,7 +412,7 @@ export class PlanetMeshLayer {
   update(camera: THREE.PerspectiveCamera, t: number): void {
     // Chart mode inks the bodies as flat discs (chart-mode/README.md);
     // a lit photographic sphere has no place on paper.
-    this.group.visible = this.field.group.visible && !this.field.monochrome;
+    this.group.visible = this.field.drawn && !this.field.monochrome;
     this.depthStampGroup.visible = this.group.visible && this.depthStampEnabled;
     if (!this.group.visible) return;
     perfMark('solar.mesh');

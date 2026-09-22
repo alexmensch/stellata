@@ -264,8 +264,8 @@ vertex buffers, so it builds a packed geometry of its own over
 `PlanetBodyField.glareSources()` — the field's live arrays, four of them
 shared by reference and three interleaved
 (`README.md` § The glare packs). The field
-writes the arrays and owns nothing on the GPU; its `group` is the
-layer's visibility state alone.
+writes the arrays and owns nothing on the GPU; its `drawn` getter is the
+layer's visibility.
 
 **There is no gain on the peak, and adding one would break the invariant
 above.** A `uGlareGain` debug multiplier rode both channels until the

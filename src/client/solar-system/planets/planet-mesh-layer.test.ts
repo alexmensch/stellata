@@ -143,7 +143,7 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
     }) as never,
   );
   const field = {
-    group: new THREE.Group(),
+    drawn: true,
     monochrome: false,
     liveInstanceCount: planets.length,
     // The observe anchor — settable, because hiding the body the camera is
@@ -475,7 +475,7 @@ describe('the ring annulus phase scalar', () => {
     // Saturn on +x at 9.5 AU, host at the local origin.
     const planetPos = new THREE.Vector3(9.5 * AU_PC, 0, 0);
     const field = {
-      group: new THREE.Group(),
+      drawn: true,
       monochrome: false,
       liveInstanceCount: 1,
       hiddenInstanceIdx: -1,

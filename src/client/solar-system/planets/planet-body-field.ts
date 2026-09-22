@@ -1,5 +1,4 @@
-// Global instanced planet-body field across every attached host.
-// See ./README.md § The two layers.
+// Per-body state across every attached host. See ./README.md § The two layers.
 
 import * as THREE from 'three';
 import { systemFamily, type Planet, type PlanetSystem } from '../planet-system';
@@ -101,8 +100,6 @@ interface PlanetView {
 // v1 attaches Sol (9 planets + 18 moons = 27 bodies) once; sized to hold
 // that in one shot so the sole attach doesn't immediately grow. bk5 may
 // grow this as exoplanet hosts come online.
-// Resizing reallocates the instanced attribute buffers — relatively cheap
-// compared to a frame.
 const INITIAL_CAPACITY = 32;
 
 interface InstanceAttrSpec {
@@ -245,7 +242,6 @@ type CrossHostCandidate = PickCandidate & {
 };
 
 export class PlanetBodyField {
-  readonly group: THREE.Group;
   private readonly localMirrorGroup = new THREE.Group();
   private mono = false;
   private hidden = false;
@@ -281,13 +277,12 @@ export class PlanetBodyField {
   // resolve their host in O(1) instead of an O(hosts) scan — several
   // run per-frame (focal ride, POI overlay per pin, focus-card rows).
   private instanceHost!: Int32Array;
-  // One shared { value } slot across every material — the uHideIdx
-  // uniform hiding the observe-anchor body (-1 = none).
-  private hideIdxUniform = { value: -1 };
+  // The observe-anchor body's flat index (-1 = none).
+  private hideIdx = -1;
   // Active local-depth cluster's slot range (start, count); (-1, 0) =
-  // none. One shared value drives the main-pass suppression AND the
-  // mirror draws' member gate, in opposite senses.
-  private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
+  // none. It drives the main-pass suppression AND the mirror draws'
+  // member gate, in opposite senses.
+  private readonly localPassRange = new Int32Array([-1, 0]);
   // Body positions as the LAST rendered frame drew them, in the same
   // renderer-local frame and layout as `localRel64` plus the host offset.
   // Differencing against them gives each body its own velocity over
@@ -323,11 +318,6 @@ export class PlanetBodyField {
   ) {
     this.magShared = magnitudeShared;
     this.cullMag = magnitudeShared.uCullMag.value;
-    this.group = new THREE.Group();
-    this.group.visible = false;
-    // PlanetBodyField sits in the renderer's local frame (no group
-    // translation). iHostLocalPos delivers each host's offset from
-    // world-local origin per-instance; the shader does the rest.
     this.allocateBuffers(this.capacity);
   }
 
@@ -402,7 +392,6 @@ export class PlanetBodyField {
     this.writeHostStaticAttributes(host);
     this.writeHostPositions(host, t);
     this.layoutVersion++;
-    this.group.visible = !this.hidden;
   }
 
   detachHost(hostStarIdx: number): void {
@@ -427,7 +416,6 @@ export class PlanetBodyField {
     this.hosts.delete(hostStarIdx);
     this.rebuildInstanceMap();
     this.resetPerInstanceFactors();
-    if (this.liveCount === 0) this.group.visible = false;
   }
 
   /** Attach/detach shifts flat indices, invalidating any mid-decay dim
@@ -497,7 +485,6 @@ export class PlanetBodyField {
    */
   update(camera: THREE.PerspectiveCamera, t: number, nowMs: number): void {
     if (this.liveCount === 0) {
-      this.group.visible = false;
       this.prevDimTargets.clear();
       this.dimTargets.clear();
       return;
@@ -515,7 +502,6 @@ export class PlanetBodyField {
     this.dimTargets = swapDims;
     this.dimTargets.clear();
     this.lastT = t;
-    this.group.visible = !this.hidden;
     for (const host of this.hosts.values()) {
       const dToHost = camera.position.distanceTo(host.hostLocalPos);
       if (dToHost > host.cullDistance) continue;
@@ -862,7 +848,7 @@ export class PlanetBodyField {
   /** Flat instance currently hidden via setHiddenInstance (-1 = none)
    *  — the observe-anchor body; the mesh LOD must hide it too. */
   get hiddenInstanceIdx(): number {
-    return this.hideIdxUniform.value;
+    return this.hideIdx;
   }
 
   /** The live per-instance arrays and slot state the WebGPU glare layer
@@ -873,8 +859,8 @@ export class PlanetBodyField {
       buffers: () => this.bufs,
       layoutVersion: () => this.layoutVersion,
       instanceCount: () => this.liveCount,
-      hideIdx: () => this.hideIdxUniform.value,
-      localPassRange: () => this.localPassRangeUniform.value,
+      hideIdx: () => this.hideIdx,
+      localPassRange: () => this.localPassRange,
     };
   }
 
@@ -1482,7 +1468,7 @@ export class PlanetBodyField {
   ): void {
     if (this.hidden) return;
     const cutoff = this.drawCutoffMag();
-    const hiddenInstance = this.hideIdxUniform.value;
+    const hiddenInstance = this.hideIdx;
     for (const host of this.hosts.values()) {
       for (let i = 0; i < host.count; i++) {
         if (host.startInstance + i === hiddenInstance) continue;
@@ -1505,9 +1491,8 @@ export class PlanetBodyField {
    *  Instances inside the range collapse in the main pass and render
    *  via the mirror draws in the local depth pass instead. */
   setLocalPassRange(start: number, count: number): void {
-    const v = this.localPassRangeUniform.value;
-    v[0] = start;
-    v[1] = count;
+    this.localPassRange[0] = start;
+    this.localPassRange[1] = count;
   }
 
 
@@ -1525,7 +1510,6 @@ export class PlanetBodyField {
 
   setMonochrome(on: boolean): void {
     this.mono = on;
-    this.group.visible = !this.hidden && this.liveCount > 0;
   }
 
   get monochrome(): boolean {
@@ -1534,16 +1518,20 @@ export class PlanetBodyField {
 
   setHidden(on: boolean): void {
     this.hidden = on;
-    if (on) this.group.visible = false;
-    else this.group.visible = this.liveCount > 0;
+  }
+
+  /** The glare's visibility, which the mesh layer and the local cluster
+   *  follow. */
+  get drawn(): boolean {
+    return !this.hidden && this.liveCount > 0;
   }
 
   /** Hide one body by flat instance index (-1 = none) — the planet
    *  sibling of the star pipeline's uHideFocusIdx, consumed by observe
-   *  mode for the body the camera is parked at. Both glare draws share
-   *  the uniform, so the hidden body writes no colour and no depth. */
+   *  mode for the body the camera is parked at. Both glare draws read
+   *  it, so the hidden body writes no colour and no depth. */
   setHiddenInstance(instanceIdx: number): void {
-    this.hideIdxUniform.value = instanceIdx;
+    this.hideIdx = instanceIdx;
   }
 
   /** Every GPU allocation added to this class must be freed here. */
