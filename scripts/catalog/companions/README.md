@@ -112,20 +112,25 @@ Per-row gates and resolution:
   What it takes: the WDS (ρ, θ) tangent projection off the anchor, the
   anchor's `distVia` (as a minted member does — it now sits at the anchor's
   distance, not its own fit's), the anchor's systemic velocity,
-  and the Δmag/`wds_mag` brightness with its Ballesteros colour. Photometry
-  travels with the astrometry here because ONE cause rejects both — the
-  brighter star's light inside the detection window — and BP/RP see more of
-  it than G does. The spectral type is measured elsewhere and stays the
-  record's own; the physical radius and the colour both re-derive against
-  it. The record keeps its identifiers and its first-class membership, so
+  and a **curated** brightness with its Ballesteros colour — A+Δmag, the
+  row's WDS magnitude referenced to the distance the member now sits at, or
+  class→M_V. Photometry travels with the astrometry here because ONE cause
+  rejects both — the brighter star's light inside the detection window — and
+  BP/RP see more of it than G does. With no curated source the member keeps
+  its own apparent brightness across the move (absmag shifts by the distance
+  modulus and the A_V difference, colour untouched), never a row's `own` or
+  inherited-twin magnitude: those were derived at the rejected fit's distance
+  or are the anchor's light. The spectral type is measured elsewhere and
+  stays the record's own; the physical radius re-derives against it. The record keeps its identifiers and its first-class membership, so
   this adds no star and retires none. Sirius B is the case: 11.1″ from a
   star 9.91 mag brighter, RUWE 2.42 and a blended image on 18% of transits,
   and a V ≤ 11 floor admits it in its own right — its own fit put the pair
   at 19.1 AU against the measured 29.27, took M_V 11.467 against A+Δmag's
   11.360 and B−V −0.224 against the DA1.9 Ballesteros −0.443, and fed the
   systemic blend below a proper motion that dragged **Sirius A** from
-  1339.4 mas/yr to 1282.7. Counted `companionExistingMemberRecurated`, once
-  per member however many cursors reach it.
+  1339.4 mas/yr to 1282.7. Counted `companionExistingMemberRecurated`, per
+  brightness source (`held` for the fallback), once per member however many
+  cursors reach it.
 - **Anchor-is-the-component refusal.** A pair whose two ends resolve to ONE
   record has no second star to mint. `01398-5612`'s A row carries the B
   record's HD, HIP and Gaia cells, so the cursor anchors on B and the B row's

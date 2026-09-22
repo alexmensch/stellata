@@ -3,6 +3,7 @@
 // scripts/catalog/validate/README.md § Validation harness.
 import type { DistVia } from './distance/parallax/parallax-cascade';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
+import type { RecuratedBrightness } from './companions/companion-promotion';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -346,9 +347,9 @@ export interface BuildCounts {
    *  designation constellation, carrying none of their own. */
   companionExistingDesigConFromAnchor: number;
   /** Existing records whose own 5p solution Gaia rejects, re-curated onto the
-   *  pair's measured geometry, the anchor's systemic velocity and the curated
-   *  brightness (Sirius B once a magnitude floor admits it in its own right). */
-  companionExistingMemberRecurated: number;
+   *  pair's measured geometry and the anchor's systemic velocity, per where
+   *  the brightness came from (Sirius B is `dmag_imputed`). */
+  companionExistingMemberRecurated: Record<RecuratedBrightness, number>;
   /** Synthetic mints refused because a stored same-as edge bridges the key to
    *  a Gaia source the catalogue already holds — without it one physical star
    *  ships twice. Ratchets DOWN. */

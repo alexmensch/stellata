@@ -33,6 +33,7 @@ import {
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
 import { REPO_ROOT } from '../../util/paths';
+import { emptyTallyPartition } from '../../util/tally';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations';
@@ -449,8 +450,9 @@ export interface PromotionStats {
    *  took the anchor's designation constellation because they carried none of
    *  their own. See {@link inheritAnchorDesignationCon}. */
   existingDesigConFromAnchor: number;
-  /** See README.md § Re-curation of an already-in-catalog member. */
-  existingMemberRecurated: number;
+  /** Per brightness source. See README.md § Re-curation of an
+   *  already-in-catalog member. */
+  existingMemberRecurated: Record<RecuratedBrightness, number>;
   /** Ratchets DOWN. See README.md § Same-as bridge to an already-admitted
    *  source. */
   existingViaSameasBridge: number;
@@ -606,7 +608,7 @@ export function emptyPromotionStats(): PromotionStats {
     blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
     existingDesigConFromAnchor: 0,
-    existingMemberRecurated: 0,
+    existingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
     existingViaSameasBridge: 0,
     droppedParkedRecord: 0,
     droppedParkedRecordViaGaia5p: 0,
@@ -832,6 +834,10 @@ export const OWN_BRIGHTNESS_ABSMAG_SOURCES: ReadonlySet<CompanionAbsmagSource> =
 // ownPhotometryIsAnchorBlend is true when the escape row's only ids were
 // inherited, so its "own" photometry was reached through the anchor's
 // identifier and IS the anchor's blend.
+function rowOwnWdsMag(row: MultiplesTsvRow): number | null {
+  return row.orbitRole === 'primary' ? row.magPri : row.magSec;
+}
+
 export function imputeCompanionAbsmag(
   secondary: MultiplesTsvRow,
   primary: MultiplesTsvRow | null,
@@ -855,8 +861,7 @@ export function imputeCompanionAbsmag(
   if (anchorDmagApplies && primaryAbsmag !== null && dmag !== null) {
     return { absmag: primaryAbsmag + dmag, source: 'dmag_imputed' };
   }
-  const ownWdsMag = secondary.orbitRole === 'primary'
-    ? secondary.magPri : secondary.magSec;
+  const ownWdsMag = rowOwnWdsMag(secondary);
   const distPc = secondary.distPc ?? primary?.distPc ?? null;
   if (ownWdsMag !== null && distPc !== null && distPc > 0) {
     return {
@@ -1457,6 +1462,24 @@ function ownFitFailsAnchorGrade(
   return g !== undefined && !isCoherenceAnchorGrade(g);
 }
 
+/** Where a re-curated member's brightness came from: a curated source, or
+ *  `held` — its own apparent brightness, carried across the move. */
+export const RECURATED_BRIGHTNESS = [
+  'dmag_imputed', 'wds_mag', 'spectral', 'held',
+] as const;
+export type RecuratedBrightness = (typeof RECURATED_BRIGHTNESS)[number];
+
+function isCuratedRecurationSource(
+  source: CompanionAbsmag['source'],
+): source is Exclude<RecuratedBrightness, 'held'> {
+  return source === 'dmag_imputed' || source === 'wds_mag'
+    || source === 'spectral';
+}
+
+function starDistPc(s: { x: number; y: number; z: number }): number {
+  return Math.hypot(s.x, s.y, s.z);
+}
+
 /** Applied in place, so this adds no star and retires none.
  *  See README.md § Re-curation of an already-in-catalog member. */
 function recurateExistingMember(
@@ -1465,19 +1488,26 @@ function recurateExistingMember(
   stats: PromotionStats,
   dustGrid: DustGrid | null,
   memberIdx: number,
-): boolean {
+): RecuratedBrightness | null {
   const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, position,
           isPairRowPrimary } = ctx;
-  if (isPairRowPrimary || position === null) return false;
+  if (isPairRowPrimary || position === null) return null;
   if (hasIndependentFitRoute(
     row, anchorPrimaryRow.gaiaSourceId, anchorPrimaryRow.hip,
   )) {
-    return false;
+    return null;
   }
-  if (state.recuratedMembers.has(memberIdx)) return false;
+  if (state.recuratedMembers.has(memberIdx)) return null;
   const member = state.existingStars[memberIdx];
-  if (!ownFitFailsAnchorGrade(member, state.gaiaAstrometry)) return false;
+  if (!ownFitFailsAnchorGrade(member, state.gaiaAstrometry)) return null;
   state.recuratedMembers.add(memberIdx);
+
+  const avAt = (s: { x: number; y: number; z: number }): number =>
+    dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0;
+  const dOld = starDistPc(member);
+  const avOld = avAt(member);
+  const dNew = starDistPc(position);
+  const avNew = avAt(position);
 
   member.x = position.x;
   member.y = position.y;
@@ -1492,16 +1522,21 @@ function recurateExistingMember(
   member.distVia = inheritAnchor?.distVia ?? null;
   const spectral = recordSpectralInfo(member);
   const imputed = imputeCompanionAbsmag(row, anchorPrimaryRow, spectral);
-  if (imputed !== null) {
-    const av = dustGrid
-      ? avSolToStar(dustGrid, position.x, position.y, position.z) : 0;
-    member.absmag = deExtinctCompanionAbsmag(imputed, av);
-    member.physicalRadius = physicalRadius(member.absmag, spectral);
+  let brightness: RecuratedBrightness = 'held';
+  if (imputed !== null && isCuratedRecurationSource(imputed.source)) {
+    brightness = imputed.source;
+    const wdsMag = rowOwnWdsMag(row);
+    const absmag = brightness === 'wds_mag' && wdsMag !== null
+      ? apparentToAbsoluteMagnitude(wdsMag, dNew) : imputed.absmag;
+    member.absmag = deExtinctCompanionAbsmag({ absmag, source: brightness }, avNew);
     member.ci = imputeCompanionCi(row, spectral);
-    if (companionCiIsObserved(row)) member.ci -= av / R_V;
+    if (companionCiIsObserved(row)) member.ci -= avNew / R_V;
+  } else if (dOld > 0 && dNew > 0) {
+    member.absmag += 5 * Math.log10(dOld / dNew) + avOld - avNew;
   }
-  stats.existingMemberRecurated++;
-  return true;
+  member.physicalRadius = physicalRadius(member.absmag, spectral);
+  stats.existingMemberRecurated[brightness]++;
+  return brightness;
 }
 
 /** A record a pair row resolves to displays a name composed off the anchor
@@ -2214,9 +2249,9 @@ export function promoteCompanions(
     // system distance the record's override stack later replaced (HD 64315's
     // rows say 12.7 kpc against the record's B-J 6.2 kpc, a 1.5 mag error in
     // the observed frame every hypothesis below is compared against).
-    const distPc = Math.hypot(anchor.x, anchor.y, anchor.z);
+    const distPc = starDistPc(anchor);
     const recordObsMag = (s: Star): number | null => {
-      const d = Math.hypot(s.x, s.y, s.z);
+      const d = starDistPc(s);
       return d > 0 ? absoluteToApparentMagnitude(s.absmag, d) + av : null;
     };
     const mObs = distPc > 0 ? recordObsMag(anchor) : null;

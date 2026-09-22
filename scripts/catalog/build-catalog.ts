@@ -78,6 +78,7 @@ import {
   readMultiplesTsv,
   MULTIPLES_TSV,
   parkedRefusals,
+  RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
 import {
   buildCatalogRowIndexMap,
@@ -400,7 +401,7 @@ async function main() {
     companionRepositionedCollocatedDouble: 0,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
-    companionExistingMemberRecurated: 0,
+    companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
     companionExistingViaSameasBridge: 0,
     gaiaAstrometryEntries: 0,
     hip2Entries: 0,
@@ -746,7 +747,7 @@ async function main() {
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
         `(${ps.promotedSynthetic} via synthetic ID); ` +
         `already-in-catalog ${ps.alreadyInCatalog} ` +
-        `(${ps.existingMemberRecurated} re-curated, ` +
+        `(re-curated ${formatPartition(ps.existingMemberRecurated)}, ` +
         `${ps.existingViaSameasBridge} via same-as bridge); ` +
         `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
         `no-position=${ps.droppedNoPosition}, ` +

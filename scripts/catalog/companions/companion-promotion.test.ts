@@ -17,6 +17,7 @@ import {
   parkedRefusals,
   promoteCompanions,
   type MultiplesTsvRow,
+  type PromotionStats,
 } from './companion-promotion';
 import {
   FLAG_BINARY_COMPANION_ONLY,
@@ -3046,6 +3047,8 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
 
 describe('an existing member whose own 5p solution Gaia rejects', () => {
   const SIRIUS_B_SOURCE = '2947050466531873024';
+  const recuratedTotal = (stats: PromotionStats): number =>
+    Object.values(stats.existingMemberRecurated).reduce((a, b) => a + b, 0);
 
   function siriusRows() {
     return [
@@ -3103,7 +3106,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
     );
     expect(newStars).toHaveLength(0);
-    expect(stats.existingMemberRecurated).toBe(1);
+    expect(stats.existingMemberRecurated.dmag_imputed).toBe(1);
     // Placed at the anchor's distance, so it claims the anchor's tier — the
     // optical-double suppression reads distVia as the placement's provenance.
     expect(b.distVia).toBe('hip2_parallax');
@@ -3120,6 +3123,40 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     expect(b.spectDisplay).toBe('DA1.9');
   });
 
+  it('references a WDS magnitude to the distance the member now sits at', () => {
+    const a = siriusA();
+    const b = siriusB();
+    const rows = siriusRows();
+    // No Δmag, and a dist_pc from the rejected fit rather than the anchor's.
+    Object.assign(rows[1], { dmag: null, distPc: 2.9 });
+    const { stats } = promoteCompanions(
+      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(stats.existingMemberRecurated.wds_mag).toBe(1);
+    const dNew = Math.hypot(b.x, b.y, b.z);
+    expect(b.absmag).toBeCloseTo(8.44 - 5 * Math.log10(dNew / 10), 6);
+  });
+
+  it('holds its own apparent brightness when no curated source answers', () => {
+    const a = siriusA();
+    const b = siriusB();
+    const rows = siriusRows();
+    Object.assign(rows[1], {
+      dmag: null, magSec: null, spectVia: 'athyg',
+      absmag: 11.4666, photometryVia: 'gaia_photometry',
+    });
+    Object.assign(b, { x: b.x * 1.1, y: b.y * 1.1, z: b.z * 1.1 });
+    const dOld = Math.hypot(b.x, b.y, b.z);
+    const apparentBefore = b.absmag + 5 * Math.log10(dOld / 10);
+    const { stats } = promoteCompanions(
+      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(stats.existingMemberRecurated.held).toBe(1);
+    const dNew = Math.hypot(b.x, b.y, b.z);
+    expect(dNew).not.toBeCloseTo(dOld, 6);
+    expect(b.absmag + 5 * Math.log10(dNew / 10)).toBeCloseTo(apparentBefore, 9);
+  });
+
   it('leaves a member alone when Gaia stands behind its own fit', () => {
     const a = siriusA();
     const b = siriusB();
@@ -3127,7 +3164,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const { stats } = promoteCompanions(
       siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, acceptedFit(),
     );
-    expect(stats.existingMemberRecurated).toBe(0);
+    expect(recuratedTotal(stats)).toBe(0);
     expect(b.x).toBe(before.x);
     expect(b.absmag).toBe(before.absmag);
     expect(b.vx).toBe(before.vx);
@@ -3143,7 +3180,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const { stats } = promoteCompanions(
       siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
     );
-    expect(stats.existingMemberRecurated).toBe(0);
+    expect(recuratedTotal(stats)).toBe(0);
     expect(b.absmag).toBe(11.4666);
   });
 
@@ -3151,7 +3188,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const a = siriusA();
     const b = siriusB();
     const { stats } = promoteCompanions(siriusRows(), [a, b], CON_ASSIGNMENT);
-    expect(stats.existingMemberRecurated).toBe(0);
+    expect(recuratedTotal(stats)).toBe(0);
     expect(b.absmag).toBe(11.4666);
   });
 
