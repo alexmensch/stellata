@@ -24,8 +24,12 @@ comes out* is here.
   rows, the record count they were measured on, and the resolution-hole
   table (§ The resolution hole). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
-  rule the table is sampled with, the cube it is resampled onto, and the
-  CPU mirror of the trilinear fetch both shaders make.
+  rule the table is sampled with, the cube it is resampled onto, the
+  CPU mirror of the trilinear fetch both shaders make, and
+  `resolvedHoleCatalogueMismatch`: the table subtracts the light of the
+  catalogue it was measured on, so the shell checks the loaded record count
+  against `RESOLVED_HOLE_CATALOGUE_RECORDS` once and warns. A warning, never
+  a throw — a shallower local build is legitimate and the band still renders.
 - `resolved-hole-texture.ts` (+ test) — the `Data3DTexture` those voxels go
   into and its filter pair.
 

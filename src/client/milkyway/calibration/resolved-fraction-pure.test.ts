@@ -9,6 +9,7 @@ import {
   type ResolvedHoleTable,
   clampResolvedHoleStrength,
   resolvedHoleBandEdges,
+  resolvedHoleCatalogueMismatch,
   resolvedHoleIndex,
   resolvedHoleShellEdgesPc,
   resolvedHoleUv,
@@ -152,5 +153,20 @@ describe('the table sampler the cube is resampled with', () => {
         expect(got).toBeLessThanOrEqual(1);
       }
     }
+  });
+});
+
+describe('resolvedHoleCatalogueMismatch', () => {
+  it('says nothing when the loaded catalogue is the measured one', () => {
+    expect(resolvedHoleCatalogueMismatch(RESOLVED_HOLE_CATALOGUE_RECORDS))
+      .toBeNull();
+  });
+
+  it('names both counts when a shallower build loads', () => {
+    const warning = resolvedHoleCatalogueMismatch(388071);
+    expect(warning).not.toBeNull();
+    expect(warning).toContain('388,071');
+    expect(warning).toContain(RESOLVED_HOLE_CATALOGUE_RECORDS.toLocaleString());
+    expect(warning).toContain('measure:band-resolved');
   });
 });
