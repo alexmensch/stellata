@@ -2,7 +2,7 @@
 
 The camera→star V-band extinction read: one raymarch per star through
 the Edenhofer 3D dust texture, cached in a star-indexed render target
-that `../star.vert.glsl` consumes with a single `texelFetch`.
+that the star vertex stage consumes with a single indexed read.
 
 The **cancellation invariant** below is the load-bearing content here —
 catalog `absmag` / `ci` are stored de-extincted, so this runtime stack
@@ -28,14 +28,6 @@ src/client/star-pipeline/extinction/
                                   integration shell holds, implemented once
                                   per backend, plus the shared uniform
                                   value-objects both write.
-  extinction-prepass.ts           ExtinctionPrepass — the WebGL2 per-star A_V
-                                  cache and its camera-displacement
-                                  invalidation. TSL twin:
-                                  ../../webgpu/extinction/.
-  extinction-prepass.frag.glsl    The prepass draw: one fragment per star,
-                                  writing raw physical A_V into R32F. Rides
-                                  the shared fullscreen vertex stage +
-                                  geometry in ../../util/fullscreen-pass.
   extinction-prepass-pure.ts      Texture geometry, position packing (the
     (+ test)                      vec4 loop both backends fill from, in star
                                   order here and in the WebGPU twin's own
@@ -46,18 +38,12 @@ src/client/star-pipeline/extinction/
                                   kernel's parity check reads through it
                                   (../../webgpu/extinction/README.md § The
                                   prepass kernel).
-  dust-raymarch.glsl              Shared camera→star Edenhofer raymarch chunk
-                                  (stellata_dust_raymarch), included by the
-                                  prepass and by ../star.vert.glsl's fallback
-                                  path. Spliced in stellata.ts via ?raw.
   dust-raymarch-pure.ts (+ test)  CPU mirror of the march — the segment–cube
                                   clip, the tap rule, the decode, the midpoint
                                   sum — and the E(B−V) = A_V / R_V reddening.
-                                  The TSL twin imports its constants; the
+                                  The TSL march imports its constants; the
                                   build's integral imports its clip; the
                                   runtime never calls it.
-  dust-raymarch-glsl-drift.test.ts  Pins the GLSL chunk's literals to the
-                                  constants above.
 ```
 
 ## The march
@@ -132,12 +118,10 @@ it, which is what you'd actually see.
 
 ## The prepass cache
 
-`ExtinctionPrepass` renders one raymarch per *star* into a
-star-indexed R32F render target (1024 × ⌈count/1024⌉; star *i* at
-texel `(i % 1024, i / 1024)`); `../star.vert.glsl` consumes it with a
-single `texelFetch`. Without the cache the identical integral ran in
-the vertex shader once per vertex (×4) per pass (×2–3) — 8–12
-recomputations per visible star per frame.
+The prepass computes one raymarch per *star* into a star-indexed
+buffer the vertex stage reads by star index. Without the cache the
+identical integral runs in the vertex stage once per vertex (×4) per
+pass (×2–3) — 8–12 recomputations per visible star per frame.
 
 - **Invalidation** is camera-displacement-based: the target is
   recomputed when the absolute camera position moves more than
@@ -164,14 +148,12 @@ recomputations per visible star per frame.
   the model clock's space-motion pass rewrites that array in place, so
   `refreshPositions()` re-packs it from the epoch advance itself; without
   that the march follows the stars no further than the attach epoch.
-- **Fallback:** on WebGL2 contexts without `EXT_color_buffer_float` (no
-  float-renderable target) the prepass is inert and the vertex shader
-  runs the in-vertex camera→star raymarch, gated by the visibility
-  prefilter. Both paths share the `stellata_dust_raymarch` chunk
-  (`dust-raymarch.glsl`). That gate has no WebGPU counterpart — float
-  render targets are core there, so the port's `supported` is constant
-  true and the fallback branch survives only as the A/B switch below.
-  The march's tap count and clip are § The march.
+- **Fallback:** the vertex stage can run the camera→star raymarch
+  in-line instead, gated by the visibility prefilter, sharing the march
+  with the prepass through `dust-raymarch-tsl.ts`. Nothing reaches it on
+  capability — float render targets are core on this backend, so
+  `supported` is constant true and the branch survives only as the A/B
+  switch below. The march's tap count and clip are § The march.
 - **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
   console) parks the shader on the fallback path AND pauses cache
   maintenance, so the fallback side never pays fill cost — the honest

@@ -6,16 +6,16 @@ import { staticElement } from './star-tables-pure';
 import { makeFakeStarRenderer, makeStarLayerSources } from './star-sources-mock';
 
 function make(count = 8) {
-  const { sources, opts } = makeStarLayerSources(count);
-  return { sources, opts, tables: new StarTables(sources) };
+  const { sources } = makeStarLayerSources(count);
+  return { sources, tables: new StarTables(sources) };
 }
 
 describe('StarTables statics', () => {
   it('interleaves the catalogue and star-frame arrays once, at the roster slots', () => {
-    const { sources, opts } = makeStarLayerSources(4);
-    opts.catalog.absmag[2] = 5.5;
+    const { sources } = makeStarLayerSources(4);
+    sources.catalog.absmag[2] = 5.5;
     sources.distSol[1] = 42;
-    opts.catalog.pulsColorSwing[3] = 0.25;
+    sources.catalog.pulsColorSwing[3] = 0.25;
     const { statics } = new StarTables(sources);
     const table = statics.array as Float32Array;
     expect(table[staticElement(2, 'iAbsmag')]).toBe(5.5);

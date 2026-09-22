@@ -205,7 +205,7 @@ render knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
 `pickChartDiscUniforms`), `MilkyWay` (`uLimitMag`, whose only consumer is the chart-mode isobar
 branch — which has never drawn, so nothing rendered reads it; the band's
 own brightness is photometric),
-`StarLocalMirror`, `ExtinctionPrepass`, `FloatingOrigin`
+the star mirror, the extinction prepass, `FloatingOrigin`
 (`uWorldOffset`), `StarFrame` (reads `uFovYRad` / `uViewport` / `uSizeMin`
 and both `distN` slots for its windows, and is the sole writer of
 `uPhysSizeWindowPc` —

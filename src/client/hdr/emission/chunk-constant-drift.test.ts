@@ -14,10 +14,6 @@ import {
   footprintRadiusPc,
   pxPerRadianFromSolidAngle,
 } from './emission-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
-import {
-  PHYS_RATIO_THRESHOLD,
-} from '../../star-pipeline/local-pass/star-local-cluster-pure';
 import '../hdr-pipeline';
 
 const read = (name: string) =>
@@ -27,7 +23,6 @@ const tonemapChunk = read('../tonemap/tonemap.glsl');
 const ignChunk = read('../tonemap/ign.glsl');
 const emissionChunk = read('./emission.glsl');
 const extendedEmitterChunk = read('./extended-emitter.glsl');
-const perceptualDiscChunk = read('../../star-pipeline/perceptual-disc/perceptual-disc.glsl');
 
 function lumaWeights(chunk: string): number[] {
   const m = chunk.match(
@@ -74,22 +69,6 @@ describe('shared chunk constants', () => {
     // And the operator composes over it rather than keeping a twin.
     expect(tonemapChunk).toContain('#include <stellata_ign>');
     expect(tonemapChunk).not.toContain(String(DITHER_IGN_SCALE));
-  });
-
-  // The WebGPU star stages import these two from TypeScript while the
-  // GLSL ones paste the chunk, so a drifted literal moves one backend's
-  // faint edge or pass split and leaves the other where it was.
-  it('perceptual-disc.glsl declares the taper margin and pass split TypeScript owns', () => {
-    const margin = perceptualDiscChunk.match(
-      /const float STELLATA_SOFT_TAPER_MARGIN_MAG = ([\d.]+);/,
-    );
-    const physRatio = perceptualDiscChunk.match(
-      /const float STELLATA_PHYS_RATIO_THRESHOLD = ([\d.]+);/,
-    );
-    expect(margin).not.toBeNull();
-    expect(physRatio).not.toBeNull();
-    expect(Number(margin![1])).toBe(SOFT_TAPER_MARGIN_MAG);
-    expect(Number(physRatio![1])).toBe(PHYS_RATIO_THRESHOLD);
   });
 
   it('emission.glsl clamps at the same ceiling as emission-pure', () => {
@@ -156,7 +135,6 @@ describe('shared chunk constants', () => {
   // silently shadows nothing, so only this catches it.
   it('no consumer of the unit redeclares a constant it already has', () => {
     for (const stage of [
-      '../../star-pipeline/star.vert.glsl',
       '../../solar-system/planets/glare/planet.vert.glsl',
       '../../milkyway/milkyway.frag.glsl',
       '../../local-group/emission/local-group-emission.frag.glsl',

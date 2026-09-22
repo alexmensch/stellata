@@ -4,7 +4,7 @@ The star half of the local depth pass: which stars join the pass each
 frame, and the mirror draw that re-renders them inside its depth
 bracket. Pass mechanics and the other member layers are
 `../../local-depth/README.md`; why the main pass can't do this job is
-`../README.md` § Depth encoding.
+`../../webgpu/star/README.md` § The disc draw writes no depth.
 
 ## Files
 
@@ -19,7 +19,7 @@ bracket. Pass mechanics and the other member layers are
   differently-packed component on one backend reads as a silent
   brightness bug. Survives the WebGL2 deletion; the two classes below
   do not both.
-- `star-local-mirror.ts` — `StarLocalMirror`: the GLSL materials over
+- `../../webgpu/star/star-local-mirror-tsl.ts` — the materials over
   those slots (the TSL twin is
   `../../webgpu/star/star-local-mirror-tsl.ts`). Its disc and glow
   meshes are statistic emitters like the main-pass pair — a member
@@ -32,7 +32,7 @@ bracket. Pass mechanics and the other member layers are
 - `star-local-cluster-pure.ts` — `isResolvedDiscStar` membership
   predicate + `discWindowPc` camera-window bound, shared with the
   core-mask gate via `RESOLVED_DISC_MIN_PX`. `PHYS_RATIO_THRESHOLD`
-  mirrors `STELLATA_PHYS_RATIO_THRESHOLD` in `../perceptual-disc/perceptual-disc.glsl`
+  mirrors the same pivot in `../../webgpu/perceptual-disc-tsl.ts`
   (both star stages read it there), and `isDiscDominant` is
   that split as a predicate — the **one** CPU mirror of it. Membership
   above is `isDiscDominant` plus the size floor; the star pick gate

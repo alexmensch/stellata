@@ -11,18 +11,7 @@ import {
   verifyDustChunks,
   type ChunkVerifyReport,
 } from './loaders/dust-voxel-readback';
-import perceptualDiscChunk from './star-pipeline/perceptual-disc/perceptual-disc.glsl?raw';
-import dustRaymarchChunk from './star-pipeline/extinction/dust-raymarch.glsl?raw';
 import { DustParticleLayer } from './dust/dust-particle-layer';
-
-// Register the perceptual-disc chunk so star.{vert,frag} (and any
-// future point-source layer) can `#include <stellata_perceptual_disc>`
-// via three.js's standard ShaderChunk preprocessor. Side-effect at
-// module load — runs once before any material compiles.
-(THREE.ShaderChunk as Record<string, string>)['stellata_perceptual_disc'] =
-  perceptualDiscChunk;
-(THREE.ShaderChunk as Record<string, string>)['stellata_dust_raymarch'] =
-  dustRaymarchChunk;
 import {
   GalacticDisc,
   GALACTIC_DISC_BOUND_PC,

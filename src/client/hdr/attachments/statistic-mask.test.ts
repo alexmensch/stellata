@@ -31,27 +31,14 @@ describe('the statistic attachment mask', () => {
     });
   }
 
-  it('claims the resolved disc core alone for the star quad', () => {
-    // The claim is a PROPERTY, not a whitelist: an emitter claims coverage
-    // exactly where it emits surface brightness over its own physical
-    // footprint rather than a PSF peak over an exaggerated kernel. For this
-    // pipeline that is the disc pass restricted to the core — the glow pass
-    // passes a literal zero at every framing, and a resolved photosphere is
-    // the one resolved surface that used to be excluded by the old
-    // enumerated contract.
-    const src = read('../../star-pipeline/star.frag.glsl');
-    expect(glslCallArgs(src, 'stellataStatisticTexel')[1]).toBe('coreMask');
-    expect(src).toContain('float core = step(uCoreThreshold, glow);');
-    expect(src).toContain('starEmission(glow, core);');
-    expect(src).toContain('starEmission(glow, 0.0);');
-  });
-
-  // TSL is TypeScript, so the ported writers read off the same argument
-  // walker rather than a second mechanism. Their helper takes the park mask
-  // FIRST and scales the whole texel by it — masking the flux alone would
-  // leave an alpha-composited emitter still compositing `dst · (1 − alpha)`
-  // over the attachment the WebGL gate would have shut
-  // (webgpu/hdr/README.md § The gate becomes the output struct).
+  // The claim is a PROPERTY, not a whitelist: an emitter claims coverage
+  // exactly where it emits surface brightness over its own physical
+  // footprint rather than a PSF peak over an exaggerated kernel. Their
+  // helper takes the park mask FIRST and scales the whole texel by it —
+  // masking the flux alone would leave an alpha-composited emitter still
+  // compositing `dst · (1 − alpha)` over the attachment the gate would
+  // have shut (webgpu/hdr/README.md § The gate becomes the output
+  // struct).
   const TSL_WRITERS = [
     {
       label: 'star quad',

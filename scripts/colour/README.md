@@ -54,8 +54,8 @@ so the two routes cannot silently diverge. The chain's own behaviour
 the single definition. Two of the three implementations import them
 (the functions here, and the TSL graph in
 `src/client/webgpu/star/star-vertex-tsl.ts`); GLSL cannot, so
-`star.vert.glsl` carries literals and
-`ballesteros-glsl-drift.test.ts` pins each one at its position in the
+`../../src/client/webgpu/star/star-vertex-tsl.ts` imports each one, so
+nothing can drift from its position in the
 expression against the exported constant, plus an inline snapshot of the
 whole body so a reshuffle or sign flip fails too. Intentional edits
 change the constants AND the snapshot.

@@ -34,7 +34,8 @@ src/client/hdr/emission/
                              plus the constrained solve that turns a
                              galaxy's published integrated index into its
                              disc's (§ Population colours).
-  chunk-constant-drift.test  Pins the numbers the GLSL chunks duplicate
+  chunk-constant-drift.test  Pins the numbers the surviving GLSL chunks
+                             duplicate
                              from TypeScript, and the include guards.
 ```
 

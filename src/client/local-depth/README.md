@@ -39,8 +39,8 @@ star passes (RawShaderMaterial — no `USE_LOGARITHMIC_DEPTH_BUFFER`)
 write plain standard depth over the full range, quantising everything
 beyond ~3 AU to exactly 1.0. Moon↔parent, ring↔body, and close-binary
 separations land inside a single quantum either way and z-order as
-frame-to-frame float noise. See `../star-pipeline/README.md` § Depth
-encoding for the full main-pass picture.
+frame-to-frame float noise. What the main pass encodes instead is
+`../webgpu/star/README.md` § The disc draw writes no depth.
 
 Every analytic workaround (disc silhouette clip, ray-sphere occlusion,
 the orbit-ring corrupt/restore dance, ring-shader ray-ellipsoid

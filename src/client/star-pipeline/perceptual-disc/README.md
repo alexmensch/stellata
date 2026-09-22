@@ -7,17 +7,11 @@ it. Stars and planet glare share this kernel exactly.
 
 ## Files
 
-- `perceptual-disc.glsl` — the shared GLSL chunk, registered as
-  `stellata_perceptual_disc` in `../../stellata.ts` and `#include`d by
-  `../star.vert.glsl`, `../star.frag.glsl` and
-  `../../solar-system/planets/glare/planet.{vert,frag}.glsl`. The chunk
-  name is what the includes name, so moving this file does not touch
-  them.
 - `perceptual-disc-pure.ts` + `perceptual-disc-flux-pure.ts` (+ tests) —
-  the chunk's **one** CPU mirror (dmEff / appSizePx / exponent / profile
-  + divisor guards) and the kernel's area integral `Φ(n)`. The pick path,
-  planet body field, and the port's TSL graph compose over them rather
-  than re-deriving.
+  the kernel's **one** CPU mirror (dmEff / appSizePx / exponent / profile
+  + divisor guards) and its area integral `Φ(n)`. The pick path, the
+  planet body field and the TSL graph compose over them rather than
+  re-deriving.
 - `phys-size-elision-pure.ts` (+ test) — the `physSize` below which every
   consumer of it stops responding, and the tolerance the one graceful
   consumer is held to (§ Eliding the physical-size branch).
@@ -25,12 +19,12 @@ it. Stars and planet glare share this kernel exactly.
   window and the worst gated star over `public/catalog.bin`, so the
   measured figures in that section are regenerated rather than quoted.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms the
-  chunk consumes. `buildSharedUniforms` `satisfies` this interface, and
+  kernel consumes. `buildSharedUniforms` `satisfies` this interface, and
   `PlanetBodyField.buildMaterials` picks exactly these keys out via
-  `pickPerceptualDiscUniforms`. Single source of truth so the two
-  pipelines can't drift at the chunk's interface.
+  `pickPerceptualDiscUniforms`. Single source of truth so no consumer
+  drifts at the kernel's interface.
 
-The WebGPU port's TSL mirror of the same kernel is
+The TSL graph that runs the kernel on the GPU is
 `../../webgpu/perceptual-disc-tsl.ts`, composed over the constants this
 folder exports.
 
@@ -42,8 +36,7 @@ in the vertex shader (collapsed past the visibility floor — `../collapse/READM
 - `appSize` is the brightness-based term: the `√Δm` Gaussian-PSF curve
   over the visible-population window `Δm = uLimitMag − appMag`, with
   **soft-knee saturation** (`uSizeKnee`, default 16 mag, debug-tunable)
-  above it. The curve and the knee's Michaelis–Menten form live in
-  `perceptual-disc.glsl`'s header; the derivation is
+  above it. The curve and the knee's Michaelis–Menten form are derived in
   `docs/science-stellar-modelling.md` § Stellar perception model.
   `uSizeKnee = 0` recovers the hard clamp the knee replaced — which had
   pinned Sol and Barnard's Star to the same cap at 5e-3 pc despite a
@@ -183,13 +176,10 @@ margin is why the tolerance reads loose: it is stated against a
 max-radius star sitting at the `uSizeMin` floor, a pairing no real star
 reaches, since a disc that wide is far too bright to size at the floor.
 
-The elision is WebGPU-only; the GLSL twin runs the branch
-unconditionally, so an A/B parity check differs by at most the tolerance.
-
 ## Star intensity profile
 
 Both the disc and glow passes share a single **super-Gaussian**
-falloff shape (`perceptualDiscProfile` in `perceptual-disc.glsl`),
+falloff shape (`perceptualDiscProfile` in `perceptual-disc-pure.ts`),
 parameterised so the perceived bright disc fills the calibrated quad
 to its edge. It is a **unit-peak kernel**: it shapes the light,
 `vPeakL` scales it (`../README.md` § Physical-luminance emission).

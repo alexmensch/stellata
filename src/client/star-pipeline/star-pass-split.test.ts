@@ -1,4 +1,4 @@
-// Both vertex stages must route the disc/glow split on the undimmed
+// The vertex stage must route the disc/glow split on the undimmed
 // magnitude, or the three compilations tier a star differently and every
 // one of them discards it. ./README.md § Star rendering.
 
@@ -13,7 +13,6 @@ const code = (rel: string): string =>
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\/\/[^\n]*/g, '');
 
-const glsl = code('./star.vert.glsl');
 const tsl = code('../webgpu/star/star-vertex-tsl.ts');
 
 /** Offset of the first match, asserted present. */
@@ -23,35 +22,7 @@ function at(src: string, needle: RegExp, label: string): number {
   return m.index;
 }
 
-describe('star.vert.glsl routes the pass split on the undimmed magnitude', () => {
-  it('captures appMagRoute ahead of the eclipse fold', () => {
-    // Captured, not reconstructed: subtracting the dim back off afterwards
-    // does not round-trip in float32, so the glow compilation would route
-    // on a value the other two never compute.
-    expect(at(glsl, /float appMagRoute = appMag;/, 'capture'))
-      .toBeLessThan(at(glsl, /appMag \+= -2\.5 \* log\(iEclipseDim\)/, 'fold'));
-  });
-
-  it('never lets the dim reach appMagRoute', () => {
-    expect(glsl).not.toMatch(/appMagRoute[^;\n]*iEclipseDim/);
-  });
-
-  it('adds the dust extinction to both, so they differ by the dim alone', () => {
-    expect(glsl).toMatch(/appMag \+= absorbAV;\s*\n\s*appMagRoute \+= absorbAV;/);
-  });
-
-  it('solves routeAppSize from appMagRoute, and vPhysRatio from routeAppSize', () => {
-    expect(glsl).toMatch(/routeAppSize[\s\S]{0,200}perceptualDmEff\(appMagRoute,/);
-    expect(glsl).toMatch(/vPhysRatio = clamp\(physSize \/ max\(max\(routeAppSize, physSize\)/);
-  });
-
-  it('skips the re-solve when no dim is on the star', () => {
-    expect(glsl).toMatch(/float routeAppSize = eclipseDimmed\s*\n\s*\?/);
-    expect(glsl).toMatch(/:\s*appSize;/);
-  });
-});
-
-describe('star-vertex-tsl.ts mirrors that routing', () => {
+describe('star-vertex-tsl.ts routes on the undimmed magnitude', () => {
   it('captures appMagRoute ahead of the eclipse fold', () => {
     expect(at(tsl, /appMagRoute\.assign\(appMag\);/, 'capture'))
       .toBeLessThan(at(tsl, /appMag\.addAssign\(log\(eclipseDim\)/, 'fold'));
@@ -70,7 +41,7 @@ describe('star-vertex-tsl.ts mirrors that routing', () => {
     expect(tsl).toMatch(/physRatio\.assign\(\s*\n?\s*clamp\(physSize\.div\(max\(max\(routeAppSize, physSize\)/);
   });
 
-  it('skips the re-solve when no dim is on the star, as the GLSL ternary does', () => {
+  it('skips the re-solve when no dim is on the star', () => {
     expect(tsl).toMatch(
       /If\(eclipseDim\.lessThan\(1\.0\), \(\) => \{\s*\n\s*routeAppSize\.assign\(/);
   });

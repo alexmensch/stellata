@@ -5,7 +5,7 @@ rasterises a full-size quad and pays read-modify-write blend bandwidth on
 every attachment its pass opens. At a deep adaptation cut that is most of
 the star field — the statistic-attachment write row measured ~50 % of the
 default Sol-view frame (`../../debug/frame-cost/passes/README.md`
-§ Decomposing the HDR chain). Two vertex-stage mechanisms in `../star.vert.glsl` (TSL
+§ Decomposing the HDR chain). Two vertex-stage mechanisms (TSL
 twin: `../../webgpu/star/star-vertex-tsl.ts`) bound that cost. Neither
 touches the cull bounds themselves — `uCullMag` stays adaptation-free
 (`../../hdr/exposure/README.md` § One writer, five slots).
@@ -21,7 +21,7 @@ HDR chain.
 ```
 src/client/star-pipeline/collapse/
   glow-collapse-pure.ts     The derived display floor the kernel collapse
-    (+ test)                compares against. The test pins the GLSL
+    (+ test)                compares against. The test pins the
                             literal and the taper-cull bound.
 ```
 

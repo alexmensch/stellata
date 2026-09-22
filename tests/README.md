@@ -106,7 +106,7 @@ readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
                          that must stay gated (unread README on disk,
                          committed folder missing one).
 shader-frag-depth.test.ts
-                         gl_FragDepth roster: only star.frag.glsl may
+                         gl_FragDepth roster: no shader may
                          write frag depth (a static write defeats
                          early-z draw-wide). Allowlist shrinks to empty
                          when the WebGPU port lands the depth-honest
@@ -309,8 +309,7 @@ Work every line, then record the findings in the PR body:
   `luminance()` and `transposeMat3()`; a shader calling a removed helper is a
   runtime-only compile failure.
 - **The log-depth define name and the `gl_FragDepth` spelling** three injects
-  into non-raw materials — `src/client/star-pipeline/README.md` § Depth
-  encoding turns on the raw/non-raw split.
+  into non-raw materials.
 - **`resolveIncludes` still runs before the raw-material gate** in
   `WebGLProgram`, or the `stellata_*` chunks stop resolving in the raw star
   shaders.

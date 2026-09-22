@@ -55,8 +55,8 @@ star. CPU mirror for the hover footprint: `max(physSize, appSize)`.
 That occlusion is the local depth pass; the old core mask is gone.
 
 `planet.frag.glsl` writes no `gl_FragDepth`, and may not: a static write
-costs the whole draw its early-z, so only `star.frag.glsl` carries one
-(`../../../star-pipeline/README.md` § Depth encoding, pinned by
+costs the whole draw its early-z, and nothing carries one
+(`../../../webgpu/README.md` § Early-z, pinned by
 `tests/shader-frag-depth.test.ts`). The glare is a non-raw
 `ShaderMaterial`, so in the main pass three's `logdepthbuf_fragment`
 writes the depth; in the local pass fixed-function depth is already

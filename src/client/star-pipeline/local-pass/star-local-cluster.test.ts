@@ -8,30 +8,30 @@ import type { RenderedSizeComponents } from '../../camera/controls/star-physics'
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { OccluderSet } from '../../occlusion/occluder-set';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
-import { StarLocalMirror } from './star-local-mirror';
-import { MIRROR_CAPACITY } from './star-mirror-slots';
+import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { StarLocalCluster } from './star-local-cluster';
 import { RESOLVED_DISC_MIN_PX } from './star-local-cluster-pure';
 
 const STAR_COUNT = 12;
 
-function makeSourceGeometry(): THREE.InstancedBufferGeometry {
-  const g = new THREE.InstancedBufferGeometry();
-  g.setAttribute(
-    'aCorner',
-    new THREE.BufferAttribute(
-      new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5]),
-      2,
-    ),
-  );
-  g.setIndex([0, 1, 2, 1, 3, 2]);
-  g.setAttribute(
-    'iAbsmag',
-    new THREE.InstancedBufferAttribute(new Float32Array(STAR_COUNT), 1),
-  );
-  g.instanceCount = STAR_COUNT;
-  return g;
+interface FakeMirror extends StarMirror {
+  members: readonly number[];
+  syncs: number;
 }
+
+function makeMirror(): FakeMirror {
+  const group = new THREE.Group();
+  return {
+    group,
+    members: [],
+    syncs: 0,
+    setMembers(members) { this.members = [...members]; },
+    // Both real mirrors hide the group when the sync filled no slot.
+    sync() { this.syncs += 1; group.visible = this.members.length > 0; },
+    dispose() {},
+  };
+}
+
 
 function makeBinaries(relations = [makeRelation({ primaryIdx: 4, secondaryIdx: 5, flags: FLAG_HAS_ORBIT })]): BinariesData {
   const primary = new Map<number, number[]>();
@@ -50,7 +50,7 @@ function makeBinaries(relations = [makeRelation({ primaryIdx: 4, secondaryIdx: 5
 
 interface Fixture {
   cluster: StarLocalCluster;
-  mirror: StarLocalMirror;
+  mirror: FakeMirror;
   uniform: { value: Int32Array };
   occluders: OccluderSet;
   camera: THREE.PerspectiveCamera;
@@ -71,7 +71,7 @@ interface Fixture {
 }
 
 function makeFixture(): Fixture {
-  const mirror = new StarLocalMirror(makeSourceGeometry(), 'void main(){}', 'void main(){}', {});
+  const mirror = makeMirror();
   const uniform = { value: new Int32Array(MIRROR_CAPACITY).fill(-1) };
   const nearStars: number[] = [];
   const sizes = new Map<number, RenderedSizeComponents>();

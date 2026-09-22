@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import {
   GLOW_COLLAPSE_FLOOR_L,
   GLOW_COLLAPSE_STACK_MARGIN,
@@ -13,11 +11,6 @@ import {
 } from '../../hdr/exposure/exposure-epoch';
 import { emitterPutsInkOnScreen, taperFactor } from '../../hdr/exposure/visibility/emitter-visibility-pure';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
-
-const src = (name: string) =>
-  readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
-const vertSrc = () => src('../star.vert.glsl');
-const fragSrc = () => src('../star.frag.glsl');
 
 describe('the collapse floor', () => {
   it('is the operator inverted at half an 8-bit step, margin under it', () => {
@@ -33,52 +26,6 @@ describe('the collapse floor', () => {
     const lo = glowCollapseHalfStepL(tonemapWhitePoint(5.5));
     const hi = glowCollapseHalfStepL(tonemapWhitePoint(11));
     expect(Math.abs(hi - lo) / lo).toBeLessThan(1e-4);
-  });
-});
-
-describe('the GLSL twin', () => {
-  it('pins the shader literal against the derived constant', () => {
-    const m = vertSrc().match(
-      /STELLATA_GLOW_COLLAPSE_FLOOR_L = ([0-9.e+-]+);/,
-    );
-    expect(m).not.toBeNull();
-    const literal = Number(m![1]);
-    expect(Math.abs(literal - GLOW_COLLAPSE_FLOOR_L) / GLOW_COLLAPSE_FLOOR_L)
-      .toBeLessThan(1e-6);
-  });
-
-  it('collapses the footprint before the flux renorm divides it', () => {
-    const src = vertSrc();
-    const collapse = src.indexOf('pxSize = uSizeMin;');
-    const renorm = src.indexOf('vFluxPeakL = stellataKernelFluxPeak');
-    expect(collapse).toBeGreaterThan(0);
-    expect(renorm).toBeGreaterThan(collapse);
-  });
-
-  it('the taper cull and the fragment taper share one named bound', () => {
-    // The vertex cull past the band's end is exact only while the fragment
-    // taper ends there. A literal on either side lets the two drift apart
-    // without failing anything, and lets either drift from the TypeScript
-    // the WebGPU stages import — hence the no-literal assertions.
-    expect(vertSrc()).toMatch(
-      /appMag >= uThresholdMag \+ STELLATA_SOFT_TAPER_MARGIN_MAG/,
-    );
-    expect(fragSrc()).toMatch(
-      /uThresholdMag \+ STELLATA_SOFT_TAPER_MARGIN_MAG, vAppMag\)/,
-    );
-    expect(vertSrc()).not.toMatch(/uThresholdMag \+ 0\.5/);
-    expect(fragSrc()).not.toMatch(/uThresholdMag \+ 0\.5/);
-  });
-
-  it('tests the taper bound once, before the extinction read', () => {
-    // The read is the dominant vertex cost on the fallback path, and A_V
-    // only ever dims — so the prefilter call is what keeps it off the
-    // culled population, and the post-extinction call is the exact one.
-    const vert = vertSrc();
-    const calls = [...vert.matchAll(/starTaperDead\(appMag\)/g)];
-    expect(calls).toHaveLength(2);
-    expect(calls[0]!.index).toBeLessThan(vert.indexOf('absorbAV = '));
-    expect(calls[1]!.index).toBeGreaterThan(vert.indexOf('appMag += absorbAV;'));
   });
 });
 

@@ -1,13 +1,13 @@
 // gl_FragDepth roster: a static write defeats early-z for the whole
-// draw, so only star.frag.glsl may carry one (its halo/member tricks;
-// src/client/star-pipeline/README.md § Depth encoding has the contract).
+// draw, so no surviving shader may carry one. The TSL twin is
+// tsl-frag-depth.test.ts.
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const ALLOWED = new Set(['src/client/star-pipeline/star.frag.glsl']);
+const ALLOWED = new Set<string>();
 
 const writesFragDepth = (path: string): boolean =>
   /gl_FragDepth/.test(readFileSync(path, 'utf8'));
@@ -22,7 +22,7 @@ describe('shader frag-depth roster', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('the allowlist matches reality — shrink it when the port lands', () => {
+  it('the allowlist matches reality', () => {
     for (const p of ALLOWED) {
       const path = join(ROOT, p);
       expect(existsSync(path), `allowlisted shader is gone: ${p}`).toBe(true);

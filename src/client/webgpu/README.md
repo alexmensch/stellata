@@ -301,12 +301,11 @@ ported layer is covered by (§ TSL test pattern).
 ## Early-z — the star layer's depth-honest redesign
 
 Any static `gl_FragDepth` write disables early-z for the whole draw (in
-WGSL: pipeline) and no conservative-depth qualifier exists in either
-language, so the defensive write the three star passes share
-(`../star-pipeline/README.md` § Depth encoding) costs all three their
-early-z, not just the halo branch needing it. Port contract, valid on any
-renderer or encoding: one program per pass (compile-time define replacing
-`uRenderMode`); glow carries no depth output (removal of the defensive
+WGSL: pipeline) and no conservative-depth qualifier exists, so a
+defensive write shared across the three star passes would cost all three
+their early-z, not just the halo branch needing it. The contract, valid
+on any renderer or encoding: one program per pass (compile-time define
+replacing `uRenderMode`); glow carries no depth output (removal of the defensive
 write is bit-exact); the core-mask member stamp moves to the vertex stage
 (per-instance, so clip z pins to the near end of the active depth
 convention); the disc pass writes no depth at all, because the core-mask

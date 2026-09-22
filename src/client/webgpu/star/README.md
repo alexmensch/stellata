@@ -308,7 +308,7 @@ backends.
 
 ## The local mirror
 
-`star-local-mirror-tsl.ts` is the GLSL `StarLocalMirror`'s twin behind
+`star-local-mirror-tsl.ts` sits behind
 the shared `StarMirror` interface: `StarLocalCluster` drives whichever
 one the boot built, and never learns which. What the port changes:
 

@@ -17,8 +17,8 @@ attribute writers here.
   cache, plus the build-time de-extinction cancellation invariant.
 - `pulsation/` — the per-type variable-star {ρ, ΔB−V} tables and the
   eclipsing-binary suppress mask.
-- `local-pass/` — `StarLocalCluster` + `StarLocalMirror`: which stars
-  join the local depth pass each frame and the mirror draw that
+- `local-pass/` — `StarLocalCluster` + the `StarMirror` contract: which
+  stars join the local depth pass each frame and the mirror draw that
   re-renders them inside its bracket. `MIRROR_CAPACITY` and the
   `RESOLVED_DISC_MIN_PX` / `discWindowPc` pivots the core-mask gate
   shares live there.
@@ -30,10 +30,9 @@ attribute writers here.
   NOT shard-aware yet lists the legs still indexing `catalog` directly.
 - `perceptual-disc/` — the display kernel: the `max(appSize, physSize)`
   sizing rule, the plate-scale calibration that makes it
-  viewport-invariant, and the super-Gaussian profile. The GLSL chunk,
-  its CPU mirrors and the uniform interface live there, and it stays the
-  authority on all three — the sections below cover only how the star
-  passes bind to it.
+  viewport-invariant, and the super-Gaussian profile. The CPU mirrors
+  and the uniform interface live there, and it stays the authority on
+  both — the sections below cover only how the star passes bind to it.
 
 ## Files
 
@@ -74,10 +73,6 @@ attribute writers here.
   own arrays. Nothing instances them: they exist for the version and
   dirty ranges `util/attribute-upload` flags and
   `../webgpu/star/star-tables.ts` forwards.
-- `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
-  coreMask `RawShaderMaterial`s + meshes. Unreachable from the shell;
-  deleted with the rest of the GLSL path.
-- `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
 - `star-blend.ts` (+ test) — `applyDiscBlendDefaults`,
   `applyGlowBlendDefaults`, `applyMonochromeBlend` and the
   `applyChartBlendSwap` pair helper over them. Renderer-neutral: every
@@ -106,16 +101,11 @@ attribute writers here.
   peak-normalised. Regenerate via `pnpm run build:lut`. The vertex
   shader renormalises each sample to luminance 1 (§ Physical-luminance
   emission).
-- `star-pipeline-mock.ts` — zero-filled `StarPipelineOptions` for tests
-  needing a real geometry without GL; `../webgpu/star-attribute-roster.test.ts`
-  derives the port's packable-attribute partition from it.
-- `star-pipeline.test.ts` — dispose + uniform-sharing + blend
-  defaults.
-- `star-pass-split-drift.test.ts` — pins both backends' vertex stages to
-  routing the disc/glow split on the undimmed magnitude (§ Star
-  rendering). Source-level, because no behavioural suite can reach it:
-  the CPU mirror takes resolved size terms and agrees with itself
-  whichever value the shaders route on.
+- `star-pass-split.test.ts` — pins the vertex stage to routing the
+  disc/glow split on the undimmed magnitude (§ Star rendering).
+  Source-level, because no behavioural suite can reach it: the CPU
+  mirror takes resolved size terms and agrees with itself whichever
+  value the shader routes on.
 
 ## Physical-luminance emission
 
@@ -161,7 +151,7 @@ K-exaggerated footprint over-counts a star's frame flux by design
 (`docs/science-hdr-pipeline.md` § 1, § 8). The exposure statistic needs
 that integral back, so `vFluxPeakL` carries the same kernel divided by its
 own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
-`perceptual-disc/perceptual-disc.glsl`, and `../hdr/attachments/README.md` for what reads it.
+`../webgpu/perceptual-disc-tsl.ts`, and `../hdr/attachments/README.md` for what reads it.
 
 **The disc pass's core claims lit-surface coverage; the glow pass claims
 none.** That split is not about stars — it is the general rule read off
@@ -177,7 +167,7 @@ halo is where the kernel stops reading as the photosphere.
 ## Colour routing
 
 Runtime colour is **two-tier** — `iTeffApsis > 0 ? Ballesteros(iTeffApsis)
-: iCi` in `star.vert.glsl` — where `iCi` is the build-time-baked
+: iCi` in `../webgpu/star/star-vertex-tsl.ts` — where `iCi` is the build-time-baked
 intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
 `spectralClassCi` bakes in
 `scripts/catalog/spectral/physical-radius.ts`).
@@ -261,7 +251,7 @@ to its material). The disc pass discards fragments with `vPhysRatio <
 discards both `vPhysRatio < 0.5` and `glow < uCoreThreshold`.
 
 **The three discards are complementary only while all three agree on
-`vPhysRatio`, and that is not free.** Each material runs `star.vert.glsl`
+`physRatio`, and that is not free.** Each pipeline runs the vertex stage
 independently, so any per-pass term reaching the size solve makes them
 disagree — and the disc/glow discards are written as a partition, so a
 disagreement drops the star from *both*, drawn nowhere while every CPU
@@ -286,7 +276,7 @@ core-mask compilations run — equal bit for bit. Rebuilding it as
 `appMag − eclipseDimMag` instead does not round-trip in float32 and puts
 the glow pass back on a value the other two never compute, for any star
 within ~1.6 × 10⁻³ px of the split. Both backends are pinned against
-that in `star-pass-split-drift.test.ts`, which is the only thing that
+that in `star-pass-split.test.ts`, which is the only thing that
 can catch it: `colourPassFor` takes size terms already resolved, so the
 CPU mirror agrees with itself whatever the shaders do.
 
@@ -349,82 +339,11 @@ shell when the focused star qualifies; the engage / disengage rules +
 load-bearing `controls.target` invariant are managed in the focus
 controller.
 
-`RawShaderMaterial({ glslVersion: THREE.GLSL3 })`. Vertex shader uses
-`uint` uniforms and bitwise ops for the spectral-class mask. Do **not**
-downgrade to GLSL1 — the mask logic would need to be rewritten as
-per-class bools.
-
 Chart mode swaps both star materials to `MultiplyBlending` + disables
 depth for an ink-on-paper look against the light canvas, and replaces
 the super-Gaussian profile with flat hard-edged discs sized linearly
 by magnitude. It is non-photometric and bypasses the HDR seam
 entirely, so it emits no luminance (`../hdr/README.md` § Chart mode).
-
-## Depth encoding — the escape hatch's
-
-The shipped encoding is **reversed-z over float32**, and no shipped
-pipeline writes fragment depth at all: `../webgpu/star/README.md`
-§ The disc draw writes no depth carries it, `../webgpu/README.md`
-§ Early-z carries why. What follows governs the `#renderer=webgl2` path
-alone, and `0it.14` deletes it with those materials.
-
-That renderer is constructed with
-`WebGLRenderer({ logarithmicDepthBuffer: true })`, but that flag only
-injects `USE_LOGARITHMIC_DEPTH_BUFFER` into NON-raw materials (planet
-billboards, meshes, lines, volumes) — that is what enables
-`camera.near = 1e-12` for the layers that need intra-system depth. **The star materials are
-RawShaderMaterial, which three.js gives only `material.defines` — so
-the `logdepthbuf` chunk includes in the star shaders compile to
-nothing and the star passes write STANDARD depth** over the full
-`[near 1e-12, far 1e5]` range. Standard depth ≈ `1 − near/z`: every
-star fragment beyond ~3 AU quantises to exactly 1.0 in the 24-bit
-buffer; only close-approach fragments write less.
-
-Why this de facto two-band split works in the main pass:
-
-- Star ↔ star colour is order-independent — per-channel max in the
-  disc pass, additive in the glow pass — so equal-depth (1.0)
-  fragments need no ordering.
-- Background layers (MW, grids, clouds — log-encoded or at the far
-  plane) land at or near 1.0 and lose the LessEqual test against a
-  close-range core's `< 1.0` depth — the core depth-mask mechanism.
-- Planet billboards are additive reflected glare only (no opaque disc
-  or core-mask), so in the main pass they never write depth — they just
-  add, order-independent like the star glow pass. A planet *behind* its
-  host is handled photometrically (`iEclipseDim`), not by depth, and
-  while a system is locally active the question moves to the local
-  depth pass entirely (`../local-depth/README.md`).
-
-Per-pass depth rules:
-
-- `star.frag.glsl` writes `gl_FragDepth = gl_FragCoord.z`
-  unconditionally before the (inert) chunk include — defensive
-  against the GLSL rule that once any path writes `gl_FragDepth`,
-  unwritten paths leave it undefined; the halo override below relies
-  on it.
-- Off-screen-sentinel early-returns in `star.vert.glsl` skip the
-  `<logdepthbuf_vertex>` chunk — harmless while the chunk is inert,
-  load-bearing if a raw→non-raw material change ever activates it
-  (see the in-shader comments).
-- The disc pass's halo override `gl_FragDepth = 1.0` (when
-  `glow < uCoreThreshold`) writes the far plane — true in any depth
-  encoding — so distant stars in the later glow pass peek through
-  haloed fragments.
-
-Standard depth at whole-catalog range **cannot** order two disc cores
-of a tight pair against each other (both quantise to the same value;
-their z-order is float noise that flips frame-to-frame — a visible
-flicker in the overlap). Nor can it occlude background glow behind a
-resolved disc past the sub-1.0 band (~7 AU at near = 1e-12 pc): the
-disc writes exactly 1.0, ties the background's 1.0, and LessEqual
-lets everything through. Both problems move to the local depth pass:
-any disc-pass star mirrors into the bracketed pass
-(`local-pass/README.md`), whose standard-depth bracket resolves sub-AU
-pair separations natively and whose repaint over the finished frame
-occludes main-pass glow by construction.
-
-That write costs all three passes their early-z — the cost the shipped
-redesign exists to recover (`../webgpu/README.md` § Early-z).
 
 ## Sizing and profile — `perceptual-disc/`
 

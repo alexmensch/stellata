@@ -1,31 +1,36 @@
-// StarLayerSources over a zero-filled StarPipeline, for tests that need
-// the real WebGL-side attributes without a GL context.
+// StarLayerSources over zero-filled arrays, for tests that need the real
+// source attributes without a device.
 
-import { StarPipeline } from '../../star-pipeline/star-pipeline';
-import { makeStarPipelineOptions } from '../../star-pipeline/star-pipeline-mock';
+import { makeEmptyCatalog } from '../../loaders/catalog-mock';
+import { CATALOG_BOUNDING_RADIUS_PC } from '../../star-pipeline/shards/star-shards-pure';
+import { buildStarSourceAttributes } from '../../star-pipeline/star-source-attributes';
 import type { StarLayerSources } from './star-tables';
 
 export function makeStarLayerSources(count = 4): {
   sources: StarLayerSources;
-  opts: ReturnType<typeof makeStarPipelineOptions>;
-  pipe: StarPipeline;
+  arrays: {
+    localPositions: Float32Array;
+    compositeSuppress: Float32Array;
+    eclipseDim: Float32Array;
+    suppressPulsation: Float32Array;
+  };
 } {
-  const opts = makeStarPipelineOptions(count);
-  const pipe = new StarPipeline(opts);
+  const arrays = {
+    localPositions: new Float32Array(count * 3),
+    compositeSuppress: new Float32Array(count),
+    eclipseDim: new Float32Array(count).fill(1),
+    suppressPulsation: new Float32Array(count),
+  };
   return {
-    opts,
-    pipe,
+    arrays,
     sources: {
-      catalog: opts.catalog,
-      logRadii: opts.logRadii,
-      lumClassF32: opts.lumClassF32,
-      distSol: opts.distSol,
-      teffApsis: opts.teffApsis,
-      boundingSphereRadiusPc: opts.boundingSphereRadiusPc,
-      iPositionAttr: pipe.iPositionAttr,
-      iCompositeSuppressAttr: pipe.iCompositeSuppressAttr,
-      iEclipseDimAttr: pipe.iEclipseDimAttr,
-      iSuppressPulsationAttr: pipe.iSuppressPulsationAttr,
+      catalog: makeEmptyCatalog(count),
+      logRadii: new Float32Array(count),
+      lumClassF32: new Float32Array(count),
+      distSol: new Float32Array(count),
+      teffApsis: new Float32Array(count),
+      boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
+      ...buildStarSourceAttributes(arrays),
     },
   };
 }
