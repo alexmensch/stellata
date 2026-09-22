@@ -94,9 +94,7 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
   const raw = await runDwell(page, {
     frames: plan.frames,
     warmupFrames: plan.warmupFrames,
-    wantGpuStream: true,
     samplesModuleUrl: GPU_SAMPLES_MODULE_URL,
-    countPasses: true,
     readbackEvery: plan.readbackEvery,
     forceRecompute: plan.forceRecompute,
   });
