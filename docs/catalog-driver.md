@@ -1070,7 +1070,15 @@ Applications of `docs/sid.md` (which remains the authority):
   calibration.
 - A deeper magnitude pull re-runs § 6 in additive mode: existing
   records must not move (same SIDs, zero field deltas); new records
-  only add.
+  only add. **The V ≤ 11 flip did not meet this on the record side** —
+  about 3,000 existing records moved and five synthetic components
+  retired, because companion promotion, anchor-flux conservation and
+  system distance coherence all read the record set rather than the
+  manifest. Measured by `pnpm run validate:record-parity`
+  (`scripts/catalog/validate/README.md` § Additive-mode record parity);
+  the cohort and its cause are
+  `scripts/catalog/membership/magnitude-term/README.md` § What the floor
+  moves that was already there, the open decision `stellata-cns.18`.
 
 **Dead patterns — do not rebuild:** a bright/fill two-tier hybrid
 membership; positional joins at any stage; live SIMBAD in the build; a
