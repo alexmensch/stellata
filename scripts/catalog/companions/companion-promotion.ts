@@ -1355,9 +1355,10 @@ interface PromotionState {
   existingDimMembers: Set<string>;
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   synthGaiaBridges: Map<string, string>;
-  /** Members already re-curated this run, so a member reached from two
-   *  cursors is repositioned once. */
-  recuratedMembers: Set<number>;
+  /** Members already re-curated this run and where their brightness came
+   *  from, so a member reached from two cursors is repositioned once and
+   *  every registration of it reads the same source. */
+  recuratedMembers: Map<number, RecuratedBrightness>;
 }
 
 interface AnchorDimCandidate {
@@ -1402,14 +1403,17 @@ interface BlendSplitCandidate {
  *  kept the pair's combined light (ξ UMa, ξ Sco, HD 75632 all shipped ~0.5–0.8
  *  mag too bright). The record's absmag is an independent measurement, so it
  *  enters as `source: 'own'` — flux subtraction, never the Δmag re-split, which
- *  would overwrite a first-class record's own brightness. */
+ *  would overwrite a first-class record's own brightness. A re-curated member's
+ *  absmag is the curated one instead, and enters as the mint path's would. */
 function registerExistingMemberForAnchorDim(
   ctx: PromoteRowContext,
   state: PromotionState,
   memberIdx: number,
   dustGrid: DustGrid | null,
+  recurated: RecuratedBrightness | null = null,
 ): void {
   const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx } = ctx;
+  if (recurated === 'spectral') return;
   if (anchorCatalogIdx === null || anchorStar === null
       || memberIdx === anchorCatalogIdx
       || !anchorMagIsCatalogued(anchorStar)) {
@@ -1426,7 +1430,7 @@ function registerExistingMemberForAnchorDim(
     anchorIdx: anchorCatalogIdx,
     member,
     memberSpectral: recordSpectralInfo(member),
-    source: 'own',
+    source: recurated === null || recurated === 'held' ? 'own' : recurated,
     dmag: row.dmag,
     // Never structural, and the asymmetry with the mint path is load-bearing:
     // the identity bypass is for a member with no other evidence, and one that
@@ -1489,6 +1493,8 @@ function recurateExistingMember(
   dustGrid: DustGrid | null,
   memberIdx: number,
 ): RecuratedBrightness | null {
+  const prior = state.recuratedMembers.get(memberIdx);
+  if (prior !== undefined) return prior;
   const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, position,
           isPairRowPrimary } = ctx;
   if (isPairRowPrimary || position === null) return null;
@@ -1497,10 +1503,8 @@ function recurateExistingMember(
   )) {
     return null;
   }
-  if (state.recuratedMembers.has(memberIdx)) return null;
   const member = state.existingStars[memberIdx];
   if (!ownFitFailsAnchorGrade(member, state.gaiaAstrometry)) return null;
-  state.recuratedMembers.add(memberIdx);
 
   const avAt = (s: { x: number; y: number; z: number }): number =>
     dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0;
@@ -1535,6 +1539,7 @@ function recurateExistingMember(
     member.absmag += 5 * Math.log10(dOld / dNew) + avOld - avNew;
   }
   member.physicalRadius = physicalRadius(member.absmag, spectral);
+  state.recuratedMembers.set(memberIdx, brightness);
   stats.existingMemberRecurated[brightness]++;
   return brightness;
 }
@@ -1630,8 +1635,8 @@ function promoteRow(
       inheritAnchorDesignationCon(
         state.existingStars[existingIdx], anchorStar ?? systemAnchorStar, stats,
       );
-      recurateExistingMember(ctx, state, stats, dustGrid, existingIdx);
-      registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid);
+      const recurated = recurateExistingMember(ctx, state, stats, dustGrid, existingIdx);
+      registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid, recurated);
       return null;
     }
     // A pair whose two ends resolve to ONE record has no second star to mint;
@@ -1707,8 +1712,8 @@ function promoteRow(
       inheritAnchorDesignationCon(
         state.existingStars[bridgedIdx], anchorStar ?? systemAnchorStar, stats,
       );
-      recurateExistingMember(ctx, state, stats, dustGrid, bridgedIdx);
-      registerExistingMemberForAnchorDim(ctx, state, bridgedIdx, dustGrid);
+      const recurated = recurateExistingMember(ctx, state, stats, dustGrid, bridgedIdx);
+      registerExistingMemberForAnchorDim(ctx, state, bridgedIdx, dustGrid, recurated);
       return null;
     }
   }
@@ -1934,7 +1939,7 @@ export function promoteCompanions(
     existingDimMembers: new Set(),
     gaiaAstrometry,
     synthGaiaBridges,
-    recuratedMembers: new Set(),
+    recuratedMembers: new Map(),
   };
   const getStarAt = (idx: number): Star =>
     idx < existingStars.length

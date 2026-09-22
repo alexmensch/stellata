@@ -3157,6 +3157,31 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     expect(b.absmag + 5 * Math.log10(dNew / 10)).toBeCloseTo(apparentBefore, 9);
   });
 
+  it('dims the anchor by the Δmag re-split, not by the curated light it lent', () => {
+    // A printed blend of A+B at 5″, Δmag 0.5: the curated B is A+Δmag, so
+    // subtracting it as an independent 'own' measurement would take A's own
+    // light out of A.
+    const a = siriusA();
+    Object.assign(a, { absmag: 1.0, vVia: 'printed_hip' });
+    const b = siriusB();
+    const rows = siriusRows();
+    const blend = 1.0 + 5 * Math.log10(2.637061 / 10);
+    const split = 2.5 * Math.log10(1 + 10 ** -0.2);
+    for (const r of rows) {
+      Object.assign(r, {
+        sepArcsec: 5, dmag: 0.5, magPri: blend + split, magSec: blend + split + 0.5,
+      });
+    }
+    Object.assign(rows[0], { absmag: 1.0 });
+    const { stats } = promoteCompanions(
+      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+    );
+    expect(stats.existingMemberRecurated.dmag_imputed).toBe(1);
+    expect(stats.blendDimmedAnchors).toBe(1);
+    expect(b.absmag - a.absmag).toBeCloseTo(0.5, 6);
+    expect(a.absmag).toBeCloseTo(1.0 + split, 6);
+  });
+
   it('leaves a member alone when Gaia stands behind its own fit', () => {
     const a = siriusA();
     const b = siriusB();

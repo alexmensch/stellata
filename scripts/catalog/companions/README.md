@@ -323,7 +323,9 @@ Per-row gates and resolution:
     enter as `own` — flux subtraction against the record's own measurement,
     never the Δmag re-split, which would overwrite a first-class record's
     brightness — deduped per `(anchor, member)`, since every cursor pairing the
-    two arrives at the same registration.
+    two arrives at the same registration. A **re-curated** member is the
+    exception: its brightness is the curated one, so it enters under that
+    source exactly as a minted member would (and a class→M_V one not at all).
   - **Conservation is observed-frame.** A member's flux leaves at the apparent
     magnitude the observer sees and the residual converts back at the anchor's
     own distance. Identical arithmetic for a minted member (tangent projection
