@@ -930,7 +930,9 @@ async function main() {
 
   // Built here (not at the sidecar write below) so the wings pass resolves
   // multiples.tsv rows exactly as the runtime binaries loader will.
-  const rowIndexMap = buildCatalogRowIndexMap(stars);
+  const rowIndexMap = buildCatalogRowIndexMap(
+    stars, syntheticGaiaBridges(loadStoredEdges()),
+  );
 
   let componentDesignations = new Map<number, ComponentDesignation>();
   let multiplesMemberIndices = new Set<number>();

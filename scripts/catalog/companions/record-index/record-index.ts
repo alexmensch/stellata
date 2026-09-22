@@ -30,7 +30,16 @@ export interface CatalogRowIndexMap {
 // binaries loader resolves multiples.tsv rows to catalog.bin records
 // through this map; the build script writes it next to catalog.bin /
 // search-index.json.
-export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
+export function buildCatalogRowIndexMap(
+  stars: Star[],
+  /** Runtime synth id -> the Gaia source a stored same-as edge calls the same
+   *  star. A component whose row carries no identifier is addressable only
+   *  under its synth key, and where promotion refused the mint because that
+   *  source is already a record, the key has to reach it here or the star
+   *  ships with no component letter and no search entry. Addressing only:
+   *  the record's own designations stay the manifest's. */
+  synthGaiaBridges: ReadonlyMap<string, string> = new Map(),
+): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
   const byHip: Record<string, number> = {};
   const bySynth: Record<string, number> = {};
@@ -45,6 +54,10 @@ export function buildCatalogRowIndexMap(stars: Star[]): CatalogRowIndexMap {
     if (s.syntheticId && !(s.syntheticId in bySynth)) {
       bySynth[s.syntheticId] = i;
     }
+  }
+  for (const [synthId, gaiaId] of synthGaiaBridges) {
+    const idx = byGaia[gaiaId];
+    if (idx !== undefined && !(synthId in bySynth)) bySynth[synthId] = idx;
   }
   return { byGaia, byHip, bySynth };
 }

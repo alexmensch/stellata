@@ -3151,22 +3151,26 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     expect(b.absmag).toBe(11.4666);
   });
 
+  // 20450+1244 B: the row carries no gaia and no hip, so it mints
+  // synth-20450+1244-B and only a same-as edge links it to a real source.
+  const bridgedRows = () => [
+    multiplesRow({
+      systemId: '20450+1244-AB', comp: 'A', hip: 102398,
+      x_pc: 68.494089, y_pc: -78.099838, z_pc: 23.461268, distPc: 106.496273,
+      absmag: 3.271, orbitRole: 'primary',
+      sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
+    }),
+    multiplesRow({
+      systemId: '20450+1244-AB', comp: 'B',
+      x_pc: 58.362644, y_pc: -66.547695, z_pc: 19.991079, distPc: 90.7438,
+      absmag: 3.271, photometryVia: 'athyg_system_inherited',
+      orbitRole: 'secondary',
+      sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
+    }),
+  ];
+
   it('recognises a member through the SID same-as bridge and mints no twin', () => {
-    const rows = [
-      multiplesRow({
-        systemId: '20450+1244-AB', comp: 'A', hip: 102398,
-        x_pc: 68.494089, y_pc: -78.099838, z_pc: 23.461268, distPc: 106.496273,
-        absmag: 3.271, orbitRole: 'primary',
-        sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
-      }),
-      multiplesRow({
-        systemId: '20450+1244-AB', comp: 'B',
-        x_pc: 58.362644, y_pc: -66.547695, z_pc: 19.991079, distPc: 90.7438,
-        absmag: 3.271, photometryVia: 'athyg_system_inherited',
-        orbitRole: 'secondary',
-        sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
-      }),
-    ];
+    const rows = bridgedRows();
     const anchor = makeStar({
       hip: 102398, absmag: 3.271,
       x: 68.494089, y: -78.099838, z: 23.461268,
@@ -3181,24 +3185,14 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     );
     expect(newStars).toHaveLength(0);
     expect(stats.existingViaSameasBridge).toBe(1);
+    // Promotion amends no identifier: the record's designations stay the
+    // manifest's, and the synth key reaches it through the addressing
+    // sidecar instead (record-index/README.md).
+    expect(bridged.syntheticId).toBeNull();
   });
 
   it('mints as before when no bridge names the synthetic key', () => {
-    const rows = [
-      multiplesRow({
-        systemId: '20450+1244-AB', comp: 'A', hip: 102398,
-        x_pc: 68.494089, y_pc: -78.099838, z_pc: 23.461268, distPc: 106.496273,
-        absmag: 3.271, orbitRole: 'primary',
-        sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
-      }),
-      multiplesRow({
-        systemId: '20450+1244-AB', comp: 'B',
-        x_pc: 58.362644, y_pc: -66.547695, z_pc: 19.991079, distPc: 90.7438,
-        absmag: 3.271, photometryVia: 'athyg_system_inherited',
-        orbitRole: 'secondary',
-        sepArcsec: 0.7, paDeg: 176.0, dmag: -0.58, magPri: 9.14, magSec: 8.56,
-      }),
-    ];
+    const rows = bridgedRows();
     const anchor = makeStar({
       hip: 102398, absmag: 3.271,
       x: 68.494089, y: -78.099838, z: 23.461268,

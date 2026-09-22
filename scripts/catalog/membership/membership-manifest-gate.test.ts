@@ -9,7 +9,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { OVERRIDES_PATH } from '../../sid/registry-io';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
-import { canonicalKeyOf, compareDesignations, parseSameasTsv } from '../../sid/sid-pure';
+import {
+  SYNTH_RUNTIME_PREFIX, canonicalKeyOf, compareDesignations, parseSameasTsv,
+  syntheticGaiaBridges,
+} from '../../sid/sid-pure';
+import { loadStoredEdges } from '../../sid/registry-io';
 import {
   DEFAULT_CATALOG_MANIFEST,
   DEFAULT_ROW_INDEX_MAP,
@@ -300,8 +304,30 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       const parked = new Set(parseParkedRecordsTsv(
         readFileSync(resolve(REPO_ROOT, PARKED_LEDGER_FILE), 'utf-8'),
       ).map((r) => r.recordKey));
+      // A stored same-as edge is a THIRD source of designation, beside the
+      // manifest and promotion: it states that a synthetic component key and a
+      // Gaia source name one star, and the addressing sidecar carries the key
+      // onto that record so the naming ladder and binaries.bin can reach the
+      // component. The manifest never carries a synth key, so without this the
+      // gate reads the registry's own assertion as an invention. A synth key no
+      // edge names still fails.
+      const bridgedSynthByGaia = new Map<string, string>();
+      for (const [synthId, gaiaId] of syntheticGaiaBridges(loadStoredEdges())) {
+        bridgedSynthByGaia.set(
+          gaiaId, `synth:${synthId.slice(SYNTH_RUNTIME_PREFIX.length)}`,
+        );
+      }
+      const withBridgedSynth = (row: ManifestRow): string[] => {
+        const designations = manifestDesignations(row);
+        for (const d of designations) {
+          if (!d.startsWith('gaia_dr3:')) continue;
+          const synth = bridgedSynthByGaia.get(d.slice('gaia_dr3:'.length));
+          if (synth !== undefined) return [...designations, synth];
+        }
+        return designations;
+      };
       const fromManifest = tally(
-        manifest.filter((row) => !parked.has(manifestKey(row))).map(manifestDesignations),
+        manifest.filter((row) => !parked.has(manifestKey(row))).map(withBridgedSynth),
       );
       const diff = differences(fromBuild, fromManifest);
       expect(diff.slice(0, 20)).toEqual([]);
