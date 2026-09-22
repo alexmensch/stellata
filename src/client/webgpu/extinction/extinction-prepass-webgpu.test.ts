@@ -131,10 +131,6 @@ function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
 }
 
 describe('construction', () => {
-  it('needs no float-target extension — that verdict has no WebGPU analogue', () => {
-    expect(makePrepass().prepass.supported).toBe(true);
-  });
-
   it('points the consumer slot at a one-float-per-star buffer immediately', () => {
     const { prepass, slots } = makePrepass();
     // uAvPrepassEnabled is the gate, not the binding, so an uncomputed

@@ -59,9 +59,7 @@ WebGL map and never learns about the port. The contract:
   swapped on attach — one node per slot for the whole boot, since two
   consumers of the same volume must not be able to diverge
   (`../extinction/README.md` § One owner for every shared slot). The A_V cache is a
-  storage buffer on this backend, bound the same way (§ Storage
-  attributes), so `uAvPrepassTex` in the shared map stays null for a
-  WebGPU boot's whole life.
+  storage buffer, bound the same way (§ Storage attributes).
   **A placeholder's filter pair is what its node's WGSL fetches with**, for
   the graph's whole life and whatever is swapped in later — so the
   placeholder carries the real texture's pair

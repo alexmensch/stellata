@@ -1658,7 +1658,7 @@ export class Stellata implements FrameAnchor {
     this.renderGate.invalidate('debug:survivors');
     const counts = await this.webgpuStarLayer.readSurvivorCounts();
     if (counts === null) return null;
-    return { ...counts, inFrame: this.extinctionPrepass?.countInFrame?.() ?? null };
+    return { ...counts, inFrame: this.extinctionPrepass?.countInFrame() ?? null };
   }
 
   /** Numeric check that the compute A_V kernel and a fragment march of the
@@ -1666,7 +1666,7 @@ export class Stellata implements FrameAnchor {
    *  a WebGPU boot has no pixel to show. Null on WebGL2 or with no dust.
    *  `webgpu/extinction/README.md` § The prepass kernel. */
   async verifyExtinction(): Promise<AvParityReport | null> {
-    const report = await this.extinctionPrepass?.verifyParity?.() ?? null;
+    const report = await this.extinctionPrepass?.verifyParity() ?? null;
     if (report === null) {
       console.warn('verifyExtinction: no compute prepass active');
       return null;
@@ -2020,7 +2020,7 @@ export class Stellata implements FrameAnchor {
    *  the star pick gates on, so `extinctionAvMagFor` is exact by the time
    *  the dwell fires (`webgpu/extinction/README.md` § Cold reads). */
   notifyPickImminent(): void {
-    this.extinctionPrepass?.warmAvReadback?.();
+    this.extinctionPrepass?.warmAvReadback();
   }
 
   /** Debug kill switch for the star core depth-mask draw AND the

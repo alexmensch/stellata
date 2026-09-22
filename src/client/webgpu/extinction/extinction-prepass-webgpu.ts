@@ -62,10 +62,6 @@ export interface WebGpuExtinctionPrepassOptions {
 }
 
 export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
-  /** Storage buffers and compute are core WebGPU — there is no
-   *  EXT_color_buffer_float to gate on and no fallback branch to port. */
-  readonly supported = true;
-
   private readonly renderer: WebGPURenderer;
   private readonly uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
   private readonly slots: ExtinctionNodes;
@@ -368,9 +364,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     return moved;
   }
 
-  /** The consumer's `uAvPrepassEnabled` gate is the one shared-map write
-   *  this pass owns on either backend. `uAvPrepassTex` is a WebGL texture
-   *  slot; here the consumers index the buffer slot directly. */
   private syncConsumerUniforms(): void {
     this.uniforms.uAvPrepassEnabled.value = this.isActive() ? 1 : 0;
   }

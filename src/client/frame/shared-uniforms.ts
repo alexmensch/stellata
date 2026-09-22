@@ -131,10 +131,8 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uDustEnabled: { value: 0.0 },
     uExtinctionStrength: { value: 1.0 },
     uWorldOffset: { value: new THREE.Vector3() },
-    // Per-star A_V prepass consumers — owned by ExtinctionPrepass
-    // (constructed on attachDust); the vertex shader falls back to the
-    // in-vertex raymarch while uAvPrepassEnabled is 0.
-    uAvPrepassTex: { value: null as THREE.Texture | null },
+    // Owned by the extinction prepass (constructed on attachDust); the
+    // vertex stage falls back to the in-vertex raymarch while this is 0.
     uAvPrepassEnabled: { value: 0.0 },
     // OBSERVE-mode focal-star suppression. Set to the focused-star catalog
     // index when the camera is parked on it; -1 disables the gate. All
