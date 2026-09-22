@@ -1,6 +1,6 @@
 // LgEmissionMaterials test double. See README.md § The material seam.
 
-import { fakeEmitterMaterial, type FakeEmitterMaterial } from '../../scene/emitter-material-mock';
+import { surfaceRecorder, type FakeEmitterMaterial } from '../../scene/emitter-material-mock';
 import type { LgEmissionMaterials } from './lg-emission-materials';
 
 export interface FakeLgEmissionMaterials extends LgEmissionMaterials {
@@ -9,13 +9,6 @@ export interface FakeLgEmissionMaterials extends LgEmissionMaterials {
 }
 
 export function fakeLgEmissionMaterials(): FakeLgEmissionMaterials {
-  const surfaces: FakeEmitterMaterial[] = [];
-  return {
-    surfaces,
-    emission: () => {
-      const surface = fakeEmitterMaterial();
-      surfaces.push(surface);
-      return surface;
-    },
-  };
+  const recorder = surfaceRecorder();
+  return { surfaces: recorder.surfaces, emission: () => recorder.mint() };
 }

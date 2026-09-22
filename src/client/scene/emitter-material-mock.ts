@@ -43,6 +43,29 @@ export function fakeEmitterMaterial(
   return handle;
 }
 
+export interface SurfaceRecorder<A extends unknown[]> {
+  /** One per `mint()` call, in build order. */
+  readonly surfaces: FakeEmitterMaterial[];
+  mint(...args: A): FakeEmitterMaterial;
+}
+
+/** The body of every factory double: a fresh surface per call, seeded from
+ *  the call's arguments the way the shipped factory seeds it, and kept. */
+export function surfaceRecorder<A extends unknown[] = []>(
+  seed: (surface: FakeEmitterMaterial, ...args: A) => void = () => {},
+): SurfaceRecorder<A> {
+  const surfaces: FakeEmitterMaterial[] = [];
+  return {
+    surfaces,
+    mint(...args) {
+      const surface = fakeEmitterMaterial();
+      seed(surface, ...args);
+      surfaces.push(surface);
+      return surface;
+    },
+  };
+}
+
 /** README.md § The material seam — the `touchedSlots` guard. */
 export function expectSlotsServedBy(
   touched: readonly string[],

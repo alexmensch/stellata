@@ -2,8 +2,7 @@
 // See README.md § The material seam.
 
 import * as THREE from 'three';
-import { fakeEmitterMaterial } from '../scene/emitter-material-mock';
-import type { EmitterMaterial } from '../scene/emitter-material';
+import { surfaceRecorder, type FakeEmitterMaterial } from '../scene/emitter-material-mock';
 import {
   seedBandSharedSlots,
   type BandComponentSpec,
@@ -49,26 +48,23 @@ function filledHoleTexture(fill: number): THREE.Data3DTexture {
 export interface FakeBandMaterials extends BandMaterials {
   /** One per `component()` call, in build order: disc, then bulge. */
   readonly specs: BandComponentSpec[];
-  readonly surfaces: EmitterMaterial[];
+  readonly surfaces: FakeEmitterMaterial[];
 }
 
 export function fakeBandMaterials(): FakeBandMaterials {
   const specs: BandComponentSpec[] = [];
-  const surfaces: EmitterMaterial[] = [];
+  const recorder = surfaceRecorder((surface, spec: BandComponentSpec) => {
+    specs.push(spec);
+    surface.uniforms.uDensity0.value = spec.density0;
+    surface.uniforms.uColor.value = spec.tint.clone();
+  });
   const shared = bandSharedSlots(0);
   seedBandSharedSlots(shared);
   return {
     shared,
     specs,
-    surfaces,
-    component(spec) {
-      specs.push(spec);
-      const surface = fakeEmitterMaterial();
-      surface.uniforms.uDensity0.value = spec.density0;
-      surface.uniforms.uColor.value = spec.tint.clone();
-      surfaces.push(surface);
-      return surface;
-    },
+    surfaces: recorder.surfaces,
+    component: (spec) => recorder.mint(spec),
     dispose() {
       (shared.uUnresolvedLight.value as THREE.Data3DTexture).dispose();
     },

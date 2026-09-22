@@ -27,7 +27,8 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 - `emitter-material.ts` — `EmitterMaterial` (§ The material seam).
   Type-only.
 - `emitter-material-mock.ts` — `fakeEmitterMaterial`, the double every
-  layer suite's own factory fake is built from, and `expectSlotsServedBy`.
+  layer suite's own factory fake is built from, `surfaceRecorder` (the
+  mint-seed-keep body those fakes share), and `expectSlotsServedBy`.
   Its slot record answers any name, minting one on first touch, so a suite
   on it pins the layer's behaviour and never the uniform roster — that
   roster belongs to the factory, and the factory's own suite is where a

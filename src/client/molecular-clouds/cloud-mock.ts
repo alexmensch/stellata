@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import type { Cloud, CloudCatalog } from './cloud-loader';
-import { fakeEmitterMaterial, type FakeEmitterMaterial } from '../scene/emitter-material-mock';
+import { fakeEmitterMaterial, surfaceRecorder, type FakeEmitterMaterial } from '../scene/emitter-material-mock';
 import type { CloudAbsorptionSpec, CloudMaterials } from './cloud-materials';
 
 export function makeMockCloud(overrides: Partial<Cloud> = {}): Cloud {
@@ -84,19 +84,16 @@ export interface FakeCloudMaterials extends CloudMaterials {
  *  its setters write through. */
 export function fakeCloudMaterials(): FakeCloudMaterials {
   const absorptionSpecs: CloudAbsorptionSpec[] = [];
-  const absorptionSurfaces: FakeEmitterMaterial[] = [];
+  const absorption = surfaceRecorder((surface, spec: CloudAbsorptionSpec) => {
+    absorptionSpecs.push(spec);
+    surface.uniforms.uSteps.value = spec.steps;
+  });
   const rim = fakeEmitterMaterial();
   return {
     absorptionSpecs,
-    absorptionSurfaces,
+    absorptionSurfaces: absorption.surfaces,
     rimSurface: rim,
-    absorption(spec) {
-      absorptionSpecs.push(spec);
-      const surface = fakeEmitterMaterial();
-      surface.uniforms.uSteps.value = spec.steps;
-      absorptionSurfaces.push(surface);
-      return surface;
-    },
+    absorption: (spec) => absorption.mint(spec),
     // One material for all ~96 clouds, as the factories build it.
     rim(spec) {
       rim.uniforms.uChart.value = 0;
