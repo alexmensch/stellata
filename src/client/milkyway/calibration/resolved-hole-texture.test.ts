@@ -14,7 +14,7 @@ const index = (ix: number, iy: number, iz: number) =>
   (iz * RESOLVED_HOLE_GRID_N + iy) * RESOLVED_HOLE_GRID_N + ix;
 
 describe('the resolution-hole grid', () => {
-  // README.md § The table is a texture, not a uniform array — every one
+  // README.md § The table is a 3D grid, not a uniform array — every one
   // of these is load-bearing.
   it('is a 64-cube half-float red texture, linear and clamped on all three axes', () => {
     const tex = makeResolvedHoleTexture();

@@ -54,7 +54,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const texelCoord = (c: number, size: number) =>
   Math.min(Math.max(c * size - 0.5, 0), size - 1);
 
-/** README.md § The table is a texture, not a uniform array. */
+/** README.md § The table is a 3D grid, not a uniform array. */
 export function sampleTexelCentres(
   values: ArrayLike<number>,
   width: number,

@@ -136,7 +136,7 @@ export function makeGlslBandMaterials(cfg: GlslBandConfig): BandMaterials {
   return {
     shared,
     dispose() {
-      (shared.uUnresolvedLight.value as THREE.DataTexture).dispose();
+      (shared.uUnresolvedLight.value as THREE.Data3DTexture).dispose();
     },
     component(spec) {
       const material = new THREE.ShaderMaterial({

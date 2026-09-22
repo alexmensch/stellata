@@ -209,12 +209,12 @@ model's light at that point**, read out of `resolved-hole-table.ts`:
   share (`scripts/milkyway-calibration/README.md` § How a cell is measured).
 - Sampled **bilinearly in (log d, |sin b|)** over the cell centres and
   clamped to the edge cells beyond them, so the first shell's value holds
-  inside 10 pc and the last shell's past 15.8 kpc — and that is the whole
-  of it, because both are a filtering sampler's own conventions (§ The
-  table is a texture, not a uniform array). Each shader computes two
-  coordinates and fetches; `sampleTexelCentres` mirrors the hardware for
-  the CPU march. The GLSL layout literals are pinned against the wrapper's
-  constants in `../milkyway.test.ts` and the TSL imports them by name.
+  inside 10 pc and the last shell's past 15.8 kpc. That is the rule the
+  cube is resampled with (`sampleTexelCentres`), not what the shaders do:
+  each computes one `vec3` into the cube and takes a trilinear fetch
+  (§ The table is a 3D grid, not a uniform array). The GLSL layout literals
+  are pinned against the wrapper's constants in `../milkyway.test.ts` and
+  the TSL imports them by name.
 - Applied **before the dust**, so the resolved stars and what the band
   still draws see the same column — the catalogue's stars are rendered
   through the per-star extinction prepass, the band's remainder through its

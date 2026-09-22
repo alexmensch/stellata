@@ -149,8 +149,7 @@ float bulgeDensityVal(float R, float zVal, float footprintPc) {
   return uDensity0 * exp(-rPrime / uBulgeScaleRadiusPc);
 }
 
-// Sol sits at (−R₀, 0, 0) in this frame and in the plane, so |sin b| from
-// Sol is |z| over the distance from Sol.
+// Sol sits at (−R₀, 0, 0) in this frame, which is what the offset undoes.
 float unresolvedBandLight(vec3 posGalCentric) {
   vec3 fromSol = posGalCentric + vec3(uR0Pc, 0.0, 0.0);
   // One multiply-add into a Sol-centred cube. Clamp-to-edge is the outside
