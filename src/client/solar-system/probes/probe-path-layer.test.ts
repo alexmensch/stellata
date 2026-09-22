@@ -6,8 +6,9 @@ import * as THREE from 'three';
 import { AU_PC } from '../../util/astronomy-constants';
 import { tToJdUt } from '../time/time';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
-import { PROBE_MARKER_PX, ProbeField, type ProbeSharedUniforms } from './probe-field';
+import { PROBE_MARKER_PX, ProbeField } from './probe-field';
 import { ProbePathLayer } from './probe-path-layer';
+import type { ScreenMetricUniforms } from '../../util/orbit-line';
 import { fakeChromeLineMaterials } from '../../chrome-lines/chrome-lines-mock';
 import { buildProbeTrajectory } from './probe-trajectory';
 import { fakeProbeMaterials } from '../materials/solar-system-materials-mock';
@@ -43,9 +44,8 @@ const ROSTER = [makeFile('alpha', 40), makeFile('beta', 80)]
   .map(buildProbeTrajectory);
 
 function makeHarness() {
-  const shared: ProbeSharedUniforms = {
+  const shared: ScreenMetricUniforms = {
     uViewport: { value: new THREE.Vector2(800, 600) },
-    uPixelRatio: { value: 1 },
     uFovYRad: { value: (50 * Math.PI) / 180 },
   };
   const field = new ProbeField(fakeProbeMaterials());

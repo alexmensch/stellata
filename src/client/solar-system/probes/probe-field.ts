@@ -3,11 +3,7 @@
 
 import * as THREE from 'three';
 import { HELIOPAUSE_EXTENT_PC } from '../heliopause/heliopause';
-import type { PerceptualDiscUniforms } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
-import {
-  isFeatureLegible,
-  type ScreenMetricUniforms,
-} from '../../util/orbit-line';
+import { isFeatureLegible } from '../../util/orbit-line';
 import {
   probeSignalLost,
   probeStateAt,
@@ -46,12 +42,6 @@ const MARKER_RENDER_ORDER = 3.5;
 // below the star glow mirror (3.5) — the same slot ordering the ring layer
 // documents. See src/client/local-depth/README.md.
 const MARKER_LOCAL_RENDER_ORDER = 3.3;
-
-/** The star pipeline's viewport / FOV / pixel-ratio slots, by reference, so a
- *  resize or FOV change reaches the marker material and the on-screen gates
- *  with no bookkeeping here. */
-export type ProbeSharedUniforms =
-  ScreenMetricUniforms & Pick<PerceptualDiscUniforms, 'uPixelRatio'>;
 
 /** Per-probe geometry for this frame, shared with the trail layer, the
  *  label overlay, and every interaction surface so all of them agree on
