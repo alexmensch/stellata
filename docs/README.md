@@ -37,8 +37,8 @@ bd-workflow.md          Long-form bd procedures that fire on a trigger
                         rather than in every session: the bug-sweep
                         handoff format and the label / metadata /
                         external-ref conventions. Creation-time
-                        obligations (model-routing labels, choosing the
-                        parent epic) sit in the stellata-beads skill
+                        obligations (choosing the parent epic and the
+                        priority) sit in the stellata-beads skill
                         instead, since they bind before you would think
                         to open a doc; grooming is the bd-grooming
                         skill.
