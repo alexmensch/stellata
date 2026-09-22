@@ -7,9 +7,9 @@ describe('scenarios', () => {
   });
 
   // A row compares only against one taken at the same position in its run,
-  // so the pin run has to visit the Tier 1 vantages first, in Tier 1's order,
-  // on the backend Tier 1 measures. Reordering either constant re-takes the pin.
-  it('opens the canon with the Tier 1 vantages, and the gated backend first', () => {
+  // so the pin run has to visit the Tier 1 vantages first, in Tier 1's
+  // order. Reordering either constant re-takes the pin.
+  it('opens the canon with the Tier 1 vantages', () => {
     expect(TIER1_SCENARIOS).toEqual(['mw120', 'sol']);
     expect(SCENARIO_NAMES.slice(0, TIER1_SCENARIOS.length)).toEqual([...TIER1_SCENARIOS]);
     expect(BACKENDS).toEqual(['webgpu']);

@@ -97,15 +97,20 @@ Two branches carry the whole subtlety:
   shipped it at all, and the Windows / Apple-silicon builds that have
   still reach this page. Chrome does run on every platform tested. So the
   action is Chrome and the per-OS fact moves to the **detail**, phrased as
-  a possibility ("a newer Firefox may work") rather than an instruction:
-  the reader gets the route that works first, and the Firefox route
-  second. This is also the one branch where `no-adapter` does not name
-  hardware acceleration — that setting is the fix on Chrome, not here.
+  a possibility rather than an instruction: the reader gets the route that
+  works first, and the Firefox route second. This is also the one branch
+  where `no-adapter` does not name hardware acceleration — that setting is
+  the fix on Chrome, not here.
+- **The Firefox detail names no version.** The reader of that copy is a
+  Firefox *without* WebGPU, so a version number is one they may already be
+  past — the copy told a user on 141 that 141 is where it arrives. Per-OS
+  facts that are not version numbers (Linux's `dom.webgpu.enabled`,
+  Android's absence) stay, because those a reader can act on.
 
-The version numbers come from the support audit in the `stellata-0it`
-epic body, which is **dated** — the page says so in as many words, so a
-stale row reads as a dated observation rather than a guarantee. Update
-`SUPPORT_AUDIT_LABEL` alongside the table.
+The support audit lives in the `stellata-0it` epic body and is **dated** —
+the page says so in as many words, so a stale row reads as a dated
+observation rather than a guarantee. Update `SUPPORT_AUDIT_LABEL`
+alongside the table.
 
 ## Two callers, one page
 

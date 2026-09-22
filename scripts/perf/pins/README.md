@@ -419,7 +419,7 @@ a pin run reads `steady`.
   since a run whose rows were all refused prints a table with no `✗` in
   it. **Pin rows the run did not visit are listed, not refused** — the table
   walks the run's rows, so a Tier 1 run answers for its two and prints the
-  other eight as `not measured in this run`.
+  other three as `not measured in this run`.
 - **Record count.** `recordCount` is the star records the page loaded, off
   the catalogue binary's header. It moves how many instanced quads every
   star pass draws — the most direct frame-cost change the repo can make. A

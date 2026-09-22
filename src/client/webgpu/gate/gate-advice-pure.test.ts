@@ -70,7 +70,17 @@ describe('no-api — the browser has no WebGPU, so name a newer one', () => {
   it('keeps the per-OS Firefox reason in the detail', () => {
     expect(adviceFor(hints(ANDROID_FIREFOX), 'no-api').detail).toContain('121');
     expect(adviceFor(hints(LINUX_FIREFOX), 'no-api').detail).toContain('about:config');
-    expect(adviceFor(hints(MAC_FIREFOX), 'no-api').detail).toContain('145');
+  });
+
+  // The reader IS a Firefox without WebGPU, so a version number in the copy
+  // is one they may already be past — WIN_FIREFOX is 141, which the copy
+  // used to name as the version that has it.
+  it('names no Firefox version to the reader it cannot be true for', () => {
+    for (const ua of [MAC_FIREFOX, WIN_FIREFOX]) {
+      const detail = adviceFor(hints(ua), 'no-api').detail;
+      expect(detail).not.toMatch(/\b1[0-9]{2}\b/);
+      expect(detail).toContain('Chrome');
+    }
   });
 
   it('gives Android Chrome its version and OS floor', () => {

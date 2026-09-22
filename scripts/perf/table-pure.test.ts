@@ -215,7 +215,7 @@ describe('formatPinTable', () => {
         floorDeltaMs: 0.75, spreadDeltaMs: null, bandMs: 0.25, verdict: 'dearer', note: '',
       }, {
         key: 'mw120|webgpu', metric: 'wall-p50', pinnedMs: 16.7, currentMs: 16.7, deltaMs: 0,
-        floorDeltaMs: null, spreadDeltaMs: null, bandMs: 0, verdict: 'ungated', note: 'no GPU stream — WebGL2 supplies none',
+        floorDeltaMs: null, spreadDeltaMs: null, bandMs: 0, verdict: 'ungated', note: 'no GPU stream — this adapter supplies none',
       }],
       refusals: [{ key: 'lg|webgpu', reason: 'run position 10 vs 1' }],
       unmeasured: ['earth|webgpu', 'mw50|webgpu'],
@@ -227,7 +227,7 @@ describe('formatPinTable', () => {
     expect(lines[0]).toMatch(/delta\s+floor\s+spread\s+band/);
     expect(lines[1]).toMatch(/^\s*✗\s+sol\|webgpu\s+gpu-p50\s+21\.8\s+22\.6\s+0\.8\s+0\.75\s+0\.25/);
     expect(lines[2]).toMatch(/^\s*·\s+mw120\|webgpu\s+wall-p50\s+16\.7\s+16\.7\s+0\s+0\s+no GPU/);
-    expect(lines[2]).toContain('no GPU stream — WebGL2 supplies none');
+    expect(lines[2]).toContain('no GPU stream — this adapter supplies none');
     expect(lines[3]).toBe('  not compared: lg|webgpu — run position 10 vs 1');
     expect(lines[4]).toBe('  not measured in this run: earth|webgpu, mw50|webgpu');
   });

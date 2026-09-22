@@ -302,6 +302,9 @@ export interface PinSummary {
   readonly merged: PerfFile | null;
   readonly refusals: readonly string[];
   readonly provenance: readonly RowProvenance[];
+  /** Keys the sources carried that the canon does not hold
+   *  (README.md § Run position). */
+  readonly dropped: readonly string[];
 }
 
 /**
@@ -355,6 +358,15 @@ function keysAcross(sources: readonly RunSource[]): string[] {
   return [...CANON_POSITIONS.keys()].filter((key) => keys.has(key));
 }
 
+/** Rows the runs carry that the canon does not, so a narrowed pin says which
+ *  rows it dropped. An archive taken before a canon change carries rows that
+ *  compare with nothing; leaving them out is right, leaving them out in
+ *  silence is a gate narrowing with no record. */
+function nonCanonKeys(sources: readonly RunSource[]): string[] {
+  const keys = new Set(sources.flatMap((s) => s.file.scenarios.map(pinKey)));
+  return [...keys].filter((key) => !CANON_POSITIONS.has(key)).sort();
+}
+
 function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
   const dwell = record.dwell!;
   const compute = computeClock(dwell);
@@ -404,6 +416,7 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
   });
 
   const provenance: RowProvenance[] = [];
+  const dropped = nonCanonKeys(sources);
   const chosen: { record: ScenarioRecord; sourceRun: string }[] = [];
   for (const key of keysAcross(sources)) {
     const refusedIn: { sourceRun: string; reason: string }[] = [];
@@ -426,7 +439,7 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
   const newest = sources.at(-1);
   const slug = newest === undefined ? null : adapterSlug(newest.file.run.gpu);
   if (refusals.length > 0 || newest === undefined || slug === null || newest.file.run.gpu === null) {
-    return { pin: null, merged: null, refusals, provenance };
+    return { pin: null, merged: null, refusals, provenance, dropped };
   }
   return {
     pin: {
@@ -447,6 +460,7 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
     },
     refusals,
     provenance,
+    dropped,
   };
 }
 

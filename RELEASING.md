@@ -140,12 +140,12 @@ information.
   the canon order, so a two-context run would measure it at a position the
   pin does not hold for it and the row would refuse
   (§ Run position). A witness that refuses is not a witness. Paste the
-  table; the eight pin rows the run did not visit print as `not measured`
+  table; the three pin rows the run did not visit print as `not measured`
   and fail nothing. A `✗` exits 1 and owes an `accepted:` line exactly as it
   does at Tier 2, and the pin is left where it was.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
-  `--mode dwell --scenario all --backend both --cooldown-ms 120000
+  `--mode dwell --scenario all --cooldown-ms 120000
   --frames 960 --pin`, ~15–25 min. Every row the pin records is this tier's
   to re-take. **`--frames` is not optional and its value is whatever the
   outgoing pin's rows were taken at** — today 960, and every pin row carries
@@ -388,7 +388,7 @@ crossing, which is a collapse rather than a move.
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode
-dwell --scenario all --backend both --cooldown-ms 120000`, with no
+dwell --scenario all --cooldown-ms 120000`, with no
 render-path file changed between them — put sol, earth, mw50 and mw120
 inside 0.18 % of each other, the largest absolute move being 0.030 ms. The
 floor sits about 8× that.
@@ -484,7 +484,7 @@ own bead. Tiers 0 and 1 leave the pin where they found it, which is the
 point of them: the pin advances when the answer would change.
 
 **Who runs it.** The agent, human-armed: one arm per run, the machine idle
-throughout — about 15–25 min for a Tier 2 pin's ten dwell contexts at a
+throughout — about 15–25 min for a Tier 2 pin's five dwell contexts at a
 120 s cool-down, ~4 min for Tier 1's two.
 
 ## Citation and archiving

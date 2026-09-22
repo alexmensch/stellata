@@ -24,7 +24,7 @@ touched, draw counts and pass structure unchanged — is `--mode dwell
 --scenario mw120,sol --backend webgpu --frames 960
 --against-pin scripts/perf/pins/<slug>.json`,
 two contexts and ~4 min, read against the committed pin (whose run opens
-with those two contexts, so the rows compare at equal position; the eight
+with those two contexts, so the rows compare at equal position; the three
 pin rows it does not visit print as not measured and fail nothing).
 **Match `--frames` to the count the pin's own rows carry** — today 960,
 readable off any row — or the run refuses every row as two dwell lengths
@@ -104,19 +104,17 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
   the time-matched control, in the same session.
 - `pnpm run perf -- --mode sweep --scenario sol --scales 0.5,1,1.5,2` — what
   the frame is bound by (fill vs vertex/CPU), from the log-log slope.
-- `pnpm run perf -- --backend both --scenario earth --mode dwell` — both
-  backends, on the one clock they share. Pins `--method raf-delta` itself.
 - `--json <path>` to save the run, `--baseline <path>` to diff against a
   saved one. Always `--json` a run worth citing: the table in your scrollback
   is not a record, and the raw samples are only in the file.
-- `pnpm run perf -- --mode dwell --scenario all --backend both --cooldown-ms 120000 --json <run> --pin scripts/perf/pins/<slug>.json`
+- `pnpm run perf -- --mode dwell --scenario all --cooldown-ms 120000 --json <run> --pin scripts/perf/pins/<slug>.json`
   — take the perf pin, cold: one launch, idle between contexts, every
   context state-guarded. `--against-pin <path>` prints the verdicts a
   render-path PR pastes into its `## Perf` section. The `metric` column names
   the statistic each row was marked on — `gpu-p50`, or `gpu-plain-p50` where
   the vantage draws two pass classes, and `compute-p10` on the
-  `<scenario>|webgpu|compute` row beside it; every WebGL2 row reads `·`
-  ungated, and the `spread` column never marks at all. A `✗` exits 1, and so does a refused row — a run whose rows were
+  `<scenario>|webgpu|compute` row beside it, and the `spread` column never
+  marks at all. A `✗` exits 1, and so does a refused row — a run whose rows were
   all refused shows a table with no `✗` in it. Taking the pin in the same
   run as `--against-pin` needs `--accept <row>:<bead>` for each `✗` — the
   compute row under its own key — or nothing is written.

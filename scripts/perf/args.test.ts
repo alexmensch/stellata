@@ -78,7 +78,7 @@ describe('parseRunArgs', () => {
 
   // A pin summarises whatever the run measured, so a two-context run would
   // write a two-row pin and every later comparison would silently lose the
-  // other eight. A PERMUTED run covers the canon and is refused all the same:
+  // other three. A PERMUTED run covers the canon and is refused all the same:
   // its rows sit at positions no later run visits them at, so the pin it
   // writes refuses every row of the next comparison instead.
   it('refuses --pin unless the run is the whole canon, in canon order', () => {

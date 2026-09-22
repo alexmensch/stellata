@@ -78,11 +78,14 @@ function firefoxAdvice(ua: string, verdict: GateVerdict): Copy {
         + 'which may work. Chrome needs no flag and is where Stellata has run reliably.',
     };
   }
+  // No version numbers: Firefox ships WebGPU per platform on its own
+  // schedule, and this page is reached BY a Firefox without it — naming the
+  // version a reader is already running tells them their browser is the one
+  // that works.
   return {
     action,
-    detail: 'A newer Firefox may work — it has WebGPU on Windows from 141 and on '
-      + 'Apple-silicon macOS from about 145 — but Chrome and Edge are where Stellata has '
-      + 'run reliably.',
+    detail: 'Firefox has begun shipping WebGPU on some platforms, but Chrome and '
+      + 'Edge are where Stellata has run reliably.',
   };
 }
 
