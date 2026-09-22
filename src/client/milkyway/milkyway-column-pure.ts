@@ -22,7 +22,7 @@ import {
 } from './calibration/diffuse-reference';
 import {
   type ResolvedHoleGrid,
-  SHIPPED_RESOLVED_HOLE_GRID,
+  shippedResolvedHoleGrid,
   unresolvedGridLight,
 } from './calibration/resolved-fraction-pure';
 import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
@@ -402,7 +402,7 @@ export function componentColumnRgb(
     steps = STEPS,
     foregroundSteps = FOREGROUND_DUST_STEPS,
     omegaPxArcsec2 = 0,
-    resolvedHole = SHIPPED_RESOLVED_HOLE_GRID,
+    resolvedHole = shippedResolvedHoleGrid(),
   } = options;
   const dustEffective = dustEnabled ? extinctionStrength : 0;
 

@@ -100,12 +100,7 @@ export function unresolvedLightFraction(
 export const RESOLVED_HOLE_GRID_N = 64;
 export const RESOLVED_HOLE_GRID_HALF_PC = 4000;
 
-/** What the 3D slot is written with. README.md § The table is a 3D grid. */
-export function unresolvedHoleVoxels(
-  strength = 1,
-  table: ResolvedHoleTable = SHIPPED_RESOLVED_HOLE,
-): Float32Array {
-  const k = clampResolvedHoleStrength(strength);
+function holeVoxelsOf(table: ResolvedHoleTable): Float32Array {
   const n = RESOLVED_HOLE_GRID_N;
   const step = (2 * RESOLVED_HOLE_GRID_HALF_PC) / n;
   const out = new Float32Array(n * n * n);
@@ -116,11 +111,31 @@ export function unresolvedHoleVoxels(
       for (let ix = 0; ix < n; ix++) {
         const x = -RESOLVED_HOLE_GRID_HALF_PC + (ix + 0.5) * step;
         const d = Math.hypot(x, y, z);
-        const hole = resolvedLightFraction(d, d > 0 ? Math.abs(z) / d : 0, table);
-        out[(iz * n + iy) * n + ix] = 1 - k * hole;
+        out[(iz * n + iy) * n + ix] =
+          resolvedLightFraction(d, d > 0 ? Math.abs(z) / d : 0, table);
       }
     }
   }
+  return out;
+}
+
+let shippedHole: Float32Array | null = null;
+
+/** Build from this, never re-sample — README.md § The table is a 3D grid. */
+export function shippedHoleVoxels(): Float32Array {
+  shippedHole ??= holeVoxelsOf(SHIPPED_RESOLVED_HOLE);
+  return shippedHole;
+}
+
+/** What the 3D slot is written with. README.md § The table is a 3D grid. */
+export function unresolvedHoleVoxels(
+  strength = 1,
+  table: ResolvedHoleTable = SHIPPED_RESOLVED_HOLE,
+): Float32Array {
+  const k = clampResolvedHoleStrength(strength);
+  const hole = table === SHIPPED_RESOLVED_HOLE ? shippedHoleVoxels() : holeVoxelsOf(table);
+  const out = new Float32Array(hole.length);
+  for (let i = 0; i < hole.length; i++) out[i] = 1 - k * hole[i];
   return out;
 }
 
@@ -129,9 +144,13 @@ export interface ResolvedHoleGrid {
   readonly voxels: ArrayLike<number>;
 }
 
-export const SHIPPED_RESOLVED_HOLE_GRID: ResolvedHoleGrid = {
-  voxels: unresolvedHoleVoxels(),
-};
+let shippedGrid: ResolvedHoleGrid | null = null;
+
+/** README.md § The table is a 3D grid — why this is not a constant. */
+export function shippedResolvedHoleGrid(): ResolvedHoleGrid {
+  shippedGrid ??= { voxels: unresolvedHoleVoxels() };
+  return shippedGrid;
+}
 
 /** The cube a freshly measured table implies — what the shaders would fetch
  *  once it is committed. */
@@ -178,7 +197,7 @@ export function unresolvedGridLight(
   xFromSolPc: number,
   yFromSolPc: number,
   zFromSolPc: number,
-  grid: ResolvedHoleGrid = SHIPPED_RESOLVED_HOLE_GRID,
+  grid: ResolvedHoleGrid = shippedResolvedHoleGrid(),
 ): number {
   const [u, v, w] = resolvedHoleUvw(xFromSolPc, yFromSolPc, zFromSolPc);
   return sampleVoxelCentres(grid.voxels, RESOLVED_HOLE_GRID_N, u, v, w);

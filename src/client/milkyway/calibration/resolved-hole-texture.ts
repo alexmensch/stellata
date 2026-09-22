@@ -4,11 +4,12 @@
 import * as THREE from 'three';
 import {
   RESOLVED_HOLE_GRID_N,
-  unresolvedHoleVoxels,
+  clampResolvedHoleStrength,
+  shippedHoleVoxels,
 } from './resolved-fraction-pure';
 
 /** Every parameter here is load-bearing, none a default — README.md
- *  § The table is a texture, not a uniform array. */
+ *  § The table is a 3D grid, not a uniform array. */
 export function makeResolvedHoleTexture(): THREE.Data3DTexture {
   const n = RESOLVED_HOLE_GRID_N;
   const tex = new THREE.Data3DTexture(new Uint16Array(n * n * n), n, n, n);
@@ -29,8 +30,11 @@ export function writeResolvedHoleTexture(
   tex: THREE.Data3DTexture,
   strength = 1,
 ): void {
-  const voxels = unresolvedHoleVoxels(strength);
+  const hole = shippedHoleVoxels();
+  const k = clampResolvedHoleStrength(strength);
   const data = tex.image.data as Uint16Array;
-  for (let i = 0; i < voxels.length; i++) data[i] = THREE.DataUtils.toHalfFloat(voxels[i]);
+  for (let i = 0; i < hole.length; i++) {
+    data[i] = THREE.DataUtils.toHalfFloat(1 - k * hole[i]);
+  }
   tex.needsUpdate = true;
 }

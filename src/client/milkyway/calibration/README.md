@@ -297,6 +297,13 @@ is *relative*, and the multiplier is smallest exactly where the hole is
 largest. Storing the hole would have put a ~1e-3 absolute floor under a
 residual that goes to zero in the inner cells.
 
+**The hole cube is sampled once per process and every consumer rescales
+from it** (`shippedHoleVoxels`). Evaluating the 262,144 voxels costs ~50 ms
+— a `hypot`, a `log10` and a bilinear table read each — and no strength
+moves any of it, so a strength change is one multiply per voxel. The
+shipped grid is a function rather than a module-scope constant for the same
+reason: a boot that draws no band must not pay the build.
+
 **Both shaders fetch level 0 explicitly** — `textureLod` in the GLSL,
 `.level(int(0))` in the TSL, pinned on each side. A `Data3DTexture` carries
 no mip chain, so an implicit LOD selects nothing; what it does buy is the

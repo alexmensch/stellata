@@ -17,7 +17,7 @@ import {
   type MilkywayComponent,
   type Vec3,
 } from '../../../src/client/milkyway/milkyway-column-pure';
-import { SHIPPED_RESOLVED_HOLE_GRID } from '../../../src/client/milkyway/calibration/resolved-fraction-pure';
+import { shippedResolvedHoleGrid } from '../../../src/client/milkyway/calibration/resolved-fraction-pure';
 import { relativeLuminance } from '../../../src/client/hdr/tonemap/tonemap-pure';
 
 export interface PlanStep {
@@ -47,6 +47,7 @@ export function buildMarchPlan(field: DustField, originPc: Vec3, dirUnit: Vec3):
     u: new THREE.Vector3(dirUnit[0], dirUnit[1], dirUnit[2]),
   };
   const cov = coverageSpan(ray, coverageRadiusPc(field.params));
+  const resolvedHole = shippedResolvedHoleGrid();
   const components: PlanComponent[] = [];
 
   for (const component of MILKYWAY_COMPONENTS) {
@@ -91,7 +92,7 @@ export function buildMarchPlan(field: DustField, originPc: Vec3, dirUnit: Vec3):
         sb,
         dsPc: sb - sa,
         density:
-          unresolvedBandLightAt([px, py, pz], SHIPPED_RESOLVED_HOLE_GRID) *
+          unresolvedBandLightAt([px, py, pz], resolvedHole) *
           component.density(Math.hypot(px, py), pz),
         analytic: analyticAv(field, ray, cov, sa, sb),
       });
