@@ -15,12 +15,10 @@ is the runtime contract.
 src/client/star-pipeline/pulsation/
   pulsation-params-pure.ts        buildPulsationParams(varType): the
     (+ test)                     per-instance {ρ, ΔB−V} table driving the
-                                 iPuls attribute + the CPU disc mirror.
+                                 vertex stage + the CPU disc mirror.
                                  Called at catalog load
                                  (catalog.pulsRho / catalog.pulsColorSwing).
-                                 interleavePulsParams packs the pair into
-                                 the vec2 backing array (both
-                                 geometries). Vitest-pinned.
+                                 Vitest-pinned.
   pulsation-suppress-pure.ts     buildPulsationSuppressMask(varType): the
     (+ test)                     per-instance iSuppressPulsation mask
                                  (1 on every eclipsing binary — an eclipse
@@ -30,8 +28,8 @@ src/client/star-pipeline/pulsation/
 ```
 
 Consumers: `../../loaders/catalog-loader.ts` and `catalog-mock.ts` build
-the arrays at load; `../star-pipeline.ts` binds them as instanced
-attributes; `stellata.ts` wires the uniforms.
+the arrays at load; `../../webgpu/star/star-tables.ts` interleaves them
+into the static record table; `stellata.ts` wires the uniforms.
 
 ## Running on the model clock
 
