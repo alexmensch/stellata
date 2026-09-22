@@ -24,9 +24,9 @@ scripts/catalog/membership/magnitude-term/
 
 ## The floor is one constant
 
-`MAGNITUDE_FLOOR_V` is the whole parameter. `null` is a membership term of the
-primaries alone — what ships today — and a number re-cuts the catalogue with no
-other edit: `build:membership` reads the pull, unions the survivors onto the
+`MAGNITUDE_FLOOR_V` is the whole parameter. It ships at **11**; `null` is a
+membership term of the primaries alone, and a number re-cuts the catalogue with
+no other edit: `build:membership` reads the pull, unions the survivors onto the
 manifest, and the record build walks the longer file unchanged.
 
 Moving it **deeper than `V ≤ 11` needs a re-pull first**. The file on disk is
