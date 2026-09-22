@@ -100,9 +100,9 @@ node-material terms, by two mechanisms:
   the material's own blend (one blend state covers every attachment,
   a zero write is `dst + 0` for additive, `max(dst, 0)`
   for per-channel max over non-negative values, and `0·1 + dst·(1−0)`
-  for premultiplied-over — the destination is untouched in every case. The struct member and the mark
-  are one decision here too: a material with no struct cannot reach the
-  extra attachments at all, so chrome stays safe by default.
+  for premultiplied-over — the destination is untouched in every case. The
+  struct is the whole declaration: a material with no struct cannot reach
+  the extra attachments at all, so chrome stays safe by default.
 - **The per-frame masks ride a uniform, not a pipeline swap.** The
   statistic park flips every rendered frame, and rebuilding pipelines at
   that cadence would be the most expensive gate available — so
