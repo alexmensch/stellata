@@ -4,23 +4,19 @@ The Fresnel-rim shell surface, shared by the heliopause and the Local
 Bubble. Its CPU half — geometry, rim params, the distance ladder — is
 `../../fresnel-shell/`.
 
-**It ports as a material swap, not a layer.** The shells keep every line
-of their CPU logic — geometry, group, declutter and chart gating,
-floating-origin recentre, labels, picking — and take their surface
-through `../../fresnel-shell/README.md` § The material seam.
+**A material, not a layer.** The shells own all of their CPU logic —
+geometry, group, declutter and chart gating, floating-origin recentre,
+labels, picking — and take their surface through `../../fresnel-shell/README.md` § The material seam.
 
 ## Files in this area
 
 ```
 src/client/webgpu/fresnel-shell/
-  fresnel-rim-tsl.ts        TSL mirror of the stellata_fresnel_rim chunk —
-                            both its functions, the rim shape and the
-                            camera-distance attenuation. Shared with the
-                            cloud rim shells exactly as the GLSL chunk is.
+  fresnel-rim-tsl.ts        The rim shape and the camera-distance
+                            attenuation. Shared with the cloud rim shells.
   fresnel-shell-tsl.ts      The shell surface: attenuated rim alpha over an
                             authored chrome colour.
-  shell-uniform-nodes.ts    TSL uniform-node twins of the GLSL factory's
-                            seven slots, transcribed key-for-key.
+  shell-uniform-nodes.ts    The surface's seven slots as TSL nodes.
   tsl-shell-materials.ts    The factory implementing ShellMaterials.
 ```
 
@@ -31,9 +27,6 @@ src/client/webgpu/fresnel-shell/
 `normalView` and `positionView`. So the material sets `fragmentNode`
 alone, the same reasoning as three of the five solar-system surfaces
 (`../solar-system/README.md` § Vertex stages).
-
-`normalView` normalises after interpolation where the GLSL normalises at
-use; the drawn value is the same.
 
 `positionView` is the same built-in the camera-distance attenuation reads
 (`../../fresnel-shell/README.md` § Camera-distance attenuation), so that
@@ -57,9 +50,8 @@ with an invariant by coincidence is not the invariant being stated.
 
 A shell renders **into** the HDR target (it must depth-test against the
 scene) but never multiplies exposure: `uColour` goes through
-`setRawChromeColour` here exactly as it does on the GLSL path, and the
-chrome registry is keyed by the live `Color` — a `uniform()` node holds
-one as its `.value`, so `syncMode`'s re-authoring reaches a TSL shell with
+`setRawChromeColour`, and the chrome registry is keyed by the live
+`Color` — a `uniform()` node holds one as its `.value`, so `syncMode`'s re-authoring reaches a TSL shell with
 no extra registration (`../../hdr/chrome/README.md`).
 
 Statistic and diffuse take `vec4(0)`, the identity element under both

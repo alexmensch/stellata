@@ -42,7 +42,7 @@ The Fresnel shell's material seam and gating base live in
   and appears only when the camera flies out beyond the wall (~300 pc).
   Without this the near-wall rim glow washes the whole scene. The mesh is
   `frustumCulled = false` (bounding-sphere culling is unreliable with the
-  camera interior). Crossing the wall no longer pops it out: the shared
+  camera interior). Crossing the wall does not pop it out: the shared
   near-fade ramps the rim to nothing as the camera closes on it, and the
   cull then takes over from inside (`../fresnel-shell/README.md`
   § Camera-distance attenuation).

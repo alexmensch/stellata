@@ -12,7 +12,7 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
 ## Files
 
 - `shell-distance-pure.ts` (+ test) — the attenuation's CPU mirror and the
-  authored constants every backend and consumer reads
+  authored constants every consumer reads
   (`NEAR_FADE_EXTENT_FRAC`, `DEPTH_DIM_CLEARANCE_PC`, `DEPTH_DIM_POWER`),
   plus `rimDistancesForExtent`, which turns one extent into both reaches.
   Vitest-pinned.
@@ -50,8 +50,7 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
   shells as focus targets): `SHELL_KEYS`, the `ShellInstance` contract,
   and `ShellRegistry` (owns per-shell geometry: localPositionInto,
   cameraDistancePc, viewingDistancePc, focusParkDistancePc,
-  renderedSizePx). Instantiated per shell-module; no longer a
-  top-level registry on `Stellata`.
+  renderedSizePx). Instantiated per shell-module.
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
   key → frozen-SID pin (§ SID pins).
 - `shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
@@ -84,10 +83,10 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
 ## The material seam
 
 Both shells take their surface from a `ShellMaterials` factory rather
-than building a material directly, so the shader side moves without a
-second copy of any shell logic — geometry, group, declutter and chart
-gating, recentre, labels and picking all stay as they were. The factory
-is `../webgpu/fresnel-shell/README.md`; `shell-module.ts` passes
+than building a material directly: the shell owns geometry, group,
+declutter and chart gating, recentre, labels and picking, and never sees
+a graph. The factory is `../webgpu/fresnel-shell/README.md`;
+`shell-module.ts` passes
 `kindCtx.webgpu.shellMaterials`.
 
 Each consumer builds **its own** surface — colour, limb alpha and blend
@@ -95,7 +94,7 @@ are per-shell, so there is nothing to share and no refcount to keep.
 
 `FresnelShell` holds the returned `EmitterMaterial` and exposes only its
 `.material` to subclasses (which need it for the mesh); `dispose` goes
-through the handle, because on WebGPU it must also sever the material's
+through the handle, because it must also sever the material's
 MRT-mode registration and a bare `material.dispose()` would not.
 
 ## Invariants
@@ -156,8 +155,8 @@ work.
     nearFade = clamp(d / uNearFadePc, 0, 1)
     depthDim = pow(clamp(uDepthDimRefPc / d, 0, 1), uDepthPower)
 
-**All three implementations take `d` as an argument, and every caller
-divides by it to get `viewDir`.** That is the one root per fragment: the
+**Both implementations — the CPU mirror and the graph — take `d` as an
+argument, and every caller divides by it to get `viewDir`.** That is the one root per fragment: the
 rim shape needs `-positionView` normalised and the attenuation needs its
 length, so a call site spelling the first as `normalize()` pays an
 `inversesqrt` and a `sqrt` for one quantity. Keep the shape's `viewDir` as
@@ -220,10 +219,8 @@ per-material opt-out flag.
 **Chart mode is excluded by structure, not by a condition.** Ink density
 varying with distance would break the flat printed-atlas convention. Both
 boundary shells hide outright in chart mode, and the cloud rim's chart arm
-returns before it reaches the shared chunk, so there is nothing to gate;
-the cloud rim's chart arm returns before it reaches the shared
-attenuation. Do not add a branch that would look
-load-bearing and is not.
+returns before it reaches the shared attenuation, so there is nothing to
+gate. Do not add a branch that would look load-bearing and is not.
 
 **Sweeping the constants.** `setRimParams` takes the same six-field record
 on both `stellata.kinds.shell` (fanned out to both shells) and
