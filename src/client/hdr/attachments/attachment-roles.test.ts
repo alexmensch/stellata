@@ -12,10 +12,14 @@ describe('the attachment roles, read off each graph', () => {
   ];
 
   for (const { label, src: path } of VOLUMETRIC) {
-    it(`the ${label} writes the extended-source struct into attachment 2`, () => {
+    it(`the ${label} writes the extended-source struct into attachments 1 and 2`, () => {
       const src = read(path);
       expect(src).toContain('emitExtendedSourceTsl(');
-      expect(src).toMatch(/diffuse: select\([^;]*lit\.diffuse, nothing\.diffuse\)/);
+      for (const member of ['statistic', 'diffuse']) {
+        expect(src).toMatch(
+          new RegExp(`${member}: select\\([^;]*lit\\.${member}, nothing\\.${member}\\)`),
+        );
+      }
     });
   }
 
