@@ -1,4 +1,4 @@
-// The TSL half of the dust sprite's constant-drift guards. See
+// The dust sprite's constant-drift guards. See
 // ../solar-system/README.md § Constant drift.
 
 import { readTslSource } from '../tsl/tsl-source-fixture';
@@ -31,10 +31,7 @@ describe('the TSL sprite restates no pinned constant as a literal', () => {
   });
 });
 
-// The GLSL's ln→log10 conversion divides out of the ratio it feeds, so
-// the TSL drops it (README.md § Two no-ops the graph drops). Re-adding it
-// would put a Math.log(10) here that is neither imported nor pinned, and
-// that disagrees with the GLSL's literal in the 11th digit.
+// README.md § Two quantities that divide out.
 describe('the TSL sprite re-derives no log base', () => {
   it('carries no local LOG10', () => {
     expect(src).not.toMatch(/Math\.log\(\s*10\s*\)/);

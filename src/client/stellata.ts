@@ -634,12 +634,8 @@ export class Stellata implements FrameAnchor {
       () => this.absorbCatalogRecords());
     this.absorbCatalogRecords();
 
-    // The sprite takes its slots off the uniform-node mirror; the shared
-    // uniforms still pass by reference so floating-origin recenters,
-    // resize updates and dust loads reach it.
     this.dustParticles = new DustParticleLayer(
       this.scene,
-      sharedUniforms,
       this.webgpu.dustParticleMaterials,
     );
 

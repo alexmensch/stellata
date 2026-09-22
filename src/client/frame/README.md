@@ -235,8 +235,7 @@ inline into an already-tone-mapped target. Pinned in the test; see
 Many slots are star-specific (`uColorLut`, `uLocalMemberIdx`,
 `uPinFocusToCenter`, …) — the map is the union of what its consumers
 read, and narrowing per consumer happens at the type level
-(`PerceptualDiscUniforms`, `DustParticleSharedUniforms`,
-`StarPhysicsUniforms`), not by cloning slots.
+(`PerceptualDiscUniforms`, `StarPhysicsUniforms`), not by cloning slots.
 
 The renderer mirrors this map as TSL uniform nodes
 (`../webgpu/tsl/README.md` § Shared uniform nodes); a key-parity test pins

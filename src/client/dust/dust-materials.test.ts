@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../frame/shared-uniforms';
 import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
 import { makeTslDustParticleMaterials } from '../webgpu/dust/tsl-dust-materials';
-import type { DustParticleSharedUniforms } from './dust-particle-layer';
 
 const hdr = makeHdrEmitterUniforms();
 
@@ -16,20 +14,11 @@ function sharedNodes() {
 }
 
 describe('the dust-particle material seam', () => {
-  const shared: DustParticleSharedUniforms = {
-    uPixelRatio: { value: 1 },
-    uViewport: { value: new THREE.Vector2(800, 600) },
-    uWorldOffset: { value: new THREE.Vector3() },
-    uDustEnabled: { value: 0 },
-    uDustDensityMin: { value: 1e-4 },
-    uDustLogRatio: { value: 4 },
-  };
-
   // See ../webgpu/dust/README.md § Six of its seven uniforms.
   it('exposes uParticleStrength as the only layer-owned slot', () => {
     const tslSlots = makeTslDustParticleMaterials({
       nodes: sharedNodes(), registerMrtLayer: () => () => {},
-    }).dustParticles(shared).uniforms;
+    }).dustParticles().uniforms;
     expect(tslSlots.uParticleStrength.value).toBe(0);
     expect(Object.keys(tslSlots)).toEqual(['uParticleStrength']);
   });
@@ -42,7 +31,7 @@ describe('the dust-particle material seam', () => {
         live++;
         return () => { live--; };
       },
-    }).dustParticles(shared);
+    }).dustParticles();
     expect(live).toBe(1);
     surface.dispose();
     expect(live).toBe(0);

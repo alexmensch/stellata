@@ -14,9 +14,9 @@ are not visualising the Edenhofer dust field: two treatments were built
 (a fullscreen fog raymarch, then these importance-sampled billboards)
 and neither looked good enough to ship, so the finding is that the hard
 part is the treatment, not the sampling or the render. This layer and
-its WebGPU twin are being deleted rather than carried, and a third
-attempt should start from the treatment question rather than from either
-implementation. The voxel-extinction component of the dust map is
+its graph (`../webgpu/dust/`) are being deleted rather than carried, and
+a third attempt should start from the treatment question rather than from
+either treatment. The voxel-extinction component of the dust map is
 unaffected and stays live in the star pipeline (see
 `../star-pipeline/extinction/README.md`) — it is a separate consumer of
 the same data.
@@ -38,19 +38,17 @@ union, so dropping a renderable means dropping its row).
 ## The material seam
 
 The layer takes its sprite surface from a `DustParticleMaterials` factory
-rather than building a `ShaderMaterial` directly, so a WebGPU boot swaps
-shaders with no second copy of the attach / strength / dispose logic. The
-geometry crosses backends unchanged — `aCorner`, `iPosition`, `iDensity`
-is three vertex buffers, well inside WebGPU's eight — which is why this is
-a material swap rather than a layer of its own. The factory is
+and owns the attach / strength / dispose logic itself. Its geometry —
+`aCorner`, `iPosition`, `iDensity` — is three vertex buffers, well inside
+WebGPU's eight. The factory is
 `../webgpu/dust/README.md`; `stellata.ts` passes
 `webgpu.dustParticleMaterials`.
 
 **Six of the seven uniforms are shared-by-reference and one is the
-layer's.** The six come off the uniform-node mirror and the factory
-ignores its `shared` argument entirely (`../webgpu/dust/README.md` § Six
-of its seven uniforms), so `uParticleStrength` is the only key in the
-slot record `setStrength` writes.
+layer's.** The six come off the uniform-node mirror
+(`../webgpu/dust/README.md` § Six of its seven uniforms), so
+`uParticleStrength` is the only key in the slot record `setStrength`
+writes.
 
 `dust-particle-pure.ts` holds the footprint window, the dim floor and the
 tint, which the sprite graph imports (`../webgpu/dust/README.md`

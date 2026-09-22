@@ -1,9 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
-import {
-  DustParticleLayer,
-  type DustParticleSharedUniforms,
-} from './dust-particle-layer';
+import { DustParticleLayer } from './dust-particle-layer';
 import type { DustParticleData } from '../loaders/dust-loader';
 import { fakeDustParticleMaterials } from './dust-materials-mock';
 import { expectSlotsServedBy } from '../scene/emitter-material-mock';
@@ -11,17 +8,6 @@ import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../frame/shared-uniforms';
 import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
 import { makeTslDustParticleMaterials } from '../webgpu/dust/tsl-dust-materials';
-
-function makeSharedUniforms(): DustParticleSharedUniforms {
-  return {
-    uPixelRatio: { value: 1 },
-    uViewport: { value: new THREE.Vector2(1024, 768) },
-    uWorldOffset: { value: new THREE.Vector3() },
-    uDustEnabled: { value: 1 },
-    uDustDensityMin: { value: 0 },
-    uDustLogRatio: { value: 1 },
-  };
-}
 
 function makeData(count: number): DustParticleData {
   return {
@@ -34,7 +20,7 @@ function makeData(count: number): DustParticleData {
 function makeLayer() {
   const scene = new THREE.Scene();
   const materials = fakeDustParticleMaterials();
-  const layer = new DustParticleLayer(scene, makeSharedUniforms(), materials);
+  const layer = new DustParticleLayer(scene, materials);
   return { scene, layer, materials, slots: () => materials.surfaces.at(-1)!.uniforms };
 }
 
@@ -57,14 +43,13 @@ describe('DustParticleLayer', () => {
     layer.attach(makeData(1));
     layer.setStrength(0.5);
 
-    const shared = makeSharedUniforms();
     const nodes = buildSharedUniformNodes(buildSharedUniforms({
       pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600,
       hdr: makeHdrEmitterUniforms(),
     })).nodes;
     const real = makeTslDustParticleMaterials({
       nodes, registerMrtLayer: () => () => {},
-    }).dustParticles(shared);
+    }).dustParticles();
 
     expectSlotsServedBy(materials.surfaces.at(-1)!.touchedSlots, real);
   });

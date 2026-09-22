@@ -2,26 +2,10 @@ import * as THREE from 'three';
 import type { DustParticleData } from '../loaders/dust-loader';
 import type { EmitterMaterial } from '../scene/emitter-material';
 
-// Star-material uniforms shared with the particle shader. Reference-
-// shared (not cloned) so floating-origin recenters, resize updates, and
-// dust-texture loads propagate to the particle pass automatically.
-export interface DustParticleSharedUniforms {
-  uPixelRatio: { value: number };
-  uViewport: { value: THREE.Vector2 };
-  uWorldOffset: { value: THREE.Vector3 };
-  uDustEnabled: { value: number };
-  uDustDensityMin: { value: number };
-  uDustLogRatio: { value: number };
-}
-
-/**
- * The renderer-neutral contract the sprite surface is built through
- * (README.md § The material seam). The geometry crosses backends
- * unchanged — three buffers, well inside WebGPU's eight — so this ports
- * as a material swap rather than a layer of its own.
- */
+/** The contract the sprite surface is built through (README.md § The
+ *  material seam). */
 export interface DustParticleMaterials {
-  dustParticles(shared: DustParticleSharedUniforms): EmitterMaterial;
+  dustParticles(): EmitterMaterial;
 }
 
 // Currently shelved — see ./README.md. Default strength = 0 →
@@ -33,7 +17,6 @@ export class DustParticleLayer {
 
   constructor(
     private scene: THREE.Scene,
-    private sharedUniforms: DustParticleSharedUniforms,
     materials: DustParticleMaterials,
   ) {
     this.materials = materials;
@@ -58,7 +41,7 @@ export class DustParticleLayer {
     geom.instanceCount = data.count;
     geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 60_000);
 
-    this.surface = this.materials.dustParticles(this.sharedUniforms);
+    this.surface = this.materials.dustParticles();
     this.mesh = new THREE.Mesh(geom, this.surface.material);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2; // after disc + glow passes
