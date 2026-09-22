@@ -1,13 +1,13 @@
 # Molecular clouds on WebGPU
 
-The TSL half of the cloud layer's two surfaces: the absorption raymarch
+The graphs of the cloud layer's two surfaces: the absorption raymarch
 that dims every diffuse layer behind a cloud, and the rim shell that
 annotates its silhouette. These are the layer's only surfaces; the
 physics is `../../molecular-clouds/absorption/README.md`'s and its
 parent's, and that is where it is argued.
 
-**Both are a material swap, not a layer.** The cloud layer keeps every
-line of its CPU logic — geometry, per-cloud transforms, declutter and
+**Both are materials, not a layer.** The cloud layer owns all of its CPU
+logic — geometry, per-cloud transforms, declutter and
 chart gating, picking, labels, focus geometry — and takes its surfaces
 through `../../molecular-clouds/README.md` § The material seam.
 
@@ -18,8 +18,7 @@ src/client/webgpu/molecular-clouds/
   cloud-absorption-tsl.ts   The ellipsoid raymarch, in both tiers.
   cloud-rim-tsl.ts          The attenuated fresnel rim and the chart
                             stipple contour.
-  cloud-uniform-nodes.ts    TSL uniform-node twins of the seam's three
-                            uniform blocks, transcribed key-for-key.
+  cloud-uniform-nodes.ts    The seam's three uniform blocks as TSL nodes.
   tsl-cloud-materials.ts    The factory implementing CloudMaterials.
     (+ test)                Its suite is the seam's guard: each surface's
                             draw state, the per-cloud slots seeded from
@@ -53,9 +52,8 @@ attachment it dims (`../../hdr/attachments/README.md` § The gate); the
 struct is what carries it out.
 
 The statistic takes `vec4(0)`. Under this material's premultiplied-over
-blend a zero source leaves the destination exactly as the WebGL gate's
-`NONE` did — and an absorber has no claim on the exposure statistic
-anyway.
+blend a zero source leaves the destination untouched — and an absorber has
+no claim on the exposure statistic anyway.
 
 **The blend is spelled out, and `premultipliedAlpha` is the one flag this
 material may not set.** It would wrap the fragment output node and
@@ -81,9 +79,8 @@ is arithmetically a no-op — only the factors were ever load-bearing.
   (`../tsl/README.md` § TSL test pattern).
 - **The loop bound is a node, not a constant.** The step count is
   screen-adaptive and capped by the `uSteps` dev lever, so `Loop` takes a
-  computed `end`. It is clamped in float and truncated once, rather than
-  GLSL's truncate-then-clamp — identical for every input, and it keeps a
-  lone int node out of an otherwise float graph.
+  computed `end`. It is clamped in float and truncated once, which keeps
+  a lone int node out of an otherwise float graph.
 
 ## The shared pair is not in this record
 
@@ -99,11 +96,11 @@ no `.value` face a layer would want.
 ## `fwidth` spelled out
 
 TSL has no `fwidth` node, so the chart contour's band width is
-`abs(dFdx(x)) + abs(dFdy(x))` — which is what GLSL's `fwidth` is defined
-as. `MIN_FWIDTH` is load-bearing: a facet with zero screen-space gradient
-would give a zero-width band and drop the contour entirely. It lives in
+`abs(dFdx(x)) + abs(dFdy(x))`, `fwidth`'s definition. `MIN_FWIDTH` is
+load-bearing: a facet with zero screen-space gradient would give a
+zero-width band and drop the contour entirely. It lives in
 `../../molecular-clouds/cloud-rim-pure.ts` with the rest of the rim's
-authored numbers, and the GLSL's bare copy is pinned against it.
+authored numbers, and the graph imports it.
 
 ## 96 materials are not 96 pipelines
 
@@ -137,23 +134,19 @@ would carry two screen-space derivatives, a `fract`, two `smoothstep`s and
 a `length` it never reads (chart mode, the fresnel `pow` and the dither).
 `uChart` is a uniform, so branching on it is *uniform* control flow —
 coherent across the whole draw, and the one kind of branch WGSL still
-allows `dFdx` / `dFdy` inside. Each arm carries its own `Discard`, which is
-also what the GLSL's early `return` out of the chart branch expresses.
+allows `dFdx` / `dFdy` inside. Each arm carries its own `Discard`.
 
 The camera-distance attenuation rides the realistic arm only
 (`../../fresnel-shell/README.md` § Camera-distance attenuation) — that arm
-being the only path to the shared chunk is what excludes chart mode, on
-this backend as on the GLSL one.
+being the only path to the shared chunk is what excludes chart mode.
 
-One deliberate difference from the GLSL: the realistic arm discards at
-`rimAlpha <= 0`, where the GLSL writes `max(alpha + dither, 0)`
-unconditionally. Under additive blending a zero-alpha fragment contributes
-nothing, so this only drops the sub-half-level dither on a rim that had no
-alpha to begin with — and it drops the fragment's blend with it.
+The realistic arm discards at `rimAlpha <= 0`. Under additive blending a
+zero-alpha fragment contributes nothing, so this only drops the
+sub-half-level dither on a rim that had no alpha to begin with — and it
+drops the fragment's blend with it.
 
 The layer swaps `material.blending` across the chart flip with no
-`needsUpdate` beside it. This backend
-compares `material.blending` against the render object's recorded value on
+`needsUpdate` beside it. The renderer compares `material.blending` against the render object's recorded value on
 its own (`WebGPUBackend.needsRenderUpdate`), so the pipeline is rebuilt
 from the assignment alone; a version bump would only re-derive the cache
 key for every rim mesh sharing the material.

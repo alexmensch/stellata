@@ -30,11 +30,8 @@ export function buildCloudAbsorptionMaterial(
   material.transparent = true;
   material.depthTest = true;
   material.depthWrite = false;
-  // What `premultipliedAlpha: true` + NormalBlending means on the GLSL
-  // twin, spelled out. Setting that flag HERE would silently demote the
-  // three-member output struct to one attachment and fail the WGSL
-  // compile (`../hdr/README.md` § The gate becomes the output struct), so
-  // the flag is the one thing this material may not copy from its twin.
+  // Premultiplied-over, spelled out: `premultipliedAlpha` would demote the
+  // output struct (README.md § The absorption writes attachment 2).
   material.blending = CustomBlending;
   material.blendSrc = OneFactor;
   material.blendDst = OneMinusSrcAlphaFactor;
@@ -76,9 +73,6 @@ export function buildCloudAbsorptionMaterial(
       const chordPc = t1.sub(t0).mul(dlPerT);
       const midDistPc = max(t0.add(t1).mul(0.5).mul(dlPerT), MARCH_MIN_CHORD_T);
       const footprintMidPc = midDistPc.mul(u.uFovYRad).div(u.uViewport.y);
-      // Clamped in float and truncated after, rather than GLSL's truncate-
-      // then-clamp: identical for every non-negative input, and it keeps one
-      // int node out of an otherwise float graph.
       const steps = int(clamp(
         chordPc.div(max(footprintMidPc, MARCH_MIN_CHORD_T)),
         float(MARCH_MIN_STEPS), c.uSteps)).toVar();
@@ -102,8 +96,7 @@ export function buildCloudAbsorptionMaterial(
           const uu = length(pu).toVar();
           const env = float(1.0).sub(
             smoothstep(c.uUEnv.mul(ENVELOPE_TAPER_FRAC), c.uUEnv, uu)).toVar();
-          // The GLSL's `continue` as the branch it guarded — same reason
-          // the break above is braced.
+          // A branch rather than `Continue` — README.md § Three WGSL rules.
           If(env.greaterThan(0.0), () => {
             const q = uu.mul(c.uAxes.z).div(c.uRflat).toVar();
             const density = pow(
@@ -117,8 +110,7 @@ export function buildCloudAbsorptionMaterial(
     const alpha = min(float(1.0).sub(exp(av.mul(-TAU_PER_AV))), ALPHA_CAP);
     const dither = lsbDitherTsl(screenCoordinate.xy.add(DITHER_SEED_OFFSET));
     const texel = vec4(vec3(0.0), clamp(alpha.add(dither), 0.0, ALPHA_CAP));
-    // The same texel on both: on this backend the output struct IS the
-    // attachment gate (`README.md` § The absorption writes attachment 2).
+    // README.md § The absorption writes attachment 2.
     return { colour: texel, statistic: vec4(0.0), diffuse: texel };
   });
 }

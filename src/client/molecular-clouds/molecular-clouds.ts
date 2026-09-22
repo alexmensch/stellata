@@ -452,7 +452,7 @@ export class MolecularClouds {
 
   /**
    * The brick texture is built here rather than in a factory because this
-   * layer owns its lifetime on either backend — `brickTextures` is what
+   * layer owns its lifetime — `brickTextures` is what
    * disposes it.
    */
   private absorptionSpec(

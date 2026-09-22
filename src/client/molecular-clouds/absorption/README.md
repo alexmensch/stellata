@@ -31,8 +31,8 @@ fragment shader raymarches the ellipsoid segment (4–14 jittered steps,
 screen-adaptive) and converts the A_V column to `α = 1 − exp(−0.921·A_V)`,
 capped at 0.95.
 
-**Traced clouds march the per-cloud Edenhofer density brick** (`USE_FIELD`
-define; a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
+**Traced clouds march the per-cloud Edenhofer density brick** (a builder
+branch, `../README.md` § The material seam; a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
 `A_V = 2.742·∫E dl`, clip at the brick's u = 1.05 taper edge) — the same
 volume the rim isosurface was traced from, so the shadow matches the
 silhouette 1:1 and the dimming matches per-star extinction physics. Fallback
@@ -49,16 +49,11 @@ jitter (never reseeded per frame) and the output carries ±0.5-LSB dither.
   way); `FrontSide` would kill the inside-the-cloud absorption. The rim
   shell is `FrontSide` for the opposite reason — see the parent's
   hide-when-inside contract.
-- **No `#version 300 es` directive, and no redeclaring auto-injected
-  attributes** (`position`, `normal`, `modelMatrix`, …). Doing either
-  silently breaks the GLSL3 compile.
 - **The blend is alpha-only premultiplied over** — rgb = 0 under
-  `premultipliedAlpha: true` + `NormalBlending`, i.e.
-  `background × (1 − absorption)`. Nothing is added. The TSL twin reaches
-  the same blend through explicit `CustomBlending` factors because the flag
-  itself breaks an MRT output struct
-  (`../../webgpu/molecular-clouds/README.md`); the two factories are meant
-  to differ there.
+  `CustomBlending` `OneFactor` / `OneMinusSrcAlphaFactor`, i.e.
+  `background × (1 − absorption)`. Nothing is added. The factors are
+  spelled out because `premultipliedAlpha` itself breaks an MRT output
+  struct (`../../webgpu/molecular-clouds/README.md`).
 
 ## Fragment budget
 
@@ -80,11 +75,11 @@ double-count). The reference chrome at −1 (galactic disc/grid, Local Bubble
 shell, the cloud rim shells themselves) deliberately draws after the mesh —
 annotation shouldn't be extincted.
 
-**Order is necessary and no longer sufficient**, because the band and the LG
-glow write the HDR target's *third* attachment now, not the one the
+**Order is necessary but not sufficient**, because the band and the LG
+glow write the HDR target's *third* attachment, not the one the
 absorption draw would reach by default. The mesh is `markAbsorber`ed
-(`../../hdr/attachments/README.md` § The gate) and the shader writes its
-alpha-only texel to `location = 2` as well as `location = 0`; one blend
+(`../../hdr/attachments/README.md` § The gate) and the output struct carries
+its alpha-only texel to `location = 2` as well as `location = 0`; one blend
 equation covers both, so the multiply is identical on each. Drop either half
 and the clouds keep drawing, keep sorting correctly, and extinct nothing —
 no error, no missing draw, just no dark rift. The `location = 2` write is

@@ -38,7 +38,7 @@ reads that flag directly (§ The permit that gates the rim gates the pick).
 `isAbsorptionDrawn` reads the parent group and the absorption group together
 — the `cloudAbsorption` frame-cost lever's `present()`
 (`../debug/frame-cost/passes/README.md` § The roster). Once the layer skips,
-the raymarch is gone and `update` no longer runs, so the lever's kill switch
+the raymarch is gone and `update` does not run, so the lever's kill switch
 reaches nothing and its A/B would price zero.
 
 The cloud kind module (`cloud-module.ts`) owns the runtime lifecycle:
@@ -70,8 +70,8 @@ module's `sids()` leg, attached by main.ts's roster loop (see
   contract and the per-cloud `CloudAbsorptionSpec` the factory consumes
   (§ The material seam). The factory and its guard are
   `../webgpu/molecular-clouds/`.
-- `absorption/` — the raymarch: its shader pair, `cloud-presence-pure.ts`
-  and their own drift pin. `absorption/README.md`.
+- `absorption/` — the raymarch: `cloud-presence-pure.ts`, the constants
+  and CPU mirror its graph imports. `absorption/README.md`.
 - `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
   contour width, alpha floor, `MIN_FWIDTH`), plus `CLOUD_RIM_EXTENT_PC` /
   `CLOUD_RIM_DISTANCES` (§ Rim shell render), which the rim graph
@@ -86,9 +86,8 @@ module's `sids()` leg, attached by main.ts's roster loop (see
 ## The material seam
 
 Both surfaces are built through a `CloudMaterials` factory rather than
-inline, so the shader side moves without a second copy of any cloud logic
-— per-cloud transforms, declutter and chart gating, picking, labels and
-focus geometry all stay as they were. The factory is
+inline: the layer owns the per-cloud transforms, declutter and chart
+gating, picking, labels and focus geometry, and never sees a graph. The factory is
 `../webgpu/molecular-clouds/README.md`; `cloud-module.ts` passes
 `kindCtx.webgpu.cloudMaterials` and adds the group to `kindCtx.scene`.
 
@@ -223,8 +222,7 @@ single entry point behind the module's one pick surface — the click
 FSM (via `Picker.pickKindHit('cloud', …)`) and the hover engine run
 the same function, so the two can never disagree on which of two
 overlapping clouds the cursor is on. A tiebreak living in the click
-handler instead would drift the moment either surface changes. (The
-old click-side warp gate is subsumed by the FSM's `blocksClick()`.)
+handler instead would drift the moment either surface changes.
 Resolving here first cannot disagree with the ordering across layers,
 because both run the same comparison and the smallest of the smallest is
 the smallest (`../hover/README.md` Rule 3).

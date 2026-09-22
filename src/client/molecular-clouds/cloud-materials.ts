@@ -6,7 +6,7 @@ import type { EmitterMaterial } from '../scene/emitter-material';
 
 /** The traced tier: the per-cloud Edenhofer density brick and the frame
  *  that maps a cloud-local sample point into it. Its presence is what
- *  selects the brick-marching variant, on both backends. */
+ *  selects the brick-marching graph. */
 export interface CloudFieldSpec {
   brick: THREE.Data3DTexture;
   densityMax: number;
@@ -21,9 +21,9 @@ export interface CloudFieldSpec {
 }
 
 /**
- * One cloud's absorption material, as both backends need it.
+ * One cloud's absorption material.
  *
- * The layer builds this — it owns the brick texture's lifetime either way —
+ * The layer builds this — it owns the brick texture's lifetime —
  * so the factories stay pure shader plumbing and the per-cloud constants
  * reach a uniform in exactly one place.
  */

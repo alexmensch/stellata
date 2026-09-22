@@ -46,7 +46,7 @@ function mockBrick(): THREE.Data3DTexture {
 }
 
 /** One cloud's absorption inputs, on either tier — `field` present is what
- *  selects the traced march on both backends. */
+ *  selects the traced march. */
 export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec {
   return {
     axes: new THREE.Vector3(3, 2, 1),
