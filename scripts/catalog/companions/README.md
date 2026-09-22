@@ -76,7 +76,11 @@ Per-row gates and resolution:
 - **Identifier.** Real-ID resolution (gaia first, then hip)
   attempts to match the row against an existing catalog star;
   skip when it hits a row that ISN'T the system primary
-  (alreadyInCatalog). When the row carries no own gaia AND no
+  (alreadyInCatalog) — and so does a row whose own Gaia source missed the
+  index but whose own HIP names a non-anchor record. Every already-in-catalog
+  route (these two and the same-as bridge below) goes through
+  `adoptExistingMember`: the anchor's designation constellation, the
+  re-curation below, and anchor-dim registration. When the row carries no own gaia AND no
   own hip, mint `synth-<wds_id>-<comp>` and proceed —
   `FLAG_BINARY_COMPANION_SYNTHETIC` flags the result. Same path
   fires when the inherited-HIP or inherited-Gaia escapes strip

@@ -1544,6 +1544,23 @@ function recurateExistingMember(
   return brightness;
 }
 
+/** Every route by which a pair row resolves to a record the catalogue
+ *  already holds ends here, so each gets the same treatment. */
+function adoptExistingMember(
+  ctx: PromoteRowContext,
+  state: PromotionState,
+  stats: PromotionStats,
+  dustGrid: DustGrid | null,
+  memberIdx: number,
+): void {
+  stats.alreadyInCatalog++;
+  inheritAnchorDesignationCon(
+    state.existingStars[memberIdx], ctx.anchorStar ?? ctx.systemAnchorStar, stats,
+  );
+  const recurated = recurateExistingMember(ctx, state, stats, dustGrid, memberIdx);
+  registerExistingMemberForAnchorDim(ctx, state, memberIdx, dustGrid, recurated);
+}
+
 /** A record a pair row resolves to displays a name composed off the anchor
  *  ("Fomalhaut C"), so it is named for the ANCHOR's designation whatever its
  *  own position says — the same rule the mint path applies. It reaches
@@ -1631,12 +1648,7 @@ function promoteRow(
       && anchorCatalogIdx !== null
       && existingIdx === anchorCatalogIdx;
     if (existingIdx !== null && !inheritedIdCollision) {
-      stats.alreadyInCatalog++;
-      inheritAnchorDesignationCon(
-        state.existingStars[existingIdx], anchorStar ?? systemAnchorStar, stats,
-      );
-      const recurated = recurateExistingMember(ctx, state, stats, dustGrid, existingIdx);
-      registerExistingMemberForAnchorDim(ctx, state, existingIdx, dustGrid, recurated);
+      adoptExistingMember(ctx, state, stats, dustGrid, existingIdx);
       return null;
     }
     // A pair whose two ends resolve to ONE record has no second star to mint;
@@ -1660,8 +1672,7 @@ function promoteRow(
     if (existingIdx === null && row.gaiaSourceId !== null && rowHasOwnHip) {
       const hipHit = state.existing.byHip.get(row.hip as number);
       if (hipHit !== undefined && hipHit !== anchorCatalogIdx) {
-        stats.alreadyInCatalog++;
-        registerExistingMemberForAnchorDim(ctx, state, hipHit, dustGrid);
+        adoptExistingMember(ctx, state, stats, dustGrid, hipHit);
         return null;
       }
     }
@@ -1707,13 +1718,8 @@ function promoteRow(
     const bridgedIdx = bridged === undefined
       ? undefined : state.existing.byGaia.get(bridged);
     if (bridgedIdx !== undefined) {
-      stats.alreadyInCatalog++;
       stats.existingViaSameasBridge++;
-      inheritAnchorDesignationCon(
-        state.existingStars[bridgedIdx], anchorStar ?? systemAnchorStar, stats,
-      );
-      const recurated = recurateExistingMember(ctx, state, stats, dustGrid, bridgedIdx);
-      registerExistingMemberForAnchorDim(ctx, state, bridgedIdx, dustGrid, recurated);
+      adoptExistingMember(ctx, state, stats, dustGrid, bridgedIdx);
       return null;
     }
   }
