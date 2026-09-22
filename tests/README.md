@@ -295,8 +295,8 @@ literal lines is the smaller cost.
 ## The three upgrade audit
 
 `three` is the one dependency whose breakages are mostly **invisible to
-typecheck**: shader chunks resolve at GL compile time, renderer internals are
-reached through casts, and the `examples/jsm` modules carry no compatibility
+typecheck**: node graphs compile to WGSL at pipeline creation, renderer
+internals are reached through casts, and the `examples/jsm` modules carry no compatibility
 promise at all. A green typecheck after a bump means nothing about whether the
 scene still renders. So the surface below is audited by hand, against the
 installed copy in `node_modules/three`, and
@@ -305,24 +305,22 @@ which is the only thing making the audit non-optional.
 
 Work every line, then record the findings in the PR body:
 
-- **`<common>` still supplies every helper our GLSL calls.** r185 dropped
-  `luminance()` and `transposeMat3()`; a shader calling a removed helper is a
-  runtime-only compile failure.
-- **The log-depth define name and the `gl_FragDepth` spelling** three injects
-  into non-raw materials.
-- **`resolveIncludes` still runs before the raw-material gate** in
-  `WebGLProgram`, or the `stellata_*` chunks stop resolving in the raw star
-  shaders.
-- **The `WebGLState.drawBuffers` re-issue condition** —
-  `src/client/hdr/attachments/README.md` § The cache the gate rides. A gate
-  three decides to reopen is scene-wide exposure drift, not an error.
-- **`getInternalDepthFormat` still returns `DEPTH_COMPONENT24`** for the
-  seam's target — `src/client/hdr/README.md` § Three attachments.
-- **The four `logdepthbuf` includes `src/client/util/orbit-line.ts` strips by
-  string replace** are still present verbatim in three's line shader.
-- **`renderer.properties.get(tex).__webglTexture`** in
-  `src/client/loaders/dust-loader.ts` — cast through `unknown`, so tsc sees
-  nothing.
+- **`WebGPUBackend.getRenderCacheKey` still keys on the program ids plus
+  attachment 0's format alone** — the reason every material on the HDR target
+  swaps its fragment graph with the target mode
+  (`src/client/webgpu/hdr/README.md` § The gate becomes the output struct).
+- **`NodeMaterial.setupOutput` still wraps the output under `premultipliedAlpha`
+  and `fog`, and `buildCode` still tests `isOutputStructNode` on the top-level
+  node** — § Two material flags silently demote the struct, same README.
+- **A render target's auto-created depth texture is still `Depth24Plus` under
+  `reversedDepthBuffer`** — § The depth format is requested, not asserted.
+- **`renderer.backend.device` and `renderer.backend.get(…)`** in
+  `src/client/webgpu/timestamps/timestamp-probe.ts`,
+  `src/client/webgpu/extinction/extinction-parity.ts` and
+  `src/client/loaders/dust-voxel-readback.ts` — cast through `unknown`, so tsc
+  sees nothing.
+- **`readRenderTargetPixelsAsync` still allocates its landing array per call**
+  — `src/client/webgpu/hdr/README.md` § Reduction prices that.
 - **Who owns `LineMaterial.resolution`** — three writes it per frame from
   `LineSegments2.onBeforeRender`; `src/client/galactic/coord-spheres/README.md`
   is why nothing app-side does.
