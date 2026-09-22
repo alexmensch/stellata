@@ -1247,8 +1247,9 @@ function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): vo
 /** OBSERVE's enter leg plus the chart flag it gates. The origin pre-snap
  *  precedes `controls.update()` so `lookAt` resolves the quaternion from the
  *  focal origin, not the orbit position the focus left; `setMode` preserves it
- *  when it pins position again. Idempotent — both the synchronous tail and the
- *  deferred focus callback run it. */
+ *  when it pins position again. Exactly one of its two call sites runs it: the
+ *  deferred focus callback while a focus is pending, the synchronous tail
+ *  otherwise. */
 function restoreObserve(stellata: Stellata, view: DecodedView): void {
   if (view.mode !== 'observe') return;
   if (!isHardTarget(stellata.focus.getFocusedTarget())) return;
