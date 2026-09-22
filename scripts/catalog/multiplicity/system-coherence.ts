@@ -66,9 +66,16 @@ function rankBeats(rank: AnchorRank, best: AnchorRank | null): boolean {
   return rank[2] < best[2];
 }
 
-function anchorTier(
+function fractionalError(plxMas: number | null, errMas: number | null): number | null {
+  return plxMas !== null && plxMas > 0 && errMas !== null ? errMas / plxMas : null;
+}
+
+/** The member's anchor tier, and the fractional parallax error of the fit that
+ *  earned it — null below the HIP2 tier, which carries no trusted fit. See
+ *  README.md § System distance coherence, Precision veto. */
+function anchorEvidence(
   star: Star, sources: CoherenceSources, hostsSubsystem: boolean,
-): number {
+): { tier: number; fracError: number | null } {
   // A component that hosts its own sub-pair (Acrux C = Ca,Cb) is an
   // unresolved close binary whatever its RUWE says — photocentre wobble
   // on periods longer than Gaia's baseline corrupts the 5p parallax
@@ -78,38 +85,24 @@ function anchorTier(
   if (!hostsSubsystem && star.gaiaSourceId !== null) {
     const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
     if (g !== undefined && isCoherenceAnchorGrade(g)) {
-      return ANCHOR_TIER_GAIA_CLEAN;
-    }
-  }
-  if (star.hip !== null && sources.hip2.has(star.hip)) {
-    return ANCHOR_TIER_HIP2;
-  }
-  if (star.gaiaSourceId !== null && sources.bjMap.has(star.gaiaSourceId)) {
-    return ANCHOR_TIER_BAILER_JONES;
-  }
-  return ANCHOR_TIER_INHERITED;
-}
-
-/** Null where nothing clears the bar. See README.md § System distance
- *  coherence. */
-export function trustedParallaxPrecision(
-  star: Star, sources: CoherenceSources, hostsSubsystem = false,
-): number | null {
-  if (!hostsSubsystem && star.gaiaSourceId !== null) {
-    const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
-    if (g !== undefined && isCoherenceAnchorGrade(g)
-      && g.parallaxMas !== null && g.parallaxErrorMas !== null) {
-      return g.parallaxErrorMas / g.parallaxMas;
+      return {
+        tier: ANCHOR_TIER_GAIA_CLEAN,
+        fracError: fractionalError(g.parallaxMas, g.parallaxErrorMas),
+      };
     }
   }
   if (star.hip !== null) {
     const h = sources.hip2.get(star.hip);
-    if (h !== undefined && h.plxMas !== null && h.plxMas > 0
-      && h.plxErrorMas !== null) {
-      return h.plxErrorMas / h.plxMas;
+    if (h !== undefined) {
+      return {
+        tier: ANCHOR_TIER_HIP2, fracError: fractionalError(h.plxMas, h.plxErrorMas),
+      };
     }
   }
-  return null;
+  if (star.gaiaSourceId !== null && sources.bjMap.has(star.gaiaSourceId)) {
+    return { tier: ANCHOR_TIER_BAILER_JONES, fracError: null };
+  }
+  return { tier: ANCHOR_TIER_INHERITED, fracError: null };
 }
 
 /** Best available (distance_pc, sigma_pc) measurement for the record,
@@ -120,27 +113,19 @@ export function trustedParallaxPrecision(
 function parallaxDistanceWithError(
   star: Star, sources: CoherenceSources,
 ): { distPc: number; sigmaPc: number } | null {
-  if (star.gaiaSourceId !== null) {
-    const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
-    if (g !== undefined && g.parallaxMas !== null && g.parallaxMas > 0) {
-      const distPc = 1000 / g.parallaxMas;
-      const sigmaPc = g.parallaxErrorMas !== null
-        ? (1000 * g.parallaxErrorMas) / (g.parallaxMas * g.parallaxMas)
-        : 0;
-      return { distPc, sigmaPc };
-    }
-  }
-  if (star.hip !== null) {
-    const h = sources.hip2.get(star.hip);
-    if (h !== undefined && h.plxMas !== null && h.plxMas > 0) {
-      const distPc = 1000 / h.plxMas;
-      const sigmaPc = h.plxErrorMas !== null
-        ? (1000 * h.plxErrorMas) / (h.plxMas * h.plxMas)
-        : 0;
-      return { distPc, sigmaPc };
-    }
-  }
-  return null;
+  const invert = (plxMas: number | null, errMas: number | null) =>
+    plxMas !== null && plxMas > 0
+      ? {
+        distPc: 1000 / plxMas,
+        sigmaPc: errMas !== null ? (1000 * errMas) / (plxMas * plxMas) : 0,
+      }
+      : null;
+  const g = star.gaiaSourceId !== null
+    ? sources.gaiaAstrometry.get(star.gaiaSourceId) : undefined;
+  const fromGaia = g !== undefined ? invert(g.parallaxMas, g.parallaxErrorMas) : null;
+  if (fromGaia !== null) return fromGaia;
+  const h = star.hip !== null ? sources.hip2.get(star.hip) : undefined;
+  return h !== undefined ? invert(h.plxMas, h.plxErrorMas) : null;
 }
 
 function starDist(star: Star): number {
@@ -254,10 +239,10 @@ export function applySystemDistanceCoherence(
 
     let anchorIdx: number | null = null;
     let anchorRank: AnchorRank | null = null;
-    let anchorHostsSubsystem = false;
+    let anchorFracError: number | null = null;
     let primaryIdx: number | null = null;
     let primaryRank: AnchorRank | null = null;
-    let primaryHostsSubsystem = false;
+    let primaryFracError: number | null = null;
     for (const [idx, info] of members) {
       // Tier, then pair-primary side, then the WDS-canonical letter
       // (the record holding 'A' beats one holding 'C' — catalog index
@@ -266,33 +251,24 @@ export function applySystemDistanceCoherence(
       for (const t of info.tokens) {
         if (minToken === '' || t < minToken) minToken = t;
       }
-      const subsystem = hostsSubsystem(info);
-      const rank: AnchorRank = [
-        anchorTier(stars[idx], sources, subsystem),
-        info.isPrimary ? 0 : 1, minToken,
-      ];
+      const evidence = anchorEvidence(stars[idx], sources, hostsSubsystem(info));
+      const rank: AnchorRank = [evidence.tier, info.isPrimary ? 0 : 1, minToken];
       if (rankBeats(rank, anchorRank)) {
         anchorRank = rank;
         anchorIdx = idx;
-        anchorHostsSubsystem = subsystem;
+        anchorFracError = evidence.fracError;
       }
       if (info.isPrimary && rankBeats(rank, primaryRank)) {
         primaryRank = rank;
         primaryIdx = idx;
-        primaryHostsSubsystem = subsystem;
+        primaryFracError = evidence.fracError;
       }
     }
     if (anchorIdx === null) continue;
     // see README.md § System distance coherence, Precision veto
     if (anchorRank !== null && anchorRank[1] === 1 && primaryIdx !== null) {
-      const memberPrecision = trustedParallaxPrecision(
-        stars[anchorIdx], sources, anchorHostsSubsystem,
-      );
-      const primaryPrecision = trustedParallaxPrecision(
-        stars[primaryIdx], sources, primaryHostsSubsystem,
-      );
-      if (memberPrecision !== null && primaryPrecision !== null
-        && primaryPrecision < memberPrecision) {
+      if (anchorFracError !== null && primaryFracError !== null
+        && primaryFracError < anchorFracError) {
         anchorIdx = primaryIdx;
         anchorRank = primaryRank;
         stats.memberAnchorPrecisionVetoed++;

@@ -245,9 +245,9 @@ Per WDS root with ≥2 resolved own-record members:
   the WDS-canonical letter.
 - **Precision veto on a member anchor.** Tier ranks PROVENANCE, and it is
   the pair primary's placement every member is about to be moved onto, so
-  a member displacing the primary must also be the better MEASUREMENT:
-  `trustedParallaxPrecision` compares fractional parallax error and the
-  primary keeps the anchor when it wins. Only a fit clearing the
+  a member displacing the primary must also be the better MEASUREMENT: the
+  fractional parallax error `anchorEvidence` returns beside each member's tier
+  is compared, and the primary keeps the anchor when it wins. Only a fit clearing the
   anchor-grade bar counts — a fit that bar rejects publishes a formal
   sigma understating its own error — and `hostsSubsystem` bars the Gaia
   branch here exactly as it does in the tier pick, so a sub-pair's
