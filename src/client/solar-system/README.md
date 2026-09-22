@@ -15,14 +15,15 @@ Rendering, ephemerides, and the clock live in the subfolders.
 
 ## Subfolders
 
-- `planets/` — the two render layers (instanced glare field + close-range
-  spheroid mesh LOD), shaders, rotation elements, inter-body shadows,
-  ring systems (annulus + the ring share of appMag), per-body labels.
+- `planets/` — the body field (per-body state the glare packs from) and
+  the close-range spheroid mesh LOD, rotation elements, inter-body
+  shadows, ring systems (annulus + the ring share of appMag), per-body
+  labels. Their graphs are `../webgpu/solar-system/`.
 - `atmosphere/` — first-principles single-scattering airlight for Venus,
   Earth, Mars, and Titan; the integrator and its CPU mirror.
-- `materials/` — which shader backend the family's surfaces are built
-  on. The layers keep their CPU logic and take a material through one
-  neutral contract, so a WebGPU boot swaps shaders and nothing else.
+- `materials/` — which surfaces the family asks for, and the neutral
+  contract they arrive through. The layers keep their CPU logic and take
+  a material through that contract, so the shader side moves alone.
 - `time/` — simulation time `t`, the `VirtualClock` behind
   `Stellata.getT()`, the UT readout, and the transport scrubber widget.
 - `ephemerides/` — planet + moon position resolvers (frozen JPL Horizons
@@ -176,8 +177,8 @@ via a same-as edge, so that record's in-record sid and
 ## Reflected-light magnitude model
 
 `perceptual-magnitude.ts` + `phase-function.ts` are the CPU side of the
-shared reflected-light model; `planets/glare/planet.vert.glsl` carries the
-GPU mirror. Both must stay in step — the pure helpers are vitest-pinned
+shared reflected-light model; `webgpu/solar-system/planet-glare-tsl.ts`
+carries the GPU mirror. Both must stay in step — the pure helpers are vitest-pinned
 and the full-Moon calibration (−12.7) anchors the underlying flux.
 
 ### Apparent-magnitude formula

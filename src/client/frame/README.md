@@ -205,7 +205,7 @@ render knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
 `pickChartDiscUniforms`), `MilkyWay` (`uLimitMag`, whose only consumer is the chart-mode isobar
 branch — which has never drawn, so nothing rendered reads it; the band's
 own brightness is photometric),
-`StarLocalMirror`, `ExtinctionPrepass`, `FloatingOrigin`
+the star mirror, the extinction prepass, `FloatingOrigin`
 (`uWorldOffset`), `StarFrame` (reads `uFovYRad` / `uViewport` / `uSizeMin`
 and both `distN` slots for its windows, and is the sole writer of
 `uPhysSizeWindowPc` —
@@ -235,8 +235,7 @@ inline into an already-tone-mapped target. Pinned in the test; see
 Many slots are star-specific (`uColorLut`, `uLocalMemberIdx`,
 `uPinFocusToCenter`, …) — the map is the union of what its consumers
 read, and narrowing per consumer happens at the type level
-(`PerceptualDiscUniforms`, `DustParticleSharedUniforms`,
-`StarPhysicsUniforms`), not by cloning slots.
+(`PerceptualDiscUniforms`, `StarPhysicsUniforms`), not by cloning slots.
 
 The renderer mirrors this map as TSL uniform nodes
 (`../webgpu/tsl/README.md` § Shared uniform nodes); a key-parity test pins

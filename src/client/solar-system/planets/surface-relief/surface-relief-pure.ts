@@ -1,9 +1,9 @@
 // Surface relief in the mesh shader: the tangent frame, the normal
 // perturbation and the horizon lookup on it — CPU mirrors of
-// ../planet-mesh.frag.glsl — plus the limb bound that stands in while loading.
+// ../../../webgpu/solar-system/planet-mesh-tsl.ts — plus the limb bound that stands in while loading.
 
 /** Below this the east direction is numerically undefined and the
- *  perturbation is dropped — mirrors the guard in the GLSL. */
+ *  perturbation is dropped — mirrors the guard in the mesh graph. */
 export const RELIEF_POLE_EPS = 1e-6;
 
 /** Azimuths a horizon map stores, and the full-scale of the sine it encodes —

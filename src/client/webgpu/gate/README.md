@@ -15,18 +15,17 @@ src/client/webgpu/gate/
   gate-page.ts (+ test)          showWebGpuGate — builds and mounts the
                                  takeover. Styles: ../../styles.css
                                  `.webgpu-gate*`.
+  gate-override.ts (+ test)      parseGateOverride — the #webgpu-gate dev
+                                 switch, off the URL fragment
+                                 (§ The dev switch).
 ```
-
-The `#webgpu-gate` dev switch is **not** in this folder: it is fragment
-parsing, so `parseGateOverride` sits beside `parseRendererFlag` in
-`../renderer-flag.ts` and is tested there.
 
 ## Not behind the import boundary
 
 This folder holds **no** `three/webgpu` value import and must never gain
 one. The gate has to render on a browser with no WebGPU at all, so it sits
 in the entry bundle and `main.ts` imports it statically — the same
-exemption `renderer-flag.ts` has (`../README.md` § Import boundary).
+exemption `../boot-route.ts` has (`../README.md` § Import boundary).
 `detectWebGpuSupport` therefore declares the slice of `navigator.gpu` it
 touches structurally rather than importing the typings.
 
@@ -65,13 +64,13 @@ sentence on the page.
 
 So `no-api` names a newer browser or OS, and `no-adapter` names whatever
 is withholding the GPU — hardware acceleration switched off, a driver the
-browser blocks, a remote or virtual session with no GPU to hand out. The
-mobile branch differs again, because a phone has neither a
-hardware-acceleration switch nor a driver to update.
+browser blocks, a remote or virtual session with no GPU to hand out. Two
+branches differ again: a phone has neither a hardware-acceleration switch
+nor a driver to update, and Firefox gets Chrome on this verdict too
+(§ UA picks the wording).
 
-The parameter is **required, with no default**. A default is what let the
-verdict go unread in the first place: the lead sentence branched on it
-while the advice did not, so the page contradicted itself.
+The parameter is **required, with no default**, so the advice cannot
+ignore a verdict the lead sentence branches on.
 
 ## UA picks the wording, never the verdict
 
@@ -91,16 +90,26 @@ Two branches carry the whole subtlety:
 - **Firefox is matched before macOS Safari.** A Mac Firefox UA contains
   `Macintosh`, so checking the Safari branch first would tell a Firefox
   user to update a browser they are not running.
-- **Firefox then splits again by operating system.** It shipped WebGPU on
-  Windows and Apple-silicon macOS, so "update Firefox" is the fix there —
-  but on Android it has not shipped at all and on Linux it sits behind
-  `dom.webgpu.enabled`, where updating is advice the detail sentence
-  itself contradicts. Those two get Chrome, or the flag, instead.
+- **Firefox always names Chrome, whatever the OS and whatever the
+  verdict.** No Firefox configuration has been observed reaching a running
+  app — Linux keeps WebGPU behind `dom.webgpu.enabled`, Android has not
+  shipped it at all, and the Windows / Apple-silicon builds that have
+  still reach this page. Chrome does run on every platform tested. So the
+  action is Chrome and the per-OS fact moves to the **detail**, phrased as
+  a possibility rather than an instruction: the reader gets the route that
+  works first, and the Firefox route second. This is also the one branch
+  where `no-adapter` does not name hardware acceleration — that setting is
+  the fix on Chrome, not here.
+- **The Firefox detail names no version.** The reader of that copy is a
+  Firefox *without* WebGPU, so a version number is one they may already be
+  past. Per-OS
+  facts that are not version numbers (Linux's `dom.webgpu.enabled`,
+  Android's absence) stay, because those a reader can act on.
 
-The version numbers come from the support audit in the `stellata-0it`
-epic body, which is **dated** — the page says so in as many words, so a
-stale row reads as a dated observation rather than a guarantee. Update
-`SUPPORT_AUDIT_LABEL` alongside the table.
+The support audit lives in the `stellata-0it` epic body and is **dated** —
+the page says so in as many words, so a stale row reads as a dated
+observation rather than a guarantee. Update `SUPPORT_AUDIT_LABEL`
+alongside the table.
 
 ## Two callers, one page
 
@@ -121,9 +130,8 @@ so the async chunk and the adapter init cost the loading screen nothing,
 but the verdict still lands last. The probe is what spares a browser the
 download; this path was never going to.
 
-There is no WebGL2 fallback on either route. `#renderer=webgl2` reaches
-that renderer and is undocumented (`../README.md` § The renderer is
-WebGPU).
+There is no fallback renderer on either route (`../README.md` § The
+renderer is WebGPU).
 
 ## The dev switch
 
@@ -135,8 +143,7 @@ it is checked ahead of the capability probe.
 `no-api` (spelled `force` too) and `no-adapter` each show their own page.
 Both spellings exist because a developer's browser fails *neither* probe,
 so without naming the verdict the `no-adapter` copy could not be read on a
-real browser at all — which is how its advice came to contradict its own
-lead sentence for a release.
+real browser at all.
 
 ## Smoke
 

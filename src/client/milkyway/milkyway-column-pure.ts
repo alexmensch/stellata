@@ -1,5 +1,5 @@
 // Milky Way density / dust profiles and a CPU mirror of
-// milkyway.frag.glsl's raymarch. Owns the constants the shader receives as
+// ../webgpu/milkyway/milkyway-band-tsl.ts's raymarch. Owns the constants the shader receives as
 // uniforms — README.md § Density profiles, calibration/README.md.
 
 import { R0_PC } from '../galactic/galactic-coords';
@@ -93,7 +93,7 @@ export const DEFAULT_EXTINCTION_STRENGTH = 1.0;
 
 export const MAG_PER_TAU = 1.0857;
 
-// --- Raymarch resolution (mirrors the GLSL consts) ---------------------
+// --- Raymarch resolution (the band graph imports these) ----------------
 
 export const STEPS = 32;
 export const S_MIN_PC = 1;
@@ -387,7 +387,7 @@ export interface ColumnOptions {
 }
 
 /**
- * In the shared flux unit. Mirrors milkyway.frag.glsl — keep the two in
+ * In the shared flux unit. Mirrors ../webgpu/milkyway/milkyway-band-tsl.ts — keep the two in
  * lockstep.
  */
 export function componentColumnRgb(

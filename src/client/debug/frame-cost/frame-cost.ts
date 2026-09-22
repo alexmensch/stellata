@@ -59,10 +59,8 @@ export interface PriceFrameOptions extends PassToggleOptions {
    *  when toggled, and the differential then prices a different star
    *  population instead of the pass. Set false to price the live path. */
   pinExposure?: boolean;
-  /** Pin the sample clock instead of taking the backend's best. A
-   *  cross-backend table has to pin 'raf-delta', the one clock every
-   *  browser × backend pairing shares; a method the backend cannot supply
-   *  refuses the sweep rather than silently switching clocks. */
+  /** Pin the sample clock instead of taking the adapter's best
+   *  (README.md § Preconditions). */
   method?: GpuFrameMethod;
 }
 
@@ -103,14 +101,14 @@ async function probeIdleCadenceMs(): Promise<number> {
  * Price every present pass from wherever the camera sits: dwell on the
  * whole-frame GPU scope with the pass disabled, difference the median
  * against baselines measured either side of it. One pass at a time —
- * differentials are the only honest per-pass price on ANGLE/Metal
- * (../README.md § GPU timing).
+ * differentials are the only per-pass price there is
+ * (../gpu-timing/README.md § An exact frame total, and no per-pass rows at
+ * all).
  *
- * The sample source is per backend (`gpu-frame-source.ts`): the WebGPU
- * renderer's own timestamp resolve, a WebGL2 timer query, or the rAF-delta
- * fallback where neither exists (WebGL2 Safari) and a differential smaller
- * than the vsync quantum reads as zero unless the frame is already over
- * budget.
+ * The sample source (`gpu-frame-source.ts`) is the renderer's own
+ * timestamp resolve, or rAF-delta wall time where the adapter has no sound
+ * timestamps — and there a differential smaller than the vsync quantum
+ * reads as zero unless the frame is already over budget.
  *
  * Pauses the simulation clock for the duration and restores its rate,
  * and sizes the dwells to the time budget once the first one has shown
@@ -250,9 +248,9 @@ export async function runPriceFrame(
     fitDwellToBudget(performance.now() - baselineStartedMs);
     if (firstBaseline === null) {
       console.warn(
-        `priceFrame: no baseline samples on the '${method}' clock — on ` +
-        'WebGL2 the query slot was taken mid-run (debug panel opened?); on ' +
-        'either backend a lost device stops the samples too',
+        `priceFrame: no baseline samples on the '${method}' clock — a lost ` +
+        'device stops the samples, and so does a timestamp pool latching ' +
+        'unsound mid-run',
       );
       return [];
     }

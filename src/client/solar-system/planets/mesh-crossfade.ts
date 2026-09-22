@@ -15,7 +15,7 @@ export const TEXTURE_PREFETCH_PX = 0.5;
 /** Photocentre shift toward the lit limb, as a fraction of the disc
  *  radius, at maximum crescent (illumFrac → 0) and full resolvedness —
  *  shape only, so a barely-resolved crescent's halo doesn't ring its
- *  dark limb. Mirrored in planet.vert.glsl (uGlarePhotocentreShift). */
+ *  dark limb. Mirrored in ../../webgpu/solar-system/planet-glare-tsl.ts (uGlarePhotocentreShift). */
 export const GLARE_PHOTOCENTRE_SHIFT = 0.5;
 
 /** Mesh opacity for a physical diameter in CSS px: 0 at/below

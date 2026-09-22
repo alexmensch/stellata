@@ -2,7 +2,7 @@
 
 The camera→star V-band extinction read: one raymarch per star through
 the Edenhofer 3D dust texture, cached in a star-indexed render target
-that `../star.vert.glsl` consumes with a single `texelFetch`.
+that the star vertex stage consumes with a single indexed read.
 
 The **cancellation invariant** below is the load-bearing content here —
 catalog `absmag` / `ci` are stored de-extincted, so this runtime stack
@@ -25,46 +25,31 @@ without breaking the cancellation.
 ```
 src/client/star-pipeline/extinction/
   extinction-seam.ts              ExtinctionPrepassSeam — the contract the
-                                  integration shell holds, implemented once
-                                  per backend, plus the shared uniform
-                                  value-objects both write.
-  extinction-prepass.ts           ExtinctionPrepass — the WebGL2 per-star A_V
-                                  cache and its camera-displacement
-                                  invalidation. TSL twin:
-                                  ../../webgpu/extinction/.
-  extinction-prepass.frag.glsl    The prepass draw: one fragment per star,
-                                  writing raw physical A_V into R32F. Rides
-                                  the shared fullscreen vertex stage +
-                                  geometry in ../../util/fullscreen-pass.
+                                  integration shell holds, implemented in
+                                  ../../webgpu/extinction/, plus the shared
+                                  uniform value-objects it writes.
   extinction-prepass-pure.ts      Texture geometry, position packing (the
-    (+ test)                      vec4 loop both backends fill from, in star
-                                  order here and in the WebGPU twin's own
-                                  dispatch order there), and the
+    (+ test)                      vec4 loop the kernel's dispatch order and
+                                  the parity reference fill from), and the
                                   ε-displacement predicate. Vitest-pinned.
   av-parity-pure.ts (+ test)      Bit-level compare of two per-star A_V
                                   arrays + its console line — the WebGPU
                                   kernel's parity check reads through it
                                   (../../webgpu/extinction/README.md § The
                                   prepass kernel).
-  dust-raymarch.glsl              Shared camera→star Edenhofer raymarch chunk
-                                  (stellata_dust_raymarch), included by the
-                                  prepass and by ../star.vert.glsl's fallback
-                                  path. Spliced in stellata.ts via ?raw.
   dust-raymarch-pure.ts (+ test)  CPU mirror of the march — the segment–cube
                                   clip, the tap rule, the decode, the midpoint
                                   sum — and the E(B−V) = A_V / R_V reddening.
-                                  The TSL twin imports its constants; the
+                                  The TSL march imports its constants; the
                                   build's integral imports its clip; the
                                   runtime never calls it.
-  dust-raymarch-glsl-drift.test.ts  Pins the GLSL chunk's literals to the
-                                  constants above.
 ```
 
 ## The march
 
 `dustRaymarchAV(absFrom, absTo)` integrates A_V along the camera→star
-segment in two steps, identical in the GLSL chunk, the TSL twin and the
-CPU mirror:
+segment in two steps, identical in `dust-raymarch-tsl.ts` and the CPU
+mirror:
 
 1. **Clip to the cube.** A slab test per axis yields the segment's
    parametric overlap `[t0, t1]` with the ±`uDustBoundsPc` cube
@@ -132,12 +117,10 @@ it, which is what you'd actually see.
 
 ## The prepass cache
 
-`ExtinctionPrepass` renders one raymarch per *star* into a
-star-indexed R32F render target (1024 × ⌈count/1024⌉; star *i* at
-texel `(i % 1024, i / 1024)`); `../star.vert.glsl` consumes it with a
-single `texelFetch`. Without the cache the identical integral ran in
-the vertex shader once per vertex (×4) per pass (×2–3) — 8–12
-recomputations per visible star per frame.
+The prepass computes one raymarch per *star* into a star-indexed
+buffer the vertex stage reads by star index. Without the cache the
+identical integral runs in the vertex stage once per vertex (×4) per
+pass (×2–3) — 8–12 recomputations per visible star per frame.
 
 - **Invalidation** is camera-displacement-based: the target is
   recomputed when the absolute camera position moves more than
@@ -149,8 +132,7 @@ recomputations per visible star per frame.
   (AU-scale motion) never recomputes; a fast warp recomputes per
   frame, which still costs ~1/10th of the old per-vertex-per-pass
   scheme.
-  **On WebGPU a fourth trigger joins those three: the view turning.**
-  The kernel refills only what the frustum holds, so a turn exposes stars
+  **A fourth trigger joins those three: the view turning.** The kernel refills only what the frustum holds, so a turn exposes stars
   no camera position ever asked for, and it requests a refill exactly as a
   displacement does — which is why AU-scale orbiting is free of a *march*
   there but not of a dispatch. Displacement alone still governs the
@@ -164,14 +146,10 @@ recomputations per visible star per frame.
   the model clock's space-motion pass rewrites that array in place, so
   `refreshPositions()` re-packs it from the epoch advance itself; without
   that the march follows the stars no further than the attach epoch.
-- **Fallback:** on WebGL2 contexts without `EXT_color_buffer_float` (no
-  float-renderable target) the prepass is inert and the vertex shader
-  runs the in-vertex camera→star raymarch, gated by the visibility
-  prefilter. Both paths share the `stellata_dust_raymarch` chunk
-  (`dust-raymarch.glsl`). That gate has no WebGPU counterpart — float
-  render targets are core there, so the port's `supported` is constant
-  true and the fallback branch survives only as the A/B switch below.
-  The march's tap count and clip are § The march.
+- **Fallback:** the vertex stage can run the camera→star raymarch
+  in-line instead, gated by the visibility prefilter, sharing the march
+  with the prepass through `dust-raymarch-tsl.ts`. Only the A/B switch
+  below reaches it. The march's tap count and clip are § The march.
 - **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
   console) parks the shader on the fallback path AND pauses cache
   maintenance, so the fallback side never pays fill cost — the honest
@@ -190,13 +168,11 @@ strength changes never invalidate the cache.
 
 ## Reading A_V back on the CPU
 
-`readAvMag(idx)` returns one star's raw A_V out of the cache texel
-`star.vert.glsl` fetches — **synchronously, on WebGL2 only**. WebGPU has
-no synchronous readback, so its implementation answers out of a CPU
-mirror of the whole buffer that the pointer events preceding a pick stage
-for it (`warmAvReadback`), and null until one lands; the caveats below
-are unchanged either way, and the divergence is
-`../../webgpu/extinction/README.md` § Cold reads.
+`readAvMag(idx)` returns one star's raw A_V out of the cache
+`../../webgpu/star/star-vertex-tsl.ts` fetches. **There is no synchronous
+readback**, so it answers out of a CPU mirror of the whole buffer that the
+pointer events preceding a pick stage for it (`warmAvReadback`), and null
+until one lands (`../../webgpu/extinction/README.md` § Cold reads).
 
 The pick paths are the only caller: a star's extinction decides whether
 the renderer puts a pixel on screen for it at all, and a pick gated on
@@ -212,24 +188,14 @@ that reason.
 
 Two constraints on any new caller:
 
-- **Event rate only — on this backend.** A cold read here is a
-  synchronous `readPixels`, so it stalls the pipeline — the thing the
-  reduction's fence exists to avoid
-  (`../../hdr/exposure/reduction/README.md` § Latency). Reads are
-  **memoised per star** and the memo is cleared exactly where the target
-  is rewritten (`update()`'s recompute) — that one line is the whole
-  invalidation rule, because the target's contents are the only other
-  input. It matters because hover picks ride `pointermove`, which
-  outruns the frame rate on a fast pointer; without the memo a sweep
-  across a dusty field pays a stall per candidate. The pick path also
-  resolves candidates lazily in score order, so a cold pick normally
-  costs one read. Never sweep it over the catalog — the WebGPU twin does
-  sweep, in one asynchronous copy that stalls nothing, which is the
-  difference the two backends' contracts turn on.
-- **Null means no cache, not no dust.** On the fallback path (no
-  `EXT_color_buffer_float`) the shader still dims the star through its
-  in-vertex march while this returns null, so a consumer that treats
-  null as "no extinction" degrades to the pre-existing behaviour rather
+- **Warm before you read.** `readAvMag` answers out of the staged copy,
+  so a new pick path calls `warmAvReadback` on the pointer event that
+  precedes it, exactly as the existing ones do
+  (`../../webgpu/extinction/mirror/README.md`).
+- **Null means no answer yet, not no dust.** Before the copy lands, and
+  on the A/B fallback path, the shader still dims the star through its
+  in-vertex march while this returns null, so a consumer that treats null
+  as "no extinction" degrades to the intrinsic-magnitude behaviour rather
   than to a wrong answer.
 
 ## The cancellation invariant

@@ -73,10 +73,10 @@ system draws, never every catalog pair.
   drawn after the member-star disc mirror so the bracket z-buffer hides
   far-side arcs behind a resolved disc and passes near-side arcs over
   it. The stroke comes from the chrome line seam
-  (`../../chrome-lines/README.md`) with its `localPass` flag;
+  (`../../chrome-lines/README.md`);
   `collectSpheres` reports each drawn pair's barycentre + apoapsis extent
   so the slice bracket contains the ellipses. Paths drawing ⇒ the cluster
-  is active, so they always render, on either backend.
+  is active, so they always render.
 
   **The near-side arc IS drawn over the member, and you still cannot see
   it.** The star mirror's additive glow sits at `renderOrder` 3.5 against

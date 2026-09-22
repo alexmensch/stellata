@@ -1,6 +1,6 @@
-// The particle sprite's authored constants, in the one place both shader
-// backends read them from. GLSL cannot import, so its copies are pinned
-// against these by dust-particle-glsl-drift.test.ts.
+// The particle sprite's authored constants. The graph imports them;
+// ../webgpu/dust/dust-tsl-drift.test.ts holds it to naming each rather
+// than restating a value.
 
 /** Sprite footprint in CSS px at the bottom and top of the density
  *  window. Wide and dim on purpose: a single particle sits barely above

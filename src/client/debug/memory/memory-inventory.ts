@@ -75,8 +75,8 @@ function textureName(texture: THREE.Texture, slot: string): string {
 /** A TSL material binds its textures inside the node graph, not on a
  *  material property or a `uniforms` slot, so this walk reaches none of
  *  them. Tested structurally rather than with `instanceof NodeMaterial`:
- *  `three/webgpu` must never be imported into the WebGL2 bundle
- *  (`../../webgpu/README.md`). */
+ *  this module is in the entry bundle, which must never import
+ *  `three/webgpu` (`../../webgpu/README.md` § Import boundary). */
 function isNodeMaterial(material: THREE.Material): boolean {
   return (material as { isNodeMaterial?: boolean }).isNodeMaterial === true;
 }

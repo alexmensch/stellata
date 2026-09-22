@@ -48,6 +48,7 @@ export interface Measured<T> {
 export interface DwellPlan {
   readonly frames: number;
   readonly warmupFrames: number;
+  /** Recorded into the run's `params`; the dwell itself reads no backend. */
   readonly backend: Backend;
   /** The idle rAF period measured for this scenario — what the wall-clock
    *  row's `vsyncClamped` verdict is judged against. */
@@ -93,9 +94,7 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
   const raw = await runDwell(page, {
     frames: plan.frames,
     warmupFrames: plan.warmupFrames,
-    wantGpuStream: plan.backend === 'webgpu',
     samplesModuleUrl: GPU_SAMPLES_MODULE_URL,
-    countPasses: plan.backend === 'webgpu',
     readbackEvery: plan.readbackEvery,
     forceRecompute: plan.forceRecompute,
   });

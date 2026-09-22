@@ -2,7 +2,7 @@
 // the 8 guaranteed vertex buffers (README.md § The glare packs).
 
 import * as THREE from 'three';
-import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-pipeline';
+import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-quad';
 import type {
   PlanetGlareBuffers,
 } from '../../solar-system/planets/planet-body-field';
@@ -56,10 +56,7 @@ export function packGlareLayout(
     body[i * 4 + 0] = bufs.radius[i];
     body[i * 4 + 1] = bufs.albedo[i];
     body[i * 4 + 2] = bufs.hostAbsmag[i];
-    // Only Mercury carries a degree-7 term; the other three phaseC slots
-    // are reserved, so the coefficient rides here and the whole attribute
-    // goes away.
-    body[i * 4 + 3] = bufs.phaseC[i * 4];
+    body[i * 4 + 3] = bufs.phaseC[i];
   }
 }
 

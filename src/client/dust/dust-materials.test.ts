@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import * as THREE from 'three';
-import { makeHdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../frame/shared-uniforms';
 import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
 import { makeTslDustParticleMaterials } from '../webgpu/dust/tsl-dust-materials';
-import {
-  makeGlslDustParticleMaterials, type DustParticleSharedUniforms,
-} from './dust-particle-layer';
 
 const hdr = makeHdrEmitterUniforms();
 
@@ -18,25 +14,11 @@ function sharedNodes() {
 }
 
 describe('the dust-particle material seam', () => {
-  const shared: DustParticleSharedUniforms = {
-    uPixelRatio: { value: 1 },
-    uViewport: { value: new THREE.Vector2(800, 600) },
-    uWorldOffset: { value: new THREE.Vector3() },
-    uDustEnabled: { value: 0 },
-    uDustDensityMin: { value: 1e-4 },
-    uDustLogRatio: { value: 4 },
-  };
-
-  // Not a key-parity test: the six shared slots bind by reference on the
-  // WebGL path and off the uniform-node mirror on the TSL one, so only the
-  // layer-owned slot is common to both records
-  // (`../webgpu/dust/README.md` § Six of its seven uniforms).
-  it('exposes uParticleStrength as the layer-owned slot on both backends', () => {
-    const glslSlots = makeGlslDustParticleMaterials().dustParticles(shared).uniforms;
+  // See ../webgpu/dust/README.md § Six of its seven uniforms.
+  it('exposes uParticleStrength as the only layer-owned slot', () => {
     const tslSlots = makeTslDustParticleMaterials({
       nodes: sharedNodes(), registerMrtLayer: () => () => {},
-    }).dustParticles(shared).uniforms;
-    expect(glslSlots.uParticleStrength.value).toBe(0);
+    }).dustParticles().uniforms;
     expect(tslSlots.uParticleStrength.value).toBe(0);
     expect(Object.keys(tslSlots)).toEqual(['uParticleStrength']);
   });
@@ -49,7 +31,7 @@ describe('the dust-particle material seam', () => {
         live++;
         return () => { live--; };
       },
-    }).dustParticles(shared);
+    }).dustParticles();
     expect(live).toBe(1);
     surface.dispose();
     expect(live).toBe(0);

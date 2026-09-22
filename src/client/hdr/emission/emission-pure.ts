@@ -1,6 +1,6 @@
 // The emission half of the HDR unit: apparent magnitude → linear
 // luminance, and the peak a point source's display kernel carries. CPU
-// mirror of emission.glsl — see README.md § Unit.
+// mirror of ../../webgpu/emission-tsl.ts — see README.md § Unit.
 
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
 import { type Rgb, relativeLuminance } from '../tonemap/tonemap-pure';
@@ -25,8 +25,7 @@ export const LUMA_CEIL = 4096;
 export const SB_ZERO_POINT = -2.5 * Math.log10(ARCSEC_TO_RAD * ARCSEC_TO_RAD);
 
 /** Matches the second moment of a square footprint, which is the order
- *  `footprintRadiusPc` corrects to. Shared with the TSL twin, which cannot
- *  see the GLSL's STELLATA_SQRT12. */
+ *  `footprintRadiusPc` corrects to. */
 export const FOOTPRINT_SQRT12 = Math.sqrt(12);
 
 /** `m` is a V-band APPARENT magnitude. Unclamped — the ceiling belongs to
@@ -77,7 +76,7 @@ export function pixelSolidAngleArcsec2(pxPerRadian: number): number {
 /** Inverse of `pixelSolidAngleArcsec2`. A layer that needs a plate scale
  *  recovers it from `uOmegaPxArcsec2` rather than taking a second
  *  uniform, so a resize cannot leave the two disagreeing about the
- *  viewport. Mirrors `stellataPxPerRadian`. */
+ *  viewport. Mirrors `pxPerRadianTsl`. */
 export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
   return 1 / (ARCSEC_TO_RAD * Math.sqrt(Math.max(omegaPxArcsec2, 1e-12)));
 }
@@ -179,7 +178,7 @@ export const MAG_PER_STOP = 2.5 * Math.log10(2);
  *  threshold back in the magnitude domain recovers it from the same solid
  *  angle the gain runs on rather than taking a second uniform, so the two
  *  cannot disagree about where threshold is. Mirrors
- *  `stellataExtendedThresholdSb`, whose only caller is the MW chart isobar
+ *  `extendedThresholdSbTsl`, whose only caller is the MW chart isobar
  *  — a branch that has never drawn (`../../milkyway/README.md` § Chart
  *  mode + warp). */
 export function extendedThresholdSbFromSolidAngle(

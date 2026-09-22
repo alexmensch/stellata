@@ -2,7 +2,7 @@
 // and per-layer cadence suites.
 
 import * as THREE from 'three';
-import { FrameFrustum } from './frame-frustum';
+import { FrameFrustum } from './contribution/frame-frustum';
 import type { CadenceCtx, FrameCtx } from './scene-layer';
 import type { FrameExposure } from '../hdr/exposure/visibility/emitter-visibility-pure';
 import { pixelSolidAngleArcsec2 } from '../hdr/emission/emission-pure';

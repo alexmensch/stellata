@@ -1,6 +1,5 @@
-// TSL uniform-node twins of the cloud material seam's uniform blocks
-// (../../molecular-clouds/cloud-materials.ts) — transcribed key-for-key,
-// pinned by a key-parity test.
+// The cloud material seam's uniform blocks
+// (../../molecular-clouds/cloud-materials.ts) as TSL nodes.
 
 import { Color } from 'three';
 import { texture3D, uniform } from 'three/tsl';
@@ -24,8 +23,8 @@ import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
  * wrong `uUEnv` would march the wrong envelope from its first frame, and
  * there is no later write that would fix it.
  *
- * `uFovYRad` and `uViewport` are deliberately absent — they are shared by
- * reference on the WebGL path and come off the uniform-node mirror here
+ * `uFovYRad` and `uViewport` are deliberately absent — they come off the
+ * uniform-node mirror
  * (`README.md` § The shared pair is not in this record).
  */
 export function cloudAbsorptionUniformNodes(spec: CloudAbsorptionSpec) {
@@ -36,9 +35,8 @@ export function cloudAbsorptionUniformNodes(spec: CloudAbsorptionSpec) {
     uP: uniform(spec.p),
     uUEnv: uniform(spec.uEnv),
     uInvQuat: uniform(spec.invQuat.clone()),
-    // Float, where the GLSL declares int: the march clamps in float and
-    // truncates once for the loop bound, so an int node here would be
-    // converted straight back.
+    // Float: the march clamps in float and truncates once for the loop
+    // bound, so an int node here would be converted straight back.
     uSteps: uniform(spec.steps),
   };
 }
@@ -62,8 +60,8 @@ export function cloudFieldUniformNodes(field: CloudFieldSpec) {
 export type CloudFieldNodes = ReturnType<typeof cloudFieldUniformNodes>;
 
 /** One rim material serves every cloud, so these are neutral defaults the
- *  layer's setters then drive — exactly as the GLSL block is. `uColour`
- *  seeds through the chrome inverse here too: the registry is keyed by the
+ *  layer's setters then drive. `uColour` seeds through the chrome
+ *  inverse: the registry is keyed by the
  *  live `Color`, and a node holds one as its `.value`. */
 export function cloudRimUniformNodes(inkHex: number, inkAlpha: number, opacity: number) {
   return {

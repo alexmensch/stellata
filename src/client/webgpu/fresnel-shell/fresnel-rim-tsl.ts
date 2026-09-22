@@ -1,6 +1,5 @@
-// TSL mirror of the stellata_fresnel_rim chunk: the rim-alpha shape and
-// the camera-distance attenuation on it. Shared with the cloud rim shells
-// exactly as the GLSL chunk is.
+// The rim-alpha shape and the camera-distance attenuation on it, shared by
+// the boundary shells and the cloud rim shells.
 
 import { Fn, clamp, float, max, mix, pow } from 'three/tsl';
 import type { Node } from 'three/webgpu';
@@ -16,8 +15,8 @@ export const fresnelRimAlphaTsl = /* @__PURE__ */ Fn((
   return alphaLimb.mul(mix(faceOnFloor, float(1.0), fresnel));
 });
 
-/** A second factor on the same alpha, kept out of the shape above exactly
- *  as in the GLSL: `positionView` is a built-in here, so the fragment's own
+/** A second factor on the same alpha, kept out of the shape above:
+ *  `positionView` is a built-in here, so the fragment's own
  *  camera distance costs nothing beyond the length the caller already takes
  *  to build `viewDir`. Mirrored by
  *  `../../fresnel-shell/shell-distance-pure.ts`. */

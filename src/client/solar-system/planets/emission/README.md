@@ -22,7 +22,8 @@ normaliser, and each tier swap would then step the disc's brightness
 Both planet layers emit into the scene-wide HDR unit — the glare through
 the point-source rule, the mesh through the surface-brightness rule. There
 is no per-layer brightness encoding left, and no multiplier on either:
-`uExposure` is the one exposure (`../glare/README.md`).
+`uExposure` is the one exposure
+(`../../../webgpu/solar-system/README.md` § Reflected glare).
 
 **The mesh anchor is a closed form.** A body's mean disc surface
 brightness drops both its radius and the viewer distance, because they
@@ -100,9 +101,9 @@ multiplies on top a pure redistribution rather than a dimming:
   `planetApparentMagnitude` uses; limb darkening then redistributes at
   unit mean. Atmospheric bodies substitute `F = 1` (no limb term — the
   scattering governs their limb), recovering the pure 2/3.
-  **`LIMB_FLOOR` / `LIMB_EXP` are mirrored as literals in
-  `../planet-mesh.frag.glsl`** and drift-pinned; changing one side alone
-  shifts every body off its flux with no other symptom.
+  **`LIMB_FLOOR` / `LIMB_EXP` are imported by the mesh graph**
+  (`../../../webgpu/solar-system/planet-mesh-tsl.ts`), so the disc-mean
+  normaliser and the shader cannot disagree about them.
 - The **day map's own mean linear luminance**
   (`../textures/texture-ladder-generated.ts`), measured at build from the
   body's top rung, cos-latitude weighted, and shared by every rung.

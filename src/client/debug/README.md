@@ -19,13 +19,11 @@ src/client/debug/
                                   latch-reset link.
   perf-hud.ts                     Ring-buffer instrumentation +
                                   histogram + per-label table. Module-
-                                  level mark/measure/frame/gpuBegin/
-                                  gpuEnd swapped from no-op to real on
-                                  panel open.
-  gpu-timing/                     Where the gpu.* rows come from, per
-                                  backend: the WebGL2 rotating timer, the
-                                  WebGPU frame-sample channel, the GL test
-                                  stub. Own README.
+                                  level mark/measure/frame swapped from
+                                  no-op to real on panel open.
+  gpu-timing/                     Where the gpu.* rows come from: the
+                                  renderer's own frame-sample channel.
+                                  Own README.
   frame-cost/                     debug.priceFrame() — automated per-pass
                                   gpu.frame differentials. Own README.
   render-watch/                   debug.renderWatch() — why is this scene
@@ -98,13 +96,10 @@ up as a hot path in its own measurements.
   reported "347 FPS" on a 60 Hz display whenever the work was cheap and
   invited nonsense cross-browser comparisons.
 - **`gpu Xms`** is a whole-frame GPU measurement (the `gpu.frame` scope),
-  and appears wherever the backend can produce one: a WebGL2 timer query,
-  or the WebGPU renderer's own timestamps
-  ([`gpu-timing/`](gpu-timing/README.md)). It is **not** the sum of the
-  per-pass `gpu.*` rows — on WebGL2 those rotate across frames and
-  over-attribute, so their total runs well above the frame period.
-  Where the backend offers nothing — WebGL2 Safari exposes no timer query,
-  a WebGPU adapter can withhold `timestamp-query`, and Chrome grants it but
+  from the renderer's own timestamps
+  ([`gpu-timing/`](gpu-timing/README.md)).
+  Where the adapter offers nothing — it can withhold `timestamp-query`,
+  and Chrome grants it but
   resolves garbage ([`gpu-timing/`](gpu-timing/README.md) § A granted
   feature can still resolve garbage) — the headline says
   **`submit Xms`** instead and reports CPU wall-time
@@ -126,9 +121,7 @@ test admits at this view, which is the population that pays the cache
 gate's reads (`../webgpu/extinction/refill/README.md` § Counting the
 in-frame population), and returns the report.
 
-WebGPU only: the WebGL2 boot lists no survivors and prices its three draws
-at the whole catalogue, so the call warns and returns null there. It maps
-a copy of the indirect args on demand — the mechanism and why it is not a
+It maps a copy of the indirect args on demand — the mechanism and why it is not a
 per-frame row are `../webgpu/star/compaction/README.md` § Reading the
 counts back. Take it with the camera settled. The prefilter count is armed
 by the call itself and costs nothing between calls, so the read wakes the
@@ -150,17 +143,13 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | core-mask layer's `skip`         | The binary-search `shouldEnableCoreMask()` (see below), run as that layer's contribution test. |
-| `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` / `gpu.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
-| `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's bracketed renders — one per slice on WebGL2, one for the whole bracket under reversed-z (K = 1). |
-| `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero while the seam is parked (HDR off, chart mode, no float target). |
+| `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's bracketed renders — one for the whole bracket under reversed-z (K = 1). |
+| `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero in chart mode, where the seam has no target to resolve. |
 | `submit.reduction`      | `stellata.ts` `animate()`       | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode (`../hdr/exposure/reduction/README.md` § Latency). |
-| `gpu.frame`             | timer query / timestamps         | Real GPU ms for the frame's render passes — one WebGL2 query spanning every pass, or the summed WebGPU per-pass timestamps. The headline's source, and the only row that prices anything. Both backends. |
-| `gpu.compute`           | timestamps (WebGPU)              | Real GPU ms for the frame's compute passes — the star compaction every frame, the extinction prepass when it recomputes — from three's separate compute pool, resolved in the same cycle as `gpu.frame` and never summed into it (`gpu-timing/README.md` § WebGPU). |
-| `gpu.main`              | timer query (WebGL2)             | Main-pass timer scope. Over-attributes — a relative signal, not a cost. Every per-pass row below is WebGL2-only (`gpu-timing/README.md`). |
-| `gpu.localDepth`        | timer query (WebGL2)             | Local-depth-pass timer scope. Same caveat. |
-| `gpu.tonemap`           | timer query (WebGL2)             | Fullscreen HDR resolve timer scope, **including** the rod-summation downsample it runs first (`../hdr/summation/README.md`). Same caveat. |
-| `gpu.reduction`         | timer query (WebGL2)             | The chain of ever-smaller weighted-mean draws down to the tile level. Same caveat. |
+| `gpu.frame`             | timestamps                       | Real GPU ms for the frame's render passes, summed from three's per-pass timestamps. The headline's source, and the only row that prices anything. |
+| `gpu.compute`           | timestamps                       | Real GPU ms for the frame's compute passes — the star compaction every frame, the extinction prepass when it recomputes — from three's separate compute pool, resolved in the same cycle as `gpu.frame` and never summed into it (`gpu-timing/README.md`). |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
 | `solar.bodies`          | `planet-body-field.ts` `update()` | Ephemeris walk + eclipse-dim collection across attached hosts. |
 | `solar.mesh`            | `planet-mesh-layer.ts` `update()` | Mesh-LOD per-body uniforms, casters, rotation, ring + atmosphere shells. |
@@ -185,8 +174,8 @@ The environment does, though. **Safari 26 with Web Inspector open against
 the dev server runs the fan-out ~50× slower — `pre-render` 2 ms → 100 ms,
 and the frame rate collapses with it, so the work really is that slow
 rather than misreported.** Scope, measured: Safari only (Chrome DevTools
-shows no effect at all), dev server only (a production build is clean),
-and identical on both renderer backends. It is not the HUD, and it is not
+shows no effect at all), and dev server only (a production build is
+clean). It is not the HUD, and it is not
 logging — nothing in the fan-out logs per frame and the prod build strips
 no `console` calls — so it is deoptimised execution of Vite's unbundled
 module graph, a cost the shipped app never pays. **Take Safari CPU numbers
@@ -194,20 +183,17 @@ from a production build, or with the inspector closed.** Under the
 inspector even the *ratios* between rows are unusable: the per-star loops
 lose far more than the DOM and submit rows do.
 
-Second comparison trap: the two backends land on different clocks — the
-shipped boot in Chrome falls to `raf-delta` where the timestamps resolve
-garbage, while a `#renderer=webgl2` boot there gets `timer-query`
-([`gpu-timing/`](gpu-timing/README.md)) — so cross-backend rows compare
-only under one pinned `method` at the same `bufferMpx`
+Second comparison trap: a boot can land on a different clock — Chrome
+falls to `raf-delta` where the timestamps resolve garbage
+([`gpu-timing/`](gpu-timing/README.md)) — so rows compare only under one
+pinned `method` at the same `bufferMpx`
 (`docs/render-rules.md` § Measurement canon).
 
 ## GPU timing
 
-Own folder — [`gpu-timing/README.md`](gpu-timing/README.md) covers both
-backends: the WebGL2 one-query-at-a-time rotation and why its per-pass
-rows can be neither summed nor ratioed, the WebGPU per-pass timestamps
-that make `gpu.frame` an exact total and leave no per-pass rows at all,
-and the resolve-every-frame invariant.
+Own folder — [`gpu-timing/README.md`](gpu-timing/README.md) covers the
+per-pass timestamps that make `gpu.frame` an exact total and leave no
+per-pass rows at all, and the resolve-every-frame invariant.
 
 The two rules a reader needs before looking at any `gpu.*` row:
 `gpu.frame` is the only figure that prices a frame, and **to price a
@@ -221,9 +207,9 @@ attribution, same buffer and same clock or no comparison — is
 The automated form of "disable it and difference `gpu.frame`": dwell,
 re-dwell with one pass disabled, difference the medians. Lives in its
 own folder — `frame-cost/README.md` owns the sweep: the
-preconditions (camera still, clock paused, and a CLOSED panel — enforced on
-WebGL2, and wanted on either backend under any `raf-delta` sweep, which
-measures wall time and so counts the panel's own per-tick work),
+preconditions (camera still, clock paused, and a CLOSED panel — wanted
+under any `raf-delta` sweep, which measures wall time and so counts the
+panel's own per-tick work),
 the drift bracketing, and how to read `noiseMs` / `bracketMs` / `iqrMs`.
 `frame-cost/passes/README.md` owns the priced-pass roster — what each row
 disables and what its number is therefore worth.
@@ -236,10 +222,6 @@ makes a video of the model reproducible after the scene it shows changes.
 `capture/README.md` owns it: the options, why both blobs must sit on one
 focus, and why the radius interpolates geometrically rather than along the
 straight line between the two camera positions.
-
-Adding a WebGL2 GPU scope: wrap the draw in `gpuBegin('name')` / `gpuEnd('name')`.
-The label lands as `gpu.name`; pair it with a `submit.name` CPU measure so
-the two are comparable when the extension is missing.
 
 Adding a measurement: import `mark`/`measure` from `perf-hud.ts` and
 wrap the block. Both functions are unconditional — when

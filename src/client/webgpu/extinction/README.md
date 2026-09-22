@@ -1,7 +1,7 @@
 # Per-star dust extinction on WebGPU
 
-The TSL twin of `../../star-pipeline/extinction/`: the camera→star
-Edenhofer raymarch as a **compute kernel**, and the per-star A_V buffer
+The implementation behind `../../star-pipeline/extinction/`'s seam: the
+camera→star Edenhofer raymarch as a **compute kernel**, and the per-star A_V buffer
 the star vertex stage indexes instead of re-marching. What the read
 *means* — the two-tier colour routing it reddens, the clip and tap rule,
 and above all the **cancellation invariant** (catalog `absmag`/`ci` are
@@ -13,12 +13,10 @@ either march has to ship with the mirrored build-side integral.
 
 ```
 src/client/webgpu/extinction/
-  dust-raymarch-tsl.ts        TSL mirror of the stellata_dust_raymarch
-                              chunk, over dust-raymarch-pure's clip and
-                              tap constants.
-                              Shared by the kernel, the parity reference
-                              and the star vertex fallback exactly as the
-                              GLSL chunk is.
+  dust-raymarch-tsl.ts        The march, over dust-raymarch-pure's clip
+                              and tap constants. Shared by the kernel, the
+                              parity reference and the star vertex
+                              fallback.
   dispatch-order/             The Morton key the kernel dispatches in and
                               the scatter that undoes it — its own README.
   refill/                     Which stars a frame refills: the worklist the
@@ -44,27 +42,21 @@ src/client/webgpu/extinction/
                               against the buffer (§ The prepass kernel).
 ```
 
-## What the port did NOT re-express
+## Layout
 
-- **No `EXT_color_buffer_float` verdict.** Storage buffers and compute
-  are core WebGPU, so `supported` is constant true and there is no
-  fallback-because-the-hardware-cannot branch to port. The *A/B* fallback
-  survives — `setExtinctionPrepassEnabled(false)` still parks the vertex
-  stage on its in-vertex march, which is what makes the prepass win
-  measurable on identical scenes.
-- **No `gl.readPixels`.** § Cold reads.
-- **No texture layout.** Star *i* is element *i* of a `count`-long float
-  buffer; its position is element *i* of a `count`-long vec4 buffer the
-  kernel fills and walks in an order of its own
-  (`dispatch-order/README.md` § Dispatch order).
-  `AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
-  `(i % 1024, i / 1024)` arithmetic are the WebGL2 twin's — and the
-  parity reference's, which draws that layout on purpose (§ The prepass
-  kernel). The consumers' index is the instance index itself, and the
-  mirror draws' `iSourceIdx` indirection is untouched.
+Star *i* is element *i* of a `count`-long float buffer; its position is
+element *i* of a `count`-long vec4 buffer the kernel fills and walks in an
+order of its own (`dispatch-order/README.md` § Dispatch order).
+`AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
+`(i % 1024, i / 1024)` arithmetic are the parity reference's, which draws
+that layout on purpose (§ The prepass kernel). The consumers' index is the
+instance index itself, and the mirror draws' `iSourceIdx` indirection is
+untouched. The `RECOMPUTE_EPSILON_PC` displacement gate means an idle
+camera costs zero.
 
-The algorithm, the tap count and the `RECOMPUTE_EPSILON_PC` displacement
-gate are the same, so an idle camera still costs zero.
+`setExtinctionPrepassEnabled(false)` parks the vertex stage on its
+in-vertex march — the A/B that makes the prepass win measurable on
+identical scenes.
 
 ## One owner for every shared slot
 
@@ -116,10 +108,6 @@ storage attribute no prepass ever owned. Any future boot-scoped
 allocation in `boot-webgpu.ts` belongs on the same path; nothing else
 reaches it.
 
-`uAvPrepassTex` in the shared map therefore stays null for a WebGPU
-boot's whole life. It is a WebGL texture slot; here the consumers index
-the buffer slot directly.
-
 ## The prepass kernel
 
 Two kernels over one march. The **fill** runs one thread per Morton slot:
@@ -134,10 +122,8 @@ star → slot table to its position, marches with no gate, and bounds itself
 by the listed length rather than three's count (`refill/README.md` § The
 kernel bounds itself by the listed length). Both default to three's
 workgroup of 64. `update()` issues at most one `renderer.compute` — its own
-submit, exactly as the fragment pass was its own render
-(`docs/render-rules.md` § 8), and it binds no render target, so the
-ends-at-the-canvas contract the fragment twin kept has nothing here to
-hold. Pinned as "never touches the render-target binding".
+submit (`docs/render-rules.md` § 8) — and it binds no render target.
+Pinned as "never touches the render-target binding".
 
 **Positions are vec4, not vec3, deliberately.** WGSL has no packed vec3
 in a storage buffer, and an itemSize-3 storage attribute is the one
@@ -156,7 +142,7 @@ parity check below is a **bit** comparison and not a tolerance.
 
 **`stellata.verifyExtinction()`** is that check: it marches every star
 once more as a fragment pass over the *same* position buffer, at the last
-computed camera, into an R32F target of the WebGL2 layout, reads both
+computed camera, into an R32F target of that texture layout, reads both
 back and compares float32 bit patterns over the whole catalogue —
 `A_V parity: N stars, bit-identical`, or the count that differ with the
 first offender and the largest gap. It refills the whole catalogue first,
@@ -202,14 +188,11 @@ catalogue index as before.
 
 ## What it costs, and what it holds
 
-The first two rows are the WebGL2 pass's unchanged in size — the port
-moved the work to a compute stage and the four uint tables are what it
-added. **Re-derive rather than trust them**: they are
+**Re-derive rather than trust them**: they are
 `recordCount` (388,071 —
 `../../../../scripts/catalog/build-catalog-expected.json`) × the element
 size, and every row moves with the catalog. `debug.memory()` prices the
-live app (`../../debug/memory/README.md`), and on a WebGL2 boot it
-*measures* the A_V target rather than taking this table's word.
+live app (`../../debug/memory/README.md`).
 
 | Resident | Size |
 | --- | --- |
@@ -224,8 +207,7 @@ So ~13.3 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
 and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
 check reads (§ The prepass kernel). **The buffer and that CPU copy are one
 array**, so `dispose()` drops the field as well as releasing the
-attribute — either reference alone keeps the 1.48 MiB alive.
-The WebGL2 twin's `DataTexture` holds the position copy the same way. All
+attribute — either reference alone keeps the 1.48 MiB alive. All
 survive on an integrated or mobile GPU without argument.
 
 The pick mirror (§ Cold reads) is a third heap allocation, the A_V row's
@@ -234,14 +216,13 @@ and re-allocated per recompute the pick actually reaches, never per
 recompute.
 
 **What does not survive everywhere is the vertex stage's right to read the
-buffer at all.** The WebGL2 layout's floor was `maxTextureDimension2D`,
-which 1024 clears on every device; a storage buffer read from a vertex
-stage answers to `maxStorageBuffersInVertexStage` instead, and that is
+buffer at all.** A texture layout's floor would be
+`maxTextureDimension2D`, which 1024 clears on every device; a storage
+buffer read from a vertex stage answers to
+`maxStorageBuffersInVertexStage` instead, and that is
 **zero** at WebGPU's compatibility feature level. So the floor this cache
-sets is no longer free, and it is no longer this folder's to keep: the
-boot refuses such a device outright (`../tsl/README.md` § Storage
-attributes), which is what makes `supported` constant true here honest
-rather than merely untested.
+sets is not free, and it is not this folder's to keep: the boot refuses
+such a device outright (`../tsl/README.md` § Storage attributes).
 
 **A full recompute is at most ~37M volume samples**: one thread per
 star × `DUST_TAPS_MAX` (96), 388,071 × 96; at Sol the tap rule spends
@@ -263,11 +244,11 @@ camera costs zero, and what the gate below skips is never listed, so it
 never reaches the march at all — from far outside the disc that is very
 nearly all of it.
 
-**On a WebGPU boot `debug.memory()` cannot price either row.** Both bind
+**`debug.memory()` cannot price any row here.** Both bind
 through TSL nodes rather than a `uniforms` slot, so the walk reaches
 neither and the star materials surface as `unknown`-basis rows instead —
 flagged, not silently dropped. Until `8cg.42` changes that, this table is
-the authority on that backend, which is the reason it states the
+the authority, which is the reason it states the
 arithmetic and not just the totals.
 
 ## The cache gate

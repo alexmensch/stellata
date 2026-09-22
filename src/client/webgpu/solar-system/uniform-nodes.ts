@@ -1,6 +1,4 @@
-// TSL uniform-node twins of the solar-system material seam's uniform
-// blocks (../../solar-system/materials/glsl-materials.ts) — transcribed
-// key-for-key, pinned by a key-parity test.
+// The uniform-node records behind each solar-system surface's slots.
 
 import { Color, Vector2, Vector3, Vector4, type Texture } from 'three';
 import { texture, uniform, uniformArray } from 'three/tsl';

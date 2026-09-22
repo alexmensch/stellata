@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createVoxelChunkUploader, createVoxelTexture } from './dust-voxel-upload';
-import { GL_ENUM, glRendererMock, webGpuRendererMock } from './dust-renderer-mock';
+import { webGpuRendererMock } from './dust-renderer-mock';
 
 const CHUNK = 4;
 const GRID = 8;
@@ -9,7 +9,7 @@ const volumeTexture = () => createVoxelTexture(GRID, new Uint8Array(GRID ** 3));
 
 const chunkBytes = (fill = 0) => new Uint8Array(CHUNK ** 3).fill(fill);
 
-describe('the voxel chunk uploader picks its backend', () => {
+describe('the voxel chunk uploader', () => {
   // An unmarked texture is one three's WebGPU backend pins to a shared 1×1
   // placeholder and then refuses to grow: the first chunk's own update
   // throws 'Texture already initialized', the loader's per-chunk catch eats
@@ -17,34 +17,17 @@ describe('the voxel chunk uploader picks its backend', () => {
   it('marks the volume for update before making it GPU-resident', () => {
     const tex = volumeTexture();
     expect(tex.version).toBe(0);
-    const gl = glRendererMock();
-    createVoxelChunkUploader(gl.renderer, tex, CHUNK);
-
-    expect(gl.initTextures).toEqual([tex]);
-    expect(gl.initVersions[0]).toBeGreaterThan(0);
-
     const gpu = webGpuRendererMock();
-    createVoxelChunkUploader(gpu.renderer, volumeTexture(), CHUNK);
+    createVoxelChunkUploader(gpu.renderer, tex, CHUNK);
+
+    expect(gpu.initTextures).toEqual([tex]);
     expect(gpu.initVersions[0]).toBeGreaterThan(0);
-  });
-
-  it('routes a WebGPU renderer to the region-copy path', () => {
-    const gpu = webGpuRendererMock();
-    createVoxelChunkUploader(gpu.renderer, volumeTexture(), CHUNK)
-      .upload(1, 0, 0, chunkBytes());
-    expect(gpu.copies).toHaveLength(1);
   });
 
   // Chunk fetches outlive a dispose, and on WebGPU a write to a released
   // texture walks three's create-on-demand path and resurrects the whole
   // ~128 MiB volume.
-  it('drops uploads that arrive after dispose, on either backend', () => {
-    const gl = glRendererMock();
-    const glUploader = createVoxelChunkUploader(gl.renderer, volumeTexture(), CHUNK);
-    glUploader.dispose();
-    glUploader.upload(0, 0, 0, chunkBytes());
-    expect(gl.subImages).toEqual([]);
-
+  it('drops uploads that arrive after dispose', () => {
     const gpu = webGpuRendererMock();
     const gpuUploader = createVoxelChunkUploader(gpu.renderer, volumeTexture(), CHUNK);
     gpuUploader.dispose();
@@ -53,50 +36,7 @@ describe('the voxel chunk uploader picks its backend', () => {
   });
 });
 
-describe('the WebGL2 uploader', () => {
-  it('writes the chunk at its grid offset, one chunk-sized block', () => {
-    const gl = glRendererMock();
-    const data = chunkBytes(7);
-    createVoxelChunkUploader(gl.renderer, volumeTexture(), CHUNK).upload(1, 0, 2, data);
-
-    expect(gl.boundTargets).toEqual([GL_ENUM.TEXTURE_3D]);
-    expect(gl.subImages).toEqual([[
-      GL_ENUM.TEXTURE_3D, 0,
-      CHUNK, 0, 2 * CHUNK,
-      CHUNK, CHUNK, CHUNK,
-      GL_ENUM.RED, GL_ENUM.UNSIGNED_BYTE, data,
-    ]]);
-  });
-
-  // Poking the context directly leaves three's state cache claiming a flip
-  // that is no longer set, so the next flipY upload skips its own call and
-  // lands mirrored — a texture the user sees flipped, from a write in a
-  // different subsystem. The reset has to go through renderer.state to stay
-  // truthful.
-  it('clears flip, premultiply and alignment through three, never on the context', () => {
-    const gl = glRendererMock();
-    createVoxelChunkUploader(gl.renderer, volumeTexture(), CHUNK).upload(0, 0, 0, chunkBytes());
-
-    expect(gl.contextPixelStorei).toEqual([]);
-    expect(gl.statePixelStorei).toEqual([
-      [GL_ENUM.UNPACK_ALIGNMENT, 1],
-      [GL_ENUM.UNPACK_FLIP_Y_WEBGL, false],
-      [GL_ENUM.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false],
-    ]);
-  });
-
-  it('drops the chunk rather than uploading into an unallocated texture', () => {
-    const gl = glRendererMock({ resident: false });
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    createVoxelChunkUploader(gl.renderer, volumeTexture(), CHUNK).upload(0, 0, 0, chunkBytes());
-
-    expect(gl.subImages).toEqual([]);
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
-  });
-});
-
-describe('the WebGPU uploader', () => {
+describe('the region-copy write', () => {
   it('stages the chunk in a format the copy accepts', () => {
     const tex = volumeTexture();
     const gpu = webGpuRendererMock();

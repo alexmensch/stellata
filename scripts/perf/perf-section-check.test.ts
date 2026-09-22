@@ -104,7 +104,6 @@ describe('perf-section-check', () => {
     const r = check('## Summary\n\nx\n', ['src/client/hdr/hdr-pipeline.ts']);
     expect(r.code).toBe(1);
     expect(r.stdout).toContain("no non-empty '## Perf' section");
-    expect(check('## Summary\n\nx\n', ['src/client/star-pipeline/glow.glsl']).code).toBe(1);
     expect(check('## Summary\n\nx\n', ['src/client/webgpu/tsl/disc.wgsl']).code).toBe(1);
   });
 
@@ -162,7 +161,7 @@ describe('perf-section-check', () => {
       '## Perf',
       '',
       'pin 194f817d · apple-m4-metal-3 · RELEASING.md § Perf pin',
-      '·  sol|webgl2   wall-p50  16.7    16.7    0    0',
+      '·  sol|webgpu   wall-p50  16.7    16.7    0    0',
       '✗  mw50|webgpu  gpu-p50   31.451  33.2    1.7  0.315',
       'accepted: mw50|webgpu the new band pass draws at mw50 (bead-7)',
       '',

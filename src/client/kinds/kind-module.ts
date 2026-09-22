@@ -2,7 +2,6 @@
 // every kind module consumes. See ./README.md.
 
 import type * as THREE from 'three';
-import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { WebGpuSeam } from '../webgpu/seam';
 import type { FocusableProvider, Target, TargetKind } from '../camera/focus/focus-target';
 import type { ConstellationOfKind } from '../focus-card/constellation-row';
@@ -27,13 +26,6 @@ export interface KindContext {
    *  magnitude bounds, HDR slots), held by reference. Modules narrow to
    *  the slots they consume. */
   readonly sharedUniforms: SharedUniforms;
-  /** Widest texture the active renderer will accept, in texels. A device
-   *  constant, so the shell reads it once off the renderer's capabilities
-   *  rather than every layer probing a GL context of its own — which the
-   *  WebGPU boot path would not answer. WebGL2 only guarantees 2048, so any
-   *  layer sizing a texture from the viewport has to clamp against it: an
-   *  oversized upload fails and leaves the body on its placeholder. */
-  readonly maxTextureSize: number;
   readonly solIndex: number;
   /** Sol's absolute catalog position into `out`; false with no Sol row.
    *  Distinct from `-worldOffset`: Sol's catalog record sits ~1 AU off
@@ -70,16 +62,10 @@ export interface KindContext {
    *  changes what a layer draws must say so here. `reason` is a short
    *  stable slug the render watcher prints. */
   requestRender(reason: string): void;
-  /** The WebGPU seam, or null on the WebGL2 escape hatch. A kind reads
-   *  its TSL surfaces from here and adds its groups to `scene` either
-   *  way — the seam owns no scene of its own
+  /** The WebGPU seam. A kind reads its TSL surfaces from here and adds
+   *  its groups to `scene` — the seam owns no scene of its own
    *  (`../webgpu/README.md` § One scene per boot). */
-  readonly webgpu: WebGpuSeam | null;
-  /** The chrome line strokes for this boot, already resolved to the
-   *  backend — a kind that draws overlay lines takes them from here
-   *  rather than reading `webgpu` itself
-   *  (`../chrome-lines/README.md`). */
-  readonly chromeLines: ChromeLineMaterials;
+  readonly webgpu: WebGpuSeam;
 }
 
 export type KindPick = HoverProvider['pick'];

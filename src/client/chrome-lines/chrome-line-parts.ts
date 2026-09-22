@@ -1,5 +1,5 @@
-// The two stroke parts neither backend varies: the fat line's object
-// assembly and the plain blend flip. See README.md.
+// The two stroke parts the shipped factory and the test double share: the
+// fat line's object assembly and the plain blend flip. See README.md.
 
 import * as THREE from 'three';
 import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js';

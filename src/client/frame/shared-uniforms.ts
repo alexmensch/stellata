@@ -10,7 +10,7 @@ import {
   STAR_RENDER_DEFAULTS,
 } from '../filters/filter-state';
 import { cullMagFor } from '../hdr/exposure/exposure-epoch';
-import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { R_SUN_PC } from '../util/astronomy-constants';
 import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
 import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
@@ -97,7 +97,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uModelDaysPerRealSec: { value: 1 / 86400 },
     uMinPeriodSec: { value: 4.0 },
 
-    // Star-disc rendering knobs (debug-panel tunable). See star.frag.glsl
+    // Star-disc rendering knobs (debug-panel tunable). See ../webgpu/star/star-glow-tsl.ts
     // for what each parameter shapes; defaults here are the calibrated
     // baseline that ships in production.
     uVisibleThreshold: { value: STAR_RENDER_DEFAULTS.visibleThreshold },
@@ -131,10 +131,8 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uDustEnabled: { value: 0.0 },
     uExtinctionStrength: { value: 1.0 },
     uWorldOffset: { value: new THREE.Vector3() },
-    // Per-star A_V prepass consumers — owned by ExtinctionPrepass
-    // (constructed on attachDust); the vertex shader falls back to the
-    // in-vertex raymarch while uAvPrepassEnabled is 0.
-    uAvPrepassTex: { value: null as THREE.Texture | null },
+    // Owned by the extinction prepass (constructed on attachDust); the
+    // vertex stage falls back to the in-vertex raymarch while this is 0.
     uAvPrepassEnabled: { value: 0.0 },
     // OBSERVE-mode focal-star suppression. Set to the focused-star catalog
     // index when the camera is parked on it; -1 disables the gate. All

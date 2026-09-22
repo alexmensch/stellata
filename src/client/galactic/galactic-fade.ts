@@ -17,7 +17,7 @@ export function smoothstep(edge0: number, edge1: number, x: number): number {
  * The galactic disc and the Local Group wireframe differ only in that base,
  * and both read it twice: once for the stroke their `update` writes, once as
  * the `'opacity'` contribution test that decides whether the layer draws at
- * all (`../scene/README.md` § Declaring what a layer can put on screen). A
+ * all (`../scene/contribution/README.md` § Declaring what a layer can put on screen). A
  * layer-local copy of this curve would let its gate and its stroke disagree.
  */
 export function farFieldFadeOpacity(baseOpacity: number, distFromSolPc: number): number {

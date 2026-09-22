@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { IndirectStorageBufferAttribute } from 'three/webgpu';
-import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-pipeline';
+import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-quad';
 import {
   STAR_TIER_DISC, STAR_TIER_GLOW, tierArgsOffsetBytes, type StarTier,
 } from './compaction/compaction-pure';

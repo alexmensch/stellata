@@ -21,8 +21,8 @@ export const SOFT_TAPER_MARGIN_MAG = 0.5;
  * `M + 5·(log10(d/pc) − 1) = M + 5·log10(d / 10pc)`.
  *
  * Floors `dPc` at 1e-30 so callers don't need to guard against zero
- * distances at the singular focal-star point — matches the GLSL
- * shader's behaviour exactly.
+ * distances at the singular focal-star point — matches the glare graph's
+ * behaviour exactly.
  */
 export function apparentMagnitude(absmag: number, dPc: number): number {
   const d = Math.max(dPc, 1e-30);
@@ -31,7 +31,7 @@ export function apparentMagnitude(absmag: number, dPc: number): number {
 
 /**
  * Reflected-light apparent magnitude of a planet seen by a viewer. CPU
- * mirror of the integrated formula in planets/glare/planet.vert.glsl.
+ * mirror of the integrated formula in ../webgpu/solar-system/planet-glare-tsl.ts.
  *
  *   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
  *   m_planet         = m_host_at_planet

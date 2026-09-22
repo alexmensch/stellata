@@ -1,6 +1,6 @@
-// The rod-summation downsample on WebGPU: summation-pass.ts's factor
-// choice and sub-rect contract over the same summation-pure math, the
-// resolve's inputs handed over as TSL nodes.
+// The rod-summation downsample: the per-frame factor choice and the
+// sub-rect it renders into, over summation-pure's math, with the resolve's
+// inputs handed over as TSL nodes. See ../../hdr/summation/README.md.
 
 import {
   HalfFloatType, LinearFilter, LinearSRGBColorSpace, NodeMaterial, NoBlending,
@@ -79,10 +79,10 @@ export class WebGpuSummationPass {
     this.factorNode.value = factor;
     this.sourceSizeNode.value.set(this.size.x, this.size.y);
 
-    // The sub-rect rides the TARGET's own viewport — never
-    // `renderer.setViewport`, which takes CSS units and rewrites the
-    // canvas viewport for the resolve and every frame after it
-    // (../../hdr/summation/summation-pass.ts says why).
+    // The sub-rect rides the TARGET's own viewport, applied verbatim in
+    // drawing-buffer pixels — never `renderer.setViewport`, which takes CSS
+    // units (multiplying by pixelRatio on the way in) and leaves the canvas
+    // viewport rewritten for the resolve and every frame after it.
     target.viewport.set(0, 0, width, height);
     target.scissor.set(0, 0, width, height);
     target.scissorTest = true;

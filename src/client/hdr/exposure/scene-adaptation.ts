@@ -3,7 +3,7 @@
 
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { dimBlendFactor } from '../../binaries/eclipse/eclipse-photometry-pure';
-import type { ReducedStatistic } from './reduction/reduction-pass';
+import type { ReducedStatistic } from '../hdr-seam';
 import { rescaleToBaseExposure } from './reduction/reduction-pure';
 import {
   type AdaptationBranches,
@@ -124,7 +124,7 @@ export class SceneAdaptation {
   /**
    * True while the measurement is parked: the reduction's draws and the
    * statistic-attachment emitter writes both stop, the clear and the
-   * readback fence stay (`park/README.md`). False on
+   * readback stay (`park/README.md`). False on
    * a probe frame — a probe reducing the cleared attachment would cost
    * ~3x reducing live content, so its writes must be open.
    */

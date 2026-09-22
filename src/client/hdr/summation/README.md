@@ -22,22 +22,12 @@ src/client/hdr/summation/
                              weights, and the CPU mirror of the
                              convolution. The test is the epic's acceptance
                              for this pass (§ What is pinned).
-  summation.glsl             The convolution as a shared chunk
-                             (stellata_summation), pasted into the resolve.
-  summation-downsample.frag  Box-average of the diffuse attachment, so the
-    .glsl                    kernel spans a bounded number of texels.
-  summation-pass.ts          SummationPass — the downsample target's
-    (+ test)                 lifecycle, the per-frame factor choice, and
-                             the uniforms it hands the resolve. The test
-                             drives it against a stub renderer, which is
-                             what pins the sub-rect seam and the pixel-ratio
-                             crossing without a GL context.
 ```
 
-The WebGPU boot runs the same math through its own pass and TSL chunk —
-`src/client/webgpu/hdr/` — over exactly the constants in
-`summation-pure.ts`; a change to a bound or the kernel rule lands on
-both backends through that one module.
+The pass and the convolution graph live in `src/client/webgpu/hdr/`
+(`summation-tsl.ts`, `summation-pass-webgpu.ts`) and import exactly the
+constants in `summation-pure.ts`, so a change to a bound or the kernel
+rule lands through that one module.
 
 ## Where it sits in the frame
 
@@ -71,17 +61,17 @@ such draw ordered after the emitters needs attachment 2 open. Additive and max
 blends are exempt because neither can attenuate anything.
 
 - **Molecular-cloud absorption** (`renderOrder` −2, against the emitters'
-  −3) is a premultiplied `rgb = 0` multiply, so it is `markAbsorber` →
-  `[0, NONE, 2]`: one blend equation covers every attachment, so the same
+  −3) is a premultiplied `rgb = 0` multiply, so it takes the absorber role —
+  attachments 0 and 2: one blend equation covers every attachment, so the same
   alpha-only texel dims both. Extinction lands **before** the convolution,
   which is the physical order — light is absorbed in interstellar space and
   the eye sums what survives. Keeping attachment 0 costs nothing and leaves
   any future far-field opaque emitter extincted.
 - **Every close-range surface in front of the band** — the planet mesh, its
   ring annulus, its atmosphere shell, all alpha-composited in the local depth
-  pass. They emit *and* attenuate, so they take `markOccludingEmitter` →
-  `[0, 1, 2]` and write black at their own alpha
-  (`../attachments/README.md` § The gate). Without it the band is added over a
+  pass. They emit *and* attenuate, so they take the occluding-emitter role — all
+  three attachments — and write black at their own alpha
+  (`../attachments/README.md` § The roles). Without it the band is added over a
   planet's night side, a shadowed ring section and the atmosphere limb —
   wherever the surface is dim enough for 38/255 to show.
 - **The canvas alpha.** The resolve writes **1**, not attachment 0's: a
@@ -137,10 +127,10 @@ brightness**, and every bound here is measured over it: 0.8 px at 120° FOV to
 `summationDownsample` is what keeps a non-separable kernel affordable across
 that range: the source is box-averaged until the kernel is ~3 texels, so the
 tap count is bounded at every FOV instead of growing quadratically.
-`MAX_KERNEL_REACH_TEXELS` is the GLSL loop bound this buys, and the
+`MAX_KERNEL_REACH_TEXELS` is the loop bound this buys, and the
 downsample target is sized to the *widest* factor the pass will use, with
 each frame rendering into the sub-rect it needs — **on the target's own
-viewport, never the renderer's** (`summation-pass.ts` says why; a
+viewport, never the renderer's** (`summation-pass-webgpu.ts` says why; a
 `renderer.setViewport` here is a CSS-unit write that three scales by the same
 pixel ratio and that outlives the pass) — so a zoom never reallocates.
 

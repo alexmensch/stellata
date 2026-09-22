@@ -14,10 +14,10 @@ export const BV_MAX = 2.0;
 
 // ---- Ballesteros 2012 ---------------------------------------------------
 
-/** The relation's coefficients. Three implementations read them: the two
- *  functions below, `star.vert.glsl`'s `ballesterosBvFromTeff` (literals,
- *  held against these by `ballesteros-glsl-drift.test.ts`), and the TSL
- *  graph in `src/client/webgpu/star/star-glow-tsl.ts` (imports them). */
+/** The relation's coefficients. Two implementations read them: the
+ *  functions below, and the graph in
+ *  `../../src/client/webgpu/star/star-vertex-tsl.ts`, which imports
+ *  them. */
 export const BALLESTEROS_T0 = 4600.0;
 export const BALLESTEROS_BV_SCALE = 0.92;
 /** Linear coefficient of the inverse's quadratic, and the k² coefficient

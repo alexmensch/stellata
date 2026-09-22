@@ -1,5 +1,5 @@
 // Extended-Reinhard tone-map operator, its exact inverse, and the sRGB
-// transfer pair. CPU mirror of tonemap.glsl — see README.md § Operator.
+// transfer pair. CPU mirror of ../../webgpu/tonemap-tsl.ts — see README.md § Operator.
 
 export type Rgb = readonly [number, number, number];
 
@@ -19,7 +19,7 @@ export const SRGB_ENCODE_EXPONENT = 1 / 2.4;
 export const SRGB_DECODE_KNEE = 0.04045;
 
 /** Interleaved-gradient-noise constants of `stellataDither` — the scalar
- *  and the fragCoord dot vector. tonemap.glsl duplicates the literals
+ *  and the fragCoord dot vector. ../../webgpu/tonemap-tsl.ts duplicates the literals
  *  (chunk-constant-drift pins them); the TSL resolve imports these. */
 export const DITHER_IGN_SCALE = 52.9829189;
 export const DITHER_IGN_DOT: readonly [number, number] = [0.06711056, 0.00583715];
@@ -114,7 +114,7 @@ export function displayLevel(y: number, whitePoint: number): number {
 }
 
 /** Linear HDR luminance → display sRGB, hue-preserving. Mirrors
- *  `stellataTonemapUndithered`: the dither is 8-bit quantisation noise
+ *  `tonemapUnditheredTsl`: the dither is 8-bit quantisation noise
  *  applied after the operator, not part of it. */
 export function tonemap(hdr: Rgb, whitePoint: number, desat = HIGHLIGHT_DESAT): Rgb {
   const y = relativeLuminance(hdr);

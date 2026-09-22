@@ -3,42 +3,40 @@
 
 import { MIP_CHAIN_FACTOR } from '../../../util/texture-bytes-pure';
 
-/**
- * Sized on the worst LEGITIMATE working set rather than a round number: one
- * body parked at the camera floor on a high-DPI display, holding its top
- * colour rung plus EVERY relief plane it ships — each a fixed width the
- * ladder's clamp cannot lower, so they enter the worst case in full or not
- * at all. The rest is headroom for the handful of distant bodies holding
- * 1024s at 2.8 MB each.
- *
- * A device that cannot afford this does not break, it just evicts more often,
- * and a re-fetch comes off the HTTP cache. What the budget prevents is
- * resident memory tracking the session's high-water mark instead of what is
- * on screen: nothing releases a map by any other route.
- */
-export const TEXTURE_VRAM_BUDGET_BYTES = 512 * 1024 * 1024;
+const MIB = 1024 * 1024;
 
-/**
- * `TEXTURE_VRAM_BUDGET_BYTES` for a device whose widest accepted texture is
- * `maxTextureSize`, which is the only capability WebGL exposes that tracks how
- * much texture memory a GPU is likely to have.
- *
- * A fixed 512 MB is a desktop number, and on a weaker device it does not merely
- * over-allocate — it is INERT, because eviction fires only above the budget. A
- * cap of 4096 both bounds what the ladder can reach and stands in for the
- * device tier, so the budget follows it. Each rung holds the same property the
- * 512 MB figure does: the worst legitimate working set — one body parked at the
- * camera floor — fits, with the rest as headroom for distant bodies.
- *
- * - `>= 8192`: 358 MB for Earth's 8192 colour + 8192 normal + 4096 horizon pair.
- * - `>= 4096`: 134 MB, that body's 4096 colour plus a 4096 horizon pair — its
- *   8192 normal map is refused outright at this cap, so relief drops out.
- * - below: 34 MB, a 2048 colour map plus a 2048 horizon pair.
- */
-export function textureVramBudgetBytes(maxTextureSize: number): number {
-  if (maxTextureSize >= 8192) return TEXTURE_VRAM_BUDGET_BYTES;
-  if (maxTextureSize >= 4096) return 192 * 1024 * 1024;
-  return 48 * 1024 * 1024;
+/** Every body's pinned 1024 plus one body at mid range — README.md § Staying
+ *  inside VRAM. */
+export const TEXTURE_VRAM_BUDGET_BYTES = 192 * MIB;
+
+/** The pinned 1024 set alone: where repeated out-of-memory step-downs stop. */
+export const TEXTURE_BUDGET_FLOOR_BYTES = 64 * MIB;
+
+/** The WebGPU spec default for `maxTextureDimension2D`. three requests no
+ *  raised limits, so this is every device's limit. */
+export const DEVICE_MAX_TEXTURE_SIZE = 8192;
+
+export const MIN_TEXTURE_CAP = 2048;
+
+export interface TextureLimits {
+  readonly budgetBytes: number;
+  readonly maxTextureSize: number;
+}
+
+export const INITIAL_TEXTURE_LIMITS: TextureLimits = {
+  budgetBytes: TEXTURE_VRAM_BUDGET_BYTES,
+  maxTextureSize: DEVICE_MAX_TEXTURE_SIZE,
+};
+
+/** Null once both limits are at their floors. */
+export function steppedTextureLimits(limits: TextureLimits): TextureLimits | null {
+  const next = {
+    budgetBytes: Math.max(TEXTURE_BUDGET_FLOOR_BYTES, limits.budgetBytes / 2),
+    maxTextureSize: Math.max(MIN_TEXTURE_CAP, limits.maxTextureSize / 2),
+  };
+  const moved = next.budgetBytes !== limits.budgetBytes
+    || next.maxTextureSize !== limits.maxTextureSize;
+  return moved ? next : null;
 }
 
 /** Bytes a decoded planet map occupies once uploaded, mip chain included.
@@ -66,6 +64,8 @@ export interface ResidentTexture {
   readonly bytes: number;
   /** Frame counter at its last use. The current frame is never evicted. */
   readonly lastFrame: number;
+  /** A body's floor rung, which is never evicted either. */
+  readonly pinned: boolean;
 }
 
 /**
@@ -87,7 +87,7 @@ export function evictionOrder(
   if (total <= budgetBytes) return [];
 
   const candidates = resident
-    .filter((t) => t.lastFrame !== currentFrame)
+    .filter((t) => t.lastFrame !== currentFrame && !t.pinned)
     .sort((a, b) => a.lastFrame - b.lastFrame || b.bytes - a.bytes);
 
   const out: string[] = [];
@@ -99,23 +99,12 @@ export function evictionOrder(
   return out;
 }
 
-/**
- * Rungs of one body to release once `shownWidth` is the one drawn — every
- * other rung it holds, narrower OR wider.
- *
- * A body keeps exactly one ready colour rung. Narrower ones are dead because
- * the demand has outgrown them; wider ones are dead because selection only
- * ever drops after the body has shrunk well past them (the hysteresis band in
- * `texture-ladder.ts`), so they are memory the screen cannot show. Freeing
- * both here rather than waiting for budget pressure is what keeps resident
- * memory tracking demand instead of tracking the session's high-water mark.
- *
- * A rung still LOADING is not resident and so is not passed in — the swap
- * only happens once its replacement is fully uploaded.
- */
+/** README.md § Staying inside VRAM. A rung still LOADING is not resident
+ *  and so is not passed in. */
 export function otherRungs(
   residentWidths: readonly number[],
   shownWidth: number,
+  floorWidth: number,
 ): number[] {
-  return residentWidths.filter((w) => w !== shownWidth);
+  return residentWidths.filter((w) => w !== shownWidth && w !== floorWidth);
 }

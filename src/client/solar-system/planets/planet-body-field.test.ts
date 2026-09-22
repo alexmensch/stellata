@@ -36,7 +36,7 @@ import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
 import {
   makeHdrEmitterUniforms,
   type HdrEmitterUniforms,
-} from '../../hdr/hdr-pipeline';
+} from '../../hdr/hdr-emitter-uniforms';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
 import { cullMagFor, exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
 
@@ -183,32 +183,16 @@ describe('PlanetBodyField lifecycle', () => {
 
   it('starts empty and stays hidden', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
-    expect(f.group.visible).toBe(false);
+    expect(f.drawn).toBe(false);
     f.dispose();
   });
 
-  it('builds the GLSL mirror draw by default, and none on a WebGPU boot', () => {
-    const glsl = new PlanetBodyField(makeSharedUniforms());
-    expect(glsl.localGroup.children.map((c) => c.name)).toEqual(['glow-local']);
-    glsl.dispose();
-    // localGroup renders in the local depth pass on that boot, where a
-    // GLSL material fails WGSL pipeline creation; the TSL glare layer
-    // parents its own mirror there instead.
-    const webgpu = new PlanetBodyField(makeSharedUniforms(), false);
-    expect(webgpu.localGroup.children).toHaveLength(0);
-    expect(() => {
-      webgpu.attachHost(
-        0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
-      webgpu.setLocalPassRange(0, 3);
-      webgpu.dispose();
-    }).not.toThrow();
-  });
 
   it('attaches a host and grows the geometry instance count', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     // group becomes visible; positions buffer holds 3 entries.
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     const positions = f.getHostLocalPositions(0);
     expect(positions).not.toBeNull();
     expect(positions!.length).toBe(9); // 3 planets × xyz
@@ -220,7 +204,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.detachHost(0);
     expect(f.getHostLocalPositions(0)).toBeNull();
-    expect(f.group.visible).toBe(false);
+    expect(f.drawn).toBe(false);
     f.dispose();
   });
 
@@ -236,7 +220,7 @@ describe('PlanetBodyField lifecycle', () => {
     // same host with the same absPos and confirm idempotence.
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, hostAbs, 0, 0);
     // Visible (re-attached fresh).
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     f.dispose();
   });
 
@@ -276,7 +260,7 @@ describe('PlanetBodyField lifecycle', () => {
     const stillThere = f.getHostLocalPositions(1);
     expect(stillThere).not.toBeNull();
     expect(stillThere!.length).toBe(9);
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     f.dispose();
   });
 
@@ -293,30 +277,10 @@ describe('PlanetBodyField lifecycle', () => {
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.setCullMag(15);
     f.setCullMag(cullMagFor(STUB_LIMIT_MAG));
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     f.dispose();
   });
 
-  it('exposes the single glare mesh + its local-pass mirror, orders pinned', () => {
-    // Planets = spheroid mesh + one additive glare pass (no opaque disc
-    // / core-mask — the mesh writes depth for occlusion, an unresolved
-    // point-glare needs none). Main-pass glare at 4; local-pass mirror
-    // at 4 too, so a transiting body's glare adds over a parent mesh
-    // behind it. Pin by name → renderOrder so a regression fails CI.
-    // See src/client/local-depth/README.md.
-    const f = new PlanetBodyField(makeSharedUniforms());
-    const orderByName = new Map(
-      f.group.children.map((m) => [m.name, m.renderOrder]),
-    );
-    expect(orderByName.get('glow')).toBe(4);
-    expect(f.group.children).toHaveLength(1);
-    const localByName = new Map(
-      f.localGroup.children.map((m) => [m.name, m.renderOrder]),
-    );
-    expect(localByName.get('glow-local')).toBe(4);
-    expect(f.localGroup.children).toHaveLength(1);
-    f.dispose();
-  });
 
   it('getHostLocalPositions returns a copy that survives capacity grow', () => {
     // Pin the value-semantics contract structurally. If a future
@@ -380,13 +344,13 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('writes the phase coefficients into iPhaseCoefsA/B/C for the right slot', () => {
-    // iPhaseCoefsA = (c0,c1,c2,c3), iPhaseCoefsB = (c4,c5,c6,alphaMaxDeg),
-    // iPhaseCoefsC = (c7,_,_,_) per-instance buffers plumbed through
-    // allocate / grow / write-static / flush / shift-down. The
-    // lifecycle tests above exercise the mechanics; this read-back
-    // pins the buffer *contents* so a swapped index, miscopied stride
-    // in growCapacity, or wrong shift in detachHost can't slip past.
+  it('writes the phase coefficients into the right slot of each buffer', () => {
+    // phaseA = (c0,c1,c2,c3), phaseB = (c4,c5,c6,alphaMaxDeg),
+    // phaseC = (c7,_,_,_) per-instance buffers plumbed through
+    // allocate / grow / write-static / shift-down. The lifecycle tests
+    // above exercise the mechanics; this read-back pins the buffer
+    // *contents* so a swapped index, miscopied stride in growCapacity, or
+    // wrong shift in detachHost can't slip past.
     const f = new PlanetBodyField(makeSharedUniforms());
     // Four planets: bare (no coefs) | bare | Saturn | Mercury (the
     // only c7 carrier). Slots 2 and 3 are the ones we read back.
@@ -400,16 +364,11 @@ describe('PlanetBodyField lifecycle', () => {
       ],
     };
     f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
-    // Reach into the geometry. The cast is narrow and stable: the
-    // class always exposes these as InstancedBufferAttribute.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const geom = (f as any).geometry as THREE.InstancedBufferGeometry;
-    const phaseA = (geom.attributes.iPhaseCoefsA as THREE.InstancedBufferAttribute)
-      .array as Float32Array;
-    const phaseB = (geom.attributes.iPhaseCoefsB as THREE.InstancedBufferAttribute)
-      .array as Float32Array;
-    const phaseC = (geom.attributes.iPhaseCoefsC as THREE.InstancedBufferAttribute)
-      .array as Float32Array;
+    // The arrays the glare layer packs its attributes from.
+    const bufs = f.glareSources().buffers();
+    const phaseA = bufs.phaseA;
+    const phaseB = bufs.phaseB;
+    const phaseC = bufs.phaseC;
     const off = 2 * 4; // slot 2, vec4 stride
     expect(phaseA[off + 0]).toBeCloseTo(SATURN_PHASE.c0, 6);
     expect(phaseA[off + 1]).toBeCloseTo(SATURN_PHASE.c1, 6);
@@ -419,15 +378,11 @@ describe('PlanetBodyField lifecycle', () => {
     expect(phaseB[off + 1]).toBeCloseTo(SATURN_PHASE.c5, 6);
     expect(phaseB[off + 2]).toBeCloseTo(SATURN_PHASE.c6, 6);
     expect(phaseB[off + 3]).toBeCloseTo(SATURN_PHASE.alphaMaxDeg, 6);
-    expect(phaseC[off + 0]).toBe(0); // Saturn carries no c7
-    // Mercury's c7 lands in slot 3's iPhaseCoefsC.x. Float32 compare —
-    // 6.592e-15 survives the narrowing with ~7 significant digits.
-    const offC = 3 * 4;
-    expect(phaseC[offC + 0]).toBeCloseTo(MERCURY_PHASE.c7, 20);
-    expect(phaseC[offC + 1]).toBe(0);
-    expect(phaseC[offC + 2]).toBe(0);
-    expect(phaseC[offC + 3]).toBe(0);
-    expect(phaseB[offC + 3]).toBeCloseTo(MERCURY_PHASE.alphaMaxDeg, 6);
+    expect(phaseC[5]).toBe(0); // Saturn carries no c7
+    // Float32 compare — 6.592e-15 survives the narrowing with ~7
+    // significant digits.
+    expect(phaseC[3]).toBeCloseTo(MERCURY_PHASE.c7, 20);
+    expect(phaseB[3 * 4 + 3]).toBeCloseTo(MERCURY_PHASE.alphaMaxDeg, 6);
     // Slots 0/1 carry the bare-coef sentinel: alphaMaxDeg = 0 (the
     // shader's "use Lambertian" signal).
     expect(phaseB[0 * 4 + 3]).toBe(0);
@@ -580,18 +535,18 @@ describe('PlanetBodyField lifecycle', () => {
     f.update(camera, 0, 0);
     // Chart mode keeps the bodies drawn — as flat ink discs; only the
     // blending swaps, mirroring the star pipeline.
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     expect(calls).toBe(2);
 
     f.setMonochrome(false);
     f.setHidden(true);
     f.update(camera, 1, 0);
-    expect(f.group.visible).toBe(false);
+    expect(f.drawn).toBe(false);
     expect(calls).toBe(3);
 
     f.setHidden(false);
     f.update(camera, 2, 0);
-    expect(f.group.visible).toBe(true);
+    expect(f.drawn).toBe(true);
     expect(calls).toBe(4);
     f.dispose();
   });
@@ -724,51 +679,8 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('update() flushes only what it wrote — the statics stay clean per frame', () => {
-    // At hundreds-of-hosts scale, per-frame re-uploads of the static
-    // attributes (iRadiusPc, iColour, iSolidity, iAlbedoP, iHostAbsmag,
-    // iPhaseCoefsA/B/C, iHostLocalPos) would be measurable wasted bus
-    // bandwidth. Pin the write-gated flush: after attach (which
-    // legitimately touches every attribute) a single update() tick over
-    // a ringless planet only flips iLocalRel (the positions tick), and
-    // iRingFlux stays quiescent with no rings to add.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
-    f.attachHost(
-      0,
-      {
-        hostStarIdx: 0,
-        planets: [makePlanet({ radiusKm: 6000 })],
-        positionsAt: (_t, out) => { out[0] = 0; out[1] = 0; out[2] = 0; },
-      },
-      4.83,
-      R_SUN_PC,
-      new THREE.Vector3(),
-      0,
-      0,
-    );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const geom = (f as any).geometry as THREE.InstancedBufferGeometry;
-    // Replace each attribute's needsUpdate setter with a flag tracker.
-    const flagged = new Set<string>();
-    for (const [name, attr] of Object.entries(geom.attributes)) {
-      Object.defineProperty(attr, 'needsUpdate', {
-        configurable: true,
-        get(): boolean { return false; },
-        set(_v: boolean): void { flagged.add(name); },
-      });
-    }
-    const camera = new THREE.PerspectiveCamera();
-    camera.position.set(0, 0, 0);
-    f.update(camera, 1, 0);
-    // Only iLocalRel should have been touched. iHostLocalPos / iRadiusPc /
-    // iColour / iSolidity / iAlbedoP / iHostAbsmag / iPhaseCoefsA/B/C /
-    // iRingFlux stay quiescent.
-    expect(flagged.has('iLocalRel')).toBe(true);
-    expect(flagged.size).toBe(1);
-    f.dispose();
-  });
 
-  it('update() flushes iRingFlux, and appMag folds the joint law', () => {
+  it('writes iRingFlux per frame, and appMag folds the joint law', () => {
     // The ring term is β-dependent, so unlike the phase polynomial it
     // cannot ride a static attribute — the CPU evaluates it per frame
     // against the live camera and ships one multiplier per instance.
@@ -816,25 +728,13 @@ describe('PlanetBodyField lifecycle', () => {
       0,
       0,
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const geom = (f as any).geometry as THREE.InstancedBufferGeometry;
-    const flagged = new Set<string>();
-    for (const [name, attr] of Object.entries(geom.attributes)) {
-      Object.defineProperty(attr, 'needsUpdate', {
-        configurable: true,
-        get(): boolean { return false; },
-        set(_v: boolean): void { flagged.add(name); },
-      });
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const bufs = (f as any).bufs as { ringFlux: Float32Array };
+    const bufs = f.glareSources().buffers();
     const camera = new THREE.PerspectiveCamera();
 
     // A near-opposition viewer just outside the host: the Earth-like
     // vantage the published law was fitted from.
     camera.position.set(1 * AU_PC, 0, 0);
     f.update(camera, 0, 0);
-    expect(flagged.has('iRingFlux')).toBe(true);
     const sameSide = bufs.ringFlux[0];
     expect(sameSide).toBeCloseTo(expectedFlux(camera.position), 6);
     expect(sameSide).toBeGreaterThan(0);
@@ -880,28 +780,6 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
-  it('recenter flushes only iHostLocalPos — iLocalRel and statics stay clean', () => {
-    // Recenter writes per-host hostLocalPos into its iHostLocalPos
-    // slot but doesn't touch iLocalRel (planet positions in the host
-    // plane frame are recenter-invariant). The narrow flush keeps the
-    // floating-origin pivot cheap at hundreds-of-hosts scale.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
-    f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(1, 0, 0), 0, 0);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const geom = (f as any).geometry as THREE.InstancedBufferGeometry;
-    const flagged = new Set<string>();
-    for (const [name, attr] of Object.entries(geom.attributes)) {
-      Object.defineProperty(attr, 'needsUpdate', {
-        configurable: true,
-        get(): boolean { return false; },
-        set(_v: boolean): void { flagged.add(name); },
-      });
-    }
-    f.recenter(new THREE.Vector3(0.5, 0, 0));
-    expect(flagged.has('iHostLocalPos')).toBe(true);
-    expect(flagged.size).toBe(1);
-    f.dispose();
-  });
 });
 
 describe('PlanetBodyField.appMagFor', () => {
@@ -1474,36 +1352,18 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
     f.update(cam, 0, 0);
   }
 
-  it('setHiddenInstance drives one shared uHideIdx uniform across both glare passes', () => {
+  it('setHiddenInstance drives the one hide slot the glare layer reads', () => {
     const f = makeField();
     attach(f, 0, 2);
     expect(f.hiddenInstanceIdx).toBe(-1);
     f.setHiddenInstance(1);
     expect(f.hiddenInstanceIdx).toBe(1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const anyF = f as any;
-    for (const mat of [anyF.matGlow, anyF.matGlowLocal]) {
-      expect(mat.uniforms.uHideIdx.value).toBe(1);
-    }
+    // The one slot the glare layer reads its uniform from.
+    expect(f.glareSources().hideIdx()).toBe(1);
     f.setHiddenInstance(-1);
     expect(f.hiddenInstanceIdx).toBe(-1);
   });
 
-  it('chart mode swaps the glare pass to multiply WITH premultipliedAlpha', () => {
-    // three.js silently declines MultiplyBlending without it and leaves
-    // the previous material's blend func in place — the star pipeline
-    // shipped exactly that as white chart discs. Same helper, same pin.
-    const f = makeField();
-    attach(f, 0, 2);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const anyF = f as any;
-    f.setMonochrome(true);
-    expect(anyF.matGlow.blending).toBe(THREE.MultiplyBlending);
-    expect(anyF.matGlow.premultipliedAlpha).toBe(true);
-    f.setMonochrome(false);
-    expect(anyF.matGlow.blending).toBe(THREE.AdditiveBlending);
-    expect(anyF.matGlow.premultipliedAlpha).toBe(false);
-  });
 
   it('hostPlanetOf / instanceIndexOf are inverses across multiple hosts', () => {
     const f = makeField();

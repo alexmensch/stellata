@@ -48,27 +48,44 @@ function platformFor(hints: UaHints): GateAdvice['platform'] {
   return 'other';
 }
 
-/** Firefox ships WebGPU per operating system, so "update Firefox" is only
- *  the fix on the two where shipping it is what happened. */
-function firefoxAdvice(ua: string): Copy {
-  if (/Android/.test(ua)) {
+/** Chrome on every OS and both verdicts; see README.md § UA picks the
+ *  wording. The `no-adapter` copy may name no version at all. */
+function firefoxAdvice(ua: string, verdict: GateVerdict): Copy {
+  const android = /Android/.test(ua);
+  const action = android
+    ? 'Open this page in Chrome for Android.'
+    : 'Open this page in Chrome or Edge.';
+
+  if (verdict === 'no-adapter') {
     return {
-      action: 'Open this page in Chrome for Android.',
-      detail: 'Firefox for Android has not shipped WebGPU, so updating it will not help. '
-        + 'Chrome for Android has it from version 121, on Android 12 and later.',
+      action,
+      detail: 'Firefox here has WebGPU and still started no graphics device. A newer '
+        + 'Firefox may fix that, but Chrome is where Stellata has run reliably on every '
+        + 'platform tested.',
+    };
+  }
+  if (android) {
+    return {
+      action,
+      detail: 'Firefox for Android has not shipped WebGPU at all. Chrome for Android has '
+        + 'it from version 121, on Android 12 and later.',
     };
   }
   if (/Linux|X11/.test(ua)) {
     return {
-      action: 'Open this page in Chrome, or switch on dom.webgpu.enabled in about:config.',
-      detail: 'Firefox on Linux still keeps WebGPU behind that flag, so updating alone '
-        + 'will not switch it on.',
+      action,
+      detail: 'Firefox on Linux keeps WebGPU behind dom.webgpu.enabled in about:config, '
+        + 'which may work. Chrome needs no flag and is where Stellata has run reliably.',
     };
   }
+  // No version numbers: Firefox ships WebGPU per platform on its own
+  // schedule, and this page is reached BY a Firefox without it — naming the
+  // version a reader is already running tells them their browser is the one
+  // that works.
   return {
-    action: 'Update Firefox, or open this page in Chrome or Edge.',
-    detail: 'Firefox has WebGPU on Windows from 141 and on Apple-silicon macOS from '
-      + 'about 145.',
+    action,
+    detail: 'Firefox has begun shipping WebGPU on some platforms, but Chrome and '
+      + 'Edge are where Stellata has run reliably.',
   };
 }
 
@@ -81,7 +98,7 @@ function missingApiAdvice(platform: GateAdvice['platform'], hints: UaHints): Cop
         detail: 'Safari has WebGPU switched on by default from version 26 (September 2025).',
       };
     case 'firefox':
-      return firefoxAdvice(hints.userAgent);
+      return firefoxAdvice(hints.userAgent, 'no-api');
     case 'android':
       return {
         action: 'Update Chrome, and check your Android version.',
@@ -112,9 +129,11 @@ function missingApiAdvice(platform: GateAdvice['platform'], hints: UaHints): Cop
   }
 }
 
-/** The API is present and no device started, so every "install this
- *  browser" line is wrong by construction — this browser already has it. */
-function noDeviceAdvice(platform: GateAdvice['platform']): Copy {
+/** The API is present and no device started, so no line may tell the
+ *  reader to update the browser they are running. Firefox still names
+ *  another browser (README.md § UA picks the wording). */
+function noDeviceAdvice(platform: GateAdvice['platform'], hints: UaHints): Copy {
+  if (platform === 'firefox') return firefoxAdvice(hints.userAgent, 'no-adapter');
   if (platform === 'ios' || platform === 'android') {
     return {
       action: 'Close your other apps and reload. If it keeps failing, restart the device.',
@@ -139,6 +158,8 @@ export function adviceFor(hints: UaHints, verdict: GateVerdict): GateAdvice {
   const platform = platformFor(hints);
   return {
     platform,
-    ...(verdict === 'no-api' ? missingApiAdvice(platform, hints) : noDeviceAdvice(platform)),
+    ...(verdict === 'no-api'
+      ? missingApiAdvice(platform, hints)
+      : noDeviceAdvice(platform, hints)),
   };
 }

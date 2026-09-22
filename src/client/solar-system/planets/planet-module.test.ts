@@ -1,7 +1,7 @@
 // Planet kind-module contract: absence before attach, the boot host
 // attach behind systemsReady, and the capability legs over the field.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import type { KindContext } from '../../kinds/kind-module';
 import {
@@ -16,6 +16,9 @@ import { R_SUN_PC } from '../../util/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES } from '../planet-system';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { createPlanetKindModule, type PlanetKindModule } from './planet-module';
+import { fakePlanetGlare, fakeWebGpuSeam, type FakePlanetGlare } from '../../webgpu/seam-mock';
+import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mock';
+import { makeFrameCtx } from '../../scene/frame-ctx-mock';
 
 const SOL_PHOTOMETRY = { absMag: 4.83, radiusPc: R_SUN_PC };
 const MARS = SOL_BODIES.findIndex((b) => b.name === 'Mars');
@@ -25,7 +28,11 @@ const DECOY_HOST = 41;
  *  the pick test's camera, so the decoy never enters a pick or a draw. */
 const DECOY_HOST_POS = new THREE.Vector3(0, 0, 1e4);
 
-function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
+function makeCtxWithGlare(
+  overrides: Partial<KindContext> = {},
+): { ctx: KindContext; glare: FakePlanetGlare; outOfMemoryListeners: Set<() => void> } {
+  const glare = fakePlanetGlare();
+  const outOfMemoryListeners = new Set<() => void>();
   // Same viewport / FOV as the mock's camera and canvas rect, so pick
   // projections and screen-centre coordinates agree across both maps.
   const sharedUniforms = buildSharedUniforms({
@@ -35,12 +42,27 @@ function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
     viewportH: MOCK_VIEWPORT_H,
     hdr: makeMockHdrEmitterUniforms(),
   });
-  return makeKindContext({
+  const ctx = makeKindContext({
+    webgpu: fakeWebGpuSeam({
+      solarSystemMaterials: () => fakeSolarSystemMaterials(),
+      // The glare is the one surface that ports as a layer, so the seam
+      // hands back a handle rather than a material.
+      attachPlanetGlare: () => glare.glare,
+      onOutOfMemory: (listener) => {
+        outOfMemoryListeners.add(listener);
+        return () => { outOfMemoryListeners.delete(listener); };
+      },
+    }),
     sharedUniforms,
     solIndex: 0,
     starPhotometry: (idx) => (idx === 0 ? SOL_PHOTOMETRY : null),
     ...overrides,
   });
+  return { ctx, glare, outOfMemoryListeners };
+}
+
+function makeCtx(overrides: Partial<KindContext> = {}): KindContext {
+  return makeCtxWithGlare(overrides).ctx;
 }
 
 /** Attach, but slip a decoy host in ahead of the module's own Sol
@@ -78,6 +100,27 @@ describe('planet kind module', () => {
     const sids = Array.from(m.sids()!);
     expect(sids).toEqual(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()]));
     expect(sids.every((s) => s > 0)).toBe(true);
+  });
+
+  // This forwarding is the only thing that carries the field's visibility
+  // to the glare draw, so an unforwarded hide leaves the main-pass billboard
+  // drawn with every other suite green.
+  it('forwards the field\'s visibility to the glare draw each frame', async () => {
+    const m = createPlanetKindModule();
+    await m.load('/');
+    const { ctx, glare } = makeCtxWithGlare();
+    const layer = m.attach(ctx)!;
+    const fc = makeFrameCtx(ctx.camera);
+
+    // Sol lands on a microtask, so this frame has an empty roster.
+    layer.update!(fc);
+    expect(m.field.drawn).toBe(false);
+    expect(glare.visible.at(-1)).toBe(false);
+
+    await m.systemsReady;
+    layer.update!(fc);
+    expect(m.field.drawn).toBe(true);
+    expect(glare.visible.at(-1)).toBe(true);
   });
 
   it('attaches Sol at boot and answers every leg from the field', async () => {
@@ -190,6 +233,18 @@ describe('planet kind module', () => {
     expect(m.meshLayer.group.children).not.toContain(m.meshLayer.depthStampGroup);
     layer!.dispose();
     expect(ctx.scene.children).not.toContain(m.meshLayer.depthStampGroup);
+  });
+
+  it('steps the mesh layer down on an out-of-memory report, until dispose', async () => {
+    const m = createPlanetKindModule();
+    await m.load('/');
+    const { ctx, outOfMemoryListeners } = makeCtxWithGlare();
+    const layer = m.attach(ctx);
+    const stepDown = vi.spyOn(m.meshLayer, 'stepDownTextureLimits');
+    for (const listener of outOfMemoryListeners) listener();
+    expect(stepDown).toHaveBeenCalledTimes(1);
+    layer!.dispose();
+    expect(outOfMemoryListeners.size).toBe(0);
   });
 
   it('setFocalHidden drives the field hide slot; -1 unhides', async () => {

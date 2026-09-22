@@ -32,9 +32,9 @@ scripts/perf/
                             check over the flags actually typed. All three
                             parsers here, including the survivors one, because
                             survivors.ts cannot be imported by a test.
-  run-pure.ts (+ test)      The decisions around a launch: which clock a
-                            backend request gets, which adapters disqualify a
-                            run, how the probe reads, whether a marker arms,
+  run-pure.ts (+ test)      The decisions around a launch: the order contexts
+                            run in, which adapters disqualify a run, how the
+                            probe reads, whether a marker arms,
                             why a boot produced no page. Also the Chromium
                             channel both launches pass and the `run` block
                             both instruments write, assembled in one place so
@@ -107,7 +107,7 @@ pnpm run survivors -- [--url http://localhost:5173] [--json <path>]
 It visits every canon vantage on WebGPU at the runner's own default viewport
 and device pixel ratio, so there is nothing to select. An unknown flag is a
 usage error, exit 2 — `parseArgs` runs `strict` here for the same reason the
-runner's does. Exit 1 is a boot that came up on the other backend.
+runner's does. Exit 1 is a boot that came up without the seam.
 
 **`--json` writes schema `stellata-survivors/1`**: the `run` provenance block
 a perf file carries — timestamps, argv, the commit pair and dirty flag,
@@ -125,10 +125,10 @@ the page they came off.
 ## Invocation
 
 ```
-pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|webgl2|both]
+pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu]
                  [--mode differential|probe|dwell|sweep] [--passes a,b]
                  [--pre-disable a,b] [--no-park] [--force-recompute]
-                 [--method timer-query|timestamp|raf-delta]
+                 [--method timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
                  [--frames 240] [--readback-every 4|4,1,2] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
@@ -138,8 +138,8 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu|we
                  [--url http://localhost:5173] [--chrome-arg=<switch>]... [--hash <fragment>]
 ```
 
-Defaults: Sol, WebGL2, differential, every present pass, the backend's best
-clock, 1280×800 at dpr 2 (4.096 Mpx), headless. The priceFrame knobs
+Defaults: Sol, differential, every present pass, the adapter's best clock,
+1280×800 at dpr 2 (4.096 Mpx), headless. The priceFrame knobs
 (`--dwell-frames`, `--warmup-frames`, `--settle-frames`, `--budget-ms`) pass
 straight through; unset ones take priceFrame's own defaults. `--mode probe`
 boots, settles and prints the adapter block and the idle rAF period, no sweep.
@@ -212,28 +212,25 @@ differential mode and the dwell's in the other two, defaulting to the same
 `--hash <fragment>` appends the app's own URL-fragment switches to every
 boot — `--hash webgpu-gate=force` shows the requires-WebGPU page on a
 browser that supports it, the one way to exercise the gate's `BootError`
-end to end. It composes with the `#renderer=webgl2` a WebGL2 boot already
-carries (`&`-joined; the app reads every switch off one hash). `--url`
+end to end (the app reads every switch off one hash, `&`-joined). `--url`
 cannot carry it: the base is prefixed with `/v/<blob>/`, so a fragment
 there lands mid-path.
 
-**Contexts run backend-major — every WebGPU context, then every WebGL2
-one — with the scenarios in the order given; `all` is the canon order
-mw120, sol, earth, mw50, lg.** So `--scenario all --backend both` opens
-with mw120|webgpu then sol|webgpu, the two contexts a Tier 1 run visits,
-in the same order. That is what lets Tier 1 compare against the pin:
-`diff/README.md` § The refusals, run position.
+**Contexts run in the scenario order given; `all` is the canon order
+mw120, sol, earth, mw50, lg.** So `--scenario all` opens with mw120 then
+sol, the two contexts a Tier 1 run visits, in the same order. That is what
+lets Tier 1 compare against the pin: `diff/README.md` § The refusals, run
+position.
 
-**`--backend both` runs each scenario twice, in separate contexts, and pins
-`--method raf-delta`.** The two backends' best clocks are different
-instruments — WebGL2's timer query against WebGPU's timestamp resolve — so
-taking each one's best builds exactly the mixed-method table that must never
-be compared. rAF wall time is the one clock both supply. An explicit
-`--method` overrides the pin, and the run says it did.
+**A dwell's clock is always `raf-delta`, so every pin run is on it.**
+`--method` is read by `differential` alone, the pin and both gates read
+dwells, and `pinRefusal` rejects any other method outright — every
+archived pin and baseline was recorded on it, and a table mixing clocks
+compares two instruments.
 
 **A flag the chosen mode does not read is an error, not a no-op.**
-`--mode dwell --method timer-query` is refused rather than quietly stamping
-the table `raf-delta`, and the same goes for `--passes`, `--pre-disable`,
+`--mode dwell --method timestamp` is refused rather than quietly stamping
+the table with the clock the mode actually used, and the same goes for `--passes`, `--pre-disable`,
 `--no-park`, `--budget-ms`, `--dwell-frames`, `--settle-frames` and
 `--no-interleave` outside `differential`, `--force-recompute` outside
 `differential` and `dwell`, `--frames` and `--readback-every` outside dwell and
@@ -285,8 +282,7 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/v/<blob>/`, plus `#renderer=webgl2` for the escape
-   hatch — WebGPU is the default (`src/client/webgpu/README.md`
+1. **Boot** `<url>/v/<blob>/` (`src/client/webgpu/README.md`
    § The renderer is WebGPU). Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
    `Error:` is a `BootError`. The requires-WebGPU gate is read *before*
@@ -295,15 +291,15 @@ neither modal ever shows:
    `display:none` and `window.stellata` is never set, so every predicate
    stays false and the wait would spend its whole timeout to say nothing.
    A mounted gate is a `BootError` naming its `data-verdict` instead.
-   Then check `stellata.webgpu` against the request: **a boot on the
-   other backend fails the scenario** rather than yielding a mislabelled
-   measurement.
-2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`
-   and `EXT_disjoint_timer_query_webgl2` presence (the live context on a
-   WebGL2 boot, a throwaway one otherwise — dropped via `WEBGL_lose_context`
-   before the sweep, so the instrument leaves no second GPU context alive in
-   the page it is about to price); WebGPU `requestAdapter().info`,
-   the fallback flag, and `stellata.webgpu.timestampsAvailable`. A software
+   Then check `stellata.webgpu`: **a page that came up without the seam
+   fails the scenario** rather than yielding a mislabelled measurement.
+2. **Adapter probe.** WebGL renderer/vendor via `WEBGL_debug_renderer_info`,
+   off a throwaway context dropped via `WEBGL_lose_context` before the sweep
+   so the instrument leaves no second GPU context alive in the page it is
+   about to price. Nothing measures on it: the unmasked renderer string is
+   what `adapterSlug` names the committed pin file by. Then WebGPU
+   `requestAdapter().info`, the fallback flag, and
+   `stellata.webgpu.timestampsAvailable`. A software
    renderer (`/swiftshader|llvmpipe|software/i`, or a fallback adapter)
    **aborts the whole run** — nothing measured on it counts.
 3. **Settle.** Poll `stellata.renderGate.debugState` every 250 ms until no
@@ -377,7 +373,7 @@ too: `diff/README.md`.
 
 ## Pinning
 
-`--pin pins/<slug>.json` summarises a whole-canon, both-backend dwell run
+`--pin pins/<slug>.json` summarises a whole-canon dwell run
 as the committed perf pin; `--against-pin <path>` prints the verdicts for
 the rows this run measured, lists the pin rows it did not, and exits 1 on
 a `✗` or a refused row. A run refused for one row is not re-armed:

@@ -1,8 +1,7 @@
-// Where a pricing sweep gets its whole-frame GPU numbers from, per
-// backend. See README.md § Preconditions.
+// Where a pricing sweep gets its whole-frame GPU numbers from: the
+// timestamp pool or rAF wall time. See README.md § Preconditions.
 
-import type * as THREE from 'three';
-import { acquireGpuFrameSampler, perfInstrumentationInstalled } from '../perf-hud';
+import { perfInstrumentationInstalled } from '../perf-hud';
 import { gpuFrameSamplesAreSound, onGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
 import { GPU_FRAME_METHODS, type GpuFrameMethod } from './frame-cost-pure';
 
@@ -14,8 +13,7 @@ export interface GpuFrameSource {
 /** The slice of the shell this module reads — keeps the unit test off the
  *  whole integration shell. */
 export interface GpuFrameSourceHost {
-  readonly rendererGL: THREE.WebGLRenderer | null;
-  readonly webgpu: { readonly timestampsAvailable: boolean } | null;
+  readonly webgpu: { readonly timestampsAvailable: boolean };
 }
 
 const VSYNC_CAVEAT =
@@ -33,7 +31,7 @@ function rafDeltaSource(lead: string): GpuFrameSource {
       "its per-tick ring fills and DOM writes land inside the sweep's own " +
       'samples. They largely cancel in a differential but widen the spread, ' +
       'and absolute frame times are biased outright — close it before ' +
-      'recording a cross-backend table.',
+      'recording a table.',
     );
   }
   return {
@@ -59,18 +57,13 @@ function refusePinned(method: GpuFrameMethod, reason: string): null {
     `priceFrame: { method: '${method}' } pinned, but ${reason}. Refusing ` +
     'rather than silently switching clocks — a silent fallback rebuilds the ' +
     "mixed-method table pinning exists to prevent. 'raf-delta' is the one " +
-    'method every backend can supply.',
+    'method every adapter can supply.',
   );
   return null;
 }
 
-/**
- * Null when the sweep cannot proceed; the caller has already been told why
- * on the console.
- *
- * `pinned` forces a method instead of taking the backend's best. A pinned
- * method the backend cannot supply refuses (null) — never falls back.
- */
+/** Null when the sweep cannot proceed; the caller has already been told why
+ *  on the console. `pinned`: README.md § Preconditions. */
 export function acquireGpuFrameSource(
   host: GpuFrameSourceHost,
   onSample: (ms: number) => void,
@@ -81,52 +74,32 @@ export function acquireGpuFrameSource(
       pinned,
       `'${pinned}' is not a clock — expected one of ` +
       `${GPU_FRAME_METHODS.map((m) => `'${m}'`).join(', ')}, and the ` +
-      'console is untyped, so falling through to the backend preference ' +
+      'console is untyped, so falling through to the preference ' +
       'order would leave a typo looking like an honoured pin',
     );
   }
   if (pinned === 'raf-delta') {
     return rafDeltaSource(
-      'method pinned to raf-delta wall time — the one clock every backend ' +
-      'shares, so cross-backend tables compare',
+      'method pinned to raf-delta wall time — the one clock every adapter ' +
+      'supplies, so tables across adapters and browsers compare',
     );
   }
-  if (host.rendererGL === null) {
-    if (pinned === 'timer-query') {
-      return refusePinned(pinned, 'a WebGPU boot has no WebGL2 timer query');
-    }
-    if (host.webgpu?.timestampsAvailable !== true) {
-      const reason = 'this adapter withheld the timestamp-query feature';
-      if (pinned === 'timestamp') return refusePinned(pinned, reason);
-      return rafDelta(reason);
-    }
-    if (!gpuFrameSamplesAreSound()) {
-      const reason =
-        'this backend granted timestamp-query but resolves durations no ' +
-        'frame can have, so every sample is being dropped';
-      if (pinned === 'timestamp') return refusePinned(pinned, reason);
-      return rafDelta(reason);
-    }
-    // Nothing is exclusive here: the render loop resolves for whoever is
-    // listening, so the debug panel may stay open.
-    return { method: 'timestamp', release: onGpuFrameSample(onSample) };
+  if (pinned === 'timer-query') {
+    return refusePinned(pinned, 'the WebGL2 timer query is not a clock this app has');
   }
-  if (pinned === 'timestamp') {
-    return refusePinned(pinned, 'WebGPU timestamps do not exist on a WebGL2 boot');
-  }
-  const gl = host.rendererGL.getContext() as WebGL2RenderingContext;
-  if (gl.getExtension('EXT_disjoint_timer_query_webgl2') === null) {
-    const reason = 'WebGL2 exposes no timer query on this context (Safari)';
-    if (pinned === 'timer-query') return refusePinned(pinned, reason);
+  if (!host.webgpu.timestampsAvailable) {
+    const reason = 'this adapter withheld the timestamp-query feature';
+    if (pinned === 'timestamp') return refusePinned(pinned, reason);
     return rafDelta(reason);
   }
-  const release = acquireGpuFrameSampler(gl, onSample);
-  if (release === null) {
-    console.warn(
-      'priceFrame: close the debug panel first — its perf timer holds the ' +
-      "context's single TIME_ELAPSED query slot",
-    );
-    return null;
+  if (!gpuFrameSamplesAreSound()) {
+    const reason =
+      'this adapter granted timestamp-query but resolves durations no ' +
+      'frame can have, so every sample is being dropped';
+    if (pinned === 'timestamp') return refusePinned(pinned, reason);
+    return rafDelta(reason);
   }
-  return { method: 'timer-query', release };
+  // Nothing is exclusive here: the render loop resolves for whoever is
+  // listening, so the debug panel may stay open.
+  return { method: 'timestamp', release: onGpuFrameSample(onSample) };
 }

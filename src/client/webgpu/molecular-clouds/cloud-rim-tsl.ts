@@ -1,4 +1,4 @@
-// cloud-rim.frag.glsl on the TSL path: the Local-Bubble fresnel treatment
+// ./cloud-rim-tsl.ts on the TSL path: the Local-Bubble fresnel treatment
 // in realistic mode, a stippled silhouette contour in chart mode. The
 // vertex stage is the shared one, which here means none at all.
 
@@ -43,7 +43,6 @@ export function buildCloudRimMaterial(r: CloudRimNodes): MrtEmitterMaterial {
     // the derivatives below stay legal in WGSL.
     If(r.uChart.greaterThan(0.5), () => {
       const ndotv = max(n.dot(viewDir), 0.0).toVar();
-      // TSL has no fwidth node; this is what GLSL defines it as.
       const fw = max(abs(dFdx(ndotv)).add(abs(dFdy(ndotv))), MIN_FWIDTH).toVar();
       const band = float(1.0).sub(
         smoothstep(fw.mul(CONTOUR_WIDTH), fw.mul(2.0 * CONTOUR_WIDTH), ndotv));

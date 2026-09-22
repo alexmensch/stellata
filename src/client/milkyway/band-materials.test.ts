@@ -1,59 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { makeHdrEmitterUniforms, pickHdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../frame/shared-uniforms';
 import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
 import { makeTslBandMaterials } from '../webgpu/milkyway/tsl-band-materials';
+import { bandSharedSlots } from './band-materials-mock';
 import {
-  makeGlslBandMaterials,
   seedBandSharedSlots,
   type BandComponentSpec,
   type BandMaterials,
   type BandSharedSlots,
 } from './band-materials';
-import { makeResolvedHoleTexture } from './calibration/resolved-hole-texture';
 
 const hdr = makeHdrEmitterUniforms();
-const uLimitMag = { value: 6.5 };
-const glsl = () => makeGlslBandMaterials({ hdr, uLimitMag });
 
-/** A value no authored constant takes, in every slot. The record is typed
- *  as BandSharedSlots, so a new slot fails to compile here before it can
- *  fail the assertion — which is what makes the seeding list unforgettable
- *  rather than merely tested. It has to be exactly representable in
- *  half-float, because one slot is a texture: a sentinel that quantises on
- *  the way in reads back as something else and passes unseeded.  */
+/** A value no authored constant takes, in every slot. It has to be exactly
+ *  representable in half-float, because one slot is a texture: a sentinel
+ *  that quantises on the way in reads back as something else and passes
+ *  unseeded. */
 const UNSEEDED = -8192;
-function unseededSlots(): BandSharedSlots {
-  const n = () => ({ value: UNSEEDED });
-  const v = () => ({ value: new THREE.Vector3(UNSEEDED, UNSEEDED, UNSEEDED) });
-  return {
-    uDustAvPerDensityPc: n(),
-    uDustEnabled: n(),
-    uExtinctionStrength: n(),
-    uAnalyticalDustScaleLengthPc: n(),
-    uAnalyticalDustScaleHeightPc: n(),
-    uAnalyticalDustNormPerPc: n(),
-    uReddeningRGB: v(),
-    uWorldOffset: v(),
-    uIcrsToGal: { value: new THREE.Matrix3().set(
-      UNSEEDED, UNSEEDED, UNSEEDED,
-      UNSEEDED, UNSEEDED, UNSEEDED,
-      UNSEEDED, UNSEEDED, UNSEEDED) },
-    uGalCenter: v(),
-    uR0Pc: n(),
-    uUnresolvedLight: { value: unseededTexture() },
-    uGlowMagOffset: n(),
-    uChartIsobar: n(),
-    uChartInkColor: { value: new THREE.Color().setRGB(UNSEEDED, UNSEEDED, UNSEEDED) },
-  };
-}
-
-function unseededTexture(): THREE.Data3DTexture {
-  const tex = makeResolvedHoleTexture();
-  (tex.image.data as Uint16Array).fill(THREE.DataUtils.toHalfFloat(UNSEEDED));
-  return tex;
-}
 
 /** One representative scalar per slot-value kind, for the sentinel sweep. */
 function probe(value: unknown): number {
@@ -90,23 +55,7 @@ function tsl(registerMrtLayer = () => () => {}): BandMaterials {
   });
 }
 
-const HDR_KEYS = Object.keys(pickHdrEmitterUniforms(hdr));
-/** Off the shared node mirror on the TSL path, so absent from its record. */
-const FROM_MIRROR = [...HDR_KEYS, 'uLimitMag'];
-/** A uniform on the GLSL path; a builder flag here. */
-const COMPILE_TIME = ['uIsBulge'];
-
 describe('the band material seam', () => {
-  for (const isBulge of [false, true]) {
-    const name = isBulge ? 'bulge' : 'disc';
-    it(`gives the ${name} the same driven slots on both backends`, () => {
-      const glslKeys = Object.keys(glsl().component(spec(isBulge)).uniforms)
-        .filter((k) => !FROM_MIRROR.includes(k) && !COMPILE_TIME.includes(k));
-      const tslKeys = Object.keys(tsl().component(spec(isBulge)).uniforms);
-      expect(tslKeys.sort()).toEqual(glslKeys.sort());
-    });
-  }
-
   // The whole point of the shared group: one slider write reaches both
   // draws. A factory per component would give two dust models that agreed
   // only until the first move.
@@ -137,39 +86,37 @@ describe('the band material seam', () => {
     expect(comp.uGlowMagOffset).toBe(materials.shared.uGlowMagOffset);
   });
 
-  it('gives the two components distinct materials on both backends', () => {
-    const g = glsl();
-    expect(g.component(spec(true)).material)
-      .not.toBe(g.component(spec(false)).material);
+  it('gives the two components distinct materials', () => {
     const t = tsl();
     expect(t.component(spec(true)).material).not.toBe(t.component(spec(false)).material);
   });
 
-  it('keeps the additive back-face render contract on both backends', () => {
-    for (const m of [glsl().component(spec(false)).material,
-      tsl().component(spec(false)).material]) {
-      expect(m.side).toBe(THREE.BackSide);
-      expect(m.blending).toBe(THREE.AdditiveBlending);
-      expect(m.depthWrite).toBe(false);
-    }
+  it('keeps the additive back-face render contract', () => {
+    const m = tsl().component(spec(false)).material;
+    expect(m.side).toBe(THREE.BackSide);
+    expect(m.blending).toBe(THREE.AdditiveBlending);
+    expect(m.depthWrite).toBe(false);
   });
 
   // The trap the shared-node shape introduces: a TSL uniform starts on a
   // declared literal, so a slot the seeder forgets marches the placeholder
   // with no error and no missing draw.
   it('seeds every shared slot, leaving no placeholder behind', () => {
-    const slots = unseededSlots();
+    const slots = bandSharedSlots(UNSEEDED);
     seedBandSharedSlots(slots);
     for (const [key, slot] of Object.entries(slots)) {
       expect(probe(slot.value), `${key} was never seeded`).not.toBe(UNSEEDED);
     }
   });
 
-  it('starts both backends on the same authored values', () => {
-    const g = glsl().shared;
-    const t = tsl().shared;
-    for (const key of Object.keys(g) as (keyof BandSharedSlots)[]) {
-      expect(probe(t[key].value), key).toBeCloseTo(probe(g[key].value), 12);
+  // The sweep above passes on a record's own declared literals, so this
+  // is what says the factory called the seeder at all.
+  it('starts the factory\'s shared record on the seeded values', () => {
+    const seeded = bandSharedSlots(UNSEEDED);
+    seedBandSharedSlots(seeded);
+    const live = tsl().shared;
+    for (const key of Object.keys(seeded) as (keyof BandSharedSlots)[]) {
+      expect(probe(live[key].value), key).toBeCloseTo(probe(seeded[key].value), 12);
     }
   });
 

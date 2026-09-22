@@ -8,15 +8,12 @@ number is not what their name suggests: `passes/README.md`. This page is
 the sweep around them — its preconditions, its drift bracketing, its
 budget, and how to read a row.
 
-**Differentials survive the WebGPU port, for a different reason.** On
-WebGL2 they are the only honest per-pass price because the per-pass timer
-scopes over-attribute on ANGLE/Metal. On WebGPU nothing over-attributes —
-three times every render pass truly — but those per-pass durations are
-keyed by an internal `timestampUID` and are not public API, so there are
-no per-pass rows to read. Either way the differential is the measurement,
-and on WebGPU its input is *better*: `gpu.frame` there is a sum of real
-per-pass timestamps rather than one derived elapsed span.
-`../gpu-timing/README.md` owns both halves.
+**The differential is the measurement, not a workaround.** three times
+every render pass truly, but those per-pass durations are keyed by an
+internal `timestampUID` and are not public API — so there are no per-pass
+rows to read, and disable-and-difference is what is left. Its input is a
+good one: `gpu.frame` is a sum of real per-pass timestamps rather than one
+derived elapsed span. `../gpu-timing/README.md` owns that half.
 
 ## Files
 
@@ -41,8 +38,9 @@ src/client/debug/frame-cost/
                               isCadenceBound itself stay client-side — the
                               runner reads the `cadenceBound` and
                               `baselineRising` fields off a row instead.
-  gpu-frame-source.ts         Which sample source a sweep gets, per
-    (+ test)                  backend, and the method label it stamps.
+  gpu-frame-source.ts         Which sample source a sweep gets — the
+    (+ test)                  timestamp pool or rAF wall time — and the
+                              method label it stamps.
   passes/                     buildPassToggles and PRICED_PASS_KEYS: what
                               each row of the table disables, and what its
                               number is therefore worth. Own README.
@@ -50,27 +48,18 @@ src/client/debug/frame-cost/
 
 ## Preconditions
 
-- **Debug panel CLOSED — on WebGL2 only.** There the run borrows the
-  swappable perf hooks via `acquireGpuFrameSampler` (`../perf-hud.ts`) — a
-  single-scope timer that samples `gpu.frame` EVERY frame, because
-  WebGL2's one-query-per-context limit is not shared with any rotating
-  scope. Panel open → the call warns and returns `[]`. Panel opened
-  mid-run → samples dry up and the run aborts rather than reporting zeros.
-  **On WebGPU there is no such requirement**: wherever the boot probe left
-  timestamps live the render loop resolves them every frame whatever is
-  listening, and the sweep just subscribes alongside the HUD.
-  **A pinned `raf-delta` sweep escapes that refusal on every backend** — it
-  never calls `acquireGpuFrameSampler`, so nothing consults the panel. It is
-  also the one mode where an open panel corrupts the number rather than
-  merely holding the slot: rAF deltas are wall time, so the panel's per-tick
-  ring fills and DOM writes sit inside the measurement. They largely cancel
-  in a differential and surface as a wider spread; an absolute frame time is
+- **Debug panel CLOSED — under `raf-delta` only.** The timestamp path has
+  no exclusivity: wherever the boot probe left timestamps live the render
+  loop resolves them every frame whatever is listening, and the sweep just
+  subscribes alongside the HUD. Under wall time the panel corrupts the
+  number instead — rAF deltas are wall time, so the panel's per-tick ring
+  fills and DOM writes sit inside the measurement. They largely cancel in a
+  differential and surface as a wider spread; an absolute frame time is
   biased outright. That corruption belongs to `raf-delta` however it was
-  reached — pinned, or fallen back to where no GPU clock exists — and a
-  panel opened mid-run keeps the samples flowing rather than drying them up
-  as it does on `timer-query`, so the sweep checks at both ends: acquire
-  warns, and release warns again if the panel is open when the sweep ends.
-  Closing it is still on you.
+  reached — pinned, or fallen back to where no GPU clock exists — and the
+  samples keep flowing rather than drying up, so nothing aborts on your
+  behalf. The sweep checks at both ends: acquire warns, and release warns
+  again if the panel is open when the sweep ends. Closing it is on you.
 - **Camera stationary.** The pose is snapshotted and a move warns at the
   end. The run holds the render gate for its duration — a still camera
   over a paused clock would otherwise be exactly the state the gate
@@ -90,18 +79,21 @@ src/client/debug/frame-cost/
   unpinned, which is six magnitudes of extra stars. `{ pinExposure:
   false }` prices the live path. `baselineLimitMag` / `disabledLimitMag`
   stay in the output as the check that it held.
-- **A GPU clock.** `timestamp` on WebGPU where the adapter granted
+- **A GPU clock.** `timestamp` where the adapter granted
   `timestamp-query` — the render passes' `gpu.frame`, not the compute
   row beside it, so a toggle that moves work between a render pass and a
   compute kernel (`extinctionPrepass`) prices its render half here and
   its compute half on a dwell's compute row
   (`../gpu-timing/README.md` § `gpu.frame` is the only row that prices
-  anything) — `timer-query` on WebGL2 with the extension, and
-  `raf-delta` wall time otherwise — WebGL2 Safari, any adapter that
-  withheld the timestamp feature, and any backend that granted it but
-  resolves durations no frame can have, which is Chrome today
-  (`../gpu-timing/README.md` § WebGPU, § A granted feature can still
-  resolve garbage).
+  anything) — and `raf-delta` wall time otherwise: any adapter that
+  withheld the timestamp feature, and any that granted it but resolves
+  durations no frame can have, which is Chrome today
+  (`../gpu-timing/README.md` § A granted feature can still
+  resolve garbage). `timer-query` remains in `GpuFrameMethod` so an
+  archived run that names it still parses; it is absent from
+  `REQUESTABLE_GPU_FRAME_METHODS`, so `--method timer-query` is refused at
+  parse time rather than after the arm is spent, and a console caller that
+  reaches past that still meets the runtime refusal.
   Under `raf-delta` a differential below the vsync quantum reads as zero
   unless the frame is already over budget *and* not itself pinned to a
   higher multiple of the refresh — so every row whose dwells the display
@@ -114,16 +106,17 @@ src/client/debug/frame-cost/
   verdict — the console says which of the two applied.
   `method` labels every row; never
   compare numbers across two methods. The sweep picks the source itself and
-  says which on the console — it never claims a clock the backend does not
+  says which on the console — it never claims a clock the adapter does not
   have, since that would spend the whole warmup before aborting with no
-  rows. **That preference order picks each backend's BEST clock, not a
-  comparable one** — the four browser × backend combinations land on three
-  different methods — so a cross-backend table has to pin the method by
-  hand: `debug.priceFrame({ method: 'raf-delta' })`, the one clock all of
-  them share. A pinned method the backend cannot supply refuses the sweep
-  outright rather than silently switching clocks, and so does a name that is
-  not one of the three — the console is untyped, so a typo would otherwise
-  read as an honoured pin.
+  rows. **That preference order picks each adapter's BEST clock, not a
+  comparable one** — Safari and a Chrome whose timestamps resolve garbage
+  land on `raf-delta`, an adapter with sound timestamps on `timestamp` — so
+  a table across adapters or browsers has to pin the method by hand:
+  `debug.priceFrame({ method: 'raf-delta' })`, the one clock every adapter
+  supplies. A pinned method the adapter cannot supply refuses the sweep
+  outright rather than silently switching clocks, and so does a name
+  `GpuFrameMethod` does not hold — the console is untyped, so a typo would
+  otherwise read as an honoured pin.
 - **A settled instrument — and this is the one precondition you cannot
   satisfy.** The GPU's own clock state moves over a sweep in both
   directions, and neither a longer warmup nor a quieter settle reaches the
@@ -136,22 +129,22 @@ src/client/debug/frame-cost/
 
 ## The readback cadence — measured, and NOT the confound
 
-The reduction's `gl.flush()` is the frame's only ANGLE submission
-barrier, and the rate it fires at is emergent rather than pinned — the
-fence clears only when the GPU drains. The obvious worry follows:
-disabling a pass makes the frame cheaper, the fence lands sooner, the
-barrier fires more often, and the row prices batching depth instead of
-the pass.
+The statistic readback's rate is emergent rather than pinned: one readback
+is in flight at a time, and the next is issued only once the last one lands
+(`../../webgpu/hdr/README.md` § Reduction). The obvious worry follows:
+disabling a pass makes the frame cheaper, the readback lands sooner and
+fires more often, and the row prices the readback's own copy and map
+instead of the pass.
 
-**Measured, it does not happen.** `baselineReadback` /
-`disabledReadback` report readbacks per frame per state, and at the
-default Sol view every dwell of every row read **0.25 exactly** — one
-readback per four frames, identical in both states, across frames
-ranging 31 ms (HDR parked) to 112 ms. The latency is constant in
-*frames*, not in wall time, which is pipeline-depth buffering rather
-than GPU-drain latency: it does not care what the frame costs. Keep the
-columns as a standing check, but the hypothesis is refuted at this
-viewpoint.
+**Measured 2026-08-16 on the retired WebGL2 boot, it did not happen.**
+`baselineReadback` / `disabledReadback` report readbacks per frame per
+state, and at the default Sol view every dwell of every row read **0.25
+exactly** — one readback per four frames, identical in both states, across
+frames ranging 31 ms (HDR parked) to 112 ms. The latency was constant in
+*frames*, not in wall time: pipeline-depth buffering rather than
+GPU-drain latency. Keep the columns as a standing check; the dwell mode
+pins the cadence outright (`../../../../scripts/perf/dwell/README.md`), which a sweep
+does not.
 
 Both remain gates worth reading — **equal rates mean the row is clean on
 this axis** — and a viewpoint that does move them would invalidate the
@@ -213,8 +206,8 @@ single-baseline sweep when the instrument is known to be settled.
   the floor may not be zero. Computed on ranks, so a hitched frame moves
   it by one sample rather than by its magnitude.
 - **`baselineReadback` / `disabledReadback`** — equal is clean; diverging
-  means the row priced a change in submission-barrier rate on top of the
-  pass (§ The readback cadence).
+  means the row priced a change in readback rate on top of the pass
+  (§ The readback cadence).
 - **`bufferMpx`** — the drawing buffer the sweep ran at. Run metadata, not
   a statistic, and stamped on every row so a pasted table stays
   self-describing. **Only compare tables at the same buffer size**: the
@@ -240,10 +233,11 @@ single-baseline sweep when the instrument is known to be settled.
   pass. A toggle that resets or freezes the exposure statistic is the way
   this happens.
 - **A saving that vanishes while the frame time holds was never a cost.**
-  The limit-mag gate misses a draw the backend dropped — same star
+  The limit-mag gate misses a draw the driver dropped — same star
   population in both states, only one drawing it. Compare `disabledMs`
-  across backends: a WebGPU `mrtAttachments` read 61 % at Sol on a
-  `disabledMs` of 35 against an honest 78 (`../../webgpu/hdr/README.md`
+  against an earlier run of the same row: `mrtAttachments` read 61 % at Sol
+  on a `disabledMs` of 35 against an honest 78, while Dawn discarded every
+  command buffer carrying the star pass (`../../webgpu/hdr/README.md`
   § The gate becomes the output struct).
 - **`baselineRising`** — one verdict about the whole SWEEP, stamped on
   every row of it: the baseline walked upward past what the run's own

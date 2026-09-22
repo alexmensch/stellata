@@ -406,5 +406,5 @@ Construction details (sphere scale, offset, rotation), rendering, and
 label anchoring: see `src/client/solar-system/heliopause/README.md`.
 
 Implementation: `src/client/solar-system/heliopause/heliopause.ts` and
-`src/client/fresnel-shell/fresnel-shell.{vert,frag}.glsl`.
+`src/client/webgpu/fresnel-shell/fresnel-shell-tsl.ts`.
 

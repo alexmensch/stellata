@@ -194,8 +194,8 @@ photographic statement and as the statistic's behaviour.
 
 **It is not per-layer exposure** (§ 3.2's rejection). The distinction is
 point-vs-extended — a property of the source's angular extent, which the
-unit already branches on (`stellataPointSourcePeak` vs
-`stellataSurfaceBrightnessLuminance`) — and it moves a *threshold anchor*,
+unit already branches on (`pointSourcePeakTsl` vs
+`surfaceBrightnessLuminanceTsl`) — and it moves a *threshold anchor*,
 not `uExposure` and not the operator, both of which stay global.
 
 **Uniformity is a per-FRAGMENT property, so the substitution is a
@@ -261,8 +261,8 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
   one pixel's luminance and one scene-wide scalar.
 - **Off-target there is no attachment and no pass**, so the anchor goes away
   for both emitters rather than one keeping a private fallback — the
-  concession *is* the pass. That is the float-RT fallback (§ 6) and the
-  chart mode, where the band returns to its per-pixel level.
+  concession *is* the pass. That is chart mode (§ 6), where the band
+  returns to its per-pixel level.
 - **Everything that dims the emission has to move with it.** Giving the
   diffuse emitters their own attachment takes them out of the chain that
   anything drawn in front of them composites against, and the depth-test
@@ -278,11 +278,11 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
   - *Molecular-cloud absorption* is a multiply drawn after the band
     (`renderOrder` −2 against −3), so it opens attachment 2 as well and writes
     the same alpha-only texel to both — one blend equation covers every
-    attachment, so it is a gate flag, not a second draw. Extinction therefore
-    lands **before** the convolution, which is the physical order: light is
-    absorbed in interstellar space, and the eye sums what survives. It is the
-    only *interstellar* absorber in the scene; a future one takes the same mark
-    (`src/client/hdr/attachments/README.md` § The gate).
+    attachment, so it is one more struct member, not a second draw. Extinction
+    therefore lands **before** the convolution, which is the physical order:
+    light is absorbed in interstellar space, and the eye sums what survives. It
+    is the only *interstellar* absorber in the scene; a future one takes the
+    same role (`src/client/hdr/attachments/README.md` § The roles).
   - *Every close-range surface in front of the band* — the planet mesh, the
     ring annulus, the atmosphere shell, all alpha-composited in the local
     depth pass. They emit and attenuate, so they open all three attachments.
@@ -414,15 +414,16 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   layer's calibration with it (`src/client/hdr/exposure/README.md`
   § Debug panel).
 
-The operator implementation lives in a **shared GLSL chunk**
-(`src/client/hdr/tonemap/tonemap.glsl`, exported alongside a test-pinned pure
-TS mirror) consumed by both the fullscreen pass and the no-float-RT
-fallback (§ 6) — the `dust-raymarch.glsl` two-consumers pattern.
+The operator implementation is one shared graph
+(`../src/client/webgpu/tonemap-tsl.ts`, beside a test-pinned pure TS
+mirror) consumed by both the fullscreen resolve and the inline path chart
+mode takes (§ 6) — the `../src/client/webgpu/extinction/dust-raymarch-tsl.ts`
+two-consumers pattern.
 
 **The dither is not part of the operator for an overlapping emitter.**
 It is a function of `fragCoord` alone, so N additively-blended fragments
 on one pixel add the same offset N times — a coherent bias over dense
-fields, not noise that cancels. H3 split `stellataTonemapUndithered`
+fields, not noise that cancels. H3 split `tonemapUnditheredTsl`
 out for emitters that overlap; the resolve and any single-coverage
 volume keep the dithered call.
 
@@ -433,8 +434,8 @@ resolve to the same value either way. This has always been true of the
 Milky Way band, whose disc and bulge proxies overlap toward the Galactic
 centre, and of M31's two components — but § 1's summation gain raised the
 band's per-fragment `L` about 12×, which moves those fragments to a
-steeper part of the curve and widens the gap. It is a property of chart mode
-and the no-float-RT fallback, not of the shipped path, where the operator
+steeper part of the curve and widens the gap. It is a property of chart mode,
+not of the target path, where the operator
 runs once at the resolve.
 
 ## 3. Exposure model — instrument, adaptation, and the EV trim
@@ -542,7 +543,7 @@ adaptation. Unresolved sources floor at 1 px.
 
 **Coverage cancels, and that is the whole reason this is cheap.** A
 source's per-pixel luminance is its flux over `max(1, π·r_px²)` — the
-same denominator `stellataPointSourcePeak` uses — so `Lᵢ·Aᵢ` is `L(mᵢ)`
+same denominator `pointSourcePeakTsl` uses — so `Lᵢ·Aᵢ` is `L(mᵢ)`
 whether the source is resolved or sub-pixel, and the statistic is
 literally **mean visible flux per viewport pixel**. Coverage survives in
 exactly one place: the fraction of a source's own footprint that lands
@@ -1477,8 +1478,8 @@ instrument or the trim (`onChange` → invalidate) or the applied cut
 through resize or FOV; the statistic lands only off a rendered frame's
 reduction; camera pose renders. A sub-JND drift of the applied cut renders
 nothing and can leave the verdict stale by under 0.01 mag of exposure —
-invisible by the same definition. The obligation `scene/README.md` § A
-skipped layer reports nothing states is discharged by construction, not by
+invisible by the same definition. The obligation `scene/contribution/README.md`
+§ A skipped layer reports nothing states is discharged by construction, not by
 a scheduler.
 
 **What the park inherits.** Its "never reads a partial measurement" claim
@@ -1526,12 +1527,12 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 
 | Layer | Current squash | HDR replacement |
 | --- | --- | --- |
-| Star glow + disc (`star.frag.glsl`) | peak-1 profile; brightness = footprint only | `peak_L = L(m) / max(1, π·r_phys²)` × unit-peak profile (§ 1); footprint math untouched |
+| Star glow + disc (`../src/client/webgpu/star/star-glow-tsl.ts`) | peak-1 profile; brightness = footprint only | `peak_L = L(m) / max(1, π·r_phys²)` × unit-peak profile (§ 1); footprint math untouched |
 | Star halo (MaxEquation) + core mask | unchanged mechanisms | blend equations operate on linear L; depth rules unchanged |
-| Milky Way (`milkyway.frag.glsl`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is each component's `density0`, solved so the two proxy volumes integrate to the Galaxy's published M_V at its V-band LIGHT B/T, dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
-| LG emission (`local-group-emission.frag.glsl`) | `uGlowMagOffset`/`uLimitMag`/`uSizeSpan` gate + `1 − exp` squash, magnitude-domain | *Shipped (gxx.8).* Same mapping as the MW band — `L_px = uExposure · 10^(−0.4·S) · Ω_px` via `stellataSurfaceBrightnessLuminance`. It keeps `Ω_px` where the band moved to the summation area: these objects are not uniform over it (§ 1, *Extended sources*). The "lands on the unit for free" prediction was **half right**: the per-pixel magnitude did carry over, but the zero point did not. `uGlowMagOffset = 11.0` was tuned, and the physical value is *derivable* — a solved column is flux per steradian, so the zero point is the magnitude of one arcsec², 26.5721. The tuned constant sat 4.1 mag hot at 50°/900 px and, carrying no Ω_px, drifted further as the camera zoomed. Two things the row did not anticipate: the population tint needed luma-normalising (it multiplies a column the solver normalised against total flux, so an un-normalised tint is a 0.42 mag error, not a hue choice), and sub-pixel proxies needed the point-source resolution floor (gxx.7). The feared "blown core on a black disc" did not materialise — `DR_MAG` 7.5 covers M31's ~8.7 mag intra-object span |
+| Milky Way (`../src/client/webgpu/milkyway/milkyway-band-tsl.ts`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is each component's `density0`, solved so the two proxy volumes integrate to the Galaxy's published M_V at its V-band LIGHT B/T, dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
+| LG emission (`../src/client/webgpu/local-group/local-group-emission-tsl.ts`) | `uGlowMagOffset`/`uLimitMag`/`uSizeSpan` gate + `1 − exp` squash, magnitude-domain | *Shipped (gxx.8).* Same mapping as the MW band — `L_px = uExposure · 10^(−0.4·S) · Ω_px` via `surfaceBrightnessLuminanceTsl`. It keeps `Ω_px` where the band moved to the summation area: these objects are not uniform over it (§ 1, *Extended sources*). The "lands on the unit for free" prediction was **half right**: the per-pixel magnitude did carry over, but the zero point did not. `uGlowMagOffset = 11.0` was tuned, and the physical value is *derivable* — a solved column is flux per steradian, so the zero point is the magnitude of one arcsec², 26.5721. The tuned constant sat 4.1 mag hot at 50°/900 px and, carrying no Ω_px, drifted further as the camera zoomed. Two things the row did not anticipate: the population tint needed luma-normalising (it multiplies a column the solver normalised against total flux, so an un-normalised tint is a 0.42 mag error, not a hue choice), and sub-pixel proxies needed the point-source resolution floor (gxx.7). The feared "blown core on a black disc" did not materialise — `DR_MAG` 7.5 covers M31's ~8.7 mag intra-object span |
 | Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | *Shipped as designed (H5).* Identical point-source rule as stars, `m` from `planetApparentMagnitude`; `uGlareGain` since deleted (no multiplier on a physical peak). mesh↔glare continuity by construction — pinned to 1e-12 relative in `mesh-surface-pure.test.ts` |
-| Planet mesh (`planet-mesh.frag.glsl`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: `src/client/solar-system/planets/README.md` § Physical-luminance emission |
+| Planet mesh (`../src/client/webgpu/solar-system/planet-mesh-tsl.ts`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: `src/client/solar-system/planets/README.md` § Physical-luminance emission |
 | Planet rings | multiply litIntensity | *Shipped as designed (H5).* Multiply the same host-irradiance scalar the disc airlight and the atmosphere shell ride (`hostIrradianceLuminance`), so ring↔body contrast is fixed by the shared exposure. The strip's RGB is read as a LINEAR reflectance and deliberately not sRGB-decoded — it was authored as an albedo proxy, and decoding would darken the rings ~5x against the true-opacity alpha |
 | Earth night lights | **no codepath** | Nothing to convert: both the renderer path and the `earth-night` map were removed before H5, so this row described a layer that no longer existed. Re-adding city lights needs a radiometric calibration source (Black Marble) rather than a tuned constant, which is why H5 deliberately left it out — tracked separately |
 | Molecular-cloud absorption | premultiplied attenuation of background | **unchanged and now more correct**: transmittance is a multiplicative, exposure-invariant factor, and it attenuates linear luminance instead of squashed values. No exposure multiply — attenuation factors must never carry `uExposure` |
@@ -1574,39 +1575,29 @@ under the unaided eye, a telescopic atlas under a telescope. It inherits
 neither adaptation nor the EV trim, and that is correct rather than a
 gap: paper has no exposure state.
 
-## 6. Float-RT fallback
+## 6. The inline operator
 
-Primary path requires a float-renderable target: RGBA16F via WebGL2
-`EXT_color_buffer_float`, else `EXT_color_buffer_half_float` (fp16
-blending needs no further extension; `EXT_float_blend` is only a 32F
-concern — we never need 32F).
+A float-renderable target is core to the shipped backend, so there is no
+capability verdict to branch on. **Chart mode** is what still reaches the
+inline path: each emitting graph applies the shared operator
+(`../src/client/webgpu/tonemap-tsl.ts`) and renders direct to the canvas,
+with no intermediate target.
 
-On contexts with neither, mirror the extinction-prepass strategy
-(`star-pipeline/extinction/README.md` § The prepass cache — same chunk,
-two paths):
-**each emitting fragment shader applies the shared `tonemap.glsl` chunk
-inline and renders direct to the canvas** — no intermediate RT at all.
 Calibration is identical (same `L`, same operator, same exposure); what
 degrades is compositing: additive accumulation happens on tone-mapped
 values, so dense star fields and the MW band over-brighten slightly
 where sources overlap, and per-channel-max discs blend post-curve.
-Accepted — the fallback population is ~zero on real hardware, and for a
-point source the result is approximately right rather than
-differently-calibrated.
 
 **§ 1's convolution ended that symmetry for diffuse sources, and took the
 dev switch with it.** Off-target there is no attachment 2 and no pass, so
 both volumetric emitters lose the extended-source anchor and read several
 magnitudes faint. A `stellata.hdr.setEnabled(false)` switch used to park the
-whole frame here for A/B, mirroring `setExtinctionPrepassEnabled`; it is
-**retired**, because a path that changes the calibration is not a
-compositing comparison, and shipping it as a setting invited release notes
-describing a mis-calibrated scene as what older hardware gets. What remains
-is a hardware verdict (`supported`) and chart mode, neither of which anyone
-selects.
+whole frame here for A/B; it is **retired**, because a path that changes
+the calibration is not a compositing comparison. Chart mode is the one
+remaining route off the target, and nobody selects it for an A/B.
 
-The fallback is why the operator must live in the shared chunk from H2
-day one — the fullscreen pass and the inline path can never drift.
+That route is why the operator must live in one shared module — the
+fullscreen resolve and the inline path can never drift.
 
 ## 7. Plumbing constraints (H2 scope)
 
@@ -1641,19 +1632,17 @@ day one — the fullscreen pass and the inline path can never drift.
   differently-calibrated rather than approximately right, leaving a way to
   select it was leaving a way to ship a wrong scene. `wantsTarget()` is
   `supported && !chart`. The render target still allocates lazily, which is
-  what made the dormant period cost no VRAM and still serves chart mode and
-  an unsupported context.
-  **Consequence that outlives all of it:** the inline `stellata_tonemap`
-  fallback (§ 6) cannot be deleted, because **chart mode** runs on it. It
-  was the default path throughout H3–H5 and is still the no-float-RT path,
-  so every emitter keeps both paths compiling.
+  what made the dormant period cost no VRAM and still serves chart mode.
+  **Consequence that outlives all of it:** the inline operator (§ 6)
+  cannot be deleted, because **chart mode** runs on it, so every emitter
+  keeps both paths compiling.
   The one emitter still outside the scale is the shelved Local Group
   emission pass (stellata-gxx.8) — convert before un-shelving.
 - **Exposure and `Ω_px` are not H2's.** `uExposure`, `LUMA_CEIL`, and
   `Ω_px` land with their first consumer — stars (H3), the Milky Way (H4),
   the exposure wiring (H6) — rather than in the plumbing bead, where they
   would be uniforms and resize bookkeeping with no reader.
-  H3 landed `uExposure` and `LUMA_CEIL` in `src/client/hdr/emission.glsl`
+  H3 landed `uExposure` and `LUMA_CEIL` in `../src/client/webgpu/emission-tsl.ts`
   + `emission-pure.ts`, reachable through
   `HdrPipeline.emitterUniforms` — the by-reference uniform seam H4 and
   H5 bind to as well. Both chunks are `#ifndef`-guarded because an

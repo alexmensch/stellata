@@ -8,7 +8,6 @@ import {
   FresnelShell,
   SHELL_RIM_BLUE,
   SHELL_RIM_ALPHA_LIMB,
-  makeGlslShellMaterials,
   type ShellMaterials,
   createShellSilhouetteLabel,
   isShellLabelResolvable,
@@ -46,7 +45,7 @@ export class LocalBubbleShell extends FresnelShell {
   // Absolute ICRS pc, Sol origin.
   private sampleAbs = new Float32Array(0);
 
-  constructor(materials: ShellMaterials = makeGlslShellMaterials()) {
+  constructor(materials: ShellMaterials) {
     // renderOrder −1 (with the galactic disc): a background shell, so the
     // local stars inside it composite on top. See src/client/README.md
     // § Full render stack.

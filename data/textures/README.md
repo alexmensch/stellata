@@ -244,7 +244,7 @@ applied; Io, Europa, Callisto and Rhea were 7–9 % off.
 channel, Earth 33 %, Venus 24 %. That is older than the satellite work and is
 deliberately left alone here: `Planet.colour` also carries brightness, because
 the planet glare passes it to the shader unnormalised where the star pipeline
-divides its own colour to relative luminance 1 (`star.vert.glsl:ciToColor`).
+divides its own colour to relative luminance 1 (`../../src/client/webgpu/star/star-vertex-tsl.ts:ciToColor`).
 Aligning the planets means settling that asymmetry first and re-eyeing six
 bodies, so it is tracked rather than smuggled in — `stellata-2f6.63`.
 

@@ -1,5 +1,5 @@
-// The TSL twin of star-local-mirror.ts: LOCAL_DEPTH_PASS variants of the
-// three star pipelines over the shared slot geometry.
+// The local-depth-pass variants of the three star pipelines over the
+// shared slot geometry.
 // See ../../star-pipeline/local-pass/README.md § Mirror draw.
 
 import type * as THREE from 'three';

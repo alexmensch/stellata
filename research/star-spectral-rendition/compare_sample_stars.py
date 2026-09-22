@@ -4,7 +4,7 @@ For each reference star, computes three RGB triplets:
 
   (A) current shader ciToColor(ci)
         - the 3-stop piecewise-linear gradient in CI space currently
-          shipped in src/client/shaders/star.vert.glsl.
+          shipped in ../../src/client/webgpu/star/star-vertex-tsl.ts.
 
   (B) blackbody → sRGB at Teff(spect)
         - uses scripts/catalog-pure.ts T_TABLE (MS-only) for Teff.
@@ -66,7 +66,7 @@ REFERENCE_STARS = [
 
 
 def ci_to_color(ci: float) -> tuple[float, float, float]:
-    """Mirror of src/client/shaders/star.vert.glsl:137 ciToColor.
+    """Mirror of ../../src/client/webgpu/star/star-vertex-tsl.ts:137 ciToColor.
 
     Three-stop piecewise-linear gradient: hot blue (CI≈-0.4) → solar
     white (CI≈0.65) → cool red (CI≈2.0). Identical to the GLSL fn so

@@ -1,4 +1,4 @@
-// planet-atmosphere.frag.glsl on the TSL path: the limb halo for rays that
+// ./planet-atmosphere-tsl.ts on the TSL path: the limb halo for rays that
 // miss the disc, composited premultiplied-over. Model:
 // ../../solar-system/atmosphere/README.md.
 

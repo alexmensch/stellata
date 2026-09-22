@@ -1,10 +1,11 @@
 // The canon vantages the runner measures at, the order a run visits them
 // in, and the URL a scenario boots. README.md § What a run does.
 
-/** Context order for `--backend both`: the gated backend first, so the
- *  Tier 1 vantages open a pin run at the same positions a Tier 1 run
- *  visits them (`pins/README.md` § Run position). */
-export const BACKENDS = ['webgpu', 'webgl2'] as const;
+/** One member, and kept as a list rather than collapsed away: it is the
+ *  `backend` half of every row key and of the on-disk record, so dropping
+ *  it would bump `PERF_SCHEMA` and abandon every archived baseline
+ *  (`schema.ts`, on `PERF_SCHEMA`). */
+export const BACKENDS = ['webgpu'] as const;
 export type Backend = (typeof BACKENDS)[number];
 
 /** Key order is the canon order `all` expands to, and it is load-bearing:
@@ -26,13 +27,10 @@ export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly ScenarioName[];
 
 /**
- * `<base>/v/<blob>/` plus the fragment: the WebGL2 escape hatch where that
- * backend was asked for, and `--hash`'s own switches after it, which
- * `parseRunArgs` has already stripped of any leading `#`. The app reads
- * every switch off one hash, `&`-joined, so the two compose.
+ * `<base>/v/<blob>/` plus `--hash`'s own switches, which `parseRunArgs` has
+ * already stripped of any leading `#`.
  */
-export function scenarioUrl(base: string, blob: string, backend: Backend, hash = ''): string {
+export function scenarioUrl(base: string, blob: string, hash = ''): string {
   const root = base.replace(/\/+$/, '');
-  const parts = [backend === 'webgl2' ? 'renderer=webgl2' : '', hash].filter((p) => p !== '');
-  return `${root}/v/${blob}/${parts.length > 0 ? `#${parts.join('&')}` : ''}`;
+  return `${root}/v/${blob}/${hash === '' ? '' : `#${hash}`}`;
 }

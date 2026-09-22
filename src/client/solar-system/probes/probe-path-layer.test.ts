@@ -6,10 +6,12 @@ import * as THREE from 'three';
 import { AU_PC } from '../../util/astronomy-constants';
 import { tToJdUt } from '../time/time';
 import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
-import { PROBE_MARKER_PX, ProbeField, type ProbeSharedUniforms } from './probe-field';
+import { PROBE_MARKER_PX, ProbeField } from './probe-field';
 import { ProbePathLayer } from './probe-path-layer';
-import { builtinChromeLineMaterials } from '../../chrome-lines/builtin-chrome-lines';
+import type { ScreenMetricUniforms } from '../../util/orbit-line';
+import { fakeChromeLineMaterials } from '../../chrome-lines/chrome-lines-mock';
 import { buildProbeTrajectory } from './probe-trajectory';
+import { fakeProbeMaterials } from '../materials/solar-system-materials-mock';
 
 const STEP_DAYS = 30;
 const FIRST_JD = tToJdUt(0);
@@ -42,13 +44,12 @@ const ROSTER = [makeFile('alpha', 40), makeFile('beta', 80)]
   .map(buildProbeTrajectory);
 
 function makeHarness() {
-  const shared: ProbeSharedUniforms = {
+  const shared: ScreenMetricUniforms = {
     uViewport: { value: new THREE.Vector2(800, 600) },
-    uPixelRatio: { value: 1 },
     uFovYRad: { value: (50 * Math.PI) / 180 },
   };
-  const field = new ProbeField(shared);
-  const layer = new ProbePathLayer(shared, builtinChromeLineMaterials());
+  const field = new ProbeField(fakeProbeMaterials());
+  const layer = new ProbePathLayer(shared, fakeChromeLineMaterials());
   const t = ROSTER[0].sampleT[2];
   field.attach(ROSTER, t);
   layer.attach(ROSTER);
@@ -114,11 +115,7 @@ describe('ProbeField out-of-frame reads', () => {
     // Probe focus applies from a URL before the first frame runs, and it
     // bails on a false localPositionInto — so the attach seed is what keeps
     // a shared probe link from decoding to Sol.
-    const field = new ProbeField({
-      uViewport: { value: new THREE.Vector2(800, 600) },
-      uPixelRatio: { value: 1 },
-      uFovYRad: { value: (50 * Math.PI) / 180 },
-    });
+    const field = new ProbeField(fakeProbeMaterials());
     field.attach(ROSTER, ROSTER[0].sampleT[2]);
     const out = new THREE.Vector3();
     expect(field.localPositionInto(0, out)).toBe(true);
@@ -179,7 +176,7 @@ describe('local depth pass membership', () => {
     expect(h.layer.localGroup.visible).toBe(false);
   });
 
-  it('mirrors each trail\'s visibility and anchor drift onto its local twin', () => {
+  it('mirrors each trail\'s visibility and anchor drift onto its local mirror', () => {
     // The mirror shares the geometry but not the transform, so a missed
     // position copy detaches the local-pass trail from its marker.
     const h = makeHarness();

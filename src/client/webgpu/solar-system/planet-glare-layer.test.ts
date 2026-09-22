@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
@@ -100,7 +100,7 @@ describe('the WebGPU reflected-glare layer', () => {
     b.radius[1] = 5;
     b.albedo[1] = 6;
     b.hostAbsmag[1] = 7;
-    b.phaseC[4] = 8;
+    b.phaseC[1] = 8;
     b.ringFlux[1] = 9;
     b.eclipseDim[1] = 0.5;
     draw(layer);
@@ -212,7 +212,7 @@ describe('the WebGPU reflected-glare layer', () => {
 
   it('parents the mirror into the pass-scene group, visible, out of the seam scene', () => {
     // uLocalPassRange gates the mirror per instance (no cluster → all
-    // collapse), so it stays visible exactly as the GLSL mirror mesh does.
+    // collapse), so the mesh itself stays visible.
     const { layer, scene, mirrorParent } = makeLayer();
     expect(mirrorParent.children).toContain(layer.mirrorMesh);
     expect(scene.children).not.toContain(layer.mirrorMesh);
@@ -220,15 +220,32 @@ describe('the WebGPU reflected-glare layer', () => {
     expect(layer.mesh.visible).toBe(true);
   });
 
+  // Glare last, so a transiting body's glare adds over everything behind
+  // it — a parent mesh included (../../local-depth/README.md).
+  it('draws both meshes last, unculled', () => {
+    const { layer } = makeLayer();
+    for (const m of [layer.mesh, layer.mirrorMesh]) {
+      expect(m.renderOrder).toBe(4);
+      expect(m.frustumCulled).toBe(false);
+    }
+  });
+
   it('swaps both materials into chart ink and back', () => {
     const { layer } = makeLayer();
     const blends = () => [layer.mesh, layer.mirrorMesh]
       .map((m) => (m.material as THREE.Material).blending);
+    const premultiplied = () => [layer.mesh, layer.mirrorMesh]
+      .map((m) => (m.material as THREE.Material).premultipliedAlpha);
     expect(blends()).toEqual([THREE.AdditiveBlending, THREE.AdditiveBlending]);
+    expect(premultiplied()).toEqual([false, false]);
     layer.setMonochrome(true);
     expect(blends()).toEqual([THREE.MultiplyBlending, THREE.MultiplyBlending]);
+    // three declines MultiplyBlending without it and silently leaves the
+    // previous blend func in place, which draws white chart discs.
+    expect(premultiplied()).toEqual([true, true]);
     layer.setMonochrome(false);
     expect(blends()).toEqual([THREE.AdditiveBlending, THREE.AdditiveBlending]);
+    expect(premultiplied()).toEqual([false, false]);
   });
 
   it('takes both meshes back out of their parents on dispose', () => {

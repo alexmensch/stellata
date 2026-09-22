@@ -140,12 +140,12 @@ information.
   the canon order, so a two-context run would measure it at a position the
   pin does not hold for it and the row would refuse
   (§ Run position). A witness that refuses is not a witness. Paste the
-  table; the eight pin rows the run did not visit print as `not measured`
+  table; the three pin rows the run did not visit print as `not measured`
   and fail nothing. A `✗` exits 1 and owes an `accepted:` line exactly as it
   does at Tier 2, and the pin is left where it was.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
-  `--mode dwell --scenario all --backend both --cooldown-ms 120000
+  `--mode dwell --scenario all --cooldown-ms 120000
   --frames 960 --pin`, ~15–25 min. Every row the pin records is this tier's
   to re-take. **`--frames` is not optional and its value is whatever the
   outgoing pin's rows were taken at** — today 960, and every pin row carries
@@ -231,8 +231,7 @@ two runs of the same shape agreed to 0.019 ms, and each run's own state
 guard read steady throughout. A cool-down does not reset it: sol at 2nd of
 10 behind 120 s idle matched sol at 2nd of 2 with none to 2e-6 ms. So
 every row records its position, both gates refuse a row whose position
-differs, and the canon order puts the Tier 1 vantages first on the gated
-backend — `--backend both` runs WebGPU contexts before WebGL2, and `all`
+differs, and the canon order puts the Tier 1 vantages first — `all`
 expands mw120, sol, earth, mw50, lg — so the pin run and the Tier 1 run
 share their first two contexts. Reordering either constant re-takes the
 pin (stellata-8cg.49.27).
@@ -295,10 +294,10 @@ across frames and a coincidence of timing move it alike. Wall time is quantised 
 interval, so every canon row's wall p50 reads 16.7–17.5 ms with a
 middle-half spread of a whole interval, and its median turns on whether
 50.1 % or 49.9 % of the frames made the deadline: wall is recorded, never
-marked. A row carrying no GPU stream is recorded and not gated — every
-WebGL2 row, since the backend supplies no such clock, and any WebGPU row
-whose adapter resolves no believable durations. Deleting the WebGL2 path
-(stellata-0it.14) leaves only gated rows behind. A vantage that does not
+marked. A row carrying no GPU stream is recorded and not gated — an adapter that
+grants the timestamp feature and then refuses the query set resolves no
+believable durations. Every canon row on the pinned adapter gates. A
+vantage that does not
 reproduce cold-to-cold is recorded and not gated on the same footing —
 today that is lg alone, and the paragraph on the floor below says why.
 It keeps its GPU reading, so unlike a row with no such clock it still
@@ -363,8 +362,8 @@ names moves past its band — the pair's two-sigma standard error floored, on a
 frame row; the vantage's own constant alone, on a compute row — or when it
 crosses the
 ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
-time — whatever the band says and whether or not the vantage is gated. mw50 at 29.028 is the nearest
-row today, 4.37 ms under. `✓` is cheaper, `~` is not resolved — not "no
+time — whatever the band says and whether or not the vantage is gated. mw50 at 30.551 is the nearest
+row today, 2.85 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change". The `floor` column beside `delta` — how far the 10th-percentile
 frame moved — never marks; it says whether a `✗` lifted every frame or
 only the slow half (`scripts/perf/pins/README.md` § Reading `--against-pin`).
@@ -389,7 +388,7 @@ crossing, which is a collapse rather than a move.
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode
-dwell --scenario all --backend both --cooldown-ms 120000`, with no
+dwell --scenario all --cooldown-ms 120000`, with no
 render-path file changed between them — put sol, earth, mw50 and mw120
 inside 0.18 % of each other, the largest absolute move being 0.030 ms. The
 floor sits about 8× that.
@@ -416,7 +415,7 @@ So price a `local-group/` diff with a per-pass differential at lg, never
 with its pin row. This is the standing arrangement, not an interim one.
 
 **The `## Perf` section.** Required in the PR body when the diff touches
-anything under `src/client/` — `.ts`, `.glsl` and `.wgsl` alike — outside
+anything under `src/client/` — `.ts` and `.wgsl` alike — outside
 `*.md`, `*.test.ts`, and the folders that neither draw nor decide what is
 drawn: `calibration/`, `debug/`, `focus-card/`, `format/`, `hover/`,
 `kinds/`, `loaders/`, `modals/`, `overlays/`, `poi/`,
@@ -485,7 +484,7 @@ own bead. Tiers 0 and 1 leave the pin where they found it, which is the
 point of them: the pin advances when the answer would change.
 
 **Who runs it.** The agent, human-armed: one arm per run, the machine idle
-throughout — about 15–25 min for a Tier 2 pin's ten dwell contexts at a
+throughout — about 15–25 min for a Tier 2 pin's five dwell contexts at a
 120 s cool-down, ~4 min for Tier 1's two.
 
 ## Citation and archiving

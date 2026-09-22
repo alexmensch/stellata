@@ -7,7 +7,6 @@ import type { FocusableProvider } from '../camera/focus/focus-target';
 import { parkDistance } from '../camera/focus/focus-transition';
 import { createLgFocusProvider } from '../focus-card/lg-focus-provider';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
-import { pickHdrEmitterUniforms } from '../hdr/hdr-pipeline';
 import { formatLocalGroupHover } from '../hover/formatters/local-group-hover-format';
 import type { HoverHit, HoverProvider } from '../hover/hover-types';
 import { absCameraDistancePc } from '../kinds/kind-geometry';
@@ -107,12 +106,10 @@ export function createLgKindModule(): LgKindModule {
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
       if (!catalog || catalog.objects.length === 0) return null;
-      layer = new LocalGroupLayer(catalog, kindCtx.chromeLines);
+      layer = new LocalGroupLayer(catalog, kindCtx.webgpu.chromeLineMaterials);
       layer.setMonochrome(kindCtx.getMonochrome());
       kindCtx.scene.add(layer.group);
-      emission = new LocalGroupEmission(catalog.objects, {
-        hdr: pickHdrEmitterUniforms(kindCtx.sharedUniforms),
-      }, kindCtx.webgpu?.lgEmissionMaterials);
+      emission = new LocalGroupEmission(catalog.objects, kindCtx.webgpu.lgEmissionMaterials);
       emission.setChartHidden(kindCtx.getMonochrome());
       kindCtx.scene.add(emission.group);
       return {
@@ -141,7 +138,6 @@ export function createLgKindModule(): LgKindModule {
         },
         update: (fc) => {
           updateWarpGatedRefLayer(layer, fc, kindCtx.detailPermits('lgWireframes'));
-          emission!.update(fc.worldOffset);
         },
         setMonochrome: (on) => {
           layer!.setMonochrome(on);

@@ -1,6 +1,5 @@
-// TSL uniform-node twins of the GLSL shell factory's uniform block
-// (../../fresnel-shell/fresnel-shell.ts) — transcribed key-for-key, pinned
-// by a key-parity test.
+// The shell surface's seven slots as TSL nodes, seeded from
+// ../../fresnel-shell/fresnel-shell.ts's options.
 
 import { Color } from 'three';
 import { uniform } from 'three/tsl';
@@ -13,10 +12,7 @@ import {
 } from '../../fresnel-shell/shell-distance-pure';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 
-/** `uColour` goes through the same raw-chrome mapping the GLSL factory
- *  uses: the registry is keyed by the live `Color`, so a node's `.value`
- *  re-authors on `syncMode` exactly as a `ShaderMaterial` uniform's does
- *  (`../../hdr/chrome/README.md`). */
+/** README.md § Chrome, so both extra attachments write zero. */
 export function fresnelShellUniformNodes(opts: FresnelShellMaterialOptions) {
   const reach = rimDistancesForExtent(opts.extentPc);
   return {

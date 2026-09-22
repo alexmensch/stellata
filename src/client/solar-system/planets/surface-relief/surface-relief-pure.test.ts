@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { SOL_BODIES } from '../../planet-system';
 import { texelBytes } from '../../../util/texture-bytes-pure';
+import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
 import {
   HORIZON_AZIMUTHS,
   HORIZON_SIN_RANGE,
@@ -17,13 +18,9 @@ import {
   terrainViewFactor,
 } from './surface-relief-pure';
 
-const frag = readFileSync(
-  fileURLToPath(new URL('../planet-mesh.frag.glsl', import.meta.url)),
-  'utf8',
-);
-/** Counting identifiers over the raw source would fail the moment a comment
- *  named one of them, which is a spurious failure with a confusing message. */
-const fragCode = frag.replace(/\/\/[^\n]*/g, '');
+/** The shipped mesh graph, pinned as source text — there is no GPU here. */
+const fragCode = readTslSource(
+  new URL('../../../webgpu/solar-system/planet-mesh-tsl.ts', import.meta.url));
 
 /** Equator at longitude 0 with the pole on +z: east is +y, north is +z. */
 const N: readonly [number, number, number] = [1, 0, 0];
@@ -137,51 +134,40 @@ describe('the horizon lookup', () => {
   it('stays in range when the turn fraction rounds to a whole turn', () => {
     // A small enough negative azimuth makes 1 - turn round to exactly 1, which
     // puts the channel index one past the last — the wrap is load-bearing, not
-    // defensive, and the same edge exists in the GLSL's fract().
+    // defensive, and the same edge exists in the graph's fract().
     expect(horizonSin(enc, 1, -1e-30)).toBeCloseTo(decode(enc[0]), 12);
   });
 
   it('answers on azimuth 0 with the sun at the local zenith', () => {
     // Both components vanish there and the bearing is meaningless. atan2(0, 0)
-    // is 0 in JS but UNDEFINED in GLSL, where a NaN index would read off the
+    // is 0 in JS but UNDEFINED in WGSL, where a NaN index would read off the
     // end of the array — the shader guards to land on this same answer.
     expect(horizonSin(enc, 0, 0)).toBeCloseTo(decode(enc[0]), 12);
   });
 });
 
-// The shader is the render path and this module is only its mirror, so the
-// expression shapes are pinned as source text — there is no GL context here.
 describe('the shader mirrors this frame', () => {
-  it('builds east and north the same way', () => {
-    expect(frag).toContain('vec3 e = cross(pole, n);');
-    expect(frag).toContain('north = cross(n, east);');
-    expect(frag).toContain('if (eLen < 1e-6) return false;');
+  it('builds east and north the same way, on the shared pole epsilon', () => {
+    expect(fragCode).toContain('const e = cross(pole, n);');
+    expect(fragCode).toContain('north: cross(n, east)');
+    expect(fragCode).toContain('ok: eLen.greaterThanEqual(RELIEF_POLE_EPS)');
     expect(RELIEF_POLE_EPS).toBe(1e-6);
   });
 
   it('reconstructs z rather than reading the flat blue channel', () => {
-    expect(frag).toContain('vec2 t = enc * 2.0 - 1.0;');
-    expect(frag).toContain('n * sqrt(max(1.0 - dot(t, t), 0.0))');
-    expect(frag).toContain('texture(uNormalMap, vUvM).rg');
-  });
-
-  it('carries the same azimuth count and encoding scale', () => {
-    expect(frag).toContain(
-      `const int STELLATA_HORIZON_AZIMUTHS = ${HORIZON_AZIMUTHS};`);
-    expect(frag).toContain(
-      `const float STELLATA_HORIZON_SIN_RANGE = ${HORIZON_SIN_RANGE};`);
+    expect(fragCode).toContain('p.uNormalMap.sample(vUvM).rg.mul(2.0).sub(1.0)');
+    expect(fragCode).toContain('n.mul(max(float(1.0).sub(dot(t, t)), 0.0).sqrt())');
   });
 
   it('walks the two maps in one azimuth order', () => {
-    expect(frag).toContain('float[STELLATA_HORIZON_AZIMUTHS](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a)');
-    expect(frag).toContain('int i0 = int(base) % STELLATA_HORIZON_AZIMUTHS;');
-    expect(frag).toContain('int i1 = (i0 + 1) % STELLATA_HORIZON_AZIMUTHS;');
+    expect(fragCode).toContain('const chans = [a.x, a.y, a.z, a.w, b.x, b.y, b.z, b.w];');
+    expect(fragCode).toContain('const i0 = base.mod(HORIZON_AZIMUTHS);');
+    expect(fragCode).toContain('const i1 = i0.add(1.0).mod(HORIZON_AZIMUTHS);');
   });
 
-  it('keeps the zenith bearing defined, which GLSL atan does not', () => {
-    expect(frag).toContain(
-      'vec2 bearing = sunE == 0.0 && sunN == 0.0 ? vec2(1.0, 0.0) : vec2(sunE, sunN);');
-    expect(frag).toContain('atan(bearing.y, bearing.x)');
+  it('keeps the zenith bearing defined, which atan2 of (0, 0) is not', () => {
+    expect(fragCode).toContain('const degenerate = sunE.equal(0.0).and(sunN.equal(0.0));');
+    expect(fragCode).toContain('select(degenerate, vec2(1.0, 0.0), vec2(sunE, sunN))');
   });
 });
 
@@ -293,17 +279,17 @@ describe('the terrain view factor', () => {
   });
 
   it('clamps in the shader too, where the divergence would be silent', () => {
-    // The CPU side is the mirror; only the GLSL lights pixels. A max() dropped
-    // there brightens every plain and nothing in this file would notice.
-    expect(frag).toContain('float s = max(stellataDecodeSin(enc[i]), 0.0);');
-    expect(frag).toContain('sum += s * s;');
-    expect(frag).toContain('return sum / float(STELLATA_HORIZON_AZIMUTHS);');
+    // The CPU side is the mirror; only the graph lights pixels. A max()
+    // dropped there brightens every plain and nothing in this file notices.
+    expect(fragCode).toContain('const s = max(decodeSin(raw), 0.0);');
+    expect(fragCode).toContain('sum = sum.add(s.mul(s));');
+    expect(fragCode).toContain('return sum.div(HORIZON_AZIMUTHS);');
     // Both readings of a texel decode through the one helper, so the encoding
     // cannot drift between the skyline lookup and the view factor.
-    expect(frag).toContain(
-      'return (raw * 2.0 - 1.0) * STELLATA_HORIZON_SIN_RANGE;');
-    expect(frag).toContain(
-      'return stellataDecodeSin(mix(enc[i0], enc[i1], slot - base));');
+    expect(fragCode).toContain(
+      'const decodeSin = (raw: NF) => raw.mul(2.0).sub(1.0).mul(HORIZON_SIN_RANGE);');
+    expect(fragCode).toContain(
+      'return decodeSin(mix(encAt(a, b, i0), encAt(a, b, i1), slot.sub(base)));');
   });
 
   it('rides uPhaseScale on both reflected terms, so the ratio is phase-free', () => {
@@ -311,12 +297,14 @@ describe('the terrain view factor', () => {
     // if the phase correction multiplies the fill and the direct term alike.
     // Off the fill alone it would divide in, and Mercury sits on the clamp
     // floor of 0.25 from 60° through 150° — a 4x brighter shadow there.
-    expect(frag).toContain('vec3 col = surfaceScale * (dayside * limb * uPhaseScale);');
-    expect(frag).toContain('* limb * uPhaseScale);');
+    expect(fragCode).toContain(
+      'const reflected = dayside.mul(limb).mul(p.uPhaseScale).toVar();');
+    expect(fragCode).toContain('.mul(limb).mul(p.uPhaseScale)));');
     // Skylight is the one additive term that stays OUTSIDE it: air scatter
     // carries no surface albedo, and its disc mean divides out through
     // atmoDiscMeans instead (../emission/README.md § Two disc means).
-    const skylight = frag.match(/col \+= surfaceScale \* stellata_skyIrradiance[\s\S]*?;/)!;
+    const skylight = fragCode.match(
+      /col\.addAssign\(surfaceScale\.mul\(skyIrradianceTsl[\s\S]*?\)\);/)!;
     expect(skylight[0]).not.toContain('uPhaseScale');
   });
 
@@ -335,32 +323,37 @@ describe('the terrain view factor', () => {
 // and nothing else, which is exactly one derived cosine spent in one place.
 describe('relief feeds the direct term only', () => {
   it('perturbs nothing but the Lambert cosine', () => {
-    expect(fragCode.match(/nRelief/g)).toHaveLength(2);
+    expect(fragCode.match(/nRelief/g)).toHaveLength(3);
     expect(fragCode.match(/sunCosRelief/g)).toHaveLength(3);
-    expect(frag).toContain(
-      'smoothstep(-w, w, sunCosRelief) * max(sunCosRelief, w) * horizonGate;');
+    expect(fragCode).toContain('smoothstep(w.negate(), w, sunCosRelief)');
+    expect(fragCode).toContain('.mul(max(sunCosRelief, w)).mul(horizonGate)');
   });
 
   it('bounds the term at the body, on the geometric cosine', () => {
-    expect(frag).toContain(
-      'smoothstep(-uReliefHorizon.y, -uReliefHorizon.x, sunCos)');
+    expect(fragCode).toContain(
+      'p.uReliefHorizon.y.negate(), p.uReliefHorizon.x.negate(), sunCos));');
   });
 
   it('leaves the geometric consumers of sunCos untouched', () => {
-    expect(frag).toContain('float sunCos = dot(n, uSunDirView);');
-    expect(frag).toContain('float lit = step(0.0, sunCos) * step(0.5, shadow);');
-    expect(frag).toContain('stellata_skyIrradiance(sunCos, uScaleHeightR,');
+    expect(fragCode).toContain('const sunCos = dot(n, p.uSunDirView).toVar();');
+    expect(fragCode).toContain('const lit = step(0.0, sunCos).mul(step(0.5, shadow));');
+    expect(fragCode).toContain('skyIrradianceTsl(');
+    // The skyline test is measured from the ground's true local horizontal,
+    // so the facet's own tilt must not enter it twice.
+    expect(fragCode).toContain(
+      'horizonGate.assign(smoothstep(sinH.sub(pen), sinH.add(pen), sunCos));');
     // Interreflection is the fourth: the light filling a shadow comes off the
     // terrain around the patch, whose illumination is set by the sun's true
     // elevation there and not by which way this one facet happens to tilt.
     // uPhaseScale rides it as well — without that the shadow-to-lit ratio would
     // be a function of phase angle on every body carrying an empirical curve.
-    expect(frag).toContain(
-      '* (uTerrainAlbedo * terrainView * max(sunCos, 0.0) * limb * uPhaseScale);');
+    expect(fragCode).toContain(
+      'p.uTerrainAlbedo.mul(terrainView).mul(max(sunCos, 0.0))');
     // Narrow enough to survive an argument-list reflow in the atmosphere
     // march: what matters is which normal goes in, not the whole call.
-    expect(frag).toMatch(/float ndotv = clamp\(dot\(n, v\)/);
-    expect(frag).toMatch(/vec3 surf = normalize\(stellata_scalePolar\(normalize\(vNormalV\)/);
+    expect(fragCode).toContain('const ndotv = clamp(dot(n, view), 0.0, 1.0);');
+    expect(fragCode).toContain(
+      'const surf = scalePolarTsl(n, p.uPoleView, p.uPolarRadiusR).normalize();');
   });
 });
 

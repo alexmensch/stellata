@@ -44,7 +44,7 @@ index lands. Both lists live in one `uint` buffer of `2 × count` slots,
 glow first (`tierListBase`), so a pass's vertex stage reads
 `survivors[listBase + instance_index]`.
 
-The draws stay three, exactly the WebGL2 count. The core mask and the
+The draws are three. The core mask and the
 disc draw both consume the disc list — one geometry, one args slot,
 `indirectOffset` 20 — and the glow draw its own at offset 0. Mask-only
 and disc-only differences (a member keeps its stamp, a

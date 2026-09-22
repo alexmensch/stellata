@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../webgpu/tsl/tsl-source-fixture';
 import { describe, it, expect } from 'vitest';
 import {
   EARTH_PHASE,
@@ -509,11 +508,9 @@ describe('illuminatedFraction mirrors the shader', () => {
   });
 
   it('carries the shader expression that drives the photocentre shift', () => {
-    const glareVert = readFileSync(
-      fileURLToPath(new URL('./planets/glare/planet.vert.glsl', import.meta.url)),
-      'utf8',
-    );
-    expect(glareVert).toContain('float illumFrac = (1.0 + cosA) * 0.5;');
-    expect(glareVert).toContain('(1.0 - illumFrac)');
+    const glare = readTslSource(
+      new URL('../webgpu/solar-system/planet-glare-tsl.ts', import.meta.url));
+    expect(glare).toContain('const illumFrac = cosA.add(1.0).mul(0.5);');
+    expect(glare).toContain('float(1.0).sub(illumFrac)');
   });
 });

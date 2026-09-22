@@ -1,6 +1,6 @@
 // Async half of the boot: construct + init the WebGPURenderer and the
-// seam handle. Loaded via import() from main.ts — the module (and
-// three/webgpu with it) never reaches the WebGL2 bundle.
+// seam handle. Loaded via import() from main.ts, so the module (and
+// three/webgpu with it) never reaches the entry bundle.
 
 import { LinearSRGBColorSpace, WebGPURenderer } from 'three/webgpu';
 import type * as THREE from 'three';
@@ -30,14 +30,21 @@ import { makeTslCloudMaterials } from './molecular-clouds/tsl-cloud-materials';
 import { makeTslLgEmissionMaterials } from './local-group/tsl-lg-materials';
 import { makeTslBandMaterials } from './milkyway/tsl-band-materials';
 import type { BandMaterials } from '../milkyway/band-materials';
+import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { StarCompaction } from './star/compaction/star-compaction';
 import { STAR_VERTEX_STAGE_STORAGE_BUFFERS, StarLayer } from './star/star-layer';
 import type { StarTables } from './star/star-tables';
 import { settleTimestampSupport, type TimestampBackend } from './timestamps/timestamp-probe';
+import {
+  allocatesWithinMemory,
+  watchOutOfMemory,
+  type ErrorReporter,
+  type ErrorScopeDevice,
+} from './out-of-memory';
 
 /** Null when the device came back and then refused the renderer. The
- *  caller shows the requires-WebGPU page rather than a broken canvas —
- *  there is no WebGL2 fallback (README.md § The renderer is WebGPU). */
+ *  caller shows the requires-WebGPU page rather than a broken canvas
+ *  (README.md § The renderer is WebGPU). */
 export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam | null> {
   if (!('gpu' in navigator)) return null;
   const renderer = new WebGPURenderer({
@@ -84,12 +91,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // three bump (reversed-depth-sort.ts carries the mechanism).
   renderer.setOpaqueSort(reversedDepthOpaqueSort);
   renderer.setTransparentSort(reversedDepthTransparentSort);
-  // Output stays in the working colour space: ported shaders own the
-  // whole transfer chain (operator + sRGB encode), exactly as the GLSL
-  // build's do, and any other setting makes three render the scene into
-  // a hidden full-resolution target plus a colour-transform pass —
-  // double-encoding every emitter and pricing an extra fullscreen pass
-  // into every frame (README.md § Output colour space).
+  // README.md § Output colour space.
   renderer.outputColorSpace = LinearSRGBColorSpace;
   let registry: SharedUniformNodeRegistry | null = null;
   const hdr = new WebGpuHdrPipeline(renderer);
@@ -97,17 +99,21 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // fallback march and the prepass march sample the SAME dust node, so
   // `setDustTexture` cannot reach one and miss the other.
   const extinctionSlots = new ExtinctionNodes();
+  const outOfMemory = watchOutOfMemory(renderer as unknown as ErrorReporter);
+  const scopeDevice = (renderer.backend as unknown as { device: ErrorScopeDevice }).device;
   const nodesOrThrow = (caller: string) => {
     if (registry === null) throw new Error(`${caller} before bindSharedUniforms`);
     return registry.nodes;
   };
   const registerMrtLayer = (layer: Parameters<typeof hdr.registerMrtLayer>[0]) =>
     hdr.registerMrtLayer(layer);
-  // Unlike the per-consumer factories below it, this one is built once and
-  // cached: the disc and the bulge share its slots by reference, so a
+  // Unlike the per-consumer factories below, these two are built once and
+  // cached. The band's disc and bulge share its slots by reference, so a
   // second factory would give the layer a second, independent dust model
-  // and an MRT registration nothing disposes.
+  // and an MRT registration nothing disposes; the chrome-line factory is
+  // one per boot so every overlay, shell-wired or kind, holds the same one.
   let bandMaterialsCache: BandMaterials | null = null;
+  let chromeLineMaterialsCache: ChromeLineMaterials | null = null;
   // Boot-scoped so the extinction prepass, built later on the first
   // attachDust, can gate on the tables (extinction/README.md § The cache
   // gate) and march the worklist the compaction appends
@@ -141,9 +147,10 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       });
     },
     get chromeLineMaterials() {
-      return makeTslChromeLineMaterials({
+      chromeLineMaterialsCache ??= makeTslChromeLineMaterials({
         nodes: nodesOrThrow('chromeLineMaterials'), registerMrtLayer,
       });
+      return chromeLineMaterialsCache;
     },
     get shellMaterials() {
       return makeTslShellMaterials({ registerMrtLayer });
@@ -213,6 +220,18 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     setDustTexture(texture: THREE.Data3DTexture | null) {
       extinctionSlots.setDustTexture(texture);
     },
+    onOutOfMemory(listener: () => void) {
+      return outOfMemory.subscribe(listener);
+    },
+    uploadTexture(texture: THREE.Texture, settled: (uploaded: boolean) => void) {
+      allocatesWithinMemory(scopeDevice, () => renderer.initTexture(texture)).then(
+        settled,
+        (err: unknown) => {
+          console.error('planet texture upload threw', err);
+          settled(false);
+        },
+      );
+    },
     attachExtinctionPrepass(options: WebGpuExtinctionPrepassSources) {
       if (starTables === null || starCompaction === null) {
         throw new Error('attachExtinctionPrepass before attachStarLayer');
@@ -228,13 +247,15 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     },
     dispose() {
       extinctionSlots.dispose();
+      outOfMemory.dispose();
       // The node registry holds no GPU resource — it mirrors the shell's
       // uniform value-objects, which the shell owns. Dropping it is what
       // makes a post-dispose attach throw rather than build against a
-      // dead boot. The band cache drops with it, or a post-dispose read
-      // would hand back a factory built against one.
+      // dead boot. Both caches drop with it, or a post-dispose read would
+      // hand back a factory built against one.
       registry = null;
       bandMaterialsCache = null;
+      chromeLineMaterialsCache = null;
     },
   };
 }

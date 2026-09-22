@@ -1,6 +1,5 @@
-// The per-draw attachment gate of hdr/attachments/README.md § The gate,
-// re-expressed for WebGPU. See README.md § The gate becomes the output
-// struct.
+// The statistic-write mask the emitter structs multiply. See README.md
+// § The gate becomes the output struct.
 
 import { uniform } from 'three/tsl';
 

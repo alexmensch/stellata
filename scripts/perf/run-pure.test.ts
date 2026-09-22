@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BROWSER_CHANNEL, DWELL_METHOD, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe,
-  markerVerdict, methodFor, planContexts, readbackOrder, runProvenance, softwareRenderer,
+  BROWSER_CHANNEL, GATE_BOOT_PREFIX, bootFailure, bufferShortfall, describeProbe,
+  markerVerdict, planContexts, readbackOrder, runProvenance, softwareRenderer,
 } from './run-pure';
 import { SCENARIO_NAMES, TIER1_SCENARIOS } from './scenarios';
 import type { AdapterProbe, GitProvenance } from './schema';
@@ -33,24 +33,6 @@ function probe(over: {
   };
 }
 
-describe('methodFor', () => {
-  it('leaves each backend on its own best clock when only one is asked for', () => {
-    expect(methodFor({ backend: 'webgl2' })).toEqual({ method: undefined, why: null });
-    expect(methodFor({ backend: 'webgpu' })).toEqual({ method: undefined, why: null });
-  });
-
-  it('pins wall time for a two-backend run, and says why', () => {
-    const { method, why } = methodFor({ backend: 'both' });
-    expect(method).toBe(DWELL_METHOD);
-    expect(why).toContain('the one clock WebGL2 and WebGPU share');
-  });
-
-  it('honours an explicit pin over the both-backend default, silently', () => {
-    expect(methodFor({ backend: 'both', method: 'timestamp' }))
-      .toEqual({ method: 'timestamp', why: null });
-  });
-});
-
 describe('planContexts — the order a run visits its contexts in', () => {
   it('runs one backend in the order the scenarios were given', () => {
     expect(planContexts(['sol', 'lg'], 'webgpu', [4])).toEqual([
@@ -59,17 +41,12 @@ describe('planContexts — the order a run visits its contexts in', () => {
     ]);
   });
 
-  it('runs both backends backend-major, the gated one first', () => {
-    expect(planContexts(['sol', 'lg'], 'both', [4]).map((c) => `${c.name}|${c.backend}`))
-      .toEqual(['sol|webgpu', 'lg|webgpu', 'sol|webgl2', 'lg|webgl2']);
-  });
-
   // The pin run and the Tier 1 run share their first two contexts, which is
   // what lets Tier 1 compare against the pin: rows compare at equal position.
   it('opens a pin run with exactly the contexts a Tier 1 run visits', () => {
-    const pin = planContexts(SCENARIO_NAMES, 'both', [4]);
+    const pin = planContexts(SCENARIO_NAMES, 'webgpu', [4]);
     const tier1 = planContexts(TIER1_SCENARIOS, 'webgpu', [4]);
-    expect(pin).toHaveLength(10);
+    expect(pin).toHaveLength(5);
     expect(pin.slice(0, tier1.length)).toEqual(tier1);
     expect(tier1.map((c) => `${c.name}|${c.backend}`)).toEqual(['mw120|webgpu', 'sol|webgpu']);
   });
@@ -83,7 +60,7 @@ describe('planContexts — the order a run visits its contexts in', () => {
 
   it('adds no repeat for a single cadence, which is every ordinary run', () => {
     expect(readbackOrder([4])).toEqual([4]);
-    expect(planContexts(SCENARIO_NAMES, 'both', [4])).toHaveLength(10);
+    expect(planContexts(SCENARIO_NAMES, 'webgpu', [4])).toHaveLength(5);
   });
 });
 
@@ -115,14 +92,13 @@ describe('softwareRenderer — nothing measured on one counts', () => {
 });
 
 describe('describeProbe', () => {
-  it('spells out an absent timer query rather than printing a bare false', () => {
-    const text = describeProbe(probe({ renderer: 'Apple GPU' }));
-    expect(text).toContain('EXT_disjoint_timer_query_webgl2 present');
-    expect(describeProbe({ webgl: { renderer: 'x', vendor: 'y', timerQuery: false }, webgpu: null }))
-      .toContain('ABSENT');
+  it('prints the WebGL strings the pin slug is named by, and no timer-query verdict', () => {
+    const text = describeProbe({ webgl: { renderer: 'Apple GPU', vendor: 'Apple', timerQuery: false }, webgpu: null });
+    expect(text).toContain('webgl : Apple GPU · Apple');
+    expect(text).not.toMatch(/timer|ABSENT/);
   });
 
-  it('says a WebGL2 boot has no WebGPU timestamp answer, rather than false', () => {
+  it('says an unread timestamp answer rather than false', () => {
     const text = describeProbe({
       webgl: null,
       webgpu: {
@@ -130,7 +106,7 @@ describe('describeProbe', () => {
         isFallbackAdapter: false, timestampsAvailable: null,
       },
     });
-    expect(text).toContain('n/a on a webgl2 boot');
+    expect(text).toContain('unread');
     expect(text).toContain('no WebGL2 context');
   });
 });

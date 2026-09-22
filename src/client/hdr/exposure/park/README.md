@@ -23,10 +23,9 @@ states answer that, and `parkable` is the predicate over both. After
 `ADAPT_PARK_SETTLED_LANDINGS` consecutive landed measurements meeting it,
 with the applied cut settled where it says, the reduction's draws and the
 statistic attachment's emitter writes both stop. What stays: the
-attachment's **clear** (it must read zero, not stale) and the **readback
-fence** — the tile-level readback is the frame's only ANGLE submission
-barrier, which chart mode may drop and scene mode must not
-(`../reduction/README.md` § Where it runs). The machine ticks from
+attachment's **clear** (it must read zero, not stale) and the
+**readback**, which keeps the in-flight cadence `readbackPending` reports
+the same across a park (`../reduction/README.md` § Where it runs). The machine ticks from
 `measure()` once per **rendered** frame.
 
 - **No cut.** The measurement is most expensive exactly here — the
@@ -134,7 +133,7 @@ is where the win is.
   vantage-independent), so a measure-over-zeros cadence would be the most
   expensive schedule available — and would measure nothing.
 - **Which is why the probe waits for a drawable frame.** `measure()` does
-  no GPU work while a readback is in flight, and the parked fence keeps one
+  no GPU work while a readback is in flight, and the parked readback keeps one
   in flight ~3 frames in 4 — so firing on the interval alone opened the
   writes for frames the chain then sat out.
 - **`setHeld` outranks the park**, as it outranks chart: the machine

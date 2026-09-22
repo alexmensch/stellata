@@ -19,7 +19,7 @@ detail lives below.
 ## Perf
 
 <!--
-Required when the diff touches a render path: any .ts, .glsl or .wgsl under
+Required when the diff touches a render path: any .ts or .wgsl under
 src/client/, outside *.test.ts and the folders RELEASING.md § Perf pin
 exempts. Say which tier, then answer it — RELEASING.md § Perf pin owns the
 table:

@@ -9,9 +9,9 @@ const EMITTER_OUTPUTS = /* @__PURE__ */ struct({
   colour: 'vec4', statistic: 'vec4', diffuse: 'vec4',
 }, 'StellataEmitterOutputs');
 
-/** The three attachments one emitter fragment writes. A slot the WebGL
- *  gate would have masked off writes `vec4(0)`, which leaves the
- *  destination untouched exactly as `NONE` did — but only because every
+/** The three attachments one emitter fragment writes. A slot the draw
+ *  must not reach writes `vec4(0)`, which leaves the destination
+ *  untouched — but only because every
  *  blend that reaches an MRT target treats 0 as its identity. Chart
  *  mode's `MultiplyBlending` does NOT (its identity is 1), and it is safe
  *  solely because chart unbinds the target, so a material in the struct

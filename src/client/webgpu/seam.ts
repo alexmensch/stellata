@@ -5,7 +5,7 @@
 import type * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { SharedUniforms } from '../frame/shared-uniforms';
-import type { HdrSeam, ReductionSeam } from '../hdr/hdr-seam';
+import type { HdrSeam } from '../hdr/hdr-seam';
 import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
@@ -27,7 +27,8 @@ import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
 import type { SurvivorCounts } from './star/compaction/compaction-pure';
 import type { StarLayerSources } from './star/star-tables';
 
-export type StellataRenderer = THREE.WebGLRenderer | WebGPURenderer;
+/** The renderer the app boots — one name to change if it ever does. */
+export type StellataRenderer = WebGPURenderer;
 
 export type { StarLayerSources } from './star/star-tables';
 
@@ -42,12 +43,9 @@ export interface WebGpuExtinctionPrepassSources {
 }
 
 export interface WebGpuStarLayer {
-  /** The shell's per-frame CPU gate on the depth-only core-mask draw —
-   *  the same `visible` flip it applies to the WebGL mesh. */
+  /** The shell's per-frame CPU gate on the depth-only core-mask draw. */
   setCoreMaskVisible(on: boolean): void;
-  /** Chart mode's flat-ink blend swap — the TSL twin of the WebGL
-   *  pipeline's `setMonochromeBlend`, taken from the same `setMonochrome`
-   *  call site. */
+  /** Chart mode's flat-ink blend swap. */
   setMonochrome(on: boolean): void;
   /** The frame's compaction dispatch — forwards the star attributes the
    *  shell wrote this frame and lists the survivors the three draws read,
@@ -65,18 +63,10 @@ export interface WebGpuStarLayer {
    *  resolves frames later (star/compaction/README.md § Reading the counts
    *  back). Null once the layer is disposed. */
   readSurvivorCounts(): Promise<SurvivorCounts | null>;
-  /** The shell hands it to StarLocalCluster in place of the GLSL
-   *  StarLocalMirror; the cluster parents its group into the pass scene and
-   *  owns its dispose. */
+  /** The shell hands it to StarLocalCluster, which parents its group into
+   *  the pass scene and owns its dispose. */
   readonly localMirror: StarMirror;
   dispose(): void;
-}
-
-/** The WebGPU HDR pipeline as the shell sees it: the backend-neutral seam
- *  plus the reduction it owns (the WebGL boot constructs the two
- *  separately). */
-export interface WebGpuHdrSeam extends HdrSeam {
-  readonly reduction: ReductionSeam;
 }
 
 export interface WebGpuSeam {
@@ -88,13 +78,11 @@ export interface WebGpuSeam {
    *  allocates no query pool, so resolving anyway only warns
    *  (timestamps/README.md § Why the resolve is not gated on the HUD). */
   readonly timestampsAvailable: boolean;
-  /** The HDR chain on this boot — target, resolve, reduction. The shell
-   *  drives it in place of constructing the WebGL HdrPipeline. */
-  readonly hdr: WebGpuHdrSeam;
+  readonly hdr: HdrSeam;
   /** Built by the shell right after buildSharedUniforms; null before. */
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;
-  /** Per-frame scalar copy from the WebGL-side map into the nodes —
+  /** Per-frame scalar copy from the shared uniform map into the nodes —
    *  called from animate() before the render (tsl/README.md § Shared
    *  uniform nodes). */
   syncUniformNodes(): void;
@@ -111,7 +99,13 @@ export interface WebGpuSeam {
    *  uniform-node mirror (tsl/README.md § Shared uniform nodes), which is why
    *  this is a call rather than a map write. */
   setDustTexture(texture: THREE.Data3DTexture | null): void;
-  /** Build the per-star A_V cache on this backend. It points the star
+  /** Called on every uncaptured `GPUOutOfMemoryError`; returns the
+   *  unsubscribe (README.md § Out of memory). */
+  onOutOfMemory(listener: () => void): () => void;
+  /** Upload `texture` now; `settled(false)` when the GPU refused it
+   *  (README.md § Out of memory). */
+  uploadTexture(texture: THREE.Texture, settled: (uploaded: boolean) => void): void;
+  /** Build the per-star A_V cache. It points the star
    *  layer's A_V buffer slot at its own storage buffer, so the shell wires
    *  nothing beyond holding the handle. */
   attachExtinctionPrepass(
@@ -120,8 +114,8 @@ export interface WebGpuSeam {
   /** Release the boot-scoped GPU resources the seam owns and the shell has
    *  no handle to — today the shared extinction slots and their
    *  placeholders. NOT the renderer or the HDR pipeline: the shell holds
-   *  both as its own fields (`renderer`, `hdr`) and disposes them on
-   *  either backend, so disposing them here would double-release.
+   *  both as its own fields (`renderer`, `hdr`) and disposes them, so
+   *  disposing them here would double-release.
    *
    *  Call AFTER every attached layer and the prepass, since those hand
    *  their slots back to the placeholders this then frees. A new
@@ -129,11 +123,11 @@ export interface WebGpuSeam {
    *  only path that reaches it. */
   dispose(): void;
   /** The TSL planet surfaces, over the caller's 1×1 placeholder — the
-   *  mesh layer owns that texture on either backend, so the factory takes
-   *  it rather than the other way round. */
+   *  mesh layer owns that texture, so the factory takes it rather than the
+   *  other way round. */
   solarSystemMaterials(placeholder: THREE.Texture): SolarSystemMaterials;
   /** The TSL probe glyph, which reads no texture and so needs no
-   *  placeholder — the split mirrors `makeGlslProbeMaterial`. Read it
+   *  placeholder. Read it
    *  ONCE per field: each read is a fresh factory, and the shared-material
    *  refcount lives inside one. */
   readonly probeMaterial: ProbeMaterials;
@@ -176,7 +170,7 @@ export interface WebGpuPlanetGlare {
   /** Chart mode's flat-ink blend — the swap `PlanetBodyField` applies to
    *  its own material. */
   setMonochrome(on: boolean): void;
-  /** The field's group-visibility gate, which has no group to ride here. */
+  /** The field's visibility gate. */
   setVisible(on: boolean): void;
   dispose(): void;
 }

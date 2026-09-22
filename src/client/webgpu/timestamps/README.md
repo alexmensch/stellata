@@ -63,9 +63,9 @@ per completion rather than once per frame the readback spanned.
 ## What the figures are
 
 Two, one per pool. The summed real duration of every **render** pass in
-one frame lands as `gpu.frame` — the same row the WebGL2 timer query
-fills, and the perf HUD's headline reads `gpu` rather than `submit` on
-either backend. The summed duration of that frame's **compute** passes —
+one frame lands as `gpu.frame`, and the perf HUD's headline reads `gpu`
+rather than `submit` whenever it exists. The summed duration of that
+frame's **compute** passes —
 the star compaction, the extinction prepass when it recomputes — lands as
 `gpu.compute`, a row of its own that is never folded into `gpu.frame`
 (`../../debug/gpu-timing/README.md` § `gpu.frame` is the only row that

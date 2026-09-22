@@ -1,6 +1,5 @@
-// planet.vert.glsl / planet.frag.glsl on the TSL path: the reflected-glare
-// billboard over ./planet-glare-geometry.ts's packed layout. Physics:
-// ../../solar-system/planets/glare/README.md.
+// The reflected-glare billboard's vertex and fragment graphs over
+// ./planet-glare-geometry.ts's packed layout. Physics: README.md § Reflected glare.
 
 import {
   Discard, Fn, If, acos, atan, clamp, cos, dot, exp, float, instanceIndex, int,
@@ -210,8 +209,8 @@ function buildGlareVertexNode(
         v.vUv.assign(corner);
         v.vSoftness.assign(softness);
 
-        // uPixelRatio cancels out of the GLSL's offset chain; both
-        // uViewport and pxSize are CSS px.
+        // uPixelRatio cancels out of the offset chain; both uViewport and
+        // pxSize are CSS px.
         const centreClip = cameraProjectionMatrix
           .mul(vec4(planetView.xyz, 1.0)).toVar();
         const ndcOffset = corner.mul(pxSize).add(photoOffsetPx)

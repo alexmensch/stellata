@@ -3,11 +3,7 @@
 
 import * as THREE from 'three';
 import { HELIOPAUSE_EXTENT_PC } from '../heliopause/heliopause';
-import type { PerceptualDiscUniforms } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
-import {
-  isFeatureLegible,
-  type ScreenMetricUniforms,
-} from '../../util/orbit-line';
+import { isFeatureLegible } from '../../util/orbit-line';
 import {
   probeSignalLost,
   probeStateAt,
@@ -17,7 +13,6 @@ import {
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { ProbeMaterials } from '../materials/solar-system-materials';
-import { makeGlslProbeMaterial } from '../materials/glsl-materials';
 import {
   CADENCE_REPORT_STILL,
   fasterRate,
@@ -47,12 +42,6 @@ const MARKER_RENDER_ORDER = 3.5;
 // below the star glow mirror (3.5) — the same slot ordering the ring layer
 // documents. See src/client/local-depth/README.md.
 const MARKER_LOCAL_RENDER_ORDER = 3.3;
-
-/** The star pipeline's viewport / FOV / pixel-ratio slots, by reference, so a
- *  resize or FOV change reaches the marker material and the on-screen gates
- *  with no bookkeeping here. */
-export type ProbeSharedUniforms =
-  ScreenMetricUniforms & Pick<PerceptualDiscUniforms, 'uPixelRatio'>;
 
 /** Per-probe geometry for this frame, shared with the trail layer, the
  *  label overlay, and every interaction surface so all of them agree on
@@ -104,17 +93,11 @@ export class ProbeField {
   private alpha = new Float32Array(0);
   private geometry: THREE.InstancedBufferGeometry;
   private material: EmitterMaterial;
-  private localMaterial: EmitterMaterial;
   private mesh: THREE.Mesh;
   private localMesh: THREE.Mesh;
   private state: ProbeState = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 };
 
-  constructor(
-    shared: ProbeSharedUniforms,
-    /** The TSL glyph on a WebGPU boot; absent = the shipped GLSL pair
-     *  (`../materials/README.md`). */
-    materials?: ProbeMaterials,
-  ) {
+  constructor(materials: ProbeMaterials) {
     this.group = new THREE.Group();
     this.group.visible = false;
     this.localGroup = new THREE.Group();
@@ -129,29 +112,21 @@ export class ProbeField {
     );
     this.geometry.setIndex([0, 1, 2, 1, 3, 2]);
     this.geometry.instanceCount = 0;
-    // Two compile variants over one geometry. The mirror shares the
-    // geometry outright — the instance buffers this.update writes are the
-    // same ones it draws, so there is no attribute copy and no way for the
-    // two passes to disagree about where a probe is.
-    const factory = materials ?? makeGlslProbeMaterial(shared);
-    const makeMat = (localPass = false) => {
-      const m = factory.probeMarker(localPass);
-      m.uniforms.uSizePx.value = PROBE_MARKER_PX;
-      setRawChromeColour(m.uniforms.uColour.value as THREE.Color, PROBE_COLOUR);
-      return m;
-    };
-    const makeMesh = (name: string, material: EmitterMaterial, renderOrder: number) => {
-      const mesh = new THREE.Mesh(this.geometry, material.material);
+    // The mirror shares the geometry and the material outright — the
+    // instance buffers this.update writes are the same ones it draws, so the
+    // two passes cannot disagree about where a probe is.
+    this.material = materials.probeMarker();
+    this.material.uniforms.uSizePx.value = PROBE_MARKER_PX;
+    setRawChromeColour(this.material.uniforms.uColour.value as THREE.Color, PROBE_COLOUR);
+    const makeMesh = (name: string, renderOrder: number) => {
+      const mesh = new THREE.Mesh(this.geometry, this.material.material);
       mesh.name = name;
       mesh.frustumCulled = false;
       mesh.renderOrder = renderOrder;
       return mesh;
     };
-    this.material = makeMat();
-    this.localMaterial = makeMat(true);
-    this.mesh = makeMesh('probe-marker', this.material, MARKER_RENDER_ORDER);
-    this.localMesh = makeMesh(
-      'probe-marker-local', this.localMaterial, MARKER_LOCAL_RENDER_ORDER);
+    this.mesh = makeMesh('probe-marker', MARKER_RENDER_ORDER);
+    this.localMesh = makeMesh('probe-marker-local', MARKER_LOCAL_RENDER_ORDER);
     this.group.add(this.mesh);
     this.localGroup.add(this.localMesh);
   }
@@ -410,6 +385,5 @@ export class ProbeField {
   dispose(): void {
     this.geometry.dispose();
     this.material.dispose();
-    this.localMaterial.dispose();
   }
 }

@@ -107,7 +107,7 @@ the standing perf program is epic `stellata-8cg`. An unmeasured perf claim is a
 hypothesis and must be called one.
 
 **A render-path diff without a `## Perf` section is a blocking finding.** A
-render path is any `.ts`, `.glsl` or `.wgsl` under `src/client/` outside the
+render path is any `.ts` or `.wgsl` under `src/client/` outside the
 folders `RELEASING.md` § Perf pin exempts. Refuse the review until the
 section is there. A `✗` row without an `accepted: <row> <reason>
 (<bead-id>)` line is P1, and the bead must exist. Only the frame row and the
@@ -123,7 +123,7 @@ passes, buffers, draw counts, the catalogue or the instrument — carries the
 `--against-pin` table, the pin commit, the adapter slug and the state-guard
 line per context, and re-takes the pin in the same PR. Tier 1 — per-frame
 code touched, structure unchanged — carries the `--against-pin` table over
-mw120|webgpu and sol|webgpu alone, the other eight rows listed as not
+mw120|webgpu and sol|webgpu alone, the other three rows listed as not
 measured, and names the pin commit it read against. Tier 0
 carries a reachability argument in prose and no table. The claim worth
 auditing is the tier itself: a diff that reaches a pass or a draw count is

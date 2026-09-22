@@ -1,5 +1,5 @@
-// TSL mirrors of the rod-summation convolution (stellata_summation) and
-// its box downsample, over summation-pure's constants. The kernel rule
+// The rod-summation convolution and its box downsample, over
+// summation-pure's constants. The kernel rule
 // and every bound: ../../hdr/summation/README.md.
 
 import {
@@ -16,8 +16,7 @@ type NF = Node<'float'>;
 type N2 = Node<'vec2'>;
 
 /**
- * Mean diffuse display luminance over the summation disc — the TSL twin
- * of `stellataSummationMean`. `source` must be the BASE texture node (its
+ * Mean diffuse display luminance over the summation disc. `source` must be the BASE texture node (its
  * `.value` is what the pass swaps between the raw attachment and the
  * downsampled copy); taps sample bilinearly through it, clamped to the
  * live sub-rect. Call inside a fragment Fn.
@@ -52,7 +51,7 @@ export function summationMeanTsl(
   return acc.div(weight);
 }
 
-/** The box-downsample fragment (summation-downsample.frag.glsl): average
+/** The box-downsample fragment (./summation-tsl.ts): average
  *  a `factor`-wide cell of `source`, clamping the ragged edge taps. */
 export function buildSummationDownsampleFragment(
   source: TextureNode,

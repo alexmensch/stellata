@@ -4,33 +4,22 @@ Shared runtime for translucent **boundary shells**: a mesh whose alpha
 peaks at the silhouette (limb) and floors to a dim value face-on, so it
 reads as a soft glowing rim rather than a flat disc. Two layers consume
 the full primitive — the heliopause (`solar-system/`) and the Local
-Bubble (`local-bubble/`); the molecular-cloud rim shells consume the
-`stellata_fresnel_rim` chunk, the shared vertex stage
-(`fresnel-shell.vert.glsl`), and the shared rim constants
-(`SHELL_RIM_BLUE`, `SHELL_RIM_ALPHA_LIMB`) with their own fragment
-stage (`molecular-clouds/cloud-rim.frag.glsl`).
+Bubble (`local-bubble/`); the molecular-cloud rim shells build their own
+surface from the shared rim constants (`SHELL_RIM_BLUE`,
+`SHELL_RIM_ALPHA_LIMB`) and the shared camera-distance attenuation
+(§ Camera-distance attenuation).
 
 ## Files
 
-- `fresnel-rim.glsl` — two functions, registered by `fresnel-shell.ts` as
-  the `stellata_fresnel_rim` ShaderChunk and shared with
-  `molecular-clouds/cloud-rim.frag.glsl`: `fresnelRimAlpha`, the rim-alpha
-  formula (`fresnel = pow(1 − n·v, uFresnelPower)`,
-  `alpha = uAlphaLimb · mix(uFaceOnFloor, 1, fresnel)`), and
-  `shellDistanceAttenuation`, the camera-distance factor on it
-  (§ Camera-distance attenuation).
 - `shell-distance-pure.ts` (+ test) — the attenuation's CPU mirror and the
-  authored constants every backend and consumer reads
+  authored constants every consumer reads
   (`NEAR_FADE_EXTENT_FRAC`, `DEPTH_DIM_CLEARANCE_PC`, `DEPTH_DIM_POWER`),
   plus `rimDistancesForExtent`, which turns one extent into both reaches.
   Vitest-pinned.
-- `fresnel-shell.{vert,frag}.glsl` — the shader pair. The vert carries
-  view-space normal + position; the frag applies the rim chunk.
 - `fresnel-shell.ts`
-  - `ShellMaterials` + `makeGlslShellMaterials()` — the material seam
-    (§ The material seam below), and the only way in: the
-    `ShaderMaterial` builder behind it is module-private, so a consumer
-    cannot take a surface that skips the seam.
+  - `ShellMaterials` — the material seam (§ The material seam below), and
+    the only way in: a consumer cannot take a surface that skips it.
+    `../webgpu/fresnel-shell/tsl-shell-materials.ts` is the factory.
   - `FresnelShell` — abstract base owning the group, material, and the
     chart-mode + detail-cycle + floating-origin plumbing, plus
     `setRimParams` (§ Camera-distance attenuation).
@@ -46,10 +35,12 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   - `isShellLabelResolvable(shells, idx, worldOffset, cameraPos,
     viewportHeightPx, fovYRad)` — the label legibility gate both shells'
     visibility predicates share (§ Invariants below).
-- `shell-materials.test.ts` — the seam's guard: the two factories' slot
-  keys pinned against each other, the chrome inverse landing on the same
-  mapped colour on either side, and the TSL dispose severing its MRT
+- `shell-materials.test.ts` — the seam's guard: both camera-distance
+  reaches derived from the extent, the colour arriving through the chrome
+  inverse, the shared rim writer, and dispose severing the MRT
   registration.
+- `shell-materials-mock.ts` — the `ShellMaterials` double both shells'
+  suites build on.
 - `shell-module.ts` (+ test) — the shell `ObjectKindModule`
   (`../kinds/README.md`): one module whose `attach` constructs BOTH
   shell layers (heliopause + Local Bubble) and registers them into its
@@ -59,8 +50,7 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
   shells as focus targets): `SHELL_KEYS`, the `ShellInstance` contract,
   and `ShellRegistry` (owns per-shell geometry: localPositionInto,
   cameraDistancePc, viewingDistancePc, focusParkDistancePc,
-  renderedSizePx). Instantiated per shell-module; no longer a
-  top-level registry on `Stellata`.
+  renderedSizePx). Instantiated per shell-module.
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
   key → frozen-SID pin (§ SID pins).
 - `shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
@@ -93,19 +83,18 @@ stage (`molecular-clouds/cloud-rim.frag.glsl`).
 ## The material seam
 
 Both shells take their surface from a `ShellMaterials` factory rather
-than building a `ShaderMaterial` directly, so a WebGPU boot swaps shaders
-without a second copy of any shell logic — geometry, group, declutter and
-chart gating, recentre, labels and picking all stay as they were. The
-WebGPU twin is `../webgpu/fresnel-shell/README.md`; `shell-module.ts`
-passes `kindCtx.webgpu?.shellMaterials` and falls back to
-`makeGlslShellMaterials()`.
+than building a material directly: the shell owns geometry, group,
+declutter and chart gating, recentre, labels and picking, and never sees
+a graph. The factory is `../webgpu/fresnel-shell/README.md`;
+`shell-module.ts` passes
+`kindCtx.webgpu.shellMaterials`.
 
 Each consumer builds **its own** surface — colour, limb alpha and blend
 are per-shell, so there is nothing to share and no refcount to keep.
 
 `FresnelShell` holds the returned `EmitterMaterial` and exposes only its
 `.material` to subclasses (which need it for the mesh); `dispose` goes
-through the handle, because on WebGPU it must also sever the material's
+through the handle, because it must also sever the material's
 MRT-mode registration and a bare `material.dispose()` would not.
 
 ## Invariants
@@ -166,8 +155,8 @@ work.
     nearFade = clamp(d / uNearFadePc, 0, 1)
     depthDim = pow(clamp(uDepthDimRefPc / d, 0, 1), uDepthPower)
 
-**All three implementations take `d` as an argument, and every caller
-divides by it to get `viewDir`.** That is the one root per fragment: the
+**Both implementations — the CPU mirror and the graph — take `d` as an
+argument, and every caller divides by it to get `viewDir`.** That is the one root per fragment: the
 rim shape needs `-positionView` normalised and the attenuation needs its
 length, so a call site spelling the first as `normalize()` pays an
 `inversesqrt` and a `sqrt` for one quantity. Keep the shape's `viewDir` as
@@ -230,10 +219,8 @@ per-material opt-out flag.
 **Chart mode is excluded by structure, not by a condition.** Ink density
 varying with distance would break the flat printed-atlas convention. Both
 boundary shells hide outright in chart mode, and the cloud rim's chart arm
-returns before it reaches the shared chunk, so there is nothing to gate;
-`molecular-clouds/cloud-glsl-drift.test.ts` pins that the attenuation is
-unreachable from the chart arm. Do not add a branch that would look
-load-bearing and is not.
+returns before it reaches the shared attenuation, so there is nothing to
+gate. Do not add a branch that would look load-bearing and is not.
 
 **Sweeping the constants.** `setRimParams` takes the same six-field record
 on both `stellata.kinds.shell` (fanned out to both shells) and

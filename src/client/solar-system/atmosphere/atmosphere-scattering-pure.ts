@@ -1,5 +1,5 @@
 // Single-scattering atmosphere model (Nishita/O'Neil few-sample) — the CPU
-// mirror of atmosphere-scatter.glsl. Geometry in planet-radius units, planet
+// mirror of ../../webgpu/solar-system/atmosphere-scatter-tsl.ts. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md § The model.
 
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
@@ -52,7 +52,7 @@ function farRoot(ox: number, oy: number, oz: number, dx: number, dy: number, dz:
 }
 
 /**
- * Mirrors stellata_scalePolar in the GLSL; the arithmetic and what the map
+ * Mirrors scalePolarTsl; the arithmetic and what the map
  * guarantees live in `../../util/polar-scale.ts`.
  *
  * This is the seam between an oblate body and a march that assumes a unit
@@ -81,7 +81,7 @@ const NO_SHADOW: readonly [number, number] = [FAR, -FAR];
  * anti-sunward of the terminator plane (a half-space). `s0 > s1` when the
  * ray never enters it. Equivalent to asking whether the ray from each point
  * toward the host strikes the body, which is why the light march below never
- * needs its own occlusion test. Mirrors stellata_shadowSpan in the GLSL.
+ * needs its own occlusion test. Mirrors shadowSpanTsl.
  */
 export function shadowSpan(o: Vec3, d: Vec3, sunDir: Vec3): readonly [number, number] {
   const oS = o[0] * sunDir[0] + o[1] * sunDir[1] + o[2] * sunDir[2];
@@ -121,7 +121,7 @@ export function shadowSpan(o: Vec3, d: Vec3, sunDir: Vec3): readonly [number, nu
  * Fraction of the march segment centred on `t` with half-width `h` that falls
  * outside the shadow span — the exact quadrature weight for a hard shadow, and
  * continuous in the ray's geometry, so the lit sample count cannot step.
- * Mirrors stellata_litFraction in the GLSL.
+ * Mirrors litFractionTsl.
  *
  * Both bounds MUST stay **offsets from `t`**. `t` is the ray parameter measured
  * from the camera, so `t ± h` are large and nearly equal and the `1/(2h)`
@@ -161,7 +161,7 @@ export function verticalAbsorptionOpticalDepth(p: AtmosphereParams): Vec3 {
 
 /** Chapman airmass of a horizon sun for an exponential atmosphere of scale
  *  height `hR` (planet-radius units): √(π/(2·hR)) — ~35 on Earth. Inlined as
- *  the same expression in the GLSL mirror, which the drift test pins. */
+ *  the same expression in the graph, which the drift test pins. */
 function chapmanHorizon(hR: number): number {
   return Math.sqrt(Math.PI / (2 * hR));
 }
@@ -177,8 +177,8 @@ export const TWILIGHT_TAIL_REACH = 8.95;
 /**
  * Skylight: the fraction of host irradiance the atmosphere scatters down
  * onto the surface, per channel — one derived model covering the lit
- * hemisphere and the twilight band. Mirrors stellata_skyIrradiance in the
- * GLSL; derivation and measured anchors: README.md § Skylight.
+ * hemisphere and the twilight band. Mirrors skyIrradianceTsl;
+ * derivation and measured anchors: README.md § Skylight.
  *
  * The horizon-sun anchor and the beam term describe the same photons at
  * opposite solar elevations, so they partition as `(1 − μ_s)` / `μ_s` rather
@@ -273,8 +273,8 @@ export interface ScatterResult {
 
 /** Integrate single-scattered airlight (+ a cheap multiple-scattering fill)
  *  and view-path transmittance along the ray o + t·d for t ∈ [tStart, tStop]
- *  (planet centred at origin, rPlanet = 1). Mirrors stellata_atmosphereRadiance
- *  in atmosphere-scatter.glsl. `jitter` ∈ [0,1) offsets the sample lattice
+ *  (planet centred at origin, rPlanet = 1). Mirrors atmosphereRadianceTsl
+ *  in ../../webgpu/solar-system/atmosphere-scatter-tsl.ts. `jitter` ∈ [0,1) offsets the sample lattice
  *  within each segment — the shader passes a per-fragment value to break
  *  ray-march banding; the CPU mirror uses the midpoint (0.5). */
 export function scatterAlongRay(

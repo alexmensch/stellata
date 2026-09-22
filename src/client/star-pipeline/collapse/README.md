@@ -5,12 +5,14 @@ rasterises a full-size quad and pays read-modify-write blend bandwidth on
 every attachment its pass opens. At a deep adaptation cut that is most of
 the star field — the statistic-attachment write row measured ~50 % of the
 default Sol-view frame (`../../debug/frame-cost/passes/README.md`
-§ Decomposing the HDR chain). Two vertex-stage mechanisms in `../star.vert.glsl` (TSL
-twin: `../../webgpu/star/star-vertex-tsl.ts`) bound that cost. Neither
+§ Decomposing the HDR chain). Two vertex-stage mechanisms
+(`../../webgpu/star/star-vertex-tsl.ts`,
+`../../webgpu/star/star-visibility-tsl.ts`) bound that cost. Neither
 touches the cull bounds themselves — `uCullMag` stays adaptation-free
 (`../../hdr/exposure/README.md` § One writer, five slots).
 
-**Measured after it landed** (Sol, Chrome `timer-query`, 6.774 Mpx): the frame
+**Measured after it landed** (Sol, Chrome `timer-query` on the retired
+WebGL2 boot, 6.774 Mpx): the frame
 2.5–3.1× cheaper, ~249–311 ms down to 100.2 ms, and the row's absolute cost
 57–68 % lower. Its **share held at 50.6 %** — both attachments' traffic scales
 with quad area, so shrinking the quad cuts the display and statistic writes
@@ -21,7 +23,7 @@ HDR chain.
 ```
 src/client/star-pipeline/collapse/
   glow-collapse-pure.ts     The derived display floor the kernel collapse
-    (+ test)                compares against. The test pins the GLSL
+    (+ test)                compares against. The test pins the
                             literal and the taper-cull bound.
 ```
 
@@ -46,15 +48,13 @@ near-exact.** A tapered-to-zero glow fragment still writes alpha 1 there
 blend adds 1 to that channel where a culled quad adds nothing. Nothing
 reads it: the reduction takes means of R and G only.
 
-**`starTaperDead` is called twice, and the first call is the point.** A_V
+**`taperAlive` is tested twice, and the first test is the point.** A_V
 only ever dims, so a star already past the bound before extinction is
 past it after — the same monotonicity the magnitude prefilter beside it
-runs on. Testing there keeps the extinction read (one `texelFetch` on the
-prepass path, the raymarch on the fallback) off the whole culled
-population; the second call, on the extincted value, is the exact one.
-The TSL twin needs one test only because no extinction read is ported yet
-(`../../webgpu/star/README.md` § Dust extinction) — when
-one lands it wants the same split.
+runs on. Testing there keeps the extinction read (one buffer element on
+the prepass path, the raymarch on the fallback) off the whole culled
+population; the second test, on the extincted value, is the exact one
+(`../../webgpu/star/README.md` § Dust extinction).
 
 ## Kernel collapse — flux-preserving
 
@@ -64,7 +64,7 @@ adaptation model reads the full field at base exposure, so the star must
 keep writing attachment 1 (`../../hdr/attachments/README.md`). What it
 does not need is its display kernel: the quad collapses to `uSizeMin` — a
 threshold star's footprint, the size the statistic already trusts for the
-whole faint field — and `stellataKernelFluxPeak`'s `Φ(n)·D²` renorm
+whole faint field — and `kernelFluxPeakTsl`'s `Φ(n)·D²` renorm
 divides the collapsed size, so attachment 1 receives exactly the flux it
 did before at a fraction of the bandwidth.
 
@@ -81,7 +81,7 @@ The margin also covers the **off-target** path, where the operator runs
 per-fragment and the blend's second multiply lands outside it: the peak
 there is `tap·tonemap(vPeakL·tap)` rather than `tonemap(vPeakL·tap²)`, and
 the toe's convexity bounds it at the same half-step/16
-(`../../hdr/README.md` § Fallback).
+(`../../hdr/README.md` § The inline operator).
 
 Reading the live exposure here is deliberate and allowed: the
 no-adaptation rule protects cached and per-frame CPU consumers from

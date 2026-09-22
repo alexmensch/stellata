@@ -1,5 +1,5 @@
 // TSL mirror of stellata_dust_raymarch (../../star-pipeline/extinction/
-// dust-raymarch.glsl): the camera→star Edenhofer march returning raw
+// ./dust-raymarch-tsl.ts): the camera→star Edenhofer march returning raw
 // physical A_V, shared by the prepass and the star vertex fallback.
 
 import {
@@ -29,7 +29,7 @@ export function dustTextureNode(placeholder: Data3DTexture): DustTextureNode {
  * Raw physical A_V between two ABSOLUTE (heliocentric ICRS) positions in
  * parsecs — the dust grid is anchored to Sol, not the renderer's floating
  * local origin. Callers apply the `uDustEnabled × uExtinctionStrength`
- * gating themselves, exactly as the GLSL chunk's callers do.
+ * gating themselves.
  */
 export function dustRaymarchAvTsl(
   u: SharedUniformNodes,

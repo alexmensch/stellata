@@ -1,4 +1,4 @@
-// fresnel-shell.vert.glsl / .frag.glsl on the TSL path: the translucent
+// The boundary shell's graph: the translucent
 // boundary shell whose alpha peaks at the silhouette.
 
 import { FrontSide, NormalBlending } from 'three';

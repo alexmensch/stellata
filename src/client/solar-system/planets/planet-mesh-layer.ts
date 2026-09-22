@@ -20,10 +20,12 @@ import {
 } from './textures/texture-ladder';
 import {
   evictionOrder,
+  INITIAL_TEXTURE_LIMITS,
   otherRungs,
+  steppedTextureLimits,
   textureBytes,
-  textureVramBudgetBytes,
   type ResidentTexture,
+  type TextureLimits,
 } from './textures/texture-budget-pure';
 import { polarRadiusRatio } from './spheroid-pure';
 import {
@@ -33,7 +35,7 @@ import {
 import {
   pickHdrEmitterUniforms,
   type HdrEmitterUniforms,
-} from '../../hdr/hdr-pipeline';
+} from '../../hdr/hdr-emitter-uniforms';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import {
   phaseAngleFor,
@@ -66,9 +68,8 @@ import {
 } from '../atmosphere/atmosphere-scattering-pure';
 import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { SolarSystemMaterials } from '../materials/solar-system-materials';
-import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
+import type { WebGpuSeam } from '../../webgpu/seam';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
-import { markOccludingEmitter } from '../../hdr/attachments/attachment-gate';
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -195,6 +196,9 @@ const textureKey = (name: string, suffix = ''): string =>
 /** The colour map's key without any rung. */
 const ladderKey = (name: string): string => name.toLowerCase();
 
+/** The narrowest rung a body ships, which it keeps resident once drawn. */
+const floorRungOf = (body: string): number | null => rungsOf(body)?.[0] ?? null;
+
 /** The body's DEM elevation span, or null where it ships no relief maps —
  *  which bodies fetch them and the fallback limb bound are the same question. */
 const reliefSpanOf = (planet: Planet): readonly [number, number] | null =>
@@ -259,10 +263,11 @@ export class PlanetMeshLayer {
   private readonly loader = new THREE.ImageBitmapLoader()
     .setOptions({ ...TEXTURE_DECODE_OPTIONS });
   private readonly requestRender: (reason: string) => void;
-  /** Widest texture this device accepts. Bounds the ladder, and stands in for
-   *  the device tier the VRAM budget is sized on. */
-  private readonly maxTextureSize: number;
-  private readonly vramBudgetBytes: number;
+  private readonly upload: WebGpuSeam['uploadTexture'];
+  /** The texture cap and the resident budget; `stepDownTextureLimits` lowers
+   *  both. */
+  private limits: TextureLimits;
+  private steppedSinceUpdate = false;
   private readonly entries = new Map<number, MeshEntry>();
   private readonly textures = new Map<string, TextureState>();
   /** Frames are counted only to answer "was this drawn just now" during
@@ -299,16 +304,15 @@ export class PlanetMeshLayer {
     textureBaseUrl: string,
     hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: (reason: string) => void,
-    maxTextureSize: number,
-    /** The TSL surfaces on a WebGPU boot; absent = the shipped GLSL ones
-     *  (`../materials/README.md`). */
-    materials?: (placeholder: THREE.Texture) => SolarSystemMaterials,
+    materials: (placeholder: THREE.Texture) => SolarSystemMaterials,
+    upload: WebGpuSeam['uploadTexture'],
+    limits: TextureLimits = INITIAL_TEXTURE_LIMITS,
   ) {
     this.field = field;
+    this.upload = upload;
     this.textureBaseUrl = textureBaseUrl;
     this.requestRender = requestRender;
-    this.maxTextureSize = maxTextureSize;
-    this.vramBudgetBytes = textureVramBudgetBytes(maxTextureSize);
+    this.limits = limits;
     this.hdr = pickHdrEmitterUniforms(hdr);
     this.uPixelRatio = hdr.uPixelRatio;
     this.group = new THREE.Group();
@@ -329,8 +333,7 @@ export class PlanetMeshLayer {
     // swap a slot BACK to the placeholder, and that swap has to rebuild
     // the bind group too.
     this.placeholder.version = this.placeholder.id + 1;
-    this.materials = materials?.(this.placeholder)
-      ?? makeGlslSolarSystemMaterials({ hdr: this.hdr, placeholder: this.placeholder });
+    this.materials = materials(this.placeholder);
     this.stampMaterial = this.materials.planetDepthStamp();
   }
 
@@ -412,9 +415,10 @@ export class PlanetMeshLayer {
    *  motion need no extra hooks. `t` is the model clock (getT()) —
    *  IAU spin runs on it like binary orbits. */
   update(camera: THREE.PerspectiveCamera, t: number): void {
+    this.steppedSinceUpdate = false;
     // Chart mode inks the bodies as flat discs (chart-mode/README.md);
     // a lit photographic sphere has no place on paper.
-    this.group.visible = this.field.group.visible && !this.field.monochrome;
+    this.group.visible = this.field.drawn && !this.field.monochrome;
     this.depthStampGroup.visible = this.group.visible && this.depthStampEnabled;
     if (!this.group.visible) return;
     perfMark('solar.mesh');
@@ -440,22 +444,22 @@ export class PlanetMeshLayer {
       if (physPx >= TEXTURE_PREFETCH_PX) {
         this.ensureColourRung(planet, physPx);
         if (reliefSpanOf(planet)) {
-          this.ensureTexture(textureKey(planet.name, RELIEF_SUFFIX), {
+          this.requireTexture(textureKey(planet.name, RELIEF_SUFFIX), {
             ext: 'webp', format: THREE.RGFormat,
           });
           // Not RG: all four channels of each horizon plane carry an
           // azimuth, alpha included.
           for (const suffix of HORIZON_SUFFIXES) {
-            this.ensureTexture(textureKey(planet.name, suffix), { ext: 'webp' });
+            this.requireTexture(textureKey(planet.name, suffix), { ext: 'webp' });
           }
           // One scalar per texel, so R8 — a quarter of the RGBA8 an
           // ImageBitmap of the same grayscale file would otherwise upload as.
-          this.ensureTexture(textureKey(planet.name, SKY_VIEW_SUFFIX), {
+          this.requireTexture(textureKey(planet.name, SKY_VIEW_SUFFIX), {
             ext: 'webp', format: THREE.RedFormat,
           });
         }
         if (planet.rings) {
-          this.ensureTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
+          this.requireTexture(textureKey(planet.name, RINGS_SUFFIX), { ext: 'png' });
         }
       }
       const fade = meshFadeFromPhysPx(physPx);
@@ -666,23 +670,70 @@ export class PlanetMeshLayer {
       body,
       requiredMapWidth(physPx, this.pixelRatio()),
       shown,
-      this.maxTextureSize,
+      this.limits.maxTextureSize,
     );
     // A body with no ladder row ships no map at all (Uranus, future
     // exoplanets) and takes the representative-colour base path.
-    if (want === null) return;
+    const floor = floorRungOf(body);
+    if (want === null || floor === null) return;
     // Recorded even when it is what we already draw, so a rung still in flight
     // from a demand that has since receded is recognised as superseded when it
     // lands rather than sitting resident and undrawn.
     this.requestedRung.set(body, want);
+    const floorReady = this.ensureRung(body, floor);
+    const wantReady = this.ensureRung(body, want);
     if (want === shown) return;
-    const key = textureKey(planet.name, `-${want}`);
-    this.rungOf.set(key, { body, width: want });
-    this.ensureTexture(key, { ext: 'jpg' });
-    if (this.useTexture(key)?.state === 'ready') {
+    if (wantReady) {
       this.shownRung.set(body, want);
       this.releaseOtherRungs(planet, want);
+    } else if (shown === null && floorReady) {
+      this.shownRung.set(body, floor);
     }
+  }
+
+  /** Request one colour rung, and report whether it is drawable yet. */
+  private ensureRung(body: string, width: number): boolean {
+    const key = textureKey(body, `-${width}`);
+    if (!this.textures.has(key)) this.rungOf.set(key, { body, width });
+    return this.requireTexture(key, { ext: 'jpg' })?.state === 'ready';
+  }
+
+  /** Request a map and stamp it used this frame. Every map fetched for a body
+   *  past `TEXTURE_PREFETCH_PX` goes through here, the prefetch half-pixel
+   *  below the crossfade band included: a map fetched but never stamped is an
+   *  eviction candidate the frame it lands, so over budget it is released,
+   *  re-requested and re-decoded every frame, and each landing wakes the
+   *  render gate. */
+  private requireTexture(
+    key: string,
+    opts: { ext: TextureExt; format?: THREE.PixelFormat },
+  ): TextureState | undefined {
+    this.ensureTexture(key, opts);
+    return this.useTexture(key);
+  }
+
+  /** textures/README.md § Staying inside VRAM. */
+  stepDownTextureLimits(): void {
+    if (this.steppedSinceUpdate) return;
+    const next = steppedTextureLimits(this.limits);
+    if (next === null) return;
+    this.steppedSinceUpdate = true;
+    this.limits = next;
+    const oversized: string[] = [];
+    for (const [key, state] of this.textures) {
+      if (state.state !== 'ready') continue;
+      const { width, height } = state.tex.image as ImageBitmap;
+      if (width > next.maxTextureSize || height > next.maxTextureSize) oversized.push(key);
+    }
+    // Left as 'missing' rather than forgotten: the relief and ring maps ship
+    // one width each, so a forgotten key is fetched and fully decoded again
+    // next frame only for the cap check to refuse it.
+    for (const key of oversized) {
+      this.evictTexture(key);
+      this.textures.set(key, { state: 'missing' });
+    }
+    this.enforceTextureBudget();
+    this.requestRender('planet-texture-limits');
   }
 
   /**
@@ -765,17 +816,33 @@ export class PlanetMeshLayer {
     this.rungOf.delete(key);
   }
 
-  /** Free every rung of a body except the one now drawn. Narrower rungs are
-   *  outgrown; wider ones are only ever left behind after the body shrank
-   *  well past them, so both are memory the screen cannot show. */
   private releaseOtherRungs(planet: Planet, shownWidth: number): void {
     const body = ladderKey(planet.name);
     const rungs = rungsOf(body);
     if (rungs === null) return;
     const held = rungs.filter((w) => this.isResident(textureKey(planet.name, `-${w}`)));
-    for (const w of otherRungs(held, shownWidth)) {
+    for (const w of otherRungs(held, shownWidth, rungs[0])) {
       this.releaseTexture(textureKey(planet.name, `-${w}`));
     }
+  }
+
+  /** Release a map; when it was a body's drawn rung, the body falls back to
+   *  its floor, or to the placeholder if the floor is not resident. */
+  private evictTexture(key: string): void {
+    const rung = this.rungOf.get(key);
+    this.releaseTexture(key);
+    if (!rung || this.shownRung.get(rung.body) !== rung.width) return;
+    const floor = floorRungOf(rung.body);
+    if (floor !== null && this.isResident(textureKey(rung.body, `-${floor}`))) {
+      this.shownRung.set(rung.body, floor);
+    } else {
+      this.shownRung.delete(rung.body);
+    }
+  }
+
+  private isPinnedRung(key: string): boolean {
+    const rung = this.rungOf.get(key);
+    return rung !== undefined && rung.width === floorRungOf(rung.body);
   }
 
   /** Evict least-recently-drawn maps until the resident set is back inside
@@ -788,22 +855,17 @@ export class PlanetMeshLayer {
     for (const state of this.textures.values()) {
       if (state.state === 'ready') total += state.bytes;
     }
-    if (total <= this.vramBudgetBytes) return;
+    const budget = this.limits.budgetBytes;
+    if (total <= budget) return;
 
     const resident: ResidentTexture[] = [];
     for (const [key, state] of this.textures) {
       if (state.state !== 'ready') continue;
-      resident.push({ key, bytes: state.bytes, lastFrame: state.lastFrame });
+      resident.push({
+        key, bytes: state.bytes, lastFrame: state.lastFrame, pinned: this.isPinnedRung(key),
+      });
     }
-    for (const key of evictionOrder(resident, this.vramBudgetBytes, this.frame)) {
-      const rung = this.rungOf.get(key);
-      this.releaseTexture(key);
-      // A colour rung that goes must stop being the drawn one, or the body
-      // renders its placeholder until it happens to grow into a new rung.
-      if (rung && this.shownRung.get(rung.body) === rung.width) {
-        this.shownRung.delete(rung.body);
-      }
-    }
+    for (const key of evictionOrder(resident, budget, this.frame)) this.evictTexture(key);
   }
 
   /** Fill the material's uCasters array with view-space shadow spheres
@@ -964,7 +1026,7 @@ export class PlanetMeshLayer {
   private createEntry(idx: number, planet: Planet): MeshEntry {
     const material = this.materials.planetMesh();
     // The per-body constants, over the factory's neutral defaults —
-    // written here so neither backend's factory needs a `Planet`.
+    // written here so the factory needs no `Planet`.
     material.uniforms.uReliefHorizon.value = reliefHorizonOf(planet);
     material.uniforms.uTerrainAlbedo.value = planet.albedo;
     material.uniforms.uTermSoftness.value = planet.terminatorSoftness ?? 0;
@@ -972,7 +1034,6 @@ export class PlanetMeshLayer {
     mesh.name = 'planet-mesh';
     mesh.frustumCulled = false;
     mesh.renderOrder = 2.8;
-    markOccludingEmitter(mesh);
     this.group.add(mesh);
     const stamp = new THREE.Mesh(this.geometry, this.stampMaterial.material);
     stamp.name = 'planet-depth-stamp';
@@ -1019,7 +1080,6 @@ export class PlanetMeshLayer {
     mesh.renderOrder = 2.82;
     mesh.scale.setScalar(shellRadiusPc);
     mesh.visible = false;
-    markOccludingEmitter(mesh);
     this.group.add(mesh);
     return { mesh, material, shellRadiusPc };
   }
@@ -1042,17 +1102,16 @@ export class PlanetMeshLayer {
     mesh.renderOrder = 2.81;
     mesh.scale.setScalar(outerPc);
     mesh.visible = false;
-    markOccludingEmitter(mesh);
     this.group.add(mesh);
     return { mesh, material, geometry };
   }
 
   /** `format` narrows the GPU upload below RGBA8 where channels carry no
    *  signal. Two maps qualify: the normal, whose blue is a constant and
-   *  whose alpha is unused (`stellataReliefNormal` samples `.rg` and
-   *  reconstructs z), and the sky-view factor, which is one scalar written
-   *  to a grayscale file. WebGL2 RG8 and R8 are both colour-renderable and
-   *  filterable, so mipmaps and anisotropy carry over unchanged. */
+   *  whose alpha is unused (the mesh graph samples `.rg` and reconstructs
+   *  z), and the sky-view factor, which is one scalar written to a
+   *  grayscale file. RG8 and R8 are both filterable, so mipmaps and
+   *  anisotropy carry over unchanged. */
   private ensureTexture(
     key: string,
     { ext, format }: { ext: TextureExt; format?: THREE.PixelFormat },
@@ -1067,7 +1126,8 @@ export class PlanetMeshLayer {
         // cap has to be enforced where every map passes. An oversized upload
         // fails and leaves the body white; refusing here takes the
         // representative-colour path instead, which is a designed fallback.
-        if (bitmap.width > this.maxTextureSize || bitmap.height > this.maxTextureSize) {
+        const cap = this.limits.maxTextureSize;
+        if (bitmap.width > cap || bitmap.height > cap) {
           bitmap.close();
           this.resolveTexture(key, { state: 'missing' });
           return;
@@ -1090,16 +1150,26 @@ export class PlanetMeshLayer {
         // WebGPU backend rebuilds a bind group only when the new object's
         // version differs from the old one's — two version-1 textures
         // alias and the draw keeps sampling the replaced GPU texture.
-        // Uploads still happen exactly once on either backend (both
-        // compare the version per texture object, not per slot).
+        // Uploads still happen exactly once: the version is compared per
+        // texture object, not per slot.
         tex.version = tex.id + 1;
         const bytesPerTexel =
           texelBytes(format ?? THREE.RGBAFormat, THREE.UnsignedByteType) ?? 4;
-        this.resolveTexture(key, {
-          state: 'ready',
-          tex,
-          bytes: textureBytes(bitmap.width, bitmap.height, bytesPerTexel),
-          lastFrame: this.frame,
+        const bytes = textureBytes(bitmap.width, bitmap.height, bytesPerTexel);
+        // Bound only once the upload is known clean —
+        // ../../webgpu/README.md § Out of memory.
+        this.upload(tex, (uploaded) => {
+          // False once dispose has cleared the entry under the upload.
+          const awaited = this.textures.get(key)?.state === 'loading';
+          if (awaited && uploaded) {
+            this.resolveTexture(key, { state: 'ready', tex, bytes, lastFrame: this.frame });
+            return;
+          }
+          tex.dispose();
+          bitmap.close();
+          if (!awaited) return;
+          this.resolveTexture(key, { state: 'missing' });
+          this.stepDownTextureLimits();
         });
       },
       undefined,
@@ -1126,7 +1196,7 @@ export class PlanetMeshLayer {
     // comes back off the HTTP cache while a narrower one is still on the
     // wire — so ordering cannot be relied on instead.
     const rung = this.rungOf.get(key);
-    if (rung && this.requestedRung.get(rung.body) !== rung.width) {
+    if (rung && !this.isPinnedRung(key) && this.requestedRung.get(rung.body) !== rung.width) {
       this.releaseTexture(key);
     }
     this.requestRender('planet-texture');
@@ -1160,6 +1230,7 @@ export class PlanetMeshLayer {
     this.shownRung.clear();
     this.requestedRung.clear();
     this.rungOf.clear();
+    this.steppedSinceUpdate = false;
     this.stampMaterial.dispose();
     this.geometry.dispose();
     this.placeholder.dispose();

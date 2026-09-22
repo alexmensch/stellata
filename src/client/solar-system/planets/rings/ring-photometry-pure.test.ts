@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
 
-import { glslCallArgs } from '../../../util/glsl-call-args';
 
 import {
   JUPITER_PHASE,
@@ -13,7 +11,6 @@ import {
 } from '../../phase-function';
 import {
   RING_BACKLIT_TRANSMIT,
-  RING_SHADOW_FLOOR,
   SATURN_RING_PHOTOMETRY,
   effectiveRingTiltDeg,
   maxRingSystemFluxFactor,
@@ -175,25 +172,6 @@ describe('the backlit branch', () => {
     expect(fluxAt(0, 16, true)).toBeGreaterThan(0);
   });
 
-  it('shares that fraction with planet-rings.frag.glsl', () => {
-    // Resolved annulus and point-source magnitude must agree on which
-    // side of the ring plane is lit — README.md § Ring photometry.
-    const frag = readFileSync(
-      fileURLToPath(new URL('./planet-rings.frag.glsl', import.meta.url)), 'utf8');
-    const match = /const float TRANSMIT = ([0-9.]+);/.exec(frag);
-    expect(match).not.toBeNull();
-    expect(Number(match![1])).toBe(RING_BACKLIT_TRANSMIT);
-  });
-
-  it('shares the in-shadow floor with planet-rings.frag.glsl', () => {
-    // The TSL annulus reads RING_SHADOW_FLOOR from here, so the two
-    // backends' shadowed bands would drift apart silently without this.
-    const frag = readFileSync(
-      fileURLToPath(new URL('./planet-rings.frag.glsl', import.meta.url)), 'utf8');
-    const match = /const float SHADOW_FLOOR = ([0-9.]+);/.exec(frag);
-    expect(match).not.toBeNull();
-    expect(Number(match![1])).toBe(RING_SHADOW_FLOOR);
-  });
 });
 
 describe('the annulus phase scalar', () => {
@@ -288,16 +266,16 @@ describe('the annulus phase scalar', () => {
 });
 
 describe('the annulus shader spends the phase factor on flux only', () => {
-  const frag = readFileSync(
-    fileURLToPath(new URL('./planet-rings.frag.glsl', import.meta.url)), 'utf8');
+  const frag = readTslSource(
+    new URL('../../../webgpu/solar-system/planet-rings-tsl.ts', import.meta.url));
 
   it('scales `light`, never `lit`', () => {
     // `lit` is the coverage mask's gate as well as the shadow term
     // (README.md). Folding the phase factor into it would let the
     // opposition surge vote on how much lit ring surface the exposure pin
     // divides its masked mean by — brightness masquerading as area.
-    const litDecl = /\n\s*float lit = ([^;]*);/.exec(frag);
-    const lightDecl = /\n\s*float light = ([^;]*);/.exec(frag);
+    const litDecl = /\n\s*const lit = ([\s\S]*?);\n/.exec(frag);
+    const lightDecl = /\n\s*const light = ([^;]*);/.exec(frag);
     expect(litDecl).not.toBeNull();
     expect(lightDecl).not.toBeNull();
     expect(litDecl![1]).not.toMatch(/uRingPhaseScale/);
@@ -305,8 +283,8 @@ describe('the annulus shader spends the phase factor on flux only', () => {
   });
 
   it('keeps the coverage argument off it', () => {
-    expect(glslCallArgs(frag, 'stellataStatisticTexel')[1])
-      .not.toMatch(/uRingPhaseScale/);
+    // The mask is `step(0.5, lit)`, which carries no flux term at all.
+    expect(frag).toContain('gates.statisticWrites, ringL, step(0.5, lit), alpha),');
   });
 });
 

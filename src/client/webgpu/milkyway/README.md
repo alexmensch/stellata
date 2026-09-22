@@ -1,21 +1,19 @@
 # Milky Way band on WebGPU
 
-The TSL half of the band: a log-distributed march through each proxy mesh
-with running per-channel dust extinction, and the shipped one. The
-WebGL2 shaders (`../../milkyway/`) stay the semantic reference until
-`0it.14` deletes them; the density profiles, the ρ₀ solve and the
-calibration are not re-decided here.
+The band's graph: a log-distributed march through each proxy mesh with
+running per-channel dust extinction. The density profiles, the ρ₀ solve
+and the calibration live in `../../milkyway/` and are not re-decided
+here.
 
-**The chart isobar contour has never drawn, on either backend.** Chart
+**The chart isobar contour has never drawn.** Chart
 mode hides both meshes, so the branch is unreachable
-(`../../milkyway/README.md` § Chart mode + warp). It is transcribed here
-because the two shaders are maintained as one artefact — not because
-anything renders it. Treat every mention of it below as describing dead
-code kept warm for a future treatment.
+(`../../milkyway/README.md` § Chart mode + warp). It is kept for a
+future treatment, not because anything renders it. Treat every mention
+of it below as describing dead code.
 
-**It ports as a material swap.** The layer keeps its two proxy meshes,
-the per-frame galactic-centre rebase, every debug-panel lever and the
-chart handoff, and takes its materials through `../../milkyway/README.md`
+The layer owns its two proxy meshes, the per-frame galactic-centre
+rebase, every debug-panel lever and the chart handoff; this folder is
+only the materials it takes through `../../milkyway/README.md`
 § The material seam.
 
 ## Files in this area
@@ -28,7 +26,7 @@ src/client/webgpu/milkyway/
                             the march's step counts and τ conversion are
                             imported from milkyway-column-pure, never
                             restated. § The bound is taken off the mirror.
-  band-uniform-nodes.ts     TSL twins of the seam's two uniform blocks —
+  band-uniform-nodes.ts     The seam's two uniform blocks as TSL nodes —
                             the shared group and the per-component one.
   tsl-band-materials.ts     The factory implementing BandMaterials.
 ```
@@ -37,17 +35,17 @@ src/client/webgpu/milkyway/
 
 `MilkyWay.peakSurfaceBrightnessBound` is computed from
 `../../milkyway/milkyway-column-pure.ts` and decides whether the band draws
-at all (`../../milkyway/README.md` § The brightest rendered sightline). This
-is the shipped backend, so a march here that has drifted from that mirror
-yields a bound on a picture nobody is looking at — and the failure is silent,
+at all (`../../milkyway/README.md` § The brightest rendered sightline), so a
+march here that has drifted from that mirror yields a bound on a picture
+nobody is looking at — and the failure is silent,
 because the bound stays internally consistent while being about the wrong
 shader. `milkyway-band-tsl-drift.test.ts` holds the march's own shape
 (`STEPS`, `FOREGROUND_DUST_STEPS`, `S_MIN_PC`, `UNIT_BALL_SLACK`,
 `MAG_PER_TAU`) and what the resolution-hole fetch scales its two
 coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
 `_DEX_PER_SHELL` / `_MIN_DISTANCE_PC`) to the mirror's constants by
-import, plus the explicit `.level(int(0))` on the hole fetch that keeps this
-backend on the same sampling as the GLSL
+import, plus the explicit `.level(int(0))` on the hole fetch, which keeps
+the sampler's derivatives out of the march
 (`../../milkyway/calibration/README.md` § The table is a 3D grid). The profile and dust parameters need no entry there: they arrive
 as uniform nodes that `seedBandSharedSlots` alone writes (§ Seeding,
 because a node starts on its declared default). The hole grid crosses as
@@ -56,7 +54,7 @@ write in place — its extent reaches the shader as the one constant the
 coordinate divides by, so nothing else about the layout can drift.
 
 The write tail it ends on is `../extended-emitter-tsl.ts`, shared with
-the Local Group emission exactly as the GLSL chunk is.
+the Local Group emission.
 
 ## The shared nodes are built once per factory
 
@@ -73,10 +71,9 @@ read, unlike the per-consumer ones beside it (`../README.md`).
 where a name collides — `uDustEnabled`, `uExtinctionStrength`,
 `uDustAvPerDensityPc`, `uWorldOffset`. Those mirror the *frame-wide* map,
 which `registry.sync()` copies from every rendered frame; a write the band
-made into one would be overwritten on the next frame. The band's WebGL
-objects are its own too (`Stellata.setExtinctionStrength` writes the frame
-map and the band separately), so mirroring them as the band's own nodes is
-the faithful transcription, not a divergence.
+made into one would be overwritten on the next frame.
+`Stellata.setExtinctionStrength` writes the frame map and the band
+separately for the same reason.
 
 Only `uLimitMag`, the six HDR emitter slots and the two solid angles come
 off the mirror — those the band genuinely reads by reference from the
@@ -88,15 +85,13 @@ A `uniform()` node is constructed with a literal, not with the layer's
 authored constant, so the placeholders in `bandSharedUniformNodes` are
 never what a shader should march. **The factory seeds them**, through
 `seedBandSharedSlots` (`../../milkyway/band-materials.ts`) — the one
-writer of the authored values, called by the WebGL factory too, so the
-two backends cannot start on different constants and the layer holds no
-copy of the list. A slot added to `BandSharedSlots` without a line there
+writer of the authored values, so the layer holds no copy of the list. A slot added to `BandSharedSlots` without a line there
 fails `band-materials.test.ts`.
 
 ## The chart toggle rebuilds the pipeline; the clouds' does not
 
-`setIsobar` swaps `material.blending` and sets `needsUpdate`, which on this
-backend is a WGSL recompile of the march — blend state is baked into a
+`setIsobar` swaps `material.blending` and sets `needsUpdate`, which is a
+WGSL recompile of the march — blend state is baked into a
 WebGPU pipeline, so the swap cannot land without one. The sibling cloud
 layer deliberately refused that trade and put its chart flip in a uniform
 branch instead (`../molecular-clouds/README.md` § One rim graph, both
@@ -107,11 +102,9 @@ nothing to show either way while the contour does not draw.
 
 ## `uIsBulge` becomes compile-time
 
-The GLSL carries it as a **uniform** and branches on it inside the
-fragment — one program, two draws. Here the builder takes the flag and
-emits one density profile or the other, so there is no branch and no dead
-half. Same consequence as the LG family split: a component's profile is
-fixed for the material's life, which it already was.
+The builder takes the flag and emits one density profile or the other,
+so there is no branch and no dead half. Same consequence as the LG
+family split: a component's profile is fixed for the material's life.
 
 ## Three outcomes, none of which can be a return
 
@@ -122,24 +115,21 @@ coverage is one predicate and the three outcomes are nested selects.
 **The isobar would be chart ink, not light**, so it claims neither the
 statistic nor the diffuse attachment — the selects for those two exclude
 the isobar branch as well as the uncovered one. That exclusion is
-transcription of the GLSL's intent, not an observed behaviour: nothing
-draws under `uChartIsobar = 1`.
+intent, not an observed behaviour: nothing draws under
+`uChartIsobar = 1`.
 
-**`sb` is computed outside the branch**, exactly as the GLSL comments say,
-so the screen-space derivatives stay in uniform control flow.
+**`sb` is computed outside the branch**, so the screen-space derivatives
+stay in uniform control flow.
 `fwidth` has no TSL node and is `|dFdx| + |dFdy|` by definition.
 
 **Both arms of every `select` are evaluated** — that is what `select` is,
 in TSL and in WGSL alike — so the emitter tail and the (dead) isobar path
-are both live on every covered fragment, where the GLSL returned out of
-them. Named here because it is a real cost the crossing introduces, and
-an unmeasured one.
+are both live on every covered fragment. A real cost, and an unmeasured
+one.
 
-## What is NOT ported
+## The dust is the analytic slab
 
-The measured-dust cascade. The band still marches the **analytic** dust
-slab on both backends; the per-cloud tiering and the voxel-grid read are
-`stellata-ty4.5`'s, and the prefilter mechanism behind them is still
-behind a design gate. A change there lands in both shader variants or is
-deferred to whichever bead owns it — the dual-maintenance rule in
-`../README.md`.
+The band marches the **analytic** dust slab; the measured-dust cascade —
+the per-cloud tiering and the voxel-grid read — is `stellata-ty4.5`'s,
+and the prefilter mechanism behind it is still behind a design gate
+(`../../milkyway/README.md` § Dust).

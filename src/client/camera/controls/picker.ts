@@ -60,9 +60,8 @@ export interface PickerDeps {
   drawCutoffMagFn: (chart: boolean) => number;
   // Whether the renderer puts a pixel on screen for this star, and the
   // disc radius it actually draws — the terms the prefilter above cannot
-  // see, resolved per candidate because on the WebGL2 escape hatch
-  // per-star extinction stalls on a readback. Threaded as a callback so
-  // Picker stays decoupled from material uniforms.
+  // see. Threaded as a callback so Picker stays decoupled from material
+  // uniforms.
   resolveStarPick: (idx: number) => ResolvedCandidate;
   // Collapsed-cluster lead resolver: when the winning star renders as
   // one point with other members of its system (composite-suppressed),

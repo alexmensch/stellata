@@ -1,9 +1,9 @@
 // Soft-penumbra ray–sphere shadow math — CPU mirror of the caster loop
-// in planet-mesh.frag.glsl. Shader is the render path; this mirror is
+// in ../../webgpu/solar-system/planet-mesh-tsl.ts. Shader is the render path; this mirror is
 // test-pinned and feeds transit search tests.
 
 /** Caster-array capacity — mirrors `MAX_CASTERS` in
- *  planet-mesh.frag.glsl. Saturn's seven in-scope moons are the largest
+ *  ../../webgpu/solar-system/planet-mesh-tsl.ts. Saturn's seven in-scope moons are the largest
  *  family. */
 export const MAX_SHADOW_CASTERS = 8;
 

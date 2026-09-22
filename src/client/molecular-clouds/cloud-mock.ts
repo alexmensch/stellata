@@ -4,7 +4,8 @@
 
 import * as THREE from 'three';
 import type { Cloud, CloudCatalog } from './cloud-loader';
-import type { CloudAbsorptionSpec } from './cloud-materials';
+import { fakeEmitterMaterial, surfaceRecorder, type FakeEmitterMaterial } from '../scene/emitter-material-mock';
+import type { CloudAbsorptionSpec, CloudMaterials } from './cloud-materials';
 
 export function makeMockCloud(overrides: Partial<Cloud> = {}): Cloud {
   return {
@@ -45,7 +46,7 @@ function mockBrick(): THREE.Data3DTexture {
 }
 
 /** One cloud's absorption inputs, on either tier — `field` present is what
- *  selects the traced march on both backends. */
+ *  selects the traced march. */
 export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec {
   return {
     axes: new THREE.Vector3(3, 2, 1),
@@ -70,3 +71,37 @@ export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec 
 
 /** Must match the layer's defaults. */
 export const MOCK_RIM_SPEC = { inkHex: 0x000000, inkAlpha: 0.95, opacity: 1 };
+
+export interface FakeCloudMaterials extends CloudMaterials {
+  /** One per `absorption()` call, in catalogue order. */
+  readonly absorptionSpecs: CloudAbsorptionSpec[];
+  readonly absorptionSurfaces: FakeEmitterMaterial[];
+  /** The one rim surface every cloud shares. */
+  readonly rimSurface: FakeEmitterMaterial;
+}
+
+/** Records what the layer asked for and hands back a surface whose slots
+ *  its setters write through. */
+export function fakeCloudMaterials(): FakeCloudMaterials {
+  const absorptionSpecs: CloudAbsorptionSpec[] = [];
+  const absorption = surfaceRecorder((surface, spec: CloudAbsorptionSpec) => {
+    absorptionSpecs.push(spec);
+    surface.uniforms.uSteps.value = spec.steps;
+  });
+  const rim = fakeEmitterMaterial();
+  return {
+    absorptionSpecs,
+    absorptionSurfaces: absorption.surfaces,
+    rimSurface: rim,
+    absorption: (spec) => absorption.mint(spec),
+    // One material for all ~96 clouds, as the factories build it.
+    rim(spec) {
+      rim.uniforms.uChart.value = 0;
+      rim.uniforms.uColour.value = new THREE.Color();
+      rim.uniforms.uOpacity.value = spec.opacity;
+      rim.uniforms.uInk.value = new THREE.Color(spec.inkHex);
+      rim.uniforms.uInkAlpha.value = spec.inkAlpha;
+      return rim;
+    },
+  };
+}

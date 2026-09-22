@@ -13,14 +13,11 @@ import {
 import type { HoverHit } from '../hover/hover-types';
 import { applyRimParams, type RimParams } from '../fresnel-shell/fresnel-shell';
 import { setRawChromeColour } from '../hdr/chrome/chrome-colour';
-import { markAbsorber } from '../hdr/attachments/attachment-gate';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {
-  makeGlslCloudMaterials,
   type CloudAbsorptionSpec,
   type CloudFieldSpec,
   type CloudMaterials,
-  type CloudSharedUniforms,
 } from './cloud-materials';
 
 // Shared sphere geometries. The absorption mesh is slightly circumscribed
@@ -57,18 +54,11 @@ const ABSORPTION_RENDER_ORDER = -2;
 // chrome, deliberately NOT extincted by the absorption pass.
 const RIM_RENDER_ORDER = -1;
 
-function localSharedUniforms(): CloudSharedUniforms {
-  return {
-    uFovYRad: { value: Math.PI / 3.6 },
-    uViewport: { value: new THREE.Vector2(1920, 1080) },
-  };
-}
-
 /**
  * Molecular-cloud layer — two decoupled components per cloud:
  *
  * - Absorption: per-cloud ellipsoid raymarch of the calibrated Plummer
- *   model (absorption/cloud-absorption.frag.glsl), an alpha-only over that dims the
+ *   model (../webgpu/molecular-clouds/cloud-absorption-tsl.ts), an alpha-only over that dims the
  *   diffuse background. Physics, so it is ALWAYS on in realistic mode —
  *   never declutter-gated — and hidden only in chart mode.
  * - Rim shell: the fresnel-rim orientation silhouette on the per-cloud
@@ -132,10 +122,9 @@ export class MolecularClouds {
   constructor(
     catalog: CloudCatalog,
     surfaces: Map<number, CloudSurface> | null = null,
-    shared: CloudSharedUniforms = localSharedUniforms(),
-    materials?: CloudMaterials,
+    materials: CloudMaterials,
   ) {
-    this.materials = materials ?? makeGlslCloudMaterials(shared);
+    this.materials = materials;
     this.clouds = catalog.clouds;
     this.group = new THREE.Group();
     // Groups keep renderOrder 0: a non-zero Group.renderOrder becomes the
@@ -170,7 +159,6 @@ export class MolecularClouds {
       mesh.scale.set(c.axes[0], c.axes[1], c.axes[2]);
       mesh.frustumCulled = false; // group origin is offset per frame
       mesh.renderOrder = ABSORPTION_RENDER_ORDER;
-      markAbsorber(mesh);
       this.absorptionGroup.add(mesh);
 
       const rimMesh = this.makeRimMesh(c, surfaceForCloud);
@@ -462,7 +450,7 @@ export class MolecularClouds {
 
   /**
    * The brick texture is built here rather than in a factory because this
-   * layer owns its lifetime on either backend — `brickTextures` is what
+   * layer owns its lifetime — `brickTextures` is what
    * disposes it.
    */
   private absorptionSpec(

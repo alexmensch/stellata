@@ -24,12 +24,17 @@ src/client/solar-system/planets/
                                   ride, and the SVG labels stay wired
                                   in main.ts (they read the shell's
                                   orbit-rings layer + focus state).
-  planet-body-field.ts (+ test)   Instanced planet-body renderer. One
-                                  additive reflected-glare pass (+ its
-                                  local-pass mirror); the resolved surface
-                                  is the spheroid mesh (planet-mesh-layer).
-                                  Shares the glow half of perceptual-disc.glsl
-                                  with stars — see
+  planet-body-field.ts (+ test)   Per-body state for every attached
+                                  host: the arrays the reflected-glare
+                                  billboard packs from (its main pass +
+                                  local-pass mirror,
+                                  ../../webgpu/solar-system/); the resolved
+                                  surface is the spheroid mesh
+                                  (planet-mesh-layer). `drawn` is the
+                                  glare's visibility, which the mesh layer
+                                  and the local cluster follow.
+                                  Shares the glow half of the perceptual
+                                  disc with stars — see
                                   ../../star-pipeline/README.md.
                                   pick() adds one gate over
                                   forEachDrawnBodyView: bodyInkVisible,
@@ -95,11 +100,9 @@ src/client/solar-system/planets/
                                   build-generated table it reads, and the
                                   VRAM budget that releases the rest. Its
                                   own README.
-  glare/                          Reflected-glare billboard shaders: the
-                                  shared star-perceptual point and the
-                                  photocentre shift. Its own README.
-  rings/                          Ring-annulus shaders, the radial strip,
-                                  and a ring system's share of appMag.
+  rings/                          The ring annulus's photometry, the
+                                  radial strip, and a ring system's share
+                                  of appMag. Its own README.
   rotation/                       Pole + prime-meridian elements and the
                                   texture-UV orientation chain — its own
                                   README (§ Planet rotation).
@@ -119,17 +122,17 @@ src/client/solar-system/planets/
                                   resolvability-gated. Imports nothing from
                                   here and stays wired in main.ts. Its own
                                   README.
-  planet-mesh.vert.glsl,
-  planet-mesh.frag.glsl           Lit spheroid shaders (equirect sample,
-                                  host-direction Lambert terminator,
-                                  representative-colour + limb-darkening
-                                  fallback, atmosphere airlight over the disc).
 ```
+
+The lit spheroid's own graph — equirect sample, host-direction Lambert
+terminator, representative-colour + limb-darkening fallback, atmosphere
+airlight over the disc — is
+`../../webgpu/solar-system/planet-mesh-tsl.ts`.
 
 ## The two layers
 
-- **`planet-body-field.ts`** — global, instanced mesh holding every
-  attached host's planet bodies. Sol attaches once at startup; bk5
+- **`planet-body-field.ts`** — the per-body arrays for every attached
+  host's planet bodies. Sol attaches once at startup; bk5
   will iterate exoplanet hosts in. Bodies are physical objects:
   they render whenever attached, regardless of which host the camera
   is focused on. Each frame, for each host:
@@ -205,8 +208,8 @@ visibility cutoff applies **to the glare** — sub-cutoff planets fade
 naturally, no unconditional pixel floor — and never to the mesh
 (§ Planet mesh LOD). The glare is one pass (main-pass draw +
 **local-pass mirror draw** over the active cluster's slot range, gated
-by the shared `uLocalPassRange` uniform — opposite sense under the
-`LOCAL_DEPTH_PASS` define). While the system is locally active
+by `uLocalPassRange` — the mirror's vertex stage reads it in the opposite
+sense). While the system is locally active
 (`../local-cluster.ts`) the main-pass instances collapse and every body
 renders through the mirror in the bracketed local depth pass, where the
 **mesh** writes depth so the additive glare is occluded to a lit-limb
@@ -226,7 +229,8 @@ read the live `uExposure` — and must, or a parked body blacks out the
 whole faint end while leaving every one of those bodies clickable.
 
 `bodyInkVisible` is that extra gate, and it is the star pipeline's own
-test: the glare IS the shared star-perceptual point (`glare/README.md`),
+test: the glare IS the shared star-perceptual point
+(`../../webgpu/solar-system/README.md` § Reflected glare),
 so it runs through `emitterPutsInkOnScreen` unchanged, `tapered` always
 true because a body carries no opaque disc pass. The mesh OR-branch is
 `forEachDrawnBodyView`'s, unchanged — an opaque surface is pickable at
@@ -257,11 +261,11 @@ the resolve step is continuous by construction. The mesh anchor, the two
 disc means that divide out, and the colour bookkeeping that keeps a
 gamma-bent albedo from lighting the body live in `emission/README.md`.
 
-The three alpha-composited surfaces — mesh, annulus, atmosphere shell — are
-`markOccludingEmitter` rather than `markStatisticEmitter`, so they dim the
+The three alpha-composited surfaces — mesh, annulus, atmosphere shell — take
+the occluding-emitter role rather than the point-emitter one, so they dim the
 diffuse attachment by their own opacity as well as emitting. The additive
 glare needs nothing: an additive blend cannot attenuate
-(`../../hdr/attachments/README.md` § The gate).
+(`../../hdr/attachments/README.md` § The roles).
 
 **They are also the only emitters in the client that claim lit-surface
 coverage**, the term the exposure pin divides its masked mean by
@@ -317,7 +321,7 @@ crossfade.
   emission rule the star field runs. That is the load-bearing invariant:
   **visibility matches magnitude.** The billboard's own behaviour — the
   photocentre shift and why a resolved mesh hides the glare's core — is
-  `glare/README.md`.
+  `../../webgpu/solar-system/README.md` § Reflected glare.
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
@@ -383,8 +387,8 @@ crossfade.
   outcome resolving requests a frame (`ctx.requestRender('planet-texture')`):
   a load landing between ticks changes what the body draws, and frames
   are on demand (`../../render-gate/README.md`).
-- **Visibility**: the layer's group mirrors `PlanetBodyField.group`
-  (chart-mono + hidden ride along for free) and skips the field's
+- **Visibility**: the layer's group follows `PlanetBodyField.drawn` and
+  hides in chart mode (`monochrome`), and skips the field's
   `hiddenInstanceIdx` (observe anchor).
 - **Depth pre-stamp**: every fully opaque body also draws a depth-only
   copy of its spheroid first in the MAIN pass, so the background behind
@@ -400,8 +404,8 @@ every rung shares one build-measured mean luminance, or a swap would step the
 disc's brightness.
 
 **Maps are released, which the ladder makes mandatory rather than tidy** — an
-8192 map is 179 MB against a 2048's 11 MB. A body keeps exactly one rung; the
-rest rides a least-recently-drawn budget. Dropping matters most for a body
+8192 map is 179 MB against a 2048's 11 MB. A body keeps the rung it draws plus
+its pinned 1024 floor; the rest rides a least-recently-drawn budget. Dropping matters most for a body
 still ON screen but small — used every frame, so beyond that budget's reach.
 
 ### Surface relief
@@ -413,7 +417,8 @@ flattest and buys nothing below 8192. The tangent frame, the single term the
 perturbed normal may reach, how the facet's own slope composes with the
 skyline beyond it — the body's own limb included — and why the sky the ground
 sees needs a different march from the sun it sees, are
-`surface-relief/README.md`; the shader is `planet-mesh.frag.glsl` here.
+`surface-relief/README.md`; the shader is
+`../../webgpu/solar-system/planet-mesh-tsl.ts`.
 
 ### Ring systems
 

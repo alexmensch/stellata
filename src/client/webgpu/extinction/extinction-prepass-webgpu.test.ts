@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Matrix4, PerspectiveCamera, Vector3, type BufferAttribute } from 'three';
 import type { ComputeNode, StorageBufferAttribute, WebGPURenderer } from 'three/webgpu';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
 import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';
@@ -131,10 +131,6 @@ function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
 }
 
 describe('construction', () => {
-  it('needs no float-target extension — that verdict has no WebGPU analogue', () => {
-    expect(makePrepass().prepass.supported).toBe(true);
-  });
-
   it('points the consumer slot at a one-float-per-star buffer immediately', () => {
     const { prepass, slots } = makePrepass();
     // uAvPrepassEnabled is the gate, not the binding, so an uncomputed
@@ -408,9 +404,8 @@ describe('the displacement gate', () => {
     expect(computes).toHaveLength(settled);
   });
 
-  // A compute pass binds no render target, so the ends-at-the-canvas
-  // contract the fragment twin kept (../hdr/reduction-webgpu.ts) has
-  // nothing here to hold — pin that nothing is bound at all.
+  // A compute pass binds no render target — pin that nothing is bound at
+  // all.
   it('never touches the render-target binding', () => {
     const { prepass, setRenderTarget, attachDust } = makePrepass();
     attachDust();
@@ -616,9 +611,8 @@ describe('the pick mirror', () => {
     expect(reads).toHaveLength(1);
   });
 
-  // The WebGL twin clears its memo inside the recompute; here the read can
-  // outlive the buffer's contents, so the generation counter is that same
-  // invalidation rule expressed for a promise (README.md § Cold reads).
+  // The read can outlive the buffer's contents, so the generation counter
+  // is what invalidates it (README.md § Cold reads).
   it('drops a read that resolves against a superseded buffer', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();

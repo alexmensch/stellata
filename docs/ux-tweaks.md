@@ -64,7 +64,7 @@ for the surrounding context.
   cull bound is the deepest threshold the trim can reach.
 - **Soft-taper width** — `SOFT_TAPER_MARGIN_MAG` (0.5) in
   `solar-system/perceptual-magnitude.ts`, used by `magOk`
-  (`star.vert.glsl`) and the matching
+  (`../src/client/webgpu/star/star-vertex-tsl.ts`) and the matching
   `smoothstep(uThresholdMag, uThresholdMag + 0.5, vAppMag)` in the
   fragment shader's glow pass. Wider = softer fade-in at the visibility
   threshold; 0 = hard cutoff. Every CPU "is it drawn?" mirror reads the
@@ -84,7 +84,7 @@ for the surrounding context.
   shrink below 20% of the star's current baseline size.
 - **Luminosity-class softness range** — `mix(3.0, 1.8, vSoftness)` for
   glow falloff and `mix(0.48, 0.38, vSoftness)` for disc edge AA in
-  `star.frag.glsl`. Widen the gaps for more dramatic differentiation.
+  `../src/client/webgpu/star/star-glow-tsl.ts`. Widen the gaps for more dramatic differentiation.
 - **Info-modal dismissal** — cleared by removing the
   `stellata.info-dismissed` localStorage key.
 - **Chart-mode disc size range** — `uChartDiscMaxPx` (16 px) and

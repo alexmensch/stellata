@@ -3,9 +3,8 @@
 The star renderer's CPU half — instanced quads, three passes,
 physical-size scaling, the super-Gaussian intensity profile, and
 luminosity-class softness. Pulsation and dust extinction live in the
-subfolders. The GLSL materials here draw only on the `#renderer=webgl2`
-escape hatch; the shipped pipelines are `../webgpu/star/`, over the same
-geometry and attribute writers.
+subfolders. The pipelines that draw are `../webgpu/star/`, over the
+attribute writers here.
 
 ## Subfolders
 
@@ -18,8 +17,8 @@ geometry and attribute writers.
   cache, plus the build-time de-extinction cancellation invariant.
 - `pulsation/` — the per-type variable-star {ρ, ΔB−V} tables and the
   eclipsing-binary suppress mask.
-- `local-pass/` — `StarLocalCluster` + `StarLocalMirror`: which stars
-  join the local depth pass each frame and the mirror draw that
+- `local-pass/` — `StarLocalCluster` + the `StarMirror` contract: which
+  stars join the local depth pass each frame and the mirror draw that
   re-renders them inside its bracket. `MIRROR_CAPACITY` and the
   `RESOLVED_DISC_MIN_PX` / `discWindowPc` pivots the core-mask gate
   shares live there.
@@ -31,10 +30,9 @@ geometry and attribute writers.
   NOT shard-aware yet lists the legs still indexing `catalog` directly.
 - `perceptual-disc/` — the display kernel: the `max(appSize, physSize)`
   sizing rule, the plate-scale calibration that makes it
-  viewport-invariant, and the super-Gaussian profile. The GLSL chunk,
-  its CPU mirrors and the uniform interface live there, and it stays the
-  authority on all three — the sections below cover only how the star
-  passes bind to it.
+  viewport-invariant, and the super-Gaussian profile. The CPU mirrors
+  and the uniform interface live there, and it stays the authority on
+  both — the sections below cover only how the star passes bind to it.
 
 ## Files
 
@@ -69,29 +67,22 @@ geometry and attribute writers.
   through the single injected `StarModuleRuntime`. `photometry()` is
   the one leg a *non*-star module reads, via
   `KindContext.starPhotometry`.
-- `star-pipeline.ts` — `InstancedBufferGeometry` + disc / glow /
-  coreMask `RawShaderMaterial`s + meshes. Owns
-  `applyDiscBlendDefaults` + `applyGlowBlendDefaults` (shared with the
-  local mirror + planet body field) + `setMonochromeBlend` + `dispose`.
-  `absorbRecords()` grows `instanceCount` to the decoded record count and
-  range-uploads the window that landed. **On this backend the instance
-  count IS the bound** — there is no compaction pass — so leaving it at
-  the full catalogue during a progressive load draws every undecoded
-  record as an absolute-magnitude-zero star sitting on Sol. `iPuls` is the
-  one static attribute backed by a copy rather than a catalog column, so
-  its window is re-interleaved rather than just flagged.
-  **The attributes it flags are derived from the geometry** — every
-  instanced attribute whose `usage` is not `DynamicDrawUsage` — rather
-  than listed. A hand-kept roster is a list a later attribute gets left
-  off, and the symptom is that attribute rendering its whole post-chunk-0
-  tail stale with nothing failing; the four dynamic ones upload whole and
-  need no range.
-- `star.vert.glsl`, `star.frag.glsl` — GLSL3 / WebGL2 shaders.
+- `star-source-attributes.ts` — the four per-star buffers the shell
+  rewrites (`iPosition`, `iCompositeSuppress`, `iEclipseDim`,
+  `iSuppressPulsation`), wrapped as `BufferAttribute`s over the shell's
+  own arrays. Nothing instances them: they exist for the version and
+  dirty ranges `util/attribute-upload` flags and
+  `../webgpu/star/star-tables.ts` forwards.
+- `star-blend.ts` (+ test) — `applyDiscBlendDefaults`,
+  `applyGlowBlendDefaults`, `applyMonochromeBlend` and the
+  `applyChartBlendSwap` pair helper over them. Every field they set is on
+  `THREE.Material`, so the star layer and the planet glare share them.
+- `star-quad.ts` — `STAR_QUAD_CORNERS` / `STAR_QUAD_INDEX`, the unit
+  square every star-shaped emitter's geometry expands.
 - `star-pass.ts` (+ test) — the pass identities (`STAR_PASS_GLOW` /
-  `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`, = the shaders' `uRenderMode`
-  values) and `colourPassFor`, the size-terms → colour-pass routing the
-  pick mirror shares. The WebGPU port keys its compile-time pass
-  specialization on the same constants. `starPassRouting` reads the
+  `STAR_PASS_DISC` / `STAR_PASS_CORE_MASK`) and `colourPassFor`, the
+  size-terms → colour-pass routing the pick mirror shares. The vertex
+  stage's compile-time pass specialization keys on the same constants. `starPassRouting` reads the
   split both ways — undimmed and dimmed — for the eclipse debug HUD
   (`../debug/README.md` § Eclipse routing); nothing in the render path
   calls it.
@@ -107,17 +98,11 @@ geometry and attribute writers.
   peak-normalised. Regenerate via `pnpm run build:lut`. The vertex
   shader renormalises each sample to luminance 1 (§ Physical-luminance
   emission).
-- `star-pipeline-mock.ts` — zero-filled `StarPipelineOptions` for tests
-  needing a real geometry without GL; `../webgpu/star-attribute-roster.test.ts`
-  derives the port's packable-attribute partition from it.
-- `star-pipeline.test.ts` — dispose + uniform-sharing + blend
-  defaults.
-- `disc-blend.test.ts` — disc/glow blend-equation parity.
-- `star-pass-split-drift.test.ts` — pins both backends' vertex stages to
-  routing the disc/glow split on the undimmed magnitude (§ Star
-  rendering). Source-level, because no behavioural suite can reach it:
-  the CPU mirror takes resolved size terms and agrees with itself
-  whichever value the shaders route on.
+- `star-pass-split.test.ts` — pins the vertex stage to routing the
+  disc/glow split on the undimmed magnitude (§ Star rendering).
+  Source-level, because no behavioural suite can reach it: the CPU
+  mirror takes resolved size terms and agrees with itself whichever
+  value the shader routes on.
 
 ## Physical-luminance emission
 
@@ -126,13 +111,13 @@ Brightness is the **peak** of the profile, `vPeakL`, computed per
 instance in the vertex shader from the star's apparent magnitude:
 
 ```
-vPeakL = stellataPointSourcePeak(uExposure, appMag, 0.5 * physSize)
+vPeakL = pointSourcePeakTsl(uExposure, appMag, 0.5 * physSize)
 ```
 
-The footprint math is untouched, but its *meaning* changed: the √Δm
-appSize curve and the plate-scale exaggeration `K` are now purely a
-display kernel normalised to peak 1 (`perceptual-disc/README.md` § Star intensity profile) — they
-size the star, they no longer encode how bright it is. **`K` therefore
+The √Δm appSize curve and the plate-scale exaggeration `K` are purely a
+display kernel normalised to peak 1 (`perceptual-disc/README.md` § Star
+intensity profile) — they size the star and do not encode how bright it
+is. **`K` therefore
 stops being a calibration knob**, trading only legibility against how
 crowded a dense field looks.
 
@@ -163,7 +148,7 @@ K-exaggerated footprint over-counts a star's frame flux by design
 (`docs/science-hdr-pipeline.md` § 1, § 8). The exposure statistic needs
 that integral back, so `vFluxPeakL` carries the same kernel divided by its
 own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
-`perceptual-disc/perceptual-disc.glsl`, and `../hdr/attachments/README.md` for what reads it.
+`../webgpu/perceptual-disc-tsl.ts`, and `../hdr/attachments/README.md` for what reads it.
 
 **The disc pass's core claims lit-surface coverage; the glow pass claims
 none.** That split is not about stars — it is the general rule read off
@@ -179,7 +164,7 @@ halo is where the kernel stops reading as the photosphere.
 ## Colour routing
 
 Runtime colour is **two-tier** — `iTeffApsis > 0 ? Ballesteros(iTeffApsis)
-: iCi` in `star.vert.glsl` — where `iCi` is the build-time-baked
+: iCi` in `../webgpu/star/star-vertex-tsl.ts` — where `iCi` is the build-time-baked
 intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
 `spectralClassCi` bakes in
 `scripts/catalog/spectral/physical-radius.ts`).
@@ -195,9 +180,9 @@ the blue end and will not fit uint8 — `scripts/colour/README.md`.
 ## Star rendering: instanced quads, three passes
 
 Stars are rendered as **instanced unit-quads**, not `THREE.Points`.
-Points were capped by the driver-defined `gl_PointSize` max (commonly
-64–511 px) — too small for the close-range physical-size rendering,
-which can target up to 50% of the viewport. Each instance is one
+WebGPU draws a point primitive at exactly 1 px — nothing like the
+close-range physical-size rendering, which can target up to 50% of the
+viewport. Each instance is one
 `aCorner` vertex × 4, expanded to screen-space pixels in the vertex
 shader by projecting the star centre, then offsetting each corner in
 clip space by `corner × pxSize / viewport × 2 × centre.w` (the `×w`
@@ -243,27 +228,29 @@ Rendering is **three passes over the same instanced geometry**:
 - **Disc pass** (`renderOrder = 0`). Stars where `vPhysRatio ≥ 0.5` —
   i.e. the physical-size term dominates the final
   `max(appSize, physSize)`. Per-channel `MaxEquation` blend
-  (`CustomBlending` with `OneFactor` × `OneFactor`) + `depthTest` +
-  `depthWrite`. The four blend fields live in one helper,
+  (`CustomBlending` with `OneFactor` × `OneFactor`) + `depthTest`, and
+  no `depthWrite`. The blend and depth state lives in one helper,
   `applyDiscBlendDefaults()`, called both at construction and on
   chart-mode → colour-mode swap-back, so the two sites can't drift.
-  Halo fragments (`glow < uCoreThreshold`) push `gl_FragDepth = 1.0`
-  so they paint dim haze without occluding the later glow pass —
-  distant stars peek through the halo additively.
+  **The pass writes no depth of its own**: the core-mask draw already
+  stamped the same fragments several renderOrders earlier
+  (`../webgpu/star/README.md` § The disc draw writes no depth), which is
+  what keeps all three pipelines' early-z.
 - **Glow pass** (`renderOrder = 1`). Stars where `vPhysRatio < 0.5`.
   Additive blending + depthTest but no depthWrite, so overlapping
   distant-field stars accumulate brightness (Milky Way density stays
   alive) and glows correctly depth-fail against any disc drawn in
   pass 2.
 
-All three materials share a single `InstancedBufferGeometry` and the
-same `uniforms` map (the only divergent uniform is `uRenderMode` bound
-to its material). The disc pass discards fragments with `vPhysRatio <
-0.5`; the glow pass discards `vPhysRatio ≥ 0.5`; the core mask
-discards both `vPhysRatio < 0.5` and `glow < uCoreThreshold`.
+The three are separate pipelines over the same star-indexed storage
+tables, drawn indirect at survivor count, and the pass is a compile-time
+specialisation rather than a uniform (`../webgpu/star/README.md`). The
+disc pass discards fragments with `vPhysRatio < 0.5`; the glow pass
+discards `vPhysRatio ≥ 0.5`; the core mask discards both
+`vPhysRatio < 0.5` and `glow < uCoreThreshold`.
 
 **The three discards are complementary only while all three agree on
-`vPhysRatio`, and that is not free.** Each material runs `star.vert.glsl`
+`physRatio`, and that is not free.** Each pipeline runs the vertex stage
 independently, so any per-pass term reaching the size solve makes them
 disagree — and the disc/glow discards are written as a partition, so a
 disagreement drops the star from *both*, drawn nowhere while every CPU
@@ -276,10 +263,8 @@ the vertex stage) while the footprint `pxSize` still carries the dim.
 `physSize / pxSize` — a dim fades the star and shrinks its quad, it never
 re-tiers it. `isDiscDominant`
 (`local-pass/star-local-cluster-pure.ts`) is the CPU mirror of that
-routing and takes the undimmed size for the same reason; the pick gate
-(`../camera/controls/star-pick-visibility-pure.ts`) already routed this
-way. The WebGPU port carries the same rule in `routeAppSize`
-(`../webgpu/star/star-vertex-tsl.ts`).
+routing and takes the undimmed size for the same reason, as does the
+pick gate (`../camera/controls/star-pick-visibility-pure.ts`).
 
 **`appMagRoute` is carried, never reconstructed.** The undimmed
 magnitude is captured before the eclipse fold and takes the dust add
@@ -287,10 +272,10 @@ alongside `appMag`, so it is the identical sequence of adds the disc and
 core-mask compilations run — equal bit for bit. Rebuilding it as
 `appMag − eclipseDimMag` instead does not round-trip in float32 and puts
 the glow pass back on a value the other two never compute, for any star
-within ~1.6 × 10⁻³ px of the split. Both backends are pinned against
-that in `star-pass-split-drift.test.ts`, which is the only thing that
+within ~1.6 × 10⁻³ px of the split. It is pinned against
+that in `star-pass-split.test.ts`, which is the only thing that
 can catch it: `colourPassFor` takes size terms already resolved, so the
-CPU mirror agrees with itself whatever the shaders do.
+CPU mirror agrees with itself whatever the graph does.
 
 **`vPhysRatio` is not only the router**, so this reaches more than the
 vanish band. It also drives `perceptualDiscExponent`
@@ -302,18 +287,17 @@ dims under the floor. `vFluxPeakL` stays exact either way — the fragment
 paints from the same varying the flux integral is taken over.
 
 `uHideFocusIdx` (int) suppresses a single star across all three passes by
-collapsing its vertex to a clip-space sentinel
-(`gl_Position = vec4(2, 2, 2, 1)`) when `gl_InstanceID == uHideFocusIdx`.
-Defaults to `-1` (no suppression). Set to the focal-star index in OBSERVE
+collapsing its vertex to a clip-space sentinel outside the frustum when
+the star being drawn is the one it names. Defaults to `-1` (no
+suppression). Set to the focal-star index in OBSERVE
 mode (camera parked at the focal star — disc would render from inside) and
 held pinned to the source star throughout an observe-launched warp so the
 reorient phase doesn't flash the focal disc as the camera pulls away; the
 pick path mirrors it (`../camera/controls/star-pick-visibility-pure.ts`).
 
-`iCompositeSuppress` (float, per-instance) collapses a star's disc
-(mode 1) and core depth-mask (mode 2) passes — but not the additive
-glow (mode 0) — under the same clip-space-sentinel mechanism, gated on
-`uRenderMode`. Written by `BinaryOrbitField` (see
+`iCompositeSuppress` (float, per-instance) collapses a star's disc and
+core depth-mask passes — but not the additive glow — under the same
+clip-space-sentinel mechanism, gated on the compile-time pass. Written by `BinaryOrbitField` (see
 `../binaries/README.md`) for the dimmer member of a sub-pixel binary
 pair: the two near-coincident point sources sum brightness correctly
 under AdditiveBlending in the glow pass, and dropping the opaque disc
@@ -351,82 +335,11 @@ shell when the focused star qualifies; the engage / disengage rules +
 load-bearing `controls.target` invariant are managed in the focus
 controller.
 
-`RawShaderMaterial({ glslVersion: THREE.GLSL3 })`. Vertex shader uses
-`uint` uniforms and bitwise ops for the spectral-class mask. Do **not**
-downgrade to GLSL1 — the mask logic would need to be rewritten as
-per-class bools.
-
-Chart mode swaps both star materials to `MultiplyBlending` + disables
-depth for an ink-on-paper look against the light canvas, and replaces
+Chart mode swaps the disc and glow materials to `MultiplyBlending` +
+disables depth for an ink-on-paper look against the light canvas, and replaces
 the super-Gaussian profile with flat hard-edged discs sized linearly
 by magnitude. It is non-photometric and bypasses the HDR seam
 entirely, so it emits no luminance (`../hdr/README.md` § Chart mode).
-
-## Depth encoding — the escape hatch's
-
-The shipped encoding is **reversed-z over float32**, and no shipped
-pipeline writes fragment depth at all: `../webgpu/star/README.md`
-§ The disc draw writes no depth carries it, `../webgpu/README.md`
-§ Early-z carries why. What follows governs the `#renderer=webgl2` path
-alone, and `0it.14` deletes it with those materials.
-
-That renderer is constructed with
-`WebGLRenderer({ logarithmicDepthBuffer: true })`, but that flag only
-injects `USE_LOGARITHMIC_DEPTH_BUFFER` into NON-raw materials (planet
-billboards, meshes, lines, volumes) — that is what enables
-`camera.near = 1e-12` for the layers that need intra-system depth. **The star materials are
-RawShaderMaterial, which three.js gives only `material.defines` — so
-the `logdepthbuf` chunk includes in the star shaders compile to
-nothing and the star passes write STANDARD depth** over the full
-`[near 1e-12, far 1e5]` range. Standard depth ≈ `1 − near/z`: every
-star fragment beyond ~3 AU quantises to exactly 1.0 in the 24-bit
-buffer; only close-approach fragments write less.
-
-Why this de facto two-band split works in the main pass:
-
-- Star ↔ star colour is order-independent — per-channel max in the
-  disc pass, additive in the glow pass — so equal-depth (1.0)
-  fragments need no ordering.
-- Background layers (MW, grids, clouds — log-encoded or at the far
-  plane) land at or near 1.0 and lose the LessEqual test against a
-  close-range core's `< 1.0` depth — the core depth-mask mechanism.
-- Planet billboards are additive reflected glare only (no opaque disc
-  or core-mask), so in the main pass they never write depth — they just
-  add, order-independent like the star glow pass. A planet *behind* its
-  host is handled photometrically (`iEclipseDim`), not by depth, and
-  while a system is locally active the question moves to the local
-  depth pass entirely (`../local-depth/README.md`).
-
-Per-pass depth rules:
-
-- `star.frag.glsl` writes `gl_FragDepth = gl_FragCoord.z`
-  unconditionally before the (inert) chunk include — defensive
-  against the GLSL rule that once any path writes `gl_FragDepth`,
-  unwritten paths leave it undefined; the halo override below relies
-  on it.
-- Off-screen-sentinel early-returns in `star.vert.glsl` skip the
-  `<logdepthbuf_vertex>` chunk — harmless while the chunk is inert,
-  load-bearing if a raw→non-raw material change ever activates it
-  (see the in-shader comments).
-- The disc pass's halo override `gl_FragDepth = 1.0` (when
-  `glow < uCoreThreshold`) writes the far plane — true in any depth
-  encoding — so distant stars in the later glow pass peek through
-  haloed fragments.
-
-Standard depth at whole-catalog range **cannot** order two disc cores
-of a tight pair against each other (both quantise to the same value;
-their z-order is float noise that flips frame-to-frame — a visible
-flicker in the overlap). Nor can it occlude background glow behind a
-resolved disc past the sub-1.0 band (~7 AU at near = 1e-12 pc): the
-disc writes exactly 1.0, ties the background's 1.0, and LessEqual
-lets everything through. Both problems move to the local depth pass:
-any disc-pass star mirrors into the bracketed pass
-(`local-pass/README.md`), whose standard-depth bracket resolves sub-AU
-pair separations natively and whose repaint over the finished frame
-occludes main-pass glow by construction.
-
-That write costs all three passes their early-z — the cost the shipped
-redesign exists to recover (`../webgpu/README.md` § Early-z).
 
 ## Sizing and profile — `perceptual-disc/`
 

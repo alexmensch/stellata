@@ -16,7 +16,6 @@ export default defineConfig({
       exclude: [
         'src/client/main.ts',
         'src/client/stellata.ts',
-        'src/client/**/*.glsl',
         'src/worker.ts',
         '**/*.test.ts',
         '**/*.d.ts',

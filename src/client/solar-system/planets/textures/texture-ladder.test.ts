@@ -160,8 +160,7 @@ describe('selectRung', () => {
 });
 
 describe('the device cap bounds the ladder', () => {
-  // WebGL2 only guarantees MAX_TEXTURE_SIZE 2048, and an upload past the
-  // device's own limit fails outright — the body stays on its white
+  // An upload past the cap fails outright — the body stays on its white
   // placeholder with nothing else looking wrong.
   it('never asks for a rung the device cannot accept', () => {
     expect(selectRung('moon', 99999, null, 4096)).toBe(4096);
@@ -182,8 +181,7 @@ describe('the device cap bounds the ladder', () => {
   });
 
   it('still holds one rung when even the narrowest exceeds the cap', () => {
-    // Nothing else to draw, and no device in reach of the WebGL2 floor is
-    // actually here — but returning null would silently drop the map.
+    // Nothing else to draw, so returning null would silently drop the map.
     expect(selectRung('moon', 99999, null, 512)).toBe(1024);
   });
 

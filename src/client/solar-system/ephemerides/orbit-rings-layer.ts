@@ -391,7 +391,7 @@ export class OrbitRingsLayer {
   private readonly stroke: ChromeLineMaterial;
 
   constructor(chromeLines: ChromeLineMaterials) {
-    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY);
     this.group = new THREE.Group();
     // Local-depth-pass in-pass order: after the planet disc mirrors (3)
     // so ring fragments depth-test against real body depth — near-side

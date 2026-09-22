@@ -1,4 +1,4 @@
-// TSL uniform-node mirror of the WebGL-side shared map
+// TSL uniform-node mirror of the shared uniform map
 // (../../frame/shared-uniforms.ts). Reference/sync contract: README.md
 // § Shared uniform nodes.
 
@@ -9,13 +9,13 @@ import type { SharedUniforms } from '../../frame/shared-uniforms';
 /** Slots the registry does not mirror: a texture binds as a per-layer
  *  texture()/texture3D() node where the texture object lives — a uniform
  *  node cannot carry a nullable texture. */
-export const FRAME_TEXTURE_SLOTS = ['uDustTexture', 'uAvPrepassTex', 'uColorLut'] as const;
+export const FRAME_TEXTURE_SLOTS = ['uDustTexture', 'uColorLut'] as const;
 
 export type SharedUniformNodes = SharedUniformNodeRegistry['nodes'];
 
 export interface SharedUniformNodeRegistry {
   nodes: ReturnType<typeof buildNodes>;
-  /** Copy every scalar slot's current value from the WebGL-side map into
+  /** Copy every scalar slot's current value from the shared map into
    *  its node, and re-split the member-index array. Vector slots need no
    *  copy — their node holds the map's value object by reference. Called
    *  once per rendered frame, before the render. */

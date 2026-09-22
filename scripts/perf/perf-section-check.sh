@@ -33,7 +33,7 @@ touched=()
 while IFS= read -r f; do
   if [ -z "$f" ]; then continue; fi
   if [[ "$f" == *.test.ts ]]; then continue; fi
-  if [[ ! "$f" =~ ^src/client/.*\.(ts|glsl|wgsl)$ ]]; then continue; fi
+  if [[ ! "$f" =~ ^src/client/.*\.(ts|wgsl)$ ]]; then continue; fi
   if [[ "$f" =~ ^src/client/($exempt)/ ]]; then continue; fi
   touched+=("$f")
 done < "$files_file"

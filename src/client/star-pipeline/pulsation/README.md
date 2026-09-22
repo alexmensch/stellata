@@ -3,7 +3,7 @@
 The two pure tables driving variable-star pulsation: the per-type
 {ρ radius-swing, ΔB−V colour-swing} params and the eclipsing-binary
 suppress mask. Both are built at catalog load and consumed as
-per-instance attributes by `../star.vert.glsl`.
+per-instance attributes by `../../webgpu/star/star-vertex-tsl.ts`.
 
 Full physics, the per-type table, and interferometry citations are in
 `docs/science-stellar-modelling.md` § Variable-star pulsation; this file
@@ -15,12 +15,10 @@ is the runtime contract.
 src/client/star-pipeline/pulsation/
   pulsation-params-pure.ts        buildPulsationParams(varType): the
     (+ test)                     per-instance {ρ, ΔB−V} table driving the
-                                 iPuls attribute + the CPU disc mirror.
+                                 vertex stage + the CPU disc mirror.
                                  Called at catalog load
                                  (catalog.pulsRho / catalog.pulsColorSwing).
-                                 interleavePulsParams packs the pair into
-                                 the vec2 backing array (WebGL2 + WebGPU
-                                 geometries). Vitest-pinned.
+                                 Vitest-pinned.
   pulsation-suppress-pure.ts     buildPulsationSuppressMask(varType): the
     (+ test)                     per-instance iSuppressPulsation mask
                                  (1 on every eclipsing binary — an eclipse
@@ -30,8 +28,8 @@ src/client/star-pipeline/pulsation/
 ```
 
 Consumers: `../../loaders/catalog-loader.ts` and `catalog-mock.ts` build
-the arrays at load; `../star-pipeline.ts` binds them as instanced
-attributes; `stellata.ts` wires the uniforms.
+the arrays at load; `../../webgpu/star/star-tables.ts` interleaves them
+into the static record table; `stellata.ts` wires the uniforms.
 
 ## Running on the model clock
 
@@ -71,7 +69,7 @@ amplitude split:
 
 `iPuls` is a per-instance `vec2` built by `buildPulsationParams` from
 `catalog.varType`; ρ + ΔB−V are packed into one attribute to stay under
-the WebGL2 16-attribute budget. The ρ-bounded swing (≤1.4) replaces the
+the 16-attribute budget. The ρ-bounded swing (≤1.4) replaces the
 old per-frame amplitude-compression machinery; a single up-clamp
 (`physSize ≤ uMaxPhysFrac × min(viewport)`) keeps a supergiant at the
 orbit floor inside the viewport.

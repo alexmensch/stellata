@@ -4,8 +4,7 @@
 
 import type { GpuFrameMethod } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { AdapterProbe, GitProvenance, RunProvenance } from './schema';
-import type { BackendRequest } from './args';
-import { BACKENDS, type Backend, type ScenarioName } from './scenarios';
+import type { Backend, ScenarioName } from './scenarios';
 
 /** Names a renderer that is not the GPU. Nothing measured on one counts, so
  *  a match aborts the whole run rather than failing one scenario. */
@@ -21,27 +20,6 @@ export const DWELL_METHOD: GpuFrameMethod = 'raf-delta';
 export const BROWSER_CHANNEL = 'chromium';
 
 export type MarkerVerdict = 'armed' | 'absent' | 'stale';
-
-/**
- * The clock a run will use. `both` pins rAF wall time because the backends'
- * best clocks are three different instruments — taking each one's best would
- * build exactly the mixed-method table that must never be compared. An
- * explicit `--method` wins, on the caller's head, and the run says it did.
- */
-export function methodFor(args: { backend: BackendRequest; method?: GpuFrameMethod }): {
-  method: GpuFrameMethod | undefined;
-  why: string | null;
-} {
-  if (args.method !== undefined) return { method: args.method, why: null };
-  if (args.backend !== 'both') return { method: undefined, why: null };
-  return {
-    method: DWELL_METHOD,
-    why:
-      `--backend both pins --method ${DWELL_METHOD}: it is the one clock WebGL2 and WebGPU ` +
-      'share, and a table mixing timer-query with timestamp compares two instruments. ' +
-      'Pass --method explicitly to override.',
-  };
-}
 
 export interface ContextPlan {
   readonly name: ScenarioName;
@@ -64,12 +42,8 @@ export function readbackOrder(cadences: readonly number[]): number[] {
   return cadences.length > 1 ? [...cadences, cadences[0]] : [...cadences];
 }
 
-/**
- * Backend-major, the scenarios as given within each backend. So that
- * `--scenario all --backend both` opens with the Tier 1 vantages on the gated
- * backend — the positions a Tier 1 run visits them at, which is what lets its
- * rows compare against the pin's (`pins/README.md` § Run position).
- */
+/** Backend-major, the scenarios as given within each backend — the order
+ *  a pin row's position is read in (`pins/README.md` § Run position). */
 export function contextOrder(
   scenarios: readonly ScenarioName[],
   backends: readonly Backend[],
@@ -78,18 +52,17 @@ export function contextOrder(
 }
 
 /**
- * The contexts a run visits, in order: `contextOrder` over `BACKENDS`, and —
+ * The contexts a run visits, in order: `contextOrder` over the one backend, and —
  * where more than one cadence was asked for — each scenario once per cadence
  * in `readbackOrder`.
  */
 export function planContexts(
   scenarios: readonly ScenarioName[],
-  request: BackendRequest,
+  backend: Backend,
   cadences: readonly number[],
 ): readonly ContextPlan[] {
-  const backends: readonly Backend[] = request === 'both' ? BACKENDS : [request];
   const order = readbackOrder(cadences);
-  return contextOrder(scenarios, backends)
+  return contextOrder(scenarios, [backend])
     .flatMap(({ name, backend }) => order.map((readbackEvery) => ({ name, backend, readbackEvery })));
 }
 
@@ -122,11 +95,11 @@ export function bufferShortfall(
 
 export function describeProbe(p: AdapterProbe): string {
   const webgl = p.webgl
-    ? `${p.webgl.renderer} · ${p.webgl.vendor} · EXT_disjoint_timer_query_webgl2 ${p.webgl.timerQuery ? 'present' : 'ABSENT'}`
+    ? `${p.webgl.renderer} · ${p.webgl.vendor}`
     : 'no WebGL2 context';
   const webgpu = p.webgpu
     ? `${p.webgpu.description || p.webgpu.device || '(unnamed)'} · ${p.webgpu.vendor}/${p.webgpu.architecture} · ` +
-      `fallback ${p.webgpu.isFallbackAdapter} · timestampsAvailable ${p.webgpu.timestampsAvailable ?? 'n/a on a webgl2 boot'}`
+      `fallback ${p.webgpu.isFallbackAdapter} · timestampsAvailable ${p.webgpu.timestampsAvailable ?? 'unread'}`
     : 'no adapter';
   return `webgl : ${webgl}\nwebgpu: ${webgpu}`;
 }
@@ -152,9 +125,9 @@ export const GATE_BOOT_PREFIX = 'gate:';
  * The requires-WebGPU gate is the case worth naming. `showWebGpuGate` hides
  * the boot's elements rather than removing them and never sets
  * `window.stellata`, so every predicate the wait polls stays false and the
- * scenario used to die on the Playwright timeout with nothing said about
- * why. Not reachable on the machine the pin is taken on, where both
- * backends work — this is about a legible failure anywhere else.
+ * scenario would otherwise die on the Playwright timeout with nothing said
+ * about why. Not reachable on the machine the pin is taken on — this is
+ * about a legible failure anywhere else.
  */
 export function bootFailure(text: string): string | null {
   if (text === 'ok') return null;

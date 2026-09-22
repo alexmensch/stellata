@@ -8,7 +8,7 @@ import type { AtmoDiscMeans } from '../../atmosphere/atmosphere-scattering-pure'
 import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../perceptual-magnitude';
 
 /** Limb-darkening floor and exponent — `mix(LIMB_FLOOR, 1, μ^LIMB_EXP)`.
- *  Mirrored as literals in `planet-mesh.frag.glsl`; the drift test pins
+ *  Mirrored as literals in `../../../webgpu/solar-system/planet-mesh-tsl.ts`; the drift test pins
  *  them. Atmospheric bodies substitute a floor of 1 (no limb term: the
  *  scattering governs their limb). */
 export const LIMB_FLOOR = 0.45;

@@ -50,8 +50,6 @@ src/client/solar-system/probes/
                                   geometry, not a fill solve. See
                                   § Park distance.
   probe-labels.ts                 Per-probe SVG labels. See § Labels.
-  probe.vert.glsl,
-  probe.frag.glsl                 Fixed-pixel-size diamond glyph.
   probe-encounter-coherence.test  Planet-encounter + heliopause-crossing
     .ts                           corpus. See § Coherence, not precision.
 ```
@@ -116,7 +114,7 @@ from here on purpose.
 - **One fleet-scale distance cull, not a per-probe one — and it is the
   layer's contribution declaration.** The module registers
   `contribution: { kind: 'gated' }` on `ProbeField.fleetLegible`
-  (`../../scene/README.md` § Declaring what a layer can put on screen), so
+  (`../../scene/contribution/README.md` § Declaring what a layer can put on screen), so
   the markers, the trails, the sampler pass and the cadence report all drop
   together once `HELIOPAUSE_EXTENT_PC` (the 200 AU downwind apex) stops
   clearing the shared `FEATURE_LEGIBILITY_MIN_PX` floor at the camera's
@@ -186,9 +184,9 @@ from here on purpose.
 
 Markers and trails each carry a **local-depth-pass mirror** (`localGroup`)
 alongside their main-pass draw, and `SolarSystemCluster.setLocalPassActive`
-flips which one is visible each frame — exactly one ever is. Both surfaces
-draw on either backend: the marker takes its glyph off the solar-system
-material seam and the trail its stroke off the chrome line seam
+flips which one is visible each frame — exactly one ever is. The marker
+takes its glyph off the solar-system material seam and the trail its
+stroke off the chrome line seam
 (`../../chrome-lines/README.md`). While the
 solar system is locally active every one of its bodies renders in the
 bracketed pass with **depth cleared**, so a main-pass probe is painted over
@@ -197,8 +195,8 @@ depth, and a probe behind a planet shows through. No `renderOrder` reaches
 across that boundary; the mirror is the only fix
 (`../../local-depth/README.md`).
 
-Two things make the mirror cheap where `star-local-mirror.ts` needed real
-machinery:
+Two things make the mirror cheap where the star cluster's needs real
+machinery (`../../star-pipeline/local-pass/README.md`):
 
 - **It shares its source's geometry outright.** The instance buffers
   `ProbeField.update` writes and the trail's `setDrawRange` prefix are the
@@ -215,21 +213,15 @@ and, for a drawn trail, a Sol-centred sphere of the probe's heliocentric
 radius. Voyager 1 at 167 AU widens the range to ~8e13, still the same four
 slices the planet members already need.
 
-`probe.vert.glsl` / `probe.frag.glsl` wrap their log-depth chunks in
-`#ifndef LOCAL_DEPTH_PASS`, and the trail's mirror stroke takes the seam's
-`localPass` flag — the repo-wide requirement for anything rendering in
-both passes. That `#ifndef` is the pair's ONLY difference, which is why
-neither the marker's TSL twin nor the trail's needs a mirror variant at
-all: reversed-z deleted the chunks it guards
-(`../../materials/README.md`, `../../chrome-lines/README.md`).
+The trail's mirror stroke takes the same material as its main-pass one,
+and the marker's mirror draws the same material as its main-pass mesh
+(`../materials/README.md`, `../../chrome-lines/README.md`).
 
-Neither shader writes `gl_FragDepth`, and neither may: a static write
-costs the whole draw its early-z, so only `star.frag.glsl` carries one
-(`../../star-pipeline/README.md` § Depth encoding, pinned by
-`tests/shader-frag-depth.test.ts`). The marker is a non-raw
-`ShaderMaterial`, so in the main pass three's `logdepthbuf_fragment`
-writes the depth; in the local pass fixed-function depth is already
-exactly `gl_FragCoord.z`.
+Neither surface writes a fragment depth, and neither may: a static write
+costs the whole draw its early-z, and nothing carries one
+(`../../webgpu/README.md` § Early-z, pinned by
+`tests/tsl-frag-depth.test.ts`). Reversed-z makes fixed-function depth
+correct in both passes.
 
 ## Trails
 

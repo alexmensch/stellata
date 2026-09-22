@@ -1,14 +1,16 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { readTslSource } from '../../webgpu/tsl/tsl-source-fixture';
 import * as THREE from 'three';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { glslCallArgs } from '../../util/glsl-call-args';
-import { pickHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
-import { makeGlslSolarSystemMaterials } from '../materials/glsl-materials';
+import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mock';
 import { makeMockHdrEmitterUniforms } from '../../kinds/kind-context-mock';
 import { SOL_BODIES } from '../planet-system';
 import { PLANET_MESH_TEXTURE_SLOTS } from '../materials/texture-slots';
-import { TEXTURE_VRAM_BUDGET_BYTES } from './textures/texture-budget-pure';
+import {
+  DEVICE_MAX_TEXTURE_SIZE,
+  MIN_TEXTURE_CAP,
+  TEXTURE_BUDGET_FLOOR_BYTES,
+  TEXTURE_VRAM_BUDGET_BYTES,
+} from './textures/texture-budget-pure';
 import type { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer, TEXTURE_DECODE_OPTIONS } from './planet-mesh-layer';
 import {
@@ -20,14 +22,14 @@ import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { phaseAngleFromLegs } from '../phase-function';
 import { ringPhaseFactor } from './rings/ring-photometry-pure';
 import { depthStampRadius } from './depth-stamp/depth-stamp-pure';
+import type { EmitterMaterial } from '../../scene/emitter-material';
 import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 
 const read = (name: string) =>
-  readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
+  readTslSource(new URL(name, import.meta.url));
 
-/** The alpha of a `vec4(rgb, a)` write, or the sole argument of an occluder
- *  texel. */
-const lastArgOf = (src: string, name: string) => glslCallArgs(src, name).at(-1);
+const acceptUpload = (_texture: THREE.Texture, settled: (uploaded: boolean) => void) =>
+  settled(true);
 
 // Every surface this layer draws alpha-composites in FRONT of the volumetric
 // emitters, which live in attachment 2 until the resolve convolves them
@@ -38,41 +40,29 @@ const lastArgOf = (src: string, name: string) => glslCallArgs(src, name).at(-1);
 // section and the atmosphere limb, exactly where the surface is dim.
 describe('the planet surfaces occlude the diffuse attachment', () => {
   const SURFACES = [
-    { label: 'body mesh', frag: './planet-mesh.frag.glsl' },
-    { label: 'ring annulus', frag: './rings/planet-rings.frag.glsl' },
-    { label: 'atmosphere shell', frag: '../atmosphere/planet-atmosphere.frag.glsl' },
+    { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts' },
+    { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts' },
+    { label: 'atmosphere shell', src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts' },
   ];
 
-  for (const { label, frag } of SURFACES) {
-    describe(label, () => {
-      const src = read(frag);
-
-      it('declares the diffuse attachment it has to dim', () => {
-        expect(src).toMatch(/layout\(location = 2\) out vec4 outDiffuse;/);
-      });
-
-      // One blend equation runs over every attachment, so black at the
-      // fragment's own alpha dims attachment 2 by exactly the opacity
-      // attachment 0 was composited with. A DIFFERENT alpha would occlude the
-      // band by a different amount than it occludes everything else — which
-      // is the one way this can go wrong without failing to compile.
-      it('dims it by the same alpha it composites attachment 0 with', () => {
-        expect(src).toContain('outDiffuse = stellataOccluderTexel(');
-        expect(lastArgOf(src, 'stellataOccluderTexel')).toBe(
-          lastArgOf(src, 'outColor = vec4'),
-        );
-      });
+  // One blend equation runs over every attachment, so black at the
+  // fragment's own alpha dims attachment 2 by exactly the opacity
+  // attachment 0 was composited with. A DIFFERENT alpha would occlude the
+  // band by a different amount than it occludes everything else — which
+  // is the one way this can go wrong without failing to compile.
+  // Both alphas are READ off the source and compared, never spelled here:
+  // a literal in the test passes whatever the surface renames its alpha to,
+  // and only the two agreeing is the claim.
+  for (const { label, src: path } of SURFACES) {
+    it(`dims it with the alpha the ${label} composites attachment 0 with`, () => {
+      const src = read(path);
+      const occluder = /diffuse: occluderTexelTsl\(([^)]+)\),/.exec(src);
+      expect(occluder, 'no diffuse occluder write').not.toBeNull();
+      const colour = /colour: vec4\([^;]*?, ([A-Za-z0-9_.]+)\),/.exec(src);
+      expect(colour, 'no colour write').not.toBeNull();
+      expect(colour![1]).toBe(occluder![1]);
     });
   }
-
-  // The `location = 2` declarations above are discarded unless the draw opens
-  // attachment 2, and a draw that opens it without declaring the output leaves
-  // it undefined. Neither half errors on its own, so both are pinned.
-  it('marks all three meshes occluding emitters, so the gate opens', () => {
-    const src = read('./planet-mesh-layer.ts');
-    expect(src.match(/markOccludingEmitter\(mesh\)/g)).toHaveLength(SURFACES.length);
-    expect(src).not.toContain('markStatisticEmitter');
-  });
 });
 
 // The stand-in every mesh and annulus slot is cloned from. Nearest on BOTH
@@ -89,13 +79,11 @@ describe('the mesh stand-in is filterable', () => {
       '/',
       hdr,
       () => {},
-      8192,
       (placeholder) => {
         handed.push(placeholder);
-        return makeGlslSolarSystemMaterials({
-          hdr: pickHdrEmitterUniforms(hdr), placeholder,
-        });
+        return fakeSolarSystemMaterials();
       },
+      acceptUpload,
     );
     expect(handed).toHaveLength(1);
     const [standIn] = handed;
@@ -144,7 +132,11 @@ interface FakeBitmap {
 /** The real layer over a stub field and a stub loader; each frame places
  *  every body at a given projected diameter. No host: an unlit body skips
  *  the sun, caster and atmosphere legs. */
-function harness(bodyNames: string[], maxTextureSize = 8192) {
+function harness(
+  bodyNames: string[],
+  maxTextureSize = DEVICE_MAX_TEXTURE_SIZE,
+  budgetBytes = TEXTURE_VRAM_BUDGET_BYTES,
+) {
   const planets = bodyNames.map((n) => SOL_BODIES.find((b) => b.name === n)!);
   const physPx = new Map<number, number>();
   const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
@@ -154,7 +146,7 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
     }) as never,
   );
   const field = {
-    group: new THREE.Group(),
+    drawn: true,
     monochrome: false,
     liveInstanceCount: planets.length,
     // The observe anchor — settable, because hiding the body the camera is
@@ -168,18 +160,44 @@ function harness(bodyNames: string[], maxTextureSize = 8192) {
     physicalPlanetSizePx: (i: number) => physPx.get(i) ?? 0,
     hostPlanetOf: () => null,
   } as unknown as PlanetBodyField;
+  const meshSurfaces: EmitterMaterial[] = [];
+  let uploads: 'accept' | 'refuse' | 'defer' = 'accept';
+  const deferredUploads: ((uploaded: boolean) => void)[] = [];
   const layer = new PlanetMeshLayer(
     field,
     '/',
     { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
     () => {},
-    maxTextureSize,
+    () => {
+      const materials = fakeSolarSystemMaterials();
+      return {
+        ...materials,
+        planetMesh() {
+          const surface = materials.planetMesh();
+          meshSurfaces.push(surface);
+          return surface;
+        },
+      };
+    },
+    (_texture, settled) => {
+      if (uploads === 'defer') deferredUploads.push(settled);
+      else settled(uploads === 'accept');
+    },
+    { budgetBytes, maxTextureSize },
   );
   const camera = new THREE.PerspectiveCamera();
   return {
     layer,
     field,
     loads,
+    /** Body mesh surfaces, in the order the bodies first drew. */
+    meshSurfaces,
+    /** How the GPU answers each upload from now on; 'defer' holds the answer
+     *  in `deferredUploads` until the test settles it. */
+    setUploads(mode: 'accept' | 'refuse' | 'defer'): void {
+      uploads = mode;
+    },
+    deferredUploads,
     /** One frame, with each body at the given projected diameter. */
     frame(sizes: number[]): void {
       physPx.clear();
@@ -289,7 +307,7 @@ describe('the layer releases what it stops drawing', () => {
   it('never evicts a map drawn this frame, however far over budget', () => {
     const h = harness(['Europa', 'Ganymede']);
     h.frame([3000, 3000]);
-    // Square maps, so two of them are 716 MB against the 512 MB budget.
+    // Square maps, so two of them are 716 MB against the 192 MB budget.
     const a = h.resolve('europa-8192', 8192, 8192);
     const b = h.resolve('ganymede-8192', 8192, 8192);
     expect(BYTES_8192_SQ * 2).toBeGreaterThan(TEXTURE_VRAM_BUDGET_BYTES);
@@ -320,6 +338,17 @@ describe('the layer releases what it stops drawing', () => {
     expect(h.pendingFor('ganymede-8192')).toBe(true);
   });
 
+  it('keeps what it prefetched under the crossfade band, however far over budget', () => {
+    const h = harness(['Moon', 'Europa']);
+    const band = (TEXTURE_PREFETCH_PX + MESH_FADE_MIN_PX) / 2;
+    h.frame([band, 3000]);
+    h.resolve('europa-8192', 8192, 8192);
+    const normal = h.resolve('moon-normal', 4096);
+    for (let i = 0; i < 5; i++) h.frame([band, 3000]);
+    expect(normal.close).not.toHaveBeenCalled();
+    expect(h.pendingFor('moon-normal')).toBe(false);
+  });
+
   it('refuses a map wider than the device accepts, without retrying it', () => {
     // Relief and ring maps ship one fixed width each, so the ladder's own clamp
     // cannot cover them — an oversized upload fails and leaves the body white.
@@ -347,6 +376,142 @@ describe('the layer releases what it stops drawing', () => {
 
     h.layer.dispose();
     expect(map.close).toHaveBeenCalledTimes(1);
+  });
+});
+
+// See textures/README.md § Staying inside VRAM.
+describe('the floor rung stays resident', () => {
+  it('fetches the floor alongside whatever the demand asks for', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    expect(h.pendingFor('europa-1024')).toBe(true);
+    expect(h.pendingFor('europa-8192')).toBe(true);
+  });
+
+  it('keeps a floor that lands after the wider rung it was fetched beside', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.resolve('europa-8192', 8192);
+    h.frame([3000]);
+    const floor = h.resolve('europa-1024', 1024);
+    h.frame([3000]);
+    expect(floor.close).not.toHaveBeenCalled();
+  });
+
+  it('evicts the wide rung of a body off screen and keeps its floor', () => {
+    const h = harness(['Europa', 'Ganymede'], DEVICE_MAX_TEXTURE_SIZE, TEXTURE_BUDGET_FLOOR_BYTES);
+    h.frame([3000, 3000]);
+    const floor = h.resolve('ganymede-1024', 1024);
+    const wide = h.resolve('ganymede-8192', 8192);
+    h.frame([3000, 3000]);
+    h.frame([3000, 0]);
+    expect(wide.close).toHaveBeenCalledTimes(1);
+    expect(floor.close).not.toHaveBeenCalled();
+  });
+
+  it('draws the floor, not the placeholder, when the body comes back', () => {
+    const h = harness(['Europa', 'Ganymede'], DEVICE_MAX_TEXTURE_SIZE, TEXTURE_BUDGET_FLOOR_BYTES);
+    h.frame([3000, 3000]);
+    const floor = h.resolve('ganymede-1024', 1024);
+    h.resolve('ganymede-8192', 8192);
+    h.frame([3000, 3000]);
+    h.frame([3000, 0]);
+
+    h.frame([3000, 3000]);
+    const { uMap, uHasMap } = h.meshSurfaces[1].uniforms;
+    expect((uMap.value as THREE.Texture).image).toBe(floor);
+    expect(uHasMap.value).toBe(1);
+  });
+});
+
+describe('an out-of-memory report steps the limits down', () => {
+  it('releases every map wider than the new cap at once', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.resolve('europa-1024', 1024);
+    const wide = h.resolve('europa-8192', 8192);
+    h.frame([3000]);
+    h.layer.stepDownTextureLimits();
+    expect(wide.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('then asks for no rung past the lowered cap', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.resolve('europa-1024', 1024);
+    h.resolve('europa-8192', 8192);
+    h.frame([3000]);
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor('europa-8192')).toBe(false);
+    expect(h.pendingFor('europa-4096')).toBe(true);
+  });
+
+  it('does not fetch again a fixed-width map it released for the lowered cap', () => {
+    const h = harness(['Earth']);
+    h.frame([3000]);
+    const normal = h.resolve('earth-normal', 8192, 4096);
+    h.frame([3000]);
+    h.layer.stepDownTextureLimits();
+    expect(normal.close).toHaveBeenCalledTimes(1);
+    h.frame([3000]);
+    expect(h.pendingFor('earth-normal')).toBe(false);
+  });
+
+  it('steps once for a burst of reports between two frames', () => {
+    const h = harness(['Europa']);
+    h.layer.stepDownTextureLimits();
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor('europa-4096')).toBe(true);
+    expect(h.pendingFor('europa-2048')).toBe(false);
+
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor('europa-2048')).toBe(true);
+  });
+
+  it('binds a map only once its upload is known clean', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.setUploads('defer');
+    h.resolve('europa-1024', 1024);
+    h.frame([3000]);
+    const { uHasMap } = h.meshSurfaces[0].uniforms;
+    expect(uHasMap.value).toBe(0);
+
+    h.deferredUploads.shift()!(true);
+    h.frame([3000]);
+    expect(uHasMap.value).toBe(1);
+  });
+
+  it('drops a map the GPU refused, and steps down itself', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.setUploads('refuse');
+    const refused = h.resolve('europa-8192', 8192);
+    expect(refused.close).toHaveBeenCalledTimes(1);
+
+    h.frame([3000]);
+    expect(h.pendingFor('europa-8192')).toBe(false);
+    expect(h.pendingFor('europa-4096')).toBe(true);
+  });
+
+  it('releases a map whose upload settles after dispose', () => {
+    const h = harness(['Europa']);
+    h.frame([3000]);
+    h.setUploads('defer');
+    const map = h.resolve('europa-1024', 1024);
+    h.layer.dispose();
+    h.deferredUploads.shift()!(true);
+    expect(map.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops lowering the cap at its floor', () => {
+    const h = harness(['Europa'], MIN_TEXTURE_CAP);
+    h.layer.stepDownTextureLimits();
+    h.frame([3000]);
+    expect(h.pendingFor(`europa-${MIN_TEXTURE_CAP}`)).toBe(true);
   });
 });
 
@@ -390,8 +555,6 @@ describe('the depth pre-stamp', () => {
     h.frame([3000]);
     const [stamp] = stampsOf(h);
     expect(stamp.renderOrder).toBe(DEPTH_MASK_RENDER_ORDER);
-    expect((stamp.material as THREE.Material).colorWrite).toBe(false);
-    expect((stamp.material as THREE.Material).depthWrite).toBe(true);
     expect(stamp.frustumCulled).toBe(false);
     expect(stamp.parent).toBe(h.layer.depthStampGroup);
     expect(h.layer.group.children).not.toContain(h.layer.depthStampGroup);
@@ -487,7 +650,7 @@ describe('the ring annulus phase scalar', () => {
     // Saturn on +x at 9.5 AU, host at the local origin.
     const planetPos = new THREE.Vector3(9.5 * AU_PC, 0, 0);
     const field = {
-      group: new THREE.Group(),
+      drawn: true,
       monochrome: false,
       liveInstanceCount: 1,
       hiddenInstanceIdx: -1,
@@ -508,12 +671,24 @@ describe('the ring annulus phase scalar', () => {
       getAttachedPlanetSystem: () => ({ hostStarIdx: 0, planets: [saturn] }),
       eclipseDimForInstance: () => 1,
     } as unknown as PlanetBodyField;
+    const ringSurfaces: EmitterMaterial[] = [];
     const layer = new PlanetMeshLayer(
       field,
       '/',
       { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
       () => {},
-      8192,
+      () => {
+        const materials = fakeSolarSystemMaterials();
+        return {
+          ...materials,
+          planetRings() {
+            const surface = materials.planetRings();
+            ringSurfaces.push(surface);
+            return surface;
+          },
+        };
+      },
+      acceptUpload,
     );
     const cam = new THREE.PerspectiveCamera();
     cam.position.copy(camera);
@@ -524,10 +699,8 @@ describe('the ring annulus phase scalar', () => {
       pending.onLoad({ width: 2048, height: 1024, close: vi.fn() });
     }
     layer.update(cam, 0);
-    const ring = layer.group.getObjectByName('planet-rings') as
-      | THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>
-      | undefined;
-    return { layer, ring, planetPos };
+    const ring = layer.group.getObjectByName('planet-rings') as THREE.Mesh | undefined;
+    return { layer, ring, ringSlots: () => ringSurfaces.at(-1)!.uniforms, planetPos };
   }
 
   afterEach(() => {
@@ -537,7 +710,7 @@ describe('the ring annulus phase scalar', () => {
   it('reaches the annulus material, and agrees with the pure law', () => {
     // Near-opposition Earth-like vantage.
     const camPos = new THREE.Vector3(1 * AU_PC, 0, 0);
-    const { layer, ring, planetPos } = litHarness(camPos);
+    const { layer, ring, ringSlots, planetPos } = litHarness(camPos);
     expect(ring, 'no ring annulus drawn').toBeDefined();
     expect(ring!.visible).toBe(true);
 
@@ -549,7 +722,7 @@ describe('the ring annulus phase scalar', () => {
       phaseAngleFromLegs(toCam.x, toCam.y, toCam.z, toHost.x, toHost.y, toHost.z),
       saturn.phaseCoefficients,
     );
-    expect(ring!.material.uniforms.uRingPhaseScale.value).toBeCloseTo(expected, 6);
+    expect(ringSlots().uRingPhaseScale.value).toBeCloseTo(expected, 6);
     expect(expected).toBeGreaterThan(0);
     layer.dispose();
   });
@@ -560,7 +733,7 @@ describe('the ring annulus phase scalar', () => {
     // it at 8.5 AU range — alpha ~ 0.13 deg, a fifth of the way down.
     const scaleAt = (y: number): number => {
       const h = litHarness(new THREE.Vector3(1 * AU_PC, y * AU_PC, 0));
-      const v = h.ring!.material.uniforms.uRingPhaseScale.value;
+      const v = h.ringSlots().uRingPhaseScale.value;
       h.layer.dispose();
       vi.restoreAllMocks();
       return v;

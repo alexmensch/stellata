@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { MIRROR_CAPACITY } from '../../star-pipeline/local-pass/star-mirror-slots';
 import { STAR_RENDER_DEFAULTS } from '../../filters/filter-state';
@@ -34,7 +34,7 @@ function build() {
 }
 
 describe('buildSharedUniformNodes', () => {
-  it('mirrors every WebGL slot: same keys minus textures, member array split into two ivec4s', () => {
+  it('mirrors every shared slot: same keys minus textures, member array split into two ivec4s', () => {
     const { shared, registry } = build();
     const expected = new Set<string>(Object.keys(shared));
     for (const t of FRAME_TEXTURE_SLOTS) expected.delete(t);
@@ -48,7 +48,7 @@ describe('buildSharedUniformNodes', () => {
     expect(MIRROR_CAPACITY).toBe(8);
   });
 
-  it('every vector slot holds the WebGL map value object by reference — no sync needed', () => {
+  it('every vector slot holds the shared map value object by reference — no sync needed', () => {
     const { shared, registry } = build();
     const nodes = registry.nodes as unknown as Record<string, { value: unknown }>;
     const vectorKeys = objectSlotKeys(shared);
@@ -105,8 +105,8 @@ describe('buildSharedUniformNodes', () => {
 // The debug panel's "Star disc" knobs are already scalar slots on the
 // shared map, so on a WebGPU boot they reach the TSL graphs through the
 // per-frame sync with no plumbing of their own. What this pins is that a
-// NEW knob cannot be added as a non-shared uniform, which would reach the
-// GLSL pipeline and silently miss the TSL one.
+// NEW knob cannot be added as a non-shared uniform, which no graph would
+// ever see.
 describe('the debug-panel star-disc seam', () => {
   const KNOB_SLOTS: Record<keyof typeof STAR_RENDER_DEFAULTS, readonly string[]> = {
     // One knob, two slots: the derived -log(threshold) rides a uniform so

@@ -1,28 +1,20 @@
 # The tone-map operator
 
-The curve that maps scene luminance to the canvas, its shared GLSL
-chunk, the fullscreen resolve that runs it, and the CPU mirror plus
-exact inverse. `../README.md` owns the target, the attachments and the
-pass ordering; this folder owns the transfer function they resolve
-through.
+The curve that maps scene luminance to the canvas, the fullscreen
+resolve that runs it, and the CPU mirror plus exact inverse.
+`../README.md` owns the target, the attachments and the pass ordering;
+this folder owns the transfer function they resolve through.
 
-The chunk is a **two-consumer** shape: the fullscreen pass runs it, and
-so does every emitting shader inline whenever `uHdrTarget` is 0 (chart
-mode on either backend, plus the WebGL2 no-float-buffer fallback —
-`../README.md` § Fallback). One source, so the two can never drift.
+The operator is a **two-consumer** shape: the fullscreen resolve runs it,
+and so does every emitting graph inline whenever `uHdrTarget` is 0 — chart
+mode (`../README.md` § The inline operator). One source, so the two can
+never drift.
 
 ## Files
 
 ```
 src/client/hdr/tonemap/
-  ign.glsl                   Interleaved gradient noise as a shared
-                             chunk (stellata_ign) — § One hash.
-  tonemap.glsl               The operator as a shared chunk. Consumed by
-                             tonemap.frag.glsl and inline by each
-                             emitting shader when the target isn't bound.
-  tonemap.frag.glsl          The fullscreen resolve. Pairs with
-                             ../../util/fullscreen-pass.vert.glsl.
-  tonemap-pure.ts (+ test)   CPU mirror of tonemap.glsl plus the exact
+  tonemap-pure.ts (+ test)   CPU mirror of the operator plus its exact
                              inverse. Vitest-pinned against the design
                              doc's worked values. Also the codebase's
                              shared sRGB transfer pair and Rec.709 luma
@@ -30,16 +22,17 @@ src/client/hdr/tonemap/
                              scripts/ import from it.
 ```
 
-`../emission/chunk-constant-drift.test.ts` and
-`../summation/summation-pure.test.ts` read these `.glsl` files by
-relative path; moving either file means updating those reads.
+The shipped operator is `../../webgpu/tonemap-tsl.ts`, run by
+`../../webgpu/hdr/hdr-pipeline-webgpu.ts`'s resolve; the dither's
+interleaved gradient noise is `../../webgpu/tsl/jitter-tsl.ts`
+(§ One hash). All three import their constants from `tonemap-pure.ts`.
 
 ## Operator
 
 Faint-end toe, then luminance-domain extended Reinhard, hue-preserving,
 then highlight desaturation, then sRGB encode, then dither — all in
-`stellata_tonemap` so the fullscreen pass and the fallback path can never
-drift (the `stellata_dust_raymarch` two-consumers pattern).
+`tonemapTsl` so the fullscreen resolve and the inline path can never
+drift.
 
 | Constant | Default | Role |
 | --- | --- | --- |
@@ -61,8 +54,8 @@ exactly `TOE_BLACK_MAG` under lands on half an 8-bit step. The C1 knee
 is load-bearing, not taste: the first cut was a fixed-exponent power
 (slope 3.5 at the knee), and that kink projected a visible isophote
 onto every smooth gradient crossing threshold — hard-edged molecular
-clouds, banded EV sweeps. Sub-threshold light no longer
-renders at its near-linear Reinhard value; the Milky Way pole is the
+clouds, banded EV sweeps. Sub-threshold light does not render at its
+near-linear Reinhard value; the Milky Way pole is the
 motivating case (`../../milkyway/calibration/README.md` § The gradient this
 produces).
 Exactly invertible, and `inverseTonemapConstant` composes the inverse so
@@ -76,33 +69,24 @@ and end-to-end luminance preservation above the knee is **not** a property
 of the pipeline, so don't assert it — desaturation is luminance-neutral
 pre-clamp only.
 
-**`stellataTonemapUndithered` is the variant an overlapping emitter
+**`tonemapUnditheredTsl` is the variant an overlapping emitter
 wants.** The dither is a function of `fragCoord` alone, so it is the
 same offset for every fragment landing on a pixel; N additively-blended
 star quads would add it N times — a coherent brightness bias over dense
 fields, not noise that cancels. Anything covering each pixel once (the
-resolve, a fullscreen volume) wants the dithered `stellataTonemap`.
+resolve, a fullscreen volume) wants the dithered `tonemapTsl`.
 `tonemap-pure.ts` mirrors the undithered variant.
 
 
 ## One hash
 
-`stellata_ign` is the interleaved gradient noise every layer that jitters
-rides — the operator's ±0.5-LSB output dither here, the ray starts of both
-molecular-cloud raymarches, and the atmosphere march's sample lattice. One
-chunk, `DITHER_IGN_SCALE` / `DITHER_IGN_DOT` in `tonemap-pure.ts` behind
-it, and the TSL twin `interleavedGradientNoiseTsl` over the same two
-constants (`../../webgpu/tsl/README.md` § Interleaved gradient noise). It
-replaced four hand-written copies of one expression, two of them under
-different constant names — the drift a `*-pure.ts` module exists to stop,
-and one nothing would have failed on.
-
-**Its include guard is load-bearing on two stages.** The planet mesh and
-the atmosphere shell paste it twice — their own jitter through
-`stellata_atmosphere_scatter`, the dither through `stellata_tonemap` — and
-an unguarded second paste is a redefinition error at program build, which
-no test without a GPU reaches. `../emission/chunk-constant-drift.test.ts`
-pins the guard and both paste paths instead.
+`interleavedGradientNoiseTsl` is the interleaved gradient noise every
+layer that jitters rides — the operator's ±0.5-LSB output dither here, the
+ray starts of both molecular-cloud raymarches, and the atmosphere march's
+sample lattice. One helper, over `DITHER_IGN_SCALE` / `DITHER_IGN_DOT` in
+`tonemap-pure.ts` (`../../webgpu/tsl/README.md` § Interleaved gradient
+noise), so no layer carries a private copy of the expression or its
+constants.
 
 ## Operator knobs
 
@@ -135,9 +119,9 @@ colour space, not the resolve — so with the operator parked,
 `LineBasicMaterial` / `LineMaterial` chrome (grids, orbit paths, the
 constellation figure) renders un-encoded and therefore dark. No resolve
 setting fixes it: a single fullscreen pass can't both encode and not
-encode. Custom-shader chrome *is* exact. There is no whole-frame comparison
-to fall back on any more — `../README.md` § Fallback says why the one that
-existed was worse than nothing.
+encode. Custom-shader chrome *is* exact. No switch renders a whole-frame
+comparison instead — `../README.md` § The inline operator says why one
+would compare against a differently-calibrated scene.
 
 **Chrome line work reads brighter through the seam than authored, and that
 is not a bug.** `../README.md` § Chrome's inverse mapping is exact only for
@@ -149,7 +133,7 @@ downstream depends on it, and no resolve setting fixes it.
 Pass-through is not bit-identical to a pre-HDR build, for two further
 reasons worth knowing before chasing a diff:
 
-- Blending intermediates no longer round-trip through 8 bits, so faint
+- Blending intermediates do not round-trip through 8 bits, so faint
   gradients differ by up to a quantisation step.
 - Additive accumulation clamped at 1.0 per draw on the canvas; in fp16
   it accumulates past 1.0 and clamps once at the resolve. Additive and

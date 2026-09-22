@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { ComputeNode, WebGPURenderer } from 'three/webgpu';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
 import { makeEmitterGateNodes } from '../hdr/emitter-gates';
 import { ExtinctionNodes } from '../extinction/extinction-nodes';
@@ -61,9 +61,8 @@ describe('StarLayer', () => {
     expect(m.depthWrite).toBe(false);
   });
 
-  // Draw-count parity with the WebGL2 stack is part of the port contract:
-  // the migration may not cost more per frame than the renderer it
-  // replaces (../README.md § Early-z).
+  // ../README.md § Early-z: the depth contract is met by removing writes,
+  // never by adding draws.
   it('is three draws, no more', () => {
     const { scene, layer } = makeLayer();
     expect([...scene.children].sort((a, b) => a.renderOrder - b.renderOrder))

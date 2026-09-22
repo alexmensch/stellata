@@ -3,7 +3,7 @@
 // mirror, and the per-frame re-pack. README.md § The glare packs.
 
 import * as THREE from 'three';
-import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-pipeline';
+import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-blend';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
@@ -15,15 +15,15 @@ import { buildPlanetGlareMaterial } from './planet-glare-tsl';
 import { glareUniformNodes, type GlareUniformNodes } from './planet-glare-uniforms';
 
 /** Glare last (4) so a transiting body's glare adds over everything,
- *  including a parent mesh behind it — the WebGL stack's own order. */
+ *  including a parent mesh behind it. */
 const GLARE_RENDER_ORDER = 4;
 
 export class PlanetGlareLayer implements MrtOutputLayer {
   readonly mesh: THREE.Mesh;
   /** The local-pass mirror, parented into `mirrorParent` (the field's
    *  localGroup, which the solar-system cluster carries into the pass
-   *  scene). Gated per instance by `uLocalPassRange`, exactly as the
-   *  GLSL mirror is — it draws nothing while no cluster is active. */
+   *  scene). Gated per instance by `uLocalPassRange`, so it draws
+   *  nothing while no cluster is active. */
   readonly mirrorMesh: THREE.Mesh;
 
   private readonly scene: THREE.Scene;
@@ -74,8 +74,7 @@ export class PlanetGlareLayer implements MrtOutputLayer {
     for (const m of this.materials) m.setMrtOutputs(on);
   }
 
-  /** Chart mode's flat-ink blend, the swap `PlanetBodyField` applies to
-   *  the WebGL material. */
+  /** Chart mode's flat-ink blend. */
   setMonochrome(on: boolean): void {
     if (on === this.mono) return;
     this.mono = on;

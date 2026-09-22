@@ -50,11 +50,10 @@ permitted element, never force one below its floor. The chart↔realistic
 recompute passes `resetOverrides:false`, so a style flip (and URL restore,
 which re-applies the shared toggle state afterward) preserves it.
 
-The other three toggles are retired, and the floors are now the *only*
-gate on their elements: `constellationFigures` /
-`constellationBoundaries` (was `showConstellation`) and `milkyWayBand` /
-`milkyWayIsobar` (was `showMilkyway`). Both were a second answer to a
-question the declutter cycle already answered.
+The floors are the *only* gate on every other element, including
+`constellationFigures` / `constellationBoundaries` and `milkyWayBand` /
+`milkyWayIsobar`: a user toggle there would be a second answer to a
+question the declutter cycle already answers.
 
 Default `detailLevel = 'all'` (fully cluttered) → the seam is
 behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
@@ -95,5 +94,5 @@ molecular-cloud silhouette (`molecularCloudEllipsoids`), and cloud names
 (`chartCloudNames`) enter together at `representational` — a cloud's name
 never appears before its outline; constellation Latin names
 (`chartConstellationNames`) and the IAU boundary arcs
-(`constellationBoundaries`, the one chart-only element that is WebGL
+(`constellationBoundaries`, the one chart-only element that is scene
 geometry rather than a `chart-labels` tier) at `all`.

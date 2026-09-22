@@ -1,5 +1,5 @@
 // Whether the frame draws a star, and at what radius — the CPU mirror of
-// every star.vert.glsl gate a pick has to honour. See README.md § picker.ts.
+// every ../../webgpu/star/star-vertex-tsl.ts gate a pick has to honour. See README.md § picker.ts.
 
 import { emitterPutsInkOnScreen } from '../../hdr/exposure/visibility/emitter-visibility-pure';
 import { STAR_PASS_GLOW, colourPassFor } from '../../star-pipeline/star-pass';

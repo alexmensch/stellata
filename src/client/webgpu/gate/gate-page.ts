@@ -6,7 +6,7 @@ import { GATE_ELEMENT_ID, adviceFor, type GateVerdict, type UaHints } from './ga
 /** The audit date the advice copy is good as of — the epic's support
  *  survey. Shown on the page, so a stale claim reads as dated rather than
  *  as a guarantee. */
-export const SUPPORT_AUDIT_LABEL = 'August 2026';
+export const SUPPORT_AUDIT_LABEL = 'September 2026';
 
 /** Everything a boot may already have drawn. Hidden rather than removed:
  *  the gate is terminal for this page load, but an intact DOM keeps a

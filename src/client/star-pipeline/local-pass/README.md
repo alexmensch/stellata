@@ -4,24 +4,18 @@ The star half of the local depth pass: which stars join the pass each
 frame, and the mirror draw that re-renders them inside its depth
 bracket. Pass mechanics and the other member layers are
 `../../local-depth/README.md`; why the main pass can't do this job is
-`../README.md` § Depth encoding.
+`../../webgpu/star/README.md` § The disc draw writes no depth.
 
 ## Files
 
-- `star-mirror-slots.ts` (+ test) — the **backend-neutral** half both
-  mirrors are built from: `MIRROR_CAPACITY` (tied to the
-  `uLocalMemberIdx` uniform array size, pinned in
-  `../star-pipeline.test.ts`), the `StarMirror` interface the cluster
-  drives, the in-pass `MIRROR_RENDER_ORDER`, and `MirrorSlots` — the
-  slot geometry, its per-frame copy and the three draws over it. The
-  slot layout is a property of the geometry being mirrored, not of the
-  shader language, which is why it is shared: a copy resolving a
-  differently-packed component on one backend reads as a silent
-  brightness bug. Survives the WebGL2 deletion; the two classes below
-  do not both.
-- `star-local-mirror.ts` — `StarLocalMirror`: the GLSL materials over
-  those slots (the TSL twin is
-  `../../webgpu/star/star-local-mirror-tsl.ts`). Its disc and glow
+- `star-mirror-slots.ts` (+ test) — the CPU half of the mirror:
+  `MIRROR_CAPACITY` (tied to the `uLocalMemberIdx` uniform array size,
+  pinned in `../../webgpu/tsl/shared-uniform-nodes.test.ts`), the
+  `StarMirror` interface the cluster drives, the in-pass
+  `MIRROR_RENDER_ORDER`, and `MirrorSlots` — the slot geometry, its
+  per-frame copy and the three draws over it.
+- `../../webgpu/star/star-local-mirror-tsl.ts` — the materials over
+  those slots, behind the import boundary. Its disc and glow
   meshes are statistic emitters like the main-pass pair — a member
   collapses in the main pass, so the mirror is the only draw that would
   reach the exposure statistic (`../../hdr/attachments/README.md`). The
@@ -32,14 +26,13 @@ bracket. Pass mechanics and the other member layers are
 - `star-local-cluster-pure.ts` — `isResolvedDiscStar` membership
   predicate + `discWindowPc` camera-window bound, shared with the
   core-mask gate via `RESOLVED_DISC_MIN_PX`. `PHYS_RATIO_THRESHOLD`
-  mirrors `STELLATA_PHYS_RATIO_THRESHOLD` in `../perceptual-disc/perceptual-disc.glsl`
+  mirrors the same pivot in `../../webgpu/perceptual-disc-tsl.ts`
   (both star stages read it there), and `isDiscDominant` is
   that split as a predicate — the **one** CPU mirror of it. Membership
   above is `isDiscDominant` plus the size floor; the star pick gate
   (`../../camera/controls/star-pick-visibility-pure.ts`) reads it
   through `../star-pass.ts`'s `colourPassFor` for both its taper flag
   and its glow-pass-only eclipse dim.
-- `star-local-mirror.test.ts` — mirror geometry + per-frame slot sync.
 - `star-local-cluster.test.ts` (+ `-pure.test.ts`) — membership pins.
 
 ## Mirror draw
@@ -52,34 +45,24 @@ attributes from the live source arrays each frame (`MirrorSlots`),
 drawn with local-pass variants of the three star materials. Star
 identity comes from the `iSourceIdx` attribute rather than the instance
 index, so star-indexed lookups — the extinction read, `uHideFocusIdx`,
-`uPinFocusToCenter` — behave identically. **How each backend builds
-those variants differs**: GLSL compiles material clones under the
-`LOCAL_DEPTH_PASS` define (which is what swaps `gl_InstanceID` for
-`STAR_SELF_ID`), sharing the same uniform objects, over slots that copy
-every per-instance attribute; the TSL twin builds separate materials
-from the same node builders with a `mirror` vertex source, sharing
-uniform nodes and no define, over slots that hold `iSourceIdx` alone —
-its geometry has no per-instance attribute to copy, every star field
-being a storage read at that index (`../../webgpu/star/README.md`
-§ The local mirror). The
-attribute-budget invariant: each compile variant must fit within 16
-attributes (the WebGL2 guaranteed minimum). Pinned per-variant in
-`../star-pipeline.test.ts`, along with the uniform-array-size ↔
-`MIRROR_CAPACITY` tie.
+`uPinFocusToCenter` — behave identically. The variants are separate
+materials from the same node builders with a `mirror` vertex source,
+sharing uniform nodes, over slots that hold `iSourceIdx` alone — the
+geometry has no per-instance attribute to copy, every star field being a
+storage read at that index (`../../webgpu/star/README.md` § The local
+mirror).
 
-**The slot attributes carry `DynamicDrawUsage`, and on the WebGPU boot that
-rides on a size ceiling rather than on the usual argument.** `sync()` flags
+**The slot attributes carry `DynamicDrawUsage`, and that rides on a size
+ceiling rather than on the usual argument.** `sync()` flags
 them once a frame, but `buildGroup` hangs three meshes off the one slot
 geometry under a single `group.visible`, so two of the three draws read an
 attribute nothing flagged in them — and three r185 re-uploads a
 `DynamicDrawUsage` attribute on every render call whatever its version
 (`../../webgpu/README.md` § One writer per buffer per submit). It costs 64 B
-a frame here only because the TSL mirror source carries no per-instance
+a frame here only because the mirror source carries no per-instance
 attribute, leaving `iSourceIdx`'s 32 B as the whole carrier. **Give that
 geometry one per-instance attribute and the hint becomes a full upload of
-every slot, three times per rendered frame.** The answer then is a
-per-backend usage rather than a removal: `MirrorSlots` is shared, and on the
-WebGL2 boot `DYNAMIC_DRAW` is the correct hint and costs nothing.
+every slot, three times per rendered frame** — drop the hint then.
 
 ## Membership
 
@@ -113,10 +96,7 @@ that never moved. The same split already exists in pixels, as
 `renderedDiscPxAtPeak` against `renderedSizePx`.
 
 Membership parks only in chart mode (flat ink discs, depth disabled —
-suppression and mirrors must stay out of the way). The pass renders on
-both boots; on WebGPU the cluster drives the TSL mirror
-(`../../webgpu/star/star-local-mirror-tsl.ts`) through the same
-`StarMirror` interface.
+suppression and mirrors must stay out of the way).
 
 ## Core opacity is depth-gated, never paint-over
 
@@ -126,17 +106,16 @@ anything brighter in any channel — a white background glow survives
 occluded fragments from painting at all:
 
 - **Main pass** — a member keeps its core depth-mask draw (only the
-  colour passes collapse; `vLocalMember` in the shaders) and the mask
-  stamps `gl_FragDepth = 0.0`. The member's true standard depth
+  colour passes collapse) and the mask stamps the nearest depth, as a
+  clip-z pin in the vertex stage so the draw keeps its early-z
+  (`../../webgpu/README.md` § Early-z). The member's true standard depth
   quantises to 1.0 past ~7 AU and would TIE background glow instead of
   occluding it; the nearest-possible stamp is safe because the local
   pass repaints the core and membership range (a ≥5 px disc)
   guarantees nothing renderable sits between camera and disc. The
   shell ORs `starLocalCluster.hasMembers()` into the core-mask mesh
   gate so an appSize-driven member disc outside the physSize window
-  still stamps. `vLocalMember` is per-instance, so the WebGPU port
-  moves this stamp to the vertex stage as a clip-z pin and the draw
-  regains its early-z — `../../webgpu/README.md` § Early-z.
+  still stamps.
 - **Local pass** — the mirror carries a third depth-only core-mask
   mesh (in-pass renderOrder −1, before the disc mirror) so an occluded
   member core depth-fails against the front core's bracket depth

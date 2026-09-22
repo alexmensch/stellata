@@ -130,21 +130,22 @@ In chart mode the vertex shader replaces `max(appSize, physSize)` with
 a **linear-in-magnitude** mapping (= log10-in-flux by definition of
 magnitude). **Planet bodies take the identical treatment** (uadc.3
 decision: magnitude disc + star-style name label, no glyph
-vocabulary): `planet.vert.glsl` carries the same chart branch driven
+vocabulary): `../webgpu/solar-system/planet-glare-tsl.ts` carries the same chart branch driven
 by the same shared uniforms, the reflected-light appMag feeds the same
-formula, and `PlanetBodyField.setMonochrome` swaps blending exactly
+formula, and `PlanetGlareLayer.setMonochrome` swaps blending exactly
 like the star pipeline's `setMonochromeBlend` (the spheroid mesh LOD
 and the local depth pass idles in chart — rings
 are hidden on paper). Planet name labels ride the chart-labels engine
 (`kind-planet`, proper-name priority tier); `planet-labels.ts` stays
 chart-hidden as before.
 
-```glsl
-chartT = clamp(
-  (appMag - uChartMagBright) / max(uLimitMag - uChartMagBright, 0.001),
-  0, 1);
-pxSize = mix(uChartDiscMaxPx, uChartDiscMinPx, chartT);
-vPhysRatio = 1.0;  // force the frag shader's disc-pass branch
+```ts
+// ../webgpu/star/star-vertex-tsl.ts, the chart arm
+const chartT = clamp(
+  appMag.sub(u.uChartMagBright)
+    .div(max(u.uLimitMag.sub(u.uChartMagBright), 0.001)),
+  0.0, 1.0);
+pxSize.assign(mix(u.uChartDiscMaxPx, u.uChartDiscMinPx, chartT));
 ```
 
 Three tunable uniforms shared with JS via `getChartDiscParams()`:
@@ -162,14 +163,15 @@ crowding everything to one corner. Variability magMod is added to
 
 ## Chart-mode disc rendering — flat hard-edged + per-vertex AA
 
-The fragment shader's `uMonochrome > 0.5` branch renders a flat
-disc (no super-Gaussian profile, no halo, no luminosity-class
-softening) with a **one-pixel antialiased outer edge**:
+The fragment's chart branch (`chartDiscCoverage` + `chartInkColour`,
+`../webgpu/star/star-emission-tsl.ts`) renders a flat disc (no
+super-Gaussian profile, no halo, no luminosity-class softening) with a
+**one-pixel antialiased outer edge**:
 
-```glsl
-float aa = max(vAaWidth, 1e-3);
-float disc = 1.0 - smoothstep(0.5 - aa, 0.5, r);
-outColor = vec4(vec3(1.0 - disc), 1.0);  // black ink under MultiplyBlending
+```ts
+const aa = max(v.vAaWidth, 1e-3);
+const disc = float(1.0).sub(smoothstep(float(0.5).sub(aa), 0.5, length(v.vUv)));
+vec4(vec3(float(1.0).sub(disc)), 1.0); // black ink under MultiplyBlending
 ```
 
 The ink only lands because the material is in `MultiplyBlending` — and
@@ -180,7 +182,7 @@ the failure is order-dependent rather than consistent: it shipped as
 chart discs rendering white when chart was toggled on from observe, while
 entering chart directly on load happened to inherit a benign state. Every
 emitter that inks on paper takes the swap through
-`applyMonochromeBlend` (`../star-pipeline/star-pipeline.ts`) for that
+`applyMonochromeBlend` (`../star-pipeline/star-blend.ts`) for that
 reason — the flag is not optional decoration.
 
 `vAaWidth = 1 / pxSize` is computed per-vertex and passed as a
@@ -200,7 +202,7 @@ inherits no exposure state at all.
 
 ## Chart treatments — Milky Way isobar + cloud outlines
 
-- **Milky Way** (`milkyway.frag.glsl`): an `if (uChartIsobar > 0.5)`
+- **Milky Way** (`../webgpu/milkyway/milkyway-band-tsl.ts`): an `if (uChartIsobar > 0.5)`
   branch renders a single thin line, `line = 1 - smoothstep(fw*0.5,
   fw*1.5, |appMag - uLimitMag|)` where `fw = fwidth(appMag)`. The
   contour tracks "where the integrated brightness would equal the
@@ -208,7 +210,7 @@ inherits no exposure state at all.
   moves through the band like a topographic line. Discarded outside the
   line so depth stays clean. Solid black ink (`uMonoColor`), toggled by
   `MilkyWay.setIsobar` with the shared `uLimitMag` uniform reference.
-- **Molecular clouds** (`../molecular-clouds/cloud-rim.frag.glsl`): the
+- **Molecular clouds** (`../webgpu/molecular-clouds/cloud-rim-tsl.ts`): the
   rim-shell material's chart branch draws a **stippled silhouette
   outline** of each cloud's isosurface mesh — the SkyAtlas 2000 nebula
   convention — via `MolecularClouds.setMonochrome` (the registry

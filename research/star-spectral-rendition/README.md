@@ -120,7 +120,7 @@ external data ingest. **Independent of `stellata-dch`.**
 **Approach**:
 
 1. Replace the 3-stop piecewise gradient in
-   `src/client/shaders/star.vert.glsl` with a sampled 1-D LUT texture
+   `../../src/client/webgpu/star/star-vertex-tsl.ts` with a sampled 1-D LUT texture
    (256 entries, RGB float16 or uint8) mapping a B-V-derived Teff →
    gamma-encoded sRGB. The LUT is precomputed at build time via
    `research/star-spectral-rendition/blackbody_color.py`'s `blackbody_to_srgb` (Planck

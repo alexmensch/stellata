@@ -15,8 +15,9 @@ import {
   trackAnchoredLine,
   ORBIT_LINE_COLOUR,
   ORBIT_LINE_OPACITY,
+  type ScreenMetricUniforms,
 } from '../../util/orbit-line';
-import type { ProbeField, ProbeSharedUniforms } from './probe-field';
+import type { ProbeField } from './probe-field';
 import { probeSampleIndexAt, type ProbeTrajectory } from './probe-trajectory';
 
 // Just under the marker so a marker sitting on its own trail paints over
@@ -56,10 +57,10 @@ export class ProbePathLayer {
   private permitted = true;
   private mono = false;
   private localPassActive = false;
-  private shared: ProbeSharedUniforms;
+  private shared: ScreenMetricUniforms;
   private solLocal = new THREE.Vector3();
 
-  constructor(shared: ProbeSharedUniforms, chromeLines: ChromeLineMaterials) {
+  constructor(shared: ScreenMetricUniforms, chromeLines: ChromeLineMaterials) {
     this.shared = shared;
     this.group = new THREE.Group();
     this.group.renderOrder = TRAIL_RENDER_ORDER;
@@ -68,7 +69,7 @@ export class ProbePathLayer {
     this.localGroup.renderOrder = TRAIL_LOCAL_RENDER_ORDER;
     this.localGroup.visible = false;
     this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY);
-    this.localStroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.localStroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY);
   }
 
   /** Allocate one full-capacity trail per probe, plus its local-pass mirror.

@@ -25,7 +25,7 @@ export function glowCollapseHalfStepL(whitePoint = tonemapWhitePoint()): number 
 /** The vertex-stage collapse floor the star shaders compare
  *  `vPeakL · tap²` against (the glow pass's additive alpha squares the
  *  kernel, so that product IS the peak display light).
- *  `star.vert.glsl` duplicates the value as
+ *  `../../webgpu/star/star-vertex-tsl.ts` duplicates the value as
  *  `STELLATA_GLOW_COLLAPSE_FLOOR_L` — glow-collapse-pure.test.ts pins the
  *  literal; the TSL vertex imports this constant directly. */
 export const GLOW_COLLAPSE_FLOOR_L =

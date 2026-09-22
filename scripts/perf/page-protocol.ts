@@ -63,11 +63,11 @@ export async function bootScenario(page: Page, url: string, { backend, timeoutMs
   const failure = bootFailure((await outcome.jsonValue()) as string);
   if (failure !== null) throw new BootError(failure);
 
-  const actual = await page.evaluate(() =>
-    ((window as unknown as PerfWindow).stellata.webgpu === null ? 'webgl2' : 'webgpu'));
-  if (actual !== backend) {
+  const booted = await page.evaluate(() =>
+    (window as unknown as PerfWindow).stellata.webgpu !== null);
+  if (!booted) {
     throw new BootError(
-      `requested the ${backend} boot but the page booted ${actual}` +
+      `the ${backend} page came up without a seam` +
       ' — a mislabelled measurement is worse than none',
     );
   }
@@ -108,8 +108,7 @@ export async function awaitSettle(page: Page, { quietMs, timeoutMs, pollMs = 250
 export function probeAdapters(page: Page): Promise<AdapterProbe> {
   return page.evaluate(async () => {
     const s = (window as unknown as PerfWindow).stellata;
-    const live = s.rendererGL?.getContext() as WebGL2RenderingContext | undefined;
-    const gl = (live ?? document.createElement('canvas').getContext('webgl2')) as WebGL2RenderingContext | null;
+    const gl = document.createElement('canvas').getContext('webgl2') as WebGL2RenderingContext | null;
     let webgl: WebGlProbe | null = null;
     if (gl !== null) {
       const info = gl.getExtension('WEBGL_debug_renderer_info');
@@ -118,10 +117,9 @@ export function probeAdapters(page: Page): Promise<AdapterProbe> {
         vendor: String(gl.getParameter(info ? info.UNMASKED_VENDOR_WEBGL : gl.VENDOR)),
         timerQuery: gl.getExtension('EXT_disjoint_timer_query_webgl2') !== null,
       };
-      // A WebGPU boot has no live GL context, so this probe made one. Drop it
-      // before the sweep: the instrument must not leave a second GPU context
-      // alive in the page whose frame it is about to price.
-      if (live === undefined) gl.getExtension('WEBGL_lose_context')?.loseContext();
+      // The instrument must not leave a second GPU context alive in the
+      // page whose frame it is about to price.
+      gl.getExtension('WEBGL_lose_context')?.loseContext();
     }
 
     type AdapterLike = { readonly info?: Record<string, unknown>; readonly isFallbackAdapter?: boolean };
@@ -239,16 +237,9 @@ export function runDifferential(
 export interface DwellParams {
   readonly frames: number;
   readonly warmupFrames: number;
-  /** Subscribe the WebGPU frame-sample stream alongside the rAF deltas.
-   *  Only a WebGPU boot has one, and nothing there is exclusive — the
-   *  render loop resolves for whoever is listening. */
-  readonly wantGpuStream: boolean;
   /** Where the dev server serves the sample module from. The stream has no
    *  window surface, so the dwell reaches it through the module graph. */
   readonly samplesModuleUrl: string;
-  /** Count queue submits, command buffers and encoded passes per timed
-   *  frame by wrapping the WebGPU prototypes for the dwell's duration. */
-  readonly countPasses: boolean;
   /** Rendered frames between statistic readbacks, held there from before
    *  the warmup until the restore (`dwell/README.md`). */
   readonly readbackEvery: number;
@@ -286,10 +277,11 @@ export interface DwellRaw {
  * whole-frame median at a two-class vantage needs (`dwell/README.md`).
  *
  * rAF deltas are the primary metric because they are the one clock every
- * backend supplies. The WebGPU timestamp stream rides alongside where it
- * is sound, as a second opinion on the same frames rather than a
- * replacement: the two are different instruments and are never
- * differenced against each other.
+ * adapter supplies — `timestamp-query` is an optional feature — and every
+ * archived pin was recorded on them. The WebGPU timestamp stream rides
+ * alongside where it is sound, as a second opinion on the same frames
+ * rather than a replacement: the two are different instruments and are
+ * never differenced against each other.
  *
  * The pass counts wrap `GPUQueue.submit` and the two `GPUCommandEncoder`
  * begin-pass methods on their prototypes for the timed frames only, and
@@ -305,41 +297,39 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     const computeMs: number[] = [];
     let stopGpu: (() => void) | null = null;
     let stopCompute: (() => void) | null = null;
-    let gpuNote = 'not requested — rAF wall-clock deltas are the metric';
+    let gpuNote: string;
 
     type Proto = Record<string, unknown>;
     const g = globalThis as unknown as Record<string, { prototype: Proto } | undefined>;
     const queueProto = g.GPUQueue?.prototype;
     const encoderProto = g.GPUCommandEncoder?.prototype;
     const live = { submits: 0, commandBuffers: 0, renderPasses: 0, computePasses: 0 };
-    const perFrame: Record<PassCounter, number[]> | null = p.countPasses
-      ? { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] }
-      : null;
-    let passNote = 'not requested — a WebGL2 boot has no queue to count on';
+    const perFrame: Record<PassCounter, number[]> = {
+      submits: [], commandBuffers: [], renderPasses: [], computePasses: [],
+    };
+    let passNote = 'no GPUQueue / GPUCommandEncoder prototype on this page';
     let origSubmit: unknown = null;
     let origRenderPass: unknown = null;
     let origComputePass: unknown = null;
 
-    if (p.wantGpuStream) {
-      try {
-        const samples = await import(p.samplesModuleUrl) as {
-          gpuFrameSamplesAreSound(): boolean;
-          gpuComputeSamplesAreSound(): boolean;
-          onGpuFrameSample(fn: (ms: number) => void): () => void;
-          onGpuComputeSample(fn: (ms: number) => void): () => void;
-        };
-        const renderSound = samples.gpuFrameSamplesAreSound();
-        const computeSound = samples.gpuComputeSamplesAreSound();
-        if (renderSound) stopGpu = samples.onGpuFrameSample((ms) => gpuMs.push(ms));
-        if (computeSound) stopCompute = samples.onGpuComputeSample((ms) => computeMs.push(ms));
-        const unsound = 'resolved durations no frame can have';
-        if (renderSound && computeSound) gpuNote = 'subscribed, render and compute';
-        else if (renderSound) gpuNote = `subscribed, render only — the compute pool ${unsound}`;
-        else if (computeSound) gpuNote = `subscribed, compute only — the render pool ${unsound}`;
-        else gpuNote = `timestamp-query granted but both pools ${unsound}`;
-      } catch (e) {
-        gpuNote = `${p.samplesModuleUrl} did not load (${(e as Error).message})`;
-      }
+    try {
+      const samples = await import(p.samplesModuleUrl) as {
+        gpuFrameSamplesAreSound(): boolean;
+        gpuComputeSamplesAreSound(): boolean;
+        onGpuFrameSample(fn: (ms: number) => void): () => void;
+        onGpuComputeSample(fn: (ms: number) => void): () => void;
+      };
+      const renderSound = samples.gpuFrameSamplesAreSound();
+      const computeSound = samples.gpuComputeSamplesAreSound();
+      if (renderSound) stopGpu = samples.onGpuFrameSample((ms) => gpuMs.push(ms));
+      if (computeSound) stopCompute = samples.onGpuComputeSample((ms) => computeMs.push(ms));
+      const unsound = 'resolved durations no frame can have';
+      if (renderSound && computeSound) gpuNote = 'subscribed, render and compute';
+      else if (renderSound) gpuNote = `subscribed, render only — the compute pool ${unsound}`;
+      else if (computeSound) gpuNote = `subscribed, compute only — the render pool ${unsound}`;
+      else gpuNote = `timestamp-query granted but both pools ${unsound}`;
+    } catch (e) {
+      gpuNote = `${p.samplesModuleUrl} did not load (${(e as Error).message})`;
     }
 
     const clock = s.timeClock;
@@ -361,31 +351,27 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     try {
       // Inside the try: the restore is in its finally, so the wrap must not
       // be reachable without it.
-      if (perFrame !== null) {
-        if (queueProto !== undefined && encoderProto !== undefined) {
-          origSubmit = queueProto.submit;
-          origRenderPass = encoderProto.beginRenderPass;
-          origComputePass = encoderProto.beginComputePass;
-          const submit = origSubmit as (this: unknown, b: readonly unknown[]) => void;
-          const renderPass = origRenderPass as (this: unknown, d: unknown) => unknown;
-          const computePass = origComputePass as (this: unknown, d?: unknown) => unknown;
-          queueProto.submit = function (this: unknown, buffers: readonly unknown[]) {
-            live.submits += 1;
-            live.commandBuffers += buffers.length;
-            return submit.call(this, buffers);
-          };
-          encoderProto.beginRenderPass = function (this: unknown, descriptor: unknown) {
-            live.renderPasses += 1;
-            return renderPass.call(this, descriptor);
-          };
-          encoderProto.beginComputePass = function (this: unknown, descriptor?: unknown) {
-            live.computePasses += 1;
-            return computePass.call(this, descriptor);
-          };
-          passNote = 'counted on GPUQueue.submit and GPUCommandEncoder.beginRenderPass/beginComputePass';
-        } else {
-          passNote = 'no GPUQueue / GPUCommandEncoder prototype on this page';
-        }
+      if (queueProto !== undefined && encoderProto !== undefined) {
+        origSubmit = queueProto.submit;
+        origRenderPass = encoderProto.beginRenderPass;
+        origComputePass = encoderProto.beginComputePass;
+        const submit = origSubmit as (this: unknown, b: readonly unknown[]) => void;
+        const renderPass = origRenderPass as (this: unknown, d: unknown) => unknown;
+        const computePass = origComputePass as (this: unknown, d?: unknown) => unknown;
+        queueProto.submit = function (this: unknown, buffers: readonly unknown[]) {
+          live.submits += 1;
+          live.commandBuffers += buffers.length;
+          return submit.call(this, buffers);
+        };
+        encoderProto.beginRenderPass = function (this: unknown, descriptor: unknown) {
+          live.renderPasses += 1;
+          return renderPass.call(this, descriptor);
+        };
+        encoderProto.beginComputePass = function (this: unknown, descriptor?: unknown) {
+          live.computePasses += 1;
+          return computePass.call(this, descriptor);
+        };
+        passNote = 'counted on GPUQueue.submit and GPUCommandEncoder.beginRenderPass/beginComputePass';
       }
       if (rateBefore !== 0) clock.setRate(0);
       // Before the warmup, so the frames being timed are drawn at a cadence
@@ -409,16 +395,14 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
         const now = await new Promise<number>((r) => requestAnimationFrame(r));
         deltasMs.push(now - last);
         last = now;
-        if (perFrame !== null) {
-          perFrame.submits.push(live.submits);
-          perFrame.commandBuffers.push(live.commandBuffers);
-          perFrame.renderPasses.push(live.renderPasses);
-          perFrame.computePasses.push(live.computePasses);
-          live.submits = 0;
-          live.commandBuffers = 0;
-          live.renderPasses = 0;
-          live.computePasses = 0;
-        }
+        perFrame.submits.push(live.submits);
+        perFrame.commandBuffers.push(live.commandBuffers);
+        perFrame.renderPasses.push(live.renderPasses);
+        perFrame.computePasses.push(live.computePasses);
+        live.submits = 0;
+        live.commandBuffers = 0;
+        live.renderPasses = 0;
+        live.computePasses = 0;
       }
       readbacks = s.reduction.readbackRequests - readbacksBefore;
       effectiveLimitMag = s.exposure.getEffectiveLimitMag();

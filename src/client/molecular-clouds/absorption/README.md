@@ -9,19 +9,14 @@ annotates the same cloud's silhouette is annotation and lives in the parent
 
 ## Files
 
-- `cloud-absorption.vert.glsl`, `cloud-absorption.frag.glsl` — the raymarch
-  pair. Both tiers are one source; `USE_FIELD` selects between them.
 - `cloud-presence-pure.ts` (+ test) — the CPU mirror of the math (Plummer
-  density, absorption alpha) plus the constants both shader backends read:
+  density, absorption alpha) plus the constants the march reads:
   `TAU_PER_AV`, `AV_RATE_PER_NH`, `AV_PER_DENSITY`, `ALPHA_CAP`,
   `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`, `MARCH_MIN_STEPS`,
-  `MARCH_MIN_CHORD_T`. Vitest-pinned. The TSL twin
-  (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`) imports these;
-  GLSL cannot, so `absorption-glsl-drift.test.ts` pins its copies against
-  them. The **dither** is pinned in the parent's `cloud-glsl-drift.test.ts`
-  instead — one shape across both cloud shaders and the resolve, so it is
-  owned by `../../hdr/tonemap/tonemap-pure.ts` and asserted once for the
-  pair rather than per shader.
+  `MARCH_MIN_CHORD_T`. Vitest-pinned, and imported by the graph
+  (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`), so neither
+  can drift from the other. The **dither** is owned by
+  `../../hdr/tonemap/tonemap-pure.ts` and read from there.
 
 The materials that consume these — the seam, the per-cloud
 `CloudAbsorptionSpec`, and the brick texture's lifetime — stay in the
@@ -36,8 +31,8 @@ fragment shader raymarches the ellipsoid segment (4–14 jittered steps,
 screen-adaptive) and converts the A_V column to `α = 1 − exp(−0.921·A_V)`,
 capped at 0.95.
 
-**Traced clouds march the per-cloud Edenhofer density brick** (`USE_FIELD`
-define; a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
+**Traced clouds march the per-cloud Edenhofer density brick** (a builder
+branch, `../README.md` § The material seam; a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
 `A_V = 2.742·∫E dl`, clip at the brick's u = 1.05 taper edge) — the same
 volume the rim isosurface was traced from, so the shadow matches the
 silhouette 1:1 and the dimming matches per-star extinction physics. Fallback
@@ -54,16 +49,11 @@ jitter (never reseeded per frame) and the output carries ±0.5-LSB dither.
   way); `FrontSide` would kill the inside-the-cloud absorption. The rim
   shell is `FrontSide` for the opposite reason — see the parent's
   hide-when-inside contract.
-- **No `#version 300 es` directive, and no redeclaring auto-injected
-  attributes** (`position`, `normal`, `modelMatrix`, …). Doing either
-  silently breaks the GLSL3 compile.
 - **The blend is alpha-only premultiplied over** — rgb = 0 under
-  `premultipliedAlpha: true` + `NormalBlending`, i.e.
-  `background × (1 − absorption)`. Nothing is added. The TSL twin reaches
-  the same blend through explicit `CustomBlending` factors because the flag
-  itself breaks an MRT output struct
-  (`../../webgpu/molecular-clouds/README.md`); the two factories are meant
-  to differ there.
+  `CustomBlending` `OneFactor` / `OneMinusSrcAlphaFactor`, i.e.
+  `background × (1 − absorption)`. Nothing is added. The factors are
+  spelled out because `premultipliedAlpha` itself breaks an MRT output
+  struct (`../../webgpu/molecular-clouds/README.md`).
 
 ## Fragment budget
 
@@ -85,16 +75,16 @@ double-count). The reference chrome at −1 (galactic disc/grid, Local Bubble
 shell, the cloud rim shells themselves) deliberately draws after the mesh —
 annotation shouldn't be extincted.
 
-**Order is necessary and no longer sufficient**, because the band and the LG
-glow write the HDR target's *third* attachment now, not the one the
-absorption draw would reach by default. The mesh is `markAbsorber`ed
-(`../../hdr/attachments/README.md` § The gate) and the shader writes its
-alpha-only texel to `location = 2` as well as `location = 0`; one blend
-equation covers both, so the multiply is identical on each. Drop either half
-and the clouds keep drawing, keep sorting correctly, and extinct nothing —
-no error, no missing draw, just no dark rift. The `location = 2` write is
-what becomes **per-cloud conditional** once the band reads the measured grid
-itself; `location = 0` is unaffected.
+**Order is necessary but not sufficient**, because the band and the LG
+glow write the HDR target's *third* attachment, not the one the
+absorption draw would reach by default. Its output struct takes the absorber
+role (`../../hdr/attachments/README.md` § The roles), carrying its alpha-only
+texel to attachment 2 as well as attachment 0; one blend equation covers
+both, so the multiply is identical on each. Drop the attachment-2 member and
+the clouds keep drawing, keep sorting correctly, and extinct nothing — no
+error, no missing draw, just no dark rift. That member is what becomes
+**per-cloud conditional** once the band reads the measured grid itself;
+attachment 0 is unaffected.
 
 ## Which clouds may dim the band, decided per cloud
 

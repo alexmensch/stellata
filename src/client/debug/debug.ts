@@ -51,8 +51,8 @@ export interface DebugTools {
    *  Navigate mode, both blobs on one focus — `capture/README.md`. */
   capture(options: CaptureOptions): CaptureRun;
   /** Price each render pass by gpu.frame differential from the current
-   *  viewpoint. Camera stationary; on WebGL2 also panel CLOSED, since the
-   *  sweep needs the context's single query slot. */
+   *  viewpoint. Camera stationary; under raf-delta also panel CLOSED, since
+   *  wall time counts its per-tick work (`frame-cost/README.md`). */
   priceFrame(options?: PriceFrameOptions): Promise<PriceFrameRow[]>;
   /** Prints per-pass savedMs ranges across runs — the repeatability check. */
   priceFrameRepeat(runs: number, options?: PriceFrameOptions): Promise<PriceFrameRow[][]>;
@@ -88,14 +88,6 @@ function mountSection(
   module.setVisible(!section.isCollapsed());
   body.appendChild(section.section);
   return module.dispose;
-}
-
-/** The live WebGL2 context, or null on a WebGL1 fallback context or a
- *  WebGPU boot — the Perf section needs it to feature-detect the GPU
- *  timer query. */
-function perfGlContext(stellata: Stellata): WebGL2RenderingContext | null {
-  const gl = stellata.renderer.getContext();
-  return gl instanceof WebGL2RenderingContext ? gl : null;
 }
 
 export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
@@ -140,7 +132,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
       { title: 'Star disc',  storageKey: 'star',       build: () => buildStarSection(stellata) },
       { title: 'Milky Way',  storageKey: 'milkyway',   build: () => buildMilkywaySection(stellata.milkyway) },
       { title: 'Deep field', storageKey: 'deep-field', build: () => buildDeepFieldSection() },
-      { title: 'Perf',       storageKey: 'perf',       build: () => buildPerfSection(perfGlContext(stellata)) },
+      { title: 'Perf',       storageKey: 'perf',       build: () => buildPerfSection() },
       { title: 'Pin',        storageKey: 'pin',        build: () => buildPinSection(stellata) },
       { title: 'Arrows',     storageKey: 'arrows',     build: () => buildArrowSection(stellata) },
       { title: 'Warp',       storageKey: 'warp',       build: () => buildWarpSection(stellata) },
@@ -174,7 +166,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     survivors: async () => {
       const report = await readSurvivorReport(stellata);
       if (report === null) {
-        console.warn('survivors: no compaction kernel — this is a WebGL2 boot');
+        console.warn('survivors: the star layer is disposed — no compaction dispatch to read');
         return null;
       }
       console.log(formatSurvivorReport(report));

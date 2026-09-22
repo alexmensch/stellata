@@ -1,4 +1,4 @@
-// probe.vert.glsl / probe.frag.glsl on the TSL path: the fixed-pixel
+// ./probe-tsl.ts / ./probe-tsl.ts on the TSL path: the fixed-pixel
 // diamond glyph, one material for both passes (README.md § The probe glyph
 // needs no mirror variant).
 
@@ -27,8 +27,8 @@ export function buildProbeMarkerMaterial(
 
   material.vertexNode = Fn(() => {
     const probeView = modelViewMatrix.mul(vec4(attrVec3('iLocalPos'), 1.0)).toVar();
-    // The GLSL early return's off-screen sentinel; TSL has no
-    // value-carrying return, so the draw path assigns over it.
+    // Off-screen sentinel: TSL has no value-carrying return, so the draw
+    // path assigns over it.
     const clipOut = vec4(2.0, 2.0, 2.0, 1.0).toVar();
     If(attrFloat('iAlpha').greaterThan(0.0).and(probeView.z.lessThan(0.0)), () => {
       // Fixed pixel size at any range: a metre-scale probe has no
@@ -55,8 +55,7 @@ export function buildProbeMarkerMaterial(
     // no claim on the light already in the target and no occlusion of the
     // diffuse field (../../hdr/attachments/README.md § Known residuals).
     // Both extra attachments take the blend's identity element — alpha 0
-    // under this alpha-composited blend leaves the destination exactly as
-    // the WebGL gate's NONE did.
+    // under this alpha-composited blend leaves the destination untouched.
     return {
       colour: vec4(p.uColour, vAlpha.mul(mask)),
       statistic: vec4(0.0),

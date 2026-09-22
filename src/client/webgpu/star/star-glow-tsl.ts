@@ -1,10 +1,10 @@
 // The D2 glow pipeline in TSL: the shared vertex stage plus the glow-pass
-// fragment, compile-time specialized (no uRenderMode), no depth output.
+// fragment, compile-time specialized per pass, no depth output.
 
 import { Discard, Fn, float, smoothstep } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import { PHYS_RATIO_THRESHOLD } from '../../star-pipeline/local-pass/star-local-cluster-pure';
-import { applyGlowBlendDefaults } from '../../star-pipeline/star-pipeline';
+import { applyGlowBlendDefaults } from '../../star-pipeline/star-blend';
 import { STAR_PASS_GLOW } from '../../star-pipeline/star-pass';
 import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';

@@ -1,6 +1,6 @@
 // Progressive loader for the 3D dust-extinction voxel grid: zero-fill
 // Data3DTexture, fetch chunks priority-ordered, upload each arrival
-// through the per-backend voxel uploader. See src/client/loaders/README.md.
+// through the voxel uploader. See src/client/loaders/README.md.
 
 import type * as THREE from 'three';
 import type { StellataRenderer } from '../webgpu/seam';

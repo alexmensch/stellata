@@ -273,7 +273,7 @@ visible structure is partly the selection function.
    fade bands become a builder (`FadeBand(inner, outer)`).
 2. **Galaxy billboard pipeline** (0hx.3, re-fed by .4–.7) — instanced
    quads parallel to the star pipeline, shading via
-   `perceptual-disc.glsl`; per-instance position/m_k/morph_t/size.
+   `../src/client/webgpu/perceptual-disc-tsl.ts`; per-instance position/m_k/morph_t/size.
    Positions are stored absolute ICRS pc (float32) but uploaded
    camera-relative: CPU-side float64 subtraction of the camera
    position per rebase, the star pipeline's floating-origin trick

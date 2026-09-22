@@ -69,7 +69,7 @@ export function reductionChainSizes(
 }
 
 /**
- * The executable spec `reduce.frag.glsl` is pinned against: combine the
+ * The executable spec `../../../webgpu/hdr/reduction-webgpu.ts` is pinned against: combine the
  * (at most four) in-bounds parent texels of one output texel. The weight
  * channel is what makes the chain exact on a non-power-of-two frame.
  */

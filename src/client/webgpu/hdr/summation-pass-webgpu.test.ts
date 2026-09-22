@@ -11,8 +11,7 @@ import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 
 /** Everything the pass asks of a renderer, plus a log of the calls it must
- *  NOT make — the same contract summation-pass.test.ts drives the WebGL
- *  twin against. */
+ *  NOT make. */
 function fakeRenderer(cssHeight: number, pixelRatio: number) {
   const forbidden: string[] = [];
   const bound: (RenderTarget | null)[] = [];

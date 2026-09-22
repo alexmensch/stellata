@@ -49,7 +49,7 @@ running the chain instead of approximating it: point-source peak → taper
 adaptation reaches it without any bound having to move.
 
 It reads the emitter's peak from the star's **true** angular radius, the
-one `star.vert.glsl` divides by before the viewport-fraction up-clamp
+one `../../../webgpu/star/star-vertex-tsl.ts` divides by before the viewport-fraction up-clamp
 (`renderedSizeComponents`' `physSizePxUncapped`) — the clamped value
 over-brightens a star at the zoom floor. Its half-step test is also one
 side of the encode only: the pipeline dithers *after* the operator, so a

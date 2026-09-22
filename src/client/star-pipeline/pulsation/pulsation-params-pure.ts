@@ -1,5 +1,5 @@
 // Per-type variable-star pulsation params (radius-swing ρ, colour-swing
-// ΔB−V) for the star shader's iPuls attribute. See
+// ΔB−V) for the star vertex stage's iPulsRho / iPulsColorSwing fields. See
 // docs/science-stellar-modelling.md § Variable-star pulsation.
 import {
   VAR_TYPE_MIRA,
@@ -73,34 +73,5 @@ export function writePulsationParams(
     const p = pulsationParamsForType(varType[i]);
     rho[i] = p.rho;
     colorSwing[i] = p.colorSwing;
-  }
-}
-
-/** {ρ, ΔB−V} interleaved as the iPuls vec2 attribute's backing array —
- *  one attribute rather than two to stay within the WebGL2 16-attribute
- *  budget. Shared by the WebGL2 geometry and the WebGPU port's. */
-export function interleavePulsParams(
-  rho: Float32Array,
-  colorSwing: Float32Array,
-): Float32Array {
-  const out = new Float32Array(rho.length * 2);
-  writeInterleavedPulsParams(rho, colorSwing, out, 0, rho.length);
-  return out;
-}
-
-/** `interleavePulsParams` over one record window. The attribute's backing
- *  array is a COPY of the two source columns, so a progressive load that
- *  only refills `catalog.pulsRho` never reaches the shader — the window has
- *  to be re-interleaved and the attribute's range flagged. */
-export function writeInterleavedPulsParams(
-  rho: Float32Array,
-  colorSwing: Float32Array,
-  out: Float32Array,
-  first: number,
-  end: number,
-): void {
-  for (let i = first; i < end; i++) {
-    out[i * 2] = rho[i];
-    out[i * 2 + 1] = colorSwing[i];
   }
 }

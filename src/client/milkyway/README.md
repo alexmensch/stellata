@@ -1,7 +1,6 @@
 # Milky Way volumetric disc
 
-`milkyway.ts` + `milkyway.{vert,frag}.glsl` render the integrated surface
-brightness of unresolved Galactic stars by raymarching **two proxy meshes**
+`milkyway.ts` renders the integrated surface brightness of unresolved Galactic stars by raymarching **two proxy meshes**
 anchored at the galactic centre — a flattened disc (30 × 30 × 3.6 kpc
 envelope) and an oblate bulge (10 × 10 × 6 kpc), both rotated so their short
 axes align with NGP. Each fragment ray-sphere-intersects its mesh in
@@ -15,11 +14,10 @@ disables. Hidden in chart mode.
 
 - `milkyway.ts` — volumetric disc + bulge renderer. Composes the two proxy
   meshes; owns the `setIsobar` chart-mode handoff (which hides them).
-- `milkyway.{vert,frag}.glsl` — ray-sphere intersect + log-distributed
-  raymarch, additive-blended.
-- `band-materials.ts` (+ test) — the material seam: the neutral
+- `band-materials.ts` (+ test, + mock) — the material seam: the neutral
   `BandMaterials` contract, the `BandSharedSlots` group both components
-  hold by reference, and the WebGL2 implementation (§ The material seam).
+  hold by reference, and the seeder that starts it (§ The material seam).
+  The graph is `../webgpu/milkyway/milkyway-band-tsl.ts`.
 - `milkyway-column-pure.ts` — the density / dust profile constants the shader
   receives as uniforms, plus a CPU mirror of its raymarch. Owns the ρ₀ solve
   (`calibration/README.md`); the shader's step counts are pinned against the
@@ -33,7 +31,8 @@ disables. Hidden in chart mode.
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
-- `milkyway.test.ts` — HDR-seam wiring, calibration pins, GLSL↔TS drift.
+- `milkyway.test.ts` — the component specs the layer states, the
+  calibration pins and the brightness verdict.
 - `milkyway-column-pure.test.ts` — quadrature convergence, dust blast radius.
 
 `GAL_TO_ICRS` / `GALACTIC_CENTRE_PC` live in `../galactic/galactic-coords.ts`,
@@ -42,28 +41,27 @@ imported here for the GC-anchored mesh placement.
 ## The material seam
 
 Both components take their material from a `BandMaterials` factory rather
-than building a `ShaderMaterial` inline, so a WebGPU boot swaps shaders
-with no second copy of the mesh placement, the per-frame galactic-centre
-rebase, the debug levers or the chart handoff. The WebGPU twin is
-`../webgpu/milkyway/README.md`; `stellata.ts` passes
-`webgpu?.bandMaterials` and adds the group to `(webgpu?.scene ?? scene)`.
+than building one inline: the layer owns the mesh placement, the per-frame
+galactic-centre rebase, the debug levers and the chart handoff, and never
+sees the graph. The factory is `../webgpu/milkyway/README.md`;
+`stellata.ts` passes `webgpu.bandMaterials` and adds the group to
+`scene`.
 
 **The shared slots come FROM the factory.** The dust model, the galactic
 frame, the surface-brightness anchor and the chart isobar are held by
 reference between the disc and the bulge so one write reaches both draws —
-and on WebGPU those are TSL nodes, so the layer has to write through the
-factory's objects rather than its own. `MilkyWay.shared` is that handle.
+and they are TSL nodes, so the layer has to write through the factory's
+objects rather than its own. `MilkyWay.shared` is that handle.
 
 **`seedBandSharedSlots` is the single writer of the authored defaults**,
-and each factory calls it on the record it just built — a TSL
-`uniform()` node starts on a declared literal, so without it the WebGPU
-band marches a placeholder dust model. The layer therefore holds no copy
-of the constants, and the two backends cannot start on different ones.
-Add a slot to `BandSharedSlots` and `band-materials.test.ts` fails until
-it is seeded.
+and the factory calls it on the record it just built — a TSL `uniform()`
+node starts on a declared literal, so without it the band marches a
+placeholder dust model. The layer therefore holds no copy of the
+constants. Add a slot to `BandSharedSlots` and `band-materials.test.ts`
+fails until it is seeded.
 
-`uIsBulge` does not survive the crossing: it is a uniform the GLSL
-branches on, and a builder flag on the TSL side.
+Which component a material is for is a **builder** flag, not a uniform:
+the disc and the bulge are two graphs.
 
 ## Why a volumetric mesh, not a skybox
 
@@ -146,7 +144,7 @@ Two more consequences a future session needs:
   picker cannot move flux. `getValues()` returns the *authored* colour, not
   the tint, because the tint's channels exceed 1 (the disc's red sits at
   1.13) and an `<input type="color">` cannot round-trip that.
-- **The Local Group layer no longer seeds from here.** It derives its own
+- **The Local Group layer does not seed from here.** It derives its own
   two family indices (`../local-group/emission/README.md` § Population tints),
   sharing only the SSP spheroid constant and the solve — so this palette
   is the band's alone.
@@ -253,7 +251,7 @@ position it took the bound at, since that is the travel the allowance
 covers. `dispose` resets it.
 
 `MilkyWay.contributionSkip` is what the band's registry entry declares
-`contribution: { kind: 'gated' }` on (`../scene/README.md` § The
+`contribution: { kind: 'gated' }` on (`../scene/contribution/README.md` § The
 brightness reason): the ceiling first, and the fan **only** where the
 ceiling cannot decide, which is what keeps a 2–6 ms march off the deep
 cuts that need no help. `setContributing` is a term of the group's
@@ -383,8 +381,8 @@ so a band filling the frame can never reach the exposure's resolved-surface
 pin (`../hdr/attachments/README.md`). Neither writes attachment 0
 on-target: the resolve owns that pixel once it has averaged the diffuse
 attachment over the summation patch. Off-target both apply the operator
-themselves over the pixel solid angle (`uHdrTarget = 0`, the float-RT
-fallback and the A/B — `../hdr/README.md` § Fallback), in the **undithered**
+themselves over the pixel solid angle (`uHdrTarget = 0`, chart mode's
+path — `../hdr/README.md` § The inline operator), in the **undithered**
 variant: the two components overlap on every band pixel and the dither is a
 function of `fragCoord` alone, so it would land twice.
 
@@ -399,7 +397,7 @@ are renderer-local with small magnitudes.
 ## Chart mode + warp
 
 **Chart mode renders no Milky Way at all, and the isobar contour has
-NEVER been drawn — not on either backend, not in any release.** Read that
+NEVER been drawn — not in any release.** Read that
 before believing anything else here or in `../webgpu/milkyway/README.md`
 about it: the branch reads as shipped behaviour in both shaders and in
 several uniform tables, and session after session has taken it for a live

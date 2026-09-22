@@ -160,7 +160,7 @@ export function resetStarKMultiplier(): void {
 
 // Star-disc rendering knobs. Defaults shipped to production; debug panel
 // can sweep each one independently for visual calibration. See
-// star.frag.glsl for the meaning of each value — the doc lives there
+// ../webgpu/star/star-glow-tsl.ts for the meaning of each value — the doc lives there
 // alongside the math that consumes it.
 export interface StarRenderParams {
   visibleThreshold: number;
@@ -171,7 +171,7 @@ export interface StarRenderParams {
   lumBiasMin: number;
   lumBiasMax: number;
   // Soft-knee saturation extent (magnitudes) for the Gaussian-PSF disc
-  // size formula. See uSizeKnee comment in star.vert.glsl. 0 = hard cap;
+  // size formula. See uSizeKnee comment in ../webgpu/star/star-vertex-tsl.ts. 0 = hard cap;
   // larger values let bright stars keep growing
   // before saturating. 16 lands ~43% size advantage for Sol over Sirius
   // when standing at the unfocused floor inside the solar system.

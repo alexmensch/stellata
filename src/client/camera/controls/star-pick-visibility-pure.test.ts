@@ -125,7 +125,7 @@ describe('resolveStarPickVisibility / eclipse dim', () => {
       .toBe(resolveStarPickVisibility(args({ components: resolved })).hitRadius);
   });
 
-  // star.vert.glsl gates the dim on uRenderMode == 0. A resolved pair
+  // ../../webgpu/star/star-vertex-tsl.ts gates the dim on uRenderMode == 0. A resolved pair
   // orders geometrically in the local depth pass, and its discs keep
   // drawing — mirroring the dim here would hide a star that is on screen.
   it('leaves a disc-dominant star pickable at totality', () => {

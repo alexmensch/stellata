@@ -17,9 +17,8 @@ export const MIRROR_CAPACITY = 8;
  *  depth-failing per fragment. */
 export const MIRROR_RENDER_ORDER = { mask: -1, disc: 0, glow: 3.5 } as const;
 
-/** What StarLocalCluster drives, whichever backend built the mirror —
- *  `star-local-mirror.ts` (GLSL) or
- *  `../../webgpu/star/star-local-mirror-tsl.ts` (TSL). */
+/** What StarLocalCluster drives — implemented behind the import boundary
+ *  by `../../webgpu/star/star-local-mirror-tsl.ts`. */
 export interface StarMirror {
   readonly group: THREE.Group;
   setMembers(members: readonly number[]): void;
@@ -41,8 +40,7 @@ interface MirrorAttr {
 
 /**
  * A MIRROR_CAPACITY-slot copy of the star geometry, re-filled from the
- * live source arrays each frame. Shared by both backends deliberately —
- * README.md carries why a per-backend copy reads as a brightness bug.
+ * live source arrays each frame. README.md § Mirror draw.
  */
 export class MirrorSlots {
   readonly geometry: THREE.InstancedBufferGeometry;

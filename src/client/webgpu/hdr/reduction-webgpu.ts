@@ -1,6 +1,5 @@
-// The statistic reduction on WebGPU: reduction-pass.ts's mip chain
-// (reduction-pure is the executable spec) with the pixel-pack fence
-// replaced by the renderer's mapAsync-staged readback. README.md § Reduction.
+// The statistic reduction: the halving mip chain (reduction-pure is the
+// executable spec) and its mapAsync-staged readback. README.md § Reduction.
 
 import {
   FloatType, HalfFloatType, NearestFilter, NoBlending, NodeMaterial,
@@ -28,7 +27,7 @@ interface Level {
   height: number;
 }
 
-/** One level of the chain (reduce.frag.glsl): the weighted 2x2 combine,
+/** One level of the chain (./reduction-webgpu.ts): the weighted 2x2 combine,
  *  with the masked-mean product formed on the statistic-reading level
  *  alone. Source size bakes as literals — the materials rebuild with the
  *  level chain on every resize anyway. */
@@ -66,10 +65,7 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
    *  freezes at its last landed reading. */
   enabled = true;
 
-  /** Interface parity with the WebGL reduction: keep issuing the readback
-   *  while the statistic is unavailable. The ANGLE submission-barrier
-   *  rationale has no WebGPU analogue, but the frame-cost harness's
-   *  request accounting relies on the cadence either way. */
+  /** README.md § Reduction. */
   fenceWhileParked = false;
 
   /** Frames between readbacks. Emergent here — the promise resolves when it
@@ -82,9 +78,8 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
   private sourceHeight = 0;
   private issued = 0;
   private inFlight = false;
-  /** A readback already in flight at `dispose()` still resolves — the
-   *  WebGL twin drops its fence object and cannot be landed on, so this
-   *  is the same guarantee expressed for a promise. */
+  /** A readback already in flight at `dispose()` still resolves; this is
+   *  what stops it landing on a disposed chain. */
   private disposed = false;
   private landed: Float32Array | null = null;
   private landedCount = 0;
@@ -101,8 +96,7 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
     return this.issued;
   }
 
-  /** One readback in flight at a time, exactly as the WebGL fence — the
-   *  adaptation park reads it to open a probe on a frame the chain can
+  /** One readback in flight at a time — the adaptation park reads it to open a probe on a frame the chain can
    *  actually draw. */
   get readbackPending(): boolean {
     return this.inFlight;

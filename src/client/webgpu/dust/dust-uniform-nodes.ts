@@ -1,4 +1,4 @@
-// TSL uniform-node twin of the dust sprite's one layer-owned slot
+// The dust sprite's one layer-owned slot, as a TSL node
 // (../../dust/dust-particle-layer.ts) — the other six bind off the shared
 // uniform-node mirror.
 

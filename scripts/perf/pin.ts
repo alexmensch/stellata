@@ -61,6 +61,11 @@ function main(): number {
   }
 
   const summary = pinFromRuns(sources, { version: packageVersion(), accepted: acceptedMarks(args.accept) });
+  if (summary.dropped.length > 0) {
+    console.warn(
+      `perf pin: ${summary.dropped.length} row(s) at no canon position, left out `
+      + `— ${summary.dropped.join(', ')}`);
+  }
   for (const row of summary.provenance) {
     console.log(`  ${row.key.padEnd(13)} ${row.sourceRun === null ? 'sound in no run' : `← ${row.sourceRun}`}`);
     for (const refused of row.refusedIn) console.log(`      refused in ${refused.sourceRun}: ${refused.reason}`);

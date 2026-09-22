@@ -8,6 +8,7 @@ import {
 } from '../solar-system/heliopause/heliopause';
 import { pickShellSilhouette } from './shell-pick';
 import type { ShellPickSurface } from './shell-registry';
+import { fakeShellMaterials } from './shell-materials-mock';
 
 const VIEWPORT_W = 800;
 const VIEWPORT_H = 600;
@@ -30,7 +31,7 @@ const rect = {
 // The real heliopause: the pick surface is the mesh the layer draws, its
 // FrontSide material and its group transform, not a stand-in.
 function heliopauseSurface(): ShellPickSurface {
-  const shell = new Heliopause();
+  const shell = new Heliopause(fakeShellMaterials());
   shell.group.updateMatrixWorld(true);
   return shell.shellPickSurface();
 }

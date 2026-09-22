@@ -73,7 +73,7 @@ export class BinaryOrbitPathLayer {
     this.group = new THREE.Group();
     this.group.renderOrder = PATH_RENDER_ORDER;
     this.group.visible = false;
-    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY, true);
+    this.stroke = chromeLines.solid(ORBIT_LINE_COLOUR, ORBIT_LINE_OPACITY);
   }
 
   /**

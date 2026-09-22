@@ -15,8 +15,10 @@ import {
   weightedMedian,
 } from './reduction-pure';
 
+/** The shipped reduce fragment's source, comments stripped — the graph it
+ *  builds is what runs (§ TSL drift). */
 const shader = readFileSync(
-  fileURLToPath(new URL('./reduce.frag.glsl', import.meta.url)),
+  fileURLToPath(new URL('../../../webgpu/hdr/reduction-webgpu.ts', import.meta.url)),
   'utf8',
 ).replace(/\/\/[^\n]*/g, '');
 
@@ -174,31 +176,30 @@ describe('combineReductionTexels', () => {
   });
 });
 
-// combineReductionTexels is the spec; reduce.frag.glsl is what runs. The
-// two are tied by nothing at compile time, and a window widened on one side
-// alone silently biases the frame mean rather than failing.
-describe('GLSL drift', () => {
+// combineReductionTexels is the spec; the node graph is what runs. Nothing
+// at compile time ties them, and a window widened on one side alone
+// silently biases the frame mean rather than failing.
+describe('TSL drift', () => {
   it('walks the same 2x2 window the spec combines', () => {
-    expect(shader).toContain('dy < 2');
-    expect(shader).toContain('dx < 2');
+    expect(shader).toContain('[[0, 0], [1, 0], [0, 1], [1, 1]]');
   });
 
   it('divides the outgoing weight by the same window area', () => {
     const combined = combineReductionTexels([
       { mean: 0, surface: 0, coverage: 0, weight: 1 },
     ]);
-    expect(shader).toContain('weight * 0.25');
+    expect(shader).toContain('weight.mul(0.25)');
     expect(combined.weight).toBe(0.25);
   });
 
   it('drops out-of-bounds taps from the weight, not just the numerator', () => {
-    expect(shader).toMatch(/if \(c\.x >= bound\.x \|\| c\.y >= bound\.y\) continue;/);
-    expect(shader).toContain('weight += t.a');
-    expect(shader).toContain('numerator += t.a * s');
+    expect(shader).toContain('If(c.x.lessThan(bound.x).and(c.y.lessThan(bound.y))');
+    expect(shader).toContain('weight.addAssign(t.a)');
+    expect(shader).toContain('numerator.addAssign(s.mul(t.a))');
   });
 
   it('reads an all-empty output texel as zero rather than NaN, like the spec', () => {
-    expect(shader).toContain('weight > 0.0 ? numerator / weight : vec3(0.0)');
+    expect(shader).toContain('select(weight.greaterThan(0.0), numerator.div(weight), vec3(0.0))');
     expect(combineReductionTexels([]).mean).toBe(0);
   });
 
@@ -206,7 +207,7 @@ describe('GLSL drift', () => {
     // Level 0 is the RG16F statistic, which carries the flux and the mask
     // but no product of the two; every level after it already has one, and
     // multiplying again there would square the mask.
-    expect(shader).toContain('uFromStatistic > 0.5 ? vec3(t.r, t.r * t.g, t.g) : t.rgb');
+    expect(shader).toContain('fromStatistic ? vec3(t.r, t.r.mul(t.g), t.g) : t.rgb');
     const level0 = statisticTexelToReduction(9, 1);
     expect(level0).toEqual({ mean: 9, surface: 9, coverage: 1, weight: 1 });
     expect(statisticTexelToReduction(9, 0).surface).toBe(0);

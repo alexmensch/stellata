@@ -1,4 +1,4 @@
-// Pure helpers mirroring the GLSL math in `star.vert.glsl`'s chart-mode
+// Pure helpers mirroring the GLSL math in `../webgpu/star/star-vertex-tsl.ts`'s chart-mode
 // branch. See src/client/chart-mode/README.md § Star disc sizing.
 
 export interface ChartDiscParams {

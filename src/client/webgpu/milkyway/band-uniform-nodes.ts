@@ -1,6 +1,5 @@
-// TSL uniform-node twins of the band material seam's two uniform blocks
-// (../../milkyway/band-materials.ts) — transcribed key-for-key, pinned by
-// a key-parity test.
+// The band material seam's two uniform blocks
+// (../../milkyway/band-materials.ts) as TSL nodes.
 
 import { Color, Matrix3, Vector3 } from 'three';
 import { texture3D, uniform } from 'three/tsl';
@@ -11,8 +10,7 @@ import { makeResolvedHoleTexture } from '../../milkyway/calibration/resolved-hol
  * The slots both components hold by reference to each other.
  *
  * Built **once per factory**, so the disc and the bulge take the same node
- * objects and one write reaches both draws — the WebGL layout, transcribed.
- * Deliberately NOT taken from the shared uniform-node mirror even where a
+ * objects and one write reaches both draws. Deliberately NOT taken from the shared uniform-node mirror even where a
  * name collides (`uDustEnabled`, `uExtinctionStrength`,
  * `uDustAvPerDensityPc`, `uWorldOffset`): those mirror the frame-wide map,
  * whose per-frame `sync()` would overwrite a write the band made here.
@@ -39,9 +37,8 @@ export function bandSharedUniformNodes() {
 
 export type BandSharedNodes = ReturnType<typeof bandSharedUniformNodes>;
 
-/** What differs between the two draws. `uIsBulge` is absent: the GLSL
- *  carries it as a uniform and branches, while the builder here takes the
- *  flag and emits one profile or the other. */
+/** What differs between the two draws (README.md § `uIsBulge` becomes
+ *  compile-time). */
 export function bandComponentUniformNodes(spec: BandComponentSpec) {
   return {
     uMeshScalePc: uniform(spec.meshScalePc.clone()),

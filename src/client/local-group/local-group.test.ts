@@ -22,7 +22,7 @@ import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { MIN_DISC_HIT_RADIUS_PX } from '../camera/controls/star-geometry';
 import { makeLabelDom } from '../overlays/label-dom-mock';
 import { OccluderSet } from '../occlusion/occluder-set';
-import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
+import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 
 function makeObject(o: Partial<LgObject>): LgObject {
   return {
@@ -69,7 +69,7 @@ describe('LocalGroupLayer', () => {
       makeObject({ kind: 'ellipsoid' }),
       makeObject({ kind: 'ellipsoid', id: 'b' }),
       makeObject({ kind: 'disc', id: 'c' }),
-    ]), builtinChromeLineMaterials());
+    ]), fakeChromeLineMaterials());
     expect(layer.group.children).toHaveLength(1);
     expect(wireframeOf(layer)).toBeInstanceOf(THREE.LineSegments);
     layer.dispose();
@@ -77,7 +77,7 @@ describe('LocalGroupLayer', () => {
 
   it('carries three rings per object, whichever kind it is', () => {
     const rings = (objects: LgObject[]) => {
-      const layer = new LocalGroupLayer(makeCatalog(objects), builtinChromeLineMaterials());
+      const layer = new LocalGroupLayer(makeCatalog(objects), fakeChromeLineMaterials());
       const count = positionsOf(layer).count;
       layer.dispose();
       // One vertex per ring corner — the index, not a duplicate, closes it.
@@ -98,7 +98,7 @@ describe('LocalGroupLayer', () => {
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'disc', axes: [300, 200, 50] }),
       makeObject({ kind: 'ellipsoid', id: 'b', axes: [120, 90, 60] }),
-    ]), builtinChromeLineMaterials());
+    ]), fakeChromeLineMaterials());
     const index = indexOf(layer);
     const ringCount = 2 * RINGS_PER_OBJECT;
     expect(index.count).toBe(ringCount * RING_SEGMENTS * 2);
@@ -114,7 +114,7 @@ describe('LocalGroupLayer', () => {
   it('joins consecutive segments end to start, so the ring reads continuous', () => {
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ kind: 'ellipsoid', axes: [120, 90, 60] }),
-    ]), builtinChromeLineMaterials());
+    ]), fakeChromeLineMaterials());
     const index = indexOf(layer);
     for (let seg = 0; seg < RING_SEGMENTS - 1; seg++) {
       expect(index.getX(seg * 2 + 1)).toBe(index.getX(seg * 2 + 2));
@@ -128,28 +128,28 @@ describe('LocalGroupLayer', () => {
     // indexed against 554 KiB un-indexed (README.md § Runtime layer).
     const layer = new LocalGroupLayer(
       makeCatalog(Array.from({ length: 123 }, (_, i) => makeObject({ id: `o${i}` }))),
-      builtinChromeLineMaterials());
+      fakeChromeLineMaterials());
     expect(positionsOf(layer).count).toBe(123 * RINGS_PER_OBJECT * RING_SEGMENTS);
     expect(indexOf(layer).array).toBeInstanceOf(Uint16Array);
     layer.dispose();
   });
 
   it('starts hidden with material opacity = 0 — fades in via update()', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), fakeChromeLineMaterials());
     const mat = (layer.group.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial;
     expect(mat.opacity).toBe(0);
     layer.dispose();
   });
 
   it('update() at distFromSol < FADE_INNER_PC keeps the layer hidden', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), fakeChromeLineMaterials());
     layer.update(new THREE.Vector3(), FADE_INNER_PC - 100);
     expect(layer.group.visible).toBe(false);
     layer.dispose();
   });
 
   it('update() at distFromSol > FADE_OUTER_PC shows the layer at full base opacity', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), fakeChromeLineMaterials());
     layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
     expect(layer.group.visible).toBe(true);
     const mat = (layer.group.children[0] as THREE.LineSegments)
@@ -159,7 +159,7 @@ describe('LocalGroupLayer', () => {
   });
 
   it('update() applies -worldOffset to the group position (floating origin)', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), fakeChromeLineMaterials());
     const wo = new THREE.Vector3(1234, -5678, 9012);
     layer.update(wo, FADE_OUTER_PC + 1000);
     expect(layer.group.position.x).toBe(-1234);
@@ -169,7 +169,7 @@ describe('LocalGroupLayer', () => {
   });
 
   it('setMonochrome(true) hides the layer in chart mode (no chart-mode treatment yet)', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), fakeChromeLineMaterials());
     layer.setMonochrome(true);
     layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
     expect(layer.group.visible).toBe(false);
@@ -177,7 +177,7 @@ describe('LocalGroupLayer', () => {
   });
 
   it('per-object silhouette samples include 12*5 + 2 = 62 points', () => {
-    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), builtinChromeLineMaterials());
+    const layer = new LocalGroupLayer(makeCatalog([makeObject({})]), fakeChromeLineMaterials());
     expect(layer.sampleCount(0)).toBe(62);
     layer.dispose();
   });
@@ -187,7 +187,7 @@ describe('LocalGroupLayer', () => {
     const axes: [number, number, number] = [3730, 4960, 6000];
     const layer = new LocalGroupLayer(makeCatalog([makeObject({
       centerAbs: center, axes, kind: 'ellipsoid',
-    })]), builtinChromeLineMaterials());
+    })]), fakeChromeLineMaterials());
     const tmp = new THREE.Vector3();
     const maxAxis = Math.max(...axes);
     for (let i = 0; i < layer.sampleCount(0); i++) {
@@ -235,7 +235,7 @@ function projectToPickScreen(p: THREE.Vector3, camera: THREE.PerspectiveCamera):
 }
 
 function makeVisibleLayer(objects: LgObject[]): LocalGroupLayer {
-  const layer = new LocalGroupLayer(makeCatalog(objects), builtinChromeLineMaterials());
+  const layer = new LocalGroupLayer(makeCatalog(objects), fakeChromeLineMaterials());
   layer.update(new THREE.Vector3(), FADE_OUTER_PC + 1000);
   return layer;
 }
@@ -244,7 +244,7 @@ describe('LocalGroupLayer.pick', () => {
   it('returns null immediately when the layer is not visible', () => {
     const layer = new LocalGroupLayer(
       makeCatalog([makeObject({ centerAbs: new THREE.Vector3() })]),
-      builtinChromeLineMaterials());
+      fakeChromeLineMaterials());
     // Push distFromSol below FADE_INNER_PC so update() sets group.visible
     // = false (the Object3D default is visible = true pre-update()).
     layer.update(new THREE.Vector3(), FADE_INNER_PC - 100);
@@ -680,7 +680,7 @@ describe('createLocalGroupLabels teardown', () => {
     const layer = new LocalGroupLayer(makeCatalog([
       makeObject({ id: 'a', name: 'A' }),
       makeObject({ id: 'b', name: 'B' }),
-    ]), builtinChromeLineMaterials());
+    ]), fakeChromeLineMaterials());
 
     const teardown = createLocalGroupLabels(fake.host, layer);
     // One ranking handler + one label engine per object.

@@ -23,9 +23,9 @@ import { webpSize } from './image-header-pure';
 
 const TEXTURES = resolve(__dirname, '../../data/textures');
 const RELIEF = resolve(TEXTURES, 'relief');
-const MESH_FRAG = resolve(
+const MESH_SHADER = resolve(
   __dirname,
-  '../../src/client/solar-system/planets/planet-mesh.frag.glsl',
+  '../../src/client/webgpu/solar-system/planet-mesh-tsl.ts',
 );
 const pySource = readFileSync(resolve(__dirname, 'horizon_map.py'), 'utf-8');
 const buildSource = readFileSync(resolve(__dirname, 'build-textures.py'), 'utf-8');
@@ -230,11 +230,11 @@ describe('horizon maps', () => {
     expect(measure).toContain(`LIMB_FLOOR = ${LIMB_FLOOR}`);
     expect(measure).toContain(`LIMB_EXP = ${LIMB_EXP}`);
     // The third mirrored constant is a shader literal rather than a TS export,
-    // so it pins against the GLSL directly instead of an import.
+    // so it pins against the graph directly instead of an import.
     const floor = measure.match(/^TERM_SOFTNESS_FLOOR = (\S+)$/m);
     expect(floor, 'TERM_SOFTNESS_FLOOR').not.toBeNull();
-    expect(readFileSync(MESH_FRAG, 'utf-8')).toContain(
-      `max(uTermSoftness, ${floor![1]})`);
+    expect(readFileSync(MESH_SHADER, 'utf-8')).toContain(
+      `max(p.uTermSoftness, ${floor![1]})`);
   });
 
   it('mirrors each body albedo the interreflected term pays twice', () => {

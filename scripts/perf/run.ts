@@ -32,7 +32,6 @@ import {
   bufferShortfall,
   describeProbe,
   markerVerdict,
-  methodFor,
   planContexts,
   runProvenance,
   softwareRenderer,
@@ -93,10 +92,10 @@ async function unreachable(url: string): Promise<string | null> {
   }
 }
 
-function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): PriceFrameOptions {
+function priceFrameOptions(a: RunArgs): PriceFrameOptions {
   return {
     passes: a.passes,
-    method,
+    method: a.method,
     budgetMs: a.budgetMs,
     dwellFrames: a.dwellFrames,
     emptyPasses: a.emptyPasses,
@@ -109,7 +108,6 @@ function priceFrameOptions(a: RunArgs, method: GpuFrameMethod | undefined): Pric
 const sleep = (ms: number): Promise<void> => new Promise((done) => { setTimeout(done, ms); });
 
 interface ScenarioPlan extends ContextPlan {
-  readonly method: GpuFrameMethod | undefined;
   /** 1-based place in the run, recorded on the row. */
   readonly position: number;
 }
@@ -151,7 +149,7 @@ interface ScenarioOutcome {
 async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan): Promise<ScenarioOutcome> {
   const { name, backend } = plan;
   const scenario = SCENARIOS[name];
-  const url = scenarioUrl(args.url, scenario.blob, backend, args.hash);
+  const url = scenarioUrl(args.url, scenario.blob, args.hash);
   const context = await browser.newContext({
     viewport: { width: args.width, height: args.height },
     deviceScaleFactor: args.dpr,
@@ -232,7 +230,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
 
     measuring = true;
     if (args.mode === 'differential') {
-      const priceOptions = { ...priceFrameOptions(args, plan.method), cadenceMs: record.idleRafMs };
+      const priceOptions = { ...priceFrameOptions(args), cadenceMs: record.idleRafMs };
       const setup = {
         preDisable: args.preDisable ?? [],
         noPark: args.noPark,
@@ -449,9 +447,6 @@ async function main(): Promise<number> {
     return EXIT.unarmed;
   }
 
-  const { method, why } = methodFor(args);
-  if (why !== null) console.log(`perf: ${why}`);
-
   const chromeArgs = [...DEFAULT_CHROME_ARGS, ...args.chromeArgs];
   const startedAt = new Date().toISOString();
   const browser = await chromium.launch({ channel: BROWSER_CHANNEL, headless: !args.headed, args: chromeArgs });
@@ -460,13 +455,13 @@ async function main(): Promise<number> {
     `perf: ${browser.browserType().name()} ${browserVersion} · channel ${BROWSER_CHANNEL} · ${args.headed ? 'HEADED' : 'HEADLESS'} · ` +
     `${process.platform}/${process.arch}\nargs: ${chromeArgs.join(' ')}\n` +
     `viewport ${args.width}x${args.height} @ dpr ${args.dpr} · mode ${args.mode} · backend ${args.backend}` +
-    (method ? ` · method pinned ${method}` : ''),
+    (args.method ? ` · method pinned ${args.method}` : ''),
   );
 
   const records: ScenarioRecord[] = [];
   const probes: AdapterProbe[] = [];
   const plans: ScenarioPlan[] = planContexts(args.scenarios, args.backend, args.readbackEvery)
-    .map((context, i) => ({ ...context, method, position: i + 1 }));
+    .map((context, i) => ({ ...context, position: i + 1 }));
   try {
     for (const [i, plan] of plans.entries()) {
       if (i > 0 && args.cooldownMs > 0) {

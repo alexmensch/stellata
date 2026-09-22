@@ -50,7 +50,7 @@ export interface EclipsePhotometryFieldOptions {
   eclipseDimBuffer: Float32Array;
   /** Three.js attribute carrier, flushed only on frames that write, and
    *  then over the touched slots alone (README § Partial re-upload). */
-  iEclipseDimAttr: THREE.InstancedBufferAttribute;
+  iEclipseDimAttr: THREE.BufferAttribute;
 }
 
 interface EclipseRelationCache {

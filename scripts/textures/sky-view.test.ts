@@ -17,9 +17,9 @@ import { webpSize } from './image-header-pure';
 // job: data/textures/relief/README.md § Sky view factor.
 
 const RELIEF = resolve(__dirname, '../../data/textures/relief');
-const MESH_FRAG = resolve(
+const MESH_SHADER = resolve(
   __dirname,
-  '../../src/client/solar-system/planets/planet-mesh.frag.glsl',
+  '../../src/client/webgpu/solar-system/planet-mesh-tsl.ts',
 );
 const pySource = readFileSync(resolve(__dirname, 'sky_view.py'), 'utf-8');
 const horizonSource = readFileSync(resolve(__dirname, 'horizon_map.py'), 'utf-8');
@@ -45,20 +45,17 @@ const manifest: Record<string, { skyView?: SkyViewRow; horizon?: { width: number
   JSON.parse(readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'));
 
 describe('sky view factor map', () => {
-  it('shares its encoding range with the shader that decodes it', () => {
-    // A range the three disagree on scales every shadow by the ratio, which
+  it('shares its encoding range with the Python generator', () => {
+    // A range the two disagree on scales every shadow by the ratio, which
     // reads as "the fill term is mistuned" rather than as an encoding bug.
     expect(pySource).toContain(`SKY_VIEW_RANGE = ${SKY_VIEW_RANGE}`);
-    expect(readFileSync(MESH_FRAG, 'utf-8')).toContain(
-      `const float STELLATA_SKY_VIEW_RANGE = ${SKY_VIEW_RANGE};`,
-    );
   });
 
   it('decodes a raw channel the way the shader multiplies it', () => {
     expect(decodeSkyView(0)).toBe(0);
     expect(decodeSkyView(1)).toBe(SKY_VIEW_RANGE);
-    expect(readFileSync(MESH_FRAG, 'utf-8')).toContain(
-      'texture(uSkyView, vUvM).r * STELLATA_SKY_VIEW_RANGE',
+    expect(readFileSync(MESH_SHADER, 'utf-8')).toContain(
+      'p.uSkyView.sample(vUvM).r.mul(SKY_VIEW_RANGE)',
     );
   });
 
@@ -138,8 +135,8 @@ describe('sky view factor map', () => {
     // nothing; and the fallback has to stay the byte-identical old path, or
     // a body would darken between the horizon pair landing and this map.
     expect(layer).toContain('ext: \'webp\', format: THREE.RedFormat,');
-    const frag = readFileSync(MESH_FRAG, 'utf-8');
-    expect(frag).toContain('uHasSkyView > 0.5');
-    expect(frag).toContain(': stellataTerrainViewFactor(enc);');
+    const frag = readFileSync(MESH_SHADER, 'utf-8');
+    expect(frag).toContain('p.uHasSkyView.greaterThan(0.5),');
+    expect(frag).toContain('terrainViewFactor(encA, encB)));');
   });
 });

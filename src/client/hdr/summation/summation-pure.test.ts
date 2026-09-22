@@ -1,6 +1,6 @@
+import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
 import {
   MAX_DOWNSAMPLE,
   MAX_KERNEL_REACH_TEXELS,
@@ -18,9 +18,6 @@ import {
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
-
-const read = (name: string) =>
-  readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 
 const omegaPxFor = (fovDeg: number, viewportPx: number) =>
   pixelSolidAngleArcsec2(angularToPx(viewportPx, (fovDeg * Math.PI) / 180));
@@ -85,7 +82,7 @@ describe('the downsample factor that bounds the tap count', () => {
     expect(summationDownsample(radiusFor(FOV_MIN_DEG))).toBe(3);
   });
 
-  // The GLSL loop bound is a constant, so a factor that let the kernel run
+  // The shader's loop bound is a constant, so a factor that let the kernel run
   // past it would TRUNCATE the disc — a silently lopsided average, not a
   // compile error. This is the invariant that makes the constant safe.
   it('never lets the kernel reach past the shader’s loop bound', () => {
@@ -121,19 +118,6 @@ describe('the downsample factor that bounds the tap count', () => {
     }
   });
 
-  it('mirrors its ceiling into the downsample stage', () => {
-    const frag = read('./summation-downsample.frag.glsl');
-    const m = frag.match(/const int STELLATA_MAX_DOWNSAMPLE = (\d+);/);
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(MAX_DOWNSAMPLE);
-  });
-
-  it('mirrors the kernel’s reach into the convolution chunk', () => {
-    const chunk = read('./summation.glsl');
-    const m = chunk.match(/const int STELLATA_SUMMATION_REACH = (\d+);/);
-    expect(m).not.toBeNull();
-    expect(Number(m![1])).toBe(MAX_KERNEL_REACH_TEXELS);
-  });
 });
 
 describe('the kernel weights', () => {
@@ -223,59 +207,6 @@ describe('one anchor for both volumetric emitters', () => {
   });
 });
 
-// The resolve is the only consumer, and the chunk it pastes has to be there.
-describe('the resolve composites the convolution', () => {
-  const resolveFrag = read('../tonemap/tonemap.frag.glsl');
-
-  it('adds the patch mean to attachment 0 before the operator', () => {
-    expect(resolveFrag).toContain('#include <stellata_summation>');
-    expect(resolveFrag).toMatch(/hdr\.rgb \+ stellataSummationMean\(/);
-    expect(resolveFrag.indexOf('stellataSummationMean('))
-      .toBeLessThan(resolveFrag.indexOf('stellataTonemap('));
-  });
-
-  // Pass-through parks the operator, not the convolution: the diffuse
-  // emitters write no attachment 0 at all, so skipping the mean there would
-  // drop the band and the Local Group out of the A/B entirely.
-  it('keeps the diffuse light on the pass-through path', () => {
-    const passThrough = resolveFrag.slice(resolveFrag.indexOf('uTonemapEnabled < 0.5'));
-    expect(passThrough).toContain('outColor = vec4(linear, 1.0);');
-  });
-
-  // A diffuse emitter masks attachment 0 off, so its alpha is the clear's 0
-  // while its rgb is the whole band. Handing that to a premultiplied canvas
-  // is rgb > a — undefined by spec, black in practice, and the reason the
-  // first cut of this pass rendered no band at all.
-  it('owns the canvas alpha rather than carrying attachment 0’s', () => {
-    expect(resolveFrag).not.toContain('hdr.a');
-  });
-
-  it('maps a display pixel onto the source with the factor’s own scale', () => {
-    expect(resolveFrag).toContain('gl_FragCoord.xy * uSummationTexelScale');
-  });
-});
-
-describe('the CPU mirror tracks the chunk', () => {
-  const chunk = read('./summation.glsl');
-
-  it('weights each tap the same way', () => {
-    expect(chunk).toContain('clamp(radiusTexels + 0.5 - length(offset), 0.0, 1.0)');
-  });
-
-  it('normalises by the summed weight, not by the tap count', () => {
-    expect(chunk).toContain('acc / weight');
-    expect(chunk).not.toMatch(/acc \/ float\(/);
-  });
-
-  // Clamping to the edge rather than to zero. A fragment near the frame
-  // border has a patch reaching sky the frame does not contain, and treating
-  // that as black would ring the border — visible against the band.
-  it('clamps taps into the live sub-rect', () => {
-    expect(chunk).toContain('clamp(sourceTexel + offset, vec2(0.5), hi)');
-    expect(chunk).toContain('vec2 hi = extent - 0.5;');
-  });
-});
-
 describe('the patch radius against the design gate', () => {
   it('recovers the summation solid angle it was derived from', () => {
     const omegaPx = omegaPxFor(50, 900);
@@ -288,5 +219,36 @@ describe('the patch radius against the design gate', () => {
     const angular = (fovDeg: number) =>
       radiusFor(fovDeg) * Math.sqrt(omegaPxFor(fovDeg, 900)) * ARCSEC_TO_RAD;
     expect(angular(FOV_MIN_DEG)).toBeCloseTo(angular(FOV_MAX_DEG), 12);
+  });
+});
+
+/** The shipped convolution's source, comments stripped — a claim must be
+ *  satisfied by the graph, not by a comment quoting it. */
+const tsl = readFileSync(
+  fileURLToPath(new URL('../../webgpu/hdr/summation-tsl.ts', import.meta.url)),
+  'utf8',
+).replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+
+// The exposure model rests on this convolution and nothing ties the CPU
+// mirror above to the graph that runs — `summationMeanTsl` is imported by
+// one module and no test file.
+describe('the shipped convolution tracks the mirror', () => {
+  // A pixel-area weight, not a box: the tap's coverage of the disc.
+  it('weights each tap by its coverage, clamped to [0, 1]', () => {
+    expect(tsl).toContain('clamp(radiusTexels.add(0.5).sub(length(offset)), 0.0, 1.0)');
+  });
+
+  // Dividing by the tap COUNT reads the ragged edge of the disc as light
+  // that is not there, and the mean drifts with the radius.
+  it('normalises by the summed weight, never the tap count', () => {
+    expect(tsl).toContain('acc.div(weight)');
+    expect(tsl).toContain('weight.addAssign(w)');
+  });
+
+  // Edge-clamp, not clamp-to-zero: a tap off the live sub-rect must repeat
+  // the border texel, or the frame edge rings against the band.
+  it('clamps a tap into the live sub-rect', () => {
+    expect(tsl).toContain('clamp(sourceTexel.add(offset), vec2(0.5), hi)');
+    expect(tsl).toContain('extent.sub(0.5)');
   });
 });

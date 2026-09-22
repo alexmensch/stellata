@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { ComputeNode, WebGPURenderer } from 'three/webgpu';
-import { makeHdrEmitterUniforms } from '../../../hdr/hdr-pipeline';
+import { makeHdrEmitterUniforms } from '../../../hdr/hdr-emitter-uniforms';
 import { buildSharedUniforms } from '../../../frame/shared-uniforms';
 import { makeColorLutTexture } from '../../../star-pipeline/blackbody-lut';
 import { ExtinctionNodes } from '../../extinction/extinction-nodes';

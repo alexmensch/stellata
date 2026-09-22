@@ -68,7 +68,7 @@ async function main(): Promise<number> {
       await seedDismissals(context);
       const page = await context.newPage();
       try {
-        await bootScenario(page, scenarioUrl(args.url, SCENARIOS[scenario].blob, 'webgpu'), {
+        await bootScenario(page, scenarioUrl(args.url, SCENARIOS[scenario].blob), {
           backend: 'webgpu', timeoutMs: BOOT_TIMEOUT_MS,
         });
         const settleMs = await awaitSettle(page, { quietMs: QUIET_MS, timeoutMs: SETTLE_TIMEOUT_MS });

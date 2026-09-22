@@ -21,9 +21,10 @@ ellipses — `../star-pipeline/local-pass/star-local-cluster.ts`).
 ## Files
 
 - `local-depth-pass.ts` (+ test) — `LocalDepthPass`: owns the local
-  scene, cluster registration, and the per-frame render — the slice loop
-  (`clearDepth` + bracketed render, far→near) on WebGL2, one bracket on
-  a reversed-z renderer.
+  scene, cluster registration, and the per-frame render — one bracket
+  (`clearDepth` + bracketed render) on a reversed-z renderer, which the
+  boot guarantees; the general slice loop behind it has no live caller
+  (`bracket/README.md`).
 - `bracket/` — the bracket math and the precision record. `MemberSphere`
   (the cluster-API input type) is defined there, in `slice-pure.ts`.
 
@@ -39,8 +40,8 @@ star passes (RawShaderMaterial — no `USE_LOGARITHMIC_DEPTH_BUFFER`)
 write plain standard depth over the full range, quantising everything
 beyond ~3 AU to exactly 1.0. Moon↔parent, ring↔body, and close-binary
 separations land inside a single quantum either way and z-order as
-frame-to-frame float noise. See `../star-pipeline/README.md` § Depth
-encoding for the full main-pass picture.
+frame-to-frame float noise. What the main pass encodes instead is
+`../webgpu/star/README.md` § The disc draw writes no depth.
 
 Every analytic workaround (disc silhouette clip, ray-sphere occlusion,
 the orbit-ring corrupt/restore dance, ring-shader ray-ellipsoid

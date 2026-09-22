@@ -358,11 +358,11 @@ float32 cancellation in the projection chain
 (`projectionMatrix * modelViewMatrix * vec4(0)`) drifts the projected
 centre by visible pixels even though the focused star is
 mathematically at view-origin. Float64 emulation was rejected as too
-heavy; instead `star.vert.glsl` exposes a `uPinFocusToCenter: int`
+heavy; instead the star vertex graph exposes a `uPinFocusToCenter`
 uniform (-1 = disabled). When set, the shader replaces the projection
 chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the matched
-`gl_InstanceID` — bypassing matrix-multiply cancellation entirely.
-One int uniform, ~5 lines of GLSL, no CPU cost.
+instance — bypassing matrix-multiply cancellation entirely.
+One uniform, a handful of nodes, no CPU cost.
 
 JS-side per frame in `stellata.ts`: pin engages iff
 `FocusController.isPinEngaged()`, which checks
@@ -433,7 +433,7 @@ because the focused star is the source, not the destination the
 camera is flying toward.
 
 **Where to look:**
-- `../../star-pipeline/star.vert.glsl` — `uPinFocusToCenter` decl + use site.
+- `../../webgpu/star/star-vertex-tsl.ts` — `uPinFocusToCenter` use site.
 - `focus-controller.ts` — `GLOBAL_MIN_DIST_PC = 5e-3`,
   `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body, `isPinEngaged`
   gating rules.

@@ -1,5 +1,4 @@
-// TSL mirror of the stellata_tonemap chunk's undithered operator. Thin
-// composition over tonemap-pure's constants (tsl/README.md § TSL test
+// The tone-map operator and the sRGB transfer pair. Thin composition over tonemap-pure's constants (tsl/README.md § TSL test
 // pattern); tonemap-pure.ts carries the math and its tests.
 
 import {
@@ -45,8 +44,8 @@ export const tonemapUnditheredTsl = /* @__PURE__ */ Fn(
   ([hdr, whitePoint, desat]: [N3, NF, NF]) => {
     const y = dot(hdr, lumaWeightsTsl());
     // The toe must stay finite at y = 0: it feeds the mapped branch, and
-    // TSL builds a node where it is first referenced rather than where the
-    // GLSL's early-out would have skipped it.
+    // TSL evaluates a node wherever it is first referenced, with no early
+    // out to skip it.
     const ySafe = max(y, 1e-9);
     const magsUnder = log2(float(L_THRESH).div(ySafe)).mul(MAG_PER_LOG2);
     const toe = select(

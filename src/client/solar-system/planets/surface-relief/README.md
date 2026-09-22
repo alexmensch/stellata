@@ -4,9 +4,10 @@ DEM-derived maps shading the Moon, Mercury, Mars and Earth on the planet
 mesh: the
 frame they are sampled in, which terms the perturbed normal is allowed to
 reach, and how the two occluders that can hide the sun from a patch of ground
-are composed. The shader consuming all of it is `../planet-mesh.frag.glsl`
-and the uniforms are written in `../planet-mesh-layer.ts`; this README is the
-authority on the relief half of both.
+are composed. The shader consuming all of it is
+`../../../webgpu/solar-system/planet-mesh-tsl.ts` and the uniforms are
+written in `../planet-mesh-layer.ts`; this README is the authority on the
+relief half of both.
 
 ```
 src/client/solar-system/planets/surface-relief/
@@ -66,7 +67,7 @@ quietly:
   whole scene's exposure.
 - `ndotv` — `lambertLimbDiscMean` divides the limb term out in closed form,
   which perturbing it breaks.
-- `stellata_skyIrradiance(sunCos, …)` — solar depression is measured against
+- `skyIrradianceTsl(sunCos, …)` — solar depression is measured against
   the ground observer's true local horizontal, and a mountainside tilted away
   from the sun still sees the whole sky hemisphere.
 - The airlight march's `surf` / shell-entry geometry — the shell is a smooth
@@ -78,7 +79,7 @@ Both halves of `dayside` ride the perturbed cosine — the Lambert term and
 `terminatorSoftness`, a by-eye widening of that same Lambert edge — so a
 sunward slope still catches the sun where the smooth sphere has turned away,
 and the terminator reads as ragged ground rather than a clean arc. Nothing
-atmospheric follows it there: physical twilight is `stellata_skyIrradiance`,
+atmospheric follows it there: physical twilight is `skyIrradianceTsl`,
 additive and strictly geometric (`../../atmosphere/README.md` § Skylight).
 Neither does the exposure pin — light past the geometric terminator carries
 no coverage claim, so it joins the frame mean and leaves the lit-hemisphere
@@ -94,9 +95,10 @@ different scales:
 - The **normal map** is the slope, at 4096 (8192 on Earth). It is the ψ → 0 limit of the
   horizon — what you can see standing on the facet itself — and it already
   rides `dayside` through `sunCosRelief`. Both widths are **fixed per artifact**,
-  so unlike a colour rung neither can be lowered to fit a device: a body whose
-  map exceeds `KindContext.maxTextureSize` is refused it and shades without
-  relief (`../textures/README.md` § Four rules).
+  so unlike a colour rung neither can be lowered to fit the cap: a body whose
+  map exceeds the mesh layer's texture cap is refused it and shades without
+  relief (`../textures/README.md` § Four rules). The cap is 8192 until an
+  out-of-memory step-down lowers it (§ Staying inside VRAM there).
 - The **horizon map** is everything else: terrain from **two output texels**
   out to the body's limb bound, at half the DEM's width in 8 azimuths. It
   excludes the ground at your feet, because that is the normal map's job at
@@ -238,9 +240,9 @@ from. Both readings of `F` are mirrored in `surface-relief-pure.ts` —
 `decodeSkyView` for the shipped map, `terrainViewFactor` for the fallback the
 next section describes — and `SKY_VIEW_RANGE` lives there too, so the shader
 and `sky_view.py` are both pinned against one owner rather than against each
-other. The clamp inside `terrainViewFactor` is source-pinned to the GLSL
-because a `max()` dropped on the shader side alone would brighten every plain
-with nothing in the TS suite noticing.
+other. The clamp inside `terrainViewFactor` is source-pinned against the
+shader's own graph, because a `max()` dropped there alone would brighten
+every plain with nothing in the TS suite noticing.
 
 **No flux renormalisation**, and measured rather than assumed — the fourth
 column of `../emission/README.md`'s phase table.

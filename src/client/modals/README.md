@@ -72,5 +72,5 @@ one dismissal, so a returning small-viewport user gets re-advised each
 new session instead of silently falling through to the welcome modal
 forever after the first close.
 
-The broader minimum-viewport / WebGL2-capability gating decision
-(`stellata-qsg`) is out of scope here — this is only the advisory.
+The broader minimum-viewport gating decision (`stellata-qsg`) is out of
+scope here — this is only the advisory.

@@ -83,7 +83,7 @@ one an object gets depends on its family:
   envelope.** Derived by `renderedWireframeAxes`
   (`scripts/local-group/README.md`), not hand-entered, so it cannot
   drift. `overrides.tsv`'s `a_pc/b_pc/c_pc` remain the *structural*
-  input the emission geometry is built from; they are no longer what
+  input the emission geometry is built from; they are not what
   gets drawn. This exists because the overhang was structural rather
   than incidental: `z_d = c/3` makes the vertical envelope `4·z_d =
   4c/3`, so the glow spilled a third of the disc's thickness past its
@@ -137,8 +137,7 @@ once; and one shared stroke from the chrome line seam
 (`../chrome-lines/README.md`) already served every ring, so the
 per-frame opacity write still hits one slot. Nothing fades, hides or
 moves an object on its own — a feature that needed to would have to add
-a per-instance attribute rather than split the geometry back up. The
-wireframe draws on either backend.
+a per-instance attribute rather than split the geometry back up.
 
 At 123 objects the buffer holds 23,616 vertices: 277 KiB of positions
 plus a 92 KiB 16-bit index, so 369 KiB against the 324 KiB the per-ring

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { builtinChromeLineMaterials as chromeLines } from '../chrome-lines/builtin-chrome-lines';
+import { fakeChromeLineMaterials as chromeLines } from '../chrome-lines/chrome-lines-mock';
 import { boundaryArtifactFixture } from '../../../scripts/catalog/boundaries/boundary-artifact-fixture';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import type { ScreenMetricUniforms } from '../util/orbit-line';

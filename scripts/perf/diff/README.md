@@ -72,13 +72,13 @@ JSON and out of the table, as `../pins/README.md` § State guard records them.
 
 **Where NEITHER run resolved a stream the row still marks, on wall — and
 that is where this table parts company with the pin**, which prints such a
-pair `ungated` and never marks it. Every WebGL2 row is one, WebGL2 supplying
-no stream anywhere, so refusing here would leave `--baseline --mode dwell
---backend webgl2` with nothing to print at all; the pin can decline the row
-because it has ten of them across two backends. Read such a row knowing
-what it is: the one case in the table where a whole-interval delta may be
-the clock rather than the frame. In practice most are refused before they
-print, a WebGL2 frame inside one interval tripping the clamp first.
+pair `ungated` and never marks it. An adapter that grants the timestamp
+feature and then refuses the query set resolves no stream at all, so
+refusing here would leave a baseline taken on one with nothing to print;
+the pin can decline the row because it has five to fall back on. Read such
+a row knowing what it is: the one case in the table where a whole-interval
+delta may be the clock rather than the frame. In practice most are refused
+before they print, a frame inside one interval tripping the clamp first.
 
 **A GPU stream on one side and none on the other refuses the row**, the
 same refusal a differing `method` gets and for the same reason — a
@@ -94,9 +94,9 @@ of identical code, so its median is a statistic of that share, while the p10
 is not. The whole-frame constant would run 15× the row's noise at mw50 and
 about 1× it at sol, a factor of 18 across the five. One side alone refuses the
 row and leaves the frame row standing — an archive written before the compute
-pool was resolved carries no stream, and a run since does; neither side, every
-WebGL2 pair, prints no compute row at all. A frame row that is refused takes
-its compute row with it.
+pool was resolved carries no stream, and a run since does; neither side
+prints no compute row at all. A frame row that is refused takes its compute
+row with it.
 
 **A frame row at a vantage drawing two pass classes is judged on the plain
 class**, `gpu-plain-p50`, for the same reason one field over: the mixture's

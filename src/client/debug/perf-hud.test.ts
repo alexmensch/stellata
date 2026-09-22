@@ -3,15 +3,13 @@ import {
   mark,
   measure,
   frame,
-  gpuBegin,
-  gpuEnd,
   buildPerfSection,
-  acquireGpuFrameSampler,
   _sectionsForTest,
 } from './perf-hud';
-import { GPU_COMPUTE_SCOPE, publishGpuComputeSample, publishGpuFrameSample } from './gpu-timing/gpu-frame-samples';
-import { GPU_WHOLE_FRAME_SCOPE } from './gpu-timing/gpu-timer';
-import { FakeGl, asGl } from './gpu-timing/fake-gl';
+import {
+  GPU_COMPUTE_SCOPE, GPU_WHOLE_FRAME_SCOPE, publishGpuComputeSample,
+  publishGpuFrameSample,
+} from './gpu-timing/gpu-frame-samples';
 
 describe('perf-hud / no-op API', () => {
   it('mark/measure/frame are safe to call without installing the HUD', () => {
@@ -33,7 +31,7 @@ describe('perf-hud / no-op API', () => {
   });
 });
 
-// Minimal DOM stub for buildPerfSection(null) — it creates ~150 nodes
+// Minimal DOM stub for buildPerfSection() — it creates ~150 nodes
 // (headline, table header, row pool, histogram bars, caption) but the
 // teardown tests only need the build to complete; nothing is inspected.
 // vitest runs in the node environment for this project, so document is
@@ -110,7 +108,7 @@ describe('perf-hud / install → dispose teardown', () => {
   });
 
   it('dispose restores the no-op contract — mark/measure/frame stop calling performance.now', () => {
-    const section = buildPerfSection(null);
+    const section = buildPerfSection();
 
     // While installed, realMark/realMeasure both call performance.now —
     // mark stores the start timestamp, measure subtracts it. Confirm
@@ -133,8 +131,8 @@ describe('perf-hud / install → dispose teardown', () => {
   });
 
   it('records a published frame sample as the whole-frame scope only while open', () => {
-    // The WebGPU boot has no GL timer object. animate() resolves the
-    // renderer's timestamps every rendered frame regardless — the resolve
+    // animate() resolves the renderer's timestamps every rendered frame
+    // regardless — the resolve
     // is what recycles the query pool — so a sample arrives whether or not
     // anything is listening, and an unsubscribed HUD must drop it rather
     // than accumulate one.
@@ -142,7 +140,7 @@ describe('perf-hud / install → dispose teardown', () => {
     publishGpuFrameSample(4.2);
     expect(_sectionsForTest().has(whole)).toBe(false);
 
-    const section = buildPerfSection(null);
+    const section = buildPerfSection();
     publishGpuFrameSample(4.2);
     expect(_sectionsForTest().has(whole)).toBe(true);
 
@@ -159,7 +157,7 @@ describe('perf-hud / install → dispose teardown', () => {
     // and the headline reads it.
     let clock = 0;
     perfNowSpy.mockImplementation(() => (clock += 100));
-    const section = buildPerfSection(null);
+    const section = buildPerfSection();
     for (let f = 0; f < 6; f++) {
       publishGpuFrameSample(20);
       publishGpuComputeSample(1.5);
@@ -177,7 +175,7 @@ describe('perf-hud / install → dispose teardown', () => {
     // Silent-section GC is the mechanism that lets `chart.*` entries fall
     // off the HUD after exiting chart mode. Without it the HUD averages
     // stale ring data forever.
-    const section = buildPerfSection(null);
+    const section = buildPerfSection();
 
     mark('test.gc');
     measure('test.gc');
@@ -190,48 +188,10 @@ describe('perf-hud / install → dispose teardown', () => {
     section.dispose();
   });
 
-  it('headline reports the whole-frame scope, never the sum of the rotating scopes', () => {
-    // The defect this pins: scopes rotate one per frame, so their averages
-    // describe disjoint frame sets. Adding them produced a headline larger
-    // than the frame period itself (85 ms claimed inside a 62.5 ms frame).
-    const gl = new FakeGl();
+  it('headline reads gpu off the whole-frame row, not off any timer object', () => {
     let clock = 0;
     perfNowSpy.mockImplementation(() => (clock += 100));
-    const section = buildPerfSection(asGl(gl));
-
-    // animate()'s call order, with every query resolving in-frame. Only a
-    // begin that actually opened a NEW query gets a result written — the
-    // enclosing scope stays active across the inner begins.
-    const openScope = (label: string, ms: number): void => {
-      const before = gl.activeQuery;
-      gpuBegin(label);
-      if (gl.activeQuery && gl.activeQuery !== before) {
-        gl.results.set(gl.activeQuery, ms * 1e6);
-      }
-    };
-    for (let f = 0; f < 6; f++) {
-      openScope(GPU_WHOLE_FRAME_SCOPE, 20);
-      openScope('main', 17);
-      gpuEnd('main');
-      openScope('localDepth', 11);
-      gpuEnd('localDepth');
-      gpuEnd(GPU_WHOLE_FRAME_SCOPE);
-      frame();
-    }
-
-    expect(headlineBusyText(section)).toBe('gpu 20.0ms');
-
-    section.dispose();
-  });
-
-  it('headline reads gpu on a WebGPU boot, where there is no GL timer at all', () => {
-    // The WebGPU resolve is a real whole-frame GPU measurement, so gating
-    // the label on "does a GpuTimer object exist" left the headline saying
-    // `submit` — CPU wall-time around the render calls — while an exact GPU
-    // number sat in the ring. Presence of the whole-frame row is the gate.
-    let clock = 0;
-    perfNowSpy.mockImplementation(() => (clock += 100));
-    const section = buildPerfSection(null);
+    const section = buildPerfSection();
 
     for (let f = 0; f < 6; f++) {
       publishGpuFrameSample(20);
@@ -243,14 +203,13 @@ describe('perf-hud / install → dispose teardown', () => {
     section.dispose();
   });
 
-  it('headline stays submit where no backend produces a whole-frame row', () => {
+  it('headline stays submit where nothing publishes a whole-frame row', () => {
     // Presence of `gpu.frame` is the ONLY gate. Nothing publishes here —
-    // a WebGPU adapter without timestamp-query, or WebGL2 Safari — so the
-    // headline must report CPU submission wall-time and say so, never sum
-    // the per-pass scopes into a number that can exceed the frame period.
+    // an adapter without timestamp-query — so the headline must report CPU
+    // submission wall-time and say so.
     let clock = 0;
     perfNowSpy.mockImplementation(() => (clock += 100));
-    const section = buildPerfSection(null);
+    const section = buildPerfSection();
 
     for (let f = 0; f < 6; f++) {
       mark('submit.main');
@@ -263,61 +222,12 @@ describe('perf-hud / install → dispose teardown', () => {
     section.dispose();
   });
 
-  it('acquireGpuFrameSampler returns null while the panel is installed', () => {
-    const section = buildPerfSection(null);
-    expect(acquireGpuFrameSampler(asGl(new FakeGl()), () => {})).toBeNull();
-    section.dispose();
-  });
-
-  it('sampler: whole-frame scope samples EVERY frame, inner scopes ignored', () => {
-    const gl = new FakeGl();
-    const samples: number[] = [];
-    const release = acquireGpuFrameSampler(asGl(gl), (ms) => samples.push(ms));
-    expect(release).not.toBeNull();
-
-    for (let f = 0; f < 5; f++) {
-      gpuBegin(GPU_WHOLE_FRAME_SCOPE);
-      const query = gl.activeQuery;
-      expect(query).not.toBeNull();
-      gl.results.set(query!, (10 + f) * 1e6);
-      gpuBegin('main');
-      gpuEnd('main');
-      gpuEnd(GPU_WHOLE_FRAME_SCOPE);
-      frame();
-    }
-    // A multi-scope timer would rotate and sample 1/N frames; the sampler
-    // registers only the whole-frame scope, so all 5 frames land.
-    expect(samples).toEqual([10, 11, 12, 13, 14]);
-
-    release!();
-    // Hooks are no-ops again — a begin after release opens no query.
-    gpuBegin(GPU_WHOLE_FRAME_SCOPE);
-    expect(gl.activeQuery).toBeNull();
-  });
-
-  it('sampler release does not clobber a panel opened mid-hold', () => {
-    const samplerGl = new FakeGl();
-    const release = acquireGpuFrameSampler(asGl(samplerGl), () => {});
-    expect(release).not.toBeNull();
-
-    const panelGl = new FakeGl();
-    const section = buildPerfSection(asGl(panelGl));
-    release!();
-
-    // The panel's hooks survived the release: its timer still opens
-    // queries on its own context.
-    gpuBegin(GPU_WHOLE_FRAME_SCOPE);
-    expect(panelGl.activeQuery).not.toBeNull();
-    gpuEnd(GPU_WHOLE_FRAME_SCOPE);
-    section.dispose();
-  });
-
   it('dispose + re-build re-arms the install — `installed` flag was cleared', () => {
     // First session: install then dispose. The dispose path must reset
     // `installed = false` so the second buildPerfSection takes the
     // install branch again rather than skipping it (which would leave
     // _mark/_measure/_frame as no-ops despite a panel being visible).
-    const first = buildPerfSection(null);
+    const first = buildPerfSection();
     first.dispose();
 
     // Confirm the dispose actually un-installed by checking mark is a
@@ -328,7 +238,7 @@ describe('perf-hud / install → dispose teardown', () => {
     expect(perfNowSpy.mock.calls.length).toBe(0);
 
     // Second build re-runs the install branch and rewires the reals.
-    const second = buildPerfSection(null);
+    const second = buildPerfSection();
     perfNowSpy.mockClear();
     mark('test.second');
     measure('test.second');

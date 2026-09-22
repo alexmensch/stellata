@@ -1,4 +1,4 @@
-// dust-particle.vert.glsl / .frag.glsl on the TSL path: the additive
+// The dust sprite's graph: the additive
 // density-sized billboard.
 
 import { AdditiveBlending } from 'three';
@@ -32,9 +32,8 @@ export function buildDustParticleMaterial(
   material.vertexNode = Fn(() => {
     // Density → [0, 1] over the same log window the dust texture decode
     // uses, so the scale matches the visible range of real Edenhofer
-    // values rather than synthetic peaks. The GLSL's ln→log10 conversion
-    // is dropped: uDustLogRatio is itself a natural log, so the base
-    // divides out of the ratio (README.md § Two no-ops the graph drops).
+    // values rather than synthetic peaks. README.md § Two quantities
+    // that divide out.
     const logD = log(max(attrFloat('iDensity'), u.uDustDensityMin));
     const logMin = log(u.uDustDensityMin);
     const normD = clamp(
@@ -44,8 +43,8 @@ export function buildDustParticleMaterial(
       mix(float(PARTICLE_DIM_FLOOR), 1.0, normD).mul(d.uParticleStrength));
     const pxSize = mix(float(PARTICLE_MIN_PX), float(PARTICLE_MAX_PX), normD);
 
-    // The GLSL early return's off-screen sentinel; TSL has no
-    // value-carrying return, so the draw path assigns over it.
+    // Off-screen unless the draw path assigns over it: TSL has no
+    // value-carrying return.
     const clipOut = vec4(2.0, 2.0, 2.0, 1.0).toVar();
     If(u.uDustEnabled.greaterThanEqual(0.5).and(d.uParticleStrength.greaterThan(0.0)), () => {
       // Local-frame position so the floating-origin shift cancels and the

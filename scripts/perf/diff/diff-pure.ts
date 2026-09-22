@@ -144,9 +144,10 @@ function scenarioKey(record: ScenarioRecord): string {
 
 /**
  * Why a baseline scenario found no partner. The key already carries the
- * backend, so a WebGL2 baseline against a WebGPU run reads as an absent
- * scenario unless the vantage is checked separately — and "you measured a
- * different backend" is the fixable half of that.
+ * backend, so an archived baseline taken on a backend this build no longer
+ * offers reads as an absent scenario unless the vantage is checked
+ * separately — and "you measured a different backend" is the fixable half
+ * of that.
  */
 function absenceReason(record: ScenarioRecord, current: readonly ScenarioRecord[]): string {
   const backends = current
@@ -309,9 +310,9 @@ export function recordCountRefusal(a: number | null, b: number | null): string |
  * This is the condition the readback guard below turns on, and it is a
  * property of the vantage rather than of the run: earth is bimodal in all 23
  * archived WebGPU dwells that carry counters, and mw120, sol, mw50 and lg in
- * none of their 109. A WebGL2 dwell has no queue to count on and records
- * nothing, which reads here as a single class — correctly, since that backend
- * supplies no GPU stream for the guard to protect.
+ * none of their 109. An archived WebGL2 dwell had no queue to count on and
+ * recorded nothing, which reads here as a single class — correctly, since
+ * that boot supplied no GPU stream for the guard to protect.
  *
  * A run written before the counters existed carries no field at all rather
  * than a null, and 31 of the 257 archived dwells are such runs — 16 of them
@@ -447,13 +448,10 @@ function differentialRows(key: string, a: ScenarioRecord, b: ScenarioRecord): {
  * all.
  *
  * Where NEITHER side resolved a stream this row still marks, on wall, and
- * that is where it parts company with the pin: `compareToPin` prints such a
- * pair `ungated` and never marks it. The pin can afford to, having five
- * vantages on two backends to fall back on; refusing here would leave
- * `--baseline --mode dwell --backend webgl2` with no row at all, WebGL2
- * supplying no stream anywhere. The quantisation is why such a row is worth
- * little: it is the one case in this function where a whole-interval delta
- * can be an artefact of the clock rather than the frame.
+ * that is where it parts company with the pin — README.md, on the rows that
+ * gate. The quantisation is why such a row is worth little: it is the one
+ * case in this function where a whole-interval delta can be an artefact of
+ * the clock rather than the frame.
  */
 function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow | DiffRefusal)[] {
   const [da, db] = [a.dwell, b.dwell];

@@ -1,5 +1,5 @@
 // The rim shells' camera-distance attenuation, in the one place every
-// backend reads it from: a near-fade so a wall the camera is closing on
+// consumer reads it from: a near-fade so a wall the camera is closing on
 // ramps out, and a depth dimming on one shared absolute pc scale.
 
 /** Near-fade reach as a fraction of a shell's own extent — one shared
@@ -34,10 +34,10 @@ export function rimDistancesForExtent(extentPc: number): RimDistances {
 
 /**
  * The factor the rim alpha is multiplied by for a fragment `dViewPc` from
- * the camera. CPU mirror of the `stellata_fresnel_rim` chunk's
- * `shellDistanceAttenuation` and of its TSL twin. The near plane keeps
- * `dViewPc` strictly positive in any real draw, so none of the three
- * guards the divide with an epsilon that all three would then have to pin.
+ * the camera. CPU mirror of `fresnel-rim-tsl.ts`'s
+ * `shellDistanceAttenuationTsl`. The near plane keeps `dViewPc` strictly
+ * positive in any real draw, so neither guards the divide with an epsilon
+ * both would then have to pin.
  */
 export function shellDistanceAttenuation(
   dViewPc: number,

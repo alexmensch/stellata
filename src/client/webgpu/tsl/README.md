@@ -1,9 +1,9 @@
 # TSL authoring layer
 
-The scaffolding every port child builds on: how app data reaches a TSL
+The scaffolding every layer's graph builds on: how app data reaches a TSL
 shader graph (uniform nodes per frame, packed attributes per instance),
-the typing patches you need to write one, and the test pattern a ported
-layer is covered by.
+the typing patches you need to write one, and the test pattern a layer is
+covered by.
 
 ## Files in this area
 
@@ -13,11 +13,15 @@ src/client/webgpu/tsl/
                                     ../../frame/shared-uniforms.ts.
   tsl-shim.ts (+ test)              Typed patches over @types/three's TSL
                                     surface — verified gaps only.
-  uniform-slots.ts                  The IUniform face a ported layer
+  uniform-slots.ts                  The IUniform face a layer
                                     writes, over a record of TSL nodes.
   literal-drift-pure.ts (+ test)    Which pinned constants a TSL source
                                     restates as a bare literal — the scan
                                     behind every TSL-side drift guard.
+  tsl-source-fixture.ts             Reads a shipped TSL module as text with
+                                    its comments stripped, for the suites
+                                    that pin expression shapes
+                                    (§ TSL test pattern).
   jitter-tsl.ts                     Interleaved gradient noise over the
                                     fragment position, and the ±0.5-LSB
                                     output dither over that.
@@ -28,20 +32,20 @@ src/client/webgpu/tsl/
                                     (§ Storage attributes).
 ```
 
-Which WebGL star attribute feeds which storage table is
+Which per-star field feeds which storage table is
 `../star-attribute-roster.ts` — star-specific, so it stays with the
 layer that owns the roster (§ Per-instance data).
 
 ## Shared uniform nodes
 
-`buildSharedUniformNodes(shared)` mirrors the WebGL-side
-shared-uniforms-by-reference map (`../../frame/shared-uniforms.ts`) as TSL
-`uniform()` nodes, so every existing writer — `FilterController`,
-`ExposureController`, `FloatingOrigin`, `animate()` — keeps writing the
-WebGL map and never learns about the port. The contract:
+`buildSharedUniformNodes(shared)` mirrors the shared-uniforms-by-reference
+map (`../../frame/shared-uniforms.ts`) as TSL `uniform()` nodes, so every
+writer — `FilterController`, `ExposureController`, `FloatingOrigin`,
+`animate()` — writes the plain map and never learns about the nodes. The
+contract:
 
 - **Vector slots** (`uCameraPos`, `uViewport`, `uWorldOffset`) hold the
-  WebGL map's value **objects by reference** — a `.set()` on the map
+  map's value **objects by reference** — a `.set()` on the map
   reaches the node with no copy.
 - **Scalar slots** (float, int, uint — the hdr emitter slots included)
   are **copied by `registry.sync()`**, called once per rendered frame
@@ -55,9 +59,7 @@ WebGL map and never learns about the port. The contract:
   swapped on attach — one node per slot for the whole boot, since two
   consumers of the same volume must not be able to diverge
   (`../extinction/README.md` § One owner for every shared slot). The A_V cache is a
-  storage buffer on this backend, bound the same way (§ Storage
-  attributes), so `uAvPrepassTex` in the shared map stays null for a
-  WebGPU boot's whole life.
+  storage buffer, bound the same way (§ Storage attributes).
   **A placeholder's filter pair is what its node's WGSL fetches with**, for
   the graph's whole life and whatever is swapped in later — so the
   placeholder carries the real texture's pair
@@ -72,17 +74,16 @@ vector lines are load-bearing; a mis-transcribed scalar is overwritten by
 the first `sync()`.
 
 Three legs pin it: key parity against `buildSharedUniforms` (adding a
-WebGL slot without its node counterpart fails CI), every vector slot
+slot without its node counterpart fails CI), every vector slot
 holding its map object by identity, and a unique value per scalar proving
-`sync()`'s reflective key filter reaches all of them. Port-child materials
-take slots from `stellata.webgpu.uniformNodes` — shared node objects are
-what replaces shared uniform objects.
+`sync()`'s reflective key filter reaches all of them. Materials take
+slots from `stellata.webgpu.uniformNodes`.
 
-## Uniform slots — the face a ported layer writes
+## Uniform slots — the face a layer writes
 
-A layer that ports as a material swap keeps writing `uniforms`, never
+A layer that takes its material from a factory writes `uniforms`, never
 `material.uniforms`, and `uniformSlotsOf(nodes)` is what makes that reach
-this backend: a TSL `uniform()` node already carries `.value` exactly as
+the graph: a TSL `uniform()` node already carries `.value` exactly as
 an `IUniform` does, so most slots pass straight through. The one that
 cannot is a **uniform array** — it has no `.value`, so the helper puts an
 `IUniform` face over `UniformArrayNode.array`, which the layer mutates in
@@ -100,7 +101,7 @@ A buffer bound through `storage()` — a compute kernel's output, a table
 the vertex stage indexes by instance — is a `StorageBufferAttribute` that
 belongs to no geometry, and three r185 frees a GPU buffer only through
 the geometry that owns its attribute. `BufferAttribute.dispose()`
-dispatches an event nothing on this backend listens to, so a storage
+dispatches an event nothing in three's WebGPU renderer listens to, so a storage
 attribute released that way leaks its buffer for the renderer's life.
 `disposeStorageAttribute(renderer, attribute)` walks the same private
 registry `Geometries` uses to drop its own attributes; it is the one
@@ -155,7 +156,7 @@ Three properties of a storage node worth knowing before binding one:
   tables a main-pass star vertex stage binds. Core guarantees 8 per
   stage. **Any new vertex-stage storage binding on the star pipelines
   raises that constant** — and the gate page is the ceiling on what this
-  backend can ask of a device (`../star/compaction/README.md` § Binding
+  renderer can ask of a device (`../star/compaction/README.md` § Binding
   budget).
 
 ## One program per material instance
@@ -167,11 +168,11 @@ node-builder-state cache misses and each one compiles its own WGSL and its
 own pipeline. Found on the chrome line strokes, but it is a property of the
 node system rather than of that layer.
 
-The consequence a port child has to design around: **a material shared
-across N objects is worth far more here than on GLSL**, where three's
-program cache collapsed N identical materials onto one program and hid the
-duplication entirely. A per-object material that cost nothing on WebGL2 is
-N shader builds and N pipelines on this boot. Hoist it to the layer — the
+The consequence a layer has to design around: **a material shared
+across N objects**: a per-object material is N shader builds and N
+pipelines, where a program cache would have collapsed N identical
+materials onto one program and hidden the duplication. Hoist it to the
+layer — the
 orbit rings were 27 of them (`../../solar-system/ephemerides/README.md`
 § Orbit rings).
 
@@ -186,7 +187,7 @@ inside it writes `varying(float(0), 'vName')` and `.assign(...)`s over
 it. That reads like a race — the varying carries its own node, and the
 fragment stage's reference forces that node to run in the vertex stage
 too — but it resolves correctly, and the reason is worth stating so the
-next port child does not re-derive it: `NodeBuilder` generates the vertex
+next layer does not re-derive it: `NodeBuilder` generates the vertex
 stage before the fragment one, the varying's node properties are keyed
 stage-agnostically, and the property is filled the first time it
 generates. So the vertex stage emits the seed assignment followed by the
@@ -209,20 +210,15 @@ shimmers (`docs/science-molecular-clouds.md` § 9.1 rules 3–4).
 Both jobs are exported, because writing the dither out as
 `noise(coord).sub(0.5).div(255)` is what let three copies of it
 accumulate: `lsbDitherTsl` is that composition, and the resolve pass reads
-it through `../tonemap-tsl.ts` rather than keeping a private twin. Its two
+it through `../tonemap-tsl.ts` rather than keeping a private copy. Its two
 constants — the 8-bit divisor and the `DITHER_SEED_OFFSET` a caller adds
 when it jitters a ray start off the same noise — live with the rest of the
 dither's numbers in `../../hdr/tonemap/tonemap-pure.ts`.
 
-**One helper, one hash, both backends.** The solar-system atmosphere's
-`atmoJitterTsl` and its `ATMO_JITTER_*` constants are gone — the planet
-mesh and the atmosphere shell call `interleavedGradientNoiseTsl` like
-every other layer, and `webgpu/solar-system/tsl-drift.test.ts` pins the
-helper's name in their place while still forbidding the numbers as
-literals. The GLSL side is the registered `stellata_ign` chunk
-(`../../hdr/tonemap/ign.glsl`), included by the operator, both cloud
-raymarches and the atmosphere integrator; the two stages that reach it
-down both paths at once are what its include guard is for.
+**One helper, one hash.** The planet mesh and the atmosphere shell call
+`interleavedGradientNoiseTsl` like every other layer, and
+`webgpu/solar-system/tsl-drift.test.ts` pins the helper's name while
+forbidding its numbers as literals.
 
 ## TSL typing shim
 
@@ -275,25 +271,18 @@ data that never changes — the glare keeps its per-frame scalars in their
 own buffer for that reason, and the star tables keep each live scalar in
 its own table.
 
-## TSL test pattern — what a port child writes
+## TSL test pattern — what a layer's suite covers
 
-The WebGL2 build's shader tests are text scans over `.glsl` sources.
-Those keep guarding the live GLSL until the WebGL2 path is deleted; a
-ported layer's TSL variant is covered by three legs, none of which read
-generated code:
+A layer is covered by three legs, none of which read generated code:
 
 1. **Constants can't drift, by construction.** TSL is TypeScript: a
-   shader constant is imported from the same module the test imports.
-   The GLSL-era constant-drift guards (regex-pinning TS mirrors against
-   shader text) have no TSL successor because the mirror IS the shader's
-   own import — when a port child retires a `.glsl` file at cutover, its
-   drift guard retires with it, replaced by direct `toBe(CONSTANT)`
-   pins on the shared module.
-2. **Policy/roster guards scan TS the way they scanned GLSL.** The
+   shader constant is imported from the same module the test imports, so
+   the mirror IS the shader's own import and a direct `toBe(CONSTANT)`
+   pin on the shared module is the whole guard.
+2. **Policy/roster guards scan the TS source.** The
    frag-depth class of invariant ("no pipeline outside the allowlist
-   writes depth") becomes a `walkFiles` scan over `src/**/*.ts` for the
-   TSL equivalents (`depthNode` / `fragDepth` writes), same shape as
-   `tests/shader-frag-depth.test.ts`. The family so far:
+   writes depth") is a `walkFiles` scan over `src/**/*.ts` for
+   `depthNode` / `fragDepth` writes. The family so far:
    `tests/webgpu-import-boundary.test.ts`, `tests/tsl-frag-depth.test.ts`,
    `tests/tsl-loop-control.test.ts` and
    `tests/tsl-standin-filters.test.ts` — the last two pin authoring traps
@@ -304,15 +293,20 @@ generated code:
    around the body and emit no jump at all. And a data texture's
    nearest/nearest default bakes an unfiltered fetch into the WGSL
    (§ Shared uniform nodes), so every construction states its filter pair.
-3. **Behavioural math lives in pure helpers; renders are A/B smoke.**
+3. **Behavioural math lives in pure helpers; renders are smoke.**
    The canonical scalar form of any shader rule belongs in a `*-pure.ts`
    TS function (most already exist as CPU mirrors — tonemap-pure,
    emission-pure, star-physics) with its unit tests; the TSL graph stays
    thin composition over the same constants. What a node graph *renders*
-   is verified by the port child's parity smoke (same `?v=` state, flip
-   the renderer), not by unit tests — executing shaders in vitest
-   remains the hhaw WebGL2-test-seam epic's territory, and no port
-   gates on it.
+   is verified in a browser, not by unit tests — vitest executes no
+   shader.
+
+**A graph's expression SHAPE is pinned as source text**, which is the
+fourth leg where a claim has no scalar form: the shadow-span cut, the
+`litFraction` bounds, which solid angle reaches which attachment. Read the
+module through `tsl-source-fixture.ts` — it strips comments first, because
+these modules quote their own expressions in prose and a `toContain` over
+the raw text can be satisfied by the comment rather than by the graph.
 
 The literal half of leg 1 is `literal-drift-pure.ts`, shared by the
 per-subsystem drift guards. It compares by **value, not by text**: shader

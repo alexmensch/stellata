@@ -172,9 +172,8 @@ export type ResolvedCandidate = {
  * candidate is confirmed through `resolve` before it can win, and only as
  * far down the order as it takes to find a winner.
  *
- * Laziness is the point, not an optimisation: on the WebGL2 escape hatch
- * `resolve` costs one synchronous GPU readback per candidate
- * (README.md § picker.ts).
+ * Lazy so `resolve` runs at most once per candidate that could win, not
+ * once per candidate (README.md § picker.ts).
  *
  * Callers MUST pass a `hitRadius` that is an upper bound of the resolved
  * one, or the walk skips a candidate that would have enclosed the cursor.

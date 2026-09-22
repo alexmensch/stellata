@@ -43,7 +43,7 @@ type NF = Node<'float'>;
 /** How far inside the reversed-z near clip bound (z_ndc = 1) the member
  *  stamp lands. Exactly z = +w risks the primitive clipping on float
  *  rounding; one ulp-scale step inside is depth-indistinguishable from
- *  the GLSL build's absolute-nearest gl_FragDepth = 0.0 stamp. */
+ *  an absolute-nearest stamp. */
 export const CORE_MASK_NEAR_PIN_EPS = 1e-6;
 
 const ballesterosBvFromTeffTsl = /* @__PURE__ */ Fn(([teff]: [NF]) => {
@@ -60,8 +60,8 @@ export interface StarTslDeps {
    *  the shared uniform-node mirror (../shared-uniform-nodes.ts). */
   lut: THREE.DataTexture;
   /** The dust volume the raymarch fallback samples, and the star-indexed
-   *  A_V buffer the prepass path indexes. Both nullable on the WebGL side,
-   *  hence nodes over placeholders whose `.value` the prepass swaps — a
+   *  A_V buffer the prepass path indexes. Both arrive after the layer is
+   *  built, hence nodes over placeholders whose `.value` the prepass swaps — a
    *  node cannot carry a nullable texture or buffer. */
   dust: DustTextureNode;
   av: AvStorageNode;
@@ -242,11 +242,10 @@ export function solveStarTsl(
         // carry a star just under the split over it and glow discards it
         // as disc-owned while disc, reading the undimmed appMag, still
         // discards it as glow-owned — drawn by neither pipeline. Route on
-        // the undimmed size so all three agree, matching the GLSL twin
-        // and the CPU pick mirror
-        // (../../camera/controls/star-pick-visibility-pure.ts). The
-        // re-solve sits behind the same dim test the GLSL ternary uses,
-        // so an undimmed star reuses appSize on both backends.
+        // the undimmed size so all three agree, matching the CPU pick
+        // mirror (../../camera/controls/star-pick-visibility-pure.ts). The
+        // re-solve sits behind a test on the dim, so an undimmed star
+        // reuses appSize.
         const routeAppSize = float(0.0).toVar();
         routeAppSize.assign(appSize);
         if (eclipseDim !== null) {
@@ -307,7 +306,7 @@ export function buildStarVertexNode(
       : int(source.survivors.element(uint(source.listBase).add(instanceIndex)));
     const localPos = tables.position(self).toVar();
 
-    // The off-screen clip sentinel of star.vert.glsl's early returns;
+    // The off-screen clip sentinel of ./star-vertex-tsl.ts's early returns;
     // TSL has no value-carrying return, so the draw path assigns over it.
     const clipOut = vec4(2.0, 2.0, 2.0, 1.0).toVar();
 
@@ -378,15 +377,15 @@ export function buildStarVertexNode(
         If(self.equal(u.uPinFocusToCenter), () => {
           centreClip.assign(cameraProjectionMatrix.mul(vec4(0.0, 0.0, s.dPc.negate(), 1.0)));
         });
-        // uPixelRatio cancels out of the GLSL's offset chain; both
-        // uViewport and pxSize are CSS px.
+        // uPixelRatio cancels out of the offset: both uViewport and pxSize
+        // are CSS px.
         const ndcOffset = corner.mul(s.pxSize).div(u.uViewport).mul(2.0);
         clipOut.assign(centreClip.add(vec4(ndcOffset.mul(centreClip.w), 0.0, 0.0)));
 
         if (pass === STAR_PASS_CORE_MASK && isMember !== null) {
-          // The member stamp, moved from the GLSL fragment stage
-          // (gl_FragDepth = 0.0) to the vertex: per-instance, so the whole
-          // quad pins to the near end of the reversed-z clip convention and
+          // The member stamp rides the vertex stage, not the fragment: it
+          // is per-instance, so the whole quad pins to the near end of the
+          // reversed-z clip convention and
           // fixed-function depth writes the nearest value — no fragment
           // depth output, which is what keeps early-z alive
           // (../README.md § Early-z). The mirror's own mask never pins:

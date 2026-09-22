@@ -2,7 +2,7 @@
 
 import { parseArgs, type ParseArgsConfig } from 'node:util';
 import {
-  GPU_FRAME_METHODS,
+  REQUESTABLE_GPU_FRAME_METHODS,
   type GpuFrameMethod,
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import {
@@ -13,15 +13,10 @@ import {
 import { COMPUTE_ROW, DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
-import { BACKENDS, SCENARIO_NAMES, type ScenarioName } from './scenarios';
+import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
 
 export const MODES = ['differential', 'probe', 'dwell', 'sweep'] as const;
 export type Mode = (typeof MODES)[number];
-
-/** `both` measures each scenario twice, in its own context. It is not a
- *  `Backend`: nothing boots "both", so it never reaches a URL or a record. */
-export const BACKEND_REQUESTS = [...BACKENDS, 'both'] as const;
-export type BackendRequest = (typeof BACKEND_REQUESTS)[number];
 
 /** `--roundtrip idle`: the same frames between the two dwells with nothing
  *  toggled — the time-matched control for a pass round trip. */
@@ -39,7 +34,7 @@ export interface RunArgs {
   readonly help: boolean;
   readonly url: string;
   readonly scenarios: readonly ScenarioName[];
-  readonly backend: BackendRequest;
+  readonly backend: Backend;
   readonly mode: Mode;
   readonly passes: readonly string[] | undefined;
   /** differential: roster passes switched OFF before the sweep and restored
@@ -92,7 +87,7 @@ export interface RunArgs {
 export const ARG_DEFAULTS = {
   url: 'http://localhost:5173',
   scenario: 'sol',
-  backend: 'webgl2',
+  backend: 'webgpu',
   mode: 'differential',
   budgetMs: 180_000,
   width: 1280,
@@ -147,13 +142,13 @@ export function usage(): string {
   return [
     'Usage: pnpm run perf -- [flags]',
     `  --scenario <names>       comma list of ${SCENARIO_NAMES.join('|')}, or all   (default ${ARG_DEFAULTS.scenario})`,
-    `  --backend <name>         ${BACKEND_REQUESTS.join('|')}                         (default ${ARG_DEFAULTS.backend})`,
+    `  --backend <name>         ${BACKENDS.join('|')}                         (default ${ARG_DEFAULTS.backend})`,
     `  --mode <name>            ${MODES.join('|')}   (default ${ARG_DEFAULTS.mode})`,
     '  --passes <keys>          comma list of priceFrame pass keys        (default: every present pass)',
     '  --pre-disable <keys>     differential: switch these passes OFF for the whole sweep (restored after)',
     '  --no-park                differential: keep the adaptation measurement unparked for the sweep',
     '  --force-recompute        differential and dwell: run the extinction kernel every frame (a parked camera skips it)',
-    `  --method <clock>         ${GPU_FRAME_METHODS.join('|')}       (default: the backend\'s best)`,
+    `  --method <clock>         ${REQUESTABLE_GPU_FRAME_METHODS.join('|')}       (default: the adapter\'s best)`,
     `  --budget-ms <n>          whole-sweep wall-clock ceiling            (default ${ARG_DEFAULTS.budgetMs})`,
     '  --dwell-frames <n>  --warmup-frames <n>  --settle-frames <n>       (default: priceFrame\'s own)',
     `  --empty-passes <n>       emptyPass row: empty passes added; savedMs bounds all n, never n× one (default ${EMPTY_PASSES_DEFAULT})`,
@@ -163,7 +158,7 @@ export function usage(): string {
     `  --quiet-ms <n>           render-gate idle required before measuring (default ${ARG_DEFAULTS.quietMs})`,
     `  --url <base>             a RUNNING dev server                       (default ${ARG_DEFAULTS.url})`,
     '  --chrome-arg=<switch>    extra Chromium switch, repeatable (the = form, since the value starts with a dash)',
-    '  --hash <fragment>        URL-fragment switches for every boot, e.g. webgpu-gate=force; composes with #renderer=webgl2',
+    '  --hash <fragment>        URL-fragment switches for every boot, e.g. webgpu-gate=force',
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
     `  --readback-every <list>  dwell and sweep: frames between statistic readbacks, pinned per dwell; several = one context each (default ${ARG_DEFAULTS.readbackEvery})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
@@ -174,7 +169,7 @@ export function usage(): string {
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
     '  --accept <scenario>|<backend>[|compute]:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
     `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
-    `Contexts run backend-major (${BACKENDS.join(', then ')}), scenarios in the order given; all = the canon order.`,
+    'Contexts run in the scenario order given; all = the canon order.',
     'Exit codes: 0 ok · 1 scenario failed / refused / software adapter · 2 bad flags or unreachable url · 3 not armed',
   ].join('\n');
 }
@@ -184,7 +179,7 @@ export function usage(): string {
  * error rather than a no-op: the in-app instrument refuses a pin it cannot
  * honour rather than switching clocks underneath the caller
  * (`src/client/debug/frame-cost/README.md` § Preconditions), and a table
- * stamped `raf-delta` after `--method timer-query` was asked for is the same
+ * stamped `raf-delta` after `--method timestamp` was asked for is the same
  * lie with a typed command line in front of it.
  */
 const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
@@ -369,10 +364,10 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
   if (str('pin') !== undefined && str('json') === undefined) {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
   }
-  const backend = oneOf('backend', BACKEND_REQUESTS);
-  if (str('pin') !== undefined && (backend !== 'both' || !isCanonOrder(scenarios))) {
+  const backend = oneOf('backend', BACKENDS);
+  if (str('pin') !== undefined && !isCanonOrder(scenarios)) {
     throw new ArgError(
-      '--pin needs --scenario all --backend both, in canon order: a pin missing a row narrows the gate '
+      '--pin needs --scenario all, in canon order: a pin missing a row narrows the gate '
       + 'silently, and a reordered one pins every row at a position no later run visits it at',
     );
   }
@@ -390,7 +385,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     preDisable,
     noPark: values['no-park'] as boolean,
     forceRecompute: values['force-recompute'] as boolean,
-    method: optionalOneOf('method', GPU_FRAME_METHODS),
+    method: optionalOneOf('method', REQUESTABLE_GPU_FRAME_METHODS),
     budgetMs: num('budget-ms'),
     dwellFrames: optionalNum('dwell-frames'),
     emptyPasses: optionalNum('empty-passes'),

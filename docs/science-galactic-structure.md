@@ -137,7 +137,7 @@ numbers and the pins.
 
 Two distinct dust paths exist in the renderer:
 
-**Per-star extinction.** `star.vert.glsl` raymarches the Edenhofer 2023
+**Per-star extinction.** `../src/client/webgpu/star/star-vertex-tsl.ts` raymarches the Edenhofer 2023
 voxel grid camera→star and applies:
 
 - `A_V` to `appMag` (dimming).
@@ -178,8 +178,8 @@ spread — two independent constraints meeting at one normalisation.
 What composes with it, over which volumes, and why the slab is not rescaled
 to make room is § The dust stack below.
 
-Implementation: `src/client/star-pipeline/star.vert.glsl` (per-star) and
-`src/client/milkyway/milkyway.frag.glsl` (volumetric); see
+Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (per-star) and
+`../src/client/webgpu/milkyway/milkyway-band-tsl.ts` (volumetric); see
 `src/client/star-pipeline/extinction/README.md` + the shelved particle layer and
 `src/client/milkyway/README.md`.
 

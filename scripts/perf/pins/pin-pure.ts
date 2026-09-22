@@ -101,7 +101,7 @@ export interface PinRow {
   readonly frames?: number;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
-  /** The WebGPU frame-sample stream where it was sound; null on WebGL2. */
+  /** The frame-sample stream where it was sound; null where it was not. */
   readonly gpu: PinClock | null;
   readonly gpuFloor: FrameFloor | null;
   /** The band gates `plain` here rather than `gpu.p50`. Absent on a pin taken
@@ -217,7 +217,7 @@ export function pinKey(record: ScenarioRecord): string {
 }
 
 /** Every canon row and the position a pin run takes it at — backend-major in
- *  canon order, so mw120|webgpu is 1 and lg|webgl2 is 10. A pin holds all of
+ *  canon order, so mw120|webgpu is 1 and lg|webgpu is 5. A pin holds all of
  *  them and each at its own position (README.md § Run position). */
 export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
   contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),
@@ -302,6 +302,9 @@ export interface PinSummary {
   readonly merged: PerfFile | null;
   readonly refusals: readonly string[];
   readonly provenance: readonly RowProvenance[];
+  /** Keys the sources carried that the canon does not hold
+   *  (README.md § Run position). */
+  readonly dropped: readonly string[];
 }
 
 /**
@@ -348,11 +351,20 @@ function runIdentityRefusals(sources: readonly RunSource[]): string[] {
   return refusals;
 }
 
-/** Union of the runs' keys, canon rows first in canon order. */
+/** The canon rows the runs hold, in canon order — and ONLY those
+ *  (README.md § Run position). */
 function keysAcross(sources: readonly RunSource[]): string[] {
   const keys = new Set(sources.flatMap((s) => s.file.scenarios.map(pinKey)));
-  const rank = (key: string): number => CANON_POSITIONS.get(key) ?? Number.POSITIVE_INFINITY;
-  return [...keys].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  return [...CANON_POSITIONS.keys()].filter((key) => keys.has(key));
+}
+
+/** Rows the runs carry that the canon does not, so a narrowed pin says which
+ *  rows it dropped. An archive taken before a canon change carries rows that
+ *  compare with nothing; leaving them out is right, leaving them out in
+ *  silence is a gate narrowing with no record. */
+function nonCanonKeys(sources: readonly RunSource[]): string[] {
+  const keys = new Set(sources.flatMap((s) => s.file.scenarios.map(pinKey)));
+  return [...keys].filter((key) => !CANON_POSITIONS.has(key)).sort();
 }
 
 function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
@@ -404,6 +416,7 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
   });
 
   const provenance: RowProvenance[] = [];
+  const dropped = nonCanonKeys(sources);
   const chosen: { record: ScenarioRecord; sourceRun: string }[] = [];
   for (const key of keysAcross(sources)) {
     const refusedIn: { sourceRun: string; reason: string }[] = [];
@@ -426,7 +439,7 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
   const newest = sources.at(-1);
   const slug = newest === undefined ? null : adapterSlug(newest.file.run.gpu);
   if (refusals.length > 0 || newest === undefined || slug === null || newest.file.run.gpu === null) {
-    return { pin: null, merged: null, refusals, provenance };
+    return { pin: null, merged: null, refusals, provenance, dropped };
   }
   return {
     pin: {
@@ -447,6 +460,7 @@ export function pinFromRuns(given: readonly RunSource[], source: PinSource): Pin
     },
     refusals,
     provenance,
+    dropped,
   };
 }
 
@@ -457,14 +471,12 @@ export function missingCanonRows(pin: PinFile): readonly string[] {
 
 /** Which side is missing the stream, so an ungated row says why rather than
  *  only that it is ungated — the pin having one and the run not is an
- *  instrument regression, not the WebGL2 backend being itself. */
+ *  instrument regression rather than the adapter being itself. */
 function ungatedNote(
-  stream: 'GPU' | 'compute', backend: Backend, hasPinned: boolean, hasCurrent: boolean,
+  stream: 'GPU' | 'compute', hasPinned: boolean, hasCurrent: boolean,
 ): string {
   if (!hasPinned && !hasCurrent) {
-    return backend === 'webgl2'
-      ? `no ${stream} stream — WebGL2 supplies none`
-      : `no ${stream} stream on either side — the adapter resolved no believable durations`;
+    return `no ${stream} stream on either side — the adapter resolved no believable durations`;
   }
   return hasPinned
     ? `the pin carries a ${stream} stream for this row; this run resolved none`
@@ -565,7 +577,7 @@ function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
   const { key, metric, current } = spec;
   const side = spec.pinned;
   if (side === null || current === null) {
-    const note = ungatedNote(spec.stream, pinned.backend, side !== null, current !== null);
+    const note = ungatedNote(spec.stream, side !== null, current !== null);
     const context = spec.ungatedContext;
     return context === null
       ? ungatedRow(key, metric, side?.valueMs ?? null, current?.valueMs ?? null, note)

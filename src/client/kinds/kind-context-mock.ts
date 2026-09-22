@@ -2,10 +2,11 @@
 
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
-import { builtinChromeLineMaterials } from '../chrome-lines/builtin-chrome-lines';
-import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
+import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
+import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import { OccluderSet } from '../occlusion/occluder-set';
+import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import type { KindContext } from './kind-module';
 
 export const MOCK_VIEWPORT_W = 800;
@@ -46,11 +47,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
       } as DOMRect),
     } as unknown as HTMLElement,
     sharedUniforms,
-    maxTextureSize: 8192,
-    // The shipped WebGL2 boot's values — a test wanting the ported layers
-    // passes a seam and the TSL strokes through the overrides.
-    webgpu: null,
-    chromeLines: builtinChromeLineMaterials(),
+    webgpu: fakeWebGpuSeam({ chromeLineMaterials: fakeChromeLineMaterials() }),
     solIndex: 0,
     solAbsInto: (out) => {
       out.set(0, 0, 0);

@@ -1,62 +1,11 @@
 import * as THREE from 'three';
 import type { DustParticleData } from '../loaders/dust-loader';
 import type { EmitterMaterial } from '../scene/emitter-material';
-import dustParticleVert from './dust-particle.vert.glsl?raw';
-import dustParticleFrag from './dust-particle.frag.glsl?raw';
 
-// Star-material uniforms shared with the particle shader. Reference-
-// shared (not cloned) so floating-origin recenters, resize updates, and
-// dust-texture loads propagate to the particle pass automatically.
-export interface DustParticleSharedUniforms {
-  uPixelRatio: { value: number };
-  uViewport: { value: THREE.Vector2 };
-  uWorldOffset: { value: THREE.Vector3 };
-  uDustEnabled: { value: number };
-  uDustDensityMin: { value: number };
-  uDustLogRatio: { value: number };
-}
-
-/**
- * The renderer-neutral contract the sprite surface is built through
- * (README.md § The material seam). The geometry crosses backends
- * unchanged — three buffers, well inside WebGPU's eight — so this ports
- * as a material swap rather than a layer of its own.
- */
+/** The contract the sprite surface is built through (README.md § The
+ *  material seam). */
 export interface DustParticleMaterials {
-  dustParticles(shared: DustParticleSharedUniforms): EmitterMaterial;
-}
-
-/** The WebGL2 implementation. The six shared slots bind by reference, so a
- *  floating-origin recentre or a resize reaches the sprite pass with no
- *  per-frame copy; `uParticleStrength` is the layer's own. */
-export function makeGlslDustParticleMaterials(): DustParticleMaterials {
-  return {
-    dustParticles(u) {
-      const material = new THREE.ShaderMaterial({
-        glslVersion: THREE.GLSL3,
-        uniforms: {
-          uPixelRatio: u.uPixelRatio,
-          uViewport: u.uViewport,
-          uWorldOffset: u.uWorldOffset,
-          uDustEnabled: u.uDustEnabled,
-          uDustDensityMin: u.uDustDensityMin,
-          uDustLogRatio: u.uDustLogRatio,
-          uParticleStrength: { value: 0.0 },
-        },
-        vertexShader: dustParticleVert,
-        fragmentShader: dustParticleFrag,
-        transparent: true,
-        depthWrite: false,
-        depthTest: true,
-        blending: THREE.AdditiveBlending,
-      });
-      return {
-        material,
-        uniforms: material.uniforms,
-        dispose: () => material.dispose(),
-      };
-    },
-  };
+  dustParticles(): EmitterMaterial;
 }
 
 // Currently shelved — see ./README.md. Default strength = 0 →
@@ -68,10 +17,9 @@ export class DustParticleLayer {
 
   constructor(
     private scene: THREE.Scene,
-    private sharedUniforms: DustParticleSharedUniforms,
-    materials?: DustParticleMaterials,
+    materials: DustParticleMaterials,
   ) {
-    this.materials = materials ?? makeGlslDustParticleMaterials();
+    this.materials = materials;
   }
 
   /** Build the particle mesh from loaded data. Idempotent — re-calling
@@ -93,7 +41,7 @@ export class DustParticleLayer {
     geom.instanceCount = data.count;
     geom.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 60_000);
 
-    this.surface = this.materials.dustParticles(this.sharedUniforms);
+    this.surface = this.materials.dustParticles();
     this.mesh = new THREE.Mesh(geom, this.surface.material);
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 2; // after disc + glow passes

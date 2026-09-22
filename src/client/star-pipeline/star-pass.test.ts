@@ -4,10 +4,8 @@ import {
 } from './star-pass';
 
 describe('star pass identities', () => {
-  // The numeric identities are the shader contract: star.frag.glsl's
-  // uRenderMode comparisons read literal 0/1/2. One pin here; every other
-  // test imports the constants.
-  it('match the uRenderMode values the GLSL shaders compare against', () => {
+  // One pin here; every other test imports the constants.
+  it('pin the three compile-time keys', () => {
     expect(STAR_PASS_GLOW).toBe(0);
     expect(STAR_PASS_DISC).toBe(1);
     expect(STAR_PASS_CORE_MASK).toBe(2);

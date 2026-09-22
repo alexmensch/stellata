@@ -1,5 +1,5 @@
-// TSL mirror of the stellata_perceptual_disc chunk: dM soft knee, √Δm
-// disc size, super-Gaussian exponent + profile. Thin composition over
+// The perceptual disc kernel: dM soft knee, √Δm disc size,
+// super-Gaussian exponent + profile. Thin composition over
 // ../star-pipeline/perceptual-disc/perceptual-disc-pure.ts, which carries the math.
 
 import { Fn, exp, float, max, mix, pow, select, smoothstep, sqrt } from 'three/tsl';
@@ -34,7 +34,7 @@ export const perceptualDiscExponentTsl = /* @__PURE__ */ Fn(
 );
 
 /** The kernel's area integral Φ(n) over its own quad — Horner over the
- *  same degree-4 fit the CPU mirror and the GLSL chunk run
+ *  same degree-4 fit the CPU mirror runs
  *  (../../star-pipeline/perceptual-disc/perceptual-disc-flux-pure.ts). */
 export const perceptualDiscFluxIntegralTsl = /* @__PURE__ */ Fn(([n]: [NF]) => {
   const x = float(1.0).div(max(n, 1e-6));
@@ -45,8 +45,8 @@ export const perceptualDiscFluxIntegralTsl = /* @__PURE__ */ Fn(([n]: [NF]) => {
   return acc;
 });
 
-/** The profile from a pre-derived exponent — the GLSL overload derives
- *  `n` inline; TSL callers reuse the exponent node instead. */
+/** The profile from a pre-derived exponent, so a caller reuses the
+ *  exponent node rather than deriving `n` twice. */
 export const perceptualDiscProfileTsl = /* @__PURE__ */ Fn(
   ([r, n, visibleThreshold, visibleK]: [NF, NF, NF, NF]) => {
     const raw = exp(visibleK.negate().mul(pow(r.mul(2.0), n)));

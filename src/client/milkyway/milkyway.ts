@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
-import type { HdrEmitterUniforms } from '../hdr/hdr-pipeline';
-import { markDiffuseEmitter } from '../hdr/attachments/attachment-gate';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {
-  makeGlslBandMaterials, type BandMaterials, type BandSharedSlots,
+  type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
 import { clampResolvedHoleStrength } from './calibration/resolved-fraction-pure';
@@ -71,17 +69,6 @@ export const GC_SIGHTLINE_MAG_ARCSEC2 =
 
 const GAL_QUAT = new THREE.Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
 
-export interface MilkywayDeps {
-  /** By reference. Only the chart-mode isobar contour reads it — the band's
-   *  brightness is photometric and reaches the exposure model through
-   *  `uExposure`. */
-  uLimitMag: { value: number };
-  /** `HdrPipeline.emitterUniforms`, spread in by reference so exposure,
-   *  pixel solid angle and the inline-operator branch reach both
-   *  components with one write. */
-  hdr: HdrEmitterUniforms;
-}
-
 /** Per-component density / colour / scale parameters. Exposed as an
  *  interface so the dev-console levers can target either component.
  *
@@ -130,11 +117,8 @@ export class MilkyWay {
   private isobar = false;
   private readonly peakCache = new BandPeakCache();
 
-  constructor(deps: MilkywayDeps, materials?: BandMaterials) {
-    this.materials = materials ?? makeGlslBandMaterials({
-      hdr: deps.hdr,
-      uLimitMag: deps.uLimitMag,
-    });
+  constructor(materials: BandMaterials) {
+    this.materials = materials;
     this.shared = this.materials.shared;
 
     // --- Disc -----------------------------------------------------------
@@ -213,7 +197,6 @@ export class MilkyWay {
     // mis-cull when the camera is offset far from Sol.
     mesh.frustumCulled = false;
     mesh.renderOrder = -3;
-    markDiffuseEmitter(mesh);
     return mesh;
   }
 

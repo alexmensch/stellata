@@ -70,7 +70,7 @@ entry declares both admissible tests in order: `'opacity'` when
 `galacticDiscOpacity(distFromSol)` reaches zero — inside `FADE_INNER_PC`,
 which is the app's own default view — then `'frustum'` against a
 GC-centred sphere of `GALACTIC_DISC_BOUND_PC`
-(`../scene/README.md` § Declaring what a layer can put on screen). Opacity
+(`../scene/contribution/README.md` § Declaring what a layer can put on screen). Opacity
 runs first because it is the one that fires where the camera sits *inside*
 the ring and no frustum test could; the frustum half reaches only vantages
 outside the disc, which are also the only ones that can turn away from it.

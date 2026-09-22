@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  ARG_DEFAULTS, ArgError, BACKEND_REQUESTS, MODES, ROUNDTRIP_IDLE,
+  ARG_DEFAULTS, ArgError, MODES, ROUNDTRIP_IDLE,
   parsePinArgs, parseRunArgs, parseSurvivorsArgs, pinUsage, usage,
 } from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
-import { SCENARIO_NAMES } from './scenarios';
+import { BACKENDS, SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
   it('fills every default from ARG_DEFAULTS and leaves priceFrame knobs unset', () => {
@@ -46,19 +46,19 @@ describe('parseRunArgs', () => {
     });
   });
 
-  const PIN_RUN = ['--mode', 'dwell', '--scenario', 'all', '--backend', 'both', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json'];
+  const PIN_RUN = ['--mode', 'dwell', '--scenario', 'all', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json'];
 
   it('takes the pin flags in dwell mode, --accept as key:bead pairs, and a zero cool-down', () => {
     const a = parseRunArgs([
       ...PIN_RUN,
-      '--accept', 'sol|webgpu:bead-1', '--accept', 'mw50|webgl2: bead-2', '--accept', 'mw120|webgpu|compute:bead-3',
+      '--accept', 'sol|webgpu:bead-1', '--accept', 'mw50|webgpu: bead-2', '--accept', 'mw120|webgpu|compute:bead-3',
       '--against-pin', 'scripts/perf/pins/y.json', '--cooldown-ms', '120000',
     ]);
     expect(a.pin).toBe('scripts/perf/pins/x.json');
     expect(a.againstPin).toBe('scripts/perf/pins/y.json');
     expect(a.accept).toEqual([
       { key: 'sol|webgpu', bead: 'bead-1' },
-      { key: 'mw50|webgl2', bead: 'bead-2' },
+      { key: 'mw50|webgpu', bead: 'bead-2' },
       { key: 'mw120|webgpu|compute', bead: 'bead-3' },
     ]);
     expect(a.cooldownMs).toBe(120000);
@@ -78,25 +78,24 @@ describe('parseRunArgs', () => {
 
   // A pin summarises whatever the run measured, so a two-context run would
   // write a two-row pin and every later comparison would silently lose the
-  // other eight. A PERMUTED run covers the canon and is refused all the same:
+  // other three. A PERMUTED run covers the canon and is refused all the same:
   // its rows sit at positions no later run visits them at, so the pin it
   // writes refuses every row of the next comparison instead.
-  it('refuses --pin unless the run is the whole canon, in canon order, on both backends', () => {
+  it('refuses --pin unless the run is the whole canon, in canon order', () => {
     const pinned = (...flags: string[]): string[] =>
       ['--mode', 'dwell', ...flags, '--json', 'r.json', '--pin', 'p.json'];
     for (const flags of [
       [],
-      ['--scenario', 'all', '--backend', 'webgpu'],
-      ['--scenario', 'mw120,sol', '--backend', 'both'],
-      ['--scenario', 'lg,mw50,earth,sol,mw120', '--backend', 'both'],
-      ['--scenario', 'mw120,sol,earth,mw50,lg,lg', '--backend', 'both'],
+      ['--scenario', 'mw120,sol'],
+      ['--scenario', 'lg,mw50,earth,sol,mw120'],
+      ['--scenario', 'mw120,sol,earth,mw50,lg,lg'],
     ]) {
-      expect(() => parseRunArgs(pinned(...flags))).toThrow(/--pin needs --scenario all --backend both/);
+      expect(() => parseRunArgs(pinned(...flags))).toThrow(/--pin needs --scenario all/);
     }
-    expect(parseRunArgs(pinned('--scenario', 'all', '--backend', 'both')).pin).toBe('p.json');
-    const spelled = pinned('--scenario', 'mw120,sol,earth,mw50,lg', '--backend', 'both');
+    expect(parseRunArgs(pinned('--scenario', 'all')).pin).toBe('p.json');
+    const spelled = pinned('--scenario', 'mw120,sol,earth,mw50,lg');
     expect(parseRunArgs(spelled).pin).toBe('p.json');
-    expect(parseRunArgs(['--mode', 'dwell', '--scenario', 'mw120,sol', '--backend', 'webgpu', '--against-pin', 'p.json']).againstPin)
+    expect(parseRunArgs(['--mode', 'dwell', '--scenario', 'mw120,sol', '--against-pin', 'p.json']).againstPin)
       .toBe('p.json');
   });
 
@@ -215,13 +214,13 @@ describe('parseRunArgs', () => {
     }
   });
 
-  it('takes the new modes, the both backend and the two paths', () => {
+  it('takes the new modes and the two paths', () => {
     const a = parseRunArgs([
-      '--mode', 'sweep', '--backend', 'both', '--frames', '480',
+      '--mode', 'sweep', '--frames', '480',
       '--scales', '0.25, 1, 3', '--json', '/tmp/a.json', '--baseline', '/tmp/b.json',
     ]);
     expect(a.mode).toBe('sweep');
-    expect(a.backend).toBe('both');
+    expect(a.backend).toBe('webgpu');
     expect(a.frames).toBe(480);
     expect(a.scales).toEqual([0.25, 1, 3]);
     expect(a.json).toBe('/tmp/a.json');
@@ -230,7 +229,7 @@ describe('parseRunArgs', () => {
 
   it('accepts every mode and backend request it advertises', () => {
     for (const mode of MODES) expect(parseRunArgs(['--mode', mode]).mode).toBe(mode);
-    for (const backend of BACKEND_REQUESTS) {
+    for (const backend of BACKENDS) {
       expect(parseRunArgs(['--backend', backend]).backend).toBe(backend);
     }
   });
@@ -238,8 +237,11 @@ describe('parseRunArgs', () => {
   it.each([
     [['--scenario', 'mars'], /--scenario/],
     [['--backend', 'metal'], /--backend/],
+    [['--backend', 'both'], /--backend/],
+    [['--backend', 'webgl2'], /--backend/],
     [['--mode', 'stopwatch'], /--mode/],
     [['--method', 'stopwatch'], /--method/],
+    [['--mode', 'differential', '--method', 'timer-query'], /--method/],
     [['--mode', 'dwell', '--frames', '0'], /--frames/],
     [['--mode', 'sweep', '--scales', '0'], /--scales/],
     [['--mode', 'sweep', '--scales', 'half'], /--scales/],
@@ -284,7 +286,7 @@ describe('parseRunArgs', () => {
       expect(text).toContain(flag);
     }
     for (const mode of MODES) expect(text).toContain(mode);
-    for (const backend of BACKEND_REQUESTS) expect(text).toContain(backend);
+    for (const backend of BACKENDS) expect(text).toContain(backend);
   });
 });
 

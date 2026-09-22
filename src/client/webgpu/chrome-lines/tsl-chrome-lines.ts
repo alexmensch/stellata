@@ -42,13 +42,11 @@ function wrap<M extends ChromeLineStroke>(
   };
 }
 
-/** `localPass` is inert here — `../../chrome-lines/README.md`
- *  § `localPass` is a GLSL-only argument. */
 export function makeTslChromeLineMaterials(
   cfg: TslChromeLineConfig,
 ): ChromeLineMaterials {
   return {
-    solid(colour: number, opacity: number, _localPass = false) {
+    solid(colour: number, opacity: number) {
       return wrap(cfg, buildChromeLineMaterial(cfg.nodes, opacity), colour);
     },
     dashed(colour: number, dash: number, gap: number, opacity: number) {

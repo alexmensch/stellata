@@ -55,7 +55,7 @@ function makeFixture(opts: FixtureOpts = {}): Fixture {
     occluders,
   };
   const field = {
-    group: { visible: true },
+    drawn: true,
     monochrome,
     hiddenInstanceIdx,
     localGroup: new THREE.Group(),

@@ -86,14 +86,12 @@ async function main() {
     // § Import boundary). The catch is not optional — nothing awaits
     // this for the length of the fetch, so a rejected chunk load would
     // surface as an unhandled rejection instead of a refused renderer.
-    const webgpuBoot: Promise<WebGpuSeam | null> = route.renderer === 'webgpu'
-      ? import('./webgpu/boot-webgpu')
-        .then(({ bootWebGpu }) => bootWebGpu(canvas))
-        .catch((err) => {
-          console.warn('WebGPU boot rejected:', err);
-          return null;
-        })
-      : Promise.resolve(null);
+    const webgpuBoot: Promise<WebGpuSeam | null> = import('./webgpu/boot-webgpu')
+      .then(({ bootWebGpu }) => bootWebGpu(canvas))
+      .catch((err) => {
+        console.warn('WebGPU boot rejected:', err);
+        return null;
+      });
     const [binaries, boundaries] = await Promise.all([
       // Binary / multiple-star orbital elements. ~64 KB; null when the
       // artifact is missing (fresh checkout without
@@ -115,7 +113,7 @@ async function main() {
     const webgpu = await webgpuBoot;
     // The probe said supported, so a null here is a device that came back
     // and then refused the renderer — same page, same advice.
-    if (route.renderer === 'webgpu' && webgpu === null) {
+    if (webgpu === null) {
       showWebGpuGate('no-adapter');
       return;
     }

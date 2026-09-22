@@ -126,21 +126,19 @@ export function createPlanetKindModule(): PlanetKindModule {
     attach(kindCtx: KindContext): SceneLayer {
       ctx = kindCtx;
       const webgpu = kindCtx.webgpu;
-      field = new PlanetBodyField(kindCtx.sharedUniforms, webgpu === null);
+      field = new PlanetBodyField(kindCtx.sharedUniforms);
       meshLayer = new PlanetMeshLayer(
         field, baseUrl, kindCtx.sharedUniforms, kindCtx.requestRender,
-        kindCtx.maxTextureSize,
-        webgpu ? (placeholder) => webgpu.solarSystemMaterials(placeholder) : undefined,
+        (placeholder) => webgpu.solarSystemMaterials(placeholder),
+        (texture, settled) => webgpu.uploadTexture(texture, settled),
       );
-      // The group carries the GLSL main-pass glare, which the TSL billboard
-      // below draws in place of — so on a WebGPU boot it stays unparented,
-      // while its local-pass mirror still joins the field's localGroup.
-      if (webgpu === null) kindCtx.scene.add(field.group);
+      const layer = meshLayer;
+      const unsubscribeOutOfMemory = webgpu.onOutOfMemory(() => layer.stepDownTextureLimits());
       // The mesh group itself is parented into the local depth pass by the
       // solar-system cluster; the stamps have to sit in the MAIN scene.
       kindCtx.scene.add(meshLayer.depthStampGroup);
-      glare = webgpu?.attachPlanetGlare(
-        kindCtx.scene, field.glareSources(), field.localGroup) ?? null;
+      glare = webgpu.attachPlanetGlare(
+        kindCtx.scene, field.glareSources(), field.localGroup);
 
       // Horizons element tables — 1.5 MB that upgrades the ephemeris from
       // the Standish series' 0.06 AU to ~5e-6 AU across 1900–2100. Fired
@@ -183,10 +181,7 @@ export function createPlanetKindModule(): PlanetKindModule {
         contribution: { kind: 'always' },
         update: (fc) => {
           field!.update(fc.camera, fc.t, performance.now());
-          // The field's own visibility gate — chart mode, the observe
-          // hide, and an empty roster all land on it — has no group to
-          // ride on the TSL side.
-          glare?.setVisible(field!.group.visible);
+          glare?.setVisible(field!.drawn);
         },
         setMonochrome: (on) => {
           field!.setMonochrome(on);
@@ -194,6 +189,7 @@ export function createPlanetKindModule(): PlanetKindModule {
         },
         recenter: (newOrigin) => field!.recenter(newOrigin),
         dispose: () => {
+          unsubscribeOutOfMemory();
           glare?.dispose();
           glare = null;
           field!.dispose();

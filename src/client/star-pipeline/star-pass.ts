@@ -1,5 +1,5 @@
-// Star pass identities: the uRenderMode values of the WebGL2 materials
-// and the compile-time specialization keys of the WebGPU pipelines.
+// Star pass identities: the compile-time specialization keys of the three
+// star pipelines.
 
 import { isDiscDominant } from './local-pass/star-local-cluster-pure';
 

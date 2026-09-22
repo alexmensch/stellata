@@ -152,7 +152,7 @@ angular fidelity outright. The K derivation above subsumes the problem
 star still lands on `TARGET_PX` even at a 390-px landscape-mobile
 height — so the compromise retires rather than being re-tuned.
 
-Implementation: `src/client/star-pipeline/star.{vert,frag}.glsl` (`sqrt`
+Implementation: `src/client/webgpu/star/star-vertex-tsl.ts` (`sqrt`
 brightness curve + smoothstep taper) and `src/client/filters/`
 (`filter-state.ts` for the angular targets and `starPxSizes`,
 `filter-controller.ts` for every mutation path). Live tuning via
@@ -188,7 +188,7 @@ folds three physically-grounded steps:
 The six logical tiers below split across two stages: the shader resolves
 the top Apsis tier at runtime, and the lower four are **baked into the
 catalog `ci` field at build time**. The shipped shader routing
-(`star.vert.glsl`) is two-tier:
+(`../src/client/webgpu/star/star-vertex-tsl.ts`) is two-tier:
 
     iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi
 
@@ -258,7 +258,7 @@ Sources:
 
 Implementation: `scripts/colour/blackbody-lut.ts` (LUT generator + pure
 helpers), `src/client/star-pipeline/blackbody-lut.ts` (generated artifact),
-`src/client/star-pipeline/star.vert.glsl` (`ciToColor` sampler), and
+`../src/client/webgpu/star/star-vertex-tsl.ts` (`ciToColor` sampler), and
 `src/client/stellata.ts::makeColorLutTexture`.
 
 ## Variable-star pulsation
@@ -329,7 +329,7 @@ GCVS rows without a parseable period, or with zero amplitude, are
 skipped at build time — that excludes constant stars, supernovae, and
 irregular variables. Typical match rate: ~4.1k of ~390k catalog stars.
 
-Implementation: `src/client/star-pipeline/star.vert.glsl` (the `iPuls`
+Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (the `iPuls`
 attribute) and `src/client/camera/controls/star-physics.ts` (CPU-side
 `renderedSizePx` mirror); see `src/client/star-pipeline/README.md`
 §Variable star rendering, and `scripts/catalog/parse/README.md` §GCVS

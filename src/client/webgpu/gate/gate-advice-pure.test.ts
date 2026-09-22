@@ -17,13 +17,15 @@ const MAC_FIREFOX = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14.5; rv:128.0) '
   + 'Gecko/20100101 Firefox/128.0';
 const LINUX_FIREFOX = 'Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0';
 const ANDROID_FIREFOX = 'Mozilla/5.0 (Android 14; Mobile; rv:139.0) Gecko/139.0 Firefox/139.0';
+const WIN_FIREFOX = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) '
+  + 'Gecko/20100101 Firefox/141.0';
 const ANDROID_CHROME = 'Mozilla/5.0 (Linux; Android 11; Pixel 4) AppleWebKit/537.36 '
   + '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
 const WIN_CHROME = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
   + '(KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36';
 
 const EVERY_UA = [IPHONE, IPAD_OS, MAC_SAFARI_INTEL, MAC_SAFARI_ARM, MAC_FIREFOX,
-  LINUX_FIREFOX, ANDROID_FIREFOX, ANDROID_CHROME, WIN_CHROME, ''];
+  LINUX_FIREFOX, ANDROID_FIREFOX, WIN_FIREFOX, ANDROID_CHROME, WIN_CHROME, ''];
 
 describe('no-api — the browser has no WebGPU, so name a newer one', () => {
   it('sends iPhone to the OS update', () => {
@@ -62,21 +64,23 @@ describe('no-api — the browser has no WebGPU, so name a newer one', () => {
   it('gives Mac Firefox the Firefox line, not the Safari one', () => {
     const a = adviceFor(hints(MAC_FIREFOX, { platform: 'MacIntel' }), 'no-api');
     expect(a.platform).toBe('firefox');
-    expect(a.action).toContain('Update Firefox');
+    expect(a.detail).toContain('Firefox');
   });
 
-  // Firefox ships WebGPU per OS, so on the two where it has NOT shipped,
-  // "update Firefox" is advice its own detail sentence contradicts.
-  it('never tells Android or Linux Firefox to update, since that cannot work', () => {
-    const android = adviceFor(hints(ANDROID_FIREFOX), 'no-api');
-    expect(android.platform).toBe('firefox');
-    expect(android.action).not.toContain('Update Firefox');
-    expect(android.action).toContain('Chrome');
+  it('keeps the per-OS Firefox reason in the detail', () => {
+    expect(adviceFor(hints(ANDROID_FIREFOX), 'no-api').detail).toContain('121');
+    expect(adviceFor(hints(LINUX_FIREFOX), 'no-api').detail).toContain('about:config');
+  });
 
-    const linux = adviceFor(hints(LINUX_FIREFOX), 'no-api');
-    expect(linux.platform).toBe('firefox');
-    expect(linux.action).not.toContain('Update Firefox');
-    expect(linux.action).toContain('about:config');
+  // The reader IS a Firefox without WebGPU, so a version number in the copy
+  // is one they may already be past — WIN_FIREFOX is 141, which the copy
+  // used to name as the version that has it.
+  it('names no Firefox version to the reader it cannot be true for', () => {
+    for (const ua of [MAC_FIREFOX, WIN_FIREFOX]) {
+      const detail = adviceFor(hints(ua), 'no-api').detail;
+      expect(detail).not.toMatch(/\b1[0-9]{2}\b/);
+      expect(detail).toContain('Chrome');
+    }
   });
 
   it('gives Android Chrome its version and OS floor', () => {
@@ -122,6 +126,29 @@ describe('no-adapter — the browser HAS WebGPU, so never tell it to install one
   it('still reports the platform it detected, for the data attr', () => {
     expect(adviceFor(hints(IPHONE), 'no-adapter').platform).toBe('ios');
     expect(adviceFor(hints(MAC_FIREFOX), 'no-adapter').platform).toBe('firefox');
+  });
+});
+
+// see README.md § UA picks the wording, never the verdict
+describe('Firefox — Chrome on every platform and both verdicts', () => {
+  const FIREFOX_UAS = [MAC_FIREFOX, LINUX_FIREFOX, ANDROID_FIREFOX, WIN_FIREFOX];
+
+  it('names Chrome in the action, never a Firefox update and never the setting', () => {
+    for (const verdict of ['no-api', 'no-adapter'] as GateVerdict[]) {
+      for (const ua of FIREFOX_UAS) {
+        const a = adviceFor(hints(ua), verdict);
+        expect(a.platform).toBe('firefox');
+        expect(a.action).toContain('Chrome');
+        expect(a.action).not.toContain('Firefox');
+        expect(a.action).not.toContain('hardware acceleration');
+      }
+    }
+  });
+
+  it('offers a newer Firefox as a possibility, not as the instruction', () => {
+    for (const ua of FIREFOX_UAS) {
+      expect(adviceFor(hints(ua), 'no-adapter').detail).toContain('newer');
+    }
   });
 });
 
