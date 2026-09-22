@@ -35,7 +35,6 @@ import {
 } from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
-import { resolvedHoleCatalogueMismatch } from './milkyway/calibration/resolved-fraction-pure';
 import { ObserveControls } from './camera/observe/observe-controls';
 import {
   mark as perfMark,
@@ -910,12 +909,7 @@ export class Stellata implements FrameAnchor {
     // the galactic centre; the fragment shader does a bounded raymarch
     // through its volume. renderOrder = -3 keeps it behind every other
     // layer.
-    const holeMismatch = resolvedHoleCatalogueMismatch(catalog.count);
-    if (holeMismatch !== null) {
-      // eslint-disable-next-line no-console
-      console.warn(`[milkyway] ${holeMismatch}`);
-    }
-    this.milkyway = new MilkyWay(this.webgpu.bandMaterials);
+    this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.scene.add(this.milkyway.group);
 
     this.filters = new FilterController({

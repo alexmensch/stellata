@@ -6,7 +6,10 @@ import {
   type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
-import { clampResolvedHoleStrength } from './calibration/resolved-fraction-pure';
+import {
+  clampResolvedHoleStrength,
+  resolvedHoleCatalogueMismatch,
+} from './calibration/resolved-fraction-pure';
 import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
 import {
   BandPeakCache,
@@ -117,7 +120,12 @@ export class MilkyWay {
   private isobar = false;
   private readonly peakCache = new BandPeakCache();
 
-  constructor(materials: BandMaterials) {
+  constructor(materials: BandMaterials, catalogRecords: number) {
+    const holeMismatch = resolvedHoleCatalogueMismatch(catalogRecords);
+    if (holeMismatch !== null) {
+      // eslint-disable-next-line no-console
+      console.warn(`[milkyway] ${holeMismatch}`);
+    }
     this.materials = materials;
     this.shared = this.materials.shared;
 
