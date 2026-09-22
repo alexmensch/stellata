@@ -60,6 +60,11 @@ import { buildHoleCells, holeLight } from '../../../scripts/milkyway-calibration
 import { fluxNumber } from '../hdr/emission/density0-solver-pure';
 import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
 import { fakeBandMaterials } from './band-materials-mock';
+import { expectSlotsServedBy } from '../scene/emitter-material-mock';
+import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
+import { buildSharedUniforms } from '../frame/shared-uniforms';
+import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
+import { makeTslBandMaterials } from '../webgpu/milkyway/tsl-band-materials';
 import {
   DEFAULT_INSTRUMENT,
   extendedThresholdSbFor,
@@ -127,6 +132,24 @@ describe('MilkyWay component specs', () => {
     expect([v.discColor.r, v.discColor.g, v.discColor.b]).toEqual([...DISC_COLOR_RGB]);
     layer.setDiscColor(0.2, 0.4, 0.8);
     expect(layer.getValues().discColor).toEqual({ r: 0.2, g: 0.4, b: 0.8 });
+  });
+
+  it('writes only per-component slots the shipped factory serves', () => {
+    const { layer, specs, surfaces } = build();
+    layer.setDiscDensity(2);
+    layer.setBulgeDensity(3);
+    layer.setDiscColor(0.2, 0.4, 0.8);
+    layer.setBulgeColor(0.1, 0.9, 0.3);
+    const real = makeTslBandMaterials({
+      nodes: buildSharedUniformNodes(buildSharedUniforms({
+        pixelRatio: 1, fovYRad: 0.75, viewportW: 800, viewportH: 600,
+        hdr: makeHdrEmitterUniforms(),
+      })).nodes,
+      registerMrtLayer: () => () => {},
+    });
+    surfaces.forEach((surface, i) => {
+      expectSlotsServedBy(surface.touchedSlots, real.component(specs[i]));
+    });
   });
 });
 
