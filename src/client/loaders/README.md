@@ -18,10 +18,9 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          helpers imported from
                          scripts/catalog/record/catalog-pure.ts — single source
                          of truth shared with the writer and the Node
-                         AoS reader; the per-record decode is
-                         column-at-a-time via decodeRecordColumn (see
-                         scripts/catalog/record/README.md § Binary
-                         catalog format). Exposes
+                         AoS reader; the decode itself is
+                         catalog-window.ts, off the main thread
+                         (§ The catalog-decode worker). Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
                          `../binaries/eclipse/README.md`) plus
@@ -40,6 +39,26 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          scripts/catalog/multiplicity/README.md § Multiplicity status).
 catalog-progressive.ts   chunk fetch scheduling + the record window each
                          landing chunk unlocks (§ Progressive catalog load).
+catalog-window.ts        one record window's decode as plain typed arrays,
+  (+ test)               window-relative — the pass both the worker and the
+                         inline fallback run, plus the column roster the
+                         memcpy back walks and the allocator the full
+                         catalogue shares (§ The catalog-decode worker).
+                         Column-at-a-time via decodeRecordColumn (see
+                         scripts/catalog/record/README.md § Binary catalog
+                         format).
+catalog-decode-worker.ts that pass off the main thread, and the spawn +
+catalog-decode-host.ts   inline fallback around it
+  (+ host test)          (§ The catalog-decode worker).
+catalog-fixture.ts       test-only catalog.bin builder — synthetic records
+                         through the shipped writeStarRecord, so every
+                         parse in these suites is a writer→reader
+                         round-trip of the layout that ships.
+catalog-decode-stub.ts   test-only Worker stand-in for the decode host,
+                         parameterised on how it answers a window (decode
+                         it, fail it, ignore it) plus its spawn and
+                         terminate counts — the host and loader suites
+                         drive the same fallback legs through one shape.
 catalog-loader.test.ts   pin for layout decode + the BigUint64Array
                          source_id handling + the v8 velocity columns +
                          the v7 sid column + a full-record writer→reader
@@ -160,6 +179,99 @@ Three traps, all of them silent if missed:
   focus has to resolve before the pose is applied, not eventually
   (`../util/url-state/README.md` § A focus that resolves after the pose).
   `idMaps.hipToIndex` grows per chunk for the same reason.
+
+## The catalog-decode worker
+
+Every landing chunk's decode used to run on the main thread, and by then the
+scene is already rendering off chunk 0 (§ Progressive catalog load) — so each
+one froze a **rendered** app rather than sitting behind a loading cover. The
+decode runs in a worker; the main thread keeps the fetch, the name table and a
+memcpy.
+
+**The catalogue's own columns cannot cross.** They are allocated at the full
+count from chunk 0 and filled in place, because every consumer captured those
+array identities at boot, so a Transferable would detach the very arrays the
+tail is still being written into. What crosses is one window's worth:
+`decodeCatalogWindow` allocates arrays sized to the chunk alone and **indexed
+from zero**, `catalogWindowTransfers` hands their buffers over so the window is
+moved rather than cloned, and `absorb` lands each one with a single `set` at
+`first × stride`. `CATALOG_WINDOW_COLUMNS` is that memcpy's roster and
+`allocateCatalogColumns` sizes both the window and the full catalogue, so a
+column cannot exist on one side and not the other.
+
+Measured in Node on the shipped 388,071-record artifact, six chunks,
+`--expose-gc`:
+
+| step | cost | whose thread |
+| --- | --- | --- |
+| decode (26 columns + the sentinel/Sol/named pass) | 30.6 ms | the worker's |
+| slicing each window's record bytes for the worker | 2.6 ms | main |
+| memcpy of the decoded columns into the full ones | 2.8 ms | main |
+
+The pre-paint window decodes inline and keeps its share on main. Every window
+after it — the only decode that lands while the scene is drawing — goes to the
+worker, main keeping the slice and the memcpy. Read the **split** rather than
+the absolute: the same pass measures 189 ms in the browser, where the engine
+is slower at `DataView` reads and boot is competing for the thread.
+
+**A window is held once, not twice.** Peak addition while the largest chunk
+(167,772 records) is in flight is 36.1 MB against 43.5 MB of full columns —
+18.8 MB of decoded window plus the 16.8 MB byte slice, and the slice detaches
+at `postMessage`. Nothing is resident on both sides, which is what a transfer
+buys over the search index's structured clone
+(`../typeahead/README.md` § The search-index worker, 64.5 MB held twice).
+`stellata-8cg.52` owns the whole-app budget.
+
+**Only the window's bytes cross, never the assembled buffer.** Transferring
+that would detach the destination the remaining chunk fetches stream into, and
+strand the inline fallback with nothing to read. A `slice` of the window's
+records costs the 2.6 ms above.
+
+**The name table stays main-side.** It precedes the records and is read whole,
+once, so the worker returns the `FLAG_HAS_NAME` records as window-relative
+indices beside the name-table offset each carries, and the main thread does the
+map lookup for those alone. Sol comes back the same way, window-relative.
+
+**The pre-paint windows decode inline; the worker is built for the tail.**
+Wave 1 ends on the catalogue's first chunk (`../README.md` § Boot in two
+waves), so every window up to that point sits behind the loading cover with
+nothing drawing yet — an honest wait, and the one regime a worker cannot
+improve. It can only spoil it: `new Worker` fetches its own emitted chunk,
+which no `modulepreload` covers, so spawning there puts a cold round trip on
+the path to first paint in order to move a decode that is competing with
+nothing. `loadCatalog` therefore passes `decodeInline` for the windows before
+first paint and constructs the decoder inside the tail walk, where the scene
+IS drawing and each decode would otherwise be a hitch — and where the
+worker's own module fetch overlaps the remaining chunk fetches instead of
+blocking a paint.
+
+**One worker for the tail**, spawned on its first window and terminated when
+the last chunk lands — the chunks arrive one at a time, so a decode never
+overlaps the next.
+
+**The fallback is inline, and never rejects**: no `Worker` in the runtime, a
+spawn that throws, a `postMessage` that throws, a throw inside, an `onerror`
+and a worker that simply never answers all decode from the bytes the caller
+already holds, and the first failure retires the worker so later windows do
+not re-pay the round trip. A catalogue arriving slowly is a degradation; a
+catalogue never arriving is a broken app — the same contract phase 1 holds.
+`parseBinary` (Node readers, whole-buffer tests) runs `decodeInline` directly
+and stays synchronous.
+
+**Silence is a failure mode too, and it is the one with no event.** A worker
+killed from outside — an out-of-memory kill on a small device, which is where
+a 2.53× catalogue lands first — fires no `error`, so nothing would settle the
+window in flight: the tail walk would stall mid-catalogue, `whenComplete`
+would never settle, `kinds.star.ready` would never resolve, and wave 2 would
+never run. `WORKER_REPLY_TIMEOUT_MS` bounds it. It is deliberately far above
+any real decode, so it cannot fire on a working worker and costs a stalled
+load one wait rather than a hang.
+
+**Terminating and settling are one operation** (`stop`), so teardown and
+failure cannot drift apart. `dispose` is that operation without the warning:
+it ends the worker, retires the decoder so nothing respawns behind the
+finished load, and settles any window still waiting to decode inline instead
+of leaving its caller awaiting a reply that can no longer come.
 
 ## Dust voxel upload
 
