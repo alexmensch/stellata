@@ -78,8 +78,8 @@ themselves.
   any position falls in, and the chart-mode layer that draws the
   partition on a Sol-centred sphere.
 - `fresnel-shell/` — shared translucent-boundary-shell primitive
-  (material + shader pair + gating base) used by the heliopause and the
-  Local Bubble.
+  (material seam + gating base) used by the heliopause and the Local
+  Bubble.
 - `hover/`, `overlays/`, `ui/`, `typeahead/`, `modals/`, `debug/` —
   cross-cutting UI.
 - `attitude/` — the gyro-sphere attitude indicator: an FDAI-style 8-ball
