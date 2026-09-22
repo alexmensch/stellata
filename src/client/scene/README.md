@@ -64,19 +64,21 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 ## The material seam
 
 `EmitterMaterial` pairs a `THREE.Material` with the uniform slots its
-layer drives, and that indirection is what lets a layer cross shader
-shader backends without a second copy of itself: a TSL `uniform()` node
-carries `.value` exactly as an `IUniform` does, so `u.uFade.value = fade`
-reaches the shader and no layer learns what built it. `dispose()` goes
+layer drives, and that indirection keeps the graph out of the layer: a
+TSL `uniform()` node carries `.value` exactly as an `IUniform` does, so
+`u.uFade.value = fade` reaches the shader and no layer learns what built
+it. `dispose()` goes
 through the handle rather than the material because it must also sever
 the material's MRT-mode registration.
 
-It lives here, beside `SceneLayer`, because three subsystems now build
-surfaces through it — the solar-system family
-(`../solar-system/materials/README.md`), the boundary shells
-(`../fresnel-shell/README.md`) and the dust sprite
-(`../dust/README.md`). Each subsystem's own factory interface
-(`SolarSystemMaterials`, `ShellMaterials`, `DustParticleMaterials`) stays
+It lives here, beside `SceneLayer`, because every material-building
+subsystem takes its surfaces through it — the solar-system family
+(`../solar-system/materials/README.md`), the Milky Way band, the
+molecular clouds, the Local Group glow, the boundary shells
+(`../fresnel-shell/README.md`) and the dust sprite (`../dust/README.md`).
+Each subsystem's own factory interface (`SolarSystemMaterials`,
+`BandMaterials`, `CloudMaterials`, `LgEmissionMaterials`, `ShellMaterials`,
+`DustParticleMaterials`) stays
 with the layer that owns it; only the surface handle is shared. The
 `IUniform` face over a TSL node record is `uniformSlotsOf`
 (`../webgpu/tsl/README.md` § Uniform slots).
@@ -163,12 +165,11 @@ Three kinds:
 
 **There are ZERO `'realtime'` layers, and that is enforced.** The type
 can only check the layers that exist when it is written, and the live
-registry needs WebGL to build, so
+registry needs a GPU renderer to build, so
 `../../../tests/cadence-layer-declarations.test.ts` scans the shipped
 source: it pins the realtime count at zero, pins the static/clock split,
 and pins that every inline `register({…})` in the shell carries a
-declaration. The invariant used to be asserted in three READMEs and
-enforced by nothing.
+declaration.
 
 Its predicate is evaluated **above** the gate, every tick, which is why
 `animate()` builds `FrameCtx` before the render decision rather than

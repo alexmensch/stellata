@@ -9,8 +9,7 @@ export interface FakeEmitterMaterial extends EmitterMaterial {
   disposed: boolean;
   /** Every slot name the layer actually wrote or read, in first-touch
    *  order. The surface answers any name, so this is what a factory suite
-   *  compares against the roster the real factory builds — the guard the
-   *  GLSL double used to provide by throwing. */
+   *  compares against the roster the real factory builds. */
   readonly touchedSlots: string[];
 }
 
