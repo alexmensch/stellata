@@ -156,12 +156,23 @@ function harness(
     physicalPlanetSizePx: (i: number) => physPx.get(i) ?? 0,
     hostPlanetOf: () => null,
   } as unknown as PlanetBodyField;
+  const meshSurfaces: EmitterMaterial[] = [];
   const layer = new PlanetMeshLayer(
     field,
     '/',
     { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
     () => {},
-    () => fakeSolarSystemMaterials(),
+    () => {
+      const materials = fakeSolarSystemMaterials();
+      return {
+        ...materials,
+        planetMesh() {
+          const surface = materials.planetMesh();
+          meshSurfaces.push(surface);
+          return surface;
+        },
+      };
+    },
     { budgetBytes, maxTextureSize },
   );
   const camera = new THREE.PerspectiveCamera();
@@ -169,6 +180,8 @@ function harness(
     layer,
     field,
     loads,
+    /** Body mesh surfaces, in the order the bodies first drew. */
+    meshSurfaces,
     /** One frame, with each body at the given projected diameter. */
     frame(sizes: number[]): void {
       physPx.clear();
@@ -378,6 +391,20 @@ describe('the floor rung stays resident', () => {
     h.frame([3000, 0]);
     expect(wide.close).toHaveBeenCalledTimes(1);
     expect(floor.close).not.toHaveBeenCalled();
+  });
+
+  it('draws the floor, not the placeholder, when the body comes back', () => {
+    const h = harness(['Europa', 'Ganymede'], DEVICE_MAX_TEXTURE_SIZE, TEXTURE_BUDGET_FLOOR_BYTES);
+    h.frame([3000, 3000]);
+    const floor = h.resolve('ganymede-1024', 1024);
+    h.resolve('ganymede-8192', 8192);
+    h.frame([3000, 3000]);
+    h.frame([3000, 0]);
+
+    h.frame([3000, 3000]);
+    const { uMap, uHasMap } = h.meshSurfaces[1].uniforms;
+    expect((uMap.value as THREE.Texture).image).toBe(floor);
+    expect(uHasMap.value).toBe(1);
   });
 });
 
