@@ -3,59 +3,16 @@
 // See README.md § Dust voxel readback.
 
 import type * as THREE from 'three';
-import type { WebGPURenderer } from 'three/webgpu';
 import type { StellataRenderer } from '../webgpu/seam';
 import { closestChunksFirst, type DustChunkMeta, type DustManifest } from './dust-loader';
-import { glTextureOf, isWebGpuRenderer } from './dust-voxel-upload';
 
 /** Voxels per read. WebGPU rejects a buffer mapping whose range is not a
- *  multiple of 4 bytes, so a single-texel readback is not available on that
- *  backend and both paths read a run of 4 along x instead. */
+ *  multiple of 4 bytes, so a single-texel readback is not available and the
+ *  reader takes a run of 4 along x instead. */
 export const VOXEL_RUN = 4;
 
 /** Reads `VOXEL_RUN` voxels along x, starting at the given voxel. */
 export type VoxelReader = (x: number, y: number, z: number) => Promise<Uint8Array>;
-
-export function createVoxelReader(
-  renderer: StellataRenderer,
-  texture: THREE.Data3DTexture,
-): VoxelReader {
-  return isWebGpuRenderer(renderer)
-    ? webGpuVoxelReader(renderer, texture)
-    : glVoxelReader(renderer, texture);
-}
-
-function glVoxelReader(
-  renderer: THREE.WebGLRenderer,
-  texture: THREE.Data3DTexture,
-): VoxelReader {
-  return async (x, y, z) => {
-    const gl = renderer.getContext() as WebGL2RenderingContext;
-    const glTex = glTextureOf(renderer, texture);
-    if (!glTex) throw new Error('dust voxel read: texture is not GPU-resident');
-    const fb = gl.createFramebuffer();
-    // Bind through three's state cache for the same reason the upload sets
-    // pixel-store state that way. README.md § Dust voxel upload.
-    const { state } = renderer;
-    state.bindFramebuffer(gl.FRAMEBUFFER, fb);
-    gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, glTex, 0, z);
-    const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
-    // An all-zero read is indistinguishable from a genuinely empty voxel, so
-    // an incomplete framebuffer has to throw rather than report zeros.
-    if (status !== gl.FRAMEBUFFER_COMPLETE) {
-      state.bindFramebuffer(gl.FRAMEBUFFER, null);
-      gl.deleteFramebuffer(fb);
-      throw new Error(`dust voxel read: framebuffer incomplete (0x${status.toString(16)})`);
-    }
-    // RGBA/UNSIGNED_BYTE is the combination WebGL2 accepts for every
-    // normalised colour buffer; the R8 voxel arrives in the red byte.
-    const rgba = new Uint8Array(VOXEL_RUN * 4);
-    gl.readPixels(x, y, VOXEL_RUN, 1, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
-    state.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.deleteFramebuffer(fb);
-    return Uint8Array.from({ length: VOXEL_RUN }, (_, i) => rgba[i * 4]);
-  };
-}
 
 /** three exposes no public readback for a plain texture —
  *  `readRenderTargetPixelsAsync` only takes a RenderTarget — so the
@@ -71,8 +28,8 @@ interface TexelReadbackBackend {
   ): Promise<ArrayBufferView>;
 }
 
-function webGpuVoxelReader(
-  renderer: WebGPURenderer,
+export function createVoxelReader(
+  renderer: StellataRenderer,
   texture: THREE.Data3DTexture,
 ): VoxelReader {
   const backend = renderer.backend as unknown as TexelReadbackBackend;

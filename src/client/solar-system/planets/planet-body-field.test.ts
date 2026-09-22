@@ -378,15 +378,11 @@ describe('PlanetBodyField lifecycle', () => {
     expect(phaseB[off + 1]).toBeCloseTo(SATURN_PHASE.c5, 6);
     expect(phaseB[off + 2]).toBeCloseTo(SATURN_PHASE.c6, 6);
     expect(phaseB[off + 3]).toBeCloseTo(SATURN_PHASE.alphaMaxDeg, 6);
-    expect(phaseC[off + 0]).toBe(0); // Saturn carries no c7
-    // Mercury's c7 lands in slot 3's iPhaseCoefsC.x. Float32 compare —
-    // 6.592e-15 survives the narrowing with ~7 significant digits.
-    const offC = 3 * 4;
-    expect(phaseC[offC + 0]).toBeCloseTo(MERCURY_PHASE.c7, 20);
-    expect(phaseC[offC + 1]).toBe(0);
-    expect(phaseC[offC + 2]).toBe(0);
-    expect(phaseC[offC + 3]).toBe(0);
-    expect(phaseB[offC + 3]).toBeCloseTo(MERCURY_PHASE.alphaMaxDeg, 6);
+    expect(phaseC[5]).toBe(0); // Saturn carries no c7
+    // Float32 compare — 6.592e-15 survives the narrowing with ~7
+    // significant digits.
+    expect(phaseC[3]).toBeCloseTo(MERCURY_PHASE.c7, 20);
+    expect(phaseB[3 * 4 + 3]).toBeCloseTo(MERCURY_PHASE.alphaMaxDeg, 6);
     // Slots 0/1 carry the bare-coef sentinel: alphaMaxDeg = 0 (the
     // shader's "use Lambertian" signal).
     expect(phaseB[0 * 4 + 3]).toBe(0);

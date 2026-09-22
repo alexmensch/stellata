@@ -25,19 +25,16 @@ export interface StarSourceAttributes {
   iSuppressPulsationAttr: THREE.BufferAttribute;
 }
 
-function dynamic(array: Float32Array, itemSize: number): THREE.BufferAttribute {
-  const attr = new THREE.BufferAttribute(array, itemSize);
-  attr.setUsage(THREE.DynamicDrawUsage);
-  return attr;
-}
-
 /** The arrays are the caller's and must outlive these handles — they are
- *  wrapped, not copied. See README.md § Files. */
+ *  wrapped, not copied. Nothing instances them into a geometry: the star
+ *  layer reads each one's `needsUpdate` and update ranges to drive its own
+ *  storage-buffer writes (`../webgpu/star/README.md`). See README.md
+ *  § Files. */
 export function buildStarSourceAttributes(arrays: StarSourceArrays): StarSourceAttributes {
   return {
-    iPositionAttr: dynamic(arrays.localPositions, 3),
-    iCompositeSuppressAttr: dynamic(arrays.compositeSuppress, 1),
-    iEclipseDimAttr: dynamic(arrays.eclipseDim, 1),
-    iSuppressPulsationAttr: dynamic(arrays.suppressPulsation, 1),
+    iPositionAttr: new THREE.BufferAttribute(arrays.localPositions, 3),
+    iCompositeSuppressAttr: new THREE.BufferAttribute(arrays.compositeSuppress, 1),
+    iEclipseDimAttr: new THREE.BufferAttribute(arrays.eclipseDim, 1),
+    iSuppressPulsationAttr: new THREE.BufferAttribute(arrays.suppressPulsation, 1),
   };
 }

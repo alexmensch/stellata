@@ -8,7 +8,7 @@ import {
   VOXEL_RUN,
   type VerifiableDustField,
 } from './dust-voxel-readback';
-import { GL_ENUM, glRendererMock, webGpuRendererMock, type VoxelSource } from './dust-renderer-mock';
+import { webGpuRendererMock, type VoxelSource } from './dust-renderer-mock';
 
 const CHUNK = 4;
 const GRID = 8;
@@ -86,50 +86,17 @@ afterEach(() => {
 });
 
 describe('reading voxels back off the GPU', () => {
-  it('returns the same run on either backend', async () => {
+  it('reads the requested run at the requested voxel', async () => {
     const tex = createVoxelTexture(GRID, null);
-    const gl = glRendererMock({ voxels: correctGrid });
     const gpu = webGpuRendererMock({ voxels: correctGrid });
 
-    const fromGl = await createVoxelReader(gl.renderer, tex)(CHUNK, 1, 5);
-    const fromGpu = await createVoxelReader(gpu.renderer, tex)(CHUNK, 1, 5);
+    const run = await createVoxelReader(gpu.renderer, tex)(CHUNK, 1, 5);
 
     const expected = Uint8Array.from(
       { length: VOXEL_RUN }, (_, i) => correctGrid(CHUNK + i, 1, 5),
     );
-    expect([...fromGl]).toEqual([...expected]);
-    expect([...fromGpu]).toEqual([...expected]);
+    expect([...run]).toEqual([...expected]);
     expect(gpu.reads).toEqual([[CHUNK, 1, 5]]);
-  });
-
-  // Same rule as the upload's pixel-store resets: a raw bind desyncs three's
-  // state cache from GL, and the next pass renders into the wrong target.
-  it('binds the readback framebuffer through three, never on the context', async () => {
-    const gl = glRendererMock({ voxels: correctGrid });
-    await createVoxelReader(gl.renderer, createVoxelTexture(GRID, null))(0, 0, 3);
-
-    expect(gl.contextFramebuffers).toEqual([]);
-    expect(gl.stateFramebuffers.map((c) => c[0])).toEqual([
-      GL_ENUM.FRAMEBUFFER, GL_ENUM.FRAMEBUFFER,
-    ]);
-    expect(gl.stateFramebuffers[1][1]).toBe(null);
-    expect(gl.readLayers).toEqual([3]);
-    expect(gl.liveFramebuffers).toBe(0);
-  });
-
-  // An all-zero read is indistinguishable from empty space, so a readback
-  // that cannot work has to say so rather than report zeros.
-  it('throws rather than reporting zeros when the read cannot work', async () => {
-    const incomplete = glRendererMock({ framebufferComplete: false });
-    await expect(
-      createVoxelReader(incomplete.renderer, createVoxelTexture(GRID, null))(0, 0, 0),
-    ).rejects.toThrow(/framebuffer incomplete/);
-    expect(incomplete.liveFramebuffers).toBe(0);
-
-    const absent = glRendererMock({ resident: false });
-    await expect(
-      createVoxelReader(absent.renderer, createVoxelTexture(GRID, null))(0, 0, 0),
-    ).rejects.toThrow(/not GPU-resident/);
   });
 });
 

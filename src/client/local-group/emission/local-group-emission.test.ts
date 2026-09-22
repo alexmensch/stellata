@@ -436,7 +436,6 @@ describe('LocalGroupEmission controller', () => {
 
   it('chart mode and setEnabled both gate visibility; either one hides', () => {
     const layer = new LocalGroupEmission(objects, fakeLgEmissionMaterials());
-    layer.update();
     expect(layer.group.visible).toBe(true);
     layer.setChartHidden(true);
     expect(layer.group.visible).toBe(false);

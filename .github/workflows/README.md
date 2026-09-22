@@ -40,7 +40,7 @@ CI check on every PR. Fails the PR unless the body carries a non-empty
 `## Perf` section with an `accepted:` line for every `✗` row, whenever the
 diff does either of:
 
-- **touches a render path** — any `.ts`, `.glsl` or `.wgsl` under
+- **touches a render path** — any `.ts` or `.wgsl` under
   `src/client/` outside the folders `RELEASING.md` § Perf pin exempts;
 - **moves catalogue membership by more than 1 %** — read as
   `recordCount` in `scripts/catalog/build-catalog-expected.json`, base

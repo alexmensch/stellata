@@ -127,9 +127,8 @@ export class ProbeField {
     // geometry outright — the instance buffers this.update writes are the
     // same ones it draws, so there is no attribute copy and no way for the
     // two passes to disagree about where a probe is.
-    const factory = materials;
     const makeMat = (localPass = false) => {
-      const m = factory.probeMarker(localPass);
+      const m = materials.probeMarker(localPass);
       m.uniforms.uSizePx.value = PROBE_MARKER_PX;
       setRawChromeColour(m.uniforms.uColour.value as THREE.Color, PROBE_COLOUR);
       return m;

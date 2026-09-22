@@ -138,7 +138,6 @@ export function createLgKindModule(): LgKindModule {
         },
         update: (fc) => {
           updateWarpGatedRefLayer(layer, fc, kindCtx.detailPermits('lgWireframes'));
-          emission!.update();
         },
         setMonochrome: (on) => {
           layer!.setMonochrome(on);

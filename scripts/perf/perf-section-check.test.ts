@@ -104,7 +104,6 @@ describe('perf-section-check', () => {
     const r = check('## Summary\n\nx\n', ['src/client/hdr/hdr-pipeline.ts']);
     expect(r.code).toBe(1);
     expect(r.stdout).toContain("no non-empty '## Perf' section");
-    expect(check('## Summary\n\nx\n', ['src/client/star-pipeline/glow.glsl']).code).toBe(1);
     expect(check('## Summary\n\nx\n', ['src/client/webgpu/tsl/disc.wgsl']).code).toBe(1);
   });
 

@@ -100,12 +100,6 @@ export class LocalGroupEmission {
     return { mesh, geometry, surface };
   }
 
-  /** Per-frame: settle the group's visibility. The floating-origin offset
-   *  arrives through the shared uniform mirror, not from here. */
-  update(): void {
-    this.groupVisible();
-  }
-
   private groupVisible(): boolean {
     const visible = this.isDrawn();
     this.group.visible = visible;

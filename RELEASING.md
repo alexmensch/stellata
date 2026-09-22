@@ -415,7 +415,7 @@ So price a `local-group/` diff with a per-pass differential at lg, never
 with its pin row. This is the standing arrangement, not an interim one.
 
 **The `## Perf` section.** Required in the PR body when the diff touches
-anything under `src/client/` — `.ts`, `.glsl` and `.wgsl` alike — outside
+anything under `src/client/` — `.ts` and `.wgsl` alike — outside
 `*.md`, `*.test.ts`, and the folders that neither draw nor decide what is
 drawn: `calibration/`, `debug/`, `focus-card/`, `format/`, `hover/`,
 `kinds/`, `loaders/`, `modals/`, `overlays/`, `poi/`,

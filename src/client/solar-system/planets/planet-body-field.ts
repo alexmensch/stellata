@@ -106,12 +106,8 @@ interface PlanetView {
 const INITIAL_CAPACITY = 32;
 
 interface InstanceAttrSpec {
-  /** GLSL attribute name. */
-  attr: string;
   /** Floats per instance. */
   dims: number;
-  /** THREE.DynamicDrawUsage hint for per-frame-rewritten buffers. */
-  dynamicUsage?: boolean;
   /** Initial fill value (buffers default to 0). */
   fill?: number;
 }
@@ -121,24 +117,25 @@ interface InstanceAttrSpec {
 // optional fields are readable on every row).
 const attrSpecs = <K extends string>(s: Record<K, InstanceAttrSpec>) => s;
 
-/** One row per per-instance GPU attribute: `key` names the CPU-side
- *  Float32Array in `bufs`, `attr` the shader attribute. Allocation,
- *  grow-copy, geometry binding, full flush, and detach compaction all
- *  iterate this table — a new attribute is one row here plus its
- *  write site. */
+/** One row per per-instance field: `key` names the CPU-side Float32Array
+ *  in `bufs`. Allocation, grow-copy and detach compaction all iterate this
+ *  table — a new field is one row here plus its write site, and the pack
+ *  into the layer's geometry (`../../webgpu/solar-system/README.md`). */
 const INSTANCE_ATTR_SPECS = attrSpecs({
-  localRel: { attr: 'iLocalRel', dims: 3 },
-  hostLocalPos: { attr: 'iHostLocalPos', dims: 3 },
-  radius: { attr: 'iRadiusPc', dims: 1 },
-  colour: { attr: 'iColour', dims: 3 },
-  solidity: { attr: 'iSolidity', dims: 1 },
-  albedo: { attr: 'iAlbedoP', dims: 1 },
-  hostAbsmag: { attr: 'iHostAbsmag', dims: 1 },
-  phaseA: { attr: 'iPhaseCoefsA', dims: 4 },
-  phaseB: { attr: 'iPhaseCoefsB', dims: 4 },
-  phaseC: { attr: 'iPhaseCoefsC', dims: 4 },
-  eclipseDim: { attr: 'iEclipseDim', dims: 1, dynamicUsage: true, fill: 1 },
-  ringFlux: { attr: 'iRingFlux', dims: 1, dynamicUsage: true },
+  localRel: { dims: 3 },
+  hostLocalPos: { dims: 3 },
+  radius: { dims: 1 },
+  colour: { dims: 3 },
+  solidity: { dims: 1 },
+  albedo: { dims: 1 },
+  hostAbsmag: { dims: 1 },
+  phaseA: { dims: 4 },
+  phaseB: { dims: 4 },
+  /** Only the degree-7 term; the rest of the published curve is in
+   *  `phaseA` + `phaseB`. */
+  phaseC: { dims: 1 },
+  eclipseDim: { dims: 1, fill: 1 },
+  ringFlux: { dims: 1 },
 });
 
 type InstanceBufKey = keyof typeof INSTANCE_ATTR_SPECS;
@@ -287,12 +284,9 @@ export class PlanetBodyField {
   // One shared { value } slot across every material — the uHideIdx
   // uniform hiding the observe-anchor body (-1 = none).
   private hideIdxUniform = { value: -1 };
-  // Tunable reflected-glare peak multiplier (planet glare brightness vs a
-  // star of the same magnitude) — one shared slot across the main-pass
   // Active local-depth cluster's slot range (start, count); (-1, 0) =
   // none. One shared value drives the main-pass suppression AND the
-  // mirror draws' member gate (opposite sense, keyed on the
-  // LOCAL_DEPTH_PASS define).
+  // mirror draws' member gate, in opposite senses.
   private localPassRangeUniform = { value: new Int32Array([-1, 0]) };
   // Body positions as the LAST rendered frame drew them, in the same
   // renderer-local frame and layout as `localRel64` plus the host offset.
@@ -588,13 +582,11 @@ export class PlanetBodyField {
   }
 
   /** Refresh `iRingFlux` for one host's ringed bodies against the live
-   *  camera. Returns whether anything was written — a host with no ring
-   *  photometry costs one `rings` probe per body and no upload. */
+   *  camera. */
   private writeRingFluxes(
     host: AttachedHost,
     cameraPos: Readonly<THREE.Vector3>,
-  ): boolean {
-    let wrote = false;
+  ): void {
     for (let i = 0; i < host.count; i++) {
       if (!host.ps.planets[i].rings?.systemPhotometry) continue;
       const idx = host.startInstance + i;
@@ -608,15 +600,8 @@ export class PlanetBodyField {
         host.hostLocalPos.y - cameraPos.y,
         host.hostLocalPos.z - cameraPos.z,
       );
-      // fround so the comparison is against what the Float32Array holds:
-      // a parked camera on a paused clock must not re-upload every frame.
-      const flux = Math.fround(this.ringFluxOf(host, i, alpha, dvx, dvy, dvz));
-      if (this.bufs.ringFlux[idx] !== flux) {
-        this.bufs.ringFlux[idx] = flux;
-        wrote = true;
-      }
+      this.bufs.ringFlux[idx] = this.ringFluxOf(host, i, alpha, dvx, dvy, dvz);
     }
-    return wrote;
   }
 
   /** True-eclipse targets for one host's planets: a planet whose disc
@@ -1555,12 +1540,13 @@ export class PlanetBodyField {
 
   /** Hide one body by flat instance index (-1 = none) — the planet
    *  sibling of the star pipeline's uHideFocusIdx, consumed by observe
-   *  mode for the body the camera is parked at. All five passes share
+   *  mode for the body the camera is parked at. Both glare draws share
    *  the uniform, so the hidden body writes no colour and no depth. */
   setHiddenInstance(instanceIdx: number): void {
     this.hideIdxUniform.value = instanceIdx;
   }
 
+  /** Every GPU allocation added to this class must be freed here. */
   dispose(): void {}
 
   // ── private ─────────────────────────────────────────────────────────
@@ -1608,7 +1594,7 @@ export class PlanetBodyField {
       this.bufs.albedo[baseScalar + i] = planet.albedo;
       this.bufs.hostAbsmag[baseScalar + i] = host.hostAbsmag;
       // Phase coefficients packed (c0,c1,c2,c3) | (c4,c5,c6,alphaMaxDeg)
-      // | (c7,_,_,_). Bodies without published curves write all zeros —
+      // | c7. Bodies without published curves write all zeros —
       // alphaMaxDeg=0 is the shader's "use Lambertian" sentinel.
       const pc = planet.phaseCoefficients;
       const phaseOff = baseVec4 + i * 4;
@@ -1620,10 +1606,7 @@ export class PlanetBodyField {
       this.bufs.phaseB[phaseOff + 1] = pc ? pc.c5 : 0;
       this.bufs.phaseB[phaseOff + 2] = pc ? pc.c6 : 0;
       this.bufs.phaseB[phaseOff + 3] = pc ? pc.alphaMaxDeg : 0;
-      this.bufs.phaseC[phaseOff + 0] = pc ? pc.c7 : 0;
-      this.bufs.phaseC[phaseOff + 1] = 0;
-      this.bufs.phaseC[phaseOff + 2] = 0;
-      this.bufs.phaseC[phaseOff + 3] = 0;
+      this.bufs.phaseC[baseScalar + i] = pc ? pc.c7 : 0;
     }
     this.writeHostLocalPos(host);
   }

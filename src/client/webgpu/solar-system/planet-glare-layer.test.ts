@@ -100,7 +100,7 @@ describe('the WebGPU reflected-glare layer', () => {
     b.radius[1] = 5;
     b.albedo[1] = 6;
     b.hostAbsmag[1] = 7;
-    b.phaseC[4] = 8;
+    b.phaseC[1] = 8;
     b.ringFlux[1] = 9;
     b.eclipseDim[1] = 0.5;
     draw(layer);

@@ -56,10 +56,7 @@ export function packGlareLayout(
     body[i * 4 + 0] = bufs.radius[i];
     body[i * 4 + 1] = bufs.albedo[i];
     body[i * 4 + 2] = bufs.hostAbsmag[i];
-    // Only Mercury carries a degree-7 term; the other three phaseC slots
-    // are reserved, so the coefficient rides here and the whole attribute
-    // goes away.
-    body[i * 4 + 3] = bufs.phaseC[i * 4];
+    body[i * 4 + 3] = bufs.phaseC[i];
   }
 }
 

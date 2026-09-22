@@ -243,7 +243,7 @@ export class Stellata implements FrameAnchor {
   /** The boot seam — layers reach their scene and the shared uniform
    *  nodes through it. */
   readonly webgpu: WebGpuSeam;
-  private webgpuStarLayer: WebGpuStarLayer | null = null;
+  private webgpuStarLayer!: WebGpuStarLayer;
   private readonly chromeLines: ChromeLineMaterials;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
@@ -1612,7 +1612,7 @@ export class Stellata implements FrameAnchor {
     uploadFull(this.starAttrs.iSuppressPulsationAttr);
 
     this.starFrame.absorbRecords();
-    this.webgpuStarLayer?.absorbRecords();
+    this.webgpuStarLayer.absorbRecords();
     // Not markDirty — see webgpu/extinction/README.md § The cache gate.
     this.extinctionPrepass?.refreshPositions();
 
@@ -1655,12 +1655,10 @@ export class Stellata implements FrameAnchor {
   }
 
   /** How many stars each tier's draw issued, and how many passed the
-   *  prefilter. Null on a WebGL2 boot, which lists no survivors
-   *  (`webgpu/star/compaction/README.md` § Reading the counts back).
-   *  The read waits on a dispatch to count into, which a settled camera has
-   *  parked the gate out of. */
+   *  prefilter (`webgpu/star/compaction/README.md` § Reading the counts
+   *  back). The read waits on a dispatch to count into, which a settled
+   *  camera has parked the gate out of. */
   async readSurvivorCounts(): Promise<SurvivorCountsRead | null> {
-    if (this.webgpuStarLayer === null) return null;
     this.renderGate.invalidate('debug:survivors');
     const counts = await this.webgpuStarLayer.readSurvivorCounts();
     if (counts === null) return null;
@@ -2094,7 +2092,7 @@ export class Stellata implements FrameAnchor {
   /** The core depth-mask's one visibility write. Whether it should be on
    *  is the layer's contribution verdict; this is only the apply. */
   private setCoreMaskVisible(on: boolean): void {
-    this.webgpuStarLayer?.setCoreMaskVisible(on);
+    this.webgpuStarLayer.setCoreMaskVisible(on);
   }
 
   /** The layer is shelved — see src/client/dust/README.md before
@@ -2269,7 +2267,7 @@ export class Stellata implements FrameAnchor {
     if (this.monochrome === on) return;
     this.monochrome = on;
     this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
-    this.webgpuStarLayer?.setMonochrome(on);
+    this.webgpuStarLayer.setMonochrome(on);
     this.renderer.setClearColor(
       on ? paperClearColour(this.renderer.outputColorSpace) : 0x000000, on ? 1 : 0);
     // Per-layer palette swaps fan out through the registry. The milky-way
@@ -2744,7 +2742,7 @@ export class Stellata implements FrameAnchor {
     // star draw below reads — its own submit, so it has to sit between
     // the two (webgpu/star/compaction/README.md).
     perfMark('star.compaction');
-    this.webgpuStarLayer?.update(this.camera);
+    this.webgpuStarLayer.update(this.camera);
     perfMeasure('star.compaction');
     // One walk on the first rendered frame: every layer is parented by
     // then (the roster attach loop and registerSceneLayers both run in
@@ -3020,8 +3018,7 @@ export class Stellata implements FrameAnchor {
     // by the listed length).
     this.extinctionPrepass?.dispose();
     this.extinctionPrepass = null;
-    this.webgpuStarLayer?.dispose();
-    this.webgpuStarLayer = null;
+    this.webgpuStarLayer.dispose();
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();

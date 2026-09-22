@@ -67,7 +67,7 @@ export async function bootScenario(page: Page, url: string, { backend, timeoutMs
     (window as unknown as PerfWindow).stellata.webgpu !== null);
   if (!booted) {
     throw new BootError(
-      `requested the ${backend} boot but the page came up without a seam` +
+      `the ${backend} page came up without a seam` +
       ' — a mislabelled measurement is worse than none',
     );
   }
@@ -313,7 +313,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     const perFrame: Record<PassCounter, number[]> | null = p.countPasses
       ? { submits: [], commandBuffers: [], renderPasses: [], computePasses: [] }
       : null;
-    let passNote = 'not requested — a WebGL2 boot has no queue to count on';
+    let passNote = 'not requested';
     let origSubmit: unknown = null;
     let origRenderPass: unknown = null;
     let origComputePass: unknown = null;
