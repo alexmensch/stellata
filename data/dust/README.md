@@ -1,4 +1,4 @@
-# Edenhofer 2023 3D dust map (resampled)
+# Edenhofer 2024 3D dust map (resampled)
 
 Voxel-grid + importance-sampled particle field for interstellar dust
 extinction. Render-time consumers raymarch the voxel grid in the star
@@ -17,7 +17,7 @@ manifest.json     grid params + chunk index + particle count.
 
 - **Citation**: Edenhofer G., Zucker C., Frank P., Saydjari A. K.,
   Schlafly E. F., Green G. M., Enßlin T. A. 2024, *A&A* 685, A82
-  (the "Edenhofer 2023" map).
+  (`dustmaps` calls it `edenhofer2023`, after the preprint).
   DOI: [10.1051/0004-6361/202347628](https://doi.org/10.1051/0004-6361/202347628).
 - **Upstream data**: [Zenodo 8187943](https://doi.org/10.5281/zenodo.8187943).
 - **Licence**: CC-BY-4.0. The resampled grid + particles here are

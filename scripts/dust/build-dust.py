@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resample the Edenhofer+ 2023 3D dust map onto a Cartesian voxel grid
+"""Resample the Edenhofer+ 2024 3D dust map onto a Cartesian voxel grid
 and emit it as 64 chunks for progressive client-side loading. See
 scripts/dust/README.md for grid params, encoding, and CLI usage."""
 
@@ -95,7 +95,7 @@ def main() -> int:
             print(f"Loading cached voxel grid from {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             voxels = np.load(cache_path)
         else:
-            print(f"Fetching + resampling Edenhofer 2023 dust map (flavor={args.flavor})…", file=sys.stderr)
+            print(f"Fetching + resampling Edenhofer 2024 dust map (flavor={args.flavor})…", file=sys.stderr)
             voxels = resample_edenhofer(flavor=args.flavor)
             print(f"Saving raw grid cache to {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             np.save(cache_path, voxels)
@@ -313,7 +313,7 @@ def make_synthetic_grid() -> np.ndarray:
 
 
 def resample_edenhofer(*, flavor: str) -> np.ndarray:
-    """Load the Edenhofer 2023 dust map and resample onto our Cartesian grid.
+    """Load the Edenhofer 2024 dust map and resample onto our Cartesian grid.
 
     Imports dustmaps/astropy lazily so --synthetic mode has zero extra deps.
     """

@@ -173,7 +173,7 @@ describe('SOL_PLANETS data', () => {
   });
 
   it('every body has a published geometric albedo in (0, 1)', () => {
-    // Mallama 2018 + NASA fact-sheet values; pinned here so an
+    // Mallama 2017 + NASA fact-sheet values; pinned here so an
     // accidental edit doesn't silently drift the apparent-magnitude
     // calculation.
     const expected: Record<string, number> = {
@@ -189,7 +189,7 @@ describe('SOL_PLANETS data', () => {
   });
 
   it('every Mallama-published planet carries the matching phase coefficients', () => {
-    // Mallama 2018 publishes phase-angle polynomials for Mercury,
+    // Mallama 2017 publishes phase-angle polynomials for Mercury,
     // Venus, Earth, Mars, Jupiter and Saturn. Uranus, Neptune and
     // Pluto have no published phase polynomial — Uranus and Neptune
     // because their max α from Earth is "negligible" so the paper

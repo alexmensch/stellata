@@ -38,7 +38,7 @@ model directly at **[stellata.xyz/app](https://stellata.xyz/app)**.
   fill half the viewport; white dwarfs render as crisp small points.
 
 - **Interstellar dust dims and reddens stars correctly.** The vertex
-  shader raymarches the Edenhofer 2023 3D dust map from camera to
+  shader raymarches the Edenhofer 2024 3D dust map from camera to
   star at run time, so stars behind dense ISM look fainter and
   redder, exactly as you would see them.
 
@@ -47,7 +47,7 @@ model directly at **[stellata.xyz/app](https://stellata.xyz/app)**.
   silhouettes traced directly from the Edenhofer field, and dim the
   diffuse background behind them.
 
-- **Variable stars pulsate.** ~4,300 stars cross-matched with GCVS
+- **Variable stars pulsate.** ~2,800 stars cross-matched with GCVS
   pulse at their true catalogue period on the model clock — brightness,
   disc radius, and colour all swing together. Open the time scrubber
   (`T`) to accelerate time and watch a Cepheid or Mira run through a
@@ -93,7 +93,7 @@ come from absolute magnitudes via Stefan–Boltzmann; halo softness
 tracks MK luminosity class; double and multiple stars come from the
 Washington Double Star Catalog and ORB6, with Gaia DR3 NSS and the
 Pulkovo Multiple Star Catalog for orbits; dwarf galaxies in the Local
-Group come from Pace 2024's Local Volume Database with hand-curated
+Group come from Pace 2025's Local Volume Database with hand-curated
 structural detail for the LMC, SMC, M31, M33, and Sagittarius dSph
 from the primary literature.
 
@@ -195,7 +195,7 @@ anchor. From there:
 
 Set the magnitude limit to "All" (showing all ~980,000 stars) and
 pull the camera out to ~3 kpc from Sol, then orbit around. The
-Edenhofer 2023 3D dust grid is real volumetric structure, not an
+Edenhofer 2024 3D dust grid is real volumetric structure, not an
 analytical shell — as you move, extinction patterns paint
 themselves across the stellar density as filaments and clumps that
 follow the actual local ISM. Stars behind dense lanes dim and
@@ -265,10 +265,11 @@ navigation (orbit, zoom, pan) works the same everywhere.
 
 ## Known limitations
 
-- **Only ~4,300 variables pulse** — those successfully cross-matched
-  against GCVS via HIP or HD. Variables without a HIP/HD
-  cross-reference, or whose GCVS entry lacks a parseable period,
-  render as non-variable.
+- **Only ~2,800 variables pulse** — the pulsating types among the
+  ~4,350 cross-matched against GCVS (via Gaia, HIP or HD) with a
+  parseable period and amplitude. Eclipsing binaries carry a period
+  but do not pulse. Variables without a cross-reference, or whose GCVS
+  entry lacks a parseable period, render as non-variable.
 - **Emission and reflection nebulae are not modelled yet.** The local
   molecular clouds (Zucker 2020/2021) now render as traced dust
   silhouettes, but catalogued H II regions, planetary nebulae, and
@@ -295,8 +296,8 @@ The code in this repository is licensed under AGPL-3.0-only. See
 
 To cite Stellata, use the metadata in
 [`CITATION.cff`](./CITATION.cff) — GitHub's *Cite this repository*
-sidebar renders it as APA or BibTeX. Every release is archived on
-Zenodo with its own DOI; quote the concept DOI
+sidebar renders it as APA or BibTeX. Every release since v3.44.2 is
+archived on Zenodo with its own DOI; quote the concept DOI
 [10.5281/zenodo.22392528](https://doi.org/10.5281/zenodo.22392528),
 which resolves to the latest.
 
@@ -327,12 +328,12 @@ Data sources retain their own licences:
   reaches. Via [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/70A).
 - **Classic designation cross indexes** — Tycho-2 `HD`
   identifications (`IV/25`, Fabricius et al. 2002), the Bayer /
-  Flamsteed cross index (`IV/27A`, Kostjuk 2004), and the Bright Star
+  Flamsteed cross index (`IV/27A`, Kostjuk 2002), and the Bright Star
   Catalogue 5th revised (`V/50`, Hoffleit & Warren 1991). Via
   CDS/VizieR; these supply every classical designation the catalogue
   carries.
 - **IAU Working Group on Star Names** (approved proper names) —
-  [IAU WGSN](https://www.iau.org/science/scientific_bodies/working_groups/280/),
+  [IAU WGSN](https://www.pas.rochester.edu/~emamajek/WGSN/),
   the naming authority for every star that displays a proper name.
 - **Riello et al. 2021** (Gaia EDR3 photometric relations — the
   `G` → Johnson `V` transform every star's brightness is derived
@@ -362,17 +363,19 @@ Data sources retain their own licences:
 - **Stellarium modern sky culture** (constellation stick figures) —
   [Stellarium](https://github.com/Stellarium/stellarium/tree/master/skycultures/modern),
   MIT-licensed (line data; illustrations not used).
-- **Edenhofer et al. 2023 3D dust map** —
-  [Zenodo](https://doi.org/10.5281/zenodo.8187943), CC-BY-4.0. The
+- **Edenhofer et al. 2024 3D dust map** —
+  [10.1051/0004-6361/202347628](https://doi.org/10.1051/0004-6361/202347628);
+  data on [Zenodo](https://doi.org/10.5281/zenodo.8187943), CC-BY-4.0. The
   resampled voxel grid in `data/dust/` is a derivative and carries
   the same licence.
-- **Pace 2024 Local Volume Database** (dwarf galaxies) —
-  [arXiv:2411.07424](https://arxiv.org/abs/2411.07424), CC0. The
+- **Pace 2025 Local Volume Database** (dwarf galaxies) —
+  [10.33232/001c.144859](https://doi.org/10.33232/001c.144859)
+  ([arXiv:2411.07424](https://arxiv.org/abs/2411.07424)), CC0. The
   `dwarf_all` snapshot at `data/local-group/lvdb-snapshot.csv` is a
   frozen copy of the upstream table.
 - **Zucker 2020 + 2021** (molecular cloud distances and bounding
   boxes) —
-  [10.3847/1538-4357/ab9d24](https://doi.org/10.3847/1538-4357/ab9d24)
+  [10.1051/0004-6361/201936145](https://doi.org/10.1051/0004-6361/201936145)
   and [10.3847/1538-4357/ac1f96](https://doi.org/10.3847/1538-4357/ac1f96).
 
 See [SCIENCE.md](./SCIENCE.md) and

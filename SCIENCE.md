@@ -154,7 +154,7 @@ enough to see it.
     - `IV/25/tyc2_hd` — Fabricius, Makarov, Knude & Wycoff 2002,
       *A&A* 386, 709. HD ↔ Tycho-2, with the upstream `n_HD`/`n_TYC`
       ambiguity flags.
-    - `IV/27A/catalog` — Kostjuk N.D. 2004. Bayer + Flamsteed ↔
+    - `IV/27A/catalog` — Kostjuk N.D. 2002. Bayer + Flamsteed ↔
       HD/HR/HIP (as TAP serves it, the Bayer/Flamsteed-bearing subset).
     - `V/50/catalog` — Hoffleit & Warren 1991, Bright Star Catalogue 5th
       revised ed. HR ↔ HD.
@@ -303,8 +303,9 @@ enough to see it.
   https://github.com/Stellarium/stellarium/tree/master/skycultures/modern
   — MIT-licensed JSON, HIP-indexed polylines. Committed as
   `data/stellarium/stellarium-modern-skyculture.json`; essentially never changes.
-- **Edenhofer 2023 3D dust map** (interstellar extinction + ISM density):
-  https://doi.org/10.5281/zenodo.8187943 — Gordian Edenhofer & Greg Green.
+- **Edenhofer et al. 2024 3D dust map** (interstellar extinction + ISM density):
+  *A&A* 685, A82, https://doi.org/10.1051/0004-6361/202347628; data
+  https://doi.org/10.5281/zenodo.8187943.
   Downloaded via the `dustmaps` Python package and resampled by
   `scripts/dust/build-dust.py` onto a 512³ Cartesian voxel grid in ICRS pc.
   Produces `data/dust/chunk_*.bin` (64 chunks, 128 MiB total, LFS) plus

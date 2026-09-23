@@ -138,7 +138,7 @@ describe('empiricalPhaseFactor', () => {
   });
 
   it('Mercury matches the published 7th-order Mallama fit across 0°–170°', () => {
-    // Mallama 2018 Table A-1.2 publishes Mercury as a degree-7
+    // Mallama 2017 Table A-1.2 publishes Mercury as a degree-7
     // polynomial. c7 = 6.592e-15 now ships (third per-instance vec4),
     // so the rendered curve IS the published fit across the full 170°
     // validity range — the degree-6 truncation era capped αmax at 87°
@@ -184,7 +184,7 @@ describe('empiricalPhaseFactor', () => {
   });
 
   it('Mercury polynomial reproduces published ΔV at α = 30°', () => {
-    // Mallama 2018 Table A-1.2 V-band coefficients evaluated at 30°.
+    // Mallama 2017 Table A-1.2 V-band coefficients evaluated at 30°.
     // Hand-checked to land near 1.15 mag. This is a sanity bound,
     // not a hard pin.
     const a = 30 * DEG;
@@ -194,7 +194,7 @@ describe('empiricalPhaseFactor', () => {
     expect(dV).toBeLessThan(1.3);
   });
 
-  it('Earth polynomial passes through the Mallama 2018 Table A-3.1 anchor points', () => {
+  it('Earth polynomial passes through the Mallama 2017 Table A-3.1 anchor points', () => {
     // The fit was constructed to pass exactly through (45°, 1.123),
     // (90°, 2.069), (135°, 3.801) — the published table values.
     for (const [aDeg, expectedDV] of [

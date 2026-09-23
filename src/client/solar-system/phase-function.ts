@@ -2,7 +2,7 @@
 // — Lambertian default + a published empirical curve where one exists.
 // See /docs/science-solar-system.md#planet-phase-functions.
 
-/** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2018 for the
+/** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2017 for the
  *  planets that have a fit, Allen's lunar law for the Moon. Every curve
  *  describes the body's GLOBE and is anchored at its α=0 geometric
  *  albedo, so c0 = 0 throughout; a ring system's contribution rides the
@@ -207,12 +207,12 @@ export function phaseRatioToLambert(
   return Math.min(PHASE_RATIO_MAX, Math.max(PHASE_RATIO_MIN, ratio));
 }
 
-// Per-body coefficients: Mallama 2018 (Icarus 282) for the planets it
+// Per-body coefficients: Mallama 2017 (Icarus 282) for the planets it
 // fits, Allen's lunar law for the Moon. Each alphaMaxDeg is the upper
 // bound observed in the cited data; outside that range the renderer
 // falls back to anchor-scaled Lambert.
 
-/** Mercury — Mallama 2018 Table A-1.2 full 7th-order fit, valid to
+/** Mercury — Mallama 2017 Table A-1.2 full 7th-order fit, valid to
  *  the paper's 170° bound. c7 rides the third per-instance vec4
  *  (`iPhaseCoefsC`); the degree-6 storage era capped alphaMaxDeg at
  *  87° because the dropped c7·α⁷ term diverged past that. */
@@ -228,7 +228,7 @@ export const MERCURY_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 170,
 };
 
-/** Venus — Mallama 2018 Table A-2.2 4th-order fit, valid to 165°.
+/** Venus — Mallama 2017 Table A-2.2 4th-order fit, valid to 165°.
  *  The α = 170° forward-scattering peak isn't captured by the
  *  polynomial — Lambert takes over there. */
 export const VENUS_PHASE: PhaseCoefficients = {
@@ -244,7 +244,7 @@ export const VENUS_PHASE: PhaseCoefficients = {
 };
 
 /** Earth — closed-form cubic fit through the four discrete values
- *  in Mallama 2018 Table A-3.1 (the paper publishes a table, not a
+ *  in Mallama 2017 Table A-3.1 (the paper publishes a table, not a
  *  polynomial). alphaMaxDeg = 135°, the table's last datum. */
 export const EARTH_PHASE: PhaseCoefficients = {
   c0: 0,
@@ -258,7 +258,7 @@ export const EARTH_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 135,
 };
 
-/** Mars — Mallama 2018 Table A-4.2 2nd-order fit, valid to ~50°.
+/** Mars — Mallama 2017 Table A-4.2 2nd-order fit, valid to ~50°.
  *  The published rotation + orbital-longitude phase terms (L₁, L₂)
  *  aren't modelled. */
 export const MARS_PHASE: PhaseCoefficients = {
@@ -273,7 +273,7 @@ export const MARS_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 50,
 };
 
-/** Jupiter — Mallama 2018 Table A-5.2 2nd-order fit, observed range
+/** Jupiter — Mallama 2017 Table A-5.2 2nd-order fit, observed range
  *  α = 0–12°. */
 export const JUPITER_PHASE: PhaseCoefficients = {
   c0: 0,

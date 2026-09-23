@@ -288,15 +288,15 @@ stays undimmed — the halo is a rendering artefact, not a surface. The
 reverse transit (planet in front) would dim the host by (R_p/R_host)²
 ≲ 10⁻² mag and is deliberately not modelled.
 
-**Planet geometric albedos** (V-band) from Mallama et al. 2018
-(https://doi.org/10.1016/j.icarus.2017.05.018) and the NASA fact
+**Planet geometric albedos** (V-band) from Mallama et al. 2017
+(https://doi.org/10.1016/j.icarus.2016.09.023) and the NASA fact
 sheets above: Mercury 0.142, Venus 0.689, Earth 0.434, Mars 0.170,
 Jupiter 0.538, Saturn 0.499, Uranus 0.488, Neptune 0.442, Pluto 0.49
 (HST + New Horizons reconnaissance). Drives the reflected-light
 apparent magnitude formula in `src/client/solar-system/`.
 
 <a id="planet-phase-functions"></a>**Planet phase functions.** Per-planet empirical V-band phase curves
-from Mallama, Krobusek, Pavlov 2018, "Comprehensive wide-band
+from Mallama, Krobusek, Pavlov 2017, "Comprehensive wide-band
 magnitudes and albedos for the planets, with applications to
 exo-planets and Planet Nine" (Icarus 282, 2017, 19–33,
 https://doi.org/10.1016/j.icarus.2016.09.023). Mercury,
@@ -312,7 +312,7 @@ Saturn's rings are a separate term (§ Saturn's ring brightness above).
 The renderer multiplies the flux factor `10^(−ΔV/2.5)` into
 the apparent-magnitude formula in place of the Lambertian default
 whenever a planet carries coefficients and α is inside the published
-validity bound. Mallama 2018 publishes no phase polynomial for
+validity bound. Mallama 2017 publishes no phase polynomial for
 Uranus, Neptune or Pluto — the first two because their max α from
 Earth is "negligible" (the paper models latitude/temporal effects
 instead), Pluto because the paper doesn't cover it. Those three —
@@ -320,7 +320,7 @@ and every future exoplanet — fall back to the Lambertian phase
 function `φ(α) = (sin α + (π − α)·cos α)/π`. See
 `src/client/solar-system/phase-function.ts` for the per-planet coefficients.
 
-**The Moon's phase curve.** Mallama 2018 covers planets only, so Earth's
+**The Moon's phase curve.** Mallama 2017 covers planets only, so Earth's
 Moon takes the classic lunar phase law from Allen's *Astrophysical
 Quantities*: `m = −12.73 + 1.49·|φ| + 0.043·φ⁴` for φ in radians, which
 in the ΔV(α°) form the renderer stores is

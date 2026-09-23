@@ -18,7 +18,7 @@ All files ride regular git (small).
 
 ## References
 
-- Zucker C. et al. 2020, *ApJ* 900, 196.
-  DOI: 10.3847/1538-4357/abb247.
+- Zucker C. et al. 2020, *A&A* 633, A51.
+  DOI: 10.1051/0004-6361/201936145.
 - Zucker C. et al. 2021, *ApJ* 919, 35.
   DOI: 10.3847/1538-4357/ac1f96.

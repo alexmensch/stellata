@@ -1,6 +1,6 @@
 # Dust particle layer (shelved)
 
-Instanced additive billboards for the Edenhofer 2023 dust map's
+Instanced additive billboards for the Edenhofer 2024 dust map's
 importance-sampled particle field.
 
 **Status: shelved, and slated for removal.** Strength = 0 → mesh hidden

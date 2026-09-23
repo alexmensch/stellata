@@ -137,7 +137,7 @@ numbers and the pins.
 
 Two distinct dust paths exist in the renderer:
 
-**Per-star extinction.** `../src/client/webgpu/star/star-vertex-tsl.ts` raymarches the Edenhofer 2023
+**Per-star extinction.** `../src/client/webgpu/star/star-vertex-tsl.ts` raymarches the Edenhofer 2024
 voxel grid camera→star and applies:
 
 - `A_V` to `appMag` (dimming).

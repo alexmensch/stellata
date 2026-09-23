@@ -253,7 +253,7 @@ export function buildSearchIndex(
     }
 
     // GCVS variable-star designations (R CrB, VY CMa, V645 Cen). Emitted for
-    // every named variable (~14.1k, a superset of the period-matched set) —
+    // every named variable (~15.2k, a superset of the period-matched set) —
     // many (VY CMa, RR Lyr) carry no proper/Bayer/Flamsteed name and are
     // otherwise findable only by HIP/HD, so the primary line falls back to the
     // designation for those.
