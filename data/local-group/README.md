@@ -5,7 +5,7 @@ Frozen reference data feeding the build script
 which the runtime renderer (`src/client/local-group/`) consumes.
 
 ```
-lvdb-snapshot.csv   committed snapshot of Pace et al. 2024 dwarf_all
+lvdb-snapshot.csv   committed snapshot of Pace et al. 2025 dwarf_all
                     (CC0, peer-reviewed; arXiv:2411.07424). 909 rows.
 overrides.tsv       hand-curated structural detail for LMC, SMC,
                     Sagittarius dSph, M 32, NGC 205, plus full
