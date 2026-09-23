@@ -35,7 +35,8 @@ export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellat
 /** The two sidecars a record's full designation set needs beyond the binary —
  *  `hd`/`hr`/`gl` and the synthetic keys. */
 export const DEFAULT_SEARCH_INDEX = resolve(REPO_ROOT, 'public/search-index.json');
-export const DEFAULT_ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
+/** Build-time hand-off, never shipped: `build/` sits outside Vite's `publicDir`. */
+export const DEFAULT_ROW_INDEX_MAP = resolve(REPO_ROOT, 'build/catalog-row-index-map.json');
 
 /** The client loader's Node-side twin — same `assembleCatalogChunks`
  *  contract, fs instead of fetch. */

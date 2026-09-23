@@ -148,7 +148,7 @@ OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
 # Report-only binding-integrity audit artifact (gitignored, regenerated
 # each build) — the no-spot-check review surface for the Stage-2
 # contradiction detector.
-OUT_BINDING_VERDICTS = ROOT / "public" / "binding-integrity-verdicts.tsv"
+OUT_BINDING_VERDICTS = ROOT / "build" / "binding-integrity-verdicts.tsv"
 
 # Committed snapshot of per-strategy / per-tier counts emitted at the
 # end of every build. The Python comparator in stage7_counts.py mirrors

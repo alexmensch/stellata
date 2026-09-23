@@ -1,6 +1,7 @@
 # Release cutting
 
-Turns a push to `main` into GitHub releases. Invoked by
+Turns a push to `main` into GitHub releases, and gates the size of what
+the deploy uploads. Release cutting is invoked by
 `.github/workflows/deploy.yml` after a successful Cloudflare deploy;
 also usable by hand (see `RELEASING.md` § Manual release).
 
@@ -10,6 +11,17 @@ also usable by hand (see `RELEASING.md` § Manual release).
   PR body; `prNumberFromSubject()` reads the squash-merge `(#NN)` suffix.
 - `cut-releases.ts` — the CLI. Resolves the range with `git`, plans,
   then tags and publishes with `gh`.
+- `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
+  ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
+  which ranks a file list largest first and splits out oversize and
+  near-limit (over
+  `ASSET_WARN_FRACTION`, 80 %). The catalogue chunk plan's test imports
+  the same ceiling.
+- `check-asset-sizes.ts` — `pnpm run check:asset-sizes`. Walks `dist/`,
+  prints the largest files, emits GitHub `::warning::` / `::error::`
+  annotations and exits 1 on any oversize file. Run by `test.yml`'s
+  `deploy-asset-sizes` job, by `deploy.yml` before `wrangler deploy`, and
+  by `pnpm run deploy`.
 
 ## One deploy, N releases
 

@@ -19,7 +19,6 @@ dist/
 # ships as transport chunks (catalog.bin.<i>) + catalog-manifest.json.
 public/catalog.bin.*
 public/catalog-manifest.json
-public/catalog-row-index-map.json
 public/constellations.json
 public/constellation-boundaries.json
 public/search-index.json
@@ -28,7 +27,10 @@ public/local-group.json
 public/binaries.bin
 public/local-bubble.bin
 public/cloud-surfaces.bin
-public/binding-integrity-verdicts.tsv
+
+# Build-time hand-offs between pipeline stages. Everything under public/ ships
+# to dist/ and the deploy; these must not.
+/build/
 
 # Mirror of data/dust/ — the canonical LFS-tracked copy lives in data/dust/;
 # scripts/dust/build-dust.py copies chunks here so Vite's publicDir serves them.

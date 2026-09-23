@@ -300,7 +300,7 @@ if (!BRIDGE_FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
     '[record-index] skipping the same-as bridge invariant — '
-    + 'public/catalog-row-index-map.json missing. Run `pnpm run build:catalog`.',
+    + 'build/catalog-row-index-map.json missing. Run `pnpm run build:catalog`.',
   );
 }
 

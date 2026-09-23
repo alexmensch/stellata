@@ -4,8 +4,8 @@ Single-star catalogue build pipeline: the membership manifest + GCVS + CCDM +
 Bailer-Jones + Gaia Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
-`public/search-index.json` + `public/catalog-row-index-map.json` +
-`public/constellation-boundaries.json`.
+`public/search-index.json` + `public/constellation-boundaries.json`, plus the
+build-only `build/catalog-row-index-map.json` (`../README.md` § What ships).
 Run via `pnpm run build:catalog`.
 
 Membership is `data/membership/membership-manifest.tsv` less the § 6.1 parks,

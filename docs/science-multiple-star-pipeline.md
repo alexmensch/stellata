@@ -647,7 +647,7 @@ consume it in two complementary ways:
    emits `public/binaries.bin` — one record per kept physical pair,
    carrying Kepler elements (when known) plus the sep+PA the
    `BinaryOrbitField` uses for per-frame orbital evaluation.
-   `public/catalog-row-index-map.json` joins the runtime binary's
+   `build/catalog-row-index-map.json` joins the runtime binary's
    primary/secondary indices back to catalog.bin record indices.
 
 Implementation: `scripts/binaries/build-binaries.py` for the WDS+ORB6

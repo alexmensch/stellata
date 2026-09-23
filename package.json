@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -66,7 +66,8 @@
     "build:client": "vite build",
     "build": "pnpm run build:binaries && pnpm run build:catalog && pnpm run build:binaries-runtime && pnpm run build:clouds && pnpm run build:local-group && pnpm run build:dust-sync && pnpm run build:probes-sync && pnpm run build:ephemerides-sync && pnpm run build:local-bubble-sync && pnpm run build:cloud-surfaces-sync && pnpm run build:textures-sync && pnpm run build:client",
     "dev": "pnpm run build:binaries && pnpm run build:catalog && pnpm run build:binaries-runtime && pnpm run build:clouds && pnpm run build:local-group && pnpm run build:dust-sync && pnpm run build:probes-sync && pnpm run build:ephemerides-sync && pnpm run build:local-bubble-sync && pnpm run build:cloud-surfaces-sync && pnpm run build:textures-sync && vite",
-    "deploy": "pnpm run build && wrangler deploy",
+    "check:asset-sizes": "tsx scripts/release/check-asset-sizes.ts",
+    "deploy": "pnpm run build && pnpm run check:asset-sizes && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "perf": "tsx scripts/perf/run.ts",
     "survivors": "tsx scripts/perf/survivors.ts",

@@ -96,6 +96,8 @@ jobs:
 
       - run: pnpm run build
 
+      - run: pnpm run check:asset-sizes
+
       - name: Deploy to Cloudflare
         uses: cloudflare/wrangler-action@v4
         with:
