@@ -47,7 +47,7 @@ export class LocalBubbleShell extends FresnelShell {
 
   constructor(materials: ShellMaterials) {
     // renderOrder −1 (with the galactic disc): a background shell, so the
-    // local stars inside it composite on top. See src/client/README.md
+    // local stars inside it composite on top. See src/client/scene/README.md
     // § Full render stack.
     super(
       materials.fresnelShell({

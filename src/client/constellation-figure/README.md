@@ -39,7 +39,7 @@ The lines render at `renderOrder −0.75` with `depthTest: true`,
 - **Close star / planet discs occlude the lines** through the depth buffer. The
   `renderOrder −4` star **and** planet core depth-masks stamp near-z before the
   lines draw (the same pass that keeps the Milky Way / grid / clouds from
-  bleeding through bright cores — `../README.md` § Full render stack), so a line
+  bleeding through bright cores — `../scene/README.md` § Full render stack), so a line
   behind a close disc depth-fails. A planet is now occluding for real — the
   bug the shelved disc-mask planet-cutout approach chased.
 - **Saturn's true mesh + ring silhouette** occludes the lines once the local

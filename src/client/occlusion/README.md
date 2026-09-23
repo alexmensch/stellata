@@ -1,8 +1,8 @@
 # Label occlusion — the near-body set the SVG layer reads
 
 An SVG label has no depth relationship to the canvas under it
-(`../README.md` § Full render stack: "There is no z-ordering between
-WebGL and SVG"), so nothing the GPU knows about depth reaches a
+(`../scene/README.md` § Full render stack: "There is no z-ordering between
+the canvas and SVG"), so nothing the GPU knows about depth reaches a
 `<text>` element. This folder is the CPU answer: a per-frame set of
 near solid bodies, and one angular test asking whether any of them
 hides a label's anchor.

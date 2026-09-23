@@ -7,7 +7,9 @@ fan-out, `setMonochrome`, floating-origin `recenter`, `dispose`); and
 `EmitterMaterial`, the material-level sibling (§ The material seam). One
 registration per layer covers all four: a layer registered once cannot be
 silently missing from any of them, which is the property the old
-copy-everywhere lists couldn't guarantee.
+copy-everywhere lists couldn't guarantee. The ordering those layers
+compose into — every draw slot, front to back, canvas and SVG — is
+§ Full render stack.
 
 **All four fan-outs run every layer even when one throws** — they go through
 `../util/fan-out.ts`, which collects failures and rethrows them as a single
@@ -59,7 +61,7 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
   the rendered scene (§ No GLSL material may reach a WebGPU boot).
 - `render-order.ts` (+ test) — `DEPTH_MASK_RENDER_ORDER`, the one
   draw-order slot two subsystems both write into. The ladder it belongs
-  to is `../README.md` § Full render stack.
+  to is § Full render stack — front to back.
 
 ## The material seam
 
@@ -258,3 +260,135 @@ extinction prepass — they aren't scene layers and keep explicit
 lifecycle calls in `stellata.ts`. `setMonochrome`'s star-pipeline
 blend swap and renderer clear-colour also stay on the shell; the
 registry carries the per-layer legs.
+
+## Full render stack — front to back
+
+The full layer composition is something `stellata.ts` owns at the
+integration shell — each subsystem renders into the same scene, and
+which layer wins which pixel is the property that emerges here.
+Each row links to the README that owns the layer's implementation.
+
+Every canvas row below renders into the HDR target, not the canvas —
+including the local depth pass, whose repaint lands in the same target.
+One fullscreen tone-map then resolves the target to the canvas, so
+nothing in the table composites against the canvas directly and the SVG
+layer sees only the resolved frame ([hdr/](../hdr/README.md)). Chart mode
+bypasses the target and renders straight to the canvas as before.
+
+One pass draws after the resolve and appears nowhere in the table: the
+exposure statistic's mip reduction, which binds its own targets, writes no
+pixel the user sees, and is read back a frame later
+([hdr/exposure/reduction/](../hdr/exposure/reduction/README.md)). Every row
+below that emits physical light also writes the target's second,
+statistic attachment ([hdr/attachments/](../hdr/attachments/README.md)); every
+chrome row is gated out of it.
+
+There is no z-ordering between the canvas and SVG. The canvas paints
+first; the SVG `#overlay` always sits above it (`z-index: 5`,
+`pointer-events: none`). **Every label surface therefore asks
+[occlusion/](../occlusion/README.md) whether a nearer body hides its
+anchor** — a CPU answer, because no depth verdict reaches a `<text>`
+element. Without it a moon behind its planet keeps its label and a
+150 pc cloud name draws over a body 5 AU away. Inside each layer the ordering is local:
+The canvas orders by `THREE.Object3D.renderOrder`, SVG by source order in
+`src/client/index.html` (later child = on top). The constellation
+figure is depth-tested line geometry (`renderOrder −0.75`), so
+close star and planet discs occlude it through the depth buffer — no
+SVG mask (`constellation-figure/README.md`).
+
+| Layer                                            | Surface | Mechanism                                          | Order | Owner |
+| ------------------------------------------------ | ------- | -------------------------------------------------- | :---: | ----- |
+| Focus ring                                       | SVG     | source order (last child)                          | front | [overlays/](../overlays/README.md) |
+| Click ripple                                     | SVG     | source order                                       |       | [overlays/](../overlays/README.md) |
+| Heliopause label                                 | SVG     | source order                                       |       | [solar-system/heliopause/](../solar-system/heliopause/README.md) |
+| Local Bubble label                               | SVG     | source order                                       |       | [local-bubble/](../local-bubble/README.md) |
+| Molecular cloud labels                           | SVG     | source order                                       |       | [molecular-clouds/](../molecular-clouds/README.md) |
+| Planet labels                                    | SVG     | source order                                       |       | [solar-system/planets/labels/](../solar-system/planets/labels/README.md) |
+| Probe labels                                     | SVG     | source order                                       |       | [solar-system/probes/](../solar-system/probes/README.md) |
+| POI labels                                       | SVG     | source order                                       |       | [overlays/](../overlays/README.md) |
+| POI rings                                        | SVG     | source order                                       |       | [overlays/](../overlays/README.md) |
+| POI arrows                                       | SVG     | source order                                       |       | [overlays/](../overlays/README.md) |
+| Sol/GC arrow labels                              | SVG     | source order                                       |       | [galactic/](../galactic/README.md) |
+| Distance label + warp pill                       | SVG     | source order                                       |       | [overlays/](../overlays/README.md), [camera/warp/](../camera/warp/README.md) |
+| Distance vector + bg                             | SVG     | source order                                       |       | [overlays/](../overlays/README.md) |
+| Sol/GC arrows + bg                               | SVG     | source order                                       |       | [galactic/](../galactic/README.md) |
+| HUD ring                                         | SVG     | source order                                       |       | [galactic/](../galactic/README.md) |
+| Chart labels + glyphs (chart only)               | SVG     | source order (three groups)                        |       | [chart-mode/labels/](../chart-mode/labels/README.md) |
+| Coordinate-sphere edge labels                    | SVG     | source order (first SVG children)                  |       | [galactic/coord-spheres/](../galactic/coord-spheres/README.md) |
+| *— SVG / canvas boundary —*                       | —       | `.overlay { z-index: 5 }`                          | —     | — |
+| Planet glow mirror (cluster members)             | canvas  | local depth pass; bracket z-buffer (4 in-pass)     |       | [solar-system/planets/](../solar-system/planets/README.md), [local-depth/](../local-depth/README.md) |
+| Member-star glow mirror                          | canvas  | local depth pass (3.5 in-pass)                     |       | [star-pipeline/local-pass/](../star-pipeline/local-pass/README.md), [local-depth/](../local-depth/README.md) |
+| Probe marker mirror (cluster active)              | canvas  | local depth pass (3.3 in-pass)                     |       | [solar-system/probes/](../solar-system/probes/README.md), [local-depth/](../local-depth/README.md) |
+| Probe trail mirror (cluster active)               | canvas  | local depth pass (3.25 in-pass)                    |       | [solar-system/probes/](../solar-system/probes/README.md), [local-depth/](../local-depth/README.md) |
+| Orbit rings                                      | canvas  | local depth pass (3.2 in-pass)                     |       | [solar-system/ephemerides/](../solar-system/ephemerides/README.md), [local-depth/](../local-depth/README.md) |
+| Binary orbit paths                               | canvas  | local depth pass (3.2 in-pass)                     |       | [binaries/orbit-paths/](../binaries/orbit-paths/README.md), [local-depth/](../local-depth/README.md) |
+| Planet atmosphere shell (Venus/Earth/Mars/Titan) | canvas  | local depth pass; additive (2.82 in-pass)          |       | [solar-system/atmosphere/](../solar-system/atmosphere/README.md), [local-depth/](../local-depth/README.md) |
+| Planet ring annulus (Saturn/Uranus/Neptune)      | canvas  | local depth pass; bracket z-buffer (2.81 in-pass)  |       | [solar-system/planets/](../solar-system/planets/README.md), [local-depth/](../local-depth/README.md) |
+| Planet spheroid mesh (close LOD)                 | canvas  | local depth pass; bracket z-buffer (2.8 in-pass)   |       | [solar-system/planets/](../solar-system/planets/README.md), [local-depth/](../local-depth/README.md) |
+| Member-star disc mirror                          | canvas  | local depth pass (0 in-pass)                       |       | [star-pipeline/local-pass/](../star-pipeline/local-pass/README.md), [local-depth/](../local-depth/README.md) |
+| Member-star core mask (depth-only)               | canvas  | local depth pass (−1 in-pass, `colorWrite: false`) |       | [star-pipeline/local-pass/](../star-pipeline/local-pass/README.md), [local-depth/](../local-depth/README.md) |
+| *— local depth pass boundary (depth cleared) —*  | —       | drawn after the whole main pass                    | —     | — |
+| Planet glow (inactive-cluster hosts)             | canvas  | `renderOrder: 4`                                   |       | [solar-system/planets/](../solar-system/planets/README.md) |
+| Probe markers (cluster inactive)                  | canvas  | `renderOrder: 3.5`                                 |       | [solar-system/probes/](../solar-system/probes/README.md) |
+| Probe trails (cluster inactive)                   | canvas  | `renderOrder: 3.4`                                 |       | [solar-system/probes/](../solar-system/probes/README.md) |
+| Dust particles                                   | canvas  | `renderOrder: 2`                                   |       | [dust/](../dust/README.md) |
+| Star glow + heliopause shell                     | canvas  | `renderOrder: 1`                                   |       | [star-pipeline/](../star-pipeline/README.md), [solar-system/heliopause/](../solar-system/heliopause/README.md) |
+| Star disc                                        | canvas  | `renderOrder: 0`                                   |       | [star-pipeline/](../star-pipeline/README.md) |
+| Constellation figure                             | canvas  | `renderOrder: -0.75`                               |       | [constellation-figure/](../constellation-figure/README.md) |
+| IAU constellation boundaries (chart only)        | canvas  | `renderOrder: -0.8`                                |       | [constellation-boundaries/](../constellation-boundaries/README.md) |
+| Galactic disc + coordinate spheres               | canvas  | `renderOrder: -1`                                  |       | [galactic/](../galactic/README.md), [galactic/coord-spheres/](../galactic/coord-spheres/README.md), [local-group/](../local-group/README.md) |
+| Local Bubble shell                               | canvas  | `renderOrder: -1`                                  |       | [local-bubble/](../local-bubble/README.md) |
+| Molecular cloud rim shells                       | canvas  | `renderOrder: -1`                                  |       | [molecular-clouds/](../molecular-clouds/README.md) |
+| Molecular cloud absorption                       | canvas  | `renderOrder: -2`                                  | back  | [molecular-clouds/](../molecular-clouds/README.md) |
+| Milky Way volume + Local Group emission          | canvas  | `renderOrder: -3`                                  |       | [milkyway/](../milkyway/README.md), [local-group/](../local-group/README.md) |
+| Star core depth-mask (depth-only)                | canvas  | `renderOrder: -4`, `colorWrite: false`             | back  | [star-pipeline/](../star-pipeline/README.md) |
+| Planet depth pre-stamp (depth-only)              | canvas  | `renderOrder: -4`, `colorWrite: false`             | back  | [solar-system/planets/depth-stamp/](../solar-system/planets/depth-stamp/README.md) |
+
+### Per-layer visibility gates and tuning
+
+Each layer owns its own visibility gates, magnitude cutoffs, and
+shader tuning in its README. Look there when investigating a
+"layer-isn't-showing" or "wrong layer wins this pixel" report.
+
+The two cross-layer pinning rules `stellata.ts` is responsible for:
+
+- **The `-4` depth stamps** run first so background layers (MW,
+  clouds, galactic grid — all with `depthTest: true`) depth-fail
+  behind close-range bright star cores and opaque planet meshes instead
+  of being shaded and then repainted. Two writers hold the slot: the
+  star core mask, and the planet depth pre-stamp — a depth-only, shrunk
+  copy of each opaque body mesh, since the mesh itself writes its depth
+  in the local pass where the main pass cannot test against it
+  (`../solar-system/planets/depth-stamp/README.md`). Two writers in two
+  subsystems is why this is the one `renderOrder` in the table with a
+  name of its own — `DEPTH_MASK_RENDER_ORDER` (`render-order.ts`);
+  every other slot belongs to a single layer and is spelled where it is
+  set. Moving it means moving both writers together, or this table stops
+  being true.
+- **The local depth pass owns the active system — and every resolved
+  star disc.** While a system is locally active (host in cull range,
+  or its orbit rings drawing), every one of its bodies — the host
+  star included — collapses in the main pass via the sentinel
+  uniforms (`uLocalMemberIdx`, `uLocalPassRange`) and renders through
+  the pass's mirror draws instead, where a bracketed standard-depth
+  z-buffer orders everything natively (ring↔body, moon↔planet,
+  transits, near-side orbit-ring arcs). Star membership extends
+  beyond the host: the focal binary chain (with its orbit-path
+  ellipses) and any resolved-disc star near the camera mirror the
+  same way (`../star-pipeline/local-pass/star-local-cluster.ts`). The
+  `planet-body-field` test pins the pass renderOrders; a reorder
+  fails CI rather than silently regressing.
+  See [local-depth/](../local-depth/README.md).
+
+Within the same `renderOrder` value, the opaque-before-transparent
+rule of the three.js renderer determines order; opaque depth-write
+meshes establish the depth buffer that transparent passes test
+against.
+
+Rows above the local-depth boundary render in a second, depth-cleared
+pass *after* the whole main stack, ordered against each other by a
+bracketed standard-depth z-buffer (the in-pass renderOrder only
+sequences opaque-before-transparent) — see
+[local-depth/](../local-depth/README.md). While the solar-system cluster
+is inactive (camera beyond the cull range, or chart mode) its bodies
+render through the ordinary main-pass planet/star rows instead.

@@ -28,7 +28,7 @@ over the same spheroid geometry, `colorWrite: false`, at `renderOrder −4`
 beside the star core mask, in `depthStampGroup` — which the planet module
 parents into the **main** scene, never the pass scene. Every background
 layer drawn after −4 depth-fails inside the silhouette and its fragments
-never shade (`../../../README.md` § Full render stack — front to back).
+never shade (`../../../scene/README.md` § Full render stack — front to back).
 
 ## What stamps, and how far inside
 
