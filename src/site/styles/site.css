@@ -1,8 +1,8 @@
 /* Every page of the public content site. The app's chrome is the reference;
    this scales it up to reading sizes and adds nothing it does not have.
-   Organised CUBE-style — see src/site/README.md § The stylesheet. */
+   Organised CUBE-style — see src/site/styles/README.md § House style. */
 
-@import '../design-tokens.css';
+@import '../../design-tokens.css';
 
 /* ── Tokens ─────────────────────────────────────────────────────────── */
 /* Fluid Utopia scales, 320px → 1440px. Generated, not tuned by hand:
@@ -477,6 +477,28 @@ a.sight-media:hover {
 .sight-media > video {
   inline-size: 100%;
 }
+/* Built by ../replay.ts beside the media anchor, never inside it —
+   ../README.md § One script. */
+.replay-frame {
+  position: relative;
+}
+.replay {
+  position: absolute;
+  inset-block-end: var(--space-2xs);
+  inset-inline-end: var(--space-2xs);
+  padding: var(--space-3xs);
+  font: inherit;
+  font-size: var(--step-2);
+  line-height: var(--leading-flat);
+  color: var(--fg-dim);
+  text-shadow: var(--text-halo);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.replay:hover {
+  color: var(--fg);
+}
 .sight-go {
   --flow-space: var(--space-xs);
 
@@ -502,7 +524,7 @@ a.sight-media:hover {
 
 /* The stand-in a real capture replaces. Deliberately unlovely: a dashed
    hairline says "not final" where a styled empty box would ship unnoticed.
-   README § Sights carries the swap. */
+   ../README.md § Sights carries the swap. */
 /* Sized by min-block-size rather than aspect-ratio: a ratio box clips its
    own instructions at narrow widths, and a real <img width height> brings
    its own ratio when it lands. */

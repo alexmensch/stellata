@@ -21,7 +21,7 @@ Cloudflare Worker entry, browser client, and the public content site.
   the same `dist/` **after** the app build, which is the pass that empties
   it. Its README owns the seam.
 - `design-tokens.css` — the palette and typeface every surface paints
-  from. `client/styles.css` and `site/site.css` each `@import` it and add
+  from. `client/styles.css` and `site/styles/site.css` each `@import` it and add
   only what is theirs; neither restates a colour.
 
 ## Request routing

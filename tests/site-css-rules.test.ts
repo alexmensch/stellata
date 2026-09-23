@@ -2,13 +2,13 @@
 // font size, never to a viewport measurement, and every value it paints comes
 // from a token. Those are properties of the stylesheet, not preferences, so
 // they are asserted rather than described.
-// `src/site/README.md` § The stylesheet, § Responsiveness has no breakpoints.
+// `src/site/styles/README.md` § House style, § Responsiveness has no breakpoints.
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const CSS = readFileSync(resolve(__dirname, '..', join('src/site/site.css')), 'utf8');
+const CSS = readFileSync(resolve(__dirname, '..', join('src/site/styles/site.css')), 'utf8');
 
 /**
  * The stylesheet with comments removed. Every declaration scan reads this, so
