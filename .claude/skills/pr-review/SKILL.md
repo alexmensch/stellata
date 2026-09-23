@@ -21,6 +21,12 @@ goal is findings the author will act on, not encouragement.
 
 (2) and (3) are the two that block a merge.
 
+(1) and (5) are the user-level `code-craft` skill's § Review lens — load it
+before reading the diff, and run it over the whole of every file the diff
+touches, not only the hunks. A diff touching `src/client/stellata.ts` is also
+checked against AGENTS.md's integration-shell rule: any new field, tick or
+module-scope function landing there is a finding.
+
 ## Getting the diff
 
 - `gh pr view <N>`, `gh pr diff <N>` — take the **file list** from these first.
