@@ -419,10 +419,8 @@ To land a real capture:
    and the `.sight-go` line.
 
 A clip's row carries its `debug.capture()` call in an HTML comment beside
-the `<video>`, so a re-shoot replays the same take. Every row links a saved
-view except the Local Group, whose anchors are still the Large Magellanic
-Cloud's focus-only blob — the object at its park pose, not the capture's
-end pose.
+the `<video>`, so a re-shoot replays the same take. Its `end` blob — or
+`start`, for a take that only moves the clock — is the row's link.
 
 Deriving smaller responsive variants and a `srcset` is worth doing once the
 real images are in — a 2400 px JPEG is the largest thing on the page by an
