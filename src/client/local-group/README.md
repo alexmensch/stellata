@@ -303,8 +303,8 @@ what made the focus card's alias row repeat itself.
 
 ## References
 
-- **Pace et al. 2024**, *Local Volume Database*, Open Journal of
-  Astrophysics (arXiv:2411.07424). CC0.
+- **Pace et al. 2025**, *Local Volume Database*, Open Journal of
+  Astrophysics (DOI: 10.33232/001c.144859; arXiv:2411.07424). CC0.
   <https://github.com/apace7/local_volume_database>
 - **Pietrzyński et al. 2019**, *Nature* 567, 200
   (DOI: 10.1038/s41586-019-0999-4) — LMC distance.
@@ -314,13 +314,15 @@ what made the focus card's alias row repeat itself.
   (DOI: 10.3847/1538-4357/abbb2b) — SMC distance.
 - **Subramanian & Subramaniam 2012**, *ApJ* 744, 128
   (DOI: 10.1088/0004-637X/744/2/128) — SMC structure.
-- **Ibata et al. 1995**, *AJ* 110, 632 (DOI: 10.1086/192237) —
-  Sagittarius dSph discovery + structure.
+- **Ibata et al. 1997**, *AJ* 113, 634 (DOI: 10.1086/118283) —
+  Sagittarius dSph structure: prolate 3:1:1, line-of-sight depth.
 - **McConnachie et al. 2018**, *ApJ* 868, 55
   (DOI: 10.3847/1538-4357/aae8e7) — M31 inclined-disc structure from
   the PAndAS survey (i ≈ 77°, PA ≈ 37°).
-- **Bonanos et al. 2006**, *ApJ* 652, 313 (DOI: 10.1086/508140) —
-  M33 Cepheid distance (840 ± 11 kpc) + disc inclination.
+- **Gieren et al. 2013**, *ApJ* 773, 69 (DOI: 10.1088/0004-637X/773/1/69) —
+  M33 Cepheid distance (µ = 24.62 ± 0.07, 840 ± 27 kpc).
+- **Corbelli et al. 2014**, *A&A* 572, A23 (DOI: 10.1051/0004-6361/201424033) —
+  M33 disc orientation (tilted-ring fit) and 1.8 kpc scale length.
 - **McConnachie 2012**, *AJ* 144, 4
   (DOI: 10.1088/0004-6256/144/1/4) — Local Group structural review
   used for the M 32 + NGC 205 override entries.

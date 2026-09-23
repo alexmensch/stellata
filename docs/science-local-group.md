@@ -14,7 +14,7 @@ IC 10, IC 1613, Leo A, WLM, Sextans A/B, …). Geometry is representational
 (stylised LineLoop ellipsoids and discs), but every position, distance,
 and structural parameter comes from peer-reviewed catalogues:
 
-**Primary catalogue**: Pace et al. 2024, *Local Volume Database*, Open
+**Primary catalogue**: Pace et al. 2025, *Local Volume Database*, Open
 Journal of Astrophysics, arXiv:2411.07424 (CC0). A frozen snapshot of
 the `dwarf_all` table lives at `data/local-group/lvdb-snapshot.csv` —
 909 rows covering the full Local Volume. The build pipeline
@@ -54,8 +54,9 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   ±0.1 mag uncertainty). Resulting semi-axes 3.73 / 4.96 / 6.0 kpc.
 - **Sagittarius dSph (26.3 kpc)**: 3D axis allocation — LVDB's
   projected ellipticity captures the sky-plane shape but not the
-  line-of-sight extent (Ibata et al. 1995, *AJ* 110, 632,
-  DOI 10.1086/192237).
+  line-of-sight extent. Ibata et al. 1997, *AJ* 113, 634 (DOI
+  10.1086/118283) measure a red-clump line-of-sight depth of 1.2 kpc
+  and conclude Sgr is a prolate spheroid with axis ratios 3:1:1.
 - **M 32 (~773 kpc)**: optical-extent ellipsoid 1.6 / 1.2 / 1.2 kpc
   at PA 159°. LVDB's half-light radius of 105 pc renders sub-pixel
   at LG distances; the override uses the broader optical/D₂₅ extent
@@ -71,9 +72,11 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   (not in LVDB's `dwarf_all` table; the override carries RA, Dec,
   distance directly).
 - **M33 / Triangulum (840 kpc)**: inclined disc at i = 54°, line of
-  nodes PA = 22°, 8.5 kpc disc radius × 400 pc thickness — distance
-  from the Cepheid measurement of Bonanos et al. 2006, *ApJ* 652, 313
-  (DOI 10.1086/508140). Standalone row.
+  nodes PA = 22°, 8.5 kpc disc radius × 400 pc thickness — disc
+  orientation from the tilted-ring fit of Corbelli et al. 2014, *A&A*
+  572, A23 (DOI 10.1051/0004-6361/201424033); distance from the near-infrared
+  Cepheid measurement of Gieren et al. 2013, *ApJ* 773, 69
+  (DOI 10.1088/0004-637X/773/1/69; µ = 24.62 ± 0.07). Standalone row.
 
 Per the build's data-freshness policy ([Frozen external data](/data/README.md#frozen-external-data)),
 refreshing the LVDB snapshot is an explicit
