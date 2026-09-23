@@ -63,8 +63,8 @@ Schema.org JSON-LD graph. **The `Person` and `WebApplication` nodes are
 shared with the homepage** — same `@id`s, same `description` string — so a
 crawler resolves one application described twice rather than two
 applications. Editing either node here means editing it in
-`src/site/index.html` in the same change; `src/site/README.md` § The
-homepage's claims carries the rule.
+`src/site/index.html` in the same change; `src/site/README.md` § Numbers in
+copy carries the rule.
 
 The `@id`s keep the bare-root form (`https://stellata.xyz/#webapp`). An
 `@id` is an identifier, not an address — it does not have to equal the

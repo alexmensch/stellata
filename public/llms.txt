@@ -36,12 +36,12 @@ Every object is placed from a published observational catalogue or direct measur
 
 - [Washington Double Star Catalog](http://www.astro.gsu.edu/wds/): USNO — resolved pair geometry.
 - [Sixth Orbit Catalog (ORB6)](http://www.astro.gsu.edu/wds/orb6.html): USNO — computed visual orbits.
-- [Multiple Star Catalog](https://doi.org/10.3847/1538-4365/aaa7d9): Tokovinin 2018 (Pulkovo) — hierarchical subsystem orbits.
+- [Multiple Star Catalog](https://doi.org/10.3847/1538-4365/aaa1a5): Tokovinin 2018 (Pulkovo) — hierarchical subsystem orbits.
 - [Hipparcos CCDM](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239): ESA — HIP double-star cross-match (Dommanget & Nys 1994 component register).
 
 ### Interstellar medium
 
-- [Edenhofer et al. 2024](https://doi.org/10.5281/zenodo.8187943): 3D dust extinction map of the local Milky Way.
+- [Edenhofer et al. 2024](https://doi.org/10.1051/0004-6361/202347628): 3D dust extinction map of the local Milky Way.
 - [Zucker et al. 2020 & 2021](https://doi.org/10.3847/1538-4357/ac1f96): molecular-cloud distances, 3D bounding boxes, and density profiles.
 
 ### Planets & moons
@@ -50,17 +50,17 @@ Every object is placed from a published observational catalogue or direct measur
 - [JPL Solar System Dynamics](https://ssd.jpl.nasa.gov/sats/elem/): mean orbital elements for the 18 major moons.
 - [NASA planetary fact sheets](https://nssdc.gsfc.nasa.gov/planetary/factsheet/): radii and mean elements; Pluto from New Horizons 2015.
 - [IAU WGCCRE (Archinal et al. 2018)](https://doi.org/10.1007/s10569-017-9805-5): planet and moon axial tilt and rotation.
-- [Mallama, Krobusek & Pavlov 2018](https://doi.org/10.1016/j.icarus.2016.09.023): V-band albedos and phase curves.
+- [Mallama, Krobusek & Pavlov 2017](https://doi.org/10.1016/j.icarus.2016.09.023): V-band albedos and phase curves.
 
 ### Heliopause boundary
 
 - [Voyager 1 & 2](https://voyager.jpl.nasa.gov/): boundary crossings (2012, 2018), plus IBEX / Cassini ENA heliotail estimates.
-- [Frisch & Slavin 2013](https://doi.org/10.1146/annurev-astro-082312-140843): solar apex direction through the local ISM.
+- [McComas et al. 2015](https://doi.org/10.1088/0067-0049/220/2/22): IBEX interstellar inflow — the heliosphere's nose direction.
 
 ### Nearby galaxies
 
 - [McConnachie 2012](https://doi.org/10.1088/0004-6256/144/1/4): Local Group positions, distances, and luminosities.
-- Local Volume Database (Pace 2024): dwarf-galaxy parameters.
+- Local Volume Database (Pace 2025): dwarf-galaxy parameters.
 
 ## License
 

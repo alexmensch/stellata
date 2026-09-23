@@ -217,11 +217,11 @@
                 "identifier": "https://doi.org/10.1086/167900"
               },
               {
-                "@type": "Dataset",
+                "@type": "ScholarlyArticle",
                 "name": "A parsec-scale Galactic 3D dust map out to 1.25 kpc from the Sun",
                 "author": "Edenhofer et al.",
                 "datePublished": "2024",
-                "identifier": "https://doi.org/10.5281/zenodo.8187943"
+                "identifier": "https://doi.org/10.1051/0004-6361/202347628"
               },
               {
                 "@type": "ScholarlyArticle",
@@ -255,7 +255,7 @@
                 "@type": "Dataset",
                 "name": "The Local Volume Database",
                 "author": "Pace",
-                "datePublished": "2024",
+                "datePublished": "2025",
                 "identifier": "https://doi.org/10.33232/001c.144859"
               },
               {
@@ -794,8 +794,9 @@
           <p class="measure">
             %VITE_SOURCE_COUNT% catalogues and datasets are credited inside
             the application, grouped by what they place. Behind them, the
-            modelling record cites %VITE_REFERENCE_COUNT% published papers
-            with their DOIs — every formula, calibration and deliberate
+            modelling record cites at least
+            %VITE_REFERENCE_COUNT% published papers — every formula,
+            calibration and deliberate
             simplification written down and attributed, including the ones
             that make the model less pretty.
           </p>
@@ -852,7 +853,7 @@
                   <td>
                     JPL Solar System Dynamics elements · NASA planetary
                     fact sheets · IAU WGCCRE rotation and pole ·
-                    Mallama 2018 albedos and phase curves
+                    Mallama 2017 albedos and phase curves
                   </td>
                 </tr>
                 <tr>
@@ -860,15 +861,15 @@
                   <td>2</td>
                   <td>
                     Voyager 1 &amp; 2 boundary crossings, IBEX and Cassini
-                    heliotail estimates · Frisch &amp; Slavin 2013 solar
-                    apex
+                    heliotail estimates · McComas 2015 IBEX interstellar
+                    inflow direction
                   </td>
                 </tr>
                 <tr>
                   <td>Nearby galaxies</td>
                   <td>2</td>
                   <td>
-                    McConnachie 2012 · Pace 2024 Local Volume Database,
+                    McConnachie 2012 · Pace 2025 Local Volume Database,
                     with structural detail for the Magellanic Clouds, M31,
                     M33 and Sagittarius from the primary literature
                   </td>
@@ -879,15 +880,15 @@
 
           <ul class="[ spec-list ] [ measure ]">
             <li>
-              <b>The limitations are published too.</b> Roughly 4,300 stars
-              pulse, because those are the ones that cross-match to a
-              catalogued period; the rest render steady. Emission and
+              <b>The limitations are published too.</b> Roughly 2,800 stars
+              pulse, because those are the pulsating variables that
+              cross-match to a catalogued period; the rest render steady. Emission and
               reflection nebulae are not modelled. The list is maintained in
               the repository next to the feature list, not buried.
             </li>
             <li>
-              <b>It is citable.</b> Every release is archived on Zenodo with
-              its own DOI, and the repository carries a
+              <b>It is citable.</b> Every release since v3.44.2 is archived
+              on Zenodo with its own DOI, and the repository carries a
               <code>CITATION.cff</code> so a reference manager can read it.
               The concept DOI
               <a href="https://doi.org/10.5281/zenodo.22392528">10.5281/zenodo.22392528</a>
