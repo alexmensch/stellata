@@ -283,7 +283,9 @@ of the viewport. Three mechanisms replace them.
 row-reverse` on even rows puts the media right when there is room, and a
 reversed row that wraps still stacks in DOM order — so the media never
 lands *under* its own caption on a phone. That property is why the
-alternation needs no query.
+alternation needs no query. It counts sights only (`:nth-child(even of
+.sight)`), so a claim or plate placed between two sights leaves the sides
+alternating.
 
 ## The homepage's shape
 
@@ -308,16 +310,15 @@ In order down the page, and the order is the argument:
    moment it reaches far enough to sit behind the heading** — which is the
    line to hold, not the number.
 2. **Readout strip** — five figures, three of them substitutions.
-3. **What it is** — three claims, one each: a serious instrument for people
-   who already know the sky · every object from a published catalogue, and
-   the page says which · what the eye would see from any point in the
-   model, no false colour anywhere. Rewriting the copy is expected;
-   dropping one of the three is not.
-4. **Where to go first** — the sights, § below. The section the page is
-   for.
-5. **The record** — the citation table and the four provenance claims.
+3. **Start exploring** — the sights, § below. The section the page is
+   for. Three `.claim` articles sit among them, one claim each: a serious
+   instrument for people who already know the sky · every object from a
+   published catalogue, and the page says which · what the eye would see
+   from any point in the model, no false colour anywhere. Rewriting or
+   moving the copy is expected; dropping one of the three is not.
+4. **The record** — the citation table and the four provenance claims.
    Late on purpose: it is the proof, and proof follows the case.
-6. **Before you click** — WebGPU and desktop, two columns, short.
+5. **Before you click** — WebGPU and desktop, two columns, short.
 
 **No section is numbered.** A landing page that numbers its sections reads
 as a specification; the eyebrow label above each `h2` carries the same
@@ -354,7 +355,7 @@ bare-root form, because an `@id` is an identifier rather than an address.
 
 ## Sights — the media, and the link it carries
 
-Each sight in § Where to go first is one `.sight`: a picture (or a short
+Each sight in § Start exploring is one `.sight`: a picture (or a short
 silent loop) beside its copy, **where the picture is itself the link into
 the model at that view.** Both halves come out of one act at the machine —
 take the capture, then copy the address bar — which is what makes the

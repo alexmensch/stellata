@@ -425,16 +425,9 @@ video {
 
 /* ── Block: claim ──────────────────────────────────────────────────── */
 
-.claims {
-  --flow-space: var(--space-l);
-}
 .claim {
   padding-block-start: var(--space-m);
   border-block-start: var(--rule);
-}
-.claim:first-child {
-  padding-block-start: 0;
-  border-block-start: none;
 }
 .claim h3 {
   max-inline-size: var(--measure-compact);
@@ -460,7 +453,7 @@ video {
 
   align-items: center;
 }
-.sight:nth-child(even) {
+.sight:nth-child(even of .sight) {
   flex-direction: row-reverse;
 }
 .sight-copy {

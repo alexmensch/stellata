@@ -52,7 +52,7 @@ describe('the rendition opens the way an agent client expects', () => {
   // document has two roots and an agent reads two documents.
   it('shifts every body heading down a level', () => {
     expect(home()).toContain('## A model of the universe anchored in science');
-    expect(home()).toContain('### Three things this is.');
+    expect(home()).toContain('### Witness the scale of the universe in motion');
   });
 });
 
