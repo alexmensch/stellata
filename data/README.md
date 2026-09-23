@@ -35,6 +35,7 @@ this file carries only the cross-folder policies.
 | [`ephemerides/`](ephemerides/README.md) | JPL Horizons osculating-element tables for the nine planets across 1900–2100. |
 | [`probes/`](probes/README.md) | JPL Horizons heliocentric state vectors for the five Sun-escape deep-space probes. |
 | [`textures/`](textures/README.md) | Planet surface/cloud equirect maps + Saturn-ring radial profile (frozen sources + built artifacts). |
+| [`papers/`](papers/README.md) | Citation audit — every paper the tree cites, its identifiers, and the checksum of the private PDF copy it is verified against (the PDFs themselves are never committed). |
 | [`sid/`](sid/README.md) | Stellata ID registry — append-only SID ledger + stored same-as edges (NOT external data; see docs/sid.md). |
 
 ## Frozen external data
