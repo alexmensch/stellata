@@ -193,6 +193,61 @@ the orbit lock on the share URL — state no controller owns,
 Each reads through its field every time, so installing after construction
 works exactly as a lazily-attached layer does, and `dispose` clears both.
 
+## Decomposing the shell
+
+`stellata.ts` is headed for wiring only — construct, connect, dispose
+(epic `stellata-hhaw.32`). Its fields fall into clusters: fields read and
+written together, plus the methods touching them. Each row leaves for the
+named folder with its tests, and **the PR that moves a cluster deletes its
+row**. The order is the bead graph's (`bd show stellata-hhaw.32`), not this
+table's.
+
+| Cluster | Fields | Methods and sites | Target | Bead |
+| --- | --- | --- | --- | --- |
+| Clock cadence | `cadence*`, `lastRenderedSimS`, `pulsationCadenceBudgetS`, `_rideAccum` | `refreshCadence`, `cadenceDebugState`, `visibleCameraTurnRad`, the dispose resets | `render-gate/cadence/` | `hhaw.32.3` |
+| Focal rides | `_focalPert`, `_lastAppliedPert`, `_ride*`, `_movingRide*`, `_epochFollowDelta` | `applyFocalFrameRide`, `applyMovingFocalRide`, `applyRideDelta`, `maybeReAdvanceEpoch`'s translate, both reseeds | `camera/focus/` | `hhaw.32.2` |
+| Star size + pick | `pickSizeScratch`, `passDebugScratch` | `renderedSizePxFor`, `renderedSizeComponentsFor`, `chartDiscPxFor`, `pickPrefilterSizePxFor`, `resolveStarPick`, `getFocusedDiscRadiusPx`, `collapsedClusterLead`, the `focusables` / `pinnable` hand lists | the kind table (`kinds/`, `camera/focus/`) | `hhaw.32.4` |
+| Binaries | `binaryOrbitField`, `eclipsePhotometryField`, `binariesData`, `_compositeSuppress`, `_eclipseDim` | `attachBinaries`, `getBinaries`, `updateBinaryOrbits`, `eclipseDebugRows`, `eclipseActiveDimCount`, `isCompositeSuppressed`, four rate closures | `binaries/` | `hhaw.32.5` |
+| Dust + extinction | `dust`, `extinctionPrepass`, `_extinctionView`, `extinctionRecomputeForced` | `attachDust`, `verifyDust`, `verifyExtinction`, the extinction knobs, `notifyPickImminent`, `extinctionAvMagFor`, the prepass block in `animate` | `star-pipeline/extinction/` | `hhaw.32.6` |
+| Dust particles (shelved) | `dustParticles`, `dustParticleSource`, `lastParticleStrength` | `attachDustParticles`, `setDustParticleSource`, `setParticleStrength` | `dust/`, or removed — a product call | `hhaw.32.7` |
+| Constellations | `constellationFigureLayer`, `constellationBoundaryLayer`, `constellationLabels`, `constellationNamer`, `conFigureSig` | `refreshConstellationFigure`, `attachConstellationBoundaries`, `constellationOf`, `aimAtConstellation`'s centroid, two layer entries | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
+| Solar-system wiring | `orbitRingsLayer`, `solarCluster`, `tmpHostLocal` | `getFocusedPlanetLocalPositions`, `isOrbitRingVisible`, three layer entries, four planet rate closures | `solar-system/` | `hhaw.32.9` |
+| Galactic + HUD | `galacticDisc`, `coordSpheres`, `tmpBound` | `updateHud`, `coordSphereDrawn`, `coordSphereAvailable`, three layer entries | `galactic/`, `overlays/` | `hhaw.32.10` |
+| Declutter | `detailPermitted` | `detailPermits`, `buildSceneElementBinds`, `applyMilkywayEnabled`, `applyLgEmissionEnabled` | `scene/declutter/` | `hhaw.32.11` |
+| Observe look pin | `observePinQuat`, `observeTmpFwd` | `observeUpdateTarget` and its two resets | `camera/observe/` | `hhaw.32.12` |
+| Star render machinery | `starFrame`, `starAttrs`, `webgpuStarLayer`, `_suppressPulsation`, `absorbedSuppressCount`, `offCatalogRecords`, `coreMaskEnabled` | `absorbCatalogRecords`, the core-mask entry, `starPassRoutingFor`, the star-frame reads | `star-pipeline/` | `hhaw.32.13` |
+| Per-frame exposure | `lastInvalidatedDm`, `frameExposureRecord`, `drawingBufferSize` | `frameExposure`, `measureAdaptationStatistic`, the adaptation block in `animate` | `hdr/exposure/` | `hhaw.32.14` |
+| Frame loop — last | `frameCtx`, `glslResidentsChecked`, `_realtimeFramesNeeded`, `_tmpAnimateLocal` | `animate`, `refreshFrameCtx` | `scene/frame-loop/` | `hhaw.32.15` |
+
+**Stays on the shell**, as composition (§ Public surface): the controller
+namespaces and their construction, `bus` / `on`, the layer registration
+order, the recentre fan-out and `buildFocalAnchorPolicy`, the clock (`getT`
+/ `setT` / `notifyClockJumped`), the aim gates, `setCameraFov` /
+`syncPixelSolidAngle` / `angularToPx`, `setMonochrome`,
+`setFocalBodyHidden`, the install seams, `onResize` and `dispose`.
+
+### Late-attached slots
+
+A cluster holding a value that lands after construction cannot move without
+choosing how "not yet" is represented — the question `stellata-cns.16`
+answers. **So cns.16's design lands before the binaries, dust + extinction
+and constellation extractions**, and each of those implements its contract
+once rather than moving a `T | null` twice. The focal rides read the binaries
+slot, so they follow both. Clusters holding no late slot do not wait.
+
+| Slot | Lands | Not-ready answer today |
+| --- | --- | --- |
+| Binaries (both fields + table) | wave 2, after `kinds.star.ready` | `?.… ?? false` (the focus controller's perturbation read), `?? CADENCE_REPORT_STILL`, `?? []`, `?? 0`, the binary ride skipped |
+| Dust + extinction prepass | when the dust manifest resolves — no wave | `?.` no-op; `extinctionAvMagFor` 0 (deliberately pickable); `isExtinctionPrepassActive` false; survivor `inFrame` null |
+| Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
+| Dust-particle source | first opt-in | shelved |
+| Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
+
+Two catalogue-prefix reads also sit in the shell: the constellation figure
+and `aimAtConstellation`'s centroid read figure vertices from
+`localPositions` in wave 1. Records are V-ordered, so every vertex should be
+in chunk 0, but nothing checks it.
+
 ## Event bus on `Stellata`
 
 Subscribers register via `stellata.on(name, fn)` and receive a typed
