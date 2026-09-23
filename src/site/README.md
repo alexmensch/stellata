@@ -416,16 +416,13 @@ To land a real capture:
    across every frame rather than one), when to pad instead of crop, and
    when a capture has to be re-shot rather than rescued.
 4. Put the address bar's URL on **both** anchors in that row — the media
-   and the "Fly there" line.
+   and the `.sight-go` line.
 
-**The links in the file today are starting points, not captures.** Each is
-a focus-only share blob — one field, the object's SID — so it lands on that
-object at its park pose, which is where the shot should be taken from. Two
-rows differ: the solar system links to bare `/app` (Sol is the canonical
-default focus, so a default state has no blob at all), and chart mode
-carries a real saved view. The galactic-disc row has no link at all,
-because that view is a camera pose rather than a focused object and there
-is nothing honest to derive.
+A clip's row carries its `debug.capture()` call in an HTML comment beside
+the `<video>`, so a re-shoot replays the same take. Every row links a saved
+view except the Local Group, whose anchors are still the Large Magellanic
+Cloud's focus-only blob — the object at its park pose, not the capture's
+end pose.
 
 Deriving smaller responsive variants and a `srcset` is worth doing once the
 real images are in — a 2400 px JPEG is the largest thing on the page by an
