@@ -2,7 +2,7 @@
  * Fails when any file in the built dist/ exceeds the Cloudflare Workers per-asset limit.
  */
 
-import { readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 import { REPO_ROOT } from '../util/paths';
@@ -25,14 +25,12 @@ function walk(dir: string): AssetSize[] {
   });
 }
 
-let assets: AssetSize[];
-try {
-  assets = walk(DIST);
-} catch {
+if (!existsSync(DIST)) {
   console.error(`No ${DIST} to check. Run \`pnpm run build\` first.`);
   process.exit(1);
 }
 
+const assets = walk(DIST);
 const { largestFirst, oversize, nearLimit } = judgeAssetSizes(assets);
 const limit = formatMiB(WORKERS_MAX_ASSET_BYTES);
 
