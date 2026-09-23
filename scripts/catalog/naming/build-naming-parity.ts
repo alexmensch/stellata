@@ -5,7 +5,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../../util/paths';
-import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
+import {
+  DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
+} from '../catalog-lookup';
 import type { SearchEntry } from '../record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
 import { displayNamesFromSearchIndex } from './star-naming-pure';
@@ -23,10 +25,8 @@ import {
 
 const PARITY = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-parity.tsv');
 const DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
-const PUBLIC = resolve(REPO_ROOT, 'public');
-
-function readJson<T>(name: string): T {
-  return JSON.parse(readFileSync(resolve(PUBLIC, name), 'utf8')) as T;
+function readJson<T>(path: string): T {
+  return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
 
 /** FROZEN, and carried forward from the committed ledger.
@@ -50,9 +50,9 @@ function frozenOldLabels(): Map<string, string> {
 }
 
 function main(): void {
-  const raw = readJson<SearchEntry[]>('search-index.json');
-  const rowIndexMap = JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf8')) as RowIndexMap;
-  const constellations = readJson<{ code: string; name: string }[]>('constellations.json');
+  const raw = readJson<SearchEntry[]>(DEFAULT_SEARCH_INDEX);
+  const rowIndexMap = readJson<RowIndexMap>(DEFAULT_ROW_INDEX_MAP);
+  const constellations = readJson<{ code: string; name: string }[]>(DEFAULT_CONSTELLATIONS_JSON);
   const keys = ledgerKeys(rowIndexMap);
   const composed = displayNamesFromSearchIndex(raw, constellations);
   const labelByKey = new Map<string, string>();

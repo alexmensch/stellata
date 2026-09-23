@@ -15,17 +15,16 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 import { lfsContentReadable } from '../scripts/util/paths';
-import { DEFAULT_ROW_INDEX_MAP } from '../scripts/catalog/catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST, DEFAULT_ROW_INDEX_MAP } from '../scripts/catalog/catalog-lookup';
 
 const ROOT = resolve(__dirname, '..');
 const MULTIPLES_TSV = resolve(ROOT, 'data/binaries/multiples.tsv');
-const CATALOG_MANIFEST = resolve(ROOT, 'public/catalog-manifest.json');
 const BINARIES_BIN = resolve(ROOT, 'public/binaries.bin');
 
-const catalogBuilt = existsSync(CATALOG_MANIFEST);
+const catalogBuilt = existsSync(DEFAULT_CATALOG_MANIFEST);
 const skip = !catalogBuilt || !lfsContentReadable(MULTIPLES_TSV);
 
-describe.skipIf(skip)('built-artifact coherence (public/)', () => {
+describe.skipIf(skip)('built-artifact coherence (public/ + build/)', () => {
   it('binaries.bin exists whenever the catalog has been built', () => {
     expect(
       existsSync(BINARIES_BIN),
