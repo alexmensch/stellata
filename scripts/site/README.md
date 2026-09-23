@@ -38,7 +38,7 @@ application and the marketing page is good for.
   docs plus every `*.md` under `docs/ src/ scripts/ data/`. The pattern
   matches only the multi-author forms (`Høg et al. 2000`,
   `Bland-Hawthorn & Gerhard 2016`), so single-author citations
-  (Pace 2024, Tokovinin 2018, McConnachie 2012) are real references it
+  (Pace 2025, Tokovinin 2018, McConnachie 2012) are real references it
   cannot see. **The count is a floor on the record, never a measure of
   it** — which is the direction a public claim has to be wrong in. Widen
   the pattern and it starts matching ordinary prose ("Table 3 shows 2021"),
