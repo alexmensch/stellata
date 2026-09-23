@@ -13,7 +13,8 @@ also usable by hand (see `RELEASING.md` § Manual release).
   then tags and publishes with `gh`.
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
   ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
-  which splits a file list into oversize and near-limit (over
+  which ranks a file list largest first and splits out oversize and
+  near-limit (over
   `ASSET_WARN_FRACTION`, 80 %). The catalogue chunk plan's test imports
   the same ceiling.
 - `check-asset-sizes.ts` — `pnpm run check:asset-sizes`. Walks `dist/`,

@@ -2,7 +2,9 @@
  * Cloudflare Workers static-asset size budget: the per-file ceiling and the verdict over a built dist/.
  */
 
-export const WORKERS_MAX_ASSET_BYTES = 25 * 1024 * 1024;
+export const MiB = 1024 * 1024;
+
+export const WORKERS_MAX_ASSET_BYTES = 25 * MiB;
 
 export const ASSET_WARN_FRACTION = 0.8;
 
@@ -12,6 +14,7 @@ export interface AssetSize {
 }
 
 export interface AssetSizeVerdict {
+  largestFirst: AssetSize[];
   oversize: AssetSize[];
   nearLimit: AssetSize[];
 }
@@ -21,13 +24,14 @@ export function judgeAssetSizes(
   limitBytes: number = WORKERS_MAX_ASSET_BYTES,
   warnFraction: number = ASSET_WARN_FRACTION,
 ): AssetSizeVerdict {
-  const bySizeDesc = [...assets].sort((a, b) => b.bytes - a.bytes);
+  const largestFirst = [...assets].sort((a, b) => b.bytes - a.bytes);
   return {
-    oversize: bySizeDesc.filter((a) => a.bytes > limitBytes),
-    nearLimit: bySizeDesc.filter((a) => a.bytes <= limitBytes && a.bytes > limitBytes * warnFraction),
+    largestFirst,
+    oversize: largestFirst.filter((a) => a.bytes > limitBytes),
+    nearLimit: largestFirst.filter((a) => a.bytes <= limitBytes && a.bytes > limitBytes * warnFraction),
   };
 }
 
 export function formatMiB(bytes: number): string {
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+  return `${(bytes / MiB).toFixed(1)} MiB`;
 }

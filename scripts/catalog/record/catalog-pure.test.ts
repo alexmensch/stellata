@@ -1,5 +1,5 @@
 import { DIST_VIA_VALUES } from '../distance/parallax/parallax-cascade';
-import { WORKERS_MAX_ASSET_BYTES } from '../../release/asset-size-pure';
+import { MiB, WORKERS_MAX_ASSET_BYTES } from '../../release/asset-size-pure';
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -2026,7 +2026,6 @@ describe('catalog-pure / transport chunking', () => {
   it('no chunk ever exceeds the target, at any catalogue size', () => {
     // A plan that doubled past the target would break deploy rather than
     // fail a test, so the doubling is asserted clamped rather than trusted.
-    const MiB = 1024 * 1024;
     for (const totalMiB of [37, 94, 235, 4096]) {
       const plan = planCatalogChunks(totalMiB * MiB);
       expect(Math.max(...plan), `${totalMiB} MiB`).toBe(CATALOG_CHUNK_TARGET_BYTES);
@@ -2036,7 +2035,7 @@ describe('catalog-pure / transport chunking', () => {
 
   it('the first chunk is the first-paint payload, not the transport ceiling', () => {
     expect(CATALOG_FIRST_CHUNK_TARGET_BYTES).toBeLessThan(CATALOG_CHUNK_TARGET_BYTES);
-    expect(planCatalogChunks(100 * 1024 * 1024)[0]).toBe(CATALOG_FIRST_CHUNK_TARGET_BYTES);
+    expect(planCatalogChunks(100 * MiB)[0]).toBe(CATALOG_FIRST_CHUNK_TARGET_BYTES);
   });
 
   it('assembleCatalogChunks throws on chunk-count mismatch', () => {

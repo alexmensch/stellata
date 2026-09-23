@@ -2,12 +2,11 @@ import { describe, it, expect } from 'vitest';
 
 import {
   ASSET_WARN_FRACTION,
+  MiB,
   WORKERS_MAX_ASSET_BYTES,
   formatMiB,
   judgeAssetSizes,
 } from './asset-size-pure';
-
-const MiB = 1024 * 1024;
 
 describe('judgeAssetSizes', () => {
   it('pins the Workers ceiling at 25 MiB', () => {
@@ -42,12 +41,17 @@ describe('judgeAssetSizes', () => {
     expect(verdict.oversize).toEqual([]);
   });
 
-  it('orders each list largest first', () => {
+  it('orders every list largest first', () => {
     const verdict = judgeAssetSizes([
+      { path: 'small', bytes: MiB },
       { path: 'a', bytes: 26 * MiB },
+      { path: 'near-a', bytes: 21 * MiB },
       { path: 'b', bytes: 30 * MiB },
+      { path: 'near-b', bytes: 24 * MiB },
     ]);
+    expect(verdict.largestFirst.map((a) => a.path)).toEqual(['b', 'a', 'near-b', 'near-a', 'small']);
     expect(verdict.oversize.map((a) => a.path)).toEqual(['b', 'a']);
+    expect(verdict.nearLimit.map((a) => a.path)).toEqual(['near-b', 'near-a']);
   });
 });
 

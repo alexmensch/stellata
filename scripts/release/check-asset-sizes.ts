@@ -33,11 +33,11 @@ try {
   process.exit(1);
 }
 
-const { oversize, nearLimit } = judgeAssetSizes(assets);
+const { largestFirst, oversize, nearLimit } = judgeAssetSizes(assets);
 const limit = formatMiB(WORKERS_MAX_ASSET_BYTES);
 
 console.log(`${assets.length} assets in dist/; largest:`);
-for (const a of [...assets].sort((x, y) => y.bytes - x.bytes).slice(0, LARGEST_SHOWN)) {
+for (const a of largestFirst.slice(0, LARGEST_SHOWN)) {
   console.log(`  ${formatMiB(a.bytes).padStart(10)}  ${a.path}`);
 }
 
