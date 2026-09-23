@@ -138,8 +138,10 @@ jobs:
       - run: pnpm run build:local-group
       - uses: actions/upload-artifact@v7
         with:
-          name: public-artifacts
-          path: public/
+          name: catalog-artifacts
+          path: |
+            public/
+            build/
           retention-days: 1
 
   # Ledger ↔ artifact consistency, drop side (docs/sid.md § 4.5):
@@ -161,8 +163,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
-          name: public-artifacts
-          path: public/
+          name: catalog-artifacts
+          path: .
       - run: pnpm run sid:check
 
   # Tier-A validation against the built artifacts: the known-stars
@@ -186,8 +188,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
-          name: public-artifacts
-          path: public/
+          name: catalog-artifacts
+          path: .
       - run: pnpm run build:binaries-runtime
       - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
 
@@ -211,3 +213,24 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts scripts/catalog/classic-ids/parity-ledger.test.ts
+
+  # The exact build deploy.yml ships, checked against the Cloudflare Workers
+  # per-asset limit — wrangler otherwise only rejects it after merge.
+  deploy-asset-sizes:
+    name: Deploy asset sizes
+    runs-on: ubuntu-latest
+    needs: lfs-data
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/lfs-cache
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run build
+      - run: pnpm run check:asset-sizes

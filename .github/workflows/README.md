@@ -80,13 +80,17 @@ fan-out of jobs beyond the bare checks:
   matches the committed artifact; resolve Stage 2 against the curated
   ground-truth corpus.
 - `build-catalog` — `build:catalog` + `build:clouds` +
-  `build:local-group`, uploading `public/` as an artifact the jobs
-  below consume.
+  `build:local-group`, uploading `public/` + `build/` as the
+  `catalog-artifacts` artifact the jobs below consume.
 - `sid-consistency` / `tier-a-corpus` — SID ledger↔artifact consistency
   and the Tier-A star corpus + render-geometry regression against the
   built artifacts.
 - `sid-ledger-guard` — append-only ledger guard, DR-reconciliation
   classifier, swap parity ledger.
+- `deploy-asset-sizes` — the full `pnpm run build` deploy runs, then
+  `pnpm run check:asset-sizes` over `dist/`: fails on any file past
+  Cloudflare Workers' 25 MiB per-asset limit, warns past 80 % of it.
+  `deploy.yml` runs the same check before `wrangler deploy`.
 
 Both LFS jobs run an explicit file list, so a `describe.skipIf` suite no
 list names skips everywhere and reports green. Adding one means adding it

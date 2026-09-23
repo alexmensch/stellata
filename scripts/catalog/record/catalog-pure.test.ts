@@ -1,4 +1,5 @@
 import { DIST_VIA_VALUES } from '../distance/parallax/parallax-cascade';
+import { WORKERS_MAX_ASSET_BYTES } from '../../release/asset-size-pure';
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -2018,9 +2019,12 @@ describe('catalog-pure / transport chunking', () => {
     );
   });
 
+  it('the chunk target sits under the Workers per-asset ceiling', () => {
+    expect(CATALOG_CHUNK_TARGET_BYTES).toBeLessThan(WORKERS_MAX_ASSET_BYTES);
+  });
+
   it('no chunk ever exceeds the target, at any catalogue size', () => {
-    // The ceiling is the Cloudflare Workers 25 MiB per-asset limit with
-    // headroom; a plan that doubled past it would break deploy rather than
+    // A plan that doubled past the target would break deploy rather than
     // fail a test, so the doubling is asserted clamped rather than trusted.
     const MiB = 1024 * 1024;
     for (const totalMiB of [37, 94, 235, 4096]) {

@@ -249,7 +249,8 @@ block in `scripts/catalog/record/catalog-pure.test.ts`.
 
 ### On-disk transport chunking
 
-Cloudflare Workers rejects any single static asset > 25 MiB, and the
+Cloudflare Workers rejects any single static asset > 25 MiB
+(`WORKERS_MAX_ASSET_BYTES`, `../../README.md` § What ships), and the
 assembled binary is well past that, so it is **not** written as one file.
 The build slices the assembled buffer into sequential byte-range chunks
 (`public/catalog.bin.0`, `.1`, …), plus `public/catalog-manifest.json`
