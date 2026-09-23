@@ -159,8 +159,8 @@ site-css-rules.test.ts   The public stylesheet answers to its container and
                          the one that overflows at the 32px root WCAG
                          1.4.4's 200% text resize implies. Scans the file
                          with comments stripped, so prose naming a property
-                         cannot register as CSS. `src/site/README.md`
-                         § The stylesheet, § Responsiveness has no
+                         cannot register as CSS. `src/site/styles/README.md`
+                         § House style, § Responsiveness has no
                          breakpoints.
 site-dev-routing.test.ts The dev server's routing table held against the
                          deploy's: both legacy share transports 301,

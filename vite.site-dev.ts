@@ -35,19 +35,20 @@ export function devRoute(pathname: string, search: string): DevRoute {
 
 /** A third relative reference needs the same treatment — `src/client/app/README.md`. */
 const SIBLING_OF_ROOT = /(src|href)="\.\.\//g;
+const SIBLING_OF_PAGE = /(src|href)="\.\//g;
 
 /** Requires `appType: 'custom'`. `src/site/README.md` § Reading it in dev. */
 export function documentRoutingInDev(repoRoot: string): Plugin {
   const appDoc = resolve(repoRoot, 'src/client/app/index.html');
   const siteDir = resolve(repoRoot, 'src/site');
   // Outside this server's root, so the filesystem route is the only way in.
-  const stylesheet = `/@fs${resolve(siteDir, 'site.css')}`;
+  const siteSibling = `$1="/@fs${siteDir}/`;
 
   // `base` is what Vite resolves a document's own relative imports against.
   const documents = {
-    app: { file: appDoc, base: '/app/index.html', status: 200 },
-    home: { file: resolve(siteDir, 'index.html'), base: '/index.html', status: 200 },
-    notFound: { file: resolve(siteDir, '404.html'), base: '/404.html', status: 404 },
+    app: { file: appDoc, base: '/app/index.html', status: 200, site: false },
+    home: { file: resolve(siteDir, 'index.html'), base: '/index.html', status: 200, site: true },
+    notFound: { file: resolve(siteDir, '404.html'), base: '/404.html', status: 404, site: true },
   } as const;
 
   return {
@@ -85,7 +86,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             return;
           }
 
-          const { file, base, status } = documents[route.doc];
+          const { file, base, status, site } = documents[route.doc];
           const rendition = markdownRendition(pathname);
 
           try {
@@ -102,7 +103,10 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
 
             const html = await server.transformIndexHtml(
               base,
-              raw.replaceAll('./site.css', stylesheet).replace(SIBLING_OF_ROOT, '$1="/'),
+              (site ? raw.replace(SIBLING_OF_PAGE, siteSibling) : raw).replace(
+                SIBLING_OF_ROOT,
+                '$1="/',
+              ),
               req.originalUrl,
             );
             res.statusCode = status;

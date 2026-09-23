@@ -129,6 +129,14 @@ describe('the middleware answers whatever the client accepts', () => {
     expect(answer.body).toContain('<h1 id="hero-heading">');
   });
 
+  it('routes every file beside a site page through the filesystem', async () => {
+    const { body } = await fetchPath('/', 'text/html');
+    const siteDir = resolve(ROOT, 'src/site');
+    expect(body).toContain(`href="/@fs${siteDir}/styles/site.css"`);
+    expect(body).toContain(`src="/@fs${siteDir}/replay.ts"`);
+    expect(body).not.toMatch(/(src|href)="\.\//);
+  });
+
   it('serves the application document to a wildcard Accept too', async () => {
     const answer = await fetchPath('/app', '*/*');
     expect(answer.status).toBe(200);
@@ -188,7 +196,7 @@ describe('an edit to a page reloads the browser', () => {
 
   it('leaves the stylesheet to Vite’s own css update', () => {
     const server = start();
-    server.change(resolve(ROOT, 'src/site/site.css'));
+    server.change(resolve(ROOT, 'src/site/styles/site.css'));
     expect(server.sent).toEqual([]);
   });
 
