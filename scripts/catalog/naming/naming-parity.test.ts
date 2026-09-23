@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../../util/paths';
+import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
 import type { SearchEntry } from '../record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
 import { displayNamesFromSearchIndex } from './star-naming-pure';
@@ -22,7 +23,6 @@ import {
 
 const HERE = resolve(REPO_ROOT, 'scripts/catalog/naming');
 const SEARCH_INDEX = resolve(REPO_ROOT, 'public/search-index.json');
-const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 const CONSTELLATIONS = resolve(REPO_ROOT, 'public/constellations.json');
 const WGSN_NAMES = resolve(REPO_ROOT, 'data/iau-wgsn/wgsn_names.tsv');
 const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
@@ -33,7 +33,7 @@ const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
  *  rather than the star (docs/star-naming.md § 2). RATCHET DOWN — it last
  *  moved when the membership manifest admitted a record for one of them. */
 const PUBLISHED_NAMES_UNREACHED = 54;
-const FIXTURES_READY = existsSync(SEARCH_INDEX) && existsSync(ROW_INDEX_MAP)
+const FIXTURES_READY = existsSync(SEARCH_INDEX) && existsSync(DEFAULT_ROW_INDEX_MAP)
   && existsSync(CONSTELLATIONS);
 
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
@@ -53,7 +53,7 @@ interface Fixtures {
 function loadFixtures(): Fixtures {
   const raw = readJson<SearchEntry[]>(SEARCH_INDEX);
   const constellations = readJson<{ code: string; name: string }[]>(CONSTELLATIONS);
-  const keys = ledgerKeys(readJson<RowIndexMap>(ROW_INDEX_MAP));
+  const keys = ledgerKeys(readJson<RowIndexMap>(DEFAULT_ROW_INDEX_MAP));
   const composed = displayNamesFromSearchIndex(raw, constellations);
   const labelByKey = new Map<string, string>();
   const entryByKey = new Map<string, SearchEntry>();

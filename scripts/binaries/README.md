@@ -121,7 +121,7 @@ tables), `data/binaries/` (the `multiples.tsv` output plus the curated
 ## Pipeline at a glance
 
 Three build steps in order, with `data/binaries/multiples.tsv` and
-`public/catalog-row-index-map.json` as hand-offs:
+`build/catalog-row-index-map.json` as hand-offs:
 
 1. **Binary-system pipeline** (`build-binaries.py`). Reads WDS + ORB6 +
    AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) +
@@ -316,7 +316,7 @@ system* inherit their bound parent token (20312's Aa/Ab follow A, not
 sibling BC). Verdicts are counted (Stage-7 `binding_conflicts_*` /
 `arbitrated_geometric` / `arbitrated_unbound_ambiguous` /
 `arbitration_skipped_no_reference` / `arbitration_skipped_photocentre_blend`)
-and written to `public/binding-integrity-verdicts.tsv` (gitignored
+and written to `build/binding-integrity-verdicts.tsv` (gitignored
 audit surface). This is what re-homes the ~7 duplicate-relation
 mis-associations the writer previously collapsed; a source cannot be
 two stars at measured different separations.

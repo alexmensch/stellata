@@ -20,7 +20,7 @@ scripts/catalog/companions/record-index/
 ## The sidecar and why resolution is duplicated from Python
 
 `buildCatalogRowIndexMap` runs after the sort and emits
-`public/catalog-row-index-map.json` with three sections — `byGaia`,
+`build/catalog-row-index-map.json` with three sections — `byGaia`,
 `byHip`, `bySynth`. That priority order is how the runtime binaries layer
 turns a `multiples.tsv` row back into a record, and
 `resolvePairComponents` is the **TypeScript twin of

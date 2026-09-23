@@ -129,6 +129,7 @@ import {
 } from './parse/read-stars-inputs';
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
+import { DEFAULT_ROW_INDEX_MAP } from './catalog-lookup';
 import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
 import {
   resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
@@ -159,7 +160,6 @@ const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
 const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
 const OUT_BOUNDARIES = resolve(ROOT, 'public/constellation-boundaries.json');
-const OUT_ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
   __dirname,
@@ -170,7 +170,7 @@ function isUpToDate(): boolean {
   if (!existsSync(OUT_MANIFEST) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
   if (!existsSync(OUT_BOUNDARIES)) return false;
   if (!existsSync(resolve(PUBLIC_DIR, catalogChunkFilename(0)))) return false;
-  if (!existsSync(OUT_ROW_INDEX_MAP)) return false;
+  if (!existsSync(DEFAULT_ROW_INDEX_MAP)) return false;
   const binMtime = statSync(OUT_MANIFEST).mtimeMs;
   // This file is an orchestration shell — the build logic lives across the
   // scripts/catalog subfolders plus scripts/util and scripts/sid, so any of
@@ -1257,9 +1257,10 @@ async function main() {
   // source_id (decimal string, since source_ids exceed 2^53), HIP, and
   // synthetic identifier (`synth-<wds_id>-<comp>` for promoted companions
   // that carry no real ID — Algol Ab). Built once above, after the sort.
-  await writeFile(OUT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
+  await mkdir(dirname(DEFAULT_ROW_INDEX_MAP), { recursive: true });
+  await writeFile(DEFAULT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
   console.log(
-    `Wrote ${OUT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
+    `Wrote ${DEFAULT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
       `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
   );

@@ -7,7 +7,7 @@ cross-script policy and pointers.
 
 - `catalog/` — single-star catalog build → `public/catalog.bin.<i>`
   transport chunks + `public/catalog-manifest.json` (+
-  `public/catalog-row-index-map.json`; companions promoted from
+  `build/catalog-row-index-map.json`; companions promoted from
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
   byte-range split of the v9 binary that keeps every deployed asset
@@ -56,6 +56,21 @@ cross-script policy and pointers.
   `public/local-bubble.bin` (shell mesh), cross-checked against the
   Edenhofer dust grid; `cloud-surfaces/` traces per-cloud isosurface
   meshes from the Edenhofer posterior (offline, LFS-committed).
+
+## What ships
+
+Vite copies every file in `public/` into `dist/`, and `wrangler deploy`
+uploads all of `dist/`. So `public/` holds only what the client fetches.
+A hand-off between build stages that no client code reads —
+`catalog-row-index-map.json`, `binding-integrity-verdicts.tsv` — goes in
+the gitignored `build/` instead, where it costs no deploy bytes and
+counts against no asset limit.
+
+Cloudflare Workers rejects any single asset over 25 MiB
+(`WORKERS_MAX_ASSET_BYTES`, `release/asset-size-pure.ts`).
+`pnpm run check:asset-sizes` walks a built `dist/` against it; CI's
+`deploy-asset-sizes` job runs it on every PR, so an oversize file fails
+the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency
 

@@ -15,11 +15,11 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 import { lfsContentReadable } from '../scripts/util/paths';
+import { DEFAULT_ROW_INDEX_MAP } from '../scripts/catalog/catalog-lookup';
 
 const ROOT = resolve(__dirname, '..');
 const MULTIPLES_TSV = resolve(ROOT, 'data/binaries/multiples.tsv');
 const CATALOG_MANIFEST = resolve(ROOT, 'public/catalog-manifest.json');
-const ROW_INDEX_MAP = resolve(ROOT, 'public/catalog-row-index-map.json');
 const BINARIES_BIN = resolve(ROOT, 'public/binaries.bin');
 
 const catalogBuilt = existsSync(CATALOG_MANIFEST);
@@ -39,7 +39,7 @@ describe.skipIf(skip)('built-artifact coherence (public/)', () => {
     'binaries.bin is at least as fresh as its inputs',
     () => {
       const binMtime = statSync(BINARIES_BIN).mtimeMs;
-      for (const input of [MULTIPLES_TSV, ROW_INDEX_MAP]) {
+      for (const input of [MULTIPLES_TSV, DEFAULT_ROW_INDEX_MAP]) {
         if (!existsSync(input)) continue;
         expect(
           binMtime >= statSync(input).mtimeMs,

@@ -48,12 +48,12 @@ import { BinaryOrbitField } from '../../../src/client/binaries/binary-orbit-fiel
 import { AU_PC, AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
 import { REPO_ROOT } from '../../util/paths';
+import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');
 const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
-const ROW_INDEX_MAP = resolve(REPO_ROOT, 'public/catalog-row-index-map.json');
 const NAMING_DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
@@ -61,7 +61,7 @@ const NAMING_DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-dupl
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
   existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV)
-  && existsSync(BINARIES_BIN) && existsSync(ROW_INDEX_MAP);
+  && existsSync(BINARIES_BIN) && existsSync(DEFAULT_ROW_INDEX_MAP);
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
@@ -841,7 +841,7 @@ function buildWdsRootToIndices(): Map<string, number[]> {
     if (rec === null && row.hip !== null && row.hip > 0) rec = lookupByHip(catalog, row.hip);
     if (rec !== null) bindRoot(root, rec.i);
   }
-  const bySynth = (JSON.parse(readFileSync(ROW_INDEX_MAP, 'utf-8')) as
+  const bySynth = (JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf-8')) as
     { bySynth: Record<string, number> }).bySynth;
   for (const [key, idx] of Object.entries(bySynth)) {
     const body = key.slice('synth-'.length);

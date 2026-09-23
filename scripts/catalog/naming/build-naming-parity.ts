@@ -5,6 +5,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../../util/paths';
+import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
 import type { SearchEntry } from '../record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
 import { displayNamesFromSearchIndex } from './star-naming-pure';
@@ -50,7 +51,7 @@ function frozenOldLabels(): Map<string, string> {
 
 function main(): void {
   const raw = readJson<SearchEntry[]>('search-index.json');
-  const rowIndexMap = readJson<RowIndexMap>('catalog-row-index-map.json');
+  const rowIndexMap = JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf8')) as RowIndexMap;
   const constellations = readJson<{ code: string; name: string }[]>('constellations.json');
   const keys = ledgerKeys(rowIndexMap);
   const composed = displayNamesFromSearchIndex(raw, constellations);

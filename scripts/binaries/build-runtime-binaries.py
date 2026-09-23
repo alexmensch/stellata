@@ -31,7 +31,7 @@ from scripts.util.paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
 SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"
-SRC_ROW_INDEX_MAP = ROOT / "public" / "catalog-row-index-map.json"
+SRC_ROW_INDEX_MAP = ROOT / "build" / "catalog-row-index-map.json"
 OUT_BIN = ROOT / "public" / "binaries.bin"
 EXPECTED_COUNTS = SCRIPT.parent / "build-runtime-binaries-expected.json"
 
@@ -214,7 +214,7 @@ def load_pairs(path: Path) -> list[MultiplesPair]:
 
 @dataclass
 class RowIndexMap:
-    """``public/catalog-row-index-map.json`` loaded into resolver maps."""
+    """``build/catalog-row-index-map.json`` loaded into resolver maps."""
 
     by_gaia: dict[str, int]
     by_hip: dict[int, int]
