@@ -466,6 +466,30 @@
               </div>
             </article>
 
+            <article class="[ claim ] [ flow ]">
+              <h3>An instrument, built for people who already know the sky.</h3>
+              <p>
+                The controls are the ones an observer expects. Limiting
+                magnitude derived from an aperture rather than a taste
+                slider. Exposure in stops, so a change of one halves or
+                doubles the light. Star sizes set by plate scale. An
+                attitude indicator reading the camera against the ecliptic,
+                equatorial or galactic frame, or against the focused
+                object's own orbital plane. Coordinate spheres in all three
+                frames with edge-labelled gridlines. The IAU constellation
+                boundaries as Delporte drew them in 1930. A chart mode in
+                the manner of <i>Sky Atlas 2000.0</i>, with Bayer and
+                Flamsteed designations, double-star wings and variable-star
+                rings.
+              </p>
+              <p>
+                Every view — camera pose, clock, filters, exposure, mode —
+                packs into the address bar, so a view you found is a link
+                you can put in a paper, an email or a lecture and know it
+                comes back identically.
+              </p>
+            </article>
+
             <article class="[ sight ] [ switcher ]">
               <a class="sight-media" href="/app/v/BIWAgQQHzLhPtz9TCDfyFQe4BxlaRb8pNvY-ItrVPqMDAQ/">
                 <img
@@ -559,6 +583,30 @@
               </div>
             </article>
 
+            <article class="[ claim ] [ flow ]">
+              <h3>Every object came out of a published catalogue, and says which.</h3>
+              <p>
+                Positions, distances, proper motions, colours, temperatures,
+                radii, pulsation periods, orbital elements, dust densities:
+                each is read from published data, and the source is named in
+                the application and in the repository. Star radii are
+                computed from catalogued absolute magnitude and spectral
+                class through Stefan–Boltzmann rather than assigned by eye.
+                Variable stars pulse on their catalogued periods. Close
+                binaries orbit on their measured elements. Every star is
+                propagated from the epoch its position was measured at to
+                the date on the clock, along its measured motion through
+                space.
+              </p>
+              <p>
+                Theoretical predictions and conjectured structures are
+                excluded on purpose. There is no procedural filler and no
+                painted backdrop, which is also why the model has an edge:
+                it currently reaches 6.5 million light years, and stops
+                where the measurements do.
+              </p>
+            </article>
+
             <article class="[ sight ] [ switcher ]">
               <a class="sight-media" href="/app/v/BIXAgQ0HPAoAsPlsDjBNQ3kvB0rSUz7Knmu-DnBzPwH6_xPC-V62ERTbQQA/">
                 <video
@@ -627,6 +675,50 @@
               </div>
             </article>
 
+            <article class="[ claim ] [ flow ]">
+              <h3>What your eye would see, from any point in the model.</h3>
+              <p>
+                There is no false colour anywhere in Stellata — no infrared,
+                no radio, no narrowband palette, none of the composites that
+                make published astronomy imagery beautiful and misleading
+                about what is actually visible. Colour comes from measured
+                temperature and photometry through the human visual
+                response.
+              </p>
+              <p>
+                Brightness is handled the same way. Apparent magnitude is
+                recomputed for the camera's real position every frame, so
+                moving changes what you can see, and the light is
+                attenuated and reddened by raymarching the actual
+                three-dimensional dust map between camera and star. One
+                global tone-map turns that into pixels, calibrated so a
+                star at the naked-eye threshold sits at the threshold of
+                your display. There is a calibration screen in the
+                application for setting your monitor's black point, because
+                on an uncalibrated screen in a lit room none of it means
+                anything.
+              </p>
+            </article>
+
+            <figure class="[ plate ] [ flow ]">
+              <div class="holder">
+                <span class="label">Plate 02 — placeholder</span>
+                <b>Extinction structure, from a few kiloparsecs out.</b>
+                The strongest single demonstration that the dust is a real
+                volume rather than a texture. Show all stars, pull the camera
+                to roughly 3 kpc from Sol and orbit until the filaments and
+                clear windows of the local interstellar medium paint
+                themselves across the stellar density. Save as
+                <code>public/site/dust.jpg</code>.
+              </div>
+              <figcaption class="plate-caption">
+                Stars behind dense lanes dim and redden; stars in clear
+                windows shine through. The pattern is the local interstellar
+                medium, traced from a published 3D dust map, not a stylistic
+                overlay.
+              </figcaption>
+            </figure>
+
             <article class="[ sight ] [ switcher ]">
               <a
                 class="sight-media"
@@ -682,109 +774,6 @@
               </div>
             </article>
           </div>
-        </div>
-      </section>
-
-      <section class="[ section ] [ region ]" id="instrument">
-        <div class="[ flow ] [ wrapper ]">
-          <div class="[ section-head ] [ flow ]">
-            <span class="label" data-accent>What it is</span>
-            <h2>Three things this is.</h2>
-          </div>
-
-          <div class="[ claims ] [ flow ]">
-            <article class="[ claim ] [ flow ]">
-              <h3>An instrument, built for people who already know the sky.</h3>
-              <p>
-                The controls are the ones an observer expects. Limiting
-                magnitude derived from an aperture rather than a taste
-                slider. Exposure in stops, so a change of one halves or
-                doubles the light. Star sizes set by plate scale. An
-                attitude indicator reading the camera against the ecliptic,
-                equatorial or galactic frame, or against the focused
-                object's own orbital plane. Coordinate spheres in all three
-                frames with edge-labelled gridlines. The IAU constellation
-                boundaries as Delporte drew them in 1930. A chart mode in
-                the manner of <i>Sky Atlas 2000.0</i>, with Bayer and
-                Flamsteed designations, double-star wings and variable-star
-                rings.
-              </p>
-              <p>
-                Every view — camera pose, clock, filters, exposure, mode —
-                packs into the address bar, so a view you found is a link
-                you can put in a paper, an email or a lecture and know it
-                comes back identically.
-              </p>
-            </article>
-
-            <article class="[ claim ] [ flow ]">
-              <h3>Every object came out of a published catalogue, and says which.</h3>
-              <p>
-                Positions, distances, proper motions, colours, temperatures,
-                radii, pulsation periods, orbital elements, dust densities:
-                each is read from published data, and the source is named in
-                the application and in the repository. Star radii are
-                computed from catalogued absolute magnitude and spectral
-                class through Stefan–Boltzmann rather than assigned by eye.
-                Variable stars pulse on their catalogued periods. Close
-                binaries orbit on their measured elements. Every star is
-                propagated from the epoch its position was measured at to
-                the date on the clock, along its measured motion through
-                space.
-              </p>
-              <p>
-                Theoretical predictions and conjectured structures are
-                excluded on purpose. There is no procedural filler and no
-                painted backdrop, which is also why the model has an edge:
-                it currently reaches 6.5 million light years, and stops
-                where the measurements do.
-              </p>
-            </article>
-
-            <article class="[ claim ] [ flow ]">
-              <h3>What your eye would see, from any point in the model.</h3>
-              <p>
-                There is no false colour anywhere in Stellata — no infrared,
-                no radio, no narrowband palette, none of the composites that
-                make published astronomy imagery beautiful and misleading
-                about what is actually visible. Colour comes from measured
-                temperature and photometry through the human visual
-                response.
-              </p>
-              <p>
-                Brightness is handled the same way. Apparent magnitude is
-                recomputed for the camera's real position every frame, so
-                moving changes what you can see, and the light is
-                attenuated and reddened by raymarching the actual
-                three-dimensional dust map between camera and star. One
-                global tone-map turns that into pixels, calibrated so a
-                star at the naked-eye threshold sits at the threshold of
-                your display. There is a calibration screen in the
-                application for setting your monitor's black point, because
-                on an uncalibrated screen in a lit room none of it means
-                anything.
-              </p>
-            </article>
-          </div>
-
-          <figure class="[ plate ] [ flow ]">
-            <div class="holder">
-              <span class="label">Plate 02 — placeholder</span>
-              <b>Extinction structure, from a few kiloparsecs out.</b>
-              The strongest single demonstration that the dust is a real
-              volume rather than a texture. Show all stars, pull the camera
-              to roughly 3 kpc from Sol and orbit until the filaments and
-              clear windows of the local interstellar medium paint
-              themselves across the stellar density. Save as
-              <code>public/site/dust.jpg</code>.
-            </div>
-            <figcaption class="plate-caption">
-              Stars behind dense lanes dim and redden; stars in clear
-              windows shine through. The pattern is the local interstellar
-              medium, traced from a published 3D dust map, not a stylistic
-              overlay.
-            </figcaption>
-          </figure>
         </div>
       </section>
 
