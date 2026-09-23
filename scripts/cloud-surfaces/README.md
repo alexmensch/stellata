@@ -1,7 +1,7 @@
 # Cloud surface build
 
 `build-cloud-surfaces.py` traces a per-cloud **isosurface mesh** from
-the Edenhofer 2023 dust posterior mean for every Zucker cloud
+the Edenhofer 2024 dust posterior mean for every Zucker cloud
 → `data/molecular-clouds/cloud-surfaces.bin`, consumed by the
 molecular-cloud rim shells ([Rim shell render](/src/client/molecular-clouds/README.md#rim-shell-render)).
 In-grid clouds sample the standard 1.25 kpc

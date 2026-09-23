@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Build data/molecular-clouds/cloud-surfaces.bin: per-cloud isosurface
-meshes traced from the Edenhofer 2023 dust posterior mean, keyed by cloud
+meshes traced from the Edenhofer 2024 dust posterior mean, keyed by cloud
 sid. See scripts/cloud-surfaces/README.md."""
 
 import argparse

@@ -65,7 +65,7 @@ identity. The authoritative source per identifier:
 | Tycho-2→DR3 cross-walk | `gaiadr3.tycho2tdsc_merge_best_neighbour` | 2,518,330 (in-tree) | TYC → `gaia_source_id` | already `data/gaia/gaia_dr3_tyc_xmatch.tsv` |
 | HIP→DR3 cross-walk | `gaiadr3.hipparcos2_best_neighbour` | 99,525 (in-tree) | HIP → `gaia_source_id` | already `data/gaia/gaia_dr3_hip_xmatch.tsv` |
 | Tycho-2 HD identifications | `IV/25/tyc2_hd` | 353,527 | HD ↔ TYC (with `n_HD`/`n_TYC` ambiguity flags) | Fabricius, Makarov, Knude & Wycoff 2002, A&A 386, 709 |
-| Cross index | `IV/27A/catalog` | 3,690 | Bayer + Flamsteed ↔ HD/HIP | Kostjuk N.D. 2004, VizieR IV/27A |
+| Cross index | `IV/27A/catalog` | 3,690 | Bayer + Flamsteed ↔ HD/HIP | Kostjuk N.D. 2002, VizieR IV/27A |
 | Bright Star Catalogue 5th rev. | `V/50/catalog` | 9,110 (9,096 with HD) | HR ↔ HD | Hoffleit & Warren 1991 |
 | CNS5 | `J/A+A/670/A19/cns5` | 5,909 (corrected 2023-12-13) | GJ ↔ Gaia EDR3 source_id ↔ HIP, component letters | Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023, A&A 670, A19 |
 | Hipparcos main (V slice) | `I/239/hip_main` | 118,218 | printed Johnson V (`Vmag`) for the bright/printed tier | ESA 1997, SP-1200 |

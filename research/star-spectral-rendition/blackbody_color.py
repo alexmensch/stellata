@@ -9,7 +9,7 @@ Approach:
      5 nm resolution.
   2. Multiply by CIE 1931 colour-matching functions (x̄, ȳ, z̄) — using
      the multi-lobe Gaussian analytical fits from Wyman/Sloan/Shirley
-     (JCGT 2(2), 2013, doi:10.5281/zenodo.10049479). Accurate to ~1%
+     (JCGT 2(2), 2013, jcgt.org/published/0002/02/01). Accurate to ~1%
      vs the tabulated CIE 1931 2° standard.
   3. Integrate → XYZ tristimulus.
   4. Linear-sRGB transform (D65 illuminant).

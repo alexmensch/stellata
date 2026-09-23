@@ -19,7 +19,7 @@ import type { LgEmission, LgObject } from '../local-group-loader';
 
 /**
  * Intrinsic integrated (B−V)₀ of M31, Tempel et al. 2011 (A&A 526, A155,
- * DOI 10.1051/0004-6361/201015000) Table 2 — the only Local Group disc
+ * DOI 10.1051/0004-6361/201016067) Table 2 — the only Local Group disc
  * galaxy with a published dereddened integrated colour.
  */
 export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;

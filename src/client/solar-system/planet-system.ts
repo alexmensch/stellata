@@ -86,10 +86,10 @@ export interface Planet {
   // deferred until that lands.
   readonly colour: readonly [number, number, number];
   // Geometric albedo (V-band). Drives the apparent-magnitude
- // calculation in the planet pipeline. Mallama 2018 +
+ // calculation in the planet pipeline. Mallama 2017 +
   // NASA fact-sheet values.
   readonly albedo: number;
-  // Optional Mallama 2018 empirical phase-curve coefficients —
+  // Optional Mallama 2017 empirical phase-curve coefficients —
   // overrides the default Lambertian phase function in the renderer
   // when present. See `phase-function.ts` for the polynomial form
   // and per-planet citations. Pluto and every exoplanet under

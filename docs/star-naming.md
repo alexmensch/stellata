@@ -45,7 +45,7 @@ implementation's own statement of all three rules.
 |---|---|---|---|
 | IAU WGSN `NEC.csv` | **authority** | 377 approved names + 4,971 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (9,297 rows) | IAU Div. C WG on Star Names, 2025-05 |
 | IAU WGSN `wgsnFaints.csv` | **authority** | 132 approved names below V 6.5; its WDS column ships empty | same, 2025-05 |
-| `IV/27A` cross index | mechanical | Bayer/Flamsteed for the sub-naked-eye tail (`data/classic-ids/`) | Kostjuk 2004 |
+| `IV/27A` cross index | mechanical | Bayer/Flamsteed for the sub-naked-eye tail (`data/classic-ids/`) | Kostjuk 2002 |
 | `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
 | GCVS 5.1 | mechanical | variable-star designations | `data/gcvs/README.md` |

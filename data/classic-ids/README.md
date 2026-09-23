@@ -67,7 +67,7 @@ all four; cite the paper per table.
   parse time, so the committed file remains a faithful slice. `n_hd` /
   `n_tyc` are the upstream ambiguity flags (394 rows with `n_hd` > 1,
   16 with `n_tyc` > 1).
-- **`cross_index.tsv`** ← VizieR `IV/27A/catalog`. Kostjuk N.D. 2004 —
+- **`cross_index.tsv`** ← VizieR `IV/27A/catalog`. Kostjuk N.D. 2002 —
   the HD-DM-GC-HR-HIP-Bayer-Flamsteed cross index. The whole table is
   3,690 rows, every one Bayer- or Flamsteed-bearing (HR 8832 is absent) —
   a cross index for those designations, with no larger slice behind it;

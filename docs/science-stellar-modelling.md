@@ -248,7 +248,7 @@ Sources:
 - Wyman, C., Sloan, P.-P., Shirley, P. (2013). Simple analytic
   approximations to the CIE XYZ color matching functions. *Journal of
   Computer Graphics Techniques* 2(2), 1–11.
-  https://doi.org/10.5281/zenodo.10049479
+  https://jcgt.org/published/0002/02/01/
 - IEC 61966-2-1:1999. Multimedia systems and equipment — Colour
   measurement and management — Part 2-1: Colour management — Default
   RGB colour space — sRGB.
@@ -327,7 +327,7 @@ the geometric-occlusion field, not intrinsic pulsation.
 
 GCVS rows without a parseable period, or with zero amplitude, are
 skipped at build time — that excludes constant stars, supernovae, and
-irregular variables. Typical match rate: ~4.1k of ~390k catalog stars.
+irregular variables. Typical match rate: ~4.4k of ~983k catalog records (`variableCount`).
 
 Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (the `iPuls`
 attribute) and `src/client/camera/controls/star-physics.ts` (CPU-side
