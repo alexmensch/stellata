@@ -289,21 +289,16 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 
 [Focus-park lerp](../focus/README.md#focus-park-lerp) owns this — the stay-put/lerp
 branch, the `controls.enabled` contract, the pin suppression, and the
-overlay hide. Two things that belong here rather than there:
+overlay hide, and the list of sites that cancel the lerp. One thing
+belongs here rather than there:
 
 `CAMERA_LERP_MS = 2000` is the canonical 2 s constant for non-warp
 camera lerps — `AIM_T_MAX_MS` and `FOCUS_LERP_MS` alias it so the
 focus-park glide and aim animation read as the same family. The warp's
-`WARP_REORIENT_MS = 1800` was once part of this family but tuning
-moved it slightly under the canonical lerp — the reorient phase reads
-snappier than a generic camera glide. `WARP_T_K_MS = 3000` is a
-separate literal — a log-scale flight coefficient (see
-`../warp/README.md`), not a duration.
-
-`cancelFocusLerp` is wired at every site that already calls
-`cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`, `startWarp`,
-`aimAt`, `aimAtConstellation`, `onPointerUp`) so a follow-up
-camera-changing action can't race the in-flight lerp.
+`WARP_REORIENT_MS = 1800` sits deliberately under the canonical lerp —
+the reorient phase reads snappier than a generic camera glide.
+`WARP_T_K_MS = 3000` is a separate literal — a log-scale flight
+coefficient (see `../warp/README.md`), not a duration.
 
 ## Aim controller (`camera/controls/aim-controller.ts`)
 
