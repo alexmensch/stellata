@@ -260,8 +260,8 @@ referring file's own directory first, then the repo root — which is how
 READMEs use for named sub-topics — ordered-list leaders included, and
 those whose closing `**` falls on the next line — and a Files roster's
 backticked module name, which is how a pointer names one file's entry.
-63 of the tree's pointers name a leader rather than a heading, so this
-is house style, not tolerance.
+Dozens of the tree's pointers name a leader rather than a heading, so
+this is house style, not tolerance.
 
 **Wrapping.** A section name wraps with the comment around it, so each
 line is joined with its successor before matching. A path wrapped at one
@@ -280,16 +280,15 @@ resolve to `## Timescales`. But:
 - **Two shared opening words are enough.** A pointer routinely names a
   heading's opening and runs straight on in prose, so the first two
   words are the citation. A rename leaving those two alone reads as a
-  truncated citation and passes. Tightening to strict prefix-only was
-  tried: it rejects 24 legitimate pointers.
+  truncated citation and passes. Strict prefix-only matching rejects
+  legitimate pointers that run on past the heading.
 - **A bold sentence can stand in for a renamed heading.** Because a
   leader is a legitimate target, prose that opens with the same two
   words is an equally legitimate one. `hdr/exposure/README.md` carries
   both an `## Adaptation` heading and a bold sentence starting
   "Adaptation is deliberately absent…", so renaming the heading would
-  not fail the guard. 104 pointers match more than one candidate this
-  way. Narrowing it would cost the leader support above, which more
-  pointers depend on than are exposed by this.
+  not fail the guard. Narrowing it would cost the leader support above,
+  which more pointers depend on than are exposed by this.
 
 ## TSL stand-in filters
 
