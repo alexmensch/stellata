@@ -660,6 +660,10 @@ a.sight-media:hover {
   inline-size: 100%;
   border-collapse: collapse;
   font-size: var(--step--1);
+}
+/* On the cells, not the table: the UA centres a th whose inherited
+   text-align is the initial value, and `start` is the initial value. */
+.sources :is(th, td) {
   text-align: start;
 }
 .sources th {
@@ -688,7 +692,7 @@ a.sight-media:hover {
   color: var(--fg);
   min-inline-size: var(--sources-name-min);
 }
-.sources td:nth-child(2) {
+.sources :is(th, td):nth-child(2) {
   font-variant-numeric: tabular-nums;
   text-align: end;
   white-space: nowrap;
