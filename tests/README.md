@@ -239,8 +239,12 @@ strings (log lines, error messages, test titles) name the concept in
 words; a message that sends its reader to a doc carries the token.
 
 **Scope is git's.** Every tracked or untracked-but-not-ignored file with
-a scanned extension, symlinks excluded (`CLAUDE.md` would double
-`AGENTS.md`). Tracking puts `.claude/skills` in; `.gitignore` keeps
+a scanned extension (or a scanned name, for `.gitignore`), symlinks
+excluded (`CLAUDE.md` would double `AGENTS.md`). Files Git LFS stores
+are out — the pulled survey tables, about 1 GB — so a hand-written
+comment in one (`data/classic-ids/cross_index_corrections.tsv`) is
+unchecked. `data/sid/retirements.tsv` is out because the sid ledger
+guard freezes its existing rows. Tracking puts `.claude/skills` in; `.gitignore` keeps
 `worktrees/` out, so no folder list exists to drift. Untracked files
 count, so a new doc is checked before its first `git add` — and a local
 draft with a broken pointer fails the suite here while CI never sees

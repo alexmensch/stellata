@@ -4,12 +4,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve } from 'node:path';
+import { basename, dirname, extname, join, relative, resolve } from 'node:path';
 import { docAnchors, extractPointers, extractSameFileLinks, resolveDocPath, strayedSectionSigns } from './doc-pointer-pure';
-import { gitFiles } from './walk-files';
+import { gitFiles, lfsTracked } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html'];
+const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
+// Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
+const FROZEN = ['data/sid/retirements.tsv'];
+const kindOf = (name: string): string => extname(name) || basename(name);
 
 // Fixtures interpolate their `#` and section sign from here, so no literal
 // pointer or sign appears in this file and it stays out of its own scan.
@@ -17,8 +20,12 @@ const H = '#';
 const S = '\u00a7';
 
 function scannedFiles(): string[] {
-  return gitFiles(ROOT, [], { untracked: true })
-    .filter((name) => SCANNED_EXTS.includes(extname(name)))
+  const names = gitFiles(ROOT, [], { untracked: true }).filter(
+    (name) => SCANNED_KINDS.includes(kindOf(name)) && !FROZEN.includes(name),
+  );
+  const lfs = lfsTracked(ROOT, names);
+  return names
+    .filter((name) => !lfs.has(name))
     .map((name) => join(ROOT, name))
     .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());
 }
@@ -68,8 +75,13 @@ describe('doc pointers resolve', () => {
     expect(failures, failures.join('\n')).toEqual([]);
   });
 
-  it.each(SCANNED_EXTS)('the scan finds pointers in %s files', (ext) => {
-    expect(pointers.some(({ file }) => extname(file) === ext)).toBe(true);
+  it('leaves the files Git LFS stores out of the scan', () => {
+    const lfsTable = 'data/classic-ids/cross_index.tsv';
+    expect(lfsTracked(ROOT, [lfsTable, 'data/local-group/aliases.tsv'])).toEqual(new Set([lfsTable]));
+  });
+
+  it.each(SCANNED_KINDS)('the scan finds pointers in %s files', (kind) => {
+    expect(pointers.some(({ file }) => kindOf(file) === kind)).toBe(true);
   });
 });
 
