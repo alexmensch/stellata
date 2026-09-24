@@ -114,9 +114,7 @@ gate gets quietly avoided.
 
 ## Diff efficiency — calibration
 
-`diff-shape.sh`'s default buckets fit this tree unchanged (`.wgsl` is
-source, `tests/` and `*.test.*` are tests, `.tsv` is data). The prose
-threshold stays at the default 25%: landed stellata commits run 20–68% on
+The prose threshold stays at the default 25%: landed stellata commits run 20–68% on
 this measure, so it is a deliberate tightening, not the status quo. The usual
 offender is a comment block restating what the folder README now says.
 
