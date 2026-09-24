@@ -206,6 +206,12 @@ describe('the public stylesheet uses logical properties', () => {
     expect(found, `physical properties: ${found.join(' · ')}`).toEqual([]);
   });
 
+  it('aligns the sources table on its cells, where a th would otherwise centre', () => {
+    expect(CODE).not.toMatch(/\.sources\s*\{[^}]*text-align/);
+    expect(CODE).toMatch(/\.sources :is\(th, td\)\s*\{[^}]*text-align:\s*start/);
+    expect(CODE).toMatch(/\.sources :is\(th, td\):nth-child\(2\)\s*\{[^}]*text-align:\s*end/);
+  });
+
   it('aligns text to start and end, not left and right', () => {
     const found = [...CODE.matchAll(/text-align\s*:\s*(left|right)/g)].map(([m]) => m);
     expect(found, `physical text-align: ${found.join(' · ')}`).toEqual([]);
