@@ -301,10 +301,7 @@ snappier than a generic camera glide. `WARP_T_K_MS = 3000` is a
 separate literal — a log-scale flight coefficient (see
 `../warp/README.md`), not a duration.
 
-`cancelFocusLerp` is wired at every site that already calls
-`cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`, `startWarp`,
-`claimCameraForAim`, `onPointerUp`) so a follow-up camera-changing action
-can't race the in-flight lerp.
+The sites cancelling it are listed in [Focus-park lerp](../focus/README.md#focus-park-lerp).
 
 ## Aim controller (`camera/controls/aim-controller.ts`)
 
@@ -372,8 +369,8 @@ nothing ([The claim-the-camera sequence](../README.md#the-claim-the-camera-seque
 Cancellation contract — `aim.cancel()` drops both slot states but does
 **not** touch `controls.enabled` or call `observeControls.enable()`.
 That re-enable only happens on natural completion of the slerp.
-Cancellation sites (warp start, observe-exit, focus change while in
-observe) are moving control elsewhere and own the next input-handler
+Cancellation sites (observe-exit, focus change while in observe) are
+moving control elsewhere and own the next input-handler
 transition themselves.
 
 ## Picking a constellation aims the camera

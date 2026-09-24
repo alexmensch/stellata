@@ -2070,11 +2070,6 @@ export class Stellata implements FrameAnchor {
    * the quaternion rotates. Called by the Sol / GC label click handlers,
    * the search typeahead, the distance-vector label, and the POI overlay.
    * A caller holding a direction rather than an object wants `aimAlong`.
-   *
-   * No-ops during warp, mid-aim, focus-lerp, or observe-transition. The
-   * actual slerp + controls.enabled / observeControls handoff lives in
-   * `AimController`; this dispatcher owns the composition-layer busy
-   * gates the controller doesn't see.
    */
   aimAt(pointLocal: THREE.Vector3) {
     if (!claimCameraForAim(this.cameraClaim)) return;
