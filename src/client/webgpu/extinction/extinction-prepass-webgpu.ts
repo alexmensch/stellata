@@ -29,7 +29,7 @@ import {
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
 import { computeIndirect } from '../tsl/tsl-shim';
-import { inverseOrder, mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
+import { writeDispatchTablesInto } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
@@ -135,7 +135,10 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       uMonochrome: uniform(uniforms.uMonochrome.value),
     };
 
-    this.dispatchOrder = mortonDispatchOrder(positions, count);
+    this.dispatchOrder = new Uint32Array(count);
+    // ../star/compaction/README.md § Binding budget.
+    const table = new Uint32Array(count + refillWorklistLength(count));
+    writeDispatchTablesInto(this.dispatchOrder, table, positions, count);
     this.orderedOver = loadedCount;
     // vec4 slots, not vec3: WGSL has no packed vec3 in a storage buffer, and
     // an itemSize-3 attribute is the one the backend silently re-strides
@@ -146,9 +149,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.order = new StorageBufferAttribute(this.dispatchOrder, 1);
     this.av = new StorageBufferAttribute(count, 1);
     this.stamps = new StorageBufferAttribute(new Uint32Array(count), 1);
-    // ../star/compaction/README.md § Binding budget.
-    const table = new Uint32Array(count + refillWorklistLength(count));
-    table.set(inverseOrder(this.dispatchOrder));
     this.refillTable = new StorageBufferAttribute(table, 1);
     // The consumers' slots point here for this instance's whole life;
     // `uAvPrepassEnabled` is what gates the read, so a buffer that has not
@@ -210,7 +210,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   refreshPositions(loadedCount: number): void {
     if (this.positions === null || this.dispatchOrder === null) return;
     if (loadedCount === this.count && this.orderedOver < this.count) {
-      this.reorder(this.dispatchOrder);
+      this.reorder();
     }
     packPositionsVec4Into(
       this.positions.array as Float32Array, this.sourcePositions, this.count,
@@ -220,11 +220,12 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   }
 
   /** Why this parks the flight: README.md § What a CACHE owes. */
-  private reorder(order: Uint32Array): void {
-    if (this.order === null || this.refillTable === null) return;
-    order.set(mortonDispatchOrder(this.sourcePositions, this.count));
+  private reorder(): void {
+    if (this.dispatchOrder === null || this.order === null || this.refillTable === null) return;
+    writeDispatchTablesInto(
+      this.dispatchOrder, this.refillTable.array as Uint32Array,
+      this.sourcePositions, this.count);
     this.order.needsUpdate = true;
-    (this.refillTable.array as Uint32Array).set(inverseOrder(order));
     this.refillTable.needsUpdate = true;
     this.orderedOver = this.count;
     this.parkRefill();

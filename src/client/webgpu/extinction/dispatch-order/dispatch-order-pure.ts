@@ -59,12 +59,18 @@ export function mortonDispatchOrder(positions: Float32Array, count: number): Uin
   return sortIndicesByKeyWords([lo, hi], 0, count);
 }
 
-/** Star → dispatch slot, the inverse of `order`: what a kernel handed a
- *  star index needs to find that star in the slot-indexed position table. */
-export function inverseOrder(order: Uint32Array): Uint32Array {
-  const slotOf = new Uint32Array(order.length);
-  for (let i = 0; i < order.length; i++) slotOf[order[i]] = i;
-  return slotOf;
+/** Sort `positions` into `order` (slot → star) and write its inverse into
+ *  `slotOf[0, count)` (star → slot), what a kernel handed a star index needs
+ *  to find that star in the slot-indexed position table. `slotOf` may run
+ *  past `count`; the rest is left alone. */
+export function writeDispatchTablesInto(
+  order: Uint32Array,
+  slotOf: Uint32Array,
+  positions: Float32Array,
+  count: number,
+): void {
+  order.set(mortonDispatchOrder(positions, count));
+  for (let i = 0; i < count; i++) slotOf[order[i]] = i;
 }
 
 /** Undo the permutation: element `i` of `src` belongs to star `order[i]`. */

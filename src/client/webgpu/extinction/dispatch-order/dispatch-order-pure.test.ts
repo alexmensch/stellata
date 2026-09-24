@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MORTON_BITS_PER_AXIS, inverseOrder, mortonDispatchOrder, scatterByOrder,
+  MORTON_BITS_PER_AXIS, mortonDispatchOrder, scatterByOrder, writeDispatchTablesInto,
 } from './dispatch-order-pure';
 import { scrambledLattice } from './dispatch-order-fixture';
 
@@ -71,16 +71,24 @@ describe('mortonDispatchOrder', () => {
   });
 });
 
-describe('inverseOrder', () => {
-  it('composes with the order to the identity in both directions', () => {
-    const order = mortonDispatchOrder(lattice(), COUNT);
-    const slotOf = inverseOrder(order);
+describe('writeDispatchTablesInto', () => {
+  it('writes the Morton order and its inverse, composing to the identity both ways', () => {
+    const positions = lattice();
+    const order = new Uint32Array(COUNT);
+    const slotOf = new Uint32Array(COUNT);
+    writeDispatchTablesInto(order, slotOf, positions, COUNT);
+    expect(Array.from(order)).toEqual(Array.from(mortonDispatchOrder(positions, COUNT)));
     for (let slot = 0; slot < COUNT; slot++) expect(slotOf[order[slot]]).toBe(slot);
     for (let star = 0; star < COUNT; star++) expect(order[slotOf[star]]).toBe(star);
   });
 
-  it('inverts a small explicit permutation', () => {
-    expect(Array.from(inverseOrder(Uint32Array.from([2, 0, 3, 1])))).toEqual([1, 3, 0, 2]);
+  it('leaves the table past count untouched', () => {
+    const positions = Float32Array.from([3, 0, 0, 1, 0, 0, 2, 0, 0]);
+    const order = new Uint32Array(3);
+    const slotOf = new Uint32Array(5).fill(99);
+    writeDispatchTablesInto(order, slotOf, positions, 3);
+    expect(Array.from(order)).toEqual([1, 2, 0]);
+    expect(Array.from(slotOf)).toEqual([2, 0, 1, 99, 99]);
   });
 });
 
