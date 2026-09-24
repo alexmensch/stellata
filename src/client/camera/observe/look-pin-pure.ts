@@ -24,8 +24,7 @@ export const LOOK_PIN_DIST_PC = 1;
  *  translated camera instead lands `position + forward` a few ULP off the
  *  value the ride wrote — every frame, never converging — and the render
  *  gate reads that as a camera move (`../../render-gate/README.md`
- *  § Pose change). A NaN-seeded `pinnedAt` never compares equal, so the
- *  first call after a seed or a mode change always re-derives. */
+ *  § Pose change). */
 export function lookPinStale(pinnedAt: QuatLike, cameraQuat: QuatLike): boolean {
   return pinnedAt.x !== cameraQuat.x
     || pinnedAt.y !== cameraQuat.y

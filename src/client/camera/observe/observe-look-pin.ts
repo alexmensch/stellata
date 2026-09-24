@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { lookPinStale, writeLookPin } from './look-pin-pure';
 
 export class ObserveLookPin {
-  private readonly pinnedAt = new THREE.Quaternion(Number.NaN, 0, 0, 0);
+  private readonly pinnedAt = new THREE.Quaternion();
+  private stale = true;
   private readonly forward = new THREE.Vector3();
 
   constructor(
@@ -13,7 +14,8 @@ export class ObserveLookPin {
   ) {}
 
   update(): void {
-    if (!lookPinStale(this.pinnedAt, this.camera.quaternion)) return;
+    if (!this.stale && !lookPinStale(this.pinnedAt, this.camera.quaternion)) return;
+    this.stale = false;
     this.pinnedAt.copy(this.camera.quaternion);
     this.forward.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
     writeLookPin(this.camera.position, this.forward, this.target);
@@ -22,6 +24,6 @@ export class ObserveLookPin {
   /** Force the next `update` to re-derive. Required after anything else
    *  writes `target` — the observe transitions do. */
   invalidate(): void {
-    this.pinnedAt.set(Number.NaN, 0, 0, 0);
+    this.stale = true;
   }
 }

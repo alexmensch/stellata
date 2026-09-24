@@ -289,8 +289,8 @@ to it.** The blob carries cam/tgt anchor-relative and float32, and a sweep
 of camera-from-origin 1e-9–1000 pc (0.9–1.1 pc looking back included)
 round-trips with zero error beyond the float32 floor itself — worst
 4.7e-8 rad, ~1800× under a pixel at `FOV_MIN_DEG` on a 2000 px viewport.
-`ObserveLookPin` NaN-seeds its last-derived orientation so the first
-`update()` always derives, and the shell's `'cameraMode'` handler calls
+`ObserveLookPin` starts stale, so the first `update()` always derives,
+and the shell's `'cameraMode'` handler calls
 `invalidate()` because the transitions write `controls.target` directly —
 without that, a mode round-trip with no rotation would keep the
 transition's target as the pin. The shell calls `update()` on two
