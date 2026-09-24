@@ -1,6 +1,6 @@
 ---
 name: stellata-pr-review
-description: Stellata's gates on top of the user-level `pr-review` skill — GPU and VRAM cost, the perf-pin tier, folder-README-first reading, bead and epic drift, and the `reviewed` label. Load it together with `pr-review` for every review of a stellata pull request, branch or diff ("review PR 123", "review this branch", "/pr-review", "/stellata-pr-review").
+description: Stellata's extension of the user-level `pr-review` skill — GPU and VRAM cost, the perf-pin tier, folder-README-first reading, bead and epic drift, and the `reviewed` label. `pr-review` loads it for every review of a stellata pull request, branch or diff; load it directly only if `pr-review` is already in context without it.
 ---
 
 # Reviewing a stellata PR
