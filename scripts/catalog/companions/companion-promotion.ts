@@ -548,7 +548,7 @@ export function parkedRefusals(
 export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
 
 /** Whether promoting this pair row would re-serve a parallax a tier above
- *  refused — the courier the § 5 skip rules exist to close.
+ *  refused — the courier the per-field skip rules (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) exist to close.
  *
  *  **The match is on the measurement, never on the identifier alone.**
  *  multiples.tsv states a distance for every component, and for a row carrying
@@ -1001,7 +1001,7 @@ const ANCHOR_DIM_MIN_DELTA_MAG = 0.05;
 // a printed-tier anchor never went through that relation (its σ is Hipparcos'
 // printed precision), and the hypotheses are built from WDS observed-frame
 // magnitudes whose error dominates both — face-value pair mags, some in
-// non-V bands, at the ~0.1 mag level (README § Anchor flux conservation).
+// non-V bands, at the ~0.1 mag level (README.md#anchor-flux-conservation-post-pass).
 // Raising the margin toward that term is a calibration with count movement,
 // not a constant swap.
 const ANCHOR_DIM_DECISIVE_MAG = RIELLO_G_MINUS_V_SIGMA;
@@ -1013,13 +1013,13 @@ const ANCHOR_DIM_MAX_FIT_MEMBERS = 16;
 // How far the WINNING hypothesis may sit from the anchor's observed magnitude
 // before the fit is refused as matching nothing. Distinct from the decisive
 // margin above, which compares hypotheses to each other and says nothing about
-// whether any of them is right. Calibrated — README § Anchor flux conservation.
+// whether any of them is right. Calibrated — README.md#anchor-flux-conservation-post-pass.
 export const ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG = 0.2;
 
 // Angular scale beyond which a member's light cannot be inside the anchor's
 // magnitude, per the catalogue that produced it. Both calibrated against the
 // blend-vs-component hypothesis split over WDS pair magnitudes — README
-// § The separation gate.
+// README.md#the-separation-gate.
 export const PRINTED_BLEND_MAX_SEP_ARCSEC = 10.0;
 export const GAIA_BLEND_MAX_SEP_ARCSEC = 1.0;
 
@@ -1867,7 +1867,7 @@ function promoteRow(
   // inherited-then-stripped ids; every other own-brightness member
   // (identifier-carrying AND identifier-less synth alike) is a
   // candidate whose membership the post-pass subset solve decides —
-  // see README § Anchor flux conservation. Deferred to a post-pass so
+  // see README.md#anchor-flux-conservation-post-pass. Deferred to a post-pass so
   // each anchor's members are judged jointly.
   if (OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)
       && anchorCatalogIdx !== null && anchorStar !== null

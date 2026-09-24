@@ -22,7 +22,7 @@ const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
  * `frame` is the load-bearing check: the arcs are *drawn* at equinox B1875
  * but the directions are *emitted* in ICRS, and B1875 directions rendered as
  * if they were ICRS resolve to a plausible-looking sky sitting ~1.4° off
- * every star (§ B1875).
+ * every star (iau-geometry/README.md#b1875).
  */
 export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   const artifact = raw as BoundaryArtifact;

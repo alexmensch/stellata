@@ -31,7 +31,7 @@ three, so either import path stays valid.
 - `search-corpus.ts` — the fuzzy corpus and the exact-match identifier
   maps (`buildSearchIndex` and the label builders).
 - `search-index-payload.ts` — every catalogue-wide derivation of the search
-  index, in ONE composer pass. § The search-index worker.
+  index, in ONE composer pass. [The search-index worker](#the-search-index-worker).
 - `search-index-worker.ts` / `search-index-host.ts` — that pass, off the
   main thread, and the parse + spawn + inline fallback around it.
 

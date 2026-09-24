@@ -616,7 +616,7 @@ export function createNearestEdgeIndex(edges: IauBoundaryEdges): NearestEdgeInde
 /** Membership over a region grid with the B1875 precession bound in, so
  *  callers pass ICRS/J2000 positions. This is the half of the lookup that
  *  needs no edge set, which is what lets a browser consumer have it from the
- *  shipped artifact's grid (§ How each consumer gets this). */
+ *  shipped artifact's grid (/src/client/constellation-boundaries/README.md#how-each-consumer-gets-this). */
 export interface GridConstellationLookup {
   /** `AND`, `SER1`, … */
   edgeCodeAt(j2000: SkyPosition): string;

@@ -40,7 +40,7 @@ they are deliberately excluded.
   (Sun centre), `REF_PLANE=FRAME`, `VEC_TABLE='2'` (position +
   velocity), `OUT_UNITS=AU-D`, `CSV_FORMAT=YES`, spanning the probe's
   SPK start to `2050-01-01`. Epochs are requested rather than stepped
-  through — see § Sampling.
+  through — see [Sampling](#sampling).
 - Horizons targets: `-23` Pioneer 10, `-24` Pioneer 11, `-31`
   Voyager 1, `-32` Voyager 2, `-98` New Horizons.
 
@@ -93,7 +93,7 @@ a refresh still diffs sample-by-sample in git.
   the samples, and because the fetch pipeline uses the endpoint
   velocities to decide where the grid needs refining.
 - `chordToleranceAu` — the accuracy the grid was built to and measured
-  against; see § Sampling.
+  against; see [Sampling](#sampling).
 - `samples` is ascending in `jd`, **non-uniformly spaced**, and starts
   at the SPK's first epoch —
   which for Voyager 1 is 1977-09-06, *after* its 1977-09-05 launch.

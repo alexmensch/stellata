@@ -39,8 +39,7 @@ consumers and refresh cadences differ.
 Consumed by `scripts/catalog/build-catalog.ts` (visual-doubles flag
 in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 (CCDM tier of the WDS-component → Gaia source_id cascade). See
-[`scripts/catalog/README.md`](../../scripts/catalog/README.md)
-§ CCDM double-star cross-match for the gate semantics.
+[CCDM double-star cross-match](/scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match) for the gate semantics.
 
 ## `hip_main_vmag.tsv`
 

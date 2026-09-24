@@ -1,6 +1,6 @@
 # The parallax cascade
 
-The measured parallax behind every record's distance. The last § 5 cascade to
+The measured parallax behind every record's distance. The last [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) cascade to
 retire its printed cell, and the only one whose residual is a membership event:
 rv and PM fall back to a null — zero motion, the star stays where it is —
 whereas a record with no distance cannot be placed at all.
@@ -21,11 +21,11 @@ scripts/catalog/distance/parallax/
                                 root. Built once before the walk, in
                                 ../../parse/read-stars-inputs.ts.
   simbad-sourced-ledger.ts      The `simbad_plx` records, by the two keys a
-    (+ test)                    SIMBAD-based validator joins on — § 5's
+    (+ test)                    SIMBAD-based validator joins on — /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's
                                 validation independence. Written by
                                 build-catalog.ts, read by
                                 ../../validate/validate-simbad-sample.ts.
-  parked-ledger.ts (+ test)     The § 6.1 dropped list — where it is committed,
+  parked-ledger.ts (+ test)     The /docs/catalog-driver.md#61-record-parity dropped list — where it is committed,
                                 its closed reason enum, and the identifier key
                                 the parity gate matches it on. The producer is
                                 build-catalog.ts, the consumer
@@ -47,7 +47,7 @@ unless an override layer replaces it. Counts pin as `dist*`.
 | `pair_member_parallax` | a bound sibling's clean DR3 fit | |
 | `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | 15 |
 | `curated` | Sol alone | 1 |
-| `none` | — | § 6 ledger drop |
+| `none` | — | [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) ledger drop |
 
 **V/70A appears twice, and the order is the whole point.** Its resulting
 parallax is trigonometric on about half its rows and a photometric or
@@ -80,7 +80,7 @@ Most `gaia_dr3_inversion` rows are then superseded by `bailer_jones`, which is
 counted in its place rather than alongside it, so the two never double-count.
 `lmc_kinematic` likewise replaces whatever tier a supergiant resolved.
 
-**Gaia leads, and § 5's table has the order wrong.** § 5 lists HIP2 above the
+**Gaia leads, and [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s table has the order wrong.** [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) lists HIP2 above the
 inversion, which was right while that tier fired only for the Gaia-saturated
 bright set. Re-keyed onto the record's own HIP it governs ~2,600 records, and
 that order would hand 115 of them to 1991 Hipparcos over a converged DR3 fit.
@@ -181,7 +181,7 @@ and SIMBAD's 53 sub-floor rows barely reachable on a tier only 116 records took.
 4,067 records, and 8 of those 53 became reachable**: parallaxes of S/N
 0.01–0.33, each indistinguishable from zero, inverting to 54,000–714,000 pc.
 They left the walk through `readStars`'s `MAX_DIST_PC` exit — the one gate that
-is not a § 6.1 park, pinned at zero — so eight manifest rows neither shipped
+is not a [§ 6.1](/docs/catalog-driver.md#61-record-parity) park, pinned at zero — so eight manifest rows neither shipped
 nor parked. Extending the floor, which this paragraph already named as the
 available override, is what closed it; the refused rows park
 `refused_no_defensible_parallax` like any other. CNS5 and Gliese still lose
@@ -212,7 +212,7 @@ parallax cascade is where the general shape became visible.
   mas, SIMBAD serves 2.62.
 
 **A SIMBAD-sourced distance is excluded from SIMBAD-based validation**, which
-is § 5's validation-independence rule reaching this field for the first time —
+is [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s validation-independence rule reaching this field for the first time —
 no earlier cascade had a SIMBAD tier under a validator that checks the same
 quantity. Both validators honour it: `distance-regression-check` reads
 `distVia` in-process, and `validate-simbad-sample` reads
@@ -222,7 +222,7 @@ against the parallax they were derived from and bias the metric toward
 agreement that was never measured.
 
 Gliese `V/70A` is subject to neither, for two different reasons — which is why
-it is two tiers rather than one (§ The cascade). Its **trigonometric** parallaxes
+it is two tiers rather than one ([The cascade](#the-cascade)). Its **trigonometric** parallaxes
 predate both instruments, so no later reduction stands behind them to withdraw.
 Its photometric and spectroscopic ones are not measurements at all, so there is
 nothing to withdraw either; that same fact is what ranks them last.
@@ -237,7 +237,7 @@ than the same fit returning.
 
 ## Why the residual drops rather than degrading
 
-§ 5's residual policy allows a deliberate ledgered drop, and this is the cascade
+[§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s residual policy allows a deliberate ledgered drop, and this is the cascade
 that needs it. The alternative was admitting a Gaia-release parallax wherever it
 was the row's last tier, which was weighed and rejected on measurement rather
 than on principle:
@@ -268,10 +268,10 @@ Records the pipeline stops producing are **presence events, not retirements**
 same identity when Gaia DR4 fits these blends. The drop is a park, and the
 reason code says so.
 
-**One ledger holds every § 6.1 park.** A row the V cascade never lights parks
+**One ledger holds every [§ 6.1](/docs/catalog-driver.md#61-record-parity) park.** A row the V cascade never lights parks
 as `no_v_magnitude`, and one no direction tier states as `no_position`,
 alongside the two parallax reasons — a single enumerated file per membership
-event is what § 6.1's no-silent-drops rule can be gated on. The `reason` column
+event is what [§ 6.1](/docs/catalog-driver.md#61-record-parity)'s no-silent-drops rule can be gated on. The `reason` column
 says which.
 
 **A park is a ledger entry, never a walk-gate drop.** `droppedTooFar` — the one
@@ -291,7 +291,7 @@ mas, the HIP2 value the floor refused to eight significant figures. That is the
 shape the gate refuses; the bound-sibling tier now places HIP 26549 itself off
 HIP 26551 D's clean fit, so it is no longer a row the gate sees. Promoting such
 a row re-serves a refusal through a courier, the general rule at the head of
-§ The skip rules. The refusal is counted as `companionDroppedParkedRecord`
+[The skip rules](#the-skip-rules--one-principle-two-publications). The refusal is counted as `companionDroppedParkedRecord`
 (**9**), and it matches on the measurement: `statesRefusedParallax` compares the
 row's stated distance against every parallax a skip rule refused on that record,
 indexed by the id the pair row names it with.
@@ -352,7 +352,7 @@ doubt.
 
 **Most rows it refuses are the parked primary's siblings, not the parked record
 arriving twice.** Stage 2/3 bind one blended source to every component row of a
-sub-arcsec pair (§ The cascade, on why the sibling index dedups on exactly
+sub-arcsec pair ([The cascade](#the-cascade), on why the sibling index dedups on exactly
 this), so the parked primary's `gaia_source_id` and HIP sit on its siblings'
 rows too, and those rows state the same refused distance. WDS 01425+5000 is the
 shape: comp A and comp B both read HIP 7979 / source 405578335904111744.

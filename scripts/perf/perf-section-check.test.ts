@@ -149,14 +149,14 @@ describe('perf-section-check', () => {
     expect(r.stdout).toContain('accepted:');
   });
 
-  // The row markers are multibyte, and BSD awk in a UTF-8 locale reads · and
-  // § as equal to ✗ — so a real table demanded an accepted: line for every
-  // unmarked row and for the § in a doc pointer, failing a body CI passes.
+  // The row markers are multibyte, and BSD awk in a UTF-8 locale reads a
+  // two-byte · as equal to ✗ — so a real table demanded an accepted: line for
+  // every unmarked row, failing a body CI passes.
   // Both halves are asserted because mawk on the runner is bytewise anyway
   // and would pass the behavioural case either way. The 📌 line is a first
   // field of a different byte width again: ✗ is three bytes and · two, so a
   // four-byte glyph is the case neither of those would catch.
-  it('reads the marker bytewise, so a · row, a § pointer and a 📌 footer are not marks', () => {
+  it('reads the marker bytewise, so a · row, a doc pointer and a 📌 footer are not marks', () => {
     const table = [
       '## Perf',
       '',

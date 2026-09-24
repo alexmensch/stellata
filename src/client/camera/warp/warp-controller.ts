@@ -30,11 +30,11 @@ import { hybridUSeam } from '../arrival/arrival-curves';
 
 // Source→dest separations below this have no reliable travel direction —
 // AB/distPc is float32 noise (coincident catalog baselines / orbit
-// crossing). See README § OBSERVE mode and the warp state machine.
+// crossing). See README.md#observe-mode-and-the-warp-state-machine.
 const WARP_DEGENERATE_DIST_PC = 1e-9;
 
-// Settled plateau-trigger shape — see README § Chart-mode
-// plateau-trigger for what each value does to the cue.
+// Settled plateau-trigger shape — see README.md#chart-mode-plateau-trigger
+// for what each value does to the cue.
 const CHART_PLATEAU_MARGIN = 0.7;
 const CHART_PHASE3_ALPHA = 0.2;
 

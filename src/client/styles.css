@@ -86,7 +86,7 @@ html, body {
    `.bottom-left-stack` sets `pointer-events: none`, which the cover would
    inherit — a drag then reaches the canvas it is hiding and latches
    `renderGate.sawUserInput`, cancelling the restore it is being held for
-   (`util/url-state/README.md` § A focus that resolves after the pose). */
+   (util/url-state/README.md#a-focus-that-resolves-after-the-pose). */
 .loading {
   position: fixed;
   inset: 0;
@@ -241,8 +241,7 @@ body.scene-live .loading-inner {
 }
 .ui-bottom > * { pointer-events: auto; }
 
-/* Hide-controls toggle — see src/client/ui/README.md § Hide-controls
- * toggle. Hides the interactive controls in the right-hand column; the
+/* Hide-controls toggle — see ui/README.md#hide-controls-toggle. Hides the interactive controls in the right-hand column; the
  * meta readout (star count / time scrubber) stays visible, pinned to
  * the column floor by its .ui-top-bottom wrapper. */
 body[data-controls-hidden] #topbar,
@@ -1315,12 +1314,12 @@ body.monochrome .poi-label {
    attitude-indicator.ts from the constants its SVG is drawn against. Those
    two are the whole contract: the drawing keeps its own 192-unit design
    space and the rules below scale it, so the instrument resizes from one
-   number — attitude/README.md § Sizing.
+   number — attitude/README.md#sizing.
 
    Only the chrome OUTSIDE the ball is styled here. The caret and the index
    cross are read against the ball's own fixed two tones rather than the page,
    so attitude-indicator.ts paints them from those constants directly —
-   attitude/README.md § Markings and palette. */
+   attitude/README.md#markings-and-palette. */
 .bottom-left-stack {
   display: flex;
   flex-direction: column;
@@ -1332,7 +1331,7 @@ body.monochrome .poi-label {
    differs only in what bounds it: it hangs off the bottom of the viewport
    rather than the top, so it sizes to its contents instead of sharing a
    column's height budget. The scale bar underneath aligns to this box's
-   edge — ui/README.md § Bottom-left widget. */
+   edge — ui/README.md#bottom-left-widget-scene-scale-bar. */
 .instruments {
   flex: 0 0 auto;
   width: var(--panel-width);

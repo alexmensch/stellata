@@ -13,8 +13,8 @@ const CHUNK = join(ROOT, 'public', catalogChunkFilename(0));
  *  superseded one. */
 const ATHYG_SPINE_ROWS = '313,257';
 
-/** The rounding every prose surface quotes. § rounds to the figure the prose
- *  quotes derives the same string from the built artifact, so a refresh that
+/** The rounding every prose surface quotes. The *rounds to the figure the prose
+ *  quotes* case derives the same string from the built artifact, so a refresh that
  *  moves the catalogue fails there and the sweep starts from this constant. */
 const PROSE_ROUNDED = '980k';
 

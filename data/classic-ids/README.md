@@ -4,7 +4,7 @@ The frozen CDS tables that carry HD / HR / Bayer / Flamsteed / GJ
 designations, the source_id-keyed overlay joined out of them, and the review
 queues the merge onto the catalogue's records produces. This is the identifier
 half of the AT-HYG retirement — [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) decides the
-sources, § 4 the HD→Gaia route and the ambiguity / precedence policy.
+sources, [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) the HD→Gaia route and the ambiguity / precedence policy.
 
 ```
 tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
@@ -25,7 +25,7 @@ classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
                                    source_id (357,265 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
-                                   (§ HD-route cross-check below).
+                                   (README.md#classic_id_overlaytsv--the-derived-overlay).
 hd_hip_route_disagreements_review.tsv
                                    Hand-curated dispositions for the queue,
                                    joined row-for-row by
@@ -34,7 +34,7 @@ hd_hip_route_disagreements_review.tsv
                                    grows the queue fails until reviewed.
 rejected_bindings.tsv              460 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
-                                   (§ The binding gate).
+                                   (README.md#the-binding-gate).
 label_flips.tsv                    736 rows. Pipeline-derived, and by
                                    `build:membership` rather than by this
                                    folder's build — that is where the merge
@@ -74,7 +74,7 @@ all four; cite the paper per table.
   HR routes via `bsc5.tsv`, HD via `tyc2_hd.tsv`. 2,185 rows carry a Bayer
   letter, 2,757 a Flamsteed number — 119 Flamsteed numbers the spine
   carries are not among them (`data/membership/README.md`). Two of those
-  rows leave the table as curated corrections (§ the roster above), so
+  rows leave the table as curated corrections (the file list above), so
   consumers see 2,183 Bayer and 2,755 Flamsteed cells.
   `bayer` is IV/27A's own lowercase three-letter form
   (`alf`, `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
@@ -100,7 +100,7 @@ all four; cite the paper per table.
   GJ ↔ Gaia EDR3 source_id ↔ HIP directly plus component letters, which
   is why it beats hand-rolling Gliese from V/70A (CNS3, not ingested).
   5,237 of 5,909 rows carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
-  volume-limited to 25 pc** — see § Coverage.
+  volume-limited to 25 pc** — see [Coverage](#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
 ### The astrometry re-slice
 
@@ -237,7 +237,7 @@ membership term itself, so these are the records the labels actually land on.
 Coverage is the label merge's own routing (counts pinned in
 `scripts/catalog/classic-ids/classic-id-overlay-expected.json`): `keyed` is
 every spine row carrying the identifier, `reproduces` the subset the overlay
-confirms. The remainder is the overlay disagreeing (a flip, § 4 precedence) or
+confirms. The remainder is the overlay disagreeing (a flip, [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) precedence) or
 asserting nothing:
 
 | Identifier | Spine rows keyed | Overlay reproduces | | Flips |

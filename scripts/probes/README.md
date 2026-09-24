@@ -21,8 +21,8 @@ frame/unit facts, and the mission-date caveats live in
   a non-ascending `jd`.
 - `adaptive-grid-pure.ts` (+ test) — epoch arithmetic in integer
   microdays, the two chord-error tests refinement stops on, the
-  Douglas–Peucker decimation, and the query planner. See § Adaptive
-  grid.
+  Douglas–Peucker decimation, and the query planner. See [Adaptive
+  grid](#adaptive-grid).
 - `horizons-client.ts` — one Horizons VECTORS query per
   `EpochRequest`: URL shape, retry with backoff, pacing, and the
   row-count checks. Owns the two API limits worth knowing — a `TLIST`

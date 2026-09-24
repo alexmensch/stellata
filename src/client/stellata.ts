@@ -1012,7 +1012,7 @@ export class Stellata implements FrameAnchor {
     // Sequencing only, owning nothing — the second such entry, and the last
     // camera WRITE of the frame. Every camera reader is registered below it;
     // the argument for that, and for `static`, is scene/README.md#not-every-entry-owns-a-layer
-    // and § Camera writes, then camera reads.
+    // and scene/README.md#camera-writes-then-camera-reads.
     this.layers.register({
       timeBehaviour: { kind: 'static' },
       contribution: { kind: 'always' },

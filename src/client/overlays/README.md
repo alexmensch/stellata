@@ -56,7 +56,7 @@ src/client/overlays/
                                   referent.
   distance-gated-label.ts         createDistanceGatedLabel — the
     (+ test)                      silhouette half of the same families.
-                                  See § The two label halves.
+                                  See README.md#the-two-label-halves.
   label-dom-mock.ts               Minimal SVG-label DOM fake (named
                                   containers + mint-and-lookup of <text>
                                   by id) shared by the engine's own suite

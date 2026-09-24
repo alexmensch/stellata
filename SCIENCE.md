@@ -111,7 +111,7 @@ enough to see it.
     - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
       direction cascade and the input Bailer-Jones inverts (below).
     - **Johnson V** — `G` and `BP − RP` transformed through **Riello M., De
-      Angeli F., Evans D. W. et al. 2021, *A&A* 649, A3** § *Photometric
+      Angeli F., Evans D. W. et al. 2021, *A&A* 649, A3**, section *Photometric
       relationships with other photometric systems* (`G − V` as a cubic in
       `BP − RP`, σ = 0.03017 mag over −0.5 ≤ `BP − RP` ≤ 5.0). Every record's
       absolute magnitude is derived from this V, so it sets what the whole
@@ -141,7 +141,7 @@ enough to see it.
   `data/membership/membership-manifest.tsv`, which the record build walks;
   every field on a record is sourced from a first-order catalogue this build
   pulls itself. Licence CC-BY-SA-4.0 follows the subset it derives from.
-  Contract: [§ 3](docs/catalog-driver.md#3-the-inherited-spine) and § 3.1.
+  Contract: [§ 3](docs/catalog-driver.md#3-the-inherited-spine) and [§ 3.1](docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 - **Classic-designation cross indexes** (HD / HR / Bayer / Flamsteed /
   Gliese), the classic-ID label overlay and part of the membership term
   it derives from — four frozen
@@ -276,7 +276,7 @@ enough to see it.
   parallax, proper motion, coordinates and Johnson B/V fluxes, each
   carrying the `bibcode` of the measurement SIMBAD compiled it from —
   the bottom tier of the per-field cascades in
-  [§ 5,](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) where SIMBAD is the index and the
+  [§ 5](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers), where SIMBAD is the index and the
   bibcode is the source. Values SIMBAD publishes without one are
   dropped at write time rather than shipped for a consumer to filter,
   so every column's value count equals its bibcode count. Scoped to an
@@ -373,7 +373,7 @@ enough to see it.
       (DOI 10.1146/annurev-astro-081915-023441). Table 2 gives the Galaxy's
       global absolute magnitudes and colour indices as an external observer
       would measure them (M_V = −21.37, B−V = 0.73, from Licquia, Newman &
-      Brinchmann 2015's Milky Way analogues); § 5.1 gives the thin/thick
+      Brinchmann 2015's Milky Way analogues); Bland-Hawthorn & Gerhard 2016 Sect. 5.1 gives the thin/thick
       disc scale heights (300 ± 50 / 900 ± 180 pc), the thin-disc scale
       length (2.6 ± 0.5 kpc), and the thick-disc normalisations
       (f_ρ = 4 ± 2 %, f_Σ = 12 ± 4 %). The review is explicit that the

@@ -19,8 +19,8 @@ every addition. Spans `src/client/` end to end.
 3. **Net LOC goes down.** The shell sheds its per-kind glue and its
    forwarding facade; duplicated per-kind geometry contracts merge.
 4. **Nothing is precluded.** Free-fly camera mode and Gly-scale
-   catalogues impose constraints on the engine tier (§ Free-fly
-   constraints) that every phase must honour now, cheaply, rather than
+   catalogues impose constraints on the engine tier ([Free-fly
+   constraints](#free-fly-constraints-on-the-engine-tier)) that every phase must honour now, cheaply, rather than
    retrofit later.
 
 ## Where the codebase already is
@@ -122,7 +122,7 @@ interface ObjectKindModule<K extends TargetKind> {
   load(baseUrl): Promise<void>;      // NEVER rejects; stores the artifact
   attach(ctx: KindContext): SceneLayer | null;  // shell registers the layer
   // capability legs, valid after attach:
-  focusable(): FocusableProvider;    // merged contract, § below
+  focusable(): FocusableProvider;    // merged contract, see below
   card(): FocusCardProvider<K>;
   hover?(): HoverProvider;           // its pick doubles as the click FSM's
   pinnable(idx: number): boolean;
@@ -204,7 +204,7 @@ galaxy catalogue is a shard of the galaxy kind.
 - The alternative — `TargetKind` entries like `'star-lmc'` — would
   poison every exhaustive record with behavioural duplicates and is
   rejected.
-- **Chunk-local coordinates** (§ Free-fly constraints) are part of the
+- **Chunk-local coordinates** ([Free-fly constraints](#free-fly-constraints-on-the-engine-tier)) are part of the
   shard format from the first multi-shard kind.
 
 ### Stars are a module — sequenced last, not privileged
@@ -332,7 +332,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    field list (scene, camera, canvas, shared uniforms, solIndex, and
    accessors for t / worldOffset / focus / monochrome / declutter /
    constellation / frame-tick) and amended the contract sketch
-   (§ Tier 2). It also collapsed `FocusKind` into an alias of
+   ([Tier 2](#tier-2--kind-modules)). It also collapsed `FocusKind` into an alias of
    `TargetKind` — half of structural finding 1.
 3. **Migrate the remaining non-star kinds** — soft kinds (cloud / lg /
    shell) **landed** (`molecular-clouds/cloud-module.ts`,
@@ -361,7 +361,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    writes and the mesh's camera read — and the SVG planet labels stay
    in `main.ts` (they read the orbit-rings layer + focus state, both
    shell machinery).
-4. **Facade flattening** — landed (§ Facade flattening).
+4. **Facade flattening** — landed ([Facade flattening](#facade-flattening-phase-4--landed)).
 5. **Engine-services extraction + star module** — split into three
    sub-beads under the phase bead. **5a landed**: `FloatingOrigin`
    (frame/anchor service with the policy seam) + shared view uniforms
@@ -382,7 +382,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    the catalog as shard 0. `sids()` is the only leg routed through the
    table so far; the render plumbing and the remaining catalog-indexed
    legs arrive with the first second population, as data plus a shard
-   entry (that README's § What is NOT shard-aware yet enumerates them).
+   entry (that README's [What is NOT shard-aware yet](/src/client/star-pipeline/shards/README.md#what-is-not-shard-aware-yet) enumerates them).
 
 Each phase leaves the app fully working; no phase depends on a later
 one. LOC expectation across the epic: `stellata.ts` → ~1,200–1,400,

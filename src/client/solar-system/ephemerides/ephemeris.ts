@@ -322,7 +322,7 @@ export interface PlanetOrbitShape {
   /** The body's own eccentric anomaly at this `t`. The ring polyline
    *  starts a vertex here, so the body always sits exactly ON a vertex
    *  rather than up to half a chord off it — see
-   *  orbit-rings-layer.ts § buildEllipsePoints. */
+   *  `buildEllipsePoints` in orbit-rings-layer.ts. */
   readonly eccentricAnomaly: number;
 }
 

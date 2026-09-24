@@ -24,7 +24,7 @@ scripts/catalog/parse/
                                   multiples.tsv with the Gaia table already
                                   loaded here. Async, because the 5p tier has
                                   a second source once the magnitude term is
-                                  on (§ The direction tier's two Gaia files).
+                                  on (README.md#the-direction-tiers-two-gaia-files).
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator) plus the
                                   Apsis and 5p astrometry side-tables. The HIP
@@ -46,16 +46,16 @@ scripts/catalog/parse/
                                   segments — plus
                                   createConstellationAssignment, which binds
                                   the boundary lookup to the table's indices
-                                  (§ Positional constellation membership).
+                                  (README.md#positional-constellation-membership).
   tsv-stream.ts                   forEachLine — the one line-at-a-time read
                                   over a committed table too large to hold as
-                                  one string (§ Streaming a committed table).
+                                  one string (README.md#streaming-a-committed-table).
   corpus-tsv.ts                   Shared TSV header, cell and record-ref
                                   parsing. RECORD_REF_KINDS is the one list of
                                   ways a corpus row addresses a record —
                                   hip / gaia / name / hd. headerIndex
                                   is the one header walk for every committed
-                                  table (see § TSV header resolution) and
+                                  table (see README.md#tsv-header-resolution) and
                                   dataRows is the row iterator over it; the
                                   cell + record-ref helpers additionally serve
                                   the frozen regression corpora
@@ -136,8 +136,8 @@ when `MAGNITUDE_FLOOR_V` is set, by the magnitude pull's own rows for the
 sources that term admitted — same schema, same parser, so tier 1 sees one kind
 of row and cannot tell which file it came from. Only the manifest rows marked
 `term=magnitude` are read out of the pull, and a source the catalogue file
-already answers for keeps that row. Both passes stream (§ Streaming a
-committed table): the keep-set folds out of the manifest a line at a time, and
+already answers for keeps that row. Both passes stream ([Streaming a
+committed table](#streaming-a-committed-table)): the keep-set folds out of the manifest a line at a time, and
 the pull's rows are filtered against it during the fold rather than collected
 and re-parsed. With the floor off, neither read happens.
 [The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it).
@@ -152,7 +152,7 @@ label-merge/README.md).
 
 **Two rows leave without a record, and the difference is what the count means.**
 A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no
-parallax, no V, or no position, so the § 6.1 ledger records it leaving and
+parallax, no V, or no position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
 `data/membership/parked-ledger.tsv` names it. A **drop** (step 5) is a
 reference table disagreeing with the tiers above it — never a membership
 decision — so it is pinned at 0 in `../build-catalog-expected.json` and a
@@ -179,7 +179,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    the coordinate tier has nothing to serve it either. Every other row of that
    shape reaches SIMBAD coordinates ([The values pull](/data/simbad/README.md#the-values-pull)).
 3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
-   states a position but no motion. See § Space-motion velocity.
+   states a position but no motion. See [Space-motion velocity](#space-motion-velocity).
 4. **Distance overrides**, in order, each superseding the last on the rows it
    claims. `dist = 1000/plx` from step 0, then **Bailer-Jones (DR3)**
    (`applyBailerJonesOverride`), eligible where step 0 resolved
@@ -196,7 +196,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    the whole override stack settled; **position** — `directionOnPm` advances
    the step-2 solution to the scene epoch on the motion the row ends up
    carrying, and `xyz = direction × distance` in float64; then **velocity**
-   assembly (§ Space-motion velocity).
+   assembly ([Space-motion velocity](#space-motion-velocity)).
 7. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
    it). See `../spectral/README.md`.
@@ -214,7 +214,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    special-cased to 0.013 R☉; Wolf-Rayets keep their own ramps (Apsis
    models neither). Clamped to [0.08, 2500] R☉.
 10. **Constellation** — positional, from the resolved xyz
-    (§ Positional constellation membership). Nothing here sets the
+    ([Positional constellation membership](#positional-constellation-membership)). Nothing here sets the
     DESIGNATION's constellation: the manifest carries no editorial `con` cell.
 
 Every cascade tally the walk returns is incremented **after** step 5, so each

@@ -209,7 +209,7 @@ export interface Cns5Row {
   gaiaSourceId: string | null;
   hip: number | null;
   /** Null where the row states no position or no epoch to state it at —
-   *  the § 5 direction cascade's CNS5 tier needs both. */
+   *  the direction cascade's CNS5 tier (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) needs both. */
   astrometry: Cns5Astrometry | null;
 }
 

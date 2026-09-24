@@ -92,7 +92,7 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      # see scripts/ci/README.md § The catalogue build cache
+      # see /scripts/ci/README.md#the-catalogue-build-cache
       - id: catalog-key
         run: |
           key=$(pnpm exec tsx scripts/ci/catalog-stage.ts key)
@@ -121,7 +121,7 @@ jobs:
           key: ${{ steps.catalog-key.outputs.key }}
       - id: built
         run: pnpm run build:layers
-      # Ledger ↔ artifact consistency, drop side (docs/sid.md § 4.5):
+      # Ledger ↔ artifact consistency, drop side (/docs/sid.md#45-ci-guard):
       # read-only allocation walk over the built artifacts; fails on any
       # would-mint object or orphaned synth key, so an object-set change
       # can't land without its allocation / retirement / bridge.

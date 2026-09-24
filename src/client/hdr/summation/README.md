@@ -21,7 +21,7 @@ src/client/hdr/summation/
     (+ test)                 bounds the tap count, the disc's area-overlap
                              weights, and the CPU mirror of the
                              convolution. The test is the epic's acceptance
-                             for this pass (§ What is pinned).
+                             for this pass (README.md#what-is-pinned).
 ```
 
 The pass and the convolution graph live in `src/client/webgpu/hdr/`

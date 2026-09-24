@@ -44,7 +44,7 @@ motion the viewer cannot see, which under a scale-relative trigger is
 unbounded URL churn against a *trailing* debounce — that is, no URL write at
 all. Subtracting the anchor removes both.
 
-**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
+<a id="worldoffset-carries-the-frame"></a>**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
 the encoder gates that field on the exact complement of this test rather than
 on a second rule of its own. Three cases leave the pose un-anchored: nothing
 focused, a source that will not resolve, and a **soft-kind focus** — only a

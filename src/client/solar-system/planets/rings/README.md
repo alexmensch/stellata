@@ -2,7 +2,7 @@
 
 Saturn, plus Uranus + Neptune's faint rings at true opacity. `../README.md`
 owns the mesh-LOD regime these render inside; the strip data pipeline is
-[Ring strips,](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor) which also carries the spans and
+[Ring strips](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor), which also carries the spans and
 the Jupiter exclusion.
 
 ```
@@ -11,7 +11,7 @@ src/client/solar-system/planets/rings/
   (+ test)                 ring system's share of the body's unresolved
                            magnitude, and the drawn annulus's phase
                            scalar. Pure, vitest-pinned.
-                           § Ring photometry.
+                           README.md#ring-photometry--the-unresolved-magnitude.
 ```
 
 `Planet.rings` adds an annulus mesh in the body's equatorial plane (IAU
@@ -34,8 +34,8 @@ render in the bracketed second pass (`../../../local-depth/README.md`),
 where standard depth orders ring↔body natively — including the oblate
 limb. The analytic ray–ellipsoid helper survives only for the body-shadow
 term (sun ray, not camera ray). Geometry drawn near a planet body in the
-MAIN pass still cannot depth-test against it (same README, § Why the main
-pass cannot do this) — new close-range geometry belongs in the local pass,
+MAIN pass still cannot depth-test against it ([Why the main
+pass cannot do this](../../../local-depth/README.md#why-the-main-pass-cannot-do-this)) — new close-range geometry belongs in the local pass,
 not behind a new analytic trick. Edge-on the zero-thickness annulus thins
 to a line, which is the physically honest look.
 

@@ -9,7 +9,7 @@ per-frame dash scale) and take their material from here, so the shader
 side stays in one place. The primitives those
 materials are handed to (`makeOrbitLineLoop` / `makeOrbitLine` /
 `makeOrbitLineSegments` / `mirrorOrbitLine`) stay in `../util/orbit-line.ts`
-— except the fat one (§ The fat stroke brings its own object).
+— except the fat one ([The fat stroke brings its own object](#the-fat-stroke-brings-its-own-object)).
 
 ## Files in this area
 

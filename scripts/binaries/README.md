@@ -58,8 +58,7 @@ scripts/binaries/
                                   consume. Label convention: data/msc/README.md.
   subdivide.py                    Synthesized sub-pair injection — ORB6 orphans
                                   + curated overrides, MSC inner pairs, binding
-                                  seeds, Gaia-NSS inner pairs. See § Sub-pair
-                                  synthesis.
+                                  seeds, Gaia-NSS inner pairs. See README.md#sub-pair-synthesis-subdividepy.
   stage2_resolve.py               WDS component → Gaia DR3 source_id cascade,
                                   with same-letter + Aa→A propagation. Also
                                   hosts the binding-integrity audit.
@@ -79,12 +78,12 @@ scripts/binaries/
   stage7_counts.py                Build-counts + build-rates snapshot writer
                                   (mirrors scripts/catalog/build-counts.ts).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
-                                  (Cox 2000 §15.2 / Pecaut & Mamajek 2013).
+                                  (Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013).
   build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
                                   public/binaries.bin. Detects hierarchical
                                   chains via component-letter prefix matching
                                   and writes outer-before-inner. See
-                                  § Pipeline at a glance, step 3.
+                                  README.md#pipeline-at-a-glance, step 3.
   build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
                                   asserts the strongest-priority resolution per
                                   (wds_id, component) against
@@ -532,7 +531,7 @@ a0 → 0 for near-equal-brightness pairs. Reconstructing `a_rel` needs a
 mass ratio AND a flux ratio we don't reliably have per pair, so `a_AU`
 is left `None` here; Stage 6's `finalize_renderable_elements`
 estimates it from Kepler's third law for the non-visual routes
-(§ Stage 6). The plane angles `i` /
+([Stage 6](#stage-6--multiplestsv-emit)). The plane angles `i` /
 `Ω` are shared between the photocentre and relative orbits and
 populate as-is; `ω` is the photocentre's, which sits π away from the
 secondary's relative-orbit ω whenever the primary carries most of the
@@ -746,7 +745,7 @@ Three system-level mechanisms run at emit time:
   parses both components' spectral strings (SIMBAD per-component
   preferred, AT-HYG inherited fallback) into class / subclass / lum
   class and reads a `q = M_secondary / (M_primary + M_secondary)` off
-  per-class mass tables for MS / III / IV / I (Cox 2000 §15.2, Pecaut &
+  per-class mass tables for MS / III / IV / I (Cox 2000 Sect. 15.2, Pecaut &
   Mamajek 2013). White dwarfs default to 0.6 M☉; carbon / S / WR
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.

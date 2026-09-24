@@ -36,7 +36,7 @@ export interface BinaryOrbitFieldOptions {
   /** Immutable J2016.0 catalog baseline (count × 3) + per-star space-motion
    *  velocities (pc/yr). Unfocused, relations reset their local slots from
    *  these in float64 via `writeAdvancedLocal` rather than from the float32
-   *  `absolutePositions`. See § Walk-active LOD. */
+   *  `absolutePositions`. See README.md#walk-active-lod. */
   basePositions: Float32Array;
   velocities: Float32Array;
   /** Catalog-wide absolute magnitudes, length = catalog.count. Drives
@@ -245,7 +245,7 @@ export class BinaryOrbitField {
       // Unfocused: reconstruct the baseline in float64 off base + velocities
       // (writeAdvancedLocal), NOT from the float32 absolute. Focused: reset
       // from the absolute so the shell's epoch-follow camera move cancels and
-      // the focal stays pinned. See § Walk-active LOD.
+      // the focal stays pinned. See README.md#walk-active-lod.
       const pBase = pIdx * 3;
       const sBase = sIdx * 3;
       if (focalIdx !== null) {
@@ -314,8 +314,8 @@ export class BinaryOrbitField {
       // Barycentric split (sCoeff − pCoeff = 1): primary += −q·ΔR, secondary
       // tracks primary + baseDiffPc + ΔR. aPx carries any parent
       // perturbation, so a hierarchical inner pair inherits it on both
-      // members while its relative offset stays clean. See README § Tier
-      // mapping + § Hierarchical walk.
+      // members while its relative offset stays clean. See README.md#tier-mapping
+      // + README.md#hierarchical-walk.
       this.evaluateDelta(rc, r, tJd);
       keplerCount++;
       const dxDelta = DELTA_OUT.x;
@@ -337,7 +337,7 @@ export class BinaryOrbitField {
 
     // Only localPositions is rewritten wholesale from outside this field,
     // so only it falls back to a full upload; nothing else writes
-    // compositeSuppress. See README § Partial re-upload.
+    // compositeSuppress. See README.md#partial-re-upload.
     this.positionUploader.flush(this.baselinesDirty);
     this.suppressUploader.flush(false);
     this.baselinesDirty = false;

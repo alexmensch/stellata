@@ -40,7 +40,7 @@ nothing translucent, blurred, or filtered over it. Adding a
 
 ## The four sections
 
-| § | Patches | What it catches |
+| Section | Patches | What it catches |
 | --- | --- | --- |
 | Black point | `1 2 3 4 6 8 11 16` on `0` | shadow crush — the failure that matters most, since the scene is faint sources on black |
 | Highlights | `238…254` on `255` | top-end crush, which is what the resolved-surface pin compensates for |
@@ -72,7 +72,7 @@ by `devicePixelRatio` and fills **one device pixel per stripe**. A CSS
 resolvable and every match point shifts.
 
 The cell measures its own laid-out box rather than carrying fixed
-dimensions, so it tracks § Sizing. That makes **layout a precondition**:
+dimensions, so it tracks [Sizing](#sizing). That makes **layout a precondition**:
 a still-hidden canvas measures zero and is skipped, so the cells are cut
 *after* `handle.open()`, never before. They are re-cut on `resize`, which
 covers both a viewport change and a window dragged between displays of

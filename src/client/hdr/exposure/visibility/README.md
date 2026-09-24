@@ -78,7 +78,7 @@ Local Group pair as its users.
 **Rule 2 refuses a skip within a band of the visibility edge, and the
 band is the plate scale's** — it widens as the camera zooms out, because
 the share bound carries `Ω_px` where the display carries `Ω_sum`. The
-measured widths are § 3.5's, pinned in `emitter-visibility-pure.test.ts`.
+measured widths are [§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound)'s, pinned in `emitter-visibility-pure.test.ts`.
 
 **`peakSb` arrives as a thunk, and the order it is called in is the
 contract.** Producing the bound is the expensive half of a verdict — the

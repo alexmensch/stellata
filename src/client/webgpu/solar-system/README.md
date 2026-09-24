@@ -11,8 +11,8 @@ The layers take their surfaces through
 `../../solar-system/materials/README.md` — that README owns which
 surfaces this family asks for, the neutral-defaults rule, and why the
 probe glyph is split out; the `EmitterMaterial` contract they are handed
-back is [The material seam](../../scene/README.md#the-material-seam). Only the glare needed a layer of its own (§ The glare
-packs).
+back is [The material seam](../../scene/README.md#the-material-seam). Only the glare needed a layer of its own ([The glare
+packs](#the-glare-packs)).
 
 ## Files in this area
 
@@ -31,8 +31,7 @@ src/client/webgpu/solar-system/
   probe-tsl.ts                The fixed-pixel diamond glyph.
   planet-glare-tsl.ts         The reflected-glare billboard's vertex and
                               fragment graphs, main pass and mirror.
-  planet-glare-geometry.ts    Its packed instanced geometry (§ The glare
-                              packs).
+  planet-glare-geometry.ts    Its packed instanced geometry (README.md#the-glare-packs).
   planet-glare-layer.ts       PlanetGlareLayer: the main mesh into the
     (+ test)                  shell's scene, the mirror into the field's
                               localGroup (the pass scene), the per-frame
@@ -44,7 +43,7 @@ src/client/webgpu/solar-system/
                               the shared roster
                               (`../../solar-system/materials/README.md#texture-slot-rosters`).
   tsl-materials.ts (+ test)   The factory implementing SolarSystemMaterials.
-  tsl-drift.test.ts           § Constant drift.
+  tsl-drift.test.ts           README.md#constant-drift.
 ```
 
 ## A stand-in's filters
@@ -107,8 +106,8 @@ shell and the annulus need, and each of their varyings is a TSL built-in
 — `positionView`, `normalView`, `uv()`, and `varying(positionGeometry.xy)`
 for the annulus. So those three set `fragmentNode` alone, and the depth
 pre-stamp — the same spheroid, no varyings at all — sets a fragment that
-writes nothing but still swaps (§ Every fragment writes the whole output
-struct). The glare and the glyph project their own screen-space quads and
+writes nothing but still swaps ([Every fragment writes the whole output
+struct](#every-fragment-writes-the-whole-output-struct)). The glare and the glyph project their own screen-space quads and
 carry a `vertexNode`.
 
 `normalView` normalises after interpolation, and three's
@@ -119,7 +118,7 @@ reaches the normal correctly.
 
 Every surface here reaches the HDR target, so every one of them declares
 all three attachment outputs and swaps to a single output when the target
-is not bound ([The gate becomes the output struct,](../hdr/README.md#the-gate-becomes-the-output-struct)
+is not bound ([The gate becomes the output struct](../hdr/README.md#the-gate-becomes-the-output-struct),
 `../hdr/mrt-material.ts`). The depth pre-stamp included: its colour writes
 are off, so the swap is irrelevant to validity and mandatory for three's
 pipeline cache — the same argument the star core mask carries. A slot a
@@ -251,7 +250,7 @@ The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
 channel (`../../hdr/attachments/README.md`).
 
-The layer packs from `PlanetBodyField.glareSources()` (§ The glare packs);
+The layer packs from `PlanetBodyField.glareSources()` ([The glare packs](#the-glare-packs));
 the field writes the arrays and owns nothing on the GPU, and its `drawn`
 getter is the layer's visibility.
 

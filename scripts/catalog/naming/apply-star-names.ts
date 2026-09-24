@@ -44,7 +44,7 @@ export function loadStarNamingInputs(): StarNamingInputs {
 /** The curated escape hatch, keyed on SID because that identity survives
  *  re-indexing and a no-Gaia record has no source_id (/docs/star-naming.md#7-curation-seam).
  * Expected to stay empty: it exists for review findings the
- *  authority cannot express, never as a home for the folk names § 2 routes
+ *  authority cannot express, never as a home for the folk names the naming authority (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) routes
  *  to aliases. */
 export function loadNameOverrides(): Map<number, string> {
   const out = new Map<number, string>();
@@ -93,7 +93,7 @@ export interface StarNamingCounts {
   namingIauNamedByProper: number;
   /** Approved names no record carries an identifier or spelling for. */
   namingIauUnreached: number;
-  /** Records carrying a § 2 string designation (`Ross 128`). */
+  /** Records carrying a string designation (`Ross 128`; /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
   namingEponym: number;
   /** Records the authority gives a glyph-bearing Bayer designation, and how
    *  many of them the spine printed no Bayer cell for at all. */
@@ -162,7 +162,7 @@ export function applyStarNames(
       }
     } else if ((star.flags & FLAG_IS_SOL) !== 0) {
       // The one hand-emitted record: no catalogue names it, and it is exempt
-      // from the § 2 disposition gate rather than absent from it.
+      // from the naming-authority disposition gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) rather than absent from it.
       star.eponym = star.proper;
     } else if (star.proper !== null) {
       const routed = routeDisposedProper(

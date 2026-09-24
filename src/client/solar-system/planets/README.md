@@ -40,8 +40,7 @@ src/client/solar-system/planets/
                                   pick() adds one gate over
                                   forEachDrawnBodyView: bodyInkVisible,
                                   which reads the LIVE uExposure so the
-                                  adaptation cut reaches the pick (§ The
-                                  pick's adapted gate).
+                                  adaptation cut reaches the pick (README.md#the-picks-adapted-gate).
                                   isCollapsedOntoParent is the per-body
                                   "renders as one point with its parent"
                                   verdict (drawn this frame AND within
@@ -65,10 +64,9 @@ src/client/solar-system/planets/
                                   is unpickable rather than invisible and
                                   clickable.
                                   cadenceReport is the field's per-frame
-                                  answer to the render gate (§ What the
-                                  render cadence reads).
+                                  answer to the render gate (README.md#what-the-render-cadence-reads).
   planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
-                                  § Planet mesh LOD. Builds its four
+                                  README.md#planet-mesh-lod. Builds its four
                                   surfaces (mesh, annulus, shell, depth
                                   pre-stamp) through ../materials/, which
                                   owns the shared atmosphere uniform
@@ -106,7 +104,7 @@ src/client/solar-system/planets/
                                   of appMag. Its own README.
   rotation/                       Pole + prime-meridian elements and the
                                   texture-UV orientation chain — its own
-                                  README (§ Planet rotation).
+                                  README (README.md#planet-rotation).
   body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math, CPU
                                   mirror of the mesh shader's caster loop.
                                   Io-transit / lunar-eclipse search tests
@@ -157,7 +155,7 @@ airlight over the disc — is
 
 - **`planet-mesh-layer.ts`** — the close-range spheroid mesh, ring
   annuli, and atmosphere shells. Only present in the mesh-LOD regime
-  (§ Planet mesh LOD).
+  ([Planet mesh LOD](#planet-mesh-lod)).
 
 The orbit-ring layer is a sibling concern and lives in
 `../ephemerides/orbit-rings-layer.ts` — it reads live centres from
@@ -207,7 +205,7 @@ pass. Apparent magnitude is computed in the vertex shader from
 reflected host-star light through a per-planet phase function. The
 visibility cutoff applies **to the glare** — sub-cutoff planets fade
 naturally, no unconditional pixel floor — and never to the mesh
-(§ Planet mesh LOD). The glare is one pass (main-pass draw +
+([Planet mesh LOD](#planet-mesh-lod)). The glare is one pass (main-pass draw +
 **local-pass mirror draw** over the active cluster's slot range, gated
 by `uLocalPassRange` — the mirror's vertex stage reads it in the opposite
 sense). While the system is locally active
@@ -330,7 +328,7 @@ crossfade.
   `spheroid-pure.ts:polarRadiusRatio` and nowhere else
   ([Shell extents](../atmosphere/README.md#shell-extents) says why).
   Orientation comes from the body's IAU rotation elements
-  (§ Planet rotation); bodies without them fall back to pole =
+  ([Planet rotation](#planet-rotation)); bodies without them fall back to pole =
   host orbital-plane normal with an arbitrary fixed meridian.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,
@@ -353,7 +351,7 @@ crossfade.
   - `uSurfaceLuminance` (`mesh-surface-pure.ts:meshSurfaceLuminance`) —
     the body's **true mean surface brightness** in the scene-wide HDR
     unit, pre-divided by the disc means of everything the shader
-    multiplies on top (§ Physical-luminance emission) and, for an
+    multiplies on top ([Physical-luminance emission](#physical-luminance-emission)) and, for an
     atmospheric body, less the share of that flux its airlight already
     supplies ([Flux bookkeeping](../atmosphere/README.md#flux-bookkeeping)). Surface-only: the
     reflected glare is the star-perceptual point (driven by appMag,

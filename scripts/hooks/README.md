@@ -22,8 +22,8 @@ scripts/hooks/
   prime-guard.sh           SessionStart: persists the full `bd prime`
                            output and emits a ~460-byte pointer to it.
                            PreToolUse: blocks every tool call until that
-                           file is Read. Enforces ~/.claude/CLAUDE.md
-                           § Session-start hook output. Behaviour pinned
+                           file is Read. Enforces ~/.claude/CLAUDE.md's
+                           "Session-start hook output". Behaviour pinned
                            by tests/prime-guard.test.ts.
   commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
                            staged tree touches a guarded folder
@@ -35,7 +35,7 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts), and/or
                            when a staged comment block restates
                            markdown prose the same commit adds
-                           — § The restatement sweep.
+                           — README.md#the-restatement-sweep.
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
   perf-guard.sh            Two independent gates on Bash / Write / Edit /
@@ -47,7 +47,7 @@ scripts/hooks/
                            an hour. Splitting them is what stops a launch
                            spelling the hook misses from carrying a
                            self-arm through with it. Fails CLOSED —
-                           § How perf-guard fails closed. The deny reason
+                           README.md#how-perf-guard-fails-closed. The deny reason
                            carries the arm protocol. Marker name and
                            freshness come from
                            scripts/perf/arming/perf-go-lib.sh, shared with the
@@ -276,7 +276,7 @@ matched commit:
    references. Scoped to NEW content so pre-existing legacy
    violations don't block unrelated commits.
 
-3. **Restatement sweep.** § The restatement sweep below.
+3. **Restatement sweep.** [The restatement sweep](#the-restatement-sweep) below.
 
 Any check fires a `permissionDecision: "deny"` with a per-finding
 breakdown and the relevant [Code comments](/AGENTS.md#code-comments--what-ci-enforces-here) substitution.

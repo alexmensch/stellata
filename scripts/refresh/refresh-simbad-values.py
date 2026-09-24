@@ -53,9 +53,9 @@ GAIA_RESOLUTION_MIN = 0.95
 
 
 def collect_oid_requests(client: rl.TapClient) -> list[int]:
-    """Resolve the § 5 value cohort's manifest keys to a sorted oid list."""
+    """Resolve the per-field value cohort's manifest keys (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) to a sorted oid list."""
     gaia_complete = inputs.gaia_complete_source_ids(GAIA_ASTROMETRY)
-    print(f"gaia 5p states every § 5 value for {len(gaia_complete)} source_ids")
+    print(f"gaia 5p states every cascade value for {len(gaia_complete)} source_ids")
     keys = inputs.membership_request_keys(
         MEMBERSHIP, inputs.simbad_value_cohort(gaia_complete),
     )

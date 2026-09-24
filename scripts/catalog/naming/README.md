@@ -9,7 +9,7 @@ Two entry points regenerate committed artifacts, both asserted
 byte-identical in CI so artifact and code always land together:
 
 - `pnpm run build:wgsn` — the keyed tables under `data/iau-wgsn/`.
-- `pnpm run build:naming-parity` — the parity ledger (§ The parity ledger).
+- `pnpm run build:naming-parity` — the parity ledger ([The parity ledger](#the-parity-ledger)).
 
 `build-catalog.ts` calls this folder twice: `applyStarNames` right after the
 classic-ID label merge, and `assignDisplayNames` post-sort just before the
@@ -34,7 +34,7 @@ scripts/catalog/naming/
                                 `null`, and both key columns' inline
                                 component letters (`HIP 518A`, `62264AB`).
                                 A key shape covered by neither throws.
-  wgsn-normalise-pure.ts        Both § 4 normalisers. NEC `Bayer/other`
+  wgsn-normalise-pure.ts        Both /docs/star-naming.md#4-canonical-designation-forms normalisers. NEC `Bayer/other`
     (+ test)                    grammar → structured bayer / flamsteed /
                                 gould / variable / non-stellar /
                                 other-catalogue / corrupt; IV/27A `bayer`
@@ -43,7 +43,7 @@ scripts/catalog/naming/
                                 class. Plus the multi-name cell split and
                                 the diacritic fold used for name matching.
   wgsn-tables-pure.ts (+ test)  Row shaping and the two joins: the IV/27A
-                                Bayer union, the § 2 disposition set
+                                Bayer union, the /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them disposition set
                                 comparison, the key sets both sides of the
                                 union share, and the total sort order the
                                 committed table's byte-for-byte CI diff
@@ -57,7 +57,7 @@ scripts/catalog/naming/
   wgsn-index-pure.ts (+ test)   The record-side join: readers for the two
                                 committed tables and the disposition file,
                                 the keyed index, the three pickers, and the
-                                § 2 class routing (§ The record-side join).
+                                /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them class routing (README.md#the-record-side-join).
   apply-star-names.ts           I/O + the record pass: loads the committed
                                 tables and writes each record's authority
                                 tiers, aliases and designation
@@ -66,7 +66,7 @@ scripts/catalog/naming/
   star-naming-pure.ts (+ test)  THE COMPOSER. The ladder, the component
                                 rules, the wire adapter. Imported by the
                                 build AND by the runtime
-                                (§ Two callers, one composer).
+                                (README.md#two-callers-one-composer).
   display-names.ts (+ test)     The build's half of the composer: every
                                 record's designation set → its display
                                 name, with the NAME tiers written into
@@ -76,7 +76,7 @@ scripts/catalog/naming/
                                 the shared label resolver.
   build-naming-parity.ts        Refreshes the ledger from the built
                                 artifacts.
-  naming-parity.test.ts         The § 8 gate over the built artifacts.
+  naming-parity.test.ts         The /docs/star-naming.md#8-parity--the-gate-on-any-naming-change gate over the built artifacts.
   naming-parity.tsv             The display-change enumeration.
   naming-duplicates.tsv         Duplicate composed labels — data findings.
 ```
@@ -112,9 +112,9 @@ Positionally, all but one sit outside the membership manifest entirely, so
 they name stars the catalogue does not carry; the pins are there to catch a
 refresh that changes either fact.
 
-## The § 2 residual gate
+## The residual gate
 
-Every manifest `proper` must either match a WGSN name key
+[§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s residual, enforced: every manifest `proper` must either match a WGSN name key
 (diacritic-folded, post multi-name-split — 445 of 491 do) or appear in
 the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (46 rows).
 The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
@@ -180,7 +180,7 @@ with no component cell over a lettered one (γ Cen's keys carry all three of
 `γ Cen`, `γ Cen A`, `γ Cen B`), then a superscripted row over the bare one
 (β Sco and β¹ Sco both key HIP 78820 — the star is β¹ Sco).
 
-**§ 2's classes route here, not in code.** `discovery-designation`,
+**[§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s classes route here, not in code.** `discovery-designation`,
 `catalogue-designation` and `gould-designation` display their string
 (`Ross 128`, `Cygnus X-1`, `268 G. Cet`); `component-letter`,
 `unattributed` and `latin-bayer` keep theirs as a search-only alias.
@@ -206,7 +206,7 @@ Flamsteed form ships as an alias rather than going unsearchable.
 pass rather than a per-star function because two of its three rules are
 relational:
 
-1. **The ladder** — curated override → IAU name → § 2 string designation →
+1. **The ladder** — curated override → IAU name → [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) string designation →
    Bayer (Greek) → Flamsteed → Bayer (Latin) → Gould → GCVS → catalogue
    (HIP → HD → HR → GJ). **The Bayer tier is split**, because Bayer's Greek
    letters and his Latin overflow are read differently: `α UMa` outranks
@@ -253,7 +253,7 @@ for exactly that reason.
 
 ## The parity ledger
 
-[§ 8,](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change) as two committed TSVs plus
+[§ 8](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change), as two committed TSVs plus
 `naming-parity.test.ts`:
 
 - **`naming-parity.tsv`** — one row per record whose displayed name changed
@@ -270,7 +270,7 @@ for exactly that reason.
 
 The gate is stated over strings with EXTERNAL provenance — every name the
 authority approves and every name the manifest carries must reach a record.
-A string the build composed itself has no external existence, so § 5 lets
+A string the build composed itself has no external existence, so [§ 5](/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) lets
 it disappear with the composition that made it; 1,986 do, and the ledger's
 `resolves` column is where each one is reviewable.
 

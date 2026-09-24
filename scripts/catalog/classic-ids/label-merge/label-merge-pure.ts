@@ -86,7 +86,7 @@ export interface LabelMergeCounts {
   labelAgree: LabelPartition;
   /** Identifier the spine had no value for at all. */
   labelAdded: LabelPartition;
-  /** Overlay value adopted over a disagreeing spine value (§ 4 precedence). */
+  /** Overlay value adopted over a disagreeing spine value (the HD-route precedence, /docs/catalog-driver.md#4-how-hd-reaches-gaia). */
   labelFlipped: LabelPartition;
   /** Spine value kept because the overlay asserts none for this identifier —
    *  including every record it has no row for. */
@@ -160,7 +160,7 @@ interface FieldSpec {
    *  component letter: two spellings of one component agree, two different
    *  components of one system disagree, and a system-level candidate against a
    *  component cell is neither — it makes no claim the cell can contradict, so
-   *  § 4 precedence must not fire on it. */
+   *  the HD-route precedence (/docs/catalog-driver.md#4-how-hd-reaches-gaia) must not fire on it. */
   confirms?: (candidate: string, spine: string) => boolean;
   /** Where the values the single-valued field cannot hold go, or null where
    *  the field has nowhere to put them. Null is what separates the two extra
@@ -431,7 +431,7 @@ export interface LabelMergeInput<R extends LabelMergeRecord> {
   overrides: LabelOverrides;
   /** Source_ids whose `multiples.tsv` system names more than one component, so
    *  a second HD naming the pair's other component has a record of its own to
-   *  belong to (§ An alias stops at the blend). Promotion only ever renders a
+   *  belong to (README.md#an-alias-stops-at-the-blend). Promotion only ever renders a
    *  secondary that exists as a member row, so this over-approximates the
    *  rendered set by design — withholding one alias too many is reviewable,
    *  leaving one on the wrong record is not. */

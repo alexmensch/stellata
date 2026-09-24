@@ -18,7 +18,7 @@ import { formatRatePerSecond } from './time-scrubber-widget-pure';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 // Monochrome line-art transport glyphs (currentColor stroke, styled in
-// styles.css § .transport-icon) matching the app's thin-line iconography.
+// `.transport-icon` in styles.css) matching the app's thin-line iconography.
 // viewBox 0 0 24 24; every glyph fills the box so reset reads at the same
 // weight and size as the triangle/chevron controls.
 const TRANSPORT_ICON_PATHS: Record<TransportAction, string[]> = {

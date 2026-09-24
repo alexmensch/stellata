@@ -324,7 +324,7 @@ async function main() {
     awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
     // Out of the root stacking context and into the instrument stack —
-    // styles.css § .loading.
+    // `.loading` in styles.css.
     document.getElementById('bottom-left-stack')!.prepend(loading);
     document.body.classList.add('scene-live');
     // README.md#boot-in-two-waves the dead-control rule.

@@ -3,7 +3,7 @@
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
 — **379,135** ids, the union of four contributions the table's four
-consumers need (§ The request is a union). Not a network pull and not on the
+consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
 (`../README.md` owns the output contract).

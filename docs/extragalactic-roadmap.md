@@ -9,8 +9,8 @@ handling, and the three cross-cutting architecture changes. The epic
 body carries the motivating survey + per-tier performance analysis;
 this doc carries the *decisions*.
 
-All source URLs verified live 2026-07-06 (retrieval flags in § Access
-flags). Frozen-data policy applies throughout: every catalogue is
+All source URLs verified live 2026-07-06 (retrieval flags in [Access
+flags](#access-flags-verified-2026-07-06)). Frozen-data policy applies throughout: every catalogue is
 fetched once by a one-off `scripts/refresh-*` script excluded from
 `pnpm run build`, committed under `data/extragalactic/` (LFS above
 ~1 MB), and the build never touches the network.
@@ -142,8 +142,8 @@ E(z) = √(Ωm(1+z)³ + Ω_r(1+z)⁴ + ΩΛ). Trapezoidal at Δz = 1e-4 is
 far below data uncertainty. The integrator lives once in
 `scripts/extragalactic/cosmology-pure.ts` with vitest pins (e.g.
 D_C(0.1), D_C(0.7), D_C(1089.9) ≈ 14.0 Gpc for the CMB shell — pin
-the integrator's own output with `toBe` at impl time, per § Test
-coverage at write time).
+the integrator's own output with `toBe` at impl time, per [Test
+coverage at write time](authoring-patterns.md#test-coverage-at-write-time)).
 
 Below Tier 3 (z ≲ 0.035), catalogue distances (TRGB/SBF/CF4) are used
 directly — cosmology conversion applies only where redshift IS the
@@ -157,7 +157,7 @@ apply our own flow model.
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| position | 3 × float32, ICRS heliocentric pc | float32 = ~7 sig figs → ~100 pc grid at 1 Gpc, far below data uncertainty; render-side precision is handled camera-relative (see § 7) |
+| position | 3 × float32, ICRS heliocentric pc | float32 = ~7 sig figs → ~100 pc grid at 1 Gpc, far below data uncertainty; render-side precision is handled camera-relative (see [§ 7](#7-architecture-sketches-impl-in-0hx2--0hx3)) |
 | distance | float32 pc | redundant with ‖position‖ but kept: LOD banding + fade tests read it without a sqrt |
 | m_k | float32 | apparent Ks; M_K derivable with distance. NaN when the tier has no K photometry (SDSS/BOSS: r-band or class-uniform proxy, documented per tier) |
 | morph_t | int8 | de Vaucouleurs T (−5…10); 42 = QSO sentinel, 127 = unknown |
@@ -177,7 +177,7 @@ apply our own flow model.
   count header, fixed-stride records per the table above, name table
   appended as length-prefixed UTF-8. Layout constants live once in a
   `*-pure.ts` shared by build script, loader, and tests (never
-  redefined — § Named constants and DRY).
+  redefined — [Named constants and DRY](authoring-patterns.md#named-constants-and-dry)).
 - **Tier 4+ chunking**: HEALPix **Nside = 4, nested** (192 sky
   cells) × **4 comoving distance bands** with log-spaced edges
   (Tier 4: 0.2 / 0.45 / 0.7 / 1.0 Gpc; Tier 5: 1.0 / 1.6 / 2.2 /
@@ -258,7 +258,7 @@ visible structure is partly the selection function.
   follow-up under 0hx.7, not a gate.
 - The tier's data README documents the three target classes, their
   z-ranges, footprints, and the "structure ≠ selection" caveat, and
-  cites Ross et al. 2020 § 2 for the selection definitions.
+  cites Ross et al. 2020 Sect. 2 for the selection definitions.
 
 ## 7. Architecture sketches (impl in 0hx.2 / 0hx.3)
 
@@ -277,10 +277,10 @@ visible structure is partly the selection function.
    Positions are stored absolute ICRS pc (float32) but uploaded
    camera-relative: CPU-side float64 subtraction of the camera
    position per rebase, the star pipeline's floating-origin trick
-   lifted to galaxies. Tier 4+ adds the chunk loader (§ 3) and the
+   lifted to galaxies. Tier 4+ adds the chunk loader ([§ 3](#3-manifest-schema)) and the
    near-billboard/far-volumetric LOD split the epic describes.
 3. **Label rank with spatial bucketing** (lands with 0hx.3, extended
-   per tier) — § 4 above.
+   per tier) — [§ 4](#4-naming-policy--label-ranking) above.
 
 New client code lands in `src/client/extragalactic/` (day-1 folder
 with README; loaders/renderers/`*-pure.ts`/tests), with per-tier
@@ -293,13 +293,13 @@ build scripts under `scripts/extragalactic/` + one-off
   use `http://` or prefer the CDS mirror.
 - **HyperLEDA** `leda.univ-lyon1.fr`: HTTPS cert expired 2020;
   HTTP redirects to mirror `atlas.obs-hp.fr/hyperleda/`. Deferred
-  from v1 (§ 1).
+  from v1 ([§ 1](#1-data-inventory)).
 - **Dupuy & Courtois watersheds**: only source is the IP2I
   CosmicFlows page (no VizieR/Zenodo record) — treat as fragile;
   commit the derived shells promptly.
 - **NED-LVS**: live file is a moving target — pin + record version
-  date (§ 1).
-- **SDSS MGS**: no standalone file; CasJobs extraction required (§ 1).
+  date ([§ 1](#1-data-inventory)).
+- **SDSS MGS**: no standalone file; CasJobs extraction required ([§ 1](#1-data-inventory)).
 - **CDS FTP** intermittently sits behind an anti-bot wall for
   non-browser agents; the refresh scripts should set a UA and fall
   back to VizieR's TSV export endpoints.

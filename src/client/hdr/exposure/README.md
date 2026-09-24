@@ -27,9 +27,9 @@ src/client/hdr/exposure/
                              joining them, and the slew.
   scene-adaptation.ts        SceneAdaptation — folds the frame-late
     (+ test)                 measurement into the applied cut, and owns
-                             the three debug overrides (§ Debug panel).
+                             the three debug overrides (README.md#debug-panel).
   exposure-frame-step.ts     ExposureFrameStep — the frame loop's three
-    (+ test)                 calls into this folder (§ The frame step).
+    (+ test)                 calls into this folder (README.md#the-frame-step).
   exposure-tuning.ts         The debug panel's Exposure section: the live
                              readout plus the five sliders.
   exposure-tuning-pure.ts    Readout text — the branch labels and the
@@ -54,7 +54,7 @@ The **instrument** sets what the scene is exposed *for*: a source at its
 `m_lim` (7.8 for the unaided eye) lands on the just-noticeable floor the
 unit is anchored to, and every emitter reading the shared uniform moves
 together. **Adaptation** (`dm ≤ 0`) is the automatic per-frame cut
-(§ Adaptation). The **EV trim** is the user's manual ±3 stops in 1/3
+([Adaptation](#adaptation--the-frame-measures-itself)). The **EV trim** is the user's manual ±3 stops in 1/3
 steps, and is the only term that may go positive.
 
 **There is no data-magnitude filter**, and its absence is a design
@@ -235,7 +235,7 @@ must keep, because callers depend on them rather than on the formula:
   exactly for a body-dominated frame (`L_ADAPT = L_TARGET · f_ref` is that
   identity), so the top closes with no step of its own.
   `ADAPT_DOT_COVERAGE` is `f_ref / 2^EV_MAX_STOPS` — the smallest framing
-  the trim could still pull back to `L_TARGET`, under which § 3.2's
+  the trim could still pull back to `L_TARGET`, under which [§ 3.2](/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix)'s
   brilliant dot is the honest reading. Neither is a tuned constant.
 - **Approaching a body deepens the cut while its whole lit disc is in
   frame.** `pin` is constant in coverage and `w` rises with it, so `dm` is

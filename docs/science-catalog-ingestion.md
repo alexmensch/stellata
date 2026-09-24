@@ -61,7 +61,7 @@ which underlying catalog supplied each piece of data:
 - `pm_src` — origin of proper motion. Nothing reads it: the space-motion
   cascade takes its PM from whichever tier the direction cascade selected,
   and re-keys through the rescue cascade where that tier states none
-  (§ Current-epoch star positions).
+  ([Current-epoch star positions](#current-epoch-star-positions--space-motion-propagation-to-t)).
 
 The two source families have meaningfully different magnitude
 distributions: HIP-sourced rows average `mag ≈ 8.4`, while Tycho-sourced
@@ -83,7 +83,7 @@ manifest row leaves without a record in one of two ways
 
 1. **A park**, ledgered in `data/membership/parked-ledger.tsv` — the parallax
    cascade reaches no owned measurement, or the V cascade reaches no
-   magnitude. A record needs both a place and a brightness, and § 6.1 requires
+   magnitude. A record needs both a place and a brightness, and [§ 6.1](catalog-driver.md#61-record-parity) requires
    every such row be named rather than counted.
 2. **A drop**, pinned at zero — no direction tier resolves, or the row is
    past `dist > 50,000 pc` after every override. Both mean a reference table
@@ -170,7 +170,7 @@ the underlying distance actually is a Gaia inverse-parallax estimate
 rows we take the Bailer-Jones distance (photogeometric `r_med_photogeo`
 preferred, geometric `r_med_geo` as fallback when photogeo is absent);
 position follows as the direction-cascade unit vector × the new distance
-(§ Driver astrometry). Brightness needs no separate correction here:
+([Driver astrometry](#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)). Brightness needs no separate correction here:
 absmag is derived once, from the cascade's V at whatever distance the
 whole override stack settled on, so a star placed at a new distance and
 *lit* for the old one is unreachable rather than guarded against.
@@ -446,7 +446,7 @@ first-hand: an ordered cascade over Gaia DR3, HIP2, CNS5, Gliese
 V/70A and bibcoded SIMBAD values settles which parallax a record
 inverts, and the Bailer-Jones → LMC-kinematic → cutoff stack above
 then overrides that inversion where its own gate fires. A record no
-tier reaches is a ledgered § 6.1 drop rather than a silent keep of a
+tier reaches is a ledgered [§ 6.1](catalog-driver.md#61-record-parity) drop rather than a silent keep of a
 printed cell. The tier order, the two precision constants, and why
 the residual drops rather than degrading are
 `scripts/catalog/distance/parallax/README.md`; the override stack is
@@ -491,7 +491,7 @@ focus on — the high-PM nearby neighbours (drift table:
 [Reference epoch and proper motion](/data/README.md#reference-epoch-and-proper-motion); worst case
 Barnard's Star at ~1.8 arcmin from the J2016.0 base).
 
-**Position baseline.** Post-direction-cascade (§ Driver astrometry
+**Position baseline.** Post-direction-cascade ([Driver astrometry](#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)
 above), every record's position is J2016.0 *by construction* — Gaia
 DR3 5p at its native J2016.0 (no propagation), HIP2 propagated
 J1991.25 → J2016.0, or AT-HYG printed ra/dec as-is for the 30
@@ -543,7 +543,7 @@ basis (the same basis `directionAtEpoch` in
 so the basis math extracts into a shared helper), `d` the final
 stack distance, and `v_r` in pc/yr via 1 km/s = 1.0227×10⁻⁶ pc/yr.
 μ_α* is the cos δ-applied rate — never divide by cos δ. This is the
-standard epoch-transformation model (ESA SP-1200 Vol. 1 § 1.5.5;
+standard epoch-transformation model (ESA SP-1200 Vol. 1 Sect. 1.5.5;
 Butkevich & Lindegren 2014, A&A 570, A62 give the rigorous form).
 Deliberately omitted: perspective acceleration and light-time
 terms. The perspective term is the largest omission and grows

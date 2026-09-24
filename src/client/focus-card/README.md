@@ -104,7 +104,7 @@ card is wrong in a different way for each: **not yet known** (the URL focus
 has not resolved, so the Sol default stands in — a different object),
 **known but incomplete** (the record decoded, its derived tables have not —
 wrong values), and **rendered while it was either** and never redrawn
-(§ Surfaces retained over a growing catalogue).
+([Surfaces retained over a growing catalogue](#surfaces-retained-over-a-growing-catalogue)).
 
 One rule covers all three: a card renders a subject only once that subject is
 settled and complete, and re-renders when that changes. Same rule as the
@@ -186,7 +186,7 @@ test can check for you.
   partial map. `focus-card-contract.test.ts` pins it with
   `@ts-expect-error`.
 - `constellation-row.ts` (+ test) — the shared `Constellation` row for
-  every non-stellar kind (§ Constellation row).
+  every non-stellar kind ([Constellation row](#constellation-row)).
 - `card-body.ts` — the shared content renderer: fills a card's title +
   body from `FocusCardContent`, tracks LIVE rows (function-valued
   `FocusCardRow.value`), and re-evaluates them on `tick()` while the
@@ -196,7 +196,7 @@ test can check for you.
   `#card-stack` DOM (built in `index.html`, styled via `.card-stack` /
   `.card-strip` + the `.panel` chrome in `styles.css`), rebuilds on
   `'focus'` / `'cameraMode'` / `'pois'` and on a `derivedGeneration` move
-  (§ Surfaces retained over a growing catalogue), and ticks
+  ([Surfaces retained over a growing catalogue](#surfaces-retained-over-a-growing-catalogue)), and ticks
   LIVE rows on `'frame'`. Collapse rides the shared `bindCollapse`
   helper (`../ui/panel-layout.ts`).
 - `card-dom-mock.ts` — the element fake the rolodex suite installs as

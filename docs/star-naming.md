@@ -49,7 +49,7 @@ implementation's own statement of all three rules.
 | `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
 | GCVS 5.1 | mechanical | variable-star designations | `data/gcvs/README.md` |
-| AT-HYG `proper` / `bayer` | **rejected as authority** | alias candidates only (§ 5) | — |
+| AT-HYG `proper` / `bayer` | **rejected as authority** | alias candidates only ([§ 5](#5-aliases--ship-what-cannot-be-derived-derive-what-can)) | — |
 | Stellarium `common_names` | **rejected as authority** | 659 HIP-keyed folk names, alias candidates only | `data/stellarium/README.md` |
 | SIMBAD live resolution | **rejected** | — | frozen-data policy, `data/README.md` |
 
@@ -83,7 +83,7 @@ Diacritic-folded, over `data/athyg/inherited-spine.tsv`:
 
 | Class | Count | Disposition |
 |---|---|---|
-| IAU-approved | **445** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once § 4's normaliser splits it |
+| IAU-approved | **445** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
 | discovery / eponymous designation | 21 | designation tier (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`) |
 | IAU name + AT-HYG component letter | 8 | alias only (`Acrab B`, `Cor Caroli B`, `Revati B`, …) |
 | Gould designation | 3 | designation tier (`268 G. Cet`) |
@@ -126,12 +126,12 @@ refresh, never a code edit — which is why the list is committed at ingest
 
 Display resolution order, first hit wins:
 
-1. **Curated override** (§ 7) — the escape hatch, empty by default.
+1. **Curated override** ([§ 7](#7-curation-seam)) — the escape hatch, empty by default.
 2. **IAU WGSN approved name** — `NEC` ∪ `wgsnFaints`, keyed HR → HD → HIP,
    then the record's own printed name. HIP is LAST, not first: Hipparcos
    resolved close pairs as one star, so NEC lists both p Eri rows against
    HIP 7751 and separates them only by HR and HD — a HIP-first join
-   collapses p Eri A and B onto one record, the very duplicate § 8.4
+   collapses p Eri A and B onto one record, the very duplicate [§ 8.4](#84-known-duplicate-display-names)
    expects to dissolve.
 3. **Bayer, Greek series** — glyph + superscript + designation constellation.
 4. **Flamsteed** — `<number> <dc>`.
@@ -150,7 +150,7 @@ Display resolution order, first hit wins:
    The 48 UPPERCASE cases are the sharpest: a Latin `A` collides with the
    component-letter namespace this ladder appends in, and `2 Sco B` composed
    as `A Sco B` reads as a component of something. `A² Aqr` is one half of a
-   § 8 duplicate for the same reason.
+   [§ 8](#8-parity--the-gate-on-any-naming-change) duplicate for the same reason.
 6. **Gould** — `<number> G. <dc>`. New tier; the authority carries 936.
 7. **GCVS variable designation** — `R CrB`, `V645 Cen`.
 8. **Catalogue designation** — HIP → HD → HR → GJ, as today. The order
@@ -180,13 +180,13 @@ resolve down the ladder on their own.
 
 AT-HYG's `proper` column appears nowhere in this list. Its 442 confirmed
 names arrive through tier 2 (the authority asserts them); the rest are
-reclassified by § 2's table. That is the demotion `stellata-wgp3` asked
+reclassified by [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them)'s table. That is the demotion `stellata-wgp3` asked
 for, expressed as *routing by class* rather than a curated exception list.
 
 ## 4. Canonical designation forms
 
 One representation per designation kind, normalised at ingest. The wire
-carries **structure**; every spelling is derived (§ 5).
+carries **structure**; every spelling is derived ([§ 5](#5-aliases--ship-what-cannot-be-derived-derive-what-can)).
 
 | Kind | Canonical | Wire (`SearchEntry`) |
 |---|---|---|
@@ -258,7 +258,7 @@ The dividing line, and the reason the search index does not grow much:
   letter (`Alp`, `Alf`, `Alpha`, `α`), constellation-name expansions
   (`Alpha Centaurus`), GCVS zero-padding variants (`V0645`/`V645`), Gliese
   prefix forms, and `<system> <letter>` component forms. All are pure
-  functions of § 4's structure — `buildBayerLabels` / `buildComponentLabels`
+  functions of [§ 4](#4-canonical-designation-forms)'s structure — `buildBayerLabels` / `buildComponentLabels`
   already work this way and keep doing so.
 - **Shipped in `al?: string[]`.** Only strings no structure implies:
   displaced AT-HYG names (`Acrab B`, `Deltoton`), IAU alternates split out
@@ -293,7 +293,7 @@ derivable from designations we already carry. The column stays in the frozen
 slice as provenance; no consumer is added.
 
 Nothing that resolves a search is lost by a demotion. That is the
-invariant the parity gate (§ 8) enforces.
+invariant the parity gate ([§ 8](#8-parity--the-gate-on-any-naming-change)) enforces.
 
 ## 6. Rendering — glyphs everywhere, no fallback path
 
@@ -326,25 +326,25 @@ before the name table is written; every row is a reviewable diff, and a
 applied override that displays nothing.
 
 Expected to stay near-empty. It exists for review findings the authority
-cannot express — not as a home for folk names § 2 routes to aliases. A
+cannot express — not as a home for folk names [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them) routes to aliases. A
 growing override file is a signal the ingest is wrong, and its row count is
 pinned in build-counts so growth is visible in review.
 
 ## 8. Parity — the gate on any naming change
 
-A **naming parity ledger**, same discipline as [§ 6,](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change)
+A **naming parity ledger**, same discipline as [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change),
 committed as a test fixture:
 
-1. **Searchability never regresses.** Every string that resolves a star
+1. <a id="81-searchability-never-regresses"></a>**Searchability never regresses.** Every string that resolves a star
    today still resolves the same star. A displaced name becomes an alias or
    the gate fails. This is the hard invariant.
-2. **Display changes are enumerated, not counted.** Every record whose
+2. <a id="82-display-changes-are-enumerated"></a>**Display changes are enumerated, not counted.** Every record whose
    displayed name changes appears with old name, new name, and the tier that
    won. Reviewed once, then pinned.
-3. **Tier routing counts pinned** in build-counts: records named per tier,
+3. <a id="83-tier-routing-counts-pinned"></a>**Tier routing counts pinned** in build-counts: records named per tier,
    IAU names matched / unmatched / unreachable, override rows, alias count,
-   and the § 2 residual classes.
-4. **`KNOWN_DUPLICATE_DISPLAY_NAMES` → 0**, and the constant retired: all
+   and the [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them) residual classes.
+4. <a id="84-known-duplicate-display-names"></a>**`KNOWN_DUPLICATE_DISPLAY_NAMES` → 0**, and the constant retired: all
    three dissolved, `p Eridani` ×2 into `p Eri A` / `p Eri B` per the
    authority and both `The-1 Ori` collisions into correctly-rendered θ¹ Ori
    forms. The measurement it pinned covered the name table alone, so it is

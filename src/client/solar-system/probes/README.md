@@ -10,13 +10,13 @@ contract, provenance, and the frame/unit facts live in
 A probe is a real object rendered by a **representation** of one: the
 spacecraft subtends no angle at any range, so what draws is a glyph
 standing in for it, and the declutter cycle classes markers accordingly
-(§ Declutter and chart mode). What the marker inherits from a physical
+([Declutter and chart mode](#declutter-and-chart-mode)). What the marker inherits from a physical
 body is that it is **not focus-gated** — it draws regardless of which
 object the camera is focused on, and its motion comes wholly from a `t`
 sampler. Only the trail gates on focus.
 
 Probes are full interaction citizens — a third hard focus kind alongside
-stars and planets (§ Focus), searchable, hoverable, clickable, pinnable,
+stars and planets ([Focus](#focus)), searchable, hoverable, clickable, pinnable,
 and valid observe anchors.
 
 ## Files in this area
@@ -33,25 +33,25 @@ src/client/solar-system/probes/
   probe-trajectory.ts (+ test)    Wire file → typed arrays, plus the pure
                                   sampler: probeStateAt / probeSampleIndexAt
                                   / probeSignalLost / probeLabelText.
-                                  See § Sampler.
+                                  See README.md#sampler.
   probe-loader.ts                 Parallel fetch of the roster's JSONs from
                                   public/probes/. A missing file drops that
                                   probe; it is never an error.
   probe-field.ts                  ProbeField — the instanced marker quads,
                                   the per-frame sampler pass, and the
                                   ProbeFrameSample record every other
-                                  consumer reads. See § Marker field.
+                                  consumer reads. See README.md#marker-field.
   probe-path-layer.ts             ProbePathLayer — one open polyline per
-                                  probe, launch → position(t). See § Trails.
+                                  probe, launch → position(t). See README.md#trails.
   probe-path-layer.test.ts        Trail focus gate + the field's
                                   visible-vs-sampled split.
   probe-focus-geometry.ts         PROBE_ORBIT_FLOOR_PC /
                                   PROBE_PARK_DIST_PC — fixed park
                                   geometry, not a fill solve. See
-                                  § Park distance.
-  probe-labels.ts                 Per-probe SVG labels. See § Labels.
+                                  README.md#park-distance-is-set-by-the-near-plane-not-by-the-spacecraft.
+  probe-labels.ts                 Per-probe SVG labels. See README.md#labels.
   probe-encounter-coherence.test  Planet-encounter + heliopause-crossing
-    .ts                           corpus. See § Coherence, not precision.
+    .ts                           corpus. See README.md#coherence-not-precision.
 ```
 
 The interaction surfaces dispatch through `probe-module.ts`'s legs —
@@ -140,7 +140,7 @@ from here on purpose.
   probe is, how fast it is going, or whether it is drawn. The card's
   speed row is the sampler's own interpolated velocity for exactly this
   reason; a finite difference across frames would be a different
-  quantity in each part of a trajectory (§ Sampler).
+  quantity in each part of a trajectory ([Sampler](#sampler)).
 - **`resampleAt` is the out-of-frame seed, and focus needs it.** A URL
   restore attaches the roster, jumps the clock, and applies its focus all
   before the first frame runs, and a probe `flyTo` bails on a false
@@ -169,7 +169,7 @@ from here on purpose.
 - **`cadenceReport` prices the drawn markers for the render gate**
   (`../../render-gate/cadence/README.md`). It rides the sampler's own
   interpolated velocity, minus the camera's, projected across the line of
-  sight — never a finite difference, for the reason § Sampler gives. A
+  sight — never a finite difference, for the reason [Sampler](#sampler) gives. A
   hidden, decluttered or unsampled probe reports nothing. There is no
   brightness channel: signal-lost is a step in alpha at one instant, not a
   ramp. `prevLocalPc` exists only for the safety net's measured-displacement
@@ -219,7 +219,7 @@ and the marker's mirror draws the same material as its main-pass mesh
 
 Neither surface writes a fragment depth, and neither may: a static write
 costs the whole draw its early-z, and nothing carries one
-([Early-z,](../../webgpu/README.md#early-z--the-star-layers-depth-honest-redesign) pinned by
+([Early-z](../../webgpu/README.md#early-z--the-star-layers-depth-honest-redesign), pinned by
 `tests/tsl-frag-depth.test.ts`). Reversed-z makes fixed-function depth
 correct in both passes.
 
@@ -244,7 +244,7 @@ forward is defined; the trail simply ends wherever `t` puts the probe.
   camera motion. Extending the trail forces a rebake; otherwise the
   per-frame drift check owns it.
 - **Three gates, one job each.** A trail draws only when **that probe is
-  the focused object** (§ Focus gate), AND when its marker is drawn (a
+  the focused object** ([Focus gate](#focus-gate)), AND when its marker is drawn (a
   trail with no probe at its end reads as a bug), AND when the probe's own
   heliocentric distance clears the legibility floor at the camera's
   distance to the marker — days after launch the traversed path is a
@@ -395,7 +395,7 @@ Probes join every kind-generic contract without a special case anywhere
 in the interaction layer:
 
 - **SID** — `sol:<roster id>`, `kind=probe` in the ledger, pinned
-  client-side in `../sol-object-sids.ts` (§ Sol-system SID pins in
+  client-side in `../sol-object-sids.ts` ([Sol-system SID pins](/src/client/solar-system/README.md#sol-system-sid-pins) in
   `../README.md`). The URL wire needs no probe-specific work: focus, the
   distance vector, and POIs already carry any-kind SIDs, and unlike the
   planet domain there is no index translation — the resolver's

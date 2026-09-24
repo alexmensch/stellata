@@ -25,7 +25,7 @@ src/client/hdr/tonemap/
 The shipped operator is `../../webgpu/tonemap-tsl.ts`, run by
 `../../webgpu/hdr/hdr-pipeline-webgpu.ts`'s resolve; the dither's
 interleaved gradient noise is `../../webgpu/tsl/jitter-tsl.ts`
-(§ One hash). All three import their constants from `tonemap-pure.ts`.
+([One hash](#one-hash)). All three import their constants from `tonemap-pure.ts`.
 
 ## Operator
 

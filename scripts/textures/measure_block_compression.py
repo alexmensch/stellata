@@ -1,5 +1,5 @@
 """Angular error BC5 and lossy WebP each cost the shipped normal maps.
-Manual, not in the build. Why: /data/textures/relief/README.md#bc5-measured--and--lossless-caught-the-packing-not-the-codec.
+Manual, not in the build. Why: /data/textures/relief/README.md#bc5-measured--and-lossless-caught-the-packing-not-the-codec.
 """
 
 from __future__ import annotations
@@ -81,7 +81,7 @@ def encode_bc5(rg: np.ndarray) -> np.ndarray:
 
 
 def encode_webp_rgb(img: np.ndarray, quality: int) -> np.ndarray:
-    """The arm § Lossless rejected: both channels through one photographic
+    """The arm the relief README rejected (/data/textures/relief/README.md#lossless-and-that-is-not-a-default): both channels through one photographic
     codec, so libwebp's shared 4:2:0 chroma plane carries G at quarter
     resolution. This is the historical baseline, not a fair codec."""
     buf = io.BytesIO()

@@ -13,14 +13,14 @@ membership-manifest.tsv  ~64 MB, LFS. One row per admitted record: final
                          the row. 979,160 rows: 376,932 `primaries` and
                          602,228 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
-additions-ledger.tsv     ~3.6 MB, LFS. The § 6.1 ledger for everything the
+additions-ledger.tsv     ~3.6 MB, LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the
                          primaries admit that the spine lacked: one row per
                          group, keyed on the same five identifier cells as
                          parked-ledger.tsv, under the
                          closed reason enum (admitted:hd_link_gap ·
                          admitted:hd_omitted · admitted:hip_omitted ·
                          admitted:cns5_census · component:<anchor>).
-parked-ledger.tsv        ~282 KB, regular git. The § 6.1 ledger for manifest
+parked-ledger.tsv        ~282 KB, regular git. The /docs/catalog-driver.md#61-record-parity ledger for manifest
                          rows that build no record: no owned parallax, no V, or
                          no position. Same five identifier cells as
                          additions-ledger.tsv, under the closed reason enum
@@ -61,7 +61,7 @@ spine-corrections.tsv    ~4 KB, regular git. Hand-curated: where review found
                          `value` names it). 2 rows. Every field is checked and
                          a fold's survivor must answer to everything the folded
                          row did (/scripts/catalog/membership/README.md#correcting-a-merge-decision).
-label-drops.tsv          ~7 KB, regular git. The § 6.2 label ledger: every
+label-drops.tsv          ~7 KB, regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
                          flamsteed_unattested (119) · hd_unattested (1).
