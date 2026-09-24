@@ -1,7 +1,8 @@
 // See README.md § The frame step.
 
 import * as THREE from 'three';
-import type { HdrSeam } from '../hdr-seam';
+import type { HdrSeam, ReductionSeam } from '../hdr-seam';
+import type { HdrEmitterUniforms } from '../hdr-emitter-uniforms';
 import type { ExposureController } from './exposure-controller';
 import type { SceneAdaptation } from './scene-adaptation';
 import { exposureForMagLimit } from './exposure-epoch';
@@ -13,9 +14,12 @@ import {
 } from './scene-adaptation-pure';
 
 export interface ExposureFrameStepDeps {
-  readonly hdr: Pick<
-    HdrSeam, 'emitterUniforms' | 'statisticTexture' | 'setStatisticWritesParked' | 'reduction'
-  >;
+  readonly hdr: Pick<HdrSeam, 'statisticTexture' | 'setStatisticWritesParked'> & {
+    readonly emitterUniforms: Pick<
+      HdrEmitterUniforms, 'uExposure' | 'uOmegaSummationArcsec2' | 'uOmegaPxArcsec2' | 'uWhitePoint'
+    >;
+    readonly reduction: Pick<ReductionSeam, 'fenceWhileParked' | 'measure' | 'reset'>;
+  };
   readonly exposure: Pick<ExposureController, 'getLimitMag' | 'setAdaptation'>;
   readonly adaptation: Pick<
     SceneAdaptation, 'measure' | 'isMeasurementParked' | 'getLandedStatistic' | 'getTuning'
