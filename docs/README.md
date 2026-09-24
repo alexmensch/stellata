@@ -13,11 +13,13 @@ architecture-modularity.md  Design gate for the object-kind modularity
                         FocusableProvider merge, facade flattening,
                         free-fly engine constraints, phasing. Spans
                         src/client/ end to end.
-authoring-patterns.md   Write-time consistency rules (lifecycle pairing,
-                        sibling symmetry, sentinel-init dirty-track,
-                        single source of truth for time / camera state).
-                        Each rule is the codified version of a
-                        retrospective code-review finding. Read before
+authoring-patterns.md   Stellata's instances of the write-time
+                        consistency rules (lifecycle pairing, sibling
+                        symmetry, sentinel-init dirty-track, single
+                        source of truth for time / camera state), each
+                        narrowing its generic rule in code-craft's
+                        write-time patterns, plus the code-comment CI
+                        and the star-count rule. Read before
                         adding a bus.on() call, a sibling helper, a
                         sentinel-init dirty-track pattern, or any state
                         struct shifted mid-animation.

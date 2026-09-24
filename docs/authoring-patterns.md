@@ -1,16 +1,18 @@
 # Authoring patterns — consistency at the seam
 
-A bundle of consistency rules that catch a recurring class of subtle
-bugs in stellata code. Each is the codified version of a retrospective
-code-review finding; apply at write time, not at review time. These
-patterns sit alongside the DRY override in `~/.claude/CLAUDE.md` § DRY
-— together they define the write-time bar this codebase holds itself
-to.
+Stellata's instances of the write-time consistency rules. The rules
+themselves live at user level, in the code-standards bundle: the `code-craft`
+skill's `references/write-time-patterns.md` (lifecycle pairing, sibling
+symmetry, sentinel-init, single source of truth, named constants, rename
+sweep, test coverage, peer coverage, doc updates) and the always-on block in
+`~/.claude/CLAUDE.md` (DRY, commit granularity, large-PR honesty). Each
+section below names the generic section it narrows and adds only what is
+true here: the stellata spelling, the representative finding, and the gate
+that enforces it.
 
 ## Lifecycle pairing
 
-Every long-lived resource has its teardown wired in the SAME diff that
-introduces it.
+Narrows write-time patterns § Lifecycle pairing.
 
 - Each `bus.on()` subscription returns or stores an unsub that the
   dispose path calls.
@@ -26,14 +28,9 @@ the same diff.
 
 ## Sibling symmetry
 
-Two sibling functions / helpers / branches must be defensively
-symmetric. Common pairs in stellata: lambertian vs mallama phase
-factors; encode vs decode for URL state; v2 vs v3 schema; pickStar
-prime vs fallback; reserved-bit decode vs ignore.
-
-If one clamps inputs, the other clamps. If one asserts a bit budget,
-the other asserts. If one logs on degenerate input, the other logs.
-Asymmetry invites "I'll just call X — same shape" mistakes downstream.
+Narrows write-time patterns § Sibling symmetry. Common pairs in stellata:
+lambertian vs mallama phase factors; encode vs decode for URL state; v2 vs v3
+schema; pickStar prime vs fallback; reserved-bit decode vs ignore.
 
 Representative finding: `empiricalPhaseFactor` didn't clamp α while
 `lambertianPhaseFactor` did. The sibling pair needs to clamp
@@ -41,16 +38,9 @@ identically or document the asymmetry as intentional.
 
 ## Sentinel-init for dirty-track
 
-When introducing dirty-track / cache patterns:
-
-- The sentinel initial value MUST fail the comparison on first write
-  (force first-write to land — choose `NaN`, `-Infinity`, or a
-  poison-string like `\0` if the desired state can legitimately equal
-  the natural sentinel).
-- Hide / dispose / reset paths MUST reset every numeric sentinel and
-  every cached input — not just visibility flags.
-- Cache keys MUST include every input dimension that affects the cached
-  output (text + font-load + CSS class + scale, not just text).
+Narrows write-time patterns § Sentinel-init for dirty-tracking and caches.
+The sentinels used here are `NaN`, `-Infinity`, or a poison string like `\0`.
+A label cache key covers text + font-load + CSS class + scale, not just text.
 
 Representative finding: `pointerEvents = ""` sentinel matched
 steady-state so first-frame write was skipped, leaving the overlay
@@ -58,11 +48,12 @@ unresponsive until the second frame.
 
 ## Single source of truth for time / camera state / world offset
 
-Code that needs the wall-clock-derived `t` reads it via
-`Stellata.getT()` — never `Date.now()` directly. Code that mutates a
-state struct mid-animation (e.g. `WarpState.pEnd` shifted across origin
-recentre) either makes the entire struct frame-coherent OR adds an
-explicit invariant comment naming which fields are valid in which phase.
+Narrows write-time patterns § Single source of truth for shared state. Code
+that needs the wall-clock-derived `t` reads it via `Stellata.getT()` — never
+`Date.now()` directly. Code that mutates a state struct mid-animation (e.g.
+`WarpState.pEnd` shifted across origin recentre) either makes the entire
+struct frame-coherent OR adds an explicit invariant comment naming which
+fields are valid in which phase.
 
 Representative finding: `PlanetBodyField.attachHost` called
 `Date.now()/1000` instead of routing through `getT()`; that drifted from
@@ -134,43 +125,17 @@ These are write-time rules, not review-time rules:
 
 ## Named constants and DRY
 
-The law is *extract at second usage, not third* — parameterise the differing
-tolerances / wrap conventions / blend modes as arguments; that IS the
-abstraction. This section carries the operational rules that follow.
-
-1. **Hoist numeric literals at first sight of a second usage.** Any
-   literal referenced in more than one place — or that encodes a
-   tuned / calibrated value (pixel thresholds, mag-biases, near/far
-   clamps, bit positions) — gets a named export at its canonical
-   source module. If a literal is calibrated by feel, it MUST be
-   named — the name documents intent.
-
-2. **Tests IMPORT constants from production code, never redefine.**
-   Redefining magic numbers in tests divorces them from the
-   production value and lets calibration drift go undetected.
-
-3. **Schemas / structures / functions that are mostly-identical
-   share a builder.** When two versions of a wire schema differ in
-   only a few entries, or two materials differ only in blend
-   equation, or two parsers differ only in field projection, or two
-   solvers differ only in tolerance / wrap convention — extract a
-   builder / factory / helper and parameterise the differences.
-   "Slightly different X and Y" between two call sites is the case
-   FOR extracting, not against it.
-
-4. **Comment-DRY counts.** If the same caveat appears verbatim in
-   two consumer files, hoist the comment to the source helper.
-
-The two-call-site threshold is firm. If a previous session left a
-"copy-paste with attribution comment" or "lift later only if a third
-site appears" note, treat it as a fileable defect, not precedent —
-the "premature abstraction" default is overridden here.
+Narrows write-time patterns § Named constants. Tuned values here are pixel
+thresholds, mag-biases, near/far clamps and bit positions; mostly-identical
+builders are wire-schema versions, materials differing only in blend
+equation, and solvers differing only in tolerance or wrap convention.
 
 ### The star count is never a literal
 
-**Trigger: writing how many stars Stellata holds.** The catalogue is
-the only thing that knows, and it has moved — binary components are
-minted beyond the AT-HYG spine, so the shipped record count exceeds the
+Stellata's case of the generic rule "a quantity the system can compute is
+never a literal". **Trigger: writing how many stars Stellata holds.** The
+catalogue is the only thing that knows, and it has moved — binary components
+are minted beyond the AT-HYG spine, so the shipped record count exceeds the
 spine's 313,257 and drifts again on every refresh. A number typed into
 copy is stale from the next build.
 
@@ -189,66 +154,35 @@ copy is stale from the next build.
 
 ## Rename + stale-prose sweep
 
-When a PR renames or removes an API surface (function, method, event,
-class, mechanism, named threshold), substantively changes the
-**semantics** of code in a folder, OR **moves a file or a README section
-into a new folder** (the § Folder READMEs split), treat it as a sweep,
-not just a refactor.
+Narrows write-time patterns § Rename and stale-prose sweep. A move includes
+moving a README section into a new folder (the § Folder READMEs split).
 
-1. `grep -rn "<old-name>" .` (skip `node_modules`, `.git`, `public/`)
-   and triage every hit.
-2. **Open every README.md in every folder touched by the diff.** Read
-   as if seeing it the first time. Folder READMEs are the prose-only
-   surface where grep alone misses stale claims — they describe data
-   flow, file rosters, "X feeds Y", "X doesn't ingest Y." See
-   [Folder READMEs](/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit) for the read/update protocol; this
-   section is its commit-time enforcement leg.
-3. Open every other doc in the diff context (`docs/*.md`,
-   `SCIENCE.md`, `AGENTS.md`, `RELEASING.md`) and re-read. Stale
-   prose is the most common drift class.
-4. When changing semantics of a quantity referenced in a docblock,
-   open the docblock and re-read its rationale. If your change
-   invalidates the prose, update it.
-5. Numerical sanity-check examples in docs (arcseconds, AU, decimal
-   precision) need to be paste-computed themselves.
-6. `RELEASING.md` classifies version bumps. A user-visible behaviour
-   change is at minimum a minor bump even if the diff is small.
-7. **A folder split's real cost is its inbound refs.** `typecheck`
-   rewrites every import and proves nothing about prose. Grep the moved
-   file's basename and every moved `## Heading` across `*.md` + `*.ts`,
-   and repoint each hit at where the content now lives. Leaving the old
-   heading behind as a pointer does not discharge this: the ref resolves,
-   the claim it was attached to is gone, and a comment quoting the moved
-   sentence now cites a file that no longer contains it.
-8. **Pointers are checked; the basename half of step 7 is not.** Cite a
-   section as `<path>.md#<slug>` — a markdown link in `.md`, the bare
-   token in code — and `tests/doc-pointer-resolution.test.ts` fails the
-   suite when the slug no longer names a heading or `<a id>` anchor in
-   that file, so a split or a heading rename breaks the build until its
-   inbound pointers are repointed. A bare `§ Heading` naming no file is
-   unchecked. Grammar and resolution:
-   [Doc-pointer resolution](/tests/README.md#doc-pointer-resolution).
+- The search is `grep -rn "<old-name>" .`, skipping `node_modules`,
+  `.git` and `public/`.
+- The docs to re-read are every folder README in the diff —
+  [Folder READMEs](/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit) is the read/update protocol and this
+  section its commit-time leg — plus `docs/*.md`, `SCIENCE.md`, `AGENTS.md`
+  and `RELEASING.md`.
+- `RELEASING.md` classifies version bumps: a user-visible behaviour change is
+  at minimum a minor bump even if the diff is small.
+- Numerical examples to recompute are arcseconds, AU and decimal precision.
+- **Pointers are checked; the basename search is not.** Cite a section as
+  `<path>.md#<slug>` — a markdown link in `.md`, the bare token in code —
+  and `tests/doc-pointer-resolution.test.ts` fails the suite when the slug
+  no longer names a heading or `<a id>` anchor in that file, so a split or
+  a heading rename breaks the build until its inbound pointers are
+  repointed. A bare `§ Heading` naming no file is unchecked. Grammar and
+  resolution: [Doc-pointer resolution](/tests/README.md#doc-pointer-resolution).
 
-Only `§` pointers are checked. Every other stale claim — a data-flow
-sentence, a file roster, "X doesn't ingest Y" — is caught by the reader
-or not at all.
+Every other stale claim — a data-flow sentence, a file roster, "X doesn't
+ingest Y" — is caught by the reader or not at all.
 
 ## Test coverage at write time
 
-When writing code, add tests **in the same PR** for:
-
-- **Pure helpers** — extract to module scope (or a separate
-  `*-pure.ts` file) so they're testable, then test.
-- **Numeric headline claims** in the PR description — pin with
-  `expect(x).toBe(N)`, never `toBeLessThanOrEqual(N)`. The latter
-  catches regressions past the bound but not what the headline
-  claims.
-- **Integration paths through new state machinery** — allocate /
-  grow / write / flush / shift cycles for typed-array buffers,
-  multi-tier reducers, lifecycle FSMs all need a read-back assertion,
-  not just a "does not throw" smoke.
-- **Auto-upgrade / migration paths** (e.g. v2→v3 URL rewrite) flagged
-  as "manual smoke" in the test plan — promote to vitest.
+Narrows write-time patterns § Test coverage at write time. Pure helpers lift
+to a `*-pure.ts` sibling; a numeric headline claim is pinned with
+`expect(x).toBe(N)`, never `toBeLessThanOrEqual(N)`; a migration path such as
+the v2→v3 URL rewrite is promoted from manual smoke to vitest.
 
 Audit the diff before opening a PR:
 
@@ -261,110 +195,21 @@ Audit the diff before opening a PR:
 4. Two-tier / N-tier control flow (prime vs fallback) exercises each
    tier; priority semantics is a separate assertion.
 
-Manual-smoke fallback regresses between releases; automated tests
-don't.
-
 ## Pattern coverage across peers
 
-When a PR is framed as "apply pattern X to all the Y in this layer"
-(every SVG overlay, every event handler, every picker entry point,
-every shader pass, every DRY blend), **enumerate the set of Y
-explicitly in the PR description AND verify the implementation
-covers each.** One missed peer = the headline claim is false.
-
-1. Before starting the refactor, write the explicit peer list in
-   the PR description. Skim [Repo layout](/AGENTS.md#repo-layout--the-structure-is-the-index) + the layer's
-   folder README for the canonical peer list.
-2. After implementing, `grep` for the OLD pattern and confirm ZERO
-   remaining call sites in scope. If non-zero, convert them or call
-   out as "deliberately deferred" with a follow-up bead.
-3. If two peers end up with two strategies (per-attribute dirty-track
-   vs whole-frame signature dirty-track), document the chosen
-   strategy in the layer's `README.md` and reconcile.
-4. Sister-layer extension — when extending a feature for one host
-   (stars), check whether sibling hosts (clouds, planets) have the
-   same surface and would benefit / drift if not extended too. File
-   a bead for sibling work even if out of scope.
+Narrows write-time patterns § Pattern coverage across peers. Peer sets here:
+every SVG overlay, every event handler, every picker entry point, every
+shader pass, every DRY blend. The canonical peer list comes from
+[Repo layout](/AGENTS.md#repo-layout--the-structure-is-the-index) and the layer's folder README; a
+deliberately deferred site gets a follow-up bead. Two peers on two strategies
+(per-attribute dirty-track vs whole-frame signature dirty-track) record the
+chosen one in the layer's `README.md`. Sibling hosts for a feature extended
+to stars are clouds and planets.
 
 ## Defer doc updates — descriptions, not decisions
 
-Don't edit `AGENTS.md`, `README.md`, `docs/`, or `SCIENCE.md` to
-*describe* code you are still writing: file rosters, parameter values,
-data flow, knob names, anything that tracks the implementation. Code is
-the deliverable for that, and the sweep happens at commit time.
-
-Why: mid-session doc edits become churn. Direction shifts, features
-get dropped, parameters rename, knob values move; the paragraph
-written early ends up describing something that no longer exists.
-
-**The exception is the important half: a settled decision goes into the
-folder README the moment it is settled.** An invariant, a rejected
-alternative and the reason it lost, why a ranking key is what it is —
-none of that churns once decided, so the churn argument does not reach
-it. Deferring it has a cost the deferral was never weighing: until that
-README section exists, the only place the reasoning can go is a code
-comment. The comment rule forbids restating a doc, but at write time
-there is no doc yet to restate, so the comment passes its own gate
-honestly, the same reasoning gets written into the README an hour
-later, and nobody goes back. That is how a diff ends up half prose.
-
-How to apply:
-
-- Still moving? Code, shaders, tests only. Sweep the docs at commit.
-- Just settled something you would otherwise explain in a comment?
-  Write the README section **now**, and let the code carry a pointer
-  or nothing at all.
-- The tell is the audience. Prose a future session needs *before* it
-  touches the code belongs in the README. Prose that only means
-  anything beside the line it sits on is the rare comment that earns
-  its keep.
-- A decision that took an argument to reach is the highest-value README
-  content there is, and the strongest pull toward a code comment. The
-  PR body gets it too — that is where a reviewer meets it.
-- At commit time, grep the final diff for renames, removed knobs,
-  new uniforms, behavioural shifts, anything user-visible. Open
-  every relevant doc and update only what's now stale — and delete the
-  comments that README now covers.
-
-## Large-PR honesty
-
-For large multi-bead PRs (~10+ issues bundled), proactively
-distinguish code with strong test coverage from code that requires
-manual verification.
-
-Confidence categories at PR-open time:
-
-- **High** — changed code paths exercised by unit / integration tests.
-- **Medium** — tests cover adjacent code but not the integration point.
-- **Low (needs eyeballs)** — user-visible paths with only unit-level
-  coverage; constructor signature changes; callback rewiring;
-  build-pipeline scripts; generated artifacts.
-
-At PR-open time, audit the manual-smoke checklist against the diff —
-every Low-coverage path needs an explicit smoke step. Distinguish
-"tests pass" from "behaviour verified" in the PR body so reviewers
-can prioritise their manual passes.
-
-## Commit granularity
-
-Prefer **small topical commits**: when a change touches multiple
-concerns, split into separate commits each with a focused subject and
-brief why-body. One concept per commit keeps the repo's story legible
-and makes revert / bisect surgical.
-
-**Commit along the way, not at the end.** Default: commit each
-logical chunk as it completes during the session, not by
-cherry-picking from a giant staged diff at end-of-session.
-End-of-session staging gymnastics are error-prone.
-
-Fall back to end-of-session reordering only when discovery order
-diverges from logical commit order (e.g. you implemented a feature,
-then mid-stream realised a refactor was needed underneath, and the
-cleaner story is "refactor first, then feature on top"). When
-mid-stream discovery is going to read backwards, either commit the
-in-flight chunk on a temp branch and rebase later, or keep going and
-reorder at end. NOT fine: silently letting the staging area grow
-into an omnibus pile.
-
-Err toward more commits, not fewer. Use HEREDOC for multi-line
-messages.
+Narrows write-time patterns § Doc updates — defer descriptions, write
+decisions now. The docs in question are `AGENTS.md`, folder `README.md`s,
+`docs/` and `SCIENCE.md`; the design doc a settled decision goes into is the
+folder README. At the commit sweep, new uniforms count among the things to
+search the final diff for.
