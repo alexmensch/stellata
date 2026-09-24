@@ -11,14 +11,18 @@ export interface DocPointer {
   line: number;
 }
 
-const POINTER = /(?<![\w@.~/-])(\/?(?:\.{1,2}\/)*(?:[\w@.-]+\/)*[\w@.-]+\.md)#([\p{L}\p{N}_-]+)/gu;
+const DOC_PATH = String.raw`(?<![\w@.~/-])(\/?(?:\.{1,2}\/)*(?:[\w@.-]+\/)*[\w@.-]+\.md)`;
+const POINTER = new RegExp(String.raw`${DOC_PATH}#([\p{L}\p{N}_-]+)`, 'gu');
+const RETIRED_POINTER = new RegExp(String.raw`${DOC_PATH}[\x60*]*\s+§`, 'gu');
+
+const lineOf = (text: string, index: number): number => text.slice(0, index).split('\n').length;
 
 export function extractPointers(text: string): DocPointer[] {
-  return [...text.matchAll(POINTER)].map((m) => ({
-    citedPath: m[1],
-    slug: m[2],
-    line: text.slice(0, m.index).split('\n').length,
-  }));
+  return [...text.matchAll(POINTER)].map((m) => ({ citedPath: m[1], slug: m[2], line: lineOf(text, m.index) }));
+}
+
+export function extractRetiredPointers(text: string): Omit<DocPointer, 'slug'>[] {
+  return [...text.matchAll(RETIRED_POINTER)].map((m) => ({ citedPath: m[1], line: lineOf(text, m.index) }));
 }
 
 const plainText = (tokens: Token[]): string =>

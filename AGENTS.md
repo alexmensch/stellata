@@ -41,7 +41,7 @@ CI can't catch a comment that merely restates `README.md` / `SCIENCE.md` /
 ## Write-time discipline — triggers and pointers
 
 Trigger fires → rule applies. Full text (rule + why + how-to-apply)
-in `docs/authoring-patterns.md` § <named section>; the trigger word
+in the named section of `docs/authoring-patterns.md`; the trigger word
 here is the always-loaded hook pointing to which section to open.
 
 - **Adding `bus.on(...)`** → wire unsub into dispose, same diff.

@@ -234,7 +234,9 @@ such an anchor at the start of its line. Matching is exact set membership:
 any rename of a cited heading fails the suite, subtitle and all.
 
 **Bare `§` refs are not pointers.** A `§ 5` or `§ Heading` naming no file
-is invisible to the check.
+is invisible to the check. A file followed by `§` is the retired form
+and fails the suite wherever it appears, quoted or wrapped, since the
+resolver cannot see it.
 
 **Scope is git's.** Every tracked or untracked-but-not-ignored file with
 a scanned extension, symlinks excluded (`CLAUDE.md` would double

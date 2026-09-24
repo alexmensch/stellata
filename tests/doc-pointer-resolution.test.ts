@@ -5,15 +5,16 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
-import { docAnchors, extractPointers, resolveDocPath } from './doc-pointer-pure';
+import { docAnchors, extractPointers, extractRetiredPointers, resolveDocPath } from './doc-pointer-pure';
 import { gitFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh'];
 
-// Fixtures interpolate their `#` from here, so no literal pointer appears in
-// this file and it stays out of its own scan.
+// Fixtures interpolate their `#` and `§` from here, so no literal pointer
+// appears in this file and it stays out of its own scan.
 const H = '#';
+const S = '§';
 
 function scannedFiles(): string[] {
   return gitFiles(ROOT, [], { untracked: true })
@@ -32,9 +33,15 @@ describe('doc pointers resolve', () => {
     return parsed;
   };
 
-  const pointers = scannedFiles().flatMap((file) =>
-    extractPointers(readFileSync(file, 'utf-8')).map((pointer) => ({ file, pointer })),
-  );
+  const texts = scannedFiles().map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
+  const pointers = texts.flatMap(({ file, text }) => extractPointers(text).map((pointer) => ({ file, pointer })));
+
+  it(`no pointer is written in the retired "<path>.md ${S} Heading" form`, () => {
+    const retired = texts.flatMap(({ file, text }) =>
+      extractRetiredPointers(text).map((p) => `${relative(ROOT, file)}:${p.line} — ${p.citedPath}`),
+    );
+    expect(retired, retired.join('\n')).toEqual([]);
+  });
 
   it('every "<path>.md#<slug>" names a heading or anchor that exists', () => {
     const failures: string[] = [];
@@ -88,6 +95,20 @@ describe('extraction', () => {
     expect(cited(`~/.claude/CLAUDE.md${H}dry`)).toEqual([]);
     expect(cited(`https://github.com/o/r/blob/main/README.md${H}usage`)).toEqual([]);
     expect(cited(`\`<path>.md${H}<slug>\``)).toEqual([]);
+  });
+
+  it(`finds the retired ${S} form however the path is quoted or wrapped`, () => {
+    const text = [
+      `see docs/sid.md ${S} 4.5, \`\`README.md\`\` ${S} Stage 2 and **/AGENTS.md** ${S}${S} Unit`,
+      `and scripts/README.md`,
+      `  ${S} Building, but not ~/.claude/CLAUDE.md ${S} DRY`,
+    ].join('\n');
+    expect(extractRetiredPointers(text)).toEqual([
+      { citedPath: 'docs/sid.md', line: 1 },
+      { citedPath: 'README.md', line: 1 },
+      { citedPath: '/AGENTS.md', line: 1 },
+      { citedPath: 'scripts/README.md', line: 2 },
+    ]);
   });
 });
 
