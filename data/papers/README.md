@@ -30,6 +30,9 @@ the store exists only so claims can be checked against the paper itself.
 | `resolution.json` | For each work the tree cites without a DOI, arXiv ID or bibcode: its identification (`identified`, `book`, `ambiguous`, `not_found`, `mismatch`) with the evidence. `mismatch` means the paper exists but does not carry the claim the tree credits it with. |
 | `manifest.json` | Per key: download `status` (`ok`, `manual` = needs a hand download, `unidentified`), `source_url`, `version`, `sha256` and `bytes` of the private copy. |
 
+`tests/doc-pointer-resolution.test.ts` skips `inventory.json`: its quotes carry
+other files' relative pointers verbatim, which would not resolve from here.
+
 ### `version` decides what a page number means
 
 | `version` | Pagination |

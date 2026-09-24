@@ -10,8 +10,12 @@ import { gitFiles, lfsTracked } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
-// Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
-const FROZEN = ['data/sid/retirements.tsv'];
+const UNSCANNED = [
+  // Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
+  'data/sid/retirements.tsv',
+  // Quotes tree lines verbatim, pointers included, as evidence of where a paper is cited.
+  'data/papers/inventory.json',
+];
 const kindOf = (name: string): string => extname(name) || basename(name);
 
 // Fixtures interpolate their `#` and section sign from here, so no literal
@@ -21,7 +25,7 @@ const S = '\u00a7';
 
 function scannedFiles(): string[] {
   const names = gitFiles(ROOT, [], { untracked: true }).filter(
-    (name) => SCANNED_KINDS.includes(kindOf(name)) && !FROZEN.includes(name),
+    (name) => SCANNED_KINDS.includes(kindOf(name)) && !UNSCANNED.includes(name),
   );
   const lfs = lfsTracked(ROOT, names);
   return names

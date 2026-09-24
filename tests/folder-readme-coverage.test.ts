@@ -20,7 +20,7 @@ const EXCLUDED_DIRS = new Set([
  *  this suite fails for anyone who runs the tests meanwhile. */
 const EXCLUDED_SUFFIXES = ['.ckpt'];
 
-// see data/papers/README.md § The PDFs are private
+// see /data/papers/README.md#the-pdfs-are-private
 const EXCLUDED_PATHS = new Set(['data/papers/pdf']);
 
 function collectFolders(dir: string, out: string[]): void {
