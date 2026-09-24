@@ -37,15 +37,11 @@ export class SolarSystemWiring {
   readonly planetMeshEntry: SceneLayer;
   readonly clusterEntry: SceneLayer;
 
-  private readonly field: PlanetBodyField;
-  private readonly focusedPlanetSystem: () => PlanetSystem | null;
   private readonly tmpHostLocal = new THREE.Vector3();
 
   constructor(deps: SolarSystemWiringDeps) {
     const { planetField: field, planetMesh } = deps;
     const orbitRings = new OrbitRingsLayer(deps.chromeLines);
-    this.field = field;
-    this.focusedPlanetSystem = deps.focusedPlanetSystem;
     this.orbitRings = orbitRings;
     this.cluster = new SolarSystemCluster({
       field,
@@ -104,24 +100,5 @@ export class SolarSystemWiring {
       update: (ctx) => this.cluster.update(ctx.camera),
       dispose: () => {},
     };
-  }
-
-  /** Renderer-local positions of the focused host's bodies (xyz triples,
-   *  length 3·N), or null if no system is attached. The host offset is
-   *  applied — under planet focus the host is not at the local origin. A
-   *  fresh copy each call (`PlanetBodyField.getHostLocalPositions`), so safe
-   *  to cache across frames. */
-  focusedPlanetLocalPositions(): Float64Array | null {
-    const ps = this.focusedPlanetSystem();
-    if (!ps) return null;
-    const rel = this.field.getHostLocalPositions(ps.hostStarIdx);
-    if (!rel) return null;
-    if (!this.field.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)) return null;
-    for (let i = 0; i < rel.length; i += 3) {
-      rel[i] += this.tmpHostLocal.x;
-      rel[i + 1] += this.tmpHostLocal.y;
-      rel[i + 2] += this.tmpHostLocal.z;
-    }
-    return rel;
   }
 }

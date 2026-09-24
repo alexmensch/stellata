@@ -53,8 +53,6 @@ function rig(): Rig {
       out.copy(HOST_LOCAL);
       return true;
     },
-    getHostLocalPositions: (h: number) =>
-      (h === HOST ? new Float64Array([0.5, 0, 0, 0, 0.25, 0]) : null),
     planetIdxWithin: (h: number, flat: number | null) =>
       (h === HOST && flat !== null ? flat - 100 : null),
     instanceIndexOf: (h: number, p: number) => (h === HOST ? p + 100 : null),
@@ -167,15 +165,6 @@ describe('SolarSystemWiring', () => {
     expect(c.skip(makeFrameCtx(camera))).toBe('legibility');
     r.state.meshWork = true;
     expect(c.skip(makeFrameCtx(camera))).toBeNull();
-  });
-
-  it('reports focused body positions in the renderer-local frame', () => {
-    const r = rig();
-    expect(r.wiring.focusedPlanetLocalPositions()).toBeNull();
-    r.state.ps = SYSTEM;
-    expect(Array.from(r.wiring.focusedPlanetLocalPositions()!)).toEqual([1.5, 2, 3, 1, 2.25, 3]);
-    r.state.hostKnown = false;
-    expect(r.wiring.focusedPlanetLocalPositions()).toBeNull();
   });
 
   it('parents the orbit rings under the local-depth cluster', () => {

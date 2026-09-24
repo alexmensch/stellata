@@ -703,34 +703,6 @@ export class PlanetBodyField {
   }
 
   /**
-   * Fresh-copy snapshot of a host's planet positions RELATIVE TO THE
-   * HOST (renderer-local only after adding
-   * `getHostLocalPositionInto`). Layout: 3 doubles per planet, ordering
-   * matches PlanetSystem.planets. Returns null when the host isn't
-   * attached.
-   *
-   * The planet-labels overlay reads this (host offset re-added by
-   * `SolarSystemWiring.focusedPlanetLocalPositions`) so labels project to
-   * the same positions the body mesh renders at, without re-running
-   * the Keplerian math itself.
-   *
-   * Returns a Float64Array `.slice()` (copy), not a `.subarray()`
-   * view — the copy survives attach-driven capacity grow and
-   * detach-driven tail-shift, so callers can hold a cached reference
-   * without silently reading stale data the next frame. The allocation
-   * cost is ~3·count·8 bytes per call (216 B at Sol scale), dwarfed by
-   * the projection math that follows.
-   */
-  getHostLocalPositions(hostStarIdx: number): Float64Array | null {
-    const host = this.hosts.get(hostStarIdx);
-    if (!host) return null;
-    return this.localRel64.slice(
-      host.startInstance * 3,
-      (host.startInstance + host.count) * 3,
-    );
-  }
-
-  /**
    * Host star's renderer-local position into `out` — the same
    * hostLocalPos the planet shader adds to iLocalRel, so any layer
    * anchored on it (orbit rings, labels) stays centred on the exact

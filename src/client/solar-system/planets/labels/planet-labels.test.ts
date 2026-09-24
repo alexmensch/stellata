@@ -59,7 +59,7 @@ describe('createPlanetLabels — the OBSERVE anchor body', () => {
   camera.position.set(0, 0, 5);
   camera.updateMatrixWorld();
 
-  function run(observeAnchorFlat: number | null): string[] {
+  function run(observeAnchorFlat: number | null, placeable = (_flat: number) => true): string[] {
     const els: FakeEl[] = [];
     const group = { style: { display: '' }, appendChild: (el: FakeEl) => els.push(el) };
     return withDocument(group, () => {
@@ -79,6 +79,10 @@ describe('createPlanetLabels — the OBSERVE anchor body', () => {
               planetIdxWithin: (host: number, flat: number | null) =>
                 host === HOST ? flat : null,
               instanceIndexOf: (_h: number, i: number) => i,
+              planetLocalPositionInto: (flat: number, out: THREE.Vector3) => {
+                out.set(0.1 * flat, 0, 0);
+                return placeable(flat);
+              },
               eclipseDimForInstance: () => 1,
             },
           },
@@ -86,7 +90,6 @@ describe('createPlanetLabels — the OBSERVE anchor body', () => {
         getMonochrome: () => false,
         declutter: { permits: () => true },
         solarSystem: {
-          focusedPlanetLocalPositions: () => new Float32Array([0, 0, 0, 0.1, 0, 0]),
           orbitRings: { isOrbitRingResolvable: () => true },
         },
         camera,
@@ -104,5 +107,9 @@ describe('createPlanetLabels — the OBSERVE anchor body', () => {
 
   it('hides the anchor body’s label while its body is still drawn', () => {
     expect(run(1)).toEqual(['', 'none']);
+  });
+
+  it('hides the label of a body the field cannot place', () => {
+    expect(run(null, (flat) => flat !== 0)).toEqual(['none', '']);
   });
 });

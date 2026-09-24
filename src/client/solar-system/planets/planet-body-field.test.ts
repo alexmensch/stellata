@@ -85,6 +85,19 @@ function makePlanet(overrides: Partial<Planet> = {}): Planet {
   };
 }
 
+/** Every body's host-relative xyz, flattened; null when the host isn't attached. */
+function hostRelPositions(f: PlanetBodyField, host: number): number[] | null {
+  if (f.instanceIndexOf(host, 0) === null) return null;
+  const out: number[] = [];
+  const v = new THREE.Vector3();
+  for (let i = 0, flat = f.instanceIndexOf(host, i); flat !== null;
+    flat = f.instanceIndexOf(host, ++i)) {
+    f.planetHostRelPositionInto(flat, v);
+    out.push(v.x, v.y, v.z);
+  }
+  return out;
+}
+
 describe('cullDistancePc', () => {
   it('returns zero for a host with no reflectance proxy', () => {
     expect(cullDistancePc(4.83, 0, 6.5)).toBe(0);
@@ -193,7 +206,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     // group becomes visible; positions buffer holds 3 entries.
     expect(f.drawn).toBe(true);
-    const positions = f.getHostLocalPositions(0);
+    const positions = hostRelPositions(f, 0);
     expect(positions).not.toBeNull();
     expect(positions!.length).toBe(9); // 3 planets × xyz
     f.dispose();
@@ -203,7 +216,7 @@ describe('PlanetBodyField lifecycle', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.detachHost(0);
-    expect(f.getHostLocalPositions(0)).toBeNull();
+    expect(hostRelPositions(f, 0)).toBeNull();
     expect(f.drawn).toBe(false);
     f.dispose();
   });
@@ -247,8 +260,8 @@ describe('PlanetBodyField lifecycle', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.attachHost(1, makePlanetSystem(1, 4), 4.83, R_SUN_PC, new THREE.Vector3(0.5, 0, 0), 0, 0);
-    expect(f.getHostLocalPositions(0)!.length).toBe(6);
-    expect(f.getHostLocalPositions(1)!.length).toBe(12);
+    expect(hostRelPositions(f, 0)!.length).toBe(6);
+    expect(hostRelPositions(f, 1)!.length).toBe(12);
     f.dispose();
   });
 
@@ -269,7 +282,7 @@ describe('PlanetBodyField lifecycle', () => {
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.attachHost(1, makePlanetSystem(1, 3), 4.83, R_SUN_PC, new THREE.Vector3(0.5, 0, 0), 0, 0);
     f.detachHost(0);
-    const stillThere = f.getHostLocalPositions(1);
+    const stillThere = hostRelPositions(f, 1);
     expect(stillThere).not.toBeNull();
     expect(stillThere!.length).toBe(9);
     expect(f.drawn).toBe(true);
@@ -280,7 +293,7 @@ describe('PlanetBodyField lifecycle', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.attachHost(0, makePlanetSystem(0, 5), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
-    expect(f.getHostLocalPositions(0)!.length).toBe(15);
+    expect(hostRelPositions(f, 0)!.length).toBe(15);
     f.dispose();
   });
 
@@ -294,13 +307,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
 
-  it('getHostLocalPositions returns a copy that survives capacity grow', () => {
-    // Pin the value-semantics contract structurally. If a future
-    // refactor swaps `.slice()` back to `.subarray()` to save the
-    // allocation, this test fails because the cached reference would
-    // become a view into the orphaned old buffer and read [0,0,0]
-    // (the original allocation is GC'd / overwritten depending on
-    // how growCapacity is implemented).
+  it('host positions survive capacity grow', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(
       0,
@@ -320,24 +327,18 @@ describe('PlanetBodyField lifecycle', () => {
     hosts.get(0)!.orientation.identity();
     const camera = new THREE.PerspectiveCamera();
     f.update(camera, 0, 0);
+    expect(hostRelPositions(f, 0)).toEqual([
+      expect.closeTo(0.42, 6), expect.closeTo(-1.5, 6), expect.closeTo(7, 6),
+    ]);
 
-    const cached = f.getHostLocalPositions(0)!;
-    expect(cached[0]).toBeCloseTo(0.42, 6);
-    expect(cached[1]).toBeCloseTo(-1.5, 6);
-    expect(cached[2]).toBeCloseTo(7,    6);
-
-    // Force growCapacity by overflowing the initial allocation.
-    // INITIAL_CAPACITY = 32 instances, so 40 single-planet hosts (40
-    // instances) force at least one grow past the first host's slot.
+    // INITIAL_CAPACITY = 32 instances, so 40 single-planet hosts force at
+    // least one reallocation past the first host's slot.
     for (let i = 1; i < 40; i++) {
       f.attachHost(i, makePlanetSystem(i, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     }
-    // Cached reference must still read the original values — the
-    // backing buffer has been reallocated, but `.slice()` decoupled
-    // us from it.
-    expect(cached[0]).toBeCloseTo(0.42, 6);
-    expect(cached[1]).toBeCloseTo(-1.5, 6);
-    expect(cached[2]).toBeCloseTo(7,    6);
+    expect(hostRelPositions(f, 0)).toEqual([
+      expect.closeTo(0.42, 6), expect.closeTo(-1.5, 6), expect.closeTo(7, 6),
+    ]);
     f.dispose();
   });
 
@@ -349,7 +350,7 @@ describe('PlanetBodyField lifecycle', () => {
       f.attachHost(i, makePlanetSystem(i, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     }
     for (let i = 0; i < 40; i++) {
-      const slice = f.getHostLocalPositions(i);
+      const slice = hostRelPositions(f, i);
       expect(slice).not.toBeNull();
       expect(slice!.length).toBe(3);
     }
@@ -592,7 +593,7 @@ describe('PlanetBodyField lifecycle', () => {
     camera.position.set(0, 0, 0);
     f.update(camera, 0, 0);
 
-    const slice = f.getHostLocalPositions(0)!;
+    const slice = hostRelPositions(f, 0)!;
     expect(slice[0]).toBeCloseTo(0, 6);
     expect(slice[1]).toBeCloseTo(1, 6);
     expect(slice[2]).toBeCloseTo(0, 6);
@@ -641,7 +642,7 @@ describe('PlanetBodyField lifecycle', () => {
     expect(f.planetAbsolutePositionInto(0, abs)).toBe(true);
     expect(Math.abs(abs.length() - target) / KM_PC).toBeLessThan(1);
 
-    const slice = f.getHostLocalPositions(0)!;
+    const slice = hostRelPositions(f, 0)!;
     const sliceLen = Math.sqrt(slice[0] ** 2 + slice[1] ** 2 + slice[2] ** 2);
     expect(Math.abs(sliceLen - target) / KM_PC).toBeLessThan(1);
     f.dispose();
@@ -666,7 +667,7 @@ describe('PlanetBodyField lifecycle', () => {
       0,    // solIndex — drives orientation choice
       0,
     );
-    const slice = f.getHostLocalPositions(0)!;
+    const slice = hostRelPositions(f, 0)!;
     const r = Math.sqrt(slice[0] ** 2 + slice[1] ** 2 + slice[2] ** 2);
     expect(r).toBeCloseTo(1 * AU_PC, 9);
     f.dispose();

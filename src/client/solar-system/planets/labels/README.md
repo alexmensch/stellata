@@ -2,8 +2,9 @@
 
 The planet-and-moon label overlay. Self-contained: it imports nothing
 from `../` — only the shell, `../../../overlays/` and three.js — and
-reads the solar-system wiring's orbit rings (`stellata.solarSystem`) +
-focus state, so it stays wired in
+reads the planet field's per-body positions (`stellata.kinds.planet.field`),
+the solar-system wiring's orbit rings (`stellata.solarSystem`) and focus
+state, so it stays wired in
 `main.ts` rather than through the planet kind module.
 
 ## Files
