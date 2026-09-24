@@ -362,9 +362,11 @@ owns the user-facing definition.
 Composition split — the controller knows only the mode it runs in and its
 own slot state. The cross-controller busy gates (warp, aim, observe
 transition) and the focus-lerp cancels are `claimCameraForAim`, a free
-function taking them as closures; the shell's aims (`aimAt`, `aimAlong`,
-`aimAtConstellation`, `invertView`) wire it to the live controllers and
-delegate to `this.aim` only on a granted claim. A refused claim cancels
+function taking them as `AimClaimGates` closures. The shell builds that
+object once (`cameraClaim`) and hands the same one to `InputController`,
+whose deps extend the type; the shell's aims (`aimAt`, `aimAlong`,
+`aimAtConstellation`, `invertView`) delegate to `this.aim` only on a
+granted claim. A refused claim cancels
 nothing ([The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence)).
 
 Cancellation contract — `aim.cancel()` drops both slot states but does

@@ -53,7 +53,7 @@ import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
 import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
-import { AimController, claimCameraForAim } from './camera/controls/aim-controller';
+import { AimController, claimCameraForAim, type AimClaimGates } from './camera/controls/aim-controller';
 import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
@@ -341,6 +341,13 @@ export class Stellata implements FrameAnchor {
   private monochrome = false;
   readonly warp!: WarpController;
   readonly aim!: AimController;
+  private readonly cameraClaim: AimClaimGates = {
+    isWarpActive: () => this.warp.isActive(),
+    isAimActive: () => this.aim.isActive(),
+    isObserveTransitionActive: () => this.observe.isActive(),
+    cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
+    cancelFocusLerp: () => this.focus.cancelFocusLerp(),
+  };
 
   readonly pois!: PoiStore;
   // Canvas pointer input — click FSM (single/double, both modes) and the
@@ -2044,7 +2051,7 @@ export class Stellata implements FrameAnchor {
 
     const dir = new THREE.Vector3().subVectors(c, t);
     if (dir.lengthSq() < 1e-6) return; // aim point coincides with target
-    if (!this.claimCameraForAim()) return;
+    if (!claimCameraForAim(this.cameraClaim)) return;
     dir.normalize();
 
     const r = this.camera.position.distanceTo(t);
@@ -2070,7 +2077,7 @@ export class Stellata implements FrameAnchor {
    * gates the controller doesn't see.
    */
   aimAt(pointLocal: THREE.Vector3) {
-    if (!this.claimCameraForAim()) return;
+    if (!claimCameraForAim(this.cameraClaim)) return;
     this.aim.aimAt(pointLocal);
   }
 
@@ -2083,18 +2090,8 @@ export class Stellata implements FrameAnchor {
    * Shares `aimAt`'s composition-layer busy gates.
    */
   aimAlong(dirLocal: THREE.Vector3) {
-    if (!this.claimCameraForAim()) return;
+    if (!claimCameraForAim(this.cameraClaim)) return;
     this.aim.aimAlong(dirLocal);
-  }
-
-  private claimCameraForAim(): boolean {
-    return claimCameraForAim({
-      isWarpActive: () => this.warp.isActive(),
-      isAimActive: () => this.aim.isActive(),
-      isObserveTransitionActive: () => this.observe.isActive(),
-      cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
-      cancelFocusLerp: () => this.focus.cancelFocusLerp(),
-    });
   }
 
   /**
@@ -2107,7 +2104,7 @@ export class Stellata implements FrameAnchor {
    * `AimController`.
    */
   invertView() {
-    if (!this.claimCameraForAim()) return;
+    if (!claimCameraForAim(this.cameraClaim)) return;
     this.aim.invert();
   }
 
@@ -2162,11 +2159,7 @@ export class Stellata implements FrameAnchor {
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getVectorTarget: () => this.focus.getVectorTarget(),
       setVector: (target) => this.focus.setVector(target),
-      isWarpActive: () => this.warp.isActive(),
-      isAimActive: () => this.aim.isActive(),
-      isObserveTransitionActive: () => this.observe.isActive(),
-      cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
-      cancelFocusLerp: () => this.focus.cancelFocusLerp(),
+      ...this.cameraClaim,
       flyTo: (target) => this.focus.flyTo(target),
       setOrbitTarget: (target) => this.focus.setOrbitTarget(target),
       unfocus: () => this.focus.unfocus(),
