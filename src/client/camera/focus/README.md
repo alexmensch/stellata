@@ -347,7 +347,7 @@ and draws throughout every lerp (`../../constellation-figure/README.md`).
 
 `cancelFocusLerp` is wired at every site that already calls
 `cancelUnfocusLerp` (`focusHardTarget`, `flyTo`, `unfocus`,
-`startWarp`, `aimAt`, `aimAtConstellation`, `onPointerUp`) so a
+`startWarp`, the shell's `claimCameraForAim`, `onPointerUp`) so a
 follow-up camera-changing action can't race the in-flight lerp.
 
 The per-frame motion (camera position + orientation) delegates to
