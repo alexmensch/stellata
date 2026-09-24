@@ -155,7 +155,7 @@ pixel count while a 50°→120° FOV change made it *cheaper* (the
 cross-vantage sweeps in stellata-8cg.18's notes). Early-z buys nothing
 here, because no occluder sits in front of most band pixels.
 
-<a id="3-how-to-apply"></a>**How to apply.** The sum is what is bandlimited, so keep it linear all
+**How to apply.** The sum is what is bandlimited, so keep it linear all
 the way to the upsample: rgb and the scalar the knee runs on are stored
 raw, and the knee is applied to the *summed* field. Attachments of one
 render target must share dimensions, so a reduced-resolution emitter is
@@ -313,7 +313,7 @@ float depth: **0.1 ms** for one extra empty pass at Earth close approach
 not a reading). Sol's bound per boundary is therefore an order under
 Earth's resolved figure. Whether that gap is the vantage — Earth is the
 one canon vantage where the reduction chain draws under the pin — or the
-four clears coalescing is untested; [How to apply](#3-how-to-apply) says what not to
+four clears coalescing is untested; [How to apply](#8-how-to-apply) says what not to
 conclude from it.
 **Either way the boundary is not paying a full store-and-reload.** Those
 attachments hold ~115 MB at this buffer, and moving them out and back
@@ -331,7 +331,7 @@ both, so the counts alone cannot tell them apart. A readback frame adds
 2 submits (the exposure copy, no pass) and, at Earth alone under the
 exposure pin, the 6 reduction-chain passes on 6 more submits.
 
-**How to apply.** Read every add-a-pass or fold-a-pass proposal against
+<a id="8-how-to-apply"></a>**How to apply.** Read every add-a-pass or fold-a-pass proposal against
 the `emptyPass` row ([The roster](/src/client/debug/frame-cost/passes/README.md#the-roster))
 at the vantage in question and against the frame it
 lands in.
