@@ -131,9 +131,13 @@ built, so the next build there sees them rewritten and rebuilds.
 
 `pnpm run build:seed` (`build-seed.sh`) runs `build:stamped` — exactly the
 steps whose outputs seed a new worktree (§ Building in a worktree) — with one
-build per checkout: it records the build's process group in
-`build/build-seed.pid`, and a later `build:seed` in the same checkout stops
-that group before starting its own. The superseded run exits 0 with
+build per checkout. Each run registers `build/build-seed/<start ns>.<pid>`
+before looking at the others, then stops every older live run and waits for it
+to exit, or exits at once if a newer one is registered; so the newest run
+builds and no two ever build at the same time, however many start together. A
+stopped run takes its build's whole process group down (TERM, then KILL after
+30 s) before exiting, and an entry whose process is gone is deleted on sight.
+`scripts/build-seed.test.ts` pins all of this. The superseded run exits 0 with
 `superseded by a newer build:seed`; any other exit is the build's own status.
 Nothing is forced — the stamped step that was interrupted has no stamp and
 reruns, every step that finished skips (§ Preprocessor idempotency). The
