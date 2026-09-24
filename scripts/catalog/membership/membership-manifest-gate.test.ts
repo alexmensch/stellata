@@ -206,6 +206,10 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(manifest.filter((r) => manifestDesignations(r).includes('sol:sun'))).toHaveLength(1);
   });
 
+  it('ends no gl cell on a null marker or other punctuation', () => {
+    expect(manifest.map((r) => r.gl).filter((gl) => /[^A-Za-z0-9.]$/.test(gl))).toEqual([]);
+  });
+
   // A designation two rows carry keys neither of them (docs/sid.md § 4.1), so
   // the row it would have keyed falls to its next rung — the Gaia id, or
   // nothing. Admission refuses one an existing record answers to, which leaves

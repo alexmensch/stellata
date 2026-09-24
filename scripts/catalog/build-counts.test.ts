@@ -51,6 +51,9 @@ function baseCounts(): BuildCounts {
     gspcSourcesUnpulled: 30000,
     lmcCandidates: 1200,
     lmcOverridden: 60,
+    lmcParallaxRefusedByDistVia: {
+      ...emptyTallyPartition(DIST_VIA_VALUES), bailer_jones: 3,
+    },
     lmcOverriddenByDistVia: {
       ...emptyTallyPartition(DIST_VIA_VALUES), bailer_jones: 58, gaia_dr3_inversion: 2,
     },

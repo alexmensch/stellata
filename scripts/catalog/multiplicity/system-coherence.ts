@@ -56,14 +56,27 @@ export interface CoherenceSources {
 
 const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;
 
-/** Anchor tier, pair-primary side, WDS-canonical letter. */
-type AnchorRank = [number, number, string];
+interface AnchorRank {
+  tier: number;
+  fracError: number | null;
+  primarySide: number;
+  letter: string;
+}
 
+/** see README.md § System distance coherence, Why precision sits between side
+ *  and letter */
 function rankBeats(rank: AnchorRank, best: AnchorRank | null): boolean {
   if (best === null) return true;
-  if (rank[0] !== best[0]) return rank[0] < best[0];
-  if (rank[1] !== best[1]) return rank[1] < best[1];
-  return rank[2] < best[2];
+  if (rank.tier !== best.tier) return rank.tier < best.tier;
+  if (rank.primarySide !== best.primarySide) return rank.primarySide < best.primarySide;
+  if (rank.tier === ANCHOR_TIER_GAIA_CLEAN && rank.fracError !== best.fracError) {
+    return morePrecise(rank.fracError, best.fracError);
+  }
+  return rank.letter < best.letter;
+}
+
+function morePrecise(a: number | null, b: number | null): boolean {
+  return a !== null && (b === null || a < b);
 }
 
 function fractionalError(plxMas: number | null, errMas: number | null): number | null {
@@ -239,36 +252,37 @@ export function applySystemDistanceCoherence(
 
     let anchorIdx: number | null = null;
     let anchorRank: AnchorRank | null = null;
-    let anchorFracError: number | null = null;
     let primaryIdx: number | null = null;
     let primaryRank: AnchorRank | null = null;
-    let primaryFracError: number | null = null;
     for (const [idx, info] of members) {
-      // Tier, then pair-primary side, then the WDS-canonical letter
-      // (the record holding 'A' beats one holding 'C' — catalog index
-      // order is pre-sort CSV order and means nothing).
+      // The WDS-canonical letter is the last tie-break (the record holding
+      // 'A' beats one holding 'C' — catalog index order is pre-sort CSV
+      // order and means nothing).
       let minToken = '';
       for (const t of info.tokens) {
         if (minToken === '' || t < minToken) minToken = t;
       }
       const evidence = anchorEvidence(stars[idx], sources, hostsSubsystem(info));
-      const rank: AnchorRank = [evidence.tier, info.isPrimary ? 0 : 1, minToken];
+      const rank: AnchorRank = {
+        tier: evidence.tier,
+        fracError: evidence.fracError,
+        primarySide: info.isPrimary ? 0 : 1,
+        letter: minToken,
+      };
       if (rankBeats(rank, anchorRank)) {
         anchorRank = rank;
         anchorIdx = idx;
-        anchorFracError = evidence.fracError;
       }
       if (info.isPrimary && rankBeats(rank, primaryRank)) {
         primaryRank = rank;
         primaryIdx = idx;
-        primaryFracError = evidence.fracError;
       }
     }
     if (anchorIdx === null) continue;
     // see README.md § System distance coherence, Precision veto
-    if (anchorRank !== null && anchorRank[1] === 1 && primaryIdx !== null) {
-      if (anchorFracError !== null && primaryFracError !== null
-        && primaryFracError < anchorFracError) {
+    if (anchorRank !== null && anchorRank.primarySide === 1
+      && primaryIdx !== null && primaryRank !== null) {
+      if (morePrecise(primaryRank.fracError, anchorRank.fracError)) {
         anchorIdx = primaryIdx;
         anchorRank = primaryRank;
         stats.memberAnchorPrecisionVetoed++;
@@ -277,7 +291,7 @@ export function applySystemDistanceCoherence(
     const anchorStar = stars[anchorIdx];
     const anchorDist = starDist(anchorStar);
     if (!(anchorDist > 0) || !Number.isFinite(anchorDist)) continue;
-    if (anchorRank !== null && anchorRank[1] === 1) stats.memberAnchorWins++;
+    if (anchorRank !== null && anchorRank.primarySide === 1) stats.memberAnchorWins++;
     const anchorPlx = parallaxDistanceWithError(anchorStar, sources);
     // An anchor whose rendered catalog distance contradicts its own
     // parallax evidence would drag every member onto a bogus placement

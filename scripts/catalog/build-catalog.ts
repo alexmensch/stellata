@@ -332,6 +332,7 @@ async function main() {
     gspcSourcesUnpulled: 0,
     lmcCandidates: 0,
     lmcOverridden: 0,
+    lmcParallaxRefusedByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     nameTableEntries: 0,
     variableCount: 0,
@@ -510,6 +511,9 @@ async function main() {
     console.log(
       `    displacing: ${formatPartition(stats.lmcOverriddenByDistVia)}`,
     );
+    console.log(
+      `    refused on own parallax, keeping: ${formatPartition(stats.lmcParallaxRefusedByDistVia)}`,
+    );
   }
   const dv = stats.directionVia;
   console.log(
@@ -600,6 +604,7 @@ async function main() {
   for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
+  counts.lmcParallaxRefusedByDistVia = stats.lmcParallaxRefusedByDistVia;
   counts.lmcOverriddenByDistVia = stats.lmcOverriddenByDistVia;
   counts.directionGaia5p = dv.gaia_5p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;

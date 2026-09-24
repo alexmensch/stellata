@@ -162,7 +162,7 @@ proposal can re-expose a value its partner had proposed to vacate.
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
 an explicit value, or empty for "keep the spine's". It is for the case
 `docs/catalog-driver.md` § 4 names: review finding the CDS join wrong. It holds
-**16 rows**, and they are two shapes rather than 16 judgements. The count is
+**17 rows**, and they are three shapes rather than 17 judgements. The count is
 `labelOverridden` summed across the identifiers in
 `../../membership/membership-manifest-expected.json`.
 
@@ -180,6 +180,14 @@ witnesses named, is the honest shape for a set that small. **HD and HR move
 together or not at all** — V/50 publishes them as a pair, so moving one alone
 composes a pair no catalogue prints, and the one record of the eight carrying no
 HR moves a single field.
+
+**One is a malformed spine spelling the overlay cannot reach.** AT-HYG
+transcribed V/70A's `comp` null marker `-` into HIP 102970's cell, reading
+`GJ 1255-`; the overlay asserts no GJ for its source, so the backstop would
+keep that spelling. The row pins `GJ 1255`, the V/70A row whose HD is the
+record's own. `../../membership/membership-manifest-gate.test.ts` asserts no
+manifest `gl` cell ends in punctuation, so a second such cell fails there
+rather than shipping.
 
 An override is applied before the collision guard and before the extras
 partition, so a curated value neither suppresses nor aliases: it is what the

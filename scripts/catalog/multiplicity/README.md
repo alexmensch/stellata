@@ -241,8 +241,20 @@ Per WDS root with ≥2 resolved own-record members:
   saturated or binarity-corrupted (Acrux). A member hosting its own
   sub-pair (Acrux C = Ca,Cb) never takes the clean-Gaia tier —
   photocentre wobble on periods beyond Gaia's baseline corrupts the 5p
-  parallax without tripping RUWE. Ties break pair-primary first, then
+  parallax without tripping RUWE. Ties break pair-primary first, then —
+  in the clean-Gaia tier only — the smaller fractional parallax error, then
   the WDS-canonical letter.
+- **Why precision sits between side and letter.** γ Vel is the case it was
+  added for: B (γ¹, 2.6052 ± 0.1235 mas) and C (2.9193 ± 0.0348) are both
+  clean-Gaia pair primaries, and the letter handed the system B's 392.3 pc
+  where C, D, E and the interferometric orbit (336 +8/−7 pc) agree near
+  340; ranked on precision it ships at 340.8. It stays **below pair-primary
+  side**: GJ 4's wide F is the most precise member (0.020%), and anchoring
+  on it leaves A and B each 3–4σ from F, so both keep their own depths and
+  the tight AB orbit splits ~2,000 AU along the sightline. It stays **out of
+  the HIP2 tier**: those records are routinely placed by Bailer-Jones on a
+  non-anchor-grade Gaia fit, so their HIP2 error ranks a fit they do not
+  ship — HIP 185 / 190 would move from 87.5 to 99.4 pc against HIP2's 77–87.
 - **Precision veto on a member anchor.** Tier ranks PROVENANCE, and it is
   the pair primary's placement every member is about to be moved onto, so
   a member displacing the primary must also be the better MEASUREMENT: the

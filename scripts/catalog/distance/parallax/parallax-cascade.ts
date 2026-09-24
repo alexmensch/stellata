@@ -4,7 +4,8 @@
 
 import { isGaiaCatalogueBibcode, isHipparcos2Bibcode } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
-import type { CitedParallax } from '../../cited-parallax';
+import { parallaxSignalToNoise } from '../../cited-parallax';
+import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
 
@@ -74,9 +75,9 @@ export interface ParallaxSources {
 }
 
 export interface ParallaxResolution {
-  /** mas, always > 0. Null on `curated` (Sol, distance zero by construction)
+  /** `mas` always > 0. Null on `curated` (Sol, distance zero by construction)
    *  and on `none`, which is a membership event rather than a value. */
-  plxMas: number | null;
+  parallax: MeasuredParallax | null;
   via: DistVia;
   /** The tier's parallax is real but its fractional error exceeds
    *  `PARALLAX_LOW_PRECISION_SN`, so the inverted distance is biased. */
@@ -92,13 +93,6 @@ export interface ParallaxResolution {
 
 function usable(plx: number | null): plx is number {
   return plx !== null && plx > 0;
-}
-
-/** `plx / e_plx`, or null where the index publishes no usable error bar. */
-export function parallaxSignalToNoise(
-  plx: number, err: number | null,
-): number | null {
-  return err !== null && err > 0 ? plx / err : null;
 }
 
 /** Whether `PARALLAX_SN_FLOOR` refuses this parallax — the single statement of
@@ -131,14 +125,15 @@ export function resolveParallax(
   gaiaIs2p: boolean,
   isSol: boolean,
 ): ParallaxResolution {
-  const hit = (
-    plxMas: number, via: DistVia, sn: number | null,
-  ): ParallaxResolution => ({
-    plxMas,
-    via,
-    lowPrecision: sn !== null && sn < PARALLAX_LOW_PRECISION_SN,
-    refusedPlxMas: [],
-  });
+  const hit = (parallax: MeasuredParallax, via: DistVia): ParallaxResolution => {
+    const sn = parallaxSignalToNoise(parallax.mas, parallax.errMas);
+    return {
+      parallax,
+      via,
+      lowPrecision: sn !== null && sn < PARALLAX_LOW_PRECISION_SN,
+      refusedPlxMas: [],
+    };
+  };
 
   const refusedPlxMas: number[] = [];
   let hip2Refused = false;
@@ -156,18 +151,18 @@ export function resolveParallax(
       refusedPlxMas.push(p.mas);
       return null;
     }
-    return hit(p.mas, via, parallaxSignalToNoise(p.mas, p.errMas));
+    return hit(p, via);
   };
 
   if (gaia !== null && usable(gaia.parallaxMas)) {
-    return hit(gaia.parallaxMas, 'gaia_dr3_inversion',
-      parallaxSignalToNoise(gaia.parallaxMas, gaia.parallaxErrorMas));
+    return hit(
+      { mas: gaia.parallaxMas, errMas: gaia.parallaxErrorMas }, 'gaia_dr3_inversion',
+    );
   }
 
   if (hip2 !== null && usable(hip2.plxMas)) {
     if (!belowParallaxSnFloor(hip2.plxMas, hip2.plxErrorMas)) {
-      return hit(hip2.plxMas, 'hip2_parallax',
-        parallaxSignalToNoise(hip2.plxMas, hip2.plxErrorMas));
+      return hit({ mas: hip2.plxMas, errMas: hip2.plxErrorMas }, 'hip2_parallax');
     }
     hip2Refused = true;
     refusedPlxMas.push(hip2.plxMas);
@@ -176,8 +171,7 @@ export function resolveParallax(
   if (cns5 !== null && usable(cns5.mas)) {
     if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.bibcode))
         && !belowParallaxSnFloor(cns5.mas, cns5.errMas)) {
-      return hit(cns5.mas, 'cns5_plx',
-        parallaxSignalToNoise(cns5.mas, cns5.errMas));
+      return hit(cns5, 'cns5_plx');
     }
     refusedPlxMas.push(cns5.mas);
   }
@@ -189,8 +183,7 @@ export function resolveParallax(
     const laundered = (gaiaIs2p && isGaiaCatalogueBibcode(simbad.bibcode))
       || (hip2Refused && isHipparcos2Bibcode(simbad.bibcode));
     if (!laundered && !belowParallaxSnFloor(simbad.mas, simbad.errMas)) {
-      return hit(simbad.mas, 'simbad_plx',
-        parallaxSignalToNoise(simbad.mas, simbad.errMas));
+      return hit(simbad, 'simbad_plx');
     }
     refusedPlxMas.push(simbad.mas);
   }
@@ -202,8 +195,7 @@ export function resolveParallax(
   // indices because it lends a neighbour's measurement rather than serving this
   // star's own.
   if (pairMember !== null) {
-    return hit(pairMember.mas, 'pair_member_parallax',
-      parallaxSignalToNoise(pairMember.mas, pairMember.errMas));
+    return hit(pairMember, 'pair_member_parallax');
   }
 
   // V/70A's photometric and spectroscopic parallaxes: a distance from colour and
@@ -220,10 +212,8 @@ export function resolveParallax(
   // Sol's distance is zero rather than a parallax — the same curated exit the
   // direction and V cascades take.
   if (isSol) {
-    return {
-      plxMas: null, via: 'curated', lowPrecision: false, refusedPlxMas: [],
-    };
+    return { parallax: null, via: 'curated', lowPrecision: false, refusedPlxMas: [] };
   }
 
-  return { plxMas: null, via: 'none', lowPrecision: false, refusedPlxMas };
+  return { parallax: null, via: 'none', lowPrecision: false, refusedPlxMas };
 }

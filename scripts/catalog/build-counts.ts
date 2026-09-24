@@ -98,6 +98,9 @@ export interface BuildCounts {
   /** Rows that ALSO pass the LMC bulk-PM gate; their dist/x/y/z/absmag
    *  were snapped to Pietrzyński 2019's eclipsing-binary distance. */
   lmcOverridden: number;
+  /** Cone + PM matches the snap refuses on their own parallax, split by the
+   *  tier they keep. See distance/README.md § Layer 2. */
+  lmcParallaxRefusedByDistVia: Record<DistVia, number>;
   /** lmcOverridden split by the distance tier the snap displaced — B-J's
    *  posterior or the raw inversion on most rows; the split states which
    *  populations the override actually moves. */

@@ -79,3 +79,11 @@ gaia_source_id	field	value
 #   Tycho entry names the freed 330122, so it reaches no manifest row and stops
 #   resolving anywhere (scripts/catalog/classic-ids/label-merge/README.md
 #   § What a freed number costs).
+#
+# A MALFORMED SPINE SPELLING the overlay cannot reach: AT-HYG transcribed
+# V/70A's `comp` null marker `-` into the cell, reading GJ 1255-. V/70A's three
+# GJ 1255 rows are `-` (HD 199476, this record's HD), AB (HD 197433) and C, so
+# the `-` row is the right one and only its label is wrong. The overlay asserts
+# no GJ for this source, so the merge's backstop would keep the spine's
+# spelling.
+2277839861099828480	gl	GJ 1255

@@ -11,6 +11,7 @@ import { headerIndex } from '../parse/corpus-tsv.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
 import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
+import { parallaxSignalToNoise, type MeasuredParallax } from '../cited-parallax.ts';
 
 /** The bottom of every chromaticity cascade: ~0.65 renders a yellow disc
  *  rather than a hot blue or cold red default. */
@@ -1881,21 +1882,34 @@ export function isInLmcCone(raHours: number, decDegrees: number): boolean {
   return sep <= LMC_CONE_HALF_ANGLE_DEG;
 }
 
-/** When (raHours, decDegrees) is inside the LMC sky cone AND (pmRa, pmDec)
- *  lies within tolerance of the LMC bulk-PM centre, returns Pietrzyński 2019's
- *  distance. Otherwise null — the caller leaves the row's existing distance in
- *  place (which after B-J is either the B-J posterior or AT-HYG's 1/π). Every
- *  gate is evaluated here, so no caller can produce an override by forgetting
- *  one. */
+export const LMC_PARALLAX_MAS = 1000 / LMC_DISTANCE_PC;
+
+/** Measured, not chosen: `../distance/README.md` § Layer 2. */
+export const LMC_PARALLAX_CONSISTENCY_SIGMA = 10;
+
+export type LmcKinematicVerdict =
+  | { kind: 'snap'; distPc: number }
+  | { kind: 'parallax_rules_out' }
+  | { kind: 'not_member' };
+
+/** Every gate is evaluated here, so no caller can produce an override by
+ *  forgetting one. */
 export function applyLmcKinematicOverride(
   raHours: number,
   decDegrees: number,
   pmRa: number | null,
   pmDec: number | null,
-): number | null {
-  if (pmRa === null || pmDec === null) return null;
-  if (!isInLmcCone(raHours, decDegrees)) return null;
-  if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return null;
-  if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return null;
-  return LMC_DISTANCE_PC;
+  parallax: MeasuredParallax | null,
+): LmcKinematicVerdict {
+  if (pmRa === null || pmDec === null) return { kind: 'not_member' };
+  if (!isInLmcCone(raHours, decDegrees)) return { kind: 'not_member' };
+  if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
+  if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
+  const sigmaAboveLmc = parallax === null
+    ? null
+    : parallaxSignalToNoise(parallax.mas - LMC_PARALLAX_MAS, parallax.errMas);
+  if (sigmaAboveLmc !== null && sigmaAboveLmc > LMC_PARALLAX_CONSISTENCY_SIGMA) {
+    return { kind: 'parallax_rules_out' };
+  }
+  return { kind: 'snap', distPc: LMC_DISTANCE_PC };
 }

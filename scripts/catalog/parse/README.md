@@ -187,7 +187,8 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    `gaia_dr3_inversion` — the posterior treats that measurement, so a non-Gaia
    parallax must not be regressed onto its Galactic-density prior — then the
    **LMC kinematic override** (`applyLmcKinematicOverride`), which gates on the
-   direction tier's own place and the motion steps 2–3 settled. See
+   direction tier's own place, the motion steps 2–3 settled, and step 0's
+   parallax with its error. See
    `../distance/README.md` § Multi-layer distance refinement.
 5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff** (`stars-parse.ts`).
    **Drops** rows still beyond LMC depth after every override —

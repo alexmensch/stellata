@@ -350,6 +350,8 @@ export function readStars(
     distVia: Record<DistVia, number>;
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
+    /** PM-gate passes whose own parallax rules the LMC out, by the tier kept. */
+    lmcParallaxRefusedByDistVia: Record<DistVia, number>;
     /** lmcOverridden split by the tier the snap displaced — which populations
      *  the override actually moves. */
     lmcOverriddenByDistVia: Record<DistVia, number>;
@@ -394,6 +396,7 @@ export function readStars(
   let bjEligibleNotPulled = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
+  const lmcParallaxRefusedByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
   const lmcOverriddenByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
   const distViaCounts = emptyTallyPartition(DIST_VIA_VALUES);
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
@@ -570,7 +573,7 @@ export function readStars(
     // B-J's Galactic-density prior tail (~10–40 kpc). A null parallax here is
     // the curated exit (Sol, distance zero by construction); `none` returned
     // above.
-    const plxDistPc = plxRes.plxMas === null ? null : 1000 / plxRes.plxMas;
+    const plxDistPc = plxRes.parallax === null ? null : 1000 / plxRes.parallax.mas;
     let dist = plxDistPc ?? 0;
     let distVia: DistVia = plxRes.via;
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
@@ -586,21 +589,21 @@ export function readStars(
       }
     }
 
-    // LMC kinematic override: B-J's Galactic-density prior pulls real LMC
-    // supergiants to ~5-20 kpc instead of 49.59 kpc. Sky-cone + bulk-PM
-    // filter on the direction tier's own place and the motion the row
-    // carries snaps the ~60 affected rows back to Pietrzyński 2019's
-    // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
-    // mis-anchored value on the same rows.
+    // Runs AFTER B-J so the LMC snap overrides B-J's mis-anchored value on the
+    // same rows.
     const raHours = dirRes.srcRaDeg / 15;
     if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
       lmcCandidates++;
-      const ovr = applyLmcKinematicOverride(raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr);
-      if (ovr !== null) {
+      const lmc = applyLmcKinematicOverride(
+        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, plxRes.parallax,
+      );
+      if (lmc.kind === 'snap') {
         lmcOverriddenByDistVia[distVia]++;
-        dist = ovr;
+        dist = lmc.distPc;
         distVia = 'lmc_kinematic';
         lmcOverridden++;
+      } else if (lmc.kind === 'parallax_rules_out') {
+        lmcParallaxRefusedByDistVia[distVia]++;
       }
     }
 
@@ -803,6 +806,7 @@ export function readStars(
       distVia: distViaCounts,
       lmcCandidates,
       lmcOverridden,
+      lmcParallaxRefusedByDistVia,
       lmcOverriddenByDistVia,
       directionVia,
       vVia,

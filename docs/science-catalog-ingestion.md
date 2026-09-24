@@ -123,25 +123,28 @@ on every AT-HYG row before the bounded-scope cutoff above fires:
    sampling distribution's heavy tail push individual estimators by an
    order of magnitude.
 2. **LMC kinematic override** — replaces B-J's mis-anchored posterior
-   for AT-HYG entries in the LMC field, using a sky-cone + bulk-PM
+   for stars in the LMC field, using a sky-cone + bulk-PM
    identification pinned to Pietrzyński et al. (2019)'s eclipsing-
-   binary distance to the LMC's centre of mass.
+   binary distance to the LMC's centre of mass. Motion alone is not
+   membership: a star whose own parallax sits more than 10σ above the
+   LMC's ~0.02 mas is a foreground star sharing the Cloud's apparent
+   motion, and keeps its own distance.
 3. **Bounded-scope cutoff** at 50,000 pc — drops rows still beyond LMC
    depth as unmodelled extragalactic per the framing above.
 
 Ordering is non-commutative. Bailer-Jones runs first because its
 posterior is well-calibrated everywhere the Galactic-density prior is
 valid; the LMC kinematic layer runs second so it can override B-J on
-the ~60 AT-HYG rows where B-J's smooth prior fails (B-J has no LMC).
+the ~110 rows where B-J's smooth prior fails (B-J has no LMC).
 If LMC ran first, B-J would clobber the kinematic snap back onto its
 intermediate-wrong posterior because LMC stars carry Gaia source_ids
 that B-J's map covers. The cutoff runs last so it acts on the refined
 distance, not the catastrophic input.
 
 Future Magellanic-system or M31 layers will sit alongside the LMC
-kinematic layer (same sky-cone + bulk-PM identification pattern,
-distinct anchor distances) and bump the cutoff as each new modelled
-population enters scope.
+kinematic layer (same sky-cone + bulk-PM identification pattern and
+parallax-consistency veto, distinct anchor distances) and bump the
+cutoff as each new modelled population enters scope.
 
 **Bailer-Jones DR3 distance override (Layer 1).** AT-HYG's `dist` for
 the ~98% G_R3 majority is Gaia DR3's naive `1 / π` parallax inversion —

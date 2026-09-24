@@ -4,6 +4,7 @@
 
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
 import { normaliseGjKey } from './record/catalog-pure';
+import type { MeasuredParallax } from './cited-parallax';
 
 const FILE_LABEL = 'data/gliese/gliese_v70a.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:gliese`.';
@@ -22,9 +23,7 @@ const COLUMNS = [
  *  side of SIMBAD, so a consumer that ignored it would silently invert an
  *  estimate as though it were a measurement — see
  *  `data/gliese/README.md` § The parallax is half the column. */
-export interface GlieseParallax {
-  mas: number;
-  errMas: number | null;
+export interface GlieseParallax extends MeasuredParallax {
   trigonometric: boolean;
 }
 
