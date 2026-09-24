@@ -292,19 +292,19 @@ once per frame.
 
 ## What the planet field reports
 
-`cadenceReport(ctx)` is this field's declaration to the render gate: the
-fastest on-screen speed of the bodies it is actually drawing, and the
-fastest brightness slope among them. `../../../render-gate/cadence/README.md`
-owns the design; four things about it are specific to this field.
+`PlanetBodyField.cadenceReport(ctx)` is the planet field's declaration:
+the fastest on-screen speed of the bodies it is actually drawing, and the
+fastest brightness slope among them. Four things about it are specific to
+that field.
 
 - **The walk is `forEachDrawnBodyView` plus two more gates.** `bodyInkVisible`
-  (the same live-exposure test the pick path uses, § The pick's adapted
-  gate) and occlusion by the parent. The second is one angular-separation
+  (the same live-exposure test the pick path uses,
+  `../../solar-system/planets/README.md` § The pick's adapted gate) and occlusion by the parent. The second is one angular-separation
   test against the parent's own angular radius, and it shares
   `parentGeometryInto` with the body-collapse verdict rather than
   open-coding the cross-and-dot a second time — the two want opposite ends
   of the angular range, which is why both ride `angleBetweenRad`
-  (`../../../util/README.md`) instead of the phase function's `acos` form.
+  (`../../util/README.md`) instead of the phase function's `acos` form.
 - **Each body's velocity is differenced, not modelled.** `prevBodyLocal64`
   holds the positions the LAST rendered frame drew, snapshotted at the top
   of `update` before the ephemeris walk overwrites them. That is what makes
@@ -330,9 +330,8 @@ solar-system local cluster) share this one report; the field caches it on
 
 ## What the binary field reports
 
-`cadenceReport(ctx)` prices the pairs the walk actually animated, for the
-render gate (this file). Per active relation the
-pair's own sweep rate is `ΔR` **differenced over the last rendered
+The binary field's `cadenceReport(ctx)` prices the pairs the walk
+actually animated. Per active relation the pair's own sweep rate is `ΔR` **differenced over the last rendered
 frame** — the quantity the walk already computed — split by the same
 barycentric coefficients it applies, then projected across each member's
 line of sight over its camera distance.
