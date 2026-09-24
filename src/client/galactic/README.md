@@ -15,18 +15,13 @@ src/client/galactic/
                                   GALACTIC_CENTRE_PC (Vector3 at R₀ =
                                   8.122 kpc). Reused by the Milky Way
                                   volumetric layer (src/client/milkyway/README.md).
-  galactic-disc.ts                15 kpc midplane ring + ±1800 pc
+  galactic-disc.ts (+ test)       15 kpc midplane ring + ±1800 pc
                                   thickness rings + 5 × 3 kpc bulge
                                   wireframe, on one seam stroke;
                                   always-on in dark mode, hidden in
-                                  chart mode.
-  galactic-reference.ts (+ test)  GalacticReference — the shell's
-                                  `galactic` namespace. Owns the disc
-                                  (handed in, § Wiring) and the three
-                                  coordinate spheres, builds their two
-                                  registry entries, answers
-                                  coordSphereDrawn / coordSphereAvailable,
-                                  and runs the focus-change frame demotion.
+                                  chart mode. galacticDiscSceneLayer
+                                  constructs it and returns its registry
+                                  entry (§ Wiring).
   galactic-fade.ts (+ test)       Both distance-from-Sol curves
                                   (§ Distance fades): the far-field
                                   reveal FADE_INNER_PC / FADE_OUTER_PC
@@ -103,15 +98,15 @@ orientation.
 
 ## Wiring
 
-`GalacticReference` builds the disc and coordinate-sphere registry entries;
-`stellata.ts` registers them below the orbit lock, where the disc's frustum
-test is legal.
+`galacticDiscSceneLayer` and `coord-spheres/`'s `CoordSpheres` build the disc
+and coordinate-sphere registry entries; `stellata.ts` registers them below the
+orbit lock, where the disc's frustum test is legal.
 
-**The shell constructs the disc and hands it in**, before the kind modules
-attach. The disc and the Local Bubble shell are both transparent at
-renderOrder −1 and both centred on Sol, so their depths tie exactly and three
-falls back to object id; constructing the disc after the modules would flip
-which of the two draws first.
+**The shell calls `galacticDiscSceneLayer` before the kind modules attach**,
+because that call constructs the disc. The disc and the Local Bubble shell are
+both transparent at renderOrder −1 and both centred on Sol, so their depths tie
+exactly and three falls back to object id; constructing the disc after the
+modules would flip which of the two draws first.
 
 ## Distance fades
 

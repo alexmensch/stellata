@@ -12,8 +12,8 @@ import {
   type ChunkVerifyReport,
 } from './loaders/dust-voxel-readback';
 import { DustParticleLayer } from './dust/dust-particle-layer';
-import { GalacticDisc } from './galactic/galactic-disc';
-import { GalacticReference } from './galactic/galactic-reference';
+import { galacticDiscSceneLayer } from './galactic/galactic-disc';
+import { CoordSpheres } from './galactic/coord-spheres/coord-spheres';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import type { OrbitFramePort } from './attitude/attitude-pure';
 import { focusFrameInputs } from './attitude/focus-frame';
@@ -127,6 +127,7 @@ import {
   updateWarpGatedRefLayer,
   type ContributionCensus,
   type FrameCtx,
+  type SceneLayer,
 } from './scene/scene-layer';
 import { FrameFrustum } from './scene/contribution/frame-frustum';
 import { findGlslResidents } from './scene/glsl-residents-pure';
@@ -347,7 +348,7 @@ export class Stellata implements FrameAnchor {
   // roll gestures. See camera/controls/input/README.md § Input controller.
   readonly input!: InputController;
 
-  readonly galactic: GalacticReference;
+  readonly coordSpheres: CoordSpheres;
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
@@ -600,9 +601,13 @@ export class Stellata implements FrameAnchor {
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
     // existing #overlay so it shares the distance vector's stroke + halo
     // styling and inherits the `body.warping` hide rule for free.
-    // Constructed here, not by GalacticReference — galactic/README.md § Wiring.
-    const galacticDisc = new GalacticDisc(this.chromeLines);
-    this.scene.add(galacticDisc.group);
+    // Constructed here, ahead of the kind modules — galactic/README.md § Wiring.
+    const galacticDiscEntry = galacticDiscSceneLayer({
+      scene: this.scene,
+      chromeLines: this.chromeLines,
+      worldOffset: this.worldOffset,
+      detailPermits: (id) => this.declutter.permits(id),
+    });
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     this.starLocalCluster = new StarLocalCluster(
       this.webgpuStarLayer.localMirror,
@@ -833,12 +838,9 @@ export class Stellata implements FrameAnchor {
       this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
     this.on('cameraMode', () => this.observeLookPin.invalidate());
-    this.galactic = new GalacticReference({
-      disc: galacticDisc,
+    this.coordSpheres = new CoordSpheres({
       scene: this.scene,
       chromeLines: this.chromeLines,
-      worldOffset: this.worldOffset,
-      detailPermits: (id) => this.declutter.permits(id),
       coordSphere: () => this.filter.coordSphere,
       setCoordSphere: (frame) => this.filters.setFilter({ coordSphere: frame }),
       cameraMode: () => this.focus.getCameraMode(),
@@ -930,7 +932,7 @@ export class Stellata implements FrameAnchor {
       frustum: new FrameFrustum(),
       exposure: null,
     };
-    this.registerSceneLayers();
+    this.registerSceneLayers(galacticDiscEntry);
     // Seed the declutter cycle: a layer that only learns its permission from
     // a push (both boundary shells, the orbit/probe overlays) otherwise sits
     // at whatever its constructor guessed until the level is cycled.
@@ -965,7 +967,7 @@ export class Stellata implements FrameAnchor {
 
   // Registration order is per-frame update order — scene/README.md § How the
   // shell uses it.
-  private registerSceneLayers(): void {
+  private registerSceneLayers(galacticDiscEntry: SceneLayer): void {
     this.layers.register({
       timeBehaviour: { kind: 'clock', rate: this.solarSystem.planetRate },
       contribution: { kind: 'always' },
@@ -1081,8 +1083,8 @@ export class Stellata implements FrameAnchor {
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
     // Below the orbit lock — galactic/README.md § Wiring.
-    this.layers.register(this.galactic.discEntry);
-    this.layers.register(this.galactic.coordSpheresEntry);
+    this.layers.register(galacticDiscEntry);
+    this.layers.register(this.coordSpheres.entry);
     this.layers.register(hudSceneLayer({
       hud: this.hud,
       camera: this.camera,

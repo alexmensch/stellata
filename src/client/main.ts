@@ -240,7 +240,7 @@ async function main() {
     createClickRipple(stellata);
     for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
       createCoordSphereLabels(stellata, COORD_SPHERE_SPECS[frame], () =>
-        stellata.galactic.coordSphereDrawn(frame) ? 1 : 0);
+        stellata.coordSpheres.drawn(frame) ? 1 : 0);
     }
     createPlanetLabels(stellata);
     // Kind-module SVG label overlays (probe, cloud, lg, shell).

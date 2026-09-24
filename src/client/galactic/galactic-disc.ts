@@ -4,6 +4,8 @@ import { farFieldFadeOpacity } from './galactic-fade';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,
 } from '../chrome-lines/chrome-line-materials';
+import type { SceneElementId } from '../scene/declutter/scene-elements';
+import { updateWarpGatedRefLayer, type SceneLayer } from '../scene/scene-layer';
 import { makeOrbitLineLoop, writeRingVerts } from '../util/orbit-line';
 import {
   BULGE_HALF_THICKNESS_PC,
@@ -162,4 +164,38 @@ export class GalacticDisc {
     }
     this.stroke.dispose();
   }
+}
+
+export interface GalacticDiscSceneLayerDeps {
+  scene: THREE.Scene;
+  chromeLines: ChromeLineMaterials;
+  worldOffset: Readonly<THREE.Vector3>;
+  detailPermits: (id: SceneElementId) => boolean;
+}
+
+/** Constructs and parents the disc, returning its registry entry. The caller
+ *  decides WHEN — README.md § Wiring. */
+export function galacticDiscSceneLayer(deps: GalacticDiscSceneLayerDeps): SceneLayer {
+  const disc = new GalacticDisc(deps.chromeLines);
+  deps.scene.add(disc.group);
+  const bound = new THREE.Sphere(undefined, GALACTIC_DISC_BOUND_PC);
+  return {
+    timeBehaviour: { kind: 'static' },
+    contribution: {
+      kind: 'gated',
+      // Opacity first: it is a scalar on `distFromSol` and it is what fires
+      // at the app default view, where the camera sits inside the ring and no
+      // frustum test could.
+      skip: (ctx) => {
+        if (galacticDiscOpacity(ctx.distFromSol) <= 0) return 'opacity';
+        bound.center.copy(GALACTIC_CENTRE_PC).sub(deps.worldOffset);
+        return ctx.frustum.intersectsSphere(bound) ? null : 'frustum';
+      },
+      setContributing: (on) => { disc.group.visible = on; },
+    },
+    update: (ctx) => updateWarpGatedRefLayer(
+      disc, ctx, deps.detailPermits('galacticDiscWireframe')),
+    setMonochrome: (on) => disc.setMonochrome(on),
+    dispose: () => disc.dispose(),
+  };
 }

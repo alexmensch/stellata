@@ -9,8 +9,8 @@ HUD.
 **Drawn in OBSERVE mode only.** In navigate the attitude indicator carries the
 frame instead (`../../attitude/README.md`), and the two instruments are never
 on screen together: one answer to "which way is north" at a time is what stops
-them drifting apart. `stellata.galactic.coordSphereDrawn(frame)`
-(`../galactic-reference.ts`) is that predicate, and
+them drifting apart. `stellata.coordSpheres.drawn(frame)`
+(`coord-spheres.ts`) is that predicate, and
 both the layer and the label pools read it rather than re-deriving it.
 
 ## Files in this area
@@ -29,6 +29,11 @@ src/client/galactic/coord-spheres/
   coord-sphere-labels.ts (+ test) SVG edge labels for any sphere: one
                                   per grid line, dropped to the viewport
                                   edge that line exits.
+  coord-spheres.ts (+ test)       CoordSpheres — the shell's
+                                  `coordSpheres` namespace: the three
+                                  spheres' registry entry, drawn /
+                                  available, and the focus-change
+                                  demotion.
 ```
 
 One import reaches back into the parent and is genuinely shared rather than
@@ -165,7 +170,7 @@ in `../../attitude/attitude-pure.ts` because the same answer governs the
 instrument: `frameAvailableFor` reads it off `autoFrameFor` rather than
 restating "in Sol's system", so the two cannot drift. Galactic everywhere, the
 ecliptic wherever the focus rule already lands inside Sol's system, RA/Dec on
-Earth alone. `stellata.galactic.coordSphereAvailable` binds it to the live focus, and
+Earth alone. `stellata.coordSpheres.available` binds it to the live focus, and
 the `S` cycle, the panel's stops and the demotion below all gate on that one
 predicate.
 
@@ -188,7 +193,7 @@ ever restate where that object is.
 `#gal-grid-labels` / `#ecl-grid-labels` / `#eq-grid-labels`, one pool per
 sphere, pooled once (one per line) and positioned + rotated each frame.
 `main.ts` passes each pool a `groupOpacity` closure — **an alpha, not a
-boolean**, and the one caller left drives it from `coordSphereDrawn` at 1 or 0.
+boolean**, and the one caller left drives it from `coordSpheres.drawn` at 1 or 0.
 The alpha is kept because it is the seam a partially-shown grid would need, and
 because at full strength the attribute is *removed* rather than set to `1`, so
 a grid keeps exactly the CSS alpha it always had. Every group hides in warp via

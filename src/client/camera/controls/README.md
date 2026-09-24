@@ -19,7 +19,7 @@ in both navigate and observe modes.
   § Stop controls), not open-coded here. Reverse-sync runs off
   `'filter'` / `'cameraMode'`; the coordinate-sphere control's disabled
   state rides `'focus'` / `'cameraMode'` through
-  `stellata.galactic.coordSphereAvailable` (`../../galactic/coord-spheres/README.md`
+  `stellata.coordSpheres.available` (`../../galactic/coord-spheres/README.md`
   § A frame is offered where it describes something).
 - `input/` — canvas gestures + the camera state they drive: the click
   FSM, the two roll authorities (camera.up and the quaternion), the roll
