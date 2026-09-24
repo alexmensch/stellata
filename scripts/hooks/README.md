@@ -56,7 +56,9 @@ scripts/hooks/
   skill-guard.sh           Blocks Write / Edit / NotebookEdit against a
                            file a rule names until that rule's skill has
                            been invoked this session; a Skill call naming
-                           it arms the session. Rules: *.css → cube-css.
+                           it arms the session. Rules: *.css → cube-css;
+                           code (ts/tsx/js/mjs/cjs/py/sh/wgsl/glsl) →
+                           code-craft.
                            Behaviour pinned by tests/skill-guard.test.ts.
   review-design-reminder.sh
                            Once a pr-review starts in a session, adds a
@@ -220,6 +222,13 @@ primitives, the no-width-query mandate, the review gates) belongs to the
 skill, and a README describing the one reads convincingly like coverage of
 the other. A session that has read the README therefore believes it is
 already briefed.
+
+**code-craft has a second trap: the change does not look like design.**
+Its trigger names design, refactor and review, and a bug fix reads as none
+of them, so a bug-sweep session can scout, plan and draft a fix without
+the design pass. Gating at the first code edit is the last point the load
+can still shape the change. It does not reach a plan written before any
+edit, so the prose trigger still owns that.
 
 **Arming, not consent**, so it fails open the way readme-guard does: a
 hook that errors lets the call through, and the alternative — a stylesheet

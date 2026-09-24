@@ -69,10 +69,9 @@ describe('skill-guard / cube-css', () => {
     expect(edit('/repo/src/site/site.css').allowed).toBe(false);
   });
 
-  it('ignores every file that is not a stylesheet', () => {
-    for (const path of ['/repo/src/a.ts', '/repo/src/site/index.html', '/repo/a.csso']) {
-      expect(edit(path).allowed).toBe(true);
-    }
+  it('does not arm the gate on a code file', () => {
+    expect(skill('cube-css').allowed).toBe(true);
+    expect(edit('/repo/src/a.ts').allowed).toBe(false);
   });
 
   it('gates Write and NotebookEdit on their own path keys', () => {
@@ -84,5 +83,36 @@ describe('skill-guard / cube-css', () => {
 
   it('passes a payload carrying no path at all', () => {
     expect(run({ tool_name: 'Edit', tool_input: {} }).allowed).toBe(true);
+  });
+});
+
+describe('skill-guard / code-craft', () => {
+  const CODE_FILES = [
+    '/repo/src/a.ts', '/repo/src/a.tsx', '/repo/a.js', '/repo/a.mjs', '/repo/a.cjs',
+    '/repo/scripts/a.py', '/repo/scripts/hooks/a.sh', '/repo/src/a.wgsl', '/repo/src/a.glsl',
+  ];
+
+  it('blocks every code file before the skill is invoked', () => {
+    for (const path of CODE_FILES) {
+      const decision = edit(path);
+      expect(decision.allowed, path).toBe(false);
+      expect(decision.reason, path).toContain('code-craft');
+    }
+  });
+
+  it('allows every code file once the skill has been invoked', () => {
+    expect(skill('code-craft').allowed).toBe(true);
+    for (const path of CODE_FILES) expect(edit(path).allowed, path).toBe(true);
+  });
+
+  it('does not arm the stylesheet gate', () => {
+    expect(skill('code-craft').allowed).toBe(true);
+    expect(edit('/repo/src/site/site.css').allowed).toBe(false);
+  });
+
+  it('ignores files neither rule names', () => {
+    for (const path of ['/repo/README.md', '/repo/src/site/index.html', '/repo/a.json', '/repo/a.csso', '/repo/a.tsv']) {
+      expect(edit(path).allowed, path).toBe(true);
+    }
   });
 });

@@ -15,6 +15,7 @@ set -euo pipefail
 required_skill() {
   case "$1" in
     *.css) echo cube-css ;;
+    *.ts|*.tsx|*.js|*.mjs|*.cjs|*.py|*.sh|*.wgsl|*.glsl) echo code-craft ;;
   esac
 }
 
@@ -24,6 +25,7 @@ why() {
     cube-css) echo "Stylesheets here are CUBE CSS over Every Layout primitives: which layer a rule belongs in, why utilities carry !important and blocks may not, the no-width-media-query mandate, and the review gates (a hardcoded value on first use, a z-index where source order would do, a minmax() with no min(…, 100%) guard). A folder README documents the house style — which rule landed where, and why — not the system underneath it, so having read one is not having loaded the other.
 
 Reach for the utopia skill alongside it when the change touches a type size, a space step or a clamp()." ;;
+    code-craft) echo "Every code change is design work, a one-line bug fix included: the design pass (one owner per fact, no legal-looking 'not ready' value, what each module hides, where the copies are), the two-hats commit split, and the recurring-bug-class rule. A folder README says what the code here does, not how to judge a change to it, so having read one is not having loaded the other." ;;
   esac
 }
 
