@@ -11,6 +11,7 @@ const MODIFIERS = /^  (?:(?:private|protected|public|readonly|static|override|de
 const FIELD = new RegExp(`${MODIFIERS.source}([A-Za-z_$][\\w$]*)[!?]?\\s*[:=]`);
 const ARROW_METHOD = /=\s*(?:async\s+)?\([^)]*\)\s*(?::[^=]+)?=>/;
 const BACKTICKED = /`([A-Za-z_$][\w$]*\*?)`/g;
+const IDENTIFIER = /[A-Za-z_$][\w$]*/g;
 
 function shellFields(): string[] {
   const lines = SHELL.split('\n');
@@ -68,15 +69,16 @@ describe('stellata.ts decomposition map', () => {
     expect(misplaced, 'add the field to its cluster row, or to the stays row').toEqual([]);
   });
 
+  const staleTokens = (column: (r: Row) => string[], names: readonly string[]) =>
+    rows.flatMap((r) =>
+      column(r).filter((t) => !names.some((n) => matches(t, n))).map((t) => `${r.cluster}: ${t}`));
+
   it('names no field the shell no longer declares', () => {
-    const stale = rows.flatMap((r) =>
-      r.fields.filter((t) => !fields.some((f) => matches(t, f))).map((t) => `${r.cluster}: ${t}`));
-    expect(stale, 'the PR that moves a cluster deletes its row').toEqual([]);
+    expect(staleTokens((r) => r.fields, fields), 'the PR that moves a cluster deletes its row').toEqual([]);
   });
 
   it('names no method or site the shell no longer contains', () => {
-    const stale = rows.flatMap((r) =>
-      r.sites.filter((t) => !new RegExp(`\\b${t.replace('*', '')}`).test(SHELL)).map((t) => `${r.cluster}: ${t}`));
-    expect(stale, 'the PR that moves a cluster deletes its row').toEqual([]);
+    const identifiers = [...new Set(SHELL.match(IDENTIFIER))];
+    expect(staleTokens((r) => r.sites, identifiers), 'the PR that moves a cluster deletes its row').toEqual([]);
   });
 });
