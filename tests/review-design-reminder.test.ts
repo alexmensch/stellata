@@ -50,6 +50,10 @@ describe('review-design-reminder', () => {
     expect(prompt('is there a better way than a regex?')).toContain('*enforced by*');
   });
 
+  it('arms on /pr-review behind leading whitespace', () => {
+    expect(prompt('  \n/pr-review 610')).not.toBeNull();
+  });
+
   it('arms on a scoped slash command', () => {
     expect(prompt('/.claude/worktrees/hhaw-32:pr-review 610')).not.toBeNull();
   });
