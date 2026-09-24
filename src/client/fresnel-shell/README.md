@@ -135,7 +135,7 @@ MRT-mode registration and a bare `material.dispose()` would not.
   pushes a permission.** `Stellata`'s constructor seeds that push
   (`applyDetailPreset` at the end of construction). Without it a shell
   whose `shellReady()` needs no attach step never appears at all:
-  `detailPermitted` is a per-frame *read* cache, and an imperative layer
+  `SceneDeclutter`'s cache is a per-frame *read* path, and an imperative layer
   never consults it. Don't "fix" a missing shell by defaulting `permitted`
   true — that just lets an unrelated `refreshVisibility()` caller reveal a
   shell nobody permitted, which is precisely how this failed before. The

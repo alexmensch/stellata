@@ -17,15 +17,8 @@ import {
   getStarKMultiplier as readStarKMultiplier,
   setStarKMultiplier as patchStarKMultiplier,
 } from './filter-state';
-import {
-  type DetailLevel,
-  type RenderStyle,
-  type SceneElementBinds,
-  type SceneElementId,
-  SCENE_ELEMENT_FLOORS,
-  SCENE_ELEMENT_IDS,
-  floorPermits,
-} from '../scene/declutter/scene-elements';
+import type { DetailLevel, RenderStyle, SceneElementId } from '../scene/declutter/scene-elements';
+import type { SceneDeclutter } from '../scene/declutter/scene-declutter';
 
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here
@@ -62,10 +55,7 @@ export interface FilterControllerDeps {
    *  kind — re-solve when the FOV changes. Wired to
    *  FocusController.refreshOrbitFloor. */
   refreshOrbitFloor: () => void;
-  /** Per-element visibility adapters, exhaustive over SceneElementId.
-   *  applyDetailPreset / setSceneElementVisible drive these; each folds
-   *  one scene layer's visibility idiom into a single call site. */
-  sceneElementBinds: SceneElementBinds;
+  declutter: Pick<SceneDeclutter, 'applyFloors' | 'setPermitted'>;
 }
 
 export class FilterController {
@@ -97,9 +87,7 @@ export class FilterController {
       this.filter.showLgEmission = true;
     }
     const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
-    for (const id of SCENE_ELEMENT_IDS) {
-      this.deps.sceneElementBinds[id](floorPermits(SCENE_ELEMENT_FLOORS[id][style], level));
-    }
+    this.deps.declutter.applyFloors(level, style);
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }
@@ -107,7 +95,7 @@ export class FilterController {
   // Override one element's permission directly; superseded by the next
   // applyDetailPreset, which re-derives the whole set.
   setSceneElementVisible(id: SceneElementId, on: boolean): void {
-    this.deps.sceneElementBinds[id](on);
+    this.deps.declutter.setPermitted(id, on);
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }

@@ -19,27 +19,36 @@ layer never evaluates its permit.
   derivation (`floorPermits`, `elementPermitted`, `visibleSet`),
   `DETAIL_LEVELS` / `DETAIL_RANK`, and `USER_OWNED_IDS`.
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
+- `scene-declutter.ts` — `SceneDeclutter`, the live permission cache
+  (`stellata.declutter`) and every write into it.
+- `scene-declutter.test.ts` — floor application, push order, and the two
+  coupled enables.
 
 ## The contract
 
 **Exhaustiveness is the load-bearing contract** (same shape as
 `FocusableProviders`): `SCENE_ELEMENT_FLOORS` is a mapped type over the
 closed `SceneElementId` union — a new renderable that skips a floor row
-fails `tsc`, pinned by `scene-elements.test.ts`. The runtime binds in
-`stellata.ts` (`buildSceneElementBinds`) are a second exhaustive `Record`,
-so an unwired element also fails `tsc`.
+fails `tsc`, pinned by `scene-elements.test.ts`. That table is the one
+place an element is classified; whether it is pulled or pushed is decided
+by its layer, not by a second list.
 
-**Push meets pull at `Stellata.detailPermitted`.** `FilterController.
-applyDetailPreset(level)` computes each element's floor permission and
-calls its bind, which writes the `detailPermitted` cache. Per-frame
-layers *pull* — their update / label predicate reads
-`stellata.detailPermits(id)`. The few event-driven layers (Milky Way /
-LG-emission `setEnabled`, orbit rings, binary orbit rings, heliopause
-shell, Local Bubble shell) have no per-frame gate, so their bind *pushes*
-the change imperatively. A per-element
-override (`setSceneElementVisible`) writes one cache slot directly and
-supersedes its floor until the next `applyDetailPreset` overwrites the
-whole set.
+**Push meets pull at `SceneDeclutter`.** `FilterController.
+applyDetailPreset(level)` owns the level and the style and hands both to
+`applyFloors`, which writes each element's floor permission through
+`setPermitted`. Per-frame layers *pull* — their update / label predicate
+reads `stellata.declutter.permits(id)` (a kind module reads it through
+`KindContext.detailPermits`). The event-driven layers have no per-frame
+gate, so `setPermitted` *pushes* the change: the shell's `layerPushes`
+(orbit rings, binary orbit rings, constellation figure, the Milky Way
+isobar), then the kind modules' `detailBinds()` (probe markers and trails,
+both boundary shells). Two enables combine a permission with another
+input and are derived here, not pushed: the Milky Way group is enabled
+while `milkyWayBand || milkyWayIsobar`, LG emission while
+`lgEmissionGlow && showLgEmission`; `refreshEnables` re-derives both after
+a filter patch. A per-element override (`setSceneElementVisible`) writes
+one slot and supersedes its floor until the next `applyDetailPreset`
+overwrites the whole set.
 
 **The preset is authoritative — overrides are within-scene only.** Exactly
 one element still carries a legacy user toggle that ANDs with the floor:

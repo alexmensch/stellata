@@ -18,10 +18,9 @@ export const DETAIL_RANK: Record<DetailLevel, number> = Object.fromEntries(
 ) as Record<DetailLevel, number>;
 
 /** Closed union of every renderable the detail cycle governs. Adding a
- *  renderable here forces a SCENE_ELEMENT_FLOORS row (tsc) and a bind in
- *  stellata.ts's SceneElementBinds Record (tsc) — the "a decision MUST be
- *  made" guard. User-owned chrome (HUD, coord sphere, cards) is NOT here
- *  — see USER_OWNED_IDS. */
+ *  renderable here forces a SCENE_ELEMENT_FLOORS row (tsc) — the "a
+ *  decision MUST be made" guard. User-owned chrome (HUD, coord sphere,
+ *  cards) is NOT here — see USER_OWNED_IDS. */
 export type SceneElementId =
   // Physical tier.
   | 'stars'
@@ -99,15 +98,10 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   constellationBoundaries:   { realistic: 'never',            chart: 'all' },
 };
 
-/** Iteration order for applyDetailPreset — the SceneElementId union as a
- *  runtime array. Pinned against SCENE_ELEMENT_FLOORS keys by the test so
- *  it can't silently drop a member. */
+/** Iteration order for SceneDeclutter.applyFloors — the SceneElementId
+ *  union as a runtime array. Pinned against SCENE_ELEMENT_FLOORS keys by
+ *  the test so it can't silently drop a member. */
 export const SCENE_ELEMENT_IDS = Object.keys(SCENE_ELEMENT_FLOORS) as SceneElementId[];
-
-/** Per-element bind adapter: folds one of the scattered visibility idioms
- *  (warp-gate flag, setEnabled, event setVisible, per-frame permit read)
- *  into a single call site. Constructed exhaustively in stellata.ts. */
-export type SceneElementBinds = Record<SceneElementId, (on: boolean) => void>;
 
 /** Is `floor` reached at `level`? 'never' → false; otherwise cumulative. */
 export function floorPermits(floor: Floor, level: DetailLevel): boolean {

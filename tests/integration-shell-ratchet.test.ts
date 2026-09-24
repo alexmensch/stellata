@@ -7,7 +7,7 @@ const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
-  'clock', 'controls', 'disposed', 'exposure', 'exposureFrame', 'filters', 'floatingOrigin', 'focus',
+  'clock', 'controls', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters', 'floatingOrigin', 'focus',
   'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
@@ -21,7 +21,7 @@ const AWAITING_EXTRACTION: readonly string[] = [
   '_rideLive', '_suppressPulsation', '_tmpAnimateLocal', 'absorbedSuppressCount',
   'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
-  'constellationNamer', 'coordSpheres', 'coreMaskEnabled', 'detailPermitted',
+  'constellationNamer', 'coordSpheres', 'coreMaskEnabled',
   'dust', 'dustParticleSource', 'dustParticles',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
   'frameCtx', 'galacticDisc', 'glslResidentsChecked',

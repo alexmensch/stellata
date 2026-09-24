@@ -477,7 +477,7 @@ function lgLabelHostOf(stellata: Stellata): LgLabelHost {
     ...labelHostOf(stellata),
     getWorldOffset: () => stellata.getWorldOffset(),
     getMonochrome: () => stellata.getMonochrome(),
-    detailPermits: (id) => stellata.detailPermits(id),
+    detailPermits: (id) => stellata.declutter.permits(id),
   };
 }
 

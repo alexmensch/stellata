@@ -93,9 +93,9 @@ its catalog load blocks first paint and may reject) — and are only
   it import every kind folder.
 - **Declutter pushes route by element id, not by name.**
   `mergeKindDetailBinds()` flattens every module's `detailBinds()` into
-  one `SceneElementId`-keyed record and the shell's `set(id)` helper
-  applies `kindPush[id]` for EVERY row of its exhaustive record — a
-  migrated kind adds no line to `buildSceneElementBinds`. Two kinds
+  one `SceneElementId`-keyed record, and `SceneDeclutter.setPermitted`
+  applies it for every element it writes — a migrated kind adds no line
+  to the shell (`../scene/declutter/README.md`). Two kinds
   claiming one element throws at merge rather than silently clobbering.
 - **One pick function per kind, and it lives on `hover()`.** There is
   no separate `pick` leg to keep in sync: `KindPick` IS
@@ -140,7 +140,7 @@ attach-loops the roster at the layer-construction point;
 `notifyClockJumped` fans out `clockJumped` — called by `setT` and by the
 scrubber's Jump / Reset, which move the `VirtualClock` directly to keep
 the current rate; `setFocalBodyHidden` fans out `setFocalHidden`,
-`buildSceneElementBinds` applies the merged `detailBinds()` pushes,
+`SceneDeclutter` applies the merged `detailBinds()` pushes,
 and `collectKindPicks()` hands the Picker each module's hover `pick`
 for its `pickKindHit` dispatch (the click FSM's planet / cloud / lg /
 shell / probe picks all route through it). The `focusables` record and
