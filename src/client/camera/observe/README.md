@@ -281,7 +281,12 @@ it read that as a camera move and the whole clock cadence stopped idling
 The 1 pc distance is what makes it worst: `position + forward × 1pc`
 differences two near-equal magnitudes when the camera sits about a parsec
 from the local origin looking back toward it, and the drift there measured
-~3900 ULP per tick against ~1 elsewhere. `observePinQuat` is NaN-seeded so
+~3900 ULP per tick against ~1 elsewhere. That is a float64 ULP, and it
+stays a render-gate problem only: **the serialised direction loses nothing
+to it.** The blob carries cam/tgt anchor-relative and float32, and a sweep
+of camera-from-origin 1e-9–1000 pc (0.9–1.1 pc looking back included)
+round-trips with zero error beyond the float32 floor itself — worst
+4.7e-8 rad, ~1800× under a pixel at `FOV_MIN_DEG` on a 2000 px viewport. `observePinQuat` is NaN-seeded so
 the first frame always derives, and the `'cameraMode'` handler re-seeds it
 because the transitions write `controls.target` directly — without that, a
 mode round-trip with no rotation would keep the transition's target as the
