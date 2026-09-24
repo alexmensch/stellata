@@ -14,7 +14,5 @@ tests/artifact-freshness.test.ts
 tests/astronomy-constants-sync.test.ts
 tests/cadence-layer-declarations.test.ts
 tests/sid-ledger-guard.test.ts
-tests/site-claims.test.ts
-tests/site-css-rules.test.ts
 tests/tsl-loop-control.test.ts
 tests/webgpu-import-boundary.test.ts
