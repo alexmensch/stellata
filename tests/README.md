@@ -18,9 +18,9 @@ astronomy-constants-sync.test.ts
                          and the build-script copy.
 artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
                          when public/catalog-manifest.json exists but
-                         public/binaries.bin is missing, or its stamp
-                         (build/stamps/binaries-bin.json) records a
-                         different multiples.tsv / row-index map — the state
+                         public/binaries.bin is missing, or any file its
+                         stamp (build/stamps/binaries-bin.json) records —
+                         input or output — has changed since — the state
                          where the binaries-dependent suites would
                          silently self-skip and "npm test green" means
                          less than it reads. Self-skips on fresh clones

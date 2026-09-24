@@ -10,13 +10,13 @@
 // job) — mirroring sid-ledger-guard's skip contract.
 
 import { existsSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../scripts/util/paths';
-import { hashFile, readStamp, stampPath } from '../scripts/util/build-stamp';
-import { DEFAULT_CATALOG_MANIFEST, DEFAULT_ROW_INDEX_MAP } from '../scripts/catalog/catalog-lookup';
+import { changedSince, readStamp, stampPath } from '../scripts/util/build-stamp';
+import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-lookup';
 
 const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
@@ -37,17 +37,14 @@ describe.skipIf(skip)('built-artifact coherence (public/ + build/)', () => {
   });
 
   it.skipIf(!existsSync(BINARIES_BIN))(
-    'binaries.bin was built from the current multiples.tsv and row-index map',
+    'binaries.bin was built from every input and output its stamp records',
     () => {
       const recorded = readStamp(BINARIES_BIN_STAMP);
       expect(recorded, `${BINARIES_BIN_STAMP} is missing — rebuild with: ${REBUILD}`).not.toBeNull();
-      for (const input of [MULTIPLES_TSV, DEFAULT_ROW_INDEX_MAP]) {
-        const current = existsSync(input) ? hashFile(input) : null;
-        expect(
-          recorded?.inputs[relative(REPO_ROOT, input)],
-          `public/binaries.bin was built from a different ${input} — rebuild with: ${REBUILD}`,
-        ).toBe(current);
-      }
+      expect(
+        changedSince({ ...recorded?.inputs, ...recorded?.outputs }),
+        `public/binaries.bin is stale against these files — rebuild with: ${REBUILD}`,
+      ).toEqual([]);
     },
   );
 });
