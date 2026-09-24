@@ -60,8 +60,7 @@ code-comment-rules.test.ts
                          numbers and [[wikilinks]], plus the 3-line
                          module-docstring cap, whose pre-existing
                          offenders sit in the sibling allowlist .txt and
-                         are meant to shrink. `.glsl` is NOT scanned, so
-                         shader comments rest on review alone.
+                         are meant to shrink.
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
@@ -122,13 +121,6 @@ review-design-reminder.test.ts
                          mention, not `/pr-reviewer`, not a path ending
                          `/pr-review`), scoped to its
                          session, never blocking, and one line long.
-shader-frag-depth.test.ts
-                         gl_FragDepth roster: no shader may
-                         write frag depth (a static write defeats
-                         early-z draw-wide). Allowlist shrinks to empty
-                         when the WebGPU port lands the depth-honest
-                         redesign (star-pipeline README § Depth
-                         encoding).
 sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          § 4.5): structural validity, head-snapshot
                          integrity, frozen-prefix check vs the git
@@ -138,6 +130,9 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
+                         one describe per skill gate (cube-css, code-craft);
+                         scripts/hooks/README.md § How skill-guard works.
 star-count-consistency.test.ts
                          The catalogue's own size, stated once. Rounds the
                          BUILT header to `PROSE_ROUNDED` (artifact-backed,
@@ -157,8 +152,9 @@ three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
                          bump of the dependency range.
-tsl-frag-depth.test.ts   The frag-depth roster's TSL half — no node
-                         material may write depthNode / frag_depth. The
+tsl-frag-depth.test.ts   The frag-depth roster — no node material may
+                         write depthNode / frag_depth (a static write
+                         defeats early-z draw-wide). The
                          allowlist starts empty and should stay empty; the
                          failure message carries the two patterns that
                          replace a fragment depth write.
@@ -192,7 +188,7 @@ tsl-standin-filters.test.ts
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
                          outside src/client/webgpu/, so the ~1 MB second
-                         copy of three's core stays out of the WebGL2
+                         copy of three's core stays out of the entry
                          bundle (src/client/webgpu/README.md § Import
                          boundary).
 doc-pointer-pure.ts      Not a test — extraction, resolution and heading
