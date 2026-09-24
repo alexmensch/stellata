@@ -30,7 +30,7 @@ import {
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 const EXTENDED_THRESHOLD_SB = extendedThresholdSbFor(DEFAULT_FILTER.instrument);
 
-// The § 1 range budget, at the naked-eye epoch. These are the numbers
+// The /docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance range budget, at the naked-eye epoch. These are the numbers
 // H7 validates the star field against, so they are pinned rather than
 // bounded.
 describe('luminanceForMagnitude at the base epoch', () => {
@@ -150,7 +150,7 @@ describe('the footprint a raymarch step smooths its profile over', () => {
   });
 });
 
-// The § 1 range-budget row for the Milky Way band: a 20 mag/arcsec²
+// The /docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance range-budget row for the Milky Way band: a 20 mag/arcsec²
 // sightline at 94 arcsec/px lands on L ≈ 2.3e-3 at the base epoch.
 describe('surfaceBrightnessLuminance', () => {
   it('matches the design gate’s MW band-pixel budget row', () => {

@@ -73,7 +73,7 @@ const FIXTURES: Fixtures | null = FIXTURES_READY ? loadFixtures() : null;
 describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
   it('every enumerated display change is exactly what the ladder composes', () => {
     const { labelByKey } = FIXTURES!;
-    // § 8.2: display changes are enumerated, not counted. Reviewed once,
+    // /docs/star-naming.md#82-display-changes-are-enumerated: display changes are enumerated, not counted. Reviewed once,
     // then pinned — a drift here means a record's label moved without the
     // ledger being refreshed (`pnpm run build:naming-parity`).
     const drifted = parity
@@ -96,10 +96,10 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
   });
 
   it('every published name resolves, and every displaced label as pinned', () => {
-    // § 8.1's hard invariant, stated over the strings that HAVE external
+    // /docs/star-naming.md#81-searchability-never-regresses's hard invariant, stated over the strings that HAVE external
     // provenance: every name the authority approves and every name the
     // manifest carries must reach a record. A string the build composed
-    // itself has none, so § 5 lets it disappear with the composition —
+    // itself has none, so /docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can lets it disappear with the composition —
     // which is what the ledger's `resolves` column enumerates, reviewed
     // once and pinned so a later change cannot quietly widen the set.
     const { raw, constellations, entryByKey } = FIXTURES!;
@@ -140,7 +140,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
   });
 
   it('duplicate composed labels are exactly the enumerated data findings', () => {
-    // § 8.4: the composer is injective given (naming anchor, component
+    // /docs/star-naming.md#84-known-duplicate-display-names: the composer is injective given (naming anchor, component
     // letter), so a duplicate is two catalogue entries claiming one
     // designation. RATCHET DOWN — every row is a curation finding, and the
     // fix is upstream rather than a qualifier bolted onto the label.

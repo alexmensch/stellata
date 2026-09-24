@@ -64,7 +64,7 @@ system draws, never every catalog pair.
 
   A pair whose relation the walk has not evaluated draws nothing that
   frame rather than falling back to a slot-derived guess.
-- **Observing from a member.** A star sits on its own ellipse, so OBSERVE
+- <a id="observing-from-a-member"></a>**Observing from a member.** A star sits on its own ellipse, so OBSERVE
   from it puts the camera on that curve; the segments through the eye are
   near-plane clipped at `w → 0` and whip under rotation, clock paused or
   not. `update` takes `ObserveTransition.observeAnchorOf('star')` and hides

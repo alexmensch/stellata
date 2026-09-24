@@ -13,7 +13,7 @@ permissions:
 # membership by more than 1 %, carries a non-empty `## Perf` section with an
 # `accepted:` line for every ✗ row. CI has no GPU, so this checks the section,
 # not the numbers — the runner produces those on the developer's machine.
-# Rules: RELEASING.md § Perf pin; the check itself is
+# Rules: /RELEASING.md#perf-pin; the check itself is
 # scripts/perf/perf-section-check.sh so it can be tested.
 
 jobs:

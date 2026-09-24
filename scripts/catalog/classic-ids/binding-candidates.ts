@@ -19,7 +19,7 @@ const XMATCH_HINT = 'refresh the cross-walk with `pnpm run refresh:gaia-hip` / `
 
 /** The two cross-walk products that give an overlay entry a `hip` — the gate's
  *  top printed tier. The Tycho and Gliese tiers beneath it are the caller's to
- *  supply (§ The gate's evidence has to be pulled). */
+ *  supply (README.md#the-gates-evidence-has-to-be-pulled). */
 export interface BindingCandidateInputs {
   cns5: Cns5Row[];
   hipToSource: Map<number, string>;

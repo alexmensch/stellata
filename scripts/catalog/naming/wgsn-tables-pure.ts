@@ -1,5 +1,5 @@
 // Row shaping and the two joins behind build-wgsn-tables.ts: the IV/27A
-// Bayer union, and the § 2 disposition set comparison. See README.md.
+// Bayer union, and the /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them disposition set comparison. See README.md.
 
 import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
 import { normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
@@ -102,7 +102,7 @@ export function unionIv27aBayer(
 }
 
 /** Manifest propers and disposition rows meet on this key, so both sides
- *  build it here — a format that drifts turns the § 2 gate into a
+ *  build it here — a format that drifts turns the /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them gate into a
  *  comparison of two disjoint sets that both look populated. */
 export function membershipProperKey(
   proper: string,
@@ -122,7 +122,7 @@ export function parseDispositionKeys(tsv: string): Set<string> {
   return keys;
 }
 
-/** The § 2 gate is exact set equality in both directions: an unmatched
+/** The /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them gate is exact set equality in both directions: an unmatched
  *  proper missing from the file, or a disposition the authority now covers,
  *  both fail the build. */
 export function diffDispositions(

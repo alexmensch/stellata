@@ -20,7 +20,7 @@ import {
 //                    extragalactic objects from inside is clutter).
 //
 // The emission layer has no knobs: it emits physical luminance, so the
-// exposure model is its only lever (README § Emission layer).
+// exposure model is its only lever (README.md#emission-layer).
 //
 // Section title "Deep field" is intentionally broader than "Local
 // Group" so future LG-layer knobs (ring opacity, sample density, the

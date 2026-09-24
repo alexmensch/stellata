@@ -166,7 +166,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // (ii) Every manifest row no spine row reaches is on the additions ledger
   // under a closed reason, and every ledger row is one of those — or a
   // `component:` row naming the manifest record it resolved onto.
-  it('(ii) ledgers every addition, and nothing else, under the § 6.1 enum', () => {
+  it('(ii) ledgers every addition, and nothing else, under the record-parity enum', () => {
     const ledger = parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8'));
     const admitted = ledger.filter((l) => !l.reason.startsWith(COMPONENT_REASON_PREFIX));
     const components = ledger.filter((l) => l.reason.startsWith(COMPONENT_REASON_PREFIX));
@@ -254,7 +254,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     );
   });
 
-  // § 6.2: every spine label the manifest leaves out is on the label ledger,
+  // /docs/catalog-driver.md#62-label-parity: every spine label the manifest leaves out is on the label ledger,
   // keyed on the manifest row it left, under a closed reason.
   it('ledgers every dropped spine label onto its manifest row', () => {
     const drops = parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
@@ -268,7 +268,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(Object.fromEntries(byReason)).toEqual(expected.labelDropsByReason);
   });
 
-  // A dropped label is a designation leaving a record, so § 7 asks whether it
+  // A dropped label is a designation leaving a record, so /docs/catalog-driver.md#7-identity-and-ordering-rules asks whether it
   // was the one keying it. A Flamsteed number is no designation at all, and an
   // HD only keys a record no higher-laddered cell reaches — but "the row that
   // lost one happened to carry a HIP" is a fact about today's data, not a rule.

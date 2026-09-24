@@ -21,8 +21,8 @@ import { photometry, printedVOf } from './photometry-fixture';
 
 describe('Riello+ 2021 G−V relation', () => {
   // The literals ARE the assertion: these are the published Table 5.9 values
-  // (Gaia EDR3 documentation, § Photometric relationships with other
-  // photometric systems). A transcription slip is the failure this catches,
+  // (Gaia EDR3 documentation, section "Photometric relationships with other
+  // photometric systems"). A transcription slip is the failure this catches,
   // so the test cannot import them from the module under test.
   it('carries the published coefficients, sigma and validity range', () => {
     expect([...RIELLO_G_MINUS_V_COEFFS]).toEqual([-0.02704, 0.01424, -0.2156, 0.01426]);
@@ -143,7 +143,7 @@ describe('resolveVMagnitude cascade', () => {
 });
 
 describe('tycho2VMagnitude', () => {
-  // SP-1200 § 1.3: V = VT − 0.090(BT−VT).
+  // SP-1200 Sect. 1.3: V = VT − 0.090(BT−VT).
   it('reduces VT to Johnson V through the published coefficient', () => {
     expect(tycho2VMagnitude(9.5, 8.9).v).toBeCloseTo(8.9 - 0.090 * 0.6, 12);
   });

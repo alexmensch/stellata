@@ -87,7 +87,7 @@ describe('scene-adaptation constants', () => {
     // agree exactly for a body-dominated frame — so the ramp closes with no
     // step of its own. The foot is the smallest framing the ±3-stop trim
     // could still pull back to L_TARGET; under it a body is past the trim's
-    // reach and § 3.2's brilliant dot is the honest reading.
+    // reach and /docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix's brilliant dot is the honest reading.
     expect(ADAPT_PIN_COVERAGE).toBe(ADAPT_REF_COVERAGE);
     expect(ADAPT_DOT_COVERAGE).toBeCloseTo(0.0085625, 7);
     expect(ADAPT_PIN_COVERAGE / ADAPT_DOT_COVERAGE).toBeCloseTo(2 ** EV_MAX_STOPS, 12);
@@ -106,7 +106,7 @@ describe('scene-adaptation constants', () => {
   });
 
   it('lands the three independently-judged planets within 0.15 mag of L_TARGET', () => {
-    // The smoke pass's disc-mean luminances (§ 3.1). Their agreement
+    // The smoke pass's disc-mean luminances (/docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut). Their agreement
     // across a 40× spread in intrinsic surface brightness is what makes
     // L_TARGET data rather than taste.
     const measured = { neptune: 0.919, uranus: 0.824, jupiter: 0.940 };
@@ -118,7 +118,7 @@ describe('scene-adaptation constants', () => {
   });
 });
 
-describe('§ 3.1 contribution table', () => {
+describe('the adaptation contribution table', () => {
   it('adapts to a resolved planet filling a fifth of the frame', () => {
     // Venus: S₀ = +0.78 mag/arcsec², the closed form in
     // /src/client/solar-system/planets/README.md#physical-luminance-emission.
@@ -154,7 +154,7 @@ describe('§ 3.1 contribution table', () => {
     expect(surfacePinWeight(solAt1Au.coverage)).toBe(0);
     expect(adaptationBranches(solAt1Au).regime).toBe('floor');
     expect(adaptationDm(solAt1Au)).toBe(ADAPT_DISPLAY_FLOOR_DM);
-    // § 3.2's accepted exception survives, by a wider margin than before:
+    // /docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix's accepted exception survives, by a wider margin than before:
     // the disc needs −22 mag to fall under the white point and the floor
     // plus a full negative trim reaches −8.55, so it stays clipped white.
     const neededCut = -2.5 * Math.log10(discL / tonemapWhitePoint());
@@ -350,7 +350,7 @@ describe('the resolved-surface pin', () => {
     // point of 20. Sol's disc is ~1.9 px across there, under the disc
     // pass's own threshold, so every photon in frame arrives as a kernel
     // and claims nothing — the perception branch governs, floored, and
-    // § 3.2's accepted exception stands.
+    // /docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix's accepted exception stands.
     const b = adaptationBranches(pointFrame(68.6));
     expect(b.coverage).toBe(0);
     expect(b.pin).toBe(0);
@@ -389,7 +389,7 @@ describe('the resolved-surface pin', () => {
   });
 });
 
-describe('the display floor (§ 3.2)', () => {
+describe('the display floor', () => {
   it('is the perception branch evaluated on a full-white frame', () => {
     // The strongest stimulus the display can deliver is every pixel at
     // the white point, so no displayed frame justifies a deeper cut —
@@ -525,7 +525,7 @@ describe('the tuning override (debug panel)', () => {
   });
 });
 
-describe('coverage sensitivity (§ 3.2)', () => {
+describe('coverage sensitivity', () => {
   /** Dim enough that the display floor never binds at these coverages, so
    *  the perception branch's geometry is what these rows exercise. */
   const DIM_DISC_L = 100;

@@ -206,7 +206,7 @@ function catalogInputPaths(): string[] {
 
 // Clear a prior build's chunk set so a shrunk chunk count can't strand stale
 // higher-index chunks the manifest no longer lists.
-/** The § 6.1 dropped list. A record that reaches no owned parallax cannot be
+/** The /docs/catalog-driver.md#61-record-parity dropped list. A record that reaches no owned parallax cannot be
  *  placed, so it does not ship — and unlike the low-precision rows, which stay
  *  in the catalogue and are recomputable from it, nothing else records that
  *  these existed. Committed so the set is diffable: a refresh that moves it is
@@ -214,10 +214,10 @@ function catalogInputPaths(): string[] {
 async function writeParkedRecords(parked: readonly ParkedRecord[]): Promise<void> {
   const path = resolve(ROOT, PARKED_LEDGER_FILE);
   await writeFile(path, formatParkedRecordsTsv(parked));
-  console.log(`  parked (§ 6.1): ${parked.length} → ${PARKED_LEDGER_FILE}`);
+  console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER_FILE}`);
 }
 
-/** § 5's validation independence, made checkable: a record whose distance came
+/** /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's validation independence, made checkable: a record whose distance came
  *  from the SIMBAD tier cannot be verified against SIMBAD's own parallax, so
  *  the sample validator needs to know which records those are. It reads
  *  catalog.bin, which carries no `distVia`, hence the file. */

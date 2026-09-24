@@ -133,7 +133,7 @@ describe('parallax-cascade / the precision floor', () => {
   // The floor gates every tier BELOW Gaia, not HIP2 alone. Before it did, 8
   // sub-floor SIMBAD parallaxes reached records and inverted to 54,000-714,000
   // pc, leaving the walk through MAX_DIST_PC — the one exit that is not a
-  // § 6.1 park — so those rows neither shipped nor parked.
+  // /docs/catalog-driver.md#61-record-parity park — so those rows neither shipped nor parked.
   it('refuses a sub-floor parallax on every tier below Gaia, and parks each '
     + 'as a refusal rather than as nothing published', () => {
     const subFloor: Array<[Partial<ParallaxSources>, string, number]> = [
@@ -147,7 +147,7 @@ describe('parallax-cascade / the precision floor', () => {
       expect(res.via, tier).toBe('none');
       expect(res.parallax, tier).toBeNull();
       // A non-empty list is what picks refused_no_defensible_parallax over
-      // no_parallax_published on the § 6.1 ledger the parity gate subtracts,
+      // no_parallax_published on the /docs/catalog-driver.md#61-record-parity ledger the parity gate subtracts,
       // and the values are what companion promotion matches a pair row against.
       expect(res.refusedPlxMas, tier).toEqual([mas]);
     }

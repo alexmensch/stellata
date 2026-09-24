@@ -1,5 +1,5 @@
 // `pnpm run build:membership` — emit data/membership/: the membership manifest,
-// the § 6.1 additions ledger and the binding review queue, plus the label
+// the /docs/catalog-driver.md#61-record-parity additions ledger and the binding review queue, plus the label
 // merge's review queue. See README.md.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';

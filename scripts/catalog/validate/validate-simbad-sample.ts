@@ -382,7 +382,7 @@ function lookupRow(
 
 /** The record a sample row resolved to shipped its distance from the SIMBAD
  *  tier, so comparing it against SIMBAD's parallax measures nothing — the two
- *  are the same number. § 5's validation-independence rule; the producer is
+ *  are the same number. /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's validation-independence rule; the producer is
  *  build-catalog.ts. Either match route can land on one, hence both key
  *  sets. */
 function isSimbadSourced(

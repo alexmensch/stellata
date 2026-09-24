@@ -24,7 +24,7 @@ export interface ProbeFocusProviderConfig {
   speedPcPerSec: (idx: number) => number | null;
   /** Whether the model clock has passed this probe's last contact. */
   signalLost: (idx: number) => boolean;
-  /** § Constellation row. */
+  /** README.md#constellation-row. */
   constellationName: (idx: number) => string | null;
 }
 

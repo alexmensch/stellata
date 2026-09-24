@@ -61,7 +61,7 @@ export function parseIntOrNull(s: string | undefined): number | null {
  *  the other three cannot: a no-Gaia astrometry-tier record carries no HIP, no
  *  source_id and no proper name, and HD is the only designation left. It
  *  resolves through the search index rather than the binary, which carries no
- *  HD column (`../catalog-lookup.ts` § Per-key indexes). */
+ *  HD column (the per-key indexes in `../catalog-lookup.ts`). */
 export const RECORD_REF_KINDS = ['hip', 'gaia', 'name', 'hd'] as const;
 export type RecordRefKind = (typeof RECORD_REF_KINDS)[number];
 

@@ -40,7 +40,7 @@ export interface PlanetFocusProviderConfig {
    *  and moonless bodies) — same source the hover card reads; the
    *  focus card shows the uncapped list. */
   moonNamesOf: (idx: number) => readonly string[];
-  /** § Constellation row. */
+  /** README.md#constellation-row. */
   constellationName: (idx: number) => string | null;
 }
 

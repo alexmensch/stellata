@@ -1,5 +1,5 @@
 // The source_id-keyed classic-ID overlay join and its coverage counts.
-// Routes, ambiguity policy and precedence: /docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad § 4.
+// Routes, ambiguity policy and precedence: /docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../record/catalog-pure';
@@ -195,7 +195,7 @@ export function applyBindingGate(
 }
 
 /** An IV/27A row whose HD→TYC→source_id route and HIP→source_id route
- *  disagree. The HD route is the authority (§ 4); these go to the parity
+ *  disagree. The HD route is the authority (/docs/catalog-driver.md#4-how-hd-reaches-gaia); these go to the parity
  *  ledger's review queue rather than being resolved mechanically. */
 export interface HdHipRouteDisagreement {
   hd: number;
@@ -258,7 +258,7 @@ export interface OverlayJoinCounts {
   hdHipRouteHipOnly: number;
 
   /** Upstream designations no route keys to a source_id. They are not lost
-   *  records: their labels ride the inherited spine (§ 1), which is why the
+   *  records: their labels ride the inherited spine (/docs/catalog-driver.md#1-the-driver-model), which is why the
    *  overlay is a union term rather than the label authority. */
   crossIndexBayerUnkeyed: number;
   crossIndexFlamsteedUnkeyed: number;

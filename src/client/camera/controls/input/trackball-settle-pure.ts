@@ -1,6 +1,6 @@
 // On-screen motion of one frame's TrackballControls step, and the floors
 // its damping tail and its re-derived pose are snapped still under. See
-// README.md#damping-settle-floor and § Derived-pose settle floor.
+// README.md#damping-settle-floor and README.md#derived-pose-settle-floor.
 
 import { ulpsBetween } from '../../../util/ulp';
 
@@ -19,7 +19,7 @@ export const TRACKBALL_SETTLE_PX = 0.1;
  *  1e4 pc) x 5 body-step sizes x 3 fovs. The smallest rotation a viewer can
  *  ask for, one hundredth of a pixel, is 4.6e18 ULP. This sits ~19x above
  *  the measured noise and ~15 orders below the smallest real move, so no
- *  input can fall inside it. § Derived-pose settle floor owns the argument. */
+ *  input can fall inside it. README.md#derived-pose-settle-floor owns the argument. */
 export const ORIENTATION_SETTLE_ULP = 4096;
 
 /** Per-frame position drift under which the position `TrackballControls`

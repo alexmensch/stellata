@@ -1,5 +1,5 @@
 // Parser and per-record lookup for data/tycho2/{tycho2_main,tycho2_suppl1}.tsv
-// — the first-order tier under HIP2 in the § 5 direction, PM and V cascades.
+// — the first-order tier under HIP2 in the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers direction, PM and V cascades.
 // See data/tycho2/README.md.
 
 import { dataRows, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';

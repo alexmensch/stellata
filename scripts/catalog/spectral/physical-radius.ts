@@ -167,7 +167,7 @@ export function physicalRadius(
 }
 
 // Absolute visual magnitude M_V by spectral class + subclass, calibrated
-// per luminosity class (Cox 2000 §15.3, Pecaut & Mamajek 2013 — the same
+// per luminosity class (Cox 2000 Sect. 15.3, Pecaut & Mamajek 2013 — the same
 // tables mass_estimate.py reads for the mass-ratio backfill).
 const MV_MS_TABLE: Record<number, [number, number][]> = {
   0: [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V

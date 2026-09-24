@@ -81,7 +81,7 @@ def display_name(raw: str) -> str:
 # Curated cross-catalogue / common names, keyed by the stable slug id — NOT
 # the display name, which the canonical override below may change (the id is
 # the frozen SID/URL key and must survive that). (canonical | None, aliases).
-# Precedence + full-table rationale: README § Alternate names.
+# Precedence + full-table rationale: README.md#alternate-names.
 CLOUD_ALT_NAMES: dict[str, tuple[str | None, list[str]]] = {
     # Composite label split — canonical drops the "Mon OB1 /" join.
     'mon-ob1-ngc-2264': ('NGC 2264', ['Mon OB1', 'Cone Nebula', 'Christmas Tree Cluster']),

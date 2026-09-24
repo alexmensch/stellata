@@ -153,7 +153,7 @@ def parse_spectral_type(raw: str | None) -> ParsedSpect | None:
 
 
 # Each row is mass (M_sun) at subclass 0,1,...,9 for that spectral
-# class — entries cover Cox 2000 §15.2 / Pecaut & Mamajek 2013 with
+# class — entries cover Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013 with
 # linear interpolation between published anchors. Rows are indexed by
 # class index (0=O .. 6=M). Class 7 (C/S/WR) and 8 (unknown) fall back
 # to a single representative mass at the bottom.
@@ -192,7 +192,7 @@ _III_MASS: tuple[tuple[float, ...], ...] = (
 
 
 # Subgiant (IV) interpolation between the MS and III rows. The giant
-# bias reflects Cox 2000 §15.7 evolutionary tracks (a subgiant is
+# bias reflects Cox 2000 Sect. 15.7 evolutionary tracks (a subgiant is
 # post-MS, closer to III than to V on the HRD); the F5IV output is
 # pinned against Procyon A's measured mass in
 # MassFromSpectralClassTests.

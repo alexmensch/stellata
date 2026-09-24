@@ -347,7 +347,7 @@ Per-row gates and resolution:
     misses the anchor's observed magnitude by more than the input's own error
     scale (`blendDimMembersMisfit`). Scoped to the fit's verdict, so members
     that never entered the fit — a printed tier's structural ones — still apply.
-  - **The separation gate.** Identity evidence answers "is this member inside
+  - <a id="the-separation-gate"></a>**The separation gate.** Identity evidence answers "is this member inside
     the entry" only where the catalogue published an identifier for it; past
     that, photometry alone cannot tell a sub-arcsec photocentre from a companion
     525″ off. `PRINTED_BLEND_MAX_SEP_ARCSEC` = 10″ and

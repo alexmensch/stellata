@@ -41,7 +41,7 @@ const GAIA_CATALOGUE_BIBCODES: ReadonlySet<string> = new Set([
 ]);
 
 /** Whether a bibcode names a Gaia catalogue release rather than the
- *  literature — every § 5 skip rule turns on it. Takes a bibcode, never an
+ *  literature — every /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers skip rule turns on it. Takes a bibcode, never an
  *  absence: both pulls drop an uncited value whole
  *  (`../cited-proper-motion.ts`), so a null here could only be a citation that
  *  went missing after the parse, and reading it as "not Gaia" would silently

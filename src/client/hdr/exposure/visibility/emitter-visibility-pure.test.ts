@@ -186,7 +186,7 @@ describe('the extended-source sibling', () => {
   });
 });
 
-describe('the brightness skip — § 3.5 rules 1 and 2', () => {
+describe('the brightness skip — share-bound rules 1 and 2', () => {
   /** The app default view: `L̄` = 68.6 at the base exposure and no lit
    *  resolved surface, which the display floor turns into a −6.29 cut. */
   const SOL_STAT: FrameStatistic = { meanL: 68.6, coverage: 0, discL: 0 };
@@ -202,7 +202,7 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
   const drawn = (peakSb: number, exposure: FrameExposure) =>
     brightnessSkip({ peakSb: () => peakSb, contributing: true, warpActive: false, exposure });
 
-  it('reproduces § 3.5 default view: a −6.29 cut against a 17.21 threshold', () => {
+  it('reproduces the share bound\'s default view: a −6.29 cut against a 17.21 threshold', () => {
     expect(adaptationDm(SOL_STAT)).toBeCloseTo(-6.29, 2);
     expect(adaptationBranches(SOL_STAT).regime).toBe('floor');
     const sLim = extendedThresholdSbFromSolidAngle(
@@ -270,7 +270,7 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
     // The share bound carries Ω_px where the display carries Ω_sum, so the
     // fraction of `L̄` a skip removes — and therefore how far past the edge
     // rule 2 keeps refusing — grows quadratically as the field widens.
-    // MEASURED, not § 3.5's algebra: the design gate estimates ~0.1 mag at
+    // MEASURED, not /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound's algebra: the design gate estimates ~0.1 mag at
     // 50° and ~2.5 at 120° and is loose in both directions.
     const EYE_STAT: FrameStatistic = { meanL: 5, coverage: 0, discL: 0 };
     const EDGE_SB = 23.5 + adaptationDm(EYE_STAT);
@@ -324,7 +324,7 @@ describe('the brightness skip — § 3.5 rules 1 and 2', () => {
 });
 
 describe('the loop the design gate exists to close', () => {
-  // § 3.5's hazard in full: a skipped emitter's light genuinely leaves the
+  // /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound's hazard in full: a skipped emitter's light genuinely leaves the
   // next landed statistic, and a drawn one puts it back. Iterating the
   // verdict against a statistic that FOLLOWS it is the only test that can
   // see a 2-cycle; every other test here holds the statistic fixed.
@@ -355,7 +355,7 @@ describe('the loop the design gate exists to close', () => {
   }
 
   it('settles on M31 at every share the bound admits', () => {
-    // 0.0081 is § 3.5's own bound on the band's share from Sol. The rest
+    // 0.0081 is /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound's own bound on the band's share from Sol. The rest
     // are absurd on purpose: the loop has to settle across orders of
     // magnitude, not just at the figure the design gate quotes.
     for (const share of [0.0081, 0.1, 1, 5, 20, 40]) {

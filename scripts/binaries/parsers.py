@@ -317,7 +317,7 @@ class Orb6Entry:
     e: float | None
     T0_val: float | None
     T0_unit: str
-    grade: int              # 1=definitive..5=indeterminate; 7/8/9 non-visual (see README § Stage 4)
+    grade: int              # 1=definitive..5=indeterminate; 7/8/9 non-visual (see README.md#stage-4--orbital-element-selection-per-pair)
     ref: str
     # ORB6's own J2000 coordinate prefix (cols 1-18, same HHMMSS.SS±DDMMSS.S
     # layout as the WDS precise coord). Position anchor for synthesized

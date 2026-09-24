@@ -1,10 +1,10 @@
 // Build / parse the canonical `/v/<blob>/` share-URL path form (trailing
 // slash optional on parse) and pick the blob source from a loaded URL.
-// Pure helpers — see README § Transport.
+// Pure helpers — see README.md#transport--canonical-path-vs-legacy-query.
 
 const SHARE_PATH_RE = /^\/v\/([A-Za-z0-9_-]+)\/?$/;
 
-// Legacy query param `?v=<blob>`, decoded forever (README § Transport).
+// Legacy query param `?v=<blob>`, decoded forever (README.md#transport--canonical-path-vs-legacy-query).
 export const SHARE_PARAM = 'v';
 
 // Resolves a pasted relative path and is never read back, so any host parses.

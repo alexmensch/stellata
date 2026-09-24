@@ -84,7 +84,7 @@ export interface ParallaxResolution {
   lowPrecision: boolean;
   /** Every parallax a skip rule or the S/N floor refused, mas. Non-empty
    *  distinguishes a row nothing measured from one whose only measurement this
-   *  build will not stand behind — § 5's residual policy requires the two be
+   *  build will not stand behind — /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's residual policy requires the two be
    *  counted apart. The values themselves are what companion promotion matches
    *  a pair row's stated distance against
    *  (`../../companions/README.md#refused-parallax-refusal`). */
@@ -109,7 +109,7 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
   return sn !== null && sn < PARALLAX_SN_FLOOR;
 }
 
-/** **Gaia leads, and § 5's table has the order wrong.** `hip2_saturated` fires
+/** **Gaia leads, and /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's table has the order wrong.** `hip2_saturated` fires
  *  only where Gaia states no usable parallax, so distance follows the same
  *  astrometric solution the position did. Restoring the doc's order would hand
  *  a converged DR3 fit back to 1991 Hipparcos on thousands of records.
