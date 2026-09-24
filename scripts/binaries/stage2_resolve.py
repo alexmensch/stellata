@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Stage 2 — WDS-component → Gaia DR3 ``source_id`` resolution cascade.
-See ``scripts/binaries/README.md`` § Stage 2 for the cascade priority.
+See /scripts/binaries/README.md#stage-2--wds-component--gaia-dr3-source_id for the cascade priority.
 """
 
 from __future__ import annotations
@@ -996,7 +996,8 @@ def match_athyg_position_either_epoch(
 ) -> int | None:
     """Position-match AT-HYG trying PM-propagated J1991.25→J2000 first,
     then unpropagated. Propagated wins on tie. See
-    ``scripts/binaries/README.md`` § Stage 2 / Stage 3 for the
+    /scripts/binaries/README.md#stage-2--wds-component--gaia-dr3-source_id and
+    /scripts/binaries/README.md#stage-3--per-component-astrometry-routing for the
     GJ-vs-HIP epoch convention rationale that makes the dual pass
     necessary.
     """
@@ -1552,7 +1553,7 @@ def write_astrometry_request(
 # Detects the contradictions the cascade + propagation can leave (one
 # source on disjoint letters; one letter on disjoint sources) and
 # arbitrates them against WDS (ρ, θ) geometry. See
-# ``scripts/binaries/README.md`` § Binding-integrity audit.
+# /scripts/binaries/README.md#binding-integrity-audit-enforced.
 
 BINDING_SHAPE_SOURCE_LETTERS = "source_letters"
 BINDING_SHAPE_LETTER_SOURCES = "letter_sources"

@@ -274,7 +274,7 @@ def pair_carried_as_one_star(tyc: Tyc, reached: set[Tyc]) -> bool:
     pair's ``TYC3=1`` entry, so no row of its own ever existed to pull. That
     entry is evidence of the merge, not a solution the component inherits: the
     parse keys on the full TYC, so this component draws nothing from Tycho-2
-    either way (``data/tycho2/README.md`` § The request set)."""
+    either way (/data/tycho2/README.md#the-request-set--manifest--iv25)."""
     tyc1, tyc2, tyc3 = tyc
     return tyc3 > 1 and (tyc1, tyc2, 1) in reached
 
@@ -287,7 +287,7 @@ def assert_membership_covered(
     upstream regression rather than a refresh landing short. Components are
     admitted where the pair entry shows Tycho-2 merged them. This gates the
     pull's reach, never a record's placement — the cascade's tiers below
-    Tycho-2 settle that (``data/tycho2/README.md`` § The request set).
+    Tycho-2 settle that (/data/tycho2/README.md#the-request-set--manifest--iv25).
     """
     missing = membership_tycs - reached
     merged = {t for t in missing if pair_carried_as_one_star(t, reached)}

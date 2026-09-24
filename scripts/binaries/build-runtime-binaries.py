@@ -86,7 +86,7 @@ NO_PARENT = -1
 @dataclass
 class MultiplesPair:
     """One physical pair, primary + secondary rows joined by system_id.
-    See ``scripts/binaries/README.md`` § Runtime side artifact for the
+    See /scripts/binaries/README.md#runtime-side-artifact for the
     raw-comp synth-key invariant ``primary_comp`` / ``secondary_comp``
     encode."""
 

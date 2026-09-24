@@ -143,7 +143,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    code change. Gates, identifier minting, placement, and the
    field-inheritance contract:
    [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion).
-3. **Runtime side artifact** (`build-runtime-binaries.py`). Reads
+3. <a id="runtime-side-artifact"></a>**Runtime side artifact** (`build-runtime-binaries.py`). Reads
    multiples.tsv + `catalog-row-index-map.json` (whose `bySynth` section
    sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
    fixed-size record per physical pair carrying Kepler elements + sep/PA

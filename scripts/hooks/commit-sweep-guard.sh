@@ -254,7 +254,7 @@ if [ -n "$stale" ]; then
 fi
 
 if [ -n "$violations" ]; then
-  reason+=$'\n\nForbidden comment-rule patterns in the staged diff (AGENTS.md § Code comments):\n'
+  reason+=$'\n\nForbidden comment-rule patterns in the staged diff (/AGENTS.md#code-comments--what-ci-enforces-here):\n'
   reason+="$violations"$'\n'
   reason+=$'\nFix: rewrite per /AGENTS.md#code-comments--what-ci-enforces-here. Credit a bead → commit subject, not the code. Reference a memory → no link in code (invisible to readers without bd). Cite a PR → drop it; git blame carries the history.'
 fi
