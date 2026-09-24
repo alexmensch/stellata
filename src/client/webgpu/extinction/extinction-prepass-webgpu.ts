@@ -222,15 +222,17 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
   setEnabled(on: boolean): void {
     this.forceDisabled = !on;
-    // Or the compaction keeps rebuilding a list nothing will march. Parking
-    // the cursor abandons the classes the switch interrupted, so the pass
-    // owes itself a fresh request rather than resuming a truncated flight.
-    if (!on) {
-      this.slots.refill.arm.value = 0;
-      this.refill = idleRefill();
-      this.dirty = true;
-    }
+    // Or the compaction keeps rebuilding a list nothing will march.
+    if (!on) this.parkRefill();
     this.syncConsumerUniforms();
+  }
+
+  /** Abandon any flight in progress and owe a fresh request, rather than
+   *  resuming a truncated one (refill/README.md § The cursor). */
+  private parkRefill(): void {
+    this.slots.refill.arm.value = 0;
+    this.refill = idleRefill();
+    this.dirty = true;
   }
 
   isActive(): boolean {
