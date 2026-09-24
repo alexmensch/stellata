@@ -85,6 +85,7 @@ const ABSMAG_TOLERANCE = 0.05;          // absmag tolerance, both primary + comp
 const PERIOD_REL_TOLERANCE = 0.05;      // orbital period, ±5%
 const CI_TOLERANCE = 0.03;              // primary_ci — float32 + Ballesteros round-trip headroom
 const RADIUS_REL_TOLERANCE = 0.10;      // primary_radius_rsun default, per docs/science-stellar-modelling.md § Physical radius
+const LMC_ENVELOPE_INNER_PC = 48_000;
 
 // ---- TSV row types -----------------------------------------------------
 
@@ -719,11 +720,10 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
     it.each(LMC_SNAPS)('$systemName', (row) => {
       const record = lookupPrimary(row);
       assertPrimary(row, record);
-      // LMC envelope sanity check on the corpus value itself.
       expect(
         row.primaryDistancePc,
         `${row.systemName}: tagged as LMC kinematic snap but expected distance ${row.primaryDistancePc} pc is outside the LMC envelope`,
-      ).toBeGreaterThan(48_000);
+      ).toBeGreaterThan(LMC_ENVELOPE_INNER_PC);
     });
   });
 
@@ -734,7 +734,7 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
       expect(
         row.primaryDistancePc,
         `${row.systemName}: tagged as an LMC parallax refusal but expected distance ${row.primaryDistancePc} pc is inside the LMC envelope`,
-      ).toBeLessThan(48_000);
+      ).toBeLessThan(LMC_ENVELOPE_INNER_PC);
     });
   });
 
