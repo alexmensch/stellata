@@ -1,7 +1,4 @@
-// The public site's layout answers to its container and to the reader's own
-// font size, never to a viewport measurement, and every value it paints comes
-// from a token. Those are properties of the stylesheet, not preferences, so
-// they are asserted rather than described.
+// The public stylesheet's house rules, asserted rather than described.
 // `src/site/styles/README.md` § House style, § Responsiveness has no breakpoints.
 
 import { readFileSync } from 'node:fs';
