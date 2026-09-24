@@ -53,7 +53,7 @@ fields.
 
 ## 2. Identifier sources — frozen CDS files, not live SIMBAD
 
-Per [Frozen external data,](/data/README.md#frozen-external-data) the build never touches
+Per [Frozen external data](/data/README.md#frozen-external-data), the build never touches
 the network; live SIMBAD/VizieR resolution is **rejected** for the
 identifier spine (unreproducible, unauditable, component-level
 cross-IDs churn). SIMBAD supplies enrichment values only (sp_type, WDS

@@ -145,7 +145,7 @@ number served both.
 
 Validation compares **per-pixel** luminance, never integrals: the
 K-exaggerated footprint over-counts a star's frame flux by design
-([§ 1,](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) [§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7)). The exposure statistic needs
+([§ 1](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance), [§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7)). The exposure statistic needs
 that integral back, so `vFluxPeakL` carries the same kernel divided by its
 own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
 `../webgpu/perceptual-disc-tsl.ts`, and `../hdr/attachments/README.md` for what reads it.

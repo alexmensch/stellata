@@ -2,7 +2,7 @@
 
 Saturn, plus Uranus + Neptune's faint rings at true opacity. `../README.md`
 owns the mesh-LOD regime these render inside; the strip data pipeline is
-[Ring strips,](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor) which also carries the spans and
+[Ring strips](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor), which also carries the spans and
 the Jupiter exclusion.
 
 ```

@@ -149,7 +149,7 @@ the row does not resolve; raising the count tightens the bound on that many
 boundaries together. Quote the total, not `savedMs` over the count — dividing
 assumes the clears add, and consecutive clears with nothing drawn between them
 are what a driver would coalesce
-([The roster,](/src/client/debug/frame-cost/passes/README.md#the-roster)
+([The roster](/src/client/debug/frame-cost/passes/README.md#the-roster),
 [§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs)).
 
 **`--pre-disable <keys>` and `--no-park` set up the frame a differential
@@ -218,7 +218,7 @@ there lands mid-path.
 **Contexts run in the scenario order given; `all` is the canon order
 mw120, sol, earth, mw50, lg.** So `--scenario all` opens with mw120 then
 sol, the two contexts a Tier 1 run visits, in the same order. That is what
-lets Tier 1 compare against the pin: [The refusals,](diff/README.md#the-refusals) run
+lets Tier 1 compare against the pin: [The refusals](diff/README.md#the-refusals), run
 position.
 
 **A dwell's clock is always `raf-delta`, so every pin run is on it.**

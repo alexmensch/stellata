@@ -83,7 +83,7 @@ of work on a 120 Hz panel reads 16.67, still the display's number. A clamped
 dwell is refused by `--baseline` and makes a sweep inconclusive.
 
 **The period is the one the run measured, not 60 Hz assumed.** The rAF probe
-taken after settle ([What a run does,](../README.md#what-a-run-does) step 4) is the
+taken after settle ([What a run does](../README.md#what-a-run-does), step 4) is the
 display's cadence with the gate idle, and
 the clamp test is judged against it: 16.67 ms on a 60 Hz panel, 8.33 on a
 120 Hz one. Headless Chromium's virtual display idles at 16.70 ms (59.9 Hz),
@@ -186,7 +186,7 @@ stop. The **counters** are what says there are two classes to find:
 `renderPasses` min against max. Without that gate a vantage that merely
 wanders takes a cut of its own, `lg` on every dwell it has ever recorded.
 What the pin then holds, and what the band is built from:
-[The compute row,](../pins/README.md#the-compute-row) last.
+[The compute row](../pins/README.md#the-compute-row), last.
 
 `READBACK_TOLERANCE` (25 %) bounds the rate drift, clear of the 7 % spread
 `earth` holds across 25 cold runs. **The guard is gated on the frame being

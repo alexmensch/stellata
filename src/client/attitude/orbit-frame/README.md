@@ -175,7 +175,7 @@ re-derives it for you until the next tick.** `ridePoseBy` writes
 `camera.position` and `camera.up`. Every reader downstream — the render, the
 overlays, and the ball's own `readAttitude` — takes `camera.quaternion`, which
 `lookAt` builds from those two, and `TrackballControls.update()` does not run
-again until the next rAF tick ([Roll authority,](../../camera/controls/input/README.md#roll-authority)
+again until the next rAF tick ([Roll authority](../../camera/controls/input/README.md#roll-authority),
 derivation A). So the ride re-derives it itself. Skip that
 and the frame draws the new position through the old aim while the ball reads
 the new datum against the old attitude: **a lag of exactly one frame's turn**,

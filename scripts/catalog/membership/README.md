@@ -10,7 +10,7 @@ all. **`readStars` walks it, and
 membership is exactly these rows less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks**
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
-[§ 3.1,](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) the measurement behind it
+[§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), the measurement behind it
 [The primaries audit](../spine/README.md#the-primaries-audit).
 
 The manifest is a **pure function of committed inputs**, so unlike the spine it
@@ -173,7 +173,7 @@ value ships as `reviewed`.
 How a row reaches its `gaia_source_id` — the four committed sources, the
 precedence and consensus ranking, both gates, and the `contested` /
 `collision` outcomes the derivation cannot settle alone — is
-[What the derivation cannot settle alone,](binding/README.md#what-the-derivation-cannot-settle-alone) which owns it.
+[What the derivation cannot settle alone](binding/README.md#what-the-derivation-cannot-settle-alone), which owns it.
 
 ## The unattested labels leave the row
 

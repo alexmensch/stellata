@@ -253,7 +253,7 @@ for exactly that reason.
 
 ## The parity ledger
 
-[§ 8,](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change) as two committed TSVs plus
+[§ 8](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change), as two committed TSVs plus
 `naming-parity.test.ts`:
 
 - **`naming-parity.tsv`** — one row per record whose displayed name changed

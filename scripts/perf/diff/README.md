@@ -134,7 +134,7 @@ eight archived rows spanning 0.725 ms against a 0.25 ms band. So the two are
 different statistics and the verdict between them means nothing. 960 frames
 makes them comparable without making either quiet: a same-tree repeat pair
 there still reaches 1.272 ms at `mw120`, which is the re-run rule in
-[What a mark means,](/RELEASING.md#what-a-mark-means) not this refusal. Nothing else catches
+[What a mark means](/RELEASING.md#what-a-mark-means), not this refusal. Nothing else catches
 the length mismatch itself: the state
 guard compares quarters within one dwell and both read steady, and the band is
 computed from the pair and widens with neither, so a pin re-taken at the wrong

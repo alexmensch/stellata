@@ -120,7 +120,7 @@ dust-renderer-mock.ts    A recording renderer stand-in, enough surface
 `loadCatalog` resolves on the **first chunk carrying a whole record**, not on
 the whole artifact, so boot paints a sky while the rest is still on the wire.
 Records are apparent-V ordered and the chunk plan ramps from 1 MiB
-([Record order,](/scripts/catalog/record/README.md#record-order) [On-disk transport
+([Record order](/scripts/catalog/record/README.md#record-order), [On-disk transport
 chunking](/scripts/catalog/record/README.md#on-disk-transport-chunking)), so that prefix is roughly the naked-eye sky.
 
 The shape: one buffer pre-allocated at `manifest.totalBytes`, the chunks
@@ -214,7 +214,7 @@ is slower at `DataView` reads and boot is competing for the thread.
 18.8 MB of decoded window plus the 16.8 MB byte slice, and the slice detaches
 at `postMessage`. Nothing is resident on both sides, which is what a transfer
 buys over the search index's structured clone
-([The search-index worker,](../typeahead/README.md#the-search-index-worker) 64.5 MB held twice).
+([The search-index worker](../typeahead/README.md#the-search-index-worker), 64.5 MB held twice).
 `stellata-8cg.52` owns the whole-app budget.
 
 **Only the window's bytes cross, never the assembled buffer.** Transferring

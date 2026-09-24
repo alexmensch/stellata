@@ -249,7 +249,7 @@ non-load-bearing MAXREC, identifier quoting — lives in
 on purpose** — `pull_table` gates and returns rows, `write_table` commits
 them, and
 nothing is written until the cross-table membership cover has also passed
-([Why the pull is range-batched,](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered) last paragraph).
+([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered), last paragraph).
 Its non-network test (`refresh-tycho2.test.py`) covers the request-set
 union, the TYC1 range cover and scan-span assertion, the local filter,
 the fraction / spot-row gates against an in-memory TAP backend, and the

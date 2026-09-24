@@ -108,7 +108,7 @@ transition (the `body.focus-lerping` class hides only the SVG overlay), so the
 glide draws every frame. Hence `selectFigures` excludes
 `ObserveTransition.observeAnchorOf('star')`, which spans both glides — the
 rule and why the mode flag alone is wrong live in
-[The observe anchor in line layers,](../camera/observe/README.md#the-observe-anchor-in-line-layers) along
+[The observe anchor in line layers](../camera/observe/README.md#the-observe-anchor-in-line-layers), along
 with the other line layers asking the same question.
 
 A planet or probe anchor suppresses nothing here yet, which is unreachable

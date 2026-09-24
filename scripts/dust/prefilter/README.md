@@ -1,7 +1,7 @@
 # Band dust-prefilter sweep
 
 Analysis-only. Nothing here ships or feeds a build artifact — it produced the
-numbers behind [The prefilter mechanism,](/docs/science-galactic-structure.md#the-prefilter-mechanism--a-view-frustum-froxel-grid)
+numbers behind [The prefilter mechanism](/docs/science-galactic-structure.md#the-prefilter-mechanism--a-view-frustum-froxel-grid),
 and it is the harness the band's prefiltered-vs-direct agreement pin should be
 built on when the read lands (stellata-ty4.5).
 

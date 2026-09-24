@@ -332,7 +332,7 @@ pinned in build-counts so growth is visible in review.
 
 ## 8. Parity — the gate on any naming change
 
-A **naming parity ledger**, same discipline as [§ 6,](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change)
+A **naming parity ledger**, same discipline as [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change),
 committed as a test fixture:
 
 1. <a id="81-searchability-never-regresses"></a>**Searchability never regresses.** Every string that resolves a star

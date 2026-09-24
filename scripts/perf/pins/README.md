@@ -306,7 +306,7 @@ inherits the same refusal without another edit.
 ## State guard
 
 What `trending` means, which clock the verdict is read off, and why it is the
-quarters' spread rather than a rise through them: [The state guard,](../dwell/README.md#the-state-guard)
+quarters' spread rather than a rise through them: [The state guard](../dwell/README.md#the-state-guard),
 beside `stateGuardVerdict` itself.
 
 Here it decides two things. A trending row at a **gated** vantage refuses the
@@ -373,7 +373,7 @@ a pin run reads `steady`.
   one that decides, so a Tier 1 band under this one would mark a move Tier 2
   calls unresolved ([Perf pin](/RELEASING.md#perf-pin)). **A frame row's `✗` is not
   final on one run** — its band sits under its own repeat scatter, and what
-  covers that is the re-run rule in [What a mark means,](/RELEASING.md#what-a-mark-means) not a
+  covers that is the re-run rule in [What a mark means](/RELEASING.md#what-a-mark-means), not a
   wider floor.
 - **Floor.** Each GPU row also records its 10th-percentile frame off the raw
   samples, and the table prints how far that p10 moved beside `delta`. A cost

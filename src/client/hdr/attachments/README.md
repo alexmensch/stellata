@@ -151,7 +151,7 @@ so the destination is untouched. A material built without the struct — every
 chrome layer — writes attachment 0 alone, so nothing else can reach the
 statistic, **including a chrome layer added later**. The pipeline's two
 frame-cost masks and the adaptation park ride uniforms the struct graphs read
-([Dev switches,](../README.md#dev-switches) `../exposure/park/README.md`), and the park
+([Dev switches](../README.md#dev-switches), `../exposure/park/README.md`), and the park
 scales the WHOLE statistic texel, since an alpha-composited writer's identity
 needs alpha 0 too.
 

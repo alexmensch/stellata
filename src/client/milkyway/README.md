@@ -109,7 +109,7 @@ star catalogue's measured share of the model's light at each step,
 applied ahead of the dust step. It reaches both shaders as one filtered
 fetch of the shared `uUnresolvedLight` grid, and the CPU mirror through
 `unresolvedBandLightAt` over the same cube
-([The resolution hole,](calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars) [The table is a 3D grid](calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)).
+([The resolution hole](calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars), [The table is a 3D grid](calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)).
 
 ### Population tints carry hue, never flux
 

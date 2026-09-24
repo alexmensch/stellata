@@ -372,7 +372,7 @@ the disagreement, not its sign: **band plus catalogue at the pole reads
 23.42 against Leinert's 23.83**, 0.41 mag over, where band-without-hole
 plus catalogue read 0.88 over — the double count was the other 0.47. That
 0.41 is the scale disagreement proper. eso0932a sides with the total but
-confirms a pole-side excess independently ([§ 8,](/docs/science-hdr-pipeline.md#8-validation-contract-h7)
+confirms a pole-side excess independently ([§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7),
 graded on the pre-hole table).
 
 ## The gradient this produces, and what it reads on screen

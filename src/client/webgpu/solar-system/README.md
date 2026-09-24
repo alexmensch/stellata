@@ -118,7 +118,7 @@ reaches the normal correctly.
 
 Every surface here reaches the HDR target, so every one of them declares
 all three attachment outputs and swaps to a single output when the target
-is not bound ([The gate becomes the output struct,](../hdr/README.md#the-gate-becomes-the-output-struct)
+is not bound ([The gate becomes the output struct](../hdr/README.md#the-gate-becomes-the-output-struct),
 `../hdr/mrt-material.ts`). The depth pre-stamp included: its colour writes
 are off, so the swap is irrelevant to validity and mandatory for three's
 pipeline cache — the same argument the star core mask carries. A slot a

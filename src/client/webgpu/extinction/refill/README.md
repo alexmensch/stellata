@@ -314,7 +314,7 @@ A_V depends on camera **position** only — the ray is camera→star — so a
 star's value is stale by however far the camera has moved since its quarter
 last marched, at most `REFILL_SLICES` frames' worth. Extinction varies on
 the dust texture's ~5 pc voxel scale, about **3 mmag of A_V per pc** of
-camera displacement ([The prepass cache,](../../../star-pipeline/extinction/README.md#the-prepass-cache)
+camera displacement ([The prepass cache](../../../star-pipeline/extinction/README.md#the-prepass-cache),
 which sizes `RECOMPUTE_EPSILON_PC` off the same rate). So
 the error is `REFILL_SLICES × (displacement per frame) × 3 mmag/pc`.
 

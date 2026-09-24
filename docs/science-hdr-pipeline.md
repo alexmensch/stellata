@@ -1320,7 +1320,7 @@ cannot raise surface brightness past the naked eye's. Pinned in
 ### 3.5 Skipping a diffuse emitter the display cannot show — the share bound
 
 Design gate for stellata-8cg.50.4. The contribution contract
-([§ 2,](/docs/render-rules.md#2-contribution-gated-liveness) `src/client/scene/README.md`) admits three
+([§ 2](/docs/render-rules.md#2-contribution-gated-liveness), `src/client/scene/README.md`) admits three
 geometric skip reasons; the fourth, brightness, was held out because
 skipping an emitter changes the exposure that decides whether it is
 skipped. This section is the argument that admits it and what the
@@ -1884,7 +1884,7 @@ to the far-field emissivity grid, alongside the high-|b| excess above.
 - **Deliverable placement:** this doc (cross-cutting) + a
   `src/client/hdr/README.md` from H2 for RT/pass implementation detail.
   The K derivation belongs to
-  [Stellar perception model,](/docs/science-stellar-modelling.md#stellar-perception-model) which
+  [Stellar perception model](/docs/science-stellar-modelling.md#stellar-perception-model), which
   already owns σ and the √Δm curve; [§ 3.3](#33-fov-is-magnification-the-instrument-is-aperture) states the rule and points
   there.
 

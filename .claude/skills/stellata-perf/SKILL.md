@@ -154,7 +154,7 @@ and `disabledLimitMag` must agree or the row priced a different scene; never
 compare across `method`, `bufferMpx`, headed/headless, browsers, or a dev
 server against a production build; never sum the column.
 
-Per mode (`scripts/perf/dwell/README.md`, [Sweep mode,](/scripts/perf/README.md#sweep-mode)
+Per mode (`scripts/perf/dwell/README.md`, [Sweep mode](/scripts/perf/README.md#sweep-mode),
 [Reading the table](/scripts/perf/diff/README.md#reading-the-table)):
 
 - **`vsyncClamped` true throws the dwell away.** A p50 sitting on any whole

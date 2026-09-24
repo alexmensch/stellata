@@ -30,7 +30,7 @@ src/client/webgpu/star/compaction/
 ```
 
 The kernel also appends the extinction refill's worklist; that block, its
-population and its schedule are [The compaction appends the worklist,](../../extinction/refill/README.md#the-compaction-appends-the-worklist)
+population and its schedule are [The compaction appends the worklist](../../extinction/refill/README.md#the-compaction-appends-the-worklist),
 and this file carries only what it costs
 the compaction ([The refill dispatch](#the-refill-dispatch), [Binding budget](#binding-budget)).
 

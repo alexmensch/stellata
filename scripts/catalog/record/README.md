@@ -300,7 +300,7 @@ handful of round trips and is the wrong side of that deal.
 
 The manifest also carries
 the optional `sidSuccessors` side-field (retired sid → successor sid
-pairs, [§ 9.4,](/docs/sid.md#94-migration-semantics--exact-table) derived from `data/sid/retirements.tsv` net
+pairs, [§ 9.4](/docs/sid.md#94-migration-semantics--exact-table), derived from `data/sid/retirements.tsv` net
 of reinstatements) so the runtime SID resolver can follow merge-type
 retirements without an extra fetch; omitted while empty.
 

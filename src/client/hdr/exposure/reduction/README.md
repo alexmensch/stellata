@@ -103,7 +103,7 @@ first pass either way. Each level is its own render pass, and a pass has
 a floor independent of what it draws — but that floor was measured at
 0.1–0.5 ms, and the chain draws only on the one frame in four whose
 readback has landed, so **the pass count is not where this chain's cost
-is**; the texel reads are ([§ 8,](/docs/render-rules.md#8-submits-and-passes-are-costs) which now carries
+is**; the texel reads are ([§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs), which now carries
 the measurement and names this chain as the case pass-count reasoning
 gets wrong).
 

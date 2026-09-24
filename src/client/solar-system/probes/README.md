@@ -219,7 +219,7 @@ and the marker's mirror draws the same material as its main-pass mesh
 
 Neither surface writes a fragment depth, and neither may: a static write
 costs the whole draw its early-z, and nothing carries one
-([Early-z,](../../webgpu/README.md#early-z--the-star-layers-depth-honest-redesign) pinned by
+([Early-z](../../webgpu/README.md#early-z--the-star-layers-depth-honest-redesign), pinned by
 `tests/tsl-frag-depth.test.ts`). Reversed-z makes fixed-function depth
 correct in both passes.
 

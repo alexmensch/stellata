@@ -276,7 +276,7 @@ enough to see it.
   parallax, proper motion, coordinates and Johnson B/V fluxes, each
   carrying the `bibcode` of the measurement SIMBAD compiled it from —
   the bottom tier of the per-field cascades in
-  [§ 5,](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) where SIMBAD is the index and the
+  [§ 5](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers), where SIMBAD is the index and the
   bibcode is the source. Values SIMBAD publishes without one are
   dropped at write time rather than shipped for a consumer to filter,
   so every column's value count equals its bibcode count. Scoped to an

@@ -210,7 +210,7 @@ build parking a different star for the same total would land silently.
 `pnpm run audit:spine-primaries` measures the spine against the frozen tables
 AT-HYG merged — IV/25, V/50, IV/27A, CNS5, V/70A, I/239, HIP2, the WGSN
 tables, Tycho-2 and the two DR3 best-neighbour walks — and is the evidence
-behind [§ 3.1,](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) which owns the decisions. Three
+behind [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), which owns the decisions. Three
 questions, one pass over the rows:
 
 - **Attestation** — for each classical cell (`hd` `hr` `hip` `gl` `bayer`

@@ -384,7 +384,7 @@ closer pairs by taking the larger R_cav.
 The emitted `clouds.json` fields (`class`, `n0Cal`, `uEnv`, `rflat`,
 `p`, `sigmaS`, `massLeike`, `akPeak`, `inGrid`, `seed`, `embedded[]`,
 plus the build-side `noiseModel` block) are documented in
-[Output schema,](/scripts/clouds/README.md#output-schema) which is the schema's single
+[Output schema](/scripts/clouds/README.md#output-schema), which is the schema's single
 source of truth. Physics behind each field is [§ 4](#4-per-cloud-density-model--the-presence-pass-field), [§ 5](#5-substructure-noise-build-side-spec), [§ 7](#7-taxonomy-and-embedded-stars) here.
 
 ## 9. Presence pass

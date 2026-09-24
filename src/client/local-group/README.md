@@ -59,7 +59,7 @@ missing or duplicated — a stale or pre-stamp `local-group.json` needs
 `../util/sid-resolver/README.md`).
 
 Each object also carries an `emission` block — the solved luminosity
-model (per-family profile params + density0; [Local Group luminosity model,](/docs/science-local-group.md#local-group-luminosity-model)
+model (per-family profile params + density0; [Local Group luminosity model](/docs/science-local-group.md#local-group-luminosity-model),
 solver contract in
 `scripts/local-group/README.md`).
 The wireframe layer ignores it; it feeds the volumetric emission
