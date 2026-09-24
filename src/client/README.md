@@ -177,11 +177,20 @@ one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
 whether the camera was free *and* cancels the focus lerps, so every aim
 takes it the same way),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
-(clockJumped fan-out), the `FrameAnchor` recentre trio, `setMonochrome`,
-the `attach*` family, and the star-frame reads (`localPositions`,
-`starLocalPositionInto`, `uniforms`) exposing the shell-owned star
-render machinery. A new zero-logic pass-through belongs on the
-controller.
+(clockJumped fan-out) and `setMonochrome`. A new zero-logic pass-through
+belongs on the controller.
+
+**Forwarders still on the shell leave with their cluster, and so do their
+callers** (§ Decomposing the shell). The `attach*` family — `main.ts` calls
+`attachBinaries`, `attachDust` and `attachConstellationBoundaries` — moves
+with its row, and `main.ts` calls the new owner through a readonly
+namespace. The star-frame reads (`localPositions`, `uniforms`) and the
+`FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
+`starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
+`floatingOrigin`; with the star render machinery, the focus controller's
+`frameAnchor` dep is built from those two owners directly, and outside
+readers of `stellata.getWorldOffset()` read the floating origin's
+namespace. No extraction leaves a method behind that only forwards.
 
 **Install seams are the other admissible shape**, and they are not
 pass-throughs: a UI surface built after the shell registers itself here so
@@ -218,7 +227,7 @@ field, method or site the file no longer has.
 | Galactic + HUD | `galacticDisc`, `coordSpheres`, `tmpBound`, `tmpVec3b` | `updateHud`, `coordSphereDrawn`, `coordSphereAvailable`, the HUD arrow callbacks, the galactic-disc, coord-sphere and HUD entries | `galactic/`, `overlays/` | `hhaw.32.10` |
 | Declutter | `detailPermitted` | `detailPermits`, `buildSceneElementBinds`, `applyMilkywayEnabled`, `applyLgEmissionEnabled` | `scene/declutter/` | `hhaw.32.11` |
 | Observe look pin | `observePinQuat`, `observeTmpFwd` | `observeUpdateTarget` and its two resets | `camera/observe/` | `hhaw.32.12` |
-| Star render machinery | `starFrame`, `starAttrs`, `webgpuStarLayer`, `starLocalCluster`, `_suppressPulsation`, `absorbedSuppressCount`, `offCatalogRecords`, `coreMaskEnabled` | `absorbCatalogRecords`, `setCoreMaskVisible`, `starPassRoutingFor`, `starLocalPositionInto`, the star-local-cluster and core-mask entries | `star-pipeline/` | `hhaw.32.13` |
+| Star render machinery | `starFrame`, `starAttrs`, `webgpuStarLayer`, `starLocalCluster`, `_suppressPulsation`, `absorbedSuppressCount`, `offCatalogRecords`, `coreMaskEnabled` | `absorbCatalogRecords`, `setCoreMaskVisible`, `starPassRoutingFor`, the star-frame reads and `FrameAnchor` methods (§ Public surface), the star-local-cluster and core-mask entries | `star-pipeline/` | `hhaw.32.13` |
 | Per-frame exposure | `lastInvalidatedDm`, `frameExposureRecord`, `drawingBufferSize` | `frameExposure`, `measureAdaptationStatistic`, the adaptation block in `animate` | `hdr/exposure/` | `hhaw.32.14` |
 | Frame loop — last | `frameCtx`, `glslResidentsChecked`, `_realtimeFramesNeeded`, `_tmpAnimateLocal`, `trackballSettle` | `animate`, `refreshFrameCtx` | `scene/frame-loop/` | `hhaw.32.15` |
 | Stays — composition (§ Public surface) | `catalog`, `renderer`, `webgpu`, `scene`, `camera`, `controls`, `chromeLines`, `sharedUniforms`, `floatingOrigin`, `layers`, `bus`, `clock`, `monochrome`, `disposed`, `hdr`, `roll`, `filters`, `exposure`, `adaptation`, `focus`, `observe`, `observeControls`, `warp`, `aim`, `pois`, `input`, `picker`, `kinds`, `systemMembership`, `occluders`, `localDepthPass`, `renderGate`, `hud`, `milkyway`, `chartLabels`, `tmpRecenter`, `orbitFrameTick`, `orbitFramePort` | controller construction, `on`, the registration order, the recentre fan-out and `buildFocalAnchorPolicy`, `getT` / `setT` / `notifyClockJumped`, the aim gates, `setCameraFov` / `syncPixelSolidAngle` / `angularToPx`, `setMonochrome`, `setFocalBodyHidden`, the install seams and the orbit-lock entry, the Milky Way and chart-labels entries, `onResize`, `dispose` | — | — |
