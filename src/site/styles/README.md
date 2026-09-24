@@ -84,9 +84,8 @@ multiplier. Logical properties throughout: `max-inline-size`,
 exception is the sources table's `overflow-x`, because `overflow-inline`
 has no Chromium or WebKit support yet.
 
-One tracking value serves every uppercase label (`--tracking-caps`), where
-three near-identical figures used to sit; the visual language is one
-decision, not one per block.
+One tracking value serves every uppercase label (`--tracking-caps`); the
+visual language is one decision, not one per block.
 
 `tests/site-css-rules.test.ts` asserts all of it — the cascade order, the
 `!important`, the absence of colour literals and physical properties, and
@@ -118,16 +117,16 @@ of the viewport. Three mechanisms replace them.
   changes the gap *above itself* by setting `--flow-space`, and a container
   changes its children's gaps with `X > * { --flow-space: … }`; nothing sets
   a bespoke margin. **`--flow-space` is registered `inherits: false`**, so a
-  value set on a container itself does nothing — without that, it reached
-  every nested `.flow`'s children too.
+  value set on a container itself does nothing, and none reaches a nested
+  `.flow`'s children.
 
   **A missing gap has two causes, and the second is the likely one.** Either
   the container lacks `.flow` — visible, and the fix is obvious — or a block
   **cancelled** the gap `.flow` gave it, by declaring a vertical `margin` in
   the block layer, which cascades after compositions and therefore wins. That
   second one is silent: the composition is present and correct, and the
-  element still sits flush. It happened twice here, `.spec-list` and `.plate`
-  each restating the global `margin: 0` reset one layer too late.
+  element still sits flush — the usual form is a block restating the global
+  `margin: 0` reset one layer too late.
 
   So: a block needing a reset means adding its element to the **global**
   reset, where `.flow` still wins; a block needing a different gap sets
@@ -163,10 +162,9 @@ of the viewport. Three mechanisms replace them.
 
   **`dd` is in the global reset for this strip's sake.** The UA stylesheet
   indents a `dd` by 40px, which on an 11rem cell puts a short figure near
-  the middle and reads as centred text rather than as an indent — the bug
-  that hid here until the figures were meant to line up. Adding the element
-  to the global reset is the fix, per § Responsiveness's rule that a block
-  needing a reset never writes the margin itself.
+  the middle and reads as centred text rather than as an indent. It is reset
+  globally, per § Responsiveness's rule that a block needing a reset never
+  writes the margin itself.
 
 `.sight`'s alternating sides ride the switcher: `flex-direction:
 row-reverse` on even rows puts the media right when there is room, and a
