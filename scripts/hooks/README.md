@@ -53,11 +53,11 @@ scripts/hooks/
                            scripts/perf/arming/README.md owns the
                            design. Behaviour pinned by
                            tests/perf-guard.test.ts.
-  css-skill-guard.sh       Blocks Write / Edit / NotebookEdit against
-                           any *.css until the cube-css skill has been
-                           invoked this session; a Skill call naming it
-                           arms the session. Behaviour pinned by
-                           tests/css-skill-guard.test.ts.
+  skill-guard.sh           Blocks Write / Edit / NotebookEdit against a
+                           file a rule names until that rule's skill has
+                           been invoked this session; a Skill call naming
+                           it arms the session. Rules: *.css → cube-css.
+                           Behaviour pinned by tests/skill-guard.test.ts.
   review-design-reminder.sh
                            Once a pr-review starts in a session, adds a
                            one-line reminder to every later prompt: apply
@@ -66,10 +66,11 @@ scripts/hooks/
                            `/pr-review` prompt or a Skill call naming it.
                            § How review-design-reminder works. Behaviour
                            pinned by tests/review-design-reminder.test.ts.
-  skill-name.sh            Sourced, not registered: `is_skill`, the one
-                           answer to "does this Skill call name skill X"
-                           under any scoped spelling (`x`, `prefix:x`)
-                           — a worktree-scoped listing invokes
+  skill-name.sh            Sourced, not registered: `skill_name` and
+                           `is_skill`, the one answer to "which skill
+                           does this Skill call name" under any scoped
+                           spelling (`x`, `prefix:x`) — a
+                           worktree-scoped listing invokes
                            `.claude/worktrees/<wt>:x`. Nothing after a
                            `/` counts, so a prompt opening with a path
                            ending `/pr-review` does not arm.
@@ -195,18 +196,22 @@ host's truncation banner reads as plumbing metadata. Same conclusion
 as readme-guard: the harness executing the rule beats the model
 self-checking against it.
 
-## How css-skill-guard works
+## How skill-guard works
 
-Same shape as readme-guard, one skill wide. State is a marker file at
-`${TMPDIR:-/tmp}/claude-css-skill-guard/loaded-${GUARD_SESSION:-$PPID}`,
-so a session arms once and edits freely after.
+Same shape as readme-guard, keyed on a skill instead of a folder. The rule
+table is `required_skill` (path pattern → skill) and `why` (what that skill
+carries, quoted in the denial); a new gate is one arm in each. State is one
+marker per skill at
+`${TMPDIR:-/tmp}/claude-skill-guard/<skill>-${GUARD_SESSION:-$PPID}`, so a
+session arms once per skill and edits freely after.
 
 The hook sits on `Skill` as well as the edit tools, and that is the whole
-mechanism: a `Skill` call whose `skill` is `cube-css` — bare, or under a
-directory-scoped or plugin prefix — touches the marker and always passes
-through. Every other `Skill` call passes through untouched. Only then does
-an edit whose path ends `.css` find the marker and go ahead; without it the
-call is denied with the skill named.
+mechanism: every `Skill` call touches the marker for the name it invokes —
+the part after any directory-scoped or plugin prefix — and passes through.
+Only then does an edit a rule claims find its skill's marker and go ahead;
+without it the call is denied with the skill named. Arming every invoked
+name rather than only the guarded ones keeps the rule table the single list
+of which skills gate anything.
 
 The gate exists because the load looks redundant from inside the repo and
 is not. A folder README documents the **house style** — which layer each
@@ -392,7 +397,7 @@ Two paths:
    commit message (covers the README check; comment violations still
    block — fix the comments). For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
-   the `rm` isn't itself blocked. For `css-skill-guard`: invoke the
+   the `rm` isn't itself blocked. For `skill-guard`: invoke the
    skill, which is the intended route rather than an escape.
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or

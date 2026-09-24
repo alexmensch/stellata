@@ -1,6 +1,4 @@
-// Behavioural guard for scripts/hooks/css-skill-guard.sh: a stylesheet edit
-// must be blocked until the cube-css skill has been invoked, and everything
-// else must pass straight through.
+// Behaviour of scripts/hooks/skill-guard.sh — see scripts/hooks/README.md § How skill-guard works.
 
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
@@ -8,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-const HOOK = resolve(__dirname, '../scripts/hooks/css-skill-guard.sh');
+const HOOK = resolve(__dirname, '../scripts/hooks/skill-guard.sh');
 
 let stateDir: string;
 
@@ -42,14 +40,14 @@ function skill(name: string): Decision {
 }
 
 beforeEach(() => {
-  stateDir = realpathSync(mkdtempSync(join(tmpdir(), 'css-skill-guard-')));
+  stateDir = realpathSync(mkdtempSync(join(tmpdir(), 'skill-guard-')));
 });
 
 afterEach(() => {
   rmSync(stateDir, { recursive: true, force: true });
 });
 
-describe('css-skill-guard', () => {
+describe('skill-guard / cube-css', () => {
   it('blocks a stylesheet edit before the skill is invoked', () => {
     const decision = edit('/repo/src/site/site.css');
     expect(decision.allowed).toBe(false);
