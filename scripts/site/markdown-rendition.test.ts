@@ -8,6 +8,7 @@ import { select, selectAll } from 'hast-util-select';
 import { visit } from 'unist-util-visit';
 import { describe, expect, it } from 'vitest';
 
+import { escapeRegExp } from '../util/escape-regexp';
 import { markdownRendition } from './markdown-rendition';
 import { parseHtml } from './parse-html';
 
@@ -103,11 +104,13 @@ describe('the page’s content survives the derivation', () => {
     const tables = selectAll('table', tree);
     expect(tables.length).toBeGreaterThan(0);
     for (const table of tables) {
-      const header = selectAll('th', table).map((th) => `\\|\\s*${textOf(th)}\\s*`).join('');
-      expect(home).toMatch(new RegExp(header.replace(/[.()]/g, '\\$&')));
+      const header = selectAll('th', table)
+        .map((th) => `\\|\\s*${escapeRegExp(textOf(th))}\\s*`)
+        .join('');
+      expect(home).toMatch(new RegExp(header));
       for (const row of selectAll('tbody tr', table)) {
         const first = textOf(select('td', row));
-        expect(plain(home)).toMatch(new RegExp(`\\|\\s*${first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\|`));
+        expect(plain(home)).toMatch(new RegExp(`\\|\\s*${escapeRegExp(first)}\\s*\\|`));
       }
     }
   });

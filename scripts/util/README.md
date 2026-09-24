@@ -13,6 +13,11 @@ bar: repo plumbing with several callers, not a build helper with one.
   content, both TSL rosters, doc pointers). Carries `isProductionTs`
   too: a `.ts` that is neither a test nor an ambient declaration.
 
+- `escape-regexp.ts` (+ test) — `escapeRegExp(text)`, text made literal
+  inside a `RegExp` source, backslash included. Every pattern built from
+  page text or a figure goes through it; a hand-rolled character class
+  beside it is the defect CodeQL's `js/incomplete-sanitization` flags.
+
 - `astronomy_constants.py` — Python mirror of
   `src/client/util/astronomy-constants.ts`. `J2000_JD`,
   `DAYS_PER_JULIAN_YEAR`, and any future physics constants Python-side
