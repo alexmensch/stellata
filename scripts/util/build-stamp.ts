@@ -2,7 +2,8 @@
 
 import { createHash } from 'node:crypto';
 import {
-  closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, rmSync, writeFileSync,
+  closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync,
+  writeFileSync,
 } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 
@@ -44,9 +45,15 @@ export function fileHashes(paths: readonly string[]): FileHashes {
   return hashes;
 }
 
+/** Absent, unparseable and pre-outputs stamps all read as null: no stamp to trust. */
 export function readStamp(stamp: string): Stamp | null {
   if (!existsSync(stamp)) return null;
-  const parsed = JSON.parse(readFileSync(stamp, 'utf8')) as Partial<Stamp>;
+  let parsed: Partial<Stamp>;
+  try {
+    parsed = JSON.parse(readFileSync(stamp, 'utf8')) as Partial<Stamp>;
+  } catch {
+    return null;
+  }
   return parsed.inputs && parsed.outputs ? { inputs: parsed.inputs, outputs: parsed.outputs } : null;
 }
 
@@ -81,5 +88,7 @@ export function writeStamp(stamp: string, inputs: FileHashes, outputs: readonly 
     throw new Error(`writeStamp(${stamp}): outputs missing or none given: ${missing.join(', ')}`);
   }
   mkdirSync(dirname(stamp), { recursive: true });
-  writeFileSync(stamp, `${JSON.stringify({ inputs, outputs: outputHashes }, null, 2)}\n`);
+  const tmp = `${stamp}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify({ inputs, outputs: outputHashes }, null, 2)}\n`);
+  renameSync(tmp, stamp);
 }

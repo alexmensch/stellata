@@ -86,6 +86,13 @@ class BuildStampTests(unittest.TestCase):
         self.assertIsNone(read_stamp(self.stamp))
         self.assertFalse(self.current())
 
+    def test_truncated_stamp_reads_as_none_and_write_leaves_no_temp(self) -> None:
+        self.write()
+        self.assertFalse(self.stamp.with_name(self.stamp.name + ".tmp").exists())
+        self.stamp.write_text('{"inputs": {')
+        self.assertIsNone(read_stamp(self.stamp))
+        self.assertFalse(self.current())
+
     def test_refuses_missing_or_no_outputs(self) -> None:
         self.output.unlink()
         with self.assertRaisesRegex(RuntimeError, "outputs missing"):

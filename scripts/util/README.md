@@ -47,8 +47,9 @@ need the same thing — single-use helpers stay with their consumer.
   and re-hashes the recorded outputs (`changedSince`), so an output rewritten
   by anything other than this build — an older commit's build, a write
   through a symlink, a partial copy — reads as stale. `clearStamp` runs
-  before a build writes, `writeStamp` after its asserts pass, and refuses a
-  missing output. The Python sibling serves the two binaries steps and writes
+  before a build writes, `writeStamp` after its asserts pass, refusing a
+  missing output and landing the stamp by rename, so a stamp on disk is whole
+  or absent; an unparseable one still reads as no stamp. The Python sibling serves the two binaries steps and writes
   the same JSON shape, which `tests/artifact-freshness.test.ts` reads from the
   TS side. Its `imported_script_modules()` is those steps' code inputs: every
   `scripts/` module the process has imported, so the import statements are

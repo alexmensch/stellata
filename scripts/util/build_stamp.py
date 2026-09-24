@@ -55,9 +55,13 @@ def imported_script_modules() -> list[Path]:
 
 
 def read_stamp(stamp: Path) -> Optional[Stamp]:
+    """Absent, unparseable and pre-outputs stamps all read as None: no stamp to trust."""
     if not stamp.exists():
         return None
-    parsed = json.loads(stamp.read_text())
+    try:
+        parsed = json.loads(stamp.read_text())
+    except json.JSONDecodeError:
+        return None
     if "inputs" not in parsed or "outputs" not in parsed:
         return None
     return Stamp(parsed["inputs"], parsed["outputs"])
@@ -90,7 +94,9 @@ def write_stamp(stamp: Path, inputs: FileHashes, outputs: Iterable[Path]) -> Non
     if not output_hashes or missing:
         raise RuntimeError(f"write_stamp({stamp}): outputs missing or none given: {missing}")
     stamp.parent.mkdir(parents=True, exist_ok=True)
-    stamp.write_text(
+    tmp = stamp.with_name(stamp.name + ".tmp")
+    tmp.write_text(
         json.dumps({"inputs": dict(inputs), "outputs": output_hashes}, indent=2, sort_keys=True)
         + "\n"
     )
+    os.replace(tmp, stamp)

@@ -86,6 +86,14 @@ describe('build-stamp', () => {
     expect(current()).toBe(false);
   });
 
+  it('reads a truncated stamp as no stamp, and leaves no temp file after a write', () => {
+    write();
+    expect(existsSync(`${stamp}.tmp`)).toBe(false);
+    writeFileSync(stamp, '{"inputs": {');
+    expect(readStamp(stamp)).toBeNull();
+    expect(current()).toBe(false);
+  });
+
   it('refuses to stamp a missing output, or no outputs at all', () => {
     rmSync(output);
     expect(() => write()).toThrow(/outputs missing/);
