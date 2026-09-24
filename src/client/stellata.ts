@@ -133,6 +133,7 @@ import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { ExposureFrameStep } from './hdr/exposure/exposure-frame-step';
+import type { Mutable } from './util/mutable';
 import {
   cameraAbsInto,
   SceneLayerRegistry,
@@ -347,7 +348,7 @@ export class Stellata implements FrameAnchor {
   // see scene/README.md. frameCtx is the shared per-frame input struct,
   // mutated in place each frame to avoid a per-frame allocation.
   private readonly layers = new SceneLayerRegistry();
-  private frameCtx!: { -readonly [K in keyof FrameCtx]: FrameCtx[K] };
+  private frameCtx!: Mutable<FrameCtx>;
 
   readonly observe!: ObserveTransition;
   private observeControls!: ObserveControls;

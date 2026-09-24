@@ -2,6 +2,7 @@
 
 import * as THREE from 'three';
 import type { CadenceCtx } from '../../scene/scene-layer';
+import type { Mutable } from '../../util/mutable';
 import {
   CADENCE_REPORT_STILL,
   cadenceSimBudgetS,
@@ -50,13 +51,8 @@ export class ClockCadence {
   private pulsationBudgetS = Number.POSITIVE_INFINITY;
   private readonly rideAccum = new THREE.Vector3();
   private frameId = 0;
-  private readonly ctx: {
-    camera: THREE.PerspectiveCamera;
-    frameId: number;
-    pxPerRadian: number;
-    simDtS: number;
-    cameraVelPcPerSimS: THREE.Vector3;
-  };
+  private readonly cameraVel = new THREE.Vector3();
+  private readonly ctx: Mutable<CadenceCtx>;
 
   constructor(private readonly deps: ClockCadenceDeps) {
     this.ctx = {
@@ -64,7 +60,7 @@ export class ClockCadence {
       frameId: 0,
       pxPerRadian: 0,
       simDtS: Number.NaN,
-      cameraVelPcPerSimS: new THREE.Vector3(),
+      cameraVelPcPerSimS: this.cameraVel,
     };
   }
 
@@ -90,9 +86,9 @@ export class ClockCadence {
     ctx.pxPerRadian = frame.pxPerRadian;
     ctx.simDtS = simDtS;
     if (Number.isFinite(simDtS) && simDtS !== 0) {
-      ctx.cameraVelPcPerSimS.copy(this.rideAccum).divideScalar(simDtS);
+      this.cameraVel.copy(this.rideAccum).divideScalar(simDtS);
     } else {
-      ctx.cameraVelPcPerSimS.set(0, 0, 0);
+      this.cameraVel.set(0, 0, 0);
     }
     this.rideAccum.set(0, 0, 0);
     const report = this.deps.collectReport(ctx);
@@ -128,6 +124,6 @@ export class ClockCadence {
     this.rideAccum.set(0, 0, 0);
     this.frameId = 0;
     this.ctx.simDtS = Number.NaN;
-    this.ctx.cameraVelPcPerSimS.set(0, 0, 0);
+    this.cameraVel.set(0, 0, 0);
   }
 }
