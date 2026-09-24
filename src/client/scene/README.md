@@ -106,7 +106,7 @@ itself never set the latter, so the positive test is the one that admits
 
 `stellata.ts` registers one entry per render layer in its constructor.
 A subsystem that owns its wiring builds its own entries
-(`../solar-system/README.md` § Wiring) and the shell only registers them,
+([Wiring](../solar-system/README.md#wiring)) and the shell only registers them,
 since where each goes is a claim about *other* layers; the rest are inline
 adapters. Registration is in draw-dependency order (the continuously-ticking
 entries — the moving-focal ride, orbit rings, binary orbits — first;

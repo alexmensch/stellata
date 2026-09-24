@@ -174,7 +174,7 @@ export interface GalacticDiscSceneLayerDeps {
 }
 
 /** Constructs and parents the disc, returning its registry entry. The caller
- *  decides WHEN — README.md § Wiring. */
+ *  decides WHEN — README.md#wiring. */
 export function galacticDiscSceneLayer(deps: GalacticDiscSceneLayerDeps): SceneLayer {
   const disc = new GalacticDisc(deps.chromeLines);
   deps.scene.add(disc.group);

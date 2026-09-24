@@ -248,7 +248,7 @@ interface for both:
   not-ready answer stays inside the provider for 32.5 and cns.16 to change
   in one place.
 - **The planet rate** — settled as `solarSystem.planetRate`, a `(cc) =>
-  CadenceReport` (`solar-system/README.md` § Wiring); the moving-focal-ride
+  CadenceReport` ([Wiring](solar-system/README.md#wiring)); the moving-focal-ride
   entry takes it, and the rides carry that `rate` with them.
 
 ### Late-attached slots
