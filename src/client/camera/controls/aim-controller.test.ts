@@ -632,15 +632,9 @@ describe('claimCameraForAim', () => {
     expect(cancelled).toEqual(['unfocus', 'focus']);
   });
 
-  it.each(['warp', 'aim'] as const)('refuses during %s and cancels nothing', (owner) => {
+  it.each(['warp', 'aim', 'observe'] as const)('refuses during %s and leaves both lerps running', (owner) => {
     const { gates, cancelled } = makeGates({ [owner]: true });
     expect(claimCameraForAim(gates)).toBe(false);
     expect(cancelled).toEqual([]);
-  });
-
-  it('refuses during an observe transition, cancelling both lerps first', () => {
-    const { gates, cancelled } = makeGates({ observe: true });
-    expect(claimCameraForAim(gates)).toBe(false);
-    expect(cancelled).toEqual(['unfocus', 'focus']);
   });
 });

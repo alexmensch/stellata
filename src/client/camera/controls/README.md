@@ -303,8 +303,8 @@ separate literal — a log-scale flight coefficient (see
 
 `cancelFocusLerp` is wired at every site that already calls
 `cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`, `startWarp`,
-`aimAt`, `aimAtConstellation`, `onPointerUp`) so a follow-up
-camera-changing action can't race the in-flight lerp.
+`claimCameraForAim`, `onPointerUp`) so a follow-up camera-changing action
+can't race the in-flight lerp.
 
 ## Aim controller (`camera/controls/aim-controller.ts`)
 
@@ -364,7 +364,8 @@ own slot state. The cross-controller busy gates (warp, aim, observe
 transition) and the focus-lerp cancels are `claimCameraForAim`, a free
 function taking them as closures; the shell's aims (`aimAt`, `aimAlong`,
 `aimAtConstellation`, `invertView`) wire it to the live controllers and
-delegate to `this.aim` only on a granted claim.
+delegate to `this.aim` only on a granted claim. A refused claim cancels
+nothing ([The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence)).
 
 Cancellation contract — `aim.cancel()` drops both slot states but does
 **not** touch `controls.enabled` or call `observeControls.enable()`.

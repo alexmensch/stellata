@@ -162,29 +162,22 @@ namespaces in one expression routinely; that is correct, not a smell.
 
 ### The claim-the-camera sequence
 
-Three sites run the same four-step sequence when a *new user action*
-wants the camera:
-
-1. bail if warp or aim is animating (those own the camera outright),
-2. `cancelUnfocusLerp()`,
-3. `cancelFocusLerp()`,
-4. bail if an observe transition is animating.
-
-Sites: `controls/input/input-controller.ts` `onPointerUp`, `Stellata.aimAt`,
-and `Stellata.aimAtConstellation` (steps 2–4 only — it has no
-warp/aim bail).
-
-**The step order is load-bearing.** Steps 2–3 sit *between* the two
-bails, so the sequence cannot collapse into a single predicate call:
-the focus-park and unfocus lerps are **cancelled** by the incoming
-action, not blocked by it. A gate that folded them in — i.e.
-`isCameraBusy()` — would make every click self-block whenever a
+A *new user action* that wants the camera bails while warp, aim or an
+observe transition owns it, and cancels the focus-park and unfocus lerps
+(`cancelUnfocusLerp()`, `cancelFocusLerp()`). **The lerps are cancelled by
+the incoming action, never blocked by it**: a gate that folded them in —
+i.e. `isCameraBusy()` — would make every click self-block whenever a
 focus-park lerp happened to be in flight.
 
-Consolidating this sequence behind one entry point is the job of the
-intent-API seam (`focusOn` / `warpTo` / `observeFrom` / `aimAt`), not
-of the individual call sites; it is deliberately left duplicated until
-that seam lands.
+Two sites run it, in different orders:
+
+- **Aims** — `claimCameraForAim` (`controls/aim-controller.ts`), taken by
+  every shell aim. All three bails come first; the cancels run only on a
+  granted claim, so a refused aim leaves both lerps running.
+- **Clicks** — `controls/input/input-controller.ts` `onPointerUp` bails on
+  warp / aim, cancels, and only then bails on an observe transition, so a
+  click refused by the transition still cancels the lerps. Pinned by its
+  test; whether that order is wanted is open (`stellata-hhaw.32.17`).
 
 ### Verdict per input-controller gate
 
@@ -193,7 +186,7 @@ that seam lands.
 
 | Site | Shape | Verdict |
 |---|---|---|
-| `onPointerUp` | steps 1–4 above | **narrower, deliberate** — the interleaved cancels are the whole point |
+| `onPointerUp` | the click sequence above | **narrower, deliberate** — the lerps are cancelled, not blocked |
 | `dispatchSingleClick` | `blocksClick()` | 3-term; focus-park already cancelled at pointer-up |
 | `dispatchDoubleClick` | `blocksClick()` | same 3 terms — shares the one predicate |
 

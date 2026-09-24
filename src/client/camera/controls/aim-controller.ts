@@ -60,15 +60,14 @@ export interface AimClaimGates {
   cancelFocusLerp: () => void;
 }
 
-/** Take the camera for an aim, reporting whether it was free: false while
- *  warp, another aim, or an observe transition owns it. Cancels the focus
- *  lerps on the way through, so a granted claim hands the camera over with
- *  nothing else still driving it. */
+// see ../README.md#the-claim-the-camera-sequence
 export function claimCameraForAim(gates: AimClaimGates): boolean {
-  if (gates.isWarpActive() || gates.isAimActive()) return false;
+  if (gates.isWarpActive() || gates.isAimActive() || gates.isObserveTransitionActive()) {
+    return false;
+  }
   gates.cancelUnfocusLerp();
   gates.cancelFocusLerp();
-  return !gates.isObserveTransitionActive();
+  return true;
 }
 
 export class AimController {
