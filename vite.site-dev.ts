@@ -1,6 +1,7 @@
 /** Dev-only document routing: one `pnpm run dev` answers every path the deploy does. */
 
 import { readFile } from 'node:fs/promises';
+import type { ServerResponse } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
@@ -8,10 +9,17 @@ import { markdownRendition as renderMarkdown } from './scripts/site/markdown-ren
 import { legacyShareRedirect, ownedByApp } from './src/client/util/url-state/share-path-pure.ts';
 import {
   MARKDOWN_TYPE,
+  alternateLink,
   markdownRendition,
   prefersMarkdown,
+  varyWithAccept,
   wantsDocument,
 } from './src/negotiation-pure.ts';
+
+function varyOnAccept(res: ServerResponse): void {
+  const current = res.getHeader('Vary');
+  res.setHeader('Vary', varyWithAccept(current === undefined ? null : [current].flat().join(', ')));
+}
 
 export type DevRoute =
   | { kind: 'redirect'; to: string }
@@ -92,7 +100,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             if (rendition !== null && prefersMarkdown(accept)) {
               res.statusCode = status;
               res.setHeader('Content-Type', MARKDOWN_TYPE);
-              res.setHeader('Vary', 'Accept');
+              varyOnAccept(res);
               res.end(renderMarkdown(raw));
               return;
             }
@@ -108,8 +116,8 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             res.statusCode = status;
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
             if (rendition !== null) {
-              res.setHeader('Link', `<${rendition}>; rel="alternate"; type="text/markdown"`);
-              res.setHeader('Vary', 'Accept');
+              res.setHeader('Link', alternateLink(rendition));
+              varyOnAccept(res);
             }
             res.end(html);
           } catch (err) {
