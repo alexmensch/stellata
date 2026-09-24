@@ -53,11 +53,13 @@ scripts/hooks/
                            scripts/perf/arming/README.md owns the
                            design. Behaviour pinned by
                            tests/perf-guard.test.ts.
-  css-skill-guard.sh       Blocks Write / Edit / NotebookEdit against
-                           any *.css until the cube-css skill has been
-                           invoked this session; a Skill call naming it
-                           arms the session. Behaviour pinned by
-                           tests/css-skill-guard.test.ts.
+  skill-guard.sh           Blocks Write / Edit / NotebookEdit against a
+                           file a rule names until that rule's skill has
+                           been invoked this session; a Skill call naming
+                           it arms the session. Rules: *.css → cube-css;
+                           code (ts/tsx/js/mjs/cjs/py/sh/wgsl/glsl) →
+                           code-craft.
+                           Behaviour pinned by tests/skill-guard.test.ts.
   review-design-reminder.sh
                            Once a pr-review starts in a session, adds a
                            one-line reminder to every later prompt: apply
@@ -66,10 +68,11 @@ scripts/hooks/
                            `/pr-review` prompt or a Skill call naming it.
                            § How review-design-reminder works. Behaviour
                            pinned by tests/review-design-reminder.test.ts.
-  skill-name.sh            Sourced, not registered: `is_skill`, the one
-                           answer to "does this Skill call name skill X"
-                           under any scoped spelling (`x`, `prefix:x`)
-                           — a worktree-scoped listing invokes
+  skill-name.sh            Sourced, not registered: `skill_name` and
+                           `is_skill`, the one answer to "which skill
+                           does this Skill call name" under any scoped
+                           spelling (`x`, `prefix:x`) — a
+                           worktree-scoped listing invokes
                            `.claude/worktrees/<wt>:x`. Nothing after a
                            `/` counts, so a prompt opening with a path
                            ending `/pr-review` does not arm.
@@ -195,18 +198,22 @@ host's truncation banner reads as plumbing metadata. Same conclusion
 as readme-guard: the harness executing the rule beats the model
 self-checking against it.
 
-## How css-skill-guard works
+## How skill-guard works
 
-Same shape as readme-guard, one skill wide. State is a marker file at
-`${TMPDIR:-/tmp}/claude-css-skill-guard/loaded-${GUARD_SESSION:-$PPID}`,
-so a session arms once and edits freely after.
+Same shape as readme-guard, keyed on a skill instead of a folder. The rule
+table is one `case` on the edited path; each arm names the skill and what it
+carries (quoted in the denial), so a new gate is one arm. State is one
+marker per skill at
+`${TMPDIR:-/tmp}/claude-skill-guard/<skill>-${GUARD_SESSION:-$PPID}`, so a
+session arms once per skill and edits freely after.
 
 The hook sits on `Skill` as well as the edit tools, and that is the whole
-mechanism: a `Skill` call whose `skill` is `cube-css` — bare, or under a
-directory-scoped or plugin prefix — touches the marker and always passes
-through. Every other `Skill` call passes through untouched. Only then does
-an edit whose path ends `.css` find the marker and go ahead; without it the
-call is denied with the skill named.
+mechanism: every `Skill` call touches the marker for the name it invokes —
+the part after any directory-scoped or plugin prefix — and passes through.
+Only then does an edit a rule claims find its skill's marker and go ahead;
+without it the call is denied with the skill named. Arming every invoked
+name rather than only the guarded ones keeps the rule table the single list
+of which skills gate anything.
 
 The gate exists because the load looks redundant from inside the repo and
 is not. A folder README documents the **house style** — which layer each
@@ -216,11 +223,20 @@ skill, and a README describing the one reads convincingly like coverage of
 the other. A session that has read the README therefore believes it is
 already briefed.
 
+**code-craft has a second trap: the change does not look like design.**
+Its trigger names design, refactor and review, and a bug fix reads as none
+of them, so a bug-sweep session can scout, plan and draft a fix without
+the design pass. Gating at the first code edit is the last point the load
+can still shape the change. It does not reach a plan written before any
+edit, so the prose trigger still owns that.
+
 **Arming, not consent**, so it fails open the way readme-guard does: a
 hook that errors lets the call through, and the alternative — a stylesheet
 edit blocked by a broken gate — is worse than one made without the skill.
 The deny message names the marker path, so a session that genuinely needs
-to proceed creates it.
+to proceed creates it. Only cube-css offers that as an opt-out, for a
+stylesheet that is not CUBE; code-craft offers none, since "this change is
+too small for the design pass" is the excuse its gate exists to refuse.
 
 That path is also the answer to the one thing the test suite cannot
 settle, since it drives the script directly rather than through a harness:
@@ -392,7 +408,7 @@ Two paths:
    commit message (covers the README check; comment violations still
    block — fix the comments). For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
-   the `rm` isn't itself blocked. For `css-skill-guard`: invoke the
+   the `rm` isn't itself blocked. For `skill-guard`: invoke the
    skill, which is the intended route rather than an escape.
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or
