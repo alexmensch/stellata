@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Alex Marshall
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { APP_PATH, legacyShareRedirect } from './client/util/url-state/share-path-pure';
+import { APP_PATH, legacyShareRedirect, ownedByApp } from './client/util/url-state/share-path-pure';
 import { MARKDOWN_TYPE, markdownRendition, prefersMarkdown } from './negotiation-pure';
 
 // Fetcher is inlined rather than imported from @cloudflare/workers-types.
@@ -15,10 +15,6 @@ interface Fetcher {
 
 interface Env {
   ASSETS: Fetcher;
-}
-
-function ownedByApp(pathname: string): boolean {
-  return pathname === APP_PATH || pathname.startsWith(`${APP_PATH}/`);
 }
 
 /** `Accept` now changes what a page answers, so every cache between here and

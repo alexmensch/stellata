@@ -3,6 +3,7 @@ import {
   APP_PATH,
   buildSharePath,
   legacyShareRedirect,
+  ownedByApp,
   parseLegacySharePath,
   parseSharePath,
   pickShareBlob,
@@ -167,4 +168,14 @@ describe('shareBlobFrom', () => {
       expect(shareBlobFrom(input)).toBeNull();
     },
   );
+});
+
+describe('ownedByApp', () => {
+  it.each(['/app', '/app/', '/app/v/AQAA/', '/app/anything'])('claims %s', (pathname) => {
+    expect(ownedByApp(pathname)).toBe(true);
+  });
+
+  it.each(['/', '/apple', '/application', '/v/AQAA/', '/index.md'])('leaves %s to the site', (pathname) => {
+    expect(ownedByApp(pathname)).toBe(false);
+  });
 });

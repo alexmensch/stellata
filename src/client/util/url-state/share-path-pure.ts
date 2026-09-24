@@ -16,14 +16,23 @@ export const SHARE_PARAM = 'v';
 // Resolves a pasted relative path and is never read back, so any host parses.
 const SHARE_BASE = 'https://stellata.xyz';
 
-// Built from APP_PATH so the two cannot disagree. base64url's alphabet
-// (`A-Za-z0-9-_`) has no `/`, so the blob drops into one segment with no
-// escaping; the trailing slash is optional on parse.
-const SHARE_PATH_RE = new RegExp(`^${APP_PATH}/v/([A-Za-z0-9_-]+)/?$`);
+const SHARE_SEGMENT = '/v';
 
-// The path form shared before the application moved to /app, when the app
-// was the site root.
-const LEGACY_SHARE_PATH_RE = /^\/v\/([A-Za-z0-9_-]+)\/?$/;
+// base64url has no `/`, so a blob is always exactly one path segment.
+const BLOB = '[A-Za-z0-9_-]+';
+
+const SHARE_PATH_RE = new RegExp(`^${APP_PATH}${SHARE_SEGMENT}/(${BLOB})/?$`);
+const LEGACY_SHARE_PATH_RE = new RegExp(`^${SHARE_SEGMENT}/(${BLOB})/?$`);
+const BARE_BLOB_RE = new RegExp(`^${BLOB}$`);
+
+function isUnder(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+/** The path is the application's to interpret, not the site's. */
+export function ownedByApp(pathname: string): boolean {
+  return isUnder(pathname, APP_PATH);
+}
 
 export interface ShareBlobSource {
   blob: string | null;
@@ -34,7 +43,7 @@ export interface ShareBlobSource {
 }
 
 export function buildSharePath(blob: string): string {
-  return `${APP_PATH}/v/${blob}/`;
+  return `${APP_PATH}${SHARE_SEGMENT}/${blob}/`;
 }
 
 export function parseSharePath(pathname: string): string | null {
@@ -77,7 +86,7 @@ export function shareBlobFrom(input: string): string | null {
     return pickShareBlob(url.pathname, url.search).blob;
   }
   const afterParam = text.includes('=') ? text.slice(text.lastIndexOf('=') + 1) : text;
-  return /^[A-Za-z0-9_-]+$/.test(afterParam) ? afterParam : null;
+  return BARE_BLOB_RE.test(afterParam) ? afterParam : null;
 }
 
 /**
@@ -90,7 +99,7 @@ export function shareBlobFrom(input: string): string | null {
  * land on the app, which strips the bar itself (README.md#transport--canonical-path-vs-legacy-query).
  */
 export function legacyShareRedirect(pathname: string, search: string): string | null {
-  if (pathname === '/v' || pathname.startsWith('/v/')) {
+  if (isUnder(pathname, SHARE_SEGMENT)) {
     return APP_PATH + pathname + search;
   }
   if (pathname === '/' && new URLSearchParams(search).has(SHARE_PARAM)) {
