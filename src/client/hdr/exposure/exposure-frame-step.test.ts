@@ -40,7 +40,7 @@ function harness(opts: { chart?: boolean; statistic?: THREE.Texture | null; fenc
   const step = new ExposureFrameStep({
     hdr, exposure, adaptation,
     isChart: () => chart.on,
-    drawingBufferSizeInto: (out) => out.set(1920, 1080),
+    drawingBufferSizeInto: (out: THREE.Vector2) => out.set(1920, 1080),
     invalidate,
   } as unknown as ExposureFrameStepDeps);
   return {
