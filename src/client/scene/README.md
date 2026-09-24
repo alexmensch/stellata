@@ -290,11 +290,11 @@ first; the SVG `#overlay` always sits above it (`z-index: 5`,
 anchor** — a CPU answer, because no depth verdict reaches a `<text>`
 element. Without it a moon behind its planet keeps its label and a
 150 pc cloud name draws over a body 5 AU away. Inside each layer the ordering is local:
-The canvas orders by `THREE.Object3D.renderOrder`, SVG by source order in
+the canvas orders by `THREE.Object3D.renderOrder`, SVG by source order in
 `src/client/index.html` (later child = on top). The constellation
 figure is depth-tested line geometry (`renderOrder −0.75`), so
 close star and planet discs occlude it through the depth buffer — no
-SVG mask (`constellation-figure/README.md`).
+SVG mask (`../constellation-figure/README.md`).
 
 | Layer                                            | Surface | Mechanism                                          | Order | Owner |
 | ------------------------------------------------ | ------- | -------------------------------------------------- | :---: | ----- |
@@ -339,9 +339,9 @@ SVG mask (`constellation-figure/README.md`).
 | Galactic disc + coordinate spheres               | canvas  | `renderOrder: -1`                                  |       | [galactic/](../galactic/README.md), [galactic/coord-spheres/](../galactic/coord-spheres/README.md), [local-group/](../local-group/README.md) |
 | Local Bubble shell                               | canvas  | `renderOrder: -1`                                  |       | [local-bubble/](../local-bubble/README.md) |
 | Molecular cloud rim shells                       | canvas  | `renderOrder: -1`                                  |       | [molecular-clouds/](../molecular-clouds/README.md) |
-| Molecular cloud absorption                       | canvas  | `renderOrder: -2`                                  | back  | [molecular-clouds/](../molecular-clouds/README.md) |
+| Molecular cloud absorption                       | canvas  | `renderOrder: -2`                                  |       | [molecular-clouds/](../molecular-clouds/README.md) |
 | Milky Way volume + Local Group emission          | canvas  | `renderOrder: -3`                                  |       | [milkyway/](../milkyway/README.md), [local-group/](../local-group/README.md) |
-| Star core depth-mask (depth-only)                | canvas  | `renderOrder: -4`, `colorWrite: false`             | back  | [star-pipeline/](../star-pipeline/README.md) |
+| Star core depth-mask (depth-only)                | canvas  | `renderOrder: -4`, `colorWrite: false`             |       | [star-pipeline/](../star-pipeline/README.md) |
 | Planet depth pre-stamp (depth-only)              | canvas  | `renderOrder: -4`, `colorWrite: false`             | back  | [solar-system/planets/depth-stamp/](../solar-system/planets/depth-stamp/README.md) |
 
 ### Per-layer visibility gates and tuning
