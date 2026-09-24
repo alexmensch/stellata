@@ -330,7 +330,7 @@ export class Stellata implements FrameAnchor {
   get reduction(): ReductionSeam { return this.hdr.reduction; }
   private readonly exposureFrame!: ExposureFrameStep;
 
-  readonly declutter!: SceneDeclutter;
+  readonly declutter: SceneDeclutter;
 
   private disposed = false;
   private bus = new EventBus<StellataEventMap>();
@@ -452,6 +452,20 @@ export class Stellata implements FrameAnchor {
   constructor({ canvas, catalog, kinds, webgpu }: StellataOptions) {
     this.catalog = catalog;
     this.kinds = kinds;
+    this.declutter = new SceneDeclutter({
+      pushes: [
+        {
+          milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
+          orbitRings: (on) => this.orbitRingsLayer.setPermitted(on),
+          binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
+          constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
+        },
+        ...collectKindDetailBinds(this.kinds),
+      ],
+      setMilkyWayEnabled: (on) => this.milkyway.setEnabled(on),
+      setLgEmissionEnabled: (on) => this.kinds.lg.setEmissionEnabled(on),
+      showLgEmission: () => this.filter.showLgEmission,
+    });
 
     this.webgpu = webgpu;
     this.renderer = this.webgpu.renderer;
@@ -883,20 +897,6 @@ export class Stellata implements FrameAnchor {
     this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.scene.add(this.milkyway.group);
 
-    this.declutter = new SceneDeclutter({
-      pushes: [
-        {
-          milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
-          orbitRings: (on) => this.orbitRingsLayer.setPermitted(on),
-          binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
-          constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
-        },
-        ...collectKindDetailBinds(this.kinds),
-      ],
-      setMilkyWayEnabled: (on) => this.milkyway.setEnabled(on),
-      setLgEmissionEnabled: (on) => this.kinds.lg.setEmissionEnabled(on),
-      showLgEmission: () => this.filter.showLgEmission,
-    });
     this.filters = new FilterController({
       camera: this.camera,
       uniforms: sharedUniforms,
