@@ -201,8 +201,8 @@ self-checking against it.
 ## How skill-guard works
 
 Same shape as readme-guard, keyed on a skill instead of a folder. The rule
-table is `required_skill` (path pattern → skill) and `why` (what that skill
-carries, quoted in the denial); a new gate is one arm in each. State is one
+table is one `case` on the edited path; each arm names the skill and what it
+carries (quoted in the denial), so a new gate is one arm. State is one
 marker per skill at
 `${TMPDIR:-/tmp}/claude-skill-guard/<skill>-${GUARD_SESSION:-$PPID}`, so a
 session arms once per skill and edits freely after.
