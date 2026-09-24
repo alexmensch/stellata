@@ -402,21 +402,32 @@ a third would be a third:
   (`../../star-pipeline/star-frame/README.md`), so the march and the gate
   follow the stars over the ±5,000 yr the clock reaches;
 - each landing transport chunk, because the catalogue streams and attach
-  happens on the first one (`../../loaders/README.md` § Progressive catalog
+  waits on the dust manifest, not on the catalogue — it can land after any
+  chunk (`../../loaders/README.md` § Progressive catalog
   load). `markDirty()` is NOT enough here and the failure is silent: the
   kernel re-marches the copy it already holds, so every record past the
   attach-time prefix keeps an A_V computed from its undecoded `(0,0,0)` —
   Sol to Sol, zero extinction — until a bucket crossing happens to re-pack
   it, which on an unscrubbed clock is never.
 
-The Morton order is *not* rebuilt by either: it buys memory coherence
-rather than correctness, and re-sorting costs ~21 ms of main thread per
-bucket crossing plus the re-uploads (`dispatch-order/README.md`
-§ Dispatch order). Under a
-progressive load that leaves the order keyed on an attach-time table that
-was mostly zeros, so the coherence it buys is lost for the session —
-a cost, not a wrong answer. Whether attach really lands that early, and a
-rebuild once the catalogue completes, is open in `stellata-cns.21`.
+**The Morton order is re-sorted once, by the refresh that completes the
+catalogue, and only if attach sorted a prefix.** An order keyed on a table
+still mostly zeros sorts every undecoded record onto Sol's one key, which
+forfeits the coherence the order exists for (`dispatch-order/README.md`
+§ Dispatch order) — a cost, not a wrong answer, since the tables stay
+paired. The attach-time `loadedCount` and each refresh's are what decide
+it. An epoch bucket crossing never re-sorts: ±5,000 yr of stellar motion
+is far under a voxel, and the sort costs ~21 ms of main thread plus three
+uploads.
+
+**The re-sort parks any refill in flight.** It rewrites the order table and
+the star → slot prefix of the fused refill table in place, and that table
+uploads whole — its worklist region included, so the class the compaction
+built last frame is gone before the refill kernel reads it. Parking and
+re-requesting (`refill/README.md` § The cursor) re-lists every in-frame
+star against the new slots within `REFILL_SLICES` frames. Resuming would
+march that class's zeroed entries onto star 0 and leave its own stars
+unmarched until some later request.
 
 ## Cold reads — the one behaviour that is not parity
 

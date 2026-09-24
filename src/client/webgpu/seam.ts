@@ -39,6 +39,8 @@ export interface WebGpuExtinctionPrepassSources {
    *  catalog.positions, NOT the floating-origin local buffer. */
   positions: Float32Array;
   count: number;
+  /** `catalog.loadedCount` at attach; `positions` past it is still zero. */
+  loadedCount: number;
   uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
 }
 

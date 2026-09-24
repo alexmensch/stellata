@@ -46,6 +46,7 @@ export interface WebGpuExtinctionPrepassOptions {
    *  catalog.positions, NOT the floating-origin local buffer. */
   positions: Float32Array;
   count: number;
+  loadedCount: number;
   nodes: SharedUniformNodes;
   /** The extinction slots, shared by object identity with the star layer's:
    *  one `attachDust` write reaches both the kernel and the vertex fallback
@@ -86,6 +87,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  Shares its array with the `order` buffer, so dispose has to drop both
    *  or the 1.48 MiB outlives the pass. */
   private dispatchOrder: Uint32Array | null;
+  /** Records decoded when `dispatchOrder` was sorted (README.md § What a
+   *  CACHE owes). */
+  private orderedOver: number;
   private readonly absCameraPos = uniform(new Vector3());
   private readonly viewScratch = new Matrix4();
   private lastView: Matrix4 | null = null;
@@ -113,7 +117,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private lastCamZ = Infinity;
 
   constructor({
-    renderer, positions, count, nodes, slots, uniforms, tables, compaction,
+    renderer, positions, count, loadedCount, nodes, slots, uniforms, tables, compaction,
   }: WebGpuExtinctionPrepassOptions) {
     this.renderer = renderer;
     this.mirror = new AvMirror(renderer);
@@ -132,6 +136,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     };
 
     this.dispatchOrder = mortonDispatchOrder(positions, count);
+    this.orderedOver = loadedCount;
     // vec4 slots, not vec3: WGSL has no packed vec3 in a storage buffer, and
     // an itemSize-3 attribute is the one the backend silently re-strides
     // (../README.md § One writer per buffer per submit).
@@ -201,15 +206,28 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.dirty = true;
   }
 
-  /** Re-pack the position table at the catalogue's current epoch,
-   *  reusing the Morton order (README.md § The cache gate). */
-  refreshPositions(): void {
+  /** README.md § What a CACHE owes. */
+  refreshPositions(loadedCount: number): void {
     if (this.positions === null || this.dispatchOrder === null) return;
+    if (loadedCount === this.count && this.orderedOver < this.count) {
+      this.reorder(this.dispatchOrder);
+    }
     packPositionsVec4Into(
       this.positions.array as Float32Array, this.sourcePositions, this.count,
       this.dispatchOrder);
     this.positions.needsUpdate = true;
     this.dirty = true;
+  }
+
+  /** Why this parks the flight: README.md § What a CACHE owes. */
+  private reorder(order: Uint32Array): void {
+    if (this.order === null || this.refillTable === null) return;
+    order.set(mortonDispatchOrder(this.sourcePositions, this.count));
+    this.order.needsUpdate = true;
+    (this.refillTable.array as Uint32Array).set(inverseOrder(order));
+    this.refillTable.needsUpdate = true;
+    this.orderedOver = this.count;
+    this.parkRefill();
   }
 
   countInFrame(): number | null {
