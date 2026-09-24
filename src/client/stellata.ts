@@ -1004,13 +1004,6 @@ export class Stellata implements FrameAnchor {
     this.animate();
   }
 
-  private observeAnchorRing(ps: PlanetSystem | null): number | null {
-    const flat = this.observe.observeAnchorOf('planet');
-    if (ps === null || flat === null) return null;
-    const body = this.planetBodyField.hostPlanetOf(flat);
-    return body?.hostStarIdx === ps.hostStarIdx ? body.planetIdx : null;
-  }
-
   // Push the figure's active set, skipping the rebuild when it is unchanged
   // ('state' fires on every discrete mutation, filter emits on every slider
   // drag). The selection rule itself is `selectFigures`.
@@ -1069,7 +1062,8 @@ export class Stellata implements FrameAnchor {
           window.innerHeight,
           hostPos,
           ctx.t,
-          this.observeAnchorRing(ps),
+          ps === null ? null : this.planetBodyField.planetIdxWithin(
+            ps.hostStarIdx, this.observe.observeAnchorOf('planet')),
           (planetIdx, out) => {
             if (ps === null) return false;
             const flat = this.planetBodyField.instanceIndexOf(ps.hostStarIdx, planetIdx);
