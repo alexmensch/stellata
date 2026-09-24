@@ -110,14 +110,6 @@ readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
                          session is creating, and the neighbouring cases
                          that must stay gated (unread README on disk,
                          committed folder missing one).
-review-design-reminder.test.ts
-                         Behavioural pins for
-                         scripts/hooks/review-design-reminder.sh: silent
-                         until a review starts, armed by a `/pr-review`
-                         first word or a Skill call under any scope (not a
-                         mention, not `/pr-reviewer`, not a path ending
-                         `/pr-review`), scoped to its
-                         session, never blocking, and one line long.
 sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-guard):
                          structural validity, head-snapshot
                          integrity, frozen-prefix check vs the git
