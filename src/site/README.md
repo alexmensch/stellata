@@ -1,13 +1,14 @@
 # Public content site
 
 The pages served from `stellata.xyz` that are **not** the 3D application:
-authored HTML, no framework, and one small script (§ One script). The homepage is the only one so
+authored HTML, no framework, and one small script ([One script](#one-script)). The homepage is the only one so
 far, and it is the site root — the application lives at `/app`
 (`src/client/app/README.md`).
 
 ```
 index.html   The homepage, served at /. Documented below. Its markdown
-             rendition is derived from it at build time (§ below), not
+             rendition is derived from it at build time
+             (README.md#the-markdown-rendition--how-an-agent-reads-these-pages), not
              authored — there is no `index.md` here to edit.
 404.html     Served for every unmatched path — by Cloudflare's
              not_found_handling = "404-page" (wrangler.toml) in production,
@@ -18,7 +19,7 @@ pages.ts     The page roster (+ test): each page's source and whether it has
              Worker's negotiation and the dev server's routes all derive
              from it.
 styles/      site.css, every page's stylesheet, and its README.
-replay.ts    The homepage's one script, § One script. Wires
+replay.ts    The homepage's one script, README.md#one-script. Wires
              replay-control.ts (+ test) onto every video[data-replay].
 ```
 
@@ -56,7 +57,7 @@ source path the same way Vite's emit does, so the two cannot disagree.
 
 **Routing that the tree cannot express lives in the Worker**, not here:
 the legacy share-link redirects and the app's unmatched-path fallback.
-`src/README.md` § Request routing is the authority, including why
+[Request routing](/src/README.md#request-routing) is the authority, including why
 `wrangler.toml`'s `not_found_handling` is `"404-page"`.
 
 ## Reading it in dev
@@ -128,7 +129,7 @@ the rendition.
 
 ## No JavaScript, by rule
 
-These pages ship no script beyond § One script. It is what keeps them
+These pages ship no script beyond [One script](#one-script). It is what keeps them
 instant, indexable without rendering, and readable on the browsers the
 application itself turns away — someone whose browser has no WebGPU still
 gets the whole case for the project. A page that needs interaction is a
@@ -149,7 +150,7 @@ since a button inside a link is invalid and would follow the link.
 The button shows whenever the clip is stopped — ended, paused, or refused
 autoplay, which a browser in a power-saving mode does silently and which
 only a rejected `play()` reports. A press replays the clip once from the
-start, so the § Sights rule of no `loop` and under five seconds still holds.
+start, so the [Sights](#sights--the-media-and-the-link-it-carries) rule of no `loop` and under five seconds still holds.
 
 A second script is a decision to take explicitly, not a precedent this one
 sets.
@@ -182,7 +183,8 @@ In order down the page, and the order is the argument:
    moment it reaches far enough to sit behind the heading** — which is the
    line to hold, not the number.
 2. **Readout strip** — five figures, three of them substitutions.
-3. **Start exploring** — the sights, § below. The section the page is
+3. <a id="start-exploring"></a>**Start exploring** — the sights,
+   [Sights](#sights--the-media-and-the-link-it-carries) below. The section the page is
    for. Three `.claim` articles sit among them, one claim each: a serious
    instrument for people who already know the sky · every object from a
    published catalogue, and the page says which · what the eye would see
@@ -220,8 +222,7 @@ and a section the derivation loses still does.
 Rounded prose is a different case and is still fine — the "Before you click"
 aside's "around 980,000 records" is held true by
 `tests/star-count-consistency.test.ts`, which reads this folder's pages
-among its prose surfaces. `docs/authoring-patterns.md` § The star count is
-never a literal.
+among its prose surfaces. [The star count is never a literal](/docs/authoring-patterns.md#the-star-count-is-never-a-literal).
 
 **The JSON-LD graph shares nodes with the application.** `Person` and
 `WebApplication` carry the same `@id`s and the same `description` string
@@ -232,7 +233,7 @@ bare-root form, because an `@id` is an identifier rather than an address.
 
 ## Sights — the media, and the link it carries
 
-Each sight in § Start exploring is one `.sight`: a picture (or a short
+Each sight in [Start exploring](#start-exploring) is one `.sight`: a picture (or a short
 silent loop) beside its copy, **where the picture is itself the link into
 the model at that view.** Both halves come out of one act at the machine —
 take the capture, then copy the address bar — which is what makes the

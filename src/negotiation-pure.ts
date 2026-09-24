@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /** Which rendition of a page a client asked for. `worker.ts` and
- *  `../vite.site-dev.ts` both decide it here. README.md § Request routing. */
+ *  `../vite.site-dev.ts` both decide it here. README.md#request-routing. */
 
 import { pageAt, renditionPath } from './site/pages';
 

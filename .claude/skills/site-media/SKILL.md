@@ -11,7 +11,7 @@ description: >
 
 # Site media — captures into sight slots
 
-`src/site/README.md` § Sights owns the contract and every *why* behind it:
+[Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries) owns the contract and every *why* behind it:
 the encode settings, CRF 17 rather than the usual 21, no `loop`, the
 five-second ceiling, the poster being the clip's last frame. Read it once
 per session before encoding. This file is the **procedure** — what to
@@ -22,7 +22,7 @@ sight at 15 fps beside one at 60, or one letterboxed beside one full-bleed,
 reads as a mistake before a viewer can name which. So prefer the settings
 here over a per-file judgement that looks better in isolation, and when a
 file genuinely cannot meet them, say so rather than quietly special-casing
-it — § Hand it back.
+it — [Hand it back](#hand-it-back).
 
 ## The target
 
@@ -72,7 +72,7 @@ Then: content height needed, against `width × 9/16` available.
 - **Does not fit** → **pad, don't crop.** These scenes sit on black, so
   bars are invisible and nothing is lost. Cropping a subject that fills the
   frame is the one irreversible choice here.
-- **Source is clipped already, or below ~24 fps** → § Hand it back.
+- **Source is clipped already, or below ~24 fps** → [Hand it back](#hand-it-back).
 
 ## Commands
 
@@ -119,7 +119,7 @@ gradient — thousands of moving point-stars defeat temporal prediction, and
 relaxing to CRF 23 only halves it while crushing faint stars into flicker.
 A sight clip several times the hero's size is the content, not a mistake.
 Report the number rather than quietly raising CRF: the setting is pinned in
-`src/site/README.md` § Sights for a reason, and relaxing it is the user's
+[Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries) for a reason, and relaxing it is the user's
 call.
 
 ## Hand it back
@@ -150,5 +150,5 @@ Write the rule that catches the **class**, not a note about the incident;
 the incident belongs in the commit message. Default to a pointer — restate
 only what you must know *before* you would know to look it up. Verify
 against the running tools or the repo before writing, keep the register
-terse, do not duplicate `src/site/README.md` § Sights, and say in one line
+terse, do not duplicate [Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries), and say in one line
 what changed.

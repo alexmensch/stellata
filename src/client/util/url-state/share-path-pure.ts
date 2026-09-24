@@ -1,11 +1,11 @@
 // Build / parse the canonical `/app/v/<blob>/` share-URL path form, pick the
 // blob source from a loaded URL, and map both legacy transports onto the
-// canonical one. Pure helpers — see README § Transport.
+// canonical one. Pure helpers — see README.md#transport--canonical-path-vs-legacy-query.
 
-/** The application document's own path — README § Transport. */
+/** The application document's own path — README.md#transport--canonical-path-vs-legacy-query. */
 export const APP_PATH = '/app';
 
-/** Legacy query param `?v=<blob>`, decoded forever (README § Transport). */
+/** Legacy query param `?v=<blob>`, decoded forever (README.md#transport--canonical-path-vs-legacy-query). */
 export const SHARE_PARAM = 'v';
 
 // Resolves a pasted relative path and is never read back, so any host parses.
@@ -91,7 +91,7 @@ export function shareBlobFrom(input: string): string | null {
  * legacy link that reached it some other way.
  *
  * The blob is not parsed out and rebuilt — an undecodable one still has to
- * land on the app, which strips the bar itself (README § Transport).
+ * land on the app, which strips the bar itself (README.md#transport--canonical-path-vs-legacy-query).
  */
 export function legacyShareRedirect(pathname: string, search: string): string | null {
   if (isUnder(pathname, SHARE_SEGMENT)) {

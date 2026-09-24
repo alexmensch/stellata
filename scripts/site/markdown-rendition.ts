@@ -1,6 +1,6 @@
 /** The markdown rendition of an authored site page, derived from the page's
  *  own HTML so that the two can never come to state different things.
- *  README.md § The markdown rendition. */
+ *  README.md#the-markdown-rendition. */
 
 import type { Element, ElementContent, Root } from 'hast';
 import { selectAll, select } from 'hast-util-select';
@@ -14,7 +14,7 @@ import { parseHtml } from './parse-html.ts';
 
 const DROPPED = '.holder, .skip-link';
 
-/** Closed: a tag outside it throws — README.md § The markdown rendition. */
+/** Closed: a tag outside it throws — README.md#the-markdown-rendition. */
 const VOCABULARY = new Set([
   'a',
   'article',

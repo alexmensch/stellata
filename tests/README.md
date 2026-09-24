@@ -128,8 +128,8 @@ site-claims.test.ts      No figure on a public page is a literal: each
                          still summing to it, and the reference scan
                          bounded both ways, since a pattern that matches
                          nothing and one that matches ordinary prose fail
-                         in opposite directions. `src/site/README.md`
-                         § Numbers in copy.
+                         in opposite directions.
+                         /src/site/README.md#numbers-in-copy.
 site-css-rules.test.ts   The public stylesheet answers to its container and
                          to the reader's font size, never to a viewport
                          measurement, and paints nothing it has not
@@ -148,9 +148,9 @@ site-css-rules.test.ts   The public stylesheet answers to its container and
                          the one that overflows at the 32px root WCAG
                          1.4.4's 200% text resize implies. Scans the file
                          with comments stripped, so prose naming a property
-                         cannot register as CSS. `src/site/styles/README.md`
-                         § House style, § Responsiveness has no
-                         breakpoints.
+                         cannot register as CSS.
+                         /src/site/styles/README.md#house-style,
+                         /src/site/styles/README.md#responsiveness-has-no-breakpoints.
 site-dev-routing.test.ts The dev server's routing table held against the
                          deploy's: both legacy share transports 301,
                          /app/** gets the application document, the root

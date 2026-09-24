@@ -41,7 +41,7 @@ three and the app into separate vendor chunks leaves both halves near
 `pnpm run dev` serves it at **`http://localhost:5173/app`** — and serves
 the public homepage at `/` and the 404 page for anything else, so one
 server answers the deploy's whole URL space. `vite.site-dev.ts` is the
-dev-only plugin doing that; `src/site/README.md` § Reading it in dev is the
+dev-only plugin doing that; [Reading it in dev](/src/site/README.md#reading-it-in-dev) is the
 reference.
 
 Artifacts are unaffected: `publicDir` still serves `public/` at the dev
@@ -63,8 +63,7 @@ Schema.org JSON-LD graph. **The `Person` and `WebApplication` nodes are
 shared with the homepage** — same `@id`s, same `description` string — so a
 crawler resolves one application described twice rather than two
 applications. Editing either node here means editing it in
-`src/site/index.html` in the same change; `src/site/README.md` § Numbers in
-copy carries the rule.
+`src/site/index.html` in the same change; [Numbers in copy](/src/site/README.md#numbers-in-copy) carries the rule.
 
 The `@id`s keep the bare-root form (`https://stellata.xyz/#webapp`). An
 `@id` is an identifier, not an address — it does not have to equal the
@@ -78,7 +77,7 @@ panel, modal and HUD container. Two properties a reader has to know before
 editing it:
 
 - **Source order inside `#overlay` is paint order** — later children sit on
-  top. `src/client/scene/README.md` § Full render stack is the authority on which
+  top. [Full render stack](/src/client/scene/README.md#full-render-stack--front-to-back) is the authority on which
   layer wins which pixel, and the ordering there is this file's ordering.
 - **The `<noscript>` block is the crawler and no-JavaScript fallback**, and
   it is the only prose about the project inside the application. It is not

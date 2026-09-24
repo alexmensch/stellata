@@ -1,5 +1,5 @@
 // The public stylesheet's house rules, asserted rather than described.
-// `src/site/styles/README.md` § House style, § Responsiveness has no breakpoints.
+// /src/site/styles/README.md#house-style, /src/site/styles/README.md#responsiveness-has-no-breakpoints.
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -190,7 +190,7 @@ describe('the public stylesheet keeps the CUBE cascade order', () => {
   });
 });
 
-// `src/site/styles/README.md` § House style — both pills share one hover.
+// /src/site/styles/README.md#house-style — both pills share one hover.
 describe('the filled call to action inverts the outlined one', () => {
   const ruleFor = (selector: string): { at: number; body: string } => {
     const at = CODE.indexOf(`${selector} {`);
@@ -215,7 +215,7 @@ describe('the filled call to action inverts the outlined one', () => {
 });
 
 describe('the public stylesheet uses logical properties', () => {
-  // overflow-x: the one exception, `src/site/styles/README.md` § House style.
+  // overflow-x: the one exception, /src/site/styles/README.md#house-style.
   const PHYSICAL =
     /^(width|height|(min|max)-(width|height)|top|right|bottom|left|inset|float|clear|overflow-y|(margin|padding|border)-(top|right|bottom|left)(-[a-z]+)?)$/;
 

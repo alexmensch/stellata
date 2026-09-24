@@ -1,5 +1,5 @@
 // The Worker's routing table, against a stubbed assets binding — the two
-// rules the built tree cannot express (README § Request routing).
+// rules the built tree cannot express (README.md#request-routing).
 
 import { describe, expect, it, vi } from 'vitest';
 import worker from './worker';

@@ -63,7 +63,7 @@ client reads instead of the HTML. `vite.site.config.ts` calls it at
 `generateBundle` and emits the result beside the document it renders —
 `src/site/index.html` → `dist/index.md`, served at `/index.md`.
 `src/negotiation-pure.ts` decides when `/` answers with it, and
-`src/site/README.md` § The markdown rendition is why the page has one.
+[The markdown rendition](/src/site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages) is why the page has one.
 
 **Derived, never authored beside the page.** A hand-kept markdown copy of
 the homepage is two sources for one claim, which is the defect

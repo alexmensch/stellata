@@ -10,7 +10,7 @@ import {
 
 /**
  * The VITE_ prefix, rather than `define`, because only it behaves the same
- * in dev and prod. `src/site/README.md` § Numbers in copy.
+ * in dev and prod. src/site/README.md#numbers-in-copy.
  */
 export function publishBuildEnv(root: string): void {
   process.env.VITE_APP_VERSION = JSON.parse(

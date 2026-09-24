@@ -1,4 +1,4 @@
-/** The homepage's one script: a replay button on every `video[data-replay]`. src/site/README.md § One script. */
+/** The homepage's one script: a replay button on every `video[data-replay]`. /src/site/README.md#one-script. */
 
 import { REPLAY_GLYPH, attachReplay } from './replay-control';
 

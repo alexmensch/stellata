@@ -1,4 +1,4 @@
-// src/site/README.md § Numbers in copy.
+// /src/site/README.md#numbers-in-copy.
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
