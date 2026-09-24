@@ -1091,6 +1091,7 @@ export class Stellata implements FrameAnchor {
           this.localPositions,
           ctx.camera,
           window.innerHeight,
+          this.observe.observeAnchorOf('star'),
         );
       },
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),

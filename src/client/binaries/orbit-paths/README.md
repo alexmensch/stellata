@@ -64,6 +64,17 @@ system draws, never every catalog pair.
 
   A pair whose relation the walk has not evaluated draws nothing that
   frame rather than falling back to a slot-derived guess.
+- **Observing from a member.** A star sits on its own ellipse, so OBSERVE
+  from it puts the camera on that curve; the segments through the eye are
+  near-plane clipped at `w → 0` and whip under rotation, clock paused or
+  not. `update` takes `ObserveTransition.observeAnchorOf('star')` and hides
+  just the loop through the anchor — primary or secondary, per pair, so a
+  hierarchical member loses its loop in every pair naming it — while the
+  companion's ellipse stays drawn: from Aa you see Ab's orbit, not the one
+  you ride. The size gate and the `collectSpheres` extent both read the
+  larger **drawn** ellipse, so the bracket is not sized around the hidden
+  one. The rule is shared with every line layer:
+  `../../camera/observe/README.md` § The observe anchor in line layers.
 - **Tier 2** (`has_orbit`, no measured inclination) draws too: period
   and semi-major axis are real, but the orbit plane is the galactic-Z
   fallback, so the ellipse *orientation* is not physical — size and
@@ -96,7 +107,7 @@ system draws, never every catalog pair.
   pair share one stroke and `../../util/orbit-line.ts`'s
   `makeOrbitLineLoop` + shared `ORBIT_LINE_SEGMENTS` — the same primitive
   the planet orbit rings use.
-- **On-screen-size gate.** `update` hides a pair once its larger ellipse
+- **On-screen-size gate.** `update` hides a pair once its larger drawn ellipse
   subtends less than `PATH_MIN_RADIUS_PX` (`pixelsPerRadian` /
   `angularRadiusPx` from `../../util/orbit-line.ts`), so a distant or zoomed-out
   system stops drawing sub-pixel loops — the analog of the planet rings'

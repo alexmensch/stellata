@@ -305,6 +305,8 @@ the `unfocus` kind. Each line layer asks it for the kind it draws and
 drops only the geometry through that point:
 
 - constellation figure — every segment touching the anchor star.
+- binary orbit paths — the anchor star's own ellipse, never its
+  companion's (`../../binaries/orbit-paths/README.md`).
 
 **URL state:** the OBSERVE-mode flag round-trips through the `?v=`
 blob (flags-byte bit 5), applied after camera params +
