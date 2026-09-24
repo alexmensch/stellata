@@ -351,6 +351,8 @@ Constants in `../record/catalog-pure.ts`:
 | `LMC_PM_RA_CENTRE` | 1.85 mas/yr | PM gate centre μ_α* (≈ vdM&K 2014 COM 1.910). |
 | `LMC_PM_DEC_CENTRE` | 0.20 mas/yr | PM gate centre μ_δ (≈ vdM&K 2014 COM 0.229). |
 | `LMC_PM_TOLERANCE` | 0.5 mas/yr | Per-axis tolerance around the gate centre. |
+| `LMC_PARALLAX_MAS` | 1000 / `LMC_DISTANCE_PC` ≈ 0.0202 mas | The LMC's own parallax, the zero the consistency test measures from. |
+| `LMC_PARALLAX_CONSISTENCY_SIGMA` | 10 | Errors above `LMC_PARALLAX_MAS` past which a row's own parallax refuses the snap. |
 
 `isInLmcCone(raHours, decDegrees)` evaluates the cone independently
 of the PM gate so `readStars` can count cone-membership candidates

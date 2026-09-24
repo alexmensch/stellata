@@ -589,9 +589,8 @@ export function readStars(
       }
     }
 
-    // LMC kinematic override: B-J's Galactic-density prior pulls real LMC
-    // supergiants to ~5-20 kpc instead of 49.59 kpc. Runs AFTER B-J so it
-    // overrides B-J's mis-anchored value on the same rows.
+    // Runs AFTER B-J so the LMC snap overrides B-J's mis-anchored value on the
+    // same rows.
     const raHours = dirRes.srcRaDeg / 15;
     if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
       lmcCandidates++;
