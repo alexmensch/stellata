@@ -169,11 +169,13 @@ the incoming action, never blocked by it**: a gate that folded them in —
 i.e. `isCameraBusy()` — would make every click self-block whenever a
 focus-park lerp happened to be in flight.
 
-Two sites run it, in different orders:
+Three sites run it:
 
 - **Aims** — `claimCameraForAim` (`controls/aim-controller.ts`), taken by
   every shell aim. All three bails come first; the cancels run only on a
   granted claim, so a refused aim leaves both lerps running.
+- **Warps** — `warp/warp-controller.ts` `startWarp` bails on a warp or an
+  observe transition, then cancels. It does not bail on an aim.
 - **Clicks** — `controls/input/input-controller.ts` `onPointerUp` bails on
   warp / aim, cancels, and only then bails on an observe transition, so a
   click refused by the transition still cancels the lerps. Pinned by its

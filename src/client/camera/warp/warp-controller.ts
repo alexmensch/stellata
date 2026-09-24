@@ -162,9 +162,7 @@ export class WarpController {
   }
 
   /** Per-frame tick. The integration shell dispatches here exactly when
-   *  `isActive()` is true; the controller doesn't gate on
-   *  observe-transition / aim / focus-lerp because those are mutually
-   *  exclusive with warp by construction (startWarp cancels each). */
+   *  `isActive()` is true, ahead of every other camera animation. */
   tick(nowMs: number): void {
     if (!this.state) return;
     this.updateWarp(nowMs);
@@ -239,11 +237,10 @@ export class WarpController {
     source: FocusTarget,
     dest: FocusTarget,
   ): void {
-    if (this.state) return;
     const focus = this.deps.focus;
+    if (this.state || focus.isObserveTransitionActive()) return;
     focus.cancelUnfocusLerp();
     focus.cancelFocusLerp();
-    if (focus.isObserveTransitionActive()) return;
     // Warp launched from OBSERVE: leave cameraMode='observe' for the
     // duration so search-row, mode toggle, and any mode-bound UI don't
     // flicker through navigate. The animate loop branches off the
