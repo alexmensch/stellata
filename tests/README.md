@@ -60,19 +60,16 @@ code-comment-rules.test.ts
                          numbers and [[wikilinks]], plus the 3-line
                          module-docstring cap, whose pre-existing
                          offenders sit in the sibling allowlist .txt and
-                         are meant to shrink. `.glsl` is NOT scanned, so
-                         shader comments rest on review alone.
+                         are meant to shrink.
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
-                         Every `<file>.md § <Heading>` pointer under src/,
-                         scripts/, tests/, docs/, data/, research/,
-                         .claude/skills/ plus the repo-root docs
-                         resolves to a heading that exists —
-                         the codebase's wiki links, checked. Scans .ts .js
-                         .glsl .md .py, and pins the pointer total. Grammar,
-                         resolution order and the two limits it cannot see:
-                         § Doc-pointer resolution below.
+                         Every `<file>.md § <Heading>` pointer in a
+                         git-listed .ts .md .py file resolves to a
+                         heading that exists — the codebase's wiki links,
+                         checked. Grammar, scope, resolution order and the
+                         two limits it cannot see: § Doc-pointer
+                         resolution below.
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (AGENTS.md
@@ -124,13 +121,6 @@ review-design-reminder.test.ts
                          mention, not `/pr-reviewer`, not a path ending
                          `/pr-review`), scoped to its
                          session, never blocking, and one line long.
-shader-frag-depth.test.ts
-                         gl_FragDepth roster: no shader may
-                         write frag depth (a static write defeats
-                         early-z draw-wide). Allowlist shrinks to empty
-                         when the WebGPU port lands the depth-honest
-                         redesign (star-pipeline README § Depth
-                         encoding).
 sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          § 4.5): structural validity, head-snapshot
                          integrity, frozen-prefix check vs the git
@@ -140,6 +130,9 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
+                         one describe per skill gate (cube-css, code-craft);
+                         scripts/hooks/README.md § How skill-guard works.
 star-count-consistency.test.ts
                          The catalogue's own size, stated once. Rounds the
                          BUILT header to `PROSE_ROUNDED` (artifact-backed,
@@ -159,8 +152,9 @@ three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
                          bump of the dependency range.
-tsl-frag-depth.test.ts   The frag-depth roster's TSL half — no node
-                         material may write depthNode / frag_depth. The
+tsl-frag-depth.test.ts   The frag-depth roster — no node material may
+                         write depthNode / frag_depth (a static write
+                         defeats early-z draw-wide). The
                          allowlist starts empty and should stay empty; the
                          failure message carries the two patterns that
                          replace a fragment depth write.
@@ -194,22 +188,24 @@ tsl-standin-filters.test.ts
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
                          outside src/client/webgpu/, so the ~1 MB second
-                         copy of three's core stays out of the WebGL2
+                         copy of three's core stays out of the entry
                          bundle (src/client/webgpu/README.md § Import
                          boundary).
 doc-pointer-pure.ts      Not a test — extraction, resolution and heading
                          matching for doc-pointer-resolution.test.ts.
                          Behaviour is documented in § Doc-pointer
                          resolution below, not in the module.
-walk-files.ts            Not a test — the recursive file walk the
-                         scanners above share (code-comment-rules,
-                         bundle-content, shader-frag-depth, both TSL
-                         rosters), taking `include` / `skipDir`
-                         predicates. Follows symlinked directories, which
-                         public/ carries. Also `isProductionTs`, the
-                         include predicate the three TSL scanners share:
-                         a .ts that is neither a test nor an ambient
-                         declaration. webgpu-import-boundary.test.ts keeps
+walk-files.ts            Not a test — file enumeration the scanners above
+                         share. `walkFiles` is a recursive walk taking
+                         `include` / `skipDir` predicates, and follows
+                         symlinked directories, which public/ carries.
+                         `gitFiles` is git's list (tracked, optionally
+                         untracked-but-not-ignored), for a scan whose
+                         scope is the repo rather than a folder list.
+                         Also `isProductionTs`, the include predicate the
+                         TSL scanners share: a .ts that is neither a test
+                         nor an ambient declaration.
+                         webgpu-import-boundary.test.ts keeps
                          its own broader `isClientSource` — a declaration
                          file can carry an import, so that corpus wants
                          globals.d.ts in scope.
@@ -235,15 +231,25 @@ than naming a section and are skipped.
 
 **Corpus.** Only pointers that name a file. A bare `§ 5` whose document
 is implied by context is not checked, so "every pointer resolves" means
-every pointer carrying a path. The pointer total is pinned by the suite:
-a matcher regression that stops *seeing* pointers would otherwise leave
-it green, which is the direction that reads as success.
+every pointer carrying a path.
 
-`.claude/skills` is scanned alongside the source roots — a skill cites doc
-sections in the same grammar and rots the same way when one is renamed or
-moved. The rest of `.claude` stays skipped, `worktrees/` above all: it holds
-whole checkouts, and scanning them would count every pointer again per
-worktree.
+**Scope is git's.** Every tracked or untracked-but-not-ignored file with
+a scanned extension, symlinks excluded (`CLAUDE.md` would double
+`AGENTS.md`). Tracking puts `.claude/skills` in; `.gitignore` keeps
+`worktrees/` out, so no folder list exists to drift. Untracked files
+count, so a new doc is checked before its first `git add` — and a local
+draft with a broken pointer fails the suite here while CI never sees
+it. One case per extension asserts the scan finds pointers in that
+file type, so an extension that carries none has no business in the
+list.
+
+**A blind matcher fails on synthetic input, never on the tree.** A
+regression that stops *seeing* pointers leaves the resolution check green
+by finding nothing — the direction that reads as success. Each grammar
+form therefore has its own extraction case in the suite; narrowing the
+pattern fails the case for the form it dropped. Never pin a whole-tree
+pointer count instead: every docs PR moves it, so any two branches
+touching docs conflict on the one line.
 
 **Where a path resolves.** Pointers are written root-relative and
 file-relative in the same folder, so both readings are tried: the
@@ -256,8 +262,8 @@ referring file's own directory first, then the repo root — which is how
 READMEs use for named sub-topics — ordered-list leaders included, and
 those whose closing `**` falls on the next line — and a Files roster's
 backticked module name, which is how a pointer names one file's entry.
-63 of the tree's pointers name a leader rather than a heading, so this
-is house style, not tolerance.
+Dozens of the tree's pointers name a leader rather than a heading, so
+this is house style, not tolerance.
 
 **Wrapping.** A section name wraps with the comment around it, so each
 line is joined with its successor before matching. A path wrapped at one
@@ -276,16 +282,15 @@ resolve to `## Timescales`. But:
 - **Two shared opening words are enough.** A pointer routinely names a
   heading's opening and runs straight on in prose, so the first two
   words are the citation. A rename leaving those two alone reads as a
-  truncated citation and passes. Tightening to strict prefix-only was
-  tried: it rejects 24 legitimate pointers.
+  truncated citation and passes. Strict prefix-only matching rejects
+  legitimate pointers that run on past the heading.
 - **A bold sentence can stand in for a renamed heading.** Because a
   leader is a legitimate target, prose that opens with the same two
   words is an equally legitimate one. `hdr/exposure/README.md` carries
   both an `## Adaptation` heading and a bold sentence starting
   "Adaptation is deliberately absent…", so renaming the heading would
-  not fail the guard. 104 pointers match more than one candidate this
-  way. Narrowing it would cost the leader support above, which more
-  pointers depend on than are exposed by this.
+  not fail the guard. Narrowing it would cost the leader support above,
+  which more pointers depend on than are exposed by this.
 
 ## TSL stand-in filters
 
