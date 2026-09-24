@@ -3,9 +3,9 @@
 // leaving a pointer that still reads as authoritative.
 
 import { describe, expect, it } from 'vitest';
-import { lstatSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
-import { walkFiles } from './walk-files';
+import { execFileSync } from 'node:child_process';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
+import { dirname, extname, join, relative, resolve } from 'node:path';
 import {
   citesSection,
   extractPointers,
@@ -14,42 +14,24 @@ import {
 } from './doc-pointer-pure';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_ROOTS = [
-  'src',
-  'scripts',
-  'tests',
-  'docs',
-  'data',
-  'research',
-  // Skills cite doc sections the same way and rot the same way; the rest of
-  // .claude stays skipped, worktrees above all.
-  join('.claude', 'skills'),
-];
-const SCANNED_EXT = /\.(ts|js|md|py)$/;
-const SKIP_DIRS = new Set(['node_modules', 'public', 'dist', '.git', '.claude']);
-
-// Bump deliberately, having read the diff: a drop means the extractor stopped
-// seeing pointers, which passes the resolution check by finding nothing.
-const POINTER_COUNT = 2676;
+const SCANNED_EXTS = ['.ts', '.js', '.md', '.py'];
 
 // Fixtures interpolate their § from here, so the `<path>.md §` a pointer
 // needs never appears literally and this file stays out of its own scan.
 const S = '§';
 
 function scannedFiles(): string[] {
-  const files = SCANNED_ROOTS.flatMap((root) => [
-    ...walkFiles(join(ROOT, root), {
-      include: (path) => SCANNED_EXT.test(path),
-      skipDir: (name) => SKIP_DIRS.has(name),
-    }),
-  ]);
-  // Repo-root docs and build config too. CLAUDE.md is a symlink to AGENTS.md
-  // and would double every finding in it.
-  const rootFiles = readdirSync(ROOT)
-    .filter((name) => SCANNED_EXT.test(name))
+  const listed = execFileSync(
+    'git',
+    ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+    { cwd: ROOT, encoding: 'utf8' },
+  );
+  // CLAUDE.md is a symlink to AGENTS.md and would double every finding in it.
+  return listed
+    .split('\0')
+    .filter((name) => SCANNED_EXTS.includes(extname(name)))
     .map((name) => join(ROOT, name))
-    .filter((path) => !lstatSync(path).isSymbolicLink());
-  return [...files, ...rootFiles];
+    .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());
 }
 
 describe('doc pointers resolve', () => {
@@ -62,7 +44,8 @@ describe('doc pointers resolve', () => {
     return parsed;
   };
 
-  const pointers = scannedFiles().flatMap((file) => {
+  const files = scannedFiles();
+  const pointers = files.flatMap((file) => {
     const text = readFileSync(file, 'utf-8');
     if (!text.includes('§')) return [];
     return extractPointers(text).map((pointer) => ({ file, pointer }));
@@ -84,8 +67,8 @@ describe('doc pointers resolve', () => {
     expect(failures, failures.join('\n')).toEqual([]);
   });
 
-  it(`the tree carries ${POINTER_COUNT} pointers`, () => {
-    expect(pointers.length).toBe(POINTER_COUNT);
+  it.each(SCANNED_EXTS)('the scan reaches %s files', (ext) => {
+    expect(files.some((file) => extname(file) === ext)).toBe(true);
   });
 });
 
@@ -203,6 +186,17 @@ describe('extraction across wrapped comments', () => {
 
   it('skips a pointer that names the syntax instead of a section', () => {
     expect(extractPointers(`// AGENTS.md ${S} <named section> fires the rule.`)).toEqual([]);
+    expect(extractPointers(`(\`hdr/README.md ${S} …\`)`)).toEqual([]);
+  });
+
+  it('sees a backticked path, and a numbered section through its period', () => {
+    expect(extractPointers(`# see \`docs/sid.md\` ${S} 4.5 allocation.`)).toEqual([
+      { citedPath: 'docs/sid.md', section: '4.5 allocation', line: 1 },
+    ]);
+  });
+
+  it('skips a path outside the repo', () => {
+    expect(extractPointers(`// ~/.claude/CLAUDE.md ${S} DRY and /etc/x.md ${S} Y`)).toEqual([]);
   });
 
   it('keeps a stale pointer that another pointer elsewhere merely extends', () => {

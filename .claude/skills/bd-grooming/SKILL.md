@@ -187,8 +187,8 @@ in the surviving memories, and mentions in docs and skills. Note that
 if a skill still cites it. That is the safety net for doc moves; it does not
 cover memories, which nothing checks.
 
-Run the full `pnpm test` before pushing — the pointer-count and README-size
-pins move when docs move. Verify with `bd memories` and `bd ready` afterwards:
+Run the full `pnpm test` before pushing — the README-size pins move when docs
+move. Verify with `bd memories` and `bd ready` afterwards:
 both should be meaningfully shorter and reflect actual scope.
 
 Memory writes persist to local Dolt immediately but reach the remote via

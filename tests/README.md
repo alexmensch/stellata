@@ -65,14 +65,12 @@ code-comment-rules.test.ts
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
-                         Every `<file>.md § <Heading>` pointer under src/,
-                         scripts/, tests/, docs/, data/, research/,
-                         .claude/skills/ plus the repo-root docs
-                         resolves to a heading that exists —
-                         the codebase's wiki links, checked. Scans .ts .js
-                         .glsl .md .py, and pins the pointer total. Grammar,
-                         resolution order and the two limits it cannot see:
-                         § Doc-pointer resolution below.
+                         Every `<file>.md § <Heading>` pointer in a
+                         git-tracked .ts .js .md .py file resolves to a
+                         heading that exists — the codebase's wiki links,
+                         checked. Grammar, scope, resolution order and the
+                         two limits it cannot see: § Doc-pointer
+                         resolution below.
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (AGENTS.md
@@ -235,15 +233,21 @@ than naming a section and are skipped.
 
 **Corpus.** Only pointers that name a file. A bare `§ 5` whose document
 is implied by context is not checked, so "every pointer resolves" means
-every pointer carrying a path. The pointer total is pinned by the suite:
-a matcher regression that stops *seeing* pointers would otherwise leave
-it green, which is the direction that reads as success.
+every pointer carrying a path.
 
-`.claude/skills` is scanned alongside the source roots — a skill cites doc
-sections in the same grammar and rots the same way when one is renamed or
-moved. The rest of `.claude` stays skipped, `worktrees/` above all: it holds
-whole checkouts, and scanning them would count every pointer again per
-worktree.
+**Scope is git's.** Every tracked or untracked-but-not-ignored file with
+a scanned extension, symlinks excluded (`CLAUDE.md` would double
+`AGENTS.md`). `.gitignore` already keeps `.claude/skills` in and the rest
+of `.claude` — `worktrees/` above all — out, so no folder list exists to
+drift. One case per extension asserts the scan reaches that file type.
+
+**A blind matcher fails on synthetic input, never on the tree.** A
+regression that stops *seeing* pointers leaves the resolution check green
+by finding nothing — the direction that reads as success. Each grammar
+form therefore has its own extraction case in the suite; narrowing the
+pattern fails the case for the form it dropped. Never pin a whole-tree
+pointer count instead: every docs PR moves it, so any two branches
+touching docs conflict on the one line.
 
 **Where a path resolves.** Pointers are written root-relative and
 file-relative in the same folder, so both readings are tried: the
