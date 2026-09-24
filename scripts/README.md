@@ -76,8 +76,8 @@ the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency
 
-`build:binaries`, `build:catalog` and `build:binaries-runtime` skip on a
-**content-hash stamp**, never on mtimes. Each hashes every input it reads —
+`build:binaries`, `build:catalog` and `build:binaries-runtime` — together
+`build:stamped` — skip on a **content-hash stamp**, never on mtimes. Each hashes every input it reads —
 data tables, the SID registry, every non-test module under the script folders
 it imports — and skips when that set matches `build/stamps/<step>.json` and
 every output the stamp recorded still hashes the same. The stamp is cleared
@@ -92,8 +92,9 @@ identical content leaves the catalogue skipped. Forcing a rebuild: `--force`
 on either Python step, `UPDATE_BUILD_COUNTS=1` on `build:catalog`, or delete
 the stamp.
 
-`build:clouds`, `build:local-group` and the `*-sync` mirrors are mtime-gated
-(size + mtime for the mirrors) and cost seconds cold.
+`build:clouds`, `build:local-group` and the `*-sync` mirrors — together
+`build:mtime-gated` — are mtime-gated (size + mtime for the mirrors) and cost
+seconds cold. `build:data` is `build:stamped` then `build:mtime-gated`.
 
 ## Building in a worktree
 
