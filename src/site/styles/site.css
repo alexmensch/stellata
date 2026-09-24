@@ -51,19 +51,13 @@
      out under a display heading. */
   --text-halo: 0 0 0.12em var(--halo), 0 0.04em 0.5em var(--halo);
 
-  /* Halos and washes are the palette at partial alpha, mixed from the
-     tokens rather than restated, so design-tokens.css stays the only place
-     a colour of both surfaces is written. */
   --halo: color-mix(in srgb, var(--bg) 88%, transparent);
   --wash-accent: color-mix(in srgb, var(--accent) 9%, transparent);
   --wash-accent-faint: color-mix(in srgb, var(--accent) 5%, transparent);
   --selection-bg: color-mix(in srgb, var(--accent) 22%, transparent);
   --pill-bg: color-mix(in srgb, var(--bg) 85%, transparent);
-  /* Belongs to this surface only, so it is defined here. */
   --bg-sunken: #04060d;
 
-  /* What one column wants before a composition stacks. Configuration, not
-     scale steps — named here so no rule carries a bare length. */
   --switcher-item: 16rem;
   --switcher-item-sight: 20rem;
   --switcher-item-requirement: 15rem;
@@ -81,8 +75,6 @@
   --layer-masthead: 1;
   --layer-skip-link: 2;
 
-  /* Leading, tracking and weight are named sets like the sizes are, so the
-     visual language changes in one place rather than per rule. */
   --leading-body: 1.6;
   --leading-flat: 1.12;
   --leading-tight: 1.25;
@@ -151,8 +143,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Every vertical gap on these pages comes from .flow, so no element brings
-   a margin of its own to argue with it. */
 h1,
 h2,
 h3,
@@ -232,8 +222,6 @@ video {
   padding-block: var(--region-space, var(--space-xl-2xl));
 }
 
-/* Vertical rhythm belongs to one rule, so no block ever needs a bespoke
-   margin: an element sets --flow-space to change the gap above itself. */
 .flow > * + * {
   margin-block-start: var(--flow-space, var(--space-m));
 }
@@ -247,10 +235,7 @@ video {
   --flow-space: var(--space-s);
 }
 
-/* Alignment and spacing are channels so a block configures this cluster
-   instead of declaring a flex-wrap rule of its own: a second flex-wrap in
-   this file is a duplicate cluster, not a new composition. The states
-   declare directly rather than through the channels, so they cannot
+/* States declare directly rather than through the channels, so they cannot
    inherit into a nested cluster. */
 .cluster {
   display: flex;
@@ -264,13 +249,7 @@ video {
   gap: var(--cluster-space-tight);
 }
 
-/* Every Layout's switcher: two-up above --switcher-threshold and stacked
-   below it, decided by the CONTAINER's width rather than the viewport's.
-   The multiplier forces the calc negative — and so the basis to 100% —
-   the moment the container is narrower than the threshold. Not a magic
-   number to tidy: any smaller value stops the flip working.
-   The threshold is derived from what one column needs, so changing the
-   column minimum or the item count moves the switch point with it. */
+/* --switcher-flip is not a number to tidy — README.md § Responsiveness. */
 .switcher {
   --switcher-items: 2;
   --switcher-threshold: calc(
@@ -312,9 +291,6 @@ video {
 }
 
 /* ── Block: banner ─────────────────────────────────────────────────── */
-/* The masthead rides over the hero image so the imagery is the first thing
-   on the page. It carries its legibility in the glyphs' own halo rather than
-   in a scrim, because nothing over the hero may dim the hero. */
 
 .banner {
   position: relative;
@@ -344,10 +320,7 @@ video {
   overflow: hidden;
   background: var(--hero-wash), var(--bg);
 }
-/* The media's bottom edge dissolves into the page ground so the hero has no
-   seam against the band below it. Reaches --hero-fade up and no further:
-   this reads as the frame ending, and the moment it climbs far enough to sit
-   behind the copy it has become the scrim this hero does without. */
+/* Never tall enough to sit behind the copy — ../README.md § The homepage's shape. */
 .hero-media::after {
   content: '';
   position: absolute;
@@ -371,10 +344,6 @@ video {
   padding-block: var(--space-xl) var(--space-l-xl);
   text-shadow: var(--text-halo);
 }
-/* The halo is for glyphs meeting the imagery, so anything bringing its own
-   ground is exempt — the pill's fill already separates its label, and the
-   halo only muddies it. Exempting rather than listing the elements that
-   take the halo: new copy over the media then arrives protected. */
 .hero-copy .pill {
   text-shadow: none;
 }
@@ -383,16 +352,12 @@ video {
 }
 
 /* ── Block: readout ────────────────────────────────────────────────── */
-/* Hairlines come from a one-pixel grid gap showing the border colour
-   through, so dividers stay exact however the cells wrap. */
 
 .readout-band {
   --region-space: var(--space-l);
 }
 .readout {
   display: grid;
-  /* min() so a track collapses instead of overflowing: a rem minimum grows
-     with the reader's font size while the viewport does not. */
   grid-template-columns: repeat(
     auto-fit,
     minmax(min(var(--readout-item), 100%), 1fr)
@@ -401,10 +366,7 @@ video {
   background: var(--border);
   border: var(--rule);
 }
-/* A cell subgrids the band's two rows, so a label that wraps to two lines
-   raises every value in that band rather than dropping its own. The label
-   carries the separation below itself, because a subgridded axis takes its
-   gutter from the parent — here the hairline. */
+/* No row gap on the cell: README.md § Responsiveness has no breakpoints. */
 .readout-cell {
   display: grid;
   grid-row: span 2;
@@ -446,11 +408,6 @@ video {
 }
 
 /* ── Block: sight ──────────────────────────────────────────────────── */
-/* The observing list, media-led: the image IS the link into the model at
-   that view, so the whole plate is the anchor. Alternate sides by
-   reversing the flex direction — the switcher wraps to one line per item
-   below its threshold, where a reversed row still stacks in DOM order, so
-   the media never lands under its own caption. */
 
 .sights > * {
   --flow-space: var(--space-xl);
@@ -481,8 +438,7 @@ video {
 .sight-media > video {
   inline-size: 100%;
 }
-/* Built by ../replay.ts beside the media anchor, never inside it —
-   ../README.md § One script. */
+/* Built by ../replay.ts. */
 .replay-frame {
   position: relative;
 }
@@ -508,8 +464,6 @@ video {
 }
 
 /* ── Block: plate ──────────────────────────────────────────────────── */
-/* Figures are numbered plates, captioned like an atlas rather than a
-   screenshot with a caption. */
 
 .plate img {
   border: var(--rule);
@@ -522,9 +476,6 @@ video {
   color: var(--fg-dim);
 }
 
-/* The stand-in a real capture replaces. Deliberately unlovely: a dashed
-   hairline says "not final" where a styled empty box would ship unnoticed.
-   ../README.md § Sights carries the swap. */
 /* Sized by min-block-size rather than aspect-ratio: a ratio box clips its
    own instructions at narrow widths, and a real <img width height> brings
    its own ratio when it lands. */
@@ -546,8 +497,6 @@ video {
 }
 
 /* ── Block: pill ───────────────────────────────────────────────────── */
-/* The app's warp pill, at reading size — the one rounded thing in a square
-   interface, which is what makes it read as the action rather than a panel. */
 
 .pill {
   padding-block: var(--space-2xs);
@@ -575,9 +524,6 @@ video {
 }
 
 /* ── Block: prose ──────────────────────────────────────────────────── */
-/* The named text treatments. Blocks rather than utilities because each
-   carries a state or a descendant rule, and a utility is a final
-   adjustment nothing may override. */
 
 .label {
   display: block;
@@ -599,7 +545,6 @@ video {
   line-height: var(--leading-snug);
 }
 
-/* Secondary text: every block's small, dimmed prose. */
 .aside,
 .claim p,
 .sight-copy p,
@@ -615,7 +560,6 @@ video {
 }
 
 /* ── Block: skip link ──────────────────────────────────────────────── */
-/* Clipped rather than pushed off-screen, so there is no magic offset. */
 
 .skip-link {
   position: absolute;
@@ -727,8 +671,6 @@ video {
 }
 
 /* ── Block: not found ──────────────────────────────────────────────── */
-/* Short page, so it centres in the viewport rather than sitting under the
-   masthead with a screen of nothing below it. */
 
 .notfound {
   display: flex;
@@ -743,10 +685,6 @@ video {
 }
 
 /* ── Utilities ──────────────────────────────────────────────────────── */
-/* The last layer, and !important by design: a utility is a final
-   adjustment nothing before it may override. Anything a block must be able
-   to override belongs in the block layer instead — which is why the named
-   text treatments above are blocks. */
 
 .wrapper {
   max-inline-size: var(--column) !important;
