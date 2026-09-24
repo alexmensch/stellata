@@ -76,7 +76,7 @@ const SRC_GLIESE = resolve(ROOT, 'data/gliese/gliese_v70a.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
 const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 
-/** Every file a readStars walk reads — the mtime set an artifact derived
+/** Every file a readStars walk reads — the input set an artifact derived
  *  from that walk must invalidate against. */
 export const READ_STARS_INPUT_PATHS: readonly string[] = [
   MEMBERSHIP_MANIFEST_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
