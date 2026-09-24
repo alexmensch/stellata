@@ -103,8 +103,11 @@ switches on the *viewport* is wrong for every element that isn't the width
 of the viewport. Three mechanisms replace them.
 
 - **`.flow`** owns all vertical rhythm through one owl selector. An element
-  changes the gap *above itself* by setting `--flow-space`; nothing sets a
-  bespoke margin.
+  changes the gap *above itself* by setting `--flow-space`, and a container
+  changes its children's gaps with `X > * { --flow-space: … }`; nothing sets
+  a bespoke margin. **`--flow-space` is registered `inherits: false`**, so a
+  value set on a container itself does nothing — without that, it reached
+  every nested `.flow`'s children too.
 
   **A missing gap has two causes, and the second is the likely one.** Either
   the container lacks `.flow` — visible, and the fix is obvious — or a block

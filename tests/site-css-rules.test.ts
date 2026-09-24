@@ -161,6 +161,10 @@ describe('the public stylesheet keeps the CUBE cascade order', () => {
     ).toEqual([]);
   });
 
+  it('keeps --flow-space from inheriting into a nested .flow', () => {
+    expect(CODE).toMatch(/@property --flow-space\s*\{[^}]*inherits:\s*false/);
+  });
+
   it('marks every utility declaration !important', () => {
     const layer = CODE.slice(CODE.indexOf('.wrapper'));
     const plain = [...layer.matchAll(/\n\s{2}([a-z-]+\s*:[^;]+);/g)]

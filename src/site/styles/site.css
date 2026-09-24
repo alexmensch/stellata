@@ -99,6 +99,13 @@
 
 /* ── Global ─────────────────────────────────────────────────────────── */
 
+/* Read on the child .flow spaces, so a value set on a container must not
+   reach a nested .flow's children. Set it on `X > *`, never on X. */
+@property --flow-space {
+  syntax: '*';
+  inherits: false;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -418,8 +425,6 @@ video {
   --region-space: var(--space-l-xl);
 }
 .section-head {
-  --flow-space: var(--space-2xs);
-
   max-inline-size: var(--measure-short);
 }
 
@@ -445,7 +450,7 @@ video {
    below its threshold, where a reversed row still stacks in DOM order, so
    the media never lands under its own caption. */
 
-.sights {
+.sights > * {
   --flow-space: var(--space-xl);
 }
 .sight {
@@ -457,9 +462,10 @@ video {
   flex-direction: row-reverse;
 }
 .sight-copy {
-  --flow-space: var(--space-s);
-
   max-inline-size: var(--measure-medium);
+}
+.sight-copy > * {
+  --flow-space: var(--space-s);
 }
 .sight-copy p {
   font-size: var(--step--1);
@@ -725,9 +731,10 @@ a.sight-media:hover {
 .requirements {
   --switcher-item: var(--switcher-item-requirement);
 }
-.requirement {
+.requirement > * {
   --flow-space: var(--space-2xs);
-
+}
+.requirement {
   padding-block-start: var(--space-xs);
   border-block-start: var(--hairline) solid var(--border-strong);
 }
