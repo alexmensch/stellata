@@ -69,7 +69,7 @@
     "build:layers": "pnpm run build:binaries-runtime && pnpm run build:mtime-gated",
     "build:data": "pnpm run build:stamped && pnpm run build:mtime-gated",
     "build": "pnpm run build:data && pnpm run build:client",
-    "build:latest": "bash scripts/build-latest.sh",
+    "build:seed": "bash scripts/build-seed.sh",
     "dev": "pnpm run build:data && vite",
     "check:asset-sizes": "tsx scripts/release/check-asset-sizes.ts",
     "deploy": "pnpm run build && pnpm run check:asset-sizes && wrangler deploy",

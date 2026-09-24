@@ -291,15 +291,16 @@ Run it from the main checkout with Bash `run_in_background: true`, after
 everything above has finished:
 
 ```bash
-pnpm run build:latest
+pnpm run build:seed
 ```
 
-`build:latest` stops a build another landing already started in the main
-checkout, so concurrent `/pr-cleanup` runs never build side by side
-(`scripts/README.md` § Superseding builds).
+`build:seed` builds only the stamped steps worktrees are seeded from, and
+stops a build another landing already started in the main checkout, so
+concurrent `/pr-cleanup` runs never build side by side (`scripts/README.md`
+§ Seeding builds).
 
 Report the landing without waiting on it. When the background task exits,
-report its exit status. `superseded by a newer build:latest` with exit 0 is
+report its exit status. `superseded by a newer build:seed` with exit 0 is
 a newer landing taking over, not a failure. Any other non-zero exit means
 main's artifacts are stale or partial, so name the failing step — never retry
 it on your own.
