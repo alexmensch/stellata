@@ -452,7 +452,7 @@ that marked a frame row carries its confirming run's table too
 The `perf-section-guard` workflow fails the PR when the section is
 missing, empty, or has a `✗` without an `accepted:` line — CI has no GPU,
 so it checks the section the way `release-notes-guard` does — and the
-`pr-review` skill refuses a render-path diff without it. Naming the tier
+`stellata-pr-review` skill refuses a render-path diff without it. Naming the tier
 is for the reviewer, who is the one who can dispute it; the guard cannot
 read a reachability argument and does not try. There is no skip label: a
 change that costs nothing says why, or shows a table of `~`.
