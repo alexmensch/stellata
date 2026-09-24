@@ -22,7 +22,7 @@ export function mergeSortedByDistance(
   let b = incoming.length - 1;
   let w = end - 1;
   while (b >= 0) {
-    if (a >= 0 && dist[idx[a]] > dist[incoming[b]]) {
+    if (a >= 0 && key[a] > dist[incoming[b]]) {
       idx[w] = idx[a];
       a--;
     } else {
