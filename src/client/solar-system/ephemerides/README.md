@@ -402,7 +402,8 @@ Orbit rings + the heliopause shell are also declutter-cycle elements
 (floor `representational`) — `OrbitRingsLayer.setPermitted` /
 `Heliopause.setPermitted` AND into `group.visible` alongside the existing
 warp / chart / focus gates, so both hide at detail level `physical`
-(`../../scene/declutter/README.md`).
+(`../../scene/declutter/README.md`). The OBSERVE anchor body's own ring
+is not drawn but stays resolvable (`../../camera/observe/README.md` § The observe anchor in line layers).
 
 ## Orbital plane convention
 

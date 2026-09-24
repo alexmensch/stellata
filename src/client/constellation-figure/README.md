@@ -16,7 +16,7 @@ the constellation hull is gone and the chart-mode Latin **name** labels stay in
 - `constellation-figure-pure.ts` — `collectFigureSegmentEndpoints`: expands the
   catalog's per-constellation polylines into a flat line-segment endpoint list
   (two star indices per segment), dropping any segment that touches
-  `excludeStarIdx`. Plus `selectFigures`: the active-set + anchor rule and the
+  `excludeStarIdx`. Plus `selectFigures`: the active set, the anchor exclusion and the
   rebuild signature, so the whole decision is testable without a shell. Both
   vitest-pinned.
 - `constellation-figure-pure.test.ts` — endpoint-expansion, exclusion, and
@@ -105,31 +105,15 @@ endpoint is approaching the camera the segment's projected direction runs away,
 and it whips across the sky before collapsing to a point on arrival — the
 "lines read as noise" report. Nothing gates this WebGL layer on the observe
 transition (the `body.focus-lerping` class hides only the SVG overlay), so the
-glide draws every frame. Hence `selectFigures` keys the suppression on
-`inObserve || observeGlideActive` (`ObserveTransition.isActive` — enter/exit,
-never the navigate-mode `unfocus` kind): the mode flag alone covers entry and
-leaves the identical smear on the way out, since exit emits
-`cameraMode='navigate'` at glide *start*.
+glide draws every frame. Hence `selectFigures` excludes
+`ObserveTransition.observeAnchorOf('star')`, which spans both glides — the
+rule and why the mode flag alone is wrong live in
+`../camera/observe/README.md` § The observe anchor in line layers, along
+with the other line layers asking the same question.
 
-**The same geometry bites any line layer.** OBSERVE parks the camera on the
-focal object, so ANY line geometry with a vertex there is degenerate — and a
-curve that merely passes through the eye point is worse than one that ends
-there, because near-plane clipping makes it whip under rotation instead of
-collapsing to a point. The binary orbit paths hit exactly that: a star sits on
-its own barycentric ellipse by construction (`../binaries/orbit-paths/README.md`),
-so observing from it puts the camera on the curve (stellata-uadc.31).
-
-**A non-star anchor keeps its host's lines, and that is not a geometric
-argument.** `focus.getFocusedStar()` is null for every non-star kind, so a
-planet or probe anchor suppresses nothing. Today that is unreachable rather
-than correct: Sol is the only attached planet host and carries no figure vertex
-(figures resolve from Stellarium HIP lists, `scripts/catalog/parse/constellations.ts`).
-It is not defensible on geometry — a planet sits ~5×10⁻⁶ pc from its host
-against parsec-scale segments, so an exoplanet anchor's host lines would
-converge on the camera to within microradians and smear exactly as a star
-anchor's do. When exoplanet hosts land, the anchor has to resolve through the
-host (`focusedStar ?? focusedPlanetSystem.hostStarIdx`, which covers probes for
-free).
+A planet or probe anchor suppresses nothing here yet, which is unreachable
+rather than correct: `../camera/observe/README.md` § The observe anchor in
+line layers says why and where the host resolution has to land.
 
 ## Styling
 

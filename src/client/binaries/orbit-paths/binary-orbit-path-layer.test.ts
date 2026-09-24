@@ -5,6 +5,9 @@ import { makeRelation } from '../binary-relation-fixture';
 import { relationIndicesInBounds } from '../orbit-relation-cache';
 import { BinaryOrbitPathLayer, type RelationOffsetSource } from './binary-orbit-path-layer';
 import { fakeChromeLineMaterials as chromeLines } from '../../chrome-lines/chrome-lines-mock';
+import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
+import { RING_EXTENT_MARGIN } from '../../solar-system/local-cluster-pure';
+import { AU_PC } from '../../util/astronomy-constants';
 
 // One Kepler pair 0↔1 (q = 0.4, Tier 2 — no inclination flag). Focusing
 // star 0 puts the relation on its chain.
@@ -32,6 +35,7 @@ const LOCAL = new Float32Array([2, 0, 0, 0, 5, 0]);
 const OFFSET_R = new THREE.Vector3(-2, 5, 0);
 const BARYCENTRE = new THREE.Vector3(1.2, 2, 0);
 const VIEWPORT_H = 1000;
+const NO_ANCHOR = null;
 
 function offsetsOf(r: THREE.Vector3): RelationOffsetSource {
   return { relationOffsetPcInto: (_ri, out) => { out.copy(r); return true; } };
@@ -78,7 +82,7 @@ describe('BinaryOrbitPathLayer.update', () => {
   it('parks each pair-group at the barycentre secondary − (1−q)·R(t)', () => {
     const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
-    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, NO_ANCHOR);
     const pos = layer.group.children[0].position;
     expect(pos.x).toBeCloseTo(BARYCENTRE.x, 12);
     expect(pos.y).toBeCloseTo(BARYCENTRE.y, 12);
@@ -95,7 +99,7 @@ describe('BinaryOrbitPathLayer.update', () => {
     layer.setSystem(SINGLE, 0, ABS);
     const innerSplit = new Float32Array(LOCAL);
     innerSplit[2] -= 1;
-    layer.update(OFFSETS, innerSplit, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, innerSplit, CLOSE(), VIEWPORT_H, NO_ANCHOR);
     const pos = layer.group.children[0].position;
     expect(pos.x).toBeCloseTo(BARYCENTRE.x, 12);
     expect(pos.y).toBeCloseTo(BARYCENTRE.y, 12);
@@ -106,7 +110,7 @@ describe('BinaryOrbitPathLayer.update', () => {
   it('draws no pair when the walk has not evaluated its relation', () => {
     const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
-    layer.update(null, LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(null, LOCAL, CLOSE(), VIEWPORT_H, NO_ANCHOR);
     expect(layer.group.children[0].visible).toBe(false);
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.dispose();
@@ -115,10 +119,66 @@ describe('BinaryOrbitPathLayer.update', () => {
   it('hides a pair once its orbit shrinks below the on-screen-size gate', () => {
     const layer = new BinaryOrbitPathLayer(chromeLines());
     layer.setSystem(SINGLE, 0, ABS);
-    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, NO_ANCHOR);
     expect(layer.group.children[0].visible).toBe(true);
-    layer.update(OFFSETS, LOCAL, FAR(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, FAR(), VIEWPORT_H, NO_ANCHOR);
     expect(layer.group.children[0].visible).toBe(false);
+    layer.dispose();
+  });
+});
+
+describe('BinaryOrbitPathLayer.update — observing from a member', () => {
+  // Fixture pair: a = 1 AU (makeRelation default), e = 0, q = 0.4.
+  const PRIMARY_SEMI_PC = PAIR_Q * AU_PC;
+  const SECONDARY_SEMI_PC = (1 - PAIR_Q) * AU_PC;
+
+  function loops(layer: BinaryOrbitPathLayer): { primary: boolean; secondary: boolean } {
+    const [primary, secondary] = layer.group.children[0].children;
+    return { primary: primary.visible, secondary: secondary.visible };
+  }
+  function extentPc(layer: BinaryOrbitPathLayer, cam: THREE.PerspectiveCamera): number {
+    const out: MemberSphere[] = [];
+    layer.collectSpheres(cam, out);
+    expect(out).toHaveLength(1);
+    return out[0].radiusPc;
+  }
+
+  it('draws both loops when OBSERVE stands on no member', () => {
+    const layer = new BinaryOrbitPathLayer(chromeLines());
+    layer.setSystem(SINGLE, 0, ABS);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, NO_ANCHOR);
+    expect(loops(layer)).toEqual({ primary: true, secondary: true });
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, 99);
+    expect(loops(layer)).toEqual({ primary: true, secondary: true });
+    layer.dispose();
+  });
+
+  it('drops the primary’s own loop when observing from the primary, keeping the companion’s', () => {
+    const layer = new BinaryOrbitPathLayer(chromeLines());
+    layer.setSystem(SINGLE, 0, ABS);
+    const cam = CLOSE();
+    layer.update(OFFSETS, LOCAL, cam, VIEWPORT_H, 0);
+    expect(loops(layer)).toEqual({ primary: false, secondary: true });
+    expect(extentPc(layer, cam)).toBe(SECONDARY_SEMI_PC * RING_EXTENT_MARGIN);
+    layer.dispose();
+  });
+
+  it('drops the secondary’s own loop when observing from it, and sizes the bracket to what is left', () => {
+    const layer = new BinaryOrbitPathLayer(chromeLines());
+    layer.setSystem(SINGLE, 1, ABS);
+    const cam = CLOSE();
+    layer.update(OFFSETS, LOCAL, cam, VIEWPORT_H, 1);
+    expect(loops(layer)).toEqual({ primary: true, secondary: false });
+    expect(extentPc(layer, cam)).toBe(PRIMARY_SEMI_PC * RING_EXTENT_MARGIN);
+    layer.dispose();
+  });
+
+  it('restores the loop once the anchor clears', () => {
+    const layer = new BinaryOrbitPathLayer(chromeLines());
+    layer.setSystem(SINGLE, 0, ABS);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, 0);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, NO_ANCHOR);
+    expect(loops(layer)).toEqual({ primary: true, secondary: true });
     layer.dispose();
   });
 });
@@ -128,14 +188,14 @@ describe('BinaryOrbitPathLayer.anyOrbitRingVisible', () => {
     const layer = new BinaryOrbitPathLayer(chromeLines());
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.setSystem(SINGLE, 0, ABS);
-    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, NO_ANCHOR);
     expect(layer.anyOrbitRingVisible()).toBe(true);
     // Zoomed far out — the orbit is sub-pixel, so the focus ring should
     // take back over.
-    layer.update(OFFSETS, LOCAL, FAR(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, FAR(), VIEWPORT_H, NO_ANCHOR);
     expect(layer.anyOrbitRingVisible()).toBe(false);
     // Decluttered (representational off) hides it even when close.
-    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H);
+    layer.update(OFFSETS, LOCAL, CLOSE(), VIEWPORT_H, NO_ANCHOR);
     layer.setPermitted(false);
     expect(layer.anyOrbitRingVisible()).toBe(false);
     layer.dispose();

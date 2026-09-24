@@ -1014,8 +1014,7 @@ export class Stellata implements FrameAnchor {
       highlightCon: f.highlightCon,
       constellationCount: this.catalog.constellations.length,
       inObserve: this.focus.getCameraMode() === 'observe',
-      observeGlideActive: this.observe.isActive(),
-      focusedStar: this.focus.getFocusedStar(),
+      observeAnchorStar: this.observe.observeAnchorOf('star'),
     });
     if (sel.signature === this.conFigureSig) return;
     this.conFigureSig = sel.signature;
@@ -1063,6 +1062,8 @@ export class Stellata implements FrameAnchor {
           window.innerHeight,
           hostPos,
           ctx.t,
+          ps === null ? null : this.planetBodyField.planetIdxWithin(
+            ps.hostStarIdx, this.observe.observeAnchorOf('planet')),
           (planetIdx, out) => {
             if (ps === null) return false;
             const flat = this.planetBodyField.instanceIndexOf(ps.hostStarIdx, planetIdx);
@@ -1092,6 +1093,7 @@ export class Stellata implements FrameAnchor {
           this.localPositions,
           ctx.camera,
           window.innerHeight,
+          this.observe.observeAnchorOf('star'),
         );
       },
       recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
@@ -1366,8 +1368,8 @@ export class Stellata implements FrameAnchor {
    *  the focused host. Used by planet-labels to hide labels in lockstep
    *  with their associated rings — the body stays rendered (subject to
    *  apparent-mag visibility) regardless. */
-  isOrbitRingVisible(planetIdx: number): boolean {
-    return this.orbitRingsLayer.isOrbitRingVisible(planetIdx);
+  isOrbitRingResolvable(planetIdx: number): boolean {
+    return this.orbitRingsLayer.isOrbitRingResolvable(planetIdx);
   }
   /** Rendered disc radius (CSS px) of the focused object, any kind; 0
    *  when nothing is focused. Single source for the arrow-fade coverage

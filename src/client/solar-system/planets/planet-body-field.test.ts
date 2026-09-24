@@ -252,6 +252,18 @@ describe('PlanetBodyField lifecycle', () => {
     f.dispose();
   });
 
+  it('planetIdxWithin resolves a flat index only against its own host', () => {
+    const f = new PlanetBodyField(makeSharedUniforms());
+    f.attachHost(0, makePlanetSystem(0, 2), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
+    f.attachHost(1, makePlanetSystem(1, 3), 4.83, R_SUN_PC, new THREE.Vector3(0.5, 0, 0), 0, 0);
+    const secondOfHost1 = f.instanceIndexOf(1, 1)!;
+    expect(f.planetIdxWithin(1, secondOfHost1)).toBe(1);
+    expect(f.planetIdxWithin(0, secondOfHost1)).toBeNull();
+    expect(f.planetIdxWithin(0, f.instanceIndexOf(0, 0))).toBe(0);
+    expect(f.planetIdxWithin(0, null)).toBeNull();
+    f.dispose();
+  });
+
   it('detaching the first host compacts the buffer; the second still resolves', () => {
     const f = new PlanetBodyField(makeSharedUniforms());
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);

@@ -34,6 +34,8 @@ Public surface of `ObserveTransition`:
 - `isActive` / `isAnyActive` / `getProgress` — observer predicates;
   `isActive` excludes the `unfocus` kind so overlays gating on observe
   visibility stay steady-state-navigate during close-zoom.
+- `observeAnchorOf(kind)` — what the camera stands on, for line layers
+  (§ The observe anchor in line layers).
 - `cancelUnfocusLerp` — `FocusOps` shim for `WarpController`.
 - `cancelTransition` — used by `FocusController.setFocus`'s observe-cleanup
   branch when the focal star is changing mid-flight.
@@ -279,11 +281,58 @@ it read that as a camera move and the whole clock cadence stopped idling
 The 1 pc distance is what makes it worst: `position + forward × 1pc`
 differences two near-equal magnitudes when the camera sits about a parsec
 from the local origin looking back toward it, and the drift there measured
-~3900 ULP per tick against ~1 elsewhere. `observePinQuat` is NaN-seeded so
+~3900 ULP per tick against ~1 elsewhere. That is a float64 ULP, and it
+stays a render-gate problem only: **the serialised direction loses nothing
+to it.** The blob carries cam/tgt anchor-relative and float32, and a sweep
+of camera-from-origin 1e-9–1000 pc (0.9–1.1 pc looking back included)
+round-trips with zero error beyond the float32 floor itself — worst
+4.7e-8 rad, ~1800× under a pixel at `FOV_MIN_DEG` on a 2000 px viewport. `observePinQuat` is NaN-seeded so
 the first frame always derives, and the `'cameraMode'` handler re-seeds it
 because the transitions write `controls.target` directly — without that, a
 mode round-trip with no rotation would keep the transition's target as the
 pin.
+
+## The observe anchor in line layers
+
+OBSERVE parks the camera ON the focal object, so any line geometry with a
+vertex there, or a curve passing through that point, degenerates: a
+segment ending at the eye projects to a point, and one passing through it
+is near-plane clipped at `w → 0` and whips under rotation. The glides are
+the visible window for the first kind, since the camera closes on the
+vertex over `OBSERVE_TRANSITION_MS`
+(`../../constellation-figure/README.md` § The observe anchor).
+
+`ObserveTransition.observeAnchorOf(kind)` is the one answer to "what is
+the camera standing on": the focused hard target's index while in OBSERVE
+**or** on an enter/exit glide — exit flips the mode to navigate at glide
+*start*, so the mode alone leaves the whole pull-out unsuppressed. Never
+the `unfocus` kind. Each line layer asks it for the kind it draws and
+drops only the geometry through that point:
+
+- constellation figure — every segment touching the anchor star.
+- binary orbit paths — the anchor star's own ellipse, never its
+  companion's (`../../binaries/orbit-paths/README.md`).
+- planet and moon orbit rings — the anchor body's own ring, whose vertex 0
+  sits on the body; rings centred ON the anchor (its moons, or a host
+  star's planets) do not pass through the eye and stay drawn. The flat
+  planet index resolves to the ring through
+  `PlanetBodyField.planetIdxWithin`, same host only. The ring's hide is
+  draw-only; the body's label hides over the same window by a rule of its
+  own (`../../solar-system/planets/labels/README.md` § Labels).
+- probe trails need nothing here: the trail drops with the observed probe
+  (`../../solar-system/probes/README.md`).
+
+**A planet or probe anchor keeps its host star's lines, and that holds only
+while it is unreachable.** `observeAnchorOf('star')` is null for every
+non-star kind, so neither the host's figure segments nor its own binary
+ellipse drop. Sol is the only attached planet host, and it carries no figure
+vertex (figures resolve from Stellarium HIP lists,
+`scripts/catalog/parse/constellations.ts`) and no binary orbit. It is not
+defensible on geometry: a planet sits ~5×10⁻⁶ pc from its host, so an
+exoplanet anchor's host lines would converge on the camera to within
+microradians and smear as a star anchor's do. When exoplanet hosts land,
+the star-kind answer has to resolve through the host — here, in
+`observeAnchorOf`, so every line layer inherits it.
 
 **URL state:** the OBSERVE-mode flag round-trips through the `?v=`
 blob (flags-byte bit 5), applied after camera params +

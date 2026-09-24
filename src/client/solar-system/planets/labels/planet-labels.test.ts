@@ -1,6 +1,35 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import { createPlanetLabels } from './planet-labels';
 import type { Stellata } from '../../../stellata';
+
+interface FakeEl {
+  style: { display: string };
+  setAttribute(): void;
+  remove(): void;
+  textContent: string;
+}
+
+function withDocument<T>(group: object, run: () => T): T {
+  const prevDoc = (globalThis as { document?: unknown }).document;
+  const prevWin = (globalThis as { window?: unknown }).window;
+  (globalThis as { document?: unknown }).document = {
+    getElementById: (id: string) => (id === 'planet-labels' ? group : null),
+    createElementNS: (): FakeEl => ({
+      style: { display: '' },
+      setAttribute: () => {},
+      remove: () => {},
+      textContent: '',
+    }),
+  };
+  (globalThis as { window?: unknown }).window = { innerWidth: 800, innerHeight: 800 };
+  try {
+    return run();
+  } finally {
+    (globalThis as { document?: unknown }).document = prevDoc;
+    (globalThis as { window?: unknown }).window = prevWin;
+  }
+}
 
 describe('createPlanetLabels — sentinel-init', () => {
   it('writes display:none synchronously on init', () => {
@@ -12,19 +41,66 @@ describe('createPlanetLabels — sentinel-init', () => {
     // poison sentinel forces the write through. Same shape as the
     // heliopause first-load fix (consistency-at-the-seam §3).
     const group = { style: { display: '' } };
-    const prevDoc = (globalThis as { document?: unknown }).document;
-    (globalThis as { document?: unknown }).document = {
-      getElementById: (id: string) => (id === 'planet-labels' ? group : null),
-    };
-    try {
+    withDocument(group, () => {
       const stellata = {
         on: () => () => {},
         focus: { getFocusedPlanetSystem: () => null },
       } as unknown as Stellata;
       createPlanetLabels(stellata);
-      expect(group.style.display).toBe('none');
-    } finally {
-      (globalThis as { document?: unknown }).document = prevDoc;
-    }
+    });
+    expect(group.style.display).toBe('none');
+  });
+});
+
+describe('createPlanetLabels — the OBSERVE anchor body', () => {
+  const HOST = 0;
+  const ps = { hostStarIdx: HOST, planets: [{ name: 'Venus' }, { name: 'Earth' }] };
+  const camera = new THREE.PerspectiveCamera(60, 1, 1e-6, 10);
+  camera.position.set(0, 0, 5);
+  camera.updateMatrixWorld();
+
+  function run(observeAnchorFlat: number | null): string[] {
+    const els: FakeEl[] = [];
+    const group = { style: { display: '' }, appendChild: (el: FakeEl) => els.push(el) };
+    return withDocument(group, () => {
+      let onFrame = (): void => {};
+      const stellata = {
+        on: (ev: string, fn: () => void) => {
+          if (ev === 'frame') onFrame = fn;
+          return () => {};
+        },
+        focus: { getFocusedPlanetSystem: () => ps },
+        observe: {
+          observeAnchorOf: (kind: string) => (kind === 'planet' ? observeAnchorFlat : null),
+        },
+        kinds: {
+          planet: {
+            field: {
+              planetIdxWithin: (host: number, flat: number | null) =>
+                host === HOST ? flat : null,
+              instanceIndexOf: (_h: number, i: number) => i,
+              eclipseDimForInstance: () => 1,
+            },
+          },
+        },
+        getMonochrome: () => false,
+        detailPermits: () => true,
+        getFocusedPlanetLocalPositions: () => new Float32Array([0, 0, 0, 0.1, 0, 0]),
+        isOrbitRingResolvable: () => true,
+        camera,
+        occluders: { hides: () => false },
+      } as unknown as Stellata;
+      createPlanetLabels(stellata);
+      onFrame();
+      return els.map((e) => e.style.display);
+    });
+  }
+
+  it('labels every resolvable body when OBSERVE stands on none', () => {
+    expect(run(null)).toEqual(['', '']);
+  });
+
+  it('hides the anchor body’s label while its body is still drawn', () => {
+    expect(run(1)).toEqual(['', 'none']);
   });
 });

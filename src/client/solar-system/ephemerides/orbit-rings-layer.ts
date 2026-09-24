@@ -106,6 +106,15 @@ interface PlanetRing {
   // The geometry `master` was written from. update() compares the live
   // elements against it and rewrites only on resolvable drift.
   built: BodyOrbitGeometry;
+  // The pixel-gap verdict alone. `line.visible` also drops the OBSERVE
+  // anchor's ring, which says nothing about whether the body is on screen.
+  resolvable: boolean;
+}
+
+interface RingVisibilityGroup {
+  readonly idxs: number[];
+  readonly radii: number[];
+  readonly visible: boolean[];
 }
 
 /**
@@ -168,8 +177,9 @@ export function orbitalPlaneNormalFor(
 export function ringVisibility(
   pixelRadii: readonly number[],
   thresholdPx: number,
+  out: boolean[] = [],
 ): boolean[] {
-  const out: boolean[] = new Array(pixelRadii.length).fill(false);
+  out.length = pixelRadii.length;
   for (let i = 0; i < pixelRadii.length; i++) {
     const gapPrev = i > 0 ? pixelRadii[i] - pixelRadii[i - 1] : Infinity;
     const gapNext = i < pixelRadii.length - 1 ? pixelRadii[i + 1] - pixelRadii[i] : Infinity;
@@ -384,6 +394,8 @@ export class OrbitRingsLayer {
   // focused. Sibling of `hidden` / `mono`.
   private permitted = true;
   private readonly tmpParentRel = new THREE.Vector3();
+  private readonly visGroupByCentre = new Map<number, RingVisibilityGroup>();
+  private readonly visGroups: RingVisibilityGroup[] = [];
   // Last host renderer-local position update() received; retained so a
   // null feed (host not attached yet) keeps the rings where they were.
   private readonly hostLocal = new THREE.Vector3();
@@ -446,6 +458,7 @@ export class OrbitRingsLayer {
         parentIdx: g.parentIdx,
         semiMajorPc,
         built: g,
+        resolvable: false,
       });
     }
 
@@ -489,12 +502,18 @@ export class OrbitRingsLayer {
    * field's iLocalRel) — a moon's ring rides its parent through it, and
    * its visibility group measures camera→parent. A moon ring hides
    * whenever the offset is unavailable.
+   *
+   * `observeAnchorRing` is the planet-within-host index OBSERVE stands on;
+   * that body's own ring hides — its vertex 0 sits on the body
+   * (README.md § The polyline starts a vertex on the body), and so on the
+   * eye. ../../camera/observe/README.md § The observe anchor in line layers.
    */
   update(
     camera: THREE.PerspectiveCamera,
     viewportHeightPx: number,
     hostLocalPos: Readonly<THREE.Vector3> | null,
     t: number,
+    observeAnchorRing: number | null,
     parentRelInto?: (planetIdx: number, out: THREE.Vector3) => boolean,
   ): void {
     if (this.hidden || this.mono || !this.permitted || this.rings.length === 0) {
@@ -509,13 +528,17 @@ export class OrbitRingsLayer {
     const dHost = camera.position.distanceTo(this.hostLocal);
     // Keyed by centre body (parentIdx): a ring gaps only against others
     // sharing its centre, measured at that centre's camera distance.
-    const groups = new Map<number, { idxs: number[]; radii: number[] }>();
+    for (const g of this.visGroups) {
+      g.idxs.length = 0;
+      g.radii.length = 0;
+    }
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
       r.centre.copy(this.hostLocal);
       let dPc = dHost;
       if (r.parentIdx !== null) {
         if (!parentRelInto || !parentRelInto(r.parentIdx, this.tmpParentRel)) {
+          r.resolvable = false;
           r.line.visible = false;
           continue;
         }
@@ -523,18 +546,21 @@ export class OrbitRingsLayer {
         dPc = r.centre.distanceTo(camera.position);
       }
       const key = r.parentIdx ?? -1;
-      let group = groups.get(key);
+      let group = this.visGroupByCentre.get(key);
       if (!group) {
-        group = { idxs: [], radii: [] };
-        groups.set(key, group);
+        group = { idxs: [], radii: [], visible: [] };
+        this.visGroupByCentre.set(key, group);
+        this.visGroups.push(group);
       }
       group.idxs.push(i);
       group.radii.push(angularRadiusPx(r.semiMajorPc, dPc, pxPerRad));
     }
-    for (const g of groups.values()) {
-      const visible = ringVisibility(g.radii, RING_VISIBILITY_THRESHOLD_PX);
+    for (const g of this.visGroups) {
+      const visible = ringVisibility(g.radii, RING_VISIBILITY_THRESHOLD_PX, g.visible);
       for (let k = 0; k < g.idxs.length; k++) {
-        this.rings[g.idxs[k]].line.visible = visible[k];
+        const r = this.rings[g.idxs[k]];
+        r.resolvable = visible[k];
+        r.line.visible = visible[k] && g.idxs[k] !== observeAnchorRing;
       }
     }
     // Geometry and position passes both run after visibility, so an
@@ -563,17 +589,18 @@ export class OrbitRingsLayer {
 
   /**
    * The planet-labels overlay gates label visibility on this per-planet
-   * flag, so labels appear only when their associated ring does.
+   * flag: the ring clears the pixel-gap gate, whether or not it is drawn
+   * (the OBSERVE anchor's ring clears it and is not drawn).
    *
    * Crucially: labels follow rings, NOT body apparent-magnitude. A
    * planet whose body is below the slider cutoff still shows a label
    * if its ring is up — labels answer "what would I be seeing here,"
    * not "what am I currently rendering."
    */
-  isOrbitRingVisible(i: number): boolean {
+  isOrbitRingResolvable(i: number): boolean {
     if (this.hidden || this.mono || !this.permitted || !this.group.visible) return false;
     if (i < 0 || i >= this.rings.length) return false;
-    return this.rings[i].line.visible;
+    return this.rings[i].resolvable;
   }
 
   /**
@@ -618,5 +645,7 @@ export class OrbitRingsLayer {
       r.line.geometry.dispose();
     }
     this.rings = [];
+    this.visGroupByCentre.clear();
+    this.visGroups.length = 0;
   }
 }

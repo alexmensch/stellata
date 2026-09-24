@@ -890,6 +890,14 @@ export class PlanetBodyField {
     return { hostStarIdx: host.hostStarIdx, planetIdx: instanceIdx - host.startInstance };
   }
 
+  /** Planet-within-host index of `instanceIdx` when it belongs to
+   *  `hostStarIdx`; null for no instance or another host's body. */
+  planetIdxWithin(hostStarIdx: number, instanceIdx: number | null): number | null {
+    if (instanceIdx === null) return null;
+    const hp = this.hostPlanetOf(instanceIdx);
+    return hp?.hostStarIdx === hostStarIdx ? hp.planetIdx : null;
+  }
+
   /** Flat instance index for (host, planet-within-host), or null when
    *  the host isn't attached or the index is out of range. */
   instanceIndexOf(hostStarIdx: number, planetIdx: number): number | null {

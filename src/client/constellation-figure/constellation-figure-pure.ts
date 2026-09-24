@@ -13,11 +13,8 @@ export interface FigureSelectionInput {
   readonly highlightCon: number;
   readonly constellationCount: number;
   readonly inObserve: boolean;
-  /** `ObserveTransition.isActive` — an enter/exit glide, never navigate's
-   *  `unfocus`. */
-  readonly observeGlideActive: boolean;
-  /** Null for every non-star kind. */
-  readonly focusedStar: number | null;
+  /** `ObserveTransition.observeAnchorOf('star')`. */
+  readonly observeAnchorStar: number | null;
 }
 
 export interface FigureSelection {
@@ -27,13 +24,9 @@ export interface FigureSelection {
   readonly signature: string;
 }
 
-/** The anchor suppression spans the OBSERVE glide as well as the settled
- *  pose — README.md § The observe anchor for why the glide is the whole
- *  point. */
 export function selectFigures(input: FigureSelectionInput): FigureSelection {
   const chartActive = input.chart && input.inObserve;
-  const anchored = input.inObserve || input.observeGlideActive;
-  const excludeStarIdx = anchored ? input.focusedStar : null;
+  const excludeStarIdx = input.observeAnchorStar;
   const conIndices = chartActive
     ? Array.from({ length: input.constellationCount }, (_, i) => i)
     : input.highlightCon >= 0 ? [input.highlightCon] : [];

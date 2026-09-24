@@ -23,7 +23,7 @@ import {
 // bracket z-buffer hides far-side arcs behind a resolved disc and draws
 // near-side arcs over it; before the member glow (3.5), which adds on top.
 const PATH_RENDER_ORDER = 3.2;
-// Hide a pair once its larger ellipse subtends less than this on-screen
+// Hide a pair once its larger drawn ellipse subtends less than this on-screen
 // radius: at that size the orbit no longer reads as a loop, and the focus
 // ring (24 px) takes back over as the "you are here" marker.
 const PATH_MIN_RADIUS_PX = 24;
@@ -38,16 +38,17 @@ export interface RelationOffsetSource {
 
 interface OrbitPathPair {
   readonly relationIdx: number;
+  readonly primaryIdx: number;
   readonly secondaryIdx: number;
   /** Secondary mass fraction M_s/(M_p+M_s); drives the barycentre split. */
   readonly q: number;
-  /** Larger member's ellipse semi-major (pc) — the on-screen-size proxy
-   *  for the per-frame visibility gate. */
-  readonly charSizePc: number;
-  /** Bounding radius (pc) of the pair's drawn ellipses about the
-   *  barycentre — larger member's apoapsis plus margin. Feeds the local
-   *  depth pass's slice bracket. */
-  readonly extentPc: number;
+  readonly e: number;
+  /** Each member's ellipse semi-major (pc) about the barycentre. */
+  readonly primarySemiPc: number;
+  readonly secondarySemiPc: number;
+  /** Larger DRAWN ellipse's semi-major (pc), set by `update` — the
+   *  on-screen-size gate's proxy and the extent sphere's base. */
+  drawnSemiPc: number;
   readonly group: THREE.Group;
   readonly primaryLoop: THREE.Line;
   readonly secondaryLoop: THREE.Line;
@@ -111,14 +112,16 @@ export class BinaryOrbitPathLayer {
       g.add(primaryLoop);
       g.add(secondaryLoop);
       this.group.add(g);
-      const charSizePc = Math.max(params.elements.q, 1 - params.elements.q)
-        * params.elements.a * AU_PC;
+      const aPc = params.elements.a * AU_PC;
       this.pairs.push({
         relationIdx: ri,
+        primaryIdx: r.primaryIdx,
         secondaryIdx: r.secondaryIdx,
         q: params.elements.q,
-        charSizePc,
-        extentPc: charSizePc * (1 + params.elements.e) * RING_EXTENT_MARGIN,
+        e: params.elements.e,
+        primarySemiPc: params.elements.q * aPc,
+        secondarySemiPc: (1 - params.elements.q) * aPc,
+        drawnSemiPc: 0,
         group: g,
         primaryLoop,
         secondaryLoop,
@@ -138,12 +141,16 @@ export class BinaryOrbitPathLayer {
    * The barycentre must come off the secondary's slot and the walk's own
    * `R(t)`, never the mass-weighted average of the two slots — README
    * § Anchor.
+   *
+   * `observeAnchorStar` (`ObserveTransition.observeAnchorOf('star')`)
+   * drops the loop the camera stands on — README § Observing from a member.
    */
   update(
     offsets: RelationOffsetSource | null,
     localPositions: Float32Array,
     camera: THREE.PerspectiveCamera,
     viewportHeightPx: number,
+    observeAnchorStar: number | null,
   ): void {
     if (!this.permitted || this.pairs.length === 0) {
       this.group.visible = false;
@@ -165,8 +172,16 @@ export class BinaryOrbitPathLayer {
         localPositions[sB + 1] - secondaryFrac * _offset.y,
         localPositions[sB + 2] - secondaryFrac * _offset.z,
       );
+      const primaryDrawn = observeAnchorStar !== p.primaryIdx;
+      const secondaryDrawn = observeAnchorStar !== p.secondaryIdx;
+      p.primaryLoop.visible = primaryDrawn;
+      p.secondaryLoop.visible = secondaryDrawn;
+      p.drawnSemiPc = Math.max(
+        primaryDrawn ? p.primarySemiPc : 0,
+        secondaryDrawn ? p.secondarySemiPc : 0,
+      );
       const dPc = camera.position.distanceTo(p.group.position);
-      const visible = angularRadiusPx(p.charSizePc, dPc, pxPerRad) >= PATH_MIN_RADIUS_PX;
+      const visible = angularRadiusPx(p.drawnSemiPc, dPc, pxPerRad) >= PATH_MIN_RADIUS_PX;
       p.group.visible = visible;
       if (visible) anyVisible = true;
     }
@@ -199,7 +214,7 @@ export class BinaryOrbitPathLayer {
       if (!p.group.visible) continue;
       out.push({
         distPc: camera.position.distanceTo(p.group.position),
-        radiusPc: p.extentPc,
+        radiusPc: p.drawnSemiPc * (1 + p.e) * RING_EXTENT_MARGIN,
       });
     }
   }
