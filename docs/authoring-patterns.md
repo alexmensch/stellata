@@ -156,8 +156,9 @@ moving a README section into a new folder (the § Folder READMEs split).
   and `tests/doc-pointer-resolution.test.ts` fails the suite when the slug
   no longer names a heading or `<a id>` anchor in that file, so a split or
   a heading rename breaks the build until its inbound pointers are
-  repointed. A bare `§ Heading` naming no file is unchecked. Grammar and
-  resolution: [Doc-pointer resolution](/tests/README.md#doc-pointer-resolution).
+  repointed. A markdown file citing its own section links `[words](#<slug>)`,
+  checked against its own headings. Grammar and resolution:
+  [Doc-pointer resolution](/tests/README.md#doc-pointer-resolution).
 
 Every other stale claim — a data-flow sentence, a file roster, "X doesn't
 ingest Y" — is caught by the reader or not at all.
