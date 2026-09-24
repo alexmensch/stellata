@@ -20,7 +20,7 @@ SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
 from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, input_hashes, stamp_is_current, stamp_path, write_stamp,
+    clear_stamp, file_hashes, stamp_is_current, stamp_path, write_stamp,
 )
 from scripts.util.astronomy_constants import J2000_JD  # noqa: E402
 from scripts.binaries.component_tokens import (  # noqa: E402
@@ -728,8 +728,8 @@ def run(force: bool) -> int:
             "pnpm run build:catalog first",
         )
         return 1
-    inputs = input_hashes(_iter_input_paths())
-    if not force and stamp_is_current(BINARIES_BIN_STAMP, inputs, [OUT_BIN]):
+    inputs = file_hashes(_iter_input_paths())
+    if not force and stamp_is_current(BINARIES_BIN_STAMP, inputs):
         log(
             f"{OUT_BIN.relative_to(ROOT)} up to date — skipping "
             "(use --force to rebuild)"
@@ -779,7 +779,7 @@ def run(force: bool) -> int:
             f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime"
         )
         return 1
-    write_stamp(BINARIES_BIN_STAMP, inputs)
+    write_stamp(BINARIES_BIN_STAMP, inputs, [OUT_BIN])
     return 0
 
 

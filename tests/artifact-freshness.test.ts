@@ -44,7 +44,7 @@ describe.skipIf(skip)('built-artifact coherence (public/ + build/)', () => {
       for (const input of [MULTIPLES_TSV, DEFAULT_ROW_INDEX_MAP]) {
         const current = existsSync(input) ? hashFile(input) : null;
         expect(
-          recorded?.[relative(REPO_ROOT, input)],
+          recorded?.inputs[relative(REPO_ROOT, input)],
           `public/binaries.bin was built from a different ${input} — rebuild with: ${REBUILD}`,
         ).toBe(current);
       }

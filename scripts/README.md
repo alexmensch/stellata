@@ -80,10 +80,11 @@ the PR, not the post-merge deploy.
 **content-hash stamp**, never on mtimes. Each hashes every input it reads —
 data tables, the SID registry, every non-test module under the script folders
 it imports — and skips when that set matches `build/stamps/<step>.json` and
-its outputs exist. The stamp is cleared before the build writes anything and
-rewritten only once the build's snapshot asserts pass, so a failed or
-interrupted build always reruns. Hashing the ~1.1 GB input set costs about a
-second on a warm page cache. Helpers: `util/build-stamp.ts`,
+every output the stamp recorded still hashes the same. The stamp is cleared
+before the build writes anything and rewritten only once the build's snapshot
+asserts pass, so a failed or interrupted build always reruns. Hashing the
+~1.1 GB input set plus ~100 MB of outputs costs about a second on a warm page
+cache. Helpers: `util/build-stamp.ts`,
 `util/build_stamp.py`.
 
 An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
@@ -122,4 +123,5 @@ the worktree then writes *through* the symlinks into the main checkout's
 `build:binaries-runtime` in a worktree, confirm nothing is a symlink:
 `find public -maxdepth 1 -type l`.
 
-Repairing a clobbered main checkout: `rm -rf build/stamps` there, then rebuild.
+A clobbered main checkout repairs itself: its stamps record the outputs it
+built, so the next build there sees them rewritten and rebuilds.

@@ -1,10 +1,10 @@
-import { existsSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  clearStamp, inputHashes, readStamp, stampIsCurrent, writeStamp,
+  changedSince, clearStamp, fileHashes, readStamp, stampIsCurrent, writeStamp,
 } from './build-stamp';
 
 describe('build-stamp', () => {
@@ -12,6 +12,10 @@ describe('build-stamp', () => {
   let input: string;
   let output: string;
   let stamp: string;
+
+  const write = (): void => writeStamp(stamp, fileHashes([input]), [output]);
+  const current = (...inputs: string[]): boolean =>
+    stampIsCurrent(stamp, fileHashes(inputs.length > 0 ? inputs : [input]));
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'build-stamp-'));
@@ -25,57 +29,78 @@ describe('build-stamp', () => {
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
   it('is stale with no stamp', () => {
-    expect(stampIsCurrent(stamp, inputHashes([input]), [output])).toBe(false);
+    expect(current()).toBe(false);
   });
 
-  it('is current once written for unchanged inputs', () => {
-    writeStamp(stamp, inputHashes([input]));
-    expect(stampIsCurrent(stamp, inputHashes([input]), [output])).toBe(true);
+  it('is current once written for unchanged inputs and outputs', () => {
+    write();
+    expect(current()).toBe(true);
   });
 
   it('ignores mtime: a touched input with the same content stays current', () => {
-    writeStamp(stamp, inputHashes([input]));
+    write();
     utimesSync(input, new Date(), new Date(Date.now() + 60_000));
-    expect(stampIsCurrent(stamp, inputHashes([input]), [output])).toBe(true);
+    expect(current()).toBe(true);
   });
 
   it('is stale when an input content changes', () => {
-    writeStamp(stamp, inputHashes([input]));
+    write();
     writeFileSync(input, 'a\tc\n');
-    expect(stampIsCurrent(stamp, inputHashes([input]), [output])).toBe(false);
+    expect(current()).toBe(false);
   });
 
   it('is stale when the input set grows', () => {
-    writeStamp(stamp, inputHashes([input]));
+    write();
     const extra = join(dir, 'extra.tsv');
     writeFileSync(extra, 'x');
-    expect(stampIsCurrent(stamp, inputHashes([input, extra]), [output])).toBe(false);
+    expect(current(input, extra)).toBe(false);
   });
 
   it('records an absent input as null, and its arrival as a change', () => {
     const later = join(dir, 'later.tsv');
-    const before = inputHashes([input, later]);
+    const before = fileHashes([input, later]);
     expect(Object.values(before)).toContain(null);
-    writeStamp(stamp, before);
-    expect(stampIsCurrent(stamp, inputHashes([input, later]), [output])).toBe(true);
+    writeStamp(stamp, before, [output]);
+    expect(current(input, later)).toBe(true);
     writeFileSync(later, 'x');
-    expect(stampIsCurrent(stamp, inputHashes([input, later]), [output])).toBe(false);
+    expect(current(input, later)).toBe(false);
   });
 
   it('is stale when an output is missing', () => {
-    writeStamp(stamp, inputHashes([input]));
+    write();
     rmSync(output);
-    expect(stampIsCurrent(stamp, inputHashes([input]), [output])).toBe(false);
+    expect(current()).toBe(false);
+  });
+
+  it('is stale when an output was rewritten by something other than this build', () => {
+    write();
+    writeFileSync(output, 'built by another commit');
+    expect(current()).toBe(false);
+    expect(changedSince(readStamp(stamp)!.outputs)).toHaveLength(1);
+  });
+
+  it('reads a stamp without recorded outputs as no stamp', () => {
+    mkdirSync(dirname(stamp), { recursive: true });
+    writeFileSync(stamp, JSON.stringify({ inputs: fileHashes([input]) }));
+    expect(readStamp(stamp)).toBeNull();
+    expect(current()).toBe(false);
+  });
+
+  it('refuses to stamp a missing output, or no outputs at all', () => {
+    rmSync(output);
+    expect(() => write()).toThrow(/outputs missing/);
+    expect(() => writeStamp(stamp, fileHashes([input]), [])).toThrow(/none given/);
+    expect(existsSync(stamp)).toBe(false);
   });
 
   it('keys hashes independent of argument order and duplicates', () => {
     const other = join(dir, 'other.tsv');
     writeFileSync(other, 'y');
-    expect(inputHashes([other, input, other])).toEqual(inputHashes([input, other]));
+    expect(fileHashes([other, input, other])).toEqual(fileHashes([input, other]));
   });
 
   it('clearStamp removes the stamp and tolerates its absence', () => {
-    writeStamp(stamp, inputHashes([input]));
+    write();
     clearStamp(stamp);
     expect(existsSync(stamp)).toBe(false);
     expect(readStamp(stamp)).toBeNull();

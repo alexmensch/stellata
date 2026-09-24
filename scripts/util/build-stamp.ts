@@ -11,7 +11,12 @@ import { REPO_ROOT } from './paths';
 export const STAMP_DIR = resolve(REPO_ROOT, 'build/stamps');
 
 /** Repo-relative path → sha1 of its content, or null when the file is absent. */
-export type InputHashes = Readonly<Record<string, string | null>>;
+export type FileHashes = Readonly<Record<string, string | null>>;
+
+export interface Stamp {
+  readonly inputs: FileHashes;
+  readonly outputs: FileHashes;
+}
 
 export function stampPath(name: string): string {
   return resolve(STAMP_DIR, `${name}.json`);
@@ -31,7 +36,7 @@ export function hashFile(path: string): string {
   return hash.digest('hex');
 }
 
-export function inputHashes(paths: readonly string[]): InputHashes {
+export function fileHashes(paths: readonly string[]): FileHashes {
   const hashes: Record<string, string | null> = {};
   for (const p of [...new Set(paths)].sort()) {
     hashes[relative(REPO_ROOT, p)] = existsSync(p) ? hashFile(p) : null;
@@ -39,21 +44,28 @@ export function inputHashes(paths: readonly string[]): InputHashes {
   return hashes;
 }
 
-export function readStamp(stamp: string): InputHashes | null {
+export function readStamp(stamp: string): Stamp | null {
   if (!existsSync(stamp)) return null;
-  return (JSON.parse(readFileSync(stamp, 'utf8')) as { inputs: InputHashes }).inputs;
+  const parsed = JSON.parse(readFileSync(stamp, 'utf8')) as Partial<Stamp>;
+  return parsed.inputs && parsed.outputs ? { inputs: parsed.inputs, outputs: parsed.outputs } : null;
 }
 
-function sameHashes(a: InputHashes, b: InputHashes): boolean {
+function sameHashes(a: FileHashes, b: FileHashes): boolean {
   const keys = Object.keys(a);
   return keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k]);
 }
 
-export function stampIsCurrent(
-  stamp: string, hashes: InputHashes, outputs: readonly string[],
-): boolean {
+/** Recorded paths whose content on disk no longer matches the recorded hash. */
+export function changedSince(recorded: FileHashes): string[] {
+  const current = fileHashes(Object.keys(recorded).map((p) => resolve(REPO_ROOT, p)));
+  return Object.keys(recorded).filter((p) => current[p] !== recorded[p]);
+}
+
+export function stampIsCurrent(stamp: string, inputs: FileHashes): boolean {
   const recorded = readStamp(stamp);
-  return recorded !== null && outputs.every(existsSync) && sameHashes(recorded, hashes);
+  return recorded !== null
+    && sameHashes(recorded.inputs, inputs)
+    && changedSince(recorded.outputs).length === 0;
 }
 
 /** Must run before a build writes any output, so a build that dies midway
@@ -62,7 +74,12 @@ export function clearStamp(stamp: string): void {
   rmSync(stamp, { force: true });
 }
 
-export function writeStamp(stamp: string, hashes: InputHashes): void {
+export function writeStamp(stamp: string, inputs: FileHashes, outputs: readonly string[]): void {
+  const outputHashes = fileHashes(outputs);
+  const missing = Object.keys(outputHashes).filter((p) => outputHashes[p] === null);
+  if (outputs.length === 0 || missing.length > 0) {
+    throw new Error(`writeStamp(${stamp}): outputs missing or none given: ${missing.join(', ')}`);
+  }
   mkdirSync(dirname(stamp), { recursive: true });
-  writeFileSync(stamp, `${JSON.stringify({ inputs: hashes }, null, 2)}\n`);
+  writeFileSync(stamp, `${JSON.stringify({ inputs, outputs: outputHashes }, null, 2)}\n`);
 }

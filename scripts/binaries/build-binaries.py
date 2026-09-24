@@ -20,7 +20,7 @@ sys.path.insert(0, str(SCRIPT.parents[2]))
 from scripts.refresh import refresh_lib  # noqa: E402
 from scripts.refresh.refresh_lib import assert_row_count  # noqa: E402
 from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, input_hashes, stamp_is_current, stamp_path, write_stamp,
+    clear_stamp, file_hashes, stamp_is_current, stamp_path, write_stamp,
 )
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 
@@ -510,8 +510,8 @@ def resolve_through_stage2() -> Stage2Resolution:
 
 
 def run(force: bool) -> int:
-    inputs = input_hashes(_iter_input_paths())
-    if not force and stamp_is_current(MULTIPLES_STAMP, inputs, [OUT_MULTIPLES]):
+    inputs = file_hashes(_iter_input_paths())
+    if not force and stamp_is_current(MULTIPLES_STAMP, inputs):
         log(
             f"{OUT_MULTIPLES.relative_to(ROOT)} up to date — skipping "
             "(use --force to rebuild)"
@@ -710,7 +710,10 @@ def run(force: bool) -> int:
         "Stage 7 complete. data/binaries/multiples.tsv ready for "
         "build-runtime-binaries.py."
     )
-    write_stamp(MULTIPLES_STAMP, inputs)
+    write_stamp(
+        MULTIPLES_STAMP, inputs,
+        [OUT_MULTIPLES, OUT_ASTROMETRY_REQUEST, OUT_BINDING_VERDICTS],
+    )
     return 0
 
 

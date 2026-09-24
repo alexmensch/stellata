@@ -7,15 +7,20 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from typing import Iterable, Mapping, Optional
+from typing import Iterable, Mapping, NamedTuple, Optional
 
 from scripts.util.paths import REPO_ROOT
 
 STAMP_DIR = REPO_ROOT / "build" / "stamps"
 
-InputHashes = Mapping[str, Optional[str]]
+FileHashes = Mapping[str, Optional[str]]
 
 _HASH_CHUNK_BYTES = 1 << 22
+
+
+class Stamp(NamedTuple):
+    inputs: FileHashes
+    outputs: FileHashes
 
 
 def stamp_path(name: str) -> Path:
@@ -30,22 +35,35 @@ def hash_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def input_hashes(paths: Iterable[Path]) -> dict[str, Optional[str]]:
+def file_hashes(paths: Iterable[Path]) -> dict[str, Optional[str]]:
     return {
         Path(os.path.relpath(p, REPO_ROOT)).as_posix(): hash_file(p) if p.exists() else None
         for p in sorted({p.resolve() for p in paths})
     }
 
 
-def read_stamp(stamp: Path) -> Optional[InputHashes]:
+def read_stamp(stamp: Path) -> Optional[Stamp]:
     if not stamp.exists():
         return None
-    return json.loads(stamp.read_text())["inputs"]
+    parsed = json.loads(stamp.read_text())
+    if "inputs" not in parsed or "outputs" not in parsed:
+        return None
+    return Stamp(parsed["inputs"], parsed["outputs"])
 
 
-def stamp_is_current(stamp: Path, hashes: InputHashes, outputs: Iterable[Path]) -> bool:
+def changed_since(recorded: FileHashes) -> list[str]:
+    """Recorded paths whose content on disk no longer matches the recorded hash."""
+    current = file_hashes(REPO_ROOT / p for p in recorded)
+    return [p for p in recorded if current.get(p) != recorded[p]]
+
+
+def stamp_is_current(stamp: Path, inputs: FileHashes) -> bool:
     recorded = read_stamp(stamp)
-    return recorded is not None and all(o.exists() for o in outputs) and dict(recorded) == dict(hashes)
+    return (
+        recorded is not None
+        and dict(recorded.inputs) == dict(inputs)
+        and not changed_since(recorded.outputs)
+    )
 
 
 def clear_stamp(stamp: Path) -> None:
@@ -54,6 +72,13 @@ def clear_stamp(stamp: Path) -> None:
     stamp.unlink(missing_ok=True)
 
 
-def write_stamp(stamp: Path, hashes: InputHashes) -> None:
+def write_stamp(stamp: Path, inputs: FileHashes, outputs: Iterable[Path]) -> None:
+    output_hashes = file_hashes(outputs)
+    missing = [p for p, h in output_hashes.items() if h is None]
+    if not output_hashes or missing:
+        raise RuntimeError(f"write_stamp({stamp}): outputs missing or none given: {missing}")
     stamp.parent.mkdir(parents=True, exist_ok=True)
-    stamp.write_text(json.dumps({"inputs": dict(hashes)}, indent=2, sort_keys=True) + "\n")
+    stamp.write_text(
+        json.dumps({"inputs": dict(inputs), "outputs": output_hashes}, indent=2, sort_keys=True)
+        + "\n"
+    )

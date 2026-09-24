@@ -39,12 +39,16 @@ need the same thing — single-use helpers stay with their consumer.
   manifest and the boundary-epoch cross-check is the last reader left, so the
   literal sits in that suite (`data/athyg/README.md` § Consumed by).
 - `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
-  (`../README.md` § Preprocessor idempotency): `inputHashes` maps each input's
+  (`../README.md` § Preprocessor idempotency): `fileHashes` maps each file's
   repo-relative path to its sha1, `null` when absent, so an input's arrival is
-  a change too. `stampIsCurrent` compares that map against
-  `build/stamps/<step>.json` and checks the outputs exist; `clearStamp` runs
-  before a build writes, `writeStamp` after its asserts pass, with the hashes
-  taken *before* the build. The Python sibling serves the two binaries steps
+  a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
+  the inputs, hashed *before* the build, and every output the build wrote,
+  hashed after it. `stampIsCurrent` compares the inputs against the caller's
+  and re-hashes the recorded outputs (`changedSince`), so an output rewritten
+  by anything other than this build — an older commit's build, a write
+  through a symlink, a partial copy — reads as stale. `clearStamp` runs
+  before a build writes, `writeStamp` after its asserts pass, and refuses a
+  missing output. The Python sibling serves the two binaries steps
   and writes the same JSON shape, which `tests/artifact-freshness.test.ts`
   reads from the TS side. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).

@@ -130,7 +130,7 @@ import {
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
-  clearStamp, inputHashes, stampIsCurrent, stampPath, writeStamp,
+  clearStamp, fileHashes, stampIsCurrent, stampPath, writeStamp,
 } from '../util/build-stamp';
 import { DEFAULT_ROW_INDEX_MAP } from './catalog-lookup';
 import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
@@ -170,10 +170,6 @@ const EXPECTED_OUTLIERS = resolve(
 );
 
 const CATALOG_STAMP = stampPath('catalog');
-const CATALOG_OUTPUTS = [
-  OUT_MANIFEST, OUT_CON, OUT_SEARCH, OUT_BOUNDARIES,
-  resolve(PUBLIC_DIR, catalogChunkFilename(0)), DEFAULT_ROW_INDEX_MAP,
-];
 
 function catalogInputPaths(): string[] {
   // This file is an orchestration shell — the build logic lives across the
@@ -261,8 +257,8 @@ async function main() {
   // unchanged (the snapshot assert/refresh is unreachable otherwise).
   const forceRebuild =
     process.env.UPDATE_BUILD_COUNTS === '1' || process.env.UPDATE_DISTANCE_OUTLIERS === '1';
-  const inputHashesAtStart = inputHashes(catalogInputPaths());
-  if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart, CATALOG_OUTPUTS)) {
+  const inputHashesAtStart = fileHashes(catalogInputPaths());
+  if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart)) {
     console.log('catalog.bin is up to date with its inputs; skipping rebuild.');
     return;
   }
@@ -1331,7 +1327,10 @@ async function main() {
 
   await assertOrUpdateBuildCounts(counts);
   await assertOrUpdateDistanceOutliers(stars);
-  writeStamp(CATALOG_STAMP, inputHashesAtStart);
+  writeStamp(CATALOG_STAMP, inputHashesAtStart, [
+    ...chunkBytes.map((_, i) => resolve(PUBLIC_DIR, catalogChunkFilename(i))),
+    OUT_MANIFEST, OUT_CON, OUT_BOUNDARIES, OUT_SEARCH, DEFAULT_ROW_INDEX_MAP,
+  ]);
 }
 
 async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
