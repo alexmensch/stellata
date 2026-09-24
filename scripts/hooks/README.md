@@ -393,12 +393,13 @@ Two paths:
    block — fix the comments). For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked. For `css-skill-guard`: invoke the
-   skill, which is the intended route rather than an escape. For
-   `review-design-reminder`: delete the session's `active-<session_id>`
-   marker.
+   skill, which is the intended route rather than an escape.
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or
-   temporarily move the hook script aside.
+   temporarily move the hook script aside. `review-design-reminder`
+   has two entries, under `PreToolUse` and `UserPromptSubmit`; to
+   silence it for the rest of one session without editing settings,
+   delete that session's `active-<session_id>` marker.
 
 Disabling is the right call when investigating a folder that
 genuinely has no subsystem ownership (e.g. ad-hoc scratch) — but the
