@@ -345,7 +345,7 @@ local origin — `url-state.ts`'s `anchoredPose`, which both writers read so
 they cannot disagree about what has moved. A hard focus recentres the origin
 onto the object at apply time, while the sender's own recentre fires only
 once the camera has drifted 16× the eye distance
-(`../../camera/focus/focal-ride-pure.ts`). Between two of those the
+(`../../camera/focus/focal-ride/focal-ride-pure.ts`). Between two of those the
 moving-focal ride carries camera and target along with the object: raw local
 values drift out of any frame the receiver reconstructs, and they carry
 motion the viewer cannot see, which under a scale-relative trigger is

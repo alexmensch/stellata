@@ -280,7 +280,7 @@ across its orbit; a wide binary) drags the camera tens of AU from the
 fixed focus-time origin — reviving the float32 modelview cancellation
 the floating origin exists to prevent (a growing wobble on the focal
 body). The focal anchor policy
-(`../camera/focus/focal-anchor-policy.ts`, applied by
+(`../camera/focus/focal-ride/focal-anchor-policy.ts`, applied by
 `FloatingOrigin.tick()` each frame) recentres the origin back onto the
 look target once camera-from-origin exceeds
 `FOCAL_ORIGIN_DRIFT_RATIO × eye distance` (`focal-ride-pure.ts`),

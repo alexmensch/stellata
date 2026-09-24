@@ -76,8 +76,8 @@ import {
   type BuiltKindModules,
 } from './kinds/kind-modules';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
-import { focalRideStep } from './camera/focus/focal-ride-pure';
-import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
+import { focalRideStep } from './camera/focus/focal-ride/focal-ride-pure';
+import { makeFocalAnchorPolicy } from './camera/focus/focal-ride/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
 import type { SurvivorCountsRead } from './debug/survivor-counts';
 import type { PlanetSystem } from './solar-system/planet-system';
@@ -298,7 +298,7 @@ export class Stellata implements FrameAnchor {
   // local-position delta so it stays under the camera and user pan
   // offsets survive. `_movingRideIdx` reseeds on every 'focus' event,
   // which is what makes the shared slot safe across kinds — see
-  // camera/focus/README.md#moving-focal-ride.
+  // camera/focus/focal-ride/README.md#moving-focal-ride.
   private readonly _movingRideLast = new THREE.Vector3();
   private readonly _movingRideLive = new THREE.Vector3();
   private readonly _movingRideDelta = new THREE.Vector3();
