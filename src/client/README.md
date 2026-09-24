@@ -206,33 +206,35 @@ works exactly as a lazily-attached layer does, and `dispose` clears both.
 
 `stellata.ts` is headed for wiring only — construct, connect, dispose
 (epic `stellata-hhaw.32`). Its fields fall into clusters: fields read and
-written together, plus the methods touching them. Each row leaves for the
-named folder with its tests, and **the PR that moves a cluster deletes its
-row**. The order is the bead graph's (`bd show stellata-hhaw.32`), not this
-table's. Registry entries have no names, so "entry" cells name each by what
-it updates. `tests/shell-decomposition-map.test.ts` holds the table to the
-file: every field of `Stellata` sits in exactly one row, and no row names a
-field, method or site the file no longer has. **Every bead named in this
-section leaves with the PR that closes it** — a row, a cross-row bullet, a
-clause — and the last extraction (32.15) deletes the section and its test.
+written together, plus the methods touching them. Each cluster leaves for
+the named folder with its tests; which fields and methods it takes is its
+bead's description, and the order is the bead graph's (`bd show
+stellata-hhaw.32`), not this table's.
 
-| Cluster | Fields | Methods and sites | Target | Bead |
-| --- | --- | --- | --- | --- |
-| Clock cadence | `cadence*`, `lastRenderedSimS`, `pulsationCadenceBudgetS`, `_rideAccum` | `refreshCadence`, `cadenceDebugState`, `visibleCameraTurnRad`, the dispose resets | `render-gate/cadence/` | `hhaw.32.3` |
-| Focal rides | `_focalPert`, `_lastAppliedPert`, `_rideDelta`, `_rideLive`, `_rideFocalIdx`, `_movingRide*`, `_epochFollowDelta` | `applyFocalFrameRide`, `applyMovingFocalRide`, `applyRideDelta`, `maybeReAdvanceEpoch`'s translate, both reseeds, the moving-focal-ride entry | `camera/focus/` | `hhaw.32.2` |
-| Star size + pick | `pickSizeScratch`, `passDebugScratch`, `focusables` | `renderedSizePxFor`, `renderedSizeComponentsFor`, `chartDiscPxFor`, `pickPrefilterSizePxFor`, `resolveStarPick`, `getFocusedDiscRadiusPx`, `collapsedClusterLead`, the `focusables` / `pinnable` hand lists | the kind table (`kinds/`, `camera/focus/`) | `hhaw.32.4` |
-| Binaries | `binaryOrbitField`, `eclipsePhotometryField`, `binariesData`, `binaryOrbitPathLayer`, `_compositeSuppress`, `_eclipseDim` | `attachBinaries`, `getBinaries`, `updateBinaryOrbits`, `eclipseDebugRows`, `eclipseActiveDimCount`, `isCompositeSuppressed`, the binary leg of `anyOrbitRingVisible`, the orbit-path `setSystem` focus handler, the binary-walk entry, the binaries rate | `binaries/` | `hhaw.32.5` |
-| Dust + extinction | `dust`, `extinctionPrepass`, `_extinctionView`, `extinctionRecomputeForced` | `attachDust`, `verifyDust`, `verifyExtinction`, the extinction knobs, `notifyPickImminent`, `extinctionAvMagFor`, the prepass block in `animate` | `star-pipeline/extinction/` | `hhaw.32.6` |
-| Dust particles (shelved) | `dustParticles`, `dustParticleSource`, `lastParticleStrength` | `attachDustParticles`, `setDustParticleSource`, `setParticleStrength`, the dust-particle entry | `dust/`, or removed — a product call | `hhaw.32.7` |
-| Constellations | `constellationFigureLayer`, `constellationBoundaryLayer`, `constellationLabels`, `constellationNamer`, `conFigureSig`, `tmpConstellationAbs` | `refreshConstellationFigure`, `attachConstellationBoundaries`, `constellationOf`, `aimAtConstellation`'s centroid, the figure and boundary entries | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
-| Solar-system wiring | `orbitRingsLayer`, `solarCluster`, `tmpHostLocal` | `getFocusedPlanetLocalPositions`, `isOrbitRingVisible`, the planet leg of `anyOrbitRingVisible`, the orbit-ring, planet-mesh and solar-cluster entries, the planet rate | `solar-system/` | `hhaw.32.9` |
-| Galactic + HUD | `galacticDisc`, `coordSpheres`, `tmpBound`, `tmpVec3b` | `updateHud`, `coordSphereDrawn`, `coordSphereAvailable`, the HUD arrow callbacks, the galactic-disc, coord-sphere and HUD entries | `galactic/`, `overlays/` | `hhaw.32.10` |
-| Declutter | `detailPermitted` | `detailPermits`, `buildSceneElementBinds`, `applyMilkywayEnabled`, `applyLgEmissionEnabled` | `scene/declutter/` | `hhaw.32.11` |
-| Observe look pin | `observePinQuat`, `observeTmpFwd` | `observeUpdateTarget` and its two resets | `camera/observe/` | `hhaw.32.12` |
-| Star render machinery | `starFrame`, `starAttrs`, `webgpuStarLayer`, `starLocalCluster`, `_suppressPulsation`, `absorbedSuppressCount`, `offCatalogRecords`, `coreMaskEnabled` | `absorbCatalogRecords`, `setCoreMaskVisible`, `starPassRoutingFor`, the star-frame reads and `FrameAnchor` methods (§ Public surface), the star-local-cluster and core-mask entries | `star-pipeline/` | `hhaw.32.13` |
-| Per-frame exposure | `lastInvalidatedDm`, `frameExposureRecord`, `drawingBufferSize` | `frameExposure`, `measureAdaptationStatistic`, the adaptation block in `animate` | `hdr/exposure/` | `hhaw.32.14` |
-| Frame loop — last | `frameCtx`, `glslResidentsChecked`, `_realtimeFramesNeeded`, `_tmpAnimateLocal`, `trackballSettle` | `animate`, `refreshFrameCtx` | `scene/frame-loop/` | `hhaw.32.15` |
-| Stays — composition (§ Public surface) | `catalog`, `renderer`, `webgpu`, `scene`, `camera`, `controls`, `chromeLines`, `sharedUniforms`, `floatingOrigin`, `layers`, `bus`, `clock`, `monochrome`, `disposed`, `hdr`, `roll`, `filters`, `exposure`, `adaptation`, `focus`, `observe`, `observeControls`, `warp`, `aim`, `pois`, `input`, `picker`, `kinds`, `systemMembership`, `occluders`, `localDepthPass`, `renderGate`, `hud`, `milkyway`, `chartLabels`, `tmpRecenter`, `orbitFrameTick`, `orbitFramePort` | controller construction, `on`, the registration order, the recentre fan-out and `buildFocalAnchorPolicy`, `getT` / `setT` / `notifyClockJumped`, the aim gates, `setCameraFov` / `syncPixelSolidAngle` / `angularToPx`, `setMonochrome`, `setFocalBodyHidden`, the install seams and the orbit-lock entry, the Milky Way and chart-labels entries, `onResize`, `dispose` | — | — |
+`tests/integration-shell-ratchet.test.ts` is what holds the file to the
+rule: every `Stellata` field is either composition that stays or awaiting
+extraction, a new field in neither fails, and an extraction deletes its
+fields from the awaiting list. **Every bead named in this section leaves
+with the PR that closes it** — a row, a cross-row bullet, a clause — and
+the last extraction (32.15) deletes the section, leaving the ratchet with
+an empty awaiting list.
+
+| Cluster | Target | Bead |
+| --- | --- | --- |
+| Clock cadence | `render-gate/cadence/` | `hhaw.32.3` |
+| Focal rides | `camera/focus/` | `hhaw.32.2` |
+| Star size + pick | the kind table (`kinds/`, `camera/focus/`) | `hhaw.32.4` |
+| Binaries | `binaries/` | `hhaw.32.5` |
+| Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
+| Dust particles (shelved) | `dust/`, or removed — a product call | `hhaw.32.7` |
+| Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
+| Solar-system wiring | `solar-system/` | `hhaw.32.9` |
+| Galactic + HUD | `galactic/`, `overlays/` | `hhaw.32.10` |
+| Declutter | `scene/declutter/` | `hhaw.32.11` |
+| Observe look pin | `camera/observe/` | `hhaw.32.12` |
+| Star render machinery | `star-pipeline/` | `hhaw.32.13` |
+| Per-frame exposure | `hdr/exposure/` | `hhaw.32.14` |
+| Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 
 **Three values cross a row boundary**, and whichever row moves first settles
 the interface for both:
