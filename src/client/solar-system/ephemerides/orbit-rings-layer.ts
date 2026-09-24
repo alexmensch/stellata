@@ -489,12 +489,18 @@ export class OrbitRingsLayer {
    * field's iLocalRel) — a moon's ring rides its parent through it, and
    * its visibility group measures camera→parent. A moon ring hides
    * whenever the offset is unavailable.
+   *
+   * `observeAnchorRing` is the planet-within-host index OBSERVE stands on;
+   * that body's own ring hides — its vertex 0 sits on the body
+   * (README.md § The polyline starts a vertex on the body), and so on the
+   * eye. ../../camera/observe/README.md § The observe anchor in line layers.
    */
   update(
     camera: THREE.PerspectiveCamera,
     viewportHeightPx: number,
     hostLocalPos: Readonly<THREE.Vector3> | null,
     t: number,
+    observeAnchorRing: number | null,
     parentRelInto?: (planetIdx: number, out: THREE.Vector3) => boolean,
   ): void {
     if (this.hidden || this.mono || !this.permitted || this.rings.length === 0) {
@@ -534,7 +540,7 @@ export class OrbitRingsLayer {
     for (const g of groups.values()) {
       const visible = ringVisibility(g.radii, RING_VISIBILITY_THRESHOLD_PX);
       for (let k = 0; k < g.idxs.length; k++) {
-        this.rings[g.idxs[k]].line.visible = visible[k];
+        this.rings[g.idxs[k]].line.visible = visible[k] && g.idxs[k] !== observeAnchorRing;
       }
     }
     // Geometry and position passes both run after visibility, so an

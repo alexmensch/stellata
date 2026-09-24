@@ -307,6 +307,15 @@ drops only the geometry through that point:
 - constellation figure — every segment touching the anchor star.
 - binary orbit paths — the anchor star's own ellipse, never its
   companion's (`../../binaries/orbit-paths/README.md`).
+- planet and moon orbit rings — the anchor body's own ring, whose vertex 0
+  sits on the body; rings centred ON the anchor (its moons, or a host
+  star's planets) do not pass through the eye and stay drawn. The shell
+  resolves the flat planet index to the ring through
+  `PlanetBodyField.hostPlanetOf`, same host only. A hidden ring also
+  hides that body's label, which reads ring visibility — moot once the
+  glide lands, since the body is hidden then.
+- probe trails need nothing here: the trail drops with the observed probe
+  (`../../solar-system/probes/README.md`).
 
 **URL state:** the OBSERVE-mode flag round-trips through the `?v=`
 blob (flags-byte bit 5), applied after camera params +

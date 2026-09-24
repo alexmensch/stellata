@@ -33,6 +33,7 @@ import {
 // J2000.0 in Unix-seconds — the model time every static-geometry test
 // builds rings at.
 const T0 = 946728000;
+const NO_ANCHOR = null;
 
 // Day offsets the moon parity pins sample. A secular element term is
 // exactly zero at J2000 and grows from there, so samples clustered
@@ -371,7 +372,7 @@ describe('OrbitRingsLayer', () => {
     ss.setPlanetSystem(ps, 0, T0);
     // Camera at 5 AU from the (origin) host. A lone ring has no
     // neighbours, so the gap heuristic always lets it render.
-    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
     expect(ss.anyOrbitRingVisible()).toBe(true);
     ss.dispose();
   });
@@ -383,7 +384,7 @@ describe('OrbitRingsLayer', () => {
       planets: [makePlanet()],
     };
     ss.setPlanetSystem(ps, 0, T0);
-    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
     ss.setPlanetSystem(null, 0, T0);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -396,7 +397,7 @@ describe('OrbitRingsLayer', () => {
       planets: [makePlanet()],
     };
     ss.setPlanetSystem(ps, 0, T0);
-    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
     ss.setHidden(true);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -409,7 +410,7 @@ describe('OrbitRingsLayer', () => {
       planets: [makePlanet()],
     };
     ss.setPlanetSystem(ps, 0, T0);
-    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
     ss.setMonochrome(true);
     expect(ss.anyOrbitRingVisible()).toBe(false);
     ss.dispose();
@@ -429,7 +430,7 @@ describe('OrbitRingsLayer', () => {
     // (pile-up against neighbour) while the outer ring remains spread.
     // The exact heuristic outcome is exercised in `ringVisibility` tests
     // above; here we just confirm the per-index API plumbs through.
-    ss.update(makeCamera(50 * AU_PC), 800, null, T0);
+    ss.update(makeCamera(50 * AU_PC), 800, null, T0, NO_ANCHOR);
     const a = ss.isOrbitRingVisible(0);
     const b = ss.isOrbitRingVisible(1);
     expect(typeof a).toBe('boolean');
@@ -457,8 +458,34 @@ describe('OrbitRingsLayer', () => {
     };
     ss.setPlanetSystem(ps, 0, T0);
     // 1e6 pc is absurdly far; both ring projections shrink to indistinguishable.
-    ss.update(makeCamera(1e6), 800, null, T0);
+    ss.update(makeCamera(1e6), 800, null, T0, NO_ANCHOR);
     expect(ss.anyOrbitRingVisible()).toBe(false);
+    ss.dispose();
+  });
+});
+
+describe('OrbitRingsLayer — observing from a body', () => {
+  // Two well-separated rings seen from 5 AU: both clear the gap heuristic.
+  const ps: PlanetSystem = {
+    hostStarIdx: 0,
+    planets: [
+      makePlanet({ name: 'A', semiMajorAxisAu: 1 }),
+      makePlanet({ name: 'B', semiMajorAxisAu: 3 }),
+    ],
+  };
+  const drawn = (ss: OrbitRingsLayer) => [ss.isOrbitRingVisible(0), ss.isOrbitRingVisible(1)];
+
+  it('hides only the ring the camera stands on, and restores it when the anchor clears', () => {
+    const ss = new OrbitRingsLayer(chromeLines());
+    ss.setPlanetSystem(ps, 0, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
+    expect(drawn(ss)).toEqual([true, true]);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, 1);
+    expect(drawn(ss)).toEqual([true, false]);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, 0);
+    expect(drawn(ss)).toEqual([false, true]);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
+    expect(drawn(ss)).toEqual([true, true]);
     ss.dispose();
   });
 });
@@ -485,7 +512,7 @@ describe('OrbitRingsLayer host centring', () => {
     const cam = makeCamera(0);
     cam.position.copy(host);
     cam.position.z += 5 * AU_PC;
-    ss.update(cam, 800, host, T0);
+    ss.update(cam, 800, host, T0, NO_ANCHOR);
     // Circular ring (e = 0): every vertex sits exactly one semi-major
     // axis from the host, wherever the host is parked.
     const line = ss.group.children[0] as THREE.Line;
@@ -529,7 +556,7 @@ describe('OrbitRingsLayer host centring', () => {
     // camera at a 3000-km framing of a body there.
     const host = new THREE.Vector3(-aPc, 0, 0);
     const cam = makeCamera(3000 * KM_PC);
-    ss.update(cam, 800, host, T0);
+    ss.update(cam, 800, host, T0, NO_ANCHOR);
     // Drift (39.5 AU) far exceeds LINE_ANCHOR_MAX_DRIFT_PC → verts must
     // have been rebaked about the live centre.
     expect(line.position.length()).toBe(0);
@@ -555,7 +582,7 @@ describe('OrbitRingsLayer host centring', () => {
     const versionBefore = attr.version;
     const drift = LINE_ANCHOR_MAX_DRIFT_PC / 10;
     const host = new THREE.Vector3(drift, 0, 0);
-    ss.update(makeCamera(5 * AU_PC), 800, host, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, host, T0, NO_ANCHOR);
     expect(line.position.x).toBeCloseTo(drift, 24);
     expect(attr.version).toBe(versionBefore);
 
@@ -563,7 +590,7 @@ describe('OrbitRingsLayer host centring', () => {
     // bumps, and the world-space ring is unchanged (circle still one
     // semi-major axis from the host).
     const far = new THREE.Vector3(0.1 * AU_PC, 0, 0);
-    ss.update(makeCamera(5 * AU_PC), 800, far, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, far, T0, NO_ANCHOR);
     expect(line.position.length()).toBe(0);
     expect(attr.version).toBeGreaterThan(versionBefore);
     expect(ringVertexWorld(line, 512).distanceTo(far) / AU_PC).toBeCloseTo(1, 6);
@@ -588,7 +615,7 @@ describe('OrbitRingsLayer host centring', () => {
     const cam = makeCamera(0);
     cam.position.copy(host);
     cam.position.z += 5 * AU_PC;
-    ss.update(cam, 800, host, T0);
+    ss.update(cam, 800, host, T0, NO_ANCHOR);
     expect(ss.isOrbitRingVisible(0)).toBe(true);
     expect(ss.isOrbitRingVisible(1)).toBe(true);
     ss.dispose();
@@ -602,9 +629,9 @@ describe('OrbitRingsLayer host centring', () => {
     };
     ss.setPlanetSystem(ps, 0, T0);
     const host = new THREE.Vector3(0.5, 0.5, 0.5);
-    ss.update(makeCamera(5 * AU_PC), 800, host, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, host, T0, NO_ANCHOR);
     ss.setPlanetSystem(ps, 0, T0);
-    ss.update(makeCamera(5 * AU_PC), 800, null, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
     const line = ss.group.children[0] as THREE.Line;
     expect(ringVertexWorld(line, 0).length() / AU_PC).toBeCloseTo(1, 6);
     ss.dispose();
@@ -835,10 +862,10 @@ describe('ring geometry passes through the body (single element source)', () => 
     it('rewrites the buffer — a frozen ring is byte-identical a month on', () => {
       const ss = new OrbitRingsLayer(chromeLines());
       ss.setPlanetSystem(solSystem(), 0, T0);
-      ss.update(NEAR_MOON, 800, null, T0, originCentres);
+      ss.update(NEAR_MOON, 800, null, T0, NO_ANCHOR, originCentres);
       expectDrawn(ss);
       const atT0 = moonRingVerts(ss);
-      ss.update(NEAR_MOON, 800, null, T0 + 30 * 86400, originCentres);
+      ss.update(NEAR_MOON, 800, null, T0 + 30 * 86400, NO_ANCHOR, originCentres);
       const atT1 = moonRingVerts(ss);
       expect(atT1.some((v, i) => v !== atT0[i])).toBe(true);
       ss.dispose();
@@ -860,7 +887,7 @@ describe('ring geometry passes through the body (single element source)', () => 
         const ss = new OrbitRingsLayer(chromeLines());
         ss.setPlanetSystem(solSystem(), 0, T0);
         const t = T0 + days * 86400;
-        ss.update(NEAR_MOON, 800, null, t, originCentres);
+        ss.update(NEAR_MOON, 800, null, t, NO_ANCHOR, originCentres);
         expectDrawn(ss);
 
         // The layer rotates its rings onto the host plane; the resolver
@@ -887,10 +914,10 @@ describe('ring geometry passes through the body (single element source)', () => 
       // along per frame for a ring nothing can see.
       const ss = new OrbitRingsLayer(chromeLines());
       ss.setPlanetSystem(solSystem(), 0, T0);
-      ss.update(makeCamera(5 * AU_PC), 800, null, T0, originCentres);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR, originCentres);
       expect(ss.isOrbitRingVisible(MOON_IDX)).toBe(false);
       const atT0 = moonRingVerts(ss);
-      ss.update(makeCamera(5 * AU_PC), 800, null, T0 + 365 * 86400, originCentres);
+      ss.update(makeCamera(5 * AU_PC), 800, null, T0 + 365 * 86400, NO_ANCHOR, originCentres);
       expect(moonRingVerts(ss)).toEqual(atT0);
       ss.dispose();
     });
@@ -902,8 +929,8 @@ describe('ring geometry passes through the body (single element source)', () => 
       const ss = new OrbitRingsLayer(chromeLines());
       ss.setPlanetSystem(solSystem(), 0, T0);
       const t = T0 + 365 * 86400;
-      ss.update(makeCamera(5 * AU_PC), 800, null, t, originCentres);
-      ss.update(NEAR_MOON, 800, null, t, originCentres);
+      ss.update(makeCamera(5 * AU_PC), 800, null, t, NO_ANCHOR, originCentres);
+      ss.update(NEAR_MOON, 800, null, t, NO_ANCHOR, originCentres);
       expectDrawn(ss);
 
       const hostQuat = new THREE.Quaternion().setFromUnitVectors(
@@ -981,7 +1008,7 @@ describe('OrbitRingsLayer moon rings', () => {
     const cam = makeCamera(0);
     cam.position.copy(parentRel);
     cam.position.x += 0.01 * AU_PC;
-    ss.update(cam, 800, null, T0, (idx, out) => {
+    ss.update(cam, 800, null, T0, NO_ANCHOR, (idx, out) => {
       expect(idx).toBe(0);
       out.copy(parentRel);
       return true;
@@ -1001,7 +1028,7 @@ describe('OrbitRingsLayer moon rings', () => {
     const ss = new OrbitRingsLayer(chromeLines());
     ss.setPlanetSystem(makeMoonSystem(), 0, T0);
     const cam = makeCamera(5 * AU_PC);
-    ss.update(cam, 800, null, T0);
+    ss.update(cam, 800, null, T0, NO_ANCHOR);
     expect(ss.isOrbitRingVisible(1)).toBe(false);
     ss.dispose();
   });
@@ -1014,7 +1041,7 @@ describe('OrbitRingsLayer moon rings', () => {
     ss.setPlanetSystem(makeMoonSystem(), 0, T0);
     const parentRel = new THREE.Vector3(0, 0, 5 * AU_PC);
     const cam = makeCamera(5 * AU_PC + 0.01 * AU_PC);
-    ss.update(cam, 800, null, T0, (_idx, out) => {
+    ss.update(cam, 800, null, T0, NO_ANCHOR, (_idx, out) => {
       out.copy(parentRel);
       return true;
     });
@@ -1042,18 +1069,18 @@ describe('OrbitRingsLayer moon rings', () => {
     // A century of sim time with the elements standing still costs nothing:
     // the old sim-time gate rebuilt here, which is what degenerated into a
     // per-frame 8192-vertex rewrite under fast-forward.
-    ss.update(cam, 800, null, T0 + 100 * 365 * 86400);
+    ss.update(cam, 800, null, T0 + 100 * 365 * 86400, NO_ANCHOR);
     expect(radiusAu()).toBeCloseTo(1, 6);
 
     // Drift under the polyline's own resolution stays unwritten — rewriting
     // it would only redraw discretisation noise.
     aAu = 1 + RING_GEOMETRY_DRIFT_TOLERANCE * 0.5;
-    ss.update(cam, 800, null, T0 + 1);
+    ss.update(cam, 800, null, T0 + 1, NO_ANCHOR);
     expect(radiusAu()).toBeCloseTo(1, 6);
 
     // Past it, the geometry re-derives at the live elements.
     aAu = 2;
-    ss.update(cam, 800, null, T0 + 2);
+    ss.update(cam, 800, null, T0 + 2, NO_ANCHOR);
     expect(radiusAu()).toBeCloseTo(2, 6);
     ss.dispose();
   });
