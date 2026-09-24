@@ -58,7 +58,6 @@ const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;
 
 interface AnchorRank {
   tier: number;
-  /** Null ranks below every stated fraction: no trusted fit. */
   fracError: number | null;
   primarySide: number;
   letter: string;
@@ -71,11 +70,13 @@ function rankBeats(rank: AnchorRank, best: AnchorRank | null): boolean {
   if (rank.tier !== best.tier) return rank.tier < best.tier;
   if (rank.primarySide !== best.primarySide) return rank.primarySide < best.primarySide;
   if (rank.tier === ANCHOR_TIER_GAIA_CLEAN && rank.fracError !== best.fracError) {
-    if (rank.fracError === null) return false;
-    if (best.fracError === null) return true;
-    return rank.fracError < best.fracError;
+    return morePrecise(rank.fracError, best.fracError);
   }
   return rank.letter < best.letter;
+}
+
+function morePrecise(a: number | null, b: number | null): boolean {
+  return a !== null && (b === null || a < b);
 }
 
 function fractionalError(plxMas: number | null, errMas: number | null): number | null {
@@ -281,8 +282,7 @@ export function applySystemDistanceCoherence(
     // see README.md § System distance coherence, Precision veto
     if (anchorRank !== null && anchorRank.primarySide === 1
       && primaryIdx !== null && primaryRank !== null) {
-      if (anchorRank.fracError !== null && primaryRank.fracError !== null
-        && primaryRank.fracError < anchorRank.fracError) {
+      if (morePrecise(primaryRank.fracError, anchorRank.fracError)) {
         anchorIdx = primaryIdx;
         anchorRank = primaryRank;
         stats.memberAnchorPrecisionVetoed++;
