@@ -229,8 +229,8 @@ unaffected: it reads the CSV directly, on AT-HYG's printed ra/dec, which is
 what isolates the epoch and the decomposition from the cascade.
 
 The CSV rides LFS, so the suite self-skips in the bare CI `test` job and
-runs smudged in **`tier-a-corpus`**, which names the file explicitly.
-A `describe.skipIf` suite that no job names runs nowhere: check
+runs smudged in the **`Tier-A star corpus`** CI step, which names the file explicitly.
+A `describe.skipIf` suite that no CI vitest list names runs nowhere: check
 `.github/workflows/test.yml` when adding another.
 
 AT-HYG shares no input with the edge set, so this is external

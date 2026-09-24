@@ -50,6 +50,8 @@ cross-script policy and pointers.
   pixel; launches only past the operator's `.perf-go` marker
   (`hooks/perf-guard.sh`). Not part of `pnpm test` or the build.
 - `hooks/` — Claude Code guard hooks (PreToolUse / SessionStart).
+- `ci/` — helpers only `.github/workflows/` runs: the catalogue build
+  cache's key.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the Zucker 2022 inner-surface HEALPix map into
@@ -69,7 +71,7 @@ counts against no asset limit.
 Cloudflare Workers rejects any single asset over 25 MiB
 (`WORKERS_MAX_ASSET_BYTES`, `release/asset-size-pure.ts`).
 `pnpm run check:asset-sizes` walks a built `dist/` against it; CI's
-`deploy-asset-sizes` job runs it on every PR, so an oversize file fails
+`Deploy asset sizes` step runs it on every PR, so an oversize file fails
 the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency

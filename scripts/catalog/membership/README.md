@@ -39,7 +39,7 @@ scripts/catalog/membership/
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
                                   over the COMMITTED artifacts. LFS-gated;
-                                  runs in tier-a-corpus.
+                                  runs in CI's `Tier-A star corpus` step.
   membership-manifest-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1.
@@ -354,7 +354,7 @@ arithmetic and label-flips replay:
   spine-driven build still shipped) went when `readStars` swapped onto the
   manifest: the build now reads the same cells the manifest publishes, so a
   dropped label is dropped in both. Needs a built catalogue, so it self-skips
-  in the bare `test` job and runs in `tier-a-corpus`.
+  in the bare `test` job and runs in the `Tier-A star corpus` CI step.
 - **The two joins.** Every disposition names a queue row on the same record
   and the same derived id, and every disposed row ships the value its
   disposition settled on (both files regular git, so this runs in every job).

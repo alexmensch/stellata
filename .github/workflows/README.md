@@ -79,20 +79,38 @@ fan-out of jobs beyond the bare checks:
 - `build-binaries` / `spotcheck` — rebuild `multiples.tsv` and assert it
   matches the committed artifact; resolve Stage 2 against the curated
   ground-truth corpus.
-- `build-catalog` — `build:catalog` + `build:clouds` +
-  `build:local-group`, uploading `public/` + `build/` as the
-  `catalog-artifacts` artifact the jobs below consume.
-- `sid-consistency` / `tier-a-corpus` — SID ledger↔artifact consistency
-  and the Tier-A star corpus + render-geometry regression against the
-  built artifacts.
+- `build-catalog` — the catalogue stage with its regenerate-and-diff
+  gates, then `build:layers` (everything `pnpm run build` does after
+  `build:catalog` except the client), then every check that reads the
+  built artifacts, as named steps. On a pull request
+  the catalogue stage (`build:classic-ids` through `build:catalog`, ~5 min)
+  restores from a content-keyed cache when no input changed; key, cached
+  set and the one way to get a stale hit: `scripts/ci/README.md`. The
+  checks:
+  - `SID ledger–artifact consistency` — `pnpm run sid:check`.
+  - `Tier-A star corpus` — the known-stars corpus + render-geometry
+    regression, and the LFS-gated catalogue-wide sweeps.
+  - `Deploy asset sizes` — finishes the deploy build with
+    `build:client` (`pnpm run build`'s one stage this job skips is
+    `build:binaries`, pinned by `build-binaries`), then
+    `pnpm run check:asset-sizes` over
+    `dist/`: fails on any file past Cloudflare Workers' 25 MiB per-asset
+    limit, warns past 80 % of it. `deploy.yml` runs the same check before
+    `wrangler deploy`.
+
+  Each check gates on `build:layers`, not on the others, so all report
+  when one fails. They share the build's runner rather than downloading its
+  output in jobs of their own: a job costs ~45 s of checkout, LFS
+  restore and install before it starts, and here that setup would sit
+  on the pipeline's critical path.
 - `sid-ledger-guard` — append-only ledger guard, DR-reconciliation
   classifier, swap parity ledger.
-- `deploy-asset-sizes` — the full `pnpm run build` deploy runs, then
-  `pnpm run check:asset-sizes` over `dist/`: fails on any file past
-  Cloudflare Workers' 25 MiB per-asset limit, warns past 80 % of it.
-  `deploy.yml` runs the same check before `wrangler deploy`.
 
-Both LFS jobs run an explicit file list, so a `describe.skipIf` suite no
-list names skips everywhere and reports green. Adding one means adding it
-to `tier-a-corpus` (needs built artifacts) or `sid-ledger-guard` (needs
-committed LFS inputs only).
+Both LFS vitest runs take an explicit file list, so a `describe.skipIf`
+suite no list names skips everywhere and reports green. Adding one means
+adding it to the `Tier-A star corpus` step (needs built artifacts) or
+`sid-ledger-guard` (needs committed LFS inputs only).
+
+The `main` ruleset requires these jobs by display name
+(`RELEASING.md` § Merge gating): renaming, merging or splitting a job
+means updating the ruleset's required contexts in the same change.

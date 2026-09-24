@@ -92,106 +92,57 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      # Same reproducibility contract as multiples.tsv above: the committed
-      # overlay must be exactly what the committed join produces.
-      - run: pnpm run build:classic-ids
-      - run: |
-          git diff --exit-code -- data/classic-ids/ || {
-            echo "::error::committed classic-ID overlay is stale — run" \
-              "'pnpm run build:classic-ids' and commit the regenerated files";
-            exit 1;
-          }
-      - run: pnpm run build:wgsn
-      - run: |
-          git diff --exit-code -- data/iau-wgsn/ || {
-            echo "::error::committed WGSN tables are stale — run" \
-              "'pnpm run build:wgsn' and commit the regenerated files";
-            exit 1;
-          }
-      # The membership manifest is a pure function of committed inputs, so it
-      # takes the regenerate-and-diff gate the frozen spine could not.
-      - run: pnpm run build:membership
-      # label_flips.tsv sits under data/classic-ids/ but is this build's
-      # artifact, so the step above cannot pin it — it runs before this one.
-      - run: |
-          git diff --exit-code -- data/membership/ data/classic-ids/label_flips.tsv || {
-            echo "::error::committed membership manifest is stale — run" \
-              "'pnpm run build:membership' and commit the regenerated files";
-            exit 1;
-          }
-      # Hard-fails on any record the SID ledger doesn't cover (the mint
-      # side of ledger consistency; the drop side is the job below).
-      - run: pnpm run build:catalog
-      # Same reproducibility contract as the two artifacts above. build:catalog
-      # writes both of these, so without this step the § 6.1 parked ledger's
-      # ROW CONTENT is unpinned — only its length is, via distNone in the count
-      # snapshot — and a build that parks a different star for the same total
-      # would land silently.
-      - run: |
-          git diff --exit-code -- data/membership/parked-ledger.tsv \
-            data/athyg/simbad_sourced_distances.tsv || {
-            echo "::error::committed build ledgers are stale — run" \
-              "'pnpm run build:catalog' and commit the regenerated files";
-            exit 1;
-          }
-      - run: pnpm run build:clouds
-      - run: pnpm run build:local-group
-      - uses: actions/upload-artifact@v7
+      # see scripts/ci/README.md § The catalogue build cache
+      - id: catalog-key
+        run: |
+          key=$(pnpm exec tsx scripts/ci/catalog-stage.ts key)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+      - id: catalog-cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
         with:
-          name: catalog-artifacts
-          path: |
-            public/
-            build/
-          retention-days: 1
-
-  # Ledger ↔ artifact consistency, drop side (docs/sid.md § 4.5):
-  # read-only allocation walk over the built artifacts; fails on any
-  # would-mint object or orphaned synth key, so an object-set change
-  # can't land without its allocation / retirement / bridge.
-  sid-consistency:
-    name: SID ledger–artifact consistency
-    runs-on: ubuntu-latest
-    needs: build-catalog
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/lfs-cache
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+          path: ${{ runner.temp }}/catalog-build.tar
+          key: ${{ steps.catalog-key.outputs.key }}
+      - if: steps.catalog-cache.outputs.cache-hit == 'true'
+        run: tar -xf "$RUNNER_TEMP/catalog-build.tar"
+      # build:catalog hard-fails on any record the SID ledger doesn't cover
+      # (the mint side of ledger consistency; the drop side is sid:check).
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: pnpm exec tsx scripts/ci/catalog-stage.ts run
+      # On a fresh checkout the stage's untracked files under public/ and
+      # build/ are exactly its outputs; the tracked icons and manifest there
+      # must never be restored from a cache.
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: git ls-files -z --others --ignored --exclude-standard public build | tar --null -T - -cf "$RUNNER_TEMP/catalog-build.tar"
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
         with:
-          node-version: '24'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v8
-        with:
-          name: catalog-artifacts
-          path: .
-      - run: pnpm run sid:check
-
-  # Tier-A validation against the built artifacts: the known-stars
-  # corpus plus the multi-star render-geometry regression (which needs
-  # public/binaries.bin, built here from the committed multiples.tsv).
-  # Also the home for LFS-gated catalogue-wide sweeps that self-skip in
-  # the bare `test` job — every such suite must be named in the vitest
-  # invocation below, or it never runs smudged anywhere.
-  tier-a-corpus:
-    name: Tier-A star corpus
-    runs-on: ubuntu-latest
-    needs: build-catalog
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/lfs-cache
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v8
-        with:
-          name: catalog-artifacts
-          path: .
-      - run: pnpm run build:binaries-runtime
-      - run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
+          path: ${{ runner.temp }}/catalog-build.tar
+          key: ${{ steps.catalog-key.outputs.key }}
+      - id: built
+        run: pnpm run build:layers
+      # Ledger ↔ artifact consistency, drop side (docs/sid.md § 4.5):
+      # read-only allocation walk over the built artifacts; fails on any
+      # would-mint object or orphaned synth key, so an object-set change
+      # can't land without its allocation / retirement / bridge.
+      - name: SID ledger–artifact consistency
+        if: ${{ !cancelled() && steps.built.outcome == 'success' }}
+        run: pnpm run sid:check
+      # Tier-A validation against the built artifacts: the known-stars
+      # corpus plus the multi-star render-geometry regression (which needs
+      # public/binaries.bin, built here from the committed multiples.tsv).
+      # Also the home for LFS-gated catalogue-wide sweeps that self-skip in
+      # the bare `test` job — every such suite must be named in the vitest
+      # invocation below, or it never runs smudged anywhere.
+      - name: Tier-A star corpus
+        if: ${{ !cancelled() && steps.built.outcome == 'success' }}
+        run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
+      - id: deploy-build
+        if: ${{ !cancelled() && steps.built.outcome == 'success' }}
+        run: pnpm run build:client
+      - name: Deploy asset sizes
+        if: ${{ !cancelled() && steps.deploy-build.outcome == 'success' }}
+        run: pnpm run check:asset-sizes
 
   # Append-only ledger guard (needs full history for the merge-base
   # read), the DR-reconciliation classifier against its committed dry-run
@@ -213,24 +164,3 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts scripts/catalog/classic-ids/parity-ledger.test.ts
-
-  # The exact build deploy.yml ships, checked against the Cloudflare Workers
-  # per-asset limit — wrangler otherwise only rejects it after merge.
-  deploy-asset-sizes:
-    name: Deploy asset sizes
-    runs-on: ubuntu-latest
-    needs: lfs-data
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/lfs-cache
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
-      - run: pnpm run check:asset-sizes

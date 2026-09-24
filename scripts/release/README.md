@@ -20,7 +20,7 @@ also usable by hand (see `RELEASING.md` § Manual release).
 - `check-asset-sizes.ts` — `pnpm run check:asset-sizes`. Walks `dist/`,
   prints the largest files, emits GitHub `::warning::` / `::error::`
   annotations and exits 1 on any oversize file. Run by `test.yml`'s
-  `deploy-asset-sizes` job, by `deploy.yml` before `wrangler deploy`, and
+  `Deploy asset sizes` step, by `deploy.yml` before `wrangler deploy`, and
   by `pnpm run deploy`.
 
 ## One deploy, N releases
