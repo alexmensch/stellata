@@ -415,7 +415,10 @@ catalogue, and only if attach sorted a prefix.** An order keyed on a table
 still mostly zeros sorts every undecoded record onto Sol's one key, which
 forfeits the coherence the order exists for (`dispatch-order/README.md`
 § Dispatch order) — a cost, not a wrong answer, since the tables stay
-paired. The pass holds the catalogue itself and reads `loadedCount` live,
+paired. **Attaching over a prefix is the ordinary cold load, not an edge
+case**: `../../main.ts` starts the dust-manifest fetch once the pre-paint
+chunks have landed, while the tail is still streaming, and the pass
+attaches when that small file resolves. The pass holds the catalogue itself and reads `loadedCount` live,
 at attach and on each refresh, rather than taking a count the shell
 sampled. An epoch bucket crossing never re-sorts: ±5,000 yr of stellar motion
 is far under a voxel, and the sort costs ~21 ms of main thread plus three
