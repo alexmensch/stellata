@@ -77,13 +77,14 @@ their own affordances (`H` / `S` / `U` / `T`).
 
 The chart-only elements are read per-frame by
 `chart-labels.ts`, which gates each label/glyph tier on
-`detailPermits(id)`. Two couplings aren't one-to-one: planet name labels
+`declutter.permits(id)`. Two couplings aren't one-to-one: planet name labels
 ride `chartStarNameLabels` (no separate planet-label element — uadc.3
 gave planets star-style labels), and `chartVariableRings` gates **both**
 the variable rings and the binary wings (one row for the paired glyphs).
-`milkyWayIsobar` has no per-frame reader — it *pushes* through its bind
-(`MilkyWay.setIsobar` + `applyMilkywayEnabled`); the MW group is enabled
-when either the band (realistic) or the isobar (chart) is permitted.
+`milkyWayIsobar` has no per-frame reader — it *pushes* through the shell's
+`MilkyWay.setIsobar` push, and `SceneDeclutter` re-derives the MW group's
+enable, which holds while either the band (realistic) or the isobar
+(chart) is permitted.
 
 ## What each tier means
 

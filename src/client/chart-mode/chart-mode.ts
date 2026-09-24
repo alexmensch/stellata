@@ -46,7 +46,7 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
     active = next;
     // The render style flipped, so re-derive the detail-permitted set from
     // the new style's floors: this drives the milky-way band↔isobar swap
-    // (via the milkyWayIsobar bind), hides the realistic-only structure
+    // (via the milkyWayIsobar push), hides the realistic-only structure
     // layers, and gates the chart-labels tiers below. The user's per-element
     // toggles survive the style flip — only a detail-level change (V / the
     // control) clears them.
