@@ -18,7 +18,7 @@ const AWAITING_EXTRACTION: readonly string[] = [
   '_compositeSuppress', '_eclipseDim', '_epochFollowDelta', '_extinctionView', '_focalPert',
   '_lastAppliedPert', '_movingRideDelta', '_movingRideIdx', '_movingRideLast',
   '_movingRideLive', '_realtimeFramesNeeded', '_rideDelta', '_rideFocalIdx',
-  '_rideLive', '_suppressPulsation', '_tmpAnimateLocal', 'absorbedSuppressCount',
+  '_rideLive', '_suppressPulsation', 'absorbedSuppressCount',
   'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coreMaskEnabled',

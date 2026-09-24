@@ -228,7 +228,6 @@ an empty awaiting list.
 | Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
 | Dust particles (shelved) | `dust/`, or removed — a product call | `hhaw.32.7` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
-| Galactic + HUD | `galactic/`, `overlays/` | `hhaw.32.10` |
 | Star render machinery | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 

@@ -40,6 +40,7 @@ src/client/overlays/                  (full overlay roster in src/client/overlay
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows. Lives in
                                   overlays/ but the feature group is
                                   documented here.
+  hud-scene-layer.ts              The HUD's registry entry.
 ```
 
 Local Group wireframes + per-galaxy labels are a separate layer; see

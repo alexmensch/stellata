@@ -18,6 +18,7 @@ import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-
 import type { OrbitFramePort } from './attitude/attitude-pure';
 import { focusFrameInputs } from './attitude/focus-frame';
 import { HudOverlay, hudElementsById } from './overlays/hud-overlay';
+import { hudSceneLayer } from './overlays/hud-scene-layer';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
@@ -1088,18 +1089,16 @@ export class Stellata implements FrameAnchor {
     // Below the orbit lock — galactic/README.md § Wiring.
     this.layers.register(this.galactic.discEntry);
     this.layers.register(this.galactic.coordSpheresEntry);
-    this.layers.register({
-      // Pure projection: it reads the focal position and projects arrow
-      // tips, adding no motion of its own. Whatever it points at is
-      // bounded by the layer that OWNS that object — which is why every
-      // focusable kind has to declare a rate, not just the ones that
-      // happen to be pinnable today.
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      update: (ctx) => this.updateHud(ctx.warpActive),
-      setMonochrome: (on) => this.hud.setMonochrome(on),
-      dispose: () => this.hud.dispose(),
-    });
+    this.layers.register(hudSceneLayer({
+      hud: this.hud,
+      camera: this.camera,
+      target: this.controls.target,
+      solIndex: this.catalog.solIndex,
+      focus: this.focus,
+      filter: () => this.filter,
+      observeProgress: () => this.observe.getProgress(),
+      focusedDiscRadiusPx: () => this.getFocusedDiscRadiusPx(),
+    }));
     const milkyWayCameraAbs = new THREE.Vector3();
     this.layers.register({
       // Skybox re-anchored to camera.position; the raymarch reads the
@@ -2274,13 +2273,6 @@ export class Stellata implements FrameAnchor {
     return cadenceVisibleTurnRad(this.angularToPx(), this.renderer.getPixelRatio());
   }
 
-  // Scratch slot for the non-allocating *LocalPositionInto helpers.
-  // Owned by animate() and the methods it calls in sequence (the
-  // scene-layer update fan-out); values are valid only inside that
-  // scope. Adding a writer that retains the value across another
-  // animate-stack method violates the contract.
-  private _tmpAnimateLocal = new THREE.Vector3();
-
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
@@ -2510,50 +2502,6 @@ export class Stellata implements FrameAnchor {
       census: this.layers.behaviourCensus(),
       contribution: this.layers.contributionCensus(),
     };
-  }
-
-  // HUD projection — hidden during warp (the camera is in motion and
-  // its reference function is exactly the context warp suppresses,
-  // same as the disc / grid / LG wireframe entries in the registry).
-  private updateHud(warpActive: boolean) {
-    if (warpActive) {
-      this.hud.setVisible(false);
-      return;
-    }
-    // Refresh camera matrices before any SVG projection — controls.update()
-    // mutates camera.position/quaternion but doesn't propagate to
-    // matrixWorld/matrixWorldInverse. The renderer would do this for us, but
-    // we project arrow tips into screen space *before* renderer.render() runs,
-    // so without this call the labels lag by one frame during fast moves.
-    this.camera.updateMatrixWorld();
-
-    // Kind-generic focal position: measuring HUD distances from
-    // controls.target is only right in navigate — in observe the target
-    // is parked 1 pc ahead of the camera (ObserveLookPin), which
-    // read as "Sol · 3.3 ly" from a planet-anchored observe.
-    const focusedLocal = this.focus.focalLocalPositionInto(this._tmpAnimateLocal)
-      ? this._tmpAnimateLocal
-      : null;
-    const focusedStar = this.focus.getFocusedStar();
-    const isSolFocus = focusedStar !== null && focusedStar === this.catalog.solIndex;
-    // HudOverlay computes its own fade alpha from THIS frame's shaft
-    // geometry — no more one-frame-lag flash when the HUD toggles on
-    // (ml8 symptom 1). The distance-vector overlay does the same in its
-    // 'frame' handler against its own arrow length (ml8 symptom 2 / per-
-    // arrow coverage from the bead's option B).
-    this.hud.update({
-      enabled: this.filter.showHud,
-      camera: this.camera,
-      target: this.controls.target,
-      focusedLocal,
-      hideSolArrow: isSolFocus,
-      sizeMaxPx: this.filter.sizeMax,
-      cameraMode: this.focus.getCameraMode(),
-      transition: this.observe.getProgress(),
-      focusedDiscRadiusPx: this.getFocusedDiscRadiusPx(),
-      w: window.innerWidth,
-      h: window.innerHeight,
-    });
   }
 
   dispose() {
