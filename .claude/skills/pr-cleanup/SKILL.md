@@ -1,6 +1,6 @@
 ---
 name: pr-cleanup
-description: Land a stellata PR and finish every follow-up — rebase onto main if needed (force-with-lease pre-authorised), merge it (watching only if checks are still pending), close the PR's beads, remove its worktree, fast-forward local main, and rebuild main's artifacts in the background. Use when asked to merge, land, or clean up after a PR ("merge PR 123 and clean up", "land this one", "/pr-cleanup 123").
+description: Land a stellata PR and finish every follow-up — merge main into it if behind, squash-merge it (watching only if checks are still pending), close the PR's beads, remove its worktree, fast-forward local main, and rebuild main's artifacts in the background. Use when asked to merge, land, or clean up after a PR ("merge PR 123 and clean up", "land this one", "/pr-cleanup 123").
 ---
 
 # Landing a stellata PR
@@ -17,9 +17,10 @@ adding one.
 For **the PR named at invocation**, and nothing else:
 
 - **Merge it.** Squash only — the ruleset allows no other method.
-- **Force-push it, with `--force-with-lease`, and only when a rebase onto
-  main requires it.** A force-push with no rebase behind it is not
-  authorised; neither is `--force`.
+- **Merge `origin/main` into its branch and push** ([Bring main in](#2-bring-main-in--always-check-even-when-nothing-suggests-it)).
+- **Force-push it, with `--force-with-lease`, only for the re-sign in
+  [The signature trap](#3-the-signature-trap--check-before-arming-the-merge).** No other force-push is authorised; neither is
+  `--force`.
 - **Close its beads, remove its worktree, fast-forward local main, rebuild
   main's artifacts.**
 
@@ -70,32 +71,30 @@ gh pr view <N> --json title,body,commits \
 Read each one (`bd show <id>`) rather than trusting the ID: a PR sometimes
 *mentions* a bead it does not close.
 
-## 2. Rebase onto main — always check, even when nothing suggests it
+## 2. Bring main in — always check, even when nothing suggests it
 
 ```bash
-git status --porcelain                     # must be empty — rebase aborts on a dirty tree
+git status --porcelain                     # must be empty — merge refuses a dirty tree
 git rev-list --count HEAD..origin/main     # 0 → current; skip to SKILL.md#3-the-signature-trap--check-before-arming-the-merge
-git rebase origin/main
+git merge --no-edit origin/main
 ```
+
+Merge, never rebase. The squash lands one commit titled by the PR, so the
+branch's own history never reaches main, and a merge resolves each conflict
+once against main's tip where a rebase replays it per commit.
 
 **`package.json` conflicts whenever main shipped a release since this branch
 bumped.** Resolve to a patch *above* main's version — never keep the branch's
 stale number, never keep main's unchanged.
 
-Then check the bump commit's own subject. `Bump version to 3.33.3` that now
-bumps to `3.33.5` is a stale claim in permanent history, and the fix is
-awkward: `git rebase -i` is unavailable in this environment. Rebuild the
-chain with `git commit-tree` instead — and **read [The signature trap](#3-the-signature-trap--check-before-arming-the-merge)
-before you do**, because that rewrite is exactly what breaks the merge.
-
 If the version moved, re-read the PR body's `## Release notes` block: it
 ships to the GitHub release page for whatever version this PR lands
 (`RELEASING.md`), and `release-notes-guard` fails an empty one.
 
-Re-run the gates after any rebase — `pnpm run typecheck && pnpm test` — then:
+Re-run the gates after the merge — `pnpm run typecheck && pnpm test` — then:
 
 ```bash
-git push --force-with-lease origin <headRefName>
+git push origin <headRefName>
 ```
 
 ## 3. The signature trap — check before arming the merge
@@ -113,7 +112,10 @@ commit-tree` ignores `commit.gpgsign`) or from `-c commit.gpgsign=false`
 carried over from the test suites that legitimately pass it. Pass no signing
 flag on a branch that will be merged.
 
-Fix, and verify the fix changed nothing but signatures:
+The fix below is a rebase, so it flattens merge commits and replays every
+commit, conflicts and all. A branch carrying a merge from main is a
+[deviation](#deviations--stop-and-ask) here, not a re-sign. Otherwise fix, and verify the fix changed
+nothing but signatures:
 
 ```bash
 BEFORE=$(git rev-parse HEAD^{tree})
@@ -152,7 +154,7 @@ a standalone PR.
 | `CLEAN` | mergeable, all required checks passed — merge now |
 | `BLOCKED` | required checks pending **or** [Deviations](#deviations--stop-and-ask)' blocked-with-no-failing-check |
 | `UNSTABLE` | mergeable, but something is failing — a [deviation](#deviations--stop-and-ask), never merge over it |
-| `BEHIND` / `DIRTY` | out of date / conflicting — back to [Rebase onto main](#2-rebase-onto-main--always-check-even-when-nothing-suggests-it) |
+| `BEHIND` / `DIRTY` | out of date / conflicting — back to [Bring main in](#2-bring-main-in--always-check-even-when-nothing-suggests-it) |
 | `UNKNOWN` | not computed yet — ordinary after a push; re-query, do not act |
 
 **Checks already green** (`mergeStateStatus: CLEAN`) — merge and go straight
@@ -330,8 +332,9 @@ Report the cause; changing a ruleset is Alex's call, never yours.
 - A check failed or was cancelled, or the monitor exited `CLOSED` / not-armed.
 - `mergeStateStatus` is `UNSTABLE` — something is failing even though GitHub
   would let the merge through.
-- Rebase conflicts anywhere except the `package.json` version bump.
-- Gates fail after the rebase — the rebase changed behaviour; do not push.
+- Merge conflicts anywhere except the `package.json` version bump.
+- Gates fail after the merge — main's changes broke the branch; do not push.
+- Unsigned commits on a branch that carries a merge from main.
 - No worktree holds the branch, or the branch is checked out in the **main
   checkout** (never remove that worktree).
 - A bead ID resolves to work this PR does not actually close, is already
@@ -339,6 +342,6 @@ Report the cause; changing a ruleset is Alex's call, never yours.
 - Local `main` has uncommitted changes, or is ahead of origin — do not pull
   over it.
 - The PR bumps the version but `## Release notes` is empty, or still describes
-  the pre-rebase version.
+  the pre-merge version.
 
 When Alex answers, that answer covers that PR only.
