@@ -19,8 +19,8 @@ every addition. Spans `src/client/` end to end.
 3. **Net LOC goes down.** The shell sheds its per-kind glue and its
    forwarding facade; duplicated per-kind geometry contracts merge.
 4. **Nothing is precluded.** Free-fly camera mode and Gly-scale
-   catalogues impose constraints on the engine tier (§ Free-fly
-   constraints) that every phase must honour now, cheaply, rather than
+   catalogues impose constraints on the engine tier ([Free-fly
+   constraints](#free-fly-constraints-on-the-engine-tier)) that every phase must honour now, cheaply, rather than
    retrofit later.
 
 ## Where the codebase already is

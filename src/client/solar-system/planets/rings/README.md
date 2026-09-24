@@ -34,8 +34,8 @@ render in the bracketed second pass (`../../../local-depth/README.md`),
 where standard depth orders ring↔body natively — including the oblate
 limb. The analytic ray–ellipsoid helper survives only for the body-shadow
 term (sun ray, not camera ray). Geometry drawn near a planet body in the
-MAIN pass still cannot depth-test against it (same README, § Why the main
-pass cannot do this) — new close-range geometry belongs in the local pass,
+MAIN pass still cannot depth-test against it ([Why the main
+pass cannot do this](../../../local-depth/README.md#why-the-main-pass-cannot-do-this)) — new close-range geometry belongs in the local pass,
 not behind a new analytic trick. Edge-on the zero-thickness annulus thins
 to a line, which is the physically honest look.
 

@@ -259,9 +259,8 @@ transfer is 65.72 MB gz rather than the 62.4 MB the table's single-blob
 
 Per-star GPU residency is derived, never pinned — the two folders that own
 these buffers both say to re-derive rather than trust a byte count
-(`../../../../src/client/webgpu/star/compaction/README.md` and
-`../../../../src/client/webgpu/extinction/README.md`, each § What it costs, and
-what it holds):
+([compaction](/src/client/webgpu/star/compaction/README.md#what-it-costs-and-what-it-holds) and
+[extinction](/src/client/webgpu/extinction/README.md#what-it-costs-and-what-it-holds), each *What it costs, and what it holds*):
 
 | resident | B/star | today | at `V <= 11` |
 |---|---|---|---|

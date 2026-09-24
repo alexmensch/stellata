@@ -59,7 +59,7 @@ scripts/catalog/photometry/
 ## The published relations
 
 Both transforms come from **one table** — Gaia DR3 documentation Table 5.9,
-§ Photometric relationships with other photometric systems, the release-3
+section *Photometric relationships with other photometric systems*, the release-3
 restatement of Riello+ 2021 App. C — as polynomials in `BP − RP`:
 
 | Relation | Degree | σ | Stated range |
@@ -336,7 +336,7 @@ for the same gate on the label side).
 
 Riello, M., De Angeli, F., Evans, D. W., et al. 2021, *A&A* 649, A3 — "Gaia
 Early Data Release 3: Photometric content and validation", section *Photometric
-relationships with other photometric systems. DR3 ships EDR3's photometry
+relationships with other photometric systems*. DR3 ships EDR3's photometry
 unchanged, so the EDR3 calibration is the one that applies. The coefficients,
 σ, and colour range are pinned as literals in the test rather than imported
 from the module, so a transcription slip fails rather than round-trips.

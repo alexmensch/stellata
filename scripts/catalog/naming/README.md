@@ -112,9 +112,9 @@ Positionally, all but one sit outside the membership manifest entirely, so
 they name stars the catalogue does not carry; the pins are there to catch a
 refresh that changes either fact.
 
-## The § 2 residual gate
+## The residual gate
 
-Every manifest `proper` must either match a WGSN name key
+[§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s residual. Every manifest `proper` must either match a WGSN name key
 (diacritic-folded, post multi-name-split — 445 of 491 do) or appear in
 the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (46 rows).
 The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
