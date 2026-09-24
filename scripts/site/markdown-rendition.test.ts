@@ -1,30 +1,55 @@
-// The rendition is derived from the authored page, so this suite holds that
-// the derivation keeps the content, drops only scaffolding, and stops the
-// build on an element nobody taught it rather than losing it silently.
+// The derivation's rules, against the homepage and small synthetic pages.
+// src/site/README.md § Numbers in copy — the suites read the page.
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import type { Element, Root } from 'hast';
+import { select, selectAll } from 'hast-util-select';
+import { visit } from 'unist-util-visit';
 import { describe, expect, it } from 'vitest';
 
 import { markdownRendition } from './markdown-rendition';
+import { parseHtml } from './parse-html';
 
 const ROOT = resolve(__dirname, '../..');
 const HOME = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');
 
-const FIGURES = {
+const FIGURES: Record<string, string> = {
   VITE_STAR_COUNT: '388,068',
   VITE_SOURCE_COUNT: '34',
   VITE_REFERENCE_COUNT: '108',
   VITE_APP_VERSION: '9.9.9',
 };
 
-const home = (): string => markdownRendition(HOME, FIGURES);
+const home = markdownRendition(HOME, FIGURES);
+const tree = parseHtml(HOME.replace(/%(VITE_[A-Z_]+)%/g, (_, name: string) => FIGURES[name]));
+const SCAFFOLDING = new Set(selectAll('.holder, .holder *, .skip-link, .skip-link *', tree));
 
-/** The preamble is derived from these two, so the suite reads them rather
-    than restating copy the page is free to rewrite. */
-const titleOf = (html: string): string => /<title>([^<]*)<\/title>/.exec(html)![1];
-const descriptionOf = (html: string): string =>
-  /<meta[^>]*\sname="description"[^>]*\scontent="([^"]*)"/.exec(html)![1];
+function textOf(node: Element | Root | null | undefined): string {
+  if (node == null) return '';
+  let out = '';
+  visit(node, 'text', (text: { value: string }) => {
+    out += text.value;
+  });
+  return out.replace(/\s+/g, ' ').trim();
+}
+
+/** Markdown with its inline syntax stripped, so it compares against an element's text. */
+function plain(markdown: string): string {
+  let text = markdown;
+  for (let prev = ''; prev !== text; ) {
+    prev = text;
+    text = text.replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1');
+  }
+  return text
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/\\(.)/g, '$1')
+    .replace(/[*`]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+const content = (selector: string): Element[] =>
+  selectAll(selector, tree).filter((el) => !SCAFFOLDING.has(el) && textOf(el) !== '');
 
 /** A whole page, so a rule can be checked without the homepage's bulk. */
 function page(body: string, head = ''): string {
@@ -36,54 +61,65 @@ function page(body: string, head = ''): string {
 
 describe('the rendition opens the way an agent client expects', () => {
   it('leads with the page title as its one top-level heading', () => {
-    expect(home().split('\n')[0]).toBe(`# ${titleOf(HOME)}`);
-    expect(home().match(/^# /gm)).toHaveLength(1);
+    expect(home.split('\n')[0]).toBe(`# ${textOf(select('title', tree))}`);
+    expect(home.match(/^# /gm)).toHaveLength(1);
   });
 
   it('follows it with the meta description as a summary blockquote', () => {
-    expect(home()).toContain(`> ${descriptionOf(HOME)}`);
+    const description = select('meta[name="description"]', tree)?.properties?.content;
+    expect(home).toContain(`> ${String(description).replace(/\s+/g, ' ').trim()}`);
   });
 
   it('points back at the HTML it was derived from', () => {
-    expect(home()).toContain('[Read this page as HTML](https://stellata.xyz/)');
+    const canonical = select('link[rel="canonical"]', tree)?.properties?.href;
+    expect(home).toContain(`[Read this page as HTML](${String(canonical)})`);
   });
 
   // The title takes h1, so the hero heading has to move under it or the
   // document has two roots and an agent reads two documents.
-  it('shifts every body heading down a level', () => {
-    expect(home()).toContain('## A model of the universe anchored in science');
-    expect(home()).toContain('### Witness the scale of the universe in motion');
-  });
+  it.each(content('body :is(h1, h2, h3, h4)').map((h) => [h.tagName, textOf(h)]))(
+    'shifts <%s> %j down a level',
+    (tag, text) => {
+      const hashes = '#'.repeat(Number(tag.slice(1)) + 1);
+      const headings = home.split('\n').filter((line) => line.startsWith(`${hashes} `));
+      expect(headings.map((line) => plain(line.slice(hashes.length + 1)).trim())).toContain(text);
+    },
+  );
 });
 
 describe('the page’s content survives the derivation', () => {
-  it.each([
-    'Around 980,000 records stream in brightest first',
-    'There is no false colour anywhere in Stellata',
-    'The citation record is the product.',
-    'Chrome and Edge 113+, Safari 26+',
-  ])('keeps the prose: %s', (prose) => {
-    expect(home()).toContain(prose);
+  it.each(content('body p').map((p) => [textOf(p)]))('keeps the paragraph %j', (text) => {
+    expect(plain(home)).toContain(text);
   });
 
-  it('renders the readout strip as labelled figures rather than loose text', () => {
-    expect(home()).toContain('- **Catalogued objects** — 388,068');
-    expect(home()).toContain('- **Clock range** — 3000 BCE – 3000 CE');
+  it.each(content('.readout-cell').map((cell) => [textOf(select('dt', cell)), textOf(select('dd', cell))]))(
+    'renders the readout cell %j as a labelled figure',
+    (label, value) => {
+      expect(home).toContain(`- **${label}** — ${value}`);
+    },
+  );
+
+  it('renders every table as a table, header row included', () => {
+    const tables = selectAll('table', tree);
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of tables) {
+      const header = selectAll('th', table).map((th) => `\\|\\s*${textOf(th)}\\s*`).join('');
+      expect(home).toMatch(new RegExp(header.replace(/[.()]/g, '\\$&')));
+      for (const row of selectAll('tbody tr', table)) {
+        const first = textOf(select('td', row));
+        expect(plain(home)).toMatch(new RegExp(`\\|\\s*${first.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\|`));
+      }
+    }
   });
 
-  it('renders the sources table as a table, header row included', () => {
-    expect(home()).toMatch(/\|\s*Subsystem\s*\|\s*Sources\s*\|\s*Principal authorities\s*\|/);
-    expect(home()).toMatch(/\|\s*Nearby galaxies\s*\|\s*2\s*\|/);
-  });
-
-  it('resolves every root-relative link against the canonical', () => {
-    expect(home()).toContain('](https://stellata.xyz/app)');
-    expect(home()).not.toMatch(/\]\(\/[a-z]/);
+  it('resolves every link against the canonical', () => {
+    expect(home).toMatch(/\]\(https:\/\//);
+    expect(home).not.toMatch(/\]\((?!https?:\/\/)/);
   });
 
   it('resolves the figures the page asks for rather than shipping the token', () => {
-    expect(home()).not.toContain('VITE_');
-    expect(home()).toContain('v9.9.9');
+    expect(home).not.toContain('VITE_');
+    expect(home).toContain(FIGURES.VITE_APP_VERSION);
   });
 
   it('refuses to render a figure it has no value for', () => {
@@ -92,22 +128,27 @@ describe('the page’s content survives the derivation', () => {
 });
 
 describe('authoring scaffolding is dropped', () => {
-  // The dashed capture boxes are instructions to the author. An agent
-  // quoting them back would read the filenames of pictures that do not
-  // exist as though they were the page's claims.
-  it('drops the capture holders and everything they name', () => {
-    expect(home()).not.toContain('placeholder');
-    expect(home()).not.toContain('public/site/hero.jpg');
-    expect(home()).not.toContain('2400 px');
+  it('drops a capture holder and everything it names', () => {
+    const rendered = markdownRendition(
+      page('<div class="holder"><p>Save it as <code>hero.jpg</code></p></div><p>Kept.</p>'),
+      FIGURES,
+    );
+    expect(rendered).not.toContain('hero.jpg');
+    expect(rendered).toContain('Kept.');
   });
 
   it('drops the skip link', () => {
-    expect(home()).not.toContain('Skip to content');
+    const rendered = markdownRendition(page('<a class="skip-link" href="#main">Skip</a><p>Kept.</p>'), FIGURES);
+    expect(rendered).not.toContain('Skip');
   });
 
-  // Until the captures land, a sight's media anchor wraps only a holder.
   it('drops an anchor left with nothing in it', () => {
-    expect(home()).not.toContain('[](');
+    const rendered = markdownRendition(
+      page('<a href="/app/v/AQAA/"><div class="holder">Capture</div></a><p>Kept.</p>'),
+      FIGURES,
+    );
+    expect(rendered).not.toContain('[](');
+    expect(home).not.toContain('[](');
   });
 
   it('keeps a media anchor once it wraps a real capture', () => {

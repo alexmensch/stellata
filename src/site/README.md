@@ -206,12 +206,17 @@ the page carries `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
 in. That module's README is the authority on where each count comes from
 and why the reference count is a floor.
 
-`tests/site-claims.test.ts` holds the pages to it: each readout cell must
-still carry its substitution rather than a number, the subsystem table must
-still sum to the credited total, and the derivations must not have
-collapsed. Two cells are prose because nothing in the repo can count them —
-**6.5 Mly** and **3000 BCE – 3000 CE**, the model's measured radius and its
-clock clamp, both stated in `../../README.md`.
+`tests/site-claims.test.ts` holds the pages to it: every readout cell is a
+substitution unless it carries **`data-literal`**, no counted figure appears
+anywhere in the page's text as a literal, the subsystem table sums to the
+credited total, and the derivations have not collapsed. `data-literal` is
+for a figure nothing in the repo can count — today the model's measured
+radius and its clock clamp, both stated in `../../README.md`.
+
+**The suites read the page rather than quote it.** Every expectation about
+the homepage's content — its headings, paragraphs, readout cells, table
+rows — is taken from the HTML itself, so rewording copy never breaks a test
+and a section the derivation loses still does.
 
 Rounded prose is a different case and is still fine — the "Before you click"
 aside's "around 980,000 records" is held true by

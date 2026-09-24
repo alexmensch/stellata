@@ -4,12 +4,16 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { publishBuildEnv } from '../vite.env';
 import { devRoute, documentRoutingInDev } from '../vite.site-dev';
 
 const ROOT = resolve(__dirname, '..');
+const HOME_TITLE = /<title>[^<]*<\/title>/.exec(
+  readFileSync(resolve(ROOT, 'src/site/index.html'), 'utf8'),
+)![0];
 
 interface Server {
   handler: (req: never, res: never, next: never) => unknown;
@@ -136,7 +140,7 @@ describe('the middleware answers whatever the client accepts', () => {
     const answer = await fetchPath('/', accept);
     expect(answer.status).toBe(200);
     expect(answer.fellThrough).toBe(false);
-    expect(answer.body).toContain('<h1 id="hero-heading">');
+    expect(answer.body).toContain(HOME_TITLE);
   });
 
   it('routes every file beside a site page through the filesystem', async () => {
