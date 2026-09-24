@@ -1,7 +1,9 @@
 # Harness guard hooks
 
-Harness hooks for Claude Code, registered in `.claude/settings.json`. Each
-reads the hook payload as JSON on stdin. The five guards are PreToolUse /
+Harness hooks for Claude Code, registered in `.claude/settings.json`. Claude
+Code's settings file watcher applies a registration change mid-session, so a
+session that adds or edits a hook here is governed by it from the next call.
+Each hook reads its payload as JSON on stdin. The five guards are PreToolUse /
 SessionStart hooks answering with a `permissionDecision`. The review
 design-pass reminder lives at user level, in the code-standards bundle
 (`~/.claude/hooks/code-standards/`).
@@ -228,10 +230,6 @@ whether a given harness runs `PreToolUse` on `Skill` calls at all. Where
 one does not, the skill can be invoked and the marker still never appears,
 so the deny message says to create it and stop invoking — a loop being the
 failure mode a gate armed by another tool call invites.
-
-Claude Code's settings file watcher normally applies a registration change
-mid-session, so a session that adds or edits a hook here can be governed by
-it from the next call.
 
 ## How commit-sweep-guard works
 
