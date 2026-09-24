@@ -87,7 +87,7 @@ The SessionStart hook output is far larger than the host inlines, so the
 persistent project memories and workflow rules are not in your context. They
 are in that file. Reading it is one call, and it is the whole of the fix.
 
-~/.claude/CLAUDE.md's "Session-start hook output" makes this law; the gate exists because
+The 'Session-start hook output' rule in ~/.claude/CLAUDE.md makes this law; the gate exists because
 the prose rule loses to momentum on the first turn, every time.
 
 Genuinely need to bypass: delete $SENTINEL."
