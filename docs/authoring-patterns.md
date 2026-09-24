@@ -72,8 +72,8 @@ mattered" landing in a PR and then misleading every reader downstream.
 
 Enforcement runs at CI time in `tests/code-comment-rules.test.ts`:
 
-- **Forbidden-pattern scan** — strict for all `*.ts` / `*.py` files
-  under `src/` and `scripts/`. Bead-IDs, PR refs, and memory-key
+- **Forbidden-pattern scan** — strict for all `*.ts` / `*.js` / `*.py`
+  files under `src/` and `scripts/`. Bead-IDs, PR refs, and memory-key
   wikilinks fail the suite immediately.
 - **Module-docstring length** — 1-3-line cap with an allowlist
   (`tests/code-comment-rules-allowlist.txt`) grandfathering the
@@ -90,14 +90,15 @@ When the test fails:
   allowlist entry unless the file is genuinely out-of-scope to fix in
   this PR.
 
-CI catches the forbidden patterns; it can't catch a comment that merely
-restates something already written elsewhere. That one is caught by
+A comment restating README content written minutes earlier is the dominant
+failure mode. When the prose lands in the same commit, `commit-sweep-guard`
+denies it — [The restatement sweep](/scripts/hooks/README.md#the-restatement-sweep).
+Prose from an earlier commit is invisible to it, and that case is caught by
 write order:
 
-- **Write the folder README prose first, code comments last.** A comment
-  restating README content written minutes earlier is the dominant
-  failure mode — one code-side statement of a contract maximum, usually
-  the type or field docstring, with the prose in the README.
+- **Write the folder README prose first, code comments last** — one
+  code-side statement of a contract maximum, usually the type or field
+  docstring, with the prose in the README.
 - **Re-run the gate at commit time**, diffing for comment lines you
   added. Comments written early in a diff predate the README update and
   need the re-audit; the gate is naming the concrete wrong action a
