@@ -8,7 +8,7 @@ const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters',
-  'floatingOrigin', 'focus', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
+  'floatingOrigin', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
   'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
@@ -23,7 +23,7 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coreMaskEnabled',
   'dust', 'dustParticleSource', 'dustParticles',
-  'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
+  'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced',
   'frameCtx', 'glslResidentsChecked',
   'lastParticleStrength', 'offCatalogRecords', 'passDebugScratch',
   'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',

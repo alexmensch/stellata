@@ -99,9 +99,10 @@ generically by `FocusController.makeFocusTarget` from the kind's
 `FocusableProvider` — there are no per-kind factories. Adding a new
 focusable kind (nebula, exoplanet, …) consists of:
 
-1. Declaring the kind's `KIND_TRAITS` row and its `FocusableProvider`
-   entry in `stellata.focusables` (both records are exhaustive over
-   `TargetKind`, so `tsc` fails until both exist).
+1. Declaring the kind's `KIND_TRAITS` row and its module's `focusable()`
+   leg (`stellata.focusables` is built from `KIND_ROSTER`, and both the
+   traits record and the roster are exhaustive over `TargetKind`, so
+   `tsc` fails until both exist).
 2. Plumbing pick / click handling for the new kind so its `Target` can
    be passed to `warpTo` / `flyTo`-style entry points.
 
@@ -171,9 +172,10 @@ are declared data in `KIND_TRAITS`, readable without the registry
 (`isHardTarget` is the predicate).
 The registry is constructed once in `stellata.ts` (exposed as
 `stellata.focusables`); lazily-attached layers are read through
-closures, so attach cycles need no re-registration. Every kind supplies its row via its module's `focusable()` leg
-(`src/client/kinds/README.md`); the record itself, and its
-exhaustiveness, stay here. Overlays and
+closures, so attach cycles need no re-registration. Every kind supplies
+its row via its module's `focusable()` leg, collected over `KIND_ROSTER`
+by `collectFocusables()` (`src/client/kinds/README.md`); the record type,
+and its exhaustiveness, stay here. Overlays and
 pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
 of per-kind shell methods.
 

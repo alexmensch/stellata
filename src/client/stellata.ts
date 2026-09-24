@@ -68,8 +68,10 @@ import {
 import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
 import {
+  collectFocusables,
   collectKindDetailBinds,
   collectKindPicks,
+  collectPinnable,
   KIND_ROSTER,
   type BuiltKindModules,
 } from './kinds/kind-modules';
@@ -423,9 +425,6 @@ export class Stellata implements FrameAnchor {
 
   readonly picker!: Picker;
 
-  // Per-kind geometry registry (camera/focus/focus-target.ts). Overlays
-  // and pickers dispatch `focusables[target.kind].<leg>(target.idx)`
-  // instead of per-kind shell methods.
   readonly focusables!: FocusableProviders;
 
   constructor({ canvas, catalog, kinds, webgpu }: StellataOptions) {
@@ -772,18 +771,8 @@ export class Stellata implements FrameAnchor {
       focalPerturbationInto: (idx, out) =>
         this.binaryOrbitField?.focalPerturbationInto(idx, this.getT(), out) ?? false,
     });
-    // Kind-agnostic geometry + focus-state registry — the shell's
-    // per-kind knowledge in one exhaustive record. Lazily-attached
-    // layers are read through closures, so attach cycles need no
-    // re-registration. See camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry.
-    this.focusables = {
-      star: this.kinds.star.focusable(),
-      cloud: this.kinds.cloud.focusable(),
-      lg: this.kinds.lg.focusable(),
-      shell: this.kinds.shell.focusable(),
-      probe: this.kinds.probe.focusable(),
-      planet: this.kinds.planet.focusable(),
-    };
+    // see camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry
+    this.focusables = collectFocusables(this.kinds);
     this.warp = new WarpController({
       camera: this.camera,
       controls: this.controls,
@@ -912,18 +901,7 @@ export class Stellata implements FrameAnchor {
     this.syncPixelSolidAngle();
 
     this.pois = new PoiStore({
-      pinnable: {
-        star: (idx) => this.kinds.star.pinnable(idx),
-        // Pinnable ⊇ URL-encodable: any attached planet pins in-session,
-        // but only Sol's SID domain is wired (main.ts planetDomainIndexOf),
-        // so a future non-Sol host's pin works live yet won't round-trip
-        // through ?v=.
-        planet: (idx) => this.kinds.planet.pinnable(idx),
-        probe: (idx) => this.kinds.probe.pinnable(idx),
-        lg: (idx) => this.kinds.lg.pinnable(idx),
-        shell: (idx) => this.kinds.shell.pinnable(idx),
-        cloud: (idx) => this.kinds.cloud.pinnable(idx),
-      },
+      pinnable: collectPinnable(this.kinds),
       onChange: (pois) => {
         this.bus.emit('pois', pois);
         this.bus.emit('state');
