@@ -188,30 +188,30 @@ catalogue index as before.
 
 ## What it costs, and what it holds
 
-**Re-derive rather than trust them**: they are
-`recordCount` (388,071 —
-`../../../../scripts/catalog/build-catalog-expected.json`) × the element
-size, and every row moves with the catalog. `debug.memory()` prices the
-live app (`../../debug/memory/README.md`).
+**Re-derive rather than trust the totals**: every row is bytes per star ×
+`recordCount` (983,068 —
+`../../../../scripts/catalog/build-catalog-expected.json`), so they move
+with the catalog and the per-star column does not. `debug.memory()` prices
+the live app (`../../debug/memory/README.md`).
 
-| Resident | Size |
-| --- | --- |
-| A_V buffer (one float32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
-| Position buffer (one vec4 float32 per slot) | 388,071 × 16 B ≈ 5.92 MiB |
-| Slot → star table (one uint32 per slot) | 388,071 × 4 B ≈ 1.48 MiB |
-| Camera-generation stamp (one uint32 per star) | 388,071 × 4 B ≈ 1.48 MiB |
-| Refill table — star → slot, then the worklist at `REFILL_BUCKETS` × ⌈count / `REFILL_BUCKETS`⌉ uint32 | (388,071 + 388,096) × 4 B ≈ 2.96 MiB |
+| Resident | Per star | At 983,068 |
+| --- | --- | --- |
+| A_V buffer (one float32 per star) | 4 B | 3.75 MiB |
+| Position buffer (one vec4 float32 per slot) | 16 B | 15.00 MiB |
+| Slot → star table (one uint32 per slot) | 4 B | 3.75 MiB |
+| Camera-generation stamp (one uint32 per star) | 4 B | 3.75 MiB |
+| Refill table — star → slot, then the worklist at `REFILL_BUCKETS` × ⌈count / `REFILL_BUCKETS`⌉ uint32 | ~8 B | (983,068 + 983,296) × 4 B ≈ 7.50 MiB |
 
-So ~13.3 MiB of video memory for the pass's whole life, plus the ~5.9 MiB
-`Float32Array` the position attribute keeps on the JS heap after upload
-and the ~1.5 MiB `Uint32Array` behind the order table, which the parity
-check reads (§ The prepass kernel). **The buffer and that CPU copy are one
-array**, so `dispose()` drops the field as well as releasing the
-attribute — either reference alone keeps the 1.48 MiB alive. All
-survive on an integrated or mobile GPU without argument.
+So ~36 B per star, ~33.8 MiB of video memory for the pass's whole life,
+plus the 15.0 MiB `Float32Array` the position attribute keeps on the JS
+heap after upload and the 3.75 MiB `Uint32Array` behind the order table,
+which the parity check reads (§ The prepass kernel). **The buffer and that
+CPU copy are one array**, so `dispose()` drops the field as well as
+releasing the attribute — either reference alone keeps the 3.75 MiB alive.
+All survive on an integrated or mobile GPU without argument.
 
 The pick mirror (§ Cold reads) is a third heap allocation, the A_V row's
-1.48 MiB again — but only from the first pointer event that asks for it,
+3.75 MiB again — but only from the first pointer event that asks for it,
 and re-allocated per recompute the pick actually reaches, never per
 recompute.
 
@@ -224,9 +224,9 @@ buffer read from a vertex stage answers to
 sets is not free, and it is not this folder's to keep: the boot refuses
 such a device outright (`../tsl/README.md` § Storage attributes).
 
-**A full recompute is at most ~37M volume samples**: one thread per
-star × `DUST_TAPS_MAX` (96), 388,071 × 96; at Sol the tap rule spends
-~44 per star, ~17M (`../../star-pipeline/extinction/README.md` § The
+**A full recompute is at most ~94M volume samples**: one thread per
+star × `DUST_TAPS_MAX` (96), 983,068 × 96; at the tap rule's at-Sol mean
+of ~44 per star, ~43M (`../../star-pipeline/extinction/README.md` § The
 march). The cap binds wherever the in-cube path runs past
 `DUST_TAP_PC × DUST_TAPS_MAX` ≈ 960 pc, so from outside the cube the
 ceiling is very nearly the per-admitted-star cost. **None of those
