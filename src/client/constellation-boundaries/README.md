@@ -43,8 +43,7 @@ runtime consumer reads the built artifact, never the edges:
   (`../../../scripts/catalog/parse/constellations.ts`), which binds the
   geometry's lookup to the IAU-88 index space. Every record's own
   position resolves into catalog byte 34; the browser reads the answer.
-  See `scripts/catalog/parse/README.md` § Positional constellation
-  membership.
+  See [Positional constellation membership](/scripts/catalog/parse/README.md#positional-constellation-membership).
 - **Drawing, labelling and runtime membership** all ride
   `public/constellation-boundaries.json` — arcs, label anchors
   (§ Label anchors), and the resolved cell grid (§ Runtime membership).
@@ -72,18 +71,17 @@ sphere-wide sampling grid in `constellation-regions.test.ts`, and
 rejected at load unless both bound arrays ascend.
 
 Which kinds route through `Stellata.constellationOf`, why stars don't,
-and why every answer is Sol-frame: `../focus-card/README.md`
-§ Constellation row.
+and why every answer is Sol-frame: [Constellation row](../focus-card/README.md#constellation-row).
 
 ## Label anchors
 
 One per region, so **Serpens carries two** — the derivation, the
 published-area agreement, and the assertion that every anchor lands
-inside the region it names are `iau-geometry/README.md` § Label anchors.
+inside the region it names are [Label anchors](iau-geometry/README.md#label-anchors).
 Anchors arrive in ICRS off the artifact and are baked to
 `SPHERE_RADIUS_PC` at attach, exactly as the arcs are, so a label rides
 the block it names from any camera position. The chart writes the Latin
-name there (`../chart-mode/labels/README.md` § Label engine); the closure check
+name there ([Label engine](../chart-mode/labels/README.md#label-engine--glyphs)); the closure check
 on the shipped areas is `boundary-artifact-loader.ts`, which is why the
 areas ride the wire at all.
 
@@ -169,13 +167,12 @@ The resulting window is sub-parsec to a few parsecs, so the arcs vanish
 well before the camera reaches α Cen — pinned in the layer test. That is
 the correct outcome, not a limitation: from another star, Earth's
 constellation boundaries do not describe the sky. The derivation and the
-quantile numbers live in `scripts/catalog/boundaries/README.md` § Fade
-table.
+quantile numbers live in [Fade table](/scripts/catalog/boundaries/README.md#fade-table).
 
-**Validated at load, but never fatal.** `validateBoundaryArtifact` rejects
+<a id="validated-at-load-but-never-fatal"></a>**Validated at load, but never fatal.** `validateBoundaryArtifact` rejects
 anything but `frame: "ICRS"`, because B1875 directions rendered as if they
 were ICRS produce a plausible-looking sky sitting ~1.4° off every star —
-the failure mode `iau-geometry/README.md` § B1875 describes, and one
+the failure mode [B1875](iau-geometry/README.md#b1875) describes, and one
 no spot check catches. It also
 pins the fade table's shape: ascending `magLimits` (the bracketing walks
 forwards), one offset row per magnitude row, and every row exactly as wide

@@ -1,5 +1,5 @@
 // The designation-constellation cascade, pinned against the BUILT search
-// index. See README.md § The designation constellation.
+// index. See README.md#the-designation-constellation.
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -56,7 +56,7 @@ describe.skipIf(!built)('designation constellation on the wire', () => {
     expect(entry?.dc).toBe(con('psa'));
   });
 
-  // README.md § One designation, two HD numbers. IV/27A gives both members of
+  // README.md#one-designation-two-hd-numbers. IV/27A gives both members of
   // each pair the designation, and neither pair carries a component letter to
   // tell them apart, so without the correction both records composed it.
   it('leaves 23 Ori and 104 Aqr on one HD each', () => {

@@ -1,6 +1,6 @@
 // Reads the `--page-margin-*` custom properties every fixed chrome
 // container is positioned by, for the overlays that place themselves in
-// JS. See ./README.md § Page margins.
+// JS. See ./README.md#page-margins.
 
 export type PageMargins = { x: number; top: number; bottom: number };
 

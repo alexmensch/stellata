@@ -11,12 +11,12 @@ restores extinction rather than adding it twice.
 **This march has no analytic slab term** — it integrates the measured
 grid alone, and a sample outside the cube clamps to the zero-padded edge
 rather than handing over to a slab. So extinction beyond the 1.25 kpc
-coverage adds ≈0, which is what `scripts/catalog/distance/dust/README.md`
-§ Build-time de-extinction states from the build side and what the
+coverage adds ≈0, which is what [Build-time de-extinction](/scripts/catalog/distance/dust/README.md#build-time-de-extinction)
+states from the build side and what the
 cancellation invariant below requires: the runtime addition can only
 cancel the terms the build subtraction actually used. The Milky Way
-band's own dust column (`docs/science-galactic-structure.md` § The dust
-stack) *does* carry the slab, and shares the ordering — but not the
+band's own dust column ([The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition))
+*does* carry the slab, and shares the ordering — but not the
 sampling mechanism, and this march cannot take a prefiltered field
 without breaking the cancellation.
 
@@ -35,8 +35,7 @@ src/client/star-pipeline/extinction/
   av-parity-pure.ts (+ test)      Bit-level compare of two per-star A_V
                                   arrays + its console line — the WebGPU
                                   kernel's parity check reads through it
-                                  (../../webgpu/extinction/README.md § The
-                                  prepass kernel).
+                                  (../../webgpu/extinction/README.md#the-prepass-kernel).
   dust-raymarch-pure.ts (+ test)  CPU mirror of the march — the segment–cube
                                   clip, the tap rule, the decode, the midpoint
                                   sum — and the E(B−V) = A_V / R_V reddening.
@@ -111,8 +110,8 @@ the Edenhofer 3D dust texture along the camera→star sightline, and
 reddened by E(B−V) = A_V/3.1 on the intrinsic LUT-input B–V. That input
 is the shader's two-tier routing: `Ballesteros(iTeffApsis)` when an
 Apsis Teff is present, else the baked intrinsic `iCi` (observed AT-HYG
-B–V or the spectral-class colour baked at build — see `../README.md`
-§ Colour routing). Looking through dust dims and reddens stars behind
+B–V or the spectral-class colour baked at build — see [Colour routing](../README.md#colour-routing)).
+Looking through dust dims and reddens stars behind
 it, which is what you'd actually see.
 
 ## The prepass cache
@@ -137,8 +136,7 @@ pass (×2–3) — 8–12 recomputations per visible star per frame.
   displacement does — which is why AU-scale orbiting is free of a *march*
   there but not of a dispatch. Displacement alone still governs the
   values, since A_V depends on camera position only
-  (`../../webgpu/extinction/refill/README.md` § A view change is a refill
-  request).
+  ([A view change is a refill request](../../webgpu/extinction/refill/README.md#a-view-change-is-a-refill-request--nothing-more)).
 - **Positions are the catalog baseline** (`catalog.positions`, packed
   into an RGBA float texture) — binary-orbit perturbations (sub-AU) are
   ignored, as is the floating origin (both the prepass march and the
@@ -147,7 +145,7 @@ pass (×2–3) — 8–12 recomputations per visible star per frame.
   rewrite that array in place, so `refreshPositions()` re-packs it from
   both; without that the march follows the stars no further than the
   attach epoch and the attach-time prefix
-  (`../../webgpu/extinction/README.md` § What a CACHE owes).
+  ([What a CACHE owes](../../webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)).
 - **Fallback:** the vertex stage can run the camera→star raymarch
   in-line instead, gated by the visibility prefilter, sharing the march
   with the prepass through `dust-raymarch-tsl.ts`. Only the A/B switch
@@ -161,7 +159,7 @@ pass (×2–3) — 8–12 recomputations per visible star per frame.
   invalidates the cache before every `update()`, so the fill runs on every
   frame at a parked camera. It exists because the displacement gate makes
   the fill free at exactly the vantages a measurement can hold still at —
-  `../../debug/frame-cost/passes/README.md` § The extinction rows. Dwell
+  [The extinction rows](../../debug/frame-cost/passes/README.md#the-extinction-rows). Dwell
   only; it re-arms the pick mirror's copy every frame in the live app.
 
 The prepass stores raw physical A_V; `uDustEnabled ×
@@ -174,13 +172,12 @@ strength changes never invalidate the cache.
 `../../webgpu/star/star-vertex-tsl.ts` fetches. **There is no synchronous
 readback**, so it answers out of a CPU mirror of the whole buffer that the
 pointer events preceding a pick stage for it (`warmAvReadback`), and null
-until one lands (`../../webgpu/extinction/README.md` § Cold reads).
+until one lands ([Cold reads](../../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity)).
 
 The pick paths are the only caller: a star's extinction decides whether
 the renderer puts a pixel on screen for it at all, and a pick gated on
 the intrinsic magnitude selects stars the frame drew black
-(`../../hdr/exposure/visibility/README.md`
-§ What "visible" means to a pick path).
+([What "visible" means to a pick path](../../hdr/exposure/visibility/README.md#what-visible-means-to-a-pick-path)).
 
 **Reading the texel is the point** — the alternative, a CPU march, needs
 the ~128 MiB voxel grid that `../../loaders/dust-loader.ts` uploads and
@@ -204,7 +201,7 @@ Two constraints on any new caller:
 
 Catalog `absmag` and `ci` are stored **intrinsic** (de-extincted at
 build against the same voxel grid — see
-`scripts/catalog/distance/dust/README.md` § Build-time de-extinction), so this
+[Build-time de-extinction](/scripts/catalog/distance/dust/README.md#build-time-de-extinction)), so this
 runtime extinction *restores* the observer-relative extinction rather
 than double-applying it: at camera=Sol the build subtraction and this
 addition cancel, so a dusty-sightline star renders at its AT-HYG

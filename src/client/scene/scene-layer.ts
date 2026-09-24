@@ -54,7 +54,7 @@ export interface CadenceCtx {
    *  wrote — and each must declare a rate rather than stay silent. They
    *  declare the rate of the subsystem whose content they are anchored to,
    *  and the field caches on this token so its walk runs once per frame
-   *  however many entries ask (README.md § Anchored content). */
+   *  however many entries ask (README.md#anchored-content-declares-its-anchors-rate). */
   readonly frameId: number;
   /** CSS pixels per radian at the live viewport / FOV — the plate scale
    *  that turns an angular rate into an on-screen one. */
@@ -71,7 +71,7 @@ export interface CadenceCtx {
    *  body differencing its own position over the same interval therefore
    *  cancels it exactly — which is why the ridden focal contributes only
    *  its own rotation, and why no ride-specific fudge factor exists
-   *  (`../render-gate/README.md` § The focal ride). */
+   *  (`../render-gate/README.md#the-focal-ride`). */
   readonly cameraVelPcPerSimS: Readonly<THREE.Vector3>;
 }
 
@@ -117,7 +117,7 @@ export type LayerTimeBehaviour =
   | { readonly kind: 'realtime'; needsFrames(ctx: FrameCtx): boolean };
 
 /** Why a gated layer cannot put a display-visible pixel on screen this
- *  frame (docs/render-rules.md § 2): its bounding volume is outside the
+ *  frame (/docs/render-rules.md#2-contribution-gated-liveness): its bounding volume is outside the
  *  view, its projected extent is under the legibility floor, its own
  *  authored opacity has faded to zero, or its brightest pixel encodes
  *  under half an 8-bit step at the live exposure. */
@@ -133,8 +133,8 @@ export type ContributionSkip = 'frustum' | 'legibility' | 'opacity' | 'brightnes
  *  registry calls neither `update` nor lets the draw happen — the layer
  *  hides its own groups in `setContributing(false)`, which the registry
  *  calls on the transition only. That hook MUST also reset every
- *  dirty-track sentinel the layer holds (`docs/authoring-patterns.md`
- *  § Sentinel-init), or the layer refuses to repaint when it returns. */
+ *  dirty-track sentinel the layer holds (`/docs/authoring-patterns.md#sentinel-init-for-dirty-track`),
+ * or the layer refuses to repaint when it returns. */
 export type LayerContribution =
   | { readonly kind: 'always' }
   | {
@@ -262,7 +262,7 @@ export class SceneLayerRegistry {
    *  A skipped layer is excluded rather than asked: its `update` did not
    *  run, so its rate would read the state of whichever frame it last
    *  drew — and content that cannot reach a pixel cannot move one
-   *  (contribution/README.md § A skipped layer reports nothing).
+   *  (contribution/README.md#a-skipped-layer-reports-nothing).
    *
    *  A NaN rate cannot win: `maxCadenceReport` compares rather than
    *  calling `Math.max`, so a layer returning garbage cannot freeze the
@@ -289,8 +289,8 @@ export class SceneLayerRegistry {
    *  its own wake: the geometric three are functions of camera pose, which
    *  renders by itself, and `'brightness'` is not — every input to it
    *  changes only on a rendered frame instead. A fifth reason owes that
-   *  argument before it may be declared (contribution/README.md
-   *  § A skipped layer reports nothing). */
+   *  argument before it may be declared (contribution/README.md#a-skipped-layer-reports-nothing).
+   * */
   realtimeFramesNeeded(ctx: FrameCtx): boolean {
     for (let i = 0; i < this.layers.length; i++) {
       if (!this.contributing[i]) continue;

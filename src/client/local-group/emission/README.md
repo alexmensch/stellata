@@ -51,7 +51,7 @@ split while the bulge reads as a bulge from edge-on viewpoints).
   envelope; density `ρ₀·exp(−R/R_d − |z|/z_d)`.
 
 The solved luminosity model each pass renders is the loader's `emission`
-block (`docs/science-local-group.md` § Local Group luminosity model;
+block ([Local Group luminosity model](/docs/science-local-group.md#local-group-luminosity-model);
 solver contract in `scripts/local-group/README.md`).
 
 The camera transforms into each instance's unit-ball frame in the
@@ -89,7 +89,7 @@ family and seven for the Sérsic one, inside WebGPU's eight. The factory is
 `../../webgpu/local-group/README.md`; `lg-module.ts` passes
 `kindCtx.webgpu.lgEmissionMaterials` and adds the emission group to
 `kindCtx.scene` — the wireframes are Line2 chrome and join it there, on
-the seam's stroke (`../../webgpu/README.md` § One scene per boot).
+the seam's stroke ([One scene per boot](../../webgpu/README.md#one-scene-per-boot)).
 
 **Every uniform these shaders read is shared**, so the factory exposes no
 slot record at all: the six HDR emitter slots and `uWorldOffset` are in
@@ -100,7 +100,7 @@ shader — and no per-frame update at all.
 ## Zero free parameters — the emission scale is derived
 
 The layer emits into the scene-wide HDR unit
-(`../../hdr/emission/README.md` § Unit), exactly as the Milky Way band
+([Unit](../../hdr/emission/README.md#unit--what-an-emitting-layer-writes)), exactly as the Milky Way band
 does. **The zero point is derived, not tuned.** The solver normalises
 `density0` against zero-point-free flux `F = 10^(−0.4·m_V)`, and
 Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a raymarched column *is* flux per
@@ -137,7 +137,7 @@ convolve-then-gain.
 **Two consequences worth having before touching the raymarch.** The
 convolution can only average what the rasteriser sampled, so the profile is
 smoothed over one pixel's transverse footprint as it is marched
-(`../../hdr/emission/README.md` § Footprint) — without that the Sérsic cusp
+([Footprint](../../hdr/emission/README.md#footprint--a-fragment-carries-a-pixel-not-a-point)) — without that the Sérsic cusp
 survives the convolution intact, which is the whole 3.95 mag. And M31 is now
 **FOV-invariant** like the band: its display level carries no plate scale at
 all, where it used to dim quadratically while the band held. The nucleus
@@ -175,7 +175,7 @@ scalar column — so it agrees with the shader only while that holds; the
 normalisation is an invariant, not a style choice.
 
 Each seed is a (B−V) through the star field's own colour chain
-(`../../milkyway/calibration/README.md` § Population colours), no longer
+([Population colours](../../milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited)), no longer
 the Milky Way's palette by import:
 
 | family | (B−V) | source |
@@ -235,7 +235,7 @@ lockstep). Worst measured deviation across 5 objects × k ∈ {1.5, 4, 20}:
 `LocalGroupEmission.peakSurfaceBrightness(cameraAbsPc, Ω_px)` answers, in
 mag/arcsec², "how bright can the glow's brightest pixel be from here" — an
 upper bound the brightness skip compares against the live extended
-threshold (`docs/science-hdr-pipeline.md` § 3.5). Per object it is the
+threshold ([§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound)). Per object it is the
 shader's own central ray — the CPU mirror from the actual camera through
 the component's centre, footprint at each sample's true distance —
 **maximised over the jitter phase**, summed over the object's components;
@@ -273,8 +273,7 @@ M-series laptop, node; a low-end integrated part's CPU is the budget that
 matters and will be slower). It is CPU work on the frame thread, so the
 brightness skip takes it as a thunk and calls it only after the refusals
 that do not need it — the warp refusal above all
-(`../../hdr/exposure/visibility/README.md` § Skipping an emitter the
-display cannot show).
+([Skipping an emitter the display cannot show](../../hdr/exposure/visibility/README.md#skipping-an-emitter-the-display-cannot-show)).
 
 From Sol at the acceptance plate scale (50° over 900 CSS px) M31 bounds at
 17.42, 0.2 mag under the default view's 17.21 threshold, so the glow skips
@@ -289,7 +288,7 @@ only this layer's margin is thin enough for a resize to flip it.
 and `Ω_px`, never on exposure; `dispose` resets it.
 
 `LocalGroupEmission.contributionSkip` runs it through the two-rule
-predicate (`../../scene/contribution/README.md` § The brightness reason). **The
+predicate ([The brightness reason](../../scene/contribution/README.md#the-brightness-reason)). **The
 verdict is not this layer's alone**: the lg module returns ONE scene
 layer for the wireframe and the glow together, so its `skip` is the
 conjunction — the wireframe's distance fade has to have reached zero as
@@ -323,7 +322,7 @@ fighting it. Through the summation patch, at the base epoch and a
 50° / 900 px viewport, the profile reads **120 / 64 / 28 / 1** of 255 at
 0 / 10 / 20 / 40 arcmin — a threshold star is 38.25, so M31 stays brighter
 than one out to ~15 arcmin, and the operator's faint-end toe
-(`../../hdr/tonemap/README.md` § Operator) takes the sub-threshold outer envelope
+([Operator](../../hdr/tonemap/README.md#operator)) takes the sub-threshold outer envelope
 to the dither floor. A bright core trailing off over most of a degree,
 which is what the naked eye gets, and pinned.
 

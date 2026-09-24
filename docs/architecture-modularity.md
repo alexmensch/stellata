@@ -31,13 +31,13 @@ this is the foundation the epic builds on, not a thing to re-litigate:
 - `Target = {kind, idx}` sum type; focus, vector, pins, clicks, warp
   all operate on it. Per-kind branches in the shell / input FSM are a
   review-blocking defect by documented law
-  (`src/client/camera/focus/README.md` § FocusableProviders).
+  ([FocusableProviders](/src/client/camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry)).
 - Exhaustive mapped types that fail `tsc` when a kind is missing:
   `FocusableProviders`, `FocusCardProviders`, `PoiStore.pinnable`,
   `SCENE_ELEMENT_FLOORS`.
 - Runtime registries: `SceneLayerRegistry`, the hover-provider list,
   `ShellRegistry`, `SystemMembershipRegistry`, SID resolver domains.
-- The URL wire is fully kind-agnostic (SIDs; `docs/sid.md` § 10).
+- The URL wire is fully kind-agnostic (SIDs; [§ 10](/docs/sid.md#10-adding-a-future-object-type--the-recipe)).
 - Absence tolerance is uniform: a missing artifact loads to `null` and
   the layer/providers simply don't exist.
 
@@ -395,7 +395,7 @@ reduction ~600–900 lines after adding the module files.
 - Shard→flat-index mapping mechanics — settled in phase 5c: `Catalog`
   IS shard 0, uncut (flat indices concatenate shards in order, so its
   local indices stay its flat indices);
-  `src/client/star-pipeline/shards/README.md` § Flat Target.idx space.
+  [Flat Target](/src/client/star-pipeline/shards/README.md#flat-targetidx-space).idx space.
 - Whether `SystemMembershipRegistry` providers fold into the module
   contract or stay a separate registry (only two implementors today —
   second-consumer rule applies).

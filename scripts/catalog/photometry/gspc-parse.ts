@@ -1,5 +1,5 @@
 // data/gaia/gaia_dr3_gspc.tsv → source_id → synthetic Johnson B−V.
-// See README.md § The ci cascade.
+// See README.md#the-ci-cascade.
 
 import { dataRows, parseFloatOrNull } from '../parse/corpus-tsv';
 
@@ -9,7 +9,7 @@ const GSPC_COLUMNS = [
 
 /** `1` = the source's G and BP−RP lie where the JKC standardisation was
  *  validated (Montegriffo+ 2023 § 6.2). The archive states no polarity;
- *  `data/gaia/README.md` § The GSPC validated-range flag carries the quote
+ *  `/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range` carries the quote
  *  and the measured region. */
 const FLAG_IN_VALIDATED_RANGE = '1';
 
@@ -20,8 +20,8 @@ export interface GspcColour {
   /** Whether the archive calls both bands inside the standardisation's
    *  validated range. Recorded rather than gated on — this catalogue is
    *  bright enough that it is almost never true, and the tier's real bound is
-   *  the measured one (README.md § Why the GSPC tier does not gate on the
-   *  flag). Its count is pinned so an upstream polarity flip surfaces. */
+   *  the measured one (README.md#why-the-gspc-tier-does-not-gate-on-the-flag).
+   * Its count is pinned so an upstream polarity flip surfaces. */
   inValidatedRange: boolean;
 }
 

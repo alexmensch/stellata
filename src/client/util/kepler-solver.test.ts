@@ -80,8 +80,8 @@ const ROUND_TRIP_ORBITS: Orbit[] = [
   },
   // e stops at 0.01 rather than going lower because ω itself becomes
   // singular as e → 0 — the reason the planet ephemeris carries
-  // equinoctial elements (../solar-system/ephemerides/README.md
-  // § Equinoctial elements). Below this the assertion would be measuring
+  // equinoctial elements (../solar-system/ephemerides/README.md#equinoctial-elements).
+  // Below this the assertion would be measuring
   // that singularity, not this function.
   {
     label: 'a near-circular, near-coplanar orbit',

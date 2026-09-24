@@ -3,8 +3,7 @@
 Where a body's pole and prime meridian point on the model clock, and how
 that composition reaches texture UVs. Consumed by
 `../planet-mesh-layer.ts` (mesh orientation) and `../../planet-system.ts`
-(the per-body rotation tables); the mesh LOD itself is `../README.md`
-§ Planet mesh LOD.
+(the per-body rotation tables); the mesh LOD itself is [Planet mesh LOD](../README.md#planet-mesh-lod).
 
 ```
 src/client/solar-system/planets/rotation/
@@ -32,7 +31,7 @@ worth most of a hemisphere at the clock's bounds:
   lag of Earth's rotation behind uniform time, and it reaches 20.5 h —
   308° of rotation — at 3000 BC. So the spin runs on the Earth rotation
   angle, which is linear in UT1 by definition, and every other body keeps
-  the TT argument (`../../time/README.md` § Timescales).
+  the TT argument ([Timescales](../../time/README.md#timescales)).
 - **Its prime meridian is not linear in any timescale.** W is measured
   from the node of the equator of date on the ICRS equator, and that node
   precesses non-linearly. `earthSpinDeg` therefore composes W as
@@ -94,7 +93,7 @@ body's equirect map, added to the spin term so texture features land
 on their true longitudes. Planet maps are centred on 0° except
 Pluto (PIA11707 is centred on ~180°E — Sputnik Planitia at map
 centre); moon maps are centred on 180° except the Moon and Io (0°) —
-see `data/textures/README.md` § Artifact contract. Gas-giant and
+see [Artifact contract](/data/textures/README.md#artifact-contract). Gas-giant and
 Venus cloud maps are epoch snapshots of rotating cloud decks, so
 their longitude alignment is inherently arbitrary; 0 is used.
 

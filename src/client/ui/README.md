@@ -35,12 +35,12 @@ registry only describes what to display.
 | `←` / `→` | Time scrubber (while open): rewind / fast-forward — thin wrappers over the widget's `stepBack` / `stepForward` |
 | `Space` | Time scrubber (while open): play / pause (`togglePlay`) — but during an active warp, Space skips the warp (`warp-button.ts`) and leaves the scrubber untouched |
 | `Backspace` | Time scrubber (while open): reset to live now (`reset`) |
-| `S` | Step the reference frame on, landing on whichever instrument the mode shows: the attitude indicator's frame flag in navigate, `coordSphere` (which adds a `none` stop) in observe. Any frame the focused object gives no meaning to is skipped (`../attitude/README.md` § Which frame, and who chooses). It never hides an instrument — only `U` does |
-| `L` | Level the camera: zero its roll against the attitude indicator's active frame in navigate (same action as clicking the ball), or against the drawn coordinate sphere in observe, where it is a no-op while none is up (`../attitude/README.md` § Levelling) |
-| `Shift` `L` | Engage or release the orbit lock — the padlock chip's keyboard path. One key squares you up to the frame, its modifier keeps you there. A silent no-op unless the chip is on screen, which is ORB only (`../attitude/orbit-frame/README.md` § The lock) |
-| `Z` | Aim at the showing frame's origin — 0° longitude, 0° latitude on the 8-ball's frame in navigate, on the drawn grid in observe, where it does nothing with none up (`../attitude/README.md` § Levelling) |
+| `S` | Step the reference frame on, landing on whichever instrument the mode shows: the attitude indicator's frame flag in navigate, `coordSphere` (which adds a `none` stop) in observe. Any frame the focused object gives no meaning to is skipped ([Which frame, and who chooses](../attitude/README.md#which-frame-and-who-chooses)). It never hides an instrument — only `U` does |
+| `L` | Level the camera: zero its roll against the attitude indicator's active frame in navigate (same action as clicking the ball), or against the drawn coordinate sphere in observe, where it is a no-op while none is up ([Levelling](../attitude/README.md#levelling)) |
+| `Shift` `L` | Engage or release the orbit lock — the padlock chip's keyboard path. One key squares you up to the frame, its modifier keeps you there. A silent no-op unless the chip is on screen, which is ORB only ([The lock](../attitude/orbit-frame/README.md#the-lock)) |
+| `Z` | Aim at the showing frame's origin — 0° longitude, 0° latitude on the 8-ball's frame in navigate, on the drawn grid in observe, where it does nothing with none up ([Levelling](../attitude/README.md#levelling)) |
 | `Shift` `Z` | Aim at the opposite point, 180° longitude — where `Z` followed by an invert would land, in one sweep |
-| `Shift` `V` | Invert the view — the INV chip's keyboard path, which observe needs because the chip rides a navigate-only instrument (`../attitude/README.md` § Inverting the view) |
+| `Shift` `V` | Invert the view — the INV chip's keyboard path, which observe needs because the chip rides a navigate-only instrument ([Inverting the view](../attitude/README.md#inverting-the-view)) |
 | `H` | Toggle `showHud` |
 | `F` `F` | Double-tap: toggle browser fullscreen (`fullscreen.ts`) — works in every mode. Single `F` opens Find in observe mode only, deferred by the double-tap window so the second press can take fullscreen instead. `F` is the only key left with that deferral. |
 | `U` | Show/hide the controls — the top-right stack and the bottom-left Instruments panel (`controls-hidden.ts`) |
@@ -137,7 +137,7 @@ overlays / camera position are deliberately *not* touched — those are user
 choices, not "default view" state.
 
 The star-size and "Dynamic range" resets are gone with their sliders
-(`../filters/README.md` § The multiplier is the ONLY footprint control);
+([The multiplier is the ONLY footprint control](../filters/README.md#the-multiplier-is-the-only-footprint-control-deliberately));
 `sizeMin`/`sizeMax` are derived, so there is nothing to reset them *to*
 that they are not already at.
 
@@ -231,8 +231,8 @@ Two specific freezes use this:
 - **Navigate mode** disables the coordinate-sphere row outright — nothing
   draws a grid there, so a click would write a selection with no visible
   effect. In observe, a frame the focused object gives no meaning to is
-  disabled on its own (`../galactic/coord-spheres/README.md` § A frame is
-  offered where it describes something). Both ride `'focus'` / `'cameraMode'`
+  disabled on its own ([A frame is offered where it describes something](../galactic/coord-spheres/README.md#a-frame-is-offered-where-it-describes-something)).
+  Both ride `'focus'` / `'cameraMode'`
   rather than the per-frame path, since neither turns on camera distance any
   more.
 
@@ -267,8 +267,7 @@ Everything else in the panel rides the discrete `'filter'` /
 
 For the underlying instrument / FOV / star-size model (aperture-derived
 `m_lim`, override flags, plate-scale K, soft-knee saturation), see
-`../filters/README.md` and `../star-pipeline/perceptual-disc/README.md`
-§ Angular-size calibration.
+`../filters/README.md` and [Angular-size calibration](../star-pipeline/perceptual-disc/README.md#angular-size-calibration).
 
 ## Theme
 
@@ -293,7 +292,7 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   Children in DOM order:
   topbar ("Navigate" heading + Focus/To search), panel (Settings), then
   the `.ui-top-bottom` group — the card rolodex (`#card-stack`,
-  `../focus-card/README.md` § Rolodex behaviour) + meta (star count /
+  [Rolodex behaviour](../focus-card/README.md#rolodex-behaviour)) + meta (star count /
   time scrubber). A single `margin-top: auto` on the group pins it to
   the column floor. The rolodex is one card-sized unit at any pin count
   (strips compress instead of the stack growing), so the column never
@@ -364,8 +363,7 @@ tick". In OBSERVE mode the bar switches to angular-extent-of-sky in
 degrees (FOV-driven) since "scene scale at camera-target depth" is
 meaningless when the camera sits on the focal star. Scene-scale during
 a warp already targets B from warp start (`controls.target` is
-repointed at B at warp launch — see `src/client/camera/warp/README.md`
-§ Scale-bar smoothness).
+repointed at B at warp launch — see [Scale-bar smoothness](/src/client/camera/warp/README.md#scale-bar-smoothness)).
 
 The former **focus z-axis indicator** (an angled line from the bar's
 left end aiming at the focused object, carrying its name +

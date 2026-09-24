@@ -28,7 +28,7 @@ describe('the chart paper reaches the canvas as its authored value', () => {
 
   // The boot pins outputColorSpace to the working space, so nothing on that
   // path encodes the clear — the ported shaders own their own transfer
-  // (`../webgpu/README.md` § Output colour space).
+  // (`../webgpu/README.md#output-colour-space--pinned-to-the-working-space`).
   it('lands on #f5f2ea through the WebGPU clear', () => {
     const written = webgpuClearsWith(paperClearColour(THREE.LinearSRGBColorSpace));
     for (let i = 0; i < 3; i++) expect(written[i]).toBeCloseTo(PAPER_DISPLAY[i], 5);

@@ -1,6 +1,5 @@
 // Non-singular equinoctial elements, the representation every planet element
-// source is expressed in before a position is solved. See README.md
-// § Equinoctial elements.
+// source is expressed in before a position is solved. See README.md#equinoctial-elements.
 
 const DEG = Math.PI / 180;
 

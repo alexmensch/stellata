@@ -17,7 +17,7 @@ Byte-signature pinned by `blackbody-lut.test.ts`.
 
 The table holds **linear light, not gamma-encoded values** — the HDR
 tone-map pass is the codebase's only sRGB encode
-(`docs/science-hdr-pipeline.md` § 2), so an encode here would be a
+([§ 2](/docs/science-hdr-pipeline.md#2-tone-map-operator)), so an encode here would be a
 double one. Every named-star pin in the test encodes on read, which is
 why the Python reference triplets are unchanged by the switch.
 
@@ -32,7 +32,7 @@ so uint8 costs at most 0.91%.
 Four consumers reach past the table into the pure module:
 `scripts/catalog/spectral/physical-radius.ts` for the Ballesteros inverse at
 build time, and — for their population tints
-(`src/client/milkyway/calibration/README.md` § Population colours) — the
+([Population colours](/src/client/milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited)) — the
 band's column integrand, the Local Group emission block, and the
 population constants the two layers share in
 `src/client/hdr/emission/population-colour-pure.ts`. Which is why the

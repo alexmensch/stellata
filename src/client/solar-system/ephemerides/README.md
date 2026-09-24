@@ -96,7 +96,7 @@ Standish's published budget for the Table 2a elements
 λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at Uranus;
 measured against DE441 the giants sit at 0.05–0.14 AU across the clamp
 and 0.05 AU in 1900–2100. Whether that shows depends on viewing
-distance, not on eye discrimination from Sol (AGENTS.md § Camera-anywhere, any-epoch):
+distance, not on eye discrimination from Sol ([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)):
 under a Voyager 2 flythrough the camera rides within the true 0.0007 AU
 Uranus approach while the series puts the planet 0.05 AU away, so the
 swing-by reads as a distant pass. That is what the tables are for, and it
@@ -378,8 +378,8 @@ same constants for all of them and nothing writes the material per ring,
 so a stroke per ring bought nothing and cost its own shader build, its own
 pipeline and its own multiple-render-target registration — up to 27 of
 them for Sol (nine planet rings, eighteen moon rows), each its own program
-(`../../webgpu/tsl/README.md` § One program per material
-instance). It is built in the
+([One program per material instance](../../webgpu/tsl/README.md#one-program-per-material-instance)).
+It is built in the
 constructor and freed in `dispose`, NOT in `disposeRings` — that runs on
 every rebuild. Each ring
 rides its live centre (the host's renderer-local position, fed each
@@ -403,7 +403,7 @@ Orbit rings + the heliopause shell are also declutter-cycle elements
 `Heliopause.setPermitted` AND into `group.visible` alongside the existing
 warp / chart / focus gates, so both hide at detail level `physical`
 (`../../scene/declutter/README.md`). The OBSERVE anchor body's own ring
-is not drawn but stays resolvable (`../../camera/observe/README.md` § The observe anchor in line layers).
+is not drawn but stays resolvable ([The observe anchor in line layers](../../camera/observe/README.md#the-observe-anchor-in-line-layers)).
 
 ## Orbital plane convention
 

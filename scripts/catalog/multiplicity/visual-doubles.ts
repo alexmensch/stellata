@@ -1,6 +1,5 @@
 // Hipparcos CCDM parser plus curated visual-double overrides, feeding
-// the chart-mode wings glyph. See scripts/catalog/multiplicity/README.md § CCDM
-// double-star cross-match.
+// the chart-mode wings glyph. See /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 import { existsSync, readFileSync } from 'node:fs';
 
 import {

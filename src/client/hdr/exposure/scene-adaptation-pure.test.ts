@@ -37,7 +37,7 @@ import {
   trimStopsForCoverage,
 } from './scene-adaptation-pure';
 
-// docs/science-hdr-pipeline.md § 3.1's reference frame: the default
+// /docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut's reference frame: the default
 // instrument at EV 0 on a 1920×1080 viewport at its 50° FOV. Every
 // contribution below is quoted against exactly this.
 const VIEWPORT_W = 1920;
@@ -121,7 +121,7 @@ describe('scene-adaptation constants', () => {
 describe('§ 3.1 contribution table', () => {
   it('adapts to a resolved planet filling a fifth of the frame', () => {
     // Venus: S₀ = +0.78 mag/arcsec², the closed form in
-    // solar-system/planets/README.md § Physical-luminance emission.
+    // /src/client/solar-system/planets/README.md#physical-luminance-emission.
     const surfaceL = surfaceBrightnessLuminance(EXPOSURE, 0.78, OMEGA_PX);
     expect(surfaceL).toBeCloseTo(3.57e5, -3);
     // Coverage cancels against the disc's own area, so the contribution

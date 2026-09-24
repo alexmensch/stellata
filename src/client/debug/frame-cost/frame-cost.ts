@@ -60,7 +60,7 @@ export interface PriceFrameOptions extends PassToggleOptions {
    *  population instead of the pass. Set false to price the live path. */
   pinExposure?: boolean;
   /** Pin the sample clock instead of taking the adapter's best
-   *  (README.md § Preconditions). */
+   *  (README.md#preconditions). */
   method?: GpuFrameMethod;
 }
 
@@ -102,8 +102,7 @@ async function probeIdleCadenceMs(): Promise<number> {
  * whole-frame GPU scope with the pass disabled, difference the median
  * against baselines measured either side of it. One pass at a time —
  * differentials are the only per-pass price there is
- * (../gpu-timing/README.md § An exact frame total, and no per-pass rows at
- * all).
+ * (../gpu-timing/README.md#an-exact-frame-total-and-no-per-pass-rows-at-all).
  *
  * The sample source (`gpu-frame-source.ts`) is the renderer's own
  * timestamp resolve, or rAF-delta wall time where the adapter has no sound

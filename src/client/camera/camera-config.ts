@@ -1,6 +1,5 @@
 // Live camera-motion config: shipping values from `timing.ts`, mutable
-// by the warp-tuning debug panel. See src/client/camera/README.md
-// § Shipping config vs debug panel.
+// by the warp-tuning debug panel. See /src/client/camera/README.md#shipping-config-vs-debug-panel.
 
 import {
   type ArrivalCurveContext,

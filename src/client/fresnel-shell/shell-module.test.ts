@@ -116,7 +116,7 @@ describe('shell kind module', () => {
 
   // One scene per boot, and NOTHING warns about a layer parented
   // elsewhere — it renders nowhere while every CPU mirror believes it
-  // draws (`../webgpu/README.md` § One scene per boot). This is the only
+  // draws (`../webgpu/README.md#one-scene-per-boot`). This is the only
   // guard on that.
   it('builds both shells into the context scene', async () => {
     stubFetch(true);
@@ -136,8 +136,8 @@ describe('shell kind module', () => {
     const ctx = makeCtx();
     m.attach(ctx);
     const { pick } = m.hover!();
-    // Both shells start unpermitted (fresnel-shell/README.md
-    // § Invariants) — nothing is drawn, so nothing picks.
+    // Both shells start unpermitted (/src/client/fresnel-shell/README.md#invariants)
+    // — nothing is drawn, so nothing picks.
     expect(pick(400, 300, 14)).toBeNull();
     const binds = m.detailBinds!();
     binds.localBubbleShell!(true);

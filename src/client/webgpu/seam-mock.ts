@@ -1,4 +1,4 @@
-// WebGpuSeam test double. See README.md § Files in this area.
+// WebGpuSeam test double. See README.md#files-in-this-area.
 
 import type { WebGpuSeam, WebGpuPlanetGlare } from './seam';
 

@@ -1,13 +1,13 @@
 // On-screen motion of one frame's TrackballControls step, and the floors
 // its damping tail and its re-derived pose are snapped still under. See
-// README.md § Damping settle floor and § Derived-pose settle floor.
+// README.md#damping-settle-floor and § Derived-pose settle floor.
 
 import { ulpsBetween } from '../../../util/ulp';
 
 /** Per-frame on-screen motion under which the navigate-mode damping tail
  *  is stopped, in CSS pixels. A pixel is a pixel from any vantage at any
  *  epoch, which is what makes this threshold admissible where a
- *  world-space one would not be (AGENTS.md § Camera-anywhere). */
+ *  world-space one would not be (/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule). */
 export const TRACKBALL_SETTLE_PX = 0.1;
 
 /** Per-frame quaternion drift under which the orientation `lookAt`
@@ -56,7 +56,7 @@ export function eyeSwingRad(prev: Vec3Like, now: Vec3Like): number {
 /** What this frame's camera step moved on screen, in CSS px: the eye's
  *  angular swing, plus what the dolly did to a feature at the frame
  *  edge. Those are the only two residuals the damping can produce — pan
- *  is off permanently (README.md § TrackballControls tuning) — so the
+ *  is off permanently (README.md#trackballcontrols-tuning) — so the
  *  target's own motion (a focal ride, a recentre) is deliberately not a
  *  term: it carries camera and target together and owes no tail. */
 export function trackballMotionPx(

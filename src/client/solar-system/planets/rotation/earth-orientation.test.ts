@@ -1,5 +1,5 @@
 // Earth's full orientation chain vs frozen Horizons sub-solar lon/lat
-// across the whole model clock. See README.md § Earth is not a linear row.
+// across the whole model clock. See README.md#earth-is-not-a-linear-row.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';

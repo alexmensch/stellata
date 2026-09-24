@@ -37,7 +37,7 @@ EXPECTED_A2_ROWS = 13
 
 # Paper-name → Gaia DR3 source_id, hand-resolved once via SIMBAD and
 # G-mag-verified against the paper. Resolution recipe per name type is
-# documented in data/distance-validation/README.md § Name resolution.
+# documented in /data/distance-validation/README.md#name-resolution--gaia_source_id.
 # In-line notes below cover only the special cases where the obvious
 # SIMBAD lookup picks the wrong source.
 NAME_TO_GAIA_DR3: dict[str, int] = {

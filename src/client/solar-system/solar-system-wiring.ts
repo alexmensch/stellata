@@ -1,4 +1,4 @@
-// Solar-system scene wiring — see README.md § Wiring.
+// Solar-system scene wiring — see README.md#wiring.
 
 import * as THREE from 'three';
 import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';

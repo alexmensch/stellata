@@ -127,7 +127,7 @@ export function shiftArrivalWaypoints(
  *
  *  Position evolves as a smoothstep over `log d` — equal time per decade
  *  of distance, giving uniform octaves-per-second of angular size. See
- *  `src/client/camera/arrival/README.md` § Profile. The endpoints are written
+ *  `/src/client/camera/arrival/README.md#profile`. The endpoints are written
  *  bit-exact (`pStart` at `u ≤ 0`, `pEnd` at `u ≥ 1`) so callers that
  *  compare `camera.position.equals(pEnd)` after landing still match. */
 export function tickArrival(

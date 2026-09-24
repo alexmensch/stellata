@@ -18,7 +18,7 @@ copying them.
 
 The Standish 1992 series the runtime falls back to is within its published
 budget, and that budget is **0.05–0.06 AU at Saturn, Uranus and Neptune**
-(`../../src/client/solar-system/ephemerides/README.md` § Planet ephemeris).
+([Planet ephemeris](../../src/client/solar-system/ephemerides/README.md#planet-ephemeris)).
 That is not a precision nicety: under a probe flythrough the camera rides
 within Voyager 2's true 0.0007 AU Uranus approach while the rendered planet
 sits 0.06 AU away, so the swing-by reads as a distant pass. These tables
@@ -33,7 +33,7 @@ frozen truth rows for regression tests. No overlap with this folder.
   ephemeris DE441.
 - Retrieved: 2026-07-26. Each file carries its own `source.retrievedUtc`.
 - Refresh: `pnpm run fetch:ephemerides` — manual and infrequent, never part
-  of `pnpm run build` (`../README.md` § Frozen external data).
+  of `pnpm run build` ([Frozen external data](../README.md#frozen-external-data)).
 - Query shape per planet: `EPHEM_TYPE=ELEMENTS`, `CENTER='500@10'`
   (Sun centre), `REF_PLANE=ECLIPTIC`, `OUT_UNITS=AU-D`, `CSV_FORMAT=YES`,
   spanning JD 2415020.0 (Julian year 1900.0) to JD 2488070.0 (year 2100.0)
@@ -80,7 +80,7 @@ emitter and the runtime table.
   singular for these bodies.** The Earth/Moon barycentre's osculating
   inclination to the ecliptic of J2000 crosses 0.0001°, and Horizons' Ω jumps
   215° across that one sample while the orbit does not move.
-  `scripts/ephemerides/README.md` § Unwrapping the mean longitude has the
+  [Unwrapping the mean longitude](/scripts/ephemerides/README.md#unwrapping-the-mean-longitude) has the
   detail.
 - Rounded to 11 significant digits from Horizons' 16 — the binding column is
   `lambda`, where 11 digits leaves three orders of headroom on what the 1e-5
@@ -93,7 +93,7 @@ interpolated elements stays within `positionToleranceAu` (1e-5 AU, 1,496 km)
 of Horizons** — the same bound the probe trajectory grids hold, so a rendered
 flyby's error is the encounter geometry's own. How the pipeline finds the
 cadence, and why the interpolation is cubic, is
-`scripts/ephemerides/README.md` § Cadence.
+[Cadence](/scripts/ephemerides/README.md#cadence).
 
 Measured by `fetch:ephemerides` at the time of the retrieval above. *Midpoint*
 is the max over every interval midpoint — epochs the table was never fitted

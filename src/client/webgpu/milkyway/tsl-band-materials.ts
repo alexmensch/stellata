@@ -1,5 +1,5 @@
 // The band material seam's factory
-// (../../milkyway/README.md § The material seam).
+// (../../milkyway/README.md#the-material-seam).
 
 import {
   seedBandSharedSlots, type BandMaterials, type BandSharedSlots,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Synthesized sub-pair injection — inner pairs whose orbit exists in
 ORB6 / Gaia NSS / Pulkovo MSC but which WDS never enumerates as a pair
-row. See ``scripts/binaries/README.md`` § Sub-pair synthesis."""
+row. See /scripts/binaries/README.md#sub-pair-synthesis-subdividepy."""
 
 from __future__ import annotations
 

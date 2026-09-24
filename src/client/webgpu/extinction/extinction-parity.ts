@@ -1,6 +1,6 @@
 // The kernel's parity instrument: the same TSL march as a fragment pass
 // into a star-indexed float target, bit-compared against the storage
-// buffer the kernel wrote. README.md § The prepass kernel.
+// buffer the kernel wrote. README.md#the-prepass-kernel.
 
 import {
   FloatType, NearestFilter, NoBlending, NodeMaterial, QuadMesh, RedFormat,

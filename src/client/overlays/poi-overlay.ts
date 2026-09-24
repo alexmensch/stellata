@@ -178,8 +178,7 @@ export function createPoiOverlay(stellata: Stellata): void {
   const tmpScreenDir: [number, number] = [0, 0];
 
   // Position + name dispatch through the kind-generic registries so a
-  // new pinnable kind needs no overlay edit (camera/focus/README.md
-  // § FocusableProviders).
+  // new pinnable kind needs no overlay edit (/src/client/camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry).
   function poiLocalPositionInto(t: Target, out: THREE.Vector3): boolean {
     return stellata.focusables[t.kind].localPositionInto(t.idx, out);
   }

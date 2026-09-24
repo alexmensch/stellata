@@ -49,7 +49,7 @@ describe('stellata.ts integration-shell ratchet', () => {
     const allowed = new Set([...COMPOSITION, ...AWAITING_EXTRACTION]);
     expect(
       fields.filter((f) => !allowed.has(f)),
-      'stellata.ts is wiring only (AGENTS.md § Folder & module conventions): new state belongs in its subsystem folder',
+      'stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands): new state belongs in its subsystem folder',
     ).toEqual([]);
   });
 

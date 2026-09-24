@@ -1,5 +1,5 @@
 // The reflected-glare billboard's vertex and fragment graphs over
-// ./planet-glare-geometry.ts's packed layout. Physics: README.md § Reflected glare.
+// ./planet-glare-geometry.ts's packed layout. Physics: README.md#reflected-glare--a-planet-reads-exactly-like-a-star.
 
 import {
   Discard, Fn, If, acos, atan, clamp, cos, dot, exp, float, instanceIndex, int,

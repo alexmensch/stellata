@@ -8,7 +8,7 @@ import type { ParkPhase } from './park/adaptation-park-pure';
 
 export interface ExposureReadout {
   /** Both rescaled to the base instrument exposure, as the branches read
-   *  them (`reduction/README.md` § Measure at the base exposure). */
+   *  them (`reduction/README.md#measure-at-the-base-exposure-not-the-live-one`). */
   meanL: number;
   discL: number;
   coverage: number;

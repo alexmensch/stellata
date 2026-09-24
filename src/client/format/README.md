@@ -53,8 +53,8 @@ probe-format.ts           Deep-space-probe mission stats:
                           formatter, so neither is spelled out at a call
                           site. The distance and speed are the
                           card tiers' one Sol-relative pair — see
-                          ../focus-card/README.md § Frame-of-reference
-                          principle for why they're admitted.
+                          ../focus-card/README.md#frame-of-reference-principle
+                          for why they're admitted.
 moon-list-format.ts       moonRosterText(names, maxNames?) → capped
                           comma roster for the hover card's "Moons …"
                           line (truncating to "+N more"). The focus

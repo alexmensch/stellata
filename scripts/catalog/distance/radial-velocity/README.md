@@ -3,8 +3,8 @@
 The radial term of the space-motion velocity: which source supplies it, the
 gate that withholds Gaia's on a blended row, and the rule stopping Gaia's own
 reduction of that row from returning through SIMBAD. The tangential term and
-the velocity assembly that consumes both are `../README.md` § Direction
-resolution and `../../parse/README.md` § Space-motion velocity.
+the velocity assembly that consumes both are [Direction resolution](../README.md#direction-resolution)
+and [Space-motion velocity](../../parse/README.md#space-motion-velocity).
 
 ## Files in this area
 
@@ -31,7 +31,7 @@ Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
 ```
 
 The spine's printed `rv` cell is **not** a tier and is no longer read: it is
-an AT-HYG transcription we cannot re-pull, so `docs/catalog-driver.md` § 5
+an AT-HYG transcription we cannot re-pull, so [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 retires it. Its 871 `rv_src=OTHER` cells were unattributable even by that
 standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
@@ -154,7 +154,7 @@ EGGR 252's reads **243,879 km/s**.
 
 The tier ships what the bibcode says, so a published-but-wrong velocity
 arrives with it and is caught downstream by the two thresholds
-`../../parse/README.md` § Space-motion velocity describes, not by a quality
+[Space-motion velocity](../../parse/README.md#space-motion-velocity) describes, not by a quality
 or magnitude gate here. Both moved when the tier landed, and both are pinned:
 
 - `velocityAboveEscape` **45 → 56**. Fourteen tier values exceed 550 km/s,

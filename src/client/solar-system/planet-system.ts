@@ -1,6 +1,6 @@
 // Planet / PlanetSystem contract + SOL_PLANETS table. Generic across
 // hosts; gating is via FocusController.getFocusedPlanetSystem(). See
-// src/client/solar-system/README.md § Data model.
+// /src/client/solar-system/README.md#data-model.
 
 import { AU_KM } from '../util/astronomy-constants';
 import { solveKepler } from '../util/kepler-solver';
@@ -110,7 +110,7 @@ export interface Planet {
   // plane, textured by the `<body>-rings.png` radial strip (RGB =
   // colour, A = opacity; U maps inner→outer). Spans must match the
   // strip builds in scripts/textures/build-textures.py — see
-  // data/textures/README.md § Ring strips (Jupiter's rings ship no
+  // /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor (Jupiter's rings ship no
   // strip: below the 8-bit-representable opacity floor).
   readonly rings?: PlanetRings;
   // Optional atmosphere shell (mesh-LOD regime only): day-side limb
@@ -175,8 +175,8 @@ export interface PlanetSystem {
    *  Float64Array, not Float32Array: at Pluto's 39.5 AU a float32
    *  parsec quantises to 449 km — 0.38 of Pluto's own radius, and this
    *  buffer feeds the mesh LOD, focus ride, and overlay projections,
-   *  not just the GPU attribute. See `planets/README.md` § Position
-   *  precision. */
+   *  not just the GPU attribute. See `planets/README.md#position-precision--float64-master-float32-gpu-bake`.
+   * */
   positionsAt?: (t: number, out: Float64Array) => void;
   /** Optional live orbit-ring geometry, indexed parallel to `planets`,
    *  from the SAME element source `positionsAt` evaluates — so a ring
@@ -316,7 +316,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     // optically thin over it (a limb/airlight overlay, not a second cloud
     // layer that would double-count), mild blue absorption → pale-yellow tint.
     // Rayleigh: the CO₂ column above the τ=1 cloud tops. Sources:
-    // docs/science-solar-system.md § Atmosphere optical depths.
+    // /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
     atmosphere: {
       heightKm: 90, rayleighHeightKm: 15.9, mieHeightKm: 5,
       rayleighCoeff: [0.0035, 0.0068, 0.0156], mieCoeff: 0.12,
@@ -338,7 +338,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     terminatorSoftness: 0.05,
     // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine et al. 1999); the
     // Mie term is the clean maritime background aerosol column. Sources +
-    // derivations: docs/science-solar-system.md § Atmosphere optical depths.
+    // derivations: /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
     atmosphere: {
       heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
       rayleighCoeff: [0.049, 0.097, 0.221], mieCoeff: 0.05,
@@ -360,7 +360,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     // Dust-dominated: the 6.1 hPa CO₂ column's near-zero Rayleigh, the
     // measured background dust column as grey Mie, and blue-absorbing dust
     // (measured single-scattering albedo) → butterscotch sky. Sources:
-    // docs/science-solar-system.md § Atmosphere optical depths.
+    // /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
     atmosphere: {
       heightKm: 60, rayleighHeightKm: 11, mieHeightKm: 11,
       rayleighCoeff: [0.0013, 0.0025, 0.0057], mieCoeff: 0.2,
@@ -394,8 +394,8 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: SATURN_PHASE,
     rotation: SATURN_ROTATION,
     terminatorSoftness: 0.02,
-    // Radial span of the shipped ring profile (data/textures/README.md
-    // § Artifact contract) — D-ring inner edge to F-ring outer.
+    // Radial span of the shipped ring profile (/data/textures/README.md#artifact-contract)
+    // — D-ring inner edge to F-ring outer.
     rings: {
       innerRadiusKm: 74510,
       outerRadiusKm: 140390,
@@ -468,7 +468,7 @@ interface MoonPhysical {
 
 // Physical properties for the 18 major moons. Mean radii from NASA/JPL
 // fact sheets; geometric albedos and representative colours per
-// docs/science-solar-system.md § Moons. Orbital a/e are NOT repeated here
+// /docs/science-solar-system.md#moons. Orbital a/e are NOT repeated here
 // — SOL_MOONS reads them from MOON_ELEMENTS by name, so each has a single
 // source of truth.
 const MOON_PHYSICAL: readonly MoonPhysical[] = [
@@ -502,8 +502,7 @@ const MOON_PHYSICAL: readonly MoonPhysical[] = [
     // the other bodies (per-row params); do not invert the absorption.
     // Rayleigh: the full 1.5-bar N₂ column, ~11x Earth's — mostly hidden
     // beneath the absorbing haze, but its top is Titan's real high-altitude
-    // blue limb. Sources: docs/science-solar-system.md § Atmosphere optical
-    // depths.
+    // blue limb. Sources: /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
     atmosphere: {
       heightKm: 300, rayleighHeightKm: 40, mieHeightKm: 50,
       rayleighCoeff: [0.51, 1.01, 2.31], mieCoeff: 2.5,

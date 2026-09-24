@@ -489,7 +489,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   it('total magnitude sits between the as-observed and dereddened values', () => {
     // Catalogue m_V = 3.44 is RC3 as-observed; Tempel et al. 2011
     // (A&A 526, A155) Table 2 gives 3.24 intrinsic. The layer calibrates
-    // to as-observed on purpose (docs/science-local-group.md § No dust),
+    // to as-observed on purpose (/docs/science-local-group.md#no-dust),
     // so the difference IS the MW foreground it declines to remove.
     expect(m31.emission.mV).toBe(3.44);
     expect(m31.emission.mV - 3.24).toBeGreaterThan(0.1);
@@ -508,8 +508,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   // 24×24 brute-force samples per plate scale, each a full combined-profile
   // evaluation, across three FOVs — tens of seconds solo, and past the 30 s
   // global under full-suite parallel load. Carries its own timeout for the
-  // same reason its sibling above does; see tests/README.md
-  // § Suite-wide timeouts.
+  // same reason its sibling above does; see /tests/README.md#suite-wide-timeouts.
   it('softens the nucleus to the area average a pixel should carry', { timeout: 120_000 }, () => {
     const areaAverageSb = (thetaArcsec: number, pxArcsec: number) => {
       const n = 24;
@@ -546,7 +545,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   // Why this layer does NOT take the Milky Way band's rod-summation display
-  // gain (`../../hdr/emission/README.md` § Extended sources). That gain multiplies a
+  // gain (`../../hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail`). That gain multiplies a
   // surface brightness by the eye's summation solid angle, which is the
   // flux in that patch only for a source uniform across it. M31's bulge
   // R_e is 4.4 arcmin against a 13.0 arcmin summation disc, so assuming

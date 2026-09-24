@@ -118,7 +118,7 @@ const orbitBoresight = new THREE.Vector3();
 const orbitSeed = new THREE.Vector3();
 
 /** `captureOrbitFrame` writing into `out`. The instrument rebuilds ORB every
- *  tick (`orbit-frame/README.md` § Orbit rate), so this path runs per rendered
+ *  tick (`orbit-frame/README.md#orbit-rate`), so this path runs per rendered
  *  frame and allocates nothing. */
 export function orbitFrameInto(
   out: ReferenceFrame,
@@ -211,7 +211,7 @@ function frameBasisInto(out: THREE.Matrix4, frame: ReferenceFrame): THREE.Matrix
  *  the next tick reads any write at all as a fresh camera move and renders;
  *  at live 1× a moon's datum turns a few millionths of a degree per tick,
  *  which would pin the gate open forever for a step no display can show
- *  (`orbit-frame/README.md` § The lock). */
+ *  (`orbit-frame/README.md#the-lock`). */
 export function orbitRideRotation(
   out: THREE.Quaternion,
   from: ReferenceFrame,

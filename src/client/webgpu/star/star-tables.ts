@@ -1,6 +1,6 @@
 // The star-indexed storage tables every WebGPU star shader reads: the static
 // record table built once, and the shell-written attributes mirrored live
-// over their own arrays. README.md § Star tables.
+// over their own arrays. README.md#star-tables--every-per-star-field-is-a-storage-read.
 
 import type * as THREE from 'three';
 import { StorageBufferAttribute, type WebGPURenderer } from 'three/webgpu';
@@ -27,7 +27,7 @@ export interface StarLayerSources {
   teffApsis: Float32Array;
   boundingSphereRadiusPc: number;
   /** The shell-owned attributes the forwarded tables wrap.
-   *  See README.md § Star tables. */
+   *  See README.md#star-tables--every-per-star-field-is-a-storage-read. */
   iPositionAttr: THREE.BufferAttribute;
   iCompositeSuppressAttr: THREE.BufferAttribute;
   iEclipseDimAttr: THREE.BufferAttribute;

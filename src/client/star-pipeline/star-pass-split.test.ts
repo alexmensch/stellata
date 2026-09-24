@@ -1,6 +1,6 @@
 // The vertex stage must route the disc/glow split on the undimmed
 // magnitude, or the three compilations tier a star differently and every
-// one of them discards it. ./README.md § Star rendering.
+// one of them discards it. ./README.md#star-rendering-instanced-quads-three-passes.
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';

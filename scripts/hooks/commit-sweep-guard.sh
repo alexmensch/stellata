@@ -5,18 +5,18 @@
 #  (a) the staged tree touches a guarded folder (src/, scripts/, data/,
 #      docs/) without modifying that folder's README.md, AND the
 #      commit message lacks an explicit `[readme-skip: <reason>]`
-#      opt-out — enforces AGENTS.md § Folder READMEs trigger 4
+#      opt-out — enforces /AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit trigger 4
 #      ("At commit time, update");
 #
 #  (b) the staged diff (added lines only) contains forbidden comment-
 #      rule patterns from comment-rules.json — the same file
 #      tests/code-comment-rules.test.ts reads, scoped to NEW lines so
 #      pre-existing legacy violations don't block unrelated commits —
-#      enforces AGENTS.md § Code comments;
+#      enforces /AGENTS.md#code-comments--what-ci-enforces-here;
 #
 #  (c) a comment block the commit adds restates markdown prose the same
 #      commit adds — the "README written minutes earlier" failure named
-#      in docs/authoring-patterns.md § Code-comment hygiene. Opt out with
+#      in /docs/authoring-patterns.md#code-comment-hygiene. Opt out with
 #      `[comment-ok: <reason>]`.
 #
 # Scope is `git diff --cached`: -a / --all commits aren't fully
@@ -248,21 +248,21 @@ fi
 reason="Refusing git commit — pre-commit sweep found work the rules say has to happen now, not in a follow-up."
 
 if [ -n "$stale" ]; then
-  reason+=$'\n\nModified code in folders whose README.md is not in this commit (AGENTS.md § Folder READMEs — "At commit time, update"):\n'
+  reason+=$'\n\nModified code in folders whose README.md is not in this commit (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit — "At commit time, update"):\n'
   reason+="$stale"$'\n'
   reason+=$'\nFix: re-read each README and either edit it (preferred — folder READMEs are the prose-only surface a grep for renamed symbols won\'t catch) OR, if every claim is still accurate, add `[readme-skip: <reason>]` to the commit message documenting why no update is needed. The skip tag is visible in the PR for review.'
 fi
 
 if [ -n "$violations" ]; then
-  reason+=$'\n\nForbidden comment-rule patterns in the staged diff (AGENTS.md § Code comments):\n'
+  reason+=$'\n\nForbidden comment-rule patterns in the staged diff (/AGENTS.md#code-comments--what-ci-enforces-here):\n'
   reason+="$violations"$'\n'
-  reason+=$'\nFix: rewrite per AGENTS.md § Code comments. Credit a bead → commit subject, not the code. Reference a memory → no link in code (invisible to readers without bd). Cite a PR → drop it; git blame carries the history.'
+  reason+=$'\nFix: rewrite per /AGENTS.md#code-comments--what-ci-enforces-here. Credit a bead → commit subject, not the code. Reference a memory → no link in code (invisible to readers without bd). Cite a PR → drop it; git blame carries the history.'
 fi
 
 if [ -n "$restate" ]; then
-  reason+=$'\n\nComment blocks that repeat prose this same commit adds (docs/authoring-patterns.md § Code-comment hygiene — "a comment restating README content written minutes earlier is the dominant failure mode"):\n'
+  reason+=$'\n\nComment blocks that repeat prose this same commit adds (/docs/authoring-patterns.md#code-comment-hygiene — "a comment restating README content written minutes earlier is the dominant failure mode"):\n'
   reason+="$restate"$'\n'
-  reason+=$'\nFix: cut the block to a one-line pointer at the section that now carries it (`// see <file> § <section>`). The prose is already written; a second copy rots. If the comment genuinely says something the prose does not, add `[comment-ok: <reason>]` to the commit message — visible in the PR for review.'
+  reason+=$'\nFix: cut the block to a one-line pointer at the section that now carries it (`// see <path>.md#<slug>`). The prose is already written; a second copy rots. If the comment genuinely says something the prose does not, add `[comment-ok: <reason>]` to the commit message — visible in the PR for review.'
 fi
 
 jq -n --arg reason "$reason" '{

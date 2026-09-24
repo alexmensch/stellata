@@ -23,7 +23,7 @@ three, so either import path stays valid.
   binary's and only the main thread holds it, and boot reads the Bayer map
   off `kinds.star.searchTables` rather than deriving its own.
   **A table whose consumers captured it before the index landed is filled
-  in place, never replaced** (`../README.md` § Boot in two waves):
+  in place, never replaced** ([Boot in two waves](../README.md#boot-in-two-waves)):
   `buildStarLabels` takes the module's own `starLabels` map, and boot
   copies the worker's Bayer map into the one chart mode bound against in
   wave 1 — swapping either strands its consumer on the empty map for the
@@ -39,7 +39,7 @@ three, so either import path stays valid.
 
 Deriving the search index's catalogue-wide tables costs about a second of
 main thread at boot, and since the catalogue now paints from its first
-chunk (`../loaders/README.md` § Progressive catalog load) that second
+chunk ([Progressive catalog load](../loaders/README.md#progressive-catalog-load)) that second
 freezes a **rendered** app rather than sitting behind a loading cover. So
 it runs in a worker.
 
@@ -105,7 +105,7 @@ here, if one is ever needed, is deriving `spectral` and `bayer` main-side
 letter as a glyph with its index alongside (`b` / `bx`), and every label —
 display and search alike — is rendered from that structure by the one pure
 composer the record build wrote it with
-(`scripts/catalog/naming/README.md` § Two callers, one composer). So the
+([Two callers, one composer](/scripts/catalog/naming/README.md#two-callers-one-composer)). So the
 label tier is a single pass of that composer over the corpus rather
 than a per-entry fallback chain: two of the ladder's rules are relational
 (a component borrows its system's base, and a letter is appended only
@@ -118,8 +118,8 @@ constellation + Bayer designation. Every constellation-relative *designation* �
 Flamsteed, GCVS, the component aliases below — resolves through
 `designationConIndex(entry.dc, entry.c)`, never `entry.c` alone: byte 34
 is where the star *is*, `dc` is what its name is *named for*, and the two
-diverge on a small minority of entries — `scripts/catalog/record/README.md`
-§ Search index owns that count (`designationConMismatch`), and restating it
+diverge on a small minority of entries — [Search index](/scripts/catalog/record/README.md#search-index-publicsearch-indexjson)
+owns that count (`designationConMismatch`), and restating it
 here only drifts, since every added record can move it. The
 dropdown's context line is the reverse — positional `c`, so a row reads
 the constellation the star sits in. Selecting an entry dispatches through `flyTo` /
@@ -180,7 +180,7 @@ ranking never diverges between them. The find picker differs only in its
 `onSelect`: it resolves the pick to a local position and calls
 `stellata.aimAt` — pointing the camera without focus, warp, or travel —
 and its widget is relocated into the shared `#kb-modal` card by the
-keyboard-shortcut handler (see `../ui/README.md` § Keyboard shortcuts).
+keyboard-shortcut handler (see [Keyboard shortcuts](../ui/README.md#keyboard-shortcuts)).
 
 GCVS variable-star designations (`g` field: `R CrB`, `VY CMa`, `V645 Cen`)
 are Fuse-fuzzy like Bayer/proper names — `buildGcvsLabels` emits both the
@@ -240,7 +240,7 @@ nowhere else. Every bare designation is already reached by its own tier's
 derived labels or its exact-match map, and fuzzy-indexing 300k catalogue
 numbers would only dilute the ranking. A record's `al` aliases index
 alongside: those are the published spellings the ladder displaced
-(`docs/star-naming.md` § 5), and every derivable spelling is derived
+([§ 5](/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can)), and every derivable spelling is derived
 rather than shipped.
 The numeric-ID maps echo the matched identifier in the dropdown
 ("Vega (HIP 91262)") — though a star with no proper name has nothing to echo
@@ -253,7 +253,7 @@ numbers records DISPLAY are laid down first, then the `hda` / `hra` aliases,
 first write winning. That one rule settles two collisions — 57 HD and 11 HR
 numbers are displayed by two records each (a component pair sharing one
 catalogue number), and entries arrive apparent-brightest-first
-(`scripts/catalog/record/README.md` § Record order), so an ambiguous number
+([Record order](/scripts/catalog/record/README.md#record-order)), so an ambiguous number
 resolves to the record that LOOKS brighter — which is the one a reader typing
 the number is generally after; and an alias never displaces a record that
 displays that number outright. The other two carry no aliases and still take
@@ -264,8 +264,8 @@ the fainter one. HIP carries no duplicate key today and is built the same way
 so it cannot acquire one silently. `catalog-lookup.ts`'s `byHd` uses the same
 builder, so a frozen corpus row and the search box cannot resolve one number
 differently. Which numbers become aliases at all is the write side's rule
-(`scripts/catalog/classic-ids/label-merge/README.md` § An alias stops at
-the blend): only
+([An alias stops at the blend](/scripts/catalog/classic-ids/label-merge/README.md#an-alias-stops-at-the-blend)):
+only
 where the pair is unresolved, so the record carries both components' light.
 The direction the dropdown reads — record to label — stays single-valued.
 

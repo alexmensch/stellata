@@ -1,6 +1,6 @@
 // The § 6.1 dropped list: its committed shape, its closed reason enum, and the
 // identifier key the parity gate matches it on.
-// See README.md § Why the residual drops rather than degrading.
+// See README.md#why-the-residual-drops-rather-than-degrading.
 
 /** Where the ledger is committed — beside the additions ledger it is the
  *  counterpart to, keyed on the same five identifier cells. */
@@ -46,7 +46,7 @@ export interface ParkedRecord {
   /** Build-time only — no ledger column carries it. Every parallax a skip rule
    *  refused on this row, mas, which is what companion promotion needs to tell a
    *  pair row re-serving the refusal from one merely sharing the blend's id
-   *  (`../../companions/README.md` § Refused-parallax refusal). Empty on the
+   *  (`../../companions/README.md#refused-parallax-refusal`). Empty on the
    *  three reasons that refused nothing. */
   refusedPlxMas: readonly number[];
 }

@@ -26,8 +26,7 @@ The warp consumes focusable objects through the `FocusTarget` contract
   sibling `shiftArrivalWaypoints` lives in `../arrival/camera-motion.ts`.
 - `warp-tuning.ts` — tuning section in the debug panel. Sliders write
   into `../camera-config.ts`; the panel is the only writer and no
-  shipped path imports it. See `../README.md` § Shipping config vs
-  debug panel.
+  shipped path imports it. See [Shipping config vs debug panel](../README.md#shipping-config-vs-debug-panel).
 - `warp-telemetry.ts` — last-warp summary slot, written by
   `finishWarp`, read by the tuning readout. Debug observability only;
   nothing in the warp path reads it back.
@@ -43,8 +42,7 @@ top-centre (shown only while warping), or `Esc` / `Space`.
 Double-click-to-travel routes through `focusStar(idx)` for
 consistency with search-select (parks at `parkDistForStar(idx)` —
 same auto-park every landing uses; lerps over `FOCUS_LERP_MS` or
-stays put when already inside park; see `../focus/README.md`
-§ Focus-park lerp).
+stays put when already inside park; see [Focus-park lerp](../focus/README.md#focus-park-lerp)).
 
 Two- or three-phase animation in `WarpController.updateWarp` (called
 per frame via `WarpController.tick(nowMs)`), depending on whether the
@@ -59,7 +57,7 @@ eases linearly from `mag0` down to `sourceOffset`. End state: A is
 centred and B is straight ahead, beyond A. Quaternion slerp is used
 for the angular interp (robust against antipodal starting positions).
 `sourceOffset` is the source's own auto-park distance (see
-`../controls/README.md` § Camera near plane vs controls minDistance),
+[Camera near plane vs controls minDistance](../controls/README.md#camera-near-plane-vs-controls-mindistance)),
 separate from `endOffset` (the destination's). Decoupling these
 handles asymmetric warps cleanly: a Betelgeuse → Sol flight starts
 well outside Betelgeuse's giant disc and arrives at Sol's small park
@@ -70,7 +68,7 @@ Camera orientation during the reorient depends on launch mode:
 - **Navigate launch:** `camera.lookAt(A)` is called every frame. With
   `mag0 > 0` this keeps A perfectly centred as the camera swings
   around it. Roll comes along for free: `lookAt` reads `camera.up`, the
-  navigate roll authority (`../controls/input/README.md` § Roll authority),
+  navigate roll authority ([Roll authority](../controls/input/README.md#roll-authority)),
   so a swing that crosses the sky carries the roll the camera launched
   with rather than acquiring one from the new view axis. The animate loop
   transports `camera.up` across each of those frames — the controls are
@@ -96,8 +94,8 @@ shipped arrival profile with focus-park and unfocus. The profile is
 the **hybrid two-regime curve** — linear-d piecewise-quad outer
 (rocket-impulse, parallax-driven) → quintic smootherstep on
 angular-size inner (smooth perceptual landing on disc growth), with
-a single tunable seam-distance multiplier. See `../arrival/README.md`
-§ Profile for the geometry and the panel-knob wiring.
+a single tunable seam-distance multiplier. See [Profile](../arrival/README.md#profile)
+for the geometry and the panel-knob wiring.
 `camera.lookAt(B)` throughout.
 
 **Mid-Fly floating-origin recentre.** The moment the camera passes
@@ -126,7 +124,7 @@ family is fired from `finishWarp` via `dest.emitFocusEvents()` so the
 search-row label and friends settle in lock-step with the camera
 landing rather than ~half a warp duration early.
 
-**Chart-mode plateau-trigger.** Chart mode renders stars as
+<a id="chart-mode-plateau-trigger"></a>**Chart-mode plateau-trigger.** Chart mode renders stars as
 magnitude-driven discs (`pxSize = mix(maxPx, minPx, chartT)` with
 `chartT = clamp((appMag − magBright)/(uLimitMag − magBright), 0, 1)`).
 Once the camera is close enough that `appMag ≤ uChartMagBright`,

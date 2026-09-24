@@ -4,12 +4,12 @@ Invisible is not free: a star whose fragments write nothing still
 rasterises a full-size quad and pays read-modify-write blend bandwidth on
 every attachment its pass opens. At a deep adaptation cut that is most of
 the star field — the statistic-attachment write row measured ~50 % of the
-default Sol-view frame (`../../debug/frame-cost/passes/README.md`
-§ Decomposing the HDR chain). Two vertex-stage mechanisms
+default Sol-view frame ([Decomposing the HDR chain](../../debug/frame-cost/passes/README.md#decomposing-the-hdr-chain)).
+Two vertex-stage mechanisms
 (`../../webgpu/star/star-vertex-tsl.ts`,
 `../../webgpu/star/star-visibility-tsl.ts`) bound that cost. Neither
 touches the cull bounds themselves — `uCullMag` stays adaptation-free
-(`../../hdr/exposure/README.md` § One writer, five slots).
+([One writer, five slots](../../hdr/exposure/README.md#one-writer-five-slots)).
 
 **Measured after it landed** (Sol, Chrome `timer-query` on the retired
 WebGL2 boot, 6.774 Mpx): the frame
@@ -17,8 +17,7 @@ WebGL2 boot, 6.774 Mpx): the frame
 57–68 % lower. Its **share held at 50.6 %** — both attachments' traffic scales
 with quad area, so shrinking the quad cuts the display and statistic writes
 together and the ~50 % above still describes the frame. Numbers, gates and
-instrument: `../../debug/frame-cost/passes/README.md` § Decomposing the
-HDR chain.
+instrument: [Decomposing the HDR chain](../../debug/frame-cost/passes/README.md#decomposing-the-hdr-chain).
 
 ```
 src/client/star-pipeline/collapse/
@@ -44,7 +43,7 @@ exempt; it sizes and clips against `uLimitMag`.
 **Attachment 1's alpha is what makes it bit-exact rather than
 near-exact.** A tapered-to-zero glow fragment still writes alpha 1 there
 (the flux channel must be summed once, not scaled by the kernel again —
-`../../hdr/attachments/README.md` § One blend equation), so the additive
+[One blend equation](../../hdr/attachments/README.md#one-blend-equation-every-attachment)), so the additive
 blend adds 1 to that channel where a culled quad adds nothing. Nothing
 reads it: the reduction takes means of R and G only.
 
@@ -54,7 +53,7 @@ past it after — the same monotonicity the magnitude prefilter beside it
 runs on. Testing there keeps the extinction read (one buffer element on
 the prepass path, the raymarch on the fallback) off the whole culled
 population; the second test, on the extincted value, is the exact one
-(`../../webgpu/star/README.md` § Dust extinction).
+([Dust extinction](../../webgpu/star/README.md#dust-extinction--two-tiers-one-gate)).
 
 ## Kernel collapse — flux-preserving
 
@@ -81,11 +80,11 @@ The margin also covers the **off-target** path, where the operator runs
 per-fragment and the blend's second multiply lands outside it: the peak
 there is `tap·tonemap(vPeakL·tap)` rather than `tonemap(vPeakL·tap²)`, and
 the toe's convexity bounds it at the same half-step/16
-(`../../hdr/README.md` § The inline operator).
+([The inline operator](../../hdr/README.md#the-inline-operator--chart-modes-path)).
 
 Reading the live exposure here is deliberate and allowed: the
 no-adaptation rule protects cached and per-frame CPU consumers from
-thrash (`../../hdr/exposure/README.md` § One writer, five slots), and
+thrash ([One writer, five slots](../../hdr/exposure/README.md#one-writer-five-slots)), and
 this is a per-instance GPU computation with no cache. The win lands
 exactly at deep-cut vantages; at `dm = 0` the floor sits inside the
 taper's last scrap, where quads are minimum-size anyway.

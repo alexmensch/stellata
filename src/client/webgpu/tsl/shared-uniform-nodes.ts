@@ -1,6 +1,5 @@
 // TSL uniform-node mirror of the shared uniform map
-// (../../frame/shared-uniforms.ts). Reference/sync contract: README.md
-// § Shared uniform nodes.
+// (../../frame/shared-uniforms.ts). Reference/sync contract: README.md#shared-uniform-nodes.
 
 import { Vector4 } from 'three';
 import { uniform } from 'three/tsl';

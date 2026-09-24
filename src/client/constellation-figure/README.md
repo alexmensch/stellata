@@ -39,7 +39,7 @@ The lines render at `renderOrder −0.75` with `depthTest: true`,
 - **Close star / planet discs occlude the lines** through the depth buffer. The
   `renderOrder −4` star **and** planet core depth-masks stamp near-z before the
   lines draw (the same pass that keeps the Milky Way / grid / clouds from
-  bleeding through bright cores — `../scene/README.md` § Full render stack), so a line
+  bleeding through bright cores — [Full render stack](../scene/README.md#full-render-stack--front-to-back)), so a line
   behind a close disc depth-fails. A planet is now occluding for real — the
   bug the shelved disc-mask planet-cutout approach chased.
 - **Saturn's true mesh + ring silhouette** occludes the lines once the local
@@ -65,7 +65,7 @@ per-frame refill below is a fixed cost independent of the camera.
   empty (nothing highlighted). The shell pushes it off `'state'` and skips the
   rebuild on an unchanged `selectFigures` signature: every fine-grained
   mutation the set reads (focus, filter, cameraMode) pairs with `'state'`
-  (`../README.md` § Event bus), and so does the observe transition's landing,
+  ([Event bus](../README.md#event-bus-on-stellata)), and so does the observe transition's landing,
   which no fine-grained event covers.
 - `update(localPositions)` — re-copies vertex positions from the live buffer
   every drawn frame, so a vertex tracks its star through everything that
@@ -108,12 +108,12 @@ transition (the `body.focus-lerping` class hides only the SVG overlay), so the
 glide draws every frame. Hence `selectFigures` excludes
 `ObserveTransition.observeAnchorOf('star')`, which spans both glides — the
 rule and why the mode flag alone is wrong live in
-`../camera/observe/README.md` § The observe anchor in line layers, along
+[The observe anchor in line layers,](../camera/observe/README.md#the-observe-anchor-in-line-layers) along
 with the other line layers asking the same question.
 
 A planet or probe anchor suppresses nothing here yet, which is unreachable
-rather than correct: `../camera/observe/README.md` § The observe anchor in
-line layers says why and where the host resolution has to land.
+rather than correct: [The observe anchor in line layers](../camera/observe/README.md#the-observe-anchor-in-line-layers)
+says why and where the host resolution has to land.
 
 ## Styling
 

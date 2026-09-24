@@ -1,6 +1,6 @@
 // Canonical Unicode Greek forms for Bayer designations, the ASCII
 // conventions that normalise into them, and the genitive → IAU-code map.
-// The glyph IS the canonical letter (docs/star-naming.md § 4).
+// The glyph IS the canonical letter (/docs/star-naming.md#4-canonical-designation-forms).
 
 export const GREEK_GLYPHS = new Set([
   'α', 'β', 'γ', 'δ', 'ε', 'ζ', 'η', 'θ', 'ι', 'κ', 'λ', 'μ',

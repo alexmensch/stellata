@@ -1,5 +1,5 @@
 // Which load gets the renderer, and which gets the gate page instead. See
-// README.md § The renderer is WebGPU.
+// README.md#the-renderer-is-webgpu.
 
 import type { GateVerdict } from './gate/gate-advice-pure';
 import { parseGateOverride } from './gate/gate-override';

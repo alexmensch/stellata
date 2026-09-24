@@ -7,14 +7,13 @@ here.
 
 **The chart isobar contour has never drawn.** Chart
 mode hides both meshes, so the branch is unreachable
-(`../../milkyway/README.md` § Chart mode + warp). It is kept for a
+([Chart mode + warp](../../milkyway/README.md#chart-mode--warp)). It is kept for a
 future treatment, not because anything renders it. Treat every mention
 of it below as describing dead code.
 
 The layer owns its two proxy meshes, the per-frame galactic-centre
 rebase, every debug-panel lever and the chart handoff; this folder is
-only the materials it takes through `../../milkyway/README.md`
-§ The material seam.
+only the materials it takes through [The material seam](../../milkyway/README.md#the-material-seam).
 
 ## Files in this area
 
@@ -35,7 +34,7 @@ src/client/webgpu/milkyway/
 
 `MilkyWay.peakSurfaceBrightnessBound` is computed from
 `../../milkyway/milkyway-column-pure.ts` and decides whether the band draws
-at all (`../../milkyway/README.md` § The brightest rendered sightline), so a
+at all ([The brightest rendered sightline](../../milkyway/README.md#the-brightest-rendered-sightline)), so a
 march here that has drifted from that mirror yields a bound on a picture
 nobody is looking at — and the failure is silent,
 because the bound stays internally consistent while being about the wrong
@@ -46,7 +45,7 @@ coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
 `_DEX_PER_SHELL` / `_MIN_DISTANCE_PC`) to the mirror's constants by
 import, plus the explicit `.level(int(0))` on the hole fetch, which keeps
 the sampler's derivatives out of the march
-(`../../milkyway/calibration/README.md` § The table is a 3D grid). The profile and dust parameters need no entry there: they arrive
+([The table is a 3D grid](../../milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)). The profile and dust parameters need no entry there: they arrive
 as uniform nodes that `seedBandSharedSlots` alone writes (§ Seeding,
 because a node starts on its declared default). The hole grid crosses as
 a `texture3D()` node over the `Data3DTexture` the seed and the debug lever
@@ -94,8 +93,8 @@ fails `band-materials.test.ts`.
 WGSL recompile of the march — blend state is baked into a
 WebGPU pipeline, so the swap cannot land without one. The sibling cloud
 layer deliberately refused that trade and put its chart flip in a uniform
-branch instead (`../molecular-clouds/README.md` § One rim graph, both
-modes). The band diverges because its uniform branch is the *dead* one:
+branch instead ([One rim graph, both modes](../molecular-clouds/README.md#one-rim-graph-both-modes)).
+The band diverges because its uniform branch is the *dead* one:
 the recompile is what the blend swap costs, and it lands on chart **exit**,
 when the meshes unhide. Unmeasured, and cheap to make moot — the flip has
 nothing to show either way while the contour does not draw.
@@ -132,4 +131,4 @@ one.
 The band marches the **analytic** dust slab; the measured-dust cascade —
 the per-cloud tiering and the voxel-grid read — is `stellata-ty4.5`'s,
 and the prefilter mechanism behind it is still behind a design gate
-(`../../milkyway/README.md` § Dust).
+([Dust](../../milkyway/README.md#dust--the-analytic-tier-and-what-composes-with-it)).

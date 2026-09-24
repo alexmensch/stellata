@@ -1,6 +1,6 @@
 // Single-scattering atmosphere model (Nishita/O'Neil few-sample) — the CPU
 // mirror of ../../webgpu/solar-system/atmosphere-scatter-tsl.ts. Geometry in planet-radius units, planet
-// centred at origin. Model + calibration: README.md § The model.
+// centred at origin. Model + calibration: README.md#the-model.
 
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import { scalePolarInto } from '../../util/polar-scale';
@@ -21,7 +21,7 @@ const INV_4PI = 1 / (4 * Math.PI);
 /** Isotropic multiple-scattering fill weight — the isotropic source-function
  *  approximation, so it IS 1/(4π): the same redistribution the skylight
  *  terminator anchor's ¼ comes from. Derivation + measured shares:
- *  README.md § Multiple-scattering fill. */
+ *  README.md#multiple-scattering-fill. */
 export const MS_STRENGTH = INV_4PI;
 
 /** Sol illuminant colour (warm white). Non-Sol hosts (bk5) will override. */
@@ -178,7 +178,7 @@ export const TWILIGHT_TAIL_REACH = 8.95;
  * Skylight: the fraction of host irradiance the atmosphere scatters down
  * onto the surface, per channel — one derived model covering the lit
  * hemisphere and the twilight band. Mirrors skyIrradianceTsl;
- * derivation and measured anchors: README.md § Skylight.
+ * derivation and measured anchors: README.md#skylight--the-lit-air-scattering-light-back-down.
  *
  * The horizon-sun anchor and the beam term describe the same photons at
  * opposite solar elevations, so they partition as `(1 − μ_s)` / `μ_s` rather
@@ -267,7 +267,7 @@ export interface ScatterResult {
    *  `inscatter`. Broken out on the CPU side only (the shader has no use
    *  for it) so its share can be measured instead of re-derived — it is
    *  the majority of the airlight at physical depths, which is the thing
-   *  to watch: README.md § Multiple-scattering fill. */
+   *  to watch: README.md#multiple-scattering-fill. */
   readonly msFill: Vec3;
 }
 
@@ -359,7 +359,7 @@ export function scatterAlongRay(
 
 /** Full-phase disc means (luma) of everything the mesh shader lays over the
  *  body's flux — the normalisers that keep the drawn disc integrating to the
- *  body's true flux. README.md § Flux bookkeeping. */
+ *  body's true flux. README.md#flux-bookkeeping. */
 export interface AtmoDiscMeans {
   /** ⟨μ · luma(T_view)⟩ — the Lambert disc mean of what survives the view
    *  path. The airless 2/3 in the transparent limit, and *less* than that

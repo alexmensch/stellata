@@ -1,4 +1,4 @@
-// See ./README.md § The catalog-decode worker.
+// See ./README.md#the-catalog-decode-worker.
 
 import { describe, expect, it } from 'vitest';
 import {

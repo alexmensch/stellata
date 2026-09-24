@@ -115,7 +115,7 @@ describe('compaction layout', () => {
 
   // The prefix the refill kernel searches and the plain copy of the atomic
   // counters the scan reads are disjoint, so the scan never reads a value it
-  // is in the middle of writing (README.md § The refill dispatch).
+  // is in the middle of writing (README.md#the-refill-dispatch).
   it('lays the two scan tables back to back past the listed length', () => {
     expect(REFILL_PREFIX_BASE).toBe(REFILL_DISPATCH_LENGTH_ELEMENT + 1);
     expect(REFILL_BUCKET_COUNT_BASE).toBe(REFILL_PREFIX_BASE + REFILL_BUCKETS);

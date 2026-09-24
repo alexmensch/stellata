@@ -41,7 +41,7 @@ write plain standard depth over the full range, quantising everything
 beyond ~3 AU to exactly 1.0. Moon↔parent, ring↔body, and close-binary
 separations land inside a single quantum either way and z-order as
 frame-to-frame float noise. What the main pass encodes instead is
-`../webgpu/star/README.md` § The disc draw writes no depth.
+[The disc draw writes no depth](../webgpu/star/README.md#the-disc-draw-writes-no-depth).
 
 Every analytic workaround (disc silhouette clip, ray-sphere occlusion,
 the orbit-ring corrupt/restore dance, ring-shader ray-ellipsoid
@@ -160,7 +160,7 @@ Live providers:
   geometry rather than re-copying attributes, and the whole fleet flips
   passes together — a probe is a Sol-system object whenever the cluster
   is active, so there is no per-instance suppression range
-  (`../solar-system/probes/README.md` § Which pass draws them).
+  ([Which pass draws them](../solar-system/probes/README.md#which-pass-draws-them)).
 - **star cluster** (`../star-pipeline/local-pass/star-local-cluster.ts`) — star
   mirror draws for the active host, the focal star's Kepler chain
   (engaged by drawn orbit paths or any member resolving as a disc),
@@ -184,15 +184,15 @@ depth-tested non-writers (ring annuli, orbit-ring lines, additive
 glow). The disc pass's own core depth + halo `gl_FragDepth = 1.0`
 convention carries over on the GLSL path; the TSL mirror has no
 successor for the halo's far-write, and stamps member cores from a
-depth-only mask draw instead (`../webgpu/star/README.md` § The disc
-draw writes no depth). The corrupt/restore pair did not carry over —
+depth-only mask draw instead ([The disc draw writes no depth](../webgpu/star/README.md#the-disc-draw-writes-no-depth)).
+The corrupt/restore pair did not carry over —
 it existed only because the main pass's depth can't order ring vs
 body, which is the problem this pass solves.
 
 Across slices the partition itself did the ordering, which is the one
 semantic K = 1 drops on WebGPU — safe here because `renderOrder` pins
 intra-body order and orbit lines blend commutatively, argued in
-`bracket/README.md` § Decision.
+[Decision](bracket/README.md#decision--keep-the-pass-collapse-to-k--1).
 
 ## Interactions
 
@@ -203,7 +203,7 @@ intra-body order and orbit lines blend commutatively, argued in
   a planet reads as a star of its apparent magnitude (visibility matches
   chart mode) — identical in both compile variants; `LOCAL_DEPTH_PASS`
   gates only member suppression + the log-depth chunk here, never
-  brightness (`../solar-system/planets/README.md` § Planet mesh LOD). There is no
+  brightness ([Planet mesh LOD](../solar-system/planets/README.md#planet-mesh-lod)). There is no
   opaque planet disc to composite across the pass boundary.
 - **Chart mode** — inert. Chart flattens bodies to ink discs with
   depth disabled; the mesh layer already hides in monochrome and
@@ -279,7 +279,7 @@ per-instance writes its mirror re-copies; `localDepthPass.render`
 runs after every main render — a no-op frame when no cluster is
 active (deep field, chart mode). Perf labels: `submit.localDepth` (CPU
 submission wall-time) and, where the driver exposes a timer query,
-`gpu.localDepth` (real GPU ms) — see `../debug/README.md` § GPU timing.
+`gpu.localDepth` (real GPU ms) — see [GPU timing](../debug/README.md#gpu-timing).
 `stellata.localDepthPass.enabled = false` kills the pass entirely (all
 close-range occlusion with it) — a frame-cost measurement lever
 (`../debug/frame-cost/README.md`), never a shipped state.

@@ -1,5 +1,5 @@
 // Planet hover formatter — name, camera distance · Vmag, period,
-// radius. See ../README.md § Rule 1a for the line ordering.
+// radius. See ../README.md#rule-1a--line-ordering-for-object-cards for the line ordering.
 
 import { fmtDistAuto } from '../../ui/distance-util';
 import { formatEarthRadii, formatMagnitude } from '../../format/physical-format';

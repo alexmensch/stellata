@@ -1,6 +1,6 @@
 // The IV/27A cross index as every consumer reads it — the frozen CDS table
 // with data/classic-ids/cross_index_corrections.tsv applied.
-// See README.md § One designation, two HD numbers.
+// See README.md#one-designation-two-hd-numbers.
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';

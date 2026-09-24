@@ -373,7 +373,7 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     // ¼·τ_s·T̄(τ_ext·Ch): the ¼ is the hemispheric down-flux of an isotropic
     // in-scatter over the half-dome the horizon sun still lights; T̄ is the
     // column-mean transmission of a horizon sun through Chapman airmass —
-    // README.md § Skylight. Residual +75 % is the un-modelled ozone Chappuis
+    // README.md#skylight--the-lit-air-scattering-light-back-down. Residual +75 % is the un-modelled ozone Chappuis
     // absorption and up-scatter loss, both of which only push down.
     const measured = MEASURED_LX[0] / FULL_SUN_LX;
     expect(frac(0)).toBeCloseTo(7.0e-3, 4);
@@ -402,7 +402,7 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     // Optically-thin limit, where both pieces reduce to a multiple of τ_s:
     // beam → ½·τ_s·μ and the anchor → ¼·τ_s. Summing reads 0.75·τ_s at noon
     // where the (1 − μ_s) partition reads exactly ½·τ_s. Both describe the
-    // same photons at opposite elevations — README.md § Skylight.
+    // same photons at opposite elevations — README.md#skylight--the-lit-air-scattering-light-back-down.
     const thin: Vec3 = [1e-4, 1e-4, 1e-4];
     const none: Vec3 = [0, 0, 0];
     expect(relativeLuminance(skyIrradianceFrac(1, hR, thin, none)) / 1e-4).toBeCloseTo(0.5, 3);
@@ -486,7 +486,7 @@ describe('skylight on the surface — derived, anchored to measured Earth twilig
     // Measured through the same march the shader runs, per body, at physical
     // depths. `share` = π/p·⟨inscatter⟩ is the fraction of the body's own flux
     // the airlight claims; the reflected terms get 1 − share
-    // (emission/mesh-surface-pure.ts). README.md § Flux bookkeeping.
+    // (emission/mesh-surface-pure.ts). README.md#flux-bookkeeping.
     const EXPECTED: Record<string, { surface: number; sky: number; share: number }> = {
       Venus: { surface: 0.5528, sky: 0.0467, share: 0.0816 },
       Earth: { surface: 0.5657, sky: 0.0541, share: 0.2198 },

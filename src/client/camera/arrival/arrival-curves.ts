@@ -1,6 +1,6 @@
 // Hybrid arrival profile (linear-d outer + angular-size inner) with a
 // cubic-Hermite log-d fallback.
-// See src/client/camera/arrival/README.md § Profile.
+// See /src/client/camera/arrival/README.md#profile.
 
 export interface ArrivalCurveContext {
   d0: number;
@@ -53,7 +53,7 @@ export function hybridUSeam(
 
 /** Hybrid two-regime arrival profile — returns log-d-equivalent
  *  eased-u so the tickArrival consumer line is unchanged. See
- *  src/client/camera/arrival/README.md § Profile. */
+ *  /src/client/camera/arrival/README.md#profile. */
 export function easeHybrid(
   u: number,
   d0: number,

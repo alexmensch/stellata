@@ -1,6 +1,6 @@
 // The emission half of the HDR unit: apparent magnitude → linear
 // luminance, and the peak a point source's display kernel carries. CPU
-// mirror of ../../webgpu/emission-tsl.ts — see README.md § Unit.
+// mirror of ../../webgpu/emission-tsl.ts — see README.md#unit--what-an-emitting-layer-writes.
 
 import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
 import { type Rgb, relativeLuminance } from '../tonemap/tonemap-pure';
@@ -94,7 +94,7 @@ export function pxPerRadianFromSolidAngle(omegaPxArcsec2: number): number {
  * This is load-bearing for the display convolution rather than cosmetic: the
  * convolution can only average what the rasteriser sampled, and an aliased
  * Sérsic cusp survives it — 3.95 mag on M31's nucleus.
- * `../summation/README.md` § Footprint carries the measurement.
+ * `../summation/README.md#footprint--the-half-the-convolution-cannot-do` carries the measurement.
  */
 export function footprintRadiusPc(distancePc: number, omegaPxArcsec2: number): number {
   return distancePc / (pxPerRadianFromSolidAngle(omegaPxArcsec2) * FOOTPRINT_SQRT12);
@@ -160,7 +160,7 @@ export function surfaceBrightnessLuminance(
  * a point source at `limitMag` does. Fixed in **angle**, so an extended
  * source's display luminance does not move with FOV — the eye's summation
  * area is a property of the retina, not of the plate scale.
- * `docs/science-hdr-pipeline.md` § 1 carries the derivation.
+ * `/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance` carries the derivation.
  */
 export function rodSummationSolidAngleArcsec2(
   thresholdMagArcsec2: number,
@@ -179,8 +179,8 @@ export const MAG_PER_STOP = 2.5 * Math.log10(2);
  *  angle the gain runs on rather than taking a second uniform, so the two
  *  cannot disagree about where threshold is. Mirrors
  *  `extendedThresholdSbTsl`, whose only caller is the MW chart isobar
- *  — a branch that has never drawn (`../../milkyway/README.md` § Chart
- *  mode + warp). */
+ *  — a branch that has never drawn (`../../milkyway/README.md#chart-mode--warp`).
+ * */
 export function extendedThresholdSbFromSolidAngle(
   omegaSummationArcsec2: number,
   limitMag: number,

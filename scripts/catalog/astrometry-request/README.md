@@ -46,8 +46,8 @@ every id in it is distinct.
 
 Reading the column is what makes the two agree — `readStars` reads the same
 cell, and the binding it carries was derived once, in the generator, through
-the G−V / sibling-letter gates (`../membership/binding/README.md`
-§ Both gates weigh every candidate). The
+the G−V / sibling-letter gates ([Both gates weigh every candidate](../membership/binding/README.md#both-gates-weigh-every-candidate)).
+The
 derivation's own candidates are the third contribution below,
 so the pull carries a G for every source it might bind before it binds one.
 
@@ -85,8 +85,8 @@ indexes), and the tier lends that member's parallax to the sibling Gaia fitted
 none for. Its coverage now has a zero-pin of its own,
 `pairMemberSiblingNoAstrometryRow` — the sibling sources this pull holds no row
 for, which is the only reason the tier misses one that a re-pull can fix
-(`../distance/parallax/README.md` § The tier's reach is bounded by measurement
-quality). Every other refusal there is a measurement, and
+([The tier's reach is bounded by measurement quality](../distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request)).
+Every other refusal there is a measurement, and
 `pairMemberSiblingNotAnchorGrade` — the anchor gate on fit quality alone —
 dominates them.
 
@@ -133,8 +133,8 @@ that quietly stops covering them fails a snapshot instead of silently accepting
 bindings. Both read 0 today — the pull does return 2 fewer rows than the
 request (379,133 of 379,135), but both are reviewed bindings rather than
 candidates: the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
-holds no DR3 successor for (`../spine/README.md` § Six source_ids DR3 does not
-publish). What no request can fix is `gateSkippedNullGMag` (112) and
+holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
+What no request can fix is `gateSkippedNullGMag` (112) and
 `derivedWeighedNullGMag` (77): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
 

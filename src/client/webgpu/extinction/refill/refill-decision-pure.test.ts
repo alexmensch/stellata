@@ -5,8 +5,8 @@ import {
   EXTINCTION_FRUSTUM_SLACK_PX, composeViewProjectionAbs, countInFrameAbs, sameView, slotRefills,
 } from './refill-decision-pure';
 
-// The slack is a stated bound, not a tuning knob — README.md § Only what is
-// in frame argues the failure mode from this number.
+// The slack is a stated bound, not a tuning knob — README.md#only-what-is-in-frame
+// argues the failure mode from this number.
 it('pins the frustum slack the README states, in px', () => {
   expect(EXTINCTION_FRUSTUM_SLACK_PX).toBe(256);
 });

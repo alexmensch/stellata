@@ -37,7 +37,7 @@ step with whatever is actually on screen.
   visible change, where "visible" means a quarter of a device pixel of
   on-screen motion or 1 % of a body's own flux.
 - **`contribute`** — the contribution census
-  (`../../scene/contribution/README.md` § Declaring what a layer can put on screen):
+  ([Declaring what a layer can put on screen](../../scene/contribution/README.md#declaring-what-a-layer-can-put-on-screen)):
   how many layers declare `always` versus `gated`, and how many gated
   layers are skipping their draw this frame, by reason — `frustum`,
   `legibility`, `opacity`, `brightness`. A skipped layer costs one
@@ -56,7 +56,7 @@ step with whatever is actually on screen.
   second. Divide the threshold by it and you have the budget above.
 - **`observed`** — what actually moved, measured independently of the
   rate model. This is the safety net's input
-  (`../../render-gate/cadence/README.md` § The safety net); when it exceeds a
+  ([The safety net](../../render-gate/cadence/README.md#the-safety-net)); when it exceeds a
   visible step on a *scheduled* frame, `trust` drops and the headline
   turns red. **Printed as a rate, normalised over the gap it was
   measured across**, which is the only form comparable to `reported`
@@ -73,7 +73,7 @@ step with whatever is actually on screen.
   under `POSE_DRIFT_ULP_NOISE` (4096) steps: the slot is being
   re-derived each frame from inputs that round differently, so it can
   never compare equal and no amount of settling will help
-  (`../../render-gate/README.md` § The decision, in priority order).
+  ([The decision, in priority order](../../render-gate/README.md#the-decision-in-priority-order)).
   Past that it is real motion, and the question becomes what is moving.
   The absolute delta alone cannot separate the two — both are far below
   anything visible.

@@ -16,7 +16,7 @@ import type { SpineRow } from './inherited-spine-pure';
 
 /** The HD number above which AT-HYG's Tycho-2 → HD link took effect. Below it
  *  the spine carries an HD only where HYG supplied one — measured, not designed:
- *  see README.md § The primaries audit. */
+ *  see README.md#the-primaries-audit. */
 export const ATHYG_HD_LINK_FLOOR = 100_000;
 
 /** `cns5 = 0` is the Sun, a spine row by its proper name rather than a GJ. */
@@ -88,8 +88,8 @@ export interface Cns5Index {
   /** The same keys without the bare fold from a component row: a bare number
    *  answers only where CNS5 lists it without letters. What a binding takes off
    *  the row is one component's Gaia source, so folding would hand a primary
-   *  whichever sibling the file lists first (`../classic-ids/README.md` § The
-   *  GJ fold stops at the component). */
+   *  whichever sibling the file lists first (`../classic-ids/README.md#the-gj-fold-stops-at-the-component`).
+   * */
   cns5ByOwnKey: Map<string, Cns5Row>;
 }
 
@@ -220,7 +220,7 @@ export type GlAttestation = 'cns5' | 'v70a' | null;
 /** IV/27A or WGSN publishes a Bayer designation for this star. The letter
  *  itself is not compared: HYG's `Alp-1` and IV/27A's `alf01` meet only through
  *  the naming ladder's normalisers, which are `../naming/`'s to own. `flam` is
- *  compared by value — README.md § The primaries audit states the asymmetry. */
+ *  compared by value — README.md#the-primaries-audit states the asymmetry. */
 export type BayerAttestation = 'iv27a' | 'wgsn' | null;
 export type FlamAttestation = 'iv27a' | 'wgsn' | null;
 export type ProperAttestation = 'wgsn' | 'sol' | null;
@@ -455,7 +455,8 @@ export interface HipAddition {
 }
 
 /** How much of IV/25 the spine already carries, either side of the link floor.
- *  The gap below it is the AT-HYG defect § 3.1 of docs/catalog-driver.md
+ *  The gap below it is the AT-HYG defect
+ *  /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries
  *  reports; measured over distinct HD numbers, not IV/25 rows. */
 export interface Iv25Coverage {
   belowFloor: { iv25: number; onSpine: number };
@@ -600,7 +601,7 @@ export function findAdditions(
  *  through IV/25, and the `hyg` id is the only per-row trace of which branch
  *  ran — so a row whose HYG entry simply carried no HD counts as HYG-sourced
  *  here. The split is a proxy for AT-HYG's provenance, not its own record of
- *  it: docs/catalog-driver.md § 3.1 states what it does and does not license. */
+ *  it: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries states what it does and does not license. */
 export interface AthygHdProvenance {
   hygSixDigit: number;
   hygShorter: number;

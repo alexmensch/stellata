@@ -1,4 +1,4 @@
-// CPU mirror of ../../webgpu/extinction/dust-raymarch-tsl.ts / dust-raymarch-tsl.ts — README.md § The march.
+// CPU mirror of ../../webgpu/extinction/dust-raymarch-tsl.ts / dust-raymarch-tsl.ts — README.md#the-march.
 
 export const DUST_TAP_PC = 10;
 export const DUST_TAPS_MIN = 4;
@@ -11,7 +11,7 @@ export const SLAB_PARALLEL_EPS_PC = 1e-6;
 /** Canonical interstellar reddening ratio A_V / E(B-V) (CCM 1989,
  *  diffuse ISM). Single global value — mirrors `R_V` in ../../webgpu/star/star-vertex-tsl.ts.
  *  The density-dependent R_V(ρ) upgrade is a no-op at our voxel-scale
- *  column ceiling (peak A_V ≈ 2.7); see docs/science-molecular-clouds.md § 6. */
+ *  column ceiling (peak A_V ≈ 2.7); see /docs/science-molecular-clouds.md#6-reddening. */
 export const R_V = 3.1;
 
 export interface DustDecodeParams {

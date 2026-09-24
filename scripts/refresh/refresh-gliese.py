@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/gliese/gliese_v70a.tsv — the printed value columns of the
 Gliese & Jahreiss third catalogue of nearby stars. Cascade placement:
-docs/catalog-driver.md § 5."""
+/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ OUT_DIR = REPO_ROOT / "data" / "gliese"
 
 # `Name` is NOT unique: a resolved system carries one row per component, so
 # the join key is Name + Comp (Gl 559 A and Gl 559 B are two rows, Gl 165 AB
-# is one row covering both). data/gliese/README.md § The join key.
+# is one row covering both). /data/gliese/README.md#the-join-key.
 GLIESE = VizierSlice(
     table="V/70A/catalog",
     output=OUT_DIR / "gliese_v70a.tsv",

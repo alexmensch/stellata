@@ -1,5 +1,5 @@
 // The serialised look pin OBSERVE keeps in `controls.target`, and the one
-// condition that invalidates it. See README.md § The serialised look pin.
+// condition that invalidates it. See README.md#the-serialised-look-pin.
 
 interface Vec3Like { x: number; y: number; z: number }
 interface QuatLike {
@@ -23,8 +23,8 @@ export const LOOK_PIN_DIST_PC = 1;
  *  exact and keeps a translated pin correct for free. Re-deriving from a
  *  translated camera instead lands `position + forward` a few ULP off the
  *  value the ride wrote — every frame, never converging — and the render
- *  gate reads that as a camera move (`../../render-gate/README.md`
- *  § Pose change). */
+ *  gate reads that as a camera move (`../../render-gate/README.md#pose-change`).
+ * */
 export function lookPinStale(pinnedAt: QuatLike, cameraQuat: QuatLike): boolean {
   return pinnedAt.x !== cameraQuat.x
     || pinnedAt.y !== cameraQuat.y

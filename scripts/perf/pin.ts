@@ -1,5 +1,5 @@
 // Write the perf pin from saved run files — no browser, no arm. The runs
-// are first-hand data already; pins/README.md § From saved runs.
+// are first-hand data already; pins/README.md#from-saved-runs.
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';

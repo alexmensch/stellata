@@ -1,5 +1,5 @@
 // Distance-from-Sol fade curves: the far-field reveal and its inverse, the
-// Sol-frame self-hide. See src/client/galactic/README.md § Distance fades.
+// Sol-frame self-hide. See /src/client/galactic/README.md#distance-fades.
 
 export const FADE_INNER_PC = 500;
 export const FADE_OUTER_PC = 5000;
@@ -17,7 +17,7 @@ export function smoothstep(edge0: number, edge1: number, x: number): number {
  * The galactic disc and the Local Group wireframe differ only in that base,
  * and both read it twice: once for the stroke their `update` writes, once as
  * the `'opacity'` contribution test that decides whether the layer draws at
- * all (`../scene/contribution/README.md` § Declaring what a layer can put on screen). A
+ * all (`../scene/contribution/README.md#declaring-what-a-layer-can-put-on-screen`). A
  * layer-local copy of this curve would let its gate and its stroke disagree.
  */
 export function farFieldFadeOpacity(baseOpacity: number, distFromSolPc: number): number {

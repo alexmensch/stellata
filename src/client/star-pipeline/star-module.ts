@@ -65,17 +65,17 @@ export interface StarKindModule extends ObjectKindModule<'star'> {
    *  table the module's own name ladder does. */
   readonly starLabels: Map<number, string>;
   /** Fills into `starLabels` and its sibling tables, counted
-   *  (`../focus-card/README.md` § Surfaces retained over a growing
-   *  catalogue). */
+   *  (`../focus-card/README.md#surfaces-retained-over-a-growing-catalogue`).
+   * */
   derivedGeneration(): number;
-  /** Valid after `ready` — `../typeahead/README.md` § The search-index
-   *  worker. */
+  /** Valid after `ready` — `../typeahead/README.md#the-search-index-worker`.
+   * */
   readonly searchTables: SearchIndexPayload;
   /** Settles when the whole catalogue and the search index have landed and
    *  every table derived from them is built. `load` resolves far earlier —
    *  on the catalogue's first chunk — so anything needing the COMPLETE
-   *  population waits here instead (`../loaders/README.md` § Progressive
-   *  catalog load). */
+   *  population waits here instead (`../loaders/README.md#progressive-catalog-load`).
+   * */
   readonly ready: Promise<void>;
   /** Absolute V magnitude + floored physical radius (pc) of star `idx`;
    *  null out of range or before load. Backs `KindContext.starPhotometry`

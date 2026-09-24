@@ -1,6 +1,6 @@
 // The D3 core depth-mask in TSL: depth-only over disc-pass cores, colour
 // writes off, member stamp in the shared vertex stage — no fragment
-// depth (../README.md § Early-z). The CPU visible gate is the shell's.
+// depth (../README.md#early-z--the-star-layers-depth-honest-redesign). The CPU visible gate is the shell's.
 
 import { Discard, If, vec4 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
@@ -22,7 +22,7 @@ import {
  * material whose fragment program is identical under both attachment
  * counts is therefore handed the pipeline built for the OTHER count when
  * the target is rebuilt, and Dawn drops every command buffer it appears in
- * (../hdr/README.md § The gate becomes the output struct).
+ * (../hdr/README.md#the-gate-becomes-the-output-struct).
  */
 export function buildStarCoreMaskMaterial(
   deps: StarTslDeps,

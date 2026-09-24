@@ -1,4 +1,4 @@
-// CLI parsing for the perf runner. Flag reference: README.md § Invocation.
+// CLI parsing for the perf runner. Flag reference: README.md#invocation.
 
 import { parseArgs, type ParseArgsConfig } from 'node:util';
 import {
@@ -41,11 +41,11 @@ export interface RunArgs {
    *  after it, so the priced rows describe a frame without them. */
   readonly preDisable: readonly PricedPassKey[] | undefined;
   /** differential: keep the adaptation measurement unparked for the sweep
-   *  (`src/client/hdr/exposure/park/README.md` § The lever). */
+   *  (`/src/client/hdr/exposure/park/README.md#the-lever`). */
   readonly noPark: boolean;
   /** differential and dwell: refill the per-star A_V cache every frame, which
    *  the camera-displacement gate skips at every canon vantage
-   *  (`src/client/debug/frame-cost/passes/README.md` § The extinction rows). */
+   *  (`/src/client/debug/frame-cost/passes/README.md#the-extinction-rows`). */
   readonly forceRecompute: boolean;
   readonly method: GpuFrameMethod | undefined;
   readonly budgetMs: number;
@@ -165,7 +165,7 @@ export function usage(): string {
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
     '  --json <path>            write the whole run as stellata-perf/2',
     '  --baseline <path>        diff this run against a saved one and print the verdicts',
-    '  --pin <path>             dwell: write this run as the perf pin (with --json; RELEASING.md § Perf pin)',
+    '  --pin <path>             dwell: write this run as the perf pin (with --json; /RELEASING.md#perf-pin)',
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
     '  --accept <scenario>|<backend>[|compute]:<bead>  dwell, with --pin: accept a ✗ and pin its value, repeatable',
     `  --cooldown-ms <n>        idle between contexts so each starts cold    (default ${ARG_DEFAULTS.cooldownMs})`,
@@ -178,7 +178,7 @@ export function usage(): string {
  * A flag the chosen mode ignores is an
  * error rather than a no-op: the in-app instrument refuses a pin it cannot
  * honour rather than switching clocks underneath the caller
- * (`src/client/debug/frame-cost/README.md` § Preconditions), and a table
+ * (`/src/client/debug/frame-cost/README.md#preconditions`), and a table
  * stamped `raf-delta` after `--method timestamp` was asked for is the same
  * lie with a typed command line in front of it.
  */
@@ -207,7 +207,7 @@ const ACCEPT_KEY = new RegExp(`^(${SCENARIO_NAMES.join('|')})\\|(${BACKENDS.join
 /** The whole canon in canon order. Order, not membership: a pin's rows are
  *  only ever compared against a row taken at the same position, so a
  *  permutation pins ten rows no later run reaches
- *  (`pins/README.md` § Run position). */
+ *  (`pins/README.md#run-position`). */
 function isCanonOrder(scenarios: readonly ScenarioName[]): boolean {
   return scenarios.length === SCENARIO_NAMES.length
     && scenarios.every((name, i) => name === SCENARIO_NAMES[i]);
@@ -469,7 +469,7 @@ export interface SurvivorsArgs {
 }
 
 /** Here rather than beside the instrument so a test can reach it: survivors.ts
- *  imports Playwright as a value (README.md § Files). */
+ *  imports Playwright as a value (README.md#files). */
 export function parseSurvivorsArgs(argv: readonly string[]): SurvivorsArgs {
   try {
     const { values } = parseArgs({

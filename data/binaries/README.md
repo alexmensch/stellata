@@ -8,8 +8,8 @@ stays in one place.
 multiples.tsv                   build-binaries.py output. Two rows per
                                 kept physical WDS pair (incl. sub-pairs
                                 synthesized from ORB6 / Gaia NSS — see
-                                scripts/binaries/README.md § Sub-pair
-                                synthesis), plus standalone rows for
+                                /scripts/binaries/README.md#sub-pair-synthesis-subdividepy),
+                                plus standalone rows for
                                 SIMBAD-known components the pair walk
                                 didn't reach. ~7 MB, LFS.
 component_sptype_overrides.tsv  Hand-curated per-component MK types for

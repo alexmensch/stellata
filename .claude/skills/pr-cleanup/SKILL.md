@@ -282,7 +282,7 @@ a branch that is not this PR's `headRefName`.
 ## 7. Rebuild main's artifacts — last, in the background
 
 New worktrees are seeded from the main checkout's `public/` and `build/`
-artifacts (`scripts/README.md` § Building in a worktree); a stamp that
+artifacts ([Building in a worktree](/scripts/README.md#building-in-a-worktree)); a stamp that
 disagrees with the worktree's inputs rebuilds that step. Rebuilding main
 right after the pull keeps those stamps matching, so the next worktree starts
 without a cold catalogue build.
@@ -296,8 +296,7 @@ pnpm run build:seed
 
 `build:seed` builds only the stamped steps worktrees are seeded from, and
 stops a build another landing already started in the main checkout, so
-concurrent `/pr-cleanup` runs never build side by side (`scripts/README.md`
-§ Seeding builds).
+concurrent `/pr-cleanup` runs never build side by side ([Seeding builds](/scripts/README.md#seeding-builds--buildseed)).
 
 Report the landing without waiting on it. When the background task exits,
 report its exit status. `superseded by a newer build:seed` with exit 0 is
@@ -314,7 +313,7 @@ wait.
 them: unsigned commits (§ The signature trap), then an orphaned
 required-status context —
 gating lives in ruleset `15843287`, not branch protection, and a renamed job
-`name:` strands the old context forever (`RELEASING.md` § Merge gating). Compare required against reported:
+`name:` strands the old context forever ([Merge gating](/RELEASING.md#merge-gating)). Compare required against reported:
 
 ```bash
 gh api repos/alexmensch/stellata/rulesets/15843287 \

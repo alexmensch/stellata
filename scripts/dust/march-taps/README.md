@@ -1,7 +1,7 @@
 # Extinction march tap sweep
 
 Analysis-only. Prices the accuracy side of the per-star extinction march's
-tap budget (`src/client/star-pipeline/extinction/README.md` § The march):
+tap budget ([The march](/src/client/star-pipeline/extinction/README.md#the-march)):
 each tap scheme's A_V error against the converged in-cube integral the
 catalogue build uses, over sampled catalogue stars, from several vantages.
 Nothing here ships or feeds a build artifact.

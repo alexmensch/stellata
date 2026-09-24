@@ -1,6 +1,6 @@
 """Index-anchored colour calibration: per-map linear-RGB gains moving
 each map's sphere-weighted mean chromaticity onto the body's published
-disc-integrated colour (data/textures/README.md § Colour fidelity)."""
+disc-integrated colour (/data/textures/README.md#colour-fidelity--index-anchored-calibration)."""
 
 import numpy as np
 from PIL import Image
@@ -161,7 +161,7 @@ def calibrate(
     #
     # Free because the map's ABSOLUTE level carries no information: the
     # renderer divides each map's own mean luminance back out
-    # (src/client/solar-system/planets/emission/README.md § Two disc means),
+    # (/src/client/solar-system/planets/emission/README.md#two-disc-means-divide-out),
     # so only the ratios
     # between channels survive to the screen. What this drops is the old
     # mean-luminance-preserving property, which was never observable and

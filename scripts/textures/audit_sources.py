@@ -1,5 +1,5 @@
 """Measure what each frozen source contains, against its provenance row.
-Manual, not in the build. Why: data/textures/src/README.md § Auditing.
+Manual, not in the build. Why: /data/textures/src/README.md#auditing.
 """
 
 from __future__ import annotations

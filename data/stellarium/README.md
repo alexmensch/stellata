@@ -6,7 +6,7 @@ constellation **boundary** segments at equinox B1875.
 
 The file also carries a `common_names` block — 659 HIP-keyed folk names
 with per-name literature references. **Nothing reads it**, and it is
-rejected as a naming authority (`docs/star-naming.md` § 2); it carries
+rejected as a naming authority ([§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)); it carries
 **no Bayer designations and no Greek glyphs**, so it is not a glyph
 source either. It stays an optional alias candidate only.
 

@@ -62,7 +62,7 @@ describe('classifyDrTransition', () => {
   });
 });
 
-// End-to-end pin of the DR2→DR3 dry run (docs/sid.md § 6.2) against the
+// End-to-end pin of the DR2→DR3 dry run (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) against the
 // committed request + neighbourhood snapshots. Self-skips where those LFS
 // files are pointer stubs (the bare CI test job); runs in the
 // SID-ledger-guard job and locally.
@@ -71,7 +71,7 @@ const NEIGHBOURHOOD = resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood.tsv')
 const available = lfsContentReadable(REQUEST) && lfsContentReadable(NEIGHBOURHOOD);
 
 describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
-  it('reproduces the docs/sid.md § 6.2 classification exactly', () => {
+  it('reproduces the /docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07 classification exactly', () => {
     const riskIds = readRiskIds(readFileSync(REQUEST, 'utf-8'));
     const rows = readNeighbourhoodRows(
       readFileSync(NEIGHBOURHOOD, 'utf-8'),
@@ -90,7 +90,7 @@ describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
     expect(c.sharedCandidateGroups.reduce((n, g) => n + g.riskIds.length, 0)).toBe(4);
     expect(c.droppedNearMiss).toHaveLength(177);
     expect(c.droppedNoRows).toHaveLength(56);
-    // docs/sid.md § 6.2 prints these at 1 dp: 0.2 / 2.5 / 108.2 / 375.9.
+    // /docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07 prints these at 1 dp: 0.2 / 2.5 / 108.2 / 375.9.
     expect(c.distanceQuantiles).toEqual({ p50: 0.195, p90: 2.511, p99: 108.231, max: 375.914 });
   });
 });

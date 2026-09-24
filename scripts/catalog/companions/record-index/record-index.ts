@@ -22,7 +22,7 @@ export interface CatalogRowIndexMap {
   /** Hipparcos catalog number → catalog.bin record index. */
   byHip: Record<string, number>;
   /** Synthetic identifier → catalog.bin record index. See
-   *  ../README.md § Companion promotion from `data/binaries/multiples.tsv`. */
+   *  ../README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`. */
   bySynth: Record<string, number>;
 }
 
@@ -32,7 +32,7 @@ export interface CatalogRowIndexMap {
 // search-index.json.
 export function buildCatalogRowIndexMap(
   stars: Star[],
-  /** README.md § The sidecar and why resolution is duplicated from Python. */
+  /** README.md#the-sidecar-and-why-resolution-is-duplicated-from-python. */
   synthGaiaBridges: ReadonlyMap<string, string> = new Map(),
 ): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
@@ -214,7 +214,7 @@ function reHomeToParent(
  *  plus every resolved multiples.tsv member index — the record set the
  *  MULTIPLICITY_RESOLVED status covers (a blended primary whose members all
  *  collapse onto it counts: the row exists for it even with nothing
- *  rendered apart). See ./README.md § Renderable-companion wings. */
+ *  rendered apart). See ./README.md#renderable-companion-wings. */
 export function wingRenderablePrimaries(
   rows: MultiplesTsvRow[],
   stars: Star[],
@@ -304,7 +304,7 @@ export interface ComponentDesignation {
  *  A root may not borrow its identity from a star another root already owns.
  *  Refusing the anchor leaves those records on their own designations, which
  *  is what the gate means by a surviving collision being a data finding
- *  rather than a renderer concession (docs/star-naming.md § 8).
+ *  rather than a renderer concession (/docs/star-naming.md#8-parity--the-gate-on-any-naming-change).
  *
  *  The anchor is included with its own comp letter so "α Cen A" focuses it,
  *  and a record shared across pairs takes first-write-wins. */

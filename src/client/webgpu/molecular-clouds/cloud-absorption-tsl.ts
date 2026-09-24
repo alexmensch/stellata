@@ -31,7 +31,7 @@ export function buildCloudAbsorptionMaterial(
   material.depthTest = true;
   material.depthWrite = false;
   // Premultiplied-over, spelled out: `premultipliedAlpha` would demote the
-  // output struct (README.md § The absorption writes attachment 2).
+  // output struct (README.md#the-absorption-writes-attachment-2-and-that-is-the-gate).
   material.blending = CustomBlending;
   material.blendSrc = OneFactor;
   material.blendDst = OneMinusSrcAlphaFactor;
@@ -82,8 +82,7 @@ export function buildCloudAbsorptionMaterial(
 
       Loop({ start: int(0), end: steps, condition: '<' }, ({ i }) => {
         // Braced rather than a concise arrow: a jump handed back as the
-        // branch's output is emitted twice (`../tsl/README.md` § TSL test
-        // pattern).
+        // branch's output is emitted twice (`../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers`).
         If(av.greaterThan(AV_SATURATED), () => { Break(); });
         const t = t0.add(float(i).add(jitter).mul(dt));
         const pu = ro.add(rd.mul(t)).toVar();
@@ -96,7 +95,7 @@ export function buildCloudAbsorptionMaterial(
           const uu = length(pu).toVar();
           const env = float(1.0).sub(
             smoothstep(c.uUEnv.mul(ENVELOPE_TAPER_FRAC), c.uUEnv, uu)).toVar();
-          // A branch rather than `Continue` — README.md § Three WGSL rules.
+          // A branch rather than `Continue` — README.md#three-wgsl-rules-this-march-lives-under.
           If(env.greaterThan(0.0), () => {
             const q = uu.mul(c.uAxes.z).div(c.uRflat).toVar();
             const density = pow(
@@ -110,7 +109,7 @@ export function buildCloudAbsorptionMaterial(
     const alpha = min(float(1.0).sub(exp(av.mul(-TAU_PER_AV))), ALPHA_CAP);
     const dither = lsbDitherTsl(screenCoordinate.xy.add(DITHER_SEED_OFFSET));
     const texel = vec4(vec3(0.0), clamp(alpha.add(dither), 0.0, ALPHA_CAP));
-    // README.md § The absorption writes attachment 2.
+    // README.md#the-absorption-writes-attachment-2-and-that-is-the-gate.
     return { colour: texel, statistic: vec4(0.0), diffuse: texel };
   });
 }

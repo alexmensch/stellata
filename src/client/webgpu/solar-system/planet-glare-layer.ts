@@ -1,6 +1,6 @@
 // The reflected-glare billboard on a WebGPU boot: packed geometry over
 // PlanetBodyField's live arrays, the main-pass draw and its local-pass
-// mirror, and the per-frame re-pack. README.md § The glare packs.
+// mirror, and the per-frame re-pack. README.md#the-glare-packs.
 
 import * as THREE from 'three';
 import { applyGlowBlendDefaults, applyMonochromeBlend } from '../../star-pipeline/star-blend';
@@ -60,8 +60,7 @@ export class PlanetGlareLayer implements MrtOutputLayer {
       m.renderOrder = GLARE_RENDER_ORDER;
       // Both meshes carry the hook: setVisible() can hide the main mesh
       // while the mirror still draws, so one hook would stop the re-pack.
-      // A frame drawing both re-packs and re-uploads twice (README.md
-      // § The glare packs).
+      // A frame drawing both re-packs and re-uploads twice (README.md#the-glare-packs).
       m.onBeforeRender = () => this.sync();
       parent.add(m);
       return m;

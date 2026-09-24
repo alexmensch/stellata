@@ -110,7 +110,7 @@ one of them. A frame that were subtly wrong would still look like a plausible
 grid, so external coordinates are the only check that bites.
 
 - The **equator** is the chrome line seam's **fat stroke**
-  (`../../chrome-lines/README.md` § The fat stroke brings its own object)
+  ([The fat stroke brings its own object](../../chrome-lines/README.md#the-fat-stroke-brings-its-own-object))
   at 2.4 px screen-space width — basic `LineBasicMaterial.linewidth`
   silently clamps to 1 in WebGL on most platforms, so a fat line is the
   only reliable way to get a thicker stroke, and the object class differs
@@ -127,8 +127,8 @@ grid, so external coordinates are the only check that bites.
   the same number an app-side write could supply (the renderer is sized in
   CSS pixels and nothing calls `renderer.setViewport`), so a resize hook
   here would be a second writer of a value three already owns, going stale
-  the moment either side changed. `tests/README.md` § The three upgrade
-  audit carries it as a line to re-check on the next bump.
+  the moment either side changed. [The three upgrade audit](/tests/README.md#the-three-upgrade-audit)
+  carries it as a line to re-check on the next bump.
 - **Latitude rings + meridians** take the seam's solid stroke at 0.45
   opacity, over `../../util/orbit-line.ts`'s `makeOrbitLineLoop` /
   `makeOrbitLine` — an index-closed `THREE.Line` rather than
@@ -153,7 +153,7 @@ grid, so external coordinates are the only check that bites.
   style flip and never per frame. **The flip goes through the seam handle's
   `setOpaque`, never `material.transparent`** — the fat stroke's WebGPU
   material answers that flag with a full-frame texture read of the target
-  it is drawing into (`../../chrome-lines/README.md` § The layer writes
+  it is drawing into ([The layer writes](../../chrome-lines/README.md#the-layer-writes-material-never-a-wrapper)
   `material`, never a wrapper).
 
 ### A frame is offered where it describes something
@@ -161,7 +161,7 @@ grid, so external coordinates are the only check that bites.
 Declination is measured from Earth's rotational axis and right ascension from
 the vernal equinox, so — unlike galactic coordinates, defined by the Milky
 Way's actual disc plane and centre and therefore meaningful from anywhere in
-the galaxy (AGENTS.md § Camera-anywhere, any-epoch) — the RA/Dec frame is a
+the galaxy ([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)) — the RA/Dec frame is a
 property of one body. The ecliptic sits between: it is the plane Sol's planets
 share, a reference across that system and an arbitrary tilt outside it.
 
@@ -189,7 +189,7 @@ the focus rather than on parsecs is both narrower and honest: in observe mode
 the camera sits *on* the focused object, so a distance threshold could only
 ever restate where that object is.
 
-**Grid orientation labels** (`coord-sphere-labels.ts`) — SVG `<text>` under
+<a id="grid-orientation-labels"></a>**Grid orientation labels** (`coord-sphere-labels.ts`) — SVG `<text>` under
 `#gal-grid-labels` / `#ecl-grid-labels` / `#eq-grid-labels`, one pool per
 sphere, pooled once (one per line) and positioned + rotated each frame.
 `main.ts` passes each pool a `groupOpacity` closure — **an alpha, not a

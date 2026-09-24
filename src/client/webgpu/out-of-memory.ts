@@ -1,5 +1,5 @@
 // Fans the renderer's uncaptured out-of-memory reports out to subscribers.
-// See README.md § Out of memory.
+// See README.md#out-of-memory.
 
 /** The slice of three's `Renderer.onError` report this reads. */
 export interface RendererErrorReport {
@@ -26,7 +26,7 @@ export interface ErrorScopeDevice {
   popErrorScope(): Promise<unknown>;
 }
 
-/** README.md § Out of memory. */
+/** README.md#out-of-memory. */
 export async function allocatesWithinMemory(
   device: ErrorScopeDevice,
   allocate: () => void,

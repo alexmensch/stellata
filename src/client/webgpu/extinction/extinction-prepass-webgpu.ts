@@ -50,10 +50,10 @@ export interface WebGpuExtinctionPrepassOptions extends WebGpuExtinctionPrepassS
    *  buffers rather than the shell wiring them. */
   slots: ExtinctionNodes;
   /** The star layer's tables — the whole fill gates on the star stages' own
-   *  prefilter over them (README.md § The cache gate). */
+   *  prefilter over them (README.md#the-cache-gate). */
   tables: StarTables;
   /** The compaction that appends the refill worklist and sizes its dispatch
-   *  (refill/README.md § The compaction appends the worklist). */
+   *  (refill/README.md#the-compaction-appends-the-worklist). */
   compaction: StarCompaction;
 }
 
@@ -67,7 +67,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private order: StorageBufferAttribute | null;
   private av: StorageBufferAttribute | null;
   /** Per star, the camera generation its A_V was computed at
-   *  (refill/README.md § The generation stamp). */
+   *  (refill/README.md#the-generation-stamp). */
   private stamps: StorageBufferAttribute | null;
   /** Star → slot — the refill kernel's route into the position table and the
    *  producer's bucket key — followed by the worklist itself. */
@@ -82,8 +82,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  Shares its array with the `order` buffer, so dispose has to drop both
    *  or the 1.48 MiB outlives the pass. */
   private dispatchOrder: Uint32Array | null;
-  /** Sorted while the catalogue tail was still zero (README.md § What a
-   *  CACHE owes). */
+  /** Sorted while the catalogue tail was still zero (README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not).
+   * */
   private orderIsProvisional: boolean;
   private readonly absCameraPos = uniform(new Vector3());
   private readonly viewScratch = new Matrix4();
@@ -93,7 +93,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private readonly catalog: WebGpuExtinctionPrepassSources['catalog'];
   /** Nodes this pass owns, not the shared registry's: that syncs after this
    *  pass dispatches, so a kernel on it would gate a frame behind the watch
-   *  below (README.md § The cache gate). */
+   *  below (README.md#the-cache-gate). */
   private readonly gateBounds: StarVisibilityUniforms & StarVisibilityBoundValues;
   /** Built once, run by both the whole fill and the reference march, so the
    *  two cannot skip different stars. */
@@ -132,13 +132,13 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     };
 
     this.dispatchOrder = new Uint32Array(count);
-    // ../star/compaction/README.md § Binding budget.
+    // ../star/compaction/README.md#binding-budget.
     const table = new Uint32Array(count + refillWorklistLength(count));
     writeDispatchTablesInto(this.dispatchOrder, table, positions, count);
     this.orderIsProvisional = catalog.loadedCount < count;
     // vec4 slots, not vec3: WGSL has no packed vec3 in a storage buffer, and
     // an itemSize-3 attribute is the one the backend silently re-strides
-    // (../README.md § One writer per buffer per submit).
+    // (../README.md#one-writer-per-buffer-per-submit).
     this.positions = new StorageBufferAttribute(count, 4);
     packPositionsVec4Into(
       this.positions.array as Float32Array, positions, count, this.dispatchOrder);
@@ -169,7 +169,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       const av = float(0.0).toVar();
       If(this.visible(self, starAbs), () => { av.assign(march(starAbs)); });
       // Zero rather than a skipped write — the compare in
-      // README.md § The cache gate is total.
+      // README.md#the-cache-gate is total.
       slots.av.element(self).assign(av);
       refill.stamps.element(self).assign(refill.cameraGeneration);
     })(), count);
@@ -177,13 +177,13 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
     // One thread per listed star of this frame's quarter. No gate: the
     // compaction applied it before appending
-    // (refill/README.md § The kernel bounds itself by the listed length).
+    // (refill/README.md#the-kernel-bounds-itself-by-the-listed-length).
     const prefix = (bucket: Node<'uint'>) =>
       compaction.refillDispatchNode.element(uint(REFILL_PREFIX_BASE).add(bucket));
     this.refillKernel = computeIndirect(Fn(() => {
       const i = instanceIndex;
       If(i.lessThan(compaction.refillDispatchNode.element(REFILL_DISPATCH_LENGTH_ELEMENT)), () => {
-        // refill/README.md § Bucketed by Morton range.
+        // refill/README.md#bucketed-by-morton-range.
         const bucket = uint(0).toVar();
         for (let step = REFILL_BUCKETS >> 1; step >= 1; step >>= 1) {
           const next = bucket.add(uint(step)).toVar();
@@ -202,7 +202,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.dirty = true;
   }
 
-  /** README.md § What a CACHE owes. */
+  /** README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not. */
   refreshPositions(): void {
     if (this.positions === null || this.dispatchOrder === null) return;
     if (this.orderIsProvisional && this.catalog.loadedCount === this.count) {
@@ -215,7 +215,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.dirty = true;
   }
 
-  /** Why this parks the flight: README.md § What a CACHE owes. */
+  /** Why this parks the flight: README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not. */
   private reorder(): void {
     if (this.dispatchOrder === null || this.order === null || this.refillTable === null) return;
     writeDispatchTablesInto(
@@ -243,7 +243,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   }
 
   /** Abandon any flight in progress and owe a fresh request, rather than
-   *  resuming a truncated one (refill/README.md § The cursor). */
+   *  resuming a truncated one (refill/README.md#the-cursor-and-why-a-request-never-stalls-it). */
   private parkRefill(): void {
     this.slots.refill.arm.value = 0;
     this.refill = idleRefill();
@@ -273,7 +273,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
         this.lastView = (this.lastView ?? new Matrix4()).copy(this.viewScratch);
       }
     }
-    // The first fill is whole (refill/README.md § Three places).
+    // The first fill is whole (refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one).
     if (!this.hasComputed) {
       if (!bump) return;
       this.setCameraGeneration(absCamX, absCamY, absCamZ);
@@ -290,7 +290,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     }
     // Consume before produce: the class marched now is the one the
     // compaction built LAST frame; the compaction this frame reads the arm
-    // and the class left here (refill/README.md § The cursor).
+    // and the class left here (refill/README.md#the-cursor-and-why-a-request-never-stalls-it).
     const plan = planRefill(this.refill, bump || viewChanged);
     this.refill = plan.next;
     if (plan.dispatch) {
@@ -304,7 +304,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.dirty = false;
   }
 
-  /** see refill/README.md § The generation stamp */
+  /** see refill/README.md#the-generation-stamp */
   private setCameraGeneration(x: number, y: number, z: number): void {
     this.absCameraPos.value.set(x, y, z);
     this.lastCamX = x;
@@ -312,8 +312,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.lastCamZ = z;
   }
 
-  /** Every slot at one camera, and nothing owed after it (refill/README.md
-   *  § Three places). */
+  /** Every slot at one camera, and nothing owed after it (refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one).
+   * */
   private fillWhole(): void {
     if (this.fillKernel === null) return;
     this.renderer.compute(this.fillKernel, this.count);
@@ -329,7 +329,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    * stage indexes — exact, free, and over the whole catalog once the
    * mirror has landed. Null until then, which is the honest answer while
    * the buffer's contents exist only on the GPU: WebGPU offers no
-   * synchronous readback (README.md § Cold reads).
+   * synchronous readback (README.md#cold-reads--the-one-behaviour-that-is-not-parity).
    */
   readAvMag(idx: number): number | null {
     if (!this.isActive()) return null;
@@ -343,12 +343,12 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   warmAvReadback(): void {
     if (!this.isActive() || this.av === null) return;
     // Nothing in flight only: a copy taken mid-flight is superseded before
-    // the dwell that wanted it can read a byte (README.md § Cold reads).
+    // the dwell that wanted it can read a byte (README.md#cold-reads--the-one-behaviour-that-is-not-parity).
     if (refillInFlight(this.refill)) return;
     this.mirror.stage(this.av, this.generation);
   }
 
-  /** The parity check of README.md § The prepass kernel: the same march as
+  /** The parity check of README.md#the-prepass-kernel: the same march as
    *  a fragment pass over the same positions, at the last computed camera,
    *  bit-compared against the whole buffer. Dev-console only. */
   async verifyParity(): Promise<AvParityReport | null> {
@@ -369,7 +369,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   }
 
   /** Copy the bounds the gate reads and report whether any moved
-   *  (README.md § The cache gate). */
+   *  (README.md#the-cache-gate). */
   private syncGateBounds(): boolean {
     let moved = false;
     for (const key of STAR_VISIBILITY_BOUND_KEYS) {

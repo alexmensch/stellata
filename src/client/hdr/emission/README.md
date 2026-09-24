@@ -3,7 +3,7 @@
 What an emitting layer writes into the HDR target. `../README.md` owns the
 target's lifecycle, pass ordering and the operator; this folder owns the
 *value* a fragment carries and the rules that turn a physical magnitude
-into it. `docs/science-hdr-pipeline.md` § 1 is the design gate.
+into it. [§ 1](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) is the design gate.
 
 ```
 src/client/hdr/emission/
@@ -52,8 +52,7 @@ That saturation has a consumer: `POINT_SOURCE_FLAT_PEAK_DIAMETER_PX`
 (2/√π) is the **diameter** at which `max(1, π·r²)` reaches 1, so a
 source at or under it carries a peak exactly insensitive to its own
 radius — which is what lets the star solve drop the radius entirely past
-a distance bound (`../../star-pipeline/perceptual-disc/README.md`
-§ Eliding the physical-size branch).
+a distance bound ([Eliding the physical-size branch](../../star-pipeline/perceptual-disc/README.md#eliding-the-physical-size-branch)).
 
 A layer that draws an **extended source** instead of a kernel takes
 `surfaceBrightnessLuminanceTsl` — the flux magnitude inside a solid
@@ -82,7 +81,7 @@ spheroid population, 0.14–0.18 mag on their discs. What moves a
 
 **The separation holds at the emission site and not one step past it.**
 The Milky Way's raymarch attenuates per channel inside the same loop
-(`../../milkyway/README.md` § Dust), so a redder component
+([Dust](../../milkyway/README.md#dust--the-analytic-tier-and-what-composes-with-it)), so a redder component
 transmits more of its own light through the same dust: every dust-free
 column is bit-identical under any hue, and every extincted one is not.
 0.012 mag toward the Galactic centre for a disc 0.3 mag bluer in B−V,
@@ -98,7 +97,7 @@ surface-brightness rule with the disc's mean `S` — and past 1 px the two
 are the *same quantity*, so a body crossing from point to resolved mesh
 does not change brightness. The disc-mean derivation and the two
 normalisers that make the shaded disc integrate back to `L(m)` are
-`../../solar-system/planets/README.md` § Physical-luminance emission.
+[Physical-luminance emission](../../solar-system/planets/README.md#physical-luminance-emission).
 **The mesh reads `uOmegaPxArcsec2` and, unlike the band, must**: the two
 rules agree at 1 px on that solid angle alone, so the summation
 substitution below would break the resolve step it exists to close.
@@ -117,8 +116,8 @@ volume integrate back to a published magnitude.
 *actual* mesh volume — whatever the envelope clips, ρ₀ makes up, so a tight
 envelope brightens what remains rather than losing light. Both consumers
 rely on that: the Local Group solves per object against a catalogue
-apparent magnitude at its own distance (`scripts/local-group/README.md`
-§ Emission solver), the Milky Way against a published **absolute** one at
+apparent magnitude at its own distance ([Emission solver](/scripts/local-group/README.md#emission-solver--per-object-density0)),
+the Milky Way against a published **absolute** one at
 d = 10 pc (`../../milkyway/calibration/README.md`). Same function, and
 the only difference is which distance goes in.
 
@@ -153,7 +152,7 @@ BC03 Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
 Υ\*_V comes off. It is a *population* constant, not either layer's: the
 Galactic bulge, M31's bulge and the luminous early-type spheroids are the
 same population. It is **not** the metal-poor dwarf spheroids
-(`../../local-group/emission/README.md` § Population tints).
+([Population tints](../../local-group/emission/README.md#population-tints--two-family-seeds-both-derived)).
 
 Its hue, `OLD_SPHEROID_COLOR_RGB`, is derived here for the same reason —
 one population, one triplet. `BULGE_COLOR_RGB` and `SPHEROID_COLOR_RGB`
@@ -173,7 +172,7 @@ Three properties a change here has to keep:
   divides by zero to `+Infinity` and so needs its own half of the guard.
 
 Why solving beats predicting both components:
-`../../milkyway/calibration/README.md` § Population colours carries the
+[Population colours](../../milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited) carries the
 argument and the numbers, including what an independent pair would do to
 the band's integrated colour.
 
@@ -188,7 +187,7 @@ which the **display** path substitutes for `Ω_px`. Fixed in angle, so the
 level cannot move with FOV. Derivation, the threshold's identity with the
 instrument's `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
 `extendedThresholdSbFor`), and every rejected alternative:
-`docs/science-hdr-pipeline.md` § 1 (*Extended sources*).
+[§ 1](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) (*Extended sources*).
 
 **The substitution is only the flux in the patch for a source uniform
 across it, so it does not happen here.** `emitExtendedSourceTsl` writes
@@ -208,13 +207,13 @@ branch must write them" one decision rather than one per early return. `../../we
 for the chart isobar, which would contour surface brightness against
 `extendedThresholdSbTsl`, the inverse of the same pair — so contour
 and emission could not disagree about where threshold is. **That contour
-has never drawn** (`../../milkyway/README.md` § Chart mode + warp), so the
+has never drawn** ([Chart mode + warp](../../milkyway/README.md#chart-mode--warp)), so the
 magnitude step is the branch's cost and nothing else's.
 
 **Off-target there is no attachment 2 and no pass, so the anchor is gone
 entirely** and both emitters fall back to `Ω_px`. One rule rather than a
 per-layer choice: the concession *is* the pass. That is chart mode
-(`../README.md` § The inline operator).
+([The inline operator](../README.md#the-inline-operator--chart-modes-path)).
 
 ## Footprint — a fragment carries a pixel, not a point
 
@@ -244,5 +243,5 @@ Two things it must get right, both measured:
 
 Inert where the plate scale already resolves the profile. From Sol the
 band moves under 0.003 mag at both FOV extremes
-(`../../milkyway/calibration/README.md` § The gradient this produces),
+([The gradient this produces](../../milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen)),
 which is what keeps the shipped display table where it is.

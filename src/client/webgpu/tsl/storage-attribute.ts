@@ -1,6 +1,6 @@
 // Storage buffer attributes no geometry owns: releasing one, and the device
 // limit deciding whether a vertex stage may read one at all.
-// README.md § Storage attributes.
+// README.md#storage-attributes.
 
 import type { BufferAttribute } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
@@ -11,7 +11,7 @@ interface AttributeRegistry {
 
 /** `maxStorageBuffersPerShaderStage` at WebGPU's core level — the ceiling a
  *  stage may bind to without asking the device for anything
- *  (README.md § Storage attributes). */
+ *  (README.md#storage-attributes). */
 export const WEBGPU_CORE_STORAGE_BUFFERS_PER_STAGE = 8;
 
 /** The slice of the backend the limit read needs, structurally — the project
@@ -41,8 +41,7 @@ export function disposeStorageAttribute(
  * `build` is called twice, so each side gets its own. `toReadOnly()` narrows
  * the node it is called on rather than returning a view, so a single shared
  * node narrowed for the reader is pinned read-only in the writer too and that
- * kernel's pipeline stops compiling on the device (README.md § Storage
- * attributes).
+ * kernel's pipeline stops compiling on the device (README.md#storage-attributes).
  */
 export function storageWriteRead<N extends { toReadOnly(): N }>(
   build: () => N,

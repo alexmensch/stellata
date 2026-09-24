@@ -1,6 +1,6 @@
 // How many rendered frames apart the statistic readback may go out, for a
 // caller that needs the duty cycle held rather than emergent.
-// README.md § Latency.
+// README.md#latency.
 
 export class ReadbackCadence {
   /** Rendered frames between readbacks, or null for the emergent rate the

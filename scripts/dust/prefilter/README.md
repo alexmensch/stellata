@@ -1,7 +1,7 @@
 # Band dust-prefilter sweep
 
 Analysis-only. Nothing here ships or feeds a build artifact — it produced the
-numbers behind `docs/science-galactic-structure.md` § The prefilter mechanism,
+numbers behind [The prefilter mechanism,](/docs/science-galactic-structure.md#the-prefilter-mechanism--a-view-frustum-froxel-grid)
 and it is the harness the band's prefiltered-vs-direct agreement pin should be
 built on when the read lands (stellata-ty4.5).
 
@@ -53,9 +53,9 @@ screen grid arrives at an arbitrary sub-cell offset *and* an arbitrary roll; a
 sky-fixed grid holds one pose, so its shimmer is identically zero. `cost.ts` is
 arithmetic only, in dust-texture fetches per fill and texels held, quoted
 against a fixed yardstick of one 48-tap march per catalogue star (18.6M fetches
-at 388k) so the ratios in `docs/science-galactic-structure.md` § Cost stay
+at 388k) so the ratios in [Cost](/docs/science-galactic-structure.md#cost) stay
 comparable; the shipped per-star march spends taps by path length
-(`src/client/star-pipeline/extinction/README.md` § The march).
+([The march](/src/client/star-pipeline/extinction/README.md#the-march)).
 
 ## Three things to know before changing it
 

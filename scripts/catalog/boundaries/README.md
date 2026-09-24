@@ -80,8 +80,7 @@ region's area in square degrees at `AREA_DECIMALS = 2`. The areas
 reproduce the published IAU values, which is why they ship rather than
 being recomputed: they are the artifact's own self-check. Derivation and
 the inside-the-region assertion are in
-`src/client/constellation-boundaries/iau-geometry/README.md` § Label
-anchors.
+[Label anchors](/src/client/constellation-boundaries/iau-geometry/README.md#label-anchors).
 
 `regions` is the resolved cell grid, run-length-coded along RA
 band-major: `runs` is `[cellCount, codeIndex, …]`, and 47,200 cells
@@ -137,7 +136,7 @@ the runtime lerps a window out of the live magnitude limit.
 The layer fades from the **1%** column to the **5%** column and rejects an
 artifact that carries neither — dropping a quantile here is a wire change
 that breaks a consumer, not a statistics tweak
-(`src/client/constellation-boundaries/README.md` § Chart-mode layer). The
+([Chart-mode layer](/src/client/constellation-boundaries/README.md#chart-mode-layer)). The
 loader also pins what this emitter must hold to: `magLimits` ascending, one
 `offsetsPc` row per magnitude row, and every row exactly `quantilePcts`
 wide. Emitting a short row is the dangerous one — it resolves a quantile to
@@ -174,7 +173,7 @@ The whole stage costs under a second.
 
 `writeBoundaryArtifact` takes the lookup rather than building one, and
 passes it whole to `buildBoundaryArtifact`: `loadReadStarsInputs` already
-decomposed the edge set for byte 34 (`../parse/README.md` § Positional
-constellation membership), so the arcs, the label anchors and the shipped
+decomposed the edge set for byte 34 ([Positional constellation membership](../parse/README.md#positional-constellation-membership)),
+so the arcs, the label anchors and the shipped
 grid are three readings of that one decomposition — none of them can
 disagree with the membership the catalogue shipped.

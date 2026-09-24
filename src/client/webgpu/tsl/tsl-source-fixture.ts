@@ -1,5 +1,5 @@
 // Reading a shipped TSL module as text, for the suites that pin expression
-// shapes. See README.md § TSL test pattern.
+// shapes. See README.md#tsl-test-pattern--what-a-layers-suite-covers.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

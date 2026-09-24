@@ -1,6 +1,6 @@
 """Molecular-cloud density model shared by build-clouds.py (clouds.json v3)
 and build-dust.py (extinction column check): Zucker 2021 Plummer profiles,
-column calibration, taxonomy, noise constants. docs/science-molecular-clouds.md §§ 2-5."""
+column calibration, taxonomy, noise constants. /docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain through /docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ SRC_2021_T1 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table1.dat'
 SRC_2021_T2 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table2.dat'
 SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 
-# Units chain (docs/science-molecular-clouds.md § 2): every layer works in
+# Units chain (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain): every layer works in
 # extinction rate; n_H [cm^-3] converts through these.
 AV_PER_NH_PC = 1.65e-3      # mag A_V per pc per (n_H cm^-3)
 ZGR_PER_NH = 6.02e-4        # E_ZGR per pc per (n_H cm^-3)
@@ -49,7 +49,7 @@ MIN_AXIS_PC = 3.0
 
 # Half-extent of the Edenhofer dust voxel cube (build-dust.py bakes into
 # ±this along each ICRS axis). Clouds fully inside get baked per-star
-# extinction; the rest are presence-only (docs/science-molecular-clouds.md § 1
+# extinction; the rest are presence-only (/docs/science-molecular-clouds.md#1-overview--two-independent-fields
 # decision 2).
 DUST_GRID_HALF_EXTENT_PC = 1250.0
 
@@ -61,7 +61,8 @@ DUST_GRID_HALF_EXTENT_PC = 1250.0
 # tightened chord.
 MASS_CAP_FACTOR = 2.0
 
-# Class-based defaults (docs/science-molecular-clouds.md §§ 4.3, 5.1, 7.1).
+# Class-based defaults: /docs/science-molecular-clouds.md#43-the-sphere-clouds-zucker-2020--corona-australis,
+# /docs/science-molecular-clouds.md#51-physical-basis, /docs/science-molecular-clouds.md#71-classes.
 SIGMA_S_BY_CLASS = {'dark': 1.3, 'sf': 1.7, 'hii': 1.9}
 AV_TARGET_BY_CLASS = {'dark': 2.0, 'sf': 3.0, 'hii': 4.0}
 SPHERE_RFLAT_FRACTION = 0.25
@@ -102,7 +103,7 @@ CLOUD_CLASS: dict[str, str] = {
 DEFAULT_CLASS = 'dark'
 
 # Substructure noise ladder for the presence-pass shader (A.4/A.6,
-# docs/science-molecular-clouds.md § 5): one geometric ladder from the cloud's
+# /docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec): one geometric ladder from the cloud's
 # major diameter down to LAMBDA_MIN_PC, evaluated wholly in-shader (the
 # voxel field carries the real Edenhofer structure; no synthetic noise is
 # baked). Per-octave variance follows a turbulence power-law: variance
@@ -404,7 +405,7 @@ def profiled_clouds() -> list[ProfiledCloud]:
     and the clouds.json v3 fields. Calibration: solve n0_cal so the
     shortest-axis column through the centroid equals the observed
     Leike-resolution peak column, under the mass budget
-    (docs/science-molecular-clouds.md § 4.2)."""
+    (/docs/science-molecular-clouds.md#42-calibration-procedure-per-cloud)."""
     t1 = parse_z2021_table1()
     t2 = parse_z2021_table2()
     t3 = parse_z2021_table3()

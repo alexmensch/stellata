@@ -1,6 +1,6 @@
 // Fragment-stage pieces the star passes share: the kernel and its gates,
 // chart mode's ink disc, starEmission()'s colour, and the MRT output
-// struct + mode swap (../hdr/README.md § The gate becomes the struct).
+// struct + mode swap (../hdr/README.md#the-gate-becomes-the-output-struct struct).
 
 import { Discard, If, float, length, max, select, smoothstep, vec3, vec4 } from 'three/tsl';
 import type { Node, NodeMaterial } from 'three/webgpu';
@@ -37,8 +37,8 @@ export function discardOutsideKernel(v: StarVaryings) {
  * Those two fragment sets are one decision: the mask stamps the depth the
  * disc draw then reads without writing any of its own, so a test added to
  * one and not the other either stamps depth for a star that renders no
- * colour or leaves a core unstamped (README.md § The disc draw writes no
- * depth). Chart mode splits the same way on `vPhysRatio` — the disc/glow
+ * colour or leaves a core unstamped (README.md#the-disc-draw-writes-no-depth).
+ * Chart mode splits the same way on `vPhysRatio` — the disc/glow
  * pivot is a property of the star, not of the render style — which is why
  * this half sits outside the chart branch.
  */
@@ -110,7 +110,7 @@ export function starEmissionColour(
  * of the branch; `colourKernel` is the pass's remaining colour-mode gates
  * plus its kernel, which the chart side needs none of. Chart is
  * non-photometric and bypasses the HDR seam, so its statistic texel is a
- * flat zero rather than a masked flux (../../hdr/README.md § Chart mode).
+ * flat zero rather than a masked flux (../../hdr/README.md#chart-mode--full-bypass).
  *
  * The chart branch's zeroed statistic and diffuse slots are NOT the
  * blend's identity under `MultiplyBlending` — 1 is. They never reach an
@@ -125,7 +125,7 @@ export function starEmissionColour(
  * `coreMask` is the pass's lit-surface claim over its own kernel: 1 only
  * where the fragment emits a photosphere's true surface brightness across
  * its own physical footprint, which the glow pass never does
- * (`../../hdr/attachments/README.md` § The unit).
+ * (`../../hdr/attachments/README.md#the-unit`).
  */
 export function finishStarColourMaterial(
   material: NodeMaterial,

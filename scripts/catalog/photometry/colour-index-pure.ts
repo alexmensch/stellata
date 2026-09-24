@@ -1,5 +1,5 @@
 // Johnson B−V resolution from Gaia DR3 photometry, the catalogue's printed
-// cell, and the intrinsic spectral-class tiers. See README.md § The ci cascade.
+// cell, and the intrinsic spectral-class tiers. See README.md#the-ci-cascade.
 
 import { SOLAR_BV_FALLBACK } from '../record/catalog-pure';
 import {
@@ -66,7 +66,7 @@ export function gaiaBMinusV(photometry: GaiaPhotometry | null): number | null {
  *  `I/239` B−V over the rows carrying both: median |Δ| holds at 0.031–0.043
  *  mag out to here and breaks to 0.135 in the bin above it. The GSPC flag's
  *  own bound is 2.6, but it bounds a standardisation fit rather than the
- *  colour — README.md § Why the GSPC tier does not gate on the flag.
+ *  colour — README.md#why-the-gspc-tier-does-not-gate-on-the-flag.
  *
  *  There is deliberately no blue counterpart: printed reaches every catalogue
  *  row blue of the flag's own −0.5 edge, so the gate would be unreachable and
@@ -130,12 +130,12 @@ export interface ColourIndexSources {
 /** B−V through the cascade: the Gaia relation, else printed `I/239` B−V, else
  *  Gaia's synthetic photometry, else — only where no Apsis Teff will override
  *  the colour downstream — the intrinsic spectral-class value, else solar.
- *  `docs/catalog-driver.md` § 5.
+ *  `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers`.
  *
  *  **Printed sits above synthetic**, which inverts the order that contract
  *  states, because the synthetic tier now runs outside the standardisation
- *  that ties it to the ground system — README.md § Why the GSPC tier does not
- *  gate on the flag. Every corpus row carrying both prefers printed.
+ *  that ties it to the ground system — README.md#why-the-gspc-tier-does-not-gate-on-the-flag.
+ * Every corpus row carrying both prefers printed.
  *
  *  The two derived tiers are gated on `apsisTeff === null` because the shader
  *  reads `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi`: deriving a colour an

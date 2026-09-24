@@ -20,7 +20,7 @@ as the camera pulls away from Sol. The curve itself is
 `FADE_OUTER_PC` (5 kpc) live with it in the shared `galactic-fade.ts`
 module — hoisted there at the second usage, not the third, and the base
 opacity is its argument so neither layer carries a copy
-(`../galactic/README.md` § Distance fades).
+([Distance fades](../galactic/README.md#distance-fades)).
 
 The layer has no *dedicated* checkbox, but it IS part of the declutter
 cycle (`../scene/declutter/README.md`): the wireframes are `lgWireframes` (floor
@@ -39,8 +39,8 @@ conjunction.** `lg-module.ts` declares
 `contribution: { kind: 'gated' }` and skips only when the wireframe's
 distance fade has reached zero (`lgWireframeOpacity`, inside
 `FADE_INNER_PC` — which is the app's own default view) **and** the glow's
-peak is under the display floor (`emission/README.md` § The brightest
-rendered pixel). The reason reported is the glow's `'brightness'`: the
+peak is under the display floor ([The brightest rendered pixel](emission/README.md#the-brightest-rendered-pixel)).
+The reason reported is the glow's `'brightness'`: the
 wireframe is one stroke, and the glow is a whole-frame raymarch plus two
 whole-frame attachment writes. Hiding the wireframe group on the way out
 also closes its pick, which reads that flag.
@@ -51,7 +51,7 @@ The lg kind module (`lg-module.ts`) owns the runtime lifecycle: its
 `load` fetches `public/local-group.json` (format version 2) via
 `local-group-loader.ts`, and its `attach` constructs the wireframe +
 emission layer pair at the kind's roster position. Each object carries
-a frozen Stellata ID (`sid`, docs/sid.md § 7); the loader rejects the
+a frozen Stellata ID (`sid`, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)); the loader rejects the
 artifact (warn + null) when the version mismatches or any sid is
 missing or duplicated — a stale or pre-stamp `local-group.json` needs
 `pnpm run build:local-group`. The `lg` SID domain is the module's
@@ -59,8 +59,8 @@ missing or duplicated — a stale or pre-stamp `local-group.json` needs
 `../util/sid-resolver/README.md`).
 
 Each object also carries an `emission` block — the solved luminosity
-model (per-family profile params + density0; `docs/science-local-group.md`
-§ Local Group luminosity model, solver contract in
+model (per-family profile params + density0; [Local Group luminosity model,](/docs/science-local-group.md#local-group-luminosity-model)
+solver contract in
 `scripts/local-group/README.md`).
 The wireframe layer ignores it; it feeds the volumetric emission
 renderer. `type` (morphological string) and optional `aliases`
@@ -164,8 +164,8 @@ per-object override on the family tints.
 ## Label engine
 
 `createMilkyWayLabel` and `createLocalGroupLabels` both use the shared
-silhouette label engine (`../overlays/README.md` § The two label
-halves). Each label binds to:
+silhouette label engine ([The two label halves](../overlays/README.md#the-two-label-halves)).
+Each label binds to:
 
 - A per-frame visibility predicate (`visibleLabelIds.has(id)` — a
   shared Set written by the global ranking pass, see below).
@@ -270,8 +270,8 @@ SVG slots live in `index.html` next to the heliopause label:
 Per-object `<text id="lg-<slug>-label">` children are minted at runtime
 by `createLocalGroupLabels` from the loaded catalog — `obj.name` as-is,
 with no runtime name resolution. **The proper-name-first ordering every
-label reads is settled at build time** (`scripts/local-group/README.md`
-§ Display-name rules): `DISPLAY_NAME_OVERRIDES` expands LVDB's `LMC` /
+label reads is settled at build time** ([Display-name rules](/scripts/local-group/README.md#display-name-rules)):
+`DISPLAY_NAME_OVERRIDES` expands LVDB's `LMC` /
 `SMC` shortform to `Large Magellanic Cloud` / `Small Magellanic Cloud`,
 then `aliases.tsv`'s `canonical` column promotes a common name over a
 catalogue designation where one exists — M31 labels as "Andromeda
@@ -295,7 +295,7 @@ what made the focus card's alias row repeat itself.
   invisible / stellar-scale, not a wireframe primitive.
 - **Star catalogues for LMC/SMC/Sgr stellar populations** — AT-HYG
   depth doesn't reach LMC/SMC reliably; Sgr dSph red giants are
-  marginal. See `SCIENCE.md` § Scope principles — Detail gradient.
+  marginal. See [Scope principles](/SCIENCE.md#scope-principles) — Detail gradient.
 - **Chart-mode glyphs for Local Group / dSph members** — owned by
   `stellata-m40.4`.
 - **Galactic-disc fade-curve rework** — the current 500 pc / 5 kpc

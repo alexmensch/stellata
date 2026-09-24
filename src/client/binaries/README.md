@@ -48,7 +48,7 @@ star catalog records.
   offset. `relationOffsetPcInto` hands out one pair's rendered `R(t)` as
   the walk placed it — the ANCHOR-relative offset, which for a
   hierarchical outer pair is not the difference of the two slots
-  (`orbit-paths/README.md` § Anchor). The static-frame skip, the `markBaselinesDirty()` contract and
+  ([Anchor](orbit-paths/README.md#anchor)). The static-frame skip, the `markBaselinesDirty()` contract and
   `cadenceReport` each have a section below.
 - `focal-chain.ts` — `focalChainRelationSet(binaries, focalIdx)`: the
   relation-index set on a focal star's slot-chain (focal as primary or
@@ -191,8 +191,8 @@ longitude datum drops. `relationIdx` comes back with the normal so the
 caller reads the partner off that answer rather than resolving the innermost
 relation a second time and trusting the two to agree.
 
-The attitude indicator levels on all of it (`../attitude/README.md`
-§ Levelling on an orbit).
+The attitude indicator levels on all of it ([Levelling](../attitude/README.md#levelling)
+on an orbit).
 
 ### Composition with proper-motion propagation
 
@@ -228,8 +228,7 @@ shear from a drifting primary. Full systemic coherence for *every*
 binaries.bin pair — keyed on this file's authoritative resolved pairing,
 which the catalog build can't replicate — is `stellata-zau1`; until it
 lands, the ~950 divergent-velocity Tier-3 wide pairs shear up to tens of
-arcminutes at the scrub-range extremes (docs/science-catalog-ingestion.md §
-Current-epoch star
+arcminutes at the scrub-range extremes ([Current-epoch star](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)
 positions).
 
 ### Focal-frame ride (no rebase)
@@ -247,7 +246,7 @@ the star and `lookAt(target) == star` keeps the pin substitution valid.
 
 Both rides reach the camera through one `applyRideDelta` helper, which
 also hands the delta to the gate and the cadence
-(`../render-gate/README.md` § The focal ride).
+([The focal ride](../render-gate/README.md#the-focal-ride)).
 
 `focalPerturbationInto(focalIdx, t, out)` supplies that drift in
 **float64**: it replays the focal's slot-chain (§ Walk-active LOD) in
@@ -412,7 +411,7 @@ Both rules hold on the WebGPU boot unchanged, where nothing renders the
 attributes this uploader flags: the star layer wraps each attribute's
 array as an itemSize-1 storage table and forwards its version and update
 ranges verbatim, full-over-ranges included
-(`../webgpu/star/README.md` § Star tables). The uploader's stride and
+([Star tables](../webgpu/star/README.md#star-tables--every-per-star-field-is-a-storage-read)). The uploader's stride and
 array are therefore always the GPU's, on either backend.
 
 Camera-epsilon and Kepler-chain-aware variants of the static-frame skip

@@ -1,6 +1,6 @@
 // Runtime SID resolver: global sid → {kind, localIndex} lookup over
 // whichever object-carrying artifacts attach, plus deferred intents for
-// late-attaching domains. See README.md and docs/sid.md § 8.
+// late-attaching domains. See README.md and /docs/sid.md#8-runtime-resolver-b4.
 
 export type SidRuntimeKind = 'star' | 'planet' | 'cloud' | 'lg' | 'shell' | 'probe';
 
@@ -34,8 +34,8 @@ export class SidResolver {
 
   /** `roster` declares every domain this client may attach; a sid stays
    *  `pending` while any of them is neither attached nor concluded.
-   *  `successors` is the retired-sid → successor-sid map (docs/sid.md
-   *  § 9.4) — resolution follows it before consulting the domains. */
+   *  `successors` is the retired-sid → successor-sid map (/docs/sid.md#94-migration-semantics--exact-table)
+   * — resolution follows it before consulting the domains. */
   constructor(
     roster: readonly SidRuntimeKind[],
     successors: ReadonlyMap<number, number> = new Map(),

@@ -81,7 +81,7 @@ describe('the requires-WebGPU gate page', () => {
   // The lead is not enough on its own: the action line is the largest
   // thing on the page, so a no-adapter reader seeing "update to 26" is
   // told to install what they already have. The verdict has to reach the
-  // advice, not just the lead (README.md § What a no-adapter reader).
+  // advice, not just the lead (README.md#what-a-no-adapter-reader-is-told).
   it('does not tell a no-adapter reader to install the thing they have', () => {
     const noApi = showWebGpuGate('no-api', hints, fakeDoc().doc) as unknown as ElStub;
     const noAdapter = showWebGpuGate('no-adapter', hints, fakeDoc().doc) as unknown as ElStub;

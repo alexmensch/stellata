@@ -94,7 +94,7 @@ export const deflattenedDirTsl = /* @__PURE__ */ Fn(
  * The planetary shadow along `o + t·d` as the single t-interval it always
  * is, returned as `(s0, s1)`; s0 > s1 means the ray never enters it. Solved
  * once per ray, never per sample — the anti-banding argument is
- * `../../solar-system/atmosphere/README.md` § Anti-banding.
+ * `../../solar-system/atmosphere/README.md#anti-banding`.
  */
 export const shadowSpanTsl = /* @__PURE__ */ Fn(([o, d, sunDir]: [N3, N3, N3]) => {
   const oS = dot(o, sunDir).toVar();
@@ -260,8 +260,7 @@ export function atmosphereRadianceTsl(args: {
       litSum.addAssign(lit);
       const sExit = farRootTsl(p, sunDir, rAtmo).toVar();
       // Two `continue`s expressed as the branch they guard — a jump out of
-      // a concise arrow is emitted twice (../tsl/README.md
-      // § TSL test pattern).
+      // a concise arrow is emitted twice (../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers).
       If(lit.greaterThan(0.0).and(sExit.greaterThan(0.0)), () => {
         // Decorrelate the light-march offset from the view-march (and per
         // view sample) so the two lattices don't beat into a moiré.

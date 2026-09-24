@@ -1,6 +1,6 @@
 // TSL mirrors of stellata_hdr_emission's point-source peak, flux-peak
 // and statistic-texel rules, over emission-pure's constants. Contracts:
-// ../hdr/emission/README.md § Unit, ../hdr/attachments/README.md § The unit.
+// ../hdr/emission/README.md#unit--what-an-emitting-layer-writes ../hdr/attachments/README.md#the-unit.
 
 import { Fn, clamp, dot, float, log2, max, min, pow, sqrt, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
@@ -21,7 +21,7 @@ export const luminanceForMagTsl = /* @__PURE__ */ Fn(
  * **Unclamped by contract** — being a single scalar is what lets a layer
  * apply it to a coloured column without touching chromaticity, so the
  * CALLER clamps the product rather than the factor
- * (`../hdr/emission/README.md` § Unit).
+ * (`../hdr/emission/README.md#unit--what-an-emitting-layer-writes`).
  */
 export const surfaceBrightnessLuminanceTsl = /* @__PURE__ */ Fn(
   ([exposure, magPerArcsec2, omegaArcsec2]: [NF, NF, NF]) =>
@@ -95,7 +95,7 @@ export const kernelFluxPeakTsl = /* @__PURE__ */ Fn(
 /** One texel of the statistic attachment: flux-correct luminance in R,
  *  the lit-resolved-surface mask in G. `alpha` must be whatever the same
  *  fragment writes to attachment 0 — one blend state runs over every
- *  attachment (../hdr/attachments/README.md § One blend equation). */
+ *  attachment (../hdr/attachments/README.md#one-blend-equation-every-attachment). */
 export const statisticTexelTsl = /* @__PURE__ */ Fn(
   ([fluxL, litSurface, alpha]: [NF, NF, NF]) =>
     vec4(min(fluxL, LUMA_CEIL), clamp(litSurface, 0.0, 1.0), 0.0, alpha),
@@ -119,7 +119,7 @@ export const maskedStatisticTexelTsl = /* @__PURE__ */ Fn(
  *  light but standing in front of some. `alpha` MUST be the alpha the same
  *  fragment writes to attachment 0, or the object dims the band by a
  *  different amount than it dims everything else
- *  (../hdr/attachments/README.md § The roles). */
+ *  (../hdr/attachments/README.md#the-roles). */
 export const occluderTexelTsl = /* @__PURE__ */ Fn(
   ([alpha]: [NF]) => vec4(0.0, 0.0, 0.0, alpha),
 );

@@ -1,5 +1,4 @@
-// Flat Target.idx space over an ordered star-shard list. See ./README.md
-// § Flat Target.idx space.
+// Flat Target.idx space over an ordered star-shard list. See ./README.md#flat-targetidx-space.
 
 import type { StarShard } from './star-shards-pure';
 

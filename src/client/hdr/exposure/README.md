@@ -5,7 +5,7 @@ multiplies by, and the magnitude bounds derived from the same state.
 `../README.md` owns the render target and the operator; this folder owns
 the number they run on.
 
-`docs/science-hdr-pipeline.md` § 3 is the design gate — the perception
+[§ 3](/docs/science-hdr-pipeline.md#3-exposure-model--instrument-adaptation-and-the-ev-trim) is the design gate — the perception
 model, the measured calibration, and the rejected alternatives live
 there. This README carries the implementation contract.
 
@@ -77,8 +77,8 @@ function of filter state alone.
 
 | uniform | value | who reads it |
 | --- | --- | --- |
-| `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, and the MW chart isobar — which has never drawn (`../../milkyway/README.md` § Chart mode + warp), so it is not a live reader |
-| `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, and every CPU "is it drawn?" prefilter via `drawCutoffMag` — a bound, never a visibility test (`visibility/README.md` § What "visible" means to a pick path) |
+| `uLimitMag` | the instrument's `m_lim` | exposure anchor, `perceptualDmEff`'s footprint window, chart disc sizing, and the MW chart isobar — which has never drawn ([Chart mode + warp](../../milkyway/README.md#chart-mode--warp)), so it is not a live reader |
+| `uThresholdMag` | `m_lim + MAG_PER_STOP·ev` | the fragment taper, and every CPU "is it drawn?" prefilter via `drawCutoffMag` — a bound, never a visibility test ([What "visible" means to a pick path](visibility/README.md#what-visible-means-to-a-pick-path)) |
 | `uCullMag` | `m_lim + 3·MAG_PER_STOP + 0.5` = 10.56 | the vertex cull, nothing else |
 | `uOmegaSummationArcsec2` | `10^(0.4·(S_lim − m_lim))` = 4.7863e5 arcsec² | both volumetric emitters' display gain (and the never-drawn MW chart isobar) |
 
@@ -88,7 +88,7 @@ the point.** It is the offset between two *thresholds* — the point-source
 `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
 `extendedThresholdSbFor`) — and adaptation and the trim move both together,
 so only an instrument change may write it. The derivation is
-`../emission/README.md` § Extended sources; the convolution it gains into is
+[Extended sources](../emission/README.md#extended-sources--two-solid-angles-one-write-tail); the convolution it gains into is
 `../summation/README.md`.
 
 **There is no `uThresholdMag` analogue on the extended side.** The
@@ -96,7 +96,7 @@ point-source pair ships an anchor *and* a trimmed edge; the extended side
 ships only the anchor, so the `S_lim` that `extendedThresholdSbTsl`
 recovers is always the untrimmed 22.0. Harmless while the only consumer is
 the MW chart isobar, which inherits no exposure state **and has never
-drawn at all** (`../../milkyway/README.md` § Chart mode + warp) — but a
+drawn at all** ([Chart mode + warp](../../milkyway/README.md#chart-mode--warp)) — but a
 scene-mode isobar would need `S_lim + MAG_PER_STOP·ev`, not this.
 
 **The taper anchors on `uThresholdMag`, the cull on `uCullMag`.** A
@@ -121,13 +121,13 @@ live `uExposure` rather than through this readout.
 is the reason to keep the prohibition rather than a mere illustration of
 it: it watches `uThresholdMag` and `uCullMag` and re-marches every star it
 admits whenever either moves, tens of millions of volume samples
-(`../../webgpu/extinction/README.md` § The cache gate). Both stay free of
+([The cache gate](../../webgpu/extinction/README.md#the-cache-gate)). Both stay free of
 the cut today; putting `dm` into either makes that refill per-frame with
 nothing failing.
 
 **`FrameCtx.exposure` is the exempt class, named.** `ExposureFrameStep`
 fills a `FrameExposure` record every tick and hands it to each gated layer's
-`skip` (`../../scene/contribution/README.md` § The brightness reason). It is per frame,
+`skip` ([The brightness reason](../../scene/contribution/README.md#the-brightness-reason)). It is per frame,
 stateless, and stores nothing keyed on adaptation. **What the prohibition
 turns on is HOLDING something derived from the cut, never object
 identity** — so the record is one preallocated slot rewritten in place,
@@ -186,7 +186,7 @@ each other; a resolved photosphere beside a parked planet is ten decades
 apart and no pooling exponent closes that. The breakdown point is 50 % of
 the masked area, so a small blinding emitter cannot move the subject and
 a body's larger annulus can. Derivation, the measured pooling table and
-the estimator argument: `reduction/README.md` § The tile level.
+the estimator argument: [The tile level](reduction/README.md#the-tile-level-and-why-the-subject-is-a-median).
 
 `adaptationBranches` is the **only** implementation of that block —
 `adaptationDm` reads its `dm`, and the readout reads the same object, so a
@@ -211,8 +211,8 @@ at.
 the only perceptual claim; the **resolved-surface pin** (`D` held at
 `L_TARGET`) and the **display floor** (`ADAPT_DISPLAY_FLOOR_DM`, the eye
 branch's own response to a full-white frame) are display compensations at
-the two ends of the operator's range — `docs/science-hdr-pipeline.md`
-§ 3.2 (*The resolved-surface pin*, *The display floor*) is the design gate
+the two ends of the operator's range — [§ 3.2](/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix)
+(*The resolved-surface pin*, *The display floor*) is the design gate
 and the only place the reasoning lives. Four properties the implementation
 must keep, because callers depend on them rather than on the formula:
 
@@ -221,7 +221,7 @@ must keep, because callers depend on them rather than on the formula:
   not a property of who wrote a mask. Anything drawing a kernel or a
   diffuse column claims no coverage and therefore cannot darken a frame
   past `ADAPT_DISPLAY_FLOOR_DM`; a **resolved** star disc does claim
-  coverage (`../attachments/README.md` § The unit) and reaches the pin
+  coverage ([The unit](../attachments/README.md#the-unit)) and reaches the pin
   like any other resolved surface, which is exactly the fix that stopped
   a star at closest approach rendering as a flat blown-out white disc.
   What keeps Sol at 1 AU clipped is coverage, not the mask: its disc is
@@ -265,8 +265,7 @@ luminance in R and the **lit-surface mask** in G. R needs its own
 normalisation because the display kernel preserves *peak*, not energy, so
 summing what attachment 0 holds would over-count a threshold star's flux
 by 1.96x and a knee-saturated bright one by 28.9x; R divides that kernel
-by its own area integral (`../../star-pipeline/perceptual-disc/README.md` §
-Star intensity
+by its own area integral ([Star intensity](../../star-pipeline/perceptual-disc/README.md#star-intensity-profile)
 profile owns the integral, `../attachments/README.md` the texel rule).
 **G was peak-correct luminance and is not any more.** The highlight guard
 was its only consumer and retired with it, and for a resolved surface R
@@ -340,12 +339,12 @@ lone body's disc mean and now need no peak at all.
 
 - **Measure at the base instrument exposure**, never the live scalar. The
   target is rendered *with* the live one, so the reduction divides it back
-  out (`reduction/README.md` § Measure at the base exposure) — that is the
+  out ([Measure at the base exposure](reduction/README.md#measure-at-the-base-exposure-not-the-live-one)) — that is the
   one genuinely new trap in a buffer measurement, and the most likely
   source of a feedback loop.
 - **Chart mode measures nothing** and reports `dm = 0` rather than leaving
   the last scene's cut standing; chart bypasses the whole seam
-  (`../README.md` § Chart mode).
+  ([Chart mode](../README.md#chart-mode--full-bypass)).
 
 **What the frame-wide reduction gave up: per-source attribution.** The
 readout's "· adapted to Venus" clause retired with the walk — a mean over
@@ -368,8 +367,8 @@ three calls at three points of `animate()`:
 - `measure(nowMs, warpActive)` — after the layer fan-out, before the first
   draw: `SceneAdaptation.measure` → `setAdaptation` → the statistic-write
   park, and the applied cut handed to `RenderGate.noteExposureCut`, which
-  owns the wake (`../../render-gate/README.md` § The decision, in priority
-  order). It returns the park verdict.
+  owns the wake ([The decision, in priority order](../../render-gate/README.md#the-decision-in-priority-order)).
+  It returns the park verdict.
 - `reduce(parked)` — after the resolve, with **that same verdict**. The
   park is read once for both halves — the statistic writes this frame
   draws and the chain that reduces them — so the frame never pays one
@@ -401,7 +400,7 @@ cut the scene measurement asked for and did not get. `L_THRESH` and
 
 Sliders: `L_ADAPT`, `L_TARGET` and the slew τ, held on `SceneAdaptation` —
 plus `DR_MAG` and the desaturation strength, which are `HdrPipeline`'s
-(`../README.md` § Dev switches). **The overrides survive a chart
+([Dev switches](../README.md#dev-switches)). **The overrides survive a chart
 round-trip**: `reset()` clears the statistic and the slew, never the
 knobs. **They survive a panel close too, so every slider seeds off its
 live getter rather than the module constant** — `togglePanel` rebuilds

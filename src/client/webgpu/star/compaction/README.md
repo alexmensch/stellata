@@ -4,7 +4,7 @@ One compute pass per rendered frame lists the stars each pass will draw,
 so the three star draws are priced at **survivor count**: each
 `drawIndexedIndirect` takes its instance count from a buffer the kernel
 counted into, and the vertex stage resolves `instance_index` through the
-list to its catalogue star. `docs/render-rules.md` § 1 is the rule this
+list to its catalogue star. [§ 1](/docs/render-rules.md#1-draw-at-visible-count-not-catalogue-count) is the rule this
 discharges; the vertex stage that runs over the survivors, and the
 tables it reads, are `../README.md`.
 
@@ -24,14 +24,14 @@ src/client/webgpu/star/compaction/
                                 the kernel — at the quad's extent for the
                                 survivor list, at the extinction slack for
                                 the refill worklist
-                                (../../extinction/refill/README.md § Only
-                                what is in frame); `starQuadOffscreen` is
+                                (../../extinction/refill/README.md#only-what-is-in-frame);
+                                `starQuadOffscreen` is
                                 its CPU mirror.
 ```
 
 The kernel also appends the extinction refill's worklist; that block, its
-population and its schedule are `../../extinction/refill/README.md` § The
-compaction appends the worklist, and this file carries only what it costs
+population and its schedule are [The compaction appends the worklist,](../../extinction/refill/README.md#the-compaction-appends-the-worklist)
+and this file carries only what it costs
 the compaction (§ The refill dispatch, § Binding budget).
 
 ## Two lists, one kernel, three draws
@@ -90,7 +90,7 @@ stages forming the clip position in a different float32 order.
 `starQuadOffscreen` (`compaction-pure.ts`) is the CPU mirror and carries
 the tests. Three.js frustum culling is off on every layer because
 floating-origin rebasing invalidates its bounding spheres
-(`docs/render-rules.md` § 1), so this is the star population's only
+([§ 1](/docs/render-rules.md#1-draw-at-visible-count-not-catalogue-count)), so this is the star population's only
 frustum test, and it is exact: a quad off the screen covers no pixel
 whatever else is true of the star.
 
@@ -115,7 +115,7 @@ mutate position and quaternion without propagating them, and the render
 that would is still ahead, so a kernel reading them as left by the last
 render would cull against the previous frame's view. Inside `update()`
 the layer first forwards this frame's attribute writes onto the tables
-(`../README.md` § Star tables), so the kernel and the draws see the same
+([Star tables](../README.md#star-tables--every-per-star-field-is-a-storage-read)), so the kernel and the draws see the same
 positions — a kernel listing survivors off last frame's positions on a
 recentre frame would flicker the whole field.
 
@@ -129,8 +129,7 @@ orders dispatches within a pass so the atomics see the reset, the scan sees
 the atomics, and its second half sees the copy its first half made. Every rendered frame pays that submit; the render gate
 already decides whether a frame renders at all. The extinction prepass
 dispatches *before* this pass in the frame and reads the worklist this
-pass wrote the frame before (`../../extinction/refill/README.md` § The
-cursor).
+pass wrote the frame before ([The cursor](../../extinction/refill/README.md#the-cursor-and-why-a-request-never-stalls-it)).
 
 ## Reading the counts back
 
@@ -146,7 +145,7 @@ draw slots**: every star the dust-independent prefilter admits, counted
 before the frustum test. No draw reads it. `drawn / prefilter` is the share
 the frustum alone keeps of a population a prefilter-gated kernel already
 runs over — the extinction cache's gate is that kernel
-(`../../extinction/README.md` § The cache gate), so this ratio, not
+([The cache gate](../../extinction/README.md#the-cache-gate)), so this ratio, not
 `drawn / records`, is the frustum's prize there.
 
 **It is armed by the readback and by nothing else**, because it would
@@ -188,7 +187,7 @@ up for `REFILL_SLICES` frames from a request, and the reset kernel — now
 `REFILL_BUCKETS` threads wide, its thread 0 still doing the tiers and the
 prefilter — zeroes the counters under that same arm. The bucket partition
 and what the list order buys are
-`../../extinction/refill/README.md` § Bucketed by Morton range.
+[Bucketed by Morton range](../../extinction/refill/README.md#bucketed-by-morton-range).
 
 **Two kernels close the pass, because the scan must not read the atomics
 `REFILL_BUCKETS` times each.** The first copies every bucket's counter out
@@ -212,8 +211,7 @@ with, one constant for both.
 so a single node narrowed for the refill kernel is read-only in the finish
 kernel too and that kernel's pipeline then fails to compile on the device —
 which discards the whole submit, and with it every star this pass lists.
-`storageWriteRead` builds the pair (`../../tsl/README.md` § Storage
-attributes).
+`storageWriteRead` builds the pair ([Storage attributes](../../tsl/README.md#storage-attributes)).
 
 **Both scan kernels are dispatched on armed frames only, and `dispatch()`
 picks the kernel list by `refill.arm` rather than branching inside them.**
@@ -241,7 +239,7 @@ read each and buys a scan and a search that touch no atomic at all.
 Three treats that as a mutable field feeding both the dispatch size and an
 `instanceIndex >= count` guard delivered as a **uniform**, so a progressive
 catalog load moves it per landing chunk with no pipeline recompile and no
-bind-group rebuild (`../../../loaders/README.md` § Progressive catalog load).
+bind-group rebuild ([Progressive catalog load](../../../loaders/README.md#progressive-catalog-load)).
 
 It is a correctness bound before it is a saving. An undecoded record is
 all-zero — position (0,0,0), which is Sol, and `absmag` 0 — so it passes the
@@ -261,7 +259,7 @@ prepass may pass it only because it dispatches a single node.
 ## The buffer-writer requirements, discharged
 
 Of the four the single-writer audit put on this design (bead
-`stellata-0it.15`, design field; `docs/render-rules.md` § 7):
+`stellata-0it.15`, design field; [§ 7](/docs/render-rules.md#7-one-writer-per-buffer-per-submit)):
 
 - **Per-draw addressing (1)** — met with no slots. The survivor buffer
   and the args buffer are each written once per frame, by one dispatch,
@@ -269,7 +267,7 @@ Of the four the single-writer audit put on this design (bead
   reads them in that render wants the same bytes (mask and disc share the
   disc slot, glow has its own). The mirror draws read neither: their
   survivor set is the CPU member list they already draw at member count
-  (`../README.md` § The local mirror). No per-draw write exists, so
+  ([The local mirror](../README.md#the-local-mirror)). No per-draw write exists, so
   `writeBuffer` ordering has nothing to race.
 - **The running-total router (2)** — not built, by decision. No draw
   spans more than one compacted group: each of the three draws reads
@@ -284,7 +282,7 @@ Of the four the single-writer audit put on this design (bead
   since that length only exists on the GPU. Binding short was the means,
   not the requirement — what it was there to buy is the absent readback,
   and the indirect args buy that outright.
-- **The uploader trap (4)** — `../README.md` § Star tables: no
+- **The uploader trap (4)** — [Star tables](../README.md#star-tables--every-per-star-field-is-a-storage-read): no
   itemSize-3 storage attribute exists anywhere in this layer.
 
 ## Binding budget
@@ -299,10 +297,10 @@ and worklist — which is the whole core guarantee of 8 per stage
 into the args buffer or a table folded into another, never a new binding —
 both of which this pass has now spent, the refill's bucket counters on the
 first and its `slotOf` read on the second
-(`../../extinction/refill/README.md` § The compaction appends the
-worklist). Each scan kernel binds 2, args and the refill dispatch. The
+([The compaction appends the worklist](../../extinction/refill/README.md#the-compaction-appends-the-worklist)).
+Each scan kernel binds 2, args and the refill dispatch. The
 compatibility level reports 0 in the vertex stage and the boot refuses it
-against that constant (`../../tsl/README.md` § Storage attributes). A new
+against that constant ([Storage attributes](../../tsl/README.md#storage-attributes)). A new
 per-star table costs a binding in every one of those stages.
 
 ## What it costs, and what it holds
@@ -317,7 +315,7 @@ Byte counts, derived not measured — `recordCount`
 | Refill dispatch (4 × u32 + two `REFILL_BUCKETS` scan tables) | 2,064 B |
 
 The refill's stamps and worklist are the prepass's
-(`../../extinction/README.md` § What it costs, and what it holds).
+([What it costs, and what it holds](../../extinction/README.md#what-it-costs-and-what-it-holds)).
 
 Per rendered frame: one compute submit, 388,071 threads each running the
 solve to the routing point (magnitude, pulsation, prefilter, one A_V read
@@ -330,4 +328,4 @@ dispatches, which an unarmed frame does not issue. What it removes is the vertex
 three passes ran its stage over 4 corners × the whole catalogue with the
 invisible members exiting to the clip sentinel; now each runs over
 4 corners × the survivors inside the view. The frame-time delta is the
-Tier 2 pin's to state (`RELEASING.md` § Perf pin), not this file's.
+Tier 2 pin's to state ([Perf pin](/RELEASING.md#perf-pin)), not this file's.

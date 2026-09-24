@@ -154,7 +154,7 @@ def read_mentioned_tycs(
     path: Path = MEMBERSHIP_MANIFEST, tyc2_hd: Path = TYC2_HD_CROSS_INDEX
 ) -> set[Tyc]:
     """Every Tycho entry the manifest or IV/25 names — see
-    ``data/tycho2/README.md`` § The request set.
+    /data/tycho2/README.md#the-request-set--manifest--iv25.
 
     Both pulls scoped to Tycho entries share it, so they cover the same
     entries by construction rather than by coincidence. Parsing both sides

@@ -65,8 +65,7 @@ src/client/solar-system/
                                   (Lambertian + empirical phase factors)
                                   + the host-irradiance magnitude and the
                                   mesh's disc surface brightness (see
-                                  planets/README.md § Physical-luminance
-                                  emission).
+                                  planets/README.md#physical-luminance-emission).
                                   Drives the body field's glare
                                   sizing/brightness and per-planet label
                                   gating. Also consumed by ../binaries/
@@ -101,7 +100,7 @@ satisfies:
   representative RGB colour — **linear**, and the eight
   index-calibrated moons take theirs from the same measured target their
   texture is calibrated to, at their own unchanged luminance
-  (`data/textures/README.md` § Colour fidelity; pinned by
+  ([Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration); pinned by
   `scripts/textures/texture-colours.test.ts`). Every other row is still
   hand-picked. Optional `parentName` marks a body that
   orbits a planet rather than the host star (a moon); optional
@@ -129,7 +128,7 @@ per-host JSON shards without changing the call sites.
 `SOL_PLANETS` is the eight major planets + Pluto with constants
 sourced from NASA Planetary Fact Sheets (radii) and JPL DE440 (mean
 elements at J2000). Pluto comes from New Horizons 2015 reconnaissance.
-See `docs/science-solar-system.md` §Solar system for the citation rationale.
+See [Solar system](/docs/science-solar-system.md#solar-system) for the citation rationale.
 
 ### Bodies: planets and moons are one array
 
@@ -138,16 +137,16 @@ the four Galileans; seven Saturnian moons; five Uranian moons; and
 Triton. Physical props (`MOON_PHYSICAL`) live next to `SOL_PLANETS`;
 orbital `a`/`e` are read from `MOON_ELEMENTS`
 (`ephemerides/moon-ephemeris.ts`) by name so they have a single source
-of truth. Scope + citations in `docs/science-solar-system.md` § Moons.
+of truth. Scope + citations in [Moons](/docs/science-solar-system.md#moons).
 
 Those `a`/`e` fields stay display-only for every moon, and for Earth's
 Moon the whole element row is: it is positioned by a truncated ELP
 series rather than a Kepler solve, and its orbit ring comes from the
 osculating ellipse through that series' state. Every body's ring
 geometry additionally carries the body's own eccentric anomaly, so the
-polyline starts a vertex on it — `ephemerides/README.md` § The polyline
-starts a vertex on the body. `ephemerides/README.md`
-§ Moon ephemeris carries the why — a fixed ellipse cannot place an
+polyline starts a vertex on it — [The polyline starts a vertex on the body](ephemerides/README.md#the-polyline-starts-a-vertex-on-the-body).
+[Moon ephemeris](ephemerides/README.md#moon-ephemeris)
+carries the why — a fixed ellipse cannot place an
 eclipse.
 
 `SOL_MOONS` is **not** part of `SOL_PLANETS`; the two concatenate into
@@ -166,7 +165,7 @@ against `MOON_ELEMENTS`) and the same face keeps toward the parent.
 `sol-object-sids.ts` maps each Sol-system object that carries no catalog
 record or artifact of its own — `sun`, `mercury` … `pluto`, the 18 moons
 `moon`, `io` … `triton`, and the five probes `pioneer10` …
-`newhorizons` — to its frozen Stellata ID (docs/sid.md § 7). This
+`newhorizons` — to its frozen Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)). This
 hand-written table is their runtime SID source, feeding two resolver
 domains: `planet` (moons reuse the `planet` kind — a moon is a
 planet-domain object under the resolver) and `probe` (`kind=probe` in
@@ -215,13 +214,13 @@ sphere), pure Lambertian `(sin α + (π − α)·cos α)/π` for bodies
 without published curves. Every curve is the body's **globe** anchored on
 its α=0 geometric albedo, so `c0 = 0` throughout — a ring system's share
 rides its own joint α/ring-tilt law
-(`planets/rings/README.md` § Ring photometry), never `c0`. Mallama covers
+([Ring photometry](planets/rings/README.md#ring-photometry--the-unresolved-magnitude)), never `c0`. Mallama covers
 Mercury, Venus, Earth, Mars, Jupiter and Saturn; Earth's Moon takes the
 classic lunar phase law in the same polynomial form (`MOON_PHASE`, the
 only moon with a curve measured across the phases a camera can occupy).
 Uranus, Neptune, Pluto,
 every other moon and every exoplanet take the Lambertian fallback —
-`docs/science-solar-system.md` § Planet phase functions says why for
+[Planet phase functions](/docs/science-solar-system.md#planet-phase-functions) says why for
 each. Verified Jupiter values (under Lambert):
 −2.7 from Earth at opposition, +5.2 from ~150 AU outside the
 heliopause, +21 from α Cen at 1.34 pc.
@@ -262,9 +261,9 @@ system is locally active" decision and the bracket spheres that define
 the local depth pass's near/far range. While active, the planet
 layers collapse their main-pass instances and render through the
 mirror draw inside the bracketed pass, where the mesh writes depth —
-see `../local-depth/README.md` and `planets/README.md` § Planet mesh LOD.
+see `../local-depth/README.md` and [Planet mesh LOD](planets/README.md#planet-mesh-lod).
 The probe marker field and trail layer follow the same flip
-(`probes/README.md` § Which pass draws them); everything a body could
+([Which pass draws them](probes/README.md#which-pass-draws-them)); everything a body could
 occlude has to be inside the pass, because the pass clears depth.
 The hand-off parks only in chart mode (flat main-pass ink discs — a
 collapsed slot whose mirror never repaints is a body that draws nowhere
@@ -297,7 +296,7 @@ read by `../binaries/orbit-paths/binary-orbit-path-layer.ts`.
 them, because each one's place in the frame is a claim about other layers that
 only registration order can state: the rings after the body field (a moon ring
 centres on its parent's live position), the planet mesh below every camera
-write (`../scene/README.md` § Camera writes, then camera reads), the cluster
+write ([Camera writes, then camera reads](../scene/README.md#camera-writes-then-camera-reads)), the cluster
 after both. All three, and the shell's moving-focal ride, declare
 `planetRate` — the bodies are what each one draws a view of.
 
@@ -339,7 +338,7 @@ URL) recentres the floating origin onto the planet itself and drops
 the floor to `minOrbitDistForPlanet` (the same 90 %-fill angular
 solve, ~2.4 body radii); arrival parks at `parkDistForPlanet` (a
 30 %-fill solve). The camera follows the orbiting body via the
-moving-focal ride — see `../camera/focus/README.md` § Hard kinds.
+moving-focal ride — see [Hard kinds](../camera/focus/README.md#hard-kinds--star-planet-probe).
 A focused planet is a full observe anchor: entering observe parks the
 camera on the body and hides it via `uHideIdx`
 (`../camera/observe/README.md`).
@@ -347,7 +346,7 @@ camera on the body and hides it via `uHideIdx`
 Focusing a probe (`{kind:'probe'}` Targets) is the third hard kind and
 takes the same shape, with fixed park / floor distances in place of the
 angular solves and the same ride carrying the camera along the whole
-trajectory under scrub — `probes/README.md` § Focus.
+trajectory under scrub — [Focus](probes/README.md#focus).
 
 `camera.near` is at `1e-12 pc` — well below `minOrbitDistForStar` and
 below the tightest planet/moon floor (`minOrbitDistForPlanet` for a
@@ -369,8 +368,7 @@ moon at its park distance.
 - **Orbital plane rule for new hosts.** Any new planet-bearing host
   must declare its plane via the orientation quaternion. The default
   for non-Sol hosts is the galactic plane — don't accidentally
-  default to the ecliptic. See `ephemerides/README.md`
-  § Orbital plane convention.
+  default to the ecliptic. See [Orbital plane convention](ephemerides/README.md#orbital-plane-convention).
 - **Variable-star pulsation is on `t`.** Pulsation phase reads the model
   clock (`uModelDays` from `getT()`) at real GCVS periods — no separate
   cosmetic clock. New render code that needs the pulsation phase reads

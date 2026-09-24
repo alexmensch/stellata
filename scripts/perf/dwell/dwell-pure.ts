@@ -18,7 +18,7 @@ export const DEFAULT_DWELL_FRAMES = 240;
  * GPU-stream median measures where the frame has two classes — README.md.
  * Four is the rate every clean `earth` dwell in the archive ran at, and the
  * app's own at the Sol default view
- * (`src/client/hdr/exposure/reduction/README.md` § Latency).
+ * (`/src/client/hdr/exposure/reduction/README.md#latency`).
  */
 export const DWELL_READBACK_EVERY_FRAMES = 4;
 
@@ -102,7 +102,7 @@ export interface DwellSummary {
 
 /** The fast end of a dwell: a per-frame cost moves it as far as the median,
  *  a wander lifts the upper half and leaves it. Printed beside the median in
- *  both gates and never marked (`../pins/README.md` § Reading `--against-pin`).
+ *  both gates and never marked (`../pins/README.md#reading---against-pin` `--against-pin`).
  *
  *  The tenth-percentile frame and not the single fastest, which the archive
  *  measures as the noisier of the two — repeat-pair |Δ| tails reach 1.473 ms
@@ -145,7 +145,7 @@ export function spreadMove(before: StreamEnds | null, after: StreamEnds | null):
 }
 
 /** The widest gap must exceed the lower class's own median to be a cut at
- *  all — README.md § Where the frame has two classes. */
+ *  all — README.md#where-the-frame-has-two-classes-the-gpu-stream-median-follows-the. */
 export const CLASS_GAP_OVER_MEDIAN = 1;
 
 /** Each class must hold at least this share of the samples for the gap above
@@ -228,15 +228,14 @@ export interface GatingClock {
 
 /**
  * Which of a dwell's two clocks a gate is entitled to act on: the GPU stream
- * where the row has one, wall only where it does not (README.md § The state
- * guard).
+ * where the row has one, wall only where it does not (README.md#the-state-guard).
  *
  * Wall deltas are quantised to the display's refresh interval, so at a
  * vantage whose frame exceeds one interval they alternate between one and
  * two and the quarter medians swing by a whole interval however idle the
  * machine is — mw50 split 240 deltas 120/120 and 117/123 across two cold
  * runs whose GPU quarters spanned 0.017 ms. A state verdict read off that
- * clock is a coin flip. RELEASING.md § Perf pin already records wall p50 and
+ * clock is a coin flip. /RELEASING.md#perf-pin already records wall p50 and
  * never marks it, for that reason; this is the same rule one field over.
  *
  * Only a gate whose row MARKS on the returned clock may use this — standing

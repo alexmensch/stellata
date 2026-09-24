@@ -19,13 +19,13 @@ function scriptExemptions(): string[] {
   return line![1].split('|');
 }
 
-/** The same list as RELEASING.md § Perf pin states it, which is the design
+/** The same list as /RELEASING.md#perf-pin states it, which is the design
  *  record the script implements: the backticked `folder/` names in the
  *  sentence naming what neither draws nor decides what is drawn. */
 function releasingExemptions(): string[] {
   const text = readFileSync(RELEASING, 'utf-8');
   const sentence = /neither draw nor decide what is\s+drawn:([\s\S]*?)\*\*Naming/.exec(text);
-  expect(sentence, 'RELEASING.md § Perf pin no longer names the exempt folders').not.toBeNull();
+  expect(sentence, '/RELEASING.md#perf-pin no longer names the exempt folders').not.toBeNull();
   return [...sentence![1].matchAll(/`([a-z-]+)\/`/g)].map((m) => m[1]);
 }
 
@@ -80,7 +80,7 @@ afterEach(() => {
 });
 
 describe('the exempt list has exactly one authority', () => {
-  it('matches RELEASING.md § Perf pin folder for folder', () => {
+  it('matches /RELEASING.md#perf-pin folder for folder', () => {
     expect([...scriptExemptions()].sort()).toEqual([...releasingExemptions()].sort());
   });
 
@@ -160,7 +160,7 @@ describe('perf-section-check', () => {
     const table = [
       '## Perf',
       '',
-      'pin 194f817d · apple-m4-metal-3 · RELEASING.md § Perf pin',
+      'pin 194f817d · apple-m4-metal-3 · /RELEASING.md#perf-pin',
       '·  sol|webgpu   wall-p50  16.7    16.7    0    0',
       '✗  mw50|webgpu  gpu-p50   31.451  33.2    1.7  0.315',
       'accepted: mw50|webgpu the new band pass draws at mw50 (bead-7)',
@@ -223,7 +223,7 @@ describe('perf-section-check', () => {
     // The cost of matching anywhere, pinned rather than discovered in CI: the
     // guard cannot tell a sentence ABOUT the marker from a regression written
     // out in words, so the character is reserved for rows being accepted and
-    // RELEASING.md § What the section carries says so.
+    // /RELEASING.md#what-the-section-carries says so.
     it('fails a section that merely talks about the marker', () => {
       const r = check([
         '## Perf',
@@ -252,7 +252,7 @@ describe('perf-section-check', () => {
     });
   });
 
-  // RELEASING.md § Perf pin promises Tier 0 a prose reachability argument
+  // /RELEASING.md#perf-pin promises Tier 0 a prose reachability argument
   // in place of a table. Nothing in the script had to change for that — a
   // body with no table has no ✗ — but the promise is now written down, so
   // it gets a test rather than resting on the guard happening to allow it.

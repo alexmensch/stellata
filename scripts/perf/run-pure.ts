@@ -32,8 +32,8 @@ export interface ContextPlan {
  * The cadences one scenario is visited at, first one repeated LAST when
  * there is more than one — the same bracket `sweepOrder` puts around a set
  * of scales, for the same reason. The GPU's sustained-load ramp moves frame
- * time across a run whatever the cool-down (`pins/README.md` § Run
- * position), so a span rising across ascending cadences is a trend and the
+ * time across a run whatever the cool-down (`pins/README.md#run-position`),
+ * so a span rising across ascending cadences is a trend and the
  * clock's drift wearing the same shape. The two readings at the first
  * cadence bound the second, and without them a cadence probe cannot tell
  * them apart.
@@ -43,7 +43,7 @@ export function readbackOrder(cadences: readonly number[]): number[] {
 }
 
 /** Backend-major, the scenarios as given within each backend — the order
- *  a pin row's position is read in (`pins/README.md` § Run position). */
+ *  a pin row's position is read in (`pins/README.md#run-position`). */
 export function contextOrder(
   scenarios: readonly ScenarioName[],
   backends: readonly Backend[],

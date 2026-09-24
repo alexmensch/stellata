@@ -1,6 +1,5 @@
 // Data-texture filter roster: the pair a TSL texture node bakes into its
-// WGSL. Behaviour and the scan's one limit are in README.md § TSL stand-in
-// filters.
+// WGSL. Behaviour and the scan's one limit are in README.md#tsl-stand-in-filters.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -14,12 +13,12 @@ const GUIDANCE =
   + 'texture node bakes as an unfiltered textureLoad — so the pair is a '
   + 'decision every site owes explicitly, matching whatever texture the '
   + 'object stands in for — '
-  + "src/client/webgpu/solar-system/README.md § A stand-in's filters. "
+  + "/src/client/webgpu/solar-system/README.md#a-stand-ins-filters. "
   + 'Both writes must be literal and in this file: a named target reported '
   + 'here is one whose pair is set nowhere or through a helper, and '
   + '<unassigned> is a construction no assignment can reach — give it a '
   + 'local. A shared helper is deliberately not enough: '
-  + 'README.md § TSL stand-in filters.';
+  + 'README.md#tsl-stand-in-filters.';
 
 const SITE = /(?:(?:const|let|var)\s+(\w+)|(this\.\w+))?\s*=?\s*new\s+(?:THREE\.)?Data(?:3D)?Texture\s*\(/g;
 

@@ -1,4 +1,4 @@
-// See README.md § The frame step.
+// See README.md#the-frame-step.
 
 import * as THREE from 'three';
 import type { HdrSeam, ReductionSeam } from '../hdr-seam';

@@ -1,5 +1,5 @@
 // The contract the Local Group emission passes are built through.
-// See README.md § The material seam.
+// See README.md#the-material-seam.
 
 import type { EmitterMaterial } from '../../scene/emitter-material';
 

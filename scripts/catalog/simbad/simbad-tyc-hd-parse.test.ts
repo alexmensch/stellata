@@ -104,7 +104,7 @@ const SRC_TYC2_HD = AT(TYC2_HD_FILE);
 const SRC_MANIFEST = AT(MEMBERSHIP_MANIFEST_FILE);
 const ADJUDICATION_INPUTS = [SRC_SIMBAD_TYC_HD, SRC_TYC2_HD, SRC_MANIFEST];
 
-// Pins README.md § What the TYC → HD pull adjudicates. The figures are the
+// Pins README.md#what-the-tyc--hd-pull-adjudicates. The figures are the
 // pull's whole justification, so they are asserted rather than narrated: a
 // re-pull that moves one fails here instead of ageing that prose.
 describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
@@ -174,7 +174,7 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
 
     // 23 before the eight rows the four-witness rule licensed were asserted
-    // (README.md § Which witness decides a close pair's HD). What is left is
+    // (README.md#which-witness-decides-a-close-pairs-hd). What is left is
     // the twelve the rule refuses, the two it cannot answer for, and α Psc,
     // whose correction is held back — see the move set's own comment.
     it('finds 15 rows both witnesses contradict', () => {
@@ -191,7 +191,7 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
 const SRC_SIMBAD_SPTYPE = AT('data/simbad/simbad_sptype.tsv');
 const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 
-/** The move set of README.md § Which witness decides a close pair's HD: the
+/** The move set of README.md#which-witness-decides-a-close-pairs-hd: the
  *  rows all four witnesses agree the record's own component is not the one its
  *  HD cell names. Enumerated rather than counted, because the assertion those
  *  rows license moves canonical SID keys and each has to be inspected.
@@ -222,8 +222,8 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     }
     const simbad = parseSimbadTycHdTsv(readFileSync(SPLIT_INPUTS[0], 'utf-8'));
 
-    // The rows both TYC witnesses contradict — the 15 of README.md § What the
-    // TYC → HD pull adjudicates, the eight asserted having left the class.
+    // The rows both TYC witnesses contradict — the 15 of README.md#what-the-tyc--hd-pull-adjudicates
+    // the eight asserted having left the class.
     // Keyed on the TYC, not the source: a mutual swap is two rows.
     const contested = new Map<string, string>();
     for (const row of parseManifestTsv(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {

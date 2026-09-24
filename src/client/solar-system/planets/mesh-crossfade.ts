@@ -1,6 +1,6 @@
 // Disc ↔ spheroid-mesh LOD crossfade + reflected-glare sizing: the glare
 // is the shared star-perceptual point (a planet reads as a star of its
-// magnitude). Contract in README.md § Planet mesh LOD.
+// magnitude). Contract in README.md#planet-mesh-lod.
 
 /** Mesh fully faded out at/below this physical diameter — the eye can
  *  track a resolved body (and its crescent phase) down to ~1 px, so

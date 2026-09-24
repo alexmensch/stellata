@@ -20,7 +20,7 @@ the frame-cost row on the pass roster
 ## Why
 
 The mesh writes its depth in the local depth pass, whose depth is cleared
-before it repaints (`../../../local-depth/README.md` § Architecture) — so
+before it repaints ([Architecture](../../../local-depth/README.md#architecture)) — so
 the main pass shades everything behind a screen-filling planet and the
 local pass then paints over it. The pre-stamp puts the body's depth where
 the main pass can test against it: a second `THREE.Mesh` per opaque body
@@ -28,7 +28,7 @@ over the same spheroid geometry, `colorWrite: false`, at `renderOrder −4`
 beside the star core mask, in `depthStampGroup` — which the planet module
 parents into the **main** scene, never the pass scene. Every background
 layer drawn after −4 depth-fails inside the silhouette and its fragments
-never shade (`../../../scene/README.md` § Full render stack — front to back).
+never shade ([Full render stack](../../../scene/README.md#full-render-stack--front-to-back)).
 
 ## What stamps, and how far inside
 
@@ -71,7 +71,7 @@ was the mesh's already. The applied cut is unchanged by construction.
 
 A `NodeMaterial` through `finishMrtMaterial` with colour writes off, which
 still needs the single↔struct swap for three's pipeline cache
-(`../../../webgpu/hdr/README.md` § The gate becomes the output struct).
+([The gate becomes the output struct](../../../webgpu/hdr/README.md#the-gate-becomes-the-output-struct)).
 
 ## Priced, not assumed
 

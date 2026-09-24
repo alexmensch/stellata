@@ -1,6 +1,6 @@
 // The records whose shipped distance came from the cascade's SIMBAD tier —
-// § 5's validation-independence rule made checkable. See README.md § The skip
-// rules, and ../../validate/README.md for the validator that reads it.
+// § 5's validation-independence rule made checkable. See README.md#the-skip-rules--one-principle-two-publications
+// and ../../validate/README.md for the validator that reads it.
 
 /** Where the exclusion list is committed. */
 export const SIMBAD_SOURCED_DISTANCES_FILE =

@@ -23,15 +23,15 @@ import type { MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { StarTslDeps, StarVertexSource } from './star-vertex-tsl';
 
 /** Storage buffers a main-pass star vertex stage binds — the count the boot
- *  holds the device to (../tsl/README.md § Storage attributes). */
+ *  holds the device to (../tsl/README.md#storage-attributes). */
 export const STAR_VERTEX_STAGE_STORAGE_BUFFERS =
   ['survivors', 'av', 'statics', ...STAR_FORWARDED_ATTRIBUTES].length;
 
 export class StarLayer {
   /** Depth-only member/core stamp, first in the frame (renderOrder −4);
    *  `visible` is the shell's CPU gate. This is the ONLY depth a disc core
-   *  gets — the disc draw writes none (README.md § The disc draw writes no
-   *  depth). */
+   *  gets — the disc draw writes none (README.md#the-disc-draw-writes-no-depth).
+   * */
   readonly coreMaskMesh: THREE.Mesh;
   readonly discMesh: THREE.Mesh;
   readonly glowMesh: THREE.Mesh;
@@ -121,8 +121,8 @@ export class StarLayer {
 
   /** Swap every material that draws into the target between its
    *  single-output fragment and the three-member MRT struct — driven by
-   *  the HDR pipeline in lockstep with its target mode (../hdr/README.md
-   *  § The gate becomes the output struct). The core mask swaps too, for
+   *  the HDR pipeline in lockstep with its target mode (../hdr/README.md#the-gate-becomes-the-output-struct).
+   * The core mask swaps too, for
    *  three's pipeline cache rather than for validity
    *  (star-core-mask-tsl.ts). The mirror's draws land in the same target,
    *  so they ride the same swap. */
@@ -133,7 +133,7 @@ export class StarLayer {
 
   /** The shell's per-frame CPU gate — skip the whole depth-only draw when
    *  no member and no close star can stamp anything
-   *  (../../star-pipeline/README.md § Star rendering). */
+   *  (../../star-pipeline/README.md#star-rendering-instanced-quads-three-passes). */
   setCoreMaskVisible(on: boolean): void {
     this.coreMaskMesh.visible = on;
   }
@@ -160,7 +160,7 @@ export class StarLayer {
     this.compaction.setLoadedCount(this.sources.catalog.loadedCount);
   }
 
-  /** compaction/README.md § Reading the counts back. */
+  /** compaction/README.md#reading-the-counts-back. */
   readSurvivorCounts() {
     return this.compaction.readSurvivorCounts();
   }

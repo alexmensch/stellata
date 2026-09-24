@@ -90,7 +90,7 @@ describe('the target', () => {
     // guard on that — the format three actually allocates is unreadable
     // until after the first render into the target, so what can be
     // defended is the request, and the edit worth catching is one that
-    // drops it (README.md § The depth format is requested, not asserted).
+    // drops it (README.md#the-depth-format-is-requested-not-asserted).
     expect(rt.depthBuffer).toBe(true);
     expect(rt.stencilBuffer).toBe(false);
     expect(rt.depthTexture).not.toBe(null);
@@ -147,7 +147,7 @@ describe('the target', () => {
 
 // The struct's member count must match the bound target's attachment
 // count or pipeline creation fails — so the swap must track every mode
-// input (README.md § The gate becomes the output struct).
+// input (README.md#the-gate-becomes-the-output-struct).
 describe('the output-struct swap', () => {
   it('applies the current mode on register and tracks chart + the lever', () => {
     const { renderer } = fakeRenderer();

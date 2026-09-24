@@ -1,5 +1,5 @@
 // The statistic reduction: the halving mip chain (reduction-pure is the
-// executable spec) and its mapAsync-staged readback. README.md § Reduction.
+// executable spec) and its mapAsync-staged readback. README.md#reduction--an-asynchronous-readback.
 
 import {
   FloatType, HalfFloatType, NearestFilter, NoBlending, NodeMaterial,
@@ -65,7 +65,7 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
    *  freezes at its last landed reading. */
   enabled = true;
 
-  /** README.md § Reduction. */
+  /** README.md#reduction--an-asynchronous-readback. */
   fenceWhileParked = false;
 
   /** Frames between readbacks. Emergent here — the promise resolves when it
@@ -128,7 +128,7 @@ export class WebGpuLuminanceReduction implements ReductionSeam {
     // Disabled or parked, the tile level's texels are from an older frame:
     // the readback goes out anyway and poll() drops what it lands, so the
     // statistic holds still rather than pairing stale texels with a live
-    // exposure (../../hdr/exposure/reduction/README.md § Where it runs).
+    // exposure (../../hdr/exposure/reduction/README.md#where-it-runs-in-the-frame).
     const last = this.levels[this.levels.length - 1];
     this.inFlight = true;
     this.issued++;

@@ -74,7 +74,7 @@ export interface Tycho2VResolution {
   /** Whether `BT−VT` sat outside the range SP-1200 publishes the reduction
    *  over. The transform runs anyway — nothing below this tier could serve
    *  the row, and V is a membership gate, so gating would cost it its record
-   *  (README.md § The Tycho-2 tier runs outside its published colour range).
+   *  (README.md#the-tycho-2-tier-runs-outside-its-published-colour-range).
    *  Pinned as `vTycho2OutsideBtVtRange` so an upstream shift is reviewed. */
   outsideRange: boolean;
 }
@@ -102,8 +102,8 @@ export function tycho2VMagnitude(
 /** V through the cascade: Riello-transformed Gaia photometry, else the printed
  *  Hipparcos V, else Tycho-2's reduced `VT`, else Gliese's printed `Vmag`,
  *  else curated. Tier rationale — why the bright tier is a condition rather
- *  than a magnitude cut, and why there is no SIMBAD tier — in README.md
- *  § The V cascade. */
+ *  than a magnitude cut, and why there is no SIMBAD tier — in README.md#the-v-cascade.
+ * */
 export function resolveVMagnitude(
   photometry: GaiaPhotometry | null,
   printedV: number | null,
@@ -144,7 +144,7 @@ export interface PrintedV {
 /** The two lower printed tiers bound to their parsed tables. One bundle rather
  *  than a loose callback pair, because four call sites weigh the same two tiers
  *  and a site supplying only one of them silently narrows a binding gate to
- *  evidence the other side can still see (`docs/catalog-driver.md` § 4). */
+ *  evidence the other side can still see (`/docs/catalog-driver.md#4-how-hd-reaches-gaia`). */
 export interface PrintedVLookups {
   tycho2VOfTyc: (tyc: string) => number | null;
   glieseVOfGj: (gj: string) => number | null;
@@ -167,7 +167,7 @@ export function printedVLookups(
  *  not reach: Tycho-2 on the row's Tycho entries, then Gliese on its GJ cells.
  *  Both binding gates weigh their candidates against this, so the record side
  *  and the label side cannot drift on what evidence is reachable
- *  (`docs/catalog-driver.md` § 4).
+ *  (`/docs/catalog-driver.md#4-how-hd-reaches-gaia`).
  *
  *  **Lists, not cells.** A spine row states one TYC and one GJ, but an overlay
  *  entry is keyed on a Gaia source IV/25 may route several Tycho entries to,
@@ -198,10 +198,10 @@ export function printedVBelowHip(
  *  component the source catalogue failed to resolve, summed into one value.
  *  True for the three printed tiers; `null` is a record no cascade ran on (a
  *  minted companion), per-component by construction. Which tiers blend and
- *  why: README.md § Which tiers give a system blend.
+ *  why: README.md#which-tiers-give-a-system-blend--vtierissystemblend.
  *
  *  Subtracting a companion's flux from a record double-counts unless gated on
- *  this — ../companions/README.md § Anchor flux conservation. */
+ *  this — ../companions/README.md#anchor-flux-conservation-post-pass. */
 export function vTierIsSystemBlend(via: VVia | null): boolean {
   return via === 'printed_hip' || via === 'tycho2' || via === 'gliese';
 }

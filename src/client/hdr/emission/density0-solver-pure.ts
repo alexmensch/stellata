@@ -1,6 +1,6 @@
 // Turning a published total magnitude into a volumetric emitter's ρ₀:
 // the flux number, Gauss–Legendre quadrature over a truncated ellipsoid,
-// and the far-field solve. See README.md § Solving ρ₀.
+// and the far-field solve. See README.md#solving-ρ--a-published-magnitude-into-an-emitters-density.
 
 /** Zero-point-free flux number for an apparent magnitude. */
 export function fluxNumber(mV: number): number {

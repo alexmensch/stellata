@@ -1,5 +1,5 @@
 // Relation-index set on a focal star's slot-chain. See
-// src/client/binaries/README.md § Walk-active LOD.
+// /src/client/binaries/README.md#walk-active-lod.
 
 import { NO_PARENT, type BinariesData } from './binaries-loader';
 

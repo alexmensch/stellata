@@ -153,7 +153,7 @@ describe('loadBoundaries', () => {
     expect(await loadBoundaries(URL)).toBeNull();
   });
 
-  // Why absence lands here and not on !ok: README.md § Validated at load.
+  // Why absence lands here and not on !ok: README.md#validated-at-load-but-never-fatal.
   it('resolves null when the SPA fallback serves index.html at 200', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,

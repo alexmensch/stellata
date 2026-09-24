@@ -1,6 +1,6 @@
 // The Gaia sources the classic-ID routes can propose — the binding gate's
 // candidate set, and the astrometry request's second contribution.
-// See README.md § The gate's evidence has to be pulled.
+// See README.md#the-gates-evidence-has-to-be-pulled.
 
 import { resolve } from 'node:path';
 

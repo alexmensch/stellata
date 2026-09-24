@@ -1,5 +1,5 @@
 // The Constellation row every non-stellar card carries.
-// See ./README.md § Constellation row.
+// See ./README.md#constellation-row.
 
 import type { TargetKind } from '../camera/focus/focus-target';
 import type { FocusCardRow } from './focus-card-types';

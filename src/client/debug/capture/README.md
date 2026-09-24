@@ -77,12 +77,12 @@ so a blob written under one states `cam` and `tgt` as offsets **from that
 object**, not as fixed points of the frame. The take reads the focal's live
 local position every frame and writes the pose onto it, which is what holds
 the object under `controls.target` and keeps `uPinFocusToCenter` engaged for
-the length of a take (`../../camera/focus/README.md` § Pin-to-center).
+the length of a take ([Pin-to-center](../../camera/focus/README.md#pin-to-center-upinfocustocenter)).
 
 The object really does move, and fast: a clock spending a year in five seconds
 crosses an epoch re-advance bucket every 0.05 Julian year, and each crossing
 steps the focal by its whole space motion over that bucket
-(`../../star-pipeline/star-frame/README.md` § The star frame). Close in, that
+([The star frame](../../star-pipeline/star-frame/README.md#the-star-frame)). Close in, that
 step is not small against the orbit radius — a take on Mira parked at 1.3 AU
 covers about eighteen times its own camera-to-star distance over one pulsation
 period, so a pose written as fixed frame coordinates does not drift off the
@@ -109,7 +109,7 @@ geometric rule.
 
 Straight-line interpolation of the camera position is wrong for the takes
 this tool is for. Angular size runs as `1/d`
-(`../../camera/arrival/README.md` § The angular-arrival problem), so a
+([The angular-arrival problem](../../camera/arrival/README.md#the-angular-arrival-problem)), so a
 1.5-decade approach — 30 pc to 0.9 pc, which is one of the homepage's own
 sights — spends four fifths of a linear move in a far field where nothing
 appears to change, then crosses every visible scale in the last few frames.

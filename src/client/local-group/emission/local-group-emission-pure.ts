@@ -31,7 +31,7 @@ export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
  */
 export const M31_BULGE_TO_TOTAL_LIGHT = 0.31;
 
-/** README.md § Population tints. */
+/** README.md#population-tints--two-family-seeds-both-derived. */
 export const DISC_COLOUR_INDEX_BV = discColourIndex(
   M31_TOTAL_COLOUR_INDEX_BV,
   OLD_SPHEROID_COLOUR_INDEX_BV,

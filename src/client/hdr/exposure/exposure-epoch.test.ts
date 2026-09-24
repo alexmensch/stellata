@@ -36,7 +36,7 @@ describe('limitMagForAperture', () => {
   });
 
   it('lands 50 mm binoculars 4.3 mag deeper — the retired preset step', () => {
-    // docs/science-hdr-pipeline.md § 3.4: (50/7)² = 51× = 4.3 mag, which
+    // /docs/science-hdr-pipeline.md#34-the-instrument-record--aperture-is-the-single-number: (50/7)² = 51× = 4.3 mag, which
     // is what made exposureMul a double-count.
     expect(limitMagForAperture(50) - EYE_LIMIT_MAG).toBeCloseTo(4.2694, 4);
   });

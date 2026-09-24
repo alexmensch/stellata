@@ -6,8 +6,8 @@ import type { DecodedView, ViewPose } from '../../util/url-state';
 
 export type EaseName = 'smooth' | 'linear';
 
-/** Quintic smootherstep — the shape `../../camera/arrival/README.md`
- *  § Profile lands arrivals on. */
+/** Quintic smootherstep — the shape `../../camera/arrival/README.md#profile`
+ * lands arrivals on. */
 export function easeAt(name: EaseName, u: number): number {
   const t = Math.min(1, Math.max(0, u));
   if (name === 'linear') return t;
@@ -31,7 +31,7 @@ export function capturePose(pose: ViewPose): CapturePose {
 }
 
 /** Move a focal-relative pose onto where the focal object currently sits.
- *  README.md § The take rides the focal object. */
+ *  README.md#the-take-rides-the-focal-object. */
 export function anchorPose(
   pose: CapturePose, anchor: THREE.Vector3, out: CapturePose,
 ): CapturePose {
@@ -58,7 +58,7 @@ export function slerpUnit(
 }
 
 /** Interpolate along an ARC at a GEOMETRIC radius, not along the chord, FOV
- *  included — README.md § The move is an arc at a geometric radius.
+ *  included — README.md#the-move-is-an-arc-at-a-geometric-radius.
  *
  *  A radius of zero has no direction to slerp — the OBSERVE pose, parked at
  *  the focal origin — so those fall back to a straight chord. */
@@ -94,7 +94,7 @@ function offsetKey(view: DecodedView): string {
 }
 
 /** Why these two blobs cannot be interpolated, or null when they can.
- *  README.md § Both blobs must be anchored on the same object. */
+ *  README.md#both-blobs-must-be-anchored-on-the-same-object. */
 export function frameMismatch(start: DecodedView, end: DecodedView): string | null {
   if (start.mode === 'observe' || end.mode === 'observe') {
     return 'OBSERVE-mode blob: the pose there is an orientation, not a camera '
@@ -161,8 +161,8 @@ export interface ClockRequest {
   currentT: number;
 }
 
-/** An end time is a destination, so it SOLVES the rate — README.md
- *  § What the clock does. */
+/** An end time is a destination, so it SOLVES the rate — README.md#what-the-clock-does.
+ * */
 export function planClock(request: ClockRequest): ClockPlan {
   const { startT, endT, rate, seconds, currentT } = request;
   if (endT === null) return { startT, moveRate: rate, idleRate: rate, endT: null };

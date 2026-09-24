@@ -21,8 +21,7 @@ The contract is intentionally minimal:
   after it, for the rest of the session.
 - `clear()` detaches every subscription — wired into `Stellata.dispose`
   so cross-session subscriptions don't leak (representative
-  authoring-pattern finding; see `docs/authoring-patterns.md`
-  § Lifecycle pairing).
+  authoring-pattern finding; see [Lifecycle pairing](/docs/authoring-patterns.md#lifecycle-pairing)).
 
 `index.ts` re-exports from `event-bus.ts` so consumers can keep their
 existing `from './util/event-bus'` imports working.
@@ -56,16 +55,16 @@ including that handler's own instrument — disagrees with it in the meantime.
 **The bus is the wrong seam for that write, not just the wrong event.** Where
 in the frame a camera write belongs is an ordering claim about other layers
 (after the position writes, before the projectors), and the scene registry is
-the only place that can express it — `../../scene/README.md` § Not every entry
-owns a layer. The orbit lock is the worked example: it rides through
+the only place that can express it — [Not every entry owns a layer](../../scene/README.md#not-every-entry-owns-a-layer).
+The orbit lock is the worked example: it rides through
 `Stellata.setOrbitFrameTick` from a sequencing-only registry entry, and only
-its *drawing* rides `frame` (`../../attitude/orbit-frame/README.md` § The lock).
+its *drawing* rides `frame` ([The lock](../../attitude/orbit-frame/README.md#the-lock)).
 
 **One standing exception, argued rather than assumed:** `debug.capture` writes
 the camera from `frame` for the length of a take. It is the sole writer while
 it runs and has no readout of its own, so the rule's two harms reduce to a
-constant one-frame lag — `../../debug/capture/README.md` § Writing the pose
-from `frame`, which is a departure. A second camera writer on that path retires
+constant one-frame lag — [Writing the pose from](../../debug/capture/README.md#writing-the-pose-from-frame-which-is-a-departure)
+`frame`, which is a departure. A second camera writer on that path retires
 the exception.
 
 ## Authoring a new event

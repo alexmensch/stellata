@@ -32,9 +32,9 @@ export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
 export type SurvivorsNode = UintStorageNode;
 
 /** Storage buffers the compaction kernel binds, against the 8 WebGPU
- *  guarantees a stage (`../../tsl/README.md` § Storage attributes). At the
+ *  guarantees a stage (`../../tsl/README.md#storage-attributes`). At the
  *  ceiling: a ninth needs a counter folded into the args buffer or a table
- *  folded into another, never a new binding (README.md § Binding budget). */
+ *  folded into another, never a new binding (README.md#binding-budget). */
 export const STAR_COMPACTION_KERNEL_STORAGE_BUFFERS = [
   'position', 'statics', 'suppressPulsation', 'av', 'survivors', 'args',
   'refillStamps', 'refillTable',
@@ -48,11 +48,11 @@ export class StarCompaction {
    *  tier's draws share binds it at that slot's byte offset — then the
    *  prefilter counter and the refill sub-list counters. */
   readonly args: IndirectStorageBufferAttribute;
-  /** README.md § The refill dispatch. */
+  /** README.md#the-refill-dispatch. */
   readonly refillDispatch: IndirectStorageBufferAttribute;
   /** The vertex stages' read of the lists. One node object: access is a
    *  property of the stage, so it is read_write in the kernel and read in
-   *  every draw (../../tsl/README.md § Storage attributes). */
+   *  every draw (../../tsl/README.md#storage-attributes). */
   readonly survivorsNode: SurvivorsNode;
   /** The refill kernel's read-only node over `refillDispatch`, for its own
    *  bound — its own node, not the one the finish kernel assigns through. */
@@ -65,11 +65,11 @@ export class StarCompaction {
   private readonly renderer: WebGPURenderer;
   private readonly viewProjection = uniform(new Matrix4());
   /** 1 only while a readback is waiting for its dispatch — the counter it
-   *  gates feeds no draw (README.md § Reading the counts back). */
+   *  gates feeds no draw (README.md#reading-the-counts-back). */
   private readonly countPrefilter = uniform(0, 'uint');
   private readonly awaitingDispatch: (() => void)[] = [];
   /** The armed frame's set, and what dispose releases — so every kernel is
-   *  reachable from it (README.md § The refill dispatch). */
+   *  reachable from it (README.md#the-refill-dispatch). */
   private kernels: ComputeNode[] | null;
   private plainKernels: ComputeNode[] | null;
   private readonly refill: RefillWorklistNodes;
@@ -150,7 +150,7 @@ export class StarCompaction {
     })(), this.count);
     kernel.setName('star-compaction');
     this.kernel = kernel;
-    // README.md § The refill dispatch.
+    // README.md#the-refill-dispatch.
     const dispatchBuf = refillDispatchNodes.write;
     const copyCounts = compute(Fn(() => {
       const bucket = instanceIndex;
@@ -181,8 +181,8 @@ export class StarCompaction {
 
   /** Bound the per-star kernel to the records actually decoded — it is a
    *  correctness bound before it is a saving, and `tierListBase` keeps the
-   *  full count. README.md § The kernel's thread count follows the decoded
-   *  records. */
+   *  full count. README.md#the-kernels-thread-count-follows-the-decoded-records.
+   * */
   setLoadedCount(loaded: number): void {
     this.kernel.count = Math.min(loaded, this.count);
   }
@@ -196,7 +196,7 @@ export class StarCompaction {
 
   /** Per tier, off a mapped copy of the args buffer, on demand. Never per
    *  frame: the readback resolves frames later and nothing on the render
-   *  path waits for it (README.md § Reading the counts back).
+   *  path waits for it (README.md#reading-the-counts-back).
    *
    *  Arms the prefilter counter and waits one dispatch for it, so the caller
    *  owes this a rendered frame — a parked render gate never resolves it. */

@@ -12,7 +12,7 @@ import {
 
 // The build writes texture-ladder-generated.ts; these pin the selection rules
 // over it, and the shape of the generated table itself. Rationale for each
-// rule: README.md § Texture tier selection.
+// rule: README.md#texture-tier-selection.
 
 describe('the generated ladder', () => {
   it('lists ascending rungs for every body, with no duplicates', () => {

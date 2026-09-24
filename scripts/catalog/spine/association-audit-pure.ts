@@ -1,6 +1,5 @@
 // Which of a spine row's identifiers the primaries' own cross-references link
-// to one another, and which only AT-HYG associates. See README.md § The
-// association audit.
+// to one another, and which only AT-HYG associates. See README.md#the-association-audit.
 
 import { lookupGliese } from '../gliese-parse';
 import { normaliseGjKey } from '../record/catalog-pure';

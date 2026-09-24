@@ -1,4 +1,4 @@
-// Append-only CI guard for the SID registry (docs/sid.md § 4.5):
+// Append-only CI guard for the SID registry (/docs/sid.md#45-ci-guard):
 // structural validity of data/sid/, head-snapshot integrity, and the
 // frozen-prefix check against the git merge-base. There is deliberately
 // no UPDATE_* escape hatch — a prefix rewrite requires editing this test

@@ -1,6 +1,6 @@
 // TSL mirror of the stellata_extended_emitter chunk: the write tail every
 // extended-source emitter shares — column → gain → all three attachments,
-// and the inline operator off-target. ../hdr/emission/README.md § Unit.
+// and the inline operator off-target. ../hdr/emission/README.md#unit--what-an-emitting-layer-writes.
 
 import { Fn, If, dot, min, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';

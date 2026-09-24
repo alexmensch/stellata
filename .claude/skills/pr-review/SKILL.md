@@ -33,8 +33,8 @@ module-scope function landing there is a finding.
 - **Read the folder `README.md` of every folder in that list before any source
   file in it.** Not after, not on demand. The README carries the invariants —
   uniform pins, sentinels, overrides — that the code cannot tell you, and a
-  finding reachable only from it is one you never learn you missed. AGENTS.md
-  § Folder READMEs. Cover the folders the diff *implicates* as well as the ones
+  finding reachable only from it is one you never learn you missed. [Folder READMEs](/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
+  Cover the folders the diff *implicates* as well as the ones
   it edits: a README arriving as a diff hunk has been read as an artifact, not
   as context.
 - **A strong PR body is not that context, and substitutes for it invisibly.**
@@ -64,7 +64,7 @@ is a leak. Per-frame CPU allocation in the render loop (arrays, objects, `Set`s,
 sorts) is a GC-jank finding in its own right.
 
 `bus.on(...)` without a matching unsub in dispose is the same defect class —
-docs/authoring-patterns.md § Lifecycle pairing.
+[Lifecycle pairing](/docs/authoring-patterns.md#lifecycle-pairing).
 
 ### 2. Name what the cost scales with, and its bound
 
@@ -100,7 +100,7 @@ argument. Occluded fragments still shade wherever early-z is defeated.
 A cost claim names the device class it holds for. "Imperceptible on my M4" is
 not a claim — the budget that matters belongs to a low-end integrated or mobile
 GPU, measured against its VRAM ceiling and max-texture-size limit. This is the
-performance face of AGENTS.md § Camera-anywhere, any-epoch: state the vantage
+performance face of [Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule): state the vantage
 and the epoch offset, at the extremes the model allows.
 
 ### 6. Measured, or labelled unmeasured
@@ -108,13 +108,13 @@ and the epoch offset, at the extremes the model allows.
 Only `gpu.frame` differentials price a pass. Per-scope magnitudes over-attribute
 on ANGLE/Metal, absolute numbers are not reproducible (ratios and differentials
 only), and Safari exposes no GPU timer at all. Measurement canon is
-`docs/render-rules.md` § 9 (the empirics behind it in bead `stellata-8cg.1`);
+[§ 9](/docs/render-rules.md#9-measurement-canon) (the empirics behind it in bead `stellata-8cg.1`);
 the standing perf program is epic `stellata-8cg`. An unmeasured perf claim is a
 hypothesis and must be called one.
 
 **A render-path diff without a `## Perf` section is a blocking finding.** A
 render path is any `.ts` or `.wgsl` under `src/client/` outside the
-folders `RELEASING.md` § Perf pin exempts. Refuse the review until the
+folders [Perf pin](/RELEASING.md#perf-pin) exempts. Refuse the review until the
 section is there. A `✗` row without an `accepted: <row> <reason>
 (<bead-id>)` line is P1, and the bead must exist. Only the frame row and the
 `|compute` row are marked, each on the statistic its own `metric` column

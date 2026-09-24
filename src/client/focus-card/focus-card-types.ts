@@ -29,7 +29,7 @@ export interface FocusCardContent {
 export interface FocusCardProvider<K extends FocusKind = FocusKind> {
   readonly kind: K;
   format(idx: number): FocusCardContent;
-  /** README.md § A card appears only when its own subject is ready.
+  /** README.md#a-card-appears-only-when-its-own-subject-is-ready.
    *  Omitted by a kind whose artifact lands whole. */
   ready?(idx: number): boolean;
 }

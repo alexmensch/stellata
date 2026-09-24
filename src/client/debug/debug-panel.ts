@@ -1,6 +1,6 @@
 // Draggable dev tuning panel chrome plus collapsible-section, slider,
 // and colour-picker helpers shared across sections. See
-// src/client/debug/README.md § Debug panel.
+// /src/client/debug/README.md#debug-panel.
 
 import {
   PANEL_WIDTH,

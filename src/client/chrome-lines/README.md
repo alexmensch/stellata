@@ -36,7 +36,7 @@ that folder's dynamic-import boundary.
 ## Why a seam at all — no graph has immunity
 
 **Both graphs the app draws go through the same renderer** — the one
-scene the shell builds (`../webgpu/README.md` § One scene per boot) and
+scene the shell builds ([One scene per boot](../webgpu/README.md#one-scene-per-boot)) and
 the local depth pass. So a built-in `LineBasicMaterial` in either reaches the HDR
 target's three colour attachments with a one-output fragment, fails WGSL
 pipeline creation, and **one invalid pipeline discards the whole
@@ -57,13 +57,13 @@ a suite can drive a layer through the double. `ChromeLineStroke` /
 
 `dispose()` goes through the handle rather than the material because it
 must also sever the material's MRT-mode registration — the same reason
-`../scene/README.md` § The material seam gives.
+[The material seam](../scene/README.md#the-material-seam) gives.
 
 **`setOpaque()` is on the handle for a different reason: the flag it looks
 like is unusable on the fat stroke.** Chart mode runs the coordinate
 spheres' strokes opaque with blending off, which on every other material is
 `transparent = false`; the fat stroke answers that same flag with a
-full-frame texture read (`../webgpu/chrome-lines/README.md` § Why
+full-frame texture read ([Why](../webgpu/chrome-lines/README.md#why-linebasicnodematerial-when-fragmentnode-replaces-its-shading)
 `LineBasicNodeMaterial`…), so it spells `CustomBlending` factors out
 instead. A layer writing `material.transparent` itself would be correct on
 every stroke but that one, and quietly ruinous on it.
@@ -107,7 +107,7 @@ writes `stroke.material.color` through the same setter.
 A local-pass stroke takes the same material as a main-pass one: reversed-z
 leaves fragments on standard bracket depth already
 (`../local-depth/README.md`), the same reason the probe glyph serves both
-passes from one graph (`../webgpu/solar-system/README.md` § The probe glyph
+passes from one graph ([The probe glyph](../webgpu/solar-system/README.md#the-probe-glyph-is-one-material-across-both-passes)
 needs no mirror variant).
 
 ## One factory per boot

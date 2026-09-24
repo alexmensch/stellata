@@ -78,7 +78,7 @@ export function earthMoonAt(t: number): { earth: Vec3; moon: Vec3 } {
  * the Moon when it blocked the light, Earth when the light arrives. Worth
  * a systematic +36 s of greatest-eclipse timing, which dominated the
  * residual against the canons once the element tables were in. The mesh
- * shader deliberately does NOT do this (README.md § Three conventions) —
+ * shader deliberately does NOT do this (README.md#three-conventions-that-cost-real-time) —
  * the two paths differ by 0.3 % of Earth's disc.
  */
 function earthAndRetardedMoon(t: number): { earth: Vec3; moon: Vec3 } {

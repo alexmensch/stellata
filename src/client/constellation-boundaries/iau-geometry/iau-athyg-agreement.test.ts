@@ -1,5 +1,5 @@
 // Catalogue-wide cross-check of the IAU-positional assignment against AT-HYG's
-// own editorial `con` column. See README.md § Agreement with AT-HYG.
+// own editorial `con` column. See README.md#agreement-with-at-hyg.
 
 import { createReadStream } from 'node:fs';
 import { resolve } from 'node:path';
@@ -14,8 +14,8 @@ import { createIauConstellationLookup } from './iau-boundaries-pure';
 /** The upstream AT-HYG catalogue. Not an input to the record build, which
  *  walks `data/membership/membership-manifest.tsv`; `build:binaries` Stage 1
  *  still parses it. This suite is the last TypeScript reader, which is why the
- *  path is spelt here rather than shared (`data/athyg/README.md`
- *  § Consumed by). */
+ *  path is spelt here rather than shared (`/data/athyg/README.md#consumed-by`).
+ * */
 const ATHYG_CSV = resolve(REPO_ROOT, 'data/athyg/athyg_33_classic_ids.csv');
 
 /** AT-HYG rows carrying a `con` cell. Sol is the one row that does not. */
@@ -82,7 +82,7 @@ describe.skipIf(!available)('IAU-positional assignment vs the AT-HYG con column'
   // editorial cell has no nomenclature to answer to. This one carries a
   // designation, so making conIndex positional would silently rewrite its
   // search aliases — which is why the designation constellation is carried
-  // separately. See README.md § ρ Aquilae.
+  // separately. See README.md#ρ-aquilae.
   it('leaves rho Aql as the only designated star it moves', () => {
     const designated = disagreements.filter((d) => d.designation.length > 0);
     expect(designated).toEqual([

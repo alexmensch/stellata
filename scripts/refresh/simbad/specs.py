@@ -120,7 +120,7 @@ OTYPE = ColumnSpec(adql="b.otype", alias="otype", tsv_name="otype", dtype=str)
 
 # Value columns — each measured quantity travels with its own bibcode and
 # quality flag, because the bibcode is the source and SIMBAD only the index
-# that found it (docs/catalog-driver.md § 5).
+# that found it (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers).
 RA = ColumnSpec(adql="b.ra", alias="ra", tsv_name="ra", dtype=float)
 DEC = ColumnSpec(adql="b.dec", alias="dec", tsv_name="dec", dtype=float)
 COO_QUAL = ColumnSpec(adql="b.coo_qual", alias="coo_qual", tsv_name="coo_qual", dtype=str)
@@ -189,5 +189,5 @@ GAIA_RELEASES = (GAIA_DR3, GAIA_DR2, GAIA_DR1)
 
 # The designation namespaces a source_id-keyed row falls through to when
 # SIMBAD's ident table does not hold its Gaia id, tried in this order — the
-# same ladder `docs/catalog-driver.md` § 5 gives the no-Gaia tier.
+# same ladder `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` gives the no-Gaia tier.
 WIDENING_LADDER = (HIP, TYC, GJ)

@@ -8,7 +8,7 @@ cross-match in `scripts/catalog/`.
 
 ## Stellar physics
 
-**Physical radius.** Each star's `physicalRadius` (in solar radii) is
+<a id="physical-radius"></a>**Physical radius.** Each star's `physicalRadius` (in solar radii) is
 computed at build time via Stefan–Boltzmann, given the absolute
 magnitude and an effective temperature:
 
@@ -21,8 +21,8 @@ L/L☉    = 10^((4.74 − Mbol) / 2.5)
 R/R☉    = sqrt(L/L☉) × (T_sun/T)²
 ```
 
-The measured Gaia DR3 Apsis Teff (see `docs/science-catalog-ingestion.md`
-§ Astrophysical parameters from Gaia DR3 Apsis) is preferred wherever a solution exists inside the
+The measured Gaia DR3 Apsis Teff (see [Astrophysical parameters from Gaia DR3 Apsis](/docs/science-catalog-ingestion.md#astrophysical-parameters-from-gaia-dr3-apsis))
+is preferred wherever a solution exists inside the
 2 000–60 000 K sanity window — R ∝ T⁻², so a GSP-Spec-tier star whose
 letter-only class defaulted to subclass 5 (a real K0 sized as K5) was
 otherwise misized by ~36%, and an unknown-class star riding the
@@ -48,7 +48,7 @@ The famous-star radius and colour claims are pinned end-to-end against
 
 Implementation: `physicalRadius` / `resolveApsisTeff` in
 `scripts/catalog/spectral/physical-radius.ts`, wired in `stars-parse.ts`; see
-`scripts/catalog/spectral/README.md` § The resolver and the radius chain for
+[The resolver and the radius chain](/scripts/catalog/spectral/README.md#the-resolver-and-the-radius-chain) for
 the spectral-string parser and the surrounding pipeline.
 
 ## Stellar perception model
@@ -78,7 +78,7 @@ derived from aperture — not a user-set data filter. The unaided eye is
 Bortle-1 best case, in vacuum, fully night-adapted. Deeper instruments
 derive theirs from aperture the same way; the record shape and the
 retired `exposureMul` / `angularMag` multipliers are
-`docs/science-hdr-pipeline.md` § 3.4.
+[§ 3.4](/docs/science-hdr-pipeline.md#34-the-instrument-record--aperture-is-the-single-number).
 
 **Exaggeration K — two factors, and only one of them is physics.**
 Literal physics at 50° vertical FOV / 1080 px puts the threshold disc at
@@ -331,7 +331,6 @@ irregular variables. Typical match rate: ~4.1k of ~390k catalog stars.
 
 Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (the `iPuls`
 attribute) and `src/client/camera/controls/star-physics.ts` (CPU-side
-`renderedSizePx` mirror); see `src/client/star-pipeline/README.md`
-§Variable star rendering, and `scripts/catalog/parse/README.md` §GCVS
-variability cross-match for the build-time matching rules.
+`renderedSizePx` mirror); see [Variable-star pulsation](/src/client/star-pipeline/pulsation/README.md#variable-star-pulsation)
+and [GCVS variability cross-match](/scripts/catalog/parse/gcvs/README.md#gcvs-variability-cross-match) for the build-time matching rules.
 

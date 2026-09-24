@@ -69,7 +69,7 @@ src/client/util/url-state/
 
 Four wire formats coexist. **v4** (current) replaces every parallel
 object-ref encoding with one universal unsigned-LEB128 **Stellata ID**
-(docs/sid.md § 9): `focus` and `to` each carry a SID of any kind — a
+([§ 9](/docs/sid.md#9-wire-format-v4-b5)): `focus` and `to` each carry a SID of any kind — a
 cloud focus is just a cloud-kind SID — and POIs are a count byte plus
 one LEB128 SID per entry. No type tag rides the wire; kind comes from
 the runtime resolver (`../sid-resolver/README.md`) at apply time.
@@ -101,7 +101,7 @@ refs and POI HIPs are 3 bytes (1 tag bit + 23-bit id); cloud refs are
 1 byte; vec3s are flat 12 bytes. **v1** (legacy: 32-bit mask, float32
 scalars, uint32 ids) is still decoded. Old shared URLs auto-upgrade
 to v4 on load via `applyFromUrl`'s post-debounce rewrite per the
-docs/sid.md § 9.4 migration table: HIP refs re-key exactly
+[§ 9.4](/docs/sid.md#94-migration-semantics--exact-table) migration table: HIP refs re-key exactly
 (hip → index → sid), index/cloud refs freeze best-effort to whatever
 they resolve to in the current build, unresolvable refs drop while
 the rest of the state applies.
@@ -113,12 +113,12 @@ artifact attaches ride the resolver's deferred-intent contract; a
 retired/unknown SID expires silently.
 
 **The STAR domain is attached but STILL FILLING when `applyFromUrl`
-runs**, because the catalogue streams (`../../loaders/README.md`
-§ Progressive catalog load). A hit resolves synchronously — which is the
+runs**, because the catalogue streams ([Progressive catalog load](../../loaders/README.md#progressive-catalog-load)).
+A hit resolves synchronously — which is the
 whole naked-eye sky, records being apparent-V ordered — and only a miss
 stays `pending` and queues, because the sid may sit in a chunk that has
-not arrived (`../sid-resolver/README.md` § A domain that is still
-filling). Withholding the domain until the last chunk instead would make
+not arrived ([A domain that is still filling](../sid-resolver/README.md#a-domain-that-is-still-filling)).
+Withholding the domain until the last chunk instead would make
 every star ref deferred, and § A focus that resolves after the pose is
 why that is wrong rather than merely slow. Every other pinnable kind's
 domain (planet, lg) attaches complete at boot, strictly before
@@ -194,7 +194,7 @@ bit order, so mode isn't known until the field loop completes).
   `getT()` directly without a `'state'` event, so without this a time
   scrub on a still camera would never reach the URL.
 - The `up` slot carries **`camera.up`**
-  (`src/client/camera/controls/input/README.md` § Roll authority), which is
+  ([Roll authority](/src/client/camera/controls/input/README.md#roll-authority)), which is
   the navigate roll authority itself — nothing derives it per frame, so it
   is a value a link can hold. **The omission test is the rendered roll, not
   the vector:** the field is dropped when the view is galactic-LEVEL, since
@@ -280,7 +280,7 @@ emits `'state'`) nor a pose — arming ORB writes an instrument-local variable,
 and engaging the lock moves nothing a still camera would show. So the
 instrument announces them itself, through
 `Stellata.notifyOrbitFrameChanged()`, on any change to either
-(`../../attitude/orbit-frame/README.md` § The lock). Without that the bits
+([The lock](../../attitude/orbit-frame/README.md#the-lock)). Without that the bits
 reached the address bar only when some unrelated change happened to write it
 afterwards, which is why the arm survived a refresh and the lock — the last
 thing a user touches — did not.
@@ -311,7 +311,7 @@ limit and the trim applies on top.
 
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when nothing
 is focused AND the anchor is far enough from Sol to move the pose — see
-`src/client/frame/README.md` § URL round-trip for the precision-anchor
+[URL round-trip](/src/client/frame/README.md#url-round-trip) for the precision-anchor
 semantics that make this round-trip safe, and § What counts as a camera move
 for "far enough".
 
@@ -331,8 +331,8 @@ has no orbit pivot but still carries a radius — the serialised look pin a
 parsec down the forward axis (`../../camera/observe/README.md`).
 
 **An absolute threshold is wrong at every vantage but one**, and this camera
-reaches lunar orbit and the Local Group in a session (`AGENTS.md`
-§ Camera-anywhere). The rule this replaced was `max(1e-9 pc, min(1e-3 pc,
+reaches lunar orbit and the Local Group in a session ([Camera-anywhere](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)).
+The rule this replaced was `max(1e-9 pc, min(1e-3 pc,
 1 % of magnitude))`, and each term failed somewhere: the 1e-9 pc floor is
 **30,857 km**, so beside the Moon the camera had to travel seven times its
 own distance from the body before the URL was rewritten and a whole orbit
@@ -379,7 +379,7 @@ the new schema after the same 1 s debounce as routine URL writes.
 
 **Adding an object kind** costs nothing here: focus / to / POIs
 already carry any-kind SIDs — register a resolver domain for the new
-artifact and the wire just works (docs/sid.md § 10). The one wired
+artifact and the wire just works ([§ 10](/docs/sid.md#10-adding-a-future-object-type--the-recipe)). The one wired
 exception: planet sids resolve to a planet-within-host domain index,
 which `IdMaps.planetTargetIndexOf` translates to the body-field flat
 Target index at apply time (and `planetDomainIndexOf` back at encode

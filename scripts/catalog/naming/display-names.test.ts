@@ -57,7 +57,7 @@ describe('assignDisplayNames', () => {
 
   it('renders a designation against dc, never the positional constellation', () => {
     // ρ Aql sits in Delphinus and is ρ Aquilae permanently; the positional
-    // index would rename it (docs/star-naming.md § 6).
+    // index would rename it (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
     const stars = [star({ bayer: 'δ', conIndex: CMA, desigConIndex: 1 })];
     assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1]);
     expect(

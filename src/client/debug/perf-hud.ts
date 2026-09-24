@@ -145,7 +145,7 @@ let unsubGpuCompute: (() => void) | null = null;
 
 /** True while the debug panel holds the real instrumentation. A raf-delta
  *  sweep measures wall time, so the panel's per-tick work lands inside its
- *  samples — `frame-cost/README.md` § Preconditions. */
+ *  samples — `frame-cost/README.md#preconditions`. */
 export function perfInstrumentationInstalled(): boolean {
   return installed;
 }
@@ -330,7 +330,7 @@ function renderPanel(): void {
 
   // The headline is the whole-frame row, never a sum of rows, and that
   // row's presence is what decides whether it can say `gpu` at all
-  // (gpu-timing/README.md § `gpu.frame` is the only row that prices anything).
+  // (gpu-timing/README.md#gpuframe-is-the-only-row-that-prices-anything).
   const whole = sections.get(`gpu.${GPU_WHOLE_FRAME_SCOPE}`);
   let busyLabel = 'submit';
   let busyMs = 0;

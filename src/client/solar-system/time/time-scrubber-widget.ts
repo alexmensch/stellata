@@ -1,6 +1,6 @@
 // First-class time-scrubber widget in the bottom-right meta slot: collapsed
 // star-count + live-UT readout ⇄ app-styled transport controls (T key /
-// click the readout). See ./README.md § Time scrubber widget.
+// click the readout). See ./README.md#time-scrubber-widget.
 
 import type { Stellata } from '../../stellata';
 import { createTimeReadout, formatFullTimeReadout } from './time-readout';
@@ -138,7 +138,7 @@ export function createTimeScrubberWidget(
 
   const jumpRow = document.createElement('div');
   jumpRow.className = 'scrubber-jump';
-  // Text, not `datetime-local` — see ./README.md § Time `t` and the readout.
+  // Text, not `datetime-local` — see ./README.md#time-t-and-the-readout.
   const jumpInput = document.createElement('input');
   jumpInput.type = 'text';
   jumpInput.placeholder = JUMP_FIELD_PLACEHOLDER;
@@ -163,7 +163,7 @@ export function createTimeScrubberWidget(
     setJumpValid(true);
   };
   // Jump and Reset both move `t` discontinuously and owe this epilogue —
-  // ./README.md § Time `t` and the readout.
+  // ./README.md#time-t-and-the-readout.
   const afterClockJump = (seconds: number): void => {
     stellata.notifyClockJumped();
     setJumpField(seconds);

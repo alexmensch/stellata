@@ -1,5 +1,5 @@
 // Shared TSV header, cell and record-ref parsing for the build's committed
-// tables and the Tier A corpora. See README.md § TSV header resolution.
+// tables and the Tier A corpora. See README.md#tsv-header-resolution.
 
 /** Throws on a missing column AND on an empty or headerless file, so a
  *  truncated or unsmudged input can never read as a zero-row table. */

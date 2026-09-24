@@ -3,7 +3,7 @@
 **The star pipeline**, constructed through
 `WebGpuSeam.attachStarLayer` over the shell's scene (never imported from
 `stellata.ts` — the import boundary in `../README.md`). It carries the
-three depth-honest pipelines of `../README.md` § Early-z: D2 glow (no
+three depth-honest pipelines of [Early-z](../README.md#early-z--the-star-layers-depth-honest-redesign): D2 glow (no
 depth output), D3 core mask (depth-only, member stamp in the vertex
 stage), and D4 disc (colour only, no depth output either — § The disc
 draw writes no depth) — plus their local-depth-pass mirror variants
@@ -51,8 +51,7 @@ src/client/webgpu/star/
   star-core-mask-tsl.ts        The D3 material: depth-only, colour
                                writes off, over the shared disc gate;
                                takes the MRT swap for three's pipeline
-                               cache (../hdr/README.md § The gate
-                               becomes the output struct).
+                               cache (../hdr/README.md#the-gate-becomes-the-output-struct).
   star-emission-tsl.ts         Fragment pieces the passes share: the
                                kernel and the two halves of the disc gate
                                BOTH disc and core mask run, chart mode's
@@ -77,8 +76,7 @@ src/client/webgpu/star/
 the `atan` — for every star past `uPhysSizeWindowPc`, where no catalog
 star can reach a size any consumer of it notices. What the bound has to
 satisfy, and the one consumer held to a tolerance rather than an exact
-threshold, is `../../star-pipeline/perceptual-disc/README.md` § Eliding
-the physical-size branch.
+threshold, is [Eliding the physical-size branch](../../star-pipeline/perceptual-disc/README.md#eliding-the-physical-size-branch).
 
 Which per-star field lands where — the static-table fields, the
 forwarded four, the one per-vertex attribute — is
@@ -114,13 +112,13 @@ belong here rather than there:
   fills exactly the population this stage can ask about. Both call
   `starVisibilityTsl`; restating either would let the two disagree about
   who is visible, and what a cache additionally owes for that is
-  `../extinction/README.md` § The cache gate.
+  [The cache gate](../extinction/README.md#the-cache-gate).
 - **The march runs in ABSOLUTE space** (`iPosition + uWorldOffset`,
   camera likewise) because the dust grid is anchored to Sol, not to the
   renderer's floating local origin.
 - **Reddening applies to whichever colour tier won** —
   `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — over the shared
-  `R_V`, exactly as `../../star-pipeline/README.md` § Colour routing
+  `R_V`, exactly as [Colour routing](../../star-pipeline/README.md#colour-routing)
   describes.
 
 ## Chart mode
@@ -159,17 +157,17 @@ Both colour passes share one fragment builder
 argument it hands that builder rather than a branch inside it. D4 claims
 `step(uCoreThreshold, glow)`, its resolved core; D2 claims a literal zero
 at every framing. Why the split is the general rule and not a star-shaped
-exception: `../../hdr/attachments/README.md` § The unit. Both are pinned
+exception: [The unit](../../hdr/attachments/README.md#the-unit). Both are pinned
 by `../../hdr/attachments/statistic-mask.test.ts`.
 
 The MRT emission/statistic write side is here (`finishStarColourMaterial`,
 `StarLayer.setMrtOutputs`) but engages only while the HDR pipeline binds
 its target; single-output frames run the inline operator, which is exact
-for point sources (`../../hdr/README.md` § The inline operator). All three
+for point sources ([The inline operator](../../hdr/README.md#the-inline-operator--chart-modes-path)). All three
 pipelines swap, the depth-only core mask included — its writes are
 masked, but an unchanged fragment program is handed the stale
 three-target pipeline from three's cache when the target drops to one
-attachment (`../hdr/README.md` § The gate becomes the output struct).
+attachment ([The gate becomes the output struct](../hdr/README.md#the-gate-becomes-the-output-struct)).
 
 ## Star tables — every per-star field is a storage read
 
@@ -209,8 +207,8 @@ at its `iSourceIdx`. Two kinds of table:
 Two paths, picked by whether the writer reported three.js update ranges:
 
 - **Ranged** — the writer named the slots it touched
-  (`BinaryOrbitField`'s `DirtyItemUploader`, `util/README.md`
-  § attribute-upload). The forwarded ranges upload those bytes and no
+  (`BinaryOrbitField`'s `DirtyItemUploader`, [attribute-upload](/src/client/util/README.md#attribute-uploadts)).
+  The forwarded ranges upload those bytes and no
   others, so a sub-pixel binary flip costs a handful of floats. The layer
   also **clears the source's range list** — no geometry draws the source
   attribute itself, so they would otherwise accumulate to
@@ -231,8 +229,8 @@ hint set. A table upload happens when its version moves and not otherwise.
 
 `EclipsePhotometryField` forces its own first writing flush full,
 because the shell's re-attach fill reaches stars outside the member
-slots it tracks (`../../binaries/eclipse/README.md` § Partial
-re-upload) — a range list appended before a render consumed that fill
+slots it tracks ([Partial re-upload](../../binaries/eclipse/README.md#partial-re-upload))
+— a range list appended before a render consumed that fill
 would strand every untracked star at the previous attach's value.
 
 ### What the tables hold
@@ -262,7 +260,7 @@ holding the originals — `DirtyItemUploader`, which caches both at
 construction — then diffs a stride and an array the GPU never sees, and
 emits ranges addressing the unpadded layout. Reading positions as three
 scalars out of an itemSize-1 table over the writer's own array is what
-keeps `../../binaries/README.md` § Partial re-upload's contract on the
+keeps [Partial re-upload](../../binaries/README.md#partial-re-upload)'s contract on the
 source attribute intact without that attribute ever becoming storage.
 
 ## Suppression semantics carried by the pass specialization
@@ -275,7 +273,7 @@ Compile-time pass constants decide what each pipeline suppresses
   folds into `appMag` before any size/brightness derivation — but **not**
   before the pass split, which every pipeline solves from the undimmed
   `appSize` or the three would tier the same star differently and all
-  discard it (`../../star-pipeline/README.md` § Star rendering). Every
+  discard it ([Star rendering](../../star-pipeline/README.md#star-rendering-instanced-quads-three-passes)). Every
   pipeline carries `routeAppSize`; only this one can diverge from
   `appSize`, and only behind a runtime test on the dim, so an undimmed
   star never pays the re-solve. The undimmed magnitude it re-solves from
@@ -374,7 +372,7 @@ a per-draw viewport state change.
 
 **What this gives up, and where.** The mask's `visible` gate is off
 when no star's disc can reach `RESOLVED_DISC_MIN_PX` (5 px) —
-`../../star-pipeline/README.md` § Star rendering. A disc *can* render
+[Star rendering](../../star-pipeline/README.md#star-rendering-instanced-quads-three-passes). A disc *can* render
 below that (the pass split has no pixel floor, only
 `physSize ≥ 0.5 · max(appSize, physSize)` on the **undimmed** `appSize`
 — not on `pxSize`, which an eclipse dim shrinks without re-tiering the

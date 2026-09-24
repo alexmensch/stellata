@@ -170,7 +170,7 @@ describe('StarCompaction dispatch', () => {
 });
 
 // The counter feeds no draw, so it must not run on frames nobody asked for
-// a count on (README.md § Reading the counts back).
+// a count on (README.md#reading-the-counts-back).
 describe('the prefilter counter is armed only across its readback', () => {
   it('waits for a dispatch to count into', async () => {
     const { compaction, dispatches } = make();

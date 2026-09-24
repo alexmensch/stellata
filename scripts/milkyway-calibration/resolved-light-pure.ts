@@ -45,7 +45,7 @@ export interface CapSurfaceBrightness {
   readonly stars: number;
 }
 
-/** De-extincted (`V = absmag + 5·log10(d/10)`) — README.md § What it writes. */
+/** De-extincted (`V = absmag + 5·log10(d/10)`) — README.md#what-it-writes. */
 export function capSurfaceBrightness(
   stars: StarColumns,
   centreUnit: Vec3,
@@ -142,7 +142,7 @@ function bandIndex(absSinB: number): number {
   return Math.min(Math.floor(absSinB * RESOLVED_HOLE_BANDS), RESOLVED_HOLE_BANDS - 1);
 }
 
-/** On the table's own edges. README.md § How a cell is measured. */
+/** On the table's own edges. README.md#how-a-cell-is-measured. */
 export function buildHoleCells(
   stars: StarColumns,
   icrsToGal: Rotation3,
@@ -231,7 +231,7 @@ export function resolvedShare(of: { catalogue: number; model: number }): number 
   return of.model > 0 ? Math.min(of.catalogue / of.model, 1) : 0;
 }
 
-/** README.md § How a cell is measured. */
+/** README.md#how-a-cell-is-measured. */
 export const MIN_STARS_PER_CELL = 500;
 
 /** The table the band marches, from cells binned on the table's own edges. */

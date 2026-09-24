@@ -2,7 +2,7 @@
 // three's core (~1 MB) and nothing tree-shakes an eagerly-imported
 // renderer, so its value imports may exist only inside the async chunk
 // behind main.ts's import('./webgpu/boot-webgpu') — see
-// src/client/webgpu/README.md § Import boundary.
+// /src/client/webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -37,7 +37,7 @@ const EXEMPT_MODULES = ENTRY_BUNDLE_MEMBERS.map((f) => f.replace(/\.ts$/, ''));
 // A module matches whole, a folder by prefix — every file under it is
 // exempt, which is why only the modules take the `$`.
 const EXEMPT_DIRS = ['gate/'];
-// src/client/webgpu/README.md § Import boundary.
+// /src/client/webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle.
 const isMock = (p: string) => p.endsWith('-mock.ts');
 const isWebGpuFolderRef = (spec: string) => new RegExp(
   `(?:^|/)webgpu/(?!${[...EXEMPT_MODULES.map((m) => `${m}$`), ...EXEMPT_DIRS].join('|')})[^'"]+$`,

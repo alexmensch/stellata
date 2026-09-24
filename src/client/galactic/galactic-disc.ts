@@ -38,8 +38,8 @@ const DISC_RENDER_ORDER = -1;
 
 /** Stroke opacity at a camera distance from Sol — zero inside the fade's
  *  inner edge, which is what the layer's `'opacity'` contribution test
- *  reads (`../scene/README.md` § Declaring what a layer can put on
- *  screen). */
+ *  reads (`../scene/README.md#declaring-what-a-layer-can-put-on-screen`).
+ * */
 export function galacticDiscOpacity(distFromSolPc: number): number {
   return farFieldFadeOpacity(DARK_BASE_OPACITY, distFromSolPc);
 }
@@ -174,7 +174,7 @@ export interface GalacticDiscSceneLayerDeps {
 }
 
 /** Constructs and parents the disc, returning its registry entry. The caller
- *  decides WHEN — README.md § Wiring. */
+ *  decides WHEN — README.md#wiring. */
 export function galacticDiscSceneLayer(deps: GalacticDiscSceneLayerDeps): SceneLayer {
   const disc = new GalacticDisc(deps.chromeLines);
   deps.scene.add(disc.group);

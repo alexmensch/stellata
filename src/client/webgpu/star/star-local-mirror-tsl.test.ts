@@ -61,7 +61,7 @@ describe('StarLocalMirrorTsl construction', () => {
     expect(disc.blendEquation).toBe(THREE.MaxEquation);
     // The mirror's own core mask stamps every member core several
     // renderOrders earlier, so the disc mirror writes no depth either —
-    // README.md § The disc draw writes no depth carries over in-pass.
+    // README.md#the-disc-draw-writes-no-depth carries over in-pass.
     expect(disc.depthWrite).toBe(false);
     expect(glow.name).toBe('star-glow-local-tsl');
     expect(glow.blending).toBe(THREE.AdditiveBlending);

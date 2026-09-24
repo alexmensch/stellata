@@ -152,8 +152,8 @@ wrong, and each cost a wrong name before it was pinned:
 star, so its number is the least component-specific of the three: NEC
 lists both p Eri rows against HIP 7751 and separates them only by HR
 (486 / 487) and HD (10360 / 10361). A HIP-first join collapses p Eri A and
-B onto one record — the very duplicate `docs/star-naming.md` § 8 expects
-the ladder to dissolve. `docs/star-naming.md` § 3 states HIP first and is
+B onto one record — the very duplicate [§ 8](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change) expects
+the ladder to dissolve. [§ 3](/docs/star-naming.md#3-the-ladder) states HIP first and is
 wrong; the order here is the measured one.
 
 **The record's own printed name is the last key.** Three names the
@@ -193,7 +193,7 @@ it, and it carries its own string.
 
 The authority states which constellation its own designation is named for,
 so `applyStarNames` writes it as the top tier of the cascade the label
-merge started (`../classic-ids/README.md` § The designation constellation),
+merge started ([The designation constellation](../classic-ids/README.md#the-designation-constellation)),
 covering 2,941 records. One `uint8` serves one designation and the tier
 that COMPOSES the label owns it, so where the authority's Bayer names a
 different constellation from the record's Flamsteed number — 16 Lyn is
@@ -253,7 +253,7 @@ for exactly that reason.
 
 ## The parity ledger
 
-`docs/star-naming.md` § 8, as two committed TSVs plus
+[§ 8,](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change) as two committed TSVs plus
 `naming-parity.test.ts`:
 
 - **`naming-parity.tsv`** — one row per record whose displayed name changed

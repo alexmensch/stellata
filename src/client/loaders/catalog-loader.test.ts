@@ -595,7 +595,7 @@ describe('catalog-loader / parseBinary', () => {
       vi.stubGlobal('Worker', stub.Worker);
 
       const cat = await loadCatalog(MANIFEST_URL, CON_URL);
-      // See ./README.md § The catalog-decode worker, the pre-paint windows.
+      // See ./README.md#the-catalog-decode-worker the pre-paint windows.
       expect(stub.spawned()).toBe(0);
       expect(cat.loadedCount).toBeGreaterThan(0);
 

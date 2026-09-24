@@ -1,6 +1,5 @@
 // Stamp frozen Stellata IDs onto clouds.json / local-group.json from the
-// committed ledger, after their emitters run. See scripts/sid/README.md
-// § Sibling-artifact stamping.
+// committed ledger, after their emitters run. See /scripts/sid/README.md#sibling-artifact-stamping.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

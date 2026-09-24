@@ -11,21 +11,21 @@ export const REQUESTABLE_GPU_FRAME_METHODS = ['timestamp', 'raf-delta'] as const
 
 /** Frames discarded before the first dwell of a measurement. Long enough to
  *  absorb the cold-clock ramp and NOT the slow rise over the minutes after
- *  it — README.md § The instrument drifts names both directions, and
+ *  it — README.md#the-instrument-drifts-so-the-baseline-is-bracketed names both directions, and
  *  `baselineTrend` is what reports the second. Shared with the headless
  *  runner's dwell mode, which needs the same ramp absorbed. */
 export const WARMUP_FRAMES = 180;
 
 /** Frames after a pass is restored before the next dwell, so the trailing
  *  baseline is not sampled while the exposure is still re-converging —
- *  README.md § Restore transients. The headless runner's `--roundtrip`
+ *  README.md#restore-transients. The headless runner's `--roundtrip`
  *  waits the same count for the same reason (`scripts/perf/README.md`). */
 export const SETTLE_FRAMES = 30;
 
 /** How close to a whole number of display intervals counts as sitting on
  *  one, as a fraction of the interval: 1 ms at 60 Hz, 0.5 ms at 120. Never
  *  a fixed millisecond, which on a small interval sits within reach of some
- *  multiple whatever the frame cost. README.md § Reading a row. */
+ *  multiple whatever the frame cost. README.md#reading-a-row. */
 export const CADENCE_TOLERANCE = 0.06;
 
 /** Frames the idle rAF probe samples to find the display's period. */
@@ -115,7 +115,7 @@ export interface PriceFrameRow {
   /** Readbacks per frame in each state. The reduction's fence is the
    *  frame's only ANGLE submission barrier and its cadence is emergent, so
    *  a row whose two values differ priced a change in barrier rate on top
-   *  of the pass — README.md § The readback cadence confound. */
+   *  of the pass — README.md#the-readback-cadence--measured-and-not-the-confound confound. */
   readonly baselineReadback: number;
   readonly disabledReadback: number;
   /** Faintest magnitude rendered in each state. **These two differing is
@@ -244,7 +244,7 @@ function ranks(xs: readonly number[]): number[] {
 
 /** Lag-1 autocorrelation of a dwell's frame times, on ranks. What each sign
  *  means, and where `noiseMs` stops being an honest standard error:
- *  README.md § Reading a row. */
+ *  README.md#reading-a-row. */
 export function lag1Autocorrelation(samples: readonly number[]): number {
   if (samples.length < 3) return 0;
   const r = ranks(samples);
@@ -404,7 +404,7 @@ function assembleRow(
 /** A rise under this share of the sweep's first baseline earns no verdict
  *  however tidy the walk. A very settled instrument's brackets are near
  *  zero, so its own micro drift clears the band at a rise of ~1 % —
- *  README.md § The instrument drifts records the separation this sits in. */
+ *  README.md#the-instrument-drifts-so-the-baseline-is-bracketed records the separation this sits in. */
 export const RISING_BASELINE_MIN_FRACTION = 0.1;
 
 export interface BaselineTrend {

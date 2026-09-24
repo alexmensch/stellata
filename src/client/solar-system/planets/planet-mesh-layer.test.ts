@@ -69,7 +69,7 @@ describe('the planet surfaces occlude the diffuse attachment', () => {
 // filters is what makes the WGSL builder bake an unfiltered fetch for the
 // material's whole life, so this pair is the fix for the WebGPU terminator
 // staircase and nothing else pins it — the roster guard asks only that a
-// pair be stated (../../webgpu/solar-system/README.md § A stand-in's filters).
+// pair be stated (../../webgpu/solar-system/README.md#a-stand-ins-filters).
 describe('the mesh stand-in is filterable', () => {
   it('hands the materials factory a placeholder that is not nearest/nearest', () => {
     const hdr = { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } };
@@ -379,7 +379,7 @@ describe('the layer releases what it stops drawing', () => {
   });
 });
 
-// See textures/README.md § Staying inside VRAM.
+// See textures/README.md#staying-inside-vram.
 describe('the floor rung stays resident', () => {
   it('fetches the floor alongside whatever the demand asks for', () => {
     const h = harness(['Europa']);
@@ -626,7 +626,7 @@ describe('the depth pre-stamp', () => {
 // build the slot and createEntry still snapshots it, so nothing throws — the
 // body just keeps whatever map another body last bound. Source-scanned because
 // each site pairs with its own readiness test and uHas* flag, so there is no
-// loop to assert over (../materials/README.md § Texture-slot rosters).
+// loop to assert over (../materials/README.md#texture-slot-rosters).
 describe('every mesh texture slot has a release site', () => {
   const src = read('./planet-mesh-layer.ts');
 

@@ -20,8 +20,8 @@ detail lives below.
 
 <!--
 Required when the diff touches a render path: any .ts or .wgsl under
-src/client/, outside *.test.ts and the folders RELEASING.md § Perf pin
-exempts. Say which tier, then answer it — RELEASING.md § Perf pin owns the
+src/client/, outside *.test.ts and the folders /RELEASING.md#perf-pin
+exempts. Say which tier, then answer it — /RELEASING.md#perf-pin owns the
 table:
 
   Tier 0  no per-frame code reachable. Prose: which functions the diff

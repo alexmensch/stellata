@@ -35,13 +35,13 @@ consumer's own, for the reason `../../chrome-lines/README.md` gives.
 Both are chrome, so **both extra attachments write `vec4(0)`** — the
 blend's identity element under this alpha-composited blend, so the
 destination is left exactly as it was
-(`../hdr/README.md` § The gate becomes the output struct).
+([The gate becomes the output struct](../hdr/README.md#the-gate-becomes-the-output-struct)).
 
 ## The encode the struct graph does not carry
 
 three encodes linear→sRGB for the canvas and nothing for a render target.
 With `outputColorSpace` pinned to the working space
-(`../README.md` § Output colour space) it now encodes for **neither**, so
+([Output colour space](../README.md#output-colour-space--pinned-to-the-working-space)) it now encodes for **neither**, so
 a stroke reaching the canvas would render linear-dark. The single-output
 graph therefore owns that encode, selected on the `uHdrTarget` node
 mirror, which is 0 exactly when the target is unbound — chart mode. The

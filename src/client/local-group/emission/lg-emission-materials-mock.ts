@@ -1,4 +1,4 @@
-// LgEmissionMaterials test double. See README.md § The material seam.
+// LgEmissionMaterials test double. See README.md#the-material-seam.
 
 import { surfaceRecorder, type FakeEmitterMaterial } from '../../scene/emitter-material-mock';
 import type { LgEmissionMaterials } from './lg-emission-materials';

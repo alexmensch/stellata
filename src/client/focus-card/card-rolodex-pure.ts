@@ -1,6 +1,6 @@
 // Pure planning for the card rolodex: which card is in front, which
 // cards render as header strips, and the strip height for the count.
-// See ./README.md § Rolodex behaviour.
+// See ./README.md#rolodex-behaviour.
 
 import { targetsEqual, type Target, type TargetKind } from '../camera/focus/focus-target';
 

@@ -1,5 +1,5 @@
 // Scene-driven exposure adaptation: the two branches the reduced frame
-// statistic drives, and the cut they imply. See README.md § Adaptation.
+// statistic drives, and the cut they imply. See README.md#adaptation--the-frame-measures-itself.
 
 import { EV_MAX_STOPS } from './exposure-epoch';
 import {
@@ -11,7 +11,7 @@ import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 
 /** Display luminance a correctly-exposed sunlit disc reads at —
  *  measured, not chosen: the geometric mean of three independently
- *  judged planets (`docs/science-hdr-pipeline.md` § 3.1). */
+ *  judged planets (`/docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut`). */
 export const L_TARGET = 0.89;
 
 /** Reference coverage — the frame fraction a body lands exactly on
@@ -43,7 +43,7 @@ export const ADAPT_SLEW_TAU_S = 0.3;
 
 /** The slew parks inside this many magnitudes — an exponential never
  *  arrives, and the parked cut must be a genuine fixed point
- *  (README.md § Adaptation, *It settles*). */
+ *  (README.md#adaptation--the-frame-measures-itself *It settles*). */
 export const ADAPT_SLEW_SETTLE_MAG = 1e-3;
 
 /**
@@ -126,7 +126,7 @@ export function surfacePinDm(stat: FrameStatistic, lTarget = L_TARGET): number {
  *  branch's own response to a full-white frame, the strongest stimulus
  *  the display can deliver. The scene-referred cut past this point
  *  simulates a retinal bleaching the monitor never caused —
- *  `docs/science-hdr-pipeline.md` § 3.2 (The display floor). */
+ *  `/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix` (The display floor). */
 export function displayFloorDm(tuning = DEFAULT_ADAPTATION_TUNING): number {
   return -2.5 * Math.log10(tuning.whitePoint / tuning.lAdapt);
 }

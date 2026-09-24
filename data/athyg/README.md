@@ -51,8 +51,8 @@ where it expects a header. Any further small file added here needs its own
 - **Per-row provenance**: `pos_src` / `dist_src` / `mag_src` / `pm_src`
   columns name which upstream catalogue supplied each piece of data.
   ~99.4 % Tycho-2 positions, ~97.9 % Gaia DR3 distances, mixed
-  Tycho-2 / Hipparcos magnitudes. See `docs/science-catalog-ingestion.md`
-  § Stellar catalog ingestion for the magnitude distribution and how it interacts with
+  Tycho-2 / Hipparcos magnitudes. See [Stellar catalog ingestion](/docs/science-catalog-ingestion.md#stellar-catalog-ingestion)
+  for the magnitude distribution and how it interacts with
   the `naked-eye` / `binoculars` / `all` presets.
 
 ## The inherited spine
@@ -98,11 +98,10 @@ the successor and a disposition on `simbad_dr2_object` accepts it
 (`../membership/binding-review-dispositions.tsv`); those four records now
 reach Gaia's own row. The two with no successor (GJ 3775, GJ 3981) keep the
 DR2 id on a disposition of the same basis. Every record keys on a HIP, HD or
-GJ, so no canonical key moves either way (`docs/sid.md` § 4.2). All six also
+GJ, so no canonical key moves either way ([§ 4.2](/docs/sid.md#42-canonical-key--stability-first)). All six also
 reach the SIMBAD values pull: the widening ladder falls through to their own
 TYC / GJ and corroborates the binding across releases, so each carries
-bibcoded coordinates, PM and parallax (`../simbad/README.md` § The widening
-ladder, and its corroboration rule).
+bibcoded coordinates, PM and parallax ([The widening ladder, and its corroboration rule](../simbad/README.md#the-widening-ladder-and-its-corroboration-rule)).
 
 ## Consumed by
 
@@ -111,8 +110,7 @@ frozen record of AT-HYG's merge decisions — which designations name one
 star — that the primaries-derived manifest re-keys, plus the label cells the
 merge starts from. Its `gaia_source_id` and `mag` columns it reads not at all:
 the binding is derived from committed evidence alone
-(`scripts/catalog/membership/binding/README.md`
-§ The four sources, in precedence order).
+([The four sources, in precedence order](/scripts/catalog/membership/binding/README.md#the-four-sources-in-precedence-order)).
 The manifest's parity gate reads it as the baseline every manifest row must
 account for; `scripts/catalog/classic-ids/parity-ledger.test.ts` backs two
 dispositions against its cells; `pnpm run build:astrometry-request` reads its
@@ -120,7 +118,7 @@ TYCs and rows for the cross-walk narrowing and the derivation's candidates;
 the two `audit:spine-*` instruments measure it; `build:classic-ids` does not
 read it at all. `scripts/catalog/spine/inherited-spine-guard.test.ts` pins its
 bytes, committed counts and the queue above. The order those readers leave
-in: `docs/catalog-driver.md` § 3.2.
+in: [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-column-per-consumer-in-order).
 
 **`build:catalog` does not read it.** `readStars` walks
 `../membership/membership-manifest.tsv`; membership is that file less the
@@ -137,6 +135,6 @@ TypeScript reader left, and it spells the path itself) and
 
 Every request set is derived from the membership term — the spine's own
 columns first, and the manifest's since the record build swapped onto it
-(`scripts/refresh/README.md` § Request sets are membership-derived). Request
+([Request sets are membership-derived](/scripts/refresh/README.md#request-sets-are-membership-derived)). Request
 and record build name the same source_ids by construction rather than by
 agreeing. A new AT-HYG release therefore no longer moves the catalogue.

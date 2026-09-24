@@ -141,7 +141,7 @@ airlight over the disc — is
   1. Skip the work entirely if the camera is past the host's
      `cullDistancePc` — the closed-form distance at which its
      brightest planet would just cross the population cull bound
-     (`../README.md` § Per-host distance cull).
+     ([Per-host distance cull](../README.md#per-host-distance-cull)).
   2. Otherwise call `positionsAt(t, scratch)` to refresh local-frame
      positions, apply the per-host orientation quaternion, and write
      into the host's iLocalRel slot in the global instance buffer.
@@ -171,7 +171,7 @@ buffer; `bufs.localRel` is its float32 bake, and exists only to feed the
 `planetLocalPositionInto`, `planetAbsolutePositionInto`,
 `planetHostRelPositionInto`, `evalPlanetView`,
 `orbitCentreOffsetInto` (the attitude indicator's ORB datum —
-`../../attitude/README.md` § Levelling on an orbit; a moon's centre is its
+[Levelling](../../attitude/README.md#levelling) on an orbit; a moon's centre is its
 parent's slot, not the host's), the eclipse-dim walk — reads the float64
 master. `PlanetSystem.positionsAt`
 writes a `Float64Array` for the same reason; moons compose
@@ -231,7 +231,7 @@ whole faint end while leaving every one of those bodies clickable.
 
 `bodyInkVisible` is that extra gate, and it is the star pipeline's own
 test: the glare IS the shared star-perceptual point
-(`../../webgpu/solar-system/README.md` § Reflected glare),
+([Reflected glare](../../webgpu/solar-system/README.md#reflected-glare--a-planet-reads-exactly-like-a-star)),
 so it runs through `emitterPutsInkOnScreen` unchanged, `tapered` always
 true because a body carries no opaque disc pass. The mesh OR-branch is
 `forEachDrawnBodyView`'s, unchanged — an opaque surface is pickable at
@@ -252,11 +252,11 @@ fastest on-screen speed of the bodies it is actually drawing, and the
 fastest brightness slope among them. The walk, the two extra visibility
 gates it applies, why each body's velocity is differenced rather than
 modelled, and why a culled host correctly reports zero are
-`../../render-gate/cadence/README.md` § What the planet field reports.
+[What the planet field reports](../../render-gate/cadence/README.md#what-the-planet-field-reports).
 ## Physical-luminance emission
 
 Both layers emit into the scene-wide HDR unit
-(`../../hdr/emission/README.md` § Unit) — the glare through the point-source rule, the mesh through the
+([Unit](../../hdr/emission/README.md#unit--what-an-emitting-layer-writes)) — the glare through the point-source rule, the mesh through the
 surface-brightness rule, and past 1 px the two are the same quantity, so
 the resolve step is continuous by construction. The mesh anchor, the two
 disc means that divide out, and the colour bookkeeping that keeps a
@@ -266,18 +266,18 @@ The three alpha-composited surfaces — mesh, annulus, atmosphere shell — take
 the occluding-emitter role rather than the point-emitter one, so they dim the
 diffuse attachment by their own opacity as well as emitting. The additive
 glare needs nothing: an additive blend cannot attenuate
-(`../../hdr/attachments/README.md` § The roles).
+([The roles](../../hdr/attachments/README.md#the-roles)).
 
 **They are also the only emitters in the client that claim lit-surface
 coverage**, the term the exposure pin divides its masked mean by
-(`../../hdr/exposure/README.md` § Adaptation). The mesh claims its **lit
+([Adaptation](../../hdr/exposure/README.md#adaptation--the-frame-measures-itself)). The mesh claims its **lit
 hemisphere alone** — `step(0, sunCos) · step(0.5, shadow)`, the geometric
 terminator, so a crescent exposes its crescent rather than being pulled
 dark by the night side it happens to present. **Each of the other two gates
 on its own illumination the same way** and for the same reason, over a dark
 region of its own — the shadowed strip for the annulus (`rings/README.md`),
 the unlit chord for the shell (`../atmosphere/README.md`); the pinned table
-is `../../hdr/attachments/README.md` § The unit. The glare claims nothing:
+is [The unit](../../hdr/attachments/README.md#the-unit). The glare claims nothing:
 it draws a kernel, and its flux belongs in the frame mean only.
 
 ## Planet mesh LOD
@@ -293,8 +293,8 @@ crossfade.
   px — full at ≥ `MESH_FADE_FULL_PX` (2 px), gone at ≤ `MESH_FADE_MIN_PX`
   (1 px) (`meshFadeFromPhysPx` on `PlanetBodyField.physicalPlanetSizePx`).
   The layer's **contribution declaration** is `{ kind: 'gated' }` on
-  `anyMeshWorkPending` (`../../scene/README.md` § Declaring what a layer
-  can put on screen), so a frame where no body has reached
+  `anyMeshWorkPending` ([Declaring what a layer can put on screen](../../scene/README.md#declaring-what-a-layer-can-put-on-screen)),
+  so a frame where no body has reached
   `TEXTURE_PREFETCH_PX` pays neither the update nor the draw. **The gate's
   floor is the prefetch one, not the band's**, and the half-pixel between
   them is the whole reason: `update` is where each body's texture fetch
@@ -322,13 +322,13 @@ crossfade.
   emission rule the star field runs. That is the load-bearing invariant:
   **visibility matches magnitude.** The billboard's own behaviour — the
   photocentre shift and why a resolved mesh hides the glare's core — is
-  `../../webgpu/solar-system/README.md` § Reflected glare.
+  [Reflected glare](../../webgpu/solar-system/README.md#reflected-glare--a-planet-reads-exactly-like-a-star).
 
 - **Geometry**: one shared unit sphere, scaled per body to
   `(R_eq, R_eq·(1−f), R_eq)` — `Planet.flattening` carries NASA
   fact-sheet oblateness (Saturn 0.098 is visibly non-spherical), via
   `spheroid-pure.ts:polarRadiusRatio` and nowhere else
-  (`../atmosphere/README.md` § Shell extents says why).
+  ([Shell extents](../atmosphere/README.md#shell-extents) says why).
   Orientation comes from the body's IAU rotation elements
   (§ Planet rotation); bodies without them fall back to pole =
   host orbital-plane normal with an arbitrary fixed meridian.
@@ -336,7 +336,7 @@ crossfade.
   direction (view space) — the day/night terminator IS this lighting,
   not imagery. Limb darkening on top; an airless night side is black (no
   ambient term), an atmospheric one is lit by twilight
-  (`../atmosphere/README.md` § Skylight). Three scalars refine it, all
+  ([Skylight](../atmosphere/README.md#skylight--the-lit-air-scattering-light-back-down)). Three scalars refine it, all
   CPU-computed per frame from vitest-pinned pure helpers:
   - `uPhaseScale` = φ_body(α)/φ_Lambert(α)
     (`../phase-function.ts:phaseRatioToLambert`, clamped [¼, 4]) corrects
@@ -347,15 +347,15 @@ crossfade.
     rejected: it depends on viewer distance and blows out on approach.
     It multiplies **every** reflected term, terrain interreflection
     included — on one of them alone it would divide into the ratio
-    between them (`surface-relief/README.md` § Shadows are lit by the
-    terrain). Scattered air light is the exception and normalises
-    separately (`emission/README.md` § Two disc means).
+    between them ([Shadows are lit by the terrain](surface-relief/README.md#shadows-are-lit-by-the-terrain)).
+    Scattered air light is the exception and normalises
+    separately ([Two disc means](emission/README.md#two-disc-means-divide-out)).
   - `uSurfaceLuminance` (`mesh-surface-pure.ts:meshSurfaceLuminance`) —
     the body's **true mean surface brightness** in the scene-wide HDR
     unit, pre-divided by the disc means of everything the shader
     multiplies on top (§ Physical-luminance emission) and, for an
     atmospheric body, less the share of that flux its airlight already
-    supplies (`../atmosphere/README.md` § Flux bookkeeping). Surface-only: the
+    supplies ([Flux bookkeeping](../atmosphere/README.md#flux-bookkeeping)). Surface-only: the
     reflected glare is the star-perceptual point (driven by appMag,
     above), so this shades the mesh, not the glare. Body-kind-agnostic —
     planets, moons, and future lit bodies all read the one scalar.
@@ -368,7 +368,7 @@ crossfade.
   - `uTermSoftness` (`Planet.terminatorSoftness`) — by-eye widening of
     the terminator (Venus 0.08 widest; Titan the one moon with a band;
     undefined = airless hard cut). What actually lights the night side
-    is a separate physical term — `../atmosphere/README.md` § Skylight.
+    is a separate physical term — [Skylight](../atmosphere/README.md#skylight--the-lit-air-scattering-light-back-down).
 - **Inter-body shadows**: each drawn body carries up to 8 view-space
   caster spheres (`uCasters` — a moon's parent; a planet's moons); the
   fragment shader attenuates the reflected term when the ray toward
@@ -440,5 +440,5 @@ meridian `W(t)`, the body→ICRS composition the mesh applies, and the
 
 Surface detail beyond what is listed here (banding, axial-tilt cue)
 stays **deliberately deferred** to the planet-zoom epic
-(`stellata-2f6`); see `SCIENCE.md` § Scope principles — Defer detail
+(`stellata-2f6`); see [Scope principles](/SCIENCE.md#scope-principles) — Defer detail
 until zoom affordance.

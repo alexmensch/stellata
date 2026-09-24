@@ -1,5 +1,5 @@
 // Two-line time readout for the current `t`: UT date line + JD(TT)/ΔT
-// line. See ./README.md § Time `t` and the readout.
+// line. See ./README.md#time-t-and-the-readout.
 
 import type { Stellata } from '../../stellata';
 import { tToJdUt } from './time';

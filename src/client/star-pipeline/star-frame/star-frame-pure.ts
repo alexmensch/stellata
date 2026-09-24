@@ -1,10 +1,10 @@
 // The Sol-distance proximity index's in-place merge.
-// See ./README.md § Absorbing a chunk.
+// See ./README.md#absorbing-a-chunk.
 
 import { sortIndicesByKeyWords } from '../../util/radix-sort';
 
 /** `key` holds `Infinity` past `end` on entry and on exit, and `dist` is
- *  non-negative (`+Infinity` allowed) — ./README.md § Absorbing a chunk. */
+ *  non-negative (`+Infinity` allowed) — ./README.md#absorbing-a-chunk. */
 export function mergeSortedByDistance(
   dist: Float32Array,
   idx: Uint32Array,

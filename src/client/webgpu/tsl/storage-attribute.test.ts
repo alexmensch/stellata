@@ -57,7 +57,7 @@ describe('storageWriteRead', () => {
 // The star vertex stage indexes the A_V cache out of a storage buffer, and a
 // device holding none there fails all three star pipelines — one invalid
 // pipeline discards the whole submit, so the boot refuses rather than paint
-// black (../README.md § One scene per boot).
+// black (../README.md#one-scene-per-boot).
 describe('supportsVertexStageStorageBuffers', () => {
   it('refuses a device reporting none in the vertex stage', () => {
     expect(supportsVertexStageStorageBuffers(

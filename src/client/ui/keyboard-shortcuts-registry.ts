@@ -1,6 +1,6 @@
 // Display metadata for keyboard shortcuts — the single source behind the
 // `?` help modal. Pure (no DOM), unit-tested.
-// See src/client/ui/README.md § Keyboard shortcuts.
+// See /src/client/ui/README.md#keyboard-shortcuts.
 
 export interface ShortcutDescriptor {
   /** Display keys: one chip per entry (`['G']`, `['F', 'F']`, `['+', '−']`). */

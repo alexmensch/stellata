@@ -181,8 +181,8 @@ describe('MilkyWay population tints', () => {
   // Peak-normalised chromaticities, so each authored triplet carries its
   // own luminance and neither is 1: unnormalised, the pair would move the
   // flux split by their DIFFERENCE, which is the figure pinned here. The
-  // eyeballed palette this replaced carried 0.390 mag of it (README.md
-  // § Population tints). The bulge's own 0.2277 is the shared population
+  // eyeballed palette this replaced carried 0.390 mag of it (README.md#population-tints-carry-hue-never-flux).
+  // The bulge's own 0.2277 is the shared population
   // constant's, pinned in ../hdr/emission/population-colour-pure.test.ts.
   it('pins what the authored palette would cost unnormalised', () => {
     const lost = (rgb: Rgb) => -2.5 * Math.log10(relativeLuminance(rgb));
@@ -243,7 +243,7 @@ describe('MilkyWay population tints', () => {
 
 // Bland-Hawthorn & Gerhard 2016 § 5.1. The thick disc is for the EXTERNAL
 // edge-on view — from Sol it is a small correction, and it is emphatically
-// not a fix for a high-latitude deficit (README.md § Density profiles).
+// not a fix for a high-latitude deficit (README.md#density-profiles).
 describe('MilkyWay vertical profile', () => {
   it('pins the thin/thick split against BHG16 § 5.1', () => {
     expect(DISC_SCALE_HEIGHT_PC).toBe(300);
@@ -257,7 +257,7 @@ describe('MilkyWay vertical profile', () => {
   // LUMINOSITY ratio at 0.12, and Mosenkov et al. 2021 measure
   // 0.71 ± 0.45 at 3.4 µm — outside their interval on the low side, where
   // their thick disc is radially longer as well. Stated rather than tuned
-  // (README.md § Density profiles), so a future session that "fixes" the
+  // (README.md#density-profiles), so a future session that "fixes" the
   // ratio into their band fails here and has to argue with the README.
   it('sits below Mosenkov 2021 on the thick/thin luminosity ratio', () => {
     const ratio =
@@ -360,7 +360,7 @@ describe('MilkyWay luminosity solve', () => {
   });
 
   // Light moved, none made or lost, to the 0.017 mag the grid's resampling
-  // leaves on the identity: calibration/README.md § Two checks.
+  // leaves on the identity: calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order.
   it('adds the band and the catalogue at the pole without the double count', () => {
     const catalogue = fluxNumber(RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole);
     const sky = -2.5 * Math.log10(fluxNumber(sbAt(0, 90)) + catalogue);
@@ -420,7 +420,7 @@ describe('MilkyWay luminosity solve', () => {
   // and the Sol sightlines barely can either, because the bulge sits behind
   // 4.6 τ_V from here. Where a mass-for-light substitution actually shows
   // is the face-on external view, which is the one the camera can reach
-  // (AGENTS.md § Camera-anywhere, any-epoch): it is the bulge/disc contrast
+  // (/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule): it is the bulge/disc contrast
   // that makes the model read as an Sbc rather than an S0.
   //
   // Edge-on is pinned alongside as the opposite extreme: the bulge sits
@@ -707,7 +707,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // resolved-surface pin, and its own level sits 3.8 stops under the
   // perception branch's anchor. The margin is measured on the Ω_px value the
   // statistic actually carries, not on the 12x-larger level the band
-  // displays at (../hdr/attachments/README.md § The unit).
+  // displays at (../hdr/attachments/README.md#the-unit).
   it('writes a statistic the adaptation cut cannot act on', () => {
     const statisticL = surfaceBrightnessLuminance(
       BASE_EPOCH_EXPOSURE,
@@ -818,7 +818,7 @@ describe('isDrawn is the whole conjunction, not the user toggle', () => {
   });
 
   // Chart mode hides the two meshes and leaves the group enabled, so that the
-  // isobar treatment has somewhere to draw (README.md § Chart mode + warp).
+  // isobar treatment has somewhere to draw (README.md#chart-mode--warp).
   // The band is the one layer of the three whose chart gate is therefore NOT
   // behind `group.visible`, and reading the group alone would price it.
   it('does not draw in chart mode, where the group stays visible', () => {

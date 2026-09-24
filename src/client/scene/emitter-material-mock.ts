@@ -1,5 +1,5 @@
 // Test double for the material seam, shared by the layer suites.
-// See README.md § The material seam.
+// See README.md#the-material-seam.
 
 import { expect } from 'vitest';
 import * as THREE from 'three';
@@ -13,7 +13,7 @@ export interface FakeEmitterMaterial extends EmitterMaterial {
   readonly touchedSlots: string[];
 }
 
-/** A surface that answers every slot name — see README.md § Files. */
+/** A surface that answers every slot name — see README.md#files. */
 export function fakeEmitterMaterial(
   material: THREE.Material = new THREE.MeshBasicMaterial(),
 ): FakeEmitterMaterial {
@@ -65,7 +65,7 @@ export function surfaceRecorder<A extends unknown[] = []>(
   };
 }
 
-/** README.md § The material seam — the `touchedSlots` guard. */
+/** README.md#the-material-seam — the `touchedSlots` guard. */
 export function expectSlotsServedBy(
   touched: readonly string[],
   real: EmitterMaterial,

@@ -1,5 +1,5 @@
 // LOD thresholds for the binary-orbit field. See
-// src/client/binaries/README.md § Walk-active LOD.
+// /src/client/binaries/README.md#walk-active-lod.
 
 /** Maximum primary-camera distance (pc) at which a relation participates
  *  in per-frame Kepler evaluation. At 1 kpc, a 50 AU orbital separation

@@ -1,6 +1,6 @@
 // The naming parity ledger's codec and its record-identity key. Pure, so
 // the generator and the test read one implementation.
-// See README.md § The parity ledger.
+// See README.md#the-parity-ledger.
 
 export interface RowIndexMap {
   byGaia: Record<string, number>;

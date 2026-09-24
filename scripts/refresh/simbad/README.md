@@ -69,7 +69,7 @@ of the cohort only where that holds **and** its identity is first-hand too: a
 **Both halves, because the manifest carries value provenance for neither.**
 The predicate this replaced read the spine's `pos_src` / `dist_src` /
 `mag_src` / `rv_src` / `pm_src` marks. Nothing in
-`../../catalog/membership/README.md` § Columns restates them — the record
+[Columns](../../catalog/membership/README.md#columns) restates them — the record
 build resolves each cascade's tier itself — so an identity-only rebase drops
 the exact class § 5 retires. Measured: of the 11,050 spine rows the old
 predicate selected, an identity-only predicate covers 5,799 and loses 5,238,
@@ -92,7 +92,7 @@ keying on the raw returned id silently loses those rows.
 
 ## An unbibcoded value never reaches the file
 
-`docs/catalog-driver.md` § 5 makes the bibcode the source and SIMBAD only
+[§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) makes the bibcode the source and SIMBAD only
 the index that found it, so a value SIMBAD publishes without one is an
 orphan: nothing to cite, nothing to re-pull, nothing a cascade may
 defend. `write_simbad_tsv` therefore drops the whole quantity — value,
@@ -119,7 +119,7 @@ A row's primary key is the first namespace it carries, so a populated
 therefore runs a second ladder over the source_ids the Gaia namespace did
 not reach, retrying each on the record's own HIP, then TYC, then GJ. Each
 rung asks only for what the rungs above left unbound, and the order is the
-one `docs/catalog-driver.md` § 5 gives the no-Gaia tier — both read it off
+one [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) gives the no-Gaia tier — both read it off
 `WIDENING_LADDER`, and `membership_request_keys` partitions the no-Gaia rows by
 iterating that same tuple, so the tier and the widening cannot drift apart.
 

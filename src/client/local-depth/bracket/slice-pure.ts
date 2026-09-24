@@ -55,7 +55,7 @@ export function reversedDepthQuantumPc(zPc: number, farPc: number): number {
 
 /** The members' whole [near, far] bracket — margins and floors applied,
  *  no partition. The reversed-z Depth32Float path renders this once
- *  (K = 1, README.md § Decision); the sliced path partitions it below.
+ *  (K = 1, README.md#decision--keep-the-pass-collapse-to-k--1); the sliced path partitions it below.
  *  Empty input → null (the pass skips the frame). */
 export function computeBracket(spheres: readonly MemberSphere[]): DepthSlice | null {
   if (spheres.length === 0) return null;

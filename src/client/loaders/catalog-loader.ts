@@ -33,7 +33,7 @@ export interface Catalog {
   /** Records decoded so far — a prefix of `count`, growing as transport
    *  chunks land. Anything walking the catalogue during load bounds itself
    *  here; past it the arrays hold zeros, and a zero position is Sol's own.
-   *  ./README.md § Progressive catalog load. */
+   *  ./README.md#progressive-catalog-load. */
   loadedCount: number;
   positions: Float32Array;       // length = count * 3
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
@@ -72,7 +72,7 @@ export interface Catalog {
   pulsRho: Float32Array;         // length = count
   pulsColorSwing: Float32Array;  // length = count
   hip: Uint32Array;              // length = count, 0 = no HIP
-  // Frozen Stellata ID per record (docs/sid.md § 7). 0 = NO_SID, which
+  // Frozen Stellata ID per record (/docs/sid.md#7-storage--sid-in-every-artifact). 0 = NO_SID, which
   // never ships (the build hard-fails on unallocated records) but is
   // still guarded at consumers so a hand-built artifact degrades.
   sid: Uint32Array;              // length = count
@@ -98,7 +98,7 @@ export interface Catalog {
   solIndex: number;              // -1 if not found
   constellations: Constellation[];
   // Retired sid → successor sid, from the manifest's sidSuccessors field
-  // (docs/sid.md § 9.4). Empty until a merge-type retirement ships. Fed to
+  // (/docs/sid.md#94-migration-semantics--exact-table). Empty until a merge-type retirement ships. Fed to
   // the SID resolver so retired wire sids resolve to their successor.
   sidSuccessors: ReadonlyMap<number, number>;
   /** Called after each chunk's records decode, with the window that just
@@ -122,7 +122,7 @@ export interface LoadProgress {
 
 /** Resolves once the FIRST transport chunk has decoded, with the rest still
  *  in flight — boot paints off the returned prefix and the catalogue fills
- *  behind it (`./README.md` § Progressive catalog load). Await
+ *  behind it (`./README.md#progressive-catalog-load`). Await
  *  `catalog.whenComplete` for the whole population. */
 export async function loadCatalog(
   manifestUrl: string,
@@ -171,7 +171,7 @@ export async function loadCatalog(
   };
   // On to the first chunk carrying a whole record — with a small first
   // chunk that is not chunk 0, and boot needs a star to paint. Inline:
-  // ./README.md § The catalog-decode worker, the pre-paint windows.
+  // ./README.md#the-catalog-decode-worker the pre-paint windows.
   for (let i = 0; i < next; i++) await absorbWith(i, decodeInline);
   while (catalog.loadedCount === 0 && next < fetches.length) {
     await fetches[next];
@@ -244,7 +244,7 @@ function beginCatalog(
   const offset = recordsOffset(header);
 
   const columns = allocateCatalogColumns(count);
-  // ./README.md § Progressive catalog load, the undecoded-tail list.
+  // ./README.md#progressive-catalog-load the undecoded-tail list.
   columns.companion.fill(-1);
 
   const names = new Map<number, string>();

@@ -1,6 +1,6 @@
 // Guard over the committed data/athyg/inherited-spine.tsv. The spine is
 // frozen, so nothing regenerates it in CI — these assertions are what keeps
-// the artifact honest instead. See README.md § Why a guard, not a rebuild.
+// the artifact honest instead. See README.md#why-a-guard-not-a-rebuild.
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';

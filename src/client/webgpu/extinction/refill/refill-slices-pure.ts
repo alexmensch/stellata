@@ -1,8 +1,8 @@
 // Which quarter of the extinction refill worklist a frame marches, and the
 // cursor that owes the rest. README.md.
 
-/** Moving this moves the staleness bound — see README.md § The staleness
- *  this buys. */
+/** Moving this moves the staleness bound — see README.md#the-staleness-this-buys-and-what-sets-refill_slices.
+ * */
 export const REFILL_SLICES = 4;
 
 /** CPU mirror of the kernel's `self % REFILL_SLICES`. */
@@ -33,7 +33,7 @@ export interface RefillPlan {
 }
 
 /** A request arms the producer for every class again; each armed frame
- *  builds one and the next frame marches it — README.md § The cursor. */
+ *  builds one and the next frame marches it — README.md#the-cursor-and-why-a-request-never-stalls-it. */
 export function planRefill(
   cursor: RefillCursor, wanted: boolean, slices: number = REFILL_SLICES,
 ): RefillPlan {

@@ -1,6 +1,6 @@
 // Where the instrument's parts sit: the mini-renderer's view geometry, the
 // sphere's silhouette that follows from it, and the design box the SVG chrome
-// is drawn in. README.md § Rendering, § Case chrome.
+// is drawn in. README.md#rendering § Case chrome.
 
 /** The mini-renderer's view: a unit sphere at `BALL_VIEW_DIST` under a
  *  vertical `BALL_VIEW_FOV_DEG`. `attitude-ball.ts` builds its camera from

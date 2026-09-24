@@ -52,7 +52,7 @@ describe('gaiaBMinusV', () => {
 
   // Solar BP−RP is 0.82 (Casagrande & VandenBerg 2018); the true solar B−V is
   // 0.65, so this pins both the sign of the difference and the ~0.05 mag
-  // offset the |Δci| distribution in README.md § The ci cascade reports.
+  // offset the |Δci| distribution in README.md#the-ci-cascade reports.
   it('lands near the solar B−V at the solar colour', () => {
     const bv = gaiaBMinusV(atColour(0.82))!;
     expect(bv).toBeGreaterThan(0.55);
@@ -94,8 +94,8 @@ describe('gspcBMinusV', () => {
 
   it('carries the measured colour bound, which is NOT the archive flag bound', () => {
     // 3.0 is where |Δ| against printed I/239 B−V breaks (0.043 → 0.135); the
-    // flag's own bound is 2.6. README.md § Why the GSPC tier does not gate on
-    // the flag carries the distribution.
+    // flag's own bound is 2.6. README.md#why-the-gspc-tier-does-not-gate-on-the-flag
+    // carries the distribution.
     expect(GSPC_BP_RP_MAX).toBe(3.0);
   });
 
@@ -112,8 +112,7 @@ describe('gspcBMinusV', () => {
 
   it('keeps a colour blue of the flag box, which is bounded on one side only', () => {
     // The nine catalogue rows blue of −0.5 all reach printed first, so a blue
-    // gate would only ever cost a measured colour — README.md § Why the GSPC
-    // tier does not gate on the flag.
+    // gate would only ever cost a measured colour — README.md#why-the-gspc-tier-does-not-gate-on-the-flag.
     expect(gspcBMinusV(atColour(-1.0), synthetic(-0.33))).toBe(-0.33);
   });
 

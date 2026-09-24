@@ -1,6 +1,6 @@
 // Loads the binding gate's evidence tables — Gaia G per source, the V
 // cascade's three printed tiers, SIMBAD's WDS component cross-IDs.
-// See README.md § The gate's evidence has to be pulled.
+// See README.md#the-gates-evidence-has-to-be-pulled.
 
 import { resolve } from 'node:path';
 

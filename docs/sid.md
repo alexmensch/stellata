@@ -115,8 +115,7 @@ is always stored.**
 A designation carried by more than one catalog record (an HD/HR/GL
 number covering both members of an AT-HYG component pair) names a
 catalogue granularity, not one object: it joins no class and can key
-no ledger row. Policy detail in `scripts/sid/README.md` § Ambiguous
-designations.
+no ledger row. Policy detail in [Ambiguous designations](/scripts/sid/README.md#ambiguous-designations-are-dropped-not-assigned).
 
 ### 4.2 Canonical key — stability-first
 
@@ -364,7 +363,7 @@ is structural, then procedural:
   § 4.2) has **zero SID churn by construction** — the SID is pinned
   by the stable key; a DR bump merely attaches the new `gaia_dr4:`
   designation via the recomputed intra-release cross-walks
-  (`scripts/refresh/README.md` § Refreshing data when DR4 lands).
+  ([Refreshing data when DR4 lands](/scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands)).
 - **Procedural (the 5,085 `gaia_*`-keyed rows, 1.56%):** carried
   forward via Gaia's official neighbourhood cross-match table for the
   transition (DR2→DR3: `gaiadr3.dr2_neighbourhood`; DPAC publishes
@@ -374,7 +373,7 @@ is structural, then procedural:
 
 Per DR bump. The classifier + risk-set exporter are B1 deliverables;
 running them is a refresh-time task alongside
-`scripts/refresh/README.md` § Refreshing data when DR4 lands.
+[Refreshing data when DR4 lands](/scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands).
 
 1. Extract the at-risk canonical keys: the ledger rows whose key
    namespace is `gaia_*`.

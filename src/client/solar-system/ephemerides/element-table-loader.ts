@@ -1,5 +1,5 @@
 // Fetches the nine planet element tables from public/ephemerides/ and installs
-// them into the ephemeris. See README.md § Horizons element tables.
+// them into the ephemeris. See README.md#horizons-element-tables.
 
 import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
 import { planetElementFilename } from '../../../../scripts/ephemerides/sync-ephemerides-pure';

@@ -1,6 +1,6 @@
 // The backend-neutral half of a star local mirror: the slot geometry over
 // the main star geometry, its per-frame copy, and the three in-pass draws.
-// See README.md § Mirror draw.
+// See README.md#mirror-draw.
 
 import * as THREE from 'three';
 
@@ -40,7 +40,7 @@ interface MirrorAttr {
 
 /**
  * A MIRROR_CAPACITY-slot copy of the star geometry, re-filled from the
- * live source arrays each frame. README.md § Mirror draw.
+ * live source arrays each frame. README.md#mirror-draw.
  */
 export class MirrorSlots {
   readonly geometry: THREE.InstancedBufferGeometry;

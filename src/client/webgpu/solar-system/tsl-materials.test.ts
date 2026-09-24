@@ -118,7 +118,7 @@ describe('the solar-system material seam', () => {
       expect(Object.keys(built.uniforms)).toEqual([]);
     });
 
-    // See ../hdr/README.md § The gate becomes the output struct.
+    // See ../hdr/README.md#the-gate-becomes-the-output-struct.
     it('takes the MRT output swap and severs it on dispose', () => {
       let registered = 0;
       const layers: { setMrtOutputs(on: boolean): void }[] = [];

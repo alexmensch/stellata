@@ -1,6 +1,6 @@
 // Motion-aware clock cadence: the per-frame rate report every layer
 // files, and how long the render gate may idle given it. See
-// README.md § The clock cadence.
+// README.md#the-clock-cadence.
 
 /** On-screen motion smaller than this many DEVICE pixels between two
  *  rendered frames is below the step a viewer can resolve. Device, not
@@ -16,8 +16,8 @@ export const CADENCE_VISIBLE_STEP_DEVICE_PX = 0.5;
  *  forgets shows up as a visible FREEZE, not as wasted frames. Scheduling
  *  at half the visible step costs 2x the frames and buys a 2x error
  *  margin on every term at once — and it is what makes the handoff to
- *  `CADENCE_CAP_SIM_S` clean (README.md § Emerging from behind
- *  something). */
+ *  `CADENCE_CAP_SIM_S` clean (README.md#emerging-from-behind-something).
+ * */
 export const CADENCE_SAFETY_FACTOR = 2;
 
 /** The scheduling threshold: how far anything drawn may travel, in device
@@ -35,7 +35,7 @@ export const CADENCE_MOTION_THRESHOLD_DEVICE_PX =
  *  frame could show. `RenderGate` compares poses for exact equality, so
  *  any write at all costs every subsequent tick a frame; this is how a
  *  per-frame camera writer stays inside the cadence instead of defeating
- *  it (`../README.md` § The focal ride).
+ *  it (`../README.md#the-focal-ride`).
  *
  *  A degenerate viewport answers 0 — ride every step — because the safe
  *  failure here is a frame too many, not an instrument that never moves. */
@@ -76,8 +76,7 @@ export const CADENCE_CAP_SIM_S = 30;
  *  the gate's conversion is the only place a threshold or a pixel ratio
  *  appears. Neither is a bound over a population: a star too faint to
  *  see, a body behind its parent, and a pair whose separation is
- *  sub-pixel all contribute nothing (README.md § Only ink on screen
- *  counts).
+ *  sub-pixel all contribute nothing (README.md#only-ink-on-screen-counts).
  *
  *  The two OBSERVED channels are the audit
  *  (`cadence-trust-pure.ts`) — measured, never derived from the rate

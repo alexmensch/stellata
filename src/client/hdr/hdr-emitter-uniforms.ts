@@ -1,6 +1,6 @@
-// The uniform slots every physical emitter binds by reference, so one
-// write reaches all of them, and the attachment contract their target
-// carries. See README.md §§ Unit, Three attachments.
+// The uniform slots every physical emitter binds by reference, so one write reaches all of them, and
+// the attachment contract their target carries. See README.md#unit--what-an-emitting-layer-writes and
+// README.md#three-attachments-and-a-per-draw-gate-on-two-of-them.
 
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
@@ -10,8 +10,8 @@ import { pixelSolidAngleArcsec2 } from './emission/emission-pure';
 import { BASE_EPOCH_EXPOSURE, DEFAULT_SUMMATION_ARCSEC2 } from './exposure/exposure-epoch';
 
 /** `uHdrTarget` is the branch: 0 means the fragment lands straight on the
- *  canvas and the emitter applies the operator itself (README.md § The
- *  inline operator). */
+ *  canvas and the emitter applies the operator itself (README.md#the-inline-operator--chart-modes-path).
+ * */
 export interface HdrEmitterUniforms {
   uHdrTarget: THREE.IUniform<number>;
   uWhitePoint: THREE.IUniform<number>;
@@ -36,8 +36,8 @@ export function pickHdrEmitterUniforms(src: HdrEmitterUniforms): HdrEmitterUnifo
 }
 
 /** Seeds only: the pipeline's constructor rewrites the operator slots
- *  before the first frame, and the writers of the rest are README.md
- *  §§ Unit, Exposure. */
+ *  before the first frame, and the writers of the rest are README.md#unit--what-an-emitting-layer-writes
+ *  and README.md#exposure--two-slots-this-class-does-not-write. */
 export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
   return {
     uHdrTarget: { value: 0 },
@@ -54,7 +54,7 @@ export function makeHdrEmitterUniforms(): HdrEmitterUniforms {
 export const HDR_ATTACHMENT_COUNT = 3;
 
 /** Per-attachment format and filter state the seam's target carries
- *  (README.md § Three attachments). Takes fewer than
+ *  (README.md#three-attachments-and-a-per-draw-gate-on-two-of-them). Takes fewer than
  *  `HDR_ATTACHMENT_COUNT` textures: the extra-attachments frame-cost lever
  *  rebuilds the target with attachment 0 alone. */
 export function applyHdrAttachmentState(textures: readonly THREE.Texture[]): void {
@@ -62,7 +62,7 @@ export function applyHdrAttachmentState(textures: readonly THREE.Texture[]): voi
   if (textures.length > 1) {
     // Half attachment 0's memory, and the reduction reads its missing
     // alpha as 1 — which is exactly the level-0 weight
-    // (exposure/reduction/README.md § The chain).
+    // (exposure/reduction/README.md#the-chain).
     textures[1].format = THREE.RGFormat;
     textures[1].colorSpace = THREE.LinearSRGBColorSpace;
   }

@@ -1,6 +1,6 @@
 // Heuristic for the mobile / small-screen advisory splash — no true
 // keyboard-absent signal exists, so approximate from viewport + touch.
-// See src/client/modals/README.md § Mobile advisory.
+// See /src/client/modals/README.md#mobile-advisory.
 
 /** Viewport width (px) below which the advisory is a candidate — roughly
  *  the iPad-mini boundary. */

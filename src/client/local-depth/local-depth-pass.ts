@@ -16,8 +16,8 @@ import {
  *  together at boot — `boot-webgpu` refuses a renderer that dropped it
  *  and `WebGpuHdrPipeline` requests Depth32Float behind it. Reversed-z
  *  over FIXED-POINT depth would take this branch and put the bracket
- *  ~262 AU out at Neptune's ring (bracket/README.md § Precision
- *  analysis), so a future backend must re-establish the pairing, not
+ *  ~262 AU out at Neptune's ring (bracket/README.md#precision-analysis),
+ * so a future backend must re-establish the pairing, not
  *  just set the flag. */
 function rendersFloat32Depth(renderer: StellataRenderer): boolean {
   return 'reversedDepthBuffer' in renderer && renderer.reversedDepthBuffer === true;
@@ -66,7 +66,7 @@ export class LocalDepthPass {
    *  once per depth slice, far→near, clearing depth (never colour)
    *  between slices. Reversed-z Depth32Float (`reversedDepthBuffer`,
    *  the WebGPU boot) is ratio-free, so that path renders the whole
-   *  bracket as one slice — bracket/README.md § Decision. No-op when no
+   *  bracket as one slice — bracket/README.md#decision--keep-the-pass-collapse-to-k--1. No-op when no
    *  cluster reports members, save for `extraEmptyPasses`, which issue
    *  whatever the clusters report. Restores camera near/far and renderer
    *  autoClear before returning. */

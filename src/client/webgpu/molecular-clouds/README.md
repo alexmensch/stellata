@@ -9,7 +9,7 @@ parent's, and that is where it is argued.
 **Both are materials, not a layer.** The cloud layer owns all of its CPU
 logic — geometry, per-cloud transforms, declutter and
 chart gating, picking, labels, focus geometry — and takes its surfaces
-through `../../molecular-clouds/README.md` § The material seam.
+through [The material seam](../../molecular-clouds/README.md#the-material-seam).
 
 ## Files in this area
 
@@ -41,12 +41,12 @@ that reads them is a different graph.
 
 ## The absorption writes attachment 2, and that IS the gate
 
-The fragment's output struct is the gate (`../hdr/README.md` § The gate
-becomes the output struct), so the **same alpha-only texel** is returned
+The fragment's output struct is the gate ([The gate becomes the output struct](../hdr/README.md#the-gate-becomes-the-output-struct)),
+so the **same alpha-only texel** is returned
 for `colour` and `diffuse`. Drop the second and the clouds keep drawing,
 keep sorting correctly, and extinct nothing — no error, no missing draw,
 just no dark rift. That is the absorber role
-(`../../hdr/attachments/README.md` § The roles).
+([The roles](../../hdr/attachments/README.md#the-roles)).
 
 The statistic takes `vec4(0)`. Under this material's premultiplied-over
 blend a zero source leaves the destination untouched — and an absorber has
@@ -55,8 +55,8 @@ no claim on the exposure statistic anyway.
 **The blend is spelled out, and `premultipliedAlpha` is the one flag this
 material may not set.** It would wrap the fragment output node and
 silently demote the three-member struct to one attachment, failing the
-WGSL compile on `m0` (`../hdr/README.md` § Two material flags silently
-demote the struct — the failure this layer shipped with). So the blend it
+WGSL compile on `m0` ([Two material flags silently demote the struct](../hdr/README.md#two-material-flags-silently-demote-the-struct)
+— the failure this layer shipped with). So the blend it
 selects is written out instead: `CustomBlending` with `OneFactor` /
 `OneMinusSrcAlphaFactor` on both colour and alpha. The texel is
 `vec4(vec3(0), alpha)`, so the shader-side premultiply the flag also implies
@@ -73,7 +73,7 @@ is arithmetically a no-op — only the factors were ever load-bearing.
 - **A jump out of a concise arrow is emitted twice.** The saturation
   `break` is braced (`() => { Break(); }`), and the analytic tier's
   `continue` is expressed as the branch it guarded instead
-  (`../tsl/README.md` § TSL test pattern).
+  ([TSL test pattern](../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers)).
 - **The loop bound is a node, not a constant.** The step count is
   screen-adaptive and capped by the `uSteps` dev lever, so `Loop` takes a
   computed `end`. It is clamped in float and truncated once, which keeps
@@ -134,7 +134,7 @@ coherent across the whole draw, and the one kind of branch WGSL still
 allows `dFdx` / `dFdy` inside. Each arm carries its own `Discard`.
 
 The camera-distance attenuation rides the realistic arm only
-(`../../fresnel-shell/README.md` § Camera-distance attenuation) — that arm
+([Camera-distance attenuation](../../fresnel-shell/README.md#camera-distance-attenuation)) — that arm
 being the only path to the shared chunk is what excludes chart mode.
 
 The realistic arm discards at `rimAlpha <= 0`. Under additive blending a

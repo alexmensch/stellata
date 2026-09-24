@@ -68,8 +68,7 @@ rather than `submit` whenever it exists. The summed duration of that
 frame's **compute** passes —
 the star compaction, the extinction prepass when it recomputes — lands as
 `gpu.compute`, a row of its own that is never folded into `gpu.frame`
-(`../../debug/gpu-timing/README.md` § `gpu.frame` is the only row that
-prices anything). Subscribers (the HUD, a `debug.priceFrame()` sweep, the
+([`gpu.frame` is the only row that prices anything](../../debug/gpu-timing/README.md#gpuframe-is-the-only-row-that-prices-anything)). Subscribers (the HUD, a `debug.priceFrame()` sweep, the
 perf runner's dwell) come and go through
 `../../debug/gpu-timing/gpu-frame-samples.ts` while the resolve itself is
 gated on nothing but the probe's verdict.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Cast-shadow half of surface relief: per-texel horizon elevation in
 HORIZON_AZIMUTHS directions, packed into two RGBA maps (rationale in
-data/textures/relief/README.md § Cast shadows)."""
+/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps)."""
 
 import numpy as np
 
@@ -15,7 +15,7 @@ HORIZON_AZIMUTHS = 8
 # bilinear sample of the DEM; at exactly 2 the bilinear sample at a cell
 # centre IS that box average, to 2e-10 m. At any other ratio the observer
 # smooths against sharp neighbours and the stored skyline biases upward in
-# rough terrain (data/textures/relief/README.md § Cast shadows).
+# rough terrain (/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps).
 HORIZON_DEM_RATIO = 2
 
 

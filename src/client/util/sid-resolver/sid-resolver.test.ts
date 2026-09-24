@@ -41,7 +41,7 @@ describe('SidResolver', () => {
     });
   });
 
-  describe('successor following (docs/sid.md § 9.4)', () => {
+  describe('successor following (/docs/sid.md#94-migration-semantics--exact-table)', () => {
     it('resolves a retired sid to its successor', () => {
       const r = new SidResolver(['star'], new Map([[99, 10]]));
       r.attach('star', arrayDomain([10, 20]));
@@ -83,7 +83,7 @@ describe('SidResolver', () => {
     });
   });
 
-  describe('shell domain round-trip (docs/sid.md § 8)', () => {
+  describe('shell domain round-trip (/docs/sid.md#8-runtime-resolver-b4)', () => {
     it('resolves a shell sid to its SHELL_KEYS index and sidOf reverses', () => {
       // Fabricated pins in SHELL_KEYS order (local_bubble, heliopause) —
       // exercises the wiring independent of the frozen ledger values.

@@ -129,7 +129,7 @@ describe('no-adapter — the browser HAS WebGPU, so never tell it to install one
   });
 });
 
-// see README.md § UA picks the wording, never the verdict
+// see README.md#ua-picks-the-wording-never-the-verdict
 describe('Firefox — Chrome on every platform and both verdicts', () => {
   const FIREFOX_UAS = [MAC_FIREFOX, LINUX_FIREFOX, ANDROID_FIREFOX, WIN_FIREFOX];
 

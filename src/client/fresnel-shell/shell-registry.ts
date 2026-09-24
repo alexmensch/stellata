@@ -1,5 +1,5 @@
 // Instance-registration seam for boundary-shell focus targets. See
-// ./README.md § Boundary shells as focus targets.
+// ./README.md#boundary-shells-as-focus-targets.
 
 import * as THREE from 'three';
 

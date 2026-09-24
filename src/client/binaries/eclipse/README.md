@@ -26,9 +26,9 @@ src/client/binaries/eclipse/
 ```
 
 Two further consumers of the pure half. The planet field's true-eclipse
-dim (`../../solar-system/planets/eclipses/README.md` § True-eclipse dim) reuses all
+dim ([True-eclipse dim](../../solar-system/planets/eclipses/README.md#true-eclipse-dim)) reuses all
 of it for planet-behind-host-disc occlusion; the exposure-adaptation
-statistic (`../../hdr/exposure/README.md` § Adaptation) takes
+statistic ([Adaptation](../../hdr/exposure/README.md#adaptation--the-frame-measures-itself)) takes
 `circleCircleLensArea` alone, in **screen pixels** rather than angular
 units, for its nearer-disc occlusion pass, plus `dimBlendFactor` for the
 slew limit on the applied exposure cut — the same "smooth a per-frame
@@ -88,14 +88,14 @@ frames that write nothing skip the attribute re-upload entirely.
 #### Partial re-upload
 
 `iEclipseDim` flushes through a `DirtyItemUploader`
-(`../../util/README.md` § attribute-upload) over `orbitMemberSlots` —
+([attribute-upload](../../util/README.md#attribute-uploadts)) over `orbitMemberSlots` —
 every member of a cached relation, the only slots the dim walk can
 write. The uploader diffs those slots and uploads ranges over the ones
 whose float32 bits moved, so an eclipse frame costs tens of bytes
 rather than the whole per-instance buffer. On WebGPU the ranges are
 forwarded onto the scalar's storage table as they are; the whole-buffer
 figure, and which writer reaches that path, are
-`../../webgpu/star/README.md` § Star tables.
+[Star tables](../../webgpu/star/README.md#star-tables--every-per-star-field-is-a-storage-read).
 
 The **decay tail** needs no bookkeeping of its own: a slot blending
 back toward 1.0 keeps differing from the uploader's shadow for as many
@@ -152,7 +152,7 @@ three star materials are separate compilations of one vertex stage and
 their discards form a partition, so a term only one of them applies can
 tier the same star two ways and have every pass discard it. The split
 routes on an undimmed magnitude carried alongside `appMag`
-(`star-pipeline/README.md` § Star rendering); the dim still shrinks the
+([Star rendering](/src/client/star-pipeline/README.md#star-rendering-instanced-quads-three-passes)); the dim still shrinks the
 quad and fades the star, it just cannot re-tier it.
 
 A resolved pair's overlapping disc cores order **geometrically in the

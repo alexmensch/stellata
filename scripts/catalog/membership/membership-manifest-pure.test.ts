@@ -623,7 +623,7 @@ describe('buildMembership — the additions', () => {
 
   // IV/25 resolving one HD onto two Tycho-2 stars, neither on the spine: the
   // second is a component of the first, never a second record answering to the
-  // same designation — which would key no SID for either (docs/sid.md § 4.1).
+  // same designation — which would key no SID for either (/docs/sid.md#41-same-as-equivalence-graph).
   it('admits one record per designation when two groups arrive with the same HD', () => {
     expect(byTyc.has('2-6-1')).toBe(false);
     expect(result.ledger).toContainEqual({

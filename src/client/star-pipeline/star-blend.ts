@@ -4,8 +4,7 @@
 import * as THREE from 'three';
 
 // No depth write: the core mask already stamped every core, and a halo
-// must not write at all — ../webgpu/star/README.md § The disc draw writes
-// no depth.
+// must not write at all — ../webgpu/star/README.md#the-disc-draw-writes-no-depth.
 export function applyDiscBlendDefaults(m: THREE.Material) {
   m.transparent = true;
   m.blending = THREE.CustomBlending;

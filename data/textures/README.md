@@ -40,10 +40,10 @@ gitignored mirror.
   that is not a power of two (Venus 1800, Saturn 2880, Jupiter 3601,
   Titan 4040, Pluto 5926, Mimas 6356). Nothing is ever upscaled and no
   detail the master has is discarded. Rungs and the per-body rationale:
-  `scripts/textures/README.md` § Size ladder.
+  [Size ladder](/scripts/textures/README.md#size-ladder).
 - Lazy-loaded on close approach; the lazy-load unit is one body at one
   rung, chosen from the live viewport
-  (`src/client/solar-system/planets/README.md` § Texture tier selection).
+  ([Texture tier selection](/src/client/solar-system/planets/README.md#texture-tier-selection)).
 - **Every rung of a body shares one mean luminance**, measured at build
   from the top rung and shipped in `texture-ladder-generated.ts`. The
   renderer divides it out of `uSurfaceLuminance` (§ Colour fidelity),
@@ -122,7 +122,7 @@ calibrates every map with a published disc-integrated colour to a
 
 - **Reference white is the solar spectrum**, not D65 — a body
   reflecting sunlight neutrally renders R = G = B. Decision record in
-  `docs/science-solar-system.md` § Naked-eye colour calibration.
+  [Naked-eye colour calibration](/docs/science-solar-system.md#naked-eye-colour-calibration--reference-white-is-the-solar).
 - Each body's target chromaticity is its published **B−V / V−R**,
   expressed as flux ratios against the Sun's own indices and mapped
   B→blue, V→green, Rc→red. Planets take Mallama, Krobusek & Pavlov 2017
@@ -259,7 +259,7 @@ only run the pure-copy sync step, so Pillow is never a build
 dependency. To replace a source map, drop the new file into `src/`,
 update `src/README.md` + `BODIES` in the build script, rerun, and
 commit both layers. Replacing a **DEM** additionally goes through
-`scripts/textures/reduce_dem.py` — `src/README.md` § Refresh recipe.
+`scripts/textures/reduce_dem.py` — [Refresh recipe](src/README.md#refresh-recipe).
 
 ## Credits
 
@@ -267,4 +267,4 @@ NASA/USGS imagery is public domain. The Venus, Saturn, and Neptune
 maps and the ring profiles were created by **Björn Jónsson**
 (https://bjj.mmedia.is/ — used with attribution per his usage terms).
 Full per-file provenance in `src/README.md`; summary rows in
-`SCIENCE.md` § Data sources.
+[Data sources](/SCIENCE.md#data-sources).

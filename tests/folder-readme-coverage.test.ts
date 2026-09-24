@@ -1,5 +1,5 @@
 // Enforces the rule "every folder has a README." A folder without a
-// README.md is a bug — see AGENTS.md § Folder READMEs.
+// README.md is a bug — see /AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit.
 
 import { describe, it } from 'vitest';
 import { readdirSync, statSync, existsSync } from 'node:fs';
@@ -15,7 +15,7 @@ const EXCLUDED_DIRS = new Set([
 ]);
 
 /** A batched refresh's resume cache (`<output>.tsv.ckpt/`, gitignored, removed
- *  once every batch lands — scripts/refresh/README.md § Resuming a long pull).
+ *  once every batch lands — /scripts/refresh/README.md#resuming-a-long-pull).
  *  It exists for hours during a normal pull, so matching it by name would mean
  *  this suite fails for anyone who runs the tests meanwhile. */
 const EXCLUDED_SUFFIXES = ['.ckpt'];
@@ -50,7 +50,7 @@ function failureMessage(missing: string[]): string {
     '  - Documents invariants, sentinels, pins, override mechanisms,',
     '    data-flow contracts that the code alone cannot tell a reader',
     '',
-    'See AGENTS.md § Folder READMEs for the full rule + read/update',
+    'See /AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit for the full rule + read/update',
     'protocol.',
     '',
     'If a folder is genuinely contentless (e.g. a generated artifact',

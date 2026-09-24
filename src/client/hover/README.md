@@ -59,7 +59,7 @@ lives entirely under `src/client/hover/`:
   **`onPickImminent` fires a dwell ahead of the pick, and that gap is the
   point.** The star pick gates on per-star dust extinction, which on
   WebGPU lives in a storage buffer no synchronous read reaches
-  (`../webgpu/extinction/README.md` § Cold reads) — so the engine
+  ([Cold reads](../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity)) — so the engine
   announces on `pointermove` and on `pointerdown` (a tap reaches the
   click pick having fired no move at all), and the 280 ms delay pays for
   the copy. A drag announces nothing: hover is latched off for its
@@ -173,8 +173,8 @@ A quad that survives every discard can still resolve to 0/255 — the soft
 taper reaches zero at the cutoff, and the faint-end toe blacks a source
 out ~0.2 mag before it. For anything on the HDR unit the honest question
 is whether its brightest pixel survives 8-bit quantisation, which is
-`emitterPutsInkOnScreen` (`../hdr/exposure/README.md` § What "visible"
-means to a pick path) and not a magnitude comparison. Emissive gates
+`emitterPutsInkOnScreen` ([What "visible" means](../hdr/exposure/README.md#what-visible-means-and-when-an-emitter-may-be-skipped)
+to a pick path) and not a magnitude comparison. Emissive gates
 must also read the terms the shader applies and a CPU magnitude does
 not: dust extinction (the catalog is stored de-extincted, so the
 intrinsic value is always *brighter* than what renders) and the
@@ -220,7 +220,7 @@ inside the layer.
   `rimGroup.visible`, written by the same `update` from the
   `molecularCloudEllipsoids` permit. The absorption raymarch paints no
   mark of its own, so the rim/outline is both the depiction and the
-  pick geometry (`../molecular-clouds/README.md` § Picking + hover).
+  pick geometry ([Picking + hover](../molecular-clouds/README.md#picking--hover)).
 - For deep-space probes: the probe kind module's hover pick
   (`../solar-system/probes/probe-module.ts`) gates on the marker
   field's own per-frame `visible` verdict — the same record the glyph's
@@ -299,7 +299,7 @@ mechanisms; reuse the existing one rather than rolling a new pickbox:
   `MolecularClouds.pick`) — naturally hits the whole rim-shell
   silhouette. The raycast is the enclosure test itself, so the candidate
   sets `enclosed` and its radius reports size alone
-  (`../molecular-clouds/README.md` § Picking + hover).
+  ([Picking + hover](../molecular-clouds/README.md#picking--hover)).
 - **Three.js raycast against the rendered mesh** (boundary shells too,
   via the shared `pickShellSilhouette` helper — each shell's
   `ShellPickSurface` hands over the mesh it draws). A projected

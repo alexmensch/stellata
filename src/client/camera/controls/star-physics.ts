@@ -24,8 +24,7 @@ import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 // floor solves for, and the `uMaxPhysFrac` per-star disc clamp the shader
 // applies. Hoisted here so stellata.ts seeds the uniform from the same
 // constant the orbit-floor + park-distance math reads. Above the surface
-// clamp the floor no longer reaches this fraction — README.md
-// § Manual-zoom floor.
+// clamp the floor no longer reaches this fraction — README.md#manual-zoom-floor.
 export const ZOOM_FLOOR_FRACTION = 0.9;
 
 // Subset of the star-shader uniforms read by renderedSizePx /
@@ -79,7 +78,7 @@ export interface ParkArgs {
 }
 
 // Closest the manual-zoom floor may sit to a body's centre, as a multiple
-// of its equatorial radius. README.md § Manual-zoom floor derives it.
+// of its equatorial radius. README.md#manual-zoom-floor derives it.
 export const ORBIT_FLOOR_SURFACE_MARGIN = 1.05;
 
 // The manual-zoom floor both hard kinds take: the ZOOM_FLOOR_FRACTION fill

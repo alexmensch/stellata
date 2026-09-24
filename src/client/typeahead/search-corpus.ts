@@ -1,6 +1,6 @@
 // The fuzzy corpus and the exact-match identifier maps behind star search.
 // A leaf module: no THREE, no Stellata, so the build's parity gate can
-// import it. See README.md § Star search.
+// import it. See README.md#star-search.
 
 import {
   buildAliasedIdIndex,
@@ -56,7 +56,7 @@ export function normalizeGlKey(raw: string): string {
 // Each Bayer'd star gets several fuzzy-index entries so the user can type any
 // of "Alpha Cen", "Alp Cen", "Alf Cen", "α Cen", or "Alpha Centaurus" and
 // find the star. Every spelling is DERIVED from the glyph the wire carries
-// (docs/star-naming.md § 5) — `GREEK_SPELLINGS` is the one table, shared
+// (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) — `GREEK_SPELLINGS` is the one table, shared
 // with the build's normalisers, so a convention added for either side
 // reaches both. The Latin overflow series (p Eri, A Aqr) has no ASCII
 // alternative and emits the letter alone.
@@ -135,7 +135,7 @@ export function buildComponentLabels(
 
 /** The constellation a designation on this entry is NAMED for, which is
  *  what every derived label is built against — byte 34 is only where the
- *  star sits (`scripts/catalog/record/README.md` § Search index). Resolved per
+ *  star sits (`/scripts/catalog/record/README.md#search-index-publicsearch-indexjson`). Resolved per
  *  entry, so a component's aliases are built against its ANCHOR's, the
  *  same source the display-name composer takes the base from. */
 function designationCon(
@@ -169,7 +169,7 @@ export interface SearchIndex {
 export function buildSearchIndex(
   raw: SearchEntry[],
   constellations: { code: string; name: string }[],
-  /** `./README.md` § The search-index worker. */
+  /** `./README.md#the-search-index-worker`. */
   precomposed?: ReturnType<typeof displayNamesFromSearchIndex>,
 ): SearchIndex {
   const hipMap = buildAliasedIdIndex(raw, (e) => e.hip);
@@ -188,7 +188,7 @@ export function buildSearchIndex(
   for (const entry of raw) byIndex.set(entry.i, entry);
 
   // The composer's two relational rules need every entry in hand
-  // (docs/star-naming.md § 6).
+  // (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   const composed = precomposed ?? displayNamesFromSearchIndex(raw, constellations);
 
   const addFlam = (key: string, e: FuzzyEntry) => {

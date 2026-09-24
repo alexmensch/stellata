@@ -1,6 +1,6 @@
 // What each mode does to a page that has already booted and settled. The
 // browser and scenario lifecycle is run.ts; every page.evaluate is
-// page-protocol.ts. README.md § What a run does.
+// page-protocol.ts. README.md#what-a-run-does.
 
 import type { Page } from 'playwright';
 import { SETTLE_FRAMES } from '../../src/client/debug/frame-cost/frame-cost-pure';
@@ -56,7 +56,7 @@ export interface DwellPlan {
   /** Rendered frames between statistic readbacks, pinned for the dwell. */
   readonly readbackEvery: number;
   /** Refill the per-star A_V cache every timed frame
-   *  (`src/client/debug/frame-cost/passes/README.md` § The extinction rows). */
+   *  (`/src/client/debug/frame-cost/passes/README.md#the-extinction-rows`). */
   readonly forceRecompute: boolean;
 }
 
@@ -105,7 +105,7 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
   // Settle already requires an unheld gate, so a hold live here means the
   // page was not in the state the dwell assumes. The debug panel takes one,
   // and under rAF wall time its per-tick DOM writes sit inside the numbers
-  // (`src/client/debug/frame-cost/README.md` § Preconditions).
+  // (`/src/client/debug/frame-cost/README.md#preconditions`).
   if (raw.holdsBefore !== 0) {
     return {
       value: record,

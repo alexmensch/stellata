@@ -1,6 +1,6 @@
 // Per-row sky-direction resolution for the catalog build: Gaia DR3 5p →
 // HIP2 → Tycho-2 → CNS5 → SIMBAD, with proper-motion propagation to the
-// J2016.0 scene epoch. See ./README.md § Direction resolution.
+// J2016.0 scene epoch. See ./README.md#direction-resolution.
 
 import {
   equatorialTangentBasis,
@@ -20,14 +20,13 @@ export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
 /** SIMBAD states `basic.ra` / `basic.dec` at J2000.0 whatever epoch the
  *  citation measured them at. The pull carries no epoch column, so this is
- *  measured rather than assumed — README.md § Direction resolution. */
+ *  measured rather than assumed — README.md#direction-resolution. */
 export const SIMBAD_REF_EPOCH = 2000.0;
 // Gaia DR3's native epoch: the catalogue-wide scene epoch every position
 // is normalised onto. The dominant Gaia set lands here with zero
 // propagation; only the HIP2 / Tycho-2 / CNS5 / SIMBAD minority advances.
 // The binaries pipeline mirrors this in scripts/binaries/stage6_multiples.py
-// — keep the two in sync (see data/README.md § Reference epoch and proper
-// motion).
+// — keep the two in sync (see /data/README.md#reference-epoch-and-proper-motion).
 export const CATALOG_SCENE_EPOCH = 2016.0;
 
 // Gaia 5p reliability + HIP2-preference thresholds, mirrored from
@@ -155,8 +154,7 @@ export interface DirectionSolution {
 
 /** Sky direction at `toEpoch` for a source measured at `fromEpoch` —
  *  RV-free linear space-motion form (accuracy budget + the
- *  perspective-acceleration omission are in ./README.md
- *  § Direction resolution).
+ *  perspective-acceleration omission are in ./README.md#direction-resolution).
  *
  *  `pmraMasyr` is the tier's own μ_α* — the cos δ-applied east-component
  *  rate. Do NOT divide by cos δ before calling. Either PM component
@@ -234,8 +232,8 @@ export const GALACTIC_ESCAPE_VELOCITY_PC_YR =
  *
  *  `pmraMasyr` is μ_α* (cos δ-applied); do NOT divide by cos δ. `distancePc`
  *  is the final distance-stack output. Missing PM → tangential term zero;
- *  missing RV → radial term zero. See docs/science-catalog-ingestion.md
- *  § Current-epoch star positions. */
+ *  missing RV → radial term zero. See /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t.
+ * */
 export function velocityPcPerYr(
   raDeg: number,
   decDeg: number,
@@ -294,15 +292,15 @@ function pmVelVia(
 }
 
 /** Select the astrometric solution one spine row's sky direction comes from,
- *  through the trust cascade. Route semantics + priority order in ./README.md
- *  § Direction resolution; the Gaia/HIP2 thresholds mirror
+ *  through the trust cascade. Route semantics + priority order in ./README.md#direction-resolution;
+ * the Gaia/HIP2 thresholds mirror
  *  scripts/binaries/stage3_astrometry.py.
  *
  *  The solution is NOT advanced here — `directionOnPm` is, once, at the caller,
  *  because the winning motion may be `pm-rescue/`'s rather than this tier's.
  *
  *  Returns null only when no tier reaches the row at all. That is a record
- *  with no owned direction, which `docs/catalog-driver.md` § 5 makes a § 6
+ *  with no owned direction, which `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` makes a § 6
  *  membership event rather than a silent keep — the walk counts it as
  *  `spineDroppedNoDirection`, pinned at 0. */
 export function resolveDirection(

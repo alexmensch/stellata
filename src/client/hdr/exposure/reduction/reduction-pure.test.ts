@@ -323,8 +323,7 @@ describe('the coverage-weighted median', () => {
   it('is monotone in every sample, which is what keeps LUMA_CEIL safe', () => {
     // The clamp lowers each tile's flux and can never raise one, so the
     // median it produces is a lower bound on the truth exactly as the mean
-    // was — the loop still converges from above (README.md § Measure at the
-    // base exposure).
+    // was — the loop still converges from above (README.md#measure-at-the-base-exposure-not-the-live-one).
     const pairs: [number, number][] = [[3, 1], [900, 2], [4096, 5], [12000, 3]];
     const clamped = pairs.map(([v, w]) => [Math.min(v, 4096), w] as const);
     expect(median(clamped)).toBeLessThanOrEqual(median(pairs));

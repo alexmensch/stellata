@@ -3,7 +3,7 @@
 The normalisers that put a planet's mesh and glare on the one physical
 luminance scale, and the reason a body does not brighten per-pixel on
 approach. `../README.md` owns the two layers that read these scalars;
-`../../../hdr/emission/README.md` § Unit is the contract they emit into.
+[Unit](../../../hdr/emission/README.md#unit--what-an-emitting-layer-writes) is the contract they emit into.
 
 ```
 src/client/solar-system/planets/emission/
@@ -17,13 +17,13 @@ computed at build from each body's top rung and shipped in
 `../textures/texture-ladder-generated.ts`. It had to move for the texture ladder —
 measuring per map would give every rung of a body a slightly different
 normaliser, and each tier swap would then step the disc's brightness
-(`../README.md` § Texture tier selection).
+([Texture tier selection](../README.md#texture-tier-selection)).
 
 Both planet layers emit into the scene-wide HDR unit — the glare through
 the point-source rule, the mesh through the surface-brightness rule. There
 is no per-layer brightness encoding left, and no multiplier on either:
 `uExposure` is the one exposure
-(`../../../webgpu/solar-system/README.md` § Reflected glare).
+([Reflected glare](../../../webgpu/solar-system/README.md#reflected-glare--a-planet-reads-exactly-like-a-star)).
 
 **The mesh anchor is a closed form.** A body's mean disc surface
 brightness drops both its radius and the viewer distance, because they
@@ -65,7 +65,7 @@ cannot reach; the horizon maps take that back and hold the disc inside
 does not.** Terrain fill adds light the disc integral did not previously carry,
 so it had to be measured rather than waved through — and re-measured when the
 sky-view map roughly doubled the factor it reads
-(`../surface-relief/README.md` § F comes from its own map), which is the test
+([F comes from its own map](../surface-relief/README.md#f-comes-from-its-own-map-not-from-the-horizon-planes)), which is the test
 that mattered: a term that needed no renormalisation at half the input might
 not survive twice it. It still does. The largest cell moves 0.001 mag — the
 Moon at full phase and at 120°, Mercury at 120°, Mars at 150° — and nothing at
@@ -73,7 +73,7 @@ all to three decimals anywhere else. It is bounded by construction: the term is 
 terrain view factor that is near zero over the open ground making up most of
 the disc, so the deep craters where it is worth anything are far too small a
 share of the disc to move the integral
-(`../surface-relief/README.md` § F comes from its own map).
+([F comes from its own map](../surface-relief/README.md#f-comes-from-its-own-map-not-from-the-horizon-planes)).
 
 `uPhaseScale` is absent from every column here because it multiplies the fill
 and the direct term alike, so it cancels in the ratio these magnitudes are. That
@@ -92,7 +92,7 @@ could be fitted to the full deficit rather than a partly-closed one
 
 `../surface-relief/README.md` owns which terms the perturbed normal reaches.
 
-**Two disc means divide out**, which is what makes everything the shader
+<a id="two-disc-means-divide-out"></a>**Two disc means divide out**, which is what makes everything the shader
 multiplies on top a pure redistribution rather than a dimming:
 
 - `lambertLimbDiscMean` — the closed form `2·(F/3 + (1−F)/(3+E))` for
@@ -110,8 +110,8 @@ multiplies on top a pure redistribution rather than a dimming:
   The maps are brightness-stretched mosaics whose absolute level is not
   radiometric — the build calibrates only their mean *chromaticity*, and
   since nothing downstream reads the level it normalises the gains to
-  avoid clipping rather than to preserve it (`data/textures/README.md`
-  § Colour fidelity) — so the map supplies the pattern and the level has
+  avoid clipping rather than to preserve it ([Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration))
+  — so the map supplies the pattern and the level has
   to come from `p`. **This division is what makes that safe**: darken a
   map by any factor and its mean darkens with it, so the ratio the shader
   uses is unchanged. Texture-less
@@ -130,7 +130,7 @@ step, where a dim-surfaced body's compressed mesh could read dimmer than
 its own peak-1 glare and a bright moon could outshine a resolved parent:
 that step existed only because mesh and glare were on unrelated scales.
 
-**Colour bookkeeping.** Day maps still load `NoColorSpace` and the mesh
+<a id="colour-bookkeeping"></a>**Colour bookkeeping.** Day maps still load `NoColorSpace` and the mesh
 shader decodes them with `stellataSrgbDecode` before lighting — a raw
 display-encoded texel multiplied by a physical luminance would light the
 body with a gamma-bent albedo. `Planet.colour` is already linear and is
@@ -143,6 +143,6 @@ in these layers (`../rings/README.md`).
 **Both render paths.** Each planet shader applies the operator inline
 when `uHdrTarget` is 0, undithered — the mesh, ring annulus and
 atmosphere shell composite over each other, so a fragCoord-keyed dither
-would bias a pixel once per layer (`../../../hdr/tonemap/README.md` § Operator).
+would bias a pixel once per layer ([Operator](../../../hdr/tonemap/README.md#operator)).
 The shell runs the operator on its airlight *before* `uFade` premultiplies,
 since the crossfade is a compositing weight, not light.

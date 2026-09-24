@@ -1,16 +1,15 @@
 // The physSize below which every consumer of it stops responding, and the
-// tolerance the one graceful consumer is held to. README.md § Eliding the
-// physical-size branch.
+// tolerance the one graceful consumer is held to. README.md#eliding-the-physical-size-branch.
 
 import { POINT_SOURCE_FLAT_PEAK_DIAMETER_PX } from '../../hdr/emission/emission-pure';
 import { PHYS_RATIO_THRESHOLD } from '../local-pass/star-local-cluster-pure';
 
 /** Relative movement allowed in the super-Gaussian exponent when `physSize`
- *  is elided. README.md § Eliding the physical-size branch. */
+ *  is elided. README.md#eliding-the-physical-size-branch. */
 export const DISC_EXPONENT_TOLERANCE = 0.0025;
 
 /** Largest `physSize` (CSS px, diameter) at which pinning it to zero is safe.
- *  README.md § Eliding the physical-size branch. */
+ *  README.md#eliding-the-physical-size-branch. */
 export function physSizeElisionBoundPx(
   sizeMinPx: number,
   distNMin: number,

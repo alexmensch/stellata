@@ -21,10 +21,10 @@ const COLLAPSED_KEY = 'stellata.focus-card-collapsed';
 export interface CardRolodexConfig {
   stellata: Stellata;
   providers: FocusCardProviders;
-  /** README.md § Surfaces retained over a growing catalogue. */
+  /** README.md#surfaces-retained-over-a-growing-catalogue. */
   derivedGeneration: () => number;
-  /** True while a URL-named focus has not resolved — README.md § A card
-   *  appears only when its own subject is ready. */
+  /** True while a URL-named focus has not resolved — README.md#a-card-appears-only-when-its-own-subject-is-ready.
+   * */
   focusPending: () => boolean;
 }
 
@@ -40,7 +40,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   let desiredFront: CardKey | null = null;
   let frontKey: CardKey | null = null;
   let knownPois: readonly Target[] = stellata.pois.get();
-  // README.md § Surfaces retained over a growing catalogue.
+  // README.md#surfaces-retained-over-a-growing-catalogue.
   let seenGeneration = -1;
   let seenFocusPending = true;
 
@@ -100,7 +100,7 @@ export function createCardRolodex(config: CardRolodexConfig): () => void {
   const reconcile = () => {
     seenGeneration = derivedGeneration();
     seenFocusPending = focusPending();
-    // README.md § A card appears only when its own subject is ready.
+    // README.md#a-card-appears-only-when-its-own-subject-is-ready.
     const focused = stellata.focus.getFocusedTarget();
     const suppress = stellata.focus.getCameraMode() === 'observe'
       || seenFocusPending

@@ -1,5 +1,4 @@
-// The statistic-write mask the emitter structs multiply. See README.md
-// § The gate becomes the output struct.
+// The statistic-write mask the emitter structs multiply. See README.md#the-gate-becomes-the-output-struct.
 
 import { uniform } from 'three/tsl';
 

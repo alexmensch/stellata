@@ -1,5 +1,5 @@
 // Camera park distance and manual-zoom floor for a focused deep-space
-// probe. See README.md § Park distance.
+// probe. See README.md#park-distance-is-set-by-the-near-plane-not-by-the-spacecraft.
 
 import { KM_PC } from '../../util/astronomy-constants';
 

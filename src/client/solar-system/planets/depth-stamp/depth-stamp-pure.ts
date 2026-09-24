@@ -5,7 +5,7 @@
 /** Radial shrink of the stamp against the body mesh. The stamp must land
  *  strictly INSIDE the mesh's silhouette: anything it covers that the mesh
  *  does not paint is background culled and never repainted
- *  (README.md § What stamps, and how far inside). */
+ *  (README.md#what-stamps-and-how-far-inside). */
 export const DEPTH_STAMP_SHRINK = 1e-3;
 
 export function depthStampRadius(radiusPc: number): number {

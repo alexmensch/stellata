@@ -1,5 +1,5 @@
 // Sid-keyed field comparison between two built catalogues.
-// README.md § Additive-mode record parity.
+// README.md#additive-mode-record-parity.
 
 import {
   FLAG_HAS_NAME,
@@ -93,7 +93,7 @@ function companionSidOf(cat: CatalogView, off: number): number | null {
 
 /** Every field of every record the two builds share, keyed on sid. Record
  *  INDICES move whenever membership does and are never compared —
- *  `../record/README.md` § Record order. */
+ *  `../record/README.md#record-order`. */
 export function compareRecordParity(
   baselineBuffer: ArrayBuffer,
   currentBuffer: ArrayBuffer,
@@ -157,8 +157,8 @@ export function compareRecordParity(
   };
 }
 
-/** Moved fields are reported, never failed: README.md § Additive-mode record
- *  parity. */
+/** Moved fields are reported, never failed: README.md#additive-mode-record-parity.
+ * */
 export function parityHolds(report: ParityReport): boolean {
   return report.droppedSids.length === 0 && report.currentSharedSids === 0;
 }

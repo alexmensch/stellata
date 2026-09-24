@@ -1,5 +1,5 @@
 // Runtime probe trajectory: a parsed wire file plus the position/velocity
-// sampler every probe consumer reads. See README.md § Sampler.
+// sampler every probe consumer reads. See README.md#sampler.
 
 import { PROBE_SAMPLE_STRIDE, type ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
 import { AU_PC } from '../../util/astronomy-constants';

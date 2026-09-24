@@ -1,5 +1,5 @@
 // Instanced fixed-size marker per deep-space probe, positioned from the
-// trajectory sampler each frame. See README.md § Marker field.
+// trajectory sampler each frame. See README.md#marker-field.
 
 import * as THREE from 'three';
 import { HELIOPAUSE_EXTENT_PC } from '../heliopause/heliopause';

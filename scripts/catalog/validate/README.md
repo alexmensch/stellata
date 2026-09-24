@@ -65,7 +65,7 @@ Three tiers, all snapshot-pinned:
   the runtime loader and asserts every row matches within tolerance.
   Adding a row → see § Adding to the known-stars corpus below.
   The sky-position corpus (`sky-position-corpus.tsv` +
-  `sky-position.test.ts`, `../distance/README.md` § Direction resolution) is the companion
+  `sky-position.test.ts`, [Direction resolution](../distance/README.md#direction-resolution)) is the companion
   Tier A harness for single-star angular placement.
 - **Tier A — system pair topology.**
   `scripts/catalog/validate/system-pair-topology.tsv` (driven by the same
@@ -110,7 +110,7 @@ Three tiers, all snapshot-pinned:
   reads identically across the two builds. A `BuildCounts` entry is
   either a scalar or a per-tier partition (`emptyTallyPartition`); the latter
   diffs as one `parent.bucket` row per bucket, so a single drifting population
-  names itself (`../distance/README.md` § Override-layer authoring discipline).
+  names itself ([Override-layer authoring discipline](../distance/README.md#override-layer-authoring-discipline)).
 - **Tier C — SIMBAD random sample.**
   `scripts/catalog/validate/validate-simbad-sample.ts` cross-checks the built
   `public/catalog.bin` against a stratified random 10k SIMBAD sample
@@ -120,13 +120,13 @@ Three tiers, all snapshot-pinned:
   tier supplied** — `data/athyg/simbad_sourced_distances.tsv` names them,
   since this harness reads `catalog.bin` and cannot see a build-time tier.
   Their residual is zero by construction, so including them would report
-  agreement nothing measured (`docs/catalog-driver.md` § 5, validation
+  agreement nothing measured ([§ 5,](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) validation
   independence). Counted in the report as an exclusion rather than folded
   into `unmatched`, which means something else.
 
 ## Additive-mode record parity
 
-`docs/catalog-driver.md` § 8 holds a deeper magnitude pull to **additive**
+[§ 8](/docs/catalog-driver.md#8-gaia-dr-transitions--what-re-pulls-and-what-never-does) holds a deeper magnitude pull to **additive**
 mode on identity: every baseline sid survives, and no object is drawn twice.
 `pnpm run validate:record-parity --baseline=<dir> [--current=<dir>]` is the
 measurement, over two directories of built artifacts (`catalog-manifest.json`
@@ -144,7 +144,7 @@ population is the signal.
 
 **Keyed on `sid`, never on record index.** Records sort by apparent V from Sol,
 so any membership change re-sorts the whole array and every existing record's
-index moves (`../record/README.md` § Record order). An index diff would report
+index moves ([Record order](../record/README.md#record-order)). An index diff would report
 the whole catalogue. The two derived fields follow the same rule: `companion`
 compares as the companion's **sid**, and `nameOffset` as the resolved **name**.
 A sid on two records is one object drawn twice — skipped by the field

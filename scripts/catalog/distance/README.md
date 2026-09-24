@@ -26,8 +26,7 @@ scripts/catalog/distance/
                                   parseGaiaAstrometryCatalogTsv: tier 1's own
                                   table reads it whole, and the magnitude term
                                   streams its pull through the same fold with a
-                                  keep-set (`../parse/README.md` § Streaming a
-                                  committed table).
+                                  keep-set (`../parse/README.md#streaming-a-committed-table`).
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
@@ -101,8 +100,8 @@ divide by cos δ.
 The two Tycho-2 cells were the trap: `ra_mdeg` is stated at J2000 while
 `ep_ra`/`ep_de` date the OBSERVATIONS behind it, and `ra_icrs` is the observed
 position at J1991.25 — so reading either epoch off the column beside it is
-wrong, in opposite directions. `data/tycho2/README.md` § Which position to
-propagate from carries the measurement; `directionAtEpoch` is the single form
+wrong, in opposite directions. [Which position to propagate from](/data/tycho2/README.md#which-position-to-propagate-from)
+carries the measurement; `directionAtEpoch` is the single form
 every tier reaches through `directionOnPm`.
 
 **`resolveDirection` selects a solution; it does not advance one.**
@@ -162,7 +161,7 @@ pins the count. It is counted rather than gated for the same reason the V
 tier's out-of-range colour is: nothing sits below this tier for a TYC-keyed
 row, so refusing the position would cost the record rather than improve it.
 The same row's V is marked a system blend
-(`../photometry/README.md` § Which tiers give a system blend).
+([Which tiers give a system blend](../photometry/README.md#which-tiers-give-a-system-blend--vtierissystemblend)).
 
 **The tycho2 tier's corpus row is HD 14039**, reached through the `hd:` ref
 kind — its records are by construction the ones Gaia and HIP2 both miss, and not
@@ -182,8 +181,8 @@ blend is admissible at all, and the Gaia-bibcode skip rule's 13-row cost.
 the same `directionOnPm` every tier's own PM goes through, so no row tracks a
 rate from a place its tier left stale. Only the 3 Tycho-2 rows move (2.337″ /
 0.149″ / 0.109″); the 36 Gaia rows are native J2016.0 and the advance is a
-zero-Δt no-op. `pm-rescue/README.md` § The rescued motion advances the position
-too carries the check that says it lands right, and § Whether the rescuing
+zero-Δt no-op. [The rescued motion advances the position too](pm-rescue/README.md#the-rescued-motion-advances-the-position-too)
+carries the check that says it lands right, and § Whether the rescuing
 source should supply the position too records why it does not.
 
 `velocityVia` credits the catalogue rather than the route to it, so
@@ -194,8 +193,8 @@ direction tier's 38.
 
 Every star's final distance is the output of an ordered three-layer
 stack run inside `readStars` (`scripts/catalog/parse/stars-parse.ts`). The
-order is non-commutative — see `docs/science-catalog-ingestion.md`
-§ Multi-layer distance refinement for the physical rationale; the
+order is non-commutative — see [Multi-layer distance refinement](/docs/science-catalog-ingestion.md#multi-layer-distance-refinement)
+for the physical rationale; the
 diagram below is the build-side view:
 
 ```
@@ -297,8 +296,7 @@ al. 2021 (CDS I/352). The pipeline:
    in the map. `isBailerJonesEligible` is the single gate and it reads
    the **resolved tier**, so a record placed by Hipparcos, CNS5,
    Gliese, SIMBAD or a bound sibling is excluded — why, and what the
-   prior's ~10–40 kpc tail would cost it: `data/bailer-jones/README.md`
-   § Consumed by.
+   prior's ~10–40 kpc tail would cost it: [Consumed by](/data/bailer-jones/README.md#consumed-by).
 3. On a hit, `applyBailerJonesOverride` returns
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
@@ -319,7 +317,7 @@ the cascade's naive inversion. Data refresh: `pnpm run refresh:bailer-jones`.
 `gaia_dr3_inversion`, so the row has its own DR3 parallax and the publication
 covers every DR3 source that has one. An absence is this pull's scope — every
 source at `G ≤ 11`, plus the exported catalog request below that floor
-(`scripts/refresh/magnitude/README.md` § The deep population) — having moved, not a gap
+([The deep population](/scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg)) — having moved, not a gap
 upstream.
 
 It slips in the worst direction: the row keeps a naive `1/π`, and rows that
@@ -329,7 +327,7 @@ parallax 1.25 ± 0.83 mas and `RUWE` (Gaia's goodness-of-fit ratio, ~1 being
 a clean single-star fit) 19.7, inverting to 800 pc against Hipparcos-2's 171.
 
 The rule, the other gated pulls, and why a forced rebuild cannot substitute:
-`scripts/refresh/README.md` § The staleness gate.
+[The staleness gate](/scripts/refresh/README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator).
 
 ### Layer 2 — LMC kinematic override
 
@@ -396,8 +394,8 @@ is **not** a noise filter — it's a statement about which populations
 the model currently represents (Sol out to and including the LMC).
 The cutoff bumps in sync with each new modelled population the
 renderer takes responsibility for (future SMC, Sgr dSph, M31
-supergiant layers would extend it). See `docs/science-catalog-ingestion.md`
-§ Stellar catalog ingestion for the framing rationale.
+supergiant layers would extend it). See [Stellar catalog ingestion](/docs/science-catalog-ingestion.md#stellar-catalog-ingestion)
+for the framing rationale.
 
 Every kinematic-override target distance must satisfy
 `dist < MAX_DIST_PC` or its entire population is silently dropped at

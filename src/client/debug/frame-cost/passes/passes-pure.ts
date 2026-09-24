@@ -20,6 +20,6 @@ export const PRICED_PASS_KEYS = [
 export type PricedPassKey = (typeof PRICED_PASS_KEYS)[number];
 
 /** Empty render passes the `emptyPass` row ADDS while "disabled", wherever
- *  the caller names no count. One often fails to resolve — README.md
- *  § The roster. */
+ *  the caller names no count. One often fails to resolve — README.md#the-roster.
+ * */
 export const EMPTY_PASSES_DEFAULT = 1;

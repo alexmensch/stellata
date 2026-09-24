@@ -1,6 +1,6 @@
 // The record build's half of the composer: every record's designation set
 // to its display name, with the NAME tiers written into `proper`.
-// See README.md § Two callers, one composer.
+// See README.md#two-callers-one-composer.
 
 import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
@@ -42,7 +42,7 @@ export function designationSetOf(
 ): DesignationSet {
   // The designation's own constellation, never the positional one: once a
   // boundary moves past a named star the two diverge and the positional
-  // index renames ρ Aql to ρ Del (docs/star-naming.md § 6).
+  // index renames ρ Aql to ρ Del (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   const conIdx = star.desigConIndex !== NO_CONSTELLATION_INDEX
     ? star.desigConIndex : star.conIndex;
   const con = conIdx !== NO_CONSTELLATION_INDEX ? constellations[conIdx] : undefined;
@@ -115,7 +115,7 @@ export function assignDisplayNames(
       throw new Error(
         `data/naming/name_overrides.tsv names ${unmatched.length} SID(s) no record `
         + `carries: ${unmatched.join(', ')} — a retired or mistyped SID, so the `
-        + 'override would silently display nothing (docs/star-naming.md § 7)',
+        + 'override would silently display nothing (/docs/star-naming.md#7-curation-seam)',
       );
     }
   }

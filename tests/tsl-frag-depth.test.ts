@@ -1,6 +1,6 @@
 // Frag-depth roster for TSL pipelines. Any fragment-stage depth write
 // disables early-z for the whole pipeline, and no star pipeline writes it
-// (src/client/webgpu/README.md § Early-z) — so the allowlist stays empty.
+// (/src/client/webgpu/README.md#early-z--the-star-layers-depth-honest-redesign) — so the allowlist stays empty.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -14,7 +14,7 @@ const GUIDANCE =
   + 'stage as a clip-z pin (the D3 core-mask pattern); a draw that wanted to '
   + 'yield depth per fragment should write none and read an earlier '
   + "depth-only draw's stamp instead (the D4 disc pattern — "
-  + 'src/client/webgpu/star/README.md § The disc draw writes no depth). A '
+  + '/src/client/webgpu/star/README.md#the-disc-draw-writes-no-depth). A '
   + 'second draw over the same instances is NOT the answer: it prices the '
   + 'port above the renderer it replaces. If a write is genuinely '
   + 'unavoidable, allowlist it here with the early-z cost stated.';

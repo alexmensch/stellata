@@ -32,13 +32,12 @@ within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
 `LgObject` type in `build-local-group-pure.ts`; the client loader at
 `src/client/local-group/local-group-loader.ts` mirrors it 1:1.
 
-Each object also carries a `sid` (frozen Stellata ID, docs/sid.md § 7),
+Each object also carries a `sid` (frozen Stellata ID, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)),
 stamped after this script by `scripts/sid/stamp-sibling-sids.ts` (the tail
 of `pnpm run build:local-group`) — it resolves each `lg:<id>` slug against
 the committed ledger; this build never touches the ledger. A new slug
 hard-fails the stamp until `pnpm run sid:allocate` mints it; a rename needs
-a `data/sid/sameas-overrides.tsv` bridge. See `scripts/sid/README.md`
-§ Sibling-artifact stamping.
+a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
 Idempotent — exits early if `public/local-group.json` is newer than
 the script and both source files. Run via
@@ -52,8 +51,8 @@ of the LVDB snapshot is a manual `curl` of
 **Precedence: common/proper name > Messier > NGC/IC > other catalogue** —
 the four rungs of `NAME_TIERS`. The *principle* is uniform across object
 kinds; the rungs are not, because the catalogues aren't. The molecular
-clouds run the same chain over a longer list — `scripts/clouds/README.md`
-§ Alternate names owns the shared statement and adds Sh2/RCW/LBN/LDN/
+clouds run the same chain over a longer list — [Alternate names](/scripts/clouds/README.md#alternate-names)
+owns the shared statement and adds Sh2/RCW/LBN/LDN/
 Caldwell and Zucker-region rungs no Local Group object carries. The stars
 order proper name first too, but over identifier catalogues with no
 Messier or NGC/IC rung at all, since neither lists stars
@@ -127,8 +126,8 @@ them from the table costs no searchability.
 
 ## Emission solver — per-object DENSITY0
 
-Physics and calibration rationale in `docs/science-local-group.md`
-§ Local Group luminosity model; this section carries the implementation
+Physics and calibration rationale in [Local Group luminosity model](/docs/science-local-group.md#local-group-luminosity-model);
+this section carries the implementation
 contract.
 
 Every rendered object gets an `emission` block (JSON format version 2):
@@ -162,7 +161,7 @@ consumes raw numbers and never re-derives photometry.
   (`integrateOverEllipsoid`, Gauss–Legendre in unit-ball coordinates) for
   every profile; the analytic incomplete-gamma closed forms exist only as
   vitest cross-pins. `emission-geometry-pure.ts` supplies the shapes,
-  `src/client/hdr/emission/README.md` § Solving ρ₀ owns the solve.
+  [Solving ρ₀](/src/client/hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density) owns the solve.
 - **M31 bulge contract:** the bulge is its own spheroid component —
   density0 solves over the bulge's u ≤ uMax sphere via the same
   Sérsic geometry integral as every spheroid, and the renderer packs

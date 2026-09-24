@@ -22,7 +22,7 @@ discriminated union for the same reason as `timeBehaviour`: an omitted
 hook would read as "always draws", which is the silent answer every
 layer gave before the contract existed, and the failure it prevents is
 paying a draw and a per-frame update for something that cannot reach a
-single display pixel from this vantage (`docs/render-rules.md` § 2 is
+single display pixel from this vantage ([§ 2](/docs/render-rules.md#2-contribution-gated-liveness) is
 the rule; this is its mechanism).
 
 Two kinds:
@@ -49,9 +49,9 @@ own threshold is stricter must use that instead. The star core mask stamps
 down to `RESOLVED_DISC_MIN_PX`; the planet mesh gates at
 `TEXTURE_PREFETCH_PX`, half a pixel *below* its own 1 px crossfade floor,
 because its `update` is where the texture fetch that feeds the band starts
-(`../../solar-system/planets/README.md` § Planet mesh LOD). The shared 6 px
+([Planet mesh LOD](../../solar-system/planets/README.md#planet-mesh-lod)). The shared 6 px
 floor would reject frames both layers do work on. What is forbidden is a
-second projected-size *helper* (`docs/render-rules.md` § 2), not a second
+second projected-size *helper* ([§ 2](/docs/render-rules.md#2-contribution-gated-liveness)), not a second
 threshold — and a layer may gate looser than it draws, since admitting a
 frame that draws nothing is the direction the contract allows.
 
@@ -96,12 +96,11 @@ positions only `update` refreshes. Per-layer state seeds `contributing
 constructed visibility and is never told anything.
 
 **A layer that skips must reset every dirty-track sentinel on the way
-out** (`docs/authoring-patterns.md` § Sentinel-init) inside
+out** ([Sentinel-init](/docs/authoring-patterns.md#sentinel-init-for-dirty-track)) inside
 `setContributing(false)` — a "same as last frame" short-circuit computed
 before the skip is exactly what refuses to repaint on re-entry.
 `FresnelShell.permitted` starting `false` to agree with its constructed
-`group.visible` is the worked example (`../../fresnel-shell/README.md`
-§ Invariants).
+`group.visible` is the worked example ([Invariants](../../fresnel-shell/README.md#invariants)).
 
 **The frustum is valid only below the orbit lock.** The focal rides and
 the lock move the camera *inside* the fan-out, and the lock is a
@@ -138,14 +137,14 @@ frame statistic and the adaptation tuning — **null in chart**, where the
 seam is bypassed, so nothing may skip on it there. It is rewritten in
 place every tick — one preallocated slot on the shell, like every other
 `FrameCtx` field — which is exactly the stateless per-frame reader
-`../../hdr/exposure/README.md` § One writer, five slots exempts from the
+[One writer, five slots](../../hdr/exposure/README.md#one-writer-five-slots) exempts from the
 prohibition on consumers keyed on adaptation: what that forbids is
 *holding* something derived from the cut, not the record's identity.
 
 **It carries the cut the LAST rendered frame was drawn with.** The
 fan-out runs before `measure()` folds this frame's landing, so a verdict
 is one frame behind the exposure it names. That is the same lateness
-`docs/science-hdr-pipeline.md` § 3.5 already argues is conservative on
+[§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound) already argues is conservative on
 both transitions, and a cut still slewing invalidates every frame
 anyway, so the stale window is a settled cut that has not moved.
 
@@ -164,8 +163,8 @@ user or the declutter floor has switched off is out of `L̄` as surely as a
 skipped one, so both emitters refuse *above* the predicate rather than
 passing it `false` — the verdict cannot change a frame they are absent
 from, and each would spend milliseconds on a peak bound to reach it
-(`../../hdr/exposure/visibility/README.md` § Skipping an emitter the display
-cannot show). A gated layer whose own predicate is expensive owes the same
+([Skipping an emitter the display cannot show](../../hdr/exposure/visibility/README.md#skipping-an-emitter-the-display-cannot-show)).
+A gated layer whose own predicate is expensive owes the same
 refusal; the star core mask's is the third
 (`../../star-pipeline/README.md`).
 
@@ -195,7 +194,7 @@ invalidates from `animate()` whenever it moves past `CADENCE_JND_MAG`;
 off a rendered frame's reduction; and camera pose renders. What is left
 is sub-JND drift of the applied cut, which renders nothing and can leave
 a verdict stale by under 0.01 mag of exposure — invisible by the same
-definition the verdict uses. `docs/science-hdr-pipeline.md` § 3.5 carries
+definition the verdict uses. [§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound) carries
 the enumeration; adding a fifth reason means redoing it.
 
 `cadenceReport` runs after `updateAll`, so it reads this frame's
@@ -204,8 +203,8 @@ rendered frame's — a layer stays presumed-skipped until a frame proves
 otherwise, which is the conservative direction.
 
 **The contract is per layer.** Per-instance culling inside a layer —
-one cloud of ninety-six behind the camera — is `docs/render-rules.md`
-§ 1's territory and lives in the layer's own `update`; the layer-level
+one cloud of ninety-six behind the camera — is [§ 1](/docs/render-rules.md#1-draw-at-visible-count-not-catalogue-count)'s
+territory and lives in the layer's own `update`; the layer-level
 verdict fires only when the whole population fails one test.
 
 **No hysteresis, in any of the four.** The geometric three cross their

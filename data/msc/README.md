@@ -54,4 +54,4 @@ labels.
 ## Refresh
 
 `python3 scripts/refresh/refresh-msc.py` (no pnpm target; venv per
-`scripts/refresh/README.md` § One-time setup).
+[One-time setup](/scripts/refresh/README.md#one-time-setup)).

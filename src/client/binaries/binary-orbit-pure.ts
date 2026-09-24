@@ -1,6 +1,6 @@
 // Pure orbital math for binaries: Kepler + Thiele-Innes + tangent-plane
 // (Tier 1) and galactic-plane fallback (Tier 2). See
-// src/client/binaries/README.md § Tier mapping.
+// /src/client/binaries/README.md#tier-mapping.
 
 import * as THREE from 'three';
 import { AU_PC } from '../util/astronomy-constants';

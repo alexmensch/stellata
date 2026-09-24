@@ -1,6 +1,6 @@
 // Dirty-track helpers for per-frame SVG attribute / textContent /
 // inline-style writes; caller-managed sentinel state.
-// See docs/authoring-patterns.md § Sentinel-init for dirty-track.
+// See /docs/authoring-patterns.md#sentinel-init-for-dirty-track.
 
 /**
  * Half a .toFixed(1) step — below this, the attribute string round-trips

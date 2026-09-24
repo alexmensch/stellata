@@ -1,6 +1,5 @@
 // The observer-centred coordinate sphere: one grid geometry, parametrised by
-// the frame its longitude/latitude resolve into. See galactic/README.md
-// § Coordinate spheres.
+// the frame its longitude/latitude resolve into. See /src/client/galactic/README.md#coordinate-spheres.
 
 import * as THREE from 'three';
 import { CHART_REFERENCE_INK } from '../../chart-mode/chart-palette';

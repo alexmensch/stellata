@@ -54,8 +54,8 @@ export interface FatChromeLineSpec {
   renderOrder: number;
 }
 
-/** `colour` is an authored sRGB hex, not a linear value — README.md
- *  § Colour is authored once, at construction. */
+/** `colour` is an authored sRGB hex, not a linear value — README.md#colour-is-authored-once-at-construction.
+ * */
 export interface ChromeLineMaterials {
   solid(colour: number, opacity: number): ChromeLineMaterial;
   dashed(

@@ -1,5 +1,5 @@
 // The `IUniform` face a ported layer writes, over a record of TSL nodes.
-// See README.md § Uniform slots.
+// See README.md#uniform-slots--the-face-a-layer-writes.
 
 import type { IUniform } from 'three';
 import type { uniformArray } from 'three/tsl';

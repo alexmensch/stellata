@@ -1,5 +1,5 @@
 // Parser and per-record lookup for data/simbad/simbad_values.tsv — the
-// bibcoded bottom tier of the value cascades in docs/catalog-driver.md § 5.
+// bibcoded bottom tier of the value cascades in /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import {
@@ -140,7 +140,7 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
  *  not because the two ladders share an order but because its emitted row
  *  carries the asking designation in the namespace that bound it, so this
  *  walk reaches it whichever rung matches first. What arrives here is already
- *  adjudicated (`scripts/refresh/simbad/README.md` § The widening carries its
+ *  adjudicated (`/scripts/refresh/simbad/README.md#the-widening-falls-through-on-resolution-not-on-cell-presence` carries its
  *  own corroboration rule). Its `source_id` cell may name a DIFFERENT source
  *  from the record's — the DR2/DR3 case, inert because no record asks for it,
  *  and pinned in `spine/inherited-spine-guard.test.ts`. */

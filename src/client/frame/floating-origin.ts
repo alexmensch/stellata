@@ -38,8 +38,8 @@ export class FloatingOrigin {
 
   /** Register a recentre listener; fan-out order is registration order.
    *  Order is load-bearing: the star-buffer rewrite must run before the
-   *  camera/target shift and the scene-layer fan-out (./README.md
-   *  § Recentre fan-out). Returns an unsubscribe, safe to call from
+   *  camera/target shift and the scene-layer fan-out (./README.md#recentre-fan-out--order-is-load-bearing).
+   * Returns an unsubscribe, safe to call from
    *  inside the fan-out. */
   onRecenter(listener: RecenterListener): () => void {
     this.listeners.add(listener);
@@ -52,7 +52,7 @@ export class FloatingOrigin {
 
   /**
    * Shift the local origin to `newOrigin` (absolute space) — see
-   * ./README.md § Floating origin. Returns the applied (dx, dy, dz),
+   * ./README.md#floating-origin. Returns the applied (dx, dy, dz),
    * null on the no-op path (no listener fires). The returned Vector3
    * is shared scratch — copy it to outlive the next call.
    */

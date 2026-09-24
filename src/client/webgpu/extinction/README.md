@@ -46,7 +46,7 @@ src/client/webgpu/extinction/
 
 Star *i* is element *i* of a `count`-long float buffer; its position is
 element *i* of a `count`-long vec4 buffer the kernel fills and walks in an
-order of its own (`dispatch-order/README.md` § Dispatch order).
+order of its own ([Dispatch order](dispatch-order/README.md#dispatch-order)).
 `AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
 `(i % 1024, i / 1024)` arithmetic are the parity reference's, which draws
 that layout on purpose (§ The prepass kernel). The consumers' index is the
@@ -77,7 +77,7 @@ load-bearing in both directions:
   writes *through the same node object* the vertex stage reads: access is
   a property of the shader stage, not the node, so one node is
   `read_write` in the kernel and `read` in every draw
-  (`../tsl/README.md` § Storage attributes).
+  ([Storage attributes](../tsl/README.md#storage-attributes)).
 
 **The volume placeholder is marked `needsUpdate` at construction**, and
 it bites: an unmarked texture gets three's shared 1×1 **2D** substitute,
@@ -88,7 +88,7 @@ regardless of their gate (it is a runtime branch; both arms compile), so
 this has to hold from the first frame, before any `attachDust`.
 `createVoxelTexture` deliberately does not mark — that is the uploader's
 job, paired with `initTexture` in an order that matters
-(`../../loaders/README.md` § Dust voxel upload) — so a placeholder from
+([Dust voxel upload](../../loaders/README.md#dust-voxel-upload)) — so a placeholder from
 that factory marks itself. Pinned in the test, which fails without it.
 
 The A_V placeholder is a one-float `StorageBufferAttribute`, the stamp
@@ -114,21 +114,21 @@ Two kernels over one march. The **fill** runs one thread per Morton slot:
 it reads position `instanceIndex` out of a read-only vec4 storage buffer,
 gates on the cache gate below, marches from `absCameraPos` to it with the
 shared `dustRaymarchAvTsl`, and assigns the result to the A_V element the
-slot → star table names (`dispatch-order/README.md` § Dispatch order).
+slot → star table names ([Dispatch order](dispatch-order/README.md#dispatch-order)).
 The **refill** runs one thread per star of this frame's worklist quarter
-at the workgroup count the compaction wrote (`refill/README.md` § The
-compaction appends the worklist): it resolves the star through the
+at the workgroup count the compaction wrote ([The compaction appends the worklist](refill/README.md#the-compaction-appends-the-worklist)):
+it resolves the star through the
 star → slot table to its position, marches with no gate, and bounds itself
-by the listed length rather than three's count (`refill/README.md` § The
-kernel bounds itself by the listed length). Both default to three's
+by the listed length rather than three's count ([The kernel bounds itself by the listed length](refill/README.md#the-kernel-bounds-itself-by-the-listed-length)).
+Both default to three's
 workgroup of 64. `update()` issues at most one `renderer.compute` — its own
-submit (`docs/render-rules.md` § 8) — and it binds no render target.
+submit ([§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs)) — and it binds no render target.
 Pinned as "never touches the render-target binding".
 
 **Positions are vec4, not vec3, deliberately.** WGSL has no packed vec3
 in a storage buffer, and an itemSize-3 storage attribute is the one
-three silently re-strides (`../README.md` § One writer per buffer per
-submit). All five buffers are owned outright by the prepass —
+three silently re-strides ([One writer per buffer per submit](../README.md#one-writer-per-buffer-per-submit)).
+All five buffers are owned outright by the prepass —
 allocated, filled once, released through `disposeStorageAttribute` — and
 none is a vertex attribute anyone uploads through `DirtyItemUploader`,
 so `iPosition` and the binaries partial-upload contract are untouched.
@@ -146,8 +146,8 @@ computed camera, into an R32F target of that texture layout, reads both
 back and compares float32 bit patterns over the whole catalogue —
 `A_V parity: N stars, bit-identical`, or the count that differ with the
 first offender and the largest gap. It refills the whole catalogue first,
-so one camera stands behind the buffer it compares (`refill/README.md`
-§ Three places). The target exists for the call only.
+so one camera stands behind the buffer it compares ([Three places](refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one)).
+The target exists for the call only.
 Run it at Sol default and on a Galactic-centre sightline (the bead's
 smoke views); a nonzero count there is a finding about the two stages'
 compilation, not a tolerance to widen.
@@ -175,8 +175,8 @@ Of the four requirements the single-writer audit put on this design
   position table is vec4 and the A_V table is float, both owned outright,
   and no itemSize-3 attribute moved.
 - **The prefix-sum router (2)** and **the implicit draw count (3)** are
-  the compaction's (`../star/compaction/README.md` § The buffer-writer
-  requirements, discharged), which keeps `iPosition` off an itemSize-3
+  the compaction's ([The buffer-writer requirements, discharged](../star/compaction/README.md#the-buffer-writer-requirements-discharged)),
+  which keeps `iPosition` off an itemSize-3
   storage attribute the way this pass does — it reads the same array
   through an itemSize-1 table instead.
 
@@ -222,12 +222,12 @@ buffer read from a vertex stage answers to
 `maxStorageBuffersInVertexStage` instead, and that is
 **zero** at WebGPU's compatibility feature level. So the floor this cache
 sets is not free, and it is not this folder's to keep: the boot refuses
-such a device outright (`../tsl/README.md` § Storage attributes).
+such a device outright ([Storage attributes](../tsl/README.md#storage-attributes)).
 
 **A full recompute is at most ~94M volume samples**: one thread per
 star × `DUST_TAPS_MAX` (96), 983,068 × 96; at the tap rule's at-Sol mean
-of ~44 per star, ~43M (`../../star-pipeline/extinction/README.md` § The
-march). The cap binds wherever the in-cube path runs past
+of ~44 per star, ~43M ([The march](../../star-pipeline/extinction/README.md#the-march)).
+The cap binds wherever the in-cube path runs past
 `DUST_TAP_PC × DUST_TAPS_MAX` ≈ 960 pc, so from outside the cube the
 ceiling is very nearly the per-admitted-star cost. **None of those
 figures is a time**: the same README records the same-commit pair in
@@ -239,7 +239,7 @@ camera moving more than `RECOMPUTE_EPSILON_PC` between them — pays a
 quarter of that population per frame rather than the whole catalogue. The
 moving camera is still the case to measure, not the idle one. Every canon
 vantage is idle, so pricing it takes the forced-recompute lever
-(`../../debug/frame-cost/passes/README.md` § The extinction rows). An idle
+([The extinction rows](../../debug/frame-cost/passes/README.md#the-extinction-rows)). An idle
 camera costs zero, and what the gate below skips is never listed, so it
 never reaches the march at all — from far outside the disc that is very
 nearly all of it.
@@ -268,8 +268,8 @@ the identical gate closure (§ The prepass kernel).
 refill kernel runs none.** On an armed frame the compaction kernel's
 threads of one residue class test the frustum at the refill's slack
 first, then these four terms, then the stamp, and append the star that
-passes all three (`refill/README.md` § The compaction appends the
-worklist); the refill kernel then marches every listed star
+passes all three ([The compaction appends the worklist](refill/README.md#the-compaction-appends-the-worklist));
+the refill kernel then marches every listed star
 unconditionally. The four scattered reads are therefore paid by a quarter
 of the in-frame population per armed frame, by a kernel that just read the
 same record — and never by a dispatch of their own.
@@ -339,8 +339,8 @@ the frustum as well — so the frustum alone takes **−29% at mw120 and −39% 
 mw50** off an already-gated, already-sliced kernel. The whole five-vantage
 column there reads mw120 1.396, sol 1.478, earth 1.288, mw50 1.177, lg 2.364.
 That artifact is the synthetic set and its band is uncorrected, as the
-baseline's was (`../../../../scripts/perf/synthetic-catalog/README.md` § The
-band double-counts); a run over it never compares to `pins/`.
+baseline's was ([The band double-counts](../../../../scripts/perf/synthetic-catalog/README.md#the-band-double-counts-and-it-moves-the-number));
+a run over it never compares to `pins/`.
 
 **The whole fill and the vertex stage compute `dPc` in different frames**
 — the fill in absolute heliocentric coordinates, the vertex stage and the
@@ -374,7 +374,7 @@ invalidation. Three obligations fall out of caching the same test:
   sample count that is). `uThresholdMag` is the one that could move: it is
   `m_lim + MAG_PER_STOP·ev`, and `ev` is the user's discrete trim, with
   the adaptation cut held out of it on exactly this ground
-  (`../../hdr/exposure/README.md` § Adaptation is deliberately absent —
+  ([Adaptation](../../hdr/exposure/README.md#adaptation--the-frame-measures-itself) is deliberately absent —
   which names a dirty-tracked cache keyed on the cut as the thing that
   would thrash). Folding `dm` into a bound here is silent: the answers
   stay correct and the cost goes up by the whole march.
@@ -403,8 +403,8 @@ a third would be a third:
   follow the stars over the ±5,000 yr the clock reaches;
 - each landing transport chunk, because the catalogue streams and attach
   waits on the dust manifest, not on the catalogue — it can land after any
-  chunk (`../../loaders/README.md` § Progressive catalog
-  load). `markDirty()` is NOT enough here and the failure is silent: the
+  chunk ([Progressive catalog load](../../loaders/README.md#progressive-catalog-load)).
+  `markDirty()` is NOT enough here and the failure is silent: the
   kernel re-marches the copy it already holds, so every record past the
   attach-time prefix keeps an A_V computed from its undecoded `(0,0,0)` —
   Sol to Sol, zero extinction — until a bucket crossing happens to re-pack
@@ -413,8 +413,8 @@ a third would be a third:
 **The Morton order is re-sorted once, by the refresh that completes the
 catalogue, and only if attach sorted a prefix.** An order keyed on a table
 still mostly zeros sorts every undecoded record onto Sol's one key, which
-forfeits the coherence the order exists for (`dispatch-order/README.md`
-§ Dispatch order) — a cost, not a wrong answer, since the tables stay
+forfeits the coherence the order exists for ([Dispatch order](dispatch-order/README.md#dispatch-order))
+— a cost, not a wrong answer, since the tables stay
 paired. **Attach can land over a prefix on any cold load**: `../../main.ts`
 starts the dust-manifest fetch once the pre-paint chunks have landed, while
 the tail is still streaming, and the pass attaches when that small file
@@ -432,7 +432,7 @@ uploads.
 the star → slot prefix of the fused refill table in place, and that table
 uploads whole — its worklist region included, so the class the compaction
 built last frame is gone before the refill kernel reads it. Parking and
-re-requesting (`refill/README.md` § The cursor) re-lists every in-frame
+re-requesting ([The cursor](refill/README.md#the-cursor-and-why-a-request-never-stalls-it)) re-lists every in-frame
 star against the new slots within `REFILL_SLICES` frames. Resuming would
 march that class's zeroed entries onto star 0 and leave its own stars
 unmarched until some later request.

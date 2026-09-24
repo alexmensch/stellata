@@ -186,7 +186,7 @@ export function buildPlanetMeshMaterial(
     // Refracted, Rayleigh-reddened sunlight inside a caster's umbra — an
     // ADDITIVE illuminant, not a floor on `shadow`, weighted by 1 − shadow
     // so it fills exactly what the caster removed
-    // (../../solar-system/planets/eclipses/README.md § Umbral glow).
+    // (../../solar-system/planets/eclipses/README.md#umbral-glow--why-a-totally-eclipsed-moon-is-red-not-black).
     col.addAssign(base.mul(p.uSurfaceLuminance).mul(float(1.0).sub(shadow))
       .mul(p.uUmbralGlow).mul(reflected));
     // Terrain interreflection — the sunlit slopes around this patch

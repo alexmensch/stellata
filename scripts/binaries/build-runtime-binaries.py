@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Build ``public/binaries.bin`` — one record per physical binary
-pair for the runtime layer. See scripts/binaries/README.md
-§ Files in this area."""
+pair for the runtime layer. See /scripts/binaries/README.md#files-in-this-area."""
 
 from __future__ import annotations
 
@@ -87,7 +86,7 @@ NO_PARENT = -1
 @dataclass
 class MultiplesPair:
     """One physical pair, primary + secondary rows joined by system_id.
-    See ``scripts/binaries/README.md`` § Runtime side artifact for the
+    See /scripts/binaries/README.md#runtime-side-artifact for the
     raw-comp synth-key invariant ``primary_comp`` / ``secondary_comp``
     encode."""
 
@@ -415,7 +414,7 @@ def override_inner_primary_indices(
 ) -> None:
     """Force each inner pair's primary onto its parent component's catalog
     slot — the shared-slot invariant the runtime walk + focal-frame ride
-    both depend on (see src/client/binaries/README.md § Hierarchical walk).
+    both depend on (see /src/client/binaries/README.md#hierarchical-walk).
 
     An inner pair's own id-first resolve can miss this slot when the
     parent component is Gaia-blended with the system primary: Castor Ba

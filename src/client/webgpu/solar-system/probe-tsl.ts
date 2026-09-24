@@ -1,5 +1,5 @@
 // ./probe-tsl.ts / ./probe-tsl.ts on the TSL path: the fixed-pixel
-// diamond glyph, one material for both passes (README.md § The probe glyph
+// diamond glyph, one material for both passes (README.md#the-probe-glyph-is-one-material-across-both-passes
 // needs no mirror variant).
 
 import {
@@ -53,7 +53,7 @@ export function buildProbeMarkerMaterial(
     Discard(mask.lessThanEqual(0.0).or(vAlpha.lessThanEqual(0.0)));
     // Chrome: an authored colour inverse-mapped through the operator, with
     // no claim on the light already in the target and no occlusion of the
-    // diffuse field (../../hdr/attachments/README.md § Known residuals).
+    // diffuse field (../../hdr/attachments/README.md#known-residuals).
     // Both extra attachments take the blend's identity element — alpha 0
     // under this alpha-composited blend leaves the destination untouched.
     return {

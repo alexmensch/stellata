@@ -27,7 +27,7 @@ wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
 
 ## The values pull
 
-`docs/catalog-driver.md` § 5 puts SIMBAD at the **bottom** of the rv,
+[§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) puts SIMBAD at the **bottom** of the rv,
 distance, direction, PM and V cascades: never an authority, only the
 bibcoded courier for cohorts no first-order catalogue reaches. Two
 properties follow, and both are structural rather than stylistic.
@@ -66,7 +66,7 @@ a filter change: the predicate is `simbad_value_cohort` in
 table states every § 5 value for it AND its identity is first-hand too (a
 `crosswalk_gated` binding plus a TYC or a HIP). Why it takes both halves —
 and what an identity-only predicate loses — is
-`scripts/refresh/simbad/README.md` § The cohort is two questions.
+[The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
 Coverage over the cohort, measured at the 2026-09-08 pull (74,446 oids, up
 from 11,045 rows on the spine-scoped one it replaced). Every count below is
@@ -138,8 +138,8 @@ object: two Tycho entries SIMBAD folds onto one oid each ship their own row.
 
 The two classes it answers in, the 220 rows no committed table could detect,
 the 10 it vindicates against IV/25, and the four-witness split of the 15 it
-still contradicts: `scripts/catalog/simbad/README.md` § What the TYC → HD pull
-adjudicates and § Which witness decides a close pair's HD. That folder owns
+still contradicts: [What the TYC → HD pull adjudicates](/scripts/catalog/simbad/README.md#what-the-tyc--hd-pull-adjudicates)
+and § Which witness decides a close pair's HD. That folder owns
 what a consumer may conclude from these tables; this one owns what they are.
 
 ## Provenance
@@ -165,8 +165,8 @@ what a consumer may conclude from these tables; this one owns what they are.
 ## Request sets come off the membership term
 
 Every SIMBAD pull keys on the membership
-term — **no refresh script reads the AT-HYG CSV** (`data/athyg/README.md`
-§ Consumed by). The spine's `gaia_source_id` is the resolved, gate-passed
+term — **no refresh script reads the AT-HYG CSV** ([Consumed by](/data/athyg/README.md#consumed-by)).
+The spine's `gaia_source_id` is the resolved, gate-passed
 binding rather than a raw cell, so request and record build name the same
 sources by construction; rebasing the sp_type set dropped 3,172 source_ids
 the CSV walk over-pulled and gained 193 (measured 2026-08-15). Realised on
@@ -177,20 +177,18 @@ The no-Gaia tier (1,371 rows) falls through **HIP → TYC → GJ**: 1,317
 carry a HIP, 41 are keyed on a TYC, 12 on a GJ, and Sol carries none.
 The fall-through is strict, so those 41 are keyed on TYC whether or not
 they also carry a GJ — **5 of them do**, and their GJ is never requested
-(`scripts/catalog/spectral/README.md` § The ladder is ordered by what an
-identifier names).
+([The ladder is ordered by what an identifier names](/scripts/catalog/spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names)).
 Resolution against SIMBAD's `ident` table is 100% for HIP and TYC and
 10/12 for GJ — `Gl 165A` and `GJ 3406A` are component designations SIMBAD
 does not index, and stripping the letter would key the system rather than
 the component, so they stay unresolved rather than mis-bound.
 
-**The widening ladder, and its corroboration rule.** A source_id SIMBAD's
+<a id="the-widening-ladder-and-its-corroboration-rule"></a>**The widening ladder, and its corroboration rule.** A source_id SIMBAD's
 `ident` table does not carry leaves its row unreachable under the Gaia
 namespace — so each pull retries those rows on the record's own **HIP,
 then TYC, then GJ**, the order the no-Gaia tier itself falls through, each
 rung asking only for what the rungs above left unbound. Read-back does not
-depend on that order — see `scripts/refresh/simbad/README.md` § The widening
-falls through on resolution, not on cell presence.
+depend on that order — see [The widening falls through on resolution, not on cell presence](/scripts/refresh/simbad/README.md#the-widening-falls-through-on-resolution-not-on-cell-presence).
 Every binding made on a designation alone — these, and the union's below —
 is adjudicated against SIMBAD's own Gaia cross-IDs **across releases**: kept
 where SIMBAD holds the asking id under any release, dropped where it
@@ -200,7 +198,7 @@ holds no DR3 id to contradict it. Over the value cohort, **8 vetoed** and
 candidate bindings — bindings, not rows: a row vetoed on one rung is
 offered again to the next, so the 150 exceeds the distinct rows widened by
 at most the 8 vetoed. Mechanism and why only DR3 can contradict:
-`scripts/refresh/simbad/README.md` § The widening carries its own
+[The widening](/scripts/refresh/simbad/README.md#the-widening-falls-through-on-resolution-not-on-cell-presence) carries its own
 corroboration rule.
 
 Reading a differing DR3 id as a different star is what used to lose the
@@ -230,8 +228,7 @@ The +2,169 into SIMBAD is exactly the 1,821 leaving GSP-Spec plus the 348
 leaving unknown, so no record changed tier for any other reason. 348 fewer
 stars display as unknown. The TYC and GJ rows only reach records because
 the resolver gained matching tiers in the same change — the pull's cross-ID
-columns are inert without them (`scripts/catalog/spectral/README.md`
-§ The resolver and the radius chain).
+columns are inert without them ([The resolver and the radius chain](/scripts/catalog/spectral/README.md#the-resolver-and-the-radius-chain)).
 
 **The union closed the 34 the ladder could not** (re-pulled 2026-09-02).
 Those 34 records had lost a spectral type to a vanished HIP key: the object
@@ -243,8 +240,8 @@ gets SIMBAD's Gaia-keyed object for the same star, which carries no
 resolved, so no rung ever fired.
 
 The pull now asks every namespace a record reaches wherever the object it
-bound answers with nothing (`scripts/refresh/simbad/README.md` § The union
-asks every namespace a record reaches), and the reach is far wider than
+bound answers with nothing ([The union asks every namespace a record reaches](/scripts/refresh/simbad/README.md#the-union-asks-every-namespace-a-record-reaches)),
+and the reach is far wider than
 those 34: measured on the spine-scoped pull that introduced it, 280,676 of
 313,257 rows were answered by a bound object and asked nothing at all,
 32,581 were not, and **3,267 of those were recovered** on 3,188 added
@@ -296,8 +293,8 @@ threaten it.** Two SIMBAD objects for one star both reach the pull, but
 under different keys: SIMBAD's `ident` table maps an id to exactly one
 object, so a designation the union asks under can only resolve to the
 object that holds it, and an object an earlier phase already pulled adds
-nothing (`scripts/refresh/simbad/README.md` § The union adds rows, never a
-second row under one key — it carries the check to re-run). No key repeats
+nothing ([The union adds rows, never a second row under one key](/scripts/refresh/simbad/README.md#the-union-adds-rows-never-a-second-row-under-one-key)
+— it carries the check to re-run). No key repeats
 in any of the four namespaces. What the union did change is that
 `parseSimbadSptypeTsv` now MERGES a repeat rather than failing on one,
 keeping whichever row states a type; that decides nothing today.
@@ -338,24 +335,23 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   (Tier-C manual full run, `pnpm run validate:simbad`).
 - `simbad_sptype.tsv` → `scripts/catalog/build-catalog.ts` (Tier-1
   spectral classifier + the `otype = '**'` unresolved-multiplicity
-  flag, scripts/catalog/multiplicity/README.md § Multiplicity status) +
+  flag, [Multiplicity status](/scripts/catalog/multiplicity/README.md#multiplicity-status)) +
   `scripts/binaries/build-binaries.py` Stage 6 (per-component sp_type,
   beats AT-HYG's system-inherited string).
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
   cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`
   (sibling-letter attribution gate on the overlay's bindings — see
-  `data/classic-ids/README.md` § The binding gate). **The record build no
+  [The binding gate](/data/classic-ids/README.md#the-binding-gate)). **The record build no
   longer reads it**: `readStars` takes each binding off the manifest column,
   already gated, so the gate runs where bindings are still being decided
-  (`scripts/catalog/membership/README.md` § The identifier columns are read,
-  never re-derived).
+  ([The identifier columns are read, never re-derived](/scripts/catalog/membership/README.md#the-identifier-columns-are-read-never-re-derived)).
 - `simbad_values.tsv` → `scripts/catalog/simbad/simbad-values-parse.ts`, indexed by
   every namespace the pull keyed on and joined per record source_id → HIP →
   **GJ → TYC** — the join deliberately no longer mirrors the request order,
   because a GJ names the component where a TYC names the system
-  (`scripts/catalog/spectral/README.md` § The ladder is ordered by what an
-  identifier names). The **rv** cascade
+  ([The ladder is ordered by what an identifier names](/scripts/catalog/spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names)).
+  The **rv** cascade
   (`scripts/catalog/distance/radial-velocity/README.md`) and the
   **direction / PM** cascade both consume it; the distance cascade follows.
   The file shipped ahead of all of them so each is a build change against a
@@ -379,7 +375,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   J2016. The cascade therefore advances these coordinates 16 yr on the
   row's own bibcoded PM.
 
-  **The V flux reaches no cascade at all.** `docs/catalog-driver.md` § 5's
+  **The V flux reaches no cascade at all.** [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s
   projected SIMBAD V tier does not exist: Gliese `V/70A` reaches every row
   Tycho-2 misses, and for the nine that would otherwise have fallen here
   SIMBAD publishes fluxes in `B`, `J`, `H`, `K`, `R`, `g`, `r`, `i` and `G`

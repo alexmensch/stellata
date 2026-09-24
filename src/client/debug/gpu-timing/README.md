@@ -36,8 +36,7 @@ compute kernel shows as the frame row falling and the compute row rising.
 **To price a single pass, disable it and difference `gpu.frame`.**
 `../frame-cost/` automates it. This README owns the clocks; the canon
 they feed — wall clock is the total, slots are attribution, same buffer
-and same clock or no comparison — is `docs/render-rules.md`
-§ Measurement canon.
+and same clock or no comparison — is [Measurement canon](/docs/render-rules.md#9-measurement-canon).
 
 ## An exact frame total, and no per-pass rows at all
 
@@ -66,8 +65,7 @@ where the adapter withholds the feature; every resolve then returns
 one, so `webgpu/timestamps/` drives a timestamped pass through a
 validation scope at boot and clears the flag where it is refused. The boot
 records that verdict once as
-`WebGpuSeam.timestampsAvailable` (`../../webgpu/timestamps/README.md`
-§ The flag is a request, and a grant is not proof)
+`WebGpuSeam.timestampsAvailable` ([The flag is a request, and a grant is not proof](../../webgpu/timestamps/README.md#the-flag-is-a-request-and-a-grant-is-not-proof))
 and consumers ask that rather than assuming the flag took: with no
 timestamps the headline stays `submit` and a pricing sweep degrades to
 `raf-delta` instead of claiming a clock it does not have.
@@ -116,8 +114,8 @@ of a raw GPU timestamp (1.7 × 10¹⁵ ns ≈ 20 days of counter), so one half o
 a pass's timestamp pair resolves unwritten while the other holds an
 absolute counter. Safari 26 grants the same feature and then rejects the
 query set, taking every submit down with it
-(`../../webgpu/timestamps/README.md` § The flag is a request, and a grant
-is not proof) — so of the two browsers measured, one grants and lies and
+([The flag is a request, and a grant is not proof](../../webgpu/timestamps/README.md#the-flag-is-a-request-and-a-grant-is-not-proof))
+— so of the two browsers measured, one grants and lies and
 the other grants and breaks. The grant is a backend claim about itself,
 not a property of the API.
 
@@ -181,7 +179,7 @@ ONE frame's duration in the ring k times, k being the frames the readback
 spanned. That is not a cosmetic duplicate — it inflates the sample count
 `noiseMs` divides by (√k too tight, so rows read as resolved that did not),
 and the adjacent repeats drive `baselineLag1` / `disabledLag1` positive,
-which `../frame-cost/README.md` § Reading a row tells you to read as drift.
+which [Reading a row](../frame-cost/README.md#reading-a-row) tells you to read as drift.
 `resolveAndPublishGpuFrame` holds one cycle — both pools, one guard — in
 flight and publishes once per completion, render then compute; skipping
 the call while one is pending costs neither pool anything, because three

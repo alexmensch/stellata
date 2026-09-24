@@ -57,7 +57,7 @@ owns the derivation and the per-body contract.
   one by `reduce_dem.py`) is read twice: it decodes the reduction, and the
   renderer fences relief lighting at the depression that span's summit can
   see past the limb —
-  `src/client/solar-system/planets/README.md` § Surface relief.
+  [Surface relief](/src/client/solar-system/planets/README.md#surface-relief).
 - Measured area-weighted tilt off the local vertical, over the same
   ±85° window, ships in `relief.json` and is pinned by
   `dem-relief.test.ts`: median / p90 of **3.27° / 11.66°** (Moon),
@@ -317,8 +317,7 @@ sky that texel's own terrain fills, `mean(max(sin h, 0)²)` over the same 8
 azimuths.
 `scripts/textures/sky_view.py` owns it, and the mesh shader reads it as the
 `terrainView` the interreflected fill term multiplies
-(`src/client/solar-system/planets/surface-relief/README.md` § Shadows are lit
-by the terrain).
+([Shadows are lit by the terrain](/src/client/solar-system/planets/surface-relief/README.md#shadows-are-lit-by-the-terrain)).
 
 **It exists because the horizon pair cannot answer this question.** Those
 planes march from **two OUTPUT texels** out and skip everything nearer,
@@ -343,8 +342,8 @@ cannot serve both readings, and this map marches from **one DEM texel**,
   its pair's 89.5. Quote the per-body number with its width: this is the
   cheapest of the three planes either way, but Earth's is four times the
   others' and it enters the renderer's VRAM budget in full
-  (`src/client/solar-system/planets/textures/README.md` § Staying inside
-  VRAM). Grayscale WebP stores three identical channels and the lossless coder
+  ([Staying inside VRAM](/src/client/solar-system/planets/textures/README.md#staying-inside-vram)).
+  Grayscale WebP stores three identical channels and the lossless coder
   removes almost all of that; the upload narrows regardless.
 - **Reduced from the DEM's own width, not marched at the output grid.** The
   factor is smooth where a skyline is not, so area-averaging it after the

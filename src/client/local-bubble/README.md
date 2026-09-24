@@ -10,8 +10,7 @@ searchable, focusable, warpable, and pinnable. The shell kind module's
 `attach` registers it into its internal `ShellRegistry` when the mesh
 artifact loaded (center = mesh centroid, extent = max wall distance,
 SID = `SHELL_OBJECT_SIDS.local_bubble`, card + the drawn wall mesh as
-its pick surface) — see `../fresnel-shell/README.md` § Boundary shells as focus
-targets.
+its pick surface) — see [Boundary shells as focus targets](../fresnel-shell/README.md#boundary-shells-as-focus-targets).
 
 ## Files
 
@@ -44,8 +43,7 @@ The Fresnel shell's material seam and gating base live in
   `frustumCulled = false` (bounding-sphere culling is unreliable with the
   camera interior). Crossing the wall does not pop it out: the shared
   near-fade ramps the rim to nothing as the camera closes on it, and the
-  cull then takes over from inside (`../fresnel-shell/README.md`
-  § Camera-distance attenuation).
+  cull then takes over from inside ([Camera-distance attenuation](../fresnel-shell/README.md#camera-distance-attenuation)).
 - **Both distance reaches come off the mesh.** `uNearFadePc` and
   `uDepthDimRefPc` are derived together from the loader's measured
   `extentPc` (`rimDistancesForExtent`) — a number that exists only once the
@@ -55,9 +53,9 @@ The Fresnel shell's material seam and gating base live in
   with an authored wall distance; the build measures it. The measured
   extent is the **max** wall radius (~299 pc against a ~233 pc median), so
   the depth clearance covers the whole lumpy wall rather than its typical
-  lobe (`../fresnel-shell/README.md` § Camera-distance attenuation).
+  lobe ([Camera-distance attenuation](../fresnel-shell/README.md#camera-distance-attenuation)).
 - **renderOrder −1**, additive, `depthWrite:false`: a dim rim glow the
-  local stars composite over. See `src/client/scene/README.md` § Full render stack.
+  local stars composite over. See [Full render stack](/src/client/scene/README.md#full-render-stack--front-to-back).
 - **Label** (`localBubbleLabel`, a `labels`-tier declutter element at
   floor `all`) is an SVG `<text>` bound through the shared distance-gated
   label engine over ~96 shell-surface samples, so it hugs the silhouette.
@@ -65,8 +63,8 @@ The Fresnel shell's material seam and gating base live in
   the label whenever the camera is inside the bubble — the same mechanism
   (and behaviour) as the heliopause apex label. It also hides once the
   shell's projected silhouette shrinks below the shared feature-legibility
-  floor (`isShellLabelResolvable`, `../fresnel-shell/README.md`
-  § Invariants) — the shell has no distance cutoff of its own, so without
+  floor (`isShellLabelResolvable`, [Invariants](../fresnel-shell/README.md#invariants))
+  — the shell has no distance cutoff of its own, so without
   this floor the label would outlive the shell's legibility as the camera
   zooms out.
 
@@ -74,7 +72,7 @@ The Fresnel shell's material seam and gating base live in
 
 Built from the Zucker 2022 inner-surface HEALPix map; the build
 cross-checks the surface against the independent Edenhofer dust grid
-(`scripts/local-bubble/README.md` § Dust cross-check). Wall distance
+([Dust cross-check](/scripts/local-bubble/README.md#dust-cross-check-build-guard)). Wall distance
 ~75–300 pc; the Sun is inside, off-centre.
 
 ## Not yet

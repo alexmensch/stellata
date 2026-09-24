@@ -17,7 +17,7 @@ import { srgbEncodeTsl } from '../tonemap-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { attrFloat } from '../tsl/tsl-shim';
 
-/** The encode branch: README.md § The encode the built-in path lost. */
+/** The encode branch: README.md#the-encode-the-struct-graph-does-not-carry built-in path lost. */
 function strokeColour(u: SharedUniformNodes, rgb: Node<'vec3'>, alpha: Node<'float'>) {
   return select(
     u.uHdrTarget.lessThan(0.5),
@@ -67,7 +67,7 @@ export function buildDashedChromeLineMaterial(
   return { ...built, material };
 }
 
-/** The fat stroke — README.md § The fat stroke keeps three's fragment.
+/** The fat stroke — README.md#the-fat-stroke-keeps-threes-fragment.
  *  `transparent` stays FALSE at every opacity and the alpha composite is
  *  spelled out instead; `setFatChromeLineOpaque` is the only writer of
  *  either flag. */

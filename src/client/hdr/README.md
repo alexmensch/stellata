@@ -72,7 +72,7 @@ every resize has to reach it; the integration shell's
 invariant — matching the point-source rule exactly, since a resolved
 disc's `r_phys_px` grows as FOV shrinks. The *display* path does not
 follow it: the eye's summation area is angular, so a diffuse source holds
-its level at any plate scale (`emission/README.md` § Extended sources). The
+its level at any plate scale ([Extended sources](emission/README.md#extended-sources--two-solid-angles-one-write-tail)). The
 statistic keeps the quadratic fall; an unresolved point keeps its peak at
 any FOV.
 
@@ -115,7 +115,7 @@ gate, the texel rule, the blend contract and the residuals are
 that light is in**, and the test is its blend rather than its depth — moving
 the diffuse emitters to attachment 2 moved what every attenuating draw dims,
 from cloud absorption to the close-range planet surfaces.
-`summation/README.md` § Everything that dims the field is the statement, and
+[Everything that dims the field](summation/README.md#everything-that-dims-the-field-has-to-follow-it-here) is the statement, and
 the canvas alpha is the consumer with no mark of its own.
 
 The render pass's own clear writes every attachment, so both extra
@@ -152,16 +152,15 @@ so the measurement never delays the frame it measured
 
 **The target's depth format is load-bearing, and it has to be stated
 rather than inferred.** The local depth pass derives its precision
-guarantee from the format (`../local-depth/bracket/README.md`
-§ Precision analysis): the K = 1 bound assumes float32.
+guarantee from the format ([Precision analysis](../local-depth/bracket/README.md#precision-analysis)):
+the K = 1 bound assumes float32.
 
 `reversedDepthBuffer` makes three pick `depth32float` for the CANVAS
 only; for a render target it auto-creates a `depth24plus` depth texture
 regardless, which is fixed-point and makes a single bracket wrong by
 ~262 AU at Neptune's ring. So `WebGpuHdrPipeline` attaches an **explicit
 `FloatType` `DepthTexture`** — a request, and why nothing can confirm it
-landed is `../webgpu/hdr/README.md` § The depth format is requested, not
-asserted.
+landed is [The depth format is requested, not asserted](../webgpu/hdr/README.md#the-depth-format-is-requested-not-asserted).
 
 Adding stencil breaks it: it diverts the target to
 `depth32float-stencil8`, an optional device feature.
@@ -205,7 +204,7 @@ re-authors every registered colour when the operator parks.
 
 Chart renders direct to the canvas: no target, no tone-map, no exposure,
 and pixel-identical to the pre-HDR build. Why a bypass rather than an
-identity path is `docs/science-hdr-pipeline.md` § 5.
+identity path is [§ 5](/docs/science-hdr-pipeline.md#5-chart-mode--full-bypass).
 
 `setMonochrome` is the seam (`stellata.ts`), alongside the existing
 paper clear-colour swap. `applyTheme('mono')` is the only caller, so
@@ -213,7 +212,7 @@ mono and chart are the same state in practice.
 
 Entering or leaving chart swaps every MRT material between its
 single-output graph and the three-member struct
-(`../webgpu/hdr/README.md` § The gate becomes the output struct), which
+([The gate becomes the output struct](../webgpu/hdr/README.md#the-gate-becomes-the-output-struct)), which
 rebuilds those pipelines. That is a one-time hitch on the chart
 transition, which already swaps materials anyway.
 
@@ -223,15 +222,15 @@ transition, which already swaps materials anyway.
 0** — a physical luminance reaching the canvas with no operator would just
 blow out. That is why the operator lives in a shared helper rather than
 inside the resolve alone, the same two-consumers strategy as the
-extinction prepass (`../star-pipeline/extinction/README.md` § The prepass
-cache). **Chart mode** is what reaches it, and nothing else does.
+extinction prepass ([The prepass cache](../star-pipeline/extinction/README.md#the-prepass-cache)).
+**Chart mode** is what reaches it, and nothing else does.
 
 **This path is not a calibrated build.** A point source is fine — same
 `L`, same operator, same exposure, and the **peak matches exactly**. A
 *diffuse* source is not: there is no attachment 2 and no pass to convolve
 it, so the extended-source anchor is gone entirely and both volumetric
-emitters revert to the pixel solid angle (`emission/README.md`
-§ Extended sources), which puts the band and the Local Group **several
+emitters revert to the pixel solid angle ([Extended sources](emission/README.md#extended-sources--two-solid-angles-one-write-tail)),
+which puts the band and the Local Group **several
 magnitudes faint**. So it is not a comparison path for the colour frame:
 parking one here would compare against a differently-calibrated scene.
 
@@ -267,19 +266,19 @@ to be a deliberate edit.
   the last one outside it; it takes the same
   `surfaceBrightnessLuminanceTsl` gain as the band, off a zero
   point derived from the solver's flux units rather than a tuned
-  constant (`../local-group/emission/README.md` § Zero free parameters).
+  constant ([Zero free parameters](../local-group/emission/README.md#zero-free-parameters--the-emission-scale-is-derived)).
 
 ## Dev switches
 
 The target's own levers. The operator's — `setTonemapEnabled` and the two
 shape knobs, plus what pass-through does and does not reproduce — are
-`tonemap/README.md` § Operator knobs.
+[Operator knobs](tonemap/README.md#operator-knobs).
 
 - `stellata.hdr.setStatisticWritesEnabled(false)` — masks attachment 1 out of
   every emitter draw while the clear keeps writing it, so the statistic reads
   zero rather than stale and the reduction keeps running over an empty
   attachment. A frame-cost lever
-  (`../debug/frame-cost/passes/README.md` § The roster); live, with the
+  ([The roster](../debug/frame-cost/passes/README.md#the-roster)); live, with the
   cut not held, it fades the adaptation to zero.
 - `stellata.hdr.setSummationEnabled(false)` — skips the rod-summation
   downsample and collapses the resolve's kernel to one centre tap. The band
@@ -299,24 +298,24 @@ shape knobs, plus what pass-through does and does not reproduce — are
 Perf row: `submit.tonemap` (CPU submission, `../debug/README.md`). It
 includes the summation downsample and the convolution's taps, since
 `resolve()` runs them; only `gpu.frame` prices the pass's GPU cost.
-`summation/README.md` § The kernel is where the tap count is bounded.
+[The kernel](summation/README.md#the-kernel--a-flat-disc-and-it-has-to-be) is where the tap count is bounded.
 
 ## Not here yet
 
 `DR_MAG` and the desaturation strength are on the panel as well as the
-dev console (`tonemap/README.md` § Operator knobs); `L_THRESH` and the
+dev console ([Operator knobs](tonemap/README.md#operator-knobs)); `L_THRESH` and the
 extended-source threshold
 appear there as **readouts, never sliders** — `L_THRESH` is the unit's own
 anchor, so a slider on it would move every layer's calibration with it
-(`exposure/README.md` § Debug panel). **`DR_MAG` has no leverage
+([Debug panel](exposure/README.md#debug-panel)). **`DR_MAG` has no leverage
 on the band's faint rows** — `y/Lw²` is under 2 × 10⁻³ there, so
 sweeping it 5.5 → 11 moves them under 0.01 mag
-(`docs/science-hdr-pipeline.md` § 8). It works at the top end, on star
+([§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7)). It works at the top end, on star
 peaks and hue survival — 7.5 is validated there, not against the
 panorama, and the faint end belongs to the two thresholds and the toe.
 
 No emitter is outside the scale, and both volumetric emitters share one
 zero point (`SB_ZERO_POINT`) and one ρ₀ solve
-(`emission/README.md` § Solving ρ₀). The band is anchored on the Galaxy's
+([Solving ρ₀](emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density)). The band is anchored on the Galaxy's
 integrated M_V now; where that leaves it against the sightline photometry
-is `../milkyway/calibration/README.md` § Two checks.
+is [Two checks](../milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order).

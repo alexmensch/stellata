@@ -19,8 +19,8 @@ scripts/catalog/record/
                                   stack applies (`../distance/README.md`), and
                                   the SIMBAD namespace ladder both SIMBAD pulls
                                   index and join through
-                                  (`../spectral/README.md` § The ladder is
-                                  ordered by what an identifier names). Pure.
+                                  (`../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`).
+                                  Pure.
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
                                   records on. Pure. § Record order.
 ```
@@ -42,7 +42,7 @@ its own record, so the key is the only thing worth asserting on.
 **The order is load-bearing, not cosmetic.** Any prefix of the record array is
 then the brightest-looking sky, which is exactly what the progressive load
 paints from its first transport chunk (§ On-disk transport chunking,
-`src/client/loaders/README.md` § Progressive catalog load). It also puts Sol at
+[Progressive catalog load](/src/client/loaders/README.md#progressive-catalog-load)). It also puts Sol at
 index 0 by some twenty-two magnitudes — and `catalog.solIndex` gates the boot
 focus, the floating-origin seed and the whole solar system, none of which could
 exist in a prefix under the absolute-magnitude order this replaced.
@@ -75,9 +75,9 @@ Fixed-size records in apparent-V order (§ Record order). Current version is
 takes the next character rather than a second digit). v10 moved the name table
 ahead of the records and changed no record byte; v9 appended a `uint8`
 `multiplicity_status` at byte 96 (bytes 97–99 reserved, zero-filled, so
-the stride stays a multiple of 4) — see `../multiplicity/README.md` § Multiplicity status. v8
+the stride stays a multiple of 4) — see [Multiplicity status](../multiplicity/README.md#multiplicity-status). v8
 appended three `float32` space-motion velocity components (`vx/vy/vz`,
-pc/yr) at bytes 84–95 — see `../parse/README.md` § Space-motion velocity. v7 appended a `uint32` `sid` (Stellata ID)
+pc/yr) at bytes 84–95 — see [Space-motion velocity](../parse/README.md#space-motion-velocity). v7 appended a `uint32` `sid` (Stellata ID)
 at byte 80 — see § SID allocation. v5 appended a `uint64` Gaia
 DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
 NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
@@ -104,7 +104,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 12–15 `float32`      absmag — **intrinsic** (de-extincted). The build
                           subtracts the Sol→star Edenhofer A_V so the runtime
                           raymarch re-adds it without double-counting (see
-                          `../distance/dust/README.md` § Build-time de-extinction).
+                          [Build-time de-extinction](../distance/dust/README.md#build-time-de-extinction)).
   - 16–19 `float32`      ci (intrinsic B–V colour index, de-reddened by the
                           same integral; default 0.65 for missing)
   - 20–23 `float32`      physicalRadius in solar radii (computed at build time)
@@ -115,8 +115,8 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 34    `uint8`        constellation index (0–87 into `constellations.json`;
                           255=none). **Positional**, resolved from the record's
                           own xyz against the IAU boundaries — see
-                          `../parse/README.md` § Positional constellation
-                          membership. Sol is the only record carrying 255, and
+                          [Positional constellation membership](../parse/README.md#positional-constellation-membership).
+                          Sol is the only record carrying 255, and
                           the build asserts it. The constellation a
                           designation is *named* for is a separate field,
                           search-index `dc` (§ Search index).
@@ -148,8 +148,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 44–51 `uint64`       **Gaia DR3 source_id** little-endian (0 = none).
                           Read off the manifest column, whose `binding`
                           cell says how it is justified; the build
-                          re-derives nothing (`../membership/README.md`
-                          § The identifier columns are read, never
+                          re-derives nothing ([The identifier columns are read, never](../membership/README.md#the-identifier-columns-are-read-never-re-derived)
                           re-derived). IDs routinely exceed 2^53 so
                           the JS reader exposes them via `BigUint64Array`.
                           The ~0.4% residual is dominated by Gaia-saturated
@@ -171,21 +170,21 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           gspspec as fallback. NaN = absent.
   - 72–75 `float32`      **logg_gspspec** (log cgs); NaN = absent.
   - 76–79 `float32`      **mh_gspspec** ([M/H] dex); NaN = absent.
-  - 80–83 `uint32`       **sid** — Stellata ID (docs/sid.md § 7), the frozen
+  - 80–83 `uint32`       **sid** — Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)), the frozen
                           per-object wire identity. `0` (`NO_SID`) only in the
                           unallocated-bootstrap path (§ SID allocation) before
                           the build hard-fails. Every shipped record is
                           nonzero.
   - 84–87 `float32`      **vx** — space-motion velocity x (pc/yr, equatorial
                           Cartesian, Sol at origin). See
-                          `../parse/README.md` § Space-motion velocity.
+                          [Space-motion velocity](../parse/README.md#space-motion-velocity).
   - 88–91 `float32`      **vy** — space-motion velocity y (pc/yr).
   - 92–95 `float32`      **vz** — space-motion velocity z (pc/yr).
   - 96    `uint8`        **multiplicity_status** (`MULTIPLICITY_*`:
                           0=single, 1=resolved — a multiples.tsv member
                           row backs the record, 2=unresolved — SIMBAD
                           otype `**` with nothing resolved). See
-                          `../multiplicity/README.md` § Multiplicity status.
+                          [Multiplicity status](../multiplicity/README.md#multiplicity-status).
   - 97–99 reserved (zero-filled; `RECORD_RESERVED_TAIL_BYTES` — a field
                           taking a reserved byte still bumps the version).
 - Name table: length-prefixed UTF-8 strings (`uint16` length then bytes).
@@ -250,7 +249,7 @@ block in `scripts/catalog/record/catalog-pure.test.ts`.
 ### On-disk transport chunking
 
 Cloudflare Workers rejects any single static asset > 25 MiB
-(`WORKERS_MAX_ASSET_BYTES`, `../../README.md` § What ships), and the
+(`WORKERS_MAX_ASSET_BYTES`, [What ships](../../README.md#what-ships)), and the
 assembled binary is well past that, so it is **not** written as one file.
 The build slices the assembled buffer into sequential byte-range chunks
 (`public/catalog.bin.0`, `.1`, …), plus `public/catalog-manifest.json`
@@ -301,7 +300,7 @@ handful of round trips and is the wrong side of that deal.
 
 The manifest also carries
 the optional `sidSuccessors` side-field (retired sid → successor sid
-pairs, docs/sid.md § 9.4, derived from `data/sid/retirements.tsv` net
+pairs, [§ 9.4,](/docs/sid.md#94-migration-semantics--exact-table) derived from `data/sid/retirements.tsv` net
 of reinstatements) so the runtime SID resolver can follow merge-type
 retirements without an extra fetch; omitted while empty.
 
@@ -347,12 +346,12 @@ with `catalog.bin` in `main.ts`.
 the record's NAME, `b`/`bx`/`bc` the Bayer glyph with its index and the
 component the authority attributes it to, `f`/`gd`/`gh` the Flamsteed and
 Gould numbers, `al` the spellings the ladder displaced. Nothing on the
-wire is a composed string and nothing parses one; `../naming/README.md`
-§ Two callers, one composer owns the rest.
+wire is a composed string and nothing parses one; [Two callers, one composer](../naming/README.md#two-callers-one-composer)
+owns the rest.
 
 `hda`/`hra` carry the further HD / HR numbers a record answers to but does
 not display — the manifest's `hd_alt` / `hr_alt` cells
-(`../classic-ids/label-merge/README.md` § An alias stops at the blend). The `s` field carries
+([An alias stops at the blend](../classic-ids/label-merge/README.md#an-alias-stops-at-the-blend)). The `s` field carries
 the raw spectral designation the spectral resolver settled on ("G2 V",
 "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display. The `g` field carries the GCVS variable-star
 designation (`R CrB`, `VY CMa`, `V0645 Cen`) the cross-match attaches
@@ -369,8 +368,8 @@ the same `gaia → hip → synth` priority `build-runtime-binaries.py` uses.
 The pair drives both the composed display label ("Sirius B") and the
 runtime "<system> <letter>" aliases ("Alpha Centauri C" / "α Cen C" →
 Proxima). `cp` is the WDS ROOT's anchor, not the pair cursor's:
-`../companions/record-index/README.md` § Component-letter search
-designations. Coverage is bounded by what decomposes in `multiples.tsv`
+[Component-letter search designations](../companions/record-index/README.md#component-letter-search-designations).
+Coverage is bounded by what decomposes in `multiples.tsv`
 (`componentDesignations` in build-counts pins the total).
 
 `c` is the record's **positional** constellation (byte 34) and drives the
@@ -380,7 +379,7 @@ ships only where the two diverge AND the entry carries a
 constellation-relative designation (`b`/`f`/`gd`/`g`/`cl`) — **69** entries,
 `designationConMismatch` — so the reader's `designationConIndex(dc, c)`
 fallback carries the rest at no wire cost. The cascade behind the field:
-`../naming/README.md` § The designation constellation.
+[The designation constellation](../naming/README.md#the-designation-constellation).
 
 Field shape pinned in `scripts/catalog/record/catalog-pure.ts` as the `SearchEntry`
 interface — the writer (`../build-catalog.ts`) and the reader
@@ -389,7 +388,7 @@ interface — the writer (`../build-catalog.ts`) and the reader
 Which forms dispatch to an exact-match map and which are Fuse-fuzzy, and
 every ASCII / constellation-expanded spelling derived off the structure
 above, are the reader's own:
-`src/client/typeahead/README.md` § Star search.
+[Star search](/src/client/typeahead/README.md#star-search).
 
 The dropdown deduplicates by star index so a star with multiple matching
 Bayer variants shows up once.

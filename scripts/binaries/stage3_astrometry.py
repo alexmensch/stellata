@@ -183,7 +183,7 @@ def _from_athyg_position(row: AthygRow) -> ComponentAstrometry | None:
     """Synthesize ``ComponentAstrometry`` from an AT-HYG row's stored
     ra/dec + parallax (=1000/``dist_pc``). Returns ``None`` when
     ``dist_pc`` is absent or non-positive — the row carries no usable
-    parallax. See ``scripts/binaries/README.md`` § Stage 3 for the
+    parallax. See /scripts/binaries/README.md#stage-3--per-component-astrometry-routing for the
     population this route serves.
     """
     if row.dist_pc is None or row.dist_pc <= 0:
@@ -373,7 +373,7 @@ def attach_athyg_position_fallback(
     ``ComponentAstrometry`` from the matched row. Mutates ``astrometry``
     in place; rows that can't be matched stay ``unresolved``.
 
-    See ``scripts/binaries/README.md`` § Stage 3 for how this composes
+    See /scripts/binaries/README.md#stage-3--per-component-astrometry-routing for how this composes
     with Stage 2's identifier-binding pass over the same cascade.
     Opts into secondary blend-inheritance so Hipparcos-unresolved
     blends (A and B sharing a single AT-HYG entry at sub-AU

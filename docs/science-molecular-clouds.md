@@ -105,11 +105,10 @@ yielded only 0.44 mag against a field that peaks near 0.135 E_ZGR/pc.
 The fixed ceiling widens the 255-step log window from 4.73 to 6.30
 decades (quantisation 4.4 %→5.9 %/step, invisible downstream); the
 shader decodes from manifest constants, so no client change beyond the
-regenerated data. Encoding mechanics: `scripts/dust/README.md`
-§ Encoding.
+regenerated data. Encoding mechanics: [Encoding](/scripts/dust/README.md#encoding).
 
-The de-extinction invariant (`scripts/catalog/distance/dust/README.md` § Build-time
-de-extinction) means the catalog rebuild ships with the re-encoded
+The de-extinction invariant ([Build-time de-extinction](/scripts/catalog/distance/dust/README.md#build-time-de-extinction))
+means the catalog rebuild ships with the re-encoded
 grid: intrinsic absmags of stars behind dense dust brightened by up to
 ~1.8 mag. Because extinction only dims (A_V ≥ 0), the `../src/client/webgpu/star/star-vertex-tsl.ts`
 prefilter needs no headroom term — a star whose unextincted appMag
@@ -385,7 +384,7 @@ closer pairs by taking the larger R_cav.
 The emitted `clouds.json` fields (`class`, `n0Cal`, `uEnv`, `rflat`,
 `p`, `sigmaS`, `massLeike`, `akPeak`, `inGrid`, `seed`, `embedded[]`,
 plus the build-side `noiseModel` block) are documented in
-`scripts/clouds/README.md` § Output schema, which is the schema's single
+[Output schema,](/scripts/clouds/README.md#output-schema) which is the schema's single
 source of truth. Physics behind each field is §§ 4, 5, 7 here.
 
 ## 9. Presence pass
@@ -440,7 +439,7 @@ Intensity constants are named uniforms with dev-console levers
 
 The volumetric Milky Way deliberately does not sample the Edenhofer
 voxels because fixed-step marches alias into visible streaks
-(`docs/science-galactic-structure.md` § Interstellar dust extinction;
+([Interstellar dust extinction](/docs/science-galactic-structure.md#interstellar-dust-extinction);
 the standing spiral-arm non-goal exists for the same reason). The
 absorption integrand is the smooth analytic Plummer profile or the
 traced brick — no heavy-tailed noise estimator. Three rules are

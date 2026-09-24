@@ -35,7 +35,7 @@ they are deliberately excluded.
   post-encounter reconstruction).
 - Retrieved: 2026-07-25. Each file carries its own `source.retrievedUtc`.
 - Refresh: `pnpm run fetch:probes` — manual and infrequent, never part
-  of `pnpm run build` (`../README.md` § Frozen external data).
+  of `pnpm run build` ([Frozen external data](../README.md#frozen-external-data)).
 - Query shape per probe: `EPHEM_TYPE=VECTORS`, `CENTER='500@10'`
   (Sun centre), `REF_PLANE=FRAME`, `VEC_TABLE='2'` (position +
   velocity), `OUT_UNITS=AU-D`, `CSV_FORMAT=YES`, spanning the probe's
@@ -79,8 +79,8 @@ a refresh still diffs sample-by-sample in git.
   loader divides. The `Ms` suffix is load-bearing — an undecorated
   `launchUnix` reads as seconds and is off by 1000×.
 - `jd` — Julian Date, **TDB**. The runtime's clock is UTC, so the loader
-  converts through `jdTdbToT` (`src/client/solar-system/time/README.md`
-  § Timescales). At 17 km/s the 69 s offset is 1,200 km ≈ 8e-6 AU: below
+  converts through `jdTdbToT` ([Timescales](/src/client/solar-system/time/README.md#timescales)).
+  At 17 km/s the 69 s offset is 1,200 km ≈ 8e-6 AU: below
   anything visible, but no longer below the planet ephemeris it gets
   compared against.
 - `x, y, z` — heliocentric position, **AU**, **ICRS equatorial** axes
@@ -109,8 +109,7 @@ Sample spacing tracks how hard each trajectory is turning rather than a
 clock. Every file is built to one guarantee — **linear interpolation
 between its samples stays within `chordToleranceAu` (1e-5 AU, 1,496 km)
 of the real trajectory** — and the spacing needed to hold that is what
-the grid is. How the pipeline finds it is `scripts/probes/README.md`
-§ Adaptive grid.
+the grid is. How the pipeline finds it is [Adaptive grid](/scripts/probes/README.md#adaptive-grid).
 
 | File | Rows | Size | Finest gap | Coarsest gap |
 |---|---|---|---|---|

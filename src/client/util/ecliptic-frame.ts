@@ -1,5 +1,5 @@
 // The fixed J2000 ecliptic ↔ ICRS equatorial rotation about the
-// obliquity. See README.md § ecliptic-frame.ts.
+// obliquity. See README.md#ecliptic-framets.ts.
 
 import { J2000_OBLIQUITY_RAD } from './astronomy-constants';
 

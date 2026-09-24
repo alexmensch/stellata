@@ -2,7 +2,7 @@
 
 A spine row's `gaia_source_id`, derived from committed evidence alone. The
 manifest that consumes it is `../README.md`; the retirement this derivation
-completes is `docs/catalog-driver.md` § 3.2.
+completes is [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-column-per-consumer-in-order).
 
 ## Files in this area
 
@@ -29,7 +29,7 @@ committed sources, in precedence order:
    and the bare number **only from a row CNS5 lists without letters**. A
    binding takes one component's source, so a bare cell may not fold onto a
    lettered row — GJ 1001 is the shape, where CNS5 lists the L-dwarf pair C
-   first (`../../classic-ids/README.md` § The GJ fold stops at the component).
+   first ([The GJ fold stops at the component](../../classic-ids/README.md#the-gj-fold-stops-at-the-component)).
    The `gl:` ↔ `gl:` bridges of `data/sid/sameas-overrides.tsv` are read as
    one designation, so CNS5's `GJ 9140` row answers for `Gl 157.1`.
 4. **SIMBAD** — the Gaia source SIMBAD's frozen cross-IDs
@@ -53,8 +53,8 @@ that passes wins. The magnitude gate weighs G
 against the record's **printed V in the V cascade's own tier order**:
 Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC, else
 Gliese's `Vmag` on its GJ cell — the last two through `printedVLookups`, the
-one bundle both gates read them by (`../../photometry/README.md` § The V
-cascade). The Tycho-2 arm is what reaches
+one bundle both gates read them by ([The V cascade](../../photometry/README.md#the-v-cascade)).
+The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
@@ -86,7 +86,7 @@ component's source, while SIMBAD binds the star the HIP names. CNS5 itself
 letters the two the way SIMBAD and the HIP do.
 
 A **collision** is one source two spine rows derive: a Gaia source on two
-records keys neither (`docs/sid.md` § 4.1), so **both** are withheld and
+records keys neither ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)), so **both** are withheld and
 queued. Nothing in the derivation ranks one row over the other, so there is no
 tiebreak to inherit, and inventing one would settle an identity question on
 walk order.

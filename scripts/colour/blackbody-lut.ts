@@ -8,8 +8,8 @@
 // pinned by vitest so any change here forces a deliberate update on both
 // sides.
 //
-// See docs/science-stellar-modelling.md § "Star colour calibration" and
-// research/star-spectral-rendition/README.md § Tier 1.
+// See /docs/science-stellar-modelling.md#star-colour-calibration and
+// /research/star-spectral-rendition/README.md#tier-1--replace-citocolor-with-blackbody--srgb-lut-ship-standalone.
 
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -96,7 +96,7 @@ function renderModule(bytes: Uint8Array): string {
 // LINEAR light, not gamma-encoded — the star shader renormalises each
 // sample to luminance 1 and the tone-map pass owns the only sRGB encode.
 // See scripts/colour/blackbody-lut.ts and
-// docs/science-stellar-modelling.md § "Star colour calibration".
+// /docs/science-stellar-modelling.md#star-colour-calibration.
 
 export const LUT_SIZE = ${LUT_SIZE};
 export const BV_MIN = ${BV_MIN};

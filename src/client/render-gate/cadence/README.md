@@ -74,8 +74,8 @@ the nonsense hurting, which rendered every refresh.
 ## The contract
 
 `SceneLayer.timeBehaviour` is **required** and a discriminated union, so
-a layer cannot stay silent about time; `../../scene/README.md` § Declaring
-how time moves a layer owns that half. A `'clock'` layer's `rate(ctx)`
+a layer cannot stay silent about time; [Declaring how time moves a layer](../../scene/README.md#declaring-how-time-moves-a-layer)
+owns that half. A `'clock'` layer's `rate(ctx)`
 returns a `CadenceReport`:
 
 | channel | unit | what it is |
@@ -130,8 +130,8 @@ A star too faint to see must not set the frame rate. The visibility
 predicate is **the one the shader uses** — the existing
 `emitterPutsInkOnScreen` / `bodyInkVisible` machinery reading the live
 exposure, which is legitimate here precisely because the decision is
-per-frame and cached nowhere (`../../solar-system/planets/README.md`
-§ The pick's adapted gate makes the same argument for the pick path).
+per-frame and cached nowhere ([The pick's adapted gate](../../solar-system/planets/README.md#the-picks-adapted-gate)
+makes the same argument for the pick path).
 
 Three exclusions, all first-class:
 
@@ -259,7 +259,7 @@ Three properties worth knowing:
   diagnosis.
 - **It reports.** A silent net is worse than none, so a live correction
   is the TOP verdict in `debug.renderWatch()`, above holds
-  (`../../debug/render-watch/README.md` § DECLARATION UNDER-REPORTED).
+  ([DECLARATION UNDER-REPORTED](../../debug/render-watch/README.md#declaration-under-reported)).
 
 **What it cannot catch, stated plainly:** a driver on content no layer
 enumerates at all. The observation comes from the same walk as the rate,
@@ -299,7 +299,7 @@ that field.
 
 - **The walk is `forEachDrawnBodyView` plus two more gates.** `bodyInkVisible`
   (the same live-exposure test the pick path uses,
-  `../../solar-system/planets/README.md` § The pick's adapted gate) and occlusion by the parent. The second is one angular-separation
+  [The pick's adapted gate](../../solar-system/planets/README.md#the-picks-adapted-gate)) and occlusion by the parent. The second is one angular-separation
   test against the parent's own angular radius, and it shares
   `parentGeometryInto` with the body-collapse verdict rather than
   open-coding the cross-and-dot a second time — the two want opposite ends

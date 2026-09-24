@@ -53,7 +53,7 @@ export function parseLsFilesStage(out: string): BlobIndex {
   return blobs;
 }
 
-// see README.md § The catalogue build cache
+// see README.md#the-catalogue-build-cache
 export function keyedPaths(closure: ReadonlySet<string>, index: BlobIndex): string[] {
   const untracked = [...closure].filter((path) => !index.has(path));
   if (untracked.length > 0) {

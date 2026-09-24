@@ -4,7 +4,7 @@ The star half of the local depth pass: which stars join the pass each
 frame, and the mirror draw that re-renders them inside its depth
 bracket. Pass mechanics and the other member layers are
 `../../local-depth/README.md`; why the main pass can't do this job is
-`../../webgpu/star/README.md` § The disc draw writes no depth.
+[The disc draw writes no depth](../../webgpu/star/README.md#the-disc-draw-writes-no-depth).
 
 ## Files
 
@@ -49,8 +49,7 @@ index, so star-indexed lookups — the extinction read, `uHideFocusIdx`,
 materials from the same node builders with a `mirror` vertex source,
 sharing uniform nodes, over slots that hold `iSourceIdx` alone — the
 geometry has no per-instance attribute to copy, every star field being a
-storage read at that index (`../../webgpu/star/README.md` § The local
-mirror).
+storage read at that index ([The local mirror](../../webgpu/star/README.md#the-local-mirror)).
 
 **The slot attributes carry `DynamicDrawUsage`, and that rides on a size
 ceiling rather than on the usual argument.** `sync()` flags
@@ -58,7 +57,7 @@ them once a frame, but `buildGroup` hangs three meshes off the one slot
 geometry under a single `group.visible`, so two of the three draws read an
 attribute nothing flagged in them — and three r185 re-uploads a
 `DynamicDrawUsage` attribute on every render call whatever its version
-(`../../webgpu/README.md` § One writer per buffer per submit). It costs 64 B
+([One writer per buffer per submit](../../webgpu/README.md#one-writer-per-buffer-per-submit)). It costs 64 B
 a frame here only because the mirror source carries no per-instance
 attribute, leaving `iSourceIdx`'s 32 B as the whole carrier. **Give that
 geometry one per-instance attribute and the hint becomes a full upload of
@@ -108,7 +107,7 @@ occluded fragments from painting at all:
 - **Main pass** — a member keeps its core depth-mask draw (only the
   colour passes collapse) and the mask stamps the nearest depth, as a
   clip-z pin in the vertex stage so the draw keeps its early-z
-  (`../../webgpu/README.md` § Early-z). The member's true standard depth
+  ([Early-z](../../webgpu/README.md#early-z--the-star-layers-depth-honest-redesign)). The member's true standard depth
   quantises to 1.0 past ~7 AU and would TIE background glow instead of
   occluding it; the nearest-possible stamp is safe because the local
   pass repaints the core and membership range (a ≥5 px disc)

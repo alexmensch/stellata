@@ -1,6 +1,6 @@
 # SID resolver
 
-Runtime half of the Stellata ID system (docs/sid.md § 8; the build-time
+Runtime half of the Stellata ID system ([§ 8](/docs/sid.md#8-runtime-resolver-b4); the build-time
 registry lives under `scripts/sid/` + `data/sid/`). One global
 `SidResolver` maps a wire SID to `{ kind, localIndex }` in the runtime
 object model — the same `kind`/index currency `FocusTarget`, hover
@@ -29,7 +29,7 @@ client may ever attach (`star`, `planet`, `cloud`, `lg`, `shell`,
   waiting for it.
 
 `resolve(sid)` first canonicalises through the **successor map**
-(retired sid → successor sid, docs/sid.md § 9.4) — built at catalog
+(retired sid → successor sid, [§ 9.4](/docs/sid.md#94-migration-semantics--exact-table)) — built at catalog
 build time from `retirements.tsv` net of `reinstatements.tsv`, shipped
 as the catalog manifest's `sidSuccessors` side-field, and passed to
 the constructor. Chains are followed to their live end (a corrupt
@@ -71,7 +71,7 @@ layer:
 | `shell` | boot (both sids static) | `SHELL_OBJECT_SIDS` in `SHELL_KEYS` order | `SHELL_KEYS` index = Target `{kind:'shell'}` idx |
 
 `SOL_OBJECT_SIDS.sun` is deliberately NOT in the planet domain: Sol's
-catalog record carries the same sid (same-as edge, docs/sid.md § 7), so
+catalog record carries the same sid (same-as edge, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)), so
 the star domain claims it and a "sun" focus resolves to the Sol record.
 
 One table, two domains: `SOL_OBJECT_SIDS` backs both `planet` and
@@ -103,7 +103,7 @@ arrived, so resolution stays `pending` and the intent queues instead of
 being dropped.
 
 The star domain needs it because the catalogue streams
-(`../../loaders/README.md` § Progressive catalog load). The alternative —
+([Progressive catalog load](../../loaders/README.md#progressive-catalog-load)). The alternative —
 withholding the domain until the last chunk lands — looks safer and is
 worse, because **order matters, not just eventual correctness**: with a
 focus present the URL encoder elides `worldOffset`, so the restored

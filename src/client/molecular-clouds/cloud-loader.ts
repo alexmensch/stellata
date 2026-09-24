@@ -6,8 +6,8 @@ export type CloudSource = 'Z2021T1' | 'Z2020';
 
 export type CloudClass = 'dark' | 'sf' | 'hii';
 
-/** Embedded O/early-B star with its carved cavity (docs/science-molecular-clouds.md
- *  § 7.3). Empty until the A.5 cross-match populates it. */
+/** Embedded O/early-B star with its carved cavity (/docs/science-molecular-clouds.md#73-cavities-designed-not-yet-shipped).
+ * Empty until the A.5 cross-match populates it. */
 export interface EmbeddedStar {
   name: string;
   /** Absolute ICRS heliocentric position in parsecs. */
@@ -24,7 +24,7 @@ export interface Cloud {
    *  aliases + the focus-card alias row, mirroring the Local Group pattern.
    *  Absent when the build curated none. */
   aliases?: string[];
-  /** Frozen Stellata ID (docs/sid.md § 7), stamped by the build. */
+  /** Frozen Stellata ID (/docs/sid.md#7-storage--sid-in-every-artifact), stamped by the build. */
   sid: number;
   /** Absolute ICRS heliocentric position in parsecs. */
   centerAbs: THREE.Vector3;
@@ -38,14 +38,14 @@ export interface Cloud {
   /** Cloud mass in solar masses (Zucker 2021 Table 3, NICEST extinction
    *  map). Null for Z2020 clouds, which carry no mass estimate. */
   massMsun: number | null;
-  /** Taxonomy driving presence tint + noise shaping (docs/science-molecular-clouds.md § 7). */
+  /** Taxonomy driving presence tint + noise shaping (/docs/science-molecular-clouds.md#7-taxonomy-and-embedded-stars). */
   cloudClass: CloudClass;
-  /** Calibrated presence-pass density model (docs/science-molecular-clouds.md § 4). */
+  /** Calibrated presence-pass density model (/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field). */
   n0Cal: number;
   uEnv: number;
   rflatPc: number;
   p: number;
-  /** Log-normal σ_s by class (docs/science-molecular-clouds.md § 5.1). */
+  /** Log-normal σ_s by class (/docs/science-molecular-clouds.md#51-physical-basis). */
   sigmaS: number;
   /** uint32 noise seed (FNV-1a of the raw table name). */
   seed: number;

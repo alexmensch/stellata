@@ -8,8 +8,8 @@ import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 // A body's disc colour and its calibrated map are two renderings of one
 // quantity: iColour tints the glare billboard at distance and uColour shades
 // the mesh until the map lands, and the map's own mean is what takes over.
-// Where a measured index exists, both should be on it. data/textures/README.md
-// § Colour fidelity says which bodies are and which are not.
+// Where a measured index exists, both should be on it. /data/textures/README.md#colour-fidelity--index-anchored-calibration
+// says which bodies are and which are not.
 
 const LUMA = [0.2126, 0.7152, 0.0722] as const;
 const CALIBRATED_MOONS = [

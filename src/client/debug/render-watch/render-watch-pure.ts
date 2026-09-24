@@ -13,7 +13,7 @@ import type { CadenceViolation } from '../../render-gate/cadence/cadence-trust-p
 /** A tail that has been continuously unexpired for this long is not
  *  settling — something is stamping activity every tick. The focal ride
  *  did exactly that until it was absorbed
- *  (`../../render-gate/README.md` § The focal ride), and it presented as
+ *  (`../../render-gate/README.md#the-focal-ride`), and it presented as
  *  a settle tail that never ran out. Three tails' worth: long enough that
  *  no real burst of invalidation reaches it. */
 export const STUCK_TAIL_MS = SETTLE_MS * 3;

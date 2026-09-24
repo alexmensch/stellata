@@ -1,5 +1,5 @@
 // pnpm run validate:record-parity — sid-keyed parity between a baseline
-// catalogue and the current build. README.md § Additive-mode record parity.
+// catalogue and the current build. README.md#additive-mode-record-parity.
 
 import { resolve } from 'node:path';
 import { readCatalogBuffer, DEFAULT_CATALOG_MANIFEST } from '../catalog-lookup';
@@ -30,6 +30,6 @@ const [baseline, current] = await Promise.all([
 const report = compareRecordParity(baseline, current);
 console.log(formatParityReport(report));
 if (!parityHolds(report)) {
-  console.error('\nrecord parity FAILED — docs/catalog-driver.md § 8 additive mode');
+  console.error('\nrecord parity FAILED — /docs/catalog-driver.md#8-gaia-dr-transitions--what-re-pulls-and-what-never-does additive mode');
   process.exit(1);
 }

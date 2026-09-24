@@ -37,7 +37,7 @@ import {
 } from './survivor-counts';
 
 // `window.debug.*` dev tooling — panel toggle plus URL-state codec.
-// See src/client/debug/README.md § Debug panel for the section catalogue
+// See /src/client/debug/README.md#debug-panel for the section catalogue
 // and the "how to add a section" recipe.
 
 export interface DebugTools {
@@ -66,7 +66,7 @@ export interface DebugTools {
   /** Print how much of the catalogue each star tier's draw actually issues
    *  from this vantage, and return it. One mapped copy of the indirect
    *  args, on demand — never on the render path
-   *  (`../webgpu/star/compaction/README.md` § Reading the counts back). */
+   *  (`../webgpu/star/compaction/README.md#reading-the-counts-back`). */
   survivors(): Promise<SurvivorReport | null>;
 }
 

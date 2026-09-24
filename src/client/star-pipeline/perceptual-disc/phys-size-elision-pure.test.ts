@@ -9,7 +9,7 @@ import { PHYS_RATIO_THRESHOLD } from '../local-pass/star-local-cluster-pure';
 import { perceptualAppSizePx, perceptualDiscExponent, perceptualDmEff } from './perceptual-disc-pure';
 import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from './phys-size-elision-pure';
 
-// The vantage README.md § Eliding the physical-size branch quotes its
+// The vantage README.md#eliding-the-physical-size-branch quotes its
 // measured figures at.
 const FOV_DEG = 50;
 const VIEWPORT_H = 1000;

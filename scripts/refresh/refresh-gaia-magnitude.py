@@ -22,7 +22,7 @@ SCRIPT_NAME = "refresh-gaia-magnitude"
 ROOT = REPO_ROOT
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_magnitude_pull.tsv"
 
-# see data/gaia/README.md § Why the floor carries no margin
+# see /data/gaia/README.md#why-the-floor-carries-no-margin
 G_MAG_FLOOR = mp.G_MAG_FLOOR
 G_MAG_COLUMN = mp.G_MAG_COLUMN
 SLICE_COUNT = mp.SLICE_COUNT
@@ -33,7 +33,7 @@ EDGE_DECIMALS = mp.EDGE_DECIMALS
 EXPECTED_ROW_COUNT_MIN = 1_222_000
 EXPECTED_ROW_COUNT_MAX = 1_273_000
 
-# scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
+# /scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only.
 SYNC_MAXREC = mp.slice_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
 
 # Pinned from the live ESA archive 2026-09-19, spanning the selection:

@@ -35,8 +35,8 @@ close-approach focused star sitting at exactly NDC origin.
   both moving-focal kinds and the binary walk drive, plus
   `shouldRecenterFocalOrigin`. The seed frame measures from `target` in
   navigate and from `cameraPosition` in observe, because observe parks the
-  camera — not the target — on the object; `../../binaries/README.md`
-  § Focal-frame ride is the authority.
+  camera — not the target — on the object; [Focal-frame ride](../../binaries/README.md#focal-frame-ride-no-rebase)
+  is the authority.
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The
@@ -239,8 +239,7 @@ hard-kind + shell legs to real fields to avoid.
 - **Probe floors/parks are fixed distances, not solves.** A probe marker
   is a fixed-pixel glyph with no disc to fill, and a metre-scale
   spacecraft solve lands inside the near plane — see
-  `../../solar-system/probes/README.md` § Park distance is set by the
-  near plane.
+  [Park distance is set by the near plane](../../solar-system/probes/README.md#park-distance-is-set-by-the-near-plane-not-by-the-spacecraft).
 - **Host-derived state stays alive.** The planet kind attaches the
   HOST's planet system (orbit rings, heliopause, labels) exactly as the
   host's own star focus would; probe focus attaches Sol's for the same
@@ -279,7 +278,7 @@ It is one slot for both kinds, read through
 
 Float32 precision as the object travels far from the focus-time origin
 is held generically by the origin-follow recentre
-(`../../binaries/README.md` § Focal-frame ride — kind-agnostic, no
+([Focal-frame ride](../../binaries/README.md#focal-frame-ride-no-rebase) — kind-agnostic, no
 per-kind pin), which reseeds the ride when it fires.
 
 ## Focus-park lerp
@@ -304,7 +303,7 @@ run, taking `bidirectional` for the soft-kind rule below:
   roll the user flew in with. `tick` then re-derives `camera.up` from the
   landed quaternion before handing back to TrackballControls; skip that
   and the first `lookAt` resolves against a stale up and pops
-  (`../controls/input/README.md` § Captured-endpoint animations). Both
+  ([Captured-endpoint animations](../controls/input/README.md#captured-endpoint-animations)). Both
   interpolations are driven by the same smoothstep, so the camera
   continuously rotates toward the new target as it flies in. Builds
   the lerp **after** the focus mutation recentres the floating origin so

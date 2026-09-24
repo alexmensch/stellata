@@ -1,4 +1,4 @@
-// Probe-name SVG labels, one per drawn marker. See README.md § Labels.
+// Probe-name SVG labels, one per drawn marker. See README.md#labels.
 
 import * as THREE from 'three';
 import type { KindContext } from '../../kinds/kind-module';

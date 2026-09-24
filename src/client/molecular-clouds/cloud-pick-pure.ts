@@ -1,6 +1,5 @@
 // Cloud pick scoring + winner resolution: proportional centrality among
-// the clouds whose silhouette encloses the cursor. See ./README.md
-// § Picking + hover.
+// the clouds whose silhouette encloses the cursor. See ./README.md#picking--hover.
 
 import {
   pickFromCandidates,

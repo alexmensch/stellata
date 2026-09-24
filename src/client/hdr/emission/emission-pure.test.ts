@@ -191,7 +191,7 @@ describe('rodSummationSolidAngleArcsec2', () => {
   // The consistency check that makes the pair a summation area rather than
   // a fudge: 22 mag/arcsec² against m_lim 7.8 implies a 13.0 arcmin critical
   // diameter, inside the scotopic Ricco range measured at a non-zero
-  // background. docs/science-hdr-pipeline.md § 1 (Extended sources).
+  // background. /docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance (Extended sources).
   it('implies a scotopic Ricco critical diameter of 13 arcmin', () => {
     const omega = rodSummationSolidAngleArcsec2(EXTENDED_THRESHOLD_SB, EYE_LIMIT_MAG);
     expect(omega).toBeCloseTo(478_630.09, 2);

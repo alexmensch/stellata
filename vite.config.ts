@@ -15,8 +15,7 @@ process.env.VITE_APP_VERSION = pkgVersion;
  * The star count, read from the built catalogue's own header — never a
  * literal, so it cannot outlive the catalogue it describes. Empty string
  * on a checkout that has not run `build:catalog`; every consumer needs a
- * wording that works without it (`docs/authoring-patterns.md` § The star
- * count is never a literal).
+ * wording that works without it (`docs/authoring-patterns.md#the-star-count-is-never-a-literal`).
  */
 function builtStarCount(): string {
   try {

@@ -289,7 +289,7 @@ export function createPlanetKindModule(): PlanetKindModule {
 
     displayName: (idx) => field?.planetAt(idx)?.name ?? '',
 
-    // The planet SID domain is keyed body-within-host (docs/sid.md § 7)
+    // The planet SID domain is keyed body-within-host (/docs/sid.md#7-storage--sid-in-every-artifact)
     // — the one domain whose localIndex is NOT the Target idx; url-state
     // translates at the boundary (IdMaps.planetDomainIndexOf). The list
     // is static, so the domain attaches whether or not a host ever does.

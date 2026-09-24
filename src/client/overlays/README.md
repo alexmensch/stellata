@@ -154,7 +154,7 @@ arrows stay tangent to whichever circle is dominant.
 `chart-labels.ts` fills three SVG layers under `#overlay` while chart
 mode is active. All three are declared in `index.html` ahead of the HUD
 stack, so the HUD paints over them and the con wash paints under the
-star names — `../chart-mode/labels/README.md` § Label engine owns why.
+star names — [Label engine](../chart-mode/labels/README.md#label-engine--glyphs) owns why.
 
 - `<g id="chart-con-labels">` — constellation Latin names. Bypass the
   collision pass entirely (outline-style typography that reads as a

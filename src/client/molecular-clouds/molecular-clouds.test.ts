@@ -99,7 +99,7 @@ describe('MolecularClouds / absorption material contract', () => {
   // The tier is the layer's call — it owns the brick texture's lifetime —
   // and it is compile-time, so a spec naming the wrong
   // envelope marches it from the material's first frame
-  // (README.md § The material seam).
+  // (README.md#the-material-seam).
   it('hands the traced cloud a field spec and the fallback none', () => {
     const catalog = makeCatalog();
     const { materials } = makeClouds(

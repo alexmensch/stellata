@@ -57,7 +57,7 @@ export class WebGpuSummationPass {
     // Ω_px is a CSS-pixel solid angle — brightness must not track
     // devicePixelRatio — but every texel here is a DRAWING-BUFFER pixel, so
     // the patch radius has to cross that ratio
-    // (../../hdr/summation/README.md § The kernel).
+    // (../../hdr/summation/README.md#the-kernel--a-flat-disc-and-it-has-to-be).
     const radiusPx =
       summationRadiusPx(omegaSummationArcsec2, omegaPxArcsec2) *
       this.renderer.getPixelRatio();

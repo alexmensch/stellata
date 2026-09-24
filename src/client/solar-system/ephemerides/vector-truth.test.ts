@@ -1,6 +1,6 @@
 // Heliocentric ecliptic positions vs the frozen Horizons state vectors in
 // data/horizons/planet-vector-truth.tsv, both sources and the seam between
-// them. See README.md § Planet ephemeris.
+// them. See README.md#planet-ephemeris.
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync } from 'node:fs';

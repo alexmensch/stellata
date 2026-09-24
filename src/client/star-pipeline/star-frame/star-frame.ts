@@ -66,7 +66,7 @@ export class StarFrame {
   readonly teffApsis: Float32Array;
   /** Largest physicalRadius in the catalog, in pc, at each star's pulsation
    *  PEAK — a window solved from it must not move as a star breathes
-   *  (`../../camera/controls/README.md` § The live-versus-peak pair). The
+   *  (`../../camera/controls/README.md#the-live-versus-peak-pair-and-which-one-a-caller-owes`). The
    *  core-mask, member-scan and physical-size windows all read it. */
   get maxPhysicalRadiusPc(): number { return this._maxPhysicalRadiusPc; }
 
@@ -120,7 +120,7 @@ export class StarFrame {
     // before any consumer reads a position. localPositions, iDistSol,
     // hover/focus/warp targets, constellation lines, binaries baselines, and
     // eclipse photometry all inherit current-epoch positions by construction.
-    // See docs/science-catalog-ingestion.md § Current-epoch star positions.
+    // See /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t.
     this.basePositions = new Float32Array(catalog.count * 3);
     this._advancedEpochJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJdUt(t)));
 
@@ -130,14 +130,14 @@ export class StarFrame {
     this.teffApsis = new Float32Array(catalog.count);
     this.localPositions = new Float32Array(catalog.count * 3);
     this.sortedByDistFromSol = new Uint32Array(catalog.count);
-    // Both sentinels: README.md § Absorbing a chunk.
+    // Both sentinels: README.md#absorbing-a-chunk.
     this.sortedDistFromSol = new Float32Array(catalog.count).fill(Infinity);
 
     this.absorbRecords();
     this.notifyLocalWrites = true;
   }
 
-  /** See README.md § Absorbing a chunk — two silent traps in here. */
+  /** See README.md#absorbing-a-chunk — two silent traps in here. */
   absorbRecords(): void {
     const { catalog } = this;
     const first = this.derivedCount;
@@ -300,7 +300,7 @@ export class StarFrame {
   }
 
   /** Writes `uPhysSizeWindowPc` from the live disc uniforms — the single
-   *  writer of that slot (README.md § The physical-size window). */
+   *  writer of that slot (README.md#the-physical-size-window). */
   syncPhysSizeWindow(): void {
     this.uniforms.uPhysSizeWindowPc.value = this.discWindowPcFor(physSizeElisionBoundPx(
       this.uniforms.uSizeMin.value,

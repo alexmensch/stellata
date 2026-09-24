@@ -1,6 +1,6 @@
 // The swap parity ledger's committed gates: the route-disagreement review
 // join, the canonical-key audit over the label delta, and the V/50 HD-less
-// out-of-scope pin. See ../spine/README.md § The swap parity ledger.
+// out-of-scope pin. See ../spine/README.md#the-swap-parity-ledger.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -76,7 +76,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   // A spine designation the merge moves off its record stops feeding that
   // record's same-as class. Where it is also a ledger canonical key, the row
   // resolves only through a sameas-overrides bridge — the Gliese renumberings
-  // are the shipped shape (docs/catalog-driver.md § 4).
+  // are the shipped shape (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('bridges every canonical key the merge removes from its record', () => {
     const canonical = new Set(
       parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8')).map((r) => r.canonicalKey),
@@ -146,7 +146,7 @@ const MANIFEST_PATH = resolve(REPO_ROOT, 'data/membership/membership-manifest.ts
 const PARKED_PATH = resolve(REPO_ROOT, 'data/membership/parked-ledger.tsv');
 
 describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers', () => {
-  // label-merge/README.md § A withheld number attaches to no record. Six of
+  // label-merge/README.md#a-withheld-number-attaches-to-no-record-and-that-is-the-answer. Six of
   // the withheld numbers are the display cell of an admitted manifest row of
   // their own, and every one of those rows parks — which is what says the
   // numbers are unreachable for want of a distance rather than a label rule.
@@ -196,7 +196,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers
 });
 
 describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers', () => {
-  // label-merge/README.md § What a freed number costs. A curated correction
+  // label-merge/README.md#what-a-freed-number-costs. A curated correction
   // hands the neighbour's number back, and where the row that takes it does
   // not build, the number resolves NOWHERE — worse reach than before the
   // correction, which is the price the section states. The suite above keys on

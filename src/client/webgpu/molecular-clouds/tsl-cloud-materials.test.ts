@@ -51,7 +51,7 @@ function fieldSpec(): NonNullable<CloudAbsorptionSpec['field']> {
 }
 
 describe('the cloud absorption surface', () => {
-  // See README.md § The absorption writes attachment 2.
+  // See README.md#the-absorption-writes-attachment-2-and-that-is-the-gate.
   it('is an alpha-only premultiplied-over BackSide draw', () => {
     const m = materials().absorption(absorptionSpec(null)).material;
     expect(m.side).toBe(THREE.BackSide);
@@ -65,7 +65,7 @@ describe('the cloud absorption surface', () => {
     expect(m.blendDstAlpha).toBe(THREE.OneMinusSrcAlphaFactor);
   });
 
-  // See README.md § The tier is compile-time, so it is two graphs.
+  // See README.md#the-tier-is-compile-time-so-it-is-two-graphs.
   it('seeds the per-cloud slots from the spec', () => {
     const spec = absorptionSpec(null);
     const u = materials().absorption(spec).uniforms;
@@ -77,7 +77,7 @@ describe('the cloud absorption surface', () => {
     expect((u.uAxes.value as THREE.Vector3).x).toBe(spec.axes.x);
   });
 
-  // See README.md § The shared pair is not in this record.
+  // See README.md#the-shared-pair-is-not-in-this-record.
   it('withholds the brick slots from the record the layer writes', () => {
     const traced = materials().absorption(absorptionSpec(fieldSpec())).uniforms;
     expect(Object.keys(traced).sort()).toEqual(
@@ -86,7 +86,7 @@ describe('the cloud absorption surface', () => {
     expect(Object.keys(traced)).not.toContain('uBrick');
   });
 
-  // See README.md § The tier is compile-time, so it is two graphs.
+  // See README.md#the-tier-is-compile-time-so-it-is-two-graphs.
   it('builds a different material per tier', () => {
     const m = materials();
     expect(m.absorption(absorptionSpec(fieldSpec())).material)
@@ -105,7 +105,7 @@ describe('the cloud rim surface', () => {
   });
 
   // One annotation vocabulary across the boundary shells and all ~96 cloud
-  // rims (`../../fresnel-shell/README.md` § Camera-distance attenuation).
+  // rims (`../../fresnel-shell/README.md#camera-distance-attenuation`).
   it('starts at the shared rim params and the cloud reach', () => {
     const u = materials().rim({ inkHex: 0, inkAlpha: 1, opacity: 1 }).uniforms;
     expect(u.uAlphaLimb.value).toBe(SHELL_RIM_ALPHA_LIMB);
@@ -131,7 +131,7 @@ it('severs every MRT registration on dispose', () => {
   expect(live).toBe(0);
 });
 
-// ../../scene/README.md § The material seam.
+// ../../scene/README.md#the-material-seam.
 describe('the layer writes only slots this factory serves', () => {
   function driven() {
     const materials = fakeCloudMaterials();

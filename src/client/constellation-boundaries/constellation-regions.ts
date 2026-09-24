@@ -1,6 +1,6 @@
 // The shipped region set, read two ways: positional membership for any
 // object's position, and one chart label anchor per region.
-// See README.md § Runtime membership.
+// See README.md#runtime-membership.
 
 import * as THREE from 'three';
 

@@ -3,8 +3,8 @@
 `<adapter-slug>.json` (schema `stellata-perf/pin-3`) is the whole frame at
 the canon vantages on one GPU, taken cold: what every render-path PR diffs
 against and re-takes. Operator rules — when a PR must run it, what a mark
-means, how the pin advances — are `RELEASING.md` § Perf pin; the flags are
-`../README.md` § Invocation. Runs stay under `.perf-runs/` (tracked;
+means, how the pin advances — are [Perf pin](/RELEASING.md#perf-pin); the flags are
+[Invocation](../README.md#invocation). Runs stay under `.perf-runs/` (tracked;
 `../../../.perf-runs/README.md`) and the pin cites the file it came from by
 its repo-relative path.
 
@@ -104,7 +104,7 @@ of 2 with none to 2e-6 ms (stellata-8cg.49.27).
 The order is chosen so the pin run's first two contexts are exactly the
 Tier 1 run's — `--scenario mw120,sol --backend webgpu` — in the same
 order, which is what lets Tier 1 read `--against-pin` directly instead of
-hunting for a recent run of its own shape (`RELEASING.md` § Perf pin).
+hunting for a recent run of its own shape ([Perf pin](/RELEASING.md#perf-pin)).
 `TIER1_SCENARIOS` in `../scenarios.ts` is the prefix and a test holds the
 canon to it; reordering either constant re-takes the pin. `--pin` enforces
 the order rather than the membership for the same reason — a permuted run
@@ -227,7 +227,7 @@ finding.** Their repeat scatter runs *past* the 0.25 they are gated on: of
 the same-tree pairs on disk, 4 of 9 at mw120, 6 of 11 at sol and 3 of 5 at
 earth land outside the band, the worst 1.272 ms at mw120 — 7 % of the frame,
 so a floor sized for it ends the gate rather than tightening it. What
-covers that instead is an operator rule, `RELEASING.md` § What a mark means:
+covers that instead is an operator rule, [What a mark means](/RELEASING.md#what-a-mark-means):
 a frame-row `✗` does not stand until a second cold run reproduces it.
 `stellata-8cg.74` carries both measurements and the decision.
 
@@ -266,7 +266,7 @@ spread fix and not a change of what is measured.
 `gpuClasses` on the row carries **both** classes — cut, median, `iqrMs` and
 sample count each — so the readback frame keeps a reading of its own where the
 mixture median gave it none. Read it as summed pass occupancy rather than
-frame time (`../dwell/README.md` § Where the frame has two classes).
+frame time ([Where the frame has two classes](../dwell/README.md#where-the-frame-has-two-classes-the-gpu-stream-median-follows-the)).
 
 **The counters decide that there are two classes; the gap only says where to
 cut.** `splitFrameClasses` reads `renderPasses` min against max, and the class
@@ -287,7 +287,7 @@ whole pin.
 
 A pin holds no `params` of its own: it is taken with every setup lever at its
 default, and an absent precondition already reads as that default
-(`../diff/README.md` § The refusals). So the empty record IS the pin's
+([The refusals](../diff/README.md#the-refusals)). So the empty record IS the pin's
 preconditions, and `preconditionRefusal` against it is the whole test — one
 implementation, so `--pin` and `--against-pin` refuse the same run for the
 same reason.
@@ -299,15 +299,15 @@ frame, which lands on the compute row (§ The compute row) against a pinned
 value that is the compaction alone. Read against the pin, that is a large `✗`
 attributed to whatever code is under review; **written** as the pin, it
 carries the lever's cost in every later run's verdict — the ratchet
-`RELEASING.md` § Perf pin exists to stop. Any future lever a dwell can carry
+[Perf pin](/RELEASING.md#perf-pin) exists to stop. Any future lever a dwell can carry
 inherits the same refusal without another edit.
 
 
 ## State guard
 
 What `trending` means, which clock the verdict is read off, and why it is the
-quarters' spread rather than a rise through them: `../dwell/README.md`
-§ The state guard, beside `stateGuardVerdict` itself.
+quarters' spread rather than a rise through them: [The state guard,](../dwell/README.md#the-state-guard)
+beside `stateGuardVerdict` itself.
 
 Here it decides two things. A trending row at a **gated** vantage refuses the
 pin and refuses a comparison; at an ungated one it does neither
@@ -330,7 +330,7 @@ a pin run reads `steady`.
   names which statistic the row was judged on, and it is not the same at
   every row: `gpu-plain-p50` where the vantage draws two pass classes and
   `compute-p10` on a compute row (§ The compute row).
-- **Ungated vantages, and `lg` is permanently one.** `PIN_UNGATED_SCENARIOS`
+- <a id="ungated-vantages-and-lg-is-permanently-one"></a>**Ungated vantages, and `lg` is permanently one.** `PIN_UNGATED_SCENARIOS`
   maps a vantage the band never marks to the reason, which the row's note
   prints. `lg`'s GPU duration **wanders as much inside a single dwell as it
   does between runs**, so its median is not a stable estimator there and
@@ -371,9 +371,9 @@ a pin run reads `steady`.
   to the instrument. Both floors live in `../diff/diff-pure.ts` beside `band`
   because `--baseline` applies the same ones: the tighter of two gates is the
   one that decides, so a Tier 1 band under this one would mark a move Tier 2
-  calls unresolved (`RELEASING.md` § Perf pin). **A frame row's `✗` is not
+  calls unresolved ([Perf pin](/RELEASING.md#perf-pin)). **A frame row's `✗` is not
   final on one run** — its band sits under its own repeat scatter, and what
-  covers that is the re-run rule in `RELEASING.md` § What a mark means, not a
+  covers that is the re-run rule in [What a mark means,](/RELEASING.md#what-a-mark-means) not a
   wider floor.
 - **Floor.** Each GPU row also records its 10th-percentile frame off the raw
   samples, and the table prints how far that p10 moved beside `delta`. A cost
@@ -388,7 +388,7 @@ a pin run reads `steady`.
   1.353. Blank on a compute row, where the p10 *is* the metric and the column
   would restate `delta`. `frameFloor` lives in `../dwell/dwell-pure.ts`
   because `--baseline` prints the same column off the same statistic
-  (`../README.md` § Comparing against a baseline), and a reader asking "cost
+  ([Comparing against a baseline](../README.md#comparing-against-a-baseline)), and a reader asking "cost
   or wander?" must not have to ask it differently of the two tables.
 - **Spread.** `p90 − p10` on the same stream, and how far it moved. Never
   marked, on any row: it is the reading that says some frames got dearer
@@ -420,7 +420,7 @@ a pin run reads `steady`.
   it. **Pin rows the run did not visit are listed, not refused** — the table
   walks the run's rows, so a Tier 1 run answers for its two and prints the
   other three as `not measured in this run`.
-- **Record count.** `recordCount` is the star records the page loaded, off
+- <a id="record-count"></a>**Record count.** `recordCount` is the star records the page loaded, off
   the catalogue binary's header. It moves how many instanced quads every
   star pass draws — the most direct frame-cost change the repo can make. A
   pin taken at 329,657 records went on being compared against after

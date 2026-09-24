@@ -1,6 +1,6 @@
 // Pure inputs to the chart-mode boundary layer: polyline → line-segment
 // vertex expansion, the dash phase along each polyline, and the
-// magnitude-keyed fade window. See README.md § Chart-mode layer.
+// magnitude-keyed fade window. See README.md#chart-mode-layer.
 
 import type {
   BoundaryFadeTableWire,

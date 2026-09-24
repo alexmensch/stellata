@@ -1,6 +1,6 @@
 // A TSL authoring trap: `toReadOnly()` narrows the node it is called on, so
 // narrowing one a kernel assigns through breaks that kernel's pipeline on the
-// device. src/client/webgpu/tsl/README.md § Storage attributes.
+// device. /src/client/webgpu/tsl/README.md#storage-attributes.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
@@ -15,7 +15,7 @@ const PAIR_BUILDER = 'src/client/webgpu/tsl/storage-attribute.ts';
 const GUIDANCE =
   'narrows a storage node it may not solely own. Give the reader a node of '
   + 'its own — `storageWriteRead(() => storage(...))` '
-  + '(src/client/webgpu/tsl/README.md § Storage attributes).';
+  + '(/src/client/webgpu/tsl/README.md#storage-attributes).';
 
 const NARROWS = /\.toReadOnly\s*\(\s*\)/g;
 const OWN_RESULT = /\bstorage\s*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*\.toReadOnly\s*\(\s*\)/g;

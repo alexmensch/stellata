@@ -19,7 +19,7 @@ export interface Vec3Like {
  * fix this one: below ~1e-3 the round-trip error is sub-pixel on any display,
  * and it must stay well above the float32 wire's own 6e-8 resolution or a
  * settled camera would rewrite the URL forever.
- * See `README.md` § What counts as a camera move.
+ * See `README.md#what-counts-as-a-camera-move`.
  */
 export const POSE_CHANGE_EPS = 1e-4;
 

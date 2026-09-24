@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Surface-relief half of the texture build: the frozen-DEM contract and the
 DEM -> tangent-space normal-map derivation (rationale in
-data/textures/relief/README.md § Surface relief)."""
+/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps)."""
 
 import numpy as np
 from PIL import Image
@@ -12,7 +12,7 @@ from PIL import Image
 DEM_ZERO_LEVEL = 32768
 # Default frozen-reduction width. Per-body `target_w` overrides it: Earth's
 # relief is far the flattest of the four and buys nothing below 8192
-# (data/textures/relief/README.md § Surface relief).
+# (/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
 DEM_TARGET_W = 4096
 
 # Latitude past which the equirect longitude derivative degenerates: texels
@@ -22,7 +22,7 @@ DEM_TARGET_W = 4096
 # the same window, so they measure only where both derivatives are real.
 POLE_CUTOFF_DEG = 85.0
 
-# Per-body relief contract (data/textures/relief/README.md § Surface relief).
+# Per-body relief contract (/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
 # `dtype`/`scale`/`offset`/`span_m`/`nodata` decode the DOWNLOADED original
 # for reduce_dem.py; the rest drive every build. Two fields name the thing
 # they are NOT: `map_center_lon` is the COLOUR map's centre rather than the

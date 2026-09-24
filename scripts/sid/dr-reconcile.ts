@@ -1,5 +1,5 @@
 // `pnpm run sid:dr-reconcile` — classify a Gaia DR transition's cross-match
-// pull per docs/sid.md § 6.1 and emit the churn report; --bridges-out writes
+// pull per /docs/sid.md#61-procedure and emit the churn report; --bridges-out writes
 // the carried-1:1 bridge edges for review. See scripts/sid/README.md.
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -75,7 +75,7 @@ function main(): void {
     }
   }
   if (c.sharedCandidateGroups.length > 0) {
-    console.log('  shared-candidate detail (split/merge review, docs/sid.md § 6.1):');
+    console.log('  shared-candidate detail (split/merge review, /docs/sid.md#61-procedure):');
     for (const g of c.sharedCandidateGroups) {
       console.log(`    ${args.candidateNs}:${g.candidateId} ← ${g.riskIds.map((r) => `${args.riskNs}:${r}`).join(', ')}`);
     }

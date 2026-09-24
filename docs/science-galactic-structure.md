@@ -32,8 +32,8 @@ Integrated properties and the thin/thick/halo structural parameters come
 from **Bland-Hawthorn & Gerhard 2016**, *ARA&A* 54, 529
 (DOI 10.1146/annurev-astro-081915-023441); the sightline surface
 brightnesses the model is checked against come from **Leinert et al. 1998**,
-*A&AS* 127, 1 (DOI 10.1051/aas:1998105) Table 24. See `SCIENCE.md`
-§ Data sources for the values and their caveats.
+*A&AS* 127, 1 (DOI 10.1051/aas:1998105) Table 24. See [Data sources](/SCIENCE.md#data-sources)
+for the values and their caveats.
 
 The volumetric Milky Way layer raymarches through two proxy meshes —
 a disc and a bulge — and accumulates emission along the camera→fragment
@@ -82,7 +82,7 @@ a higher Υ\*_V than the disc's, so the same mass share buys less V light.
 Dividing through leaves only the RATIO of the two Υ\*_V — 3.15 from a
 BC03 Chabrier SSP at Z = 0.02, 10 Gyr, against Flynn et al. 2006's
 measured 1.5 for the local disc column. There is no free parameter left;
-`src/client/milkyway/calibration/README.md` § The light ratio carries the
+[The light ratio](/src/client/milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number) carries the
 closed form and the metallicity brackets.
 
 **The band marches the model minus the stars the catalogue draws.** The
@@ -91,8 +91,8 @@ field draws the resolved ones itself, so a band marching the whole
 emissivity counts them twice. The band therefore multiplies the emissivity
 at each step by one minus the catalogue's measured share of the model's
 light there — a table over distance from Sol and |sin b|, read off the
-built catalogue (`src/client/milkyway/calibration/README.md` § The
-resolution hole). At V ≤ 11 the hole removes **0.35 %** of the model's
+built catalogue ([The resolution hole](/src/client/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+At V ≤ 11 the hole removes **0.35 %** of the model's
 light over the tabulated volume — 1.03× the catalogue's own light there,
 the shell average being blind to structure in longitude — while the
 catalogue carries **77 %** of Leinert's total starlight at the pole, where
@@ -130,7 +130,7 @@ floor, and the residual anchor re-run there would put the Galaxy a
 magnitude *fainter* than M31. A vertical-profile change cannot substitute
 — the pole column and the integrated total are both vertical integrals,
 and adding the thick disc moved their ratio by 0.09 mag.
-`src/client/milkyway/calibration/README.md` § Two checks carries the
+[Two checks](/src/client/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order) carries the
 numbers and the pins.
 
 ## Interstellar dust extinction
@@ -148,7 +148,7 @@ parsec; the conversion `A_V / E_ZGR ≈ 2.742` at V band is baked in.
 
 Catalog `absmag` and `ci` are stored **intrinsic** — the build subtracts
 the Sol→star integral through this same voxel grid at write time (see
-`scripts/catalog/distance/dust/README.md` § Build-time de-extinction), so this
+[Build-time de-extinction](/scripts/catalog/distance/dust/README.md#build-time-de-extinction)), so this
 raymarch *restores* the observer-relative extinction instead of adding
 it a second time. Because both sides integrate the same model, at
 camera=Sol the build subtraction and the runtime addition cancel and a
@@ -361,7 +361,7 @@ instrument change moves it. Fetches are counted against a fixed yardstick —
 march over the catalogue, which recomputes every frame during a warp — because
 that is a GPU workload doing the same fetch against the same texture. The
 shipped march now spends taps by in-cube path length, ~44 per star at Sol
-(`src/client/star-pipeline/extinction/README.md` § The march); the yardstick
+([The march](/src/client/star-pipeline/extinction/README.md#the-march)); the yardstick
 is kept so the ratios below stay comparable. Wall-clock GPU timings are § What
 the fill measured.
 
@@ -510,7 +510,7 @@ in: **3.3× for coherence alone**. The frustum grids are coherent by
 construction, neighbouring cells being neighbouring directions, so they read
 above that floor — as does the per-star extinction prepass, which dispatches
 in a spatial order for exactly this reason
-(`src/client/webgpu/extinction/dispatch-order/README.md` § Dispatch order).
+([Dispatch order](/src/client/webgpu/extinction/dispatch-order/README.md#dispatch-order)).
 The scattered
 rate is the floor a pass pays when neighbouring threads march unrelated
 sight-lines, and it is what that order exists to stay off.
@@ -562,7 +562,7 @@ row above gives ≈5.6 ms every frame the camera moves. The pass has since been
 measured on its own compute clock, and it is **worse than that inference:
 12.89 ms**, so catalogue order scatters harder than a golden angle does.
 Morton-ordering the dispatch takes it to 2.48 ms
-(`src/client/webgpu/extinction/dispatch-order/README.md` § Dispatch order).
+([Dispatch order](/src/client/webgpu/extinction/dispatch-order/README.md#dispatch-order)).
 The rate to price
 a scattered march against here is the floor, not the estimate.
 
@@ -651,7 +651,7 @@ projection of exactly what the per-star march integrates.
 
 ### How the decision grades, and what it does not fix
 
-Graded against ESO eso0932a (`docs/science-hdr-pipeline.md` § 8), at l = 0,
+Graded against ESO eso0932a ([§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7)), at l = 0,
 medians over 15.5° × 1.4° strips, floor-subtracted and inverted through the
 shipped operator. The panorama reads **2.60 mag** brighter at b = −3 than at
 b = +3 — the Great Rift above the plane, the Large Sagittarius Star Cloud
@@ -741,6 +741,6 @@ and μ Sgr (HIP 89341), both stars Stellarium references that have empty
 position columns in the AT-HYG CSV.
 
 Implementation: `scripts/catalog/build-catalog.ts`; see
-`scripts/catalog/parse/README.md` § Stick figures from Stellarium for
+[Stick figures from Stellarium](/scripts/catalog/parse/README.md#stick-figures-from-stellarium) for
 the pipeline + missing-HIP policy.
 

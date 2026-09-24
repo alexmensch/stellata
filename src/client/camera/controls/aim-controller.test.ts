@@ -551,7 +551,7 @@ describe('AimController — invert', () => {
 // so the state never repairs itself. `stellata.ts` re-derives `up` on every
 // frame a navigate animation owns the camera; both arms below are pinned so
 // the guard cannot pass vacuously.
-// See camera/controls/input/README.md § The perpendicular invariant.
+// See /src/client/camera/controls/input/README.md#the-perpendicular-invariant.
 describe('AimController — the perpendicular invariant across a sweep', () => {
   const FRAMES = 40;
 

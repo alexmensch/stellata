@@ -1,6 +1,6 @@
 // Canonical specs for the sibling artifacts (clouds.json, local-group.json)
 // that carry an in-record sid, shared by sid:allocate and the stamp. See
-// scripts/sid/README.md § Sibling-artifact stamping.
+// /scripts/sid/README.md#sibling-artifact-stamping.
 
 import type { SidKind, SidObject } from './sid-pure';
 
@@ -9,7 +9,7 @@ export interface SiblingArtifactSpec {
   file: string;
   /** Top-level array property holding the objects. */
   arrayKey: string;
-  /** Designation namespace the ledger keys these objects on (docs/sid.md § 3). */
+  /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
   ns: string;
   kind: SidKind;
   /** pnpm script that emits `file`. */

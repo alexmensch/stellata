@@ -2,7 +2,7 @@
 
 The permutation the A_V kernel dispatches in, and the scatter that undoes
 it. Pure arithmetic over `catalog.positions` — nothing here imports the
-pass that uses it (`../README.md` § The prepass kernel).
+pass that uses it ([The prepass kernel](../README.md#the-prepass-kernel)).
 
 ## Files in this area
 
@@ -22,8 +22,8 @@ neighbouring threads, and neighbouring threads are what share a memory
 transaction. Two rows of the `stellata-ty4.9` sweep hold fetch count,
 ray length and working set identical and move only how the rays are laid
 out: **3.3× for coherence alone**, 3.3 against 10.9 G fetches/s
-(`../../../../../docs/science-galactic-structure.md`
-§ What the fill measured). This
+([What the fill measured](../../../../../docs/science-galactic-structure.md#what-the-fill-measured-and-what-to-turn-if-it-is-too-slow)).
+This
 pass is measured rather than inferred from that: a recompute of 18.6M
 fetches — the fixed 48 taps per star the march spent when the pair was
 taken — cost **12.89 ms in catalogue order against 2.48 ms in Morton
@@ -37,7 +37,7 @@ base M4's ~120 GB/s — and latency is what a coherent order hides.
 **The key is spatial, not angular.** A sky-direction sort is coherent
 only from the vantage it was built for, and the camera flies to the LMC
 and 3 kpc off-Sol, where a Sol-relative direction order is arbitrary
-again (`AGENTS.md` § Camera-anywhere). Stars adjacent in 3D have rays
+again ([Camera-anywhere](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)). Stars adjacent in 3D have rays
 that converge near the camera *and* near the star from every vantage, so
 `mortonDispatchOrder` interleaves 16 quantised bits per axis over the
 catalogue's own bounding box into a 48-bit Z-order key. **What fixes 16 is
@@ -48,7 +48,7 @@ key word, and a 32-bit word has room to spare — 10 bits per half-axis
 would still fit it — which is why the pin is on the half-width and not on
 the word. The sort is a CPU pass at attach and, when attach sorted a
 catalogue still streaming in, once more on the refresh that completes it
-(`../README.md` § What a CACHE owes); nothing re-sorts per frame, and the
+([What a CACHE owes](../README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)); nothing re-sorts per frame, and the
 order is a function of `catalog.positions` alone.
 
 **It is synchronous on the main thread, and its timing is a dev-machine
@@ -56,7 +56,7 @@ one**: ~21 ms at 983,068 stars, measured in Node on an M-series laptop, so
 budget several times that on the integrated and mobile floor this folder is
 sized for. At attach it shares its frame with the volume upload, which
 already stalls; the re-sort shares the final chunk's absorb
-(`../../../star-pipeline/star-frame/README.md` § Absorbing a chunk).
+([Absorbing a chunk](../../../star-pipeline/star-frame/README.md#absorbing-a-chunk)).
 The two words go low half first through the shared radix sort
 (`../../../util/radix-sort.ts`), four passes in all, ties by star index; a
 comparator sort over the same keys produces the identical permutation at
@@ -74,7 +74,7 @@ another writes every star's A_V onto some other star, which reads as a
 plausible dust field rather than as a failure. `packPositionsVec4Into`
 takes the same `order` array the table is built from, the pairing is
 pinned in the test, and `verifyExtinction()` is the acceptance
-(`../README.md` § The prepass kernel).
+([The prepass kernel](../README.md#the-prepass-kernel)).
 
 **That pin only bites over a field the sort actually permutes.** A
 catalogue monotone in all three axes sorts to the identity — Z-order

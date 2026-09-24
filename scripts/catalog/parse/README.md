@@ -4,7 +4,7 @@ The membership-manifest row walk (`readStars` in `stars-parse.ts`) and
 everything it resolves per star: space-motion velocity, the GCVS variability
 cross-match, and Stellarium stick figures. Spectral class and physical radius
 are resolved here but owned by `../spectral/`. The binary record layout these
-fields land in is `../record/README.md` § Binary catalog format; the
+fields land in is [Binary catalog format](../record/README.md#binary-catalog-format-publiccatalogbini--manifest); the
 membership term
 it walks is `../membership/README.md`.
 
@@ -140,13 +140,13 @@ already answers for keeps that row. Both passes stream (§ Streaming a
 committed table): the keep-set folds out of the manifest a line at a time, and
 the pull's rows are filtered against it during the fold rather than collected
 and re-parsed. With the floor off, neither read happens.
-`../membership/magnitude-term/README.md` § The astrometry comes with it.
+[The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it).
 
 ## Per-row pipeline
 
 Each manifest row walks through, inside `readStars`. The row arrives with its
-`gaia_source_id` already resolved and justified — `../membership/README.md`
-§ The identifier columns are read, never re-derived — and with its classic-ID
+`gaia_source_id` already resolved and justified — [The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived)
+— and with its classic-ID
 labels already FINAL, so no label merge runs here (`../classic-ids/README.md`
 label-merge/README.md).
 
@@ -163,22 +163,21 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    Every tier is a catalogue this build pulled itself. A row no tier reaches
    **parks** — `no_parallax_published`, or `refused_no_defensible_parallax`
    where a parallax existed but no tier would defend it.
-1. **Johnson V** (`resolveVMagnitude`). See `../photometry/README.md` § The V
-   cascade. A row no tier lights **parks** as `no_v_magnitude`: a record needs
+1. **Johnson V** (`resolveVMagnitude`). See [The V cascade](../photometry/README.md#the-v-cascade).
+   A row no tier lights **parks** as `no_v_magnitude`: a record needs
    both a place and a brightness. The tier that won is kept on the record as
    `vVia`, because it decides whether the magnitude is the system's blend or
    one component's — companion promotion's flux conservation may only subtract
-   a companion's light from a blend (`../companions/README.md` § Anchor flux
-   conservation).
+   a companion's light from a blend ([Anchor flux conservation](../companions/README.md#anchor-flux-conservation-post-pass)).
 2. **Direction resolution** (`resolveDirection` in `direction-cascade.ts`)
-   selects the tier's solution. See `../distance/README.md` § Direction
-   resolution. Every solution propagates rather than shipping its source's own
+   selects the tier's solution. See [Direction resolution](../distance/README.md#direction-resolution).
+   Every solution propagates rather than shipping its source's own
    epoch, so a row no tier reaches resolves to null and **parks** as
    `no_position`: a distance with no direction has nothing to multiply. **One
    row**, HIP 88759 — a HIP-only addition a bound sibling's parallax placed and
    printed HIP photometry lit, for which SIMBAD resolves no object at all, so
    the coordinate tier has nothing to serve it either. Every other row of that
-   shape reaches SIMBAD coordinates (`data/simbad/README.md` § The values pull).
+   shape reaches SIMBAD coordinates ([The values pull](/data/simbad/README.md#the-values-pull)).
 3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
    states a position but no motion. See § Space-motion velocity.
 4. **Distance overrides**, in order, each superseding the last on the rows it
@@ -189,7 +188,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    **LMC kinematic override** (`applyLmcKinematicOverride`), which gates on the
    direction tier's own place, the motion steps 2–3 settled, and step 0's
    parallax with its error. See
-   `../distance/README.md` § Multi-layer distance refinement.
+   [Multi-layer distance refinement](../distance/README.md#multi-layer-distance-refinement).
 5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff** (`stars-parse.ts`).
    **Drops** rows still beyond LMC depth after every override —
    `droppedTooFar`.
@@ -204,7 +203,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
 8. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
    `I/239` B−V, else Gaia's synthetic B−V, else the intrinsic
    spectral-class colour, else solar. See
-   `../photometry/README.md` § The ci cascade. Its `isObserved` verdict is
+   [The ci cascade](../photometry/README.md#the-ci-cascade). Its `isObserved` verdict is
    what decides whether de-extinction de-reddens the value, so the two
    measured tiers and the two derived ones part company here rather than at
    the dust integral.
@@ -233,7 +232,7 @@ records minted rather than walked.
 The manifest carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a
 mixed-epoch merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
 inconsistent with the same row's printed ra/dec by up to tens of arcsec on
-high-PM stars (`docs/science-catalog-ingestion.md` § Driver astrometry).
+high-PM stars ([Driver astrometry](/docs/science-catalog-ingestion.md#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)).
 
 ## Space-motion velocity
 
@@ -242,7 +241,7 @@ Cartesian) alongside its J2016.0 position. Positions stay at the fixed
 scene epoch on disk; the runtime epoch-advance pass
 (`src/client/loaders/epoch-advance-pure.ts`) reads these once at load to
 propagate every position to `getT()`. Full design:
-`docs/science-catalog-ingestion.md` § Current-epoch star positions.
+[Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t).
 
 `velocityPcPerYr` (`direction-cascade.ts`) assembles
 `v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the tier solution
@@ -252,8 +251,8 @@ both. Where it states only a position, the PM comes from a designation-keyed
 tier instead — and carries that position to the scene epoch as well as the
 velocity, so the two still read one motion. The pairing rests on both
 quantities describing the same object:
-`../distance/pm-rescue/README.md` § Why an owned PM on a blended row
-is admissible at all. The
+[Why an owned PM on a blended row is admissible at all](../distance/pm-rescue/README.md#why-an-owned-pm-on-a-blended-row-is-admissible-at-all).
+The
 east/north tangent basis is `equatorialTangentBasis`
 (`src/client/util/equatorial-basis.ts`), shared with `directionAtEpoch`,
 `companion-promotion.ts`'s sep+PA projection, and the runtime's Tier-1
@@ -280,8 +279,7 @@ the 36 Gaia rows are already at J2016.0 and do not move.
 
 `velocityAboveEscape` moved when the rv cascade took its SIMBAD tier — a
 published-but-wrong velocity is what these thresholds are for, and which rows
-moved is recorded in `../distance/radial-velocity/README.md` § The sanity
-thresholds.
+moved is recorded in [The sanity thresholds](../distance/radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value).
 
 Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity` on a
 row with a 5p solution, else a bibcoded SIMBAD `rvz_radvel`
@@ -301,7 +299,7 @@ guard this:
   **before** assembly (`radialTermExceedsCeiling`), leaving the row's measured
   PM intact — the clamp below would otherwise take a real proper motion down
   with a bad velocity. Counted `rvRadialRejected` and logged per star;
-  `../distance/radial-velocity/README.md` § The sanity thresholds carries the
+  [The sanity thresholds](../distance/radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value) carries the
   case that fixed the rule.
 - `VELOCITY_SANITY_CEILING_KM_S` (1500, ~3× escape): a hard clamp — the
   velocity is zeroed (kept at J2016.0, same as no-PM rows) so the star
@@ -369,10 +367,10 @@ The manifest carries no editorial `con` column,
 so the walk leaves `desigConIndex` (search-index `dc`) at
 `NO_CONSTELLATION_INDEX` and three later passes fill it — the IAU WGSN
 designation the naming ladder resolves states its own constellation and wins
-(`../naming/README.md` § The designation constellation), else the classic-ID
+([The designation constellation](../naming/README.md#the-designation-constellation)), else the classic-ID
 label pass fills it from IV/27A keyed on the record's own HD/HIP, else a GCVS
 designation's trailing abbreviation. Cascade, coverage and the GCVS precedence:
-`../classic-ids/README.md` § The designation constellation.
+[The designation constellation](../classic-ids/README.md#the-designation-constellation).
 `designationConIndex(dc, c)` in `../record/catalog-pure.ts` is still the single
 statement of which field a Bayer / Flamsteed / GCVS designation reads, and the
 positional `conIndex` is still the last fallback (123 faint Flamsteed-only
@@ -401,7 +399,7 @@ ways —
 
 Those two plus CM Ind (named for Indus, positionally in Pavo) are the GCVS
 share of the entries `designationConMismatch` pins; the rest come from IV/27A.
-The count itself lives in `../record/README.md` § Search index — it moves
+The count itself lives in [Search index](../record/README.md#search-index-publicsearch-indexjson) — it moves
 with the
 record set, so restating it here only goes stale (this line read 65 against a
 pinned 68).

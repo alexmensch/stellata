@@ -1,6 +1,6 @@
 // Refracted, Rayleigh-reddened sunlight inside a caster's umbra — why a
 // totally eclipsed Moon glows coppery red instead of going out.
-// Derivation and the one anchored scalar: README.md § Umbral glow.
+// Derivation and the one anchored scalar: README.md#umbral-glow--why-a-totally-eclipsed-moon-is-red-not-black.
 
 import type { PlanetAtmosphere } from '../../planet-system';
 
@@ -22,7 +22,7 @@ export const LIMB_REFRACTION_RAD = (1.16 * Math.PI) / 180;
  * 2.3e-21 / 3.4e-21 / 1.5e-22 cm².
  *
  * Carried here rather than in `PlanetAtmosphere` deliberately — the airlight
- * model does not carry ozone at all (`../../atmosphere/README.md` § Skylight
+ * model does not carry ozone at all (`../../atmosphere/README.md#skylight--the-lit-air-scattering-light-back-down`
  * says so outright), and this is the one place its absorption leads. Amplified
  * ~70x on a limb path it removes most of the red and green while barely
  * touching blue, which is what makes the OUTER umbra read turquoise instead

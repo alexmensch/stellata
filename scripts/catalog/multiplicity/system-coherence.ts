@@ -1,6 +1,6 @@
 /** Intra-system radial coherence: own-record members of a physical WDS
  *  system move to the system's best-tier distance anchor. See
- *  scripts/catalog/multiplicity/README.md § System distance coherence. */
+ *  /scripts/catalog/multiplicity/README.md#system-distance-coherence. */
 
 import type { Star } from '../parse/stars-parse';
 import type {
@@ -63,7 +63,7 @@ interface AnchorRank {
   letter: string;
 }
 
-/** see README.md § System distance coherence, Why precision sits between side
+/** see README.md#system-distance-coherence Why precision sits between side
  *  and letter */
 function rankBeats(rank: AnchorRank, best: AnchorRank | null): boolean {
   if (best === null) return true;
@@ -85,7 +85,7 @@ function fractionalError(plxMas: number | null, errMas: number | null): number |
 
 /** The member's anchor tier, and the fractional parallax error of the fit that
  *  earned it — null below the HIP2 tier, which carries no trusted fit. See
- *  README.md § System distance coherence, Precision veto. */
+ *  README.md#system-distance-coherence Precision veto. */
 function anchorEvidence(
   star: Star, sources: CoherenceSources, hostsSubsystem: boolean,
 ): { tier: number; fracError: number | null } {
@@ -279,7 +279,7 @@ export function applySystemDistanceCoherence(
       }
     }
     if (anchorIdx === null) continue;
-    // see README.md § System distance coherence, Precision veto
+    // see README.md#system-distance-coherence Precision veto
     if (anchorRank !== null && anchorRank.primarySide === 1
       && primaryIdx !== null && primaryRank !== null) {
       if (morePrecise(primaryRank.fracError, anchorRank.fracError)) {

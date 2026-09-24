@@ -1,6 +1,6 @@
 // Pure parser for a JPL Horizons ELEMENTS response (format=text,
 // CSV_FORMAT=YES). Sibling of scripts/probes/horizons-vectors.ts and carries
-// the same drift guards; see README.md § Header pins.
+// the same drift guards; see README.md#header-pins.
 
 import {
   assertAscendingJd,

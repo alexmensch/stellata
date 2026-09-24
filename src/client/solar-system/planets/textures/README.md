@@ -2,8 +2,8 @@
 
 Which rung of a body's texture ladder the renderer holds, decided from the
 live viewport every frame. The ladder itself is built by
-`scripts/textures/` and its contract is `data/textures/README.md`
-§ Artifact contract; `../planet-mesh-layer.ts` is the only consumer.
+`scripts/textures/` and its contract is [Artifact contract](/data/textures/README.md#artifact-contract);
+`../planet-mesh-layer.ts` is the only consumer.
 
 ```
 src/client/solar-system/planets/textures/
@@ -119,7 +119,7 @@ map for a distant Mars.
 
 `uSurfaceLuminance` is pre-divided by the map's sphere-weighted mean linear
 luminance, so the brightness-stretched mosaic supplies only the albedo
-pattern (`../emission/README.md` § Two disc means). If two rungs of one body
+pattern ([Two disc means](../emission/README.md#two-disc-means-divide-out)). If two rungs of one body
 measured even slightly differently, **every tier swap would be a brightness
 step** on a body whose magnitude is physically pinned.
 
@@ -206,7 +206,7 @@ so nothing the app can read separates the two.
 `WebGpuSeam.uploadTexture`, inside an out-of-memory error scope, and is bound
 only once the scope comes back clean; a refused map resolves `missing`,
 because an invalid texture in a bind group drops the whole frame
-(`../../../webgpu/README.md` § Out of memory). Every other allocation's
+([Out of memory](../../../webgpu/README.md#out-of-memory)). Every other allocation's
 refusal arrives through three's `renderer.onError` as an uncaptured
 `GPUOutOfMemoryError`. Both answer with `stepDownTextureLimits`, which halves the budget (floor
 `TEXTURE_BUDGET_FLOOR_BYTES`, 64 MB — the pinned set alone) and drops the cap

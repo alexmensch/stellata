@@ -1,6 +1,5 @@
 // The star LocalCluster: per-frame star membership + orbit-path
-// ellipses for the local depth pass. See ../../local-depth/README.md
-// § Full membership.
+// ellipses for the local depth pass. See ../../local-depth/README.md#full-membership--billboards-render-in-the-local-pass-too.
 
 import * as THREE from 'three';
 import type { BinariesData } from '../../binaries/binaries-loader';

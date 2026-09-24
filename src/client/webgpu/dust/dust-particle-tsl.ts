@@ -32,8 +32,7 @@ export function buildDustParticleMaterial(
   material.vertexNode = Fn(() => {
     // Density → [0, 1] over the same log window the dust texture decode
     // uses, so the scale matches the visible range of real Edenhofer
-    // values rather than synthetic peaks. README.md § Two quantities
-    // that divide out.
+    // values rather than synthetic peaks. README.md#two-quantities-that-divide-out.
     const logD = log(max(attrFloat('iDensity'), u.uDustDensityMin));
     const logMin = log(u.uDustDensityMin);
     const normD = clamp(

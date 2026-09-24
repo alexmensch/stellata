@@ -37,7 +37,7 @@ export function makeMockCatalog(clouds: Cloud[]): CloudCatalog {
 
 /** Carries the real brick's linear pair — on the Data3DTexture default this
  *  fixture would build a graph production never builds
- *  (`../webgpu/solar-system/README.md` § A stand-in's filters). */
+ *  (`../webgpu/solar-system/README.md#a-stand-ins-filters`). */
 function mockBrick(): THREE.Data3DTexture {
   const tex = new THREE.Data3DTexture(new Uint8Array(8), 2, 2, 2);
   tex.minFilter = THREE.LinearFilter;

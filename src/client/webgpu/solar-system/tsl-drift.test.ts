@@ -1,6 +1,6 @@
 // The solar-system graphs' constant-drift guards: a pinned constant must be
 // read from its `*-pure.ts` home, never restated as a literal.
-// README.md § Constant drift.
+// README.md#constant-drift.
 
 import { describe, expect, it } from 'vitest';
 import {

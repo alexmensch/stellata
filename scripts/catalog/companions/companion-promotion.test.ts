@@ -2872,8 +2872,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     expect(stats.droppedParkedRecord).toBe(1);
     // The borrowed HIP is the primary's, so the row carries no per-component
     // fit and refusing it withholds no measurement of B's own. That zero is
-    // the refusal's warrant, not a note — ../distance/parallax/README.md
-    // § Companion promotion may not walk a REFUSED MEASUREMENT back in.
+    // the refusal's warrant, not a note — ../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in.
     expect(stats.droppedParkedRecordOwnedFit).toBe(0);
     expect(stats.droppedParkedRecordViaGaia5p).toBe(0);
   });

@@ -107,8 +107,7 @@ describe('FilterController', () => {
 
   // The footprint window has exactly one authority — the instrument
   // record. There is no FilterState field and no slider to disagree with
-  // it; both were retired. See README.md § The multiplier is the ONLY
-  // footprint control.
+  // it; both were retired. See README.md#the-multiplier-is-the-only-footprint-control-deliberately.
   it('uSizeSpan tracks the instrument, and no filter patch can move it', () => {
     const { ctrl, uniforms } = makeHarness();
     const span = INSTRUMENTS['unaided-eye'].sizeSpan;

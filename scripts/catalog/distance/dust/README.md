@@ -46,7 +46,7 @@ truncation at 1.25 kpc, and the `avPerDensityPerPc` conversion all cancel
 by construction — so rendered `appMag` reproduces the AT-HYG observed
 magnitude. The only at-Sol residual is the shader's tap-rule quadrature
 against this converged integral
-(`src/client/star-pipeline/extinction/README.md` § The march;
+([The march](/src/client/star-pipeline/extinction/README.md#the-march);
 `scripts/dust/march-taps/README.md` measures it). Camera-anywhere: from
 within the cube, vantages get physically consistent re-lighting.
 

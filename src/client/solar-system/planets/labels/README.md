@@ -19,8 +19,7 @@ moons) above the canvas. The label engine is independent of the
 chart-mode label engine (`chart-labels.ts`); labels show when a planet
 system is attached and the detail cycle permits `planetLabels` (floor
 `all`), and are hidden in chart mode so the chart-mode glyph contract
-isn't doubled up (`../../../scene/declutter/README.md` § Detail-level
-declutter cycle).
+isn't doubled up ([Detail-level declutter cycle](../../../scene/declutter/README.md#detail-level-declutter-cycle)).
 
 Per-body resolvability gate: every label tracks its orbit ring
 (`isOrbitRingResolvable` — a ring the pixel-gap heuristic dropped means the
@@ -32,14 +31,14 @@ its label) rather than stacking on the parent.
 **The OBSERVE anchor body's label hides for the whole anchor window** —
 from the start of the enter glide until the exit glide lands, the span
 `ObserveTransition.observeAnchorOf('planet')` names
-(`../../../camera/observe/README.md` § The observe anchor in line layers).
+([The observe anchor in line layers](../../../camera/observe/README.md#the-observe-anchor-in-line-layers)).
 That is a product rule, not a resolvability one: the body stays on screen
 through both glides and its label still hides. It is keyed on the anchor,
 never on the body's shader hide, which covers only the parked pose.
 
 A totally eclipsed body's label hides with the body, except where the
 caster has an atmosphere and the umbral glow keeps it visible
-(`../eclipses/README.md` § True-eclipse dim).
+([True-eclipse dim](../eclipses/README.md#true-eclipse-dim)).
 
 **Shadow and occlusion are different gates and both apply.** The
 eclipse dim above asks whether the HOST still lights the body; the

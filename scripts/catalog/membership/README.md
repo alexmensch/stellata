@@ -8,10 +8,10 @@ that AT-HYG's subset never carried — 376,932 rows, and the 602,228 the V <= 11
 magnitude term adds on top (`magnitude-term/README.md`), 979,160 in
 all. **`readStars` walks it, and
 membership is exactly these rows less the § 6.1 parks**
-(`../parse/README.md` § Per-row pipeline). It is the artifact that retires
+([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
-`docs/catalog-driver.md` § 3.1, the measurement behind it
-`../spine/README.md` § The primaries audit.
+[§ 3.1,](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) the measurement behind it
+[The primaries audit](../spine/README.md#the-primaries-audit).
 
 The manifest is a **pure function of committed inputs**, so unlike the spine it
 takes the ordinary regenerate-and-diff gate: CI runs `pnpm run build:membership`
@@ -74,9 +74,9 @@ gaia_source_id  binding  routes  term
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,
   through the same gates), `reviewed` (the value a row of
   `data/membership/binding-review-dispositions.tsv` settles on stated
-  evidence), or `none`. `binding/README.md` § Both gates weigh every candidate
+  evidence), or `none`. [Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)
   is the rule.
-- `term` is which side of `docs/catalog-driver.md` § 1's union admitted the
+- `term` is which side of [§ 1](/docs/catalog-driver.md#1-the-driver-model)'s union admitted the
   row — `primaries` or `magnitude`; `magnitude-term/README.md` owns the
   other side, its floor and its dedupe against the bindings derived below.
 - `routes` names the primary attesting each classical cell
@@ -96,13 +96,13 @@ and never by walk order. Sol is first, keyed `sol:sun` alone.
 Each spine row becomes one manifest row. The generator reads the spine as the
 frozen record of AT-HYG's **merge decisions** — which designations name one
 star — which is the one thing AT-HYG supplies that no primary does
-(`docs/catalog-driver.md` § 3.1). The spine's identifier cells then pass
+([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)). The spine's identifier cells then pass
 through `mergeClassicIdLabels`, **keyed on the binding derived below and never
 on the frozen cell**, and this build writes the resulting
 `data/classic-ids/label_flips.tsv`. **The merge happens once, here**, and one
 producer is what says that queue enumerates every departure from the spine's
-cells — the property replayed by `../spine/README.md` § Parity is the
-manifest's gate now. The record build reads the manifest's cells as final and
+cells — the property replayed by [Parity is the manifest's gate now](../spine/README.md#parity-is-the-manifests-gate-now).
+The record build reads the manifest's cells as final and
 runs no merge of its own.
 
 Keying on the derivation is what lets a filled binding carry labels: 577 spine
@@ -111,18 +111,17 @@ where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a § 7 merge,
 retiring `hd:2094` in favour of `hip:1997`); GJ 9013 onto Ankaa; GJ 9257AB onto
 Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
-curated refusal (`../classic-ids/label-merge/README.md` § Curated overrides):
+curated refusal ([Curated overrides](../classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them)):
 Propus, where
 Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
 that source to the sibling, so the overlay would hand η Gem the sibling's
 HD 253820 in place of its own HD 42995. Gl 563.2
 A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
-`gl` on the component the two sides name (`../classic-ids/label-merge/README.md`
-§ The gl comparison is specificity-aware).
+`gl` on the component the two sides name ([The gl comparison is specificity-aware](../classic-ids/label-merge/README.md#the-gl-comparison-is-specificity-aware)).
 
 The binding is **derived**, not copied, and **nothing holds it against the
-spine's `gaia_source_id` cell**: `binding/README.md`
-§ The four sources, in precedence order walks four committed
+spine's `gaia_source_id` cell**: [The four sources, in precedence order](binding/README.md#the-four-sources-in-precedence-order)
+walks four committed
 sources through both gates and writes what survives. `derivationOutcome` in the
 count snapshot pins what the derivation reached, over every spine row:
 
@@ -174,7 +173,7 @@ value ships as `reviewed`.
 How a row reaches its `gaia_source_id` — the four committed sources, the
 precedence and consensus ranking, both gates, and the `contested` /
 `collision` outcomes the derivation cannot settle alone — is
-`binding/README.md` § What the derivation cannot settle alone, which owns it.
+[What the derivation cannot settle alone,](binding/README.md#what-the-derivation-cannot-settle-alone) which owns it.
 
 ## The unattested labels leave the row
 
@@ -225,7 +224,7 @@ an unkeyed correction lands on the Sun.
 generator holds every folded row's `spineDesignations` against the surviving
 manifest row's, and fails on any the survivor does not answer to. It is an
 identity event too: the folded row's SID retires with the survivor's as
-successor (`docs/sid.md` § 4.3). Both today:
+successor ([§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)). Both today:
 
 | Row | Op | What review found |
 |---|---|---|
@@ -252,7 +251,7 @@ stars whatever the best-neighbour walk says.
 only designations **no record already answers to** — display cell or alias,
 compared on `hd` / `hr` / `hip` / normalised GJ — and only a raw source no
 spine record carries. A designation on two records names a granularity and
-keys no SID (`docs/sid.md` § 4.1), so attaching one another record holds would
+keys no SID ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)), so attaching one another record holds would
 cost that record its key for nothing. The claim set is the spine's after the
 label merge and **grows as each group is admitted**, so the rule reads the same
 whether the record already answering is a spine row or an earlier addition.
@@ -264,7 +263,7 @@ The consequences, measured 2026-09-06:
 | `admitted:hd_omitted` | 5,063 | IV/25 star, HD ≥ 100,000 |
 | `admitted:hip_omitted` | 444 | I/239 HIP with no IV/25 star |
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
-| `component:<anchor>` | 466 | every designation it arrived with is another record's. 461 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to. Five left the class when the curated HD corrections freed the number their anchor was wrongly displaying (`../classic-ids/label-merge/README.md` § Curated overrides) |
+| `component:<anchor>` | 466 | every designation it arrived with is another record's. 461 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to. Five left the class when the curated HD corrections freed the number their anchor was wrongly displaying ([Curated overrides](../classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them)) |
 | source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
 | source left empty, gate refused | 121 | the raw binding is in `rejected_bindings.tsv` |
 
@@ -298,10 +297,10 @@ one a spine-side `hd:` or `hr:` pair), so `sid:allocate` mints every addition un
 `hip:` / `gl:`. The two counts answer only together: the first says the row has
 a classical designation, the second that the designation is its own.
 
-**Admission is not a promise of a record.** An admitted row walks the § 5
+<a id="admission-is-not-a-promise-of-a-record"></a>**Admission is not a promise of a record.** An admitted row walks the § 5
 cascades like any other, so one that reaches no owned parallax or no V parks on
 `data/membership/parked-ledger.tsv` under the existing reason codes
-(`../parse/README.md` § Per-row pipeline). Manifest rows are the membership
+([Per-row pipeline](../parse/README.md#per-row-pipeline)). Manifest rows are the membership
 term; the record count is that term less the parks.
 
 An addition's other labels come by **designation-keyed** joins over the same
@@ -389,4 +388,4 @@ counters take the printed-V cascade the binding gate already weighs each row
 against. Since the label merge moved onto the derived binding,
 `build:classic-ids` does not read this file at all. After the swap release the
 baseline becomes the previous manifest. The per-column, per-consumer
-retirement plan and its order: `docs/catalog-driver.md` § 3.2.
+retirement plan and its order: [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-column-per-consumer-in-order).

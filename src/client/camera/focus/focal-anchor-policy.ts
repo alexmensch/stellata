@@ -1,5 +1,5 @@
 // The focal AnchorPolicy: keep the floating origin on the focal object as
-// it moves under time advance. See ./README.md § Moving-focal ride.
+// it moves under time advance. See ./README.md#moving-focal-ride.
 
 import * as THREE from 'three';
 import type { AnchorPolicy } from '../../frame/floating-origin';

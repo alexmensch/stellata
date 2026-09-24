@@ -1,6 +1,6 @@
 // Scans the SHIPPED scene-layer registrations for their `timeBehaviour`
-// declaration. See src/client/scene/README.md § Declaring how time moves
-// a layer, and src/client/render-gate/README.md § The clock cadence.
+// declaration. See /src/client/scene/README.md#declaring-how-time-moves-a-layer
+// and /src/client/render-gate/README.md#the-clock-cadence.
 //
 // A source scan rather than a unit test over a synthetic registry, because
 // what needs pinning is a property of the layers that actually register:
@@ -117,8 +117,7 @@ describe('shipped scene-layer time declarations', () => {
 describe('shipped scene-layer contribution declarations', () => {
   // Same shape as the time census above, for the same reason: the type
   // refuses a layer without the declaration, and this pins what the
-  // shipped roster actually declares (src/client/scene/README.md
-  // § Declaring what a layer can put on screen).
+  // shipped roster actually declares (/src/client/scene/README.md#declaring-what-a-layer-can-put-on-screen).
 
   it('every declaration is one of the two kinds', () => {
     const unknown = contributions.filter((d) => !['always', 'gated'].includes(d.kind));
@@ -134,8 +133,8 @@ describe('shipped scene-layer contribution declarations', () => {
     // the galactic disc, the planet mesh LOD, the star core mask, and the
     // two diffuse emitters on the brightness test — the Milky Way band and
     // the Local Group pair. The refusals are deliberate and argued in
-    // src/client/scene/README.md § Declaring what a layer can put on
-    // screen: a coordinate sphere is camera-tracked at 50 kpc, so no
+    // /src/client/scene/README.md#declaring-what-a-layer-can-put-on-screen:
+    // a coordinate sphere is camera-tracked at 50 kpc, so no
     // admissible test can ever fire on it.
     const census: Record<string, number> = { always: 0, gated: 0 };
     for (const d of contributions) census[d.kind]++;

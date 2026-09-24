@@ -2,10 +2,10 @@
 
 The eye does not detect an extended source pixel by pixel: rods sum over a
 critical area, so threshold for anything larger than that area is a
-**surface brightness** (`../emission/README.md` § Extended sources). Turning
+**surface brightness** ([Extended sources](../emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Turning
 that into a display level means averaging the emission over the summation
 patch and gaining by the patch area — and the average is what this folder
-owns. `docs/science-hdr-pipeline.md` § 1 is the design gate.
+owns. [§ 1](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) is the design gate.
 
 Substituting `Ω_sum` for `Ω_px` *without* the average is the same operation
 only for a source uniform across the patch. The Milky Way band from Sol is;
@@ -37,7 +37,7 @@ attachment 0: their pre-summation display luminance, per arcsec² gained by
 each of which a separate pass would break — the band's `depthTest` against
 close star cores, the additive accumulation of the two Milky Way meshes and
 of M31's overlapping disc and bulge, and the existing pass order
-(`../README.md` § Pass ordering).
+([Pass ordering](../README.md#pass-ordering--one-target-two-passes-into-it)).
 
 ```
 hdr.bind()             → clear all three attachments
@@ -71,7 +71,7 @@ blends are exempt because neither can attenuate anything.
   ring annulus, its atmosphere shell, all alpha-composited in the local depth
   pass. They emit *and* attenuate, so they take the occluding-emitter role — all
   three attachments — and write black at their own alpha
-  (`../attachments/README.md` § The roles). Without it the band is added over a
+  ([The roles](../attachments/README.md#the-roles)). Without it the band is added over a
   planet's night side, a shadowed ring section and the atmosphere limb —
   wherever the surface is dim enough for 38/255 to show.
 - **The canvas alpha.** The resolve writes **1**, not attachment 0's: a
@@ -84,14 +84,13 @@ stops absorbing or stops occluding, with no error and no missing draw, so
 `../../molecular-clouds/molecular-clouds.test.ts` and
 `../../solar-system/planets/planet-mesh-layer.test.ts` pin every call site
 alongside the shaders' `location = 2` declarations. Authored chrome is the
-one category deliberately left out — `../attachments/README.md` § Known
-residuals.
+one category deliberately left out — [Known residuals](../attachments/README.md#known-residuals).
 
 **The gain does not move**, and that is deliberate: attachment 2 carries the
 same `Ω_sum`-gained value the band used to write into attachment 0, so the
 convolution is a plain mean of it. A mean over a *uniform* field returns
 that field exactly, which is why the band's shipped display table from Sol
-(`../../milkyway/calibration/README.md` § The gradient this produces) is preserved by
+([The gradient this produces](../../milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen)) is preserved by
 construction rather than to some tolerance. Carrying un-gained flux instead
 would put the band's texels at ~4e-8 — fp16 subnormal range, and quantised
 to nothing.
@@ -139,7 +138,7 @@ pixel ratio and that outlives the pass) — so a zoom never reallocates.
 A convolution can only average what the rasteriser sampled. A raymarch
 point-samples its profile at the pixel centre, so an aliased Sérsic cusp
 survives the convolution intact — which is why the footprint softening in
-`../emission/README.md` § Footprint is a prerequisite for this pass rather
+[Footprint](../emission/README.md#footprint--a-fragment-carries-a-pixel-not-a-point) is a prerequisite for this pass rather
 than an independent nicety. With it, the residual at M31's nucleus is
 0.01–0.15 mag across the whole FOV range; without it, 1.4–3.1 mag.
 

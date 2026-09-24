@@ -94,8 +94,8 @@ answer is not the one two TYC witnesses give.
 
 **A record's identity is its Gaia binding.** The `gaia_source_id` is what the
 manifest justified and what `readStars` builds the record from
-(`../membership/README.md` § The identifier columns are read, never
-re-derived), so the star the record IS is the star SIMBAD's object for that
+([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived)),
+so the star the record IS is the star SIMBAD's object for that
 source is. A TYC cell is a designation the row carries, and on a resolved pair
 it can be the sibling's — that is the crossed-cell case, and it cannot move
 an HD on its own however many printed indexes agree with it.
@@ -111,7 +111,7 @@ SIMBAD's object for the record's SOURCE     ┘ the record's own binding
 ```
 
 Measured over the manifest, 2026-09-09. 23 rows have both TYC witnesses
-against the shipped HD (`data/simbad/README.md` § The TYC → HD pull); the
+against the shipped HD ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)); the
 fourth witness splits them:
 
 | Verdict | Rows | What it is |
@@ -135,7 +135,7 @@ evidence**, which is why `stellata-3bsf.50`'s first rule — prefer the own-TYC
 HD — was reverted after reaching them.
 
 **I/239's HD for a HIP is not a fourth opinion.** Hipparcos resolved a close
-pair as ONE star (`../naming/README.md` § The record-side join), so its HD is
+pair as ONE star ([The record-side join](../naming/README.md#the-record-side-join)), so its HD is
 whichever component the blended entry printed; it backs the shipped cell on 18
 of the 23 and agrees with the TYC on 5, and neither reading is component
 evidence.
@@ -160,8 +160,8 @@ also why § What the TYC → HD pull adjudicates counts 15 rather than 23: the
 eight left the class by being fixed, not by being re-measured.
 
 **Eight of the nine are asserted**, in
-`data/classic-ids/classic_id_overrides.tsv` (`../classic-ids/label-merge/README.md`
-§ Curated overrides), and the move set the test pins is what is left. What the
+`data/classic-ids/classic_id_overrides.tsv` ([Curated overrides](../classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them)),
+and the move set the test pins is what is left. What the
 assertion cost: `labelOverridden` hd 1 → 9 / hr 0 → 7, five freed HD numbers
 admitted as manifest rows of their own — three building a record (f Eri B,
 δ Ser B, 12 Aqr B) and two parking — one `hd:` SID minted (δ Ser B; the other
@@ -169,7 +169,7 @@ two already keyed their designations as promoted companions, so
 `companionPromoted` falls by the 2 that `companionAlreadyInCatalog` gains and
 `recordCount` nets +1), `namingDuplicateLabels` 48 → **47**. Five designations
 leave the search index in the trade
-(`../classic-ids/label-merge/README.md` § What a freed number costs). Each
+([What a freed number costs](../classic-ids/label-merge/README.md#what-a-freed-number-costs)). Each
 record's spectral type — keyed on its Gaia source, so independent of every
 witness above — now matches the component whose HD it carries.
 

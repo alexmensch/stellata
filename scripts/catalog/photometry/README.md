@@ -2,8 +2,8 @@
 
 Per-record photometric quantities derived from Gaia DR3 broadband
 magnitudes: the Johnson V and B−V cascades, and the published relations
-behind them. The contract is `docs/catalog-driver.md` § 5; the per-row
-pipeline that consumes this is `../parse/README.md` § Per-row pipeline.
+behind them. The contract is [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers); the per-row
+pipeline that consumes this is [Per-row pipeline](../parse/README.md#per-row-pipeline).
 
 ## Files in this area
 
@@ -96,7 +96,7 @@ Per-tier routing, pinned in build-counts: `gaia_riello` **366,455** ·
 cascade pins `directionVia`. The tier also rides on the record, because it
 answers a question no consumer can answer from the magnitude alone.
 
-**There is no SIMBAD tier**, though `docs/catalog-driver.md` § 5 projected
+**There is no SIMBAD tier**, though [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) projected
 one. Gliese reaches every row Tycho-2 misses, and for the handful that would
 have fallen through to SIMBAD the pull holds fluxes in `B`, `J`, `H`, `K`,
 `R`, `g`, `r`, `i` and `G` and no `V` at all — so the § 5 rule that a SIMBAD
@@ -138,7 +138,7 @@ bounds, and **7,514** reach neither and take a derived colour.
 
 The spine's printed `ci` cell used to sit where those two tiers now do. It is
 not a source — it is AT-HYG's amalgamation of catalogues we can pull
-ourselves (`docs/catalog-driver.md` § 5) — so retiring it costs the rows it
+ourselves ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)) — so retiring it costs the rows it
 alone reached a measured colour and hands them to the derived tiers. That is
 the trade the residual policy asks for.
 
@@ -163,7 +163,7 @@ inside the range the Johnson standardisation was *validated* over. Gating on
 it would leave the tier serving **zero** rows: the flag's region and this
 tier's window do not intersect anywhere in this catalogue, which is bright
 enough that 96% of it sits below the flag's own bright bound
-(`data/gaia/README.md` § The GSPC validated-range flag has the measured
+([The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range) has the measured
 region). `ciGspcValidatedRange` pins that zero as a tripwire.
 
 Ignoring a published validity bound is what § Where the colour bound comes
@@ -217,7 +217,7 @@ a synthetic colour near −0.33 (the value those eight carry, and the right
 one for the hot stars they are) for a spectral-class guess.
 
 **Printed sits ABOVE synthetic**, inverting the tier order
-`docs/catalog-driver.md` § 5 states, and for the same reason the bound
+[§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) states, and for the same reason the bound
 exists: outside the standardisation the synthetic value is not tied to the
 ground system, while `I/239` B−V is a calibrated measurement on it. Both
 corpus rows carrying values from both tiers prefer printed — Barnard's Star
@@ -284,7 +284,7 @@ against ~13% for the printed tier, which is the signature of Gaia having
 resolved the pair the cross-match could not.
 
 Anything subtracting a companion's flux from a record must gate on this or it
-double-counts: `../companions/README.md` § Anchor flux conservation is the
+double-counts: [Anchor flux conservation](../companions/README.md#anchor-flux-conservation-post-pass) is the
 consumer, and `RIELLO_G_MINUS_V_SIGMA` is the decisive margin its subset solve
 compares hypotheses at, since a Gaia-derived V is only good to that σ.
 
@@ -295,7 +295,7 @@ one — that class of bug is unreachable rather than guarded against.
 
 ## The bright rescue tier is a condition, not a magnitude cut
 
-`docs/catalog-driver.md` § 5 defines the bright tier as *rows whose Gaia
+[§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) defines the bright tier as *rows whose Gaia
 photometry is missing or outside the transform's validity*, and the
 `printed_hip` branch is exactly that set — saturated sources, rows with a
 band missing, and colours outside the published range all land there without
@@ -328,9 +328,9 @@ Three joined rows sit at G > 15 against a bright printed V (|ΔV| up to 19.7).
 Those are cross-walk mis-bindings, not photometry, and never reach this
 cascade: the `resolveGaiaSourceId` gates scrubbed them when the inherited
 spine was frozen, and the record build reads the surviving binding off the
-manifest column rather than re-deciding it (`../membership/README.md` § The
-identifier columns are read, never re-derived; `data/classic-ids/README.md`
-§ The binding gate for the same gate on the label side).
+manifest column rather than re-deciding it ([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived);
+[The binding gate](/data/classic-ids/README.md#the-binding-gate)
+for the same gate on the label side).
 
 ## Citation
 
@@ -347,4 +347,4 @@ with a consumer outside this folder rather than anything read here:
 `G` alone, and that selection is complete for a `V` floor only while the
 relation keeps `V` fainter than `G` everywhere it applies. A successor
 calibration whose peak went positive would oblige that pull to carry a margin
-(`data/gaia/README.md` § Why the floor carries no margin).
+([Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin)).

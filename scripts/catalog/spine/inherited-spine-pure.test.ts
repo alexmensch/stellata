@@ -25,7 +25,7 @@ function row(overrides: Partial<SpineRow> = {}): SpineRow {
 }
 
 describe('spine column layout', () => {
-  it('carries every column docs/catalog-driver.md § 3 specifies', () => {
+  it('carries every column /docs/catalog-driver.md#3-the-inherited-spine specifies', () => {
     expect(SPINE_COLUMNS).toEqual([
       'tyc', 'hip', 'hd', 'hr', 'gl', 'flam', 'bayer', 'proper',
       'gaia_source_id', 'ra', 'dec', 'dist', 'mag', 'ci', 'spect', 'rv',

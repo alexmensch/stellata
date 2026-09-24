@@ -1,6 +1,6 @@
 // Truncated ELP-2000/82 lunar theory (Meeus, Astronomical Algorithms
 // 2nd ed., ch. 47): the Moon's geocentric position in the mean ecliptic
-// and equinox of date. See README.md § Moon ephemeris.
+// and equinox of date. See README.md#moon-ephemeris.
 
 import { J2000_JD } from '../../util/astronomy-constants';
 
@@ -15,7 +15,7 @@ const MEAN_DISTANCE_KM = 385000.56;
 // fundamental arguments, which the largest periodic terms amplify
 // coherently. Without the set, the along-track error reaches 518″ at the
 // clock's lower bound — a full umbra width of eclipse-path displacement.
-// Derivation and the residual it leaves: README.md § Moon ephemeris.
+// Derivation and the residual it leaves: README.md#moon-ephemeris.
 const MEAN_LON_T2_ARCSEC = 2.501823e-2;
 const MEAN_LON_T3_ARCSEC = -3.983848e-3;
 const ARG_D_T2_ARCSEC = -1.842598e-2;

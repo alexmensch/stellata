@@ -1,5 +1,5 @@
 // Pure roll algebra: the level-up projection and signed roll angles.
-// Frame-agnostic — the pole is an argument. See README.md § Roll authority.
+// Frame-agnostic — the pole is an argument. See README.md#roll-authority.
 
 import type * as THREE from 'three';
 

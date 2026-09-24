@@ -1,6 +1,6 @@
 // Milky Way density / dust profiles and a CPU mirror of
 // ../webgpu/milkyway/milkyway-band-tsl.ts's raymarch. Owns the constants the shader receives as
-// uniforms — README.md § Density profiles, calibration/README.md.
+// uniforms — README.md#density-profiles calibration/README.md.
 
 import { R0_PC } from '../galactic/galactic-coords';
 import {
@@ -36,7 +36,7 @@ export type Vec3 = readonly [number, number, number];
 export const DISC_RADIUS_PC = 15_000;
 /** Two thick scale heights — the same rule the 600 pc envelope followed
  *  against the thin one, moved to the component that now sets the extent.
- *  See README.md § Density profiles for the truncation it costs. */
+ *  See README.md#density-profiles for the truncation it costs. */
 export const DISC_HALF_THICKNESS_PC = 1_800;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
@@ -44,13 +44,13 @@ export const DISC_SCALE_HEIGHT_PC = 300;
 /** Thick disc, Bland-Hawthorn & Gerhard 2016 § 5.1: z_T = 900 ± 180 pc
  *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. The shared
  *  radial scale length is the one departure from the literature —
- *  README.md § Density profiles. */
+ *  README.md#density-profiles. */
 export const DISC_THICK_SCALE_HEIGHT_PC = 900;
 export const DISC_THICK_DENSITY_FRACTION = 0.04;
 
 export const DISC_COLOR_RGB: Rgb = linearSrgbFromColourIndex(DISC_COLOUR_INDEX_BV);
 /** The authored palette carrying hue only — what the shader multiplies in.
- *  See README.md § Population tints carry hue, never flux. */
+ *  See README.md#population-tints-carry-hue-never-flux. */
 export const DISC_TINT_RGB: Rgb = lumaNormalisedTint(DISC_COLOR_RGB);
 
 // --- Bulge component ---------------------------------------------------
@@ -72,8 +72,8 @@ export const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
  *  solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs
  *  to 1.8). Two independent constraints meet here: at the 125 pc scale
  *  height it also puts the perpendicular column to the pole at
- *  A_V = 0.125, inside the SFD polar spread. See README.md § Dust — the
- *  analytic tier. */
+ *  A_V = 0.125, inside the SFD polar spread. See
+ *  README.md#dust--the-analytic-tier-and-what-composes-with-it. */
 export const LOCAL_DUST_RATE_MAG_PER_KPC = 1.0;
 
 export const REDDENING_RGB: Rgb = [0.76, 1.0, 1.35];
@@ -147,7 +147,7 @@ function bulgeShape(rPc: number, zPc: number, footprintPc = 0): number {
  *  shapes are scalars against luma-normalised tints, so this is the
  *  LUMINANCE integral and a flux share can be split between the two
  *  without either hue moving light
- *  (`../hdr/emission/README.md` § Solving ρ₀). */
+ *  (`../hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density`). */
 export const DISC_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
   discShape,
   DISC_RADIUS_PC,

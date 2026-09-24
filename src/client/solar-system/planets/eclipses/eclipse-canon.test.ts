@@ -185,7 +185,7 @@ describe('solar eclipses vs the Five Millennium Canon', () => {
 
   it('lands greatest eclipse within 7 minutes over the whole corpus', () => {
     // At the 2000 BC end the residual is the canon's distance from DE441
-    // (README.md § Where the remaining error is), far inside the ±hours
+    // (README.md#where-the-remaining-error-is), far inside the ±hours
     // ΔT uncertainty on the real event.
     for (const r of solarResults) {
       expect(Math.abs(r.offsetS), r.row.date).toBeLessThan(420);
@@ -196,8 +196,7 @@ describe('solar eclipses vs the Five Millennium Canon', () => {
     // The deep-time worst case (198 km, -1977) is the canon-agreement
     // floor, not the model's accuracy: at that epoch the chain sits
     // within 6″ of DE441 in Moon−Sun elongation while the canon's
-    // ELP2000-85 Moon drifts ~160″ from DE441 by 2000 BC. See README.md
-    // § Where the remaining error is.
+    // ELP2000-85 Moon drifts ~160″ from DE441 by 2000 BC. See README.md#where-the-remaining-error-is.
     for (const r of solarResults) {
       expect(r.offsetKm, r.row.date).toBeLessThan(200);
     }

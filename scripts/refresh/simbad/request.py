@@ -189,8 +189,8 @@ def corroborate(
 
     Only a DR3 id can contradict the asking one, so the veto reads DR3 while
     corroboration reads all three releases — the asymmetry, and why a
-    differing DR2 id is not evidence either way, is README.md § The
-    corroboration rule. An asking id of None has nothing a
+    differing DR2 id is not evidence either way, is README.md#the-corroboration-rule.
+    An asking id of None has nothing a
     cross-ID could contradict, so it lands uncorroborated rather than skipping
     the rule: a no-Gaia manifest row binds on its designation alone too.
     """

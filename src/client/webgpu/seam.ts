@@ -1,6 +1,6 @@
 // The contract between the integration shell and the WebGPU boot
 // path. Type-only — every three/webgpu VALUE import stays behind
-// boot-webgpu.ts's dynamic import (see README.md § Import boundary).
+// boot-webgpu.ts's dynamic import (see README.md#import-boundary--nothing-webgpu-in-the-entry-bundle).
 
 import type * as THREE from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
@@ -61,8 +61,8 @@ export interface WebGpuStarLayer {
   absorbRecords(): void;
   /** How many stars each tier's draw actually issued on the last dispatch,
    *  off a mapped copy of the indirect args. On demand only — the readback
-   *  resolves frames later (star/compaction/README.md § Reading the counts
-   *  back). Null once the layer is disposed. */
+   *  resolves frames later (star/compaction/README.md#reading-the-counts-back).
+   * Null once the layer is disposed. */
   readSurvivorCounts(): Promise<SurvivorCounts | null>;
   /** The shell hands it to StarLocalCluster, which parents its group into
    *  the pass scene and owns its dispose. */
@@ -77,15 +77,15 @@ export interface WebGpuSeam {
    *  then refuses the query set. Every GPU-timing consumer must ask here,
    *  and the render loop's resolve is gated on it: with tracking off three
    *  allocates no query pool, so resolving anyway only warns
-   *  (timestamps/README.md § Why the resolve is not gated on the HUD). */
+   *  (timestamps/README.md#why-the-resolve-is-not-gated-on-the-hud). */
   readonly timestampsAvailable: boolean;
   readonly hdr: HdrSeam;
   /** Built by the shell right after buildSharedUniforms; null before. */
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;
   /** Per-frame scalar copy from the shared uniform map into the nodes —
-   *  called from animate() before the render (tsl/README.md § Shared
-   *  uniform nodes). */
+   *  called from animate() before the render (tsl/README.md#shared-uniform-nodes).
+   * */
   syncUniformNodes(): void;
   /** Requires bindSharedUniforms to have run — the materials take their
    *  slots from the uniform-node mirror. */
@@ -97,14 +97,14 @@ export interface WebGpuSeam {
    *  it. One node, shared by object identity between the star vertex
    *  stage's fallback march and the extinction prepass, so the shell's
    *  single `attachDust` reaches both. Textures are not part of the
-   *  uniform-node mirror (tsl/README.md § Shared uniform nodes), which is why
+   *  uniform-node mirror (tsl/README.md#shared-uniform-nodes), which is why
    *  this is a call rather than a map write. */
   setDustTexture(texture: THREE.Data3DTexture | null): void;
   /** Called on every uncaptured `GPUOutOfMemoryError`; returns the
-   *  unsubscribe (README.md § Out of memory). */
+   *  unsubscribe (README.md#out-of-memory). */
   onOutOfMemory(listener: () => void): () => void;
   /** Upload `texture` now; `settled(false)` when the GPU refused it
-   *  (README.md § Out of memory). */
+   *  (README.md#out-of-memory). */
   uploadTexture(texture: THREE.Texture, settled: (uploaded: boolean) => void): void;
   /** Build the per-star A_V cache. It points the star
    *  layer's A_V buffer slot at its own storage buffer, so the shell wires
@@ -134,7 +134,7 @@ export interface WebGpuSeam {
   readonly probeMaterial: ProbeMaterials;
   /** Read only AFTER `bindSharedUniforms`: building the graphs resolves the
    *  shared uniform nodes, so an earlier read throws
-   *  (`../chrome-lines/README.md` § One factory per boot). */
+   *  (`../chrome-lines/README.md#one-factory-per-boot`). */
   readonly chromeLineMaterials: ChromeLineMaterials;
   /** The TSL boundary-shell surface (heliopause, Local Bubble). Each
    *  consumer builds its own — colour, limb alpha and blend are per-shell. */

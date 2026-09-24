@@ -171,7 +171,7 @@ async function main(): Promise<void> {
     }
     console.error(
       '\ndata/iau-wgsn/athyg_proper_dispositions.tsv must enumerate exactly '
-      + 'the manifest propers no WGSN name matches (docs/star-naming.md § 2).',
+      + 'the manifest propers no WGSN name matches (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them).',
     );
     process.exit(1);
   }

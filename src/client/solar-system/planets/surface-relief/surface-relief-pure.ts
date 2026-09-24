@@ -126,7 +126,7 @@ export function tangentFrame(
  * map, all in one consistent frame (view space in the shader). `pole` is
  * the body's north pole; `enc` is the texel's raw R,G in [0, 1], carrying
  * the map's (+x east, +y north, +z out) frame —
- * `data/textures/relief/README.md` § Surface relief.
+ * `/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps`.
  */
 export function reliefNormal(
   n: Vec3,
@@ -158,7 +158,7 @@ export function reliefNormal(
  * Compare it against `dot(n, sunDir)` on the GEOMETRIC normal: a horizon is
  * measured from the ground's true local horizontal, and the perturbed normal
  * is the facet's own slope, which this term is composed with rather than
- * duplicating (README.md § Two occluders).
+ * duplicating (README.md#two-occluders-composed--the-facets-own-slope-and-the-skyline).
  */
 export function horizonSin(
   enc: readonly number[],
@@ -187,7 +187,7 @@ export function horizonSin(
  * plain would claim the fill light of a crater floor.
  *
  * This reading marches only the far field, so it under-reads a crater floor's
- * true occlusion about twofold — README.md § F comes from its own map.
+ * true occlusion about twofold — README.md#f-comes-from-its-own-map-not-from-the-horizon-planes.
  */
 export function terrainViewFactor(enc: readonly number[]): number {
   let sum = 0;

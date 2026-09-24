@@ -34,7 +34,7 @@ export const SHELL_OBJECTS_PATH = resolve(SID_DIR, 'shell-objects.tsv');
 export const BRIDGES_DIR = resolve(SID_DIR, 'bridges');
 
 /** The stored (committed) same-as edges: curated overrides plus every
- *  cross-release bridge under bridges/ (docs/sid.md § 4.1). */
+ *  cross-release bridge under bridges/ (/docs/sid.md#41-same-as-equivalence-graph). */
 export function loadStoredEdges(): SameasEdge[] {
   const edges = parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), 'sameas-overrides.tsv');
   if (existsSync(BRIDGES_DIR)) {

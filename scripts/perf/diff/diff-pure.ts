@@ -23,7 +23,7 @@ export const BUFFER_MPX_TOLERANCE = 0.01;
  *  passes' cost scales with the record count, so the question is whether the
  *  difference can reach the band. 1 % of the present catalogue is ~3,900
  *  records, and the measured step for 54,458 was 0.39–0.59 ms of GPU frame
- *  (`RELEASING.md` § Perf pin), so pro rata ~0.03–0.04 ms against a pin
+ *  (`/RELEASING.md#perf-pin`), so pro rata ~0.03–0.04 ms against a pin
  *  floor of `max(0.25 ms, 1 %)` — an order of magnitude under the smallest
  *  delta a row can be marked for. Also the bound
  *  `perf-section-check.sh` requires a re-take past, so a membership change
@@ -49,18 +49,18 @@ export const BAND_SIGMAS = 2;
  *  conditions move it further than that: the same vantage read 21.950 and
  *  21.464 ms across two runs of identical code, differing only in where the
  *  context sat in its run. Both forms were derived from the cold-to-cold
- *  spread of two pins on identical code — `../pins/README.md` § Reading
+ *  spread of two pins on identical code — `../pins/README.md#reading---against-pin`
  *  `--against-pin`.
  *
  *  Here rather than in `pin-pure.ts` because `--baseline` and
  *  `--against-pin` must floor the same row the same way: the tighter of two
  *  gates decides, so a Tier 1 band under the Tier 2 one it feeds marks a
- *  change Tier 2 would call unresolved (`RELEASING.md` § Perf pin). */
+ *  change Tier 2 would call unresolved (`/RELEASING.md#perf-pin`). */
 export const DWELL_FLOOR_MS = 0.25;
 export const DWELL_FLOOR_FRACTION = 0.01;
 
 /** 1.5× each vantage's p10 scatter, rounded up to 0.05 — the derivation and
- *  the measurement are `../pins/README.md` § The compute row. */
+ *  the measurement are `../pins/README.md#the-compute-row`. */
 export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
   mw120: 0.05,
   sol: 0.15,
@@ -253,7 +253,7 @@ export function positionRefusal(a: number | null | undefined, b: number | null |
  * rows span 0.725 ms against a 0.25 ms band. So a 240-frame row read against
  * a 960-frame one is two statistics, not two readings. 960 makes them
  * comparable without making either quiet, which is the re-run rule's job
- * rather than this refusal's (`RELEASING.md` § What a mark means).
+ * rather than this refusal's (`/RELEASING.md#what-a-mark-means`).
  *
  * Nothing else catches it: the state guard compares quarters within one
  * dwell and both read steady, and the band is computed from the pair and
@@ -462,8 +462,8 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   return 'reason' in frame ? [frame] : [frame, ...computeRow(key, a.name, da, db)];
 }
 
-/** README.md, on the compute row; why the p10, `../pins/README.md` § The
- *  compute row. */
+/** README.md, on the compute row; why the p10, `../pins/README.md#the-compute-row`.
+ * */
 function computeRow(
   key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord,
 ): (DiffRow | DiffRefusal)[] {
@@ -563,7 +563,7 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
 }
 
 /** The plain class where the vantage draws two, the whole dwell otherwise —
- *  `../pins/README.md` § The compute row, last. */
+ *  `../pins/README.md#the-compute-row` last. */
 function judgedFrameStat(
   dwell: DwellRecord, gating: ReturnType<typeof gatingClock>,
 ): { readonly clock: ClassClock; readonly metric: DwellMetric } {

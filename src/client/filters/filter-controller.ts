@@ -23,8 +23,8 @@ import type { SceneDeclutter } from '../scene/declutter/scene-declutter';
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here
  *  propagates to every pass. The magnitude bounds and `uExposure` are
- *  NOT here — `ExposureController` owns those (`../hdr/exposure/README.md`
- *  § The three terms). */
+ *  NOT here — `ExposureController` owns those (`../hdr/exposure/README.md#the-three-terms`).
+ * */
 export interface FilterUniforms {
   uMinDistSol: { value: number };
   uMaxDistSol: { value: number };

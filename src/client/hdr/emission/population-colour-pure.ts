@@ -1,6 +1,6 @@
 // Colour indices for the two stellar populations the volumetric layers
 // render, and the constrained solve that recovers a disc's index from a
-// galaxy's published integrated one. See README.md § Population colours.
+// galaxy's published integrated one. See README.md#population-colours--one-equation-two-unknowns-one-citation.
 
 import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
 
@@ -16,7 +16,7 @@ import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-
  * early-type spheroids (M 32, NGC 205) are the same population, so this
  * is a *population* constant rather than either layer's own. It is not
  * the metal-poor dwarf spheroids — see
- * `../../local-group/emission/README.md` § Population tints.
+ * `../../local-group/emission/README.md#population-tints--two-family-seeds-both-derived`.
  */
 export const OLD_SPHEROID_COLOUR_INDEX_BV = 0.9574;
 
@@ -41,8 +41,7 @@ function colourFlux(bv: number): number {
  *
  * f has to be a light ratio, not a mass one: this mixes V-band
  * luminosities, so a mass share used here carries the same error it
- * carries in the flux split (`../../milkyway/calibration/README.md`
- * § The light ratio).
+ * carries in the flux split (`../../milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number`).
  */
 export function combinedColourIndex(
   spheroidBv: number,

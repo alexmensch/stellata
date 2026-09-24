@@ -1,6 +1,6 @@
 // Keyboard-shortcut help modal (the `?` key target). Dismissal via
 // modal-dismiss.ts; the shortcut list renders from the shared registry.
-// See src/client/ui/README.md § Keyboard shortcuts.
+// See /src/client/ui/README.md#keyboard-shortcuts.
 
 import { bindModalDismissal, type ModalHandle } from './modal-dismiss';
 import { helpModalShortcuts } from '../ui/keyboard-shortcuts-registry';

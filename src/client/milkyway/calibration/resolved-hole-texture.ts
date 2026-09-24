@@ -1,5 +1,5 @@
 // The resolution hole as the filtered texture both shaders fetch.
-// README.md § The resolution hole.
+// README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars.
 
 import * as THREE from 'three';
 import {
@@ -8,8 +8,8 @@ import {
   shippedHoleVoxels,
 } from './resolved-fraction-pure';
 
-/** Every parameter here is load-bearing, none a default — README.md
- *  § The table is a 3D grid, not a uniform array. */
+/** Every parameter here is load-bearing, none a default — README.md#the-table-is-a-3d-grid-not-a-uniform-array.
+ * */
 export function makeResolvedHoleTexture(): THREE.Data3DTexture {
   const n = RESOLVED_HOLE_GRID_N;
   const tex = new THREE.Data3DTexture(new Uint16Array(n * n * n), n, n, n);

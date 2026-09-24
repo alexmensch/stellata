@@ -28,7 +28,7 @@ export interface PlanetElementTarget {
   /** Uniform sample spacing, days. Every value divides the window exactly, so
    *  the last sample lands on `TABLE_JD_END` rather than past it. Measured
    *  per planet by `fetch:ephemerides`' off-grid verification pass — see
-   *  README.md § Cadence. */
+   *  README.md#cadence. */
   stepDays: number;
 }
 

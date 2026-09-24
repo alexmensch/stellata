@@ -279,7 +279,7 @@ describe('applyBindingGate', () => {
 // The two printed tiers under Hipparcos, which the HIP-only gate could not
 // reach: a source the TYC→HD route names carries no `hip` at all, so before
 // these arms every one of them passed unweighed.
-// See README.md § The gate's evidence has to be pulled.
+// See README.md#the-gates-evidence-has-to-be-pulled.
 describe('applyBindingGate — the tiers below Hipparcos', () => {
   const BAD_SRC = '5877748442128924544';
   const TYC = '9007-5849-1';
@@ -365,7 +365,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
   // The sibling arm keys on a HIP, so a row with none must reach
   // `resolveGaiaSourceId` as null and short-circuit it. Passing 0 instead
   // applies a gate here that the record side does not
-  // (docs/catalog-driver.md § 4).
+  // (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('passes a missing HIP through as null, so the sibling arm cannot fire on it', () => {
     const overlay = hdOnlyOverlay();
     const { rejected } = applyBindingGate(

@@ -23,7 +23,7 @@ function failureMessage(): string {
     'The codebase is organised as a wiki: every folder owns one topic,',
     'documented in its own README.md. Per-area architectural prose,',
     'file rosters, and topic-specific gotchas belong in the folder\'s',
-    'README.md — NOT in AGENTS.md. See AGENTS.md § Repo layout for',
+    'README.md — NOT in AGENTS.md. See /AGENTS.md#repo-layout--the-structure-is-the-index for',
     'the wiki convention.',
     '',
     'If you are about to add something here:',

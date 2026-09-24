@@ -238,7 +238,7 @@ export interface AttitudeIndicator {
    *  far the frame turned. Runs on every rendered frame whether or not the
    *  lock is engaged — the re-read is what makes ORB live, so this is not
    *  skippable when it is off. **The shell owns when** it runs:
-   *  `Stellata.setOrbitFrameTick`, `orbit-frame/README.md` § The lock. */
+   *  `Stellata.setOrbitFrameTick`, `orbit-frame/README.md#the-lock`. */
   tickOrbitFrame(): void;
 }
 
@@ -248,7 +248,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   host.innerHTML = '';
   // The instrument fills its panel column, so the one number the stylesheet
   // cannot derive is the ball's share of the square box it sits in. Every
-  // rule consuming it is a class in styles.css — README.md § Sizing.
+  // rule consuming it is a class in styles.css — README.md#sizing.
   host.style.setProperty('--ai-ball-frac', String(BALL_PX / BOX));
   // The REF chip lights in the index cross's own colour, so the stylesheet
   // takes it from the constant above rather than keeping a second copy that
@@ -412,7 +412,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  the same. True when it wrote.
    *
    *  **This is a camera writer on the steady-state navigate path**, which
-   *  `../camera/controls/input/README.md` § Orbit drift otherwise forbids. It
+   *  `../camera/controls/input/README.md#orbit-drift-is-the-feature-not-the-bug` otherwise forbids. It
    *  is admissible for the reason a gesture is: it writes only on a frame
    *  where the datum moved far enough for the write to show, so the render
    *  gate can still idle between rides. */
@@ -675,7 +675,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // whether the lock can exist here. Ordering is the caller's problem — a
   // restore has to land after the focus, the filter and the camera mode have
   // settled, since each of those clears ORB
-  // (`../util/url-state/README.md` § ORB and the orbit lock).
+  // (`../util/url-state/README.md#orb-and-the-orbit-lock`).
   stellata.setOrbitFramePort({
     isArmed: () => orbitActive,
     isLocked: () => orbitLocked,

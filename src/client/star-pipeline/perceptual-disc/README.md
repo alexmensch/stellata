@@ -37,7 +37,7 @@ in the vertex shader (collapsed past the visibility floor — `../collapse/READM
   over the visible-population window `Δm = uLimitMag − appMag`, with
   **soft-knee saturation** (`uSizeKnee`, default 16 mag, debug-tunable)
   above it. The curve and the knee's Michaelis–Menten form are derived in
-  `docs/science-stellar-modelling.md` § Stellar perception model.
+  [Stellar perception model](/docs/science-stellar-modelling.md#stellar-perception-model).
   `uSizeKnee = 0` recovers the hard clamp the knee replaced — which had
   pinned Sol and Barnard's Star to the same cap at 5e-3 pc despite a
   2300× flux ratio. Endpoints `uSizeMin/Max` are derived from the
@@ -63,7 +63,7 @@ at `uThresholdMag` (resolved discs in the fade region would render as a
 sub-pixel speck and read as a hard cutoff anyway). The vertex cull sits
 further out still, at `uCullMag`; the taper must never follow the cull
 bound, or a threshold star would stop landing on the floor the unit is
-anchored to (`../../hdr/exposure/README.md` § One writer, five slots).
+anchored to ([One writer, five slots](../../hdr/exposure/README.md#one-writer-five-slots)).
 
 ## Angular-size calibration
 
@@ -88,8 +88,7 @@ both has shrunk. The blob was never physics.
 unaided eye, since a deeper limit needs a smaller footprint or a dense
 field washes into a solid sheet. `kMultiplier` is the panel's "Star size
 exaggeration" slider — the only user-facing footprint control, and
-deliberately the only one (`../../filters/README.md` § The multiplier is the
-ONLY footprint control).
+deliberately the only one ([The multiplier is the ONLY footprint control](../../filters/README.md#the-multiplier-is-the-only-footprint-control-deliberately)).
 
 The conversion divides by viewport **height** — the axis `camera.fov`
 maps to, and the axis `Ω_px` and `physSize` already project through. The
@@ -101,8 +100,8 @@ size by zero; it only reveals more sky.
 The plumbing that calls it — `setInstrument`, `recomputeStarPxSizes`,
 `setCameraFov`, and their override / resize semantics — belongs to
 `../../filters/README.md`; this section is only the perception model those
-knobs feed, and `docs/science-stellar-modelling.md` § Stellar perception
-model carries the derivation.
+knobs feed, and [Stellar perception model](/docs/science-stellar-modelling.md#stellar-perception-model)
+carries the derivation.
 
 `uFovYRad` (mirrored from `camera.fov` on every FOV change) is the only
 viewport-derived shader uniform that drives
@@ -112,14 +111,14 @@ viewport's minor axis purely because `minOrbitDistForStar` solves for
 that distance. That holds below the floor's surface-clamp crossover
 (`fov_minor` 96.895°); above it the clamp sets the floor instead and the
 fill falls to 0.727 at `FOV_MAX_DEG`
-(`../../camera/controls/README.md` § Manual-zoom floor).
+([Manual-zoom floor](../../camera/controls/README.md#manual-zoom-floor)).
 Smaller stars land closer to fill the same 90%; the
 camera near plane (`1e-12`) gives several orders of magnitude of
 headroom even for white dwarfs and Sirius B-class radii.
 
 A varying `vPhysRatio = physSize / max(pxSize, 0.001)` is passed to
-the fragment shader to drive the pass split (`../README.md` § Star
-rendering) and the luminosity-class softness blending (below).
+the fragment shader to drive the pass split ([Star rendering](../README.md#star-rendering-instanced-quads-three-passes))
+and the luminosity-class softness blending (below).
 
 ## Eliding the physical-size branch
 
@@ -139,7 +138,7 @@ Three stop responding at a hard threshold:
   floor, so tiering's bound implies this one.
 - **The peak** — `pointSourcePeakTsl`'s `max(1, π·r²)` saturates at
   or below `POINT_SOURCE_FLAT_PEAK_DIAMETER_PX` = 2/√π
-  (`../../hdr/emission/README.md` § Unit), where pinning the radius to 0
+  ([Unit](../../hdr/emission/README.md#unit--what-an-emitting-layer-writes)), where pinning the radius to 0
   changes the peak by nothing at all.
 
 The fourth has **no plateau**: `physRatio` is also a varying, and
@@ -161,8 +160,8 @@ exponent term binds, ~57× inside the peak.
 **The window takes each star's pulsation peak, never its static radius.**
 `StarFrame.maxPhysicalRadiusPc` folds `peakAmplitudeFactor` in, because a
 gate that decides whether to compute a size at all is a bound that must
-not move as a star breathes (`../../camera/controls/README.md` § The
-live-versus-peak pair). The catalog's widest disc swells 9.5% over its
+not move as a star breathes ([The live-versus-peak pair](../../camera/controls/README.md#the-live-versus-peak-pair-and-which-one-a-caller-owes)).
+The catalog's widest disc swells 9.5% over its
 cycle, and a window solved from the static radius would sit that much too
 close.
 
@@ -182,7 +181,7 @@ Both the disc and glow passes share a single **super-Gaussian**
 falloff shape (`perceptualDiscProfile` in `perceptual-disc-pure.ts`),
 parameterised so the perceived bright disc fills the calibrated quad
 to its edge. It is a **unit-peak kernel**: it shapes the light,
-`vPeakL` scales it (`../README.md` § Physical-luminance emission).
+`vPeakL` scales it ([Physical-luminance emission](../README.md#physical-luminance-emission)).
 
 The formula, the threshold subtraction that lands `glow = 0` exactly at
 `r = 0.5`, and the two inputs that morph the exponent `n` — distance via
@@ -200,8 +199,8 @@ profile:
 - **Halo transparency.** When `glow < uCoreThreshold`, the fragment
   paints its colour under the disc pass's `MaxEquation` blend (so the
   halo brightens the framebuffer per channel up to the halo's level)
-  and writes no depth (`../../webgpu/star/README.md` § The disc draw
-  writes no depth). The later glow pass's distant stars then pass the
+  and writes no depth ([The disc draw writes no depth](../../webgpu/star/README.md#the-disc-draw-writes-no-depth)).
+  The later glow pass's distant stars then pass the
   depth test and accumulate additively on top — the haze stays visible while background stars peek through.
   `MaxEquation`'s trade-off: faint halos against bright backgrounds
   wash out instead of summing, in exchange for no disc-edge artefacts

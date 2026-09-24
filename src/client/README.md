@@ -42,7 +42,7 @@ themselves.
 - `scene/` — the `SceneLayer` contract + registry driving the
   per-layer update / monochrome / recenter / dispose fan-outs, and the
   full render stack: which layer wins which pixel, canvas and SVG
-  (`scene/README.md` § Full render stack — front to back).
+  ([Full render stack](scene/README.md#full-render-stack--front-to-back)).
 - `render-gate/` — the on-demand render gate: `animate()` skips the
   draw (and the `'frame'` emit) on ticks where nothing invalidated the
   frame. Its README owns the invalidation-source inventory and the
@@ -119,7 +119,7 @@ themselves.
 ## Boot in two waves
 
 `main.ts` boots in two waves, because the catalogue streams
-(`loaders/README.md` § Progressive catalog load). Wave 1 ends at first
+([Progressive catalog load](loaders/README.md#progressive-catalog-load)). Wave 1 ends at first
 paint, on the catalogue's FIRST chunk; wave 2 waits on
 `kinds.star.ready` — the complete record set plus the search index.
 Four things follow, and each has cost a defect:
@@ -167,7 +167,7 @@ scene this boot draws, for the memory inventory —
 `debug/memory/README.md`), and `renderGate`
 (`render-gate/README.md`). Callers write
 `stellata.filters.setFilter(patch)`; each namespace's own README is the
-reference for what it answers. `camera/README.md` § Camera mode covers
+reference for what it answers. [Camera mode](camera/README.md#camera-mode-read-on-focus-write-on-observe) covers
 the one split pair (read on `focus`, write on `observe`).
 
 **A method on the shell itself is composition, not forwarding** — it
@@ -199,7 +199,7 @@ code that only holds a `Stellata` can reach it. `setOrbitFrameTick` (the
 attitude instrument's per-frame ORB re-read, whose *ordering* only the scene
 registry can express) and `setOrbitFramePort` / `getOrbitFramePort` (ORB and
 the orbit lock on the share URL — state no controller owns,
-`util/url-state/README.md` § ORB and the orbit lock) are both of that kind.
+[ORB and the orbit lock](util/url-state/README.md#orb-and-the-orbit-lock)) are both of that kind.
 Each reads through its field every time, so installing after construction
 works exactly as a lazily-attached layer does, and `dispose` clears both.
 
@@ -235,7 +235,7 @@ an empty awaiting list.
 interface for both:
 
 - The frame's camera velocity — owned by `ClockCadence`
-  (`render-gate/cadence/README.md` § The controller); `applyRideDelta`
+  ([The controller](render-gate/cadence/README.md#the-controller)); `applyRideDelta`
   reports each ride step through `noteRideStep`, and the rides take that
   call with them. `maybeReAdvanceEpoch`'s translate skips it today — the
   suspected bug 32.2 carries.
@@ -248,7 +248,7 @@ interface for both:
   not-ready answer stays inside the provider for 32.5 and cns.16 to change
   in one place.
 - **The planet rate** — settled as `solarSystem.planetRate`, a `(cc) =>
-  CadenceReport` (`solar-system/README.md` § Wiring); the moving-focal-ride
+  CadenceReport` ([Wiring](solar-system/README.md#wiring)); the moving-focal-ride
   entry takes it, and the rides carry that `rate` with them.
 
 ### Late-attached slots
@@ -285,7 +285,7 @@ The build-time assert is 32.8's; the read is an instance on cns.16.
 A third prefix read sits outside the shell: the extinction prepass sorts its
 dispatch order over the table it attaches to, which is normally still
 streaming, and re-sorts once on the refresh that completes it
-(`webgpu/extinction/README.md` § What a CACHE owes) — another cns.16 instance,
+([What a CACHE owes](webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)) — another cns.16 instance,
 answered inside the pass.
 
 ## Event bus on `Stellata`
@@ -389,7 +389,7 @@ centre; plain drags land on the custom look-around controller
 (direct-manipulation drag + wheel-FOV). A **Shift+drag** is the roll
 gesture in both modes and is claimed by `InputController` — the
 look-around controller and TrackballControls each bail out of that
-pointer stream (`camera/controls/input/README.md` § Roll gestures). The
+pointer stream ([Roll gestures](camera/controls/input/README.md#roll-gestures)). The
 SVG-layer Sol/GC arrow labels remain clickable; they route through `aimAt(localPoint)`,
 which has its own observe-mode branch that slerps the camera
 quaternion in place.

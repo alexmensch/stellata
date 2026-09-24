@@ -1,5 +1,5 @@
 // Authored chrome colours pre-mapped through the tone-map's inverse so
-// the resolve pass returns them unchanged. See README.md § Chrome.
+// the resolve pass returns them unchanged. See README.md#chrome-colours--non-physical-layers-keep-their-authored-look.
 
 import * as THREE from 'three';
 import {

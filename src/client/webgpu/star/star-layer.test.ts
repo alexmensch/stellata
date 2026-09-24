@@ -57,11 +57,11 @@ describe('StarLayer', () => {
     expect(m.depthTest).toBe(true);
     // The core mask is where a core's depth comes from, so this draw must
     // not write any — and a second draw for the halo would double the
-    // pass's per-corner cost (README.md § The disc draw writes no depth).
+    // pass's per-corner cost (README.md#the-disc-draw-writes-no-depth).
     expect(m.depthWrite).toBe(false);
   });
 
-  // ../README.md § Early-z: the depth contract is met by removing writes,
+  // ../README.md#early-z--the-star-layers-depth-honest-redesign: the depth contract is met by removing writes,
   // never by adding draws.
   it('is three draws, no more', () => {
     const { scene, layer } = makeLayer();
@@ -69,7 +69,7 @@ describe('StarLayer', () => {
       .toEqual([layer.coreMaskMesh, layer.discMesh, layer.glowMesh]);
   });
 
-  // compaction/README.md § The frustum test rests on this: the kernel culls
+  // compaction/README.md#the-frustum-test rests on this: the kernel culls
   // against projection × view while the vertex stage draws through
   // projection × modelView, so a transform here would cull what still draws.
   it('leaves every star mesh at the identity, which is what makes the kernel view-projection valid', () => {
@@ -122,7 +122,7 @@ describe('StarLayer', () => {
     expect(disc.depthTest).toBe(true);
     // The swap-back drift this pins: losing the override would put the
     // halo's depth write back, and with it the pipeline's early-z
-    // (README.md § The disc draw writes no depth).
+    // (README.md#the-disc-draw-writes-no-depth).
     expect(disc.depthWrite).toBe(false);
     expect(disc.transparent).toBe(true);
     expect(disc.premultipliedAlpha).toBe(false);

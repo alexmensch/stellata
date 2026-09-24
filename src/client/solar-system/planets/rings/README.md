@@ -2,7 +2,7 @@
 
 Saturn, plus Uranus + Neptune's faint rings at true opacity. `../README.md`
 owns the mesh-LOD regime these render inside; the strip data pipeline is
-`data/textures/README.md` § Ring strips, which also carries the spans and
+[Ring strips,](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor) which also carries the spans and
 the Jupiter exclusion.
 
 ```
@@ -26,8 +26,8 @@ texture arrives (no representative-colour fallback), `renderOrder` 2.81
 (after the body mesh) with `depthWrite: false`.
 
 **The strip RGB is not sRGB-decoded**, which is the one thing about these
-shaders that looks like a bug and isn't — `../emission/README.md`
-§ Colour bookkeeping carries why.
+shaders that looks like a bug and isn't — [Colour bookkeeping](../emission/README.md#colour-bookkeeping)
+carries why.
 
 **Body occlusion is the local depth pass's z-buffer**: meshes + annuli
 render in the bracketed second pass (`../../../local-depth/README.md`),
@@ -43,7 +43,7 @@ to a line, which is the physically honest look.
 claims lit-surface coverage over the strip it actually illuminates, and the
 one blend equation scales that by the same strip opacity it scales the flux
 by, so the ratio the pin reads comes out alpha-invariant
-(`../../../hdr/attachments/README.md` § The unit). A parked Saturn is
+([The unit](../../../hdr/attachments/README.md#the-unit)). A parked Saturn is
 therefore exposed for globe and rings together, area-weighted, rather than
 for whichever is brighter.
 
@@ -64,14 +64,13 @@ statistic texel like any other alpha-blended emitter, at the strip's
 **face-on** opacity: a rasterised fragment carries no opening angle, so
 the slant-path enhancement the source walk applied analytically
 (`T = (1 − α)^(1/|sin B|)`, opaque edge-on) is gone
-(`../../../hdr/attachments/README.md` § Known residuals).
+([Known residuals](../../../hdr/attachments/README.md#known-residuals)).
 
 **"Behind them" includes the Milky Way band and the Local Group**, which is
 why the annulus takes the occluding-emitter role and writes `occluderTexelTsl`
 at that same alpha: the diffuse emitters live in their own attachment until the
 resolve convolves them, and a draw that dims only attachment 0 lets the band
-back in over a shadowed ring section (`../../../hdr/summation/README.md`
-§ Everything that dims the field).
+back in over a shadowed ring section ([Everything that dims the field](../../../hdr/summation/README.md#everything-that-dims-the-field-has-to-follow-it-here)).
 
 ## Ring photometry — the unresolved magnitude
 
@@ -175,7 +174,7 @@ at β = 27°, ≈ 2.43×). A per-frame value there would drop a Saturn parked
 near a ring-plane crossing at a distance it becomes visible from once the
 rings open. It moves no cull distance as shipped: the bound is one
 distance per HOST maximised over every body, and for Sol that maximum is
-a moon — `../../README.md` § Per-host distance cull.
+a moon — [Per-host distance cull](../../README.md#per-host-distance-cull).
 
 **Uranus and Neptune ship strips but no photometry.** Their rings are
 true-opacity charcoal threads, and the brightness-vs-inclination Mallama
@@ -186,8 +185,8 @@ publishes for Uranus is polar methane depletion — not a ring term.
 `uRingPhaseScale` **is** `ringPhaseShape(α)` — the same shape whose
 amplitude-scaled form is the billboard's `iRingFlux`. So it is **1 at
 α = 0**, which is the anchor the strip already carries: its RGB is pinned
-to a ~0.05 particle **geometric** albedo (`data/textures/README.md`
-§ Ring strips), and geometric albedo is by definition the zero-phase
+to a ~0.05 particle **geometric** albedo ([Ring strips](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor)),
+and geometric albedo is by definition the zero-phase
 value. Without the scalar the strip renders its opposition brightness at
 every phase angle.
 

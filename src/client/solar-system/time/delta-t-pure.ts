@@ -1,5 +1,5 @@
 // ΔT = TT − UT: how far Earth's rotation has drifted from uniform time.
-// Espenak & Meeus polynomial set, -1999 to +3000. See README.md § Timescales.
+// Espenak & Meeus polynomial set, -1999 to +3000. See README.md#timescales.
 
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 

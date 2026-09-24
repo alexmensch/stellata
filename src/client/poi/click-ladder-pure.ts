@@ -1,6 +1,6 @@
 // Decision table for the navigate-mode click ladder on a non-focused
 // point object — any pinnable kind steps the same rungs
-// (README.md § Click ladder).
+// (README.md#click-ladder-navigate-mode).
 
 export type ClickLadderAction = 'pin' | 'vector' | 'clearVector' | 'clearBoth';
 

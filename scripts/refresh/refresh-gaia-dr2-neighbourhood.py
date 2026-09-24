@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/gaia/gaia_dr2_neighbourhood.tsv — gaiadr3.dr2_neighbourhood
 cross-match candidates for the Gaia-only stars in the committed request
-file. Drives the SID DR-reconciliation dry run (docs/sid.md § 6.2)."""
+file. Drives the SID DR-reconciliation dry run (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07)."""
 
 from __future__ import annotations
 

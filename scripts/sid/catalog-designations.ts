@@ -1,5 +1,5 @@
 // Designation set per BUILT catalog record, assembled from the artifacts in
-// public/. See README.md § Designation extraction.
+// public/. See README.md#designation-extraction--where-each-namespace-comes-from.
 
 import type { Catalog } from '../catalog/catalog-lookup';
 import { FLAG_IS_SOL, type SearchEntry } from '../catalog/record/catalog-pure';

@@ -110,7 +110,7 @@ export class MilkyWay {
   /** The slots both components hold by reference to each other. They come
    *  from the material factory rather than being built here: on WebGPU
    *  they are TSL nodes, and a write has to reach the shader through them
-   *  (README.md § The material seam). */
+   *  (README.md#the-material-seam). */
   private shared: BandSharedSlots;
   private resolvedHoleStrength = 1;
   private readonly materials: BandMaterials;
@@ -340,7 +340,7 @@ export class MilkyWay {
     (this.shared.uWorldOffset.value as THREE.Vector3).copy(worldOffset);
   }
 
-  /** `docs/science-hdr-pipeline.md` § 3.5. Two tiers: the dust-free ceiling
+  /** `/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound`. Two tiers: the dust-free ceiling
    *  decides most vantages for free, and only where it cannot does the live
    *  dusty peak get marched. Both arrive as thunks so the predicate's own
    *  refusals — warp above all — come first. */
@@ -363,7 +363,7 @@ export class MilkyWay {
   }
 
   /** Upper bound on the band's brightest rendered pixel from this camera,
-   *  mag/arcsec² (README.md § The brightest rendered sightline). */
+   *  mag/arcsec² (README.md#the-brightest-rendered-sightline). */
   peakSurfaceBrightnessBound(cameraAbsPc: THREE.Vector3): number {
     return this.peakCache.boundAt(
       galactocentricPc([cameraAbsPc.x, cameraAbsPc.y, cameraAbsPc.z]),

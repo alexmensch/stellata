@@ -10,8 +10,7 @@ import { projectToScreenInto } from '../../overlays/overlay-project';
 import { setNumAttr, setStrAttr, setStyle, setText } from '../../overlays/dirty-attr';
 
 // Orientation labels for a coordinate sphere, one per grid line, riding each
-// line to its viewport-edge exit. See README.md § Grid orientation
-// labels.
+// line to its viewport-edge exit. See README.md#grid-orientation-labels.
 
 const DEG = Math.PI / 180;
 const LAT_RING_DEGS = [0, ...LATITUDES_DEG];

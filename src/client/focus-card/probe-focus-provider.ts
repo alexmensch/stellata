@@ -1,5 +1,5 @@
 // Probe provider for the tier-2 focus card — camera-frame distance plus
-// the mission stats. See ./README.md § Frame-of-reference principle.
+// the mission stats. See ./README.md#frame-of-reference-principle.
 
 import { fmtDistAuto } from '../ui/distance-util';
 import {

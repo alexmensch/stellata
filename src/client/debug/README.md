@@ -118,12 +118,12 @@ beside them, then the count passing the dust-independent prefilter and
 the drawn share of those — the frustum's own prize, once a kernel already
 gates on the prefilter — then the count the extinction refill's frustum
 test admits at this view, which is the population that pays the cache
-gate's reads (`../webgpu/extinction/refill/README.md` § Counting the
-in-frame population), and returns the report.
+gate's reads ([Counting the in-frame population](../webgpu/extinction/refill/README.md#counting-the-in-frame-population)),
+and returns the report.
 
 It maps a copy of the indirect args on demand — the mechanism and why it is not a
-per-frame row are `../webgpu/star/compaction/README.md` § Reading the
-counts back. Take it with the camera settled. The prefilter count is armed
+per-frame row are [Reading the counts back](../webgpu/star/compaction/README.md#reading-the-counts-back).
+Take it with the camera settled. The prefilter count is armed
 by the call itself and costs nothing between calls, so the read wakes the
 render gate for the one frame it counts on and resolves a frame or two
 later rather than returning at once.
@@ -143,11 +143,11 @@ after exiting chart mode (otherwise the average would lag forever).
 | `pre-render`            | `stellata.ts` `animate()`       | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
 | `extinction.prepass`    | `stellata.ts` `animate()`       | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | core-mask layer's `skip`         | The binary-search `shouldEnableCoreMask()` (see below), run as that layer's contribution test. |
-| `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` (`../hdr/exposure/README.md` § Adaptation). Not measured in chart mode — the row goes quiet like any silent section. |
+| `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` ([Adaptation](../hdr/exposure/README.md#adaptation--the-frame-measures-itself)). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `stellata.ts` `animate()`       | CPU wall-time around `renderer.render()` — submission, not GPU work. |
 | `submit.localDepth`     | `stellata.ts` `animate()`       | CPU wall-time around the local depth pass's bracketed renders — one for the whole bracket under reversed-z (K = 1). |
 | `submit.tonemap`        | `stellata.ts` `animate()`       | CPU wall-time around the HDR resolve. Near-zero in chart mode, where the seam has no target to resolve. |
-| `submit.reduction`      | `stellata.ts` `animate()`       | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode (`../hdr/exposure/reduction/README.md` § Latency). |
+| `submit.reduction`      | `stellata.ts` `animate()`       | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode ([Latency](../hdr/exposure/reduction/README.md#latency)). |
 | `gpu.frame`             | timestamps                       | Real GPU ms for the frame's render passes, summed from three's per-pass timestamps. The headline's source, and the only row that prices anything. |
 | `gpu.compute`           | timestamps                       | Real GPU ms for the frame's compute passes — the star compaction every frame, the extinction prepass when it recomputes — from three's separate compute pool, resolved in the same cycle as `gpu.frame` and never summed into it (`gpu-timing/README.md`). |
 | `frame.handlers`        | `stellata.ts` `animate()`       | The full `'frame'` emit loop (overlays, chart labels). |
@@ -187,7 +187,7 @@ Second comparison trap: a boot can land on a different clock — Chrome
 falls to `raf-delta` where the timestamps resolve garbage
 ([`gpu-timing/`](gpu-timing/README.md)) — so rows compare only under one
 pinned `method` at the same `bufferMpx`
-(`docs/render-rules.md` § Measurement canon).
+([Measurement canon](/docs/render-rules.md#9-measurement-canon)).
 
 ## GPU timing
 
@@ -200,7 +200,7 @@ The two rules a reader needs before looking at any `gpu.*` row:
 single pass, disable it and difference `gpu.frame`** — automated below.
 The canon those two belong to — wall clock is the total, GPU slots are
 attribution, same buffer and same clock or no comparison — is
-`docs/render-rules.md` § Measurement canon.
+[Measurement canon](/docs/render-rules.md#9-measurement-canon).
 
 ## Frame pricing — `debug.priceFrame()`
 
@@ -239,11 +239,10 @@ session reading that code lands on it:
 - **Chart labels** — scratch `Vector3`, pooled per-frame containers, the
   cached brightest constellation member, pre-binned eligibility lists,
   dirty-tracked SVG writes, the full-tick skip, and the three rejected
-  alternatives: `../chart-mode/labels/README.md` § What got optimised.
+  alternatives: [What got optimised](../chart-mode/labels/README.md#what-got-optimised).
 - **`forEachStarNearCamera`** — the sorted-distance binary-search window:
   `../star-pipeline/star-frame/README.md`.
-- **Overlay self-gating fast-paths** — `../overlays/README.md`
-  § Per-frame cost.
+- **Overlay self-gating fast-paths** — [Per-frame cost](../overlays/README.md#per-frame-cost--the-self-gating-fast-path).
 
 ## Where to look first when something is slow
 
@@ -270,7 +269,7 @@ collapsible host with nine sections:
 Exposure (`../hdr/exposure/exposure-tuning.ts` — the exposure statistic,
 the three adaptation branches and which governs, the exposure
 decomposition, over `L_ADAPT` / `L_TARGET` / slew τ / `DR_MAG` /
-desaturation; `../hdr/exposure/README.md` § Debug panel),
+desaturation; [Debug panel](../hdr/exposure/README.md#debug-panel)),
 Star disc (`star-tuning.ts`), Milky Way (`milkyway-tuning.ts`), Deep field (`local-group-tuning.ts`),
 Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`arrow-fade-debug-hud.ts`), Warp (`warp-tuning.ts`), and Eclipse
@@ -325,7 +324,7 @@ whichever of those two conditions is missing:
 
 `r` is `vPhysRatio` as the vertex stages compute it — from the
 **undimmed** quad, which is what makes all three compilations agree
-(`../star-pipeline/README.md` § Star rendering). `need r>` is the value
+([Star rendering](../star-pipeline/README.md#star-rendering-instanced-quads-three-passes)). `need r>` is the value
 `r` must reach for the dim the star *already has* to tier it disc-owned:
 the camera-side target, against `trap<`'s clock-side one.
 

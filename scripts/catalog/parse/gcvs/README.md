@@ -36,12 +36,12 @@ looks up the period+amp. Two independent gates:
   is the `search-index.json` `g` field. The designation's trailing
   abbreviation also **supplies** `desigConIndex`, but only where IV/27A's
   Bayer/Flamsteed cross index left it empty (`gcvsDesignationCon` pins 7,363;
-  `../README.md` § Positional constellation membership). On the 8 records where
+  [Positional constellation membership](../README.md#positional-constellation-membership)). On the 8 records where
   the two disagree the star carries both kinds of designation in different
   constellations and IV/27A wins — a GCVS label reads its constellation out of
   the designation string itself and loses only its expanded alias, while a
   Bayer/Flamsteed label is COMPOSED from this field
-  (`../../classic-ids/README.md` § The designation constellation).
+  ([The designation constellation](../../classic-ids/README.md#the-designation-constellation)).
 - **Rendering** (pulsation) — period / amplitude / varType apply only
   when the GCVS main table gave that name a parseable period+amplitude
   (~4.1k, `gcvsMatched`). Aperiodic variables — flare stars
@@ -67,8 +67,7 @@ every `VAR_TYPE_ECLIPSING` record not already flagged
 cosmetic pulsation by this byte alone. They surface as multi-star
 systems, never intrinsic-variable rings. (A fourth wings pass,
 `wingRenderablePrimaries`, then covers physical pairs none of these three
-reach — see `../../companions/record-index/README.md`
-§ Renderable-companion wings.)
+reach — see [Renderable-companion wings](../../companions/record-index/README.md#renderable-companion-wings).)
 
 Both GCVS files are tracked via Git LFS rather than downloaded at build
 time — they update rarely (yearly-ish). If bumping to a new GCVS

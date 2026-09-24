@@ -282,7 +282,7 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
     therefore lands **before** the convolution, which is the physical order:
     light is absorbed in interstellar space, and the eye sums what survives. It
     is the only *interstellar* absorber in the scene; a future one takes the
-    same role (`src/client/hdr/attachments/README.md` § The roles).
+    same role ([The roles](/src/client/hdr/attachments/README.md#the-roles)).
   - *Every close-range surface in front of the band* — the planet mesh, the
     ring annulus, the atmosphere shell, all alpha-composited in the local
     depth pass. They emit and attenuate, so they open all three attachments.
@@ -411,8 +411,7 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
 - `DR_MAG`, the desaturation strength and the exposure readout are live on
   the debug panel (*shipped in H8*). `L_THRESH` is a **readout** there and
   stays baked: it is the unit's own anchor, so a live one would move every
-  layer's calibration with it (`src/client/hdr/exposure/README.md`
-  § Debug panel).
+  layer's calibration with it ([Debug panel](/src/client/hdr/exposure/README.md#debug-panel)).
 
 The operator implementation is one shared graph
 (`../src/client/webgpu/tonemap-tsl.ts`, beside a test-pinned pure TS
@@ -631,8 +630,8 @@ the authority on how bright that is. The test reads it out of the layer
 rather than copying it, because it has moved four times — 22.55 under the
 retired 20.0 anchor, 23.47 once the dust was normalised, 22.06 on the
 luminosity solve, 22.70 once the resolution hole took the catalogue's share
-back out (`src/client/milkyway/calibration/README.md` § The resolution
-hole). The diffuse field is therefore **Milky-Way-dominated by 5.8×**,
+back out ([The resolution hole](/src/client/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+The diffuse field is therefore **Milky-Way-dominated by 5.8×**,
 where the earliest rows had the two within 25% of each other.
 
 Nearly eight decades separate the cases that must adapt from the cases
@@ -996,7 +995,7 @@ the subject has to be segmented rather than blended, and a chain reduced
 to a single texel has thrown segmentation away by construction. The
 reduction therefore stops at a ~1024-texel tile grid and the pin takes a
 coverage-weighted median across it
-(`src/client/hdr/exposure/reduction/README.md` § The tile level). Four
+([The tile level](/src/client/hdr/exposure/reduction/README.md#the-tile-level-and-why-the-subject-is-a-median)). Four
 properties of that choice:
 
 - **50 % is the breakdown point.** A subject owning more than half the
@@ -1030,7 +1029,7 @@ night-limb chord that is *denser* than the lit one — it occludes at full
 opacity while scattering nothing toward the eye. Neither shrinks when the
 lit area does, so a crescent is exactly where geometric coverage fails
 worst. Each emitter therefore gates on its own illumination term
-(`src/client/hdr/attachments/README.md` § The unit is the pinned table).
+([The unit](/src/client/hdr/attachments/README.md#the-unit) is the pinned table).
 
 `L_TARGET` is the level the pin holds, and it is the **measured** 0.89 of
 § 3.1 rather than a second constant. It is the one knob smoke-tuning moves.
@@ -1058,7 +1057,7 @@ Three structural properties, in the sense that no refactor may lose them:
   a list of emitters: coverage is written exactly where a fragment emits
   surface brightness over its own physical footprint, never where it
   spreads a point's flux across an exaggerated kernel
-  (`src/client/hdr/attachments/README.md` § The unit). So the star glow
+  ([The unit](/src/client/hdr/attachments/README.md#the-unit)). So the star glow
   pass, the planet glare billboard and the band cannot reach this branch
   at any framing, and Sirius stays a blinding dot with no detail to
   protect — while a *resolved* photosphere, which does draw its own
@@ -1248,7 +1247,7 @@ values (12 / 9 / 5) conflated the plate-scale term with a *crowding*
 term: a deeper limit needs a smaller footprint or a dense field washes
 into a solid sheet. `K_density` is 1 for the unaided eye and is a
 per-instrument calibration for anything deeper. Derivation:
-`docs/science-stellar-modelling.md` § Stellar perception model.
+[Stellar perception model](/docs/science-stellar-modelling.md#stellar-perception-model).
 
 One consequence for § 1's accepted flux over-count: K is now large on
 small viewports and ~1 at narrow FOV, so the over-count varies with both.
@@ -1321,7 +1320,7 @@ cannot raise surface brightness past the naked eye's. Pinned in
 ### 3.5 Skipping a diffuse emitter the display cannot show — the share bound
 
 Design gate for stellata-8cg.50.4. The contribution contract
-(`docs/render-rules.md` § 2, `src/client/scene/README.md`) admits three
+([§ 2,](/docs/render-rules.md#2-contribution-gated-liveness) `src/client/scene/README.md`) admits three
 geometric skip reasons; the fourth, brightness, was held out because
 skipping an emitter changes the exposure that decides whether it is
 skipped. This section is the argument that admits it and what the
@@ -1478,8 +1477,8 @@ instrument or the trim (`onChange` → invalidate) or the applied cut
 through resize or FOV; the statistic lands only off a rendered frame's
 reduction; camera pose renders. A sub-JND drift of the applied cut renders
 nothing and can leave the verdict stale by under 0.01 mag of exposure —
-invisible by the same definition. The obligation `scene/contribution/README.md`
-§ A skipped layer reports nothing states is discharged by construction, not by
+invisible by the same definition. The obligation [A skipped layer reports nothing](/src/client/scene/contribution/README.md#a-skipped-layer-reports-nothing)
+states is discharged by construction, not by
 a scheduler.
 
 **What the park inherits.** Its "never reads a partial measurement" claim
@@ -1495,7 +1494,7 @@ took 29.8 ms off the whole frame, against at most 5.1 ms for the star
 field's own share of a 22.5 ms whole-frame write. Those are two bounds and
 not each other's complement — the runs price frames 2.6× apart and the
 writes share bandwidth, so the pair's own share is not the difference
-(`debug/frame-cost/passes/README.md` § The roster). Rule 2 already keeps
+([The roster](/src/client/debug/frame-cost/passes/README.md#the-roster)). Rule 2 already keeps
 `L̄` honest. No hysteresis in exposure space: the
 applied cut holds bit-identical inside the slew's settle band, so a verdict
 that is a function of it cannot chatter on quantiser noise, and a real slew
@@ -1506,7 +1505,7 @@ landed statistic (rule 2 needs `L̄`) and none in chart (the seam is off).
 **`FrameCtx` gains `exposure`, nullable**: live `uExposure`, the base
 exposure, the white point, `Ω_sum`, the last landed statistic at the base
 exposure, and the tuning; `Ω_px` derives from `pxPerRadian`. The one-writer
-rule (`hdr/exposure/README.md` § One writer, five slots) forbids cached and
+rule ([One writer, five slots](/src/client/hdr/exposure/README.md#one-writer-five-slots)) forbids cached and
 per-frame consumers keyed on adaptation; this reader is the class the rule
 exempts — per frame, stateless, storing nothing keyed on exposure — the
 same class as the cadence's `bodyInkVisible`. The `contributing` flag is
@@ -1532,7 +1531,7 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 | Milky Way (`../src/client/webgpu/milkyway/milkyway-band-tsl.ts`) | `1 − exp(−colorAccum · 5.35e-6 · gate)`, `uGlowMagOffset` vs slider gate | *Shipped as designed (H4).* `L_px = uExposure · 10^(−0.4·m_px)` where `m_px = uGlowMagOffset − 2.5·log10(column · Ω_px)`; the display path now takes the rod summation solid angle rather than `Ω_px` (§ 1, *Extended sources*), so the band's rendered level is FOV-invariant and the statistic keeps `Ω_px`. `DEFAULT_BRIGHTNESS`, the gate, and the exp squash are deleted. The magnitude round-trip collapses to one scalar gain, so the sightline's chromaticity survives untouched. `uGlowMagOffset` carries `SB_ZERO_POINT` (26.5721), the emission unit's own constant, shared verbatim with the Local Group layer; what the band derives is each component's `density0`, solved so the two proxy volumes integrate to the Galaxy's published M_V at its V-band LIGHT B/T, dust-free so the photometric scale cannot move with the extinction (§ 8). Dust optical depth is seeded from the camera, not from each proxy mesh's own entry point, or the bulge emits through none of the 3.1 kpc Sol-to-boundary column |
 | LG emission (`../src/client/webgpu/local-group/local-group-emission-tsl.ts`) | `uGlowMagOffset`/`uLimitMag`/`uSizeSpan` gate + `1 − exp` squash, magnitude-domain | *Shipped (gxx.8).* Same mapping as the MW band — `L_px = uExposure · 10^(−0.4·S) · Ω_px` via `surfaceBrightnessLuminanceTsl`. It keeps `Ω_px` where the band moved to the summation area: these objects are not uniform over it (§ 1, *Extended sources*). The "lands on the unit for free" prediction was **half right**: the per-pixel magnitude did carry over, but the zero point did not. `uGlowMagOffset = 11.0` was tuned, and the physical value is *derivable* — a solved column is flux per steradian, so the zero point is the magnitude of one arcsec², 26.5721. The tuned constant sat 4.1 mag hot at 50°/900 px and, carrying no Ω_px, drifted further as the camera zoomed. Two things the row did not anticipate: the population tint needed luma-normalising (it multiplies a column the solver normalised against total flux, so an un-normalised tint is a 0.42 mag error, not a hue choice), and sub-pixel proxies needed the point-source resolution floor (gxx.7). The feared "blown core on a black disc" did not materialise — `DR_MAG` 7.5 covers M31's ~8.7 mag intra-object span |
 | Planet glare / billboard (`planet.vert/frag`) | peak-1 white ceiling (2f6.27) | *Shipped as designed (H5).* Identical point-source rule as stars, `m` from `planetApparentMagnitude`; `uGlareGain` since deleted (no multiplier on a physical peak). mesh↔glare continuity by construction — pinned to 1e-12 relative in `mesh-surface-pure.test.ts` |
-| Planet mesh (`../src/client/webgpu/solar-system/planet-mesh-tsl.ts`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: `src/client/solar-system/planets/README.md` § Physical-luminance emission |
+| Planet mesh (`../src/client/webgpu/solar-system/planet-mesh-tsl.ts`) | `litIntensity`: irradiance^0.25 × slider^0.25, clamp [0.12, 1.6] | *Shipped as designed (H5).* True surface brightness: `S₀ = m_host@body + 2.5·log10(π / (ARCSEC_TO_RAD²·p))` — radius and viewer distance cancel out of `m + 2.5·log10(Ω_disc)`, so it is distance-invariant and validates on the full Moon's measured +3.4 mag/arcsec². Lambert/phase/limb shading redistributes at unit mean via a closed-form disc mean, and the day map is divided by its own measured mean luminance so a brightness-stretched mosaic contributes pattern only. `hostIntensityScale`, `HOST_IRRADIANCE_DISPLAY_EXPONENT` and `HOST_INTENSITY_MIN/MAX` are deleted. Detail: [Physical-luminance emission](/src/client/solar-system/planets/README.md#physical-luminance-emission) |
 | Planet rings | multiply litIntensity | *Shipped as designed (H5).* Multiply the same host-irradiance scalar the disc airlight and the atmosphere shell ride (`hostIrradianceLuminance`), so ring↔body contrast is fixed by the shared exposure. The strip's RGB is read as a LINEAR reflectance and deliberately not sRGB-decoded — it was authored as an albedo proxy, and decoding would darken the rings ~5x against the true-opacity alpha |
 | Earth night lights | **no codepath** | Nothing to convert: both the renderer path and the `earth-night` map were removed before H5, so this row described a layer that no longer existed. Re-adding city lights needs a radiometric calibration source (Black Marble) rather than a tuned constant, which is why H5 deliberately left it out — tracked separately |
 | Molecular-cloud absorption | premultiplied attenuation of background | **unchanged and now more correct**: transmittance is a multiplicative, exposure-invariant factor, and it attenuates linear luminance instead of squashed values. No exposure multiply — attenuation factors must never carry `uExposure` |
@@ -1547,7 +1546,7 @@ mapped through the CPU-side inverse of the tone-map
 come out of the pass at their authored appearance at any exposure.
 Additive/translucent chrome blending now happens in linear space — a
 slight look shift accepted in H2, which is where the per-material
-mapping lands (`src/client/hdr/README.md` § Chrome; the mapping has two
+mapping lands ([Chrome](/src/client/hdr/README.md#chrome--non-physical-layers-keep-their-authored-look); the mapping has two
 variants, because whether a material carries three's own output encode
 decides what "authored appearance" means for it). (Rejected alternative: render
 chrome after the tone-map via a depth blit — an extra full-res depth
@@ -1681,7 +1680,7 @@ fullscreen resolve and the inline path can never drift.
   thick disc moved their ratio 0.09 mag. The solve now runs on the total
   and both sightlines are graded checks, disagreeing by 1.68 mag at the
   pole and 1.02 toward the centre in the same direction
-  (`docs/science-galactic-structure.md` § The luminosity solve).
+  ([The luminosity solve](/docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)).
   Confirming against eso0932a stretches per instrument still stands, and
   is now the arbiter between the two published scales rather than a
   confirmation of one. Run and settled — *The eso0932a arbitration*
@@ -1726,7 +1725,7 @@ the model's display anchor average over nearly the same solid angle.
 Levels below are 8-bit sRGB — the panorama is itself a display-referred
 image, which is what the model's pinned levels are. Model rows are the
 band table as it stood before the resolution hole
-(`src/client/milkyway/calibration/README.md` § *The gradient* carries the
+([*The gradient*](/src/client/milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen) carries the
 current one), FOV-invariant by construction and computed at `DR_MAG` 7.5
 through the shipped operator (C1 toe → extended Reinhard → sRGB encode);
 the two Leinert columns shift that table's `S` by the disagreements pinned
@@ -1807,7 +1806,7 @@ Three readings of the same fact:
 - **Gradient**, the model spanning 1.76 mag over b = 5 → 30 where the
   floor-subtracted panorama spans ≈ 4.2.
 - **The Leinert pole check**, 1.68 mag in the same direction
-  (`docs/science-galactic-structure.md` § The luminosity solve).
+  ([The luminosity solve](/docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)).
 
 Both known measurement biases inflate it — floor subtraction eats real
 high-|b| light, and the b = +5 row carries resolved-star light the model
@@ -1843,7 +1842,7 @@ panorama reads 2.60 mag brighter at b = −3 than at b = +3 and the shipped
 model reads 0.00.
 
 **Settled, and it splits in two.** The rift half is dust and is answered by
-the measured cascade (`docs/science-galactic-structure.md` § The dust stack),
+the measured cascade ([The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition)),
 which recovers 2.03 mag of that 2.60 and incidentally takes the b = +30
 residual above from 0.44 to 0.13 mag model-bright. The window half is not
 dust: at b = −3 the panorama stays 3.08 mag brighter than the cascade,
@@ -1885,7 +1884,7 @@ to the far-field emissivity grid, alongside the high-|b| excess above.
 - **Deliverable placement:** this doc (cross-cutting) + a
   `src/client/hdr/README.md` from H2 for RT/pass implementation detail.
   The K derivation belongs to
-  `docs/science-stellar-modelling.md` § Stellar perception model, which
+  [Stellar perception model,](/docs/science-stellar-modelling.md#stellar-perception-model) which
   already owns σ and the √Δm curve; § 3.3 states the rule and points
   there.
 

@@ -1,5 +1,5 @@
-// Close-range spheroid mesh LOD for planet bodies. See README.md
-// § Planet mesh LOD for the crossfade + lazy-texture contract.
+// Close-range spheroid mesh LOD for planet bodies. See README.md#planet-mesh-lod
+// for the crossfade + lazy-texture contract.
 
 import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
@@ -77,7 +77,7 @@ const X_AXIS = new THREE.Vector3(1, 0, 0);
 /** Per-body scattering state in planet-radius units: the row's own params and
  *  the disc means that normalise what the shader emits from them. Both derived
  *  once — there is no global multiplier on a published optical depth, by
- *  design (`../atmosphere/README.md` § No global knobs). */
+ *  design (`../atmosphere/README.md#no-global-knobs`). */
 interface AtmoBase {
   /** `polarRadiusRatio` — the shaders scale the ray's polar component by its
    *  reciprocal so the unit-sphere march geometry describes the body drawn. */
@@ -326,7 +326,7 @@ export class PlanetMeshLayer {
     this.placeholder.needsUpdate = true;
     // Load-bearing, not cosmetic: a DataTexture's nearest/nearest default
     // bakes an unfiltered fetch into the WGSL for the slot's whole life —
-    // see ../../webgpu/solar-system/README.md § A stand-in's filters.
+    // see ../../webgpu/solar-system/README.md#a-stand-ins-filters.
     this.placeholder.minFilter = THREE.LinearFilter;
     this.placeholder.magFilter = THREE.LinearFilter;
     // Same unique-version rule as the loaded maps below: an eviction can
@@ -385,7 +385,7 @@ export class PlanetMeshLayer {
    *  band instead would elide exactly the frames that fetch runs on. The
    *  shared `FEATURE_LEGIBILITY_MIN_PX` is wrong for the same reason one
    *  rung up — a contribution test may only ever dim
-   *  (`docs/render-rules.md` § 2), and admitting a frame that draws nothing
+   *  (`/docs/render-rules.md#2-contribution-gated-liveness`), and admitting a frame that draws nothing
    *  is the conservative direction. */
   anyMeshWorkPending(cameraPos: Readonly<THREE.Vector3>): boolean {
     for (let idx = 0; idx < this.field.liveInstanceCount; idx++) {
@@ -712,7 +712,7 @@ export class PlanetMeshLayer {
     return this.useTexture(key);
   }
 
-  /** textures/README.md § Staying inside VRAM. */
+  /** textures/README.md#staying-inside-vram. */
   stepDownTextureLimits(): void {
     if (this.steppedSinceUpdate) return;
     const next = steppedTextureLimits(this.limits);
@@ -1068,7 +1068,7 @@ export class PlanetMeshLayer {
   // fragment shader integrates the view ray's single-scattered airlight
   // analytically, in the frame where the body is a unit sphere, so the shell
   // needs no per-body geometry — the mesh over-covers toward the poles and the
-  // excess discards (../atmosphere/README.md § Shell extents).
+  // excess discards (../atmosphere/README.md#shell-extents).
   private createAtmosphere(planet: Planet, atmo: PlanetAtmosphere): AtmosphereEntry {
     const shellRadiusPc = (planet.radiusKm + atmo.heightKm) * KM_PC;
     const material = this.materials.planetAtmosphere();
@@ -1157,7 +1157,7 @@ export class PlanetMeshLayer {
           texelBytes(format ?? THREE.RGBAFormat, THREE.UnsignedByteType) ?? 4;
         const bytes = textureBytes(bitmap.width, bitmap.height, bytesPerTexel);
         // Bound only once the upload is known clean —
-        // ../../webgpu/README.md § Out of memory.
+        // ../../webgpu/README.md#out-of-memory.
         this.upload(tex, (uploaded) => {
           // False once dispose has cleared the entry under the upload.
           const awaited = this.textures.get(key)?.state === 'loading';

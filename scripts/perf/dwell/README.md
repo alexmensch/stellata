@@ -25,7 +25,7 @@ The dwell loop itself is a page function in `../page-protocol.ts`
 loop under a render-gate hold, with the simulation clock stopped and the
 exposure pinned where the warmup left it. Those are the differential's own
 three preconditions
-(`src/client/debug/frame-cost/README.md` § Preconditions) and they hold here
+([Preconditions](/src/client/debug/frame-cost/README.md#preconditions)) and they hold here
 for the same reasons — a running clock re-arms the binary orbit upload inside
 the timed scope, and an unpinned exposure lets the dwell drift onto a
 different star population.
@@ -34,8 +34,8 @@ different star population.
 duty cycle.** `--readback-every` (default `DWELL_READBACK_EVERY_FRAMES`, 4)
 holds the statistic readback at one request per that many rendered frames
 from before the warmup until the restore, through
-`reduction.readbackCadence` (`src/client/hdr/exposure/reduction/README.md`
-§ Latency). Emergent, the rate is whatever the readback's round trip leaves
+`reduction.readbackCadence` ([Latency](/src/client/hdr/exposure/reduction/README.md#latency)).
+Emergent, the rate is whatever the readback's round trip leaves
 it at — 0.25 to 0.975 across the archive — and § Where the frame has two
 classes below is what that costs a median. Four is the rate every clean
 `earth` dwell ran at and the app's own at the Sol default view, so the pin
@@ -52,7 +52,7 @@ and none is another's comparison — so `--pin`, `--against-pin` and
 `--baseline` all refuse a list. The first cadence is repeated LAST, the same
 bracket `../sweep/README.md` puts around a set of scales and for the same
 reason: the GPU's sustained-load ramp moves frame time across a run whatever
-the cool-down (`../pins/README.md` § Run position), so a span rising across
+the cool-down ([Run position](../pins/README.md#run-position)), so a span rising across
 ascending cadences is a trend and that drift wearing the same shape. The two
 readings at the first cadence bound the second. What the probe is for is
 `stellata-8cg.67.2`.
@@ -63,7 +63,7 @@ adapter resolves believable durations, and reported as a second row
 (`gpu-timestamp`, the render passes) — and the compute stream from the same
 resolve cycle as a third (`gpu-compute`: the star compaction every frame,
 plus the extinction prepass on the frames it recomputes;
-`src/client/debug/gpu-timing/README.md` § An exact frame total, and no per-pass rows at all). The three are different
+[An exact frame total, and no per-pass rows at all](/src/client/debug/gpu-timing/README.md#an-exact-frame-total-and-no-per-pass-rows-at-all)). The three are different
 instruments: read them side by side, never differenced, and never sum the
 two GPU rows into a frame total — `gpu.frame` means the render passes in
 every pin row and every archived dwell. Each stream is subscribed on its own
@@ -83,7 +83,7 @@ of work on a 120 Hz panel reads 16.67, still the display's number. A clamped
 dwell is refused by `--baseline` and makes a sweep inconclusive.
 
 **The period is the one the run measured, not 60 Hz assumed.** The rAF probe
-taken after settle (`../README.md` § What a run does, step 4) is the
+taken after settle ([What a run does,](../README.md#what-a-run-does) step 4) is the
 display's cadence with the gate idle, and
 the clamp test is judged against it: 16.67 ms on a 60 Hz panel, 8.33 on a
 120 Hz one. Headless Chromium's virtual display idles at 16.70 ms (59.9 Hz),
@@ -119,7 +119,7 @@ pin, it blocked the pin for *every* render-path PR at random. Wall
 `stateGuard` is still recorded, unmarked, exactly as wall p50 is.
 
 Which gate acts on the verdict, and where it stands down:
-`../pins/README.md` § State guard.
+[State guard](../pins/README.md#state-guard).
 
 **A dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
@@ -130,10 +130,10 @@ clock and the hold. The table prints min / p50 / max per counter, since a
 count is small and quantised: a readback frame carries the reduction
 chain's extra passes, so the distribution is bimodal and the extremes are
 the two modes. It is an API-surface count, not a GPU cost — the per-pass
-floor is still a differential (`docs/render-rules.md` § 8). A dwell with no
+floor is still a differential ([§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs)). A dwell with no
 queue to count on records null.
 
-**Where the frame has two classes, the GPU-stream median follows the
+<a id="where-the-frame-has-two-classes-the-gpu-stream-median-follows-the"></a>**Where the frame has two classes, the GPU-stream median follows the
 readback duty cycle, and a pair whose rates differ is refused.** Only the
 `earth` vantage draws two shapes: the exposure measurement resolves under the
 dwell's pinned cut there, so `renderPasses` reads 4 or 10 in one dwell
@@ -186,7 +186,7 @@ stop. The **counters** are what says there are two classes to find:
 `renderPasses` min against max. Without that gate a vantage that merely
 wanders takes a cut of its own, `lg` on every dwell it has ever recorded.
 What the pin then holds, and what the band is built from:
-`../pins/README.md` § The compute row, last.
+[The compute row,](../pins/README.md#the-compute-row) last.
 
 `READBACK_TOLERANCE` (25 %) bounds the rate drift, clear of the 7 % spread
 `earth` holds across 25 cold runs. **The guard is gated on the frame being

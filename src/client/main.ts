@@ -63,7 +63,7 @@ async function main() {
 
   // Byte progress of the star catalog. It keeps running past first paint:
   // the scene is live from chunk 0 and the rest of the population streams
-  // in behind this panel (loaders/README.md § Progressive catalog load).
+  // in behind this panel (loaders/README.md#progressive-catalog-load).
   const showCatalogProgress = ({ bytes, total }: KindLoadProgress) => {
     loadingBar.style.width = `${((bytes / total) * 100).toFixed(0)}%`;
     loadingStatus.textContent =
@@ -82,8 +82,8 @@ async function main() {
     const kinds = buildKindModules();
     // Started here and awaited past the fetch: the async chunk and the
     // adapter init are latency the catalog download already pays for.
-    // The dynamic import is the bundle boundary (webgpu/README.md
-    // § Import boundary). The catch is not optional — nothing awaits
+    // The dynamic import is the bundle boundary (webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle).
+    // The catch is not optional — nothing awaits
     // this for the length of the fetch, so a rejected chunk load would
     // surface as an unhandled rejection instead of a refused renderer.
     const webgpuBoot: Promise<WebGpuSeam | null> = import('./webgpu/boot-webgpu')
@@ -137,7 +137,7 @@ async function main() {
     // all read it, so settle it first.
     await stellata.kinds.planet.systemsReady;
 
-    // util/url-state/README.md § Legacy HIP refs.
+    // util/url-state/README.md#legacy-hip-refs.
     const hipToIndex = new Map<number, number>();
     let hipIndexed = 0;
     const indexHips = () => {
@@ -147,7 +147,7 @@ async function main() {
       }
     };
     indexHips();
-    // Global SID resolver (docs/sid.md § 8). `sun` is not in the planet
+    // Global SID resolver (/docs/sid.md#8-runtime-resolver-b4). `sun` is not in the planet
     // domain — Sol's catalog record carries the same sid, so the star
     // domain claims it (see util/sid-resolver/README.md).
     const sidResolver = new SidResolver(
@@ -163,7 +163,7 @@ async function main() {
     //
     // The STAR domain attaches now but declares itself STILL FILLING, so a
     // hit resolves immediately and only a miss stays pending
-    // (util/sid-resolver/README.md § A domain that is still filling). That
+    // (util/sid-resolver/README.md#a-domain-that-is-still-filling). That
     // ordering matters beyond latency: with a focus the encoder elides
     // `worldOffset`, so the URL's cam/tgt are in the focal star's local
     // frame — resolving the focus after they are applied puts the camera in
@@ -229,8 +229,7 @@ async function main() {
 
     bindUnitToggle();
     registerThemeStellata(stellata);
-    // Bound in wave 1 over a map filled in wave 2 — README.md § Boot in
-    // two waves.
+    // Bound in wave 1 over a map filled in wave 2 — README.md#boot-in-two-waves.
     const bayerMap = new Map<number, BayerInfo>();
     bindChartMode(stellata, { bayerMap, starLabels });
     bindControls(stellata);
@@ -320,7 +319,7 @@ async function main() {
     // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
     // chrome comes up now and the loading panel stays on top of a rendering
     // sky rather than in front of a blank one.
-    // util/url-state/README.md § A focus that resolves after the pose.
+    // util/url-state/README.md#a-focus-that-resolves-after-the-pose.
     if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
     awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
@@ -328,7 +327,7 @@ async function main() {
     // styles.css § .loading.
     document.getElementById('bottom-left-stack')!.prepend(loading);
     document.body.classList.add('scene-live');
-    // README.md § Boot in two waves, the dead-control rule.
+    // README.md#boot-in-two-waves the dead-control rule.
     const searchInputs = [
       document.getElementById('search-focus'),
       document.getElementById('search-to'),
@@ -375,7 +374,7 @@ async function main() {
     await frame();
 
     // Chart mode bound against this map in wave 1 and holds it by
-    // reference (README.md § Boot in two waves), so fill it, never swap it.
+    // reference (README.md#boot-in-two-waves), so fill it, never swap it.
     const searchTables = kinds.star.searchTables;
     for (const [idx, info] of searchTables.bayer) bayerMap.set(idx, info);
     await frame();

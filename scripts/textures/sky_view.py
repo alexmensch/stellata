@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Sky view factor: the cosine-weighted terrain share of each texel's sky, over
-the whole arc terrain can occlude (data/textures/relief/README.md § Sky view
-factor)."""
+the whole arc terrain can occlude (/data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky)."""
 
 import numpy as np
 
@@ -18,7 +17,7 @@ from horizon_map import (
 # and pinned against it by sky-view.test.ts, along with the mesh shader's own
 # copy. The headroom it leaves over what terrain actually reaches, and why the
 # quantisation is invisible, are
-# data/textures/relief/README.md § Sky view factor.
+# /data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky.
 SKY_VIEW_RANGE = 0.25
 
 

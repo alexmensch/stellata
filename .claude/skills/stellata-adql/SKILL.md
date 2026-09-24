@@ -9,7 +9,7 @@ Three services, three dialects, one query language they only mostly share. A
 rejected query costs a round trip and an opaque error, and the differences
 below are not guessable — every one is verified against the live service.
 
-Plumbing reference: `scripts/refresh/README.md` § Gaia TAP and the
+Plumbing reference: [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only) and the
 `refresh_lib` docstrings. This file is the query-language layer above it.
 
 ## Reach the services through `refresh_lib`, never a bare POST
@@ -84,7 +84,7 @@ oid` works) even where the same alias is required elsewhere in the query.
 `LIKE` is forbidden on `basic.otype`; `MOD()` exists but the `%` operator does
 not. SIMBAD's long-format `flux` table carries bibcodes and `allfluxes` does
 not — which is a policy constraint here, not just a schema one
-(`docs/catalog-driver.md` § 5).
+([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 
 ### VizieR
 
@@ -99,7 +99,7 @@ A sync endpoint flags an over-long result in a VOTable `QUERY_STATUS` INFO and
 still returns HTTP 200, so a MAXREC below the result size silently shortens a
 pull. `refresh_lib` raises `SyncOverflowError` for it and deliberately does
 not classify it transient. The three sizing rules — whole-table, batched, and
-value-range — are in `scripts/refresh/README.md` § Gaia TAP; never replace one
+value-range — are in [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only); never replace one
 with a bare literal.
 
 MAXREC is not load-bearing on CDS, whose default is ~1e9. There the row-count
@@ -114,7 +114,7 @@ and a 300 s timeout. Slice on the bound itself, and space the slices so their
 counts grow geometrically, so equal steps in log-count space give near-equal
 slices where equal magnitude steps give a 27x spread.
 `refresh-gaia-magnitude.py` is the worked example;
-`scripts/refresh/magnitude/README.md` § Slicing a magnitude-bounded pull carries the
+[Slicing a magnitude-bounded pull](/scripts/refresh/magnitude/README.md#slicing-a-magnitude-bounded-pull) carries the
 spacing rule and the partition discipline (share the edge as a formatted
 literal, gate that no row is returned twice).
 
@@ -155,7 +155,7 @@ right, but only if you decided it.
 
 ## Measure the premise before you build on it
 
-`docs/catalog-driver.md` § 9 is the authority and applies to every query
+[§ 9](/docs/catalog-driver.md#9-testing-a-proposed-identifier-rule-before-building-it) is the authority and applies to every query
 written here: a stated rule in this space routinely rests on a claim a second
 witness refutes, and a TAP count costs seconds against an implementation plus
 a revert. Ask the archive for the count, the max, and the boundary case before

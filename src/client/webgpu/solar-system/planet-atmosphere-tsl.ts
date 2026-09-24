@@ -99,7 +99,7 @@ export function buildPlanetAtmosphereMaterial(
       a.assign(float(1.0).sub(atmoLumaTsl(march.transmittance)).mul(p.uFade));
     });
     // Undithered: the shell overlaps the body mesh's own fragments at the
-    // limb (../../hdr/tonemap/README.md § Operator).
+    // limb (../../hdr/tonemap/README.md#operator).
     const shown = select(
       u.uHdrTarget.lessThan(0.5),
       tonemapUnditheredTsl(col, u.uWhitePoint, u.uHighlightDesat),

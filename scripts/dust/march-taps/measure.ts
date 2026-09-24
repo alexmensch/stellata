@@ -1,4 +1,4 @@
-// Entry point of the tap sweep — README.md § What it measures.
+// Entry point of the tap sweep — README.md#what-it-measures.
 
 import { resolve } from 'node:path';
 

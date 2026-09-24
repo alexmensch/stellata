@@ -1,7 +1,7 @@
 # Frame services
 
 Engine services for the renderer's floating local frame
-(`docs/architecture-modularity.md` § Tier 1): `FloatingOrigin` — the
+([Tier 1](/docs/architecture-modularity.md#tier-1--engine-services-not-kinds)): `FloatingOrigin` — the
 floating origin's owner, recentre fan-out, and anchor-policy seam — and
 the shared view/screen uniform map every render pass holds by
 reference. Star-specific frame state (the local-position buffer, epoch
@@ -95,7 +95,7 @@ them reintroduces one-frame-stale reads.
 ### Anchor policy
 
 `AnchorPolicy` is the pluggable answer to "where should the origin sit
-this frame" (`docs/architecture-modularity.md` § Free-fly constraints:
+this frame" ([Free-fly constraints](/docs/architecture-modularity.md#free-fly-constraints-on-the-engine-tier):
 `focal` today, `follow` for free-fly later). `tick()` — called once per
 frame by `animate()`, before `flushLocalPositions` — asks the policy
 for a desired origin and recentres onto it. The service knows nothing
@@ -128,7 +128,7 @@ each frame; the shell translates `camera.position` + `controls.target`
 (and in-flight camera-transition pose caches) by that per-frame drift
 so the star stays under the camera and the pin stays engaged. Focus and
 unfocus of a pair member therefore cause no position discontinuity —
-see `../binaries/README.md` § Focal-frame ride.
+see [Focal-frame ride](../binaries/README.md#focal-frame-ride-no-rebase).
 
 **Default-load** auto-engages `setFocus(catalog.solIndex)` before the
 first frame so URL-less loads start with the pin engaged and the per-Sol
@@ -166,7 +166,7 @@ drift `FOCAL_ORIGIN_DRIFT_RATIO` × the eye distance, and until it fires the
 moving-focal ride carries camera and target along with the object. Raw local
 coordinates are therefore in a frame the receiver never rebuilds. The URL
 writer serialises camera/target measured **from the focal object**
-(`../util/url-state/README.md` § What counts as a camera move), which is
+([What counts as a camera move](../util/url-state/README.md#what-counts-as-a-camera-move)), which is
 the frame the receiver does rebuild, and which a ride leaves untouched.
 
 For unfocused-but-not-at-Sol, the URL serialises a `worldOffset` field
@@ -174,7 +174,7 @@ For unfocused-but-not-at-Sol, the URL serialises a `worldOffset` field
 with older clients). The encoder emits it on the exact complement of the
 normalisation above — whenever the receiver will **not** rebuild the anchor
 for itself — AND `worldOffset` sits far enough from Sol to move the pose at
-this scale (`../util/url-state/README.md` § What counts as a camera move).
+this scale ([What counts as a camera move](../util/url-state/README.md#what-counts-as-a-camera-move)).
 That covers a **soft-kind focus** as well as no focus at all: only a hard
 kind recentres the origin (`../camera/focus/focus-target.ts` `KIND_TRAITS`),
 so a cloud, an LG object or a shell is focusable without the frame moving,
@@ -209,7 +209,7 @@ the star mirror, the extinction prepass, `FloatingOrigin`
 (`uWorldOffset`), `StarFrame` (reads `uFovYRad` / `uViewport` / `uSizeMin`
 and both `distN` slots for its windows, and is the sole writer of
 `uPhysSizeWindowPc` —
-`../star-pipeline/star-frame/README.md` § The physical-size window),
+[The physical-size window](../star-pipeline/star-frame/README.md#the-physical-size-window)),
 `DustParticleLayer`, `Picker`, and every kind module through
 `KindContext.sharedUniforms`. The three renderer-derived seeds (pixel
 ratio, FOV, viewport) are arguments; the rest come from
@@ -219,8 +219,7 @@ constants.
 `uSizeSpan` is the exception to "comes from `DEFAULT_FILTER`": the
 footprint window is no longer a `FilterState` field, so it seeds
 through `sizeSpanOf(DEFAULT_FILTER)` — the instrument record is its
-only authority (`../filters/README.md` § The multiplier is the ONLY
-footprint control).
+only authority ([The multiplier is the ONLY footprint control](../filters/README.md#the-multiplier-is-the-only-footprint-control-deliberately)).
 
 The one set of slots this map does **not** own is
 `HdrPipeline.emitterUniforms` — `uExposure`, `uOmegaPxArcsec2`,
@@ -230,7 +229,7 @@ option and spread in by reference. `HdrPipeline` rewrites `uHdrTarget`
 on every seam / resolve / chart-mode change, so copying the values
 instead of sharing the objects would leave the star passes tone-mapping
 inline into an already-tone-mapped target. Pinned in the test; see
-`../hdr/emission/README.md` § Unit.
+[Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes).
 
 Many slots are star-specific (`uColorLut`, `uLocalMemberIdx`,
 `uPinFocusToCenter`, …) — the map is the union of what its consumers
@@ -238,6 +237,6 @@ read, and narrowing per consumer happens at the type level
 (`PerceptualDiscUniforms`, `StarPhysicsUniforms`), not by cloning slots.
 
 The renderer mirrors this map as TSL uniform nodes
-(`../webgpu/tsl/README.md` § Shared uniform nodes); a key-parity test pins
+([Shared uniform nodes](../webgpu/tsl/README.md#shared-uniform-nodes)); a key-parity test pins
 the mirror, so adding a slot here fails CI until the node counterpart
 exists.

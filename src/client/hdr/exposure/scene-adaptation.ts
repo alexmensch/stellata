@@ -1,5 +1,5 @@
 // Per-frame exposure adaptation: turns the reduced statistic attachment
-// into one slew-limited exposure cut. See README.md § Adaptation.
+// into one slew-limited exposure cut. See README.md#adaptation--the-frame-measures-itself.
 
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import { dimBlendFactor } from '../../binaries/eclipse/eclipse-photometry-pure';
@@ -39,13 +39,13 @@ export interface SceneAdaptationDeps {
   measurementReady: () => boolean;
   /** Taken live rather than off the default constant: the display floor is
    *  derived from it, so `DR_MAG` has to reach the floor or the two describe
-   *  different display ranges (`README.md` § Adaptation). */
+   *  different display ranges (`README.md#adaptation--the-frame-measures-itself`). */
   whitePoint: () => number;
 }
 
 /**
  * The area-weighted mean-luminance measurement
- * (`docs/science-hdr-pipeline.md` § 3.1), read off the frame the GPU
+ * (`/docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut`), read off the frame the GPU
  * actually drew — so it sees airlight, ring annuli, twilight and every
  * future emitter, none of which a per-source model represented.
  */
@@ -110,7 +110,7 @@ export class SceneAdaptation {
 
   /**
    * Keep the measurement live whatever the regime — a frame-cost lever, never
-   * a shipped state (`park/README.md` § The lever). Disabling unparks on the
+   * a shipped state (`park/README.md#the-lever`). Disabling unparks on the
    * same call rather than a frame later, so a sweep set up after the machine
    * has already parked still prices live writes.
    */
@@ -166,7 +166,7 @@ export class SceneAdaptation {
    *  The only tunable in the transient: the filter is one-pole, and the
    *  staircase a large scene change shows is `LUMA_CEIL`'s convergence
    *  from above rather than anything this reaches
-   *  (`reduction/README.md` § Measure at the base exposure). */
+   *  (`reduction/README.md#measure-at-the-base-exposure-not-the-live-one`). */
   setSlewTauS(tau: number): void { this.slewTauS = tau; }
 
   getSlewTauS(): number { return this.slewTauS; }
@@ -207,7 +207,7 @@ export class SceneAdaptation {
    *  first reduction, and after chart's reset. The brightness skip needs
    *  that distinction where the readout does not: a genuinely dark frame
    *  also measures `L̄` = 0, and rule 2 cannot be evaluated without a real
-   *  `L̄` (`docs/science-hdr-pipeline.md` § 3.5). */
+   *  `L̄` (`/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound`). */
   getLandedStatistic(): FrameStatistic | null {
     return this.lastLanded === null ? null : this.stat;
   }

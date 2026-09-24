@@ -6,7 +6,7 @@ tells you which way you are oriented: an FDAI-style gyro-sphere — the Apollo
 reference frame that follows whatever is focused.
 
 **Navigate mode only.** It lives in the Instruments panel bottom-left
-(`../ui/README.md` § Layout containers) and hides on entering observe, where
+([Layout containers](../ui/README.md#layout-containers-ui-top-left-ui-top-ui-bottom)) and hides on entering observe, where
 the drawn coordinate sphere carries the frame instead
 (`../galactic/coord-spheres/README.md`). One instrument answering "which way
 is north" at a time is the point: while both were on screen they held separate
@@ -25,7 +25,7 @@ chip does.
 attitude-pure.ts (+ test)  Frame table (equatorial / ecliptic / galactic,
                            plus REF and ORB), the camera→(pitch, bank,
                            longitude) read, the ball's model matrix, and
-                           `OrbitFramePort` (`orbit-frame/README.md` § The lock).
+                           `OrbitFramePort` (`orbit-frame/README.md#the-lock`).
 attitude-ball.ts           The painted grid texture and the standalone mini
                            renderer that draws the sphere.
 attitude-layout.ts (+ test) The mini-renderer's view geometry, the sphere's
@@ -59,8 +59,8 @@ real.
 **A frame is only offered where it describes something**, and a focus change
 keeps the selected one wherever the new object still allows it.
 `frameAvailableFor` / `frameAfterFocusChange` implement both;
-`../galactic/coord-spheres/README.md` § A frame is offered where it describes
-something owns the rule, the walk, and why it is keyed on the focus rather
+[A frame is offered where it describes something](../galactic/coord-spheres/README.md#a-frame-is-offered-where-it-describes-something)
+owns the rule, the walk, and why it is keyed on the focus rather
 than on distance. **A manual pick therefore survives** a focus change now,
 where it used to be reset every time.
 
@@ -377,7 +377,7 @@ orbit lock hanging off its bottom border, INV bottom-right. They share `.attitud
 hang from.
 
 `U` hides the Instruments panel along with the rest of the controls
-(`../ui/README.md` § Hide-controls toggle). No focus ring ever appears on it:
+([Hide-controls toggle](../ui/README.md#hide-controls-toggle)). No focus ring ever appears on it:
 the ball is not a tab stop — the keyboard path is `L` — and the flag's focus
 state is a border brighten rather than a UA outline, because a blue ring over a
 WebGL canvas reads as a rendering fault.
@@ -394,7 +394,7 @@ even border rather than a chevron.
 ## Levelling
 
 The two camera modes need different calls, matching the split in
-`../camera/controls/input/README.md` § Roll authority: NAVIGATE puts
+[Roll authority](../camera/controls/input/README.md#roll-authority): NAVIGATE puts
 `camera.up` on the frame's pole (`levelTo`), OBSERVE rolls the quaternion by
 `renderedRollError`.
 
@@ -435,7 +435,7 @@ local up is perpendicular to the boresight by construction is also what makes
 the half turn land exactly on the reciprocal rather than near it.
 
 The motion itself is `AimController.invert`
-(`../camera/controls/README.md` § Aim controller); the chip calls
+([Aim controller](../camera/controls/README.md#aim-controller-cameracontrolsaim-controllerts)); the chip calls
 `Stellata.invertView`, which carries the same busy gates as `aimAt`. Both
 modes compose the same half-turn quaternion onto their own start pose, so
 there is one definition of "inverted" rather than a per-mode approximation.

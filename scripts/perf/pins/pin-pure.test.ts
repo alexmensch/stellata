@@ -235,7 +235,7 @@ describe('pinFromRuns — one run', () => {
 
   // A dwell under --force-recompute marches every star every frame, which lands
   // on the compute row. Pinned, that lever's cost would ride in every later
-  // run's verdict — the ratchet RELEASING.md § Perf pin exists to stop.
+  // run's verdict — the ratchet /RELEASING.md#perf-pin exists to stop.
   it('refuses a run taken under a setup lever, so the lever cannot be written into the pin', () => {
     const forced = scenario('sol', 'webgpu', dwell(stats(25.2), stats(21.8)), {
       params: { forceRecompute: true },

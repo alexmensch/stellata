@@ -1,6 +1,5 @@
 // One trailing polyline per probe: first ephemeris sample → the probe's
-// interpolated position at `t`, never drawn ahead of it. See README.md
-// § Trails.
+// interpolated position at `t`, never drawn ahead of it. See README.md#trails.
 
 import * as THREE from 'three';
 import type {
@@ -107,7 +106,7 @@ export class ProbePathLayer {
    * position, so a stale read would detach the two.
    *
    * `focusedIdx` is the roster index of the focused probe, or -1: only
-   * that probe's trail draws. See README.md § Trails.
+   * that probe's trail draws. See README.md#trails.
    */
   update(
     field: ProbeField,

@@ -2,10 +2,9 @@
 
 Joins the four frozen CDS classic-designation tables onto Gaia DR3 source_ids
 and writes `data/classic-ids/classic_id_overlay.tsv`. Contract:
-`docs/catalog-driver.md` § 2 (sources), § 4 (HD route, ambiguity, precedence)
+[§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) (sources), § 4 (HD route, ambiguity, precedence)
 and § 5 (the designation-constellation cascade); measured coverage, and why the
-inherited spine is load-bearing beside it, `data/classic-ids/README.md`
-§ Coverage.
+inherited spine is load-bearing beside it, [Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
 Two entry points, and they split cleanly: **this build joins the overlay,
 `build:membership` applies it.**
@@ -74,8 +73,7 @@ scripts/catalog/classic-ids/
                                   ../cited-parallax.ts) so the skip rules can
                                   read the citation, and the parallax carries
                                   CNS5's own `e_plx_mas` — why each matters,
-                                  data/classic-ids/README.md § The astrometry
-                                  re-slice.
+                                  /data/classic-ids/README.md#the-astrometry-re-slice.
   cns5-fixture.ts                 Test-only Cns5Row / Cns5Astrometry builders.
                                   A module, not a test-file export: four suites
                                   across two folders build these, so a new
@@ -111,13 +109,12 @@ scripts/catalog/classic-ids/
                                   canonical-key audit of the label delta
                                   against the SID ledger + bridges, and the
                                   V/50 HD-less out-of-scope pin
-                                  (../spine/README.md § The swap parity
-                                  ledger). Also two ratchets on numbers that
+                                  (../spine/README.md#the-swap-parity-ledger).
+                                  Also two ratchets on numbers that
                                   reach no record: the withheld-sibling-HD one
-                                  (label-merge/README.md § A withheld number
-                                  attaches to no record) and the override-freed
-                                  one (label-merge/README.md § What a freed
-                                  number costs).
+                                  (label-merge/README.md#a-withheld-number-attaches-to-no-record-and-that-is-the-answer)
+                                  and the override-freed
+                                  one (label-merge/README.md#what-a-freed-number-costs).
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1 (same env var
@@ -146,7 +143,7 @@ star its designations name (460 rows today). It runs BEFORE the counts, so
 every `overlay*` count and `hdOnMultipleSources` describe the artifact while
 the route counters above stay pre-gate and keep describing upstream
 reachability. Rationale, the two canonical cases, and the bound on the
-gate's reach: `data/classic-ids/README.md` § The binding gate.
+gate's reach: [The binding gate](/data/classic-ids/README.md#the-binding-gate).
 
 ### The gate's evidence has to be pulled
 
@@ -154,10 +151,10 @@ The magnitude check compares a candidate's `phot_g_mean_mag` against the row's
 printed V, taken in **the V cascade's own tier order** — Hipparcos on the
 brightest of the row's HIPs, else Tycho-2's `VT − 0.090(BT − VT)` on the Tycho
 entries IV/25 routes to this source, else Gliese on its GJ cells
-(`../photometry/README.md` § The V cascade). One helper, `printedVBelowHip`,
+([The V cascade](../photometry/README.md#the-v-cascade)). One helper, `printedVBelowHip`,
 serves both binding gates over one `printedVLookups` bundle — a loose callback
 pair is how a call site supplies half the evidence — because
-`docs/catalog-driver.md` § 4 says the label
+[§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) says the label
 side and the record side must not drift on what counts as a bad binding — and
 until the lower two tiers landed here they drifted on evidence *reach*, with
 the label gate weighing 99,799 rows against the derivation's whole spine.
@@ -170,12 +167,12 @@ accepted.
 Candidates are not spine rows. A route resolves a designation to whatever
 source a cross-walk names, and the gate exists precisely because that source
 is often not the star, so the request has to carry them explicitly:
-`../astrometry-request/README.md` § The request is a union.
+[The request is a union](../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise).
 
 `gateRejectedMag` measures the difference directly, and it is the count to
 watch if this request ever changes again. Today the union pulls evidence for
 every candidate and the queue reads **460** rows
-(`data/classic-ids/README.md` § The binding gate); a membership-column-only
+([The binding gate](/data/classic-ids/README.md#the-binding-gate)); a membership-column-only
 request drops `gateRejectedMag` to **0**, every candidate unvettable and
 silently accepted. `reason` is the first gate that fired, so the two reason
 counts trade rows without any binding changing verdict.
@@ -202,8 +199,7 @@ at all. `bindingCandidateSourceIds` applies the same reach, so the request and
 the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
 same `resolveGaiaSourceId` call, with its own candidate contribution to the
-request and its own zero-pin (`../membership/binding/README.md`
-§ The candidates have to be in the astrometry pull).
+request and its own zero-pin ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
 
 **An ambiguous designation attaches to every matching record** (§ 4) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are
@@ -224,7 +220,7 @@ Bayer and 110 Flamsteed** designation groups, and nearly all of them are a
 close pair whose components the survey photographed separately. That is not a
 defect: the naming ladder appends the component letter, so 40 Eri B, χ Aql B
 and β Lyr B compose distinct labels from their primaries'
-(`../naming/README.md` § Two callers, one composer).
+([Two callers, one composer](../naming/README.md#two-callers-one-composer)).
 
 The defect is the pair IV/27A joins that is **not one system**, where no
 component letter exists to tell the two apart and both records compose the
@@ -240,8 +236,8 @@ two stars' distances, and each removing one row of
 `applyCrossIndexCorrections` hard-fails on a correction that would do nothing
 (the `hd` states no designation) or would orphan one (`belongs_to` does not
 state the identical cells), because a curated file that silently does nothing
-is worse than none — the same discipline `../membership/README.md`
-§ Correcting a merge decision states for spine corrections.
+is worse than none — the same discipline [Correcting a merge decision](../membership/README.md#correcting-a-merge-decision)
+states for spine corrections.
 
 **A mechanical discriminator was measured and NOT adopted.** Of the 185 groups,
 41 have exactly one member V/50 carries an HR for, and on every one of those 41
@@ -271,7 +267,7 @@ IAU WGSN designation -> IV/27A `cst` by HD -> by HIP
 The authority tops it because it states which constellation its OWN
 designation is named for; this folder's route runs beneath it and is what
 carries the Flamsteed-only records the authority does not reach
-(`../naming/README.md` § The designation constellation).
+([The designation constellation](../naming/README.md#the-designation-constellation)).
 
 Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
 `gaia_source_id`:
@@ -281,7 +277,7 @@ Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
   holds that star's photons — so it needs no binding gate.
 - That is also the only way to reach the bright tier: Gaia saturates near
   G ≈ 3, so most records at V ≤ 3 have no overlay row at all, Fomalhaut among
-  them (`data/classic-ids/README.md` § Coverage).
+  them ([Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority)).
 - Measured over the 3,303 spine rows carrying a Bayer or Flamsteed cell, the
   HD/HIP route covers 3,180 against the source_id route's 2,474, with zero
   disagreements and nothing the overlay reaches that it does not. One tier
@@ -315,8 +311,7 @@ constellation out of the designation string and loses only its expanded alias
   `spineBrightRowsWithoutOverlayEntry` — 114 of the 178 rows the printed-V
   cascade puts at V <= 3 — which is where the known-unfixed mis-bindings live.
 
-The merge's own counts are `label-merge/README.md` § What the merge compares
-values on.
+The merge's own counts are [What the merge compares values on](label-merge/README.md#what-the-merge-compares-values-on).
 
 ### The GJ fold stops at the component
 
@@ -350,7 +345,7 @@ it — `pair_member_parallax`, at the bottom, gated on anchor-grade fit quality
 (`../distance/parallax/README.md`) rather than on file order.
 
 V/70A's index *does* fold to the bare number
-(`data/gliese/README.md` § The join key), and the asymmetry is deliberate: a V
+([The join key](/data/gliese/README.md#the-join-key)), and the asymmetry is deliberate: a V
 read off a system entry is a blend that advertises itself as one
 (`vTierIsSystemBlend`), and a parallax off it is a distance the components
 share. Neither is true of a position.

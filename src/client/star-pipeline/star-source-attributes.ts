@@ -15,7 +15,7 @@ export interface StarSourceArrays {
   eclipseDim: Float32Array;
   /** Built once per attachBinaries from `varType` alone; 1.0 zeros the
    *  GCVS-amplitude radial pulsation
-   *  (`../binaries/eclipse/README.md` § Pulsation gate). */
+   *  (`../binaries/eclipse/README.md#pulsation-gate-for-eclipsing-binaries`). */
   suppressPulsation: Float32Array;
 }
 
@@ -29,8 +29,8 @@ export interface StarSourceAttributes {
 /** The arrays are the caller's and must outlive these handles — they are
  *  wrapped, not copied. Nothing instances them into a geometry: the star
  *  layer reads each one's `needsUpdate` and update ranges to drive its own
- *  storage-buffer writes (`../webgpu/star/README.md`). See README.md
- *  § Files. */
+ *  storage-buffer writes (`../webgpu/star/README.md`). See README.md#files.
+ * */
 export function buildStarSourceAttributes(arrays: StarSourceArrays): StarSourceAttributes {
   return {
     iPositionAttr: new THREE.BufferAttribute(arrays.localPositions, 3),

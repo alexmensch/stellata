@@ -27,8 +27,8 @@ import { WebGpuSummationPass } from './summation-pass-webgpu';
 import { summationMeanTsl } from './summation-tsl';
 
 /** A layer whose colour materials swap between single-output and the MRT
- *  struct — kept in lockstep with the target mode (README.md § The gate
- *  becomes the output struct). */
+ *  struct — kept in lockstep with the target mode (README.md#the-gate-becomes-the-output-struct).
+ * */
 export interface MrtOutputLayer {
   setMrtOutputs(on: boolean): void;
 }
@@ -184,7 +184,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
 
   /** Frame-cost lever — the finer split of the summation row: keep the
    *  downsample running but collapse the resolve's kernel to one centre tap
-   *  of its output (../../hdr/README.md § Dev switches). */
+   *  of its output (../../hdr/README.md#dev-switches). */
   setSummationTapsEnabled(on: boolean): void {
     this.summationTapsOn = on;
   }
@@ -245,10 +245,9 @@ export class WebGpuHdrPipeline implements HdrSeam {
     // render target three auto-creates a Depth24Plus depth texture
     // regardless of reversedDepthBuffer, silently fixed-point — which
     // voids the local depth pass's K = 1 bracket
-    // (../../local-depth/bracket/README.md § Precision analysis). An
+    // (../../local-depth/bracket/README.md#precision-analysis). An
     // explicit FloatType depth texture is what REQUESTS Depth32Float; no
-    // runtime check can confirm it landed — README.md § The depth format
-    // is requested, not asserted.
+    // runtime check can confirm it landed — README.md#the-depth-format-is-requested-not-asserted.
     const depthTexture = new DepthTexture(this.size.x, this.size.y);
     depthTexture.type = FloatType;
     rt.depthTexture = depthTexture;
@@ -301,7 +300,7 @@ export class WebGpuHdrPipeline implements HdrSeam {
     this.blackTexture = new DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1);
     // Matches attachment 2, whose linear filters the resolve's off-centre
     // taps need — a stand-in's filters are what the WGSL bakes
-    // (../solar-system/README.md § A stand-in's filters).
+    // (../solar-system/README.md#a-stand-ins-filters).
     this.blackTexture.minFilter = LinearFilter;
     this.blackTexture.magFilter = LinearFilter;
     this.blackTexture.needsUpdate = true;

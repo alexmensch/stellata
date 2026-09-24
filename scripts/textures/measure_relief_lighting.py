@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """What the relief terms light: ground past the terminator against the same
 march at full DEM width, and the disc integral against phase. Manual, run by
-hand; method and results in data/textures/relief/README.md § Cast shadows."""
+hand; method and results in /data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps."""
 
 import io
 import sys
@@ -332,7 +332,7 @@ def _sweep_setup(body: str):
 
 def sweep_width(body: str) -> None:
     """What each output width lights, costs on disk, and costs in VRAM — the
-    width table in data/textures/relief/README.md § Cast shadows."""
+    width table in /data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps."""
     spec, elev, w, sun_up, facet_lit, keep, weight, sel, due_east = _sweep_setup(body)
     lo, hi = BINS[0]
 
@@ -366,7 +366,7 @@ def sweep_width(body: str) -> None:
 
 def sweep_azimuths(body: str) -> None:
     """What each azimuth count costs in skyline accuracy — the azimuth table in
-    data/textures/relief/README.md § Cast shadows. Slow: it marches
+    /data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps. Slow: it marches
     `AZIMUTH_REF` directions so every candidate is a subset of one march."""
     spec, elev, w, sun_up, facet_lit, keep, weight, sel, due_east = _sweep_setup(body)
     lo, hi = BINS[0]

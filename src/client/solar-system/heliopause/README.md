@@ -57,7 +57,7 @@ intentional, since from inside there's nothing geometrically
 informative to show.
 
 The shared camera-distance attenuation applies here too
-(`../../fresnel-shell/README.md` § Camera-distance attenuation), and both
+([Camera-distance attenuation](../../fresnel-shell/README.md#camera-distance-attenuation)), and both
 its halves land where the shell's own scale puts them. The near-fade reach
 is the shared proportion of `HELIOPAUSE_EXTENT_PC` — 120 AU, just inside
 the 122 AU upwind boundary — so the shell is untouched at any distance it
@@ -71,8 +71,8 @@ The "Heliopause" SVG label is anchored to the upwind apex's projected
 silhouette by `createHeliopauseLabel`, mounted by the shell module's
 `labels()` leg. The shell itself has
 no distance-based render cutoff, so the label gates on
-`isShellLabelResolvable` (`../../fresnel-shell/README.md` § Boundary shells
-as focus targets) — the shell's projected angular radius at the true
+`isShellLabelResolvable` ([Boundary shells as focus targets](../../fresnel-shell/README.md#boundary-shells-as-focus-targets))
+— the shell's projected angular radius at the true
 camera distance must clear the shared `FEATURE_LEGIBILITY_MIN_PX`, or the
 label would outlive the shell's legibility as the camera zooms out. Same
 screen-size floor the planet labels ride via the orbit-ring gate.
@@ -86,7 +86,7 @@ internal `ShellRegistry` on attach (center = Sol, extent = the 200 AU
 downwind apex, SID = `SHELL_OBJECT_SIDS.heliopause`, card +
 the drawn mesh as its pick surface). Search / focus card /
 hover / click-pick all route through the module's legs
-(`../../fresnel-shell/README.md` § Boundary shells as focus targets) —
+([Boundary shells as focus targets](../../fresnel-shell/README.md#boundary-shells-as-focus-targets)) —
 there is no heliopause-specific hover or picker anymore.
 
 **Visibility is declutter-governed, not focus-coupled.** The shell (and

@@ -1,12 +1,12 @@
 // Resident-texture accounting and the eviction choice over it. Why a budget
-// exists at all, and what the numbers are: README.md § Staying inside VRAM.
+// exists at all, and what the numbers are: README.md#staying-inside-vram.
 
 import { MIP_CHAIN_FACTOR } from '../../../util/texture-bytes-pure';
 
 const MIB = 1024 * 1024;
 
-/** Every body's pinned 1024 plus one body at mid range — README.md § Staying
- *  inside VRAM. */
+/** Every body's pinned 1024 plus one body at mid range — README.md#staying-inside-vram.
+ * */
 export const TEXTURE_VRAM_BUDGET_BYTES = 192 * MIB;
 
 /** The pinned 1024 set alone: where repeated out-of-memory step-downs stop. */
@@ -99,7 +99,7 @@ export function evictionOrder(
   return out;
 }
 
-/** README.md § Staying inside VRAM. A rung still LOADING is not resident
+/** README.md#staying-inside-vram. A rung still LOADING is not resident
  *  and so is not passed in. */
 export function otherRungs(
   residentWidths: readonly number[],

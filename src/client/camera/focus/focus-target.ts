@@ -1,6 +1,6 @@
 // Per-kind focusable contracts: kind traits, the FocusableProvider
 // registry, and the FocusTarget camera-transition view built from it.
-// See src/client/camera/focus/README.md § FocusableProviders.
+// See /src/client/camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry.
 
 import * as THREE from 'three';
 
@@ -74,7 +74,7 @@ export function isHardTarget(t: Target | null): t is HardTarget {
  *  FocusController derives every focus mutation and `FocusTarget` from
  *  it, so a new kind implements this record and nothing else.
  *  Star-only affordances are getFocusedStar() guards, never provider
- *  legs — see README.md § FocusableProviders before adding one. */
+ *  legs — see README.md#focusableproviders--the-kind-agnostic-geometry-registry before adding one. */
 export interface FocusableProvider {
   /** Absolute-space anchor (catalog-frame parsecs) — the
    *  `recenterOrigin` input when a hard kind is focused and when the
@@ -103,8 +103,8 @@ export interface FocusableProvider {
   /** Camera-to-anchor distance where the chart-mode disc plateaus at
    *  `uChartDiscMaxPx` given the current `uChartMagBright`; null when
    *  the kind has no magnitude-driven chart disc. Feeds the warp's
-   *  early Fly → phase-3 pivot (../warp/README.md § Chart-mode
-   *  plateau-trigger). */
+   *  early Fly → phase-3 pivot (../warp/README.md#chart-mode-plateau-trigger).
+   * */
   chartPlateauDistance(idx: number, magBright: number): number | null;
   /** Catalog index of the star whose planet system attaches while this
    *  object is focused (a star: itself; a planet: its host; a probe:

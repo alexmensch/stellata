@@ -1,5 +1,5 @@
 // The shipped catalogue must not undercut the render gate's 30 s cap.
-// See src/client/render-gate/README.md § The clock cadence.
+// See /src/client/render-gate/README.md#the-clock-cadence.
 
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';

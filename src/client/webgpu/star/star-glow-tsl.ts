@@ -43,7 +43,7 @@ export function buildStarGlowMaterial(
 
   // A PSF peak spread over an exaggerated kernel, never a photosphere's
   // own footprint, so this pass claims no lit-surface coverage at any
-  // framing (../../hdr/attachments/README.md § The unit).
+  // framing (../../hdr/attachments/README.md#the-unit).
   const coreMask = () => float(0.0);
 
   const material = new NodeMaterial();

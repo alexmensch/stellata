@@ -1,5 +1,5 @@
 // The three coordinate spheres as one scene layer, plus the frame rule that
-// gates them — README.md § A frame is offered where it describes something.
+// gates them — README.md#a-frame-is-offered-where-it-describes-something.
 
 import type * as THREE from 'three';
 import {

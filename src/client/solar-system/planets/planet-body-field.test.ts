@@ -164,8 +164,8 @@ describe('PlanetBodyField lifecycle', () => {
   }
 
   it('aims a body at the centre of its OWN ring — its parent, not the host', async () => {
-    // The ORB frame's zero-longitude datum (`../../attitude/README.md`
-    // § Levelling on an orbit). A moon answering with the host's
+    // The ORB frame's zero-longitude datum (`../../attitude/README.md#levelling`
+    // on an orbit). A moon answering with the host's
     // direction would read the same as its parent's, which is the
     // failure this pins.
     const f = new PlanetBodyField(makeSharedUniforms());

@@ -12,7 +12,7 @@ hover affordance, since touch devices have no hover state). The
 `.brand-box` flex column is `align-items: center` so the narrow title
 and the wider link row sit symmetrically around the centre axis.
 Fullscreen (double-tap `F`-`F`) and hide-controls (`U`) are keyboard-only — see
-`src/client/ui/README.md` § Fullscreen toggle and § Hide-controls
+[Fullscreen toggle](/src/client/ui/README.md#fullscreen-toggle) and § Hide-controls
 toggle.
 
 `about` opens a single tabbed `<div class="modal">` card that

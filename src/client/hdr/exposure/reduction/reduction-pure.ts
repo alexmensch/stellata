@@ -42,7 +42,7 @@ export function reductionLevelSizes(
  *  converges on the per-texel one as tiles shrink — so the target is a
  *  budget rather than a calibration: ~1024 tiles keep the readback in the
  *  tens of kilobytes while a parked body still spans ~70 of them
- *  (README.md § The tile level). */
+ *  (README.md#the-tile-level-and-why-the-subject-is-a-median). */
 export const REDUCTION_TILE_TEXELS = 1024;
 
 /** The levels the chain actually draws: the halving sequence truncated at

@@ -29,8 +29,8 @@ export const SOLAR_BV_FALLBACK = 0.65;
  *  names the Tycho-2 entry, which for a close pair is the system. Where both
  *  reach a row the component-naming one wins, so a system blend never displaces
  *  a component value. This deliberately no longer mirrors the request order
- *  `spine_request_keys` composes with — see `../spectral/README.md` § The ladder is
- *  ordered by what an identifier names for why the pull's order is the
+ *  `spine_request_keys` composes with — see `../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`
+ * for why the pull's order is the
  *  load-bearing one. */
 export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'gj', 'tyc'] as const;
 export type SimbadNamespace = (typeof SIMBAD_NAMESPACE_VALUES)[number];
@@ -233,8 +233,8 @@ export function parseGcvsNumber(s: string): number | null {
 //
 // Codes 0–3 are stable; 4+ refine VAR_TYPE_PULSATING into pulsator
 // families so the runtime can drive the per-type radius-swing / colour-
-// swing table (docs/science-stellar-modelling.md § Variable-star
-// pulsation). VAR_TYPE_PULSATING (1) remains the fallback for a pulsator
+// swing table (/docs/science-stellar-modelling.md#variable-star-pulsation).
+// VAR_TYPE_PULSATING (1) remains the fallback for a pulsator
 // family with no dedicated bucket (RV Tauri). buildPulsationParams
 // (src/client/star-pipeline/pulsation/pulsation-params-pure.ts) maps every code to
 // its {ρ, ΔB−V}; a non-pulsator or unbucketed code takes the default row.
@@ -400,10 +400,10 @@ export const RECORD_SIZE = 100;
 // byte is populated.
 export const RECORD_RESERVED_TAIL_BYTES = 3;
 export const NO_COMPANION = 0xffffffff;
-// Reserved none/invalid SID sentinel (docs/sid.md § 2); allocation starts
+// Reserved none/invalid SID sentinel (/docs/sid.md#2-identity-model--three-layers); allocation starts
 // at 1, so 0 in RECORD_LAYOUT.sid means the record resolved to no ledger
 // row — a state build-catalog.ts writes only in its unallocated-bootstrap
-// path before hard-failing (scripts/catalog/README.md § SID allocation).
+// path before hard-failing (/scripts/catalog/README.md#sid-allocation).
 export const NO_SID = 0;
 // Sentinel uint8 stored at RECORD_LAYOUT.conIndex when the star has no
 // constellation assignment. Valid IAU constellation indexes are
@@ -421,8 +421,7 @@ export const NO_GAIA_SOURCE_ID = 0n;
 export const NO_APSIS = NaN;
 
 // On-disk transport chunking — the single reassembly contract shared by the
-// writer, client loader, and Node reader. See scripts/catalog/record/README.md
-// § On-disk transport chunking.
+// writer, client loader, and Node reader. See /scripts/catalog/record/README.md#on-disk-transport-chunking.
 
 export const CATALOG_MANIFEST_FILENAME = 'catalog-manifest.json';
 
@@ -433,7 +432,7 @@ export const CATALOG_CHUNK_TARGET_BYTES = 16 * 1024 * 1024;
 // Chunk 0 is the first-paint payload, not a transport unit, so it is sized
 // for latency rather than against the Workers ceiling. Flattening the ramp
 // to CATALOG_CHUNK_TARGET_BYTES to save requests costs first paint an order
-// of magnitude — see ./README.md § On-disk transport chunking.
+// of magnitude — see ./README.md#on-disk-transport-chunking.
 export const CATALOG_FIRST_CHUNK_TARGET_BYTES = 1024 * 1024;
 
 export interface CatalogManifest {
@@ -441,7 +440,7 @@ export interface CatalogManifest {
   chunkBytes: number[];
   /** Sum of chunkBytes — assembled length, for pre-alloc + integrity check. */
   totalBytes: number;
-  /** Retired-sid → successor-sid pairs (docs/sid.md § 9.4). Omitted when
+  /** Retired-sid → successor-sid pairs (/docs/sid.md#94-migration-semantics--exact-table). Omitted when
    *  no effectively-retired sid carries a successor (merge-type
    *  retirements only exist after a DR reconciliation). */
   sidSuccessors?: [number, number][];
@@ -582,12 +581,11 @@ export const RECORD_LAYOUT = {
   teffGspspec: 68,  // K
   loggGspspec: 72,  // log cgs
   mhGspspec: 76,    // [M/H] dex
-  sid: 80,          // Stellata ID (0 = NO_SID; docs/sid.md § 7)
+  sid: 80,          // Stellata ID (0 = NO_SID; /docs/sid.md#7-storage--sid-in-every-artifact)
   // Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
   // Consumed once at load by the epoch-advance pass; positions stay at
-  // the fixed J2016.0 scene epoch on disk. See scripts/catalog/parse/README.md
-  // § Space-motion velocity and docs/science-catalog-ingestion.md
-  // § Current-epoch star positions.
+  // the fixed J2016.0 scene epoch on disk. See /scripts/catalog/parse/README.md#space-motion-velocity
+  // and /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t.
   vx: 84,
   vy: 88,
   vz: 92,
@@ -890,7 +888,7 @@ export interface SearchEntry {
   /** Display NAME — the ladder's authority tiers only (Sirius, Ross 128,
    *  Sirius B). A record displaying a DESIGNATION carries none: the runtime
    *  composes that from the structure below, through the same composer the
-   *  build used (docs/star-naming.md § 6). */
+   *  build used (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path). */
   p?: string;
   b?: string;    // Bayer letter glyph — Greek (α) or bare Latin (p, A)
   bx?: number;   // Bayer superscript, absent when none
@@ -919,7 +917,7 @@ export interface SearchEntry {
   cp?: number;   // WDS root anchor's record index; base for "<designation> <cl>"
   /** Published spellings that resolve a search and never display — a name
    *  the ladder displaced, or an approved alternate. Strings no structure
-   *  implies; every derivable spelling is derived (docs/star-naming.md § 5). */
+   *  implies; every derivable spelling is derived (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can). */
   al?: string[];
 }
 
@@ -978,8 +976,8 @@ export function designationConIndex(
  *  sharing one catalogue number, and `Gl 277A` likewise. And an alias never
  *  displaces a record that displays that number outright, whichever way the
  *  record order happened to place the two.
- *  `../classic-ids/label-merge/README.md`
- *  § An alias stops at the blend is the same rule on the write side;
+ *  `../classic-ids/label-merge/README.md#an-alias-stops-at-the-blend`
+ * is the same rule on the write side;
  *  `cns5AstrometryByGj` is the same two-pass reduction over CNS5's component
  *  letters.
  *
@@ -1078,7 +1076,7 @@ export const FLAGS = {
   binaryCompanionOnly: 0x08,
   binaryPrimary: 0x10,
   /** Companion addressable only via the row-index map's `bySynth`
-   *  table. See ../companions/README.md § Companion promotion from
+   *  table. See ../companions/README.md#companion-promotion-from-databinariesmultiplestsv
    *  `data/binaries/multiples.tsv`. */
   binaryCompanionSynthetic: 0x20,
 } as const;
@@ -1325,7 +1323,7 @@ export interface OpticalDoubleContext {
 
 // True when a CCDM group's picked primary should NOT be winged: it's an
 // optical double with no independent physical evidence. See
-// scripts/catalog/multiplicity/README.md § CCDM double-star cross-match.
+// /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 //
 // Suppression fires only on positive evidence the asserted pair is optical
 // — the nearest same-group sibling with a Gaia-quality distance sits
@@ -1469,7 +1467,7 @@ export function inferBinaries(
  *  Galactic-density prior tail at ~10–40 kpc.
  *
  *  This used to gate on the spine's `dist_src` cell, an AT-HYG editorial value
- *  standing in for the question. `docs/catalog-driver.md` § 5 forbids that: the
+ *  standing in for the question. `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` forbids that: the
  *  build now resolves the parallax first-hand, so the tier IS the predicate. */
 export function isBailerJonesEligible(
   gaiaSourceId: string | null,
@@ -1810,7 +1808,7 @@ export function absoluteToApparentMagnitude(absmag: number, distPc: number): num
  *  Every distance-override layer (Bailer-Jones, LMC kinematic, and future SMC
  *  kinematic / structural-disc / OGLE Cepheid layers) returns a bare distance:
  *  absmag is derived once from the V cascade and the distance the whole stack
- *  settled on (`../photometry/README.md` § The V cascade), so a layer cannot
+ *  settled on (`../photometry/README.md#the-v-cascade`), so a layer cannot
  *  place a star at a new distance while lighting it for the old one. xyz is
  *  likewise not a layer's business — position is direction × distance, with
  *  the direction resolved independently by the direction cascade. */
@@ -1884,7 +1882,7 @@ export function isInLmcCone(raHours: number, decDegrees: number): boolean {
 
 export const LMC_PARALLAX_MAS = 1000 / LMC_DISTANCE_PC;
 
-/** Measured, not chosen: `../distance/README.md` § Layer 2. */
+/** Measured, not chosen: `../distance/README.md#layer-2--lmc-kinematic-override`. */
 export const LMC_PARALLAX_CONSISTENCY_SIGMA = 10;
 
 export type LmcKinematicVerdict =

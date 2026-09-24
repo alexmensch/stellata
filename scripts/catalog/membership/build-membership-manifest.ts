@@ -49,8 +49,8 @@ import {
 
 const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
-const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md § The spine side).';
-const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md § Correcting a merge decision).';
+const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
+const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
 
 function writeArtifact(repoRelative: string, text: string): void {
   const path = resolve(ROOT, repoRelative);

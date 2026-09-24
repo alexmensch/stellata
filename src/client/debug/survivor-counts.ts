@@ -1,4 +1,4 @@
-// debug.survivors(). README.md § Survivor counts.
+// debug.survivors(). README.md#survivor-counts.
 
 import type { Stellata } from '../stellata';
 import type { SurvivorCounts } from '../webgpu/star/compaction/compaction-pure';

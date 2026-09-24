@@ -1,5 +1,5 @@
 // Extended-Reinhard tone-map operator, its exact inverse, and the sRGB
-// transfer pair. CPU mirror of ../../webgpu/tonemap-tsl.ts — see README.md § Operator.
+// transfer pair. CPU mirror of ../../webgpu/tonemap-tsl.ts — see README.md#operator.
 
 export type Rgb = readonly [number, number, number];
 

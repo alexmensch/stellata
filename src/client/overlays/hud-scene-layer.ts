@@ -1,4 +1,4 @@
-// The HUD's registry entry — see ../galactic/README.md § HUD.
+// The HUD's registry entry — see ../galactic/README.md#hud.
 
 import * as THREE from 'three';
 import type { FocusController } from '../camera/focus/focus-controller';
@@ -34,7 +34,7 @@ export function hudSceneLayer(deps: HudSceneLayerDeps): SceneLayer {
         hud.setVisible(false);
         return;
       }
-      // Matrices before any projection: ../galactic/README.md § HUD.
+      // Matrices before any projection: ../galactic/README.md#hud.
       camera.updateMatrixWorld();
       const filter = deps.filter();
       const focusedStar = focus.getFocusedStar();
@@ -42,7 +42,7 @@ export function hudSceneLayer(deps: HudSceneLayerDeps): SceneLayer {
         enabled: filter.showHud,
         camera,
         target: deps.target,
-        // Never controls.target while focused: ../galactic/README.md § HUD.
+        // Never controls.target while focused: ../galactic/README.md#hud.
         focusedLocal: focus.focalLocalPositionInto(focalLocal) ? focalLocal : null,
         hideSolArrow: focusedStar !== null && focusedStar === deps.solIndex,
         sizeMaxPx: filter.sizeMax,
