@@ -1,10 +1,11 @@
 // Solar-system scene wiring — see README.md § Wiring.
 
 import * as THREE from 'three';
+import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { OccluderSet } from '../occlusion/occluder-set';
 import type { CadenceReport } from '../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx, SceneLayer } from '../scene/scene-layer';
-import type { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
+import { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
 import { type HostStarMemberSink, SolarSystemCluster } from './local-cluster';
 import type { PlanetSystem } from './planet-system';
 import type { PlanetBodyField } from './planets/planet-body-field';
@@ -13,7 +14,7 @@ import type { ProbeField } from './probes/probe-field';
 import type { ProbePathLayer } from './probes/probe-path-layer';
 
 export interface SolarSystemWiringDeps {
-  orbitRings: OrbitRingsLayer;
+  chromeLines: ChromeLineMaterials;
   planetField: PlanetBodyField;
   planetMesh: PlanetMeshLayer;
   probeField: ProbeField;
@@ -41,7 +42,8 @@ export class SolarSystemWiring {
   private readonly tmpHostLocal = new THREE.Vector3();
 
   constructor(deps: SolarSystemWiringDeps) {
-    const { planetField: field, planetMesh, orbitRings } = deps;
+    const { planetField: field, planetMesh } = deps;
+    const orbitRings = new OrbitRingsLayer(deps.chromeLines);
     this.field = field;
     this.focusedPlanetSystem = deps.focusedPlanetSystem;
     this.orbitRings = orbitRings;

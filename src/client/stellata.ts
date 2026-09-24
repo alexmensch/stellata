@@ -84,7 +84,6 @@ import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemWiring } from './solar-system/solar-system-wiring';
-import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
 import {
   PHYS_RATIO_THRESHOLD,
@@ -604,8 +603,6 @@ export class Stellata implements FrameAnchor {
     // Constructed here, not by GalacticReference — galactic/README.md § Wiring.
     const galacticDisc = new GalacticDisc(this.chromeLines);
     this.scene.add(galacticDisc.group);
-    // Ahead of the binary orbit paths — solar-system/README.md § Wiring.
-    const orbitRings = new OrbitRingsLayer(this.chromeLines);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     this.starLocalCluster = new StarLocalCluster(
       this.webgpuStarLayer.localMirror,
@@ -688,7 +685,7 @@ export class Stellata implements FrameAnchor {
       if (layer) this.layers.register(layer);
     }
     this.solarSystem = new SolarSystemWiring({
-      orbitRings,
+      chromeLines: this.chromeLines,
       planetField: this.kinds.planet.field,
       planetMesh: this.kinds.planet.meshLayer,
       probeField: this.kinds.probe.field,

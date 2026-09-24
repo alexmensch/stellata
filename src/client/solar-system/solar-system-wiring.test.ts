@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
+import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { makeCadenceCtx, makeFrameCtx } from '../scene/frame-ctx-mock';
 import { OccluderSet } from '../occlusion/occluder-set';
 import type { CadenceReport } from '../render-gate/cadence/clock-cadence-pure';
-import type { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
+import { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
 import type { PlanetSystem } from './planet-system';
 import type { PlanetBodyField } from './planets/planet-body-field';
 import type { PlanetMeshLayer } from './planets/planet-mesh-layer';
@@ -38,13 +39,12 @@ function rig(): Rig {
     state: { ps: null as PlanetSystem | null, hostKnown: true, anchor: null as number | null, meshWork: false },
   } as Rig;
   let handler: ((ps: PlanetSystem | null) => void) | null = null;
-  const orbitRings = {
-    group: new THREE.Group(),
-    update: (...args: unknown[]) => { r.ringUpdates.push(args); },
-    setPlanetSystem: (...args: unknown[]) => { r.setPlanetSystemCalls.push(args); },
-    setMonochrome: () => {},
-    dispose: () => { r.ringsDisposed++; },
-  } as unknown as OrbitRingsLayer;
+  vi.spyOn(OrbitRingsLayer.prototype, 'update')
+    .mockImplementation((...args: unknown[]) => { r.ringUpdates.push(args); });
+  vi.spyOn(OrbitRingsLayer.prototype, 'setPlanetSystem')
+    .mockImplementation((...args: unknown[]) => { r.setPlanetSystemCalls.push(args); });
+  vi.spyOn(OrbitRingsLayer.prototype, 'dispose')
+    .mockImplementation(() => { r.ringsDisposed++; });
   const field = {
     localGroup: new THREE.Group(),
     cadenceReport: () => PLANET_REPORT,
@@ -70,7 +70,7 @@ function rig(): Rig {
     update: () => {},
   } as unknown as PlanetMeshLayer;
   r.wiring = new SolarSystemWiring({
-    orbitRings,
+    chromeLines: fakeChromeLineMaterials(),
     planetField: field,
     planetMesh,
     probeField: { localGroup: new THREE.Group() } as unknown as ProbeField,
@@ -96,7 +96,10 @@ describe('SolarSystemWiring', () => {
   const camera = new THREE.PerspectiveCamera();
 
   beforeEach(() => { vi.stubGlobal('window', { innerHeight: 600 }); });
-  afterEach(() => { vi.unstubAllGlobals(); });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
 
   it('hands every planetSystem change to the orbit rings at the live clock', () => {
     const r = rig();

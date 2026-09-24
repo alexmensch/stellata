@@ -83,8 +83,7 @@ src/client/solar-system/
                                   extent radius, pure. Vitest-pinned.
   solar-system-wiring.ts (+ test) SolarSystemWiring — the shell's
                                   `solarSystem` namespace. Owns the orbit
-                                  rings (handed in, § Wiring) and the
-                                  cluster, feeds the rings each
+                                  rings and the cluster, feeds the rings each
                                   'planetSystem' change, and builds the
                                   orbit-ring, planet-mesh and cluster
                                   registry entries plus `planetRate`.
@@ -301,11 +300,6 @@ centres on its parent's live position), the planet mesh below every camera
 write (`../scene/README.md` § Camera writes, then camera reads), the cluster
 after both. All three, and the shell's moving-focal ride, declare
 `planetRate` — the bodies are what each one draws a view of.
-
-**The shell constructs the orbit rings and hands them in**, ahead of the
-binary orbit path layer. Both draw at in-pass renderOrder 3.2 and three
-breaks an equal-depth tie by object id, so constructing the rings inside the
-wiring — after the kind modules attach — would reorder the two.
 
 ## First-load default and `minDistance` relaxation
 
