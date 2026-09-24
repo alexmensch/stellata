@@ -47,9 +47,7 @@ shells) — and throws if two sources claim one element. Two enables combine a p
 input and are derived here, not pushed: the Milky Way group is enabled
 while `milkyWayBand || milkyWayIsobar`, LG emission while
 `lgEmissionGlow && showLgEmission`. Only the second reads filter state, so
-`refreshLgEmission` re-derives it alone after a filter patch. A per-element override (`setSceneElementVisible`) writes
-one slot and supersedes its floor until the next `applyDetailPreset`
-overwrites the whole set.
+`refreshLgEmission` re-derives it alone after a filter patch.
 
 **The preset is authoritative — overrides are within-scene only.** Exactly
 one element still carries a legacy user toggle that ANDs with the floor:

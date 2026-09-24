@@ -45,24 +45,38 @@ describe('SceneDeclutter', () => {
     })).toThrow(/orbitRings/);
   });
 
-  it('enables the Milky Way group while either the band or the isobar is permitted', () => {
+  it('keeps the Milky Way group enabled in both styles — band in realistic, isobar in chart', () => {
     const { declutter, calls } = makeHarness();
-    declutter.setPermitted('milkyWayBand', false);
-    expect(calls).toEqual(['mw:true']);
+    declutter.applyFloors('physical', 'realistic');
+    expect(calls.filter((c) => c.startsWith('mw:')).at(-1)).toBe('mw:true');
     calls.length = 0;
-    declutter.setPermitted('milkyWayIsobar', false);
-    expect(calls).toEqual(['push:milkyWayIsobar:false', 'mw:false']);
+    declutter.applyFloors('physical', 'chart');
+    expect(calls).toContain('push:milkyWayIsobar:true');
+    expect(calls.filter((c) => c.startsWith('mw:')).at(-1)).toBe('mw:true');
   });
 
-  it('enables LG emission only while the floor and the user toggle both allow it', () => {
-    const { declutter, calls, setLgToggle } = makeHarness();
-    declutter.setPermitted('lgEmissionGlow', true);
-    setLgToggle(false);
-    declutter.refreshLgEmission();
-    declutter.setPermitted('lgEmissionGlow', false);
-    setLgToggle(true);
-    declutter.refreshLgEmission();
-    expect(calls).toEqual(['lg:true', 'lg:false', 'lg:false', 'lg:false']);
+  describe('LG emission is enabled only while the floor and the user toggle both allow it', () => {
+    const lastLg = (calls: string[]) => calls.filter((c) => c.startsWith('lg:')).at(-1);
+
+    it('floor permits, toggle on → enabled', () => {
+      const { declutter, calls } = makeHarness();
+      declutter.applyFloors('physical', 'realistic');
+      expect(lastLg(calls)).toBe('lg:true');
+    });
+
+    it('floor permits, toggle off → disabled on the next refresh', () => {
+      const { declutter, calls, setLgToggle } = makeHarness();
+      declutter.applyFloors('physical', 'realistic');
+      setLgToggle(false);
+      declutter.refreshLgEmission();
+      expect(lastLg(calls)).toBe('lg:false');
+    });
+
+    it('floor forbids, toggle on → disabled', () => {
+      const { declutter, calls } = makeHarness();
+      declutter.applyFloors('all', 'chart');
+      expect(lastLg(calls)).toBe('lg:false');
+    });
   });
 
   it('pushes each element exactly once per applyFloors', () => {

@@ -17,7 +17,7 @@ import {
   getStarKMultiplier as readStarKMultiplier,
   setStarKMultiplier as patchStarKMultiplier,
 } from './filter-state';
-import type { DetailLevel, RenderStyle, SceneElementId } from '../scene/declutter/scene-elements';
+import type { DetailLevel, RenderStyle } from '../scene/declutter/scene-elements';
 import type { SceneDeclutter } from '../scene/declutter/scene-declutter';
 
 /** The star-pipeline sharedUniforms subset this controller writes. All
@@ -55,7 +55,7 @@ export interface FilterControllerDeps {
    *  kind — re-solve when the FOV changes. Wired to
    *  FocusController.refreshOrbitFloor. */
   refreshOrbitFloor: () => void;
-  declutter: Pick<SceneDeclutter, 'applyFloors' | 'setPermitted'>;
+  declutter: Pick<SceneDeclutter, 'applyFloors'>;
 }
 
 export class FilterController {
@@ -87,14 +87,6 @@ export class FilterController {
     this.filter.detailLevel = level;
     const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
     this.deps.declutter.applyFloors(level, style);
-    this.deps.bus.emit('filter', this.filter);
-    this.deps.bus.emit('state');
-  }
-
-  // Override one element's permission directly; superseded by the next
-  // applyDetailPreset, which re-derives the whole set.
-  setSceneElementVisible(id: SceneElementId, on: boolean): void {
-    this.deps.declutter.setPermitted(id, on);
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }

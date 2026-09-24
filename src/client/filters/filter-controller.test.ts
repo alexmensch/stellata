@@ -224,19 +224,6 @@ describe('FilterController', () => {
     expect(permittedSet(declutter)).toEqual(visibleSet('physical', 'chart'));
   });
 
-  it('a per-element override supersedes its floor until the next applyDetailPreset', () => {
-    const { ctrl, declutter } = makeHarness();
-    ctrl.applyDetailPreset('all');
-    expect(declutter.permits('constellationFigures')).toBe(true);
-    // Override one element off — others stay put.
-    ctrl.setSceneElementVisible('constellationFigures', false);
-    expect(declutter.permits('constellationFigures')).toBe(false);
-    expect(declutter.permits('planetLabels')).toBe(true);
-    // Re-applying the preset recomputes from floors, clearing the override.
-    ctrl.applyDetailPreset('all');
-    expect(declutter.permits('constellationFigures')).toBe(true);
-  });
-
   it('applyDetailPreset clears the per-element user toggle (lg)', () => {
     const { ctrl } = makeHarness();
     ctrl.setFilter({ showLgEmission: false });

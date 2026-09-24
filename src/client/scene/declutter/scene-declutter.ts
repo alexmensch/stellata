@@ -44,7 +44,7 @@ export class SceneDeclutter {
     }
   }
 
-  setPermitted(id: SceneElementId, on: boolean): void {
+  private setPermitted(id: SceneElementId, on: boolean): void {
     this.permitted[id] = on;
     this.pushes[id]?.(on);
     if (id === 'milkyWayBand' || id === 'milkyWayIsobar') this.applyMilkyWayEnabled();
