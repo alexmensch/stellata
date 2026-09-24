@@ -15,9 +15,7 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/refresh/` imports instead of independently walking
   `Path(__file__).resolve().parent...`.
 - `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
-  `scripts/catalog/*.ts` scripts, plus `mtimeIfExists(path)` and
-  `maxMtimeOfSources(paths)` (newest mtime over present paths, 0 if all
-  missing) for build-idempotency checks against optional inputs.
+  `scripts/catalog/*.ts` scripts.
   `isLfsPointer(text)` recognises a pointer stub from a head string and
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the
@@ -35,11 +33,21 @@ need the same thing — single-use helpers stay with their consumer.
   stub with a header error that mentions neither. Both the classic-ID overlay
   build and the astrometry request read the same four cross-walk inputs, which
   is why the guard is here and not in either.
-  `paths.test.ts` pins the `maxMtimeOfSources` and pointer-probe cases.
+  `paths.test.ts` pins the pointer-probe cases.
   **No data paths live here.** `ATHYG_CSV` used to, back when three folders
   read the catalogue; the astrometry request moved onto the membership
   manifest and the boundary-epoch cross-check is the last reader left, so the
   literal sits in that suite (`data/athyg/README.md` § Consumed by).
+- `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
+  (`../README.md` § Preprocessor idempotency): `inputHashes` maps each input's
+  repo-relative path to its sha1, `null` when absent, so an input's arrival is
+  a change too. `stampIsCurrent` compares that map against
+  `build/stamps/<step>.json` and checks the outputs exist; `clearStamp` runs
+  before a build writes, `writeStamp` after its asserts pass, with the hashes
+  taken *before* the build. The Python sibling serves the two binaries steps
+  and writes the same JSON shape, which `tests/artifact-freshness.test.ts`
+  reads from the TS side. Both pinned by co-located tests
+  (`python3 scripts/util/build_stamp.test.py`).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from

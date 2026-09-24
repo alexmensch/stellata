@@ -152,7 +152,7 @@ quietly fall to a lower cascade tier.
 **A rebuild cannot catch it and must not be relied on to.** `build:catalog`
 reads committed tables, so rebuilding from the same stale TSV reproduces the
 same gap exactly — the missing rows are not computable, they need a network
-fetch. `isUpToDate` already invalidates the artifact on any build-script
+fetch. The build's skip gate already invalidates the artifact on any build-script
 edit and it is no help here: nothing is stale in the *build*, the *data* is.
 
 **What does catch it is gating the shortfall.** A coverage numerator —

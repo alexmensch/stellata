@@ -19,7 +19,9 @@ SCRIPT = Path(__file__).resolve()
 # add the root so the absolute ``scripts.*`` imports below resolve.
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
-from scripts.refresh.refresh_lib import is_up_to_date  # noqa: E402
+from scripts.util.build_stamp import (  # noqa: E402
+    clear_stamp, input_hashes, stamp_is_current, stamp_path, write_stamp,
+)
 from scripts.util.astronomy_constants import J2000_JD  # noqa: E402
 from scripts.binaries.component_tokens import (  # noqa: E402
     compound_contains,
@@ -34,6 +36,7 @@ SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"
 SRC_ROW_INDEX_MAP = ROOT / "build" / "catalog-row-index-map.json"
 OUT_BIN = ROOT / "public" / "binaries.bin"
 EXPECTED_COUNTS = SCRIPT.parent / "build-runtime-binaries-expected.json"
+BINARIES_BIN_STAMP = stamp_path("binaries-bin")
 
 UPDATE_COUNTS_ENV_VAR = "UPDATE_BUILD_COUNTS"
 
@@ -725,12 +728,14 @@ def run(force: bool) -> int:
             "pnpm run build:catalog first",
         )
         return 1
-    if not force and OUT_BIN.exists() and is_up_to_date(OUT_BIN, _iter_input_paths()):
+    inputs = input_hashes(_iter_input_paths())
+    if not force and stamp_is_current(BINARIES_BIN_STAMP, inputs, [OUT_BIN]):
         log(
             f"{OUT_BIN.relative_to(ROOT)} up to date — skipping "
             "(use --force to rebuild)"
         )
         return 0
+    clear_stamp(BINARIES_BIN_STAMP)
 
     log(f"loading {SRC_MULTIPLES.relative_to(ROOT)} …")
     pairs = load_pairs(SRC_MULTIPLES)
@@ -774,6 +779,7 @@ def run(force: bool) -> int:
             f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime"
         )
         return 1
+    write_stamp(BINARIES_BIN_STAMP, inputs)
     return 0
 
 
@@ -781,7 +787,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "--force", action="store_true",
-        help="ignore mtime check and rebuild",
+        help="ignore input-hash check and rebuild",
     )
     args = p.parse_args()
     return run(force=args.force)

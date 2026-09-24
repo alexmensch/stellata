@@ -312,7 +312,7 @@ all three consumers: the writer (`../build-catalog.ts`), the runtime loader
 (`src/client/loaders/catalog-loader.ts`, fetch), and the Node test/verify
 reader (`../catalog-lookup.ts` `readCatalogBuffer`, fs). The build removes a
 prior run's chunks first so a shrunk chunk count can't strand stale
-files, and `isUpToDate` / all Node consumers key off the manifest, not a
+files, and the skip gate / all Node consumers key off the manifest, not a
 monolithic `catalog.bin`. Byte-identical reassembly is pinned in
 `src/client/loaders/catalog-loader.test.ts`.
 
@@ -327,7 +327,7 @@ the pure comparator + formatter and has its own vitest coverage; the
 assert-or-rewrite side is `../util/snapshot-assert.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
-snapshot. `isUpToDate` walks `scripts/catalog/` recursively plus `scripts/util/` and
+snapshot. `catalogInputPaths` walks `scripts/catalog/` recursively plus `scripts/util/` and
 `scripts/sid/`, so editing any build module invalidates the artifact — with no
 exclusions: `classic-ids/` used to be skipped as a one-shot generator and is now
 the label layer, `membership/` is in because `parse/` imports its codec, and

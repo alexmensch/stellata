@@ -17,7 +17,11 @@ SCRIPT = Path(__file__).resolve()
 # add the root so the absolute ``scripts.*`` imports below resolve.
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
-from scripts.refresh.refresh_lib import assert_row_count, is_up_to_date  # noqa: E402
+from scripts.refresh import refresh_lib  # noqa: E402
+from scripts.refresh.refresh_lib import assert_row_count  # noqa: E402
+from scripts.util.build_stamp import (  # noqa: E402
+    clear_stamp, input_hashes, stamp_is_current, stamp_path, write_stamp,
+)
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
@@ -174,8 +178,12 @@ def _iter_code_paths() -> Iterator[Path]:
                 yield mod
 
 
+MULTIPLES_STAMP = stamp_path("multiples")
+
+
 def _iter_input_paths() -> Iterator[Path]:
     yield from _iter_code_paths()
+    yield Path(refresh_lib.__file__)
     yield SRC_WDS_SUMM
     yield SRC_ORB6
     yield SRC_ATHYG
@@ -502,14 +510,14 @@ def resolve_through_stage2() -> Stage2Resolution:
 
 
 def run(force: bool) -> int:
-    if not force and OUT_MULTIPLES.exists() and is_up_to_date(
-        OUT_MULTIPLES, _iter_input_paths(),
-    ):
+    inputs = input_hashes(_iter_input_paths())
+    if not force and stamp_is_current(MULTIPLES_STAMP, inputs, [OUT_MULTIPLES]):
         log(
             f"{OUT_MULTIPLES.relative_to(ROOT)} up to date — skipping "
             "(use --force to rebuild)"
         )
         return 0
+    clear_stamp(MULTIPLES_STAMP)
 
     s2 = resolve_through_stage2()
     wds_pairs = s2.wds_pairs
@@ -702,6 +710,7 @@ def run(force: bool) -> int:
         "Stage 7 complete. data/binaries/multiples.tsv ready for "
         "build-runtime-binaries.py."
     )
+    write_stamp(MULTIPLES_STAMP, inputs)
     return 0
 
 
@@ -709,7 +718,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument(
         "--force", action="store_true",
-        help="ignore mtime check and reload all inputs",
+        help="ignore input-hash check and reload all inputs",
     )
     args = p.parse_args()
     return run(force=args.force)

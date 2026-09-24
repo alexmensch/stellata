@@ -128,7 +128,10 @@ import {
   loadReadStarsInputs,
 } from './parse/read-stars-inputs';
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
-import { REPO_ROOT as ROOT, maxMtimeOfSources } from '../util/paths';
+import { REPO_ROOT as ROOT } from '../util/paths';
+import {
+  clearStamp, inputHashes, stampIsCurrent, stampPath, writeStamp,
+} from '../util/build-stamp';
 import { DEFAULT_ROW_INDEX_MAP } from './catalog-lookup';
 import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
 import {
@@ -166,12 +169,13 @@ const EXPECTED_OUTLIERS = resolve(
   'distance/build-distance-outliers-expected.json',
 );
 
-function isUpToDate(): boolean {
-  if (!existsSync(OUT_MANIFEST) || !existsSync(OUT_CON) || !existsSync(OUT_SEARCH)) return false;
-  if (!existsSync(OUT_BOUNDARIES)) return false;
-  if (!existsSync(resolve(PUBLIC_DIR, catalogChunkFilename(0)))) return false;
-  if (!existsSync(DEFAULT_ROW_INDEX_MAP)) return false;
-  const binMtime = statSync(OUT_MANIFEST).mtimeMs;
+const CATALOG_STAMP = stampPath('catalog');
+const CATALOG_OUTPUTS = [
+  OUT_MANIFEST, OUT_CON, OUT_SEARCH, OUT_BOUNDARIES,
+  resolve(PUBLIC_DIR, catalogChunkFilename(0)), DEFAULT_ROW_INDEX_MAP,
+];
+
+function catalogInputPaths(): string[] {
   // This file is an orchestration shell — the build logic lives across the
   // scripts/catalog subfolders plus scripts/util and scripts/sid, so any of
   // them must invalidate the artifact.
@@ -194,15 +198,14 @@ function isUpToDate(): boolean {
   // invalidate a catalog.bin written with NO_SID placeholders, or the
   // documented build → allocate → rebuild bootstrap skips its final step).
   // Adding a new source is one array entry.
-  const newest = maxMtimeOfSources([
+  return [
     ...READ_STARS_INPUT_PATHS,
     ...DESIGNATION_CONSTELLATION_INPUT_PATHS,
     SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
     SRC_SIMBAD_SAMPLE, MULTIPLES_TSV,
     LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
     ...scriptFiles,
-  ]);
-  return binMtime > newest;
+  ];
 }
 
 // Clear a prior build's chunk set so a shrunk chunk count can't strand stale
@@ -258,10 +261,12 @@ async function main() {
   // unchanged (the snapshot assert/refresh is unreachable otherwise).
   const forceRebuild =
     process.env.UPDATE_BUILD_COUNTS === '1' || process.env.UPDATE_DISTANCE_OUTLIERS === '1';
-  if (!forceRebuild && isUpToDate()) {
-    console.log('catalog.bin is up to date with source CSV; skipping rebuild.');
+  const inputHashesAtStart = inputHashes(catalogInputPaths());
+  if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart, CATALOG_OUTPUTS)) {
+    console.log('catalog.bin is up to date with its inputs; skipping rebuild.');
     return;
   }
+  clearStamp(CATALOG_STAMP);
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
@@ -1326,6 +1331,7 @@ async function main() {
 
   await assertOrUpdateBuildCounts(counts);
   await assertOrUpdateDistanceOutliers(stars);
+  writeStamp(CATALOG_STAMP, inputHashesAtStart);
 }
 
 async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
