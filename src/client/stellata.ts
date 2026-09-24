@@ -419,6 +419,7 @@ export class Stellata implements FrameAnchor {
   // must not clobber a pick walk mid-flight.
   private readonly passDebugScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
+  private readonly starSizeInputs: starPhysics.StarSizeInputs;
 
   readonly picker!: Picker;
 
@@ -875,6 +876,14 @@ export class Stellata implements FrameAnchor {
       refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
       declutter: this.declutter,
     });
+    this.starSizeInputs = {
+      catalog,
+      camPos: this.camera.position,
+      localPositions: this.starFrame.localPositions,
+      uniforms: sharedUniforms,
+      filter: this.filter,
+      suppressPulsation: this._suppressPulsation,
+    };
 
     // Engage focus on Sol if it exists so measurement and per-star zoom
     // work from the start. setFocus (rather than raw field assignment)
@@ -1191,13 +1200,7 @@ export class Stellata implements FrameAnchor {
   getFocusedDiscRadiusPx(): number {
     const t = this.focus.getFocusedTarget();
     if (t?.kind === 'star') {
-      return starPhysics.renderedDiscPxAtPeak({
-        catalog: this.catalog,
-        idx: t.idx,
-        camPos: this.camera.position,
-        localPositions: this.localPositions,
-        uniforms: this.sharedUniforms,
-      }) * 0.5;
+      return starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, t.idx) * 0.5;
     }
     if (t?.kind === 'planet') {
       return this.planetBodyField.renderedPlanetSizePx(t.idx, this.camera.position) * 0.5;
@@ -1686,15 +1689,7 @@ export class Stellata implements FrameAnchor {
    *  shader's `max(appSize, physSize)` sizing (`star-physics.ts`). Shared
    *  by the navigate-mode fade closure and the overlay/pick paths. */
   private renderedSizePxFor(idx: number): number {
-    return starPhysics.renderedSizePx({
-      catalog: this.catalog,
-      idx,
-      camPos: this.camera.position,
-      localPositions: this.localPositions,
-      uniforms: this.sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-    });
+    return starPhysics.renderedSizePx(this.starSizeInputs, idx);
   }
 
   /** Component split of `renderedSizePxFor` — the star local cluster's
@@ -1703,15 +1698,7 @@ export class Stellata implements FrameAnchor {
     idx: number,
     out: starPhysics.RenderedSizeComponents,
   ): starPhysics.RenderedSizeComponents {
-    return starPhysics.renderedSizeComponents({
-      catalog: this.catalog,
-      idx,
-      camPos: this.camera.position,
-      localPositions: this.localPositions,
-      uniforms: this.sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-    }, out);
+    return starPhysics.renderedSizeComponents(this.starSizeInputs, idx, out);
   }
 
   private chartDiscPxFor(appMag: number): number {
@@ -1754,16 +1741,9 @@ export class Stellata implements FrameAnchor {
    *  candidate, never per frame
    *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
   private resolveStarPick(idx: number): ResolvedCandidate {
-    const c = starPhysics.renderedSizeComponents({
-      catalog: this.catalog,
-      idx,
-      camPos: this.camera.position,
-      localPositions: this.localPositions,
-      uniforms: this.sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-      extinctionAvMag: this.extinctionAvMagFor(idx),
-    }, this.pickSizeScratch);
+    const c = starPhysics.renderedSizeComponents(
+      this.starSizeInputs, idx, this.pickSizeScratch, this.extinctionAvMagFor(idx),
+    );
     return resolveStarPickVisibility({
       focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
       eclipseDim: this._eclipseDim[idx],

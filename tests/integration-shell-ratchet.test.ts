@@ -26,7 +26,7 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
   'frameCtx', 'glslResidentsChecked',
   'lastParticleStrength', 'offCatalogRecords', 'passDebugScratch',
-  'pickSizeScratch', 'starAttrs', 'starFrame',
+  'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',
   'starLocalCluster', 'tmpConstellationAbs',
   'trackballSettle', 'webgpuStarLayer',
 ];

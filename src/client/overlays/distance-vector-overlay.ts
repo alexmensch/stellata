@@ -212,11 +212,10 @@ export function createDistanceVectorOverlay(stellata: Stellata) {
     const discRadiusPx = from.kind === 'star'
       ? renderedDiscPxAtPeak({
           catalog: stellata.catalog,
-          idx: from.idx,
           camPos: stellata.camera.position,
           localPositions: stellata.localPositions,
           uniforms: stellata.uniforms,
-        }) * 0.5
+        }, from.idx) * 0.5
       : 0;
     const shaftDrawnLenPx = Math.hypot(tipX - shaftStartX, tipY - shaftStartY);
     const arrowAlpha = focusedArrowFadeAlpha(
