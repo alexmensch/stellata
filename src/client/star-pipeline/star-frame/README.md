@@ -21,9 +21,11 @@ src/client/star-pipeline/star-frame/
                                   proximity / core-mask window, and the
                                   partial-catalogue window bound.
   star-frame-pure.ts (+ test)     The proximity index's in-place merge
-                                  (§ Absorbing a chunk). Pure; pinned
-                                  against a full re-sort over an
-                                  arbitrary chunk ramp.
+                                  and the radix sort that orders each
+                                  chunk (§ Absorbing a chunk). Pure; the
+                                  merge pinned against a full re-sort
+                                  over an arbitrary chunk ramp, the sort
+                                  against a stable comparator sort.
 ```
 
 ## The star frame
@@ -138,6 +140,10 @@ decoded prefix decides where the search stops:
 `mergeSortedByDistance` (`star-frame-pure.ts`) takes that as its contract —
 `Infinity` past `end` on entry, and the same on exit.
 
+Filling `distSol` alone is the trap, because it looks sufficient: an
+undecoded record does sort past every window, but only the *sorted* array is
+ever searched.
+
 **The window sorts by radix, not by comparator.** A comparator sort over a
 167,772-record chunk measured 35 ms of the chunk's 42 ms absorb on the
 main thread, which by then is drawing; `sortIndicesByDistance` orders the
@@ -146,11 +152,9 @@ record index, identical slot for slot on the shipped catalogue. It rests on
 every distance being non-negative, since only then do the bit patterns
 order as the values do — true of a `sqrt`, and the invariant to keep if
 the key ever changes. The key rewrite starts at the lowest slot the merge
-moved; everything below it is untouched.
-
-Filling `distSol` alone is the trap, because it looks sufficient: an
-undecoded record does sort past every window, but only the *sorted* array is
-ever searched.
+moved; everything below it is untouched, and the merge reads the loaded
+run's distances from the key, so a slot left stale there misorders every
+later chunk.
 
 `maxPhysicalRadiusPc` and `maxEpochDriftPc` are running maxima over what has
 landed. Both bound windows, so they may only grow — a chunk carrying a larger

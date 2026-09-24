@@ -1,4 +1,4 @@
-// The Sol-distance proximity index's in-place merge.
+// The Sol-distance proximity index's in-place merge and its radix sort.
 // See ./README.md § Absorbing a chunk.
 
 const RADIX_BITS = 11;
@@ -35,9 +35,8 @@ export function mergeSortedByDistance(
 }
 
 /** Indices `first..end−1` ordered by ascending `dist`, ties by index.
- *  Only valid for non-negative distances (`+Infinity` included): their
- *  IEEE-754 bit patterns order exactly as unsigned integers do, which a
- *  negative value's would not. ./README.md § Absorbing a chunk. */
+ *  `dist` must be non-negative (`+Infinity` allowed) — ./README.md
+ *  § Absorbing a chunk. */
 export function sortIndicesByDistance(
   dist: Float32Array,
   first: number,
