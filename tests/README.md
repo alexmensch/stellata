@@ -235,9 +235,11 @@ every pointer carrying a path.
 
 **Scope is git's.** Every tracked or untracked-but-not-ignored file with
 a scanned extension, symlinks excluded (`CLAUDE.md` would double
-`AGENTS.md`). `.gitignore` already keeps `.claude/skills` in and the rest
-of `.claude` — `worktrees/` above all — out, so no folder list exists to
-drift. One case per extension asserts the scan finds pointers in that
+`AGENTS.md`). Tracking puts `.claude/skills` in; `.gitignore` keeps
+`worktrees/` out, so no folder list exists to drift. Untracked files
+count, so a new doc is checked before its first `git add` — and a local
+draft with a broken pointer fails the suite here while CI never sees
+it. One case per extension asserts the scan finds pointers in that
 file type, so an extension that carries none has no business in the
 list.
 
