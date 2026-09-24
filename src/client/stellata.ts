@@ -80,9 +80,9 @@ import {
 import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
 import {
+  collectKindDetailBinds,
   collectKindPicks,
   KIND_ROSTER,
-  mergeKindDetailBinds,
   type BuiltKindModules,
 } from './kinds/kind-modules';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
@@ -884,13 +884,15 @@ export class Stellata implements FrameAnchor {
     this.scene.add(this.milkyway.group);
 
     this.declutter = new SceneDeclutter({
-      layerPushes: {
-        milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
-        orbitRings: (on) => this.orbitRingsLayer.setPermitted(on),
-        binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
-        constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
-      },
-      kindPushes: mergeKindDetailBinds(this.kinds),
+      pushes: [
+        {
+          milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
+          orbitRings: (on) => this.orbitRingsLayer.setPermitted(on),
+          binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
+          constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
+        },
+        ...collectKindDetailBinds(this.kinds),
+      ],
       setMilkyWayEnabled: (on) => this.milkyway.setEnabled(on),
       setLgEmissionEnabled: (on) => this.kinds.lg.setEmissionEnabled(on),
       showLgEmission: () => this.filter.showLgEmission,

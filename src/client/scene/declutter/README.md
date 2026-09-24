@@ -21,8 +21,8 @@ layer never evaluates its permit.
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
 - `scene-declutter.ts` — `SceneDeclutter`, the live permission cache
   (`stellata.declutter`) and every write into it.
-- `scene-declutter.test.ts` — floor application, push order, and the two
-  coupled enables.
+- `scene-declutter.test.ts` — floor application, the one-push-per-element
+  merge, and the two coupled enables.
 
 ## The contract
 
@@ -39,10 +39,11 @@ applyDetailPreset(level)` owns the level and the style and hands both to
 `setPermitted`. Per-frame layers *pull* — their update / label predicate
 reads `stellata.declutter.permits(id)` (a kind module reads it through
 `KindContext.detailPermits`). The event-driven layers have no per-frame
-gate, so `setPermitted` *pushes* the change: the shell's `layerPushes`
-(orbit rings, binary orbit rings, constellation figure, the Milky Way
-isobar), then the kind modules' `detailBinds()` (probe markers and trails,
-both boundary shells). Two enables combine a permission with another
+gate, so `setPermitted` *pushes* the change. The constructor merges every
+push source into one element-keyed record — the shell's (orbit rings,
+binary orbit rings, constellation figure, the Milky Way isobar) and the
+kind modules' `detailBinds()` (probe markers and trails, both boundary
+shells) — and throws if two sources claim one element. Two enables combine a permission with another
 input and are derived here, not pushed: the Milky Way group is enabled
 while `milkyWayBand || milkyWayIsobar`, LG emission while
 `lgEmissionGlow && showLgEmission`; `refreshEnables` re-derives both after

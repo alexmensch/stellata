@@ -13,8 +13,7 @@ export type DetailPushes = Partial<Record<SceneElementId, (on: boolean) => void>
 
 export interface SceneDeclutterDeps {
   /** Pushes for layers with no per-frame gate to pull the cache from. */
-  layerPushes: DetailPushes;
-  kindPushes: DetailPushes;
+  pushes: readonly DetailPushes[];
   setMilkyWayEnabled(on: boolean): void;
   setLgEmissionEnabled(on: boolean): void;
   showLgEmission(): boolean;
@@ -25,7 +24,17 @@ export class SceneDeclutter {
     SCENE_ELEMENT_IDS.map((id) => [id, true]),
   ) as Record<SceneElementId, boolean>;
 
-  constructor(private readonly deps: SceneDeclutterDeps) {}
+  private readonly pushes: DetailPushes = {};
+
+  constructor(private readonly deps: SceneDeclutterDeps) {
+    for (const source of deps.pushes) {
+      for (const [id, push] of Object.entries(source) as [SceneElementId, DetailPushes[SceneElementId]][]) {
+        if (!push) continue;
+        if (this.pushes[id]) throw new Error(`scene element '${id}' has two declutter pushes`);
+        this.pushes[id] = push;
+      }
+    }
+  }
 
   permits(id: SceneElementId): boolean { return this.permitted[id]; }
 
@@ -37,10 +46,9 @@ export class SceneDeclutter {
 
   setPermitted(id: SceneElementId, on: boolean): void {
     this.permitted[id] = on;
-    this.deps.layerPushes[id]?.(on);
+    this.pushes[id]?.(on);
     if (id === 'milkyWayBand' || id === 'milkyWayIsobar') this.applyMilkyWayEnabled();
     if (id === 'lgEmissionGlow') this.applyLgEmissionEnabled();
-    this.deps.kindPushes[id]?.(on);
   }
 
   refreshEnables(): void {

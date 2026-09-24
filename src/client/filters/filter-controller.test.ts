@@ -21,8 +21,7 @@ import { SceneDeclutter } from '../scene/declutter/scene-declutter';
 
 function makeDeclutter(): SceneDeclutter {
   return new SceneDeclutter({
-    layerPushes: {},
-    kindPushes: {},
+    pushes: [],
     setMilkyWayEnabled: () => {},
     setLgEmissionEnabled: () => {},
     showLgEmission: () => true,

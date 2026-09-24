@@ -7,11 +7,11 @@ import { KIND_TRAITS, type TargetKind } from '../camera/focus/focus-target';
 import type { ObjectKindModule } from './kind-module';
 import {
   buildKindModules,
+  collectKindDetailBinds,
   collectKindPicks,
   displayNameOf,
   KIND_ROSTER,
   loadKindModules,
-  mergeKindDetailBinds,
   type KindModules,
 } from './kind-modules';
 
@@ -157,30 +157,19 @@ describe('displayNameOf', () => {
   });
 });
 
-describe('mergeKindDetailBinds', () => {
-  it('flattens every module push into one element-keyed record', () => {
+describe('collectKindDetailBinds', () => {
+  it('hands on each module push, skipping a module without detailBinds', () => {
     const markers = (_on: boolean) => {};
-    const merged = mergeKindDetailBinds(recordWith('probe', {
+    const [binds] = collectKindDetailBinds(recordWith('probe', {
       detailBinds: () => ({ probeMarkers: markers }),
     }));
-    expect(merged.probeMarkers).toBe(markers);
-    expect(mergeKindDetailBinds(recordWith('probe', {}))).toEqual({});
+    expect(binds.probeMarkers).toBe(markers);
+    expect(collectKindDetailBinds(recordWith('probe', {}))).toEqual([]);
   });
 
-  it('throws rather than letting one kind clobber another kind element', () => {
-    const record = recordWith('probe', {
-      detailBinds: () => ({ probeMarkers: () => {} }),
-    }) as { -readonly [K in keyof KindModules]: KindModules[K] };
-    record.planet = {
-      kind: 'planet',
-      detailBinds: () => ({ probeMarkers: () => {} }),
-    } as unknown as KindModules['planet'];
-    expect(() => mergeKindDetailBinds(record)).toThrow(/probeMarkers/);
-  });
-
-  it('carries every module declutter element exactly once', () => {
-    const merged = mergeKindDetailBinds(buildKindModules());
-    expect(Object.keys(merged).sort()).toEqual([
+  it('carries every module declutter element across the real roster', () => {
+    const ids = collectKindDetailBinds(buildKindModules()).flatMap((b) => Object.keys(b));
+    expect(ids.sort()).toEqual([
       'heliopauseShell', 'localBubbleShell', 'probeMarkers', 'probeTrails',
     ]);
   });

@@ -6,14 +6,13 @@ function makeHarness(patch: Partial<SceneDeclutterDeps> = {}) {
   const calls: string[] = [];
   let lgToggle = true;
   const declutter = new SceneDeclutter({
-    layerPushes: {
-      orbitRings: (on) => calls.push(`layer:orbitRings:${on}`),
-      milkyWayIsobar: (on) => calls.push(`layer:milkyWayIsobar:${on}`),
-    },
-    kindPushes: {
-      heliopauseShell: (on) => calls.push(`kind:heliopauseShell:${on}`),
-      orbitRings: (on) => calls.push(`kind:orbitRings:${on}`),
-    },
+    pushes: [
+      {
+        orbitRings: (on) => calls.push(`push:orbitRings:${on}`),
+        milkyWayIsobar: (on) => calls.push(`push:milkyWayIsobar:${on}`),
+      },
+      { heliopauseShell: (on) => calls.push(`push:heliopauseShell:${on}`) },
+    ],
     setMilkyWayEnabled: (on) => calls.push(`mw:${on}`),
     setLgEmissionEnabled: (on) => calls.push(`lg:${on}`),
     showLgEmission: () => lgToggle,
@@ -40,11 +39,10 @@ describe('SceneDeclutter', () => {
     }
   });
 
-  it('runs the layer push, then the kind push, for one element', () => {
-    const { declutter, calls } = makeHarness();
-    declutter.setPermitted('orbitRings', false);
-    expect(calls).toEqual(['layer:orbitRings:false', 'kind:orbitRings:false']);
-    expect(declutter.permits('orbitRings')).toBe(false);
+  it('refuses two push sources claiming one element', () => {
+    expect(() => makeHarness({
+      pushes: [{ orbitRings: () => {} }, { orbitRings: () => {} }],
+    })).toThrow(/orbitRings/);
   });
 
   it('enables the Milky Way group while either the band or the isobar is permitted', () => {
@@ -53,7 +51,7 @@ describe('SceneDeclutter', () => {
     expect(calls).toEqual(['mw:true']);
     calls.length = 0;
     declutter.setPermitted('milkyWayIsobar', false);
-    expect(calls).toEqual(['layer:milkyWayIsobar:false', 'mw:false']);
+    expect(calls).toEqual(['push:milkyWayIsobar:false', 'mw:false']);
   });
 
   it('enables LG emission only while the floor and the user toggle both allow it', () => {
@@ -72,10 +70,10 @@ describe('SceneDeclutter', () => {
     declutter.applyFloors('physical', 'realistic');
     expect(calls).toEqual([
       'mw:true',
-      'layer:milkyWayIsobar:false', 'mw:true',
+      'push:milkyWayIsobar:false', 'mw:true',
       'lg:true',
-      'layer:orbitRings:false', 'kind:orbitRings:false',
-      'kind:heliopauseShell:false',
+      'push:orbitRings:false',
+      'push:heliopauseShell:false',
     ]);
   });
 });

@@ -17,7 +17,7 @@ inside a kind stays module-internal.
   list), the exhaustive `KindModules` mapped type,
   `buildKindModules()`, `loadKindModules()` (boot's fan-out, where the
   never-rejects rule is enforced), `displayNameOf()`,
-  `collectKindPicks()`, and `mergeKindDetailBinds()`.
+  `collectKindPicks()`, and `collectKindDetailBinds()`.
 - `kind-geometry.ts` — leg helpers shared across modules:
   `absCameraDistancePc(ctx, centerAbs)`, the card
   `cameraDistancePc` leg for every kind whose centre is absolute
@@ -92,11 +92,11 @@ its catalog load blocks first paint and may reject) — and are only
   contract file is a leaf; folding hard/moving into modules would make
   it import every kind folder.
 - **Declutter pushes route by element id, not by name.**
-  `mergeKindDetailBinds()` flattens every module's `detailBinds()` into
-  one `SceneElementId`-keyed record, and `SceneDeclutter.setPermitted`
-  applies it for every element it writes — a migrated kind adds no line
-  to the shell (`../scene/declutter/README.md`). Two kinds
-  claiming one element throws at merge rather than silently clobbering.
+  `collectKindDetailBinds()` hands every module's `detailBinds()` to
+  `SceneDeclutter`, which merges them with the shell's own pushes into
+  one `SceneElementId`-keyed record — a migrated kind adds no line to the
+  shell (`../scene/declutter/README.md`). Two sources claiming one
+  element throws at construction rather than both running.
 - **One pick function per kind, and it lives on `hover()`.** There is
   no separate `pick` leg to keep in sync: `KindPick` IS
   `HoverProvider['pick']`, and `collectKindPicks()` reads it off the
