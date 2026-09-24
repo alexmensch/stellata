@@ -415,8 +415,9 @@ catalogue, and only if attach sorted a prefix.** An order keyed on a table
 still mostly zeros sorts every undecoded record onto Sol's one key, which
 forfeits the coherence the order exists for (`dispatch-order/README.md`
 § Dispatch order) — a cost, not a wrong answer, since the tables stay
-paired. The attach-time `loadedCount` and each refresh's are what decide
-it. An epoch bucket crossing never re-sorts: ±5,000 yr of stellar motion
+paired. The pass holds the catalogue itself and reads `loadedCount` live,
+at attach and on each refresh, rather than taking a count the shell
+sampled. An epoch bucket crossing never re-sorts: ±5,000 yr of stellar motion
 is far under a voxel, and the sort costs ~21 ms of main thread plus three
 uploads.
 

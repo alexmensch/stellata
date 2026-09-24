@@ -1495,7 +1495,7 @@ export class Stellata implements FrameAnchor {
     // frames must repaint.
     this.renderGate.invalidate('epoch-bucket');
     // The pass above rewrote catalog.positions; the A_V cache holds a copy.
-    this.extinctionPrepass?.refreshPositions(this.catalog.loadedCount);
+    this.extinctionPrepass?.refreshPositions();
     if (this.warp.isActive() || d.lengthSq() === 0) return;
     this.camera.position.add(d);
     this.controls.target.add(d);
@@ -1556,9 +1556,7 @@ export class Stellata implements FrameAnchor {
     this.webgpu.setDustTexture(dust.texture);
     if (this.extinctionPrepass === null) {
       this.extinctionPrepass = this.webgpu.attachExtinctionPrepass({
-        positions: this.catalog.positions,
-        count: this.catalog.count,
-        loadedCount: this.catalog.loadedCount,
+        catalog: this.catalog,
         uniforms: u,
       });
     }
@@ -1602,7 +1600,7 @@ export class Stellata implements FrameAnchor {
     this.starFrame.absorbRecords();
     this.webgpuStarLayer.absorbRecords();
     // Not markDirty — see webgpu/extinction/README.md § The cache gate.
-    this.extinctionPrepass?.refreshPositions(this.catalog.loadedCount);
+    this.extinctionPrepass?.refreshPositions();
 
     // The fastest pulsating variable bounds how long any frame may idle
     // before some star's brightness moves a JND, so a chunk carrying a

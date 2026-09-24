@@ -116,11 +116,10 @@ function makePrepass(
   const compaction = new StarCompaction(fake.renderer, {
     u: nodes, tables, lut: makeColorLutTexture(), dust: slots.dust, av: slots.av,
   }, 6, slots.refill);
+  const catalog = { positions, count, loadedCount };
   const prepass = new WebGpuExtinctionPrepass({
     renderer: fake.renderer,
-    positions,
-    count,
-    loadedCount,
+    catalog,
     nodes,
     slots,
     uniforms: shared,
@@ -131,7 +130,9 @@ function makePrepass(
     shared.uDustTexture.value = createVoxelTexture(4, new Uint8Array(64));
     slots.setDustTexture(shared.uDustTexture.value);
   };
-  return { ...fake, prepass, shared, slots, refill: slots.refill, compaction, attachDust };
+  return {
+    ...fake, prepass, catalog, shared, slots, refill: slots.refill, compaction, attachDust,
+  };
 }
 
 describe('construction', () => {
@@ -400,15 +401,17 @@ describe('the dispatch order under a streaming catalogue', () => {
     Array.from(mortonDispatchOrder(positions, LATTICE_COUNT));
 
   it('re-sorts over the whole catalogue on the chunk that completes it', () => {
-    const { full, positions, prepass, released, attachDust } = streaming();
+    const { full, positions, prepass, catalog, released, attachDust } = streaming();
     const attachOrder = sortedOver(positions);
     attachDust();
     prepass.update(0, 0, 0);
     const half = LATTICE_COUNT / 2;
     positions.set(full.subarray(LOADED * 3, half * 3), LOADED * 3);
-    prepass.refreshPositions(half);
+    catalog.loadedCount = half;
+    prepass.refreshPositions();
     positions.set(full);
-    prepass.refreshPositions(LATTICE_COUNT);
+    catalog.loadedCount = LATTICE_COUNT;
+    prepass.refreshPositions();
     prepass.dispose();
     const { starOfSlot, slotOfStar, slotPositions } = orderOf(released);
     expect(sortedOver(full)).not.toEqual(attachOrder);
@@ -421,12 +424,13 @@ describe('the dispatch order under a streaming catalogue', () => {
   });
 
   it('keeps the attach-time order while the catalogue is still landing', () => {
-    const { full, positions, prepass, released, attachDust } = streaming();
+    const { full, positions, prepass, catalog, released, attachDust } = streaming();
     const attachOrder = sortedOver(positions);
     attachDust();
     prepass.update(0, 0, 0);
     positions.set(full.subarray(0, (LATTICE_COUNT - 1) * 3));
-    prepass.refreshPositions(LATTICE_COUNT - 1);
+    catalog.loadedCount = LATTICE_COUNT - 1;
+    prepass.refreshPositions();
     prepass.dispose();
     expect(orderOf(released).starOfSlot).toEqual(attachOrder);
   });
@@ -438,30 +442,32 @@ describe('the dispatch order under a streaming catalogue', () => {
     attachDust();
     prepass.update(0, 0, 0);
     positions.reverse();
-    prepass.refreshPositions(LATTICE_COUNT);
+    prepass.refreshPositions();
     prepass.dispose();
     expect(orderOf(released).starOfSlot).toEqual(attachOrder);
 
     const late = streaming();
     late.attachDust();
     late.positions.set(late.full);
-    late.prepass.refreshPositions(LATTICE_COUNT);
+    late.catalog.loadedCount = LATTICE_COUNT;
+    late.prepass.refreshPositions();
     const resorted = sortedOver(late.full);
     late.positions.reverse();
-    late.prepass.refreshPositions(LATTICE_COUNT);
+    late.prepass.refreshPositions();
     late.prepass.dispose();
     expect(orderOf(late.released).starOfSlot).toEqual(resorted);
   });
 
   it('parks a refill in flight and re-requests', () => {
-    const { full, positions, prepass, computes, refill, attachDust } = streaming();
+    const { full, positions, prepass, catalog, computes, refill, attachDust } = streaming();
     attachDust();
     prepass.update(0, 0, 0);
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
     expect(refill.arm.value).toBe(1);
     const generation = refill.cameraGeneration.value;
     positions.set(full);
-    prepass.refreshPositions(LATTICE_COUNT);
+    catalog.loadedCount = LATTICE_COUNT;
+    prepass.refreshPositions();
     expect(refill.arm.value).toBe(0);
     const held = computes.length;
     prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
@@ -638,7 +644,7 @@ describe('the epoch refresh', () => {
     attachDust();
     prepass.update(0, 0, 0);
     positions[0] = 4321;
-    prepass.refreshPositions(COUNT);
+    prepass.refreshPositions();
     prepass.update(0, 0, 0);
     expect(refill.arm.value).toBe(1);
     prepass.update(0, 0, 0);
@@ -655,7 +661,7 @@ describe('the epoch refresh', () => {
     attachDust();
     prepass.update(0, 0, 0);
     prepass.dispose();
-    expect(() => prepass.refreshPositions(COUNT)).not.toThrow();
+    expect(() => prepass.refreshPositions()).not.toThrow();
   });
 });
 

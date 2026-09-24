@@ -26,6 +26,7 @@ import type { StarMirror } from '../star-pipeline/local-pass/star-mirror-slots';
 import type { SharedUniformNodes } from './tsl/shared-uniform-nodes';
 import type { SurvivorCounts } from './star/compaction/compaction-pure';
 import type { StarLayerSources } from './star/star-tables';
+import type { Catalog } from '../loaders/catalog-loader';
 
 /** The renderer the app boots — one name to change if it ever does. */
 export type StellataRenderer = WebGPURenderer;
@@ -35,12 +36,10 @@ export type { StarLayerSources } from './star/star-tables';
 /** What the shell supplies for the A_V cache; the renderer, the dust node
  *  and the uniform-node mirror are the seam's own. */
 export interface WebGpuExtinctionPrepassSources {
-  /** Absolute (heliocentric ICRS) star positions, xyz-interleaved —
-   *  catalog.positions, NOT the floating-origin local buffer. */
-  positions: Float32Array;
-  count: number;
-  /** `catalog.loadedCount` at attach; `positions` past it is still zero. */
-  loadedCount: number;
+  /** The catalogue itself, read live: `positions` is absolute (heliocentric
+   *  ICRS), NOT the floating-origin local buffer, and zero past
+   *  `loadedCount` while the tail streams. */
+  catalog: Pick<Catalog, 'positions' | 'count' | 'loadedCount'>;
   uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
 }
 
