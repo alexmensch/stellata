@@ -11,7 +11,6 @@ import {
   type AdaptationTuning,
   type FrameStatistic,
 } from './scene-adaptation-pure';
-import { exposureCutMoved } from '../../render-gate/render-gate-pure';
 
 export interface ExposureFrameStepDeps {
   readonly hdr: Pick<
@@ -23,11 +22,10 @@ export interface ExposureFrameStepDeps {
   >;
   readonly isChart: () => boolean;
   readonly drawingBufferSizeInto: (out: THREE.Vector2) => void;
-  readonly invalidate: (reason: string) => void;
+  readonly noteExposureCut: (dm: number) => void;
 }
 
 export class ExposureFrameStep {
-  private lastInvalidatedDm = Number.NaN;
   private readonly drawingBufferSize = new THREE.Vector2();
   private readonly record = {
     exposure: 0,
@@ -63,10 +61,7 @@ export class ExposureFrameStep {
     exposure.setAdaptation(appliedDm);
     const parked = adaptation.isMeasurementParked();
     hdr.setStatisticWritesParked(parked);
-    if (exposureCutMoved(appliedDm, this.lastInvalidatedDm)) {
-      this.lastInvalidatedDm = appliedDm;
-      this.deps.invalidate('exposure-cut');
-    }
+    this.deps.noteExposureCut(appliedDm);
     return parked;
   }
 
@@ -86,9 +81,5 @@ export class ExposureFrameStep {
       hdr.emitterUniforms.uExposure.value,
       parked,
     );
-  }
-
-  dispose(): void {
-    this.lastInvalidatedDm = Number.NaN;
   }
 }

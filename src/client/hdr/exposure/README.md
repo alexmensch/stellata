@@ -367,15 +367,13 @@ three calls at three points of `animate()`:
 - `frameExposure()` — above the gate, every tick, for `FrameCtx.exposure`.
 - `measure(nowMs, warpActive)` — after the layer fan-out, before the first
   draw: `SceneAdaptation.measure` → `setAdaptation` → the statistic-write
-  park, plus the `'exposure-cut'` wake (`../../render-gate/README.md`
-  § The decision, in priority order). It returns the park verdict.
+  park, and the applied cut handed to `RenderGate.noteExposureCut`, which
+  owns the wake (`../../render-gate/README.md` § The decision, in priority
+  order). It returns the park verdict.
 - `reduce(parked)` — after the resolve, with **that same verdict**. The
   park is read once for both halves — the statistic writes this frame
   draws and the chain that reduces them — so the frame never pays one
   without the other.
-
-The wake's anchor (the cut at the last wake) NaN-seeds and resets on
-`dispose`, so the first measured cut always wakes.
 
 ### Parking the measurement
 

@@ -23,8 +23,9 @@ src/client/render-gate/
                                pinned vantages. Its own README.
 ```
 
-Every sentinel resets on `dispose()` — the pose snapshot back to NaN, the
-hold count to zero, the `sawUserInput` latch to false. The cadence's own
+Every sentinel resets on `dispose()` — the pose snapshot and the
+exposure-cut anchor back to NaN, the hold count to zero, the
+`sawUserInput` latch to false. The cadence's own
 state resets in `ClockCadence.dispose()` (`cadence/README.md` § The
 controller). A hold released *after* that zeroing floors at 0
 rather than going negative: `Stellata.dispose()` does not close an open
@@ -93,8 +94,9 @@ would silently make the next `hold()` a no-op.
    reduction's readback landing (~4 frames), and the eclipse-dim
    one-pole blend (the only wall-clock animation in a render layer).
    The exposure slew itself does not rely on the tail:
-   `ExposureFrameStep.measure` calls `invalidate()` whenever the applied
-   `dm` moved, so a slew in flight keeps frames coming until it snaps.
+   `ExposureFrameStep.measure` hands every applied `dm` to
+   `noteExposureCut`, which invalidates whenever it moved, so a slew in
+   flight keeps frames coming until it snaps.
 
 **"Moved" is not exact inequality for the cut, and must not become
 one.** Unlike the pose — a CPU value that genuinely stops — the applied

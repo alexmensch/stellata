@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { ExposureFrameStep, type ExposureFrameStepDeps } from './exposure-frame-step';
 import { exposureForMagLimit } from './exposure-epoch';
 import { DEFAULT_ADAPTATION_TUNING, type FrameStatistic } from './scene-adaptation-pure';
-import { CADENCE_JND_MAG } from '../../render-gate/cadence/clock-cadence-pure';
 
 const LIMIT_MAG = 7.8;
 
@@ -36,15 +35,15 @@ function harness(opts: { chart?: boolean; statistic?: THREE.Texture | null; fenc
     getTuning: vi.fn(() => DEFAULT_ADAPTATION_TUNING),
   };
   const exposure = { getLimitMag: () => LIMIT_MAG, setAdaptation: vi.fn() };
-  const invalidate = vi.fn();
+  const noteExposureCut = vi.fn();
   const step = new ExposureFrameStep({
     hdr, exposure, adaptation,
     isChart: () => chart.on,
     drawingBufferSizeInto: (out: THREE.Vector2) => out.set(1920, 1080),
-    invalidate,
+    noteExposureCut,
   } as unknown as ExposureFrameStepDeps);
   return {
-    step, hdr, reduction, adaptation, exposure, invalidate, chart,
+    step, hdr, reduction, adaptation, exposure, noteExposureCut, chart,
     setDm: (v: number) => { dm = v; },
     setParked: (v: boolean) => { parked = v; },
   };
@@ -91,26 +90,13 @@ describe('ExposureFrameStep.measure', () => {
     expect(h.adaptation.measure).toHaveBeenCalledWith(true, 0, false);
   });
 
-  it('wakes the gate on the first cut, then only past a JND from the last wake', () => {
+  it('reports every applied cut to the gate', () => {
     const h = harness();
     h.setDm(-1);
     h.step.measure(0, false);
-    expect(h.invalidate).toHaveBeenCalledTimes(1);
-    expect(h.invalidate).toHaveBeenCalledWith('exposure-cut');
-    h.setDm(-1 - CADENCE_JND_MAG * 0.6);
+    h.setDm(-1.5);
     h.step.measure(16, false);
-    expect(h.invalidate).toHaveBeenCalledTimes(1);
-    h.setDm(-1 - CADENCE_JND_MAG * 1.2);
-    h.step.measure(32, false);
-    expect(h.invalidate).toHaveBeenCalledTimes(2);
-  });
-
-  it('dispose re-seeds the anchor, so the next cut wakes', () => {
-    const h = harness();
-    h.step.measure(0, false);
-    h.step.dispose();
-    h.step.measure(16, false);
-    expect(h.invalidate).toHaveBeenCalledTimes(2);
+    expect(h.noteExposureCut.mock.calls).toEqual([[-1], [-1.5]]);
   });
 });
 

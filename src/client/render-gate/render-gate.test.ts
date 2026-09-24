@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { RenderGate } from './render-gate';
 import { SETTLE_MS } from './render-gate-pure';
+import { CADENCE_JND_MAG } from './cadence/clock-cadence-pure';
 
 function makeEventTargetStub() {
   const handlers = new Map<string, Set<EventListener>>();
@@ -256,6 +257,27 @@ describe('RenderGate wake attribution', () => {
     camera.fov += 1;
     tick(SETTLE_MS);
     expect(gate.debugState.lastDecision?.poseDrift?.slot).toBe('fov');
+  });
+});
+
+describe('RenderGate exposure-cut wake', () => {
+  it('wakes on the first cut, then only past a JND from the last wake', () => {
+    const { gate } = makeGate();
+    gate.noteExposureCut(-1);
+    expect(gate.debugState.lastWake?.reason).toBe('exposure-cut');
+    gate.invalidate('bus:state');
+    gate.noteExposureCut(-1 - CADENCE_JND_MAG * 0.6);
+    expect(gate.debugState.lastWake?.reason).toBe('bus:state');
+    gate.noteExposureCut(-1 - CADENCE_JND_MAG * 1.2);
+    expect(gate.debugState.lastWake?.reason).toBe('exposure-cut');
+  });
+
+  it('dispose re-seeds the anchor, so the next cut wakes', () => {
+    const { gate } = makeGate();
+    gate.noteExposureCut(-1);
+    gate.dispose();
+    gate.noteExposureCut(-1);
+    expect(gate.debugState.lastWake?.reason).toBe('exposure-cut');
   });
 });
 

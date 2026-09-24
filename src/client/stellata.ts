@@ -659,7 +659,7 @@ export class Stellata implements FrameAnchor {
       adaptation: this.adaptation,
       isChart: () => this.filter.chart,
       drawingBufferSizeInto: (out) => this.renderer.getDrawingBufferSize(out),
-      invalidate: (reason) => this.renderGate.invalidate(reason),
+      noteExposureCut: (dm) => this.renderGate.noteExposureCut(dm),
     });
     // Kind-module attach, in roster order. Each returned scene layer
     // registers HERE — before every inline-wired layer — so every
@@ -2812,7 +2812,6 @@ export class Stellata implements FrameAnchor {
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
     this.trackballSettle.dispose();
-    this.exposureFrame.dispose();
     this.cadence.dispose();
     this._realtimeFramesNeeded = false;
     this.frameCtx.frustum.invalidate();
