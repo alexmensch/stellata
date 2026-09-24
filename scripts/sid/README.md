@@ -92,7 +92,7 @@ their artifact `id` slugs; planets, moons, and probes all come from
 `data/sid/sol-objects.tsv`, which is scoped by system membership rather
 than object class — the row's `kind` column carries the class (the
 `sun` row is not a second object: it rides the Sol record, realising
-the [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) same-as edge). Boundary shells come from
+the [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact) same-as edge). Boundary shells come from
 `data/sid/shell-objects.tsv` (same `key\tkind` format, `shell:` ns).
 `gl:` keys have whitespace collapsed
 to `_` (`gl:Gl_804`) to satisfy the [§ 3](/docs/sid.md#3-designation-namespaces) no-whitespace grammar.
