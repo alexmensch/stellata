@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { parseSharePath } from '../src/client/util/url-state/share-path-pure';
 import { decodeBlob } from '../src/client/util/url-state/url-state';
 import { parseHtml } from '../scripts/site/parse-html';
+import { escapeRegExp } from '../scripts/util/escape-regexp';
 import {
   catalogueRecordCount,
   citedReferences,
@@ -49,7 +50,7 @@ describe('the pages ask for their figures rather than quoting them', () => {
     ['reference count', String(citedReferences(ROOT).size)],
   ])('never states the %s as a literal', (_, figure) => {
     const body = textOf(select('body', HOME));
-    expect(body).not.toMatch(new RegExp(`(^|[^\\d,.])${figure.replace(/[.,]/g, '\\$&')}($|[^\\d,])`));
+    expect(body).not.toMatch(new RegExp(`(^|[^\\d,.])${escapeRegExp(figure)}($|[^\\d,])`));
   });
 
   it.each([
