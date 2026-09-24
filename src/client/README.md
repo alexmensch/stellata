@@ -274,8 +274,15 @@ no late slot do not wait either.
 
 Two catalogue-prefix reads also sit in the shell: the constellation figure
 and `aimAtConstellation`'s centroid read figure vertices from
-`localPositions` in wave 1. Records are V-ordered, so every vertex should be
-in chunk 0, but nothing checks it.
+`localPositions` in wave 1. The figure re-reads every frame, so a vertex
+outside the loaded prefix draws at `(0,0,0)` only until its chunk lands;
+the centroid is read once per aim and keeps whatever it got. Both are safe
+while every vertex sits in chunk 0 — measured on today's build (the
+`lines` indices in `public/constellations.json` against
+`recordsInFirstChunk`): 708 distinct vertices, highest record index
+10,288, chunk 0 ending at 10,411, a margin of 124 records that nothing
+checks yet.
+The build-time assert is 32.8's; the read is an instance on cns.16.
 
 ## Event bus on `Stellata`
 
