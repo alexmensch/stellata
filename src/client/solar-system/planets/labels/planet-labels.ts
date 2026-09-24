@@ -79,7 +79,7 @@ export function createPlanetLabels(stellata: Stellata): void {
       return;
     }
     // Detail cycle: planet labels are the 'all' (labels) tier.
-    if (!stellata.detailPermits('planetLabels')) {
+    if (!stellata.declutter.permits('planetLabels')) {
       setGroupVisible(false);
       return;
     }

@@ -545,11 +545,11 @@ export class ChartLabels {
     // Chart-content detail gates (recomputed on chart entry + V). Planet
     // name labels ride the star-name tier; rings + wings share one element.
     // See scene/declutter/README.md § Detail-level declutter cycle.
-    const showStarNames = stellata.detailPermits('chartStarNameLabels');
-    const showBayer = stellata.detailPermits('chartBayerGlyphs');
-    const showConNames = stellata.detailPermits('chartConstellationNames');
-    const showCloudNames = stellata.detailPermits('chartCloudNames');
-    const showVariableRings = stellata.detailPermits('chartVariableRings');
+    const showStarNames = stellata.declutter.permits('chartStarNameLabels');
+    const showBayer = stellata.declutter.permits('chartBayerGlyphs');
+    const showConNames = stellata.declutter.permits('chartConstellationNames');
+    const showCloudNames = stellata.declutter.permits('chartCloudNames');
+    const showVariableRings = stellata.declutter.permits('chartVariableRings');
 
     this.candidateCount = 0;
     const seen = this.seen; // dedupe star idx across name+bayer

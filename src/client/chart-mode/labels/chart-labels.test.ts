@@ -536,7 +536,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
           spectMask: 0xff,
         }),
       },
-      detailPermits: patch.detailPermits ?? (() => true),
+      declutter: { permits: patch.detailPermits ?? (() => true) },
       getCloudCatalog: () => null,
       kinds: { planet: { field: { liveInstanceCount: 0 } } },
       on: (name: string, fn: () => void) => {

@@ -5,7 +5,7 @@ import type { Target, TargetKind } from '../camera/focus/focus-target';
 import { createShellKindModule } from '../fresnel-shell/shell-module';
 import { createLgKindModule } from '../local-group/lg-module';
 import { createCloudKindModule } from '../molecular-clouds/cloud-module';
-import type { SceneElementId } from '../scene/declutter/scene-elements';
+import type { DetailPushes } from '../scene/declutter/scene-declutter';
 import { createPlanetKindModule } from '../solar-system/planets/planet-module';
 import {
   createProbeKindModule,
@@ -99,22 +99,8 @@ export function collectKindPicks(modules: KindModules): Partial<Record<TargetKin
   return picks;
 }
 
-export type KindDetailBinds = Partial<Record<SceneElementId, (on: boolean) => void>>;
-
-/** Flatten every module's declutter pushes into one element-keyed
- *  record for the shell's exhaustive bind builder. Two kinds claiming
- *  the same element throws rather than silently clobbering — the
- *  merged record is keyless about which module wrote a row. */
-export function mergeKindDetailBinds(modules: KindModules): KindDetailBinds {
-  const merged: KindDetailBinds = {};
-  for (const kind of KIND_ROSTER) {
-    const binds = modules[kind]?.detailBinds?.();
-    if (!binds) continue;
-    for (const [id, push] of Object.entries(binds) as [SceneElementId, ((on: boolean) => void) | undefined][]) {
-      if (!push) continue;
-      if (merged[id]) throw new Error(`scene element '${id}' claimed by two kind modules`);
-      merged[id] = push;
-    }
-  }
-  return merged;
+/** Every module's declutter pushes, in roster order, for `SceneDeclutter`
+ *  to merge. */
+export function collectKindDetailBinds(modules: KindModules): DetailPushes[] {
+  return KIND_ROSTER.flatMap((kind) => modules[kind]?.detailBinds?.() ?? []);
 }

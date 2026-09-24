@@ -1278,11 +1278,11 @@ export function applyDecodedView(
 ): Promise<void> | null {
   if (view.unit) setUnit(view.unit);
 
-  // Declutter level — applied before the filter patch below; drives the
-  // scene-element binds (default 'all' omitted, so this only fires for a
-  // decluttered share). Runs after layers are constructed (applyFromUrl
+  // Declutter level — applied before the filter patch below; drives
+  // SceneDeclutter's pushes (default 'all' omitted, so this only fires for
+  // a decluttered share). Runs after layers are constructed (applyFromUrl
   // runs post-construction), so lazily-attached layers pick up the
-  // permitted set via their per-frame detailPermits() read.
+  // permitted set via their per-frame permit read.
   if (view.detailLevel) stellata.filters.applyDetailPreset(view.detailLevel);
 
   const patch: Partial<FilterState> = {};

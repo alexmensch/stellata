@@ -17,15 +17,8 @@ import {
   getStarKMultiplier as readStarKMultiplier,
   setStarKMultiplier as patchStarKMultiplier,
 } from './filter-state';
-import {
-  type DetailLevel,
-  type RenderStyle,
-  type SceneElementBinds,
-  type SceneElementId,
-  SCENE_ELEMENT_FLOORS,
-  SCENE_ELEMENT_IDS,
-  floorPermits,
-} from '../scene/declutter/scene-elements';
+import type { DetailLevel, RenderStyle } from '../scene/declutter/scene-elements';
+import type { SceneDeclutter } from '../scene/declutter/scene-declutter';
 
 /** The star-pipeline sharedUniforms subset this controller writes. All
  *  three star passes share the value objects, so a single write here
@@ -62,10 +55,7 @@ export interface FilterControllerDeps {
    *  kind — re-solve when the FOV changes. Wired to
    *  FocusController.refreshOrbitFloor. */
   refreshOrbitFloor: () => void;
-  /** Per-element visibility adapters, exhaustive over SceneElementId.
-   *  applyDetailPreset / setSceneElementVisible drive these; each folds
-   *  one scene layer's visibility idiom into a single call site. */
-  sceneElementBinds: SceneElementBinds;
+  declutter: Pick<SceneDeclutter, 'applyFloors'>;
 }
 
 export class FilterController {
@@ -81,33 +71,22 @@ export class FilterController {
 
   getDetailLevel(): DetailLevel { return this.filter.detailLevel; }
 
-  // Re-derive every element's permission from the preset floors within the
-  // current render style. Overwriting the whole set clears any per-element
-  // override a prior setSceneElementVisible left in the cache.
-  //
-  // The preset is authoritative, so it also clears the one per-element user
-  // toggle left that ANDs with the floors (lg emission) — a within-scene
-  // hide must not outlive the mode change. An element below its floor stays
-  // hidden regardless. `resetOverrides:false` is the render-style recompute
-  // (chart↔realistic) preserving that toggle across the style flip and
-  // through URL restore.
-  applyDetailPreset(level: DetailLevel, resetOverrides = true): void {
-    this.filter.detailLevel = level;
-    if (resetOverrides) {
-      this.filter.showLgEmission = true;
-    }
-    const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
-    for (const id of SCENE_ELEMENT_IDS) {
-      this.deps.sceneElementBinds[id](floorPermits(SCENE_ELEMENT_FLOORS[id][style], level));
-    }
-    this.deps.bus.emit('filter', this.filter);
-    this.deps.bus.emit('state');
+  // A new level is authoritative: it also clears the one per-element user
+  // toggle that ANDs with the floors (lg emission), so a within-scene hide
+  // does not outlive the mode change.
+  applyDetailPreset(level: DetailLevel): void {
+    this.filter.showLgEmission = true;
+    this.applyFloorsAt(level);
   }
 
-  // Override one element's permission directly; superseded by the next
-  // applyDetailPreset, which re-derives the whole set.
-  setSceneElementVisible(id: SceneElementId, on: boolean): void {
-    this.deps.sceneElementBinds[id](on);
+  reapplyDetailFloors(): void {
+    this.applyFloorsAt(this.filter.detailLevel);
+  }
+
+  private applyFloorsAt(level: DetailLevel): void {
+    this.filter.detailLevel = level;
+    const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
+    this.deps.declutter.applyFloors(level, style);
     this.deps.bus.emit('filter', this.filter);
     this.deps.bus.emit('state');
   }

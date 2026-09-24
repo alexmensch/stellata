@@ -80,9 +80,9 @@ import {
 import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
 import {
+  collectKindDetailBinds,
   collectKindPicks,
   KIND_ROSTER,
-  mergeKindDetailBinds,
   type BuiltKindModules,
 } from './kinds/kind-modules';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
@@ -143,11 +143,7 @@ import {
 } from './scene/scene-layer';
 import { FrameFrustum } from './scene/contribution/frame-frustum';
 import { findGlslResidents } from './scene/glsl-residents-pure';
-import {
-  type SceneElementBinds,
-  type SceneElementId,
-  SCENE_ELEMENT_IDS,
-} from './scene/declutter/scene-elements';
+import { SceneDeclutter } from './scene/declutter/scene-declutter';
 import {
   buildStarSourceAttributes, type StarSourceAttributes,
 } from './star-pipeline/star-source-attributes';
@@ -334,11 +330,7 @@ export class Stellata implements FrameAnchor {
   get reduction(): ReductionSeam { return this.hdr.reduction; }
   private readonly exposureFrame!: ExposureFrameStep;
 
-  // Declutter cycle (scene/declutter/README.md § Detail-level declutter cycle).
-  // Init all-true so the default detailLevel='all' is behaviour-neutral —
-  // the seam changes nothing until V is pressed.
-  private readonly detailPermitted: Record<SceneElementId, boolean> =
-    Object.fromEntries(SCENE_ELEMENT_IDS.map((id) => [id, true])) as Record<SceneElementId, boolean>;
+  readonly declutter: SceneDeclutter;
 
   private disposed = false;
   private bus = new EventBus<StellataEventMap>();
@@ -460,6 +452,20 @@ export class Stellata implements FrameAnchor {
   constructor({ canvas, catalog, kinds, webgpu }: StellataOptions) {
     this.catalog = catalog;
     this.kinds = kinds;
+    this.declutter = new SceneDeclutter({
+      pushes: [
+        {
+          milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
+          orbitRings: (on) => this.orbitRingsLayer.setPermitted(on),
+          binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
+          constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
+        },
+        ...collectKindDetailBinds(this.kinds),
+      ],
+      setMilkyWayEnabled: (on) => this.milkyway.setEnabled(on),
+      setLgEmissionEnabled: (on) => this.kinds.lg.setEmissionEnabled(on),
+      showLgEmission: () => this.filter.showLgEmission,
+    });
 
     this.webgpu = webgpu;
     this.renderer = this.webgpu.renderer;
@@ -689,7 +695,7 @@ export class Stellata implements FrameAnchor {
       getWorldOffset: () => this.worldOffset,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getMonochrome: () => this.monochrome,
-      detailPermits: (id) => this.detailPermits(id),
+      detailPermits: (id) => this.declutter.permits(id),
       constellationOf: (kind, idx) => this.constellationOf(kind, idx),
       onFrame: (handler) => this.bus.on('frame', handler),
       occluders: this.occluders,
@@ -901,12 +907,10 @@ export class Stellata implements FrameAnchor {
         // in the population bound — refresh the cached cullDistancePc
         // whenever the instrument moves it.
         this.planetBodyField.setCullMag(sharedUniforms.uCullMag.value);
-        // Effective = detail permission AND the user's own toggle.
-        this.applyMilkywayEnabled();
-        this.applyLgEmissionEnabled();
+        this.declutter.refreshLgEmission();
       },
       refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
-      sceneElementBinds: this.buildSceneElementBinds(),
+      declutter: this.declutter,
     });
 
     // Engage focus on Sol if it exists so measurement and per-star zoom
@@ -965,15 +969,10 @@ export class Stellata implements FrameAnchor {
       exposure: null,
     };
     this.registerSceneLayers();
-    // Seed the declutter cycle so the imperative-push layers receive their
-    // initial permission. `detailPermitted` starts all-true for the
-    // per-frame readers, but a layer that only learns its permission from
-    // a bind (both boundary shells, the orbit/probe overlays) would sit at
-    // whatever its constructor guessed until the user cycled the level —
-    // which is how the heliopause shell rendered nothing on a fresh load
-    // while its label, a per-frame reader, showed. `resetOverrides: false`
-    // so a later `?v=` restore still owns the within-scene toggles.
-    this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
+    // Seed the declutter cycle: a layer that only learns its permission from
+    // a push (both boundary shells, the orbit/probe overlays) otherwise sits
+    // at whatever its constructor guessed until the level is cycled.
+    this.filters.reapplyDetailFloors();
     window.addEventListener('resize', this.onResize);
     this.renderGate.attachDom(canvas);
     this.trackballSettle.attachDom(canvas);
@@ -1172,7 +1171,7 @@ export class Stellata implements FrameAnchor {
       // Chart-only — floor 'never' in the realistic column.
       update: (ctx) => updateWarpGatedRefLayer(
         this.constellationBoundaryLayer, ctx,
-        this.detailPermits('constellationBoundaries')),
+        this.declutter.permits('constellationBoundaries')),
       setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
@@ -1195,7 +1194,7 @@ export class Stellata implements FrameAnchor {
         setContributing: (on) => { this.galacticDisc.group.visible = on; },
       },
       update: (ctx) => updateWarpGatedRefLayer(
-        this.galacticDisc, ctx, this.detailPermits('galacticDiscWireframe')),
+        this.galacticDisc, ctx, this.declutter.permits('galacticDiscWireframe')),
       setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
       dispose: () => this.galacticDisc.dispose(),
     });
@@ -2154,75 +2153,6 @@ export class Stellata implements FrameAnchor {
    *  this, so none of them can select a frame the others would reject. */
   coordSphereAvailable(frame: DrawnCoordSphereFrame): boolean {
     return frameAvailableFor(frame, focusFrameInputs(this, this.focus.getFocusedTarget()));
-  }
-
-  // Declutter cycle. detailPermits is the per-frame read path layers gate
-  // on (effective = permitted AND the layer's instance gates).
-  detailPermits(id: SceneElementId): boolean { return this.detailPermitted[id]; }
-
-  // Per-element bind adapters (exhaustive over SceneElementId — a new
-  // renderable that isn't wired fails tsc). Each writes the permitted
-  // cache; the imperative layers (Milky Way / LG-emission enable, orbit
-  // rings) pass an `extra` push because they have no per-frame gate that
-  // would pick the cache change up on its own — the shells take theirs
-  // from the shell module's `detailBinds` instead.
-  // Kind-module pushes route by element id, so migrating a kind needs no
-  // edit here.
-  private buildSceneElementBinds(): SceneElementBinds {
-    const kindPush = mergeKindDetailBinds(this.kinds);
-    const set = (id: SceneElementId, extra?: (on: boolean) => void) =>
-      (on: boolean) => {
-        this.detailPermitted[id] = on;
-        extra?.(on);
-        kindPush[id]?.(on);
-      };
-    return {
-      stars: set('stars'),
-      planetBodies: set('planetBodies'),
-      probeMarkers: set('probeMarkers'),
-      milkyWayBand: set('milkyWayBand', () => this.applyMilkywayEnabled()),
-      milkyWayIsobar: set('milkyWayIsobar', (on) => {
-        this.milkyway.setIsobar(on);
-        this.applyMilkywayEnabled();
-      }),
-      lgEmissionGlow: set('lgEmissionGlow', () => this.applyLgEmissionEnabled()),
-      galacticDiscWireframe: set('galacticDiscWireframe'),
-      lgWireframes: set('lgWireframes'),
-      orbitRings: set('orbitRings', (on) => this.orbitRingsLayer.setPermitted(on)),
-      binaryOrbitRings: set('binaryOrbitRings', (on) => this.binaryOrbitPathLayer.setPermitted(on)),
-      probeTrails: set('probeTrails'),
-      heliopauseShell: set('heliopauseShell'),
-      localBubbleShell: set('localBubbleShell'),
-      constellationFigures: set('constellationFigures', (on) => this.constellationFigureLayer.setPermitted(on)),
-      molecularCloudEllipsoids: set('molecularCloudEllipsoids'),
-      dustParticles: set('dustParticles'),
-      planetLabels: set('planetLabels'),
-      probeLabels: set('probeLabels'),
-      heliopauseLabel: set('heliopauseLabel'),
-      localBubbleLabel: set('localBubbleLabel'),
-      molecularCloudLabels: set('molecularCloudLabels'),
-      mwLabel: set('mwLabel'),
-      lgObjectLabels: set('lgObjectLabels'),
-      chartStarNameLabels: set('chartStarNameLabels'),
-      chartBayerGlyphs: set('chartBayerGlyphs'),
-      chartVariableRings: set('chartVariableRings'),
-      chartConstellationNames: set('chartConstellationNames'),
-      chartCloudNames: set('chartCloudNames'),
-      constellationBoundaries: set('constellationBoundaries'),
-    };
-  }
-
-  private applyMilkywayEnabled(): void {
-    // The layer group carries both realistic treatments: the volumetric
-    // band (realistic floor) and the chart isobar (chart floor). Exactly
-    // one is permitted per render style, and the floor is the only gate —
-    // the band is physical light, not a user-toggleable overlay.
-    this.milkyway.setEnabled(
-      this.detailPermitted.milkyWayBand || this.detailPermitted.milkyWayIsobar);
-  }
-  private applyLgEmissionEnabled(): void {
-    this.kinds.lg.setEmissionEnabled(
-      this.detailPermitted.lgEmissionGlow && this.filter.showLgEmission);
   }
 
   setMonochrome(on: boolean) {

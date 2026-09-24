@@ -19,27 +19,35 @@ layer never evaluates its permit.
   derivation (`floorPermits`, `elementPermitted`, `visibleSet`),
   `DETAIL_LEVELS` / `DETAIL_RANK`, and `USER_OWNED_IDS`.
 - `scene-elements.test.ts` — exhaustiveness + cumulative-set pinning.
+- `scene-declutter.ts` — `SceneDeclutter`, the live permission cache
+  (`stellata.declutter`) and every write into it.
+- `scene-declutter.test.ts` — floor application, the one-push-per-element
+  merge, and the two coupled enables.
 
 ## The contract
 
 **Exhaustiveness is the load-bearing contract** (same shape as
 `FocusableProviders`): `SCENE_ELEMENT_FLOORS` is a mapped type over the
 closed `SceneElementId` union — a new renderable that skips a floor row
-fails `tsc`, pinned by `scene-elements.test.ts`. The runtime binds in
-`stellata.ts` (`buildSceneElementBinds`) are a second exhaustive `Record`,
-so an unwired element also fails `tsc`.
+fails `tsc`, pinned by `scene-elements.test.ts`. That table is the one
+place an element is classified; whether it is pulled or pushed is decided
+by its layer, not by a second list.
 
-**Push meets pull at `Stellata.detailPermitted`.** `FilterController.
-applyDetailPreset(level)` computes each element's floor permission and
-calls its bind, which writes the `detailPermitted` cache. Per-frame
-layers *pull* — their update / label predicate reads
-`stellata.detailPermits(id)`. The few event-driven layers (Milky Way /
-LG-emission `setEnabled`, orbit rings, binary orbit rings, heliopause
-shell, Local Bubble shell) have no per-frame gate, so their bind *pushes*
-the change imperatively. A per-element
-override (`setSceneElementVisible`) writes one cache slot directly and
-supersedes its floor until the next `applyDetailPreset` overwrites the
-whole set.
+**Push meets pull at `SceneDeclutter`.** `FilterController.
+applyDetailPreset(level)` owns the level and the style and hands both to
+`applyFloors`, which writes each element's floor permission through
+`setPermitted`. Per-frame layers *pull* — their update / label predicate
+reads `stellata.declutter.permits(id)` (a kind module reads it through
+`KindContext.detailPermits`). The event-driven layers have no per-frame
+gate, so `setPermitted` *pushes* the change. The constructor merges every
+push source into one element-keyed record — the shell's (orbit rings,
+binary orbit rings, constellation figure, the Milky Way isobar) and the
+kind modules' `detailBinds()` (probe markers and trails, both boundary
+shells) — and throws if two sources claim one element. Two enables combine a permission with another
+input and are derived here, not pushed: the Milky Way group is enabled
+while `milkyWayBand || milkyWayIsobar`, LG emission while
+`lgEmissionGlow && showLgEmission`. Only the second reads filter state, so
+`refreshLgEmission` re-derives it alone after a filter patch.
 
 **The preset is authoritative — overrides are within-scene only.** Exactly
 one element still carries a legacy user toggle that ANDs with the floor:
@@ -47,8 +55,9 @@ one element still carries a legacy user toggle that ANDs with the floor:
 a per-element hide does **not** outlive a detail-level change — pick a new
 mode and the scene's floors alone decide. A toggle can only *hide* a
 permitted element, never force one below its floor. The chart↔realistic
-recompute passes `resetOverrides:false`, so a style flip (and URL restore,
-which re-applies the shared toggle state afterward) preserves it.
+recompute is `reapplyDetailFloors()` — the current level, the new style's
+floors, the toggle kept — so a style flip (and URL restore, which
+re-applies the shared toggle state afterward) preserves it.
 
 The floors are the *only* gate on every other element, including
 `constellationFigures` / `constellationBoundaries` and `milkyWayBand` /
@@ -57,9 +66,10 @@ question the declutter cycle already answers.
 
 Default `detailLevel = 'all'` (fully cluttered) → the seam is
 behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
-control / a decluttered `?v=` restore, **and on every chart↔realistic
-flip** (`chart-mode.ts`) so the permitted set tracks the active style's
-floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
+control / a decluttered `?v=` restore; `reapplyDetailFloors` runs at the
+end of construction (the seed push-only layers need) **and on every
+chart↔realistic flip** (`chart-mode.ts`), so the permitted set tracks the
+active style's floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
 writes (HUD, all three coordinate spheres, cards, feedback) — toggled by
 their own affordances (`H` / `S` / `U` / `T`).
 
@@ -67,13 +77,14 @@ their own affordances (`H` / `S` / `U` / `T`).
 
 The chart-only elements are read per-frame by
 `chart-labels.ts`, which gates each label/glyph tier on
-`detailPermits(id)`. Two couplings aren't one-to-one: planet name labels
+`declutter.permits(id)`. Two couplings aren't one-to-one: planet name labels
 ride `chartStarNameLabels` (no separate planet-label element — uadc.3
 gave planets star-style labels), and `chartVariableRings` gates **both**
 the variable rings and the binary wings (one row for the paired glyphs).
-`milkyWayIsobar` has no per-frame reader — it *pushes* through its bind
-(`MilkyWay.setIsobar` + `applyMilkywayEnabled`); the MW group is enabled
-when either the band (realistic) or the isobar (chart) is permitted.
+`milkyWayIsobar` has no per-frame reader — it *pushes* through the shell's
+`MilkyWay.setIsobar` push, and `SceneDeclutter` re-derives the MW group's
+enable, which holds while either the band (realistic) or the isobar
+(chart) is permitted.
 
 ## What each tier means
 

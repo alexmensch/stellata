@@ -18,13 +18,13 @@ import { applyTheme } from '../ui/theme-toggle';
 //   - Paper-aesthetic palette via the existing setMonochrome plumbing
 //     (stars, clouds, hud, galactic disc/grid, blend modes, clear color).
 //   - Cloud stippled-outline pass (via setMonochrome); the milky-way
-//     band↔isobar swap rides applyDetailPreset via the milkyWayIsobar
-//     detail bind.
+//     band↔isobar swap rides reapplyDetailFloors via the milkyWayIsobar
+//     layer push.
 //   - Constellation figure switches to all-88 mode — the WebGL
 //     constellation-figure/ layer, rebuilt by the shell on the same
 //     chart-and-observe predicate.
 //   - Label engine spins up; which label tiers render is gated by the
-//     detail cycle (chart-labels.ts reads detailPermits per tier).
+//     detail cycle (chart-labels.ts reads declutter.permits per tier).
 
 export interface ChartModeContext {
   bayerMap: Map<number, BayerInfo>;
@@ -46,19 +46,19 @@ export function bindChartMode(stellata: Stellata, ctx: ChartModeContext): void {
     active = next;
     // The render style flipped, so re-derive the detail-permitted set from
     // the new style's floors: this drives the milky-way band↔isobar swap
-    // (via the milkyWayIsobar bind), hides the realistic-only structure
-    // layers, and gates the chart-labels tiers below. `false` preserves the
-    // user's per-element toggles across the style flip — only a detail-level
-    // change (V / the control) clears them.
+    // (via the milkyWayIsobar push), hides the realistic-only structure
+    // layers, and gates the chart-labels tiers below. The user's per-element
+    // toggles survive the style flip — only a detail-level change (V / the
+    // control) clears them.
     if (active) {
       document.body.classList.add('chart');
       applyTheme('mono');
-      stellata.filters.applyDetailPreset(stellata.filters.getDetailLevel(), false);
+      stellata.filters.reapplyDetailFloors();
       stellata.chartLabels.start(ctx);
     } else {
       document.body.classList.remove('chart');
       applyTheme('dark');
-      stellata.filters.applyDetailPreset(stellata.filters.getDetailLevel(), false);
+      stellata.filters.reapplyDetailFloors();
       stellata.chartLabels.stop();
     }
   };

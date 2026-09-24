@@ -8,6 +8,7 @@ import type { ConstellationOfKind } from '../focus-card/constellation-row';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import type { HoverProvider } from '../hover/hover-types';
 import type { OccluderQuery } from '../occlusion/occluder-set';
+import type { DetailPushes } from '../scene/declutter/scene-declutter';
 import type { SceneElementId } from '../scene/declutter/scene-elements';
 import type { SceneLayer } from '../scene/scene-layer';
 import type { SharedUniforms } from '../frame/shared-uniforms';
@@ -130,7 +131,7 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   labels?(): void;
   /** Imperative declutter pushes for the kind's scene elements, keyed by
    *  element id; the shell's exhaustive bind record calls them. */
-  detailBinds?(): Partial<Record<SceneElementId, (on: boolean) => void>>;
+  detailBinds?(): DetailPushes;
   /** The model clock jumped discontinuously (URL restore) — reseed any
    *  t-sampled state before the next frame reads it. */
   clockJumped?(t: number): void;

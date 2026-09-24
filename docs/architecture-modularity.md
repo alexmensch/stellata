@@ -34,7 +34,7 @@ this is the foundation the epic builds on, not a thing to re-litigate:
   (`src/client/camera/focus/README.md` § FocusableProviders).
 - Exhaustive mapped types that fail `tsc` when a kind is missing:
   `FocusableProviders`, `FocusCardProviders`, `PoiStore.pinnable`,
-  `SCENE_ELEMENT_FLOORS` + `SceneElementBinds`.
+  `SCENE_ELEMENT_FLOORS`.
 - Runtime registries: `SceneLayerRegistry`, the hover-provider list,
   `ShellRegistry`, `SystemMembershipRegistry`, SID resolver domains.
 - The URL wire is fully kind-agnostic (SIDs; `docs/sid.md` § 10).

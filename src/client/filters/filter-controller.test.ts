@@ -16,27 +16,20 @@ import {
   starPxSizes,
   TARGET_PX,
 } from './filter-state';
-import {
-  type SceneElementBinds,
-  type SceneElementId,
-  SCENE_ELEMENT_IDS,
-  visibleSet,
-} from '../scene/declutter/scene-elements';
+import { SCENE_ELEMENT_IDS, visibleSet } from '../scene/declutter/scene-elements';
+import { SceneDeclutter } from '../scene/declutter/scene-declutter';
 
-function makeSceneBinds(): { binds: SceneElementBinds; permitted: Record<SceneElementId, boolean> } {
-  const permitted = Object.fromEntries(
-    SCENE_ELEMENT_IDS.map((id) => [id, true]),
-  ) as Record<SceneElementId, boolean>;
-  const binds = Object.fromEntries(
-    SCENE_ELEMENT_IDS.map((id) => [id, (on: boolean) => { permitted[id] = on; }]),
-  ) as SceneElementBinds;
-  return { binds, permitted };
+function makeDeclutter(): SceneDeclutter {
+  return new SceneDeclutter({
+    pushes: [],
+    setMilkyWayEnabled: () => {},
+    setLgEmissionEnabled: () => {},
+    showLgEmission: () => true,
+  });
 }
 
-/** The set of ids currently permitted (bound to true) — for comparison
- *  against visibleSet(). */
-function permittedSet(permitted: Record<SceneElementId, boolean>): Set<SceneElementId> {
-  return new Set(SCENE_ELEMENT_IDS.filter((id) => permitted[id]));
+function permittedSet(declutter: SceneDeclutter) {
+  return new Set(SCENE_ELEMENT_IDS.filter((id) => declutter.permits(id)));
 }
 
 function makeUniforms(): FilterUniforms {
@@ -72,16 +65,16 @@ function makeHarness() {
   } as never;
   const onFilterApplied = vi.fn();
   const refreshOrbitFloor = vi.fn();
-  const { binds, permitted } = makeSceneBinds();
+  const declutter = makeDeclutter();
   const ctrl = new FilterController({
     camera,
     uniforms,
     bus,
     onFilterApplied,
     refreshOrbitFloor,
-    sceneElementBinds: binds,
+    declutter,
   });
-  return { ctrl, uniforms, camera, emitted, onFilterApplied, refreshOrbitFloor, permitted };
+  return { ctrl, uniforms, camera, emitted, onFilterApplied, refreshOrbitFloor, declutter };
 }
 
 beforeEach(() => {
@@ -211,37 +204,24 @@ describe('FilterController', () => {
   });
 
   it('applyDetailPreset drives the cumulative floor set for the realistic style', () => {
-    const { ctrl, permitted, emitted } = makeHarness();
+    const { ctrl, declutter, emitted } = makeHarness();
     ctrl.applyDetailPreset('physical');
-    expect(permittedSet(permitted)).toEqual(visibleSet('physical', 'realistic'));
+    expect(permittedSet(declutter)).toEqual(visibleSet('physical', 'realistic'));
     expect(ctrl.getDetailLevel()).toBe('physical');
     expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
 
     ctrl.applyDetailPreset('representational');
-    expect(permittedSet(permitted)).toEqual(visibleSet('representational', 'realistic'));
+    expect(permittedSet(declutter)).toEqual(visibleSet('representational', 'realistic'));
 
     ctrl.applyDetailPreset('all');
-    expect(permittedSet(permitted)).toEqual(visibleSet('all', 'realistic'));
+    expect(permittedSet(declutter)).toEqual(visibleSet('all', 'realistic'));
   });
 
   it('applyDetailPreset uses the chart floors while chart is active', () => {
-    const { ctrl, permitted } = makeHarness();
+    const { ctrl, declutter } = makeHarness();
     ctrl.setFilter({ chart: true });
     ctrl.applyDetailPreset('physical');
-    expect(permittedSet(permitted)).toEqual(visibleSet('physical', 'chart'));
-  });
-
-  it('a per-element override supersedes its floor until the next applyDetailPreset', () => {
-    const { ctrl, permitted } = makeHarness();
-    ctrl.applyDetailPreset('all');
-    expect(permitted.constellationFigures).toBe(true);
-    // Override one element off — others stay put.
-    ctrl.setSceneElementVisible('constellationFigures', false);
-    expect(permitted.constellationFigures).toBe(false);
-    expect(permitted.planetLabels).toBe(true);
-    // Re-applying the preset recomputes from floors, clearing the override.
-    ctrl.applyDetailPreset('all');
-    expect(permitted.constellationFigures).toBe(true);
+    expect(permittedSet(declutter)).toEqual(visibleSet('physical', 'chart'));
   });
 
   it('applyDetailPreset clears the per-element user toggle (lg)', () => {
@@ -251,11 +231,16 @@ describe('FilterController', () => {
     expect(ctrl.getFilter().showLgEmission).toBe(true);
   });
 
-  it('applyDetailPreset(level, false) preserves the toggle for a style recompute', () => {
-    const { ctrl } = makeHarness();
-    ctrl.setFilter({ showLgEmission: false });
-    ctrl.applyDetailPreset('representational', false);
+  it('reapplyDetailFloors re-derives the current level for the new style, keeping the toggle', () => {
+    const { ctrl, declutter, emitted } = makeHarness();
+    ctrl.applyDetailPreset('physical');
+    ctrl.setFilter({ showLgEmission: false, chart: true });
+    emitted.length = 0;
+    ctrl.reapplyDetailFloors();
+    expect(ctrl.getDetailLevel()).toBe('physical');
+    expect(permittedSet(declutter)).toEqual(visibleSet('physical', 'chart'));
     expect(ctrl.getFilter().showLgEmission).toBe(false);
+    expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
   });
 });
 

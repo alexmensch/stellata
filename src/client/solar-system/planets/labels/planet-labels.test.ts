@@ -84,7 +84,7 @@ describe('createPlanetLabels — the OBSERVE anchor body', () => {
           },
         },
         getMonochrome: () => false,
-        detailPermits: () => true,
+        declutter: { permits: () => true },
         getFocusedPlanetLocalPositions: () => new Float32Array([0, 0, 0, 0.1, 0, 0]),
         isOrbitRingResolvable: () => true,
         camera,

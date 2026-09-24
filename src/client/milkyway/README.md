@@ -417,10 +417,10 @@ extended-source threshold `stellataExtendedThresholdSb` recovers from
 `uOmegaSummationArcsec2` (22.0 mag/arcsec² at the shipped instrument).
 The chart-mode treatment and un-hiding the meshes are still open work.
 
-The band↔isobar swap is driven by the `milkyWayIsobar` detail bind (chart
-floor), not chart-mode.ts directly — the group stays enabled in chart
-because `applyMilkywayEnabled` permits either the band or the isobar
-(`../scene/declutter/README.md` § Chart-content wiring).
+The band↔isobar swap is driven by the `milkyWayIsobar` declutter push
+(chart floor), not chart-mode.ts directly — the group stays enabled in
+chart because `SceneDeclutter` enables it while either the band or the
+isobar is permitted (`../scene/declutter/README.md` § Chart-content wiring).
 
 Warp keeps the layer visible in dark mode — the band reorienting as the
 camera flies past the GC is the realism payoff.

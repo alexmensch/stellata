@@ -158,7 +158,7 @@ Four things follow, and each has cost a defect:
 
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
-`exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, plus the
+`exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -229,7 +229,6 @@ an empty awaiting list.
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Solar-system wiring | `solar-system/` | `hhaw.32.9` |
 | Galactic + HUD | `galactic/`, `overlays/` | `hhaw.32.10` |
-| Declutter | `scene/declutter/` | `hhaw.32.11` |
 | Star render machinery | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 
