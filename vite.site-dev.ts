@@ -56,7 +56,7 @@ interface Document {
 const SIBLING_OF_ROOT = /(src|href)="\.\.\//g;
 const SIBLING_OF_PAGE = /(src|href)="\.\//g;
 
-/** Requires `appType: 'custom'`. `src/site/README.md` § Reading it in dev. */
+/** Requires `appType: 'custom'`. src/site/README.md#reading-it-in-dev. */
 export function documentRoutingInDev(repoRoot: string): Plugin {
   const siteDir = resolve(repoRoot, 'src/site');
   const appDocument: Document = {
@@ -87,7 +87,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
     name: 'stellata:document-routing-in-dev',
     apply: 'serve',
     configureServer(server) {
-      // Not Vite's own html reload: src/site/README.md § Reading it in dev.
+      // Not Vite's own html reload: src/site/README.md#reading-it-in-dev.
       server.watcher.add(siteDir);
       server.watcher.on('change', (file) => {
         if (file.startsWith(siteDir + sep) && file.endsWith('.html')) {

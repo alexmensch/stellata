@@ -25,7 +25,7 @@ themselves.
   render, and whose rejection the surrounding catch turns into the error
   screen. Every other loader that rejects blanks the whole app, so an
   optional artifact must resolve null instead — on a 404, which absence
-  now really is (`../README.md` § Request routing), and on a parse error,
+  now really is ([Request routing](../README.md#request-routing)), and on a parse error,
   which still catches a present-but-truncated one.
   `solar-system/probes/probe-loader.ts` is the pattern to copy;
   warn-then-null on a present-but-invalid artifact

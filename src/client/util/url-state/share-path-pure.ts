@@ -2,7 +2,7 @@
 // blob source from a loaded URL, and map both legacy transports onto the
 // canonical one. Pure helpers — see README.md#transport--canonical-path-vs-legacy-query.
 
-/** The application document's own path — README § Transport. */
+/** The application document's own path — README.md#transport--canonical-path-vs-legacy-query. */
 export const APP_PATH = '/app';
 
 /** Legacy query param `?v=<blob>`, decoded forever (README.md#transport--canonical-path-vs-legacy-query). */

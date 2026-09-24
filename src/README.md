@@ -5,7 +5,7 @@ Cloudflare Worker entry, browser client, and the public content site.
 - `worker.ts` — the Worker entry, and the request router. It exists so
   per-request analytics, observability logs, and tail are available —
   pure assets-only deploys lose those features — and it owns the two
-  routing rules the built tree cannot express (§ Request routing).
+  routing rules the built tree cannot express ([Request routing](#request-routing)).
   `wrangler.toml` (repo root) drives the deploy; CI workflow lives in
   `.github/workflows/` (see its README).
 - `worker.test.ts` — the routing table against a stubbed assets binding,
@@ -53,8 +53,7 @@ does:
 - **A client that names `text/markdown` gets the page's markdown
   rendition.** `/` answers with `dist/index.md` — cheaper to read, and
   read verbatim where an HTML fetch is re-summarised by whatever converted
-  it. `negotiation-pure.ts` owns the rule and `site/README.md` § The
-  markdown rendition owns the why. Three consequences worth knowing:
+  it. `negotiation-pure.ts` owns the rule and [The markdown rendition](site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages) owns the why. Three consequences worth knowing:
   a wildcard `Accept` still gets HTML, so no browser or existing crawler
   changes behaviour; both renditions carry `Vary: Accept`, without which a
   cache would serve one to the other; and a rendition that is somehow

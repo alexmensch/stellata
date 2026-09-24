@@ -33,7 +33,7 @@ either as `legacyTransport`, and on load `applyFromUrl` rewrites both —
 and a superseded schema version — to the canonical path, address-bar only,
 via the same post-apply debounce as routine writes. In production they
 rarely reach the client at all: the Worker 301s each onto the canonical
-form first (`src/README.md` § Request routing).
+form first ([Request routing](/src/README.md#request-routing)).
 
 Production serves `/app/v/<blob>/` through the Worker, which falls back to
 the application document for any unmatched path under `/app`. So a path

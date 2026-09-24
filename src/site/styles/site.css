@@ -1,12 +1,12 @@
 /* Every page of the public content site. The app's chrome is the reference;
    this scales it up to reading sizes and adds nothing it does not have.
-   Organised CUBE-style — see src/site/styles/README.md § House style. */
+   Organised CUBE-style — see /src/site/styles/README.md#house-style. */
 
 @import '../../design-tokens.css';
 
 /* ── Tokens ─────────────────────────────────────────────────────────── */
 /* Fluid Utopia scales, 320px → 1440px. Generated, not tuned by hand:
-   README § The scales carries the parameters and how to regenerate. */
+   README.md#the-scales carries the parameters and how to regenerate. */
 
 :root {
   --step--2: clamp(0.6944rem, 0.6643rem + 0.1508vw, 0.8rem);
@@ -249,7 +249,7 @@ video {
   gap: var(--cluster-space-tight);
 }
 
-/* --switcher-flip is not a number to tidy — README.md § Responsiveness. */
+/* --switcher-flip is not a number to tidy — README.md#responsiveness-has-no-breakpoints. */
 .switcher {
   --switcher-items: 2;
   --switcher-threshold: calc(
@@ -320,7 +320,7 @@ video {
   overflow: hidden;
   background: var(--hero-wash), var(--bg);
 }
-/* Never tall enough to sit behind the copy — ../README.md § The homepage's shape. */
+/* Never tall enough to sit behind the copy — ../README.md#the-homepages-shape. */
 .hero-media::after {
   content: '';
   position: absolute;
@@ -366,7 +366,7 @@ video {
   background: var(--border);
   border: var(--rule);
 }
-/* No row gap on the cell: README.md § Responsiveness has no breakpoints. */
+/* No row gap on the cell: README.md#responsiveness-has-no-breakpoints. */
 .readout-cell {
   display: grid;
   grid-row: span 2;
@@ -516,7 +516,7 @@ video {
   background: var(--accent);
   border-color: var(--accent);
 }
-/* Must follow [data-primary] — README.md § House style. */
+/* Must follow [data-primary] — README.md#house-style. */
 .pill:hover {
   color: var(--accent);
   background: var(--pill-bg);

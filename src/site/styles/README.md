@@ -163,7 +163,7 @@ of the viewport. Three mechanisms replace them.
   **`dd` is in the global reset for this strip's sake.** The UA stylesheet
   indents a `dd` by 40px, which on an 11rem cell puts a short figure near
   the middle and reads as centred text rather than as an indent. It is reset
-  globally, per § Responsiveness's rule that a block needing a reset never
+  globally, per [Responsiveness has no breakpoints](#responsiveness-has-no-breakpoints)'s rule that a block needing a reset never
   writes the margin itself.
 
 `.sight`'s alternating sides ride the switcher: `flex-direction:

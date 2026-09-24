@@ -10,7 +10,7 @@ import {
   varyWithAccept,
 } from './negotiation-pure';
 
-// Inlined, not imported: README.md § `@cloudflare/workers-types` leaks globally.
+// Inlined, not imported: README.md#cloudflareworkers-types-leaks-globally.
 interface Fetcher {
   fetch(request: Request): Promise<Response>;
 }

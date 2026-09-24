@@ -1,5 +1,5 @@
 // The derivation's rules, against the homepage and small synthetic pages.
-// src/site/README.md § Numbers in copy — the suites read the page.
+// /src/site/README.md#numbers-in-copy — the suites read the page.
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

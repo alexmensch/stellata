@@ -211,7 +211,7 @@ reading code is how every investigation starts, most of which change
 nothing.
 
 The gate exists because the load looks redundant from inside the repo and
-is not. `src/site/styles/README.md` § House style documents the **house
+is not. [House style](/src/site/styles/README.md#house-style) documents the **house
 style** — which layer each rule landed in here, and why — while the system
 underneath it (the layout primitives, the no-width-query mandate, the
 review gates) belongs to the skill, and a README describing the one reads

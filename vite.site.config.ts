@@ -9,7 +9,7 @@ publishBuildEnv(import.meta.dirname);
 
 const SITE_DIR = resolve(import.meta.dirname, 'src/site');
 
-/** `src/site/README.md` § The markdown rendition. */
+/** src/site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages. */
 function markdownRenditions(): Plugin {
   return {
     name: 'stellata:markdown-renditions',
@@ -33,7 +33,7 @@ export default defineConfig(() => ({
   plugins: [markdownRenditions()],
   root: SITE_DIR,
   // Both of these belong to the app pass, which runs first. Reversing
-  // either wipes dist/ — src/site/README.md § The build seam.
+  // either wipes dist/ — src/site/README.md#the-build-seam.
   publicDir: false,
   build: {
     outDir: resolve(import.meta.dirname, 'dist'),

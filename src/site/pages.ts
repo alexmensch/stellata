@@ -1,4 +1,4 @@
-/** Every page the site builds, and the URLs each one answers at. README.md § A page's path is its folder. */
+/** Every page the site builds, and the URLs each one answers at. README.md#a-pages-path-is-its-folder-and-that-is-what-serves-the-url. */
 
 export interface SitePage {
   /** Relative to `src/site/`; its folder is its URL. */
