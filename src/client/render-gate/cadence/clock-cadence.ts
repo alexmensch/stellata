@@ -50,7 +50,6 @@ export class ClockCadence {
   private trust: CadenceTrustState = CADENCE_TRUST_INITIAL;
   private pulsationBudgetS = Number.POSITIVE_INFINITY;
   private readonly rideAccum = new THREE.Vector3();
-  private frameId = 0;
   private readonly cameraVel = new THREE.Vector3();
   private readonly ctx: Mutable<CadenceCtx>;
 
@@ -80,9 +79,8 @@ export class ClockCadence {
   refresh(frame: CadenceFrame): void {
     const simDtS = frame.t - this.lastRenderedSimS;
     this.lastRenderedSimS = frame.t;
-    this.frameId++;
     const ctx = this.ctx;
-    ctx.frameId = this.frameId;
+    ctx.frameId++;
     ctx.pxPerRadian = frame.pxPerRadian;
     ctx.simDtS = simDtS;
     if (Number.isFinite(simDtS) && simDtS !== 0) {
@@ -122,7 +120,7 @@ export class ClockCadence {
     this.trust = CADENCE_TRUST_INITIAL;
     this.pulsationBudgetS = Number.POSITIVE_INFINITY;
     this.rideAccum.set(0, 0, 0);
-    this.frameId = 0;
+    this.ctx.frameId = 0;
     this.ctx.simDtS = Number.NaN;
     this.cameraVel.set(0, 0, 0);
   }
