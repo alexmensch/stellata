@@ -115,7 +115,7 @@ curated refusal (`../classic-ids/label-merge/README.md` § Curated overrides):
 Propus, where
 Gaia fits one source across a resolved Tycho-2 pair and its cross-match keys
 that source to the sibling, so the overlay would hand η Gem the sibling's
-HD 253820 in place of its own HD 42995. It is the only curated row: Gl 563.2
+HD 253820 in place of its own HD 42995. Gl 563.2
 A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
 `gl` on the component the two sides name (`../classic-ids/label-merge/README.md`
 § The gl comparison is specificity-aware).
