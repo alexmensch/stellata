@@ -108,22 +108,6 @@ write order:
   otherwise be "simplified" away in a later pass. The comment density
   in the existing binaries and test files reads as licence; it isn't.
 
-## When to apply
-
-These are write-time rules, not review-time rules:
-
-- When adding a `bus.on(...)` call, find the dispose path of the file in
-  the same diff and add the unsub.
-- When adding `growCapacity` or `pool.push`, define the upper bound and
-  a comment justifying it.
-- When implementing one of a sibling pair, copy-skim the sibling and
-  replicate every defence (or document the asymmetry as intentional).
-- When adding a sentinel, write the first-write assertion explicitly.
-- When reading time-of-day for ephemerides, route through
-  `Stellata.getT()`.
-- When opening a PR, run `npx vitest run tests/code-comment-rules` once
-  before push to surface bead-ID / docstring violations before review.
-
 ## Named constants and DRY
 
 Narrows write-time patterns § Named constants. Tuned values here are pixel
@@ -182,19 +166,9 @@ ingest Y" — is caught by the reader or not at all.
 
 Narrows write-time patterns § Test coverage at write time. Pure helpers lift
 to a `*-pure.ts` sibling; a numeric headline claim is pinned with
-`expect(x).toBe(N)`, never `toBeLessThanOrEqual(N)`; a migration path such as
+`expect(x).toBe(N)`, never `toBeLessThanOrEqual(N)`; typed-array plumbing
+triggers grow + shift and asserts at known offsets; a migration path such as
 the v2→v3 URL rewrite is promoted from manual smoke to vitest.
-
-Audit the diff before opening a PR:
-
-1. Each new function or class has a vitest. If pseudo-private, lift
-   to module scope or a `*-pure.ts` sibling first.
-2. Each numeric claim in title / summary / release notes has a
-   `toBe(N)` somewhere.
-3. New typed-array plumbing has a read-back test with known values
-   (trigger grow + shift, assert at known offsets).
-4. Two-tier / N-tier control flow (prime vs fallback) exercises each
-   tier; priority semantics is a separate assertion.
 
 ## Pattern coverage across peers
 

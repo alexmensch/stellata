@@ -122,24 +122,16 @@ offender is a comment block restating what the folder README now says.
 
 ## Epic drift
 
-`pr-review`'s plan-drift hunt, with beads as the plan. **Trigger:** the PR
-closes or advances any bead with a parent; the parent chain up to the root is
-review surface.
+`pr-review`'s plan-drift hunt, read with stellata's names: the plan is the
+closing bead's parent chain up to the root, the design doc is the folder
+README, and "settled" is spelled SETTLED.
 
-- A superseded design is corrected in the bead *in place*, marked SETTLED
-  with the date and the PR, pointing at the folder README that now owns the
-  argument. The README is the durable record; where it and the epic disagree
-  after a review, the epic is what gets corrected.
-- `bd search <the thing you changed>` for siblings still citing the
-  superseded design.
-- Pull the **raw** description (`bd show <id> --json`), never the `bd show`
-  render — it re-wraps lines and you would write the wrapping back in.
-- Stage the edited body to a file and use `--body-file` / `--design-file`.
-  Inside a worktree that is the only workable route (the guard rejects
-  `$( )`), and it cannot silently blank the field the way
-  `--description "$(cmd)"` can.
-- Re-read with `bd show` afterwards. A line starting with `+` or `-` renders
-  as a bullet; reword rather than ship a mangled spec.
+- The tracker search is `bd search <the thing you changed>`.
+- The raw description is `bd show <id> --json`.
+- The edit goes through `--body-file` / `--design-file` — inside a worktree
+  the only workable route, since the guard rejects `$( )`.
+- The re-read is `bd show`. A line starting with `+` or `-` renders as a
+  bullet; reword rather than ship a mangled spec.
 
 A deferred finding's bead goes under whichever epic owns the code
 (`stellata-beads` skill § Choosing the parent epic).
