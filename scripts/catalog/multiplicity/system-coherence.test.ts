@@ -352,4 +352,65 @@ describe('member-anchor precision veto', () => {
     expect(stats.memberAnchorPrecisionVetoed).toBe(0);
     expect(primary.x).toBeCloseTo(50.2, 6);
   });
+
+  it('ranks same-tier pair primaries on parallax precision before letter (gamma Vel)', () => {
+    const a = star({ hip: 39953, x: 342.466 });
+    const b = star({ gaiaSourceId: '5519266900766220800', x: 392.293 });
+    const c = star({ gaiaSourceId: '5519219999721187968', x: 340.1 });
+    const rows = [
+      pairRow({ systemId: '08095-4720-AB', comp: 'A', hip: 39953 }),
+      pairRow({
+        systemId: '08095-4720-AB', comp: 'B', gaiaSourceId: '5519266900766220800',
+        orbitRole: 'secondary',
+      }),
+      pairRow({ systemId: '08095-4720-BC', comp: 'B', gaiaSourceId: '5519266900766220800' }),
+      pairRow({
+        systemId: '08095-4720-BC', comp: 'C', gaiaSourceId: '5519219999721187968',
+        orbitRole: 'secondary',
+      }),
+      pairRow({ systemId: '08095-4720-CD', comp: 'C', gaiaSourceId: '5519219999721187968' }),
+    ];
+    const src = sources({
+      hip2: new Map([[39953, hip2Row({ plxMas: 2.92, plxErrorMas: 0.30 })]]),
+      gaiaAstrometry: new Map([
+        ['5519266900766220800', gaiaRow({ parallaxMas: 2.6052, parallaxErrorMas: 0.1235 })],
+        ['5519219999721187968', gaiaRow({ parallaxMas: 2.9193, parallaxErrorMas: 0.0348 })],
+      ]),
+    });
+    const stats = applySystemDistanceCoherence(rows, [a, b, c], src);
+    expect(stats.membersRepositioned).toBe(2);
+    expect(a.x).toBeCloseTo(340.1, 6);
+    expect(b.x).toBeCloseTo(340.1, 6);
+    expect(c.x).toBeCloseTo(340.1, 6);
+  });
+
+  it('keeps a pair primary as anchor over a more precise secondary-only member (GJ 4)', () => {
+    const a = star({ hip: 473, gaiaSourceId: '386653851004022144', x: 11.521 });
+    const b = star({ gaiaSourceId: '386653747925624576', x: 11.51 });
+    const f = star({ hip: 428, gaiaSourceId: '386655019234959872', x: 11.503 });
+    const rows = [
+      pairRow({ systemId: '00057+4549-AB', comp: 'A', hip: 473, gaiaSourceId: '386653851004022144' }),
+      pairRow({
+        systemId: '00057+4549-AB', comp: 'B', gaiaSourceId: '386653747925624576',
+        orbitRole: 'secondary',
+      }),
+      pairRow({ systemId: '00057+4549-AF', comp: 'A', hip: 473, gaiaSourceId: '386653851004022144' }),
+      pairRow({
+        systemId: '00057+4549-AF', comp: 'F', hip: 428, gaiaSourceId: '386655019234959872',
+        orbitRole: 'secondary',
+      }),
+    ];
+    const src = sources({
+      gaiaAstrometry: new Map([
+        ['386653851004022144', gaiaRow({ parallaxMas: 86.8003, parallaxErrorMas: 0.0243 })],
+        ['386653747925624576', gaiaRow({ parallaxMas: 86.8206, parallaxErrorMas: 0.0297 })],
+        ['386655019234959872', gaiaRow({ parallaxMas: 86.9299, parallaxErrorMas: 0.017 })],
+      ]),
+    });
+    const stats = applySystemDistanceCoherence(rows, [a, b, f], src);
+    expect(stats.memberAnchorWins).toBe(0);
+    expect(stats.significantDepthKept).toBe(1);
+    expect(b.x).toBeCloseTo(11.521, 6);
+    expect(f.x).toBeCloseTo(11.503, 6);
+  });
 });
