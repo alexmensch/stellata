@@ -182,7 +182,7 @@ function resolveRowIdx(
 
 /** A component carrying no identifier of its own renders through the PARENT
  *  component's slot — `build-runtime-binaries.py` forces exactly this before
- *  emitting (§ Hierarchical walk), so the winged set has to mirror it or a
+ *  emitting (/src/client/binaries/README.md#hierarchical-walk), so the winged set has to mirror it or a
  *  system renders a companion with no wings bit anywhere on it. Castor Ba is
  *  the shape it was written for; WDS 02536-6420 is the shape that needs it
  *  here, its Ba resolving to nothing while B (HD 18341) and synth Bb both

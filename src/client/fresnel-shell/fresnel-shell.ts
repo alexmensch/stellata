@@ -40,7 +40,7 @@ export interface FresnelShellMaterialOptions {
 }
 
 /** The live rim levers, in one vocabulary across every rim consumer —
- *  the boundary shells and the ~96 cloud rims (§ Dev-console levers).
+ *  the boundary shells and the ~96 cloud rims (/src/client/molecular-clouds/README.md#dev-console-levers).
  *  The two distance reaches are also how a shell whose extent arrives with
  *  its mesh states them, as one `rimDistancesForExtent` record. */
 export interface RimParams {

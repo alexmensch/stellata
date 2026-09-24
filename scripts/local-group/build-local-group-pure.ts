@@ -132,7 +132,7 @@ export interface AliasRow {
   type: string;
   aliases: string[];
   /** Curated promotion of a higher-precedence designation to the display
-   *  name (§ Display-name rules). Empty when the derived name already
+   *  name (README.md#display-name-rules). Empty when the derived name already
    *  sits at the top tier. */
   canonical?: string;
 }

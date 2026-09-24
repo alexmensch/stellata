@@ -16,7 +16,7 @@ import {
 } from './reduction-pure';
 
 /** The shipped reduce fragment's source, comments stripped — the graph it
- *  builds is what runs (§ TSL drift). */
+ *  builds is what runs (the *TSL drift* case). */
 const shader = readFileSync(
   fileURLToPath(new URL('../../../webgpu/hdr/reduction-webgpu.ts', import.meta.url)),
   'utf8',

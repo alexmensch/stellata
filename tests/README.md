@@ -228,14 +228,23 @@ is never a heading, and a repeated heading takes `-1`, `-2`), or an explicit
 such an anchor at the start of its line. Matching is exact set membership:
 any rename of a cited heading fails the suite, subtitle and all.
 
-**Bare `§` refs are not pointers.** A `§ 5` or `§ Heading` naming no file
-is invisible to the check. A file followed by `§` is the retired form
-and fails the suite wherever it appears, quoted or wrapped, since the
-resolver cannot see it.
+**The section sign lives only in numbered link text.** Markdown may
+write it as the opening of a link's text before a number —
+`[§ 3.5](#<slug>)` — and nowhere else; code carries none at all.
+Anything the resolver cannot see therefore fails the suite instead of
+rotting: a section named without its file, and a file followed by the
+sign. A section of an outside paper is `Sect. 6.2`; a section of a
+user-level skill or of `~/.claude/CLAUDE.md` is quoted by name. Runtime
+strings (log lines, error messages, test titles) name the concept in
+words; a message that sends its reader to a doc carries the token.
 
 **Scope is git's.** Every tracked or untracked-but-not-ignored file with
-a scanned extension, symlinks excluded (`CLAUDE.md` would double
-`AGENTS.md`). Tracking puts `.claude/skills` in; `.gitignore` keeps
+a scanned extension (or a scanned name, for `.gitignore`), symlinks
+excluded (`CLAUDE.md` would double `AGENTS.md`). Files Git LFS stores
+are out — the pulled survey tables, about 1 GB — so a hand-written
+comment in one (`data/classic-ids/cross_index_corrections.tsv`) is
+unchecked. `data/sid/retirements.tsv` is out because the sid ledger
+guard freezes its existing rows. Tracking puts `.claude/skills` in; `.gitignore` keeps
 `worktrees/` out, so no folder list exists to drift. Untracked files
 count, so a new doc is checked before its first `git add` — and a local
 draft with a broken pointer fails the suite here while CI never sees

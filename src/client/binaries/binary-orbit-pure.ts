@@ -69,7 +69,7 @@ export function evaluateOrbitSkyAU(
  *  is a property of the elements, so no Kepler solve enters.
  *
  *  Tier 1 only. Tier 2's plane is the galactic-plane convention rather than
- *  a measurement (README § Tier mapping), and a caller levelling a view on
+ *  a measurement (README.md#tier-mapping), and a caller levelling a view on
  *  it would be dressing a default as an observation. */
 export function orbitNormalSky(
   elements: OrbitalElements,
@@ -101,7 +101,7 @@ export function evaluateOrbitInPlaneAU(
 }
 
 /** AU, r = a(1 − e·cos E) — orientation-free, so Tier 2's fallback plane
- *  cannot skew it (README § Tier mapping). */
+ *  cannot skew it (README.md#tier-mapping). */
 export function evaluateOrbitSeparationAU(
   elements: OrbitalElements,
   tJd: number,

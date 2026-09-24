@@ -85,7 +85,7 @@ describe('solar-system orbit normals', () => {
   });
 
   // Earth defines the ecliptic, so its own inclination to it is ~1e-4 deg
-  // (README § Equinoctial elements — the value whose sign flip forces the
+  // (/src/client/solar-system/ephemerides/README.md#equinoctial-elements — the value whose sign flip forces the
   // non-singular element set). Anything above a hundredth of a degree here
   // means the host quaternion or the Rz·Rx·Rz composition is wrong.
   it('puts Earth on the ecliptic', () => {

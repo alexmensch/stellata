@@ -18,7 +18,7 @@ import {
 type Vec3 = readonly [number, number, number];
 type Quat = readonly [number, number, number, number];
 
-/** § The brightest rendered pixel. Small only because
+/** README.md#the-brightest-rendered-pixel. Small only because
  *  `centralRayCuspPhase` finds the maximum outright — the scan is the
  *  safety net for structure away from the centre, and a scan alone would
  *  need thousands of phases to match it. */

@@ -140,10 +140,10 @@ export class BinaryOrbitPathLayer {
    *
    * The barycentre must come off the secondary's slot and the walk's own
    * `R(t)`, never the mass-weighted average of the two slots — README
-   * § Anchor.
+   * README.md#anchor.
    *
    * `observeAnchorStar` (`ObserveTransition.observeAnchorOf('star')`)
-   * drops the loop the camera stands on — README § Observing from a member.
+   * drops the loop the camera stands on — README.md#observing-from-a-member.
    */
   update(
     offsets: RelationOffsetSource | null,

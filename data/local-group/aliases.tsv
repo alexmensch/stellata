@@ -8,8 +8,8 @@
 # Table 1 cross-IDs + NED common names.
 #
 # `canonical` promotes one of the row's own aliases to the display name,
-# per the precedence in scripts/local-group/README.md § Display-name
-# rules. Leave empty when the derived name is already top-tier. The
+# per the precedence in /scripts/local-group/README.md#display-name-rules.
+# Leave empty when the derived name is already top-tier. The
 # demoted name is kept as an alias automatically — don't list it here.
 #
 # List each designation ONCE, in its conventional written form: Messier

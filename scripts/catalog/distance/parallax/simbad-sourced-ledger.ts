@@ -1,5 +1,5 @@
 // The records whose shipped distance came from the cascade's SIMBAD tier —
-// § 5's validation-independence rule made checkable. See README.md#the-skip-rules--one-principle-two-publications
+// /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's validation-independence rule made checkable. See README.md#the-skip-rules--one-principle-two-publications
 // and ../../validate/README.md for the validator that reads it.
 
 /** Where the exclusion list is committed. */

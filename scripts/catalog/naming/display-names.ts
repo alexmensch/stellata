@@ -80,7 +80,7 @@ export interface DisplayNameCounts {
    *  `SID #` last resort. */
   namingUnlabelled: number;
   /** Labels two or more records both compose. Every one is a data finding:
-   *  two catalogue entries claiming one designation (§ 8.4). */
+   *  two catalogue entries claiming one designation (/docs/star-naming.md#84-known-duplicate-display-names). */
   namingDuplicateLabels: number;
   namingDuplicateRecords: number;
 }
@@ -107,7 +107,7 @@ export function assignDisplayNames(
 ): DisplayNameResult {
   // A curated row is the one tier no published source can be re-read to
   // check, so an unmatched SID has to fail rather than count as applied —
-  // the same review-join discipline as the § 2 residual gate.
+  // the same review-join discipline as the naming-authority residual gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them).
   if (overrides.size > 0) {
     const present = new Set(recordSids);
     const unmatched = [...overrides.keys()].filter((sid) => !present.has(sid));

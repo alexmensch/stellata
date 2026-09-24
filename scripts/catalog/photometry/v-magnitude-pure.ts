@@ -27,7 +27,7 @@ export const RIELLO_G_MINUS_V_SIGMA = 0.03017;
 export const RIELLO_BP_RP_MIN = -0.5;
 export const RIELLO_BP_RP_MAX = 5.0;
 
-/** ESA SP-1200 § 1.3's linear reduction of Tycho `VT` to Johnson `V`,
+/** ESA SP-1200 Sect. 1.3's linear reduction of Tycho `VT` to Johnson `V`,
  *  `V = VT − 0.090·(BT−VT)`. Published over `BT−VT` ∈ [−0.25, 2.0]; nothing
  *  is published above it, which is what {@link tycho2VMagnitude} documents
  *  rather than gates on. */

@@ -1053,7 +1053,7 @@ function decodeVarintMasked(dv: DataView, fields: FieldSpec[], label: string): D
   return view;
 }
 
-// RFC 4648 §5 base64url, no padding.
+// RFC 4648 Sect. 5 base64url, no padding.
 function toBase64Url(bytes: Uint8Array): string {
   let s = '';
   for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);

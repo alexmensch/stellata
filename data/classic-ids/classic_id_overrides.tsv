@@ -1,6 +1,6 @@
 gaia_source_id	field	value
 # Curated exceptions to the label merge's mechanical rule (overlay wins on
-# disagreement, docs/catalog-driver.md § 4). One row per record per identifier;
+# disagreement, /docs/catalog-driver.md#4-how-hd-reaches-gaia). One row per record per identifier;
 # an empty `value` keeps the spine's. `#` in the first column comments a line —
 # the header stays the first line, as every committed TSV's does.
 #
@@ -18,7 +18,7 @@ gaia_source_id	field	value
 # binds source 3377072212924335488 to η Gem, which is why the record binds it
 # (simbad_corroborated). The overlay reaches that source through the sibling's
 # TYC alone, so it proposes 253820 as the record's only HD — no alias list, no
-# sibling extra, just § 4 precedence handing a star its neighbour's number and
+# sibling extra, just the overlay precedence handing a star its neighbour's number and
 # folding the neighbour's own record away as a component.
 3377072212924335488	hd	
 #
@@ -26,7 +26,7 @@ gaia_source_id	field	value
 # that are a RULE's output rather than fifteen separate judgements: the record
 # ships its neighbour's HD, and all four witnesses agree which component the
 # record is
-# (scripts/catalog/simbad/README.md § Which witness decides a close pair's HD).
+# (/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd).
 # IV/25 and SIMBAD both give the record's own Tycho entry the HD below, SIMBAD's
 # object for the record's own Gaia source is the component that entry names, and
 # V/50 pairs the HR with it. HD and HR move together because V/50 publishes them
@@ -77,8 +77,7 @@ gaia_source_id	field	value
 # ^ HD 330123. Ships 330122. Neither number is in V/50, so there is no HR to
 #   move with it — the one record of the nine that carries a single field. No
 #   Tycho entry names the freed 330122, so it reaches no manifest row and stops
-#   resolving anywhere (scripts/catalog/classic-ids/label-merge/README.md
-#   § What a freed number costs).
+#   resolving anywhere (/scripts/catalog/classic-ids/label-merge/README.md#what-a-freed-number-costs).
 #
 # A MALFORMED SPINE SPELLING the overlay cannot reach: AT-HYG transcribed
 # V/70A's `comp` null marker `-` into the cell, reading GJ 1255-. V/70A's three

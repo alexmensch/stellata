@@ -13,7 +13,7 @@ export interface CloudFocusProviderConfig {
   clouds: readonly Cloud[] | null;
   /** Live camera→centroid distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number;
-  /** § Constellation row. Answers for the centroid, though a cloud genuinely
+  /** README.md#constellation-row. Answers for the centroid, though a cloud genuinely
    *  spans several — `../molecular-clouds/README.md`. */
   constellationName: (idx: number) => string | null;
 }

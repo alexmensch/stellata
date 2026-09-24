@@ -12,7 +12,7 @@ export interface SidDomain {
   /** False while the domain is still filling, which makes a MISS
    *  indeterminate rather than absent — the sid may be in a part that has
    *  not arrived. Omitted means complete on attach, which every static
-   *  artifact is. See § A domain that is still filling. */
+   *  artifact is. See README.md#a-domain-that-is-still-filling. */
   isComplete?(): boolean;
 }
 

@@ -1,6 +1,6 @@
 // Stops TrackballControls' damping tail under a pixel-scale floor, and
 // holds the pose it re-derives still when nothing moved. See README.md#damping-settle-floor
-// and § Derived-pose settle floor.
+// and README.md#derived-pose-settle-floor.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';

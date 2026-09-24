@@ -15,7 +15,8 @@ const DOC_PATH = String.raw`(?<![\w@.~/-])(\/?(?:\.{1,2}\/)*(?:[\w@.-]+\/)*[\w@.
 const SLUG = String.raw`([\p{L}\p{N}_-]+)`;
 const POINTER = new RegExp(`${DOC_PATH}#${SLUG}`, 'gu');
 const SAME_FILE_LINK = new RegExp(String.raw`\]\(#${SLUG}\)`, 'gu');
-const RETIRED_POINTER = new RegExp(String.raw`${DOC_PATH}[\x60*]*\s+§`, 'gu');
+const SECTION_SIGN = /\u00a7/g;
+const NUMBERED_LINK_TEXT = /\[\u00a7 \d[^\]\n]*\]\(/y;
 
 const lineOf = (text: string, index: number): number => text.slice(0, index).split('\n').length;
 
@@ -27,8 +28,15 @@ export function extractSameFileLinks(markdown: string): Omit<DocPointer, 'citedP
   return [...markdown.matchAll(SAME_FILE_LINK)].map((m) => ({ slug: m[1], line: lineOf(markdown, m.index) }));
 }
 
-export function extractRetiredPointers(text: string): Omit<DocPointer, 'slug'>[] {
-  return [...text.matchAll(RETIRED_POINTER)].map((m) => ({ citedPath: m[1], line: lineOf(text, m.index) }));
+const opensNumberedLinkText = (text: string, index: number): boolean => {
+  NUMBERED_LINK_TEXT.lastIndex = index - 1;
+  return NUMBERED_LINK_TEXT.test(text);
+};
+
+export function strayedSectionSigns(text: string, markdown: boolean): number[] {
+  return [...text.matchAll(SECTION_SIGN)]
+    .filter((m) => !(markdown && opensNumberedLinkText(text, m.index)))
+    .map((m) => lineOf(text, m.index));
 }
 
 const plainText = (tokens: Token[]): string =>
