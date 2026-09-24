@@ -34,8 +34,5 @@ export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly Scen
  */
 export function scenarioUrl(base: string, blob: string, hash = ''): string {
   const root = base.replace(/\/+$/, '');
-  // buildSharePath rather than a second spelling of the path form — it owns
-  // the app's own prefix, and a runner pointed at the wrong one measures the
-  // default view while reporting the scenario's name.
   return `${root}${buildSharePath(blob)}${hash === '' ? '' : `#${hash}`}`;
 }

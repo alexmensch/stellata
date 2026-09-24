@@ -10,11 +10,7 @@ import {
   varyWithAccept,
 } from './negotiation-pure';
 
-// Fetcher is inlined rather than imported from @cloudflare/workers-types.
-// Adding that package to the tsconfig `types` array bleeds its DOM
-// re-declarations into the client types and breaks `querySelector<T>`;
-// keeping a minimal local interface sidesteps the leak. Don't swap to
-// the type package without a second tsconfig for the worker build.
+// Inlined, not imported: README.md § `@cloudflare/workers-types` leaks globally.
 interface Fetcher {
   fetch(request: Request): Promise<Response>;
 }
@@ -41,10 +37,6 @@ export default {
     const readable = request.method === 'GET' || request.method === 'HEAD';
     const rendition = markdownRendition(url.pathname);
 
-    // A client that named `text/markdown` gets the page's markdown rendition
-    // instead of its HTML — cheaper to read and read verbatim, where an HTML
-    // fetch is re-summarised by whatever converted it. A rendition that is
-    // somehow absent falls through to the HTML rather than 404ing the page.
     if (rendition !== null && readable && prefersMarkdown(request.headers.get('accept'))) {
       const markdown = await env.ASSETS.fetch(
         new Request(new URL(rendition, url).toString(), request),
@@ -59,8 +51,6 @@ export default {
 
     const response = await env.ASSETS.fetch(request);
 
-    // The HTML answer to a path that has a rendition advertises it, for a
-    // client that reads headers rather than the document.
     if (rendition !== null && response.status === 200) {
       return withHeaders(response, (headers) => {
         headers.set('link', alternateLink(rendition));
@@ -68,17 +58,12 @@ export default {
       });
     }
 
-    // Cloudflare's assets layer types a `.md` file by extension, which is not
-    // a promise it makes. The rendition's content type decides whether a
-    // client reads it or downloads it, so it is stamped here either way.
+    // The assets layer's type for `.md` is not one it promises.
     if (url.pathname.endsWith('.md') && response.status === 200) {
       return withHeaders(response, (headers) => headers.set('content-type', MARKDOWN_TYPE));
     }
 
-    // A path under /app matching no asset is application state — a share
-    // blob, or whatever a future client route invents — so it gets the
-    // application document. Probing first rather than pattern-matching
-    // means a real asset ever emitted under /app keeps winning.
+    // After the probe, so a real asset under /app keeps winning.
     if (response.status === 404 && ownedByApp(url.pathname) && readable) {
       return env.ASSETS.fetch(new Request(new URL(APP_PATH, url).toString(), request));
     }

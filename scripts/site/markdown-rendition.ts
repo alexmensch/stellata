@@ -12,20 +12,9 @@ import { SKIP, visit } from 'unist-util-visit';
 
 import { parseHtml } from './parse-html.ts';
 
-/**
- * Authoring scaffolding, dropped from the rendition. `.holder` is the dashed
- * box naming a capture still to be taken — instructions to the author, and
- * the last thing an agent quoting the page should read back. The skip link is
- * a keyboard affordance carrying no content of its own.
- */
 const DROPPED = '.holder, .skip-link';
 
-/**
- * Every element the authored pages may use. A tag outside this set throws
- * rather than being converted on a guess: the conversion is `rehype-remark`'s
- * to make, and a page that reaches for `<details>` or `<aside>` needs someone
- * to decide what it means in markdown first.
- */
+/** Closed: a tag outside it throws — README.md § The markdown rendition. */
 const VOCABULARY = new Set([
   'a',
   'article',
@@ -76,16 +65,6 @@ function prune(body: Element, selector: string): void {
 }
 
 /**
- * A video is its poster still. mdast has no video node, so the rendition
- * carries the frame an agent can actually read, at the place in the document
- * the clip occupies — which is why `video` is absent from VOCABULARY rather
- * than listed in it: none survives to be converted.
- *
- * Both attributes are required because both are load-bearing off the page
- * too. The poster is the page's largest contentful paint and what a browser
- * refusing to autoplay shows instead; the label is the clip's accessible
- * name. Throwing beats rendering a clip nobody can see or name.
- *
  * Runs BEFORE pruneEmptyLinks: a sight's media anchor wrapping only a
  * `<video>` reads as empty until the video has become an `<img>`, and would
  * be dropped with the link the sight is for.
@@ -106,13 +85,6 @@ function stillVideos(body: Element): void {
   }
 }
 
-/**
- * Anchors left with nothing in them once the scaffolding went. A sight's
- * picture *is* its link, so until the captures land the media anchor wraps a
- * `.holder` and nothing else — and `[](url)` is noise in a rendition whose
- * point is that an agent reads it verbatim. The "Fly there" anchor beside it
- * carries the same URL, and once a capture lands the `<img>` keeps the anchor.
- */
 function pruneEmptyLinks(body: Element): void {
   visit(body, 'element', (node, index, parent) => {
     if (node.tagName !== 'a' || parent === undefined || index === undefined) return;
@@ -122,8 +94,6 @@ function pruneEmptyLinks(body: Element): void {
   });
 }
 
-/** Root-relative links resolved against the page's own canonical, so a
- *  rendition quoted somewhere else still points back here. */
 function absolutise(body: Element, origin: string): void {
   visit(body, 'element', (node: Element) => {
     for (const key of ['href', 'src']) {
@@ -133,8 +103,6 @@ function absolutise(body: Element, origin: string): void {
   });
 }
 
-/** The page's `<title>` becomes the document's one top-level heading, so
- *  every heading in the body moves down a level to sit under it. */
 function shiftHeadings(body: Element): void {
   visit(body, 'element', (node: Element) => {
     const level = HEADINGS.indexOf(node.tagName as (typeof HEADINGS)[number]);
@@ -142,12 +110,6 @@ function shiftHeadings(body: Element): void {
   });
 }
 
-/**
- * A definition list as labelled bullets. The readout strip is five labelled
- * figures, which `dl` says in HTML — but mdast has no definition list, so
- * `rehype-remark` would otherwise flatten the labels and values into one run
- * of text with nothing saying which figure belongs to which label.
- */
 function bulletDefinitions(body: Element): void {
   for (const list of selectAll('dl', body)) {
     const terms = selectAll('dt', list);
@@ -197,11 +159,6 @@ function metaContent(tree: Root, name: string): string | null {
   return typeof content === 'string' ? content : null;
 }
 
-/**
- * The build-time figures the page asks for. Vite substitutes these into the
- * HTML it emits; the rendition is derived from the authored source, so it
- * resolves them from the same environment rather than shipping the token.
- */
 function substitute(markdown: string, env: NodeJS.ProcessEnv): string {
   return markdown.replace(/%(VITE_[A-Z_]+)%/g, (raw, name: string) => {
     const value = env[name];
@@ -212,11 +169,6 @@ function substitute(markdown: string, env: NodeJS.ProcessEnv): string {
   });
 }
 
-/**
- * The page as markdown: its `<title>` as the one top-level heading and its
- * meta description as the summary blockquote, which is the shape `llms.txt`
- * uses and agent clients already read.
- */
 export function markdownRendition(source: string, env: NodeJS.ProcessEnv = process.env): string {
   const html = substitute(source, env);
   const tree = parseHtml(html);

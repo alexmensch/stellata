@@ -2,12 +2,7 @@
 // blob source from a loaded URL, and map both legacy transports onto the
 // canonical one. Pure helpers — see README § Transport.
 
-/**
- * The application document's own path. Everything the app owns sits under
- * it; `/` is the public homepage (`src/site/README.md`). `src/worker.ts`
- * imports this rather than restating it — a drift between the two silently
- * breaks every share link.
- */
+/** The application document's own path — README § Transport. */
 export const APP_PATH = '/app';
 
 /** Legacy query param `?v=<blob>`, decoded forever (README § Transport). */
