@@ -143,8 +143,8 @@ distance, not the catastrophic input.
 
 Future Magellanic-system or M31 layers will sit alongside the LMC
 kinematic layer (same sky-cone + bulk-PM identification pattern and
-parallax-consistency veto, distinct anchor distances) and bump the cutoff as each new modelled
-population enters scope.
+parallax-consistency veto, distinct anchor distances) and bump the
+cutoff as each new modelled population enters scope.
 
 **Bailer-Jones DR3 distance override (Layer 1).** AT-HYG's `dist` for
 the ~98% G_R3 majority is Gaia DR3's naive `1 / π` parallax inversion —
