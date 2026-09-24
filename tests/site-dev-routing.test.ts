@@ -213,6 +213,12 @@ describe('an edit to a page reloads the browser', () => {
     expect(server.sent).toEqual([{ type: 'full-reload', path: '*' }]);
   });
 
+  it('reloads on an edit to a page in a subfolder', () => {
+    const server = start();
+    server.change(resolve(ROOT, 'src/site/science/index.html'));
+    expect(server.sent).toEqual([{ type: 'full-reload', path: '*' }]);
+  });
+
   it('leaves the stylesheet to Vite’s own css update', () => {
     const server = start();
     server.change(resolve(ROOT, 'src/site/styles/site.css'));
