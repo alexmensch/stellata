@@ -1,6 +1,6 @@
 ---
 name: pr-cleanup
-description: Land a stellata PR and finish every follow-up — rebase onto main if needed (force-with-lease pre-authorised), merge it (watching only if checks are still pending), close the PR's beads, remove its worktree, and fast-forward local main. Use when asked to merge, land, or clean up after a PR ("merge PR 123 and clean up", "land this one", "/pr-cleanup 123").
+description: Land a stellata PR and finish every follow-up — rebase onto main if needed (force-with-lease pre-authorised), merge it (watching only if checks are still pending), close the PR's beads, remove its worktree, fast-forward local main, and rebuild main's artifacts in the background. Use when asked to merge, land, or clean up after a PR ("merge PR 123 and clean up", "land this one", "/pr-cleanup 123").
 ---
 
 # Landing a stellata PR
@@ -20,7 +20,8 @@ For **the PR named at invocation**, and nothing else:
 - **Force-push it, with `--force-with-lease`, and only when a rebase onto
   main requires it.** A force-push with no rebase behind it is not
   authorised; neither is `--force`.
-- **Close its beads, remove its worktree, fast-forward local main.**
+- **Close its beads, remove its worktree, fast-forward local main, rebuild
+  main's artifacts.**
 
 Still never: push or commit to `main`, merge a PR the user did not name,
 merge anything with a failing check, or `git push --delete` a remote branch
@@ -54,7 +55,8 @@ git fetch origin
 
 **Check `state` before anything else — it may already be merged.** Auto-merge
 can fire between two of your own commands. If `MERGED`, the work left is
-§ Close the beads and § Worktree, branches, main — never § Merge.
+§ Close the beads, § Worktree, branches, main and § Rebuild main's
+artifacts — never § Merge.
 
 Collect the beads: bead IDs (`stellata-<slug>` / `stellata-<slug>.<n>`) appear
 in the PR title, body, and commit subjects. Gather all three and de-duplicate:
@@ -276,6 +278,31 @@ Never remove a worktree the PR did not own.
 so the PR's own worktree is locked whenever a session is in it. The one to
 avoid is locked by *another* session — the tell is `git worktree list` naming
 a branch that is not this PR's `headRefName`.
+
+## 7. Rebuild main's artifacts — last, in the background
+
+New worktrees are seeded from the main checkout's `public/` and `build/`
+artifacts (`scripts/README.md` § Building in a worktree); a stamp that
+disagrees with the worktree's inputs rebuilds that step. Rebuilding main
+right after the pull keeps those stamps matching, so the next worktree starts
+without a cold catalogue build.
+
+Run it from the main checkout with Bash `run_in_background: true`, after
+everything above has finished:
+
+```bash
+pnpm run build:latest
+```
+
+`build:latest` stops a build another landing already started in the main
+checkout, so concurrent `/pr-cleanup` runs never build side by side
+(`scripts/README.md` § Superseding builds).
+
+Report the landing without waiting on it. When the background task exits,
+report its exit status. `superseded by a newer build:latest` with exit 0 is
+a newer landing taking over, not a failure. Any other non-zero exit means
+main's artifacts are stale or partial, so name the failing step — never retry
+it on your own.
 
 ## Deviations — stop and ask
 
