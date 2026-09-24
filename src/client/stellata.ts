@@ -1173,9 +1173,9 @@ export class Stellata implements FrameAnchor {
     return this.solarSystem.orbitRings.anyOrbitRingVisible()
       || this.binaryOrbitPathLayer.anyOrbitRingVisible();
   }
-  /** Rendered disc radius (CSS px) of the focused object, any kind; 0
-   *  when nothing is focused. Single source for the arrow-fade coverage
-   *  inputs (HUD Sol/GC pair, POI arrows). */
+  /** Peak opaque-disc radius (CSS px) of the focused object, via its kind's
+   *  `peakDiscSizePx`; 0 when nothing is focused. Single source for every
+   *  arrow fade's disc coverage. */
   getFocusedDiscRadiusPx(): number {
     const t = this.focus.getFocusedTarget();
     return t === null ? 0 : this.focusables[t.kind].peakDiscSizePx(t.idx) * 0.5;
