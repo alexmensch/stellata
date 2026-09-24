@@ -93,20 +93,15 @@ export function createPlanetLabels(stellata: Stellata): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    // The observe-anchor body is shader-hidden (uHideIdx); its label
-    // must not float alone at the camera's own position.
+    // Across both glides too, not just while the body is hidden — README § Labels.
     const ps = stellata.focus.getFocusedPlanetSystem();
-    const hiddenFlat = stellata.kinds.planet.field.hiddenInstanceIdx;
-    const hiddenHost = hiddenFlat >= 0 ? stellata.kinds.planet.field.hostPlanetOf(hiddenFlat) : null;
-    const hiddenPlanetIdx =
-      hiddenHost && ps && hiddenHost.hostStarIdx === ps.hostStarIdx
-        ? hiddenHost.planetIdx
-        : -1;
+    const anchorPlanetIdx = ps === null ? null : stellata.kinds.planet.field.planetIdxWithin(
+      ps.hostStarIdx, stellata.observe.observeAnchorOf('planet'));
 
     setGroupVisible(true);
     for (let i = 0; i < entries.length; i++) {
       const e = entries[i];
-      if (i === hiddenPlanetIdx) {
+      if (i === anchorPlanetIdx) {
         e.el.style.display = 'none';
         continue;
       }

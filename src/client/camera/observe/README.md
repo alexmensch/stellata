@@ -316,9 +316,9 @@ drops only the geometry through that point:
   sits on the body; rings centred ON the anchor (its moons, or a host
   star's planets) do not pass through the eye and stay drawn. The flat
   planet index resolves to the ring through
-  `PlanetBodyField.planetIdxWithin`, same host only. A hidden ring also
-  hides that body's label, which reads ring visibility — moot once the
-  glide lands, since the body is hidden then.
+  `PlanetBodyField.planetIdxWithin`, same host only. The ring's hide is
+  draw-only; the body's label hides over the same window by a rule of its
+  own (`../../solar-system/planets/labels/README.md` § Labels).
 - probe trails need nothing here: the trail drops with the observed probe
   (`../../solar-system/probes/README.md`).
 

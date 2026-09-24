@@ -106,6 +106,9 @@ interface PlanetRing {
   // The geometry `master` was written from. update() compares the live
   // elements against it and rewrites only on resolvable drift.
   built: BodyOrbitGeometry;
+  // The pixel-gap verdict alone. `line.visible` also drops the OBSERVE
+  // anchor's ring, which says nothing about whether the body is on screen.
+  resolvable: boolean;
 }
 
 /**
@@ -446,6 +449,7 @@ export class OrbitRingsLayer {
         parentIdx: g.parentIdx,
         semiMajorPc,
         built: g,
+        resolvable: false,
       });
     }
 
@@ -522,6 +526,7 @@ export class OrbitRingsLayer {
       let dPc = dHost;
       if (r.parentIdx !== null) {
         if (!parentRelInto || !parentRelInto(r.parentIdx, this.tmpParentRel)) {
+          r.resolvable = false;
           r.line.visible = false;
           continue;
         }
@@ -540,7 +545,9 @@ export class OrbitRingsLayer {
     for (const g of groups.values()) {
       const visible = ringVisibility(g.radii, RING_VISIBILITY_THRESHOLD_PX);
       for (let k = 0; k < g.idxs.length; k++) {
-        this.rings[g.idxs[k]].line.visible = visible[k] && g.idxs[k] !== observeAnchorRing;
+        const r = this.rings[g.idxs[k]];
+        r.resolvable = visible[k];
+        r.line.visible = visible[k] && g.idxs[k] !== observeAnchorRing;
       }
     }
     // Geometry and position passes both run after visibility, so an
@@ -569,7 +576,8 @@ export class OrbitRingsLayer {
 
   /**
    * The planet-labels overlay gates label visibility on this per-planet
-   * flag, so labels appear only when their associated ring does.
+   * flag: the ring clears the pixel-gap gate, whether or not it is drawn
+   * (the OBSERVE anchor's ring clears it and is not drawn).
    *
    * Crucially: labels follow rings, NOT body apparent-magnitude. A
    * planet whose body is below the slider cutoff still shows a label
@@ -579,7 +587,7 @@ export class OrbitRingsLayer {
   isOrbitRingResolvable(i: number): boolean {
     if (this.hidden || this.mono || !this.permitted || !this.group.visible) return false;
     if (i < 0 || i >= this.rings.length) return false;
-    return this.rings[i].line.visible;
+    return this.rings[i].resolvable;
   }
 
   /**

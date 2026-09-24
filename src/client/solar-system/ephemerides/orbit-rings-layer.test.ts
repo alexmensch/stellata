@@ -473,7 +473,7 @@ describe('OrbitRingsLayer — observing from a body', () => {
       makePlanet({ name: 'B', semiMajorAxisAu: 3 }),
     ],
   };
-  const drawn = (ss: OrbitRingsLayer) => [ss.isOrbitRingResolvable(0), ss.isOrbitRingResolvable(1)];
+  const drawn = (ss: OrbitRingsLayer) => ss.group.children.map((c) => c.visible);
 
   it('hides only the ring the camera stands on, and restores it when the anchor clears', () => {
     const ss = new OrbitRingsLayer(chromeLines());
@@ -486,6 +486,15 @@ describe('OrbitRingsLayer — observing from a body', () => {
     expect(drawn(ss)).toEqual([false, true]);
     ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR);
     expect(drawn(ss)).toEqual([true, true]);
+    ss.dispose();
+  });
+
+  it('still reports the undrawn anchor ring as resolvable', () => {
+    const ss = new OrbitRingsLayer(chromeLines());
+    ss.setPlanetSystem(ps, 0, T0);
+    ss.update(makeCamera(5 * AU_PC), 800, null, T0, 1);
+    expect(drawn(ss)).toEqual([true, false]);
+    expect([ss.isOrbitRingResolvable(0), ss.isOrbitRingResolvable(1)]).toEqual([true, true]);
     ss.dispose();
   });
 });

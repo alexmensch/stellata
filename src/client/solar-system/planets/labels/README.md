@@ -27,6 +27,14 @@ Planets gate on their host-centred ring, moons on their parent-centred
 ring — a moon collapsed toward its parent's dot drops its ring (and so
 its label) rather than stacking on the parent.
 
+**The OBSERVE anchor body's label hides for the whole anchor window** —
+from the start of the enter glide until the exit glide lands, the span
+`ObserveTransition.observeAnchorOf('planet')` names
+(`../../../camera/observe/README.md` § The observe anchor in line layers).
+That is a product rule, not a resolvability one: the body stays on screen
+through both glides and its label still hides. It is keyed on the anchor,
+never on the body's shader hide, which covers only the parked pose.
+
 A totally eclipsed body's label hides with the body, except where the
 caster has an atmosphere and the umbral glow keeps it visible
 (`../eclipses/README.md` § True-eclipse dim).
