@@ -143,6 +143,17 @@ describe('the public stylesheet hardcodes no values', () => {
   });
 });
 
+describe('the public stylesheet caps line length once', () => {
+  it('seeds the measure on every element, exempting containers', () => {
+    expect(CODE).toMatch(/\*\s*\{[^}]*max-inline-size:\s*var\(--measure\)/);
+  });
+
+  it('never restates the default measure in a block', () => {
+    const restated = RULES.filter(({ prop, value }) => prop === 'max-inline-size' && value === 'var(--measure)');
+    expect(restated).toHaveLength(1);
+  });
+});
+
 describe('the public stylesheet keeps the CUBE cascade order', () => {
   it('emits utilities after every block', () => {
     const composition = CSS.indexOf('── Composition');

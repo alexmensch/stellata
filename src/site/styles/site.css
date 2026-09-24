@@ -32,8 +32,6 @@
   --space-l-xl: clamp(2rem, 1.5rem + 2.5vw, 3.75rem);
   --space-xl-2xl: clamp(3rem, 2.4286rem + 2.8571vw, 5rem);
 
-  /* Measures are a scale, not one value: every prose element takes a named
-     line length from here rather than carrying its own ch figure. */
   --measure: 62ch;
   --measure-micro: 26ch;
   --measure-compact: 34ch;
@@ -114,6 +112,29 @@
 
 * {
   box-sizing: border-box;
+  max-inline-size: var(--measure);
+}
+html,
+body,
+div,
+header,
+nav,
+main,
+footer,
+section,
+article,
+figure,
+img,
+video,
+table,
+thead,
+tbody,
+tr,
+th,
+td,
+dl,
+a {
+  max-inline-size: none;
 }
 
 html {
@@ -427,9 +448,6 @@ video {
 .claim h3 {
   max-inline-size: var(--measure-compact);
 }
-.claim p {
-  max-inline-size: var(--measure);
-}
 
 /* ── Block: sight ──────────────────────────────────────────────────── */
 /* The observing list, media-led: the image IS the link into the model at
@@ -503,7 +521,6 @@ video {
 .plate-caption {
   --flow-space: var(--space-2xs);
 
-  max-inline-size: var(--measure);
   font-size: var(--step--2);
   line-height: var(--leading-snug);
   color: var(--fg-dim);
@@ -584,11 +601,6 @@ video {
   max-inline-size: var(--measure-lead);
   font-size: var(--step-1);
   line-height: var(--leading-snug);
-}
-
-/* Carries its own measure, so no use site has to remember one. */
-.aside {
-  max-inline-size: var(--measure);
 }
 
 /* Secondary text: every block's small, dimmed prose. */
@@ -739,8 +751,4 @@ video {
   max-inline-size: var(--column) !important;
   margin-inline: auto !important;
   padding-inline: var(--gutter) !important;
-}
-
-.measure {
-  max-inline-size: var(--measure) !important;
 }
