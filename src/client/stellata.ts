@@ -706,15 +706,15 @@ export class Stellata implements FrameAnchor {
       const layer = this.kinds[kind]?.attach(kindCtx);
       if (layer) this.layers.register(layer);
     }
-    this.solarCluster = new SolarSystemCluster(
-      this.kinds.planet.field,
-      this.kinds.planet.meshLayer,
-      this.orbitRingsLayer,
-      this.kinds.probe.field,
-      this.kinds.probe.pathLayer,
-      this.starLocalCluster,
-      this.occluders,
-    );
+    this.solarCluster = new SolarSystemCluster({
+      field: this.kinds.planet.field,
+      meshLayer: this.kinds.planet.meshLayer,
+      orbitRings: this.orbitRingsLayer,
+      probeField: this.kinds.probe.field,
+      probeTrails: this.kinds.probe.pathLayer,
+      starCluster: this.starLocalCluster,
+      occluders: this.occluders,
+    });
     this.localDepthPass.register(this.solarCluster);
     // System-membership registry: binaries FIRST so a collapsed pair's
     // outer primary leads the union over the member's planet-host role.

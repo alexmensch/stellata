@@ -90,9 +90,9 @@ function makeFixture(opts: FixtureOpts = {}): Fixture {
     sampleFor: () => null,
   } as unknown as ProbeField;
 
-  const cluster = new SolarSystemCluster(
+  const cluster = new SolarSystemCluster({
     field,
-    {
+    meshLayer: {
       group: new THREE.Group(),
       collectSpheres: () => {},
       drawnPoleInto: (flat: number, out: THREE.Vector3) => {
@@ -101,16 +101,18 @@ function makeFixture(opts: FixtureOpts = {}): Fixture {
         return true;
       },
     } as unknown as PlanetMeshLayer,
-    { group: new THREE.Group(), anyOrbitRingVisible: () => false } as unknown as OrbitRingsLayer,
+    orbitRings: {
+      group: new THREE.Group(), anyOrbitRingVisible: () => false,
+    } as unknown as OrbitRingsLayer,
     probeField,
-    {
+    probeTrails: {
       localGroup: new THREE.Group(),
       setLocalPassActive: () => {},
       trailVisible: () => false,
     } as unknown as ProbePathLayer,
-    { setHostMember: (idx: number | null) => f.hostMember!.push(idx) },
+    starCluster: { setHostMember: (idx: number | null) => f.hostMember!.push(idx) },
     occluders,
-  );
+  });
 
   f.cluster = cluster;
   f.camera = new THREE.PerspectiveCamera();
