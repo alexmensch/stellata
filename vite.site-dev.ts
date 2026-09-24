@@ -2,7 +2,7 @@
 
 import { readFile } from 'node:fs/promises';
 import type { ServerResponse } from 'node:http';
-import { dirname, resolve } from 'node:path';
+import { dirname, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
 
 import { markdownRendition as renderMarkdown } from './scripts/site/markdown-rendition.ts';
@@ -90,7 +90,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
       // Not Vite's own html reload: src/site/README.md § Reading it in dev.
       server.watcher.add(siteDir);
       server.watcher.on('change', (file) => {
-        if (dirname(file) === siteDir && file.endsWith('.html')) {
+        if (file.startsWith(siteDir + sep) && file.endsWith('.html')) {
           server.hot.send({ type: 'full-reload', path: '*' });
         }
       });
