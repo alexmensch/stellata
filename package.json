@@ -67,6 +67,7 @@
     "build:layers": "pnpm run build:binaries-runtime && pnpm run build:clouds && pnpm run build:local-group && pnpm run build:dust-sync && pnpm run build:probes-sync && pnpm run build:ephemerides-sync && pnpm run build:local-bubble-sync && pnpm run build:cloud-surfaces-sync && pnpm run build:textures-sync",
     "build:data": "pnpm run build:binaries && pnpm run build:catalog && pnpm run build:layers",
     "build": "pnpm run build:data && pnpm run build:client",
+    "build:latest": "bash scripts/build-latest.sh",
     "dev": "pnpm run build:data && vite",
     "check:asset-sizes": "tsx scripts/release/check-asset-sizes.ts",
     "deploy": "pnpm run build && pnpm run check:asset-sizes && wrangler deploy",

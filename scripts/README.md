@@ -125,3 +125,15 @@ the worktree then writes *through* the symlinks into the main checkout's
 
 A clobbered main checkout repairs itself: its stamps record the outputs it
 built, so the next build there sees them rewritten and rebuilds.
+
+## Superseding builds — `build:latest`
+
+`pnpm run build:latest` (`build-latest.sh`) is `pnpm run build` with one
+build per checkout: it records the build's process group in
+`build/build-latest.pid`, and a later `build:latest` in the same checkout
+stops that group before starting its own. The superseded run exits 0 with
+`superseded by a newer build:latest`; any other exit is the build's own
+status. Nothing is forced — the stamped step that was interrupted has no
+stamp and reruns, every step that finished skips (§ Preprocessor
+idempotency). Only `build:latest` runs take part: a plain `pnpm run build` or
+`pnpm run dev` in the same checkout is neither stopped nor seen.
