@@ -5,16 +5,16 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
-import { docAnchors, extractPointers, extractRetiredPointers, extractSameFileLinks, resolveDocPath } from './doc-pointer-pure';
+import { docAnchors, extractPointers, extractSameFileLinks, resolveDocPath, strayedSectionSigns } from './doc-pointer-pure';
 import { gitFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html'];
 
-// Fixtures interpolate their `#` and `§` from here, so no literal pointer
-// appears in this file and it stays out of its own scan.
+// Fixtures interpolate their `#` and section sign from here, so no literal
+// pointer or sign appears in this file and it stays out of its own scan.
 const H = '#';
-const S = '§';
+const S = '\u00a7';
 
 function scannedFiles(): string[] {
   return gitFiles(ROOT, [], { untracked: true })
@@ -36,11 +36,11 @@ describe('doc pointers resolve', () => {
   const texts = scannedFiles().map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
   const pointers = texts.flatMap(({ file, text }) => extractPointers(text).map((pointer) => ({ file, pointer })));
 
-  it(`no pointer is written in the retired "<path>.md ${S} Heading" form`, () => {
-    const retired = texts.flatMap(({ file, text }) =>
-      extractRetiredPointers(text).map((p) => `${relative(ROOT, file)}:${p.line} — ${p.citedPath}`),
+  it(`no ${S} appears outside "[${S} N](…)" link text in markdown, or anywhere in code`, () => {
+    const strays = texts.flatMap(({ file, text }) =>
+      strayedSectionSigns(text, extname(file) === '.md').map((line) => `${relative(ROOT, file)}:${line}`),
     );
-    expect(retired, retired.join('\n')).toEqual([]);
+    expect(strays, strays.join('\n')).toEqual([]);
   });
 
   it('every "<path>.md#<slug>" names a heading or anchor that exists', () => {
@@ -116,18 +116,17 @@ describe('extraction', () => {
     ]);
   });
 
-  it(`finds the retired ${S} form however the path is quoted or wrapped`, () => {
-    const text = [
-      `see docs/sid.md ${S} 4.5, \`\`README.md\`\` ${S} Stage 2 and **/AGENTS.md** ${S}${S} Unit`,
-      `and scripts/README.md`,
-      `  ${S} Building, but not ~/.claude/CLAUDE.md ${S} DRY`,
+  it(`allows ${S} in markdown only where it opens numbered link text`, () => {
+    const markdown = [
+      `[${S} 3.5](${H}35-lateness) and [${S} 6.1](/docs/catalog-driver.md${H}61-record-parity)`,
+      `but not ${S} 5, ${S} Heading, [${S} Heading](${H}heading) or docs/sid.md ${S} 4.5`,
+      `nor ${S}${S} 4.1, 4.4`,
     ].join('\n');
-    expect(extractRetiredPointers(text)).toEqual([
-      { citedPath: 'docs/sid.md', line: 1 },
-      { citedPath: 'README.md', line: 1 },
-      { citedPath: '/AGENTS.md', line: 1 },
-      { citedPath: 'scripts/README.md', line: 2 },
-    ]);
+    expect(strayedSectionSigns(markdown, true)).toEqual([2, 2, 2, 2, 3, 3]);
+  });
+
+  it(`allows no ${S} at all in code, link-shaped or not`, () => {
+    expect(strayedSectionSigns(`// [${S} 3.5](${H}35-lateness), ${S} Unit`, false)).toEqual([1, 1]);
   });
 });
 
