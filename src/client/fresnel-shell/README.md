@@ -301,5 +301,5 @@ the hand-written `SHELL_OBJECT_SIDS` pin here, asserted against the ledger by
 a vitest (tests import, never redefine). See `docs/sid.md` § 7. Without a SID
 a shell silently drops from a shared `?v=`.
 
-See `src/client/README.md` § Full render stack for where each consumer
+See `src/client/scene/README.md` § Full render stack for where each consumer
 sits in the render order.

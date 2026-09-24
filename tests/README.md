@@ -76,6 +76,16 @@ folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (AGENTS.md
                          § Folder READMEs).
+integration-shell-ratchet.test.ts
+                         stellata.ts is wiring only (AGENTS.md § Folder &
+                         module conventions). Every `Stellata` field is in
+                         COMPOSITION (stays) or AWAITING_EXTRACTION
+                         (shrinks to empty); a field in neither fails, and
+                         so does a listed name the class no longer has.
+                         Parses the class with the TypeScript compiler;
+                         arrow-function properties count as methods.
+                         Growing COMPOSITION is a review decision, never a
+                         way to land state on the shell.
 node-import-boundary.test.ts
                          src/client/ ships to a browser, so no module
                          there may import a `node:` builtin or a

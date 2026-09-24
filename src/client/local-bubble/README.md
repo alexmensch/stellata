@@ -57,7 +57,7 @@ The Fresnel shell's material seam and gating base live in
   the depth clearance covers the whole lumpy wall rather than its typical
   lobe (`../fresnel-shell/README.md` § Camera-distance attenuation).
 - **renderOrder −1**, additive, `depthWrite:false`: a dim rim glow the
-  local stars composite over. See `src/client/README.md` § Full render stack.
+  local stars composite over. See `src/client/scene/README.md` § Full render stack.
 - **Label** (`localBubbleLabel`, a `labels`-tier declutter element at
   floor `all`) is an SVG `<text>` bound through the shared distance-gated
   label engine over ~96 shell-surface samples, so it hugs the silhouette.
