@@ -50,6 +50,8 @@ cross-script policy and pointers.
   pixel; launches only past the operator's `.perf-go` marker
   (`hooks/perf-guard.sh`). Not part of `pnpm test` or the build.
 - `hooks/` — Claude Code guard hooks (PreToolUse / SessionStart).
+- `ci/` — helpers only `.github/workflows/` runs: the catalogue build
+  cache's key.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the Zucker 2022 inner-surface HEALPix map into

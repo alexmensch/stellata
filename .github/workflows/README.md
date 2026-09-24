@@ -81,7 +81,11 @@ fan-out of jobs beyond the bare checks:
   ground-truth corpus.
 - `build-catalog` — `build:catalog` + `build:clouds` +
   `build:local-group` with their regenerate-and-diff gates, then every
-  check that reads the built artifacts, as named steps:
+  check that reads the built artifacts, as named steps. On a pull request
+  the catalogue stage (`build:classic-ids` through `build:catalog`, ~5 min)
+  restores from a content-keyed cache when no input changed; key, cached
+  set and the one way to get a stale hit: `scripts/ci/README.md`. The
+  checks:
   - `SID ledger–artifact consistency` — `pnpm run sid:check`.
   - `Tier-A star corpus` — the known-stars corpus + render-geometry
     regression, and the LFS-gated catalogue-wide sweeps.

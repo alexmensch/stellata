@@ -92,17 +92,35 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      # The regenerate-and-diff stage below is a pure function of the files
+      # this key digests (scripts/ci/README.md), so a PR whose key matches a
+      # saved build restores that build's outputs and skips the stage. Push
+      # to main always rebuilds, so every merged commit is verified uncached.
+      - id: catalog-key
+        run: echo "key=$(pnpm exec tsx scripts/ci/catalog-cache-key.ts build:classic-ids build:wgsn build:membership build:catalog)" >> "$GITHUB_OUTPUT"
+      - id: catalog-cache
+        if: github.event_name == 'pull_request'
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/catalog-build.tar
+          key: ${{ steps.catalog-key.outputs.key }}
+      - if: steps.catalog-cache.outputs.cache-hit == 'true'
+        run: tar -xf "$RUNNER_TEMP/catalog-build.tar"
       # Same reproducibility contract as multiples.tsv above: the committed
       # overlay must be exactly what the committed join produces.
-      - run: pnpm run build:classic-ids
-      - run: |
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: pnpm run build:classic-ids
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: |
           git diff --exit-code -- data/classic-ids/ || {
             echo "::error::committed classic-ID overlay is stale — run" \
               "'pnpm run build:classic-ids' and commit the regenerated files";
             exit 1;
           }
-      - run: pnpm run build:wgsn
-      - run: |
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: pnpm run build:wgsn
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: |
           git diff --exit-code -- data/iau-wgsn/ || {
             echo "::error::committed WGSN tables are stale — run" \
               "'pnpm run build:wgsn' and commit the regenerated files";
@@ -110,30 +128,44 @@ jobs:
           }
       # The membership manifest is a pure function of committed inputs, so it
       # takes the regenerate-and-diff gate the frozen spine could not.
-      - run: pnpm run build:membership
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: pnpm run build:membership
       # label_flips.tsv sits under data/classic-ids/ but is this build's
       # artifact, so the step above cannot pin it — it runs before this one.
-      - run: |
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: |
           git diff --exit-code -- data/membership/ data/classic-ids/label_flips.tsv || {
             echo "::error::committed membership manifest is stale — run" \
               "'pnpm run build:membership' and commit the regenerated files";
             exit 1;
           }
       # Hard-fails on any record the SID ledger doesn't cover (the mint
-      # side of ledger consistency; the drop side is the job below).
-      - run: pnpm run build:catalog
+      # side of ledger consistency; the drop side is the step below).
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: pnpm run build:catalog
       # Same reproducibility contract as the two artifacts above. build:catalog
       # writes both of these, so without this step the § 6.1 parked ledger's
       # ROW CONTENT is unpinned — only its length is, via distNone in the count
       # snapshot — and a build that parks a different star for the same total
       # would land silently.
-      - run: |
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: |
           git diff --exit-code -- data/membership/parked-ledger.tsv \
             data/athyg/simbad_sourced_distances.tsv || {
             echo "::error::committed build ledgers are stale — run" \
               "'pnpm run build:catalog' and commit the regenerated files";
             exit 1;
           }
+      # On a fresh checkout the stage's untracked files under public/ and
+      # build/ are exactly its outputs; the tracked icons and manifest there
+      # must never be restored from a cache.
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        run: git ls-files -z --others --ignored --exclude-standard public build | tar --null -T - -cf "$RUNNER_TEMP/catalog-build.tar"
+      - if: steps.catalog-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/catalog-build.tar
+          key: ${{ steps.catalog-key.outputs.key }}
       - run: pnpm run build:clouds
       - id: built
         run: pnpm run build:local-group
