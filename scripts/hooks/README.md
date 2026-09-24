@@ -56,6 +56,11 @@ scripts/hooks/
                            invoked this session; a Skill call naming it
                            arms the session. Behaviour pinned by
                            tests/css-skill-guard.test.ts.
+  skill-name.sh            Sourced, not registered: `is_skill`, the one
+                           answer to "does this Skill call name skill X"
+                           under any scoped spelling (`x`, `prefix:x`,
+                           `prefix/x`) — a worktree-scoped listing
+                           invokes `.claude/worktrees/<wt>:x`.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
                            commit-sweep-guard.sh. The two hand-copied
