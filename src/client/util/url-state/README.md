@@ -19,9 +19,10 @@ fully-default state has no segment at all — the URL is bare `/app`.
 **`/app` is not decoration on the path, and `share-path-pure.ts` owns
 it.** `/` is the public marketing homepage (`src/site/README.md`), so
 every part of this module builds and parses under the application's own
-prefix. `src/worker.ts` and the perf runner's `scenarios.ts` both import
-`APP_PATH` from here rather than restating it: a second spelling breaks
-share links with no error anywhere.
+prefix. `src/worker.ts`, `vite.site-dev.ts` and the perf runner's
+`scenarios.ts` take the prefix from here — `APP_PATH`, and `ownedByApp` for
+"is this path the application's" — rather than restating it: a second
+spelling breaks share links with no error anywhere.
 
 **Two legacy transports are decoded forever**, because links carrying
 them are baked into YouTube comments and can never break. `/v/<blob>/` is

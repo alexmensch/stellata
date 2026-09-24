@@ -5,17 +5,13 @@ import { dirname, resolve } from 'node:path';
 import type { Plugin } from 'vite';
 
 import { markdownRendition as renderMarkdown } from './scripts/site/markdown-rendition.ts';
-import { APP_PATH, legacyShareRedirect } from './src/client/util/url-state/share-path-pure.ts';
+import { legacyShareRedirect, ownedByApp } from './src/client/util/url-state/share-path-pure.ts';
 import {
   MARKDOWN_TYPE,
   markdownRendition,
   prefersMarkdown,
   wantsDocument,
 } from './src/negotiation-pure.ts';
-
-function ownedByApp(pathname: string): boolean {
-  return pathname === APP_PATH || pathname.startsWith(`${APP_PATH}/`);
-}
 
 export type DevRoute =
   | { kind: 'redirect'; to: string }
