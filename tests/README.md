@@ -5,9 +5,9 @@ subsystem. Picked up by the top-level `vitest` run alongside every
 in-tree `*.test.ts`.
 
 ```
-agents-md-size.test.ts   Size guard for AGENTS.md. Holds the file at
-                         360 lines / 17.5 KB so it stays load-once-per-
-                         session affordable; the failure message
+agents-md-size.test.ts   Size guard for AGENTS.md. Holds the file under
+                         the test's MAX_LINES / MAX_BYTES so it stays
+                         load-once-per-session affordable; the failure message
                          explains the wiki convention and the
                          AGENTS.md → folder-README → docs/ decision
                          flow. Also asserts CLAUDE.md is still the
