@@ -48,18 +48,14 @@ export class SceneDeclutter {
     this.permitted[id] = on;
     this.pushes[id]?.(on);
     if (id === 'milkyWayBand' || id === 'milkyWayIsobar') this.applyMilkyWayEnabled();
-    if (id === 'lgEmissionGlow') this.applyLgEmissionEnabled();
+    if (id === 'lgEmissionGlow') this.refreshLgEmission();
   }
 
   refreshLgEmission(): void {
-    this.applyLgEmissionEnabled();
+    this.deps.setLgEmissionEnabled(this.permitted.lgEmissionGlow && this.deps.showLgEmission());
   }
 
   private applyMilkyWayEnabled(): void {
     this.deps.setMilkyWayEnabled(this.permitted.milkyWayBand || this.permitted.milkyWayIsobar);
-  }
-
-  private applyLgEmissionEnabled(): void {
-    this.deps.setLgEmissionEnabled(this.permitted.lgEmissionGlow && this.deps.showLgEmission());
   }
 }
