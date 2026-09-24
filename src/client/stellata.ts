@@ -2000,7 +2000,6 @@ export class Stellata implements FrameAnchor {
   // dominate from the user's current vantage, even when the user has
   // travelled deep into 3D space.
   aimAtConstellation(conIndex: number) {
-    if (!this.claimCameraForAim()) return;
     const cons = this.catalog.constellations;
     const lines = conIndex >= 0 && conIndex < cons.length ? cons[conIndex].lines : undefined;
     if (!lines || lines.length === 0) return;
@@ -2045,6 +2044,7 @@ export class Stellata implements FrameAnchor {
 
     const dir = new THREE.Vector3().subVectors(c, t);
     if (dir.lengthSq() < 1e-6) return; // aim point coincides with target
+    if (!this.claimCameraForAim()) return;
     dir.normalize();
 
     const r = this.camera.position.distanceTo(t);
