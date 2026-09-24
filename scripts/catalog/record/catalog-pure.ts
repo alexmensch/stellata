@@ -11,7 +11,7 @@ import { headerIndex } from '../parse/corpus-tsv.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
 import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
-import type { MeasuredParallax } from '../cited-parallax.ts';
+import { parallaxSignalToNoise, type MeasuredParallax } from '../cited-parallax.ts';
 
 /** The bottom of every chromaticity cascade: ~0.65 renders a yellow disc
  *  rather than a hot blue or cold red default. */
@@ -1905,9 +1905,10 @@ export function applyLmcKinematicOverride(
   if (!isInLmcCone(raHours, decDegrees)) return { kind: 'not_member' };
   if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
   if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
-  if (parallax !== null && parallax.errMas !== null && parallax.errMas > 0
-      && (parallax.mas - LMC_PARALLAX_MAS) / parallax.errMas
-        > LMC_PARALLAX_CONSISTENCY_SIGMA) {
+  const sigmaAboveLmc = parallax === null
+    ? null
+    : parallaxSignalToNoise(parallax.mas - LMC_PARALLAX_MAS, parallax.errMas);
+  if (sigmaAboveLmc !== null && sigmaAboveLmc > LMC_PARALLAX_CONSISTENCY_SIGMA) {
     return { kind: 'parallax_rules_out' };
   }
   return { kind: 'snap', distPc: LMC_DISTANCE_PC };

@@ -4,6 +4,7 @@
 
 import { isGaiaCatalogueBibcode, isHipparcos2Bibcode } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
+import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
@@ -92,13 +93,6 @@ export interface ParallaxResolution {
 
 function usable(plx: number | null): plx is number {
   return plx !== null && plx > 0;
-}
-
-/** `plx / e_plx`, or null where the index publishes no usable error bar. */
-export function parallaxSignalToNoise(
-  plx: number, err: number | null,
-): number | null {
-  return err !== null && err > 0 ? plx / err : null;
 }
 
 /** Whether `PARALLAX_SN_FLOOR` refuses this parallax — the single statement of
