@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# skill-guard: PreToolUse hook on Skill / Edit / Write / NotebookEdit. Blocks
-# an edit to a file a rule below names until that rule's skill has been
-# invoked this session. See README.md#how-skill-guard-works.
+# skill-guard: PreToolUse hook on Skill / Read / Grep / Edit / Write /
+# NotebookEdit. Blocks an edit (or, where the rule says so, a read) of a file
+# a rule below names until that rule's skill has been invoked this session.
+# See README.md#how-skill-guard-works.
 #
 # State scope: keyed on $PPID the way readme-guard is, for the same
 # reasons. $GUARD_SESSION overrides it for a harness that spawns a fresh
@@ -37,13 +38,19 @@ case "$file_path" in
 
 Reach for the utopia skill alongside it when the change touches a type size, a space step or a clamp()."
     opt_out=" The same file is the opt-out, for the rest of the session, where the target is genuinely not a CUBE stylesheet."
+    gates_read=1
     ;;
   *.ts|*.tsx|*.js|*.mjs|*.cjs|*.py|*.sh|*.wgsl|*.glsl)
     skill=code-craft
     why="Every code change is design work, a one-line bug fix included: the design pass (one owner per fact, no legal-looking 'not ready' value, what each module hides, where the copies are), the two-hats commit split, and the recurring-bug-class rule. A folder README says what the code here does, not how to judge a change to it, so having read one is not having loaded the other."
     opt_out=""
+    gates_read=0
     ;;
   *) exit 0 ;;
+esac
+
+case "$tool" in
+  Read|Grep) [ "$gates_read" = 1 ] || exit 0 ;;
 esac
 
 state_file="$(marker "$skill")"
@@ -53,7 +60,7 @@ reason="Refusing $tool on $(basename "$file_path") — invoke the $skill skill f
 
 $why
 
-Fix: call the Skill tool with skill '$skill', then retry the edit.
+Fix: call the Skill tool with skill '$skill', then retry.
 
 If you have just done that and this still denies, your harness does not run PreToolUse on Skill calls: arm the session by creating $state_file and carry on — do not invoke the skill a third time.$opt_out"
 

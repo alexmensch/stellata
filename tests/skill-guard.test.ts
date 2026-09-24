@@ -89,6 +89,17 @@ describe('skill-guard / cube-css', () => {
     expect(readdirSync(stateDir)).toEqual(['claude-skill-guard']);
   });
 
+  it('gates a Read of a stylesheet, and a Grep into one', () => {
+    expect(run({ tool_name: 'Read', tool_input: { file_path: '/repo/src/site/site.css' } }).allowed)
+      .toBe(false);
+    expect(run({ tool_name: 'Grep', tool_input: { path: '/repo/src/site/site.css' } }).allowed)
+      .toBe(false);
+  });
+
+  it('passes a Grep over a directory', () => {
+    expect(run({ tool_name: 'Grep', tool_input: { path: '/repo/src/site' } }).allowed).toBe(true);
+  });
+
   it('passes a payload carrying no path at all', () => {
     expect(run({ tool_name: 'Edit', tool_input: {} }).allowed).toBe(true);
   });
@@ -111,6 +122,13 @@ describe('skill-guard / code-craft', () => {
   it('allows every code file once the skill has been invoked', () => {
     expect(skill('code-craft').allowed).toBe(true);
     for (const path of CODE_FILES) expect(edit(path).allowed, path).toBe(true);
+  });
+
+  it('passes a Read or Grep of code before the skill is invoked', () => {
+    for (const path of CODE_FILES) {
+      expect(run({ tool_name: 'Read', tool_input: { file_path: path } }).allowed, path).toBe(true);
+      expect(run({ tool_name: 'Grep', tool_input: { path } }).allowed, path).toBe(true);
+    }
   });
 
   it('does not arm the stylesheet gate', () => {
