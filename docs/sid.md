@@ -5,8 +5,8 @@ binding on the implementation beads B1–B5; each bead's acceptance
 criteria trace to a section here ([§ 11](#11-acceptance-traceability)). Companion README:
 [`data/sid/README.md`](../data/sid/README.md) (registry file roster).
 
-Measured numbers: § 4.2's bucket table is from the ledger's mint build
-of 2026-07-10 (**327,452 records**, app 2.17.4); § 6.2's dry run is
+Measured numbers: [§ 4.2](#42-canonical-key--stability-first)'s bucket table is from the ledger's mint build
+of 2026-07-10 (**327,452 records**, app 2.17.4); [§ 6.2](#62-dr2dr3-dry-run-measured-2026-07-07)'s dry run is
 frozen at the 2026-07-07 `dr2_neighbourhood` pull against the
 2026-07-06 build's 5,085-id risk set (the committed request +
 neighbourhood snapshots stay that pair so the classification is
@@ -495,7 +495,7 @@ One global resolver built at boot from whatever artifacts attach:
 - `resolveSid(sid)` → `{ kind, localIndex }`, or `pending` while any
   registered-but-unattached domain remains, or `unknown` once all
   attached domains have disclaimed it.
-- **Successor following (§ 9.4's last row):** resolution first
+- **Successor following ([§ 9.4](#94-migration-semantics--exact-table)'s last row):** resolution first
   canonicalises through the retired-sid → successor-sid map, derived
   at catalog build time from `retirements.tsv` net of
   `reinstatements.tsv` (`sidSuccessorPairs` in `scripts/sid/sid-pure.ts`)

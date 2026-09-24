@@ -83,7 +83,7 @@ manifest row leaves without a record in one of two ways
 
 1. **A park**, ledgered in `data/membership/parked-ledger.tsv` — the parallax
    cascade reaches no owned measurement, or the V cascade reaches no
-   magnitude. A record needs both a place and a brightness, and § 6.1 requires
+   magnitude. A record needs both a place and a brightness, and [§ 6.1](catalog-driver.md#61-record-parity) requires
    every such row be named rather than counted.
 2. **A drop**, pinned at zero — no direction tier resolves, or the row is
    past `dist > 50,000 pc` after every override. Both mean a reference table
@@ -446,7 +446,7 @@ first-hand: an ordered cascade over Gaia DR3, HIP2, CNS5, Gliese
 V/70A and bibcoded SIMBAD values settles which parallax a record
 inverts, and the Bailer-Jones → LMC-kinematic → cutoff stack above
 then overrides that inversion where its own gate fires. A record no
-tier reaches is a ledgered § 6.1 drop rather than a silent keep of a
+tier reaches is a ledgered [§ 6.1](catalog-driver.md#61-record-parity) drop rather than a silent keep of a
 printed cell. The tier order, the two precision constants, and why
 the residual drops rather than degrading are
 `scripts/catalog/distance/parallax/README.md`; the override stack is
@@ -491,7 +491,7 @@ focus on — the high-PM nearby neighbours (drift table:
 [Reference epoch and proper motion](/data/README.md#reference-epoch-and-proper-motion); worst case
 Barnard's Star at ~1.8 arcmin from the J2016.0 base).
 
-**Position baseline.** Post-direction-cascade (§ Driver astrometry
+**Position baseline.** Post-direction-cascade ([Driver astrometry](#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)
 above), every record's position is J2016.0 *by construction* — Gaia
 DR3 5p at its native J2016.0 (no propagation), HIP2 propagated
 J1991.25 → J2016.0, or AT-HYG printed ra/dec as-is for the 30

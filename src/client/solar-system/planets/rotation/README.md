@@ -13,8 +13,7 @@ src/client/solar-system/planets/rotation/
                                   the linear rows hand off to.
   earth-orientation-pure.ts       Earth's pole and prime meridian from the
     (+ test)                      long-term precession frames + the Earth
-                                  rotation angle. See § Earth is not a
-                                  linear row.
+                                  rotation angle. See README.md#earth-is-not-a-linear-row.
   texture-orientation.test.ts     Rendered IAU-orientation → texture-UV
                                   chain vs Horizons sub-observer lon/lat
                                   (pole-up, no mirror, prime meridian).

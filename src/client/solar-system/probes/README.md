@@ -10,7 +10,7 @@ contract, provenance, and the frame/unit facts live in
 A probe is a real object rendered by a **representation** of one: the
 spacecraft subtends no angle at any range, so what draws is a glyph
 standing in for it, and the declutter cycle classes markers accordingly
-(§ Declutter and chart mode). What the marker inherits from a physical
+([Declutter and chart mode](#declutter-and-chart-mode)). What the marker inherits from a physical
 body is that it is **not focus-gated** — it draws regardless of which
 object the camera is focused on, and its motion comes wholly from a `t`
 sampler. Only the trail gates on focus.
@@ -169,7 +169,7 @@ from here on purpose.
 - **`cadenceReport` prices the drawn markers for the render gate**
   (`../../render-gate/cadence/README.md`). It rides the sampler's own
   interpolated velocity, minus the camera's, projected across the line of
-  sight — never a finite difference, for the reason § Sampler gives. A
+  sight — never a finite difference, for the reason [Sampler](#sampler) gives. A
   hidden, decluttered or unsampled probe reports nothing. There is no
   brightness channel: signal-lost is a step in alpha at one instant, not a
   ramp. `prevLocalPc` exists only for the safety net's measured-displacement
@@ -395,7 +395,7 @@ Probes join every kind-generic contract without a special case anywhere
 in the interaction layer:
 
 - **SID** — `sol:<roster id>`, `kind=probe` in the ledger, pinned
-  client-side in `../sol-object-sids.ts` (§ Sol-system SID pins in
+  client-side in `../sol-object-sids.ts` ([Sol-system SID pins](/src/client/solar-system/README.md#sol-system-sid-pins) in
   `../README.md`). The URL wire needs no probe-specific work: focus, the
   distance vector, and POIs already carry any-kind SIDs, and unlike the
   planet domain there is no index translation — the resolver's

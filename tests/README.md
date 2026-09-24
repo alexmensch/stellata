@@ -171,7 +171,7 @@ tsl-standin-filters.test.ts
                          onto the node afterwards cannot undo. Every
                          construction under src/ must state its pair
                          (/src/client/webgpu/solar-system/README.md#a-stand-ins-filters);
-                         § TSL stand-in filters below
+                         README.md#tsl-stand-in-filters below
                          carries the scan's one limit.
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
@@ -294,9 +294,9 @@ Work every line, then record the findings in the PR body:
   ([The gate becomes the output struct](/src/client/webgpu/hdr/README.md#the-gate-becomes-the-output-struct)).
 - **`NodeMaterial.setupOutput` still wraps the output under `premultipliedAlpha`
   and `fog`, and `buildCode` still tests `isOutputStructNode` on the top-level
-  node** — § Two material flags silently demote the struct, same README.
+  node** — [Two material flags silently demote the struct](/src/client/webgpu/hdr/README.md#two-material-flags-silently-demote-the-struct), same README.
 - **A render target's auto-created depth texture is still `Depth24Plus` under
-  `reversedDepthBuffer`** — § The depth format is requested, not asserted.
+  `reversedDepthBuffer`** — [The depth format is requested, not asserted](/src/client/webgpu/hdr/README.md#the-depth-format-is-requested-not-asserted).
 - **`renderer.backend.device` and `renderer.backend.get(…)`** in
   `src/client/webgpu/timestamps/timestamp-probe.ts`,
   `src/client/webgpu/extinction/extinction-parity.ts` and

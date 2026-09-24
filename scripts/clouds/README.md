@@ -37,12 +37,12 @@ scripts and source files. Run via `pnpm run build:clouds`.
 
 `{version: 3, count, noiseModel, clouds[]}` — `noiseModel` carries
 the substructure noise-ladder constants ([§ 5.2](/docs/science-molecular-clouds.md#52-the-multiplicative-field);
-build-side only — the client no longer reads them, see § 5).
+build-side only — the client no longer reads them, see [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec)).
 One entry per cloud:
 
 | Field      | Meaning |
 | ---------- | ------- |
-| `name`     | Canonical display name (§ Alternate names). |
+| `name`     | Canonical display name ([Alternate names](#alternate-names)). |
 | `id`       | Slug, also used by URL/search. |
 | `aliases`  | Cross-catalogue / common names for search + the focus-card alias row ([Alternate names](#alternate-names)). Absent when none are curated. |
 | `center`   | `[x, y, z]` ICRS heliocentric pc. |

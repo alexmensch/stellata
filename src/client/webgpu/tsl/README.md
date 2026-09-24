@@ -59,7 +59,7 @@ contract:
   swapped on attach — one node per slot for the whole boot, since two
   consumers of the same volume must not be able to diverge
   ([One owner for every shared slot](../extinction/README.md#one-owner-for-every-shared-slot)). The A_V cache is a
-  storage buffer, bound the same way (§ Storage attributes).
+  storage buffer, bound the same way ([Storage attributes](#storage-attributes)).
   **A placeholder's filter pair is what its node's WGSL fetches with**, for
   the graph's whole life and whatever is swapped in later — so the
   placeholder carries the real texture's pair
@@ -174,7 +174,7 @@ orbit rings were 27 of them ([Orbit rings](../../solar-system/ephemerides/README
 
 It also rules cache-key equality out as a test: two graphs that ought to be
 identical never compare equal. Pin the observable surface instead
-(§ TSL test pattern, leg 2).
+([TSL test pattern](#tsl-test-pattern--what-a-layers-suite-covers), leg 2).
 
 ## Assigning a varying from an explicit vertex stage
 

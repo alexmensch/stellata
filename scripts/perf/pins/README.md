@@ -311,7 +311,7 @@ beside `stateGuardVerdict` itself.
 
 Here it decides two things. A trending row at a **gated** vantage refuses the
 pin and refuses a comparison; at an ungated one it does neither
-(§ Reading `--against-pin`). And **`--baseline` goes on refusing it either
+([Reading `--against-pin`](#reading---against-pin)). And **`--baseline` goes on refusing it either
 way, which is the rule rather than an oversight**: the two gates share one
 implementation of every refusal that is a fact about the run, but this one is
 a fact about the vantage, and `--baseline` bands lg like any other row it

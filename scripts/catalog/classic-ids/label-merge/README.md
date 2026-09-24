@@ -39,7 +39,7 @@ Per identifier (`hip`, `hd`, `hr`, `gl`, `flam`), first hit wins:
 overlay asserts nothing        -> the spine's value stands (the backstop)
 overlay confirms the spine     -> the spine's own SPELLING is kept
 spine has no value             -> the overlay's is added
-the two disagree               -> the overlay wins (§ 4 precedence)
+the two disagree               -> the overlay wins (/docs/catalog-driver.md#4-how-hd-reaches-gaia precedence)
 ```
 
 **Bayer STRINGS are not merged.** IV/27A spells Bayer letters `alf` where the
@@ -260,7 +260,7 @@ build that runs it.
 The number decides the STAR; the component letter takes a PAIRWISE rule beside
 it (`FieldSpec.confirms`) and its own ownership key (`FieldSpec.identity`),
 because neither strict nor collapsed comparison is right. Two different
-components of one system disagree and § 4 precedence decides them — collapsed,
+components of one system disagree and [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) precedence decides them — collapsed,
 Gl 563.2's swap read as agreement, though CNS5 rows 3664/3665, SIMBAD and the
 HIP all letter HIP 72509 B and HIP 72511 A against AT-HYG. But a SYSTEM-level
 claim contradicts nothing on EITHER side: `gj_comp` states a multi-component

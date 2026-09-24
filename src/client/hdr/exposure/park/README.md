@@ -74,7 +74,7 @@ parked frame could not hide a rising coverage in the star field. A
 ([The unit](../../attachments/README.md#the-unit)), and the floor regime is the
 app's own default view — precisely where a star is the only masked thing
 that could appear. So the pin rides the same wake bound as `L̄` rather than
-a separate proof, and § Wake below is the whole of it.
+a separate proof, and [Wake](#wake) below is the whole of it.
 
 **The park POINT is unaffected.** Sol at 5 AU subtends ~1.9 px against the
 9.945 px the apparent-size term caps at, so its `vPhysRatio` is ~0.19 —

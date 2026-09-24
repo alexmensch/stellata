@@ -47,7 +47,7 @@ scripts/catalog/companions/
 **A record's identifiers are the manifest's, and this folder adds none.**
 Promotion mints records; it does not amend one. The manifest states each
 record's HIP and Gaia source_id, its `binding` cell says on what basis, and a
-cell it leaves empty is the § 4 gate's decision rather than an omission
+cell it leaves empty is the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gate's decision rather than an omission
 ([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived)).
 So a pair-primary row's own ids stay on the promoted companion
 and never reach the anchor's record.

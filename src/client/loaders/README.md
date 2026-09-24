@@ -38,7 +38,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          single/resolved/unresolved — see
                          /scripts/catalog/multiplicity/README.md#multiplicity-status).
 catalog-progressive.ts   chunk fetch scheduling + the record window each
-                         landing chunk unlocks (§ Progressive catalog load).
+                         landing chunk unlocks (README.md#progressive-catalog-load).
 catalog-window.ts        one record window's decode as plain typed arrays,
   (+ test)               window-relative — the pass both the worker and the
                          inline fallback run, plus the column roster the
@@ -48,7 +48,7 @@ catalog-window.ts        one record window's decode as plain typed arrays,
                          /scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
 catalog-decode-worker.ts that pass off the main thread, and the spawn +
 catalog-decode-host.ts   inline fallback around it
-  (+ host test)          (§ The catalog-decode worker).
+  (+ host test)          (README.md#the-catalog-decode-worker).
 catalog-fixture.ts       test-only catalog.bin builder — synthetic records
                          through the shipped writeStarRecord, so every
                          parse in these suites is a writer→reader
@@ -120,8 +120,8 @@ dust-renderer-mock.ts    A recording renderer stand-in, enough surface
 `loadCatalog` resolves on the **first chunk carrying a whole record**, not on
 the whole artifact, so boot paints a sky while the rest is still on the wire.
 Records are apparent-V ordered and the chunk plan ramps from 1 MiB
-([Record order,](/scripts/catalog/record/README.md#record-order) § On-disk transport
-chunking), so that prefix is roughly the naked-eye sky.
+([Record order,](/scripts/catalog/record/README.md#record-order) [On-disk transport
+chunking](/scripts/catalog/record/README.md#on-disk-transport-chunking)), so that prefix is roughly the naked-eye sky.
 
 The shape: one buffer pre-allocated at `manifest.totalBytes`, the chunks
 fetched **one at a time in order** straight into their own slices, each
@@ -302,7 +302,7 @@ Chunk bytes are z-major with x innermost per the Python writer, which is
 what the volume reads as width/height/depth.
 
 The star vertex raymarch and the extinction prepass sample the volume
-(`../webgpu/extinction/README.md`); § Dust voxel readback is how the
+(`../webgpu/extinction/README.md`); [Dust voxel readback](#dust-voxel-readback) is how the
 upload itself is verified, independently of any sampler.
 
 **The marking rule above binds every 3D texture bound in a TSL graph, not

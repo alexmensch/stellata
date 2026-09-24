@@ -74,7 +74,7 @@ Camera orientation during the reorient depends on launch mode:
   transports `camera.up` across each of those frames — the controls are
   disabled, so nothing else would, and a reorient whose travel direction sits
   near screen-up would otherwise close the angle between `up` and the
-  boresight to nothing (§ The perpendicular invariant, same README).
+  boresight to nothing ([The perpendicular invariant](/src/client/camera/controls/input/README.md#the-perpendicular-invariant), same README).
 - **Observe launch** (`returnToObserve`, `mag0 ≈ 0`): the
   lookAt-per-frame approach degenerates — the camera starts on top
   of A, so `lookAt(A)` snaps to "facing forward" the instant the

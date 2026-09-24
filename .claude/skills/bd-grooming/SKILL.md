@@ -146,7 +146,7 @@ poorly, so script the grouping in python (parent/child via
 3. **New epics** — when 3+ coupled beads should land together. Create it and
    name the design-gate child in its description.
 4. **Orphaned children of closed epics** — reparent to the surviving parent.
-5. **Re-prioritisation** against `stellata-beads` § Prioritisation. Research
+5. **Re-prioritisation** against `stellata-beads` [Prioritisation](/.claude/skills/stellata-beads/SKILL.md#prioritisation). Research
    and "investigate" tasks at P1 go to P2; code-quality children default to P3
    unless coupled to in-flight P1/P2 work.
 6. **Defer candidates** — `bd defer <ids...>`. Recurring: the mobile epic and

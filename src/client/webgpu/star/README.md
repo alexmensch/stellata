@@ -5,13 +5,13 @@
 `stellata.ts` — the import boundary in `../README.md`). It carries the
 three depth-honest pipelines of [Early-z](../README.md#early-z--the-star-layers-depth-honest-redesign): D2 glow (no
 depth output), D3 core mask (depth-only, member stamp in the vertex
-stage), and D4 disc (colour only, no depth output either — § The disc
-draw writes no depth) — plus their local-depth-pass mirror variants
+stage), and D4 disc (colour only, no depth output either — [The disc
+draw writes no depth](#the-disc-draw-writes-no-depth)) — plus their local-depth-pass mirror variants
 ([The local mirror](#the-local-mirror)). No pipeline here writes fragment depth, and the
 draw count is three, mirror draws included.
 Each main draw is indirect at its tier's survivor count
-(`compaction/README.md`), over storage tables indexed by star (§ Star
-tables) — the vertex stage runs over the stars that can draw, not the
+(`compaction/README.md`), over storage tables indexed by star ([Star
+tables](#star-tables--every-per-star-field-is-a-storage-read)) — the vertex stage runs over the stars that can draw, not the
 catalogue.
 The CPU half of that stack — the star frame, the pass identities, the
 blend states, the perceptual-disc mirror — is `../../star-pipeline/`.
@@ -26,8 +26,7 @@ src/client/webgpu/star/
   star-tables-pure.ts (+ test) Layout of the static per-star record table
                                (stride, slots, the interleave).
   star-tables.ts (+ test)      StarTables — the star-indexed storage
-                               tables every star stage reads (§ Star
-                               tables), and the per-frame forwarding of
+                               tables every star stage reads (README.md#star-tables--every-per-star-field-is-a-storage-read), and the per-frame forwarding of
                                the shell's attribute writes onto them.
   star-geometry.ts (+ test)    The two quad geometries, corner + index
                                only, each drawn indirect off its tier's
@@ -46,8 +45,7 @@ src/client/webgpu/star/
   star-glow-tsl.ts             The D2 material: glow fragment (soft
                                taper, additive) over the shared stage.
   star-disc-tsl.ts             The D4 material: per-channel max blend,
-                               no depth write — § The disc draw writes
-                               no depth.
+                               no depth write — README.md#the-disc-draw-writes-no-depth.
   star-core-mask-tsl.ts        The D3 material: depth-only, colour
                                writes off, over the shared disc gate;
                                takes the MRT swap for three's pipeline
@@ -80,7 +78,7 @@ threshold, is [Eliding the physical-size branch](../../star-pipeline/perceptual-
 
 Which per-star field lands where — the static-table fields, the
 forwarded four, the one per-vertex attribute — is
-`../star-attribute-roster.ts` (§ Star tables).
+`../star-attribute-roster.ts` ([Star tables](#star-tables--every-per-star-field-is-a-storage-read)).
 
 The operator, emission-unit and perceptual-disc mirrors the fragment
 composes live one level up (`../tonemap-tsl.ts`, `../emission-tsl.ts`,

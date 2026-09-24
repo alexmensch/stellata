@@ -382,7 +382,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    the catalog as shard 0. `sids()` is the only leg routed through the
    table so far; the render plumbing and the remaining catalog-indexed
    legs arrive with the first second population, as data plus a shard
-   entry (that README's § What is NOT shard-aware yet enumerates them).
+   entry (that README's [What is NOT shard-aware yet](/src/client/star-pipeline/shards/README.md#what-is-not-shard-aware-yet) enumerates them).
 
 Each phase leaves the app fully working; no phase depends on a later
 one. LOC expectation across the epic: `stellata.ts` → ~1,200–1,400,

@@ -56,7 +56,7 @@ actually are:
   chunk](#absorbing-a-chunk), which carries the two traps.
 - **Proximity queries.** The Sol-distance-sorted index and
   `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
-  built on it (§ Star rendering, core depth-mask). `Picker` slices the
+  built on it ([Star rendering](/src/client/star-pipeline/README.md#star-rendering-instanced-quads-three-passes), core depth-mask). `Picker` slices the
   same index for its distSol-filter window.
 - **The physical-size window.** `syncPhysSizeWindow()` — § below.
 

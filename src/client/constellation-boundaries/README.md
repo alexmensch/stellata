@@ -20,7 +20,7 @@ derivation, and the external checks on all of it — is
 ```
 src/client/constellation-boundaries/
   iau-geometry/                   The pure B1875 geometry, its own README.
-  constellation-boundary-layer.ts The chart-mode layer (§ Chart-mode layer).
+  constellation-boundary-layer.ts The chart-mode layer (README.md#chart-mode-layer).
     (+ test)
   boundary-artifact-loader.ts     Fetch + validate the shipped artifact.
     (+ test)
@@ -46,7 +46,7 @@ runtime consumer reads the built artifact, never the edges:
   See [Positional constellation membership](/scripts/catalog/parse/README.md#positional-constellation-membership).
 - **Drawing, labelling and runtime membership** all ride
   `public/constellation-boundaries.json` — arcs, label anchors
-  (§ Label anchors), and the resolved cell grid (§ Runtime membership).
+  ([Label anchors](#label-anchors)), and the resolved cell grid ([Runtime membership](#runtime-membership)).
   `buildBoundaryArtifact` takes the whole lookup, not just its edges, so
   all three come from **one** decomposition: the same one byte 34 was
   assigned from. `scripts/catalog/boundaries/README.md` owns the wire.

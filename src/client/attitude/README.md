@@ -119,7 +119,7 @@ frame on the orbital plane of whatever is focused — and levels on it.
 `orbit-frame/README.md`.
 
 The **INV chip** in the bottom-right corner is not a frame at all; it moves
-the camera rather than choosing what to read it against. § Inverting the view.
+the camera rather than choosing what to read it against. [Inverting the view](#inverting-the-view).
 
 ## What it reads
 

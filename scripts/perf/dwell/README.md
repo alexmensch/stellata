@@ -43,7 +43,7 @@ holds the frame the archive measured rather than inventing one. It is a cap,
 never a floor: a vantage whose round trip outruns the cadence requests less
 often, which is sound and recorded. A rate ABOVE the cap cannot happen if
 the lever took, so one is read as the lever not having taken and fails the
-scenario (§ Five checks below).
+scenario ([Five checks](#five-checks-each-able-to-fail) below).
 
 **Several cadences make the run a PROBE, not a comparison.**
 `--readback-every 4,1,2` visits the scenario once per value, and since every
@@ -241,7 +241,7 @@ the pass-roster module over the dev server (`PASS_TOGGLES_MODULE_URL`), never
 a second spelling of it; a pass not active at the vantage fails the scenario
 rather than round-tripping nothing under the pass's name.
 
-**Five checks, each able to fail.** A hold already live when the dwell starts
+<a id="five-checks-each-able-to-fail"></a>**Five checks, each able to fail.** A hold already live when the dwell starts
 fails it — settle requires an unheld gate, and the debug panel takes one,
 whose per-tick DOM writes would sit inside a wall-clock dwell. A clock that
 was not still stopped at the end of the timed frames fails it: the frames

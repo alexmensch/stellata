@@ -11,8 +11,8 @@ The layers take their surfaces through
 `../../solar-system/materials/README.md` — that README owns which
 surfaces this family asks for, the neutral-defaults rule, and why the
 probe glyph is split out; the `EmitterMaterial` contract they are handed
-back is [The material seam](../../scene/README.md#the-material-seam). Only the glare needed a layer of its own (§ The glare
-packs).
+back is [The material seam](../../scene/README.md#the-material-seam). Only the glare needed a layer of its own ([The glare
+packs](#the-glare-packs)).
 
 ## Files in this area
 
@@ -31,8 +31,7 @@ src/client/webgpu/solar-system/
   probe-tsl.ts                The fixed-pixel diamond glyph.
   planet-glare-tsl.ts         The reflected-glare billboard's vertex and
                               fragment graphs, main pass and mirror.
-  planet-glare-geometry.ts    Its packed instanced geometry (§ The glare
-                              packs).
+  planet-glare-geometry.ts    Its packed instanced geometry (README.md#the-glare-packs).
   planet-glare-layer.ts       PlanetGlareLayer: the main mesh into the
     (+ test)                  shell's scene, the mirror into the field's
                               localGroup (the pass scene), the per-frame
@@ -44,7 +43,7 @@ src/client/webgpu/solar-system/
                               the shared roster
                               (`../../solar-system/materials/README.md#texture-slot-rosters`).
   tsl-materials.ts (+ test)   The factory implementing SolarSystemMaterials.
-  tsl-drift.test.ts           § Constant drift.
+  tsl-drift.test.ts           README.md#constant-drift.
 ```
 
 ## A stand-in's filters
@@ -251,7 +250,7 @@ The billboard also carries `vFluxPeakL` — the same kernel renormalised so
 its integral is the body's true flux, for the exposure statistic's flux
 channel (`../../hdr/attachments/README.md`).
 
-The layer packs from `PlanetBodyField.glareSources()` (§ The glare packs);
+The layer packs from `PlanetBodyField.glareSources()` ([The glare packs](#the-glare-packs));
 the field writes the arrays and owns nothing on the GPU, and its `drawn`
 getter is the layer's visibility.
 

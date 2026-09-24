@@ -152,7 +152,7 @@ label-merge/README.md).
 
 **Two rows leave without a record, and the difference is what the count means.**
 A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no
-parallax, no V, or no position, so the § 6.1 ledger records it leaving and
+parallax, no V, or no position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
 `data/membership/parked-ledger.tsv` names it. A **drop** (step 5) is a
 reference table disagreeing with the tiers above it — never a membership
 decision — so it is pinned at 0 in `../build-catalog-expected.json` and a
@@ -179,7 +179,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    the coordinate tier has nothing to serve it either. Every other row of that
    shape reaches SIMBAD coordinates ([The values pull](/data/simbad/README.md#the-values-pull)).
 3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
-   states a position but no motion. See § Space-motion velocity.
+   states a position but no motion. See [Space-motion velocity](#space-motion-velocity).
 4. **Distance overrides**, in order, each superseding the last on the rows it
    claims. `dist = 1000/plx` from step 0, then **Bailer-Jones (DR3)**
    (`applyBailerJonesOverride`), eligible where step 0 resolved

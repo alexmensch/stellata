@@ -28,7 +28,7 @@ manifest applies — never by an edit here ([Correcting a merge decision](../mem
 retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and that
 walk no longer exists. The manifest that supersedes it is a new artifact, not
 a regeneration of this one; the rule it re-sources under, and the measurement
-behind it, are [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) and § The primaries audit below.
+behind it, are [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) and [The primaries audit](#the-primaries-audit) below.
 
 ## Files in this area
 
@@ -46,8 +46,7 @@ scripts/catalog/spine/
                                   manifest gate and ../astrometry-request/.
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
                                   byte identity, counts, keyless rows, Sol,
-                                  duplicate source_ids (§ Why a guard, not a
-                                  rebuild), plus the stale-source_id queue
+                                  duplicate source_ids (README.md#why-a-guard-not-a-rebuild), plus the stale-source_id queue
                                   (§ Six source_ids DR3 does not publish).
   inherited-spine-expected.json   Pinned count snapshot.
   primaries-audit-pure.ts         The retirement's measurement: per-row
@@ -93,7 +92,7 @@ driving file layout, per-column origin, and the counts. Two origins:
 Rows are emitted in AT-HYG `id` order (readStars preserves CSV order), so
 there is no sort key to disagree about.
 
-`pm_ra` / `pm_dec` / `pm_src` are in the file although § 3's column list
+`pm_ra` / `pm_dec` / `pm_src` are in the file although [§ 3](/docs/catalog-driver.md#3-the-inherited-spine)'s column list
 predates them: a frozen artifact cannot grow a column later, so they shipped
 against a need that might arise, and for the same reason they stay. Nothing
 reads them.
@@ -231,9 +230,9 @@ questions, one pass over the rows:
   witness — CNS5's `GJ 9140` row answers for `Gl 157.1`.
 - **Additions** — what the primaries admit that no spine row carries, per
   table: 60,344 IV/25 stars by TYC (55,008 below HD 100,000, the AT-HYG link
-  defect § 3.1 explains), 566 I/239 HIPs, 3,362 CNS5 census rows, 90 IV/27A
+  defect [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) explains), 566 I/239 HIPs, 3,362 CNS5 census rows, 90 IV/27A
   and 103 V/50 rows — the latter being 89 bright-double secondaries plus the
-  14 non-stellar V/50 entries § 3.1 rules out by class.
+  14 non-stellar V/50 entries [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) rules out by class.
 
 **The unverified residual is zero, not small.** The 34 bindings the Identity
 bullet leaves uncorroborated — its 16 + 12 + 6 — each carry a committed
@@ -249,14 +248,14 @@ record's HD/HIP; a Bayer cell counts where those tables publish *any* Bayer
 designation for the star, because HYG's `Alp-1` and IV/27A's `alf01` meet
 only through the naming ladder's normalisers, which are `../naming/`'s to
 own. The value check is what makes the Flamsteed residual 120 rather than
-115 — § 3.1 names the five it separates.
+115 — [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) names the five it separates.
 
 The audit also reads `data/athyg/athyg_33_classic_ids.csv` for one
 measurement, the HD-provenance split behind the link defect. It is the only
 reader of that file outside CI, and it is not on the `build:catalog` path.
 
 The counts are measured, not pinned: the audit is a design-gate instrument
-and the swap's own gate (§ 3.1's manifest) is what will hold them. Re-run it
+and the swap's own gate ([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s manifest) is what will hold them. Re-run it
 with `--out=<dir>` to get the rows before trusting a number quoted here —
 every count above has a file, `attestation.tsv` carrying one row per spine
 row with the primary behind each of its cells.
@@ -307,7 +306,7 @@ unless another home is named; the committed gates are
   count before some other change. `../build-catalog-expected.json` is
   always the live one. Membership was exactly the
   spine, every walk gate read 0, and `sid:check` resolved every
-  record with zero mints — so the § 6.1 dropped list was empty and its
+  record with zero mints — so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) dropped list was empty and its
   reason enum had no rows. The only per-record routing deltas are the
   four-record set enumerated above. The value-half children have since
   opened that list: retiring the printed `dist` cell parks the rows no owned
@@ -324,7 +323,7 @@ unless another home is named; the committed gates are
   four-record set: V and absmag moved one PR earlier under the V
   cascade, with the |ΔV| distribution measured per G bin against
   printed V ([Where the validity bound comes from](../photometry/README.md#where-the-validity-bound-comes-from))
-  and `vVia` routing pinned. § 6.3's |Δabsmag| axis needs no
+  and `vVia` routing pinned. [§ 6.3](/docs/catalog-driver.md#63-field-parity)'s |Δabsmag| axis needs no
   second measurement: absmag is derived from that V on a distance the
   swap did not touch, so it moves by |ΔV| exactly. Spectral-string
   changes are the +4/−4 rows of the same four-record table. ci and rv
@@ -359,7 +358,7 @@ unless another home is named; the committed gates are
 
 ### The derived-binding ledger
 
-The § 6 instantiation for the manifest deriving its `gaia_source_id` instead
+The [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) instantiation for the manifest deriving its `gaia_source_id` instead
 of copying this file's column ([The four sources, in precedence order](../membership/binding/README.md#the-four-sources-in-precedence-order)),
 measured 2026-09-08 by diffing the
 built catalogue against the one built from the copied column, records matched
@@ -407,5 +406,5 @@ Pins: `derivationOutcome`, `derivedVia` and the review counts in
   the V transform (HIP 35261, `ipd` 84, |ΔV| 1.34). Neither cascade gates its
   Gaia tier on fit quality; that is `stellata-3bsf.49`'s question, with these
   rows as its corpus.
-- **The review queue is disposed** — 54 rows, § The spine side of
+- **The review queue is disposed** — 54 rows, [The spine side](/scripts/catalog/membership/README.md#the-spine-side) of
   `../membership/README.md` — and `sid:check` is clean.

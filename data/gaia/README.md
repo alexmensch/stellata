@@ -215,7 +215,7 @@ printed tier to key on. `V >= G + 0.0268` does not bound them from above, so
 `SPINE ∪ MAGNITUDE PULL(V ≤ floor)` ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), and the
 magnitude term's predicate is a bound on V. A source carrying no V satisfies no
 predicate over V, so 925 of these are never candidates — non-selection by the
-term's own definition, not a drop the § 6.1 no-silent-drops rule speaks to.
+term's own definition, not a drop the [§ 6.1](/docs/catalog-driver.md#61-record-parity) no-silent-drops rule speaks to.
 Ledgering them would equally oblige ledgering the 312,475 rows the floor
 excludes. The 18 that are manifest rows *are* candidates and route through the
 existing park: `no_v_magnitude` is "a row placed but unlit ... and a record

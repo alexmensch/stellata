@@ -122,7 +122,7 @@ d = 10 pc (`../../milkyway/calibration/README.md`). Same function, and
 the only difference is which distance goes in.
 
 **The shape must be the luminance shape.** ρ₀ is a scalar and the tint it
-multiplies is luma-normalised (§ Unit), so the scalar volume integral *is*
+multiplies is luma-normalised ([Unit](#unit--what-an-emitting-layer-writes)), so the scalar volume integral *is*
 the luminance integral — which is what lets a flux share be split between
 two differently-tinted components without either hue moving flux.
 

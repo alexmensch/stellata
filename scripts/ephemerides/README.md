@@ -25,7 +25,7 @@ This folder owns the scripts.
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
   `data/ephemerides/{id}.json` and exits non-zero if any table misses its
-  accuracy bound. See § Cadence.
+  accuracy bound. See [Cadence](#cadence).
 - `sync-ephemerides.ts` (+ `-pure.ts`) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on
   every `pnpm run dev` / `build`, so CI and deploy never touch the network.

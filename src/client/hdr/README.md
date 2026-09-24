@@ -31,21 +31,21 @@ src/client/hdr/
   tonemap/                   The operator: the CPU mirror + exact
                              inverse, where the shared graph and the
                              fullscreen resolve live, and the two shape knobs — its own
-                             README (§ Operator).
+                             README (tonemap/README.md#operator).
   emission/                  The unit an emitting layer writes in:
                              magnitude → luminance, the point-source peak
                              rule, the two solid angles and the footprint
-                             softening — its own README (§ Unit).
+                             softening — its own README (emission/README.md#unit--what-an-emitting-layer-writes).
   summation/                 Attachment 2's convolution over the eye's
                              summation patch, which the resolve composites
-                             — its own README (§ Pass ordering).
+                             — its own README (README.md#pass-ordering--one-target-two-passes-into-it).
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
                              that measures the statistic attachment. Its
                              own README.
   chrome/                    Authored chrome colours pre-mapped through
-                             the inverse — its own README (§ Chrome).
+                             the inverse — its own README (README.md#chrome--non-physical-layers-keep-their-authored-look).
 ```
 
 ## Unit — what an emitting layer writes

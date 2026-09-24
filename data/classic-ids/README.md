@@ -4,7 +4,7 @@ The frozen CDS tables that carry HD / HR / Bayer / Flamsteed / GJ
 designations, the source_id-keyed overlay joined out of them, and the review
 queues the merge onto the catalogue's records produces. This is the identifier
 half of the AT-HYG retirement — [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) decides the
-sources, § 4 the HD→Gaia route and the ambiguity / precedence policy.
+sources, [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) the HD→Gaia route and the ambiguity / precedence policy.
 
 ```
 tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
@@ -237,7 +237,7 @@ membership term itself, so these are the records the labels actually land on.
 Coverage is the label merge's own routing (counts pinned in
 `scripts/catalog/classic-ids/classic-id-overlay-expected.json`): `keyed` is
 every spine row carrying the identifier, `reproduces` the subset the overlay
-confirms. The remainder is the overlay disagreeing (a flip, § 4 precedence) or
+confirms. The remainder is the overlay disagreeing (a flip, [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) precedence) or
 asserting nothing:
 
 | Identifier | Spine rows keyed | Overlay reproduces | | Flips |

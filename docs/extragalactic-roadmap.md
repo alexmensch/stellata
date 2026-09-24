@@ -142,8 +142,8 @@ E(z) = √(Ωm(1+z)³ + Ω_r(1+z)⁴ + ΩΛ). Trapezoidal at Δz = 1e-4 is
 far below data uncertainty. The integrator lives once in
 `scripts/extragalactic/cosmology-pure.ts` with vitest pins (e.g.
 D_C(0.1), D_C(0.7), D_C(1089.9) ≈ 14.0 Gpc for the CMB shell — pin
-the integrator's own output with `toBe` at impl time, per § Test
-coverage at write time).
+the integrator's own output with `toBe` at impl time, per [Test
+coverage at write time](authoring-patterns.md#test-coverage-at-write-time)).
 
 Below Tier 3 (z ≲ 0.035), catalogue distances (TRGB/SBF/CF4) are used
 directly — cosmology conversion applies only where redshift IS the
@@ -177,7 +177,7 @@ apply our own flow model.
   count header, fixed-stride records per the table above, name table
   appended as length-prefixed UTF-8. Layout constants live once in a
   `*-pure.ts` shared by build script, loader, and tests (never
-  redefined — § Named constants and DRY).
+  redefined — [Named constants and DRY](authoring-patterns.md#named-constants-and-dry)).
 - **Tier 4+ chunking**: HEALPix **Nside = 4, nested** (192 sky
   cells) × **4 comoving distance bands** with log-spaced edges
   (Tier 4: 0.2 / 0.45 / 0.7 / 1.0 Gpc; Tier 5: 1.0 / 1.6 / 2.2 /

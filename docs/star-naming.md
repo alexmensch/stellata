@@ -49,7 +49,7 @@ implementation's own statement of all three rules.
 | `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
 | GCVS 5.1 | mechanical | variable-star designations | `data/gcvs/README.md` |
-| AT-HYG `proper` / `bayer` | **rejected as authority** | alias candidates only (§ 5) | — |
+| AT-HYG `proper` / `bayer` | **rejected as authority** | alias candidates only ([§ 5](#5-aliases--ship-what-cannot-be-derived-derive-what-can)) | — |
 | Stellarium `common_names` | **rejected as authority** | 659 HIP-keyed folk names, alias candidates only | `data/stellarium/README.md` |
 | SIMBAD live resolution | **rejected** | — | frozen-data policy, `data/README.md` |
 
@@ -131,7 +131,7 @@ Display resolution order, first hit wins:
    then the record's own printed name. HIP is LAST, not first: Hipparcos
    resolved close pairs as one star, so NEC lists both p Eri rows against
    HIP 7751 and separates them only by HR and HD — a HIP-first join
-   collapses p Eri A and B onto one record, the very duplicate § 8.4
+   collapses p Eri A and B onto one record, the very duplicate [§ 8.4](#84-known-duplicate-display-names)
    expects to dissolve.
 3. **Bayer, Greek series** — glyph + superscript + designation constellation.
 4. **Flamsteed** — `<number> <dc>`.
@@ -335,16 +335,16 @@ pinned in build-counts so growth is visible in review.
 A **naming parity ledger**, same discipline as [§ 6,](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change)
 committed as a test fixture:
 
-1. **Searchability never regresses.** Every string that resolves a star
+1. <a id="81-searchability-never-regresses"></a>**Searchability never regresses.** Every string that resolves a star
    today still resolves the same star. A displaced name becomes an alias or
    the gate fails. This is the hard invariant.
-2. **Display changes are enumerated, not counted.** Every record whose
+2. <a id="82-display-changes-are-enumerated"></a>**Display changes are enumerated, not counted.** Every record whose
    displayed name changes appears with old name, new name, and the tier that
    won. Reviewed once, then pinned.
-3. **Tier routing counts pinned** in build-counts: records named per tier,
+3. <a id="83-tier-routing-counts-pinned"></a>**Tier routing counts pinned** in build-counts: records named per tier,
    IAU names matched / unmatched / unreachable, override rows, alias count,
    and the [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them) residual classes.
-4. **`KNOWN_DUPLICATE_DISPLAY_NAMES` → 0**, and the constant retired: all
+4. <a id="84-known-duplicate-display-names"></a>**`KNOWN_DUPLICATE_DISPLAY_NAMES` → 0**, and the constant retired: all
    three dissolved, `p Eridani` ×2 into `p Eri A` / `p Eri B` per the
    authority and both `The-1 Ori` collisions into correctly-rendered θ¹ Ori
    forms. The measurement it pinned covered the name table alone, so it is

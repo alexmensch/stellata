@@ -31,7 +31,7 @@ reduction (`reduction.enabled`), the star core depth-mask
 (`setCoreMaskEnabled`), the planet depth pre-stamp
 (`meshLayer.setDepthStampEnabled`, present only while some body's mesh is
 opaque — `../../../solar-system/planets/depth-stamp/README.md`), and the
-two extinction rows (§ The extinction rows). A pass inactive at the
+two extinction rows ([The extinction rows](#the-extinction-rows)). A pass inactive at the
 current view/state is skipped, not measured as zero.
 
 **Where the layer carries a contribution gate, `present()` asks whether it
@@ -146,7 +146,7 @@ default Sol view, park off, exposure pinned at dm −6.289 with
 
 So the whole statistic write is 22.5 ms and the star field's own share is at
 most 5.1 ms of it — and that row's readback rates diverge, so part of it is a
-submission-barrier change riding on the pass (§ The readback cadence, and
+submission-barrier change riding on the pass ([The readback cadence](/src/client/debug/frame-cost/README.md#the-readback-cadence--measured-and-not-the-confound), and
 [Reading a row](../README.md#reading-a-row)). The band and the LG glow carry the larger
 part, and holding both off took 29.8 ms off the whole frame. The two are
 also what the brightness gate (`stellata-8cg.50.4`) removes near a bright

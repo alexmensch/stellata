@@ -22,7 +22,7 @@ scripts/perf/
                             pins/README.md#from-saved-runs.
   survivors.ts              `pnpm run survivors`: debug.survivors() at the
                             canon vantages. Reads no clock and is not a cost
-                            instrument (§ Survivor counts). The other
+                            instrument (README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument). The other
                             Playwright value import; not imported by a test.
   checkout.ts               What run.ts and pin.ts share about the checkout:
                             root, main checkout, git provenance, the pin's
@@ -172,7 +172,7 @@ priceFrame, which pins the exposure only after its own warmup
 converges on the reduced scene and the sweep then pins a cut the plain run
 never had. Where the eye branch or the resolved-surface pin governs, that is
 a different star population in the two runs and the rows are not each
-other's complement; § The compression probe on the passes page is the same
+other's complement; [The compression probe](/src/client/debug/frame-cost/passes/README.md#the-compression-probe--does-the-reductions-cost-track-content) on the passes page is the same
 trap caught the hard way. At the Sol default view the display floor governs
 and the cut reads `Lw` and the anchor and nothing from the frame, so holding
 the band and the glow off cannot move it. **The `limitMag` columns are the

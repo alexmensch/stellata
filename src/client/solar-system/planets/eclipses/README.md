@@ -31,8 +31,7 @@ src/client/solar-system/planets/eclipses/
                                   2928 AD. See README.md#what-is-pinned.
   umbral-glow-pure.ts (+ test)    Refracted, reddened sunlight inside a
                                   caster's umbra, and the umbral depth both
-                                  render layers measure it at. See § Umbral
-                                  glow — this one IS on a render path.
+                                  render layers measure it at. See README.md#umbral-glow--why-a-totally-eclipsed-moon-is-red-not-black — this one IS on a render path.
 ```
 
 **The circumstances modules are not on a render path** — the shader already
@@ -168,7 +167,7 @@ scale depth buffer can't hide it — and the planet's label hides with
 it (`../labels/README.md`). **Unless the caster has an atmosphere**: Earth
 refracts sunlight into its own umbra, so the dim floors at that glow rather
 than 0 and a totally eclipsed Moon stays visible, coppery red, label and all
-(§ Umbral glow). Glare through the host's
+([Umbral glow](#umbral-glow--why-a-totally-eclipsed-moon-is-red-not-black)). Glare through the host's
 perceptual *halo* stays undimmed — the halo is a perceptual
 artefact, not a surface, so a body behind it correctly shines
 through. A planet in *front* (transit) dims the

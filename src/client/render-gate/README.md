@@ -42,8 +42,8 @@ would silently make the next `hold()` a no-op.
    idempotent.
 2. **Continuous conditions**, recomputed each tick by `animate()`: a
    camera transition in flight, or a `'realtime'` layer asking for
-   wall-clock frames (there are none — § Declaring how time moves a
-   layer in `../scene/README.md`). **A running clock is NOT one of
+   wall-clock frames (there are none — [Declaring how time moves a
+   layer](/src/client/scene/README.md#declaring-how-time-moves-a-layer) in `../scene/README.md`). **A running clock is NOT one of
    them**: it schedules through the cadence below instead, which is what
    lets the out-of-the-box live-1× view idle. The transition half is
    **not re-derived** — it falls out of the controller dispatch chain

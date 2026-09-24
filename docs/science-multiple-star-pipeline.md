@@ -655,7 +655,7 @@ pipeline (engineer walk-through in `scripts/binaries/README.md`);
 `scripts/catalog/build-catalog.ts` + `visual-doubles.ts` +
 `companion-promotion.ts` for the catalog-side passes (see
 [Geometric binary inference](/scripts/catalog/multiplicity/README.md#geometric-binary-inference)
-and § TDSC double-star cross-match for per-pass detail).
+and [TDSC](/scripts/catalog/multiplicity/README.md#tdsc) double-star cross-match for per-pass detail).
 
 ## Intra-system distance coherence
 

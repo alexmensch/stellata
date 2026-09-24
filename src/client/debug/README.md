@@ -100,8 +100,8 @@ up as a hot path in its own measurements.
   ([`gpu-timing/`](gpu-timing/README.md)).
   Where the adapter offers nothing — it can withhold `timestamp-query`,
   and Chrome grants it but
-  resolves garbage ([`gpu-timing/`](gpu-timing/README.md) § A granted
-  feature can still resolve garbage) — the headline says
+  resolves garbage (`gpu-timing/` [A granted
+  feature can still resolve garbage](gpu-timing/README.md#a-granted-feature-can-still-resolve-garbage)) — the headline says
   **`submit Xms`** instead and reports CPU wall-time
   around the render calls. Submission is asynchronous, so a large `submit`
   means the main thread is *blocking* on the driver — a real symptom, but

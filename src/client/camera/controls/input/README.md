@@ -17,7 +17,7 @@ gestures below toggle its `noRotate` / `noPan` flags.
   ([Architecture](../../../hover/README.md#architecture)).
 - `roll-controller.ts` (+ test) — `RollController`: the roll operations
   on `camera.up` and on the quaternion, one authority per camera mode.
-  Holds no state of its own beyond scratch. § Roll authority.
+  Holds no state of its own beyond scratch. [Roll authority](#roll-authority).
 - `roll-pure.ts` (+ test) — roll algebra: level-up projection, signed
   roll angles, and camera-local up.
 - `pinch-zoom-pure.ts` (+ test) — pinch-delta → wheel-notch normalisation
@@ -248,7 +248,7 @@ Two things went with that correction, and neither should come back:
 
 **The rule that replaces the deadband: steady-state navigate writes
 `camera.up` on no frame of its own.** Only a gesture, a level, a URL restore,
-a frame an animation owns (§ The perpendicular invariant), the landing
+a frame an animation owns ([The perpendicular invariant](#the-perpendicular-invariant)), the landing
 of a captured-endpoint animation, or the attitude indicator's **orbit lock**
 writes it. That last one is per-frame and is admissible for the reason a
 gesture is: it writes only on a frame where the orbit datum it rides moved far

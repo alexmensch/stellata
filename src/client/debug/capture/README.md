@@ -116,7 +116,7 @@ appears to change, then crosses every visible scale in the last few frames.
 Equal time per decade is equal time per octave of apparent size.
 
 The default ease is the quintic smootherstep the arrival profile lands on
-(§ Profile there), which has zero velocity *and* zero acceleration at both
+([Profile](/src/client/camera/arrival/README.md#profile) there), which has zero velocity *and* zero acceleration at both
 ends: the camera is genuinely still on the first and last frames, which is
 what makes a loop cut cleanly.
 

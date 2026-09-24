@@ -49,7 +49,7 @@ element *i* of a `count`-long vec4 buffer the kernel fills and walks in an
 order of its own ([Dispatch order](dispatch-order/README.md#dispatch-order)).
 `AV_TEX_WIDTH` × `⌈count/1024⌉`, `packPositionsRgba` and the
 `(i % 1024, i / 1024)` arithmetic are the parity reference's, which draws
-that layout on purpose (§ The prepass kernel). The consumers' index is the
+that layout on purpose ([The prepass kernel](#the-prepass-kernel)). The consumers' index is the
 instance index itself, and the mirror draws' `iSourceIdx` indirection is
 untouched. The `RECOMPUTE_EPSILON_PC` displacement gate means an idle
 camera costs zero.

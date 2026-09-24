@@ -22,7 +22,7 @@ scripts/catalog/record/
                                   (`../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`).
                                   Pure.
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
-                                  records on. Pure. § Record order.
+                                  records on. Pure. README.md#record-order.
 ```
 
 ## Record order
@@ -69,7 +69,7 @@ Three consequences for anything addressing a record by index:
 
 ## Binary catalog format (`public/catalog.bin.<i>` + manifest)
 
-Fixed-size records in apparent-V order (§ Record order). Current version is
+Fixed-size records in apparent-V order ([Record order](#record-order)). Current version is
 **v10** with a 100-byte stride. Magic and version step together
 (v3=`HYG3` … v9=`HYG9`, v10=`HYGA` — the field is four ASCII bytes, so v10
 takes the next character rather than a second digit). v10 moved the name table
@@ -78,7 +78,7 @@ ahead of the records and changed no record byte; v9 appended a `uint8`
 the stride stays a multiple of 4) — see [Multiplicity status](../multiplicity/README.md#multiplicity-status). v8
 appended three `float32` space-motion velocity components (`vx/vy/vz`,
 pc/yr) at bytes 84–95 — see [Space-motion velocity](../parse/README.md#space-motion-velocity). v7 appended a `uint32` `sid` (Stellata ID)
-at byte 80 — see § SID allocation. v5 appended a `uint64` Gaia
+at byte 80 — see [SID allocation](/scripts/catalog/README.md#sid-allocation). v5 appended a `uint64` Gaia
 DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
 NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
 pipeline uses everywhere else; ~99.6% of records carry one (the residual
@@ -172,7 +172,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 76–79 `float32`      **mh_gspspec** ([M/H] dex); NaN = absent.
   - 80–83 `uint32`       **sid** — Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)), the frozen
                           per-object wire identity. `0` (`NO_SID`) only in the
-                          unallocated-bootstrap path (§ SID allocation) before
+                          unallocated-bootstrap path ([SID allocation](/scripts/catalog/README.md#sid-allocation)) before
                           the build hard-fails. Every shipped record is
                           nonzero.
   - 84–87 `float32`      **vx** — space-motion velocity x (pc/yr, equatorial

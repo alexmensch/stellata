@@ -176,7 +176,7 @@ Gl 1245A at 4.72 pc and Gl 791.2 at 8.76 pc are the two nearest, and zero is
 not a better estimate than the value refused. The rule is preferred anyway for
 the reason the rv cascade gives ([The Gaia-bibcode skip rule](../radial-velocity/README.md#the-gaia-bibcode-skip-rule))
 — a value this build cannot defend does not become
-defensible by arriving through an index — and § 5's residual policy is explicit
+defensible by arriving through an index — and [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s residual policy is explicit
 that a residual is enumerated rather than silently absorbed. Admitting a
 Gaia-bibcoded PM only where nothing else reaches the row would rescue all 13
 and is one condition; it is not taken because it would key on what our pull

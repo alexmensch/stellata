@@ -12,8 +12,7 @@ per-host orbital-plane quaternion.
 src/client/solar-system/ephemerides/
   lunar-theory-pure.ts            Truncated ELP-2000/82 (Meeus ch. 47):
                                   the Moon's λ/β/Δ in the mean ecliptic
-                                  and equinox of date. See § Moon
-                                  ephemeris.
+                                  and equinox of date. See README.md#moon-ephemeris.
   moon-vector-truth.test.ts       The theory + precession chain vs frozen
                                   Horizons geocentric vectors spanning
                                   the whole clock, plus Meeus's own

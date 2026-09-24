@@ -23,7 +23,7 @@ disables. Hidden in chart mode.
   (`calibration/README.md`); the shader's step counts are pinned against the
   mirror.
 - `band-peak-pure.ts` (+ test) — the brightest sightline the band renders
-  from a camera position, as a bound (§ The brightest rendered sightline).
+  from a camera position, as a bound ([The brightest rendered sightline](#the-brightest-rendered-sightline)).
 - `calibration/` — the published photometry the solve runs on (M_V, B/T,
   the two components' B−V), the light ratio and the disc colour derived
   from it, the resolution hole the march multiplies the emissivity by, and
@@ -109,7 +109,7 @@ star catalogue's measured share of the model's light at each step,
 applied ahead of the dust step. It reaches both shaders as one filtered
 fetch of the shared `uUnresolvedLight` grid, and the CPU mirror through
 `unresolvedBandLightAt` over the same cube
-([The resolution hole,](calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars) § The table is a 3D grid).
+([The resolution hole,](calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars) [The table is a 3D grid](calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)).
 
 ### Population tints carry hue, never flux
 
@@ -129,7 +129,7 @@ channel outran its red). The solve now sets that share outright at 0.0775
 cannot move it back.
 
 **But it does not buy a free palette edit.** `REDDENING_RGB` attenuates
-per channel in the same loop (§ Dust), so a redder
+per channel in the same loop ([Dust](#dust--the-analytic-tier-and-what-composes-with-it)), so a redder
 component transmits more of its own light: dust-free columns are
 bit-identical under any hue, extincted ones are not. Deriving the palette
 brightened the plane by 0.026 mag at b = 5 and 0.023 mag at the Galactic

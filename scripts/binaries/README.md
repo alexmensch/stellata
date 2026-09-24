@@ -58,8 +58,7 @@ scripts/binaries/
                                   consume. Label convention: data/msc/README.md.
   subdivide.py                    Synthesized sub-pair injection — ORB6 orphans
                                   + curated overrides, MSC inner pairs, binding
-                                  seeds, Gaia-NSS inner pairs. See § Sub-pair
-                                  synthesis.
+                                  seeds, Gaia-NSS inner pairs. See README.md#sub-pair-synthesis-subdividepy.
   stage2_resolve.py               WDS component → Gaia DR3 source_id cascade,
                                   with same-letter + Aa→A propagation. Also
                                   hosts the binding-integrity audit.

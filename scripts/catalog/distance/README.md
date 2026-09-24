@@ -40,7 +40,7 @@ scripts/catalog/distance/
   parallax/                       The measured parallax every distance inverts
                                   — the cascade, its two precision constants,
                                   the bound-sibling index, and the two ledgers
-                                  the build commits (§ 6.1 parked rows and the
+                                  the build commits (/docs/catalog-driver.md#61-record-parity parked rows and the
                                   SIMBAD-sourced exclusion list). Its own
                                   README; this file's override stack sits above
                                   it.
@@ -145,7 +145,7 @@ of arcsec. The propagation formula itself (PM sign / cos δ /
 Δt-direction) is exercised by the 24.75-yr HIP2 tier and pinned
 independently against SIMBAD J2000 in `direction-cascade.test.ts`.
 
-**§ 5's validation-independence rule has nothing to exclude here.** It
+**[§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s validation-independence rule has nothing to exclude here.** It
 bites where a SIMBAD tier and a SIMBAD-based validator meet the same
 field, and no validator reads a position: `simbad_sample.tsv` carries
 `ra` / `dec` / `pmra` / `pmdec` columns, but `validate-simbad-sample.ts`
@@ -182,8 +182,8 @@ the same `directionOnPm` every tier's own PM goes through, so no row tracks a
 rate from a place its tier left stale. Only the 3 Tycho-2 rows move (2.337″ /
 0.149″ / 0.109″); the 36 Gaia rows are native J2016.0 and the advance is a
 zero-Δt no-op. [The rescued motion advances the position too](pm-rescue/README.md#the-rescued-motion-advances-the-position-too)
-carries the check that says it lands right, and § Whether the rescuing
-source should supply the position too records why it does not.
+carries the check that says it lands right, and [Whether the rescuing
+source should supply the position too](pm-rescue/README.md#whether-the-rescuing-source-should-supply-the-position-too--no) records why it does not.
 
 `velocityVia` credits the catalogue rather than the route to it, so
 `velocityTycho2Pm` **43** counts this cascade's 5 rows alongside the
@@ -198,7 +198,7 @@ for the physical rationale; the
 diagram below is the build-side view:
 
 ```
-1000 / resolveParallax(...)          the § 5 parallax cascade — parallax/
+1000 / resolveParallax(...)          the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers parallax cascade — parallax/
    │                                   README.md. No owned parallax parks the
    │                                   row: it builds no record at all.
    ▼

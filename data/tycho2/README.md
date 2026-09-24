@@ -112,7 +112,7 @@ Coverage, re-measured 2026-09-07 against the committed tables:
 
 The refresh hard-fails on a manifest TYC that reaches neither table **and**
 whose pair entry is unreached too. All 371,416 manifest TYCs with `TYC3=1`
-reach Tycho-2, so a primary that misses is a membership event for § 6 to
+reach Tycho-2, so a primary that misses is a membership event for [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) to
 adjudicate, or an upstream regression — not a refresh landing short. The whole
 residual sits in the 731-row component cohort (`TYC3>1`), 713 of which reach,
 and Tycho-2 carries the pair's `TYC3=1` entry for all 18 that do not: it lists
@@ -203,7 +203,7 @@ republish; a re-pull is warranted only when the request set moves.
   the no-Gaia astrometry cohort, not all of it: **4** rows route CNS5 on a GJ
   number and **222** route SIMBAD, the latter including the `TYC3>1`
   components Tycho-2 merged into their pair, which carry a TYC that reaches no
-  row of its own (§ The request set, [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
+  row of its own ([The request set](#the-request-set--manifest--iv25), [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - The same parse feeds the **PM rescue cascade**
   (`scripts/catalog/distance/pm-rescue/README.md`) on a further **64** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion

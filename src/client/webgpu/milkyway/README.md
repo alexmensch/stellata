@@ -46,8 +46,8 @@ coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
 import, plus the explicit `.level(int(0))` on the hole fetch, which keeps
 the sampler's derivatives out of the march
 ([The table is a 3D grid](../../milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)). The profile and dust parameters need no entry there: they arrive
-as uniform nodes that `seedBandSharedSlots` alone writes (§ Seeding,
-because a node starts on its declared default). The hole grid crosses as
+as uniform nodes that `seedBandSharedSlots` alone writes ([Seeding,
+because a node starts on its declared default](#seeding-because-a-node-starts-on-its-declared-default)). The hole grid crosses as
 a `texture3D()` node over the `Data3DTexture` the seed and the debug lever
 write in place — its extent reaches the shader as the one constant the
 coordinate divides by, so nothing else about the layout can drift.

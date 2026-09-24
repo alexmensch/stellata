@@ -248,7 +248,7 @@ also hands the delta to the gate and the cadence
 ([The focal ride](../render-gate/README.md#the-focal-ride)).
 
 `focalPerturbationInto(focalIdx, t, out)` supplies that drift in
-**float64**: it replays the focal's slot-chain (§ Walk-active LOD) in
+**float64**: it replays the focal's slot-chain ([Walk-active LOD](#walk-active-lod)) in
 double precision and returns the focal's total displacement from its
 catalog baseline — matching the walk's float32-written slot within the
 position quantum, continuous in `t`. `setFocus` reads it to snap

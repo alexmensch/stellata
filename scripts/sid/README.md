@@ -8,8 +8,8 @@ model, canonical-key ladder, allocation, CI guard, DR procedure — is
 `data/sid/README.md`. This README carries the tool contracts.
 
 ```
-sid-pure.ts               Pure algebra: designation grammar (§ 3),
-                          canonical-key ladder (§ 4.2), same-as classes +
+sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-designation-namespaces),
+                          canonical-key ladder (/docs/sid.md#42-canonical-key--stability-first), same-as classes +
                           allocation (§§ 4.1, 4.4), per-record designation
                           extraction (starDesignations) + read-only
                           resolution (resolveSids, mint = error),
@@ -42,21 +42,20 @@ allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           a per-PR invariant.
 export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
-                          as the neighbourhood-pull request TSV (§ 6.1
+                          as the neighbourhood-pull request TSV (/docs/sid.md#61-procedure
                           step 1). --out=<path> to write elsewhere.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
-                          DR transition (§ 6.1 classes); --bridges-out
+                          DR transition (/docs/sid.md#61-procedure classes); --bridges-out
                           writes carried-1:1 same-as edges for human
                           review. Defaults replay the committed DR2→DR3
-                          dry-run inputs (§ 6.2).
+                          dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
 stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
-                          pnpm run sid:stamp). See § Sibling-artifact
-                          stamping.
+                          pnpm run sid:stamp). See README.md#sibling-artifact-stamping.
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind per sibling) + siblingArtifactObjects, shared
                           by allocate (minting) and the stamp (resolving) so
@@ -93,10 +92,10 @@ their artifact `id` slugs; planets, moons, and probes all come from
 `data/sid/sol-objects.tsv`, which is scoped by system membership rather
 than object class — the row's `kind` column carries the class (the
 `sun` row is not a second object: it rides the Sol record, realising
-the § 7 same-as edge). Boundary shells come from
+the [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) same-as edge). Boundary shells come from
 `data/sid/shell-objects.tsv` (same `key\tkind` format, `shell:` ns).
 `gl:` keys have whitespace collapsed
-to `_` (`gl:Gl_804`) to satisfy the § 3 no-whitespace grammar.
+to `_` (`gl:Gl_804`) to satisfy the [§ 3](/docs/sid.md#3-designation-namespaces) no-whitespace grammar.
 
 ## Ambiguous designations are dropped, not assigned
 

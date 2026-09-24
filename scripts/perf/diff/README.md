@@ -25,8 +25,8 @@ that and the two `bracketMs` values — the bracket is instrument drift, which
 no amount of sampling reduces. Dwell rows use the median's standard error,
 `1.2533·(iqr/1.349)/√n`, on both sides, floored at the same figure the pin
 uses — `max(0.25 ms, 1 %)` on a frame row, the vantage's own constant on a
-compute row ([Reading](../pins/README.md#reading---against-pin) `--against-pin`, § The compute
-row). **The floors are shared deliberately.** Two sigma of the
+compute row ([Reading](../pins/README.md#reading---against-pin) `--against-pin`, [The compute
+row](/scripts/perf/pins/README.md#the-compute-row)). **The floors are shared deliberately.** Two sigma of the
 medians' own scatter describes sampling and nothing else, and a dwell's run
 conditions move it further: at 240 frames on a steady vantage that band
 draws around 0.02 ms, while moving a context's position within its run

@@ -34,8 +34,7 @@ src/client/webgpu/
                                     uncaptured GPUOutOfMemoryError reports,
                                     fanned out to subscribers — and
                                     allocatesWithinMemory, the scoped
-                                    upload behind uploadTexture (§ Out of
-                                    memory). Imports nothing from three.
+                                    upload behind uploadTexture (README.md#out-of-memory). Imports nothing from three.
   reversed-depth-sort.ts (+ test)   Render-list comparators countering
                                     r185's reversed-depth list reversal;
                                     retire with the three bump.
@@ -273,10 +272,10 @@ no WebGPU identifier appears in the entry either way).
 How app data reaches a TSL graph, and what a layer's tests look like,
 is `tsl/README.md`: the
 uniform-node mirror's reference-vs-sync contract and the texture-slot
-exception (§ Shared uniform nodes), the @types/three gaps worth casting
-around (§ TSL typing shim), the 8-vertex-buffer limit and the two ways
-a population answers it (§ Per-instance data), and the three legs a
-layer is covered by (§ TSL test pattern).
+exception ([Shared uniform nodes](tsl/README.md#shared-uniform-nodes)), the @types/three gaps worth casting
+around ([TSL typing shim](tsl/README.md#tsl-typing-shim)), the 8-vertex-buffer limit and the two ways
+a population answers it ([Per-instance data](tsl/README.md#per-instance-data)), and the three legs a
+layer is covered by ([TSL test pattern](tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers)).
 
 ## Early-z — the star layer's depth-honest redesign
 

@@ -119,7 +119,7 @@ whole naked-eye sky, records being apparent-V ordered — and only a miss
 stays `pending` and queues, because the sid may sit in a chunk that has
 not arrived ([A domain that is still filling](../sid-resolver/README.md#a-domain-that-is-still-filling)).
 Withholding the domain until the last chunk instead would make
-every star ref deferred, and § A focus that resolves after the pose is
+every star ref deferred, and [A focus that resolves after the pose](#a-focus-that-resolves-after-the-pose) is
 why that is wrong rather than merely slow. Every other pinnable kind's
 domain (planet, lg) attaches complete at boot, strictly before
 `applyFromUrl`.
@@ -265,7 +265,7 @@ against the wrong datum, with the camera no longer riding the orbit.
 
 Both ride **zero-payload presence bits** — 27 (ORB armed) and 28 (lock
 engaged) — because each is reconstructible from the focus the blob already
-carries. The flags byte is full, so this is the § Adding a field route
+carries. The flags byte is full, so this is the [Adding a field](#adding-a-field) route
 rather than a flag bit. Bit 28 opens the LEB128 mask's fifth 7-bit group,
 which is the lock's whole cost.
 
@@ -312,7 +312,7 @@ limit and the trim applies on top.
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when nothing
 is focused AND the anchor is far enough from Sol to move the pose — see
 [URL round-trip](/src/client/frame/README.md#url-round-trip) for the precision-anchor
-semantics that make this round-trip safe, and § What counts as a camera move
+semantics that make this round-trip safe, and [What counts as a camera move](#what-counts-as-a-camera-move)
 for "far enough".
 
 ## What counts as a camera move
@@ -366,7 +366,7 @@ on any display, and it has to stay well clear of the float32 wire's own
 tests pin the behaviour at five vantages spanning ten orders of magnitude,
 which is the property that matters — not the value.
 
-**Adding a field.** Claim the next free presence bit in `FIELDS_V4`,
+<a id="adding-a-field"></a>**Adding a field.** Claim the next free presence bit in `FIELDS_V4`,
 declare its type and bytes, and add encode/decode logic in
 `currentStateOf` / `applyDecodedView`. Old shared URLs decode fine
 because their bit is 0 in the presence mask. Don't repurpose retired

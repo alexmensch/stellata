@@ -92,7 +92,7 @@ science-hdr-pipeline.md Design gate for the HDR epic: the
                         upstream of the operator only — local tone mapping
                         decided out), per-layer squash replacements,
                         chart-mode bypass, and the brightness-skip share
-                        bound (§ 3.5).
+                        bound (science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound).
                         Drives xypg H2–H8;
                         spans star-pipeline, milkyway, solar-system,
                         local-group, chart-mode and the future

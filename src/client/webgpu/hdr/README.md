@@ -26,8 +26,7 @@ src/client/webgpu/hdr/
                               that would demote the struct.
                               finishMrtOutputMaterial is the same swap on
                               `outputNode` for a material whose own
-                              fragment stage must survive (§ Composing
-                              over three's fragment).
+                              fragment stage must survive (README.md#composing-over-threes-fragment).
   summation-tsl.ts            The summation convolution and the box
                               downsample, over summation-pure's
                               constants.

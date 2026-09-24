@@ -40,8 +40,7 @@ src/client/solar-system/planets/
                                   pick() adds one gate over
                                   forEachDrawnBodyView: bodyInkVisible,
                                   which reads the LIVE uExposure so the
-                                  adaptation cut reaches the pick (§ The
-                                  pick's adapted gate).
+                                  adaptation cut reaches the pick (README.md#the-picks-adapted-gate).
                                   isCollapsedOntoParent is the per-body
                                   "renders as one point with its parent"
                                   verdict (drawn this frame AND within
@@ -65,8 +64,7 @@ src/client/solar-system/planets/
                                   is unpickable rather than invisible and
                                   clickable.
                                   cadenceReport is the field's per-frame
-                                  answer to the render gate (§ What the
-                                  render cadence reads).
+                                  answer to the render gate (README.md#what-the-render-cadence-reads).
   planet-mesh-layer.ts (+ test)   Close-range spheroid mesh LOD — see
                                   README.md#planet-mesh-lod. Builds its four
                                   surfaces (mesh, annulus, shell, depth
@@ -106,7 +104,7 @@ src/client/solar-system/planets/
                                   of appMag. Its own README.
   rotation/                       Pole + prime-meridian elements and the
                                   texture-UV orientation chain — its own
-                                  README (§ Planet rotation).
+                                  README (README.md#planet-rotation).
   body-shadow-pure.ts (+ test)    Soft-penumbra ray–sphere shadow math, CPU
                                   mirror of the mesh shader's caster loop.
                                   Io-transit / lunar-eclipse search tests
@@ -330,7 +328,7 @@ crossfade.
   `spheroid-pure.ts:polarRadiusRatio` and nowhere else
   ([Shell extents](../atmosphere/README.md#shell-extents) says why).
   Orientation comes from the body's IAU rotation elements
-  (§ Planet rotation); bodies without them fall back to pole =
+  ([Planet rotation](#planet-rotation)); bodies without them fall back to pole =
   host orbital-plane normal with an arbitrary fixed meridian.
 - **Lighting**: per-fragment Lambert against the planet→host
   direction (view space) — the day/night terminator IS this lighting,

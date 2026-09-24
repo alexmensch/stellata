@@ -362,8 +362,8 @@ march over the catalogue, which recomputes every frame during a warp — because
 that is a GPU workload doing the same fetch against the same texture. The
 shipped march now spends taps by in-cube path length, ~44 per star at Sol
 ([The march](/src/client/star-pipeline/extinction/README.md#the-march)); the yardstick
-is kept so the ratios below stay comparable. Wall-clock GPU timings are § What
-the fill measured.
+is kept so the ratios below stay comparable. Wall-clock GPU timings are [What
+the fill measured](#what-the-fill-measured-and-what-to-turn-if-it-is-too-slow).
 
 **A screen-space grid is uniform in tan θ, not in solid angle**, and the cost
 table has to be read in those terms: `dθ/dx = cos²θ`, so the on-axis cell is

@@ -126,7 +126,7 @@ information.
   structure.** `--mode dwell --scenario mw120,sol --backend webgpu
   --frames 960 --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~4 min, one
   arm, read against the committed pin: the pin run opens with exactly
-  those two contexts in that order (§ Run position), so its rows for them
+  those two contexts in that order ([Run position](scripts/perf/pins/README.md#run-position)), so its rows for them
   were taken at the positions Tier 1 takes them at. Direction against a
   band is what this tier claims, and two vantages claim it twice:
   mw120|webgpu carries a sound GPU stream, and sol|webgpu is the second
@@ -139,7 +139,7 @@ information.
   Not the dearest gated row: that is mw50|webgpu, which sits 4th in
   the canon order, so a two-context run would measure it at a position the
   pin does not hold for it and the row would refuse
-  (§ Run position). A witness that refuses is not a witness. Paste the
+  ([Run position](scripts/perf/pins/README.md#run-position)). A witness that refuses is not a witness. Paste the
   table; the three pin rows the run did not visit print as `not measured`
   and fail nothing. A `✗` exits 1 and owes an `accepted:` line exactly as it
   does at Tier 2, and the pin is left where it was.
@@ -259,7 +259,7 @@ cannot fit, and the constant reads as 30× the noise at mw50
 0.25, so a re-derivation only ever tightens a row.
 
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
-order (mw120, sol, earth, mw50, lg — § Run position: a permutation pins
+order (mw120, sol, earth, mw50, lg — [Run position](scripts/perf/pins/README.md#run-position): a permutation pins
 rows no later run reaches, and `--pin` refuses one), 1280×800 at dpr 2
 (4.096 Mpx), `--frames 960`, `raf-delta`,
 exposure pinned. Every row records the wall p50 / p90, the catalogue record
@@ -343,7 +343,7 @@ moved in between:
   membership change re-takes the pin in the PR that ships it** exactly as
   a render-path change does — enforced, not merely asked for:
   `perf-section-guard` reads the count either side of the diff and
-  requires the section on the same 1 % (§ The `## Perf` section). The
+  requires the section on the same 1 % ([The `## Perf` section](#the-perf-section)). The
   refusal is the backstop under it, not the mechanism: catching a
   membership change on the *next* PR means charging a pin re-take to
   whoever did not cause it.
@@ -414,7 +414,7 @@ That is a backstop, not a gate: it catches a collapse and nothing smaller.
 So price a `local-group/` diff with a per-pass differential at lg, never
 with its pin row. This is the standing arrangement, not an interim one.
 
-**The `## Perf` section.** Required in the PR body when the diff touches
+<a id="the-perf-section"></a>**The `## Perf` section.** Required in the PR body when the diff touches
 anything under `src/client/` — `.ts` and `.wgsl` alike — outside
 `*.md`, `*.test.ts`, and the folders that neither draw nor decide what is
 drawn: `calibration/`, `debug/`, `focus-card/`, `format/`, `hover/`,
@@ -496,7 +496,7 @@ DOI come out of it:
 
 - **Concept DOI** — `10.5281/zenodo.22392528`. Version-independent,
   always resolves to the newest release. This is the one to quote:
-  README badge, README § Licence, `public/llms.txt`, `CITATION.cff`.
+  README badge, README [Licence](README.md#licence), `public/llms.txt`, `CITATION.cff`.
 - **Version DOI** — one per release, cites that exact snapshot.
   v3.44.2, the first archived release, is `10.5281/zenodo.22392529`.
 
@@ -507,7 +507,7 @@ edits with `cffconvert --validate -i CITATION.cff`.
 What each record archives is the git tree at the tag — source. The
 catalogue and rendered artifacts under `public/` are built from it, and the
 LFS-tracked inputs under `data/` arrive as pointer stubs. That is the same
-line README § Licence draws between this repository's AGPL-3.0-only code
+line README [Licence](README.md#licence) draws between this repository's AGPL-3.0-only code
 and the third-party data licences.
 
 **Invariant: GitHub's *Settings → Archives → Include Git LFS objects in

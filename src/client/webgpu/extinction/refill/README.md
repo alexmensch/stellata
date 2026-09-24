@@ -352,7 +352,7 @@ star.
   `REFILL_SLICES` cameras in the buffer. It refills whole first, so what it
   compares is the march rather than the schedule ([The prepass kernel](../README.md#the-prepass-kernel)).
 - **The pick mirror.** `warmAvReadback` maps the buffer only while nothing
-  is owed (§ The cursor).
+  is owed ([The cursor](#the-cursor-and-why-a-request-never-stalls-it)).
 
 ## The kernel bounds itself by the listed length
 

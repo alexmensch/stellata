@@ -227,7 +227,7 @@ forward-scatter term, which is where Jupiter's dust rings would live,
 and no grazing-illumination falloff, so it still takes the host's full
 irradiance at any solar elevation above ~1° (`stellata-2f6.61`).
 
-**Saturn's ring brightness.** The ring system carries most of
+<a id="saturns-ring-brightness"></a>**Saturn's ring brightness.** The ring system carries most of
 Saturn's light and its contribution swings with the tilt of the ring
 plane, so the *unresolved* magnitude runs the joint phase-angle /
 ring-tilt law of Mallama & Hilton 2018 Eq. 10 (Mallama 2012),
@@ -308,7 +308,7 @@ Hilton 2018 Eq. 12, the 4th-order fit to Dyudina's Pioneer-derived
 scattering model, valid 6°–150° and carried down to 0° where it tracks
 the α < 6.5° globe fit (Eq. 11) inside 0.011 mag. Every curve is a
 globe anchored on its α=0 geometric albedo, so `c0 = 0` throughout;
-Saturn's rings are a separate term (§ Saturn's ring brightness above).
+Saturn's rings are a separate term ([Saturn's ring brightness](#saturns-ring-brightness) above).
 The renderer multiplies the flux factor `10^(−ΔV/2.5)` into
 the apparent-magnitude formula in place of the Lambertian default
 whenever a planet carries coefficients and α is inside the published

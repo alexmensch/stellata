@@ -106,7 +106,7 @@ before the skip is exactly what refuses to repaint on re-entry.
 the lock move the camera *inside* the fan-out, and the lock is a
 rotation — so `FrameCtx.frustum` is invalidated every tick in
 `refreshFrameCtx` and refreshed by the orbit-lock entry after its write
-(§ Camera writes, then camera reads). A `'frustum'` test on an entry
+([Camera writes, then camera reads](/src/client/scene/README.md#camera-writes-then-camera-reads)). A `'frustum'` test on an entry
 registered above the lock throws on its first frame rather than culling
 against a pose the frame does not render.
 
@@ -114,7 +114,7 @@ against a pose the frame does not render.
 reading `registerSceneLayers` alone.** All five kind-module layers —
 molecular clouds, Local Group, the boundary shells, planets, probes —
 register in the constructor's roster loop, which runs *before*
-`registerSceneLayers` (§ How the shell uses it); the moving-focal ride,
+`registerSceneLayers` ([How the shell uses it](/src/client/scene/README.md#how-the-shell-uses-it)); the moving-focal ride,
 the orbit rings and the binary orbits are the three inline entries ahead
 of the lock. So clouds, the Local Group and the shells may gate on
 legibility and opacity but **not** on frustum, and moving them below the
@@ -155,7 +155,7 @@ which can bring the emitter back — so the predicate lives in
 and takes the layer's own `contributing` flag: its share is subtracted
 from `L̄` while it draws and never while it is skipped. Two rules close
 the loop — test at the exposure that will obtain *without* the emitter,
-and only where that shift is under `CADENCE_JND_MAG`. § 3.5 is the
+and only where that shift is under `CADENCE_JND_MAG`. [§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound) is the
 derivation and the authority.
 
 **That flag is not this registry's transition state alone.** A layer the

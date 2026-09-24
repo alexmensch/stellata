@@ -7,7 +7,7 @@ primaries publish for them, less the one a correction folds
 that AT-HYG's subset never carried — 376,932 rows, and the 602,228 the V <= 11
 magnitude term adds on top (`magnitude-term/README.md`), 979,160 in
 all. **`readStars` walks it, and
-membership is exactly these rows less the § 6.1 parks**
+membership is exactly these rows less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks**
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
 [§ 3.1,](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) the measurement behind it
@@ -23,7 +23,7 @@ and fails on any diff under `data/membership/`.
 scripts/catalog/membership/
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
-                                  it, the admission rule, the § 6.1 reason
+                                  it, the admission rule, the /docs/catalog-driver.md#61-record-parity reason
                                   codes, the label drops, the TSV codecs, and
                                   the spine ↔ manifest matcher the gate runs.
                                   Pure.
@@ -70,7 +70,7 @@ gaia_source_id  binding  routes  term
   ladder resolves both from HD / HIP at build time and reads the cell only as
   a counter (`../naming/README.md`).
 - `binding` says how `gaia_source_id` is justified: `crosswalk_gated` (a TYC,
-  HIP or CNS5 candidate the § 4 gates passed), `simbad_corroborated` (the
+  HIP or CNS5 candidate the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gates passed), `simbad_corroborated` (the
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,
   through the same gates), `reviewed` (the value a row of
   `data/membership/binding-review-dispositions.tsv` settles on stated
@@ -108,7 +108,7 @@ runs no merge of its own.
 Keying on the derivation is what lets a filled binding carry labels: 577 spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
-HIP 1997, whose own addition row folds away as a component (a § 7 merge,
+HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
 retiring `hd:2094` in favour of `hip:1997`); GJ 9013 onto Ankaa; GJ 9257AB onto
 Tegmine; `Gl 596.1A` to `GJ 9527` on ψ Ser under CNS5's renumbering; and one
 curated refusal ([Curated overrides](../classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them)):
@@ -191,7 +191,7 @@ Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
 the open option; until one exists the manifest ships without them and the
 ledger says which.
 
-**No dropped label was keying its record**, which is the same question § 7 asks
+**No dropped label was keying its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
 of a dropped binding and the reason neither queue writes a SID event. A
 Flamsteed number is not a designation at all, so the 119 cannot move a key. An
 HD can, so the gate states the rule rather than the coincidence: whatever keys
@@ -275,7 +275,7 @@ lose it to.** IV/25 resolves HD 23068, 37703, 45900, 63846 and 86269 onto two
 Tycho-2 stars each — close doubles at 1.5–3″, HD 45900's pair at 8.5″, flagged
 `n_tyc > 1` — and neither component is on the spine. Admission is sequential,
 so its order fixes which one takes the designation: the group whose Gaia
-binding survives the § 4 gate first, since the other would park for want of a
+binding survives the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gate first, since the other would park for want of a
 parallax this one has (HD 86269 is the pair where that outranks the lower TYC),
 then TYC, HIP, GJ. A total order over content, never over walk order.
 
@@ -297,7 +297,7 @@ one a spine-side `hd:` or `hr:` pair), so `sid:allocate` mints every addition un
 `hip:` / `gl:`. The two counts answer only together: the first says the row has
 a classical designation, the second that the designation is its own.
 
-<a id="admission-is-not-a-promise-of-a-record"></a>**Admission is not a promise of a record.** An admitted row walks the § 5
+<a id="admission-is-not-a-promise-of-a-record"></a>**Admission is not a promise of a record.** An admitted row walks the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 cascades like any other, so one that reaches no owned parallax or no V parks on
 `data/membership/parked-ledger.tsv` under the existing reason codes
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). Manifest rows are the membership
@@ -306,10 +306,10 @@ term; the record count is that term less the parks.
 An addition's other labels come by **designation-keyed** joins over the same
 primaries — HR from V/50 by HD, HIP and Flamsteed from IV/27A by HD, HIP from
 Tycho-2's own column — never through the source-keyed overlay, whose gate the
-group's `gaia_source_id` already passed (`overlay.has(source)` is the § 4
+group's `gaia_source_id` already passed (`overlay.has(source)` is the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia)
 verdict on every raw binding, spine row or not). An addition's source is the
 TYC route's where it has one; 3 groups have a HIP route binding a different
-source and follow the HD-route authority of § 4.
+source and follow the HD-route authority of [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia).
 
 ## The parity gate
 
@@ -347,7 +347,7 @@ arithmetic and label-flips replay:
   The 68 designations two rows do share are the spine's own — pinned, so a
   label change that makes a sixty-ninth fails here.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
-  over the records the build produces — **every manifest row less the § 6.1
+  over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)
   parks**, with no exclusions. The three the gate used to carry (spine-origin
   rows only, plus the dropped review bindings and dropped HD labels the
   spine-driven build still shipped) went when `readStars` swapped onto the
@@ -380,10 +380,10 @@ the generator, so the record build applies no label pass to them
 
 The spine stays committed as the baseline gate (i) reads, as the record of
 AT-HYG's merge decisions — which designations name one star — that the
-generator re-keys (with the corrections of § Correcting a merge decision
+generator re-keys (with the corrections of [Correcting a merge decision](#correcting-a-merge-decision)
 applied), and as the inherited label cells the merge above starts from. **Its
 `gaia_source_id` and `mag` columns are no longer read by anything**: the
-derivation stands on its own outputs (§ The spine side) and the V ≤ 3 coverage
+derivation stands on its own outputs ([The spine side](#the-spine-side)) and the V ≤ 3 coverage
 counters take the printed-V cascade the binding gate already weighs each row
 against. Since the label merge moved onto the derived binding,
 `build:classic-ids` does not read this file at all. After the swap release the

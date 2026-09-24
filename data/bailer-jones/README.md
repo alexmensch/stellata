@@ -43,7 +43,7 @@ them pins at zero** (`bjEligibleNotPulled`): an eligible record has its own
 DR3 parallax, so this publication covers it, and an absence means this pull's
 scope — [Refresh](#refresh) below — has moved since the table was pulled. See
 [Multi-layer distance refinement](/scripts/catalog/distance/README.md#multi-layer-distance-refinement) and
-§ Scope-derived pulls.
+[Scope-derived pulls](/scripts/catalog/distance/README.md#scope-derived-pulls--why-the-zero-pin-is-here).
 
 ## Why the pull is ESA-side
 

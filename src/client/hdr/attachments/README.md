@@ -10,7 +10,7 @@ then do.
 ```
 src/client/hdr/attachments/
   attachment-roles.test.ts  The struct each volumetric emitter and absorber
-                            returns, read off its graph (§ The roles).
+                            returns, read off its graph (README.md#the-roles).
   statistic-mask.test.ts    Which emitters may claim lit-surface coverage,
                             read off each surface's graph (README.md#the-unit).
 ```

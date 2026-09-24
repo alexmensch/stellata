@@ -85,10 +85,10 @@ rather than shipping it.
   term lights past the terminator against the same march at full DEM width
   **from the same start distance**, plus the disc integral against phase.
   `--sweep` costs output width and azimuth count against what each buys
-  (the two justification tables in § Cast shadows); `--sweep-width` and
+  (the two justification tables in [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps)); `--sweep-width` and
   `--sweep-azimuths` run one half, the azimuth half being slow enough to
   want that. The verification behind both
-  § Cast shadows and
+  [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps) and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.
 - `first-approach-probe.js` — manual, pasted into the browser

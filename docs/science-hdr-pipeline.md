@@ -416,7 +416,7 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
 The operator implementation is one shared graph
 (`../src/client/webgpu/tonemap-tsl.ts`, beside a test-pinned pure TS
 mirror) consumed by both the fullscreen resolve and the inline path chart
-mode takes (§ 6) — the `../src/client/webgpu/extinction/dust-raymarch-tsl.ts`
+mode takes ([§ 6](#6-the-inline-operator)) — the `../src/client/webgpu/extinction/dust-raymarch-tsl.ts`
 two-consumers pattern.
 
 **The dither is not part of the operator for an overlapping emitter.**
@@ -758,7 +758,7 @@ So attachment 1 is RG16F, written by physical emitters only — flux-correct
 luminance in R, and the lit-resolved-surface mask in G — and gated per
 draw so chrome is excluded by construction rather than by patching every
 chrome call site. `src/client/hdr/attachments/README.md` is the contract.
-G carried peak-correct luminance for one shipped version; § 3.2 is where
+G carried peak-correct luminance for one shipped version; [§ 3.2](#32-what-the-model-does-and-does-not-fix) is where
 that channel changed hands.
 
 **The diffuse-field constant retires with the walk.** Its two rows were
@@ -1032,7 +1032,7 @@ worst. Each emitter therefore gates on its own illumination term
 ([The unit](/src/client/hdr/attachments/README.md#the-unit) is the pinned table).
 
 `L_TARGET` is the level the pin holds, and it is the **measured** 0.89 of
-§ 3.1 rather than a second constant. It is the one knob smoke-tuning moves.
+[§ 3.1](#31-adaptation--what-drives-the-cut) rather than a second constant. It is the one knob smoke-tuning moves.
 
 Three structural properties, in the sense that no refactor may lose them:
 
@@ -1249,7 +1249,7 @@ into a solid sheet. `K_density` is 1 for the unaided eye and is a
 per-instrument calibration for anything deeper. Derivation:
 [Stellar perception model](/docs/science-stellar-modelling.md#stellar-perception-model).
 
-One consequence for § 1's accepted flux over-count: K is now large on
+One consequence for [§ 1](#1-the-unit--threshold-anchored-display-luminance)'s accepted flux over-count: K is now large on
 small viewports and ~1 at narrow FOV, so the over-count varies with both.
 It never affects per-pixel luminance (the peak stays flux-anchored), which
 is why [§ 8](#8-validation-contract-h7) compares peaks and never integrals — but any comparison must
@@ -1885,12 +1885,12 @@ to the far-field emissivity grid, alongside the high-|b| excess above.
   `src/client/hdr/README.md` from H2 for RT/pass implementation detail.
   The K derivation belongs to
   [Stellar perception model,](/docs/science-stellar-modelling.md#stellar-perception-model) which
-  already owns σ and the √Δm curve; § 3.3 states the rule and points
+  already owns σ and the √Δm curve; [§ 3.3](#33-fov-is-magnification-the-instrument-is-aperture) states the rule and points
   there.
 
 ## Out of scope
 
-Instrument *presets* (§ 3.4 mandates the record shape and names the three
+Instrument *presets* ([§ 3.4](#34-the-instrument-record--aperture-is-the-single-number) mandates the record shape and names the three
 axes; the presets themselves are a future epic) · veiling glare ([§ 3.2](#32-what-the-model-does-and-does-not-fix) —
 own bead, deferred) · Display-P3 output (zsr.2 — plugs into the [§ 2](#2-tone-map-operator)
 encode) · BC_photopic (a7d.2.10 — substitutes into `L(m)` when it lands)

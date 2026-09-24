@@ -26,7 +26,7 @@ wgsn_designations.tsv          Derived. One row per normalised designation:
                                letter + superscript, dc, Serpens Gould
                                half, component, HIP / HR / HD, source
                                (nec / faints / iv27a).
-athyg_proper_dispositions.tsv  Hand-curated. The § 2 residual: every spine
+athyg_proper_dispositions.tsv  Hand-curated. The /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them residual: every spine
                                `proper` no WGSN name matches, classified
                                (discovery-designation / component-letter /
                                gould / catalogue / latin-bayer /
@@ -84,7 +84,7 @@ the per-class counts, `wgsn-expected.json` pins them:
 `scripts/catalog/naming/build-wgsn-tables.ts` (`pnpm run build:wgsn`)
 reads the two frozen files plus `data/classic-ids/cross_index.tsv` (the
 IV/27A Bayer tail, through `readCrossIndexTable` so its curated corrections
-apply) and `data/membership/membership-manifest.tsv` (the § 2 residual
+apply) and `data/membership/membership-manifest.tsv` (the [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual
 verification), and writes the two derived tables. CI re-runs the build
 and fails on any diff, so artifact and code land together.
 

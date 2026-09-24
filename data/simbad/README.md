@@ -15,7 +15,7 @@ simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            TYC / GJ cross-IDs; the resolver keys all four.
 simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
-                           the § 5 value cohort — see README.md#the-values-pull.
+                           the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
                            HIP) curated cross-IDs.
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
@@ -35,7 +35,7 @@ properties follow, and both are structural rather than stylistic.
 **Every value travels with its own bibcode** — `rvz_bibcode`,
 `plx_bibcode`, `pm_bibcode`, `coo_bibcode`, `flux_<F>_bibcode`. The
 bibcode is the source and SIMBAD only the index that found it, so a cell
-whose bibcode is empty is **not consumable** under the § 5 residual
+whose bibcode is empty is **not consumable** under the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) residual
 policy. That is why the fluxes come from SIMBAD's long-format `flux`
 table rather than the wider, simpler `allfluxes` view: `allfluxes`
 carries no bibcode at all.
@@ -51,7 +51,7 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a § 5 value tier can reach — 75,040 of 376,932
+**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 75,040 of 376,932
 (19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
 `.total` of `membership_request_keys(MEMBERSHIP, simbad_value_cohort(…))`
 over the committed manifest and astrometry table, so calling the predicate
@@ -63,7 +63,7 @@ absent by construction, so a consumer cannot quietly reach for SIMBAD where a
 first-hand catalogue already serves. **Widening the cohort is a re-pull**, not
 a filter change: the predicate is `simbad_value_cohort` in
 `scripts/refresh/simbad/inputs.py`, and a row is OUT only where Gaia's own 5p
-table states every § 5 value for it AND its identity is first-hand too (a
+table states every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for it AND its identity is first-hand too (a
 `crosswalk_gated` binding plus a TYC or a HIP). Why it takes both halves —
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
@@ -91,7 +91,7 @@ policy is not recoverable from the committed file, which holds no unbibcoded
 value by construction, so the pull's own report is the only place that number
 is ever read.
 
-**rv Gaia-bibcode skip rule** (§ 5): of the 34,520 rv values in the pull,
+**rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 34,520 rv values in the pull,
 **14,725 carry a Gaia catalogue bibcode** — 13,381 `2018yCat.1345....0G`
 (DR2) and 1,344 `2022yCat.1355....0G` (DR3). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
@@ -139,7 +139,7 @@ object: two Tycho entries SIMBAD folds onto one oid each ship their own row.
 The two classes it answers in, the 220 rows no committed table could detect,
 the 10 it vindicates against IV/25, and the four-witness split of the 15 it
 still contradicts: [What the TYC → HD pull adjudicates](/scripts/catalog/simbad/README.md#what-the-tyc--hd-pull-adjudicates)
-and § Which witness decides a close pair's HD. That folder owns
+and [Which witness decides a close pair's HD](/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd). That folder owns
 what a consumer may conclude from these tables; this one owns what they are.
 
 ## Provenance

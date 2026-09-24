@@ -99,7 +99,7 @@ answers a question no consumer can answer from the magnitude alone.
 **There is no SIMBAD tier**, though [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) projected
 one. Gliese reaches every row Tycho-2 misses, and for the handful that would
 have fallen through to SIMBAD the pull holds fluxes in `B`, `J`, `H`, `K`,
-`R`, `g`, `r`, `i` and `G` and no `V` at all — so the § 5 rule that a SIMBAD
+`R`, `g`, `r`, `i` and `G` and no `V` at all — so the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) rule that a SIMBAD
 tier serves only cohorts no first-order catalogue reaches leaves it nothing
 to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 (`data/gliese/README.md`).
@@ -166,8 +166,8 @@ enough that 96% of it sits below the flag's own bright bound
 ([The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range) has the measured
 region). `ciGspcValidatedRange` pins that zero as a tripwire.
 
-Ignoring a published validity bound is what § Where the colour bound comes
-from refuses to do for the Table-5.9 relation, so the difference matters:
+Ignoring a published validity bound is what [Where the colour bound comes
+from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relation, so the difference matters:
 **that bound is on a fit, this one is mostly on a correction.** The relation
 is a polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
 GSPC's magnitudes are each star's own BP/RP spectrum integrated through the

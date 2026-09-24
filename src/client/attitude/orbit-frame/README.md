@@ -146,7 +146,7 @@ datum moved far enough for the write to show.**
 
 **"Actually moved" is not the test, and cannot be.** The ride writes the camera
 *below* the gate, so the next tick reads any write at all as a fresh camera
-move and renders — the § The focal ride loop in
+move and renders — the [The focal ride](/src/client/render-gate/README.md#the-focal-ride) loop in
 `../../render-gate/README.md`, which a rotation has no rebase to escape
 through. At live 1× Luna's datum turns ~2.6 × 10⁻⁶ ° per 60 Hz tick, a
 genuinely non-zero turn some 2700× under anything a display can show, and

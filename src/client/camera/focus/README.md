@@ -30,7 +30,7 @@ close-approach focused star sitting at exactly NDC origin.
   `AnchorPolicy` (`../../frame/README.md`) that keeps the floating
   origin on the focal object under time advance. Deps are live
   references + two gate closures; the shell supplies which controllers
-  count as camera-busy (§ Moving-focal ride).
+  count as camera-busy ([Moving-focal ride](#moving-focal-ride)).
 - `focal-ride-pure.ts` (+ test) — `focalRideStep`, one frame of the ride
   both moving-focal kinds and the binary walk drive, plus
   `shouldRecenterFocalOrigin`. The seed frame measures from `target` in
