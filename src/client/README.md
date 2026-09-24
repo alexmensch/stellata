@@ -212,7 +212,9 @@ row**. The order is the bead graph's (`bd show stellata-hhaw.32`), not this
 table's. Registry entries have no names, so "entry" cells name each by what
 it updates. `tests/shell-decomposition-map.test.ts` holds the table to the
 file: every field of `Stellata` sits in exactly one row, and no row names a
-field, method or site the file no longer has.
+field, method or site the file no longer has. **Every bead named in this
+section leaves with the PR that closes it** — a row, a cross-row bullet, a
+clause — and the last extraction (32.15) deletes the section and its test.
 
 | Cluster | Fields | Methods and sites | Target | Bead |
 | --- | --- | --- | --- | --- |
