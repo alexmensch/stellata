@@ -736,6 +736,11 @@ video {
   justify-content: center;
   min-block-size: var(--notfound-min);
 }
+/* Auto inline margins on a flex item stop it stretching, so the .wrapper
+   would shrink to its text rather than take the page's column. */
+.notfound > * {
+  inline-size: 100%;
+}
 
 /* ── Utilities ──────────────────────────────────────────────────────── */
 /* The last layer, and !important by design: a utility is a final
