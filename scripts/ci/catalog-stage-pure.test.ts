@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -6,11 +6,12 @@ import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../util/paths';
 import {
   CATALOG_CACHE_KEY_PREFIX,
+  CATALOG_STAGE,
   catalogCacheKey,
   keyedPaths,
   parseLsFilesStage,
   tsxEntry,
-} from './catalog-cache-key-pure';
+} from './catalog-stage-pure';
 
 const index = (paths: string[], blob = 'b0'): Map<string, string> =>
   new Map(paths.map((p) => [p, blob]));
@@ -89,15 +90,16 @@ describe('catalogCacheKey', () => {
   });
 });
 
-describe('test.yml catalogue cache', () => {
-  const workflow = readFileSync(resolve(REPO_ROOT, '.github/workflows/test.yml'), 'utf-8');
+describe('CATALOG_STAGE', () => {
+  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8'));
 
-  it('keys exactly the package scripts its cache-miss steps run', () => {
-    const keyed = workflow.match(/catalog-cache-key\.ts ([^)]+)\)/)?.[1].trim().split(/\s+/);
-    const gated = [...workflow.matchAll(
-      /- if: steps\.catalog-cache\.outputs\.cache-hit != 'true'\n\s+run: pnpm run (\S+)\n/g,
-    )].map((m) => m[1]);
-    expect(gated.length).toBeGreaterThan(0);
-    expect(keyed).toEqual(gated);
+  it('names only single-entry tsx scripts, so every step is keyed', () => {
+    for (const { script } of CATALOG_STAGE) expect(() => tsxEntry(scripts, script)).not.toThrow();
+  });
+
+  it('pins only paths that exist', () => {
+    for (const { pinned } of CATALOG_STAGE) {
+      for (const path of pinned) expect(existsSync(resolve(REPO_ROOT, path)), path).toBe(true);
+    }
   });
 });

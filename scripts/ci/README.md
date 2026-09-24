@@ -2,18 +2,20 @@
 
 Scripts that `.github/workflows/` runs and nothing else does.
 
-- `catalog-cache-key-pure.ts` (+ test) — which tracked files the catalogue
-  build stage can depend on (`keyedPaths`), and the cache key they digest to
-  (`catalogCacheKey`). The test also pins `test.yml`'s key arguments to the
-  steps it skips on a hit.
-- `catalog-cache-key.ts` — the CLI `test.yml` calls with the stage's
-  package-script names. Prints the key; `--paths` prints the keyed files
-  instead, which is how to audit a surprising miss or hit.
+- `catalog-stage-pure.ts` (+ test) — the catalogue build stage's steps
+  (`CATALOG_STAGE`: each package script and the committed paths it must
+  regenerate unchanged), which tracked files the stage can depend on
+  (`keyedPaths`), and the cache key they digest to (`catalogCacheKey`).
+- `catalog-stage.ts` — the CLI `test.yml` calls. `key` prints the key;
+  `paths` prints the keyed files instead, which is how to audit a surprising
+  miss or hit; `run` runs each step, then fails on any diff in its pinned
+  paths.
 
 ## The catalogue build cache
 
-`test.yml`'s `build-catalog` job runs `build:classic-ids`, `build:wgsn`,
-`build:membership` and `build:catalog` with their regenerate-and-diff gates:
+`test.yml`'s `build-catalog` job runs `CATALOG_STAGE` — `build:classic-ids`,
+`build:wgsn`, `build:membership` and `build:catalog`, each followed by its
+regenerate-and-diff gate:
 about five minutes, most of it `build:catalog`. The stage is a pure function
 of committed files, so on a pull request whose key matches a saved build the
 job restores that build's outputs and skips the stage — gates included,

@@ -1,7 +1,24 @@
-// Which tracked files CI's cached catalogue build can depend on, and the cache key they digest to.
+// CI's cached catalogue build stage: its steps, the tracked files it can depend on, and their cache key.
 
 import { createHash } from 'node:crypto';
 import { dirname, extname } from 'node:path';
+
+export interface StageStep {
+  script: string;
+  /** Committed paths the script regenerates; any diff after it runs fails the stage. */
+  pinned: readonly string[];
+}
+
+export const CATALOG_STAGE: readonly StageStep[] = [
+  { script: 'build:classic-ids', pinned: ['data/classic-ids/'] },
+  { script: 'build:wgsn', pinned: ['data/iau-wgsn/'] },
+  // label_flips.tsv sits under data/classic-ids/ but is written here, so it passes
+  // the classic-ids diff only because this step runs after it.
+  { script: 'build:membership', pinned: ['data/membership/', 'data/classic-ids/label_flips.tsv'] },
+  // Without this pin the parked ledger's row content is unchecked: the count snapshot
+  // pins only its length, so a build parking a different star for the same total lands.
+  { script: 'build:catalog', pinned: ['data/membership/parked-ledger.tsv', 'data/athyg/simbad_sourced_distances.tsv'] },
+];
 
 export const CATALOG_CACHE_KEY_PREFIX = 'catalog-build';
 
