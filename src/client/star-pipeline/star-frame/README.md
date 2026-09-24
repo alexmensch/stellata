@@ -138,6 +138,16 @@ decoded prefix decides where the search stops:
 `mergeSortedByDistance` (`star-frame-pure.ts`) takes that as its contract —
 `Infinity` past `end` on entry, and the same on exit.
 
+**The window sorts by radix, not by comparator.** A comparator sort over a
+167,772-record chunk measured 35 ms of the chunk's 42 ms absorb on the
+main thread, which by then is drawing; `sortIndicesByDistance` orders the
+same window on the distances' float32 bit patterns in ~3 ms, ties by
+record index, identical slot for slot on the shipped catalogue. It rests on
+every distance being non-negative, since only then do the bit patterns
+order as the values do — true of a `sqrt`, and the invariant to keep if
+the key ever changes. The key rewrite starts at the lowest slot the merge
+moved; everything below it is untouched.
+
 Filling `distSol` alone is the trap, because it looks sufficient: an
 undecoded record does sort past every window, but only the *sorted* array is
 ever searched.
