@@ -4,7 +4,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { markdownRendition, prefersMarkdown, wantsDocument } from './negotiation-pure';
+import {
+  alternateLink,
+  markdownRendition,
+  prefersMarkdown,
+  varyWithAccept,
+  wantsDocument,
+} from './negotiation-pure';
 
 describe('a page’s markdown sibling', () => {
   it('sits beside the document it renders', () => {
@@ -79,4 +85,20 @@ describe('whether a document is the right answer at all', () => {
       expect(wantsDocument(accept)).toBe(false);
     },
   );
+});
+
+describe('the headers that advertise a rendition', () => {
+  it('links the rendition as a markdown alternate', () => {
+    expect(alternateLink('/index.md')).toBe('</index.md>; rel="alternate"; type="text/markdown"');
+  });
+
+  it.each([
+    [null, 'Accept'],
+    ['', 'Accept'],
+    ['Origin', 'Origin, Accept'],
+    ['Origin, accept', 'Origin, accept'],
+    [' Origin ,, Accept-Encoding ', 'Origin, Accept-Encoding, Accept'],
+  ])('varies %j on Accept as %j', (existing, expected) => {
+    expect(varyWithAccept(existing)).toBe(expected);
+  });
 });

@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { APP_PATH, legacyShareRedirect, ownedByApp } from './client/util/url-state/share-path-pure';
-import { MARKDOWN_TYPE, markdownRendition, prefersMarkdown } from './negotiation-pure';
+import {
+  MARKDOWN_TYPE,
+  alternateLink,
+  markdownRendition,
+  prefersMarkdown,
+  varyWithAccept,
+} from './negotiation-pure';
 
 // Fetcher is inlined rather than imported from @cloudflare/workers-types.
 // Adding that package to the tsconfig `types` array bleeds its DOM
@@ -15,19 +21,6 @@ interface Fetcher {
 
 interface Env {
   ASSETS: Fetcher;
-}
-
-/** `Accept` now changes what a page answers, so every cache between here and
- *  the reader has to know that. Merged rather than set: an asset response
- *  arriving with a Vary of its own keeps it. */
-function varyOnAccept(headers: Headers): void {
-  const existing = (headers.get('vary') ?? '')
-    .split(',')
-    .map((name) => name.trim())
-    .filter((name) => name !== '');
-  if (!existing.some((name) => name.toLowerCase() === 'accept')) {
-    headers.set('vary', [...existing, 'Accept'].join(', '));
-  }
 }
 
 function withHeaders(response: Response, edit: (headers: Headers) => void): Response {
@@ -59,7 +52,7 @@ export default {
       if (markdown.status === 200) {
         return withHeaders(markdown, (headers) => {
           headers.set('content-type', MARKDOWN_TYPE);
-          varyOnAccept(headers);
+          headers.set('vary', varyWithAccept(headers.get('vary')));
         });
       }
     }
@@ -70,8 +63,8 @@ export default {
     // client that reads headers rather than the document.
     if (rendition !== null && response.status === 200) {
       return withHeaders(response, (headers) => {
-        headers.set('link', `<${rendition}>; rel="alternate"; type="text/markdown"`);
-        varyOnAccept(headers);
+        headers.set('link', alternateLink(rendition));
+        headers.set('vary', varyWithAccept(headers.get('vary')));
       });
     }
 

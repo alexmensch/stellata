@@ -107,6 +107,9 @@ describe('the middleware answers whatever the client accepts', () => {
       setHeader(name: string, value: string) {
         answer.headers[name.toLowerCase()] = value;
       },
+      getHeader(name: string) {
+        return answer.headers[name.toLowerCase()];
+      },
       end(body?: string) {
         answer.body = body ?? '';
       },

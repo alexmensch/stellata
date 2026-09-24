@@ -16,6 +16,21 @@ export function markdownRendition(pathname: string): string | null {
   return pathname === '/' ? '/index.md' : null;
 }
 
+export function alternateLink(rendition: string): string {
+  return `<${rendition}>; rel="alternate"; type="text/markdown"`;
+}
+
+/** A `Vary` value naming `Accept`, keeping whatever the response already varied on. */
+export function varyWithAccept(existing: string | null): string {
+  const names = (existing ?? '')
+    .split(',')
+    .map((name) => name.trim())
+    .filter((name) => name !== '');
+  return names.some((name) => name.toLowerCase() === 'accept')
+    ? names.join(', ')
+    : [...names, 'Accept'].join(', ');
+}
+
 /** The q-value a client gave a type by naming it exactly, or null if it did
  *  not name it. Wildcards do not count: `*` is what every client sends. */
 function namedQuality(accept: string, type: string): number | null {
