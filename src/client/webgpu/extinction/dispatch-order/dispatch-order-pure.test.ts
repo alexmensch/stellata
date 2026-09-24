@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  MORTON_BITS_PER_AXIS, inverseOrder, mortonDispatchOrder, scatterByOrder,
+  MORTON_BITS_PER_AXIS, mortonDispatchOrder, scatterByOrder, writeDispatchTablesInto,
 } from './dispatch-order-pure';
 import { scrambledLattice } from './dispatch-order-fixture';
 
@@ -64,26 +64,31 @@ describe('mortonDispatchOrder', () => {
     expect(mortonDispatchOrder(new Float32Array(0), 0)).toHaveLength(0);
   });
 
-  // The spreader is what binds, not the mantissa: part1By2 takes 8 bits and
-  // the key is two halves, so a half over 8 drops its top bits and collapses
-  // the order without failing anything. 3 × 17 = 51 still fits a float64, so
-  // pinning the mantissa would wave 17 through.
+  // ./README.md § Dispatch order: the spreader binds, not the key word.
   it('quantises each axis to the widest half the spreader accepts', () => {
     expect(MORTON_BITS_PER_AXIS).toBe(16);
     expect(MORTON_BITS_PER_AXIS >> 1).toBe(8);
   });
 });
 
-describe('inverseOrder', () => {
-  it('composes with the order to the identity in both directions', () => {
-    const order = mortonDispatchOrder(lattice(), COUNT);
-    const slotOf = inverseOrder(order);
+describe('writeDispatchTablesInto', () => {
+  it('writes the Morton order and its inverse, composing to the identity both ways', () => {
+    const positions = lattice();
+    const order = new Uint32Array(COUNT);
+    const slotOf = new Uint32Array(COUNT);
+    writeDispatchTablesInto(order, slotOf, positions, COUNT);
+    expect(Array.from(order)).toEqual(Array.from(mortonDispatchOrder(positions, COUNT)));
     for (let slot = 0; slot < COUNT; slot++) expect(slotOf[order[slot]]).toBe(slot);
     for (let star = 0; star < COUNT; star++) expect(order[slotOf[star]]).toBe(star);
   });
 
-  it('inverts a small explicit permutation', () => {
-    expect(Array.from(inverseOrder(Uint32Array.from([2, 0, 3, 1])))).toEqual([1, 3, 0, 2]);
+  it('leaves the table past count untouched', () => {
+    const positions = Float32Array.from([3, 0, 0, 1, 0, 0, 2, 0, 0]);
+    const order = new Uint32Array(3);
+    const slotOf = new Uint32Array(5).fill(99);
+    writeDispatchTablesInto(order, slotOf, positions, 3);
+    expect(Array.from(order)).toEqual([1, 2, 0]);
+    expect(Array.from(slotOf)).toEqual([2, 0, 1, 99, 99]);
   });
 });
 

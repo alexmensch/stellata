@@ -14,6 +14,7 @@ import { buildSharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { WebGpuExtinctionPrepass } from './extinction-prepass-webgpu';
 import { ExtinctionNodes } from './extinction-nodes';
 import { scrambledLattice } from './dispatch-order/dispatch-order-fixture';
+import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { composeViewProjectionAbs, countInFrameAbs } from './refill/refill-decision-pure';
 import { refillWorklistLength } from './refill/refill-buckets-pure';
 import { REFILL_SLICES } from './refill/refill-slices-pure';
@@ -98,7 +99,9 @@ function viewAt(yawRad: number) {
   return { camera, worldOffset: new Vector3() };
 }
 
-function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
+function makePrepass(
+  count = COUNT, positions: Float32Array = diagonal(count), loadedCount = count,
+) {
   const shared = buildSharedUniforms({
     pixelRatio: 2, fovYRad: 0.75, viewportW: 1600, viewportH: 900,
     hdr: makeHdrEmitterUniforms(),
@@ -113,10 +116,10 @@ function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
   const compaction = new StarCompaction(fake.renderer, {
     u: nodes, tables, lut: makeColorLutTexture(), dust: slots.dust, av: slots.av,
   }, 6, slots.refill);
+  const catalog = { positions, count, loadedCount };
   const prepass = new WebGpuExtinctionPrepass({
     renderer: fake.renderer,
-    positions,
-    count,
+    catalog,
     nodes,
     slots,
     uniforms: shared,
@@ -127,7 +130,9 @@ function makePrepass(count = COUNT, positions: Float32Array = diagonal(count)) {
     shared.uDustTexture.value = createVoxelTexture(4, new Uint8Array(64));
     slots.setDustTexture(shared.uDustTexture.value);
   };
-  return { ...fake, prepass, shared, slots, refill: slots.refill, compaction, attachDust };
+  return {
+    ...fake, prepass, catalog, shared, slots, refill: slots.refill, compaction, attachDust,
+  };
 }
 
 describe('construction', () => {
@@ -367,6 +372,108 @@ describe('the dispatch order', () => {
     const { starOfSlot, slotOfStar } = tables(LATTICE_COUNT, scrambledLattice(SIDE, 331));
     expect(slotOfStar).toHaveLength(LATTICE_COUNT);
     for (let slot = 0; slot < LATTICE_COUNT; slot++) expect(slotOfStar[starOfSlot[slot]]).toBe(slot);
+  });
+});
+
+describe('the dispatch order under a streaming catalogue', () => {
+  const SIDE = 8;
+  const LATTICE_COUNT = SIDE ** 3;
+  const LOADED = LATTICE_COUNT / 4;
+
+  /** The lattice as attach sees it mid-load: the undecoded tail at zero. */
+  function streaming() {
+    const full = scrambledLattice(SIDE, 331);
+    const positions = full.slice();
+    positions.fill(0, LOADED * 3);
+    return { full, positions, ...makePrepass(LATTICE_COUNT, positions, LOADED) };
+  }
+
+  function orderOf(released: readonly BufferAttribute[]) {
+    const [starOfSlot, refillTable] = permutations(released);
+    return {
+      starOfSlot: Array.from(starOfSlot),
+      slotOfStar: Array.from(refillTable.subarray(0, LATTICE_COUNT)),
+      slotPositions: released.find((a) => a.itemSize === 4)!.array as Float32Array,
+    };
+  }
+
+  const sortedOver = (positions: Float32Array) =>
+    Array.from(mortonDispatchOrder(positions, LATTICE_COUNT));
+
+  it('re-sorts over the whole catalogue on the chunk that completes it', () => {
+    const { full, positions, prepass, catalog, released, attachDust } = streaming();
+    const attachOrder = sortedOver(positions);
+    attachDust();
+    prepass.update(0, 0, 0);
+    const half = LATTICE_COUNT / 2;
+    positions.set(full.subarray(LOADED * 3, half * 3), LOADED * 3);
+    catalog.loadedCount = half;
+    prepass.refreshPositions();
+    positions.set(full);
+    catalog.loadedCount = LATTICE_COUNT;
+    prepass.refreshPositions();
+    prepass.dispose();
+    const { starOfSlot, slotOfStar, slotPositions } = orderOf(released);
+    expect(sortedOver(full)).not.toEqual(attachOrder);
+    expect(starOfSlot).toEqual(sortedOver(full));
+    for (let slot = 0; slot < LATTICE_COUNT; slot++) {
+      const star = starOfSlot[slot];
+      expect(slotOfStar[star]).toBe(slot);
+      expect(slotPositions[slot * 4]).toBe(full[star * 3]);
+    }
+  });
+
+  it('keeps the attach-time order while the catalogue is still landing', () => {
+    const { full, positions, prepass, catalog, released, attachDust } = streaming();
+    const attachOrder = sortedOver(positions);
+    attachDust();
+    prepass.update(0, 0, 0);
+    positions.set(full.subarray(0, (LATTICE_COUNT - 1) * 3));
+    catalog.loadedCount = LATTICE_COUNT - 1;
+    prepass.refreshPositions();
+    prepass.dispose();
+    expect(orderOf(released).starOfSlot).toEqual(attachOrder);
+  });
+
+  it('sorts once: neither a complete attach nor a later epoch refresh re-sorts', () => {
+    const positions = scrambledLattice(SIDE, 331);
+    const attachOrder = sortedOver(positions);
+    const { prepass, released, attachDust } = makePrepass(LATTICE_COUNT, positions);
+    attachDust();
+    prepass.update(0, 0, 0);
+    positions.reverse();
+    prepass.refreshPositions();
+    prepass.dispose();
+    expect(orderOf(released).starOfSlot).toEqual(attachOrder);
+
+    const late = streaming();
+    late.attachDust();
+    late.positions.set(late.full);
+    late.catalog.loadedCount = LATTICE_COUNT;
+    late.prepass.refreshPositions();
+    const resorted = sortedOver(late.full);
+    late.positions.reverse();
+    late.prepass.refreshPositions();
+    late.prepass.dispose();
+    expect(orderOf(late.released).starOfSlot).toEqual(resorted);
+  });
+
+  it('parks a refill in flight and re-requests', () => {
+    const { full, positions, prepass, catalog, computes, refill, attachDust } = streaming();
+    attachDust();
+    prepass.update(0, 0, 0);
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(refill.arm.value).toBe(1);
+    const generation = refill.cameraGeneration.value;
+    positions.set(full);
+    catalog.loadedCount = LATTICE_COUNT;
+    prepass.refreshPositions();
+    expect(refill.arm.value).toBe(0);
+    const held = computes.length;
+    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    expect(computes).toHaveLength(held);
+    expect(refill.cameraGeneration.value).toBe(generation + 1);
+    expect(refill.arm.value).toBe(1);
   });
 });
 

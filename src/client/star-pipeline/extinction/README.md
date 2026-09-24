@@ -143,9 +143,11 @@ pass (×2–3) — 8–12 recomputations per visible star per frame.
   into an RGBA float texture) — binary-orbit perturbations (sub-AU) are
   ignored, as is the floating origin (both the prepass march and the
   fallback run in absolute heliocentric space). The pack is a *copy*, and
-  the model clock's space-motion pass rewrites that array in place, so
-  `refreshPositions()` re-packs it from the epoch advance itself; without
-  that the march follows the stars no further than the attach epoch.
+  the model clock's space-motion pass and each landing catalogue chunk
+  rewrite that array in place, so `refreshPositions()` re-packs it from
+  both; without that the march follows the stars no further than the
+  attach epoch and the attach-time prefix
+  (`../../webgpu/extinction/README.md` § What a CACHE owes).
 - **Fallback:** the vertex stage can run the camera→star raymarch
   in-line instead, gated by the visibility prefilter, sharing the march
   with the prepass through `dust-raymarch-tsl.ts`. Only the A/B switch

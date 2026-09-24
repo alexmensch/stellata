@@ -43,24 +43,24 @@ that converge near the camera *and* near the star from every vantage, so
 catalogue's own bounding box into a 48-bit Z-order key. **What fixes 16 is
 the spreader, not the mantissa**: `part1By2` takes 8 bits and the key is
 assembled from two halves, so a half wider than 8 drops its top bits and
-collapses the order with nothing failing. A float64 has room to spare at
-48 bits — 17 per axis would still fit it — which is why the pin is on the
-half-width and not on the budget. The sort is one CPU
-pass at attach, alongside the ~128 MiB volume upload that triggers it;
-nothing re-sorts per frame, and the order is a function of
-`catalog.positions` alone.
+collapses the order with nothing failing. Each half is its own 24-bit
+key word, and a 32-bit word has room to spare — 10 bits per half-axis
+would still fit it — which is why the pin is on the half-width and not on
+the word. The sort is a CPU pass at attach and, when attach sorted a
+catalogue still streaming in, once more on the refresh that completes it
+(`../README.md` § What a CACHE owes); nothing re-sorts per frame, and the
+order is a function of `catalog.positions` alone.
 
 **It is synchronous on the main thread, and its timing is a dev-machine
-one**: ~77 ms at 388,071 stars, measured in Node on an M-series laptop, so
+one**: ~21 ms at 983,068 stars, measured in Node on an M-series laptop, so
 budget several times that on the integrated and mobile floor this folder is
-sized for. It shares its frame with the volume upload, which already stalls.
-The cost is the comparator rather than the keys — a comparator-free
-`Float64Array.sort()` over the same element count measures ~21 ms — and
-taking that would mean packing key and slot index into one float64: 11 bits
-per axis plus a 19-bit index is 52, inside the mantissa. Declined for now
-because 11 bits quantises coarsely once a far outlier widens the bounding
-box. **Revisit on attach latency measured on a low-end device, never on
-catalogue size** — the key's width is not what catalogue growth pressures.
+sized for. At attach it shares its frame with the volume upload, which
+already stalls; the re-sort shares the final chunk's absorb
+(`../../../star-pipeline/star-frame/README.md` § Absorbing a chunk).
+The two words go low half first through the shared radix sort
+(`../../../util/radix-sort.ts`), four passes in all, ties by star index; a
+comparator sort over the same keys produces the identical permutation at
+~232 ms.
 
 **The A_V buffer stays catalogue-star-indexed** — so the position table
 is what moves. Thread *i* reads sorted position *i* and writes

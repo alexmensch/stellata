@@ -26,10 +26,11 @@ import {
   STAR_VISIBILITY_BOUND_KEYS, starCacheVisibleTsl,
   type StarVisibilityBoundValues, type StarVisibilityUniforms,
 } from '../star/star-visibility-tsl';
+import type { WebGpuExtinctionPrepassSources } from '../seam';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import { disposeStorageAttribute } from '../tsl/storage-attribute';
 import { computeIndirect } from '../tsl/tsl-shim';
-import { inverseOrder, mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
+import { writeDispatchTablesInto } from './dispatch-order/dispatch-order-pure';
 import { dustRaymarchAvTsl } from './dust-raymarch-tsl';
 import type { ExtinctionNodes } from './extinction-nodes';
 import { runReferenceMarch, type StarCacheGate } from './extinction-parity';
@@ -40,19 +41,14 @@ import {
 } from './refill/refill-buckets-pure';
 import { idleRefill, planRefill, refillInFlight, type RefillCursor } from './refill/refill-slices-pure';
 
-export interface WebGpuExtinctionPrepassOptions {
+export interface WebGpuExtinctionPrepassOptions extends WebGpuExtinctionPrepassSources {
   renderer: WebGPURenderer;
-  /** Absolute (heliocentric ICRS) star positions, xyz-interleaved —
-   *  catalog.positions, NOT the floating-origin local buffer. */
-  positions: Float32Array;
-  count: number;
   nodes: SharedUniformNodes;
   /** The extinction slots, shared by object identity with the star layer's:
    *  one `attachDust` write reaches both the kernel and the vertex fallback
    *  march, and this pass points the A_V and refill slots at its own
    *  buffers rather than the shell wiring them. */
   slots: ExtinctionNodes;
-  uniforms: ExtinctionPrepassUniforms & StarVisibilityBoundValues;
   /** The star layer's tables — the whole fill gates on the star stages' own
    *  prefilter over them (README.md § The cache gate). */
   tables: StarTables;
@@ -86,12 +82,15 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    *  Shares its array with the `order` buffer, so dispose has to drop both
    *  or the 1.48 MiB outlives the pass. */
   private dispatchOrder: Uint32Array | null;
+  /** Sorted while the catalogue tail was still zero (README.md § What a
+   *  CACHE owes). */
+  private orderIsProvisional: boolean;
   private readonly absCameraPos = uniform(new Vector3());
   private readonly viewScratch = new Matrix4();
   private lastView: Matrix4 | null = null;
   private refill: RefillCursor = idleRefill();
-  /** `catalog.positions` itself, which StarFrame rewrites in place. */
-  private readonly sourcePositions: Float32Array;
+  /** StarFrame rewrites `catalog.positions` in place. */
+  private readonly catalog: WebGpuExtinctionPrepassSources['catalog'];
   /** Nodes this pass owns, not the shared registry's: that syncs after this
    *  pass dispatches, so a kernel on it would gate a frame behind the watch
    *  below (README.md § The cache gate). */
@@ -113,15 +112,16 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private lastCamZ = Infinity;
 
   constructor({
-    renderer, positions, count, nodes, slots, uniforms, tables, compaction,
+    renderer, catalog, nodes, slots, uniforms, tables, compaction,
   }: WebGpuExtinctionPrepassOptions) {
+    const { positions, count } = catalog;
     this.renderer = renderer;
     this.mirror = new AvMirror(renderer);
     this.uniforms = uniforms;
     this.slots = slots;
     this.nodes = nodes;
     this.count = count;
-    this.sourcePositions = positions;
+    this.catalog = catalog;
     this.gateBounds = {
       uThresholdMag: uniform(uniforms.uThresholdMag.value),
       uCullMag: uniform(uniforms.uCullMag.value),
@@ -131,7 +131,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
       uMonochrome: uniform(uniforms.uMonochrome.value),
     };
 
-    this.dispatchOrder = mortonDispatchOrder(positions, count);
+    this.dispatchOrder = new Uint32Array(count);
+    // ../star/compaction/README.md § Binding budget.
+    const table = new Uint32Array(count + refillWorklistLength(count));
+    writeDispatchTablesInto(this.dispatchOrder, table, positions, count);
+    this.orderIsProvisional = catalog.loadedCount < count;
     // vec4 slots, not vec3: WGSL has no packed vec3 in a storage buffer, and
     // an itemSize-3 attribute is the one the backend silently re-strides
     // (../README.md § One writer per buffer per submit).
@@ -141,9 +145,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.order = new StorageBufferAttribute(this.dispatchOrder, 1);
     this.av = new StorageBufferAttribute(count, 1);
     this.stamps = new StorageBufferAttribute(new Uint32Array(count), 1);
-    // ../star/compaction/README.md § Binding budget.
-    const table = new Uint32Array(count + refillWorklistLength(count));
-    table.set(inverseOrder(this.dispatchOrder));
     this.refillTable = new StorageBufferAttribute(table, 1);
     // The consumers' slots point here for this instance's whole life;
     // `uAvPrepassEnabled` is what gates the read, so a buffer that has not
@@ -201,36 +202,52 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.dirty = true;
   }
 
-  /** Re-pack the position table at the catalogue's current epoch,
-   *  reusing the Morton order (README.md § The cache gate). */
+  /** README.md § What a CACHE owes. */
   refreshPositions(): void {
     if (this.positions === null || this.dispatchOrder === null) return;
+    if (this.orderIsProvisional && this.catalog.loadedCount === this.count) {
+      this.reorder();
+    }
     packPositionsVec4Into(
-      this.positions.array as Float32Array, this.sourcePositions, this.count,
+      this.positions.array as Float32Array, this.catalog.positions, this.count,
       this.dispatchOrder);
     this.positions.needsUpdate = true;
     this.dirty = true;
+  }
+
+  /** Why this parks the flight: README.md § What a CACHE owes. */
+  private reorder(): void {
+    if (this.dispatchOrder === null || this.order === null || this.refillTable === null) return;
+    writeDispatchTablesInto(
+      this.dispatchOrder, this.refillTable.array as Uint32Array,
+      this.catalog.positions, this.count);
+    this.order.needsUpdate = true;
+    this.refillTable.needsUpdate = true;
+    this.orderIsProvisional = false;
+    this.parkRefill();
   }
 
   countInFrame(): number | null {
     if (this.lastView === null) return null;
     const viewport = this.nodes.uViewport.value;
     return countInFrameAbs(
-      this.sourcePositions, this.count, this.lastView,
+      this.catalog.positions, this.count, this.lastView,
       viewport.x, viewport.y, this.nodes.uPinFocusToCenter.value);
   }
 
   setEnabled(on: boolean): void {
     this.forceDisabled = !on;
-    // Or the compaction keeps rebuilding a list nothing will march. Parking
-    // the cursor abandons the classes the switch interrupted, so the pass
-    // owes itself a fresh request rather than resuming a truncated flight.
-    if (!on) {
-      this.slots.refill.arm.value = 0;
-      this.refill = idleRefill();
-      this.dirty = true;
-    }
+    // Or the compaction keeps rebuilding a list nothing will march.
+    if (!on) this.parkRefill();
     this.syncConsumerUniforms();
+  }
+
+  /** Abandon any flight in progress and owe a fresh request, rather than
+   *  resuming a truncated one (refill/README.md § The cursor). */
+  private parkRefill(): void {
+    this.slots.refill.arm.value = 0;
+    this.refill = idleRefill();
+    this.dirty = true;
   }
 
   isActive(): boolean {

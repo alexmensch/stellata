@@ -1556,8 +1556,7 @@ export class Stellata implements FrameAnchor {
     this.webgpu.setDustTexture(dust.texture);
     if (this.extinctionPrepass === null) {
       this.extinctionPrepass = this.webgpu.attachExtinctionPrepass({
-        positions: this.catalog.positions,
-        count: this.catalog.count,
+        catalog: this.catalog,
         uniforms: u,
       });
     }
