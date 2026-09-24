@@ -234,7 +234,9 @@ edit, so the prose trigger still owns that.
 hook that errors lets the call through, and the alternative — a stylesheet
 edit blocked by a broken gate — is worse than one made without the skill.
 The deny message names the marker path, so a session that genuinely needs
-to proceed creates it.
+to proceed creates it. Only cube-css offers that as an opt-out, for a
+stylesheet that is not CUBE; code-craft offers none, since "this change is
+too small for the design pass" is the excuse its gate exists to refuse.
 
 That path is also the answer to the one thing the test suite cannot
 settle, since it drives the script directly rather than through a harness:

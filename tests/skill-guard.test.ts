@@ -110,6 +110,11 @@ describe('skill-guard / code-craft', () => {
     expect(edit('/repo/src/site/site.css').allowed).toBe(false);
   });
 
+  it('offers no opt-out, unlike the stylesheet gate', () => {
+    expect(edit('/repo/src/a.ts').reason).not.toContain('opt-out');
+    expect(edit('/repo/src/site/site.css').reason).toContain('opt-out');
+  });
+
   it('ignores files neither rule names', () => {
     for (const path of ['/repo/README.md', '/repo/src/site/index.html', '/repo/a.json', '/repo/a.csso', '/repo/a.tsv']) {
       expect(edit(path).allowed, path).toBe(true);

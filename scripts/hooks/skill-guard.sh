@@ -38,10 +38,12 @@ case "$file_path" in
     why="Stylesheets here are CUBE CSS over Every Layout primitives: which layer a rule belongs in, why utilities carry !important and blocks may not, the no-width-media-query mandate, and the review gates (a hardcoded value on first use, a z-index where source order would do, a minmax() with no min(…, 100%) guard). A folder README documents the house style — which rule landed where, and why — not the system underneath it, so having read one is not having loaded the other.
 
 Reach for the utopia skill alongside it when the change touches a type size, a space step or a clamp()."
+    opt_out=" The same file is the opt-out, for the rest of the session, where the target is genuinely not a CUBE stylesheet."
     ;;
   *.ts|*.tsx|*.js|*.mjs|*.cjs|*.py|*.sh|*.wgsl|*.glsl)
     skill=code-craft
     why="Every code change is design work, a one-line bug fix included: the design pass (one owner per fact, no legal-looking 'not ready' value, what each module hides, where the copies are), the two-hats commit split, and the recurring-bug-class rule. A folder README says what the code here does, not how to judge a change to it, so having read one is not having loaded the other."
+    opt_out=""
     ;;
   *) exit 0 ;;
 esac
@@ -55,7 +57,7 @@ $why
 
 Fix: call the Skill tool with skill '$skill', then retry the edit.
 
-If you have just done that and this still denies, your harness does not run PreToolUse on Skill calls: arm the session by creating $state_file and carry on — do not invoke the skill a third time. The same file is the opt-out where the rule genuinely does not apply to this file."
+If you have just done that and this still denies, your harness does not run PreToolUse on Skill calls: arm the session by creating $state_file and carry on — do not invoke the skill a third time.$opt_out"
 
 jq -n --arg reason "$reason" '{
   hookSpecificOutput: {
