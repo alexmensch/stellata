@@ -208,7 +208,10 @@ belong here.
 **What a pointer is.** One token, `<path>.md#<slug>`: a path ending
 `.md`, then `#`, then a GitHub heading slug. Markdown writes it as a link
 target, `[Heading words](<path>.md#<slug>)`, so GitHub and editors can
-follow it; code comments and fenced blocks write the bare token. A pointer
+follow it; code comments and fenced blocks write the bare token. A
+markdown file citing its own section writes `[Heading words](#<slug>)`,
+checked against that file's anchors; inside its fenced blocks it names
+itself instead (`README.md#<slug>`), since a fence renders no link. A pointer
 never wraps across lines — a token split at a slash reads as a shorter path
 and fails to resolve, which is the loud direction. A path after `~` or
 another `/` is not a pointer: the user's global rules and URLs live outside
