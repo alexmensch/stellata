@@ -1,6 +1,6 @@
 // Pins the data/dust/manifest.json encode contract (fixed DENSITY_MAX
 // ceiling) and the per-cloud Zucker column-check provenance. The LFS
-// chunk-integrity test self-skips on pointer stubs (real in tier-a-corpus).
+// chunk-integrity test self-skips on pointer stubs (real in CI's Tier-A step).
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
