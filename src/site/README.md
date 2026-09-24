@@ -13,6 +13,10 @@ index.html   The homepage, served at /. Documented below. Its markdown
              not_found_handling = "404-page" (wrangler.toml) in production,
              and by the dev server's document routing locally. Carries
              noindex and is not in the sitemap.
+pages.ts     The page roster (+ test): each page's source and whether it has
+             a rendition. The build inputs, the rendition emit, the
+             Worker's negotiation and the dev server's routes all derive
+             from it.
 styles/      site.css, every page's stylesheet, and its README.
 replay.ts    The homepage's one script, § One script. Wires
              replay-control.ts (+ test) onto every video[data-replay].
@@ -47,8 +51,8 @@ while the application's `src/client/app/index.html` lands at
 URL space exactly; no build step and no rewrite reconciles them.
 
 A new page is therefore: a folder here holding `index.html` (plus its
-README), and one line in `vite.site.config.ts`'s `input` map. The map key is
-cosmetic — the input path decides the URL.
+README), and one entry in `pages.ts`. `pagePath` derives the URL from the
+source path the same way Vite's emit does, so the two cannot disagree.
 
 **Routing that the tree cannot express lives in the Worker**, not here:
 the legacy share-link redirects and the app's unmatched-path fallback.
@@ -110,10 +114,10 @@ Three things follow for anyone editing a page here:
   element vocabulary and throws on a tag it has no rule for, rather than
   dropping the section. Reaching for `<details>` means deciding what it
   means in markdown first.
-- **A new page needs two lines**, not one: an `input` entry in
-  `vite.site.config.ts` *and* a rendition in the same config's map, plus a
-  path in `markdownRendition()`. A page without a rendition simply serves
-  HTML to everyone, which is a working state rather than a broken one.
+- **A rendition is `hasRendition: true` on the page's `pages.ts` entry**,
+  and nothing else: the emit, the `Accept` answer, the `Link` header and the
+  dev server's route at the `.md` path all follow. A page without one simply
+  serves HTML to everyone, which is a working state rather than a broken one.
 - **`Accept` now changes what `/` answers**, so both renditions carry
   `Vary: Accept`. A cache that did not know would serve one to the other.
 

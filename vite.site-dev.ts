@@ -15,6 +15,7 @@ import {
   varyWithAccept,
   wantsDocument,
 } from './src/negotiation-pure.ts';
+import { NOT_FOUND_SOURCE, pageAt, pageRenderedAt, type SitePage } from './src/site/pages.ts';
 
 function varyOnAccept(res: ServerResponse): void {
   const current = res.getHeader('Vary');
@@ -23,18 +24,32 @@ function varyOnAccept(res: ServerResponse): void {
 
 export type DevRoute =
   | { kind: 'redirect'; to: string }
-  | { kind: 'document'; doc: 'app' | 'home' | 'notFound' };
+  | { kind: 'app' }
+  | { kind: 'page'; page: SitePage }
+  | { kind: 'rendition'; page: SitePage }
+  | { kind: 'notFound' };
 
 /**
- * The rules `src/worker.ts` answers in production, in its order. Reads
- * `legacyShareRedirect` rather than restating the share grammar.
+ * The rules `src/worker.ts` answers in production, in its order, plus the
+ * rendition files the deploy serves as plain assets.
  */
 export function devRoute(pathname: string, search: string): DevRoute {
   const legacy = legacyShareRedirect(pathname, search);
   if (legacy !== null) return { kind: 'redirect', to: legacy };
-  if (ownedByApp(pathname)) return { kind: 'document', doc: 'app' };
-  if (pathname === '/') return { kind: 'document', doc: 'home' };
-  return { kind: 'document', doc: 'notFound' };
+  if (ownedByApp(pathname)) return { kind: 'app' };
+  const page = pageAt(pathname);
+  if (page !== null) return { kind: 'page', page };
+  const rendered = pageRenderedAt(pathname);
+  if (rendered !== null) return { kind: 'rendition', page: rendered };
+  return { kind: 'notFound' };
+}
+
+interface Document {
+  file: string;
+  /** What Vite resolves the document's own relative imports against. */
+  base: string;
+  status: number;
+  site: boolean;
 }
 
 /** A third relative reference needs the same treatment — `src/client/app/README.md`. */
@@ -43,17 +58,30 @@ const SIBLING_OF_PAGE = /(src|href)="\.\//g;
 
 /** Requires `appType: 'custom'`. `src/site/README.md` § Reading it in dev. */
 export function documentRoutingInDev(repoRoot: string): Plugin {
-  const appDoc = resolve(repoRoot, 'src/client/app/index.html');
   const siteDir = resolve(repoRoot, 'src/site');
-  // Outside this server's root, so the filesystem route is the only way in.
-  const siteSibling = `$1="/@fs${siteDir}/`;
-
-  // `base` is what Vite resolves a document's own relative imports against.
-  const documents = {
-    app: { file: appDoc, base: '/app/index.html', status: 200, site: false },
-    home: { file: resolve(siteDir, 'index.html'), base: '/index.html', status: 200, site: true },
-    notFound: { file: resolve(siteDir, '404.html'), base: '/404.html', status: 404, site: true },
-  } as const;
+  const appDocument: Document = {
+    file: resolve(repoRoot, 'src/client/app/index.html'),
+    base: '/app/index.html',
+    status: 200,
+    site: false,
+  };
+  const siteDocument = (source: string, status: number): Document => ({
+    file: resolve(siteDir, source),
+    base: `/${source}`,
+    status,
+    site: true,
+  });
+  const documentFor = (route: Exclude<DevRoute, { kind: 'redirect' }>): Document => {
+    switch (route.kind) {
+      case 'app':
+        return appDocument;
+      case 'page':
+      case 'rendition':
+        return siteDocument(route.page.source, 200);
+      case 'notFound':
+        return siteDocument(NOT_FOUND_SOURCE, 404);
+    }
+  };
 
   return {
     name: 'stellata:document-routing-in-dev',
@@ -90,24 +118,25 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             return;
           }
 
-          const { file, base, status, site } = documents[route.doc];
+          const { file, base, status, site } = documentFor(route);
           const rendition = markdownRendition(pathname);
 
           try {
             const raw = await readFile(file, 'utf8');
 
             // The derivation the build uses, so an edit shows without one.
-            if (rendition !== null && prefersMarkdown(accept)) {
+            if (route.kind === 'rendition' || (rendition !== null && prefersMarkdown(accept))) {
               res.statusCode = status;
               res.setHeader('Content-Type', MARKDOWN_TYPE);
-              varyOnAccept(res);
+              if (rendition !== null) varyOnAccept(res);
               res.end(renderMarkdown(raw));
               return;
             }
 
             const html = await server.transformIndexHtml(
               base,
-              (site ? raw.replace(SIBLING_OF_PAGE, siteSibling) : raw).replace(
+              // Outside this server's root, so the filesystem route is the only way in.
+              (site ? raw.replace(SIBLING_OF_PAGE, `$1="/@fs${dirname(file)}/`) : raw).replace(
                 SIBLING_OF_ROOT,
                 '$1="/',
               ),

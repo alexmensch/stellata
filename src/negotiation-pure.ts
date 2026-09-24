@@ -4,16 +4,14 @@
 /** Which rendition of a page a client asked for. `worker.ts` and
  *  `../vite.site-dev.ts` both decide it here. README.md § Request routing. */
 
+import { pageAt, renditionPath } from './site/pages';
+
 export const MARKDOWN_TYPE = 'text/markdown; charset=utf-8';
 
-/**
- * A page's markdown sibling, or null for a path that has none. The built tree
- * mirrors the URL space, so the rendition sits beside the document it renders
- * and a second page is one more line here plus one input in
- * `vite.site.config.ts`.
- */
+/** A page's markdown sibling, or null for a path that has none. */
 export function markdownRendition(pathname: string): string | null {
-  return pathname === '/' ? '/index.md' : null;
+  const page = pageAt(pathname);
+  return page === null ? null : renditionPath(page);
 }
 
 export function alternateLink(rendition: string): string {

@@ -64,19 +64,26 @@ describe('the dev server answers the deploy’s routing table', () => {
   it.each(['/app', '/app/', '/app/v/AQAA/', '/app/anything'])(
     'serves the application document for %s',
     (pathname) => {
-      expect(devRoute(pathname, '')).toEqual({ kind: 'document', doc: 'app' });
+      expect(devRoute(pathname, '')).toEqual({ kind: 'app' });
     },
   );
 
   it('serves the homepage for the root alone', () => {
-    expect(devRoute('/', '')).toEqual({ kind: 'document', doc: 'home' });
-    expect(devRoute('/', '?utm=x')).toEqual({ kind: 'document', doc: 'home' });
+    expect(devRoute('/', '')).toMatchObject({ kind: 'page', page: { source: 'index.html' } });
+    expect(devRoute('/', '?utm=x')).toMatchObject({ kind: 'page', page: { source: 'index.html' } });
+  });
+
+  it('serves a rendition at its own path, as the deploy serves the asset', () => {
+    expect(devRoute('/index.md', '')).toMatchObject({
+      kind: 'rendition',
+      page: { source: 'index.html' },
+    });
   });
 
   it.each(['/nonsense', '/science', '/vintage', '/apple'])(
     'serves the 404 page for %s',
     (pathname) => {
-      expect(devRoute(pathname, '')).toEqual({ kind: 'document', doc: 'notFound' });
+      expect(devRoute(pathname, '')).toEqual({ kind: 'notFound' });
     },
   );
 });
@@ -152,6 +159,13 @@ describe('the middleware answers whatever the client accepts', () => {
     expect(answer.headers.vary).toBe('Accept');
     expect(answer.body.split('\n')[0]).toMatch(/^# Stellata/);
     expect(answer.body).not.toContain('<h1');
+  });
+
+  it('serves the rendition the HTML answer advertises', async () => {
+    const answer = await fetchPath('/index.md', '*/*');
+    expect(answer.status).toBe(200);
+    expect(answer.headers['content-type']).toBe('text/markdown; charset=utf-8');
+    expect(answer.body.startsWith('# ')).toBe(true);
   });
 
   it('advertises the rendition on the HTML answer', async () => {
