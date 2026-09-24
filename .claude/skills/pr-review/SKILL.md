@@ -243,6 +243,22 @@ body alongside the code findings — it is review output, not bookkeeping.
 Output a concise report of what should change and why, then **get approval**. Do
 NOT start fixing until findings are agreed.
 
+**Every proposed fix is a design, and carries two lines** — run code-craft
+§ Design pass to fill them:
+
+- **Owner** — where each fact the fix touches is decided once it lands.
+- **Enforced by** — the compiler, a test, or convention, ranked in that order.
+
+A fix whose honest answer is "a test keeping two copies in step" has named its
+own defect: derive one copy from the other instead. "The repo already does it
+this way" is not a reason on either line — the existing pattern is part of what
+is under review.
+
+**Follow-up turns are design turns.** A replacement fix, an alternative, an
+answer to "is there a better way?" gets the same two lines, however far into
+the review. `scripts/hooks/review-design-reminder.sh` puts that reminder on
+every prompt once the review starts.
+
 Findings get fixed **in the PR**, as topical commits on that branch. Do not
 propose filing beads as the default disposition — that defers work the PR is
 already open for, and "I will file a bead for that" reads as agreement while
