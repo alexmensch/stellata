@@ -58,11 +58,11 @@ describe('SceneDeclutter', () => {
     const { declutter, calls, setLgToggle } = makeHarness();
     declutter.setPermitted('lgEmissionGlow', true);
     setLgToggle(false);
-    declutter.refreshEnables();
+    declutter.refreshLgEmission();
     declutter.setPermitted('lgEmissionGlow', false);
     setLgToggle(true);
-    declutter.refreshEnables();
-    expect(calls).toEqual(['lg:true', 'mw:true', 'lg:false', 'lg:false', 'mw:true', 'lg:false']);
+    declutter.refreshLgEmission();
+    expect(calls).toEqual(['lg:true', 'lg:false', 'lg:false', 'lg:false']);
   });
 
   it('pushes each element exactly once per applyFloors', () => {

@@ -46,8 +46,8 @@ kind modules' `detailBinds()` (probe markers and trails, both boundary
 shells) — and throws if two sources claim one element. Two enables combine a permission with another
 input and are derived here, not pushed: the Milky Way group is enabled
 while `milkyWayBand || milkyWayIsobar`, LG emission while
-`lgEmissionGlow && showLgEmission`; `refreshEnables` re-derives both after
-a filter patch. A per-element override (`setSceneElementVisible`) writes
+`lgEmissionGlow && showLgEmission`. Only the second reads filter state, so
+`refreshLgEmission` re-derives it alone after a filter patch. A per-element override (`setSceneElementVisible`) writes
 one slot and supersedes its floor until the next `applyDetailPreset`
 overwrites the whole set.
 

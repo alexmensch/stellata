@@ -51,8 +51,7 @@ export class SceneDeclutter {
     if (id === 'lgEmissionGlow') this.applyLgEmissionEnabled();
   }
 
-  refreshEnables(): void {
-    this.applyMilkyWayEnabled();
+  refreshLgEmission(): void {
     this.applyLgEmissionEnabled();
   }
 

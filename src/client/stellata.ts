@@ -907,7 +907,7 @@ export class Stellata implements FrameAnchor {
         // in the population bound — refresh the cached cullDistancePc
         // whenever the instrument moves it.
         this.planetBodyField.setCullMag(sharedUniforms.uCullMag.value);
-        this.declutter.refreshEnables();
+        this.declutter.refreshLgEmission();
       },
       refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
       declutter: this.declutter,
