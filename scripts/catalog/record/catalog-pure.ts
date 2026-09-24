@@ -11,6 +11,7 @@ import { headerIndex } from '../parse/corpus-tsv.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
 import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
+import type { MeasuredParallax } from '../cited-parallax.ts';
 
 /** The bottom of every chromaticity cascade: ~0.65 renders a yellow disc
  *  rather than a hot blue or cold red default. */
@@ -1885,11 +1886,6 @@ export const LMC_PARALLAX_MAS = 1000 / LMC_DISTANCE_PC;
 
 /** Measured, not chosen: `../distance/README.md` § Layer 2. */
 export const LMC_PARALLAX_CONSISTENCY_SIGMA = 10;
-
-export interface MeasuredParallax {
-  mas: number;
-  errMas: number | null;
-}
 
 export type LmcKinematicVerdict =
   | { kind: 'snap'; distPc: number }

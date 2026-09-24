@@ -52,7 +52,7 @@ describe('parallax-cascade / tier order', () => {
       simbad: simbad(50, LITERATURE),
     }, false, false);
     expect(res.via).toBe('gaia_dr3_inversion');
-    expect(res.plxMas).toBe(40);
+    expect(res.parallax?.mas).toBe(40);
   });
 
   it('mirrors the direction cascade: HIP2 only where Gaia states no parallax, '
@@ -79,7 +79,7 @@ describe('parallax-cascade / tier order', () => {
     + 'distance is zero rather than a parallax', () => {
     const res = resolveParallax(NONE, false, true);
     expect(res.via).toBe('curated');
-    expect(res.plxMas).toBeNull();
+    expect(res.parallax).toBeNull();
   });
 
   it('ignores a non-positive parallax rather than inverting it', () => {
@@ -145,7 +145,7 @@ describe('parallax-cascade / the precision floor', () => {
     for (const [src, tier, mas] of subFloor) {
       const res = resolveParallax({ ...NONE, ...src }, false, false);
       expect(res.via, tier).toBe('none');
-      expect(res.plxMas, tier).toBeNull();
+      expect(res.parallax, tier).toBeNull();
       // A non-empty list is what picks refused_no_defensible_parallax over
       // no_parallax_published on the § 6.1 ledger the parity gate subtracts,
       // and the values are what companion promotion matches a pair row against.
@@ -170,7 +170,7 @@ describe('parallax-cascade / the precision floor', () => {
       gliese: gliese(30),
     }, false, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.plxMas).toBe(30);
+    expect(res.parallax?.mas).toBe(30);
     expect(res.refusedPlxMas).toEqual([]);
   });
 
@@ -226,7 +226,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
       gliese: gliese(115.0),
     }, true, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.plxMas).toBe(115.0);
+    expect(res.parallax?.mas).toBe(115.0);
   });
 
   it('does not refuse a DR1/TGAS citation — a joint Gaia+Tycho solution is a '
@@ -254,7 +254,7 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
       simbad: simbad(29.9357, SIMBAD_EDR3),
     }, false, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.plxMas).toBe(115.0);
+    expect(res.parallax?.mas).toBe(115.0);
   });
 
   // Gl 92.1 / HD 14039: V/70A prints 41.0 +/- 6.0 under n_plx='r', which
@@ -268,7 +268,7 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
       simbad: simbad(29.9357, SIMBAD_EDR3),
     }, false, false);
     expect(res.via).toBe('simbad_plx');
-    expect(1000 / (res.plxMas as number)).toBeCloseTo(33.405, 3);
+    expect(1000 / (res.parallax?.mas as number)).toBeCloseTo(33.405, 3);
   });
 
   // xi UMa (Gl 423 A/B, V 4.33/4.80): Gaia fitted position only, HIP 55203 is
@@ -285,7 +285,7 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
       gliese: gliese(96.0, false),
     }, true, false);
     expect(res.via).toBe('gliese_photometric_plx');
-    expect(res.plxMas).toBe(96.0);
+    expect(res.parallax?.mas).toBe(96.0);
   });
 
   it('parks a row whose only V/70A parallax is photometric and absent', () => {
@@ -331,7 +331,7 @@ describe('parallax-cascade / the van Leeuwen laundering rule', () => {
       simbad: simbad(24.7, LITERATURE),
     }, false, false);
     expect(res.via).toBe('simbad_plx');
-    expect(res.plxMas).toBe(24.7);
+    expect(res.parallax?.mas).toBe(24.7);
   });
 });
 
@@ -343,7 +343,7 @@ describe('parallax-cascade / the bound-sibling tier', () => {
       true, false,
     );
     expect(res.via).toBe('pair_member_parallax');
-    expect(1000 / (res.plxMas as number)).toBeCloseTo(404.14, 2);
+    expect(1000 / (res.parallax?.mas as number)).toBeCloseTo(404.14, 2);
     expect(res.refusedPlxMas).toEqual([]);
   });
 

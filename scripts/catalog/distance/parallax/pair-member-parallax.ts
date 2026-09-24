@@ -7,12 +7,11 @@ import type { MultiplesTsvRow } from '../../companions/companion-promotion';
 import { wdsRootOf } from '../../companions/companion-promotion';
 import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor, parallaxSignalToNoise } from './parallax-cascade';
+import type { MeasuredParallax } from '../../cited-parallax';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */
-export interface SiblingParallax {
+export interface SiblingParallax extends MeasuredParallax {
   sourceId: string;
-  mas: number;
-  errMas: number | null;
 }
 
 /** Why a pair-row source the dedup admitted is not a candidate. These four

@@ -572,7 +572,7 @@ export function readStars(
     // B-J's Galactic-density prior tail (~10–40 kpc). A null parallax here is
     // the curated exit (Sol, distance zero by construction); `none` returned
     // above.
-    const plxDistPc = plxRes.plxMas === null ? null : 1000 / plxRes.plxMas;
+    const plxDistPc = plxRes.parallax === null ? null : 1000 / plxRes.parallax.mas;
     let dist = plxDistPc ?? 0;
     let distVia: DistVia = plxRes.via;
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
@@ -595,10 +595,7 @@ export function readStars(
     if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
       lmcCandidates++;
       const lmc = applyLmcKinematicOverride(
-        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr,
-        plxRes.plxMas === null
-          ? null
-          : { mas: plxRes.plxMas, errMas: plxRes.plxErrMas },
+        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, plxRes.parallax,
       );
       if (lmc.kind === 'snap') {
         lmcOverriddenByDistVia[distVia]++;

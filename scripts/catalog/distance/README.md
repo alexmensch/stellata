@@ -360,8 +360,8 @@ of 14,625** cone candidates; most of the rest fail the PM tolerance (MW
 halo / runaway stars whose PMs sit far from the LMC bulk centroid).
 
 **The PM gate is not a membership test, and the cone is crowded**, so
-the snap also asks the record's own resolved parallax (`plxMas` /
-`plxErrMas` off the cascade, whichever tier supplied it). A row sitting
+the snap also asks the record's own resolved parallax (the cascade's
+`parallax`, whichever tier supplied it). A row sitting
 more than `LMC_PARALLAX_CONSISTENCY_SIGMA` (10) of its own errors above
 `LMC_PARALLAX_MAS` (1000 / 49,594 ≈ 0.0202 mas) is a foreground star
 sharing the Cloud's apparent motion, and keeps its own distance —

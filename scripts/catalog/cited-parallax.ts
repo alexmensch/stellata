@@ -1,13 +1,16 @@
-// A parallax carried only alongside the publication that sourced it — the
-// shape both second-order pulls write and the distance cascade's skip rules
-// read.
+// The parallax-with-error shape every source and the distance cascade share,
+// and the cited form both second-order pulls write and the skip rules read.
 
-/** `bibcode` is the source; the catalogue that carried the value is only the
- *  index that found it. `errMas` is admitted separately because the cascade's
- *  precision floor reads it and neither index always publishes one. */
-export interface CitedParallax {
+/** `errMas` is admitted separately because the cascade's precision floor reads
+ *  it and not every source publishes one. */
+export interface MeasuredParallax {
   mas: number;
   errMas: number | null;
+}
+
+/** `bibcode` is the source; the catalogue that carried the value is only the
+ *  index that found it. */
+export interface CitedParallax extends MeasuredParallax {
   bibcode: string;
 }
 

@@ -85,6 +85,9 @@ scripts/catalog/
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced
                                   it, so an uncited one is unrepresentable.
+                                  `MeasuredParallax`, the value + error pair
+                                  every parallax source and the cascade's
+                                  resolution share, lives beside it.
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with
                                   the position-to-propagate-from choice and
                                   the main-table-wins rule resolved at parse
