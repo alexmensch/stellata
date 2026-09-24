@@ -78,9 +78,8 @@
   --notfound-min: min(62svh, 35rem);
   --holder-min: clamp(11rem, 24vw, 17rem);
 
-  --layer-hero-copy: 1;
-  --layer-masthead: 2;
-  --layer-skip-link: 3;
+  --layer-masthead: 1;
+  --layer-skip-link: 2;
 
   /* Leading, tracking and weight are named sets like the sizes are, so the
      visual language changes in one place rather than per rule. */
@@ -363,14 +362,11 @@ video {
   block-size: 100%;
   object-fit: cover;
 }
-/* The copy reads against the media with no scrim between them: the halo
-   travels with the glyphs, so the hero is seen at the brightness it was
-   graded at. Anything that dims a band of it here is a regression.
-   Positioned because the media may be a <video>: replaced content paints
-   after an unpositioned sibling whatever the DOM order. */
+/* Positioned because .hero-media is (for its fade): an unpositioned
+   sibling paints beneath it whatever the DOM order. Being later in the DOM
+   is then what puts the copy on top, so it needs no z-index. */
 .hero-copy {
   position: relative;
-  z-index: var(--layer-hero-copy);
   align-self: end;
   padding-block: var(--space-xl) var(--space-l-xl);
   text-shadow: var(--text-halo);
