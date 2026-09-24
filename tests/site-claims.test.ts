@@ -112,3 +112,11 @@ describe('the derivations behind those figures', () => {
     expect(catalogueRecordCount(ROOT)).toBe(snapshot.recordCount);
   });
 });
+
+// list-style: none drops a list from Safari's accessibility tree unless the
+// element restates its role.
+describe('an unstyled list keeps its list semantics', () => {
+  it.each(selectAll('ul.spec-list', HOME).map((ul, i) => [i, ul]))('spec list %i carries role="list"', (_, ul) => {
+    expect((ul as Element).properties?.role).toBe('list');
+  });
+});
