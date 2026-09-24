@@ -61,7 +61,19 @@
   "gspcSourcesUnpulled": 632315,
   "lmcCandidates": 14625,
   "lmcOverridden": 111,
-  "lmcParallaxRefused": 11,
+  "lmcParallaxRefusedByDistVia": {
+    "bailer_jones": 11,
+    "lmc_kinematic": 0,
+    "gaia_dr3_inversion": 0,
+    "hip2_parallax": 0,
+    "cns5_plx": 0,
+    "gliese_plx": 0,
+    "simbad_plx": 0,
+    "pair_member_parallax": 0,
+    "gliese_photometric_plx": 0,
+    "curated": 0,
+    "none": 0
+  },
   "lmcOverriddenByDistVia": {
     "bailer_jones": 87,
     "lmc_kinematic": 0,

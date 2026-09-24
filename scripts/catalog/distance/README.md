@@ -365,7 +365,8 @@ the snap also asks the record's own resolved parallax (the cascade's
 more than `LMC_PARALLAX_CONSISTENCY_SIGMA` (10) of its own errors above
 `LMC_PARALLAX_MAS` (1000 / 49,594 ≈ 0.0202 mas) is a foreground star
 sharing the Cloud's apparent motion, and keeps its own distance —
-`lmcParallaxRefused`, **11** today. A parallax with no stated error
+`lmcParallaxRefusedByDistVia`, **11** today, all keeping `bailer_jones` and
+every other tier pinned at 0. A parallax with no stated error
 cannot contradict, so it snaps.
 
 The threshold sits in a measured gap over every row the cone + PM gate

@@ -350,7 +350,8 @@ export function readStars(
     distVia: Record<DistVia, number>;
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
-    lmcParallaxRefused: number;    // PM-gate passes whose own parallax rules the LMC out
+    /** PM-gate passes whose own parallax rules the LMC out, by the tier kept. */
+    lmcParallaxRefusedByDistVia: Record<DistVia, number>;
     /** lmcOverridden split by the tier the snap displaced — which populations
      *  the override actually moves. */
     lmcOverriddenByDistVia: Record<DistVia, number>;
@@ -395,7 +396,7 @@ export function readStars(
   let bjEligibleNotPulled = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
-  let lmcParallaxRefused = 0;
+  const lmcParallaxRefusedByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
   const lmcOverriddenByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
   const distViaCounts = emptyTallyPartition(DIST_VIA_VALUES);
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
@@ -603,7 +604,7 @@ export function readStars(
         distVia = 'lmc_kinematic';
         lmcOverridden++;
       } else if (lmc.kind === 'parallax_rules_out') {
-        lmcParallaxRefused++;
+        lmcParallaxRefusedByDistVia[distVia]++;
       }
     }
 
@@ -806,7 +807,7 @@ export function readStars(
       distVia: distViaCounts,
       lmcCandidates,
       lmcOverridden,
-      lmcParallaxRefused,
+      lmcParallaxRefusedByDistVia,
       lmcOverriddenByDistVia,
       directionVia,
       vVia,
