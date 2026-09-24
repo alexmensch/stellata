@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
-import { docAnchors, extractPointers, extractRetiredPointers, resolveDocPath } from './doc-pointer-pure';
+import { docAnchors, extractPointers, extractRetiredPointers, extractSameFileLinks, resolveDocPath } from './doc-pointer-pure';
 import { gitFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
@@ -57,6 +57,17 @@ describe('doc pointers resolve', () => {
     expect(failures, failures.join('\n')).toEqual([]);
   });
 
+  it('every same-file "[…](#<slug>)" link in markdown names a heading or anchor of that file', () => {
+    const failures = texts
+      .filter(({ file }) => extname(file) === '.md')
+      .flatMap(({ file, text }) =>
+        extractSameFileLinks(text)
+          .filter((link) => !anchorsOf(file).has(link.slug))
+          .map((link) => `${relative(ROOT, file)}:${link.line} — no #${link.slug} in this file`),
+      );
+    expect(failures, failures.join('\n')).toEqual([]);
+  });
+
   it.each(SCANNED_EXTS)('the scan finds pointers in %s files', (ext) => {
     expect(pointers.some(({ file }) => extname(file) === ext)).toBe(true);
   });
@@ -95,6 +106,14 @@ describe('extraction', () => {
     expect(cited(`~/.claude/CLAUDE.md${H}dry`)).toEqual([]);
     expect(cited(`https://github.com/o/r/blob/main/README.md${H}usage`)).toEqual([]);
     expect(cited(`\`<path>.md${H}<slug>\``)).toEqual([]);
+  });
+
+  it('reads a same-file markdown link target, and nothing that merely starts with #', () => {
+    const text = [`see [${S} 3.5](${H}35-lateness) and`, `[Unit](${H}unit--what-an-emitting-layer-writes) but not (${H}624) or [x](${H})`].join('\n');
+    expect(extractSameFileLinks(text)).toEqual([
+      { slug: '35-lateness', line: 1 },
+      { slug: 'unit--what-an-emitting-layer-writes', line: 2 },
+    ]);
   });
 
   it(`finds the retired ${S} form however the path is quoted or wrapped`, () => {

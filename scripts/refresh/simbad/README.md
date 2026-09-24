@@ -7,7 +7,7 @@ the entire stack.
 
 ```
 specs.py     Declarative dataclasses — ColumnSpec for basic-table
-             columns (sp_type / otype / the § 5 value columns and
+             columns (sp_type / otype / the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value columns and
              their bibcodes), IdentLookup for an identifier namespace
              (HIP, Gaia DR3/DR2/DR1, TYC, GJ), FluxBand for one band of
              the long-format flux table, BibcodedGroup for the columns
@@ -16,7 +16,7 @@ specs.py     Declarative dataclasses — ColumnSpec for basic-table
 inputs.py    Manifest-driven feeders — membership_request_keys partitions rows
              into per-namespace lookup keys AND collects each
              source_id-keyed row's other designations in the same pass,
-             simbad_value_cohort builds the § 5 value-tier predicate
+             simbad_value_cohort builds the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value-tier predicate
              over gaia_complete_source_ids, gl_suffix normalises the
              GJ/Gl spellings. Plus the WDS-component oid iterator.
              Cost: the designation map is a dict per source_id-keyed row —
@@ -36,8 +36,7 @@ query.py     ADQL builders + batched TAP executor. Wraps each
              rows must fold straight into their final shape, because at
              manifest scope this accumulator is ~100 MB and an
              intermediate copy doubles it.
-union.py     Phase B2 — the value-keyed union (§ The union asks every
-             namespace a record reaches). Reads Phase A's per-namespace
+union.py     Phase B2 — the value-keyed union (README.md#the-union-asks-every-namespace-a-record-reaches). Reads Phase A's per-namespace
              bindings and Phase B's rows, asks what no bound object
              answered, and returns the objects that do — each binding
              adjudicated by request.py's shared `corroborate`, because
@@ -59,7 +58,7 @@ __init__.py      Package marker + source_files(), the module list a
 
 ## The cohort is two questions, and the manifest answers one
 
-`simbad_value_cohort` takes a set of source_ids and returns the § 5 value-tier
+`simbad_value_cohort` takes a set of source_ids and returns the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value-tier
 predicate. The set is `gaia_complete_source_ids` over
 `data/gaia/gaia_dr3_astrometry_catalog.tsv` — the ids Gaia's own 5p table
 states a parallax AND a proper motion AND a radial velocity for. A row is OUT
@@ -71,7 +70,7 @@ The predicate this replaced read the spine's `pos_src` / `dist_src` /
 `mag_src` / `rv_src` / `pm_src` marks. Nothing in
 [Columns](../../catalog/membership/README.md#columns) restates them — the record
 build resolves each cascade's tier itself — so an identity-only rebase drops
-the exact class § 5 retires. Measured: of the 11,050 spine rows the old
+the exact class [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) retires. Measured: of the 11,050 spine rows the old
 predicate selected, an identity-only predicate covers 5,799 and loses 5,238,
 of which **5,135 are `rv_src`-only**. HIP 22255 and HD 150688 are the
 other shape — `dist_src=G_R2`, a Gaia DR2 distance the driver swap retired,
@@ -163,7 +162,7 @@ about the VALUE and nothing before Phase B knows it:
    bind is not re-asked: it has answered, with the absence of a value.
 4. **Adjudicate every binding.** Each one rests on a designation alone, so
    it goes through the same `corroborate` a widening rung uses, on the same
-   terms — § The corroboration rule below. This is the guard the union
+   terms — [The corroboration rule](#the-corroboration-rule) below. This is the guard the union
    would otherwise have dropped, and it is not decoration: on the pass that
    landed it, it vetoed bindings that would have given 63 records another
    star's spectral type, and so another star's rendered radius.
@@ -260,7 +259,7 @@ job and is finished; only the second is the union's.
 - [`refresh-simbad-sptype.py`](../README.md) — per-source `sp_type` /
   `sp_qual` / `sp_bibcode` / `otype` + cross-IDs, over the whole manifest.
 - [`refresh-simbad-values.py`](../README.md) — bibcoded rv / parallax /
-  PM / coordinates + B/V fluxes, over the § 5 value cohort.
+  PM / coordinates + B/V fluxes, over the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort.
 - [`refresh-simbad-wds-xids.py`](../README.md) — per-WDS-component
   (Gaia DR3, HIP) cross-IDs via a two-phase WDS-id → SIMBAD-oid →
   cross-IDs walk.

@@ -9,13 +9,13 @@ elapsed model time next need a frame".
 src/client/render-gate/cadence/
   clock-cadence.ts (+ test)    ClockCadence — the per-frame state the
                                due test and the budget run on
-                               (§ The controller).
+                               (README.md#the-controller).
   clock-cadence-pure.ts        The rate report every layer files, the
     (+ test)                   thresholds, the budget, and the due test.
   cadence-trust-pure.ts        The safety net: audit a scheduled frame
     (+ test)                   against what the budget promised.
   cadence-vantages.test.ts     The pinned acceptance numbers
-                               (§ Pinned vantages).
+                               (README.md#pinned-vantages).
 ```
 
 Nothing here imports the parent, which is why it splits cleanly: the
@@ -39,7 +39,7 @@ it, each through one method:
 - `refresh(frame)` — once per rendered frame, **after** the layer fan-out
   and every ride, so each position a report divides by is this frame's.
   It builds `CadenceCtx`, collects the registry's report, audits it
-  (§ The safety net), sets the next budget, and clears the ride steps.
+  ([The safety net](#the-safety-net)), sets the next budget, and clears the ride steps.
 
 Seeds and resets are one set: budget 0 and a NaN sim stamp, so the first
 tick under a running clock is due and the first frame's step reads as
@@ -82,7 +82,7 @@ returns a `CadenceReport`:
 | --- | --- | --- |
 | `screenPxPerSimS` | CSS px / sim s | fastest on-screen speed of anything drawn |
 | `fluxFracPerSimS` | fraction / sim s | fastest brightness slope of anything drawn |
-| `observedPx` | CSS px | what actually moved since the last frame (§ The safety net) |
+| `observedPx` | CSS px | what actually moved since the last frame ([The safety net](#the-safety-net)) |
 | `observedFluxFrac` | fraction | what actually changed since the last frame |
 
 **Layers report rates; the gate owns every threshold.** `CadenceCtx`
@@ -109,8 +109,8 @@ is a deliberate purchase. An accurate rate carries no slack, which
 inverts the failure direction: with a conservative bound a forgotten term
 wasted frames, and with an accurate one it shows as a visible FREEZE.
 2× the frames buys a 2× error margin on every term at once, and it is
-what makes the handoff to the cap clean (§ Emerging from behind
-something).
+what makes the handoff to the cap clean ([Emerging from behind
+something](#emerging-from-behind-something)).
 
 **No idle floor.** With honest rates the closest realistic vantage
 budgets seconds, not milliseconds, so nothing needs a floor to keep it
@@ -149,7 +149,7 @@ Three exclusions, all first-class:
 
 **Delegation is gone.** No layer asks for a global min over a
 population. What survives is content *anchored* to another layer's
-content — see § Anchored content.
+content — see [Anchored content](#anchored-content).
 
 ## Camera motion is subtracted, never bounded
 

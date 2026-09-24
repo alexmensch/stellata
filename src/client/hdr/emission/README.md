@@ -10,11 +10,11 @@ src/client/hdr/emission/
   density0-solver-pure.ts    The ρ₀ solve both volumetric emitters share:
     (+ test)                 flux number, Gauss–Legendre quadrature over a
                              truncated ellipsoid, ρ₀ = d²·F/G
-                             (§ Solving ρ₀).
+                             (README.md#solving-ρ--a-published-magnitude-into-an-emitters-density).
   emission-pure.ts (+ test)  CPU mirror, plus both solid-angle derivations
                              and their inverses, LUMA_CEIL,
                              POINT_SOURCE_FLAT_PEAK_DIAMETER_PX
-                             (§ Unit), SB_ZERO_POINT
+                             (README.md#unit--what-an-emitting-layer-writes), SB_ZERO_POINT
                              (the zero point both volumetric emitters
                              share) and lumaNormalisedTint, the hue-only
                              tint they multiply.
@@ -22,7 +22,7 @@ src/client/hdr/emission/
     (+ test)                 emitters render and the hue it derives to,
                              plus the constrained solve that turns a
                              galaxy's published integrated index into its
-                             disc's (§ Population colours).
+                             disc's (README.md#population-colours--one-equation-two-unknowns-one-citation).
 ```
 
 The shipped graphs are `../../webgpu/emission-tsl.ts` (the unit) and
@@ -66,8 +66,8 @@ L_px = uExposure · 10^(−0.4·S) · Ω
 
 Being a single scalar is what lets a layer apply it to a coloured column
 without touching chromaticity. It is **unclamped** — the caller clamps the
-product against `LUMA_CEIL`, not the factor. **Which `Ω` is § Extended
-sources' decision**, and it separates the physical answer from the
+product against `LUMA_CEIL`, not the factor. **Which `Ω` is [Extended
+sources](#extended-sources--two-solid-angles-one-write-tail)' decision**, and it separates the physical answer from the
 displayed one.
 
 **Being a scalar is also why an emitter's tint must carry hue only.** It
@@ -76,7 +76,7 @@ normalised against a total flux, so a tint whose relative luminance isn't 1
 rescales that emitter's flux by that luminance — 0.23 mag on either layer's
 spheroid population, 0.14–0.18 mag on their discs. What moves a
 *two-component* split is the difference, which the band carried at
-0.39 mag under the eyeballed palette that preceded § Population colours.
+0.39 mag under the eyeballed palette that preceded [Population colours](#population-colours--one-equation-two-unknowns-one-citation).
 `lumaNormalisedTint` owns it.
 
 **The separation holds at the emission site and not one step past it.**
@@ -122,7 +122,7 @@ d = 10 pc (`../../milkyway/calibration/README.md`). Same function, and
 the only difference is which distance goes in.
 
 **The shape must be the luminance shape.** ρ₀ is a scalar and the tint it
-multiplies is luma-normalised (§ Unit), so the scalar volume integral *is*
+multiplies is luma-normalised ([Unit](#unit--what-an-emitting-layer-writes)), so the scalar volume integral *is*
 the luminance integral — which is what lets a flux share be split between
 two differently-tinted components without either hue moving flux.
 
@@ -138,7 +138,7 @@ alone, uses the raw form.
 ## Population colours — one equation, two unknowns, one citation
 
 `population-colour-pure.ts` is the hue side of the same problem
-§ Solving ρ₀ is the flux side: both layers render an old spheroid and a
+[Solving ρ₀](#solving-ρ--a-published-magnitude-into-an-emitters-density) is the flux side: both layers render an old spheroid and a
 star-forming disc, and **no publication gives either galaxy its colour
 split by component.** What is published is the integrated index. So one
 component is modelled and the other is solved:

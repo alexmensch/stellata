@@ -19,8 +19,7 @@ src/client/webgpu/dust/
   dust-particle-tsl.ts     The sprite's vertex and fragment graphs.
   dust-uniform-nodes.ts    uParticleStrength, the one slot the layer owns.
   tsl-dust-materials.ts    The factory implementing DustParticleMaterials.
-  dust-tsl-drift.test.ts   The constant guard (§ Constants live in
-                           TypeScript).
+  dust-tsl-drift.test.ts   The constant guard (README.md#constants-live-in-typescript).
 ```
 
 ## Six of its seven uniforms are not in its own record

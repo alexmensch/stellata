@@ -28,7 +28,7 @@ src/client/chart-mode/
   chart-palette.ts (+ test)       Authored ink values of the paper palette,
                                   shared by the layers that swap into it,
                                   plus the paper's own clear colour
-                                  (§ Chart palette).
+                                  (README.md#chart-palette).
 ```
 
 ## Chart palette
@@ -221,7 +221,7 @@ inherits no exposure state at all.
 
 Click-pick tracks **render visibility** identically for every kind: a
 body is click-pinnable iff it is currently drawn. Chart mode hard-clips
-the star disc at `uLimitMag` (no soft taper — § Star disc sizing), so
+the star disc at `uLimitMag` (no soft taper — [Star disc sizing](#star-disc-sizing--magnitude-driven)), so
 `pickStar`'s cutoff drops the `SOFT_TAPER_MARGIN_MAG` it adds in
 navigate. **Both** kinds size the hit radius from the chart disc px
 (`chartDiscPxForAppMag`) rather than the physical/perceptual disc —
@@ -281,7 +281,7 @@ Wings are driven by `flags` bit 4. Three build-time passes set that bit:
   EA/EB/EW/ELL/E; EP eclipsing-by-planet excluded) that the two
   passes above didn't already flag. An eclipser's variability is
   the geometry of a stellar multiple, so it earns wings, not a
-  variable ring (see [Label engine + glyphs,](labels/README.md#label-engine--glyphs)
+  variable ring (see [Label engine + glyphs](labels/README.md#label-engine--glyphs),
   Variable rings).
 
 All three passes hit the same flag bit, so chart-mode rendering is

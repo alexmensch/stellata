@@ -13,7 +13,7 @@ orbit-plane.ts (+ test)  The focused object's own orbit — plane normal and
                          whichever subsystem holds it. Split in two:
                          `resolveFocusedOrbit` once per focus,
                          `focusedOrbitFrom` per rendered frame
-                         (§ What each frame re-reads, and what it must not).
+                         (README.md#what-each-frame-re-reads-and-what-it-must-not).
 ```
 
 Nothing here imports from the parent folder: the dispatch reaches the
@@ -26,7 +26,7 @@ Double-click the ball and the active frame becomes **ORB**,
 whose pole is the normal of the orbit the focused object *itself* rides. It
 is planted from `orbit-plane.ts`'s answer rather than from the current
 attitude, and `level()` then runs unchanged. Unlike REF it is **live** —
-§ Orbit rate.
+[Orbit rate](#orbit-rate).
 
 The frame flag reaches the same frame without the levelling
 ([Which frame, and who chooses](../README.md#which-frame-and-who-chooses)). Both routes capture through
@@ -146,7 +146,7 @@ datum moved far enough for the write to show.**
 
 **"Actually moved" is not the test, and cannot be.** The ride writes the camera
 *below* the gate, so the next tick reads any write at all as a fresh camera
-move and renders — the § The focal ride loop in
+move and renders — the [The focal ride](/src/client/render-gate/README.md#the-focal-ride) loop in
 `../../render-gate/README.md`, which a rotation has no rebase to escape
 through. At live 1× Luna's datum turns ~2.6 × 10⁻⁶ ° per 60 Hz tick, a
 genuinely non-zero turn some 2700× under anything a display can show, and
@@ -175,7 +175,7 @@ re-derives it for you until the next tick.** `ridePoseBy` writes
 `camera.position` and `camera.up`. Every reader downstream — the render, the
 overlays, and the ball's own `readAttitude` — takes `camera.quaternion`, which
 `lookAt` builds from those two, and `TrackballControls.update()` does not run
-again until the next rAF tick ([Roll authority,](../../camera/controls/input/README.md#roll-authority)
+again until the next rAF tick ([Roll authority](../../camera/controls/input/README.md#roll-authority),
 derivation A). So the ride re-derives it itself. Skip that
 and the frame draws the new position through the old aim while the ball reads
 the new datum against the old attitude: **a lag of exactly one frame's turn**,

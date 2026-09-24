@@ -1,6 +1,6 @@
 ---
 name: stellata-perf
-description: Take a GPU frame-cost measurement with the human-armed headless perf runner (`pnpm run perf`) — the arm protocol, the flags, how to read a row, how to tell a real regression from a warm machine or a two-valued frame, where results go. Use when asked to measure, price, baseline or compare render cost, when reading an archived run or a pin verdict, when a perf number looks wrong or a row was refused, and before stating any perf number in a PR body or a bead. Also covers § Recording for the other instrument that writes into `.perf-runs/` — `pnpm run survivors`, the non-clock survivor-count read — so load it before running that or citing its output too.
+description: Take a GPU frame-cost measurement with the human-armed headless perf runner (`pnpm run perf`) — the arm protocol, the flags, how to read a row, how to tell a real regression from a warm machine or a two-valued frame, where results go. Use when asked to measure, price, baseline or compare render cost, when reading an archived run or a pin verdict, when a perf number looks wrong or a row was refused, and before stating any perf number in a PR body or a bead. Also covers its Recording section for the other instrument that writes into `.perf-runs/` — `pnpm run survivors`, the non-clock survivor-count read — so load it before running that or citing its output too.
 ---
 
 # Measuring frame cost with the perf runner
@@ -154,7 +154,7 @@ and `disabledLimitMag` must agree or the row priced a different scene; never
 compare across `method`, `bufferMpx`, headed/headless, browsers, or a dev
 server against a production build; never sum the column.
 
-Per mode (`scripts/perf/dwell/README.md`, [Sweep mode,](/scripts/perf/README.md#sweep-mode)
+Per mode (`scripts/perf/dwell/README.md`, [Sweep mode](/scripts/perf/README.md#sweep-mode),
 [Reading the table](/scripts/perf/diff/README.md#reading-the-table)):
 
 - **`vsyncClamped` true throws the dwell away.** A p50 sitting on any whole

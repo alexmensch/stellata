@@ -82,12 +82,12 @@ sources without erroring.
 Against today's manifest the union measures 370,994 bound source_ids, 327,701
 of them in the kept set, so 602,228 rows are the term's own and the union is
 973,222 source_ids. The record total that implies, once promotion and parking
-apply: § The record total the floor implies, below.
+apply: [The record total the floor implies](#the-record-total-the-floor-implies--983068-measured), below.
 
 At `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
 those 602,228 — and every primaries-side count holds byte for byte, which is
 what says the term adds and moves nothing on the manifest side. The record side
-is not additive: § What the floor moves that was already there.
+is not additive: [What the floor moves that was already there](#what-the-floor-moves-that-was-already-there).
 
 ## The column is the ledger
 
@@ -247,7 +247,7 @@ decision.
 
 **First paint does not pay any of it.** The whole catalogue on the wire moves
 29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
-and fills behind it ([On-disk transport chunking,](../../record/README.md#on-disk-transport-chunking)
+and fills behind it ([On-disk transport chunking](../../record/README.md#on-disk-transport-chunking),
 [Progressive catalog load](../../../../src/client/loaders/README.md#progressive-catalog-load)). That
 chunk is a fixed byte budget, so it holds the same 10,412 records to apparent
 V 6.62 at either depth: the naked-eye sky arrives at the speed it always did
@@ -259,9 +259,8 @@ transfer is 65.72 MB gz rather than the 62.4 MB the table's single-blob
 
 Per-star GPU residency is derived, never pinned — the two folders that own
 these buffers both say to re-derive rather than trust a byte count
-(`../../../../src/client/webgpu/star/compaction/README.md` and
-`../../../../src/client/webgpu/extinction/README.md`, each § What it costs, and
-what it holds):
+([compaction](/src/client/webgpu/star/compaction/README.md#what-it-costs-and-what-it-holds) and
+[extinction](/src/client/webgpu/extinction/README.md#what-it-costs-and-what-it-holds), each *What it costs, and what it holds*):
 
 | resident | B/star | today | at `V <= 11` |
 |---|---|---|---|

@@ -43,13 +43,13 @@ Two consequences:
   grid extension).
 - **Substructure comes from real data, not procedural noise.** Cloud
   shape is a per-cloud isosurface mesh traced from the Edenhofer field
-  at build time (§ 9, `scripts/cloud-surfaces/`). The log-normal octave
-  model (§ 5) is retained only as the build-side spec for a possible
+  at build time ([§ 9](#9-presence-pass), `scripts/cloud-surfaces/`). The log-normal octave
+  model ([§ 5](#5-substructure-noise-build-side-spec)) is retained only as the build-side spec for a possible
   future volumetric-substructure upgrade; no client code reads the
   `noiseModel` block today.
 
 Embedded-star cavities are a **designed but not-yet-shipped** refinement
-(§ 7): a build-time cross-match behind a generic reader interface
+([§ 7](#7-taxonomy-and-embedded-stars)): a build-time cross-match behind a generic reader interface
 (`{position_pc, spectral_type, abs_mag}`, not AT-HYG-specific columns, so
 catalog upgrades slot in without touching the cloud pipeline) will carve
 presence-model density cavities and drive HII tints. Classes currently
@@ -78,7 +78,7 @@ The Zucker 2021 profile amplitudes (n0 in cm⁻³) convert through this
 chain, but their absolute normalisation is **not trusted** — the
 species convention (n_H vs n_H₂) and the extinction-to-density
 assumptions wash out because we calibrate each cloud's column to its
-observed A_K (§ 4.2). Only the profile *shape* (rflat, p) is taken at
+observed A_K ([§ 4.2](#42-calibration-procedure-per-cloud)). Only the profile *shape* (rflat, p) is taken at
 face value.
 
 ### 2.1 What "realistic A_V" means at our resolution
@@ -90,7 +90,7 @@ area-averaged columns are what the Leike-resolution 3D values give:
 Zucker Table 3 `max_ak_leike` 0.19 – 0.38 → **A_V ≈ 1.6 – 3.3 through
 the densest cores** — and those are themselves 1 pc-beam peaks, so the
 4.9 pc grid's peak columns legitimately land below them (measured
-0.3–1.0×, § 1). The presence pass conveys the darker sub-beam cores
+0.3–1.0×, [§ 1](#1-overview--two-independent-fields)). The presence pass conveys the darker sub-beam cores
 visually. Per-star extinction deliberately does **not** reach 25 mag:
 no 4.9 pc-averaged column does.
 
@@ -136,7 +136,7 @@ spine skeletons).
 ## 4. Per-cloud density model — the presence-pass field
 
 The analytic model drives the presence pass and the embedded-star /
-cavity work. It does **not** modify the voxel extinction field (§ 1).
+cavity work. It does **not** modify the voxel extinction field ([§ 1](#1-overview--two-independent-fields)).
 Shared implementation: `scripts/clouds/cloud_model.py`, consumed by
 `build-clouds.py` (clouds.json fields) and `build-dust.py` (the column
 check).
@@ -145,7 +145,7 @@ check).
 
 Plummer-like profile, parameters from Table 2 (`n0`, `rflat`, `p` —
 Plummer columns, not the Gaussian fits). Corona Australis has a Table 1
-bbox but **no Table 2/3 rows** — it takes the § 4.3 class defaults, so
+bbox but **no Table 2/3 rows** — it takes the [§ 4.3](#43-the-sphere-clouds-zucker-2020--corona-australis) class defaults, so
 11 of the 12 ellipsoids are profiled. Semi-axes floor at 3 pc per axis
 (Musca's fitted bbox is 0.5 pc thin).
 
@@ -154,8 +154,8 @@ n(x) = n0_cal · (1 + (r_eff(x)/rflat)²)^(−p/2) · envelope(u, u_env)
 envelope(u, u_env) = 1 − smoothstep(0.85·u_env, u_env, u)
 ```
 
-`n0_cal` is the calibrated amplitude (§ 4.2), NOT Table 2's `n0`;
-`u_env ≤ 1` is the mass-budget envelope tightening (§ 4.2). Fitted
+`n0_cal` is the calibrated amplitude ([§ 4.2](#42-calibration-procedure-per-cloud)), NOT Table 2's `n0`;
+`u_env ≤ 1` is the mass-budget envelope tightening ([§ 4.2](#42-calibration-procedure-per-cloud)). Fitted
 values for reference (Table 2): Taurus n0 = 72.8 cm⁻³, rflat = 1.2 pc,
 p = 1.2; Perseus 47.8 / 6.1 / 2.4; Orion B 50.3 / 8.1 / 3.0. Note p ≤ 2
 profiles have slowly-converging columns — all column integrals are taken
@@ -168,7 +168,7 @@ numerically with the envelope cutoff, never analytically to infinity.
 2. Solve `n0_cal` so `N_A_V = max_ak_leike / 0.117` (Table 3).
    Leike-scale values are the resolution-matched truth for a 3D grid;
    NICEST 2D values are sub-beam and would over-darken every sightline
-   (§ 2.1).
+   ([§ 2.1](#21-what-realistic-a_v-means-at-our-resolution)).
 3. Mass budget: `M_model = μ m_H ∫ n dV` with μ = 1.37 per H nucleon. A
    filled ellipsoid at the observed peak column over-masses elongated /
    flat-profile clouds (a real cloud is a filament inside its bbox):
@@ -177,7 +177,7 @@ numerically with the envelope cutoff, never analytically to infinity.
    budget holds. Measured u_env: 1.0 for Taurus/Ophiuchus/Perseus/Orion
    A/B; 0.49 Pipe; 0.72 Cepheus; 0.22 Orion λ — the ring morphology the
    centrally-peaked model cannot represent (the cavity carve owns it,
-   § 7.3).
+   [§ 7.3](#73-cavities-designed-not-yet-shipped)).
 
 All 11 calibrated `n0_cal` + `u_env` values are pinned in
 `scripts/clouds/clouds-json.test.ts` (`toBe`) so table or constant
@@ -201,9 +201,9 @@ only shape silhouettes.
 ## 5. Substructure noise (build-side spec)
 
 Cloud substructure ships as real data — per-cloud isosurface meshes
-traced from the Edenhofer field (§ 9). The presence shader carries no
+traced from the Edenhofer field ([§ 9](#9-presence-pass)). The presence shader carries no
 noise. The log-normal octave model below is retained as the build-side
-spec: `cloud_model.py` still emits the `noiseModel` block (§ 8) so a
+spec: `cloud_model.py` still emits the `noiseModel` block ([§ 8](#8-per-cloud-parameter-schema)) so a
 future volumetric-substructure upgrade has one calibrated source of
 truth to pick up. No client code reads it today.
 
@@ -217,7 +217,7 @@ is Gaussian with
 σ_s² = ln(1 + b² M²)        b ≈ 0.4 (mixed forcing; Federrath+ 2010)
 ```
 
-Class-based Mach numbers (§ 7): dark M ≈ 5 → σ_s ≈ 1.3; sf M ≈ 8 →
+Class-based Mach numbers ([§ 7](#7-taxonomy-and-embedded-stars)): dark M ≈ 5 → σ_s ≈ 1.3; sf M ≈ 8 →
 σ_s ≈ 1.7; hii M ≈ 10 → σ_s ≈ 1.9. Actively star-forming clouds
 additionally develop a high-density power-law tail (Federrath & Klessen
 2013; Kainulainen et al. 2009) — represented in the fine octaves'
@@ -231,7 +231,7 @@ ridged shaping, not a separate PDF term.
 
 `g` is a unit-variance octave sum; the `−σ_s²/2` offset makes the field
 mean-preserving in expectation, and the clamp bounds the log-normal tail
-(the presence integral must stay finite and band-limited, § 9.1).
+(the presence integral must stay finite and band-limited, [§ 9.1](#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode)).
 
 The octave ladder is one geometric sequence (lacunarity 2, base
 wavelength = the cloud's major diameter, down to ~0.3 pc). Per-octave
@@ -243,7 +243,7 @@ lambdaMinPc, domainStretchMajor, noiseClampSigma, ridgedFinestCount,
 ridgedExponent, sigmaS, hash: pcg3d, interp: quintic}` —
 quintic-interpolated lattice value noise under a PCG3D hash, expressible
 in GLSL ES 3.0 uint arithmetic. Seeded per cloud (`seed` in the schema,
-§ 8 — FNV-1a of the raw Zucker table name) in cloud-local coordinates so
+[§ 8](#8-per-cloud-parameter-schema) — FNV-1a of the raw Zucker table name) in cloud-local coordinates so
 the structure is static and per-cloud distinct.
 
 ### 5.3 Filamentary anisotropy
@@ -286,7 +286,7 @@ block) is Ophiuchus at A_V = 2.73, everything else ≤ 1.75, and the
 grid-max density (0.135 E_ZGR/pc → 0.37 A_V/pc) makes A_V ≳ 4 physically
 unreachable on any realistic chord. The R_V = 5.5 grain-growth regime is
 the sub-0.1 pc pencil-beam column the 4.88 pc grid deliberately does not
-resolve (§ 2.1). At A_V ≤ 2.73 the measured R_V is ≈ 3.1–3.5, so the
+resolve ([§ 2.1](#21-what-realistic-a_v-means-at-our-resolution)). At A_V ≤ 2.73 the measured R_V is ≈ 3.1–3.5, so the
 global R_V = 3.1 is correct to ≲ 0.1 mag of B−V even on the densest
 core; the ρ₂ = 0.08 trigger above would over-correct and slightly
 *under*-redden it. The constant law is the physically-grounded choice at
@@ -308,8 +308,8 @@ sf     active star formation      B2–O9 present, or curated
 hii    developed HII region(s)    O / early-B (≤ B1) present, or curated
 ```
 
-Class drives: default A_V_target (§ 4.3), Mach/σ_s (§ 5.1), fine-octave
-shaping (§ 5.3), presence tint (§ 9).
+Class drives: default A_V_target ([§ 4.3](#43-the-sphere-clouds-zucker-2020--corona-australis)), Mach/σ_s ([§ 5.1](#51-physical-basis)), fine-octave
+shaping ([§ 5.3](#53-filamentary-anisotropy)), presence tint ([§ 9](#9-presence-pass)).
 
 ### 7.2 Derivation (build time — designed, not yet shipped)
 
@@ -384,8 +384,8 @@ closer pairs by taking the larger R_cav.
 The emitted `clouds.json` fields (`class`, `n0Cal`, `uEnv`, `rflat`,
 `p`, `sigmaS`, `massLeike`, `akPeak`, `inGrid`, `seed`, `embedded[]`,
 plus the build-side `noiseModel` block) are documented in
-[Output schema,](/scripts/clouds/README.md#output-schema) which is the schema's single
-source of truth. Physics behind each field is §§ 4, 5, 7 here.
+[Output schema](/scripts/clouds/README.md#output-schema), which is the schema's single
+source of truth. Physics behind each field is [§ 4](#4-per-cloud-density-model--the-presence-pass-field), [§ 5](#5-substructure-noise-build-side-spec), [§ 7](#7-taxonomy-and-embedded-stars) here.
 
 ## 9. Presence pass
 
@@ -479,7 +479,7 @@ on Earth. Everything falls out of the two mechanisms already specified:
 
 - **Stars:** the per-star raymarch handles camera-inside-cloud
   automatically (the camera→star segment starts inside the dense
-  region). The un-clipped Edenhofer encode (§ 2.2) is what makes this
+  region). The un-clipped Edenhofer encode ([§ 2.2](#22-encoding-ceiling--the-fixed-density_max)) is what makes this
   real.
 - **Diffuse background:** the absorption mesh is `BackSide` with an
   analytic ray-envelope segment, so it renders from inside too; each
@@ -487,7 +487,7 @@ on Earth. Everything falls out of the two mechanisms already specified:
   band dims anisotropically — darkest toward the core, brightest toward
   the nearest edge. This is the correct first-order model of sitting
   inside an extinction shell. (The rim glow — not the absorption — is
-  suppressed inside, § 9.)
+  suppressed inside, [§ 9](#9-presence-pass).)
 
 ## 11. References
 

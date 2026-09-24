@@ -47,7 +47,7 @@ scripts/catalog/companions/
 **A record's identifiers are the manifest's, and this folder adds none.**
 Promotion mints records; it does not amend one. The manifest states each
 record's HIP and Gaia source_id, its `binding` cell says on what basis, and a
-cell it leaves empty is the § 4 gate's decision rather than an omission
+cell it leaves empty is the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gate's decision rather than an omission
 ([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived)).
 So a pair-primary row's own ids stay on the promoted companion
 and never reach the anchor's record.
@@ -466,7 +466,7 @@ carries the worked case and imports the same predicate for naming.
 | `conIndex` | per-component | the IAU boundary region the minted position falls in ([Positional constellation membership](../parse/README.md#positional-constellation-membership)) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
 | `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone ([Two callers, one composer](../naming/README.md#two-callers-one-composer)). |
 | `desigConIndex` | inherited | anchor's designation index — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index ([The designation constellation](../classic-ids/README.md#the-designation-constellation)). |
-| `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise ([Space-motion velocity,](../parse/README.md#space-motion-velocity) Pair coherence). Truly anchor-less escapes fall back to zero. |
+| `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise ([Space-motion velocity](../parse/README.md#space-motion-velocity), Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
 | `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
 | `absmag` | per-component | Stage-5 decomposition / dmag / blend split. |

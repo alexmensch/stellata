@@ -12,13 +12,19 @@ export interface DocPointer {
 }
 
 const DOC_PATH = String.raw`(?<![\w@.~/-])(\/?(?:\.{1,2}\/)*(?:[\w@.-]+\/)*[\w@.-]+\.md)`;
-const POINTER = new RegExp(String.raw`${DOC_PATH}#([\p{L}\p{N}_-]+)`, 'gu');
+const SLUG = String.raw`([\p{L}\p{N}_-]+)`;
+const POINTER = new RegExp(`${DOC_PATH}#${SLUG}`, 'gu');
+const SAME_FILE_LINK = new RegExp(String.raw`\]\(#${SLUG}\)`, 'gu');
 const RETIRED_POINTER = new RegExp(String.raw`${DOC_PATH}[\x60*]*\s+§`, 'gu');
 
 const lineOf = (text: string, index: number): number => text.slice(0, index).split('\n').length;
 
 export function extractPointers(text: string): DocPointer[] {
   return [...text.matchAll(POINTER)].map((m) => ({ citedPath: m[1], slug: m[2], line: lineOf(text, m.index) }));
+}
+
+export function extractSameFileLinks(markdown: string): Omit<DocPointer, 'citedPath'>[] {
+  return [...markdown.matchAll(SAME_FILE_LINK)].map((m) => ({ slug: m[1], line: lineOf(markdown, m.index) }));
 }
 
 export function extractRetiredPointers(text: string): Omit<DocPointer, 'slug'>[] {

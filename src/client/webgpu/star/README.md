@@ -5,13 +5,13 @@
 `stellata.ts` — the import boundary in `../README.md`). It carries the
 three depth-honest pipelines of [Early-z](../README.md#early-z--the-star-layers-depth-honest-redesign): D2 glow (no
 depth output), D3 core mask (depth-only, member stamp in the vertex
-stage), and D4 disc (colour only, no depth output either — § The disc
-draw writes no depth) — plus their local-depth-pass mirror variants
-(§ The local mirror). No pipeline here writes fragment depth, and the
+stage), and D4 disc (colour only, no depth output either — [The disc
+draw writes no depth](#the-disc-draw-writes-no-depth)) — plus their local-depth-pass mirror variants
+([The local mirror](#the-local-mirror)). No pipeline here writes fragment depth, and the
 draw count is three, mirror draws included.
 Each main draw is indirect at its tier's survivor count
-(`compaction/README.md`), over storage tables indexed by star (§ Star
-tables) — the vertex stage runs over the stars that can draw, not the
+(`compaction/README.md`), over storage tables indexed by star ([Star
+tables](#star-tables--every-per-star-field-is-a-storage-read)) — the vertex stage runs over the stars that can draw, not the
 catalogue.
 The CPU half of that stack — the star frame, the pass identities, the
 blend states, the perceptual-disc mirror — is `../../star-pipeline/`.
@@ -26,8 +26,7 @@ src/client/webgpu/star/
   star-tables-pure.ts (+ test) Layout of the static per-star record table
                                (stride, slots, the interleave).
   star-tables.ts (+ test)      StarTables — the star-indexed storage
-                               tables every star stage reads (§ Star
-                               tables), and the per-frame forwarding of
+                               tables every star stage reads (README.md#star-tables--every-per-star-field-is-a-storage-read), and the per-frame forwarding of
                                the shell's attribute writes onto them.
   star-geometry.ts (+ test)    The two quad geometries, corner + index
                                only, each drawn indirect off its tier's
@@ -35,7 +34,7 @@ src/client/webgpu/star/
   star-visibility-tsl.ts       The dust-independent prefilter's four
                                terms, the two bounds re-tested after
                                extinction, and the clock-independent form
-                               the A_V cache gates on (§ Dust extinction).
+                               the A_V cache gates on (README.md#dust-extinction--two-tiers-one-gate).
   star-vertex-tsl.ts           `solveStarTsl`, the per-star solve the
                                compaction kernel and all six vertex
                                stages share, and the vertex stage over
@@ -46,8 +45,7 @@ src/client/webgpu/star/
   star-glow-tsl.ts             The D2 material: glow fragment (soft
                                taper, additive) over the shared stage.
   star-disc-tsl.ts             The D4 material: per-channel max blend,
-                               no depth write — § The disc draw writes
-                               no depth.
+                               no depth write — README.md#the-disc-draw-writes-no-depth.
   star-core-mask-tsl.ts        The D3 material: depth-only, colour
                                writes off, over the shared disc gate;
                                takes the MRT swap for three's pipeline
@@ -66,7 +64,7 @@ src/client/webgpu/star/
   star-local-mirror-tsl.ts     The local-depth-pass mirror: the three
     (+ test)                   pipelines' local variants over the shared
                                MirrorSlots geometry, reading the tables
-                               by `iSourceIdx` (§ The local mirror).
+                               by `iSourceIdx` (README.md#the-local-mirror).
   star-sources-mock.ts         StarLayerSources over the zero-filled
                                StarPipeline mock, and the fake renderer
                                the layer tests dispatch into.
@@ -80,7 +78,7 @@ threshold, is [Eliding the physical-size branch](../../star-pipeline/perceptual-
 
 Which per-star field lands where — the static-table fields, the
 forwarded four, the one per-vertex attribute — is
-`../star-attribute-roster.ts` (§ Star tables).
+`../star-attribute-roster.ts` ([Star tables](#star-tables--every-per-star-field-is-a-storage-read)).
 
 The operator, emission-unit and perceptual-disc mirrors the fragment
 composes live one level up (`../tonemap-tsl.ts`, `../emission-tsl.ts`,
@@ -200,7 +198,7 @@ at its `iSourceIdx`. Two kinds of table:
   `StarTables.syncSources()` forwards the source's `version` and
   `updateRanges` onto it **verbatim**: same array, same element units.
   The position table is `count × 3` floats read as three scalars, never
-  an itemSize-3 storage attribute (§ below).
+  an itemSize-3 storage attribute ([Why no table is itemSize 3](#why-no-table-is-itemsize-3)).
 
 ### What a dirty frame costs, and which writer decides
 
@@ -308,7 +306,7 @@ and flux-preservation arguments are
   every instanced attribute of the source geometry by name — and this
   layer's geometry has none, so the copy degenerates to the member
   indices. Every star field the mirror's vertex stage reads comes out of
-  the layer's tables at that index (§ Star tables), the same reads the
+  the layer's tables at that index ([Star tables](#star-tables--every-per-star-field-is-a-storage-read)), the same reads the
   main passes make at a survivor-list index, so the two cannot resolve
   a field differently. Two vertex buffers, no indirect draw: the mirror
   draws `instanceCount = members`, its survivor set being the CPU member

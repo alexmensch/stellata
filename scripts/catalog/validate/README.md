@@ -34,8 +34,7 @@ scripts/catalog/validate/
   gaia-hip-xmatch-parity.tsv      scripts/binaries/parsers.py over one
                                   shared fixture.
   record-parity-pure.ts (+ test)  Sid-keyed field comparison of two built
-                                  catalogues. Pure. § Additive-mode record
-                                  parity.
+                                  catalogues. Pure. README.md#additive-mode-record-parity.
   record-parity.ts                pnpm run validate:record-parity — the CLI
                                   over two built artifact directories.
 ```
@@ -63,7 +62,7 @@ Three tiers, all snapshot-pinned:
   showcase systems (Castor, Algol, AR Cas, ν Sco, 40 Eri).
   `scripts/catalog/validate/known-stars.test.ts` loads `public/catalog.bin` via
   the runtime loader and asserts every row matches within tolerance.
-  Adding a row → see § Adding to the known-stars corpus below.
+  Adding a row → see [Adding to the known-stars corpus](#adding-to-the-known-stars-corpus) below.
   The sky-position corpus (`sky-position-corpus.tsv` +
   `sky-position.test.ts`, [Direction resolution](../distance/README.md#direction-resolution)) is the companion
   Tier A harness for single-star angular placement.
@@ -120,7 +119,7 @@ Three tiers, all snapshot-pinned:
   tier supplied** — `data/athyg/simbad_sourced_distances.tsv` names them,
   since this harness reads `catalog.bin` and cannot see a build-time tier.
   Their residual is zero by construction, so including them would report
-  agreement nothing measured ([§ 5,](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) validation
+  agreement nothing measured ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers), validation
   independence). Counted in the report as an exclusion rather than folded
   into `unmatched`, which means something else.
 
@@ -138,7 +137,7 @@ sid two current records carry. A retirement declared in
 reads as a drop; an undeclared one does. **Field deltas on a shared sid are
 reported, never failed** — companion promotion, anchor-flux conservation and
 system distance coherence read the record set, so a deeper catalogue
-re-anchors systems already there, and that is § 8's sanctioned behaviour. Read
+re-anchors systems already there, and that is [§ 8](/docs/catalog-driver.md#8-gaia-dr-transitions--what-re-pulls-and-what-never-does)'s sanctioned behaviour. Read
 the moved-field table as the review surface: a field moving on an unexpected
 population is the signal.
 

@@ -134,7 +134,7 @@ conservatively.
 
 Why this and not TDSC or WDS directly:
 
-- **TDSC** (Fabricius et al. 2002) is built from Tycho-2, which
+- <a id="tdsc"></a>**TDSC** (Fabricius et al. 2002) is built from Tycho-2, which
   saturates on the brightest stars (V ≲ 3) — Sirius, Mizar, Castor,
   α Cen, Polaris are all *missing* from TDSC. CCDM has no such gap.
 - **WDS** itself doesn't carry HIP. Doing positional matching

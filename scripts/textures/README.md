@@ -12,7 +12,7 @@ rather than shipping it.
 
 - `texture_ladder.py` — `RUNGS`, `MASTER_W`, and `rungs_for(width)`: the
   one answer to how wide a body's maps are, shared by the build and the
-  reduction script. § Size ladder below.
+  reduction script. [Size ladder](#size-ladder) below.
 - `reduce_source.py` — one-shot, run by hand, NOT part of the build:
   downloaded full-resolution map(s) → the frozen
   `data/textures/src/` master at `MASTER_W`. `--grid CxR` reduces each
@@ -85,10 +85,10 @@ rather than shipping it.
   term lights past the terminator against the same march at full DEM width
   **from the same start distance**, plus the disc integral against phase.
   `--sweep` costs output width and azimuth count against what each buys
-  (the two justification tables in § Cast shadows); `--sweep-width` and
+  (the two justification tables in [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps)); `--sweep-width` and
   `--sweep-azimuths` run one half, the azimuth half being slow enough to
   want that. The verification behind both
-  § Cast shadows and
+  [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps) and
   `src/client/solar-system/planets/emission/README.md`; re-run it before
   anything fits a phase curve.
 - `first-approach-probe.js` — manual, pasted into the browser
@@ -115,7 +115,7 @@ rather than shipping it.
   file-level rejection actually caught. Also sweeps BC5 error against
   map width, which is how the 8192 tier gets decided without an 8192
   map to test. Rationale and the numbers:
-  [BC5 measured](/data/textures/relief/README.md#bc5-measured--and--lossless-caught-the-packing-not-the-codec).
+  [BC5 measured](/data/textures/relief/README.md#bc5-measured--and-lossless-caught-the-packing-not-the-codec).
   Its unittest pins the codec — endpoint exactness, the
   per-mode error bound, the two-plane split, and the uint8-wraparound
   trap in the distance metric, on an **interior** texel: a block's min

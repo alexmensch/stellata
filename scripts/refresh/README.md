@@ -19,7 +19,7 @@ for one more column, widening a request set, re-stratifying the SIMBAD sample
 — all are in-session work. Never scope a design down, defer a field, or hand a
 pull back to the user on the assumption that a network fetch is out of reach;
 the cost is the pull's wall-clock time, and `--force` / the `.ckpt` resume path
-(§ Resuming a long pull) bound the retry risk.
+([Resuming a long pull](#resuming-a-long-pull)) bound the retry risk.
 
 **None of these is a reason to defer a pull to its own PR**, and each has been
 used as one: the artifact is tens of MB and tracked in LFS; the re-pull moves
@@ -249,7 +249,7 @@ non-load-bearing MAXREC, identifier quoting — lives in
 on purpose** — `pull_table` gates and returns rows, `write_table` commits
 them, and
 nothing is written until the cross-table membership cover has also passed
-([Why the pull is range-batched,](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered) last paragraph).
+([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered), last paragraph).
 Its non-network test (`refresh-tycho2.test.py`) covers the request-set
 union, the TYC1 range cover and scan-span assertion, the local filter,
 the fraction / spot-row gates against an in-memory TAP backend, and the

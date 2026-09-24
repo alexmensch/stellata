@@ -18,7 +18,7 @@ either degrades bd silently, because nothing ever fails.
 
 **Never edit a memory or a bead before showing a report and getting an
 explicit go.** The survey is the deliverable; the edits are mechanical once
-approved. Present findings as § The report below, then execute in batches.
+approved. Present findings as [The report](#the-report) below, then execute in batches.
 
 This holds even when a verdict looks obvious. A memory is something the user
 chose to write; dropping one without showing the reasoning removes context they
@@ -146,7 +146,7 @@ poorly, so script the grouping in python (parent/child via
 3. **New epics** — when 3+ coupled beads should land together. Create it and
    name the design-gate child in its description.
 4. **Orphaned children of closed epics** — reparent to the surviving parent.
-5. **Re-prioritisation** against `stellata-beads` § Prioritisation. Research
+5. **Re-prioritisation** against `stellata-beads` [Prioritisation](/.claude/skills/stellata-beads/SKILL.md#prioritisation). Research
    and "investigate" tasks at P1 go to P2; code-quality children default to P3
    unless coupled to in-flight P1/P2 work.
 6. **Defer candidates** — `bd defer <ids...>`. Recurring: the mobile epic and
@@ -157,7 +157,7 @@ Confirm before executing: research-stage P1 → P2 moves, whether cleanup tasks
 are still live, and whether to defer a whole epic or only its children.
 
 `bd orphans` is a different sense of the word and its list is mostly false
-positives here — `beads` skill § `bd orphans` means the other sense of orphan
+positives here — the `beads` skill's "`bd orphans`" section means the other sense of orphan
 before going near it, and never `--fix`.
 
 # The report

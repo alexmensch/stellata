@@ -17,15 +17,15 @@ This folder owns the scripts.
   the wire contract shared by the emitter here and the runtime table.
 - `horizons-elements.ts` — pure parser for a Horizons ELEMENTS text
   response. Sibling of `../probes/horizons-vectors.ts`; both sit on
-  `../util/horizons-response.ts`. See § Header pins.
+  `../util/horizons-response.ts`. See [Header pins](#header-pins).
 - `element-unwrap-pure.ts` (+ test) — `unwrapMeanLongitude`. See
-  § Unwrapping the mean longitude.
+  [Unwrapping the mean longitude](#unwrapping-the-mean-longitude).
 - `fetch-planet-elements.ts` — `pnpm run fetch:ephemerides`, optionally
   narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`).
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
   `data/ephemerides/{id}.json` and exits non-zero if any table misses its
-  accuracy bound. See § Cadence.
+  accuracy bound. See [Cadence](#cadence).
 - `sync-ephemerides.ts` (+ `-pure.ts`) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on
   every `pnpm run dev` / `build`, so CI and deploy never touch the network.

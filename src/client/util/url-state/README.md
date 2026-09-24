@@ -52,7 +52,7 @@ src/client/util/url-state/
   pose-change-pure.ts (+ test)    the one scale-free test behind both the
                                   per-frame write trigger and the encoder's
                                   cam / tgt / worldOffset elision. See
-                                  § What counts as a camera move.
+                                  README.md#what-counts-as-a-camera-move.
   url-state.ts (+ test)           blob encode / decode (v1–v4 formats),
                                   default-compression presence mask,
                                   per-component vec3 sub-masks,
@@ -119,7 +119,7 @@ whole naked-eye sky, records being apparent-V ordered — and only a miss
 stays `pending` and queues, because the sid may sit in a chunk that has
 not arrived ([A domain that is still filling](../sid-resolver/README.md#a-domain-that-is-still-filling)).
 Withholding the domain until the last chunk instead would make
-every star ref deferred, and § A focus that resolves after the pose is
+every star ref deferred, and [A focus that resolves after the pose](#a-focus-that-resolves-after-the-pose) is
 why that is wrong rather than merely slow. Every other pinnable kind's
 domain (planet, lg) attaches complete at boot, strictly before
 `applyFromUrl`.
@@ -158,8 +158,8 @@ bit order, so mode isn't known until the field loop completes).
   separate zero-byte presence bit so the three states (default Sol /
   specific object / cleared) stay unambiguous.
 - **An absent `focus` is a positive statement, and the receiver owes the
-  rebuild.** A hard focus is also what elides `worldOffset` (§ worldOffset
-  below), so a blob carrying neither field is asserting the default frame —
+  rebuild.** A hard focus is also what elides `worldOffset` ([`worldOffset`
+  below](#worldoffset-carries-the-frame)), so a blob carrying neither field is asserting the default frame —
   origin on Sol — and `applyDecodedView` re-establishes it before writing
   `cam` / `tgt`. A blob that states its frame some other way (an explicit
   `worldOffset`, or a legacy v1–v3 `cloud` focus) is left alone so nothing
@@ -185,7 +185,7 @@ bit order, so mode isn't known until the field loop completes).
   and the consumer to watch is `debug.capture`, which would open such a take
   30 pc out rather than where the link lands.
 - Camera changes are tracked via the `'frame'` event with the scale-free
-  comparison of § What counts as a camera move (no per-frame allocations)
+  comparison of [What counts as a camera move](#what-counts-as-a-camera-move) (no per-frame allocations)
   feeding a 1 s debounced writer. The comparison covers position, target,
   **and** `camera.up` — so a roll gesture (which moves neither position nor
   target) still triggers a URL update.
@@ -223,8 +223,8 @@ bit order, so mode isn't known until the field loop completes).
   (navigate). **That anchor test cannot answer while a focus is pending**:
   it reads boot's Sol focus, not the star the blob names, and applying the
   real focus bails observe straight back out. So the leg is skipped there
-  and re-run from the deferred callback — § A focus that resolves after the
-  pose. Chart rides with it, being observe-gated.
+  and re-run from the deferred callback — [A focus that resolves after the
+  pose](#a-focus-that-resolves-after-the-pose). Chart rides with it, being observe-gated.
 - The URL writer skips frame-triggered updates while
   `isCameraTransitionActive()` is true (warp, observe enter/exit, or the
   navigate-mode unfocus zoom-out) — those animate camera position and
@@ -239,7 +239,7 @@ The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
 `all` — a fully-cluttered share stays byte-identical to before.
 
 `coordSphere` is a **four-state carried across several places**, not one
-field — and it does not carry ORB, which is § ORB and the orbit lock.
+field — and it does not carry ORB, which is [ORB and the orbit lock](#orb-and-the-orbit-lock).
 FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
 one zero-byte presence bit per frame past the galactic default says which —
 bit 24 equatorial, bit 26 ecliptic, both built by `coordSphereFrameField`.
@@ -265,7 +265,7 @@ against the wrong datum, with the camera no longer riding the orbit.
 
 Both ride **zero-payload presence bits** — 27 (ORB armed) and 28 (lock
 engaged) — because each is reconstructible from the focus the blob already
-carries. The flags byte is full, so this is the § Adding a field route
+carries. The flags byte is full, so this is the [Adding a field](#adding-a-field) route
 rather than a flag bit. Bit 28 opens the LEB128 mask's fifth 7-bit group,
 which is the lock's whole cost.
 
@@ -312,7 +312,7 @@ limit and the trim applies on top.
 `worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when nothing
 is focused AND the anchor is far enough from Sol to move the pose — see
 [URL round-trip](/src/client/frame/README.md#url-round-trip) for the precision-anchor
-semantics that make this round-trip safe, and § What counts as a camera move
+semantics that make this round-trip safe, and [What counts as a camera move](#what-counts-as-a-camera-move)
 for "far enough".
 
 ## What counts as a camera move
@@ -352,7 +352,7 @@ motion the viewer cannot see, which under a scale-relative trigger is
 unbounded URL churn against a *trailing* debounce — that is, no URL write at
 all. Subtracting the anchor removes both.
 
-**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
+<a id="worldoffset-carries-the-frame"></a>**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
 the encoder gates that field on the exact complement of this test rather than
 on a second rule of its own. Three cases leave the pose un-anchored: nothing
 focused, a source that will not resolve, and a **soft-kind focus** — only a
@@ -366,7 +366,7 @@ on any display, and it has to stay well clear of the float32 wire's own
 tests pin the behaviour at five vantages spanning ten orders of magnitude,
 which is the property that matters — not the value.
 
-**Adding a field.** Claim the next free presence bit in `FIELDS_V4`,
+<a id="adding-a-field"></a>**Adding a field.** Claim the next free presence bit in `FIELDS_V4`,
 declare its type and bytes, and add encode/decode logic in
 `currentStateOf` / `applyDecodedView`. Old shared URLs decode fine
 because their bit is 0 in the presence mask. Don't repurpose retired

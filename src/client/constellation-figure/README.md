@@ -83,8 +83,8 @@ Four inputs, all pushed (no per-frame recompute):
 - `setPermitted(on)` — the `constellationFigures` declutter floor
   (`representational`; `../scene/declutter/README.md`), pushed from the detail bind.
 - `setFigures(..., [])` — nothing highlighted outside chart mode.
-- `setFigures(..., excludeStarIdx)` — the observe vantage point (§ The observe
-  anchor). Every segment touching that star drops out of the geometry.
+- `setFigures(..., excludeStarIdx)` — the observe vantage point ([The observe
+  anchor](#the-observe-anchor)). Every segment touching that star drops out of the geometry.
 - `setMonochrome(on)` — chart mode swaps the sky-blue stroke for ink and drops
   `depthTest` so the figure reads flat over the depth-disabled chart starfield.
 
@@ -108,7 +108,7 @@ transition (the `body.focus-lerping` class hides only the SVG overlay), so the
 glide draws every frame. Hence `selectFigures` excludes
 `ObserveTransition.observeAnchorOf('star')`, which spans both glides — the
 rule and why the mode flag alone is wrong live in
-[The observe anchor in line layers,](../camera/observe/README.md#the-observe-anchor-in-line-layers) along
+[The observe anchor in line layers](../camera/observe/README.md#the-observe-anchor-in-line-layers), along
 with the other line layers asking the same question.
 
 A planet or probe anchor suppresses nothing here yet, which is unreachable

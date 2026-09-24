@@ -20,7 +20,7 @@ derivation, and the external checks on all of it — is
 ```
 src/client/constellation-boundaries/
   iau-geometry/                   The pure B1875 geometry, its own README.
-  constellation-boundary-layer.ts The chart-mode layer (§ Chart-mode layer).
+  constellation-boundary-layer.ts The chart-mode layer (README.md#chart-mode-layer).
     (+ test)
   boundary-artifact-loader.ts     Fetch + validate the shipped artifact.
     (+ test)
@@ -28,9 +28,9 @@ src/client/constellation-boundaries/
     (+ test)                      + dash phase, and the fade window. Pure.
   constellation-regions.ts        Both readings of the shipped region set:
     (+ test)                      the runtime membership namer
-                                  (§ Runtime membership) and the chart label
+                                  (README.md#runtime-membership) and the chart label
                                   anchors baked to the boundary sphere
-                                  (§ Label anchors).
+                                  (README.md#label-anchors).
 ```
 
 ## How each consumer gets this
@@ -46,7 +46,7 @@ runtime consumer reads the built artifact, never the edges:
   See [Positional constellation membership](/scripts/catalog/parse/README.md#positional-constellation-membership).
 - **Drawing, labelling and runtime membership** all ride
   `public/constellation-boundaries.json` — arcs, label anchors
-  (§ Label anchors), and the resolved cell grid (§ Runtime membership).
+  ([Label anchors](#label-anchors)), and the resolved cell grid ([Runtime membership](#runtime-membership)).
   `buildBoundaryArtifact` takes the whole lookup, not just its edges, so
   all three come from **one** decomposition: the same one byte 34 was
   assigned from. `scripts/catalog/boundaries/README.md` owns the wire.
@@ -60,7 +60,7 @@ artifact's run-length cell grid, binds B1875 through
 table the catalog artifact already carries. Absolute (Sol-centred ICRS)
 position in, name out; **null at the origin**, the one hole byte 34
 leaves too. It returns the label anchors off that same decode and the
-same keyed table (§ Label anchors) — one entry point, because every
+same keyed table ([Label anchors](#label-anchors)) — one entry point, because every
 caller wants both.
 
 **The grid ships rather than being re-derived, and its bounds are the
@@ -93,7 +93,7 @@ hundred parsecs the label holds Earth's sky position while its stars
 have swung away. That is the right way round, since Earth's
 constellations describe nothing from elsewhere. Note the labels
 deliberately do **not** share the arcs' sub-parsec distance fade
-(§ Chart-mode layer): between the fade-out and a few hundred parsecs
+([Chart-mode layer](#chart-mode-layer)): between the fade-out and a few hundred parsecs
 the names are drawn over a partition that isn't, and tying them to that
 window would delete every constellation name before α Cen.
 
@@ -198,7 +198,7 @@ floor with the shared warp gate.
 
 **Ink.** `CHART_REFERENCE_INK` (`../chart-mode/chart-palette.ts`), shared
 with the coordinate sphere, at half its weight — and dotted where the grid
-is solid (§ Chart-mode layer), so the two reference layers stay
+is solid ([Chart-mode layer](#chart-mode-layer)), so the two reference layers stay
 distinguishable when drawn together. `renderOrder −0.8` puts the partition
 under the constellation figure (−0.75) and over the galactic disc / grid
 (−1); `depthTest` is off because the chart starfield renders

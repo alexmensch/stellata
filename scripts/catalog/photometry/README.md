@@ -59,7 +59,7 @@ scripts/catalog/photometry/
 ## The published relations
 
 Both transforms come from **one table** — Gaia DR3 documentation Table 5.9,
-§ Photometric relationships with other photometric systems, the release-3
+section *Photometric relationships with other photometric systems*, the release-3
 restatement of Riello+ 2021 App. C — as polynomials in `BP − RP`:
 
 | Relation | Degree | σ | Stated range |
@@ -82,7 +82,7 @@ relation then applies its own colour range on top.
 ```
 V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
   → printed HIP V      data/hipparcos/hip_main_vmag.tsv (I/239 Vmag)
-  → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 § 1.3, on the record's TYC
+  → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 Sect. 1.3, on the record's TYC
   → Gliese Vmag        data/gliese/gliese_v70a.tsv, on the record's GJ
   → curated            Sol alone
 ```
@@ -99,7 +99,7 @@ answers a question no consumer can answer from the magnitude alone.
 **There is no SIMBAD tier**, though [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) projected
 one. Gliese reaches every row Tycho-2 misses, and for the handful that would
 have fallen through to SIMBAD the pull holds fluxes in `B`, `J`, `H`, `K`,
-`R`, `g`, `r`, `i` and `G` and no `V` at all — so the § 5 rule that a SIMBAD
+`R`, `g`, `r`, `i` and `G` and no `V` at all — so the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) rule that a SIMBAD
 tier serves only cohorts no first-order catalogue reaches leaves it nothing
 to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 (`data/gliese/README.md`).
@@ -112,7 +112,7 @@ side, where the linear form runs bright against the printed cell it replaces.
 `tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
 the count.
 
-That is the opposite call from § Where the colour bound comes from, which
+That is the opposite call from [Where the colour bound comes from](#where-the-colour-bound-comes-from), which
 refuses to extend Table 5.9 past its note (k). The difference is what sits
 underneath: the ci cascade has three more tiers, so a refused row still gets
 a colour, while a row this tier serves that carries no `gl` has **nothing
@@ -166,17 +166,17 @@ enough that 96% of it sits below the flag's own bright bound
 ([The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range) has the measured
 region). `ciGspcValidatedRange` pins that zero as a tripwire.
 
-Ignoring a published validity bound is what § Where the colour bound comes
-from refuses to do for the Table-5.9 relation, so the difference matters:
+Ignoring a published validity bound is what [Where the colour bound comes
+from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relation, so the difference matters:
 **that bound is on a fit, this one is mostly on a correction.** The relation
 is a polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
 GSPC's magnitudes are each star's own BP/RP spectrum integrated through the
-passband — a measurement of that star — and Montegriffo+ 2023 § 6.2 calls a
+passband — a measurement of that star — and Montegriffo+ 2023 Sect. 6.2 calls a
 flag-0 magnitude *"an extrapolation of the adopted standardisation"*, i.e. of
 the correction tying the result to the ground system, not of the integration.
 
 **"Mostly" is load-bearing on the bright side.** Past the flag's `G` ≈ 10.7
-edge, § 3.2 of the same paper attributes the loss of millimag accuracy to a
+edge, Sect. 3.2 of the same paper attributes the loss of millimag accuracy to a
 BP/RP spectrometer configuration change at `G` ≈ 11.5 — that one degrades
 XP's *internal* calibration, not just the standardisation on top. This whole
 catalogue sits there, so the tier is knowingly using XP spectra outside their
@@ -203,7 +203,7 @@ Against printed `I/239` B−V, binned by colour:
 `GAIA_PHOTOMETRY_SATURATION_G`, a bound calibrated against a distribution
 rather than adopted from a header. The paper backs it independently: the
 flag's red edge sits at 2.6 because the Landolt/Stetson standard collections
-thin out past `BP−RP` ≈ 2 and disagree by 3–5% there, but § 3.2 reports that
+thin out past `BP−RP` ≈ 2 and disagree by 3–5% there, but its Sect. 3.2 reports that
 the handful of red giants they do carry over `1.5 < BP−RP < 3.5` *"match the
 same locus of the bulk of the other stars ... within <10.0 mmag"*. The
 standardisation was checked past its own flag, and held.
@@ -228,7 +228,7 @@ rows Hipparcos never observed, which no other measured source reaches.
 
 **Neither |Δ|-against-the-relation figure on this page ranks the two tiers**,
 and read side by side they appear to — synthetic disagrees with Table 5.9 by
-p50 0.023 where § Where the colour bound comes from has a printed cell
+p50 0.023 where [Where the colour bound comes from](#where-the-colour-bound-comes-from) has a printed cell
 disagreeing by p50 0.052. Two reasons that is not a ranking. The references
 differ: that section measures the **spine's** cell, not the `I/239` tier.
 And both are measured only where the relation itself applies, `BP−RP` ≤ 1.75
@@ -335,8 +335,8 @@ for the same gate on the label side).
 ## Citation
 
 Riello, M., De Angeli, F., Evans, D. W., et al. 2021, *A&A* 649, A3 — "Gaia
-Early Data Release 3: Photometric content and validation", § Photometric
-relationships with other photometric systems. DR3 ships EDR3's photometry
+Early Data Release 3: Photometric content and validation", section *Photometric
+relationships with other photometric systems*. DR3 ships EDR3's photometry
 unchanged, so the EDR3 calibration is the one that applies. The coefficients,
 σ, and colour range are pinned as literals in the test rather than imported
 from the module, so a transcription slip fails rather than round-trips.

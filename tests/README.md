@@ -88,7 +88,7 @@ node-import-boundary.test.ts
                          data/ off disk takes the `-fixture` suffix and
                          is exempt by it; a type-only import of one still
                          crosses, since it erases before the bundler
-                         runs. § Node import boundary below carries the
+                         runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
@@ -171,7 +171,7 @@ tsl-standin-filters.test.ts
                          onto the node afterwards cannot undo. Every
                          construction under src/ must state its pair
                          (/src/client/webgpu/solar-system/README.md#a-stand-ins-filters);
-                         § TSL stand-in filters below
+                         README.md#tsl-stand-in-filters below
                          carries the scan's one limit.
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
@@ -208,7 +208,10 @@ belong here.
 **What a pointer is.** One token, `<path>.md#<slug>`: a path ending
 `.md`, then `#`, then a GitHub heading slug. Markdown writes it as a link
 target, `[Heading words](<path>.md#<slug>)`, so GitHub and editors can
-follow it; code comments and fenced blocks write the bare token. A pointer
+follow it; code comments and fenced blocks write the bare token. A
+markdown file citing its own section writes `[Heading words](#<slug>)`,
+checked against that file's anchors; inside its fenced blocks it names
+itself instead (`README.md#<slug>`), since a fence renders no link. A pointer
 never wraps across lines — a token split at a slash reads as a shorter path
 and fails to resolve, which is the loud direction. A path after `~` or
 another `/` is not a pointer: the user's global rules and URLs live outside
@@ -291,9 +294,9 @@ Work every line, then record the findings in the PR body:
   ([The gate becomes the output struct](/src/client/webgpu/hdr/README.md#the-gate-becomes-the-output-struct)).
 - **`NodeMaterial.setupOutput` still wraps the output under `premultipliedAlpha`
   and `fog`, and `buildCode` still tests `isOutputStructNode` on the top-level
-  node** — § Two material flags silently demote the struct, same README.
+  node** — [Two material flags silently demote the struct](/src/client/webgpu/hdr/README.md#two-material-flags-silently-demote-the-struct), same README.
 - **A render target's auto-created depth texture is still `Depth24Plus` under
-  `reversedDepthBuffer`** — § The depth format is requested, not asserted.
+  `reversedDepthBuffer`** — [The depth format is requested, not asserted](/src/client/webgpu/hdr/README.md#the-depth-format-is-requested-not-asserted).
 - **`renderer.backend.device` and `renderer.backend.get(…)`** in
   `src/client/webgpu/timestamps/timestamp-probe.ts`,
   `src/client/webgpu/extinction/extinction-parity.ts` and

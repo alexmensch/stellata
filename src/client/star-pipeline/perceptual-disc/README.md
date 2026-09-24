@@ -14,7 +14,7 @@ it. Stars and planet glare share this kernel exactly.
   re-deriving.
 - `phys-size-elision-pure.ts` (+ test) — the `physSize` below which every
   consumer of it stops responding, and the tolerance the one graceful
-  consumer is held to (§ Eliding the physical-size branch).
+  consumer is held to ([Eliding the physical-size branch](#eliding-the-physical-size-branch)).
   `phys-size-elision-catalog.test.ts` is the second leg: it re-derives the
   window and the worst gated star over `public/catalog.bin`, so the
   measured figures in that section are regenerated rather than quoted.
@@ -41,7 +41,7 @@ in the vertex shader (collapsed past the visibility floor — `../collapse/READM
   `uSizeKnee = 0` recovers the hard clamp the knee replaced — which had
   pinned Sol and Barnard's Star to the same cap at 5e-3 pc despite a
   2300× flux ratio. Endpoints `uSizeMin/Max` are derived from the
-  instrument's PSF and the live plate scale (§ Angular-size calibration
+  instrument's PSF and the live plate scale ([Angular-size calibration](#angular-size-calibration)
   below).
 - `physSize = 2·atan(R · radiusFactor / dPc) · viewport.y / uFovYRad`
   is the star's true angular diameter projected to pixels. `R` is the
@@ -143,8 +143,8 @@ Three stop responding at a hard threshold:
 
 The fourth has **no plateau**: `physRatio` is also a varying, and
 `perceptualDiscExponent` morphs `n` through
-`smoothstep(0, PHYS_RATIO_THRESHOLD, physRatio)` (§ Star intensity
-profile). Zeroing it snaps `n` toward `distNMin` from wherever it was, so
+`smoothstep(0, PHYS_RATIO_THRESHOLD, physRatio)` ([Star intensity
+profile](#star-intensity-profile)). Zeroing it snaps `n` toward `distNMin` from wherever it was, so
 no distance makes this one exact — it is held to
 `DISC_EXPONENT_TOLERANCE` instead.
 

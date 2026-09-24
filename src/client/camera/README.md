@@ -23,7 +23,7 @@ across all five.
 - `arrival/` — log-distance smoothstep math shared by focus-park, warp
   Fly, and unfocus. Pure helpers + the per-frame `tickArrival` driver.
 
-`camera-config.ts` and `timing.ts` sit at this level — see § Shared.
+`camera-config.ts` and `timing.ts` sit at this level — see [Shared](#shared).
 
 ## Shared
 

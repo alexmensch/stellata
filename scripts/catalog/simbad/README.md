@@ -55,13 +55,13 @@ answers for — the two classes, and only the first is reachable without it:
   **Two witnesses agreeing about a TYC is not two witnesses agreeing about the
   RECORD**, and this section read this class as manifest errors "with no
   remaining doubt" before that was measured. A fourth witness splits them and
-  backs the shipped cell on most: § Which witness decides a close pair's HD
+  backs the shipped cell on most: [Which witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd)
   partitions them and carries what is left of the move set.
 
   **The class was 23 until the eight `stellata-hooj.14` asserted left it** —
   an asserted row ships the HD both TYC witnesses name, so it stops being
-  contradicted. Why that means nothing here can re-flag one: § Which witness
-  decides a close pair's HD.
+  contradicted. Why that means nothing here can re-flag one: [Which witness
+  decides a close pair's HD](#which-witness-decides-a-close-pairs-hd).
 
 So 225 shipped HD cells are contradicted and 10 are vindicated against the
 printed index. Both of the two dissents `stellata-3bsf.50` measured live
@@ -70,12 +70,12 @@ reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
 measurement that motivated it, and both are in the vindicating 10.
 
 Every count in this section is pinned against the committed tables by
-`simbad-tyc-hd-parse.test.ts` § adjudication over the committed tables, so a
+`simbad-tyc-hd-parse.test.ts`'s *adjudication over the committed tables*, so a
 re-pull that moves one fails the suite rather than ageing this prose.
 
 A consumer therefore has three verdicts to handle, not two — agrees, dissents,
-and silent, the last being the rows the pull answers for at all (§ Which
-witness decides a close pair's HD, Silence is silence).
+and silent, the last being the rows the pull answers for at all ([Which
+witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd), Silence is silence).
 
 **No consumer reads it on the build path**, and the rule it settles — the next
 section — reaches the build through curation rather than a join: eight of the
@@ -145,7 +145,7 @@ no answer from the pull at all, f Pup among them, and 2 of these 23 have no
 object for their source — a rule must leave those alone rather than treat
 absence as agreement.
 
-The partition is pinned in `simbad-tyc-hd-parse.test.ts` § the four-witness
+The partition is pinned in `simbad-tyc-hd-parse.test.ts`'s *the four-witness
 split, over the committed tables, so a re-pull that moves a row fails the suite
 rather than ageing this section.
 
@@ -153,10 +153,10 @@ rather than ageing this section.
 guards it.** The contested set is keyed on the manifest's SHIPPED HD, and an
 asserted row ships the HD both TYC witnesses name — so the row stops being
 contested the moment the override lands, and the fourth witness would never be
-weighed on it again. `simbad-tyc-hd-parse.test.ts` § the asserted move set
+weighed on it again. `simbad-tyc-hd-parse.test.ts`'s *the asserted move set*
 re-derives all four on the value ASSERTED instead, and pins V/50's HD↔HR
 pairing, which the move-together rule turns on and nothing else checks. That is
-also why § What the TYC → HD pull adjudicates counts 15 rather than 23: the
+also why [What the TYC → HD pull adjudicates](#what-the-tyc--hd-pull-adjudicates) counts 15 rather than 23: the
 eight left the class by being fixed, not by being re-measured.
 
 **Eight of the nine are asserted**, in

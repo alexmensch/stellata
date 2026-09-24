@@ -5,7 +5,7 @@ running per-channel dust extinction. The density profiles, the ρ₀ solve
 and the calibration live in `../../milkyway/` and are not re-decided
 here.
 
-**The chart isobar contour has never drawn.** Chart
+<a id="the-chart-isobar-contour-has-never-drawn"></a>**The chart isobar contour has never drawn.** Chart
 mode hides both meshes, so the branch is unreachable
 ([Chart mode + warp](../../milkyway/README.md#chart-mode--warp)). It is kept for a
 future treatment, not because anything renders it. Treat every mention
@@ -24,7 +24,7 @@ src/client/webgpu/milkyway/
                             Constant-drift guard against the CPU mirror:
                             the march's step counts and τ conversion are
                             imported from milkyway-column-pure, never
-                            restated. § The bound is taken off the mirror.
+                            restated. README.md#the-bound-is-taken-off-the-mirror-so-this-march-has-to-match-it.
   band-uniform-nodes.ts     The seam's two uniform blocks as TSL nodes —
                             the shared group and the per-component one.
   tsl-band-materials.ts     The factory implementing BandMaterials.
@@ -46,8 +46,8 @@ coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
 import, plus the explicit `.level(int(0))` on the hole fetch, which keeps
 the sampler's derivatives out of the march
 ([The table is a 3D grid](../../milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)). The profile and dust parameters need no entry there: they arrive
-as uniform nodes that `seedBandSharedSlots` alone writes (§ Seeding,
-because a node starts on its declared default). The hole grid crosses as
+as uniform nodes that `seedBandSharedSlots` alone writes ([Seeding,
+because a node starts on its declared default](#seeding-because-a-node-starts-on-its-declared-default)). The hole grid crosses as
 a `texture3D()` node over the `Data3DTexture` the seed and the debug lever
 write in place — its extent reaches the shader as the one constant the
 coordinate divides by, so nothing else about the layout can drift.
@@ -107,7 +107,7 @@ family split: a component's profile is fixed for the material's life.
 
 ## Three outcomes, none of which can be a return
 
-The fragment resolves to no coverage, the isobar contour (dead — § above),
+The fragment resolves to no coverage, the isobar contour ([dead](#the-chart-isobar-contour-has-never-drawn)),
 or the emission, and WGSL has no value-carrying return to bail with. So
 coverage is one predicate and the three outcomes are nested selects.
 

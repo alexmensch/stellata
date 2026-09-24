@@ -12,7 +12,7 @@ that enforces it.
 
 ## Lifecycle pairing
 
-Narrows write-time patterns § Lifecycle pairing.
+Narrows the write-time pattern "Lifecycle pairing".
 
 - Each `bus.on()` subscription returns or stores an unsub that the
   dispose path calls.
@@ -28,7 +28,7 @@ the same diff.
 
 ## Sibling symmetry
 
-Narrows write-time patterns § Sibling symmetry. Common pairs in stellata:
+Narrows the write-time pattern "Sibling symmetry". Common pairs in stellata:
 lambertian vs mallama phase factors; encode vs decode for URL state; v2 vs v3
 schema; pickStar prime vs fallback; reserved-bit decode vs ignore.
 
@@ -38,7 +38,7 @@ identically or document the asymmetry as intentional.
 
 ## Sentinel-init for dirty-track
 
-Narrows write-time patterns § Sentinel-init for dirty-tracking and caches.
+Narrows the write-time pattern "Sentinel-init for dirty-tracking and caches".
 The sentinels used here are `NaN`, `-Infinity`, or a poison string like `\0`.
 A label cache key covers text + font-load + CSS class + scale, not just text.
 
@@ -48,7 +48,7 @@ unresponsive until the second frame.
 
 ## Single source of truth for time / camera state / world offset
 
-Narrows write-time patterns § Single source of truth for shared state. Code
+Narrows the write-time pattern "Single source of truth for shared state". Code
 that needs the wall-clock-derived `t` reads it via `Stellata.getT()` — never
 `Date.now()` directly. Code that mutates a state struct mid-animation (e.g.
 `WarpState.pEnd` shifted across origin recentre) either makes the entire
@@ -110,7 +110,7 @@ write order:
 
 ## Named constants and DRY
 
-Narrows write-time patterns § Named constants. Tuned values here are pixel
+Narrows the write-time pattern "Named constants". Tuned values here are pixel
 thresholds, mag-biases, near/far clamps and bit positions; mostly-identical
 builders are wire-schema versions, materials differing only in blend
 equation, and solvers differing only in tolerance or wrap convention.
@@ -139,8 +139,8 @@ copy is stale from the next build.
 
 ## Rename + stale-prose sweep
 
-Narrows write-time patterns § Rename and stale-prose sweep. A move includes
-moving a README section into a new folder (the § Folder READMEs split).
+Narrows the write-time pattern "Rename and stale-prose sweep". A move includes
+moving a README section into a new folder (the [Folder READMEs](/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit) split).
 
 - The search is `grep -rn "<old-name>" .`, skipping `node_modules`,
   `.git` and `public/`.
@@ -156,15 +156,16 @@ moving a README section into a new folder (the § Folder READMEs split).
   and `tests/doc-pointer-resolution.test.ts` fails the suite when the slug
   no longer names a heading or `<a id>` anchor in that file, so a split or
   a heading rename breaks the build until its inbound pointers are
-  repointed. A bare `§ Heading` naming no file is unchecked. Grammar and
-  resolution: [Doc-pointer resolution](/tests/README.md#doc-pointer-resolution).
+  repointed. A markdown file citing its own section links `[words](#<slug>)`,
+  checked against its own headings. Grammar and resolution:
+  [Doc-pointer resolution](/tests/README.md#doc-pointer-resolution).
 
 Every other stale claim — a data-flow sentence, a file roster, "X doesn't
 ingest Y" — is caught by the reader or not at all.
 
 ## Test coverage at write time
 
-Narrows write-time patterns § Test coverage at write time. Pure helpers lift
+Narrows the write-time pattern "Test coverage at write time". Pure helpers lift
 to a `*-pure.ts` sibling; a numeric headline claim is pinned with
 `expect(x).toBe(N)`, never `toBeLessThanOrEqual(N)`; typed-array plumbing
 triggers grow + shift and asserts at known offsets; a migration path such as
@@ -172,7 +173,7 @@ the v2→v3 URL rewrite is promoted from manual smoke to vitest.
 
 ## Pattern coverage across peers
 
-Narrows write-time patterns § Pattern coverage across peers. Peer sets here:
+Narrows the write-time pattern "Pattern coverage across peers". Peer sets here:
 every SVG overlay, every event handler, every picker entry point, every
 shader pass, every DRY blend. The canonical peer list comes from
 [Repo layout](/AGENTS.md#repo-layout--the-structure-is-the-index) and the layer's folder README; a
@@ -183,8 +184,8 @@ to stars are clouds and planets.
 
 ## Defer doc updates — descriptions, not decisions
 
-Narrows write-time patterns § Doc updates — defer descriptions, write
-decisions now. The docs in question are `AGENTS.md`, folder `README.md`s,
+Narrows the write-time pattern "Doc updates — defer descriptions, write
+decisions now". The docs in question are `AGENTS.md`, folder `README.md`s,
 `docs/` and `SCIENCE.md`; the design doc a settled decision goes into is the
 folder README. At the commit sweep, new uniforms count among the things to
 search the final diff for.
