@@ -52,6 +52,25 @@ export interface AimControllerDeps {
   getCameraMode: () => CameraMode;
 }
 
+export interface AimClaimGates {
+  isWarpActive: () => boolean;
+  isAimActive: () => boolean;
+  isObserveTransitionActive: () => boolean;
+  cancelUnfocusLerp: () => void;
+  cancelFocusLerp: () => void;
+}
+
+/** Take the camera for an aim, reporting whether it was free: false while
+ *  warp, another aim, or an observe transition owns it. Cancels the focus
+ *  lerps on the way through, so a granted claim hands the camera over with
+ *  nothing else still driving it. */
+export function claimCameraForAim(gates: AimClaimGates): boolean {
+  if (gates.isWarpActive() || gates.isAimActive()) return false;
+  gates.cancelUnfocusLerp();
+  gates.cancelFocusLerp();
+  return !gates.isObserveTransitionActive();
+}
+
 export class AimController {
   private readonly deps: AimControllerDeps;
   private navigate: NavigateAimState | null = null;

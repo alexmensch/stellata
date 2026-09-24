@@ -91,7 +91,8 @@ in both navigate and observe modes.
   where `sizeMax` clears the floor.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
   + observe quaternion-in-place), the point (`aimAt`) and direction
-  (`aimAlong`) entry points, shared `aimDurationMs` ramp.
+  (`aimAlong`) entry points, shared `aimDurationMs` ramp, and
+  `claimCameraForAim` — the busy-gate claim every shell aim takes.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
   reducers and their scorers (§ Ranking a pick). Owns `PICK_THRESHOLD_PX`,
@@ -358,11 +359,12 @@ the boresight by construction, which is what makes the endpoint exact as well
 as the route predictable. [Inverting the view](../../attitude/README.md#inverting-the-view)
 owns the user-facing definition.
 
-Composition split — `Stellata.aimAt(pointLocal)` is the dispatcher that
-owns the cross-controller busy gates (`warp.isActive()`,
-`cancelUnfocusLerp`, `cancelFocusLerp`, `isObserveTransitionActive`)
-before delegating to `this.aim.aimAt(pointLocal)`. The controller knows
-only the mode it runs in and its own slot state.
+Composition split — the controller knows only the mode it runs in and its
+own slot state. The cross-controller busy gates (warp, aim, observe
+transition) and the focus-lerp cancels are `claimCameraForAim`, a free
+function taking them as closures; the shell's aims (`aimAt`, `aimAlong`,
+`aimAtConstellation`, `invertView`) wire it to the live controllers and
+delegate to `this.aim` only on a granted claim.
 
 Cancellation contract — `aim.cancel()` drops both slot states but does
 **not** touch `controls.enabled` or call `observeControls.enable()`.

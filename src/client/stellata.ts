@@ -53,7 +53,7 @@ import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
 import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
-import { AimController } from './camera/controls/aim-controller';
+import { AimController, claimCameraForAim } from './camera/controls/aim-controller';
 import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
@@ -2087,15 +2087,14 @@ export class Stellata implements FrameAnchor {
     this.aim.aimAlong(dirLocal);
   }
 
-  /** Take the camera for an aim, reporting whether it was free: false while
-   *  warp, another aim, or an observe transition owns it. Cancels the focus
-   *  lerps on the way through, so a granted claim hands the camera over with
-   *  nothing else still driving it. */
   private claimCameraForAim(): boolean {
-    if (this.warp.isActive() || this.aim.isActive()) return false;
-    this.focus.cancelUnfocusLerp();
-    this.focus.cancelFocusLerp();
-    return !this.observe.isActive();
+    return claimCameraForAim({
+      isWarpActive: () => this.warp.isActive(),
+      isAimActive: () => this.aim.isActive(),
+      isObserveTransitionActive: () => this.observe.isActive(),
+      cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
+      cancelFocusLerp: () => this.focus.cancelFocusLerp(),
+    });
   }
 
   /**

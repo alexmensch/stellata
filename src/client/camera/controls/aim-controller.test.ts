@@ -7,6 +7,8 @@ import {
   AIM_DEGENERATE_DIST_PC,
   AimController,
   aimDurationMs,
+  claimCameraForAim,
+  type AimClaimGates,
   type AimControllerDeps,
 } from './aim-controller';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS } from '../timing';
@@ -608,5 +610,37 @@ describe('AimController — the perpendicular invariant across a sweep', () => {
     // comes and goes with the exact tick. The claim is that the adopt writes
     // `up` and does not touch the quaternion at all, which is exact.
     expect(h.camera.quaternion.equals(posed)).toBe(true);
+  });
+});
+
+describe('claimCameraForAim', () => {
+  function makeGates(busy: { warp?: boolean; aim?: boolean; observe?: boolean } = {}) {
+    const cancelled: string[] = [];
+    const gates: AimClaimGates = {
+      isWarpActive: () => busy.warp === true,
+      isAimActive: () => busy.aim === true,
+      isObserveTransitionActive: () => busy.observe === true,
+      cancelUnfocusLerp: () => { cancelled.push('unfocus'); },
+      cancelFocusLerp: () => { cancelled.push('focus'); },
+    };
+    return { gates, cancelled };
+  }
+
+  it('grants a free camera and cancels both focus lerps', () => {
+    const { gates, cancelled } = makeGates();
+    expect(claimCameraForAim(gates)).toBe(true);
+    expect(cancelled).toEqual(['unfocus', 'focus']);
+  });
+
+  it.each(['warp', 'aim'] as const)('refuses during %s and cancels nothing', (owner) => {
+    const { gates, cancelled } = makeGates({ [owner]: true });
+    expect(claimCameraForAim(gates)).toBe(false);
+    expect(cancelled).toEqual([]);
+  });
+
+  it('refuses during an observe transition, cancelling both lerps first', () => {
+    const { gates, cancelled } = makeGates({ observe: true });
+    expect(claimCameraForAim(gates)).toBe(false);
+    expect(cancelled).toEqual(['unfocus', 'focus']);
   });
 });
