@@ -111,7 +111,7 @@ and **`directionOnPm`** is the single call that advances it — once, in
 the rescue cascade's. Only the caller knows which won, so a cascade that
 returned a direction would be returning one advanced on a motion the row may
 not keep. That single call site is what keeps the position and the velocity
-reading one motion (§ The proper-motion rescue cascade).
+reading one motion ([The proper-motion rescue cascade](#the-proper-motion-rescue-cascade)).
 
 | Tier | Epoch of the position it reads |
 |---|---|
@@ -214,7 +214,7 @@ diagram below is the build-side view:
 [ Layer 3: MAX_DIST_PC = 50,000 gate ]   drops anything still beyond LMC
    │
    ▼
-dist × cascade direction (§ Direction resolution) → `public/catalog.bin` xyz
+dist × cascade direction (README.md#direction-resolution) → `public/catalog.bin` xyz
 ```
 
 **The stack's input is a parallax this build pulled, and so is its gate.**
@@ -228,7 +228,7 @@ LMC layer an `LmcKinematicVerdict` — and absmag is recomputed from the
 settled distance afterwards, because skipping that places the star at
 the new distance but lights it at the old one, breaking the disc/glow
 size chain in the renderer. Position is assembled afterwards as
-`direction × dist` (§ Direction resolution), so the overrides carry
+`direction × dist` ([Direction resolution](#direction-resolution)), so the overrides carry
 no xyz. Both override helpers (`applyBailerJonesOverride`,
 `applyLmcKinematicOverride`) live in `../record/catalog-pure.ts` so the algebra
 is testable in isolation (`../record/catalog-pure.test.ts`).
@@ -275,7 +275,7 @@ the only one a given layer needs — a layer keyed on proper motion or
 cross-match coverage enumerates that dimension too. The rule is to name
 the dimensions the gate depends on and count them.
 
-`distance-regression-check.ts` (§ Post-build distance-regression check)
+`distance-regression-check.ts` ([Post-build distance-regression check](#post-build-distance-regression-check))
 is the after-the-fact detector for the same class of bug; this section is
 the write-time complement.
 
@@ -301,7 +301,7 @@ al. 2021 (CDS I/352). The pipeline:
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
    in `../build-catalog-expected.json`, and the **shortfall between the two
-   is pinned at zero** as `bjEligibleNotPulled` — § Scope-derived pulls
+   is pinned at zero** as `bjEligibleNotPulled` — [Scope-derived pulls](#scope-derived-pulls--why-the-zero-pin-is-here)
    below.
 5. The override also rescues stars the Layer 3 cap would otherwise drop:
    catastrophic-parallax-inversion supergiants whose Bayesian

@@ -6,7 +6,7 @@ description: Land a stellata PR and finish every follow-up — rebase onto main 
 # Landing a stellata PR
 
 The steps Alex asks for every time. Run them in order; stop and ask the
-moment anything leaves the happy path (§ Deviations).
+moment anything leaves the happy path ([Deviations](#deviations--stop-and-ask)).
 
 Editing this file: cross-reference sections by **name**, never by number, and
 **every check must be able to fail** — state what output means *no* before
@@ -55,8 +55,8 @@ git fetch origin
 
 **Check `state` before anything else — it may already be merged.** Auto-merge
 can fire between two of your own commands. If `MERGED`, the work left is
-§ Close the beads, § Worktree, branches, main and § Rebuild main's
-artifacts — never § Merge.
+[Close the beads](#5-close-the-beads), [Worktree, branches, main](#6-worktree-branches-main) and [Rebuild main's
+artifacts](#7-rebuild-mains-artifacts--last-in-the-background) — never [Merge](#4-merge--never-sit-on-ci).
 
 Collect the beads: bead IDs (`stellata-<slug>` / `stellata-<slug>.<n>`) appear
 in the PR title, body, and commit subjects. Gather all three and de-duplicate:
@@ -74,7 +74,7 @@ Read each one (`bd show <id>`) rather than trusting the ID: a PR sometimes
 
 ```bash
 git status --porcelain                     # must be empty — rebase aborts on a dirty tree
-git rev-list --count HEAD..origin/main     # 0 → current; skip to § The signature trap
+git rev-list --count HEAD..origin/main     # 0 → current; skip to SKILL.md#3-the-signature-trap--check-before-arming-the-merge
 git rebase origin/main
 ```
 
@@ -85,7 +85,7 @@ stale number, never keep main's unchanged.
 Then check the bump commit's own subject. `Bump version to 3.33.3` that now
 bumps to `3.33.5` is a stale claim in permanent history, and the fix is
 awkward: `git rebase -i` is unavailable in this environment. Rebuild the
-chain with `git commit-tree` instead — and **read § The signature trap
+chain with `git commit-tree` instead — and **read [The signature trap](#3-the-signature-trap--check-before-arming-the-merge)
 before you do**, because that rewrite is exactly what breaks the merge.
 
 If the version moved, re-read the PR body's `## Release notes` block: it
@@ -102,7 +102,7 @@ git push --force-with-lease origin <headRefName>
 
 The ruleset carries `required_signatures`. An unsigned commit blocks the
 merge **with every check green**, which reads exactly like the orphaned-context
-failure in § Deviations and is a different cause.
+failure in [Deviations](#deviations--stop-and-ask) and is a different cause.
 
 ```bash
 git log --format='%h %G? %s' origin/main..HEAD
@@ -150,13 +150,13 @@ a standalone PR.
 | | |
 |---|---|
 | `CLEAN` | mergeable, all required checks passed — merge now |
-| `BLOCKED` | required checks pending **or** § Deviations' blocked-with-no-failing-check |
+| `BLOCKED` | required checks pending **or** [Deviations](#deviations--stop-and-ask)' blocked-with-no-failing-check |
 | `UNSTABLE` | mergeable, but something is failing — a § Deviation, never merge over it |
-| `BEHIND` / `DIRTY` | out of date / conflicting — back to § Rebase onto main |
+| `BEHIND` / `DIRTY` | out of date / conflicting — back to [Rebase onto main](#2-rebase-onto-main--always-check-even-when-nothing-suggests-it) |
 | `UNKNOWN` | not computed yet — ordinary after a push; re-query, do not act |
 
 **Checks already green** (`mergeStateStatus: CLEAN`) — merge and go straight
-to § Close the beads. The merge is synchronous, so there is nothing to watch:
+to [Close the beads](#5-close-the-beads). The merge is synchronous, so there is nothing to watch:
 
 ```bash
 gh pr merge <N> --squash
@@ -204,7 +204,7 @@ done
 `cancel` is a terminal bucket and is **not** `fail` — a cancelled required
 check blocks the merge for good while auto-merge stays armed, so a
 `fail`-only filter polls a PR that will never move. `Monitor` with
-`persistent: true`. Only `MERGED` continues to § Close the beads; every other
+`persistent: true`. Only `MERGED` continues to [Close the beads](#5-close-the-beads); every other
 exit is a § Deviation.
 
 ## 5. Close the beads
@@ -310,7 +310,7 @@ Do not improvise past any of these. Say what you found, what you would do, and
 wait.
 
 **Blocked with no failing check.** Two known causes, in the order to check
-them: unsigned commits (§ The signature trap), then an orphaned
+them: unsigned commits ([The signature trap](#3-the-signature-trap--check-before-arming-the-merge)), then an orphaned
 required-status context —
 gating lives in ruleset `15843287`, not branch protection, and a renamed job
 `name:` strands the old context forever ([Merge gating](/RELEASING.md#merge-gating)). Compare required against reported:

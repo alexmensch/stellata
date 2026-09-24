@@ -135,7 +135,7 @@ information.
   different dwell lengths do not compare, and at the default 240 the
   mw120 median has not converged — eight archived rows span 0.725 ms
   against a 0.25 ms band. 960 does not settle it either, so **neither
-  witness's `✗` stands on one run** (§ What a mark means).
+  witness's `✗` stands on one run** ([What a mark means](#what-a-mark-means)).
   Not the dearest gated row: that is mw50|webgpu, which sits 4th in
   the canon order, so a two-context run would measure it at a position the
   pin does not hold for it and the row would refuse
@@ -447,7 +447,7 @@ context, and one `accepted: <row> <reason> (<bead-id>)` line per `✗`.
 Tier 1: the `--against-pin` table over its two rows and the pin commit it
 was read against. Tier 0: the reachability argument, no table. Either tier
 that marked a frame row carries its confirming run's table too
-(§ What a mark means).
+([What a mark means](#what-a-mark-means)).
 
 The `perf-section-guard` workflow fails the PR when the section is
 missing, empty, or has a `✗` without an `accepted:` line — CI has no GPU,
@@ -477,7 +477,7 @@ fixed in the PR or accepted with a bead; an accepted `✗` becomes the new
 pinned value, and the ceiling is the only thing stopping accepted marks
 from ratcheting the frame upward one PR at a time. Two Tier 2 PRs in
 flight re-take one file: whichever merges second rebases and re-takes,
-the same way `version-guard` (§ Version policy) makes the second bump
+the same way `version-guard` ([Version policy](#version-policy)) makes the second bump
 rebase — and here that is another armed run, so check for an open Tier 2
 PR before arming. A three bump or the cutover re-pins every row under its
 own bead. Tiers 0 and 1 leave the pin where they found it, which is the
@@ -532,7 +532,7 @@ entirely.
 **A record's description is `CITATION.cff`'s abstract**, and its notes
 field the file's `message`. Zenodo builds both from that file and ignores
 the GitHub release body, so a release's `## Release notes` prose
-(§ Release notes per PR) stays on its GitHub release page; the record
+([Release notes per PR](#release-notes-per-pr)) stays on its GitHub release page; the record
 points there through the git tree at the tag it lists as a related
 identifier.
 
@@ -573,7 +573,7 @@ validation steps are in [Refreshing data when DR4 / new AT-HYG lands](scripts/re
 **Version bump on catalogue refresh.** A catalogue refresh PR that
 changes the user-visible scene (e.g. star count, per-star distance
 distribution, new variable-star matches) bumps `package.json#version`
-per § Version policy above — minor when the change is significant
+per [Version policy](#version-policy) above — minor when the change is significant
 (new layer / new ingest source / numerical drift visible at default
 magnitude preset), patch when the refresh is mechanical and the diff
 against `public/catalog.bin` is within the noise floor. Pure pipeline

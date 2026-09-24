@@ -10,7 +10,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          public/constellations.json → Catalog (typed-array
                          views + name table). Fetches the manifest, then
                          the chunks one at a time in order
-                         (§ Progressive catalog load), decoding each as it
+                         (README.md#progressive-catalog-load), decoding each as it
                          lands (byte-range chunking clears Cloudflare
                          Workers' 25 MiB per-asset limit — see
                          /scripts/catalog/record/README.md#on-disk-transport-chunking).
@@ -20,7 +20,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          of truth shared with the writer and the Node
                          AoS reader; the decode itself is
                          catalog-window.ts, off the main thread
-                         (§ The catalog-decode worker). Exposes
+                         (README.md#the-catalog-decode-worker). Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
                          `../binaries/eclipse/README.md`) plus
@@ -43,7 +43,7 @@ catalog-window.ts        one record window's decode as plain typed arrays,
   (+ test)               window-relative — the pass both the worker and the
                          inline fallback run, plus the column roster the
                          memcpy back walks and the allocator the full
-                         catalogue shares (§ The catalog-decode worker).
+                         catalogue shares (README.md#the-catalog-decode-worker).
                          Column-at-a-time via decodeRecordColumn (see
                          /scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
 catalog-decode-worker.ts that pass off the main thread, and the spawn +
@@ -95,7 +95,7 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          Data3DTexture (DustField). Progressive upload:
                          zero-fill GPU texture upfront, fetch chunks
                          priority-ordered, hand each to the voxel uploader
-                         as it lands (§ Dust voxel upload). Manifest is
+                         as it lands (README.md#dust-voxel-upload). Manifest is
                          the contract with
                          scripts/dust/build-dust.py — both derive
                          gridSize / chunkSize / bounds / encoding from it.
@@ -103,13 +103,13 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          dust-deextinction.ts reads the same artifact to
                          de-extinct absmag/ci (mirrored decode + integral).
 dust-voxel-upload.ts     Landing one chunk inside the volume texture
-  (+ test)               (§ Dust voxel upload). Also owns
+  (+ test)               (README.md#dust-voxel-upload). Also owns
                          `createVoxelTexture` — every voxel texture,
                          volume and staging alike.
 dust-voxel-readback.ts   Reading voxels back off the GPU and comparing
   (+ test)               them against the chunk files — the numeric smoke
                          behind `stellata.verifyDust()`
-                         (§ Dust voxel readback).
+                         (README.md#dust-voxel-readback).
 dust-renderer-mock.ts    A recording renderer stand-in, enough surface
                          for the upload and readback tests to run
                          headless.
@@ -178,7 +178,7 @@ Three traps, all of them silent if missed:
 ## The catalog-decode worker
 
 Every landing chunk's decode used to run on the main thread, and by then the
-scene is already rendering off chunk 0 (§ Progressive catalog load) — so each
+scene is already rendering off chunk 0 ([Progressive catalog load](#progressive-catalog-load)) — so each
 one froze a **rendered** app rather than sitting behind a loading cover. The
 decode runs in a worker; the main thread keeps the fetch, the name table and a
 memcpy.

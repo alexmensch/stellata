@@ -77,11 +77,11 @@ module's `sids()` leg, attached by main.ts's roster loop (see
   `CLOUD_RIM_DISTANCES` (§ Rim shell render), which the rim graph
   imports.
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
-  resolution (§ Picking + hover).
+  resolution ([Picking + hover](#picking--hover)).
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` fixture builders plus
   `fakeCloudMaterials`, the recording seam double the layer suite runs on.
 - `cloud-labels.ts` — per-cloud silhouette-hugging SVG name labels
-  (§ Labels).
+  ([Labels](#labels)).
 
 ## The material seam
 
@@ -106,7 +106,7 @@ One absorption material per cloud, one rim material for all of them.
 Its own folder now: `absorption/README.md` — the march and both tiers, the
 `BackSide` invariant, the fragment budget, the render-order contract and
 the diffuse-attachment write, and which clouds may dim the band. `cloud-materials.ts` here still builds the material and owns the
-brick texture's lifetime (§ The material seam).
+brick texture's lifetime ([The material seam](#the-material-seam)).
 
 ## Rim shell render
 

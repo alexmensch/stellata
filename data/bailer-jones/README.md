@@ -19,7 +19,7 @@ bailer-jones-dr3.tsv   ~95 MB, LFS. Keyed by Gaia DR3 source_id.
   DOI: [10.3847/1538-3881/abd806](https://doi.org/10.3847/1538-3881/abd806).
 - **Table**: `external.gaiaedr3_distance` on the ESA Gaia archive — the
   archive's own copy of what VizieR publishes as `I/352/gedr3dis`, already
-  on the paper's column names. § Why the pull is ESA-side.
+  on the paper's column names. [Why the pull is ESA-side](#why-the-pull-is-esa-side).
 - **Columns ingested**: `source_id`, `r_med_photogeo`, `r_med_geo`.
   Photogeometric (`r_med_photogeo`) is preferred; geometric
   (`r_med_geo`) is the fallback when photogeo is absent.
@@ -41,7 +41,7 @@ different, worse one. Coverage pins as `bjOverridden / bjEligible` in
 `scripts/catalog/build-catalog-expected.json`, and the **shortfall between
 them pins at zero** (`bjEligibleNotPulled`): an eligible record has its own
 DR3 parallax, so this publication covers it, and an absence means this pull's
-scope — § Refresh below — has moved since the table was pulled. See
+scope — [Refresh](#refresh) below — has moved since the table was pulled. See
 [Multi-layer distance refinement](/scripts/catalog/distance/README.md#multi-layer-distance-refinement) and
 § Scope-derived pulls.
 

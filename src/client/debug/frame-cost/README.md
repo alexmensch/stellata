@@ -96,7 +96,7 @@ src/client/debug/frame-cost/
   Under `raf-delta` a differential below the vsync quantum reads as zero
   unless the frame is already over budget *and* not itself pinned to a
   higher multiple of the refresh — so every row whose dwells the display
-  decided is stamped `cadenceBound: true` (§ Reading a row). The cadence is
+  decided is stamped `cadenceBound: true` ([Reading a row](#reading-a-row)). The cadence is
   the sweep's own idle rAF probe, taken after the clock stops and before the
   render gate is held, which is the one window where nothing redraws and the
   deltas are the panel rather than the frame; `{ cadenceMs }` supplies it
@@ -119,11 +119,11 @@ src/client/debug/frame-cost/
 - **A settled instrument — and this is the one precondition you cannot
   satisfy.** The GPU's own clock state moves over a sweep in both
   directions, and neither a longer warmup nor a quieter settle reaches the
-  slow one (§ The instrument drifts). So it is met by *reporting* rather
+  slow one ([The instrument drifts](#the-instrument-drifts-so-the-baseline-is-bracketed)). So it is met by *reporting* rather
   than by waiting: the bracketing cancels what is linear across a row's
   pair, `bracketMs` is the residual each `savedMs` has to clear, and
-  `baselineRising` says whether the run as a whole walked (§ Reading a
-  row). A sweep run while something else uses the GPU is a different and
+  `baselineRising` says whether the run as a whole walked ([Reading a
+  row](#reading-a-row)). A sweep run while something else uses the GPU is a different and
   worse case, and that one is on you.
 
 ## The readback cadence — measured, and NOT the confound
@@ -168,7 +168,7 @@ reaches it; a settle *condition* would not either, since these runs had
 already been quiet for over 5 s. What the rise is has not been pinned down
 — sustained-load clock decay is the candidate — but its direction is
 enough to read a table by, and the rows carry their own defence
-(§ Reading a row, `baselineRising`).
+([Reading a row](#reading-a-row), `baselineRising`).
 
 A single leading baseline charges all of that to whichever passes
 happened to be measured late. **The tell is a run where several
@@ -206,7 +206,7 @@ single-baseline sweep when the instrument is known to be settled.
   it by one sample rather than by its magnitude.
 - **`baselineReadback` / `disabledReadback`** — equal is clean; diverging
   means the row priced a change in readback rate on top of the pass
-  (§ The readback cadence).
+  ([The readback cadence](#the-readback-cadence--measured-and-not-the-confound)).
 - **`bufferMpx`** — the drawing buffer the sweep ran at. Run metadata, not
   a statistic, and stamped on every row so a pasted table stays
   self-describing. **Only compare tables at the same buffer size**: the
@@ -240,7 +240,7 @@ single-baseline sweep when the instrument is known to be settled.
 - **`baselineRising`** — one verdict about the whole SWEEP, stamped on
   every row of it: the baseline walked upward past what the run's own
   brackets put down to scatter, so the instrument got dearer while it
-  measured (§ The instrument drifts). The test is `rise > median(bracketMs)
+  measured ([The instrument drifts](#the-instrument-drifts-so-the-baseline-is-bracketed)). The test is `rise > median(bracketMs)
   · √rows` AND `rise > 10 %` of the first baseline — a random-walk bound
   on the drift the brackets already measure, since a monotone rise
   accumulates `rows · bracket` where a walk reaches only `√rows · bracket`.
@@ -268,7 +268,7 @@ single-baseline sweep when the instrument is known to be settled.
   ever been recorded. Prefer the bracketed default whenever the instrument's
   state is unknown.
 - **Absent under three rows** in either mode, a split roster
-  (`{ passes: [...] }`, § Budget) included: too few brackets to take a
+  (`{ passes: [...] }`, [Budget](#budget--dwells-are-sized-to-fit-not-truncated)) included: too few brackets to take a
   median of, and too little of a run for one interval to describe.
 - Across runs, `debug.priceFrameRepeat(n)`'s per-pass range is the final
   word; it prints one line per pass.

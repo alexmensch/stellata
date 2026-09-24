@@ -8,13 +8,13 @@ HIP, HD, HR, or Gliese).
 
 ```
 athyg_33_classic_ids.csv   ~64 MB, LFS. Upstream. ~317k rows. NOT a build
-                           input — see § Consumed by.
+                           input — see README.md#consumed-by.
 inherited-spine.tsv        ~40 MB, LFS. Generated provenance data: AT-HYG's
                            merge decisions, frozen — see § The inherited
                            spine. 313,257 rows.
 stale_gaia_source_ids.tsv  ~1 KB, regular git. Review queue: the 6 spine
                            rows whose gaia_source_id Gaia DR3 publishes no
-                           row for — see § Six DR2 ids in the DR3 column.
+                           row for — see README.md#six-dr2-ids-in-the-dr3-column.
 simbad_sourced_distances.tsv
                            ~2 KB, regular git. The records whose distance
                            came from the cascade's SIMBAD tier, excluded from

@@ -271,7 +271,7 @@ import('/debug/gpu-timing/gpu-frame-samples.ts').then(({ onGpuFrameSample }) => 
 `.then` rather than `await`: Safari's console has no top-level await, and
 parses `await import(...)` as an identifier followed by a keyword —
 `SyntaxError: Unexpected keyword 'import'`. Safari is also the only browser
-this check can run in (§ A granted feature can still resolve garbage), so
+this check can run in ([A granted feature can still resolve garbage](#a-granted-feature-can-still-resolve-garbage)), so
 the awaited form is unusable, not merely less portable.
 
 Keep frames coming for the window — the render gate skips ticks where

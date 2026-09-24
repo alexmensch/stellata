@@ -22,7 +22,7 @@ src/client/star-pipeline/star-frame/
                                   partial-catalogue window bound.
   star-frame-pure.ts (+ test)     The proximity index's in-place merge,
                                   each chunk ordered by the shared radix
-                                  sort (§ Absorbing a chunk). Pure;
+                                  sort (README.md#absorbing-a-chunk). Pure;
                                   pinned against a full re-sort over an
                                   arbitrary chunk ramp.
 ```
@@ -52,8 +52,8 @@ actually are:
   every downstream consumer inherit current-epoch positions by
   construction.
 - **Growing with the catalogue.** `absorbRecords()` folds each landing
-  transport chunk's records into all of the above — see § Absorbing a
-  chunk, which carries the two traps.
+  transport chunk's records into all of the above — see [Absorbing a
+  chunk](#absorbing-a-chunk), which carries the two traps.
 - **Proximity queries.** The Sol-distance-sorted index and
   `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
   built on it (§ Star rendering, core depth-mask). `Picker` slices the

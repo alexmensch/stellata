@@ -44,7 +44,7 @@ One entry per cloud:
 | ---------- | ------- |
 | `name`     | Canonical display name (§ Alternate names). |
 | `id`       | Slug, also used by URL/search. |
-| `aliases`  | Cross-catalogue / common names for search + the focus-card alias row (§ Alternate names). Absent when none are curated. |
+| `aliases`  | Cross-catalogue / common names for search + the focus-card alias row ([Alternate names](#alternate-names)). Absent when none are curated. |
 | `center`   | `[x, y, z]` ICRS heliocentric pc. |
 | `axes`     | `[a, b, c]` semi-axes in pc. Sphere = `[r, r, r]`. |
 | `quat`     | `[qx, qy, qz, qw]` rotation. Identity = `[0, 0, 0, 1]`. |

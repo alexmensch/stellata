@@ -7,7 +7,7 @@ the M31 satellite subgroup, and the outer-band dwarfs (NGC 6822,
 IC 10, IC 1613, Leo A, WLM, Sextans A/B, …) out to the canonical 2 Mpc
 Local Group boundary — and a volumetric emission layer that makes each
 object glow at its physically correct apparent V magnitude from any
-camera position (§ Emission layer below). Also the Milky Way label
+camera position ([Emission layer](#emission-layer) below). Also the Milky Way label
 (the disc itself lives in `../galactic/`; only the SVG label lives
 here).
 
@@ -111,7 +111,7 @@ further out — M31 by 41 %. That is the intended reading: what should stay
 invariant is **the whole object fitting on screen**, and the whole object
 is now correctly the volume that emits. A disc-family object's `axes`
 therefore means a different isophote from a spheroid's, which is the
-tradeoff § Wireframe extent is making deliberately.
+tradeoff [Wireframe extent](#wireframe-extent--two-isophotes-on-purpose) is making deliberately.
 
 `local-group.ts` exports `LocalGroupLayer`. Per object:
 
@@ -157,7 +157,7 @@ population tints, and the sub-pixel flux floor. Live and unconditional —
 `showLgEmission` and URL bit 22 are the only gates.
 
 The wireframe and the glow deliberately draw different surfaces
-(§ Wireframe extent), and `emission.color` in `overrides.tsv` is the
+([Wireframe extent](#wireframe-extent--two-isophotes-on-purpose)), and `emission.color` in `overrides.tsv` is the
 per-object override on the family tints.
 
 
@@ -223,7 +223,7 @@ arrays used as a fixed-size top-N by insertion, so there is no
 re-created as a literal each frame. Ties still break toward the earlier
 candidate, which is what the stable sort it replaced did. The buffers are
 module state, so a second concurrent caller would need its own; one
-handler serves every label family (§ Label engine), which is what makes
+handler serves every label family ([Label engine](#label-engine)), which is what makes
 that safe.
 
 Three invariants here are pinned by tests rather than by inspection,

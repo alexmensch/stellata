@@ -18,7 +18,7 @@ either degrades bd silently, because nothing ever fails.
 
 **Never edit a memory or a bead before showing a report and getting an
 explicit go.** The survey is the deliverable; the edits are mechanical once
-approved. Present findings as § The report below, then execute in batches.
+approved. Present findings as [The report](#the-report) below, then execute in batches.
 
 This holds even when a verdict looks obvious. A memory is something the user
 chose to write; dropping one without showing the reasoning removes context they

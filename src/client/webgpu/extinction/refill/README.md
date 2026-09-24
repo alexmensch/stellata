@@ -63,7 +63,7 @@ nothing. State the vantage before narrowing the slack.
 **The prepass still composes the absolute view each frame** —
 projection × view × T(−worldOffset) in float64 from the camera the shell
 hands `update()` — to *detect* a turn (`sameView`), since a turn is a
-request (§ A view change is a refill request), and for `countInFrame()`.
+request ([A view change is a refill request](#a-view-change-is-a-refill-request--nothing-more)), and for `countInFrame()`.
 The shell runs the prepass after the ride fan-out and the compaction after
 that (`../../../stellata.ts` `animate`): the request the prepass raises
 from this frame's camera is what the compaction answers in this frame.
@@ -122,15 +122,15 @@ for good once a flight has run — pinned in the prepass test.
 refill exactly as displacing it does** and the cursor answers both the
 same way: arm the compaction, then march the quarters it lists. What that
 costs a star the turn newly exposes is up to `REFILL_SLICES` frames of its
-last stamp's value, the same bound § The staleness this buys derives for
+last stamp's value, the same bound [The staleness this buys](#the-staleness-this-buys-and-what-sets-refill_slices) derives for
 displacement — and for the same reason, since a turn at a parked camera
 moves A_V by nothing at all. The star is exact once its quarter comes
 round.
 
 A turn costs no dispatch of its own: the compaction runs over every
 catalogue star on every rendered frame regardless, and an armed frame adds
-the producer block to a quarter of its threads (§ The compaction appends
-the worklist). What a turning camera pays per frame is the march of one
+the producer block to a quarter of its threads ([The compaction appends
+the worklist](#the-compaction-appends-the-worklist)). What a turning camera pays per frame is the march of one
 class of the stars it exposed.
 
 ## The compaction appends the worklist
@@ -143,7 +143,7 @@ frustum at the refill's slack, then the cache gate (`starCacheVisibleTsl`,
 the four dust-independent terms over the *brightest* magnitude), then
 `stamps[self] != cameraGeneration`, and a star passing all three is
 appended to its Morton bucket with one `atomicAdd`
-(§ Bucketed by Morton range). The arm is a
+([Bucketed by Morton range](#bucketed-by-morton-range)). The arm is a
 uniform the prepass holds up for `REFILL_SLICES` frames from a request, so
 the four classes are built on four consecutive frames; a settled frame
 pays one uniform compare per thread and reads nothing else.
@@ -243,7 +243,7 @@ are dispatched on armed frames alone
 accessors** — `bucketOf` for the key, `worklistElement(count, bucket,
 offset)` for the slot — so the `bucket × capacity + offset` the two must
 agree on is written once. A star appended at an address the march does not
-recover is the silent-corruption case § One region describes, and the
+recover is the silent-corruption case [One region](#one-region-and-the-frame-order-behind-it) describes, and the
 round trip is pinned in `refill-buckets-pure.test.ts`.
 
 **The refill kernel finds its bucket by one bit per step.** Thread *i*
@@ -257,7 +257,7 @@ the empty-bucket case is its test.
 ## One region, and the frame order behind it
 
 **The worklist holds one built class at a time, not four.** The prepass
-runs ahead of the compaction in the frame (§ The cursor), so a frame
+runs ahead of the compaction in the frame ([The cursor](#the-cursor-and-why-a-request-never-stalls-it)), so a frame
 marches the class built last frame in its own submit and only then does
 the compaction reset the counters and build the next one over the same
 region. The list is read before it is overwritten, every frame, by

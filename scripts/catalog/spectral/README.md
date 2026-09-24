@@ -76,7 +76,7 @@ priority chain:
    null and the ladder keeps going.
 3. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
    (`../record/catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
-   key. Above TYC per § The ladder is ordered by what an identifier names.
+   key. Above TYC per [The ladder is ordered by what an identifier names](#the-ladder-is-ordered-by-what-an-identifier-names).
 4. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
    SIMBAD holds no Gaia id and no HIP for, which is exactly the population
    the values pull's widening ladder exists for; same ladder

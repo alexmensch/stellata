@@ -20,7 +20,7 @@ src/client/hdr/exposure/reduction/
                               median, and the base-exposure rescale.
   readback-cadence.ts         How many rendered frames apart a readback may
     (+ test)                  go out, for a caller that needs the duty cycle
-                              held (§ Latency).
+                              held (README.md#latency).
 ```
 
 The chain, its draws and its readback live in
@@ -60,7 +60,7 @@ the fraction of a region that is lit surface is the mean of a 0/1 indicator
 over it. Dividing two of them — `surface / coverage` — is the mean of `L`
 over that region's masked texels alone, so light *outside* the mask (a
 glare halo, the star field, the band) raises `L̄` and cannot touch the pin.
-That division is what each **tile** hands the median (§ The tile level).
+That division is what each **tile** hands the median ([The tile level](#the-tile-level-and-why-the-subject-is-a-median)).
 
 **The masked product is formed at level 0 and nowhere else.** The
 attachment is RG16F — flux in R, mask in G — so the first pass expands

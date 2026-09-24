@@ -11,7 +11,7 @@ src/client/solar-system/planets/rings/
   (+ test)                 ring system's share of the body's unresolved
                            magnitude, and the drawn annulus's phase
                            scalar. Pure, vitest-pinned.
-                           § Ring photometry.
+                           README.md#ring-photometry--the-unresolved-magnitude.
 ```
 
 `Planet.rings` adds an annulus mesh in the body's equatorial plane (IAU

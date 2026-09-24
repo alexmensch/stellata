@@ -16,7 +16,7 @@ star catalog records.
 
 ## Files
 
-- `binaries-loader.ts` — parses the v1 `BIN1` format (§ Format contract)
+- `binaries-loader.ts` — parses the v1 `BIN1` format ([Format contract](#format-contract))
   into a `BinariesData` struct: per-pair Kepler elements + `sep_arcsec` /
   `pa_deg` for the static-placement fallback, plus the index maps
   `primaryIdxToRelations` / `secondaryIdxToRelations`. Both are
@@ -27,7 +27,7 @@ star catalog records.
   including the line-of-sight component, so orbits have real depth from
   any vantage; Tier 2 is the galactic-plane fallback
   (`evaluateOrbitInPlaneAU` + `projectGalacticPlaneToICRS`). See
-  § Tier mapping for why the fallback costs only the offset's
+  [Tier mapping](#tier-mapping) for why the fallback costs only the offset's
   *direction*. `orbitNormalSky` is the plane itself —
   `(sin i sin Ω, −sin i cos Ω, cos i)`, the Thiele-Innes basis vectors'
   cross product — static in `t`, so no Kepler solve enters.
@@ -36,7 +36,7 @@ star catalog records.
   (`buildOrbitRelationCaches`, which adds the baseline
   `R(sep_pa_epoch_jd)`), and the per-frame
   `evaluateOrbitRelationDeltaPc` dispatch, plus `orbitMemberSlots` — the
-  ascending slot set the walk can write, which § Partial re-upload
+  ascending slot set the walk can write, which [Partial re-upload](#partial-re-upload)
   diffs. Both runtime fields consume
   it, and so do the hover / focus card formatters
   (`../format/star-companion-format.ts`) — the gate is what stops a card
@@ -55,7 +55,7 @@ star catalog records.
   secondary, plus `parentRelation` ancestors). Shared by
   `BinaryOrbitField`'s LOD-exemption walk and the orbit-path layer.
   `innermostRelationOf` is the narrower question — the deepest pair a star
-  is itself a member of, ancestors excluded (§ Which pair a star rides).
+  is itself a member of, ancestors excluded ([Which pair a star rides](#which-pair-a-star-rides)).
 - `binary-system-membership.ts` — the multi-star implementation of the
   kind-generic system-membership contract
   (`../system-membership/README.md`): the star-companion graph walk +
@@ -127,8 +127,7 @@ the per-pair flags):
   tight pairs. That was the displaced-centre bug: the companion orbited
   an empty point and could sweep through the primary once per period
   (Alsephina Ab at 0.562 AU vs apoapsis 0.52 AU). The baked catalog
-  position is now purely a static record + the LOD fallback (§
-  Walk-active LOD). Sub-resolution pairs (WDS ρ 0.000 / unmeasured)
+  position is now purely a static record + the LOD fallback ([Walk-active LOD](#walk-active-lod)). Sub-resolution pairs (WDS ρ 0.000 / unmeasured)
   collocate bit-identically on the primary — a placement choice for the
   fallback, not a runtime signal; they render R(t) around the primary
   like every other pair, no special baseline path.
@@ -206,7 +205,7 @@ J2016.0 baseline, and this field's walk then re-perturbs its active
 slots on top of the fresh baselines in the same frame. Unfocused, that
 slot-reset baseline is reconstructed in float64 off the J2016.0 baseline
 + velocities rather than read from the float32 `catalog.positions`
-(§ Walk-active LOD). When a star is focused every relation instead resets
+([Walk-active LOD](#walk-active-lod)). When a star is focused every relation instead resets
 from `catalog.positions`, so the whole scene rides the same absolute the
 shell's epoch-follow moves the camera by (`focalPerturbationInto`'s
 `bakedDiff` also reads the live `catalog.positions`) — the two cancel and
@@ -301,8 +300,8 @@ off the immutable J2016.0 baseline + velocities), NOT `catalog.positions
 − worldOffset`: the float32 absolute ULP is ~0.4 AU at 28 pc, so the
 rounded-absolute path snaps a drifting system onto that grid under time
 scrub (the reported unfocused-system teleport). **When a star is focused**
-every relation resets from `catalog.positions` instead — see § Composition
-with proper-motion propagation for why the whole focused scene must ride
+every relation resets from `catalog.positions` instead — see [Composition
+with proper-motion propagation](#composition-with-proper-motion-propagation) for why the whole focused scene must ride
 the absolute.
 
 Two filters on top of the instrument's visibility bound gate per-frame Kepler
@@ -359,7 +358,7 @@ Kepler relations (everything gated out or sub-pixel-suppressed — the
 shipping idle state at any wide view), every buffer write is a pure
 function of (camera, slider, viewport, fov, focal), so an `update()`
 with identical inputs skips the walk itself. It saves the CPU pass only;
-what the frame uploads is decided separately (§ Partial re-upload).
+what the frame uploads is decided separately ([Partial re-upload](#partial-re-upload)).
 Focal-chain relations are always Kepler-active (they bypass the gates
 above), so a focused orbit never skips. `recenter()` and
 `markBaselinesDirty()` — the latter called by the shell whenever it

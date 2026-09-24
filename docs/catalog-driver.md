@@ -22,11 +22,11 @@ labels            = classic-ID overlay (frozen CDS joins) + spine backstop
 fields            = per-field source cascades keyed on gaia_source_id
 ```
 
-- **Inherited spine** (§ 3): a frozen, committed enumeration of every
+- **Inherited spine** ([§ 3](#3-the-inherited-spine)): a frozen, committed enumeration of every
   AT-HYG-derived record in the final AT-HYG-driven build. After the
   swap the spine file is data; AT-HYG the catalogue is not consulted.
   Its retirement has since replaced this term with the primaries-derived
-  membership of § 3.1: the record build walks the manifest, and the spine
+  membership of [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries): the record build walks the manifest, and the spine
   is the parity baseline plus the generator's merge-decision input.
 - **Magnitude pull**: the Gaia-native `V ≤ floor` union term, built by
   `scripts/catalog/membership/magnitude-term/`. It ships **off** — one
@@ -42,7 +42,7 @@ Membership is **not** derived by re-binding the classic catalogues to
 Gaia: the frozen cross-walks cannot reproduce a `gaia_source_id` for
 11,731 rows AT-HYG matched by routes we cannot replay, and re-deriving
 them positionally is forbidden (source-ID anchoring, never position).
-The spine enumerates them for now. § 3.1 measured what those rows are —
+The spine enumerates them for now. [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) measured what those rows are —
 zero records that exist on AT-HYG's authority alone, and bindings
 SIMBAD's frozen cross-IDs corroborate on 11,697 — and settles the
 primaries-derived membership term that retires the spine.
@@ -57,7 +57,7 @@ Per [Frozen external data,](/data/README.md#frozen-external-data) the build neve
 the network; live SIMBAD/VizieR resolution is **rejected** for the
 identifier spine (unreproducible, unauditable, component-level
 cross-IDs churn). SIMBAD supplies enrichment values only (sp_type, WDS
-cross-IDs, and § 5's bibcoded bottom-of-cascade value tiers) — never
+cross-IDs, and [§ 5](#5-per-field-cascades-and-rescue-tiers)'s bibcoded bottom-of-cascade value tiers) — never
 identity. The authoritative source per identifier:
 
 | Source | CDS/ESA id | Rows (TAP) | Supplies | Citation |
@@ -102,7 +102,7 @@ in `data/hipparcos/`), joined into a source_id-keyed overlay by
 labels per identifier and has no row at all for 115 of the 178 stars at
 V ≤ 3** — Gaia saturates near G ≈ 3, so a source_id-keyed table
 structurally cannot carry Vega, Sirius or Betelgeuse. The spine backstop
-in § 1 is therefore load-bearing for a double-digit fraction of every
+in [§ 1](#1-the-driver-model) is therefore load-bearing for a double-digit fraction of every
 identifier, not a rare fallback: label parity (§ 6.2) is a property of
 overlay ∪ spine and can only be gated once the spine ships.
 Per-identifier figures and the three structural bounds behind them:
@@ -139,7 +139,7 @@ pos_src  dist_src  mag_src  rv_src  pm_src  spect_src
   is fed from the direction cascade and the PM rescue, never from this
   file — and stay because a frozen artifact cannot lose a column either.
   `mag` has the one reader among them, a coverage counter in
-  `build:membership` (§ 3.2). [Where each column comes from](/scripts/catalog/spine/README.md#where-each-column-comes-from)
+  `build:membership` ([§ 3.2](#32-retiring-the-spines-consumers--per-column-per-consumer-in-order)). [Where each column comes from](/scripts/catalog/spine/README.md#where-each-column-comes-from)
   owns the column list.
 - There is no separate keep-list file: no-Gaia rows are ordinary
   spine rows with an empty `gaia_source_id`.
@@ -170,7 +170,7 @@ count. The exceptions are the post-admission counts and the binding classes
 under *The rule* below, which `pnpm run build:membership` prints and
 `scripts/catalog/membership/membership-manifest-expected.json` pins. The
 retirement turns on whether a record can exist without AT-HYG's say-so, so the
-measurement is per spine row against the frozen tables of § 2
+measurement is per spine row against the frozen tables of [§ 2](#2-identifier-sources--frozen-cds-files-not-live-simbad)
 plus Tycho-2 `I/259`, Gliese `V/70A`, HIP2, the WGSN tables and the two DR3
 best-neighbour walks — never against the overlay's post-join columns, which
 under-state it: a designation can attest a record that has no source_id to
@@ -178,7 +178,7 @@ key an overlay row on. The audit is also the one thing outside CI that still
 reads `data/athyg/athyg_33_classic_ids.csv`, for the HD-provenance split
 below and nothing else: characterising AT-HYG's own defect needs AT-HYG's own
 file, and the instrument is off the `build:catalog` path, so this does not
-put the CSV back in the input set § 3 removed it from.
+put the CSV back in the input set [§ 3](#3-the-inherited-spine) removed it from.
 
 **Record residual: zero.** Every one of the 313,257 rows carries at least
 one classical designation a primary publishes — hd 293,326 in IV/25 + 1 in
@@ -236,7 +236,7 @@ Those 11,731 are the source_ids AT-HYG obtained through routes we cannot
 replay, and dropping them was the proposed route. Measured, they need no
 dropping: the frozen sp_type pull asked SIMBAD under each spine id, and on
 **11,697** the object SIMBAD holds under that id carries the record's own
-TYC, HIP or bare GJ number — the across-release cross-ID adjudication § 5's
+TYC, HIP or bare GJ number — the across-release cross-ID adjudication [§ 5](#5-per-field-cascades-and-rescue-tiers)'s
 widening ladder already relies on, here applied as corroboration of a
 binding rather than as its source. SIMBAD is still no identity source: it
 confirms a binding AT-HYG made, it never makes one. The remainder is **34**
@@ -263,7 +263,7 @@ outcome here moves a canonical key. The remaining 1,370 rows carry no
 for all 313,257. **233 is the walk-only figure**: the manifest no longer copies
 the column but derives it, and the derivation's fourth source — SIMBAD's
 frozen cross-IDs — takes the fills to 940 ungated and 791 through both gates,
-leaving 576 derived refusals that ship designation-keyed on the § 5 tiers. The
+leaving 576 derived refusals that ship designation-keyed on the [§ 5](#5-per-field-cascades-and-rescue-tiers) tiers. The
 binding's authority is the manifest's own `derivationOutcome` count
 ([The spine side](/scripts/catalog/membership/README.md#the-spine-side)), not this audit's
 identity bullet, which measures the frozen column.
@@ -309,7 +309,7 @@ classical designation — HD (IV/25, V/50, I/239's HD column), HR (V/50),
 Bayer / Flamsteed (WGSN, IV/27A), HIP (I/239), GJ (CNS5, V/70A), IAU proper
 name (WGSN) — keyed on that designation, with a `gaia_source_id` **derived**
 from the TYC and HIP cross-walks, CNS5 and SIMBAD's frozen cross-IDs through
-the § 4 gates, or settled by a committed review disposition where the sources
+the [§ 4](#4-how-hd-reaches-gaia) gates, or settled by a committed review disposition where the sources
 disagree with each other or reach nothing at all
 ([The four sources, in precedence order](/scripts/catalog/membership/binding/README.md#the-four-sources-in-precedence-order)).
 That
@@ -355,10 +355,10 @@ rows. The swap itself was 63,672 mints,
 zero retirements, zero reinstatements; deriving the binding then retired
 **8** Gaia-keyed ledger rows with a successor each — AT-HYG had carried the
 Gaia source as a row of its own beside the HIP record it belongs to, and the
-derived binding joins the two classes, which is a merge under § 7
+derived binding joins the two classes, which is a merge under [§ 7](#7-identity-and-ordering-rules)
 (`data/sid/retirements.tsv`).
 
-**The replacement parity gate.** The spine could not be regenerated (§ 3)
+**The replacement parity gate.** The spine could not be regenerated ([§ 3](#3-the-inherited-spine))
 because it snapshots a build that no longer exists; the primaries-derived
 membership is a pure function of committed inputs, so it can be, and that
 is what replaces the byte guard with a regenerate-and-diff. The swap emits a
@@ -392,7 +392,7 @@ membership come from one join, and `readStars` reads the manifest's cells as
 final, so there is no second designation set to flip against. The merge itself
 runs in `build:membership`, keyed on the DERIVED binding rather than the frozen
 cell, and writes `label_flips.tsv` — one producer, and the label-parity ledger
-of § 6. After the swap release the baseline becomes the previous manifest, and
+of [§ 6](#6-parity--the-gate-on-any-membership-change). After the swap release the baseline becomes the previous manifest, and
 the gate is the ordinary regenerate-and-diff every other derived artifact
 already has.
 
@@ -423,8 +423,8 @@ curation surface for the merge decisions:
 | Pattern | Rows | What is unlinked | Witness left |
 |---|---|---|---|
 | `gl` off a TYC+HIP row (no HD) | 131 | V/70A's `HD` column has nothing to reach, CNS5 lists no HIP for the entry, SIMBAD's object carries no GJ | V/70A's B1950 position and proper motion against the Tycho-2 position — the `v70a_astrometry` basis 17 dispositions already rest on |
-| `gl` + `hip` only | 1 | Gl 863.1A / HIP 111293, the same shape with no TYC | the same, else a § 7 split |
-| `hd` off TYC+HIP | 2 | HD 96600 on HIP 54335; HD 336196 on HIP 90265 (§ 3.1's transcription, already dropped) | review |
+| `gl` + `hip` only | 1 | Gl 863.1A / HIP 111293, the same shape with no TYC | the same, else a [§ 7](#7-identity-and-ordering-rules) split |
+| `hd` off TYC+HIP | 2 | HD 96600 on HIP 54335; HD 336196 on HIP 90265 ([§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s transcription, already dropped) | review |
 | `hr` off TYC+HIP+HD | 1 | HR 4401 on HD 99103 | review against V/50 |
 | `hip` off TYC+HD+HR+GJ | 1 | HIP 55203 on ξ UMa — the pair Hipparcos resolved as one | review; the four-record set's shape ([The identifier columns are read, never re-derived](/scripts/catalog/spine/README.md#the-identifier-columns-are-read-never-re-derived)) |
 
@@ -437,7 +437,7 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 | `tyc` `hip` `hd` `hr` `gl` | `build:membership` — the merge decision, the correction key (`spine-corrections.tsv`), and the label merge's backstop where the overlay asserts nothing (hip 18,593 · hd 12,751 · hr 1,700 · gl 1,227 rows, `labelSpineOnly`); gate (i) through `spineDesignations`; `parity-ledger.test.ts` (the 21 HD/HIP route-disagreement pairs, the HD-less HRs); `build:astrometry-request` (spine TYCs narrow the cross-walk; the derivation's candidates) | the link graph above, seeded one row per Tycho-2 star / I/239 HIP / CNS5 entry the way the additions already are ([The additions](/scripts/catalog/membership/README.md#the-additions)), the 136 carried on evidenced rows of the generalised correction table | `stellata-hooj.17.2` |
 | `flam` | merge backstop (694 rows); 2,604 attested, 120 not, 119 dropped to `label-drops.tsv` | IV/27A + WGSN by HD/HIP already attest the rest. The 119 are a **source** question: a frozen SIMBAD identifier pull (`* NN Con`) attests them, or the drop ledger freezes as a committed record — the spine gone, nothing regenerates it | `stellata-hooj.17.4` |
 | `bayer` | copied to the manifest; naming reads it as two counters only (`namingBayerAdded` 515, `namingBayerDropped` 2) | WGSN ∪ IV/27A by HR/HD/HIP resolves 1,520 of 1,522 and the 2 drop by design ([Measured coverage](/scripts/catalog/naming/README.md#measured-coverage)): the manifest column goes, the counters re-pin on the authority | `stellata-hooj.17.3` |
-| `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (3 records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the 46 disposed names (26 display, 20 alias); `build:wgsn`'s § 2 residual gate | Sol → the generator emits its one row. 445 → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. 46 by class: 8 component-letter compose by borrowing ([§ 3](/docs/star-naming.md#3-the-ladder)); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
+| `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (3 records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the 46 disposed names (26 display, 20 alias); `build:wgsn`'s [§ 2](#2-identifier-sources--frozen-cds-files-not-live-simbad) residual gate | Sol → the generator emits its one row. 445 → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. 46 by class: 8 component-letter compose by borrowing ([§ 3](/docs/star-naming.md#3-the-ladder)); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
 | `gaia_source_id` | **none — `17.6` landed.** `derivationOutcome` replaced `derivedVsFrozen`; `differs` / `unreached` collapsed into `bound` / `refused`; the disposition file dropped its `frozen_source_id` column and became a standing overlay keyed on the record, authoritative wherever it keys; the collision keeper rule withholds from both rows | `derivedVia` / `bindingByClass` / `derivationOutcome` / the review counts, plus `dispositionAsserted` — the 36 ids no committed source proposes, shipping on a cited basis | `stellata-hooj.17.6` ✓ |
 | `mag` | **none — `17.6` landed.** `spineBrightRows` / `spineBrightRowsWithoutOverlayEntry` re-keyed onto the printed-V cascade the binding gate already weighs each row against, reproducing 178 / 114 exactly (Sol named directly, having no gate evidence) | — | `stellata-hooj.17.6` ✓ |
 | `ra` `dec` `dist` `ci` `spect` `rv` `pm_ra` `pm_dec`, six `*_src` | none | none | `stellata-hooj.17.7` |
@@ -454,7 +454,7 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 | `audit:spine-primaries`, `audit:spine-associations` | the retirement's measurement | retire with the file: attestation already ships as the manifest's `routes`, and admission is the generator's own | 17.7 |
 | `inherited-spine-guard.test.ts`, `stale_gaia_source_ids.tsv` | the frozen artifact's integrity; the DR2 queue | retire. The queue's live facts already read out of the `simbad_dr2_object` dispositions, whose evidence names each DR2 id outright rather than pointing at the file (`17.6`); the guard and the file go with the artifact | 17.6 ✓ / 17.7 |
 | manifest `bayer` / `proper` → `readStars` → naming | see the two column rows | see the two column rows | 17.3 |
-| prose: § 3, `data/athyg/`, `data/membership/`, `data/classic-ids/` § Coverage, `SCIENCE.md`, `README.md`, `docs/star-naming.md`, `docs/science-catalog-ingestion.md`, `tests/star-count-consistency.test.ts`'s `313,257` pin | | the sweep | 17.7 |
+| prose: [§ 3](#3-the-inherited-spine), `data/athyg/`, `data/membership/`, `data/classic-ids/` § Coverage, `SCIENCE.md`, `README.md`, `docs/star-naming.md`, `docs/science-catalog-ingestion.md`, `tests/star-count-consistency.test.ts`'s `313,257` pin | | the sweep | 17.7 |
 
 **The order.** Each step leaves the spine with strictly fewer readers and
 is held by the gates that remain:
@@ -478,7 +478,7 @@ is held by the gates that remain:
    the prose, restate the licence once.
 
 **Expected movement, stated in advance.** Records: **zero** drops at every
-step — § 3.1's residual is zero, so every row keeps an attested key; `rows`
+step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s residual is zero, so every row keeps an attested key; `rows`
 (376,932) and `bindingByClass` hold across the epic except as this
 paragraph enumerates. `17.6` moved none of them, as predicted. Labels: `17.2`
 moves at most the 136 cells above, each
@@ -580,7 +580,7 @@ have passed a letter flip landing on a sibling's own spelling.
 Where a flip RENAMES a record's canonical key rather than colliding — CNS5
 renumbering `Gl 157.1` to `GJ 9140`, or lettering `GJ 3196` as its pair's
 component B where AT-HYG letters it A — the label flips and identity rides a
-`data/sid/sameas-overrides.tsv` bridge, per § 7.
+`data/sid/sameas-overrides.tsv` bridge, per [§ 7](#7-identity-and-ordering-rules).
 
 Record fields are single-valued and overlay cells are not, so the extra values
 of an ambiguous designation are enumerated as dropped labels rather than
@@ -609,7 +609,7 @@ being retired; the tier after each is its replacement:
 |---|---|
 | direction / xyz | SHIPPED — Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 from its per-star, per-coordinate mean epochs (record's own TYC) → CNS5 astrometry, from the row's own `pos_epoch` (GJ) → SIMBAD coordinates (bibcoded, J2000) → curated (Sol) |
 | space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; where that tier states a position but no PM, a designation-keyed rescue cascade (Tycho-2 by TYC → CNS5 by GJ → bibcoded SIMBAD, Gaia-bibcode skip rule below) supplies the tangential term, and carries that tier's position to J2016.0 as well so the two read one motion; zero where that too finds nothing |
-| distance | SHIPPED — B-J posterior → LMC kinematic → DR3 parallax inversion (in-tree pull) → HIP2 parallax (own HIP, above an S/N floor) → CNS5 parallax → Gliese `V/70A` printed trigonometric parallax → SIMBAD `plx_value` (bibcoded) → a bound sibling's clean DR3 parallax → curated (Sol); no owned parallax is a § 6 ledger drop — ~~spine printed~~ |
+| distance | SHIPPED — B-J posterior → LMC kinematic → DR3 parallax inversion (in-tree pull) → HIP2 parallax (own HIP, above an S/N floor) → CNS5 parallax → Gliese `V/70A` printed trigonometric parallax → SIMBAD `plx_value` (bibcoded) → a bound sibling's clean DR3 parallax → curated (Sol); no owned parallax is a [§ 6](#6-parity--the-gate-on-any-membership-change) ledger drop — ~~spine printed~~ |
 | V magnitude | SHIPPED — Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → Gliese `V/70A` printed `Vmag` → curated (Sol). **No SIMBAD flux tier**: Gliese reaches every row Tycho-2 misses, and SIMBAD publishes no `V` flux at all for the nine it would have been asked for |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
 | ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → printed `I/239` B−V (HIP) → GSPC synthetic B−V (BP−RP ≤ 3.0, a **measured** bound — see the ci bullet) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
@@ -669,7 +669,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
      ground-tying correction — not of the integration. Out-of-flag
      values agree with the Table-5.9 relation as closely as in-flag ones
      (p50 0.023 vs 0.020) and with printed `I/239` B−V to p50 0.031–0.043
-     up to BP−RP 3.0, breaking to 0.135 above it; § 3.2 independently
+     up to BP−RP 3.0, breaking to 0.135 above it; [§ 3.2](#32-retiring-the-spines-consumers--per-column-per-consumer-in-order) independently
      reports the standardisation holding to <10 mmag on red giants out
      to BP−RP 3.5. The one caveat the paper adds rather than removes is
      on the **bright** side: past `G` ≈ 11.5 a BP/RP spectrometer
@@ -710,7 +710,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
      the nine rows Tycho-2 misses: they carry `B`, `J`, `H`, `K`, `R`, `g`,
      `r`, `i` and `G` and no `V`, so this is not the bibcode policy biting
      and no re-pull would fix it. The V cascade therefore has no SIMBAD
-     tier at all — the § 5 rule that a SIMBAD tier serves only cohorts no
+     tier at all — the [§ 5](#5-per-field-cascades-and-rescue-tiers) rule that a SIMBAD tier serves only cohorts no
      first-order catalogue reaches leaves it nothing to serve.
   2. The tier that does reach them is **Gliese `V/70A`**, the first-order
      catalogue `mag_src=GJ` was transcribing all along: over all 16 rows
@@ -731,7 +731,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
 - **direction / PM** — SHIPPED (`stellata-3bsf.26`).
   `directionAthygPrinted` 61 / `velocityAthygPm` 60 retire into the tiers
   below, residual **none 0** on both axes over the spine's rows (the
-  primaries then admit 27 rows no tier states, which § 6 parks as
+  primaries then admit 27 rows no tier states, which [§ 6](#6-parity--the-gate-on-any-membership-change) parks as
   `no_position` rather than dropping):
 
   | | Tycho-2 | CNS5 | SIMBAD | curated | none |
@@ -745,7 +745,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   limit and carrying a `gaia_source_id` DR3 does not publish because it is
   a DR2 id (`data/athyg/stale_gaia_source_ids.tsv`). `stellata-3bsf.30`'s
   widening ladder reaches all four on their own GJ, so the SIMBAD tier
-  takes them and the none bucket empties — no § 6 adjudication.
+  takes them and the none bucket empties — no [§ 6](#6-parity--the-gate-on-any-membership-change) adjudication.
 
   The **PM none of 4 was a different set** from the direction none of 0 —
   three Tycho-2 rows with no mean solution and so no proper motion of their
@@ -884,7 +884,7 @@ Rules:
   and pinned, never implied**. Cells with `*_src = OTHER` are
   unattributable and drop unconditionally. A row left with **no** owned
   distance or direction cannot ship silently: it becomes a membership
-  event adjudicated through the § 6 parity ledger with an explicit
+  event adjudicated through the [§ 6](#6-parity--the-gate-on-any-membership-change) parity ledger with an explicit
   dropped-list reason code. **Record survival is not a goal in
   itself** — the spine is not a relic whose every row must be rescued.
   The walk's `dropped*` zero-pins are tripwires against *accidental*
@@ -928,7 +928,7 @@ Rules:
   Tycho-2-tier records.
 - **Binding-gate note.** GSPC and the SIMBAD values pull consume the
   spine's already-gated `gaia_source_id`/HIP keys (same shape as Apsis
-  and the astrometry catalog), so the § 4 gate does not re-run. Tycho-2
+  and the astrometry catalog), so the [§ 4](#4-how-hd-reaches-gaia) gate does not re-run. Tycho-2
   and CNS5 value columns join on the record's own TYC/GJ designation —
   value joins, not identity joins, and never positional. The SIMBAD
   pulls' **widening ladder** is the one place a value join carries binding
@@ -981,7 +981,7 @@ Rules:
 
 No binary-format change: the v9 layout, stride, and field set are
 untouched by the driver swap. Record **order** still changes (absmag
-re-derivation reshuffles the brightest-first sort) — see § 7.
+re-derivation reshuffles the brightest-first sort) — see [§ 7](#7-identity-and-ordering-rules).
 
 ## 6. Parity — the gate on any membership change
 
@@ -997,11 +997,11 @@ test fixture:
    `refused_no_defensible_parallax`, `no_parallax_published`,
    `no_v_magnitude`, `no_position`, plus the
    spine retirement's `admitted:*` / `component:*` / `binding:*` codes of
-   § 3.1, which ledger additions and identity outcomes the same way). No
+   [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), which ledger additions and identity outcomes the same way). No
    silent drops: a count that moves without a ledger entry fails the gate. The
    four park codes are **not** dissolutions: the record reaches no owned
    parallax, no V or no direction and so cannot be built, but it stops being
-   produced while its SID and identity survive (§ 7, `docs/sid.md`) and Gaia
+   produced while its SID and identity survive ([§ 7](#7-identity-and-ordering-rules), `docs/sid.md`) and Gaia
    DR4 reinstates it. A record needs a place AND a brightness, which is why
    the V and direction residuals park on the same ledger as the parallax
    ones rather than dropping through a gate.
@@ -1012,7 +1012,7 @@ test fixture:
 2. **Label parity.** Per-identifier coverage must not regress; every
    previously-named record keeps a name or is listed with a reason.
    Overlay-vs-spine designation flips are enumerated with disposition
-   (§ 4 precedence) — `data/classic-ids/label_flips.tsv` is that ledger, and it
+   ([§ 4](#4-how-hd-reaches-gaia) precedence) — `data/classic-ids/label_flips.tsv` is that ledger, and it
    is the COMPLETE delta: the spine's designation multiset replayed through it
    must equal the manifest's, which the built catalogue is then held to, and
    that chain is what keeps "every SID is preserved by construction" checkable
@@ -1020,7 +1020,7 @@ test fixture:
 3. **Field parity.** |ΔV|, |Δabsmag|, |Δci| distributions pinned
    (p50/p99/max) once reviewed; spectral-string change count pinned.
 4. The dropped and merged lists must agree row-for-row with any SID
-   ledger writes (§ 7).
+   ledger writes ([§ 7](#7-identity-and-ordering-rules)).
 
 The frozen regression corpora (known-stars, sky-position,
 multi-star-regression) stay green throughout — they pin the
@@ -1079,8 +1079,8 @@ Applications of `docs/sid.md` (which remains the authority):
 **Dead patterns — do not rebuild:** a bright/fill two-tier hybrid
 membership; positional joins at any stage; live SIMBAD in the build; a
 keep-list file separate from the membership term; re-deriving a Gaia
-*binding* from a raw cross-walk without the § 4 gate — a frozen
-designation may admit a record (§ 3.1), it never binds one.
+*binding* from a raw cross-walk without the [§ 4](#4-how-hd-reaches-gaia) gate — a frozen
+designation may admit a record ([§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)), it never binds one.
 
 ## 9. Testing a proposed identifier rule before building it
 

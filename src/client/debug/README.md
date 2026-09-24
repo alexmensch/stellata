@@ -14,7 +14,7 @@ src/client/debug/
                                   colour helpers). `makeMonoReadout` is
                                   the green-on-black block every live
                                   readout writes through `setReadoutText`
-                                  (§ Live readouts) —
+                                  (README.md#live-readouts--write-through-setreadouttext) —
                                   `buildDiagnosticReadout` is it plus the
                                   latch-reset link.
   perf-hud.ts                     Ring-buffer instrumentation +
@@ -44,7 +44,7 @@ src/client/debug/
   survivor-counts.ts (+ test)     debug.survivors() — each star tier's
                                   drawn instance count against the
                                   catalogue record count
-                                  (§ Survivor counts).
+                                  (README.md#survivor-counts).
   star-tuning.ts                  Live-tunable star-disc knobs, plus the
                                   derived-K readout (K, plate scale, FOV,
                                   resulting sizeMin/Max).
@@ -276,7 +276,7 @@ Perf (`perf-hud.ts`), Pin (`pin-debug-hud.ts`), Arrows
 (`eclipse-debug-hud.ts` — per-relation gate verdict, camera distance,
 rendered pair separation vs disc-radius sum, θ/Σα ratio, front/back,
 target and buffered dim; the fastest way to see WHY a pair is or
-isn't dimming from the current vantage, and § Eclipse routing for the
+isn't dimming from the current vantage, and [Eclipse routing](#eclipse-routing--finding-a-band-you-cannot-see) for the
 per-member line under it). Drag the
 title bar to move it, click any section header to fold/unfold; both the
 position and per-section collapse state persist in `sessionStorage`
@@ -319,7 +319,7 @@ whichever of those two conditions is missing:
 | --- | --- | --- |
 | `>pri DISC r=0.545  disc ignores the dim, back off` | The back star is a resolved disc. The disc pass never folds `iEclipseDim`, so the eclipse has **no photometric effect at all** here — overlap orders geometrically in the local depth pass. | Back off until `r` falls under 0.5. |
 | `>sec GLOW r=0.426  need r>0.494 at dim 0.139, or trap<0.002` | Glow-routed and dimmed, but the quad is too small a fraction of the split. | Close in until `r` passes the stated target. |
-| `>sec GLOW r=0.494  <TRAP>` | **In the band now.** | Look — § What the eye has to settle. |
+| `>sec GLOW r=0.494  <TRAP>` | **In the band now.** | Look — [What the eye has to settle](#what-the-eye-has-to-settle--the-hud-cannot). |
 | `>sec GLOW r=0.426  need r>0.494 at dim 0.139; no dim reaches it here` | Same, and scrubbing will not help either: even totality leaves the quad above the split. | Close in; distance is the only lever left. |
 
 `r` is `vPhysRatio` as the vertex stages compute it — from the

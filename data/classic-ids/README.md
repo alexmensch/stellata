@@ -34,7 +34,7 @@ hd_hip_route_disagreements_review.tsv
                                    grows the queue fails until reviewed.
 rejected_bindings.tsv              460 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
-                                   (§ The binding gate).
+                                   (README.md#the-binding-gate).
 label_flips.tsv                    736 rows. Pipeline-derived, and by
                                    `build:membership` rather than by this
                                    folder's build — that is where the merge
@@ -100,7 +100,7 @@ all four; cite the paper per table.
   GJ ↔ Gaia EDR3 source_id ↔ HIP directly plus component letters, which
   is why it beats hand-rolling Gliese from V/70A (CNS3, not ingested).
   5,237 of 5,909 rows carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
-  volume-limited to 25 pc** — see § Coverage.
+  volume-limited to 25 pc** — see [Coverage](#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
 ### The astrometry re-slice
 

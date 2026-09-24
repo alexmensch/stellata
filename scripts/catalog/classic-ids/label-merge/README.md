@@ -97,7 +97,7 @@ row, so the set is a deliberate **superset** of what ships — 35 withheld
 (34 hd + the 1 hr) across the 34 records whose system names a sibling, of which
 33 render one today.
 
-An alias also clears § The collision guard's rule, which the guard itself
+An alias also clears [The collision guard](#the-collision-guard)'s rule, which the guard itself
 cannot apply — aliases are not display cells, so its tally never sees them.
 Those are withheld to `extra-dropped`; 0 fire today, measured and guarded.
 
@@ -194,11 +194,11 @@ record ships.
 
 Four shapes that LOOK like exceptions are reached mechanically instead, and
 the file's header names the first three: a proposal that would make another
-record's designation ambiguous (§ The collision guard); a Gliese renumbering
+record's designation ambiguous ([The collision guard](#the-collision-guard)); a Gliese renumbering
 (`Gl 157.1` → CNS5's `GJ 9140`), an IDENTITY bridge in
 `data/sid/sameas-overrides.tsv` since both designations name the star and `gl:`
 is the canonical key of all five affected records; and a swapped GJ component
-letter (§ The gl comparison is specificity-aware). The fourth is upstream of
+letter ([The gl comparison is specificity-aware](#the-gl-comparison-is-specificity-aware)). The fourth is upstream of
 this file entirely — IV/27A stating a Bayer or Flamsteed designation for a
 star that is not the one it names, which leaves the cross index before any
 consumer reads it ([One designation, two HD numbers](../README.md#one-designation-two-hd-numbers)).
@@ -236,7 +236,7 @@ price and it is paid knowingly: a number resolving to the wrong star is worse
 than one resolving to nothing, and the two parked rows are `stellata-hooj.13`'s
 class — the number is unreachable for want of a distance, not for want of a
 label rule. HD 330122 is the other shape, the freed number no second Tycho
-entry names — the case § A withheld number attaches to no record already
+entry names — the case [A withheld number attaches to no record](#a-withheld-number-attaches-to-no-record-and-that-is-the-answer) already
 describes for the withheld set.
 
 The split is a ratchet, not a note: `../parity-ledger.test.ts` § override-freed

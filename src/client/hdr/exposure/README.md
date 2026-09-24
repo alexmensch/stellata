@@ -27,9 +27,9 @@ src/client/hdr/exposure/
                              joining them, and the slew.
   scene-adaptation.ts        SceneAdaptation — folds the frame-late
     (+ test)                 measurement into the applied cut, and owns
-                             the three debug overrides (§ Debug panel).
+                             the three debug overrides (README.md#debug-panel).
   exposure-frame-step.ts     ExposureFrameStep — the frame loop's three
-    (+ test)                 calls into this folder (§ The frame step).
+    (+ test)                 calls into this folder (README.md#the-frame-step).
   exposure-tuning.ts         The debug panel's Exposure section: the live
                              readout plus the five sliders.
   exposure-tuning-pure.ts    Readout text — the branch labels and the
@@ -54,7 +54,7 @@ The **instrument** sets what the scene is exposed *for*: a source at its
 `m_lim` (7.8 for the unaided eye) lands on the just-noticeable floor the
 unit is anchored to, and every emitter reading the shared uniform moves
 together. **Adaptation** (`dm ≤ 0`) is the automatic per-frame cut
-(§ Adaptation). The **EV trim** is the user's manual ±3 stops in 1/3
+([Adaptation](#adaptation--the-frame-measures-itself)). The **EV trim** is the user's manual ±3 stops in 1/3
 steps, and is the only term that may go positive.
 
 **There is no data-magnitude filter**, and its absence is a design

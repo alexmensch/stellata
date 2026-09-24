@@ -12,7 +12,7 @@ rather than shipping it.
 
 - `texture_ladder.py` — `RUNGS`, `MASTER_W`, and `rungs_for(width)`: the
   one answer to how wide a body's maps are, shared by the build and the
-  reduction script. § Size ladder below.
+  reduction script. [Size ladder](#size-ladder) below.
 - `reduce_source.py` — one-shot, run by hand, NOT part of the build:
   downloaded full-resolution map(s) → the frozen
   `data/textures/src/` master at `MASTER_W`. `--grid CxR` reduces each

@@ -18,8 +18,7 @@ sid-pure.ts               Pure algebra: designation grammar (§ 3),
                           Tests import its constants — never redefine
                           them.
 catalog-designations.ts   Designation set per BUILT catalog record, from
-                          catalog.bin + the two public/ sidecars (§
-                          Designation extraction). Shared by allocate and
+                          catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by allocate and
                           the inherited spine's parity gate.
 registry-io.ts            Filesystem access to the committed registry:
                           canonical data/sid/ paths, loadStoredEdges, and

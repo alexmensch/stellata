@@ -48,7 +48,7 @@ effect. `bd update --claim` is the only thing that claims; a plain
 The trap is a **stale read**: `bd show` output from earlier in the session says
 nothing about now, and a bead can be claimed between your read and your write.
 Re-read immediately before writing, and where a field's history decides it,
-read Dolt (§ Recovering a wiped field) rather than inferring from what you
+read Dolt ([Recovering a wiped field](#recovering-a-wiped-field)) rather than inferring from what you
 remember seeing.
 
 ## Recovering a wiped field
@@ -69,9 +69,9 @@ re-wraps lines.
 Both are set **at creation**, and getting either wrong is silent — nothing
 prompts you, the bead just looks filed:
 
-- `--parent <epic-id>` — § Choosing the parent epic below, and `beads` skill
+- `--parent <epic-id>` — [Choosing the parent epic](#choosing-the-parent-epic) below, and `beads` skill
   § Never create a bead outside an epic for the escalation path when none fits.
-- `--priority` — § Prioritisation below.
+- `--priority` — [Prioritisation](#prioritisation) below.
 
 Audit: `bd list --status=open --no-parent --exclude-type=epic`.
 

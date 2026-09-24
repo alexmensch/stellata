@@ -16,7 +16,7 @@ object the camera is focused on, and its motion comes wholly from a `t`
 sampler. Only the trail gates on focus.
 
 Probes are full interaction citizens — a third hard focus kind alongside
-stars and planets (§ Focus), searchable, hoverable, clickable, pinnable,
+stars and planets ([Focus](#focus)), searchable, hoverable, clickable, pinnable,
 and valid observe anchors.
 
 ## Files in this area
@@ -33,25 +33,25 @@ src/client/solar-system/probes/
   probe-trajectory.ts (+ test)    Wire file → typed arrays, plus the pure
                                   sampler: probeStateAt / probeSampleIndexAt
                                   / probeSignalLost / probeLabelText.
-                                  See § Sampler.
+                                  See README.md#sampler.
   probe-loader.ts                 Parallel fetch of the roster's JSONs from
                                   public/probes/. A missing file drops that
                                   probe; it is never an error.
   probe-field.ts                  ProbeField — the instanced marker quads,
                                   the per-frame sampler pass, and the
                                   ProbeFrameSample record every other
-                                  consumer reads. See § Marker field.
+                                  consumer reads. See README.md#marker-field.
   probe-path-layer.ts             ProbePathLayer — one open polyline per
-                                  probe, launch → position(t). See § Trails.
+                                  probe, launch → position(t). See README.md#trails.
   probe-path-layer.test.ts        Trail focus gate + the field's
                                   visible-vs-sampled split.
   probe-focus-geometry.ts         PROBE_ORBIT_FLOOR_PC /
                                   PROBE_PARK_DIST_PC — fixed park
                                   geometry, not a fill solve. See
                                   § Park distance.
-  probe-labels.ts                 Per-probe SVG labels. See § Labels.
+  probe-labels.ts                 Per-probe SVG labels. See README.md#labels.
   probe-encounter-coherence.test  Planet-encounter + heliopause-crossing
-    .ts                           corpus. See § Coherence, not precision.
+    .ts                           corpus. See README.md#coherence-not-precision.
 ```
 
 The interaction surfaces dispatch through `probe-module.ts`'s legs —
@@ -140,7 +140,7 @@ from here on purpose.
   probe is, how fast it is going, or whether it is drawn. The card's
   speed row is the sampler's own interpolated velocity for exactly this
   reason; a finite difference across frames would be a different
-  quantity in each part of a trajectory (§ Sampler).
+  quantity in each part of a trajectory ([Sampler](#sampler)).
 - **`resampleAt` is the out-of-frame seed, and focus needs it.** A URL
   restore attaches the roster, jumps the clock, and applies its focus all
   before the first frame runs, and a probe `flyTo` bails on a false
@@ -244,7 +244,7 @@ forward is defined; the trail simply ends wherever `t` puts the probe.
   camera motion. Extending the trail forces a rebake; otherwise the
   per-frame drift check owns it.
 - **Three gates, one job each.** A trail draws only when **that probe is
-  the focused object** (§ Focus gate), AND when its marker is drawn (a
+  the focused object** ([Focus gate](#focus-gate)), AND when its marker is drawn (a
   trail with no probe at its end reads as a bug), AND when the probe's own
   heliocentric distance clears the legibility floor at the camera's
   distance to the marker — days after launch the traversed path is a

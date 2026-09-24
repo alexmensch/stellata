@@ -84,7 +84,7 @@ scripts/catalog/classic-ids/
   cross-index.ts                  IV/27A as every consumer reads it: the
                                   frozen table with
                                   cross_index_corrections.tsv applied
-                                  (§ One designation, two HD numbers). Four
+                                  (README.md#one-designation-two-hd-numbers). Four
                                   call sites take it — this build, the
                                   designation-constellation pass, ../naming/'s
                                   Bayer union and ../spine/primaries-tables.ts

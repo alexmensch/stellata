@@ -15,12 +15,12 @@ simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            TYC / GJ cross-IDs; the resolver keys all four.
 simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
-                           the § 5 value cohort — see § The values pull.
+                           the § 5 value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
                            HIP) curated cross-IDs.
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
-                           see § The TYC → HD pull.
+                           see README.md#the-tyc--hd-pull.
 wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
                            coalesce overrides for Sirius B-shaped cases.
 ```
@@ -313,7 +313,7 @@ corpus is where each one gets caught, since `known-stars.test.ts` pins
 `primary_spect` per row.
 
 **A re-pull is not done when the file lands.** `simbad_sptype.tsv` feeds two
-pipelines — § Consumed by names both — and they pin separate count snapshots.
+pipelines — [Consumed by](#consumed-by) names both — and they pin separate count snapshots.
 Refreshing the file means three builds, and **`build:binaries-runtime` goes
 last, not in the middle**:
 

@@ -2,7 +2,7 @@
 
 Design gate for the SID epic (`stellata-efju`, B0). Every pin below is
 binding on the implementation beads B1–B5; each bead's acceptance
-criteria trace to a section here (§ 11). Companion README:
+criteria trace to a section here ([§ 11](#11-acceptance-traceability)). Companion README:
 [`data/sid/README.md`](../data/sid/README.md) (registry file roster).
 
 Measured numbers: § 4.2's bucket table is from the ledger's mint build
@@ -33,7 +33,7 @@ properties:
 | Layer | Currency | Stability | Owner |
 | --- | --- | --- | --- |
 | **Runtime** | array index (`catalog.bin` record index, `clouds.json` position, …) | volatile per build — fine, it's an array slot | each loader |
-| **Wire** | **SID** — dense small integer, LEB128 on the wire | frozen forever | committed ledger (§ 4) |
+| **Wire** | **SID** — dense small integer, LEB128 on the wire | frozen forever | committed ledger ([§ 4](#4-registry--same-as-graph--frozen-ledger)) |
 | **External** | designations: `hip:32349`, `gaia_dr3:294…`, `cloud:orion-a`, … | stable but heterogeneous, huge, sparse | upstream catalogues |
 
 The SID is a surrogate key over the union of external designations,
@@ -64,9 +64,9 @@ Current namespaces:
 | `hd` | Henry Draper number | AT-HYG / search index | frozen catalogue |
 | `hr` | Harvard Revised number | AT-HYG / search index | frozen catalogue |
 | `gl` | Gliese/GJ designation, trimmed AT-HYG cell with whitespace collapsed to `_` (`gl:Gl_804`) | AT-HYG / search index | frozen catalogue |
-| `gaia_dr3` | Gaia DR3 source_id | catalog.bin gaia field | release-scoped; cross-release identity via § 6 |
-| `synth` | `<wds_id>-<comp>` (the runtime synth key minus its `synth-` prefix) | companion promotion | synthetic; churns under WDS re-pairing (§ 5) |
-| `cloud` | `clouds.json` `id` slug | clouds pipeline | slug — rename requires a bridge (§ 4.1) |
+| `gaia_dr3` | Gaia DR3 source_id | catalog.bin gaia field | release-scoped; cross-release identity via [§ 6](#6-gaia-data-release-reconciliation) |
+| `synth` | `<wds_id>-<comp>` (the runtime synth key minus its `synth-` prefix) | companion promotion | synthetic; churns under WDS re-pairing ([§ 5](#5-synthetic-key-churn-wds-re-subdivision)) |
+| `cloud` | `clouds.json` `id` slug | clouds pipeline | slug — rename requires a bridge ([§ 4.1](#41-same-as-equivalence-graph)) |
 | `lg` | `local-group.json` `id` slug | LVDB pipeline | slug — rename requires a bridge |
 | `sol` | Every Sol-system object carrying no catalog record: `sun`, `mercury` … `pluto`, the 18 major moons, the five deep-space probes | committed list (`sol-objects.tsv`) | frozen by us |
 | `shell` | `local_bubble`, `heliopause` | committed list (`shell-objects.tsv`) | frozen by us |
@@ -77,7 +77,7 @@ own, and their ledger `kind` (`planet` / `probe`) carries the class.
 The separate `moon:` / `probe:` namespaces once reserved here are
 therefore retired unclaimed; nothing keys on them.
 
-Reserved for future layers (see § 10): `pgc`, `ngc`, `ic`, `ugc`,
+Reserved for future layers (see [§ 10](#10-adding-a-future-object-type--the-recipe)): `pgc`, `ngc`, `ic`, `ugc`,
 `messier` (extragalactic tiers — PGC runs past 3 million, which is
 why the wire is LEB128 from day 1) and `exo` (exoplanets, whose hosts
 are catalog stars, not the Sol system).
@@ -103,9 +103,9 @@ per connected component. Edges split by the
   cross-release decision —
   - `data/sid/sameas-overrides.tsv` — curated merges (future
     cross-catalogue identities like M31 = `ngc:224` = `pgc:2557`),
-    synth re-subdivision bridges (§ 5), slug-rename bridges.
+    synth re-subdivision bridges ([§ 5](#5-synthetic-key-churn-wds-re-subdivision)), slug-rename bridges.
   - `data/sid/bridges/<from>_<to>.tsv` (e.g. `gaia_dr3_dr4.tsv`) —
-    machine-generated cross-release Gaia bridges from the § 6
+    machine-generated cross-release Gaia bridges from the [§ 6](#6-gaia-data-release-reconciliation)
     reconciliation, human-reviewed before commit.
 
 Rule of thumb: **if an edge is derivable from committed `data/`
@@ -153,7 +153,7 @@ forever. The difference is operational: with stability-first, the set
 of ledger rows exposed to Gaia data-release churn is *exactly* the
 rows whose canonical key starts with `gaia_` — greppable from the
 committed file (5,161 rows today) — and the "zero churn for
-stable-designation holders" claim (§ 6) is a visible property of the
+stable-designation holders" claim ([§ 6](#6-gaia-data-release-reconciliation)) is a visible property of the
 key column. Objects added later that carry only Gaia ids still get
 `gaia_drN:` keys, so a future bulk expansion (~2M Gaia-only stars)
 makes the ledger majority-Gaia-keyed without weakening any of this.
@@ -176,10 +176,10 @@ sid	canonical_key	kind	first_seen
 ```
 
 - `sid` — uint32, dense, strictly ascending, never reused.
-- `canonical_key` — § 4.2; unique across the file.
+- `canonical_key` — [§ 4.2](#42-canonical-key--stability-first); unique across the file.
 - `kind` — `star | cloud | galaxy | planet` (extensible enum; the
   runtime does NOT read this — kind at runtime comes from which
-  artifact carries the sid, § 8).
+  artifact carries the sid, [§ 8](#8-runtime-resolver-b4)).
 - `first_seen` — ISO date of the allocation batch; frozen thereafter.
 
 `data/sid/retirements.tsv` (append-only, same guard): retired SIDs
@@ -195,10 +195,10 @@ the model (a parked SID resolves to nothing and wire consumers skip
 it gracefully).
 
 **Two kinds of merge, and they pick different survivors.** A merge
-under § 6.1 reconciles Gaia ids across a data release, and its
+under [§ 6.1](#61-procedure) reconciles Gaia ids across a data release, and its
 survivor is the lowest (oldest) SID — the ids being reconciled are
 interchangeable, so the oldest is the stable choice. A merge under
-§ 4.3 joins two same-as classes the pipeline itself found to name one
+[§ 4.3](#43-ledger--datasidledgertsv) joins two same-as classes the pipeline itself found to name one
 star, and there the survivor is the one whose canonical key is a
 **classical designation** — HD, HIP, HR, GJ — regardless of which
 integer is lower. A classical key is stable across Gaia releases
@@ -209,7 +209,7 @@ is the case to read: eight Gaia-keyed rows AT-HYG carried beside
 their own HIP record merged onto it when the manifest began deriving
 its binding.
 
-Where BOTH keys are classical the § 4.2 ladder decides, because the
+Where BOTH keys are classical the [§ 4.2](#42-canonical-key--stability-first) ladder decides, because the
 merged record has exactly one canonical key and the surviving ledger
 row must be the one carrying it — otherwise the ledger holds a
 `canonical_key` no record keys on. SID 368276 (`hd:2094`) retiring in
@@ -218,7 +218,7 @@ HD 2094 as a row of its own beside the HIP record it names, and the
 label merge moving onto the derived binding put the designation back
 on that record.
 
-A merge under § 4.3 reaches the build two ways: the derived binding
+A merge under [§ 4.3](#43-ledger--datasidledgertsv) reaches the build two ways: the derived binding
 moving a Gaia source onto the classically-keyed record it belongs to,
 or a `fold` row in `data/membership/spine-corrections.tsv` saying AT-HYG
 carried one star twice. Both retire the same way; the fold is for the
@@ -245,7 +245,7 @@ structural validation enforces `#reinstate ≤ #retire` and
 **original sid** — old wire refs resolve again — which is the whole
 point of reinstating rather than minting: identity is continuous
 across a presence gap. Never reinstate a sid whose object came back
-under a *different* identity; that is a bridge/merge (§ 5, § 6.1).
+under a *different* identity; that is a bridge/merge ([§ 5](#5-synthetic-key-churn-wds-re-subdivision), [§ 6.1](#61-procedure)).
 
 `data/sid/ledger-head.json` (regular git, tiny) pins the frozen
 state: `{ "rows": N, "max_sid": M, "sha256": "…" }` for the ledger
@@ -263,7 +263,7 @@ ledger rows:
 2. Resolve every equivalence class against the ledger: a class
    matches if **any** of its designations is, or same-as-reaches, an
    existing canonical key.
-3. Unmatched classes mint new rows: next sid, canonical key by § 4.2,
+3. Unmatched classes mint new rows: next sid, canonical key by [§ 4.2](#42-canonical-key--stability-first),
    today's date. Within one batch, mint order is deterministic:
    catalog record order (bright-first — commonly shared objects get
    short LEB128 encodings), then clouds.json order, then
@@ -280,10 +280,10 @@ allocation an explicit, reviewable diff.
 An object that disappears from a build (catalogue cut, WDS row
 dropped) keeps its ledger row — the sid is simply absent from the
 artifacts. If it returns later it resolves to the same SID. Explicit
-retirement (§ 4.3) is reserved for identity-level events (merges,
+retirement ([§ 4.3](#43-ledger--datasidledgertsv)) is reserved for identity-level events (merges,
 dissolved synthetic components), not presence fluctuations. A sid
 retired in error — or whose object a later pipeline refinement
-honestly restores — is reinstated (§ 4.3), never re-minted: the
+honestly restores — is reinstated ([§ 4.3](#43-ledger--datasidledgertsv)), never re-minted: the
 allocation hard-error on a reappeared retired class is the prompt.
 
 ### 4.5 CI guard
@@ -293,7 +293,7 @@ snapshot gate but deliberately stricter:
 
 1. **Structural** (always runs): sids unique, strictly ascending,
    dense from 1 through max; canonical keys unique and
-   grammar-valid (§ 3); kind in enum; sid 0 absent;
+   grammar-valid ([§ 3](#3-designation-namespaces)); kind in enum; sid 0 absent;
    `ledger-head.json` exactly matches a recomputation over the
    working files.
 2. **Append-only** (runs when a git base is resolvable, i.e. CI and
@@ -320,7 +320,7 @@ sees an LFS pointer stub and self-skips.
 The guard protects the ledger *file*; `pnpm run sid:check` (its own CI
 check, against the built artifacts) protects its *consistency with the build*: a
 read-only allocation walk that fails on any would-mint object or
-orphaned synth key. The § 4.4 build hard-fail already blocks
+orphaned synth key. The [§ 4.4](#44-allocation) build hard-fail already blocks
 unallocated objects from shipping; the check closes the other
 direction — an object-set change (a Stage-5 filter dropping pairs, a
 WDS re-lettering) cannot land without its allocation, retirement, or
@@ -350,7 +350,7 @@ comp letters / sep / PA. Resolution is human, one line each in
   genuinely dissolved (e.g. an unresolved aggregate that stopped
   being promoted).
 
-The guard (§ 4.5) plus this fail-closed detection means a WDS refresh
+The guard ([§ 4.5](#45-ci-guard)) plus this fail-closed detection means a WDS refresh
 can never silently re-point a synth-keyed SID at a different star.
 
 ## 6. Gaia data-release reconciliation
@@ -360,7 +360,7 @@ is structural, then procedural:
 
 - **Structural (98.4% of the catalogue):** every class holding a
   non-Gaia stable designation (hip/hd/hr/gl/synth/sol buckets in
-  § 4.2) has **zero SID churn by construction** — the SID is pinned
+  [§ 4.2](#42-canonical-key--stability-first)) has **zero SID churn by construction** — the SID is pinned
   by the stable key; a DR bump merely attaches the new `gaia_dr4:`
   designation via the recomputed intra-release cross-walks
   ([Refreshing data when DR4 lands](/scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands)).
@@ -387,7 +387,7 @@ running them is a refresh-time task alongside
 | **carried 1:1** | exactly one candidate within `ACCEPT_MAS = 400` | append bridge edge `gaia_dr3:X = gaia_dr4:Y` to `bridges/` |
 | **contested** | ≥2 candidates within 400 mas | manual review queue; resolve to bridge / split |
 | **split** | one old id accepted by ≥2 new ids | SID survives on the photometrically dominant component (smallest \|Δmag\|; tie → smallest angular distance); siblings mint new SIDs |
-| **merge** | ≥2 old ledger-bearing ids map to one new id | survivor = lowest (oldest) SID; others retired with `successor_sid` = survivor. Scoped to the Gaia ids this procedure reconciles — a pipeline-found merge between a Gaia-keyed and a classically-keyed class keeps the classical one instead (§ 4.3) |
+| **merge** | ≥2 old ledger-bearing ids map to one new id | survivor = lowest (oldest) SID; others retired with `successor_sid` = survivor. Scoped to the Gaia ids this procedure reconciles — a pipeline-found merge between a Gaia-keyed and a classically-keyed class keeps the classical one instead ([§ 4.3](#43-ledger--datasidledgertsv)) |
 | **dropped** | no candidate within 400 mas | review (PM-propagation flag, Δmag, sky region); unrecoverable → **parked**: ledger row kept, no bridge, resolves to nothing until a future designation re-links it |
 
 4. Additionally flag accepted matches with `|Δmag| > 1` for review
@@ -398,7 +398,7 @@ running them is a refresh-time task alongside
    reviewed before merge.
 
 Retired/parked SIDs never reuse their integer; wire refs to them
-degrade gracefully (§ 8, § 9.4).
+degrade gracefully ([§ 8](#8-runtime-resolver-b4), [§ 9.4](#94-migration-semantics--exact-table)).
 
 ### 6.2 DR2→DR3 dry run (measured 2026-07-07)
 
@@ -410,7 +410,7 @@ snapshotted to `data/gaia/gaia_dr2_neighbourhood_request.tsv`
 refresh:gaia-dr2-neighbourhood` pulled all `dr2_neighbourhood` rows
 for those DR3 ids (5,912 rows; `angular_distance` is in **mas**),
 committed as `data/gaia/gaia_dr2_neighbourhood.tsv`. Classification
-per § 6.1 with `ACCEPT_MAS = 400`.
+per [§ 6.1](#61-procedure) with `ACCEPT_MAS = 400`.
 
 | Class | Count | % of risk set |
 | --- | --- | --- |
@@ -438,7 +438,7 @@ Read-outs:
   transition (full astrometric re-solution), "no antecedent" means
   *new in DR3* (the analogue population in a DR3→DR4 bump becomes
   parked SIDs, which degrade gracefully), and the 177 near-misses
-  (nearest candidate 0.4″–1.2″) are exactly what the § 6.1 manual
+  (nearest candidate 0.4″–1.2″) are exactly what the [§ 6.1](#61-procedure) manual
   review + PM-propagation check exists to recover.
 
 ## 7. Storage — sid in every artifact
@@ -577,7 +577,7 @@ Row by row:
 | absent presence bits | — | stay absent (fields keep canonical defaults). |
 | v4 blob, decoder from an older deploy | version byte = 4 | unknown version → decode returns null → default view. Unavoidable on a SCHEMA_VERSION bump; single-deploy site makes the overlap window short. |
 | unknown high mask bits in a v4 blob | — | ignored (forward tolerance for future append-only fields). |
-| retired/parked SID arriving in v4 | LEB128 | `retirements.successor_sid` set → resolve to successor; else unresolved → deferred intent that expires (§ 8): the field degrades, the rest of the state applies. |
+| retired/parked SID arriving in v4 | LEB128 | `retirements.successor_sid` set → resolve to successor; else unresolved → deferred intent that expires ([§ 8](#8-runtime-resolver-b4)): the field degrades, the rest of the state applies. |
 
 ## 10. Adding a future object type — the recipe
 
@@ -585,10 +585,10 @@ The entire point of the SID: any object added to the model later
 plugs into frozen identity with **no wire change and no ledger
 migration**.
 
-1. **Pick designation namespace(s)** (§ 3 grammar). Prefer an
+1. **Pick designation namespace(s)** ([§ 3](#3-designation-namespaces) grammar). Prefer an
    externally stable catalogue id (`pgc`, `ngc`, exoplanet-archive
    names); release-scope it if the upstream re-keys between releases;
-   synthetic keys are allowed but adopt the § 5 bridge-on-churn
+   synthetic keys are allowed but adopt the [§ 5](#5-synthetic-key-churn-wds-re-subdivision) bridge-on-churn
    policy from day 1.
 2. **Add same-as edges** for cross-catalogue aliases — derived from
    the source's cross-ID columns where possible (recomputed), curated
@@ -598,25 +598,25 @@ migration**.
    the CI guard enforces append-only automatically.
 4. **Carry `sid` in the artifact** (in-record field, like
    clouds/LG/catalog) and register a resolver domain on attach
-   (§ 8) — deferred resolution then covers late/optional loading for
+   ([§ 8](#8-runtime-resolver-b4)) — deferred resolution then covers late/optional loading for
    free.
 5. **Wire: nothing.** Focus / to / POI fields already carry any-kind
-   LEB128 SIDs; older clients degrade per § 9.4's last rows.
+   LEB128 SIDs; older clients degrade per [§ 9.4](#94-migration-semantics--exact-table)'s last rows.
 
 ## 11. Acceptance traceability
 
 - **B1 registry substrate** (`stellata-efju.2`): same-as graph +
-  boundary § 4.1; canonical ladder § 4.2; ledger + retirements +
-  head files § 4.3; allocation tool § 4.4; CI guard § 4.5; synth
-  churn detection § 5; DR-reconciliation classifier + risk-set
-  exporter § 6.1/6.2.
-- **B2 catalog sid field** (`stellata-efju.3`): § 7 catalog.bin +
-  build hard-fail § 4.4.
-- **B3 sibling artifacts** (`stellata-efju.4`): § 7 clouds / LG /
+  boundary [§ 4.1](#41-same-as-equivalence-graph); canonical ladder [§ 4.2](#42-canonical-key--stability-first); ledger + retirements +
+  head files [§ 4.3](#43-ledger--datasidledgertsv); allocation tool [§ 4.4](#44-allocation); CI guard [§ 4.5](#45-ci-guard); synth
+  churn detection [§ 5](#5-synthetic-key-churn-wds-re-subdivision); DR-reconciliation classifier + risk-set
+  exporter [§ 6.1](#61-procedure)/6.2.
+- **B2 catalog sid field** (`stellata-efju.3`): [§ 7](#7-storage--sid-in-every-artifact) catalog.bin +
+  build hard-fail [§ 4.4](#44-allocation).
+- **B3 sibling artifacts** (`stellata-efju.4`): [§ 7](#7-storage--sid-in-every-artifact) clouds / LG /
   sol-objects + `SOL_OBJECT_SIDS` pin test.
-- **B4 runtime resolver** (`stellata-efju.5`): § 7 loader maps + § 8
+- **B4 runtime resolver** (`stellata-efju.5`): [§ 7](#7-storage--sid-in-every-artifact) loader maps + [§ 8](#8-runtime-resolver-b4)
   (domains, pending/unknown, deferred intents).
-- **B5 v4 wire** (`stellata-efju.6`): § 9.1–9.4, including the
+- **B5 v4 wire** (`stellata-efju.6`): [§ 9.1](#91-sid-ref)–9.4, including the
   freeze-first step and the golden-blob corpus.
-- **POI generalisation** (`stellata-o6nx.1`): consumes § 8 + § 9;
+- **POI generalisation** (`stellata-o6nx.1`): consumes [§ 8](#8-runtime-resolver-b4) + [§ 9](#9-wire-format-v4-b5);
   no identity work left in it.

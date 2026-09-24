@@ -12,7 +12,7 @@ tycho2_main.tsv     370,140 rows from I/259/tyc2. Mean position
                     (ep_ra/ep_de), proper motion + errors, BT/VT + errors,
                     prox, HIP, pflag, and the observed ra_icrs/de_icrs.
                     Which cell a propagation starts from and at which
-                    epoch: § Which position to propagate from.
+                    epoch: README.md#which-position-to-propagate-from.
 tycho2_suppl1.tsv   2,713 rows from I/259/suppl_1 — Tycho-1 and
                     Hipparcos stars. Observed position only (no mean
                     solution), PM where flag='H', BT/VT + errors, prox,
@@ -180,8 +180,8 @@ places — the ~27″ staleness measured rather than asserted.
 
 It is also the corpus pin for the whole tier, through the only `hd:` record ref
 in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`). Being the
-tier's fastest mover is what makes it the row that pins § Which position to
-propagate from above: it lands 0.113″ from Gaia's own place on the J2000 epoch
+tier's fastest mover is what makes it the row that pins [Which position to
+propagate from](#which-position-to-propagate-from) above: it lands 0.113″ from Gaia's own place on the J2000 epoch
 and 3.7″ away on the observation epochs.
 
 ## Provenance
@@ -216,7 +216,7 @@ Every count above is pinned in `scripts/catalog/build-catalog-expected.json`
 (`directionTycho2`, `vTycho2`, `pmRescueTycho2`) and moves with membership —
 read it rather than this list when they disagree.
 
-The parser resolves § Which position to propagate from at parse time, so
+The parser resolves [Which position to propagate from](#which-position-to-propagate-from) at parse time, so
 no consumer re-decides it: a row with a mean solution exposes
 `ra_mdeg`/`de_mdeg` at J2000, a row with none exposes `ra_icrs` at J1991.25
 and `fromIcrs: true`, and the main table's row wins on the 254 identifiers

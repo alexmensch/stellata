@@ -19,7 +19,7 @@ src/client/webgpu/hdr/
                               dev switches, the resolve material, and
                               ownership of the gates and the reduction.
   emitter-gates.ts            The statistic write mask as a uniform node
-                              (§ The gate becomes the output struct).
+                              (README.md#the-gate-becomes-the-output-struct).
   mrt-material.ts (+ test)    finishMrtMaterial — the single-output ↔
                               three-member-struct swap every
                               emitter carries, and the two material flags
@@ -37,7 +37,7 @@ src/client/webgpu/hdr/
   reduction-webgpu.ts         WebGpuLuminanceReduction — the mip chain
     (+ test)                  (reduction-pure is the spec) and its
                               readRenderTargetPixelsAsync readback
-                              (§ Reduction).
+                              (README.md#reduction--an-asynchronous-readback).
 ```
 
 ## Reduction — an asynchronous readback

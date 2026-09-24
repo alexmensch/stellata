@@ -7,7 +7,7 @@ the full primitive — the heliopause (`solar-system/`) and the Local
 Bubble (`local-bubble/`); the molecular-cloud rim shells build their own
 surface from the shared rim constants (`SHELL_RIM_BLUE`,
 `SHELL_RIM_ALPHA_LIMB`) and the shared camera-distance attenuation
-(§ Camera-distance attenuation).
+([Camera-distance attenuation](#camera-distance-attenuation)).
 
 ## Files
 
@@ -17,12 +17,12 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
   plus `rimDistancesForExtent`, which turns one extent into both reaches.
   Vitest-pinned.
 - `fresnel-shell.ts`
-  - `ShellMaterials` — the material seam (§ The material seam below), and
+  - `ShellMaterials` — the material seam ([The material seam](#the-material-seam) below), and
     the only way in: a consumer cannot take a surface that skips it.
     `../webgpu/fresnel-shell/tsl-shell-materials.ts` is the factory.
   - `FresnelShell` — abstract base owning the group, material, and the
     chart-mode + detail-cycle + floating-origin plumbing, plus
-    `setRimParams` (§ Camera-distance attenuation).
+    `setRimParams` ([Camera-distance attenuation](#camera-distance-attenuation)).
   - `RimParams` + `applyRimParams(uniforms, p)` — the six live rim slots
     and the one writer behind every consumer's `setRimParams`, so a lever
     cannot reach one surface's block and miss the identically-keyed slot
@@ -34,7 +34,7 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
     planet or a resolved star disc hides without either shell asking.
   - `isShellLabelResolvable(shells, idx, worldOffset, cameraPos,
     viewportHeightPx, fovYRad)` — the label legibility gate both shells'
-    visibility predicates share (§ Invariants below).
+    visibility predicates share ([Invariants](#invariants) below).
 - `shell-materials.test.ts` — the seam's guard: both camera-distance
   reaches derived from the extent, the colour arriving through the chrome
   inverse, the shared rim writer, and dispose severing the MRT
@@ -46,13 +46,13 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
   shell layers (heliopause + Local Bubble) and registers them into its
   internal registry, plus the focusable / card / hover / search / SID /
   declutter / label legs.
-- `shell-registry.ts` — the shell kind's internal runtime (§ Boundary
-  shells as focus targets): `SHELL_KEYS`, the `ShellInstance` contract,
+- `shell-registry.ts` — the shell kind's internal runtime ([Boundary
+  shells as focus targets](#boundary-shells-as-focus-targets)): `SHELL_KEYS`, the `ShellInstance` contract,
   and `ShellRegistry` (owns per-shell geometry: localPositionInto,
   cameraDistancePc, viewingDistancePc, focusParkDistancePc,
   renderedSizePx). Instantiated per shell-module.
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
-  key → frozen-SID pin (§ SID pins).
+  key → frozen-SID pin ([SID pins](#sid-pins)).
 - <a id="shell-pickts"></a>`shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
   label-bbox hit test both shells' click / hover picks use, keyed on a
   `ShellPickSurface`. It reports the silhouette's projected radius as the
@@ -114,7 +114,7 @@ MRT-mode registration and a bare `material.dispose()` would not.
   edge; default 2.5). Then the three attenuation slots —
   `uNearFadePc` off the required `nearFadePc` option, `uDepthDimRefPc` and
   `uDepthPower` seeded from the shared constants and deliberately not
-  options (§ Camera-distance attenuation). Pass
+  options ([Camera-distance attenuation](#camera-distance-attenuation)). Pass
   `blending: AdditiveBlending` for a glow that
   composites over the layers behind it; the default is `NormalBlending`.
 - **Visibility.** `group.visible = contributing && permitted && !mono &&
@@ -123,7 +123,7 @@ MRT-mode registration and a bare `material.dispose()` would not.
   (mesh built in its ctor), the Local Bubble ready once its mesh attaches.
   `permitted` is the declutter floor (`heliopauseShell` / `localBubbleShell`,
   both `representational`). `contributing` is the shell module's
-  contribution verdict (§ Sub-pixel cull). Camera-inside is handled
+  contribution verdict ([Sub-pixel cull](#sub-pixel-cull--one-floor-for-the-mesh-and-its-label)). Camera-inside is handled
   separately by the back-face cull.
 - **`setContributing` is a term of that conjunction, not a
   `group.visible` write.** Nothing repaints this layer per frame — its

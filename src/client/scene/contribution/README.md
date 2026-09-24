@@ -39,7 +39,7 @@ Two kinds:
   (the layer's own authored, distance-faded opacity is zero). The
   fourth, `'brightness'`, is photometric: the layer's brightest pixel
   encodes under half an 8-bit step at the live exposure
-  (§ The brightness reason).
+  ([The brightness reason](#the-brightness-reason)).
 
 **A layer may use a floor of its own where the shared one is too wide.**
 `'legibility'` names `FEATURE_LEGIBILITY_MIN_PX` because one floor across
@@ -83,7 +83,7 @@ the draw — three skips a hidden group for free. `setContributing` fires
 on the **transition only**, so a layer that stays skipped pays one
 predicate call per frame. `recenter`, `setMonochrome` and `dispose` still
 reach a skipped layer; `update`, the draw and both per-frame
-`timeBehaviour` polls are elided (§ A skipped layer reports nothing).
+`timeBehaviour` polls are elided ([A skipped layer reports nothing](#a-skipped-layer-reports-nothing)).
 Detail-permit and warp gating stay inside `update` — contribution is a
 layer above them, and a skipped layer never evaluates its permit. **A
 permit-disabled layer hides its groups on `update`'s first line and

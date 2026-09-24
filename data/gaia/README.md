@@ -143,8 +143,8 @@ the third bound, and the one easiest to read as a gap: a record needs a place
 *and* a brightness, so a source whose V no tier reaches is outside the domain
 the completeness claim is quantified over rather than missing from inside it.
 The catalogue's promise is what it can draw physically, never a row count — so
-a star it cannot light is one it declines to invent, and § What the filter
-keeps has the cohort that tests this.
+a star it cannot light is one it declines to invent, and [What the filter
+keeps](#what-the-filter-keeps-and-what-falls-through-it) has the cohort that tests this.
 
 ## Why the floor carries no margin
 

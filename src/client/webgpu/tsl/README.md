@@ -21,7 +21,7 @@ src/client/webgpu/tsl/
   tsl-source-fixture.ts             Reads a shipped TSL module as text with
                                     its comments stripped, for the suites
                                     that pin expression shapes
-                                    (§ TSL test pattern).
+                                    (README.md#tsl-test-pattern--what-a-layers-suite-covers).
   jitter-tsl.ts                     Interleaved gradient noise over the
                                     fragment position, and the ±0.5-LSB
                                     output dither over that.
@@ -29,12 +29,12 @@ src/client/webgpu/tsl/
                                     no geometry owns, the write/read node
                                     pair over one buffer, and the
                                     vertex-stage device limit
-                                    (§ Storage attributes).
+                                    (README.md#storage-attributes).
 ```
 
 Which per-star field feeds which storage table is
 `../star-attribute-roster.ts` — star-specific, so it stays with the
-layer that owns the roster (§ Per-instance data).
+layer that owns the roster ([Per-instance data](#per-instance-data)).
 
 ## Shared uniform nodes
 
@@ -258,8 +258,8 @@ still names the object:
   indexed by star ([Star tables](../star/README.md#star-tables--every-per-star-field-is-a-storage-read)), because its draws
   are compacted: the instance index names a survivor-list slot, and a
   vertex attribute cannot be fetched at an arbitrary index. The tables
-  bind under `maxStorageBuffersInVertexStage` instead (§ Storage
-  attributes), one binding per table.
+  bind under `maxStorageBuffersInVertexStage` instead ([Storage
+  attributes](#storage-attributes)), one binding per table.
 
 A vec4 interleave uploads whole, so a per-frame scalar interleaved with
 static neighbours turns each of its updates into a 4×-wide re-upload of
@@ -288,7 +288,7 @@ A layer is covered by three legs, none of which read generated code:
    WGSL on every boot; brace the body, or express the exit as an `If()`
    around the body and emit no jump at all. And a data texture's
    nearest/nearest default bakes an unfiltered fetch into the WGSL
-   (§ Shared uniform nodes), so every construction states its filter pair.
+   ([Shared uniform nodes](#shared-uniform-nodes)), so every construction states its filter pair.
 3. **Behavioural math lives in pure helpers; renders are smoke.**
    The canonical scalar form of any shader rule belongs in a `*-pure.ts`
    TS function (most already exist as CPU mirrors — tonemap-pure,
@@ -321,5 +321,5 @@ A node's own **binding** properties are the exception, and `access` is the
 one that has to be asserted: `access`, `value` and `isStorageBufferNode`
 are typed public surface rather than graph shape, they survive a bump that
 changes code generation, and a change in what `toReadOnly()` does to them
-is precisely what must fail a test rather than a boot (§ Storage
-attributes).
+is precisely what must fail a test rather than a boot ([Storage
+attributes](#storage-attributes)).

@@ -182,8 +182,8 @@ period) live on the parent `Planet` entries. The resolver
 (`moonOffsetEcliptic`) Kepler-solves each moon in its reference plane
 and rotates it into the ecliptic; `earthMoonSplit` divides Standish's
 Earth–Moon barycentre into Earth-centre and Moon. Phase photometry is
-per-body: only the Moon carries a measured curve (§ Planet phase
-functions), the rest render Lambertian.
+per-body: only the Moon carries a measured curve ([Planet phase
+functions](#planet-phase-functions)), the rest render Lambertian.
 
 <a id="planet-rotation"></a>**Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
 angle `W(t) = W0 + Ẇ·d` from the IAU Working Group on Cartographic

@@ -7,7 +7,7 @@ three depth-honest pipelines of [Early-z](../README.md#early-z--the-star-layers-
 depth output), D3 core mask (depth-only, member stamp in the vertex
 stage), and D4 disc (colour only, no depth output either — § The disc
 draw writes no depth) — plus their local-depth-pass mirror variants
-(§ The local mirror). No pipeline here writes fragment depth, and the
+([The local mirror](#the-local-mirror)). No pipeline here writes fragment depth, and the
 draw count is three, mirror draws included.
 Each main draw is indirect at its tier's survivor count
 (`compaction/README.md`), over storage tables indexed by star (§ Star
@@ -35,7 +35,7 @@ src/client/webgpu/star/
   star-visibility-tsl.ts       The dust-independent prefilter's four
                                terms, the two bounds re-tested after
                                extinction, and the clock-independent form
-                               the A_V cache gates on (§ Dust extinction).
+                               the A_V cache gates on (README.md#dust-extinction--two-tiers-one-gate).
   star-vertex-tsl.ts           `solveStarTsl`, the per-star solve the
                                compaction kernel and all six vertex
                                stages share, and the vertex stage over
@@ -66,7 +66,7 @@ src/client/webgpu/star/
   star-local-mirror-tsl.ts     The local-depth-pass mirror: the three
     (+ test)                   pipelines' local variants over the shared
                                MirrorSlots geometry, reading the tables
-                               by `iSourceIdx` (§ The local mirror).
+                               by `iSourceIdx` (README.md#the-local-mirror).
   star-sources-mock.ts         StarLayerSources over the zero-filled
                                StarPipeline mock, and the fake renderer
                                the layer tests dispatch into.
@@ -308,7 +308,7 @@ and flux-preservation arguments are
   every instanced attribute of the source geometry by name — and this
   layer's geometry has none, so the copy degenerates to the member
   indices. Every star field the mirror's vertex stage reads comes out of
-  the layer's tables at that index (§ Star tables), the same reads the
+  the layer's tables at that index ([Star tables](#star-tables--every-per-star-field-is-a-storage-read)), the same reads the
   main passes make at a survivor-list index, so the two cannot resolve
   a field differently. Two vertex buffers, no indirect draw: the mirror
   draws `instanceCount = members`, its survivor set being the CPU member

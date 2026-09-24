@@ -21,7 +21,7 @@ scripts/catalog/boundaries/
   build-boundaries-artifact.ts    Sweeps the shipped star population for fade
                                   samples and writes the JSON. Called from
                                   ../build-catalog.ts, which hands it the
-                                  lookup (§ Cost).
+                                  lookup (README.md#cost).
   boundary-artifact-fixture.ts    Test-only: the smallest artifact that clears
                                   the load-time validator.
 ```
@@ -144,8 +144,8 @@ wide. Emitting a short row is the dangerous one — it resolves a quantile to
 
 Offsets are rounded to `FADE_OFFSET_DECIMALS = 4` — 1e-4 pc ≈ 20 AU
 against a smallest emitted offset near 0.02 pc, so three significant
-figures survive the tightest row, and the width stays fixed (see § Wire
-shape on why that matters).
+figures survive the tightest row, and the width stays fixed (see [Wire
+shape](#wire-shape) on why that matters).
 
 Rows are emitted only where ≥ `FADE_MIN_SAMPLES` (64) stars qualify — a
 percentile over a handful of naked-eye stars is sampling noise — and the

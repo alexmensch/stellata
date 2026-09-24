@@ -16,7 +16,7 @@ disables. Hidden in chart mode.
   meshes; owns the `setIsobar` chart-mode handoff (which hides them).
 - `band-materials.ts` (+ test, + mock) — the material seam: the neutral
   `BandMaterials` contract, the `BandSharedSlots` group both components
-  hold by reference, and the seeder that starts it (§ The material seam).
+  hold by reference, and the seeder that starts it ([The material seam](#the-material-seam)).
   The graph is `../webgpu/milkyway/milkyway-band-tsl.ts`.
 - `milkyway-column-pure.ts` — the density / dust profile constants the shader
   receives as uniforms, plus a CPU mirror of its raymarch. Owns the ρ₀ solve
@@ -185,8 +185,8 @@ comparable with anything beside it.
 
 `uLimitMag` still arrives by reference from the star pipeline's shared
 uniform map, but **nothing the band draws reads it**: its only consumer is
-the chart-mode isobar branch, which has never rendered (§ Chart mode +
-warp). The band's brightness is photometric, so the exposure model reaches
+the chart-mode isobar branch, which has never rendered ([Chart mode +
+warp](#chart-mode--warp)). The band's brightness is photometric, so the exposure model reaches
 it through `uExposure` instead (`../hdr/exposure/README.md`). The band therefore
 brightens and dims in lockstep with the star field: a deeper instrument,
 the automatic adaptation cut and the manual EV trim all move it and the
@@ -274,8 +274,8 @@ and it is what the lever's `present()` asks: a band the brightness gate has
 skipped is enabled and not drawing, so the toggle alone would admit a row whose
 A/B disables a pass already gone. Chart mode is the second such state, and it
 is the one that does NOT reach `group.visible` — `setIsobar` hides the two
-meshes and leaves the group visible to carry the isobar treatment (§ Chart mode
-+ warp). So `isDrawn` reads the group and the isobar flag together, where the
+meshes and leaves the group visible to carry the isobar treatment ([Chart mode
++ warp](#chart-mode--warp)). So `isDrawn` reads the group and the isobar flag together, where the
 LG glow's own accessor can read its group alone
 (`../local-group/emission/README.md`).
 
@@ -437,7 +437,7 @@ the resolved stars' light twice, 1 the shipped table.
 Two are not knobs despite the slider: `setGlowMagOffset` desynchronises the
 band from the Local Group layer (both read the one zero point), and
 `setExtinctionStrength` at anything but 1.0 contradicts the dust anchor
-(§ Dust). A third is now a *third* kind of thing: the colour pickers
+([Dust](#dust--the-analytic-tier-and-what-composes-with-it)). A third is now a *third* kind of thing: the colour pickers
 luma-normalise on write, so a hue edit cannot move flux at emission — but
 both shipped hues are solved from published photometry, and an edit still
-moves the extincted plane (§ Population tints carry hue, never flux).
+moves the extincted plane ([Population tints carry hue, never flux](#population-tints-carry-hue-never-flux)).

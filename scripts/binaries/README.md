@@ -84,7 +84,7 @@ scripts/binaries/
                                   public/binaries.bin. Detects hierarchical
                                   chains via component-letter prefix matching
                                   and writes outer-before-inner. See
-                                  § Pipeline at a glance, step 3.
+                                  README.md#pipeline-at-a-glance, step 3.
   build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
                                   asserts the strongest-priority resolution per
                                   (wds_id, component) against
@@ -532,7 +532,7 @@ a0 → 0 for near-equal-brightness pairs. Reconstructing `a_rel` needs a
 mass ratio AND a flux ratio we don't reliably have per pair, so `a_AU`
 is left `None` here; Stage 6's `finalize_renderable_elements`
 estimates it from Kepler's third law for the non-visual routes
-(§ Stage 6). The plane angles `i` /
+([Stage 6](#stage-6--multiplestsv-emit)). The plane angles `i` /
 `Ω` are shared between the photocentre and relative orbits and
 populate as-is; `ω` is the photocentre's, which sits π away from the
 secondary's relative-orbit ω whenever the primary carries most of the

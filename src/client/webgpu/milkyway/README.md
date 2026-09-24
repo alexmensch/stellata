@@ -24,7 +24,7 @@ src/client/webgpu/milkyway/
                             Constant-drift guard against the CPU mirror:
                             the march's step counts and τ conversion are
                             imported from milkyway-column-pure, never
-                            restated. § The bound is taken off the mirror.
+                            restated. README.md#the-bound-is-taken-off-the-mirror-so-this-march-has-to-match-it.
   band-uniform-nodes.ts     The seam's two uniform blocks as TSL nodes —
                             the shared group and the per-component one.
   tsl-band-materials.ts     The factory implementing BandMaterials.

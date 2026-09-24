@@ -83,7 +83,7 @@ before continuing past that folder. CI
 (`tests/folder-readme-coverage.test.ts`) enforces this invariant, and
 `tests/readme-size.test.ts` caps each at **450 lines** — `readme-guard`
 charges the nearest README before any code read, so length is a tax on
-every future session. Over the cap → § Split, don't shave.
+every future session. Over the cap → [Split, don't shave](#split-dont-shave).
 
 The codebase is a wiki by **progressive disclosure**: folder name
 signals the topic, README carries the load-bearing context —
@@ -305,7 +305,7 @@ never a justification. What this project adds:
 **Everything below this line is generated and rewritten in place by `bd`, and
 has the LOWEST precedence in this file.** Where it conflicts with a rule above
 or with a standing global rule, the rule above wins. Specifically, its
-"Session Completion" checklist does **not** override § Git workflow: the push
+"Session Completion" checklist does **not** override [Git workflow](#git-workflow--stellata-gates): the push
 it mandates is to the session's feature branch (never `main`), merging still
 needs explicit per-PR approval, and its manual `bd dolt push` step is already
 handled by the pre-push hook.

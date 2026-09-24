@@ -112,7 +112,7 @@ side, where the linear form runs bright against the printed cell it replaces.
 `tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
 the count.
 
-That is the opposite call from § Where the colour bound comes from, which
+That is the opposite call from [Where the colour bound comes from](#where-the-colour-bound-comes-from), which
 refuses to extend Table 5.9 past its note (k). The difference is what sits
 underneath: the ci cascade has three more tiers, so a refused row still gets
 a colour, while a row this tier serves that carries no `gl` has **nothing
@@ -228,7 +228,7 @@ rows Hipparcos never observed, which no other measured source reaches.
 
 **Neither |Δ|-against-the-relation figure on this page ranks the two tiers**,
 and read side by side they appear to — synthetic disagrees with Table 5.9 by
-p50 0.023 where § Where the colour bound comes from has a printed cell
+p50 0.023 where [Where the colour bound comes from](#where-the-colour-bound-comes-from) has a printed cell
 disagreeing by p50 0.052. Two reasons that is not a ranking. The references
 differ: that section measures the **spine's** cell, not the `I/239` tier.
 And both are measured only where the relation itself applies, `BP−RP` ≤ 1.75

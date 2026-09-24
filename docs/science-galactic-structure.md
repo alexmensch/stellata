@@ -176,7 +176,7 @@ spread — two independent constraints meeting at one normalisation.
 
 **That analytic profile is the fallback tier, not the whole band column.**
 What composes with it, over which volumes, and why the slab is not rescaled
-to make room is § The dust stack below.
+to make room is [The dust stack](#the-dust-stack--sources-domains-and-the-partition) below.
 
 Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (per-star) and
 `../src/client/webgpu/milkyway/milkyway-band-tsl.ts` (volumetric); see
@@ -328,7 +328,7 @@ of a camera *outside* coverage, which needs an entry as well as an exit
 distance.
 
 Two of those four were written before anything was measured and the
-measurement overrode them — § Against the four requirements says which and
+measurement overrode them — [Against the four requirements](#against-the-four-requirements) says which and
 why.
 
 The per-star march remains a separate structure either way: it cannot take a
@@ -454,14 +454,14 @@ numbers force:
 
 #### Against the four requirements
 
-The gate's four (§ Sampling the measured grid in the band march) were written
+The gate's four ([Sampling the measured grid in the band march](#sampling-the-measured-grid-in-the-band-march)) were written
 before anything was measured. Two hold as written, and two the measurement
 overrode:
 
 - **Along-ray extent equal to the march step — held, by construction.** Storing
   the column rather than the density is what makes it exact rather than
   approximate, whatever the slice count.
-- **Camera outside coverage — held.** § Camera outside coverage.
+- **Camera outside coverage — held.** [Camera outside coverage](#camera-outside-coverage).
 - **Transverse resolution *finer* than the 13.0′ patch — overridden.** The pin
   is exactly one patch diameter, because the source itself carries nothing finer
   (13.43′ per voxel at the coverage edge) and 2 × 2 supersampling inside a cell
@@ -472,8 +472,8 @@ overrode:
   rebuilds on any camera change; the ε predicate the per-star prepass uses has
   no analogue here. That is the trade the 8.1× fill advantage pays for, and it
   is why the fill's absolute cost (3.0× the prepass, every frame the camera
-  moves) is a per-frame number rather than a per-frame average. § What the fill
-  measured is what it came to.
+  moves) is a per-frame number rather than a per-frame average. [What the fill
+  measured](#what-the-fill-measured-and-what-to-turn-if-it-is-too-slow) is what it came to.
 
 #### What the fill measured, and what to turn if it is too slow
 
@@ -723,7 +723,7 @@ resolve's summation patch, and every error figure is the worst over five grid
 poses. Costs are exact texel and fetch counts over the pinned geometry, not
 timings.
 
-Fill timings (§ What the fill measured): a WebGL2 spike of the fill pass alone
+Fill timings ([What the fill measured](#what-the-fill-measured-and-what-to-turn-if-it-is-too-slow)): a WebGL2 spike of the fill pass alone
 behind a timer query, Chrome on an Apple M4, taken before the WebGPU cutover and
 not on the shipped path. Only its **throughput** is carried forward — the run's
 frustum was mis-sized, so its absolute cell counts are not. Whole-frame costs

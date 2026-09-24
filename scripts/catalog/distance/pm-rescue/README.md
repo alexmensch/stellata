@@ -20,8 +20,8 @@ scripts/catalog/distance/pm-rescue/
 
 `resolvePmRescue` fires only where the winning direction tier's own solution
 carries no PM. The motion it supplies then carries **both** terms: the velocity,
-and the tier's position forward to the scene epoch (§ The rescued motion
-advances the position too). It reaches **39** rows in two shapes:
+and the tier's position forward to the scene epoch ([The rescued motion
+advances the position too](#the-rescued-motion-advances-the-position-too)). It reaches **39** rows in two shapes:
 
 - **36** resolve to a Gaia row with a 2p (position-only) solution and have no
   HIP2 cover, so they take the `gaia_5p` route's PM-less anchor.

@@ -41,7 +41,7 @@ its own record, so the key is the only thing worth asserting on.
 
 **The order is load-bearing, not cosmetic.** Any prefix of the record array is
 then the brightest-looking sky, which is exactly what the progressive load
-paints from its first transport chunk (§ On-disk transport chunking,
+paints from its first transport chunk ([On-disk transport chunking](#on-disk-transport-chunking),
 [Progressive catalog load](/src/client/loaders/README.md#progressive-catalog-load)). It also puts Sol at
 index 0 by some twenty-two magnitudes — and `catalog.solIndex` gates the boot
 focus, the floating-origin seed and the whole solar system, none of which could
@@ -119,7 +119,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           Sol is the only record carrying 255, and
                           the build asserts it. The constellation a
                           designation is *named* for is a separate field,
-                          search-index `dc` (§ Search index).
+                          search-index `dc` ([Search index](#search-index-publicsearch-indexjson)).
   - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer,
                           4=is_binary_primary). `has_name` means an authority
                           NAMED this star — the name table carries the naming
@@ -264,7 +264,7 @@ limit). Two things follow from the ramp, and both are the point:
 
 - **Chunk 0 is the first-paint payload.** Measured on today's build:
   **10,412 records, 716 KB gzipped, ending at apparent V 6.62** — in
-  apparent-V order (§ Record order) that is the naked-eye sky, and it is
+  apparent-V order ([Record order](#record-order)) that is the naked-eye sky, and it is
   smaller than every other artifact boot fetches, so the star catalogue
   stops being the thing first paint waits on. `recordsInFirstChunk` in
   `../build-catalog-expected.json` pins the count. **It does not move with

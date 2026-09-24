@@ -13,10 +13,10 @@ click handlers (single = pin a POI, double = aim-at).
   (pin POI / aim-at).
 - `look-pin-pure.ts` (+ test) — the `controls.target` value OBSERVE
   serialises, and the single condition that invalidates it.
-  § The serialised look pin.
+  [The serialised look pin](#the-serialised-look-pin).
 - `observe-look-pin.ts` (+ test) — `ObserveLookPin`, which holds the
   orientation the pin was last derived at and writes `controls.target`
-  from it. § The serialised look pin.
+  from it. [The serialised look pin](#the-serialised-look-pin).
 - `observe-transition.ts` — navigate↔observe FSM. `setMode`,
   `startExit`, `startUnfocusLerp`, the per-frame lerp, and the
   `ObserveFocusOps` cross-controller seam (implemented by
@@ -38,7 +38,7 @@ Public surface of `ObserveTransition`:
   `isActive` excludes the `unfocus` kind so overlays gating on observe
   visibility stay steady-state-navigate during close-zoom.
 - `observeAnchorOf(kind)` — what the camera stands on, for line layers
-  (§ The observe anchor in line layers).
+  ([The observe anchor in line layers](#the-observe-anchor-in-line-layers)).
 - `cancelUnfocusLerp` — `FocusOps` shim for `WarpController`.
 - `cancelTransition` — used by `FocusController.setFocus`'s observe-cleanup
   branch when the focal star is changing mid-flight.

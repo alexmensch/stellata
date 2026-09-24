@@ -163,7 +163,7 @@ about the VALUE and nothing before Phase B knows it:
    bind is not re-asked: it has answered, with the absence of a value.
 4. **Adjudicate every binding.** Each one rests on a designation alone, so
    it goes through the same `corroborate` a widening rung uses, on the same
-   terms — § The corroboration rule below. This is the guard the union
+   terms — [The corroboration rule](#the-corroboration-rule) below. This is the guard the union
    would otherwise have dropped, and it is not decoration: on the pass that
    landed it, it vetoed bindings that would have given 63 records another
    star's spectral type, and so another star's rendered radius.

@@ -58,7 +58,7 @@ scripts/catalog/spine/
                                   the primaries admit that the spine lacks.
   primaries-audit.ts              `pnpm run audit:spine-primaries` — prints
                                   the report; --out=<dir> writes every row
-                                  behind every count (§ The primaries audit).
+                                  behind every count (README.md#the-primaries-audit).
   primaries-tables.ts             Loads the frozen primary tables the audit
                                   and ../membership/ both measure against —
                                   one table set for both instruments — plus
@@ -66,7 +66,7 @@ scripts/catalog/spine/
                                   data/sid/sameas-overrides.tsv.
   association-audit-pure.ts       Per row, whether the primaries' own
     (+ test)                      cross-references connect every identifier
-                                  it carries (§ The association audit).
+                                  it carries (README.md#the-association-audit).
   association-audit.ts            `pnpm run audit:spine-associations` —
                                   prints the report; --out=<dir> writes the
                                   rows behind it.
@@ -111,7 +111,7 @@ walk order reproduces it; the derivation is a fresh answer, never a replay
 of it.
 
 What that answer decides differently is measured rather than feared:
-§ The primaries audit puts the frozen column at 11,731 bindings no **raw walk**
+[The primaries audit](#the-primaries-audit) puts the frozen column at 11,731 bindings no **raw walk**
 reaches or agrees with, and 233 empty cells a raw walk would fill. **233 is the
 walk-only figure.** The derivation adds SIMBAD's cross-IDs as a fourth source,
 which settles 11,687 of the 11,721 the walks cannot reach and takes the fills

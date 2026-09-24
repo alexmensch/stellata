@@ -12,11 +12,11 @@ src/client/hdr/attachments/
   attachment-roles.test.ts  The struct each volumetric emitter and absorber
                             returns, read off its graph (§ The roles).
   statistic-mask.test.ts    Which emitters may claim lit-surface coverage,
-                            read off each surface's graph (§ The unit).
+                            read off each surface's graph (README.md#the-unit).
 ```
 
 **The struct a surface's graph returns is its whole declaration of how it
-stands to the light already in the target.** § The roles is that table: a new
+stands to the light already in the target.** [The roles](#the-roles) is that table: a new
 layer picks a row, and a layer that fits no row adds one there.
 
 ## Why attachment 0 cannot serve
@@ -173,7 +173,7 @@ detail:
   `emitExtendedSourceTsl`'s struct, which is where that rule lives.
 - **An absorber keeps attachment 0** because nothing else may assume that
   attachment is empty behind it, and needs attachment 2 because that is where
-  the light it dims now is. Attachment 1 stays shut — § Known residuals.
+  the light it dims now is. Attachment 1 stays shut — [Known residuals](#known-residuals).
 - **An occluding emitter takes all three, and the criterion is its blend, not
   its depth.** Attachment 2 leaves the chain everything drawn in front of it
   composites against, so **any draw ordered after the volumetric emitters

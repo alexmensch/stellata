@@ -26,7 +26,7 @@ src/client/debug/frame-cost/passes/
 `buildPassToggles`: the local depth pass (`localDepthPass.enabled`), MW
 band (`milkyway.setEnabled`), LG volumetric emission, molecular-cloud
 absorption (`setAbsorptionEnabled`), the HDR chain and its four
-decomposition rows (§ Decomposing the HDR chain), the luminance
+decomposition rows ([Decomposing the HDR chain](#decomposing-the-hdr-chain)), the luminance
 reduction (`reduction.enabled`), the star core depth-mask
 (`setCoreMaskEnabled`), the planet depth pre-stamp
 (`meshLayer.setDepthStampEnabled`, present only while some body's mesh is
@@ -108,8 +108,8 @@ section below:
   −18.2 ms at bracket 15.1 and −52.4 ms at bracket 0.33, limit mags equal — and at Earth close approach (−10.5 and
   −14.1, brackets 6.6 / 7.0). The sign tracks the vantage: negative at
   both deep-cut views, positive at both dm-0 views, and it flips
-  positive when the statistic writes are masked (§ The compression
-  probe). Unexplained; check `disabledLimitMag` against
+  positive when the statistic writes are masked ([The compression
+  probe](#the-compression-probe--does-the-reductions-cost-track-content)). Unexplained; check `disabledLimitMag` against
   `baselineLimitMag` before believing any one reading, and expect the
   negative at deep-cut vantages.
 
@@ -127,8 +127,8 @@ the runner ([The lever](../../../hdr/exposure/park/README.md#the-lever)).
 **The row lumps every emitter's statistic write together, and splitting it
 gives a BOUND rather than a share.** `--pre-disable mwBand,lgEmission`
 leaves the star field's own writes in the row, and the plain row is every
-emitter's. Differencing the two is the same arithmetic § Decomposing the HDR
-chain forbids within one table and for the same reason — the writes share
+emitter's. Differencing the two is the same arithmetic [Decomposing the HDR
+chain](#decomposing-the-hdr-chain) forbids within one table and for the same reason — the writes share
 bandwidth, and the two runs price frames 2.6x apart, so neither row is the
 other's complement. Read each as an upper bound on its own side. The runner
 refuses to diff such a pair outright ([The refusals](../../../../../scripts/perf/diff/README.md#the-refusals));
@@ -204,7 +204,7 @@ frame** (2026-08-21). Two readings, and the second is the one to carry:
   target rather than a residue.
 
 Instrument matters, and the row is structurally null on this build
-(§ Decomposing the HDR chain) — the figures above are the record of a
+([Decomposing the HDR chain](#decomposing-the-hdr-chain)) — the figures above are the record of a
 boot that no longer exists, not a baseline to diff against.
 
 <a id="these-rows-price-the-fully-parked-frame-not-the-duty-cycle"></a>**These rows price the fully parked frame, not the duty cycle.** The pin

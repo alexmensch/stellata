@@ -67,12 +67,12 @@ pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
 `W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
 Cartographic Coordinates and Rotational Elements 2015 report
 (Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`, plus the
-periodic terms above the visibility bar (§ Librations). Mars is the one
+periodic terms above the visibility bar ([Librations](#librations)). Mars is the one
 body whose linear row is incomplete WITHOUT its ~71-kyr slow terms
 (1.55° of pole Dec, 0.58° of W): those linearise cleanly at J2000 and are
 folded into its linear row instead (see the MARS_ROTATION comment). The
 argument is TT via `tToJdTdb`; Earth alone leaves this whole scheme
-behind (§ Earth is not a linear row).
+behind ([Earth is not a linear row](#earth-is-not-a-linear-row)).
 `texture-orientation.test.ts` pins the whole orientation → texture-UV
 chain (pole-up, no mirror, prime meridian) against frozen JPL
 Horizons sub-observer lon/lat for Mars, Ganymede, Io and the Moon

@@ -52,7 +52,7 @@ src/client/util/url-state/
   pose-change-pure.ts (+ test)    the one scale-free test behind both the
                                   per-frame write trigger and the encoder's
                                   cam / tgt / worldOffset elision. See
-                                  § What counts as a camera move.
+                                  README.md#what-counts-as-a-camera-move.
   url-state.ts (+ test)           blob encode / decode (v1–v4 formats),
                                   default-compression presence mask,
                                   per-component vec3 sub-masks,
@@ -185,7 +185,7 @@ bit order, so mode isn't known until the field loop completes).
   and the consumer to watch is `debug.capture`, which would open such a take
   30 pc out rather than where the link lands.
 - Camera changes are tracked via the `'frame'` event with the scale-free
-  comparison of § What counts as a camera move (no per-frame allocations)
+  comparison of [What counts as a camera move](#what-counts-as-a-camera-move) (no per-frame allocations)
   feeding a 1 s debounced writer. The comparison covers position, target,
   **and** `camera.up` — so a roll gesture (which moves neither position nor
   target) still triggers a URL update.
@@ -223,8 +223,8 @@ bit order, so mode isn't known until the field loop completes).
   (navigate). **That anchor test cannot answer while a focus is pending**:
   it reads boot's Sol focus, not the star the blob names, and applying the
   real focus bails observe straight back out. So the leg is skipped there
-  and re-run from the deferred callback — § A focus that resolves after the
-  pose. Chart rides with it, being observe-gated.
+  and re-run from the deferred callback — [A focus that resolves after the
+  pose](#a-focus-that-resolves-after-the-pose). Chart rides with it, being observe-gated.
 - The URL writer skips frame-triggered updates while
   `isCameraTransitionActive()` is true (warp, observe enter/exit, or the
   navigate-mode unfocus zoom-out) — those animate camera position and
@@ -239,7 +239,7 @@ The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
 `all` — a fully-cluttered share stays byte-identical to before.
 
 `coordSphere` is a **four-state carried across several places**, not one
-field — and it does not carry ORB, which is § ORB and the orbit lock.
+field — and it does not carry ORB, which is [ORB and the orbit lock](#orb-and-the-orbit-lock).
 FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
 one zero-byte presence bit per frame past the galactic default says which —
 bit 24 equatorial, bit 26 ecliptic, both built by `coordSphereFrameField`.

@@ -96,10 +96,10 @@ attribute writers here.
   `scripts/colour/blackbody-lut.ts`. Do not edit by hand. 256-entry
   blackbody → **linear**-sRGB lookup indexed by B–V over [-0.4, 2],
   peak-normalised. Regenerate via `pnpm run build:lut`. The vertex
-  shader renormalises each sample to luminance 1 (§ Physical-luminance
-  emission).
+  shader renormalises each sample to luminance 1 ([Physical-luminance
+  emission](#physical-luminance-emission)).
 - `star-pass-split.test.ts` — pins the vertex stage to routing the
-  disc/glow split on the undimmed magnitude (§ Star rendering).
+  disc/glow split on the undimmed magnitude ([Star rendering](#star-rendering-instanced-quads-three-passes)).
   Source-level, because no behavioural suite can reach it: the CPU
   mirror takes resolved size terms and agrees with itself whichever
   value the shader routes on.

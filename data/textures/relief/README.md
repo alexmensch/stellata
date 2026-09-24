@@ -75,7 +75,7 @@ rejected at file level. Shipping the
 height quantises to 0.82° of slope terracing, a third of the median
 tilt, and a 16-bit height PNG is larger than the normal map it would
 produce while costing three taps per fragment. What that q98 number is
-and is not evidence of: § BC5 measured.
+and is not evidence of: [BC5 measured](#bc5-measured--and--lossless-caught-the-packing-not-the-codec).
 
 **Why 4096.** The slope signal buys terminator contrast and keeps
 climbing with width — the Moon's p90 tilt goes 9.7° → 11.6° from 2048
@@ -174,7 +174,7 @@ unlike the other three:
   chosen on, and the one to read against the Moon's 11.66°.
 
 Its horizon pair is therefore **4096×2048**, not 2048×1024 — the output
-grid is half the DEM width by the identity in § Cast shadows.
+grid is half the DEM width by the identity in [Cast shadows](#cast-shadows--dem-derived-horizon-maps).
 
 **One consequence in the renderer.** With the floor at the reference sphere
 there is no basin for a summit to stand over, so Earth's two limb bounds
@@ -322,7 +322,7 @@ azimuths.
 **It exists because the horizon pair cannot answer this question.** Those
 planes march from **two OUTPUT texels** out and skip everything nearer,
 deliberately: a caster that close throws a shadow no camera distance can
-resolve (§ Cast shadows). Sky occlusion carries no such requirement — a wall
+resolve ([Cast shadows](#cast-shadows--dem-derived-horizon-maps)). Sky occlusion carries no such requirement — a wall
 too small to draw still blocks its share of the sky — and the near field is
 exactly where a crater floor loses most of its. So the same eight channels
 cannot serve both readings, and this map marches from **one DEM texel**,

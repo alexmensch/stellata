@@ -19,7 +19,7 @@ for one more column, widening a request set, re-stratifying the SIMBAD sample
 — all are in-session work. Never scope a design down, defer a field, or hand a
 pull back to the user on the assumption that a network fetch is out of reach;
 the cost is the pull's wall-clock time, and `--force` / the `.ckpt` resume path
-(§ Resuming a long pull) bound the retry risk.
+([Resuming a long pull](#resuming-a-long-pull)) bound the retry risk.
 
 **None of these is a reason to defer a pull to its own PR**, and each has been
 used as one: the artifact is tens of MB and tracked in LFS; the re-pull moves

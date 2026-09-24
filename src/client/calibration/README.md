@@ -72,7 +72,7 @@ by `devicePixelRatio` and fills **one device pixel per stripe**. A CSS
 resolvable and every match point shifts.
 
 The cell measures its own laid-out box rather than carrying fixed
-dimensions, so it tracks § Sizing. That makes **layout a precondition**:
+dimensions, so it tracks [Sizing](#sizing). That makes **layout a precondition**:
 a still-hidden canvas measures zero and is skipped, so the cells are cut
 *after* `handle.open()`, never before. They are re-cut on `resize`, which
 covers both a viewport change and a window dragged between displays of

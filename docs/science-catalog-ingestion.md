@@ -61,7 +61,7 @@ which underlying catalog supplied each piece of data:
 - `pm_src` — origin of proper motion. Nothing reads it: the space-motion
   cascade takes its PM from whichever tier the direction cascade selected,
   and re-keys through the rescue cascade where that tier states none
-  (§ Current-epoch star positions).
+  ([Current-epoch star positions](#current-epoch-star-positions--space-motion-propagation-to-t)).
 
 The two source families have meaningfully different magnitude
 distributions: HIP-sourced rows average `mag ≈ 8.4`, while Tycho-sourced
@@ -170,7 +170,7 @@ the underlying distance actually is a Gaia inverse-parallax estimate
 rows we take the Bailer-Jones distance (photogeometric `r_med_photogeo`
 preferred, geometric `r_med_geo` as fallback when photogeo is absent);
 position follows as the direction-cascade unit vector × the new distance
-(§ Driver astrometry). Brightness needs no separate correction here:
+([Driver astrometry](#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)). Brightness needs no separate correction here:
 absmag is derived once, from the cascade's V at whatever distance the
 whole override stack settled on, so a star placed at a new distance and
 *lit* for the old one is unreachable rather than guarded against.

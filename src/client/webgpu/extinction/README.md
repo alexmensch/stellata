@@ -32,14 +32,14 @@ src/client/webgpu/extinction/
     (+ test)                  (texture), the A_V cache (storage buffer)
                               and the refill worklist's — with their
                               placeholders and the attach-time swap
-                              (§ One owner for every shared slot).
+                              (README.md#one-owner-for-every-shared-slot).
   extinction-prepass-webgpu.ts  WebGpuExtinctionPrepass — the whole fill
     (+ test)                  and the worklist refill into a star-indexed
                               float storage buffer, behind
                               ExtinctionPrepassSeam.
   extinction-parity.ts        The kernel's parity instrument: the same
                               march as a fragment pass, bit-compared
-                              against the buffer (§ The prepass kernel).
+                              against the buffer (README.md#the-prepass-kernel).
 ```
 
 ## Layout
@@ -183,7 +183,7 @@ Of the four requirements the single-writer audit put on this design
 **The A_V buffer stays catalogue-star-indexed.** The compaction resolves
 its survivor-list slot to the star before reading `av.element(self)`, and
 the refill kernel writes through the star index it was handed, so the
-cold-read path (§ Cold reads) and any readback design over it key on the
+cold-read path ([Cold reads](#cold-reads--the-one-behaviour-that-is-not-parity)) and any readback design over it key on the
 catalogue index as before.
 
 ## What it costs, and what it holds
@@ -205,12 +205,12 @@ the live app (`../../debug/memory/README.md`).
 So ~36 B per star, ~33.8 MiB of video memory for the pass's whole life,
 plus the 15.0 MiB `Float32Array` the position attribute keeps on the JS
 heap after upload and the 3.75 MiB `Uint32Array` behind the order table,
-which the parity check reads (§ The prepass kernel). **The buffer and that
+which the parity check reads ([The prepass kernel](#the-prepass-kernel)). **The buffer and that
 CPU copy are one array**, so `dispose()` drops the field as well as
 releasing the attribute — either reference alone keeps the 3.75 MiB alive.
 All survive on an integrated or mobile GPU without argument.
 
-The pick mirror (§ Cold reads) is a third heap allocation, the A_V row's
+The pick mirror ([Cold reads](#cold-reads--the-one-behaviour-that-is-not-parity)) is a third heap allocation, the A_V row's
 3.75 MiB again — but only from the first pointer event that asks for it,
 and re-allocated per recompute the pick actually reaches, never per
 recompute.
@@ -262,7 +262,7 @@ visible, which reads as a wrongly un-reddened star rather than as a
 failure. In the whole fill a skipped star's element is assigned **zero**,
 not left alone, so the buffer stays a function of the dispatch and
 `verifyExtinction()` keeps its total bit compare — the reference march runs
-the identical gate closure (§ The prepass kernel).
+the identical gate closure ([The prepass kernel](#the-prepass-kernel)).
 
 **The refill runs the gate in the compaction, ahead of the read, and the
 refill kernel runs none.** On an armed frame the compaction kernel's
@@ -370,7 +370,7 @@ invalidation. Three obligations fall out of caching the same test:
   and the watch loop both derive from it.
   **Every key on it must stay free of the per-frame scene adaptation**,
   or this cache refills the whole catalogue's march on every frame
-  instead of on every settle (§ What it costs, and what it holds, for the
+  instead of on every settle ([What it costs, and what it holds](#what-it-costs-and-what-it-holds), for the
   sample count that is). `uThresholdMag` is the one that could move: it is
   `m_lim + MAG_PER_STOP·ev`, and `ev` is the user's discrete trim, with
   the adaptation cut held out of it on exactly this ground

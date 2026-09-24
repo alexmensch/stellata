@@ -28,7 +28,7 @@ src/client/chart-mode/
   chart-palette.ts (+ test)       Authored ink values of the paper palette,
                                   shared by the layers that swap into it,
                                   plus the paper's own clear colour
-                                  (§ Chart palette).
+                                  (README.md#chart-palette).
 ```
 
 ## Chart palette
@@ -221,7 +221,7 @@ inherits no exposure state at all.
 
 Click-pick tracks **render visibility** identically for every kind: a
 body is click-pinnable iff it is currently drawn. Chart mode hard-clips
-the star disc at `uLimitMag` (no soft taper — § Star disc sizing), so
+the star disc at `uLimitMag` (no soft taper — [Star disc sizing](#star-disc-sizing--magnitude-driven)), so
 `pickStar`'s cutoff drops the `SOFT_TAPER_MARGIN_MAG` it adds in
 navigate. **Both** kinds size the hit radius from the chart disc px
 (`chartDiscPxForAppMag`) rather than the physical/perceptual disc —

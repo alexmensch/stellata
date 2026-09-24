@@ -63,7 +63,7 @@ Three tiers, all snapshot-pinned:
   showcase systems (Castor, Algol, AR Cas, ν Sco, 40 Eri).
   `scripts/catalog/validate/known-stars.test.ts` loads `public/catalog.bin` via
   the runtime loader and asserts every row matches within tolerance.
-  Adding a row → see § Adding to the known-stars corpus below.
+  Adding a row → see [Adding to the known-stars corpus](#adding-to-the-known-stars-corpus) below.
   The sky-position corpus (`sky-position-corpus.tsv` +
   `sky-position.test.ts`, [Direction resolution](../distance/README.md#direction-resolution)) is the companion
   Tier A harness for single-star angular placement.

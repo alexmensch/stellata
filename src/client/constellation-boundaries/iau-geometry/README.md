@@ -15,11 +15,11 @@ all derived from, and the external checks that corroborate it.
 ```
 src/client/constellation-boundaries/iau-geometry/
   iau-boundaries-pure.ts          Edge parsing, the cell decomposition
-    (+ test)                      (§ Cell decomposition), point lookup,
+    (+ test)                      (README.md#cell-decomposition--the-self-validating-invariant), point lookup,
                                   nearest-edge distance (§ Nearest-edge
                                   distance), the ICRS polyline resampling
-                                  (§ ICRS polylines), the per-region label
-                                  anchors (§ Label anchors), and
+                                  (README.md#icrs-polylines), the per-region label
+                                  anchors (README.md#label-anchors), and
                                   createIauConstellationLookup.
   iau-athyg-agreement.test.ts     Catalogue-wide cross-check against AT-HYG's
                                   editorial con column (§ Agreement).
@@ -70,7 +70,7 @@ plausible:
   the walk throws rather than emit one that doesn't. A centre of mass is
   only guaranteed inside a convex region, and this is the exact failure
   the flux-weighted centroid it replaced had: Serpens' label sat in the
-  Caput/Cauda gap, which is Ophiuchus (§ Serpens). Keeping SER1/SER2
+  Caput/Cauda gap, which is Ophiuchus ([Serpens](#serpens)). Keeping SER1/SER2
   split is what keeps the assertion true — a merged Serpens anchor would
   fail it, not slip past it.
 
@@ -117,7 +117,7 @@ plausible-looking sky:
   from 61 to 149 while every named-star spot check still passes.
 
 The epoch is therefore pinned by the disagreement count, not by spot
-checks. See § Agreement and § ρ Aquilae.
+checks. See § Agreement and [ρ Aquilae](#ρ-aquilae).
 
 ## Cell decomposition — the self-validating invariant
 
@@ -161,7 +161,7 @@ half is in Serpens, full stop — that is the IAU answer and what byte 34
 carries. But anything *placed* per region keeps the split: the chart
 draws two "SERPENS" labels, one per part, because any single point
 representing the union lands in the gap between them, which is
-Ophiuchus (§ Label anchors).
+Ophiuchus ([Label anchors](#label-anchors)).
 
 ## ρ Aquilae
 
@@ -216,7 +216,7 @@ The CSV has no GCVS column — that cross-match happens later in the build
 where the designated movers are pinned.
 
 The count is pinned as an exact number rather than a rate because it is
-the sharpest signal available on the precession epoch (§ B1875).
+the sharpest signal available on the precession epoch ([B1875](#b1875)).
 
 **This suite is now the only place the comparison is made.** The build used
 to run its own copy over the resolved position — `conPositionalDisagreement`,

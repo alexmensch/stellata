@@ -22,7 +22,7 @@ comes out* is here.
 - `resolved-hole-table.ts` — **generated** by
   `scripts/milkyway-calibration/` off the built catalogue: the two cap
   rows, the record count they were measured on, and the resolution-hole
-  table (§ The resolution hole). Never edited by hand.
+  table ([The resolution hole](#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
   rule the table is sampled with, the cube it is resampled onto, the
   CPU mirror of the trilinear fetch both shaders make, and
@@ -144,7 +144,7 @@ the SSP grid and returns the disc:
 | --- | --- | --- |
 | `GALAXY_TOTAL_COLOUR_INDEX_BV` | 0.73 | BHG16 Table 2 |
 | `BULGE_COLOUR_INDEX_BV` | 0.9574 | BC03 Chabrier SSP, Z = 0.02, 10 Gyr |
-| `BULGE_TO_TOTAL_LIGHT_V` | 0.0775 | § The light ratio, above |
+| `BULGE_TO_TOTAL_LIGHT_V` | 0.0775 | [The light ratio](#the-light-ratio--bt-in-the-solve-is-not-the-published-number), above |
 | `DISC_COLOUR_INDEX_BV` | **0.7129** | solved |
 
 Both then go through the star field's own chain — Ballesteros → Planck →
@@ -216,7 +216,7 @@ model's light at that point**, read out of `resolved-hole-table.ts`:
   inside 10 pc and the last shell's past 15.8 kpc. That is the rule the
   cube is resampled with (`sampleTexelCentres`), not what the shader does:
   it computes one `vec3` into the cube and takes a trilinear fetch
-  (§ The table is a 3D grid, not a uniform array), importing the layout
+  ([The table is a 3D grid, not a uniform array](#the-table-is-a-3d-grid-not-a-uniform-array)), importing the layout
   constants by name.
 - Applied **before the dust**, so the resolved stars and what the band
   still draws see the same column — the catalogue's stars are rendered
@@ -254,7 +254,7 @@ two columns above are that check measured. The epoch is free because
 5,000 yr of proper motion is sub-parsec for the whole catalogue against a
 tenth-dex shell, so no star changes cell. **From outside the Galaxy the
 claim is not yet measured.** What is pinned there is the band alone,
-0.004 mag fainter (§ Two checks). Giving it back needs the star field to
+0.004 mag fainter ([Two checks](#two-checks-and-both-disagree-by-the-same-sign-and-order)). Giving it back needs the star field to
 carry the whole of what came out, and the display-floor collapse does
 preserve a star's flux integral ([§ 4](/docs/render-rules.md#4-invisible-is-not-free)) while the
 magnitude cull above it does not — so the like-for-like total from
@@ -399,8 +399,8 @@ Plane-to-pole contrast **1.70 mag** photometrically. **The midplane is
 not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
 most dust. The real band behaves the same way; the dark rift is dust,
 not a gap in the stars. Every row is the band alone — the resolved stars
-the hole took out of it are drawn as points on top (§ The resolution
-hole), and b = 5 is the one row the hole barely touches, because that
+the hole took out of it are drawn as points on top ([The resolution
+hole](#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)), and b = 5 is the one row the hole barely touches, because that
 column reaches through the plane past where the catalogue resolves.
 
 **Sub-threshold rows carry the operator's faint-end toe**

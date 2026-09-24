@@ -88,7 +88,7 @@ node-import-boundary.test.ts
                          data/ off disk takes the `-fixture` suffix and
                          is exempt by it; a type-only import of one still
                          crosses, since it erases before the bundler
-                         runs. § Node import boundary below carries the
+                         runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and

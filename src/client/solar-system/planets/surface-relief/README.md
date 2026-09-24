@@ -199,7 +199,7 @@ zodiacal light ~10⁻⁸, and the solar disc's own penumbra is already `uSunAngR
 For a horizontal patch the cosine-weighted sky view factor is the mean of cos²h
 over the azimuths, and a skyline is stored as sin h — so the terrain's share is
 `mean(max(sin h, 0)²)`. That is one scalar per texel and it rides its own map,
-`<body>-skyview.webp`, for the reason § F comes from its own map gives: the
+`<body>-skyview.webp`, for the reason [F comes from its own map](#f-comes-from-its-own-map-not-from-the-horizon-planes) gives: the
 horizon planes deliberately skip the near field, which is where the answer
 mostly lives. Writing ρ for the body's geometric albedo and F for that terrain
 fraction:

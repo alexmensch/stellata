@@ -46,7 +46,7 @@ the anchor alone. While it wins, the applied cut has no input the frame can
 move, so sustaining it needs no measurement: there is no drift to bound and
 no margin to carry. What ends the regime is the scene changing, in one of
 two ways — `L̄` falling under `Lw`, or coverage rising far enough that the
-pin starts to weigh — and § Wake below is what bounds how long either takes
+pin starts to weigh — and [Wake](#wake) below is what bounds how long either takes
 to be seen.
 
 **Every measurement the park reads omits a share that moves the cut by

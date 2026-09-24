@@ -352,7 +352,7 @@ that no longer hugs the ball is what breaking that ratio looks like.
 `RENDERED_BOX_PX` is now the width the ball's raster resolution was **chosen
 against** rather than the width it renders at; `BALL_RASTER_PX` is a drawing
 buffer, not a layout box. The panel column is a little wider than that, so the
-texture margin in § Rendering absorbs a few per cent of upscale — which is the
+texture margin in [Rendering](#rendering) absorbs a few per cent of upscale — which is the
 number to re-check if `--panel-width` ever grows materially.
 
 ## Case chrome

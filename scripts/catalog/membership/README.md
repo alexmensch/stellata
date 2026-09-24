@@ -3,7 +3,7 @@
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
-(§ Correcting a merge decision), plus the 63,676 records the primaries name
+([Correcting a merge decision](#correcting-a-merge-decision)), plus the 63,676 records the primaries name
 that AT-HYG's subset never carried — 376,932 rows, and the 602,228 the V <= 11
 magnitude term adds on top (`magnitude-term/README.md`), 979,160 in
 all. **`readStars` walks it, and
@@ -85,7 +85,7 @@ gaia_source_id  binding  routes  term
   no primary publishes — 46 today, the proper names
   `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
   Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
-  (§ The unattested labels leave the row).
+  ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
 
 Rows are sorted by SID canonical key (`sortManifestRows`), then TYC, then
 source — a total order over content, so a regeneration diffs by what changed
@@ -318,7 +318,7 @@ replacement for `../spine/inherited-spine-parity.test.ts`'s spine-less-ledger
 arithmetic and label-flips replay:
 
 - **(i)** every spine row resolves to exactly one manifest row — with the
-  folds of § Correcting a merge decision as the only exception, whose count is
+  folds of [Correcting a merge decision](#correcting-a-merge-decision) as the only exception, whose count is
   pinned and whose every pair is checked, so a second row landing on someone
   else's record still fails.
   `matchSpineToManifest` resolves it the way `sid:allocate` resolves a record:

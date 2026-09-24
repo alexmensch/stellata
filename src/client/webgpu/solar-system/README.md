@@ -107,8 +107,8 @@ shell and the annulus need, and each of their varyings is a TSL built-in
 — `positionView`, `normalView`, `uv()`, and `varying(positionGeometry.xy)`
 for the annulus. So those three set `fragmentNode` alone, and the depth
 pre-stamp — the same spheroid, no varyings at all — sets a fragment that
-writes nothing but still swaps (§ Every fragment writes the whole output
-struct). The glare and the glyph project their own screen-space quads and
+writes nothing but still swaps ([Every fragment writes the whole output
+struct](#every-fragment-writes-the-whole-output-struct)). The glare and the glyph project their own screen-space quads and
 carry a `vertexNode`.
 
 `normalView` normalises after interpolation, and three's

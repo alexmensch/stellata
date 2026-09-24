@@ -222,7 +222,7 @@ against the parallax they were derived from and bias the metric toward
 agreement that was never measured.
 
 Gliese `V/70A` is subject to neither, for two different reasons — which is why
-it is two tiers rather than one (§ The cascade). Its **trigonometric** parallaxes
+it is two tiers rather than one ([The cascade](#the-cascade)). Its **trigonometric** parallaxes
 predate both instruments, so no later reduction stands behind them to withdraw.
 Its photometric and spectroscopic ones are not measurements at all, so there is
 nothing to withdraw either; that same fact is what ranks them last.
@@ -291,7 +291,7 @@ mas, the HIP2 value the floor refused to eight significant figures. That is the
 shape the gate refuses; the bound-sibling tier now places HIP 26549 itself off
 HIP 26551 D's clean fit, so it is no longer a row the gate sees. Promoting such
 a row re-serves a refusal through a courier, the general rule at the head of
-§ The skip rules. The refusal is counted as `companionDroppedParkedRecord`
+[The skip rules](#the-skip-rules--one-principle-two-publications). The refusal is counted as `companionDroppedParkedRecord`
 (**9**), and it matches on the measurement: `statesRefusedParallax` compares the
 row's stated distance against every parallax a skip rule refused on that record,
 indexed by the id the pair row names it with.
@@ -352,7 +352,7 @@ doubt.
 
 **Most rows it refuses are the parked primary's siblings, not the parked record
 arriving twice.** Stage 2/3 bind one blended source to every component row of a
-sub-arcsec pair (§ The cascade, on why the sibling index dedups on exactly
+sub-arcsec pair ([The cascade](#the-cascade), on why the sibling index dedups on exactly
 this), so the parked primary's `gaia_source_id` and HIP sit on its siblings'
 rows too, and those rows state the same refused distance. WDS 01425+5000 is the
 shape: comp A and comp B both read HIP 7979 / source 405578335904111744.

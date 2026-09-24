@@ -9,8 +9,8 @@ is the per-fragment half: how dark one surface point is, mirroring the
 mesh shader's caster loop. Both are consumed here.
 
 The folder also owns the two render-path eclipse claims — the whole-body
-brightness drop (§ True-eclipse dim, computed in `../planet-body-field.ts`)
-and the refracted glow that survives totality (§ Umbral glow).
+brightness drop ([True-eclipse dim](#true-eclipse-dim), computed in `../planet-body-field.ts`)
+and the refracted glow that survives totality ([Umbral glow](#umbral-glow--why-a-totally-eclipsed-moon-is-red-not-black)).
 
 ## Files in this area
 
@@ -28,7 +28,7 @@ src/client/solar-system/planets/eclipses/
                                   two greatest-eclipse searches.
   eclipse-canon.test.ts           23 solar and 12 lunar named eclipses from
                                   NASA's Five Millennium Canon, 1978 BC to
-                                  2928 AD. See § What is pinned.
+                                  2928 AD. See README.md#what-is-pinned.
   umbral-glow-pure.ts (+ test)    Refracted, reddened sunlight inside a
                                   caster's umbra, and the umbral depth both
                                   render layers measure it at. See § Umbral

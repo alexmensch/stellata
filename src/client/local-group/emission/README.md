@@ -9,26 +9,26 @@ in the parent (`../README.md`); this folder is the light.
 Live and unconditional: the lg module's `attach` always constructs the
 layer beside the wireframes. `showLgEmission` (through the module's
 `setEmissionEnabled` leg) and URL bit 22 are the only gates, and there
-are no Deep-field emission knobs (§ Zero free parameters).
+are no Deep-field emission knobs ([Zero free parameters](#zero-free-parameters--the-emission-scale-is-derived)).
 
 ## Files
 
 - `local-group-emission.ts` — `LocalGroupEmission`: the two instanced
   passes, their materials and the per-frame rebase.
 - `local-group-emission-pure.ts` — emission-block → component
-  decomposition, the population tints (§ Population tints), instance
+  decomposition, the population tints ([Population tints](#population-tints--two-family-seeds-both-derived)), instance
   packing, the flux ↔ magnitude inverse, and a CPU mirror of the
   raymarch. Keep the mirror in lockstep with the shader
   (`../../webgpu/local-group/local-group-emission-tsl.ts`), which imports
   the constants it marches on.
 - `lg-emission-materials.ts` (+ test, + mock) — the material seam: the
-  neutral `LgEmissionMaterials` contract (§ The material seam).
+  neutral `LgEmissionMaterials` contract ([The material seam](#the-material-seam)).
 - `local-group-emission.test.ts` — wiring, instance packing, the shader
   mirror, the tint derivation.
 - `local-group-emission-calibration.test.ts` — the epic's acceptance
-  test (§ Zero free parameters).
+  test ([Zero free parameters](#zero-free-parameters--the-emission-scale-is-derived)).
 - `lg-peak-pure.ts` (+ test) — the brightest pixel the glow renders from a
-  camera position, as a bound (§ The brightest rendered pixel).
+  camera position, as a bound ([The brightest rendered pixel](#the-brightest-rendered-pixel)).
 - `lg-catalog-fixture.ts` — the shipped catalogue assembled from `data/` for
   the suites above, since a worktree carries no `public/` artifact. It reads
   `node:fs` and `scripts/`, so it is the one module here no browser code may

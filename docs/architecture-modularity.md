@@ -332,7 +332,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    field list (scene, camera, canvas, shared uniforms, solIndex, and
    accessors for t / worldOffset / focus / monochrome / declutter /
    constellation / frame-tick) and amended the contract sketch
-   (§ Tier 2). It also collapsed `FocusKind` into an alias of
+   ([Tier 2](#tier-2--kind-modules)). It also collapsed `FocusKind` into an alias of
    `TargetKind` — half of structural finding 1.
 3. **Migrate the remaining non-star kinds** — soft kinds (cloud / lg /
    shell) **landed** (`molecular-clouds/cloud-module.ts`,
@@ -361,7 +361,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    writes and the mesh's camera read — and the SVG planet labels stay
    in `main.ts` (they read the orbit-rings layer + focus state, both
    shell machinery).
-4. **Facade flattening** — landed (§ Facade flattening).
+4. **Facade flattening** — landed ([Facade flattening](#facade-flattening-phase-4--landed)).
 5. **Engine-services extraction + star module** — split into three
    sub-beads under the phase bead. **5a landed**: `FloatingOrigin`
    (frame/anchor service with the policy seam) + shared view uniforms
