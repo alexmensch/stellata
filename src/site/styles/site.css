@@ -45,6 +45,8 @@
   --column: 72rem;
   --hairline: 1px;
   --rule: var(--hairline) solid var(--border);
+  --rule-strong: var(--hairline) solid var(--border-strong);
+  --cluster-space-tight: var(--space-2xs) var(--space-m);
   --underline-offset: 3px;
   --focus-offset: 3px;
   /* In em, so the halo grows with the type it backs rather than thinning
@@ -122,7 +124,6 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
   color: var(--fg);
   font-family: var(--font-mono);
   font-size: var(--step-0);
@@ -149,7 +150,6 @@ h3 {
   font-weight: var(--weight-medium);
   line-height: var(--leading-flat);
   letter-spacing: var(--tracking-display);
-  color: var(--fg);
   text-wrap: balance;
 }
 
@@ -171,13 +171,16 @@ p {
 }
 
 a {
-  color: var(--accent);
+  color: var(--link-color, var(--accent));
   text-decoration: underline;
   text-underline-offset: var(--underline-offset);
   text-decoration-thickness: var(--hairline);
 }
 a:hover {
   text-decoration: none;
+}
+a:where(:hover) {
+  color: var(--accent);
 }
 
 code {
@@ -243,7 +246,7 @@ video {
 .cluster[data-state='repel'] {
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--space-2xs) var(--space-m);
+  gap: var(--cluster-space-tight);
 }
 
 /* Every Layout's switcher: two-up above --switcher-threshold and stacked
@@ -287,15 +290,10 @@ video {
 }
 .masthead nav {
   --cluster-align: baseline;
-  --cluster-space: var(--space-2xs) var(--space-m);
+  --cluster-space: var(--cluster-space-tight);
+  --link-color: var(--fg-dim);
 
   font-size: var(--step--1);
-}
-.masthead nav a {
-  color: var(--fg-dim);
-}
-.masthead nav a:hover {
-  color: var(--accent);
 }
 
 /* ── Block: banner ─────────────────────────────────────────────────── */
@@ -415,7 +413,6 @@ video {
   align-self: center;
   font-size: var(--step-1);
   font-variant-numeric: tabular-nums;
-  color: var(--fg);
 }
 
 /* ── Block: section ────────────────────────────────────────────────── */
@@ -441,8 +438,6 @@ video {
 }
 .claim p {
   max-inline-size: var(--measure);
-  font-size: var(--step--1);
-  color: var(--fg-dim);
 }
 
 /* ── Block: sight ──────────────────────────────────────────────────── */
@@ -468,10 +463,6 @@ video {
 }
 .sight-copy > * {
   --flow-space: var(--space-s);
-}
-.sight-copy p {
-  font-size: var(--step--1);
-  color: var(--fg-dim);
 }
 .sight-media {
   display: block;
@@ -568,7 +559,7 @@ a.sight-media:hover {
   text-transform: uppercase;
   color: var(--fg);
   background: var(--pill-bg);
-  border: var(--hairline) solid var(--border-strong);
+  border: var(--rule-strong);
   border-radius: var(--radius-pill);
   text-decoration: none;
   white-space: nowrap;
@@ -592,6 +583,9 @@ a.sight-media:hover {
 
 .label {
   display: block;
+}
+.label,
+.sources th {
   font-size: var(--step--2);
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
@@ -605,20 +599,26 @@ a.sight-media:hover {
   max-inline-size: var(--measure-lead);
   font-size: var(--step-1);
   line-height: var(--leading-snug);
-  color: var(--fg);
 }
 
 /* Carries its own measure, so no use site has to remember one. */
 .aside {
   max-inline-size: var(--measure);
+}
+
+/* Secondary text: every block's small, dimmed prose. */
+.aside,
+.claim p,
+.sight-copy p,
+.spec-list li,
+.requirement p,
+.footer {
   font-size: var(--step--1);
   color: var(--fg-dim);
 }
-.aside a {
-  color: var(--fg-dim);
-}
-.aside a:hover {
-  color: var(--accent);
+.aside,
+.footer {
+  --link-color: var(--fg-dim);
 }
 
 /* ── Block: skip link ──────────────────────────────────────────────── */
@@ -632,7 +632,7 @@ a.sight-media:hover {
   padding-block: var(--space-2xs);
   padding-inline: var(--space-s);
   background: var(--bg-2);
-  border: var(--hairline) solid var(--border-strong);
+  border: var(--rule-strong);
   color: var(--fg);
   text-decoration: none;
 }
@@ -658,29 +658,23 @@ a.sight-media:hover {
 /* On the cells, not the table: the UA centres a th whose inherited
    text-align is the initial value, and `start` is the initial value. */
 .sources :is(th, td) {
+  padding-inline: var(--space-s);
   text-align: start;
 }
 .sources th {
   padding-block: var(--space-2xs);
-  padding-inline: var(--space-s);
-  font-size: var(--step--2);
   font-weight: normal;
-  letter-spacing: var(--tracking-caps);
-  text-transform: uppercase;
-  color: var(--fg-dim);
   border-block-end: var(--rule);
   white-space: nowrap;
 }
 .sources td {
   padding-block: var(--space-xs);
-  padding-inline: var(--space-s);
-  border-block-end: var(--rule);
   vertical-align: top;
   line-height: var(--leading-snug);
   color: var(--fg-dim);
 }
-.sources tr:last-child td {
-  border-block-end: none;
+.sources tr + tr td {
+  border-block-start: var(--rule);
 }
 .sources td:first-child {
   color: var(--fg);
@@ -700,13 +694,12 @@ a.sight-media:hover {
 }
 .spec-list li {
   padding-block: var(--space-xs);
-  border-block-start: var(--rule);
-  font-size: var(--step--1);
   line-height: var(--leading-snug);
-  color: var(--fg-dim);
+}
+.spec-list li + li {
+  border-block-start: var(--rule);
 }
 .spec-list li:first-child {
-  border-block-start: none;
   padding-block-start: 0;
 }
 .spec-list b {
@@ -724,12 +717,10 @@ a.sight-media:hover {
 }
 .requirement {
   padding-block-start: var(--space-xs);
-  border-block-start: var(--hairline) solid var(--border-strong);
+  border-block-start: var(--rule-strong);
 }
 .requirement p {
   max-inline-size: var(--measure-short);
-  font-size: var(--step--1);
-  color: var(--fg-dim);
 }
 
 /* ── Block: footer ─────────────────────────────────────────────────── */
@@ -737,14 +728,6 @@ a.sight-media:hover {
 .footer {
   padding-block: var(--space-m) var(--space-l);
   border-block-start: var(--rule);
-  font-size: var(--step--1);
-  color: var(--fg-dim);
-}
-.footer a {
-  color: var(--fg-dim);
-}
-.footer a:hover {
-  color: var(--accent);
 }
 .footer-version {
   font-variant-numeric: tabular-nums;
