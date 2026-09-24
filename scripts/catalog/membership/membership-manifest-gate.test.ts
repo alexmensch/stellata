@@ -112,7 +112,7 @@ describe('binding review dispositions', () => {
 });
 
 // The three inputs ride LFS, so the bare CI `test` job sees pointer stubs and
-// this self-skips; it runs smudged in the Tier-A step, which names this file.
+// this self-skips; it runs smudged in CI's `Tier-A star corpus` step, which names this file.
 describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () => {
   let spine: SpineRow[];
   /** Every spine row with its corrected cells, in file order — the keys a

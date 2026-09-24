@@ -39,7 +39,7 @@ scripts/catalog/membership/
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
                                   over the COMMITTED artifacts. LFS-gated;
-                                  runs in the Tier-A CI step.
+                                  runs in CI's `Tier-A star corpus` step.
   membership-manifest-expected.json
                                   Pinned count snapshot. Refresh with
                                   UPDATE_BUILD_COUNTS=1.

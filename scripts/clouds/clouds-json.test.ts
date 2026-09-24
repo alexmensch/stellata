@@ -1,6 +1,6 @@
 // Pins the clouds.json v3 payload: density-model fields, class defaults,
 // noiseModel constants, and the alias / canonical-name table. Self-skips
-// when the artifact isn't built; runs for real in CI's Tier-A step.
+// when the artifact isn't built; runs for real in CI's `Tier-A star corpus` step.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';

@@ -37,7 +37,7 @@ interface Disagreement {
 
 // The CSV rides LFS, so the bare CI `test` job sees a pointer stub and skips.
 // The sweep runs smudged in the `Tier-A star corpus` CI step, which names this file
-// explicitly — a skipIf suite that no job names runs nowhere.
+// explicitly — a skipIf suite that no CI vitest list names runs nowhere.
 const available = lfsContentReadable(ATHYG_CSV);
 
 describe.skipIf(!available)('IAU-positional assignment vs the AT-HYG con column', () => {
