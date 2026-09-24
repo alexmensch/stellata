@@ -20,7 +20,8 @@ SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
 from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, file_hashes, stamp_is_current, stamp_path, write_stamp,
+    clear_stamp, file_hashes, imported_script_modules, stamp_is_current, stamp_path,
+    write_stamp,
 )
 from scripts.util.astronomy_constants import J2000_JD  # noqa: E402
 from scripts.binaries.component_tokens import (  # noqa: E402
@@ -708,12 +709,7 @@ def log(msg: str) -> None:
 
 
 def _iter_input_paths() -> Iterator[Path]:
-    # Writer logic spans the sibling modules (component_tokens et al.)
-    # and scripts/util, not just this file.
-    for folder in (SCRIPT.parent, SCRIPT.parent.parent / "util"):
-        for mod in sorted(folder.glob("*.py")):
-            if not mod.name.endswith(".test.py"):
-                yield mod
+    yield from imported_script_modules()
     yield SRC_MULTIPLES
     yield SRC_ROW_INDEX_MAP
 

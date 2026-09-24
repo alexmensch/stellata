@@ -48,9 +48,11 @@ need the same thing — single-use helpers stay with their consumer.
   by anything other than this build — an older commit's build, a write
   through a symlink, a partial copy — reads as stale. `clearStamp` runs
   before a build writes, `writeStamp` after its asserts pass, and refuses a
-  missing output. The Python sibling serves the two binaries steps
-  and writes the same JSON shape, which `tests/artifact-freshness.test.ts`
-  reads from the TS side. Both pinned by co-located tests
+  missing output. The Python sibling serves the two binaries steps and writes
+  the same JSON shape, which `tests/artifact-freshness.test.ts` reads from the
+  TS side. Its `imported_script_modules()` is those steps' code inputs: every
+  `scripts/` module the process has imported, so the import statements are
+  the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies

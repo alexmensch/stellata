@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Iterable, Mapping, NamedTuple, Optional
 
@@ -40,6 +41,17 @@ def file_hashes(paths: Iterable[Path]) -> dict[str, Optional[str]]:
         Path(os.path.relpath(p, REPO_ROOT)).as_posix(): hash_file(p) if p.exists() else None
         for p in sorted({p.resolve() for p in paths})
     }
+
+
+def imported_script_modules() -> list[Path]:
+    """Every non-test module under scripts/ this process has imported, entry
+    script included. Call after the step's imports have run."""
+    scripts = REPO_ROOT / "scripts"
+    files = (getattr(m, "__file__", None) for m in list(sys.modules.values()))
+    paths = {Path(f).resolve() for f in files if f}
+    return sorted(
+        p for p in paths if p.is_relative_to(scripts) and not p.name.endswith(".test.py")
+    )
 
 
 def read_stamp(stamp: Path) -> Optional[Stamp]:

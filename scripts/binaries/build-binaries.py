@@ -17,10 +17,10 @@ SCRIPT = Path(__file__).resolve()
 # add the root so the absolute ``scripts.*`` imports below resolve.
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
-from scripts.refresh import refresh_lib  # noqa: E402
 from scripts.refresh.refresh_lib import assert_row_count  # noqa: E402
 from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, file_hashes, stamp_is_current, stamp_path, write_stamp,
+    clear_stamp, file_hashes, imported_script_modules, stamp_is_current, stamp_path,
+    write_stamp,
 )
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 
@@ -168,22 +168,11 @@ EXPECTED_RATES = SCRIPT.parent / "build-binaries-rates-expected.json"
 ATHYG_GAIA_COVERAGE_BOUNDS = (0.90, 1.00)
 
 
-def _iter_code_paths() -> Iterator[Path]:
-    # The orchestrator is an import shell — the pipeline logic lives in
-    # the sibling stage modules and scripts/util, so any of them must
-    # invalidate the artifact, not just this file.
-    for folder in (SCRIPT.parent, SCRIPT.parent.parent / "util"):
-        for mod in sorted(folder.glob("*.py")):
-            if not mod.name.endswith(".test.py"):
-                yield mod
-
-
 MULTIPLES_STAMP = stamp_path("multiples")
 
 
 def _iter_input_paths() -> Iterator[Path]:
-    yield from _iter_code_paths()
-    yield Path(refresh_lib.__file__)
+    yield from imported_script_modules()
     yield SRC_WDS_SUMM
     yield SRC_ORB6
     yield SRC_ATHYG

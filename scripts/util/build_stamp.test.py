@@ -16,6 +16,7 @@ from scripts.util.build_stamp import (  # noqa: E402
     changed_since,
     clear_stamp,
     file_hashes,
+    imported_script_modules,
     read_stamp,
     stamp_is_current,
     write_stamp,
@@ -92,6 +93,13 @@ class BuildStampTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "none given"):
             write_stamp(self.stamp, file_hashes([self.input]), [])
         self.assertFalse(self.stamp.exists())
+
+    def test_imported_script_modules_is_the_import_graph(self) -> None:
+        names = {p.name for p in imported_script_modules()}
+        self.assertIn("build_stamp.py", names)
+        self.assertIn("paths.py", names)
+        self.assertNotIn("build_stamp.test.py", names)
+        self.assertNotIn("component_tokens.py", names)
 
     def test_clear_stamp(self) -> None:
         self.write()
