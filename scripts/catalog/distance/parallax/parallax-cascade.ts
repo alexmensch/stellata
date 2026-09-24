@@ -77,6 +77,9 @@ export interface ParallaxResolution {
   /** mas, always > 0. Null on `curated` (Sol, distance zero by construction)
    *  and on `none`, which is a membership event rather than a value. */
   plxMas: number | null;
+  /** The tier's own published error on `plxMas`, mas; null where it states
+   *  none, and on every row `plxMas` is null. */
+  plxErrMas: number | null;
   via: DistVia;
   /** The tier's parallax is real but its fractional error exceeds
    *  `PARALLAX_LOW_PRECISION_SN`, so the inverted distance is biased. */
@@ -132,13 +135,17 @@ export function resolveParallax(
   isSol: boolean,
 ): ParallaxResolution {
   const hit = (
-    plxMas: number, via: DistVia, sn: number | null,
-  ): ParallaxResolution => ({
-    plxMas,
-    via,
-    lowPrecision: sn !== null && sn < PARALLAX_LOW_PRECISION_SN,
-    refusedPlxMas: [],
-  });
+    plxMas: number, via: DistVia, plxErrMas: number | null,
+  ): ParallaxResolution => {
+    const sn = parallaxSignalToNoise(plxMas, plxErrMas);
+    return {
+      plxMas,
+      plxErrMas,
+      via,
+      lowPrecision: sn !== null && sn < PARALLAX_LOW_PRECISION_SN,
+      refusedPlxMas: [],
+    };
+  };
 
   const refusedPlxMas: number[] = [];
   let hip2Refused = false;
@@ -156,18 +163,16 @@ export function resolveParallax(
       refusedPlxMas.push(p.mas);
       return null;
     }
-    return hit(p.mas, via, parallaxSignalToNoise(p.mas, p.errMas));
+    return hit(p.mas, via, p.errMas);
   };
 
   if (gaia !== null && usable(gaia.parallaxMas)) {
-    return hit(gaia.parallaxMas, 'gaia_dr3_inversion',
-      parallaxSignalToNoise(gaia.parallaxMas, gaia.parallaxErrorMas));
+    return hit(gaia.parallaxMas, 'gaia_dr3_inversion', gaia.parallaxErrorMas);
   }
 
   if (hip2 !== null && usable(hip2.plxMas)) {
     if (!belowParallaxSnFloor(hip2.plxMas, hip2.plxErrorMas)) {
-      return hit(hip2.plxMas, 'hip2_parallax',
-        parallaxSignalToNoise(hip2.plxMas, hip2.plxErrorMas));
+      return hit(hip2.plxMas, 'hip2_parallax', hip2.plxErrorMas);
     }
     hip2Refused = true;
     refusedPlxMas.push(hip2.plxMas);
@@ -176,8 +181,7 @@ export function resolveParallax(
   if (cns5 !== null && usable(cns5.mas)) {
     if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.bibcode))
         && !belowParallaxSnFloor(cns5.mas, cns5.errMas)) {
-      return hit(cns5.mas, 'cns5_plx',
-        parallaxSignalToNoise(cns5.mas, cns5.errMas));
+      return hit(cns5.mas, 'cns5_plx', cns5.errMas);
     }
     refusedPlxMas.push(cns5.mas);
   }
@@ -189,8 +193,7 @@ export function resolveParallax(
     const laundered = (gaiaIs2p && isGaiaCatalogueBibcode(simbad.bibcode))
       || (hip2Refused && isHipparcos2Bibcode(simbad.bibcode));
     if (!laundered && !belowParallaxSnFloor(simbad.mas, simbad.errMas)) {
-      return hit(simbad.mas, 'simbad_plx',
-        parallaxSignalToNoise(simbad.mas, simbad.errMas));
+      return hit(simbad.mas, 'simbad_plx', simbad.errMas);
     }
     refusedPlxMas.push(simbad.mas);
   }
@@ -202,8 +205,7 @@ export function resolveParallax(
   // indices because it lends a neighbour's measurement rather than serving this
   // star's own.
   if (pairMember !== null) {
-    return hit(pairMember.mas, 'pair_member_parallax',
-      parallaxSignalToNoise(pairMember.mas, pairMember.errMas));
+    return hit(pairMember.mas, 'pair_member_parallax', pairMember.errMas);
   }
 
   // V/70A's photometric and spectroscopic parallaxes: a distance from colour and
@@ -221,9 +223,13 @@ export function resolveParallax(
   // direction and V cascades take.
   if (isSol) {
     return {
-      plxMas: null, via: 'curated', lowPrecision: false, refusedPlxMas: [],
+      plxMas: null, plxErrMas: null, via: 'curated', lowPrecision: false,
+      refusedPlxMas: [],
     };
   }
 
-  return { plxMas: null, via: 'none', lowPrecision: false, refusedPlxMas };
+  return {
+    plxMas: null, plxErrMas: null, via: 'none', lowPrecision: false,
+    refusedPlxMas,
+  };
 }

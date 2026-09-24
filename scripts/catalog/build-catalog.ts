@@ -332,6 +332,7 @@ async function main() {
     gspcSourcesUnpulled: 0,
     lmcCandidates: 0,
     lmcOverridden: 0,
+    lmcParallaxRefused: 0,
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     nameTableEntries: 0,
     variableCount: 0,
@@ -505,7 +506,7 @@ async function main() {
     const pct = ((stats.lmcOverridden / stats.lmcCandidates) * 100).toFixed(1);
     console.log(
       `  LMC kinematic override: ${stats.lmcOverridden} / ${stats.lmcCandidates} ` +
-        `LMC-cone stars (${pct}%)`,
+        `LMC-cone stars (${pct}%); ${stats.lmcParallaxRefused} refused on their own parallax`,
     );
     console.log(
       `    displacing: ${formatPartition(stats.lmcOverriddenByDistVia)}`,
@@ -600,6 +601,7 @@ async function main() {
   for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
   counts.lmcCandidates = stats.lmcCandidates;
   counts.lmcOverridden = stats.lmcOverridden;
+  counts.lmcParallaxRefused = stats.lmcParallaxRefused;
   counts.lmcOverriddenByDistVia = stats.lmcOverriddenByDistVia;
   counts.directionGaia5p = dv.gaia_5p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;

@@ -91,6 +91,9 @@
 #                                                 row B-J must not shift
 #                             lmc-kinematic-snap  LMC kinematic snap to
 #                                                 the Pietrzyński anchor
+#                             lmc-parallax-refused  cone + bulk-PM match
+#                                                 the snap refuses on the
+#                                                 row's own parallax
 #                           Single/visual-binary partitioning is derived
 #                           from the companions cell, not tagged here.
 # notes_source              Provenance citation. Required on every row.
@@ -145,10 +148,14 @@ wds_id	system_name	primary_hip	primary_gaia_source_id	primary_distance_pc	primar
 # B-J no-degradation guard — well-measured nearby F-dwarf, B-J must not perturb:
 	HD 33305	23785	4773096563064098432	92.871	0.5	3.551	F5V									bj-no-degradation	high-S/N nearby F-dwarf; Bailer-Jones posterior must not shift the AT-HYG value. SIMBAD HD 33305 sp_type=F5V.
 # LMC kinematic snaps — pinned to Pietrzyński 2019 49.594 kpc:
-	HD 269529		4658107884688023040	49593.999	1	-7.628	G0	0.532	289.3							lmc-kinematic-snap	Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 269529 sp_type=G0 (bare). Absmag re-pinned for the Riello G−V cascade: V is now transformed Gaia photometry rather than AT-HYG's printed mag. ci RE-PINNED 0.488 -> 0.532 by stellata-3bsf.12: B-V now comes from the Gaia BP-RP relation rather than the spine's printed cell, which is the cascade's top tier (../photometry/README.md section The ci cascade).
-	HD 271416		4660699674131931008	49593.998	1	-7.198	K0									lmc-kinematic-snap	Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip. Absmag re-pinned for the Riello G−V cascade: V is now transformed Gaia photometry rather than AT-HYG's printed mag.
-	HD 268691		4661719299382753408	49593.999	1	-7.837	K7									lmc-kinematic-snap	Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268691 sp_type=K7 (bare). Absmag re-pinned for the Riello G−V cascade: V is now transformed Gaia photometry rather than AT-HYG's printed mag.
-	CPD-62 371	21398	4677073601271449856	49594.001	1	-9.595	M0									lmc-kinematic-snap	Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
+	HD 33579	23718	4661472149794844288	49594.000	1	-9.467	A2Ia+									lmc-kinematic-snap	Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. The LMC's A-type hypergiant; SIMBAD HD 33579 sp_type=A2Ia+ (sg*). DR3 parallax 0.0178 +/- 0.0137 mas (-0.17 sigma from the LMC's), consistent with membership.
+	HD 268749		4655363946042099200	49593.998	1	-6.578	B7Iab									lmc-kinematic-snap	Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268749 sp_type=B7Iab. DR3 parallax 0.0748 +/- 0.0194 mas, 2.82 sigma above the LMC's — the named member nearest the parallax gate, which it must still pass.
+	HD 268654	22392	4655349652394811136	49593.998	1	-8.245	B9Ia									lmc-kinematic-snap	Pietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 268654 sp_type=B9Ia. DR3 parallax 0.0051 +/- 0.0128 mas inverts to 196 kpc — the smeared-inversion case the snap exists for.
+# LMC parallax refusals — cone + bulk-PM matches the snap refuses on their own parallax:
+	HD 269529		4658107884688023040	279.273	1	3.715	G0	0.563	1.711							lmc-parallax-refused	Foreground star inside the LMC cone sharing its bulk proper motion; the LMC override refuses it on its own DR3 parallax, 3.5695 +/- 0.0105 mas (RUWE 0.67, 338 sigma above the LMC's ~0.02 mas), so it keeps its Bailer-Jones 2021 posterior. Tolerance is the parallax's own 1 sigma. SIMBAD HD 269529 sp_type=G0 (bare). Gaia gspphot logg 4.15, Teff 5830 K: a nearby G dwarf, not the 290 R_sun supergiant the snap made of it.
+	HD 271416		4660699674131931008	986.977	12	1.312	K0									lmc-parallax-refused	Foreground star inside the LMC cone sharing its bulk proper motion; the LMC override refuses it on its own DR3 parallax, 1.0005 +/- 0.0118 mas (RUWE 0.85, 83 sigma above the LMC's ~0.02 mas), so it keeps its Bailer-Jones 2021 posterior. Tolerance is the parallax's own 1 sigma. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip.
+	HD 268691		4661719299382753408	1128.468	21	0.380	K7									lmc-parallax-refused	Foreground star inside the LMC cone sharing its bulk proper motion; the LMC override refuses it on its own DR3 parallax, 0.8750 +/- 0.0163 mas (RUWE 1.09, 52 sigma above the LMC's ~0.02 mas), so it keeps its Bailer-Jones 2021 posterior. Tolerance is the parallax's own 1 sigma. SIMBAD HD 268691 sp_type=K7 (bare).
+	CPD-62 371	21398	4677073601271449856	1404.094	31	-1.856	M0									lmc-parallax-refused	Foreground star inside the LMC cone sharing its bulk proper motion; the LMC override refuses it on its own DR3 parallax, 0.7045 +/- 0.0153 mas (RUWE 0.97, 45 sigma above the LMC's ~0.02 mas), so it keeps its Bailer-Jones 2021 posterior. Tolerance is the parallax's own 1 sigma. SIMBAD CPD-62 371 sp_type empty; class byte from Gaia GSP-Spec M — synthesized M0 for round-trip.
 # ---- Single stars ------------------------------------------------------
 # Bright stars saturated in Gaia DR3 have null gaia_source_id; the
 # pipeline's spectral resolver requires a Gaia source_id, so spectClass

@@ -350,6 +350,7 @@ export function readStars(
     distVia: Record<DistVia, number>;
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
     lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
+    lmcParallaxRefused: number;    // PM-gate passes whose own parallax rules the LMC out
     /** lmcOverridden split by the tier the snap displaced — which populations
      *  the override actually moves. */
     lmcOverriddenByDistVia: Record<DistVia, number>;
@@ -394,6 +395,7 @@ export function readStars(
   let bjEligibleNotPulled = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
+  let lmcParallaxRefused = 0;
   const lmcOverriddenByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
   const distViaCounts = emptyTallyPartition(DIST_VIA_VALUES);
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
@@ -587,20 +589,24 @@ export function readStars(
     }
 
     // LMC kinematic override: B-J's Galactic-density prior pulls real LMC
-    // supergiants to ~5-20 kpc instead of 49.59 kpc. Sky-cone + bulk-PM
-    // filter on the direction tier's own place and the motion the row
-    // carries snaps the ~60 affected rows back to Pietrzyński 2019's
-    // eclipsing-binary distance. Runs AFTER B-J so it overrides B-J's
-    // mis-anchored value on the same rows.
+    // supergiants to ~5-20 kpc instead of 49.59 kpc. Runs AFTER B-J so it
+    // overrides B-J's mis-anchored value on the same rows.
     const raHours = dirRes.srcRaDeg / 15;
     if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
       lmcCandidates++;
-      const ovr = applyLmcKinematicOverride(raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr);
-      if (ovr !== null) {
+      const lmc = applyLmcKinematicOverride(
+        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr,
+        plxRes.plxMas === null
+          ? null
+          : { mas: plxRes.plxMas, errMas: plxRes.plxErrMas },
+      );
+      if (lmc.kind === 'snap') {
         lmcOverriddenByDistVia[distVia]++;
-        dist = ovr;
+        dist = lmc.distPc;
         distVia = 'lmc_kinematic';
         lmcOverridden++;
+      } else if (lmc.kind === 'parallax_rules_out') {
+        lmcParallaxRefused++;
       }
     }
 
@@ -803,6 +809,7 @@ export function readStars(
       distVia: distViaCounts,
       lmcCandidates,
       lmcOverridden,
+      lmcParallaxRefused,
       lmcOverriddenByDistVia,
       directionVia,
       vVia,

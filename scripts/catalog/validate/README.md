@@ -57,7 +57,8 @@ Three tiers, all snapshot-pinned:
   record is NOT variable). Coverage spans one pin per population
   dimension: nearest M dwarf, halo subdwarf, white dwarfs (single +
   promoted-companion), carbon star, Wolf-Rayet, O supergiant, each
-  animated GCVS family (M, DCEP, SRC, EA, EW), LMC members, B-J
+  animated GCVS family (M, DCEP, SRC, EA, EW), LMC members, the
+  foreground stars the LMC snap refuses on their own parallax, B-J
   regression cases, a Tycho-only no-HIP record, and the multi-star
   showcase systems (Castor, Algol, AR Cas, ν Sco, 40 Eri).
   `scripts/catalog/validate/known-stars.test.ts` loads `public/catalog.bin` via

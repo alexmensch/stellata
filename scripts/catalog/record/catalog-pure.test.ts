@@ -100,6 +100,8 @@ import {
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
   applyLmcKinematicOverride,
+  LMC_PARALLAX_CONSISTENCY_SIGMA,
+  LMC_PARALLAX_MAS,
   isInLmcCone,
   angularSeparationDeg,
   LMC_DISTANCE_PC,
@@ -1925,17 +1927,24 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     { label: 'HD 270752 (halo in LMC direction)', ra: 4.792, dec: -65.331, mag: 11.214, pmRa: 14.925, pmDec: -3.62, preOverrideDist: 5298.5 },
   ];
 
+  const SNAP = { kind: 'snap', distPc: LMC_DISTANCE_PC } as const;
+  const NOT_MEMBER = { kind: 'not_member' } as const;
+  const RULES_OUT = { kind: 'parallax_rules_out' } as const;
+  const atCentre = [LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG] as const;
+  const bulkPm = [LMC_PM_RA_CENTRE, LMC_PM_DEC_CENTRE] as const;
+
   it('LMC-direction + LMC-PM star is snapped to 49.594 kpc', () => {
     for (const f of LMC_HITS) {
-      const out = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec);
-      expect(out, f.label).toBe(LMC_DISTANCE_PC);
+      const plx = { mas: 1000 / f.preOverrideDist, errMas: 0.02 };
+      const out = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec, plx);
+      expect(out, f.label).toEqual(SNAP);
     }
   });
 
-  it('LMC-direction + non-LMC-PM star is unchanged (null override)', () => {
+  it('LMC-direction + non-LMC-PM star is not a member', () => {
     for (const f of LMC_PM_NON_HITS) {
-      const out = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec);
-      expect(out, f.label).toBeNull();
+      const out = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec, null);
+      expect(out, f.label).toEqual(NOT_MEMBER);
     }
   });
 
@@ -1944,58 +1953,78 @@ describe('catalog-pure / applyLmcKinematicOverride', () => {
     // sits exactly on the LMC bulk centre but which lies nowhere near the
     // LMC gets no override. Snapping it would teleport a Galactic star to
     // 49.6 kpc.
-    expect(applyLmcKinematicOverride(
-      12, 0, LMC_PM_RA_CENTRE, LMC_PM_DEC_CENTRE,
-    )).toBeNull();
+    expect(applyLmcKinematicOverride(12, 0, ...bulkPm, null)).toEqual(NOT_MEMBER);
   });
 
-  it('returns null when pm_ra or pm_dec is missing', () => {
-    // A star in the LMC cone with null proper motion — should NOT be
-    // overridden. A row can reach a position tier that states no proper
-    // motion; treat those as ineligible for the kinematic gate.
+  it('is not a member when pm_ra or pm_dec is missing', () => {
+    // A row can reach a position tier that states no proper motion; treat
+    // those as ineligible for the kinematic gate.
+    expect(applyLmcKinematicOverride(...atCentre, null, 0, null)).toEqual(NOT_MEMBER);
+    expect(applyLmcKinematicOverride(...atCentre, 0, null, null)).toEqual(NOT_MEMBER);
+  });
+
+  it('refuses a cone + PM match whose own parallax rules the LMC out', () => {
     expect(applyLmcKinematicOverride(
-      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, null, 0,
-    )).toBeNull();
+      ...atCentre, ...bulkPm, { mas: 3.5695, errMas: 0.0105 },
+    )).toEqual(RULES_OUT);
+  });
+
+  it('snaps a noisy parallax that cannot distinguish the LMC from Sol', () => {
     expect(applyLmcKinematicOverride(
-      LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG, 0, null,
-    )).toBeNull();
+      ...atCentre, ...bulkPm, { mas: 4.01, errMas: 2.34 },
+    )).toEqual(SNAP);
+  });
+
+  it('snaps when the parallax states no error, or there is none', () => {
+    expect(applyLmcKinematicOverride(
+      ...atCentre, ...bulkPm, { mas: 3.5695, errMas: null },
+    )).toEqual(SNAP);
+    expect(applyLmcKinematicOverride(...atCentre, ...bulkPm, null)).toEqual(SNAP);
+  });
+
+  it('boundary: the parallax gate is one-sided at LMC_PARALLAX_CONSISTENCY_SIGMA', () => {
+    const errMas = 0.01;
+    const at = (sigma: number) => applyLmcKinematicOverride(
+      ...atCentre, ...bulkPm,
+      { mas: LMC_PARALLAX_MAS + sigma * errMas, errMas },
+    );
+    expect(at(LMC_PARALLAX_CONSISTENCY_SIGMA - 1e-6)).toEqual(SNAP);
+    expect(at(LMC_PARALLAX_CONSISTENCY_SIGMA + 1e-6)).toEqual(RULES_OUT);
+    expect(at(-50)).toEqual(SNAP);
   });
 
   it('ordering: LMC_KIN wins over BJ for an LMC-cone star with both', () => {
     // Synthetic LMC-cone + LMC-PM star with a B-J entry. Simulates the
     // build-catalog.ts ordering: B-J runs first and writes its posterior;
-    // LMC_KIN runs after and clobbers it. Test by composing the two
-    // overrides in the same order as the build script.
+    // LMC_KIN runs after and clobbers it.
     const f = LMC_HITS[0]; // HD 268749
     const sourceId = 'fake-lmc-source-id';
     const bjMap = new Map([[sourceId, 8000]]); // arbitrary B-J posterior ≠ LMC distance
     const bj = applyBailerJonesOverride(sourceId, bjMap);
     expect(bj).toBe(8000);
-    const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec);
-    expect(lmc).toBe(LMC_DISTANCE_PC);
-    // Final state mirrors what build-catalog.ts ends up with.
-    expect(lmc).not.toBe(bj);
+    const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec, null);
+    expect(lmc).toEqual(SNAP);
   });
 
   it('boundary: PM tolerance is per-component, not radial', () => {
     // |Δpm_ra| at the tolerance, |Δpm_dec| at 0 → pass. Mirror case → pass.
     // Both at the tolerance → still pass (per-component, not Euclidean).
     const eps = 1e-9;
-    const atCentre = [LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG] as const;
     const passEdgeRa = applyLmcKinematicOverride(
-      ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE,
+      ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps, LMC_PM_DEC_CENTRE, null,
     );
-    expect(passEdgeRa).not.toBeNull();
+    expect(passEdgeRa).toEqual(SNAP);
     const passBothEdges = applyLmcKinematicOverride(
       ...atCentre,
       LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE - eps,
       LMC_PM_DEC_CENTRE - LMC_PM_TOLERANCE + eps,
+      null,
     );
-    expect(passBothEdges).not.toBeNull();
+    expect(passBothEdges).toEqual(SNAP);
     const failJustOver = applyLmcKinematicOverride(
-      ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE,
+      ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE, null,
     );
-    expect(failJustOver).toBeNull();
+    expect(failJustOver).toEqual(NOT_MEMBER);
   });
 
 });

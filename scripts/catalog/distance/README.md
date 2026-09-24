@@ -210,6 +210,7 @@ diagram below is the build-side view:
    ▼
 [ Layer 2: LMC kinematic override    ]   only inside 15° LMC cone
    │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
+   │                                       AND own parallax ≤ 10σ above LMC's
    ▼
 [ Layer 3: MAX_DIST_PC = 50,000 gate ]   drops anything still beyond LMC
    │
@@ -223,8 +224,9 @@ build knows first-hand; the build-time `plxDistPc` / `plxVia` diagnostics the
 regression check below measures drift against are that same cascade's own
 output, captured pre-override.
 
-Each override layer returns a `DistanceOverride` (`dist`, `absmag`) —
-the absmag recompute matters because skipping it places the star at
+Each override layer returns only a distance — B-J a `number | null`, the
+LMC layer an `LmcKinematicVerdict` — and absmag is recomputed from the
+settled distance afterwards, because skipping that places the star at
 the new distance but lights it at the old one, breaking the disc/glow
 size chain in the renderer. Position is assembled afterwards as
 `direction × dist` (§ Direction resolution), so the overrides carry
@@ -353,18 +355,27 @@ Constants in `../record/catalog-pure.ts`:
 `isInLmcCone(raHours, decDegrees)` evaluates the cone independently
 of the PM gate so `readStars` can count cone-membership candidates
 (`lmcCandidates` in `build-catalog-expected.json`) separately from
-PM-passing overrides (`lmcOverridden`). At `V ≤ 11` it fires for **122
-of 14,625** cone candidates; the rest fail the PM tolerance (MW halo /
-runaway stars whose PMs sit far from the LMC bulk centroid).
+PM-passing overrides (`lmcOverridden`). At `V ≤ 11` it fires for **111
+of 14,625** cone candidates; most of the rest fail the PM tolerance (MW
+halo / runaway stars whose PMs sit far from the LMC bulk centroid).
 
-**The PM gate is not a membership test, and the cone is crowded.** With
-no parallax-quality check, a foreground star that happens to lie toward
-the LMC and share its apparent motion is snapped to 49.6 kpc. Ten such
-captures are pinned in `build-distance-outliers-expected.json` with
-their measured parallaxes — 274 to 793 pc at 46σ to 167σ, where an LMC
-member's parallax would be ~0.02 mas and unmeasurable. `V ≤ 11` took
-that cohort from four rows to ten by multiplying the cone's population;
-`stellata-uadc.39` owns the parallax gate that would close it.
+**The PM gate is not a membership test, and the cone is crowded**, so
+the snap also asks the record's own resolved parallax (`plxMas` /
+`plxErrMas` off the cascade, whichever tier supplied it). A row sitting
+more than `LMC_PARALLAX_CONSISTENCY_SIGMA` (10) of its own errors above
+`LMC_PARALLAX_MAS` (1000 / 49,594 ≈ 0.0202 mas) is a foreground star
+sharing the Cloud's apparent motion, and keeps its own distance —
+`lmcParallaxRefused`, **11** today. A parallax with no stated error
+cannot contradict, so it snaps.
+
+The threshold sits in a measured gap over every row the cone + PM gate
+admits: the 111 genuine members all lie within **3.2σ**, the 11
+captures at **44.7σ to 338σ** (274 pc to 1,419 pc, every RUWE but one
+≤ 1.25). The members' side includes 24 rows whose Gaia DR3 parallax is
+negative — consistent with the LMC, but unusable for inversion — so the
+cascade resolved them on HIP2 or SIMBAD instead, e.g. HIP 23527 at
+4.01 ± 2.34 mas (1.7σ), which inverts to 249 pc — a value whose error
+bar, not its inversion, is what the gate reads.
 
 The override **must** run after Layer 1: LMC supergiants typically
 carry Gaia source_ids that B-J's map covers, so Layer 1 fires on

@@ -130,6 +130,7 @@ const CORPUS_TIERS = [
   'bj-override',
   'bj-no-degradation',
   'lmc-kinematic-snap',
+  'lmc-parallax-refused',
 ] as const;
 type CorpusTier = (typeof CORPUS_TIERS)[number];
 
@@ -373,6 +374,7 @@ const VAR_PINNED = CORPUS.filter(
 const BJ_OVERRIDES = ofTier('bj-override');
 const BJ_GUARDS = ofTier('bj-no-degradation');
 const LMC_SNAPS = ofTier('lmc-kinematic-snap');
+const LMC_REFUSALS = ofTier('lmc-parallax-refused');
 
 let catalog: Catalog;
 const multiplesByWds = MULTIPLES_BY_WDS;
@@ -722,6 +724,17 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
         row.primaryDistancePc,
         `${row.systemName}: tagged as LMC kinematic snap but expected distance ${row.primaryDistancePc} pc is outside the LMC envelope`,
       ).toBeGreaterThan(48_000);
+    });
+  });
+
+  describe('distance-refinement: LMC snap refused on the row\'s own parallax', () => {
+    it.each(LMC_REFUSALS)('$systemName', (row) => {
+      const record = lookupPrimary(row);
+      assertPrimary(row, record);
+      expect(
+        row.primaryDistancePc,
+        `${row.systemName}: tagged as an LMC parallax refusal but expected distance ${row.primaryDistancePc} pc is inside the LMC envelope`,
+      ).toBeLessThan(48_000);
     });
   });
 
