@@ -23,9 +23,11 @@ src/client/render-gate/
                                pinned vantages. Its own README.
 ```
 
-Every sentinel resets on `dispose()` — the pose snapshot back to NaN, the
-hold count to zero, the cadence budget to 0 and its sim stamp to NaN, the
-trust state to whole, the `sawUserInput` latch to false. A hold released *after* that zeroing floors at 0
+Every sentinel resets on `dispose()` — the pose snapshot and the
+exposure-cut anchor back to NaN, the hold count to zero, the
+`sawUserInput` latch to false. The cadence's own
+state resets in `ClockCadence.dispose()` (`cadence/README.md` § The
+controller). A hold released *after* that zeroing floors at 0
 rather than going negative: `Stellata.dispose()` does not close an open
 debug panel, so its release outlives the gate, and a negative count
 would silently make the next `hold()` a no-op.
@@ -91,8 +93,9 @@ would silently make the next `hold()` a no-op.
    and wall-clock blends with no queryable flag — the exposure
    reduction's readback landing (~4 frames), and the eclipse-dim
    one-pole blend (the only wall-clock animation in a render layer).
-   The exposure slew itself does not rely on the tail: `animate()`
-   calls `invalidate()` whenever the applied `dm` moved, so a slew in
+   The exposure slew itself does not rely on the tail:
+   `ExposureFrameStep.measure` hands every applied `dm` to
+   `noteExposureCut`, which invalidates whenever it moved, so a slew in
    flight keeps frames coming until it snaps.
 
 **"Moved" is not exact inequality for the cut, and must not become
@@ -254,6 +257,7 @@ inherits this defect** — the ULP column in `debug.renderWatch()` is how you
 find it, and a handful of ULP on a slot nothing should have touched is the
 signature.
 
-`applyRideDelta` also accumulates the frame's ride translation, which
-divided by the sim step IS `CadenceCtx.cameraVelPcPerSimS` (§ Camera
-motion is subtracted).
+`applyRideDelta` also reports each step to `ClockCadence.noteRideStep`;
+the frame's sum divided by the sim step IS
+`CadenceCtx.cameraVelPcPerSimS` (`cadence/README.md` § Camera motion is
+subtracted).

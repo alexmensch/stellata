@@ -28,6 +28,8 @@ src/client/hdr/exposure/
   scene-adaptation.ts        SceneAdaptation — folds the frame-late
     (+ test)                 measurement into the applied cut, and owns
                              the three debug overrides (§ Debug panel).
+  exposure-frame-step.ts     ExposureFrameStep — the frame loop's three
+    (+ test)                 calls into this folder (§ The frame step).
   exposure-tuning.ts         The debug panel's Exposure section: the live
                              readout plus the five sliders.
   exposure-tuning-pure.ts    Readout text — the branch labels and the
@@ -123,8 +125,8 @@ admits whenever either moves, tens of millions of volume samples
 the cut today; putting `dm` into either makes that refill per-frame with
 nothing failing.
 
-**`FrameCtx.exposure` is the exempt class, named.** The shell fills a
-`FrameExposure` record every tick and hands it to each gated layer's
+**`FrameCtx.exposure` is the exempt class, named.** `ExposureFrameStep`
+fills a `FrameExposure` record every tick and hands it to each gated layer's
 `skip` (`../../scene/contribution/README.md` § The brightness reason). It is per frame,
 stateless, and stores nothing keyed on adaptation. **What the prohibition
 turns on is HOLDING something derived from the cut, never object
@@ -356,6 +358,22 @@ Perf row: `adaptation` (now a handful of arithmetic), plus
 (`reduction/README.md`). The star walk's sorted-distance window, its
 `renderedSizeComponents` calls and the O(n) reduce over the source pool are
 all gone; what replaces them is GPU work on half the frames.
+
+### The frame step
+
+`ExposureFrameStep` is everything the frame loop asks of this folder, in
+three calls at three points of `animate()`:
+
+- `frameExposure()` — above the gate, every tick, for `FrameCtx.exposure`.
+- `measure(nowMs, warpActive)` — after the layer fan-out, before the first
+  draw: `SceneAdaptation.measure` → `setAdaptation` → the statistic-write
+  park, and the applied cut handed to `RenderGate.noteExposureCut`, which
+  owns the wake (`../../render-gate/README.md` § The decision, in priority
+  order). It returns the park verdict.
+- `reduce(parked)` — after the resolve, with **that same verdict**. The
+  park is read once for both halves — the statistic writes this frame
+  draws and the chain that reduces them — so the frame never pays one
+  without the other.
 
 ### Parking the measurement
 

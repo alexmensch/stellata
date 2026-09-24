@@ -7,6 +7,9 @@ elapsed model time next need a frame".
 
 ```
 src/client/render-gate/cadence/
+  clock-cadence.ts (+ test)    ClockCadence — the per-frame state the
+                               due test and the budget run on
+                               (§ The controller).
   clock-cadence-pure.ts        The rate report every layer files, the
     (+ test)                   thresholds, the budget, and the due test.
   cadence-trust-pure.ts        The safety net: audit a scheduled frame
@@ -17,8 +20,31 @@ src/client/render-gate/cadence/
 
 Nothing here imports the parent, which is why it splits cleanly: the
 gate consumes a budget it knows nothing about the derivation of, and the
-shell (`../../stellata.ts` `refreshCadence`) is the only thing that holds
-both ends.
+shell (`../../stellata.ts` `animate`) is the only thing that holds both
+ends — it asks `ClockCadence.isDue` for the gate's `cadenceDue` input and
+hands the controller `RenderGate.lastFrameWasCadenceScheduled`.
+
+## The controller
+
+`ClockCadence` owns every piece of cadence state that outlives a frame:
+the budget, the last rendered sim stamp, the last report, the trust state,
+the pulsation bound and the frame's ride translation. Four writers reach
+it, each through one method:
+
+- `isDue(rate, t)` — the gate's input, read above the gate every tick.
+- `noteRideStep(delta)` — each focal-ride step, from
+  `Stellata.applyRideDelta`. Summed until the refresh.
+- `tightenPulsationBound(s)` — each absorbed catalogue chunk's
+  `pulsationCadenceBudgetS`. A minimum: the answer cannot rise.
+- `refresh(frame)` — once per rendered frame, **after** the layer fan-out
+  and every ride, so each position a report divides by is this frame's.
+  It builds `CadenceCtx`, collects the registry's report, audits it
+  (§ The safety net), sets the next budget, and clears the ride steps.
+
+Seeds and resets are one set: budget 0 and a NaN sim stamp, so the first
+tick under a running clock is due and the first frame's step reads as
+unmeasurable (`simDtS` NaN, no camera velocity). `dispose` restores all of
+it, trust included.
 
 ## Why it exists
 
@@ -266,19 +292,19 @@ once per frame.
 
 ## What the planet field reports
 
-`cadenceReport(ctx)` is this field's declaration to the render gate: the
-fastest on-screen speed of the bodies it is actually drawing, and the
-fastest brightness slope among them. `../../../render-gate/cadence/README.md`
-owns the design; four things about it are specific to this field.
+`PlanetBodyField.cadenceReport(ctx)` is the planet field's declaration:
+the fastest on-screen speed of the bodies it is actually drawing, and the
+fastest brightness slope among them. Four things about it are specific to
+that field.
 
 - **The walk is `forEachDrawnBodyView` plus two more gates.** `bodyInkVisible`
-  (the same live-exposure test the pick path uses, § The pick's adapted
-  gate) and occlusion by the parent. The second is one angular-separation
+  (the same live-exposure test the pick path uses,
+  `../../solar-system/planets/README.md` § The pick's adapted gate) and occlusion by the parent. The second is one angular-separation
   test against the parent's own angular radius, and it shares
   `parentGeometryInto` with the body-collapse verdict rather than
   open-coding the cross-and-dot a second time — the two want opposite ends
   of the angular range, which is why both ride `angleBetweenRad`
-  (`../../../util/README.md`) instead of the phase function's `acos` form.
+  (`../../util/README.md`) instead of the phase function's `acos` form.
 - **Each body's velocity is differenced, not modelled.** `prevBodyLocal64`
   holds the positions the LAST rendered frame drew, snapshotted at the top
   of `update` before the ephemeris walk overwrites them. That is what makes
@@ -304,9 +330,8 @@ solar-system local cluster) share this one report; the field caches it on
 
 ## What the binary field reports
 
-`cadenceReport(ctx)` prices the pairs the walk actually animated, for the
-render gate (this file). Per active relation the
-pair's own sweep rate is `ΔR` **differenced over the last rendered
+The binary field's `cadenceReport(ctx)` prices the pairs the walk
+actually animated. Per active relation the pair's own sweep rate is `ΔR` **differenced over the last rendered
 frame** — the quantity the walk already computed — split by the same
 barycentric coefficients it applies, then projected across each member's
 line of sight over its camera distance.

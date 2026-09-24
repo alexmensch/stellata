@@ -248,7 +248,7 @@ export class WarpController {
     // duration so search-row, mode toggle, and any mode-bound UI don't
     // flicker through navigate. The animate loop branches off the
     // warp slot first, so the cosmetic mode value never reaches
-    // observeUpdateTarget. uHideFocusIdx stays pinned to the source
+    // ObserveLookPin. uHideFocusIdx stays pinned to the source
     // for the reorient — unhiding it would briefly render the source
     // disc from the camera's interior.
     //

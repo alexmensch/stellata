@@ -3,8 +3,8 @@
 
 import type * as THREE from 'three';
 import {
-  POSE_SLOTS, SETTLE_MS, type PoseDrift, decideRender, firstPoseDrift, posesDiffer,
-  rebasePoseTranslation, writePose,
+  POSE_SLOTS, SETTLE_MS, type PoseDrift, decideRender, exposureCutMoved, firstPoseDrift,
+  posesDiffer, rebasePoseTranslation, writePose,
 } from './render-gate-pure';
 
 const CANVAS_WAKE_EVENTS = [
@@ -38,6 +38,7 @@ export class RenderGate {
   private lastWake: GateWake | null = null;
   private lastDecision: GateDecisionTrace | null = null;
   private lastCadenceScheduled = false;
+  private lastInvalidatedDm = Number.NaN;
 
   /** Was the frame just drawn scheduled by the CLOCK CADENCE alone — no
    *  hold, no continuous condition, no camera move, no settle tail? Only
@@ -84,6 +85,13 @@ export class RenderGate {
   invalidate(reason: string): void {
     this.lastActiveMs = performance.now();
     this.lastWake = { reason, atMs: this.lastActiveMs };
+  }
+
+  // see README.md § The decision, in priority order
+  noteExposureCut(dm: number): void {
+    if (!exposureCutMoved(dm, this.lastInvalidatedDm)) return;
+    this.lastInvalidatedDm = dm;
+    this.invalidate('exposure-cut');
   }
 
   /** Render every frame until the returned release runs (ref-counted;
@@ -199,5 +207,6 @@ export class RenderGate {
     this.lastWake = null;
     this.lastDecision = null;
     this.lastCadenceScheduled = false;
+    this.lastInvalidatedDm = Number.NaN;
   }
 }

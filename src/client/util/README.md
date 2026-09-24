@@ -233,6 +233,12 @@ build scripts, tests, and shader uniforms.
   24-bit word costs two passes rather than three with no width argument.
   A float key sorts by its bit view only while every value is
   non-negative; that precondition belongs to the caller.
+- `mutable.ts` — `Mutable<T>`, `T` with `readonly` stripped. For an owner
+  that rewrites a context in place which its readers see as readonly
+  (`FrameCtx` in `stellata.ts`, `CadenceCtx` in
+  `../render-gate/cadence/clock-cadence.ts`): typing the backing object
+  from the interface is what makes a field added there a compile error
+  until the owner fills it.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts (docs/sid.md § 8).

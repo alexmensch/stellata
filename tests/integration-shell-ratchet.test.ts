@@ -6,10 +6,10 @@ import ts from 'typescript';
 const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
-  'adaptation', 'aim', 'bus', 'camera', 'catalog', 'chartLabels', 'chromeLines',
-  'clock', 'controls', 'disposed', 'exposure', 'filters', 'floatingOrigin', 'focus',
+  'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
+  'clock', 'controls', 'disposed', 'exposure', 'exposureFrame', 'filters', 'floatingOrigin', 'focus',
   'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
-  'observe', 'observeControls', 'occluders', 'orbitFramePort', 'orbitFrameTick',
+  'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
   'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
 ];
@@ -17,18 +17,16 @@ const COMPOSITION: readonly string[] = [
 const AWAITING_EXTRACTION: readonly string[] = [
   '_compositeSuppress', '_eclipseDim', '_epochFollowDelta', '_extinctionView', '_focalPert',
   '_lastAppliedPert', '_movingRideDelta', '_movingRideIdx', '_movingRideLast',
-  '_movingRideLive', '_realtimeFramesNeeded', '_rideAccum', '_rideDelta', '_rideFocalIdx',
+  '_movingRideLive', '_realtimeFramesNeeded', '_rideDelta', '_rideFocalIdx',
   '_rideLive', '_suppressPulsation', '_tmpAnimateLocal', 'absorbedSuppressCount',
-  'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'cadenceBudgetSimS',
-  'cadenceCtx', 'cadenceFrameId', 'cadenceLastReport', 'cadenceTrust', 'conFigureSig',
+  'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coordSpheres', 'coreMaskEnabled', 'detailPermitted',
-  'drawingBufferSize', 'dust', 'dustParticleSource', 'dustParticles',
+  'dust', 'dustParticleSource', 'dustParticles',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
-  'frameCtx', 'frameExposureRecord', 'galacticDisc', 'glslResidentsChecked',
-  'lastInvalidatedDm', 'lastParticleStrength', 'lastRenderedSimS', 'observePinQuat',
-  'observeTmpFwd', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
-  'pickSizeScratch', 'pulsationCadenceBudgetS', 'solarCluster', 'starAttrs', 'starFrame',
+  'frameCtx', 'galacticDisc', 'glslResidentsChecked',
+  'lastParticleStrength', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
+  'pickSizeScratch', 'solarCluster', 'starAttrs', 'starFrame',
   'starLocalCluster', 'tmpBound', 'tmpConstellationAbs', 'tmpHostLocal', 'tmpVec3b',
   'trackballSettle', 'webgpuStarLayer',
 ];

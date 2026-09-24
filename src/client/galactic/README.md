@@ -276,7 +276,7 @@ because the focal-star projection has already drifted to centre by
 `f = 1`. Distance labels measure from `origin` so the displayed
 distance reflects "from the focal object", which is meaningful in both
 modes. The focal position (never `controls.target`) is load-bearing in
-observe: `observeUpdateTarget` keeps `controls.target` parked 1 pc
+observe: `ObserveLookPin` keeps `controls.target` parked 1 pc
 ahead of the camera there, so a target-based origin would report every
 distance ~1 pc off — invisible for the galactic centre, but "Sol ·
 3.3 ly" from a planet-anchored observe where the truth is ~1 AU.
