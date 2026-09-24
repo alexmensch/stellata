@@ -26,7 +26,7 @@ utility at all: anything a block must be able to override is **not** one. A
 rule with a state, a descendant selector, or a value a block legitimately
 changes is a block — which is why `.label`, `.lead`, `.aside` and
 `.skip-link` sit in the block layer despite looking like text utilities, and
-only `.wrapper` and `.measure` are utilities.
+only `.wrapper` is a utility.
 
 **The call to action is an exception, not a block.** `.pill[data-primary]`
 fills the pill with the accent and inverts its text to the page ground; plain
@@ -65,6 +65,12 @@ token file; one belonging only here (`--bg-sunken`) goes in this file's own
 ground and the accent exists in exactly one place. Writing
 `rgba(7, 9, 18, 0.72)` would fork the palette silently the next time a token
 changed.
+
+**Line length is set once.** The global `*` rule caps every element at
+`--measure`, and the rule after it exempts the containers — `div`,
+`section`, `article`, the table parts, `a` (a sight's media anchor is a
+block), the media. A block names a *shorter* measure where it wants one; it
+never restates `--measure`, and new prose needs nothing to be capped.
 
 **No rule carries a bare value.** Measures are a named scale
 (`--measure-micro` … `--measure`) and spacing comes from the Utopia steps;
