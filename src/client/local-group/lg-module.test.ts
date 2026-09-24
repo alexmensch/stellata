@@ -134,6 +134,7 @@ describe('lg kind module', () => {
     expect(provider.orbitFloor(0)).toBe(GLOBAL_MIN_DIST_PC);
     expect(provider.arrivalRadiusPc(0)).toBeNull();
     expect(provider.renderedSizePx(0)).toBeGreaterThan(0);
+    expect(provider.peakDiscSizePx(0)).toBe(0);
 
     const card = m.card();
     expect(card.kind).toBe('lg');

@@ -9,6 +9,7 @@ const provider: FocusableProvider = {
   orbitFloor: () => 1,
   arrivalRadiusPc: () => null,
   renderedSizePx: () => 0,
+  peakDiscSizePx: () => 0,
   chartPlateauDistance: () => null,
   planetSystemHost: () => null,
 };

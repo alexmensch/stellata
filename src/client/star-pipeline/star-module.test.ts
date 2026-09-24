@@ -33,6 +33,7 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
     localPositionInto: (idx, out) => out.set(idx, 0, 0),
     parkDistForStar: () => 1.5,
     renderedSizePx: () => 12,
+    peakDiscSizePx: () => 9,
     pickStarHit: () => null,
     getBinaries: () => null,
     ...overrides,
@@ -172,6 +173,7 @@ describe('star kind module', () => {
 
     expect(f.focusParkDistance(0)).toBe(1.5);
     expect(f.renderedSizePx(0)).toBe(12);
+    expect(f.peakDiscSizePx(0)).toBe(9);
     expect(f.orbitFloor(0)).toBeGreaterThan(0);
     expect(f.arrivalRadiusPc?.(0)).toBe(
       Math.max(1, MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,

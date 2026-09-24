@@ -100,6 +100,10 @@ export interface FocusableProvider {
   arrivalRadiusPc(idx: number): number | null;
   /** Rendered silhouette diameter in px at the current camera. */
   renderedSizePx(idx: number): number;
+  /** Opaque-disc diameter in px at its largest over any brightness
+   *  cycle — the bound the focused-object arrow fade gates on, steady
+   *  while a variable breathes. 0 for a kind drawing no opaque disc. */
+  peakDiscSizePx(idx: number): number;
   /** Camera-to-anchor distance where the chart-mode disc plateaus at
    *  `uChartDiscMaxPx` given the current `uChartMagBright`; null when
    *  the kind has no magnitude-driven chart disc. Feeds the warp's

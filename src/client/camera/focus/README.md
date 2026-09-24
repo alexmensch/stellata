@@ -165,6 +165,9 @@ anchor), `localPositionInto`, `focusParkDistance` (the landing distance
 of every park), `orbitFloor` (the manual-zoom floor a focus applies),
 `arrivalRadiusPc` (angular-size ease input; null → log-d fallback),
 `renderedSizePx` (overlay chevron / silhouette sizing),
+`peakDiscSizePx` (the opaque disc at its pulsation peak — the focused-object
+arrow fade's coverage bound, `Stellata.getFocusedDiscRadiusPx`; 0 for the
+soft kinds, which draw no opaque disc),
 `chartPlateauDistance` (warp chart-mode pivot; null → no chart disc),
 and `planetSystemHost` (which star's planet system attaches; null →
 detach). Hard/soft and moving membership are NOT provider legs — they

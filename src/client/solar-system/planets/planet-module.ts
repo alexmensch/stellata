@@ -199,27 +199,31 @@ export function createPlanetKindModule(): PlanetKindModule {
       };
     },
 
-    focusable: (): FocusableProvider => ({
-      anchorInto: (idx, out) => field?.planetAbsolutePositionInto(idx, out) ?? false,
-      localPositionInto: (idx, out) => field?.planetLocalPositionInto(idx, out) ?? false,
-      focusParkDistance: (idx) => {
-        const r = planetRadiusPc(idx);
-        return r === null
-          ? 0
-          : starPhysics.parkDistForPlanet(r, starPhysics.fovMinorRad(ctx!.camera));
-      },
-      orbitFloor: (idx) => {
-        const r = planetRadiusPc(idx);
-        return r === null
-          ? 0
-          : starPhysics.minOrbitDistForPlanet(r, starPhysics.fovMinorRad(ctx!.camera));
-      },
-      arrivalRadiusPc: planetRadiusPc,
-      renderedSizePx: (idx) =>
-        field?.renderedPlanetSizePx(idx, ctx!.camera.position) ?? 0,
-      chartPlateauDistance: () => null,
-      planetSystemHost: (idx) => field?.hostPlanetOf(idx)?.hostStarIdx ?? null,
-    }),
+    focusable: (): FocusableProvider => {
+      const renderedSizePx = (idx: number) =>
+        field?.renderedPlanetSizePx(idx, ctx!.camera.position) ?? 0;
+      return {
+        anchorInto: (idx, out) => field?.planetAbsolutePositionInto(idx, out) ?? false,
+        localPositionInto: (idx, out) => field?.planetLocalPositionInto(idx, out) ?? false,
+        focusParkDistance: (idx) => {
+          const r = planetRadiusPc(idx);
+          return r === null
+            ? 0
+            : starPhysics.parkDistForPlanet(r, starPhysics.fovMinorRad(ctx!.camera));
+        },
+        orbitFloor: (idx) => {
+          const r = planetRadiusPc(idx);
+          return r === null
+            ? 0
+            : starPhysics.minOrbitDistForPlanet(r, starPhysics.fovMinorRad(ctx!.camera));
+        },
+        arrivalRadiusPc: planetRadiusPc,
+        renderedSizePx,
+        peakDiscSizePx: renderedSizePx,
+        chartPlateauDistance: () => null,
+        planetSystemHost: (idx) => field?.hostPlanetOf(idx)?.hostStarIdx ?? null,
+      };
+    },
 
     card: (): FocusCardProvider<'planet'> => createPlanetFocusProvider({
       planetAt: (idx) => field?.planetAt(idx) ?? null,

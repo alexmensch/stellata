@@ -550,6 +550,7 @@ export class Stellata implements FrameAnchor {
       localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
       parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
       renderedSizePx: (idx) => this.renderedSizePxFor(idx),
+      peakDiscSizePx: (idx) => starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
       getBinaries: () => this.getBinaries(),
     });
@@ -1177,14 +1178,7 @@ export class Stellata implements FrameAnchor {
    *  inputs (HUD Sol/GC pair, POI arrows). */
   getFocusedDiscRadiusPx(): number {
     const t = this.focus.getFocusedTarget();
-    if (t?.kind === 'star') {
-      return starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, t.idx) * 0.5;
-    }
-    if (t?.kind === 'planet') {
-      return this.planetBodyField.renderedPlanetSizePx(t.idx, this.camera.position) * 0.5;
-    }
-    if (t?.kind === 'probe') return this.focusables.probe.renderedSizePx(t.idx) * 0.5;
-    return 0;
+    return t === null ? 0 : this.focusables[t.kind].peakDiscSizePx(t.idx) * 0.5;
   }
 
   /** Absolute-space coordinate of the renderer's current local origin.

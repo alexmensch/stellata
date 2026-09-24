@@ -120,6 +120,7 @@ describe('probe kind module', () => {
     expect(provider.focusParkDistance(0)).toBe(PROBE_PARK_DIST_PC);
     expect(provider.orbitFloor(0)).toBe(PROBE_ORBIT_FLOOR_PC);
     expect(provider.renderedSizePx(0)).toBe(PROBE_MARKER_PX);
+    expect(provider.peakDiscSizePx(0)).toBe(PROBE_MARKER_PX);
     expect(provider.planetSystemHost(0)).toBe(7);
     const local = new THREE.Vector3();
     expect(provider.localPositionInto(0, local)).toBe(true);

@@ -213,6 +213,7 @@ function makeHarness(opts: {
     orbitFloor: () => Math.min(GLOBAL_MIN_DIST_PC, 1),
     arrivalRadiusPc: () => null,
     renderedSizePx: () => 10,
+    peakDiscSizePx: () => 10,
     chartPlateauDistance: () => null,
     planetSystemHost: () => null,
   };
@@ -235,6 +236,7 @@ function makeHarness(opts: {
       arrivalRadiusPc: (idx) =>
         Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
       renderedSizePx: () => 10,
+      peakDiscSizePx: () => 10,
       chartPlateauDistance: () => null,
       planetSystemHost: (idx) => idx,
     },
@@ -256,6 +258,7 @@ function makeHarness(opts: {
         return p === null ? null : p.radiusKm * KM_PC;
       },
       renderedSizePx: () => 10,
+      peakDiscSizePx: () => 10,
       chartPlateauDistance: () => null,
       planetSystemHost: (idx) => planetField.hostPlanetOf(idx)?.hostStarIdx ?? null,
     },
@@ -266,6 +269,7 @@ function makeHarness(opts: {
       orbitFloor: (idx) => Math.min(GLOBAL_MIN_DIST_PC, shells.focusParkDistancePc(idx)),
       arrivalRadiusPc: () => null,
       renderedSizePx: () => 10,
+      peakDiscSizePx: () => 10,
       chartPlateauDistance: () => null,
       planetSystemHost: () => null,
     },
@@ -280,6 +284,7 @@ function makeHarness(opts: {
       orbitFloor: () => PROBE_ORBIT_FLOOR_PC,
       arrivalRadiusPc: () => null,
       renderedSizePx: () => PROBE_MARKER_PX,
+      peakDiscSizePx: () => PROBE_MARKER_PX,
       chartPlateauDistance: () => null,
       planetSystemHost: () => catalog.solIndex,
     },
