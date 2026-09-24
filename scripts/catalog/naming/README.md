@@ -114,7 +114,7 @@ refresh that changes either fact.
 
 ## The residual gate
 
-[§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s residual. Every manifest `proper` must either match a WGSN name key
+[§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s residual, enforced: every manifest `proper` must either match a WGSN name key
 (diacritic-folded, post multi-name-split — 445 of 491 do) or appear in
 the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (46 rows).
 The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
