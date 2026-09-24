@@ -111,6 +111,12 @@ interface PlanetRing {
   resolvable: boolean;
 }
 
+interface RingVisibilityGroup {
+  readonly idxs: number[];
+  readonly radii: number[];
+  readonly visible: boolean[];
+}
+
 /**
  * Whether the live elements have moved far enough from the ones a ring's
  * vertices were written from to be worth rewriting them. Every leg is
@@ -171,8 +177,9 @@ export function orbitalPlaneNormalFor(
 export function ringVisibility(
   pixelRadii: readonly number[],
   thresholdPx: number,
+  out: boolean[] = [],
 ): boolean[] {
-  const out: boolean[] = new Array(pixelRadii.length).fill(false);
+  out.length = pixelRadii.length;
   for (let i = 0; i < pixelRadii.length; i++) {
     const gapPrev = i > 0 ? pixelRadii[i] - pixelRadii[i - 1] : Infinity;
     const gapNext = i < pixelRadii.length - 1 ? pixelRadii[i + 1] - pixelRadii[i] : Infinity;
@@ -387,6 +394,8 @@ export class OrbitRingsLayer {
   // focused. Sibling of `hidden` / `mono`.
   private permitted = true;
   private readonly tmpParentRel = new THREE.Vector3();
+  private readonly visGroupByCentre = new Map<number, RingVisibilityGroup>();
+  private readonly visGroups: RingVisibilityGroup[] = [];
   // Last host renderer-local position update() received; retained so a
   // null feed (host not attached yet) keeps the rings where they were.
   private readonly hostLocal = new THREE.Vector3();
@@ -519,7 +528,10 @@ export class OrbitRingsLayer {
     const dHost = camera.position.distanceTo(this.hostLocal);
     // Keyed by centre body (parentIdx): a ring gaps only against others
     // sharing its centre, measured at that centre's camera distance.
-    const groups = new Map<number, { idxs: number[]; radii: number[] }>();
+    for (const g of this.visGroups) {
+      g.idxs.length = 0;
+      g.radii.length = 0;
+    }
     for (let i = 0; i < this.rings.length; i++) {
       const r = this.rings[i];
       r.centre.copy(this.hostLocal);
@@ -534,16 +546,17 @@ export class OrbitRingsLayer {
         dPc = r.centre.distanceTo(camera.position);
       }
       const key = r.parentIdx ?? -1;
-      let group = groups.get(key);
+      let group = this.visGroupByCentre.get(key);
       if (!group) {
-        group = { idxs: [], radii: [] };
-        groups.set(key, group);
+        group = { idxs: [], radii: [], visible: [] };
+        this.visGroupByCentre.set(key, group);
+        this.visGroups.push(group);
       }
       group.idxs.push(i);
       group.radii.push(angularRadiusPx(r.semiMajorPc, dPc, pxPerRad));
     }
-    for (const g of groups.values()) {
-      const visible = ringVisibility(g.radii, RING_VISIBILITY_THRESHOLD_PX);
+    for (const g of this.visGroups) {
+      const visible = ringVisibility(g.radii, RING_VISIBILITY_THRESHOLD_PX, g.visible);
       for (let k = 0; k < g.idxs.length; k++) {
         const r = this.rings[g.idxs[k]];
         r.resolvable = visible[k];
@@ -632,5 +645,7 @@ export class OrbitRingsLayer {
       r.line.geometry.dispose();
     }
     this.rings = [];
+    this.visGroupByCentre.clear();
+    this.visGroups.length = 0;
   }
 }
