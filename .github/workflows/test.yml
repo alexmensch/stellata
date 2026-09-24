@@ -120,9 +120,8 @@ jobs:
         with:
           path: ${{ runner.temp }}/catalog-build.tar
           key: ${{ steps.catalog-key.outputs.key }}
-      - run: pnpm run build:clouds
       - id: built
-        run: pnpm run build:local-group
+        run: pnpm run build:layers
       # Ledger ↔ artifact consistency, drop side (docs/sid.md § 4.5):
       # read-only allocation walk over the built artifacts; fails on any
       # would-mint object or orphaned synth key, so an object-set change
@@ -136,11 +135,8 @@ jobs:
       # Also the home for LFS-gated catalogue-wide sweeps that self-skip in
       # the bare `test` job — every such suite must be named in the vitest
       # invocation below, or it never runs smudged anywhere.
-      - id: binaries-runtime
-        if: ${{ !cancelled() && steps.built.outcome == 'success' }}
-        run: pnpm run build:binaries-runtime
       - name: Tier-A star corpus
-        if: ${{ !cancelled() && steps.binaries-runtime.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
       # The exact build deploy.yml ships (`pnpm run build`, whose remaining
       # stages are build:binaries — pinned to the committed multiples.tsv by
@@ -149,7 +145,7 @@ jobs:
       # rejects it after merge.
       - id: deploy-build
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
-        run: pnpm run build:layers && pnpm run build:client
+        run: pnpm run build:client
       - name: Deploy asset sizes
         if: ${{ !cancelled() && steps.deploy-build.outcome == 'success' }}
         run: pnpm run check:asset-sizes
