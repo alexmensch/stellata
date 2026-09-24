@@ -9,7 +9,7 @@ const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'controls', 'disposed', 'exposure', 'exposureFrame', 'filters', 'floatingOrigin', 'focus',
   'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
-  'observe', 'observeControls', 'occluders', 'orbitFramePort', 'orbitFrameTick',
+  'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
   'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
 ];
@@ -25,8 +25,7 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'dust', 'dustParticleSource', 'dustParticles',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
   'frameCtx', 'galacticDisc', 'glslResidentsChecked',
-  'lastParticleStrength', 'observePinQuat',
-  'observeTmpFwd', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
+  'lastParticleStrength', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
   'pickSizeScratch', 'solarCluster', 'starAttrs', 'starFrame',
   'starLocalCluster', 'tmpBound', 'tmpConstellationAbs', 'tmpHostLocal', 'tmpVec3b',
   'trackballSettle', 'webgpuStarLayer',

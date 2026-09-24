@@ -69,7 +69,7 @@ import { AimController } from './camera/controls/aim-controller';
 import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
-import { lookPinStale, writeLookPin } from './camera/observe/look-pin-pure';
+import { ObserveLookPin } from './camera/observe/observe-look-pin';
 import { PoiStore } from './poi/poi-store';
 import { InputController } from './camera/controls/input/input-controller';
 import {
@@ -397,6 +397,7 @@ export class Stellata implements FrameAnchor {
   readonly localDepthPass = new LocalDepthPass();
   readonly renderGate = new RenderGate();
   private readonly trackballSettle: TrackballSettle;
+  private readonly observeLookPin: ObserveLookPin;
   private glslResidentsChecked = false;
   private readonly cadence: ClockCadence;
   // Read on the NEXT tick is NOT good enough for this one: a layer that
@@ -488,6 +489,7 @@ export class Stellata implements FrameAnchor {
     // unconstrained rotation — no polar clamping at the zenith/nadir, so
     // the user can orbit past the poles continuously.
     this.controls = new TrackballControls(this.camera, canvas);
+    this.observeLookPin = new ObserveLookPin(this.camera, this.controls.target);
     this.controls.rotateSpeed = 3.0;
     this.controls.zoomSpeed = 1.1;
     this.controls.staticMoving = false;
@@ -856,12 +858,7 @@ export class Stellata implements FrameAnchor {
     this.on('filter', () => {
       this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
-    this.on('cameraMode', () => {
-      // The observe transitions write controls.target directly, so the
-      // look pin must be re-derived on the next observe frame even if the
-      // camera never rotated across the switch.
-      this.observePinQuat.set(Number.NaN, 0, 0, 0);
-    });
+    this.on('cameraMode', () => this.observeLookPin.invalidate());
     this.coordSpheres = Object.fromEntries(
       DRAWN_COORD_SPHERE_FRAMES.map((frame) =>
         [frame, new CoordSphere(COORD_SPHERE_SPECS[frame], this.chromeLines)]),
@@ -2575,22 +2572,13 @@ export class Stellata implements FrameAnchor {
       this.focus.tick(nowMs);
     } else if (this.aim.isObserveAimActive()) {
       this.aim.tickObserve(nowMs);
-      // Observe-mode aim slerps the camera quaternion in place. The
-      // controls.target still needs the per-frame re-pin so URL state stays
-      // truthful mid-flight.
-      this.observeUpdateTarget();
+      this.observeLookPin.update();
     } else if (this.observe.isAnyActive()) {
       this.observe.tick(nowMs);
     } else if (this.focus.getCameraMode() === 'observe') {
       cameraAnimating = false;
-      // Look-around input (yaw/pitch/roll/FOV) mutates the camera directly
-      // via observeControls + the existing two-finger handlers. update()
-      // here advances any post-release momentum from a flick. Per-frame
-      // we also re-pin controls.target one parsec ahead of the camera so
-      // URL state writers (which serialise camera.position + target)
-      // still round-trip the look direction correctly.
       this.observeControls.update();
-      this.observeUpdateTarget();
+      this.observeLookPin.update();
     } else {
       cameraAnimating = false;
       this.trackballSettle.capture(this.camera);
@@ -2788,7 +2776,7 @@ export class Stellata implements FrameAnchor {
 
     // Kind-generic focal position: measuring HUD distances from
     // controls.target is only right in navigate — in observe the target
-    // is parked 1 pc ahead of the camera (observeUpdateTarget), which
+    // is parked 1 pc ahead of the camera (ObserveLookPin), which
     // read as "Sol · 3.3 ly" from a planet-anchored observe.
     const focusedLocal = this.focus.focalLocalPositionInto(this._tmpAnimateLocal)
       ? this._tmpAnimateLocal
@@ -2816,22 +2804,11 @@ export class Stellata implements FrameAnchor {
     });
   }
 
-  private observeTmpFwd = new THREE.Vector3();
-  // Orientation the look pin was last derived at. x=NaN forces the first
-  // call through, since NaN never equals itself.
-  private readonly observePinQuat = new THREE.Quaternion(Number.NaN, 0, 0, 0);
-  private observeUpdateTarget() {
-    if (!lookPinStale(this.observePinQuat, this.camera.quaternion)) return;
-    this.observePinQuat.copy(this.camera.quaternion);
-    this.observeTmpFwd.set(0, 0, -1).applyQuaternion(this.camera.quaternion);
-    writeLookPin(this.camera.position, this.observeTmpFwd, this.controls.target);
-  }
-
   dispose() {
     this.disposed = true;
     this.offCatalogRecords?.();
     this.offCatalogRecords = null;
-    this.observePinQuat.set(Number.NaN, 0, 0, 0);
+    this.observeLookPin.invalidate();
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
     this.trackballSettle.dispose();

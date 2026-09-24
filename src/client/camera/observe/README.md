@@ -14,6 +14,9 @@ click handlers (single = pin a POI, double = aim-at).
 - `look-pin-pure.ts` (+ test) — the `controls.target` value OBSERVE
   serialises, and the single condition that invalidates it.
   § The serialised look pin.
+- `observe-look-pin.ts` (+ test) — `ObserveLookPin`, which holds the
+  orientation the pin was last derived at and writes `controls.target`
+  from it. § The serialised look pin.
 - `observe-transition.ts` — navigate↔observe FSM. `setMode`,
   `startExit`, `startUnfocusLerp`, the per-frame lerp, and the
   `ObserveFocusOps` cross-controller seam (implemented by
@@ -271,8 +274,7 @@ report every distance ~1 pc off.
 **It is re-derived only on rotation, and that guard is load-bearing.** A
 focal ride translates camera and target together through one delta
 (`Stellata.applyRideDelta`), which is exact, so a translated pin stays
-correct for free. Re-deriving it from a translated camera instead —
-which is what the shell used to do every frame — lands
+correct for free. Re-deriving it from a translated camera instead lands
 `position + forward` a few ULP off the value the ride wrote, every frame,
 converging never. The render gate compares the pose by exact equality, so
 it read that as a camera move and the whole clock cadence stopped idling
@@ -286,11 +288,13 @@ stays a render-gate problem only: **the serialised direction loses nothing
 to it.** The blob carries cam/tgt anchor-relative and float32, and a sweep
 of camera-from-origin 1e-9–1000 pc (0.9–1.1 pc looking back included)
 round-trips with zero error beyond the float32 floor itself — worst
-4.7e-8 rad, ~1800× under a pixel at `FOV_MIN_DEG` on a 2000 px viewport. `observePinQuat` is NaN-seeded so
-the first frame always derives, and the `'cameraMode'` handler re-seeds it
-because the transitions write `controls.target` directly — without that, a
-mode round-trip with no rotation would keep the transition's target as the
-pin.
+4.7e-8 rad, ~1800× under a pixel at `FOV_MIN_DEG` on a 2000 px viewport.
+`ObserveLookPin` NaN-seeds its last-derived orientation so the first
+`update()` always derives, and the shell's `'cameraMode'` handler calls
+`invalidate()` because the transitions write `controls.target` directly —
+without that, a mode round-trip with no rotation would keep the
+transition's target as the pin. The shell calls `update()` on two
+`animate()` branches: the observe aim slerp and steady observe.
 
 ## The observe anchor in line layers
 

@@ -188,7 +188,7 @@ Skipped on navigate-mode arrivals because
 frame and would overwrite the slerped quaternion one frame after
 `finishWarp`, leaving the user with a hard snap-back. Observe
 arrivals preserve the slerp because controls are disabled and
-`observeUpdateTarget` reads `controls.target` from the camera
+`ObserveLookPin` derives `controls.target` from the camera
 quaternion, not the other way around.
 
 The floating origin is recentred onto B at the start of phase 3 (not
