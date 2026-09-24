@@ -44,14 +44,14 @@ export function sortIndicesByDistance(
   end: number,
 ): Uint32Array {
   const n = end - first;
-  const bits = new Uint32Array(dist.buffer, dist.byteOffset + first * 4, n);
+  const bits = new Uint32Array(dist.buffer, dist.byteOffset, dist.length);
   let src = new Uint32Array(n);
   let dst = new Uint32Array(n);
-  for (let i = 0; i < n; i++) src[i] = i;
+  for (let i = 0; i < n; i++) src[i] = first + i;
   const offsets = new Uint32Array(RADIX);
   for (let shift = 0; shift < 32; shift += RADIX_BITS) {
     offsets.fill(0);
-    for (let i = 0; i < n; i++) offsets[(bits[i] >>> shift) & RADIX_MASK]++;
+    for (let i = first; i < end; i++) offsets[(bits[i] >>> shift) & RADIX_MASK]++;
     let sum = 0;
     for (let d = 0; d < RADIX; d++) {
       const c = offsets[d];
@@ -64,6 +64,5 @@ export function sortIndicesByDistance(
     }
     [src, dst] = [dst, src];
   }
-  for (let i = 0; i < n; i++) src[i] += first;
   return src;
 }
