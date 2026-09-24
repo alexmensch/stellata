@@ -966,11 +966,8 @@ export class Stellata implements FrameAnchor {
       sel.excludeStarIdx);
   }
 
-  // One adapter entry per scene layer; registration order is per-frame
-  // update order (kind-module layers registered ahead of these in the
-  // constructor's roster loop). Warp gating is per-entry: reference
-  // layers hide during warp, physical/light layers keep ticking. See
-  // scene/README.md.
+  // Registration order is per-frame update order — scene/README.md § How the
+  // shell uses it.
   private registerSceneLayers(): void {
     this.layers.register({
       timeBehaviour: { kind: 'clock', rate: this.solarSystem.planetRate },

@@ -7,8 +7,8 @@ const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
-  'clock', 'controls', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters', 'floatingOrigin', 'focus', 'galactic',
-  'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
+  'clock', 'controls', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters',
+  'floatingOrigin', 'focus', 'galactic', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
   'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
