@@ -100,12 +100,10 @@ export function collectKindPicks(modules: KindModules): Partial<Record<TargetKin
   return picks;
 }
 
-/** Every kind's focusable provider — the shell's `focusables` registry. */
 export function collectFocusables(modules: BuiltKindModules): FocusableProviders {
   return rosterRecord((kind) => modules[kind].focusable());
 }
 
-/** Every kind's pin rule, for `PoiStore`. */
 export function collectPinnable(modules: BuiltKindModules): PoiStoreDeps['pinnable'] {
   return rosterRecord((kind) => (idx: number) => modules[kind].pinnable(idx));
 }

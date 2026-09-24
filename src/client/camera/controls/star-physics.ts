@@ -264,12 +264,13 @@ export function livePulsationRadiusFactor(
 // components; everything sizing against the rendered disc edge takes the
 // max via `renderedSizePx`. If the shader's size computation changes,
 // this must change in lockstep.
-/** `extinctionAvMag` — dust extinction folded into the magnitude, as the
- *  shader does. Left at 0 by the overlay consumers (focus ring,
- *  distance-vector tip), which track a star the user is already looking at
- *  and would pay a GPU readback per frame for a sub-pixel size change. The
- *  pick paths pass it: there the dust term decides whether the star is on
- *  screen at all (`../../hdr/exposure/visibility/emitter-visibility-pure.ts`). */
+//
+// `extinctionAvMag` folds dust into the magnitude, as the shader does. The
+// overlay consumers (focus ring, distance-vector tip) leave it at 0: they
+// track a star the user is already looking at and would pay a GPU readback
+// per frame for a sub-pixel size change. The pick paths pass it, since there
+// the dust term decides whether the star is on screen at all
+// (`../../hdr/exposure/visibility/emitter-visibility-pure.ts`).
 export function renderedSizeComponents(
   inputs: StarSizeInputs,
   idx: number,
