@@ -1,7 +1,7 @@
 // Behaviour of scripts/hooks/skill-guard.sh — see scripts/hooks/README.md § How skill-guard works.
 
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, realpathSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -81,6 +81,14 @@ describe('skill-guard / cube-css', () => {
       .toBe(false);
   });
 
+  it('writes no marker for a skill name that is not a plain token', () => {
+    for (const name of ['../../evil', 'a:../x', 'x y', '']) {
+      expect(skill(name).allowed, name).toBe(true);
+    }
+    expect(readdirSync(join(stateDir, 'claude-skill-guard'))).toEqual([]);
+    expect(readdirSync(stateDir)).toEqual(['claude-skill-guard']);
+  });
+
   it('passes a payload carrying no path at all', () => {
     expect(run({ tool_name: 'Edit', tool_input: {} }).allowed).toBe(true);
   });
@@ -108,6 +116,11 @@ describe('skill-guard / code-craft', () => {
   it('does not arm the stylesheet gate', () => {
     expect(skill('code-craft').allowed).toBe(true);
     expect(edit('/repo/src/site/site.css').allowed).toBe(false);
+  });
+
+  it('accepts a worktree-scoped spelling of the skill name', () => {
+    expect(skill('.claude/worktrees/wt:code-craft').allowed).toBe(true);
+    expect(edit('/repo/src/a.ts').allowed).toBe(true);
   });
 
   it('offers no opt-out, unlike the stylesheet gate', () => {
