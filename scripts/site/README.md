@@ -5,6 +5,8 @@ site-metrics.ts        Counts the catalogue records, the credited sources
                        and the cited references off the things themselves.
 markdown-rendition.ts  A page's markdown rendition, derived from the page's
                        own HTML. Emitted as `dist/index.md`.
+parse-html.ts          The one HTML parse both of the above read a page
+                       through.
 ```
 
 Both are derivations rather than pipelines, and both exist so that
@@ -30,10 +32,14 @@ application and the marketing page is good for.
   an artifact whose counts drift from that snapshot without
   `UPDATE_BUILD_COUNTS=1`. That fallback is what lets a page state an exact
   figure at all — a value that vanishes on a fresh clone has to be worded
-  around, and the wording is what goes stale.
+  around, and the wording is what goes stale. The fallback covers an
+  **absent** artifact only: one that is present but unreadable stops the
+  build rather than quoting the snapshot over it.
 - **Credited sources** — the `<div>` rows of the application's own Credits
-  tab (`src/client/app/index.html`, `.modal-credits`). Adding a source to
-  the app moves the homepage in the same build, with nobody counting.
+  tab (`src/client/app/index.html`, `.modal-credits`), selected from the
+  parsed document, so reformatting the markup cannot move the figure.
+  Adding a source to the app moves the homepage in the same build, with
+  nobody counting; finding none stops the build.
 - **Cited references** — distinct author-year citations across the two root
   docs plus every `*.md` under `docs/ src/ scripts/ data/`. The pattern
   matches only the multi-author forms (`Høg et al. 2000`,

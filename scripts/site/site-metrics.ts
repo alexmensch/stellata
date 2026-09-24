@@ -3,9 +3,11 @@
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { selectAll } from 'hast-util-select';
 
 import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
 import { walkFiles } from '../util/walk-files.ts';
+import { parseHtml } from './parse-html.ts';
 
 /** The modelling record the reference count describes: the two root docs
  *  plus every markdown file under these roots — the science docs and the
@@ -28,22 +30,26 @@ const COUNT_SNAPSHOT = join(import.meta.dirname, '../catalog/build-catalog-expec
  * snapshot without `UPDATE_BUILD_COUNTS=1`.
  */
 export function catalogueRecordCount(root: string): number {
+  let buf: Buffer;
   try {
-    const buf = readFileSync(join(root, 'public', catalogChunkFilename(0)));
-    const bytes = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    return readCatalogHeader(bytes as ArrayBuffer).count;
-  } catch {
+    buf = readFileSync(join(root, 'public', catalogChunkFilename(0)));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
     return JSON.parse(readFileSync(COUNT_SNAPSHOT, 'utf8')).recordCount;
   }
+  const bytes = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  return readCatalogHeader(bytes as ArrayBuffer).count;
 }
 
 /** Every credited source in the application's Credits tab is one `<div>`
  *  child of a `.credit-entry` that is not the entry's own label. */
 export function creditedSourceCount(root: string): number {
-  const app = readFileSync(join(root, APP_DOC), 'utf8');
-  const block = app.slice(app.indexOf('class="modal-credits"'));
-  const credits = block.slice(0, block.indexOf('</div>\n          </div>'));
-  return [...credits.matchAll(/^\s*<div>(?!<div)/gm)].length;
+  const app = parseHtml(readFileSync(join(root, APP_DOC), 'utf8'));
+  const credits = selectAll('.modal-credits > .credit-entry > div:not(.credit-label)', app);
+  if (credits.length === 0) {
+    throw new Error(`site metrics: no credited sources found in ${APP_DOC}'s .modal-credits`);
+  }
+  return credits.length;
 }
 
 function recordFiles(root: string): string[] {
