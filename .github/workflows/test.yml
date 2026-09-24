@@ -97,7 +97,9 @@ jobs:
       # saved build restores that build's outputs and skips the stage. Push
       # to main always rebuilds, so every merged commit is verified uncached.
       - id: catalog-key
-        run: echo "key=$(pnpm exec tsx scripts/ci/catalog-stage.ts key)" >> "$GITHUB_OUTPUT"
+        run: |
+          key=$(pnpm exec tsx scripts/ci/catalog-stage.ts key)
+          echo "key=$key" >> "$GITHUB_OUTPUT"
       - id: catalog-cache
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v6
