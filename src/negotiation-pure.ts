@@ -66,11 +66,9 @@ export function prefersMarkdown(accept: string | null): boolean {
 }
 
 /**
- * Whether a document is the right answer to a request that matched no asset.
- * The deploy serves one whatever the client asked for, so a dev server that
- * checked for `text/html` 404'd the root for every agent and every `curl`.
- * An explicit non-document Accept (`image/png`) still falls through as the
- * asset miss it is.
+ * Whether a document is the right answer to a request that matched no asset:
+ * yes unless the client named only non-document types (`image/png`), since
+ * the deploy serves a document whatever an agent or `curl` sends.
  */
 export function wantsDocument(accept: string | null): boolean {
   return accept === null || quality(accept, 'text/html') !== null || prefersMarkdown(accept);

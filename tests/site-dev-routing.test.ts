@@ -93,9 +93,7 @@ describe('the dev server answers the deploy’s routing table', () => {
 });
 
 // `devRoute` decides the path; these drive the middleware that answers it,
-// which is where the Accept header comes in. A dev server gated on
-// `text/html` 404'd the root for every agent fetcher and every `curl` while
-// the deploy served it — src/README.md § Request routing.
+// which is where the Accept header comes in.
 describe('the middleware answers whatever the client accepts', () => {
   interface Answer {
     status: number;

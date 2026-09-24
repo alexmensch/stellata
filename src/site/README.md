@@ -56,9 +56,8 @@ source path the same way Vite's emit does, so the two cannot disagree.
 
 **Routing that the tree cannot express lives in the Worker**, not here:
 the legacy share-link redirects and the app's unmatched-path fallback.
-`src/README.md` § Request routing is the authority, and the reason
-`wrangler.toml` no longer carries
-`not_found_handling = "single-page-application"`.
+`src/README.md` § Request routing is the authority, including why
+`wrangler.toml`'s `not_found_handling` is `"404-page"`.
 
 ## Reading it in dev
 
@@ -78,8 +77,8 @@ module request.
 
 It needs `appType: 'custom'` there, and that is not a detail to undo:
 Vite's own SPA fallback rewrites an unmatched path to `/index.html` before
-any plugin middleware runs, which made every wrong URL — and `/app` itself
-— serve the homepage.
+any plugin middleware runs, so every wrong URL — and `/app` itself — would
+serve the homepage.
 
 `pnpm run dev:site` still serves this folder alone on port 5174, rooted
 here, for iterating on a page without the app's build chain in front of it.

@@ -62,23 +62,21 @@ does:
 
 **`vite.site-dev.ts` answers this same table**, in this same order, off
 the same import — `devRoute` is its whole routing decision and
-`tests/site-dev-routing.test.ts` pins it beside `worker.test.ts`. The
-dev server restating the rules is how it came to 404 a share link the
-deploy redirects, which nobody sees until someone pastes a real URL.
+`tests/site-dev-routing.test.ts` pins it beside `worker.test.ts`. A dev
+server that restates a rule instead answers a share link differently from
+the deploy, and nobody sees it until someone pastes a real URL.
 
-**`not_found_handling` is deliberately `"404-page"`, not
-`"single-page-application"`.** As the latter it answered every unmatched
-path with the *root* `index.html`, which is now the homepage: a share link
-would have served marketing, and every typo a 200. It now serves
-`dist/404.html` (built from `src/site/404.html`) with a real 404 status.
+**`not_found_handling` is `"404-page"`, never
+`"single-page-application"`.** The latter answers every unmatched path with
+the *root* `index.html`, which is the homepage: a share link would serve
+marketing, and every typo a 200. `"404-page"` serves `dist/404.html` (built
+from `src/site/404.html`) with a real 404 status.
 
 One consequence is worth knowing before touching a loader — **a missing
-artifact now arrives as a real 404** rather than as HTML that fails to
-parse. Every optional loader already answers `!res.ok` with null, so
-absence is handled on the direct path; the parse-error branch still covers
-a present-but-truncated artifact. Note the 404 page *is* an HTML body, so
-a loader that ignored status and only guarded the parse would still be
-wrong — for a different reason than before.
+artifact arrives as a real 404**. Every optional loader answers `!res.ok`
+with null, so absence is handled on the direct path; the parse-error branch
+covers a present-but-truncated artifact. The 404 page *is* an HTML body, so
+a loader that ignored status and only guarded the parse would be wrong.
 
 ## `@cloudflare/workers-types` leaks globally
 
