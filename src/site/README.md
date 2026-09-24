@@ -256,7 +256,8 @@ To land a real capture:
    `<img src="/site/<name>" alt="…" width="…" height="…" />`. Real
    `width`/`height` attributes matter — they reserve the space and keep
    the page's layout shift at zero. `.sight-media` already carries the
-   hairline border, and `.sight-media > img` the full-width rule.
+   hairline border, and `.sight-media > img` the full-width rule; a
+   `.plate`'s capture gets its hairline from `.plate img` the same way.
 
    **A clip goes in the same slot**, and `.hero-media > video` /
    `.sight-media > video` already size it:
