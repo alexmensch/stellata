@@ -66,7 +66,7 @@ commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
                          Every `<file>.md § <Heading>` pointer in a
-                         git-tracked .ts .js .md .py file resolves to a
+                         git-listed .ts .md .py file resolves to a
                          heading that exists — the codebase's wiki links,
                          checked. Grammar, scope, resolution order and the
                          two limits it cannot see: § Doc-pointer
@@ -241,7 +241,9 @@ every pointer carrying a path.
 a scanned extension, symlinks excluded (`CLAUDE.md` would double
 `AGENTS.md`). `.gitignore` already keeps `.claude/skills` in and the rest
 of `.claude` — `worktrees/` above all — out, so no folder list exists to
-drift. One case per extension asserts the scan reaches that file type.
+drift. One case per extension asserts the scan finds pointers in that
+file type, so an extension that carries none has no business in the
+list.
 
 **A blind matcher fails on synthetic input, never on the tree.** A
 regression that stops *seeing* pointers leaves the resolution check green

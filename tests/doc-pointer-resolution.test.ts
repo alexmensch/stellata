@@ -14,7 +14,7 @@ import {
 import { gitFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_EXTS = ['.ts', '.js', '.md', '.py'];
+const SCANNED_EXTS = ['.ts', '.md', '.py'];
 
 // Fixtures interpolate their § from here, so the `<path>.md §` a pointer
 // needs never appears literally and this file stays out of its own scan.
@@ -38,8 +38,7 @@ describe('doc pointers resolve', () => {
     return parsed;
   };
 
-  const files = scannedFiles();
-  const pointers = files.flatMap((file) => {
+  const pointers = scannedFiles().flatMap((file) => {
     const text = readFileSync(file, 'utf-8');
     if (!text.includes('§')) return [];
     return extractPointers(text).map((pointer) => ({ file, pointer }));
@@ -61,8 +60,8 @@ describe('doc pointers resolve', () => {
     expect(failures, failures.join('\n')).toEqual([]);
   });
 
-  it.each(SCANNED_EXTS)('the scan reaches %s files', (ext) => {
-    expect(files.some((file) => extname(file) === ext)).toBe(true);
+  it.each(SCANNED_EXTS)('the scan finds pointers in %s files', (ext) => {
+    expect(pointers.some(({ file }) => extname(file) === ext)).toBe(true);
   });
 });
 
