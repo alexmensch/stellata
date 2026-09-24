@@ -270,7 +270,7 @@ describe('the brightness skip — share-bound rules 1 and 2', () => {
     // The share bound carries Ω_px where the display carries Ω_sum, so the
     // fraction of `L̄` a skip removes — and therefore how far past the edge
     // rule 2 keeps refusing — grows quadratically as the field widens.
-    // MEASURED, not /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound's algebra: the design gate estimates ~0.1 mag at
+    // MEASURED, not the share bound's algebra (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound): the design gate estimates ~0.1 mag at
     // 50° and ~2.5 at 120° and is loose in both directions.
     const EYE_STAT: FrameStatistic = { meanL: 5, coverage: 0, discL: 0 };
     const EDGE_SB = 23.5 + adaptationDm(EYE_STAT);
@@ -324,7 +324,7 @@ describe('the brightness skip — share-bound rules 1 and 2', () => {
 });
 
 describe('the loop the design gate exists to close', () => {
-  // /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound's hazard in full: a skipped emitter's light genuinely leaves the
+  // The share bound's hazard in full (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound): a skipped emitter's light genuinely leaves the
   // next landed statistic, and a drawn one puts it back. Iterating the
   // verdict against a statistic that FOLLOWS it is the only test that can
   // see a 2-cycle; every other test here holds the statistic fixed.
@@ -355,7 +355,7 @@ describe('the loop the design gate exists to close', () => {
   }
 
   it('settles on M31 at every share the bound admits', () => {
-    // 0.0081 is /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound's own bound on the band's share from Sol. The rest
+    // 0.0081 is the share bound's own bound (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound) on the band's share from Sol. The rest
     // are absurd on purpose: the loop has to settle across orders of
     // magnitude, not just at the figure the design gate quotes.
     for (const share of [0.0081, 0.1, 1, 5, 20, 40]) {

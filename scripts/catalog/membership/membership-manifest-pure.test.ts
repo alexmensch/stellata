@@ -671,7 +671,7 @@ describe('buildMembership — the additions', () => {
     expect(result.counts.additionSourceShared).toBe(1);
   });
 
-  // /docs/catalog-driver.md#4-how-hd-reaches-gaia gives the HD route label authority; the source follows it too.
+  // The HD route (/docs/catalog-driver.md#4-how-hd-reaches-gaia) carries label authority; the source follows it too.
   it("takes the TYC route's source where the HIP route binds another", () => {
     expect(byTyc.get('3-3-1')).toMatchObject({ hip: '50', gaia_source_id: '1313' });
     expect(result.counts.additionRouteSourceDisagree).toBe(1);
@@ -698,7 +698,7 @@ describe('buildMembership — the additions', () => {
   });
 });
 
-// /docs/catalog-driver.md#61-record-parity forbids a silent drop, and admission reads one item per cohort: a
+// Record parity (/docs/catalog-driver.md#61-record-parity) forbids a silent drop, and admission reads one item per cohort: a
 // group holding two would leave a primary's row in no manifest row and on no
 // ledger line. Two IV/25 TYCs naming one HIP is the shape that gets there.
 describe('a group holding two items of one cohort', () => {

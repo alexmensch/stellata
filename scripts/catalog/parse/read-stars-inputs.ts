@@ -207,7 +207,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     );
   }
 
-  // SIMBAD bibcoded values over the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers cohort — the rv cascade's bottom
+  // SIMBAD bibcoded values over the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) — the rv cascade's bottom
   // tier. Without it the rows no first-order catalogue reaches take a zero
   // radial term, which shows up as an rvVia drift in the count snapshot.
   let simbadValues: SimbadValueIndex = emptySimbadValueIndex();
@@ -349,7 +349,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   // Printed Gliese V/70A values — the V cascade's tier under Tycho-2, and the
   // only source reaching the GJ-only cohort at all (SIMBAD holds no V flux
   // for those rows). Absent costs each of them its V, and a row with no V
-  // parks, so this shows up on the /docs/catalog-driver.md#61-record-parity ledger rather than as a routing
+  // parks, so this shows up on the record-parity ledger (/docs/catalog-driver.md#61-record-parity) rather than as a routing
   // drift.
   let gliese: GlieseIndex = emptyGlieseIndex();
   if (existsSync(SRC_GLIESE)) {

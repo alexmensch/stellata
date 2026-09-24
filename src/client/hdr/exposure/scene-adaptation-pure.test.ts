@@ -87,7 +87,7 @@ describe('scene-adaptation constants', () => {
     // agree exactly for a body-dominated frame — so the ramp closes with no
     // step of its own. The foot is the smallest framing the ±3-stop trim
     // could still pull back to L_TARGET; under it a body is past the trim's
-    // reach and /docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix's brilliant dot is the honest reading.
+    // reach and the model-limits brilliant dot (/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix) is the honest reading.
     expect(ADAPT_PIN_COVERAGE).toBe(ADAPT_REF_COVERAGE);
     expect(ADAPT_DOT_COVERAGE).toBeCloseTo(0.0085625, 7);
     expect(ADAPT_PIN_COVERAGE / ADAPT_DOT_COVERAGE).toBeCloseTo(2 ** EV_MAX_STOPS, 12);
@@ -154,7 +154,7 @@ describe('the adaptation contribution table', () => {
     expect(surfacePinWeight(solAt1Au.coverage)).toBe(0);
     expect(adaptationBranches(solAt1Au).regime).toBe('floor');
     expect(adaptationDm(solAt1Au)).toBe(ADAPT_DISPLAY_FLOOR_DM);
-    // /docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix's accepted exception survives, by a wider margin than before:
+    // The model-limits accepted exception (/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix) survives, by a wider margin than before:
     // the disc needs −22 mag to fall under the white point and the floor
     // plus a full negative trim reaches −8.55, so it stays clipped white.
     const neededCut = -2.5 * Math.log10(discL / tonemapWhitePoint());
@@ -350,7 +350,7 @@ describe('the resolved-surface pin', () => {
     // point of 20. Sol's disc is ~1.9 px across there, under the disc
     // pass's own threshold, so every photon in frame arrives as a kernel
     // and claims nothing — the perception branch governs, floored, and
-    // /docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix's accepted exception stands.
+    // The model-limits accepted exception (/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix) stands.
     const b = adaptationBranches(pointFrame(68.6));
     expect(b.coverage).toBe(0);
     expect(b.pin).toBe(0);

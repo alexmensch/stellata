@@ -44,7 +44,7 @@ describe('lambertLimbDiscMean', () => {
 });
 
 describe('hostIrradianceLuminance', () => {
-  const omegaPx = 8836; // ~94 arcsec/px, the /docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance band reference pixel
+  const omegaPx = 8836; // ~94 arcsec/px, the display-luminance band reference pixel (/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance)
 
   it('falls as 1/d² in host distance', () => {
     const at1 = hostIrradianceLuminance(BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC);
@@ -94,7 +94,7 @@ describe('meshSurfaceLuminance', () => {
     // body crossing the handoff does not jump. Both sides are built from the
     // same p and irradiance, which is what makes this hold rather than tune.
     const dVpPc = 0.002 * AU_PC;
-    // A narrower plate scale than the /docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance band reference: continuity is a
+    // A narrower plate scale than the display-luminance band reference (/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance): continuity is a
     // claim about the PRE-clamp quantity, and the glare side clamps at
     // LUMA_CEIL while the mesh scalar does not — at 94 arcsec/px the
     // full-Moon disc already sits above the ceiling.

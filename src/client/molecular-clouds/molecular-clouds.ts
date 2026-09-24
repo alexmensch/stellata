@@ -131,7 +131,7 @@ export class MolecularClouds {
     // three.js groupOrder, which outranks per-mesh renderOrder in the
     // transparent sort — the whole cloud pass would draw BEFORE the MW
     // band (its group is 0, meshes −3) and the band would paint over the
-    // absorption, silently defeating the /docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode render-order contract.
+    // absorption, silently defeating the sampling rules' render-order contract (/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode).
     this.absorptionGroup = new THREE.Group();
     this.rimGroup = new THREE.Group();
     // Fails closed: `pick` reads this, and no declutter permit is known
@@ -342,8 +342,8 @@ export class MolecularClouds {
   setAbsorptionEnabled(on: boolean) {
     this.absorptionEnabled = on;
   }
-  /** Absorption raymarch step count (/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode lever — the sampling rules
-   *  are not). */
+  /** Absorption raymarch step count, a sampling lever (/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode); the
+   *  sampling rules themselves are not. */
   setSteps(n: number) {
     const steps = Math.max(4, Math.min(24, Math.round(n)));
     for (const s of this.absorptionSurfaces) s.uniforms.uSteps.value = steps;

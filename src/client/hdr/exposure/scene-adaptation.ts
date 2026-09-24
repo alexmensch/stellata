@@ -151,7 +151,7 @@ export class SceneAdaptation {
   }
 
   /** Adaptation anchor — `L̄` at which the perception branch's cut is zero.
-   *  A debug knob only: ships at `L_ADAPT`, which /docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut measured. */
+   *  A debug knob only: ships at `L_ADAPT`, which the adaptation section (/docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut) measured. */
   setLAdapt(l: number): void { this.lAdapt = l; }
 
   getLAdapt(): number { return this.lAdapt; }

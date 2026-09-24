@@ -262,7 +262,7 @@ export function splitNameCell(
   return { name: parts[0], aliases: [...parts.slice(1), ...aliases] };
 }
 
-/** The /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them measurement's convention — `Yunü` finds `Yunu`. */
+/** The naming-authority measurement's convention (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) — `Yunü` finds `Yunu`. */
 export function foldNameKey(name: string): string {
   return name.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 }

@@ -100,7 +100,7 @@ describe('unionIv27aBayer', () => {
   });
 });
 
-describe('the /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them disposition gate', () => {
+describe('the naming-authority disposition gate', () => {
   const tsv = [
     'proper\tclass\thip\thd',
     "Kapteyn's Star\tdiscovery-designation\t24186\t33793",

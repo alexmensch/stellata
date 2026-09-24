@@ -31,10 +31,10 @@ export interface ParityRow {
    *  the runtime's `Gaia DR3` / `SID #` last resort. */
   new: string;
   /** Whether `old` still resolves THIS record through the search corpus.
-   *  /docs/star-naming.md#81-searchability-never-regresses makes that the hard invariant for a string with external
+   *  The searchability rule (/docs/star-naming.md#81-searchability-never-regresses) makes that the hard invariant for a string with external
    *  provenance — a published name or a designation the structure
    *  re-derives. A `false` row is only legitimate where the build composed
-   *  the string itself, which /docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can says has no external existence and
+   *  the string itself, which the alias rule (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) says has no external existence and
    *  disappears with the composition that made it. */
   resolves: boolean;
 }

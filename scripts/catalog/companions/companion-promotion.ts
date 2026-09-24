@@ -548,7 +548,7 @@ export function parkedRefusals(
 export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
 
 /** Whether promoting this pair row would re-serve a parallax a tier above
- *  refused — the courier the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers skip rules exist to close.
+ *  refused — the courier the per-field skip rules (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) exist to close.
  *
  *  **The match is on the measurement, never on the identifier alone.**
  *  multiples.tsv states a distance for every component, and for a row carrying

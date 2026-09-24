@@ -33,7 +33,7 @@ export interface FrameCtx {
   /** The frame's exposure state, for the `'brightness'` test — null in
    *  chart, where the seam is off. Carries the cut the LAST rendered
    *  frame was drawn with, because the fan-out runs before `measure()`
-   *  folds this frame's; /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound's lateness argument covers it, and a slew
+   *  folds this frame's; the share bound's lateness argument (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound) covers it, and a slew
    *  in flight invalidates every frame anyway. */
   readonly exposure: FrameExposure | null;
 }

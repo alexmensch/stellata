@@ -159,7 +159,7 @@ def fetch_flux_bands(
     """Pull the long-format ``flux`` table for ``bands`` and pivot it wide.
     Returns {oid: {tsv_name: value}} over each band's value / error /
     bibcode columns. ``flux`` rather than ``allfluxes`` because only it
-    carries the per-band bibcode a /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers SIMBAD tier must ship."""
+    carries the per-band bibcode a per-field SIMBAD tier (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) must ship."""
     if not bands:
         return {}
     by_filter = {b.filter: b for b in bands}

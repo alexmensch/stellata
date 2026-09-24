@@ -251,7 +251,7 @@ function altCells(cell: string, column: string): number[] {
   });
 }
 
-/** The one gate a manifest row can still fail that is NOT a /docs/catalog-driver.md#61-record-parity park, and
+/** The one gate a manifest row can still fail that is NOT a record-parity park (/docs/catalog-driver.md#61-record-parity), and
  *  pinned at 0 in build-catalog-expected.json for that reason. */
 export interface ReadStarsDrops {
   tooFar: number;
@@ -268,7 +268,7 @@ export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
   bjMap?: Map<string, number>;
   simbadSpectral?: SimbadSpectralIndex;
-  /** Bibcoded SIMBAD values over the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers cohort — the rv cascade's bottom
+  /** Bibcoded SIMBAD values over the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) — the rv cascade's bottom
    *  tier. Absent leaves its rows on a zero radial term. */
   simbadValues?: SimbadValueIndex;
   apsisMap?: Map<string, ApsisRow>;
@@ -334,7 +334,7 @@ export function readStars(
      *  when the column gains sources the pull was never asked for, that
      *  numerator stops growing, and "stopped growing" reads as no change. */
     bjEligibleNotPulled: number;
-    /** The /docs/catalog-driver.md#61-record-parity dropped list — enumerated, because these rows leave the
+    /** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity) — enumerated, because these rows leave the
      *  catalogue and nothing else records that they existed. */
     parked: ParkedRecord[];
     /** The same rows counted per reason. The cascade partitions below run over
@@ -502,7 +502,7 @@ export function readStars(
       gaiaRowIs2p(gaiaRow),
       isSol,
     );
-    // Not a `dropped` gate: a park is a deliberate /docs/catalog-driver.md#61-record-parity ledger entry.
+    // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
       park(plxRes.refusedPlxMas.length > 0
         ? 'refused_no_defensible_parallax'
@@ -536,7 +536,7 @@ export function readStars(
       { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
       directions,
     );
-    // A /docs/catalog-driver.md#61-record-parity park, not a drop: no tier states where this row is, so its
+    // A record-parity park (/docs/catalog-driver.md#61-record-parity), not a drop: no tier states where this row is, so its
     // distance has nothing to multiply. Mostly HIP-only additions a bound
     // sibling placed and printed HIP photometry lit, which no positional tier
     // reaches — the SIMBAD values cohort is still keyed on the spine and holds

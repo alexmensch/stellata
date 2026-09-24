@@ -111,7 +111,7 @@ export function detectSimbadOutlier(
   star: Star,
   simbadSample: ReadonlyMap<string, SimbadDistanceEntry>,
 ): SimbadOutlier | null {
-  // /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's validation independence: a distance the SIMBAD tier supplied would
+  // Validation independence (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers): a distance the SIMBAD tier supplied would
   // be checked against the parallax it was derived from, so its residual is
   // zero by construction and reports agreement that was never measured.
   if (star.distVia === 'simbad_plx') return null;

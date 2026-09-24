@@ -26,7 +26,7 @@ export interface Instrument {
   /** Doubles as the extended-source detection threshold
    *  (`../hdr/exposure/exposure-epoch.ts` `extendedThresholdSbFor`). */
   skyBackgroundMagArcsec2: number;
-  /** No consumer yet — /docs/science-hdr-pipeline.md#34-the-instrument-record--aperture-is-the-single-number's remaining preset axis. */
+  /** No consumer yet — the instrument record's remaining preset axis (/docs/science-hdr-pipeline.md#34-the-instrument-record--aperture-is-the-single-number). */
   passband: 'V';
 }
 

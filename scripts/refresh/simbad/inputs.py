@@ -146,7 +146,7 @@ GAIA_VALUE_COLUMNS = ("parallax", "pmra", "pmdec", "radial_velocity")
 
 
 def gaia_complete_source_ids(astrometry_catalog_path: Path) -> set[str]:
-    """Source_ids the committed Gaia DR3 5p table states EVERY /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value for.
+    """Source_ids the committed Gaia DR3 5p table states EVERY per-field value (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) for.
     A row keyed on one of these needs no tier below Gaia for any of them; an
     id absent from the table, or present with any of the three cells blank,
     is not in the set."""
@@ -161,7 +161,7 @@ def gaia_complete_source_ids(astrometry_catalog_path: Path) -> set[str]:
 def simbad_value_cohort(gaia_complete: AbstractSet[str]) -> RowFilter:
     """Build the `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` value-cohort predicate. A row is
     OUT only where BOTH halves of the first-hand claim hold: Gaia's own 5p
-    solution states every /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value for its source_id, AND its identity rests
+    solution states every per-field value (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) for its source_id, AND its identity rests
     on a cross-walk-reproduced binding plus a printed identifier the Tycho-2 /
     Hipparcos tiers can be keyed on. Everything else is in.
 
@@ -169,7 +169,7 @@ def simbad_value_cohort(gaia_complete: AbstractSet[str]) -> RowFilter:
     predicate this replaced answered with one column each. That one read the
     spine's `pos_src` / `dist_src` / `mag_src` / `rv_src` / `pm_src` marks —
     per-field value provenance no manifest column carries. Identity alone is
-    not a substitute and silently loses the exact class /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers retires: HIP 22255
+    not a substitute and silently loses the exact class the per-field cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) retire: HIP 22255
     and HD 150688 both carry `dist_src=G_R2`, a Gaia DR2 distance the driver
     swap retired, on a `crosswalk_gated` binding with a TYC and a HIP. So the
     value half is read where it is actually stated — Gaia's own table — and

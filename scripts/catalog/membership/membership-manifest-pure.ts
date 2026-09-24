@@ -89,7 +89,7 @@ export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
 export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
 
 /** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
- *  HIP / CNS5 candidate the /docs/catalog-driver.md#4-how-hd-reaches-gaia gates passed; `simbad_corroborated` is the
+ *  HIP / CNS5 candidate the HD-route gates (/docs/catalog-driver.md#4-how-hd-reaches-gaia) passed; `simbad_corroborated` is the
  *  source SIMBAD's frozen cross-IDs hold under the record's own designation,
  *  through the same gates; `reviewed` is the value a committed disposition row
  *  settles on stated evidence; `gaia_native` is the pull row itself; `none` is
@@ -149,12 +149,12 @@ export const LABEL_DROP_COLUMNS = [
   'tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason',
 ] as const;
 export type LabelDropRow = Record<(typeof LABEL_DROP_COLUMNS)[number], string>;
-/** The /docs/catalog-driver.md#62-label-parity reasons a spine label leaves the manifest: no primary publishes
+/** The label-parity reasons (/docs/catalog-driver.md#62-label-parity) a spine label leaves the manifest: no primary publishes
  *  that Flamsteed number, or that HD number, for the star. */
 export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as const;
 export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
 
-/** The /docs/catalog-driver.md#61-record-parity reason enum for records the primaries admit that the spine lacked. */
+/** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
 export const ADDITION_REASONS = [
   'admitted:hd_link_gap',
   'admitted:hd_omitted',
@@ -313,7 +313,7 @@ export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], s
 export interface MembershipInput {
   spine: readonly SpineRow[];
   tables: PrimaryTables;
-  /** The committed post-gate overlay: `has(source)` is the /docs/catalog-driver.md#4-how-hd-reaches-gaia gate's verdict
+  /** The committed post-gate overlay: `has(source)` is the HD-route gate's verdict (/docs/catalog-driver.md#4-how-hd-reaches-gaia)
    *  on every raw cross-walk binding, spine row or not. */
   overlay: ClassicIdOverlay;
   overrides: LabelOverrides;
@@ -368,14 +368,14 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Candidates weighed on a pulled row publishing no G — unweighable by any
    *  request. */
   derivedWeighedNullGMag: number;
-  /** Spine labels the manifest leaves out, per /docs/catalog-driver.md#62-label-parity reason. */
+  /** Spine labels the manifest leaves out, per label-parity reason (/docs/catalog-driver.md#62-label-parity). */
   labelDropsByReason: Record<LabelDropReason, number>;
   /** Manifest cells no primary attests, per identifier. */
   unattestedByCell: Record<ClassicalCell, number>;
   /** Addition groups whose raw source is a spine record's, so the cell stays
    *  empty: Gaia fitted one source where Tycho-2 resolved two stars. */
   additionSourceOnSpine: number;
-  /** Addition groups whose raw source the /docs/catalog-driver.md#4-how-hd-reaches-gaia gate refused. */
+  /** Addition groups whose raw source the HD-route gate (/docs/catalog-driver.md#4-how-hd-reaches-gaia) refused. */
   additionSourceGateRefused: number;
   /** Raw sources two or more addition groups reach; no group takes one. */
   additionSourceShared: number;
@@ -815,7 +815,7 @@ function settleBinding(
 }
 
 /** Empty the spine-label cells no primary attests — the Flamsteed number, and
- *  the HD number with its aliases — into /docs/catalog-driver.md#62-label-parity ledger rows keyed on the row as
+ *  the HD number with its aliases — into label-parity ledger rows (/docs/catalog-driver.md#62-label-parity) keyed on the row as
  *  it stands afterwards, so each joins the manifest row it left. Returns the
  *  attestation of the row it leaves behind, which is the one `routesCell`
  *  needs: the HD drop runs first because IV/27A can publish a Flamsteed number
@@ -975,7 +975,7 @@ function groupAdditions(
   return [...groups.values()];
 }
 
-/** One star's items merged across the primaries, with the /docs/catalog-driver.md#4-how-hd-reaches-gaia gate's verdict on
+/** One star's items merged across the primaries, with the HD-route gate's verdict (/docs/catalog-driver.md#4-how-hd-reaches-gaia) on
  *  the source they reach. Everything admission needs except the claim set,
  *  which grows under it — so these are resolved before the first group is
  *  admitted and fix the order the contested designations go in. */
@@ -1000,7 +1000,7 @@ function additionGroup(
 ): AdditionGroup {
   // One item per cohort is what the grouping rules produce and what admission
   // reads; a second would leave a primary's row in no manifest row and on no
-  // ledger line, which /docs/catalog-driver.md#61-record-parity forbids outright. Loud beats silent: the shape is
+  // ledger line, which record parity (/docs/catalog-driver.md#61-record-parity) forbids outright. Loud beats silent: the shape is
   // new, and what it should admit is a decision, not a default.
   for (const cohort of ['hd', 'hip', 'cns5'] as const) {
     const named = items.filter((i) => i[cohort] !== null);
@@ -1038,7 +1038,7 @@ function additionGroup(
  *  it to — IV/25 resolving one HD onto two Tycho-2 stars is the shape, and it
  *  flags them `n_tyc > 1`. Admission is sequential, so this order decides which
  *  one takes the designation and which ledgers onto it as a component: the
- *  group whose Gaia binding survives the /docs/catalog-driver.md#4-how-hd-reaches-gaia gate first, since the other
+ *  group whose Gaia binding survives the HD-route gate (/docs/catalog-driver.md#4-how-hd-reaches-gaia) first, since the other
  *  component would otherwise park for want of a parallax this one has, then by
  *  TYC, HIP and GJ — a total order over content, never over walk order. */
 function compareAdditionGroups(a: AdditionGroup, b: AdditionGroup): number {

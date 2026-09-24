@@ -196,7 +196,7 @@ export interface WgsnIndex {
   nameOf(keys: NamingKeys): { row: WgsnNameRow; viaProper: boolean } | null;
   bayerOf(keys: NamingKeys): WgsnDesignationRow | null;
   gouldOf(keys: NamingKeys): WgsnDesignationRow | null;
-  /** Folded name keys the authority approves — the /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them gate's own set. */
+  /** Folded name keys the authority approves — the naming-authority gate's own set (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
   approvedNameKeys: ReadonlySet<string>;
 }
 
@@ -241,8 +241,8 @@ export function buildWgsnIndex(
 }
 
 export interface DispositionRouting {
-  /** A published designation string the ladder displays (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them's designation
-   *  classes). */
+  /** A published designation string the ladder displays (the naming authority's designation
+   *  classes, /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
   eponym: string | null;
   /** A published spelling that resolves a search and never displays. */
   alias: string | null;

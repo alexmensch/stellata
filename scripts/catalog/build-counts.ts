@@ -167,7 +167,7 @@ export interface BuildCounts {
   apsisTeffEither: number;
   /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
   simbadSptypeEntries: number;
-  /** Rows in `data/simbad/simbad_values.tsv` — the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort. */
+  /** Rows in `data/simbad/simbad_values.tsv` — the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). */
   simbadValuesEntries: number;
   /** Records classified via the curated HIP→sp_type override tier
    *  (CURATED_SPTYPE_BY_HIP) — saturated stars whose SIMBAD entry
@@ -372,7 +372,7 @@ export interface BuildCounts {
    *  overwhelmingly the wgsnFaints hosts whose only key was a survey id
    *  the normaliser drops, naming stars the catalogue does not hold. */
   namingIauUnreached: number;
-  /** Records displaying a /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them string designation (`Ross 128`). */
+  /** Records displaying a string designation (`Ross 128`; /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
   namingEponym: number;
   /** Records the authority gives a glyph-bearing Bayer designation, of
    *  which `Added` had no spine Bayer cell at all and `Dropped` had one the
@@ -466,7 +466,7 @@ export interface BuildCounts {
   pairMemberSiblingNotAnchorGrade: number;
   pairMemberSiblingBelowSnFloor: number;
   /** Distance cascade: the parallax tier each record's distance inverts,
-   *  before the two override layers. `distNone` is the /docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change ledger drop —
+   *  before the two override layers. `distNone` is the membership-parity ledger drop (/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) —
    *  records no owned parallax reaches, which do not ship. */
   distBailerJones: number;
   distLmcKinematic: number;
@@ -494,10 +494,10 @@ export interface BuildCounts {
    *  the set at any time as `plx / e_plx < PARALLAX_LOW_PRECISION_SN` over the
    *  non-Bailer-Jones tiers. */
   distLowPrecisionParallax: number;
-  /** The /docs/catalog-driver.md#61-record-parity parks, per reason — rows that reach no parallax, no V, or no
+  /** The record-parity parks (/docs/catalog-driver.md#61-record-parity), per reason — rows that reach no parallax, no V, or no
    *  position and so build no record. They are in no cascade partition: those
    *  run over records, and a parked row is not one. `refused_*` against
-   *  `no_parallax_published` is /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's residual policy counting a refused
+   *  `no_parallax_published` is the residual policy (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) counting a refused
    *  measurement apart from an absent one. */
   parkedRefusedNoDefensibleParallax: number;
   parkedNoParallaxPublished: number;
@@ -524,7 +524,7 @@ export interface BuildCounts {
   /** The `directionTycho2` subset with no mean solution at all, placed at the
    *  row's J2000 `ra_icrs` cell instead. Those rows carry no Tycho-2 PM
    *  either, so the position is unpropagated unless another tier rescues a
-   *  PM for it — the residual /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers requires enumerated rather than implied. */
+   *  PM for it — the residual the per-field cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) require enumerated rather than implied. */
   directionTycho2FromIcrs: number;
   /** The `directionTycho2` subset whose mean solution is an unresolved
    *  double's photocentre (`pflag='P'`) rather than one star's place, so the
