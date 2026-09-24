@@ -416,7 +416,7 @@ describe('OrbitRingsLayer', () => {
     ss.dispose();
   });
 
-  it('isOrbitRingVisible is per-planet and tracks per-ring visibility', () => {
+  it('isOrbitRingResolvable is per-planet and tracks per-ring visibility', () => {
     const ss = new OrbitRingsLayer(chromeLines());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
@@ -431,17 +431,17 @@ describe('OrbitRingsLayer', () => {
     // The exact heuristic outcome is exercised in `ringVisibility` tests
     // above; here we just confirm the per-index API plumbs through.
     ss.update(makeCamera(50 * AU_PC), 800, null, T0, NO_ANCHOR);
-    const a = ss.isOrbitRingVisible(0);
-    const b = ss.isOrbitRingVisible(1);
+    const a = ss.isOrbitRingResolvable(0);
+    const b = ss.isOrbitRingResolvable(1);
     expect(typeof a).toBe('boolean');
     expect(typeof b).toBe('boolean');
     // Out-of-range index is always false.
-    expect(ss.isOrbitRingVisible(2)).toBe(false);
-    expect(ss.isOrbitRingVisible(-1)).toBe(false);
+    expect(ss.isOrbitRingResolvable(2)).toBe(false);
+    expect(ss.isOrbitRingResolvable(-1)).toBe(false);
     // Hide layer → all rings report false.
     ss.setHidden(true);
-    expect(ss.isOrbitRingVisible(0)).toBe(false);
-    expect(ss.isOrbitRingVisible(1)).toBe(false);
+    expect(ss.isOrbitRingResolvable(0)).toBe(false);
+    expect(ss.isOrbitRingResolvable(1)).toBe(false);
     ss.dispose();
   });
 
@@ -473,7 +473,7 @@ describe('OrbitRingsLayer — observing from a body', () => {
       makePlanet({ name: 'B', semiMajorAxisAu: 3 }),
     ],
   };
-  const drawn = (ss: OrbitRingsLayer) => [ss.isOrbitRingVisible(0), ss.isOrbitRingVisible(1)];
+  const drawn = (ss: OrbitRingsLayer) => [ss.isOrbitRingResolvable(0), ss.isOrbitRingResolvable(1)];
 
   it('hides only the ring the camera stands on, and restores it when the anchor clears', () => {
     const ss = new OrbitRingsLayer(chromeLines());
@@ -616,8 +616,8 @@ describe('OrbitRingsLayer host centring', () => {
     cam.position.copy(host);
     cam.position.z += 5 * AU_PC;
     ss.update(cam, 800, host, T0, NO_ANCHOR);
-    expect(ss.isOrbitRingVisible(0)).toBe(true);
-    expect(ss.isOrbitRingVisible(1)).toBe(true);
+    expect(ss.isOrbitRingResolvable(0)).toBe(true);
+    expect(ss.isOrbitRingResolvable(1)).toBe(true);
     ss.dispose();
   });
 
@@ -850,7 +850,7 @@ describe('ring geometry passes through the body (single element source)', () => 
     // quietly vacuous the next time the gate moves.
     const NEAR_MOON = makeCamera(20 * MOON_A_PC);
     const expectDrawn = (ss: OrbitRingsLayer): void => {
-      expect(ss.isOrbitRingVisible(MOON_IDX), 'Moon ring must be drawn').toBe(true);
+      expect(ss.isOrbitRingResolvable(MOON_IDX), 'Moon ring must be drawn').toBe(true);
     };
 
     const moonRingVerts = (ss: OrbitRingsLayer): Float32Array => {
@@ -915,7 +915,7 @@ describe('ring geometry passes through the body (single element source)', () => 
       const ss = new OrbitRingsLayer(chromeLines());
       ss.setPlanetSystem(solSystem(), 0, T0);
       ss.update(makeCamera(5 * AU_PC), 800, null, T0, NO_ANCHOR, originCentres);
-      expect(ss.isOrbitRingVisible(MOON_IDX)).toBe(false);
+      expect(ss.isOrbitRingResolvable(MOON_IDX)).toBe(false);
       const atT0 = moonRingVerts(ss);
       ss.update(makeCamera(5 * AU_PC), 800, null, T0 + 365 * 86400, NO_ANCHOR, originCentres);
       expect(moonRingVerts(ss)).toEqual(atT0);
@@ -1020,7 +1020,7 @@ describe('OrbitRingsLayer moon rings', () => {
       .toBeCloseTo(0.003, 6);
     // Camera parked 0.01 AU from the parent: the 0.003 AU moon ring is
     // enormous on screen and must draw.
-    expect(ss.isOrbitRingVisible(1)).toBe(true);
+    expect(ss.isOrbitRingResolvable(1)).toBe(true);
     ss.dispose();
   });
 
@@ -1029,7 +1029,7 @@ describe('OrbitRingsLayer moon rings', () => {
     ss.setPlanetSystem(makeMoonSystem(), 0, T0);
     const cam = makeCamera(5 * AU_PC);
     ss.update(cam, 800, null, T0, NO_ANCHOR);
-    expect(ss.isOrbitRingVisible(1)).toBe(false);
+    expect(ss.isOrbitRingResolvable(1)).toBe(false);
     ss.dispose();
   });
 
@@ -1045,7 +1045,7 @@ describe('OrbitRingsLayer moon rings', () => {
       out.copy(parentRel);
       return true;
     });
-    expect(ss.isOrbitRingVisible(1)).toBe(true);
+    expect(ss.isOrbitRingResolvable(1)).toBe(true);
     ss.dispose();
   });
 

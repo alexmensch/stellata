@@ -116,7 +116,7 @@ export function createPlanetLabels(stellata: Stellata): void {
       // moons parent-centred): a ring the pixel-gap heuristic suppressed
       // means the body is floor-clamped sub-pixel anyway, so the label
       // would attach to nothing.
-      if (!stellata.isOrbitRingVisible(i)) {
+      if (!stellata.isOrbitRingResolvable(i)) {
         e.el.style.display = 'none';
         continue;
       }

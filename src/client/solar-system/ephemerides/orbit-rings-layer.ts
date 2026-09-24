@@ -576,7 +576,7 @@ export class OrbitRingsLayer {
    * if its ring is up — labels answer "what would I be seeing here,"
    * not "what am I currently rendering."
    */
-  isOrbitRingVisible(i: number): boolean {
+  isOrbitRingResolvable(i: number): boolean {
     if (this.hidden || this.mono || !this.permitted || !this.group.visible) return false;
     if (i < 0 || i >= this.rings.length) return false;
     return this.rings[i].line.visible;

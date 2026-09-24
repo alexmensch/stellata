@@ -21,7 +21,7 @@ isn't doubled up (`../../../scene/declutter/README.md` § Detail-level
 declutter cycle).
 
 Per-body resolvability gate: every label tracks its orbit ring
-(`isOrbitRingVisible` — a ring the pixel-gap heuristic dropped means the
+(`isOrbitRingResolvable` — a ring the pixel-gap heuristic dropped means the
 body is floor-clamped sub-pixel, so the label would anchor to nothing).
 Planets gate on their host-centred ring, moons on their parent-centred
 ring — a moon collapsed toward its parent's dot drops its ring (and so

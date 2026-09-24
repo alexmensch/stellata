@@ -1368,8 +1368,8 @@ export class Stellata implements FrameAnchor {
    *  the focused host. Used by planet-labels to hide labels in lockstep
    *  with their associated rings — the body stays rendered (subject to
    *  apparent-mag visibility) regardless. */
-  isOrbitRingVisible(planetIdx: number): boolean {
-    return this.orbitRingsLayer.isOrbitRingVisible(planetIdx);
+  isOrbitRingResolvable(planetIdx: number): boolean {
+    return this.orbitRingsLayer.isOrbitRingResolvable(planetIdx);
   }
   /** Rendered disc radius (CSS px) of the focused object, any kind; 0
    *  when nothing is focused. Single source for the arrow-fade coverage
