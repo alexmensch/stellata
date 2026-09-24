@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { CameraMode, StellataEventMap } from '../../stellata';
-import type { Target, TargetKind } from '../focus/focus-target';
+import type { HardKind, HardTarget, Target } from '../focus/focus-target';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
 import type { RollController } from '../controls/input/roll-controller';
@@ -24,7 +24,7 @@ export interface ObserveFocusOps {
   /** The focused hard-kind Target — the observe anchor. Null when the
    *  focus is empty or a soft kind, which can't anchor observe: no
    *  floating-origin recentre. */
-  getFocusedHardTarget(): Target | null;
+  getFocusedHardTarget(): HardTarget | null;
   /** Full setFocus path — fires 'focus' / 'state'. Used by the 'exit'
    *  kind's finish branch when `clearFocusOnExit` is true (the
    *  search-row X-button path). */
@@ -136,7 +136,7 @@ export class ObserveTransition {
    *  target while in OBSERVE or on its enter/exit glide — else null. Line
    *  layers drop the geometry passing through that point; README.md
    *  § The observe anchor in line layers. */
-  observeAnchorOf(kind: TargetKind): number | null {
+  observeAnchorOf(kind: HardKind): number | null {
     if (this.deps.getCameraMode() !== 'observe' && !this.isActive()) return null;
     const anchor = this.deps.focus.getFocusedHardTarget();
     return anchor?.kind === kind ? anchor.idx : null;
