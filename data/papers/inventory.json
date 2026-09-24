@@ -5022,15 +5022,15 @@
      "claim": "IV/27A Bayer/Flamsteed <-> HD/HIP cross index; designation constellation (cst)"
     },
     {
-     "file": "src/client/index.html",
-     "line": 446,
-     "text": "<div>Classic designation cross indexes — Tycho-2 <em>HD</em> identifications (Fabricius et al. 2002), the Bayer / Flamsteed cross index (Kostjuk 2004), and the <a href=\"https://cdsarc.cds.unistra.fr/v",
-     "claim": "IV/27A Bayer/Flamsteed <-> HD/HIP cross index; designation constellation (cst)"
-    },
-    {
      "file": "src/client/constellation-boundaries/iau-geometry/README.md",
      "line": 182,
      "text": "it in Delphinus. `dc` is sourced from IV/27A's Bayer/Flamsteed cross index keyed",
+     "claim": "IV/27A Bayer/Flamsteed <-> HD/HIP cross index; designation constellation (cst)"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 446,
+     "text": "<div>Classic designation cross indexes — Tycho-2 <em>HD</em> identifications (Fabricius et al. 2002), the Bayer / Flamsteed cross index (Kostjuk 2004), and the <a href=\"https://cdsarc.cds.unistra.fr/v",
      "claim": "IV/27A Bayer/Flamsteed <-> HD/HIP cross index; designation constellation (cst)"
     }
    ]
@@ -6602,15 +6602,15 @@
      "claim": "CCDM register behind Hipparcos CCDM column (visual-doubles flag)"
     },
     {
-     "file": "src/client/index.html",
-     "line": 461,
-     "text": "<div><a href=\"https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239\" target=\"_blank\" rel=\"noopener noreferrer\">Hipparcos CCDM</a> — ESA: HIP double-star cross-match (Dommanget &amp; Nys 1994 component register)</div>",
-     "claim": "CCDM register behind Hipparcos CCDM column (visual-doubles flag)"
-    },
-    {
      "file": "src/client/chart-mode/README.md",
      "line": 270,
      "text": "Components of Double and Multiple stars (Dommanget & Nys 1994).",
+     "claim": "CCDM register behind Hipparcos CCDM column (visual-doubles flag)"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 461,
+     "text": "<div><a href=\"https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239\" target=\"_blank\" rel=\"noopener noreferrer\">Hipparcos CCDM</a> — ESA: HIP double-star cross-match (Dommanget &amp; Nys 1994 component register)</div>",
      "claim": "CCDM register behind Hipparcos CCDM column (visual-doubles flag)"
     }
    ]
@@ -8164,12 +8164,6 @@
     },
     {
      "file": "scripts/catalog/validate/known-stars.tsv",
-     "line": 150,
-     "text": "# LMC kinematic snaps — pinned to Pietrzyński 2019 49.594 kpc:",
-     "claim": "LMC distance 49.594 kpc (kinematic snap, bounded-scope cutoff)"
-    },
-    {
-     "file": "scripts/catalog/validate/known-stars.tsv",
      "line": 148,
      "text": "HD 269529\t\t4658107884688023040\t49593.999\t1\t-7.628\tG0\t0.532\t289.3\t\t\t\t\t\t\tlmc-kinematic-snap\tPietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 269529 sp_type=G0 (bare). Absmag re-pinned for the Riello G−V cascade: V is now transfo",
      "claim": "LMC distance 49.594 kpc (kinematic snap, bounded-scope cutoff)"
@@ -8178,6 +8172,12 @@
      "file": "scripts/catalog/validate/known-stars.tsv",
      "line": 149,
      "text": "HD 271416\t\t4660699674131931008\t49593.998\t1\t-7.198\tK0\t\t\t\t\t\t\t\t\tlmc-kinematic-snap\tPietrzyński 2019 49.594 kpc eclipsing-binary anchor. SIMBAD HD 271416 sp_type empty; class byte from Gaia GSP-Spec K — synthesized K0 for round-trip. Absmag re-",
+     "claim": "LMC distance 49.594 kpc (kinematic snap, bounded-scope cutoff)"
+    },
+    {
+     "file": "scripts/catalog/validate/known-stars.tsv",
+     "line": 150,
+     "text": "# LMC kinematic snaps — pinned to Pietrzyński 2019 49.594 kpc:",
      "claim": "LMC distance 49.594 kpc (kinematic snap, bounded-scope cutoff)"
     },
     {
@@ -9192,15 +9192,15 @@
      "claim": "LVDB dwarf_all snapshot: dwarf positions, distances, structure, photometry"
     },
     {
-     "file": "src/client/index.html",
-     "line": 494,
-     "text": "<div><a href=\"https://doi.org/10.33232/001c.144859\" target=\"_blank\" rel=\"noopener noreferrer\">Local Volume Database</a> — Pace 2024: dwarf-galaxy positions, distances, structural parameters and photom",
-     "claim": "LVDB dwarf_all snapshot: dwarf positions, distances, structure, photometry"
-    },
-    {
      "file": "src/client/focus-card/lg-focus-provider.ts",
      "line": 22,
      "text": "LVDB: 'Pace 2025 LVDB',",
+     "claim": "LVDB dwarf_all snapshot: dwarf positions, distances, structure, photometry"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 494,
+     "text": "<div><a href=\"https://doi.org/10.33232/001c.144859\" target=\"_blank\" rel=\"noopener noreferrer\">Local Volume Database</a> — Pace 2024: dwarf-galaxy positions, distances, structural parameters and photom",
      "claim": "LVDB dwarf_all snapshot: dwarf positions, distances, structure, photometry"
     },
     {
@@ -11033,12 +11033,6 @@
      "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
     },
     {
-     "file": "src/client/index.html",
-     "line": 417,
-     "text": "catalogues and the Edenhofer 3D dust map; the nearest galaxies come",
-     "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
-    },
-    {
      "file": "src/client/chart-mode/labels/README.md",
      "line": 127,
      "text": "ship a coarser (~128³ resample of Edenhofer 2024, ~2 MiB) CPU-side",
@@ -11060,6 +11054,12 @@
      "file": "src/client/dust/README.md",
      "line": 13,
      "text": "are not visualising the Edenhofer dust field: two treatments were built",
+     "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 417,
+     "text": "catalogues and the Edenhofer 3D dust map; the nearest galaxies come",
      "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
     },
     {
@@ -11321,18 +11321,6 @@
      "claim": "molecular-cloud distances (Table A1 sightlines; the 84 sphere clouds)"
     },
     {
-     "file": "src/client/index.html",
-     "line": 416,
-     "text": "molecular clouds are traced from the Zucker 2020 &amp; 2021",
-     "claim": "molecular-cloud distances (Table A1 sightlines; the 84 sphere clouds)"
-    },
-    {
-     "file": "src/client/index.html",
-     "line": 475,
-     "text": "<div><a href=\"https://doi.org/10.3847/1538-4357/ac1f96\" target=\"_blank\" rel=\"noopener noreferrer\">Zucker et al. 2020 &amp; 2021</a> — molecular-cloud distances, 3D bounding boxes, density profiles</div>",
-     "claim": "molecular-cloud distances (Table A1 sightlines; the 84 sphere clouds)"
-    },
-    {
      "file": "src/client/focus-card/cloud-focus-provider.test.ts",
      "line": 67,
      "text": "expect(rowValue(out.rows, 'Known from')).toBe('Zucker 2020');",
@@ -11342,6 +11330,18 @@
      "file": "src/client/focus-card/cloud-focus-provider.ts",
      "line": 23,
      "text": "Z2020: 'Zucker 2020',",
+     "claim": "molecular-cloud distances (Table A1 sightlines; the 84 sphere clouds)"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 416,
+     "text": "molecular clouds are traced from the Zucker 2020 &amp; 2021",
+     "claim": "molecular-cloud distances (Table A1 sightlines; the 84 sphere clouds)"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 475,
+     "text": "<div><a href=\"https://doi.org/10.3847/1538-4357/ac1f96\" target=\"_blank\" rel=\"noopener noreferrer\">Zucker et al. 2020 &amp; 2021</a> — molecular-cloud distances, 3D bounding boxes, density profiles</div>",
      "claim": "molecular-cloud distances (Table A1 sightlines; the 84 sphere clouds)"
     }
    ]
@@ -11573,18 +11573,6 @@
      "claim": "3D bounding boxes (T1), Plummer profile fits (T2), NICEST masses / peak A_K (T3)"
     },
     {
-     "file": "src/client/index.html",
-     "line": 416,
-     "text": "molecular clouds are traced from the Zucker 2020 &amp; 2021",
-     "claim": "3D bounding boxes (T1), Plummer profile fits (T2), NICEST masses / peak A_K (T3)"
-    },
-    {
-     "file": "src/client/index.html",
-     "line": 475,
-     "text": "<div><a href=\"https://doi.org/10.3847/1538-4357/ac1f96\" target=\"_blank\" rel=\"noopener noreferrer\">Zucker et al. 2020 &amp; 2021</a> — molecular-cloud distances, 3D bounding boxes, density profiles</div>",
-     "claim": "3D bounding boxes (T1), Plummer profile fits (T2), NICEST masses / peak A_K (T3)"
-    },
-    {
      "file": "src/client/focus-card/cloud-focus-provider.test.ts",
      "line": 45,
      "text": "expect(rowValue(out.rows, 'Known from')).toBe('Zucker 2021');",
@@ -11594,6 +11582,18 @@
      "file": "src/client/focus-card/cloud-focus-provider.ts",
      "line": 22,
      "text": "Z2021T1: 'Zucker 2021',",
+     "claim": "3D bounding boxes (T1), Plummer profile fits (T2), NICEST masses / peak A_K (T3)"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 416,
+     "text": "molecular clouds are traced from the Zucker 2020 &amp; 2021",
+     "claim": "3D bounding boxes (T1), Plummer profile fits (T2), NICEST masses / peak A_K (T3)"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 475,
+     "text": "<div><a href=\"https://doi.org/10.3847/1538-4357/ac1f96\" target=\"_blank\" rel=\"noopener noreferrer\">Zucker et al. 2020 &amp; 2021</a> — molecular-cloud distances, 3D bounding boxes, density profiles</div>",
      "claim": "3D bounding boxes (T1), Plummer profile fits (T2), NICEST masses / peak A_K (T3)"
     },
     {
@@ -11664,12 +11664,6 @@
      "claim": "Local Bubble inner-surface HEALPix map (shell mesh)"
     },
     {
-     "file": "src/client/index.html",
-     "line": 476,
-     "text": "<div><a href=\"https://doi.org/10.1038/s41586-021-04286-5\" target=\"_blank\" rel=\"noopener noreferrer\">Zucker et al. 2022</a> — Local Bubble inner-surface map</div>",
-     "claim": "Local Bubble inner-surface HEALPix map (shell mesh)"
-    },
-    {
      "file": "src/client/focus-card/shell-focus-provider.test.ts",
      "line": 12,
      "text": "knownFrom: 'Zucker et al. 2022',",
@@ -11685,6 +11679,12 @@
      "file": "src/client/hover/formatters/shell-hover-format.test.ts",
      "line": 12,
      "text": "knownFrom: 'Zucker et al. 2022',",
+     "claim": "Local Bubble inner-surface HEALPix map (shell mesh)"
+    },
+    {
+     "file": "src/client/index.html",
+     "line": 476,
+     "text": "<div><a href=\"https://doi.org/10.1038/s41586-021-04286-5\" target=\"_blank\" rel=\"noopener noreferrer\">Zucker et al. 2022</a> — Local Bubble inner-surface map</div>",
      "claim": "Local Bubble inner-surface HEALPix map (shell mesh)"
     },
     {
