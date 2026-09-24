@@ -45,25 +45,6 @@
             "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/skill-guard.sh"
           }
         ]
-      },
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/review-design-reminder.sh"
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/review-design-reminder.sh"
-          }
-        ]
       }
     ],
     "SessionStart": [

@@ -9,8 +9,6 @@
 
 set -euo pipefail
 
-. "$(dirname "$0")/skill-name.sh"
-
 STATE_DIR="${TMPDIR:-/tmp}/claude-skill-guard"
 mkdir -p "$STATE_DIR"
 marker() { echo "$STATE_DIR/$1-${GUARD_SESSION:-$PPID}"; }
@@ -20,7 +18,7 @@ tool="$(printf '%s' "$input" | jq -r '.tool_name // ""')"
 
 if [ "$tool" = "Skill" ]; then
   invoked="$(printf '%s' "$input" | jq -r '.tool_input.skill // ""')"
-  bare="$(skill_name "$invoked")"
+  bare="${invoked##*:}"
   if [[ "$bare" =~ ^[A-Za-z0-9_-]+$ ]]; then : > "$(marker "$bare")"; fi
   exit 0
 fi

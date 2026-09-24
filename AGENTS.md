@@ -40,9 +40,10 @@ CI can't catch a comment that merely restates `README.md` / `SCIENCE.md` /
 
 ## Write-time discipline — triggers and pointers
 
-Trigger fires → rule applies. Full text (rule + why + how-to-apply)
-in the named section of `docs/authoring-patterns.md`; the trigger word
-here is the always-loaded hook pointing to which section to open.
+Trigger fires → rule applies. Stellata's instances sit in the named
+section of `docs/authoring-patterns.md`, each pointing at the generic
+rule in `code-craft`'s write-time patterns; the trigger word here is
+the always-loaded hook pointing to which section to open.
 
 - **Adding `bus.on(...)`** → wire unsub into dispose, same diff.
   § Lifecycle pairing.
@@ -67,10 +68,6 @@ here is the always-loaded hook pointing to which section to open.
   constant and never redefine it. § Named constants and DRY.
 - **Mid-implementation doc-edit impulse** → a *description* defers to the
   commit sweep; a *settled decision* goes in the README now. § Defer doc updates.
-- **Large PR (~10+ beads)** → distinguish High / Medium / Low test
-  confidence in PR body; flag manual-smoke paths. § Large-PR honesty.
-- **Multi-concern diff** → split into topical commits, one concept
-  each, committed along the way. § Commit granularity.
 - **A frozen table lacks a column you need** → run the re-pull; you
   have network access. Never scope a design around it or hand the
   fetch back. [Who runs a refresh](scripts/refresh/README.md#who-runs-a-refresh).
