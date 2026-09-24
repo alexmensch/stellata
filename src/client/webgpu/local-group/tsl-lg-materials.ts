@@ -1,5 +1,5 @@
 // The Local Group emission material seam's factory
-// (../../local-group/emission/README.md § The material seam).
+// (../../local-group/emission/README.md#the-material-seam).
 
 import type {
   LgEmissionMaterials,
@@ -14,7 +14,7 @@ export interface TslLgConfig {
   registerMrtLayer(layer: MrtOutputLayer): () => void;
 }
 
-/** README.md § Neither pass owns a uniform. */
+/** README.md#neither-pass-owns-a-uniform. */
 export function makeTslLgEmissionMaterials(cfg: TslLgConfig): LgEmissionMaterials {
   return {
     emission(isDisc: boolean): EmitterMaterial {

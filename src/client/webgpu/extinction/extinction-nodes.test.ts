@@ -15,7 +15,7 @@ describe('ExtinctionNodes', () => {
   // The volume slot is BOUND every frame — the uDustEnabled gate is a
   // runtime branch, not a binding decision — so a placeholder three has not
   // seen marked gets replaced by its shared 1x1 2D texture and refused a
-  // resize (../../loaders/README.md § Dust voxel upload). That puts a 2D
+  // resize (../../loaders/README.md#dust-voxel-upload). That puts a 2D
   // view on a texture_3d binding: the bind group is invalid and the whole
   // submit dies with it. createVoxelTexture does not mark (the volume's
   // mark belongs to the uploader), so this placeholder silently regresses.

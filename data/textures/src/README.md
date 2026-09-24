@@ -79,7 +79,7 @@ no flat block to memmap and no such decode trap to dodge.
 Each DEM is frozen at **its own body's** width, not one global one:
 4096 for the Moon, Mercury and Mars, **8192 for Earth**, whose relief is
 far the flattest and buys nothing narrower
-(`data/textures/relief/README.md` § Surface relief).
+([Surface relief](/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps)).
 
 ## Auditing
 

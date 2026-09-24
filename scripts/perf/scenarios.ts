@@ -1,5 +1,5 @@
 // The canon vantages the runner measures at, the order a run visits them
-// in, and the URL a scenario boots. README.md § What a run does.
+// in, and the URL a scenario boots. README.md#what-a-run-does.
 
 /** One member, and kept as a list rather than collapsed away: it is the
  *  `backend` half of every row key and of the on-disk record, so dropping
@@ -23,7 +23,7 @@ export type ScenarioName = keyof typeof SCENARIOS;
 export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 
 /** The Tier 1 run: `--scenario mw120,sol --backend webgpu`, in this order
- *  (`RELEASING.md` § Perf pin). */
+ *  (`/RELEASING.md#perf-pin`). */
 export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly ScenarioName[];
 
 /**

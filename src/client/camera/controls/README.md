@@ -10,23 +10,23 @@ in both navigate and observe modes.
   exaggeration sliders, spectral chips, overlay toggles) + the
   slider↔distance log mapping (`sliderToDist` / `distToSlider`). The
   star-size and "Dynamic range" sliders it used to bind are retired
-  (`../../filters/README.md` § The multiplier is the ONLY footprint
-  control), as are the galactic-glow and "Show constellations" checkboxes —
+  ([The multiplier is the ONLY footprint control](../../filters/README.md#the-multiplier-is-the-only-footprint-control-deliberately)),
+  as are the galactic-glow and "Show constellations" checkboxes —
   both are the declutter floor's call now (`../../scene/declutter/README.md`).
   The two segmented stop
   controls (detail level, coordinate sphere) are bound
-  and synced through `../../ui/stop-control.ts` (`../../ui/README.md`
-  § Stop controls), not open-coded here. Reverse-sync runs off
+  and synced through `../../ui/stop-control.ts` ([Stop controls](../../ui/README.md#stop-controls)),
+  not open-coded here. Reverse-sync runs off
   `'filter'` / `'cameraMode'`; the coordinate-sphere control's disabled
   state rides `'focus'` / `'cameraMode'` through
-  `stellata.coordSpheres.available` (`../../galactic/coord-spheres/README.md`
-  § A frame is offered where it describes something).
+  `stellata.coordSpheres.available`
+  ([A frame is offered where it describes something](../../galactic/coord-spheres/README.md#a-frame-is-offered-where-it-describes-something)).
 - `input/` — canvas gestures + the camera state they drive: the click
   FSM, the two roll authorities (camera.up and the quaternion), the roll
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its
   `README.md` replaces this one for reads inside that folder.
 - `mode-toggle.ts` — navigate / observe pill in the topbar.
-- `picker.ts` — pure target resolver. **Two-stage brightness gate:** the
+- <a id="pickerts"></a>`picker.ts` — pure target resolver. **Two-stage brightness gate:** the
   catalog-wide scan prunes on the star's *intrinsic* magnitude against
   `drawCutoffMag`, then each surviving candidate goes through
   `resolveStarPick`, which folds in the terms that magnitude cannot see —
@@ -36,13 +36,13 @@ in both navigate and observe modes.
   from `activePulsationAmp`, the one CPU mirror of the shader's
   `iSuppressPulsation` gate — an eclipser gets no reach, because its disc
   never swings bright. Prefiltering on the intrinsic value is sound only
-  because every omitted term dims (`../../hdr/exposure/README.md` § What
-  "visible" means to a pick path); making it the *gate* is the bug that
+  because every omitted term dims ([What "visible" means](../../hdr/exposure/README.md#what-visible-means-and-when-an-emitter-may-be-skipped)
+  to a pick path); making it the *gate* is the bug that
   had clicks landing on stars in empty sky. `pickFromCandidatesResolved`
   walks the score order lazily and stops at the first candidate that
   renders; the confirm step's extinction read is a lookup into a CPU
   mirror the pointer event ahead of the pick staged
-  (`../../webgpu/extinction/README.md` § Cold reads). The
+  ([Cold reads](../../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity)). The
   prefilter's radius must be an **upper bound** of the resolved one or
   the walk can skip a candidate that encloses the cursor — in chart mode that means
   bounding the magnitude-mapped ink disc as well as the realistic
@@ -55,7 +55,7 @@ in both navigate and observe modes.
   hover-provider pick — literally the same function the hover engine
   runs, so click and hover can't disagree (a cloud's
   overlapping-winner resolution stays in `MolecularClouds.pick`,
-  `../../molecular-clouds/README.md` § Picking + hover).
+  [Picking + hover](../../molecular-clouds/README.md#picking--hover)).
   `pickAnyKindHit` walks the whole roster and reduces with the hover
   engine's comparator — the one entry point a click path should use, so
   no caller enumerates kinds and none can omit one. Both star pick
@@ -97,7 +97,7 @@ in both navigate and observe modes.
   reducers and their scorers (§ Ranking a pick). Owns `PICK_THRESHOLD_PX`,
   the one grab radius hover and click both take: it floors every
   candidate's enclosure, so two values would rank the same pair
-  differently (`../../hover/README.md` § Architecture).
+  differently ([Architecture](../../hover/README.md#architecture)).
 - `star-physics.ts` — per-star camera/screen geometry: `fovMinorRad`,
   `peakAmplitudeFactor`, `minOrbitDistForStar`, `parkDistForStar`,
   `renderedSizePx` (+ its `renderedSizeComponents` split — the star
@@ -117,7 +117,7 @@ in both navigate and observe modes.
   `../../solar-system/probes/probe-focus-geometry.ts`, with
   `../depth-range.test.ts` pinning the near-plane margin).
 
-  **The live-versus-peak pair, and which one a caller owes.**
+  <a id="the-live-versus-peak-pair-and-which-one-a-caller-owes"></a>**The live-versus-peak pair, and which one a caller owes.**
   `pulsationPhaseInto` reports where a star sits in its cycle this frame;
   `pulsationRadiusFactor` / `livePulsationRadiusFactor` turn that into the
   radius DRAWN, swinging over `[ρ^−½, ρ^+½]` with the MINIMUM at maximum
@@ -148,7 +148,7 @@ pixel it covers if distance to its centre decides, and a 4 px star two
 pixels off its own centre is only halfway into itself. Scale-invariance
 is what keeps both reachable, and it is the same rule the cloud layer
 already used for overlapping clouds
-(`../../molecular-clouds/README.md` § Picking + hover).
+([Picking + hover](../../molecular-clouds/README.md#picking--hover)).
 
 The star scorer normalises its **whole** numerator —
 `(pxDist + appMag · PICK_MAG_BIAS_PX_PER_MAG) / hitRadius`. Among
@@ -168,7 +168,7 @@ behaviour among coincident catalogue rows lives.
 ## Camera near plane vs controls minDistance
 
 `camera.near = CAMERA_NEAR_PC = 1e-12` (`../timing.ts`; the pair is
-pinned by `../depth-range.test.ts` — see `../README.md` § Shared for how
+pinned by `../depth-range.test.ts` — see [Shared](../README.md#shared) for how
 thin the smallest-moon margin actually is), `controls.minDistance` (when
 no star is focused) = `GLOBAL_MIN_DIST_PC = 5e-3` pc. The unfocused floor sits well above
 the float32-cancellation threshold so an unfocused orbit can't drift
@@ -189,7 +189,7 @@ deliberately decoupled so manual zoom can push past the auto-park
 distance. Both come from the **true angular geometry** of the star's
 disc through the camera lens — `θ = 2·atan(R / d)`:
 
-1. **Manual-zoom floor** — `controls.minDistance =
+1. <a id="manual-zoom-floor"></a>**Manual-zoom floor** — `controls.minDistance =
    minOrbitDistForStar(idx)`. Solves for `d` such that the disc fills
    `ZOOM_FLOOR_FRACTION` (= 0.9) of the viewport's minor axis, held
    outside the body's own surface:
@@ -287,7 +287,7 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 
 ## Focus-park lerp
 
-`../focus/README.md` § Focus-park lerp owns this — the stay-put/lerp
+[Focus-park lerp](../focus/README.md#focus-park-lerp) owns this — the stay-put/lerp
 branch, the `controls.enabled` contract, the pin suppression, and the
 overlay hide. Two things that belong here rather than there:
 
@@ -355,7 +355,7 @@ has no unique axis, so rather than slerping two poses and taking whatever
 plane falls out, both branches compose an explicit half turn about the
 camera's local up onto their own start pose. That axis is perpendicular to
 the boresight by construction, which is what makes the endpoint exact as well
-as the route predictable. `../../attitude/README.md` § Inverting the view
+as the route predictable. [Inverting the view](../../attitude/README.md#inverting-the-view)
 owns the user-facing definition.
 
 Composition split — `Stellata.aimAt(pointLocal)` is the dispatcher that

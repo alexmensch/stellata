@@ -14,8 +14,8 @@ scripts/hooks/
                            NotebookEdit against files under src/**,
                            scripts/**, data/**, docs/** until the
                            containing folder's README.md has been seen
-                           this session. Enforces AGENTS.md § Folder
-                           READMEs (the scout pass) as a hard gate.
+                           this session. Enforces /AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit
+                           (the scout pass) as a hard gate.
                            Behaviour pinned by tests/readme-guard.test.ts.
   prime-guard.sh           SessionStart: persists the full `bd prime`
                            output and emits a ~460-byte pointer to it.
@@ -25,8 +25,8 @@ scripts/hooks/
                            by tests/prime-guard.test.ts.
   commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
                            staged tree touches a guarded folder
-                           without updating its README.md (AGENTS.md
-                           § Folder READMEs trigger 4 — "At commit
+                           without updating its README.md (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit
+                           trigger 4 — "At commit
                            time, update"), when the staged diff
                            introduces forbidden code-comment
                            patterns (same set as
@@ -320,11 +320,11 @@ matched commit:
 3. **Restatement sweep.** § The restatement sweep below.
 
 Any check fires a `permissionDecision: "deny"` with a per-finding
-breakdown and the relevant AGENTS.md § Code comments substitution.
+breakdown and the relevant [Code comments](/AGENTS.md#code-comments--what-ci-enforces-here) substitution.
 
 ## The restatement sweep
 
-`docs/authoring-patterns.md` § Code-comment hygiene calls a comment
+[Code-comment hygiene](/docs/authoring-patterns.md#code-comment-hygiene) calls a comment
 restating README content written minutes earlier **the dominant failure
 mode**, and says CI cannot catch it. That is true of prose written in an
 earlier PR and false of the case the sentence actually describes: prose
@@ -340,7 +340,7 @@ in markdown the same commit adds. Two lines minimum, twelve distinct words
 minimum, half of them shared, and the block is reported.
 
 Those floors are what keep a **pointer** legal: `// see
-src/client/webgpu/tsl/README.md § Interleaved gradient noise` is one line
+/src/client/webgpu/tsl/README.md#interleaved-gradient-noise` is one line
 and a handful of words, so it never reaches the test however much
 vocabulary it shares. That is the shape the deny message asks for.
 
@@ -396,7 +396,7 @@ denies rather than assuming it is fresh; a missing `jq` prints the reason to
 stderr and exits **2**, the harness's other blocking spelling, instead of
 dying mid-pipe. The `stat` portability trap that first exposed this — the
 hook erroring, and therefore permitting, on every Linux checkout while the
-macOS suite stayed green — is `scripts/perf/arming/README.md` § Traps.
+macOS suite stayed green — is [Traps](/scripts/perf/arming/README.md#traps).
 
 ## Disabling
 

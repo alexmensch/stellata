@@ -30,7 +30,7 @@ const SUPPL1_COLUMNS = [
  *  its position holds — and reading them as the position's epoch over-advances
  *  every row by `2000 - ep_ra`, which reaches 81.7 years on this table and
  *  32.2 across the direction tier's own cohort
- *  (data/tycho2/README.md § Which position to propagate from). */
+ *  (/data/tycho2/README.md#which-position-to-propagate-from). */
 export const TYCHO2_MEAN_EPOCH = 2000.0;
 
 /** The epoch a `ra_icrs` / `de_icrs` cell is stated at: Tycho-2's observed
@@ -39,7 +39,7 @@ export const TYCHO2_ICRS_EPOCH = 1991.25;
 
 /** One Tycho-2 entry, with the position choice already made — `raDeg` /
  *  `decDeg` is the position to propagate FROM, at `epoch`
- *  (data/tycho2/README.md § Which position to propagate from). `pmRaMasyr` is
+ *  (/data/tycho2/README.md#which-position-to-propagate-from). `pmRaMasyr` is
  *  μ_α*, cos δ already applied; never divide by cos δ again. */
 export interface Tycho2Row {
   raDeg: number;
@@ -71,7 +71,7 @@ export function tycho2Key(tyc1: string, tyc2: string, tyc3: string): string {
 type Tycho2Position = Pick<Tycho2Row, 'raDeg' | 'decDeg' | 'epoch' | 'fromIcrs'>;
 
 /** The mean solution's position, which a propagation must start from.
- *  data/tycho2/README.md § Which position to propagate from. */
+ *  /data/tycho2/README.md#which-position-to-propagate-from. */
 function meanPosition(
   raMean: number | null, decMean: number | null,
 ): Tycho2Position | null {
@@ -90,8 +90,8 @@ function icrsPosition(
 }
 
 /** Index both Tycho-2 tables on the full `TYC1-TYC2-TYC3` identifier. The main
- *  table wins where both carry one — data/tycho2/README.md § The two tables
- *  overlap on 254 TYCs. */
+ *  table wins where both carry one — /data/tycho2/README.md#the-two-tables-overlap-on-254-tycs.
+ * */
 export function parseTycho2Tsvs(mainText: string, suppl1Text: string): Map<string, Tycho2Row> {
   const out = new Map<string, Tycho2Row>();
 

@@ -1,5 +1,5 @@
 // Simulation time `t` (Unix-seconds double) + UT ↔ Julian-day helpers.
-// See ./README.md § Timescales.
+// See ./README.md#timescales.
 
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 import { deltaTSeconds } from './delta-t-pure';
@@ -52,7 +52,7 @@ export function julianEpochYearToT(jyr: number): number {
 }
 
 // Model-clock clamp: the Standish 1992 ephemeris window (3000 BC – 3000 AD;
-// docs/science-solar-system.md § Solar system). Outside it planet positions
+// /docs/science-solar-system.md#solar-system). Outside it planet positions
 // are garbage and
 // linear star propagation has long since degraded, so `t` never leaves it.
 export const T_CLAMP_MIN_S = julianEpochYearToT(-2999.0);
@@ -110,7 +110,7 @@ const LOCAL_DATETIME_RE =
 
 /** A zoneless jump-field value (→ **local** time) → epoch-ms, or NaN if it
  *  isn't `LOCAL_DATETIME_FORMAT`. Sibling of `toLocalDatetimeValue`.
- *  Strict rather than `new Date(value)` — see ./README.md § Time `t`. */
+ *  Strict rather than `new Date(value)` — see ./README.md#time-t-and-the-readout. */
 export function parseLocalDatetimeValue(value: string): number {
   const m = LOCAL_DATETIME_RE.exec(value.trim());
   if (m === null) return Number.NaN;

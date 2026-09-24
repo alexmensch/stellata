@@ -32,7 +32,7 @@ export interface SimbadSpectralRow {
   otype: string | null;
   /** SIMBAD's own Gaia DR3 id for the object. A designation tier reaching a
    *  row that states a DIFFERENT one has reached another star — see
-   *  README.md § A stated Gaia id the record contradicts ends the walk. */
+   *  README.md#a-stated-gaia-id-the-record-contradicts-ends-the-walk. */
   sourceId: string | null;
 }
 
@@ -84,7 +84,7 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
     };
     indexSimbadRow(
       index, keys, { spType, spQual, otype, sourceId: keys.sourceId },
-      // No key repeats in the committed file (../naming/README.md § The union
+      // No key repeats in the committed file (../naming/README.md#the-union-policy
       // adds rows,
       // never a second row under one key). The row stating a type is the
       // verdict a pull that did emit two would need; two rows both stating one
@@ -107,8 +107,8 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
 /** A row is this record's only while nothing in it says otherwise. Both ids
  *  present and differing is SIMBAD stating they are separate stars, so the
  *  match is refused and the walk continues — the read side of the pull's
- *  corroboration rule (README.md § A stated Gaia id the record contradicts
- *  ends the walk). On the source_id tier the two are equal by construction. */
+ *  corroboration rule (README.md#a-stated-gaia-id-the-record-contradicts-ends-the-walk).
+ * On the source_id tier the two are equal by construction. */
 function matchSimbadRow(
   row: SimbadSpectralRow,
   recordSourceId: string | null,
@@ -134,8 +134,8 @@ export type SpectralSource = 'curated' | 'simbad' | 'gspspec' | 'fallback';
 
 /** Seven-tier spectral resolver: a curated HIP override, the four SIMBAD
  *  namespaces in ladder order, Gaia DR3 GSP-Spec, then SPECTRAL_UNKNOWN.
- *  Which tier exists for which population is in `./README.md`
- *  § The resolver and the radius chain. */
+ *  Which tier exists for which population is in `./README.md#the-resolver-and-the-radius-chain`.
+ * */
 export function resolveSpectralInfo(
   keys: SimbadRecordKeys,
   simbad: SimbadSpectralIndex,

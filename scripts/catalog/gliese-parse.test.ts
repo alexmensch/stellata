@@ -119,7 +119,7 @@ describe('parseGlieseTsv', () => {
 // blank; every code the column carries names a photometric or spectroscopic
 // estimate. Inverting one of those and then deriving the record's own absolute
 // magnitude from the result assumes the answer, so the parser must not
-// represent it at all. data/gliese/README.md § The parallax is half the column.
+// represent it at all. /data/gliese/README.md#the-parallax-is-half-the-column-and-the-other-half-is-not-astrometry.
 describe('parseGlieseTsv / the parallax carries which kind it is', () => {
   it('marks a blank n_plx trigonometric — the catalogue saying its resulting '
     + 'parallax IS the trigonometric one', () => {

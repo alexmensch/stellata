@@ -1,6 +1,6 @@
 """The value-keyed union pass: ask every namespace a row reaches wherever
 no object it already bound carries the value.
-See README.md § The union asks every namespace a record reaches."""
+See README.md#the-union-asks-every-namespace-a-record-reaches."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from .specs import ColumnSpec, GAIA_DR3, IdentLookup, WIDENING_LADDER
 #: pull unions and the record build orders, so every namespace that answers
 #: ships its row and the read side's ladder decides which one a record takes.
 #: Gaia is absent — a source_id reaches this pass only when Phase A already
-#: failed to resolve it (README.md § Why the union asks no Gaia rung).
+#: failed to resolve it (README.md#why-the-union-asks-no-gaia-rung).
 UNION_NAMESPACES: tuple[IdentLookup, ...] = WIDENING_LADDER
 
 

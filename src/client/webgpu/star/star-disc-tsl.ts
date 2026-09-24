@@ -1,6 +1,6 @@
 // The D4 disc pipeline in TSL: one draw, per-channel max blend, no depth
 // output of any kind — the core-mask draw stamps the depth this one
-// reads. README.md § The disc draw writes no depth.
+// reads. README.md#the-disc-draw-writes-no-depth.
 
 import { Discard, Fn, step } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
@@ -33,7 +33,7 @@ export function buildStarDiscMaterial(
 
   // The core is where the kernel reads as the photosphere rather than as
   // its halo, so it is exactly the fragment set that may claim lit-surface
-  // coverage (../../hdr/attachments/README.md § The unit). Same threshold
+  // coverage (../../hdr/attachments/README.md#the-unit). Same threshold
   // the core mask stamps depth over.
   const coreMask = (glow: Node<'float'>) => step(deps.u.uCoreThreshold, glow);
 

@@ -1,4 +1,4 @@
-// ChromeLineMaterials test double. See README.md § Files in this area.
+// ChromeLineMaterials test double. See README.md#files-in-this-area.
 
 import * as THREE from 'three';
 import { Line2 } from 'three/examples/jsm/lines/Line2.js';

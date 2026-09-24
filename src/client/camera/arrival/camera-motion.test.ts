@@ -22,7 +22,7 @@ function makeCamera(): THREE.PerspectiveCamera {
 }
 
 // Reference implementation of d(u) — the cubic-Hermite log-distance profile
-// from src/client/camera/arrival/README.md § Profile. The helper runs the same Math.pow
+// from /src/client/camera/arrival/README.md#profile. The helper runs the same Math.pow
 // in the same order, so `toBe` (bit-exact) holds.
 function expectedD(d0: number, dEnd: number, u: number): number {
   const f = u * u * (3 - 2 * u);

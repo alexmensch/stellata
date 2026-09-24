@@ -1,6 +1,6 @@
 // Pure helpers for the build-catalog count assertion — diff a
 // BuildCounts record against the committed snapshot. See
-// scripts/catalog/validate/README.md § Validation harness.
+// /scripts/catalog/validate/README.md#validation-harness-1.
 import type { DistVia } from './distance/parallax/parallax-cascade';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { RecuratedBrightness } from './companions/companion-promotion';
@@ -46,7 +46,7 @@ export interface BuildCounts {
    *  already set by `inferBinaries`). */
   ccdmFlagged: number;
   /** Records the first transport chunk carries — what first paint draws
-   *  (`record/README.md` § On-disk transport chunking). */
+   *  (`record/README.md#on-disk-transport-chunking`). */
   recordsInFirstChunk: number;
   /** CCDM primaries the optical-double gate vetoed: nearest same-group
    *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
@@ -99,7 +99,7 @@ export interface BuildCounts {
    *  were snapped to Pietrzyński 2019's eclipsing-binary distance. */
   lmcOverridden: number;
   /** Cone + PM matches the snap refuses on their own parallax, split by the
-   *  tier they keep. See distance/README.md § Layer 2. */
+   *  tier they keep. See distance/README.md#layer-2--lmc-kinematic-override. */
   lmcParallaxRefusedByDistVia: Record<DistVia, number>;
   /** lmcOverridden split by the distance tier the snap displaced — B-J's
    *  posterior or the raw inversion on most rows; the split states which
@@ -139,8 +139,8 @@ export interface BuildCounts {
   designationConMismatch: number;
   /** Stars whose designation constellation came from their own GCVS
    *  designation — the only nomenclature source the build has left, since the
-   *  manifest carries no editorial `con` cell. See `parse/README.md`
-   *  § Positional constellation membership. */
+   *  manifest carries no editorial `con` cell. See `parse/README.md#positional-constellation-membership`.
+   * */
   gcvsDesignationCon: number;
   /** Record index of Sol after sort. -1 if Sol is not found in source. */
   solIndex: number;
@@ -201,7 +201,7 @@ export interface BuildCounts {
    *  standardisation's validated range — **zero**, and pinned there as a
    *  tripwire rather than as a coverage figure. The flag's region and this
    *  tier's window do not intersect on any row of this catalogue (measured,
-   *  `../../data/gaia/README.md` § The GSPC validated-range flag), so a
+   *  `../../data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range`), so a
    *  nonzero value means the flag moved upstream, not that coverage
    *  improved. */
   ciGspcValidatedRange: number;
@@ -412,7 +412,7 @@ export interface BuildCounts {
   /** Records whose name reaches catalog.bin's name table — the NAME tiers
    *  alone. Everything below is composed at runtime. */
   namingNameTable: number;
-  /** Curated override rows applied (docs/star-naming.md § 7). Expected to
+  /** Curated override rows applied (/docs/star-naming.md#7-curation-seam). Expected to
    *  stay at zero; growth is a signal the ingest is wrong. */
   namingOverrides: number;
   /** Records with no composed label — no designation of their own and no
@@ -423,7 +423,7 @@ export interface BuildCounts {
    *  claiming them. Ratchet DOWN: the composer is injective given (naming
    *  anchor, component letter), so every survivor is two catalogue entries
    *  claiming one designation — a data finding, never something the
-   *  renderer should qualify away (docs/star-naming.md § 8). */
+   *  renderer should qualify away (/docs/star-naming.md#8-parity--the-gate-on-any-naming-change). */
   namingDuplicateLabels: number;
   namingDuplicateRecords: number;
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
@@ -458,8 +458,8 @@ export interface BuildCounts {
   /** Why the rest of those pair-row sources are not candidates. These four
    *  plus `pairMemberParallaxEntries` are every source the index's per-root
    *  dedup admits, so the tier's reach is a partition rather than prose
-   *  (`distance/parallax/README.md` § The tier's reach is bounded by
-   *  measurement quality). `pairMemberSiblingNoAstrometryRow` is the one that
+   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`).
+   * `pairMemberSiblingNoAstrometryRow` is the one that
    *  says the astrometry request under-covers its pair-row half. */
   pairMemberSiblingNoAstrometryRow: number;
   pairMemberSiblingNoParallax: number;
@@ -592,7 +592,7 @@ export interface BuildCounts {
   /** PM rescue: rows the direction tier left without a proper motion whose
    *  own TYC reaches a Tycho-2 mean solution. The cascade's top tier and its
    *  only one needing no bibcode check — Tycho-2 predates Gaia
-   *  (`distance/README.md` § The proper-motion rescue cascade). */
+   *  (`distance/README.md#the-proper-motion-rescue-cascade`). */
   pmRescueTycho2: number;
   /** PM rescue: rows reached by CNS5 on their own GJ, whose PM cites the
    *  literature rather than a Gaia release. */
@@ -636,7 +636,7 @@ export interface BuildCounts {
   /** Rows whose resolved radial term alone exceeded
    *  `VELOCITY_SANITY_CEILING_KM_S` and was dropped, leaving the measured
    *  proper motion in place rather than losing it to the whole-vector clamp
-   *  (`distance/radial-velocity/README.md` § The sanity thresholds). Counted
+   *  (`distance/radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value`). Counted
    *  under the tier that supplied the value — the cascade routed correctly
    *  and the threshold, not the cascade, rejected it. */
   rvRadialRejected: number;

@@ -154,7 +154,7 @@ export function solveStarTsl(
 
   // appMagRoute stays undimmed all the way to the size solve: it is what
   // the disc/glow split routes on, and D3/D4 never fold the dim at all
-  // (../../star-pipeline/README.md § Star rendering). Carrying it — rather
+  // (../../star-pipeline/README.md#star-rendering-instanced-quads-three-passes). Carrying it — rather
   // than subtracting the dim back off later — is what makes it bit-equal
   // to the appMag those pipelines derive, since it sees the identical
   // sequence of adds.
@@ -219,8 +219,7 @@ export function solveStarTsl(
         const dMEff = perceptualDmEffTsl(appMag, u.uLimitMag, u.uSizeSpan, u.uSizeKnee);
         const appSize = perceptualAppSizePxTsl(dMEff, u.uSizeMin, u.uSizeMax, u.uSizeSpan);
 
-        // ../../star-pipeline/perceptual-disc/README.md § Eliding the
-        // physical-size branch.
+        // ../../star-pipeline/perceptual-disc/README.md#eliding-the-physical-size-branch.
         const physSizeRaw = float(0.0).toVar();
         If(dPc.lessThanEqual(u.uPhysSizeWindowPc), () => {
           const rPc = pow(10.0, stat('iLogRadius')).mul(u.uRSunPc);
@@ -228,8 +227,7 @@ export function solveStarTsl(
           physSizeRaw.assign(atan(rPc.mul(radiusFactor).div(dPc)).mul(2.0).mul(angularToPx));
         });
         // The peak takes the UNCLAMPED physical radius (CSS px) — the
-        // clamp below is display-only (../../star-pipeline/README.md
-        // § Physical-luminance emission).
+        // clamp below is display-only (../../star-pipeline/README.md#physical-luminance-emission).
         peakL.assign(pointSourcePeakTsl(u.uExposure, appMag, physSizeRaw.mul(0.5)));
 
         const physSize = min(
@@ -323,7 +321,7 @@ export function buildStarVertexNode(
     // background painting inside the core the local pass repaints); the two
     // colour passes collapse in favour of the mirror draws. Totality
     // collapses the glow quad alone, and iCompositeSuppress never gates
-    // glow (README.md § Suppression semantics).
+    // glow (README.md#suppression-semantics-carried-by-the-pass-specialization).
     const hidden = self.equal(u.uHideFocusIdx);
     const suppressed = (pass === STAR_PASS_GLOW
       ? (isMember === null ? hidden : hidden.or(isMember))
@@ -362,7 +360,7 @@ export function buildStarVertexNode(
           // area integral so its frame integral returns the star's true flux.
           // pxSize is CSS pixels, which is what keeps the frame mean
           // devicePixelRatio-independent
-          // (../../hdr/exposure/reduction/README.md § Pixel units).
+          // (../../hdr/exposure/reduction/README.md#pixel-units--css-on-a-device-pixel-grid).
           v.vFluxPeakL.assign(kernelFluxPeakTsl(
             u.uExposure, s.appMag, s.pxSize,
             perceptualDiscFluxIntegralTsl(perceptualDiscExponentTsl(
@@ -388,7 +386,7 @@ export function buildStarVertexNode(
           // reversed-z clip convention and
           // fixed-function depth writes the nearest value — no fragment
           // depth output, which is what keeps early-z alive
-          // (../README.md § Early-z). The mirror's own mask never pins:
+          // (../README.md#early-z--the-star-layers-depth-honest-redesign). The mirror's own mask never pins:
           // its stamp IS the member's true bracket depth.
           If(isMember, () => {
             clipOut.assign(vec4(

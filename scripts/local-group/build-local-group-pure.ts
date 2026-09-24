@@ -139,7 +139,7 @@ export interface AliasRow {
 
 /** Display precedence, best first. `proper` is the residual rung — a name
  *  no catalogue pattern below claims — so acronyms ("SMC", "LGS 3") land
- *  there too. See `scripts/local-group/README.md` § Display-name rules. */
+ *  there too. See `/scripts/local-group/README.md#display-name-rules`. */
 export const NAME_TIERS = ['proper', 'messier', 'ngc-ic', 'catalogue'] as const;
 export type NameTier = (typeof NAME_TIERS)[number];
 
@@ -652,7 +652,7 @@ export function buildEmission(opts: {
 
 /** Semi-axes the wireframe draws: the emission envelope for the disc
  *  family, the structural half-light ellipsoid for spheroids. Why the two
- *  families differ — see README.md § Emission solver. */
+ *  families differ — see README.md#emission-solver--per-object-density0. */
 export function renderedWireframeAxes(
   structuralAxes: [number, number, number],
   emission: LgEmission,

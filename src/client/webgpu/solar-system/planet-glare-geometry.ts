@@ -1,5 +1,5 @@
 // Packed instanced geometry for the reflected-glare billboard — exactly
-// the 8 guaranteed vertex buffers (README.md § The glare packs).
+// the 8 guaranteed vertex buffers (README.md#the-glare-packs).
 
 import * as THREE from 'three';
 import { STAR_QUAD_CORNERS, STAR_QUAD_INDEX } from '../../star-pipeline/star-quad';

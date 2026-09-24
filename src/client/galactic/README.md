@@ -51,8 +51,8 @@ constants directly — keep the module minimal and stable.
 detail level ≥ representational, hidden in chart mode*. The declutter
 cycle gates it as `galacticDiscWireframe` (floor `representational`); the
 per-frame warp/fade update is skipped when the detail cycle doesn't
-permit it (`../scene/declutter/README.md` § Detail-level declutter
-cycle). A 15 kpc midplane ring, two thickness rings at
+permit it ([Detail-level declutter cycle](../scene/declutter/README.md#detail-level-declutter-cycle)).
+A 15 kpc midplane ring, two thickness rings at
 ±1800 pc, and a 5 kpc × 3 kpc bulge wireframe (three orthogonal ring
 loops in the galactic frame), all centred on the galactic centre — Sol
 sits ~8 kpc *inside* the disc, not at its middle.
@@ -66,14 +66,14 @@ outside its own outline — which is what the previous hand-set ±400 pc and
 3 × 1.5 kpc did: 1.5× short vertically on the disc, and on the bulge 2×
 vertically and 1.67× radially. Changing a mesh envelope now moves the
 ring with it — the thickness rings tripled when the disc gained its thick
-component (`../milkyway/README.md` § Density profiles).
+component ([Density profiles](../milkyway/README.md#density-profiles)).
 
 **The disc is the one layer gating on the frustum**, and its registry
 entry declares both admissible tests in order: `'opacity'` when
 `galacticDiscOpacity(distFromSol)` reaches zero — inside `FADE_INNER_PC`,
 which is the app's own default view — then `'frustum'` against a
 GC-centred sphere of `GALACTIC_DISC_BOUND_PC`
-(`../scene/contribution/README.md` § Declaring what a layer can put on screen). Opacity
+([Declaring what a layer can put on screen](../scene/contribution/README.md#declaring-what-a-layer-can-put-on-screen)). Opacity
 runs first because it is the one that fires where the camera sits *inside*
 the ring and no frustum test could; the frustum half reaches only vantages
 outside the disc, which are also the only ones that can turn away from it.
@@ -124,7 +124,7 @@ modules would flip which of the two draws first.
   inverse, for layers that only describe the sky *from Sol* and so must
   vanish as the camera leaves. The IAU boundary arcs are its consumer.
   Its `!(outerPc > innerPc)` guard is
-  load-bearing (`../constellation-boundaries/README.md` § Chart-mode layer):
+  load-bearing ([Chart-mode layer](../constellation-boundaries/README.md#chart-mode-layer)):
   a NaN window has to hide the layer, because a NaN opacity never reads as
   ≤ 0 and would draw a Sol-frame layer at full strength from everywhere.
 
@@ -359,7 +359,7 @@ anyway. It is part of the declutter cycle, though: the detail level
   stays solid), no transparency, no blending. The equator/line opacity
   split is dropped in chart mode (paper-chart aesthetic doesn't fade) —
   except under an active Sol-distance fade, which keeps blending on
-  (`coord-spheres/README.md` § Coordinate spheres).
+  ([Coordinate spheres](coord-spheres/README.md#coordinate-spheres)).
 - Sol/GC arrows + HUD ring + POI ring/arrow/labels all flip to a deep
   saturated blue palette (`rgba(30, 64, 175, 0.85)`, the existing
   `--accent` token) with white halos on labels — distinct from

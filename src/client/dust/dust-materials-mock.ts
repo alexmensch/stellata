@@ -1,4 +1,4 @@
-// DustParticleMaterials test double. See README.md § The material seam.
+// DustParticleMaterials test double. See README.md#the-material-seam.
 
 import { surfaceRecorder, type FakeEmitterMaterial } from '../scene/emitter-material-mock';
 import type { DustParticleMaterials } from './dust-particle-layer';

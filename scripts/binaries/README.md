@@ -15,8 +15,7 @@ numeric thresholds, provenance fields.
 
 - You're refreshing external catalogues — Gaia DR4 landed, AT-HYG cut a
   new release, B-J republished posteriors, SIMBAD updated sp_type
-  bibcodes. See `scripts/refresh/README.md` § Refreshing data when
-  DR4 / new AT-HYG lands.
+  bibcodes. See [Refreshing data when DR4 / new AT-HYG lands](/scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands).
 - You're adding a star to the Tier-A validation corpus
   (`scripts/catalog/validate/known-stars.tsv`).
 - You're debugging why a specific star doesn't render at its expected
@@ -143,7 +142,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    renderer / picker / hover / focus stack picks companions up with zero
    code change. Gates, identifier minting, placement, and the
    field-inheritance contract:
-   `scripts/catalog/companions/README.md` § Companion promotion.
+   [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion).
 3. **Runtime side artifact** (`build-runtime-binaries.py`). Reads
    multiples.tsv + `catalog-row-index-map.json` (whose `bySynth` section
    sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
@@ -461,7 +460,7 @@ component-letter hierarchy. Build counters:
 **Shared-slot re-homing (blended siblings).** An inner pair's primary
 must resolve to its parent component's catalog slot — the shared-slot
 invariant the runtime walk + focal-frame ride depend on (see
-`src/client/binaries/README.md` § Hierarchical walk). When a sibling
+[Hierarchical walk](/src/client/binaries/README.md#hierarchical-walk)). When a sibling
 shares its identifier with the system primary (Castor A & B blend to one
 Gaia source; A & B of 02398-4254 share a HIP Gaia later split), the inner
 pair's own id-first resolve lands on the wrong sibling. Two coupled
@@ -470,7 +469,7 @@ picks the *bound* parent (has-orbit, then tightest sep) over a
 coincidental element-less wide pair, and `override_inner_primary_indices`
 re-homes each inner pair's primary onto that parent's member slot.
 `companion-promotion.ts`'s post-pass makes the baked catalog placement
-agree (see `scripts/catalog/companions/README.md` § Companion promotion).
+agree (see [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 
 A blended primary the synth re-home can't reach (its component was dropped
 by promotion, or it's a compound / secondary-side collapse) still resolves
@@ -578,8 +577,8 @@ stores); everything else gets `q = None` here and falls through to Stage
 
 The same `q` also feeds **systemic-velocity composition** for
 proper-motion propagation. catalog.bin bakes a per-star space-motion
-velocity (`docs/science-catalog-ingestion.md` § Current-epoch star
-positions); a bound pair's
+velocity ([Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t));
+a bound pair's
 members must share one systemic velocity or the runtime epoch-advance
 shears a static (Tier-3) pair. `scripts/catalog/companions/companion-promotion.ts`
 uses this `q` for the barycentric blend `v_sys = (1−q)·v_p + q·v_s` on a
@@ -664,15 +663,15 @@ AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH`, mirroring the single-star
 cascade in `scripts/catalog/distance/direction-cascade.ts`. This keeps a promoted
 secondary's baked xyz on the same epoch as its primary so the static
 relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
-(epoch gap × systemic PM). See `data/README.md` § Reference epoch.
+(epoch gap × systemic PM). See [Reference epoch](/data/README.md#reference-epoch-and-proper-motion).
 
 `hd` carries the component's own HD number, with the pair primary
 falling back to the coord-validated ORB6 entry's HD (stashed on the
 Stage-2 `ResolvedComponent`); counted `multiples_hd_populated`. It is
 this pipeline's own designation record for the pair — a record's HD is
 the membership manifest's cell, which the catalog build reads there and
-amends from nothing (`scripts/catalog/membership/README.md` § The
-identifier columns are read, never re-derived). Two other Stage-6 accounting
+amends from nothing ([The identifier columns are read, never re-derived](/scripts/catalog/membership/README.md#the-identifier-columns-are-read-never-re-derived)).
+Two other Stage-6 accounting
 mechanisms guard silent drops: WDS summary rows duplicated on
 (wds_id, discoverer, components) are collapsed at the parse boundary
 (`dedup_wds_pair_rows`, most-observed row wins — Pismis 24 CD carried
@@ -723,7 +722,7 @@ contribute geometry only — the pair itself stays dropped; a sep+PA
 measurement is real astrometry regardless of boundness
 classification. Blank when no chain reaches the component. Consumed
 by companion promotion's pair-row-primary escape (see
-`scripts/catalog/companions/README.md` § Companion promotion).
+[Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 
 Three system-level mechanisms run at emit time:
 
@@ -770,7 +769,7 @@ Three system-level mechanisms run at emit time:
   solution type; ORB6 rows whose a″→AU conversion lacked a parallax).
   The `a_via` column carries the provenance: `catalog` (orbit source
   published it), `kepler_mass_estimate`, or `none`.
-  `docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+  [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
   carries the error analysis (a ∝ M^⅓).
 
 The `spect` column resolves through a four-tier cascade with
@@ -807,10 +806,10 @@ the derivation is suppressed — the partner already carries the system
 light, so deriving here would mint a twin. A symmetric blend (neither
 component in AT-HYG) still derives the source's COMBINED magnitude;
 companion promotion's blend-split post-pass divides it across the
-collocated records the source backs (see `scripts/catalog/companions/README.md`
-§ Companion promotion). It recovers the ~3.5k own-DR3 companions that
+collocated records the source backs (see [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
+It recovers the ~3.5k own-DR3 companions that
 would otherwise drop at promotion for a blank absmag; see
-`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+[Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
 (companion promotion) for the transforms and source citations.
 
 ## Stage 7 — Build-counts and rates snapshots

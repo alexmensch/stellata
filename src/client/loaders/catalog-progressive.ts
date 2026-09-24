@@ -1,5 +1,5 @@
 // Fetch and record-window scheduling for the progressive catalog load.
-// See ./README.md § Progressive catalog load.
+// See ./README.md#progressive-catalog-load.
 
 import {
   catalogChunkFilename,
@@ -58,7 +58,7 @@ async function fetchChunkInto(
 /** Each chunk's fetch, chained so exactly one is in flight at a time, each
  *  resolving into its own slice of the shared buffer. Index i settles when
  *  chunk i has landed. Serial, not parallel, and that is load-bearing:
- *  ./README.md § Progressive catalog load. */
+ *  ./README.md#progressive-catalog-load. */
 export function startChunkFetches({
   dirUrl, manifest, into, onBytes,
 }: ChunkFetchDeps): Promise<void>[] {

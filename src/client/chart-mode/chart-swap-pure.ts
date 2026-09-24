@@ -1,5 +1,4 @@
-// Ordering of the two halves of the chart palette swap. See README.md
-// § Entry and exit are not mirror images.
+// Ordering of the two halves of the chart palette swap. See README.md#entry-and-exit-are-not-mirror-images.
 
 /**
  * Run the HDR mode swap and the per-layer palette fan-out in the order the

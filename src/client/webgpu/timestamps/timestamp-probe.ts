@@ -1,6 +1,6 @@
 // Whether this backend's timestamp queries survive validation. Safari 26
 // advertises 'timestamp-query' and then reports the query set's type as an
-// unknown enum (README.md § The flag is a request, and a grant is not proof).
+// unknown enum (README.md#the-flag-is-a-request-and-a-grant-is-not-proof).
 
 // GPUTextureUsage.RENDER_ATTACHMENT — read as a literal because the
 // global is browser-only, and reaching for it here would make the probe
@@ -89,7 +89,7 @@ export async function timestampWritesValidate(device: ProbeDevice): Promise<bool
 }
 
 /** Must run before the first frame — a later call cannot unpoison a cached
- *  render pass descriptor (README.md § The flag is a request). Returns
+ *  render pass descriptor (README.md#the-flag-is-a-request-and-a-grant-is-not-proof). Returns
  *  whether timestamps live. */
 export async function settleTimestampSupport(backend: TimestampBackend): Promise<boolean> {
   if (!backend.trackTimestamp) return false;

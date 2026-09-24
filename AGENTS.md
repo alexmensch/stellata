@@ -36,7 +36,7 @@ enforcement: `tests/code-comment-rules.test.ts` scans `*.{ts,js,py}` under
 
 CI can't catch a comment that merely restates `README.md` / `SCIENCE.md` /
 `AGENTS.md` prose. Write order catches that one:
-`docs/authoring-patterns.md` § Code-comment hygiene.
+[Code-comment hygiene](docs/authoring-patterns.md#code-comment-hygiene).
 
 ## Write-time discipline — triggers and pointers
 
@@ -73,7 +73,7 @@ here is the always-loaded hook pointing to which section to open.
   each, committed along the way. § Commit granularity.
 - **A frozen table lacks a column you need** → run the re-pull; you
   have network access. Never scope a design around it or hand the
-  fetch back. `scripts/refresh/README.md` § Who runs a refresh.
+  fetch back. [Who runs a refresh](scripts/refresh/README.md#who-runs-a-refresh).
 - **Adding or touching a render layer, pass, or per-frame buffer
   write** → read `docs/render-rules.md` first (visible-count draws,
   liveness gating, single-writer buffers, measurement canon).
@@ -196,8 +196,8 @@ How to apply: state the **vantage** and the **epoch offset** behind any
 claim, defaulting to the extremes the model allows — closest realistic
 viewpoint, clock's limit. "Negligible / invisible / doesn't matter"
 without both is not a claim. Physical accuracy is the mandate; "you
-can't see the difference" never overrides it. SCIENCE.md § Defer detail
-until zoom affordance is the complementary upper-bound rule (don't add
+can't see the difference" never overrides it. [Defer detail until zoom affordance](SCIENCE.md#defer-detail-until-zoom-affordance)
+is the complementary upper-bound rule (don't add
 detail the user can never get close enough to see).
 
 ## Repo layout — the structure is the index
@@ -254,8 +254,7 @@ pnpm run deploy          # wrangler deploy (requires auth)
 
 Watch/coverage variants of `pnpm test`, the catalogue verify script,
 and the manual `pnpm run refresh:*` / `pnpm run validate:simbad` chain
-are documented in `scripts/refresh/README.md` and `RELEASING.md`
-§ Catalogue refresh policy.
+are documented in `scripts/refresh/README.md` and [Catalogue refresh policy](RELEASING.md#catalogue-refresh-policy).
 
 ## Non-Interactive Shell Commands
 
@@ -288,7 +287,7 @@ a standing global rule; **never push or commit to main**, and diff size is
 never a justification. What this project adds:
 
 - **`skip-version-bump` label** on `gh pr create` for pure docs / CI /
-  `.beads` / repo-config changes — see `RELEASING.md` § Version policy, the
+  `.beads` / repo-config changes — see [Version policy,](RELEASING.md#version-policy) the
   "live-app consumer" test.
 - **`## Release notes` is required whenever the version bumps.** Every PR with
   a `package.json` version bump fills that block in the PR body (Summary /

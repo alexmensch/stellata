@@ -1,6 +1,6 @@
 // Local Group profile geometry: the Sérsic deprojection and the
 // truncated-volume integrals each family solves through, over the shared
-// quadrature. docs/science-local-group.md § Local Group luminosity model.
+// quadrature. /docs/science-local-group.md#local-group-luminosity-model.
 
 import {
   integrateOverEllipsoid,

@@ -1,4 +1,4 @@
-/** The anchor-grade bar. See README.md § System distance coherence. */
+/** The anchor-grade bar. See README.md#system-distance-coherence. */
 
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { GAIA_RUWE_UNRELIABLE_THRESHOLD } from '../distance/direction-cascade';

@@ -64,7 +64,7 @@ describe('mortonDispatchOrder', () => {
     expect(mortonDispatchOrder(new Float32Array(0), 0)).toHaveLength(0);
   });
 
-  // ./README.md § Dispatch order: the spreader binds, not the key word.
+  // ./README.md#dispatch-order: the spreader binds, not the key word.
   it('quantises each axis to the widest half the spreader accepts', () => {
     expect(MORTON_BITS_PER_AXIS).toBe(16);
     expect(MORTON_BITS_PER_AXIS >> 1).toBe(8);

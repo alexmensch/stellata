@@ -51,7 +51,7 @@ export class ConstellationFigureLayer {
    *  when a figure is highlighted, all of them in chart mode, none to clear).
    *  `localPositions` seeds the vertex buffer so no zeroed frame renders
    *  before the first `update`. `excludeStarIdx` drops every segment touching
-   *  that catalog star — the observe anchor, README.md § The observe anchor. */
+   *  that catalog star — the observe anchor, README.md#the-observe-anchor. */
   setFigures(
     constellations: readonly Constellation[],
     conIndices: readonly number[],

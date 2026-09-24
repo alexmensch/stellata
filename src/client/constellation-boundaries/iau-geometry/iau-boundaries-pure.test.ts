@@ -175,7 +175,7 @@ describe('named-star assignment', () => {
   // ρ Aquilae is the documented boundary-crossing case and the reason the
   // designation constellation has to be carried separately from the
   // positional one: IAU nomenclature keeps it in Aquila, its position is in
-  // Delphinus. See README.md § ρ Aquilae.
+  // Delphinus. See README.md#ρ-aquilae.
   it('places rho Aql (HIP 99742) in Delphinus, not Aquila', () => {
     const rhoAql = { raDeg: 303.5692452, decDeg: 15.19760993 };
     expect(lookup.edgeCodeAt(rhoAql)).toBe('DEL');

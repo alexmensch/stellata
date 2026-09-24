@@ -1,6 +1,6 @@
 // Per-type variable-star pulsation params (radius-swing ρ, colour-swing
 // ΔB−V) for the star vertex stage's iPulsRho / iPulsColorSwing fields. See
-// docs/science-stellar-modelling.md § Variable-star pulsation.
+// /docs/science-stellar-modelling.md#variable-star-pulsation.
 import {
   VAR_TYPE_MIRA,
   VAR_TYPE_SEMIREGULAR,
@@ -28,7 +28,7 @@ export interface PulsationParams {
 // while the colour reddens strongly. Cepheids / RR Lyrae swing radius
 // more (10–20%) with a moderate colour shift; DSCT-class low-amplitude
 // pulsators barely move. Values documented + cited in
-// docs/science-stellar-modelling.md § Variable-star pulsation.
+// /docs/science-stellar-modelling.md#variable-star-pulsation.
 export const PULSATION_PARAMS_BY_TYPE: Record<number, PulsationParams> = {
   [VAR_TYPE_MIRA]: { rho: 1.4, colorSwing: 0.35 },
   [VAR_TYPE_SEMIREGULAR]: { rho: 1.2, colorSwing: 0.2 },

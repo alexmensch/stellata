@@ -1,5 +1,5 @@
 // Tripwire for the hand audit of three's runtime surface: pins the version
-// that audit was last run against. README.md § The three upgrade audit is the
+// that audit was last run against. README.md#the-three-upgrade-audit is the
 // checklist, and the reason none of it can be pinned by a test instead.
 
 import { describe, expect, it } from 'vitest';

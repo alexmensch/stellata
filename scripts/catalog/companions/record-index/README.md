@@ -40,7 +40,7 @@ side fails.
 **`bySynth` also carries bridged keys.** A component whose row carries no
 identifier is addressable only under its synth key, and where promotion
 refused the mint because a stored same-as edge names a Gaia source already in
-the catalogue (`../README.md` § Same-as bridge to an already-admitted source),
+the catalogue ([Same-as bridge to an already-admitted source](../README.md#same-as-bridge-to-an-already-admitted-source)),
 the key maps onto that source's record — or the star ships with no component
 letter, no search entry and no `binaries.bin` pairing. A record that owns the
 key outright wins over a bridge. Addressing only: the record's own
@@ -132,7 +132,7 @@ name before they were written:
   identified member is θ¹ Ori C, arriving as its component I, so every
   letter in it composed against θ¹ Ori — asserting an identity the data
   does not support. Refusing that anchor leaves those records on their own
-  designations, which is what `docs/star-naming.md` § 8 means by a
+  designations, which is what [§ 8](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change) means by a
   surviving collision being a data finding rather than a renderer
   concession.
 
@@ -147,6 +147,6 @@ no primary row — there is no side to anchor the pair on, and taking the first
 row instead would attribute a glyph off a pairing the data never states.
 
 Emitted as the search index's `cl` / `cp` fields —
-`../../record/README.md` § Search index, `src/client/typeahead/README.md`
-§ Star search, and `../../naming/README.md` § Two callers, one composer.
+[Search index,](../../record/README.md#search-index-publicsearch-indexjson) [Star search,](/src/client/typeahead/README.md#star-search)
+and [Two callers, one composer](../../naming/README.md#two-callers-one-composer).
 `componentDesignations` pins the total.

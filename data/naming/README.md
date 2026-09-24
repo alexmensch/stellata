@@ -1,6 +1,6 @@
 # Naming — the curated override table
 
-The naming ladder's escape hatch (`docs/star-naming.md` § 7), and the only
+The naming ladder's escape hatch ([§ 7](/docs/star-naming.md#7-curation-seam)), and the only
 hand-written input to it. Every other tier is compiled from a published
 source: the authority itself is `../iau-wgsn/`, and the build side is
 `scripts/catalog/naming/`.
@@ -8,7 +8,7 @@ source: the authority itself is `../iau-wgsn/`, and the build side is
 ```
 name_overrides.tsv  Hand-curated, header-only today. Columns: sid,
                     display_name, reason, source. Keyed on the frozen
-                    Stellata ID (docs/sid.md § 7) — a record's identity
+                    Stellata ID (/docs/sid.md#7-storage--sid-in-every-artifact) — a record's identity
                     survives re-indexing, and a no-Gaia record has no
                     source_id to key on. Applied as ladder tier 1, above
                     the IAU name, so a row wins outright. A SID no record

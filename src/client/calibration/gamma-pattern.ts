@@ -1,6 +1,6 @@
 // Draws one gamma match cell: a solid patch inside a 50/50 black-white
 // line pattern, which averages to 0.5 linear luminance.
-// See src/client/calibration/README.md § Gamma.
+// See /src/client/calibration/README.md#gamma--why-the-stripes-are-device-pixels.
 
 import { greyCss } from './calibration-ladders-pure';
 

@@ -53,7 +53,7 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
   renderedSizePx). Instantiated per shell-module.
 - `shell-object-sids.ts` — `SHELL_OBJECT_SIDS`, the hand-written
   key → frozen-SID pin (§ SID pins).
-- `shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
+- <a id="shell-pickts"></a>`shell-pick.ts` — `pickShellSilhouette`, the shared mesh-raycast +
   label-bbox hit test both shells' click / hover picks use, keyed on a
   `ShellPickSurface`. It reports the silhouette's projected radius as the
   hit's enclosure, and a label-only hit reports the LABEL's much tighter
@@ -69,7 +69,7 @@ surface from the shared rim constants (`SHELL_RIM_BLUE`,
   reads as "nothing in front of this" (`../occlusion/README.md`). That is
   the honest answer rather than a dodge: the label engine already asked the
   occluder set about its own support point and hid the text if a body was
-  in the way (`../overlays/README.md` § The two label halves), so a rect
+  in the way ([The two label halves](../overlays/README.md#the-two-label-halves)), so a rect
   with bounds is a label that has already passed. Anchoring on the wall
   behind the words would re-ask a different question, and reading the
   raycast scratch unwritten answers about whatever the previous call hit.
@@ -105,8 +105,8 @@ MRT-mode registration and a bare `material.dispose()` would not.
   beyond the boundary. Consumers also set `frustumCulled = false` on the
   mesh — bounding-sphere culling is unreliable with the camera interior.
 - **Uniforms.** `uColour` — set from the factory's `colourHex` option,
-  which is mapped through the tone-map inverse (`../hdr/README.md`
-  § Chrome) so the shell resolves at its tuned appearance; pass an
+  which is mapped through the tone-map inverse ([Chrome](../hdr/README.md#chrome--non-physical-layers-keep-their-authored-look))
+  so the shell resolves at its tuned appearance; pass an
   authored sRGB hex, never a pre-built `THREE.Color`. Then
   `uAlphaLimb` (limb alpha, the peak),
   `uFaceOnFloor` (face-on multiplier — 0 = pure rim, 1 = flat shell;
@@ -235,8 +235,8 @@ sweeping *that* means passing each consumer its own number.
 
 Both shells are full search / focus / warp / pin targets under one shared
 `'shell'` `TargetKind` — objects like any other, joining the kind-generic
-interaction machinery with zero per-kind branches (`camera/focus/README.md`
-§ FocusableProviders). The seam is additive: the gate landed the kind +
+interaction machinery with zero per-kind branches ([FocusableProviders](/src/client/camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry)).
+The seam is additive: the gate landed the kind +
 dispatch + exhaustive-map entries, and each shell instance registers into
 `ShellRegistry` without touching a switch.
 
@@ -267,8 +267,8 @@ dispatch + exhaustive-map entries, and each shell instance registers into
 ## Sub-pixel cull — one floor for the mesh and its label
 
 The shell module declares `contribution: { kind: 'gated' }` on
-`ShellRegistry.anyLegible` (`../scene/README.md` § Declaring what a layer
-can put on screen): a shell's projected angular *radius* at the true camera
+`ShellRegistry.anyLegible` ([Declaring what a layer can put on screen](../scene/README.md#declaring-what-a-layer-can-put-on-screen)):
+a shell's projected angular *radius* at the true camera
 distance must clear `FEATURE_LEGIBILITY_MIN_PX` (`util/orbit-line.ts`), and
 the layer skips once **neither** shell does, since one registration draws
 both. Being above the orbit lock, the module may not gate on the frustum.
@@ -298,8 +298,8 @@ Neither shell is catalogued (the heliopause is generated; `local-bubble.bin`
 carries no sid field), so both mint SIDs like the Sol system rather than the
 in-record sibling artifacts: a committed `data/sid/shell-objects.tsv` list +
 the hand-written `SHELL_OBJECT_SIDS` pin here, asserted against the ledger by
-a vitest (tests import, never redefine). See `docs/sid.md` § 7. Without a SID
+a vitest (tests import, never redefine). See [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact). Without a SID
 a shell silently drops from a shared `?v=`.
 
-See `src/client/scene/README.md` § Full render stack for where each consumer
+See [Full render stack](/src/client/scene/README.md#full-render-stack--front-to-back) for where each consumer
 sits in the render order.

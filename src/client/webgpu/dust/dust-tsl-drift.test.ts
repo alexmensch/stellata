@@ -1,5 +1,5 @@
 // The dust sprite's constant-drift guards. See
-// ../solar-system/README.md § Constant drift.
+// ../solar-system/README.md#constant-drift.
 
 import { readTslSource } from '../tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
@@ -31,7 +31,7 @@ describe('the TSL sprite restates no pinned constant as a literal', () => {
   });
 });
 
-// README.md § Two quantities that divide out.
+// README.md#two-quantities-that-divide-out.
 describe('the TSL sprite re-derives no log base', () => {
   it('carries no local LOG10', () => {
     expect(src).not.toMatch(/Math\.log\(\s*10\s*\)/);

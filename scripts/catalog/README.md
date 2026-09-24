@@ -5,7 +5,7 @@ Bailer-Jones + Gaia Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
 `public/search-index.json` + `public/constellation-boundaries.json`, plus the
-build-only `build/catalog-row-index-map.json` (`../README.md` § What ships).
+build-only `build/catalog-row-index-map.json` ([What ships](../README.md#what-ships)).
 Run via `pnpm run build:catalog`.
 
 Membership is `data/membership/membership-manifest.tsv` less the § 6.1 parks,
@@ -42,7 +42,7 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
   into first-class catalog records. Its `record-index/` subfolder holds
   everything that addresses records *after* the apparent-V sort
-  (`record/README.md` § Record order): the row-index
+  ([Record order](record/README.md#record-order)): the row-index
   sidecar, the renderable-companion wings bit, and the component-letter
   designations the display-name composer builds on.
 - `naming/` — the IAU WGSN authority ladder end to end: ingest, the
@@ -123,7 +123,7 @@ committed ledger (`data/sid/`, docs/sid.md). The build is a pure
 extractor `sid:allocate` uses, so both derive an identical class per record)
 builds each record's designation set, and `resolveSids` maps it to the
 existing ledger sid. The build **never mints** — `sid:allocate` is the sole
-ledger writer (docs/sid.md § 4.4).
+ledger writer ([§ 4.4](/docs/sid.md#44-allocation)).
 
 A record set that changes (a new manifest, new companions) therefore needs a
 build → `sid:allocate` → build cycle: the first build writes `NO_SID` for
@@ -172,5 +172,4 @@ consumers:
   consumers come online.
 
 Data refresh: `pnpm run refresh:gaia-apsis`. Science framing:
-`docs/science-catalog-ingestion.md` § Astrophysical parameters from
-Gaia DR3 Apsis.
+[Astrophysical parameters from Gaia DR3 Apsis](/docs/science-catalog-ingestion.md#astrophysical-parameters-from-gaia-dr3-apsis).

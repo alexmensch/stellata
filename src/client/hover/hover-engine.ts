@@ -27,7 +27,7 @@ export type HoverEngineConfig = {
   /** A pick is coming — one dwell away on a move, sooner on a press. The
    *  star pick gates on per-star dust extinction, which on WebGPU has to
    *  be staged off the GPU before it can be read
-   *  (`../webgpu/extinction/README.md` § Cold reads). */
+   *  (`../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity`). */
   onPickImminent?: () => void;
   /** The frame's near solid bodies and where the camera reads them from.
    *  The engine stays layer-agnostic: it does not know what occludes

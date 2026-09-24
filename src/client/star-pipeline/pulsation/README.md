@@ -6,7 +6,7 @@ suppress mask. Both are built at catalog load and consumed as
 per-instance attributes by `../../webgpu/star/star-vertex-tsl.ts`.
 
 Full physics, the per-type table, and interferometry citations are in
-`docs/science-stellar-modelling.md` § Variable-star pulsation; this file
+[Variable-star pulsation](/docs/science-stellar-modelling.md#variable-star-pulsation); this file
 is the runtime contract.
 
 ## Files in this area

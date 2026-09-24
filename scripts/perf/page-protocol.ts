@@ -178,11 +178,11 @@ export interface DifferentialSetup {
    *  `finally` outside priceFrame's own. */
   readonly preDisable: readonly string[];
   /** Hold the adaptation measurement unparked for the sweep
-   *  (`src/client/hdr/exposure/park/README.md` § The lever). */
+   *  (`/src/client/hdr/exposure/park/README.md#the-lever`). */
   readonly noPark: boolean;
   /** Refill the per-star A_V cache every frame, which a parked camera
-   *  otherwise skips (`src/client/debug/frame-cost/passes/README.md`
-   *  § The extinction rows). */
+   *  otherwise skips (`/src/client/debug/frame-cost/passes/README.md#the-extinction-rows`).
+   * */
   readonly forceRecompute: boolean;
   /** Where the dev server serves the pass roster from. */
   readonly toggleModuleUrl: string;
@@ -245,7 +245,7 @@ export interface DwellParams {
   readonly readbackEvery: number;
   /** Refill the per-star A_V cache every timed frame, so `computePasses`
    *  counts the kernel a parked camera skips
-   *  (`src/client/debug/frame-cost/passes/README.md` § The extinction rows). */
+   *  (`/src/client/debug/frame-cost/passes/README.md#the-extinction-rows`). */
   readonly forceRecompute: boolean;
 }
 
@@ -273,7 +273,7 @@ export interface DwellRaw {
  * clock stopped, the exposure pinned where the warmup left it and the
  * statistic readback held at one frame in `readbackEvery` — the
  * differential's own three preconditions
- * (`src/client/debug/frame-cost/README.md` § Preconditions) plus the one a
+ * (`/src/client/debug/frame-cost/README.md#preconditions`) plus the one a
  * whole-frame median at a two-class vantage needs (`dwell/README.md`).
  *
  * rAF deltas are the primary metric because they are the one clock every

@@ -1,6 +1,6 @@
 // The classic-ID overlay's label merge: overlay ∪ spine per identifier, with
-// the collision guard and the curated overrides. See README.md § The label
-// merge and docs/catalog-driver.md § 4.
+// the collision guard and the curated overrides. See README.md#the-label-merge--overlay--spine-per-identifier
+// and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import { starDesignations } from '../../../sid/sid-pure';
 import { dataRows, nonEmpty, parseIntOrNull } from '../../parse/corpus-tsv';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
@@ -80,7 +80,7 @@ export interface LabelFlip {
  *  walk that could disagree with what the build actually wrote. */
 export interface LabelMergeCounts {
   /** Records the overlay has no row for at all — the spine backstop's reach
-   *  (`data/classic-ids/README.md` § Coverage). */
+   *  (`/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority`). */
   labelNoOverlayEntry: number;
   /** Spine value confirmed by the overlay; the spine's own spelling is kept. */
   labelAgree: LabelPartition;
@@ -270,8 +270,8 @@ export function parseLabelOverridesTsv(text: string): LabelOverrides {
  *  the caller derived for it. The binding is a parameter rather than the row's
  *  own `gaia_source_id` cell because the two part company on 800-odd rows: the
  *  manifest derives the binding from committed evidence alone
- *  (`../../membership/binding/README.md` § The four sources, in precedence
- *  order), and labels keyed on that cell would name a source the record is no
+ *  (`../../membership/binding/README.md#the-four-sources-in-precedence-order`),
+ * and labels keyed on that cell would name a source the record is no
  *  longer bound to. */
 export function spineLabelMergeRecord(
   row: SpineRow, gaiaSourceId: string | null,
@@ -333,7 +333,7 @@ export function labelFlipsTsv(flips: readonly LabelFlip[]): string {
   return `${[LABEL_FLIPS_HEADER, ...lines].join('\n')}\n`;
 }
 
-/** Which SID designation namespace an identifier keys, per `docs/sid.md` § 3.
+/** Which SID designation namespace an identifier keys, per `/docs/sid.md#3-designation-namespaces`.
  *  A Flamsteed number keys none: it is a display designation the search index
  *  carries, never an identity key. */
 function designationFor(field: LabelField, value: string): string | null {
@@ -391,7 +391,7 @@ export function labelFlipDesignationDelta(
  *  lands the same designation on another record — exactly what a same-as class
  *  cares about and exactly what a ledger canonical key does not, its row
  *  resolving through the record it was keyed on
- *  (`../../spine/README.md` § The swap parity ledger). */
+ *  (`../../spine/README.md#the-swap-parity-ledger`). */
 export function spineDesignationsRemovedBy(flips: readonly LabelFlip[]): string[] {
   const removed: string[] = [];
   for (const flip of flips) {
@@ -578,7 +578,7 @@ const tally = (values: Iterable<string>): Map<string, number> => {
  *  an ambiguous one.
  *
  *  A designation covering more than one record names a catalogue granularity,
- *  so `docs/sid.md` § 4.1 drops it from the same-as graph entirely — it keys no
+ *  so `/docs/sid.md#41-same-as-equivalence-graph` drops it from the same-as graph entirely — it keys no
  *  ledger row. Attaching an identifier a DIFFERENT record already holds off the
  *  spine therefore deletes a working SID key from both records and buys
  *  nothing: the star stays findable under that identifier through the record
@@ -645,7 +645,7 @@ function applyCollisionGuard<R extends LabelMergeRecord>(
  *  An alias also has to clear the collision guard's own rule, which
  *  `applyCollisionGuard` cannot apply for it: aliases are not display cells, so
  *  the guard's tally never sees them, and an alias equal to a value another
- *  record DISPLAYS would go ambiguous under `docs/sid.md` § 4.1 and cost both
+ *  record DISPLAYS would go ambiguous under `/docs/sid.md#41-same-as-equivalence-graph` and cost both
  *  records the key. Such a value is withheld to `extra-dropped`. */
 function partitionExtras<R extends LabelMergeRecord>(
   records: readonly R[],

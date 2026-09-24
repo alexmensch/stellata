@@ -36,7 +36,7 @@ the composition lives in one place rather than at each call site.
 
 `createGridConstellationLookup(grid)` is the half that needs no edge set,
 which is what lets a browser consumer have membership from the shipped
-grid alone — `../README.md` § Runtime membership.
+grid alone — [Runtime membership](../README.md#runtime-membership).
 
 The edge records are read from the committed Stellarium file by
 `readIauEdgeRecords` (`../../../../scripts/catalog/parse/constellations.ts`),
@@ -75,7 +75,7 @@ plausible:
   fail it, not slip past it.
 
 What the anchors cost in frame terms — a label tracks the partition, not
-its stars — is `../README.md` § Label anchors.
+its stars — is [Label anchors](../README.md#label-anchors).
 
 ## The edge set
 
@@ -183,8 +183,8 @@ live: ρ Aql renders and searches as ρ Aql / 67 Aql off `dc` while byte 34 puts
 it in Delphinus. `dc` is sourced from IV/27A's Bayer/Flamsteed cross index keyed
 on the record's own HD/HIP — a designation is fixed by nomenclature and never
 migrates with the star, so nothing positional may supply it
-(`scripts/catalog/classic-ids/README.md` § The designation constellation). See
-`scripts/catalog/record/README.md` § Search index for the wire split.
+([The designation constellation](/scripts/catalog/classic-ids/README.md#the-designation-constellation)). See
+[Search index](/scripts/catalog/record/README.md#search-index-publicsearch-indexjson) for the wire split.
 
 ## Agreement with AT-HYG
 
@@ -209,8 +209,7 @@ to. Two carry **GCVS** designations, and they are different cases:
   designation and the boundaries agree with each other against the
   catalogue column, which is why the designation — not the column — is
   the authority for `desigConIndex`
-  (`scripts/catalog/parse/README.md` § Positional constellation
-  membership).
+  ([Positional constellation membership](/scripts/catalog/parse/README.md#positional-constellation-membership)).
 
 The CSV has no GCVS column — that cross-match happens later in the build
 — so this suite sees neither; `designationConMismatch` in build-counts is

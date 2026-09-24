@@ -51,7 +51,7 @@ describe('Riello+ 2021 G−V relation', () => {
   });
 
   // A contract with the G-only magnitude pull, not a property read here —
-  // README.md § Citation.
+  // README.md#citation.
   it('peaks at −0.0268, the headroom the G-only magnitude pull relies on', () => {
     let peak = -Infinity;
     for (let x = RIELLO_BP_RP_MIN; x <= RIELLO_BP_RP_MAX; x += 0.0001) {
@@ -226,7 +226,7 @@ describe('printedVBelowHip', () => {
 describe('printedVLookups', () => {
   // Both binding gates and the astrometry request weigh candidates through
   // this one bundle; a site spelling its own pair is how the three drift on
-  // reachable evidence (docs/catalog-driver.md § 4).
+  // reachable evidence (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('reduces a Tycho-2 row through the published VT relation', () => {
     const lookups = printedVLookups(
       new Map([['a-1-1', { btMag: 9.5, vtMag: 8.9 }]]),
@@ -239,7 +239,7 @@ describe('printedVLookups', () => {
   it('reads the Gliese arm through lookupGliese, not by the printed name', () => {
     // V/70A numbers the supplement `NN nnnn` and letters a blend's components
     // together, so a prefix match on Gl/GJ misses the population the tier
-    // exists for (data/gliese/README.md § The join key).
+    // exists for (/data/gliese/README.md#the-join-key).
     const lookups = printedVLookups(new Map(), {
       byKey: new Map([['914', {
         vMag: 9.0, bv: null, parallax: null, spectralType: null,

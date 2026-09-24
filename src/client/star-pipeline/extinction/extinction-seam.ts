@@ -16,7 +16,7 @@ export interface ExtinctionPrepassUniforms {
   uAvPrepassEnabled: { value: number };
 }
 
-/** see ../../webgpu/extinction/refill/README.md § Only what is in frame */
+/** see ../../webgpu/extinction/refill/README.md#only-what-is-in-frame */
 export interface ExtinctionView {
   camera: THREE.Camera;
   worldOffset: THREE.Vector3;
@@ -27,7 +27,7 @@ export interface ExtinctionPrepassSeam {
    *  camera displacement. Called on dust attach and per chunk upload. */
   markDirty(): void;
   /** Re-pack the position table off `catalog.positions` and invalidate —
-   *  README.md § The prepass cache. */
+   *  README.md#the-prepass-cache. */
   refreshPositions(): void;
   /** Dev-console A/B switch: false parks the star vertex stage on the
    *  in-vertex raymarch fallback and pauses cache maintenance, so the
@@ -39,13 +39,13 @@ export interface ExtinctionPrepassSeam {
    *  position before the main render. Refills when dirty or the camera moved
    *  beyond RECOMPUTE_EPSILON_PC, and when the view turned — a turn is an
    *  ordinary refill request
-   *  (`../../webgpu/extinction/refill/README.md` § A view change is a refill
-   *  request). Free only with the camera parked and the view still. */
+   *  (`../../webgpu/extinction/refill/README.md#a-view-change-is-a-refill-request--nothing-more`).
+   * Free only with the camera parked and the view still. */
   update(absCamX: number, absCamY: number, absCamZ: number, view?: ExtinctionView): void;
   /** Raw physical A_V for one star, out of the buffer the star vertex
    *  stage fetches. Null when the cache is inert, and until
    *  `warmAvReadback` has landed the table
-   *  (`../../webgpu/extinction/README.md` § Cold reads). */
+   *  (`../../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity`). */
   readAvMag(idx: number): number | null;
   /** A pick is imminent, so stage the whole A_V table onto the CPU before
    *  anything asks for it. One mapped copy of the buffer, at most one per
@@ -55,8 +55,8 @@ export interface ExtinctionPrepassSeam {
   warmAvReadback(): void;
   /** How many catalogue stars the refill's frustum test admits
    *  at the view it last dispatched with — the population that pays the
-   *  gate reads (`../../webgpu/extinction/refill/README.md` § Counting the
-   *  in-frame population). Null until a view has been supplied. */
+   *  gate reads (`../../webgpu/extinction/refill/README.md#counting-the-in-frame-population`).
+   * Null until a view has been supplied. */
   countInFrame(): number | null;
   /** March every star once more as a fragment pass and
    *  bit-compare against the compute kernel's buffer. Null while the cache

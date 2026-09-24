@@ -1,6 +1,6 @@
 // The boundary-shell ObjectKindModule — one module, two instances
 // (heliopause + Local Bubble) over the internal ShellRegistry. See
-// ./README.md § Boundary shells as focus targets.
+// ./README.md#boundary-shells-as-focus-targets.
 
 import * as THREE from 'three';
 import { softOrbitFloor } from '../camera/focus/focus-controller';
@@ -223,7 +223,7 @@ export function createShellKindModule(): ShellKindModule {
     displayName: (idx) => registry.at(idx)?.label ?? '',
 
     // Both shells carry static, always-known SIDs (generated / curated
-    // objects, docs/sid.md § 7) — the domain attaches even when a layer
+    // objects, /docs/sid.md#7-storage--sid-in-every-artifact) — the domain attaches even when a layer
     // is absent, and focus/pin fall through to null via the empty slot.
     sids: () => SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k]),
 

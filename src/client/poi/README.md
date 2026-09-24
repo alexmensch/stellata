@@ -5,7 +5,7 @@ deep-space probes, Local Group objects, and boundary shells today) in
 one list. This folder owns the pin **state**; the SVG
 rendering (rings, labels, off-screen arrows) lives in
 `../overlays/poi-overlay.ts`, and the per-POI info cards are members of
-the card rolodex (`../focus-card/README.md` § Rolodex behaviour).
+the card rolodex ([Rolodex behaviour](../focus-card/README.md#rolodex-behaviour)).
 
 ## Files
 
@@ -82,7 +82,7 @@ stack shared with the focus card, one visible front card and the rest
 as promotable header strips. Card content dispatches through
 `FocusCardProviders` by the pin's kind. Behaviour (promote,
 auto-front, focused-object suppression, strip compression, collapse)
-is documented in `../focus-card/README.md` § Rolodex behaviour; layout
-in `../ui/README.md` § Layout containers. POI cards render in BOTH
+is documented in [Rolodex behaviour](../focus-card/README.md#rolodex-behaviour); layout
+in [Layout containers](../ui/README.md#layout-containers-ui-top-left-ui-top-ui-bottom). POI cards render in BOTH
 camera modes — unlike the focus card, which observe mode hides. No
 camera actions from cards: promote, collapse, and × (unpin) only.

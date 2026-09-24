@@ -39,7 +39,7 @@ DRAWS — never whether the user left it on.** `mwBand`
 (`MilkyWay.isDrawn`), `lgEmission` (`LocalGroupEmission.isDrawn`) and
 `cloudAbsorption` (`MolecularClouds.isAbsorptionDrawn`) each answer the whole
 condition behind the draw: user toggle, contribution verdict and chart gate.
-The brightness skip (`../../../scene/contribution/README.md` § The brightness reason) leaves
+The brightness skip ([The brightness reason](../../../scene/contribution/README.md#the-brightness-reason)) leaves
 both emitters enabled and not drawing at the app default view and at a planet
 approach, so a toggle-only test admits the row and its A/B disables a pass that
 is already gone. `planetDepthStamp` is the model — it walks the entries and
@@ -48,8 +48,8 @@ reads `stamp.visible`.
 **`group.visible` is not that condition for two of the three.** The clouds hide
 the absorption group beneath the parent, so the accessor reads both; the band
 hides its two MESHES and leaves the group visible, since that group also
-carries the chart isobar treatment (`../../../milkyway/README.md` § Chart mode
-+ warp). Only the LG glow's group tracks every term on its own.
+carries the chart isobar treatment ([Chart mode + warp](../../../milkyway/README.md#chart-mode--warp)).
+Only the LG glow's group tracks every term on its own.
 
 **`coreMask` is deliberately outside the set**: its row prices the
 `shouldEnableCoreMask` walk, which runs whenever the lever is on whether or not
@@ -76,12 +76,12 @@ section below:
   not the resolve draw alone. The park also stops `measure()` being
   called at all, so the toggle sets `reduction.fenceWhileParked` for the
   duration: without it the row prices the loss of the statistic readback on
-  top of the chain (`../README.md` § The readback cadence).
+  top of the chain ([The readback cadence](../README.md#the-readback-cadence--measured-and-not-the-confound)).
 - **`emptyPass`** ADDS `clearDepth()` calls to the local depth pass when
   disabled (`localDepthPass.extraEmptyPasses`). On WebGPU three encodes a
   clear as its own render pass and submit — every colour attachment loaded
   and stored, nothing drawn — so `−savedMs` is the per-pass floor at the
-  current buffer size, times the count (`docs/render-rules.md` § 8).
+  current buffer size, times the count ([§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs)).
   **One pass is often under `bracketMs`, and the row then does not
   resolve** — it read −0.45 at a 0.5 bracket at Sol. Raising the count
   (`{ passes: ['emptyPass'], emptyPasses: 4 }`, or `--empty-passes 4` on
@@ -91,15 +91,15 @@ section below:
   figure.** Dividing assumes the clears add, and consecutive clears with
   nothing drawn between them are what a driver would coalesce — untested,
   and a bound cannot tell a small linear cost from a coalesced one
-  (`docs/render-rules.md` § 8). The real frame already
+  ([§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs)). The real frame already
   carries one such pass wherever a local cluster is active: the
   `clearDepth()` between the main render and the local repaint. No row
   taken so far resolves it: on `raf-delta` a baseline under one refresh
   interval cannot show a sub-millisecond addition, and those rows now say
-  so themselves — `cadenceBound` (`../README.md` § Reading a row).
+  so themselves — `cadenceBound` ([Reading a row](../README.md#reading-a-row)).
 - **`reduction`** keeps its readback while disabled and drops only the
   chain draws, so the row prices the mip chain rather than the readback's
-  own copy and map (`../../../webgpu/hdr/README.md` § Reduction). On the
+  own copy and map ([Reduction](../../../webgpu/hdr/README.md#reduction--an-asynchronous-readback)). On the
   retired WebGL2 boot, where that readback was the frame's only ANGLE
   submission barrier, keeping it was necessary and **still not
   sufficient** — the row read solidly negative at the default Sol view
@@ -122,7 +122,7 @@ parked, so every dwell prices the same state). At those vantages the
 should read ~0 — the park working, not the instrument failing. To price
 the writes themselves there, hold the park off for the sweep —
 `stellata.adaptation.setParkEnabled(false)` in the console, `--no-park` on
-the runner (`../../../hdr/exposure/park/README.md` § The lever).
+the runner ([The lever](../../../hdr/exposure/park/README.md#the-lever)).
 
 **The row lumps every emitter's statistic write together, and splitting it
 gives a BOUND rather than a share.** `--pre-disable mwBand,lgEmission`
@@ -131,8 +131,8 @@ emitter's. Differencing the two is the same arithmetic § Decomposing the HDR
 chain forbids within one table and for the same reason — the writes share
 bandwidth, and the two runs price frames 2.6x apart, so neither row is the
 other's complement. Read each as an upper bound on its own side. The runner
-refuses to diff such a pair outright (`../../../../../scripts/perf/diff/README.md`
-§ The refusals); the subtraction is done by hand, knowing this.
+refuses to diff such a pair outright ([The refusals](../../../../../scripts/perf/diff/README.md#the-refusals));
+the subtraction is done by hand, knowing this.
 
 **Measured 2026-09-11**, on the retired WebGL2 boot's `timer-query` — a
 figure this build cannot reproduce, kept as the record it was taken as —
@@ -147,7 +147,7 @@ default Sol view, park off, exposure pinned at dm −6.289 with
 So the whole statistic write is 22.5 ms and the star field's own share is at
 most 5.1 ms of it — and that row's readback rates diverge, so part of it is a
 submission-barrier change riding on the pass (§ The readback cadence, and
-`../README.md` § Reading a row). The band and the LG glow carry the larger
+[Reading a row](../README.md#reading-a-row)). The band and the LG glow carry the larger
 part, and holding both off took 29.8 ms off the whole frame. The two are
 also what the brightness gate (`stellata-8cg.50.4`) removes near a bright
 body, so the same milliseconds are claimed by more than one piece of
@@ -207,7 +207,7 @@ Instrument matters, and the row is structurally null on this build
 (§ Decomposing the HDR chain) — the figures above are the record of a
 boot that no longer exists, not a baseline to diff against.
 
-**These rows price the fully parked frame, not the duty cycle.** The pin
+<a id="these-rows-price-the-fully-parked-frame-not-the-duty-cycle"></a>**These rows price the fully parked frame, not the duty cycle.** The pin
 collapses the machine to parked for the whole sweep, so no probe runs
 inside a dwell and the differential cannot see one. The steady-state cost
 has to be reasoned from the cadence instead: the chain already only ran
@@ -229,9 +229,9 @@ Two rows, and they price opposite halves of the same cache.
   A whole fill is one camera→star march per catalogue star — 388,071
   threads, each spending taps in proportion to its in-cube path, so ~17M
   volume fetches at Sol against a ~37M ceiling
-  (`../../../star-pipeline/extinction/README.md` § The march) — plus its
+  ([The march](../../../star-pipeline/extinction/README.md#the-march)) — plus its
   own compute submit
-  (`../../../webgpu/extinction/README.md` § The prepass kernel).
+  ([The prepass kernel](../../../webgpu/extinction/README.md#the-prepass-kernel)).
   **The row is a fraction of that ceiling**: the
   fill spreads over `REFILL_SLICES` frames, so a frame dispatches one slice
   of the slot space, and inside it only the stars the prefilter and the
@@ -246,8 +246,8 @@ camera-idle**, so a plain sweep prices a recompute that never ran and
 records `computePasses 0` throughout. The row is therefore present only
 while a **forced-recompute lever** is armed, which the caller arms *before*
 the sweep: `stellata.setExtinctionRecomputeForced(true)` on the console, or
-`--force-recompute` on the runner (`../../../../../scripts/perf/README.md`
-§ Invocation). Armed, the shell invalidates the cache before every
+`--force-recompute` on the runner ([Invocation](../../../../../scripts/perf/README.md#invocation)).
+Armed, the shell invalidates the cache before every
 per-frame `update()`, so the kernel runs on every frame and the row's two
 dwells are kernel-every-frame against kernel-never.
 
@@ -261,7 +261,7 @@ they do not, something other than the recompute moved.
 
 The cost is **vantage-dependent, deliberately, and all five vantages are
 the witness.** The kernel gates on the star stages' own prefilter
-(`../../../webgpu/extinction/README.md` § The cache gate) and then on the
+([The cache gate](../../../webgpu/extinction/README.md#the-cache-gate)) and then on the
 frustum, so what it marches is a function of where the camera is pointing
 and how wide the aperture is: the wasted share the gate removes runs 15.2%
 at Sol and 99.5% at the Galactic centre, and collapses to 0.2% at Sol at
@@ -287,7 +287,7 @@ Two things that look like defects and are not:
 **Never leave the lever on outside a measurement dwell.** In the live app
 the recompute advances the cache generation every frame, so a moving
 pointer re-arms the pick mirror's 1.48 MiB copy every frame
-(`../../../webgpu/extinction/README.md` § Cold reads). Headless runs send
+([Cold reads](../../../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity)). Headless runs send
 no pointer events, so a measurement is unaffected.
 
 ## Decomposing the HDR chain
@@ -307,7 +307,7 @@ them; read each against the aggregate.
   **This row no longer resolves.** It did where the mask could put
   `NONE` in slot 1 and the write did not happen; here it is a uniform
   multiplying the statistic texel to the blend's identity element
-  (`../../../webgpu/hdr/README.md` § The gate becomes the output struct):
+  ([The gate becomes the output struct](../../../webgpu/hdr/README.md#the-gate-becomes-the-output-struct)):
   the fragment still emits its three-member struct and the additive
   blend still read-modify-writes the RG16F texel, so the row prices one
   multiply and reads ~0 no matter how large the write bandwidth is. A

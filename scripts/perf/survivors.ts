@@ -1,4 +1,4 @@
-// Reads debug.survivors() at the canon vantages. README.md § Survivor counts.
+// Reads debug.survivors() at the canon vantages. README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument.
 
 import { writeFileSync } from 'node:fs';
 import { chromium, type Page } from 'playwright';
@@ -23,7 +23,7 @@ const TABLE_DECIMALS = 3;
  *  which is why it belongs to the run block rather than to a row. */
 const VIEWPORT: Viewport = { width: ARG_DEFAULTS.width, height: ARG_DEFAULTS.height, dpr: ARG_DEFAULTS.dpr };
 
-/** Callers must settle first — README.md § Survivor counts. */
+/** Callers must settle first — README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument. */
 function readSurvivors(page: Page): Promise<SurvivorReport | null> {
   return page.evaluate(() => (window as unknown as PerfWindow).debug.survivors());
 }

@@ -5,7 +5,7 @@ attributable is the provenance beside them: which run file each row was
 summarised from, which commit that run measured, and how far main's own
 render path moved above the tree the pin was taken on. This folder holds that
 half. The rows, bands and verdicts are `../README.md`; the operator rules are
-`RELEASING.md` § Perf pin.
+[Perf pin](/RELEASING.md#perf-pin).
 
 ```
 scripts/perf/pins/provenance/
@@ -63,7 +63,7 @@ carries no insertions clause at all.
 
 Not to the main checkout. A pin is normally taken on a branch and a branch
 normally lives in a worktree, where runs are filed under that worktree's own
-`.perf-runs/` (`../../README.md` § Recording) — so resolving against the main
+`.perf-runs/` ([Recording](../../README.md#recording)) — so resolving against the main
 checkout writes `.claude/worktrees/<name>/.perf-runs/…`, a path that stops
 resolving the moment the worktree is removed, which is to say shortly after
 the PR merges. `citeRunPath` takes the writing checkout's root for that
@@ -93,5 +93,5 @@ long after the pin that was current beside it has moved on.
 So the order of preference is **take the run while the context that wants it
 is loaded**; failing that, record the baseline run file and what flags it
 used, since a comparison is only valid against a run whose flags match
-(`../README.md` § Setup levers — a `--force-recompute` or `--readback-every`
+([Setup levers](../README.md#setup-levers) — a `--force-recompute` or `--readback-every`
 mismatch is not a comparison).

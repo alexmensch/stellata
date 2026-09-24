@@ -663,7 +663,7 @@ async function main() {
   counts.ciSpectralDerived = stats.ciVia.spectral_derived;
   counts.ciSolarFallback = stats.ciVia.solar_fallback;
 
-  // The labels are the manifest's (docs/catalog-driver.md § 3.1); what the
+  // The labels are the manifest's (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries); what the
   // classic-ID tables still supply per record is IV/27A's constellation for
   // each Bayer / Flamsteed designation.
   console.log('Resolving designation constellations from IV/27A...');
@@ -821,13 +821,13 @@ async function main() {
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
   // prefix of the record array is a usable sky and the transport chunks can
-  // stream one (record/README.md § Record order). Record indices are final
+  // stream one (record/README.md#record-order). Record indices are final
   // after this point.
   const sortKey = new Float64Array(stars.length);
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     const v = apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0);
-    // On the key, before the sort — record/README.md § Record order.
+    // On the key, before the sort — record/README.md#record-order.
     if (!Number.isFinite(v)) {
       throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
     }
@@ -985,9 +985,9 @@ async function main() {
 
   // Resolve every record to its frozen Stellata ID from the committed
   // ledger. The build never mints — sid:allocate is the sole writer
-  // (docs/sid.md § 4.4). Unallocated records get NO_SID and hard-fail the
+  // (/docs/sid.md#44-allocation). Unallocated records get NO_SID and hard-fail the
   // build after the artifact lands, so sid:allocate can still consume it
-  // (scripts/catalog/README.md § SID allocation).
+  // (/scripts/catalog/README.md#sid-allocation).
   const registry = loadRegistry();
   const sidObjects: SidObject[] = stars.map((s, i) => ({
     designations: starDesignations({
@@ -1018,7 +1018,7 @@ async function main() {
   // component's WDS root anchor resolves through the row-index map, and the
   // SIDs the override table keys on are known. Writes `proper` for the NAME
   // tiers alone — the runtime composes every designation off the search
-  // index through the same pure function (docs/star-naming.md § 6).
+  // index through the same pure function (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   const display = assignDisplayNames(
     stars, componentDesignations, CONSTELLATIONS, loadNameOverrides(), recordSids,
   );
@@ -1087,8 +1087,7 @@ async function main() {
   const bytes = new Uint8Array(out);
 
   // Header, then the name table, then the records — the order the first
-  // transport chunk needs to decode standalone (`record/README.md`
-  // § On-disk transport chunking).
+  // transport chunk needs to decode standalone (`record/README.md#on-disk-transport-chunking`).
   writeCatalogHeader(view, {
     count: stars.length,
     nameTableOffset: HEADER_SIZE,
@@ -1192,7 +1191,7 @@ async function main() {
   counts.recordsInFirstChunk = recordsInChunkPrefix(
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
-  // record/README.md § On-disk transport chunking is measured from this line.
+  // record/README.md#on-disk-transport-chunking is measured from this line.
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
     const n = recordsInChunkPrefix(

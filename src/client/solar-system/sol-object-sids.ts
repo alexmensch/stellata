@@ -1,6 +1,6 @@
 // Hand-written key → frozen Stellata ID pins for the Sol-system objects
 // carrying no catalog record: Sun, planets, moons, probes. Minted from
-// data/sid/sol-objects.tsv. See ./README.md § Sol-system SID pins.
+// data/sid/sol-objects.tsv. See ./README.md#sol-system-sid-pins.
 
 export const SOL_OBJECT_SIDS: Readonly<Record<string, number>> = {
   sun: 306055,

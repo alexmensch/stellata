@@ -1,5 +1,5 @@
 // The WebGPU implementation of the boundary-shell material seam
-// (../../fresnel-shell/README.md § The material seam).
+// (../../fresnel-shell/README.md#the-material-seam).
 
 import type { ShellMaterials } from '../../fresnel-shell/fresnel-shell';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';
@@ -18,7 +18,7 @@ export function makeTslShellMaterials(cfg: TslShellConfig): ShellMaterials {
       const built = buildFresnelShellMaterial(nodes, opts);
       // Registration keeps the material's output count in lockstep with the
       // pipeline's target mode; dispose must sever it or a dead material
-      // keeps taking mode swaps (`../README.md` § Who releases what).
+      // keeps taking mode swaps (`../README.md#who-releases-what`).
       const unregister = cfg.registerMrtLayer(built);
       return {
         material: built.material,

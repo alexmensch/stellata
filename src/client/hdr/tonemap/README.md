@@ -7,7 +7,7 @@ this folder owns the transfer function they resolve through.
 
 The operator is a **two-consumer** shape: the fullscreen resolve runs it,
 and so does every emitting graph inline whenever `uHdrTarget` is 0 — chart
-mode (`../README.md` § The inline operator). One source, so the two can
+mode ([The inline operator](../README.md#the-inline-operator--chart-modes-path)). One source, so the two can
 never drift.
 
 ## Files
@@ -56,14 +56,13 @@ is load-bearing, not taste: the first cut was a fixed-exponent power
 onto every smooth gradient crossing threshold — hard-edged molecular
 clouds, banded EV sweeps. Sub-threshold light does not render at its
 near-linear Reinhard value; the Milky Way pole is the
-motivating case (`../../milkyway/calibration/README.md` § The gradient this
-produces).
+motivating case ([The gradient this produces](../../milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen)).
 Exactly invertible, and `inverseTonemapConstant` composes the inverse so
 dark-authored chrome round-trips (`../chrome/README.md`). The design
 argument — and why a rendered sky-background pedestal was rejected — is
-`docs/science-hdr-pipeline.md` § 2.
+[§ 2](/docs/science-hdr-pipeline.md#2-tone-map-operator).
 
-Two testing consequences of what `docs/science-hdr-pipeline.md` § 2 says
+Two testing consequences of what [§ 2](/docs/science-hdr-pipeline.md#2-tone-map-operator) says
 about hue and clipping: hue survival is pinned in `tonemap-pure.test.ts`,
 and end-to-end luminance preservation above the knee is **not** a property
 of the pipeline, so don't assert it — desaturation is luminance-neutral
@@ -84,8 +83,8 @@ resolve, a fullscreen volume) wants the dithered `tonemapTsl`.
 layer that jitters rides — the operator's ±0.5-LSB output dither here, the
 ray starts of both molecular-cloud raymarches, and the atmosphere march's
 sample lattice. One helper, over `DITHER_IGN_SCALE` / `DITHER_IGN_DOT` in
-`tonemap-pure.ts` (`../../webgpu/tsl/README.md` § Interleaved gradient
-noise), so no layer carries a private copy of the expression or its
+`tonemap-pure.ts` ([Interleaved gradient noise](../../webgpu/tsl/README.md#interleaved-gradient-noise)),
+so no layer carries a private copy of the expression or its
 constants.
 
 ## Operator knobs
@@ -98,7 +97,7 @@ constants.
   Both route through `syncMode`, which is what re-authors every chrome
   colour against the new white point (`../chrome/README.md`). Both are also
   sliders on the panel's Exposure section
-  (`../exposure/README.md` § Debug panel), and `DR_MAG` reaches the display
+  ([Debug panel](../exposure/README.md#debug-panel)), and `DR_MAG` reaches the display
   floor from there — the floor is derived from the white point.
 
 **What `DR_MAG` does and does not buy.** Extended Reinhard is
@@ -120,11 +119,11 @@ colour space, not the resolve — so with the operator parked,
 constellation figure) renders un-encoded and therefore dark. No resolve
 setting fixes it: a single fullscreen pass can't both encode and not
 encode. Custom-shader chrome *is* exact. No switch renders a whole-frame
-comparison instead — `../README.md` § The inline operator says why one
+comparison instead — [The inline operator](../README.md#the-inline-operator--chart-modes-path) says why one
 would compare against a differently-calibrated scene.
 
 **Chrome line work reads brighter through the seam than authored, and that
-is not a bug.** `../README.md` § Chrome's inverse mapping is exact only for
+is not a bug.** [Chrome](../README.md#chrome--non-physical-layers-keep-their-authored-look)'s inverse mapping is exact only for
 *a lone full-alpha fragment over black*, and line work is neither —
 antialiased edges are partial-alpha and lines cross each other — so the
 round trip lands on the bright side. The shift on thin line work is plainly visible, nothing

@@ -1,5 +1,5 @@
 // Default-valued MultiplesTsvRow factory for catalog-pipeline tests.
-// A module rather than a .test.ts export — see README.md § Files in this area.
+// A module rather than a .test.ts export — see README.md#files-in-this-area.
 
 import type { MultiplesTsvRow } from './companion-promotion';
 

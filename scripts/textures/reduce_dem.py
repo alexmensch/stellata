@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One-shot global-DEM reduction, downloaded GeoTIFF -> the frozen
 data/textures/src/<body>-dem-*.tif (re-pull recipe in
-data/textures/src/README.md § Refresh recipe)."""
+/data/textures/src/README.md#refresh-recipe)."""
 
 import sys
 from pathlib import Path

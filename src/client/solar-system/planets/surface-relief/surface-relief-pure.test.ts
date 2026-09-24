@@ -188,7 +188,7 @@ describe('the layer gates every relief fetch on the span table', () => {
   // All four planes ride the one span gate. They are three fetch statements
   // rather than one loop because each narrows differently — RG8 for the
   // normal, R8 for the scalar view factor, and the horizon halves not at all
-  // (data/textures/relief/README.md § Surface relief).
+  // (/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
   const gated = layer.slice(
     layer.indexOf('if (reliefSpanOf(planet)) {'),
     layer.indexOf('if (planet.rings) {'),
@@ -302,7 +302,7 @@ describe('the terrain view factor', () => {
     expect(fragCode).toContain('.mul(limb).mul(p.uPhaseScale)));');
     // Skylight is the one additive term that stays OUTSIDE it: air scatter
     // carries no surface albedo, and its disc mean divides out through
-    // atmoDiscMeans instead (../emission/README.md § Two disc means).
+    // atmoDiscMeans instead (../emission/README.md#two-disc-means-divide-out).
     const skylight = fragCode.match(
       /col\.addAssign\(surfaceScale\.mul\(skyIrradianceTsl[\s\S]*?\)\);/)!;
     expect(skylight[0]).not.toContain('uPhaseScale');
@@ -359,7 +359,7 @@ describe('relief feeds the direct term only', () => {
 
 // The frame above calls cross(pole, n) east and cross(n, east) north, and the
 // map is authored positive-east left-to-right with v increasing northward
-// (data/textures/README.md § Artifact contract). Nothing pinned that the
+// (/data/textures/README.md#artifact-contract). Nothing pinned that the
 // RENDERED sphere agrees — and it is the one disagreement with no other
 // symptom: relief would shade real terrain lit from the wrong side and look
 // entirely plausible doing it. Pure geometry, so the IAU rotation chain on top

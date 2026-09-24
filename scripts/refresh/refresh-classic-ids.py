@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh the four frozen CDS classic-designation cross indexes under
 data/classic-ids/ (HD↔TYC, Bayer/Flamsteed, HR↔HD, GJ↔Gaia). Sources and
-join routes: docs/catalog-driver.md § 2."""
+join routes: /docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ TYC2_HD = VizierSlice(
 
 # `Cst` is the constellation the Bayer / Flamsteed designation belongs to —
 # NOT the IAU-positional constellation the catalogue assigns per record
-# (docs/catalog-driver.md § 5). Bayer letters arrive in IV/27A's own
+# (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). Bayer letters arrive in IV/27A's own
 # lowercase three-letter form ("alf", "kap"), not AT-HYG's ("Alp").
 CROSS_INDEX = VizierSlice(
     table="IV/27A/catalog",
@@ -86,7 +86,7 @@ BSC5 = VizierSlice(
 # joins the overlay directly. `Comp` is the component letter within the GJ
 # number; the "Gl 559A" / "GJ 1294A" display prefix rule is the
 # naming-authority ladder's call, not this file's.
-# `RAJ2000` vs `Epoch`: data/classic-ids/README.md § The astrometry re-slice.
+# `RAJ2000` vs `Epoch`: /data/classic-ids/README.md#the-astrometry-re-slice.
 CNS5 = VizierSlice(
     table="J/A+A/670/A19/cns5",
     output=OUT_DIR / "cns5.tsv",

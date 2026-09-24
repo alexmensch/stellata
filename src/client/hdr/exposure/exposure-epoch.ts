@@ -1,6 +1,6 @@
 // The exposure model: instrument limit, scene adaptation, and the manual
 // EV trim collapsed into one scalar, plus the two magnitude bounds the
-// shaders derive from it. See README.md § The three terms.
+// shaders derive from it. See README.md#the-three-terms.
 
 import {
   DEFAULT_INSTRUMENT,
@@ -89,7 +89,7 @@ export function drawCutoffMag(
  *  its point-source limit. Static in the exposure state: adaptation and the
  *  trim move both thresholds together, so their offset is the instrument's
  *  alone. Why that threshold is the sky background:
- *  `docs/science-hdr-pipeline.md` § 1 (*Extended sources*). */
+ *  `/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance` (*Extended sources*). */
 export function summationSolidAngleFor(name: InstrumentName): number {
   return rodSummationSolidAngleArcsec2(
     extendedThresholdSbFor(name),

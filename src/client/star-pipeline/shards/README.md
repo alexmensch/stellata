@@ -2,7 +2,7 @@
 
 A star population (the AT-HYG catalog today; an LMC/SMC field later) is
 a **shard of the star kind, never a new kind**
-(`docs/architecture-modularity.md` § Tier 3). This folder is the format
+([Tier 3](/docs/architecture-modularity.md#tier-3--populations-shards-within-a-kind)). This folder is the format
 + mapping contract, specified and exercised with the catalog as shard 0
 before any second population ships.
 
@@ -61,7 +61,7 @@ against the camera, so a camera that closes on a deferred shard *without*
 provoking a recentre exceeds it. The focal anchor policy holds the
 precondition (the origin IS the focused object) and free-fly's planned
 `follow` policy holds it by construction
-(`docs/architecture-modularity.md` § Free-fly constraints); an anchor
+([Free-fly constraints](/docs/architecture-modularity.md#free-fly-constraints-on-the-engine-tier)); an anchor
 policy that lets the camera wander far from the origin would need the
 rule re-evaluated per frame.
 
@@ -73,7 +73,7 @@ wires its own buffers in.
 ## What is NOT shard-aware yet
 
 The design goal is that a second population costs data plus a shard
-entry and nothing else (`docs/architecture-modularity.md` § Tier 3).
+entry and nothing else ([Tier 3](/docs/architecture-modularity.md#tier-3--populations-shards-within-a-kind)).
 What landed here is the format, the flat-index mapping, and the SID
 domain — `StarKindModule.sids()` is the only leg routed through the
 table. These still read `catalog` directly at a flat index and must be

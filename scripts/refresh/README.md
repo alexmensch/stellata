@@ -2,9 +2,8 @@
 
 **Layer 2** of the build/data split — manual, infrequent refresh of
 the frozen external catalogues under `data/`. Never wired into
-`pnpm run build`. The freshness policy is in `data/README.md`
-§ Frozen external data; the per-source table is in `data/README.md`
-§ Per-source folders.
+`pnpm run build`. The freshness policy is in [Frozen external data](/data/README.md#frozen-external-data);
+the per-source table is in [Per-source folders](/data/README.md#per-source-folders).
 
 ## Who runs a refresh
 
@@ -32,7 +31,7 @@ each moved count is in the same change. Splitting it out ships a design whose
 measured reach is a property of the stale table.
 
 What still needs a human: deciding to **freeze** a newly-pulled table
-(`data/README.md` § Frozen external data governs when a refresh is warranted
+([Frozen external data](/data/README.md#frozen-external-data) governs when a refresh is warranted
 at all) — a judgement about scope, not about effort.
 
 ## Layer 2 — refresh scripts
@@ -78,20 +77,20 @@ write the worktree's `data/`.
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
 | `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION the membership derivation's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest, the spine and both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id (379,135) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
-| `refresh:gaia-magnitude` | `refresh-gaia-magnitude.py` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (1,247,240) — membership's magnitude term (`docs/catalog-driver.md` § 1), on `gaia_astrometry_pull.TSV_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — `data/gaia/README.md` § Why the floor carries no margin. |
+| `refresh:gaia-magnitude` | `refresh-gaia-magnitude.py` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (1,247,240) — membership's magnitude term ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), on `gaia_astrometry_pull.TSV_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — [Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin). |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
-| `refresh:gaia-gspc` | `refresh-gaia-gspc.py` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — `data/gaia/README.md` § The GSPC validated-range flag. |
-| `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3 dry run, incl. the request-file derivation recipe. |
-| `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` (`data/bailer-jones/README.md` § Why the pull is ESA-side). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
+| `refresh:gaia-gspc` | `refresh-gaia-gspc.py` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — [The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range). |
+| `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — [§ 6.2 DR2→DR3 dry run](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07), incl. the request-file derivation recipe. |
+| `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 (van Leeuwen 2007) reduction. |
 | `refresh:hip-vmag` | `refresh-hipparcos-vmag.py` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V and B−V per HIP from `I/239/hip_main` — the printed tiers of the V-magnitude and ci cascades — plus the catalogue's own HD column, the `hd:i239` attestation route. |
 | `refresh:classic-ids` | `refresh-classic-ids.py` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`). Four slices in one script; `--only <stem>` limits it to one. |
 | `refresh:iau-wgsn` | `refresh-iau-wgsn.py` | `data/iau-wgsn/{NEC,wgsnFaints}.csv` | The IAU WGSN naked-eye catalogue + faint approved names (plain HTTP, not TAP; schema / row-band / spot-row gates). Follow with `pnpm run build:wgsn`. |
-| `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier (`data/tycho2/README.md` § Why the pull is range-batched). |
+| `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier ([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered)). |
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | Gliese & Jahreiss third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
-| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the `docs/catalog-driver.md` § 5 value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: `data/simbad/README.md` § The values pull. |
-| `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need (`data/simbad/README.md` § The TYC → HD pull). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
+| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). |
+| `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
@@ -111,7 +110,7 @@ per-table schema validation and row bounds — source detail in
 (`athyg_33_classic_ids.csv`) nor the inherited spine.
 Every catalog-scoped request set
 traces to `data/membership/membership-manifest.tsv` — the membership term
-(`docs/catalog-driver.md` § 3.1) — by one of two routes: directly, through
+([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) — by one of two routes: directly, through
 `refresh_lib.read_membership_source_ids` / `iter_membership_rows`
 (the SIMBAD pulls), or through a request file
 `export-astrometry-request.ts` exported off the same manifest column
@@ -121,8 +120,8 @@ traces to `data/membership/membership-manifest.tsv` — the membership term
 lives, and `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25; a script
 naming either path itself has drifted from it. The two pulls scoped to Tycho
 entries share the whole request set, not just the paths —
-`refresh_lib.read_mentioned_tycs`, `data/tycho2/README.md` § The request set.
-`data/simbad/README.md` § Request sets come off the membership term carries
+`refresh_lib.read_mentioned_tycs`, [The request set](/data/tycho2/README.md#the-request-set--manifest--iv25).
+[Request sets come off the membership term](/data/simbad/README.md#request-sets-come-off-the-membership-term) carries
 the measured drop/gain of the SIMBAD rebase.
 
 The manifest's `gaia_source_id` is the binding the manifest **justified**, its
@@ -130,8 +129,8 @@ The manifest's `gaia_source_id` is the binding the manifest **justified**, its
 record build name the same sources by construction — `readStars` reads the
 same cell. A raw cross-walk value is the ungated one, which is why a walk over
 one over-pulls rows that never became records — the failure
-`scripts/catalog/astrometry-request/README.md`
-§ Request and record build name the same set diagnoses at length.
+[Request and record build name the same set](/scripts/catalog/astrometry-request/README.md#request-and-record-build-name-the-same-set-by-construction)
+diagnoses at length.
 
 **A rebased request set does not rewrite its output.** The rebase changes
 what the *next* run asks for; the committed TSV keeps whatever the previous
@@ -140,7 +139,7 @@ above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
 `is_up_to_date`, so the next invocation re-pulls rather than skips.
 
 Bailer-Jones and Apsis add a second, magnitude-bounded leg on top of that
-request — `magnitude/README.md` § The deep population.
+request — [The deep population](magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg).
 
 ### The staleness gate — pin the shortfall, never the numerator
 
@@ -168,7 +167,7 @@ shortfall is what is pinned:
 | `bjEligibleNotPulled` | **0** | an eligible row has its own DR3 parallax, so Bailer-Jones publishes a posterior for it; an absence is only ever this request set drifting |
 | `apsisSourcesUnpulled` | reviewed residual | **484**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but 484 of them; that remainder plus genuine upstream absence is what the pin now holds |
 | `gspcSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue; its request is the exported union, which does cover pair members |
-| `gateSkippedNoGMag` · `derivedWeighedNoGMag` | **0** | the original instance of this rule, on the two binding gates (`scripts/catalog/astrometry-request/README.md` § The request is a union) |
+| `gateSkippedNoGMag` · `derivedWeighedNoGMag` | **0** | the original instance of this rule, on the two binding gates ([The request is a union](/scripts/catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)) |
 
 Adding a per-source consumer therefore means adding its shortfall count in
 the same change. The cost is one hash lookup per record, so it scales with
@@ -250,12 +249,11 @@ non-load-bearing MAXREC, identifier quoting — lives in
 on purpose** — `pull_table` gates and returns rows, `write_table` commits
 them, and
 nothing is written until the cross-table membership cover has also passed
-(`data/tycho2/README.md` § Why the pull is range-batched, last paragraph).
+([Why the pull is range-batched,](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered) last paragraph).
 Its non-network test (`refresh-tycho2.test.py`) covers the request-set
 union, the TYC1 range cover and scan-span assertion, the local filter,
 the fraction / spot-row gates against an in-memory TAP backend, and the
-manifest-cover gate's three verdicts (`data/tycho2/README.md` § The request
-set).
+manifest-cover gate's three verdicts ([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25)).
 
 The in-memory TAP backend every non-network suite here uses (`FakeTable`,
 `fake_tap_client`) lives in `scripts/test_helpers.py`.
@@ -279,7 +277,7 @@ gets `[simbad_backend()]` for its divergent dialect. Check ESA's
 `external.*` schema before concluding a catalogue is VizieR-only:
 Bailer-Jones is on both, and `refresh-bailer-jones.py` takes the ESA copy
 through `gaia_sync_client` precisely because only that one can be joined
-to a magnitude (`data/bailer-jones/README.md` § Why the pull is ESA-side).
+to a magnitude ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
@@ -299,7 +297,7 @@ rules, and none may be replaced with a bare literal:
   size to multiply, so all three call `slice_sync_maxrec(<the pinned
   ceiling>)` — four times the nominal slice population. The factor is
   headroom against the distribution moving, not against the slices being
-  uneven; see `magnitude/README.md` § Slicing a magnitude-bounded pull. One cap serves both legs
+  uneven; see [Slicing a magnitude-bounded pull](magnitude/README.md#slicing-a-magnitude-bounded-pull). One cap serves both legs
   of a deep-population pull, since a request-leg batch is far smaller than
   a slice.
 
@@ -351,7 +349,7 @@ whatever error it states (`../catalog/distance/radial-velocity/README.md`).
 The binaries-scope `gaia_dr3_astrometry.tsv` still predates the column, on the
 same terms as `radial_velocity` above.
 
-See `RELEASING.md` § Catalogue refresh policy for the cadence
+See [Catalogue refresh policy](/RELEASING.md#catalogue-refresh-policy) for the cadence
 (event-driven, not scheduled) and the version-bump policy for a
 catalogue-refresh PR.
 
@@ -363,7 +361,7 @@ catalogue inconsistent. Order matters:
 
 1. **Swap AT-HYG.** Drop the new `athyg_3X_classic_ids.csv` into
    `data/athyg/`. Its one build consumer is `build:binaries` Stage 1's parse
-   (`data/athyg/README.md` § Consumed by), which step 4 re-runs. Membership is
+   ([Consumed by](/data/athyg/README.md#consumed-by)), which step 4 re-runs. Membership is
    the primaries-derived manifest and `build:catalog` reads neither this file
    nor the frozen spine, so the swap moves no record.
 2. **Refresh the Gaia DR4-keyed side-files** in any order — they're
@@ -380,7 +378,7 @@ catalogue inconsistent. Order matters:
    `gaia_source_id` column plus both binding gates' candidates and the
    bound-pair siblings, so it runs after both cross-walk refreshes), then
    `pnpm run refresh:gaia-astrometry-catalog`. Under a DR transition the
-   manifest's `gaia_dr3:` ids bridge through `docs/sid.md` § 6 first —
+   manifest's `gaia_dr3:` ids bridge through [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation) first —
    requesting DR3 ids against a DR4 table returns nothing.
 3. **Refresh HIP2 + SIMBAD if upstream republished** — these are
    keyed on HIP / SIMBAD `oid` respectively, so they don't change

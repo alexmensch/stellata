@@ -1,5 +1,5 @@
 // SolarSystemMaterials / ProbeMaterials test doubles.
-// See README.md § The layer writes `uniforms`, never `material.uniforms`.
+// See README.md#the-layer-writes-uniforms-never-materialuniforms `uniforms`, never `material.uniforms`.
 
 import * as THREE from 'three';
 import { fakeEmitterMaterial } from '../../scene/emitter-material-mock';

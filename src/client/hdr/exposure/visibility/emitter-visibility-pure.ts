@@ -1,6 +1,6 @@
 // Whether an emitter puts a non-zero pixel on screen: its display
 // kernel's peak carried through the soft taper, the faint-end toe and
-// the operator. See README.md § What "visible" means to a pick path.
+// the operator. See README.md#what-visible-means-to-a-pick-path.
 
 import {
   pointSourcePeakLuminance,
@@ -67,7 +67,7 @@ export function emitterPutsInkOnScreen(a: EmitterInkArgs): boolean {
 
 /** Everything the frame's exposure state offers a per-frame reader —
  *  stateless, storing nothing keyed on adaptation, which is the class
- *  `../README.md` § One writer, five slots exempts. Null in chart, where
+ *  `../README.md#one-writer-five-slots` exempts. Null in chart, where
  *  the seam is off. */
 export interface FrameExposure {
   /** Live `uExposure`: the adaptation cut and the EV trim are both in it. */
@@ -125,7 +125,7 @@ export interface BrightnessSkipArgs {
    *  Deferred, because producing it is the expensive half of the verdict:
    *  the band marches 976 sightlines for it and the Local Group glow the
    *  central ray of 123 objects, milliseconds of frame-thread CPU either
-   *  way (`milkyway/README.md` § The brightest rendered sightline). Every
+   *  way (`/src/client/milkyway/README.md#the-brightest-rendered-sightline`). Every
    *  refusal below that does not need the number runs first, so a warping
    *  camera — which refuses unconditionally, on exactly the frames it is
    *  crossing ground fastest — never pays for one. */
@@ -149,7 +149,7 @@ export interface BrightnessSkipArgs {
 
 /**
  * Whether a diffuse emitter may skip its draw and its statistic write —
- * `docs/science-hdr-pipeline.md` § 3.5, which owns the derivation, the
+ * `/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound` which owns the derivation, the
  * probe table and the rejected alternatives.
  *
  * The two rules that close the exposure feedback loop: a drawn emitter

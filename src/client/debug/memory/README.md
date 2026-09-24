@@ -99,9 +99,9 @@ size.
 
 | Target | Size | Per texel | Authority |
 | --- | --- | --- | --- |
-| HDR MRT | drawing buffer | 8 (RGBA16F) + 4 (RG16F) + 8 (RGBA16F) + 4 (depth24) = **24 B** | `../../hdr/README.md` § Three attachments |
+| HDR MRT | drawing buffer | 8 (RGBA16F) + 4 (RG16F) + 8 (RGBA16F) + 4 (depth24) = **24 B** | [Three attachments](../../hdr/README.md#three-attachments-and-a-per-draw-gate-on-two-of-them) |
 | Rod summation | half on each axis (¼ the texels) | 8 B (RGBA16F) | `../../hdr/summation/README.md` |
-| Reduction chain | quartering levels from the statistic attachment, stopping at the ~1024-texel tile level | 8 B/level, 16 B at the RGBA32F tile level | `../../hdr/exposure/reduction/README.md` § The chain |
+| Reduction chain | quartering levels from the statistic attachment, stopping at the ~1024-texel tile level | 8 B/level, 16 B at the RGBA32F tile level | [The chain](../../hdr/exposure/reduction/README.md#the-chain) |
 | Extinction positions | One vec4 per star in a storage buffer | 16 B (RGBA32F / vec4<f32>), plus the same array retained on the heap | `../../star-pipeline/extinction/README.md`, `../../webgpu/extinction/README.md` |
 
 The A_V cache is **measured**, not hand-priced —
@@ -109,7 +109,7 @@ the star pipeline samples it through a uniform, so it is in the GPU
 table. **On a WebGPU boot it is neither**: the A_V cache is a storage
 buffer the TSL vertex stage binds through a node, so the walk cannot
 reach it and it joins this table instead, alongside the position buffer.
-`../../webgpu/extinction/README.md` § What it costs, and what it holds
+[What it costs, and what it holds](../../webgpu/extinction/README.md#what-it-costs-and-what-it-holds)
 carries both rows with their arithmetic for exactly that reason.
 
 Worked example — a 1920×1080 window at `devicePixelRatio` 2, so a
@@ -202,8 +202,8 @@ graphs and three's own counters, and three things change the comparison —
 all three must be stated when quoting a before/after:
 
 - **`sceneGraphs` is a list**, and the walk visits every entry. One
-  scene is what a boot draws today (`../../webgpu/README.md` § One scene
-  per boot); rows carry the entry's name as a prefix once there is more
+  scene is what a boot draws today ([One scene per boot](../../webgpu/README.md#one-scene-per-boot));
+  rows carry the entry's name as a prefix once there is more
   than one, so a total can be split.
 - **A TSL material binds its textures through nodes, not through
   `uniforms`.** `eachTexture` finds a `THREE.Texture` on a material

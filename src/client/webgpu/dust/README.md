@@ -27,7 +27,7 @@ src/client/webgpu/dust/
 
 The sprite reads `uPixelRatio`, `uViewport`, `uWorldOffset`,
 `uDustEnabled`, `uDustDensityMin` and `uDustLogRatio` off the
-uniform-node mirror (`../tsl/README.md` § Shared uniform nodes), the
+uniform-node mirror ([Shared uniform nodes](../tsl/README.md#shared-uniform-nodes)), the
 by-reference channel every writer already feeds.
 
 `uParticleStrength` is the layer's own, and the one slot
@@ -57,7 +57,7 @@ from `dust-particle-pure.ts` nor pinned.
 `DUST_TINT` are imported from `../../dust/dust-particle-pure.ts`, so no
 copy exists to drift. What `dust-tsl-drift.test.ts` still holds is the
 other direction — that this side names each constant and spells none of
-them as a literal (`../tsl/README.md` § TSL test pattern), which an import
+them as a literal ([TSL test pattern](../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers)), which an import
 does not prevent.
 
 **The tint is the one chrome colour still unmapped.** It is a shader

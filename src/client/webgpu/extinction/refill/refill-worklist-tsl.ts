@@ -1,6 +1,6 @@
 // The compaction kernel's side of the refill: append a star the view holds,
 // the cache gate admits and the generation has not stamped to its Morton
-// bucket. README.md § The compaction appends the worklist.
+// bucket. README.md#the-compaction-appends-the-worklist.
 
 import { If, atomicAdd, distance, float, max, uint, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';

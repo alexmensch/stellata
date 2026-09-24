@@ -200,8 +200,8 @@ describe('the bound against the shader', () => {
 });
 
 describe('from Sol at the acceptance plate scale', () => {
-  // 0.2 mag under the default view's threshold (docs/science-hdr-pipeline.md
-  // § 3.5: 17.21 at the −6.29 floor cut), so the glow can skip there.
+  // 0.2 mag under the default view's threshold (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound:
+  // 17.21 at the −6.29 floor cut), so the glow can skip there.
   it('M31 peaks at 17.42 mag/arcsec²', () => {
     const sb = objectPeakSurfaceBrightness(asSource(buildObject('M31')), SOL, OMEGA_PX_50DEG);
     expect(sb).toBeCloseTo(17.42, 2);

@@ -68,7 +68,7 @@ export const MIN_DISC_HIT_RADIUS_PX = 4;
 
 // The grab radius. Hover and click MUST share it — it floors the
 // enclosure, so two values rank the same candidates differently
-// (`../../hover/README.md` § Architecture).
+// (`../../hover/README.md#architecture`).
 export const PICK_THRESHOLD_PX = 7;
 
 // Hit radius for a drawn diameter. The floor applies to the
@@ -81,8 +81,7 @@ export function discHitRadiusPx(drawnDiameterPx: number): number {
 // Pick score: (pxDist + sub-pixel appMag bias) over the candidate's own
 // hit radius. Normalising the WHOLE numerator is what leaves same-size
 // candidates ranking as they did: an equal divisor cancels. Why the
-// divisor, and why camera distance is not a tiebreaker: README.md
-// § Ranking a pick.
+// divisor, and why camera distance is not a tiebreaker: README.md#ranking-a-pick.
 export function pickScore(pxDist: number, appMag: number, hitRadius: number): number {
   return (pxDist + appMag * PICK_MAG_BIAS_PX_PER_MAG) / hitRadius;
 }
@@ -131,7 +130,7 @@ export type PickResult<T extends PickCandidate> = {
 };
 
 // Reduce a candidate list to the winner, or null: tightest enclosure,
-// then `scoreFn` between equals (README.md § Ranking a pick). A candidate
+// then `scoreFn` between equals (README.md#ranking-a-pick). A candidate
 // encloses the cursor when `pxDist <= enclosureRadiusPx(...)` or when it
 // sets `enclosed`. Every caller's radius comes from `discHitRadiusPx`, so
 // the default scorer's divisor is floored well above zero.
@@ -173,7 +172,7 @@ export type ResolvedCandidate = {
  * far down the order as it takes to find a winner.
  *
  * Lazy so `resolve` runs at most once per candidate that could win, not
- * once per candidate (README.md § picker.ts).
+ * once per candidate (README.md#pickerts.ts).
  *
  * Callers MUST pass a `hitRadius` that is an upper bound of the resolved
  * one, or the walk skips a candidate that would have enclosed the cursor.

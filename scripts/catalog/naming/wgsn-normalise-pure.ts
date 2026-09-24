@@ -1,4 +1,4 @@
-// The two designation normalisers of docs/star-naming.md § 4 — NEC's
+// The two designation normalisers of /docs/star-naming.md#4-canonical-designation-forms — NEC's
 // `Bayer/other` cell grammar and IV/27A's ASCII Bayer conventions —
 // emitting structure (glyph + superscript + dc + component) only.
 
@@ -35,7 +35,7 @@ export interface GouldDesignation {
 }
 
 /** One `Bayer/other` cell, classified. `variable` routes to the GCVS tier
- *  (docs/star-naming.md § 3 tier 6) and is never a Bayer letter;
+ *  (/docs/star-naming.md#3-the-ladder tier 6) and is never a Bayer letter;
  *  `non_stellar` (clusters, nebulae, galaxies) and `other_catalogue`
  *  (BD/CD/Gliese/survey ids — the row still keys via HIP/HR/HD) emit no
  *  designation; `corrupt` is the upstream Mathematica artifact on ρ² Ara. */
@@ -112,7 +112,7 @@ const M_OBJECT_RE = /^M\s?\d+$/;
 const OTHER_CATALOGUE_RE = /^(BD\s?[+-]|CD-|Gliese\s|GJ\s|Groombridge\s|WASP-|HAT-P-|ASAS\s|FAUST\s|\d+\s+H\.\s)/;
 
 /** Mechanical — every rule here is a measured population
- *  (docs/star-naming.md § 4), and the build pins the per-class counts. */
+ *  (/docs/star-naming.md#4-canonical-designation-forms), and the build pins the per-class counts. */
 export function normaliseWgsnCell(raw: string | null): NormalisedCell {
   if (raw === null) return { class: 'empty' };
   let cell = foldCurlyGreek(raw.trim()).replace(/\[\d+\]$/, '');

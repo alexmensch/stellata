@@ -241,8 +241,7 @@ describe('SOL_PLANETS data', () => {
   });
 
   it('the Moon is the one moon carrying a phase curve', () => {
-    // Why the others do not: docs/science-solar-system.md
-    // § Why no other moon carries one.
+    // Why the others do not: /docs/science-solar-system.md#why-no-other-moon-carries-one.
     for (const m of SOL_MOONS) {
       if (m.name === 'Moon') expect(m.phaseCoefficients).toBe(MOON_PHASE);
       else expect(m.phaseCoefficients).toBeUndefined();
@@ -355,8 +354,8 @@ describe('atmosphere shells', () => {
   const atmoOf = (name: string) => SOL_BODIES.find((b) => b.name === name)!.atmosphere!;
 
   it('Earth carries the Bodhaine 1999 sea-level Rayleigh depths', () => {
-    // The published table IS the calibration (docs/science-solar-system.md
-    // § Atmosphere optical depths); a drift back toward slider values is the
+    // The published table IS the calibration (/docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources);
+    // a drift back toward slider values is the
     // regression this pins against.
     expect(atmoOf('Earth').rayleighCoeff).toEqual([0.049, 0.097, 0.221]);
   });
@@ -391,7 +390,7 @@ describe('atmosphere shells', () => {
   it('stays optically thin over the texture — Titan the deliberate exception', () => {
     // Nadir T_view per channel, pinned per body: the texture IS the visible
     // disc, so the overlay must not extinguish it and replace it with a
-    // featureless ball (atmosphere/README.md § The texture carries the disc).
+    // featureless ball (atmosphere/README.md#the-texture-carries-the-disc-the-atmosphere-is-an-overlay).
     // The pins
     // are the guard — a published-value refinement should register here and
     // be read, not trip a threshold it happens to sit near. Earth's blue is

@@ -10,7 +10,7 @@ import type {
 import { PlanetGlareLayer } from './planet-glare-layer';
 
 /** WebGPU's guaranteed `maxVertexBuffers`. The billboard sits exactly on
- *  it — README.md § The glare packs. */
+ *  it — README.md#the-glare-packs. */
 const MAX_VERTEX_BUFFERS = 8;
 
 function makeBuffers(capacity: number): PlanetGlareBuffers {
@@ -188,7 +188,7 @@ describe('the WebGPU reflected-glare layer', () => {
 
   it('leaves every attribute on the default usage, so version is what decides', () => {
     // The version pins above cannot see this: a usage-driven upload bypasses
-    // version entirely (../README.md § One writer per buffer per submit).
+    // version entirely (../README.md#one-writer-per-buffer-per-submit).
     const { layer } = makeLayer();
     const usages = Object.values(layer.mesh.geometry.attributes)
       .map((attr) => (attr as THREE.BufferAttribute).usage);

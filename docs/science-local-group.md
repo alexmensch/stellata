@@ -75,12 +75,12 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   from the Cepheid measurement of Bonanos et al. 2006, *ApJ* 652, 313
   (DOI 10.1086/508140). Standalone row.
 
-Per the build's data-freshness policy (`data/README.md`
-§ Frozen external data), refreshing the LVDB snapshot is an explicit
+Per the build's data-freshness policy ([Frozen external data](/data/README.md#frozen-external-data)),
+refreshing the LVDB snapshot is an explicit
 manual step (curl + `pnpm run build:local-group --force`) — `pnpm run
 build` never touches the network.
 
-Per the data-fidelity principle (`SCIENCE.md` § Scope principles), hand-curated overrides are
+Per the data-fidelity principle ([Scope principles](/SCIENCE.md#scope-principles)), hand-curated overrides are
 the exception, reserved for objects with well-studied departures that
 no canonical structural row resolves — or, in the case of M31 / M33,
 for the major spirals that the LVDB `dwarf_all` table excludes by
@@ -178,7 +178,7 @@ A column is flux per steradian by the normalisation above, so its
 surface brightness is `26.5721 − 2.5·log10(column)` mag/arcsec² — a
 derived zero point, and the layer's only one. The renderer hands that
 to the scene-wide HDR unit like any other extended source
-(`docs/science-hdr-pipeline.md` § 4).
+([§ 4](/docs/science-hdr-pipeline.md#4-per-layer-mapping--every-current-squash-and-its-replacement)).
 
 An earlier revision gated the column against the star slider and
 squashed it locally, on the reasoning that a linear map across the
@@ -214,7 +214,7 @@ consistency test pins ⟨μ⟩_e = m_V + 0.753 + 2.5·log₁₀(π·a·b) agains
 LVDB's `surface_brightness_rhalf` across the catalogue (median
 deviation 0.008 mag).
 
-**No dust.** LG objects sit far outside the MW dust slab; their
+<a id="no-dust"></a>**No dust.** LG objects sit far outside the MW dust slab; their
 internal dust is below the photometric tolerance at this detail tier.
 Catalogue m_V is as-observed (MW foreground extinction included), so
 calibrating to it with no in-shader dust makes the Sol-region view

@@ -37,8 +37,8 @@ aligned across controllers.
 invariant no formula enforces. The binding constraint is the **smallest
 focusable body**: Mimas's orbit floor sits 6.744× above `CAMERA_NEAR_PC`
 at `FOV_MAX_DEG`, where the floor is the `ORBIT_FLOOR_SURFACE_MARGIN`
-clamp rather than the fill solve (`controls/README.md` § Manual-zoom
-floor). A moon ~6× smaller, or dropping that clamp, puts a focused body
+clamp rather than the fill solve ([Manual-zoom floor](controls/README.md#manual-zoom-floor)).
+A moon ~6× smaller, or dropping that clamp, puts a focused body
 on the clip plane where it vanishes at max zoom. Widening `FOV_MAX_DEG`
 no longer thins the margin — the clamp is FOV-invariant, so the worst
 case is now an exact multiple of the moon's radius rather than an
@@ -48,7 +48,7 @@ suggests — check the test before moving either constant.
 The near plane also **decides** one focus kind's park outright rather
 than merely bounding it: a probe has no disc to solve against, so its
 fixed park / floor pair is chosen for near-plane margin
-(`controls/README.md` § star-physics). Any future fixed-pixel focusable
+([star-geometry vs star-physics](controls/README.md#star-geometry-vs-star-physics-vs-stellatats)). Any future fixed-pixel focusable
 lands in the same regime.
 
 The constants live in their own module specifically to break the
@@ -112,14 +112,14 @@ navigate runs no per-frame roll step; observe writes `camera.up` from the
 quaternion every frame; and the union of the animating branches below is
 exactly where navigate re-derives `camera.up` to hold it perpendicular to a
 view axis nothing else is transporting it against
-(`controls/input/README.md` § The perpendicular invariant).
+([The perpendicular invariant](controls/input/README.md#the-perpendicular-invariant)).
 
 Five overlapping "is the camera doing something" predicates exist, and
 picking the wrong one is the standing risk every new camera feature
 runs. There are **four independent animation sources** — warp, aim
 slerp, focus-park lerp, and the `ObserveTransition` slot (which itself
 carries three kinds: `enter` / `exit` / `unfocus`, see
-`observe/README.md` § ObserveTransition kinds). Each predicate is a
+[ObserveTransition kinds](observe/README.md#observetransition-kinds)). Each predicate is a
 different subset:
 
 | Predicate | Warp | Aim | Focus-park lerp | Observe `enter`/`exit` | Observe `unfocus` |
@@ -157,7 +157,7 @@ writes it. The asymmetry is deliberate and load-bearing —
 `FocusController` owns the field (~20 unrelated read sites) while
 `ObserveTransition` owns the enter/exit FSM and writes through the
 `setCameraModeValue` dep callback, so it stays the only mode-switcher
-(`observe/README.md` § ObserveTransition kinds). Callers pair the two
+([ObserveTransition kinds](observe/README.md#observetransition-kinds)). Callers pair the two
 namespaces in one expression routinely; that is correct, not a smell.
 
 ### The claim-the-camera sequence

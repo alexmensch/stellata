@@ -17,8 +17,7 @@ describe('the statistic attachment mask', () => {
   // helper takes the park mask FIRST and scales the whole texel by it —
   // masking the flux alone would leave an alpha-composited emitter still
   // compositing `dst · (1 − alpha)` over the attachment the gate would
-  // have shut (webgpu/hdr/README.md § The gate becomes the output
-  // struct).
+  // have shut (/src/client/webgpu/hdr/README.md#the-gate-becomes-the-output-struct).
   const TSL_WRITERS = [
     {
       label: 'star quad',

@@ -190,7 +190,7 @@ function joinNames(names: string[]): string {
 }
 
 // Tier 2's fallback is the plane ORIENTATION only — every field quoted here
-// is measured in both tiers (../binaries/README.md § Tier mapping).
+// is measured in both tiers (../binaries/README.md#tier-mapping).
 function orbitCompanionOfLines(
   rel: BinaryRelation,
   kepler: KeplerRelationParams,

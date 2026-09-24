@@ -1,5 +1,5 @@
 // Is the page quiet enough to measure? A verdict over one render-gate
-// snapshot. README.md § What a run does.
+// snapshot. README.md#what-a-run-does.
 
 import { SETTLE_MS } from '../../src/client/render-gate/render-gate-pure';
 

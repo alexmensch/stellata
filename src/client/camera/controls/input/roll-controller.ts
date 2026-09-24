@@ -1,5 +1,5 @@
 // Roll operations on the camera's own up vector and quaternion — the two
-// roll authorities, one per camera mode. See README.md § Roll authority.
+// roll authorities, one per camera mode. See README.md#roll-authority.
 
 import * as THREE from 'three';
 import { cameraLocalUpInto, levelUpInto, signedAngleAbout } from './roll-pure';
@@ -26,8 +26,8 @@ export class RollController {
    *
    *  Every frame in OBSERVE, where the quaternion is the authority; on every
    *  frame a navigate ANIMATION owns the camera, where nothing else
-   *  transports `up` against a view axis that is moving (README.md § The
-   *  perpendicular invariant); and at the landing of a captured-endpoint
+   *  transports `up` against a view axis that is moving (README.md#the-perpendicular-invariant);
+   * and at the landing of a captured-endpoint
    *  slerp. **Never on a steady-state navigate frame**: `up → lookAt →
    *  quaternion → up` is a rounding round-trip that 2-cycles, and the
    *  quaternion is in the render gate's exact-equality pose snapshot

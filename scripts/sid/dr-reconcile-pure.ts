@@ -1,8 +1,8 @@
 // Pure classifier for Gaia data-release reconciliation: per-risk-id
 // carried / contested / dropped classes, shared-candidate grouping, and
-// the Δmag review flag. Procedure and measured dry run: docs/sid.md § 6.
+// the Δmag review flag. Procedure and measured dry run: /docs/sid.md#6-gaia-data-release-reconciliation.
 
-/** Acceptance radius for a cross-match candidate (docs/sid.md § 6.1). */
+/** Acceptance radius for a cross-match candidate (/docs/sid.md#61-procedure). */
 export const ACCEPT_MAS = 400;
 
 /** |Δmag| beyond which an accepted 1:1 match is flagged for review —
@@ -44,7 +44,7 @@ export interface DrClassification {
   droppedNoRows: bigint[];
   /** One candidate accepted by ≥2 risk ids — a split of ours in the
    *  reversed dry-run orientation, a merge of ours in a forward DR bump
-   *  (docs/sid.md § 6.1). */
+   *  (/docs/sid.md#61-procedure). */
   sharedCandidateGroups: SharedCandidateGroup[];
   /** p50 / p90 / p99 / max over carried match distances (mas). */
   distanceQuantiles: { p50: number; p90: number; p99: number; max: number };

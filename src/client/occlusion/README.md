@@ -1,7 +1,7 @@
 # Label occlusion — the near-body set the SVG layer reads
 
 An SVG label has no depth relationship to the canvas under it
-(`../scene/README.md` § Full render stack: "There is no z-ordering between
+([Full render stack](../scene/README.md#full-render-stack--front-to-back): "There is no z-ordering between
 the canvas and SVG"), so nothing the GPU knows about depth reaches a
 `<text>` element. This folder is the CPU answer: a per-frame set of
 near solid bodies, and one angular test asking whether any of them
@@ -32,7 +32,7 @@ it is published by the same two clusters that decide that membership:
 Those clusters are the right providers because the local pass's own
 compositing argument already establishes what this test needs:
 **nothing renderable in the main pass sits between the camera and a
-local body** (`../local-depth/README.md` § Architecture). A body that
+local body** ([Architecture](../local-depth/README.md#architecture)). A body that
 is not a pass member is parsecs away and sub-pixel, and occludes
 nothing.
 
@@ -45,7 +45,7 @@ therefore separate walks over the same membership, not one shared list.
 
 The shell clears the set immediately before the scene-layer fan-out and
 the overlays read it on `'frame'`, which fires after the render — so a
-label reads the current frame's bodies (`../README.md` § Event bus).
+label reads the current frame's bodies ([Event bus](../README.md#event-bus-on-stellata)).
 
 **Picks read it too, through the same set.** Hover and click drop any hit
 a body in here hides, at one shared gate over every kind
@@ -132,7 +132,7 @@ short-circuits to that test untouched.
 
 This is deliberately **not** a substitute for the local depth pass.
 That pass owns fragment ordering between bodies and does it natively
-(`../local-depth/README.md` § Why the main pass cannot do this); the
+([Why the main pass cannot do this](../local-depth/README.md#why-the-main-pass-cannot-do-this)); the
 apparatus it deleted was analytic geometry standing in for a z-buffer
 that could have done the job. Here there is no z-buffer to reach: the
 SVG layer composites above the resolved frame, so an analytic test on

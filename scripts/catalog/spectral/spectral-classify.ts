@@ -80,7 +80,7 @@ function lookupLumClass(window: string): number {
 
 /** Strict Morgan-Keenan classifier for SIMBAD-canonical `sp_type`
  *  strings; returns null on unparseable input. See
- *  README.md § The resolver and the radius chain for
+ *  README.md#the-resolver-and-the-radius-chain for
  *  handled shapes and the Am/Ap composite-tag preference order. */
 export function classifyFromSimbad(rawSpType: string | null | undefined): SpectralInfo | null {
   if (!rawSpType) return null;

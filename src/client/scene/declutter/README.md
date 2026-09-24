@@ -94,8 +94,8 @@ is angular size and brightness at the camera, not "is the object real".
 A deep-space probe is a real object whose marker sits at
 `representational` for exactly this reason: a metre-scale spacecraft
 subtends nothing at any range in the model, so its glyph represents the
-object rather than showing it (`../../solar-system/probes/README.md`
-§ Declutter). Any future fixed-pixel glyph lands the same way.
+object rather than showing it ([Declutter](../../solar-system/probes/README.md#declutter-and-chart-mode)).
+Any future fixed-pixel glyph lands the same way.
 
 The chart column deliberately diverges from the general tier model: chart
 mode has no true naked-eye tier, so its `physical` base is the *legible

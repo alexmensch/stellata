@@ -1,6 +1,6 @@
 // Parser for data/simbad/simbad_tyc_hd.tsv, indexed on the full TYC — the
 // HD-attribution witness independent of IV/25.
-// See data/simbad/README.md § The TYC → HD pull.
+// See /data/simbad/README.md#the-tyc--hd-pull.
 
 import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
 

@@ -196,8 +196,7 @@ export interface NamedScene {
 // mutation. The exceptions emit alone: `planetSystem` (derived from a
 // focus change that already paired with `state`), `frame` (render-tick
 // fanout), and the `focusLerp` / warp-end animation edges (transient,
-// not URL-encoded state). Per-event list: src/client/README.md
-// § Event bus.
+// not URL-encoded state). Per-event list: /src/client/README.md#event-bus-on-stellata.
 export type StellataEventMap = {
   focus: Target | null;
   planetSystem: PlanetSystem | null;
@@ -227,8 +226,8 @@ export class Stellata implements FrameAnchor {
 
   private scene: THREE.Scene;
   private starAttrs!: StarSourceAttributes;
-  // The shared view/screen uniform map (frame/README.md § Shared
-  // uniforms) — every per-frame write goes through this field, never
+  // The shared view/screen uniform map (frame/README.md#shared-uniforms)
+  // — every per-frame write goes through this field, never
   // through a star material's uniforms object.
   private sharedUniforms!: SharedUniforms;
   // Dust-particle render layer. Currently shelved — see
@@ -257,7 +256,7 @@ export class Stellata implements FrameAnchor {
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
   // radial pulsation in the vertex shader for every eclipsing binary
   // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
-  // See src/client/binaries/eclipse/README.md § Pulsation gate for eclipsing binaries.
+  // See /src/client/binaries/eclipse/README.md#pulsation-gate-for-eclipsing-binaries.
   private _suppressPulsation: Float32Array;
   /** Records already folded into `_suppressPulsation` — the mask is written
    *  in place so the attribute bound over it keeps its array. */
@@ -297,7 +296,7 @@ export class Stellata implements FrameAnchor {
   // local-position delta so it stays under the camera and user pan
   // offsets survive. `_movingRideIdx` reseeds on every 'focus' event,
   // which is what makes the shared slot safe across kinds — see
-  // camera/focus/README.md § Moving-focal ride.
+  // camera/focus/README.md#moving-focal-ride.
   private readonly _movingRideLast = new THREE.Vector3();
   private readonly _movingRideLive = new THREE.Vector3();
   private readonly _movingRideDelta = new THREE.Vector3();
@@ -310,10 +309,10 @@ export class Stellata implements FrameAnchor {
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
   // Owns the exposure scalar and the three magnitude bounds derived from
   // it — instrument limit, just-visible threshold, population cull
-  // (hdr/exposure/README.md § One writer, five slots).
+  // (hdr/exposure/README.md#one-writer-five-slots).
   readonly exposure!: ExposureController;
   // Per-frame scene-luminance measurement feeding the automatic exposure
-  // cut (hdr/exposure/README.md § Adaptation).
+  // cut (hdr/exposure/README.md#adaptation--the-frame-measures-itself).
   readonly adaptation!: SceneAdaptation;
   get reduction(): ReductionSeam { return this.hdr.reduction; }
   private readonly exposureFrame!: ExposureFrameStep;
@@ -345,7 +344,7 @@ export class Stellata implements FrameAnchor {
 
   readonly pois!: PoiStore;
   // Canvas pointer input — click FSM (single/double, both modes) and the
-  // roll gestures. See camera/controls/input/README.md § Input controller.
+  // roll gestures. See camera/controls/input/README.md#input-controller.
   readonly input!: InputController;
 
   readonly coordSpheres: CoordSpheres;
@@ -601,7 +600,7 @@ export class Stellata implements FrameAnchor {
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
     // existing #overlay so it shares the distance vector's stroke + halo
     // styling and inherits the `body.warping` hide rule for free.
-    // Constructed here, ahead of the kind modules — galactic/README.md § Wiring.
+    // Constructed here, ahead of the kind modules — galactic/README.md#wiring.
     const galacticDiscEntry = galacticDiscSceneLayer({
       scene: this.scene,
       chromeLines: this.chromeLines,
@@ -775,7 +774,7 @@ export class Stellata implements FrameAnchor {
     // Kind-agnostic geometry + focus-state registry — the shell's
     // per-kind knowledge in one exhaustive record. Lazily-attached
     // layers are read through closures, so attach cycles need no
-    // re-registration. See camera/focus/README.md § FocusableProviders.
+    // re-registration. See camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry.
     this.focusables = {
       star: this.kinds.star.focusable(),
       cloud: this.kinds.cloud.focusable(),
@@ -965,8 +964,8 @@ export class Stellata implements FrameAnchor {
       sel.excludeStarIdx);
   }
 
-  // Registration order is per-frame update order — scene/README.md § How the
-  // shell uses it.
+  // Registration order is per-frame update order —
+  // scene/README.md#how-the-shell-uses-it.
   private registerSceneLayers(galacticDiscEntry: SceneLayer): void {
     this.layers.register({
       timeBehaviour: { kind: 'clock', rate: this.solarSystem.planetRate },
@@ -1012,8 +1011,8 @@ export class Stellata implements FrameAnchor {
     });
     // Sequencing only, owning nothing — the second such entry, and the last
     // camera WRITE of the frame. Every camera reader is registered below it;
-    // the argument for that, and for `static`, is scene/README.md § Not every
-    // entry owns a layer and § Camera writes, then camera reads.
+    // the argument for that, and for `static`, is scene/README.md#not-every-entry-owns-a-layer
+    // and § Camera writes, then camera reads.
     this.layers.register({
       timeBehaviour: { kind: 'static' },
       contribution: { kind: 'always' },
@@ -1028,7 +1027,7 @@ export class Stellata implements FrameAnchor {
     // Below every camera write in the frame — both focal rides and the
     // orbit lock — because it caches `camera.matrixWorld` for its view-space
     // sun, pole and caster uniforms, and sizes the mesh off camera distance
-    // (scene/README.md § Camera writes, then camera reads). That is why the
+    // (scene/README.md#camera-writes-then-camera-reads). That is why the
     // planet module's own layer does not run this update.
     this.layers.register(this.solarSystem.planetMeshEntry);
     // After the field, rings and mesh updates it reads; before the main
@@ -1082,7 +1081,7 @@ export class Stellata implements FrameAnchor {
       setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
-    // Below the orbit lock — galactic/README.md § Wiring.
+    // Below the orbit lock — galactic/README.md#wiring.
     this.layers.register(galacticDiscEntry);
     this.layers.register(this.coordSpheres.entry);
     this.layers.register(hudSceneLayer({
@@ -1116,7 +1115,7 @@ export class Stellata implements FrameAnchor {
         kind: 'clock',
         // Anchored content: the mask stamps the cores of the same stars the
         // local cluster mirrors, so it declares that subsystem's rate rather
-        // than a global minimum (scene/README.md § Anchored content).
+        // than a global minimum (scene/README.md#anchored-content-declares-its-anchors-rate).
         rate: (cc) => maxCadenceReport(
           this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
           this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
@@ -1282,7 +1281,7 @@ export class Stellata implements FrameAnchor {
   // Shift the renderer's local origin to `newOrigin` (an absolute-space
   // coordinate) — FloatingOrigin.recenterTo, whose listener fan-out
   // rewrites the star buffer, shifts camera + orbit target, and runs
-  // the scene-layer recenter hooks (frame/README.md § Recentre fan-out).
+  // the scene-layer recenter hooks (frame/README.md#recentre-fan-out--order-is-load-bearing).
   //
   // Triggered automatically from FocusController.setFocus() and
   // WarpController.tryMidFlyRecentre. Don't call externally — it
@@ -1369,7 +1368,7 @@ export class Stellata implements FrameAnchor {
     u.uDustEnabled.value = 1;
     // Texture slots are not part of the WebGPU uniform-node mirror, so the
     // volume reaches the TSL march by call rather than by map write
-    // (webgpu/tsl/README.md § Shared uniform nodes).
+    // (webgpu/tsl/README.md#shared-uniform-nodes).
     this.webgpu.setDustTexture(dust.texture);
     if (this.extinctionPrepass === null) {
       this.extinctionPrepass = this.webgpu.attachExtinctionPrepass({
@@ -1416,7 +1415,7 @@ export class Stellata implements FrameAnchor {
 
     this.starFrame.absorbRecords();
     this.webgpuStarLayer.absorbRecords();
-    // Not markDirty — see webgpu/extinction/README.md § The cache gate.
+    // Not markDirty — see webgpu/extinction/README.md#the-cache-gate.
     this.extinctionPrepass?.refreshPositions();
 
     // The fastest pulsating variable bounds how long any frame may idle
@@ -1439,7 +1438,7 @@ export class Stellata implements FrameAnchor {
    *  against the chunk files — the only verification the upload has until
    *  something samples the volume.
    *  Logs a summary and returns the reports.
-   *  `loaders/README.md` § Dust voxel readback. */
+   *  `loaders/README.md#dust-voxel-readback`. */
   async verifyDust(count?: number): Promise<ChunkVerifyReport[]> {
     if (this.dust === null) {
       console.warn('verifyDust: no dust attached');
@@ -1455,8 +1454,8 @@ export class Stellata implements FrameAnchor {
   }
 
   /** How many stars each tier's draw issued, and how many passed the
-   *  prefilter (`webgpu/star/compaction/README.md` § Reading the counts
-   *  back). The read waits on a dispatch to count into, which a settled
+   *  prefilter (`webgpu/star/compaction/README.md#reading-the-counts-back`).
+   * The read waits on a dispatch to count into, which a settled
    *  camera has parked the gate out of. */
   async readSurvivorCounts(): Promise<SurvivorCountsRead | null> {
     this.renderGate.invalidate('debug:survivors');
@@ -1468,7 +1467,7 @@ export class Stellata implements FrameAnchor {
   /** Numeric check that the compute A_V kernel and a fragment march of the
    *  same integral agree bit for bit over the whole catalogue — the parity
    *  no pixel can show. Null with no dust.
-   *  `webgpu/extinction/README.md` § The prepass kernel. */
+   *  `webgpu/extinction/README.md#the-prepass-kernel`. */
   async verifyExtinction(): Promise<AvParityReport | null> {
     const report = await this.extinctionPrepass?.verifyParity() ?? null;
     if (report === null) {
@@ -1599,7 +1598,7 @@ export class Stellata implements FrameAnchor {
    *  reaching `rebasePose` reinstates the pin: the ride runs below the
    *  gate, so the next tick reads the write as a fresh camera move,
    *  renders, rides again, and never reaches a skipped tick
-   *  (render-gate/README.md § The focal ride). */
+   *  (render-gate/README.md#the-focal-ride). */
   private applyRideDelta(delta: THREE.Vector3): void {
     if (delta.lengthSq() === 0) return;
     this.camera.position.add(delta);
@@ -1666,8 +1665,8 @@ export class Stellata implements FrameAnchor {
 
   /** Debug-HUD view of the disc/glow routing for one star at a given
    *  eclipse dim: the pass the shaders route it to, and the pass a
-   *  dimmed quad would have picked (`star-pipeline/README.md` § Star
-   *  rendering). The only way to see the trap band, which draws
+   *  dimmed quad would have picked (`star-pipeline/README.md#star-rendering-instanced-quads-three-passes`).
+   * The only way to see the trap band, which draws
    *  identically either side of it. */
   starPassRoutingFor(idx: number, eclipseDim: number): StarPassRouting {
     const c = this.renderedSizeComponentsFor(idx, this.passDebugScratch);
@@ -1809,8 +1808,8 @@ export class Stellata implements FrameAnchor {
   /** Frame-cost lever: invalidate the A_V cache before every update, so the
    *  recompute the camera-displacement gate skips at a parked camera runs on
    *  every frame. Every canon vantage is camera-idle, so the kernel is
-   *  otherwise unpriced — `debug/frame-cost/passes/README.md` § The
-   *  extinction rows. Never leave it on outside a measurement dwell. */
+   *  otherwise unpriced — `debug/frame-cost/passes/README.md#the-extinction-rows`.
+   * Never leave it on outside a measurement dwell. */
   setExtinctionRecomputeForced(on: boolean) {
     this.extinctionRecomputeForced = on;
   }
@@ -1821,7 +1820,7 @@ export class Stellata implements FrameAnchor {
 
   /** A pointer event says a pick is coming: stage the per-star A_V table
    *  the star pick gates on, so `extinctionAvMagFor` is exact by the time
-   *  the dwell fires (`webgpu/extinction/README.md` § Cold reads). */
+   *  the dwell fires (`webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity`). */
   notifyPickImminent(): void {
     this.extinctionPrepass?.warmAvReadback();
   }
@@ -1984,7 +1983,7 @@ export class Stellata implements FrameAnchor {
     // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
     // layer's stippled chart outline rides its registry setMonochrome hook.
     // The fan-out and the HDR swap run in opposite orders per direction —
-    // chart-mode/README.md § Entry and exit are not mirror images.
+    // chart-mode/README.md#entry-and-exit-are-not-mirror-images.
     applyChartPaletteSwap(
       on,
       (v) => this.hdr.setChartMode(v),
@@ -2079,7 +2078,7 @@ export class Stellata implements FrameAnchor {
    * Smoothly rotate the camera to look along `dirLocal` — the aim for a
    * caller that holds a direction rather than an object, where standing a
    * point up at some radius and aiming at that would land the boresight
-   * elsewhere in navigate (`camera/controls/README.md` § Aim controller).
+   * elsewhere in navigate (`camera/controls/README.md#aim-controller-cameracontrolsaim-controllerts`).
    *
    * Shares `aimAt`'s composition-layer busy gates.
    */
@@ -2103,7 +2102,7 @@ export class Stellata implements FrameAnchor {
    * Swing the camera to the reciprocal of the direction it holds — in
    * navigate around to the far side of the focused object at the same
    * distance, in observe a half turn in place. Bound to the instrument's
-   * INV chip and `Shift`+`V` (`attitude/README.md` § Inverting the view).
+   * INV chip and `Shift`+`V` (`attitude/README.md#inverting-the-view`).
    *
    * Shares `aimAt`'s composition-layer busy gates; the sweep itself lives in
    * `AimController`.
@@ -2224,7 +2223,7 @@ export class Stellata implements FrameAnchor {
    *  re-read, and the orbit lock's camera write with it. The shell owns WHEN
    *  it runs, the registry being the only place that can express "after every
    *  camera write, before every camera read"; the indicator owns what it does
-   *  (`attitude/orbit-frame/README.md` § The lock). Read through the field on
+   *  (`attitude/orbit-frame/README.md#the-lock`). Read through the field on
    *  every frame, so installing it after the layers are registered works,
    *  exactly as a lazily-attached layer does. */
   setOrbitFrameTick(tick: () => void): void {
@@ -2236,7 +2235,7 @@ export class Stellata implements FrameAnchor {
   /** Install the attitude instrument's URL seam. ORB and the orbit lock are
    *  the two pieces of view state the instrument holds itself rather than in
    *  `filter.coordSphere`, so the blob cannot reach them any other way
-   *  (`util/url-state/README.md` § ORB and the orbit lock). Same lazy shape as
+   *  (`util/url-state/README.md#orb-and-the-orbit-lock`). Same lazy shape as
    *  the tick above: the instrument is built after the shell. */
   setOrbitFramePort(port: OrbitFramePort): void {
     this.orbitFramePort = port;
@@ -2252,7 +2251,7 @@ export class Stellata implements FrameAnchor {
    *  state held on the instrument rather than in `FilterState`, so no
    *  fine-grained event covers them and the URL writer would otherwise see a
    *  lock engaged on a still camera as nothing at all — the second case of the
-   *  bare-'state' pairing `README.md` § Event bus documents, after
+   *  bare-'state' pairing `README.md#event-bus-on-stellata` documents, after
    *  `notifyClockJumped`. Not owed by a URL restore, which is applying the
    *  blob it would ask to rewrite. */
   notifyOrbitFrameChanged(): void {
@@ -2296,7 +2295,7 @@ export class Stellata implements FrameAnchor {
     // each frame, keeping the observe→navigate handover a no-op. Steady-state
     // navigate needs no step at all: camera.up IS the authority there and
     // TrackballControls transports it alongside the eye vector.
-    // See camera/controls/input/README.md § Roll authority.
+    // See camera/controls/input/README.md#roll-authority.
     if (this.focus.getCameraMode() === 'observe') {
       this.roll.adoptFromCamera(this.camera);
     }
@@ -2335,7 +2334,7 @@ export class Stellata implements FrameAnchor {
     // that angle indefinitely. Re-deriving per animating frame transports up
     // the way a drag does, without touching the pose just rendered. Gated on
     // an animation owning the camera: the steady state must still write on no
-    // frame of its own (camera/controls/input/README.md § Roll authority).
+    // frame of its own (camera/controls/input/README.md#roll-authority).
     if (cameraAnimating && this.focus.getCameraMode() === 'navigate') {
       this.roll.adoptFromCamera(this.camera);
     }
@@ -2351,7 +2350,7 @@ export class Stellata implements FrameAnchor {
     // A running clock is no longer continuous by itself: the cadence
     // decides when elapsed sim time could visibly move anything drawn,
     // from the rate the layers reported on the LAST rendered frame
-    // (render-gate/README.md § The clock cadence).
+    // (render-gate/README.md#the-clock-cadence).
     const continuous = cameraAnimating || this._realtimeFramesNeeded;
     const cadenceDue = this.cadence.isDue(this.clock.getRate(), this.frameCtx.t);
     if (!this.renderGate.tick(
@@ -2382,7 +2381,7 @@ export class Stellata implements FrameAnchor {
     this.layers.updateAll(this.frameCtx);
     if (this.extinctionPrepass !== null) {
       // Between the ride fan-out and syncUniformNodes, and both edges bind
-      // (webgpu/extinction/refill/README.md § Only what is in frame).
+      // (webgpu/extinction/refill/README.md#only-what-is-in-frame).
       // Absolute camera position in JS float64 — same frame convention as
       // the shader-side iPosition + uWorldOffset reconstruction.
       perfMark('extinction.prepass');
@@ -2424,7 +2423,7 @@ export class Stellata implements FrameAnchor {
     // then (the roster attach loop and registerSceneLayers both run in
     // this constructor, ahead of animate), and a GLSL material here
     // discards the whole submit rather than dropping one layer
-    // (webgpu/README.md § One scene per boot).
+    // (webgpu/README.md#one-scene-per-boot).
     if (!this.glslResidentsChecked) {
       this.glslResidentsChecked = true;
       const residents = findGlslResidents(this.scene);
@@ -2445,7 +2444,7 @@ export class Stellata implements FrameAnchor {
     perfMeasure('submit.tonemap');
     // After the resolve, so reducing the statistic attachment never delays
     // the frame it measures. The readback lands a frame or two later, far
-    // inside the slew (hdr/exposure/reduction/README.md § Latency).
+    // inside the slew (hdr/exposure/reduction/README.md#latency).
     perfMark('submit.reduction');
     this.exposureFrame.reduce(measurementParked);
     perfMeasure('submit.reduction');
@@ -2476,7 +2475,7 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.pxPerRadian = this.angularToPx();
     this.frameCtx.exposure = this.exposureFrame.frameExposure();
     // Stale until the orbit-lock entry re-reads the camera after the
-    // frame's last write (scene/README.md § Camera writes, then reads).
+    // frame's last write (scene/README.md#camera-writes-then-camera-reads reads).
     this.frameCtx.frustum.invalidate();
   }
 
@@ -2526,8 +2525,7 @@ export class Stellata implements FrameAnchor {
     this.controls.dispose();
     // The prepass's refill kernel binds the compaction's dispatch buffer, so
     // it has to drop its bind groups before the star layer releases that
-    // buffer (webgpu/extinction/refill/README.md § The kernel bounds itself
-    // by the listed length).
+    // buffer (webgpu/extinction/refill/README.md#the-kernel-bounds-itself-by-the-listed-length).
     this.extinctionPrepass?.dispose();
     this.extinctionPrepass = null;
     this.webgpuStarLayer.dispose();

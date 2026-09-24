@@ -1,8 +1,8 @@
 # Gliese — printed values for the nearby-star cohort
 
 One TSV from VizieR `V/70A`, the whole catalogue. Gliese is the first-order
-source behind every spine cell marked `mag_src=GJ`: `docs/catalog-driver.md`
-§ 5 routes the V cascade's bottom tier here for the GJ-bearing records
+source behind every spine cell marked `mag_src=GJ`: [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
+routes the V cascade's bottom tier here for the GJ-bearing records
 Tycho-2 does not carry.
 
 ```
@@ -138,16 +138,16 @@ the newer catalogue does not retire this one.
 ## Consumed by
 
 - `scripts/catalog/gliese-parse.ts` → the V cascade's `gliese` tier
-  (`scripts/catalog/photometry/README.md` § The V cascade) and the parallax
+  ([The V cascade](/scripts/catalog/photometry/README.md#the-v-cascade)) and the parallax
   cascade's trigonometric tier
   (`scripts/catalog/distance/parallax/README.md`). `vmag`, `bv`, `sp` and the
   `n_plx`-gated `plx_mas` / `e_plx_mas` are read; the parser adds a field per
   bead, the same terms as `data/simbad/simbad_values.tsv`.
 - `scripts/catalog/spine/association-audit-pure.ts` → the GJ↔HD link of the
-  spine's association audit (`scripts/catalog/spine/README.md` § The
-  association audit), which is what `hd` is on the parsed row for.
+  spine's association audit ([The association audit](/scripts/catalog/spine/README.md#the-association-audit)),
+  which is what `hd` is on the parsed row for.
 
 ## Refresh
 
-`pnpm run refresh:gliese` (venv per `scripts/refresh/README.md`
-§ One-time setup). `--force` overrides the mtime skip.
+`pnpm run refresh:gliese` (venv per [One-time setup](/scripts/refresh/README.md#one-time-setup)).
+`--force` overrides the mtime skip.

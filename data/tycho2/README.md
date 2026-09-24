@@ -2,7 +2,7 @@
 
 Two TSVs from VizieR `I/259`, filtered to the TYCs our designation
 sources mention. Tycho-2 is the first-order source for exactly the rows
-Gaia misses: `docs/catalog-driver.md` § 5 routes the direction, proper
+Gaia misses: [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) routes the direction, proper
 motion and V-magnitude cascades here for TYC-bearing records with no
 Gaia solution.
 
@@ -44,7 +44,7 @@ awk -F'\t' 'NR>1 && $7!="" {if (m==""||$7<m) m=$7} END {print m, 2000-m}' \
 ```
 
 Both epochs are **measured, not assumed** — the same discipline
-`../../scripts/catalog/distance/README.md` § Direction resolution applies to the
+[Direction resolution](../../scripts/catalog/distance/README.md#direction-resolution) applies to the
 SIMBAD tier:
 
 - Over the 1,145 rows carrying a mean solution, a Gaia-grade SIMBAD position and
@@ -158,8 +158,8 @@ whole 2,539,913-row main table), so the pull transfers the table and
 keeps 15% of it.
 
 **No resume checkpoint, deliberately.** `run_in_batches` can cache each
-batch to `<output>.tsv.ckpt/` (`scripts/refresh/README.md` § Resuming a
-long pull), but here a batch is ~106k *unfiltered* upstream rows and the
+batch to `<output>.tsv.ckpt/` ([Resuming a long pull](/scripts/refresh/README.md#resuming-a-long-pull)),
+but here a batch is ~106k *unfiltered* upstream rows and the
 cache holds them as XML, so checkpointing this pull would spend gigabytes
 of disk to save two minutes. The filter is what makes the output small;
 the thing worth caching is the part we throw away.
@@ -203,7 +203,7 @@ republish; a re-pull is warranted only when the request set moves.
   the no-Gaia astrometry cohort, not all of it: **4** rows route CNS5 on a GJ
   number and **222** route SIMBAD, the latter including the `TYC3>1`
   components Tycho-2 merged into their pair, which carry a TYC that reaches no
-  row of its own (§ The request set, `docs/catalog-driver.md` § 5).
+  row of its own (§ The request set, [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - The same parse feeds the **PM rescue cascade**
   (`scripts/catalog/distance/pm-rescue/README.md`) on a further **64** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion
@@ -224,5 +224,5 @@ both tables carry.
 
 ## Refresh
 
-`pnpm run refresh:tycho2` (venv per `scripts/refresh/README.md`
-§ One-time setup). `--force` overrides the mtime skip.
+`pnpm run refresh:tycho2` (venv per [One-time setup](/scripts/refresh/README.md#one-time-setup)).
+`--force` overrides the mtime skip.

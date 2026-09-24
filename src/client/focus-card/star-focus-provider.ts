@@ -1,5 +1,5 @@
 // Star provider for the tier-2 focus card — camera-frame + intrinsic
-// rows only. See ./README.md § Frame-of-reference principle.
+// rows only. See ./README.md#frame-of-reference-principle.
 
 import {
   FLAG_BINARY_COMPANION_SYNTHETIC,

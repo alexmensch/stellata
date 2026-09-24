@@ -1,6 +1,6 @@
 // The on-disk shapes both instruments write — stellata-perf/2 and
 // stellata-survivors/1 — plus the adapter, scenario and per-mode records the
-// runner, the tables and the baseline diff share. README.md § JSON output.
+// runner, the tables and the baseline diff share. README.md#json-output.
 
 import type { GpuFrameMethod, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { SurvivorReport } from '../../src/client/debug/survivor-counts';
@@ -22,7 +22,7 @@ export const PERF_SCHEMA = 'stellata-perf/2';
 
 export class SchemaError extends Error {}
 
-/** What the throwaway context reports — `README.md` § What a run does,
+/** What the throwaway context reports — `README.md#what-a-run-does`
  *  step 2, on why one is opened at all. */
 export interface WebGlProbe {
   readonly renderer: string;
@@ -114,7 +114,7 @@ export interface ScenarioRecord {
    *  before a context moves its frame time on unchanged code (0.49 ms
    *  between 8th of 10 and 1st of 2), so two rows compare only at equal
    *  position; absent — a file written before the field existed — refuses
-   *  like an absent record count. diff/README.md § The refusals. */
+   *  like an absent record count. diff/README.md#the-refusals. */
   readonly position: number | null;
   /** The clock the numbers came off. Never compare two of them. */
   readonly method: GpuFrameMethod | null;
@@ -193,7 +193,7 @@ export const SURVIVORS_SCHEMA = 'stellata-survivors/1';
 
 export interface SurvivorsRecord extends Readonly<SurvivorReport> {
   readonly scenario: ScenarioName;
-  /** README.md § Survivor counts. */
+  /** README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument. */
   readonly settleMs: number;
 }
 

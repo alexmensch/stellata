@@ -26,7 +26,7 @@ const SOURCE_LABEL: Record<LgObject['source'], string> = {
 /** Far-field apparent V magnitude from the camera: the catalogued
  *  as-observed m_V scaled by 1/d² off the catalog distance. Matches
  *  the emission layer's calibration convention
- *  (docs/science-local-group.md § Local Group luminosity model);
+ *  (/docs/science-local-group.md#local-group-luminosity-model);
  *  near/inside the object the point-source
  *  law overstates brightness, which is acceptable card precision. */
 export function lgApparentMagFrom(mV: number, catalogDistPc: number, cameraDistPc: number): number {

@@ -69,8 +69,8 @@ priority chain:
    source_id that resolves onto a component-lettered object with no
    `sp_type`, beside the star's own HD/HIP-keyed object that has one. The
    pull unions the namespaces a record reaches so BOTH objects ship
-   (`scripts/refresh/simbad/README.md` § The union asks every namespace a
-   record reaches) — under different keys, so no key ends up carrying two
+   ([The union asks every namespace a record reaches](/scripts/refresh/simbad/README.md#the-union-asks-every-namespace-a-record-reaches))
+   — under different keys, so no key ends up carrying two
    rows (same README, § The union adds rows, never a second row under one
    key). The walk passes over the typeless one on its own: `accept` returns
    null and the ladder keeps going.
@@ -84,7 +84,7 @@ priority chain:
    the file is already adjudicated — every designation-only binding, the
    widening's and the union's alike, is vetoed where SIMBAD's own Gaia
    cross-IDs contradict the asking id
-   (`scripts/refresh/simbad/README.md` § The corroboration rule) — so the
+   ([The corroboration rule](/scripts/refresh/simbad/README.md#the-corroboration-rule)) — so the
    risk this tier carries is a system-blend spectral type on an unvetoed
    pair, never a wrong star.
 
@@ -124,7 +124,7 @@ R ∝ T⁻², so the class-table fallback misized GSP-Spec-tier stars
 stars by up to ~2×. Tables are main-sequence values — cooler for
 giants/supergiants in reality — but the Mbol side of the equation
 absorbs the luminosity-class difference, so the end result lands close
-to published radii (`docs/science-stellar-modelling.md` § Physical radius carries the current
+to published radii ([Physical radius](/docs/science-stellar-modelling.md#physical-radius) carries the current
 per-star numbers; `known-stars.test.ts` pins them end-to-end via the
 corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
 `[0.08, 2500]` so pathological catalog rows don't produce absurd

@@ -13,7 +13,7 @@ function nanFloat32(count: number): Float32Array {
 
 /** `loadedCount` defaults to the whole catalogue; pass fewer to express a
  *  progressive load mid-flight, and raise it on the returned object to land
- *  a chunk (`./README.md` § Progressive catalog load). */
+ *  a chunk (`./README.md#progressive-catalog-load`). */
 export function makeEmptyCatalog(count: number, loadedCount = count): Catalog {
   const apsis = {} as Record<ApsisField, Float32Array>;
   for (const name of APSIS_FIELDS) apsis[name] = nanFloat32(count);

@@ -29,7 +29,7 @@ attitude, and `level()` then runs unchanged. Unlike REF it is **live** —
 § Orbit rate.
 
 The frame flag reaches the same frame without the levelling
-(`../README.md` § Which frame, and who chooses). Both routes capture through
+([Which frame, and who chooses](../README.md#which-frame-and-who-chooses)). Both routes capture through
 `captureOrbitFrame`, so the two never disagree about what ORB means — they
 differ only in whether the camera moves afterwards.
 
@@ -75,7 +75,7 @@ Two consequences anything touching this has to honour:
   form runs the lunar theory and 17 Kepler solves for Sol and discards 26 of
   the 27 rows. Doing that per frame reinstates exactly the cost the ring
   layer's visibility gate exists to skip
-  (`../../solar-system/ephemerides/README.md` § Orbit rings).
+  ([Orbit rings](../../solar-system/ephemerides/README.md#orbit-rings)).
 
 ## What each frame re-reads, and what it must not
 
@@ -93,8 +93,8 @@ runs once per focus and `focusedOrbitFrom` runs per frame:
   a handful of short-lived objects each time, to reproduce a constant.
 - **A planet's normal is NOT held**, and that asymmetry is real rather than an
   oversight: Triton's node precesses, so a moon's plane is genuinely a
-  function of `t` (`../../solar-system/ephemerides/README.md` § Every other
-  moon). The source carries only the body index and `t` reaches the field
+  function of `t` ([Every other moon](../../solar-system/ephemerides/README.md#every-other-moon)).
+  The source carries only the body index and `t` reaches the field
   every frame.
 - **The source is re-asked while it is null.** Both the binaries artifact and
   the planet kind attach after a focus can be set, so a resolve that failed
@@ -122,7 +122,7 @@ about the pole, by the signed turn of the datum, on the premise that *ORB's
 pole is static, so only zero longitude travels*. That premise holds for a
 planet and fails for a moon: **Luna's node regresses 0.0529°/day**, swinging
 the plane's normal round a 5.15° cone, and Triton's precesses too
-(`../../solar-system/ephemerides/README.md` § Every other moon). Per frame the
+([Every other moon](../../solar-system/ephemerides/README.md#every-other-moon)). Per frame the
 error is second order and invisible, which is why a steady scrub looked
 perfect; collapse months of node motion into a single step — a scrub at years
 per second, or Backspace back to live time — and it is first order. It landed
@@ -138,7 +138,7 @@ Two properties fall out of taking the basis delta, and both matter:
   not care which way round it got there.
 
 **This is a camera writer on the steady-state navigate path**, which
-`../../camera/controls/input/README.md` § Orbit drift otherwise forbids —
+[Orbit drift](../../camera/controls/input/README.md#orbit-drift-is-the-feature-not-the-bug) otherwise forbids —
 that rule exists because a per-frame write with no fixed point 2-cycles
 between adjacent doubles and the render gate can then never idle. The lock is
 admissible for the reason a gesture is: **it writes only on a frame where the
@@ -175,8 +175,8 @@ re-derives it for you until the next tick.** `ridePoseBy` writes
 `camera.position` and `camera.up`. Every reader downstream — the render, the
 overlays, and the ball's own `readAttitude` — takes `camera.quaternion`, which
 `lookAt` builds from those two, and `TrackballControls.update()` does not run
-again until the next rAF tick (`../../camera/controls/input/README.md`
-§ Roll authority, derivation A). So the ride re-derives it itself. Skip that
+again until the next rAF tick ([Roll authority,](../../camera/controls/input/README.md#roll-authority)
+derivation A). So the ride re-derives it itself. Skip that
 and the frame draws the new position through the old aim while the ball reads
 the new datum against the old attitude: **a lag of exactly one frame's turn**,
 which is invisible at 1×, about a degree at 9 hr/s, and half a revolution once
@@ -191,7 +191,7 @@ wrong once:
   installed through `Stellata.setOrbitFrameTick` and called from a
   sequencing-only registry entry, because where it lands is an ordering claim
   about other layers and the registry is the only place that states one
-  (`../../scene/README.md` § Not every entry owns a layer). It has to be
+  ([Not every entry owns a layer](../../scene/README.md#not-every-entry-owns-a-layer)). It has to be
   **after** every moving field's position writes — the datum's turn is not
   knowable before them, which rules out riding earlier — and after **both**
   focal rides, whose translations put `controls.target` on the object it
@@ -200,7 +200,7 @@ wrong once:
   arrows, distance vector, labels) draw against a pose the frame does not
   render otherwise, and so does the planet mesh, whose view-space lighting
   uniforms are the subtler half of the same defect
-  (`../../scene/README.md` § Camera writes, then camera reads). `'frame'`
+  ([Camera writes, then camera reads](../../scene/README.md#camera-writes-then-camera-reads)). `'frame'`
   fires after the render and fails every part of this, which is the lag
   above; only the instrument's own *drawing* rides `'frame'`.
 - **The ride is not part of the instrument's draw path.** It moves the CAMERA,
@@ -221,7 +221,7 @@ needs more. They are the instrument's own state rather than
 `filter.coordSphere`, so they reach it through `OrbitFramePort`
 (`../attitude-pure.ts`), and a restore has to land after the focus, the
 filter and the camera mode have settled, since each of those disarms ORB:
-`../../util/url-state/README.md` § ORB and the orbit lock owns the ordering
+[ORB and the orbit lock](../../util/url-state/README.md#orb-and-the-orbit-lock) owns the ordering
 and the compatibility argument. A restore goes through the same two fields
 the flag writes and then lets `refresh` apply the rule below, so a link
 cannot arm a lock the receiver would refuse.
@@ -267,9 +267,9 @@ against the *old* frame, so the gesture would look like it had failed.
 about Earth, not Earth's about Sol; Algol Aa2 on its tight inner pair, not
 on the wide Aa-Ab one its primary also belongs to. Each subsystem answers
 from its own elements — `PlanetBodyField.orbitPlaneNormalOf` /
-`orbitCentreOffsetInto` for a body (`../../solar-system/ephemerides/README.md`
-§ Orbit rings), `starOrbitNormalIcrs` plus the returned pair's other member
-for a pair (`../../binaries/README.md` § Which pair a star rides).
+`orbitCentreOffsetInto` for a body ([Orbit rings](../../solar-system/ephemerides/README.md#orbit-rings)),
+`starOrbitNormalIcrs` plus the returned pair's other member
+for a pair ([Which pair a star rides](../../binaries/README.md#which-pair-a-star-rides)).
 
 **Whatever plane that orbit is drawn in is the plane ORB captures** — a
 published inclination where there is one, the galactic-plane fallback where

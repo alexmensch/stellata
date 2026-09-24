@@ -42,11 +42,11 @@ attribute writers here.
   focusable / card / hover / search / SID / pinnable / focal-hide legs.
   **This is the only fetch of `search-index.json`** — it lands as bytes
   and every reader, worker included, works from them
-  (`../typeahead/README.md` § The search-index worker).
+  ([The search-index worker](../typeahead/README.md#the-search-index-worker)).
   **`load` resolves on the catalogue's FIRST chunk**, so boot can paint;
   `ready` is the second promise, settling when the whole population and
   the search index have landed and every table derived from them is built
-  (`../loaders/README.md` § Progressive catalog load). The search index is
+  ([Progressive catalog load](../loaders/README.md#progressive-catalog-load)). The search index is
   deliberately not awaited in `load` — 4.4 MB gzipped feeding only search,
   chart labels and designations, none of it on the first-paint path. Its
   fetch is issued before the catalogue is awaited and nothing attaches to
@@ -58,8 +58,8 @@ attribute writers here.
   back — and it is ONE map filled in place, because every card provider
   and chart binding captures it before the index lands. `derivedGeneration()`
   counts those fills so a retained surface can tell that a table moved
-  under it (`../focus-card/README.md` § Surfaces retained over a growing
-  catalogue); `card()`'s `tablesComplete` leg answers whether they are all
+  under it ([Surfaces retained over a growing catalogue](../focus-card/README.md#surfaces-retained-over-a-growing-catalogue));
+  `card()`'s `tablesComplete` leg answers whether they are all
   in, which is what withholds a half-built card. The render layers
   stay shell-wired (`attach` returns null), and
   the legs reach the shell-owned machinery — StarFrame positions, park
@@ -84,7 +84,7 @@ attribute writers here.
   size-terms → colour-pass routing the pick mirror shares. The vertex
   stage's compile-time pass specialization keys on the same constants. `starPassRouting` reads the
   split both ways — undimmed and dimmed — for the eclipse debug HUD
-  (`../debug/README.md` § Eclipse routing); nothing in the render path
+  ([Eclipse routing](../debug/README.md#eclipse-routing--finding-a-band-you-cannot-see)); nothing in the render path
   calls it.
 - `star-color-routing-pure.ts` (+ test) — `bestApsisTeff`: picks
   gspphot over gspspec for the per-instance `iTeffApsis` attribute.
@@ -106,7 +106,7 @@ attribute writers here.
 
 ## Physical-luminance emission
 
-Stars emit into the scene-wide HDR unit (`../hdr/emission/README.md` § Unit).
+Stars emit into the scene-wide HDR unit ([Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes)).
 Brightness is the **peak** of the profile, `vPeakL`, computed per
 instance in the vertex shader from the star's apparent magnitude:
 
@@ -115,14 +115,14 @@ vPeakL = pointSourcePeakTsl(uExposure, appMag, 0.5 * physSize)
 ```
 
 The √Δm appSize curve and the plate-scale exaggeration `K` are purely a
-display kernel normalised to peak 1 (`perceptual-disc/README.md` § Star
-intensity profile) — they size the star and do not encode how bright it
+display kernel normalised to peak 1 ([Star intensity profile](perceptual-disc/README.md#star-intensity-profile))
+— they size the star and do not encode how bright it
 is. **`K` therefore
 stops being a calibration knob**, trading only legibility against how
 crowded a dense field looks.
 
 The radius argument is the **unclamped** `physSize` in **CSS** pixels;
-`../hdr/emission/README.md` § Unit has why, and it applies whichever term wins
+[Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes) has why, and it applies whichever term wins
 `max(appSize, physSize)` so nothing pops at the disc/glow split.
 
 Two consequences specific to this pipeline:
@@ -145,7 +145,7 @@ number served both.
 
 Validation compares **per-pixel** luminance, never integrals: the
 K-exaggerated footprint over-counts a star's frame flux by design
-(`docs/science-hdr-pipeline.md` § 1, § 8). The exposure statistic needs
+([§ 1,](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) § 8). The exposure statistic needs
 that integral back, so `vFluxPeakL` carries the same kernel divided by its
 own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
 `../webgpu/perceptual-disc-tsl.ts`, and `../hdr/attachments/README.md` for what reads it.
@@ -154,7 +154,7 @@ own area integral `Φ(n)·D²` — `perceptualDiscFluxIntegral` in
 none.** That split is not about stars — it is the general rule read off
 the unit: an emitter claims coverage exactly where it emits surface
 brightness over its own physical footprint rather than a PSF peak over an
-exaggerated kernel (`../hdr/attachments/README.md` § The unit). A resolved
+exaggerated kernel ([The unit](../hdr/attachments/README.md#the-unit)). A resolved
 photosphere is the one resolved surface in the model the exposure pin used
 to be unable to see, and a star at closest approach rendered as a flat
 blown-out white disc because of it. The claim is `step(uCoreThreshold,
@@ -208,14 +208,14 @@ Rendering is **three passes over the same instanced geometry**:
   `local-pass/README.md`), reported as `'legibility'`: the gate walks a
   bounded window of the Sol-distance-sorted index and skips the whole draw
   call when no star is close enough to subtend `RESOLVED_DISC_MIN_PX`; the
-  window derivation is `star-frame/README.md` § `forEachStarNearCamera`.
+  window derivation is [`forEachStarNearCamera`](star-frame/README.md#foreachstarnearcamera--sorted-distance-binary-search-window).
   The floor is that constant and not the shared
   `FEATURE_LEGIBILITY_MIN_PX` — below it the bleed-through the mask stamps
   against is too small to see, and a wider floor would reject frames the
   mask does change. The entry is registered **after** the star local
   cluster's, so membership is this frame's, and it declares the binary
-  walk's rate as anchored content (`../scene/README.md` § Anchored
-  content). Everything else in this folder keeps explicit lifecycle calls
+  walk's rate as anchored content ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)).
+  Everything else in this folder keeps explicit lifecycle calls
   in `stellata.ts`.
 
   **The predicate refuses above the walk while the `coreMask` lever is
@@ -234,7 +234,7 @@ Rendering is **three passes over the same instanced geometry**:
   chart-mode → colour-mode swap-back, so the two sites can't drift.
   **The pass writes no depth of its own**: the core-mask draw already
   stamped the same fragments several renderOrders earlier
-  (`../webgpu/star/README.md` § The disc draw writes no depth), which is
+  ([The disc draw writes no depth](../webgpu/star/README.md#the-disc-draw-writes-no-depth)), which is
   what keeps all three pipelines' early-z.
 - **Glow pass** (`renderOrder = 1`). Stars where `vPhysRatio < 0.5`.
   Additive blending + depthTest but no depthWrite, so overlapping
@@ -339,7 +339,7 @@ Chart mode swaps the disc and glow materials to `MultiplyBlending` +
 disables depth for an ink-on-paper look against the light canvas, and replaces
 the super-Gaussian profile with flat hard-edged discs sized linearly
 by magnitude. It is non-photometric and bypasses the HDR seam
-entirely, so it emits no luminance (`../hdr/README.md` § Chart mode).
+entirely, so it emits no luminance ([Chart mode](../hdr/README.md#chart-mode--full-bypass)).
 
 ## Sizing and profile — `perceptual-disc/`
 

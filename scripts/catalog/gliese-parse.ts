@@ -1,6 +1,6 @@
 // Parser and per-record lookup for data/gliese/gliese_v70a.tsv — the printed
 // first-order tier under Tycho-2 in the V cascade of
-// docs/catalog-driver.md § 5.
+// /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
 import { normaliseGjKey } from './record/catalog-pure';
@@ -22,7 +22,7 @@ const COLUMNS = [
  *  because the two are separate tiers of the parallax cascade sitting on either
  *  side of SIMBAD, so a consumer that ignored it would silently invert an
  *  estimate as though it were a measurement — see
- *  `data/gliese/README.md` § The parallax is half the column. */
+ *  `/data/gliese/README.md#the-parallax-is-half-the-column-and-the-other-half-is-not-astrometry`. */
 export interface GlieseParallax extends MeasuredParallax {
   trigonometric: boolean;
 }

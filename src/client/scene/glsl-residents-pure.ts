@@ -1,6 +1,5 @@
 // Objects in a scene graph carrying a raw-GLSL material, which the WebGPU
-// renderer cannot build a pipeline for (../webgpu/README.md § One scene
-// per boot).
+// renderer cannot build a pipeline for (../webgpu/README.md#one-scene-per-boot).
 
 import type * as THREE from 'three';
 

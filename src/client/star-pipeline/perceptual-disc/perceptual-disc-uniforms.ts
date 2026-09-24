@@ -1,6 +1,6 @@
 // Canonical uniform shape for the ../../webgpu/perceptual-disc-tsl.ts chunk. See
-// ./README.md for the kernel, and ../../solar-system/planets/README.md
-// § The two layers for the planet-glare consumer.
+// ./README.md for the kernel, and ../../solar-system/planets/README.md#the-two-layers
+// for the planet-glare consumer.
 
 import * as THREE from 'three';
 

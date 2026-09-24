@@ -4,7 +4,7 @@ Fetch + sync for the nine per-planet osculating-element tables that give the
 runtime a Horizons-grade ephemeris across 1900–2100. Data contract,
 provenance, units, and the measured accuracy table live in
 `data/ephemerides/README.md`; the runtime side is
-`src/client/solar-system/ephemerides/README.md` § Horizons element tables.
+[Horizons element tables](/src/client/solar-system/ephemerides/README.md#horizons-element-tables).
 This folder owns the scripts.
 
 - `planet-element-roster.ts` — the nine targets, their sample cadence, and
@@ -22,8 +22,8 @@ This folder owns the scripts.
   § Unwrapping the mean longitude.
 - `fetch-planet-elements.ts` — `pnpm run fetch:ephemerides`, optionally
   narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`).
-  Manual and infrequent; **not** in the build chain (`data/README.md`
-  § Frozen external data). Needs network. Writes
+  Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
+  Needs network. Writes
   `data/ephemerides/{id}.json` and exits non-zero if any table misses its
   accuracy bound. See § Cadence.
 - `sync-ephemerides.ts` (+ `-pure.ts`) — mirrors the committed JSONs to
@@ -90,7 +90,7 @@ its own file and reconstructs positions at:
 
 Both are compared against a fresh Horizons VECTORS query in the same frame.
 Cadences are then set so the midpoint figure stays under ~60% of the bound;
-`data/ephemerides/README.md` § Accuracy carries the per-planet results. The
+[Accuracy](/data/ephemerides/README.md#accuracy) carries the per-planet results. The
 run fails loudly rather than shipping a table that misses its claim.
 
 **Interpolation is cubic (Catmull–Rom), not linear**, and the two boundary

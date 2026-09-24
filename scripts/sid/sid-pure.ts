@@ -1,10 +1,10 @@
 // Pure algebra for the SID registry: designation grammar, canonical-key
 // ladder, same-as classes, allocation, ledger/retirements codecs, and the
-// head-snapshot + append-only checks. Contracts in docs/sid.md §§ 3-5.
+// head-snapshot + append-only checks. Contracts in /docs/sid.md#3-designation-namespaces through /docs/sid.md#5-synthetic-key-churn-wds-re-subdivision.
 
 import { createHash } from 'node:crypto';
 
-// ---- Designation grammar (docs/sid.md § 3) -------------------------------
+// ---- Designation grammar (/docs/sid.md#3-designation-namespaces) -------------------------------
 
 const NAMESPACE_RE = /^[a-z0-9_]+$/;
 
@@ -34,7 +34,7 @@ export function isValidDesignation(d: string): boolean {
   }
 }
 
-// ---- Star designation extraction (docs/sid.md § 3, scripts/sid/README.md) -
+// ---- Star designation extraction (/docs/sid.md#3-designation-namespaces scripts/sid/README.md) -
 
 /** Runtime synthetic-companion key prefix (`Star.syntheticId`,
  *  `catalog-row-index-map.json` `bySynth`); stripped to the `synth:` key. */
@@ -68,8 +68,8 @@ export interface StarDesignationFields {
   /** Further HD / HR numbers this record answers to, beyond the one the
    *  single-valued field carries. Carried only where the pair is unresolved, so
    *  the record renders both components' light and both numbers reach it
-   *  (`scripts/catalog/classic-ids/label-merge/README.md` § An alias stops
-   *  at the blend) —
+   *  (`/scripts/catalog/classic-ids/label-merge/README.md#an-alias-stops-at-the-blend`)
+   * —
    *  which is why both key the same-as class. Required, not optional: this
    *  extractor has to derive one designation set for `sid:allocate` and the
    *  spine parity gate alike, and an omitted field is exactly the silent
@@ -108,7 +108,7 @@ export function starDesignations(f: StarDesignationFields): string[] {
   return d;
 }
 
-// ---- Canonical-key ladder (docs/sid.md § 4.2) ----------------------------
+// ---- Canonical-key ladder (/docs/sid.md#42-canonical-key--stability-first) ----------------------------
 
 const LADDER_BEFORE_GAIA = ['sol', 'hip', 'hd', 'hr', 'gl'] as const;
 const LADDER_AFTER_GAIA = ['synth', 'cloud', 'lg', 'shell'] as const;
@@ -122,7 +122,7 @@ export function namespaceRank(ns: string): number {
   if (post >= 0) return GAIA_RANK + 1 + post;
   throw new Error(
     `namespace "${ns}" has no canonical-key ladder position — ` +
-      `extend the ladder in scripts/sid/sid-pure.ts (docs/sid.md § 10 step 1)`,
+      `extend the ladder in scripts/sid/sid-pure.ts (/docs/sid.md#10-adding-a-future-object-type--the-recipe step 1)`,
   );
 }
 
@@ -165,7 +165,7 @@ export function canonicalKeyOf(designations: Iterable<string>): string {
   return best;
 }
 
-// ---- Ledger / retirements codecs (docs/sid.md § 4.3) ---------------------
+// ---- Ledger / retirements codecs (/docs/sid.md#43-ledger--datasidledgertsv) ---------------------
 
 export const SID_KINDS = ['star', 'cloud', 'galaxy', 'planet', 'shell', 'probe'] as const;
 export type SidKind = (typeof SID_KINDS)[number];
@@ -275,7 +275,7 @@ export function parseReinstatementsTsv(text: string): ReinstatementRow[] {
   );
 }
 
-/** Effective retirement state (docs/sid.md § 4.3): a sid is retired iff
+/** Effective retirement state (/docs/sid.md#43-ledger--datasidledgertsv): a sid is retired iff
  *  it has strictly more retirement rows than reinstatement rows. Counting
  *  is order-independent across the two append-only files, so a
  *  retire → reinstate → re-retire cycle needs no cross-file ordering.
@@ -301,7 +301,7 @@ export function effectiveRetirements(
 }
 
 /** Retired-sid → successor-sid pairs for the runtime resolver's
- *  successor-following (docs/sid.md § 9.4), sorted by retired sid.
+ *  successor-following (/docs/sid.md#94-migration-semantics--exact-table), sorted by retired sid.
  *  Only effectively-retired sids with a successor appear. */
 export function sidSuccessorPairs(
   retirements: RetirementRow[],
@@ -359,7 +359,7 @@ export function parseShellObjectsTsv(text: string): SolObjectRow[] {
   return parseObjectMintTsv(text, SHELL_OBJECTS_HEADER, 'shell-objects.tsv', 'shell');
 }
 
-// ---- Structural validation (docs/sid.md § 4.5 check 1) -------------------
+// ---- Structural validation (/docs/sid.md#45-ci-guard check 1) -------------------
 
 export function validateLedger(rows: LedgerRow[]): string[] {
   const errors: string[] = [];
@@ -471,7 +471,8 @@ export function validateReinstatements(
   return errors;
 }
 
-// ---- Head snapshot + append-only check (docs/sid.md §§ 4.3, 4.5) ---------
+// ---- Head snapshot + append-only check ----
+// /docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard
 
 export interface HeadTriple {
   rows: number;
@@ -556,7 +557,7 @@ export function checkAppendOnly(
   if (prefixSha !== base.sha256) {
     errors.push(
       `${label}: frozen prefix (first ${base.rows} rows) was edited, deleted from, or ` +
-        `reordered — the ledger is append-only (docs/sid.md § 4.5)`,
+        `reordered — the ledger is append-only (/docs/sid.md#45-ci-guard)`,
     );
   }
   if (opts.newSidsPastBaseMax) {
@@ -570,7 +571,9 @@ export function checkAppendOnly(
   return errors;
 }
 
-// ---- Same-as classes + allocation (docs/sid.md §§ 4.1, 4.4, 5) -----------
+// ---- Same-as classes + allocation ----
+// /docs/sid.md#41-same-as-equivalence-graph, /docs/sid.md#44-allocation,
+// /docs/sid.md#5-synthetic-key-churn-wds-re-subdivision
 
 export class UnionFind {
   private parent = new Map<string, string>();
@@ -731,7 +734,7 @@ export function allocate(input: AllocateInput): AllocateResult {
         `class {${membersByRoot.get(root)!.join(', ')}} matches only retired sids ` +
           `(${rows.map((r) => r.sid).join(', ')}) — a retired object reappeared; ` +
           `append a data/sid/reinstatements.tsv row (the object resumes its ` +
-          `original sid) or bridge/merge if its identity changed (docs/sid.md § 4.3)`,
+          `original sid) or bridge/merge if its identity changed (/docs/sid.md#43-ledger--datasidledgertsv)`,
       );
     }
   }
@@ -821,7 +824,7 @@ export type ResolveInput = Omit<AllocateInput, 'today'>;
  *  treating any object that would mint a new row (or is keyless / conflicts)
  *  as an error and leaving its sid at 0 (NO_SID). This is the resolver the
  *  artifact emitters use — the build never mints; `sid:allocate` is the sole
- *  ledger writer (docs/sid.md § 4.4). */
+ *  ledger writer (/docs/sid.md#44-allocation). */
 export function resolveSids(input: ResolveInput): SidResolution {
   const result = allocate({ ...input, today: '' });
   const mintedSids = new Set(result.minted.map((r) => r.sid));

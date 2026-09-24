@@ -126,7 +126,7 @@ const XYZ_TO_LIN_SRGB: readonly (readonly number[])[] = [
  * shader wants `Y = 1` and a Y-normalised triplet runs to 1.88 at the
  * blue end — outside what the uint8 table can hold. The shader divides
  * by `dot(rgb, LUMA_WEIGHTS)` instead; see
- * `src/client/star-pipeline/README.md` § Physical-luminance emission.
+ * `/src/client/star-pipeline/README.md#physical-luminance-emission`.
  */
 export function blackbodyToLinearSrgb(tempK: number): [number, number, number] {
   // Trapezoidal integration over the visible band.
@@ -174,7 +174,7 @@ export function blackbodyToLinearSrgb(tempK: number): [number, number, number] {
  * Ballesteros → Planck → CIE 1931 → linear sRGB, peak-normalised.
  *
  * The population tints of the volumetric layers take this route
- * (`src/client/milkyway/calibration/README.md` § Population colours), so
+ * (`/src/client/milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited`), so
  * a component's hue and a single star's are the same function of B-V.
  * **A stellar population is not a blackbody** — what survives the chain
  * is the colour index, not the SED behind it.

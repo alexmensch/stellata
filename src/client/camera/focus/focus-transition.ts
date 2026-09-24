@@ -58,7 +58,7 @@ export type FocusLerpState = ArrivalState;
  * flew in with rather than acquiring one from the new view axis. The
  * caller must re-derive `camera.up` from the landed quaternion — the
  * slerp writes the quaternion alone. See
- * `../controls/input/README.md` § Captured-endpoint animations.
+ * `../controls/input/README.md#captured-endpoint-animations`.
  */
 export function newFocusLerpFrom(
   cameraPos: THREE.Vector3,

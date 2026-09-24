@@ -1,6 +1,6 @@
 // Reads the committed WGSN tables back and answers, per catalog record,
 // which approved name and which glyph-bearing designations reach it.
-// See README.md § The record-side join.
+// See README.md#the-record-side-join.
 
 import { GREEK_GLYPHS } from './greek-forms';
 import { foldNameKey } from './wgsn-normalise-pure';
@@ -28,7 +28,7 @@ export interface WgsnDesignationRow {
 }
 
 /** How each spine `proper` no WGSN name matches is routed
- *  (`data/iau-wgsn/athyg_proper_dispositions.tsv`, docs/star-naming.md § 2).
+ *  (`data/iau-wgsn/athyg_proper_dispositions.tsv`, /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them).
  *  `gould-designation` joins the string tier rather than the structured one:
  *  the authority carries only one of the three (82 G. Eri), and both render
  *  the identical form. */

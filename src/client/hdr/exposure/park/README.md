@@ -1,7 +1,7 @@
 # Parking the measurement — when the statistic may stop being taken
 
 The state machine deciding when the adaptation measurement's GPU work may
-stop, and how it wakes. `../README.md` § Adaptation owns what the
+stop, and how it wakes. [Adaptation](../README.md#adaptation--the-frame-measures-itself) owns what the
 measurement then does; `../reduction/README.md` owns the chain this parks.
 
 ```
@@ -25,7 +25,7 @@ with the applied cut settled where it says, the reduction's draws and the
 statistic attachment's emitter writes both stop. What stays: the
 attachment's **clear** (it must read zero, not stale) and the
 **readback**, which keeps the in-flight cadence `readbackPending` reports
-the same across a park (`../reduction/README.md` § Where it runs). The machine ticks from
+the same across a park ([Where it runs](../reduction/README.md#where-it-runs-in-the-frame)). The machine ticks from
 `measure()` once per **rendered** frame.
 
 - **No cut.** The measurement is most expensive exactly here — the
@@ -54,7 +54,7 @@ under the JND.** A parked frame runs no reduction and lands nothing, and a
 probe opens the writes for its own frame *before* the chain runs, so no
 landing is partial for the park's own reasons. What can be missing is a
 diffuse emitter the brightness skip took out of the frame
-(`docs/science-hdr-pipeline.md` § 3.5) — and that skip is admissible only
+([§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound)) — and that skip is admissible only
 where the share it removes shifts `dm` by less than `CADENCE_JND_MAG`,
 which is what keeps this argument short. A partial `L̄` still at or above
 `Lw` proves the floor governs exactly as a full one does; a partial `L̄` a
@@ -71,7 +71,7 @@ direction that takes the frame *out* of the floor regime.
 be that nothing drawing a kernel or a diffuse column writes a mask, so a
 parked frame could not hide a rising coverage in the star field. A
 **resolved** star disc now claims coverage like any other resolved surface
-(`../../attachments/README.md` § The unit), and the floor regime is the
+([The unit](../../attachments/README.md#the-unit)), and the floor regime is the
 app's own default view — precisely where a star is the only masked thing
 that could appear. So the pin rides the same wake bound as `L̄` rather than
 a separate proof, and § Wake below is the whole of it.
@@ -160,7 +160,7 @@ not govern alone until 6.85 %, a factor 2.8 in camera distance further
 in. No free-fly approach crosses a band that wide inside the interval
 plus the one frame the probe waits for. The exception is a warp, which
 covers the whole band in one jump and whose landing SNAPS the slew rather
-than ramping it (`../README.md` § Adaptation), so a late probe there is a
+than ramping it ([Adaptation](../README.md#adaptation--the-frame-measures-itself)), so a late probe there is a
 one-frame flash on arrival rather than a sustained over-bright scene.
 
 ## The lever
@@ -173,7 +173,7 @@ app default view is the floor regime, which parks, and a sweep's exposure
 hold collapses a probe to parked, so `debug.priceFrame`'s
 `statisticWrites` row at Sol prices an already-parked frame however the
 sweep is called. The headless runner reaches it as `--no-park`
-(`../../../../../scripts/perf/README.md` § Invocation); `setHeld` keeps its
+([Invocation](../../../../../scripts/perf/README.md#invocation)); `setHeld` keeps its
 own semantics on top, since a disabled machine has no probe to collapse.
 
 ## What the park does NOT save
@@ -181,8 +181,8 @@ own semantics on top, since a disabled machine has no probe to collapse.
 The floor-regime park stops the whole measurement periodically and must
 keep probing to notice the scene changing, so its steady-state saving is
 roughly 60 % of the parked-frame figure rather than all of it
-(`../../../debug/frame-cost/passes/README.md` § These rows price the fully
-parked frame). Taking the remainder needs the measurement to stay *live* for the
+([These rows price the fully parked frame](../../../debug/frame-cost/passes/README.md#these-rows-price-the-fully-parked-frame-not-the-duty-cycle)).
+Taking the remainder needs the measurement to stay *live* for the
 few emitters that supply the frame mean while the 390k-instance field draw
 stops writing at all — `stellata-8cg.34`, which is a different mechanism
 and not a tuning of this one.

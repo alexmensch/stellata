@@ -8,7 +8,7 @@ description: Take a GPU frame-cost measurement with the human-armed headless per
 `pnpm run perf` boots the app in Playwright's full Chromium build, calls the
 in-app `debug.priceFrame()` differential at a canon vantage, and prints the
 table. Reference: `scripts/perf/README.md`. Interpretation authority:
-`docs/render-rules.md` § Measurement canon.
+[Measurement canon](/docs/render-rules.md#9-measurement-canon).
 
 ## When
 
@@ -17,7 +17,7 @@ table. Reference: `scripts/perf/README.md`. Interpretation authority:
 - Any perf claim in a PR body. An unmeasured perf claim is a hypothesis and
   has to be called one.
 
-**Which run a PR owes is its tier** (`RELEASING.md` § Perf pin owns the
+**Which run a PR owes is its tier** ([Perf pin](/RELEASING.md#perf-pin) owns the
 table). Tier 0 — the diff reaches no per-frame code — runs nothing and
 argues reachability in prose; do not arm for it. Tier 1 — per-frame code
 touched, draw counts and pass structure unchanged — is `--mode dwell
@@ -29,7 +29,7 @@ pin rows it does not visit print as not measured and fail nothing).
 **Match `--frames` to the count the pin's own rows carry** — today 960,
 readable off any row — or the run refuses every row as two dwell lengths
 rather than marking one, and the arm is spent for nothing. A mark still does
-not stand on one run (`RELEASING.md` § What a mark means). Tier
+not stand on one run ([What a mark means](/RELEASING.md#what-a-mark-means)). Tier
 2 — passes, buffers, draw counts, the catalogue
 or the instrument — is the full cold pin below. Arming for a sweep the
 diff cannot justify is the cost this tiering exists to stop: it spends
@@ -82,7 +82,7 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 
 ## Flags
 
-`scripts/perf/README.md` § Invocation is the reference. The shapes:
+[Invocation](/scripts/perf/README.md#invocation) is the reference. The shapes:
 
 - `pnpm run perf -- --scenario sol --passes localDepth,reduction --budget-ms 90000`
 - `pnpm run perf -- --scenario all --backend webgpu`
@@ -118,7 +118,7 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
   all refused shows a table with no `✗` in it. Taking the pin in the same
   run as `--against-pin` needs `--accept <row>:<bead>` for each `✗` — the
   compute row under its own key — or nothing is written.
-  Rules: `RELEASING.md` § Perf pin; mechanics: `scripts/perf/pins/README.md`.
+  Rules: [Perf pin](/RELEASING.md#perf-pin); mechanics: `scripts/perf/pins/README.md`.
 - `pnpm run perf:pin -- <run.json>... [--pin <path>] [--accept <row>:<bead>]... [--dry-run]`
   — the pin from saved run files, offline: no browser, no arm. **A pin run
   refused for one row is never re-armed.** Name every saved run of the same
@@ -127,7 +127,7 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
   a Tier 1 `--against-pin` run of the same commit, or a mark you have
   decided to accept all become a keystroke here. `--dry-run` first: it
   prints the rows, their runs and the verdicts against the pin being
-  replaced. `scripts/perf/pins/README.md` § From saved runs.
+  replaced. [From saved runs](/scripts/perf/pins/README.md#from-saved-runs).
 - `--headed` for a headed control run. Headed and headless never compare.
 
 A branch predating PR 469 has no `scripts/perf` at all, so measuring it means
@@ -147,15 +147,15 @@ consumed, so a typo costs no arm.
 its table, and exit 1 is the part that says the page threw inside the
 measurement.
 
-`docs/render-rules.md` § Measurement canon and
-`src/client/debug/frame-cost/README.md` § Reading a row. The short form: a
+[Measurement canon](/docs/render-rules.md#9-measurement-canon) and
+[Reading a row](/src/client/debug/frame-cost/README.md#reading-a-row). The short form: a
 `savedMs` under `noiseMs` or `bracketMs` did not resolve; `baselineLimitMag`
 and `disabledLimitMag` must agree or the row priced a different scene; never
 compare across `method`, `bufferMpx`, headed/headless, browsers, or a dev
 server against a production build; never sum the column.
 
-Per mode (`scripts/perf/dwell/README.md`, `scripts/perf/README.md` § Sweep
-mode, `scripts/perf/diff/README.md` § Reading the table):
+Per mode (`scripts/perf/dwell/README.md`, [Sweep mode,](/scripts/perf/README.md#sweep-mode)
+[Reading the table](/scripts/perf/diff/README.md#reading-the-table)):
 
 - **`vsyncClamped` true throws the dwell away.** A p50 sitting on any whole
   number of the display period the run measured, inside a spread tighter than
@@ -212,7 +212,7 @@ none of them tried and succeeded — `iqrMs`, the resolved-sample count and
 mw120 while it was defeated at sol. The frame band sits under its own repeat
 scatter: 4 of 9 same-tree pairs at mw120 and 6 of 11 at sol land outside it,
 reaching 1.272 ms. So re-arm the identical command and quote both runs;
-`RELEASING.md` § What a mark means is the rule and stellata-8cg.74 the
+[What a mark means](/RELEASING.md#what-a-mark-means) is the rule and stellata-8cg.74 the
 evidence. Compute rows are floored per vantage against exactly this scatter
 and need no second run.
 
@@ -236,7 +236,7 @@ readback frames crosses a half, wall p50 flat at 16.70 throughout.
 
 `--baseline` and `--against-pin` now **refuse** a pair whose readback rates
 moved on a split frame, so this mostly arrives as a refusal rather than as a
-number you have to disbelieve — `scripts/perf/dwell/README.md` § Dwell mode
+number you have to disbelieve — [Dwell mode](/scripts/perf/dwell/README.md#dwell-mode--the-whole-frame-at-one-vantage)
 carries the bound and why it is gated on the frame being split. Two gaps the
 guard leaves: a pin carries no counters of its own, and a rate approaching 1
 erases its own evidence as every frame becomes a readback frame. So a large
@@ -266,7 +266,7 @@ say in the announcement what has run recently.
 
 Two commands write here, and this section governs both: `pnpm run perf`, and
 `pnpm run survivors` — the non-clock survivor-count read, which needs no arm
-(`scripts/perf/README.md` § Survivor counts).
+([Survivor counts](/scripts/perf/README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument)).
 
 Write every run under the `.perf-runs/<date>/` of **the checkout you will
 commit from** — the `--json` path. Never the

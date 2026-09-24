@@ -98,7 +98,7 @@ function simulate(count: number, wantedPerFrame: readonly boolean[]) {
     const plan = planRefill(cursor, wanted);
     if (plan.dispatch) {
       // The one region holds only the class built last frame, so the march
-      // has to want exactly that one (README.md § One region).
+      // has to want exactly that one (README.md#one-region-and-the-frame-order-behind-it).
       expect(listQuarter).toBe(plan.quarter);
       for (const star of list) {
         stamps[star] = generation;

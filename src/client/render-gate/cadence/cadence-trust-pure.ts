@@ -1,6 +1,6 @@
 // The cadence safety net: audit each scheduled frame against what the
 // budget promised, and shorten the budget when a declaration was wrong.
-// See README.md § The safety net.
+// See README.md#the-safety-net.
 
 import {
   CADENCE_JND_FLUX_FRAC,

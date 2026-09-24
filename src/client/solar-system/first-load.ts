@@ -1,6 +1,6 @@
 // Canonical no-URL first-load view: camera parked 5 AU from Sol aimed at
 // the galactic centre, galactic-level, with the HUD on. See
-// src/client/solar-system/README.md § First-load default.
+// /src/client/solar-system/README.md#first-load-default-and-mindistance-relaxation.
 
 import { applyDecodedView, type DecodedView, type IdMaps } from '../util/url-state';
 import { AU_PC } from '../util/astronomy-constants';

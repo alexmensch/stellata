@@ -68,7 +68,7 @@ clamp is named for (`../ephemerides/README.md`). A
 running clock **pins at the bound** with its rate intact: the readout
 freezes there, no invisible overshoot accrues (the clock re-anchors at
 the bound), and the first opposite-direction transport step moves off
-it immediately. See docs/science-solar-system.md § Solar system for the
+it immediately. See [Solar system](/docs/science-solar-system.md#solar-system) for the
 decision record.
 
 ## Timescales
@@ -106,7 +106,7 @@ The split that makes eclipses work is therefore:
 | the clock `t`, the readout, star epochs, binaries | UT | what a user means by a date, and what historical records give |
 | planet + moon ephemerides | TT = UT + ΔT | the element sources are defined there |
 | every body's spin except Earth's | TT | uniform rotators, the IAU convention's own argument |
-| **Earth's spin** | **UT** | ΔT *is* Earth's rotational lag — see `../planets/rotation/README.md` § Earth is not a linear row |
+| **Earth's spin** | **UT** | ΔT *is* Earth's rotational lag — see [Earth is not a linear row](../planets/rotation/README.md#earth-is-not-a-linear-row) |
 
 `jdTdbToT` is a fixed-point iteration rather than a subtraction, because
 ΔT depends on the epoch being solved for. It converges immediately: ΔT
@@ -276,7 +276,7 @@ so `←`/`→` move the caret and `Space` types a space.
 
 The `.meta` slot lives in the right-hand control column's bottom group
 (`.ui-top-bottom`), so an expanding scrubber pushes the focus card up
-through normal flex layout — see `../../ui/README.md` § Layout containers.
+through normal flex layout — see [Layout containers](../../ui/README.md#layout-containers-ui-top-left-ui-top-ui-bottom).
 
 It drives the `VirtualClock`, building its transport row from `time.ts`'s
 `TRANSPORT_BUTTONS`. The controls render as monochrome line-art SVG glyphs
@@ -290,6 +290,6 @@ panel background carries an explicit light-mode override in `styles.css`.
 The catalogue moves with the scrubbed clock too — star positions
 re-advance off their J2016.0 baseline on 1/20-Julian-year bucket
 crossings (`../../loaders/README.md` on `epoch-advance-pure.ts`;
-docs/science-catalog-ingestion.md § Current-epoch star positions) — but this
+[Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)) — but this
 widget stays
 clock-only and never touches positions itself.

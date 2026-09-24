@@ -59,10 +59,10 @@ over realistic sightlines). `DENSITY_MAX` is a **fixed ceiling**
 used to autotune to the 99.95th percentile (0.0053), which silently
 clipped molecular-cloud cores 25× — peak cloud columns encoded at
 0.06–0.6 mag A_V where the raw field carries 0.8–2.7 mag
-(`docs/science-molecular-clouds.md` § 2.2). Changing the ceiling re-scales
+([§ 2.2](/docs/science-molecular-clouds.md#22-encoding-ceiling--the-fixed-density_max)). Changing the ceiling re-scales
 the decode of every voxel, so a rebuild ships with a catalog rebuild
 (build-time de-extinction integrates the same encoded grid —
-`scripts/catalog/distance/dust/README.md` § Build-time de-extinction).
+[Build-time de-extinction](/scripts/catalog/distance/dust/README.md#build-time-de-extinction)).
 
 The build also runs a per-cloud column check (`zucker` block in the
 manifest): peak A_V columns through each Zucker 2021 profiled cloud

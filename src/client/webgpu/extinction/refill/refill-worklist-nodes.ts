@@ -1,6 +1,6 @@
 // The refill's shared slots: the stamps, the fused slot/worklist table and
 // the uniforms that arm and address them.
-// README.md § The compaction appends the worklist.
+// README.md#the-compaction-appends-the-worklist.
 
 import { StorageBufferAttribute, type Node } from 'three/webgpu';
 import { storage, uint, uniform } from 'three/tsl';
@@ -10,13 +10,13 @@ import { refillBucketCapacity } from './refill-buckets-pure';
 export type UintStorageNode = ReturnType<typeof storage<'uint'>>;
 
 /** Bound by the compaction kernel from its first frame, so both slots sit
- *  over a placeholder until the prepass owns real buffers (../README.md
- *  § One owner for every shared slot). */
+ *  over a placeholder until the prepass owns real buffers (../README.md#one-owner-for-every-shared-slot).
+ * */
 export class RefillWorklistNodes {
   /** Per star, the camera generation its A_V was marched at. */
   readonly stamps: UintStorageNode;
   /** Star → slot over `[0, count)`, then the worklist
-   *  (../../star/compaction/README.md § Binding budget). Address it through
+   *  (../../star/compaction/README.md#binding-budget). Address it through
    *  `slotOf`, `bucketOf` and `worklistElement`, never by raw index. */
   readonly table: UintStorageNode;
   readonly arm = uniform(0, 'uint');

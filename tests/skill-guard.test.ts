@@ -1,4 +1,4 @@
-// Behaviour of scripts/hooks/skill-guard.sh — see scripts/hooks/README.md § How skill-guard works.
+// Behaviour of scripts/hooks/skill-guard.sh — see /scripts/hooks/README.md#how-skill-guard-works.
 
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readdirSync, realpathSync, rmSync } from 'node:fs';

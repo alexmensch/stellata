@@ -67,7 +67,7 @@ The target carries an explicit `FloatType` `DepthTexture` because
 reversed-z only infers `Depth32Float` for the **canvas**; three
 auto-creates `Depth24Plus` for a render target regardless, which voids
 the local depth pass's K = 1 bracket by ~262 AU at Neptune's ring
-(`../../local-depth/bracket/README.md` § Precision analysis). That
+([Precision analysis](../../local-depth/bracket/README.md#precision-analysis)). That
 assignment is a **request**. Nothing here confirms it landed; a throw
 testing the fields this same function writes could never fire.
 
@@ -90,7 +90,7 @@ redundant.
 
 ## The gate becomes the output struct
 
-The contract is `../../hdr/attachments/README.md` § The gate. WebGPU
+The contract is [The gate](../../hdr/attachments/README.md#the-gate--chrome-is-safe-by-default). WebGPU
 bakes the attachment set into the pipeline, so it is expressed in
 node-material terms, by two mechanisms:
 

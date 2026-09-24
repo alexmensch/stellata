@@ -1,9 +1,9 @@
 // Whether this browser can run the WebGPU renderer at all. Capability
-// only — never user-agent. See README.md § Two ways to fail, one page.
+// only — never user-agent. See README.md#two-ways-to-fail-one-page.
 
 /** `navigator.gpu` as far as the probe uses it — declaring it structurally
  *  keeps this module off the WebGPU typings, so it stays in the entry
- *  bundle (`../README.md` § Import boundary) where the gate needs it. */
+ *  bundle (`../README.md#import-boundary--nothing-webgpu-in-the-entry-bundle`) where the gate needs it. */
 interface GpuCapableNavigator {
   gpu?: { requestAdapter(): Promise<unknown> };
 }
@@ -18,7 +18,7 @@ export type WebGpuVerdict =
   | 'no-adapter';
 
 /** Ask the browser, never infer from its name. Why a rejection is a
- *  verdict rather than a throw: README.md § Two ways to fail, one page. */
+ *  verdict rather than a throw: README.md#two-ways-to-fail-one-page. */
 export async function detectWebGpuSupport(
   nav: GpuCapableNavigator = navigator as GpuCapableNavigator,
 ): Promise<WebGpuVerdict> {

@@ -46,5 +46,5 @@ orb6_orbits.txt    ~1.1 MB, LFS. Sixth catalog of visual binary
 
 See [`scripts/binaries/README.md`](../../scripts/binaries/README.md)
 for the seven-stage cross-match pipeline and
-`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline for
+[Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline) for
 the science rationale.

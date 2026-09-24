@@ -1,5 +1,5 @@
 // Authored ink values of the paper-chart palette, shared by the layers that
-// swap into it. See README.md § Chart palette.
+// swap into it. See README.md#chart-palette.
 
 import * as THREE from 'three';
 
@@ -15,8 +15,8 @@ export const CHART_REFERENCE_INK = 0x3a3530;
 export const CHART_PAPER = 0xf5f2ea;
 
 /** Read the authored paper in the space the renderer clears in, so the
- *  canvas receives the display value on either backend. See README.md
- *  § Chart palette — the clear bypasses every shader, so nothing else
+ *  canvas receives the display value on either backend. See README.md#chart-palette
+ * — the clear bypasses every shader, so nothing else
  *  encodes it. `string` because that is how three types a renderer's
  *  `outputColorSpace`; anything but the working space clears as sRGB. */
 export function paperClearColour(clearSpace: string): THREE.Color {

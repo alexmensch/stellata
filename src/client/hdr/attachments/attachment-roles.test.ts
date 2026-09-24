@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 const read = (name: string) =>
   readTslSource(new URL(name, import.meta.url));
 
-// See README.md § The roles.
+// See README.md#the-roles.
 describe('the attachment roles, read off each graph', () => {
   const VOLUMETRIC = [
     { label: 'Milky Way band', src: '../../webgpu/milkyway/milkyway-band-tsl.ts' },

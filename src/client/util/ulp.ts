@@ -24,7 +24,7 @@ function orderedKey(v: number): bigint {
  *  the right question is then what. NaN for a non-finite operand.
  *
  *  ULP is scale-free, which is what makes a threshold in it admissible where
- *  a world-space epsilon would not be (AGENTS.md § Camera-anywhere): one step
+ *  a world-space epsilon would not be (/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule): one step
  *  is the same proportional distance at Sol and at the LMC. */
 export function ulpsBetween(a: number, b: number): number {
   if (!Number.isFinite(a) || !Number.isFinite(b)) return Number.NaN;

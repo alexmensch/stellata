@@ -3,7 +3,7 @@
 Turns a push to `main` into GitHub releases, and gates the size of what
 the deploy uploads. Release cutting is invoked by
 `.github/workflows/deploy.yml` after a successful Cloudflare deploy;
-also usable by hand (see `RELEASING.md` § Manual release).
+also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
 
 - `release-plan-pure.ts` — the decision layer. `planReleases()` walks a
   push range oldest-first and emits one release per version change;

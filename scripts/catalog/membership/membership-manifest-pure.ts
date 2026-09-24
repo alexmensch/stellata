@@ -1,6 +1,6 @@
 // The primaries-derived membership manifest: row assembly from the spine plus
 // the primaries' additions, the two ledgers, the TSV codecs, and the
-// spine ↔ manifest matcher the parity gate runs. Contract: docs/catalog-driver.md § 3.1.
+// spine ↔ manifest matcher the parity gate runs. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
 
 import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
@@ -83,8 +83,8 @@ export const MANIFEST_COLUMNS = [
 export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
 export type ManifestRow = Record<ManifestColumn, string>;
 
-/** Which term of `docs/catalog-driver.md` § 1's union admitted the row.
- *  `magnitude-term/README.md` § The column is the ledger. */
+/** Which term of `/docs/catalog-driver.md#1-the-driver-model`'s union admitted the row.
+ *  `magnitude-term/README.md#the-column-is-the-ledger`. */
 export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
 export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
 
@@ -327,7 +327,7 @@ export interface MembershipInput {
   /** The committed corrections to AT-HYG's merge decisions
    *  (§ Correcting a merge decision). */
   corrections: readonly SpineCorrectionRow[];
-  /** `magnitude-term/README.md` § The union dedupes on the derived binding. */
+  /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
 }
 
@@ -388,7 +388,7 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  with a classical cell filled. */
   additionGaiaKeyedOnly: number;
   /** Designations more than one manifest row carries, so they key no SID
-   *  (docs/sid.md § 4.1). Admission leaves none that involves an addition;
+   *  (/docs/sid.md#41-same-as-equivalence-graph). Admission leaves none that involves an addition;
    *  what remains is the spine's own, which key on a higher rung. */
   sharedDesignations: number;
   /** Groups whose TYC route and HIP route bind different sources; the TYC
@@ -647,7 +647,7 @@ export function sortManifestRows(rows: readonly ManifestRow[]): ManifestRow[] {
 
 /** Seeded from the spine after the label merge and GROWN as each addition is
  *  admitted, so two addition groups cannot take one designation either
- *  (docs/sid.md § 4.1). */
+ *  (/docs/sid.md#41-same-as-equivalence-graph). */
 interface Claims {
   hd: Set<number>;
   hr: Set<number>;
@@ -1422,7 +1422,7 @@ export interface SpineMatch {
 /** Resolve every spine row through the manifest's designation classes the way
  *  `sid:allocate` resolves a record: the same-as graph over each manifest row's
  *  designations plus the stored bridges, a designation on more than one
- *  manifest row dropped first (docs/sid.md § 4.1), and the row keyed on its
+ *  manifest row dropped first (/docs/sid.md#41-same-as-equivalence-graph), and the row keyed on its
  *  first ladder-ranked designation the graph knows — its canonical key. A
  *  lower-ranked designation the label merge moved to a sibling therefore does
  *  not split the match: the SID never rode on it. */

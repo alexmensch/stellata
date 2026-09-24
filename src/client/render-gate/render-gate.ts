@@ -87,7 +87,7 @@ export class RenderGate {
     this.lastWake = { reason, atMs: this.lastActiveMs };
   }
 
-  // see README.md § The decision, in priority order
+  // see README.md#the-decision-in-priority-order
   noteExposureCut(dm: number): void {
     if (!exposureCutMoved(dm, this.lastInvalidatedDm)) return;
     this.lastInvalidatedDm = dm;
@@ -121,7 +121,7 @@ export class RenderGate {
    *  clock cadence, which is the only thing that can price what the
    *  translation actually moves — the parallax on everything that is not
    *  the focal, which every layer now differences against the ride's own
-   *  velocity (README.md § The focal ride). */
+   *  velocity (README.md#the-focal-ride). */
   rebasePose(delta: { x: number; y: number; z: number }): void {
     rebasePoseTranslation(this.lastRenderedPose, delta.x, delta.y, delta.z);
   }

@@ -27,7 +27,7 @@ Committed files, by the model's metallicity code:
 The three bracket the Galactic bulge's metallicity distribution, which is
 broad and centred near solar. `m62` is the one the shipped constants are
 read from; the other two exist so the metallicity sensitivity quoted in
-`src/client/milkyway/calibration/README.md` § The light ratio is
+[The light ratio](/src/client/milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number) is
 reproducible rather than asserted — all three are read back, and the
 brackets they imply are pinned, in `diffuse-reference.test.ts`.
 

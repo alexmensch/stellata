@@ -70,7 +70,7 @@ extinction term costs a GPU readback.
 A diffuse emitter whose brightest pixel encodes under half an 8-bit step
 at the live exposure skips its draw — statistic write included — under two
 rules that keep the cut from moving with it:
-`docs/science-hdr-pipeline.md` § 3.5 is the derivation and
+[§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound) is the derivation and
 `emitter-visibility-pure.ts` (`extendedEmitterPeakDisplayLevel`,
 `brightnessSkip`) the one implementation, with the Milky Way band and the
 Local Group pair as its users.
@@ -84,7 +84,7 @@ measured widths are § 3.5's, pinned in `emitter-visibility-pure.test.ts`.
 contract.** Producing the bound is the expensive half of a verdict — the
 band marches 976 sightlines for it (3.8–6.0 ms) and the Local Group glow
 123 objects' central rays (6.7–9.7 ms), frame-thread CPU both
-(`../../../milkyway/README.md` § The brightest rendered sightline). Every
+([The brightest rendered sightline](../../../milkyway/README.md#the-brightest-rendered-sightline)). Every
 refusal that does not need the number therefore runs above the call, and a
 warping camera, which refuses unconditionally, never pays for one — on
 exactly the frames it is crossing ground fastest. A new refusal belongs

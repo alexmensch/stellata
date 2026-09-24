@@ -22,7 +22,7 @@ click handlers (single = pin a POI, double = aim-at).
   `ObserveFocusOps` cross-controller seam (implemented by
   `FocusController` in `../focus/`). The observe→navigate seam hands roll
   back through `RollController.adoptFromCamera`
-  (`../controls/input/README.md` § Roll authority) — the quaternion is the
+  ([Roll authority](../controls/input/README.md#roll-authority)) — the quaternion is the
   authority on the observe side and `camera.up` on the navigate side, so the
   seam's job is to make the first navigate `lookAt` reproduce the pose the
   drag left rather than resolve it against a stale axis.
@@ -148,9 +148,9 @@ to.
   of camera distance. Distance has no meaning when the camera is
   parked. `FOV_MAX_DEG` is load-bearing beyond this controller — it is
   the worst case the camera near plane is validated against
-  (`../README.md` § Shared). Trackpad pinch reaches this same handler:
+  ([Shared](../README.md#shared)). Trackpad pinch reaches this same handler:
   `InputController` normalises it to whole wheel notches rather than
-  forking a pinch→FOV path (`../controls/input/README.md` § Pinch-to-zoom).
+  forking a pinch→FOV path ([Pinch-to-zoom](../controls/input/README.md#pinch-to-zoom)).
 - In navigate-mode, `rollCamera` turns `camera.up` itself, which is the roll
   authority there (TrackballControls rebuilds the quaternion from
   `camera.up` on every `update()`). In observe-mode it rotates
@@ -158,7 +158,7 @@ to.
   it on the next frame. Shift+drag fires in both modes — armed
   and disarmed live by the Shift key, mid-drag — and the look-around drag
   bails out of a shifted pointerdown so the two never process the same
-  gesture. `../controls/input/README.md` § Roll gestures carries the input
+  gesture. [Roll gestures](../controls/input/README.md#roll-gestures) carries the input
   paths.
 
 **HUD locators:** Sol and Galactic-Centre arrows are part of the HUD
@@ -261,8 +261,8 @@ the URL writer.
 
 **The pin is also OBSERVE's only signal that the view turned**, since the
 change detector reads cam, tgt and `camera.up` and a look-around moves none
-of the other two (`../../util/url-state/README.md` § What counts as a camera
-move). The distance stays arbitrary there as well, and not by luck: a turn of
+of the other two ([What counts as a camera move](../../util/url-state/README.md#what-counts-as-a-camera-move)).
+The distance stays arbitrary there as well, and not by luck: a turn of
 θ moves the pin by `D·θ` against a radius of `D`, so the ratio the detector
 tests IS θ whatever `D` is. **Replacing the two-point pin with a serialised
 direction has to carry that term with it**, or an OBSERVE look-around stops
@@ -278,7 +278,7 @@ correct for free. Re-deriving it from a translated camera instead lands
 `position + forward` a few ULP off the value the ride wrote, every frame,
 converging never. The render gate compares the pose by exact equality, so
 it read that as a camera move and the whole clock cadence stopped idling
-(`../../render-gate/README.md` § Pose change).
+([Pose change](../../render-gate/README.md#pose-change)).
 
 The 1 pc distance is what makes it worst: `position + forward × 1pc`
 differences two near-equal magnitudes when the camera sits about a parsec
@@ -304,7 +304,7 @@ segment ending at the eye projects to a point, and one passing through it
 is near-plane clipped at `w → 0` and whips under rotation. The glides are
 the visible window for the first kind, since the camera closes on the
 vertex over `OBSERVE_TRANSITION_MS`
-(`../../constellation-figure/README.md` § The observe anchor).
+([The observe anchor](../../constellation-figure/README.md#the-observe-anchor)).
 
 `ObserveTransition.observeAnchorOf(kind)` is the one answer to "what is
 the camera standing on": the focused hard target's index while in OBSERVE
@@ -322,7 +322,7 @@ drops only the geometry through that point:
   planet index resolves to the ring through
   `PlanetBodyField.planetIdxWithin`, same host only. The ring's hide is
   draw-only; the body's label hides over the same window by a rule of its
-  own (`../../solar-system/planets/labels/README.md` § Labels).
+  own ([Labels](../../solar-system/planets/labels/README.md#labels)).
 - probe trails need nothing here: the trail drops with the observed probe
   (`../../solar-system/probes/README.md`).
 

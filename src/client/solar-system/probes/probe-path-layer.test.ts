@@ -1,5 +1,5 @@
 // Trail focus gate + the marker field's visible/sampled split. See
-// README.md § Trails.
+// README.md#trails.
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';

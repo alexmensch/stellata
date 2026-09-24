@@ -11,7 +11,7 @@ The layers take their surfaces through
 `../../solar-system/materials/README.md` — that README owns which
 surfaces this family asks for, the neutral-defaults rule, and why the
 probe glyph is split out; the `EmitterMaterial` contract they are handed
-back is `../../scene/README.md` § The material seam. Only the glare needed a layer of its own (§ The glare
+back is [The material seam](../../scene/README.md#the-material-seam). Only the glare needed a layer of its own (§ The glare
 packs).
 
 ## Files in this area
@@ -42,8 +42,7 @@ src/client/webgpu/solar-system/
   uniform-nodes.ts            The uniform-node record behind each
                               surface's slots, texture slots seeded from
                               the shared roster
-                              (`../../solar-system/materials/README.md`
-                              § Texture-slot rosters).
+                              (`../../solar-system/materials/README.md#texture-slot-rosters`).
   tsl-materials.ts (+ test)   The factory implementing SolarSystemMaterials.
   tsl-drift.test.ts           § Constant drift.
 ```
@@ -52,7 +51,7 @@ src/client/webgpu/solar-system/
 
 Every mesh and annulus slot binds over a per-slot stand-in cloned from
 `PlanetMeshLayer.placeholder` and takes its real map by a `.value` swap
-(`../../solar-system/materials/README.md` § Texture-slot rosters). **That
+([Texture-slot rosters](../../solar-system/materials/README.md#texture-slot-rosters)). **That
 stand-in's `minFilter` / `magFilter` pair decides what the WGSL fetches
 with, for the material's whole life** — it is load-bearing, not cosmetic
 on a 1×1 white texel.
@@ -78,8 +77,8 @@ this pair, not the horizon map's width or its 8-bit encoding.
 
 The rule generalises past this folder: **a stand-in carries the filter
 pair of the texture it stands in for.** The A_V prepass placeholder is
-nearest because its r32float target must be (`../extinction/README.md`
-§ The prepass draw); the dust volume's and the cloud brick's are linear
+nearest because its r32float target must be ([The prepass](../extinction/README.md#the-prepass-kernel)
+draw); the dust volume's and the cloud brick's are linear
 because those volumes are. `tests/tsl-standin-filters.test.ts` pins that
 every construction states the pair rather than inheriting the default.
 
@@ -93,7 +92,7 @@ none of their values reappears as a bare literal in any of them. A number
 transcribed rather than imported is the drift no compiler catches.
 
 The literal half compares by **value**, through the scan shared with the
-other subsystems' guards (`../tsl/README.md` § TSL test pattern) — so a
+other subsystems' guards ([TSL test pattern](../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers)) — so a
 constant restated as `30.0` is caught where a text pattern for `30` was
 not. The cost is that a number coinciding with a pinned one has to be
 excused by name: `atmosphere-scatter-tsl.ts` spells 16 in the Rayleigh
@@ -120,7 +119,7 @@ reaches the normal correctly.
 
 Every surface here reaches the HDR target, so every one of them declares
 all three attachment outputs and swaps to a single output when the target
-is not bound (`../hdr/README.md` § The gate becomes the output struct,
+is not bound ([The gate becomes the output struct,](../hdr/README.md#the-gate-becomes-the-output-struct)
 `../hdr/mrt-material.ts`). The depth pre-stamp included: its colour writes
 are off, so the swap is irrelevant to validity and mandatory for three's
 pipeline cache — the same argument the star core mask carries. A slot a
@@ -174,7 +173,7 @@ also replaces every array and needs the geometry rebuilt.
 
 **The split holds only while every attribute stays on the default usage.**
 `DynamicDrawUsage` uploads an attribute on every render call whatever its
-version (`../README.md` § One writer per buffer per submit), so the hint on
+version ([One writer per buffer per submit](../README.md#one-writer-per-buffer-per-submit)), so the hint on
 the four layout-rate attributes costs 2 KiB of constants per render call —
 twice a frame while the local pass draws the mirror too — against a table
 whose whole point is skipping them. Version carries the layout rate for
@@ -196,7 +195,7 @@ resolves.
 
 The instanced billboard that carries a body's reflected light while it is
 unresolved, and the point↔bloom behaviour it morphs through as the mesh
-takes over. `../../solar-system/planets/README.md` § Planet mesh LOD owns the resolvedness band
+takes over. [Planet mesh LOD](../../solar-system/planets/README.md#planet-mesh-lod) owns the resolvedness band
 both halves ride; this folder owns the glare half of it.
 
 The billboard's graph and its packed geometry are
@@ -220,7 +219,7 @@ star field does.
 `appMag` already folds the phase factor φ(α)
 (`../../perceptual-magnitude.ts`), so a crescent is correctly dimmer — no
 separate illumFrac on brightness. A ring system folds in the same way, on
-`iRingFlux` (`../../solar-system/planets/rings/README.md` § Ring photometry): its flux belongs in
+`iRingFlux` ([Ring photometry](../../solar-system/planets/rings/README.md#ring-photometry--the-unresolved-magnitude)): its flux belongs in
 the magnitude, so it ADDS to φ — same unit — rather than touching the
 peak. Eclipse is the opposite call and folds in as a flux multiplier on
 the peak.
@@ -245,7 +244,7 @@ That occlusion is the local depth pass.
 
 The billboard writes no fragment depth, and may not: a static write costs
 the whole draw its early-z, and nothing carries one
-(`../../webgpu/README.md` § Early-z). Reversed-z leaves fixed-function
+([Early-z](../../webgpu/README.md#early-z--the-star-layers-depth-honest-redesign)). Reversed-z leaves fixed-function
 depth correct in both passes.
 
 The billboard also carries `vFluxPeakL` — the same kernel renormalised so
@@ -286,7 +285,7 @@ lives under:
 - **A `continue` becomes an `If` around the body.** A concise arrow
   returns its expression, so `() => Continue()` hands the jump back as
   the branch's output and the generator emits it twice
-  (`../tsl/README.md` § TSL test pattern).
+  ([TSL test pattern](../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers)).
 - **WGSL's `discard` is not a return.** The invocation keeps running, so
   the atmosphere shell guards its whole march behind the same condition
   it discards on — otherwise every disc-bound ray would pay for a march

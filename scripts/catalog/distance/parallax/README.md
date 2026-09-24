@@ -5,7 +5,7 @@ retire its printed cell, and the only one whose residual is a membership event:
 rv and PM fall back to a null — zero motion, the star stays where it is —
 whereas a record with no distance cannot be placed at all.
 
-`../README.md` § Multi-layer distance refinement owns the two override layers
+[Multi-layer distance refinement](../README.md#multi-layer-distance-refinement) owns the two override layers
 that sit *above* this cascade; this file owns which parallax they override.
 
 ## Files in this area
@@ -51,8 +51,8 @@ unless an override layer replaces it. Counts pin as `dist*`.
 
 **V/70A appears twice, and the order is the whole point.** Its resulting
 parallax is trigonometric on about half its rows and a photometric or
-spectroscopic estimate on the rest (`data/gliese/README.md` § The parallax is
-half the column), so the two ship as separate tiers: the measurement above
+spectroscopic estimate on the rest ([The parallax is half the column](/data/gliese/README.md#the-parallax-is-half-the-column-and-the-other-half-is-not-astrometry)),
+so the two ship as separate tiers: the measurement above
 SIMBAD, the estimate at the bottom of the cascade. Reading the column
 unconditionally put an estimate above every bibcoded measurement of the star
 itself, which is what Gl 92.1 / HD 14039 measured — 41.0 mas under `n_plx=r`
@@ -94,7 +94,7 @@ sibling's. That is why it sits below even the second-order indices — a
 neighbour's fit is a weaker claim than a poor citation of the star's own — and
 above `none` only because the alternative is no record at all. The physical
 warrant is the one `applySystemDistanceCoherence` already ships
-catalogue-wide (`../../multiplicity/README.md` § System distance coherence): a
+catalogue-wide ([System distance coherence](../../multiplicity/README.md#system-distance-coherence)): a
 bound pair's components share a distance to a part in a million. It borrows
 that pass's anchor gate outright (`isCoherenceAnchorGrade` — parallax > 0,
 RUWE ≤ 1.4, `ipd_frac_multi_peak` ≤ 2 on the 0–100 scale, G ≥ 3.0), plus this
@@ -108,7 +108,7 @@ own clean 5p solution — 2.4744 ± 0.0622 mas, RUWE 1.0689, `ipd` 0 — inverti
 to 404.1 ± 10.2 pc. Schaefer et al. 2016's dynamical parallax, 387.5 ± 1.3 pc,
 agrees at 1.62 σ. Both say the 328.9 pc the floor refused is ~20% wrong.
 
-**The tier's reach is bounded by measurement quality, not by our request**, and
+<a id="the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request"></a>**The tier's reach is bounded by measurement quality, not by our request**, and
 the index counts that where it decides it rather than over the parked set —
 which moves with every membership change and so cannot be quoted. Over the
 16,126 pair-row sources the per-root dedup admits:
@@ -123,8 +123,8 @@ which moves with every membership change and so cannot be quoted. Over the
 
 The five are a partition, so the table sums to the dedup's input and a new
 refusal path has to be classified before it can hide in prose. That input
-exceeds the request's own id count (`../../astrometry-request/README.md`
-§ The request is a union) because the dedup is per ROOT: a source under two WDS
+exceeds the request's own id count ([The request is a union](../../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise))
+because the dedup is per ROOT: a source under two WDS
 roots is a candidate for each, and counted once for each. **The zero is the
 gated one**: it is the astrometry request under-covering the pair-row half of
 its union, the one cause a re-pull can fix, and the reason the tier reaches what
@@ -283,7 +283,7 @@ instead, one `parked*` key per reason (`PARKED_COUNT_KEY`), enumerated in
 `../../membership/membership-manifest-gate.test.ts`, which subtracts the ledger
 from the manifest by key before comparing designation multisets.
 
-**Companion promotion may not walk a REFUSED MEASUREMENT back in.**
+<a id="companion-promotion-may-not-walk-a-refused-measurement-back-in"></a>**Companion promotion may not walk a REFUSED MEASUREMENT back in.**
 multiples.tsv states a distance for every component, and for a row carrying the
 refusal that distance IS the refused parallax inverted — σ Ori Aa's pair row
 reads `astrometry_via=hip2_long_baseline` at 328.947368 pc, which is 3.0400000

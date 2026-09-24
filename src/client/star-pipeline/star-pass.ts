@@ -27,7 +27,7 @@ export function colourPassFor(appSizePx: number, physSizePx: number): ColourPass
  *  the three compilations used to disagree and discard the star from
  *  every one of them. `trap` is a smoke aid, NOT a live fault: past the
  *  undimmed-routing fix the star stays drawn right through it.
- *  ./README.md § Star rendering. */
+ *  ./README.md#star-rendering-instanced-quads-three-passes. */
 export interface StarPassRouting {
   /** Solved from the undimmed quad — what every compilation agrees on. */
   routed: ColourPass;

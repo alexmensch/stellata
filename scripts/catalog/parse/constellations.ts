@@ -1,6 +1,6 @@
 // IAU-88 constellation table, the Stellarium stick-figure and boundary-edge
 // readers, and positional membership in the table's index space.
-// See README.md § Positional constellation membership.
+// See README.md#positional-constellation-membership.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 

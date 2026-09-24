@@ -15,7 +15,7 @@ external pipeline keyed off catalogues that resolve every component
 individually.
 
 The architectural consequence of the data-fidelity principle stated in
-`SCIENCE.md` § Scope principles is two-fold: **prefer official source-ID
+[Scope principles](/SCIENCE.md#scope-principles) is two-fold: **prefer official source-ID
 cross-walks over position-based matching whenever the cross-walk
 exists**, and **default to the generalised solution, not famous-star
 carve-outs + heuristic fallbacks**. Position-based matching fails
@@ -32,7 +32,7 @@ is intentional so each can evolve independently as upstream catalogues
 update.
 
 **Layer 1 — committed reference data.** Frozen under `data/` per the
-freshness policy in `data/README.md` § Frozen external data:
+freshness policy in [Frozen external data](/data/README.md#frozen-external-data):
 
 - **Washington Double Star Catalog (WDS)** + **Sixth Catalog of Orbits
   of Visual Binary Stars (ORB6)** — Mason et al. 2001, *AJ* 122, 3466
@@ -46,8 +46,7 @@ freshness policy in `data/README.md` § Frozen external data:
   Improved Hipparcos astrometry; the long-baseline PM fallback for
   bright-binary Gaia contamination.
 - **CCDM-keyed Hipparcos visual-doubles flag** — Hipparcos main
-  catalogue `CCDM` + `MultFlag` columns, as described in `SCIENCE.md`
-  § Data sources.
+  catalogue `CCDM` + `MultFlag` columns, as described in [Data sources](/SCIENCE.md#data-sources).
 - **Gaia DR3 cross-walks** — `gaiadr3.hipparcos2_best_neighbour`,
   `gaiadr3.tyco2tdsc_merge_best_neighbour`, queried per Gaia
   Collaboration et al. 2023, *A&A* 674, A1,
@@ -84,7 +83,7 @@ freshness policy in `data/README.md` § Frozen external data:
   ≥3-component hierarchies: compiled orbits for spectroscopic
   subsystems ORB6 and Gaia NSS never cover (AR Cas Aa,Ab; ν Sco
   Aa1,Aa2), per-component spectral types, and pair-side V magnitudes
-  for sub-resolution pairs. Full source entry in `SCIENCE.md` § Data sources.
+  for sub-resolution pairs. Full source entry in [Data sources](/SCIENCE.md#data-sources).
 - **Curated per-component spectral types** —
   `data/binaries/component_sptype_overrides.tsv`. Literature MK
   types for spectroscopic sub-components no machine source
@@ -268,7 +267,7 @@ sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 73% of WDS rows (114,933) leave the `components` field blank (an
 implied single A,B pair). The rescue tier ingests the high-confidence
 subset (an ORB6 orbit or a SIMBAD xid anchors the system —
-`scripts/binaries/README.md` § Blank-components rescue); the remaining
+[Blank-components rescue](/scripts/binaries/README.md#blank-components-rescue-stage-12-boundary)); the remaining
 ~112.8k-row tail was instrumented before deciding whether to ingest it
 wholesale (`scripts/binaries/probe-blank-components-tail.py`):
 
@@ -411,7 +410,7 @@ consume it in two complementary ways:
    record sits at the anchor's distance — no better distance exists
    anywhere for a component with no parallax of its own.
 
-   **Blend light conservation.** A minted member's brightness comes
+   <a id="blend-light-conservation"></a>**Blend light conservation.** A minted member's brightness comes
    from the WDS pair row's own published magnitudes (`wds_mag`:
    `M = m − 5·log₁₀(d_pc/10)` at the system distance) or from the
    anchor's magnitude plus the WDS Δmag. Its light is inside the
@@ -596,7 +595,7 @@ consume it in two complementary ways:
      Ballesteros manifold — rather than a direct Gaia→(B−V) fit — keeps
      the stored `ci` round-tripping to the Gaia-implied temperature
      through the same relation the renderer reads
-     (`docs/science-stellar-modelling.md` § Star colour calibration),
+     ([Star colour calibration](/docs/science-stellar-modelling.md#star-colour-calibration)),
      so a photometry-recovered companion lands on the same
      colour↔Teff locus as every other star. `ci` is left blank (→ the
      spectral / solar fallback) when BP/RP is absent or BP−RP is outside
@@ -634,7 +633,7 @@ consume it in two complementary ways:
      `ci` stays the shared (combined) colour.
 
    Sources for the Gaia→Johnson transforms (Ballesteros 2012 cited under
-   `docs/science-stellar-modelling.md` § Star colour calibration):
+   [Star colour calibration](/docs/science-stellar-modelling.md#star-colour-calibration)):
 
    - Riello, M. et al. (2021). Gaia Early Data Release 3: Photometric
      content and validation. *A&A* 649, A3, Table 5.7 (G−V(BP−RP)).
@@ -655,7 +654,7 @@ pipeline (engineer walk-through in `scripts/binaries/README.md`);
 `scripts/binaries/build-runtime-binaries.py` for the runtime artifact;
 `scripts/catalog/build-catalog.ts` + `visual-doubles.ts` +
 `companion-promotion.ts` for the catalog-side passes (see
-`scripts/catalog/multiplicity/README.md` § Geometric binary inference
+[Geometric binary inference](/scripts/catalog/multiplicity/README.md#geometric-binary-inference)
 and § TDSC double-star cross-match for per-pass detail).
 
 ## Intra-system distance coherence
@@ -666,7 +665,7 @@ error is a full parsec of radial scatter, five orders of magnitude
 above a 100 AU pair's real depth. Rendering each member at its own
 noisy distance splits the pair along the sightline — invisible from
 Sol, but the entire visible geometry once the camera flies near the
-system (the camera-anywhere principle in `SCIENCE.md` § Scope principles).
+system (the camera-anywhere principle in [Scope principles](/SCIENCE.md#scope-principles)).
 
 The catalog build therefore snaps the members of every kept-physical
 WDS system to a per-system distance anchor
@@ -687,6 +686,5 @@ the whole system — members keep their own distances rather than
 following a bogus anchor. Direction is untouched (mas-accurate
 regardless of parallax quality), and absmag + Stefan-Boltzmann radius
 follow the distance change so apparent brightness is invariant.
-Engineering detail: `scripts/catalog/multiplicity/README.md` § System distance
-coherence.
+Engineering detail: [System distance coherence](/scripts/catalog/multiplicity/README.md#system-distance-coherence).
 

@@ -1,5 +1,5 @@
 // Turning Horizons' wrapped mean anomaly into the continuous mean longitude
-// the wire format carries. See README.md § Unwrapping the mean longitude.
+// the wire format carries. See README.md#unwrapping-the-mean-longitude.
 
 /**
  * Mean longitudes made continuous: each step gains the whole number of turns

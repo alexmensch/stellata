@@ -1,14 +1,14 @@
 // Which slots a frustum-mode dispatch marches, and the view it tests
-// against. README.md § Only what is in frame.
+// against. README.md#only-what-is-in-frame.
 
 import { Matrix4, type Camera, type Vector3 } from 'three';
 import { starQuadOffscreen } from '../../star/compaction/compaction-pure';
 
-/** see README.md § Only what is in frame */
+/** see README.md#only-what-is-in-frame */
 export const EXTINCTION_FRUSTUM_SLACK_PX = 256;
 
 /** How many of `count` absolute positions the frustum-mode kernel tests past
- *  the frustum at this view — README.md § Counting the in-frame population. */
+ *  the frustum at this view — README.md#counting-the-in-frame-population. */
 export function countInFrameAbs(
   positions: Float32Array,
   count: number,
@@ -48,7 +48,7 @@ const originShift = new Matrix4();
 
 /** projection × view × T(−worldOffset), for an ABSOLUTE position. The same
  *  test as the compaction's only while both read the camera at the same
- *  point in the frame (README.md § Only what is in frame). */
+ *  point in the frame (README.md#only-what-is-in-frame). */
 export function composeViewProjectionAbs(
   camera: Camera,
   worldOffset: Vector3,

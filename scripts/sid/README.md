@@ -121,7 +121,7 @@ pnpm run sid:check | grep -c '^ambiguous (dropped)'
 
 ## Ownership pin — synth churn resolves here
 
-All synth-key reconciliation (WDS re-lettering, docs/sid.md § 5) lives
+All synth-key reconciliation (WDS re-lettering, [§ 5](/docs/sid.md#5-synthetic-key-churn-wds-re-subdivision)) lives
 in this folder's allocation flow; the binaries pipeline stays
 sid-free. `sid:allocate` hard-fails on a ledger `synth:` key absent
 from the current build, printing sibling candidates (comp/sep/PA from
@@ -135,7 +135,7 @@ synth key those pairs minted; the reported "candidates" are then
 surviving siblings with *different letters* — different physical
 stars, never bridge targets. (The reverse — a pipeline refinement
 re-promotes a component whose sid was retired — is a reinstatement
-row in `data/sid/reinstatements.tsv`, docs/sid.md § 4.3.) Resolve as
+row in `data/sid/reinstatements.tsv`, [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv).) Resolve as
 successor-less retirements:
 map each orphan key to its sid through `ledger.tsv`, append
 `sid<TAB>date<TAB>reason<TAB>` rows to `retirements.tsv` (script the
@@ -149,8 +149,8 @@ the count-diff check then just confirms it.
 
 ## Sibling-artifact stamping
 
-`clouds.json` and `local-group.json` carry an in-record `sid` (docs/sid.md
-§ 7). Because `build-clouds.py` is Python, resolution is NOT duplicated into
+`clouds.json` and `local-group.json` carry an in-record `sid` ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)).
+Because `build-clouds.py` is Python, resolution is NOT duplicated into
 either emitter — `stamp-sibling-sids.ts` post-processes the built artifact,
 resolving each object's `cloud:<id>` / `lg:<id>` through the shared
 `resolveSids` and writing the frozen sid in. It runs as the tail of
@@ -159,5 +159,5 @@ sid:stamp` does both). Like the catalog build it is a pure consumer: an
 unallocated slug hard-fails with instructions to run `sid:allocate` (new
 object) or add a `sameas-overrides.tsv` bridge (renamed slug). The catalog's
 stellar sids are written in-record at build time instead
-(`scripts/catalog/README.md` § SID allocation); the Sol system's are pinned
+([SID allocation](/scripts/catalog/README.md#sid-allocation)); the Sol system's are pinned
 client-side in `src/client/solar-system/sol-object-sids.ts`.

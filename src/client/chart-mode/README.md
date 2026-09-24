@@ -43,7 +43,7 @@ how the two drift apart.
 
 Colours reach the GPU through `setBuiltinChromeColour`'s **chart** variant:
 chart mode bypasses the HDR resolve, so the tone-map inverse the realistic
-path applies must not be (`../hdr/README.md` § Chrome).
+path applies must not be ([Chrome](../hdr/README.md#chrome--non-physical-layers-keep-their-authored-look)).
 
 `CHART_PAPER` (`#f5f2ea`) is the paper — the canvas clear colour, set by the
 shell's `setMonochrome`. **It is the one chart colour no shader touches**, so
@@ -53,8 +53,8 @@ clears the canvas through `getUnlitUniformColorSpace`, which for a null
 target is `outputColorSpace` (sRGB), while three's WebGPU backend clears with
 the working-space components verbatim and never consults `outputColorSpace`
 at all. Reading the hex in the renderer's own output space satisfies both,
-because the WebGPU boot pins output to working (`../webgpu/README.md`
-§ Output colour space) — so a space-agnostic `new Color(CHART_PAPER)` is the
+because the WebGPU boot pins output to working ([Output colour space](../webgpu/README.md#output-colour-space--pinned-to-the-working-space))
+— so a space-agnostic `new Color(CHART_PAPER)` is the
 linear decode, and the WebGPU clear wrote it out as a visibly dirtier
 `#e9e2d2`. `chart-palette.test.ts` pins the value each backend writes.
 
@@ -70,12 +70,12 @@ straight out with no encode on either backend, and the star disc emits
 2. `applyTheme('mono')` — flips the existing dark-mode palette to the
    mono palette (already in `theme-toggle.ts`). Its `setMonochrome`
    fan-out is what swaps the cloud layer into its chart treatment
-   (stippled silhouette outlines — `../molecular-clouds/README.md`
-   § Rim shell render); the milky-way band↔isobar swap instead rides
+   (stippled silhouette outlines — [Rim shell render](../molecular-clouds/README.md#rim-shell-render));
+   the milky-way band↔isobar swap instead rides
    `reapplyDetailFloors` (step 3) through the `milkyWayIsobar` layer push.
 3. `reapplyDetailFloors()` — re-derives the permitted set at the current level
-   from the chart floor column (see `../scene/declutter/README.md`
-   § Detail-level declutter cycle). Drives the MW isobar swap, hides
+   from the chart floor column (see [Detail-level declutter cycle](../scene/declutter/README.md#detail-level-declutter-cycle)).
+   Drives the MW isobar swap, hides
    realistic-only structure, and gates the label tiers in step 4.
 4. `stellata.chartLabels.start(ctx)` — spins up the per-frame label engine
    (`chart-labels.ts`), whose tiers are gated by the detail cycle.
@@ -281,7 +281,7 @@ Wings are driven by `flags` bit 4. Three build-time passes set that bit:
   EA/EB/EW/ELL/E; EP eclipsing-by-planet excluded) that the two
   passes above didn't already flag. An eclipser's variability is
   the geometry of a stellar multiple, so it earns wings, not a
-  variable ring (see `labels/README.md` § Label engine + glyphs,
+  variable ring (see [Label engine + glyphs,](labels/README.md#label-engine--glyphs)
   Variable rings).
 
 All three passes hit the same flag bit, so chart-mode rendering is

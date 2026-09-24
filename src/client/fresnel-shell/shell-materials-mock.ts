@@ -1,5 +1,5 @@
 // ShellMaterials test double, shared by the two shells' suites.
-// See README.md § The material seam.
+// See README.md#the-material-seam.
 
 import { surfaceRecorder, type FakeEmitterMaterial } from '../scene/emitter-material-mock';
 import { applyRimParams, type ShellMaterials, type FresnelShellMaterialOptions } from './fresnel-shell';

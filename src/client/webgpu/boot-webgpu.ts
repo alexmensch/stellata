@@ -44,7 +44,7 @@ import {
 
 /** Null when the device came back and then refused the renderer. The
  *  caller shows the requires-WebGPU page rather than a broken canvas
- *  (README.md § The renderer is WebGPU). */
+ *  (README.md#the-renderer-is-webgpu). */
 export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam | null> {
   if (!('gpu' in navigator)) return null;
   const renderer = new WebGPURenderer({
@@ -65,8 +65,8 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   }
   // The local depth pass's single-bracket precision bound assumes float32
   // reversed-z storage; on a fixed-point attachment the K = 1 bracket is
-  // wrong by ~262 AU at Neptune's ring (local-depth/bracket/README.md
-  // § Precision analysis), so a boot that lost the flag must not proceed.
+  // wrong by ~262 AU at Neptune's ring (/src/client/local-depth/bracket/README.md#precision-analysis),
+  // so a boot that lost the flag must not proceed.
   if (renderer.reversedDepthBuffer !== true) {
     console.warn('WebGPURenderer dropped reversedDepthBuffer; refusing the boot');
     renderer.dispose();
@@ -75,7 +75,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // The star vertex stage reads every per-star table, the survivor list and
   // the A_V cache out of storage buffers, so a device allowing fewer in
   // that stage fails all three star pipelines — and one invalid pipeline
-  // discards the whole submit (README.md § One scene per boot). Refusing
+  // discards the whole submit (README.md#one-scene-per-boot). Refusing
   // here lands the requires-WebGPU page instead.
   if (!supportsVertexStageStorageBuffers(renderer, STAR_VERTEX_STAGE_STORAGE_BUFFERS)) {
     console.warn('WebGPU device allows too few vertex-stage storage buffers; refusing the boot');
@@ -91,7 +91,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // three bump (reversed-depth-sort.ts carries the mechanism).
   renderer.setOpaqueSort(reversedDepthOpaqueSort);
   renderer.setTransparentSort(reversedDepthTransparentSort);
-  // README.md § Output colour space.
+  // README.md#output-colour-space--pinned-to-the-working-space.
   renderer.outputColorSpace = LinearSRGBColorSpace;
   let registry: SharedUniformNodeRegistry | null = null;
   const hdr = new WebGpuHdrPipeline(renderer);
@@ -115,9 +115,9 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   let bandMaterialsCache: BandMaterials | null = null;
   let chromeLineMaterialsCache: ChromeLineMaterials | null = null;
   // Boot-scoped so the extinction prepass, built later on the first
-  // attachDust, can gate on the tables (extinction/README.md § The cache
-  // gate) and march the worklist the compaction appends
-  // (extinction/refill/README.md § The compaction appends the worklist).
+  // attachDust, can gate on the tables (extinction/README.md#the-cache-gate)
+  // and march the worklist the compaction appends
+  // (extinction/refill/README.md#the-compaction-appends-the-worklist).
   // Cleared with the layer, so a prepass built after a teardown refuses
   // rather than binding dead storage nodes.
   let starTables: StarTables | null = null;

@@ -8,7 +8,7 @@ import { SOL_PLANETS } from '../../src/client/solar-system/planet-system';
 // build-textures.py can't import the TS SOL_PLANETS table, so its
 // RING_TABLES spans are copies of each body's `rings` annulus. These
 // pins keep the two in lockstep, and pin the headline 8-bit
-// visibility claims of data/textures/README.md § Ring strips against
+// visibility claims of /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor against
 // the source TSVs.
 
 const STRIP_W = 2048;

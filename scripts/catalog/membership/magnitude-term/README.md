@@ -1,7 +1,7 @@
 # The magnitude term — `MAGNITUDE PULL(V ≤ floor)`
 
 The second term of `membership(floor) = SPINE ∪ MAGNITUDE PULL(V ≤ floor)`
-(`docs/catalog-driver.md` § 1): the Gaia sources a Johnson-V floor admits on
+([§ 1](/docs/catalog-driver.md#1-the-driver-model)): the Gaia sources a Johnson-V floor admits on
 their brightness alone, with no classical designation behind them. The first
 term is the primaries-derived manifest of `../README.md`; this folder owns the
 floor, the filter over the pull, and the union onto that manifest.
@@ -37,8 +37,7 @@ does not hold. `MAGNITUDE_PULL_G_BOUND` states that bound and the accumulator
 rather than under-selecting, so an ad-hoc call with a deeper floor fails at the
 build and not at whatever later point a count is read as complete. The
 argument, and why the pull carries no margin over the floor rather than the
-0.5 mag one intuition asks for: `data/gaia/README.md` § Why the floor carries
-no margin.
+0.5 mag one intuition asks for: [Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin).
 
 The pull is `data/gaia/gaia_dr3_magnitude_pull.tsv`, refreshed by
 `pnpm run refresh:gaia-magnitude` (`scripts/refresh/README.md`).
@@ -56,8 +55,8 @@ the same population reports.
 Three verdicts partition every pull row, and two of them are **non-selection,
 not a drop**: the term's predicate is a bound on V, and a source with no V
 satisfies no predicate over V. Ledgering those would equally oblige ledgering
-every row above the floor. `data/gaia/README.md` § What the filter keeps, and
-what falls through it carries the cohorts and the decision behind them.
+every row above the floor. [What the filter keeps, and what falls through it](/data/gaia/README.md#what-the-filter-keeps-and-what-falls-through-it)
+carries the cohorts and the decision behind them.
 
 Measured over the committed pull at `V ≤ 11`, and pinned by the gate suite:
 
@@ -72,7 +71,7 @@ Measured over the committed pull at `V ≤ 11`, and pinned by the gate suite:
 
 `buildMembership` runs the dedupe itself rather than taking a newcomer list,
 because the sources the primaries bind are the bindings it has just derived
-(`../binding/README.md` § The four sources, in precedence order) — a caller
+([The four sources, in precedence order](../binding/README.md#the-four-sources-in-precedence-order)) — a caller
 deduping against the *previous* manifest would re-admit every source that
 run's derivation moved.
 
@@ -141,8 +140,7 @@ synthetic id. A deeper floor converts promoted companions into ordinary records
 rather than adding to them. Two of those synthetic classes then match only
 retired sids and need `../../../../data/sid/reinstatements.tsv` rows, and seven
 rows reach the record only through a stored same-as edge
-(`../../companions/README.md` § Same-as bridge to an already-admitted
-source).
+([Same-as bridge to an already-admitted source](../../companions/README.md#same-as-bridge-to-an-already-admitted-source)).
 
 **Parking scaled close to the projection**, against today's 5,087:
 
@@ -181,7 +179,7 @@ silently as a float64.
 
 **Identity is additive; field values are not.** Measured sid-keyed against a
 floor-off build of the same tree
-(`../../validate/README.md` § Additive-mode record parity), the flip adds
+([Additive-mode record parity](../../validate/README.md#additive-mode-record-parity)), the flip adds
 595,002 sids, drops none, puts no sid on two records — so the gate passes —
 and moves **about 3,000 of the 388,071 records that were already there** —
 `vx/vy/vz` 3,063/3,060/3,059, `x/y/z` 3,010/3,009/3,009, `physRadius` 2,851,
@@ -215,8 +213,8 @@ Two identity consequences, both handled in `data/sid/`:
 same-as bridge names a Gaia source the deep population admits as its own
 record, and the promotion's already-in-catalog test matches on the row's own
 identifiers. Promotion now reads the stored edges
-(`../../companions/README.md` § Same-as bridge to an already-admitted
-source), which refuses that mint and six more.
+([Same-as bridge to an already-admitted source](../../companions/README.md#same-as-bridge-to-an-already-admitted-source)),
+which refuses that mint and six more.
 
 ### What that costs on the wire
 
@@ -249,8 +247,8 @@ decision.
 
 **First paint does not pay any of it.** The whole catalogue on the wire moves
 29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
-and fills behind it (`../../record/README.md` § On-disk transport chunking,
-`../../../../src/client/loaders/README.md` § Progressive catalog load). That
+and fills behind it ([On-disk transport chunking,](../../record/README.md#on-disk-transport-chunking)
+[Progressive catalog load](../../../../src/client/loaders/README.md#progressive-catalog-load)). That
 chunk is a fixed byte budget, so it holds the same 10,412 records to apparent
 V 6.62 at either depth: the naked-eye sky arrives at the speed it always did
 and the depth streams in. Summed over nine separately-compressed chunks the
@@ -302,7 +300,7 @@ folds the `term=magnitude` rows out of the manifest a line at a time, since
 the record build needs it *before* it walks that file and the manifest is the
 build's largest artifact once the term is on. Both reads resolve their columns
 from the header by name; neither assumes a column's position.
-`../../parse/README.md` § Streaming a committed table carries the pattern and
+[Streaming a committed table](../../parse/README.md#streaming-a-committed-table) carries the pattern and
 why a collect-then-rejoin reader defeats it.
 
 Bailer-Jones distances and Apsis parameters for the same population arrive

@@ -216,7 +216,7 @@ export function deriveBinding(
 
 /** Every source the derivation could propose for these rows — what the
  *  astrometry pull has to carry a G for, so no candidate reaches the gate
- *  unweighed (`../../astrometry-request/README.md` § The request is a union). */
+ *  unweighed (`../../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`). */
 export function derivationCandidateSourceIds(
   rows: Iterable<BindingCells>,
   tables: BindingTables,

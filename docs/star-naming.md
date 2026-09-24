@@ -36,7 +36,7 @@ Two of the composer's rules are RELATIONAL, so it is a collection pass
 rather than a per-star function: a component with no designation of its
 own takes its WDS root anchor's base, and a component letter is appended
 only where a sibling OWNS the same designation.
-`scripts/catalog/naming/README.md` § Two callers, one composer carries the
+[Two callers, one composer](/scripts/catalog/naming/README.md#two-callers-one-composer) carries the
 implementation's own statement of all three rules.
 
 ## 2. Authority — one source approves names; everything else compiles them
@@ -46,7 +46,7 @@ implementation's own statement of all three rules.
 | IAU WGSN `NEC.csv` | **authority** | 377 approved names + 4,971 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (9,297 rows) | IAU Div. C WG on Star Names, 2025-05 |
 | IAU WGSN `wgsnFaints.csv` | **authority** | 132 approved names below V 6.5; its WDS column ships empty | same, 2025-05 |
 | `IV/27A` cross index | mechanical | Bayer/Flamsteed for the sub-naked-eye tail (`data/classic-ids/`) | Kostjuk 2004 |
-| `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | `docs/catalog-driver.md` § 2 |
+| `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
 | GCVS 5.1 | mechanical | variable-star designations | `data/gcvs/README.md` |
 | AT-HYG `proper` / `bayer` | **rejected as authority** | alias candidates only (§ 5) | — |
@@ -332,7 +332,7 @@ pinned in build-counts so growth is visible in review.
 
 ## 8. Parity — the gate on any naming change
 
-A **naming parity ledger**, same discipline as `docs/catalog-driver.md` § 6,
+A **naming parity ledger**, same discipline as [§ 6,](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change)
 committed as a test fixture:
 
 1. **Searchability never regresses.** Every string that resolves a star
@@ -379,7 +379,7 @@ Sequencing note: the ladder is independent of the driver swap
 — but its Bayer/Flamsteed tail and every label's spine backstop come from
 `data/athyg/inherited-spine.tsv`, which is why the ingest keys HIP/HR/HD and
 never `gaia_source_id` alone: **115 of the 178 stars at V ≤ 3 have no
-source_id-keyed overlay row** (`data/classic-ids/README.md` § Coverage), and
+source_id-keyed overlay row** ([Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority)), and
 those are exactly the stars the authority names.
 
 **Dead patterns — do not rebuild:** composing a display string anywhere but

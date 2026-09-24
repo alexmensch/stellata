@@ -1,6 +1,6 @@
 // The display-name composer: the one pure ladder the record build and the
-// runtime both render from, plus the wire adapter onto it. Contract in
-// docs/star-naming.md §§ 3, 6.
+// runtime both render from, plus the wire adapter onto it. Contract in /docs/star-naming.md#3-the-ladder
+// and /docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path.
 
 import {
   designationConIndex,
@@ -58,7 +58,7 @@ function systemBaseOf(base: string, anchorComponent: string | undefined): string
 }
 
 /** One star's structured designation set. Every field is canonical per
- *  docs/star-naming.md § 4 — the Bayer letter is the Unicode glyph, not an
+ *  /docs/star-naming.md#4-canonical-designation-forms — the Bayer letter is the Unicode glyph, not an
  *  ASCII convention, and no consumer parses a designation string. */
 export interface DesignationSet {
   override?: string;
@@ -128,7 +128,7 @@ export function designationAtTier(
   }
   // The constellation-relative tiers are unrenderable without the
   // constellation the designation is NAMED for, so the ladder falls past
-  // them rather than siting them by position (docs/star-naming.md § 6).
+  // them rather than siting them by position (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   if (!d.dc) return null;
   if (tier === 'bayer' || tier === 'bayer_latin') {
     if (!d.bayer) return null;
@@ -136,7 +136,7 @@ export function designationAtTier(
     // of that series are read differently. The Greek letter is how every
     // reference names the star; the Latin overflow is real and published but
     // the Flamsteed number is what atlases and observing lists print, so it
-    // sits BELOW Flamsteed rather than above — docs/star-naming.md § 3.
+    // sits BELOW Flamsteed rather than above — /docs/star-naming.md#3-the-ladder.
     const greek = GREEK_GLYPHS.has(d.bayer);
     if (greek !== (tier === 'bayer')) return null;
     return bayerDesignation(d.bayer, d.bayerSup, d.dc);

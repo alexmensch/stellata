@@ -1,6 +1,6 @@
 // Per-body phase functions φ(α) for reflected-light apparent magnitude
 // — Lambertian default + a published empirical curve where one exists.
-// See docs/science-solar-system.md § Planet phase functions.
+// See /docs/science-solar-system.md#planet-phase-functions.
 
 /** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2018 for the
  *  planets that have a fit, Allen's lunar law for the Moon. Every curve
@@ -172,7 +172,7 @@ export function phaseFactorAt(
 /** Illuminated fraction of a sphere seen at phase angle α: (1 + cos α)/2
  *  — 1 at full phase (α = 0), 0 at new (α = 180). CPU mirror of
  *  `illumFrac` in ../webgpu/solar-system/planet-glare-tsl.ts, which drives the glare photocentre
- *  shift (`../webgpu/solar-system/README.md` § Reflected glare); no TS
+ *  shift (`../webgpu/solar-system/README.md#reflected-glare--a-planet-reads-exactly-like-a-star`); no TS
  *  caller, so the mirror is what the
  *  vitest pin holds. α clamped to [0, π]. */
 export function illuminatedFraction(alphaRad: number): number {
@@ -310,8 +310,8 @@ export const SATURN_PHASE: PhaseCoefficients = {
  *  fits planets only): ΔV(α°) = 0.026·α + 4e-9·α⁴, its fitted range
  *  ending at 150°. Derivation from Allen's radian form, the
  *  full-to-quarter check, the clamp arithmetic, and why no other moon
- *  gets a curve: docs/science-solar-system.md § Planet phase
- *  functions. */
+ *  gets a curve: /docs/science-solar-system.md#planet-phase-functions.
+ * */
 export const MOON_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: 2.6e-2,

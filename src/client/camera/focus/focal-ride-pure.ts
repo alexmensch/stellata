@@ -1,6 +1,6 @@
 // Pure step function for the focal-frame ride — how far to translate the
 // camera / orbit target / transition caches each frame so the focused star
-// stays glued to NDC centre. See src/client/binaries/README.md § Focal-frame ride.
+// stays glued to NDC centre. See /src/client/binaries/README.md#focal-frame-ride-no-rebase.
 
 export interface Vec3 {
   readonly x: number;

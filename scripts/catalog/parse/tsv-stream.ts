@@ -1,5 +1,5 @@
 // Line-at-a-time reads over the build's largest committed tables. See
-// README.md § Streaming a committed table.
+// README.md#streaming-a-committed-table.
 
 import { createReadStream } from 'node:fs';
 import { createInterface } from 'node:readline';

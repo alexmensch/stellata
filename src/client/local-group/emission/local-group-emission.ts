@@ -1,6 +1,5 @@
 // Instanced volumetric emission renderer for Local Group objects —
-// the luminous sibling of the wireframe layer. See ./README.md
-// § The two passes.
+// the luminous sibling of the wireframe layer. See ./README.md#the-two-passes.
 
 import * as THREE from 'three';
 import type { EmitterMaterial } from '../../scene/emitter-material';
@@ -117,10 +116,10 @@ export class LocalGroupEmission {
     this.groupVisible();
   }
 
-  /** `docs/science-hdr-pipeline.md` § 3.5. The bound arrives as a thunk
+  /** `/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound`. The bound arrives as a thunk
    *  the predicate calls only after its own refusals, because a miss
-   *  marches every object's central ray (README.md § The brightest
-   *  rendered pixel). */
+   *  marches every object's central ray (README.md#the-brightest-rendered-pixel).
+   * */
   contributionSkip(
     exposure: FrameExposure,
     cameraAbsPc: THREE.Vector3,
@@ -158,8 +157,8 @@ export class LocalGroupEmission {
   }
 
   /** Upper bound on the glow's brightest rendered pixel from this camera at
-   *  this pixel solid angle, mag/arcsec² (README.md § The brightest
-   *  rendered pixel). */
+   *  this pixel solid angle, mag/arcsec² (README.md#the-brightest-rendered-pixel).
+   * */
   peakSurfaceBrightness(cameraAbsPc: THREE.Vector3, omegaPxArcsec2: number): number {
     return this.peakCache.peakAt(
       this.objects,

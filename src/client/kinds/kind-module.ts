@@ -65,7 +65,7 @@ export interface KindContext {
   requestRender(reason: string): void;
   /** The WebGPU seam. A kind reads its TSL surfaces from here and adds
    *  its groups to `scene` — the seam owns no scene of its own
-   *  (`../webgpu/README.md` § One scene per boot). */
+   *  (`../webgpu/README.md#one-scene-per-boot`). */
   readonly webgpu: WebGpuSeam;
 }
 

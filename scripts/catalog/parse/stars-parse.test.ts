@@ -140,7 +140,7 @@ describe('readStars build-time de-extinction of ci', () => {
 });
 
 describe('readStars Gaia source_id', () => {
-  // The manifest justified each binding (docs/catalog-driver.md § 3.1).
+  // The manifest justified each binding (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
   // Re-applying the G−V gate here would re-decide it against photometry the
   // manifest build already weighed, and a scrubbed source_id changes the
   // record's designation set — so every SID keyed on it moves.
@@ -231,7 +231,7 @@ describe('readStars manifest labels', () => {
 
   // A park is counted once, in the park partition, and in none of the
   // cascades — which is what lets every cascade partition sum to the record
-  // count, as claimed in ./README.md § Per-row pipeline.
+  // count, as claimed in ./README.md#per-row-pipeline.
   it('counts a park in the park partition alone', () => {
     const { stars, stats } = readStars(
       writeManifestTsv([
@@ -258,8 +258,7 @@ describe('readStars manifest labels', () => {
 describe('readStars constellation assignment', () => {
   // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
   // proper motion is the whole reason the two constellations are separate
-  // fields. See src/client/constellation-boundaries/iau-geometry/README.md
-  // § ρ Aquilae.
+  // fields. See /src/client/constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
   const RHO_AQL: Partial<ManifestRow> = {
     bayer: 'Rho', flam: '67', hip: '99742', hd: '192425', hr: '7724',
     tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,

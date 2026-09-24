@@ -93,7 +93,7 @@ Three contracts the code alone won't tell you:
 
 The stored velocity is also why the sampler reports velocity rather than
 finite-differencing: sample spacing runs from 88 s to six months
-(`../../../../data/probes/README.md` § Sampling), so a difference quotient
+([Sampling](../../../../data/probes/README.md#sampling)), so a difference quotient
 would be a different quantity in each part of a trajectory.
 
 ## Marker field
@@ -114,7 +114,7 @@ from here on purpose.
 - **One fleet-scale distance cull, not a per-probe one — and it is the
   layer's contribution declaration.** The module registers
   `contribution: { kind: 'gated' }` on `ProbeField.fleetLegible`
-  (`../../scene/contribution/README.md` § Declaring what a layer can put on screen), so
+  ([Declaring what a layer can put on screen](../../scene/contribution/README.md#declaring-what-a-layer-can-put-on-screen)), so
   the markers, the trails, the sampler pass and the cadence report all drop
   together once `HELIOPAUSE_EXTENT_PC` (the 200 AU downwind apex) stops
   clearing the shared `FEATURE_LEGIBILITY_MIN_PX` floor at the camera's
@@ -219,7 +219,7 @@ and the marker's mirror draws the same material as its main-pass mesh
 
 Neither surface writes a fragment depth, and neither may: a static write
 costs the whole draw its early-z, and nothing carries one
-(`../../webgpu/README.md` § Early-z, pinned by
+([Early-z,](../../webgpu/README.md#early-z--the-star-layers-depth-honest-redesign) pinned by
 `tests/tsl-frag-depth.test.ts`). Reversed-z makes fixed-function depth
 correct in both passes.
 
@@ -310,7 +310,7 @@ planet, right frame, right units.
 
 **That bound is now set by the corpus's own epochs, not by either dataset.**
 Both sides sit near 1e-5 AU — the trajectory grid
-(`../../../../data/probes/README.md` § Sampling) and, since the Horizons
+([Sampling](../../../../data/probes/README.md#sampling)) and, since the Horizons
 element tables landed, `../ephemerides/` too — but the corpus's epochs are
 calendar midnights rather than the true closest-approach instants, and at
 flyby speeds the intervening 0–12 h is 0.002–0.010 AU of real motion.
@@ -352,8 +352,8 @@ those two crossings are what `../heliopause/` derived its geometry from.
 
 ## Focus
 
-`probe` is the third **hard** focus kind (`../../camera/focus/README.md`
-§ FocusTarget contract): focusing one recentres the floating origin onto
+`probe` is the third **hard** focus kind ([FocusTarget contract](../../camera/focus/README.md#focustarget-contract)):
+focusing one recentres the floating origin onto
 the probe, drops the orbit floor, and makes it a valid observe anchor.
 Its `Target` idx is the **loaded-roster index** — a missing artifact
 drops that probe from the roster, from the SID domain, and from the
@@ -383,7 +383,7 @@ Under focus the camera follows the probe along its **whole** trajectory
 as `t` advances, at any fast-forward rate: focus Voyager 2, scrub from
 1977, and the camera rides past Jupiter, Saturn, Uranus, Neptune, and out
 through the heliopause. That is the kind-generic moving-focal ride in
-`../../stellata.ts` (`../../camera/focus/README.md` § Moving-focal ride),
+`../../stellata.ts` ([Moving-focal ride](../../camera/focus/README.md#moving-focal-ride)),
 shared with planet focus — a probe needed no ride of its own, only a
 provider leg. Sol's planet system stays attached under probe focus, the
 same way a planet focus keeps its host's: the orbit rings and planet

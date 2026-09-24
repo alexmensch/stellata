@@ -1,6 +1,6 @@
 // Fetches each roster probe's state vectors from JPL Horizons onto an
 // adaptive grid and writes data/probes/{id}.json. Manual + infrequent
-// (`pnpm run fetch:probes`); README.md § Adaptive grid.
+// (`pnpm run fetch:probes`); README.md#adaptive-grid.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

@@ -6,18 +6,17 @@ import { basename, relative, resolve } from 'node:path';
 import type { GitProvenance } from '../../schema';
 
 /** `checkoutRoot` is the checkout the run was WRITTEN in, which from a
- *  worktree is the worktree — README.md § `sourceRun` is relative to the
- *  checkout the run was written in. */
+ *  worktree is the worktree — README.md#sourcerun-is-relative-to-the-checkout-the-run-was-written-in. */
 export function citeRunPath(jsonPath: string, checkoutRoot: string): string {
   const rel = relative(checkoutRoot, resolve(jsonPath));
   return rel === '' || rel.startsWith('..') ? basename(jsonPath) : rel;
 }
 
 /** How `git merge-base --is-ancestor` answered *now*, not when the pin was
- *  taken. README.md § What the commit fields hold. */
+ *  taken. README.md#what-the-commit-fields-hold. */
 export type PinCommitState = 'landed' | 'unlanded' | 'unknown';
 
-/** Only exit 1 is an answer — README.md § What the commit fields hold. */
+/** Only exit 1 is an answer — README.md#what-the-commit-fields-hold. */
 export function commitStateFromExitStatus(status: number | undefined): PinCommitState {
   if (status === 0) return 'landed';
   return status === 1 ? 'unlanded' : 'unknown';
@@ -39,7 +38,7 @@ export function parseRenderPathDrift(shortstat: string): RenderPathDrift | null 
   return { files: Number(m[1]), insertions: Number(m[2] ?? 0), deletions: Number(m[3] ?? 0) };
 }
 
-/** README.md § What the commit fields hold. */
+/** README.md#what-the-commit-fields-hold. */
 export function pinProvenanceLines(
   git: GitProvenance,
   state: PinCommitState,

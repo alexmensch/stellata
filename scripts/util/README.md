@@ -37,9 +37,9 @@ need the same thing — single-use helpers stay with their consumer.
   **No data paths live here.** `ATHYG_CSV` used to, back when three folders
   read the catalogue; the astrometry request moved onto the membership
   manifest and the boundary-epoch cross-check is the last reader left, so the
-  literal sits in that suite (`data/athyg/README.md` § Consumed by).
+  literal sits in that suite ([Consumed by](/data/athyg/README.md#consumed-by)).
 - `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
-  (`../README.md` § Preprocessor idempotency): `fileHashes` maps each file's
+  ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path to its sha1, `null` when absent, so an input's arrival is
   a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
   the inputs, hashed *before* the build, and every output the build wrote,

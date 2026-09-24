@@ -1,6 +1,6 @@
 // Heliocentric ecliptic positions for the nine planets at any wall-clock
 // `t` (Unix-seconds), from the frozen Horizons element tables where they
-// reach and the Standish series elsewhere. See README.md § Planet ephemeris.
+// reach and the Standish series elsewhere. See README.md#planet-ephemeris.
 
 import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
 import { orbitalStateToCartesian, solveKepler } from '../../util/kepler-solver';

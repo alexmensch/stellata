@@ -1,4 +1,4 @@
-// The contract a layer's shader surface is built through. See README.md § The material seam.
+// The contract a layer's shader surface is built through. See README.md#the-material-seam.
 
 import type * as THREE from 'three';
 

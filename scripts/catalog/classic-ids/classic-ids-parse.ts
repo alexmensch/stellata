@@ -1,5 +1,5 @@
 // Parsers for the frozen CDS classic-designation tables under
-// data/classic-ids/. See data/classic-ids/README.md § Provenance.
+// data/classic-ids/. See /data/classic-ids/README.md#provenance.
 import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
 import { normaliseGjKey } from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
@@ -9,7 +9,7 @@ const REFRESH_CLASSIC_IDS = 'Re-run `pnpm run refresh:classic-ids`.';
 
 /** One IV/25 HD↔TYC identification. `nHd` / `nTyc` > 1 mark the upstream
  *  ambiguity flags the overlay's label-attachment policy keys on
- *  (docs/catalog-driver.md § 4). */
+ *  (/docs/catalog-driver.md#4-how-hd-reaches-gaia). */
 export interface Tyc2HdRow {
   tyc: string;
   hd: number;
@@ -77,7 +77,7 @@ export function parseCrossIndexTsv(text: string): CrossIndexRow[] {
 
 /** One curated IV/27A correction: `hd`'s Bayer / Flamsteed cells name the star
  *  `belongsTo` instead, so the row leaves the table. See
- *  README.md § One designation, two HD numbers. */
+ *  README.md#one-designation-two-hd-numbers. */
 export interface CrossIndexCorrection {
   hd: number;
   belongsTo: number;

@@ -46,13 +46,13 @@ WebGPU's eight. The factory is
 
 **Six of the seven uniforms are shared-by-reference and one is the
 layer's.** The six come off the uniform-node mirror
-(`../webgpu/dust/README.md` § Six of its seven uniforms), so
+([Six of its seven uniforms](../webgpu/dust/README.md#six-of-its-seven-uniforms-are-not-in-its-own-record)), so
 `uParticleStrength` is the only key in the slot record `setStrength`
 writes.
 
 `dust-particle-pure.ts` holds the footprint window, the dim floor and the
-tint, which the sprite graph imports (`../webgpu/dust/README.md`
-§ Constants live in TypeScript). `dust-materials.test.ts` carries the
+tint, which the sprite graph imports ([Constants live in TypeScript](../webgpu/dust/README.md#constants-live-in-typescript)).
+`dust-materials.test.ts` carries the
 seam's own guard — the layer-owned slot, and dispose severing the MRT
 registration; `dust-materials-mock.ts` is the double the layer suite
 builds on.

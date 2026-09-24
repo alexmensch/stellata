@@ -1,6 +1,6 @@
 // Which fix to name on the gate page. Pure, so the platform table is
-// testable without a browser. See README.md § UA picks the wording and
-// § What a no-adapter reader is told.
+// testable without a browser. See README.md#ua-picks-the-wording-never-the-verdict and
+// README.md#what-a-no-adapter-reader-is-told.
 
 import type { WebGpuVerdict } from './webgpu-support';
 
@@ -8,8 +8,8 @@ import type { WebGpuVerdict } from './webgpu-support';
 export type GateVerdict = Exclude<WebGpuVerdict, 'supported'>;
 
 /** Lives here rather than beside the builder because the perf runner reads it
- *  to tell a gated boot from a hung one (`scripts/perf/README.md` § What a run
- *  does), and that is Node code: a value import of the builder would put a
+ *  to tell a gated boot from a hung one (`/scripts/perf/README.md#what-a-run-does`),
+ * and that is Node code: a value import of the builder would put a
  *  module written against `document` and `navigator` in the runner's import
  *  graph. */
 export const GATE_ELEMENT_ID = 'webgpu-gate';
@@ -48,8 +48,8 @@ function platformFor(hints: UaHints): GateAdvice['platform'] {
   return 'other';
 }
 
-/** Chrome on every OS and both verdicts; see README.md § UA picks the
- *  wording. The `no-adapter` copy may name no version at all. */
+/** Chrome on every OS and both verdicts; see README.md#ua-picks-the-wording-never-the-verdict.
+ * The `no-adapter` copy may name no version at all. */
 function firefoxAdvice(ua: string, verdict: GateVerdict): Copy {
   const android = /Android/.test(ua);
   const action = android
@@ -131,7 +131,7 @@ function missingApiAdvice(platform: GateAdvice['platform'], hints: UaHints): Cop
 
 /** The API is present and no device started, so no line may tell the
  *  reader to update the browser they are running. Firefox still names
- *  another browser (README.md § UA picks the wording). */
+ *  another browser (README.md#ua-picks-the-wording-never-the-verdict). */
 function noDeviceAdvice(platform: GateAdvice['platform'], hints: UaHints): Copy {
   if (platform === 'firefox') return firefoxAdvice(hints.userAgent, 'no-adapter');
   if (platform === 'ios' || platform === 'android') {

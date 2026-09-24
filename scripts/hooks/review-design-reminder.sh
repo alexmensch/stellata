@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # review-design-reminder: UserPromptSubmit + PreToolUse(Skill) hook. Once a
 # pr-review starts in a session, every later prompt carries a one-line
-# reminder to apply code-craft's design pass. See README.md § How
-# review-design-reminder works.
+# reminder to apply code-craft's design pass. See README.md#how-review-design-reminder-works.
 
 set -uo pipefail
 

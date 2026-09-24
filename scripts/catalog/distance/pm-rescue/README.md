@@ -3,8 +3,7 @@
 A proper motion for the rows the direction cascade leaves without one, so they
 stop shipping static under the epoch scrub. The tangential term's fall-back
 tier; the radial term's is `../radial-velocity/`, and the direction tiers that
-supply a PM alongside their own position are `../README.md` § Direction
-resolution.
+supply a PM alongside their own position are [Direction resolution](../README.md#direction-resolution).
 
 ## Files in this area
 
@@ -32,8 +31,8 @@ advances the position too). It reaches **39** rows in two shapes:
 **Most of the 2p population never arrives, because the parallax cascade parks
 it.** A 2p fit states neither a parallax nor a proper motion, so the same defect
 that would bring a row here also leaves it with no owned parallax — and a row no
-parallax tier reaches builds no record at all (`../README.md` § Multi-layer
-distance refinement). Of the spine's **1,537** 2p rows: **1,219** route
+parallax tier reaches builds no record at all ([Multi-layer distance refinement](../README.md#multi-layer-distance-refinement)).
+Of the spine's **1,537** 2p rows: **1,219** route
 `hip2_saturated`, take HIP2's motion and were never static; **282** are parked
 (272 of the 283 `distRefusedNoOwnedParallax` rows are 2p); **36** reach this
 cascade. The cascade did not narrow — the catalogue stopped building the records.
@@ -101,7 +100,7 @@ makes one tier up.
 **The one-solution pairing is not really broken.** A 2p Gaia position *is* the
 blend's light centre at J2016, and a Tycho-2 mean PM *is* that same light
 centre's motion; the two describe one object, which is what the rule protects
-(`../../parse/README.md` § Space-motion velocity). Both `pflag='P'` rows in the
+([Space-motion velocity](../../parse/README.md#space-motion-velocity)). Both `pflag='P'` rows in the
 cohort — ξ UMa A and B — are the case in point: the flag warns that the mean
 *position* is a light centre, the PM is the quantity being taken, and handing
 both components the one Tycho-2 motion is what stops the advance shearing the
@@ -160,7 +159,7 @@ value the printed cell held: across the 36 2p rows the spine's retired `pm_src`
 reads `G_R2` on **17** and `GJ` on 17, and the printed cell matches the SIMBAD
 value to the digit on **31** of the 36 (2 differ, 3 carry no SIMBAD PM at all).
 Reading the printed cell back in and taking the DR2 tier are the same number
-under different labels, and `docs/catalog-driver.md` § 5 retires that number
+under different labels, and [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) retires that number
 either way.
 
 Tycho-2 needs no such check — it is a completed 1997-epoch publication and no
@@ -175,8 +174,8 @@ keeps 363 ordinary Gaia citations while skipping 309 on blended rows.
 **The cost is 13 rows that stay static, concentrated where it hurts most**:
 Gl 1245A at 4.72 pc and Gl 791.2 at 8.76 pc are the two nearest, and zero is
 not a better estimate than the value refused. The rule is preferred anyway for
-the reason the rv cascade gives (`../radial-velocity/README.md` § The
-Gaia-bibcode skip rule) — a value this build cannot defend does not become
+the reason the rv cascade gives ([The Gaia-bibcode skip rule](../radial-velocity/README.md#the-gaia-bibcode-skip-rule))
+— a value this build cannot defend does not become
 defensible by arriving through an index — and § 5's residual policy is explicit
 that a residual is enumerated rather than silently absorbed. Admitting a
 Gaia-bibcoded PM only where nothing else reaches the row would rescue all 13
@@ -204,4 +203,4 @@ The value is unchanged on EZ Aqr — CNS5 and SIMBAD both carry Zacharias 2012's
 EZ Aqr is the case the rv cascade predicted: its 6,824.7 km/s SIMBAD velocity
 is still rejected on its own, and the row keeps the 3.26″/yr motion the
 whole-vector clamp would have taken with it
-(`../radial-velocity/README.md` § The sanity thresholds).
+([The sanity thresholds](../radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value)).

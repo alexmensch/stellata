@@ -112,7 +112,7 @@ every load before the catalogue is fetched: a browser passing
 instead of a dead canvas (`gate/README.md`). A `bootWebGpu` that returns
 null after a *passing* probe — `init()` rejected, the renderer dropped
 `reversedDepthBuffer`, or the device allows no vertex-stage storage
-buffer (`tsl/README.md` § Storage attributes) — lands on the same page
+buffer ([Storage attributes](tsl/README.md#storage-attributes)) — lands on the same page
 with the `no-adapter` advice. Each of the three is a capability the
 probe's `requestAdapter` cannot see, so refusing the boot is the only
 thing between them and a black canvas.
@@ -121,8 +121,8 @@ The gate's `#webgpu-gate` dev switch is the only fragment the boot reads,
 and it rides the **URL fragment** for a reason worth keeping if anything
 else ever joins it: `util/url-state`'s writers replaceState the address
 bar on every state change, dropping query and fragment alike — they
-re-append `location.hash` verbatim (`util/url-state/README.md`
-§ Transport), and the fragment is the one slot that is *not* URL state.
+re-append `location.hash` verbatim ([Transport](/src/client/util/url-state/README.md#transport--canonical-path-vs-legacy-query)),
+and the fragment is the one slot that is *not* URL state.
 A query param would re-introduce query emission into a transport that
 deliberately retired it, and `resetJunkUrl` would need an exemption for
 it.
@@ -133,7 +133,7 @@ it.
 picker, typeahead, URL state, overlays, HUD, render gate) is
 renderer-blind, and the renderer draws the shell's one scene (§ One scene
 per boot) plus the local depth pass, which runs as a single reversed-z
-bracket (K = 1 — `../local-depth/bracket/README.md` § Decision). Every
+bracket (K = 1 — [Decision](../local-depth/bracket/README.md#decision--keep-the-pass-collapse-to-k--1)). Every
 layer takes its surfaces from the seam — the subfolders above, one per
 family — and every line overlay takes its stroke from the chrome line seam
 (`../chrome-lines/README.md`). The dust sprite (`dust/`) is built, but its
@@ -152,18 +152,18 @@ the star layer and the planet glare, which take the scene as an argument
 graph every layer builds into is the graph the renderer draws, so a
 `ShaderMaterial` there fails WGSL pipeline creation and one invalid
 pipeline discards the whole submit — a black app, not a missing layer
-(`../chrome-lines/README.md` § Why a seam at all).
+([Why a seam at all](../chrome-lines/README.md#why-a-seam-at-all--no-graph-has-immunity)).
 `scene/glsl-residents-pure.ts` walks the scene once on the first rendered
 frame and names any offender on the console; it is the only thing between
 a mis-parented material and a silent black frame.
 
 The dust voxel volume streams and uploads through
-`loaders/README.md` § Dust voxel upload; the star vertex stage's
+[Dust voxel upload](/src/client/loaders/README.md#dust-voxel-upload); the star vertex stage's
 fallback march and the extinction prepass (`extinction/README.md`)
 sample it, and each is smoke-blind without dust in the texture. Because
 no pixel can confirm the upload, it is verified numerically instead:
 `stellata.verifyDust()` reads voxels back off the GPU and compares them
-against the chunk files (`loaders/README.md` § Dust voxel readback). A
+against the chunk files ([Dust voxel readback](/src/client/loaders/README.md#dust-voxel-readback)). A
 layer that samples the volume and renders nothing should run it before
 suspecting its own shader.
 
@@ -176,7 +176,7 @@ Three tiers, and a new allocation has to pick one:
   keeps taking output-mode swaps is the failure that shape prevents.
 - **Boot-scoped.** Resources `bootWebGpu` builds once and hands to
   several layers: today the extinction slots
-  (`extinction/README.md` § One owner for every shared slot). `WebGpuSeam.dispose()`
+  ([One owner for every shared slot](extinction/README.md#one-owner-for-every-shared-slot)). `WebGpuSeam.dispose()`
   is the *only* path that frees these, and the shell calls it after every
   layer and the prepass, since those hand their slots back to the
   placeholders it then releases. A boot-scoped allocation added without a
@@ -190,9 +190,8 @@ The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 upstream in three r185 — and `trackTimestamp: true` for the `gpu.frame`
 perf row (§ Timestamps). `Depth32Float` is picked automatically for the
 CANVAS only; a render target needs an explicit `FloatType` depth
-texture (`../local-depth/bracket/README.md` § Precision analysis) — a
-request nothing can confirm landed, `hdr/README.md` § The depth format is
-requested, not asserted.
+texture ([Precision analysis](../local-depth/bracket/README.md#precision-analysis)) — a
+request nothing can confirm landed, [The depth format is requested, not asserted](hdr/README.md#the-depth-format-is-requested-not-asserted).
 
 ## Output colour space — pinned to the working space
 
@@ -212,7 +211,7 @@ output transform for their encode: one would render linear-dark on
 anything reaching the canvas. Nothing does — every line overlay is on
 the chrome line seam, whose single-output graph owns the encode and
 selects it on the `uHdrTarget` node mirror, 0 exactly in chart mode
-(`chrome-lines/README.md` § The encode the struct graph does not carry). Do not
+([The encode the struct graph does not carry](chrome-lines/README.md#the-encode-the-struct-graph-does-not-carry)). Do not
 "fix" a dark built-in by unpinning the output space — that re-breaks
 every emitter and re-prices the hidden pass; put the material on
 the seam instead.
@@ -290,7 +289,7 @@ specialization); glow carries no depth output; the core-mask member stamp moves 
 (per-instance, so clip z pins to the near end of the active depth
 convention); the disc pass writes no depth at all, because the core-mask
 draw already stamped the same fragments at the same value several
-renderOrders earlier (`star/README.md` § The disc draw writes no depth
+renderOrders earlier ([The disc draw writes no depth](star/README.md#the-disc-draw-writes-no-depth)
 carries the argument, what it gives up, and the fallbacks).
 
 **The contract is satisfied by removing writes, never by adding draws.**
@@ -306,7 +305,7 @@ before any command in that frame's submit executes, so N draws sharing one
 buffer, each preceded by a write, all read the *last* bytes and the first
 N−1 draw wrong with nothing reporting it. The rule and its remedies —
 per-draw buffers, 256-byte dynamic-offset slots, a per-view ring — are
-`docs/render-rules.md` § 7.
+[§ 7](/docs/render-rules.md#7-one-writer-per-buffer-per-submit).
 
 **Nothing here calls `writeBuffer` directly**, which is what keeps the rule
 cheap today: no `writeBuffer` / `createBuffer` / `copyBufferToBuffer` call
@@ -323,10 +322,10 @@ buffer and the star compaction's survivor lists and indirect args**, and
 none needs a per-draw slot: each is written by one compute dispatch, in a
 compute submit ahead of the frame's render, and every draw in that render
 reading it wants the *same* bytes — the A_V cache is one value per star
-(`extinction/README.md` § The prepass kernel); the lists are one per tier,
+([The prepass kernel](extinction/README.md#the-prepass-kernel)); the lists are one per tier,
 read by the draws of that tier and by nothing else
-(`star/compaction/README.md` § The buffer-writer requirements,
-discharged). The per-draw slotting of `docs/render-rules.md` § 7 starts
+([The buffer-writer requirements, discharged](star/compaction/README.md#the-buffer-writer-requirements-discharged)).
+The per-draw slotting of [§ 7](/docs/render-rules.md#7-one-writer-per-buffer-per-submit) starts
 owing the moment a buffer carries a value that differs between draws
 sharing a submit, and no buffer here does.
 
@@ -338,7 +337,7 @@ holding the originals then diffs a stride and an array the GPU will never
 see. `DirtyItemUploader` caches both at construction and `iPosition` is
 itemSize 3; it is correct because that attribute stays a plain vertex
 attribute: the star layer reads positions out of an itemSize-1 storage
-table over the same array (`star/README.md` § Star tables), and the compute
+table over the same array ([Star tables](star/README.md#star-tables--every-per-star-field-is-a-storage-read)), and the compute
 prepass owns a vec4 position table of its own. No itemSize-3 storage
 attribute exists in this tree.
 
@@ -355,9 +354,9 @@ drawn by N meshes is N render calls against one flag, so the draw count is
 the half that bites. The probe markers and trails pass on both: each flags
 from the update that settles its visibility, and only one of the main /
 local-pass pair is ever visible. The glare billboard dropped the hint
-(`solar-system/README.md` § The glare packs); the star mirror's slots keep
+([The glare packs](solar-system/README.md#the-glare-packs)); the star mirror's slots keep
 it on a size ceiling, not on the rule
-(`../star-pipeline/local-pass/README.md` § Mirror draw).
+([Mirror draw](../star-pipeline/local-pass/README.md#mirror-draw)).
 
 ## Out of memory
 
@@ -369,7 +368,7 @@ first, and calls each `WebGpuSeam.onOutOfMemory` subscriber on a
 `GPUOutOfMemoryError`. The planet module is the one subscriber: planet
 textures are the only resident set that grows with where the camera has
 been, so they are what steps down
-(`../solar-system/planets/textures/README.md` § Staying inside VRAM). A
+([Staying inside VRAM](../solar-system/planets/textures/README.md#staying-inside-vram)). A
 subscriber unsubscribes in its layer's dispose; the seam's own `dispose`
 restores three's hook.
 

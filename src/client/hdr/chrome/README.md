@@ -78,7 +78,7 @@ Two consequences worth knowing before touching this:
   though the line-over-black case is exact. Accepted by the design gate.
 - **The mapping is baked at set-time against a white point this module
   holds**, and `setChromeWhitePoint` is what keeps it honest: `DR_MAG` is
-  a live dev knob (`../README.md` § Dev switches), it moves the curve
+  a live dev knob ([Dev switches](../README.md#dev-switches)), it moves the curve
   every physical layer runs through, and chrome left on the old white
   point would drift against them. `HdrPipeline.syncMode` writes it
   alongside the operator-active flag, so the two can never disagree.

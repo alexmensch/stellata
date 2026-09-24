@@ -1,4 +1,4 @@
-// The cadence's pinned acceptance vantages — README.md § Pinned vantages
+// The cadence's pinned acceptance vantages — README.md#pinned-vantages
 // carries the arithmetic each number comes out of.
 
 import { describe, expect, it } from 'vitest';
@@ -238,8 +238,7 @@ describe('cadence vantage 3 — focused Io at 3 000 km, Jupiter entering the vie
 describe('cadence vantage 4 — emerging from behind the parent', () => {
   // Io behind Jupiter. While Io is hidden it reports nothing, so the step
   // it takes before the next frame is unbudgeted; the cap and the occluder's
-  // own rotation are what cover it (README.md § Emerging from behind
-  // something).
+  // own rotation are what cover it (README.md#emerging-from-behind-something).
   const V_IO_KM_S = 17.334;
   const JUPITER_OMEGA = 1.758533e-4;
   const JUPITER_R_KM = 71_492;

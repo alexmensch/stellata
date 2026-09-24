@@ -1,6 +1,6 @@
 // The lunar theory + precession chain vs the frozen Horizons geocentric
 // vectors in data/horizons/moon-vector-truth.tsv, across the whole model
-// clock. See README.md § Moon ephemeris.
+// clock. See README.md#moon-ephemeris.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';

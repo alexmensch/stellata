@@ -1,6 +1,6 @@
 // Coherence corpus for the committed probe trajectories: sampled position
 // vs the planet ephemeris at each closest approach, and vs the heliopause
-// boundary at the Voyager crossings. README.md § Coherence, not precision.
+// boundary at the Voyager crossings. README.md#coherence-not-precision.
 
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -59,8 +59,8 @@ const ECL_TO_ICRS = new THREE.Quaternion().setFromUnitVectors(
 // the epochs themselves rather than by either dataset: these are midnights,
 // the true closest approaches fall up to 12 h away, and at flyby speeds that
 // is 0.002–0.010 AU of real motion. Both sides sit near 1e-5 AU
-// (../ephemerides/README.md § Horizons element tables; data/probes/README.md
-// § Sampling), so tightening past this would only be pinning where midnight
+// (../ephemerides/README.md#horizons-element-tables; /data/probes/README.md#sampling),
+// so tightening past this would only be pinning where midnight
 // happens to fall. Still a COHERENCE bound — right probe, right planet, right
 // frame, right units — and a frame error blows it by tens of AU.
 const ENCOUNTER_TOLERANCE_AU = 0.011;
@@ -69,8 +69,8 @@ const ENCOUNTER_TOLERANCE_AU = 0.011;
 // own, over a ±2-day scan. Set by Voyager 2 at Neptune, at 15%: its SPK before
 // 1989-Aug-29 is a **patched-conic mission-design trajectory** (the Horizons
 // -32 header says so), and the Neptune pass sits four days inside that
-// section's end, next to one of the fourteen splices data/probes/README.md
-// § Sampling lists. The other nine land within 5%.
+// section's end, next to one of the fourteen splices /data/probes/README.md#sampling
+// lists. The other nine land within 5%.
 const CLOSEST_APPROACH_TOLERANCE = 0.16;
 
 /** What the fetch pipeline built each grid to hold, AU. */
@@ -119,7 +119,7 @@ const ENCOUNTERS: readonly Encounter[] = [
 // Heliopause crossing epochs (Gurnett & Kurth 2013 / 2019) with the
 // heliocentric distance and off-nose angle measured from the committed
 // trajectories. These are the two observations the shell's 122 AU upwind
-// and ~115 AU flank were derived from (../heliopause/README.md § Geometry).
+// and ~115 AU flank were derived from (../heliopause/README.md#geometry).
 const CROSSINGS = [
   { probe: 'voyager1', utc: '2012-08-25T00:00:00Z', distanceAu: 121.60, offNoseDeg: 29.86 },
   { probe: 'voyager2', utc: '2018-11-05T00:00:00Z', distanceAu: 119.02, offNoseDeg: 52.56 },

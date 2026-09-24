@@ -1,4 +1,4 @@
-// See ./README.md § The catalog-decode worker.
+// See ./README.md#the-catalog-decode-worker.
 
 import { catalogWindowTransfers, decodeCatalogWindow } from './catalog-window';
 import type { CatalogWindow } from './catalog-window';

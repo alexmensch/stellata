@@ -90,7 +90,7 @@ describe('focalRideStep', () => {
   });
 
   it('seed frame in observe mode repairs a park taken before the orbit was known', () => {
-    // see ../../binaries/README.md § Focal-frame ride
+    // see ../../binaries/README.md#focal-frame-ride-no-rebase
     const s = focalRideStep(base({
       rideFocalIdx: null,
       focalPert: V(3, -1, 4),

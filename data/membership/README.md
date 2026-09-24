@@ -2,14 +2,14 @@
 
 Pipeline-derived, like `../binaries/multiples.tsv`: written by
 `pnpm run build:membership` (`scripts/catalog/membership/`), regenerated and
-diffed in CI, never hand-edited. Contract: `docs/catalog-driver.md` § 3.1.
+diffed in CI, never hand-edited. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 
 ```
 membership-manifest.tsv  ~64 MB, LFS. One row per admitted record: final
                          labels (hd/hd_alt/hr/hr_alt/hip/gl/flam, the spine's
                          bayer/proper), gaia_source_id with its binding class,
                          the primary attesting each cell, and `term` — which
-                         side of docs/catalog-driver.md § 1's union admitted
+                         side of /docs/catalog-driver.md#1-the-driver-model's union admitted
                          the row. 979,160 rows: 376,932 `primaries` and
                          602,228 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
@@ -60,8 +60,7 @@ spine-corrections.tsv    ~4 KB, regular git. Hand-curated: where review found
                          merge's) or `fold` (this row is another's duplicate;
                          `value` names it). 2 rows. Every field is checked and
                          a fold's survivor must answer to everything the folded
-                         row did (scripts/catalog/membership/README.md
-                         § Correcting a merge decision).
+                         row did (/scripts/catalog/membership/README.md#correcting-a-merge-decision).
 label-drops.tsv          ~7 KB, regular git. The § 6.2 label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
@@ -99,7 +98,7 @@ spine.
 in `scripts/catalog/parse/stars-parse.ts`), as the membership term: every row
 is a record unless it parks, and no other source adds one. It is also the
 request set every catalog-scoped refresh pull is derived from
-(`scripts/refresh/README.md` § Request sets are membership-derived).
+([Request sets are membership-derived](/scripts/refresh/README.md#request-sets-are-membership-derived)).
 
 `scripts/catalog/membership/membership-manifest-gate.test.ts` reads all of
 these — the parity gate over them against the spine, the SID bridges and the

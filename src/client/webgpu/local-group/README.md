@@ -8,7 +8,7 @@ resolve convolves. The luminosity model lives in
 **Materials, not a layer.** The layer owns its instance packing, chart and
 enable gates, and both geometries — six or seven vertex buffers per
 family, inside WebGPU's eight — and takes its materials through
-`../../local-group/emission/README.md` § The material seam.
+[The material seam](../../local-group/emission/README.md#the-material-seam).
 
 ## Files in this area
 
@@ -51,8 +51,8 @@ mirror.
 ## The output struct is the gate
 
 What opens attachments 1 and 2 is the fragment's own output struct
-(`../hdr/README.md` § The gate becomes the output struct), in the
-volumetric-emitter role (`../../hdr/attachments/README.md` § The roles).
+([The gate becomes the output struct](../hdr/README.md#the-gate-becomes-the-output-struct)), in the
+volumetric-emitter role ([The roles](../../hdr/attachments/README.md#the-roles)).
 Drop the diffuse member from the struct and the glow still draws, still
 sorts, and never reaches the resolve.
 

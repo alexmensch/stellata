@@ -22,7 +22,7 @@ ROOT = REPO_ROOT
 REQUEST = ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
 OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 
-# see data/bailer-jones/README.md § Why the pull is ESA-side
+# see /data/bailer-jones/README.md#why-the-pull-is-esa-side
 TABLE = "external.gaiaedr3_distance"
 
 TSV_COLUMNS = [
@@ -67,7 +67,7 @@ EXPECTED_MAGNITUDE_ROWS_MAX = 1_262_000
 # returned 98.7%, so >= 90%.
 EXPECTED_COVERAGE_MIN = 0.90
 
-# scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
+# /scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only.
 SYNC_MAXREC = mp.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
 
 # Pinned posterior rows. Unlike the HIP / Tyc xmatch tables, the external

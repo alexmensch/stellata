@@ -37,8 +37,7 @@ export function bandSharedUniformNodes() {
 
 export type BandSharedNodes = ReturnType<typeof bandSharedUniformNodes>;
 
-/** What differs between the two draws (README.md § `uIsBulge` becomes
- *  compile-time). */
+/** What differs between the two draws (README.md#uisbulge-becomes-compile-time). */
 export function bandComponentUniformNodes(spec: BandComponentSpec) {
   return {
     uMeshScalePc: uniform(spec.meshScalePc.clone()),

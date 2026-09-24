@@ -37,7 +37,7 @@ system draws, never every catalog pair.
   the barycentre lands at each ellipse's focus. The stars sit *on* their
   own paths: the sampled vertex at the live phase equals the walk's
   rendered offset.
-- **Anchor.** Ellipse vertices are ICRS pc *offsets* from the
+- <a id="anchor"></a>**Anchor.** Ellipse vertices are ICRS pc *offsets* from the
   barycentre (frame-independent), built once per focus change. Per frame
   `update` only repositions each pair's group at its live barycentre
   `secondary − (1−q)·R(t)`, taking the secondary from the walked
@@ -74,11 +74,11 @@ system draws, never every catalog pair.
   you ride. The size gate and the `collectSpheres` extent both read the
   larger **drawn** ellipse, so the bracket is not sized around the hidden
   one. The rule is shared with every line layer:
-  `../../camera/observe/README.md` § The observe anchor in line layers.
+  [The observe anchor in line layers](../../camera/observe/README.md#the-observe-anchor-in-line-layers).
 - **Tier 2** (`has_orbit`, no measured inclination) draws too: period
   and semi-major axis are real, but the orbit plane is the galactic-Z
   fallback, so the ellipse *orientation* is not physical — size and
-  timing are. (`../README.md` § Tier mapping.)
+  timing are. ([Tier mapping](../README.md#tier-mapping).)
 - **Renders in the local depth pass.** The layer's group lives in the
   star cluster's pass group (`../../star-pipeline/local-pass/star-local-cluster.ts`),
   drawn after the member-star disc mirror so the bracket z-buffer hides

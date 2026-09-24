@@ -41,7 +41,7 @@ CI check on every PR. Fails the PR unless the body carries a non-empty
 diff does either of:
 
 - **touches a render path** — any `.ts` or `.wgsl` under
-  `src/client/` outside the folders `RELEASING.md` § Perf pin exempts;
+  `src/client/` outside the folders [Perf pin](/RELEASING.md#perf-pin) exempts;
 - **moves catalogue membership by more than 1 %** — read as
   `recordCount` in `scripts/catalog/build-catalog-expected.json`, base
   against head. A membership change lands in `scripts/` and `public/`, so
@@ -62,7 +62,7 @@ the comparison-time refusal is the backstop.
 CI check on every PR. Fails the PR if `package.json#version` was bumped
 inconsistently with the PR's contents — pure-docs PRs need
 `skip-version-bump`; user-visible behaviour PRs need a bump. See
-`RELEASING.md` § Version policy.
+[Version policy](/RELEASING.md#version-policy).
 
 ## `test.yml`
 
@@ -112,5 +112,5 @@ adding it to the `Tier-A star corpus` step (needs built artifacts) or
 `sid-ledger-guard` (needs committed LFS inputs only).
 
 The `main` ruleset requires these jobs by display name
-(`RELEASING.md` § Merge gating): renaming, merging or splitting a job
+([Merge gating](/RELEASING.md#merge-gating)): renaming, merging or splitting a job
 means updating the ruleset's required contexts in the same change.

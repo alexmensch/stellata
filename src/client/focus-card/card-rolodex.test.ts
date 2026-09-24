@@ -81,8 +81,7 @@ describe('card rolodex over a growing catalogue', () => {
     return { dom, frame, dispose, stack: dom.els.get('card-stack')! };
   }
 
-  // The gate, and it names no field on purpose — README.md § Surfaces
-  // retained over a growing catalogue.
+  // The gate, and it names no field on purpose — README.md#surfaces-retained-over-a-growing-catalogue.
   it('a card built mid-load renders what a complete-catalogue boot would', () => {
     const late: LateTables = { ...PARTIAL, generation: 1 };
     const { dom, frame } = boot(late);

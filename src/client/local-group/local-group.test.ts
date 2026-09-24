@@ -125,7 +125,7 @@ describe('LocalGroupLayer', () => {
   it('keeps the whole catalogue inside a 16-bit index', () => {
     // 123 objects x 3 rings x 64 corners = 23,616 vertices, well under the
     // 65,535 a Uint16 entry addresses. The full roster costs 369 KiB
-    // indexed against 554 KiB un-indexed (README.md § Runtime layer).
+    // indexed against 554 KiB un-indexed (README.md#runtime-layer).
     const layer = new LocalGroupLayer(
       makeCatalog(Array.from({ length: 123 }, (_, i) => makeObject({ id: `o${i}` }))),
       fakeChromeLineMaterials());

@@ -25,14 +25,14 @@ src/client/webgpu/gate/
 This folder holds **no** `three/webgpu` value import and must never gain
 one. The gate has to render on a browser with no WebGPU at all, so it sits
 in the entry bundle and `main.ts` imports it statically — the same
-exemption `../boot-route.ts` has (`../README.md` § Import boundary).
+exemption `../boot-route.ts` has ([Import boundary](../README.md#import-boundary--nothing-webgpu-in-the-entry-bundle)).
 `detectWebGpuSupport` therefore declares the slice of `navigator.gpu` it
 touches structurally rather than importing the typings.
 
 `gate-advice-pure.ts` carries a second constraint of the same shape: **it
 must stay loadable under Node**, because the headless perf runner imports
 `GATE_ELEMENT_ID` from it to tell a gated boot from a hung one
-(`scripts/perf/README.md` § What a run does). It touches no browser global
+([What a run does](/scripts/perf/README.md#what-a-run-does)). It touches no browser global
 today and must not start; the id lives here rather than beside the element
 it names for exactly that reason. Nothing in the vitest suite covers the
 runner's import graph — the runner is human-armed and never part of
@@ -130,8 +130,7 @@ so the async chunk and the adapter init cost the loading screen nothing,
 but the verdict still lands last. The probe is what spares a browser the
 download; this path was never going to.
 
-There is no fallback renderer on either route (`../README.md` § The
-renderer is WebGPU).
+There is no fallback renderer on either route ([The renderer is WebGPU](../README.md#the-renderer-is-webgpu)).
 
 ## The dev switch
 

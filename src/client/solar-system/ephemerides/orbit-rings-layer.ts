@@ -1,5 +1,5 @@
 // Per-planet orbit-ring ellipses for the focused host's planet system.
-// See ./README.md § Orbit rings.
+// See ./README.md#orbit-rings.
 
 import * as THREE from 'three';
 import {
@@ -472,7 +472,7 @@ export class OrbitRingsLayer {
    * Call only AFTER the visibility pass: this skips rings nothing is
    * drawing, and with every ring sub-pixel it never evaluates the
    * elements at all. Why the drift gate rather than a skip by body kind,
-   * and what it costs per body: see README.md § Orbit rings.
+   * and what it costs per body: see README.md#orbit-rings.
    */
   private refreshGeometry(t: number): void {
     if (!this.rings.some((r) => r.line.visible)) return;
@@ -505,8 +505,8 @@ export class OrbitRingsLayer {
    *
    * `observeAnchorRing` is the planet-within-host index OBSERVE stands on;
    * that body's own ring hides — its vertex 0 sits on the body
-   * (README.md § The polyline starts a vertex on the body), and so on the
-   * eye. ../../camera/observe/README.md § The observe anchor in line layers.
+   * (README.md#the-polyline-starts-a-vertex-on-the-body), and so on the
+   * eye. ../../camera/observe/README.md#the-observe-anchor-in-line-layers.
    */
   update(
     camera: THREE.PerspectiveCamera,

@@ -19,7 +19,7 @@ gated by the detail cycle — `tick()` reads `detailPermits(id)` per group
 rings + wings → `chartVariableRings`, constellation names →
 `chartConstellationNames`, cloud names → `chartCloudNames`) and skips the
 group's build loop when the current level doesn't reach its chart floor.
-See `../../scene/declutter/README.md` § Chart-content wiring for the couplings.
+See [Chart-content wiring](../../scene/declutter/README.md#chart-content-wiring) for the couplings.
 
 - `<g id="chart-con-labels">` — `<text>` per constellation Latin name.
 - `<g id="chart-labels">` — `<text>` elements for proper-named stars,
@@ -70,7 +70,7 @@ formula.
 stars.** The anchor is the equal-surface-weight centre of mass of the
 region the boundary layer draws — `Stellata.constellationLabelAnchors`,
 one per region, off the shipped artifact
-(`../../constellation-boundaries/README.md` § Label anchors) — baked to the
+([Label anchors](../../constellation-boundaries/README.md#label-anchors)) — baked to the
 same Sol-centred sphere as the arcs, so `− worldOffset` is the whole
 per-frame projection and the name stays inside its block from any camera
 position. **Serpens therefore gets two labels**, one in Caput and one in

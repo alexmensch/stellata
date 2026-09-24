@@ -1,5 +1,5 @@
 // Bit-level comparison of two per-star A_V arrays, and its one-line
-// console summary. README.md § Reading A_V back on the CPU.
+// console summary. README.md#reading-a_v-back-on-the-cpu.
 
 export interface AvParityReport {
   compared: number;

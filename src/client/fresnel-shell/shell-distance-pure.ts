@@ -3,13 +3,13 @@
 // ramps out, and a depth dimming on one shared absolute pc scale.
 
 /** Near-fade reach as a fraction of a shell's own extent — one shared
- *  proportion, not three authored distances. See README.md
- *  § Camera-distance attenuation for all three. */
+ *  proportion, not three authored distances. See README.md#camera-distance-attenuation
+ * for all three. */
 export const NEAR_FADE_EXTENT_FRAC = 0.6;
 
 /** Full-brightness headroom past a shell's own surface (pc) — a clearance,
  *  not an absolute reference. Don't flatten it back to a bare distance;
- *  README.md § Camera-distance attenuation carries what that broke. */
+ *  README.md#camera-distance-attenuation carries what that broke. */
 export const DEPTH_DIM_CLEARANCE_PC = 150;
 
 /** Falloff exponent past that clearance, below 1 to keep the cloud span

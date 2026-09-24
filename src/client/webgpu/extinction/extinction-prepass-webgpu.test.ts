@@ -297,7 +297,7 @@ describe('only what is in frame', () => {
     expect(reads).toHaveLength(1);
   });
 
-  // see ./refill/README.md § Counting the in-frame population
+  // see ./refill/README.md#counting-the-in-frame-population
   it('counts the in-frame population at the view it last saw', () => {
     const { prepass, shared, attachDust } = makePrepass();
     attachDust();
@@ -314,7 +314,7 @@ describe('only what is in frame', () => {
     expect(prepass.countInFrame()).not.toBe(0);
   });
 
-  // see ./refill/README.md § The generation stamp
+  // see ./refill/README.md#the-generation-stamp
   it('a camera creeping under epsilon per frame keeps recomputing', () => {
     const { prepass, computes, attachDust } = makePrepass();
     attachDust();
@@ -719,7 +719,7 @@ describe('the pick mirror', () => {
   });
 
   // The read can outlive the buffer's contents, so the generation counter
-  // is what invalidates it (README.md § Cold reads).
+  // is what invalidates it (README.md#cold-reads--the-one-behaviour-that-is-not-parity).
   it('drops a read that resolves against a superseded buffer', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
@@ -838,7 +838,7 @@ describe('dispose', () => {
   });
 
   // None of the five sits in a geometry, so nothing but this call frees
-  // them (../tsl/README.md § Storage attributes).
+  // them (../tsl/README.md#storage-attributes).
   it('frees all five storage buffers through the renderer registry', () => {
     const { prepass, slots, released, attachDust } = makePrepass();
     attachDust();

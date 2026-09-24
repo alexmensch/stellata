@@ -1,5 +1,5 @@
 // Interleaved gradient noise over the fragment position, and the output
-// dither it also serves. See README.md § Interleaved gradient noise.
+// dither it also serves. See README.md#interleaved-gradient-noise.
 
 import { Fn, dot, fract, vec2 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
@@ -9,8 +9,8 @@ import {
 
 type N2 = Node<'vec2'>;
 
-/** Static per pixel — never reseed it per frame (README.md § Interleaved
- *  gradient noise). */
+/** Static per pixel — never reseed it per frame (README.md#interleaved-gradient-noise).
+ * */
 export const interleavedGradientNoiseTsl = /* @__PURE__ */ Fn(
   ([fragCoord]: [N2]) =>
     fract(fract(dot(fragCoord, vec2(...DITHER_IGN_DOT))).mul(DITHER_IGN_SCALE)),

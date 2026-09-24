@@ -52,7 +52,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // window, chart disc sizing and the MW chart isobar; uThresholdMag is
     // where a source lands on the just-visible floor, and is the taper
     // anchor; uCullMag is the static population bound the vertex stage
-    // culls at. `../hdr/exposure/README.md` § One writer, five slots.
+    // culls at. `../hdr/exposure/README.md#one-writer-five-slots`.
     uLimitMag: { value: baseLimitMag },
     uThresholdMag: { value: baseLimitMag },
     uCullMag: { value: cullMagFor(baseLimitMag) },
@@ -83,8 +83,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uMaxPhysFrac: { value: ZOOM_FLOOR_FRACTION },
     // Seeded past any distance the model reaches: the branch must RUN on a
     // slot nothing has written, and a zero here would elide it for the
-    // whole catalog instead (../star-pipeline/star-frame/README.md § The
-    // physical-size window).
+    // whole catalog instead (../star-pipeline/star-frame/README.md#the-physical-size-window).
     uPhysSizeWindowPc: { value: 1e30 },
     // Variability clock. Pulsation runs on the model clock (getT()) at
     // real GCVS periods, so it responds to time-warp like binary orbits.
@@ -144,7 +143,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // it. Written per frame by StarLocalCluster.update. -1 = empty slot.
     uLocalMemberIdx: { value: new Int32Array(MIRROR_CAPACITY).fill(-1) },
     // Blackbody → sRGB lookup for the star vertex shader's ciToColor.
-    // See docs/science-stellar-modelling.md § "Star colour calibration".
+    // See /docs/science-stellar-modelling.md#star-colour-calibration.
     uColorLut: { value: makeColorLutTexture() },
     // Force-center the focused star at NDC (0,0). At the close-approach
     // orbit floor (~5×10⁻⁸ pc for Sol-class stars), float32 cancellation

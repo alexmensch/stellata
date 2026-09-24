@@ -24,7 +24,7 @@ export const SHELL_RIM_ALPHA_LIMB = 0.5;
 
 export interface FresnelShellMaterialOptions {
   /** Authored sRGB hex; mapped through the tone-map inverse here so the
-   *  shell resolves at its tuned appearance (../hdr/README.md § Chrome). */
+   *  shell resolves at its tuned appearance (../hdr/README.md#chrome--non-physical-layers-keep-their-authored-look). */
   colourHex: number;
   /** Face-on alpha is this × `faceOnFloor`. */
   alphaLimb: number;
@@ -69,7 +69,7 @@ export function applyRimParams(
 
 /**
  * The renderer-neutral contract a boundary shell's surface is built
- * through (README.md § The material seam). Each consumer builds its own —
+ * through (README.md#the-material-seam). Each consumer builds its own —
  * colour, limb alpha and blend are per-shell, so there is nothing to
  * share.
  */

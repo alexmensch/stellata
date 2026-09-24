@@ -1,4 +1,4 @@
-// Per-body state across every attached host. See ./README.md § The two layers.
+// Per-body state across every attached host. See ./README.md#the-two-layers.
 
 import * as THREE from 'three';
 import { systemFamily, type Planet, type PlanetSystem } from '../planet-system';
@@ -145,7 +145,7 @@ export type PlanetGlareBuffers = Readonly<Record<InstanceBufKey, Float32Array>>;
 /**
  * What the WebGPU glare layer reads off this field — the arrays plus the
  * slot state its packed attributes and uniforms track
- * (`../../webgpu/solar-system/README.md` § The glare packs).
+ * (`../../webgpu/solar-system/README.md#the-glare-packs`).
  *
  * Accessors rather than a snapshot: a grow replaces every array, and the
  * layer has to see the new ones on the frame it happens.
@@ -187,8 +187,7 @@ const SPEC_ENTRIES = Object.entries(INSTANCE_ATTR_SPECS) as readonly [
  * tilt: a Saturn parked near a ring-plane crossing must not be culled at
  * a distance it will be visible from once the rings open. One distance
  * per HOST though, maximised over `ps.planets` — which for Sol is a moon,
- * so the ring factor moves no shipped cull today. `../README.md`
- * § Per-host distance cull.
+ * so the ring factor moves no shipped cull today. `../README.md#per-host-distance-cull`.
  *
  * Pure function — exported for tests.
  */
@@ -288,7 +287,7 @@ export class PlanetBodyField {
   // Differencing against them gives each body its own velocity over
   // exactly the interval the focal ride translated the camera over, so
   // the two cancel to the bit for the ridden focal
-  // (../../render-gate/README.md § The focal ride).
+  // (../../render-gate/README.md#the-focal-ride).
   private prevBodyLocal64 = new Float64Array(0);
   private readonly cadenceForward = new THREE.Vector3();
   private readonly parentGeom = {
@@ -649,7 +648,7 @@ export class PlanetBodyField {
           // an atmosphere, which refracts sunlight into its own umbra. Without
           // this floor a totally eclipsed Moon vanishes outright at billboard
           // range and takes its label with it, where the resolved mesh draws
-          // it coppery red (eclipses/README.md § Umbral glow).
+          // it coppery red (eclipses/README.md#umbral-glow--why-a-totally-eclipsed-moon-is-red-not-black).
           const glow = this.umbralGlowFraction(host, idx, parentIdx);
           if (glow > dim) dim = glow;
         }

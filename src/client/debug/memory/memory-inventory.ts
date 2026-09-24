@@ -76,7 +76,7 @@ function textureName(texture: THREE.Texture, slot: string): string {
  *  material property or a `uniforms` slot, so this walk reaches none of
  *  them. Tested structurally rather than with `instanceof NodeMaterial`:
  *  this module is in the entry bundle, which must never import
- *  `three/webgpu` (`../../webgpu/README.md` § Import boundary). */
+ *  `three/webgpu` (`../../webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle`). */
 function isNodeMaterial(material: THREE.Material): boolean {
   return (material as { isNodeMaterial?: boolean }).isNodeMaterial === true;
 }

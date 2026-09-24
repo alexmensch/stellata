@@ -295,7 +295,7 @@ describe('mergeClassicIdLabels', () => {
 
   // The p Eridani / Gl 277A shape: HIP 7751 already keys record A off the
   // spine, so attaching it to B would make it ambiguous and cost BOTH records
-  // their SID key (docs/sid.md § 4.1).
+  // their SID key (/docs/sid.md#41-same-as-equivalence-graph).
   it('withholds an addition that would make another record\'s key ambiguous', () => {
     const records = [record({ hip: 7751, hd: 10360 }), record({
       gaiaSourceId: SRC_B, hd: 10361,

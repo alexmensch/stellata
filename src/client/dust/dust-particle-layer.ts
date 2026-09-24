@@ -2,8 +2,8 @@ import * as THREE from 'three';
 import type { DustParticleData } from '../loaders/dust-loader';
 import type { EmitterMaterial } from '../scene/emitter-material';
 
-/** The contract the sprite surface is built through (README.md § The
- *  material seam). */
+/** The contract the sprite surface is built through (README.md#the-material-seam).
+ * */
 export interface DustParticleMaterials {
   dustParticles(): EmitterMaterial;
 }

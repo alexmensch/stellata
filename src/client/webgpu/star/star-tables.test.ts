@@ -29,7 +29,7 @@ describe('StarTables statics', () => {
 describe('StarTables forwarded attributes', () => {
   // Same array, itemSize 1: no copy to keep current, and no itemSize-3
   // storage attribute for three to re-stride behind the uploader
-  // (../README.md § One writer per buffer per submit).
+  // (../README.md#one-writer-per-buffer-per-submit).
   // The two rosters partition every per-star field, and the partition is
   // what a new field has to join: `stat`, `forwardedAttribute`,
   // `StaticFieldSources` and `forwardedSourceAttrs` are all typed over
@@ -137,7 +137,7 @@ describe('StarTables forwarded attributes', () => {
 
 describe('StarTables dispose', () => {
   // None of these sits in a geometry, so only this call frees them
-  // (../tsl/README.md § Storage attributes).
+  // (../tsl/README.md#storage-attributes).
   it('releases the static table and every forwarded table through the renderer registry', () => {
     const { tables } = make();
     const fake = makeFakeStarRenderer();

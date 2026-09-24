@@ -314,7 +314,7 @@ wait.
 them: unsigned commits (§ The signature trap), then an orphaned
 required-status context —
 gating lives in ruleset `15843287`, not branch protection, and a renamed job
-`name:` strands the old context forever (`RELEASING.md` § Merge gating). Compare required against reported:
+`name:` strands the old context forever ([Merge gating](/RELEASING.md#merge-gating)). Compare required against reported:
 
 ```bash
 gh api repos/alexmensch/stellata/rulesets/15843287 \

@@ -14,7 +14,7 @@ gestures below toggle its `noRotate` / `noPan` flags.
   here, since a list is what let clouds drop out of the comparison. It
   passes the shared `PICK_THRESHOLD_PX` (`../star-geometry.ts`); a grab
   radius of its own would rank the same candidates differently from hover
-  (`../../../hover/README.md` § Architecture).
+  ([Architecture](../../../hover/README.md#architecture)).
 - `roll-controller.ts` (+ test) — `RollController`: the roll operations
   on `camera.up` and on the quaternion, one authority per camera mode.
   Holds no state of its own beyond scratch. § Roll authority.
@@ -30,8 +30,8 @@ gestures below toggle its `noRotate` / `noPan` flags.
   themselves (`TRACKBALL_SETTLE_PX`, `ORIENTATION_SETTLE_ULP`,
   `POSITION_SETTLE_ULP`). § Derived-pose settle floor.
 
-The click decision tables live in `../../../README.md` § Click-state
-machine; the ladder's pure decision function is
+The click decision tables live in [Click-state machine](../../../README.md#click-state-machine-cameracontrolsinputinput-controllerts);
+the ladder's pure decision function is
 `../../../poi/click-ladder-pure.ts`. Picking (`../picker.ts`), aim slerps
 (`../aim-controller.ts`), and the near-plane / orbit-floor geometry stay
 in the parent — see `../README.md`.
@@ -45,7 +45,7 @@ both modes are held for `DBL_CLICK_MS` (280 ms) by a shared
 `PendingClickDispatcher` (`../../../util/pending-click.ts`) so single and
 double clicks disambiguate; the deferred handlers re-check the
 warp / aim / transition guards at fire time. The full per-mode click
-decision table lives in `../../../README.md` § Click-state machine;
+decision table lives in [Click-state machine](../../../README.md#click-state-machine-cameracontrolsinputinput-controllerts);
 the ladder's pure decision function is
 `../../../poi/click-ladder-pure.ts`.
 
@@ -54,7 +54,7 @@ closures (busy gates, Target-keyed focus/vector reads, flyTo /
 setOrbitTarget / unfocus / togglePoi / aimAt / aimAlong) — it owns
 dispatch order and gesture math, never focus or camera-transition
 state. The observe double-click holds a ray, so it takes `aimAlong`
-and never stands a point up along it (`../README.md` § Aim controller);
+and never stands a point up along it ([Aim controller](../README.md#aim-controller-cameracontrolsaim-controllerts));
 it normalises first, the raw unprojection landing close enough to the
 near plane to sink under that path's degeneracy guard. Roll math delegates to `RollController`, which owns the
 scratch vectors; the per-gesture-event path allocates nothing.
@@ -125,8 +125,8 @@ frame it crosses the floor.
 
 The floor is in **pixels** deliberately: a pixel means the same thing
 from any vantage at any epoch, where a world-space or per-parsec cut-off
-would settle differently at Sol and at the LMC (AGENTS.md
-§ Camera-anywhere). It is the navigate-mode sibling of observe's
+would settle differently at Sol and at the LMC ([Camera-anywhere](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)).
+It is the navigate-mode sibling of observe's
 `MOMENTUM_MIN_SPEED` (`../../observe/observe-controls.ts`), which has
 floored its own momentum on the same argument from the start.
 
@@ -134,7 +134,7 @@ floored its own momentum on the same argument from the start.
 
 The damping floor above stops a tail that *decays*. This one stops a drift
 that never decays at all, and the two must not be confused —
-`../../../render-gate/README.md` § Pose change draws the distinction in
+[Pose change](../../../render-gate/README.md#pose-change) draws the distinction in
 ULP, which is the only readout that separates them.
 
 `TrackballControls.update()` rebuilds the pose from scratch every call: it
@@ -166,8 +166,7 @@ viewer can ask for — one hundredth of a pixel — is 4.6e18 ULP, so nothing
 an input can produce falls inside either.
 
 The OBSERVE half of the same defect is not floored but removed: its look
-pin is re-derived only on rotation (`../../observe/README.md`
-§ The serialised look pin).
+pin is re-derived only on rotation ([The serialised look pin](../../observe/README.md#the-serialised-look-pin)).
 
 ## Roll authority
 
@@ -212,7 +211,7 @@ into the next image plane — which is what a drag does, so an aim now injects
 no roll of its own instead of spinning the image as its endpoint approaches
 the old screen-up. It does not reintroduce the 2-cycle below: that needs a
 frame where nothing else moves, and these frames are moving by definition.
-`camera/README.md` § Camera-activity predicates carries which branches count.
+[Camera-activity predicates](/src/client/camera/README.md#camera-activity-predicates) carries which branches count.
 
 ### Orbit drift is the feature, not the bug
 
@@ -255,7 +254,7 @@ writes it. That last one is per-frame and is admissible for the reason a
 gesture is: it writes only on a frame where the orbit datum it rides moved far
 enough for the write to show, so a paused clock writes nothing, a live-1× drift
 accumulates instead of writing every frame, and the gate still idles
-(`../../../attitude/orbit-frame/README.md` § The lock). `up → lookAt → quaternion → up`
+([The lock](../../../attitude/orbit-frame/README.md#the-lock)). `up → lookAt → quaternion → up`
 is a rounding round-trip that 2-cycles exactly as the old correction did,
 so `adoptFromCamera` must stay out of the navigate steady state — it is an
 observe-mode and seam call only. `roll-controller.test.ts` pins a settled

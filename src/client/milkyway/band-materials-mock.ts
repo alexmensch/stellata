@@ -1,5 +1,5 @@
 // BandMaterials test double: records what the layer asked for.
-// See README.md § The material seam.
+// See README.md#the-material-seam.
 
 import * as THREE from 'three';
 import { surfaceRecorder, type FakeEmitterMaterial } from '../scene/emitter-material-mock';

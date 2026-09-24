@@ -1,5 +1,5 @@
 // The settings panel's segmented "stop" controls — detail level, coordinate
-// sphere. See ui/README.md § Stop controls.
+// sphere. See /src/client/ui/README.md#stop-controls.
 
 /**
  * Wire one segmented control: each button carries its value in

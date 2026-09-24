@@ -25,7 +25,7 @@ rather than shipping it.
   artifacts (per-body ladder of equirect JPEGs + the 2048×1 RGBA
   `<body>-rings.png` strips: Saturn from the Jónsson radial profiles,
   Uranus/Neptune from authored ring tables at true opacity —
-  `data/textures/README.md` § Ring strips — + the 4096-wide
+  [Ring strips](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor) — + the 4096-wide
   `<body>-normal.webp` and paired half-width
   `<body>-horizon-{a,b}.webp` relief maps for the four bodies with a
   usable global DEM — Earth at double the rest). Manual, infrequent
@@ -41,7 +41,7 @@ rather than shipping it.
   it): the `DEM_BODIES` per-body contract and the DEM →
   tangent-space normal-map derivation. Owns the three facts nothing
   else can state — each frozen DEM's own map centre versus its
-  **colour** map's (the build rolls the first onto the second), the
+  <a id="colour"></a>**colour** map's (the build rolls the first onto the second), the
   radius the body is drawn at, which sets the slope scale, and the
   elevation span, which both decodes the reduction and gives the
   renderer its limb bound on relief lighting.
@@ -51,7 +51,7 @@ rather than shipping it.
   statistics in `data/textures/relief/relief.json`, the shipped maps' own
   dimensions read from their WebP headers, and the +1 encoding of the
   unused third channel. Rationale:
-  `data/textures/relief/README.md` § Surface relief.
+  [Surface relief](/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
 - `horizon_map.py` — cast-shadow half of the build (imported by it):
   per-texel skyline elevation in 8 azimuths, encoded as sines into the
   two `<body>-horizon-{a,b}.webp` planes. Owns the exact spherical
@@ -61,7 +61,7 @@ rather than shipping it.
   `surface-relief-pure.ts`, the search arc against the renderer's
   fallback limb bound, and the manifest rows against the shipped
   planes' own headers. Rationale:
-  `data/textures/relief/README.md` § Cast shadows.
+  [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps).
 - `sky_view.py` — the third relief artifact (imported by the build):
   one scalar per texel, the cosine-weighted share of its sky that
   terrain fills, packed into a grayscale `<body>-skyview.webp`. Owns
@@ -73,7 +73,7 @@ rather than shipping it.
   and the mesh shader against that one export, plus the grid against the
   horizon pair's, the manifest rows against the shipped maps' own
   headers, and the R8 upload and its fallback in the layer. Rationale:
-  `data/textures/relief/README.md` § Sky view factor.
+  [Sky view factor](/data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky).
 - `horizon_map.test.py` — stdlib unittest pins for the geometry the
   TS suite can only source-pin: the flat-ground floor's closed form,
   azimuth registration and its east/west handedness against a
@@ -115,7 +115,7 @@ rather than shipping it.
   file-level rejection actually caught. Also sweeps BC5 error against
   map width, which is how the 8192 tier gets decided without an 8192
   map to test. Rationale and the numbers:
-  `data/textures/relief/README.md` § BC5 measured.
+  [BC5 measured](/data/textures/relief/README.md#bc5-measured--and--lossless-caught-the-packing-not-the-codec).
   Its unittest pins the codec — endpoint exactness, the
   per-mode error bound, the two-plane split, and the uint8-wraparound
   trap in the distance metric, on an **interior** texel: a block's min
@@ -130,7 +130,7 @@ rather than shipping it.
   quote; the mirror and chroma passes run on a reduction, being
   scale-free. Every correlation is reported aligned AND longitude-shifted
   because only the gap between them is evidence. What each check can and
-  cannot settle is `data/textures/src/README.md` § Auditing.
+  cannot settle is [Auditing](/data/textures/src/README.md#auditing).
 - `source-provenance.test.ts` — the mechanical half of that audit in
   CI: parses the provenance table and asserts every stated size against
   the file's own header (the FIRST size a row states, which is the
@@ -170,7 +170,7 @@ rather than shipping it.
   Mallama 2017, satellites from Frey & Lowman 1974. Writes per-body
   numbers into `data/textures/calibration.json`;
   `texture-calibration.test.ts` pins targets, achieved means, the
-  index table and that conversion. Rationale: `data/textures/README.md` § Colour fidelity.
+  index table and that conversion. Rationale: [Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration).
 - `sync-textures.ts` (+ `-pure.ts`, test) — mirrors the committed
   artifacts to `public/textures/` (gitignored) on every `pnpm run
   build` / `dev`; pure copy, so CI/deploy never needs Pillow. The
@@ -183,7 +183,7 @@ There is no one right width. 2048 is exactly right for 1080p and four
 times short of a 5K display, so the build stops deciding and offers a
 ladder instead: `texture_ladder.py` declares the rungs, the build writes
 every rung a body's master can fill, and the renderer picks one per frame
-(`src/client/solar-system/planets/README.md` § Texture tier selection).
+([Texture tier selection](/src/client/solar-system/planets/README.md#texture-tier-selection)).
 
 **Where 8192 comes from.** `minOrbitDistForPlanet` solves
 `d = R / tan(0.9 · fov_minor / 2)`, so at the camera floor EVERY body

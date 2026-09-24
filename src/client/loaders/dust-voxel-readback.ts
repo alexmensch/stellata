@@ -1,6 +1,6 @@
 // Reading voxels back off the GPU and checking them against the chunk
 // files they came from — the numeric smoke for the streaming upload.
-// See README.md § Dust voxel readback.
+// See README.md#dust-voxel-readback.
 
 import type * as THREE from 'three';
 import type { StellataRenderer } from '../webgpu/seam';

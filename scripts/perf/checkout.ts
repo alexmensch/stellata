@@ -36,7 +36,7 @@ export function mainCheckout(): string {
   }
 }
 
-/** pins/provenance/README.md § What the commit fields hold. */
+/** pins/provenance/README.md#what-the-commit-fields-hold. */
 export function gitMeta(): GitProvenance {
   let commit = 'unavailable';
   let dirty = true;

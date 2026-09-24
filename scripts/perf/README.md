@@ -6,7 +6,7 @@ a canon vantage through `page.evaluate`, and prints the table `console.table`
 shows in the browser. It reads GPU timestamps and rAF wall-clock deltas and
 nothing else — never a screenshot, never a pixel readback — so it is a cost
 instrument and is never used for appearance or UX decisions. The
-interpretation authority is `docs/render-rules.md` § Measurement canon; the
+interpretation authority is [Measurement canon](/docs/render-rules.md#9-measurement-canon); the
 agent-facing procedure is the `stellata-perf` skill.
 
 ## Files
@@ -19,7 +19,7 @@ scripts/perf/
                             value imports; never imported by a test.
   pin.ts                    `pnpm run perf:pin`: the pin from saved run
                             files, offline — no browser, no arm.
-                            pins/README.md § From saved runs.
+                            pins/README.md#from-saved-runs.
   survivors.ts              `pnpm run survivors`: debug.survivors() at the
                             canon vantages. Reads no clock and is not a cost
                             instrument (§ Survivor counts). The other
@@ -80,11 +80,10 @@ render-gate settle the runner waits for, and prints what the compaction
 kernel listed: glow-tier and disc-tier instance counts against the
 catalogue record count, the count passing the dust-independent
 prefilter with the drawn share of it
-(`src/client/webgpu/star/compaction/README.md` § Reading the counts back),
+([Reading the counts back](/src/client/webgpu/star/compaction/README.md#reading-the-counts-back)),
 and the count the extinction refill's frustum test admits — the
 population that pays the cache gate's reads
-(`src/client/webgpu/extinction/refill/README.md` § Counting the in-frame
-population).
+([Counting the in-frame population](/src/client/webgpu/extinction/refill/README.md#counting-the-in-frame-population)).
 It reuses `scenarios.ts` and `page-protocol.ts` so its vantages and its
 boot are the runner's, byte for byte.
 
@@ -150,8 +149,8 @@ the row does not resolve; raising the count tightens the bound on that many
 boundaries together. Quote the total, not `savedMs` over the count — dividing
 assumes the clears add, and consecutive clears with nothing drawn between them
 are what a driver would coalesce
-(`src/client/debug/frame-cost/passes/README.md` § The roster,
-`docs/render-rules.md` § 8).
+([The roster,](/src/client/debug/frame-cost/passes/README.md#the-roster)
+[§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs)).
 
 **`--pre-disable <keys>` and `--no-park` set up the frame a differential
 prices, and are read by that mode alone.** The named roster passes are
@@ -160,16 +159,16 @@ toggles, so there is no second spelling of any pass — and restored in a
 `finally` outside priceFrame's own; a pass not active at the vantage
 throws rather than pricing a frame it was never in. `--no-park` holds the
 adaptation measurement unparked; why that is needed at all, and why it is a
-lever rather than a state, is `src/client/hdr/exposure/park/README.md`
-§ The lever. Both land in the record's `params`, and a run differing in
-either refuses to compare (`diff/README.md` § The refusals). The case they
+lever rather than a state, is [The lever](/src/client/hdr/exposure/park/README.md#the-lever).
+Both land in the record's `params`, and a run differing in
+either refuses to compare ([The refusals](diff/README.md#the-refusals)). The case they
 exist for is the `statisticWrites` row at the Sol default view
-(`src/client/debug/frame-cost/passes/README.md` § The roster).
+([The roster](/src/client/debug/frame-cost/passes/README.md#the-roster)).
 
 **`--pre-disable` is only sound where the applied cut does not depend on the
 frame, and Sol's floor regime is that case.** The flag acts *before*
 priceFrame, which pins the exposure only after its own warmup
-(`src/client/debug/frame-cost/README.md` § Preconditions) — so the warmup
+([Preconditions](/src/client/debug/frame-cost/README.md#preconditions)) — so the warmup
 converges on the reduced scene and the sweep then pins a cut the plain run
 never had. Where the eye branch or the resolved-surface pin governs, that is
 a different star population in the two runs and the rows are not each
@@ -190,11 +189,11 @@ the compute pass into a `dwell`'s `computePasses` counts. It is read by those
 two modes only; the sweep's exponent relates frame time to pixels, and a cost
 that marches every star whatever is on screen would flatten it. Lands in the
 record's `params` and refuses to compare against a run without it
-(`diff/README.md` § The refusals) — including the pin, which such a run can
-neither be read against nor written as (`pins/README.md` § Setup levers).
+([The refusals](diff/README.md#the-refusals)) — including the pin, which such a run can
+neither be read against nor written as ([Setup levers](pins/README.md#setup-levers)).
 What the row means, why the scene is
 identical on both sides, and which vantages to take it at:
-`src/client/debug/frame-cost/passes/README.md` § The extinction rows.
+[The extinction rows](/src/client/debug/frame-cost/passes/README.md#the-extinction-rows).
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set.
@@ -205,7 +204,7 @@ restore. The rate is otherwise emergent, and it decides what the GPU-stream
 median measures where the frame has two classes, so a dwell holds it as it
 already holds the gate, the clock and the exposure. Several values visit the
 scenario once per cadence — a probe, refused by `--pin`, `--against-pin` and
-`--baseline` (`dwell/README.md` § What a dwell measures). `--warmup-frames` is shared: it is priceFrame's own warmup in
+`--baseline` ([What a dwell measures](dwell/README.md#what-a-dwell-measures)). `--warmup-frames` is shared: it is priceFrame's own warmup in
 differential mode and the dwell's in the other two, defaulting to the same
 `WARMUP_FRAMES` either way, since it exists to absorb the same clock ramp.
 
@@ -219,7 +218,7 @@ there lands mid-path.
 **Contexts run in the scenario order given; `all` is the canon order
 mw120, sol, earth, mw50, lg.** So `--scenario all` opens with mw120 then
 sol, the two contexts a Tier 1 run visits, in the same order. That is what
-lets Tier 1 compare against the pin: `diff/README.md` § The refusals, run
+lets Tier 1 compare against the pin: [The refusals,](diff/README.md#the-refusals) run
 position.
 
 **A dwell's clock is always `raf-delta`, so every pin run is on it.**
@@ -237,8 +236,8 @@ the table with the clock the mode actually used, and the same goes for `--passes
 sweep, `--roundtrip` outside dwell, and `--scales` outside sweep. Only flags actually typed are checked,
 so a default never trips it, and `--warmup-frames` is exempt because every
 mode absorbs the same ramp. The in-app instrument takes the same posture on a
-pin it cannot honour (`src/client/debug/frame-cost/README.md`
-§ Preconditions); a typed command line is no improvement if the honoured-pin
+pin it cannot honour ([Preconditions](/src/client/debug/frame-cost/README.md#preconditions));
+a typed command line is no improvement if the honoured-pin
 illusion survives it.
 
 Exit codes: **0** ok · **1** a scenario failed, was tainted, priceFrame
@@ -282,8 +281,8 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/v/<blob>/` (`src/client/webgpu/README.md`
-   § The renderer is WebGPU). Wait for `window.debug`,
+1. **Boot** `<url>/v/<blob>/` ([The renderer is WebGPU](/src/client/webgpu/README.md#the-renderer-is-webgpu)).
+   Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
    `Error:` is a `BootError`. The requires-WebGPU gate is read *before*
    those, because it hides the boot's elements rather than removing them
@@ -319,8 +318,7 @@ neither modal ever shows:
    the rows — each is bracketed against its own neighbours — it says not to
    read the run's levels against a settled one's. Under `--no-interleave` it
    does invalidate them, every row there being differenced against the
-   leading baseline alone (`src/client/debug/frame-cost/README.md`
-   § Reading a row).
+   leading baseline alone ([Reading a row](/src/client/debug/frame-cost/README.md#reading-a-row)).
 
 Page console is forwarded as `[page:<type>]` except `table` (the rows come
 back as data). A `pageerror` during boot fails the scenario; during the sweep
@@ -380,7 +378,7 @@ a `✗` or a refused row. A run refused for one row is not re-armed:
 `pnpm run perf:pin` writes the pin from saved run files of one commit.
 What the pin holds, what refuses it, the merge rule, the metric, floor and
 ceiling: `pins/README.md`. When a PR must run it and what a mark means:
-`RELEASING.md` § Perf pin.
+[Perf pin](/RELEASING.md#perf-pin).
 
 ## Traps
 
@@ -389,8 +387,8 @@ ceiling: `pins/README.md`. When a PR must run it and what a mark means:
   baseline that walks upward across the sweep, and rows that fall under
   their brackets — measured on the parity spike, where the one run taken
   during other work was the one that looked like a headless defect.
-- Everything in `docs/render-rules.md` § Measurement canon and
-  `src/client/debug/frame-cost/README.md` § Reading a row: a `savedMs` under
+- Everything in [Measurement canon](/docs/render-rules.md#9-measurement-canon) and
+  [Reading a row](/src/client/debug/frame-cost/README.md#reading-a-row): a `savedMs` under
   `noiseMs` or `bracketMs` did not resolve; the limit-mag columns must
   agree; never compare across `method`, `bufferMpx`, headed/headless, or
   browsers; never sum the column.
@@ -418,7 +416,7 @@ you for it and the PR ships a citation to a file no one else has.
 **`git add` the run file in the PR that cites it — the folder being tracked
 does not commit anything.** A bead note, a PR body or a README quoting
 `.perf-runs/<date>/<file>` is a promise that the path resolves for the next
-reader; `../../.perf-runs/README.md` § Names is where that promise is written
+reader; [Names](../../.perf-runs/README.md#names) is where that promise is written
 down. Until the file is in a commit it resolves on one machine only, and a
 `git clean` ends it.
 

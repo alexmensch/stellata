@@ -1,6 +1,6 @@
 // The extinction slots as TSL nodes — the dust volume, the per-star A_V
 // buffer and the refill worklist's — shared by object identity between the
-// star layer and the prepass so one attach reaches both. README.md § One owner for every shared slot.
+// star layer and the prepass so one attach reaches both. README.md#one-owner-for-every-shared-slot.
 
 import { StorageBufferAttribute } from 'three/webgpu';
 import { storage } from 'three/tsl';
@@ -18,12 +18,12 @@ export type AvStorageNode = ReturnType<typeof storage<'float'>>;
  * so each placeholder must be valid from the first frame: the volume's
  * marks itself `needsUpdate`, or three substitutes a 2D 1×1 texture on
  * the `texture_3d` binding and the whole submit dies with the bind group
- * (README.md § One owner for every shared slot).
+ * (README.md#one-owner-for-every-shared-slot).
  */
 export class ExtinctionNodes {
   readonly dust: DustTextureNode;
   readonly av: AvStorageNode;
-  /** refill/README.md § The compaction appends the worklist. */
+  /** refill/README.md#the-compaction-appends-the-worklist. */
   readonly refill = new RefillWorklistNodes();
 
   private readonly dustPlaceholder: Data3DTexture;

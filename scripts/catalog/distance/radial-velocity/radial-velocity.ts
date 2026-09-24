@@ -24,7 +24,7 @@ export const RV_VIA_VALUES = [
 export type RvVia = (typeof RV_VIA_VALUES)[number];
 
 // Coarse `radial_velocity_error` spread over the rows the Gaia tier supplies,
-// pinned in build-counts. Nothing routes on it — README.md § radial_velocity_error.
+// pinned in build-counts. Nothing routes on it — README.md#radial_velocity_error-is-tracked-never-gated.
 export const RV_ERROR_BANDS = [
   'none',
   'le1',
@@ -58,8 +58,8 @@ export function rvErrorBand(errorKmS: number | null): RvErrorBand {
 
 /** Whether a radial term alone is past the space-velocity sanity ceiling.
  *  Rejecting just this term leaves the row its measured proper motion, which
- *  the whole-vector clamp would otherwise take with it — README.md § The
- *  sanity thresholds. */
+ *  the whole-vector clamp would otherwise take with it — README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value.
+ * */
 export function radialTermExceedsCeiling(rvKmS: number | null): boolean {
   return rvKmS !== null && Math.abs(rvKmS) > VELOCITY_SANITY_CEILING_KM_S;
 }
@@ -80,19 +80,19 @@ export interface RadialVelocityResolution {
 
 /** Radial velocity through the cascade: Gaia DR3 `radial_velocity` on a 5p
  *  row → SIMBAD `rvz_radvel` (bibcoded) → zero radial term.
- *  `docs/catalog-driver.md` § 5.
+ *  `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers`.
  *
  *  The Gaia tier needs a 5p solution, not merely an `rv` cell: RVS measures the
  *  same window the astrometric fit does, so a row Gaia could not separate into
  *  parallax + PM is one whose spectrum is a blend of the components too, and its
- *  median RV is not the primary's. See README.md § The 5p gate.
+ *  median RV is not the primary's. See README.md#the-5p-gate.
  *
  *  **The skip rule** closes the way back in. SIMBAD frequently serves a
  *  Gaia-bibcoded velocity for a 2p row — the same blended spectrum under
  *  Gaia's own reduction — so taking it would launder in a value this build
  *  distrusts for a physical reason. Those candidates fall to zero rather than
  *  to SIMBAD. It turns on the blend, not on whether our own pull happens to
- *  hold the competing Gaia value. See README.md § The Gaia-bibcode skip rule. */
+ *  hold the competing Gaia value. See README.md#the-gaia-bibcode-skip-rule. */
 export function resolveRadialVelocity(
   gaia: GaiaAstrometryCatalogRow | null,
   simbad: SimbadRadialVelocity | null,

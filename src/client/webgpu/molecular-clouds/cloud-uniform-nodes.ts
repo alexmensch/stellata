@@ -25,7 +25,7 @@ import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
  *
  * `uFovYRad` and `uViewport` are deliberately absent — they come off the
  * uniform-node mirror
- * (`README.md` § The shared pair is not in this record).
+ * (`README.md#the-shared-pair-is-not-in-this-record`).
  */
 export function cloudAbsorptionUniformNodes(spec: CloudAbsorptionSpec) {
   return {

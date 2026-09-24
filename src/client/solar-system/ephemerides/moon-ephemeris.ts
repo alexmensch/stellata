@@ -1,6 +1,6 @@
 // J2000 osculating orbital elements for the major moons + the resolver
 // that composes their heliocentric ecliptic positions. Sibling of
-// ephemeris.ts (planets). See ./README.md § Moon ephemeris.
+// ephemeris.ts (planets). See ./README.md#moon-ephemeris.
 
 import { J2000_JD, KM_PC } from '../../util/astronomy-constants';
 import { icrsToEcliptic } from '../../util/ecliptic-frame';
@@ -86,7 +86,7 @@ const URANUS_EQUATOR_POLE = { ra: 77.311, dec: 15.175 } as const;
 // node/ω/M triplets for those systems are not in the frame its legend
 // states and put every moon tens of degrees off (verified against
 // Horizons state vectors; moon-sky-truth.test.ts pins the corpus).
-// See docs/science-solar-system.md § Moons for the frame convention
+// See /docs/science-solar-system.md#moons for the frame convention
 // and per-moon reference plane.
 export const MOON_ELEMENTS: readonly MoonElements[] = [
   // Earth — the Moon's orbit tracks the ecliptic, not Earth's equator, so

@@ -1,11 +1,11 @@
 # src/client/molecular-clouds/absorption/ — the cloud absorption raymarch
 
 The per-fragment raymarch of the calibrated Zucker density model that dims
-every diffuse layer drawn behind a cloud (`docs/science-molecular-clouds.md`
-§§ 4, 9). **Physics, so it is always on in realistic mode — never
+every diffuse layer drawn behind a cloud ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field),
+[§ 9](/docs/science-molecular-clouds.md#9-presence-pass)). **Physics, so it is always on in realistic mode — never
 declutter-gated** — and it hides only in chart mode. The rim shell that
 annotates the same cloud's silhouette is annotation and lives in the parent
-(`../README.md` § Rim shell render).
+([Rim shell render](../README.md#rim-shell-render)).
 
 ## Files
 
@@ -20,7 +20,7 @@ annotates the same cloud's silhouette is annotation and lives in the parent
 
 The materials that consume these — the seam, the per-cloud
 `CloudAbsorptionSpec`, and the brick texture's lifetime — stay in the
-parent: `../cloud-materials.ts` and `../README.md` § The material seam.
+parent: `../cloud-materials.ts` and [The material seam](../README.md#the-material-seam).
 
 ## The march
 
@@ -32,14 +32,14 @@ screen-adaptive) and converts the A_V column to `α = 1 − exp(−0.921·A_V)`,
 capped at 0.95.
 
 **Traced clouds march the per-cloud Edenhofer density brick** (a builder
-branch, `../README.md` § The material seam; a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
+branch, [The material seam](../README.md#the-material-seam); a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
 `A_V = 2.742·∫E dl`, clip at the brick's u = 1.05 taper edge) — the same
 volume the rim isosurface was traced from, so the shadow matches the
 silhouette 1:1 and the dimming matches per-star extinction physics. Fallback
 clouds march the calibrated Plummer profile, clipped at the mass-budget
 envelope `u = uEnv`.
 
-Per `docs/science-molecular-clouds.md` § 9.1 the ray start carries static IGN
+Per [§ 9.1](/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode) the ray start carries static IGN
 jitter (never reseeded per frame) and the output carries ±0.5-LSB dither.
 
 ## Invariants
@@ -65,7 +65,7 @@ lever), and the march breaks once the column saturates the alpha cap.
 
 ## Render order, and the attachment that is easy to drop
 
-**Render-order contract** (`docs/science-molecular-clouds.md` § 9.1 rule 5):
+**Render-order contract** ([§ 9.1](/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode) rule 5):
 the absorption alpha dims only layers drawn *before* the absorption meshes
 (`renderOrder −2`). Every diffuse background the clouds should extinct — the
 MW band and LG emission (−3), any future HiPS / sky-imagery layer — must
@@ -78,7 +78,7 @@ annotation shouldn't be extincted.
 **Order is necessary but not sufficient**, because the band and the LG
 glow write the HDR target's *third* attachment, not the one the
 absorption draw would reach by default. Its output struct takes the absorber
-role (`../../hdr/attachments/README.md` § The roles), carrying its alpha-only
+role ([The roles](../../hdr/attachments/README.md#the-roles)), carrying its alpha-only
 texel to attachment 2 as well as attachment 0; one blend equation covers
 both, so the multiply is identical on each. Drop the attachment-2 member and
 the clouds keep drawing, keep sorting correctly, and extinct nothing — no
@@ -88,7 +88,7 @@ attachment 0 is unaffected.
 
 ## Which clouds may dim the band, decided per cloud
 
-`docs/science-galactic-structure.md` § The dust stack. The band's dust comes
+[The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition). The band's dust comes
 from the highest-resolution source covering each point, so a cloud either
 supplies its own volume — and is carved out of the band's read of the voxel
 grid — or is left to the grid, which already holds it. The test is whether

@@ -26,8 +26,8 @@ src/client/render-gate/
 Every sentinel resets on `dispose()` — the pose snapshot and the
 exposure-cut anchor back to NaN, the hold count to zero, the
 `sawUserInput` latch to false. The cadence's own
-state resets in `ClockCadence.dispose()` (`cadence/README.md` § The
-controller). A hold released *after* that zeroing floors at 0
+state resets in `ClockCadence.dispose()` ([The controller](cadence/README.md#the-controller)).
+A hold released *after* that zeroing floors at 0
 rather than going negative: `Stellata.dispose()` does not close an open
 debug panel, so its release outlives the gate, and a negative count
 would silently make the next `hold()` a no-op.
@@ -64,7 +64,7 @@ would silently make the next `hold()` a no-op.
    budget the last rendered frame computed. A cadence frame renders THIS
    tick without stamping activity, so no settle tail rides it (§ The
    clock cadence).
-3. **Pose change**: a 14-slot exact-equality snapshot — camera position,
+3. <a id="pose-change"></a>**Pose change**: a 14-slot exact-equality snapshot — camera position,
    quaternion, fov, `controls.target`, `worldOffset`. Catches every
    camera mutation whatever its source (trackball damping, observe
    look-around momentum, recentres, `setCameraFov`). The snapshot is
@@ -74,7 +74,7 @@ would silently make the next `hold()` a no-op.
    moves, we render; when damping converges to bit-identical floats, we
    stop. That convergence is not free — a TrackballControls tail decays
    forever, so navigate-mode damping carries its own pixel-scale floor
-   (`../camera/controls/input/README.md` § Damping settle floor), without
+   ([Damping settle floor](../camera/controls/input/README.md#damping-settle-floor)), without
    which one camera nudge holds the gate open for over two minutes.
 
    **A slot RE-DERIVED each frame never converges, and that is a distinct
@@ -102,8 +102,8 @@ would silently make the next `hold()` a no-op.
 one.** Unlike the pose — a CPU value that genuinely stops — the applied
 `dm` is read back off the GPU and feeds the exposure it was measured at,
 and fp16 rounding in the statistic attachment turns that loop into a
-quantiser (`../hdr/exposure/reduction/README.md` § Measure at the base
-exposure owns why the division cannot cancel it). The threshold guards
+quantiser ([Measure at the base exposure](../hdr/exposure/reduction/README.md#measure-at-the-base-exposure-not-the-live-one)
+owns why the division cannot cancel it). The threshold guards
 the class: frame scheduling must never key on exact float equality of a
 GPU-read continuous quantity.
 
@@ -124,7 +124,7 @@ produces the frames that produce the next wake never settles.
 
 `exposureCutMoved` therefore compares against `CADENCE_JND_MAG` — the
 same 1 % of flux every other brightness driver schedules against
-(`cadence/README.md` § The thresholds), in the magnitudes `dm` is
+([The thresholds](cadence/README.md#the-thresholds)), in the magnitudes `dm` is
 already expressed in. A real slew still wakes on its first frame, since
 entering a bright scene ramps whole magnitudes.
 
@@ -152,7 +152,7 @@ carry a threshold below the measurement's own noise.
 - `KindContext.requestRender(reason)` — the seam for a kind module's own
   async landings, which reach neither the shell nor the bus. Its one
   caller today is the planet mesh layer's lazy texture load
-  (`../solar-system/planets/README.md` § Planet mesh LOD): the body
+  ([Planet mesh LOD](../solar-system/planets/README.md#planet-mesh-lod)): the body
   draws a white placeholder until the map resolves, and with the clock
   paused nothing else would ask for the frame that swaps it in.
 
@@ -226,7 +226,7 @@ a pan that moves `target` alone still wakes the gate.
 and the only other way to stay inside the schedule is to decline the write.**
 The attitude indicator's orbit lock is the second such writer — it swings the
 camera round with the focused object so the 8-ball stands still
-(`../attitude/orbit-frame/README.md` § The lock) — and it rides only a turn
+([The lock](../attitude/orbit-frame/README.md#the-lock)) — and it rides only a turn
 past `cadenceVisibleTurnRad`, the scheduling threshold expressed as a camera
 turn, holding the un-ridden remainder so sub-threshold turns accumulate into
 one that is worth a frame. Without that it is this section's loop exactly: at
@@ -249,9 +249,9 @@ and the clock running the gate woke on 28–55 % of ticks.
 
 The fix is at the derivations, not here: the navigate pair is floored and
 restored around `update()`
-(`../camera/controls/input/README.md` § Derived-pose settle floor), and the
+([Derived-pose settle floor](../camera/controls/input/README.md#derived-pose-settle-floor)), and the
 OBSERVE pin is re-derived only on rotation
-(`../camera/observe/README.md` § The serialised look pin). The gate keeps
+([The serialised look pin](../camera/observe/README.md#the-serialised-look-pin)). The gate keeps
 exact equality. **Anything new that recomputes a pose slot below the gate
 inherits this defect** — the ULP column in `debug.renderWatch()` is how you
 find it, and a handful of ULP on a slot nothing should have touched is the
@@ -259,5 +259,4 @@ signature.
 
 `applyRideDelta` also reports each step to `ClockCadence.noteRideStep`;
 the frame's sum divided by the sim step IS
-`CadenceCtx.cameraVelPcPerSimS` (`cadence/README.md` § Camera motion is
-subtracted).
+`CadenceCtx.cameraVelPcPerSimS` ([Camera motion is subtracted](cadence/README.md#camera-motion-is-subtracted-never-bounded)).

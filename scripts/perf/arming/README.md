@@ -62,7 +62,7 @@ denies, an unreadable marker age denies, and a missing `jq` falls back to a
 bare exit 2 (the harness's other blocking spelling) rather than to silence.
 That is the opposite posture from `prime-guard`, which fails open on purpose:
 a missing memory is survivable, an unasked-for GPU run is not.
-`scripts/hooks/README.md` § How perf-guard fails closed carries the rest.
+[How perf-guard fails closed](/scripts/hooks/README.md#how-perf-guard-fails-closed) carries the rest.
 
 Reading `run.ts`, running the pure tests, `await-go.sh`, and
 `perf-go-lib.sh` all pass through.

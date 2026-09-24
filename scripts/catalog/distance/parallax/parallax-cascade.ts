@@ -87,7 +87,7 @@ export interface ParallaxResolution {
    *  build will not stand behind — § 5's residual policy requires the two be
    *  counted apart. The values themselves are what companion promotion matches
    *  a pair row's stated distance against
-   *  (`../../companions/README.md` § Refused-parallax refusal). */
+   *  (`../../companions/README.md#refused-parallax-refusal`). */
   refusedPlxMas: readonly number[];
 }
 

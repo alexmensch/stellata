@@ -83,12 +83,12 @@ Each subsystem's own factory interface (`SolarSystemMaterials`,
 `DustParticleMaterials`) stays
 with the layer that owns it; only the surface handle is shared. The
 `IUniform` face over a TSL node record is `uniformSlotsOf`
-(`../webgpu/tsl/README.md` § Uniform slots).
+([Uniform slots](../webgpu/tsl/README.md#uniform-slots--the-face-a-layer-writes)).
 
 ## No GLSL material may reach a WebGPU boot
 
 The shipped renderer draws the one scene every layer builds into
-(`../webgpu/README.md` § One scene per boot), and a raw `ShaderMaterial`
+([One scene per boot](../webgpu/README.md#one-scene-per-boot)), and a raw `ShaderMaterial`
 in it fails WGSL pipeline creation — which discards the entire submit,
 so the symptom is a black frame naming nothing, not one absent layer.
 `findGlslResidents` walks the graph and returns a description per
@@ -189,16 +189,16 @@ ring is centred on the moon's parent, the star local cluster mirrors
 slots the binary walk wrote, a constellation figure's vertex may BE a
 binary member. Each declares the rate of the subsystem it is anchored to,
 which is not a global min in disguise —
-`../render-gate/cadence/README.md` § Anchored content carries the
+[Anchored content](../render-gate/cadence/README.md#anchored-content) carries the
 `min(a, a) = a` argument and the per-frame memo that keeps the walk to
 one pass.
 
-**Not every entry owns a layer.** Two inline entries own no GPU resources
+<a id="not-every-entry-owns-a-layer"></a>**Not every entry owns a layer.** Two inline entries own no GPU resources
 at all (`dispose` is empty) and exist purely to sequence a camera write
 that belongs to another owner: the **moving-focal ride**, which has to
 land after the module layers' position writes; and the attitude
 indicator's **orbit lock** (`Stellata.setOrbitFrameTick`,
-`../attitude/orbit-frame/README.md` § The lock), which has to land after
+[The lock](../attitude/orbit-frame/README.md#the-lock)), which has to land after
 both focal rides, since it reads a datum they produce and pivots about the
 `controls.target` they move. The registry is the only place that expresses
 "between these two", so a sequencing-only entry is the intended shape

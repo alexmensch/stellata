@@ -48,8 +48,8 @@ scripts/catalog/companions/
 Promotion mints records; it does not amend one. The manifest states each
 record's HIP and Gaia source_id, its `binding` cell says on what basis, and a
 cell it leaves empty is the § 4 gate's decision rather than an omission
-(`../membership/README.md` § The identifier columns are read, never
-re-derived). So a pair-primary row's own ids stay on the promoted companion
+([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived)).
+So a pair-primary row's own ids stay on the promoted companion
 and never reach the anchor's record.
 
 `companion-promotion.ts` runs BEFORE the record sort. It reads the
@@ -92,17 +92,17 @@ Per-row gates and resolution:
   strips it rather than colliding with the primary in every
   gaia-keyed lookup, and build-runtime-binaries retries the
   synth key when its id-first resolve degenerates.
-- **Same-as bridge to an already-admitted source.** A row with no id of its
+- <a id="same-as-bridge-to-an-already-admitted-source"></a>**Same-as bridge to an already-admitted source.** A row with no id of its
   own mints `synth-<wds_id>-<comp>`, and the already-in-catalog test above
   has nothing to match on — so when a deeper magnitude floor admits the same
   physical star on its Gaia source, both ship and one object is drawn twice,
   100 pc apart. The SID registry's same-as edges are the only witness of the
   link (`syntheticGaiaBridges` over `data/sid/sameas-overrides.tsv` +
-  `bridges/`, `docs/sid.md` § 4.1): a bridged source already in the catalog
+  `bridges/`, [§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)): a bridged source already in the catalog
   IS this component, so the mint is refused and that record takes the
   re-curation and anchor-dim registration an already-in-catalog hit gets.
   Counted `companionExistingViaSameasBridge`, a ratchet-DOWN metric.
-- **Re-curation of an already-in-catalog member.** An existing member's
+- <a id="re-curation-of-an-already-in-catalog-member"></a>**Re-curation of an already-in-catalog member.** An existing member's
   position, brightness and velocity all descend from its own 5p solution.
   Where **Gaia rejects that solution** — `isCoherenceAnchorGrade`
   (`../multiplicity/anchor-grade-pure.ts`) — AND the record's `distVia` says
@@ -152,7 +152,7 @@ Per-row gates and resolution:
   witness, which is why the `Gl 277A` duplicate needs a membership fix instead.
   `applyStarNames` runs before promotion, which is what puts `bayerComponent`
   on the record in time.
-- **Refused-parallax refusal.** A row never promotes when the distance it STATES
+- <a id="refused-parallax-refusal"></a>**Refused-parallax refusal.** A row never promotes when the distance it STATES
   is a parallax a tier above refused — `statesRefusedParallax` matches the cell
   against every refused value indexed under the row's ids. Sharing the id is not
   enough: Stage 2/3 bind one blended source to every component of a sub-arcsec
@@ -163,7 +163,7 @@ Per-row gates and resolution:
   `companionDroppedParkedRecord` (9); `companionDroppedParkedOwnedFit` is
   **pinned at 0**, so no refused row carries an owned id on a per-component
   route and nothing of the component's own is withheld — tolerance and the
-  wider-join caveat in `../distance/parallax/README.md` § Companion promotion.
+  wider-join caveat in [Companion promotion](../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in).
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
@@ -230,7 +230,7 @@ Per-row gates and resolution:
   identifier-less secondary. The honesty gates are position and
   brightness, not identity; a reappearing previously-retired component
   is reconciled in the SID ledger via `data/sid/reinstatements.tsv`
-  (docs/sid.md § 4.3), never by dropping the star. Position resolves
+  ([§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)), never by dropping the star. Position resolves
   in preference order: (1) the row's own
   per-component astrometry when Stage 3 supplied a real independent fit
   (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
@@ -264,7 +264,7 @@ Per-row gates and resolution:
   (non-inherited) absmag — including the Stage-6 Gaia-photometry value
   (`photometry_via = gaia_photometry`) derived from an own-DR3
   companion's G/BP/RP + parallax when no AT-HYG row backs it
-  (`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline);
+  ([Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline));
   primary + Δmag fallback; the row's own WDS
   apparent magnitude at the system distance (`wds_mag`, M = m −
   5·log₁₀(d/10) — fires when both Δmag paths are unavailable and
@@ -291,7 +291,7 @@ Per-row gates and resolution:
   honest brightness the record inherits the anchor's collocated
   brightness (`companionAbsmagAnchorCollocated`) rather than a
   corrupted A+Δmag.
-- **Anchor flux conservation (post-pass).** A member whose light is
+- <a id="anchor-flux-conservation-post-pass"></a>**Anchor flux conservation (post-pass).** A member whose light is
   embedded in an `athyg_own` anchor's record magnitude double-counts the flux
   if minted without dimming the anchor. **Which members CAN be in there is set
   by the catalogue the anchor's V came from, not by identifiers.** A printed
@@ -300,11 +300,11 @@ Per-row gates and resolution:
   handed its OWN source_id is separated by measurement and cannot be in the
   anchor's G (`blendDimGaiaResolved` — HD 153557's B at 5″, σ Ori's E at 42″,
   both of which the fit alone would have dimmed). `vTierIsSystemBlend` owns
-  that split (`../photometry/README.md` § Which tiers give a system blend).
+  that split ([Which tiers give a system blend](../photometry/README.md#which-tiers-give-a-system-blend--vtierissystemblend)).
   Every remaining own-brightness member (`dmag_imputed` / `own` / `wds_mag`) is
   decided per anchor by a **joint subset solve** — derivation, margin rationale
-  and worked examples in `docs/science-multiple-star-pipeline.md` § Blend light
-  conservation. The engineering invariants it rests on, each easy to get wrong:
+  and worked examples in [Blend light conservation](/docs/science-multiple-star-pipeline.md#blend-light-conservation).
+  The engineering invariants it rests on, each easy to get wrong:
 
   - **Observed magnitude** comes from the anchor's own `absmag` at its own
     `|xyz|`, never a multiples.tsv `dist_pc` — that can predate a distance
@@ -397,7 +397,7 @@ Per-row gates and resolution:
   near-equal by construction, exact for the M-dwarf eclipsing pairs that
   dominate; total system light is preserved. `ci` stays the shared
   colour. Counted `companionBlendSplit`; runs before the record sort.
-  See `docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+  See [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
   (Blend split).
 - **B-V (ci).** When Stage 6 tags the row's photometry as inherited
   (`photometry_via = athyg_system_inherited`), recompute from the
@@ -458,15 +458,15 @@ companion never gets one without the other.
 Which cursor primary is the ROOT's is `isMoreCanonicalAnchor`: top-level
 letter first, then depth, then alphabetical order — so a root whose only
 A-branch cursor is Aa,Ab still takes its position and velocity from the A
-branch. `record-index/README.md` § Component-letter search designations
+branch. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
 carries the worked case and imports the same predicate for naming.
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |
-| `conIndex` | per-component | the IAU boundary region the minted position falls in (`../parse/README.md` § Positional constellation membership) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
-| `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone (`../naming/README.md` § Two callers, one composer). |
-| `desigConIndex` | inherited | anchor's designation index — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index (`../classic-ids/README.md` § The designation constellation). |
-| `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise (`../parse/README.md` § Space-motion velocity, Pair coherence). Truly anchor-less escapes fall back to zero. |
+| `conIndex` | per-component | the IAU boundary region the minted position falls in ([Positional constellation membership](../parse/README.md#positional-constellation-membership)) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
+| `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone ([Two callers, one composer](../naming/README.md#two-callers-one-composer)). |
+| `desigConIndex` | inherited | anchor's designation index — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index ([The designation constellation](../classic-ids/README.md#the-designation-constellation)). |
+| `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise ([Space-motion velocity,](../parse/README.md#space-motion-velocity) Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
 | `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
 | `absmag` | per-component | Stage-5 decomposition / dmag / blend split. |
@@ -475,7 +475,7 @@ carries the worked case and imports the same predicate for naming.
 | `physicalRadius` | per-component | Stefan-Boltzmann from the per-component absmag + Teff. |
 | `flags` | per-component | `FLAG_BINARY_COMPANION_ONLY` (+ `_SYNTHETIC`). |
 | `syntheticId` | per-component | `synth-<wds_id>-<comp>` when no own id survives the gates. |
-| `companionIdx` | post-pass | set by geometric binary inference (`../multiplicity/README.md` § Geometric binary inference). |
+| `companionIdx` | post-pass | set by geometric binary inference ([Geometric binary inference](../multiplicity/README.md#geometric-binary-inference)). |
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
 | `hd`, `hr`, `flam`, `bayer`, `gl`, `tyc` | unset | not carried on multiples.tsv rows. `hdAlt`/`hrAlt` are empty for a different reason — deliberately not inherited: an anchor's alternative HD is often the pair's OTHER component number, which makes handing it to this record tempting and wrong. The overlay asserts both numbers against one Gaia source and names no component, so attributing one here would invent evidence (`../classic-ids/label-merge/README.md`). |
 
@@ -492,7 +492,7 @@ inherits a sibling's composed name, and one root cannot letter one star
 twice.
 
 The letter and the anchor a record composes against are
-`record-index/README.md` § Component-letter search designations; the
+[Component-letter search designations](record-index/README.md#component-letter-search-designations); the
 duplicate labels that survive the ladder are data findings, enumerated in
 `../naming/naming-duplicates.tsv` and ratcheted by
 `multi-star-regression.test.ts`.

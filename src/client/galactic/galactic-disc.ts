@@ -38,8 +38,8 @@ const DISC_RENDER_ORDER = -1;
 
 /** Stroke opacity at a camera distance from Sol — zero inside the fade's
  *  inner edge, which is what the layer's `'opacity'` contribution test
- *  reads (`../scene/README.md` § Declaring what a layer can put on
- *  screen). */
+ *  reads (`../scene/README.md#declaring-what-a-layer-can-put-on-screen`).
+ * */
 export function galacticDiscOpacity(distFromSolPc: number): number {
   return farFieldFadeOpacity(DARK_BASE_OPACITY, distFromSolPc);
 }

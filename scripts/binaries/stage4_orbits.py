@@ -47,7 +47,7 @@ NSS_PERIOD_THRESHOLD_DAYS = 3.0 * 365.25
 NSS_SEPARATION_THRESHOLD_MAS = 1000.0
 
 # Separation-sanity gate bounds — mass ceiling and ρ/a_max ratio for
-# _nss_separation_consistent. See README.md § Stage 4 for the leak
+# _nss_separation_consistent. See README.md#stage-4--orbital-element-selection-per-pair for the leak
 # mechanism and the apastron derivation.
 NSS_MAX_SYSTEM_MASS_MSUN = 150.0
 NSS_SEPARATION_SANITY_RATIO = 3.0
@@ -256,7 +256,7 @@ def nss_to_canonical_elements(
       ``OrbitalTargetedSearch*``, ``AstroSpectroSB1``) — recover
       i/Ω/ω from A,B,F,G via Heintz 1978 algebra. The TI semi-major
       axis is the photocentre's a0, not the relative A–B orbit, so
-      ``a_AU`` is always left ``None`` (README.md § Stage 4); ω is
+      ``a_AU`` is always left ``None`` (README.md#stage-4--orbital-element-selection-per-pair); ω is
       the photocentre's, π away from the secondary's relative-orbit
       ω when the primary dominates the flux.
     * Eclipsing (``EclipsingBinary``, ``EclipsingSpectro``) — read

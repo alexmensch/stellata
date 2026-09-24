@@ -1,4 +1,4 @@
-// Live declutter permission cache. See scene/declutter/README.md § The contract.
+// Live declutter permission cache. See /src/client/scene/declutter/README.md#the-contract.
 
 import {
   type DetailLevel,

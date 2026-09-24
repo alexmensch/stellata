@@ -30,7 +30,7 @@ type LgPickCandidate = PickCandidate & {
 
 export const RING_SEGMENTS = 64;
 
-/** README.md § Runtime layer. The merged buffer sizes off it, and
+/** README.md#runtime-layer. The merged buffer sizes off it, and
  *  `buildWireframeSegments` throws rather than truncate if the two
  *  ever disagree. */
 export const RINGS_PER_OBJECT = 3;
@@ -52,8 +52,8 @@ const WIREFRAME_RENDER_ORDER = -1;
 
 /** Stroke opacity at a camera distance from Sol — zero inside the fade's
  *  inner edge, which is the wireframe half of the layer's contribution
- *  test (`../scene/README.md` § Declaring what a layer can put on
- *  screen). The glow half is the brightness verdict. */
+ *  test (`../scene/README.md#declaring-what-a-layer-can-put-on-screen`).
+ * The glow half is the brightness verdict. */
 export function lgWireframeOpacity(distFromSolPc: number): number {
   return farFieldFadeOpacity(DARK_BASE_OPACITY, distFromSolPc);
 }
@@ -240,7 +240,7 @@ export class LocalGroupLayer {
 
 /** A disc's axes[2] is its semi-thickness along the normal, not a third
  *  radius, so its rings are one plane at three heights rather than three
- *  planes. README.md § Runtime layer. */
+ *  planes. README.md#runtime-layer. */
 function ringSpecsOf(obj: LgObject): RingSpec[] {
   const [a, b, c] = obj.axes;
   if (obj.kind === 'disc') {
@@ -258,7 +258,7 @@ function ringSpecsOf(obj: LgObject): RingSpec[] {
 }
 
 /** Every object's rings as one vertex buffer in absolute ICRS pc, ring
- *  after ring — README.md § Runtime layer. */
+ *  after ring — README.md#runtime-layer. */
 function buildWireframeSegments(objects: readonly LgObject[]): Float32Array {
   const out = new Float32Array(objects.length * RINGS_PER_OBJECT * RING_SEGMENTS * 3);
   let at = 0;

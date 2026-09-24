@@ -11,7 +11,7 @@ import { webpSize } from './image-header-pure';
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with
 // the committed manifest and the shipped maps. Why it matters:
-// data/textures/relief/README.md § Surface relief.
+// /data/textures/relief/README.md#surface-relief--dem-derived-normal-maps.
 
 const TEXTURES = resolve(__dirname, '../../data/textures');
 const RELIEF = resolve(TEXTURES, 'relief');
@@ -152,7 +152,7 @@ describe('surface-relief normal maps', () => {
 
   it('ships none for the cloud, haze and giant bodies', () => {
     // Relief applies only where the rendered texture IS the solid surface —
-    // per-body reasoning in data/textures/relief/README.md § Surface relief.
+    // per-body reasoning in /data/textures/relief/README.md#surface-relief--dem-derived-normal-maps.
     for (const name of ['venus', 'titan', 'jupiter', 'saturn', 'uranus', 'neptune']) {
       expect(shippedNormalMaps).not.toContain(name);
     }
@@ -171,7 +171,7 @@ describe('surface-relief normal maps', () => {
       // surface is ocean clamped flat, which is what pulls the median to
       // exactly 0 and the p90 to 0.521. Over land alone the same map
       // measures median 0.265 / p90 2.157 — the figure the 8192 width was
-      // chosen on (data/textures/relief/README.md § Surface relief).
+      // chosen on (/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
       earth: [0.0, 0.521],
     };
     for (const [name, [median, p90]] of Object.entries(pins)) {

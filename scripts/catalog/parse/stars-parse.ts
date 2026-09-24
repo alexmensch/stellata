@@ -141,7 +141,7 @@ export interface Star {
    *  designations fall back to `conIndex`. Filled downstream of this walk:
    *  the IAU WGSN designation the naming ladder resolves states it, else
    *  IV/27A keyed on HD/HIP, else a GCVS designation's own trailing
-   *  abbreviation. See ./README.md § Positional constellation membership. */
+   *  abbreviation. See ./README.md#positional-constellation-membership. */
   desigConIndex: number;
   flags: number;
   /** The record's display name — what `catalog.bin`'s name table carries.
@@ -153,7 +153,7 @@ export interface Star {
   /** IAU WGSN approved name — the ladder's authority tier. */
   iauName: string | null;
   /** A published designation no structured source states, carried as a
-   *  string (`Ross 128`, `Cygnus X-1`) — docs/star-naming.md § 2. */
+   *  string (`Ross 128`, `Cygnus X-1`) — /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them. */
   eponym: string | null;
   /** Bayer letter as the Unicode glyph — Greek (`α`) or the bare Latin
    *  overflow series (`p`). The manifest's ASCII cell (`Alp`) until the naming
@@ -162,14 +162,14 @@ export interface Star {
   bayerSup: number | null;
   /** `κ Her` names component A, so NEC's row for the B component states it —
    *  and the letter then renders unconditionally, where a WDS letter renders
-   *  only to break a tie (docs/star-naming.md § 3). */
+   *  only to break a tie (/docs/star-naming.md#3-the-ladder). */
   bayerComponent: string | null;
   gould: number | null;
   /** Serpens' Gould halves are numbered separately (`4 G. Ser Cau`). */
   gouldHalf: string | null;
   /** Published spellings that resolve a search and never display — a name
    *  the ladder displaced, or an approved alternate. Only strings no
-   *  structure implies (docs/star-naming.md § 5). */
+   *  structure implies (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can). */
   aliases: string[];
   hip: number | null;
   hd: number | null;
@@ -215,7 +215,7 @@ export interface Star {
    *  `vTierIsSystemBlend` in ../photometry/v-magnitude-pure.ts. */
   vVia: VVia | null;
   /** Build-time-only synthetic identifier. See
-   *  ../companions/README.md § Companion promotion from
+   *  ../companions/README.md#companion-promotion-from-databinariesmultiplestsv
    *  `data/binaries/multiples.tsv`. */
   syntheticId: string | null;
 }
@@ -430,7 +430,7 @@ export function readStars(
     total++;
     const hip = parseIntOrNull(row.hip);
     // Read off the manifest column, never re-derived: the binding is the one
-    // the manifest justified (docs/catalog-driver.md § 3.1), and re-deciding
+    // the manifest justified (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), and re-deciding
     // it here would re-run a cross-walk against reference tables that have
     // moved since.
     const gaiaSourceId = nonEmpty(row.gaia_source_id);
@@ -549,8 +549,7 @@ export function readStars(
     // The direction tier supplies the PM wherever its own solution carries
     // one. Where it does not — the 2p Gaia cohort, Tycho-2's rows with no mean
     // solution — the tangential term re-keys on the record's own designations
-    // rather than shipping static. See ../distance/README.md § The
-    // proper-motion rescue cascade.
+    // rather than shipping static. See ../distance/README.md#the-proper-motion-rescue-cascade.
     const pmRescue = !isSol && dirRes.velVia === 'zero'
       ? resolvePmRescue(
           {
@@ -704,8 +703,8 @@ export function readStars(
 
     // B−V through the Gaia relation → printed I/239 B−V → synthetic
     // photometry → intrinsic spectral class → solar. Printed above synthetic
-    // inverts docs/catalog-driver.md § 5 — ../photometry/README.md § The ci
-    // cascade. The baked value only drives colour for no-Apsis stars, which is
+    // inverts /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers — ../photometry/README.md#the-ci-cascade.
+    // The baked value only drives colour for no-Apsis stars, which is
     // why the derived tiers gate on apsisTeff.
     const gspc = gaiaSourceId ? gspcMap.get(gaiaSourceId) ?? null : null;
     const ciRes = resolveColourIndex({

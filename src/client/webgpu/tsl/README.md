@@ -58,12 +58,12 @@ contract:
   fills later (`uDustTexture`) binds over a placeholder whose `.value` is
   swapped on attach — one node per slot for the whole boot, since two
   consumers of the same volume must not be able to diverge
-  (`../extinction/README.md` § One owner for every shared slot). The A_V cache is a
+  ([One owner for every shared slot](../extinction/README.md#one-owner-for-every-shared-slot)). The A_V cache is a
   storage buffer, bound the same way (§ Storage attributes).
   **A placeholder's filter pair is what its node's WGSL fetches with**, for
   the graph's whole life and whatever is swapped in later — so the
   placeholder carries the real texture's pair
-  (`../solar-system/README.md` § A stand-in's filters).
+  ([A stand-in's filters](../solar-system/README.md#a-stand-ins-filters)).
 
 The mirror is a **transcription, not a loop** — `uniform()`'s node type
 comes from its overloads resolving against a concrete value, so a derived
@@ -107,8 +107,7 @@ attribute released that way leaks its buffer for the renderer's life.
 registry `Geometries` uses to drop its own attributes; it is the one
 reach into a renderer private in this folder, and a three bump has to
 re-verify the field name. Whoever allocates the attribute owns that
-call, in its dispose, in the same diff (`../../../../docs/authoring-patterns.md`
-§ Lifecycle pairing).
+call, in its dispose, in the same diff ([Lifecycle pairing](../../../../docs/authoring-patterns.md#lifecycle-pairing)).
 
 Three properties of a storage node worth knowing before binding one:
 
@@ -118,8 +117,7 @@ Three properties of a storage node worth knowing before binding one:
   read-only there — so ONE `StorageBufferNode` object can be the kernel's
   write target and a vertex stage's read source at once. Sharing it by
   identity is what makes a `.value` swap reach every consumer (the
-  extinction A_V slot, `../extinction/README.md` § One owner for every
-  shared slot).
+  extinction A_V slot, [One owner for every shared slot](../extinction/README.md#one-owner-for-every-shared-slot)).
   **`toReadOnly()` is the exception, and it narrows in place.** It is
   `setAccess(READ_ONLY)` returning the same node, not a view, and an
   explicit access binds in the compute stage too — so narrowing a node a
@@ -129,8 +127,8 @@ Three properties of a storage node worth knowing before binding one:
   another only reads therefore needs **two `storage()` calls over the one
   attribute**. `storageWriteRead(build)` (`storage-attribute.ts`) is that
   pair — it calls `build` twice and narrows only the reader — and the
-  refill dispatch takes it (`../star/compaction/README.md` § The refill
-  dispatch). **Narrowing is safe only on a `storage()` call's own
+  refill dispatch takes it ([The refill dispatch](../star/compaction/README.md#the-refill-dispatch)).
+  **Narrowing is safe only on a `storage()` call's own
   result**, which no other holder can reach;
   `../../../../tests/tsl-storage-narrowing.test.ts` scans `src/` for the
   rest, and the pair builder is its one exemption.
@@ -145,8 +143,8 @@ Three properties of a storage node worth knowing before binding one:
   its limits but not this one, so a device holding no vertex-stage storage
   buffer boots and then fails every pipeline that binds one. The dust A_V
   cache is the one that does, across all three star pipelines, and one
-  invalid pipeline discards the whole submit (`../README.md` § One scene
-  per boot). `supportsVertexStageStorageBuffers` is therefore a boot
+  invalid pipeline discards the whole submit ([One scene per boot](../README.md#one-scene-per-boot)).
+  `supportsVertexStageStorageBuffers` is therefore a boot
   refusal in `../boot-webgpu.ts`, beside the `reversedDepthBuffer` one: the
   requires-WebGPU page, not a black canvas. A device reporting no limit at
   all predates the compatibility level, so core limits apply and it
@@ -156,8 +154,7 @@ Three properties of a storage node worth knowing before binding one:
   tables a main-pass star vertex stage binds. Core guarantees 8 per
   stage. **Any new vertex-stage storage binding on the star pipelines
   raises that constant** — and the gate page is the ceiling on what this
-  renderer can ask of a device (`../star/compaction/README.md` § Binding
-  budget).
+  renderer can ask of a device ([Binding budget](../star/compaction/README.md#binding-budget)).
 
 ## One program per material instance
 
@@ -173,8 +170,7 @@ across N objects**: a per-object material is N shader builds and N
 pipelines, where a program cache would have collapsed N identical
 materials onto one program and hidden the duplication. Hoist it to the
 layer — the
-orbit rings were 27 of them (`../../solar-system/ephemerides/README.md`
-§ Orbit rings).
+orbit rings were 27 of them ([Orbit rings](../../solar-system/ephemerides/README.md#orbit-rings)).
 
 It also rules cache-key equality out as a test: two graphs that ought to be
 identical never compare equal. Pin the observable surface instead
@@ -205,7 +201,7 @@ the `vertexNode` body.
 few-sample lattice into fine grain, and the ±0.5-LSB output dither that
 stops a whisper-level gradient banding on 8-bit — one shape, two jobs. It
 is **static per pixel and never reseeded per frame**: animated jitter
-shimmers (`docs/science-molecular-clouds.md` § 9.1 rules 3–4).
+shimmers ([§ 9.1](/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode) rules 3–4).
 
 Both jobs are exported, because writing the dither out as
 `noise(coord).sub(0.5).div(255)` is what let three copies of it
@@ -259,7 +255,7 @@ still names the object:
   Its instance index IS the body, so a vertex attribute fetched by
   instance still addresses the right record.
 - **The star layer** reads every per-star field out of storage tables
-  indexed by star (`../star/README.md` § Star tables), because its draws
+  indexed by star ([Star tables](../star/README.md#star-tables--every-per-star-field-is-a-storage-read)), because its draws
   are compacted: the instance index names a survivor-list slot, and a
   vertex attribute cannot be fetched at an arbitrary index. The tables
   bind under `maxStorageBuffersInVertexStage` instead (§ Storage

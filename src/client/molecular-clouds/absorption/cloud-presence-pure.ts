@@ -1,11 +1,11 @@
 // CPU mirror of the absorption-pass math in ../../webgpu/molecular-clouds/cloud-absorption-tsl.ts:
-// Plummer density and absorption alpha. Physics: docs/science-molecular-clouds.md
-// §§ 2, 4, 9.
+// Plummer density and absorption alpha. Physics: /docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain,
+// /docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field, /docs/science-molecular-clouds.md#9-presence-pass.
 
 /** τ_V = 0.921 · A_V (A_V = 1.086 τ_V). */
 export const TAU_PER_AV = 0.921;
 
-/** A_V rate [mag/pc] per n_H [cm⁻³] (docs/science-molecular-clouds.md § 2). */
+/** A_V rate [mag/pc] per n_H [cm⁻³] (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain). */
 export const AV_RATE_PER_NH = 1.65e-3;
 
 /** Opacity ceiling: the densest core never fully blacks out the
@@ -37,7 +37,7 @@ function smoothstep(e0: number, e1: number, x: number): number {
 
 /**
  * Calibrated Plummer density [cm⁻³] at ellipsoidal radius `u`
- * (docs/science-molecular-clouds.md § 4.1): profile radius is `u · sMin`, the
+ * (/docs/science-molecular-clouds.md#41-the-11-profiled-clouds-zucker-2021): profile radius is `u · sMin`, the
  * mass-budget envelope cuts smoothly at `uEnv`.
  */
 export function cloudModelDensity(

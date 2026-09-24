@@ -65,4 +65,4 @@ provides the position directly — no LVDB merge happens. Other
 LVDB-only dwarfs render as sky-plane oblate ellipsoids from
 `rhalf_physical` + `ellipticity` + `position_angle` — no override row
 needed, and their luminosity model solves entirely from LVDB
-photometry (`docs/science-local-group.md` § Local Group luminosity model).
+photometry ([Local Group luminosity model](/docs/science-local-group.md#local-group-luminosity-model)).

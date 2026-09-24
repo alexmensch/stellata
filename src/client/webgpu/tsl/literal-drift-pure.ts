@@ -1,5 +1,5 @@
 // Which pinned constants a TSL source restates as a bare literal. See
-// ../solar-system/README.md § Constant drift.
+// ../solar-system/README.md#constant-drift.
 
 export interface PinnedConstant {
   identifier: string;

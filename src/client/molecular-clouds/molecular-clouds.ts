@@ -253,8 +253,8 @@ export class MolecularClouds {
   }
 
   /** Whether any cloud's silhouette still clears the shared legibility
-   *  floor — the layer-level contribution test (`docs/render-rules.md`
-   *  § 2), so the whole population has to fail it. One cloud of ninety-six
+   *  floor — the layer-level contribution test (`/docs/render-rules.md#2-contribution-gated-liveness`),
+   * so the whole population has to fail it. One cloud of ninety-six
    *  behind the camera is rule 1's per-instance territory instead. */
   anyCloudLegible(
     worldOffset: Readonly<THREE.Vector3>,
@@ -270,8 +270,8 @@ export class MolecularClouds {
   }
 
   /** Contribution gate. `rimGroup` is cleared as well as the parent
-   *  because the pick gate reads it directly (README.md § The permit that
-   *  gates the rim gates the pick) and a hidden ancestor does not reach it;
+   *  because the pick gate reads it directly (README.md#the-permit-that-gates-the-rim-gates-the-pick)
+   * and a hidden ancestor does not reach it;
    *  the `update` that would clear it does not run while skipped. */
   setContributing(on: boolean): void {
     this.group.visible = on;

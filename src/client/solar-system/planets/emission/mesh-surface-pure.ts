@@ -1,6 +1,6 @@
 // Planet mesh + ring + airlight emission into the scene-wide HDR unit:
 // the disc-mean normalisers that make the shaded disc integrate to the
-// body's true flux. See README.md § Physical-luminance emission.
+// body's true flux. See README.md#physical-luminance-emission--into-the-scene-wide-hdr-unit.
 
 import { ARCSEC_TO_RAD } from '../../../util/astronomy-constants';
 import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../hdr/emission/emission-pure';
@@ -42,7 +42,7 @@ export function lambertLimbDiscMean(limbFloor: number, limbExp: number): number 
  *
  *  `E · Ω_px`: the host's irradiance at the body on the luminance scale,
  *  times the solid angle one pixel subtends. Ω_px is why zooming dims an
- *  extended source (`../../../hdr/emission/README.md` § Unit) — the same
+ *  extended source (`../../../hdr/emission/README.md#unit--what-an-emitting-layer-writes`) — the same
  *  factor that
  *  dims a resolved disc's peak under the point-source rule, which is what
  *  keeps mesh and glare continuous at any FOV. */

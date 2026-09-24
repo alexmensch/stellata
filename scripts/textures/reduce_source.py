@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One-shot colour-map reduction, downloaded original(s) -> the frozen
 data/textures/src/<name> master (re-pull recipe in
-data/textures/src/README.md § Refresh recipe)."""
+/data/textures/src/README.md#refresh-recipe)."""
 
 import argparse
 from pathlib import Path

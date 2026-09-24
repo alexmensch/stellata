@@ -152,13 +152,13 @@ information.
   its own `frames` so the outgoing pin answers the question itself. Omit it
   and the runner dwells at its default 240, which is a different statistic
   rather than a noisier one; `--against-pin` and `--baseline` both refuse the
-  mismatch (`scripts/perf/diff/README.md` § The refusals), so it costs a run
+  mismatch ([The refusals](scripts/perf/diff/README.md#the-refusals)), so it costs a run
   rather than corrupting the next PR's verdict.
   A sweep refused for one row — a first-context settle, a dwell that
   trended — is not re-armed: `pnpm run perf:pin` writes the pin offline
   from the saved run files of one commit, taking each row from the run
   that held it steady, with the same `--accept` gate
-  (`scripts/perf/pins/README.md` § From saved runs).
+  ([From saved runs](scripts/perf/pins/README.md#from-saved-runs)).
 
 **A re-take may be taken on main instead, in a PR of its own, where the
 drift above the outgoing pin would swamp the diff being judged.** A pin at
@@ -217,7 +217,7 @@ so its tree is not main's by construction: `--against-pin` re-asks the
 ancestry at comparison time, and where the tip never landed it prints
 main's own `git diff --shortstat` between the two bases, because a mark is
 only the PR's if nothing else moved the frame in between
-(`scripts/perf/pins/provenance/README.md` § What the commit fields hold). A run that
+([What the commit fields hold](scripts/perf/pins/provenance/README.md#what-the-commit-fields-hold)). A run that
 cannot be compared is refused rather than trusted: a differing adapter,
 buffer, method, mode or record count, and a row taken at another position
 in its run (below). A committed index was declined for being a
@@ -240,7 +240,7 @@ pin (stellata-8cg.49.27).
 two vantages are exactly the ones a wall-clock row cannot resolve — sol's
 wall p50 sits at two refresh intervals and mw120's at one — so a row
 marked on wall would compare two quantised medians and refuse or fabricate
-by turns (`scripts/perf/diff/README.md` § Reading the table).
+by turns ([Reading the table](scripts/perf/diff/README.md#reading-the-table)).
 
 **And the same floor**, one implementation in
 `scripts/perf/diff/diff-pure.ts` that both gates apply. Tier 1 may not gate
@@ -255,7 +255,7 @@ takes **its vantage's own** floor as its whole band — 0.05 ms at mw120 and
 mw50, 0.10 at earth, 0.15 at sol, the 0.25 constant at lg — because scatter
 there runs 0.008 to 0.267 ms across the five, a factor of 33 one constant
 cannot fit, and the constant reads as 30× the noise at mw50
-(`scripts/perf/pins/README.md` § The compute row). Each is capped at the
+([The compute row](scripts/perf/pins/README.md#the-compute-row)). Each is capped at the
 0.25, so a re-derivation only ever tightens a row.
 
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
@@ -278,7 +278,7 @@ whole-frame reading the pin holds — the middle half of a canon row spans
 timestamps separately, so a WebGPU context prints a second row,
 `<scenario>|webgpu|compute`, banded on its own vantage's floor (above), the
 same ceiling, and accepted under its own key
-(`scripts/perf/pins/README.md` § The compute row). The two are never
+([The compute row](scripts/perf/pins/README.md#the-compute-row)). The two are never
 summed, and a compute regression marks whatever the frame row says.
 
 **Which statistic of each stream is the `metric` column's job**, and it is
@@ -357,7 +357,7 @@ moved in between:
   per-frame code at all, for ~1,600 insertions of main's own render-path
   work (stellata-8cg.49.24).
 
-**What a mark means.** A row is `✗` when the statistic its `metric` column
+<a id="what-a-mark-means"></a>**What a mark means.** A row is `✗` when the statistic its `metric` column
 names moves past its band — the pair's two-sigma standard error floored, on a
 frame row; the vantage's own constant alone, on a compute row — or when it
 crosses the
@@ -366,7 +366,7 @@ time — whatever the band says and whether or not the vantage is gated. mw50 at
 row today, 2.85 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change". The `floor` column beside `delta` — how far the 10th-percentile
 frame moved — never marks; it says whether a `✗` lifted every frame or
-only the slow half (`scripts/perf/pins/README.md` § Reading `--against-pin`).
+only the slow half ([Reading](scripts/perf/pins/README.md#reading---against-pin) `--against-pin`).
 
 **A FRAME row's `✗` does not stand until a second cold run of the same tree
 reproduces it.** Re-arm the identical command — same scenarios, backend,
@@ -400,7 +400,7 @@ median 0.626 ms and up to 1.775, against ~0.02 at the other four; spread
 across runs 1.608 ms, the same size), so a 120-sample median there lands
 anywhere in that band and no cool-down or longer dwell narrows it. So lg is
 recorded and **permanently** never marked by the band —
-`scripts/perf/pins/README.md` § Ungated vantages carries the evidence and
+[Ungated vantages](scripts/perf/pins/README.md#ungated-vantages-and-lg-is-permanently-one) carries the evidence and
 stellata-8cg.49.18 closed on it. A single floor wide enough to cover lg would have to be ~12 %, which
 would hide a 3.9 ms regression at mw50 — the gate would be a formality.
 
@@ -440,7 +440,7 @@ smallest delta a row can be marked for. That bound is
 agree: a change under the trigger ships with no fresh pin, so a stricter
 refusal would leave that pin refusing every row of the next render-path PR.
 
-**What the section carries is the tier's answer**, and the section names
+<a id="what-the-section-carries"></a>**What the section carries is the tier's answer**, and the section names
 which tier it is claiming. Tier 2: the `--against-pin` table, the pin
 commit it was read against, the adapter slug, the state-guard line per
 context, and one `accepted: <row> <reason> (<bead-id>)` line per `✗`.
@@ -547,7 +547,7 @@ NSS + Apsis, Bailer-Jones DR3, Hipparcos-2 van Leeuwen, SIMBAD pulls)
 are refreshed by manual `pnpm run refresh:*` invocations, **not** by
 `pnpm run build` or the deploy workflow. The build reads the committed
 files under `data/<source>/` and never hits the network — see
-`data/README.md` § Frozen external data for the rationale.
+[Frozen external data](data/README.md#frozen-external-data) for the rationale.
 
 **Cadence.** Refresh is event-driven, not scheduled. The trigger is an
 upstream catalogue release:
@@ -568,8 +568,7 @@ upstream catalogue release:
   catalogues and a sample-time anchor is fine for the validation tier.
 
 The full refresh recipe + ordering constraints + post-refresh
-validation steps are in `scripts/refresh/README.md` § Refreshing data when
-DR4 / new AT-HYG lands.
+validation steps are in [Refreshing data when DR4 / new AT-HYG lands](scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands).
 
 **Version bump on catalogue refresh.** A catalogue refresh PR that
 changes the user-visible scene (e.g. star count, per-star distance

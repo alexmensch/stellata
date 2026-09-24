@@ -105,7 +105,7 @@ export function buildLocalGroupEmissionMaterial(
     const c = dot(vCamLocal, vCamLocal).sub(1.0).toVar();
     const disc = b.mul(b).sub(a.mul(c)).toVar();
 
-    // README.md § One coverage predicate.
+    // README.md#one-coverage-predicate.
     const sqDisc = max(disc, 0.0).sqrt();
     const tEnter = max(b.negate().sub(sqDisc).div(a), 0.0).toVar();
     const worldPerT = length(vWorldPos.sub(cameraPosition)).toVar();
@@ -139,7 +139,7 @@ export function buildLocalGroupEmissionMaterial(
         prevS.assign(sBoundary);
         const pLocal = vCamLocal.add(dirLocal.mul(sSample.div(worldPerT))).toVar();
         // Braced, so the jump is not handed back as the branch's output
-        // and emitted twice (`../tsl/README.md` § TSL test pattern).
+        // and emitted twice (`../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers`).
         If(dot(pLocal, pLocal).greaterThan(EMISSION_UNIT_BALL_SLACK), () => { Break(); });
         const footprintPc = footprintPcTsl(sSample, u.uOmegaPxArcsec2).toVar();
         const density = zFootprintScale !== null

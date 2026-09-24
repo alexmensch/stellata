@@ -20,7 +20,7 @@ files with no query logic of their own — the same split
 
 **MAXREC is not load-bearing on CDS.** VizieR's TAP default MAXREC is ~1e9,
 so a whole-table slice needs none of the sizing the Gaia sync endpoints demand
-(`../README.md` § Gaia TAP); the row-count band is what catches an upstream
+([Gaia TAP](../README.md#gaia-tap-synchronous-endpoints-only)); the row-count band is what catches an upstream
 row loss here. Coverage of the pull is asserted downstream instead —
 `pnpm run build:classic-ids` pins per-identifier counts.
 
@@ -32,8 +32,8 @@ on the slash. `rl.select_columns()` quotes for you.
 a filtered subset rather than a whole table, and its gate is a band on kept
 rows as a fraction of the request set rather than an absolute row count, so a
 membership term that gains or loses rows moves the gate with it. It still
-shares the projection and every gate helper — `../README.md` § VizieR, and
-`data/tycho2/README.md` § Why the pull is range-batched.
+shares the projection and every gate helper — [VizieR,](../README.md#vizier) and
+[Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered).
 
 Non-network dependency: `vizier_slice.test.py` covers the ADQL shape, the
 row-count / spot-row gates, the `--only` selector, and the no-partial-write

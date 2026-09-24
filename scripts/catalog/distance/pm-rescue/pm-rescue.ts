@@ -48,7 +48,7 @@ export interface PmRescueResolution {
 const NO_PM = { pmRaMasyr: null, pmDecMasyr: null } as const;
 
 /** Proper motion for a row the direction cascade left without one —
- *  `docs/catalog-driver.md` § 5's residual policy applied to the tangential
+ *  `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers`'s residual policy applied to the tangential
  *  term. The order is the direction cascade's own designation-joined order, so
  *  a first-order catalogue always outranks the second-order index.
  *

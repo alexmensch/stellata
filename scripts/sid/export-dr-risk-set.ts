@@ -1,6 +1,6 @@
 // `pnpm run sid:risk-set` — export the DR-churn risk set: source_ids of the
 // non-retired ledger rows whose canonical key is gaia_*-namespaced, as the
-// request TSV a refresh:gaia-*-neighbourhood pull reads. docs/sid.md § 6.1.
+// request TSV a refresh:gaia-*-neighbourhood pull reads. /docs/sid.md#61-procedure.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

@@ -40,7 +40,7 @@ actually are:
   the frame's leg of a recentre: registered as the FIRST `onRecenter`
   listener, it rewrites the buffer in float64 per axis before the
   float32 write-back, ahead of the camera shift and the scene-layer
-  fan-out (`../../frame/README.md` § Recentre fan-out).
+  fan-out ([Recentre fan-out](../../frame/README.md#recentre-fan-out--order-is-load-bearing)).
 - **Epoch advance.** The immutable J2016.0 `basePositions` snapshot and
   `advanceEpochTo(t, focalIdx, outDelta)`, which re-runs the
   space-motion pass whenever the model clock crosses a
@@ -66,14 +66,14 @@ actually are:
 the camera distance past which the WebGPU size solve skips the physical-
 size branch. It composes `discWindowPcFor` over
 `physSizeElisionBoundPx`, which owns what the bound has to satisfy
-(`../perceptual-disc/README.md` § Eliding the physical-size branch).
+([Eliding the physical-size branch](../perceptual-disc/README.md#eliding-the-physical-size-branch)).
 
 Every window solved through `discWindowPcFor` — this one, the core-mask
 gate, the member scan — reads `maxPhysicalRadiusPc`, which is taken at
 each star's **pulsation peak**, not its static radius. These are bounds
 that must not move as a star breathes, and the peak/live distinction is
 the one that already cost the occluder set a Mira
-(`../../camera/controls/README.md` § The live-versus-peak pair).
+([The live-versus-peak pair](../../camera/controls/README.md#the-live-versus-peak-pair-and-which-one-a-caller-owes)).
 
 The shell calls it once per rendered frame, **before** the node sync that
 copies scalars onto the TSL uniform nodes: the window moves with FOV,
@@ -104,8 +104,8 @@ new landing there has to sit after the flush instead.
 
 ## Absorbing a chunk
 
-The catalogue arrives progressively (`../../loaders/README.md`
-§ Progressive catalog load), so every buffer above is allocated at the full
+The catalogue arrives progressively ([Progressive catalog load](../../loaders/README.md#progressive-catalog-load)),
+so every buffer above is allocated at the full
 record count and filled forward, one window per chunk, by `absorbRecords()`.
 The shell calls it from `Stellata.absorbCatalogRecords`, never on a timer.
 

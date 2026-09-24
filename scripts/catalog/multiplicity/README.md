@@ -302,5 +302,5 @@ matches what `binaries.bin` renders. Pinned in build-counts as
 `systemCoherenceMemberAnchorWins` /
 `systemCoherenceSignificantDepthKept` /
 `systemCoherenceMemberAnchorPrecisionVetoed`.
-`docs/science-multiple-star-pipeline.md` § Multiple-star pipeline
+[Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
 carries the science framing.

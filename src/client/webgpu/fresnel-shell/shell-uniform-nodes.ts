@@ -12,7 +12,7 @@ import {
 } from '../../fresnel-shell/shell-distance-pure';
 import { setRawChromeColour } from '../../hdr/chrome/chrome-colour';
 
-/** README.md § Chrome, so both extra attachments write zero. */
+/** README.md#chrome-so-both-extra-attachments-write-zero. */
 export function fresnelShellUniformNodes(opts: FresnelShellMaterialOptions) {
   const reach = rimDistancesForExtent(opts.extentPc);
   return {

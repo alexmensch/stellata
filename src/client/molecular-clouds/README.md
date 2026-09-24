@@ -4,7 +4,7 @@
 decoupled components per cloud:
 
 - **Absorption** — a per-fragment raymarch of the calibrated Zucker
-  density model (`docs/science-molecular-clouds.md` §§ 4, 9) that dims every
+  density model ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field), [§ 9](/docs/science-molecular-clouds.md#9-presence-pass)) that dims every
   diffuse layer drawn behind the cloud (the MW band, LG emission).
   Physics, so it is **always on in realistic mode — never
   declutter-gated** — and hides only in chart mode. It has its own folder:
@@ -24,20 +24,20 @@ Both stay visible during warp by design (flying past Taurus is a
 feature, not noise).
 
 The module declares `contribution: { kind: 'gated' }` on
-`anyCloudLegible` (`../scene/README.md` § Declaring what a layer can put
-on screen): the whole layer skips once **no** cloud's silhouette clears
+`anyCloudLegible` ([Declaring what a layer can put on screen](../scene/README.md#declaring-what-a-layer-can-put-on-screen)):
+the whole layer skips once **no** cloud's silhouette clears
 `FEATURE_LEGIBILITY_MIN_PX`, which from a few hundred parsecs out takes
 the absorption raymarch and the rim pass with it. One cloud of ninety-six
 behind the camera is per-instance culling instead, inside the draw
-(`docs/render-rules.md` § 1). Being above the orbit lock, the layer may
-not gate on the frustum at all — `../scene/README.md` § Declaring what a
-layer can put on screen carries why. `setContributing(false)` clears
+([§ 1](/docs/render-rules.md#1-draw-at-visible-count-not-catalogue-count)). Being above the orbit lock, the layer may
+not gate on the frustum at all — [Declaring what a layer can put on screen](../scene/README.md#declaring-what-a-layer-can-put-on-screen)
+carries why. `setContributing(false)` clears
 `rimGroup.visible` as well as the parent group, because the pick gate
 reads that flag directly (§ The permit that gates the rim gates the pick).
 
 `isAbsorptionDrawn` reads the parent group and the absorption group together
 — the `cloudAbsorption` frame-cost lever's `present()`
-(`../debug/frame-cost/passes/README.md` § The roster). Once the layer skips,
+([The roster](../debug/frame-cost/passes/README.md#the-roster)). Once the layer skips,
 the raymarch is gone and `update` does not run, so the lever's kill switch
 reaches nothing and its A/B would price zero.
 
@@ -48,7 +48,7 @@ its `load` fetches `public/clouds.json` via `cloud-loader.ts`
 `public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed
 meshes; a missing artifact means every cloud uses its ellipsoid rim),
 and its `attach` constructs the layer at the kind's roster position.
-Each cloud carries a frozen Stellata ID (`sid`, docs/sid.md § 7); the
+Each cloud carries a frozen Stellata ID (`sid`, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)); the
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
 `pnpm run build:clouds`. The resolver's `cloud` SID domain is the
@@ -128,7 +128,7 @@ absorption keeps working from inside.
   n·v → 0, masked by a screen-space dot grid.
 
 The realistic arm also carries the shared camera-distance attenuation
-(`../fresnel-shell/README.md` § Camera-distance attenuation), so a rim
+([Camera-distance attenuation](../fresnel-shell/README.md#camera-distance-attenuation)), so a rim
 fades out as the camera closes on it and a distant cloud reads dimmer than
 a near one on the same scale as the Local Bubble wall. The chart arm
 returns before the shared chunk, which is what keeps the stipple outline
@@ -139,7 +139,7 @@ all ~96, so both come off one representative radius
 (`CLOUD_RIM_EXTENT_PC`, 20 pc) rather than per-cloud, which also means no
 two clouds can disagree on the depth scale. Both halves of that shared
 reach carry an accepted trade, and the near-fade's is the cloud-specific
-one — `../fresnel-shell/README.md` § Camera-distance attenuation states
+one — [Camera-distance attenuation](../fresnel-shell/README.md#camera-distance-attenuation) states
 both.
 
 ## Labels
@@ -165,7 +165,7 @@ module keeps the mount's teardown and runs it from its scene layer's
 ## Constellation — centroid only, deliberately
 
 The focus card's `Constellation` row answers for the cloud's **centroid**
-(`../focus-card/README.md` § Constellation row), which is the convention
+([Constellation row](../focus-card/README.md#constellation-row)), which is the convention
 for naming one — Taurus Molecular Cloud, Aquila Rift, Coalsack in Crux.
 
 It is also an under-answer, and knowingly so: a complex genuinely spans
@@ -227,7 +227,7 @@ Resolving here first cannot disagree with the ordering across layers,
 because both run the same comparison and the smallest of the smallest is
 the smallest (`../hover/README.md` Rule 3).
 
-**The permit that gates the rim gates the pick.** `pick` returns null
+<a id="the-permit-that-gates-the-rim-gates-the-pick"></a>**The permit that gates the rim gates the pick.** `pick` returns null
 whenever `rimGroup.visible` is false, so below the `representational`
 floor a cloud is neither hoverable nor clickable. Three raycasts hidden
 objects, so without that read the layer answered the cursor from states
@@ -286,7 +286,7 @@ that radius instead would misclassify near-lobe hits.
 Cloud entries enter the shared Fuse fuzzy index through the module's
 `searchEntries()` leg, discriminated by their `kind` tag. Each cloud
 indexes its canonical `name` plus every curated `aliases` entry
-(`scripts/clouds/README.md` § Alternate names), all resolving to the
+([Alternate names](/scripts/clouds/README.md#alternate-names)), all resolving to the
 same cloud — the Local Group pattern. The Focus search box dispatches `flyTo` with the entry's Target
 (focus-park lerp to viewing distance + set cloud focus); the To (distance
 vector) box dispatches `setVector` the same way.
@@ -296,7 +296,7 @@ vector) box dispatches `setVector` the same way.
 Clouds ride the Target-keyed shell surface — no cloud-specific entry
 points remain. Per-kind geometry (local position, park distance,
 rendered silhouette) comes from the `cloud` FocusableProviders entry
-(`../camera/focus/README.md` § FocusableProviders).
+([FocusableProviders](../camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry)).
 
 **`setOrbitTarget({kind:'cloud', idx})`:** the click-without-focus
 path. Moves orbit pivot to the cloud centroid and sets the cloud
@@ -319,7 +319,7 @@ the user warps via the distance label.
 point is whatever is focused (`currentFocusTarget()`); destination is
 the cloud's effective centre; arrival offset is `viewingDistancePc`.
 `WarpState` carries source/dest as kind-agnostic `FocusTarget`s
-(`../camera/focus/README.md` § FocusTarget contract), so arrival parks
+([FocusTarget contract](../camera/focus/README.md#focustarget-contract)), so arrival parks
 and focus dispatch need no per-kind switch.
 
 ## Floating-origin handling
@@ -348,7 +348,7 @@ Under `stellata.kinds.cloud.layer.*`:
   attenuation. Literally the same call as `stellata.kinds.shell`'s, over
   one record; the depth pair is one absolute scale spanning both kinds, so
   sweep it on both or the comparison it exists for says nothing
-  (`../fresnel-shell/README.md` § Camera-distance attenuation)
+  ([Camera-distance attenuation](../fresnel-shell/README.md#camera-distance-attenuation))
 - `setSteps(n)` — absorption raymarch step count
 - `setAbsorptionEnabled(on)` — absorption-pass kill switch for
   frame-cost differentials (`../debug/frame-cost/README.md`);

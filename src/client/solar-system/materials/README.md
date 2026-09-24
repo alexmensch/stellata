@@ -2,7 +2,7 @@
 
 Which surfaces the solar-system family asks for, and the contract they
 arrive through — `EmitterMaterial`, shared with the boundary shells and the dust
-sprite and lives in `../../scene/README.md` § The material seam. The
+sprite and lives in [The material seam](../../scene/README.md#the-material-seam). The
 layers above (`../planets/`, `../probes/`) keep every line of their CPU
 logic — ephemeris walk, LOD
 band, texture ladder, per-frame uniform writes — and take their materials
@@ -35,7 +35,7 @@ rosters, the per-slot stand-ins and each surface's draw state.
 
 ## The layer writes `uniforms`, never `material.uniforms`
 
-Why the indirection is `../../scene/README.md` § The material seam; here
+Why the indirection is [The material seam](../../scene/README.md#the-material-seam); here
 it reads `u.uFade.value = fade` and
 `(u.uSunDirView.value as Vector3).copy(...)`, reaching the shader
 unchanged.
@@ -45,8 +45,8 @@ Two slot kinds need a word here:
 - **Textures.** A `texture()` node's `.value` is its texture, so a rung
   swap is one assignment.
 - **`uCasters`.** WebGPU has no uniform-array-of-vec4 node carrying
-  `.value`; `uniformSlotsOf` (`../../webgpu/tsl/README.md` § Uniform
-  slots, shared with the boundary shells and the dust sprite) puts an
+  `.value`; `uniformSlotsOf` ([Uniform slots,](../../webgpu/tsl/README.md#uniform-slots--the-face-a-layer-writes)
+  shared with the boundary shells and the dust sprite) puts an
   `IUniform` face over
   `UniformArrayNode.array`, which the layer mutates in place and the node
   re-packs every render.
@@ -75,7 +75,7 @@ constants rather than one list:
 Both rosters mint a stand-in **per slot**, for the binding-merge reason
 `texture-slots.ts` carries — cloned from the layer's one placeholder,
 whose **filter pair is what every slot's WGSL fetches with**
-(`../../webgpu/solar-system/README.md` § A stand-in's filters).
+([A stand-in's filters](../../webgpu/solar-system/README.md#a-stand-ins-filters)).
 
 Two guards, because the roster **moves** the omission rather than deleting
 it — the release sites are still written out one per slot, since each pairs
@@ -120,4 +120,4 @@ in render order and parent group, never in shading.
 ## The one surface that is NOT here
 
 The reflected-glare billboard packs a geometry of its own
-(`../../webgpu/solar-system/README.md` § The glare packs).
+([The glare packs](../../webgpu/solar-system/README.md#the-glare-packs)).

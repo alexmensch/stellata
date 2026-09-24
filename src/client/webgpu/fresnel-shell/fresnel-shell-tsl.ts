@@ -19,7 +19,7 @@ export function buildFresnelShellMaterial(
   material.depthWrite = false;
   material.blending = opts.blending ?? NormalBlending;
   // Not a redundant default — this IS the hide-when-inside contract
-  // (`../../fresnel-shell/README.md` § Invariants).
+  // (`../../fresnel-shell/README.md#invariants`).
   material.side = FrontSide;
 
   return finishMrtMaterial(material, () => {
@@ -33,8 +33,7 @@ export function buildFresnelShellMaterial(
     ));
     // Chrome: an authored colour inverse-mapped through the operator, with
     // no claim on the light already in the target. Both extra attachments
-    // take the blend's identity element (`../hdr/README.md` § The gate
-    // becomes the output struct).
+    // take the blend's identity element (`../hdr/README.md#the-gate-becomes-the-output-struct`).
     return {
       colour: vec4(s.uColour, alpha),
       statistic: vec4(0.0),

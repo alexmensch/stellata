@@ -33,7 +33,7 @@ build scripts, tests, and shader uniforms.
   Scale-free, which is what makes a threshold in it admissible where a
   world-space epsilon would not be. Consumers: the render gate's pose
   drift readout, and the navigate derived-pose settle floors.
-- `attribute-upload.ts` (+ test) — partial GPU re-upload for an
+- <a id="attribute-uploadts"></a>`attribute-upload.ts` (+ test) — partial GPU re-upload for an
   instanced attribute whose per-frame writes land on a small, fixed
   subset of items. `DirtyItemUploader` diffs those items against the
   previous flush and adds three.js update ranges over what moved,
@@ -49,21 +49,21 @@ build scripts, tests, and shader uniforms.
   off a padded copy the uploader never sees, silently, which is why the
   WebGPU star layer reads the same array through an itemSize-1 table and
   forwards these ranges onto it verbatim
-  (`../webgpu/README.md` § One writer per buffer per submit).
+  ([One writer per buffer per submit](../webgpu/README.md#one-writer-per-buffer-per-submit)).
   Its shadow is NaN-seeded at construction and
   by `reset()` — NaN compares unequal to everything, so the first flush
   after either reports every tracked item, which is the truth in both
   cases (no GPU buffer yet / a stale one). Consumers + the invariants
-  they ride on: `../binaries/README.md` § Partial re-upload (iPosition,
-  iCompositeSuppress) and `../binaries/eclipse/README.md` § Partial
-  re-upload (iEclipseDim).
-- `ecliptic-frame.ts` (+ test) — `icrsToEcliptic` / `eclipticToIcrs`, the
+  they ride on: [Partial re-upload](../binaries/README.md#partial-re-upload) (iPosition,
+  iCompositeSuppress) and [Partial re-upload](../binaries/eclipse/README.md#partial-re-upload)
+  (iEclipseDim).
+- <a id="ecliptic-framets"></a>`ecliptic-frame.ts` (+ test) — `icrsToEcliptic` / `eclipticToIcrs`, the
   fixed `Rx(±ε)` pair about the J2000 obliquity, on plain `{x, y, z}`
   and safe to alias `out` with `v` (the moon resolver does). This is the
   scalar form; `orbit-rings-layer.ts`'s `refPlaneToEclipticQuat` is the
   quaternion one the ring vertices ride, and the two are parity-pinned
   against each other. Sign trap: the north ecliptic pole comes back with
-  a NEGATIVE y — see `../solar-system/ephemerides/README.md` § Gotchas.
+  a NEGATIVE y — see [Gotchas](../solar-system/ephemerides/README.md#gotchas).
 - `equatorial-basis.ts` — the ICRS tangent basis every sky-frame
   projection resolves against: `equatorialTangentBasisRad` (core) /
   `equatorialTangentBasis` (degrees) / `equatorialTangentBasisAt(x, y, z)`
@@ -97,8 +97,8 @@ build scripts, tests, and shader uniforms.
   element↔state pair `orbitalStateToCartesian` and its inverse
   `cartesianToOrbitalElements` — the inverse is what lets a body
   positioned by a *series* rather than by elements still get an orbit
-  ring that passes through it (the Moon; `../solar-system/ephemerides/README.md`
-  § Orbit rings). The inverse also returns the eccentric anomaly, which
+  ring that passes through it (the Moon; [Orbit rings](../solar-system/ephemerides/README.md#orbit-rings)).
+  The inverse also returns the eccentric anomaly, which
   the ring layer anchors its first vertex on; it comes out of `r` and
   `r·v` directly rather than from a second Kepler solve.
 - `orbit-line.ts` (+ test) — shared bits of the line overlays
@@ -122,8 +122,8 @@ build scripts, tests, and shader uniforms.
   it replaced, and they had drifted to three different hues; a new line
   overlay takes this one rather than picking a fourth. A dashed consumer also owns the cumulative
   `lineDistance` attribute, because `computeLineDistances` resets the phase
-  per segment pair (`../constellation-boundaries/README.md`
-  § Chart-mode layer) — and the on-screen-size helpers `pixelsPerRadian`
+  per segment pair ([Chart-mode layer](../constellation-boundaries/README.md#chart-mode-layer))
+  — and the on-screen-size helpers `pixelsPerRadian`
   (+ `pixelsPerRadianFromFovRad` for callers holding the FOV in radians, and
   `pixelsPerRadianFromUniforms` for the `ScreenMetricUniforms` viewport / FOV
   slot pair every layer that sizes in screen pixels holds by reference —
@@ -151,7 +151,7 @@ build scripts, tests, and shader uniforms.
   drifts past `LINE_ANCHOR_MAX_DRIFT_PC` — otherwise the shader cancels
   two large float32 quantities per vertex and the line visibly jitters
   under camera motion at close framings (the Pluto-focus wobble).
-- `precession.ts` (+ test) — ICRS/J2000 ↔ the mean equator and equinox
+- <a id="precessionts"></a>`precession.ts` (+ test) — ICRS/J2000 ↔ the mean equator and equinox
   of another epoch, in **two models with different validity windows**:
   - **IAU 1976 (Lieske)** — `precessionAnglesFromJ2000`, the rotation
     they compose (`precessionRotationFromJ2000`), and its forward /
@@ -159,7 +159,7 @@ build scripts, tests, and shader uniforms.
     `besselianEpochToJd` supplies `B1875_JD`, the equinox the IAU
     constellation boundaries are drawn at — the θ sign and the epoch are
     both silent-failure modes, documented in
-    `../constellation-boundaries/iau-geometry/README.md` § B1875. Cubic
+    [B1875](../constellation-boundaries/iau-geometry/README.md#b1875). Cubic
     polynomials: right for the 125 years back to B1875, arcminutes off at
     the model clock's bounds.
   - **Vondrák, Capitaine & Wallace 2011** — `longTermEclipticPole` /
@@ -222,9 +222,9 @@ build scripts, tests, and shader uniforms.
   difference is deliberate: see its README.
 - `radix-sort.ts` (+ test) — `sortIndicesByKeyWords(words, first, end)`,
   the stable index sort both whole-catalogue orderings ride: the
-  Sol-distance proximity index (`../star-pipeline/star-frame/README.md`
-  § Absorbing a chunk) and the extinction dispatch order
-  (`../webgpu/extinction/dispatch-order/README.md` § Dispatch order). A
+  Sol-distance proximity index ([Absorbing a chunk](../star-pipeline/star-frame/README.md#absorbing-a-chunk))
+  and the extinction dispatch order
+  ([Dispatch order](../webgpu/extinction/dispatch-order/README.md#dispatch-order)). A
   comparator sort of the dispatch order over the 983,068-record catalogue
   measures ~232 ms in Node; this is ~21. The key is one or more `Uint32Array` words,
   least significant first, each **indexed by record, not by position in
@@ -241,6 +241,6 @@ build scripts, tests, and shader uniforms.
   until the owner fills it.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
-  attached artifacts (docs/sid.md § 8).
+  attached artifacts ([§ 8](/docs/sid.md#8-runtime-resolver-b4)).
 - `url-state/` — `?v=` URL wire format (v1/v2/v3) and the address-bar
   round-trip.

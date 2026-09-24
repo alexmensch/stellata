@@ -1,6 +1,5 @@
 // Shared mesh-raycast + label-bbox hit test for boundary shells
-// (heliopause, Local Bubble). See ./README.md § Boundary shells as focus
-// targets.
+// (heliopause, Local Bubble). See ./README.md#boundary-shells-as-focus-targets.
 
 import * as THREE from 'three';
 import { enclosureRadiusPx } from '../camera/controls/star-geometry';
@@ -27,7 +26,7 @@ export interface ShellPickParams {
 
 // Neither dead centre nor the rim: a raycast cannot say how deep inside
 // the silhouette the cursor sits, and this score breaks ties against
-// kinds that measure their depth honestly. README.md § shell-pick.ts.
+// kinds that measure their depth honestly. README.md#shell-pickts.ts.
 const SILHOUETTE_DEPTH_SCORE = 0.5;
 
 // Pick-path scratch, rewritten on every call before it is read.
@@ -37,7 +36,7 @@ const anchor = new THREE.Vector3();
 
 /**
  * The drawn mesh under the cursor, OR the label rect. What each half
- * reports for size, depth and anchor: README.md § shell-pick.ts.
+ * reports for size, depth and anchor: README.md#shell-pickts.ts.
  *
  * The floating-origin offset arrives through the mesh's `matrixWorld`
  * rather than a live `worldOffset` read, so the pick answers against the
@@ -60,7 +59,7 @@ export function pickShellSilhouette(p: ShellPickParams): HoverHit | null {
   }
   // Must be unconditional: reading the scratch unwritten answers the
   // occlusion gate about whatever the previous call hit. Why the camera
-  // is the right anchor here: README.md § shell-pick.ts.
+  // is the right anchor here: README.md#shell-pickts.ts.
   if (!insideSilhouette) anchor.copy(camera.position);
 
   let labelRadiusPx = Infinity;

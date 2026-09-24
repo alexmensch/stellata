@@ -1,6 +1,6 @@
 // The record build's one remaining classic-ID pass: IV/27A's constellation
 // for each Bayer / Flamsteed designation, keyed on the record's HD / HIP.
-// See README.md § The designation constellation.
+// See README.md#the-designation-constellation.
 import { existsSync } from 'node:fs';
 
 import { NO_CONSTELLATION_INDEX } from '../record/catalog-pure';

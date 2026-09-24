@@ -35,8 +35,8 @@ export async function readMagnitudeTermSourceIds(manifestPath: string): Promise<
   return out;
 }
 
-/** The pull's 5p astrometry for `keep` — README.md § The astrometry comes
- *  with it. */
+/** The pull's 5p astrometry for `keep` — README.md#the-astrometry-comes-with-it.
+ * */
 export async function readMagnitudeTermAstrometry(
   keep: ReadonlySet<string>,
 ): Promise<Map<string, GaiaAstrometryCatalogRow>> {

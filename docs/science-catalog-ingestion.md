@@ -33,7 +33,7 @@ What that means for reading the rest of this file:
   completeness artefact — describes the input set a build that no longer
   exists read. AT-HYG has left the input set entirely: membership is the
   primaries-derived manifest (`data/membership/membership-manifest.tsv`,
-  `docs/catalog-driver.md` § 3.1), which `readStars` walks, and the frozen
+  [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)), which `readStars` walks, and the frozen
   inherited spine survives only as that manifest's baseline and its record of
   AT-HYG's merge decisions.
 - **Already moved.** Johnson V and absolute magnitude no longer come
@@ -79,7 +79,7 @@ document.
 
 **What we keep at build time.** No AT-HYG cell gates membership any more. A
 manifest row leaves without a record in one of two ways
-(`scripts/catalog/parse/README.md` § Per-row pipeline):
+([Per-row pipeline](/scripts/catalog/parse/README.md#per-row-pipeline)):
 
 1. **A park**, ledgered in `data/membership/parked-ledger.tsv` — the parallax
    cascade reaches no owned measurement, or the V cascade reaches no
@@ -105,14 +105,14 @@ There is no source-aware filtering. The 100-byte v9 binary record
 preserves none of the `*_src` columns either, so the renderer can't
 distinguish a Tycho-positioned, Gaia-distanced row from a "pure"
 Hipparcos one — every star is shaded by the same physical model
-(`docs/science-stellar-modelling.md` §Stellar physics, §Stellar
-perception model). The record does carry each
+([Stellar physics](/docs/science-stellar-modelling.md#stellar-physics),
+[Stellar perception model](/docs/science-stellar-modelling.md#stellar-perception-model)). The record does carry each
 star's Gaia DR3 `source_id` (when AT-HYG has it) plus Apsis
 astrophysical parameters (Teff/logg/[M/H]/A0 from gspphot ∪ gspspec)
 keyed by it — the source-ID anchor downstream consumers (cross-match
 and Apsis-direct stellar parameters) key off.
 
-**Multi-layer distance refinement.** Three overrides run in fixed order
+<a id="multi-layer-distance-refinement"></a>**Multi-layer distance refinement.** Three overrides run in fixed order
 on every AT-HYG row before the bounded-scope cutoff above fires:
 
 1. **Bailer-Jones (2021) Bayesian posterior** — replaces the catastrophic
@@ -207,7 +207,7 @@ republication, not with more cross-walk work.
 Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (365,980 rows,
 refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
-**Distance-override validation against Vaidman et al. 2025.** Vaidman,
+<a id="distance-override-validation-against-vaidman-et-al-2025"></a>**Distance-override validation against Vaidman et al. 2025.** Vaidman,
 Khokhlov, Miroshnichenko, Agishev & Yermekbayev 2025 (*Universe* 11, 359;
 DOI [10.3390/universe11110359](https://doi.org/10.3390/universe11110359))
 publish a Bayesian recalculation of Gaia DR3 distances for 132 Galactic
@@ -252,7 +252,7 @@ AT-HYG/Gaia source data. SMC, Sgr dSph, and other Magellanic-system
 populations are too faint for AT-HYG's brightness cut today; the same
 approach will extend when DR4 lands or AT-HYG goes deeper.
 
-**Astrophysical parameters from Gaia DR3 Apsis.** Apsis is Gaia DR3's
+<a id="astrophysical-parameters-from-gaia-dr3-apsis"></a>**Astrophysical parameters from Gaia DR3 Apsis.** Apsis is Gaia DR3's
 astrophysical-parameters pipeline (Creevey et al. 2023, *A&A* 674,
 A26, DOI 10.1051/0004-6361/202243688). It publishes two independent
 solutions per source: `gspphot` (photometric fit to BP/RP spectra +
@@ -268,7 +268,7 @@ spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
 Stellata pulls all seven Apsis floats plus the gspspec spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
 writes them per record into the binary at offsets 52–79 (see
-`scripts/catalog/record/README.md` § Binary catalog format). Coverage: ~99.6% of
+[Binary catalog format](/scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest)). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
 last number is the population the renderer's colour LUT path can re-
@@ -280,8 +280,8 @@ back to spectral-class T_TABLE.
 Three downstream paths consume Apsis directly:
 
 - **Stellar colour calibration** uses Apsis T_eff as the intrinsic
-  temperature when available — see `docs/science-stellar-modelling.md`
-  §Star colour calibration §Per-star intrinsic Teff routing for the
+  temperature when available — see [Star colour calibration](/docs/science-stellar-modelling.md#star-colour-calibration)
+  and [Per-star intrinsic Teff routing](/docs/science-stellar-modelling.md#per-star-intrinsic-teff-routing) for the
   six-tier resolver and why Apsis
   beats Ballesteros(B-V) here (gspphot fits include `A0` explicitly,
   so dust reddening composes downstream without double-counting
@@ -319,14 +319,13 @@ The driver swap carried the artefact forward verbatim: the inherited spine
 enumerated exactly the rows AT-HYG's cross-match luck admitted. The spine
 retirement is the first thing to change its shape — the membership manifest
 admits every IV/25 Tycho-2 star the AT-HYG subset's HD link defect had
-dropped (`docs/catalog-driver.md` § 3.1), which is a selection on what the
+dropped ([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)), which is a selection on what the
 frozen primaries publish rather than on whether a Tycho row found a DR3
 distance. Whether that dilutes the rectangles or sharpens them is a
 measurement nobody has taken; it is not what the additions were made for.
 The completeness phase's Gaia-native magnitude pull selects on `V` and is a
 third selection function again. Judging any of them is a job for the parity
-ledger every membership change runs through (`docs/catalog-driver.md`
-§ Parity).
+ledger every membership change runs through ([Parity](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change)).
 
 Implementation: `scripts/catalog/build-catalog.ts` (filters live in `readStars`,
 binary schema in the `pack*` helpers); see `scripts/README.md` for
@@ -369,7 +368,7 @@ the xyz column matches no single (source, epoch) pair we tested. It
 is a merge artifact without recoverable provenance. Corroborating:
 the multiple-star pipeline independently found AT-HYG's printed
 ra/dec to be mixed-epoch (HIP-sourced rows empirically at J1991.25,
-Tycho/GJ rows near J2000 — `scripts/binaries/README.md` § Stage 2).
+Tycho/GJ rows near J2000 — [Stage 2](/scripts/binaries/README.md#stage-2--wds-component--gaia-dr3-source_id)).
 
 **Finding 3 — the current build splits the catalogue into two
 position regimes, and the bright famous stars are in the worse one.**
@@ -425,7 +424,7 @@ multiple-star pipeline already implements
 (`scripts/binaries/stage3_astrometry.py`), sharing its thresholds. The three
 tiers below are that research's snapshot; the shipped cascade has since grown
 Tycho-2, CNS5, SIMBAD and curated tiers in place of the printed one, and
-`scripts/catalog/distance/README.md` § Direction resolution is the live table
+[Direction resolution](/scripts/catalog/distance/README.md#direction-resolution) is the live table
 with the per-tier counts:
 
 1. **Gaia DR3 5p** (ra, dec at J2016.0, the scene epoch — no
@@ -451,13 +450,13 @@ tier reaches is a ledgered § 6.1 drop rather than a silent keep of a
 printed cell. The tier order, the two precision constants, and why
 the residual drops rather than degrading are
 `scripts/catalog/distance/parallax/README.md`; the override stack is
-`scripts/catalog/distance/README.md` § Multi-layer distance
-refinement. Every row's xyz is `direction × distance` computed
+[Multi-layer distance refinement](/scripts/catalog/distance/README.md#multi-layer-distance-refinement).
+Every row's xyz is `direction × distance` computed
 in float64 and written float32; the stored `x0/y0/z0` columns are
 no longer consumed. Both build pipelines derive every shared star
 from the same astrometry files, closing the consistency gap by
 construction. **J2016.0 is the scene epoch** — Gaia DR3's native epoch,
-adopted catalogue-wide (`data/README.md` § Reference epoch) so the
+adopted catalogue-wide ([Reference epoch](/data/README.md#reference-epoch-and-proper-motion)) so the
 Gaia-dominant corpus needs no propagation and only the shrinking HIP2 /
 AT-HYG minority advances; the binary pipeline mirrors the same
 `CATALOG_SCENE_EPOCH` in `scripts/binaries/stage6_multiples.py`. Epoch
@@ -477,8 +476,7 @@ scene epoch the Gaia tier is a zero-Δt no-op, so it is a
 placement/tier-routing pin; the propagation formula (tangent / sign /
 cos δ) is exercised by the HIP2 tier and pinned independently against
 SIMBAD J2000 in `direction-cascade.test.ts`. Gaia DR4 slots in as a
-source-file swap inside the same cascade (`scripts/refresh/README.md`
-§ Refreshing data when DR4 / new AT-HYG lands).
+source-file swap inside the same cascade ([Refreshing data when DR4 / new AT-HYG lands](/scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands)).
 
 ## Current-epoch star positions — space-motion propagation to `t`
 
@@ -490,7 +488,7 @@ for the solar system and binary orbital motion but not for the
 ~390k catalog star positions, which sit frozen ~10 years stale. The
 error is concentrated exactly in the stars users recognise and
 focus on — the high-PM nearby neighbours (drift table:
-`data/README.md` § Reference epoch and proper motion; worst case
+[Reference epoch and proper motion](/data/README.md#reference-epoch-and-proper-motion); worst case
 Barnard's Star at ~1.8 arcmin from the J2016.0 base).
 
 **Position baseline.** Post-direction-cascade (§ Driver astrometry
@@ -610,8 +608,8 @@ The model clock is clamped to the Standish ephemeris window
 pins at the bound with its rate intact.
 Within that window every layer is honest without hide/fade machinery:
 planets are arcsecond-faithful inside 1900–2100 and within Standish's
-published budget outside it (`docs/science-solar-system.md`
-§ Planet positions); stars carry real 3D space
+published budget outside it ([Planet positions](/docs/science-solar-system.md#planet-positions));
+stars carry real 3D space
 motion (linear propagation degrades gracefully — arcminute-faithful
 to ~±1 kyr, worst-case ~1° for Barnard's-class PM at the window
 edges); constellation figures and chart mode read the live positions
@@ -631,8 +629,7 @@ worst pairs.
 
 **Time base.** `Stellata.getT()` → Julian epoch years via
 `(JDE − 2451545.0) / 365.25`. Single source of truth — never
-`Date.now()` (`docs/authoring-patterns.md` § Single source of
-truth).
+`Date.now()` ([Single source of truth](/docs/authoring-patterns.md#single-source-of-truth-for-time--camera-state--world-offset)).
 
 **Composition with binary orbital motion.** Members of a pair get
 one shared *systemic* velocity: the barycentric blend
@@ -642,8 +639,8 @@ per-member Gaia PMs to first order — the barycentre is what moves
 linearly), else whichever member has one. Because
 `BinaryOrbitField` places a Tier-1/2 secondary at
 `primary + baseDiffPc + ΔR(t)` from the Kepler *elements alone*
-(never `abs[s] − abs[p]`; `src/client/binaries/README.md` § Tier
-mapping), the rendered relative offset — its baseline caches and
+(never `abs[s] − abs[p]`; [Tier mapping](/src/client/binaries/README.md#tier-mapping)),
+the rendered relative offset — its baseline caches and
 eclipse photometry's `baseDiff` — is invariant under the advance
 *regardless* of the members' baked velocities; orbital motion stays
 owned by the Kepler layer with no double-counting and no field-code

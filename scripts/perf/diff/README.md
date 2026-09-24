@@ -2,7 +2,7 @@
 
 `--baseline <path>` differences a run against a saved one. What counts as a
 move, what refuses a pair outright, and which of those refusals the pin
-applies too. The flags are `../README.md` § Invocation; the pin's own table
+applies too. The flags are [Invocation](../README.md#invocation); the pin's own table
 is `../pins/README.md`.
 
 ```
@@ -25,7 +25,7 @@ that and the two `bracketMs` values — the bracket is instrument drift, which
 no amount of sampling reduces. Dwell rows use the median's standard error,
 `1.2533·(iqr/1.349)/√n`, on both sides, floored at the same figure the pin
 uses — `max(0.25 ms, 1 %)` on a frame row, the vantage's own constant on a
-compute row (`../pins/README.md` § Reading `--against-pin`, § The compute
+compute row ([Reading](../pins/README.md#reading---against-pin) `--against-pin`, § The compute
 row). **The floors are shared deliberately.** Two sigma of the
 medians' own scatter describes sampling and nothing else, and a dwell's run
 conditions move it further: at 240 frames on a steady vantage that band
@@ -54,7 +54,7 @@ reading the gated statistic is chosen not to follow: some frames got dearer
 while the rest did not. A pass spread deliberately across frames moves it and
 leaves `delta`; so does a coincidence of timing, which is why no verdict
 rests on it. What the two tables do differently is only the note: the pin
-calls out a `✗` whose floor did not follow (`../pins/README.md` § Reading
+calls out a `✗` whose floor did not follow ([Reading](../pins/README.md#reading---against-pin)
 `--against-pin`), and this table has no note column to say it in.
 
 **A dwell row is judged on the clock `gatingClock` names** — the GPU stream
@@ -68,7 +68,7 @@ idle the machine is — which read the row's own clamp and state guard as a
 verdict on the machine and refused mw120 and sol outright. Off the GPU
 stream both tests are about the hardware: a resolved timestamp is a span no
 compositor can pad. Where the GPU stream gates, the wall numbers stay in the
-JSON and out of the table, as `../pins/README.md` § State guard records them.
+JSON and out of the table, as [State guard](../pins/README.md#state-guard) records them.
 
 **Where NEITHER run resolved a stream the row still marks, on wall — and
 that is where this table parts company with the pin**, which prints such a
@@ -86,8 +86,8 @@ timestamp median against a wall median is two instruments. The pin prints
 that pair as an ungated row instead, because a committed table shows every
 vantage; here there is a refusal list to say it in.
 
-**The compute passes are a second dwell row, keyed `|compute`.** Where both
-runs carry the compute stream (`../pins/README.md` § The compute row) it is
+<a id="the-compute-passes-are-a-second-dwell-row-keyed-compute"></a>**The compute passes are a second dwell row, keyed `|compute`.** Where both
+runs carry the compute stream ([The compute row](../pins/README.md#the-compute-row)) it is
 judged on `compute-p10` and banded on **that vantage's own floor** and nothing
 else — the stream holds two overlapping modes whose share varies between runs
 of identical code, so its median is a statistic of that share, while the p10
@@ -112,7 +112,7 @@ says there are two classes at all: `../dwell/README.md`.
 buffers or adapters produce a table that looks like a comparison and is not,
 so an incomparable pair is named and skipped rather than dropped silently:
 a differing adapter string refuses the whole run (a differing schema never
-reaches the diff — `../README.md` § JSON output); a differing method or
+reaches the diff — [JSON output](../README.md#json-output)); a differing method or
 mode, a buffer more than 1 % apart, a **record count** more than 1 % apart or
 absent on either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side
@@ -134,7 +134,7 @@ eight archived rows spanning 0.725 ms against a 0.25 ms band. So the two are
 different statistics and the verdict between them means nothing. 960 frames
 makes them comparable without making either quiet: a same-tree repeat pair
 there still reaches 1.272 ms at `mw120`, which is the re-run rule in
-`RELEASING.md` § What a mark means, not this refusal. Nothing else catches
+[What a mark means,](/RELEASING.md#what-a-mark-means) not this refusal. Nothing else catches
 the length mismatch itself: the state
 guard compares quarters within one dwell and both read steady, and the band is
 computed from the pair and widens with neither, so a pin re-taken at the wrong
@@ -143,7 +143,7 @@ runner stamps the `--frames` it honoured, and carried on every pin row.
 **Absent on either side declines the guard rather than refusing**, the posture
 `readbackPerFrame` takes and the opposite of the record count's — a pin
 written before the field existed stays usable, and only a known mismatch
-refuses. `RELEASING.md` § Perf pin states the Tier 2 command that has to carry
+refuses. [Perf pin](/RELEASING.md#perf-pin) states the Tier 2 command that has to carry
 it.
 
 **Sweep preconditions: the state a differential was SET UP in refuses the
@@ -152,16 +152,16 @@ frame contained before the roster was touched at all, and `--no-interleave`
 changes how every row is differenced — a non-interleaved sweep differences
 every row against the leading baseline alone rather than against the pair
 either side of it, so the two sides estimate the same cost with different
-estimators (`src/client/debug/frame-cost/README.md` § Reading a row). All
+estimators ([Reading a row](/src/client/debug/frame-cost/README.md#reading-a-row)). All
 four are recorded in `params` and compared there. `--force-recompute` is the one of them a **dwell** carries
 too — a dwell taken under it runs the extinction kernel on every frame — so
 that refusal is what stops such a run being read against the pin, and what
-stops one being written as the pin (`../pins/README.md` § Setup levers).
+stops one being written as the pin ([Setup levers](../pins/README.md#setup-levers)).
 Pre-disabled keys compare as sets, so the order they were typed in is not a
 difference. `--empty-passes` refuses at the **row** level instead — it reaches
 the `emptyPass` row alone, and refusing a whole scenario for it would drop
 twelve sound rows to protect one. This is what stops the subtraction those
-flags exist for (`src/client/debug/frame-cost/passes/README.md` § The roster)
+flags exist for ([The roster](/src/client/debug/frame-cost/passes/README.md#the-roster))
 being read off a row-against-row verdict: it is a bound taken across two runs
 by hand, and the two runs are not comparable in the sense this table means.
 
@@ -182,8 +182,8 @@ reset it: sol at 2nd of 10 behind 120 s idle matched sol at 2nd of 2 with
 none to 2e-6 ms, so position is the variable and idle time is not. Every
 record carries `position`, and a file written before the field existed
 refuses as an absent record count does. The same refusal applies against
-the pin (`../pins/README.md` § Run position), which is why the canon order
-opens with the Tier 1 vantages (`../README.md` § Invocation).
+the pin ([Run position](../pins/README.md#run-position)), which is why the canon order
+opens with the Tier 1 vantages ([Invocation](../README.md#invocation)).
 
 The key carries the backend, so a vantage the other run measured on the
 *other* backend says exactly that rather than reporting itself absent.

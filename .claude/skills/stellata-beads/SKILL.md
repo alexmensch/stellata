@@ -153,8 +153,7 @@ let the dependency graph do the work.
   dependency graph, and "see issue X" prose never surfaces there. Avoid
   epic-level blocks when task-level deps express the same constraint.
 - Structured info (PR numbers, URLs, source tags) goes in labels / metadata /
-  external-ref, never title prose. Conventions in `docs/bd-workflow.md`
-  § Tagging.
+  external-ref, never title prose. Conventions in [Tagging](/docs/bd-workflow.md#tagging--labels-metadata-external-ref).
 
 ## Keep this skill current — do this without being asked
 

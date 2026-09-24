@@ -7,7 +7,7 @@ import type { EmitterMaterial } from '../../scene/emitter-material';
 /**
  * The solar-system surfaces built over their layer's own geometry. The
  * reflected-glare billboard builds a packed geometry of its own instead
- * (`../../webgpu/solar-system/README.md` § The glare packs).
+ * (`../../webgpu/solar-system/README.md#the-glare-packs`).
  */
 export interface SolarSystemMaterials {
   /** The lit spheroid: equirect sample, terminator, relief, casters, and
@@ -24,8 +24,7 @@ export interface SolarSystemMaterials {
 }
 
 /**
- * The probe glyph, built alone — `README.md` § Why the probe glyph is
- * split out.
+ * The probe glyph, built alone — `README.md#why-the-probe-glyph-is-split-out`.
  */
 export interface ProbeMaterials {
   /** The fixed-pixel diamond, drawn by both the main-pass mesh and its

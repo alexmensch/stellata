@@ -26,10 +26,10 @@ export function tierArgsInstanceCountElement(tier: StarTier): number {
   return tier * INDIRECT_ARGS_STRIDE + INDIRECT_INSTANCE_COUNT_SLOT;
 }
 
-/** README.md § Reading the counts back. */
+/** README.md#reading-the-counts-back. */
 export const PREFILTER_COUNT_ELEMENT = STAR_TIERS.length * INDIRECT_ARGS_STRIDE;
 /** First of one append counter per refill bucket, past the prefilter count
- *  (README.md § The refill dispatch). The kernels address a bucket's counter
+ *  (README.md#the-refill-dispatch). The kernels address a bucket's counter
  *  through `RefillWorklistNodes.counterElement`. */
 export const REFILL_LIST_COUNT_BASE = PREFILTER_COUNT_ELEMENT + 1;
 export const ARGS_ELEMENTS = REFILL_LIST_COUNT_BASE + REFILL_BUCKETS;
@@ -55,7 +55,7 @@ export function survivorCountsFromArgs(args: Uint32Array): SurvivorCounts {
  *  `dispatchWorkgroupsIndirect` reads, the listed length the refill kernel
  *  bounds its threads by, then the two scan tables — the exclusive prefix
  *  the kernel searches and the plain copy of the atomic counters the scan
- *  reads (README.md § The refill dispatch). */
+ *  reads (README.md#the-refill-dispatch). */
 export const REFILL_DISPATCH_LENGTH_ELEMENT = 3;
 export const REFILL_PREFIX_BASE = 4;
 export const REFILL_BUCKET_COUNT_BASE = REFILL_PREFIX_BASE + REFILL_BUCKETS;

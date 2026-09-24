@@ -1,6 +1,6 @@
 // Camera-wide timing constants, angular bounds, and numeric floors.
 // Single source of truth for every constant listed in
-// src/client/camera/README.md § Shared.
+// /src/client/camera/README.md#shared.
 
 import * as THREE from 'three';
 
@@ -44,8 +44,8 @@ export const FOV_MAX_DEG = 120;
 // the default FOV and 6.7e-12 at FOV_MAX_DEG, its worst case — a larger
 // 1e-10 pc near plane clipped every sub-Pluto moon at its park distance. `logarithmicDepthBuffer` on the renderer is what keeps depth
 // precision intact across the resulting near→far range; the pairing is
-// load-bearing (controls/README.md § Camera near plane vs controls
-// minDistance) and pinned by depth-range.test.ts.
+// load-bearing (controls/README.md#camera-near-plane-vs-controls-mindistance)
+// and pinned by depth-range.test.ts.
 export const CAMERA_NEAR_PC = 1e-12;
 
 // Camera-distance floor used by sites that need a finite log10(dCam) or

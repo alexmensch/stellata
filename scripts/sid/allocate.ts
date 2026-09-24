@@ -1,6 +1,6 @@
 // `pnpm run sid:allocate` — the only writer of data/sid/ledger.tsv: resolves
 // every built-artifact object against the frozen ledger and appends mints.
-// `pnpm run sid:check` (--check): read-only CI mode — docs/sid.md § 4.5.
+// `pnpm run sid:check` (--check): read-only CI mode — /docs/sid.md#45-ci-guard.
 
 import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -88,7 +88,7 @@ async function collectObjects(): Promise<{ objects: SidObject[]; starCount: numb
   }
   for (const row of solRows) {
     // sol:sun rides the FLAG_IS_SOL catalog record — the same-as edge of
-    // docs/sid.md § 7 — so it must not surface as a second object here.
+    // /docs/sid.md#7-storage--sid-in-every-artifact — so it must not surface as a second object here.
     if (row.key === 'sun') continue;
     objects.push({ designations: [`sol:${row.key}`], kind: row.kind, label: `sol ${row.key}` });
   }
@@ -139,7 +139,7 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
     if (siblings.length === 0) lines.push('    (no current synth keys under this WDS root)');
   }
   lines.push(
-    '  Resolve each by hand (docs/sid.md § 5): a bridge line in',
+    '  Resolve each by hand (/docs/sid.md#5-synthetic-key-churn-wds-re-subdivision): a bridge line in',
     '  data/sid/sameas-overrides.tsv for a re-lettered component, or a',
     '  retirements.tsv row for a component that genuinely dissolved',
     '  (reinstatements.tsv resumes the sid if it later reappears).',

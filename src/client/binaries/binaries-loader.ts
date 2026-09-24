@@ -1,5 +1,5 @@
 // Parses public/binaries.bin into a typed record-set the runtime
-// reads per frame. See src/client/binaries/README.md § Format contract.
+// reads per frame. See /src/client/binaries/README.md#format-contract.
 
 import { J2000_JD } from '../util/astronomy-constants';
 

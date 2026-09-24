@@ -21,7 +21,7 @@ shorten but a shape the design has to take. `getArrayBufferAsync` stages
 a `copyBufferToBuffer` and maps it, resolving frames later — so a copy
 issued *by* the pick lands after the verdict it was meant to decide, and
 the caller has already read `null` as "no cache, not no dust"
-(`../../../star-pipeline/extinction/README.md` § Reading A_V back) and erred
+([Reading A_V back](../../../star-pipeline/extinction/README.md#reading-a_v-back-on-the-cpu)) and erred
 toward *pickable*. No per-star refinement of that read closes it. The
 value has to be on the CPU **before** the pick asks.
 
@@ -58,7 +58,7 @@ let a copy issued before a dispatch answer picks after it.
 **A refill still cycling warms nothing at all**, which is the other half of
 that bound and the one the generation counter alone does not give. A warp,
 a focus lerp or a camera simply turning asks for a refill every frame
-(`../refill/README.md` § A view change is a refill request), so the cursor
+([A view change is a refill request](../refill/README.md#a-view-change-is-a-refill-request--nothing-more)), so the cursor
 never parks, the generation advances every frame, and a copy issued against
 one is superseded before the 280 ms dwell that wanted it can read a byte —
 every such copy is spent and dropped, at 1.48 MiB a frame for as long as the
@@ -70,11 +70,10 @@ is one a pick can still be staged for. The frame-cost lever that forces a
 recompute every frame at a parked camera is the same shape, and keying this
 gate on the recompute instead would swallow it — it would also spend 1.48
 MiB a frame on a live pointer, which is why that lever is dwell-only
-(`../../../debug/frame-cost/passes/README.md` § The extinction rows). A
+([The extinction rows](../../../debug/frame-cost/passes/README.md#the-extinction-rows)). A
 parked cursor also means the buffer belongs to one completed cycle rather
 than to a half-written one, which is the second thing the mirror needs and
-the camera the old gate watched never said (`../refill/README.md` § Three
-places).
+the camera the old gate watched never said ([Three places](../refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one)).
 
 A drag announces nothing either: hover is suppressed for its duration
 anyway, and the camera motion under it would invalidate each copy before
@@ -96,5 +95,5 @@ also offers a `ReadbackBuffer` target that holds one across calls; it
 trades 1.48 MiB of VRAM for the renderer's whole life against a create
 and destroy per warm, and with the camera gate above a warm is a
 per-settle event rather than a per-frame one. On the integrated and
-mobile floor the parent sizes for (`../README.md` § What it costs, and what
-it holds), the resident megabyte is the dearer half of that trade.
+mobile floor the parent sizes for ([What it costs, and what it holds](../README.md#what-it-costs-and-what-it-holds)),
+the resident megabyte is the dearer half of that trade.

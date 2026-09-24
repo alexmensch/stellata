@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # skill-guard: PreToolUse hook on Skill / Edit / Write / NotebookEdit. Blocks
 # an edit to a file a rule below names until that rule's skill has been
-# invoked this session. See README.md § How skill-guard works.
+# invoked this session. See README.md#how-skill-guard-works.
 #
 # State scope: keyed on $PPID the way readme-guard is, for the same
 # reasons. $GUARD_SESSION overrides it for a harness that spawns a fresh

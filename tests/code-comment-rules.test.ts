@@ -1,6 +1,6 @@
 // Enforces the comment-rule "law" section of AGENTS.md across every
-// TS/Py source the repo owns — see docs/authoring-patterns.md
-// § Code-comment hygiene for the rules.
+// TS/Py source the repo owns — see /docs/authoring-patterns.md#code-comment-hygiene
+// for the rules.
 
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
@@ -198,7 +198,7 @@ describe('forbidden code-comment patterns', () => {
       .join('\n');
     throw new Error(
       `\nForbidden code-comment patterns found (${violations.length}):\n\n${formatted}\n\n` +
-      'See AGENTS.md § "Code comments — what CI enforces here" for the rules.\n' +
+      'See /AGENTS.md#code-comments--what-ci-enforces-here for the rules.\n' +
       'Substitutions: credit a bead → commit subject (not the code). ' +
       'Reference a memory → no link in code (memories are invisible to readers). ' +
       'Cite a PR → drop it; git blame carries the history.\n'
@@ -365,7 +365,7 @@ describe('comment-to-code ratio', () => {
       + `     folder README's job — move it there and leave a pointer at most.\n`
       + `  3. Only prose whose absence would make a reader of THIS line act\n`
       + `     wrongly stays in the code.\n`
-      + `AGENTS.md § Code comments; docs/authoring-patterns.md § Defer doc updates.\n\n`
+      + `/AGENTS.md#code-comments--what-ci-enforces-here; /docs/authoring-patterns.md#defer-doc-updates--descriptions-not-decisions.\n\n`
       + `Standing backlog, not a gate: ${backlog}.\n`
       + `──────────────────────────────────────────────────────────────\n`
     );

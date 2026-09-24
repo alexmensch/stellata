@@ -1,5 +1,5 @@
 // Draw-order slots held by more than one subsystem. The whole ladder is
-// README.md § Full render stack — front to back.
+// README.md#full-render-stack--front-to-back.
 
 /** The depth-only slot, ahead of every background layer so their fragments
  *  depth-fail inside whatever it stamped. Two writers: the star core mask

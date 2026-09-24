@@ -70,7 +70,7 @@ def membership_request_keys(
     designations ride along as that row's widening keys. The no-Gaia tier
     falls through `WIDENING_LADDER` itself rather than restating its order, so
     the tier and the widening that retries under it cannot come to disagree —
-    the property `docs/catalog-driver.md` § 5 relies on. Sol carries none of
+    the property `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` relies on. Sol carries none of
     the namespaces and lands in `keyless`.
     """
     keys = MembershipRequestKeys()
@@ -125,7 +125,7 @@ def gl_suffix(cell: str) -> str | None:
 
 
 # The binding verdict that says a raw cross-walk reproduces the row's Gaia
-# id — `../../catalog/membership/README.md` § The spine side grades the four.
+# id — `../../catalog/membership/README.md#the-spine-side` grades the four.
 # The other three rest on the spine's frozen claim, SIMBAD's object, or a
 # human disposition, none of which a value cascade may lean on the same way.
 GATE_REPRODUCED_BINDING = "crosswalk_gated"
@@ -139,7 +139,7 @@ PRINTED_TIER_ID_COLUMNS = ("tyc", "hip")
 # The 5p columns whose absence drops a cascade to a tier below Gaia: the
 # parallax the distance cascade inverts, BOTH components of the proper motion
 # the direction and PM-rescue cascades propagate on, and the radial velocity.
-# All are `docs/catalog-driver.md` § 5 fields a SIMBAD tier serves. A motion is
+# All are `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` fields a SIMBAD tier serves. A motion is
 # only stated when both components are, so reading `pmra` alone would call a
 # row complete that the PM cascade still has to leave Gaia for.
 GAIA_VALUE_COLUMNS = ("parallax", "pmra", "pmdec", "radial_velocity")
@@ -159,7 +159,7 @@ def gaia_complete_source_ids(astrometry_catalog_path: Path) -> set[str]:
 
 
 def simbad_value_cohort(gaia_complete: AbstractSet[str]) -> RowFilter:
-    """Build the `docs/catalog-driver.md` § 5 value-cohort predicate. A row is
+    """Build the `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` value-cohort predicate. A row is
     OUT only where BOTH halves of the first-hand claim hold: Gaia's own 5p
     solution states every § 5 value for its source_id, AND its identity rests
     on a cross-walk-reproduced binding plus a printed identifier the Tycho-2 /

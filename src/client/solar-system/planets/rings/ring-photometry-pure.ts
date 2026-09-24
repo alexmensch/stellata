@@ -1,6 +1,6 @@
 // Ring-system contribution to a ringed body's unresolved apparent
 // magnitude: Mallama & Hilton's joint phase-angle / ring-tilt law.
-// See README.md § Ring photometry.
+// See README.md#ring-photometry--the-unresolved-magnitude.
 
 import {
   lambertianPhaseFactor,
@@ -53,7 +53,7 @@ export const SATURN_RING_PHOTOMETRY: RingSystemPhotometry = {
  * opposite side of the ring plane from the host. Pinned to the
  * `TRANSMIT` the annulus shader dims its unlit face by, which is what
  * keeps the point-source and resolved models agreeing on which side is
- * lit. README.md § Three places the published fit runs out.
+ * lit. README.md#three-places-the-published-fit-runs-out-and-what-happens-instead.
  */
 export const RING_BACKLIT_TRANSMIT = 0.35;
 
@@ -130,7 +130,7 @@ function systemDV(
 /** Ring flux inside the joint fit's α bound: the system the law gives,
  *  less the globe curve, in units of the globe's own flux at α = 0.
  *  Floored at zero — the law and the globe curve carry independently
- *  determined zero points. README.md § Ring photometry. */
+ *  determined zero points. README.md#ring-photometry--the-unresolved-magnitude. */
 function ringFluxInFit(
   photometry: RingSystemPhotometry,
   alphaDeg: number,
@@ -149,7 +149,7 @@ function ringFluxInFit(
  * The ring system's flux at opposition, in units of the **globe's own
  * flux at α = 0** — the amplitude the one phase shape scales. Floors at
  * zero below β ≈ 0.94°, where the 0.036 mag between the two papers'
- * zero points swamps the tilt term. README.md § Ring photometry.
+ * zero points swamps the tilt term. README.md#ring-photometry--the-unresolved-magnitude.
  */
 export function ringOppositionFlux(
   photometry: RingSystemPhotometry,
@@ -163,7 +163,7 @@ export function ringOppositionFlux(
  * The ring phase curve's α-response, normalised to 1 at opposition and
  * evaluated at the fit's own `betaMaxDeg` — one shape for every tilt.
  * Past `alphaMaxDeg` it continues as anchor-scaled Lambert.
- * README.md § One shape, scaled by one amplitude.
+ * README.md#one-shape-scaled-by-one-amplitude.
  */
 export function ringPhaseShape(
   photometry: RingSystemPhotometry,
@@ -186,7 +186,7 @@ export function ringPhaseShape(
 /**
  * Ring flux at (α, β), in units of the globe's own flux at α = 0 — the
  * opposition amplitude times the one phase shape, so every tilt rides
- * the same α-response. README.md § One shape, scaled by one amplitude.
+ * the same α-response. README.md#one-shape-scaled-by-one-amplitude.
  */
 export function ringFluxAt(
   photometry: RingSystemPhotometry,
@@ -231,7 +231,7 @@ export function ringFluxFor(
  * its amplitude by, so the two surfaces cannot step against each other
  * inside the resolvedness band. 1 at opposition, which is the anchor the
  * strip's RGB already carries (a geometric albedo is by definition the
- * zero-phase value). README.md § The drawn annulus rides the same curve.
+ * zero-phase value). README.md#the-drawn-annulus-rides-the-same-curve.
  */
 export function ringPhaseFactor(
   photometry: RingSystemPhotometry | undefined,

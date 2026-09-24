@@ -9,7 +9,7 @@ export type InstrumentName = 'unaided-eye';
 /**
  * An observing instrument: aperture plus the data aperture cannot
  * supply. Everything a renderer reads off it is either a field here or
- * derived from one — `docs/science-hdr-pipeline.md` § 3.4.
+ * derived from one — `/docs/science-hdr-pipeline.md#34-the-instrument-record--aperture-is-the-single-number`.
  */
 export interface Instrument {
   apertureMm: number;
@@ -20,8 +20,8 @@ export interface Instrument {
    *  derived per frame by `starPxSizes`. */
   kDensity: number;
   /** Magnitude window the footprint curve grows across. NOT display
-   *  dynamic range — that is the tone-map's `DR_MAG` (`../hdr/tonemap/README.md`
-   *  § Operator). */
+   *  dynamic range — that is the tone-map's `DR_MAG` (`../hdr/tonemap/README.md#operator`).
+   * */
   sizeSpan: number;
   /** Doubles as the extended-source detection threshold
    *  (`../hdr/exposure/exposure-epoch.ts` `extendedThresholdSbFor`). */
@@ -66,7 +66,7 @@ export function instrumentLimitMag(name: InstrumentName): number {
  *
  * It **is** the instrument's sky background: threshold contrast for a
  * large, soft, scotopic target is of order unity.
- * `docs/science-hdr-pipeline.md` § 1 (*Extended sources*)
+ * `/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance` (*Extended sources*)
  * carries the derivation and the summation area it implies.
  */
 export function extendedThresholdSbFor(name: InstrumentName): number {
@@ -129,14 +129,14 @@ export interface FilterState {
 
 export const ALL_SPECT_MASK = 0b111111111;
 
-// Star size physics — see docs/science-stellar-modelling.md § Stellar
-// perception model. STAR_PHYSICS_FACTOR = 2·ln(10)/2.5.
+// Star size physics — see /docs/science-stellar-modelling.md#stellar-perception-model.
+// STAR_PHYSICS_FACTOR = 2·ln(10)/2.5.
 export const STAR_PHYSICS_FACTOR = 1.84;
 
 /** Pixel size a threshold star lands on, at every FOV and every
  *  viewport height — the one number that moves absolute star size.
- *  Calibrated by eye against the real sky (docs/science-stellar-modelling.md
- *  § Stellar perception model), not derived. */
+ *  Calibrated by eye against the real sky (/docs/science-stellar-modelling.md#stellar-perception-model),
+ * not derived. */
 export const TARGET_PX = 2.592;
 
 // The panel's "Star size exaggeration" multiplier on the derived

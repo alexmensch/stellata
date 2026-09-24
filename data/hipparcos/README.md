@@ -59,8 +59,8 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   `Vmag` and `B-V` are Johnson on the catalogue's own photometric system;
   for a resolved double both are the entry's combined value, which is what
   makes this tier a system blend where a Gaia-derived V is not
-  (`scripts/catalog/photometry/README.md` § Which tiers give a system blend).
-- **Role**: the printed tier of two cascades (`docs/catalog-driver.md` § 5).
+  ([Which tiers give a system blend](/scripts/catalog/photometry/README.md#which-tiers-give-a-system-blend--vtierissystemblend)).
+- **Role**: the printed tier of two cascades ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
   `Vmag` serves the V-magnitude cascade for rows whose Gaia photometry is
   missing or outside the Riello+ 2021 transform's validity range — 2,174
   records in the current build. `B-V` serves the ci cascade below the
@@ -71,7 +71,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   classic-ID overlay's binding gate (`scripts/catalog/classic-ids/`) — which
   needs a V keyed by a designation the overlay itself carries, not by an
   AT-HYG row, so the gate survives AT-HYG's retirement.
-  `data/classic-ids/README.md` § The binding gate. All share the one parser.
+  [The binding gate](/data/classic-ids/README.md#the-binding-gate). All share the one parser.
   `scripts/catalog/spine/primaries-tables.ts` reads the `hip` and `hd`
   columns as I/239's attestation sets — the HIPs the catalogue publishes,
   and the HD numbers it names for them, the route behind `hd:i239` in the
@@ -95,7 +95,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
      window of the orbit.
 
   The catalog build mirrors both paths as direction-cascade tier 2
-  (`scripts/catalog/distance/README.md` § Direction resolution), and
+  ([Direction resolution](/scripts/catalog/distance/README.md#direction-resolution)), and
   re-derives `dist_src=HIP` rows' distances as 1000/plx at full
   precision when HIP2 reproduces AT-HYG's printed value.
 

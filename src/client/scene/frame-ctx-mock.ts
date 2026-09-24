@@ -16,7 +16,7 @@ import { DEFAULT_ADAPTATION_TUNING } from '../hdr/exposure/scene-adaptation-pure
 
 /** The pinned acceptance plate scale: a 900 CSS-px-tall viewport at the
  *  default 50° vertical FOV, which is what
- *  `../render-gate/cadence/README.md` § Pinned vantages quotes every rate
+ *  `../render-gate/cadence/README.md#pinned-vantages` quotes every rate
  *  against.
  *  `angularToPx` is viewport height over FOV in radians. */
 export const ACCEPTANCE_PX_PER_RADIAN = 900 / ((50 * Math.PI) / 180);
@@ -24,7 +24,7 @@ export const ACCEPTANCE_PX_PER_RADIAN = 900 / ((50 * Math.PI) / 180);
 /** The shipped instrument at zero cut and zero trim, with one landed
  *  statistic that measures exactly that — the neutral exposure a layer's
  *  `skip` sees, where no emitter is under the display floor. Override
- *  `statistic.meanL` for a cut: `docs/science-hdr-pipeline.md` § 3.5
+ *  `statistic.meanL` for a cut: `/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound`
  *  quotes the app default view at `L̄` = 68.6, which the display floor
  *  turns into −6.29 mag. */
 export function makeFrameExposure(overrides: Partial<FrameExposure> = {}): FrameExposure {

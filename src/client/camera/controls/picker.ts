@@ -123,7 +123,7 @@ export class Picker {
 
   /** The winning object across every registered kind, by the comparator
    *  the hover engine runs over the same picks. Roster-driven, never a
-   *  written-out kind list — README.md § picker.ts. */
+   *  written-out kind list — README.md#pickerts.ts. */
   pickAnyKindHit(
     clientX: number,
     clientY: number,

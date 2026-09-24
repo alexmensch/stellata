@@ -102,7 +102,7 @@ export function runCapture(
 
   cancelActive?.();
 
-  // README.md § Calling it — a take opens in navigate whatever preceded it.
+  // README.md#calling-it — a take opens in navigate whatever preceded it.
   if (stellata.focus.getCameraMode() === 'observe') {
     stellata.observe.setMode('navigate', { animate: false });
   }
@@ -130,13 +130,12 @@ export function runCapture(
   let closed = false;
   let finish = () => {};
   const done = new Promise<void>((resolve) => {
-    // README.md § What a take holds for its duration, last paragraph.
+    // README.md#what-a-take-holds-for-its-duration last paragraph.
     let settleFrames = 2;
     let takeStartMs = 0;
     let phase: TakePhase = 'delay';
 
-    // A zero anchor is a soft or absent focus — README.md § The take rides
-    // the focal object.
+    // A zero anchor is a soft or absent focus — README.md#the-take-rides-the-focal-object.
     const focalAnchor = (): THREE.Vector3 => {
       const focal = stellata.focus.getFocusedHardTarget();
       const resolved = focal !== null

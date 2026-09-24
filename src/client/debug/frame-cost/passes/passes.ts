@@ -21,7 +21,7 @@ export interface PassToggleOptions {
    *  "disabled". Its `savedMs` is minus the total for that many boundaries
    *  together, which is what the row bounds — never that over this count,
    *  since consecutive clears with nothing drawn between them are what a
-   *  driver would coalesce (README.md § The roster). Raise it wherever one
+   *  driver would coalesce (README.md#the-roster). Raise it wherever one
    *  pass falls under `bracketMs` and the row will not resolve. */
   emptyPasses?: number;
 }
@@ -30,12 +30,12 @@ export interface PassToggleOptions {
  *  park) also stops writing the statistic attachment, flips emitters to
  *  inline tone-mapping and parks the reduction — its row is the whole
  *  target chain against direct-to-canvas, not the resolve draw alone.
- *  The four rows after it decompose that aggregate (README.md
- *  § Decomposing the HDR chain). extinctionPrepass reports the consumer
+ *  The four rows after it decompose that aggregate (README.md#decomposing-the-hdr-chain).
+ * extinctionPrepass reports the consumer
  *  A/B: disabling ADDS the in-vertex raymarch, so its savedMs is normally
  *  negative (what the cache saves). extinctionRecompute prices the fill
  *  instead, and is present only under a lever the caller arms before the
- *  sweep (README.md § The extinction rows). emptyPass ADDS `emptyPasses` empty
+ *  sweep (README.md#the-extinction-rows). emptyPass ADDS `emptyPasses` empty
  *  render passes, so its savedMs is minus the floor times that count. */
 export function buildPassToggles(
   stellata: Stellata,

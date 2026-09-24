@@ -1,5 +1,5 @@
 // Per-frame field that walks binary relations + perturbs star-pipeline
-// positions. See src/client/binaries/README.md § Tier mapping + LOD.
+// positions. See /src/client/binaries/README.md#tier-mapping + LOD.
 
 import * as THREE from 'three';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
@@ -359,7 +359,7 @@ export class BinaryOrbitField {
    *  not `local[secondary] − local[primary]`, which for a hierarchical
    *  outer pair also carries the inner pair's split of the shared primary
    *  slot. The orbit-path layer needs the anchor form to place the pair's
-   *  barycentre (`orbit-paths/README.md` § Anchor). */
+   *  barycentre (`orbit-paths/README.md#anchor`). */
   relationOffsetPcInto(relationIdx: number, out: THREE.Vector3): boolean {
     const slot = this.cacheSlotByRelationIdx.get(relationIdx);
     if (slot === undefined || this.relDeltaWritten[slot] === 0) return false;

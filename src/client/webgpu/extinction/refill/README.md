@@ -74,8 +74,8 @@ from this frame's camera is what the compaction answers in this frame.
 the CPU at the view the prepass last saw, and returns how many stars it
 admits — the population the producer runs the cache gate over on an armed
 frame. `debug.survivors()` prints it beside the compaction's counters and
-`pnpm run survivors` records it (`../../../debug/README.md` § Survivor
-counts), so that population is readable at a vantage without a clock.
+`pnpm run survivors` records it ([Survivor counts](../../../debug/README.md#survivor-counts)),
+so that population is readable at a vantage without a clock.
 
 **Only the matrix is the last view's.** `uViewport` and
 `uPinFocusToCenter` are read live. A viewport change moves the projection
@@ -170,7 +170,7 @@ population:
   would then brighten at a settled camera with the A_V of wherever the
   move began. The cache gate credits every star its whole brightward
   swing, so it admits a superset and the clock moves nothing it reads
-  (`../README.md` § What a CACHE owes).
+  ([What a CACHE owes](../README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)).
 
 Both are dust-independent and phase-independent, which is what lets the
 list be built ahead of the read and marched with **no gate in the refill
@@ -190,8 +190,8 @@ consumer expects.
 **`slotOf` and the worklist are one buffer, and that is what pays for the
 bucket key.** The compaction kernel binds **8 storage buffers**, the core
 guarantee — position, statics, suppress-pulsation, A_V, survivors, args,
-stamps and this table (`../../star/compaction/README.md` § Binding
-budget) — so the producer's `slotOf[self]` read cannot have a binding of
+stamps and this table ([Binding budget](../../star/compaction/README.md#binding-budget))
+— so the producer's `slotOf[self]` read cannot have a binding of
 its own. It does not need one: star → slot occupies `[0, count)` of the
 same buffer the producer appends into, and `RefillWorklistNodes.slotOf`
 and `.worklistElement` are the two ways to address it. Nothing else may
@@ -206,7 +206,7 @@ slot it gets back is the star's place inside the bucket's static region.
 So the list is sorted to `REFILL_BUCKETS` (256) Morton ranges and
 scrambled only *within* one, and the march reads the dust volume in
 roughly the order the whole fill does — which is worth 5.2× on this pass
-(`../dispatch-order/README.md` § Dispatch order).
+([Dispatch order](../dispatch-order/README.md#dispatch-order)).
 
 **Capacity is a hard bound, and the geometry is why.** Bucket *b* spans
 exactly `⌈count / REFILL_BUCKETS⌉` Morton slots and a star occupies one
@@ -237,7 +237,7 @@ the next has thread *b* sum the copies before it into the exclusive prefix
 and its last thread write `[⌈n / 64⌉, 1, 1, n]`. Both tables ride in
 `refillDispatch`, which the refill kernel already binds, and both kernels
 are dispatched on armed frames alone
-(`../../star/compaction/README.md` § The refill dispatch).
+([The refill dispatch](../../star/compaction/README.md#the-refill-dispatch)).
 
 **Producer and refill kernel address one entry through the same two
 accessors** — `bucketOf` for the key, `worklistElement(count, bucket,
@@ -304,7 +304,7 @@ builds all four afresh.
 be staged on.** `warmAvReadback` refuses while anything is in flight — a
 frame owed or a class built and not yet marched: a copy taken mid-flight
 is superseded by the next class before the hover dwell that wanted it can
-read a byte (`../README.md` § Cold reads). Nothing in flight means no
+read a byte ([Cold reads](../README.md#cold-reads--the-one-behaviour-that-is-not-parity)). Nothing in flight means no
 request has landed for `REFILL_SLICES` frames, camera or view, so that one
 test covers a turning camera as well as a travelling one.
 
@@ -314,8 +314,8 @@ A_V depends on camera **position** only — the ray is camera→star — so a
 star's value is stale by however far the camera has moved since its quarter
 last marched, at most `REFILL_SLICES` frames' worth. Extinction varies on
 the dust texture's ~5 pc voxel scale, about **3 mmag of A_V per pc** of
-camera displacement (`../../../star-pipeline/extinction/README.md` § The
-prepass cache, which sizes `RECOMPUTE_EPSILON_PC` off the same rate). So
+camera displacement ([The prepass cache,](../../../star-pipeline/extinction/README.md#the-prepass-cache)
+which sizes `RECOMPUTE_EPSILON_PC` off the same rate). So
 the error is `REFILL_SLICES × (displacement per frame) × 3 mmag/pc`.
 
 The vantage that maximises it is inside the dust cube, flying, at any epoch
@@ -350,8 +350,7 @@ star.
 - **`verifyExtinction()`.** The parity check is a bit compare against one
   reference march at one camera, and a worklist flight leaves up to
   `REFILL_SLICES` cameras in the buffer. It refills whole first, so what it
-  compares is the march rather than the schedule (`../README.md` § The
-  prepass kernel).
+  compares is the march rather than the schedule ([The prepass kernel](../README.md#the-prepass-kernel)).
 - **The pick mirror.** `warmAvReadback` maps the buffer only while nothing
   is owed (§ The cursor).
 

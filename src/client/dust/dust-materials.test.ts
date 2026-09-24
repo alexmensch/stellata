@@ -14,7 +14,7 @@ function sharedNodes() {
 }
 
 describe('the dust-particle material seam', () => {
-  // See ../webgpu/dust/README.md § Six of its seven uniforms.
+  // See ../webgpu/dust/README.md#six-of-its-seven-uniforms-are-not-in-its-own-record.
   it('exposes uParticleStrength as the only layer-owned slot', () => {
     const tslSlots = makeTslDustParticleMaterials({
       nodes: sharedNodes(), registerMrtLayer: () => () => {},

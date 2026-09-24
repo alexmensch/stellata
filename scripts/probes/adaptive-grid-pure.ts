@@ -1,6 +1,6 @@
 // Epoch arithmetic and the chord-error tests that drive the adaptive
 // trajectory grid. Pure; the network side is horizons-client.ts.
-// See README.md § Adaptive grid.
+// See README.md#adaptive-grid.
 
 /** Epochs are integer microdays of JD throughout: 0.0864 s, the finest
  *  Horizons resolves from a `JD…` time string, and exact under the

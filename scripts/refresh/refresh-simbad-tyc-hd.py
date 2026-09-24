@@ -26,7 +26,7 @@ BASIC_COLUMNS = (OID, MAIN_ID)
 
 # Written rows are the requested TYCs SIMBAD resolves AND holds an HD for, so
 # the band tracks that intersection rather than either input's size. Measured
-# 2026-09-09 (see data/simbad/README.md § The TYC to HD pull); the width
+# 2026-09-09 (see /data/simbad/README.md#the-tyc--hd-pull); the width
 # absorbs SIMBAD curation drift without admitting a collapsed request set.
 ROW_COUNT_LOW = 300_000
 ROW_COUNT_HIGH = 380_000

@@ -1,5 +1,5 @@
 // Navigate↔observe mode-switch orchestrator.
-// See src/client/camera/observe/README.md § ObserveTransition kinds.
+// See /src/client/camera/observe/README.md#observetransition-kinds.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
@@ -81,7 +81,7 @@ interface ObserveTransitionState {
   // the unfocus path; tick() delegates that branch to tickArrival so
  // 's log-distance profile can be swapped in by touching the
   // helper alone. enter/exit aren't park-arrivals (see
-  // src/client/camera/arrival/README.md § Inventory) and keep their inline
+  // /src/client/camera/arrival/README.md#inventory-of-arrival-sites) and keep their inline
   // time-smoothstep.
   arrival?: ArrivalState;
 }
@@ -134,8 +134,8 @@ export class ObserveTransition {
 
   /** Index of the `kind` object the camera stands on — the focused hard
    *  target while in OBSERVE or on its enter/exit glide — else null. Line
-   *  layers drop the geometry passing through that point; README.md
-   *  § The observe anchor in line layers. */
+   *  layers drop the geometry passing through that point; README.md#the-observe-anchor-in-line-layers.
+   * */
   observeAnchorOf(kind: HardKind): number | null {
     if (this.deps.getCameraMode() !== 'observe' && !this.isActive()) return null;
     const anchor = this.deps.focus.getFocusedHardTarget();
@@ -382,7 +382,7 @@ export class ObserveTransition {
  * 's log-distance swap lands in one place. 'enter' / 'exit' are
    *  observe-mode handovers — endpoints are AT or near the focal star,
    *  not at parkDist — so they keep the inline time-smoothstep (see
-   *  src/client/camera/arrival/README.md § Inventory). */
+   *  /src/client/camera/arrival/README.md#inventory-of-arrival-sites). */
   tick(nowMs: number): void {
     const state = this.state;
     if (!state) return;

@@ -1,6 +1,6 @@
 // Typed patches over @types/three's TSL surface. Only compile-verified
 // gaps live here — delete each entry when upstream types catch up
-// (README.md § TSL typing shim).
+// (README.md#tsl-typing-shim).
 
 import {
   attribute, compute as computeCountPinned, min as minIntPinned, mix as mixFloatPinnedT,
@@ -64,7 +64,7 @@ export const min = minIntPinned as unknown as MinIntCapable;
 
 // compute()'s count is number-pinned upstream while the runtime takes an
 // IndirectStorageBufferAttribute and dispatches at the workgroup count the
-// GPU wrote into it (README.md § TSL typing shim).
+// GPU wrote into it (README.md#tsl-typing-shim).
 export const computeIndirect = computeCountPinned as unknown as (
   node: Node,
   dispatch: IndirectStorageBufferAttribute,

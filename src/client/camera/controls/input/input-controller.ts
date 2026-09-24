@@ -1,5 +1,5 @@
 // Mode-agnostic canvas input: the click FSM, the roll gestures, and
-// pinch-to-zoom normalisation. See README.md § Input controller.
+// pinch-to-zoom normalisation. See README.md#input-controller.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
@@ -189,7 +189,7 @@ export class InputController {
   /** Deliberately narrower than `FocusController.isCameraBusy()`: the focus-park
    *  and unfocus lerps are *cancelled* by a click, not blocked by it, so
    *  including them here would make every click self-block. See
-   *  `../../README.md` § Camera-activity predicates. */
+   *  `../../README.md#camera-activity-predicates`. */
   private blocksClick(): boolean {
     return this.deps.isWarpActive()
       || this.deps.isAimActive()
@@ -448,7 +448,7 @@ export class InputController {
    *  re-emit it as an ordinary wheel event on the canvas: navigate-mode zoom
    *  (TrackballControls) and observe-mode FOV (ObserveControls) then handle
    *  pinch through the exact path they already handle scrolling through.
-   *  See README.md § Pinch-to-zoom. */
+   *  See README.md#pinch-to-zoom. */
   private onWheelCapture = (e: Event) => {
     const wheel = e as WheelEvent;
     if (!wheel.ctrlKey) return;

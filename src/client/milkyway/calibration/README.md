@@ -42,7 +42,7 @@ units, so nothing about the conversion is free.
 
 What the layer derives is each component's `density0`, through the same
 `ρ₀ = d²·F/G` the Local Group solves per object
-(`../../hdr/emission/README.md` § Solving ρ₀) — here with **d = 10 pc**,
+([Solving ρ₀](../../hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density)) — here with **d = 10 pc**,
 because the anchor is an *absolute* magnitude:
 
 ```
@@ -61,13 +61,13 @@ Three properties a change here must keep:
   **not** a point emissivity: the disc's vertical term is 1.04 at the
   midplane, so `DISC_DENSITY0` sits 4 % above (R₀, 0).
 - **The scalar volume integral is the LUMINANCE integral**, because both
-  tints are luma-normalised (`../README.md` § Population tints). That is
+  tints are luma-normalised ([Population tints](../README.md#population-tints-carry-hue-never-flux)). That is
   what lets one flux total be split between two hues without either moving
   light.
 - **Truncation compensation is inherent.** G is over the ACTUAL proxy
   volume, so the **0.076 mag** the disc envelope clips against all space is
   redistributed inward — a tighter envelope *brightens* what remains. Mostly
-  radial, against 0.018 mag vertical (`../README.md` § Density profiles),
+  radial, against 0.018 mag vertical ([Density profiles](../README.md#density-profiles)),
   and one ellipsoid does not separate into the two — the pin is the
   all-space closed form.
 
@@ -125,7 +125,7 @@ Three things a change here has to know:
 bulge sits behind 4.6 τ_V from here, so it is 0.02 % of the GC column and
 13.9 % of the b = 5 one; every sightline row below moves under 0.09 mag.
 Where it shows is the face-on external view, which the camera can reach
-(`AGENTS.md` § Camera-anywhere, any-epoch): the centre pixel goes from
+([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)): the centre pixel goes from
 48 % bulge to **31 %**, and the integrated bulge/disc luminance ratio from
 0.176 to **0.0840**. That contrast is what makes the model read as an Sbc
 rather than an S0, and it is pinned in `../milkyway.test.ts` alongside the
@@ -137,7 +137,7 @@ does in V.
 
 Same shape of problem as the light ratio: **nobody publishes the Galaxy's
 colour split by component**, only its integrated index. The shared solve
-(`../../hdr/emission/README.md` § Population colours) takes the bulge off
+([Population colours](../../hdr/emission/README.md#population-colours--one-equation-two-unknowns-one-citation)) takes the bulge off
 the SSP grid and returns the disc:
 
 | term | value | source |
@@ -210,7 +210,7 @@ model's light at that point**, read out of `resolved-hole-table.ts`:
   (`ρ₀ × shape` integrated on the same cell), clamped to [0, 1]. A cell the
   catalogue outshines is wholly resolved; the band cannot emit negative
   light for the rest. A cell under 500 stars takes its shell's all-sky
-  share (`scripts/milkyway-calibration/README.md` § How a cell is measured).
+  share ([How a cell is measured](/scripts/milkyway-calibration/README.md#how-a-cell-is-measured)).
 - Sampled **bilinearly in (log d, |sin b|)** over the cell centres and
   clamped to the edge cells beyond them, so the first shell's value holds
   inside 10 pc and the last shell's past 15.8 kpc. That is the rule the
@@ -256,7 +256,7 @@ tenth-dex shell, so no star changes cell. **From outside the Galaxy the
 claim is not yet measured.** What is pinned there is the band alone,
 0.004 mag fainter (§ Two checks). Giving it back needs the star field to
 carry the whole of what came out, and the display-floor collapse does
-preserve a star's flux integral (`docs/render-rules.md` § 4) while the
+preserve a star's flux integral ([§ 4](/docs/render-rules.md#4-invisible-is-not-free)) while the
 magnitude cull above it does not — so the like-for-like total from
 1 Mpc is the band plus the catalogue's own patch sum, which is
 `stellata-xypg.43`.
@@ -362,8 +362,8 @@ column is ~30 mag: `diffuseResidualMagArcsec2` returns `null` for that
 pair deliberately, and folding it in would only widen the gap.
 
 **The two constraints cannot both be met, and no shape parameter bridges
-them** — the argument is `docs/science-galactic-structure.md` § The
-luminosity solve. The total wins because it is what the camera sees from
+them** — the argument is [The luminosity solve](/docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy).
+The total wins because it is what the camera sees from
 outside: the Galaxy from M31 reads 3.08 against M31 from Sol at 3.44,
 ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
 than M31 — and the residual anchor re-run at V ≤ 11 would put it a
@@ -372,8 +372,8 @@ the disagreement, not its sign: **band plus catalogue at the pole reads
 23.42 against Leinert's 23.83**, 0.41 mag over, where band-without-hole
 plus catalogue read 0.88 over — the double count was the other 0.47. That
 0.41 is the scale disagreement proper. eso0932a sides with the total but
-confirms a pole-side excess independently (`docs/science-hdr-pipeline.md`
-§ 8, graded on the pre-hole table).
+confirms a pole-side excess independently ([§ 8,](/docs/science-hdr-pipeline.md#8-validation-contract-h7)
+graded on the pre-hole table).
 
 ## The gradient this produces, and what it reads on screen
 
@@ -404,12 +404,12 @@ hole), and b = 5 is the one row the hole barely touches, because that
 column reaches through the plane past where the catalogue resolves.
 
 **Sub-threshold rows carry the operator's faint-end toe**
-(`../../hdr/tonemap/README.md` § Operator): over-threshold levels are untouched,
+([Operator](../../hdr/tonemap/README.md#operator)): over-threshold levels are untouched,
 and 1.5 mag under threshold is black by construction — the NGP at 2.24
 under sits on the dither floor. Nothing pins the band to the threshold.
 
 **Every row here is dust-attenuated, so the dust cascade moves them and the
-solve does not.** `docs/science-galactic-structure.md` § The dust stack fixes
+solve does not.** [The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition) fixes
 which is which: the solve, its inputs and the dust-free NGP residual are
 anchors carrying no slack; this table, the plane-to-pole contrast and the
 Leinert GC check are outcomes that move when the measured tiers land, to
@@ -434,11 +434,10 @@ it is solved against a published luminosity and carries no slack.
 `DR_MAG` cannot do it either: it lifts the band and the star field
 together, so it has no term for a point-vs-extended ratio. The lever is
 the extended-source threshold itself, which is the instrument's
-`skyBackgroundMagArcsec2` (`../../hdr/emission/README.md` § Extended
-sources).
+`skyBackgroundMagArcsec2` ([Extended sources](../../hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail)).
 
 The Local Group emission layer runs the same mapping, the same constant
-(`../../local-group/emission/README.md` § Zero free parameters) and now the same
+([Zero free parameters](../../local-group/emission/README.md#zero-free-parameters--the-emission-scale-is-derived)) and now the same
 solve. The two layers are one unit system: same zero point, same
 `stellataSurfaceBrightnessLuminance` gain, same `ρ₀ = d²·F/G`, both
 mag/arcsec² in one exposure. All that differs is which magnitude goes in

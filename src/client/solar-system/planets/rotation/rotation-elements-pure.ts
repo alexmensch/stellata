@@ -1,6 +1,6 @@
 // IAU rotation elements (pole RA/Dec + prime-meridian angle W) for the
 // Sol planets, evaluated at model time `t`. Sources + dropped-terms
-// rationale in ../README.md § Planet rotation.
+// rationale in ../README.md#planet-rotation.
 
 import { J2000_JD } from '../../../util/astronomy-constants';
 import { tToJdTdb } from '../../time/time';
@@ -25,12 +25,12 @@ export interface RotationElements {
    *  adds it to the spin angle so texture features land on their true
    *  longitudes. Omitted = 0 (map centred on the prime meridian). */
   readonly mapCenterLonDeg?: number;
-  /** Periodic libration terms on top of the linear rows — README.md
-   *  § Librations. Omitted where every published amplitude is below the
+  /** Periodic libration terms on top of the linear rows — README.md#librations.
+   * Omitted where every published amplitude is below the
    *  visibility bar. */
   readonly terms?: readonly RotationTerm[];
   /** Supersedes the four linear rows above with a full orientation
-   *  model. Earth only — README.md § Earth is not a linear row. */
+   *  model. Earth only — README.md#earth-is-not-a-linear-row. */
   readonly orientationModel?: BodyOrientationModel;
 }
 
@@ -162,8 +162,8 @@ export const PLUTO_ROTATION: RotationElements = {
 };
 
 // The 18 major moons — same IAU WG 2015 linear terms as the planets
-// (sub-degree periodic librations dropped; ../README.md § Planet
-// rotation). Every entry is tidally locked, so |wDegPerDay| equals the
+// (sub-degree periodic librations dropped; ../README.md#planet-rotation).
+// Every entry is tidally locked, so |wDegPerDay| equals the
 // orbital mean motion 360/periodDays (rotation-elements-pure.test.ts
 // pins the parity against MOON_ELEMENTS). mapCenterLonDeg matches each
 // shipped map's centre after the build's positive-east normalisation

@@ -8,13 +8,13 @@ import { ballBasisInto, type ReferenceFrame } from './attitude-pure';
 // The ball's centre resolves ~3.3 device pixels per degree at a device ratio
 // of 2; this carries 5.7, so the texture still out-resolves the screen by
 // ~1.7x. Every stroke below is measured in degrees, so the ball's size stays
-// a free parameter — README.md § Rendering.
+// a free parameter — README.md#rendering.
 const TEX_W = 2560;
 const TEX_H = 1280;
 
 /** The instrument's own two tones, held fixed against every page theme. The
  *  ball is a painted object, not a surface of the page, so chrome drawn over
- *  it is read against these — see README.md § Markings and palette. */
+ *  it is read against these — see README.md#markings-and-palette. */
 export const BALL_LIGHT = '#e6edf7';
 export const BALL_DARK = '#070912';
 const FONT = 'ui-monospace, SFMono-Regular, Menlo, monospace';

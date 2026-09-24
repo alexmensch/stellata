@@ -673,7 +673,7 @@ describe('the compute row', () => {
   // lg's measured scatter is 0.267 ms, whose 1.5x is past the inherited
   // constant, so the cap binds there and nowhere else. The pin stands lg
   // down by vantage; --baseline does not, and bands it under its own
-  // scatter as the price — README.md § The compute row.
+  // scatter as the price — README.md#the-compute-passes-are-a-second-dwell-row-keyed-compute row.
   it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
     expect(computeFloorMs('lg', 0.589)).toBe(DWELL_FLOOR_MS);
     expect(computeFloorMs('sol', 0.446)).toBe(0.15);
@@ -704,8 +704,7 @@ describe('the compute row', () => {
 
   // The re-floor reaches the compute row alone: the frame rows' own repeat
   // scatter runs PAST 0.25 at three of five vantages, so a floor sized for it
-  // would end the gate rather than tighten it (`../pins/README.md` § The
-  // compute row).
+  // would end the gate rather than tighten it (`../pins/README.md#the-compute-row`).
   it('leaves the frame row at the same vantage on the whole-frame floor', () => {
     const tight = { samples: 960, iqrMs: 0.02 };
     const diff = diffRuns(

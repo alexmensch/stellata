@@ -1,5 +1,5 @@
 // Fetch + validate public/constellation-boundaries.json.
-// See README.md § Chart-mode layer.
+// See README.md#chart-mode-layer.
 
 import {
   validateRegionGridWire,
@@ -115,7 +115,7 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
 }
 
 /** Null means no layer at all, and this **must never reject**:
- *  README.md § Validated at load, but never fatal. */
+ *  README.md#validated-at-load-but-never-fatal. */
 export async function loadBoundaries(url: string): Promise<BoundaryArtifact | null> {
   let raw: unknown;
   try {

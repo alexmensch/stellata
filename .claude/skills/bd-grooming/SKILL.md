@@ -183,7 +183,7 @@ hook never points at a destination that does not exist yet.
 **Sweep for references whenever a key is dropped or renamed** — `[[wikilinks]]`
 in the surviving memories, and mentions in docs and skills. Note that
 `tests/doc-pointer-resolution.test.ts` scans `.claude/skills` for
-`<file>.md § <Heading>` pointers, so a section you delete from a doc fails CI
+`<path>.md#<slug>` pointers, so a section you delete from a doc fails CI
 if a skill still cites it. That is the safety net for doc moves; it does not
 cover memories, which nothing checks.
 

@@ -2,7 +2,7 @@
 
 Every `pnpm run perf` invocation worth citing, as the runner wrote it: the
 `--json` record, under `<date>/`. Written here by the protocol in
-`../scripts/perf/README.md` § Recording, which also says the part the tracked
+[Recording,](../scripts/perf/README.md#recording) which also says the part the tracked
 folder does not do for you: the file reaches main only if the PR that cites
 it adds it.
 
@@ -30,7 +30,7 @@ archive being write-once is why it stays that way.
 
 **A run file has no authority.** It is one measurement on one machine at one
 commit. The artifact with teeth is the pin, `../scripts/perf/pins/<slug>.json`,
-and the rules that give it teeth are `../RELEASING.md` § Perf pin. A row here
+and the rules that give it teeth are [Perf pin](../RELEASING.md#perf-pin). A row here
 that disagrees with the pin is a row to explain, never a pin to replace —
 re-pinning is `pnpm run perf:pin`, a deliberate act with its own acceptance.
 

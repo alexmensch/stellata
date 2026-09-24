@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/simbad/simbad_values.tsv — bibcoded SIMBAD rv, parallax,
 proper motion, coordinates and B/V fluxes for the membership rows a
-docs/catalog-driver.md § 5 SIMBAD value tier can reach."""
+/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers SIMBAD value tier can reach."""
 
 from __future__ import annotations
 

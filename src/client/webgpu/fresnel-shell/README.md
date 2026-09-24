@@ -6,7 +6,7 @@ Bubble. Its CPU half — geometry, rim params, the distance ladder — is
 
 **A material, not a layer.** The shells own all of their CPU logic —
 geometry, group, declutter and chart gating, floating-origin recentre,
-labels, picking — and take their surface through `../../fresnel-shell/README.md` § The material seam.
+labels, picking — and take their surface through [The material seam](../../fresnel-shell/README.md#the-material-seam).
 
 ## Files in this area
 
@@ -26,15 +26,15 @@ src/client/webgpu/fresnel-shell/
 `./fresnel-shell-tsl.ts` does, and both its varyings are TSL built-ins —
 `normalView` and `positionView`. So the material sets `fragmentNode`
 alone, the same reasoning as three of the five solar-system surfaces
-(`../solar-system/README.md` § Vertex stages).
+([Vertex stages](../solar-system/README.md#vertex-stages-four-of-six-need-none)).
 
 `positionView` is the same built-in the camera-distance attenuation reads
-(`../../fresnel-shell/README.md` § Camera-distance attenuation), so that
+([Camera-distance attenuation](../../fresnel-shell/README.md#camera-distance-attenuation)), so that
 term costs no varying here either, and its `length` is the one the rim
 shape's `viewDir` divides by — `.toVar()`, so the graph emits a single
 root. Its math lives in
 `shell-distance-pure.ts` with the graph as thin composition over it, per
-`../tsl/README.md` § TSL test pattern leg 3 — what the graph renders is
+[TSL test pattern](../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers) leg 3 — what the graph renders is
 the A/B parity smoke, not a unit test.
 
 ## `FrontSide` is load-bearing, not a default
@@ -42,7 +42,7 @@ the A/B parity smoke, not a unit test.
 The hide-when-inside contract lives in the material's `side`, not in the
 geometry: with outward-oriented winding the shell back-face-culls when the
 camera sits inside it, which is the common near view for both consumers
-(`../../fresnel-shell/README.md` § Invariants). `NodeMaterial` happens to
+([Invariants](../../fresnel-shell/README.md#invariants)). `NodeMaterial` happens to
 default to `FrontSide`, so this is set explicitly — a default that agrees
 with an invariant by coincidence is not the invariant being stated.
 
@@ -56,4 +56,4 @@ no extra registration (`../../hdr/chrome/README.md`).
 
 Statistic and diffuse take `vec4(0)`, the identity element under both
 blends a shell uses — additive for the Local Bubble, alpha-composited for
-the heliopause (`../hdr/README.md` § The gate becomes the output struct).
+the heliopause ([The gate becomes the output struct](../hdr/README.md#the-gate-becomes-the-output-struct)).

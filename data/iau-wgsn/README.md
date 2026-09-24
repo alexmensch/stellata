@@ -50,7 +50,7 @@ row-level diffs are the review surface for the derived tables).
   by this pair — do not ingest it.
 - **Licence**: CC-BY-4.0 (IAU data policy).
 - **Citation**: IAU WGSN, Mamajek E. et al. — WGSN naked-eye catalogue
-  (NEC); see SCIENCE.md § Data sources.
+  (NEC); see [Data sources](/SCIENCE.md#data-sources).
 
 ## Upstream quirks the pipeline handles
 

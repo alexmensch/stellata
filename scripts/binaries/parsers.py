@@ -793,7 +793,7 @@ def parse_simbad_wds_spectra(
 ) -> dict[tuple[str, str], str]:
     """Join ``simbad_sptype.tsv`` against ``simbad_wds_xids.tsv`` on
     ``simbad_oid``, returning a ``(wds_id, component) -> sp_type`` map.
-    See scripts/binaries/README.md § Stage 6 for the AT-HYG fallback
+    See /scripts/binaries/README.md#stage-6--multiplestsv-emit for the AT-HYG fallback
     contract."""
     sp_by_oid: dict[int, str] = {}
     with simbad_sptype_path.open(newline="") as fh:

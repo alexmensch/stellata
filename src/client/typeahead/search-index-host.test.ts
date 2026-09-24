@@ -1,4 +1,4 @@
-// See ./README.md § The search-index worker.
+// See ./README.md#the-search-index-worker.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SearchEntry } from '../../../scripts/catalog/record/catalog-pure';

@@ -73,8 +73,8 @@ When adding a new external source:
    refresh recipe.
 2. Files over ~1 MB ride Git LFS — add the `data/<source>/*.{tsv,csv,…}
    filter=lfs …` line to `.gitattributes`.
-3. Document the source URL + retrieval date in `SCIENCE.md` § Data
-   sources and add the row to the per-source README's *Provenance*
+3. Document the source URL + retrieval date in [Data sources](/SCIENCE.md#data-sources)
+   and add the row to the per-source README's *Provenance*
    block.
 4. Build scripts read from `data/<source>/<file>`. They do not hit
    the network.
@@ -88,7 +88,7 @@ When adding a new external source:
 Every stellar layer is a **J2016.0** snapshot — Gaia DR3's native
 reference epoch, adopted catalogue-wide so the Gaia-dominant corpus
 needs no propagation and only the small HIP2 / Tycho-2 / CNS5 / SIMBAD
-minority advances (see `docs/science-catalog-ingestion.md` § Driver astrometry). The solar system is the
+minority advances (see [Driver astrometry](/docs/science-catalog-ingestion.md#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)). The solar system is the
 only "now" layer in the scene. Epoch (position *time*) is distinct from
 frame *orientation*: all layers share ICRS axes (the J2000.0 equinox),
 which are time-independent — only the epoch at which positions are
@@ -98,7 +98,7 @@ measured moved to J2016.0.
 
 | Layer | Epoch | How |
 |---|---|---|
-| Stars (catalog.bin xyz) | J2016.0 by construction | Sky directions are resolved per row through the Gaia DR3 5p → HIP2 → Tycho-2 → CNS5 → SIMBAD → curated cascade and PM-propagated from each source's native epoch to the J2016.0 scene epoch at build time (`scripts/catalog/distance/direction-cascade.ts`, `CATALOG_SCENE_EPOCH`). Gaia routes (~99%) are native J2016.0 — a zero-Δt no-op; HIP2 (J1991.25) advances 24.75 yr; Tycho-2 advances each coordinate over its own mean epoch, CNS5 over the row's own `pos_epoch`, SIMBAD over 16 yr from J2000. The printed-cell tier is retired — every tier is now a first-order catalogue we pulled ourselves (`docs/catalog-driver.md` § 5) — and the per-route pins run `directionGaia5p` … `directionCurated`, with `no_position` — a row no tier states — parked on the § 6.1 ledger rather than dropped. **No mixed-epoch position is left**: the 3 Tycho-2 rows with no mean solution state `ra_icrs` at J2000 and advance on the PM the rescue cascade reaches them with, like every other tier. AT-HYG's stored `x0/y0/z0` — a mixed-epoch merge artifact, tens of arcsec off on high-PM stars — is not consumed either. See `docs/science-catalog-ingestion.md` § Driver astrometry. |
+| Stars (catalog.bin xyz) | J2016.0 by construction | Sky directions are resolved per row through the Gaia DR3 5p → HIP2 → Tycho-2 → CNS5 → SIMBAD → curated cascade and PM-propagated from each source's native epoch to the J2016.0 scene epoch at build time (`scripts/catalog/distance/direction-cascade.ts`, `CATALOG_SCENE_EPOCH`). Gaia routes (~99%) are native J2016.0 — a zero-Δt no-op; HIP2 (J1991.25) advances 24.75 yr; Tycho-2 advances each coordinate over its own mean epoch, CNS5 over the row's own `pos_epoch`, SIMBAD over 16 yr from J2000. The printed-cell tier is retired — every tier is now a first-order catalogue we pulled ourselves ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)) — and the per-route pins run `directionGaia5p` … `directionCurated`, with `no_position` — a row no tier states — parked on the § 6.1 ledger rather than dropped. **No mixed-epoch position is left**: the 3 Tycho-2 rows with no mean solution state `ra_icrs` at J2000 and advance on the PM the rescue cascade reaches them with, like every other tier. AT-HYG's stored `x0/y0/z0` — a mixed-epoch merge artifact, tens of arcsec off on high-PM stars — is not consumed either. See [Driver astrometry](/docs/science-catalog-ingestion.md#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision). |
 | Binary companions (multiples.tsv → catalog.bin) | J2016.0 by construction | `scripts/binaries/stage6_multiples.py` `_position_pc` PM-propagates every component's position from its native epoch to `CATALOG_SCENE_EPOCH`, mirroring the single-star cascade, so a promoted secondary's baked xyz shares its primary's epoch and the static relative sep/PA is the pair's true J2016.0 geometry. |
 | GCVS variables | n/a (period + amplitude only) | We never consume GCVS positions; the variable rides on its AT-HYG row via the HIP/HD cross-match, so position inherits J2016.0 transitively. |
 | Hipparcos CCDM | n/a (flag-only) | We consume `MultFlag` only, never position. |
@@ -118,7 +118,7 @@ rv cascade. AT-HYG's printed `pm_*` and `rv` cells supply neither. At load the r
 position to the model clock — `p(t) = p(J2016) + v·(t − 2016)`,
 `src/client/loaders/epoch-advance-pure.ts`, run once before the scene
 builds so hover / focus / constellation lines / binaries all inherit
-current-epoch positions (`docs/science-catalog-ingestion.md` § Current-epoch star positions). The
+current-epoch positions ([Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)). The
 wire stays J2016.0 (stable regression corpus, no rebuild to stay
 current); the epoch a viewer sees is `getT()`.
 

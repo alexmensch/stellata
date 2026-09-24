@@ -3,8 +3,8 @@
 The mip chain that turns the HDR target's **statistic attachment** into
 three numbers — the frame's area-weighted mean luminance, the frame
 fraction lit resolved surfaces cover, and the **modal** lit surface's own
-brightness — and the frame-late readback of them. `../README.md`
-§ Adaptation owns what the three numbers then do;
+brightness — and the frame-late readback of them. [Adaptation](../README.md#adaptation--the-frame-measures-itself)
+owns what the three numbers then do;
 `../../attachments/README.md` owns what writes the two channels they come
 out of.
 
@@ -103,7 +103,7 @@ first pass either way. Each level is its own render pass, and a pass has
 a floor independent of what it draws — but that floor was measured at
 0.1–0.5 ms, and the chain draws only on the one frame in four whose
 readback has landed, so **the pass count is not where this chain's cost
-is**; the texel reads are (`docs/render-rules.md` § 8, which now carries
+is**; the texel reads are ([§ 8,](/docs/render-rules.md#8-submits-and-passes-are-costs) which now carries
 the measurement and names this chain as the case pass-count reasoning
 gets wrong).
 
@@ -152,7 +152,7 @@ weighted by the masked area behind it (`w · coverage`):
 R, G, B and the weight in A — so the coverage term costs no new pass, no
 new target and no widening of the attachment. What paid for it was the
 highlight guard retiring: the max of the peak channel had no consumer left
-(`../README.md` § Adaptation).
+([Adaptation](../README.md#adaptation--the-frame-measures-itself)).
 
 fp16 flushes a level texel whose local mean falls under ~6e-8 to zero.
 That is a bound on *isolated* faint light — a lone threshold star

@@ -1,6 +1,5 @@
 // Aim-slerp state machines: rotate camera so a world point lands at
-// view centre. See src/client/camera/controls/README.md § Aim
-// controller.
+// view centre. See /src/client/camera/controls/README.md#aim-controller-cameracontrolsaim-controllerts.
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';

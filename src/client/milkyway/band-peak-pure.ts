@@ -1,5 +1,5 @@
 // The band's brightest rendered sightline from a camera position — the
-// bound the brightness skip reads (docs/science-hdr-pipeline.md § 3.5).
+// bound the brightness skip reads (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound).
 
 import { GALACTIC_CENTRE_PC, ICRS_TO_GAL_M3, R0_PC } from '../galactic/galactic-coords';
 import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
@@ -179,7 +179,7 @@ export const BAND_PEAK_STALENESS_MAG = BAND_PEAK_DRIFT_MAG_PER_PC * BAND_PEAK_RE
 
 /** Position-keyed memo of the bound, brighter again by the staleness
  *  allowance. Keyed on camera pose alone, never on exposure
- *  (hdr/exposure/README.md § One writer, five slots). */
+ *  (/src/client/hdr/exposure/README.md#one-writer-five-slots). */
 export class BandPeakCache {
   private at: Vec3 | null = null;
   private radiusPc = 0;

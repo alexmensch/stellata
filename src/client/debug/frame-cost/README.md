@@ -84,12 +84,11 @@ src/client/debug/frame-cost/
   row beside it, so a toggle that moves work between a render pass and a
   compute kernel (`extinctionPrepass`) prices its render half here and
   its compute half on a dwell's compute row
-  (`../gpu-timing/README.md` § `gpu.frame` is the only row that prices
-  anything) — and `raf-delta` wall time otherwise: any adapter that
+  ([`gpu.frame` is the only row that prices anything](../gpu-timing/README.md#gpuframe-is-the-only-row-that-prices-anything)) — and `raf-delta` wall time otherwise: any adapter that
   withheld the timestamp feature, and any that granted it but resolves
   durations no frame can have, which is Chrome today
-  (`../gpu-timing/README.md` § A granted feature can still
-  resolve garbage). `timer-query` remains in `GpuFrameMethod` so an
+  ([A granted feature can still resolve garbage](../gpu-timing/README.md#a-granted-feature-can-still-resolve-garbage)).
+  `timer-query` remains in `GpuFrameMethod` so an
   archived run that names it still parses; it is absent from
   `REQUESTABLE_GPU_FRAME_METHODS`, so `--method timer-query` is refused at
   parse time rather than after the arm is spent, and a console caller that
@@ -131,7 +130,7 @@ src/client/debug/frame-cost/
 
 The statistic readback's rate is emergent rather than pinned: one readback
 is in flight at a time, and the next is issued only once the last one lands
-(`../../webgpu/hdr/README.md` § Reduction). The obvious worry follows:
+([Reduction](../../webgpu/hdr/README.md#reduction--an-asynchronous-readback)). The obvious worry follows:
 disabling a pass makes the frame cheaper, the readback lands sooner and
 fires more often, and the row prices the readback's own copy and map
 instead of the pass.
@@ -237,8 +236,7 @@ single-baseline sweep when the instrument is known to be settled.
   population in both states, only one drawing it. Compare `disabledMs`
   against an earlier run of the same row: `mrtAttachments` read 61 % at Sol
   on a `disabledMs` of 35 against an honest 78, while Dawn discarded every
-  command buffer carrying the star pass (`../../webgpu/hdr/README.md`
-  § The gate becomes the output struct).
+  command buffer carrying the star pass ([The gate becomes the output struct](../../webgpu/hdr/README.md#the-gate-becomes-the-output-struct)).
 - **`baselineRising`** — one verdict about the whole SWEEP, stamped on
   every row of it: the baseline walked upward past what the run's own
   brackets put down to scatter, so the instrument got dearer while it

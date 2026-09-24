@@ -21,11 +21,11 @@ export function composedLabelsOf(
 
 /** Display label per star: `catalog.bin`'s name table carries the NAME
  *  tiers and always wins; `composedLabels` fills every record an authority
- *  never named (docs/star-naming.md § 6). A record the search index does
+ *  never named (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path). A record the search index does
  *  not carry falls to `resolveStarName`'s `Gaia DR3` / `SID #` last resort.
  *
  *  The composer runs once for the whole catalogue and both its callers
- *  take the result — `./README.md` § The search-index worker. */
+ *  take the result — `./README.md#the-search-index-worker`. */
 export function buildStarLabels(
   catalog: Catalog,
   composedLabels: Map<number, string>,
@@ -40,7 +40,7 @@ export function buildStarLabels(
 
 /** The name-table half of the label ladder, which is available from the
  *  catalogue's FIRST chunk — the table precedes the records on the wire for
- *  exactly this reason (`scripts/catalog/record/README.md` § Record order).
+ *  exactly this reason (`/scripts/catalog/record/README.md#record-order`).
  *  Seeded per landing chunk so a named star carries its name the moment it
  *  is drawn, rather than showing a bare SID until the search index lands
  *  and supplies the composed-designation half. */

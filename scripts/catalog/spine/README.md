@@ -2,9 +2,9 @@
 
 `data/athyg/inherited-spine.tsv` is one row per AT-HYG-derived record of the
 final AT-HYG-driven build, carrying that record's resolved designation set
-plus AT-HYG's printed cells. The contract is `docs/catalog-driver.md` § 3; why
+plus AT-HYG's printed cells. The contract is [§ 3](/docs/catalog-driver.md#3-the-inherited-spine); why
 the spine is load-bearing rather than a rare fallback is
-`data/classic-ids/README.md` § Coverage.
+[Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
 **Six readers, and the record build is not one of them.** `readStars` walks
 the membership manifest (`../membership/README.md`), which this file is an
@@ -12,24 +12,23 @@ input to and a baseline for. What the spine still supplies is the one thing no
 primary does: **which designations name one star**. `build:membership` reads
 it for those merge decisions and for the label cells the merge starts from,
 deriving each row's Gaia binding from committed evidence alone
-(`../membership/binding/README.md` § The four sources, in precedence order); the
+([The four sources, in precedence order](../membership/binding/README.md#the-four-sources-in-precedence-order)); the
 manifest's parity gate (i) reads it as the baseline every manifest row must
 account for; `../classic-ids/parity-ledger.test.ts` backs two dispositions
 against its cells; `../astrometry-request/` reads its TYCs to narrow the
 cross-walk and its rows for the derivation's candidates; the two audits here
 measure it; the guard below pins it. Which column each reads, what replaces
-it and the order they leave in: `docs/catalog-driver.md` § 3.2.
+it and the order they leave in: [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-column-per-consumer-in-order).
 
 **The file is frozen, so a merge decision review finds wrong is corrected in
 `data/membership/spine-corrections.tsv`** — a committed, evidenced row the
-manifest applies — never by an edit here (`../membership/README.md`
-§ Correcting a merge decision).
+manifest applies — never by an edit here ([Correcting a merge decision](../membership/README.md#correcting-a-merge-decision)).
 
 **Nothing regenerates it.** The one-shot generator
 retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and that
 walk no longer exists. The manifest that supersedes it is a new artifact, not
 a regeneration of this one; the rule it re-sources under, and the measurement
-behind it, are `docs/catalog-driver.md` § 3.1 and § The primaries audit below.
+behind it, are [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) and § The primaries audit below.
 
 ## Files in this area
 
@@ -105,7 +104,7 @@ The classical cells come off the column and the manifest re-keys them; the
 `gaia_source_id` cell is the one column the manifest **does not read at all**.
 The generator derives each binding from the TYC and HIP cross-walks, CNS5 and
 SIMBAD's cross-IDs through both binding gates
-(`../membership/binding/README.md` § Both gates weigh every candidate). The
+([Both gates weigh every candidate](../membership/binding/README.md#both-gates-weigh-every-candidate)). The
 native → HIP-cross-walk precedence that produced the frozen column took
 AT-HYG's own `gaia` cell as its first input, which is not in the repo, so no
 walk order reproduces it; the derivation is a fresh answer, never a replay
@@ -119,7 +118,7 @@ which settles 11,687 of the 11,721 the walks cannot reach and takes the fills
 to 940 ungated, 791 after both gates — a reader scoping off 233 under-budgets
 by four. The manifest's `derivationOutcome` count carries what the derivation
 reaches; nothing compares it against the frozen column any more
-(`../membership/README.md` § The spine side).
+([The spine side](../membership/README.md#the-spine-side)).
 
 **Four rows carry identifiers the frozen build resolved *after* its walk**:
 the three `multiples.tsv` HD-only primaries it stamped from their
@@ -134,7 +133,7 @@ moved that is not a retired gate traces to these four**:
 | Count | Δ | Which of the four, and why |
 |---|---|---|
 | `spectralBySimbad` / `spectralFallback` | +4 / −4 | all four: a source_id at walk time resolves SIMBAD sp_type in the walk instead of in a re-classification after it |
-| `ciSpectralDerived` (now `ciVia.spectral_derived`) | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplied the colour where classIdx=8 had fallen through to solar. **At the swap only:** `stellata-3bsf.12` put a Gaia relation above that tier and the same pull reached these sources, so both now route `ciVia.gaia_relation` and neither is in the 279 (`../photometry/README.md` § The ci cascade) |
+| `ciSpectralDerived` (now `ciVia.spectral_derived`) | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplied the colour where classIdx=8 had fallen through to solar. **At the swap only:** `stellata-3bsf.12` put a Gaia relation above that tier and the same pull reached these sources, so both now route `ciVia.gaia_relation` and neither is in the 279 ([The ci cascade](../photometry/README.md#the-ci-cascade)) |
 | `vPrintedHip` / `vCatalogued` | +3 / −3 | the three primaries: a HIP reaches the V cascade's printed tier |
 | `companionAlreadyInCatalog` | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
 | `companionRepositionedCollocatedDouble` | 1 → 0 | ξ UMa B: that early return precedes the collocated-double merge, which is what used to write the source_id |
@@ -142,7 +141,7 @@ moved that is not a retired gate traces to these four**:
 | `systemCoherenceSystems` | +1 | ξ UMa B: the coherence pass resolves members by source_id then HIP, so B used to collapse onto A's record on the shared HIP 55203 and the root never reached two members |
 | `bjEligible` | −1 | none of the four — the one `tooFar` row the old walk counted as eligible before dropping it; the spine never carried it |
 
-`../companions/README.md` § Anchor flux conservation carries the
+[Anchor flux conservation](../companions/README.md#anchor-flux-conservation-post-pass) carries the
 consequence of the V-tier move: three records ship as unsplit blends.
 
 ## Six source_ids DR3 does not publish
@@ -157,7 +156,7 @@ itself a spine cell — which would put two records on one SIMBAD row and
 trip the values parser's duplicate-key throw.
 
 Why the cells stay as they are, and what the manifest carries for each of the
-six: `data/athyg/README.md` § Six DR2 ids in the DR3 column.
+six: [Six DR2 ids in the DR3 column](/data/athyg/README.md#six-dr2-ids-in-the-dr3-column).
 
 ## Why a guard, not a rebuild
 
@@ -192,7 +191,7 @@ spine to the records that ship, which is what the retired
 The property both rest on: **every departure from the spine's designation set
 is accounted for by an enumerated file**, never by a relaxed comparison. The
 classic-ID label layer moves designations off the spine's inherited cells by
-design (`docs/catalog-driver.md` § 4), and `data/classic-ids/label_flips.tsv`
+design ([§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia)), and `data/classic-ids/label_flips.tsv`
 is the COMPLETE enumeration of that delta — flips, additions, suppressions and
 dropped extras. That is what keeps every SID preserved by construction, and a
 queue failing to list one departure fails the gate.
@@ -212,7 +211,7 @@ build parking a different star for the same total would land silently.
 `pnpm run audit:spine-primaries` measures the spine against the frozen tables
 AT-HYG merged — IV/25, V/50, IV/27A, CNS5, V/70A, I/239, HIP2, the WGSN
 tables, Tycho-2 and the two DR3 best-neighbour walks — and is the evidence
-behind `docs/catalog-driver.md` § 3.1, which owns the decisions. Three
+behind [§ 3.1,](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) which owns the decisions. Three
 questions, one pass over the rows:
 
 - **Attestation** — for each classical cell (`hd` `hr` `hip` `gl` `bayer`
@@ -220,7 +219,7 @@ questions, one pass over the rows:
   I/239's own `HD` column. A row none of whose carried cells is attested
   exists on AT-HYG's authority alone. **0 rows** do; 167 carry one
   unattested *label* (1 HDE number, 120 Flamsteed cells, the 46 disposed
-  proper names — `../membership/README.md` § The spine side disposes them).
+  proper names — [The spine side](../membership/README.md#the-spine-side) disposes them).
 - **Identity** — the spine's `gaia_source_id` against what the raw TYC / HIP /
   CNS5 walks bind, pre-gate. 300,155 agree, 11,721 no walk reaches, 10 a walk
   contradicts; on 11,697 of those 11,731 SIMBAD's object for the same id
@@ -239,7 +238,7 @@ questions, one pass over the rows:
 **The unverified residual is zero, not small.** The 34 bindings the Identity
 bullet leaves uncorroborated — its 16 + 12 + 6 — each carry a committed
 review disposition with the measurement behind it
-(`../membership/README.md` § The spine side), and the Attestation bullet's
+([The spine side](../membership/README.md#the-spine-side)), and the Attestation bullet's
 **0 rows** says the same of the classical cells. So no row of this file exists
 on AT-HYG's authority alone, on either question the pass asks — frozen here
 means examined and then held, not taken on trust.
@@ -281,21 +280,21 @@ on TYC and HIP, CNS5 supplies the GJ, and `simbad_sptype.tsv`'s cross-ID
 columns are `hip` / `tyc` / `gj` with no HD among them. The two `hd` rows and
 the one `hr` row below are therefore the `published` residual unchanged, not a
 verdict that the witnesses examined them. An HD cross-ID column on the frozen
-SIMBAD identifier pull `docs/catalog-driver.md` § 3.2 proposes would bring
+SIMBAD identifier pull [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-column-per-consumer-in-order) proposes would bring
 them into reach.
 
 Measured 2026-09-20: 312,280 rows carry two or more of the five cells;
 **316** do not connect under `published`, **136** under `witnessed` — 131 a
 GJ number on a TYC+HIP row with no HD, plus HD 96600 / HIP 54335,
 HD 336196 / HIP 90265, HR 4401 / HD 99103, HIP 55203 on ξ UMa, and
-Gl 863.1A / HIP 111293 with no TYC. `docs/catalog-driver.md` § 3.2 carries
+Gl 863.1A / HIP 111293 with no TYC. [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-column-per-consumer-in-order) carries
 the table and what each pattern needs. `--out=<dir>` writes
 `disconnected.tsv`, one row per `witnessed` miss with both partitions, so
 the merge-decision retirement has its diff surface before it starts.
 
 ## The swap parity ledger
 
-The instantiation of `docs/catalog-driver.md` § 6 for the driver swap,
+The instantiation of [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) for the driver swap,
 audited 2026-08-09. Counts are pinned in `../build-catalog-expected.json`
 unless another home is named; the committed gates are
 `inherited-spine-guard.test.ts` here, `../membership/`'s manifest gate and
@@ -312,8 +311,8 @@ unless another home is named; the committed gates are
   reason enum had no rows. The only per-record routing deltas are the
   four-record set enumerated above. The value-half children have since
   opened that list: retiring the printed `dist` cell parks the rows no owned
-  parallax reaches (`../distance/parallax/README.md` § Why the residual drops
-  rather than degrading), which is the first non-empty dropped list this
+  parallax reaches ([Why the residual drops rather than degrading](../distance/parallax/README.md#why-the-residual-drops-rather-than-degrading)),
+  which is the first non-empty dropped list this
   ledger has carried and the reason the parity gate subtracts it.
 - **Label parity — strict gain.** No previously-labeled record lost a
   label: per identifier the shipped coverage is the spine's keyed count
@@ -324,15 +323,15 @@ unless another home is named; the committed gates are
 - **Field parity.** The swap PR moved no field values beyond the
   four-record set: V and absmag moved one PR earlier under the V
   cascade, with the |ΔV| distribution measured per G bin against
-  printed V (`../photometry/README.md` § Where the validity bound comes
-  from) and `vVia` routing pinned. § 6.3's |Δabsmag| axis needs no
+  printed V ([Where the validity bound comes from](../photometry/README.md#where-the-validity-bound-comes-from))
+  and `vVia` routing pinned. § 6.3's |Δabsmag| axis needs no
   second measurement: absmag is derived from that V on a distance the
   swap did not touch, so it moves by |ΔV| exactly. Spectral-string
   changes are the +4/−4 rows of the same four-record table. ci and rv
   were spine passthroughs at swap time and are no longer: both took a
   Gaia-native tier above the printed cell in `stellata-3bsf.12`, which
-  carries its own |Δci| measurement (`../photometry/README.md` § The ci
-  cascade) and its own per-tier routing pins.
+  carries its own |Δci| measurement ([The ci cascade](../photometry/README.md#the-ci-cascade))
+  and its own per-tier routing pins.
 - **Identity events — five bridges, zero ledger writes.** The swap
   appended nothing to `data/sid/ledger.tsv`, `retirements.tsv` or
   `reinstatements.tsv`; there were no presence events (membership is
@@ -356,17 +355,17 @@ unless another home is named; the committed gates are
   rows are the binding gate refusing to key a designation on a source
   that is not the star, so each leaves its record on the spine's label
   — no departure for the label term to carry, and no identity event to
-  dispose (`data/classic-ids/README.md` § The binding gate).
+  dispose ([The binding gate](/data/classic-ids/README.md#the-binding-gate)).
 
 ### The derived-binding ledger
 
 The § 6 instantiation for the manifest deriving its `gaia_source_id` instead
-of copying this file's column (`../membership/binding/README.md`
-§ The four sources, in precedence order), measured 2026-09-08 by diffing the
+of copying this file's column ([The four sources, in precedence order](../membership/binding/README.md#the-four-sources-in-precedence-order)),
+measured 2026-09-08 by diffing the
 built catalogue against the one built from the copied column, records matched
 on their canonical designation.
 That baseline also predates the four manifest-derived re-pulls
-(`../../refresh/README.md` § The staleness gate), so a move below carries both
+([The staleness gate](../../refresh/README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator)), so a move below carries both
 the new binding and the table row it can now reach; two records whose binding
 never changed move for the second reason alone.
 Pins: `derivationOutcome`, `derivedVia` and the review counts in

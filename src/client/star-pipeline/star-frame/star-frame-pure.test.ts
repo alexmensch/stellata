@@ -45,7 +45,7 @@ describe('mergeSortedByDistance', () => {
   });
 
   it('leaves Infinity past the decoded prefix, so the window search stops there', () => {
-    // ./README.md § Absorbing a chunk, the distSol/sortedDistFromSol pair.
+    // ./README.md#absorbing-a-chunk the distSol/sortedDistFromSol pair.
     const count = 1000;
     const loaded = 40;
     const { dist, idx, key } = index(

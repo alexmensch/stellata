@@ -52,7 +52,7 @@ its catalog load blocks first paint and may reject) — and are only
   by `kind-modules.test.ts`.
 - **`KindContext.webgpu` is the seam every kind reads its surfaces
   from.** It owns no scene, so every group a kind builds goes into
-  `KindContext.scene` (`../webgpu/README.md` § One scene per boot). It is
+  `KindContext.scene` ([One scene per boot](../webgpu/README.md#one-scene-per-boot)). It is
   non-nullable, and the fixture keeps it honest: `fakeWebGpuSeam`
   (`../webgpu/seam-mock.ts`) carries every member and refuses by name until
   a suite overrides the leg it exercises.
@@ -111,8 +111,8 @@ its catalog load blocks first paint and may reject) — and are only
   `reason` is a short stable slug the render watcher prints, so a frame
   rate pinned by one of these is attributable after the fact.
 - **A module's returned layer declares its `timeBehaviour`**, like every
-  other scene layer (`../scene/README.md` § Declaring how time moves a
-  layer). Five modules attach a layer and all five declare: planet and
+  other scene layer ([Declaring how time moves a layer](../scene/README.md#declaring-how-time-moves-a-layer)).
+  Five modules attach a layer and all five declare: planet and
   probe report a rate off their field, cloud / lg / shell are `'static'`
   (fixed positions, event-driven visibility). Star returns null, so it
   has nothing to declare.

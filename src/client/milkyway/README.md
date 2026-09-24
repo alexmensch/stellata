@@ -83,8 +83,7 @@ Constants baked into `milkyway.ts`; no runtime data loads.
   and is **not** a high-latitude fix: it brightens the pole.
 
   Both components share a radial scale length, the one place this departs
-  from the literature (`docs/science-galactic-structure.md` § Milky Way
-  density profiles).
+  from the literature ([Milky Way density profiles](/docs/science-galactic-structure.md#milky-way-density-profiles)).
 
   `DISC_HALF_THICKNESS_PC` = 1800 is **two thick scale heights**, the
   same rule 600 pc followed against the thin one, and it clips 0.0183 mag
@@ -100,8 +99,8 @@ Constants baked into `milkyway.ts`; no runtime data loads.
 Each component multiplies a population colour pre-integration, so the
 band's hue varies by line of sight — warm cream (255,219,196) for the
 disc, warmer still (255,198,151) for the bulge, both derived from their
-populations' (B−V) rather than authored (`calibration/README.md`
-§ Population colours). Neither carries flux at emission, and neither
+populations' (B−V) rather than authored ([Population colours](calibration/README.md#population-colours--the-discs-is-solved-not-cited)).
+Neither carries flux at emission, and neither
 component has a hand-set weight any more: both `density0` values are
 solved.
 
@@ -110,7 +109,7 @@ star catalogue's measured share of the model's light at each step,
 applied ahead of the dust step. It reaches both shaders as one filtered
 fetch of the shared `uUnresolvedLight` grid, and the CPU mirror through
 `unresolvedBandLightAt` over the same cube
-(`calibration/README.md` § The resolution hole, § The table is a 3D grid).
+([The resolution hole,](calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars) § The table is a 3D grid).
 
 ### Population tints carry hue, never flux
 
@@ -136,7 +135,7 @@ bit-identical under any hue, extincted ones are not. Deriving the palette
 brightened the plane by 0.026 mag at b = 5 and 0.023 mag at the Galactic
 centre while leaving the poles alone — the whole sightline table below is
 tint-coupled through the dust and nothing above the dust is
-(`../hdr/emission/README.md` § Unit).
+([Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes)).
 
 Two more consequences a future session needs:
 
@@ -145,13 +144,13 @@ Two more consequences a future session needs:
   the tint, because the tint's channels exceed 1 (the disc's red sits at
   1.13) and an `<input type="color">` cannot round-trip that.
 - **The Local Group layer does not seed from here.** It derives its own
-  two family indices (`../local-group/emission/README.md` § Population tints),
+  two family indices ([Population tints](../local-group/emission/README.md#population-tints--two-family-seeds-both-derived)),
   sharing only the SSP spheroid constant and the solve — so this palette
   is the band's alone.
 
 ## Surface-brightness emission
 
-The band emits into the scene-wide HDR unit (`../hdr/emission/README.md` § Unit).
+The band emits into the scene-wide HDR unit ([Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes)).
 `colorAccum` is the raymarch's emission column in "density × pc ×
 colour" units; `uGlowMagOffset` carries `SB_ZERO_POINT`, the **V surface
 brightness a unit column carries**, so the sightline reads
@@ -169,7 +168,7 @@ which is why the line-of-sight hue the raymarch built survives untouched.
 the magnitude means the same thing it does for a star.
 
 **`Ω` is the eye's rod summation area, not the pixel's**
-(`uOmegaSummationArcsec2`; `../hdr/emission/README.md` § Extended sources). An
+(`uOmegaSummationArcsec2`; [Extended sources](../hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). An
 extended source's threshold is a surface brightness, and the summation
 area is fixed in angle — so the band holds its display level at every FOV
 and viewport, where the pixel solid angle would have dimmed it
@@ -204,7 +203,7 @@ result is graded by, and the sightline table those produce.
 `MilkyWay.peakSurfaceBrightnessBound(cameraAbsPc)` answers, in mag/arcsec²,
 "how bright can the band's brightest pixel be from here" — an upper bound
 the brightness skip compares against the live extended threshold
-(`docs/science-hdr-pipeline.md` § 3.5). Two tiers, both off the CPU mirror:
+([§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound)). Two tiers, both off the CPU mirror:
 
 - `MW_PEAK_SB_DUST_FREE` (17.11) — the dust-free full central chord,
   marched dense. Brighter than any vantage can render, so it settles the
@@ -217,11 +216,11 @@ the brightness skip compares against the live extended threshold
   resolution-hole lookup at every step, and CPU work on the frame
   thread, which is why the brightness skip takes it as a thunk and calls it
   only past the refusals that do not need it
-  (`../hdr/exposure/visibility/README.md` § Skipping an emitter the display
-  cannot show). Centring on the centre is what keeps
+  ([Skipping an emitter the display cannot show](../hdr/exposure/visibility/README.md#skipping-an-emitter-the-display-cannot-show)).
+  Centring on the centre is what keeps
   it scale-free — from a megaparsec the Galaxy spans two degrees and an
   absolute (l, b) grid would miss it, which is the sampling error
-  `docs/science-hdr-pipeline.md` § 3.5's probe table carried at 1 Mpc.
+  [§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound)'s probe table carried at 1 Mpc.
   `BAND_PEAK_MARGIN_MAG` (0.05) covers
   the fan's worst shortfall against a dense sweep over an eight-vantage grid
   (0.038, pinned); `BAND_PEAK_STALENESS_MAG` (0.07) covers the peak's drift
@@ -251,8 +250,8 @@ position it took the bound at, since that is the travel the allowance
 covers. `dispose` resets it.
 
 `MilkyWay.contributionSkip` is what the band's registry entry declares
-`contribution: { kind: 'gated' }` on (`../scene/contribution/README.md` § The
-brightness reason): the ceiling first, and the fan **only** where the
+`contribution: { kind: 'gated' }` on ([The brightness reason](../scene/contribution/README.md#the-brightness-reason)):
+the ceiling first, and the fan **only** where the
 ceiling cannot decide, which is what keeps a 2–6 ms march off the deep
 cuts that need no help. `setContributing` is a term of the group's
 visibility alongside the user's `mw=0` toggle, never a bare
@@ -326,7 +325,7 @@ contributes nothing; beyond it, this is the only dust. The partition is by
 **volume, never by a rescaled fraction** — scaling the slab down globally to
 make room for local clouds would under-extinct the far disc, a ~3 mag error
 to avoid a ~0.05 mag one, and that argument still holds against exactly that
-move. `docs/science-galactic-structure.md` § The dust stack is the contract:
+move. [The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition) is the contract:
 the tier table, which clouds are carved out of the grid and which are folded
 into it, the froxel-grid prefilter and its measured cost, and the eso0932a
 grading.
@@ -356,8 +355,8 @@ outside of pays anything, so sightlines that miss the bulge proxy
 tapering to 0.011 mag by l = 30° (pinned).
 
 The Edenhofer voxel grid is **not sampled here yet**, but both the decision and
-the mechanism are settled (`docs/science-galactic-structure.md` § The dust
-stack). The read comes from a **view-frustum froxel grid** — measured A_V column
+the mechanism are settled ([The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition)).
+The read comes from a **view-frustum froxel grid** — measured A_V column
 per (screen cell × log-distance slice), 13.0′ cells (one summation patch) × 32
 slices, one ray per cell, filled at half a voxel per step, its distance axis
 spanning coverage entry to exit. A grid holding the *column* rather than the
@@ -382,7 +381,7 @@ pin (`../hdr/attachments/README.md`). Neither writes attachment 0
 on-target: the resolve owns that pixel once it has averaged the diffuse
 attachment over the summation patch. Off-target both apply the operator
 themselves over the pixel solid angle (`uHdrTarget = 0`, chart mode's
-path — `../hdr/README.md` § The inline operator), in the **undithered**
+path — [The inline operator](../hdr/README.md#the-inline-operator--chart-modes-path)), in the **undithered**
 variant: the two components overlap on every band pixel and the dither is a
 function of `fragCoord` alone, so it would land twice.
 
@@ -420,7 +419,7 @@ The chart-mode treatment and un-hiding the meshes are still open work.
 The band↔isobar swap is driven by the `milkyWayIsobar` declutter push
 (chart floor), not chart-mode.ts directly — the group stays enabled in
 chart because `SceneDeclutter` enables it while either the band or the
-isobar is permitted (`../scene/declutter/README.md` § Chart-content wiring).
+isobar is permitted ([Chart-content wiring](../scene/declutter/README.md#chart-content-wiring)).
 
 Warp keeps the layer visible in dark mode — the band reorienting as the
 camera flies past the GC is the realism payoff.

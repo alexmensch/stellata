@@ -1,5 +1,5 @@
 // What the search-index worker computes and hands back, and the one
-// function that computes it. See ./README.md § The search-index worker.
+// function that computes it. See ./README.md#the-search-index-worker.
 
 import type { SearchEntry } from '../../../scripts/catalog/record/catalog-pure';
 import { buildSearchIndex, type SearchIndex } from './search-corpus';
@@ -20,7 +20,7 @@ export interface SearchIndexPayload {
   corpus: SearchIndex;
 }
 
-/** See ./README.md § The search-index worker. */
+/** See ./README.md#the-search-index-worker. */
 export function buildSearchIndexPayload(
   raw: SearchEntry[],
   constellations: ConstellationName[],

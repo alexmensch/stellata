@@ -1,5 +1,5 @@
 // Layout, sampler mirror and texel values for the resolution hole.
-// README.md § The resolution hole; the table itself is generated.
+// README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars; the table itself is generated.
 
 import {
   RESOLVED_HOLE_CATALOGUE_RECORDS,
@@ -73,7 +73,7 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const texelCoord = (c: number, size: number) =>
   Math.min(Math.max(c * size - 0.5, 0), size - 1);
 
-/** README.md § The table is a 3D grid, not a uniform array. */
+/** README.md#the-table-is-a-3d-grid-not-a-uniform-array. */
 export function sampleTexelCentres(
   values: ArrayLike<number>,
   width: number,
@@ -106,7 +106,7 @@ export function resolvedLightFraction(
     table.values, RESOLVED_HOLE_SHELLS, RESOLVED_HOLE_BANDS, u, v);
 }
 
-/** README.md § The table is a 3D grid. */
+/** README.md#the-table-is-a-3d-grid-not-a-uniform-array. */
 export const RESOLVED_HOLE_GRID_N = 64;
 export const RESOLVED_HOLE_GRID_HALF_PC = 4000;
 
@@ -131,13 +131,13 @@ function holeVoxelsOf(table: ResolvedHoleTable): Float32Array {
 
 let shippedHole: Float32Array | null = null;
 
-/** Build from this, never re-sample — README.md § The table is a 3D grid. */
+/** Build from this, never re-sample — README.md#the-table-is-a-3d-grid-not-a-uniform-array. */
 export function shippedHoleVoxels(): Float32Array {
   shippedHole ??= holeVoxelsOf(SHIPPED_RESOLVED_HOLE);
   return shippedHole;
 }
 
-/** What the 3D slot is written with. README.md § The table is a 3D grid. */
+/** What the 3D slot is written with. README.md#the-table-is-a-3d-grid-not-a-uniform-array. */
 export function unresolvedHoleVoxels(
   strength = 1,
   table: ResolvedHoleTable = SHIPPED_RESOLVED_HOLE,
@@ -156,7 +156,7 @@ export interface ResolvedHoleGrid {
 
 let shippedGrid: ResolvedHoleGrid | null = null;
 
-/** README.md § The table is a 3D grid — why this is not a constant. */
+/** README.md#the-table-is-a-3d-grid-not-a-uniform-array — why this is not a constant. */
 export function shippedResolvedHoleGrid(): ResolvedHoleGrid {
   shippedGrid ??= { voxels: unresolvedHoleVoxels() };
   return shippedGrid;
@@ -213,7 +213,7 @@ export function unresolvedGridLight(
   return sampleVoxelCentres(grid.voxels, RESOLVED_HOLE_GRID_N, u, v, w);
 }
 
-/** See README.md § The resolution hole. */
+/** See README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars. */
 export function clampResolvedHoleStrength(k: number): number {
   return Math.min(1, Math.max(0, k));
 }

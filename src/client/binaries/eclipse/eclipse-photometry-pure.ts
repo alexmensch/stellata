@@ -26,7 +26,7 @@ export const DIM_SETTLED = 0.999;
 /** Anti-strobe blend factor for this frame's dim writes: 1 on the
  *  first frame (snap to target), else `1 − e^(−dt/τ)` with dt clamped
  *  to [0, 0.25] s. `nowMs` is wall-clock (a render filter, not sim
- *  time). See ./README.md § Anti-strobe smoothing. */
+ *  time). See ./README.md#anti-strobe-smoothing. */
 export function dimBlendFactor(
   nowMs: number,
   lastNowMs: number | null,

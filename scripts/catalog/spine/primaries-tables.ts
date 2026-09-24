@@ -1,5 +1,5 @@
 // Loads the frozen primary tables AT-HYG merged, for the primaries audit and
-// the membership manifest build. See README.md § The primaries audit.
+// the membership manifest build. See README.md#the-primaries-audit.
 
 import { resolve } from 'node:path';
 
@@ -105,7 +105,7 @@ function readSimbadXids(): Map<string, SimbadXids> {
     const sourceId = cells[idx.source_id];
     if (!sourceId) continue;
     // Two rows under one id would make the corroboration verdict depend on file
-    // order; the values parser refuses the same shape (README.md § Six source_ids).
+    // order; the values parser refuses the same shape (README.md#six-source_ids-dr3-does-not-publish).
     if (out.has(sourceId)) {
       throw new Error(`simbad_sptype.tsv: duplicate source_id ${sourceId}; ${LFS_HINT}`);
     }

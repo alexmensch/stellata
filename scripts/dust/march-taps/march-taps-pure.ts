@@ -52,7 +52,7 @@ const f = Math.fround;
 /** `dustRaymarchAv` rounded to single precision at every operation — the
  *  arithmetic the GLSL chunk and the TSL twin actually evaluate. Prices the
  *  GEOMETRY only: the sampler's sub-texel interpolation and the GPU's own
- *  `exp` carry error this does not model. README.md § Reading a result. */
+ *  `exp` carry error this does not model. README.md#reading-a-result. */
 export function fp32March(
   from: Vec3,
   to: Vec3,

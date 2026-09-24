@@ -1,5 +1,5 @@
 // Refreshes the naming parity ledger from the built artifacts.
-// `pnpm run build:naming-parity`. See README.md § The parity ledger.
+// `pnpm run build:naming-parity`. See README.md#the-parity-ledger.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

@@ -67,7 +67,7 @@ function noCut(dm: number): boolean {
  * two cases — no cut, and the display floor governing — is the whole reason
  * this is a predicate rather than a test for zero. Why the floor case is
  * exact rather than approximate, and what bounds how long a scene change
- * takes to be seen: `README.md` § Wake.
+ * takes to be seen: `README.md#wake`.
  *
  * The settled test is on the DIFFERENCE rather than on each cut separately:
  * a floor-governed cut parks at the floor, not at zero, so "both read no

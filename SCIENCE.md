@@ -104,10 +104,10 @@ enough to see it.
   `data/gaia/README.md`. The roles the rest of the model rests on:
     - **Membership** — every `gaia_source` row at `G ≤ 11` is the magnitude
       term of catalogue membership, unioned with the designation-keyed term
-      (`docs/catalog-driver.md` § 1). The bound is on `G` alone and is
+      ([§ 1](docs/catalog-driver.md#1-the-driver-model)). The bound is on `G` alone and is
       nonetheless complete for a `V ≤ 11` floor, because the Riello relation
       below keeps `V` fainter than `G` across its whole validity range
-      (`data/gaia/README.md` § Why the floor carries no margin).
+      ([Why the floor carries no margin](data/gaia/README.md#why-the-floor-carries-no-margin)).
     - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
       direction cascade and the input Bailer-Jones inverts (below).
     - **Johnson V** — `G` and `BP − RP` transformed through **Riello M., De
@@ -129,7 +129,7 @@ enough to see it.
       Table-5.9 relation, and unlike that relation it measures the individual
       star rather than fitting a population — which is what lets it serve the
       red rows the relation's colour bound excludes
-      (`scripts/catalog/photometry/README.md` § The ci cascade).
+      ([The ci cascade](scripts/catalog/photometry/README.md#the-ci-cascade)).
 - **AT-HYG v3.3** (stellar catalogue): https://codeberg.org/astronexus/athyg
   — maintained by David Nash. The build's one AT-HYG-derived input is the
   frozen `data/athyg/inherited-spine.tsv`, read for its record of AT-HYG's
@@ -141,7 +141,7 @@ enough to see it.
   `data/membership/membership-manifest.tsv`, which the record build walks;
   every field on a record is sourced from a first-order catalogue this build
   pulls itself. Licence CC-BY-SA-4.0 follows the subset it derives from.
-  Contract: `docs/catalog-driver.md` § 3 and § 3.1.
+  Contract: [§ 3](docs/catalog-driver.md#3-the-inherited-spine) and § 3.1.
 - **Classic-designation cross indexes** (HD / HR / Bayer / Flamsteed /
   Gliese), the classic-ID label overlay and part of the membership term
   it derives from — four frozen
@@ -149,7 +149,7 @@ enough to see it.
   source_ids by `pnpm run build:classic-ids`. Per-table provenance,
   licences and the measured per-identifier coverage are in
   `data/classic-ids/README.md`; the sourcing decision is
-  `docs/catalog-driver.md` § 2. Retrieved 2026-07-28, public domain via
+  [§ 2](docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad). Retrieved 2026-07-28, public domain via
   CDS:
     - `IV/25/tyc2_hd` — Fabricius, Makarov, Knude & Wycoff 2002,
       *A&A* 386, 709. HD ↔ Tycho-2, with the upstream `n_HD`/`n_TYC`
@@ -186,7 +186,7 @@ enough to see it.
   2026-08-25, public domain via CDS. The first-order source for the
   TYC-bearing rows Gaia does not reach — mean positions with **per-star,
   per-coordinate mean epochs**, proper motions, and BT/VT photometry, so
-  the direction, PM and V cascades of `docs/catalog-driver.md` § 5 route
+  the direction, PM and V cascades of [§ 5](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) route
   here rather than to any printed cell. It reaches every one of the
   TYC-bearing membership rows; the mean epochs are what fix the
   printed cells' unpropagated staleness (~27″ worst case).
@@ -254,7 +254,7 @@ enough to see it.
   refresh via `scripts/refresh/refresh-msc.py`. Because MSC compiles
   from the same primary literature the other orbit sources curate, its
   orbit route ranks below ORB6 and Gaia NSS and fires for
-  sub-resolution pairs only (`scripts/binaries/README.md` § Stage 4).
+  sub-resolution pairs only ([Stage 4](scripts/binaries/README.md#stage-4--orbital-element-selection-per-pair)).
   Retrieved 2026-07-11. CDS/VizieR standard academic use; cite
   Tokovinin 2018.
 - **SIMBAD WDS↔Gaia DR3 cross-identifications** (CDS Strasbourg).
@@ -276,7 +276,7 @@ enough to see it.
   parallax, proper motion, coordinates and Johnson B/V fluxes, each
   carrying the `bibcode` of the measurement SIMBAD compiled it from —
   the bottom tier of the per-field cascades in
-  `docs/catalog-driver.md` § 5, where SIMBAD is the index and the
+  [§ 5,](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) where SIMBAD is the index and the
   bibcode is the source. Values SIMBAD publishes without one are
   dropped at write time rather than shipped for a consumer to filter,
   so every column's value count equals its bibcode count. Scoped to an
@@ -287,7 +287,7 @@ enough to see it.
   Refresh: `pnpm run refresh:simbad-values`. Fluxes come from the
   long-format `flux` table rather than the `allfluxes` view, which
   publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in
-  `data/simbad/README.md` § The values pull. Same citation as above.
+  [The values pull](data/simbad/README.md#the-values-pull). Same citation as above.
 - **Gaia DR2↔(E)DR3 cross-match** (`gaiadr3.dr2_neighbourhood`):
   Torra et al. 2021, *A&A* 649, A10,
   DOI [10.1051/0004-6361/202039637](https://doi.org/10.1051/0004-6361/202039637)
@@ -297,8 +297,8 @@ enough to see it.
   catalog stars (no HIP/HD/HR/GJ designation) and committed as
   `data/gaia/gaia_dr2_neighbourhood.tsv` (+ the request-file snapshot
   of that risk set). Retrieved 2026-07-07. Empirical input to the
-  Stellata-ID DR-reconciliation dry run — `docs/sid.md` § DR2→DR3
-  dry run. Licence CC-BY-4.0 (Gaia data release policy).
+  Stellata-ID DR-reconciliation dry run — [DR2→DR3 dry run](docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
+  Licence CC-BY-4.0 (Gaia data release policy).
 - **Stellarium modern sky culture** (constellation stick figures):
   https://github.com/Stellarium/stellarium/tree/master/skycultures/modern
   — MIT-licensed JSON, HIP-indexed polylines. Committed as
@@ -332,7 +332,7 @@ enough to see it.
   Mercury's monochrome mosaic is tinted to its near-neutral
   gray-brown visible appearance and Pluto's un-imaged southern band
   is filled with the map's feathered mean colour (per-body colour
-  rationale in data/textures/README.md § Colour fidelity).
+  rationale in [Colour fidelity](data/textures/README.md#colour-fidelity--index-anchored-calibration)).
 - **Moon surface maps** (13 of the 18 major moons, retrieved
   2026-07-19): NASA SVS CGI Moon Kit (LROC WAC) for the Moon; USGS
   Galileo/Voyager global mosaics for the Galileans (Io + Ganymede in
@@ -349,7 +349,7 @@ enough to see it.
   Coordinates and Rotational Elements 2015 report (Archinal et al.
   2018, https://doi.org/10.1007/s10569-017-9805-5), values as
   distributed in NAIF `pck00011.tpc`; linear terms only (see
-  `docs/science-solar-system.md` § Planet rotation). Every moon is
+  [Planet rotation](docs/science-solar-system.md#planet-rotation)). Every moon is
   tidally locked — its Ẇ equals the orbital mean motion, test-pinned
   against the JPL mean elements. Tables in
   `src/client/solar-system/planets/rotation-elements-pure.ts`.
@@ -413,8 +413,8 @@ enough to see it.
   LIGHT B/T derived from the three sources above. The two Leinert checks
   then disagree with it by 1.68 mag
   at the pole and 1.02 toward the centre, in the same direction, and no
-  shape parameter bridges that — `docs/science-galactic-structure.md`
-  § The luminosity solve argues it out;
+  shape parameter bridges that — [The luminosity solve](docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)
+  argues it out;
   `src/client/milkyway/calibration/README.md` carries the numbers.
 
 > **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
@@ -504,4 +504,4 @@ science it relates to.
   would be identically zero. Physically honest: Jupiter's rings are
   invisible in backscattered visible light (they were discovered in
   forward scatter, which the ring shader doesn't model). See
-  `data/textures/README.md` § Ring strips.
+  [Ring strips](data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor).

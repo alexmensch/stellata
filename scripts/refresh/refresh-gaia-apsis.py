@@ -69,7 +69,7 @@ EXPECTED_UNION_COVERAGE_MIN = 0.80
 # Measured 99.8% at depth, 2026-09-19.
 EXPECTED_COVERAGE_MIN = 0.90
 
-# scripts/refresh/README.md § Gaia TAP: synchronous endpoints only.
+# /scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only.
 SYNC_MAXREC = mp.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
 
 # ESP-HS resolves a spectral-type letter for nearly the whole population,
@@ -148,7 +148,7 @@ SCRIPT_NAME = "refresh-gaia-apsis"
 def _has_teff_logg(row: Any, teff: str, logg: str) -> bool:
     """A pipeline covers a row when both its Teff and log g are non-null.
     Union coverage across pipelines is the headline number motivating Apsis
-    ingest — see research/star-spectral-rendition/README.md § Tier 2.
+    ingest — see /research/star-spectral-rendition/README.md#tier-2--ingest-gaia-dr3-apsis.
     """
     return (
         rl.coerce_masked(row[teff]) is not None

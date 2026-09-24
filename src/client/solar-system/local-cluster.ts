@@ -1,5 +1,5 @@
 // The solar-system LocalCluster: per-frame membership + bracket spheres
-// for the local depth pass. See ../local-depth/README.md § Cluster API.
+// for the local depth pass. See ../local-depth/README.md#cluster-api.
 
 import * as THREE from 'three';
 import type { LocalCluster } from '../local-depth/local-depth-pass';
@@ -164,8 +164,7 @@ export class SolarSystemCluster implements LocalCluster {
    * a trail spans Sol to the probe, so it contributes a Sol-centred sphere of
    * the probe's heliocentric radius. Voyager 1 at 167 AU widens the bracket
    * to 8e13 — still four slices at the default `maxSliceRatio`, the same count
-   * the planet members already need (../local-depth/bracket/README.md § Depth
-   * slices).
+   * the planet members already need (../local-depth/bracket/README.md#depth-slices--unconditionally-correct-painters-partitioning).
    */
   private collectProbes(camera: THREE.PerspectiveCamera, active: boolean): void {
     this.probeField.setLocalPassActive(active);

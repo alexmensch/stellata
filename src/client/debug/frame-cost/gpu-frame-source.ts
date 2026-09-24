@@ -1,5 +1,5 @@
 // Where a pricing sweep gets its whole-frame GPU numbers from: the
-// timestamp pool or rAF wall time. See README.md § Preconditions.
+// timestamp pool or rAF wall time. See README.md#preconditions.
 
 import { perfInstrumentationInstalled } from '../perf-hud';
 import { gpuFrameSamplesAreSound, onGpuFrameSample } from '../gpu-timing/gpu-frame-samples';
@@ -63,7 +63,7 @@ function refusePinned(method: GpuFrameMethod, reason: string): null {
 }
 
 /** Null when the sweep cannot proceed; the caller has already been told why
- *  on the console. `pinned`: README.md § Preconditions. */
+ *  on the console. `pinned`: README.md#preconditions. */
 export function acquireGpuFrameSource(
   host: GpuFrameSourceHost,
   onSample: (ms: number) => void,

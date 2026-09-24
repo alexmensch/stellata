@@ -3,7 +3,7 @@
 The frozen CDS tables that carry HD / HR / Bayer / Flamsteed / GJ
 designations, the source_id-keyed overlay joined out of them, and the review
 queues the merge onto the catalogue's records produces. This is the identifier
-half of the AT-HYG retirement — `docs/catalog-driver.md` § 2 decides the
+half of the AT-HYG retirement — [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) decides the
 sources, § 4 the HD→Gaia route and the ambiguity / precedence policy.
 
 ```
@@ -14,8 +14,7 @@ cross_index.tsv                    ~94 KB, LFS. Bayer / Flamsteed ↔ HD/HR/HIP
                                    readCrossIndexTable).
 cross_index_corrections.tsv        Hand-curated. Two rows; IV/27A rows whose
                                    designation names a star the row is not
-                                   (scripts/catalog/classic-ids/README.md
-                                   § One designation, two HD numbers).
+                                   (/scripts/catalog/classic-ids/README.md#one-designation-two-hd-numbers).
 bsc5.tsv                           ~136 KB, LFS. HR ↔ HD (9,110 rows).
 cns5.tsv                           ~953 KB, LFS. GJ ↔ Gaia EDR3 ↔ HIP,
                                    plus the astrometry re-slice —
@@ -42,17 +41,16 @@ label_flips.tsv                    736 rows. Pipeline-derived, and by
                                    runs. EVERY departure of the shipped labels
                                    from the spine's, with a disposition each —
                                    the parity ledger
-                                   `docs/catalog-driver.md` § 6 requires, and
+                                   `/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change` requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
 classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
                                    hatch for a CDS join review finds wrong
-                                   (scripts/catalog/classic-ids/label-merge/README.md
-                                   § Curated overrides). Fifteen are the eight
+                                   (/scripts/catalog/classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them).
+                                   Fifteen are the eight
                                    close-pair records whose hd and hr the
                                    four-witness rule moves together
-                                   (scripts/catalog/simbad/README.md § Which
-                                   witness decides a close pair's HD).
+                                   (/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd).
 ```
 
 ## Provenance
@@ -80,7 +78,7 @@ all four; cite the paper per table.
   consumers see 2,183 Bayer and 2,755 Flamsteed cells.
   `bayer` is IV/27A's own lowercase three-letter form
   (`alf`, `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
-  `docs/star-naming.md` § 4 stores the Unicode glyph, sourced from the
+  [§ 4](/docs/star-naming.md#4-canonical-designation-forms) stores the Unicode glyph, sourced from the
   IAU WGSN naked-eye catalogue, and demotes this table to the V > 6.5
   tail; both ASCII conventions are normaliser inputs there. 111 of
   these cells are GCVS-style variable designations (`R And`, `RZ Cas`,
@@ -88,7 +86,7 @@ all four; cite the paper per table.
   Bayer tier. `cst` is the
   constellation the Bayer / Flamsteed designation belongs to — never the
   IAU-positional constellation the catalogue assigns per record
-  (`docs/catalog-driver.md` § 5).
+  ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - **`bsc5.tsv`** ← VizieR `V/50/catalog`. Hoffleit & Warren 1991, Bright
   Star Catalogue 5th revised ed. Supplies HR ↔ HD (9,096 of 9,110 rows
   carry an HD; the 14 HD-less entries are non-stellar — novae/SNe, four
@@ -106,8 +104,8 @@ all four; cite the paper per table.
 
 ### The astrometry re-slice
 
-The slice was widened with CNS5's own astrometry (`docs/catalog-driver.md`
-§ 5 routes the GJ-keyed no-Gaia cohort here): `ra_deg`/`de_deg`,
+The slice was widened with CNS5's own astrometry ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
+routes the GJ-keyed no-Gaia cohort here): `ra_deg`/`de_deg`,
 `pos_epoch`, `plx_mas` + `e_plx_mas`, `pm_ra`/`pm_de` + errors, and a
 bibcode per quantity. Upstream publishes one proper-motion reference
 (`r_pmRA`, whose own description reads *"Source of the proper motion"*)
@@ -165,7 +163,7 @@ resolution. All 21 are disposed `no-identity-event` in
 `hd_hip_route_disagreements_review.tsv`: in every row one spine record
 holds both designations, so the disagreement is over which component's
 source the walks bound, never over which record the star is
-(`scripts/catalog/spine/README.md` § The swap parity ledger).
+([The swap parity ledger](/scripts/catalog/spine/README.md#the-swap-parity-ledger)).
 
 ## The binding gate
 
@@ -189,8 +187,7 @@ counts as a bad binding:
 
 The two counts trade rows as G coverage changes — `reason` is the first gate
 that fired — so their sum, **460**, is the queue's size
-(`scripts/catalog/classic-ids/README.md` § The gate's evidence has to be
-pulled).
+([The gate's evidence has to be pulled](/scripts/catalog/classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 
 A firing gate drops the **whole row**, not just its `hip` cell: if the source
 is not the star then every designation keyed on it is misattributed, and the
@@ -218,8 +215,8 @@ Hipparcos alone left 257,926 rows unvettable and the label side accepting
 bindings the record side refused; 254,135 of them turned out to be one
 magnitude comparison away, and taking that comparison caught **192 more
 mis-bindings** (`gateRejectedMag` 218 → 410). One helper serves both sides so
-they cannot drift again (`scripts/catalog/classic-ids/README.md` § The gate's
-evidence has to be pulled), and widening the gate meant widening the astrometry
+they cannot drift again ([The gate's evidence has to be pulled](/scripts/catalog/classic-ids/README.md#the-gates-evidence-has-to-be-pulled)),
+and widening the gate meant widening the astrometry
 request by 295 ids and re-pulling, to hold `gateSkippedNoGMag` at zero.
 
 **Ask the Gliese arm through `lookupGliese`**
@@ -254,8 +251,8 @@ asserting nothing:
 Additions the spine had no value for: hd 149, hr 4, gl 205, flam 67.
 
 Measured after the merge moved onto the DERIVED binding
-(`scripts/catalog/membership/binding/README.md`
-§ The four sources, in precedence order). Keyed on the
+([The four sources, in precedence order](/scripts/catalog/membership/binding/README.md#the-four-sources-in-precedence-order)).
+Keyed on the
 spine's frozen `gaia_source_id` cell the same walk read 41 rows fewer as having
 an overlay entry at all, and the `gl` line 31 reproductions lower.
 
@@ -268,7 +265,7 @@ cell.
 
 **14,975 spine rows get no overlay entry at all** — 577 bind no source, and the
 rest bind one that neither best-neighbour walk carries. That population is
-concentrated at the bright end exactly as `docs/catalog-driver.md` § 5's bright
+concentrated at the bright end exactly as [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s bright
 tier predicts: **114 of the 178 rows at V ≤ 3 have no overlay row**, Vega,
 Sirius, Procyon and Betelgeuse among them.
 Gaia saturates near G ≈ 3, so the most famous stars in the catalogue are absent
@@ -299,10 +296,9 @@ Three structural bounds behind the shortfalls:
 `gl`'s flips run high for its size because the comparison scores the COMPONENT
 the two sides name, not the bare number: 13 of the 79 are a swapped component
 letter CNS5 states on its own Gaia-keyed row
-(`scripts/catalog/classic-ids/label-merge/README.md` § The gl comparison
-is specificity-aware).
+([The gl comparison is specificity-aware](/scripts/catalog/classic-ids/label-merge/README.md#the-gl-comparison-is-specificity-aware)).
 
-None of this loses a record or a label: `docs/catalog-driver.md` § 1
+None of this loses a record or a label: [§ 1](/docs/catalog-driver.md#1-the-driver-model)
 defines labels as *overlay + spine backstop*, and the inherited spine
 preserves every record's designation set. The measurement's real content
 is that the backstop is **load-bearing for 4–42% of each identifier**,
@@ -334,4 +330,4 @@ Then `pnpm run build:classic-ids` regenerates the overlay and
 `pnpm run build:membership` regenerates `label_flips.tsv` — CI runs both and
 fails on any diff, so artifact and code always land in the same commit. The
 classic-side joins are Gaia-DR-independent and never re-pull for a data release
-(`docs/catalog-driver.md` § 8); only the TYC/HIP → source_id hops move.
+([§ 8](/docs/catalog-driver.md#8-gaia-dr-transitions--what-re-pulls-and-what-never-does)); only the TYC/HIP → source_id hops move.

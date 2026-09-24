@@ -8,11 +8,11 @@ import type { GaiaPhotometry } from '../../photometry/gaia-photometry-pure';
 export const MAGNITUDE_PULL_FILE = 'data/gaia/gaia_dr3_magnitude_pull.tsv';
 
 /** Johnson V the term admits on; `null` is the primaries alone.
- *  README.md § The floor is one constant. */
+ *  README.md#the-floor-is-one-constant. */
 export const MAGNITUDE_FLOOR_V: number | null = 11;
 
 /** Raising MAGNITUDE_FLOOR_V past this needs a re-pull first —
- *  README.md § The floor is one constant. */
+ *  README.md#the-floor-is-one-constant. */
 export const MAGNITUDE_PULL_G_BOUND = 11;
 
 const PULL_COLUMNS = [
@@ -21,7 +21,7 @@ const PULL_COLUMNS = [
 
 export const MAGNITUDE_PULL_HINT = 'run `pnpm run refresh:gaia-magnitude`.';
 
-/** README.md § The filter is the shipped cascade's own top tier. */
+/** README.md#the-filter-is-the-shipped-cascades-own-top-tier. */
 export const MAGNITUDE_VERDICTS = ['kept', 'above_floor', 'no_v'] as const;
 export type MagnitudeVerdict = (typeof MAGNITUDE_VERDICTS)[number];
 

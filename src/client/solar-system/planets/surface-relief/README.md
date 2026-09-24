@@ -22,7 +22,7 @@ src/client/solar-system/planets/surface-relief/
 ## What ships
 
 Moon, Mercury, Mars and Earth ship a DEM-derived tangent-space normal map
-(`<body>-normal.webp`, `data/textures/relief/README.md` § Surface relief) and a pair
+(`<body>-normal.webp`, [Surface relief](/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps)) and a pair
 of horizon maps (`<body>-horizon-{a,b}.webp`, § Cast shadows there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
 map. Three planes for four of ~30 bodies, so the fetch is gated on
@@ -80,11 +80,10 @@ Both halves of `dayside` ride the perturbed cosine — the Lambert term and
 sunward slope still catches the sun where the smooth sphere has turned away,
 and the terminator reads as ragged ground rather than a clean arc. Nothing
 atmospheric follows it there: physical twilight is `skyIrradianceTsl`,
-additive and strictly geometric (`../../atmosphere/README.md` § Skylight).
+additive and strictly geometric ([Skylight](../../atmosphere/README.md#skylight--the-lit-air-scattering-light-back-down)).
 Neither does the exposure pin — light past the geometric terminator carries
 no coverage claim, so it joins the frame mean and leaves the lit-hemisphere
-mean the pin holds untouched (`../../../hdr/attachments/README.md` § The
-unit).
+mean the pin holds untouched ([The unit](../../../hdr/attachments/README.md#the-unit)).
 
 ## Two occluders, composed — the facet's own slope and the skyline
 
@@ -97,7 +96,7 @@ different scales:
   rides `dayside` through `sunCosRelief`. Both widths are **fixed per artifact**,
   so unlike a colour rung neither can be lowered to fit the cap: a body whose
   map exceeds the mesh layer's texture cap is refused it and shades without
-  relief (`../textures/README.md` § Four rules). The cap is 8192 until an
+  relief ([Four rules](../textures/README.md#four-rules-and-two-of-them-are-one-hysteresis-band)). The cap is 8192 until an
   out-of-memory step-down lowers it (§ Staying inside VRAM there).
 - The **horizon map** is everything else: terrain from **two output texels**
   out to the body's limb bound, at half the DEM's width in 8 azimuths. It
@@ -126,7 +125,7 @@ the point** — it is the whole 38.7 % → 9.6 % of § What the composition is w
 The cost of that power is that a 2048 skyline it over-estimates darkens real
 lit ground: linear interpolation between stored azimuths over-shadows, because
 a skyline has narrow peaks and averaging two neighbours over-states the gap
-between them (`data/textures/relief/README.md` § Cast shadows measures it — 0.37°
+between them ([Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps) measures it — 0.37°
 mean at 8 azimuths). What keeps this one-sided rather than compounding is that
 the map's OWN error over flat ground runs the other way: the march never
 samples closer than its start distance, so flat ground at the reference sphere
@@ -175,7 +174,7 @@ drift.
 against the same march run at full DEM width — the reference isolates the cost
 of the output grid and the encoding, and shares the first-step floor above
 rather than being ground truth (`scripts/textures/measure_relief_lighting.py`,
-method and the width/azimuth evidence in `data/textures/relief/README.md` § Cast shadows):
+method and the width/azimuth evidence in [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps)):
 
 | solar depression | normal map + fence | + horizon maps | full-DEM |
 |---|---|---|---|
@@ -225,7 +224,7 @@ through 150°, which would make its shadows 4× brighter relative to lit ground
 there than at full phase, and the elevation-free ratio above would stop being
 phase-free. Skylight is the one additive term legitimately outside
 `uPhaseScale` — air scatter carries no surface albedo and its disc mean divides
-out separately (`../emission/README.md` § Two disc means).
+out separately ([Two disc means](../emission/README.md#two-disc-means-divide-out)).
 
 **A skyline below the local horizontal is sky, not terrain.** Over open ground
 every azimuth reads the body's own limb bound — negative — and squaring that
@@ -257,7 +256,7 @@ floor's sky is taken mostly by walls inside that skipped near field. Sky
 occlusion carries no renderability requirement — a wall too small to draw still
 blocks its share — so the two readings need different marches, and `terrainView`
 now samples `<body>-skyview.webp`, marched from one DEM texel out
-(`data/textures/relief/README.md` § Sky view factor).
+([Sky view factor](/data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky)).
 
 Measured off the shipped maps, area-weighted by `cos(lat)`, with `ρ·F` read as
 the shadow-to-lit ratio, against what the horizon planes alone gave:
@@ -275,7 +274,7 @@ planes topped out at 0.101 and sat fifty times under it at p99.
 
 ### What the exposure has to be for it to show
 
-The faint-end toe (`../../../hdr/tonemap/README.md` § Operator) crushes anything more
+The faint-end toe ([Operator](../../../hdr/tonemap/README.md#operator)) crushes anything more
 than `TOE_BLACK_MAG` = 1.5 mag under `L_THRESH` to black, and it measures that
 against the GLOBAL threshold rather than against the lit ground beside it. So
 "will this shadow show" is a question about the lit surface's own level, not

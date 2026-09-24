@@ -1,5 +1,5 @@
 // The IAU boundary arcs as chart-mode line segments on a Sol-centred sphere.
-// See README.md § Chart-mode layer.
+// See README.md#chart-mode-layer.
 
 import * as THREE from 'three';
 import type {
@@ -126,7 +126,7 @@ export class ConstellationBoundaryLayer {
    *  differs is the binding, and both bindings are written so the colour stays
    *  correct if the layer ever gains a realistic floor. Chart mode bypasses
    *  the HDR resolve, so the chart variant must skip the inverse tone-map or
-   *  the ink lands at the wrong value on paper (`../hdr/README.md` § Chrome). */
+   *  the ink lands at the wrong value on paper (`../hdr/README.md#chrome--non-physical-layers-keep-their-authored-look`). */
   setMonochrome(on: boolean): void {
     setBuiltinChromeColour(this.stroke.material.color, CHART_REFERENCE_INK, on);
   }

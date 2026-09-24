@@ -70,7 +70,7 @@ export function writePose(
  *  translates camera and target together and rotates nothing. Orientation,
  *  fov and worldOffset are untouched, so a rotation applied below the gate
  *  is NOT absorbable here and must instead decline steps too small to see
- *  (`README.md` § The focal ride names the second such writer). A
+ *  (`README.md#the-focal-ride` names the second such writer). A
  *  NaN-seeded slot stays NaN, so a snapshot that has never rendered still
  *  differs from every real pose. */
 export function rebasePoseTranslation(
@@ -103,9 +103,9 @@ export function posesDiffer(a: ArrayLike<number>, b: ArrayLike<number>): boolean
  *  each wake buys `SETTLE_MS` of frames, every one of those frames
  *  re-measures, and the measurement's own noise re-arms the tail before
  *  it can expire — the focal ride's shape by another route
- *  (README.md § The focal ride). `dm` is in magnitudes, so the threshold
+ *  (README.md#the-focal-ride). `dm` is in magnitudes, so the threshold
  *  is `CADENCE_JND_MAG`: the same 1 % of flux every other brightness
- *  driver schedules against (`cadence/README.md` § The thresholds).
+ *  driver schedules against (`cadence/README.md#the-thresholds`).
  *
  *  Not exact inequality either, for the reason the band exists: the cut
  *  is read back off the GPU and feeds the exposure it was measured at,
@@ -128,7 +128,7 @@ export interface GateDecision {
  *  cadence frame is a scheduled single redraw, and stamping it would drag
  *  the whole SETTLE_MS tail behind every one — ~90 extra frames per
  *  cadence frame at 60 Hz, which is the idleness the cadence exists to
- *  buy (README.md § The clock cadence). */
+ *  buy (README.md#the-clock-cadence). */
 export function decideRender(
   state: { holds: number; lastActiveMs: number },
   inputs: { continuous: boolean; poseChanged: boolean; cadenceDue: boolean; nowMs: number },

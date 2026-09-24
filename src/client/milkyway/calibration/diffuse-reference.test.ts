@@ -50,7 +50,7 @@ function bc03MlVAt10Gyr(metallicityCode: 'm52' | 'm62' | 'm72'): number {
 }
 
 /** (B−V) — columns 3 and 4 of that row, both per 1 M⊙ formed, so the
- *  difference needs no normalisation (`data/bc03/README.md` § Schema). */
+ *  difference needs no normalisation (`/data/bc03/README.md#schema`). */
 function bc03ColourIndexAt10Gyr(
   metallicityCode: 'm52' | 'm62' | 'm72',
 ): number {
@@ -94,7 +94,7 @@ describe('MilkyWay diffuse reference', () => {
 
 // No publication gives the Milky Way a V-band bulge-to-total LIGHT ratio,
 // so the solve's flux split is derived from a published MASS ratio and the
-// two populations' Υ*_V. README.md § The light ratio is the argument.
+// two populations' Υ*_V. README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number is the argument.
 describe('MilkyWay bulge-to-total light ratio', () => {
   // Υ*_V of the bulge is read off a committed model table, so the citation
   // is machine-checked rather than asserted in a docstring: hand-editing
@@ -131,7 +131,7 @@ describe('MilkyWay bulge-to-total light ratio', () => {
 
 // Nobody publishes the Galaxy's colour split by component either, so the
 // disc index is solved against the published total rather than synthesised
-// beside the bulge. README.md § Population colours is the argument.
+// beside the bulge. README.md#population-colours--the-discs-is-solved-not-cited is the argument.
 describe('MilkyWay population colour indices', () => {
   // Same row, same machine-checked citation as Υ*_V above.
   it('reads the bulge colour index back out of the committed BC03 table', () => {

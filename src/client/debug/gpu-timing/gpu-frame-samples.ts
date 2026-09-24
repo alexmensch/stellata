@@ -1,10 +1,10 @@
 // Whole-frame GPU durations the render loop measures itself — the render
 // passes on one channel, the compute passes on another — fanned out to
-// every consumer that wants them. See README.md § GPU timing.
+// every consumer that wants them. See README.md#gpu-timing--how-a-frames-real-gpu-cost-is-measured.
 
 type Subscriber = (ms: number) => void;
 
-/** README.md § `gpu.frame` is the only row that prices anything. */
+/** README.md#gpuframe-is-the-only-row-that-prices-anything */
 export const GPU_WHOLE_FRAME_SCOPE = 'frame';
 
 /** three keeps one timestamp pool per pass type and resolves them
@@ -26,7 +26,7 @@ const subscribers: Record<TimestampPool, Set<Subscriber>> = {
 };
 
 /** The renderer's frame-duration resolve, structurally — keeps this module
- *  off `three/webgpu` (`../../webgpu/README.md` § Import boundary). */
+ *  off `three/webgpu` (`../../webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle`). */
 export interface GpuFrameResolver {
   resolveTimestampsAsync(type: TimestampPool): Promise<number | undefined>;
 }
@@ -44,8 +44,8 @@ function clearable(v: unknown): { clear(): void } | null {
     : null;
 }
 
-/** Why clearing is safe, and what it is worth: README.md § The resolved-uid
- *  trim. */
+/** Why clearing is safe, and what it is worth: README.md#the-resolved-uid-trim--threes-map-never-shrinks-on-its-own.
+ * */
 export function dropResolvedTimestamps(host: TimestampPoolHost): void {
   const pools = (host.backend as { timestampQueryPool?: unknown } | null | undefined)
     ?.timestampQueryPool;
@@ -66,14 +66,14 @@ export function publishGpuFrameSample(ms: number): void {
   publish('render', ms);
 }
 
-/** Never folded into `gpu.frame`: README.md § `gpu.frame` is the only row that prices anything. */
+/** Never folded into `gpu.frame`: README.md#gpuframe-is-the-only-row-that-prices-anything */
 export function publishGpuComputeSample(ms: number): void {
   publish('compute', ms);
 }
 
 /** False once the RENDER pool has resolved a duration no frame can have,
  *  which latches for the tab: a granted `timestamp-query` is necessary but
- *  not sufficient (README.md § A granted feature can still resolve garbage). */
+ *  not sufficient (README.md#a-granted-feature-can-still-resolve-garbage). */
 export function gpuFrameSamplesAreSound(): boolean {
   return !unsound.render;
 }
@@ -109,7 +109,7 @@ function publishResolved(pool: TimestampPool, ms: number | undefined): void {
  * each pool's duration to its own channel.
  *
  * Why at most one cycle is in flight, and why one guard covers both pools
- * rather than one each: README.md § An exact frame total, and no per-pass rows at all.
+ * rather than one each: README.md#an-exact-frame-total-and-no-per-pass-rows-at-all.
  *
  * `timestampsLive` is the boot probe's verdict
  * (`../../webgpu/seam.ts` `timestampsAvailable`); false skips the backend

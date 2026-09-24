@@ -1,5 +1,4 @@
-// Debug-panel section that hands off to the render watcher. See README.md
-// § Starting it from the panel.
+// Debug-panel section that hands off to the render watcher. See README.md#starting-it-from-the-panel.
 
 import type { DebugSection } from '../debug-panel';
 

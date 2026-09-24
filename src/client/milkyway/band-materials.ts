@@ -1,5 +1,5 @@
 // The contract the two band components are built through.
-// See README.md § The material seam.
+// See README.md#the-material-seam.
 
 import * as THREE from 'three';
 import type { EmitterMaterial } from '../scene/emitter-material';

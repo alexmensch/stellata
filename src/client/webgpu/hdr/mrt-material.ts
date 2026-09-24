@@ -1,5 +1,5 @@
 // The single-output ↔ MRT-struct swap every ported emitter carries. See
-// README.md § The gate becomes the output struct.
+// README.md#the-gate-becomes-the-output-struct.
 
 import { Fn, output, outputStruct, struct } from 'three/tsl';
 import type { Node, NodeMaterial } from 'three/webgpu';

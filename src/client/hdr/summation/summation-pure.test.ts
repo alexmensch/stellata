@@ -99,7 +99,7 @@ describe('the downsample factor that bounds the tap count', () => {
   // Rounding puts the kernel in [3 − 1.5/k, 3 + 1.5/k] texels for factor k,
   // so it is never coarser than 2.25 nor finer than 4.5 once there is
   // anything to downsample — the band the quadrature error of 0.02–0.07 mag
-  // is measured over (README.md § The kernel).
+  // is measured over (README.md#the-kernel--a-flat-disc-and-it-has-to-be).
   it('keeps the kernel inside the band its accuracy was measured over', () => {
     for (const fovDeg of [FOV_MIN_DEG, 20, 30, 50, 90, FOV_MAX_DEG]) {
       for (const viewport of [900, TALLEST_VIEWPORT_CSS_PX]) {
@@ -129,7 +129,7 @@ describe('the kernel weights', () => {
 
   // A linear ramp across the boundary texel, which is what matches exact
   // circle-square overlap. Thresholding instead is 4x worse at the same tap
-  // count (README.md § The kernel).
+  // count (README.md#the-kernel--a-flat-disc-and-it-has-to-be).
   it('ramps across the boundary texel rather than thresholding', () => {
     expect(summationWeight(4, 0, 4)).toBeCloseTo(0.5, 12);
     expect(summationWeight(4.25, 0, 4)).toBeCloseTo(0.25, 12);
@@ -138,8 +138,8 @@ describe('the kernel weights', () => {
   // Every disc kernel of the same radius is the same operator whatever the
   // plate scale, so the mean of a UNIFORM field must be that field exactly.
   // This is not a tolerance: it is the identity the band's shipped display
-  // table from Sol rests on (../../milkyway/calibration/README.md § The
-  // gradient this produces), and it holds at every factor because
+  // table from Sol rests on (../../milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen),
+  // and it holds at every factor because
   // normalising by the summed weight is scale-free.
   it('returns a uniform field untouched at every reachable radius', () => {
     for (const fovDeg of [FOV_MIN_DEG, 20, 30, 50, 90, FOV_MAX_DEG]) {
@@ -184,7 +184,7 @@ describe('one anchor for both volumetric emitters', () => {
     // reach the same attachment-2 value, so the same mean and the same level.
     expect(summationMean(() => level(22), 3)).toBeCloseTo(level(22), 15);
     // And the anchor is the threshold itself: 22.0 is where an extended
-    // source lands on L_THRESH (../emission/README.md § Extended sources).
+    // source lands on L_THRESH (../emission/README.md#extended-sources--two-solid-angles-one-write-tail).
     expect(level(22)).toBeCloseTo(0.02, 4);
   });
 

@@ -1,6 +1,6 @@
 // The TSL band's constant-drift guard against the CPU mirror the brightness
-// bound is taken from — README.md § The bound is taken off the mirror, and
-// ../solar-system/README.md § Constant drift.
+// bound is taken from — README.md#the-bound-is-taken-off-the-mirror-so-this-march-has-to-match-it and
+// ../solar-system/README.md#constant-drift.
 
 import { readTslSource } from '../tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
@@ -17,8 +17,8 @@ const src = readTslSource(new URL('./milkyway-band-tsl.ts', import.meta.url));
 // The march's own shape — what decides whether the TSL integrates the column
 // the mirror computes. The density and dust parameters are deliberately NOT
 // here: they cross as uniform nodes whose single writer is
-// `seedBandSharedSlots` (README.md § Seeding, because a node starts on its
-// declared default), and band-materials.test.ts fails until a new slot joins
+// `seedBandSharedSlots` (README.md#seeding-because-a-node-starts-on-its-declared-default),
+// and band-materials.test.ts fails until a new slot joins
 // it. Pinning them here would duplicate that guard, not extend it.
 const PINNED: readonly PinnedConstant[] = [
   { identifier: 'STEPS', values: [STEPS] },
@@ -41,7 +41,7 @@ describe('the TSL band reads the mirror its bound is taken from', () => {
     expect(src).toMatch(/from '\.\.\/\.\.\/milkyway\/calibration\/resolved-fraction-pure'/);
   });
 
-  // ../../milkyway/calibration/README.md § The table is a 3D grid.
+  // ../../milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array.
   it('fetches the hole at level 0', () => {
     expect(src).toContain('.level(int(0))');
   });

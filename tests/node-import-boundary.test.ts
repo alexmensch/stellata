@@ -1,6 +1,6 @@
 // Bundle boundary for the browser tree: src/client/ ships to a browser, so
 // a node: builtin there is a build break waiting for its first importer —
-// see tests/README.md § Node import boundary.
+// see /tests/README.md#node-import-boundary.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';

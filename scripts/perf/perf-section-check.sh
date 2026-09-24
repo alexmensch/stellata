@@ -3,7 +3,7 @@
 # unless its body carries a non-empty `## Perf` section with an `accepted:`
 # line for every ✗ row.
 # Usage: perf-section-check.sh <body-file> <changed-files-file>
-#          [<base-record-count> <head-record-count>]. RELEASING.md § Perf pin.
+#          [<base-record-count> <head-record-count>]. /RELEASING.md#perf-pin.
 set -euo pipefail
 
 # Byte comparisons, not collated ones: the row markers are multibyte, and BSD
@@ -25,7 +25,7 @@ record_tolerance_percent=1
 
 # Naming what is EXEMPT rather than what is covered is the invariant: a list
 # of render folders exempts by omission, so a layer folder added later
-# escapes the gate until somebody notices. RELEASING.md § Perf pin owns this
+# escapes the gate until somebody notices. /RELEASING.md#perf-pin owns this
 # list, and perf-section-check.test.ts fails when the two drift apart.
 exempt='calibration|debug|focus-card|format|hover|kinds|loaders|modals|overlays|poi|system-membership|typeahead|ui'
 
@@ -44,7 +44,7 @@ done < "$files_file"
 # scripts/catalog/build-catalog-expected.json, which cannot move without a
 # deliberate UPDATE_BUILD_COUNTS refresh, so it is the membership term's own
 # committed record. Unreadable on either side leaves the check silent: the
-# comparison-time refusal (pins/README.md § Record count) is the backstop.
+# comparison-time refusal (pins/README.md#record-count) is the backstop.
 membership=''
 if [[ "$base_records" =~ ^[0-9]+$ && "$head_records" =~ ^[0-9]+$ ]] && [ "$base_records" -gt 0 ]; then
   if [ "$head_records" -gt "$base_records" ]; then
@@ -76,7 +76,7 @@ section=$(awk '
 stripped=$(printf '%s' "$section" | perl -0777 -pe 's/<!--.*?-->//gs')
 
 if ! printf '%s' "$stripped" | grep -qE '[^[:space:]]'; then
-  echo "::error::${reason} but the PR body has no non-empty '## Perf' section. Run the perf runner with --against-pin and paste its table — RELEASING.md § Perf pin."
+  echo "::error::${reason} but the PR body has no non-empty '## Perf' section. Run the perf runner with --against-pin and paste its table — /RELEASING.md#perf-pin."
   exit 1
 fi
 

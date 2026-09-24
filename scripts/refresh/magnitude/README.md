@@ -47,7 +47,7 @@ truncates identically, so it fails fast naming the MAXREC to raise.
 `magnitude_slices`): three pulls name the same population, and a floor that
 drifted between them would leave the enrichment tables covering a different
 set of records than the magnitude term admits. `slice_sync_maxrec` sizes each
-slice's MAXREC off the same partition — `../README.md` § Gaia TAP.
+slice's MAXREC off the same partition — [Gaia TAP](../README.md#gaia-tap-synchronous-endpoints-only).
 
 ## The deep population — a bounded leg plus a request leg
 
@@ -74,12 +74,12 @@ it at 0.90.
   `gaiadr3.gaia_source`, where the bound lives; both are keyed on the indexed
   `source_id`, so the join costs about what the slice does. Why that beats an
   id list, and why Bailer-Jones is pulled from ESA rather than VizieR:
-  `data/bailer-jones/README.md` § Why the pull is ESA-side.
+  [Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side).
 - The **request leg** is `gaia_catalog_source_id_request.tsv`, whose classic
   tiers reach fainter than the floor, restricted to the ids the magnitude leg
   did not return. That restriction keeps it to the genuine remainder and makes
   "each source exactly once" a property of the helper rather than of a dedupe.
 
 Reading the exported union rather than the manifest is what closes the
-asymmetry `../README.md` § The staleness gate names.
+asymmetry [The staleness gate](../README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator) names.
 

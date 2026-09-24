@@ -1,5 +1,5 @@
-// The tone-map operator and the sRGB transfer pair. Thin composition over tonemap-pure's constants (tsl/README.md § TSL test
-// pattern); tonemap-pure.ts carries the math and its tests.
+// The tone-map operator and the sRGB transfer pair. Thin composition over tonemap-pure's constants (tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers);
+// tonemap-pure.ts carries the math and its tests.
 
 import {
   Fn, clamp, dot, exp, float, log2, max, mix, pow, select, vec3,

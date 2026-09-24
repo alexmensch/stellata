@@ -1,6 +1,6 @@
 // Fetches each planet's osculating elements from JPL Horizons onto a uniform
 // grid, verifies the reconstruction off-grid, and writes
-// data/ephemerides/{id}.json. See README.md § Cadence.
+// data/ephemerides/{id}.json. See README.md#cadence.
 
 import { mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';

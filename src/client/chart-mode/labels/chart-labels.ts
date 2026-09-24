@@ -305,8 +305,7 @@ export class ChartLabels {
 
   // Bus subscriptions live for as long as the engine is running, so they
   // attach in start() and detach in stop() — the engine has its own
-  // teardown, so it captures its own unsubscribes (util/event-bus/README.md
-  // § Who must capture the unsubscribe).
+  // teardown, so it captures its own unsubscribes (/src/client/util/event-bus/README.md#who-must-capture-the-unsubscribe).
   private unsubs: Array<() => void> = [];
 
   constructor(stellata: Stellata) {
@@ -335,7 +334,7 @@ export class ChartLabels {
       const pos = cat.positions;
       for (let i = 0; i < cat.count; i++) {
         // Rings are intrinsic-only; eclipsers surface via the wings glyph,
-        // not a ring. See README.md § Label engine + glyphs, Variable rings.
+        // not a ring. See README.md#label-engine--glyphs Variable rings.
         if (
           cat.periodDays[i] > 0 &&
           cat.amplitudeMag[i] > 0 &&
@@ -544,7 +543,7 @@ export class ChartLabels {
 
     // Chart-content detail gates (recomputed on chart entry + V). Planet
     // name labels ride the star-name tier; rings + wings share one element.
-    // See scene/declutter/README.md § Detail-level declutter cycle.
+    // See /src/client/scene/declutter/README.md#detail-level-declutter-cycle.
     const showStarNames = stellata.declutter.permits('chartStarNameLabels');
     const showBayer = stellata.declutter.permits('chartBayerGlyphs');
     const showConNames = stellata.declutter.permits('chartConstellationNames');
@@ -604,8 +603,7 @@ export class ChartLabels {
     // centre of mass, so the name sits in the middle of the block the boundary
     // layer draws around it rather than wherever its member stars happen to
     // clump. Serpens gets two anchors, one per disjoint part; the anchors ride
-    // the same Sol-centred sphere as the arcs (constellation-boundaries/
-    // README.md § Label anchors), so `- worldOffset` is the whole projection.
+    // the same Sol-centred sphere as the arcs (/src/client/constellation-boundaries/README.md#label-anchors), so `- worldOffset` is the whole projection.
     //
     // Visibility still gates on the members: a region whose brightest star is
     // under the magnitude limit goes unnamed. That walk needs the *apparent*
@@ -680,8 +678,7 @@ export class ChartLabels {
 
     // 5) Planet bodies — name labels beside the chart disc, gated by the
     // same magnitude rule as the ink disc itself: magnitude disc +
-    // star-style name label, no glyph vocabulary. See ../README.md § Star
-    // disc sizing.
+    // star-style name label, no glyph vocabulary. See ../README.md#star-disc-sizing--magnitude-driven.
     perfMark('chart.planets');
     const planetField = stellata.kinds.planet.field;
     if (showStarNames) for (let i = 0; i < planetField.liveInstanceCount; i++) {

@@ -1,6 +1,6 @@
 // Earth's pole and prime meridian across the model clock, built from the
 // long-term precession frames and the Earth rotation angle rather than
-// from a linear IAU row. See README.md § Earth is not a linear row.
+// from a linear IAU row. See README.md#earth-is-not-a-linear-row.
 
 import { ARCSEC_TO_RAD, J2000_JD } from '../../../util/astronomy-constants';
 import {

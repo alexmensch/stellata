@@ -22,14 +22,14 @@ export interface StarShard {
   readonly key: string;
   readonly count: number;
   /** xyz triples RELATIVE to `chunkOrigin`, never absolute
-   *  (./README.md § Chunk-local coordinates). */
+   *  (./README.md#chunk-local-coordinates--the-format-law). */
   readonly positions: Float32Array;
   /** Absolute origin, float64 per axis — a Float32Array here would
    *  reintroduce the quantisation the format exists to avoid. */
   readonly chunkOrigin: readonly [number, number, number];
   /** Bounding-sphere radius about `chunkOrigin` (pc). */
   readonly boundingRadiusPc: number;
-  /** Frozen SID column (docs/sid.md § 7), localIndex-ordered. */
+  /** Frozen SID column (/docs/sid.md#7-storage--sid-in-every-artifact), localIndex-ordered. */
   readonly sid: Uint32Array;
 }
 
@@ -47,8 +47,8 @@ export function catalogShard(catalog: Catalog): StarShard {
 
 /** Whether a recentre onto `(ox, oy, oz)` must rewrite this shard's buffers
  *  eagerly, or may defer and render through a float32 origin offset.
- *  Assumes the camera sits near the new origin — see ./README.md
- *  § Shard-aware recentring for the error model and that precondition. */
+ *  Assumes the camera sits near the new origin — see ./README.md#shard-aware-recentring
+ * for the error model and that precondition. */
 export function shardRecentreEager(
   shard: StarShard,
   ox: number,

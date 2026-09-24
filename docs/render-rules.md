@@ -8,12 +8,12 @@ specific to it, and `authoring-patterns.md` carries write-time process
 **Rule / Why / How to apply / Where it is enforced or measured**.
 
 Every rule below is evaluated **per frame, from the live vantage and the
-live exposure**. AGENTS.md § Camera-anywhere, any-epoch forbids the
+live exposure**. [Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule) forbids the
 design-time shortcut "from Sol, today, this rounds away"; the rules here
 are the opposite move — the frame itself decides, each time it is drawn,
 what can and cannot reach the display, and skips only what provably
-cannot. The complementary upper bound is SCIENCE.md § Defer detail until
-zoom affordance: do not add detail the user can never get close enough
+cannot. The complementary upper bound is [Defer detail until zoom affordance](/SCIENCE.md#defer-detail-until-zoom-affordance):
+do not add detail the user can never get close enough
 to see.
 
 Two measured facts frame everything below (`src/client/debug/frame-cost/
@@ -43,8 +43,8 @@ that compacts the visible list and issues an indirect draw, so the GPU
 never sees the catalogue count. A CPU frustum test plus a magnitude
 window over the population's own distance-sorted index is the cheaper
 form where a compute pass would not pay for itself
-(`star-pipeline/star-frame/README.md`
-§ `forEachStarNearCamera` is the existing binary-searched window).
+([`forEachStarNearCamera`](/src/client/star-pipeline/star-frame/README.md#foreachstarnearcamera--sorted-distance-binary-search-window)
+is the existing binary-searched window).
 A reorder
 that changes instance identity must sweep every consumer of the old
 order (picker sorted arrays and binary relation indices are index-
@@ -101,39 +101,39 @@ band keyed on where Sol is:
    `emitterPutsInkOnScreen`, i.e. its peak surface brightness is more
    than `TOE_BLACK_MAG` past the live extended threshold
    (`extendedThresholdSbTsl`, 22.0 mag/arcsec² at the shipped
-   instrument, `hdr/emission/README.md` § Extended sources). Skipping an
+   instrument, [Extended sources](/src/client/hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Skipping an
    emitter on this test removes its share from the exposure statistic,
    which eases the cut, which brings the emitter back — so the skip is
    admissible only under two rules: the emitter must be invisible at the
    exposure that will obtain *without* it, and that exposure shift must
-   be under `CADENCE_JND_MAG`. `docs/science-hdr-pipeline.md` § 3.5 is
+   be under `CADENCE_JND_MAG`. [§ 3.5](/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound) is
    the derivation; `hdr/exposure/visibility/emitter-visibility-pure.ts`
    (`brightnessSkip`) is the one implementation, and the Milky Way band
    and the Local Group pair are its two users. Unlike the geometric
    three this reason is not a function of camera pose, so a layer taking
-   it owes the wake argument `scene/contribution/README.md` § A skipped
-   layer reports nothing enumerates.
+   it owes the wake argument [A skipped layer reports nothing](/src/client/scene/contribution/README.md#a-skipped-layer-reports-nothing)
+   enumerates.
 
 "Prefilter with the bound, decide with the predicate"
-(`hdr/exposure/visibility/README.md` § What "visible" means to a pick path) holds
+([What "visible" means to a pick path](/src/client/hdr/exposure/visibility/README.md#what-visible-means-to-a-pick-path)) holds
 here too: the layer test is the conservative bound side, and it must
 only ever *dim* — a layer the bound admits may still draw nothing, a
 layer it rejects must be one that could not have drawn.
 
 **A layer that skips must reset every dirty-track sentinel on the way
-out** (`authoring-patterns.md` § Sentinel-init), or it holds stale state
+out** ([Sentinel-init](authoring-patterns.md#sentinel-init-for-dirty-track)), or it holds stale state
 and refuses to repaint when it becomes visible again. `FresnelShell`
 starting `permitted = false` so it agrees with its constructor's
 `group.visible = false` is the worked example
 (`fresnel-shell/fresnel-shell.ts`).
 
 **Where.** `SceneLayer.contribution`, beside `timeBehaviour`
-(`scene/contribution/README.md` § Declaring what a layer can put on screen — a
+([Declaring what a layer can put on screen](/src/client/scene/contribution/README.md#declaring-what-a-layer-can-put-on-screen) — a
 required discriminated union, because an omitted hook reads as an answer
 and the failure it prevents is silence). The registry runs the test and
 skips the update; the layer hides its groups.
 `tests/cadence-layer-declarations.test.ts` pins the census, and
-`scene/contribution/README.md` § Which layers are gated, and which refused carries the
+[Which layers are gated, and which refused](/src/client/scene/contribution/README.md#which-layers-are-gated-and-which-refused) carries the
 roster — including the three layers that took a verdict of `'always'`
 with an argument rather than by omission.
 
@@ -251,13 +251,13 @@ early-z.** The clause above forbids answering a depth *ordering*
 requirement with another draw; a stamp that pays one depth-only draw to
 stop a later pass shading at all is the opposite trade, and it is
 admissible **only priced** — it moves the draw count, so it owes Tier 2
-(`RELEASING.md` § Perf pin) and the win has to resolve against the band
+([Perf pin](/RELEASING.md#perf-pin)) and the win has to resolve against the band
 at the vantage it is claimed for. Two hold the `renderOrder −4` slot on
 that argument: the star core mask, and the planet depth pre-stamp
 (`src/client/solar-system/planets/depth-stamp/README.md`). A third owes
 the same measurement, not the same precedent.
 
-**How to apply.** `src/client/webgpu/README.md` § Early-z is the
+**How to apply.** [Early-z](/src/client/webgpu/README.md#early-z--the-star-layers-depth-honest-redesign) is the
 authority for the star layer's depth-honest design and stays so.
 `tests/tsl-frag-depth.test.ts` holds the allowlist at empty and fails on
 any depth write.
@@ -287,7 +287,7 @@ kernel. Related validation trap, already guarded in
 in a not-yet-submitted encoder fails — defer the map to a microtask
 after the submit.
 
-**Where.** `webgpu/README.md` § One writer per buffer per submit carries
+**Where.** [One writer per buffer per submit](/src/client/webgpu/README.md#one-writer-per-buffer-per-submit) carries
 the backend mechanics and what the audit of the two existing designs
 found: nothing outside three writes a GPU buffer today, and an attribute
 moved to a storage buffer loses the `itemSize` and `array` its uploader
@@ -332,8 +332,8 @@ both, so the counts alone cannot tell them apart. A readback frame adds
 exposure pin, the 6 reduction-chain passes on 6 more submits.
 
 **How to apply.** Read every add-a-pass or fold-a-pass proposal against
-the `emptyPass` row (`src/client/debug/frame-cost/passes/README.md`
-§ The roster) at the vantage in question and against the frame it
+the `emptyPass` row ([The roster](/src/client/debug/frame-cost/passes/README.md#the-roster))
+at the vantage in question and against the frame it
 lands in.
 At ≤ 0.5 ms a boundary, folding the local pass's depth clear into the
 repaint saves under 2 % of a Sol frame, and stellata-8cg.48 (4×4
@@ -351,8 +351,7 @@ resolves near 0.4 ms; coalescing stays pinned near 0.1).
 
 **Where.** The counts and the floor are stellata-0it.37's notes, which
 name the `.perf-runs` file each arm wrote. The
-instrument is `src/client/debug/frame-cost/passes/README.md` § The
-roster.
+instrument is [The roster](/src/client/debug/frame-cost/passes/README.md#the-roster).
 
 ## 9. Measurement canon
 
@@ -361,7 +360,7 @@ differential prices a pass. Every renderer-touching PR states its
 measured frame cost — the cost of a feature is known before it merges,
 not discovered in an audit. The statement goes in the PR's `## Perf`
 section, and what it has to be worth is the tier the diff earns
-(`RELEASING.md` § Perf pin): a reachability argument where no per-frame
+([Perf pin](/RELEASING.md#perf-pin)): a reachability argument where no per-frame
 code is reachable, a two-vantage `--against-pin` table where per-frame
 code moved, the full `--against-pin` table and a re-taken pin where
 passes, buffers, draw counts, the catalogue or the instrument did. A `debug.priceFrame()` differential
@@ -383,7 +382,7 @@ at the canonical vantages is what explains a row that moved.
   interval: the median sits on a multiple of it whatever the frame costs,
   so it resolves nothing under one interval and jumps a whole one when it
   moves. The pin gates on the GPU-stream p50 where the backend supplies
-  one and records wall beside it (`RELEASING.md` § Perf pin). This is the
+  one and records wall beside it ([Perf pin](/RELEASING.md#perf-pin)). This is the
   frame's own span, not a per-pass slot — attribution is still a
   differential.
 - **`gpu.frame` is the render passes; compute passes are their own row.**
@@ -395,7 +394,7 @@ at the canonical vantages is what explains a row that moved.
   its vantage's own floor, tighter than the frame's at four of the five —
   the p10 and not the median, because that stream holds two overlapping
   modes whose share varies between runs of identical code
-  (`scripts/perf/pins/README.md` § The compute row). Never
+  ([The compute row](/scripts/perf/pins/README.md#the-compute-row)). Never
   sum the two into a frame total, and never read a compute dispatch off
   the frame row: a kernel that moved work out of a render pass shows as
   the frame falling and the compute row rising, and only the pair says
@@ -441,7 +440,7 @@ number above; this section states the rules.
 ## 10. Pointers into the write-time rules
 
 Adopting any rule above across every layer is
-`authoring-patterns.md § Pattern coverage across peers`: enumerate the
+`authoring-patterns.md#pattern-coverage-across-peers`: enumerate the
 peer set in the PR body and grep the old pattern to zero. Per-frame
 state that a skip leaves behind is `§ Sentinel-init`. Time inside any of
 these decisions is `Stellata.getT()`, never `Date.now()`

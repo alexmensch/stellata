@@ -31,8 +31,8 @@ frame/unit facts, and the mission-date caveats live in
   outright even though a range query stopping there is accepted.
 - `fetch-probe-trajectories.ts` — `pnpm run fetch:probes`, optionally
   narrowed to one or more probe ids (`pnpm run fetch:probes voyager1`).
-  Manual and infrequent; **not** in the build chain (`data/README.md`
-  § Frozen external data). Needs network. Writes
+  Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
+  Needs network. Writes
   `data/probes/{id}.json`.
 - `sync-probes.ts` (+ `-pure.ts`, test) — mirrors the committed JSONs
   to `public/probes/` (gitignored) via `scripts/util/mirror-to-public.ts`
@@ -89,5 +89,5 @@ sideways by tens of thousands of km between one second and the next.
 Bisection drives such an interval to the floor and still fails; the run
 reports those separately from the tolerance the rest of the grid holds,
 because averaging them in would hide a real discontinuity behind a number
-that is true everywhere else. `data/probes/README.md` § Sampling lists
+that is true everywhere else. [Sampling](/data/probes/README.md#sampling) lists
 the fourteen the fleet currently has.

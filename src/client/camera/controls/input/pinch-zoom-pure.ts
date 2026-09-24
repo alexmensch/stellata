@@ -1,5 +1,5 @@
 // Normalisation from trackpad-pinch wheel deltas to whole scroll-notch
-// equivalents. See README.md § Pinch-to-zoom.
+// equivalents. See README.md#pinch-to-zoom.
 
 /** One mouse-wheel notch in pixel delta mode. TrackballControls' zoom and
  *  ObserveControls' FOV step are both tuned against this, so re-emitting

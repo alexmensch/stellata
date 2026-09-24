@@ -1,5 +1,5 @@
 // Which texture slots the solar-system surfaces carry, and the obligation
-// each roster's slots come with. See README.md § Texture-slot rosters.
+// each roster's slots come with. See README.md#texture-slot-rosters.
 
 /**
  * Each slot needs a stand-in of its OWN: three keys a texture uniform's
@@ -11,7 +11,7 @@ export const PLANET_MESH_TEXTURE_SLOTS = [
   'uMap', 'uNormalMap', 'uHorizonA', 'uHorizonB', 'uSkyView',
 ] as const;
 
-/** Deliberately fallback-free — README.md § Texture-slot rosters. */
+/** Deliberately fallback-free — README.md#texture-slot-rosters. */
 export const PLANET_RINGS_TEXTURE_SLOTS = ['uRingMap'] as const;
 
 export type PlanetMeshTextureSlot = (typeof PLANET_MESH_TEXTURE_SLOTS)[number];

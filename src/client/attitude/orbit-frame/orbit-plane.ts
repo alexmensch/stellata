@@ -1,5 +1,5 @@
 // The focused object's own orbit as an ICRS frame — plane normal plus the
-// direction to the orbit's centre. See ../README.md § Levelling on an orbit.
+// direction to the orbit's centre. See ../README.md#levelling on an orbit.
 
 import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
@@ -19,7 +19,7 @@ export interface FocusedOrbit {
 
 /** Which subsystem answers for the focused object's orbit, plus whatever
  *  about that orbit does not move. Resolved once per focus so the per-frame
- *  rebuild ORB runs on (README.md § Orbit rate) does no work it can avoid.
+ *  rebuild ORB runs on (README.md#orbit-rate) does no work it can avoid.
  *
  *  A **pair** carries its normal: an orbit is planar and the elements are
  *  frozen, so the only live quantity is the direction to the partner. A

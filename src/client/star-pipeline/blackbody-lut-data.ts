@@ -8,7 +8,7 @@
 // LINEAR light, not gamma-encoded — the star shader renormalises each
 // sample to luminance 1 and the tone-map pass owns the only sRGB encode.
 // See scripts/colour/blackbody-lut.ts and
-// docs/science-stellar-modelling.md § "Star colour calibration".
+// /docs/science-stellar-modelling.md#star-colour-calibration.
 
 export const LUT_SIZE = 256;
 export const BV_MIN = -0.4;

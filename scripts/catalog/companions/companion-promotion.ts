@@ -1,6 +1,6 @@
 // Reads data/binaries/multiples.tsv and promotes physical-pair
 // secondaries not in AT-HYG into first-class catalog.bin records.
-// See ./README.md § Companion promotion from `data/binaries/multiples.tsv`.
+// See ./README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -152,7 +152,7 @@ function parseIntOrNull(s: string | undefined): number | null {
  *  misses the sibling on exactly the resolved pairs this is asked about.
  *  Promotion can still decline to render a member row, so this is a superset of
  *  what ships; the label merge wants that direction
- *  (`../classic-ids/label-merge/README.md` § An alias stops at the blend). */
+ *  (`../classic-ids/label-merge/README.md#an-alias-stops-at-the-blend`). */
 export function sourceIdsWithSiblingComponent(
   rows: readonly MultiplesTsvRow[],
 ): Set<string> {
@@ -450,11 +450,11 @@ export interface PromotionStats {
    *  took the anchor's designation constellation because they carried none of
    *  their own. See {@link inheritAnchorDesignationCon}. */
   existingDesigConFromAnchor: number;
-  /** Per brightness source. See README.md § Re-curation of an
-   *  already-in-catalog member. */
+  /** Per brightness source. See README.md#re-curation-of-an-already-in-catalog-member.
+   * */
   existingMemberRecurated: Record<RecuratedBrightness, number>;
-  /** Ratchets DOWN. See README.md § Same-as bridge to an already-admitted
-   *  source. */
+  /** Ratchets DOWN. See README.md#same-as-bridge-to-an-already-admitted-source.
+   * */
   existingViaSameasBridge: number;
   /** Pair rows refused because the distance they state IS a parallax a tier
    *  above refused — mostly the parked primary's siblings, which inherit its
@@ -465,8 +465,8 @@ export interface PromotionStats {
   droppedParkedRecord: number;
   /** Of those, the rows whose `astrometry_via` is `gaia_5p`. A route alone is
    *  not an owned fit — the count below is what says so — but it is the figure
-   *  `../distance/parallax/README.md` § Companion promotion may not walk a
-   *  REFUSED MEASUREMENT back in argues from. */
+   *  `../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in`
+   * argues from. */
   droppedParkedRecordViaGaia5p: number;
   /** Of those, the rows carrying an INDEPENDENT per-component fit
    *  ({@link hasIndependentFitRoute}: an owned identifier on a per-component
@@ -616,7 +616,7 @@ export function emptyPromotionStats(): PromotionStats {
   };
 }
 
-/** See ./README.md § Companion promotion from `data/binaries/multiples.tsv`
+/** See ./README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`
  *  for when this fires. */
 export function composeSyntheticId(
   systemId: string,
@@ -1454,7 +1454,7 @@ const DIST_VIA_OWN_GAIA_FIT: ReadonlySet<string> = new Set([
   'bailer_jones', 'gaia_dr3_inversion',
 ]);
 
-/** See README.md § Re-curation of an already-in-catalog member. */
+/** See README.md#re-curation-of-an-already-in-catalog-member. */
 function ownFitFailsAnchorGrade(
   star: Star, gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>,
 ): boolean {
@@ -1485,7 +1485,7 @@ function starDistPc(s: { x: number; y: number; z: number }): number {
 }
 
 /** Applied in place, so this adds no star and retires none.
- *  See README.md § Re-curation of an already-in-catalog member. */
+ *  See README.md#re-curation-of-an-already-in-catalog-member. */
 function recurateExistingMember(
   ctx: PromoteRowContext,
   state: PromotionState,
@@ -1631,7 +1631,7 @@ function promoteRow(
   // photometry on the record it merged, so a row sharing the anchor's HD/HIP
   // reads the SYSTEM's magnitude however Gaia later resolved the component.
   // Which tier can hold a member at all is
-  // README.md § Anchor flux conservation.
+  // README.md#anchor-flux-conservation-post-pass.
   const idsInheritedFromAnchor = inheritedGaia || inheritedHip;
   // Dedup against existing catalog + previously-promoted records.
   // The inherited-HIP/Gaia escapes let a secondary match the ANCHOR's
@@ -1965,8 +1965,8 @@ export function promoteCompanions(
   // systemic-velocity reconciliation post-pass. Members of a bound system
   // share one systemic velocity so the runtime epoch-advance never shears
   // a pair; orbital motion stays owned by BinaryOrbitField's elements-alone
-  // walk. See docs/science-catalog-ingestion.md § Current-epoch star
-  // positions (Composition with binary orbital motion).
+  // walk. See /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t
+  // (Composition with binary orbital motion).
   interface SystemicGroup {
     anchorIdx: number | null;
     pairs: { pIdx: number; sIdx: number; q: number | null }[];

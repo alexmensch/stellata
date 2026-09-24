@@ -61,13 +61,13 @@ Both land the same number in the buffer.
 `maskedStatisticTexelTsl` (`../../webgpu/emission-tsl.ts`) is the texel
 rule. R clamps at `LUMA_CEIL`, for the reason the display peak does: a clamped read
 is a lower bound the adaptation loop closes from above
-(`../exposure/reduction/README.md` § Measure at the base exposure).
+([Measure at the base exposure](../exposure/reduction/README.md#measure-at-the-base-exposure-not-the-live-one)).
 
 **G carried peak-correct luminance until the highlight guard retired.** The
 guard was its only consumer, and for a resolved surface R and G were the
 same number anyway — so the channel was already redundant where it mattered
 most. It now carries the coverage term the exposure pin divides by
-(`../exposure/README.md` § Adaptation), which is why that fix cost no
+([Adaptation](../exposure/README.md#adaptation--the-frame-measures-itself)), which is why that fix cost no
 memory and no extra pass.
 
 **Which emitters may claim coverage is part of the contract, and it is
@@ -84,7 +84,7 @@ resolved surface in exactly the sense the pin means:
 The emission unit already draws that line generically —
 `peak_L = L(m) / max(1, π·r_phys_px²)`, so below 1 px the whole flux lands
 on the peak and above it the emission IS true surface brightness
-(`../emission/README.md` § Unit). A texel counted as coverage without light
+([Unit](../emission/README.md#unit--what-an-emitting-layer-writes)). A texel counted as coverage without light
 in R pulls `D` down and over-exposes the surface the pin holds; light in R
 without coverage leaves it alone. The night side is the dark case big
 enough to matter — geometric coverage would halve `D` at full phase and gut
@@ -105,7 +105,7 @@ emitters still claim nothing at any framing**, and by the property rather
 than by name: each is a PSF peak or a diffuse column, neither of which is
 surface brightness over its own footprint. What keeps Sol at 1 AU clipped
 white is therefore *coverage*, not the mask — 103 px of 2.07e6, 172x under
-the exposure ramp's foot (`../exposure/README.md` § Adaptation).
+the exposure ramp's foot ([Adaptation](../exposure/README.md#adaptation--the-frame-measures-itself)).
 
 The two non-mesh rows are the ones geometry gets wrong the hardest, because
 neither dark region shrinks when the lit one does. Saturn's annulus is
@@ -139,19 +139,19 @@ diameter. `kernelFluxPeakTsl` is that renormalisation, and it is
 computed per instance in the vertex stage because the exponent morphs on
 `vSoftness` and `vPhysRatio`, both of which are per instance. CSS rather
 than device pixels is what keeps the frame mean
-`devicePixelRatio`-independent — `../exposure/reduction/README.md`
-§ Pixel units carries the arithmetic.
+`devicePixelRatio`-independent — [Pixel units](../exposure/reduction/README.md#pixel-units--css-on-a-device-pixel-grid)
+carries the arithmetic.
 
 ## The gate — chrome is safe by default
 
 Which attachments a draw reaches is the three-member struct its fragment
-graph returns (`../../webgpu/hdr/README.md` § The gate becomes the output
-struct). A member the draw must not reach writes the blend's identity element,
+graph returns ([The gate becomes the output struct](../../webgpu/hdr/README.md#the-gate-becomes-the-output-struct)).
+A member the draw must not reach writes the blend's identity element,
 so the destination is untouched. A material built without the struct — every
 chrome layer — writes attachment 0 alone, so nothing else can reach the
 statistic, **including a chrome layer added later**. The pipeline's two
 frame-cost masks and the adaptation park ride uniforms the struct graphs read
-(`../README.md` § Dev switches, `../exposure/park/README.md`), and the park
+([Dev switches,](../README.md#dev-switches) `../exposure/park/README.md`), and the park
 scales the WHOLE statistic texel, since an alpha-composited writer's identity
 needs alpha 0 too.
 
@@ -240,7 +240,7 @@ rather than a second draw.
   attachment 0 alone, so the band is added over it rather than under it, and
   line work crossing the band reads slightly brighter than it should. Several
   are built-in `Line` / `LineMaterial` programs with no fragment output to
-  add, and `../README.md` § Chrome's inverse mapping is already exact only for
+  add, and [Chrome](../README.md#chrome--non-physical-layers-keep-their-authored-look)'s inverse mapping is already exact only for
   a lone full-alpha fragment over black. Accepted: at the band's ceiling of
   38/255
   the shift is a fraction of a bright chrome line, and it applies to nothing

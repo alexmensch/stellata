@@ -15,7 +15,7 @@ export interface LgObject {
   type: string;
   /** Extra typeable designations (catalog cross-IDs, common names). */
   aliases?: string[];
-  /** Frozen Stellata ID (docs/sid.md § 7), stamped by the build. */
+  /** Frozen Stellata ID (/docs/sid.md#7-storage--sid-in-every-artifact), stamped by the build. */
   sid: number;
   /** Absolute ICRS heliocentric position, parsecs. */
   centerAbs: THREE.Vector3;
@@ -27,8 +27,8 @@ export interface LgObject {
   source: LgSource;
   /** Heliocentric distance to the centroid in parsecs. */
   distanceFromSol: number;
-  /** Solved luminosity model (docs/science-local-group.md § Local Group
-   *  luminosity model) — consumed by the emission renderer. */
+  /** Solved luminosity model (/docs/science-local-group.md#local-group-luminosity-model)
+   * — consumed by the emission renderer. */
   emission: LgEmission;
 }
 

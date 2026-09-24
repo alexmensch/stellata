@@ -1,4 +1,4 @@
-// Mechanical half of data/textures/src/README.md § Auditing: the pins read
+// Mechanical half of /data/textures/src/README.md#auditing: the pins read
 // each FILE's header, never the prose beside it.
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -112,7 +112,7 @@ const rowFor = (body: string): string => {
 // the row is the only record of it and nothing held that row to the constant
 // it describes. These pins do, both directions — a retune that leaves the
 // prose behind fails, and so does prose claiming a treatment the build
-// doesn't apply. data/textures/src/README.md § Auditing.
+// doesn't apply. /data/textures/src/README.md#auditing.
 describe('every colour-invention claim matches the constant behind it', () => {
   const CHROMA_TINT = /half the representative chroma|FULL representative/;
   const HALFWAY_GRAY = /pulled halfway to gray/;

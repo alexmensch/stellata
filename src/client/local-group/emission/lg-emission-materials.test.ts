@@ -18,7 +18,7 @@ function tsl(registerMrtLayer = () => () => {}) {
 }
 
 describe('the Local Group emission material seam', () => {
-  // See ../../webgpu/local-group/README.md § Neither pass owns a uniform.
+  // See ../../webgpu/local-group/README.md#neither-pass-owns-a-uniform.
   it('exposes no slot record', () => {
     expect(Object.keys(tsl().emission(false).uniforms)).toEqual([]);
     expect(Object.keys(tsl().emission(true).uniforms)).toEqual([]);

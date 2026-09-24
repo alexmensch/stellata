@@ -1,4 +1,4 @@
-// See README.md § The serialised look pin.
+// See README.md#the-serialised-look-pin.
 
 import * as THREE from 'three';
 import { lookPinStale, writeLookPin } from './look-pin-pure';

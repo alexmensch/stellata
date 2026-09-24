@@ -49,8 +49,7 @@ directory per depth, and a dev server is pointed at one by copying it over
 `public/`.
 
 Copy the artifacts into the worktree, never symlink them — a build in a
-worktree writes through a symlink into the main checkout (`scripts/README.md`
-§ Building in a worktree).
+worktree writes through a symlink into the main checkout ([Building in a worktree](/scripts/README.md#building-in-a-worktree)).
 
 ## What the distribution is drawn from
 

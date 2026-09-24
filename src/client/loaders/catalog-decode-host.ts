@@ -1,4 +1,4 @@
-// See ./README.md § The catalog-decode worker.
+// See ./README.md#the-catalog-decode-worker.
 
 import type { RecordSpan } from '../../../scripts/catalog/record/catalog-pure';
 import {
@@ -9,7 +9,7 @@ import {
 import type { CatalogDecodeRequest, CatalogDecodeResponse } from './catalog-decode-worker';
 
 export interface CatalogDecoder {
-  /** Never rejects — ./README.md § The catalog-decode worker. */
+  /** Never rejects — ./README.md#the-catalog-decode-worker. */
   decode(source: ArrayBuffer, span: RecordSpan): Promise<CatalogWindow>;
   dispose(): void;
 }
@@ -19,7 +19,7 @@ export function decodeInline(source: ArrayBuffer, span: RecordSpan): CatalogWind
   return decodeCatalogWindow(new DataView(source, start, length), span.first, span.end - span.first);
 }
 
-/** See ./README.md § The catalog-decode worker, silence as a failure mode. */
+/** See ./README.md#the-catalog-decode-worker silence as a failure mode. */
 const WORKER_REPLY_TIMEOUT_MS = 10_000;
 
 export function createCatalogDecoder(): CatalogDecoder {
@@ -28,7 +28,7 @@ export function createCatalogDecoder(): CatalogDecoder {
   let nextId = 0;
   const pending = new Map<number, (r: CatalogDecodeResponse | null) => void>();
 
-  /** See ./README.md § The catalog-decode worker, terminating and settling. */
+  /** See ./README.md#the-catalog-decode-worker terminating and settling. */
   const stop = (): void => {
     retired = true;
     worker?.terminate();
@@ -77,7 +77,7 @@ export function createCatalogDecoder(): CatalogDecoder {
             id,
             first: span.first,
             count: span.end - span.first,
-            // A copy — ./README.md § The catalog-decode worker.
+            // A copy — ./README.md#the-catalog-decode-worker.
             bytes: source.slice(start, start + length),
           };
           live.postMessage(request, [request.bytes]);

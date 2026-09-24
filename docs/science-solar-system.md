@@ -8,7 +8,7 @@ local frame around the host. Sol is the only populated host so far; the
 machinery is generic so future exoplanet-host work can plug in
 without changing the renderer.
 
-**Planet positions.** Two sources, picked by epoch, both resolved into
+<a id="planet-positions"></a>**Planet positions.** Two sources, picked by epoch, both resolved into
 non-singular equinoctial elements and solved through one Kepler solve
 (`src/client/solar-system/ephemerides/README.md`).
 
@@ -18,7 +18,7 @@ lazily loaded, no bundle cost). A position reconstructed from the
 interpolated elements sits **within 1e-5 AU (1,500 km) of Horizons**,
 measured at epochs off the sample grid; the fetch pipeline re-reads its
 own output and fails rather than ship a table that misses its claim
-(`scripts/ephemerides/README.md` § Cadence). Elements rather than
+([Cadence](/scripts/ephemerides/README.md#cadence)). Elements rather than
 positions because the Kepler solve already carries the orbital motion,
 so the table only has to resolve the slow perturbation on top — some
 fifty times more compact at equal accuracy — and because the orbit-ring
@@ -41,7 +41,7 @@ than switching, so scrubbing across 1900 or 2100 under planet focus does
 not pop the outer planets by 0.05 AU.
 
 Both sources evaluate against **TDB**, not the UTC clock `t` runs in
-(`src/client/solar-system/time/README.md` § Timescales); the 69.184 s
+([Timescales](/src/client/solar-system/time/README.md#timescales)); the 69.184 s
 offset is 2.2e-5 AU at Mercury.
 
 The full position chain (elements → ecliptic→ICRS rotation) is pinned
@@ -67,8 +67,8 @@ clamps to the Standish validity window (3000 BC – 3000 AD;
 `T_CLAMP_MIN_S`/`T_CLAMP_MAX_S` in
 `src/client/solar-system/time/time.ts`) — the same window at which
 linear star propagation and the static background layers stop being
-honest (`docs/science-catalog-ingestion.md` § Current-epoch star
-positions). No scrubbable epoch can leave it.
+honest ([Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)).
+No scrubbable epoch can leave it.
 
 **Planet physical data.** Equatorial radii from NASA Planetary Fact
 Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major
@@ -77,7 +77,7 @@ data from New Horizons 2015 reconnaissance (mean radius 1188 km,
 tan-pink colour from MVIC imagery). Representative single-colour RGB
 values per planet are observation-derived.
 
-**Naked-eye colour calibration — reference white is the solar
+<a id="naked-eye-colour-calibration--reference-white-is-the-solar"></a>**Naked-eye colour calibration — reference white is the solar
 spectrum.** The renderer's white point is sunlight, not D65: a body
 reflecting the solar spectrum neutrally renders R = G = B. This is
 the physically meaningful choice for a scene whose sole illuminant is
@@ -113,7 +113,7 @@ Venus's inferior conjunction. Gas giants carry no shell: no detached
 haze exists distinct from their cloud decks at render scale.
 Implementation in `src/client/solar-system/atmosphere/README.md`.
 
-**Atmosphere optical depths — per-body sources.** The `PlanetAtmosphere`
+<a id="atmosphere-optical-depths--per-body-sources"></a>**Atmosphere optical depths — per-body sources.** The `PlanetAtmosphere`
 rows in `src/client/solar-system/planet-system.ts` carry each body's
 TRUE vertical optical depths at the shader's (650, 550, 450) nm
 channels, sourced rather than read off a slider:
@@ -140,7 +140,7 @@ channels, sourced rather than read off a slider:
   top is the real high-altitude blue limb Cassini images show. τ_Mie = 2.5
   sits in the measured visible haze range τ ≈ 2–5 (Tomasko et al. 2008).
 
-**Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
+<a id="moons"></a>**Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
 Rhea, Titan, Iapetus; Uranus's Miranda, Ariel, Umbriel, Titania,
 Oberon; and Neptune's Triton — carry J2000 osculating orbital elements
@@ -185,7 +185,7 @@ Earth–Moon barycentre into Earth-centre and Moon. Phase photometry is
 per-body: only the Moon carries a measured curve (§ Planet phase
 functions), the rest render Lambertian.
 
-**Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
+<a id="planet-rotation"></a>**Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
 angle `W(t) = W0 + Ẇ·d` from the IAU Working Group on Cartographic
 Coordinates and Rotational Elements 2015 report (Archinal et al. 2018,
 Celest Mech Dyn Astr 130:22, https://doi.org/10.1007/s10569-017-9805-5),
@@ -195,7 +195,7 @@ terms ship: the periodic nutation/precession corrections are sub-degree
 while the linear pole rates keep the visually meaningful long-term
 behaviour (Earth's axial precession moves the pole ~30° across the
 model-clock window). The elements evaluate against **TDB** like the
-ephemerides do (`src/client/solar-system/time/README.md` § Timescales);
+ephemerides do ([Timescales](/src/client/solar-system/time/README.md#timescales));
 reading the UTC clock directly instead is 0.29° of Earth spin, which is
 resolvable on a textured globe. The
 regression corpus pins Earth's sub-solar longitude at an
@@ -216,7 +216,7 @@ visible cue; Neptune's Le Verrier and Adams rings (arcs folded in as
 an azimuthal average) sit at 2–4/255 alpha, and the τ~10⁻⁴ Galle and
 Lassell sheets quantise to zero. Jupiter's rings (τ ≤ 10⁻⁵) fall
 three orders below the 8-bit floor and ship no strip at all —
-scoping analysis in `data/textures/README.md` § Ring strips.
+scoping analysis in [Ring strips](/data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor).
 Lighting of the drawn annulus is a deliberately simple model:
 full strip colour on the sunlit face, a dimmed transmitted factor on
 the unlit face, both dying off as illumination goes edge-on to the
@@ -270,7 +270,7 @@ strip-averaged rather than per-radius because the per-region amplitudes
 percent once flux-weighted, and because amplitude's correlation with
 optical depth turns over near τ ≈ 0.5–1 — so the strip's own opacity
 channel is not a usable proxy for it.
-`src/client/solar-system/planets/rings/README.md` § Ring photometry.
+[Ring photometry](/src/client/solar-system/planets/rings/README.md#ring-photometry--the-unresolved-magnitude).
 
 **Earth night lights.** NASA Black Marble 2016 (Suomi NPP VIIRS)
 blended in as an *emissive* term — no limb darkening, unlike the
@@ -295,7 +295,7 @@ Jupiter 0.538, Saturn 0.499, Uranus 0.488, Neptune 0.442, Pluto 0.49
 (HST + New Horizons reconnaissance). Drives the reflected-light
 apparent magnitude formula in `src/client/solar-system/`.
 
-**Planet phase functions.** Per-planet empirical V-band phase curves
+<a id="planet-phase-functions"></a>**Planet phase functions.** Per-planet empirical V-band phase curves
 from Mallama, Krobusek, Pavlov 2018, "Comprehensive wide-band
 magnitudes and albedos for the planets, with applications to
 exo-planets and Planet Nine" (Icarus 282, 2017, 19–33,
@@ -335,7 +335,7 @@ shared `PHASE_RATIO_MIN` floor on the mesh scalar, costing at most
 0.055 mag over α ∈ [112°, 141°] — an order of magnitude less than
 Mercury already loses to the same floor.
 
-**Why no other moon carries one.** The Moon is the only body in
+<a id="why-no-other-moon-carries-one"></a>**Why no other moon carries one.** The Moon is the only body in
 `MOON_PHYSICAL` whose phase curve is measured across the range a camera
 can occupy, because it is the only one Earth sees at every phase. Every
 other in-scope moon is observed from Earth within a few degrees of full
@@ -366,8 +366,8 @@ the y-component is negative.
 widget; the bottom-right time readout displays the UTC timestamp the
 positions correspond to. Every time-varying visual now shares this one
 clock: planet ephemerides, binary orbital motion, the load-time
-proper-motion advance (`docs/science-catalog-ingestion.md` §
-Current-epoch star positions), AND variable-star
+proper-motion advance ([Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)),
+AND variable-star
 pulsation — the latter formerly rode a separate cosmetic `uTime`
 real-seconds clock, now reversed so pulsation runs at real GCVS periods on
 `t` and responds to the same time-warp.

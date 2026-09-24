@@ -1,4 +1,4 @@
-// The gate's dev switch. See README.md § The dev switch.
+// The gate's dev switch. See README.md#the-dev-switch.
 
 import type { GateVerdict } from './gate-advice-pure';
 

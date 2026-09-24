@@ -14,7 +14,7 @@ import type * as THREE from 'three';
 //
 // `hostStarIdx` is the optional sub-layer identity slot for a provider
 // whose `idx` alone doesn't pin an object; only that provider's `format`
-// reads it (./README.md § Architecture).
+// reads it (./README.md#architecture).
 export type HoverHit = {
   idx: number;
   cameraDistancePc: number;

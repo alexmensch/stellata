@@ -73,7 +73,7 @@ describe('StarFrame construction', () => {
   });
 
   it('bounds the proximity window to the decoded prefix, then grows it', () => {
-    // README.md § Absorbing a chunk, the distSol/sortedDistFromSol pair.
+    // README.md#absorbing-a-chunk the distSol/sortedDistFromSol pair.
     const catalog = makeCatalog([[3, 0, 0], [0, 12, 0], [0, 0, 7]], undefined, 2);
     const { frame } = makeFrame(catalog);
 

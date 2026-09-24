@@ -1,6 +1,6 @@
 // The perf pin: a committed summary of the whole frame at the canon vantages
 // on one GPU, and the verdicts of a later run against it. Operator rules:
-// RELEASING.md § Perf pin; mechanics: README.md.
+// /RELEASING.md#perf-pin; mechanics: README.md.
 
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import {
@@ -26,7 +26,7 @@ export const PIN_SCHEMA = 'stellata-perf/pin-3';
  *  whether the row is comparable — and a trending one must therefore not
  *  refuse it, since any refused row refuses the whole pin. The ceiling still
  *  applies: a vantage that wanders 1.5 ms is no licence for a frame that
- *  doubled. README.md § Reading `--against-pin`. */
+ *  doubled. README.md#reading---against-pin `--against-pin`. */
 export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
   lg: 'wanders as much inside one dwell as between runs',
 };
@@ -60,7 +60,7 @@ export interface PinClassClock {
   readonly samples: number;
 }
 
-/** Both classes where the vantage draws two — README.md § The compute row,
+/** Both classes where the vantage draws two — README.md#the-compute-row
  *  last. `dear` is summed pass occupancy, not a frame time. */
 export interface PinFrameClasses {
   readonly cutMs: number;
@@ -148,7 +148,7 @@ export interface PinFile {
  *  carries no GPU-stream median on one side or the other, and wall time is
  *  quantised to the display's refresh interval; or its vantage is in
  *  `PIN_UNGATED_SCENARIOS`. The ceiling reaches the second kind, so an
- *  ungated vantage can still read `dearer`. RELEASING.md § Perf pin. */
+ *  ungated vantage can still read `dearer`. /RELEASING.md#perf-pin. */
 export type PinVerdict = Verdict | 'ungated';
 
 export const PIN_VERDICT_MARK: Record<PinVerdict, string> = { ...VERDICT_MARK, ungated: '·' };
@@ -168,7 +168,7 @@ export interface PinVerdictRow {
   /** How far the 10th-percentile frame moved, where both sides hold a GPU
    *  floor; null otherwise. Context for `deltaMs`, never a verdict input. */
   readonly floorDeltaMs: number | null;
-  /** How far `p90 - p10` moved. Never a verdict input — README.md § Reading
+  /** How far `p90 - p10` moved. Never a verdict input — README.md#reading---against-pin
    *  `--against-pin`, on the `spread` column. */
   readonly spreadDeltaMs: number | null;
   readonly verdict: PinVerdict;
@@ -218,7 +218,7 @@ export function pinKey(record: ScenarioRecord): string {
 
 /** Every canon row and the position a pin run takes it at — backend-major in
  *  canon order, so mw120|webgpu is 1 and lg|webgpu is 5. A pin holds all of
- *  them and each at its own position (README.md § Run position). */
+ *  them and each at its own position (README.md#run-position). */
 export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
   contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),
 );
@@ -270,7 +270,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
 }
 
 /** A row taken where the pin run never takes it compares with nothing later:
- *  every comparison is at equal position (README.md § Run position). */
+ *  every comparison is at equal position (README.md#run-position). */
 function canonPositionRefusal(record: ScenarioRecord): string | null {
   const canon = CANON_POSITIONS.get(pinKey(record));
   if (canon === undefined || record.position === canon) return null;
@@ -303,7 +303,7 @@ export interface PinSummary {
   readonly refusals: readonly string[];
   readonly provenance: readonly RowProvenance[];
   /** Keys the sources carried that the canon does not hold
-   *  (README.md § Run position). */
+   *  (README.md#run-position). */
   readonly dropped: readonly string[];
 }
 
@@ -352,7 +352,7 @@ function runIdentityRefusals(sources: readonly RunSource[]): string[] {
 }
 
 /** The canon rows the runs hold, in canon order — and ONLY those
- *  (README.md § Run position). */
+ *  (README.md#run-position). */
 function keysAcross(sources: readonly RunSource[]): string[] {
   const keys = new Set(sources.flatMap((s) => s.file.scenarios.map(pinKey)));
   return [...CANON_POSITIONS.keys()].filter((key) => keys.has(key));
@@ -400,7 +400,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
  * of identical code narrow nothing, so a row one run refused for straddling
  * a load state is taken from the run that held it steady — which is what
  * lets a pin come from saved runs without a second arm
- * (README.md § From saved runs).
+ * (README.md#from-saved-runs).
  */
 export function pinFromRuns(given: readonly RunSource[], source: PinSource): PinSummary {
   const sources = oldestFirst(given);
@@ -519,7 +519,7 @@ function floorNote(row: PinVerdictRow): PinVerdictRow {
 }
 
 /** Past this multiple of its floor, the row's own spread is what sets the
- *  band — README.md § Reading `--against-pin`, on the band. A note and not a
+ *  band — README.md#reading---against-pin `--against-pin`, on the band. A note and not a
  *  refusal: any refused row refuses the whole pin. */
 export const BAND_OVER_FLOOR_FACTOR = 4;
 
@@ -544,8 +544,8 @@ function underCeiling(row: PinVerdictRow): PinVerdictRow {
  *  never asks which it was given. */
 interface GatedSide {
   readonly valueMs: number;
-  /** Zero where the row bands on its floor alone — README.md § The compute
-   *  row. */
+  /** Zero where the row bands on its floor alone — README.md#the-compute-row.
+   * */
   readonly standardErrorMs: number;
   readonly p10: number | null;
   readonly p90: number | null;
@@ -572,7 +572,7 @@ interface StreamSpec {
 /** One stream judged against its pinned twin: the band where both sides
  *  hold one, ungated by vantage or where a side lacks it, the ceiling on
  *  every reading. The frame's stream and the compute one are the same rule
- *  one statistic over (`README.md` § The compute row). */
+ *  one statistic over (`README.md#the-compute-row`). */
 function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
   const { key, metric, current } = spec;
   const side = spec.pinned;
@@ -736,7 +736,7 @@ export function pinDiffFails(diff: PinDiff): boolean {
 
 /**
  * The marked rows no `--accept` covers. Writing a pin over one of those is
- * the ratchet RELEASING.md § Perf pin names: an unexamined regression
+ * the ratchet /RELEASING.md#perf-pin names: an unexamined regression
  * becomes the pinned value, and the frame walks upward a PR at a time with
  * only the ceiling ever catching it.
  */

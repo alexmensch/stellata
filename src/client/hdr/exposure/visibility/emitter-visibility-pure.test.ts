@@ -75,7 +75,7 @@ describe('taperFactor', () => {
 });
 
 describe('emitterPeakDisplayLevel', () => {
-  // hdr/tonemap/README.md § Operator: "L = L_THRESH resolves to 0.15 of full
+  // /src/client/hdr/tonemap/README.md#operator: "L = L_THRESH resolves to 0.15 of full
   // scale after encode". A source at the threshold carries exactly
   // L_THRESH by construction, so this pins the whole chain end to end.
   it('puts a threshold source at 0.15 of full scale on an unadapted frame', () => {
@@ -148,7 +148,7 @@ describe('emitterPutsInkOnScreen — the pick gate the shipped cutoff misses', (
 });
 
 describe('the extended-source sibling', () => {
-  // docs/science-hdr-pipeline.md § 3.5. No taper — that is a point-source
+  // /docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound. No taper — that is a point-source
   // term — and the peak is a surface brightness over the rod summation
   // area rather than a flux over a display kernel.
   const OMEGA_SUM = summationSolidAngleFor(DEFAULT_INSTRUMENT);

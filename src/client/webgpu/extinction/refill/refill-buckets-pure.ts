@@ -1,10 +1,10 @@
 // The Morton-range partition the worklist is appended under, and the
 // exclusive prefix that packs the buckets back into one dense dispatch.
-// README.md § Bucketed by Morton range.
+// README.md#bucketed-by-morton-range.
 
 /** Buckets the slot space is cut into. A power of two: the refill kernel's
  *  search walks one bit per step from `REFILL_BUCKETS / 2` and never needs a
- *  bound test (README.md § Bucketed by Morton range). */
+ *  bound test (README.md#bucketed-by-morton-range). */
 export const REFILL_BUCKETS = 256;
 
 /** Slots per bucket, which is also the bucket's capacity: a bucket spans
@@ -19,7 +19,7 @@ export function refillBucketOf(
   return Math.floor(slot / refillBucketCapacity(count, buckets));
 }
 
-/** One region, shared by all four quarters (README.md § One region). */
+/** One region, shared by all four quarters (README.md#one-region-and-the-frame-order-behind-it). */
 export function refillWorklistLength(count: number, buckets: number = REFILL_BUCKETS): number {
   return Math.max(1, buckets) * refillBucketCapacity(count, buckets);
 }

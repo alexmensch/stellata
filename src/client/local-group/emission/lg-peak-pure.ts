@@ -1,5 +1,5 @@
 // The Local Group glow's brightest rendered pixel from a camera position —
-// the bound the brightness skip reads (docs/science-hdr-pipeline.md § 3.5).
+// the bound the brightness skip reads (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound).
 
 import { footprintAlong, footprintRadiusPc } from '../../hdr/emission/emission-pure';
 import type { LgEmission } from '../local-group-loader';
@@ -219,7 +219,7 @@ export function lgPeakSurfaceBrightness(
 }
 
 /** Memo of the layer peak, keyed on camera pose and the pixel solid angle,
- *  never on exposure (hdr/exposure/README.md § One writer, five slots). */
+ *  never on exposure (/src/client/hdr/exposure/README.md#one-writer-five-slots). */
 export class LgPeakCache {
   private at: Vec3 | null = null;
   private omegaPxArcsec2 = Number.NaN;

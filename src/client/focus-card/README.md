@@ -42,7 +42,7 @@ on Sol, so a direction from Sol is meaningless for them.
 - **Stars** read catalog byte 34 (`star-focus-provider.ts`) — baked,
   survives a missing boundary artifact, and the designation
   constellation lives beside it
-  (`../constellation-boundaries/iau-geometry/README.md` § ρ Aquilae).
+  ([ρ Aquilae](../constellation-boundaries/iau-geometry/README.md#ρ-aquilae)).
 - **Every other kind** resolves through `Stellata.constellationOf(kind,
   idx)`, one grid lookup against the shipped IAU partition, so a galaxy
   and the stars around it are answered by the same boundaries.
@@ -131,7 +131,7 @@ session's life.
 
 ## Surfaces retained over a growing catalogue
 
-The catalogue streams (`../loaders/README.md` § Progressive catalog load) and
+The catalogue streams ([Progressive catalog load](../loaders/README.md#progressive-catalog-load)) and
 the tables the providers read — `starLabels`, `spectralMap`,
 `searchEntryById`, the binaries relation — keep filling until wave 2 ends. A
 provider always answers correctly: each holds its table by reference and
@@ -230,7 +230,7 @@ test can check for you.
   capped comma roster via `../format/moon-list-format.ts`).
 - `cloud-focus-provider.ts` — tier-2 cloud rows: type identity line, a
   dot-separated alias line when the cloud carries curated cross-catalogue
-  names (`../molecular-clouds/README.md` § Search; the LG / star card
+  names ([Search](../molecular-clouds/README.md#search); the LG / star card
   designation-line convention), live camera distance, size, mass (Z2021
   only), and provenance.
 - `shell-focus-provider.ts` — tier-2 boundary-shell rows (Local Bubble,

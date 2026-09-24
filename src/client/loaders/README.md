@@ -13,8 +13,8 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          (§ Progressive catalog load), decoding each as it
                          lands (byte-range chunking clears Cloudflare
                          Workers' 25 MiB per-asset limit — see
-                         scripts/catalog/record/README.md § On-disk
-                         transport chunking). Layout, chunk and record-decode
+                         /scripts/catalog/record/README.md#on-disk-transport-chunking).
+                         Layout, chunk and record-decode
                          helpers imported from
                          scripts/catalog/record/catalog-pure.ts — single source
                          of truth shared with the writer and the Node
@@ -30,13 +30,13 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          read). Exposes `velocities: Float32Array` (count×3,
                          pc/yr) alongside `positions`; the epoch-advance
                          pass below consumes it. Exposes `sid: Uint32Array`
-                         (frozen Stellata IDs, docs/sid.md § 7) — the star
+                         (frozen Stellata IDs, /docs/sid.md#7-storage--sid-in-every-artifact) — the star
                          domain of the SID resolver
                          (`../util/sid-resolver/README.md`) and the v4 URL
                          wire both key off it. Exposes
                          `multiplicityStatus: Uint8Array` (v9:
                          single/resolved/unresolved — see
-                         scripts/catalog/multiplicity/README.md § Multiplicity status).
+                         /scripts/catalog/multiplicity/README.md#multiplicity-status).
 catalog-progressive.ts   chunk fetch scheduling + the record window each
                          landing chunk unlocks (§ Progressive catalog load).
 catalog-window.ts        one record window's decode as plain typed arrays,
@@ -45,8 +45,7 @@ catalog-window.ts        one record window's decode as plain typed arrays,
                          memcpy back walks and the allocator the full
                          catalogue shares (§ The catalog-decode worker).
                          Column-at-a-time via decodeRecordColumn (see
-                         scripts/catalog/record/README.md § Binary catalog
-                         format).
+                         /scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
 catalog-decode-worker.ts that pass off the main thread, and the spawn +
 catalog-decode-host.ts   inline fallback around it
   (+ host test)          (§ The catalog-decode worker).
@@ -85,12 +84,11 @@ epoch-advance-pure.ts    space-motion propagation:
                          position `(base + v·Δt) − origin` in float64 —
                          `BinaryOrbitField`'s per-frame reset uses it so a
                          drifting unfocused pair doesn't snap onto the float32
-                         absolute grid (`../binaries/README.md` § Walk-active
-                         LOD). Pure +
+                         absolute grid (`../binaries/README.md#walk-active-lod`).
+                         Pure +
                          vitest-pinned; the sky-position corpus drives the
                          SAME function end-to-end. See
-                         docs/science-catalog-ingestion.md §
-                         Current-epoch star positions.
+                         /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t.
 catalog-mock.ts          test-only Catalog factory. NaN-fills Apsis
                          fields, -1 companion, lumClass=255.
 dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
@@ -122,7 +120,7 @@ dust-renderer-mock.ts    A recording renderer stand-in, enough surface
 `loadCatalog` resolves on the **first chunk carrying a whole record**, not on
 the whole artifact, so boot paints a sky while the rest is still on the wire.
 Records are apparent-V ordered and the chunk plan ramps from 1 MiB
-(`scripts/catalog/record/README.md` § Record order, § On-disk transport
+([Record order,](/scripts/catalog/record/README.md#record-order) § On-disk transport
 chunking), so that prefix is roughly the naked-eye sky.
 
 The shape: one buffer pre-allocated at `manifest.totalBytes`, the chunks
@@ -149,7 +147,7 @@ What the undecoded tail holds, and why each is what it is:
 - **`StarFrame.distSol` and `StarFrame.sortedDistFromSol` are both pre-filled
   with `Infinity`** — the sorted one is what the proximity window's binary
   search actually reads, and filling only `distSol` looks sufficient and is
-  not (`../star-pipeline/star-frame/README.md` § Absorbing a chunk).
+  not ([Absorbing a chunk](../star-pipeline/star-frame/README.md#absorbing-a-chunk)).
 - **Positions, magnitudes and flags stay zero**, which is safe only because
   nothing walks past `loadedCount`: the compaction kernel's thread count
   is the decoded count (`../webgpu/star/compaction/README.md`).
@@ -170,11 +168,11 @@ Three traps, all of them silent if missed:
   makes a miss indeterminate rather than absent, so a sid in a chunk that
   has not arrived stays `pending` and queues instead of being dropped, and
   every landing chunk calls `refresh()` to retry the queue
-  (`../util/sid-resolver/README.md` § A domain that is still filling).
+  ([A domain that is still filling](../util/sid-resolver/README.md#a-domain-that-is-still-filling)).
   Withholding it until the last chunk is the obvious alternative and is
   wrong — a `?v=` link's cam/tgt are in the focal object's frame, so the
   focus has to resolve before the pose is applied, not eventually
-  (`../util/url-state/README.md` § A focus that resolves after the pose).
+  ([A focus that resolves after the pose](../util/url-state/README.md#a-focus-that-resolves-after-the-pose)).
   `idMaps.hipToIndex` grows per chunk for the same reason.
 
 ## The catalog-decode worker
@@ -216,7 +214,7 @@ is slower at `DataView` reads and boot is competing for the thread.
 18.8 MB of decoded window plus the 16.8 MB byte slice, and the slice detaches
 at `postMessage`. Nothing is resident on both sides, which is what a transfer
 buys over the search index's structured clone
-(`../typeahead/README.md` § The search-index worker, 64.5 MB held twice).
+([The search-index worker,](../typeahead/README.md#the-search-index-worker) 64.5 MB held twice).
 `stellata-8cg.52` owns the whole-app budget.
 
 **Only the window's bytes cross, never the assembled buffer.** Transferring
@@ -230,8 +228,8 @@ indices beside the name-table offset each carries, and the main thread does the
 map lookup for those alone. Sol comes back the same way, window-relative.
 
 **The pre-paint windows decode inline; the worker is built for the tail.**
-Wave 1 ends on the catalogue's first chunk (`../README.md` § Boot in two
-waves), so every window up to that point sits behind the loading cover with
+Wave 1 ends on the catalogue's first chunk ([Boot in two waves](../README.md#boot-in-two-waves)),
+so every window up to that point sits behind the loading cover with
 nothing drawing yet — an honest wait, and the one regime a worker cannot
 improve. It can only spoil it: `new Worker` fetches its own emitted chunk,
 which no `modulepreload` covers, so spawning there puts a cold round trip on

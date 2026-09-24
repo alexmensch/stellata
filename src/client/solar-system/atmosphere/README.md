@@ -196,9 +196,9 @@ p/π relation above means it needs no extra factor. The twilight band reads
 when the adaptation follows a night-side-dominated frame; the day-side term
 is a ~9 % lift under the direct sun. `Planet.terminatorSoftness` is the older
 by-eye widening of the Lambert edge and is deliberately untouched here
-(`../planets/README.md` § Planet mesh LOD, the **Lighting** bullet).
+([Planet mesh LOD,](../planets/README.md#planet-mesh-lod) the **Lighting** bullet).
 
-**Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
+<a id="flux-bookkeeping"></a>**Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
 everything the shader multiplies on top so the disc integrates to the body's
 true flux (`../planets/emission/mesh-surface-pure.ts`). At physical depths the
 atmosphere is not a small correction to that mean, so all three of the things
@@ -236,7 +236,7 @@ residuals remain, each bounded by its own term's size. The disc means follow
 the debug panel's multipliers (`setAtmosphereTuning` refreshes them), or the
 flux would drift off the row every time a slider moved.
 
-**The texture carries the disc; the atmosphere is an overlay.** Each body's
+<a id="the-texture-carries-the-disc-the-atmosphere-is-an-overlay"></a>**The texture carries the disc; the atmosphere is an overlay.** Each body's
 surface texture is its visible disc — including the *cloud-top* map for Venus.
 The atmosphere therefore stays **optically thin** over it: a limb/airlight
 overlay, never a second scattering layer thick enough to extinguish the texture
@@ -251,7 +251,7 @@ atmosphere that hides its texture and reads as a featureless orange ball. Every
 atmosphere is an independent per-body `PlanetAtmosphere` row, so this is a local
 choice, not a global one; the debug sliders are global multipliers on top.
 
-**Multiple-scattering fill.** An isotropic term = fraction scattered (not
+<a id="multiple-scattering-fill"></a>**Multiple-scattering fill.** An isotropic term = fraction scattered (not
 absorbed) × opacity (1 − T) × sunlit-fraction, weighted by `MS_STRENGTH`, adds
 day-side ambient so the terminator doesn't fall to pure single-scatter black. It
 stands in for a term the march genuinely does not compute, and it carries **no
@@ -308,7 +308,7 @@ Three sources, three fixes.
 2. *Sample-count* — the few-sample march (`ATMO_N_VIEW` × `ATMO_N_LIGHT`)
    jitters its sample lattice per fragment by an interleaved-gradient-noise
    offset (`interleavedGradientNoiseTsl` over the fragment position —
-   `../../webgpu/tsl/README.md` § Interleaved gradient noise), and the light march offsets by
+   [Interleaved gradient noise](../../webgpu/tsl/README.md#interleaved-gradient-noise)), and the light march offsets by
    a further golden-ratio stride per view sample (`LIGHT_JITTER_STRIDE`) so the
    view and light lattices stay **decorrelated** — otherwise the two beat into a
    moiré rather than dissolving into fine grain. The CPU mirror uses the
@@ -344,8 +344,8 @@ white-balance-processed, so pixel-matching is a trap. Instead:
   > Earth 0.43 > Titan 0.22 ≈ Mars 0.17) — Venus should read brightest.
 - **Rayleigh `rayleighCoeff`** is the body's TRUE molecular vertical optical
   depth at the shader's (650, 550, 450) nm channels — sourced, never read off
-  a slider (per-body citations: `docs/science-solar-system.md` § Atmosphere
-  optical depths). Limb reddening at these depths is sunset physics, not an
+  a slider (per-body citations: [Atmosphere optical depths](/docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources)).
+  Limb reddening at these depths is sunset physics, not an
   error: a real Earth limb runs warm at its base and blue above.
 - **`absorbCoeff`** is blue-heaviest for the coloured hazes (Titan, Mars dust,
   Venus) — it removes blue from airlight and transmittance. Do not invert.

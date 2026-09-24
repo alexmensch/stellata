@@ -1,5 +1,5 @@
 // The source_id-keyed classic-ID overlay join and its coverage counts.
-// Routes, ambiguity policy and precedence: docs/catalog-driver.md § 2, § 4.
+// Routes, ambiguity policy and precedence: /docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad § 4.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../record/catalog-pure';
@@ -63,7 +63,7 @@ export interface BindingEvidence {
   vMagOfHip: (hip: number) => number | null;
   /** The V cascade's tiers below Hipparcos, so both gates weigh a row with no
    *  Hipparcos V on the same evidence the record side reaches
-   *  (`../photometry/README.md` § The V cascade). */
+   *  (`../photometry/README.md#the-v-cascade`). */
   printedV: PrintedVLookups;
   wdsXids: SimbadWdsXidIndex | null;
 }
@@ -120,8 +120,8 @@ function designationSummary(entry: OverlayEntry): string {
  *  A gateable row with no `G` is NOT a rejection — `resolveGaiaSourceId`
  *  passes a candidate it cannot weigh — so both no-G counts are the gate's
  *  own coverage alarms, split by cause
- *  (`../astrometry-request/README.md` § The request is a union;
- *  `../photometry/README.md` § The V cascade). */
+ *  (`../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`;
+ *  `../photometry/README.md#the-v-cascade`). */
 export function applyBindingGate(
   overlay: ClassicIdOverlay,
   evidence: BindingEvidence,
@@ -175,7 +175,7 @@ export function applyBindingGate(
     // `null`, not 0, where the entry carries no HIP: the record side passes
     // its own null cell and `isSiblingLetterAttribution` short-circuits on it,
     // so a 0 here would apply a gate to the label side that the record side
-    // does not (docs/catalog-driver.md § 4 — the two must not drift).
+    // does not (/docs/catalog-driver.md#4-how-hd-reaches-gaia — the two must not drift).
     const verdict = resolveGaiaSourceId(
       sourceId, hip === 0 ? null : hip, null, vMag, evidence.gMagOf, evidence.wdsXids,
     );
@@ -236,7 +236,7 @@ export interface OverlayJoinCounts {
    *  Every `overlay*` count above is post-gate — it describes the artifact.
    *  `reason` is the FIRST gate that fired, so the two rejection counts trade
    *  rows between themselves as `G` coverage changes and only their sum is a
-   *  queue size (README.md § The gate's evidence has to be pulled). */
+   *  queue size (README.md#the-gates-evidence-has-to-be-pulled). */
   gateRejectedMag: number;
   gateRejectedSibling: number;
   gateSkippedNoPrintedV: number;
@@ -484,7 +484,7 @@ export function serializeOverlay(overlay: ClassicIdOverlay): string {
 
 /** Read the committed overlay back. Demands the header be `OVERLAY_COLUMNS`
  *  byte for byte, in order — the same contract `iterSpineTsv` holds its own
- *  frozen artifact to (`../parse/README.md` § TSV header resolution): this
+ *  frozen artifact to (`../parse/README.md#tsv-header-resolution`): this
  *  file's only writer is `serializeOverlay` above, so a header that merely
  *  parses is already a file nobody meant to ship. */
 export function parseOverlayTsv(text: string): ClassicIdOverlay {

@@ -1,6 +1,6 @@
 // The naming ladder's authority tiers over the record array: approved
 // names, glyph-bearing designations, disposition routing, aliases.
-// See README.md § The record-side join.
+// See README.md#the-record-side-join.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -42,8 +42,8 @@ export function loadStarNamingInputs(): StarNamingInputs {
 }
 
 /** The curated escape hatch, keyed on SID because that identity survives
- *  re-indexing and a no-Gaia record has no source_id (docs/star-naming.md
- *  § 7). Expected to stay empty: it exists for review findings the
+ *  re-indexing and a no-Gaia record has no source_id (/docs/star-naming.md#7-curation-seam).
+ * Expected to stay empty: it exists for review findings the
  *  authority cannot express, never as a home for the folk names § 2 routes
  *  to aliases. */
 export function loadNameOverrides(): Map<number, string> {
@@ -207,7 +207,7 @@ export function applyStarNames(
 }
 
 /** The top tier of the cascade the label merge started
- *  (`../classic-ids/README.md` § The designation constellation). */
+ *  (`../classic-ids/README.md#the-designation-constellation`). */
 function applyDesignationConstellation(
   star: NamingTarget,
   dc: string,

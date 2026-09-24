@@ -124,8 +124,8 @@ Millennium Canon's ELP2000-85 Moon (tidal acceleration −25.858″/cy²)
 drifts that far from DE441 over four millennia. Matching the canon
 tighter would mean degrading the model toward the older ephemeris, so
 the 200 km / 7-minute corpus bounds are the canon-agreement floor, not
-the model's accuracy (`../../ephemerides/README.md`
-§ DE441 recalibration has the model-vs-DE441 figures). **The ground
+the model's accuracy ([DE441 recalibration](../../ephemerides/README.md#de441-recalibration)
+has the model-vs-DE441 figures). **The ground
 bound has 1.7 km of headroom** — 198.3 km at −1977 against 200 — and
 that thinness is deliberate: it is a floor set by the canon, so an
 ephemeris change that pushes through it wants explaining, not a wider
@@ -179,8 +179,8 @@ so it is deliberately not modelled.
 (`ECLIPSE_DIM_TAU_S`) is the only wall-clock animation in a render layer,
 so it has no queryable in-flight flag for the render gate to hold frames
 on. It rides the gate's **settle tail** instead — `SETTLE_MS` of frames
-after the last activity, item 4 of `../../../render-gate/README.md`
-§ The decision, in priority order. Frames are on demand, so without that
+after the last activity, item 4 of [The decision, in priority order](../../../render-gate/README.md#the-decision-in-priority-order).
+Frames are on demand, so without that
 tail a dim that begins as the camera goes still would blend across frames
 that never render.
 

@@ -1,10 +1,10 @@
 // Morton (Z-order) dispatch order for the extinction kernel: the permutation
 // that lands spatially adjacent stars on adjacent GPU threads, and the
-// scatter that undoes it. README.md § Dispatch order.
+// scatter that undoes it. README.md#dispatch-order.
 
 import { sortIndicesByKeyWords } from '../../../util/radix-sort';
 
-/** A ceiling, not a preference — README.md § Dispatch order. */
+/** A ceiling, not a preference — README.md#dispatch-order. */
 export const MORTON_BITS_PER_AXIS = 16;
 
 const AXIS_MAX = (1 << MORTON_BITS_PER_AXIS) - 1;
@@ -26,7 +26,7 @@ function interleave(x: number, y: number, z: number): number {
 }
 
 /** Dispatch slot → star index, ordered so consecutive slots hold stars close
- *  in 3D. Why spatial and not angular: README.md § Dispatch order. */
+ *  in 3D. Why spatial and not angular: README.md#dispatch-order. */
 export function mortonDispatchOrder(positions: Float32Array, count: number): Uint32Array {
   let minX = Infinity; let minY = Infinity; let minZ = Infinity;
   let maxX = -Infinity; let maxY = -Infinity; let maxZ = -Infinity;

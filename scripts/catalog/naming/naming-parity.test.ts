@@ -1,5 +1,5 @@
-// The naming parity gate (docs/star-naming.md § 8) over the built
-// artifacts. See README.md § The parity ledger.
+// The naming parity gate (/docs/star-naming.md#8-parity--the-gate-on-any-naming-change) over the built
+// artifacts. See README.md#the-parity-ledger.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -30,7 +30,7 @@ const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 /** Published names reaching no record: the wgsnFaints hosts whose only key
  *  was a survey id the normaliser drops (they name stars outside the
  *  catalogue), plus `Red Rectangle`, which names the nebula around HD 44179
- *  rather than the star (docs/star-naming.md § 2). RATCHET DOWN — it last
+ *  rather than the star (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). RATCHET DOWN — it last
  *  moved when the membership manifest admitted a record for one of them. */
 const PUBLISHED_NAMES_UNREACHED = 54;
 const FIXTURES_READY = existsSync(DEFAULT_SEARCH_INDEX) && existsSync(DEFAULT_ROW_INDEX_MAP)
@@ -85,7 +85,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
   it('every ledger row is a change, keyed once', () => {
     // The pre-ladder label is knowable only from the committed `old`
     // column, so a change the ledger omits is unreachable from here — a
-    // re-seed is what enumerates the set (README.md § The parity ledger).
+    // re-seed is what enumerates the set (README.md#the-parity-ledger).
     const enumerated = new Set(parity.map((row) => row.key));
     const missing: string[] = [];
     for (const row of parity) {

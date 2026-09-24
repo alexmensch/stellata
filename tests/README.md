@@ -39,8 +39,7 @@ cadence-layer-declarations.test.ts
                          synthetic one proves nothing about the roster the
                          app runs — the invariant was previously asserted
                          in three READMEs and enforced by nothing
-                         (src/client/scene/README.md § Declaring how time
-                         moves a layer).
+                         (/src/client/scene/README.md#declaring-how-time-moves-a-layer).
 cadence-pulsation-bound.test.ts
                          Tripwire on the render cadence's 30 s cap: the
                          shipped catalogue's fastest unsuppressed variable
@@ -55,8 +54,8 @@ cadence-pulsation-bound.test.ts
                          public/ is unbuilt.
 code-comment-rules.test.ts
                          Comment-hygiene scanner over `*.ts` / `*.js` /
-                         `*.py` under src/ and scripts/ (AGENTS.md
-                         § Code comments): forbidden bead IDs, PR
+                         `*.py` under src/ and scripts/ (/AGENTS.md#code-comments--what-ci-enforces-here):
+                         forbidden bead IDs, PR
                          numbers and [[wikilinks]], plus the 3-line
                          module-docstring cap, whose pre-existing
                          offenders sit in the sibling allowlist .txt and
@@ -64,19 +63,17 @@ code-comment-rules.test.ts
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
-                         Every `<file>.md § <Heading>` pointer in a
-                         git-listed .ts .md .py file resolves to a
-                         heading that exists — the codebase's wiki links,
-                         checked. Grammar, scope, resolution order and the
-                         two limits it cannot see: § Doc-pointer
-                         resolution below.
+                         Every `<path>.md#<slug>` pointer in a
+                         git-listed .ts .md .py .sh file names a heading
+                         or anchor that exists — the codebase's wiki
+                         links, checked. Grammar, scope and resolution:
+                         README.md#doc-pointer-resolution.
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
-                         docs/ has a README.md" invariant (AGENTS.md
-                         § Folder READMEs).
+                         docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
 integration-shell-ratchet.test.ts
-                         stellata.ts is wiring only (AGENTS.md § Folder &
-                         module conventions). Every `Stellata` field is in
+                         stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands).
+                         Every `Stellata` field is in
                          COMPOSITION (stays) or AWAITING_EXTRACTION
                          (shrinks to empty); a field in neither fails, and
                          so does a listed name the class no longer has.
@@ -121,8 +118,8 @@ review-design-reminder.test.ts
                          mention, not `/pr-reviewer`, not a path ending
                          `/pr-review`), scoped to its
                          session, never blocking, and one line long.
-sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
-                         § 4.5): structural validity, head-snapshot
+sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-guard):
+                         structural validity, head-snapshot
                          integrity, frozen-prefix check vs the git
                          merge-base. No UPDATE_* escape hatch — a prefix
                          rewrite means editing the guard itself with
@@ -132,7 +129,7 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          job and locally.
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
-                         scripts/hooks/README.md § How skill-guard works.
+                         /scripts/hooks/README.md#how-skill-guard-works.
 star-count-consistency.test.ts
                          The catalogue's own size, stated once. Rounds the
                          BUILT header to `PROSE_ROUNDED` (artifact-backed,
@@ -172,8 +169,7 @@ tsl-storage-narrowing.test.ts
                          discards the whole submit. Narrowing is allowed
                          only on a `storage()` call's own result; the
                          write/read pair builder is the one exemption
-                         (src/client/webgpu/tsl/README.md § Storage
-                         attributes).
+                         (/src/client/webgpu/tsl/README.md#storage-attributes).
 tsl-standin-filters.test.ts
                          The other TSL authoring trap: DataTexture and
                          Data3DTexture default BOTH filters to nearest, and
@@ -182,19 +178,16 @@ tsl-standin-filters.test.ts
                          unfiltered textureLoad that the real map swapped
                          onto the node afterwards cannot undo. Every
                          construction under src/ must state its pair
-                         (src/client/webgpu/solar-system/README.md § A
-                         stand-in's filters); § TSL stand-in filters below
+                         (/src/client/webgpu/solar-system/README.md#a-stand-ins-filters);
+                         § TSL stand-in filters below
                          carries the scan's one limit.
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
                          outside src/client/webgpu/, so the ~1 MB second
                          copy of three's core stays out of the entry
-                         bundle (src/client/webgpu/README.md § Import
-                         boundary).
-doc-pointer-pure.ts      Not a test — extraction, resolution and heading
-                         matching for doc-pointer-resolution.test.ts.
-                         Behaviour is documented in § Doc-pointer
-                         resolution below, not in the module.
+                         bundle (/src/client/webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle).
+doc-pointer-pure.ts      Not a test — extraction, anchor collection and
+                         path resolution for doc-pointer-resolution.test.ts.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
@@ -217,21 +210,31 @@ belong here.
 
 ## Doc-pointer resolution
 
-`doc-pointer-pure.ts` owns the grammar and matching behind
-`doc-pointer-resolution.test.ts`. This section is the authority; the
-module carries one-line pointers back here.
+`doc-pointer-pure.ts` owns the grammar behind
+`doc-pointer-resolution.test.ts`; this section is the authority.
 
-**What counts as a pointer.** A path ending `.md`, optionally
-backticked, then `§`, then the section name. A leading `~` or `/`
-disqualifies the path — the user's global rules live outside the repo
-and cannot be resolved. The name runs to the first clause terminator,
-except that a period before a digit stays in, so a numbered section
-survives the cut. `§ <named section>` and `§ …` cite the syntax rather
-than naming a section and are skipped.
+**What a pointer is.** One token, `<path>.md#<slug>`: a path ending
+`.md`, then `#`, then a GitHub heading slug. Markdown writes it as a link
+target, `[Heading words](<path>.md#<slug>)`, so GitHub and editors can
+follow it; code comments and fenced blocks write the bare token. A pointer
+never wraps across lines — a token split at a slash reads as a shorter path
+and fails to resolve, which is the loud direction. A path after `~` or
+another `/` is not a pointer: the user's global rules and URLs live outside
+the repo.
 
-**Corpus.** Only pointers that name a file. A bare `§ 5` whose document
-is implied by context is not checked, so "every pointer resolves" means
-every pointer carrying a path.
+**Where a path resolves.** GitHub's reading, and only that: a leading `/`
+is the repo root, anything else is relative to the citing file. A `../`
+chain that climbs out of the repo resolves to nothing.
+
+**What a slug may name.** A heading, slugged the way GitHub slugs it
+(`github-slugger` over an `mdast` parse, so a `#` line inside a fenced block
+is never a heading, and a repeated heading takes `-1`, `-2`), or an explicit
+`<a id="…"></a>` anchor. A cited bold leader or Files-roster entry carries
+such an anchor at the start of its line. Matching is exact set membership:
+any rename of a cited heading fails the suite, subtitle and all.
+
+**Bare `§` refs are not pointers.** A `§ 5` or `§ Heading` naming no file
+is invisible to the check.
 
 **Scope is git's.** Every tracked or untracked-but-not-ignored file with
 a scanned extension, symlinks excluded (`CLAUDE.md` would double
@@ -250,47 +253,6 @@ form therefore has its own extraction case in the suite; narrowing the
 pattern fails the case for the form it dropped. Never pin a whole-tree
 pointer count instead: every docs PR moves it, so any two branches
 touching docs conflict on the one line.
-
-**Where a path resolves.** Pointers are written root-relative and
-file-relative in the same folder, so both readings are tried: the
-referring file's own directory first, then the repo root — which is how
-`SCIENCE.md` and `AGENTS.md` are cited from anywhere — then
-`src/client/`, the shorthand `docs/` uses for subsystem READMEs. A
-`../` chain that climbs out of the repo resolves to nothing.
-
-**What a pointer may name.** `#` headings, and also the bold leaders the
-READMEs use for named sub-topics — ordered-list leaders included, and
-those whose closing `**` falls on the next line — and a Files roster's
-backticked module name, which is how a pointer names one file's entry.
-Dozens of the tree's pointers name a leader rather than a heading, so
-this is house style, not tolerance.
-
-**Wrapping.** A section name wraps with the comment around it, so each
-line is joined with its successor before matching. A path wrapped at one
-of its own slashes rejoins with no space, and its second half alone
-reads as a bare `README.md` — suppressed, since the previous join
-already saw it whole. The two windows straddling a pointer both see it;
-the longer reading wins, and on a tie the later one, whose window starts
-on the line the pointer is actually on. That collapse is scoped to
-adjacent lines: widen it and a stale pointer that happens to be the
-opening of a valid one elsewhere in the file is dropped unchecked.
-
-**Two limits, both asserted rather than assumed.** Matching is a
-word-boundary character prefix in either direction, so `§ Time` will not
-resolve to `## Timescales`. But:
-
-- **Two shared opening words are enough.** A pointer routinely names a
-  heading's opening and runs straight on in prose, so the first two
-  words are the citation. A rename leaving those two alone reads as a
-  truncated citation and passes. Strict prefix-only matching rejects
-  legitimate pointers that run on past the heading.
-- **A bold sentence can stand in for a renamed heading.** Because a
-  leader is a legitimate target, prose that opens with the same two
-  words is an equally legitimate one. `hdr/exposure/README.md` carries
-  both an `## Adaptation` heading and a bold sentence starting
-  "Adaptation is deliberately absent…", so renaming the heading would
-  not fail the guard. Narrowing it would cost the leader support above,
-  which more pointers depend on than are exposed by this.
 
 ## TSL stand-in filters
 
@@ -332,7 +294,7 @@ Work every line, then record the findings in the PR body:
 - **`WebGPUBackend.getRenderCacheKey` still keys on the program ids plus
   attachment 0's format alone** — the reason every material on the HDR target
   swaps its fragment graph with the target mode
-  (`src/client/webgpu/hdr/README.md` § The gate becomes the output struct).
+  ([The gate becomes the output struct](/src/client/webgpu/hdr/README.md#the-gate-becomes-the-output-struct)).
 - **`NodeMaterial.setupOutput` still wraps the output under `premultipliedAlpha`
   and `fog`, and `buildCode` still tests `isOutputStructNode` on the top-level
   node** — § Two material flags silently demote the struct, same README.
@@ -344,7 +306,7 @@ Work every line, then record the findings in the PR body:
   `src/client/loaders/dust-voxel-readback.ts` — cast through `unknown`, so tsc
   sees nothing.
 - **`readRenderTargetPixelsAsync` still allocates its landing array per call**
-  — `src/client/webgpu/hdr/README.md` § Reduction prices that.
+  — [Reduction](/src/client/webgpu/hdr/README.md#reduction--an-asynchronous-readback) prices that.
 - **Who owns `LineMaterial.resolution`** — three writes it per frame from
   `LineSegments2.onBeforeRender`; `src/client/galactic/coord-spheres/README.md`
   is why nothing app-side does.

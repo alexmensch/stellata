@@ -10,7 +10,7 @@ allocation, CI guard, Gaia DR reconciliation, v4 wire — in
 Unlike every sibling `data/` folder, this is **not** frozen external
 data: the ledger is Stellata's own identity contract. It grows by
 append only (`pnpm run sid:allocate`, the sole writer) and its frozen
-prefix is CI-guarded — see docs/sid.md § 4.5 for what the guard
+prefix is CI-guarded — see [§ 4.5](/docs/sid.md#45-ci-guard) for what the guard
 enforces and why there is no `UPDATE_*` escape hatch.
 
 ## Files
@@ -22,7 +22,7 @@ retirements.tsv         sid → retired → reason → successor_sid.
                         Append-only; retired sids are never reused.
 reinstatements.tsv      sid → reinstated → reason. Append-only; each
                         row cancels one retirement of that sid
-                        (docs/sid.md § 4.3 counting semantics), so a
+                        (/docs/sid.md#43-ledger--datasidledgertsv counting semantics), so a
                         reappeared object resumes its original sid.
 ledger-head.json        { rows, max_sid, sha256 } snapshot of the
                         ledger / retirements / reinstatements frozen
@@ -34,7 +34,7 @@ ledger-head.json        { rows, max_sid, sha256 } snapshot of the
                         structurally by the guard instead.
 sameas-overrides.tsv    Curated same-as edges (a → b → note):
                         cross-catalogue merges, synth re-subdivision
-                        bridges (docs/sid.md § 5), slug-rename bridges,
+                        bridges (/docs/sid.md#5-synthetic-key-churn-wds-re-subdivision), slug-rename bridges,
                         and designation-renumbering bridges (CNS5 moving
                         Gl 157.1 into the GJ 9xxx block, or lettering
                         GJ 3196 as its pair's component B) — the shape
@@ -44,7 +44,7 @@ sol-objects.tsv         The sol: namespace mint list (key → kind):
                         sun + eight majors + Pluto + the 18 major moons
                         (moons reuse kind=planet) + the five deep-space
                         probes (kind=probe). Scoped by system
-                        membership, not object class — docs/sid.md § 3.
+                        membership, not object class — /docs/sid.md#3-designation-namespaces.
                         Client pin in
                         src/client/solar-system/sol-object-sids.ts.
 shell-objects.tsv       The shell: namespace mint list (key → kind):
@@ -52,7 +52,7 @@ shell-objects.tsv       The shell: namespace mint list (key → kind):
                         shells Stellata generates/curates; client pin in
                         src/client/fresnel-shell/shell-object-sids.ts.
 bridges/<from>_<to>.tsv Machine-generated cross-release Gaia bridges
-                        (docs/sid.md § 6), human-reviewed per DR bump.
+                        (/docs/sid.md#6-gaia-data-release-reconciliation), human-reviewed per DR bump.
                         Directory appears with the first bridge.
 ```
 
@@ -64,4 +64,4 @@ key a ledger row.
 Derived-edge inputs (gaia↔hip cross-walks, AT-HYG co-designations,
 `multiples.tsv` synth keys, `simbad_wds_xids.tsv`) live in their own
 source folders and are recomputed each allocation run, never stored
-here — docs/sid.md § 4.1 carries the recompute-vs-store boundary.
+here — [§ 4.1](/docs/sid.md#41-same-as-equivalence-graph) carries the recompute-vs-store boundary.

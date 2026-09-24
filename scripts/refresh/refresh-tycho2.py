@@ -68,7 +68,7 @@ class TableSpec:
 
 
 # RAmdeg/DEmdeg vs RA(ICRS), and why pflag='X' rows need both:
-# data/tycho2/README.md § Which position to propagate from.
+# /data/tycho2/README.md#which-position-to-propagate-from.
 MAIN = TableSpec(
     vizier_table="I/259/tyc2",
     output=OUT_MAIN,
@@ -152,8 +152,7 @@ TABLES: tuple[TableSpec, ...] = (MAIN, SUPPL1)
 
 
 def tyc1_ranges(per_query: int = TYC1_PER_QUERY) -> list[tuple[int, int]]:
-    """Contiguous TYC1 scan bands — data/tycho2/README.md § Why the pull
-    is range-batched."""
+    """Contiguous TYC1 scan bands — /data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered."""
     return [
         (lo, min(lo + per_query - 1, TYC1_MAX))
         for lo in range(TYC1_MIN, TYC1_MAX + 1, per_query)

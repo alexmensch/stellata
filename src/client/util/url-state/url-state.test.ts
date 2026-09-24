@@ -250,10 +250,10 @@ function makeStatefulStellata() {
     state.focusedPlanet = null;
     state.focusedProbe = null;
   };
-  // see ../../attitude/orbit-frame/README.md § The lock
+  // see ../../attitude/orbit-frame/README.md#the-lock
   const disarmOrbit = () => { state.orbit.armed = false; state.orbit.locked = false; };
   const setFocusSlot = (t: Target) => {
-    // see ../../camera/focus/README.md § Hard kinds
+    // see ../../camera/focus/README.md#hard-kinds--star-planet-probe
     if (state.mode === 'observe') state.mode = 'navigate';
     disarmOrbit();
     if (t.kind === 'star') state.focusedStar = t.idx;
@@ -1711,7 +1711,7 @@ describe('url-state', () => {
   describe('legacy → v4 migration (decode → apply → re-encode)', () => {
     // applyFromUrl detects `decoded.version !== SCHEMA_VERSION` and
     // schedules a debounced writeUrl that re-encodes the *live state*
-    // as v4 — that apply-then-re-encode pair IS the docs/sid.md § 9.4
+    // as v4 — that apply-then-re-encode pair IS the /docs/sid.md#94-migration-semantics--exact-table
     // migration table. These tests drive it end-to-end over a stateful
     // mock Stellata: decode a legacy blob, applyDecodedView, then
     // currentStateOf → encodeBlob and assert the v4 wire.
@@ -1802,7 +1802,7 @@ describe('url-state', () => {
 
     it('a pending sid applies as a deferred intent when its domain attaches', () => {
       // Cloud domain registered but not attached at apply time — the
-      // docs/sid.md § 8 late-artifact contract. The focus intent must
+      // /docs/sid.md#8-runtime-resolver-b4 late-artifact contract. The focus intent must
       // fire on the attach, not throw or drop.
       const sidResolver = new SidResolver(['star', 'cloud']);
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
@@ -1885,7 +1885,7 @@ describe('url-state', () => {
     });
 
     // The mode leg runs BEFORE the ORB restore, because entering observe
-    // disarms ORB — README.md § A focus that resolves after the pose. Swap the
+    // disarms ORB — README.md#a-focus-that-resolves-after-the-pose. Swap the
     // two and the lock this blob asks for is gone by the time the frame lands.
     it('restores ORB over the mode a late focus re-enters', () => {
       const sidResolver = new SidResolver(['star', 'cloud']);
@@ -1922,7 +1922,7 @@ describe('url-state', () => {
     });
 
     // Both directions, because boot holds the loading cover on this promise —
-    // README.md § A focus that resolves after the pose.
+    // README.md#a-focus-that-resolves-after-the-pose.
     it('reports no pending focus when the sid resolves synchronously', () => {
       const sidResolver = new SidResolver(['star']);
       sidResolver.attach('star', arrayDomain(STAR_SIDS));

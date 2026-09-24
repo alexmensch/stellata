@@ -1,6 +1,6 @@
 // The two coordinate-sphere frames — galactic l/b and equatorial RA/Dec — and
 // the reachability + `S`-cycle rules that read off them.
-// See galactic/README.md § Coordinate spheres.
+// See /src/client/galactic/README.md#coordinate-spheres.
 
 import * as THREE from 'three';
 import { equatorialTangentBasisRad } from '../../util/equatorial-basis';

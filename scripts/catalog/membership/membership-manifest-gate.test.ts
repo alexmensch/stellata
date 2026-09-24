@@ -1,6 +1,6 @@
 // The replacement parity gate over the committed membership artifacts:
 // spine → manifest (i), additions ledger (ii), built catalogue (iii).
-// See README.md § The parity gate.
+// See README.md#the-parity-gate.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -143,7 +143,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
 
   // (i) Every spine row resolves through its designation class to exactly one
   // manifest row — the same SID by construction. The retirement drops no
-  // record (docs/catalog-driver.md § 3.1: the residual is zero), so there is
+  // record (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries: the residual is zero), so there is
   // no drop list for a spine row to land on instead.
   //
   // A FOLD is the one way two spine rows may share a manifest row, and
@@ -174,7 +174,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     // The magnitude term is unreached by construction and carries no ledger
     // row: its `term` column is the whole ledger for that cohort, since every
     // row of it has the same admission reason
-    // (magnitude-term/README.md § The column is the ledger).
+    // (magnitude-term/README.md#the-column-is-the-ledger).
     const unreachedKeys = match.unreached
       .filter((i) => manifest[i].term === 'primaries')
       .map((i) => manifestKey(manifest[i]))
@@ -210,7 +210,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(manifest.map((r) => r.gl).filter((gl) => /[^A-Za-z0-9.]$/.test(gl))).toEqual([]);
   });
 
-  // A designation two rows carry keys neither of them (docs/sid.md § 4.1), so
+  // A designation two rows carry keys neither of them (/docs/sid.md#41-same-as-equivalence-graph), so
   // the row it would have keyed falls to its next rung — the Gaia id, or
   // nothing. Admission refuses one an existing record answers to, which leaves
   // the spine's own pairs: those key on a HIP the merge left alone, and the

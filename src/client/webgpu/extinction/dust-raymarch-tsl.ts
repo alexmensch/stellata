@@ -20,7 +20,7 @@ export type DustTextureNode = ReturnType<typeof texture3D>;
 /** The volume as a sampling node. Not part of the shared uniform-node
  *  mirror: a uniform node cannot carry a nullable texture, so each
  *  consumer binds its own node over a placeholder and swaps `.value`
- *  when `attachDust` lands (../tsl/README.md § Shared uniform nodes). */
+ *  when `attachDust` lands (../tsl/README.md#shared-uniform-nodes). */
 export function dustTextureNode(placeholder: Data3DTexture): DustTextureNode {
   return texture3D(placeholder);
 }

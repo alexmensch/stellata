@@ -1,5 +1,5 @@
 // The dust-particle material seam's factory
-// (../../dust/README.md § The material seam).
+// (../../dust/README.md#the-material-seam).
 
 import type { DustParticleMaterials } from '../../dust/dust-particle-layer';
 import type { MrtOutputLayer } from '../hdr/hdr-pipeline-webgpu';

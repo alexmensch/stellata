@@ -14,7 +14,7 @@ import { webpSize } from './image-header-pure';
 // sky_view.py cannot import the runtime tables, so this pins its encoding
 // range against the shader that decodes it, and both against the shipped
 // artifacts. Why the map exists at all, and why it is not the horizon pair's
-// job: data/textures/relief/README.md § Sky view factor.
+// job: /data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky.
 
 const RELIEF = resolve(__dirname, '../../data/textures/relief');
 const MESH_SHADER = resolve(

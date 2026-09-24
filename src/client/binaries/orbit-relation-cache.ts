@@ -1,6 +1,6 @@
 // Shared per-relation orbital cache for the runtime binary fields
 // (orbit perturbation + eclipse photometry). See
-// src/client/binaries/README.md § Tier mapping.
+// /src/client/binaries/README.md#tier-mapping.
 
 import { J2000_JD } from '../util/astronomy-constants';
 import {

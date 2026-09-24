@@ -32,7 +32,7 @@ import type {
 // decoded forever — old shared links are baked into YouTube comments).
 // Four wire formats coexist (v1–v4); on load, legacy query-form links
 // and superseded schema versions both rewrite to the canonical path per
-// the migration table in docs/sid.md § 9.4. See
+// the migration table in /docs/sid.md#94-migration-semantics--exact-table. See
 // src/client/util/url-state/README.md for the wire format and the
 // "adding a field" recipe.
 //
@@ -57,8 +57,8 @@ const SCALAR_EPS = 1e-3;
 // Default values that the encoder uses to decide whether to omit a field.
 const DEFAULT_CAM: [number, number, number] = [0, 0, 30];
 const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
-// The `up` slot carries `camera.up` (camera/controls/input/README.md § Roll
-// authority). A galactic-LEVEL camera omits the field, and the receiver's own
+// The `up` slot carries `camera.up` (/src/client/camera/controls/input/README.md#roll-authority).
+// A galactic-LEVEL camera omits the field, and the receiver's own
 // default reproduces it — the test is the rendered roll, not the vector,
 // because up is the pole's image-plane projection and so equals the pole
 // itself from no viewpoint at all.
@@ -716,7 +716,7 @@ function tField(bit: number): FieldSpec {
   };
 }
 
-// v4 universal object ref — an unsigned LEB128 SID (docs/sid.md § 9.1).
+// v4 universal object ref — an unsigned LEB128 SID (/docs/sid.md#91-sid-ref).
 // No type tag on the wire; kind comes from the runtime resolver at
 // apply time. isPresent claims the bit only for sid-kind refs, so a
 // legacy hip/index ref that somehow survives into an encode is dropped
@@ -880,7 +880,7 @@ const FIELDS_V3: FieldSpec[] = [
 ];
 
 // ── FIELDS_V4 — the live schema ──────────────────────────────────────
-// v4 (docs/sid.md § 9.2): the three parallel object-ref encodings
+// v4 (/docs/sid.md#92-fields_v4): the three parallel object-ref encodings
 // collapse into one universal LEB128 SID ref. focus/to carry a SID of
 // any kind (a cloud focus is just a cloud-kind SID); POIs persist by
 // SID. Bits 16/17 (legacy 1-byte cloud refs) are RETIRED — leave them
@@ -1139,7 +1139,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   const t = encodeTgt;
   anchoredPose(stellata, focused, c, t);
   const u = stellata.camera.up;
-  // README.md § What counts as a camera move owns every gate below — each a
+  // README.md#what-counts-as-a-camera-move owns every gate below — each a
   // fraction of the orbit radius, none a distance.
   //
   // Don't collapse this to one predicate: vec3FieldV3.isPresent re-checks at
@@ -1311,8 +1311,7 @@ export function applyDecodedView(
   // update() reads as "if any of those happened, refresh" — replaces
   // a hand-maintained N-way OR that grew with every new branch.
   let controlsDirty = false;
-  // Non-null once a focus sid has queued as a deferred intent — README.md
-  // § A focus that resolves after the pose.
+  // Non-null once a focus sid has queued as a deferred intent — README.md#a-focus-that-resolves-after-the-pose.
   let focusPending: Promise<void> | null = null;
 
   // An omitted `up` is a positive statement — the sender was galactic-LEVEL
@@ -1351,8 +1350,8 @@ export function applyDecodedView(
       // restored pose on the next frame.
       stellata.focus.unfocus({ animate: false });
     } else if (view.focus.kind === 'sid') {
-      // v4 universal ref. Deferred-resolution contract (docs/sid.md
-      // § 8): a sid whose domain hasn't attached yet applies on that
+      // v4 universal ref. Deferred-resolution contract (/docs/sid.md#8-runtime-resolver-b4):
+      // a sid whose domain hasn't attached yet applies on that
       // attach; a sid no attached domain claims expires silently and
       // the rest of the decoded state stands. Planet sids translate
       // domain index → flat Target index; a translation miss (host
@@ -1367,7 +1366,7 @@ export function applyDecodedView(
         const idx = targetIdxOf(idMaps, kind, localIndex);
         if (idx !== null) {
           applyFocusTarget(stellata, { kind, idx }, snap);
-          // README.md § A focus that resolves after the pose, both halves:
+          // README.md#a-focus-that-resolves-after-the-pose both halves:
           // why a late focus has to re-seat, and why user input vetoes it.
           // The mode rides the same veto: entering observe parks the camera,
           // which is the move the veto exists to abandon.
@@ -1446,8 +1445,8 @@ export function applyDecodedView(
     // The restored `up` arrived as an axis, ahead of the position and target
     // it has to be perpendicular to. The lookAt inside update() has now
     // resolved the roll from it; this puts up itself back on the
-    // perpendicular invariant (camera/controls/input/README.md
-    // § Roll authority) without changing what is on screen.
+    // perpendicular invariant (/src/client/camera/controls/input/README.md#roll-authority)
+    // without changing what is on screen.
     stellata.roll.adoptFromCamera(stellata.camera);
   }
 
@@ -1496,7 +1495,7 @@ function restoreOrbitFrame(stellata: Stellata, view: DecodedView): void {
   stellata.getOrbitFramePort()?.restore(view.orb === true, view.orbLock === true);
 }
 
-// README.md § Transport — the fragment is not URL state, and a bare-path
+// README.md#transport--canonical-path-vs-legacy-query — the fragment is not URL state, and a bare-path
 // replaceState would drop it.
 function replacePathKeepHash(path: string): void {
   history.replaceState(null, '', path + location.hash);
@@ -1532,7 +1531,7 @@ export interface AppliedUrl {
    *  too, so the user lands on the framed default rather than the unframed
    *  canvas-default pose. */
   applied: boolean;
-  /** README.md § A focus that resolves after the pose. */
+  /** README.md#a-focus-that-resolves-after-the-pose. */
   focusPending: Promise<void> | null;
 }
 
@@ -1553,7 +1552,7 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
   const focusPending = applyDecodedView(stellata, decoded.view, idMaps);
   // After the same debounce as routine writes, rewrite the address bar to
   // the canonical path form when the link arrived in legacy query form OR
-  // in a superseded schema (the docs/sid.md § 9.4 migration: HIP refs land
+  // in a superseded schema (the /docs/sid.md#94-migration-semantics--exact-table migration: HIP refs land
   // exactly, index/cloud refs freeze to the current build, unresolvable
   // refs drop). Both conditions must stay — a current-schema `?v=` link
   // needs the query→path rewrite even though its bytes wouldn't change.

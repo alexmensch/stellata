@@ -23,7 +23,7 @@ import { RESOLVED_CATALOGUE_CAP } from './resolved-hole-table';
  *
  * Intrinsic, i.e. corrected for internal extinction — which is what the
  * emissivity has to be, because the layer applies its own dust at render
- * time (../README.md § Dust).
+ * time (../README.md#dust--the-analytic-tier-and-what-composes-with-it).
  */
 export const GALAXY_TOTAL_ABSMAG_V = -21.37;
 
@@ -43,7 +43,7 @@ export const BULGE_TO_TOTAL_MASS = 0.15;
  *
  * A single SSP for a population whose metallicity distribution is broad:
  * the bulge's is centred near solar and roughly uniformly old
- * (≥ 10 Gyr). README.md § The light ratio carries what the Z = 0.008 and
+ * (≥ 10 Gyr). README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number carries what the Z = 0.008 and
  * Z = 0.05 brackets do to the ratio below.
  */
 export const BULGE_ML_V = 3.15;
@@ -96,7 +96,7 @@ export const BULGE_TO_TOTAL_LIGHT_V = bulgeToTotalLight(
  * the layer's luminosity and its colour come from one system.
  *
  * BHG16 flags a ~0.1 mag inconsistency between its magnitudes and its
- * colour indices, which is the uncertainty README.md § Population colours
+ * colour indices, which is the uncertainty README.md#population-colours--the-discs-is-solved-not-cited
  * weighs the alternative against.
  */
 export const GALAXY_TOTAL_COLOUR_INDEX_BV = 0.73;
@@ -113,7 +113,7 @@ export const BULGE_COLOUR_INDEX_BV = OLD_SPHEROID_COLOUR_INDEX_BV;
  * total and the bulge SSP determine the disc through
  * `discColourIndex`. 0.7129.
  *
- * README.md § Population colours carries why the published total wins
+ * README.md#population-colours--the-discs-is-solved-not-cited carries why the published total wins
  * over an independently synthesised pair, and how little the answer turns
  * on the bulge (0.003 mag across the whole `data/bc03/` metallicity
  * bracket — the disc carries 92 % of the V light, so this number is
@@ -183,7 +183,7 @@ if (ngpResidual === null) {
  * What is left at the NGP after the star field's own contribution comes
  * off Leinert's total — a **check** on the emissivity, not its anchor:
  * the model is solved against the Galaxy's total luminosity above, and
- * the two do not agree (README.md § Two checks).
+ * the two do not agree (README.md#two-checks-and-both-disagree-by-the-same-sign-and-order).
  *
  * The NGP is the only sightline where the two inputs are commensurable.
  * Extinction there is ~0.03 mag, so the de-extincted catalogue sum and

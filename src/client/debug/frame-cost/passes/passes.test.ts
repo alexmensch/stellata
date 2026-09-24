@@ -54,7 +54,7 @@ describe('a contribution-gated row asks whether its layer draws', () => {
 
   // The skip already removed the pass, so disabling it saves nothing and the
   // row would read a meaningless zero — which is the one thing present() is
-  // there to prevent (README.md § The roster).
+  // there to prevent (README.md#the-roster).
   it('is absent while the layer is skipped', () => {
     for (const key of GATED_ROWS) {
       expect(presentOf(gatedLayers(false), key), key).toBe(false);

@@ -1,5 +1,5 @@
 """Angular error BC5 and lossy WebP each cost the shipped normal maps.
-Manual, not in the build. Why: data/textures/relief/README.md § BC5 measured.
+Manual, not in the build. Why: /data/textures/relief/README.md#bc5-measured--and--lossless-caught-the-packing-not-the-codec.
 """
 
 from __future__ import annotations

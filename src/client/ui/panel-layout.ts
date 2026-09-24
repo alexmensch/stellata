@@ -1,6 +1,6 @@
 // Collapse/expand toggles for the settings and instruments panels
 // (top-level + per-group).
-// See src/client/ui/README.md § Per-group collapse in the settings panel.
+// See /src/client/ui/README.md#per-group-collapse-in-the-settings-panel.
 
 const PANEL_KEY = 'stellata.panel-collapsed';
 const INSTRUMENTS_KEY = 'stellata.instruments-collapsed';

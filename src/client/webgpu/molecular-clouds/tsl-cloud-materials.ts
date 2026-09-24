@@ -1,5 +1,5 @@
 // The WebGPU implementation of the cloud material seam
-// (../../molecular-clouds/README.md § The material seam).
+// (../../molecular-clouds/README.md#the-material-seam).
 
 import type { CloudMaterials } from '../../molecular-clouds/cloud-materials';
 import type { EmitterMaterial } from '../../scene/emitter-material';
@@ -25,7 +25,7 @@ export function makeTslCloudMaterials(cfg: TslCloudConfig): CloudMaterials {
   ): EmitterMaterial => {
     // Registration keeps the material's output count in lockstep with the
     // pipeline's target mode; dispose must sever it or a dead material
-    // keeps taking mode swaps (`../README.md` § Who releases what).
+    // keeps taking mode swaps (`../README.md#who-releases-what`).
     const unregister = cfg.registerMrtLayer(built);
     return {
       material: built.material,
@@ -43,7 +43,7 @@ export function makeTslCloudMaterials(cfg: TslCloudConfig): CloudMaterials {
       const field = spec.field === null ? null : cloudFieldUniformNodes(spec.field);
       const built = buildCloudAbsorptionMaterial(cfg.nodes, nodes, field);
       // `field` is deliberately withheld from the written record
-      // (README.md § The shared pair is not in this record).
+      // (README.md#the-shared-pair-is-not-in-this-record).
       return wrap(built, nodes);
     },
 

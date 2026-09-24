@@ -1,5 +1,5 @@
 // The Gaia DR3 broadband bundle and the validity gate every published
-// relation over it shares. See README.md § The published relations.
+// relation over it shares. See README.md#the-published-relations.
 
 /** The three Gaia DR3 broadband magnitudes a published relation reads.
  *  Structurally satisfied by `GaiaAstrometryCatalogRow`. */
@@ -12,7 +12,7 @@ export interface GaiaPhotometry {
 /** Gaia's CCD response saturates on the brightest sources, so `phot_g_mean_mag`
  *  below this bound is systematically unreliable and the printed tier takes
  *  over regardless of colour. Calibrated against the printed-vs-transformed
- *  |ΔV| distribution — see README.md § Where the validity bound comes from. */
+ *  |ΔV| distribution — see README.md#where-the-validity-bound-comes-from. */
 export const GAIA_PHOTOMETRY_SATURATION_G = 4.0;
 
 /** G and BP−RP as plain numbers, for a row whose photometry sits in the regime

@@ -514,8 +514,7 @@ export class FocusController implements FocusOps {
       // The slerp owned the quaternion; camera.up still holds the launch
       // roll. Re-derive it before handing back, or TC's first lookAt
       // resolves against the stale up and pops the view off the pose the
-      // lerp just landed on. See ../controls/input/README.md
-      // § Captured-endpoint animations.
+      // lerp just landed on. See ../controls/input/README.md#captured-endpoint-animations.
       this.deps.roll.adoptFromCamera(this.deps.camera);
       this.deps.controls.update();
     }

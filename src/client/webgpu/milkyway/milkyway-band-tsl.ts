@@ -67,8 +67,8 @@ export function buildMilkyWayBandMaterial(
       .mul(vertical);
   };
 
-  /** `unresolvedBandLightAt`'s fetch (../../milkyway/calibration/README.md
-   *  § The resolution hole). */
+  /** `unresolvedBandLightAt`'s fetch (../../milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars).
+   * */
   const unresolvedBandLight = (posGalCentric: N3): NF => {
     const fromSol = posGalCentric.add(vec3(s.uR0Pc, 0.0, 0.0)).toVar();
     return s.uUnresolvedLight.sample(
@@ -146,7 +146,7 @@ export function buildMilkyWayBandMaterial(
         const pLocal = camLocal.add(dirLocal.mul(sMid.div(worldPerT))).toVar();
         // Outside the unit sphere → outside the integration volume.
         // Braced, so the jump is not emitted twice
-        // (`../tsl/README.md` § TSL test pattern).
+        // (`../tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers`).
         If(dot(pLocal, pLocal).greaterThan(UNIT_BALL_SLACK), () => { Break(); });
 
         const posGalCentric = pLocal.mul(c.uMeshScalePc).toVar();
@@ -176,8 +176,8 @@ export function buildMilkyWayBandMaterial(
 
     // Chart isobar: contour where the sightline's SURFACE BRIGHTNESS
     // crosses the extended-source threshold. NEVER REACHED — chart mode
-    // hides both meshes, and always has (`../../milkyway/README.md`
-    // § Chart mode + warp). Transcribed to keep the two shaders one
+    // hides both meshes, and always has (`../../milkyway/README.md#chart-mode--warp`).
+    // Transcribed to keep the two shaders one
     // artefact, not because a pixel depends on it.
     // `fwidth` has no TSL node — it is |dFdx| + |dFdy| by definition.
     const fw = max(abs(dFdx(sb)).add(abs(dFdy(sb))), 1e-5).toVar();

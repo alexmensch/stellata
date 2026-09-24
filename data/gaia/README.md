@@ -26,7 +26,7 @@ gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
                                        G <= 11 (1,247,240) on the SAME schema
                                        as the two astrometry pulls — the
                                        magnitude term of membership
-                                       (docs/catalog-driver.md § 1), floor-
+                                       (/docs/catalog-driver.md#1-the-driver-model), floor-
                                        agnostic below V <= 11. Not keyed on a
                                        request set: its selection is the
                                        magnitude bound itself.
@@ -58,7 +58,7 @@ gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        the 2026-07-06 build so the pull below
                                        stays consistent with it. Regenerate
                                        from the ledger with `pnpm run
-                                       sid:risk-set` (docs/sid.md § 6.1) only
+                                       sid:risk-set` (/docs/sid.md#61-procedure) only
                                        alongside a fresh neighbourhood pull.
 gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
                                        candidates for that risk set. NOTE:
@@ -85,7 +85,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   https://gea.esac.esa.int/archive/.
 - **Licence**: CC-BY-4.0 (Gaia data release policy).
 - **Source tables** (queried via ADQL over the synchronous Gaia TAP
-  endpoints — `scripts/refresh/README.md` § Gaia TAP):
+  endpoints — [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only)):
   - `gaia_dr3_hip_xmatch.tsv` ← `hipparcos2_best_neighbour`.
   - `gaia_dr3_tyc_xmatch.tsv` ← `tyco2tdsc_merge_best_neighbour`.
   - `gaia_dr3_astrometry.tsv` ← `gaia_source` (binaries subset queried
@@ -97,7 +97,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   - `gaia_dr3_nss_two_body.tsv` ← `nss_two_body_orbit`.
   - `gaia_dr3_apsis.tsv` ← `astrophysical_parameters` (gspphot ∪
     gspspec; scoped like the magnitude pull plus the catalog request —
-    `../../scripts/refresh/magnitude/README.md` § The deep population).
+    [The deep population](../../scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg)).
   - `gaia_dr3_gspc.tsv` ← `synthetic_photometry_gspc` (queried by the
     same catalog source_id request the astrometry pull reads).
   - `gaia_dr2_neighbourhood.tsv` ← `dr2_neighbourhood` (the DPAC
@@ -110,12 +110,12 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 absolute magnitude and not a distance bound. It derives from Gaia's
 *observed* `phot_g_mean_mag`, so interstellar dust is in it: the build
 subtracts the Sol→star extinction when it derives `absmag`
-(`../../scripts/catalog/distance/dust/README.md` § Why the build subtracts),
+([Why the build subtracts](../../scripts/catalog/distance/dust/README.md#why-the-build-subtracts)),
 but membership is decided on the reddened value the archive publishes.
 
 Catalogue completeness is therefore a Sol-centred bubble whose radius depends
 on how luminous the star is, which is the shape worth holding rather than the
-magnitude (AGENTS.md § Camera-anywhere, any-epoch):
+magnitude ([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)):
 
 | Star | `M_V` | Complete to |
 |---|---|---|
@@ -193,7 +193,7 @@ alone does not. The gate is the authority — those 633 are among the brightest
 stars in the sky and reach their V through the printed tier instead.
 
 The 4,836 rows no transform serves, against whether the membership term this
-pull is unioned with (`docs/catalog-driver.md` § 1) already holds them:
+pull is unioned with ([§ 1](/docs/catalog-driver.md#1-the-driver-model)) already holds them:
 
 | cohort | rows | of those, bound in the manifest |
 |---|---|---|
@@ -212,7 +212,7 @@ printed tier to key on. `V >= G + 0.0268` does not bound them from above, so
 `G <= 11` decides nothing about their floor membership.
 
 **They do not enter, and no new rule decides that.** Membership is
-`SPINE ∪ MAGNITUDE PULL(V ≤ floor)` (`docs/catalog-driver.md` § 1), and the
+`SPINE ∪ MAGNITUDE PULL(V ≤ floor)` ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), and the
 magnitude term's predicate is a bound on V. A source carrying no V satisfies no
 predicate over V, so 925 of these are never candidates — non-selection by the
 term's own definition, not a drop the § 6.1 no-silent-drops rule speaks to.
@@ -248,8 +248,7 @@ standing gap rather than one the floor move creates.
 
 The record total that floor implies, what promotion and parking do to it, and
 what the result costs on the wire are the build's, not this folder's:
-`../../scripts/catalog/membership/magnitude-term/README.md`
-§ The record total the floor implies.
+[The record total the floor implies](../../scripts/catalog/membership/magnitude-term/README.md#the-record-total-the-floor-implies--983068-measured).
 
 ## The GSPC validated-range flag — `1` means IN range
 
@@ -276,8 +275,7 @@ brighter than `G` 11, so only 7.0% of the pulled rows are flag-valid in
 both bands, and **none at all** of the red rows the ci cascade needs. The
 ci cascade therefore records the flag on the row and gates on a measured
 colour bound instead — including what the bright edge above costs, which
-is not only a standardisation matter (`scripts/catalog/photometry/
-README.md` § Why the GSPC tier does not gate on the flag).
+is not only a standardisation matter ([Why the GSPC tier does not gate on the flag](/scripts/catalog/photometry/README.md#why-the-gspc-tier-does-not-gate-on-the-flag)).
 
 Two more things the paper settles about this table, both worth not
 re-deriving:
@@ -309,8 +307,8 @@ re-deriving:
   `gaia_source_id` itself: the record build reads each binding off the
   manifest column, where `build:membership` derived it from both cross-walks,
   CNS5 and SIMBAD through the binding gates
-  (`scripts/catalog/membership/binding/README.md`
-  § Both gates weigh every candidate) — the
+  ([Both gates weigh every candidate](/scripts/catalog/membership/binding/README.md#both-gates-weigh-every-candidate))
+  — the
   membership generator and the classic-ID overlay build are the cross-walks'
   two resolution consumers, and the astrometry request reads the manifest
   column plus both of their candidate sets
@@ -319,7 +317,7 @@ re-deriving:
   `spectraltype_esphs` for the six-tier spectral resolver;
   `gaia_dr3_astrometry_catalog.tsv` as direction-cascade tier 1 and
   the NSS source_id set for the `gaia_nss_systemic` routing tag
-  (`scripts/catalog/distance/README.md` § Direction resolution). That same
+  ([Direction resolution](/scripts/catalog/distance/README.md#direction-resolution)). That same
   table's `phot_{g,bp,rp}_mean_mag` columns are the top tier of the Johnson V
   cascade every record's absmag is derived from — 311,071 of 313,257 stars
   (`scripts/catalog/photometry/README.md`). `gaia_dr3_gspc.tsv` is the ci
@@ -328,13 +326,13 @@ re-deriving:
 - `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
 - `scripts/sid/dr-reconcile.ts` (`pnpm run sid:dr-reconcile`) — replays
-  the request + neighbourhood pair as the docs/sid.md § 6.2 dry run;
+  the request + neighbourhood pair as the [§ 6.2](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) dry run;
   `scripts/sid/dr-reconcile-pure.test.ts` pins that classification
   end-to-end.
 
 See [`scripts/catalog/README.md`](../../scripts/catalog/README.md)
 and [`scripts/binaries/README.md`](../../scripts/binaries/README.md)
-for the routing logic. SCIENCE.md § Data sources carries the
+for the routing logic. [Data sources](/SCIENCE.md#data-sources) carries the
 science-side rationale.
 
 ## Refresh
@@ -357,5 +355,4 @@ it has the same ordering constraint:
 - `refresh:gaia-dr2-neighbourhood` reads
   `gaia_dr2_neighbourhood_request.tsv`, a frozen snapshot of the
   Gaia-only risk set derived from a built `public/catalog.bin` +
-  `public/search-index.json` (recipe in docs/sid.md § DR2→DR3 dry
-  run).
+  `public/search-index.json` (recipe in [DR2→DR3 dry run](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07)).

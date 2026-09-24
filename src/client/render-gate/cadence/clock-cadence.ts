@@ -1,4 +1,4 @@
-// The clock cadence's per-frame state. See README.md § The controller.
+// The clock cadence's per-frame state. See README.md#the-controller.
 
 import * as THREE from 'three';
 import type { CadenceCtx } from '../../scene/scene-layer';

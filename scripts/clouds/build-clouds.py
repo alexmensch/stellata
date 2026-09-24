@@ -192,7 +192,7 @@ def density_model_fields(raw_name: str, *, radius_pc: float,
                          profiled: dict[str, cloud_model.ProfiledCloud]) -> dict:
     """The clouds.json v3 per-cloud density-model block. Profiled clouds
     carry the calibrated Plummer parameters the bake used; the rest get the
-    class-based presence-pass defaults (docs/science-molecular-clouds.md § 4.3)."""
+    class-based presence-pass defaults (/docs/science-molecular-clouds.md#43-the-sphere-clouds-zucker-2020--corona-australis)."""
     cls = cloud_class(raw_name)
     common = {
         'class': cls,

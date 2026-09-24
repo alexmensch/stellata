@@ -52,7 +52,7 @@ export function createSearchRunner(
   catalog: Catalog,
   raw: SearchEntry[],
   kinds: KindModules | null = null,
-  /** `./README.md` § The search-index worker. */
+  /** `./README.md#the-search-index-worker`. */
   prebuilt?: SearchIndex,
 ): (q: string) => FuzzyEntry[] {
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")

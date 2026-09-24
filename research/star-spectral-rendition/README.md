@@ -160,7 +160,7 @@ external data ingest. **Independent of `stellata-dch`.**
 **Scope**: single PR. No schema bump (no new per-star fields). One
 shader change + one LUT helper + tests + docs/science-stellar-modelling.md citation.
 
-### Tier 2 — Ingest Gaia DR3 Apsis (rides `stellata-dch` Phase 1)
+### Tier 2 — Ingest Gaia DR3 Apsis
 
 **Goal**: shift from B-V-derived Teff (good proxy) to spectroscopic
 Teff + logg + metallicity + extinction (the canonical source). Pays

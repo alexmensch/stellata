@@ -179,7 +179,7 @@ describe('the annulus phase scalar', () => {
     ringPhaseFactor(P, alphaDeg * DEG, SATURN_PHASE);
 
   it('is exactly 1 at opposition — the strip\u2019s own albedo anchor', () => {
-    // data/textures/README.md § Ring strips anchors the strip RGB on a
+    // /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor anchors the strip RGB on a
     // ~0.05 particle GEOMETRIC albedo, which is the zero-phase value.
     expect(scale(0)).toBe(1);
   });
@@ -221,7 +221,7 @@ describe('the annulus phase scalar', () => {
     // globe and the Milky Way rather than fading it out. Evaluating the
     // shape at the fit's reference tilt is what keeps it positive: a
     // per-tilt quotient of globe-differenced fluxes hit exactly 0 for every
-    // β ≤ 6.06° (README.md § One shape, scaled by one amplitude).
+    // β ≤ 6.06° (README.md#one-shape-scaled-by-one-amplitude).
     for (let aDeg = 0; aDeg < 180; aDeg += 0.25) {
       expect(scale(aDeg)).toBeGreaterThan(0);
     }

@@ -12,7 +12,7 @@ Plummer density model (column calibration + mass-budget envelope
 tightening), the curated class taxonomy, and the substructure-noise
 constants exported as the `noiseModel` block. `build-dust.py` imports
 it for the per-cloud extinction column check. Physics + measured
-numbers: `docs/science-molecular-clouds.md` §§ 2–5.
+numbers: [§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain) to [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec).
 
 `clouds-json.test.ts` pins the emitted v3 payload (11 calibrated
 clouds, class defaults, noiseModel, in-grid split, the alias /
@@ -36,8 +36,8 @@ scripts and source files. Run via `pnpm run build:clouds`.
 ## Output schema
 
 `{version: 3, count, noiseModel, clouds[]}` — `noiseModel` carries
-the substructure noise-ladder constants (docs/science-molecular-clouds.md
-§ 5.2; build-side only — the client no longer reads them, see § 5).
+the substructure noise-ladder constants ([§ 5.2](/docs/science-molecular-clouds.md#52-the-multiplicative-field);
+build-side only — the client no longer reads them, see § 5).
 One entry per cloud:
 
 | Field      | Meaning |
@@ -51,9 +51,9 @@ One entry per cloud:
 | `source`   | `"Z2021T1"` or `"Z2020"` provenance. |
 | `distance` | Heliocentric distance to centroid (pc). |
 | `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the Leike-map `mass_leike` saturates in dense gas and underestimates by up to ~14×). Absent for Z2020 clouds. |
-| `sid`      | Frozen Stellata ID (docs/sid.md § 7). |
+| `sid`      | Frozen Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)). |
 | `class`    | `dark` / `sf` / `hii` taxonomy (curated seed; a planned build-time embedded-star cross-match will supersede). |
-| `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model (docs/science-molecular-clouds.md § 4). |
+| `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field)). |
 | `sigmaS`, `seed` | Log-normal σ_s by class + FNV-1a noise seed. |
 | `massLeike`, `akPeak` | Zucker Table 3 Leike-resolution calibration anchors; null unless profiled. |
 | `inGrid`   | Cloud lies fully inside the ±1250 pc dust voxel cube. |
@@ -63,8 +63,7 @@ One entry per cloud:
 (the tail of `pnpm run build:clouds`), resolving each `cloud:<id>` slug against
 the committed ledger — this Python build never touches the ledger. A new cloud
 slug hard-fails the stamp until `pnpm run sid:allocate` mints it; a rename needs
-a `data/sid/sameas-overrides.tsv` bridge. See `scripts/sid/README.md`
-§ Sibling-artifact stamping.
+a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
 ## Merge logic
 
@@ -106,6 +105,6 @@ within it. IC 1396 keeps its designation; "Elephant's Trunk" is one
 globule inside it).
 
 The table is **keyed by the stable slug `id`, not the display name** —
-`id` is the frozen SID / URL key (docs/sid.md § 7), so a canonical-name
+`id` is the frozen SID / URL key ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)), so a canonical-name
 change never churns it and needs no `sameas` bridge. An entry matching no
 cloud id is a curation typo and fails the build loudly.

@@ -1,6 +1,6 @@
 // The dust-independent visibility prefilter every star stage runs, the two
 // bounds it re-tests on the extincted magnitude, and the clock-independent
-// form the extinction cache gates on. README.md § Dust extinction.
+// form the extinction cache gates on. README.md#dust-extinction--two-tiers-one-gate.
 
 import { Fn, float, log, uint } from 'three/tsl';
 import type { Node } from 'three/webgpu';
@@ -14,7 +14,7 @@ type NF = Node<'float'>;
 /** The instrument and filter uniforms the A_V cache gates its march on, and
  *  therefore the complete set a change to any of which has to invalidate it.
  *  Both types below and the cache's watch derive from this list rather than
- *  restating it (`../extinction/README.md` § The cache gate). */
+ *  restating it (`../extinction/README.md#the-cache-gate`). */
 export const STAR_VISIBILITY_BOUND_KEYS = [
   'uThresholdMag', 'uCullMag', 'uMinDistSol', 'uMaxDistSol', 'uSpectMask', 'uMonochrome',
 ] as const;
@@ -26,7 +26,7 @@ export type StarVisibilityBoundKey = typeof STAR_VISIBILITY_BOUND_KEYS[number];
 export type StarVisibilityBoundValues = Record<StarVisibilityBoundKey, { value: number }>;
 
 /** `SharedUniformNodes` satisfies this, and so does the extinction
- *  prepass's own record (`../extinction/README.md` § The cache gate). */
+ *  prepass's own record (`../extinction/README.md#the-cache-gate`). */
 export type StarVisibilityUniforms = Pick<SharedUniformNodes, StarVisibilityBoundKey>;
 
 /** The distance modulus alone — before pulsation, eclipse dim or
@@ -43,7 +43,7 @@ export interface StarVisibility {
   magOk(): Node<'bool'>;
   taperAlive(): Node<'bool'>;
   /** All four terms, and exact ahead of the extinction read: A_V ≥ 0 and
-   *  both bounds are monotonic in dust (README.md § Dust extinction). */
+   *  both bounds are monotonic in dust (README.md#dust-extinction--two-tiers-one-gate). */
   alive(): Node<'bool'>;
 }
 
@@ -78,7 +78,7 @@ export function starVisibilityTsl(
  * The prefilter a per-star CACHE may gate on: the same four terms over the
  * BRIGHTEST magnitude the star can reach, so the answer is clock-independent
  * and every stage's own prefilter admits a subset of it.
- * `../extinction/README.md` § The cache gate.
+ * `../extinction/README.md#the-cache-gate`.
  */
 export function starCacheVisibleTsl(
   u: StarVisibilityUniforms,
