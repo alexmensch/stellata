@@ -64,10 +64,7 @@ describe('mortonDispatchOrder', () => {
     expect(mortonDispatchOrder(new Float32Array(0), 0)).toHaveLength(0);
   });
 
-  // The spreader is what binds, not the mantissa: part1By2 takes 8 bits and
-  // the key is two halves, so a half over 8 drops its top bits and collapses
-  // the order without failing anything. 3 × 17 = 51 still fits a float64, so
-  // pinning the mantissa would wave 17 through.
+  // ./README.md § Dispatch order: the spreader binds, not the key word.
   it('quantises each axis to the widest half the spreader accepts', () => {
     expect(MORTON_BITS_PER_AXIS).toBe(16);
     expect(MORTON_BITS_PER_AXIS >> 1).toBe(8);

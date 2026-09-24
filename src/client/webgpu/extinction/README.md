@@ -410,11 +410,13 @@ a third would be a third:
   it, which on an unscrubbed clock is never.
 
 The Morton order is *not* rebuilt by either: it buys memory coherence
-rather than correctness, and re-sorting would cost ~77 ms per bucket
-crossing (`dispatch-order/README.md` § Dispatch order). Under a
+rather than correctness, and re-sorting costs ~21 ms of main thread per
+bucket crossing plus the re-uploads (`dispatch-order/README.md`
+§ Dispatch order). Under a
 progressive load that leaves the order keyed on an attach-time table that
 was mostly zeros, so the coherence it buys is lost for the session —
-a cost, not a wrong answer.
+a cost, not a wrong answer. Whether attach really lands that early, and a
+rebuild once the catalogue completes, is open in `stellata-cns.21`.
 
 ## Cold reads — the one behaviour that is not parity
 

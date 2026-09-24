@@ -2,19 +2,14 @@
 // that lands spatially adjacent stars on adjacent GPU threads, and the
 // scatter that undoes it. README.md § Dispatch order.
 
-/**
- * Bits of each axis quantised into the key, and a ceiling rather than a
- * preference: `part1By2` spreads 8 bits and the key is assembled from two
- * halves, so a half wider than 8 loses its top bits and the order collapses
- * without anything failing. The float64 mantissa is not the wall — 48 bits
- * of key leaves 5 to spare, and 17 bits per axis would still fit it.
- */
+import { sortIndicesByKeyWords } from '../../../util/radix-sort';
+
+/** A ceiling, not a preference — README.md § Dispatch order. */
 export const MORTON_BITS_PER_AXIS = 16;
 
 const AXIS_MAX = (1 << MORTON_BITS_PER_AXIS) - 1;
 const HALF_SHIFT = MORTON_BITS_PER_AXIS >> 1;
 const HALF_MASK = (1 << HALF_SHIFT) - 1;
-const HALF_SCALE = 2 ** (3 * HALF_SHIFT);
 
 /** Spread the low 8 bits of `n` over every third bit of a 24-bit word. */
 function part1By2(n: number): number {
@@ -33,9 +28,7 @@ function interleave(x: number, y: number, z: number): number {
 /** Dispatch slot → star index, ordered so consecutive slots hold stars close
  *  in 3D. Why spatial and not angular: README.md § Dispatch order. */
 export function mortonDispatchOrder(positions: Float32Array, count: number): Uint32Array {
-  const order = new Uint32Array(count);
-  for (let i = 0; i < count; i++) order[i] = i;
-  if (count < 2) return order;
+  if (count < 2) return Uint32Array.from({ length: count }, (_, i) => i);
 
   let minX = Infinity; let minY = Infinity; let minZ = Infinity;
   let maxX = -Infinity; let maxY = -Infinity; let maxZ = -Infinity;
@@ -54,16 +47,16 @@ export function mortonDispatchOrder(positions: Float32Array, count: number): Uin
   const scaleY = maxY > minY ? AXIS_MAX / (maxY - minY) : 0;
   const scaleZ = maxZ > minZ ? AXIS_MAX / (maxZ - minZ) : 0;
 
-  const keys = new Float64Array(count);
+  const hi = new Uint32Array(count);
+  const lo = new Uint32Array(count);
   for (let i = 0; i < count; i++) {
     const qx = ((positions[i * 3] - minX) * scaleX) | 0;
     const qy = ((positions[i * 3 + 1] - minY) * scaleY) | 0;
     const qz = ((positions[i * 3 + 2] - minZ) * scaleZ) | 0;
-    keys[i] = interleave(qx >>> HALF_SHIFT, qy >>> HALF_SHIFT, qz >>> HALF_SHIFT) * HALF_SCALE
-      + interleave(qx & HALF_MASK, qy & HALF_MASK, qz & HALF_MASK);
+    hi[i] = interleave(qx >>> HALF_SHIFT, qy >>> HALF_SHIFT, qz >>> HALF_SHIFT);
+    lo[i] = interleave(qx & HALF_MASK, qy & HALF_MASK, qz & HALF_MASK);
   }
-  order.sort((a, b) => keys[a] - keys[b] || a - b);
-  return order;
+  return sortIndicesByKeyWords([lo, hi], 0, count);
 }
 
 /** Star → dispatch slot, the inverse of `order`: what a kernel handed a
