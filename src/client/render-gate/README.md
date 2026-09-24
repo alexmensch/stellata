@@ -92,9 +92,9 @@ would silently make the next `hold()` a no-op.
    and wall-clock blends with no queryable flag — the exposure
    reduction's readback landing (~4 frames), and the eclipse-dim
    one-pole blend (the only wall-clock animation in a render layer).
-   The exposure slew itself does not rely on the tail: `animate()`
-   calls `invalidate()` whenever the applied `dm` moved, so a slew in
-   flight keeps frames coming until it snaps.
+   The exposure slew itself does not rely on the tail:
+   `ExposureFrameStep.measure` calls `invalidate()` whenever the applied
+   `dm` moved, so a slew in flight keeps frames coming until it snaps.
 
 **"Moved" is not exact inequality for the cut, and must not become
 one.** Unlike the pose — a CPU value that genuinely stops — the applied

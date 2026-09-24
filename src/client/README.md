@@ -232,7 +232,6 @@ an empty awaiting list.
 | Declutter | `scene/declutter/` | `hhaw.32.11` |
 | Observe look pin | `camera/observe/` | `hhaw.32.12` |
 | Star render machinery | `star-pipeline/` | `hhaw.32.13` |
-| Per-frame exposure | `hdr/exposure/` | `hhaw.32.14` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 
 **Three values cross a row boundary**, and whichever row moves first settles

@@ -7,7 +7,7 @@ const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
-  'clock', 'controls', 'disposed', 'exposure', 'filters', 'floatingOrigin', 'focus',
+  'clock', 'controls', 'disposed', 'exposure', 'exposureFrame', 'filters', 'floatingOrigin', 'focus',
   'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
@@ -22,10 +22,10 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coordSpheres', 'coreMaskEnabled', 'detailPermitted',
-  'drawingBufferSize', 'dust', 'dustParticleSource', 'dustParticles',
+  'dust', 'dustParticleSource', 'dustParticles',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
-  'frameCtx', 'frameExposureRecord', 'galacticDisc', 'glslResidentsChecked',
-  'lastInvalidatedDm', 'lastParticleStrength', 'observePinQuat',
+  'frameCtx', 'galacticDisc', 'glslResidentsChecked',
+  'lastParticleStrength', 'observePinQuat',
   'observeTmpFwd', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
   'pickSizeScratch', 'solarCluster', 'starAttrs', 'starFrame',
   'starLocalCluster', 'tmpBound', 'tmpConstellationAbs', 'tmpHostLocal', 'tmpVec3b',

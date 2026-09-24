@@ -44,7 +44,6 @@ import {
 import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples';
 import { RenderGate } from './render-gate/render-gate';
 import { TrackballSettle } from './camera/controls/input/trackball-settle';
-import { exposureCutMoved } from './render-gate/render-gate-pure';
 import {
   CADENCE_REPORT_STILL,
   cadenceVisibleTurnRad,
@@ -132,13 +131,8 @@ import {
 import { FilterController } from './filters/filter-controller';
 import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
-import type { FrameExposure } from './hdr/exposure/visibility/emitter-visibility-pure';
-import {
-  DEFAULT_ADAPTATION_TUNING,
-  type AdaptationTuning,
-  type FrameStatistic,
-} from './hdr/exposure/scene-adaptation-pure';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
+import { ExposureFrameStep } from './hdr/exposure/exposure-frame-step';
 import {
   cameraAbsInto,
   SceneLayerRegistry,
@@ -337,7 +331,7 @@ export class Stellata implements FrameAnchor {
   // cut (hdr/exposure/README.md § Adaptation).
   readonly adaptation!: SceneAdaptation;
   get reduction(): ReductionSeam { return this.hdr.reduction; }
-  private readonly drawingBufferSize = new THREE.Vector2();
+  private readonly exposureFrame!: ExposureFrameStep;
 
   // Declutter cycle (scene/declutter/README.md § Detail-level declutter cycle).
   // Init all-true so the default detailLevel='all' is behaviour-neutral —
@@ -403,7 +397,6 @@ export class Stellata implements FrameAnchor {
   readonly localDepthPass = new LocalDepthPass();
   readonly renderGate = new RenderGate();
   private readonly trackballSettle: TrackballSettle;
-  private lastInvalidatedDm = Number.NaN;
   private glslResidentsChecked = false;
   private readonly cadence: ClockCadence;
   // Read on the NEXT tick is NOT good enough for this one: a layer that
@@ -657,6 +650,14 @@ export class Stellata implements FrameAnchor {
       reduced: () => this.reduction.current(),
       measurementReady: () => !this.reduction.readbackPending,
       whitePoint: () => this.hdr.emitterUniforms.uWhitePoint.value,
+    });
+    this.exposureFrame = new ExposureFrameStep({
+      hdr: this.hdr,
+      exposure: this.exposure,
+      adaptation: this.adaptation,
+      isChart: () => this.filter.chart,
+      drawingBufferSizeInto: (out) => this.renderer.getDrawingBufferSize(out),
+      invalidate: (reason) => this.renderGate.invalidate(reason),
     });
     // Kind-module attach, in roster order. Each returned scene layer
     // registers HERE — before every inline-wired layer — so every
@@ -2675,22 +2676,7 @@ export class Stellata implements FrameAnchor {
     // After the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
-    const appliedDm = this.adaptation.measure(
-      this.filter.chart, nowMs, this.frameCtx.warpActive,
-    );
-    this.exposure.setAdaptation(appliedDm);
-    // One read for both halves of the park: the writes this frame draws and
-    // the chain that reduces what they wrote have to gate together, or the
-    // frame pays one without the other.
-    const measurementParked = this.adaptation.isMeasurementParked();
-    this.hdr.setStatisticWritesParked(measurementParked);
-    // A moved cut changes the next frame's scene, so a slew in flight
-    // must keep frames coming until it snaps — the gate cannot see it
-    // otherwise.
-    if (exposureCutMoved(appliedDm, this.lastInvalidatedDm)) {
-      this.lastInvalidatedDm = appliedDm;
-      this.renderGate.invalidate('exposure-cut');
-    }
+    const measurementParked = this.exposureFrame.measure(nowMs, this.frameCtx.warpActive);
     perfMeasure('pre-render');
     perfMark('submit.main');
     this.hdr.bind();
@@ -2732,7 +2718,7 @@ export class Stellata implements FrameAnchor {
     // the frame it measures. The readback lands a frame or two later, far
     // inside the slew (hdr/exposure/reduction/README.md § Latency).
     perfMark('submit.reduction');
-    this.measureAdaptationStatistic(measurementParked);
+    this.exposureFrame.reduce(measurementParked);
     perfMeasure('submit.reduction');
     // After the frame's LAST pass, whatever is listening: a pool nothing
     // resolves overruns and stops sampling.
@@ -2759,42 +2745,10 @@ export class Stellata implements FrameAnchor {
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();
     this.frameCtx.pxPerRadian = this.angularToPx();
-    this.frameCtx.exposure = this.frameExposure();
+    this.frameCtx.exposure = this.exposureFrame.frameExposure();
     // Stale until the orbit-lock entry re-reads the camera after the
     // frame's last write (scene/README.md § Camera writes, then reads).
     this.frameCtx.frustum.invalidate();
-  }
-
-  /** Backing store for `FrameCtx.exposure` — one record, rewritten in
-   *  place, never read before `frameExposure()` fills it. */
-  private readonly frameExposureRecord = {
-    exposure: 0,
-    baseExposure: 0,
-    omegaSummationArcsec2: 0,
-    omegaPxArcsec2: 0,
-    whitePoint: 0,
-    statistic: null as FrameStatistic | null,
-    tuning: DEFAULT_ADAPTATION_TUNING as AdaptationTuning,
-  } satisfies FrameExposure;
-
-  /** The frame's exposure state for the `'brightness'` contribution test.
-   *  Null in chart, where the seam is bypassed and nothing may skip on it.
-   *  Rewritten in place each tick, like every other `FrameCtx` field: what
-   *  `hdr/exposure/README.md` § One writer, five slots forbids is HOLDING
-   *  something derived from the cut, and every slot here is overwritten
-   *  before any layer reads it. */
-  private frameExposure(): FrameExposure | null {
-    if (this.filter.chart) return null;
-    const u = this.hdr.emitterUniforms;
-    const e = this.frameExposureRecord;
-    e.exposure = u.uExposure.value;
-    e.baseExposure = exposureForMagLimit(this.exposure.getLimitMag());
-    e.omegaSummationArcsec2 = u.uOmegaSummationArcsec2.value;
-    e.omegaPxArcsec2 = u.uOmegaPxArcsec2.value;
-    e.whitePoint = u.uWhitePoint.value;
-    e.statistic = this.adaptation.getLandedStatistic();
-    e.tuning = this.adaptation.getTuning();
-    return e;
   }
 
   /** Debug-scoped view of the clock-cadence state, joined with the clock,
@@ -2815,24 +2769,6 @@ export class Stellata implements FrameAnchor {
       census: this.layers.behaviourCensus(),
       contribution: this.layers.contributionCensus(),
     };
-  }
-
-  /** Reduce the statistic attachment the frame just wrote. Chart and the
-   *  fallback path render nothing into it, so the reduction is dropped
-   *  rather than run over a stale attachment. */
-  private measureAdaptationStatistic(parked: boolean) {
-    const statistic = this.hdr.statisticTexture();
-    if (statistic === null) {
-      this.reduction.reset();
-      if (!this.reduction.fenceWhileParked) return;
-    }
-    this.renderer.getDrawingBufferSize(this.drawingBufferSize);
-    this.reduction.measure(
-      statistic,
-      this.drawingBufferSize.x, this.drawingBufferSize.y,
-      this.hdr.emitterUniforms.uExposure.value,
-      parked,
-    );
   }
 
   // HUD projection — hidden during warp (the camera is in motion and
@@ -2899,7 +2835,7 @@ export class Stellata implements FrameAnchor {
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
     this.trackballSettle.dispose();
-    this.lastInvalidatedDm = Number.NaN;
+    this.exposureFrame.dispose();
     this.cadence.dispose();
     this._realtimeFramesNeeded = false;
     this.frameCtx.frustum.invalidate();
