@@ -111,17 +111,9 @@ rule and why the mode flag alone is wrong live in
 `../camera/observe/README.md` § The observe anchor in line layers, along
 with the other line layers asking the same question.
 
-**A non-star anchor keeps its host's lines, and that is not a geometric
-argument.** `observeAnchorOf('star')` is null for every non-star kind, so a
-planet or probe anchor suppresses nothing. Today that is unreachable rather
-than correct: Sol is the only attached planet host and carries no figure vertex
-(figures resolve from Stellarium HIP lists, `scripts/catalog/parse/constellations.ts`).
-It is not defensible on geometry — a planet sits ~5×10⁻⁶ pc from its host
-against parsec-scale segments, so an exoplanet anchor's host lines would
-converge on the camera to within microradians and smear exactly as a star
-anchor's do. When exoplanet hosts land, the anchor has to resolve through the
-host (`focusedStar ?? focusedPlanetSystem.hostStarIdx`, which covers probes for
-free).
+A planet or probe anchor suppresses nothing here yet, which is unreachable
+rather than correct: `../camera/observe/README.md` § The observe anchor in
+line layers says why and where the host resolution has to land.
 
 ## Styling
 

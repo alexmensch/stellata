@@ -322,6 +322,18 @@ drops only the geometry through that point:
 - probe trails need nothing here: the trail drops with the observed probe
   (`../../solar-system/probes/README.md`).
 
+**A planet or probe anchor keeps its host star's lines, and that holds only
+while it is unreachable.** `observeAnchorOf('star')` is null for every
+non-star kind, so neither the host's figure segments nor its own binary
+ellipse drop. Sol is the only attached planet host, and it carries no figure
+vertex (figures resolve from Stellarium HIP lists,
+`scripts/catalog/parse/constellations.ts`) and no binary orbit. It is not
+defensible on geometry: a planet sits ~5×10⁻⁶ pc from its host, so an
+exoplanet anchor's host lines would converge on the camera to within
+microradians and smear as a star anchor's do. When exoplanet hosts land,
+the star-kind answer has to resolve through the host — here, in
+`observeAnchorOf`, so every line layer inherits it.
+
 **URL state:** the OBSERVE-mode flag round-trips through the `?v=`
 blob (flags-byte bit 5), applied after camera params +
 `controls.update()` so the saved pose lands first. The URL writer's
