@@ -12,6 +12,8 @@
 
 set -euo pipefail
 
+. "$(dirname "$0")/skill-name.sh"
+
 STATE_DIR="${TMPDIR:-/tmp}/claude-css-skill-guard"
 mkdir -p "$STATE_DIR"
 STATE_FILE="$STATE_DIR/loaded-${GUARD_SESSION:-$PPID}"
@@ -19,13 +21,9 @@ STATE_FILE="$STATE_DIR/loaded-${GUARD_SESSION:-$PPID}"
 input="$(cat)"
 tool="$(printf '%s' "$input" | jq -r '.tool_name // ""')"
 
-# Invoking the skill arms the session. Accept any scoped spelling — a
-# directory-scoped or plugin listing prefixes the name it was invoked by.
 if [ "$tool" = "Skill" ]; then
   skill="$(printf '%s' "$input" | jq -r '.tool_input.skill // ""')"
-  case "$skill" in
-    cube-css|*:cube-css|*/cube-css) : > "$STATE_FILE" ;;
-  esac
+  if is_skill "$skill" cube-css; then : > "$STATE_FILE"; fi
   exit 0
 fi
 
