@@ -710,7 +710,7 @@ export class PlanetBodyField {
    * attached.
    *
    * The planet-labels overlay reads this (host offset re-added by
-   * `Stellata.getFocusedPlanetLocalPositions`) so labels project to
+   * `SolarSystemWiring.focusedPlanetLocalPositions`) so labels project to
    * the same positions the body mesh renders at, without re-running
    * the Keplerian math itself.
    *

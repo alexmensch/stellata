@@ -91,12 +91,12 @@ import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
 import type { SurvivorCountsRead } from './debug/survivor-counts';
 import type { PlanetSystem } from './solar-system/planet-system';
-import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
-import { SolarSystemCluster } from './solar-system/local-cluster';
+import { SolarSystemWiring } from './solar-system/solar-system-wiring';
+import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
 import {
   PHYS_RATIO_THRESHOLD,
@@ -367,8 +367,6 @@ export class Stellata implements FrameAnchor {
   // `filter.showHud`. Mono mode swaps strokes to a paper-chart palette via
   // setMonochrome on each layer (HUD is CSS-only).
   private galacticDisc: GalacticDisc;
-  // Representational layer — only renders when the host is focused.
-  private orbitRingsLayer: OrbitRingsLayer;
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
@@ -400,7 +398,7 @@ export class Stellata implements FrameAnchor {
   private _realtimeFramesNeeded = false;
   private coreMaskEnabled = true;
   private starLocalCluster: StarLocalCluster;
-  private solarCluster: SolarSystemCluster;
+  readonly solarSystem: SolarSystemWiring;
   /** The frame's near-solid-body set, published by the two local-depth
    *  clusters and read by every SVG label surface
    *  (`occlusion/README.md`). */
@@ -456,7 +454,7 @@ export class Stellata implements FrameAnchor {
       pushes: [
         {
           milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
-          orbitRings: (on) => this.orbitRingsLayer.setPermitted(on),
+          orbitRings: (on) => this.solarSystem.orbitRings.setPermitted(on),
           binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
           constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
         },
@@ -624,7 +622,8 @@ export class Stellata implements FrameAnchor {
     // styling and inherits the `body.warping` hide rule for free.
     this.galacticDisc = new GalacticDisc(this.chromeLines);
     this.scene.add(this.galacticDisc.group);
-    this.orbitRingsLayer = new OrbitRingsLayer(this.chromeLines);
+    // Ahead of the binary orbit paths — solar-system/README.md § Wiring.
+    const orbitRings = new OrbitRingsLayer(this.chromeLines);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     this.starLocalCluster = new StarLocalCluster(
       this.webgpuStarLayer.localMirror,
@@ -706,16 +705,21 @@ export class Stellata implements FrameAnchor {
       const layer = this.kinds[kind]?.attach(kindCtx);
       if (layer) this.layers.register(layer);
     }
-    this.solarCluster = new SolarSystemCluster({
-      field: this.kinds.planet.field,
-      meshLayer: this.kinds.planet.meshLayer,
-      orbitRings: this.orbitRingsLayer,
+    this.solarSystem = new SolarSystemWiring({
+      orbitRings,
+      planetField: this.kinds.planet.field,
+      planetMesh: this.kinds.planet.meshLayer,
       probeField: this.kinds.probe.field,
       probeTrails: this.kinds.probe.pathLayer,
       starCluster: this.starLocalCluster,
       occluders: this.occluders,
+      solIndex: catalog.solIndex,
+      getT: () => this.getT(),
+      focusedPlanetSystem: () => this.focus.getFocusedPlanetSystem(),
+      observeAnchorPlanet: () => this.observe.observeAnchorOf('planet'),
+      onPlanetSystem: (handler) => this.bus.on('planetSystem', handler),
     });
-    this.localDepthPass.register(this.solarCluster);
+    this.localDepthPass.register(this.solarSystem.cluster);
     // System-membership registry: binaries FIRST so a collapsed pair's
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
@@ -821,14 +825,6 @@ export class Stellata implements FrameAnchor {
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
     this.buildFocalAnchorPolicy();
-    // Orbit rings are representational layers gated on host-focus. Planet
-    // bodies live in PlanetBodyField and render whenever inside the
-    // per-host cull distance regardless of focus. (The heliopause is no
-    // longer focus-coupled — the declutter cycle governs it, like the
-    // Local Bubble.)
-    this.on('planetSystem', (ps) => {
-      this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex, this.getT());
-    });
     // Orbit paths rebuild on every focus mutation: the focused system's
     // Kepler pairs, or none when focus leaves a multi-star system.
     this.on('focus', () => {
@@ -1008,10 +1004,7 @@ export class Stellata implements FrameAnchor {
   // scene/README.md.
   private registerSceneLayers(): void {
     this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
+      timeBehaviour: { kind: 'clock', rate: this.solarSystem.planetRate },
       contribution: { kind: 'always' },
       // Ride runs right after every moving-body field wrote this
       // frame's positions — the whole module roster updates ahead of
@@ -1020,39 +1013,10 @@ export class Stellata implements FrameAnchor {
       update: () => this.applyMovingFocalRide(),
       dispose: () => {},
     });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      contribution: { kind: 'always' },
-      // AFTER the body field: a moon ring's centre is the parent's
-      // live iLocalRel — reading it before the field's walk left the
-      // rings one frame of sim-time behind the bodies, a visible lag
-      // under fast scrub.
-      update: (ctx) => {
-        const ps = this.focus.getFocusedPlanetSystem();
-        const hostPos = ps !== null
-          && this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
-          ? this.tmpHostLocal : null;
-        this.orbitRingsLayer.update(
-          ctx.camera,
-          window.innerHeight,
-          hostPos,
-          ctx.t,
-          ps === null ? null : this.planetBodyField.planetIdxWithin(
-            ps.hostStarIdx, this.observe.observeAnchorOf('planet')),
-          (planetIdx, out) => {
-            if (ps === null) return false;
-            const flat = this.planetBodyField.instanceIndexOf(ps.hostStarIdx, planetIdx);
-            return flat !== null
-              && this.planetBodyField.planetHostRelPositionInto(flat, out);
-          },
-        );
-      },
-      setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
-      dispose: () => this.orbitRingsLayer.dispose(),
-    });
+    // AFTER the body field: a moon ring's centre is the parent's live
+    // iLocalRel — reading it before the field's walk left the rings one frame
+    // of sim-time behind the bodies, a visible lag under fast scrub.
+    this.layers.register(this.solarSystem.orbitRingsEntry);
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
@@ -1096,38 +1060,16 @@ export class Stellata implements FrameAnchor {
       },
       dispose: () => {},
     });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      contribution: {
-        kind: 'gated',
-        skip: (ctx) => this.kinds.planet.meshLayer.anyMeshWorkPending(ctx.camera.position)
-          ? null : 'legibility',
-        setContributing: (on) => this.kinds.planet.meshLayer.setContributing(on),
-      },
-      // Below every camera write in the frame — both focal rides and the
-      // orbit lock — because it caches `camera.matrixWorld` for its
-      // view-space sun, pole and caster uniforms, and sizes the mesh off
-      // camera distance (scene/README.md § Camera writes, then camera reads).
-      // That is why this update lives on the shell rather than inside the
-      // planet module's layer.
-      update: (ctx) => this.kinds.planet.meshLayer.update(ctx.camera, ctx.t),
-      dispose: () => {},
-    });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      contribution: { kind: 'always' },
-      // After the field, rings and mesh updates it reads; before the main
-      // render its suppression uniforms gate. Owns no GPU resources —
-      // the star mirror it feeds is disposed with the star cluster.
-      update: (ctx) => this.solarCluster.update(ctx.camera),
-      dispose: () => {},
-    });
+    // Below every camera write in the frame — both focal rides and the
+    // orbit lock — because it caches `camera.matrixWorld` for its view-space
+    // sun, pole and caster uniforms, and sizes the mesh off camera distance
+    // (scene/README.md § Camera writes, then camera reads). That is why the
+    // planet module's own layer does not run this update.
+    this.layers.register(this.solarSystem.planetMeshEntry);
+    // After the field, rings and mesh updates it reads; before the main
+    // render its suppression uniforms gate. Owns no GPU resources — the star
+    // mirror it feeds is disposed with the star cluster.
+    this.layers.register(this.solarSystem.clusterEntry);
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
@@ -1318,36 +1260,8 @@ export class Stellata implements FrameAnchor {
    *  update fan-out runs before `'frame'` event handlers, so overlays
    *  driven by the frame loop (focus ring, etc.) read current-frame data. */
   anyOrbitRingVisible(): boolean {
-    return this.orbitRingsLayer.anyOrbitRingVisible()
+    return this.solarSystem.orbitRings.anyOrbitRingVisible()
       || this.binaryOrbitPathLayer.anyOrbitRingVisible();
-  }
-  /** Renderer-local positions of the focused host's planets (xyz
-   *  triples, length 3·N), or null if no system is attached. Host
-   *  offset is applied — under planet focus the host is not at the
-   *  local origin. Returns a fresh Float64Array copy each call (see
-   *  `PlanetBodyField.getHostLocalPositions`) — safe to cache across
-   *  frames; the value semantics survive attach grow / detach shift. */
-  getFocusedPlanetLocalPositions(): Float64Array | null {
-    const ps = this.focus.getFocusedPlanetSystem();
-    if (!ps) return null;
-    const rel = this.planetBodyField.getHostLocalPositions(ps.hostStarIdx);
-    if (!rel) return null;
-    if (!this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)) {
-      return null;
-    }
-    for (let i = 0; i < rel.length; i += 3) {
-      rel[i] += this.tmpHostLocal.x;
-      rel[i + 1] += this.tmpHostLocal.y;
-      rel[i + 2] += this.tmpHostLocal.z;
-    }
-    return rel;
-  }
-  /** True when the orbit ring for planet `i` is currently rendering on
-   *  the focused host. Used by planet-labels to hide labels in lockstep
-   *  with their associated rings — the body stays rendered (subject to
-   *  apparent-mag visibility) regardless. */
-  isOrbitRingResolvable(planetIdx: number): boolean {
-    return this.orbitRingsLayer.isOrbitRingResolvable(planetIdx);
   }
   /** Rendered disc radius (CSS px) of the focused object, any kind; 0
    *  when nothing is focused. Single source for the arrow-fade coverage
@@ -2046,7 +1960,6 @@ export class Stellata implements FrameAnchor {
   }
 
   private tmpVec3b = new THREE.Vector3();
-  private tmpHostLocal = new THREE.Vector3();
   private tmpConstellationAbs = new THREE.Vector3();
   private tmpBound = new THREE.Sphere();
 

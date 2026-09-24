@@ -83,7 +83,7 @@ export function createPlanetLabels(stellata: Stellata): void {
       setGroupVisible(false);
       return;
     }
-    const positions = stellata.getFocusedPlanetLocalPositions();
+    const positions = stellata.solarSystem.focusedPlanetLocalPositions();
     if (!positions || positions.length / 3 !== entries.length) {
       setGroupVisible(false);
       return;
@@ -111,7 +111,7 @@ export function createPlanetLabels(stellata: Stellata): void {
       // moons parent-centred): a ring the pixel-gap heuristic suppressed
       // means the body is floor-clamped sub-pixel anyway, so the label
       // would attach to nothing.
-      if (!stellata.isOrbitRingResolvable(i)) {
+      if (!stellata.solarSystem.orbitRings.isOrbitRingResolvable(i)) {
         e.el.style.display = 'none';
         continue;
       }

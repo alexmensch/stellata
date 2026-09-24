@@ -158,7 +158,8 @@ Four things follow, and each has cost a defect:
 
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
-`exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`, plus the
+`exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
+`solarSystem`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -227,13 +228,12 @@ an empty awaiting list.
 | Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
 | Dust particles (shelved) | `dust/`, or removed — a product call | `hhaw.32.7` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
-| Solar-system wiring | `solar-system/` | `hhaw.32.9` |
 | Galactic + HUD | `galactic/`, `overlays/` | `hhaw.32.10` |
 | Star render machinery | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 
-**Three values cross a row boundary**, and whichever row moves first settles
-the interface for both:
+**Values crossing a row boundary** — whichever row moves first settles the
+interface for both:
 
 - The frame's camera velocity — owned by `ClockCadence`
   (`render-gate/cadence/README.md` § The controller); `applyRideDelta`
@@ -248,9 +248,9 @@ the interface for both:
   CadenceReport` callback; the callback's type carries no `null`, so the
   not-ready answer stays inside the provider for 32.5 and cns.16 to change
   in one place.
-- **The planet rate** — `planetBodyField.cadenceReport(cc)`, in the
-  moving-focal-ride entry as well as the three solar-system ones; the same
-  callback shape.
+- **The planet rate** — settled as `solarSystem.planetRate`, a `(cc) =>
+  CadenceReport` (`solar-system/README.md` § Wiring); the moving-focal-ride
+  entry takes it, and the rides carry that `rate` with them.
 
 ### Late-attached slots
 

@@ -81,6 +81,13 @@ src/client/solar-system/
                                   ../local-depth/README.md.
   local-cluster-pure.ts (+ test)  Activation predicate + orbit-ring
                                   extent radius, pure. Vitest-pinned.
+  solar-system-wiring.ts (+ test) SolarSystemWiring — the shell's
+                                  `solarSystem` namespace. Owns the orbit
+                                  rings (handed in, § Wiring) and the
+                                  cluster, feeds the rings each
+                                  'planetSystem' change, and builds the
+                                  orbit-ring, planet-mesh and cluster
+                                  registry entries plus `planetRate`.
   first-load.ts (+ test)          Canonical no-URL first-load view: 5 AU
                                   galactic-centre-aimed park.
 ```
@@ -284,6 +291,21 @@ pixels deep at the planet-focus zoom floor, blanking labels in open sky.
 The activation predicate and the orbit-ring extent radius are pure and
 vitest-pinned in `local-cluster-pure.ts`; `RING_EXTENT_MARGIN` is also
 read by `../binaries/orbit-paths/binary-orbit-path-layer.ts`.
+
+## Wiring
+
+`SolarSystemWiring` builds its three registry entries; `stellata.ts` registers
+them, because each one's place in the frame is a claim about other layers that
+only registration order can state: the rings after the body field (a moon ring
+centres on its parent's live position), the planet mesh below every camera
+write (`../scene/README.md` § Camera writes, then camera reads), the cluster
+after both. All three, and the shell's moving-focal ride, declare
+`planetRate` — the bodies are what each one draws a view of.
+
+**The shell constructs the orbit rings and hands them in**, ahead of the
+binary orbit path layer. Both draw at in-pass renderOrder 3.2 and three
+breaks an equal-depth tie by object id, so constructing the rings inside the
+wiring — after the kind modules attach — would reorder the two.
 
 ## First-load default and `minDistance` relaxation
 

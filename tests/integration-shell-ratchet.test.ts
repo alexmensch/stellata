@@ -11,7 +11,7 @@ const COMPOSITION: readonly string[] = [
   'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
-  'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
+  'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
 ];
 
 const AWAITING_EXTRACTION: readonly string[] = [
@@ -25,9 +25,9 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'dust', 'dustParticleSource', 'dustParticles',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
   'frameCtx', 'galacticDisc', 'glslResidentsChecked',
-  'lastParticleStrength', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
-  'pickSizeScratch', 'solarCluster', 'starAttrs', 'starFrame',
-  'starLocalCluster', 'tmpBound', 'tmpConstellationAbs', 'tmpHostLocal', 'tmpVec3b',
+  'lastParticleStrength', 'offCatalogRecords', 'passDebugScratch',
+  'pickSizeScratch', 'starAttrs', 'starFrame',
+  'starLocalCluster', 'tmpBound', 'tmpConstellationAbs', 'tmpVec3b',
   'trackballSettle', 'webgpuStarLayer',
 ];
 

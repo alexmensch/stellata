@@ -85,8 +85,10 @@ describe('createPlanetLabels — the OBSERVE anchor body', () => {
         },
         getMonochrome: () => false,
         declutter: { permits: () => true },
-        getFocusedPlanetLocalPositions: () => new Float32Array([0, 0, 0, 0.1, 0, 0]),
-        isOrbitRingResolvable: () => true,
+        solarSystem: {
+          focusedPlanetLocalPositions: () => new Float32Array([0, 0, 0, 0.1, 0, 0]),
+          orbitRings: { isOrbitRingResolvable: () => true },
+        },
         camera,
         occluders: { hides: () => false },
       } as unknown as Stellata;
