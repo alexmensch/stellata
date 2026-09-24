@@ -27,7 +27,7 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'frameCtx', 'glslResidentsChecked',
   'lastParticleStrength', 'offCatalogRecords', 'passDebugScratch',
   'pickSizeScratch', 'starAttrs', 'starFrame',
-  'starLocalCluster', 'tmpConstellationAbs', 'tmpVec3b',
+  'starLocalCluster', 'tmpConstellationAbs',
   'trackballSettle', 'webgpuStarLayer',
 ];
 

@@ -75,8 +75,6 @@ export interface HudUpdateOpts {
   camera: THREE.PerspectiveCamera;
   /** Orbit target in local frame — used as origin when unfocused. */
   target: THREE.Vector3;
-  /** Floating-origin offset (catalog absolute → local). */
-  worldOffset: THREE.Vector3;
   /** Focused star's local-frame position, or null when unfocused. */
   focusedLocal: THREE.Vector3 | null;
   /** True when the focused star is Sol — Sol arrow hidden in that case. */
@@ -102,6 +100,44 @@ export interface HudUpdateOpts {
   h: number;
 }
 
+export interface HudElements {
+  ring: SVGCircleElement;
+  solPath: SVGPathElement;
+  solBg: SVGPathElement;
+  gcPath: SVGPathElement;
+  gcBg: SVGPathElement;
+  solLabel: SVGTextElement;
+  gcLabel: SVGTextElement;
+}
+
+export function hudElementsById(doc: Document): HudElements {
+  const byId = <T>(id: string) => doc.getElementById(id) as unknown as T;
+  return {
+    ring: byId('hud-ring'),
+    solPath: byId('sol-arrow'),
+    solBg: byId('sol-arrow-bg'),
+    gcPath: byId('gc-arrow'),
+    gcBg: byId('gc-arrow-bg'),
+    solLabel: byId('sol-arrow-label'),
+    gcLabel: byId('gc-arrow-label'),
+  };
+}
+
+export interface HudOverlayDeps {
+  elements: HudElements;
+  /** Floating-origin offset (catalog absolute → local), read live. */
+  worldOffset: Readonly<THREE.Vector3>;
+  aimAt: (localPoint: THREE.Vector3) => void;
+}
+
+function solLocalInto(worldOffset: Readonly<THREE.Vector3>, out: THREE.Vector3): THREE.Vector3 {
+  return out.copy(worldOffset).negate();
+}
+
+function gcLocalInto(worldOffset: Readonly<THREE.Vector3>, out: THREE.Vector3): THREE.Vector3 {
+  return out.copy(GALACTIC_CENTRE_PC).sub(worldOffset);
+}
+
 /**
  * The HUD: Sol/GC locator arrows + the OBSERVE-mode screen-centred ring.
  * One feature, one module. Future HUD widgets (e.g. compass tick marks,
@@ -125,6 +161,7 @@ export class HudOverlay {
   private gcBg: SVGPathElement;
   private solLabel: SVGTextElement;
   private gcLabel: SVGTextElement;
+  private readonly worldOffset: Readonly<THREE.Vector3>;
 
   // Most-recently rendered shaft length per arrow, in CSS pixels. 0 when the
   // arrow was hidden this frame. `update` feeds them straight into the shared
@@ -146,6 +183,7 @@ export class HudOverlay {
   private tmpOrigin = new THREE.Vector3();
   private tmpSolLocal = new THREE.Vector3();
   private tmpGcLocal = new THREE.Vector3();
+  private tmpAim = new THREE.Vector3();
   private tmpOriginScreen: [number, number] = [0, 0];
   private tmpTargetScreen: [number, number] = [0, 0];
   private tmpScreenDir: [number, number] = [0, 0];
@@ -162,26 +200,17 @@ export class HudOverlay {
   private onSolLabelClick: (() => void) | null = null;
   private onGcLabelClick: (() => void) | null = null;
 
-  constructor(
-    ring: SVGCircleElement,
-    solPath: SVGPathElement,
-    solBg: SVGPathElement,
-    gcPath: SVGPathElement,
-    gcBg: SVGPathElement,
-    solLabel: SVGTextElement,
-    gcLabel: SVGTextElement,
-    onSolClick: () => void,
-    onGcClick: () => void,
-  ) {
-    this.ring = ring;
-    this.solPath = solPath;
-    this.solBg = solBg;
-    this.gcPath = gcPath;
-    this.gcBg = gcBg;
-    this.solLabel = solLabel;
-    this.gcLabel = gcLabel;
-    this.onSolLabelClick = onSolClick;
-    this.onGcLabelClick = onGcClick;
+  constructor({ elements, worldOffset, aimAt }: HudOverlayDeps) {
+    this.ring = elements.ring;
+    this.solPath = elements.solPath;
+    this.solBg = elements.solBg;
+    this.gcPath = elements.gcPath;
+    this.gcBg = elements.gcBg;
+    this.solLabel = elements.solLabel;
+    this.gcLabel = elements.gcLabel;
+    this.worldOffset = worldOffset;
+    this.onSolLabelClick = () => aimAt(solLocalInto(worldOffset, this.tmpAim));
+    this.onGcLabelClick = () => aimAt(gcLocalInto(worldOffset, this.tmpAim));
     this.solLabel.addEventListener('click', this.onSolLabelClick);
     this.gcLabel.addEventListener('click', this.onGcLabelClick);
     this.hideAll();
@@ -205,17 +234,11 @@ export class HudOverlay {
       return;
     }
 
-    const { camera, target, worldOffset, focusedLocal, hideSolArrow,
+    const { camera, target, focusedLocal, hideSolArrow,
             sizeMaxPx, cameraMode, transition, focusedDiscRadiusPx, w, h } = opts;
 
-    // Sol's local-frame position is `-worldOffset` (Sol is the catalog
-    // origin); GC is the absolute GC vector minus the same offset.
-    this.tmpSolLocal.set(-worldOffset.x, -worldOffset.y, -worldOffset.z);
-    this.tmpGcLocal.set(
-      GALACTIC_CENTRE_PC.x - worldOffset.x,
-      GALACTIC_CENTRE_PC.y - worldOffset.y,
-      GALACTIC_CENTRE_PC.z - worldOffset.z,
-    );
+    solLocalInto(this.worldOffset, this.tmpSolLocal);
+    gcLocalInto(this.worldOffset, this.tmpGcLocal);
 
     // Origin: the focal star (or controls.target if unfocused) is what the
     // arrows project from and what distance labels measure to.

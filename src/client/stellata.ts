@@ -17,12 +17,9 @@ import { GalacticReference } from './galactic/galactic-reference';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
 import type { OrbitFramePort } from './attitude/attitude-pure';
 import { focusFrameInputs } from './attitude/focus-frame';
-import { HudOverlay } from './overlays/hud-overlay';
+import { HudOverlay, hudElementsById } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
-import {
-  GALACTIC_CENTRE_PC,
-  GALACTIC_NORTH_POLE_ICRS,
-} from './galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
@@ -851,22 +848,11 @@ export class Stellata implements FrameAnchor {
       focusFrameInputs: (target) => focusFrameInputs(this, target),
       onFocus: (handler) => this.bus.on('focus', handler),
     });
-    const hudRing = document.getElementById('hud-ring') as unknown as SVGCircleElement;
-    const solPath = document.getElementById('sol-arrow') as unknown as SVGPathElement;
-    const solBg = document.getElementById('sol-arrow-bg') as unknown as SVGPathElement;
-    const gcPath = document.getElementById('gc-arrow') as unknown as SVGPathElement;
-    const gcBg = document.getElementById('gc-arrow-bg') as unknown as SVGPathElement;
-    const solLabel = document.getElementById('sol-arrow-label') as unknown as SVGTextElement;
-    const gcLabel = document.getElementById('gc-arrow-label') as unknown as SVGTextElement;
-    // Clicking either label aims the camera at the named object. Sol's
-    // local-frame position is just `-worldOffset` (Sol is the catalog
-    // origin); GC sits at GALACTIC_CENTRE_PC in absolute space. Handlers are
-    // owned by HudOverlay so its dispose() can detach them.
-    this.hud = new HudOverlay(
-      hudRing, solPath, solBg, gcPath, gcBg, solLabel, gcLabel,
-      () => this.aimAt(this.tmpVec3b.copy(this.worldOffset).negate()),
-      () => this.aimAt(this.tmpVec3b.copy(GALACTIC_CENTRE_PC).sub(this.worldOffset)),
-    );
+    this.hud = new HudOverlay({
+      elements: hudElementsById(document),
+      worldOffset: this.worldOffset,
+      aimAt: (localPoint) => this.aimAt(localPoint),
+    });
 
     // Milky Way volumetric disc. A flattened ellipsoid mesh anchored at
     // the galactic centre; the fragment shader does a bounded raymarch
@@ -1114,6 +1100,7 @@ export class Stellata implements FrameAnchor {
       setMonochrome: (on) => this.hud.setMonochrome(on),
       dispose: () => this.hud.dispose(),
     });
+    const milkyWayCameraAbs = new THREE.Vector3();
     this.layers.register({
       // Skybox re-anchored to camera.position; the raymarch reads the
       // absolute camera. No `t` dependence.
@@ -1121,7 +1108,7 @@ export class Stellata implements FrameAnchor {
       contribution: {
         kind: 'gated',
         skip: (ctx) => ctx.exposure === null ? null : this.milkyway.contributionSkip(
-          ctx.exposure, cameraAbsInto(ctx, this.tmpVec3b), ctx.warpActive),
+          ctx.exposure, cameraAbsInto(ctx, milkyWayCameraAbs), ctx.warpActive),
         setContributing: (on) => this.milkyway.setContributing(on),
       },
       // Re-anchors the skybox mesh to camera.position and refreshes the
@@ -1900,7 +1887,6 @@ export class Stellata implements FrameAnchor {
     return layer ? { count: layer.clouds.length, clouds: layer.clouds } : null;
   }
 
-  private tmpVec3b = new THREE.Vector3();
   private tmpConstellationAbs = new THREE.Vector3();
 
   /** The core depth-mask's one visibility write. Whether it should be on
@@ -2559,7 +2545,6 @@ export class Stellata implements FrameAnchor {
       enabled: this.filter.showHud,
       camera: this.camera,
       target: this.controls.target,
-      worldOffset: this.worldOffset,
       focusedLocal,
       hideSolArrow: isSolFocus,
       sizeMaxPx: this.filter.sizeMax,
