@@ -3,7 +3,6 @@
 // leaving a pointer that still reads as authoritative.
 
 import { describe, expect, it } from 'vitest';
-import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, extname, join, relative, resolve } from 'node:path';
 import {
@@ -12,6 +11,7 @@ import {
   resolveDocPath,
   sectionTitles,
 } from './doc-pointer-pure';
+import { gitFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const SCANNED_EXTS = ['.ts', '.js', '.md', '.py'];
@@ -21,14 +21,8 @@ const SCANNED_EXTS = ['.ts', '.js', '.md', '.py'];
 const S = '§';
 
 function scannedFiles(): string[] {
-  const listed = execFileSync(
-    'git',
-    ['ls-files', '-z', '--cached', '--others', '--exclude-standard'],
-    { cwd: ROOT, encoding: 'utf8' },
-  );
   // CLAUDE.md is a symlink to AGENTS.md and would double every finding in it.
-  return listed
-    .split('\0')
+  return gitFiles(ROOT, [], { untracked: true })
     .filter((name) => SCANNED_EXTS.includes(extname(name)))
     .map((name) => join(ROOT, name))
     .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());

@@ -199,15 +199,17 @@ doc-pointer-pure.ts      Not a test — extraction, resolution and heading
                          matching for doc-pointer-resolution.test.ts.
                          Behaviour is documented in § Doc-pointer
                          resolution below, not in the module.
-walk-files.ts            Not a test — the recursive file walk the
-                         scanners above share (code-comment-rules,
-                         bundle-content, shader-frag-depth, both TSL
-                         rosters), taking `include` / `skipDir`
-                         predicates. Follows symlinked directories, which
-                         public/ carries. Also `isProductionTs`, the
-                         include predicate the three TSL scanners share:
-                         a .ts that is neither a test nor an ambient
-                         declaration. webgpu-import-boundary.test.ts keeps
+walk-files.ts            Not a test — file enumeration the scanners above
+                         share. `walkFiles` is a recursive walk taking
+                         `include` / `skipDir` predicates, and follows
+                         symlinked directories, which public/ carries.
+                         `gitFiles` is git's list (tracked, optionally
+                         untracked-but-not-ignored), for a scan whose
+                         scope is the repo rather than a folder list.
+                         Also `isProductionTs`, the include predicate the
+                         TSL scanners share: a .ts that is neither a test
+                         nor an ambient declaration.
+                         webgpu-import-boundary.test.ts keeps
                          its own broader `isClientSource` — a declaration
                          file can carry an import, so that corpus wants
                          globals.d.ts in scope.

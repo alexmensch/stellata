@@ -1,8 +1,8 @@
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { catalogChunkFilename, readCatalogHeader } from '../scripts/catalog/record/catalog-pure';
+import { gitFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 const CHUNK = join(ROOT, 'public', catalogChunkFilename(0));
@@ -45,9 +45,7 @@ const PROSE_SURFACES = [
 const SIZE_FIGURE = /\b\d\d\d(?:,\d{3}|k)\b/g;
 
 function scannedFiles(): string[] {
-  return execFileSync('git', ['ls-files', 'src', 'docs', 'scripts', 'tests',
-    ...ROOT_FILES], { cwd: ROOT, encoding: 'utf8' })
-    .trim().split('\n')
+  return gitFiles(ROOT, ['src', 'docs', 'scripts', 'tests', ...ROOT_FILES])
     .filter((f) => /\.(ts|js|md|html|css|cff|json|txt)$/.test(f))
     .filter((f) => f !== 'tests/star-count-consistency.test.ts');
 }

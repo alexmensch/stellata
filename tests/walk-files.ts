@@ -1,4 +1,5 @@
-// Recursive file walk shared by the repo-meta scanners.
+// File enumeration shared by the repo-meta scanners: a recursive walk, or git's list.
+import { execFileSync } from 'node:child_process';
 import { readdirSync, statSync, type Dirent } from 'node:fs';
 import { join } from 'node:path';
 
@@ -37,4 +38,16 @@ export function* walkFiles(dir: string, opts: WalkOptions = {}): Generator<strin
       yield path;
     }
   }
+}
+
+export function gitFiles(
+  root: string,
+  pathspecs: string[] = [],
+  { untracked = false }: { untracked?: boolean } = {},
+): string[] {
+  const args = ['ls-files', '-z', '--cached'];
+  if (untracked) args.push('--others', '--exclude-standard');
+  return execFileSync('git', [...args, '--', ...pathspecs], { cwd: root, encoding: 'utf8' })
+    .split('\0')
+    .filter((name) => name !== '');
 }
