@@ -78,7 +78,7 @@ panel, modal and HUD container. Two properties a reader has to know before
 editing it:
 
 - **Source order inside `#overlay` is paint order** — later children sit on
-  top. `src/client/README.md` § Full render stack is the authority on which
+  top. `src/client/scene/README.md` § Full render stack is the authority on which
   layer wins which pixel, and the ordering there is this file's ordering.
 - **The `<noscript>` block is the crawler and no-JavaScript fallback**, and
   it is the only prose about the project inside the application. It is not
