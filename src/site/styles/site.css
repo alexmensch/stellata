@@ -220,10 +220,6 @@ video {
 .flow > h2 {
   --flow-space: var(--space-l);
 }
-.flow > h3,
-.flow > .label {
-  --flow-space: var(--space-m);
-}
 .flow > .label + * {
   --flow-space: var(--space-2xs);
 }
@@ -239,7 +235,6 @@ video {
 .cluster {
   display: flex;
   flex-wrap: wrap;
-  justify-content: var(--cluster-justify, flex-start);
   align-items: var(--cluster-align, center);
   gap: var(--cluster-space, var(--space-s) var(--space-m));
 }
@@ -356,7 +351,6 @@ video {
   position: relative;
   z-index: var(--layer-hero-copy);
   align-self: end;
-  inline-size: 100%;
   padding-block: var(--space-xl) var(--space-l-xl);
   text-shadow: var(--text-halo);
 }
@@ -369,9 +363,6 @@ video {
 }
 .hero-copy h1 {
   max-inline-size: var(--measure-micro);
-}
-.hero-copy .lead {
-  color: var(--fg);
 }
 
 /* ── Block: readout ────────────────────────────────────────────────── */
@@ -469,7 +460,7 @@ video {
   text-decoration: none;
   border: var(--rule);
 }
-a.sight-media:hover {
+.sight-media:hover {
   border-color: var(--accent);
 }
 .sight-media > img,
@@ -499,9 +490,6 @@ a.sight-media:hover {
   color: var(--fg);
 }
 .sight-go {
-  --flow-space: var(--space-xs);
-
-  font-size: var(--step--1);
   letter-spacing: var(--tracking-cta);
 }
 
@@ -542,9 +530,6 @@ a.sight-media:hover {
 .holder b {
   font-weight: var(--weight-medium);
   color: var(--fg);
-}
-.holder code {
-  overflow-wrap: anywhere;
 }
 
 /* ── Block: pill ───────────────────────────────────────────────────── */
@@ -758,8 +743,4 @@ a.sight-media:hover {
 
 .measure {
   max-inline-size: var(--measure) !important;
-}
-
-.dim {
-  color: var(--fg-dim) !important;
 }

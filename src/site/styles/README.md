@@ -26,7 +26,7 @@ utility at all: anything a block must be able to override is **not** one. A
 rule with a state, a descendant selector, or a value a block legitimately
 changes is a block — which is why `.label`, `.lead`, `.aside` and
 `.skip-link` sit in the block layer despite looking like text utilities, and
-only `.wrapper`, `.measure` and `.dim` are utilities.
+only `.wrapper` and `.measure` are utilities.
 
 **The call to action is an exception, not a block.** `.pill[data-primary]`
 fills the pill with the accent and inverts its text to the page ground; plain
