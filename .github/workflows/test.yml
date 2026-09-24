@@ -92,10 +92,7 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      # The regenerate-and-diff stage below is a pure function of the files
-      # this key digests (scripts/ci/README.md), so a PR whose key matches a
-      # saved build restores that build's outputs and skips the stage. Push
-      # to main always rebuilds, so every merged commit is verified uncached.
+      # see scripts/ci/README.md § The catalogue build cache
       - id: catalog-key
         run: |
           key=$(pnpm exec tsx scripts/ci/catalog-stage.ts key)
@@ -140,11 +137,6 @@ jobs:
       - name: Tier-A star corpus
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
-      # The exact build deploy.yml ships (`pnpm run build`, whose remaining
-      # stages are build:binaries — pinned to the committed multiples.tsv by
-      # build-binaries above — and build:catalog, done here), checked against
-      # the Cloudflare Workers per-asset limit; wrangler otherwise only
-      # rejects it after merge.
       - id: deploy-build
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm run build:client
