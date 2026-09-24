@@ -12,20 +12,10 @@ import {
   type ChunkVerifyReport,
 } from './loaders/dust-voxel-readback';
 import { DustParticleLayer } from './dust/dust-particle-layer';
-import {
-  GalacticDisc,
-  GALACTIC_DISC_BOUND_PC,
-  galacticDiscOpacity,
-} from './galactic/galactic-disc';
+import { GalacticDisc } from './galactic/galactic-disc';
+import { GalacticReference } from './galactic/galactic-reference';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
-import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
-import {
-  COORD_SPHERE_SPECS,
-  DRAWN_COORD_SPHERE_FRAMES,
-} from './galactic/coord-spheres/coord-sphere-frames';
-import {
-  frameAfterFocusChange, frameAvailableFor, type OrbitFramePort,
-} from './attitude/attitude-pure';
+import type { OrbitFramePort } from './attitude/attitude-pure';
 import { focusFrameInputs } from './attitude/focus-frame';
 import { HudOverlay } from './overlays/hud-overlay';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
@@ -360,13 +350,7 @@ export class Stellata implements FrameAnchor {
   // roll gestures. See camera/controls/input/README.md § Input controller.
   readonly input!: InputController;
 
-  // Galactic reference layers. Disc fades in by camera-distance
-  // from Sol and is always-on. The coordinate spheres are gated by
-  // `filter.coordSphere`, which admits only one of them at a time.
-  // The HUD (Sol/GC arrows + OBSERVE-mode ring) is gated by
-  // `filter.showHud`. Mono mode swaps strokes to a paper-chart palette via
-  // setMonochrome on each layer (HUD is CSS-only).
-  private galacticDisc: GalacticDisc;
+  readonly galactic: GalacticReference;
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
@@ -410,7 +394,6 @@ export class Stellata implements FrameAnchor {
   pickVisibility(): PickVisibility {
     return { occluders: this.occluders, cameraPos: this.camera.position };
   }
-  private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
   readonly hud: HudOverlay;
   /** `chart-mode.ts` starts / stops it on the chart activation predicate;
    *  the shell owns its lifetime. */
@@ -620,8 +603,9 @@ export class Stellata implements FrameAnchor {
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
     // existing #overlay so it shares the distance vector's stroke + halo
     // styling and inherits the `body.warping` hide rule for free.
-    this.galacticDisc = new GalacticDisc(this.chromeLines);
-    this.scene.add(this.galacticDisc.group);
+    // Constructed here, not by GalacticReference — galactic/README.md § Wiring.
+    const galacticDisc = new GalacticDisc(this.chromeLines);
+    this.scene.add(galacticDisc.group);
     // Ahead of the binary orbit paths — solar-system/README.md § Wiring.
     const orbitRings = new OrbitRingsLayer(this.chromeLines);
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
@@ -841,14 +825,6 @@ export class Stellata implements FrameAnchor {
     // the shared ride slot safe when the kind changes but the index
     // collides (planet 3 → probe 3).
     this.on('focus', () => { this._movingRideIdx = null; });
-    // A frame the new focus gives no meaning to is demoted to that object's
-    // own default rather than left measuring nothing — attitude/README.md
-    // § Which frame, and who chooses.
-    this.on('focus', (target) => {
-      const next = frameAfterFocusChange(
-        this.filter.coordSphere, focusFrameInputs(this, target));
-      if (next !== this.filter.coordSphere) this.filters.setFilter({ coordSphere: next });
-    });
     // Every fine-grained mutation the figure's active set reads — focus,
     // filter, cameraMode — pairs with 'state', and so does the observe
     // transition's landing, which no fine-grained event covers.
@@ -862,13 +838,19 @@ export class Stellata implements FrameAnchor {
       this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
     this.on('cameraMode', () => this.observeLookPin.invalidate());
-    this.coordSpheres = Object.fromEntries(
-      DRAWN_COORD_SPHERE_FRAMES.map((frame) =>
-        [frame, new CoordSphere(COORD_SPHERE_SPECS[frame], this.chromeLines)]),
-    ) as Record<DrawnCoordSphereFrame, CoordSphere>;
-    for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-      this.scene.add(this.coordSpheres[frame].group);
-    }
+    this.galactic = new GalacticReference({
+      disc: galacticDisc,
+      scene: this.scene,
+      chromeLines: this.chromeLines,
+      worldOffset: this.worldOffset,
+      detailPermits: (id) => this.declutter.permits(id),
+      coordSphere: () => this.filter.coordSphere,
+      setCoordSphere: (frame) => this.filters.setFilter({ coordSphere: frame }),
+      cameraMode: () => this.focus.getCameraMode(),
+      focusedTarget: () => this.focus.getFocusedTarget(),
+      focusFrameInputs: (target) => focusFrameInputs(this, target),
+      onFocus: (handler) => this.bus.on('focus', handler),
+    });
     const hudRing = document.getElementById('hud-ring') as unknown as SVGCircleElement;
     const solPath = document.getElementById('sol-arrow') as unknown as SVGPathElement;
     const solBg = document.getElementById('sol-arrow-bg') as unknown as SVGPathElement;
@@ -1117,50 +1099,9 @@ export class Stellata implements FrameAnchor {
       setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
-    this.layers.register({
-      // Fixed galactic reference geometry, camera-anchored.
-      timeBehaviour: { kind: 'static' },
-      contribution: {
-        kind: 'gated',
-        // Opacity first: it is a scalar on `distFromSol` and it is what
-        // fires at the app default view, where the camera sits inside the
-        // ring and no frustum test could. The frustum half only reaches
-        // vantages outside the disc, which are also the only ones that can
-        // turn away from it.
-        skip: (ctx) => {
-          if (galacticDiscOpacity(ctx.distFromSol) <= 0) return 'opacity';
-          this.tmpBound.center.copy(GALACTIC_CENTRE_PC).sub(this.worldOffset);
-          this.tmpBound.radius = GALACTIC_DISC_BOUND_PC;
-          return ctx.frustum.intersectsSphere(this.tmpBound) ? null : 'frustum';
-        },
-        setContributing: (on) => { this.galacticDisc.group.visible = on; },
-      },
-      update: (ctx) => updateWarpGatedRefLayer(
-        this.galacticDisc, ctx, this.declutter.permits('galacticDiscWireframe')),
-      setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
-      dispose: () => this.galacticDisc.dispose(),
-    });
-    this.layers.register({
-      // Camera-tracked frames, so nothing here moves with the clock.
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      update: (ctx) => {
-        for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-          const sphere = this.coordSpheres[frame];
-          const on = !ctx.warpActive && this.coordSphereDrawn(frame);
-          sphere.group.visible = on;
-          if (on) sphere.update(ctx.camera.position);
-        }
-      },
-      setMonochrome: (on) => {
-        for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-          this.coordSpheres[frame].setMonochrome(on);
-        }
-      },
-      dispose: () => {
-        for (const frame of DRAWN_COORD_SPHERE_FRAMES) this.coordSpheres[frame].dispose();
-      },
-    });
+    // Below the orbit lock — galactic/README.md § Wiring.
+    this.layers.register(this.galactic.discEntry);
+    this.layers.register(this.galactic.coordSpheresEntry);
     this.layers.register({
       // Pure projection: it reads the focal position and projects arrow
       // tips, adding no motion of its own. Whatever it points at is
@@ -1961,7 +1902,6 @@ export class Stellata implements FrameAnchor {
 
   private tmpVec3b = new THREE.Vector3();
   private tmpConstellationAbs = new THREE.Vector3();
-  private tmpBound = new THREE.Sphere();
 
   /** The core depth-mask's one visibility write. Whether it should be on
    *  is the layer's contribution verdict; this is only the apply. */
@@ -2049,23 +1989,6 @@ export class Stellata implements FrameAnchor {
   setCameraFov(fov: number) {
     this.filters.setCameraFov(fov);
     this.syncPixelSolidAngle();
-  }
-
-  /** Is `frame`'s sphere on screen? Observe mode only — in navigate the
-   *  attitude indicator carries the frame instead, and two instruments
-   *  answering "which way is north" at once is what let them drift apart.
-   *  Warp gating is the layer's, not this: the SVG labels hide in warp
-   *  through `body.warping` rather than through their own predicate. */
-  coordSphereDrawn(frame: DrawnCoordSphereFrame): boolean {
-    return this.filter.coordSphere === frame
-      && this.focus.getCameraMode() === 'observe';
-  }
-
-  /** Does `frame` describe anything real from whatever is focused? The `S`
-   *  cycle, the panel's stop control and the focus-change demotion all gate on
-   *  this, so none of them can select a frame the others would reject. */
-  coordSphereAvailable(frame: DrawnCoordSphereFrame): boolean {
-    return frameAvailableFor(frame, focusFrameInputs(this, this.focus.getFocusedTarget()));
   }
 
   setMonochrome(on: boolean) {

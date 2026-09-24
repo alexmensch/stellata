@@ -159,7 +159,7 @@ Four things follow, and each has cost a defect:
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
-`solarSystem`, plus the
+`solarSystem`, `galactic`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every

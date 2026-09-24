@@ -17,9 +17,10 @@ in both navigate and observe modes.
   controls (detail level, coordinate sphere) are bound
   and synced through `../../ui/stop-control.ts` (`../../ui/README.md`
   § Stop controls), not open-coded here. Reverse-sync runs off
-  `'filter'` / `'cameraMode'`; the one exception is the coordinate-sphere
-  control's disabled state, which tracks camera distance and so rides
-  `'frame'` behind a cached flag (`../../galactic/coord-spheres/README.md`).
+  `'filter'` / `'cameraMode'`; the coordinate-sphere control's disabled
+  state rides `'focus'` / `'cameraMode'` through
+  `stellata.galactic.coordSphereAvailable` (`../../galactic/coord-spheres/README.md`
+  § A frame is offered where it describes something).
 - `input/` — canvas gestures + the camera state they drive: the click
   FSM, the two roll authorities (camera.up and the quaternion), the roll
   gestures, pinch-to-zoom, and TrackballControls' own tuning. Its

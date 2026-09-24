@@ -20,6 +20,13 @@ src/client/galactic/
                                   wireframe, on one seam stroke;
                                   always-on in dark mode, hidden in
                                   chart mode.
+  galactic-reference.ts (+ test)  GalacticReference — the shell's
+                                  `galactic` namespace. Owns the disc
+                                  (handed in, § Wiring) and the three
+                                  coordinate spheres, builds their two
+                                  registry entries, answers
+                                  coordSphereDrawn / coordSphereAvailable,
+                                  and runs the focus-change frame demotion.
   galactic-fade.ts (+ test)       Both distance-from-Sol curves
                                   (§ Distance fades): the far-field
                                   reveal FADE_INNER_PC / FADE_OUTER_PC
@@ -92,6 +99,18 @@ wireframe layer so both reveal in lockstep). In chart mode the layer is
 hidden entirely — a 15 kpc reference ring reads as visual noise on a
 paper-chart aesthetic, and the arrows + sphere already provide
 orientation.
+
+## Wiring
+
+`GalacticReference` builds the disc and coordinate-sphere registry entries;
+`stellata.ts` registers them below the orbit lock, where the disc's frustum
+test is legal.
+
+**The shell constructs the disc and hands it in**, before the kind modules
+attach. The disc and the Local Bubble shell are both transparent at
+renderOrder −1 and both centred on Sol, so their depths tie exactly and three
+falls back to object id; constructing the disc after the modules would flip
+which of the two draws first.
 
 ## Distance fades
 

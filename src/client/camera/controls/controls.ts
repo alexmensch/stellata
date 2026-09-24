@@ -224,7 +224,7 @@ export function bindControls(stellata: Stellata) {
       if (frame === undefined) continue;
       btn.disabled = !observing
         || (frame !== 'none'
-          && !stellata.coordSphereAvailable(frame as DrawnCoordSphereFrame));
+          && !stellata.galactic.coordSphereAvailable(frame as DrawnCoordSphereFrame));
     }
   };
   stellata.on('focus', syncCoordSphereStops);

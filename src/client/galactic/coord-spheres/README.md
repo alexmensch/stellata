@@ -9,7 +9,8 @@ HUD.
 **Drawn in OBSERVE mode only.** In navigate the attitude indicator carries the
 frame instead (`../../attitude/README.md`), and the two instruments are never
 on screen together: one answer to "which way is north" at a time is what stops
-them drifting apart. `Stellata.coordSphereDrawn(frame)` is that predicate, and
+them drifting apart. `stellata.galactic.coordSphereDrawn(frame)`
+(`../galactic-reference.ts`) is that predicate, and
 both the layer and the label pools read it rather than re-deriving it.
 
 ## Files in this area
@@ -164,7 +165,7 @@ in `../../attitude/attitude-pure.ts` because the same answer governs the
 instrument: `frameAvailableFor` reads it off `autoFrameFor` rather than
 restating "in Sol's system", so the two cannot drift. Galactic everywhere, the
 ecliptic wherever the focus rule already lands inside Sol's system, RA/Dec on
-Earth alone. `Stellata.coordSphereAvailable` binds it to the live focus, and
+Earth alone. `stellata.galactic.coordSphereAvailable` binds it to the live focus, and
 the `S` cycle, the panel's stops and the demotion below all gate on that one
 predicate.
 
