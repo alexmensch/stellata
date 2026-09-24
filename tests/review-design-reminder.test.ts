@@ -58,6 +58,7 @@ describe('review-design-reminder', () => {
     expect(prompt('please run /pr-review later')).toBeNull();
     expect(prompt('/pr-reviewer 12')).toBeNull();
     expect(prompt('pr-review 610')).toBeNull();
+    expect(prompt('/Users/me/.claude/skills/pr-review is odd')).toBeNull();
   });
 
   it('arms on a Skill call naming pr-review under any scope, and never blocks it', () => {

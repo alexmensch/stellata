@@ -120,7 +120,8 @@ review-design-reminder.test.ts
                          scripts/hooks/review-design-reminder.sh: silent
                          until a review starts, armed by a `/pr-review`
                          first word or a Skill call under any scope (not a
-                         mention, not `/pr-reviewer`), scoped to its
+                         mention, not `/pr-reviewer`, not a path ending
+                         `/pr-review`), scoped to its
                          session, never blocking, and one line long.
 shader-frag-depth.test.ts
                          gl_FragDepth roster: no shader may

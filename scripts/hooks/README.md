@@ -68,9 +68,11 @@ scripts/hooks/
                            pinned by tests/review-design-reminder.test.ts.
   skill-name.sh            Sourced, not registered: `is_skill`, the one
                            answer to "does this Skill call name skill X"
-                           under any scoped spelling (`x`, `prefix:x`,
-                           `prefix/x`) — a worktree-scoped listing
-                           invokes `.claude/worktrees/<wt>:x`.
+                           under any scoped spelling (`x`, `prefix:x`)
+                           — a worktree-scoped listing invokes
+                           `.claude/worktrees/<wt>:x`. Nothing after a
+                           `/` counts, so a prompt opening with a path
+                           ending `/pr-review` does not arm.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
                            commit-sweep-guard.sh. The two hand-copied
