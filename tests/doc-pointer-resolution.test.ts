@@ -9,7 +9,7 @@ import { docAnchors, extractPointers, extractRetiredPointers, extractSameFileLin
 import { gitFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh'];
+const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html'];
 
 // Fixtures interpolate their `#` and `§` from here, so no literal pointer
 // appears in this file and it stays out of its own scan.
