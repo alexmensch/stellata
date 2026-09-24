@@ -287,6 +287,11 @@ while every vertex sits in chunk 0 — measured on today's build (the
 10,288, chunk 0 ending at 10,411, a margin of 124 records that nothing
 checks yet.
 The build-time assert is 32.8's; the read is an instance on cns.16.
+A third prefix read sits outside the shell: the extinction prepass sorts its
+dispatch order over the table it attaches to, which is normally still
+streaming, and re-sorts once on the refresh that completes it
+(`webgpu/extinction/README.md` § What a CACHE owes) — another cns.16 instance,
+answered inside the pass.
 
 ## Event bus on `Stellata`
 
