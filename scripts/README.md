@@ -76,8 +76,8 @@ the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency
 
-`build:binaries`, `build:catalog` and `build:binaries-runtime` skip on a
-**content-hash stamp**, never on mtimes. Each hashes every input it reads —
+`build:binaries`, `build:catalog` and `build:binaries-runtime` — together
+`build:stamped` — skip on a **content-hash stamp**, never on mtimes. Each hashes every input it reads —
 data tables, the SID registry, every non-test module under the script folders
 it imports — and skips when that set matches `build/stamps/<step>.json` and
 every output the stamp recorded still hashes the same. The stamp is cleared
@@ -92,8 +92,9 @@ identical content leaves the catalogue skipped. Forcing a rebuild: `--force`
 on either Python step, `UPDATE_BUILD_COUNTS=1` on `build:catalog`, or delete
 the stamp.
 
-`build:clouds`, `build:local-group` and the `*-sync` mirrors are mtime-gated
-(size + mtime for the mirrors) and cost seconds cold.
+`build:clouds`, `build:local-group` and the `*-sync` mirrors — together
+`build:mtime-gated` — are mtime-gated (size + mtime for the mirrors) and cost
+seconds cold. `build:data` is `build:stamped` then `build:mtime-gated`.
 
 ## Building in a worktree
 
@@ -125,3 +126,21 @@ the worktree then writes *through* the symlinks into the main checkout's
 
 A clobbered main checkout repairs itself: its stamps record the outputs it
 built, so the next build there sees them rewritten and rebuilds.
+
+## Seeding builds — `build:seed`
+
+`pnpm run build:seed` (`build-seed.sh`) runs `build:stamped` — exactly the
+steps whose outputs seed a new worktree (§ Building in a worktree) — with one
+build per checkout. Each run registers `build/build-seed/<start ns>.<pid>`
+before looking at the others, then stops every older live run and waits for it
+to exit, or exits at once if a newer one is registered; so the newest run
+builds and no two ever build at the same time, however many start together. A
+stopped run takes its build's whole process group down (TERM, then KILL after
+30 s) before exiting, and an entry whose process is gone is deleted on sight.
+`scripts/build-seed.test.ts` pins all of this. The superseded run exits 0 with
+`superseded by a newer build:seed`; any other exit is the build's own status.
+Nothing is forced — the stamped step that was interrupted has no stamp and
+reruns, every step that finished skips (§ Preprocessor idempotency). The
+mtime-gated steps and the client are never run, so none is ever interrupted
+mid-write. Only `build:seed` runs take part: a plain `pnpm run build` or
+`pnpm run dev` in the same checkout is neither stopped nor seen.
