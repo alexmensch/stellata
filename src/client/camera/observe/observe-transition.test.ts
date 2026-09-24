@@ -156,6 +156,58 @@ describe('ObserveTransition — lifecycle + activity predicates', () => {
   });
 });
 
+describe('ObserveTransition.observeAnchorOf', () => {
+  it('names the focused object of the asked kind while observing, and nothing in navigate', () => {
+    const h = makeHarness({ mode: 'observe' });
+    h.focus.setFocusedStar(142352);
+    expect(h.observe.observeAnchorOf('star')).toBe(142352);
+    expect(h.observe.observeAnchorOf('planet')).toBeNull();
+    h.setCameraMode('navigate');
+    expect(h.observe.observeAnchorOf('star')).toBeNull();
+  });
+
+  it('answers per kind, so a planet anchor is no star anchor', () => {
+    const h = makeHarness({ mode: 'observe' });
+    h.focus.setFocusedPlanet(3);
+    expect(h.observe.observeAnchorOf('planet')).toBe(3);
+    expect(h.observe.observeAnchorOf('star')).toBeNull();
+  });
+
+  it('does not read index 0 as "no anchor"', () => {
+    const h = makeHarness({ mode: 'observe' });
+    h.focus.setFocusedStar(0);
+    expect(h.observe.observeAnchorOf('star')).toBe(0);
+  });
+
+  it('holds across both glides — exit flips the mode to navigate at glide start', () => {
+    const h = makeHarness({ mode: 'navigate' });
+    h.focus.setFocusedStar(7);
+    const startNow = 1000;
+    vi.spyOn(performance, 'now').mockReturnValue(startNow);
+    h.observe.setMode('observe', { animate: true });
+    expect(h.observe.observeAnchorOf('star')).toBe(7);
+    h.observe.tick(startNow + OBSERVE_TRANSITION_MS + 1);
+    expect(h.observe.isActive()).toBe(false);
+    expect(h.observe.observeAnchorOf('star')).toBe(7);
+
+    const exitNow = startNow + 2 * OBSERVE_TRANSITION_MS;
+    vi.spyOn(performance, 'now').mockReturnValue(exitNow);
+    h.observe.startExit({ animate: true, clearFocusOnExit: false });
+    expect(h.getCameraMode()).toBe('navigate');
+    expect(h.observe.observeAnchorOf('star')).toBe(7);
+    h.observe.tick(exitNow + OBSERVE_TRANSITION_MS + 1);
+    expect(h.observe.observeAnchorOf('star')).toBeNull();
+  });
+
+  it('ignores the navigate-mode unfocus lerp, which shares the state slot', () => {
+    const h = makeHarness({ mode: 'navigate' });
+    h.focus.setFocusedStar(7);
+    h.observe.startUnfocusLerp(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 2), 1);
+    expect(h.observe.isAnyActive()).toBe(true);
+    expect(h.observe.observeAnchorOf('star')).toBeNull();
+  });
+});
+
 describe('ObserveTransition.setMode — navigate → observe (animated)', () => {
   it('builds an enter transition, drops vectors, flips controls/cameraMode, emits cameraMode+state', () => {
     const h = makeHarness({ mode: 'navigate' });

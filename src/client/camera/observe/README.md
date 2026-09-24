@@ -34,6 +34,8 @@ Public surface of `ObserveTransition`:
 - `isActive` / `isAnyActive` / `getProgress` — observer predicates;
   `isActive` excludes the `unfocus` kind so overlays gating on observe
   visibility stay steady-state-navigate during close-zoom.
+- `observeAnchorOf(kind)` — what the camera stands on, for line layers
+  (§ The observe anchor in line layers).
 - `cancelUnfocusLerp` — `FocusOps` shim for `WarpController`.
 - `cancelTransition` — used by `FocusController.setFocus`'s observe-cleanup
   branch when the focal star is changing mid-flight.
@@ -284,6 +286,25 @@ the first frame always derives, and the `'cameraMode'` handler re-seeds it
 because the transitions write `controls.target` directly — without that, a
 mode round-trip with no rotation would keep the transition's target as the
 pin.
+
+## The observe anchor in line layers
+
+OBSERVE parks the camera ON the focal object, so any line geometry with a
+vertex there, or a curve passing through that point, degenerates: a
+segment ending at the eye projects to a point, and one passing through it
+is near-plane clipped at `w → 0` and whips under rotation. The glides are
+the visible window for the first kind, since the camera closes on the
+vertex over `OBSERVE_TRANSITION_MS`
+(`../../constellation-figure/README.md` § The observe anchor).
+
+`ObserveTransition.observeAnchorOf(kind)` is the one answer to "what is
+the camera standing on": the focused hard target's index while in OBSERVE
+**or** on an enter/exit glide — exit flips the mode to navigate at glide
+*start*, so the mode alone leaves the whole pull-out unsuppressed. Never
+the `unfocus` kind. Each line layer asks it for the kind it draws and
+drops only the geometry through that point:
+
+- constellation figure — every segment touching the anchor star.
 
 **URL state:** the OBSERVE-mode flag round-trips through the `?v=`
 blob (flags-byte bit 5), applied after camera params +

@@ -81,8 +81,7 @@ describe('selectFigures', () => {
     highlightCon: -1,
     constellationCount: 88,
     inObserve: false,
-    observeGlideActive: false,
-    focusedStar: null,
+    observeAnchorStar: null,
   };
   const sel = (patch: Partial<FigureSelectionInput> = {}) =>
     selectFigures({ ...base, ...patch });
@@ -101,32 +100,14 @@ describe('selectFigures', () => {
       .toEqual([82]);
   });
 
-  it('suppresses the anchor star only while observing', () => {
-    expect(sel({ inObserve: true, focusedStar: 142352 }).excludeStarIdx).toBe(142352);
-    expect(sel({ inObserve: false, focusedStar: 142352 }).excludeStarIdx).toBeNull();
-  });
-
-  it('holds the suppression through the observe glide, in both directions', () => {
-    // Entry emits cameraMode='observe' at glide start; exit emits
-    // 'navigate' at glide start and lands ~1.8 s later. The camera is off
-    // the anchor for both, which is the only window the segments are
-    // visible at all.
-    expect(sel({ inObserve: true, observeGlideActive: true, focusedStar: 7 }).excludeStarIdx)
-      .toBe(7);
-    expect(sel({ inObserve: false, observeGlideActive: true, focusedStar: 7 }).excludeStarIdx)
-      .toBe(7);
-    expect(sel({ inObserve: false, observeGlideActive: false, focusedStar: 7 }).excludeStarIdx)
-      .toBeNull();
-  });
-
-  it('suppresses nothing for a non-star anchor, whose focusedStar is null', () => {
-    expect(sel({ inObserve: true, focusedStar: null }).excludeStarIdx).toBeNull();
+  it('drops the segments of the star OBSERVE stands on', () => {
+    expect(sel({ observeAnchorStar: 142352 }).excludeStarIdx).toBe(142352);
+    expect(sel().excludeStarIdx).toBeNull();
   });
 
   it('does not treat star index 0 as "no anchor"', () => {
-    expect(sel({ inObserve: true, focusedStar: 0 }).excludeStarIdx).toBe(0);
-    expect(sel({ inObserve: true, focusedStar: 0 }).signature)
-      .not.toBe(sel({ inObserve: true, focusedStar: null }).signature);
+    expect(sel({ observeAnchorStar: 0 }).excludeStarIdx).toBe(0);
+    expect(sel({ observeAnchorStar: 0 }).signature).not.toBe(sel().signature);
   });
 
   it('keys the signature on every input the geometry reads', () => {
@@ -134,7 +115,7 @@ describe('selectFigures', () => {
     expect(sel({ highlightCon: 3 }).signature).not.toBe(sel({ highlightCon: 4 }).signature);
     expect(sel({ chart: true, inObserve: true }).signature)
       .not.toBe(sel({ inObserve: true }).signature);
-    expect(sel({ inObserve: true, focusedStar: 7 }).signature)
-      .not.toBe(sel({ inObserve: true, focusedStar: 8 }).signature);
+    expect(sel({ observeAnchorStar: 7 }).signature)
+      .not.toBe(sel({ observeAnchorStar: 8 }).signature);
   });
 });

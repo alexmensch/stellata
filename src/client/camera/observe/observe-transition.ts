@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { CameraMode, StellataEventMap } from '../../stellata';
-import type { Target } from '../focus/focus-target';
+import type { Target, TargetKind } from '../focus/focus-target';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';
 import type { RollController } from '../controls/input/roll-controller';
@@ -130,6 +130,16 @@ export class ObserveTransition {
    *  fire while a navigate-mode close-zoom is mid-flight. */
   isAnyActive(): boolean {
     return this.state !== null;
+  }
+
+  /** Index of the `kind` object the camera stands on — the focused hard
+   *  target while in OBSERVE or on its enter/exit glide — else null. Line
+   *  layers drop the geometry passing through that point; README.md
+   *  § The observe anchor in line layers. */
+  observeAnchorOf(kind: TargetKind): number | null {
+    if (this.deps.getCameraMode() !== 'observe' && !this.isActive()) return null;
+    const anchor = this.deps.focus.getFocusedHardTarget();
+    return anchor?.kind === kind ? anchor.idx : null;
   }
 
   /** Eased progress of the in-flight observe-mode camera translate, or

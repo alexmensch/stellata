@@ -1014,8 +1014,7 @@ export class Stellata implements FrameAnchor {
       highlightCon: f.highlightCon,
       constellationCount: this.catalog.constellations.length,
       inObserve: this.focus.getCameraMode() === 'observe',
-      observeGlideActive: this.observe.isActive(),
-      focusedStar: this.focus.getFocusedStar(),
+      observeAnchorStar: this.observe.observeAnchorOf('star'),
     });
     if (sel.signature === this.conFigureSig) return;
     this.conFigureSig = sel.signature;
