@@ -1,8 +1,10 @@
 # Harness guard hooks
 
-Tool-call guards for Claude Code. The five `.sh` files are PreToolUse /
-SessionStart hooks registered in `.claude/settings.json`; each reads the
-hook payload as JSON on stdin and answers with a `permissionDecision`.
+Harness hooks for Claude Code, registered in `.claude/settings.json`. Each
+reads the hook payload as JSON on stdin. The five guards are PreToolUse /
+SessionStart hooks answering with a `permissionDecision`;
+`review-design-reminder.sh` never blocks and answers a UserPromptSubmit with
+`additionalContext`.
 
 ## Files in this area
 
@@ -56,6 +58,14 @@ scripts/hooks/
                            invoked this session; a Skill call naming it
                            arms the session. Behaviour pinned by
                            tests/css-skill-guard.test.ts.
+  review-design-reminder.sh
+                           Once a pr-review starts in a session, adds a
+                           one-line reminder to every later prompt: apply
+                           code-craft § Design pass and state owner and
+                           enforced-by for any proposed change. Armed by a
+                           `/pr-review` prompt or a Skill call naming it.
+                           § How review-design-reminder works. Behaviour
+                           pinned by tests/review-design-reminder.test.ts.
   skill-name.sh            Sourced, not registered: `is_skill`, the one
                            answer to "does this Skill call name skill X"
                            under any scoped spelling (`x`, `prefix:x`,
@@ -220,6 +230,39 @@ failure mode a gate armed by another tool call invites.
 Registration is read at session start, so a session that adds or edits a
 hook here is not itself governed by it.
 
+## How review-design-reminder works
+
+A review runs over many turns, and code-craft is loaded once, at its start.
+Every later turn that proposes a fix, a test, a guard or an alternative is
+a design decision made against a skill that is by then far back in the
+context — and "is there a better way?" is the turn where that shows. The
+reminder puts the design pass back in front of the model at the moment of
+decision, for a few dozen tokens a turn.
+
+It is a pointer, not a reload: the skill text is already in context, so
+re-invoking it would append another full copy every turn. The line says to
+load it only if it is gone, which is the compaction case.
+
+**Arming.** A marker at
+`${TMPDIR:-/tmp}/claude-review-design-reminder/active-<session_id>`, keyed
+on the payload's `session_id` for prime-guard's reason — a UserPromptSubmit
+hook is not guaranteed to share a parent process with tool calls. Two
+routes set it, because a review starts two ways:
+
+1. **A prompt whose first word is `/pr-review`**, scoped spellings
+   included. A slash command expands inline, with no Skill tool call.
+2. **A `Skill` call naming pr-review** (PreToolUse, matcher `Skill`), for
+   a review the skill's own description triggered.
+
+Once armed, every UserPromptSubmit in that session carries the line,
+including the arming turn. Nothing clears it: follow-up fixes after the
+`reviewed` label are design turns too, and the marker dies with the
+session.
+
+**Fails open**, like prime-guard: no `session_id`, no `jq`, an unwritable
+state directory — each exits silent, and a missing reminder costs less
+than a broken prompt.
+
 ## How commit-sweep-guard works
 
 `PreToolUse` on `Bash`. Filters down to `git commit ...` invocations
@@ -348,7 +391,9 @@ Two paths:
    block — fix the comments). For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked. For `css-skill-guard`: invoke the
-   skill, which is the intended route rather than an escape.
+   skill, which is the intended route rather than an escape. For
+   `review-design-reminder`: delete the session's `active-<session_id>`
+   marker.
 2. **Across the session.** Remove the entry from
    `.claude/settings.json`'s `hooks.PreToolUse` array, or
    temporarily move the hook script aside.

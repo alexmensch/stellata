@@ -115,6 +115,13 @@ readme-guard.test.ts     Behavioural pins for scripts/hooks/readme-guard.sh:
                          session is creating, and the neighbouring cases
                          that must stay gated (unread README on disk,
                          committed folder missing one).
+review-design-reminder.test.ts
+                         Behavioural pins for
+                         scripts/hooks/review-design-reminder.sh: silent
+                         until a review starts, armed by a `/pr-review`
+                         first word or a Skill call under any scope (not a
+                         mention, not `/pr-reviewer`), scoped to its
+                         session, never blocking, and one line long.
 shader-frag-depth.test.ts
                          gl_FragDepth roster: no shader may
                          write frag depth (a static write defeats
