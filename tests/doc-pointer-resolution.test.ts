@@ -16,7 +16,6 @@ const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh'];
 const H = '#';
 
 function scannedFiles(): string[] {
-  // CLAUDE.md is a symlink to AGENTS.md and would double every finding in it.
   return gitFiles(ROOT, [], { untracked: true })
     .filter((name) => SCANNED_EXTS.includes(extname(name)))
     .map((name) => join(ROOT, name))

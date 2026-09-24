@@ -227,7 +227,7 @@ is the repo root, anything else is relative to the citing file. A `../`
 chain that climbs out of the repo resolves to nothing.
 
 **What a slug may name.** A heading, slugged the way GitHub slugs it
-(`github-slugger` over an `mdast` parse, so a `#` line inside a fenced block
+(`github-slugger` over a `marked` lexer pass, so a `#` line inside a fenced block
 is never a heading, and a repeated heading takes `-1`, `-2`), or an explicit
 `<a id="…"></a>` anchor. A cited bold leader or Files-roster entry carries
 such an anchor at the start of its line. Matching is exact set membership:
