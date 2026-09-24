@@ -13,6 +13,7 @@ export function sortIndicesByKeyWords(
   let src = new Uint32Array(n);
   let dst = new Uint32Array(n);
   for (let i = 0; i < n; i++) src[i] = first + i;
+  if (n < 2) return src;
   const offsets = new Uint32Array(DIGIT_COUNT);
   for (let k = 0; k < words.length; k++) {
     const word = words[k];

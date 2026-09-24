@@ -28,8 +28,6 @@ function interleave(x: number, y: number, z: number): number {
 /** Dispatch slot → star index, ordered so consecutive slots hold stars close
  *  in 3D. Why spatial and not angular: README.md § Dispatch order. */
 export function mortonDispatchOrder(positions: Float32Array, count: number): Uint32Array {
-  if (count < 2) return Uint32Array.from({ length: count }, (_, i) => i);
-
   let minX = Infinity; let minY = Infinity; let minZ = Infinity;
   let maxX = -Infinity; let maxY = -Infinity; let maxZ = -Infinity;
   for (let i = 0; i < count; i++) {
