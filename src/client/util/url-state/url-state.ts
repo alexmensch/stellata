@@ -1672,8 +1672,7 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     const u = stellata.camera.up;
     // Steady-state path: one scale-free comparison against the snapshot
     // (`pose-change/pose-change-pure.ts`). No allocations on the no-change
-    // path — this used to be 10+ string allocations per frame from a
-    // toFixed(3)×9 hash.
+    // path: this runs every frame.
     if (poseChanged(lastCam, frameCam, frameTgt, u)) {
       snapshotCam(lastCam, frameCam, frameTgt, u);
       changed = true;
