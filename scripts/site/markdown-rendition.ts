@@ -4,12 +4,13 @@
 
 import type { Element, ElementContent, Root } from 'hast';
 import { selectAll, select } from 'hast-util-select';
-import rehypeParse from 'rehype-parse';
 import rehypeRemark from 'rehype-remark';
 import remarkGfm from 'remark-gfm';
 import remarkStringify from 'remark-stringify';
 import { unified } from 'unified';
 import { SKIP, visit } from 'unist-util-visit';
+
+import { parseHtml } from './parse-html.ts';
 
 /**
  * Authoring scaffolding, dropped from the rendition. `.holder` is the dashed
@@ -218,7 +219,7 @@ function substitute(markdown: string, env: NodeJS.ProcessEnv): string {
  */
 export function markdownRendition(source: string, env: NodeJS.ProcessEnv = process.env): string {
   const html = substitute(source, env);
-  const tree = unified().use(rehypeParse).parse(html) as Root;
+  const tree = parseHtml(html);
 
   const canonical = select('link[rel="canonical"]', tree)?.properties?.href;
   if (typeof canonical !== 'string') {
