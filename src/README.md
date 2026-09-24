@@ -11,7 +11,8 @@ Cloudflare Worker entry, browser client, and the public content site.
 - `worker.test.ts` — the routing table against a stubbed assets binding,
   so the rules below are checked without a `wrangler dev`.
 - `negotiation-pure.ts` — which rendition of a page an `Accept` header
-  asks for, and where a page's markdown sibling sits. Imported by
+  asks for, and the headers that advertise it; which pages have one is
+  `site/pages.ts`'s. Imported by
   `worker.ts` and by `../vite.site-dev.ts`, so the deploy and the dev
   server cannot answer differently.
 - `client/` — browser app, served at `/app`. Built by `vite.config.ts`;

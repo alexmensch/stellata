@@ -2,33 +2,36 @@ import { defineConfig, type Plugin } from 'vite';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
+import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
 import { publishBuildEnv } from './vite.env.ts';
 
 publishBuildEnv(import.meta.dirname);
 
+const SITE_DIR = resolve(import.meta.dirname, 'src/site');
+
 /** `src/site/README.md` § The markdown rendition. */
-function markdownRenditions(pages: Record<string, string>): Plugin {
+function markdownRenditions(): Plugin {
   return {
     name: 'stellata:markdown-renditions',
     apply: 'build',
     generateBundle() {
-      for (const [name, page] of Object.entries(pages)) {
+      for (const page of SITE_PAGES) {
+        const rendition = renditionPath(page);
+        if (rendition === null) continue;
         this.emitFile({
           type: 'asset',
-          fileName: name,
-          source: markdownRendition(readFileSync(page, 'utf8')),
+          fileName: rendition.slice(1),
+          source: markdownRendition(readFileSync(resolve(SITE_DIR, page.source), 'utf8')),
         });
       }
     },
   };
 }
 
-const HOME = resolve(import.meta.dirname, 'src/site/index.html');
-
 export default defineConfig(() => ({
   base: '/',
-  plugins: [markdownRenditions({ 'index.md': HOME })],
-  root: resolve(import.meta.dirname, 'src/site'),
+  plugins: [markdownRenditions()],
+  root: SITE_DIR,
   // Both of these belong to the app pass, which runs first. Reversing
   // either wipes dist/ — src/site/README.md § The build seam.
   publicDir: false,
@@ -37,11 +40,9 @@ export default defineConfig(() => ({
     emptyOutDir: false,
     target: 'es2020',
     rollupOptions: {
-      // src/site/README.md § A page's path is its folder.
-      input: {
-        home: HOME,
-        notFound: resolve(import.meta.dirname, 'src/site/404.html'),
-      },
+      input: [...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) =>
+        resolve(SITE_DIR, source),
+      ),
     },
   },
   server: {
