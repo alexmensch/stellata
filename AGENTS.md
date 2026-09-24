@@ -74,6 +74,7 @@ the always-loaded hook pointing to which section to open.
 - **Adding or touching a render layer, pass, or per-frame buffer
   write** → read `docs/render-rules.md` first (visible-count draws,
   liveness gating, single-writer buffers, measurement canon).
+
 ## Folder READMEs — read before you touch the folder; update at commit
 
 **Law.** Every folder under `src/`, `scripts/`, `data/`, `docs/` has a
