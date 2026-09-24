@@ -18,6 +18,9 @@ src/client/overlays/
                                   (any hard kind — kind-generic).
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows — see
                                   src/client/galactic/README.md.
+  hud-scene-layer.ts (+ test)     hudSceneLayer — the HUD's registry
+                                  entry: gathers the frame's HUD inputs
+                                  and hides the HUD in warp.
   poi-overlay.ts (+ test)         Pinned-POI labels + rings + arrows
                                   (both camera modes).
   click-ripple.ts (+ test)        Noop-click feedback: a ring ripples

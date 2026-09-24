@@ -15,11 +15,13 @@ src/client/galactic/
                                   GALACTIC_CENTRE_PC (Vector3 at R₀ =
                                   8.122 kpc). Reused by the Milky Way
                                   volumetric layer (src/client/milkyway/README.md).
-  galactic-disc.ts                15 kpc midplane ring + ±1800 pc
+  galactic-disc.ts (+ test)       15 kpc midplane ring + ±1800 pc
                                   thickness rings + 5 × 3 kpc bulge
                                   wireframe, on one seam stroke;
                                   always-on in dark mode, hidden in
-                                  chart mode.
+                                  chart mode. galacticDiscSceneLayer
+                                  constructs it and returns its registry
+                                  entry (§ Wiring).
   galactic-fade.ts (+ test)       Both distance-from-Sol curves
                                   (§ Distance fades): the far-field
                                   reveal FADE_INNER_PC / FADE_OUTER_PC
@@ -33,6 +35,7 @@ src/client/overlays/                  (full overlay roster in src/client/overlay
   hud-overlay.ts                  HUD ring + Sol/GC SVG arrows. Lives in
                                   overlays/ but the feature group is
                                   documented here.
+  hud-scene-layer.ts              The HUD's registry entry.
 ```
 
 Local Group wireframes + per-galaxy labels are a separate layer; see
@@ -92,6 +95,18 @@ wireframe layer so both reveal in lockstep). In chart mode the layer is
 hidden entirely — a 15 kpc reference ring reads as visual noise on a
 paper-chart aesthetic, and the arrows + sphere already provide
 orientation.
+
+## Wiring
+
+`galacticDiscSceneLayer` and `coord-spheres/`'s `CoordSpheres` build the disc
+and coordinate-sphere registry entries; `stellata.ts` registers them below the
+orbit lock, where the disc's frustum test is legal.
+
+**The shell calls `galacticDiscSceneLayer` before the kind modules attach**,
+because that call constructs the disc. The disc and the Local Bubble shell are
+both transparent at renderOrder −1 and both centred on Sol, so their depths tie
+exactly and three falls back to object id; constructing the disc after the
+modules would flip which of the two draws first.
 
 ## Distance fades
 

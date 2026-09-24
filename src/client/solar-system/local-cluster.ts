@@ -26,6 +26,16 @@ export interface HostStarMemberSink {
   setHostMember(idx: number | null): void;
 }
 
+export interface SolarSystemClusterDeps {
+  field: PlanetBodyField;
+  meshLayer: PlanetMeshLayer;
+  orbitRings: OrbitRingsLayer;
+  probeField: ProbeField;
+  probeTrails: ProbePathLayer;
+  starCluster: HostStarMemberSink;
+  occluders: OccluderSet;
+}
+
 /**
  * Owns the "is a system locally active" decision each frame. Active =
  * any attached host inside its cull distance, or its orbit rings
@@ -49,15 +59,9 @@ export class SolarSystemCluster implements LocalCluster {
   private readonly tmpPole = new THREE.Vector3();
   private readonly tmpSol = new THREE.Vector3();
 
-  constructor(
-    field: PlanetBodyField,
-    meshLayer: PlanetMeshLayer,
-    orbitRings: OrbitRingsLayer,
-    probeField: ProbeField,
-    probeTrails: ProbePathLayer,
-    starCluster: HostStarMemberSink,
-    occluders: OccluderSet,
-  ) {
+  constructor({
+    field, meshLayer, orbitRings, probeField, probeTrails, starCluster, occluders,
+  }: SolarSystemClusterDeps) {
     this.field = field;
     this.meshLayer = meshLayer;
     this.orbitRings = orbitRings;

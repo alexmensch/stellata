@@ -12,27 +12,15 @@ import {
   type ChunkVerifyReport,
 } from './loaders/dust-voxel-readback';
 import { DustParticleLayer } from './dust/dust-particle-layer';
-import {
-  GalacticDisc,
-  GALACTIC_DISC_BOUND_PC,
-  galacticDiscOpacity,
-} from './galactic/galactic-disc';
+import { galacticDiscSceneLayer } from './galactic/galactic-disc';
+import { CoordSpheres } from './galactic/coord-spheres/coord-spheres';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
-import { CoordSphere, type DrawnCoordSphereFrame } from './galactic/coord-spheres/coord-sphere';
-import {
-  COORD_SPHERE_SPECS,
-  DRAWN_COORD_SPHERE_FRAMES,
-} from './galactic/coord-spheres/coord-sphere-frames';
-import {
-  frameAfterFocusChange, frameAvailableFor, type OrbitFramePort,
-} from './attitude/attitude-pure';
+import type { OrbitFramePort } from './attitude/attitude-pure';
 import { focusFrameInputs } from './attitude/focus-frame';
-import { HudOverlay } from './overlays/hud-overlay';
+import { HudOverlay, hudElementsById } from './overlays/hud-overlay';
+import { hudSceneLayer } from './overlays/hud-scene-layer';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
-import {
-  GALACTIC_CENTRE_PC,
-  GALACTIC_NORTH_POLE_ICRS,
-} from './galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
 import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
@@ -91,12 +79,11 @@ import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
 import type { SurvivorCountsRead } from './debug/survivor-counts';
 import type { PlanetSystem } from './solar-system/planet-system';
-import { OrbitRingsLayer } from './solar-system/ephemerides/orbit-rings-layer';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
-import { SolarSystemCluster } from './solar-system/local-cluster';
+import { SolarSystemWiring } from './solar-system/solar-system-wiring';
 import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
 import {
   PHYS_RATIO_THRESHOLD,
@@ -140,6 +127,7 @@ import {
   updateWarpGatedRefLayer,
   type ContributionCensus,
   type FrameCtx,
+  type SceneLayer,
 } from './scene/scene-layer';
 import { FrameFrustum } from './scene/contribution/frame-frustum';
 import { findGlslResidents } from './scene/glsl-residents-pure';
@@ -360,15 +348,7 @@ export class Stellata implements FrameAnchor {
   // roll gestures. See camera/controls/input/README.md § Input controller.
   readonly input!: InputController;
 
-  // Galactic reference layers. Disc fades in by camera-distance
-  // from Sol and is always-on. The coordinate spheres are gated by
-  // `filter.coordSphere`, which admits only one of them at a time.
-  // The HUD (Sol/GC arrows + OBSERVE-mode ring) is gated by
-  // `filter.showHud`. Mono mode swaps strokes to a paper-chart palette via
-  // setMonochrome on each layer (HUD is CSS-only).
-  private galacticDisc: GalacticDisc;
-  // Representational layer — only renders when the host is focused.
-  private orbitRingsLayer: OrbitRingsLayer;
+  readonly coordSpheres: CoordSpheres;
   private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
@@ -400,7 +380,7 @@ export class Stellata implements FrameAnchor {
   private _realtimeFramesNeeded = false;
   private coreMaskEnabled = true;
   private starLocalCluster: StarLocalCluster;
-  private solarCluster: SolarSystemCluster;
+  readonly solarSystem: SolarSystemWiring;
   /** The frame's near-solid-body set, published by the two local-depth
    *  clusters and read by every SVG label surface
    *  (`occlusion/README.md`). */
@@ -412,7 +392,6 @@ export class Stellata implements FrameAnchor {
   pickVisibility(): PickVisibility {
     return { occluders: this.occluders, cameraPos: this.camera.position };
   }
-  private coordSpheres: Record<DrawnCoordSphereFrame, CoordSphere>;
   readonly hud: HudOverlay;
   /** `chart-mode.ts` starts / stops it on the chart activation predicate;
    *  the shell owns its lifetime. */
@@ -456,7 +435,7 @@ export class Stellata implements FrameAnchor {
       pushes: [
         {
           milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
-          orbitRings: (on) => this.orbitRingsLayer.setPermitted(on),
+          orbitRings: (on) => this.solarSystem.orbitRings.setPermitted(on),
           binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
           constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
         },
@@ -622,9 +601,13 @@ export class Stellata implements FrameAnchor {
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
     // existing #overlay so it shares the distance vector's stroke + halo
     // styling and inherits the `body.warping` hide rule for free.
-    this.galacticDisc = new GalacticDisc(this.chromeLines);
-    this.scene.add(this.galacticDisc.group);
-    this.orbitRingsLayer = new OrbitRingsLayer(this.chromeLines);
+    // Constructed here, ahead of the kind modules — galactic/README.md § Wiring.
+    const galacticDiscEntry = galacticDiscSceneLayer({
+      scene: this.scene,
+      chromeLines: this.chromeLines,
+      worldOffset: this.worldOffset,
+      detailPermits: (id) => this.declutter.permits(id),
+    });
     this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     this.starLocalCluster = new StarLocalCluster(
       this.webgpuStarLayer.localMirror,
@@ -706,16 +689,21 @@ export class Stellata implements FrameAnchor {
       const layer = this.kinds[kind]?.attach(kindCtx);
       if (layer) this.layers.register(layer);
     }
-    this.solarCluster = new SolarSystemCluster(
-      this.kinds.planet.field,
-      this.kinds.planet.meshLayer,
-      this.orbitRingsLayer,
-      this.kinds.probe.field,
-      this.kinds.probe.pathLayer,
-      this.starLocalCluster,
-      this.occluders,
-    );
-    this.localDepthPass.register(this.solarCluster);
+    this.solarSystem = new SolarSystemWiring({
+      chromeLines: this.chromeLines,
+      planetField: this.kinds.planet.field,
+      planetMesh: this.kinds.planet.meshLayer,
+      probeField: this.kinds.probe.field,
+      probeTrails: this.kinds.probe.pathLayer,
+      starCluster: this.starLocalCluster,
+      occluders: this.occluders,
+      solIndex: catalog.solIndex,
+      getT: () => this.getT(),
+      focusedPlanetSystem: () => this.focus.getFocusedPlanetSystem(),
+      observeAnchorPlanet: () => this.observe.observeAnchorOf('planet'),
+      onPlanetSystem: (handler) => this.bus.on('planetSystem', handler),
+    });
+    this.localDepthPass.register(this.solarSystem.cluster);
     // System-membership registry: binaries FIRST so a collapsed pair's
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
@@ -821,14 +809,6 @@ export class Stellata implements FrameAnchor {
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
     this.buildFocalAnchorPolicy();
-    // Orbit rings are representational layers gated on host-focus. Planet
-    // bodies live in PlanetBodyField and render whenever inside the
-    // per-host cull distance regardless of focus. (The heliopause is no
-    // longer focus-coupled — the declutter cycle governs it, like the
-    // Local Bubble.)
-    this.on('planetSystem', (ps) => {
-      this.orbitRingsLayer.setPlanetSystem(ps, this.catalog.solIndex, this.getT());
-    });
     // Orbit paths rebuild on every focus mutation: the focused system's
     // Kepler pairs, or none when focus leaves a multi-star system.
     this.on('focus', () => {
@@ -845,14 +825,6 @@ export class Stellata implements FrameAnchor {
     // the shared ride slot safe when the kind changes but the index
     // collides (planet 3 → probe 3).
     this.on('focus', () => { this._movingRideIdx = null; });
-    // A frame the new focus gives no meaning to is demoted to that object's
-    // own default rather than left measuring nothing — attitude/README.md
-    // § Which frame, and who chooses.
-    this.on('focus', (target) => {
-      const next = frameAfterFocusChange(
-        this.filter.coordSphere, focusFrameInputs(this, target));
-      if (next !== this.filter.coordSphere) this.filters.setFilter({ coordSphere: next });
-    });
     // Every fine-grained mutation the figure's active set reads — focus,
     // filter, cameraMode — pairs with 'state', and so does the observe
     // transition's landing, which no fine-grained event covers.
@@ -866,29 +838,21 @@ export class Stellata implements FrameAnchor {
       this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
     });
     this.on('cameraMode', () => this.observeLookPin.invalidate());
-    this.coordSpheres = Object.fromEntries(
-      DRAWN_COORD_SPHERE_FRAMES.map((frame) =>
-        [frame, new CoordSphere(COORD_SPHERE_SPECS[frame], this.chromeLines)]),
-    ) as Record<DrawnCoordSphereFrame, CoordSphere>;
-    for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-      this.scene.add(this.coordSpheres[frame].group);
-    }
-    const hudRing = document.getElementById('hud-ring') as unknown as SVGCircleElement;
-    const solPath = document.getElementById('sol-arrow') as unknown as SVGPathElement;
-    const solBg = document.getElementById('sol-arrow-bg') as unknown as SVGPathElement;
-    const gcPath = document.getElementById('gc-arrow') as unknown as SVGPathElement;
-    const gcBg = document.getElementById('gc-arrow-bg') as unknown as SVGPathElement;
-    const solLabel = document.getElementById('sol-arrow-label') as unknown as SVGTextElement;
-    const gcLabel = document.getElementById('gc-arrow-label') as unknown as SVGTextElement;
-    // Clicking either label aims the camera at the named object. Sol's
-    // local-frame position is just `-worldOffset` (Sol is the catalog
-    // origin); GC sits at GALACTIC_CENTRE_PC in absolute space. Handlers are
-    // owned by HudOverlay so its dispose() can detach them.
-    this.hud = new HudOverlay(
-      hudRing, solPath, solBg, gcPath, gcBg, solLabel, gcLabel,
-      () => this.aimAt(this.tmpVec3b.copy(this.worldOffset).negate()),
-      () => this.aimAt(this.tmpVec3b.copy(GALACTIC_CENTRE_PC).sub(this.worldOffset)),
-    );
+    this.coordSpheres = new CoordSpheres({
+      scene: this.scene,
+      chromeLines: this.chromeLines,
+      coordSphere: () => this.filter.coordSphere,
+      setCoordSphere: (frame) => this.filters.setFilter({ coordSphere: frame }),
+      cameraMode: () => this.focus.getCameraMode(),
+      focusedTarget: () => this.focus.getFocusedTarget(),
+      focusFrameInputs: (target) => focusFrameInputs(this, target),
+      onFocus: (handler) => this.bus.on('focus', handler),
+    });
+    this.hud = new HudOverlay({
+      elements: hudElementsById(document),
+      worldOffset: this.worldOffset,
+      aimAt: (localPoint) => this.aimAt(localPoint),
+    });
 
     // Milky Way volumetric disc. A flattened ellipsoid mesh anchored at
     // the galactic centre; the fragment shader does a bounded raymarch
@@ -968,7 +932,7 @@ export class Stellata implements FrameAnchor {
       frustum: new FrameFrustum(),
       exposure: null,
     };
-    this.registerSceneLayers();
+    this.registerSceneLayers(galacticDiscEntry);
     // Seed the declutter cycle: a layer that only learns its permission from
     // a push (both boundary shells, the orbit/probe overlays) otherwise sits
     // at whatever its constructor guessed until the level is cycled.
@@ -1001,17 +965,11 @@ export class Stellata implements FrameAnchor {
       sel.excludeStarIdx);
   }
 
-  // One adapter entry per scene layer; registration order is per-frame
-  // update order (kind-module layers registered ahead of these in the
-  // constructor's roster loop). Warp gating is per-entry: reference
-  // layers hide during warp, physical/light layers keep ticking. See
-  // scene/README.md.
-  private registerSceneLayers(): void {
+  // Registration order is per-frame update order — scene/README.md § How the
+  // shell uses it.
+  private registerSceneLayers(galacticDiscEntry: SceneLayer): void {
     this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
+      timeBehaviour: { kind: 'clock', rate: this.solarSystem.planetRate },
       contribution: { kind: 'always' },
       // Ride runs right after every moving-body field wrote this
       // frame's positions — the whole module roster updates ahead of
@@ -1020,39 +978,10 @@ export class Stellata implements FrameAnchor {
       update: () => this.applyMovingFocalRide(),
       dispose: () => {},
     });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      contribution: { kind: 'always' },
-      // AFTER the body field: a moon ring's centre is the parent's
-      // live iLocalRel — reading it before the field's walk left the
-      // rings one frame of sim-time behind the bodies, a visible lag
-      // under fast scrub.
-      update: (ctx) => {
-        const ps = this.focus.getFocusedPlanetSystem();
-        const hostPos = ps !== null
-          && this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
-          ? this.tmpHostLocal : null;
-        this.orbitRingsLayer.update(
-          ctx.camera,
-          window.innerHeight,
-          hostPos,
-          ctx.t,
-          ps === null ? null : this.planetBodyField.planetIdxWithin(
-            ps.hostStarIdx, this.observe.observeAnchorOf('planet')),
-          (planetIdx, out) => {
-            if (ps === null) return false;
-            const flat = this.planetBodyField.instanceIndexOf(ps.hostStarIdx, planetIdx);
-            return flat !== null
-              && this.planetBodyField.planetHostRelPositionInto(flat, out);
-          },
-        );
-      },
-      setMonochrome: (on) => this.orbitRingsLayer.setMonochrome(on),
-      dispose: () => this.orbitRingsLayer.dispose(),
-    });
+    // AFTER the body field: a moon ring's centre is the parent's live
+    // iLocalRel — reading it before the field's walk left the rings one frame
+    // of sim-time behind the bodies, a visible lag under fast scrub.
+    this.layers.register(this.solarSystem.orbitRingsEntry);
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
@@ -1096,38 +1025,16 @@ export class Stellata implements FrameAnchor {
       },
       dispose: () => {},
     });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      contribution: {
-        kind: 'gated',
-        skip: (ctx) => this.kinds.planet.meshLayer.anyMeshWorkPending(ctx.camera.position)
-          ? null : 'legibility',
-        setContributing: (on) => this.kinds.planet.meshLayer.setContributing(on),
-      },
-      // Below every camera write in the frame — both focal rides and the
-      // orbit lock — because it caches `camera.matrixWorld` for its
-      // view-space sun, pole and caster uniforms, and sizes the mesh off
-      // camera distance (scene/README.md § Camera writes, then camera reads).
-      // That is why this update lives on the shell rather than inside the
-      // planet module's layer.
-      update: (ctx) => this.kinds.planet.meshLayer.update(ctx.camera, ctx.t),
-      dispose: () => {},
-    });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => this.planetBodyField.cadenceReport(cc),
-      },
-      contribution: { kind: 'always' },
-      // After the field, rings and mesh updates it reads; before the main
-      // render its suppression uniforms gate. Owns no GPU resources —
-      // the star mirror it feeds is disposed with the star cluster.
-      update: (ctx) => this.solarCluster.update(ctx.camera),
-      dispose: () => {},
-    });
+    // Below every camera write in the frame — both focal rides and the
+    // orbit lock — because it caches `camera.matrixWorld` for its view-space
+    // sun, pole and caster uniforms, and sizes the mesh off camera distance
+    // (scene/README.md § Camera writes, then camera reads). That is why the
+    // planet module's own layer does not run this update.
+    this.layers.register(this.solarSystem.planetMeshEntry);
+    // After the field, rings and mesh updates it reads; before the main
+    // render its suppression uniforms gate. Owns no GPU resources — the star
+    // mirror it feeds is disposed with the star cluster.
+    this.layers.register(this.solarSystem.clusterEntry);
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
@@ -1175,62 +1082,20 @@ export class Stellata implements FrameAnchor {
       setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
       dispose: () => this.constellationBoundaryLayer.dispose(),
     });
-    this.layers.register({
-      // Fixed galactic reference geometry, camera-anchored.
-      timeBehaviour: { kind: 'static' },
-      contribution: {
-        kind: 'gated',
-        // Opacity first: it is a scalar on `distFromSol` and it is what
-        // fires at the app default view, where the camera sits inside the
-        // ring and no frustum test could. The frustum half only reaches
-        // vantages outside the disc, which are also the only ones that can
-        // turn away from it.
-        skip: (ctx) => {
-          if (galacticDiscOpacity(ctx.distFromSol) <= 0) return 'opacity';
-          this.tmpBound.center.copy(GALACTIC_CENTRE_PC).sub(this.worldOffset);
-          this.tmpBound.radius = GALACTIC_DISC_BOUND_PC;
-          return ctx.frustum.intersectsSphere(this.tmpBound) ? null : 'frustum';
-        },
-        setContributing: (on) => { this.galacticDisc.group.visible = on; },
-      },
-      update: (ctx) => updateWarpGatedRefLayer(
-        this.galacticDisc, ctx, this.declutter.permits('galacticDiscWireframe')),
-      setMonochrome: (on) => this.galacticDisc.setMonochrome(on),
-      dispose: () => this.galacticDisc.dispose(),
-    });
-    this.layers.register({
-      // Camera-tracked frames, so nothing here moves with the clock.
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      update: (ctx) => {
-        for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-          const sphere = this.coordSpheres[frame];
-          const on = !ctx.warpActive && this.coordSphereDrawn(frame);
-          sphere.group.visible = on;
-          if (on) sphere.update(ctx.camera.position);
-        }
-      },
-      setMonochrome: (on) => {
-        for (const frame of DRAWN_COORD_SPHERE_FRAMES) {
-          this.coordSpheres[frame].setMonochrome(on);
-        }
-      },
-      dispose: () => {
-        for (const frame of DRAWN_COORD_SPHERE_FRAMES) this.coordSpheres[frame].dispose();
-      },
-    });
-    this.layers.register({
-      // Pure projection: it reads the focal position and projects arrow
-      // tips, adding no motion of its own. Whatever it points at is
-      // bounded by the layer that OWNS that object — which is why every
-      // focusable kind has to declare a rate, not just the ones that
-      // happen to be pinnable today.
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      update: (ctx) => this.updateHud(ctx.warpActive),
-      setMonochrome: (on) => this.hud.setMonochrome(on),
-      dispose: () => this.hud.dispose(),
-    });
+    // Below the orbit lock — galactic/README.md § Wiring.
+    this.layers.register(galacticDiscEntry);
+    this.layers.register(this.coordSpheres.entry);
+    this.layers.register(hudSceneLayer({
+      hud: this.hud,
+      camera: this.camera,
+      target: this.controls.target,
+      solIndex: this.catalog.solIndex,
+      focus: this.focus,
+      filter: () => this.filter,
+      observeProgress: () => this.observe.getProgress(),
+      focusedDiscRadiusPx: () => this.getFocusedDiscRadiusPx(),
+    }));
+    const milkyWayCameraAbs = new THREE.Vector3();
     this.layers.register({
       // Skybox re-anchored to camera.position; the raymarch reads the
       // absolute camera. No `t` dependence.
@@ -1238,7 +1103,7 @@ export class Stellata implements FrameAnchor {
       contribution: {
         kind: 'gated',
         skip: (ctx) => ctx.exposure === null ? null : this.milkyway.contributionSkip(
-          ctx.exposure, cameraAbsInto(ctx, this.tmpVec3b), ctx.warpActive),
+          ctx.exposure, cameraAbsInto(ctx, milkyWayCameraAbs), ctx.warpActive),
         setContributing: (on) => this.milkyway.setContributing(on),
       },
       // Re-anchors the skybox mesh to camera.position and refreshes the
@@ -1318,36 +1183,8 @@ export class Stellata implements FrameAnchor {
    *  update fan-out runs before `'frame'` event handlers, so overlays
    *  driven by the frame loop (focus ring, etc.) read current-frame data. */
   anyOrbitRingVisible(): boolean {
-    return this.orbitRingsLayer.anyOrbitRingVisible()
+    return this.solarSystem.orbitRings.anyOrbitRingVisible()
       || this.binaryOrbitPathLayer.anyOrbitRingVisible();
-  }
-  /** Renderer-local positions of the focused host's planets (xyz
-   *  triples, length 3·N), or null if no system is attached. Host
-   *  offset is applied — under planet focus the host is not at the
-   *  local origin. Returns a fresh Float64Array copy each call (see
-   *  `PlanetBodyField.getHostLocalPositions`) — safe to cache across
-   *  frames; the value semantics survive attach grow / detach shift. */
-  getFocusedPlanetLocalPositions(): Float64Array | null {
-    const ps = this.focus.getFocusedPlanetSystem();
-    if (!ps) return null;
-    const rel = this.planetBodyField.getHostLocalPositions(ps.hostStarIdx);
-    if (!rel) return null;
-    if (!this.planetBodyField.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)) {
-      return null;
-    }
-    for (let i = 0; i < rel.length; i += 3) {
-      rel[i] += this.tmpHostLocal.x;
-      rel[i + 1] += this.tmpHostLocal.y;
-      rel[i + 2] += this.tmpHostLocal.z;
-    }
-    return rel;
-  }
-  /** True when the orbit ring for planet `i` is currently rendering on
-   *  the focused host. Used by planet-labels to hide labels in lockstep
-   *  with their associated rings — the body stays rendered (subject to
-   *  apparent-mag visibility) regardless. */
-  isOrbitRingResolvable(planetIdx: number): boolean {
-    return this.orbitRingsLayer.isOrbitRingResolvable(planetIdx);
   }
   /** Rendered disc radius (CSS px) of the focused object, any kind; 0
    *  when nothing is focused. Single source for the arrow-fade coverage
@@ -2045,10 +1882,7 @@ export class Stellata implements FrameAnchor {
     return layer ? { count: layer.clouds.length, clouds: layer.clouds } : null;
   }
 
-  private tmpVec3b = new THREE.Vector3();
-  private tmpHostLocal = new THREE.Vector3();
   private tmpConstellationAbs = new THREE.Vector3();
-  private tmpBound = new THREE.Sphere();
 
   /** The core depth-mask's one visibility write. Whether it should be on
    *  is the layer's contribution verdict; this is only the apply. */
@@ -2136,23 +1970,6 @@ export class Stellata implements FrameAnchor {
   setCameraFov(fov: number) {
     this.filters.setCameraFov(fov);
     this.syncPixelSolidAngle();
-  }
-
-  /** Is `frame`'s sphere on screen? Observe mode only — in navigate the
-   *  attitude indicator carries the frame instead, and two instruments
-   *  answering "which way is north" at once is what let them drift apart.
-   *  Warp gating is the layer's, not this: the SVG labels hide in warp
-   *  through `body.warping` rather than through their own predicate. */
-  coordSphereDrawn(frame: DrawnCoordSphereFrame): boolean {
-    return this.filter.coordSphere === frame
-      && this.focus.getCameraMode() === 'observe';
-  }
-
-  /** Does `frame` describe anything real from whatever is focused? The `S`
-   *  cycle, the panel's stop control and the focus-change demotion all gate on
-   *  this, so none of them can select a frame the others would reject. */
-  coordSphereAvailable(frame: DrawnCoordSphereFrame): boolean {
-    return frameAvailableFor(frame, focusFrameInputs(this, this.focus.getFocusedTarget()));
   }
 
   setMonochrome(on: boolean) {
@@ -2452,13 +2269,6 @@ export class Stellata implements FrameAnchor {
     return cadenceVisibleTurnRad(this.angularToPx(), this.renderer.getPixelRatio());
   }
 
-  // Scratch slot for the non-allocating *LocalPositionInto helpers.
-  // Owned by animate() and the methods it calls in sequence (the
-  // scene-layer update fan-out); values are valid only inside that
-  // scope. Adding a writer that retains the value across another
-  // animate-stack method violates the contract.
-  private _tmpAnimateLocal = new THREE.Vector3();
-
   private animate = () => {
     if (this.disposed) return;
     perfMark('frame.total');
@@ -2688,51 +2498,6 @@ export class Stellata implements FrameAnchor {
       census: this.layers.behaviourCensus(),
       contribution: this.layers.contributionCensus(),
     };
-  }
-
-  // HUD projection — hidden during warp (the camera is in motion and
-  // its reference function is exactly the context warp suppresses,
-  // same as the disc / grid / LG wireframe entries in the registry).
-  private updateHud(warpActive: boolean) {
-    if (warpActive) {
-      this.hud.setVisible(false);
-      return;
-    }
-    // Refresh camera matrices before any SVG projection — controls.update()
-    // mutates camera.position/quaternion but doesn't propagate to
-    // matrixWorld/matrixWorldInverse. The renderer would do this for us, but
-    // we project arrow tips into screen space *before* renderer.render() runs,
-    // so without this call the labels lag by one frame during fast moves.
-    this.camera.updateMatrixWorld();
-
-    // Kind-generic focal position: measuring HUD distances from
-    // controls.target is only right in navigate — in observe the target
-    // is parked 1 pc ahead of the camera (ObserveLookPin), which
-    // read as "Sol · 3.3 ly" from a planet-anchored observe.
-    const focusedLocal = this.focus.focalLocalPositionInto(this._tmpAnimateLocal)
-      ? this._tmpAnimateLocal
-      : null;
-    const focusedStar = this.focus.getFocusedStar();
-    const isSolFocus = focusedStar !== null && focusedStar === this.catalog.solIndex;
-    // HudOverlay computes its own fade alpha from THIS frame's shaft
-    // geometry — no more one-frame-lag flash when the HUD toggles on
-    // (ml8 symptom 1). The distance-vector overlay does the same in its
-    // 'frame' handler against its own arrow length (ml8 symptom 2 / per-
-    // arrow coverage from the bead's option B).
-    this.hud.update({
-      enabled: this.filter.showHud,
-      camera: this.camera,
-      target: this.controls.target,
-      worldOffset: this.worldOffset,
-      focusedLocal,
-      hideSolArrow: isSolFocus,
-      sizeMaxPx: this.filter.sizeMax,
-      cameraMode: this.focus.getCameraMode(),
-      transition: this.observe.getProgress(),
-      focusedDiscRadiusPx: this.getFocusedDiscRadiusPx(),
-      w: window.innerWidth,
-      h: window.innerHeight,
-    });
   }
 
   dispose() {

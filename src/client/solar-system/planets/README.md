@@ -19,11 +19,12 @@ src/client/solar-system/planets/
                                   consumes) / search / SID / pinnable /
                                   focal-hide legs over the field below.
                                   Its scene layer updates the field
-                                  only; the mesh layer's update stays
-                                  on the shell after the moving-focal
-                                  ride, and the SVG labels stay wired
-                                  in main.ts (they read the shell's
-                                  orbit-rings layer + focus state).
+                                  only; the mesh layer's entry is built
+                                  by ../solar-system-wiring.ts and
+                                  registered below every camera write,
+                                  and the SVG labels stay wired in
+                                  main.ts (they read the field, the
+                                  wiring's orbit rings + focus state).
   planet-body-field.ts (+ test)   Per-body state for every attached
                                   host: the arrays the reflected-glare
                                   billboard packs from (its main pass +
@@ -168,7 +169,7 @@ The orbit-ring layer is a sibling concern and lives in
 buffer; `bufs.localRel` is its float32 bake, and exists only to feed the
 `iLocalRel` GPU attribute. Every CPU consumer —
 `planetLocalPositionInto`, `planetAbsolutePositionInto`,
-`planetHostRelPositionInto`, `getHostLocalPositions`, `evalPlanetView`,
+`planetHostRelPositionInto`, `evalPlanetView`,
 `orbitCentreOffsetInto` (the attitude indicator's ORB datum —
 `../../attitude/README.md` § Levelling on an orbit; a moon's centre is its
 parent's slot, not the host's), the eclipse-dim walk — reads the float64

@@ -83,45 +83,44 @@ export function createPlanetLabels(stellata: Stellata): void {
       setGroupVisible(false);
       return;
     }
-    const positions = stellata.getFocusedPlanetLocalPositions();
-    if (!positions || positions.length / 3 !== entries.length) {
+    const ps = stellata.focus.getFocusedPlanetSystem();
+    if (ps === null) {
       setGroupVisible(false);
       return;
     }
+    const field = stellata.kinds.planet.field;
 
     const camera = stellata.camera;
     const w = window.innerWidth;
     const h = window.innerHeight;
 
     // Across both glides too, not just while the body is hidden — README § Labels.
-    const ps = stellata.focus.getFocusedPlanetSystem();
-    const anchorPlanetIdx = ps === null ? null : stellata.kinds.planet.field.planetIdxWithin(
+    const anchorPlanetIdx = field.planetIdxWithin(
       ps.hostStarIdx, stellata.observe.observeAnchorOf('planet'));
 
     setGroupVisible(true);
     for (let i = 0; i < entries.length; i++) {
       const e = entries[i];
-      if (i === anchorPlanetIdx) {
+      const flat = field.instanceIndexOf(ps.hostStarIdx, i);
+      if (i === anchorPlanetIdx || flat === null || !field.planetLocalPositionInto(flat, tmp)) {
         e.el.style.display = 'none';
         continue;
       }
-      const flat = ps ? stellata.kinds.planet.field.instanceIndexOf(ps.hostStarIdx, i) : null;
       // Resolvability gate — hide a label whose body isn't meaningfully on
       // screen. Every body tracks its orbit ring (planets host-centred,
       // moons parent-centred): a ring the pixel-gap heuristic suppressed
       // means the body is floor-clamped sub-pixel anyway, so the label
       // would attach to nothing.
-      if (!stellata.isOrbitRingResolvable(i)) {
+      if (!stellata.solarSystem.orbitRings.isOrbitRingResolvable(i)) {
         e.el.style.display = 'none';
         continue;
       }
       // A fully eclipsed body (behind the host's physical disc) renders
       // nothing — its label must not float alone on the host's disc.
-      if (flat !== null && stellata.kinds.planet.field.eclipseDimForInstance(flat) <= 0) {
+      if (field.eclipseDimForInstance(flat) <= 0) {
         e.el.style.display = 'none';
         continue;
       }
-      tmp.set(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
       placeAnchoredLabel(e.el, tmp, camera, w, h, LABEL_OFFSET_PX, stellata.occluders);
     }
   });

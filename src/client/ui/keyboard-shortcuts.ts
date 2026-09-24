@@ -270,7 +270,7 @@ function cycleCoordSphere(stellata: Stellata) {
   stellata.filters.setFilter({
     coordSphere: nextCoordSphereFrame(
       stellata.filters.getFilter().coordSphere,
-      (frame) => stellata.coordSphereAvailable(frame),
+      (frame) => stellata.coordSpheres.available(frame),
     ),
   });
 }

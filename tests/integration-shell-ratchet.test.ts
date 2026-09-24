@@ -7,27 +7,27 @@ const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
-  'clock', 'controls', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters', 'floatingOrigin', 'focus',
-  'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
+  'clock', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters',
+  'floatingOrigin', 'focus', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
-  'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
+  'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
 ];
 
 const AWAITING_EXTRACTION: readonly string[] = [
   '_compositeSuppress', '_eclipseDim', '_epochFollowDelta', '_extinctionView', '_focalPert',
   '_lastAppliedPert', '_movingRideDelta', '_movingRideIdx', '_movingRideLast',
   '_movingRideLive', '_realtimeFramesNeeded', '_rideDelta', '_rideFocalIdx',
-  '_rideLive', '_suppressPulsation', '_tmpAnimateLocal', 'absorbedSuppressCount',
+  '_rideLive', '_suppressPulsation', 'absorbedSuppressCount',
   'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
-  'constellationNamer', 'coordSpheres', 'coreMaskEnabled',
+  'constellationNamer', 'coreMaskEnabled',
   'dust', 'dustParticleSource', 'dustParticles',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
-  'frameCtx', 'galacticDisc', 'glslResidentsChecked',
-  'lastParticleStrength', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
-  'pickSizeScratch', 'solarCluster', 'starAttrs', 'starFrame',
-  'starLocalCluster', 'tmpBound', 'tmpConstellationAbs', 'tmpHostLocal', 'tmpVec3b',
+  'frameCtx', 'glslResidentsChecked',
+  'lastParticleStrength', 'offCatalogRecords', 'passDebugScratch',
+  'pickSizeScratch', 'starAttrs', 'starFrame',
+  'starLocalCluster', 'tmpConstellationAbs',
   'trackballSettle', 'webgpuStarLayer',
 ];
 

@@ -7,7 +7,9 @@ import {
   resetArrowSentinels,
   HudOverlay,
   type ArrowState,
+  type HudElements,
 } from './hud-overlay';
+import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
 import { discCoverageAlpha } from './arrow-fade';
 import { ARROW_PIXEL_LENGTH } from './arrow-path';
 import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
@@ -31,6 +33,24 @@ function makeSvgStub() {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   };
+}
+
+function makeHud(worldOffset: THREE.Vector3, aimAt: (p: THREE.Vector3) => void = () => {}) {
+  const els = {
+    ring: makeSvgStub(),
+    solPath: makeSvgStub(),
+    solBg: makeSvgStub(),
+    gcPath: makeSvgStub(),
+    gcBg: makeSvgStub(),
+    solLabel: makeSvgStub(),
+    gcLabel: makeSvgStub(),
+  };
+  const hud = new HudOverlay({
+    elements: els as unknown as HudElements,
+    worldOffset,
+    aimAt,
+  });
+  return { hud, els };
 }
 
 describe('hud-overlay applyFade', () => {
@@ -135,28 +155,11 @@ describe('HudOverlay.update distance labels', () => {
     // controls.target sits 1 pc ahead of the camera in observe, which
     // rendered "Sol · 3.3 ly" from Earth; (b) the label must format via
     // fmtDistAuto so the AU tier engages below AU_SWITCH_PC.
-    const ring = makeSvgStub();
-    const solPath = makeSvgStub();
-    const solBg = makeSvgStub();
-    const gcPath = makeSvgStub();
-    const gcBg = makeSvgStub();
-    const solLabel = makeSvgStub();
-    const gcLabel = makeSvgStub();
-    const hud = new HudOverlay(
-      ring as unknown as SVGCircleElement,
-      solPath as unknown as SVGPathElement,
-      solBg as unknown as SVGPathElement,
-      gcPath as unknown as SVGPathElement,
-      gcBg as unknown as SVGPathElement,
-      solLabel as unknown as SVGTextElement,
-      gcLabel as unknown as SVGTextElement,
-      () => {},
-      () => {},
-    );
-
     // Observe parked on a planet 1 AU from Sol: floating origin on the
     // planet (worldOffset = planet abs pos), camera at the local origin
     // looking AWAY from Sol so the Sol arrow draws at full length.
+    const { hud, els } = makeHud(new THREE.Vector3(AU_PC, 0, 0));
+    const solLabel = els.solLabel;
     const camera = new THREE.PerspectiveCamera(60, 800 / 600, 1e-10, 1000);
     camera.position.set(0, 0, 0);
     // Sol sits at (-1 AU, 0, 0); look away-and-off-axis so it's behind
@@ -169,7 +172,6 @@ describe('HudOverlay.update distance labels', () => {
       enabled: true,
       camera,
       target: new THREE.Vector3(1, 0, 0), // 1 pc ahead — must NOT be the origin
-      worldOffset: new THREE.Vector3(AU_PC, 0, 0),
       focusedLocal: new THREE.Vector3(0, 0, 0), // the observed planet
       hideSolArrow: false,
       sizeMaxPx: 8,
@@ -186,30 +188,30 @@ describe('HudOverlay.update distance labels', () => {
   });
 });
 
-describe('HudOverlay two-pass alpha sequencing', () => {
-  function makeHud() {
-    const els = {
-      ring: makeSvgStub(),
-      solPath: makeSvgStub(),
-      solBg: makeSvgStub(),
-      gcPath: makeSvgStub(),
-      gcBg: makeSvgStub(),
-      solLabel: makeSvgStub(),
-      gcLabel: makeSvgStub(),
-    };
-    const hud = new HudOverlay(
-      els.ring as unknown as SVGCircleElement,
-      els.solPath as unknown as SVGPathElement,
-      els.solBg as unknown as SVGPathElement,
-      els.gcPath as unknown as SVGPathElement,
-      els.gcBg as unknown as SVGPathElement,
-      els.solLabel as unknown as SVGTextElement,
-      els.gcLabel as unknown as SVGTextElement,
-      () => {},
-      () => {},
-    );
-    return { hud, els };
+describe('HudOverlay label clicks', () => {
+  function clickOf(stub: ReturnType<typeof makeSvgStub>): () => void {
+    const [event, handler] = stub.addEventListener.mock.calls[0];
+    expect(event).toBe('click');
+    return handler as () => void;
   }
+
+  it('aims at Sol and the galactic centre in the live local frame', () => {
+    const worldOffset = new THREE.Vector3(3, -4, 5);
+    const aimed: number[][] = [];
+    const { els } = makeHud(worldOffset, (p) => aimed.push(p.toArray()));
+    clickOf(els.solLabel)();
+    worldOffset.set(10, 0, 0);
+    clickOf(els.gcLabel)();
+    expect(aimed).toEqual([
+      [-3, 4, -5],
+      GALACTIC_CENTRE_PC.clone().sub(new THREE.Vector3(10, 0, 0)).toArray(),
+    ]);
+  });
+});
+
+describe('HudOverlay two-pass alpha sequencing', () => {
+  // → Sol local = (10, 0, 5)
+  const hudAtOffset = () => makeHud(new THREE.Vector3(-10, 0, -5));
 
   const W = 800;
   const H = 600;
@@ -233,7 +235,6 @@ describe('HudOverlay two-pass alpha sequencing', () => {
       enabled: true,
       camera,
       target: new THREE.Vector3(0, 0, -5),
-      worldOffset: new THREE.Vector3(-10, 0, -5), // → Sol local = (10, 0, 5)
       focusedLocal: new THREE.Vector3(0, 0, -5),
       hideSolArrow: false,
       sizeMaxPx: 0,
@@ -261,7 +262,7 @@ describe('HudOverlay two-pass alpha sequencing', () => {
     // (commit geometry, then derive alpha) is what fixes it, and only an
     // integration assertion over update() can catch a regression: the
     // pure-helper guard test passes either way.
-    const { hud } = makeHud();
+    const { hud } = hudAtOffset();
 
     hud.setVisible(false); // toggle-off: latches solDrawnLen = gcDrawnLen = 0
     expect(hud.getDrawnLengths()).toEqual({ sol: 0, gc: 0 });
@@ -286,7 +287,7 @@ describe('HudOverlay two-pass alpha sequencing', () => {
     // Sol and GC share one alpha so the chevron pair fades together; the
     // opacity actually painted must be the alpha update() derived, not a
     // per-arrow re-derivation.
-    const { hud, els } = makeHud();
+    const { hud, els } = hudAtOffset();
     hud.setVisible(false);
     hud.update(navigateUpdateOpts());
 

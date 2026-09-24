@@ -61,7 +61,7 @@ describe('shipped scene-layer time declarations', () => {
 
   it('finds the roster at all — a scan that matches nothing proves nothing', () => {
     expect(declarations.length).toBeGreaterThan(10);
-    expect(inlineRegistrations.get(SHELL)).toBeGreaterThan(10);
+    expect(inlineRegistrations.get(SHELL)).toBeGreaterThan(0);
   });
 
   it('every declaration is one of the three kinds', () => {
