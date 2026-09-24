@@ -157,7 +157,7 @@ Confirm before executing: research-stage P1 → P2 moves, whether cleanup tasks
 are still live, and whether to defer a whole epic or only its children.
 
 `bd orphans` is a different sense of the word and its list is mostly false
-positives here — `beads` skill § `bd orphans` means the other sense of orphan
+positives here — the `beads` skill's "`bd orphans`" section means the other sense of orphan
 before going near it, and never `--fix`.
 
 # The report

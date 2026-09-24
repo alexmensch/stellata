@@ -26,7 +26,7 @@ src/client/hdr/exposure/reduction/
 The chain, its draws and its readback live in
 `src/client/webgpu/hdr/reduction-webgpu.ts`; `reduction-pure.ts` is the
 executable spec its graph is held to, and its own suite source-pins the
-combine against this one (§ TSL drift there).
+combine against this one (its *TSL drift* case).
 
 ## Why a buffer reduction and not a source walk
 
@@ -48,7 +48,7 @@ statistic texels too.
 ## The chain
 
 Level 0 is the statistic attachment itself. Each level after it is
-`ceil(size / 2)` on both axes, down to the **tile level** (§ below), and
+`ceil(size / 2)` on both axes, down to the **tile level** ([below](#the-tile-level-and-why-the-subject-is-a-median)), and
 each output texel reads the (at most four) parent texels that exist:
 
 ```

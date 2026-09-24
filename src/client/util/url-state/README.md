@@ -158,8 +158,8 @@ bit order, so mode isn't known until the field loop completes).
   separate zero-byte presence bit so the three states (default Sol /
   specific object / cleared) stay unambiguous.
 - **An absent `focus` is a positive statement, and the receiver owes the
-  rebuild.** A hard focus is also what elides `worldOffset` (§ worldOffset
-  below), so a blob carrying neither field is asserting the default frame —
+  rebuild.** A hard focus is also what elides `worldOffset` ([`worldOffset`
+  below](#worldoffset-carries-the-frame)), so a blob carrying neither field is asserting the default frame —
   origin on Sol — and `applyDecodedView` re-establishes it before writing
   `cam` / `tgt`. A blob that states its frame some other way (an explicit
   `worldOffset`, or a legacy v1–v3 `cloud` focus) is left alone so nothing
@@ -352,7 +352,7 @@ motion the viewer cannot see, which under a scale-relative trigger is
 unbounded URL churn against a *trailing* debounce — that is, no URL write at
 all. Subtracting the anchor removes both.
 
-**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
+<a id="worldoffset-carries-the-frame"></a>**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
 the encoder gates that field on the exact complement of this test rather than
 on a second rule of its own. Three cases leave the pose un-anchored: nothing
 focused, a source that will not resolve, and a **soft-kind focus** — only a

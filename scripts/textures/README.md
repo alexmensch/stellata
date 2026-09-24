@@ -115,7 +115,7 @@ rather than shipping it.
   file-level rejection actually caught. Also sweeps BC5 error against
   map width, which is how the 8192 tier gets decided without an 8192
   map to test. Rationale and the numbers:
-  [BC5 measured](/data/textures/relief/README.md#bc5-measured--and--lossless-caught-the-packing-not-the-codec).
+  [BC5 measured](/data/textures/relief/README.md#bc5-measured--and-lossless-caught-the-packing-not-the-codec).
   Its unittest pins the codec — endpoint exactness, the
   per-mode error bound, the two-plane split, and the uint8-wraparound
   trap in the distance metric, on an **interior** texel: a block's min

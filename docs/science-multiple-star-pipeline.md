@@ -202,7 +202,7 @@ astronomer-relevant summary:
    photometry cannot constrain one — so for the non-visual routes
    the pipeline estimates it from Kepler's third law,
    a = M_total^⅓ · P_yr^⅔ AU, with M_total = M₁/(1−q) from the
-   primary's spectral-class mass (Cox 2000 §15.2 / Pecaut & Mamajek
+   primary's spectral-class mass (Cox 2000 Sect. 15.2 / Pecaut & Mamajek
    2013, the same tables the q backfill uses; 1 M☉ when the type is
    unparseable). Where no mass ratio is derivable the companion is
    assumed at half the primary's mass (q = ⅓, near the SB1
@@ -238,7 +238,7 @@ astronomer-relevant summary:
    Spectral type resolves curated → SIMBAD per-component → MSC
    pair-side → AT-HYG per-system inherited; mass ratio `q` rides through
    from Gaia NSS / SB2 spectroscopy where present, with per-class
-   mass-table backfill from Cox 2000 §15.2 / Pecaut & Mamajek 2013
+   mass-table backfill from Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013
    for visual orbits without spectroscopy.
 7. **Assert against snapshots.** Per-stage counts gate
    `build-binaries-expected.json`; per-strategy rates gate

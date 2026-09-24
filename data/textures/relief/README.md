@@ -67,7 +67,7 @@ owns the derivation and the per-body contract.
   width, which is why the Moon is the body this work is scoped around —
   at a 15° sun its p90 slope is a ~4× terminator brightness contrast.
 
-**Lossless, and that is not a default.** Both channels through one lossy
+<a id="lossless-and-that-is-not-a-default"></a>**Lossless, and that is not a default.** Both channels through one lossy
 WebP at q98 errs **1.58° of normal angle, mean**, against the Moon's
 3.27° median tilt — about half the signal — so lossy encoding is
 rejected at file level. Shipping the
@@ -75,7 +75,7 @@ rejected at file level. Shipping the
 height quantises to 0.82° of slope terracing, a third of the median
 tilt, and a 16-bit height PNG is larger than the normal map it would
 produce while costing three taps per fragment. What that q98 number is
-and is not evidence of: [BC5 measured](#bc5-measured--and--lossless-caught-the-packing-not-the-codec).
+and is not evidence of: [BC5 measured](#bc5-measured--and-lossless-caught-the-packing-not-the-codec).
 
 **Why 4096.** The slope signal buys terminator contrast and keeps
 climbing with width — the Moon's p90 tilt goes 9.7° → 11.6° from 2048
@@ -96,7 +96,7 @@ would silently delete four of the eight — a whole-branch `RG8` is the
 plausible-looking mistake here, and it reads as wrong terrain rather
 than a missing map. `surface-relief-pure.test.ts` pins the split.
 
-### BC5 measured — and § Lossless caught the packing, not the codec
+### BC5 measured — and Lossless caught the packing, not the codec
 
 `measure_block_compression.py` runs the shipped maps through a reference
 BC4/BC5 codec and through lossy WebP three ways, against the same 8-bit
@@ -115,7 +115,7 @@ libwebp's lossy path is 4:2:0, so an RGB file carries G at quarter
 resolution — and here G is half the signal, not a chroma channel. Give
 each channel its own grayscale file and the same codec at the same
 quality ties BC5 at p90 on the Moon and beats it at p99 on all three.
-So § Lossless's verdict transfers to *packing two independent channels
+So [Lossless](#lossless-and-that-is-not-a-default)'s verdict transfers to *packing two independent channels
 into one photographic frame*, which is the mistake it actually caught;
 it says nothing about whether a DCT can carry a normal map. Quoting
 BC5 as "a third of q98" would have decided the 8192 tier on that

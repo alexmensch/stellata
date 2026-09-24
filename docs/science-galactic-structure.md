@@ -41,7 +41,7 @@ ray. The density at each step is:
 
 - **Disc**: `density0 × exp(-(R-R₀)/3000pc) × (exp(-|z|/300pc) +
   0.04·exp(-|z|/900pc))` — thin plus thick in galactocentric cylindrical
-  coordinates, the thick term at BHG16 § 5.1's z_T = 900 ± 180 pc and
+  coordinates, the thick term at BHG16 Sect. 5.1's z_T = 900 ± 180 pc and
   f_ρ = 4 ± 2 %. It exists for the **external** view: edge-on from the LMC
   or a few hundred kpc out, a galaxy with no thick disc reads as a
   hard-edged lens. Both components share one radial scale length, which
@@ -673,7 +673,7 @@ The cost is modest and the direction is right:
 Plane-to-pole contrast moves 1.51 → 1.42. RMS |ΔS| over the whole −30…+30
 profile is flat (1.15 → 1.16); at |b| ≥ 10 it improves 0.72 → 0.67, and the
 northern rows b = +15…+30 go from 0.4–1.0 mag bright to mostly under 0.3 —
-the same high-|b| excess § 8 records, partly explained by dust the smooth slab
+the same high-|b| excess [§ 8](science-hdr-pipeline.md#the-high-b-excess-this-measurement-exposes) records, partly explained by dust the smooth slab
 was missing.
 
 **The below-plane half of the motivating case is not a dust problem and is not

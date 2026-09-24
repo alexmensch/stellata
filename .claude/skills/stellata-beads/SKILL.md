@@ -69,8 +69,8 @@ re-wraps lines.
 Both are set **at creation**, and getting either wrong is silent — nothing
 prompts you, the bead just looks filed:
 
-- `--parent <epic-id>` — [Choosing the parent epic](#choosing-the-parent-epic) below, and `beads` skill
-  § Never create a bead outside an epic for the escalation path when none fits.
+- `--parent <epic-id>` — [Choosing the parent epic](#choosing-the-parent-epic) below, and the `beads` skill's
+  "Never create a bead outside an epic" for the escalation path when none fits.
 - `--priority` — [Prioritisation](#prioritisation) below.
 
 Audit: `bd list --status=open --no-parent --exclude-type=epic`.

@@ -239,8 +239,8 @@ label rule. HD 330122 is the other shape, the freed number no second Tycho
 entry names — the case [A withheld number attaches to no record](#a-withheld-number-attaches-to-no-record-and-that-is-the-answer) already
 describes for the withheld set.
 
-The split is a ratchet, not a note: `../parity-ledger.test.ts` § override-freed
-HD numbers pins which three ship and which three do not, so a seventh freed
+The split is a ratchet, not a note: the *override-freed HD numbers* case in
+`../parity-ledger.test.ts` pins which three ship and which three do not, so a seventh freed
 number, or one of these three changing side, fails rather than ageing this
 table. It keys on the `override-value` disposition where the withheld ratchet
 keys on `extra-sibling-rendered`, which is why they are two suites and not one.

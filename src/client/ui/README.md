@@ -52,7 +52,7 @@ registry only describes what to display.
 
 The Find picker reuses the shared search corpus via `createSearchRunner`
 (`../typeahead/search.ts`) and is relocated into the `#kb-modal` card
-like the Go / Constellation pickers — see § DOM relocation below.
+like the Go / Constellation pickers — see [DOM relocation](#go--constellation-pickers--dom-relocation) below.
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)

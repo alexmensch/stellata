@@ -14,7 +14,7 @@ src/client/webgpu/hdr/
   hdr-pipeline-webgpu.ts      WebGpuHdrPipeline — the lazy MRT target
     (+ test)                  (RGBA16F + RG16F + RGBA16F over a
                               requested Depth32Float reversed-z depth
-                              attachment, § below),
+                              attachment, README.md#the-depth-format-is-requested-not-asserted),
                               bind/resolve, chart bypass, syncMode, the
                               dev switches, the resolve material, and
                               ownership of the gates and the reduction.

@@ -122,7 +122,7 @@ interface ObjectKindModule<K extends TargetKind> {
   load(baseUrl): Promise<void>;      // NEVER rejects; stores the artifact
   attach(ctx: KindContext): SceneLayer | null;  // shell registers the layer
   // capability legs, valid after attach:
-  focusable(): FocusableProvider;    // merged contract, § below
+  focusable(): FocusableProvider;    // merged contract, see below
   card(): FocusCardProvider<K>;
   hover?(): HoverProvider;           // its pick doubles as the click FSM's
   pinnable(idx: number): boolean;
@@ -204,7 +204,7 @@ galaxy catalogue is a shard of the galaxy kind.
 - The alternative — `TargetKind` entries like `'star-lmc'` — would
   poison every exhaustive record with behavioural duplicates and is
   rejected.
-- **Chunk-local coordinates** (§ Free-fly constraints) are part of the
+- **Chunk-local coordinates** ([Free-fly constraints](#free-fly-constraints-on-the-engine-tier)) are part of the
   shard format from the first multi-shard kind.
 
 ### Stars are a module — sequenced last, not privileged

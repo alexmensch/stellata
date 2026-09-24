@@ -7,7 +7,7 @@ distance stack, `docs/science-catalog-ingestion.md`); this document
 covers everything else. The decision record — audit empirics, per-child
 traceability, phase sequencing — lives in bd (epic `stellata-3bsf`,
 design gate `stellata-3bsf.1`). External tables verified against
-VizieR TAP 2026-07-27; § 5's value sources (I/360 GSPC, I/259, SIMBAD)
+VizieR TAP 2026-07-27; [§ 5](#5-per-field-cascades-and-rescue-tiers)'s value sources (I/360 GSPC, I/259, SIMBAD)
 verified against VizieR/ESA TAP and SIMBAD 2026-08-14
 (`stellata-3bsf.21`). The naming-authority ladder (proper/Bayer
 display names, search aliases) is `docs/star-naming.md`.
@@ -655,7 +655,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   1. *"GSPC reaches ≈90% of the red rows"* measured GSPC **row presence**
      (91.0% of the request set), not validity. The per-band flag reads
      `1` for in-range, not `0` — the archive publishes no polarity;
-     Montegriffo+ 2023 § 6.2 does, and the numeric region was measured.
+     Montegriffo+ 2023 Sect. 6.2 does, and the numeric region was measured.
      It does not intersect the red rows on a single row of this
      catalogue, which is bright enough that 96% of it sits below the
      flag's bright bound. A flag-valid gate would have shipped the tier
@@ -664,7 +664,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
      BELOW printed `I/239` B−V rather than above it, and carries a
      measured red bound of BP−RP 3.0. This is not the extrapolation the
      paragraph above rejects twice: GSPC integrates each star's own
-     BP/RP spectrum through the passband, and § 6.2 calls a flag-0
+     BP/RP spectrum through the passband, and Montegriffo+ 2023 Sect. 6.2 calls a flag-0
      magnitude an extrapolation of the *standardisation* — the
      ground-tying correction — not of the integration. Out-of-flag
      values agree with the Table-5.9 relation as closely as in-flag ones
@@ -1059,7 +1059,7 @@ Applications of `docs/sid.md` (which remains the authority):
 - The DR-scoped hops swap tables: TYC→source_id and HIP→source_id move
   to the new release's best-neighbour analogues; per-source_id pulls
   (astrometry, Apsis, NSS, synthetic photometry, distance posteriors)
-  re-run through `scripts/refresh/` (§ DR4 transition order); spine
+  re-run through `scripts/refresh/` ([Refreshing data when DR4 lands](/scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands)); spine
   `gaia_dr3:` ids bridge through [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation) reconciliation.
 - The photometric transform ([§ 5](#5-per-field-cascades-and-rescue-tiers)) gets the new release's successor
   calibration.

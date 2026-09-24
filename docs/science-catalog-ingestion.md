@@ -543,7 +543,7 @@ basis (the same basis `directionAtEpoch` in
 so the basis math extracts into a shared helper), `d` the final
 stack distance, and `v_r` in pc/yr via 1 km/s = 1.0227×10⁻⁶ pc/yr.
 μ_α* is the cos δ-applied rate — never divide by cos δ. This is the
-standard epoch-transformation model (ESA SP-1200 Vol. 1 § 1.5.5;
+standard epoch-transformation model (ESA SP-1200 Vol. 1 Sect. 1.5.5;
 Butkevich & Lindegren 2014, A&A 570, A62 give the rigorous form).
 Deliberately omitted: perspective acceleration and light-time
 terms. The perspective term is the largest omission and grows

@@ -47,7 +47,7 @@ scripts/catalog/spine/
   inherited-spine-guard.test.ts   Assertions over the COMMITTED artifact —
                                   byte identity, counts, keyless rows, Sol,
                                   duplicate source_ids (README.md#why-a-guard-not-a-rebuild), plus the stale-source_id queue
-                                  (§ Six source_ids DR3 does not publish).
+                                  (README.md#six-source_ids-dr3-does-not-publish).
   inherited-spine-expected.json   Pinned count snapshot.
   primaries-audit-pure.ts         The retirement's measurement: per-row
     (+ test)                      designation attestation against the

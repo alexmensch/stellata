@@ -121,7 +121,7 @@ information.
   accepts this — it requires a non-empty section and an `accepted:` line
   per `✗`, and a section with no row to mark writes none — so a table is
   not what the gate asks for, an answer is. Keep the character out of the
-  prose, though: it marks wherever it appears (§ What the section carries).
+  prose, though: it marks wherever it appears ([What the section carries](#what-the-section-carries)).
 - **Tier 1 — per-frame code touched, no change to draw counts or pass
   structure.** `--mode dwell --scenario mw120,sol --backend webgpu
   --frames 960 --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~4 min, one

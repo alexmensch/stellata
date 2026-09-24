@@ -405,7 +405,7 @@ silently disengages the pin. Residual sources that have bitten this:
    `worldOffset` put (no `recenterOrigin(0,0,0)`).
 4. **Orbital drift of a binary focal.** The focal star moves along its
    orbit each frame; a static target would fall off it. The focal-frame
-   ride (§ binaries/README) translates `controls.target` by the star's
+   ride ([`binaries/README.md`](../../binaries/README.md)) translates `controls.target` by the star's
    per-frame perturbation so target stays on the star.
 5. **Space-motion re-advance under time scrubbing.** A scrubbed clock
    re-runs the epoch-advance pass, moving the focal star's baseline

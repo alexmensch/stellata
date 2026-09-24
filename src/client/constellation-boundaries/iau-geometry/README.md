@@ -21,7 +21,7 @@ src/client/constellation-boundaries/iau-geometry/
                                   anchors (README.md#label-anchors), and
                                   createIauConstellationLookup.
   iau-athyg-agreement.test.ts     Catalogue-wide cross-check against AT-HYG's
-                                  editorial con column (§ Agreement).
+                                  editorial con column (README.md#agreement-with-at-hyg).
 ```
 
 **Use `createIauConstellationLookup(records)`, not the pieces.** It parses,
@@ -116,7 +116,7 @@ plausible-looking sky:
   from 61 to 149 while every named-star spot check still passes.
 
 The epoch is therefore pinned by the disagreement count, not by spot
-checks. See § Agreement and [ρ Aquilae](#ρ-aquilae).
+checks. See [Agreement](#agreement-with-at-hyg) and [ρ Aquilae](#ρ-aquilae).
 
 ## Cell decomposition — the self-validating invariant
 

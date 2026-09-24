@@ -287,8 +287,7 @@ restoring camera-from-origin ≈ eye distance. It is kind-agnostic —
 keyed on camera geometry, not the focus kind — so every hard focus
 benefits with no per-kind code. The shared origin is the one precision
 lever a per-shader pin (`uPinFocusToCenter`) can't generalise; that pin
-still handles the separate close-approach-at-origin case (§ focus/README
-§ Pin-to-center).
+still handles the separate close-approach-at-origin case ([Pin-to-center](../camera/focus/README.md#pin-to-center-upinfocustocenter)).
 
 ## Walk-active LOD
 
@@ -442,4 +441,4 @@ the full `baseDiffPc_inner`. It is the same value the walk writes into
 the buffer (the walk anchors the secondary on `baseDiffPc` too), so the
 ride tracks the true perturbed position; without `corr` the ride would
 leave `controls.target` off a focused secondary of a mismatched pair by
-that constant, silently disengaging the pin (§ focus/README).
+that constant, silently disengaging the pin ([`camera/focus/README.md`](../camera/focus/README.md)).

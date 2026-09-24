@@ -258,7 +258,7 @@ visible structure is partly the selection function.
   follow-up under 0hx.7, not a gate.
 - The tier's data README documents the three target classes, their
   z-ranges, footprints, and the "structure ≠ selection" caveat, and
-  cites Ross et al. 2020 § 2 for the selection definitions.
+  cites Ross et al. 2020 Sect. 2 for the selection definitions.
 
 ## 7. Architecture sketches (impl in 0hx.2 / 0hx.3)
 
@@ -277,7 +277,7 @@ visible structure is partly the selection function.
    Positions are stored absolute ICRS pc (float32) but uploaded
    camera-relative: CPU-side float64 subtraction of the camera
    position per rebase, the star pipeline's floating-origin trick
-   lifted to galaxies. Tier 4+ adds the chunk loader (§ 3) and the
+   lifted to galaxies. Tier 4+ adds the chunk loader ([§ 3](#3-manifest-schema)) and the
    near-billboard/far-volumetric LOD split the epic describes.
 3. **Label rank with spatial bucketing** (lands with 0hx.3, extended
    per tier) — [§ 4](#4-naming-policy--label-ranking) above.

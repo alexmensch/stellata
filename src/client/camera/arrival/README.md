@@ -27,7 +27,7 @@ smoothstep — `f(t) = 2t² for t < 0.5, else 1 − 2(1−t)²`. (Warp Phase 3
 also lerps camera position by time, but is excluded from this list:
 it's already cubic-Hermite, lands at the focal star's local origin
 rather than parkDist, and is an OBSERVE handover rather than an
-arrival — see § Inventory.) That damped the **time** profile but did
+arrival — see [Inventory](#inventory-of-arrival-sites).) That damped the **time** profile but did
 nothing about the `1/d` term in angular space. Smoothstep at the end
 of position still lands with `dd/dt = 0`, but `dθ/dd = −2R/d²` is
 enormous at small d, so the angular rate blew up just before zero
@@ -143,7 +143,7 @@ range.
 zero velocity (outer's piecewise-quad ends at v = 0; inner's quintic
 starts at v = 0 via `S'(0) = 0`), so the handoff is velocity-continuous
 without the matching constraint that killed the previously-rejected
-dWindow split (see § "What about a two-region split at dWindow?"
+dWindow split (see [What about a two-region split at `dWindow`?](#what-about-a-two-region-split-at-dwindow)
 below). The trade-off is a momentary neutral coast at the seam, which
 is perceptually masked because parallax has already collapsed by then
 and angular growth hasn't yet become salient.

@@ -78,7 +78,7 @@ scripts/binaries/
   stage7_counts.py                Build-counts + build-rates snapshot writer
                                   (mirrors scripts/catalog/build-counts.ts).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
-                                  (Cox 2000 §15.2 / Pecaut & Mamajek 2013).
+                                  (Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013).
   build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
                                   public/binaries.bin. Detects hierarchical
                                   chains via component-letter prefix matching
@@ -745,7 +745,7 @@ Three system-level mechanisms run at emit time:
   parses both components' spectral strings (SIMBAD per-component
   preferred, AT-HYG inherited fallback) into class / subclass / lum
   class and reads a `q = M_secondary / (M_primary + M_secondary)` off
-  per-class mass tables for MS / III / IV / I (Cox 2000 §15.2, Pecaut &
+  per-class mass tables for MS / III / IV / I (Cox 2000 Sect. 15.2, Pecaut &
   Mamajek 2013). White dwarfs default to 0.6 M☉; carbon / S / WR
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.

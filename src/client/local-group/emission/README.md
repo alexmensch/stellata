@@ -131,8 +131,8 @@ used to carry (the pixel solid angle passed to both of
 **2.695 mag** it cost the envelope and the **3.95 mag** over-lift at M31's
 nucleus it was avoiding. Both figures, the 3.6′ crossover between them, the
 rejected `fwidth(S)` cap and the residuals the shipped pass leaves are all
-pinned in `local-group-emission-calibration.test.ts` § against
-convolve-then-gain.
+pinned in the *against convolve-then-gain* case of
+`local-group-emission-calibration.test.ts`.
 
 **Two consequences worth having before touching the raymarch.** The
 convolution can only average what the rasteriser sampled, so the profile is

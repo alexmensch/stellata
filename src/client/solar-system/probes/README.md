@@ -48,7 +48,7 @@ src/client/solar-system/probes/
   probe-focus-geometry.ts         PROBE_ORBIT_FLOOR_PC /
                                   PROBE_PARK_DIST_PC — fixed park
                                   geometry, not a fill solve. See
-                                  § Park distance.
+                                  README.md#park-distance-is-set-by-the-near-plane-not-by-the-spacecraft.
   probe-labels.ts                 Per-probe SVG labels. See README.md#labels.
   probe-encounter-coherence.test  Planet-encounter + heliopause-crossing
     .ts                           corpus. See README.md#coherence-not-precision.

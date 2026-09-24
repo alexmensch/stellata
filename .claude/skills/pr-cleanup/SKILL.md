@@ -151,7 +151,7 @@ a standalone PR.
 |---|---|
 | `CLEAN` | mergeable, all required checks passed — merge now |
 | `BLOCKED` | required checks pending **or** [Deviations](#deviations--stop-and-ask)' blocked-with-no-failing-check |
-| `UNSTABLE` | mergeable, but something is failing — a § Deviation, never merge over it |
+| `UNSTABLE` | mergeable, but something is failing — a [deviation](#deviations--stop-and-ask), never merge over it |
 | `BEHIND` / `DIRTY` | out of date / conflicting — back to [Rebase onto main](#2-rebase-onto-main--always-check-even-when-nothing-suggests-it) |
 | `UNKNOWN` | not computed yet — ordinary after a push; re-query, do not act |
 
@@ -205,12 +205,12 @@ done
 check blocks the merge for good while auto-merge stays armed, so a
 `fail`-only filter polls a PR that will never move. `Monitor` with
 `persistent: true`. Only `MERGED` continues to [Close the beads](#5-close-the-beads); every other
-exit is a § Deviation.
+exit is a [deviation](#deviations--stop-and-ask).
 
 ## 5. Close the beads
 
 Only once the PR is actually `MERGED` — whether the watch reported it or
-§ Ground truth found it already merged.
+[Ground truth](#1-ground-truth-first) found it already merged.
 
 ```bash
 bd close <id> [<id>...] --reason="Shipped in PR #<N> (squash merged)."

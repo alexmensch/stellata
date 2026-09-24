@@ -198,7 +198,7 @@ at its `iSourceIdx`. Two kinds of table:
   `StarTables.syncSources()` forwards the source's `version` and
   `updateRanges` onto it **verbatim**: same array, same element units.
   The position table is `count × 3` floats read as three scalars, never
-  an itemSize-3 storage attribute (§ below).
+  an itemSize-3 storage attribute ([Why no table is itemSize 3](#why-no-table-is-itemsize-3)).
 
 ### What a dirty frame costs, and which writer decides
 

@@ -58,7 +58,7 @@ actually are:
   `forEachStarNearCamera` / `discWindowPcFor` / `shouldEnableCoreMask`
   built on it ([Star rendering](/src/client/star-pipeline/README.md#star-rendering-instanced-quads-three-passes), core depth-mask). `Picker` slices the
   same index for its distSol-filter window.
-- **The physical-size window.** `syncPhysSizeWindow()` — § below.
+- **The physical-size window.** `syncPhysSizeWindow()` — [below](#the-physical-size-window).
 
 ## The physical-size window
 

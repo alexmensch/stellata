@@ -91,7 +91,7 @@ drift off its body — including through the seam.
 ### The Standish series is not sub-arcminute, and its error is not invisible
 
 Standish's published budget for the Table 2a elements
-(`ssd.jpl.nasa.gov/planets/approx_pos.html` § Accuracy) reaches
+(`ssd.jpl.nasa.gov/planets/approx_pos.html`, section *Accuracy*) reaches
 λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at Uranus;
 measured against DE441 the giants sit at 0.05–0.14 AU across the clamp
 and 0.05 AU in 1900–2100. Whether that shows depends on viewing

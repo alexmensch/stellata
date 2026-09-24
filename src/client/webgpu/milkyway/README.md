@@ -5,7 +5,7 @@ running per-channel dust extinction. The density profiles, the ρ₀ solve
 and the calibration live in `../../milkyway/` and are not re-decided
 here.
 
-**The chart isobar contour has never drawn.** Chart
+<a id="the-chart-isobar-contour-has-never-drawn"></a>**The chart isobar contour has never drawn.** Chart
 mode hides both meshes, so the branch is unreachable
 ([Chart mode + warp](../../milkyway/README.md#chart-mode--warp)). It is kept for a
 future treatment, not because anything renders it. Treat every mention
@@ -107,7 +107,7 @@ family split: a component's profile is fixed for the material's life.
 
 ## Three outcomes, none of which can be a return
 
-The fragment resolves to no coverage, the isobar contour (dead — § above),
+The fragment resolves to no coverage, the isobar contour ([dead](#the-chart-isobar-contour-has-never-drawn)),
 or the emission, and WGSL has no value-carrying return to bail with. So
 coverage is one predicate and the three outcomes are nested selects.
 

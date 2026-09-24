@@ -70,7 +70,7 @@ reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
 measurement that motivated it, and both are in the vindicating 10.
 
 Every count in this section is pinned against the committed tables by
-`simbad-tyc-hd-parse.test.ts` § adjudication over the committed tables, so a
+`simbad-tyc-hd-parse.test.ts`'s *adjudication over the committed tables*, so a
 re-pull that moves one fails the suite rather than ageing this prose.
 
 A consumer therefore has three verdicts to handle, not two — agrees, dissents,
@@ -145,7 +145,7 @@ no answer from the pull at all, f Pup among them, and 2 of these 23 have no
 object for their source — a rule must leave those alone rather than treat
 absence as agreement.
 
-The partition is pinned in `simbad-tyc-hd-parse.test.ts` § the four-witness
+The partition is pinned in `simbad-tyc-hd-parse.test.ts`'s *the four-witness
 split, over the committed tables, so a re-pull that moves a row fails the suite
 rather than ageing this section.
 
@@ -153,7 +153,7 @@ rather than ageing this section.
 guards it.** The contested set is keyed on the manifest's SHIPPED HD, and an
 asserted row ships the HD both TYC witnesses name — so the row stops being
 contested the moment the override lands, and the fourth witness would never be
-weighed on it again. `simbad-tyc-hd-parse.test.ts` § the asserted move set
+weighed on it again. `simbad-tyc-hd-parse.test.ts`'s *the asserted move set*
 re-derives all four on the value ASSERTED instead, and pins V/50's HD↔HR
 pairing, which the move-together rule turns on and nothing else checks. That is
 also why [What the TYC → HD pull adjudicates](#what-the-tyc--hd-pull-adjudicates) counts 15 rather than 23: the

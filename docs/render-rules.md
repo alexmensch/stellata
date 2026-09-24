@@ -155,7 +155,7 @@ pixel count while a 50°→120° FOV change made it *cheaper* (the
 cross-vantage sweeps in stellata-8cg.18's notes). Early-z buys nothing
 here, because no occluder sits in front of most band pixels.
 
-**How to apply.** The sum is what is bandlimited, so keep it linear all
+<a id="3-how-to-apply"></a>**How to apply.** The sum is what is bandlimited, so keep it linear all
 the way to the upsample: rgb and the scalar the knee runs on are stored
 raw, and the knee is applied to the *summed* field. Attachments of one
 render target must share dimensions, so a reduced-resolution emitter is
@@ -313,7 +313,7 @@ float depth: **0.1 ms** for one extra empty pass at Earth close approach
 not a reading). Sol's bound per boundary is therefore an order under
 Earth's resolved figure. Whether that gap is the vantage — Earth is the
 one canon vantage where the reduction chain draws under the pin — or the
-four clears coalescing is untested; § How to apply says what not to
+four clears coalescing is untested; [How to apply](#3-how-to-apply) says what not to
 conclude from it.
 **Either way the boundary is not paying a full store-and-reload.** Those
 attachments hold ~115 MB at this buffer, and moving them out and back
@@ -442,6 +442,6 @@ number above; this section states the rules.
 Adopting any rule above across every layer is
 `authoring-patterns.md#pattern-coverage-across-peers`: enumerate the
 peer set in the PR body and grep the old pattern to zero. Per-frame
-state that a skip leaves behind is `§ Sentinel-init`. Time inside any of
+state that a skip leaves behind is [Sentinel-init](authoring-patterns.md#sentinel-init-for-dirty-track). Time inside any of
 these decisions is `Stellata.getT()`, never `Date.now()`
-(`§ Single source of truth for time / camera state / world offset`).
+([Single source of truth for time / camera state / world offset](authoring-patterns.md#single-source-of-truth-for-time--camera-state--world-offset)).

@@ -82,7 +82,7 @@ relation then applies its own colour range on top.
 ```
 V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
   → printed HIP V      data/hipparcos/hip_main_vmag.tsv (I/239 Vmag)
-  → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 § 1.3, on the record's TYC
+  → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 Sect. 1.3, on the record's TYC
   → Gliese Vmag        data/gliese/gliese_v70a.tsv, on the record's GJ
   → curated            Sol alone
 ```
@@ -171,12 +171,12 @@ from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relati
 **that bound is on a fit, this one is mostly on a correction.** The relation
 is a polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
 GSPC's magnitudes are each star's own BP/RP spectrum integrated through the
-passband — a measurement of that star — and Montegriffo+ 2023 § 6.2 calls a
+passband — a measurement of that star — and Montegriffo+ 2023 Sect. 6.2 calls a
 flag-0 magnitude *"an extrapolation of the adopted standardisation"*, i.e. of
 the correction tying the result to the ground system, not of the integration.
 
 **"Mostly" is load-bearing on the bright side.** Past the flag's `G` ≈ 10.7
-edge, § 3.2 of the same paper attributes the loss of millimag accuracy to a
+edge, Sect. 3.2 of the same paper attributes the loss of millimag accuracy to a
 BP/RP spectrometer configuration change at `G` ≈ 11.5 — that one degrades
 XP's *internal* calibration, not just the standardisation on top. This whole
 catalogue sits there, so the tier is knowingly using XP spectra outside their
@@ -203,7 +203,7 @@ Against printed `I/239` B−V, binned by colour:
 `GAIA_PHOTOMETRY_SATURATION_G`, a bound calibrated against a distribution
 rather than adopted from a header. The paper backs it independently: the
 flag's red edge sits at 2.6 because the Landolt/Stetson standard collections
-thin out past `BP−RP` ≈ 2 and disagree by 3–5% there, but § 3.2 reports that
+thin out past `BP−RP` ≈ 2 and disagree by 3–5% there, but its Sect. 3.2 reports that
 the handful of red giants they do carry over `1.5 < BP−RP < 3.5` *"match the
 same locus of the bulk of the other stars ... within <10.0 mmag"*. The
 standardisation was checked past its own flag, and held.
@@ -335,7 +335,7 @@ for the same gate on the label side).
 ## Citation
 
 Riello, M., De Angeli, F., Evans, D. W., et al. 2021, *A&A* 649, A3 — "Gaia
-Early Data Release 3: Photometric content and validation", § Photometric
+Early Data Release 3: Photometric content and validation", section *Photometric
 relationships with other photometric systems. DR3 ships EDR3's photometry
 unchanged, so the EDR3 calibration is the one that applies. The coefficients,
 σ, and colour range are pinned as literals in the test rather than imported

@@ -85,7 +85,7 @@ pipeline uses everywhere else; ~99.6% of records carry one (the residual
 ~0.4% are the famous bright binaries Gaia couldn't fit a 5p PM to). v6
 appended seven `float32` Gaia DR3 Apsis astrophysical parameters at
 bytes 52–79 (gspphot Teff/logg/[M/H]/A0 then gspspec Teff/logg/[M/H]),
-keyed by the v5 `gaia_source_id` field — see § Gaia DR3 Apsis surfacing
+keyed by the v5 `gaia_source_id` field — see [Gaia DR3 Apsis surfacing](../README.md#gaia-dr3-apsis-surfacing)
 for its coverage and the runtime colour-LUT re-key it enables.
 
 - Header (32 bytes)
@@ -232,7 +232,7 @@ yields one `CatalogRecord` object per call, while the SoA loader fills
 parallel typed arrays and does so **column-at-a-time** — one kind
 dispatch per column, then a tight constant-getter loop, which decodes the
 390k-record catalog ~35% faster than a per-record pass over every field.
-`scripts/catalog/record/catalog-pure.test.ts` § record reader surface pins the
+The *record reader surface* block of `scripts/catalog/record/catalog-pure.test.ts` pins the
 two read shapes against each other and against the writer. Free flag bits today are `0x40`, `0x80` (see
 `FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` — set on
 records added by `companion-promotion.ts`. `0x20` is

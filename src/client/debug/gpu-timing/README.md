@@ -130,8 +130,8 @@ once per tab, and latches that pool's soundness false — for the render pool,
 `gpuFrameSamplesAreSound()`, which drops the headline to `submit` and a
 sweep to `raf-delta`. That is the same degradation the withheld-feature path
 already had, reached one step later — **the grant is necessary, never
-sufficient.** The latch is per pool (§ The resolve must run on EVERY
-rendered frame), so this verdict is about the render pool alone. A zero is
+sufficient.** The latch is per pool ([The resolve must run on EVERY
+rendered frame](#the-resolve-must-run-on-every-rendered-frame)), so this verdict is about the render pool alone. A zero is
 NOT a fault: three seeds `lastValue` at 0 and returns it from every
 early-out that measured nothing, so zeros are dropped silently and leave the
 backend sound.
@@ -150,7 +150,7 @@ Three consequences, none of them a limitation to work around:
   gives us honestly, so **there are no per-pass `gpu.*` rows** —
   the `submit.*` CPU rows and `debug.priceFrame()` cover that ground.
 
-**The resolve must run on EVERY rendered frame that has a clock, and it
+<a id="the-resolve-must-run-on-every-rendered-frame"></a>**The resolve must run on EVERY rendered frame that has a clock, and it
 must resolve BOTH pools**, not only while the HUD is open and not only the
 render one. Tracking allocates the query pair whether or not anyone reads
 the result, and only a resolve of that pool recycles it: a resolve gated on

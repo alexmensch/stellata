@@ -77,7 +77,7 @@ Constants baked into `milkyway.ts`; no runtime data loads.
 
 - **Disc**: `density0 × exp(-(R-R₀)/3000pc) × (exp(-|z|/300pc) +
   0.04·exp(-|z|/900pc))` — thin plus thick, Bland-Hawthorn & Gerhard
-  2016 § 5.1 (z_T = 900 ± 180 pc carrying f_ρ = 4 ± 2 % of the local
+  2016 Sect. 5.1 (z_T = 900 ± 180 pc carrying f_ρ = 4 ± 2 % of the local
   density). It is for the **external** view — edge-on from the LMC or a
   few hundred kpc out, a galaxy without one reads as a hard-edged lens —
   and is **not** a high-latitude fix: it brightens the pole.

@@ -40,7 +40,7 @@ nothing translucent, blurred, or filtered over it. Adding a
 
 ## The four sections
 
-| § | Patches | What it catches |
+| Section | Patches | What it catches |
 | --- | --- | --- |
 | Black point | `1 2 3 4 6 8 11 16` on `0` | shadow crush — the failure that matters most, since the scene is faint sources on black |
 | Highlights | `238…254` on `255` | top-end crush, which is what the resolved-surface pin compensates for |

@@ -25,7 +25,7 @@ classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
                                    source_id (357,265 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
-                                   (§ HD-route cross-check below).
+                                   (README.md#classic_id_overlaytsv--the-derived-overlay).
 hd_hip_route_disagreements_review.tsv
                                    Hand-curated dispositions for the queue,
                                    joined row-for-row by
@@ -74,7 +74,7 @@ all four; cite the paper per table.
   HR routes via `bsc5.tsv`, HD via `tyc2_hd.tsv`. 2,185 rows carry a Bayer
   letter, 2,757 a Flamsteed number — 119 Flamsteed numbers the spine
   carries are not among them (`data/membership/README.md`). Two of those
-  rows leave the table as curated corrections (§ the roster above), so
+  rows leave the table as curated corrections (the file list above), so
   consumers see 2,183 Bayer and 2,755 Flamsteed cells.
   `bayer` is IV/27A's own lowercase three-letter form
   (`alf`, `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:

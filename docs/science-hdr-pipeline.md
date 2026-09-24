@@ -1232,11 +1232,11 @@ missed: 2.16 (preserving the retired `K = 12`'s angular exaggeration at
 pixel size on 1920×1080) clearly large. 2.592 is 1.2× the former. Note it
 must be `TARGET_PX` that carries this calibration and not the debug
 multiplier or `K_density`, which multiply the *floored* term and so would
-hold K above 1 at every zoom — see § the floor below. Either way every
+hold K above 1 at every zoom — see [where K floors](#where-k-floors) below. Either way every
 viewport converges on one size instead of scattering — ultrawides shrink
 toward it, small laptops grow toward it.
 
-**Where K floors depends on `TARGET_PX`.** `K = 1` at
+<a id="where-k-floors"></a>**Where K floors depends on `TARGET_PX`.** `K = 1` at
 `arcsec_per_px = σ/TARGET_PX`, so on a 1080-px viewport the crossover is
 **3.47°** at 2.592 (4.17° at 2.16, 2.34° at 3.84). Below it the true 30″ PSF
 is wider than a pixel and the disc **grows** as the FOV narrows — the

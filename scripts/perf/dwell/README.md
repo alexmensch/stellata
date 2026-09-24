@@ -36,8 +36,8 @@ holds the statistic readback at one request per that many rendered frames
 from before the warmup until the restore, through
 `reduction.readbackCadence` ([Latency](/src/client/hdr/exposure/reduction/README.md#latency)).
 Emergent, the rate is whatever the readback's round trip leaves
-it at — 0.25 to 0.975 across the archive — and § Where the frame has two
-classes below is what that costs a median. Four is the rate every clean
+it at — 0.25 to 0.975 across the archive — and [Where the frame has two
+classes](#where-the-frame-has-two-classes-the-gpu-stream-median-follows-the) below is what that costs a median. Four is the rate every clean
 `earth` dwell ran at and the app's own at the Sol default view, so the pin
 holds the frame the archive measured rather than inventing one. It is a cap,
 never a floor: a vantage whose round trip outruns the cadence requests less
