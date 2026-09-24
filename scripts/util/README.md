@@ -15,9 +15,7 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/refresh/` imports instead of independently walking
   `Path(__file__).resolve().parent...`.
 - `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
-  `scripts/catalog/*.ts` scripts, plus `mtimeIfExists(path)` and
-  `maxMtimeOfSources(paths)` (newest mtime over present paths, 0 if all
-  missing) for build-idempotency checks against optional inputs.
+  `scripts/catalog/*.ts` scripts.
   `isLfsPointer(text)` recognises a pointer stub from a head string and
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the
@@ -35,11 +33,28 @@ need the same thing — single-use helpers stay with their consumer.
   stub with a header error that mentions neither. Both the classic-ID overlay
   build and the astrometry request read the same four cross-walk inputs, which
   is why the guard is here and not in either.
-  `paths.test.ts` pins the `maxMtimeOfSources` and pointer-probe cases.
+  `paths.test.ts` pins the pointer-probe cases.
   **No data paths live here.** `ATHYG_CSV` used to, back when three folders
   read the catalogue; the astrometry request moved onto the membership
   manifest and the boundary-epoch cross-check is the last reader left, so the
   literal sits in that suite (`data/athyg/README.md` § Consumed by).
+- `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
+  (`../README.md` § Preprocessor idempotency): `fileHashes` maps each file's
+  repo-relative path to its sha1, `null` when absent, so an input's arrival is
+  a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
+  the inputs, hashed *before* the build, and every output the build wrote,
+  hashed after it. `stampIsCurrent` compares the inputs against the caller's
+  and re-hashes the recorded outputs (`changedSince`), so an output rewritten
+  by anything other than this build — an older commit's build, a write
+  through a symlink, a partial copy — reads as stale. `clearStamp` runs
+  before a build writes, `writeStamp` after its asserts pass, refusing a
+  missing output and landing the stamp by rename, so a stamp on disk is whole
+  or absent; an unparseable one still reads as no stamp. The Python sibling serves the two binaries steps and writes
+  the same JSON shape, which `tests/artifact-freshness.test.ts` reads from the
+  TS side. Its `imported_script_modules()` is those steps' code inputs: every
+  `scripts/` module the process has imported, so the import statements are
+  the only list. Both pinned by co-located tests
+  (`python3 scripts/util/build_stamp.test.py`).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from

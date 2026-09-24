@@ -76,41 +76,52 @@ the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency
 
-`scripts/catalog/build-catalog.ts isUpToDate` skips rebuild if
-`catalog-manifest.json` (+ its first chunk), `constellations.json`,
-`search-index.json`, `catalog-row-index-map.json`, **and**
-`constellation-boundaries.json` all exist *and*
-`catalog-manifest.json` is newer than all source inputs
-(AT-HYG CSV, Stellarium JSON, GCVS files, Hipparcos CCDM TSV,
-`data/binaries/multiples.tsv`, and the script itself) — the other four
-are checked for existence only, since one build writes them all. If you change
-field mapping but not the script mtime (e.g. edit in a way that
-updates atime only), you may need to `touch
-scripts/catalog/build-catalog.ts` or delete the generated files.
+`build:binaries`, `build:catalog` and `build:binaries-runtime` skip on a
+**content-hash stamp**, never on mtimes. Each hashes every input it reads —
+data tables, the SID registry, every non-test module under the script folders
+it imports — and skips when that set matches `build/stamps/<step>.json` and
+every output the stamp recorded still hashes the same. The stamp is cleared
+before the build writes anything and rewritten only once the build's snapshot
+asserts pass, so a failed or interrupted build always reruns. Hashing the
+~1.1 GB input set plus ~100 MB of outputs costs about a second on a warm page
+cache. Helpers: `util/build-stamp.ts`,
+`util/build_stamp.py`.
+
+An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
+identical content leaves the catalogue skipped. Forcing a rebuild: `--force`
+on either Python step, `UPDATE_BUILD_COUNTS=1` on `build:catalog`, or delete
+the stamp.
+
+`build:clouds`, `build:local-group` and the `*-sync` mirrors are mtime-gated
+(size + mtime for the mirrors) and cost seconds cold.
 
 ## Building in a worktree
 
-A fresh worktree has no `public/` artifacts — they are gitignored. Build them
-there: `pnpm run dev` preprocesses and then serves, so starting the worktree's
-dev server builds that worktree's artifacts, about a minute. `pnpm run build`
-is the headless equivalent when no server is wanted, and Alex runs one dev
-server per worktree, each on its own port. A missing `public/` is a setup step,
-never a reason to route work back to the main checkout — not a perf run, not an
-artifact-backed suite, not anything.
+A worktree Claude Code creates starts with the main checkout's catalogue and
+binaries artifacts plus their stamps: `.worktreeinclude` at the repo root
+lists them, and the harness copies those gitignored files in at creation. The
+stamps make the copy safe — when the worktree's inputs match what the main
+checkout last built from, the dev server starts without rebuilding; when they
+differ (main checkout built from an older commit, a pipeline change on the
+branch), the stamp mismatches and the step rebuilds. Only stamped outputs
+belong in that list: an mtime-gated step reads any fresh copy as up to date,
+whatever it was built from. A worktree made any other way
+(`git worktree add`) builds from scratch.
 
-**Never symlink the main checkout's `public/` into a worktree.**
-Artifact-backed suites self-skip without artifacts, and symlinking them in
-makes those suites run — but then any build in the worktree writes *through*
-the symlinks into the main checkout's `public/`, leaving it with artifacts that
-disagree with each other. `tests/artifact-freshness.test.ts` exists to catch
-exactly that mismatch. Want artifacts without a build? **Copy** them (`cp`), or
-symlink and then materialise (`rm link && cp target link`) before any build.
-Before running `build:catalog` or `build:binaries-runtime` in a worktree,
-confirm nothing is a symlink: `find public -maxdepth 1 -type l`.
+`pnpm run dev` preprocesses and then serves, so starting the worktree's dev
+server builds whatever is missing or stale; a cold catalogue build takes about
+six minutes. `pnpm run build` is the headless equivalent when no server is
+wanted, and Alex runs one dev server per worktree, each on its own port. A
+missing `public/` is a setup step, never a reason to route work back to the
+main checkout — not a perf run, not an artifact-backed suite, not anything.
 
-Repairing a clobbered main checkout: rebuild there, forcing past the mtime gate
-above — `rm -f public/catalog-manifest.json` first, or `UPDATE_BUILD_COUNTS=1`.
+**Never symlink the main checkout's `public/` into a worktree.** Any build in
+the worktree then writes *through* the symlinks into the main checkout's
+`public/`, leaving it with artifacts that disagree with each other.
+`tests/artifact-freshness.test.ts` exists to catch exactly that mismatch.
+**Copy** artifacts, never link them. Before running `build:catalog` or
+`build:binaries-runtime` in a worktree, confirm nothing is a symlink:
+`find public -maxdepth 1 -type l`.
 
-One mtime side effect: a fresh worktree's LFS checkout of
-`data/binaries/multiples.tsv` is newer than a symlinked `binaries.bin`, which
-fails artifact-freshness until the mtimes are aligned (`touch -r`).
+A clobbered main checkout repairs itself: its stamps record the outputs it
+built, so the next build there sees them rewritten and rebuilds.

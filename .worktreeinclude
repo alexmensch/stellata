@@ -1,0 +1,9 @@
+public/catalog.bin.*
+public/catalog-manifest.json
+public/constellations.json
+public/constellation-boundaries.json
+public/search-index.json
+public/binaries.bin
+build/catalog-row-index-map.json
+build/binding-integrity-verdicts.tsv
+build/stamps/*.json
