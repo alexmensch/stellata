@@ -19,8 +19,8 @@ star-disc render knobs, and the controller that owns every mutation.
   `FilterState` instance and every mutation path: `setFilter`,
   `setInstrument`, `recomputeStarPxSizes`, `setCameraFov`,
   `setStarKMultiplier`, `setStarRenderParams`,
-  and the declutter cycle — `applyDetailPreset` /
-  `setSceneElementVisible` drive the exhaustive scene-element binds
+  and the declutter cycle — `applyDetailPreset` / `reapplyDetailFloors` /
+  `setSceneElementVisible` drive `SceneDeclutter`
   (`../scene/declutter/README.md` § Detail-level declutter cycle).
   `FilterState` carries `detailLevel` (default `all`); the effective
   permitted set is `SceneDeclutter`'s runtime cache, not part of

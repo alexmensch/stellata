@@ -56,8 +56,9 @@ one element still carries a legacy user toggle that ANDs with the floor:
 a per-element hide does **not** outlive a detail-level change — pick a new
 mode and the scene's floors alone decide. A toggle can only *hide* a
 permitted element, never force one below its floor. The chart↔realistic
-recompute passes `resetOverrides:false`, so a style flip (and URL restore,
-which re-applies the shared toggle state afterward) preserves it.
+recompute is `reapplyDetailFloors()` — the current level, the new style's
+floors, the toggle kept — so a style flip (and URL restore, which
+re-applies the shared toggle state afterward) preserves it.
 
 The floors are the *only* gate on every other element, including
 `constellationFigures` / `constellationBoundaries` and `milkyWayBand` /
@@ -66,9 +67,10 @@ question the declutter cycle already answers.
 
 Default `detailLevel = 'all'` (fully cluttered) → the seam is
 behaviour-neutral at startup. `applyDetailPreset` runs on `V` / the
-control / a decluttered `?v=` restore, **and on every chart↔realistic
-flip** (`chart-mode.ts`) so the permitted set tracks the active style's
-floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
+control / a decluttered `?v=` restore; `reapplyDetailFloors` runs at the
+end of construction (the seed push-only layers need) **and on every
+chart↔realistic flip** (`chart-mode.ts`), so the permitted set tracks the
+active style's floor column. `USER_OWNED_IDS` enumerates the chrome the cycle never
 writes (HUD, all three coordinate spheres, cards, feedback) — toggled by
 their own affordances (`H` / `S` / `U` / `T`).
 

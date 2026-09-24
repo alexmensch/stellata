@@ -72,8 +72,8 @@ straight out with no encode on either backend, and the star disc emits
    fan-out is what swaps the cloud layer into its chart treatment
    (stippled silhouette outlines — `../molecular-clouds/README.md`
    § Rim shell render); the milky-way band↔isobar swap instead rides
-   `applyDetailPreset` (step 3) through the `milkyWayIsobar` detail bind.
-3. `applyDetailPreset(getDetailLevel())` — re-derives the permitted set
+   `reapplyDetailFloors` (step 3) through the `milkyWayIsobar` layer push.
+3. `reapplyDetailFloors()` — re-derives the permitted set at the current level
    from the chart floor column (see `../scene/declutter/README.md`
    § Detail-level declutter cycle). Drives the MW isobar swap, hides
    realistic-only structure, and gates the label tiers in step 4.

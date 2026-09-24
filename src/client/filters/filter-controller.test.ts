@@ -245,11 +245,16 @@ describe('FilterController', () => {
     expect(ctrl.getFilter().showLgEmission).toBe(true);
   });
 
-  it('applyDetailPreset(level, false) preserves the toggle for a style recompute', () => {
-    const { ctrl } = makeHarness();
-    ctrl.setFilter({ showLgEmission: false });
-    ctrl.applyDetailPreset('representational', false);
+  it('reapplyDetailFloors re-derives the current level for the new style, keeping the toggle', () => {
+    const { ctrl, declutter, emitted } = makeHarness();
+    ctrl.applyDetailPreset('physical');
+    ctrl.setFilter({ showLgEmission: false, chart: true });
+    emitted.length = 0;
+    ctrl.reapplyDetailFloors();
+    expect(ctrl.getDetailLevel()).toBe('physical');
+    expect(permittedSet(declutter)).toEqual(visibleSet('physical', 'chart'));
     expect(ctrl.getFilter().showLgEmission).toBe(false);
+    expect(emitted.map((e) => e.name)).toEqual(['filter', 'state']);
   });
 });
 

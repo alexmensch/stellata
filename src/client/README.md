@@ -229,7 +229,6 @@ an empty awaiting list.
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Solar-system wiring | `solar-system/` | `hhaw.32.9` |
 | Galactic + HUD | `galactic/`, `overlays/` | `hhaw.32.10` |
-| Declutter | `scene/declutter/` | `hhaw.32.11` |
 | Star render machinery | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 

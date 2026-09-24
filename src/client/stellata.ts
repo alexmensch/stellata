@@ -970,9 +970,7 @@ export class Stellata implements FrameAnchor {
     // Seed the declutter cycle: a layer that only learns its permission from
     // a push (both boundary shells, the orbit/probe overlays) otherwise sits
     // at whatever its constructor guessed until the level is cycled.
-    // `resetOverrides: false` so a later `?v=` restore still owns the
-    // within-scene toggles.
-    this.filters.applyDetailPreset(this.filters.getDetailLevel(), false);
+    this.filters.reapplyDetailFloors();
     window.addEventListener('resize', this.onResize);
     this.renderGate.attachDom(canvas);
     this.trackballSettle.attachDom(canvas);

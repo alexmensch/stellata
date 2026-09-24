@@ -71,21 +71,20 @@ export class FilterController {
 
   getDetailLevel(): DetailLevel { return this.filter.detailLevel; }
 
-  // Re-derive every element's permission from the preset floors within the
-  // current render style. Overwriting the whole set clears any per-element
-  // override a prior setSceneElementVisible left in the cache.
-  //
-  // The preset is authoritative, so it also clears the one per-element user
-  // toggle left that ANDs with the floors (lg emission) — a within-scene
-  // hide must not outlive the mode change. An element below its floor stays
-  // hidden regardless. `resetOverrides:false` is the render-style recompute
-  // (chart↔realistic) preserving that toggle across the style flip and
-  // through URL restore.
-  applyDetailPreset(level: DetailLevel, resetOverrides = true): void {
+  // A new level is authoritative: it also clears the one per-element user
+  // toggle that ANDs with the floors (lg emission), so a within-scene hide
+  // does not outlive the mode change.
+  applyDetailPreset(level: DetailLevel): void {
+    this.filter.showLgEmission = true;
+    this.applyFloorsAt(level);
+  }
+
+  reapplyDetailFloors(): void {
+    this.applyFloorsAt(this.filter.detailLevel);
+  }
+
+  private applyFloorsAt(level: DetailLevel): void {
     this.filter.detailLevel = level;
-    if (resetOverrides) {
-      this.filter.showLgEmission = true;
-    }
     const style: RenderStyle = this.filter.chart ? 'chart' : 'realistic';
     this.deps.declutter.applyFloors(level, style);
     this.deps.bus.emit('filter', this.filter);
