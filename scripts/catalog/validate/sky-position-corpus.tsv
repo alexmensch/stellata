@@ -40,8 +40,8 @@
 #   ep_ra/ep_de, which date the observations behind it — so this advances 16 yr
 #   on Tycho-2's own PM, 6.5" of motion. Reading the epoch columns as the
 #   position's instead advances it 24.93 yr and lands 3.7" away, which is where
-#   this row sat when it was added; data/tycho2/README.md § Which position to
-#   propagate from carries the measurement that settled both cells.
+#   this row sat when it was added; /data/tycho2/README.md#which-position-to-propagate-from
+#   carries the measurement that settled both cells.
 #
 #   The expected value is computed from the published cells rather than taken
 #   from a catalogue's own J2016 statement, since no catalogue publishes one for
