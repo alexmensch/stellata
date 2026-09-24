@@ -44,6 +44,13 @@ on an accent fill. `tests/site-css-rules.test.ts` fails the build on
 either. Focus needs nothing special: the global `:focus-visible` ring carries
 an `outline-offset`, so it lands on the page ground outside the fill.
 
+**A treatment several blocks share is one rule, not one per block.** The
+small dimmed prose every block carries is a single selector list in the
+prose block; a context wanting dimmed links sets **`--link-color`**, which
+the global `a` rule reads, and the global hover takes any link without a
+class of its own to the accent. A block restating `font-size` and `color`
+beside that list, or an `a:hover` of its own, is the duplicate to fold in.
+
 **The palette is not ours to set.** `site.css` imports
 `src/design-tokens.css` and must not restate a colour or the typeface. The
 app's chrome is the reference: near-black ground, monospace throughout, 1px
