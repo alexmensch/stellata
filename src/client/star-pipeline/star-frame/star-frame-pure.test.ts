@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeSortedByDistance, sortIndicesByDistance } from './star-frame-pure';
+import { mergeSortedByDistance } from './star-frame-pure';
 import { sortedDistRange } from '../../camera/controls/star-geometry';
 
 /** The three arrays as `StarFrame` allocates them, with `count` records of
@@ -74,26 +74,5 @@ describe('mergeSortedByDistance', () => {
     const before = Array.from(idx);
     mergeSortedByDistance(dist, idx, key, 2, 2);
     expect(Array.from(idx)).toEqual(before);
-  });
-});
-
-describe('sortIndicesByDistance', () => {
-  it('orders a window exactly as a stable comparator sort, ties and Infinity included', () => {
-    const n = 5000;
-    const offset = 7;
-    const dist = new Float32Array(n + offset).fill(-1);
-    for (let i = 0; i < n; i++) {
-      dist[i + offset] = i % 97 === 0
-        ? Infinity
-        : ((i * 7919) % 613) * 1.37e-3 + (i % 5 === 0 ? 0 : 1e4);
-    }
-    const expected = Array.from({ length: n }, (_, i) => i + offset)
-      .sort((a, b) => dist[a] - dist[b] || a - b);
-    expect(Array.from(sortIndicesByDistance(dist, offset, n + offset))).toEqual(expected);
-  });
-
-  it('breaks ties by record index', () => {
-    const dist = new Float32Array([4, 2, 4, 2, 0]);
-    expect(Array.from(sortIndicesByDistance(dist, 0, 5))).toEqual([4, 1, 3, 0, 2]);
   });
 });

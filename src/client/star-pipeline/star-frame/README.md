@@ -20,12 +20,11 @@ src/client/star-pipeline/star-frame/
                                   epoch re-advance + focal delta, the
                                   proximity / core-mask window, and the
                                   partial-catalogue window bound.
-  star-frame-pure.ts (+ test)     The proximity index's in-place merge
-                                  and the radix sort that orders each
-                                  chunk (§ Absorbing a chunk). Pure; the
-                                  merge pinned against a full re-sort
-                                  over an arbitrary chunk ramp, the sort
-                                  against a stable comparator sort.
+  star-frame-pure.ts (+ test)     The proximity index's in-place merge,
+                                  each chunk ordered by the shared radix
+                                  sort (§ Absorbing a chunk). Pure;
+                                  pinned against a full re-sort over an
+                                  arbitrary chunk ramp.
 ```
 
 ## The star frame
@@ -146,9 +145,10 @@ ever searched.
 
 **The window sorts by radix, not by comparator.** A comparator sort over a
 167,772-record chunk measured 35 ms of the chunk's 42 ms absorb on the
-main thread, which by then is drawing; `sortIndicesByDistance` orders the
-same window on the distances' float32 bit patterns in ~3 ms, ties by
-record index, identical slot for slot on the shipped catalogue. It rests on
+main thread, which by then is drawing; `sortIndicesByKeyWords`
+(`../../util/radix-sort.ts`) orders the same window on the
+distances' float32 bit patterns in ~3 ms, ties by record index, identical
+slot for slot on the shipped catalogue. It rests on
 every distance being non-negative, since only then do the bit patterns
 order as the values do — true of a `sqrt`, and the invariant to keep if
 the key ever changes. The key rewrite starts at the lowest slot the merge

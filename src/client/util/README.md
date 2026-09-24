@@ -220,6 +220,19 @@ build scripts, tests, and shader uniforms.
   cannot take its siblings with it. Consumers are `SceneLayerRegistry`'s four
   fan-outs (`../scene/README.md`). **Not** what `event-bus/` does, and the
   difference is deliberate: see its README.
+- `radix-sort.ts` (+ test) — `sortIndicesByKeyWords(words, first, end)`,
+  the stable index sort both whole-catalogue orderings ride: the
+  Sol-distance proximity index (`../star-pipeline/star-frame/README.md`
+  § Absorbing a chunk) and the extinction dispatch order
+  (`../webgpu/extinction/dispatch-order/README.md` § Dispatch order). A
+  comparator sort of the dispatch order over the 983,068-record catalogue
+  measures ~232 ms in Node; this is ~21. The key is one or more `Uint32Array` words,
+  least significant first, each **indexed by record, not by position in
+  the window**, and ties fall to record order. Twelve bits per pass, and a
+  pass whose digit every index shares is skipped after its count, so a
+  24-bit word costs two passes rather than three with no width argument.
+  A float key sorts by its bit view only while every value is
+  non-negative; that precondition belongs to the caller.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts (docs/sid.md § 8).
