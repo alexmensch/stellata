@@ -69,7 +69,7 @@ counts against no asset limit.
 Cloudflare Workers rejects any single asset over 25 MiB
 (`WORKERS_MAX_ASSET_BYTES`, `release/asset-size-pure.ts`).
 `pnpm run check:asset-sizes` walks a built `dist/` against it; CI's
-`deploy-asset-sizes` job runs it on every PR, so an oversize file fails
+`Deploy asset sizes` step runs it on every PR, so an oversize file fails
 the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency

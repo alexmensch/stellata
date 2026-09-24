@@ -80,19 +80,26 @@ fan-out of jobs beyond the bare checks:
   matches the committed artifact; resolve Stage 2 against the curated
   ground-truth corpus.
 - `build-catalog` — `build:catalog` + `build:clouds` +
-  `build:local-group` with their regenerate-and-diff gates, then two
-  checks against the built artifacts as named steps: `SID ledger–artifact
-  consistency` and `Tier-A star corpus` (the known-stars corpus +
-  render-geometry regression). Each check gates on the build, not on the
-  other, so both report when one fails. They share the build's runner
-  because each is ~45 s of setup against ~15–30 s of work, sitting on the
-  pipeline's critical path.
+  `build:local-group` with their regenerate-and-diff gates, then every
+  check that reads the built artifacts, as named steps:
+  - `SID ledger–artifact consistency` — `pnpm run sid:check`.
+  - `Tier-A star corpus` — the known-stars corpus + render-geometry
+    regression, and the LFS-gated catalogue-wide sweeps.
+  - `Deploy asset sizes` — finishes the deploy build on top of this
+    job's catalogue (`build:layers` + `build:client`; `pnpm run build`'s
+    other stages are `build:catalog`, done here, and `build:binaries`,
+    pinned by `build-binaries`), then `pnpm run check:asset-sizes` over
+    `dist/`: fails on any file past Cloudflare Workers' 25 MiB per-asset
+    limit, warns past 80 % of it. `deploy.yml` runs the same check before
+    `wrangler deploy`.
+
+  Each check gates on the build, not on the others, so all report when
+  one fails. They share the build's runner rather than downloading its
+  output in jobs of their own: a job costs ~45 s of checkout, LFS
+  restore and install before it starts, and here that setup would sit
+  on the pipeline's critical path.
 - `sid-ledger-guard` — append-only ledger guard, DR-reconciliation
   classifier, swap parity ledger.
-- `deploy-asset-sizes` — the full `pnpm run build` deploy runs, then
-  `pnpm run check:asset-sizes` over `dist/`: fails on any file past
-  Cloudflare Workers' 25 MiB per-asset limit, warns past 80 % of it.
-  `deploy.yml` runs the same check before `wrangler deploy`.
 
 Both LFS vitest runs take an explicit file list, so a `describe.skipIf`
 suite no list names skips everywhere and reports green. Adding one means
@@ -100,5 +107,5 @@ adding it to the `Tier-A star corpus` step (needs built artifacts) or
 `sid-ledger-guard` (needs committed LFS inputs only).
 
 The `main` ruleset requires these jobs by display name
-(`RELEASING.md` § Merge gating): renaming, merging or splitting a job means updating the ruleset's
-required contexts in the same change.
+(`RELEASING.md` § Merge gating): renaming, merging or splitting a job
+means updating the ruleset's required contexts in the same change.
