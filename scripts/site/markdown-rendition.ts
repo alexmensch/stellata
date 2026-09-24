@@ -53,8 +53,6 @@ const VOCABULARY = new Set([
   'ul',
 ]);
 
-const HEADINGS = ['h1', 'h2', 'h3', 'h4', 'h5'] as const;
-
 function prune(body: Element, selector: string): void {
   const doomed = new Set<Element>(selectAll(selector, body));
   visit(body, 'element', (node, index, parent) => {
@@ -105,8 +103,8 @@ function absolutise(body: Element, origin: string): void {
 
 function shiftHeadings(body: Element): void {
   visit(body, 'element', (node: Element) => {
-    const level = HEADINGS.indexOf(node.tagName as (typeof HEADINGS)[number]);
-    if (level >= 0) node.tagName = HEADINGS[level + 1] ?? 'h6';
+    const heading = /^h([1-5])$/.exec(node.tagName);
+    if (heading !== null) node.tagName = `h${Number(heading[1]) + 1}`;
   });
 }
 
