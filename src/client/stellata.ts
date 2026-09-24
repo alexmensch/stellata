@@ -47,18 +47,14 @@ import { TrackballSettle } from './camera/controls/input/trackball-settle';
 import { exposureCutMoved } from './render-gate/render-gate-pure';
 import {
   CADENCE_REPORT_STILL,
-  cadenceSimBudgetS,
   cadenceVisibleTurnRad,
-  clockFrameDue,
   maxCadenceReport,
   pulsationCadenceBudgetS,
-  type CadenceReport,
 } from './render-gate/cadence/clock-cadence-pure';
 import {
-  CADENCE_TRUST_INITIAL,
-  auditCadenceFrame,
-  type CadenceTrustState,
-} from './render-gate/cadence/cadence-trust-pure';
+  ClockCadence,
+  type ClockCadenceDebugState,
+} from './render-gate/cadence/clock-cadence';
 import type { HdrSeam, ReductionSeam } from './hdr/hdr-seam';
 import {
   angularToPx as angularToPxPure,
@@ -409,27 +405,7 @@ export class Stellata implements FrameAnchor {
   private readonly trackballSettle: TrackballSettle;
   private lastInvalidatedDm = Number.NaN;
   private glslResidentsChecked = false;
-  // Clock-cadence state (render-gate/README.md § The clock cadence).
-  // The budget seeds 0 so the first tick under a running clock is due;
-  // the NaN sim stamp makes clockFrameDue's first read due too and marks
-  // the first frame's step as unmeasurable.
-  private cadenceBudgetSimS = 0;
-  private lastRenderedSimS = Number.NaN;
-  private cadenceLastReport: CadenceReport = CADENCE_REPORT_STILL;
-  private cadenceTrust: CadenceTrustState = CADENCE_TRUST_INITIAL;
-  private pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
-  /** Ride translation applied to the camera during THIS frame's fan-out,
-   *  summed over both rides. Divided by the frame's sim step to give the
-   *  camera velocity every layer differences its own content against. */
-  private readonly _rideAccum = new THREE.Vector3();
-  private cadenceFrameId = 0;
-  private readonly cadenceCtx = {
-    camera: null as unknown as THREE.PerspectiveCamera,
-    frameId: 0,
-    pxPerRadian: 0,
-    simDtS: Number.NaN,
-    cameraVelPcPerSimS: new THREE.Vector3(),
-  };
+  private readonly cadence: ClockCadence;
   // Read on the NEXT tick is NOT good enough for this one: a layer that
   // starts needing wall-clock frames while the gate idles would wait a
   // whole cap for them, and forever with the clock paused. Evaluated
@@ -510,6 +486,10 @@ export class Stellata implements FrameAnchor {
     );
     this.camera.position.set(0, 0, 30);
     this.roll.levelTo(this.camera, GALACTIC_NORTH_POLE_ICRS);
+    this.cadence = new ClockCadence({
+      camera: this.camera,
+      collectReport: (cc) => this.layers.cadenceReport(cc),
+    });
 
     // TrackballControls (instead of OrbitControls) because we want
     // unconstrained rotation — no polar clamping at the zenith/nadir, so
@@ -1609,16 +1589,13 @@ export class Stellata implements FrameAnchor {
     // faster one has to shorten the budget. A minimum over the window
     // alone: rescanning every record per chunk is main-thread time the
     // frame is waiting on, and the answer cannot rise.
-    this.pulsationCadenceBudgetS = Math.min(
-      this.pulsationCadenceBudgetS,
-      pulsationCadenceBudgetS(
-        this.catalog.periodDays,
-        this.catalog.amplitudeMag,
-        this._suppressPulsation,
-        absorbedFrom,
-        this.catalog.loadedCount,
-      ),
-    );
+    this.cadence.tightenPulsationBound(pulsationCadenceBudgetS(
+      this.catalog.periodDays,
+      this.catalog.amplitudeMag,
+      this._suppressPulsation,
+      absorbedFrom,
+      this.catalog.loadedCount,
+    ));
     this.renderGate.invalidate('catalog-chunk');
   }
 
@@ -1795,7 +1772,7 @@ export class Stellata implements FrameAnchor {
     this.focus.translateFocusFrame(delta);
     this.observe.translateFocusFrame(delta);
     this.renderGate.rebasePose(delta);
-    this._rideAccum.add(delta);
+    this.cadence.noteRideStep(delta);
   }
 
   // Moving-body sibling of applyFocalFrameRide, over the shared
@@ -2646,9 +2623,7 @@ export class Stellata implements FrameAnchor {
     // from the rate the layers reported on the LAST rendered frame
     // (render-gate/README.md § The clock cadence).
     const continuous = cameraAnimating || this._realtimeFramesNeeded;
-    const cadenceDue = clockFrameDue(
-      this.clock.getRate(), this.frameCtx.t, this.lastRenderedSimS, this.cadenceBudgetSimS,
-    );
+    const cadenceDue = this.cadence.isDue(this.clock.getRate(), this.frameCtx.t);
     if (!this.renderGate.tick(
       this.camera, this.controls.target, this.worldOffset,
       { continuous, cadenceDue, nowMs },
@@ -2670,11 +2645,6 @@ export class Stellata implements FrameAnchor {
     // the warp rate in model-days/real-second for the anti-strobe floor.
     this.sharedUniforms.uModelDays.value = tToJdUt(this.getT()) - J2000_JD;
     this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
-    // Per-frame layer fan-out through the registry. The context was
-    // built above the gate; the pin above may have moved nothing it reads,
-    // but the rides inside the fan-out do move the camera, which is why the
-    // accumulator is cleared here and read straight after.
-    this._rideAccum.set(0, 0, 0);
     // Cleared here rather than by either publisher: both local-depth
     // clusters push into it during the fan-out below, and whichever ran
     // first would otherwise drop the other's entries.
@@ -2696,7 +2666,12 @@ export class Stellata implements FrameAnchor {
       );
       perfMeasure('extinction.prepass');
     }
-    this.refreshCadence();
+    this.cadence.refresh({
+      t: this.frameCtx.t,
+      pxPerRadian: this.frameCtx.pxPerRadian,
+      pixelRatio: this.sharedUniforms.uPixelRatio.value,
+      cadenceScheduled: this.renderGate.lastFrameWasCadenceScheduled,
+    });
     // After the fan-out: the statistic reads this frame's ephemeris
     // positions, and the cut it writes has to land before the first draw
     // so measurement and frame can never be one frame apart.
@@ -2822,71 +2797,20 @@ export class Stellata implements FrameAnchor {
     return e;
   }
 
-  /** Collect this frame's rate report, audit what actually moved against
-   *  what the last budget promised, and set the budget the next tick's due
-   *  test reads (render-gate/README.md § The clock cadence).
-   *
-   *  Runs after the fan-out, so every position a report divides by is this
-   *  frame's and the rides have already moved the camera. The result is
-   *  valid until the next rendered frame: between frames the camera is
-   *  static — a camera move renders — so the distances hold. */
-  private refreshCadence(): void {
-    const simDtS = this.frameCtx.t - this.lastRenderedSimS;
-    this.lastRenderedSimS = this.frameCtx.t;
-    this.cadenceFrameId++;
-    this.cadenceCtx.camera = this.camera;
-    this.cadenceCtx.frameId = this.cadenceFrameId;
-    this.cadenceCtx.pxPerRadian = this.frameCtx.pxPerRadian;
-    this.cadenceCtx.simDtS = simDtS;
-    if (Number.isFinite(simDtS) && simDtS !== 0) {
-      this.cadenceCtx.cameraVelPcPerSimS.copy(this._rideAccum).divideScalar(simDtS);
-    } else {
-      this.cadenceCtx.cameraVelPcPerSimS.set(0, 0, 0);
-    }
-    const report = this.layers.cadenceReport(this.cadenceCtx);
-    this.cadenceLastReport = report;
-    const pixelRatio = this.sharedUniforms.uPixelRatio.value;
-    this.cadenceTrust = auditCadenceFrame(this.cadenceTrust, {
-      cadenceScheduled: this.renderGate.lastFrameWasCadenceScheduled,
-      observedPx: report.observedPx,
-      observedFluxFrac: report.observedFluxFrac,
-      pixelRatio,
-    });
-    this.cadenceBudgetSimS = cadenceSimBudgetS(
-      report, this.pulsationCadenceBudgetS, pixelRatio, this.cadenceTrust.trust,
-    );
-  }
-
-  /** Debug-scoped view of the clock-cadence state the shell owns, for the
-   *  render watcher (`debug/render-watch/README.md`). Every field is what
-   *  the LAST rendered frame left behind, which is what the gate's next
-   *  due test reads. */
-  get cadenceDebugState(): {
+  /** Debug-scoped view of the clock-cadence state, joined with the clock,
+   *  the pixel ratio and the layer census, for the render watcher
+   *  (`debug/render-watch/README.md`). */
+  get cadenceDebugState(): ClockCadenceDebugState & {
     clockRate: number;
-    budgetSimS: number;
-    report: CadenceReport;
-    /** Sim seconds the report's OBSERVED channels were measured over —
-     *  without it those two numbers are per-gap while `report`'s rate
-     *  channels are per-sim-second, and a readout printing both invites
-     *  the comparison that units mismatch makes meaningless. */
-    observedSimDtS: number;
-    lastRenderedSimS: number;
-    pulsationBudgetS: number;
     pixelRatio: number;
-    trust: CadenceTrustState;
     realtimeNeeded: boolean;
     census: Record<string, number>;
     contribution: ContributionCensus;
   } {
     return {
+      ...this.cadence.debugState,
       clockRate: this.clock.getRate(),
-      budgetSimS: this.cadenceBudgetSimS,
-      report: this.cadenceLastReport,
-      observedSimDtS: this.cadenceCtx.simDtS,
-      lastRenderedSimS: this.lastRenderedSimS,
-      pulsationBudgetS: this.pulsationCadenceBudgetS,
       pixelRatio: this.sharedUniforms.uPixelRatio.value,
-      trust: this.cadenceTrust,
       realtimeNeeded: this._realtimeFramesNeeded,
       census: this.layers.behaviourCensus(),
       contribution: this.layers.contributionCensus(),
@@ -2976,13 +2900,7 @@ export class Stellata implements FrameAnchor {
     this.renderGate.dispose();
     this.trackballSettle.dispose();
     this.lastInvalidatedDm = Number.NaN;
-    this.lastRenderedSimS = Number.NaN;
-    this.cadenceBudgetSimS = 0;
-    this.cadenceLastReport = CADENCE_REPORT_STILL;
-    this.cadenceTrust = CADENCE_TRUST_INITIAL;
-    this.pulsationCadenceBudgetS = Number.POSITIVE_INFINITY;
-    this.cadenceFrameId = 0;
-    this._rideAccum.set(0, 0, 0);
+    this.cadence.dispose();
     this._realtimeFramesNeeded = false;
     this.frameCtx.frustum.invalidate();
     this.input.dispose();

@@ -6,7 +6,7 @@ import ts from 'typescript';
 const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
-  'adaptation', 'aim', 'bus', 'camera', 'catalog', 'chartLabels', 'chromeLines',
+  'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'controls', 'disposed', 'exposure', 'filters', 'floatingOrigin', 'focus',
   'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'occluders', 'orbitFramePort', 'orbitFrameTick',
@@ -17,18 +17,17 @@ const COMPOSITION: readonly string[] = [
 const AWAITING_EXTRACTION: readonly string[] = [
   '_compositeSuppress', '_eclipseDim', '_epochFollowDelta', '_extinctionView', '_focalPert',
   '_lastAppliedPert', '_movingRideDelta', '_movingRideIdx', '_movingRideLast',
-  '_movingRideLive', '_realtimeFramesNeeded', '_rideAccum', '_rideDelta', '_rideFocalIdx',
+  '_movingRideLive', '_realtimeFramesNeeded', '_rideDelta', '_rideFocalIdx',
   '_rideLive', '_suppressPulsation', '_tmpAnimateLocal', 'absorbedSuppressCount',
-  'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'cadenceBudgetSimS',
-  'cadenceCtx', 'cadenceFrameId', 'cadenceLastReport', 'cadenceTrust', 'conFigureSig',
+  'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coordSpheres', 'coreMaskEnabled', 'detailPermitted',
   'drawingBufferSize', 'dust', 'dustParticleSource', 'dustParticles',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
   'frameCtx', 'frameExposureRecord', 'galacticDisc', 'glslResidentsChecked',
-  'lastInvalidatedDm', 'lastParticleStrength', 'lastRenderedSimS', 'observePinQuat',
+  'lastInvalidatedDm', 'lastParticleStrength', 'observePinQuat',
   'observeTmpFwd', 'offCatalogRecords', 'orbitRingsLayer', 'passDebugScratch',
-  'pickSizeScratch', 'pulsationCadenceBudgetS', 'solarCluster', 'starAttrs', 'starFrame',
+  'pickSizeScratch', 'solarCluster', 'starAttrs', 'starFrame',
   'starLocalCluster', 'tmpBound', 'tmpConstellationAbs', 'tmpHostLocal', 'tmpVec3b',
   'trackballSettle', 'webgpuStarLayer',
 ];

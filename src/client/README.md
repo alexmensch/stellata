@@ -221,7 +221,6 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Clock cadence | `render-gate/cadence/` | `hhaw.32.3` |
 | Focal rides | `camera/focus/` | `hhaw.32.2` |
 | Star size + pick | the kind table (`kinds/`, `camera/focus/`) | `hhaw.32.4` |
 | Binaries | `binaries/` | `hhaw.32.5` |
@@ -239,11 +238,11 @@ an empty awaiting list.
 **Three values cross a row boundary**, and whichever row moves first settles
 the interface for both:
 
-- `_rideAccum` — the frame's camera velocity. `applyRideDelta` writes it,
-  `refreshCadence` reads it. Cadence moves first and owns it; the rides
-  report each step through a write method on the cadence controller.
-  `maybeReAdvanceEpoch`'s translate skips it today — the suspected bug
-  32.2 carries.
+- The frame's camera velocity — owned by `ClockCadence`
+  (`render-gate/cadence/README.md` § The controller); `applyRideDelta`
+  reports each ride step through `noteRideStep`, and the rides take that
+  call with them. `maybeReAdvanceEpoch`'s translate skips it today — the
+  suspected bug 32.2 carries.
 - **The binaries rate** — `binaryOrbitField?.cadenceReport(cc) ??
   CADENCE_REPORT_STILL` maxed with the eclipse field's, written out in four
   entries: the binary walk, and the star-local-cluster, core-mask and

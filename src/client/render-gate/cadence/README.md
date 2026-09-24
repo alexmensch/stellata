@@ -7,6 +7,9 @@ elapsed model time next need a frame".
 
 ```
 src/client/render-gate/cadence/
+  clock-cadence.ts (+ test)    ClockCadence — the per-frame state the
+                               due test and the budget run on
+                               (§ The controller).
   clock-cadence-pure.ts        The rate report every layer files, the
     (+ test)                   thresholds, the budget, and the due test.
   cadence-trust-pure.ts        The safety net: audit a scheduled frame
@@ -17,8 +20,31 @@ src/client/render-gate/cadence/
 
 Nothing here imports the parent, which is why it splits cleanly: the
 gate consumes a budget it knows nothing about the derivation of, and the
-shell (`../../stellata.ts` `refreshCadence`) is the only thing that holds
-both ends.
+shell (`../../stellata.ts` `animate`) is the only thing that holds both
+ends — it asks `ClockCadence.isDue` for the gate's `cadenceDue` input and
+hands the controller `RenderGate.lastFrameWasCadenceScheduled`.
+
+## The controller
+
+`ClockCadence` owns every piece of cadence state that outlives a frame:
+the budget, the last rendered sim stamp, the last report, the trust state,
+the pulsation bound and the frame's ride translation. Four writers reach
+it, each through one method:
+
+- `isDue(rate, t)` — the gate's input, read above the gate every tick.
+- `noteRideStep(delta)` — each focal-ride step, from
+  `Stellata.applyRideDelta`. Summed until the refresh.
+- `tightenPulsationBound(s)` — each absorbed catalogue chunk's
+  `pulsationCadenceBudgetS`. A minimum: the answer cannot rise.
+- `refresh(frame)` — once per rendered frame, **after** the layer fan-out
+  and every ride, so each position a report divides by is this frame's.
+  It builds `CadenceCtx`, collects the registry's report, audits it
+  (§ The safety net), sets the next budget, and clears the ride steps.
+
+Seeds and resets are one set: budget 0 and a NaN sim stamp, so the first
+tick under a running clock is due and the first frame's step reads as
+unmeasurable (`simDtS` NaN, no camera velocity). `dispose` restores all of
+it, trust included.
 
 ## Why it exists
 
