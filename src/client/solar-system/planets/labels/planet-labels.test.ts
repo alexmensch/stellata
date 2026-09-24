@@ -39,7 +39,7 @@ describe('createPlanetLabels — sentinel-init', () => {
     // the first-call write silently no-ops — the empty group then paints
     // at SVG defaults until a non-matching toggle. The dirty-attr `\0`
     // poison sentinel forces the write through. Same shape as the
-    // heliopause first-load fix (consistency-at-the-seam §3).
+    // heliopause first-load fix (/docs/authoring-patterns.md#sentinel-init-for-dirty-track).
     const group = { style: { display: '' } };
     withDocument(group, () => {
       const stellata = {

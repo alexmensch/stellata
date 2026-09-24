@@ -2,8 +2,8 @@
 
 Joins the four frozen CDS classic-designation tables onto Gaia DR3 source_ids
 and writes `data/classic-ids/classic_id_overlay.tsv`. Contract:
-[§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) (sources), § 4 (HD route, ambiguity, precedence)
-and § 5 (the designation-constellation cascade); measured coverage, and why the
+[§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) (sources), [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) (HD route, ambiguity, precedence)
+and [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) (the designation-constellation cascade); measured coverage, and why the
 inherited spine is load-bearing beside it, [Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
 Two entry points, and they split cleanly: **this build joins the overlay,
@@ -15,7 +15,7 @@ Two entry points, and they split cleanly: **this build joins the overlay,
   row, keyed on the binding it derived, and writes
   `data/classic-ids/label_flips.tsv` (`label-merge/README.md`). The record
   build reads the merged cells off the manifest and applies only
-  `applyDesignationConstellations` (§ The designation constellation).
+  `applyDesignationConstellations` ([The designation constellation](#the-designation-constellation)).
 
 ## Subfolders
 
@@ -36,8 +36,7 @@ scripts/catalog/classic-ids/
   binding-candidates.ts (+ test)  The cross-walk loaders, and the source_ids
                                   the gate can weigh — shared with
                                   ../astrometry-request/, which pulls a G for
-                                  every one (§ The gate's evidence has to be
-                                  pulled). `BindingCandidateEvidence` states
+                                  every one (README.md#the-gates-evidence-has-to-be-pulled). `BindingCandidateEvidence` states
                                   every table the walk reads and defaults
                                   none: a partial bundle would narrow the set
                                   to the HIP tier while the gate kept weighing
@@ -64,8 +63,7 @@ scripts/catalog/classic-ids/
                                   reads back — one GJ fold for the direction
                                   cascade's `cns5` tier, the PM rescue and the
                                   parallax cascade's `cns5_plx` tier alike, and
-                                  no bare-number fold beneath it (§ The GJ fold
-                                  stops at the component). This folder parses
+                                  no bare-number fold beneath it (README.md#the-gj-fold-stops-at-the-component). This folder parses
                                   that file, ../distance/ routes on it. Motion
                                   and parallax arrive as a
                                   `CitedProperMotion` / `CitedParallax`
@@ -84,7 +82,7 @@ scripts/catalog/classic-ids/
   cross-index.ts                  IV/27A as every consumer reads it: the
                                   frozen table with
                                   cross_index_corrections.tsv applied
-                                  (§ One designation, two HD numbers). Four
+                                  (README.md#one-designation-two-hd-numbers). Four
                                   call sites take it — this build, the
                                   designation-constellation pass, ../naming/'s
                                   Bayer union and ../spine/primaries-tables.ts
@@ -201,7 +199,7 @@ The membership derivation runs the same checks on the record side through the
 same `resolveGaiaSourceId` call, with its own candidate contribution to the
 request and its own zero-pin ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
 
-**An ambiguous designation attaches to every matching record** (§ 4) —
+**An ambiguous designation attaches to every matching record** ([§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia)) —
 `buildClassicIdOverlay` never picks a winner, so overlay cells are
 `|`-separated lists and `sourcesWithMultipleHd` / `hdOnMultipleSources`
 are pinned counts rather than assertions of uniqueness. Search dispatch

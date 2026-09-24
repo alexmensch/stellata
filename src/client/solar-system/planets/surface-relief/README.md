@@ -23,7 +23,7 @@ src/client/solar-system/planets/surface-relief/
 
 Moon, Mercury, Mars and Earth ship a DEM-derived tangent-space normal map
 (`<body>-normal.webp`, [Surface relief](/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps)) and a pair
-of horizon maps (`<body>-horizon-{a,b}.webp`, § Cast shadows there), all
+of horizon maps (`<body>-horizon-{a,b}.webp`, [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps) there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
 map. Three planes for four of ~30 bodies, so the fetch is gated on
 `RELIEF_ELEV_SPAN_M` — `reliefSpanOf` in `../planet-mesh-layer.ts` is the one
@@ -97,7 +97,7 @@ different scales:
   so unlike a colour rung neither can be lowered to fit the cap: a body whose
   map exceeds the mesh layer's texture cap is refused it and shades without
   relief ([Four rules](../textures/README.md#four-rules-and-two-of-them-are-one-hysteresis-band)). The cap is 8192 until an
-  out-of-memory step-down lowers it (§ Staying inside VRAM there).
+  out-of-memory step-down lowers it ([Staying inside VRAM](/src/client/solar-system/planets/textures/README.md#staying-inside-vram) there).
 - The **horizon map** is everything else: terrain from **two output texels**
   out to the body's limb bound, at half the DEM's width in 8 azimuths. It
   excludes the ground at your feet, because that is the normal map's job at
@@ -121,7 +121,7 @@ higher — `max` of the two horizons, saturated; inside the penumbra band the
 product is darker than either factor alone.
 
 **The coarse map therefore CAN veto a facet the fine map lights, and that is
-the point** — it is the whole 38.7 % → 9.6 % of § What the composition is worth.
+the point** — it is the whole 38.7 % → 9.6 % of [What the composition is worth](#what-the-composition-is-worth).
 The cost of that power is that a 2048 skyline it over-estimates darkens real
 lit ground: linear interpolation between stored azimuths over-shadows, because
 a skyline has narrow peaks and averaging two neighbours over-states the gap
@@ -170,7 +170,7 @@ no-map path stays byte-identical. Its "not at all past" column is the same
 `arccos(r_floor / r_summit)` the precompute searches to, so the two cannot
 drift.
 
-**What the composition is worth**, Moon, sun in the equatorial plane, lit area
+<a id="what-the-composition-is-worth"></a>**What the composition is worth**, Moon, sun in the equatorial plane, lit area
 against the same march run at full DEM width — the reference isolates the cost
 of the output grid and the encoding, and shares the first-step floor above
 rather than being ground truth (`scripts/textures/measure_relief_lighting.py`,
@@ -199,7 +199,7 @@ zodiacal light ~10⁻⁸, and the solar disc's own penumbra is already `uSunAngR
 For a horizontal patch the cosine-weighted sky view factor is the mean of cos²h
 over the azimuths, and a skyline is stored as sin h — so the terrain's share is
 `mean(max(sin h, 0)²)`. That is one scalar per texel and it rides its own map,
-`<body>-skyview.webp`, for the reason § F comes from its own map gives: the
+`<body>-skyview.webp`, for the reason [F comes from its own map](#f-comes-from-its-own-map-not-from-the-horizon-planes) gives: the
 horizon planes deliberately skip the near field, which is where the answer
 mostly lives. Writing ρ for the body's geometric albedo and F for that terrain
 fraction:

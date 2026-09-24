@@ -286,7 +286,7 @@ export function atmosphereRadianceTsl(args: {
     betaRs.mul(viewOdR).add(betaA.add(betaMs).mul(viewOdM)).negate()).toVar();
   // Isotropic multiple-scattering fill: fraction-scattered × opacity ×
   // sunlit. Not the small correction its name suggests — it leads the
-  // airlight except in back-lit geometry (README § Multiple-scattering).
+  // airlight except in back-lit geometry (/src/client/solar-system/atmosphere/README.md#multiple-scattering-fill).
   const scatterC = betaRs.add(betaMs);
   const ssAlbedo = scatterC.div(max(scatterC.add(betaA), vec3(1e-6)));
   inscatter.addAssign(

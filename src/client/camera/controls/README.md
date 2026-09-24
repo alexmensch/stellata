@@ -95,7 +95,7 @@ in both navigate and observe modes.
   `claimCameraForAim` — the busy-gate claim every shell aim takes.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
-  reducers and their scorers (§ Ranking a pick). Owns `PICK_THRESHOLD_PX`,
+  reducers and their scorers ([Ranking a pick](#ranking-a-pick)). Owns `PICK_THRESHOLD_PX`,
   the one grab radius hover and click both take: it floors every
   candidate's enclosure, so two values would rank the same pair
   differently ([Architecture](../../hover/README.md#architecture)).

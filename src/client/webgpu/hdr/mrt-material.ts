@@ -72,7 +72,7 @@ function installMrtGraphs(
   install: (node: Node) => void,
 ): MrtEmitterMaterial {
   // Both default to wrapping the fragment output in a vec4 math node, which
-  // demotes the struct — see § The gate becomes the output struct. `fog`
+  // demotes the struct — see README.md#the-gate-becomes-the-output-struct. `fog`
   // defaults to TRUE on every NodeMaterial and is inert only while no scene
   // carries a fog node, so it is forced rather than asserted.
   material.fog = false;

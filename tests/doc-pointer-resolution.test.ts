@@ -4,21 +4,28 @@
 
 import { describe, expect, it } from 'vitest';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
-import { dirname, extname, join, relative, resolve } from 'node:path';
-import { docAnchors, extractPointers, extractRetiredPointers, resolveDocPath } from './doc-pointer-pure';
-import { gitFiles } from './walk-files';
+import { basename, dirname, extname, join, relative, resolve } from 'node:path';
+import { docAnchors, extractPointers, extractSameFileLinks, resolveDocPath, strayedSectionSigns } from './doc-pointer-pure';
+import { gitFiles, lfsTracked } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_EXTS = ['.ts', '.md', '.py', '.sh'];
+const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
+// Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
+const FROZEN = ['data/sid/retirements.tsv'];
+const kindOf = (name: string): string => extname(name) || basename(name);
 
-// Fixtures interpolate their `#` and `§` from here, so no literal pointer
-// appears in this file and it stays out of its own scan.
+// Fixtures interpolate their `#` and section sign from here, so no literal
+// pointer or sign appears in this file and it stays out of its own scan.
 const H = '#';
-const S = '§';
+const S = '\u00a7';
 
 function scannedFiles(): string[] {
-  return gitFiles(ROOT, [], { untracked: true })
-    .filter((name) => SCANNED_EXTS.includes(extname(name)))
+  const names = gitFiles(ROOT, [], { untracked: true }).filter(
+    (name) => SCANNED_KINDS.includes(kindOf(name)) && !FROZEN.includes(name),
+  );
+  const lfs = lfsTracked(ROOT, names);
+  return names
+    .filter((name) => !lfs.has(name))
     .map((name) => join(ROOT, name))
     .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());
 }
@@ -36,11 +43,11 @@ describe('doc pointers resolve', () => {
   const texts = scannedFiles().map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
   const pointers = texts.flatMap(({ file, text }) => extractPointers(text).map((pointer) => ({ file, pointer })));
 
-  it(`no pointer is written in the retired "<path>.md ${S} Heading" form`, () => {
-    const retired = texts.flatMap(({ file, text }) =>
-      extractRetiredPointers(text).map((p) => `${relative(ROOT, file)}:${p.line} — ${p.citedPath}`),
+  it(`no ${S} appears outside "[${S} N](…)" link text in markdown, or anywhere in code`, () => {
+    const strays = texts.flatMap(({ file, text }) =>
+      strayedSectionSigns(text, extname(file) === '.md').map((line) => `${relative(ROOT, file)}:${line}`),
     );
-    expect(retired, retired.join('\n')).toEqual([]);
+    expect(strays, strays.join('\n')).toEqual([]);
   });
 
   it('every "<path>.md#<slug>" names a heading or anchor that exists', () => {
@@ -57,8 +64,24 @@ describe('doc pointers resolve', () => {
     expect(failures, failures.join('\n')).toEqual([]);
   });
 
-  it.each(SCANNED_EXTS)('the scan finds pointers in %s files', (ext) => {
-    expect(pointers.some(({ file }) => extname(file) === ext)).toBe(true);
+  it('every same-file "[…](#<slug>)" link in markdown names a heading or anchor of that file', () => {
+    const failures = texts
+      .filter(({ file }) => extname(file) === '.md')
+      .flatMap(({ file, text }) =>
+        extractSameFileLinks(text)
+          .filter((link) => !anchorsOf(file).has(link.slug))
+          .map((link) => `${relative(ROOT, file)}:${link.line} — no #${link.slug} in this file`),
+      );
+    expect(failures, failures.join('\n')).toEqual([]);
+  });
+
+  it('leaves the files Git LFS stores out of the scan', () => {
+    const lfsTable = 'data/classic-ids/cross_index.tsv';
+    expect(lfsTracked(ROOT, [lfsTable, 'data/local-group/aliases.tsv'])).toEqual(new Set([lfsTable]));
+  });
+
+  it.each(SCANNED_KINDS)('the scan finds pointers in %s files', (kind) => {
+    expect(pointers.some(({ file }) => kindOf(file) === kind)).toBe(true);
   });
 });
 
@@ -97,18 +120,25 @@ describe('extraction', () => {
     expect(cited(`\`<path>.md${H}<slug>\``)).toEqual([]);
   });
 
-  it(`finds the retired ${S} form however the path is quoted or wrapped`, () => {
-    const text = [
-      `see docs/sid.md ${S} 4.5, \`\`README.md\`\` ${S} Stage 2 and **/AGENTS.md** ${S}${S} Unit`,
-      `and scripts/README.md`,
-      `  ${S} Building, but not ~/.claude/CLAUDE.md ${S} DRY`,
-    ].join('\n');
-    expect(extractRetiredPointers(text)).toEqual([
-      { citedPath: 'docs/sid.md', line: 1 },
-      { citedPath: 'README.md', line: 1 },
-      { citedPath: '/AGENTS.md', line: 1 },
-      { citedPath: 'scripts/README.md', line: 2 },
+  it('reads a same-file markdown link target, and nothing that merely starts with #', () => {
+    const text = [`see [${S} 3.5](${H}35-lateness) and`, `[Unit](${H}unit--what-an-emitting-layer-writes) but not (${H}624) or [x](${H})`].join('\n');
+    expect(extractSameFileLinks(text)).toEqual([
+      { slug: '35-lateness', line: 1 },
+      { slug: 'unit--what-an-emitting-layer-writes', line: 2 },
     ]);
+  });
+
+  it(`allows ${S} in markdown only where it opens numbered link text`, () => {
+    const markdown = [
+      `[${S} 3.5](${H}35-lateness) and [${S} 6.1](/docs/catalog-driver.md${H}61-record-parity)`,
+      `but not ${S} 5, ${S} Heading, [${S} Heading](${H}heading) or docs/sid.md ${S} 4.5`,
+      `nor ${S}${S} 4.1, 4.4`,
+    ].join('\n');
+    expect(strayedSectionSigns(markdown, true)).toEqual([2, 2, 2, 2, 3, 3]);
+  });
+
+  it(`allows no ${S} at all in code, link-shaped or not`, () => {
+    expect(strayedSectionSigns(`// [${S} 3.5](${H}35-lateness), ${S} Unit`, false)).toEqual([1, 1]);
   });
 });
 

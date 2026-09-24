@@ -54,7 +54,7 @@ export function cloudModelDensity(
   return n0Cal * (1 + q * q) ** (-p / 2) * envelope;
 }
 
-/** `av` is a raymarched A_V column (§ 9). */
+/** `av` is a raymarched A_V column (/docs/science-molecular-clouds.md#9-presence-pass). */
 export function absorptionAlpha(av: number): number {
   return Math.min(1 - Math.exp(-TAU_PER_AV * av), ALPHA_CAP);
 }

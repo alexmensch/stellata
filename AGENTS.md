@@ -40,34 +40,35 @@ CI can't catch a comment that merely restates `README.md` / `SCIENCE.md` /
 
 ## Write-time discipline — triggers and pointers
 
-Trigger fires → rule applies. Stellata's instances sit in the named
-section of `docs/authoring-patterns.md`, each pointing at the generic
-rule in `code-craft`'s write-time patterns; the trigger word here is
-the always-loaded hook pointing to which section to open.
+Trigger fires → rule applies. Each trigger links its section of
+`docs/authoring-patterns.md`, where stellata's instance points at the
+generic rule in `code-craft`'s write-time patterns; the trigger word is
+the always-loaded hook.
 
-- **Adding `bus.on(...)`** → wire unsub into dispose, same diff.
-  § Lifecycle pairing.
-- **Implementing one of a sibling pair** (lambertian/mallama,
-  encode/decode, v2/v3, prime/fallback) → copy-skim sibling,
-  replicate defences. § Sibling symmetry.
-- **Introducing dirty-track / cache** → sentinel must fail
-  first-write; dispose resets every sentinel; cache key covers every
-  input dimension. § Sentinel-init.
-- **Wall-clock time mid-animation** → route through
-  `Stellata.getT()`, never `Date.now()`. § Single source of truth.
-- **Code comment violations** → P1 in PR review. § Code-comment hygiene.
-- **Renaming an API OR changing semantics** → `grep -rn` old name +
-  sweep every folder README in the diff. § Rename + stale-prose sweep.
-- **Writing new code** → tests in the SAME PR; pure helpers in
-  `*-pure.ts`; numeric headline claims pinned with `toBe(N)`, never
-  `toBeLessThanOrEqual`. § Test coverage at write time.
-- **Refactor framed "apply pattern X to all Y"** → enumerate peer set
-  in PR description; verify zero remaining call sites of old pattern.
-  § Pattern coverage across peers.
-- **Numeric literals** → hoist at the second usage; tests import the
-  constant and never redefine it. § Named constants and DRY.
-- **Mid-implementation doc-edit impulse** → a *description* defers to the
-  commit sweep; a *settled decision* goes in the README now. § Defer doc updates.
+- **[Adding `bus.on(...)`](docs/authoring-patterns.md#lifecycle-pairing)** →
+  wire unsub into dispose, same diff.
+- **[Implementing one of a sibling pair](docs/authoring-patterns.md#sibling-symmetry)**
+  (lambertian/mallama, encode/decode, v2/v3, prime/fallback) → copy-skim
+  sibling, replicate defences.
+- **[Introducing dirty-track / cache](docs/authoring-patterns.md#sentinel-init-for-dirty-track)**
+  → sentinel must fail first-write; dispose resets every sentinel; cache
+  key covers every input dimension.
+- **[Wall-clock time mid-animation](docs/authoring-patterns.md#single-source-of-truth-for-time--camera-state--world-offset)**
+  → route through `Stellata.getT()`, never `Date.now()`.
+- **[Code comment violations](docs/authoring-patterns.md#code-comment-hygiene)** → P1 in PR review.
+- **[Renaming an API OR changing semantics](docs/authoring-patterns.md#rename--stale-prose-sweep)**
+  → `grep -rn` old name + sweep every folder README in the diff.
+- **[Writing new code](docs/authoring-patterns.md#test-coverage-at-write-time)** → tests in the
+  SAME PR; pure helpers in `*-pure.ts`; numeric headline claims pinned
+  with `toBe(N)`, never `toBeLessThanOrEqual`.
+- **[Refactor framed "apply pattern X to all Y"](docs/authoring-patterns.md#pattern-coverage-across-peers)**
+  → enumerate peer set in PR description; verify zero remaining call
+  sites of old pattern.
+- **[Numeric literals](docs/authoring-patterns.md#named-constants-and-dry)** → hoist at the second
+  usage; tests import the constant and never redefine it.
+- **[Mid-implementation doc-edit impulse](docs/authoring-patterns.md#defer-doc-updates--descriptions-not-decisions)**
+  → a *description* defers to the commit sweep; a *settled decision*
+  goes in the README now.
 - **A frozen table lacks a column you need** → run the re-pull; you
   have network access. Never scope a design around it or hand the
   fetch back. [Who runs a refresh](scripts/refresh/README.md#who-runs-a-refresh).
@@ -83,7 +84,7 @@ before continuing past that folder. CI
 (`tests/folder-readme-coverage.test.ts`) enforces this invariant, and
 `tests/readme-size.test.ts` caps each at **450 lines** — `readme-guard`
 charges the nearest README before any code read, so length is a tax on
-every future session. Over the cap → § Split, don't shave.
+every future session. Over the cap → [Split, don't shave](#split-dont-shave).
 
 The codebase is a wiki by **progressive disclosure**: folder name
 signals the topic, README carries the load-bearing context —
@@ -284,7 +285,7 @@ a standing global rule; **never push or commit to main**, and diff size is
 never a justification. What this project adds:
 
 - **`skip-version-bump` label** on `gh pr create` for pure docs / CI /
-  `.beads` / repo-config changes — see [Version policy,](RELEASING.md#version-policy) the
+  `.beads` / repo-config changes — see [Version policy](RELEASING.md#version-policy), the
   "live-app consumer" test.
 - **`## Release notes` is required whenever the version bumps.** Every PR with
   a `package.json` version bump fills that block in the PR body (Summary /
@@ -305,7 +306,7 @@ never a justification. What this project adds:
 **Everything below this line is generated and rewritten in place by `bd`, and
 has the LOWEST precedence in this file.** Where it conflicts with a rule above
 or with a standing global rule, the rule above wins. Specifically, its
-"Session Completion" checklist does **not** override § Git workflow: the push
+"Session Completion" checklist does **not** override [Git workflow](#git-workflow--stellata-gates): the push
 it mandates is to the session's feature branch (never `main`), merging still
 needs explicit per-PR approval, and its manual `bd dolt push` step is already
 handled by the pre-push hook.

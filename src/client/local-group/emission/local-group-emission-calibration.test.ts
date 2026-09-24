@@ -783,7 +783,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // way because neither carries a plate scale any more.
     // What a viewer actually sees, in 8-bit levels at the base epoch and the
     // reference viewport — the distribution half of the acceptance, and the
-    // half the § against convolve-then-gain errors above cannot show. A
+    // half the *against convolve-then-gain* block above cannot show. A
     // threshold star lands on 38.25 (../../hdr/tonemap/tonemap-pure.ts), so M31 reads
     // brighter than one out to ~15 arcmin — the core and inner disc the
     // naked eye actually gets. The outer rows sit under the extended

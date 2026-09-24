@@ -41,7 +41,7 @@ export const DISC_HALF_THICKNESS_PC = 1_800;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
 
-/** Thick disc, Bland-Hawthorn & Gerhard 2016 § 5.1: z_T = 900 ± 180 pc
+/** Thick disc, Bland-Hawthorn & Gerhard 2016 Sect. 5.1: z_T = 900 ± 180 pc
  *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. The shared
  *  radial scale length is the one departure from the literature —
  *  README.md#density-profiles. */

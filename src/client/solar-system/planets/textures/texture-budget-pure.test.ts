@@ -141,7 +141,7 @@ describe('otherRungs', () => {
 });
 
 // What the layer DOES with all of this is driven for real in
-// ../planet-mesh-layer.test.ts § the layer releases what it stops drawing —
+// ../planet-mesh-layer.test.ts's *the layer releases what it stops drawing* case —
 // promotion, the in-flight loser, eviction and dispose each land there against
 // a stub loader. What survives here is the one invariant no behavioural test
 // reaches: a policy scan over every draw-path lookup in the file.

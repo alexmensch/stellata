@@ -47,7 +47,7 @@ export function buildPlanetAtmosphereMaterial(
     // faceting grid the interpolated position would feed the march.
     const shellPoint = p.uCenterView
       .add(normalView.mul(p.uRadiusPc.mul(p.uAtmoRadius)));
-    // Everything below is in the unit-sphere frame (README § Shell extents).
+    // Everything below is in the unit-sphere frame (/src/client/solar-system/atmosphere/README.md#shell-extents).
     const dir = deflattenedDirTsl(
       shellPoint.normalize(), p.uPoleView, p.uPolarRadiusR).toVar();
     const o = deflattenedCameraTsl(

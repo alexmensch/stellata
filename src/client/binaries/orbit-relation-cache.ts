@@ -34,7 +34,7 @@ export interface OrbitRelationCache {
    *  geometry. The consumers add ΔR(t) to it, giving rendered rel = R(t)
    *  exactly. Baseline epoch = sepPaEpochJd (the epoch the stored catalog
    *  separation was measured at, NOT J2000), falling back to J2000 when
-   *  the record carries none. See README § Tier mapping for why this
+   *  the record carries none. See README.md#tier-mapping for why this
    *  replaces the float32 slot diff. */
   baseDiffPc: Vec3;
   /** a · (1 + e), AU — the screen-separation LOD's worst-case sub-pixel
@@ -87,7 +87,7 @@ export function keplerRelationParams(
 
 /** The plane of the pair `starIdx` rides, with the pair it came from — null
  *  only when the star is in no pair, or its pair carries no orbital elements
- *  (README § Which pair a star rides).
+ *  (README.md#which-pair-a-star-rides).
  *
  *  `systemXyzPc` is the pair's ICRS position, supplying the sky tangent
  *  basis a Tier-1 normal projects through; Tier 2 needs no vantage. */

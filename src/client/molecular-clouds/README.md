@@ -33,7 +33,7 @@ behind the camera is per-instance culling instead, inside the draw
 not gate on the frustum at all — [Declaring what a layer can put on screen](../scene/README.md#declaring-what-a-layer-can-put-on-screen)
 carries why. `setContributing(false)` clears
 `rimGroup.visible` as well as the parent group, because the pick gate
-reads that flag directly (§ The permit that gates the rim gates the pick).
+reads that flag directly ([The permit that gates the rim gates the pick](#the-permit-that-gates-the-rim-gates-the-pick)).
 
 `isAbsorptionDrawn` reads the parent group and the absorption group together
 — the `cloudAbsorption` frame-cost lever's `present()`
@@ -68,20 +68,20 @@ module's `sids()` leg, attached by main.ts's roster loop (see
   (format: `scripts/cloud-surfaces/README.md`).
 - `cloud-materials.ts` — the material seam: the neutral `CloudMaterials`
   contract and the per-cloud `CloudAbsorptionSpec` the factory consumes
-  (§ The material seam). The factory and its guard are
+  ([The material seam](#the-material-seam)). The factory and its guard are
   `../webgpu/molecular-clouds/`.
 - `absorption/` — the raymarch: `cloud-presence-pure.ts`, the constants
   and CPU mirror its graph imports. `absorption/README.md`.
 - `cloud-rim-pure.ts` — the rim shell's authored constants (stipple grid,
   contour width, alpha floor, `MIN_FWIDTH`), plus `CLOUD_RIM_EXTENT_PC` /
-  `CLOUD_RIM_DISTANCES` (§ Rim shell render), which the rim graph
+  `CLOUD_RIM_DISTANCES` ([Rim shell render](#rim-shell-render)), which the rim graph
   imports.
 - `cloud-pick-pure.ts` — the overlapping-cloud pick score + winner
-  resolution (§ Picking + hover).
+  resolution ([Picking + hover](#picking--hover)).
 - `cloud-mock.ts` — `Cloud`/`CloudCatalog` fixture builders plus
   `fakeCloudMaterials`, the recording seam double the layer suite runs on.
 - `cloud-labels.ts` — per-cloud silhouette-hugging SVG name labels
-  (§ Labels).
+  ([Labels](#labels)).
 
 ## The material seam
 
@@ -106,7 +106,7 @@ One absorption material per cloud, one rim material for all of them.
 Its own folder now: `absorption/README.md` — the march and both tiers, the
 `BackSide` invariant, the fragment budget, the render-order contract and
 the diffuse-attachment write, and which clouds may dim the band. `cloud-materials.ts` here still builds the material and owns the
-brick texture's lifetime (§ The material seam).
+brick texture's lifetime ([The material seam](#the-material-seam)).
 
 ## Rim shell render
 
@@ -195,7 +195,7 @@ park-distance inputs use the layer's `viewingDistancePc` (= `2.4 ×`
 the effective extent, with a 5 pc floor) as the cloud's `dMinFloor`
 instead of the star 90 %-fill solve.
 
-**Effective focus geometry.** Fly-to / orbit / warp / labels / the
+<a id="effective-focus-geometry"></a>**Effective focus geometry.** Fly-to / orbit / warp / labels / the
 distance vector all aim at the layer's per-cloud **effective centre**
 — the traced mesh's vertex centroid (with its max vertex radius as the
 extent) — never at the Zucker bbox centroid, which can sit far from
@@ -269,8 +269,8 @@ This is the same comparison every other kind is ranked by, on the same
 field, so a cloud and a shell and a star all order by size with nothing
 kind-specific anywhere (`../hover/README.md` Rule 3).
 
-Projection is against the **effective centre** (§ Effective focus
-geometry), and the denominator is the layer's `renderedSizePx` — the
+Projection is against the **effective centre** ([Effective focus
+geometry](#effective-focus-geometry)), and the denominator is the layer's `renderedSizePx` — the
 extent sphere for traced clouds, the tight ellipsoid quadric otherwise,
 both at the depicted `u = uEnv` envelope, keyed off the canonical
 shader-side pixels-per-radian (`KindContext.angularToPx()`, which reads

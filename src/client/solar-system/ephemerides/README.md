@@ -12,8 +12,7 @@ per-host orbital-plane quaternion.
 src/client/solar-system/ephemerides/
   lunar-theory-pure.ts            Truncated ELP-2000/82 (Meeus ch. 47):
                                   the Moon's λ/β/Δ in the mean ecliptic
-                                  and equinox of date. See § Moon
-                                  ephemeris.
+                                  and equinox of date. See README.md#moon-ephemeris.
   moon-vector-truth.test.ts       The theory + precession chain vs frozen
                                   Horizons geocentric vectors spanning
                                   the whole clock, plus Meeus's own
@@ -26,10 +25,10 @@ src/client/solar-system/ephemerides/
                                   Heliocentric ecliptic parsecs out.
   equinoctial-pure.ts (+ test)    The non-singular element representation
                                   every source is expressed in, and the
-                                  blend. See § Equinoctial elements.
+                                  blend. See README.md#equinoctial-elements.
   element-table.ts (+ test)       One planet's uniform-cadence table of
                                   equinoctial elements + the Catmull–Rom
-                                  sampler. See § Horizons element tables.
+                                  sampler. See README.md#horizons-element-tables.
   element-table-loader.ts         Parallel fetch of the nine tables from
                                   public/ephemerides/. A missing file
                                   drops that planet onto Standish; it is
@@ -77,7 +76,7 @@ src/client/solar-system/ephemerides/
 picked by epoch:
 
 - **Frozen Horizons element tables** across 1900–2100, ~5e-6 AU
-  (§ Horizons element tables).
+  ([Horizons element tables](#horizons-element-tables)).
 - **The JPL Standish 1992 Keplerian-elements approximation** with the
   cubic Jupiter–Pluto correction terms (Table 2a/2b inlined) everywhere
   else — the whole 3000 BC – 3000 AD span the model clock clamps to
@@ -92,7 +91,7 @@ drift off its body — including through the seam.
 ### The Standish series is not sub-arcminute, and its error is not invisible
 
 Standish's published budget for the Table 2a elements
-(`ssd.jpl.nasa.gov/planets/approx_pos.html` § Accuracy) reaches
+(`ssd.jpl.nasa.gov/planets/approx_pos.html`, section *Accuracy*) reaches
 λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at Uranus;
 measured against DE441 the giants sit at 0.05–0.14 AU across the clamp
 and 0.05 AU in 1900–2100. Whether that shows depends on viewing
@@ -175,7 +174,7 @@ Returned positions are heliocentric **ecliptic** parsecs, not ICRS —
 the rotation onto ICRS happens in the caller via the per-host
 orbital-plane orientation quaternion. Sol's quaternion is the J2000
 obliquity rotation; future exoplanet hosts (`bk5`) get a galactic-
-plane-aligned default per § Orbital plane convention.
+plane-aligned default per [Orbital plane convention](#orbital-plane-convention).
 
 Positions recompute at every distinct `t` — the single-slot cache is
 keyed on exact `t` and only collapses the several same-frame consumers
@@ -207,7 +206,7 @@ displacement on their own.
 The row stays in `MOON_ELEMENTS` behind `useLunarTheory`, as the mean
 orbit that the focus card's orbit descriptor and the tidally-locked
 rotation parity read. **It is not the position source**, and the orbit
-ring does not read it either — see § Orbit rings.
+ring does not read it either — see [Orbit rings](#orbit-rings).
 
 Frame: the series is referred to the equinox of date, and the model works
 in the J2000 ecliptic. Over the clock's span the equinox sweeps ~42° and
@@ -438,7 +437,7 @@ reach for `orbitPlaneNormalInto`, never `orbitalPlaneNormalFor`.
   term — Standish's accuracy budget doesn't need it and the
   apparent-position match is unaffected. (The lunar theory's
   equinox-of-date frame is a different question and does move — see
-  § Moon ephemeris.)
+  [Moon ephemeris](#moon-ephemeris).)
 - **Ecliptic-pole sign.** The north ecliptic pole in ICRS is
   `(0, −sin ε, cos ε)` — RA 18h, Dec +66.56°; the y-component is
   NEGATIVE (cos 66.56° · sin 270° = −sin ε). The mirrored `+sin ε`

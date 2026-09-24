@@ -73,7 +73,7 @@ class IdentLookup:
 class BibcodedGroup:
     """Columns that only ship alongside their bibcode.
 
-    § 5 makes the bibcode the source and SIMBAD merely the index that
+    The per-field cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) make the bibcode the source and SIMBAD merely the index that
     found it, so a value whose bibcode is empty is unattributable and no
     consumer may use it. The writer drops the whole group rather than
     emit a cell that has to be filtered again downstream — which means

@@ -22,7 +22,7 @@ scripts/perf/
                             pins/README.md#from-saved-runs.
   survivors.ts              `pnpm run survivors`: debug.survivors() at the
                             canon vantages. Reads no clock and is not a cost
-                            instrument (§ Survivor counts). The other
+                            instrument (README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument). The other
                             Playwright value import; not imported by a test.
   checkout.ts               What run.ts and pin.ts share about the checkout:
                             root, main checkout, git provenance, the pin's
@@ -149,7 +149,7 @@ the row does not resolve; raising the count tightens the bound on that many
 boundaries together. Quote the total, not `savedMs` over the count — dividing
 assumes the clears add, and consecutive clears with nothing drawn between them
 are what a driver would coalesce
-([The roster,](/src/client/debug/frame-cost/passes/README.md#the-roster)
+([The roster](/src/client/debug/frame-cost/passes/README.md#the-roster),
 [§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs)).
 
 **`--pre-disable <keys>` and `--no-park` set up the frame a differential
@@ -172,7 +172,7 @@ priceFrame, which pins the exposure only after its own warmup
 converges on the reduced scene and the sweep then pins a cut the plain run
 never had. Where the eye branch or the resolved-surface pin governs, that is
 a different star population in the two runs and the rows are not each
-other's complement; § The compression probe on the passes page is the same
+other's complement; [The compression probe](/src/client/debug/frame-cost/passes/README.md#the-compression-probe--does-the-reductions-cost-track-content) on the passes page is the same
 trap caught the hard way. At the Sol default view the display floor governs
 and the cut reads `Lw` and the anchor and nothing from the frame, so holding
 the band and the glow off cannot move it. **The `limitMag` columns are the
@@ -218,7 +218,7 @@ there lands mid-path.
 **Contexts run in the scenario order given; `all` is the canon order
 mw120, sol, earth, mw50, lg.** So `--scenario all` opens with mw120 then
 sol, the two contexts a Tier 1 run visits, in the same order. That is what
-lets Tier 1 compare against the pin: [The refusals,](diff/README.md#the-refusals) run
+lets Tier 1 compare against the pin: [The refusals](diff/README.md#the-refusals), run
 position.
 
 **A dwell's clock is always `raf-delta`, so every pin run is on it.**

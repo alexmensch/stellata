@@ -182,7 +182,7 @@ lerps, so every aim takes it the same way),
 belongs on the controller.
 
 **Forwarders still on the shell leave with their cluster, and so do their
-callers** (§ Decomposing the shell). The `attach*` family — `main.ts` calls
+callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
 `attachBinaries`, `attachDust` and `attachConstellationBoundaries` — moves
 with its row, and `main.ts` calls the new owner through a readonly
 namespace. The star-frame reads (`localPositions`, `uniforms`) and the

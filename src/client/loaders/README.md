@@ -10,7 +10,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          public/constellations.json → Catalog (typed-array
                          views + name table). Fetches the manifest, then
                          the chunks one at a time in order
-                         (§ Progressive catalog load), decoding each as it
+                         (README.md#progressive-catalog-load), decoding each as it
                          lands (byte-range chunking clears Cloudflare
                          Workers' 25 MiB per-asset limit — see
                          /scripts/catalog/record/README.md#on-disk-transport-chunking).
@@ -20,7 +20,7 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          of truth shared with the writer and the Node
                          AoS reader; the decode itself is
                          catalog-window.ts, off the main thread
-                         (§ The catalog-decode worker). Exposes
+                         (README.md#the-catalog-decode-worker). Exposes
                          `varType: Uint8Array` for the runtime
                          pulsation-suppress gate (see
                          `../binaries/eclipse/README.md`) plus
@@ -38,17 +38,17 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          single/resolved/unresolved — see
                          /scripts/catalog/multiplicity/README.md#multiplicity-status).
 catalog-progressive.ts   chunk fetch scheduling + the record window each
-                         landing chunk unlocks (§ Progressive catalog load).
+                         landing chunk unlocks (README.md#progressive-catalog-load).
 catalog-window.ts        one record window's decode as plain typed arrays,
   (+ test)               window-relative — the pass both the worker and the
                          inline fallback run, plus the column roster the
                          memcpy back walks and the allocator the full
-                         catalogue shares (§ The catalog-decode worker).
+                         catalogue shares (README.md#the-catalog-decode-worker).
                          Column-at-a-time via decodeRecordColumn (see
                          /scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
 catalog-decode-worker.ts that pass off the main thread, and the spawn +
 catalog-decode-host.ts   inline fallback around it
-  (+ host test)          (§ The catalog-decode worker).
+  (+ host test)          (README.md#the-catalog-decode-worker).
 catalog-fixture.ts       test-only catalog.bin builder — synthetic records
                          through the shipped writeStarRecord, so every
                          parse in these suites is a writer→reader
@@ -95,7 +95,7 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          Data3DTexture (DustField). Progressive upload:
                          zero-fill GPU texture upfront, fetch chunks
                          priority-ordered, hand each to the voxel uploader
-                         as it lands (§ Dust voxel upload). Manifest is
+                         as it lands (README.md#dust-voxel-upload). Manifest is
                          the contract with
                          scripts/dust/build-dust.py — both derive
                          gridSize / chunkSize / bounds / encoding from it.
@@ -103,13 +103,13 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          dust-deextinction.ts reads the same artifact to
                          de-extinct absmag/ci (mirrored decode + integral).
 dust-voxel-upload.ts     Landing one chunk inside the volume texture
-  (+ test)               (§ Dust voxel upload). Also owns
+  (+ test)               (README.md#dust-voxel-upload). Also owns
                          `createVoxelTexture` — every voxel texture,
                          volume and staging alike.
 dust-voxel-readback.ts   Reading voxels back off the GPU and comparing
   (+ test)               them against the chunk files — the numeric smoke
                          behind `stellata.verifyDust()`
-                         (§ Dust voxel readback).
+                         (README.md#dust-voxel-readback).
 dust-renderer-mock.ts    A recording renderer stand-in, enough surface
                          for the upload and readback tests to run
                          headless.
@@ -120,8 +120,8 @@ dust-renderer-mock.ts    A recording renderer stand-in, enough surface
 `loadCatalog` resolves on the **first chunk carrying a whole record**, not on
 the whole artifact, so boot paints a sky while the rest is still on the wire.
 Records are apparent-V ordered and the chunk plan ramps from 1 MiB
-([Record order,](/scripts/catalog/record/README.md#record-order) § On-disk transport
-chunking), so that prefix is roughly the naked-eye sky.
+([Record order](/scripts/catalog/record/README.md#record-order), [On-disk transport
+chunking](/scripts/catalog/record/README.md#on-disk-transport-chunking)), so that prefix is roughly the naked-eye sky.
 
 The shape: one buffer pre-allocated at `manifest.totalBytes`, the chunks
 fetched **one at a time in order** straight into their own slices, each
@@ -178,7 +178,7 @@ Three traps, all of them silent if missed:
 ## The catalog-decode worker
 
 Every landing chunk's decode used to run on the main thread, and by then the
-scene is already rendering off chunk 0 (§ Progressive catalog load) — so each
+scene is already rendering off chunk 0 ([Progressive catalog load](#progressive-catalog-load)) — so each
 one froze a **rendered** app rather than sitting behind a loading cover. The
 decode runs in a worker; the main thread keeps the fetch, the name table and a
 memcpy.
@@ -214,7 +214,7 @@ is slower at `DataView` reads and boot is competing for the thread.
 18.8 MB of decoded window plus the 16.8 MB byte slice, and the slice detaches
 at `postMessage`. Nothing is resident on both sides, which is what a transfer
 buys over the search index's structured clone
-([The search-index worker,](../typeahead/README.md#the-search-index-worker) 64.5 MB held twice).
+([The search-index worker](../typeahead/README.md#the-search-index-worker), 64.5 MB held twice).
 `stellata-8cg.52` owns the whole-app budget.
 
 **Only the window's bytes cross, never the assembled buffer.** Transferring
@@ -302,7 +302,7 @@ Chunk bytes are z-major with x innermost per the Python writer, which is
 what the volume reads as width/height/depth.
 
 The star vertex raymarch and the extinction prepass sample the volume
-(`../webgpu/extinction/README.md`); § Dust voxel readback is how the
+(`../webgpu/extinction/README.md`); [Dust voxel readback](#dust-voxel-readback) is how the
 upload itself is verified, independently of any sampler.
 
 **The marking rule above binds every 3D texture bound in a TSL graph, not

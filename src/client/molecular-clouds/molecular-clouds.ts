@@ -131,7 +131,7 @@ export class MolecularClouds {
     // three.js groupOrder, which outranks per-mesh renderOrder in the
     // transparent sort — the whole cloud pass would draw BEFORE the MW
     // band (its group is 0, meshes −3) and the band would paint over the
-    // absorption, silently defeating the § 9.1 render-order contract.
+    // absorption, silently defeating the sampling rules' render-order contract (/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode).
     this.absorptionGroup = new THREE.Group();
     this.rimGroup = new THREE.Group();
     // Fails closed: `pick` reads this, and no declutter permit is known
@@ -342,8 +342,8 @@ export class MolecularClouds {
   setAbsorptionEnabled(on: boolean) {
     this.absorptionEnabled = on;
   }
-  /** Absorption raymarch step count (§ 9.1 lever — the sampling rules
-   *  are not). */
+  /** Absorption raymarch step count, a sampling lever (/docs/science-molecular-clouds.md#91-sampling-and-anti-aliasing--banding-is-the-known-failure-mode); the
+   *  sampling rules themselves are not. */
   setSteps(n: number) {
     const steps = Math.max(4, Math.min(24, Math.round(n)));
     for (const s of this.absorptionSurfaces) s.uniforms.uSteps.value = steps;
@@ -365,14 +365,14 @@ export class MolecularClouds {
    * FSM and the hover engine share, so the two can never disagree.
    * Rim-mesh raycast gates hit-vs-miss; `resolveCloudPick` picks the
    * cloud with the tightest silhouette, then the one the cursor sits
-   * proportionally deepest inside (README § Picking + hover).
+   * proportionally deepest inside (README.md#picking--hover).
    *
    * Only cloud geometry is tested: this resolves which CLOUD the cursor
    * is in, and the cross-layer comparator ranks that answer against every
    * other kind (`../hover/hover-pick-disambiguator.ts`).
    *
    * Returns null whenever the rim shells are not permitted — the rim is
-   * the only mark the layer paints for itself (README § Picking + hover).
+   * the only mark the layer paints for itself (README.md#picking--hover).
    */
   pick(
     camera: THREE.PerspectiveCamera,

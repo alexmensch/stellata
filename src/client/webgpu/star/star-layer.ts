@@ -154,7 +154,7 @@ export class StarLayer {
     this.tables.endFrame();
   }
 
-  /** seam.ts § absorbRecords. */
+  /** `absorbRecords` in seam.ts. */
   absorbRecords(): void {
     this.tables.absorbRecords();
     this.compaction.setLoadedCount(this.sources.catalog.loadedCount);

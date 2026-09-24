@@ -22,7 +22,7 @@ scripts/catalog/record/
                                   (`../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`).
                                   Pure.
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
-                                  records on. Pure. § Record order.
+                                  records on. Pure. README.md#record-order.
 ```
 
 ## Record order
@@ -41,7 +41,7 @@ its own record, so the key is the only thing worth asserting on.
 
 **The order is load-bearing, not cosmetic.** Any prefix of the record array is
 then the brightest-looking sky, which is exactly what the progressive load
-paints from its first transport chunk (§ On-disk transport chunking,
+paints from its first transport chunk ([On-disk transport chunking](#on-disk-transport-chunking),
 [Progressive catalog load](/src/client/loaders/README.md#progressive-catalog-load)). It also puts Sol at
 index 0 by some twenty-two magnitudes — and `catalog.solIndex` gates the boot
 focus, the floating-origin seed and the whole solar system, none of which could
@@ -69,7 +69,7 @@ Three consequences for anything addressing a record by index:
 
 ## Binary catalog format (`public/catalog.bin.<i>` + manifest)
 
-Fixed-size records in apparent-V order (§ Record order). Current version is
+Fixed-size records in apparent-V order ([Record order](#record-order)). Current version is
 **v10** with a 100-byte stride. Magic and version step together
 (v3=`HYG3` … v9=`HYG9`, v10=`HYGA` — the field is four ASCII bytes, so v10
 takes the next character rather than a second digit). v10 moved the name table
@@ -78,14 +78,14 @@ ahead of the records and changed no record byte; v9 appended a `uint8`
 the stride stays a multiple of 4) — see [Multiplicity status](../multiplicity/README.md#multiplicity-status). v8
 appended three `float32` space-motion velocity components (`vx/vy/vz`,
 pc/yr) at bytes 84–95 — see [Space-motion velocity](../parse/README.md#space-motion-velocity). v7 appended a `uint32` `sid` (Stellata ID)
-at byte 80 — see § SID allocation. v5 appended a `uint64` Gaia
+at byte 80 — see [SID allocation](/scripts/catalog/README.md#sid-allocation). v5 appended a `uint64` Gaia
 DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
 NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
 pipeline uses everywhere else; ~99.6% of records carry one (the residual
 ~0.4% are the famous bright binaries Gaia couldn't fit a 5p PM to). v6
 appended seven `float32` Gaia DR3 Apsis astrophysical parameters at
 bytes 52–79 (gspphot Teff/logg/[M/H]/A0 then gspspec Teff/logg/[M/H]),
-keyed by the v5 `gaia_source_id` field — see § Gaia DR3 Apsis surfacing
+keyed by the v5 `gaia_source_id` field — see [Gaia DR3 Apsis surfacing](../README.md#gaia-dr3-apsis-surfacing)
 for its coverage and the runtime colour-LUT re-key it enables.
 
 - Header (32 bytes)
@@ -119,7 +119,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           Sol is the only record carrying 255, and
                           the build asserts it. The constellation a
                           designation is *named* for is a separate field,
-                          search-index `dc` (§ Search index).
+                          search-index `dc` ([Search index](#search-index-publicsearch-indexjson)).
   - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer,
                           4=is_binary_primary). `has_name` means an authority
                           NAMED this star — the name table carries the naming
@@ -172,7 +172,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 76–79 `float32`      **mh_gspspec** ([M/H] dex); NaN = absent.
   - 80–83 `uint32`       **sid** — Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)), the frozen
                           per-object wire identity. `0` (`NO_SID`) only in the
-                          unallocated-bootstrap path (§ SID allocation) before
+                          unallocated-bootstrap path ([SID allocation](/scripts/catalog/README.md#sid-allocation)) before
                           the build hard-fails. Every shipped record is
                           nonzero.
   - 84–87 `float32`      **vx** — space-motion velocity x (pc/yr, equatorial
@@ -232,7 +232,7 @@ yields one `CatalogRecord` object per call, while the SoA loader fills
 parallel typed arrays and does so **column-at-a-time** — one kind
 dispatch per column, then a tight constant-getter loop, which decodes the
 390k-record catalog ~35% faster than a per-record pass over every field.
-`scripts/catalog/record/catalog-pure.test.ts` § record reader surface pins the
+The *record reader surface* block of `scripts/catalog/record/catalog-pure.test.ts` pins the
 two read shapes against each other and against the writer. Free flag bits today are `0x40`, `0x80` (see
 `FLAG_*` exports). `0x08` is `FLAG_BINARY_COMPANION_ONLY` — set on
 records added by `companion-promotion.ts`. `0x20` is
@@ -264,7 +264,7 @@ limit). Two things follow from the ramp, and both are the point:
 
 - **Chunk 0 is the first-paint payload.** Measured on today's build:
   **10,412 records, 716 KB gzipped, ending at apparent V 6.62** — in
-  apparent-V order (§ Record order) that is the naked-eye sky, and it is
+  apparent-V order ([Record order](#record-order)) that is the naked-eye sky, and it is
   smaller than every other artifact boot fetches, so the star catalogue
   stops being the thing first paint waits on. `recordsInFirstChunk` in
   `../build-catalog-expected.json` pins the count. **It does not move with
@@ -300,7 +300,7 @@ handful of round trips and is the wrong side of that deal.
 
 The manifest also carries
 the optional `sidSuccessors` side-field (retired sid → successor sid
-pairs, [§ 9.4,](/docs/sid.md#94-migration-semantics--exact-table) derived from `data/sid/retirements.tsv` net
+pairs, [§ 9.4](/docs/sid.md#94-migration-semantics--exact-table), derived from `data/sid/retirements.tsv` net
 of reinstatements) so the runtime SID resolver can follow merge-type
 retirements without an extra fetch; omitted while empty.
 

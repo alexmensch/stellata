@@ -120,7 +120,7 @@ function angularDiffDeg(a: number, b: number): number {
 //
 // One budget for every body now, where the Galileans used to need double
 // Mars's. Their pole/PM librations were the reason and they are no longer
-// dropped (`rotation-elements-pure.ts` § terms) — folding Ganymede's J5
+// dropped (the terms in `rotation-elements-pure.ts`) — folding Ganymede's J5
 // in took the whole corpus under 0.15°. What is left is UT-vs-TDB, ~0.3°
 // of Mars spin at worst, and planetographic-vs-centric latitude, ≤ 0.35°
 // on Mars's flattening — which is why latitude keeps the looser of the two.

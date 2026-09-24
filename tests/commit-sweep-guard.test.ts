@@ -174,7 +174,7 @@ export const x = 1;
   // Spliced for the same reason the bead IDs above are: written literally
   // this is a doc pointer into a fixture path, and
   // tests/doc-pointer-resolution.test.ts resolves every one it finds.
-  const POINTER = `src/thing/README.md ${'§'} Reading it in dev`;
+  const POINTER = `src/thing/README.md${'#'}reading-it-in-dev`;
 
   const POINTS = `// Not Vite's own html reload: ${POINTER}.
 export const x = 1;

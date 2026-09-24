@@ -20,8 +20,8 @@ scripts/catalog/distance/pm-rescue/
 
 `resolvePmRescue` fires only where the winning direction tier's own solution
 carries no PM. The motion it supplies then carries **both** terms: the velocity,
-and the tier's position forward to the scene epoch (§ The rescued motion
-advances the position too). It reaches **39** rows in two shapes:
+and the tier's position forward to the scene epoch ([The rescued motion
+advances the position too](#the-rescued-motion-advances-the-position-too)). It reaches **39** rows in two shapes:
 
 - **36** resolve to a Gaia row with a 2p (position-only) solution and have no
   HIP2 cover, so they take the `gaia_5p` route's PM-less anchor.
@@ -176,7 +176,7 @@ Gl 1245A at 4.72 pc and Gl 791.2 at 8.76 pc are the two nearest, and zero is
 not a better estimate than the value refused. The rule is preferred anyway for
 the reason the rv cascade gives ([The Gaia-bibcode skip rule](../radial-velocity/README.md#the-gaia-bibcode-skip-rule))
 — a value this build cannot defend does not become
-defensible by arriving through an index — and § 5's residual policy is explicit
+defensible by arriving through an index — and [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s residual policy is explicit
 that a residual is enumerated rather than silently absorbed. Admitting a
 Gaia-bibcoded PM only where nothing else reaches the row would rescue all 13
 and is one condition; it is not taken because it would key on what our pull

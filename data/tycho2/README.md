@@ -12,7 +12,7 @@ tycho2_main.tsv     370,140 rows from I/259/tyc2. Mean position
                     (ep_ra/ep_de), proper motion + errors, BT/VT + errors,
                     prox, HIP, pflag, and the observed ra_icrs/de_icrs.
                     Which cell a propagation starts from and at which
-                    epoch: § Which position to propagate from.
+                    epoch: README.md#which-position-to-propagate-from.
 tycho2_suppl1.tsv   2,713 rows from I/259/suppl_1 — Tycho-1 and
                     Hipparcos stars. Observed position only (no mean
                     solution), PM where flag='H', BT/VT + errors, prox,
@@ -112,7 +112,7 @@ Coverage, re-measured 2026-09-07 against the committed tables:
 
 The refresh hard-fails on a manifest TYC that reaches neither table **and**
 whose pair entry is unreached too. All 371,416 manifest TYCs with `TYC3=1`
-reach Tycho-2, so a primary that misses is a membership event for § 6 to
+reach Tycho-2, so a primary that misses is a membership event for [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) to
 adjudicate, or an upstream regression — not a refresh landing short. The whole
 residual sits in the 731-row component cohort (`TYC3>1`), 713 of which reach,
 and Tycho-2 carries the pair's `TYC3=1` entry for all 18 that do not: it lists
@@ -180,8 +180,8 @@ places — the ~27″ staleness measured rather than asserted.
 
 It is also the corpus pin for the whole tier, through the only `hd:` record ref
 in the repo (`scripts/catalog/validate/sky-position-corpus.tsv`). Being the
-tier's fastest mover is what makes it the row that pins § Which position to
-propagate from above: it lands 0.113″ from Gaia's own place on the J2000 epoch
+tier's fastest mover is what makes it the row that pins [Which position to
+propagate from](#which-position-to-propagate-from) above: it lands 0.113″ from Gaia's own place on the J2000 epoch
 and 3.7″ away on the observation epochs.
 
 ## Provenance
@@ -203,7 +203,7 @@ republish; a re-pull is warranted only when the request set moves.
   the no-Gaia astrometry cohort, not all of it: **4** rows route CNS5 on a GJ
   number and **222** route SIMBAD, the latter including the `TYC3>1`
   components Tycho-2 merged into their pair, which carry a TYC that reaches no
-  row of its own (§ The request set, [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
+  row of its own ([The request set](#the-request-set--manifest--iv25), [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - The same parse feeds the **PM rescue cascade**
   (`scripts/catalog/distance/pm-rescue/README.md`) on a further **64** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion
@@ -216,7 +216,7 @@ Every count above is pinned in `scripts/catalog/build-catalog-expected.json`
 (`directionTycho2`, `vTycho2`, `pmRescueTycho2`) and moves with membership —
 read it rather than this list when they disagree.
 
-The parser resolves § Which position to propagate from at parse time, so
+The parser resolves [Which position to propagate from](#which-position-to-propagate-from) at parse time, so
 no consumer re-decides it: a row with a mean solution exposes
 `ra_mdeg`/`de_mdeg` at J2000, a row with none exposes `ra_icrs` at J1991.25
 and `fromIcrs: true`, and the main table's row wins on the 254 identifiers

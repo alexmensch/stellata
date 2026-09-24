@@ -14,7 +14,7 @@ export interface LgFocusProviderConfig {
   objects: readonly LgObject[] | null;
   /** Live camera→centroid distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number;
-  /** § Constellation row. */
+  /** README.md#constellation-row. */
   constellationName: (idx: number) => string | null;
 }
 

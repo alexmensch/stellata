@@ -98,7 +98,7 @@ interface Encounter {
    *  a real observation: the spacecraft SPKs and the DE441 planetary ephemeris
    *  are independent fits to radio tracking, and the rendered minimum landing
    *  on the published one checks both against reality rather than against each
-   *  other. See § Coherence in README.md. */
+   *  other. See README.md#coherence-not-precision. */
   closestApproachKm: number;
 }
 

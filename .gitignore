@@ -12,7 +12,7 @@ dist/
 /coverage/
 
 # The perf runner's one-launch arm marker, created only by hand
-# (scripts/perf/README.md § Human-armed).
+# (/scripts/perf/README.md#human-armed).
 /.perf-go
 
 # Generated catalog artifacts (regenerated from source CSV). catalog.bin

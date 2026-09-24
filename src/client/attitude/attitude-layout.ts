@@ -1,6 +1,6 @@
 // Where the instrument's parts sit: the mini-renderer's view geometry, the
 // sphere's silhouette that follows from it, and the design box the SVG chrome
-// is drawn in. README.md#rendering § Case chrome.
+// is drawn in. README.md#case-chrome.
 
 /** The mini-renderer's view: a unit sphere at `BALL_VIEW_DIST` under a
  *  vertical `BALL_VIEW_FOV_DEG`. `attitude-ball.ts` builds its camera from
@@ -20,7 +20,7 @@ export const C = BOX / 2;
  *  this is an aperture rather than a silhouette: the disc is ball edge to
  *  edge, and what falls outside is simply not shown. That is the real
  *  instrument's arrangement — a large ball behind a small window — and
- *  § The window, not the whole ball says why it is not a wider view. */
+ *  README.md#the-window-not-the-whole-ball says why it is not a wider view. */
 export const BALL_R = BALL_PX / 2;
 
 /** How much of the sphere's surface the window shows, as an angle from the

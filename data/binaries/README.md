@@ -43,8 +43,7 @@ spot_check_ground_truth.tsv     SIMBAD-verified expected Stage 2
                                 resolutions for ~90 well-known
                                 (wds_id, component) rows. Read by the
                                 end-to-end spot-check harness
-                                (stellata-9mm.203.2). See § Spot-check
-                                ground truth. Regular git.
+                                (stellata-9mm.203.2). See README.md#spot-check-ground-truth. Regular git.
 ```
 
 ## Schema

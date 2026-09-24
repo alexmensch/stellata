@@ -66,7 +66,7 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
   document.body.appendChild(hud);
 
   /** Gaps between consecutive rendered frames, newest last, capped at
-   *  GAP_SAMPLE_COUNT and CLEARED on every wake — see § Reading it. */
+   *  GAP_SAMPLE_COUNT and CLEARED on every wake — see README.md#reading-it. */
   const gapsMs: number[] = [];
   const tickAt: number[] = [];
   const t0 = performance.now();

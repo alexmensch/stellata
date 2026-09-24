@@ -44,8 +44,8 @@ Both by `scripts/catalog/parse/constellations.ts`, which owns the path:
 - `buildFigureLines(hipToIndex)` → `public/constellations.json` (absent
   for constellations with no asterism lines), from
   `scripts/catalog/build-catalog.ts`. See
-  [`scripts/catalog/parse/README.md`](../../scripts/catalog/parse/README.md)
-  § Stick figures from Stellarium.
+  `scripts/catalog/parse/README.md`
+  [Stick figures from Stellarium](/scripts/catalog/parse/README.md#stick-figures-from-stellarium).
 - `readIauEdgeRecords()` → the boundary segments, parsed and decomposed
   into named sky regions by
   [`src/client/constellation-boundaries/`](../../src/client/constellation-boundaries/README.md).
@@ -60,5 +60,5 @@ preferred over RA/Dec positional matching.
 
 The boundary side has the equivalent guard built into its own
 decomposition: the edge set must resolve to exactly 89 uniquely named
-regions or the walk throws. See that folder's README § Cell
-decomposition.
+regions or the walk throws. See that folder's README [Cell
+decomposition](/src/client/constellation-boundaries/iau-geometry/README.md#cell-decomposition--the-self-validating-invariant).

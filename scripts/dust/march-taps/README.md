@@ -43,7 +43,7 @@ Schemes:
   The row marked *(shipped)* is `DUST_TAP_PC` at `DUST_TAPS_MAX`.
 - **…, fp32** — the shipped rule with every operation rounded to single
   precision (`fp32March`), against the same double-precision reference.
-  § Single precision is where the difference shows.
+  [Single precision is where the difference shows](#single-precision-is-where-the-difference-shows).
 
 Vantages: Sol, and 500 pc / 3 kpc / 1 Mpc along the galactic north pole
 (`GALACTIC_NORTH_POLE_ICRS`). The 1 Mpc row is the `lg` canon vantage's

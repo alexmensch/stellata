@@ -74,7 +74,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 - **Photometry citation**: Riello M., De Angeli F., Evans D. W. et al. 2021,
   *A&A* 649, A3 (Gaia EDR3 photometric content and validation). DOI:
   [10.1051/0004-6361/202039587](https://doi.org/10.1051/0004-6361/202039587).
-  Its § *Photometric relationships with other photometric systems* gives the
+  Its section *Photometric relationships with other photometric systems* gives the
   `G − V` cubic in `BP − RP` the V cascade transforms through; DR3 ships EDR3's
   photometry unchanged, so the EDR3 calibration is the one that applies.
 - **Synthetic-photometry citation**: Gaia Collaboration, Montegriffo P.,
@@ -143,8 +143,8 @@ the third bound, and the one easiest to read as a gap: a record needs a place
 *and* a brightness, so a source whose V no tier reaches is outside the domain
 the completeness claim is quantified over rather than missing from inside it.
 The catalogue's promise is what it can draw physically, never a row count — so
-a star it cannot light is one it declines to invent, and § What the filter
-keeps has the cohort that tests this.
+a star it cannot light is one it declines to invent, and [What the filter
+keeps](#what-the-filter-keeps-and-what-falls-through-it) has the cohort that tests this.
 
 ## Why the floor carries no margin
 
@@ -215,7 +215,7 @@ printed tier to key on. `V >= G + 0.0268` does not bound them from above, so
 `SPINE ∪ MAGNITUDE PULL(V ≤ floor)` ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), and the
 magnitude term's predicate is a bound on V. A source carrying no V satisfies no
 predicate over V, so 925 of these are never candidates — non-selection by the
-term's own definition, not a drop the § 6.1 no-silent-drops rule speaks to.
+term's own definition, not a drop the [§ 6.1](/docs/catalog-driver.md#61-record-parity) no-silent-drops rule speaks to.
 Ledgering them would equally oblige ledgering the 312,475 rows the floor
 excludes. The 18 that are manifest rows *are* candidates and route through the
 existing park: `no_v_magnitude` is "a row placed but unlit ... and a record
@@ -254,7 +254,7 @@ what the result costs on the wire are the build's, not this folder's:
 
 The archive publishes `b_jkc_flag` / `v_jkc_flag` as *"Flag indicating if
 G mag and BP−RP color of the source lie in the validated range"* and
-states no polarity. Montegriffo+ 2023 § 6.2 does: the flag *"has a value
+states no polarity. Montegriffo+ 2023 Sect. 6.2 does: the flag *"has a value
 of 1 if the G_BP−G_RP colour and G magnitude of the considered star are
 within the ranges where standardisation and validation have been
 performed. In practice, the X magnitude of a source with Xflag = 0 should
@@ -263,7 +263,7 @@ be considered as an extrapolation of the adopted standardisation."*
 The paper gives no numeric box, so the region was measured against
 `gaiadr3.gaia_source` (2026-08-15). `flag = 1` has sharp edges:
 
-| axis | flag = 1 where | edge measured between | what sets it (§ 3.2) |
+| axis | flag = 1 where | edge measured between | what sets it (Sect. 3.2) |
 |---|---|---|---|
 | `G` | ≳ 10.7 | the 10.50–10.75 and 10.75–11.00 bins | the BP/RP spectrometer configuration change at `G` ≈ 11.5 — onset of gates, window-class switch — which costs XP's *internal* calibration its millimag accuracy |
 | `BP − RP` | −0.5 … ≈ 2.6 | the 2.5–2.6 and 2.6–2.7 bins | the Landolt/Stetson standard collections thin out past `BP−RP` ≈ 2 and disagree by 3–5% there |
@@ -280,7 +280,7 @@ is not only a standardisation matter ([Why the GSPC tier does not gate on the fl
 Two more things the paper settles about this table, both worth not
 re-deriving:
 
-- **The S/N > 30 per-band cut is already applied upstream** (§ 6.2, Eq.
+- **The S/N > 30 per-band cut is already applied upstream** (Sect. 6.2, Eq.
   21): a band whose `flux/flux_error` fails it ships no magnitude at all.
   Verified over all 565,505 magnitudes held here — none is at or below
   30 — so **the build needs no S/N gate of its own**. It is also why B is

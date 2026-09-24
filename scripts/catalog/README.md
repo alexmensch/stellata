@@ -8,7 +8,7 @@ Stellarium → `public/catalog.bin.<i>` transport chunks +
 build-only `build/catalog-row-index-map.json` ([What ships](../README.md#what-ships)).
 Run via `pnpm run build:catalog`.
 
-Membership is `data/membership/membership-manifest.tsv` less the § 6.1 parks,
+Membership is `data/membership/membership-manifest.tsv` less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks,
 and nothing else — `data/athyg/` left this build's input set entirely. Classic
 designations arrive already merged, so this build applies no label layer of its
 own. Contract: `docs/catalog-driver.md`; term: `membership/README.md`.
@@ -66,7 +66,7 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   pair's two components a record's cells name.
 - `membership/` — the membership term: the primaries-derived manifest
   (`pnpm run build:membership` → `data/membership/`), its parity gate and the
-  § 6.1 ledgers. `parse/` streams it through `iterManifestTsv`.
+  [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledgers. `parse/` streams it through `iterManifestTsv`.
 - `spine/` — AT-HYG's merge decisions, frozen: `data/athyg/inherited-spine.tsv`,
   its codec and byte guard. Read by `build:membership` and the manifest gate,
   never by `build:catalog`.
@@ -141,7 +141,7 @@ decoding it.
 `scripts/catalog/build-catalog.ts` loads `data/gaia/gaia_dr3_apsis.tsv`
 via `parseGaiaApsisTsv` into a `Map<source_id, ApsisRow>` and writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
-52–79; see § Binary catalog format above). Coverage: 98.4% of records
+52–79; see [Binary catalog format](record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.4% of records
 match an Apsis row (966,953 of 983,068); 88.0% of the catalogue has a
 non-null Teff in either gspphot or gspspec. The remaining ~12%
 (typically faint Tycho-only stars without high-S/N BP/RP photometry,

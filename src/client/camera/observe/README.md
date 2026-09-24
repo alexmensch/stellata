@@ -13,10 +13,10 @@ click handlers (single = pin a POI, double = aim-at).
   (pin POI / aim-at).
 - `look-pin-pure.ts` (+ test) — the `controls.target` value OBSERVE
   serialises, and the single condition that invalidates it.
-  § The serialised look pin.
+  [The serialised look pin](#the-serialised-look-pin).
 - `observe-look-pin.ts` (+ test) — `ObserveLookPin`, which holds the
   orientation the pin was last derived at and writes `controls.target`
-  from it. § The serialised look pin.
+  from it. [The serialised look pin](#the-serialised-look-pin).
 - `observe-transition.ts` — navigate↔observe FSM. `setMode`,
   `startExit`, `startUnfocusLerp`, the per-frame lerp, and the
   `ObserveFocusOps` cross-controller seam (implemented by
@@ -38,7 +38,7 @@ Public surface of `ObserveTransition`:
   `isActive` excludes the `unfocus` kind so overlays gating on observe
   visibility stay steady-state-navigate during close-zoom.
 - `observeAnchorOf(kind)` — what the camera stands on, for line layers
-  (§ The observe anchor in line layers).
+  ([The observe anchor in line layers](#the-observe-anchor-in-line-layers)).
 - `cancelUnfocusLerp` — `FocusOps` shim for `WarpController`.
 - `cancelTransition` — used by `FocusController.setFocus`'s observe-cleanup
   branch when the focal star is changing mid-flight.
@@ -198,13 +198,13 @@ near-zero flight then lands through the normal `finishWarp` →
 was tried and reverted: it bypasses `finishWarp`'s `controls.target` setup
 and desyncs the focal-frame ride.
 
-**X button (clear focus from observe):** `unfocus()` detects observe +
+<a id="x-button-clear-focus-from-observe"></a>**X button (clear focus from observe):** `unfocus()` detects observe +
 hard focus and immediately clears focus *before* starting the
 zoom-out animation. The search box empties via the `'focus'` event on the
 click, then the camera pulls back to the former focal's park distance
 along its current view direction over `OBSERVE_TRANSITION_MS`.
 
-**Navigate-mode close-zoom unfocus** (a7d.2.6) takes the same shape:
+<a id="navigate-mode-close-zoom-unfocus"></a>**Navigate-mode close-zoom unfocus** (a7d.2.6) takes the same shape:
 when the user hits Esc / clicks the focused object / clicks the X while
 already in navigate, and the camera sits closer than
 the focal object's park distance, `unfocus()` lerps the camera outward
@@ -382,8 +382,8 @@ the `?v=` blob in any camera mode, encoded as SIDs at bit 19.
   The focal-body hide is held off across the glide; the finish branch
   hides the focal body (`setFocalBodyHidden`) and enables
   `ObserveControls`.
-- **`exit`** — animated observe → navigate exit. See § X button and
-  § Navigate-mode close-zoom unfocus above for both code paths.
+- **`exit`** — animated observe → navigate exit. See [X button](#x-button-clear-focus-from-observe) and
+  [Navigate-mode close-zoom unfocus](#navigate-mode-close-zoom-unfocus) above for both code paths.
 - **`unfocus`** — navigate-mode close-zoom outbound park-arrival.
   Reuses the state slot but isn't an observe transition; delegated to
   `../arrival/camera-motion.ts:tickArrival` so focus-park, warp Fly,

@@ -10,9 +10,9 @@ codebase reads `Date.now()` for the model clock.
 ```
 src/client/solar-system/time/
   delta-t-pure.ts (+ test)        ΔT = TT − UT, Espenak & Meeus, -1999 to
-                                  +3000. See § Timescales.
+                                  +3000. See README.md#timescales.
   time.ts (+ test)                Simulation time `t` + the UT ↔ Julian-day
-                                  and TDB helpers (§ Timescales). Owns
+                                  and TDB helpers (README.md#timescales). Owns
                                   VirtualClock, the clock behind
                                   Stellata.getT(), plus the FF/RW rate
                                   transitions, rate label, and the
