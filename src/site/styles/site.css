@@ -68,7 +68,11 @@
   --switcher-item-sight: 20rem;
   --switcher-item-requirement: 15rem;
   --readout-item: 11rem;
+  --switcher-flip: 999;
 
+  --hero-wash:
+    radial-gradient(120% 90% at 70% 15%, var(--wash-accent), transparent 60%),
+    radial-gradient(90% 70% at 20% 80%, var(--wash-accent-faint), transparent 55%);
   --hero-min: clamp(30rem, 82svh, 48rem);
   --hero-fade: 30%;
   --notfound-min: min(62svh, 35rem);
@@ -262,7 +266,7 @@ video {
 }
 .switcher > * {
   flex-grow: 1;
-  flex-basis: calc((var(--switcher-threshold) - 100%) * 999);
+  flex-basis: calc((var(--switcher-threshold) - 100%) * var(--switcher-flip));
 }
 
 /* ── Block: masthead ───────────────────────────────────────────────── */
@@ -304,7 +308,8 @@ video {
 }
 .masthead[data-overlay] {
   position: absolute;
-  inset: 0 0 auto;
+  inset-block-start: 0;
+  inset-inline: 0;
   z-index: var(--layer-masthead);
   border-block-end: none;
   text-shadow: var(--text-halo);
@@ -324,10 +329,7 @@ video {
   display: grid;
   align-content: start;
   overflow: hidden;
-  background:
-    radial-gradient(120% 90% at 70% 15%, var(--wash-accent), transparent 60%),
-    radial-gradient(90% 70% at 20% 80%, var(--wash-accent-faint), transparent 55%),
-    var(--bg);
+  background: var(--hero-wash), var(--bg);
 }
 /* The media's bottom edge dissolves into the page ground so the hero has no
    seam against the band below it. Reaches --hero-fade up and no further:
@@ -571,27 +573,13 @@ a.sight-media:hover {
   text-decoration: none;
   white-space: nowrap;
 }
-.pill:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Filled rather than outlined, so the primary move reads as one. An
-   exception rather than a second block: the shape, padding and typography
-   are the pill's, and only the fill differs. Opt-in, so a pill that is not
-   the primary move stays outlined.
-
-   Hover swaps the pair — the outlined pill fills, this one empties — so the
-   two are inverses and hover is a state change rather than a shade of one.
-   It must restate all three properties: `.pill[data-primary]` and
-   `.pill:hover` have equal specificity, so without this rule the later
-   filled state would simply keep winning. */
 .pill[data-primary] {
   color: var(--bg);
   background: var(--accent);
   border-color: var(--accent);
 }
-.pill[data-primary]:hover {
+/* Must follow [data-primary] — README.md § House style. */
+.pill:hover {
   color: var(--accent);
   background: var(--pill-bg);
   border-color: var(--accent);

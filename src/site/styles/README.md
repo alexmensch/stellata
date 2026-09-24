@@ -35,15 +35,12 @@ filled has no primary action — and an exception rather than a second block
 because the shape, padding and typography are all the pill's, and only the
 fill differs.
 
-**Hover swaps the pair.** The outlined pill fills; the filled one empties
-into exactly the outlined pill's hover treatment. So the two are inverses and
-hover reads as a state change rather than a shade of one.
-
-That rule restates all three properties, and has to. `.pill[data-primary]`
-and `.pill:hover` carry equal specificity, so with no rule of its own the
-filled state simply keeps winning and the button never reacts; with a rule
-that sets only `color` and `border-color`, the accent fill stays and the text
-turns accent on accent. `tests/site-css-rules.test.ts` fails the build on
+**Both pills share one hover**: accent text and border on the outlined
+ground, so the filled pill empties into exactly the outlined one's hover.
+`.pill:hover` therefore comes **after** `.pill[data-primary]` and sets the
+background too — the two carry equal specificity, so a hover emitted first
+never beats the fill, and one that leaves the background paints accent text
+on an accent fill. `tests/site-css-rules.test.ts` fails the build on
 either. Focus needs nothing special: the global `:focus-visible` ring carries
 an `outline-offset`, so it lands on the page ground outside the fill.
 
@@ -68,9 +65,11 @@ so do leading (`--leading-flat` … `--leading-body`), tracking
 (`--tracking-caps`, `--tracking-display`), weight and the pill radius. The
 one-off lengths a composition needs — the column minimum before a switcher
 stacks, the readout's minimum cell, the sources table's name column — are
-named in `:root` too. Logical properties throughout:
-`max-inline-size`, `border-block-end`, `inset-inline-start`,
-`text-align: start`.
+named in `:root` too, as are the hero's wash and the switcher's flip
+multiplier. Logical properties throughout: `max-inline-size`,
+`border-block-end`, `inset-inline-start`, `text-align: start`. The one
+exception is the sources table's `overflow-x`, because `overflow-inline`
+has no Chromium or WebKit support yet.
 
 One tracking value serves every uppercase label (`--tracking-caps`), where
 three near-identical figures used to sit; the visual language is one
