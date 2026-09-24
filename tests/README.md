@@ -112,6 +112,16 @@ shader-frag-depth.test.ts
                          when the WebGPU port lands the depth-honest
                          redesign (star-pipeline README § Depth
                          encoding).
+shell-decomposition-map.test.ts
+                         Holds the cluster table in src/client/README.md
+                         § Decomposing the shell to stellata.ts: every
+                         `Stellata` field in exactly one row (a `name*`
+                         token is a prefix), and no row naming a field,
+                         method or site the file no longer has — so an
+                         extraction that forgets to delete its row fails.
+                         Field detection is a 2-space-indent declaration
+                         scan of the class body; arrow-function fields
+                         count as methods.
 sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (docs/sid.md
                          § 4.5): structural validity, head-snapshot
                          integrity, frozen-prefix check vs the git
