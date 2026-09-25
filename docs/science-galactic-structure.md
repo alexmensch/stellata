@@ -4,7 +4,7 @@ Covers the shared galactic coordinate
 frame, Milky Way stellar density profiles, interstellar dust
 extinction, and constellation stick-figure geometry. Spans
 `src/client/galactic/galactic-coords.ts`, `src/client/milkyway/`,
-`src/client/dust/`, `scripts/dust/`, `src/client/overlays/`.
+`src/client/star-pipeline/extinction/`, `scripts/dust/`, `src/client/overlays/`.
 
 ## Galactic coordinate system
 
