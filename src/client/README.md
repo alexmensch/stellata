@@ -175,8 +175,8 @@ does something no single controller can. Keep that property when adding
 one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
 `aimAt` / `aimAlong` / `aimAtConstellation` / `invertView`
 (cross-controller busy gates, shared as `claimCameraForAim` — it reports
-whether the camera was free *and* cancels the focus lerps, so every aim
-takes it the same way),
+whether the camera was free and, only when it was, cancels the focus
+lerps, so every aim takes it the same way),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
 (clockJumped fan-out) and `setMonochrome`. A new zero-logic pass-through
 belongs on the controller.

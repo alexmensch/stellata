@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "5.2.6",
+  "version": "5.2.7",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",

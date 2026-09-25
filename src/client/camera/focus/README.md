@@ -342,8 +342,10 @@ and draws throughout every lerp (`../../constellation-figure/README.md`).
 
 `cancelFocusLerp` is wired at every site that already calls
 `cancelUnfocusLerp` (`focusHardTarget`, `flyTo`, `unfocus`,
-`startWarp`, `aimAt`, `aimAtConstellation`, `onPointerUp`) so a
-follow-up camera-changing action can't race the in-flight lerp.
+`startWarp`, `claimCameraForAim`, `onPointerUp`) so a follow-up
+camera-changing action can't race the in-flight lerp. Where each site
+cancels relative to its refusals is
+[The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence).
 
 The per-frame motion (camera position + orientation) delegates to
 `../arrival/camera-motion.ts:tickArrival` so focus-park, warp Fly,

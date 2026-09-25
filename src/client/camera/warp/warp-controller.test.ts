@@ -806,6 +806,16 @@ describe('WarpController — bus emit shape', () => {
     expect(h.focus.calls.cancelFocusLerp).toBe(1);
   });
 
+  it('a warp refused during an observe transition leaves both focus lerps running', () => {
+    const h = makeHarness();
+    seedStarStar(h);
+    h.focus.ops.isObserveTransitionActive = () => true;
+    h.warp.warpTo({ kind: 'star', idx: 1 });
+    expect(h.warp.isActive()).toBe(false);
+    expect(h.focus.calls.cancelUnfocusLerp).toBe(0);
+    expect(h.focus.calls.cancelFocusLerp).toBe(0);
+  });
+
   it('finishWarp clears the vector slot regardless of dest kind', () => {
     const h = makeHarness();
     seedStarStar(h);

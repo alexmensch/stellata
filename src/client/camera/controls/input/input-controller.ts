@@ -14,12 +14,13 @@ import {
   DBL_CLICK_MS,
   PendingClickDispatcher,
 } from '../../../util/pending-click';
+import type { AimClaimGates } from '../aim-controller';
 import type { Picker } from '../picker';
 import { PICK_THRESHOLD_PX } from '../star-geometry';
 import type { RollController } from './roll-controller';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
-export interface InputControllerDeps {
+export interface InputControllerDeps extends AimClaimGates {
   canvas: HTMLCanvasElement;
   camera: THREE.PerspectiveCamera;
   controls: TrackballControls;
@@ -32,13 +33,6 @@ export interface InputControllerDeps {
   getFocusedTarget: () => Target | null;
   getVectorTarget: () => Target | null;
   setVector: (target: Target | null) => void;
-  /** Composition-layer busy gates + cancellation the FSM re-checks at
-   *  pointer-up AND again when a deferred click fires. */
-  isWarpActive: () => boolean;
-  isAimActive: () => boolean;
-  isObserveTransitionActive: () => boolean;
-  cancelUnfocusLerp: () => void;
-  cancelFocusLerp: () => void;
   flyTo: (target: Target) => void;
   setOrbitTarget: (target: Target) => void;
   unfocus: () => void;
