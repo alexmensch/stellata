@@ -115,7 +115,7 @@ side, where the linear form runs bright against the printed cell it replaces.
 the count.
 
 That is the opposite call from [Where the colour bound comes from](#where-the-colour-bound-comes-from), which
-refuses to extend Table 5.9 past its note (k). The difference is what sits
+refuses to extend Table 5.9 past Table 5.10 note (k). The difference is what sits
 underneath: the ci cascade has three more tiers, so a refused row still gets
 a colour, while a row this tier serves that carries no `gl` has **nothing
 below it at all** — and V is a membership gate, so gating would cost that row
@@ -242,7 +242,7 @@ corpus rows that carry both.
 
 ### Where the colour bound comes from
 
-Table 5.9 note (k) restricts `G − B` to **M giants** past `BP−RP` 1.75, and
+Table 5.10 note (k) restricts `G − B` to **M giants** past `BP−RP` 1.75, and
 this build cannot tell a giant from a dwarf on the no-Apsis population the
 tier serves — `lumClass` is 255 for most of it. So 1.75, not the relation's
 stated 4.0, is what `gaiaBMinusV` gates on.

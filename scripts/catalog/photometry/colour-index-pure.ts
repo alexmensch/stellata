@@ -35,7 +35,7 @@ export const GAIA_G_MINUS_B_BP_RP_MIN = -0.5;
  *  this constant exists only to state what was given up. */
 export const GAIA_G_MINUS_B_BP_RP_MAX = 4.0;
 
-/** Table 5.9 note (k): past this colour `G − B = f(BP − RP)` holds for M
+/** Table 5.10 note (k): past this colour `G − B = f(BP − RP)` holds for M
  *  giants only. */
 export const GAIA_G_MINUS_B_GIANT_ONLY_BP_RP = 1.75;
 

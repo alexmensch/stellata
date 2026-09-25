@@ -961,7 +961,7 @@ Rules:
   measured |Δci| distribution), not the coefficients.
   **Settled:** `B−V = (G−V) − (G−B)`, both polynomials from DR3
   documentation Table 5.9 so `G` cancels and the difference is published
-  rather than composed, gated at BP−RP ≤ 1.75 by that table's note (k).
+  rather than composed, gated at BP−RP ≤ 1.75 by Table 5.10 note (k).
   Coefficients, the measured |Δci| per colour bin, and what the
   conservative bound costs: [The ci cascade](/scripts/catalog/photometry/README.md#the-ci-cascade).
   GSPC and `I/239` B−V are observed-convention like
