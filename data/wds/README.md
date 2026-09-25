@@ -22,7 +22,7 @@ orb6_orbits.txt    ~1.1 MB, LFS. Sixth catalog of visual binary
   DOI: [10.1086/323920](https://doi.org/10.1086/323920).
 - **ORB6 citation**: Hartkopf W. I., Mason B. D., Worley C. E.
   2001, *AJ* 122, 3472.
-  DOI: [10.1086/323923](https://doi.org/10.1086/323923).
+  DOI: [10.1086/323921](https://doi.org/10.1086/323921).
 - **Maintainers**: U.S. Naval Observatory (WDS) and Georgia State
   University (ORB6), continuously updated.
 - **Source URLs**: http://www.astro.gsu.edu/wds/ — `Webtextfiles/`
