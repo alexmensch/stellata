@@ -53,8 +53,10 @@ git diff origin/main... -U0 | grep -E '^\+.*(10\.[0-9]{4,}/|arXiv|[0-9]{4}[A-Za-
 
 **2. A cited value that disagrees with its claims-table row.** When the diff
 adds or changes a number beside a pointer, open the key's entry. A row
-holding that value: compare, and a mismatch is P1. A row reading
-`unverified`, or no row: the diff fills it — value, page, quoted passage —
+holding that value: compare, and a mismatch is P1. A row whose Status is
+`disagrees` or `not in paper`: the diff must not add a new use of the value.
+A row whose Status is `unverified`, or no row: the diff fills it — value,
+status, page, quoted passage —
 checked against the copy at `data/papers/pdf/<key>.pdf` when that path
 exists (read through the symlink, never its target), with page numbers read
 the way the entry's **Copy** version says. Without the copies (CI, a

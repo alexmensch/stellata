@@ -65,7 +65,7 @@ the store exists only so claims can be checked against the paper itself.
 
 | File | Holds |
 |---|---|
-| `index.md` | One entry per cited work under an explicit `<a id="<key>">` anchor: full citation, identifiers, the private copy's version, identification status when the work is not plainly identified (`book`, `ambiguous` with its candidates, `mismatch`, `not_found`), and a claims table (claim, value, page, passage). Hand-owned. |
+| `index.md` | One entry per cited work under an explicit `<a id="<key>">` anchor: full citation, identifiers, the private copy's version, identification status when the work is not plainly identified (`book`, `ambiguous` with its candidates, `mismatch`, `not_found`), and a claims table (claim, value, status, page, passage). Hand-owned. |
 | `manifest.json` | Per key, for machines: download `status` (`ok`, `manual` = needs a hand download, `unobtainable` = no copy reachable, so the claim needs another source, `unidentified` = no single work to fetch), `source_url`, `version`, `sha256` and `bytes` of the private copy, and a `note` when the copy is partial or the status needs a reason. |
 
 Where a work is cited is never stored: `grep -rn 'index.md#<key>'` answers it
