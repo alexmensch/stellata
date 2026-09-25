@@ -138,7 +138,8 @@ population sees the same error boot would).
 and it is the only place that type comes from. Anything that walks every
 record — a lookup map, a membership table, a filtered index list — takes a
 `CompleteCatalog`, so calling it on the first-paint prefix does not compile.
-Tests brand a fully populated fixture with `assumeComplete`
+`catalog.complete` is the same fact for a synchronous reader, as a
+`Late<CompleteCatalog>` ([Late values](../util/late/README.md)). Tests brand a fully populated fixture with `assumeComplete`
 (`catalog-mock.ts`), which throws on a prefix.
 
 **Every column is allocated at the full `count` from chunk 0**, because the

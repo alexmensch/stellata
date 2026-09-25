@@ -7,6 +7,7 @@ import {
   type CatalogManifest,
   type RecordSpan,
 } from '../../../scripts/catalog/record/catalog-pure';
+import { lateFromPromise, type Late } from '../util/late/late';
 import { chunkRecordSpan, startChunkFetches } from './catalog-progressive';
 import { createCatalogDecoder, decodeInline } from './catalog-decode-host';
 import {
@@ -107,6 +108,9 @@ export interface Catalog {
   /** Settles when `loadedCount === count`. Rejects if any chunk fails, so a
    *  caller awaiting the full catalogue sees the same error boot would. */
   readonly whenComplete: Promise<CompleteCatalog>;
+  /** `whenComplete` for a synchronous reader: pending until it resolves,
+   *  absent if it rejects. */
+  readonly complete: Late<CompleteCatalog>;
 }
 
 declare const complete: unique symbol;
@@ -276,6 +280,7 @@ function beginCatalog(
     constellations,
     sidSuccessors: new Map(manifest.sidSuccessors ?? []),
     whenComplete,
+    complete: lateFromPromise(whenComplete),
 
     onRecordsDecoded(listener) {
       listeners.add(listener);

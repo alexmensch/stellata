@@ -3,6 +3,7 @@
 
 import { APSIS_FIELDS, type ApsisField } from '../../../scripts/catalog/record/catalog-pure';
 import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
+import { LateCell } from '../util/late/late';
 import type { Catalog, CompleteCatalog } from './catalog-loader';
 
 function nanFloat32(count: number): Float32Array {
@@ -20,7 +21,7 @@ export function assumeComplete(catalog: Catalog): CompleteCatalog {
 
 export interface MockCatalog extends Catalog {
   /** Land every remaining record and settle `whenComplete`. */
-  complete(): void;
+  finishLoading(): void;
 }
 
 /** `loadedCount` defaults to the whole catalogue; pass fewer to express a
@@ -32,6 +33,7 @@ export function makeEmptyCatalog(count: number, loadedCount = count): MockCatalo
   const varType = new Uint8Array(count);
   const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
   let settle!: () => void;
+  const complete = new LateCell<CompleteCatalog>();
   const whenComplete = new Promise<void>((resolve) => { settle = resolve; })
     .then(() => assumeComplete(catalog));
   const catalog: MockCatalog = {
@@ -63,11 +65,13 @@ export function makeEmptyCatalog(count: number, loadedCount = count): MockCatalo
     sidSuccessors: new Map(),
     onRecordsDecoded: () => () => {},
     whenComplete,
-    complete() {
+    complete,
+    finishLoading() {
       catalog.loadedCount = count;
       settle();
+      complete.land(assumeComplete(catalog));
     },
   };
-  if (loadedCount === count) settle();
+  if (loadedCount === count) catalog.finishLoading();
   return catalog;
 }
