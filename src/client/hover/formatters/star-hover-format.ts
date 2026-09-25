@@ -2,7 +2,10 @@
 // camera-frame distance, cleaned spectral class, variability, and
 // binary-companion lines. See ./README.md.
 
-import { FLAG_BINARY_COMPANION_SYNTHETIC } from '../../../../scripts/catalog/record/catalog-pure';
+import {
+  FLAG_BINARY_COMPANION_SYNTHETIC,
+  NO_CONSTELLATION_INDEX,
+} from '../../../../scripts/catalog/record/catalog-pure';
 import { fmtDistAuto } from '../../ui/distance-util';
 import { formatSpectral, spectralLine } from '../../format/spectral-format';
 import { formatVariability } from '../../format/physical-format';
@@ -68,7 +71,7 @@ export function formatStarHover(
   } = ctx;
 
   const conIdx = constellation[idx];
-  const con = conIdx !== 255 ? constellations[conIdx].name : '';
+  const con = conIdx !== NO_CONSTELLATION_INDEX ? constellations[conIdx].name : '';
   const ctxLine = [con, fmtDistAuto(cameraDistancePc)].filter(Boolean).join(' · ');
 
   const system = ctx.membership

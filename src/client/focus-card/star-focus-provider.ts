@@ -3,6 +3,7 @@
 
 import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
+  NO_CONSTELLATION_INDEX,
 } from '../../../scripts/catalog/record/catalog-pure';
 import {
   UNKNOWN_CLASS_IDX,
@@ -126,7 +127,7 @@ export function createStarFocusProvider(
         if (prov.length > 0) rows.push({ label: 'Known from', value: prov.join(' · ') });
       }
       const conIdx = catalog.constellation[idx];
-      if (conIdx !== 255) {
+      if (conIdx !== NO_CONSTELLATION_INDEX) {
         rows.push({ label: 'Constellation', value: catalog.constellations[conIdx].name });
       }
 
