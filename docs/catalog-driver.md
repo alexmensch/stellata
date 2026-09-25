@@ -850,8 +850,8 @@ Measured exposure and expected coverage (2026-08-14; pins in
   the refused HIP2 number to eight significant figures). Promotion now
   refuses a parked record, and the tier supplies an owned distance where
   a bound sibling carries a clean DR3 fit: σ Ori ships at HIP 26551 D's
-  404.1 ± 10.2 pc, against a dynamical parallax of 387.5 ± 1.3 pc
-  ([Schaefer+ 2016](/data/papers/index.md#schaefer2016)) agreeing at 1.62 σ. Of the 44 parked rows multiples.tsv
+  404.1 ± 10.2 pc, against an orbital parallax of 387.5 ± 1.3 pc
+  ([Schaefer et al. 2016](/data/papers/index.md#schaefer2016)) agreeing at 1.62 σ. Of the 44 parked rows multiples.tsv
   covers, 15 have a sibling carrying its own source_id and 8 rescue; the
   other 7 have a sibling the anchor gate refuses on RUWE or a blended
   image. The astrometry request was widened to cover those siblings — they

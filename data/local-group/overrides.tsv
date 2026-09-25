@@ -58,6 +58,9 @@
 # 3D extent through tidal disruption) that warrant per-object detail.
 # M31 / M33 are major spirals omitted from the LVDB dwarf_all table —
 # hand-curated entries are the only way they reach the renderer.
+# M33's distance_kpc (840) is Gieren et al. 2013's Cepheid distance
+# (/data/papers/index.md#gieren2013); its ref_doi cells name the
+# structural source only.
 #
 # Label visibility is governed at runtime by apparent-size ranking
 # (local-group.ts → computeVisibleLabels) — no per-object threshold

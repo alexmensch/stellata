@@ -307,7 +307,7 @@ what made the focus card's alias row repeat itself.
   <https://github.com/apace7/local_volume_database>
 - [**Pietrzyński et al. 2019**](/data/papers/index.md#pietrzynski2019) — LMC distance.
 - [**van der Marel & Kallivayalil 2014**](/data/papers/index.md#vandermarel2014) — LMC structure.
-- [**Graczyk et al. 2020**](/data/papers/index.md#graczyk2020) — SMC distance.
+- [**Graczyk et al. 2020**](/data/papers/index.md#graczyk2020) — SMC distance cross-check.
 - [**Subramanian & Subramaniam 2012**](/data/papers/index.md#subramanian2012) — SMC structure.
 - [**Ibata et al. 1997**](/data/papers/index.md#ibata1997) —
   Sagittarius dSph structure: prolate 3:1:1, line-of-sight depth.

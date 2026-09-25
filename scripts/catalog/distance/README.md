@@ -339,7 +339,7 @@ LMC supergiants in the catalogue (HDE 268xxx range) land somewhere
 intermediate (5–20 kpc) after Layer 1 instead of the LMC's true
 ~50 kpc. Layer 2 identifies these stars by sky-cone + bulk proper
 motion and snaps their distance to the eclipsing-binary anchor in
-[Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) (49.594 kpc).
+[Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) (49.59 kpc, shipped as 49.594).
 
 Constants in `../record/catalog-pure.ts`:
 

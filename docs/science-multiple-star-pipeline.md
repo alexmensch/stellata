@@ -348,7 +348,7 @@ pairs) is tracked as its own follow-up.
   B-J's smooth Galactic-density prior has no LMC). The LMC kinematic
   override fires on the second pass — sky-cone match + PM within
   ±0.5 mas/yr of (μ_α* = 1.85, μ_δ = 0.20) — and snaps `dist` to
-  [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019)'s 49.594 kpc. The bounded-scope cutoff then keeps
+  49.594 kpc ([Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) print 49.59). The bounded-scope cutoff then keeps
   it (49.594 kpc < 50 kpc); without the LMC layer it would either
   have been dropped or rendered as a Galactic foreground star at a
   catastrophic intermediate distance.

@@ -492,8 +492,9 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // Catalogue m_V = 3.44 is RC3 (/data/papers/index.md#devaucouleurs1991)
     // as-observed; Tempel et al. 2011 (/data/papers/index.md#tempel2011)
     // Table 2 gives 3.24 intrinsic. The layer calibrates to as-observed on
-    // purpose (/docs/science-local-group.md#no-dust),
-    // so the difference IS the MW foreground it declines to remove.
+    // purpose (/docs/science-local-group.md#no-dust). Table 2 is already
+    // corrected for Milky Way extinction and its visible row gives
+    // V = 4.27 − 0.90 = 3.37, so most of the gap is M31's own dust.
     expect(m31.emission.mV).toBe(3.44);
     expect(m31.emission.mV - 3.24).toBeGreaterThan(0.1);
     expect(m31.emission.mV - 3.24).toBeLessThan(0.35);

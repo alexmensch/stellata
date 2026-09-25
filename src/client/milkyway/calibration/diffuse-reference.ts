@@ -16,13 +16,14 @@ import { RESOLVED_CATALOGUE_CAP } from './resolved-hole-table';
  *
  * **Cite the spread, do not imply consensus.** BHG16's figure derives from
  * Milky Way analogues (Licquia, Newman & Brinchmann 2015,
- * /data/papers/index.md#licquia2015b) rather than from direct integration,
- * and it flags its own SDSS-vs-colour-index inconsistency. Older
- * direct-integration work runs 0.3–0.5 mag dimmer once its B-band results
- * are carried across at the Galaxy's integrated colour: de Vaucouleurs
- * 1983 (/data/papers/index.md#devaucouleurs1983) M_B = −20.2 ± 0.15
- * and van der Kruit 1986 (/data/papers/index.md#vanderkruit1986)
- * M_B = −20.3 ± 0.2, against (B−V) ≈ 0.83.
+ * /data/papers/index.md#licquia2015b, whose own estimate is M_V = −21.51)
+ * rather than from direct integration, and it flags its own
+ * SDSS-vs-colour-index inconsistency. Older direct-integration work runs
+ * dimmer once its B-band result is carried across at its own integrated
+ * colour: de Vaucouleurs 1983 (/data/papers/index.md#devaucouleurs1983)
+ * M_B = −20.2 ± 0.15 at (B−V) = 0.53, M_V ≈ −20.7, 0.64 mag dimmer; van
+ * der Kruit 1986 (/data/papers/index.md#vanderkruit1986) M_B = −20.3 ± 0.2
+ * at (B−V) = 0.83, M_V ≈ −21.1, 0.24 mag dimmer.
  *
  * Intrinsic, i.e. corrected for internal extinction — which is what the
  * emissivity has to be, because the layer applies its own dust at render

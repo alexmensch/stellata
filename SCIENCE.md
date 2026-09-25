@@ -373,8 +373,9 @@ enough to see it.
   [BC03](/data/papers/index.md#bruzual2003) grid below):
     - [**Bland-Hawthorn & Gerhard 2016**](/data/papers/index.md#blandhawthorn2016). Table 2 gives the Galaxy's
       global absolute magnitudes and colour indices as an external observer
-      would measure them (M_V = −21.37, B−V = 0.73, from
-      [Licquia, Newman & Brinchmann 2015](/data/papers/index.md#licquia2015b)'s Milky Way analogues);
+      would measure them (M_V = −21.37, B−V = 0.73, BHG16's own transformation
+      of [Licquia, Newman & Brinchmann 2015](/data/papers/index.md#licquia2015b)'s Milky Way analogues, whose
+      own estimate is M_V = −21.51);
       [Bland-Hawthorn & Gerhard 2016](/data/papers/index.md#blandhawthorn2016) Sect. 5.1 gives the thin/thick
       disc scale heights (300 ± 50 / 900 ± 180 pc), the thin-disc scale
       length (2.6 ± 0.5 kpc), and the thick-disc normalisations

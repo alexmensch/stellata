@@ -216,11 +216,13 @@ Supersonic turbulence gives a log-normal volume-density PDF
 Gaussian with
 
 ```
-σ_s² = ln(1 + b² M²)        b ≈ 0.4 (mixed forcing; Federrath+ 2010)
+σ_s² = ln(1 + b² M²)        b ≈ 0.4 (mixed forcing; Federrath et al. 2010)
 ```
 
-Class-based Mach numbers ([§ 7](#7-taxonomy-and-embedded-stars)): dark M ≈ 5 → σ_s ≈ 1.3; sf M ≈ 8 →
-σ_s ≈ 1.7; hii M ≈ 10 → σ_s ≈ 1.9. Actively star-forming clouds
+Through [Federrath et al. 2010](/data/papers/index.md#federrath2010)'s relation, the class-based Mach numbers
+([§ 7](#7-taxonomy-and-embedded-stars)) give dark M ≈ 5 → σ_s ≈ 1.3; sf M ≈ 8 → σ_s ≈ 1.56;
+hii M ≈ 10 → σ_s ≈ 1.68. The shipped
+`SIGMA_S_BY_CLASS` carries 1.3 / 1.7 / 1.9. Actively star-forming clouds
 additionally develop a high-density power-law tail
 ([Federrath & Klessen 2013](/data/papers/index.md#federrath2013);
 [Kainulainen et al. 2009](/data/papers/index.md#kainulainen2009)) — represented in the fine octaves'
@@ -348,7 +350,7 @@ voxels already resolve the real cavities ([Edenhofer](/data/papers/index.md#eden
 Strömgren radius:
 
 ```
-R_S = ( 3 Q_H / (4π α_B n²) )^(1/3)      α_B = 2.6×10⁻¹³ cm³ s⁻¹
+R_S = ( 3 Q_H / (4π α_B n²) )^(1/3)      α_B = 2.6×10⁻¹³ cm³ s⁻¹ at T = 10⁴ K
 ```
 
 `n` = analytic model density at the star's position (floor 10 cm⁻³).

@@ -1827,7 +1827,7 @@ export function applyBailerJonesOverride(
 
 // LMC kinematic parameters. References:
 //   - Pietrzyński et al. 2019 (/data/papers/index.md#pietrzynski2019):
-//     eclipsing-binary distance 49.594 ± 0.55 kpc.
+//     eclipsing-binary distance 49.59 ± 0.55 kpc (shipped as 49.594).
 //   - van der Marel & Kallivayalil 2014 (/data/papers/index.md#vandermarel2014):
 //     PM dynamical centre (RA, Dec) = (78.76°, −69.19°)
 //     = (05h 15m 02s, −69° 11′ 24″) — their PM-field fit, not the NED/SIMBAD

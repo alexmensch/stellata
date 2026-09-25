@@ -98,7 +98,8 @@ all four; cite the paper per table.
   version. [Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023](/data/papers/index.md#golovin2023) —
   the fifth Catalogue of Nearby Stars. Carries
   GJ ↔ Gaia EDR3 source_id ↔ HIP directly plus component letters, which
-  is why it beats hand-rolling [Gliese](/data/papers/index.md#gliese1991) from V/70A (CNS3, not ingested).
+  is why it beats hand-rolling [Gliese](/data/papers/index.md#gliese1991) from V/70A (CNS3, which [`data/gliese/`](../gliese/README.md) ingests for its
+  photometry, not as a cross index).
   The corrected table holds 5,909 rows (the paper counts 5,931 objects);
   5,237 carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
   volume-limited to 25 pc** — see [Coverage](#coverage--the-overlay-is-a-union-term-not-the-label-authority).

@@ -242,7 +242,7 @@ cone of the LMC's PM dynamical centre (RA 78.76°, Dec −69.19°;
 Dec — a rounded working value near the same paper's centre-of-mass
 PM of μ_α* = 1.910 ± 0.020, μ_δ = 0.229 ± 0.047 mas/yr, well inside
 the tolerance) has its `dist` snapped to the LMC's eclipsing-binary distance
-(49.594 kpc, [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019); CDS
+(49.59 kpc, [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019), shipped as 49.594; CDS
 J/other/Natur/567.200), with
 `absmag` recomputed from the new distance. ~54 rows are
 flagged at LMC depth each build — close to the ~60 estimated from the
@@ -541,21 +541,13 @@ basis (the same basis `directionAtEpoch` in
 `scripts/catalog/distance/direction-cascade.ts` assembles — second usage,
 so the basis math extracts into a shared helper), `d` the final
 stack distance, and `v_r` in pc/yr via 1 km/s = 1.0227×10⁻⁶ pc/yr.
-μ_α* is the cos δ-applied rate — never divide by cos δ. This is the
-standard epoch-transformation model ([ESA 1997](/data/papers/index.md#esa1997) Vol. 1
-Sect. 1.5.5; [Butkevich & Lindegren 2014](/data/papers/index.md#butkevich2014) give the
-rigorous form).
-Deliberately omitted: perspective acceleration and light-time
-terms. The perspective term is the largest omission and grows
-quadratically — from the J2016.0 base it is ~0.07″ at J2026 for
-Barnard's (the worst case), far below the 1″ validation tolerance;
-~10 arcmin at ±1 kyr. Linear
-propagation is therefore faithful at arcsecond fidelity for
-decades and at arcminute fidelity for ~±1 kyr on the fastest
-stars (far longer for everything else); a future deep-time
-scrubber that exceeds that window revisits with the rigorous
-model, alongside the [Standish](/data/papers/index.md#standish1992) ephemeris window it already has to
-respect.
+μ_α* is the cos δ-applied rate — never divide by cos δ. This is uniform
+space motion, the rigorous epoch-transformation model of
+[ESA 1997](/data/papers/index.md#esa1997) Vol. 1 Sect. 1.5.5; in Cartesian form the `v_r·û` term
+carries perspective acceleration exactly, wherever a row has an RV.
+Deliberately omitted: the light-time terms
+[Butkevich & Lindegren 2014](/data/papers/index.md#butkevich2014) add, which exceed 0.1 mas over 100 yr for
+at least 33 Hipparcos stars (p. 1).
 
 **Decision — runtime propagation at load-time granularity, not a
 build-time epoch bump.** A build-time advance to a fixed epoch
