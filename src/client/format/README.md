@@ -71,6 +71,10 @@ star-companion-format.ts  Binary-role card lines, read from
                           label), and the hover-composed companionLines.
                           Hover and focus card call the same functions
                           so the visual-vs-orbit tiering never forks.
+                          The binaries slot arrives as its `LateState`
+                          and is matched here alone: pending and absent
+                          both drop the lines, so a caller passes the
+                          state through rather than collapsing it.
                           Tier 1 and Tier 2 share one block shape (ρ on
                           the heading, "P = … · e = …" below); Tier 2
                           appends "(unknown orbital plane)" because its

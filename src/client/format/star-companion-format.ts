@@ -2,6 +2,7 @@
 // star focus-card provider. See ./README.md.
 
 import { J2000_JD } from '../util/astronomy-constants';
+import type { LateState } from '../util/late/late';
 import {
   type BinariesData,
   type BinaryRelation,
@@ -21,9 +22,7 @@ export interface StarNameContext {
 }
 
 export interface CompanionFormatContext extends StarNameContext {
-  // Parsed binaries.bin, or null when the artifact is absent — the
-  // companion lines simply drop out in that case.
-  binaries: BinariesData | null;
+  binaries: LateState<BinariesData>;
   // Current sim time as JD (tToJdUt(getT())), injected fresh per card by
   // the caller. Drives the Tier-1 live separation.
   nowJd: number;
@@ -121,23 +120,24 @@ export function companionLines(idx: number, ctx: CompanionFormatContext): string
  *  Acrux A and B) would otherwise repeat the same ρ/PA block per
  *  primary. */
 export function companionOfLines(idx: number, ctx: CompanionFormatContext): string[] {
-  const binaries = ctx.binaries;
-  if (!binaries) return [];
-  const secRelIdxs = binaries.secondaryIdxToRelations.get(idx);
-  if (!secRelIdxs) return [];
-  return companionOfAllLines(secRelIdxs.map((i) => binaries.relations[i]), ctx);
+  return companionOfAllLines(relationsOf(ctx, 'secondaryIdxToRelations', idx), ctx);
 }
 
 /** Names of every companion for which the star is the PRIMARY, in
  *  relation order. */
 export function companionNames(idx: number, ctx: CompanionFormatContext): string[] {
-  const binaries = ctx.binaries;
-  if (!binaries) return [];
-  const relIdxs = binaries.primaryIdxToRelations.get(idx);
-  if (!relIdxs) return [];
-  return relIdxs.map((i) =>
-    resolveStarName(ctx, binaries.relations[i].secondaryIdx),
-  );
+  return relationsOf(ctx, 'primaryIdxToRelations', idx)
+    .map((rel) => resolveStarName(ctx, rel.secondaryIdx));
+}
+
+function relationsOf(
+  ctx: CompanionFormatContext,
+  role: 'primaryIdxToRelations' | 'secondaryIdxToRelations',
+  idx: number,
+): BinaryRelation[] {
+  if (ctx.binaries.status !== 'ready') return [];
+  const binaries = ctx.binaries.value;
+  return (binaries[role].get(idx) ?? []).map((i) => binaries.relations[i]);
 }
 
 function companionOfAllLines(

@@ -260,10 +260,8 @@ export function createStarKindModule(): StarKindModule {
       pick: (x, y, pxThreshold) => runtime?.pickStarHit(x, y, pxThreshold) ?? null,
       // `nowJd` is sampled fresh so the Tier-1 live separation tracks
       // the sim clock.
-      format: (hit) => {
-        if (!catalog || !ctx) return null;
-        const binaries = binariesState();
-        return formatStarHover(hit.idx, hit.cameraDistancePc, {
+      format: (hit) => (catalog && ctx
+        ? formatStarHover(hit.idx, hit.cameraDistancePc, {
           ...nameCtx(),
           spectralMap,
           spectClass: catalog.spectClass,
@@ -273,11 +271,11 @@ export function createStarKindModule(): StarKindModule {
           constellations: catalog.constellations,
           periodDays: catalog.periodDays,
           amplitudeMag: catalog.amplitudeMag,
-          binaries: binaries.status === 'ready' ? binaries.value : null,
+          binaries: binariesState(),
           nowJd: tToJdUt(ctx.getT()),
           membership: ctx.systemMembership,
-        });
-      },
+        })
+        : null),
     }),
 
     pinnable: (idx) =>

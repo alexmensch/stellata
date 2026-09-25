@@ -55,10 +55,6 @@ export function createStarFocusProvider(
 ): FocusCardProvider<'star'> {
   const { catalog, starLabels, spectralMap, searchEntries } = config;
   const nameCtx = { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid };
-  const binariesNow = (): BinariesData | null => {
-    const binaries = config.binaries();
-    return binaries.status === 'ready' ? binaries.value : null;
-  };
 
   return {
     kind: 'star',
@@ -110,7 +106,7 @@ export function createStarFocusProvider(
       if (vel) rows.push({ label: 'Velocity', value: formatSpaceVelocity(vel) });
       const names = companionNames(idx, {
         ...nameCtx,
-        binaries: binariesNow(),
+        binaries: config.binaries(),
         nowJd: 0,
       });
       if (names.length > 0) {
@@ -139,7 +135,7 @@ export function createStarFocusProvider(
       // hover card's does — shared fields must agree between tiers.
       const orbits = () => companionOfLines(idx, {
         ...nameCtx,
-        binaries: binariesNow(),
+        binaries: config.binaries(),
         nowJd: config.nowJd(),
       }).join('\n');
       if (orbits()) lines.push(orbits);
