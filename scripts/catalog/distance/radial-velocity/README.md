@@ -159,12 +159,13 @@ or magnitude gate here. Both moved when the tier landed, and both are pinned:
 
 - `velocityAboveEscape` **45 → 56**. Fourteen tier values exceed 550 km/s,
   most of them quality-`A` rows from one APOGEE-era compilation
-  (`2020AJ....160..120J`) plus τ Sco at 650 km/s — near-certainly upstream
+  ([Jönsson et al. 2020](/data/papers/index.md#jonsson2020)) plus τ Sco at 650 km/s — near-certainly upstream
   fit artifacts on hot stars, but legitimately published and cited. Keeping
   them visible in the ratchet is exactly its stated job.
 - `rvRadialRejected` **1**, `velocityClamped` unmoved at **8**. One tier value
   exceeds the 1500 km/s ceiling: **EZ Aqr** (Gl 866A, 3.4 pc) at
-  **6,824.7 km/s**, quality `D`, bibcode `2021MNRAS.508.5148C`.
+  **6,824.7 km/s**, quality `D`, cited to
+  [Costa-Almeida et al. 2021](/data/papers/index.md#costaalmeida2021).
 
 **A radial term past the ceiling is rejected on its own** —
 `radialTermExceedsCeiling`, applied before the velocity is assembled, so a
@@ -199,8 +200,8 @@ go.
 
 Scoring the Gaia value needs a velocity measured somewhere else, and the only
 non-Gaia radial velocities here are the SIMBAD tier's 7,171 — led by
-Gontcharov's Pulkovo compilation (`2006AstL...32..759G`, 2,809 rows) and the
-GCRV (`1953GCRV..C......0W`, 884), which is the same pre-Gaia literature the
+[Gontcharov 2006](/data/papers/index.md#gontcharov2006)'s Pulkovo compilation (2,809 rows) and
+the GCRV ([Wilson 1953](/data/papers/index.md#wilson1953), 884), which is the same pre-Gaia literature the
 retired spine cells transcribed, quoted to the nearest km/s or half rather
 than measured by a better instrument. Nine of those rows sit on a Gaia row
 stating more than 20 km/s of uncertainty, and their median disagreement is

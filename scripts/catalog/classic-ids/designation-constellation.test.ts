@@ -37,8 +37,9 @@ describe.skipIf(!built)('designation constellation on the wire', () => {
   });
 
   // Flamsteed numbered per Ptolemaic constellation, so the 1930 Delporte
-  // boundaries left a whole population like this one behind. IV/27A is the
-  // authority for it, and nothing in the record's own position can be.
+  // boundaries (/data/papers/index.md#delporte1930) left a whole population like
+  // this one behind. IV/27A is the authority for it, and nothing in the
+  // record's own position can be.
   it('keeps 15 LMi in Leo Minor though it sits in Ursa Major', () => {
     const entry = byHd.get(84737);
     expect(entry?.f).toBe(15);

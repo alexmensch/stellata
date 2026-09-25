@@ -2083,7 +2083,7 @@ JGR Planets 114, E00B42 (2009) · [doi:10.1029/2008JE003186](https://doi.org/10.
 | Venus upper-haze tau 0.05-0.3 | | unverified | |
 
 <a id="wilson1953"></a>
-### (GCRV) 1953 — General Catalogue of Radial Velocities
+### Wilson R. E. 1953 — General Catalogue of Stellar Radial Velocities
 
 [1953GCRV..C......0W](https://ui.adsabs.harvard.edu/abs/1953GCRV..C......0W)
 

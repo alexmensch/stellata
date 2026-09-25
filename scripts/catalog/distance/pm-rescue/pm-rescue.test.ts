@@ -6,8 +6,9 @@ import { TYCHO2_MEAN_EPOCH, type Tycho2Row } from '../../tycho2-parse';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
 const GAIA_EDR3 = '2020yCat.1350....0G';
-// Zacharias's UCAC4 and Fabricius & Makarov 2002 — the two literature
-// bibcodes the shipped cohort's SIMBAD tier actually leans on.
+// Zacharias 2012's UCAC4 (/data/papers/index.md#zacharias2012) and Fabricius &
+// Makarov 2002 (/data/papers/index.md#fabricius2002b) — the two literature bibcodes
+// the shipped cohort's SIMBAD tier actually leans on.
 const UCAC4 = '2012yCat.1322....0Z';
 const FABRICIUS = '2002A&A...384..180F';
 

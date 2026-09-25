@@ -64,7 +64,7 @@ export interface GaiaAstrometryCatalogRow {
   radialVelocityErrorKmS: number | null;
 }
 
-/** van Leeuwen 2007 reduction row from
+/** van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007) reduction row from
  *  `data/hipparcos/hip2_van_leeuwen.tsv`. ra/dec are at J1991.25. */
 export interface Hip2AstrometryRow {
   raDeg: number;
@@ -214,7 +214,8 @@ export const VELOCITY_SANITY_CEILING_KM_S = 1500;
 export const VELOCITY_SANITY_CEILING_PC_YR =
   VELOCITY_SANITY_CEILING_KM_S * KM_S_TO_PC_YR;
 
-// Local Galactic escape velocity (~550 km/s, Piffl et al. 2014). A star
+// Local Galactic escape velocity (~550 km/s, Piffl et al. 2014
+// (/data/papers/index.md#piffl2014)). A star
 // faster than this is unbound — genuinely exceptional (a handful of proven
 // hypervelocity stars Galaxy-wide), so a large above-escape population is
 // almost entirely PM×distance / bad-RV artifacts. These rows are NOT

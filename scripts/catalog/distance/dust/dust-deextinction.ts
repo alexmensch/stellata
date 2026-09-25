@@ -1,5 +1,6 @@
-// Loads the LFS-committed Edenhofer dust artifact (data/dust/) into a
-// DustGrid for the build-time de-extinction integral — README.md.
+// Loads the LFS-committed Edenhofer et al. 2024 (/data/papers/index.md#edenhofer2024)
+// dust artifact (data/dust/) into a DustGrid for the build-time
+// de-extinction integral — README.md.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
