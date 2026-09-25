@@ -16,7 +16,7 @@ it travels. The focus state it rides lives in the parent (`../README.md`).
   `AnchorPolicy` (`../../../frame/README.md`) that keeps the floating
   origin on the focal object under time advance. Deps are live
   references + two gate closures; the shell supplies which controllers
-  count as camera-busy (§ Moving-focal ride).
+  count as camera-busy ([Moving-focal ride](#moving-focal-ride)).
 
 ## Moving-focal ride
 
