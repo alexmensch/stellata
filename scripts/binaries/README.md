@@ -78,7 +78,9 @@ scripts/binaries/
   stage7_counts.py                Build-counts + build-rates snapshot writer
                                   (mirrors scripts/catalog/build-counts.ts).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
-                                  (Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013).
+                                  (Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013:
+                                  /data/papers/index.md#cox2000,
+                                  /data/papers/index.md#pecaut2013).
   build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
                                   public/binaries.bin. Detects hierarchical
                                   chains via component-letter prefix matching
@@ -130,7 +132,8 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    reach. Seven stages, one module per stage. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
    Reads AT-HYG + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /
-   Bailer-Jones / Gaia HIP-xmatch side-files + Stellarium + GCVS + CCDM.
+   [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) / Gaia
+   HIP-xmatch side-files + Stellarium + GCVS + CCDM.
    Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
    `constellations.json`, `search-index.json`, and
    `catalog-row-index-map.json`. `pnpm run build:catalog`.
@@ -374,7 +377,7 @@ astrometric measurement for it. Routes in `ASTROMETRY_VIA_VALUES`:
 | `hip2_long_baseline` (orbit-corrupted PM) | The system has any pair with min ρ ≤ 5″ AND `|pmRA_gaia − pmRA_hip2| > 50 mas/yr` OR same on Dec. Hipparcos averages a different window of the orbit than Gaia's 2014–2017 mission baseline; for bright close binaries with both available, HIP2 is closer to the systemic motion. |
 | `gaia_5p` | Default. The 5p row is clean and no orbit-correction signal fires. |
 | `hip2_long_baseline` (Gaia-saturated) | The component has no usable Gaia parallax — either no Gaia source resolved at all (Sirius A, α Cen, Algol, Procyon) or the Gaia row exists with ra/dec but `parallax=NULL` because Gaia couldn't fit a 5p solution (Castor STF1110 AB). HIP is known and HIP2 covers it; HIP2 is the only parallax source available. |
-| `athyg_position` | Post-pass after the Gaia / HIP2 cascade. For components still `unresolved`, the WDS precise_coord position-matches an AT-HYG row (dual-epoch: PM-propagated J1991.25→J2000 then unpropagated for GJ-anchored rows that store ra/dec at J2000). Position comes from the row's stored ra/dec; parallax = 1000/dist_pc. Canonical case: ξ UMa — Gaia source absent from `gaia_dr3_astrometry.tsv` (G≈4.3 saturated), HIP 55203 absent from HIP2 (van Leeuwen excluded orbit-corrupted entry), but AT-HYG carries the GJ-anchored distance 10.42 pc. |
+| `athyg_position` | Post-pass after the Gaia / HIP2 cascade. For components still `unresolved`, the WDS precise_coord position-matches an AT-HYG row (dual-epoch: PM-propagated J1991.25→J2000 then unpropagated for GJ-anchored rows that store ra/dec at J2000). Position comes from the row's stored ra/dec; parallax = 1000/dist_pc. Canonical case: ξ UMa — Gaia source absent from `gaia_dr3_astrometry.tsv` (G≈4.3 saturated), HIP 55203 absent from HIP2 ([van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007) excluded orbit-corrupted entry), but AT-HYG carries the GJ-anchored distance 10.42 pc. |
 | `unresolved` | None of Gaia 5p, HIP2, or the AT-HYG position-match reach the component. |
 
 The HIP2-discrepancy 5″ gate runs against the **minimum** WDS ρ across
@@ -517,13 +520,13 @@ orbit was attaching to the 5.5″ and 49″ visual companions.
 
 The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
 (`Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
-`AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell` (Heintz
-1978 / Halbwachs+ 2023 Appendix C). The ESA NSSTools package isn't a
-dependency — the closed form is ~10 lines and NSSTools has been
+`AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell`
+([Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs et al. 2023](/data/papers/index.md#halbwachs2023)
+Appendix C). The ESA NSSTools package isn't a dependency — the closed form is ~10 lines and NSSTools has been
 unmaintained since 2022.
 
 The TI constants describe the **photocentre's** orbit around the
-system barycentre, not the relative A–B orbit (Halbwachs+ 2023): the
+system barycentre, not the relative A–B orbit ([Halbwachs et al. 2023](/data/papers/index.md#halbwachs2023)): the
 recovered semi-major axis is `a0 = |q − β|·a_rel`, where
 `q = M₂/(M₁+M₂)` is the secondary's mass fraction (the same q the
 pipeline stores per pair) and `β = F₂/(F₁+F₂)` its flux fraction — so
@@ -745,8 +748,9 @@ Three system-level mechanisms run at emit time:
   parses both components' spectral strings (SIMBAD per-component
   preferred, AT-HYG inherited fallback) into class / subclass / lum
   class and reads a `q = M_secondary / (M_primary + M_secondary)` off
-  per-class mass tables for MS / III / IV / I (Cox 2000 Sect. 15.2, Pecaut &
-  Mamajek 2013). White dwarfs default to 0.6 M☉; carbon / S / WR
+  per-class mass tables for MS / III / IV / I
+  ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2,
+  [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013)). White dwarfs default to 0.6 M☉; carbon / S / WR
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.
 - **Renderable-element finalization.** After the q backfill,

@@ -14,19 +14,20 @@ from PIL import Image
 # time so each row keeps the number its source actually published.
 #
 # PLANETS — the adopted reference magnitudes of Mallama, Krobusek & Pavlov
-# 2017 (Icarus 282, 19 — Table 3). Saturn's V−Rc uses the paper's
-# internally-consistent synthetic pair (its photometric V and synthetic Rc
-# disagree by 0.17 mag, which would inflate the index). Uranus is carried
-# for completeness though it ships no map.
+# 2017 (/data/papers/index.md#mallama2017), Table 3. Saturn's V−Rc uses the
+# paper's internally-consistent synthetic pair (its photometric V and
+# synthetic Rc disagree by 0.17 mag, which would inflate the index). Uranus
+# is carried for completeness though it ships no map.
 #
-# SATELLITES — Frey & Lowman, "Studies of the Major Planet Satellite
-# Systems", NASA Goddard X-922-74-112 (1974), Table IV, carrying Harris 1961
-# as reported by Newburn & Gulkis 1973. Its Table III states the filter
-# effective wavelengths (U .35, B .45, V .55, R .69, I .82 µm), which is what
-# fixes the R column as Johnson rather than Cousins. Bodies the table gives
-# B−V for but no V−R (Enceladus, Tethys, Iapetus) and Mimas, which it has no
-# colour for at all, are absent here and keep the hand treatments in
-# `build-textures.py` — a red target cannot be invented for them.
+# SATELLITES — Frey & Lowman 1974 (/data/papers/index.md#frey1974), Table
+# IV, carrying Harris 1961 (/data/papers/index.md#harris1961) as reported by
+# Newburn & Gulkis 1973 (/data/papers/index.md#newburn1973). Its Table III
+# states the filter effective wavelengths (U .35, B .45, V .55, R .69, I .82
+# µm), which is what fixes the R column as Johnson rather than Cousins.
+# Bodies the table gives B−V for but no V−R (Enceladus, Tethys, Iapetus) and
+# Mimas, which it has no colour for at all, are absent here and keep the
+# hand treatments in `build-textures.py` — a red target cannot be invented
+# for them.
 COLOUR_INDICES = {
     "mercury": (0.97, 0.52, "cousins"),
     "venus": (0.70, 0.35, "cousins"),
@@ -47,10 +48,11 @@ COLOUR_INDICES = {
 }
 
 # Johnson V−R → Cousins V−Rc, as paired columns of the intrinsic-colour
-# tables of Fitzgerald 1970 (A&A 4, 234) and Ducati et al. 2001 (ApJ 558,
-# 309) tabulated by STScI, whose Cousins columns are the Johnson ones
-# transformed by Bessell 1979 (PASP 91, 589). G0 through K5, which brackets
-# every satellite row above (0.48–0.84).
+# tables of Fitzgerald 1970 (/data/papers/index.md#fitzgerald1970) and
+# Ducati et al. 2001 (/data/papers/index.md#ducati2001) tabulated by STScI,
+# whose Cousins columns are the Johnson ones transformed by Bessell 1979
+# (/data/papers/index.md#bessell1979). G0 through K5, which brackets every
+# satellite row above (0.48–0.84).
 #
 # Interpolating a published pair beats restating Bessell's coefficients from
 # memory, and it cross-checks: inverting it at the adopted solar V−Rc gives a
@@ -77,10 +79,11 @@ def vrc_of(vr: float, system: str) -> float:
                   [c for _, c in _VR_JOHNSON_COUSINS])
     )
 
-# Solar colour, same system (Ramírez et al. 2012 solar-analog values).
-# The renderer's reference white is the SOLAR SPECTRUM: a body
-# reflecting sunlight neutrally renders R = G = B, so a body's target
-# chromaticity is its index OFFSET from the Sun, as flux ratios.
+# Solar colour, same system (Ramírez et al. 2012
+# (/data/papers/index.md#ramirez2012) solar-analog values). The renderer's
+# reference white is the SOLAR SPECTRUM: a body reflecting sunlight
+# neutrally renders R = G = B, so a body's target chromaticity is its index
+# OFFSET from the Sun, as flux ratios.
 SUN_BV = 0.653
 SUN_VRC = 0.352
 

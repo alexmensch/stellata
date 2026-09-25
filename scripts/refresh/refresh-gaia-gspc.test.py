@@ -73,7 +73,8 @@ class BandPredicateTests(unittest.TestCase):
         self.assertTrue(gspc._both_flags_valid(_row(b_jkc_flag=1, v_jkc_flag=1)))
         self.assertFalse(gspc._both_flags_valid(_row(b_jkc_flag=1, v_jkc_flag=0)))
         # Polarity is the whole tier's load-bearing assumption: 1 is IN range
-        # (Montegriffo+ 2023 Sect. 6.2), so an all-zero row is not validated.
+        # (Montegriffo+ 2023, /data/papers/index.md#montegriffo2023, Sect. 6.2), so an
+        # all-zero row is not validated.
         self.assertFalse(gspc._both_flags_valid(_row()))
 
 

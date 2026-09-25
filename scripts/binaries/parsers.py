@@ -507,7 +507,7 @@ def parse_ccdm(path: Path) -> list[CcdmRow]:
     return rows
 
 
-# ─── HIP2 van Leeuwen ────────────────────────────────────────────────
+# ─── HIP2 van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007) ───
 
 
 @dataclass
@@ -820,7 +820,8 @@ def parse_simbad_wds_spectra(
 @dataclass
 class MscSystemRow:
     """One pair of an MSC hierarchy (``data/msc/msc_systems.tsv``).
-    ``prim``/``sec``/``parent`` are Tokovinin labels, not WDS tokens —
+    ``prim``/``sec``/``parent`` are Tokovinin 2018
+    (/data/papers/index.md#tokovinin2018) labels, not WDS tokens —
     map through ``msc_map.map_msc_labels`` before joining."""
 
     wds_id: str
@@ -866,7 +867,7 @@ def parse_msc_systems(path: Path) -> list[MscSystemRow]:
 @dataclass
 class MscOrbitRow:
     """One MSC orbit (``data/msc/msc_orbits.tsv``). ``syst`` is the
-    Tokovinin pair label (``"Aa,Ab"``). ``t0`` is a Besselian year OR a
+    Tokovinin 2018 (/data/papers/index.md#tokovinin2018) pair label (``"Aa,Ab"``). ``t0`` is a Besselian year OR a
     truncated JD with no unit flag — ``stage4_orbits.msc_T0_jd``
     disambiguates by magnitude + plausibility window."""
 

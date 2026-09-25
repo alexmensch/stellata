@@ -627,15 +627,16 @@ def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
 # and full source citations.
 
 # Gaia EDR3 → Johnson V: G − V as a cubic in (BP − RP). Riello et al.
-# 2021, A&A 649, A3, Table 5.7 (σ = 0.030 mag; valid −0.5 < BP−RP < 5.0).
+# 2021 (/data/papers/index.md#riello2021), Table 5.7 (σ = 0.030 mag; valid −0.5 < BP−RP < 5.0).
 GAIA_G_MINUS_V_COEFFS: tuple[float, ...] = (
     -0.02704, 0.01424, -0.2156, 0.01426,
 )
 GAIA_G_MINUS_V_COLOR_RANGE: tuple[float, float] = (-0.5, 5.0)
 
 # Gaia (BP − RP) → effective temperature: fifth-order fit, Montalto et
-# al. 2021 (PLATO Input Catalogue), A&A 653, A98 (valid 0.5 < BP−RP <
-# 5.0). Feeds the catalogue's Ballesteros B−V↔Teff convention so the
+# al. 2021 (/data/papers/index.md#montalto2021; PLATO Input Catalogue) (valid
+# 0.5 < BP−RP < 5.0). Feeds the catalogue's Ballesteros 2012
+# (/data/papers/index.md#ballesteros2012) B−V↔Teff convention so the
 # recovered ci lands on the same colour manifold every other star uses
 # (ballesteros_bv_from_teff mirrors scripts/colour/blackbody-lut-pure.ts).
 GAIA_BPRP_TEFF_COEFFS: tuple[float, ...] = (
@@ -660,7 +661,8 @@ def _polyval_ascending(coeffs: tuple[float, ...], x: float) -> float:
 
 
 def ballesteros_bv_from_teff(teff: float) -> float:
-    """Analytic inverse of Ballesteros 2012 (Teff K → Johnson B−V).
+    """Analytic inverse of Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
+    (Teff K → Johnson B−V).
     Python mirror of ``ballesterosBvFromTeff`` in
     scripts/colour/blackbody-lut-pure.ts — keep the two in sync (pinned
     by the Stage-6 unit test against the solar value)."""
@@ -678,12 +680,12 @@ def gaia_photometry_absmag_ci(
     magnitude or no positive parallax — nothing to anchor a magnitude on.
 
     absmag: ``M_G = G + 5·log10(ϖ_mas) − 10``, then ``M_V = M_G − (G−V)``
-    with the Riello 2021 G−V(BP−RP) cubic. Raw ``M_G`` is the fallback
+    with the Riello 2021 (/data/papers/index.md#riello2021) G−V(BP−RP) cubic. Raw ``M_G`` is the fallback
     when BP or RP is absent (~0.3 mag redward bias vs the transform for
     cool stars, but honest).
 
-    ci: BP−RP → Teff (Montalto 2021) → B−V via the catalogue's
-    Ballesteros inverse, so the stored colour round-trips to the
+    ci: BP−RP → Teff (Montalto 2021, /data/papers/index.md#montalto2021) → B−V via the
+    catalogue's Ballesteros 2012 (/data/papers/index.md#ballesteros2012) inverse, so the stored colour round-trips to the
     Gaia-implied temperature through the same relation the renderer
     reads. ``None`` when BP/RP is absent or BP−RP falls outside the Teff
     polynomial's validity range — companion promotion then falls back to

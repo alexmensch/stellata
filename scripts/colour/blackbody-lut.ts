@@ -29,11 +29,12 @@ export { BV_MAX, BV_MIN, LUT_SIZE, ballesterosTeff, bvAtIndex };
 // ---- LUT build --------------------------------------------------------
 
 /**
- * Build the 256-entry RGB LUT as a flat Uint8Array of 768 bytes (R, G, B
- * × 256). Each row's Teff = Ballesteros(bvAtIndex(i)), with Planck → CIE
- * 1931 → linear sRGB → peak-normalise → uint8 quantise. Quantising in
- * linear light costs at most 0.91% on any component (the smallest
- * peak-normalised component across the table is 0.189, at the red end).
+ * Build the 256-entry RGB LUT as a flat Uint8Array of 768 bytes (R, G, B ×
+ * 256). Each row's Teff = Ballesteros(bvAtIndex(i)) (Ballesteros 2012,
+ * /data/papers/index.md#ballesteros2012), with Planck → CIE 1931 → linear
+ * sRGB → peak-normalise → uint8 quantise. Quantising in linear light costs at
+ * most 0.91% on any component (the smallest peak-normalised component across
+ * the table is 0.189, at the red end).
  */
 export function buildLut(): Uint8Array {
   const out = new Uint8Array(LUT_SIZE * 3);

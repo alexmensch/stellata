@@ -6,10 +6,10 @@ import { describe, expect, it } from 'vitest';
 // Pin of the committed calibration manifest (data/textures/
 // calibration.json, written by build-textures.py): every calibrated
 // artifact's sphere-weighted mean chromaticity sits on its
-// index-derived target, and the index table itself matches the
-// adopted Mallama, Krobusek & Pavlov 2017 values. A retune of
-// texture_calibration.py that drifts either fails here until the
-// artifacts are rebuilt and recommitted.
+// index-derived target, and the index table itself matches the adopted
+// Mallama, Krobusek & Pavlov 2017 (/data/papers/index.md#mallama2017)
+// values. A retune of texture_calibration.py that drifts either fails
+// here until the artifacts are rebuilt and recommitted.
 
 interface CalibrationRow {
   bv: number;
@@ -26,10 +26,11 @@ const manifest: Record<string, CalibrationRow> = JSON.parse(
   readFileSync(resolve(__dirname, '../../data/textures/calibration.json'), 'utf-8'),
 );
 
-// (B−V, V−R, system) per body, as PUBLISHED. Planets: Mallama et al. 2017,
-// Table 3 reference rows (Saturn V−Rc from its internally-consistent
-// synthetic pair). Satellites: Frey & Lowman 1974, Table IV, whose R band
-// its Table III places at 0.69 µm — Johnson, not Cousins.
+// (B−V, V−R, system) per body, as PUBLISHED. Planets: Mallama et al. 2017
+// (/data/papers/index.md#mallama2017), Table 3 reference rows (Saturn V−Rc
+// from its internally-consistent synthetic pair). Satellites: Frey & Lowman
+// 1974 (/data/papers/index.md#frey1974), Table IV, whose R band its Table
+// III places at 0.69 µm — Johnson, not Cousins.
 const INDICES: Record<string, [number, number, 'cousins' | 'johnson']> = {
   mercury: [0.97, 0.52, 'cousins'],
   venus: [0.7, 0.35, 'cousins'],
@@ -136,7 +137,8 @@ describe('texture colour calibration manifest', () => {
     // The Viking Mars mosaic's blue boost is strongly dimmed…
     expect(manifest.mars.gains[2]).toBeLessThan(0.7);
     // …and the 1989 Voyager-era Neptune azure pales toward the
-    // measured (Irwin-consistent) tone.
+    // measured tone, consistent with Irwin et al. 2024
+    // (/data/papers/index.md#irwin2024).
     expect(manifest.neptune.meanBefore[2]).toBeGreaterThan(1.5);
     expect(manifest.neptune.achieved[2]).toBeLessThan(1.35);
   });

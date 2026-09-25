@@ -7,15 +7,15 @@ import {
   integrateOverEllipsoidRz,
 } from '../../src/client/hdr/emission/density0-solver-pure';
 
-/** Ciotti & Bertin 1999 asymptotic b_n — the Sérsic shape constant
- *  placing half the projected light inside R_e. */
+/** Ciotti & Bertin 1999 (/data/papers/index.md#ciotti1999) asymptotic b_n — the
+ *  Sérsic shape constant placing half the projected light inside R_e. */
 export function bnCoeff(n: number): number {
   return 2 * n - 1 / 3 + 4 / (405 * n);
 }
 
-/** Prugniel–Simien deprojection exponent p_n. The 3D density
- *  ν(u) = u^(−p_n)·exp(−b_n·u^(1/n)) projects to the observed 2D
- *  Sérsic law to ~1%; raymarching the 2D law as 3D density is a
+/** Prugniel–Simien 1997 (/data/papers/index.md#prugniel) deprojection
+ *  exponent p_n. The 3D density ν(u) = u^(−p_n)·exp(−b_n·u^(1/n)) projects
+ *  to the observed 2D Sérsic law to ~1%; raymarching the 2D law as 3D density is a
  *  deprojection error (visibly too-shallow centre for n > 1). */
 export function pnCoeff(n: number): number {
   return 1 - 0.6097 / n + 0.05463 / (n * n);

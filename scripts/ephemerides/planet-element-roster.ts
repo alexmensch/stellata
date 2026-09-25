@@ -9,8 +9,8 @@ const jdOfJulianYear = (year: number): number =>
   J2000_JD + (year - 2000) * DAYS_PER_JULIAN_YEAR;
 
 /** The observationally meaningful window. Outside it the runtime falls back to
- *  the Standish series, which is within its published budget there and needs
- *  ~30× the data to table. */
+ *  the Standish 1992 (/data/papers/index.md#standish1992) series, which is within
+ *  its published budget there and needs ~30× the data to table. */
 export const TABLE_JD_START = jdOfJulianYear(1900);
 export const TABLE_JD_END = jdOfJulianYear(2100);
 
@@ -21,9 +21,10 @@ export const POSITION_TOLERANCE_AU = 1e-5;
 
 export interface PlanetElementTarget {
   id: PlanetName;
-  /** Horizons **barycentre** id. Standish's series fits the barycentric
-   *  orbits, `earth` is the Earth/Moon barycentre `earthMoonSplit` divides,
-   *  and a Pluto barycentre skips the 6.4 d Pluto–Charon wobble. */
+  /** Horizons **barycentre** id. Standish's series (Standish 1992,
+   *  /data/papers/index.md#standish1992) fits the barycentric orbits, `earth` is the
+   *  Earth/Moon barycentre `earthMoonSplit` divides, and a Pluto barycentre
+   *  skips the 6.4 d Pluto–Charon wobble. */
   horizonsId: string;
   /** Uniform sample spacing, days. Every value divides the window exactly, so
    *  the last sample lands on `TABLE_JD_END` rather than past it. Measured
@@ -46,7 +47,8 @@ export const ELEMENT_TARGETS: readonly PlanetElementTarget[] = [
 
 /** Grid epochs of one target's table. Throws when the cadence does not divide
  *  the window: a truncated last interval would leave the runtime falling back
- *  to Standish inside the window it claims to cover. */
+ *  to Standish 1992 (/data/papers/index.md#standish1992) inside the window it
+ *  claims to cover. */
 export function tableEpochs(stepDays: number): number[] {
   const span = TABLE_JD_END - TABLE_JD_START;
   const intervals = span / stepDays;

@@ -69,10 +69,11 @@ BODIES = {
     "triton": "triton-pia18668.jpg",
 }
 
-# Schenk IR-G-UV enhanced-colour mosaics (the 2014 Cassini icy-moon
-# series + Triton): the colour separation is exaggerated far past
-# what the eye would see on these near-neutral ices, so pull the
-# chroma halfway back toward gray (README.md#colour fidelity).
+# Schenk 2014 (/data/papers/index.md#schenk2014) IR-G-UV enhanced-colour
+# mosaics (the 2014 Cassini icy-moon series + Triton): the colour
+# separation is exaggerated far past what the eye would see on these
+# near-neutral ices, so pull the chroma halfway back toward gray
+# (README.md#colour fidelity).
 DESATURATE = {
     "mimas": 0.5,
     "enceladus": 0.5,

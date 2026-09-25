@@ -72,7 +72,7 @@ additive-glow-on-black rendering, not just a Lab-space number.
   on the giant branch and main sequence get the same colour. This is
   the visual proof that a naive "swap to T_TABLE blackbody" would
   regress continuity.
-- Panel C (blackbody at `Teff(B-V)` via Ballesteros 2012):
+- Panel C (blackbody at `Teff(B-V)` via [Ballesteros 2012](/data/papers/index.md#ballesteros2012)):
   continuous AND physical. B-V is a strong proxy for both Teff and
   logg in practice — giant-branch stars in panel C separate naturally
   from the main sequence at the same spectral class because their
@@ -80,7 +80,7 @@ additive-glow-on-black rendering, not just a Lab-space number.
 
 Panel C is the visual answer to "can we ship colour-fidelity gains
 **without** an external catalogue ingest?" — yes, by feeding a
-blackbody LUT from Ballesteros(B-V) rather than from the T_TABLE.
+blackbody LUT from the [Ballesteros 2012](/data/papers/index.md#ballesteros2012) Teff(B-V) rather than from the T_TABLE.
 
 ### Empirical Apsis coverage (`apsis_coverage.txt`)
 
@@ -124,11 +124,13 @@ external data ingest. **Independent of `stellata-dch`.**
    (256 entries, RGB float16 or uint8) mapping a B-V-derived Teff →
    gamma-encoded sRGB. The LUT is precomputed at build time via
    `research/star-spectral-rendition/blackbody_color.py`'s `blackbody_to_srgb` (Planck
-   + CIE 1931 Wyman 2013 fits + sRGB D65 transform, cross-checked
+   + CIE 1931 [Wyman 2013](/data/papers/index.md#wyman2013) fits + sRGB D65
+   transform, cross-checked
    against Mitchell Charity's reference table to ΔE ≤ 5 over the
    visually-meaningful range).
 2. Routing per star:
-   - if `ci` present: Teff = Ballesteros(B-V), sample LUT.
+   - if `ci` present: Teff from B-V via [Ballesteros 2012](/data/papers/index.md#ballesteros2012),
+     sample LUT.
    - elif `spect` parseable: Teff = T_TABLE(class, subclass), sample LUT.
      Already what we compute for the Stefan-Boltzmann radius chain;
      re-use.
@@ -137,7 +139,8 @@ external data ingest. **Independent of `stellata-dch`.**
    - else: solar fallback (no behaviour change vs today).
 3. Dust reddening: the existing `effectiveCi = iCi + absorbAV / R_V`
    path remains — we just feed the resulting reddened B-V into
-   Ballesteros and the LUT. Identical interface shape; better fidelity.
+   [Ballesteros 2012](/data/papers/index.md#ballesteros2012) and the LUT. Identical interface shape; better
+   fidelity.
 
 **Build-time helper** (TypeScript):
 - New `scripts/blackbody-lut.ts`: ports `blackbody_color.py` to
@@ -182,16 +185,18 @@ off across multiple surfaces beyond colour.
    per record. Routing precedence:
    - if Apsis (gspphot OR gspspec): use direct spectroscopic Teff.
    - else: T_TABLE(spect, lumClass) where lumClass known.
-   - else: Ballesteros(B-V) where ci present.
+   - else: Teff from B-V via [Ballesteros 2012](/data/papers/index.md#ballesteros2012) where
+     ci present.
    - else: solar fallback.
 4. Tier 1 LUT is now keyed by Teff directly rather than by B-V —
    same shader path, different upstream Teff source. Tier 1 stays
    in production unchanged for stars without Apsis.
 5. Optional follow-ons enabled by Apsis:
-   - Cross-check `azero_gspphot` vs the Edenhofer dust map along the
-     same line of sight; surface disagreements as a research diagnostic
-     (NOT a swap — Edenhofer remains canonical, but disagreement
-     locations are interesting).
+   - Cross-check `azero_gspphot` vs the [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024)
+     dust map along the same line of sight; surface disagreements as a
+     research diagnostic (NOT a swap —
+     [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) remains canonical,
+     but disagreement locations are interesting).
    - Use `logg_gspphot` to refine the Stefan-Boltzmann physical-radius
      chain (`physicalRadius` in `catalog-pure.ts` currently uses
      spectral-class-only Teff for non-WD stars).
@@ -216,7 +221,8 @@ under `stellata-zsr`, since the infrastructure overlap is total.
 
 ### Tier 3 — Deferred / opportunistic
 
-- **Pecaut & Mamajek 2013 extended T_TABLE** (class × lumClass) baked
+- **[Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) extended
+  T_TABLE** (class × lumClass) baked
   into `catalog-pure.ts` as a richer offline fallback for the ~30%
   of catalogue that has lumClass but won't get Apsis. Refines Tier 1.
   No new data ingest; library lookup + recompute. Defer until Tier 2
@@ -243,7 +249,8 @@ under `stellata-zsr`, since the infrastructure overlap is total.
 `dch` was rewritten 2026-05-15 as the source-ID-anchored catalogue
 pipeline rewrite (5-layer architecture, ~28 children under it). Phase 1
 acquires Gaia DR3 HIP/Tycho cross-walks, astrometry, NSS orbits, and
-Bailer-Jones distances — all routed through a shared
+[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) distances —
+all routed through a shared
 `scripts/refresh_lib.py` TAP client. **It does not currently include
 Apsis.** Tier 2 above is the proposed extension.
 
@@ -342,10 +349,10 @@ Low gravity = puffed-out atmosphere = orders-of-magnitude lower density = pertur
 **Effective temperature (Teff).** Temperature of a blackbody emitting the same total bolometric flux as the star. It's the *physical* quantity; colour and spectral class are *observational proxies*. Inference paths (most → least direct):
 - Detailed spectroscopic model-atmosphere fit (Apsis GSP-Spec) — best.
 - Multi-band photometric SED fit + parallax (Apsis GSP-Phot) — good.
-- Single colour index → empirical relation (Ballesteros) — workable.
+- Single colour index → empirical relation ([Ballesteros 2012](/data/papers/index.md#ballesteros2012)) — workable.
 - Spectral class look-up (`T_TABLE`) — coarsest.
 
-**Ballesteros 2012 relation.** Clean empirical fit mapping B−V → Teff, calibrated against stars with both measured independently:
+**[Ballesteros 2012](/data/papers/index.md#ballesteros2012) relation.** Clean empirical fit mapping B−V → Teff, calibrated against stars with both measured independently:
 
 ```
 Teff = 4600 × (1/(0.92(B−V) + 1.7) + 1/(0.92(B−V) + 0.62))   [K]
@@ -492,7 +499,7 @@ Herschel named it "Garnet Star" in 1783 by eyepiece. The name has stuck for 240 
 | Method | Effective Teff | sRGB |
 |---|---|---|
 | Pure blackbody at spectroscopic Teff (no dust, no observer) | 3750 K | (255, 206, 153) — warm peach |
-| Ballesteros from observed B-V = +2.4 (dust-reddened, Earth observer) | 2804 K | (255, 178, 96) — pumpkin / amber |
+| [Ballesteros 2012](/data/papers/index.md#ballesteros2012) from observed B-V = +2.4 (dust-reddened, Earth observer) | 2804 K | (255, 178, 96) — pumpkin / amber |
 | Current shader (wrong, oversaturated) at B-V = 2.4 | n/a | (255, 140, 89) — strong orange-red |
 | Almandine garnet gemstone (reference) | n/a | (115, 54, 53) — deep brick / burgundy |
 
@@ -507,7 +514,7 @@ The "Garnet Star" name is therefore a perceptual / contextual story, not a chrom
 
 ### Position-dependent colour: the Stellata pipeline's key property
 
-The most interesting feature of the pipeline for this case study is **observer-position-dependent dust reddening**. The dust-reddening correction `effectiveCi = iCi + A_V / R_V` (R_V = 3.1) samples A_V along the **line of sight from camera to star** via the Edenhofer 3D dust map. As the camera moves, the integral changes.
+The most interesting feature of the pipeline for this case study is **observer-position-dependent dust reddening**. The dust-reddening correction `effectiveCi = iCi + A_V / R_V` (R_V = 3.1) samples A_V along the **line of sight from camera to star** via the [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) 3D dust map. As the camera moves, the integral changes.
 
 The consequence for the Garnet Star specifically — and for every dust-reddened star in the catalogue — is that:
 
@@ -515,7 +522,7 @@ The consequence for the Garnet Star specifically — and for every dust-reddened
 - **Viewed up close (camera near Mu Cep):** the line-of-sight integral covers essentially zero dust (Mu Cep's local cavity is mostly cleared by its own wind). The rendered colour drifts toward the **intrinsic** stellar blackbody, ~(255, 206, 153), a warm peach.
 - **Viewed from somewhere beyond Mu Cep (camera far side of the dust column):** the integral covers a different dust subset — possibly *less* than the Earth-side column, depending on the 3D dust geometry. Local dust geometry along *the new* line of sight is what determines reddening, not "how far from Mu Cep the camera is" in a 1D sense.
 
-This is **a genuine feature, not a bug**. In real astrophysics, the colour of a star **is observer-dependent**: a hypothetical observer near Mu Cephei would see a noticeably less-red star than we do from Earth, because their photons travel through less dust to reach them. Stellata's pipeline reproduces this faithfully via the 3D Edenhofer map and per-frame line-of-sight integration. Stars are not "labelled with a colour" in the model — they have an intrinsic spectrum which is filtered through the actual interstellar medium between camera and star at every frame.
+This is **a genuine feature, not a bug**. In real astrophysics, the colour of a star **is observer-dependent**: a hypothetical observer near Mu Cephei would see a noticeably less-red star than we do from Earth, because their photons travel through less dust to reach them. Stellata's pipeline reproduces this faithfully via the 3D [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) map and per-frame line-of-sight integration. Stars are not "labelled with a colour" in the model — they have an intrinsic spectrum which is filtered through the actual interstellar medium between camera and star at every frame.
 
 ### Implications for visiting Mu Cephei in Stellata
 
@@ -527,4 +534,4 @@ The same observation applies to every other notably dust-reddened object in the 
 
 ### What this case study confirms about Tier 1 readiness
 
-The Tier 1 LUT swap doesn't change any of the above — dust reddening is upstream of the LUT and continues to feed reddened B−V values into the LUT sampler. What Tier 1 fixes is the chromaticity mapping at each (reddened) Teff: today's piecewise gradient over-saturates the warm-red end (current Mu Cep ≈ (255, 140, 89), more vivid than physical), while Ballesteros + blackbody + sRGB lands at the physically correct (255, 178, 96). The dust column itself remains in the loop, and the observer-position-dependent rendering remains intact. Tier 1 will make Mu Cep less aggressively red than it currently looks — but the position-dependent variation as the user approaches the star (the genuine physics) will remain identical in shape, just shifted to a more honest baseline.
+The Tier 1 LUT swap doesn't change any of the above — dust reddening is upstream of the LUT and continues to feed reddened B−V values into the LUT sampler. What Tier 1 fixes is the chromaticity mapping at each (reddened) Teff: today's piecewise gradient over-saturates the warm-red end (current Mu Cep ≈ (255, 140, 89), more vivid than physical), while [Ballesteros 2012](/data/papers/index.md#ballesteros2012) + blackbody + sRGB lands at the physically correct (255, 178, 96). The dust column itself remains in the loop, and the observer-position-dependent rendering remains intact. Tier 1 will make Mu Cep less aggressively red than it currently looks — but the position-dependent variation as the user approaches the star (the genuine physics) will remain identical in shape, just shifted to a more honest baseline.

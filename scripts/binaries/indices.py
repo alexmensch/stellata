@@ -174,7 +174,8 @@ def build_indices(
     # (multiple HIPs can resolve to the same Gaia source for tight
     # systems), so collisions here pick whichever HIP appears first.
     # Stage 3's HIP2 fallback only needs *some* HIP to look up the
-    # van Leeuwen row, not the canonical one — any HIP wholly inside
+    # van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007) row, not the canonical one —
+    # any HIP wholly inside
     # the Gaia source's footprint suffices.
     src_to_hip: dict[int, int] = {}
     for hip, src in hip_to_gaia.items():

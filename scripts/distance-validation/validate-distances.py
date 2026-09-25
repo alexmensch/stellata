@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Distance validation harness — compares the catalogue's Bailer-Jones
-override against Vaidman et al. 2025's independent Bayesian distances
+"""Distance validation harness — compares the catalogue's Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
+override against the independent Bayesian distances of Vaidman et al. 2025 (/data/papers/index.md#vaidman2025)
 for 132 Galactic BA-supergiants. See scripts/distance-validation/README.md."""
 
 from __future__ import annotations
@@ -116,9 +116,9 @@ def read_reference_tsv(path: Path) -> list[RefRow]:
 def read_bailer_jones_tsv(path: Path) -> dict[int, float]:
     """Parse data/bailer-jones/bailer-jones-dr3.tsv into a
     {source_id: r_med_photogeo} dict. Skips rows where r_med_photogeo is
-    masked — Bailer-Jones leaves the photogeo posterior blank for stars
-    that fail their photometric joint fit and the TSV carries those cells
-    as the astropy "--" sentinel."""
+    masked — Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) leaves
+    the photogeo posterior blank for stars that fail their photometric joint
+    fit and the TSV carries those cells as the astropy "--" sentinel."""
     out: dict[int, float] = {}
     for row in read_tsv_rows(path):
         dist_cell = row["r_med_photogeo"]

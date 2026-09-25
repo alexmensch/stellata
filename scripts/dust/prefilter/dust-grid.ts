@@ -1,6 +1,6 @@
-// Node-side reader for the Edenhofer voxel chunks in data/dust/, plus the
-// cascade's analytic tier — the two dust sources the sweep reads. Grid
-// geometry and the log-window decode come from the manifest beside the chunks.
+// Node-side reader for the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) voxel chunks in
+// data/dust/, plus the cascade's analytic tier — the two dust sources the sweep reads.
+// Grid geometry and the log-window decode come from the manifest beside the chunks.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

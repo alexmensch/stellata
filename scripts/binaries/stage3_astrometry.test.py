@@ -411,7 +411,7 @@ class AthygPositionFallbackTests(unittest.TestCase):
     an AT-HYG row whose stored ra/dec/dist_pc carry a usable astrometric
     anchor. Canonical population: ξ UMa-shape systems where the bright
     primary is Gaia-saturated AND HIP2 dropped the entry (van Leeuwen
-    excludes orbit-corrupted HIP fits).
+    2007 (/data/papers/index.md#vanleeuwen2007) excludes orbit-corrupted HIP fits).
     """
 
     def test_athyg_position_fires_when_gaia_and_hip2_miss(self) -> None:

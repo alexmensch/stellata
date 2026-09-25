@@ -1,9 +1,10 @@
 # Local Bubble build
 
-`build-local-bubble.py` turns the Zucker 2022 inner-surface HEALPix map
-(`data/local-bubble/`) into `data/local-bubble/local-bubble.bin` — a
-star-shaped triangle-mesh shell of the Local Bubble's dust wall, consumed
-by `src/client/local-bubble/`.
+`build-local-bubble.py` turns the
+[Zucker et al. 2022](/data/papers/index.md#zucker2022) inner-surface
+HEALPix map (`data/local-bubble/`) into
+`data/local-bubble/local-bubble.bin` — a star-shaped triangle-mesh shell
+of the Local Bubble's dust wall, consumed by `src/client/local-bubble/`.
 
 The Python build needs numpy/astropy/healpy, so — like the dust grid — it
 runs **offline** and its output is **committed** (LFS). The deploy build
@@ -36,9 +37,10 @@ vertex normals.
 
 ## Dust cross-check (build guard)
 
-The build asserts the surface against the **independent** Edenhofer dust
-grid (`data/dust/`): sampling the dust along each wall direction, the
-density must peak at ~1.0 R (median per-ray peak-density radius in
-[0.85, 1.05] R, currently ≈0.96). A galactic/ICRS frame swap, a pc-scale
-error, or a bad column breaks that correlation and fails the build.
-Skip with `--skip-crosscheck` (dev only).
+The build asserts the surface against the **independent**
+[Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) dust grid
+(`data/dust/`): sampling the dust along each wall direction, the density
+must peak at ~1.0 R (median per-ray peak-density radius in [0.85, 1.05] R,
+currently ≈0.96). A galactic/ICRS frame swap, a pc-scale error, or a bad
+column breaks that correlation and fails the build. Skip with
+`--skip-crosscheck` (dev only).

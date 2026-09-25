@@ -7,12 +7,13 @@ provenance, units, and the measured accuracy table live in
 [Horizons element tables](/src/client/solar-system/ephemerides/README.md#horizons-element-tables).
 This folder owns the scripts.
 
-- `planet-element-roster.ts` — the nine targets, their sample cadence, and
-  the window every table spans (`TABLE_JD_START` / `TABLE_JD_END`,
+- `planet-element-roster.ts` — the nine targets, their sample cadence, and the
+  window every table spans (`TABLE_JD_START` / `TABLE_JD_END`,
   `POSITION_TOLERANCE_AU`). The authoring source; editing a cadence needs a
-  re-run of `fetch:ephemerides`. `tableEpochs` refuses a cadence that does
-  not divide the window exactly — a truncated last interval would leave the
-  runtime on the Standish fallback inside the window the table claims.
+  re-run of `fetch:ephemerides`. `tableEpochs` refuses a cadence that does not
+  divide the window exactly — a truncated last interval would leave the
+  runtime on the [Standish 1992](/data/papers/index.md#standish1992) fallback
+  inside the window the table claims.
 - `planet-element-schema.ts` — `PlanetElementTableFile` + `ELEMENT_COLUMNS`,
   the wire contract shared by the emitter here and the runtime table.
 - `horizons-elements.ts` — pure parser for a Horizons ELEMENTS text

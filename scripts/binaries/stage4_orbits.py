@@ -154,7 +154,8 @@ class OrbitElements:
 def _thiele_innes_to_campbell(
     A: float, B: float, F: float, G: float,
 ) -> tuple[float, float, float, float] | None:
-    """Heintz 1978 / Halbwachs+ 2023 Appendix C closed form.
+    """Heintz 1978 (/data/papers/index.md#heintz1978) / Halbwachs+ 2023
+    (/data/papers/index.md#halbwachs2023) Appendix C closed form.
 
     Inputs A,B,F,G in mas (Gaia DR3 NSS native). Returns
     ``(a_mas, i_rad, Omega_rad, omega_rad)`` where ``Omega`` is the
@@ -254,7 +255,7 @@ def nss_to_canonical_elements(
 
     * TI-derived (``Orbital``, ``OrbitalAlternative*``,
       ``OrbitalTargetedSearch*``, ``AstroSpectroSB1``) — recover
-      i/Ω/ω from A,B,F,G via Heintz 1978 algebra. The TI semi-major
+      i/Ω/ω from A,B,F,G via Heintz 1978 (/data/papers/index.md#heintz1978) algebra. The TI semi-major
       axis is the photocentre's a0, not the relative A–B orbit, so
       ``a_AU`` is always left ``None`` (README.md#stage-4--orbital-element-selection-per-pair); ω is
       the photocentre's, π away from the secondary's relative-orbit
@@ -272,7 +273,8 @@ def nss_to_canonical_elements(
     DR3 today, but a forward guard against future NSS extensions); the
     caller falls through to ORB6.
 
-    Cross-checked against the ESA NSSTools algebra (Halbwachs+ 2023);
+    Cross-checked against the ESA NSSTools algebra (Halbwachs+ 2023,
+    /data/papers/index.md#halbwachs2023);
     the algebra is inlined rather than imported because the package
     has not been maintained for 2+ years and the closed form is ~10
     lines.

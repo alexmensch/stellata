@@ -81,13 +81,13 @@ write the worktree's `data/`.
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + GSP-Spec `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:gaia-gspc` | `refresh-gaia-gspc.py` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — [The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range). |
 | `refresh:gaia-dr2-neighbourhood` | `refresh-gaia-dr2-neighbourhood.py` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — [§ 6.2 DR2→DR3 dry run](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07), incl. the request-file derivation recipe. |
-| `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | Bailer-Jones 2021 photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
-| `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 (van Leeuwen 2007) reduction. |
+| `refresh:bailer-jones` | `refresh-bailer-jones.py` | `data/bailer-jones/bailer-jones-dr3.tsv` | [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
+| `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 ([van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007)) reduction. |
 | `refresh:hip-vmag` | `refresh-hipparcos-vmag.py` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V and B−V per HIP from `I/239/hip_main` — the printed tiers of the V-magnitude and ci cascades — plus the catalogue's own HD column, the `hd:i239` attestation route. |
 | `refresh:classic-ids` | `refresh-classic-ids.py` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`). Four slices in one script; `--only <stem>` limits it to one. |
 | `refresh:iau-wgsn` | `refresh-iau-wgsn.py` | `data/iau-wgsn/{NEC,wgsnFaints}.csv` | The IAU WGSN naked-eye catalogue + faint approved names (plain HTTP, not TAP; schema / row-band / spot-row gates). Follow with `pnpm run build:wgsn`. |
 | `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier ([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered)). |
-| `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | Gliese & Jahreiss third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
+| `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | [Gliese & Jahreiss 1991](/data/papers/index.md#gliese1991) third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
 | `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). |
 | `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
@@ -111,11 +111,11 @@ per-table schema validation and row bounds — source detail in
 Every catalog-scoped request set
 traces to `data/membership/membership-manifest.tsv` — the membership term
 ([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) — by one of two routes: directly, through
-`refresh_lib.read_membership_source_ids` / `iter_membership_rows`
-(the SIMBAD pulls), or through a request file
-`export-astrometry-request.ts` exported off the same manifest column
-(astrometry-catalog, GSPC, Bailer-Jones, Apsis — see
-`read_source_id_request` below).
+`refresh_lib.read_membership_source_ids` / `iter_membership_rows` (the
+SIMBAD pulls), or through a request file `export-astrometry-request.ts`
+exported off the same manifest column (astrometry-catalog, GSPC,
+[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021), Apsis —
+see `read_source_id_request` below).
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
 lives, and `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25; a script
 naming either path itself has drifted from it. The two pulls scoped to Tycho
@@ -138,8 +138,9 @@ run pulled until that run happens — the same terms as `radial_velocity`
 above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
 `is_up_to_date`, so the next invocation re-pulls rather than skips.
 
-Bailer-Jones and Apsis add a second, magnitude-bounded leg on top of that
-request — [The deep population](magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg).
+[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) and Apsis
+add a second, magnitude-bounded leg on top of that request —
+[The deep population](magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg).
 
 ### The staleness gate — pin the shortfall, never the numerator
 
@@ -164,7 +165,7 @@ shortfall is what is pinned:
 
 | Count | Pin | What a move means |
 |---|---|---|
-| `bjEligibleNotPulled` | **0** | an eligible row has its own DR3 parallax, so Bailer-Jones publishes a posterior for it; an absence is only ever this request set drifting |
+| `bjEligibleNotPulled` | **0** | an eligible row has its own DR3 parallax, so [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) publishes a posterior for it; an absence is only ever this request set drifting |
 | `apsisSourcesUnpulled` | reviewed residual | **484**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but 484 of them; that remainder plus genuine upstream absence is what the pin now holds |
 | `gspcSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue; its request is the exported union, which does cover pair members |
 | `gateSkippedNoGMag` · `derivedWeighedNoGMag` | **0** | the original instance of this rule, on the two binding gates ([The request is a union](/scripts/catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)) |
@@ -275,9 +276,11 @@ would fail with a misleading "table not found";
 `backends=[cds_backend()]` because `I/311/hip2` is VizieR-only. SIMBAD
 gets `[simbad_backend()]` for its divergent dialect. Check ESA's
 `external.*` schema before concluding a catalogue is VizieR-only:
-Bailer-Jones is on both, and `refresh-bailer-jones.py` takes the ESA copy
-through `gaia_sync_client` precisely because only that one can be joined
-to a magnitude ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
+[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) is on
+both, and `refresh-bailer-jones.py` takes the ESA copy through
+`gaia_sync_client` precisely because only that one can be joined to a
+magnitude
+([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
@@ -305,8 +308,8 @@ rules, and none may be replaced with a bare literal:
 
 A pull scoped by a bound on `phot_g_mean_mag` rather than by a request set —
 the slice partition, `slice_sync_maxrec`, and the two-leg deep population
-Bailer-Jones and Apsis are pulled over — lives in `scripts/refresh/magnitude/`
-with its own README.
+[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) and Apsis
+are pulled over — lives in `scripts/refresh/magnitude/` with its own README.
 
 ### Resuming a long pull
 
@@ -323,8 +326,9 @@ hand is always safe — it only forces a full re-pull.
 **A deep-population pull writes two of them**, `.tsv.ckpt-magnitude/` and
 `.tsv.ckpt-request/`, one per leg — they must not share a directory, or a
 resume would replay the magnitude leg's batches as the request leg's. So
-Apsis and Bailer-Jones resume at 48 slices plus the request batches (~8
-for Apsis), not the ~63 id batches the manifest-keyed pulls ran.
+Apsis and [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021)
+resume at 48 slices plus the request batches (~8 for Apsis), not the ~63 id
+batches the manifest-keyed pulls ran.
 
 `scripts/refresh/gaia_astrometry_pull.py` is the shared 5p-astrometry
 pull (schema, ADQL, batching, coverage + spot-check gates, atomic

@@ -28,10 +28,11 @@ exactly this reason.
 
 It runs the other way too: ESA carries `external.*` copies of catalogues you
 may reach for on VizieR, and the copy you pick decides what you can ASK. The
-Bailer-Jones distances are `external.gaiaedr3_distance` on ESA, already on the
-paper's column names, where VizieR's `I/352/gedr3dis` carries no magnitude —
-so only the ESA copy can be bounded by one. Check both services for a table
-before accepting the constraints of the first.
+[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) distances
+are `external.gaiaedr3_distance` on ESA, already on the paper's column names,
+where VizieR's `I/352/gedr3dis` carries no magnitude — so only the ESA copy
+can be bounded by one. Check both services for a table before accepting the
+constraints of the first.
 
 ## Verified dialect differences
 

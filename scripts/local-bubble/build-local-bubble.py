@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build public/local-bubble.bin (shell mesh) from the Zucker 2022 wall-
-distance HEALPix map, cross-checked against the Edenhofer dust grid.
-See scripts/local-bubble/README.md."""
+"""Build public/local-bubble.bin (shell mesh) from the Zucker 2022 (/data/papers/index.md#zucker2022)
+wall-distance HEALPix map, cross-checked against the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
+dust grid. See scripts/local-bubble/README.md."""
 
 import argparse
 import json
@@ -84,7 +84,8 @@ def build_mesh(r_map: np.ndarray, n_lat: int, n_lon: int):
 
 
 def dust_crosscheck(r_map: np.ndarray, nside: int) -> None:
-    """Assert the independent Edenhofer dust grid peaks at this wall."""
+    """Assert the independent Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust
+    grid peaks at this wall."""
     m = json.loads((DUST_DIR / "manifest.json").read_text())
     N, CS = m["gridSize"], m["chunkSize"]
     lo, _ = m["boundsPc"]

@@ -1,6 +1,6 @@
-// Pure colour math: Ballesteros 2012 and its analytic inverse, the Planck
-// → CIE 1931 → linear-sRGB chromaticity chain, and the LUT shape
-// constants. Node-free so client code can import it.
+// Pure colour math: Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
+// and its analytic inverse, the Planck → CIE 1931 → linear-sRGB chromaticity
+// chain, and the LUT shape constants. Node-free so client code can import it.
 
 // ---- LUT shape (must match src/client/star-pipeline/blackbody-lut-data.ts) ----
 
@@ -27,7 +27,8 @@ export const BALLESTEROS_QUAD_LINEAR = 2.32;
 export const BALLESTEROS_DISC_K2 = 1.1664;
 
 /**
- * Ballesteros 2012 empirical relation: B-V → Teff in Kelvin.
+ * Ballesteros 2012 (/data/papers/index.md#ballesteros2012) empirical relation:
+ * B-V → Teff in Kelvin.
  *
  *   Teff = 4600 × ( 1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62) )
  */
@@ -38,11 +39,11 @@ export function ballesterosTeff(bv: number): number {
 }
 
 /**
- * Analytic inverse of Ballesteros 2012: Teff (K) → B-V. Picks the
- * positive root of the quadratic that recovers `u = 0.92 · bv` from
- * `T = 4600 · (2u + 2.32) / (u² + 2.32u + 1.054)`. Discriminant
- * `4 + 1.1664·k²` is always positive (k = T/4600), so the inverse is
- * defined for all Teff > 0.
+ * Analytic inverse of Ballesteros 2012
+ * (/data/papers/index.md#ballesteros2012): Teff (K) → B-V. Picks the positive
+ * root of the quadratic that recovers `u = 0.92 · bv` from `T = 4600 · (2u +
+ * 2.32) / (u² + 2.32u + 1.054)`. Discriminant `4 + 1.1664·k²` is always
+ * positive (k = T/4600), so the inverse is defined for all Teff > 0.
  */
 export function ballesterosBvFromTeff(teff: number): number {
   const k = teff / BALLESTEROS_T0;
@@ -74,7 +75,7 @@ function planckSpectralRadiance(lambdaNm: number, tempK: number): number {
   return a / (Math.exp(exponent) - 1.0);
 }
 
-// ---- CIE 1931 2° colour-matching functions (Wyman 2013) -----------------
+// ---- CIE 1931 2° colour-matching functions (Wyman 2013, /data/papers/index.md#wyman2013) ----
 
 function wymanGaussian(
   lam: number,
@@ -171,7 +172,8 @@ export function blackbodyToLinearSrgb(tempK: number): [number, number, number] {
  * A B-V colour index → the linear-sRGB chromaticity of the blackbody
  * carrying it. The whole chain the star field's per-star colour runs, in
  * one call and at full precision rather than through the quantised LUT:
- * Ballesteros → Planck → CIE 1931 → linear sRGB, peak-normalised.
+ * Ballesteros 2012 (/data/papers/index.md#ballesteros2012) → Planck → CIE 1931 →
+ * linear sRGB, peak-normalised.
  *
  * The population tints of the volumetric layers take this route
  * (`/src/client/milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited`), so

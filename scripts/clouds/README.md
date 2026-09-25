@@ -1,8 +1,9 @@
 # Molecular cloud build
 
-`build-clouds.py` — Zucker 2020 Table A1 + Zucker 2021 Tables 1–3 →
-`public/clouds.json` (v3). Z2021 entries take precedence over Z2020
-for the clouds both cover. Consumed by the runtime presence layer
+`build-clouds.py` — [Zucker 2020](/data/papers/index.md#zucker2020) Table A1 +
+[Zucker 2021](/data/papers/index.md#zucker2021) Tables 1–3 →
+`public/clouds.json` (v3). Z2021 entries take precedence over Z2020 for the
+clouds both cover. Consumed by the runtime presence layer
 (`src/client/molecular-clouds/`).
 
 `cloud_model.py` is the shared physics module (stdlib-pure where
@@ -50,12 +51,12 @@ One entry per cloud:
 | `quat`     | `[qx, qy, qz, qw]` rotation. Identity = `[0, 0, 0, 1]`. |
 | `source`   | `"Z2021T1"` or `"Z2020"` provenance. |
 | `distance` | Heliocentric distance to centroid (pc). |
-| `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the Leike-map `mass_leike` saturates in dense gas and underestimates by up to ~14×). Absent for Z2020 clouds. |
+| `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the [Leike et al. 2020](/data/papers/index.md#leike2020) map's `mass_leike` saturates in dense gas and underestimates by up to ~14×). Absent for Z2020 clouds. |
 | `sid`      | Frozen Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)). |
 | `class`    | `dark` / `sf` / `hii` taxonomy (curated seed; a planned build-time embedded-star cross-match will supersede). |
 | `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field)). |
 | `sigmaS`, `seed` | Log-normal σ_s by class + FNV-1a noise seed. |
-| `massLeike`, `akPeak` | Zucker Table 3 Leike-resolution calibration anchors; null unless profiled. |
+| `massLeike`, `akPeak` | [Zucker 2021](/data/papers/index.md#zucker2021) Table 3 [Leike et al. 2020](/data/papers/index.md#leike2020)-resolution calibration anchors; null unless profiled. |
 | `inGrid`   | Cloud lies fully inside the ±1250 pc dust voxel cube. |
 | `embedded` | Embedded-star/cavity list — currently empty (the cross-match + cavity carve are tracked, not yet shipped). |
 
@@ -67,15 +68,15 @@ a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scrip
 
 ## Merge logic
 
-- **Z2021 Table 1** → 12 ellipsoid clouds with axis-aligned bounding
-  boxes in galactic Cartesian. The bbox is converted to centroid +
-  semi-axes; the orientation `quat` is the `GAL_TO_ICRS` rotation so
-  the ellipsoid local axes correctly point along galactic +X/+Y/+Z
+- **[Zucker 2021](/data/papers/index.md#zucker2021) Table 1** → 12 ellipsoid
+  clouds with axis-aligned bounding boxes in galactic Cartesian. The bbox is
+  converted to centroid + semi-axes; the orientation `quat` is the `GAL_TO_ICRS`
+  rotation so the ellipsoid local axes correctly point along galactic +X/+Y/+Z
   when scaled by the renderer.
-- **Z2020 Table A1** → 84 sphere clouds (sightline-aggregated by name;
-  sphere radius = max distance of any sightline from the centroid,
-  with a 5 pc default for singletons and a 3 pc floor). `quat` =
-  identity.
+- **[Zucker 2020](/data/papers/index.md#zucker2020) Table A1** → 84 sphere
+  clouds (sightline-aggregated by name; sphere radius = max distance of any
+  sightline from the centroid, with a 5 pc default for singletons and a 3 pc
+  floor). `quat` = identity.
 - **Precedence** — Z2021 entries override Z2020 for the clouds both
   cover (Chamaeleon, Ophiuchus, Lupus, Taurus, Perseus, Pipe, Cepheus,
   Corona Australis, Orion → A/B/λ split). Sub-regions like

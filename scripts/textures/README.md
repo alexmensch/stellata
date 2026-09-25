@@ -160,17 +160,19 @@ rather than shipping it.
   absence of each body's declared no-data sentinel — declared per body
   because the SVS product is unsigned and has none, and a signed
   literal would compare false against it everywhere.
-- `texture_calibration.py` — index-anchored colour calibration
-  (imported by the build): per-map linear-RGB gains that move each
-  map's sphere-weighted mean chromaticity onto the body's published
-  B−V / V−R target, solar-spectrum reference white. Owns the one fact
-  neither source states — that they are on DIFFERENT photometric
-  systems, so each row carries its own and `vrc_of` converts a Johnson
-  V−R onto the Cousins system `SUN_VRC` is measured on. Planets from
-  Mallama 2017, satellites from Frey & Lowman 1974. Writes per-body
+- `texture_calibration.py` — index-anchored colour calibration (imported
+  by the build): per-map linear-RGB gains that move each map's
+  sphere-weighted mean chromaticity onto the body's published B−V / V−R
+  target, solar-spectrum reference white. Owns the one fact neither
+  source states — that they are on DIFFERENT photometric systems, so
+  each row carries its own and `vrc_of` converts a Johnson V−R onto the
+  Cousins system `SUN_VRC` is measured on. Planets from
+  [Mallama 2017](/data/papers/index.md#mallama2017), satellites from
+  [Frey & Lowman 1974](/data/papers/index.md#frey1974). Writes per-body
   numbers into `data/textures/calibration.json`;
-  `texture-calibration.test.ts` pins targets, achieved means, the
-  index table and that conversion. Rationale: [Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration).
+  `texture-calibration.test.ts` pins targets, achieved means, the index
+  table and that conversion. Rationale:
+  [Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration).
 - `sync-textures.ts` (+ `-pure.ts`, test) — mirrors the committed
   artifacts to `public/textures/` (gitignored) on every `pnpm run
   build` / `dev`; pure copy, so CI/deploy never needs Pillow. The

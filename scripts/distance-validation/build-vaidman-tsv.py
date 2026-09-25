@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build data/distance-validation/vaidman-2025-supergiants.tsv from the
-Vaidman et al. 2025 paper PDF. One-shot reference-data builder; see
-data/distance-validation/README.md for provenance and license."""
+Vaidman et al. 2025 (/data/papers/index.md#vaidman2025) paper PDF. One-shot
+reference-data builder; see data/distance-validation/README.md (provenance, license)."""
 
 from __future__ import annotations
 

@@ -214,8 +214,8 @@ def _indices_with_astrometry(
 def _ti_from_campbell(
     a_mas: float, i_rad: float, Omega_rad: float, omega_rad: float,
 ) -> tuple[float, float, float, float]:
-    """Forward Thiele-Innes from Campbell — Halbwachs+ 2023 Eq. (16)
-    convention. The unit tests round-trip through ``_thiele_innes_to_
+    """Forward Thiele-Innes from Campbell — Halbwachs+ 2023
+    (/data/papers/index.md#halbwachs2023) Eq. (16) convention. The unit tests round-trip through ``_thiele_innes_to_
     campbell`` so any sign/ordering drift in the inverse algebra
     surfaces immediately.
     """

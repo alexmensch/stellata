@@ -94,7 +94,8 @@ class ComponentAstrometry:
     ref_epoch: float | None
 
 
-# Hipparcos-2 reference epoch (van Leeuwen 2007 reduction). Stored at
+# Hipparcos-2 reference epoch (van Leeuwen 2007 reduction,
+# /data/papers/index.md#vanleeuwen2007). Stored at
 # module scope so the HIP2 branch and Stage 6's epoch propagation
 # both pull from the same constant.
 HIP2_REF_EPOCH = 1991.25

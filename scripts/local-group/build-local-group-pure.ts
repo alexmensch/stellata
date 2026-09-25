@@ -463,9 +463,10 @@ export const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
   'Sextans A': 'Sextans A',
   'Sextans B': 'Sextans B',
   'Sagittarius dIrr': 'Sagittarius Dwarf Irregular',
-  // LVDB "Aquarius" is DDO 210 (dTr / dIrr per McConnachie 2012),
-  // distinct from the Aquarius II / III dSphs which keep the default
-  // suffix. "Antlia B" is a transition dwarf per Hargis 2020.
+  // LVDB "Aquarius" is DDO 210 (dTr / dIrr per McConnachie 2012,
+  // /data/papers/index.md#mcconnachie2012), distinct from the Aquarius II / III dSphs
+  // which keep the default suffix. "Antlia B" is a transition dwarf per
+  // Hargis 2020 (/data/papers/index.md#hargis2020).
   Aquarius: 'Aquarius Dwarf',
   'Antlia B': 'Antlia B Dwarf',
 };

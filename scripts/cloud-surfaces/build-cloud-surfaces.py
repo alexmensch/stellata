@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build data/molecular-clouds/cloud-surfaces.bin: per-cloud isosurface
-meshes traced from the Edenhofer 2024 dust posterior mean, keyed by cloud
-sid. See scripts/cloud-surfaces/README.md."""
+meshes from the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust posterior
+mean, keyed by cloud sid. See scripts/cloud-surfaces/README.md."""
 
 import argparse
 import json
@@ -41,15 +41,16 @@ ENVELOPE_HI = 1.05
 # Iso-level calibration: per-cloud fraction of the in-envelope p99
 # density, floored at a physical minimum (0.005 E_ZGR/pc ≈ 0.014 mag/pc
 # A_V ≈ n_H 8 cm⁻³ — below any molecular boundary, so the floor only
-# rejects clouds where Edenhofer sees essentially nothing).
+# rejects clouds where Edenhofer 2024 (/data/papers/index.md#edenhofer2024) sees
+# essentially nothing).
 ISO_FRAC = 0.25
 ISO_FLOOR = 0.005
 
 # Per-cloud floor overrides (by cloud id) for weak globules + distant HII
 # regions the global ISO_FLOOR rejects but that carry a genuine — if faint
-# — Edenhofer signal at their distance (out-of-grid clouds sample the
-# noisier 2 kpc flavor, so their peaks read lower). Each floor is ~half the
-# cloud's in-envelope peak, tracing the dense knot while staying above the
+# — Edenhofer 2024 (/data/papers/index.md#edenhofer2024) signal at their
+# distance (out-of-grid clouds sample the noisier 2 kpc flavor, so their
+# peaks read lower). Each floor is ~half the cloud's in-envelope peak, tracing the dense knot while staying above the
 # diffuse-noise pedestal. Clouds with no real signal are deliberately
 # absent (Carina, IC 2944, RCW38, the CB/LBN/Draco globules — they keep
 # their ellipsoid fallback).
@@ -94,7 +95,8 @@ def load_query(flavor="main"):
 
 
 def query_for(cache, cloud):
-    """Lazily load + memoise the Edenhofer flavor a cloud samples from:
+    """Lazily load + memoise the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
+    flavor a cloud samples from:
     in-grid clouds use the cleaner 1.25 kpc 'main' posterior; out-of-grid
     clouds use the noisier 'less_data_but_2kpc' flavor that reaches 2 kpc."""
     flavor = "main" if cloud["inGrid"] else "less_data_but_2kpc"
@@ -105,7 +107,8 @@ def query_for(cache, cloud):
 
 
 def query_density(query, xyz):
-    """Edenhofer mean density (E_ZGR pc⁻¹) at (n,3) ICRS pc points."""
+    """Edenhofer 2024 (/data/papers/index.md#edenhofer2024) mean density (E_ZGR pc⁻¹)
+    at (n,3) ICRS pc points."""
     import astropy.units as u
     from astropy.coordinates import SkyCoord
     out = np.zeros(len(xyz))

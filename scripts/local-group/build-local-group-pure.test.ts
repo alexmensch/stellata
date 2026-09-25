@@ -349,7 +349,7 @@ describe('displayName overrides + default type suffix', () => {
   });
   it('explicitly overrides the named non-dSph dwarfs that the regex misses', () => {
     expect(displayName('Leo A')).toBe('Leo A');
-    expect(displayName('Leo P')).toBe('Leo P');           // dIrr per Giovanelli 2013
+    expect(displayName('Leo P')).toBe('Leo P');           // dIrr per Giovanelli 2013 (/data/papers/index.md#giovanelli2013)
     expect(displayName('WLM')).toBe('WLM');
     expect(displayName('Phoenix')).toBe('Phoenix Dwarf');
     expect(displayName('Pegasus dIrr')).toBe('Pegasus Dwarf Irregular');
@@ -357,7 +357,7 @@ describe('displayName overrides + default type suffix', () => {
     expect(displayName('Sextans B')).toBe('Sextans B');
     expect(displayName('Sagittarius dIrr')).toBe('Sagittarius Dwarf Irregular');
     expect(displayName('Aquarius')).toBe('Aquarius Dwarf');     // DDO 210, dTr
-    expect(displayName('Antlia B')).toBe('Antlia B Dwarf');     // dTr per Hargis 2020
+    expect(displayName('Antlia B')).toBe('Antlia B Dwarf');     // dTr per Hargis 2020 (/data/papers/index.md#hargis2020)
   });
   it('Aquarius II / III remain dSph — only the bare "Aquarius" (DDO 210) is overridden', () => {
     expect(displayName('Aquarius II')).toBe('Aquarius II Dwarf Spheroidal');
