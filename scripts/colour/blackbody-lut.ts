@@ -91,9 +91,10 @@ function renderModule(bytes: Uint8Array): string {
 // Regenerate via: pnpm run build:lut
 //
 // 256-entry blackbody → linear-sRGB lookup indexed by B-V over [${BV_MIN}, ${BV_MAX}].
-// Each entry's Teff is derived via Ballesteros 2012; chromaticity is the
-// Planck spectrum at that Teff through CIE 1931 2° (Wyman 2013 multi-
-// Gaussian fits) and the sRGB D65 transform, peak-normalised. Values are
+// Each entry's Teff is derived via Ballesteros 2012
+// (/data/papers/index.md#ballesteros2012); chromaticity is the Planck
+// spectrum at that Teff through CIE 1931 2° (Wyman 2013 multi-Gaussian fits,
+// /data/papers/index.md#wyman2013) and the sRGB D65 transform, peak-normalised. Values are
 // LINEAR light, not gamma-encoded — the star shader renormalises each
 // sample to luminance 1 and the tone-map pass owns the only sRGB encode.
 // See scripts/colour/blackbody-lut.ts and
