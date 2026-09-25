@@ -106,8 +106,14 @@ export interface Catalog {
   onRecordsDecoded(listener: (span: DecodedSpan) => void): () => void;
   /** Settles when `loadedCount === count`. Rejects if any chunk fails, so a
    *  caller awaiting the full catalogue sees the same error boot would. */
-  readonly whenComplete: Promise<void>;
+  readonly whenComplete: Promise<CompleteCatalog>;
 }
+
+declare const complete: unique symbol;
+
+/** A catalogue whose every record has decoded. `whenComplete` is the only
+ *  source, so a function taking one cannot run on a prefix. */
+export type CompleteCatalog = Catalog & { readonly [complete]: true };
 
 /** The half-open record window one chunk's decode filled. */
 export interface DecodedSpan {
@@ -253,6 +259,13 @@ function beginCatalog(
   const listeners = new Set<(span: DecodedSpan) => void>();
   let loadedCount = 0;
   let solIndex = -1;
+  let settle!: (rest: Promise<void>) => void;
+  const whenComplete = new Promise<void>((resolve) => { settle = resolve; }).then(() => {
+    if (loadedCount !== count) {
+      throw new Error(`Catalog load settled at ${loadedCount} of ${count} records`);
+    }
+    return (catalog as Catalog) as CompleteCatalog;
+  });
 
   const catalog: GrowingCatalog = {
     count,
@@ -262,7 +275,7 @@ function beginCatalog(
     get solIndex() { return solIndex; },
     constellations,
     sidSuccessors: new Map(manifest.sidSuccessors ?? []),
-    whenComplete: Promise.resolve(),
+    whenComplete,
 
     onRecordsDecoded(listener) {
       listeners.add(listener);
@@ -291,15 +304,7 @@ function beginCatalog(
     },
 
     settleOn(rest) {
-      // Writable only here: the interface exposes it readonly so a consumer
-      // cannot swap the promise the boot sequence is gated on.
-      (catalog as { whenComplete: Promise<void> }).whenComplete = rest.then(() => {
-        if (loadedCount !== count) {
-          throw new Error(
-            `Catalog load settled at ${loadedCount} of ${count} records`,
-          );
-        }
-      });
+      settle(rest);
     },
   };
 

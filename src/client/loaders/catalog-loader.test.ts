@@ -462,7 +462,8 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.loadedCount).toBeLessThan(cat.count);
       expect(cat.count).toBe(3);
 
-      await cat.whenComplete;
+      const complete = await cat.whenComplete;
+      expect(complete).toBe(cat);
       expect(cat.loadedCount).toBe(3);
     });
 

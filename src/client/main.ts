@@ -356,6 +356,7 @@ async function main() {
     // index that rides beside it. Each entry here is a correctness
     // requirement, not a tidiness one — see the comment at each call.
     await kinds.star.ready;
+    const completeCatalog = await catalog.whenComplete;
     const searchIndex = kinds.star.searchIndex;
     await frame();
 
@@ -378,8 +379,8 @@ async function main() {
     const searchTables = kinds.star.searchTables;
     for (const [idx, info] of searchTables.bayer) bayerMap.set(idx, info);
     await frame();
-    bindSearch(stellata, catalog, searchIndex, searchTables.corpus);
-    bindFindSearch(stellata, catalog, searchIndex, searchTables.corpus);
+    bindSearch(stellata, completeCatalog, searchIndex, searchTables.corpus);
+    bindFindSearch(stellata, completeCatalog, searchIndex, searchTables.corpus);
     for (const el of searchInputs) {
       el.disabled = false;
       el.placeholder = el.id === 'search-to' ? 'Search destination…' : 'Search stars…';
