@@ -4,12 +4,12 @@ The contracts a render layer is built and torn down through: `SceneLayer`
 + `SceneLayerRegistry` — the seam that keeps `stellata.ts` from
 hand-maintaining four parallel per-layer enumerations (per-frame update
 fan-out, `setMonochrome`, floating-origin `recenter`, `dispose`); and
-`EmitterMaterial`, the material-level sibling (§ The material seam). One
+`EmitterMaterial`, the material-level sibling ([The material seam](#the-material-seam)). One
 registration per layer covers all four: a layer registered once cannot be
 silently missing from any of them, which is the property the old
 copy-everywhere lists couldn't guarantee. The ordering those layers
 compose into — every draw slot, front to back, canvas and SVG — is
-§ Full render stack.
+[Full render stack](#full-render-stack--front-to-back).
 
 **All four fan-outs run every layer even when one throws** — they go through
 `../util/fan-out.ts`, which collects failures and rethrows them as a single
@@ -26,7 +26,7 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
   `LayerContribution` + `ContributionSkip`, `SceneLayer`,
   `SceneLayerRegistry`, and `cameraAbsInto` — the frame's absolute ICRS
   camera position, which both diffuse emitters' peak providers key on.
-- `emitter-material.ts` — `EmitterMaterial` (§ The material seam).
+- `emitter-material.ts` — `EmitterMaterial` ([The material seam](#the-material-seam)).
   Type-only.
 - `emitter-material-mock.ts` — `fakeEmitterMaterial`, the double every
   layer suite's own factory fake is built from, `surfaceRecorder` (the
@@ -41,8 +41,8 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
   the factory's are written out separately; not where one shared function
   applies them to both, as `applyRimParams` does for the shells.
 - `scene-layer.test.ts` — fan-out order, optional-hook semantics, the
-  contribution skip path, and the cadence reduction (§ Declaring how time
-  moves a layer).
+  contribution skip path, and the cadence reduction ([Declaring how time
+  moves a layer](#declaring-how-time-moves-a-layer)).
 - `frame-ctx-mock.ts` — `makeFrameCtx`, the neutral per-frame fixture
   (camera at Sol, clock zero, no warp, the acceptance plate scale, a
   frustum already refreshed from the camera) every layer / kind-module
@@ -58,10 +58,10 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
   scene-element floor table, its derivation and tests. Own README.
 - `glsl-residents-pure.ts` (+ test) — `findGlslResidents`, the walk
   behind the shell's first-frame check that no raw-GLSL material reached
-  the rendered scene (§ No GLSL material may reach a WebGPU boot).
+  the rendered scene ([No GLSL material may reach a WebGPU boot](#no-glsl-material-may-reach-a-webgpu-boot)).
 - `render-order.ts` (+ test) — `DEPTH_MASK_RENDER_ORDER`, the one
   draw-order slot two subsystems both write into. The ladder it belongs
-  to is § Full render stack — front to back.
+  to is [Full render stack](#full-render-stack--front-to-back) — front to back.
 
 ## The material seam
 
@@ -76,11 +76,10 @@ the material's MRT-mode registration.
 It lives here, beside `SceneLayer`, because every material-building
 subsystem takes its surfaces through it — the solar-system family
 (`../solar-system/materials/README.md`), the Milky Way band, the
-molecular clouds, the Local Group glow, the boundary shells
-(`../fresnel-shell/README.md`) and the dust sprite (`../dust/README.md`).
+molecular clouds, the Local Group glow and the boundary shells
+(`../fresnel-shell/README.md`).
 Each subsystem's own factory interface (`SolarSystemMaterials`,
-`BandMaterials`, `CloudMaterials`, `LgEmissionMaterials`, `ShellMaterials`,
-`DustParticleMaterials`) stays
+`BandMaterials`, `CloudMaterials`, `LgEmissionMaterials`, `ShellMaterials`) stays
 with the layer that owns it; only the surface handle is shared. The
 `IUniform` face over a TSL node record is `uniformSlotsOf`
 ([Uniform slots](../webgpu/tsl/README.md#uniform-slots--the-face-a-layer-writes)).
@@ -112,7 +111,7 @@ adapters. Registration is in draw-dependency order (the continuously-ticking
 entries — the moving-focal ride, orbit rings, binary orbits — first;
 then the camera readers, planet mesh through to SVG projectors like the
 HUD, which additionally need the camera-matrix refresh —
-§ Camera writes, then camera reads). Kind-module layers
+[Camera writes, then camera reads](#camera-writes-then-camera-reads)). Kind-module layers
 (`../kinds/README.md`) register first of all: the constructor's roster
 attach loop runs before `registerSceneLayers`, so a module layer
 updates ahead of every inline-wired entry — which is what keeps the
@@ -123,8 +122,8 @@ closure over the shell's layer field, so a lazily-attached layer
 attach, the live instance after, with no re-registration.
 
 `FrameCtx` (camera, worldOffset, float64 `distFromSol`, model-clock
-`t`, `warpActive`, `pxPerRadian`, and the `frustum` — § Declaring what a
-layer can put on screen) is computed once per frame and shared. Warp
+`t`, `warpActive`, `pxPerRadian`, and the `frustum` — [Declaring what a
+layer can put on screen](#declaring-what-a-layer-can-put-on-screen)) is computed once per frame and shared. Warp
 gating lives inside each entry, not in a branched caller: reference
 layers (galactic disc / grid, Local Group wireframe, HUD) hide
 themselves while `ctx.warpActive`; light-emitting and physical layers
@@ -334,7 +333,6 @@ SVG mask (`../constellation-figure/README.md`).
 | Planet glow (inactive-cluster hosts)             | canvas  | `renderOrder: 4`                                   |       | [solar-system/planets/](../solar-system/planets/README.md) |
 | Probe markers (cluster inactive)                  | canvas  | `renderOrder: 3.5`                                 |       | [solar-system/probes/](../solar-system/probes/README.md) |
 | Probe trails (cluster inactive)                   | canvas  | `renderOrder: 3.4`                                 |       | [solar-system/probes/](../solar-system/probes/README.md) |
-| Dust particles                                   | canvas  | `renderOrder: 2`                                   |       | [dust/](../dust/README.md) |
 | Star glow + heliopause shell                     | canvas  | `renderOrder: 1`                                   |       | [star-pipeline/](../star-pipeline/README.md), [solar-system/heliopause/](../solar-system/heliopause/README.md) |
 | Star disc                                        | canvas  | `renderOrder: 0`                                   |       | [star-pipeline/](../star-pipeline/README.md) |
 | Constellation figure                             | canvas  | `renderOrder: -0.75`                               |       | [constellation-figure/](../constellation-figure/README.md) |

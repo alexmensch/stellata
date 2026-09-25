@@ -20,13 +20,13 @@ src/client/hdr/exposure/reduction/
                               median, and the base-exposure rescale.
   readback-cadence.ts         How many rendered frames apart a readback may
     (+ test)                  go out, for a caller that needs the duty cycle
-                              held (§ Latency).
+                              held (README.md#latency).
 ```
 
 The chain, its draws and its readback live in
 `src/client/webgpu/hdr/reduction-webgpu.ts`; `reduction-pure.ts` is the
 executable spec its graph is held to, and its own suite source-pins the
-combine against this one (§ TSL drift there).
+combine against this one (its *TSL drift* case).
 
 ## Why a buffer reduction and not a source walk
 
@@ -48,7 +48,7 @@ statistic texels too.
 ## The chain
 
 Level 0 is the statistic attachment itself. Each level after it is
-`ceil(size / 2)` on both axes, down to the **tile level** (§ below), and
+`ceil(size / 2)` on both axes, down to the **tile level** ([below](#the-tile-level-and-why-the-subject-is-a-median)), and
 each output texel reads the (at most four) parent texels that exist:
 
 ```
@@ -60,7 +60,7 @@ the fraction of a region that is lit surface is the mean of a 0/1 indicator
 over it. Dividing two of them — `surface / coverage` — is the mean of `L`
 over that region's masked texels alone, so light *outside* the mask (a
 glare halo, the star field, the band) raises `L̄` and cannot touch the pin.
-That division is what each **tile** hands the median (§ The tile level).
+That division is what each **tile** hands the median ([The tile level](#the-tile-level-and-why-the-subject-is-a-median)).
 
 **The masked product is formed at level 0 and nowhere else.** The
 attachment is RG16F — flux in R, mask in G — so the first pass expands
@@ -103,7 +103,7 @@ first pass either way. Each level is its own render pass, and a pass has
 a floor independent of what it draws — but that floor was measured at
 0.1–0.5 ms, and the chain draws only on the one frame in four whose
 readback has landed, so **the pass count is not where this chain's cost
-is**; the texel reads are ([§ 8,](/docs/render-rules.md#8-submits-and-passes-are-costs) which now carries
+is**; the texel reads are ([§ 8](/docs/render-rules.md#8-submits-and-passes-are-costs), which now carries
 the measurement and names this chain as the case pass-count reasoning
 gets wrong).
 

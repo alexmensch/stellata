@@ -1,4 +1,4 @@
-// The § 6.1 dropped list: its committed shape, its closed reason enum, and the
+// The record-parity dropped list (/docs/catalog-driver.md#61-record-parity): its committed shape, its closed reason enum, and the
 // identifier key the parity gate matches it on.
 // See README.md#why-the-residual-drops-rather-than-degrading.
 
@@ -6,7 +6,7 @@
  *  counterpart to, keyed on the same five identifier cells. */
 export const PARKED_LEDGER_FILE = 'data/membership/parked-ledger.tsv';
 
-/** The closed enum § 6.1 requires, for this membership event.
+/** The closed enum record parity (/docs/catalog-driver.md#61-record-parity) requires, for this membership event.
  *  `refused_no_defensible_parallax` is a row whose only measurement a skip rule
  *  refused; `no_parallax_published` is a row nothing ever measured. The two
  *  have different futures — the first reinstates when Gaia DR4 fits the blend,

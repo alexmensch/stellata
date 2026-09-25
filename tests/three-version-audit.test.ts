@@ -15,8 +15,8 @@ describe('the three version the runtime audit was run against', () => {
     ) as { dependencies: Record<string, string> };
     expect(
       pkg.dependencies.three,
-      'three moved without the runtime audit being re-run — work README.md ' +
-        '§ The three upgrade audit, then move AUDITED_THREE_RANGE',
+      'three moved without the runtime audit being re-run — work ' +
+        '/tests/README.md#the-three-upgrade-audit, then move AUDITED_THREE_RANGE',
     ).toBe(AUDITED_THREE_RANGE);
   });
 });

@@ -2,7 +2,7 @@
 
 Every `pnpm run perf` invocation worth citing, as the runner wrote it: the
 `--json` record, under `<date>/`. Written here by the protocol in
-[Recording,](../scripts/perf/README.md#recording) which also says the part the tracked
+[Recording](../scripts/perf/README.md#recording), which also says the part the tracked
 folder does not do for you: the file reaches main only if the PR that cites
 it adds it.
 

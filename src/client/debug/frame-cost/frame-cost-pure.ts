@@ -412,8 +412,8 @@ export interface BaselineTrend {
   readonly riseMs: number;
   readonly risePct: number;
   /** What that walk would come to if the instrument's own scatter were a
-   *  random walk rather than a trend. Derived per mode — § The instrument
-   *  drifts names both — and compared against the same rise either way. */
+   *  random walk rather than a trend. Derived per mode —
+   *  README.md#the-instrument-drifts-so-the-baseline-is-bracketed names both — and compared against the same rise either way. */
   readonly bandMs: number;
   readonly rising: boolean;
 }

@@ -191,7 +191,7 @@ describe('readStars manifest labels', () => {
     expect(stars[0].plxDistPc).toBeCloseTo(100, 9);
   });
 
-  it('parks a row no V tier lights, under its own § 6.1 reason', () => {
+  it('parks a row no V tier lights, under its own record-parity reason', () => {
     const { stars, stats } = readStars(
       writeManifestTsv([{ ...AT_ORIGIN_SIGHTLINE, hd: '55' }]),
       {

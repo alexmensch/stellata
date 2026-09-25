@@ -100,7 +100,7 @@ describe('unionIv27aBayer', () => {
   });
 });
 
-describe('the § 2 disposition gate', () => {
+describe('the naming-authority disposition gate', () => {
   const tsv = [
     'proper\tclass\thip\thd',
     "Kapteyn's Star\tdiscovery-designation\t24186\t33793",

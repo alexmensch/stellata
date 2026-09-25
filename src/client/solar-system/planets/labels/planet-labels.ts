@@ -54,7 +54,7 @@ export function createPlanetLabels(stellata: Stellata): void {
   // no inline `display: none` in index.html, so its effective initial
   // state is visible, and a boolean sentinel initialised to `false` would
   // silently no-op on the first `setGroupVisible(false)` call. Same shape
-  // as the heliopause first-load fix (consistency-at-the-seam §3).
+  // as the heliopause first-load fix (/docs/authoring-patterns.md#sentinel-init-for-dirty-track).
   let lastGroupDisplay = '\0';
   function setGroupVisible(on: boolean): void {
     lastGroupDisplay = setStyle(group!, 'display', on ? '' : 'none', lastGroupDisplay);
@@ -94,7 +94,7 @@ export function createPlanetLabels(stellata: Stellata): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    // Across both glides too, not just while the body is hidden — README § Labels.
+    // Across both glides too, not just while the body is hidden — README.md#labels.
     const anchorPlanetIdx = field.planetIdxWithin(
       ps.hostStarIdx, stellata.observe.observeAnchorOf('planet'));
 

@@ -21,9 +21,9 @@ src/client/galactic/
                                   always-on in dark mode, hidden in
                                   chart mode. galacticDiscSceneLayer
                                   constructs it and returns its registry
-                                  entry (§ Wiring).
+                                  entry (README.md#wiring).
   galactic-fade.ts (+ test)       Both distance-from-Sol curves
-                                  (§ Distance fades): the far-field
+                                  (README.md#distance-fades): the far-field
                                   reveal FADE_INNER_PC / FADE_OUTER_PC
                                   smoothstep, and its inverse
                                   solFrameFadeFactor.

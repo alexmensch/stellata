@@ -83,8 +83,7 @@ is arithmetically a no-op — only the factors were ever load-bearing.
 
 `uFovYRad` and `uViewport` come off the uniform-node mirror, so they are
 absent from `cloudAbsorptionUniformNodes` and from the record the layer
-writes — the same asymmetry the dust sprite carries
-(`../dust/README.md`).
+writes.
 
 The brick's own slots are absent from the *written* record for a different
 reason: nothing drives them after construction, and a texture node carries

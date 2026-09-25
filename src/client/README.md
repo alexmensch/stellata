@@ -73,7 +73,7 @@ themselves.
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
   `galactic/` (galactic reference geometry + both coordinate
-  spheres), `molecular-clouds/`, `chart-mode/`, `dust/`,
+  spheres), `molecular-clouds/`, `chart-mode/`,
   `local-bubble/`, `constellation-figure/` — render layers.
 - `constellation-boundaries/` — the IAU (Delporte 1930) boundary arcs:
   the B1875 edge set, the positional lookup answering which constellation
@@ -175,14 +175,14 @@ does something no single controller can. Keep that property when adding
 one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
 `aimAt` / `aimAlong` / `aimAtConstellation` / `invertView`
 (cross-controller busy gates, shared as `claimCameraForAim` — it reports
-whether the camera was free *and* cancels the focus lerps, so every aim
-takes it the same way),
+whether the camera was free and, only when it was, cancels the focus
+lerps, so every aim takes it the same way),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
 (clockJumped fan-out) and `setMonochrome`. A new zero-logic pass-through
 belongs on the controller.
 
 **Forwarders still on the shell leave with their cluster, and so do their
-callers** (§ Decomposing the shell). The `attach*` family — `main.ts` calls
+callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
 `attachBinaries`, `attachDust` and `attachConstellationBoundaries` — moves
 with its row, and `main.ts` calls the new owner through a readonly
 namespace. The star-frame reads (`localPositions`, `uniforms`) and the
@@ -225,7 +225,6 @@ an empty awaiting list.
 | Focal rides | `camera/focus/` | `hhaw.32.2` |
 | Binaries | `binaries/` | `hhaw.32.5` |
 | Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
-| Dust particles (shelved) | `dust/`, or removed — a product call | `hhaw.32.7` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
@@ -267,7 +266,6 @@ no late slot do not wait either.
 | Binaries (both fields + table) | wave 2, after `kinds.star.ready`; also handed to `starLocalCluster.setBinaries` | `?.… ?? false` (the focus controller's perturbation read), `?? CADENCE_REPORT_STILL` (the binaries rate), `?? []`, `?? 0`, `binariesData` null in the orbit-path focus handler, the binary ride skipped |
 | Dust + extinction prepass | when the dust manifest resolves — no wave | `?.` no-op; `extinctionAvMagFor` 0 (deliberately pickable); `isExtinctionPrepassActive` false; survivor `inFrame` null |
 | Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
-| Dust-particle source | first opt-in | shelved |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 
 Two catalogue-prefix reads also sit in the shell: the constellation figure

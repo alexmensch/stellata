@@ -17,10 +17,10 @@ switches.
 ```
 src/client/hdr/
   hdr-emitter-uniforms.ts    The six slots every physical emitter binds by
-                             reference (§ Unit), the picker that lifts them
+                             reference (README.md#unit--what-an-emitting-layer-writes), the picker that lifts them
                              out of the shared map, and the attachment
                              contract the seam's target carries
-                             (§ Three attachments).
+                             (README.md#three-attachments-and-a-per-draw-gate-on-two-of-them).
   hdr-seam.ts                The interface the shell holds; the pipeline
                              behind it is src/client/webgpu/hdr/, past the
                              import boundary.
@@ -31,21 +31,21 @@ src/client/hdr/
   tonemap/                   The operator: the CPU mirror + exact
                              inverse, where the shared graph and the
                              fullscreen resolve live, and the two shape knobs — its own
-                             README (§ Operator).
+                             README (tonemap/README.md#operator).
   emission/                  The unit an emitting layer writes in:
                              magnitude → luminance, the point-source peak
                              rule, the two solid angles and the footprint
-                             softening — its own README (§ Unit).
+                             softening — its own README (emission/README.md#unit--what-an-emitting-layer-writes).
   summation/                 Attachment 2's convolution over the eye's
                              summation patch, which the resolve composites
-                             — its own README (§ Pass ordering).
+                             — its own README (README.md#pass-ordering--one-target-two-passes-into-it).
   exposure/                  The exposure scalar and the magnitude
                              bounds derived from it — instrument limit,
                              scene adaptation, EV trim, and the reduction
                              that measures the statistic attachment. Its
                              own README.
   chrome/                    Authored chrome colours pre-mapped through
-                             the inverse — its own README (§ Chrome).
+                             the inverse — its own README (README.md#chrome--non-physical-layers-keep-their-authored-look).
 ```
 
 ## Unit — what an emitting layer writes
@@ -166,7 +166,7 @@ Adding stencil breaks it: it diverts the target to
 `depth32float-stencil8`, an optional device feature.
 
 The target is `RGBA16F` plus its `RG16F` statistic attachment and a second
-`RGBA16F` for the diffuse emitters (§ Three attachments), sized to the
+`RGBA16F` for the diffuse emitters ([Three attachments](#three-attachments-and-a-per-draw-gate-on-two-of-them)), sized to the
 renderer's **drawing buffer** (canvas × pixelRatio, existing cap 2).
 `syncSize()` re-derives from the renderer rather than taking a width/height,
 so window resize and any future pixel-ratio change are the same code path —
@@ -249,7 +249,7 @@ against that one:
 
 ## Ship gate — the seam is the only path
 
-Every physical emitter carries luminance in the § Unit scale — stars (H3), the
+Every physical emitter carries luminance in the [Unit](#unit--what-an-emitting-layer-writes) scale — stars (H3), the
 Milky Way (H4), the planet mesh / rings / airlight / reflected glare (H5), the
 Local Group glow — so the target is the path, and nothing can take it away.
 No switch reaches past it: `wantsTarget()` is `!chart`, and

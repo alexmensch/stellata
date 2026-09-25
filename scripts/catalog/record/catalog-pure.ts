@@ -381,7 +381,7 @@ export function isPlanetaryTransitOnly(rawType: string | null | undefined): bool
 //
 // The name table precedes the records so the first transport chunk decodes
 // standalone: a progressive load paints its prefix with real names rather
-// than composed designations (see § On-disk transport chunking).
+// than composed designations (see README.md#on-disk-transport-chunking).
 //
 // HEADER_LAYOUT / RECORD_LAYOUT below carry the per-field byte offsets;
 // HEADER_FIELD_KINDS / RECORD_FIELD_KINDS carry the matching wire types
@@ -969,7 +969,7 @@ export function designationConIndex(
  *  records DISPLAY first, then the aliases beside them.
  *
  *  Two passes and first-write-wins, which settles two collisions with one rule.
- *  Entries arrive apparent-brightest-first (§ Record order fixes record
+ *  Entries arrive apparent-brightest-first (README.md#record-order fixes record
  *  order), so an ambiguous designation resolves to the record that LOOKS
  *  brightest — 57 HD
  *  and 11 HR numbers are displayed by two records each, always a component pair
@@ -1106,7 +1106,7 @@ export const SOL_ABSOLUTE_V_MAGNITUDE = 4.85;
 /** Sol's apparent V, curated for the same reason its direction is: it carries
  *  no identifier any cascade can key on, so every machine tier misses it and
  *  V is a membership gate. Cox 2000, *Allen's Astrophysical Quantities* 4th
- *  ed. § 12 — the published value, not the printed cell the retired
+ *  ed. Sect. 12 — the published value, not the printed cell the retired
  *  AT-HYG-driven build happened to carry.
  *
  *  It reaches no shipped byte: absmag takes `SOL_ABSOLUTE_V_MAGNITUDE` above

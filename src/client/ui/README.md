@@ -52,7 +52,7 @@ registry only describes what to display.
 
 The Find picker reuses the shared search corpus via `createSearchRunner`
 (`../typeahead/search.ts`) and is relocated into the `#kb-modal` card
-like the Go / Constellation pickers — see § DOM relocation below.
+like the Go / Constellation pickers — see [DOM relocation](#go--constellation-pickers--dom-relocation) below.
 
 **Capture phase.** The listener is registered with `{capture: true}`
 because foreground-modal listeners (info / about / credits / help)
@@ -83,7 +83,7 @@ shortcut switch):
 Fullscreen exit is not in this chain: the browser reserves Esc to
 leave fullscreen and the exit is not cancelable by page code, so the
 first Esc always leaves fullscreen (like any fullscreen web app). See
-§ Fullscreen toggle.
+[Fullscreen toggle](#fullscreen-toggle).
 
 ### Go / Constellation pickers — DOM relocation
 
@@ -203,7 +203,7 @@ stop rather than leaving the row reading something stale.
 
 A stop the current state can't reach is **disabled, not hidden**
 (`.link-btn:disabled`), and its explanatory `title` goes on the **row**, never
-on the disabled button — see § Disabled-control styling.
+on the disabled button — see [Disabled-control styling](#disabled-control-styling).
 
 ## Disabled-control styling
 
@@ -302,7 +302,7 @@ native html/css... we shouldn't dictate layout"). Do not reintroduce it.
   layout — no fixed clearances, no measurement.
 - `.ui-bottom` — fixed full-width along the bottom. Its left slot is
   `.bottom-left-stack`, a column holding the **Instruments panel** above the
-  scale-bar widget (§ Bottom-left widget below). The stack itself is
+  scale-bar widget ([Bottom-left widget](#bottom-left-widget-scene-scale-bar) below). The stack itself is
   `pointer-events: none` with `auto` on its children, so the gap between the
   two never swallows a canvas click.
   The Instruments panel takes the Settings panel's chrome wholesale — same

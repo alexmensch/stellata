@@ -51,3 +51,15 @@ export function gitFiles(
     .split('\0')
     .filter((name) => name !== '');
 }
+
+export function lfsTracked(root: string, names: string[]): Set<string> {
+  const fields = execFileSync('git', ['check-attr', '-z', '--stdin', 'filter'], {
+    cwd: root,
+    input: names.join('\0'),
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  }).split('\0');
+  const tracked = new Set<string>();
+  for (let i = 0; i + 2 < fields.length; i += 3) if (fields[i + 2] === 'lfs') tracked.add(fields[i]);
+  return tracked;
+}

@@ -210,7 +210,7 @@ the star mirror, the extinction prepass, `FloatingOrigin`
 and both `distN` slots for its windows, and is the sole writer of
 `uPhysSizeWindowPc` —
 [The physical-size window](../star-pipeline/star-frame/README.md#the-physical-size-window)),
-`DustParticleLayer`, `Picker`, and every kind module through
+`Picker`, and every kind module through
 `KindContext.sharedUniforms`. The three renderer-derived seeds (pixel
 ratio, FOV, viewport) are arguments; the rest come from
 `DEFAULT_FILTER` / `STAR_RENDER_DEFAULTS` and the star pipeline's own

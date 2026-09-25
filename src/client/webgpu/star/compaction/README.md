@@ -30,9 +30,9 @@ src/client/webgpu/star/compaction/
 ```
 
 The kernel also appends the extinction refill's worklist; that block, its
-population and its schedule are [The compaction appends the worklist,](../../extinction/refill/README.md#the-compaction-appends-the-worklist)
+population and its schedule are [The compaction appends the worklist](../../extinction/refill/README.md#the-compaction-appends-the-worklist),
 and this file carries only what it costs
-the compaction (§ The refill dispatch, § Binding budget).
+the compaction ([The refill dispatch](#the-refill-dispatch), [Binding budget](#binding-budget)).
 
 ## Two lists, one kernel, three draws
 
@@ -123,7 +123,7 @@ The reset kernel (`REFILL_BUCKETS` threads: thread 0 zeroes both
 `instanceCount`s and the prefilter counter, and on an armed frame every
 thread zeroes its bucket's refill counter),
 the compaction kernel and — on an armed frame — the two scan kernels
-(§ The refill dispatch) are
+([The refill dispatch](#the-refill-dispatch)) are
 one `renderer.compute([...])`: one compute pass, one submit, and WebGPU
 orders dispatches within a pass so the atomics see the reset, the scan sees
 the atomics, and its second half sees the copy its first half made. Every rendered frame pays that submit; the render gate
@@ -221,13 +221,13 @@ only under the arm. So a parked camera would otherwise pay
 `O(REFILL_BUCKETS²)` L1 reads every frame to republish a prefix nothing
 reads: measured at 0.028 ms per frame at 1,278,785 records, against a win
 that only lands while the camera moves. The arm is set by the prepass,
-which runs earlier in the frame (§ The frame order), so the CPU knows it
+which runs earlier in the frame ([The frame order](#the-frame-order)), so the CPU knows it
 before this pass is submitted and the two dispatches cost nothing at all on
 a settled frame.
 
 **The scan's copy kernel is the only reader of an atomic outside the
 compaction kernel, and it reads each counter once.** A refill thread
-reading a counter directly is the shape § Reading the counts back refuses
+reading a counter directly is the shape [Reading the counts back](#reading-the-counts-back) refuses
 for `PREFILTER_COUNT_ELEMENT`: an atomic read-modify-write on one address
 from every thread of the dispatch. The counts already exist at the end of
 the pass, so republishing them as plain `u32` beside the dispatch costs one

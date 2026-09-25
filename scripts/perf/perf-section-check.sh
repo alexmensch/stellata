@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # Byte comparisons, not collated ones: the row markers are multibyte, and BSD
-# awk in a UTF-8 locale reads · and § as equal to ✗ — every non-marked row then
+# awk in a UTF-8 locale reads a two-byte · as equal to ✗ — every non-marked row then
 # demands an accepted: line and the check fails on a body CI would pass.
 export LC_ALL=C
 

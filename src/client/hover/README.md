@@ -11,7 +11,7 @@ disambiguator, and the `#tooltip` render.
 
 ## Files in this area
 
-The full file roster is in § Architecture below. The hover subsystem
+The full file roster is in [Architecture](#architecture) below. The hover subsystem
 lives entirely under `src/client/hover/`:
 
 - `hover-engine.ts` — the engine.

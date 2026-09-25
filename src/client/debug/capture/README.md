@@ -116,7 +116,7 @@ appears to change, then crosses every visible scale in the last few frames.
 Equal time per decade is equal time per octave of apparent size.
 
 The default ease is the quintic smootherstep the arrival profile lands on
-(§ Profile there), which has zero velocity *and* zero acceleration at both
+([Profile](/src/client/camera/arrival/README.md#profile) there), which has zero velocity *and* zero acceleration at both
 ends: the camera is genuinely still on the first and last frames, which is
 what makes a loop cut cleanly.
 
@@ -158,8 +158,8 @@ period by 4 seconds for the fastest model-days-per-second a subject takes.
   running — that flag gates its listeners, not its per-frame work, which is
   what still rebuilds the camera from the position and target written each
   frame.
-- **The `'frame'` subscription** the pose is written from — § Writing the pose
-  from `frame`, which is a departure.
+- **The `'frame'` subscription** the pose is written from — [Writing the pose
+  from `frame`](#writing-the-pose-from-frame-which-is-a-departure), which is a departure.
 
 Every one of them is released on completion and on `cancel()`, including the
 camera mode's own `enabled` value as it stood before the take.

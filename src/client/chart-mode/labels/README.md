@@ -9,7 +9,7 @@ parent; `stellata.ts` is its one consumer.
 ## Files
 
 - `chart-labels.ts` (+ test) — the engine, `CHART_LAYER_IDS`, and the
-  pooling / dirty-tracking machinery § What got optimised describes.
+  pooling / dirty-tracking machinery [What got optimised](#what-got-optimised) describes.
 
 ## Label engine + glyphs
 
@@ -148,7 +148,7 @@ across a chart exit.
 formats**, on the labels whose x/y actually moved — unavoidable through
 `setAttribute`, and it fires on exactly the frames the camera is moving.
 Don't read the pooling as "chart mode allocates nothing"; see
-§ Chart-labels: pooled per-frame containers below before
+[Chart-labels: pooled per-frame containers](#chart-labels-pooled-per-frame-containers) below before
 interpreting a profile.
 
 Three invariants make the reuse safe. Each is mutation-pinned in
@@ -218,7 +218,7 @@ the label engine's containers; read a non-zero `tick` self-size as the
 former before suspecting the latter.
 
 Pooled reuse rests on three invariants, each mutation-pinned by
-`chart-labels.test.ts` and argued under § Label engine + glyphs
+`chart-labels.test.ts` and argued under [Label engine + glyphs](#label-engine--glyphs)
 (**Pooling**) above.
 
 ### Chart-labels: cached brightest constellation member

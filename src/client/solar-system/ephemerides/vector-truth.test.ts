@@ -67,7 +67,7 @@ beforeAll(() => {
 });
 
 /** Standish's published nominal errors for the 3000 BC – 3000 AD elements
- *  (approx_pos.html § Accuracy): heliocentric longitude λ and latitude φ in
+ *  (approx_pos.html, section *Accuracy*): heliocentric longitude λ and latitude φ in
  *  arcsec, distance ρ in 1000 km. Combined at the body's semi-major axis
  *  these give a position budget in AU. */
 const PUBLISHED_ERROR: Record<string, readonly [number, number, number]> = {

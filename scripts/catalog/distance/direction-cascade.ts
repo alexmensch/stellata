@@ -300,7 +300,7 @@ function pmVelVia(
  *  because the winning motion may be `pm-rescue/`'s rather than this tier's.
  *
  *  Returns null only when no tier reaches the row at all. That is a record
- *  with no owned direction, which `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` makes a § 6
+ *  with no owned direction, which `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` makes a /docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change
  *  membership event rather than a silent keep — the walk counts it as
  *  `spineDroppedNoDirection`, pinned at 0. */
 export function resolveDirection(

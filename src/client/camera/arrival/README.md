@@ -27,7 +27,7 @@ smoothstep — `f(t) = 2t² for t < 0.5, else 1 − 2(1−t)²`. (Warp Phase 3
 also lerps camera position by time, but is excluded from this list:
 it's already cubic-Hermite, lands at the focal star's local origin
 rather than parkDist, and is an OBSERVE handover rather than an
-arrival — see § Inventory.) That damped the **time** profile but did
+arrival — see [Inventory](#inventory-of-arrival-sites).) That damped the **time** profile but did
 nothing about the `1/d` term in angular space. Smoothstep at the end
 of position still lands with `dd/dt = 0`, but `dθ/dd = −2R/d²` is
 enormous at small d, so the angular rate blew up just before zero
@@ -54,7 +54,7 @@ place and the helper owns both the time and the distance profile.
 **Excluded: Warp Phase 3 (observe→observe arrivals).** Phase 3's
 position track lerps `pEnd → (0,0,0)` over `OBSERVE_TRANSITION_MS` and
 is already eased with cubic-Hermite `u²·(3 − 2u)` — the same shape the
-helper adopts in § Profile, applied to the position lerp directly
+helper adopts in [Profile](#profile), applied to the position lerp directly
 rather than to `log d`. The endpoint is the destination star's local
 origin, not parkDist — that's the OBSERVE-mode invariant: in OBSERVE
 the camera occupies the focused star's local origin so the user
@@ -143,7 +143,7 @@ range.
 zero velocity (outer's piecewise-quad ends at v = 0; inner's quintic
 starts at v = 0 via `S'(0) = 0`), so the handoff is velocity-continuous
 without the matching constraint that killed the previously-rejected
-dWindow split (see § "What about a two-region split at dWindow?"
+dWindow split (see [What about a two-region split at `dWindow`?](#what-about-a-two-region-split-at-dwindow)
 below). The trade-off is a momentary neutral coast at the seam, which
 is perceptually masked because parallax has already collapsed by then
 and angular growth hasn't yet become salient.
@@ -260,7 +260,7 @@ Smoke testing the log-d cubic-Hermite revealed a different problem:
 linear velocity collapses geometrically across any log-d profile, so
 background-star parallax reads as decelerating from very early in the
 warp regardless of the curve's `f(u)` shape. The resolution shipped in
-1.12.0 is the **hybrid two-regime design** — see § Profile above. The
+1.12.0 is the **hybrid two-regime design** — see [Profile](#profile) above. The
 hybrid IS a two-region split, but with different math:
 
 - Outer uses **linear-d** piecewise-quad (not smoothstep on linear-d).
@@ -290,7 +290,7 @@ log-d-only design.
    inner angular-size regime, so kinds that return `null` from
    `FocusTarget.physicalRadius()` trigger the cubic-Hermite log-d
    fallback. `parkDist` is the only per-target input the fallback
-   needs. See § Worked examples below for the fallback's worked
+   needs. See [Worked examples](#worked-examples) below for the fallback's worked
    tables — still applicable to cloud arrivals today.
 
 3. **Outbound (unfocus).** `d0 < d_end`, so the hybrid's seam concept
@@ -316,7 +316,7 @@ These tables describe the **cubic-Hermite log-d fallback profile**
 (`u_eased = 3u² − 2u³`) — what fires for cloud destinations, outbound
 unfocus, and any inbound star warp whose ctx is missing. The shipped
 hybrid profile uses different math for inbound star approaches; see
-§ Profile above for its geometry.
+[Profile](#profile) above for its geometry.
 
 **Sol from 1 pc** (`parkDist ≈ AU_PC ≈ 4.85·10⁻⁶ pc`):
 

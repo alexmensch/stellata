@@ -99,7 +99,7 @@ Re-run it before moving any of the three constants; the numbers belong in
 the PR and the bead, not here.
 
 **Any change here ships with the mirrored build-side integral**
-(§ The cancellation invariant). The build integrates the same clipped
+([The cancellation invariant](#the-cancellation-invariant)). The build integrates the same clipped
 overlap at a step of at most one voxel (`avAlongSegment`), so today the
 only at-Sol residual is this march's quadrature.
 
@@ -113,6 +113,11 @@ Apsis Teff is present, else the baked intrinsic `iCi` (observed AT-HYG
 B–V or the spectral-class colour baked at build — see [Colour routing](../README.md#colour-routing)).
 Looking through dust dims and reddens stars behind
 it, which is what you'd actually see.
+
+**Extinction is the only way the dust field is drawn.** A visible-dust
+treatment starts from the look, not from an implementation: a fullscreen
+fog raymarch banded and jittered at far zoom, and density-sampled
+additive sprites never read well enough to ship.
 
 ## The prepass cache
 
@@ -149,7 +154,7 @@ pass (×2–3) — 8–12 recomputations per visible star per frame.
 - **Fallback:** the vertex stage can run the camera→star raymarch
   in-line instead, gated by the visibility prefilter, sharing the march
   with the prepass through `dust-raymarch-tsl.ts`. Only the A/B switch
-  below reaches it. The march's tap count and clip are § The march.
+  below reaches it. The march's tap count and clip are [The march](#the-march).
 - **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
   console) parks the shader on the fallback path AND pauses cache
   maintenance, so the fallback side never pays fill cost — the honest

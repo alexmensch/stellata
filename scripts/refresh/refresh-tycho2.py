@@ -283,7 +283,7 @@ def assert_membership_covered(
     membership_tycs: set[Tyc], reached: set[Tyc], *, log: Callable[[str], None] = print
 ) -> None:
     """Tycho-2 carries every ``TYC3=1`` identifier the manifest names, so a
-    primary reaching neither table is a § 6 membership adjudication or an
+    primary reaching neither table is a membership-parity adjudication (/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) or an
     upstream regression rather than a refresh landing short. Components are
     admitted where the pair entry shows Tycho-2 merged them. This gates the
     pull's reach, never a record's placement — the cascade's tiers below

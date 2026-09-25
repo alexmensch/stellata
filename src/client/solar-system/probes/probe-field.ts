@@ -258,7 +258,7 @@ export class ProbeField {
    *  One motion term per drawn marker: the sampler's own interpolated
    *  velocity (never a finite difference — the trajectory grid spacing runs
    *  from 88 s to six months, so a difference quotient is a different
-   *  quantity in each part of a trajectory, § Sampler), minus the camera's,
+   *  quantity in each part of a trajectory, README.md#sampler), minus the camera's,
    *  projected across the line of sight over the camera distance. A hidden,
    *  decluttered or unsampled probe moves no ink and reports nothing.
    *

@@ -17,18 +17,18 @@ gestures below toggle its `noRotate` / `noPan` flags.
   ([Architecture](../../../hover/README.md#architecture)).
 - `roll-controller.ts` (+ test) — `RollController`: the roll operations
   on `camera.up` and on the quaternion, one authority per camera mode.
-  Holds no state of its own beyond scratch. § Roll authority.
+  Holds no state of its own beyond scratch. [Roll authority](#roll-authority).
 - `roll-pure.ts` (+ test) — roll algebra: level-up projection, signed
   roll angles, and camera-local up.
 - `pinch-zoom-pure.ts` (+ test) — pinch-delta → wheel-notch normalisation
   (`PINCH_NOTCH_GAIN`, `pinchStep`).
 - `trackball-settle.ts` (+ test) — `TrackballSettle`: stops the damping
-  tail once a frame moves less than a tenth of a pixel. § Damping settle
-  floor.
+  tail once a frame moves less than a tenth of a pixel. [Damping settle
+  floor](#damping-settle-floor).
 - `trackball-settle-pure.ts` (+ test) — the on-screen motion of one
   frame's step (`eyeSwingRad`, `trackballMotionPx`) and the floors
   themselves (`TRACKBALL_SETTLE_PX`, `ORIENTATION_SETTLE_ULP`,
-  `POSITION_SETTLE_ULP`). § Derived-pose settle floor.
+  `POSITION_SETTLE_ULP`). [Derived-pose settle floor](#derived-pose-settle-floor).
 
 The click decision tables live in [Click-state machine](../../../README.md#click-state-machine-cameracontrolsinputinput-controllerts);
 the ladder's pure decision function is
@@ -86,11 +86,11 @@ Current settings:
   A/S/D defaults, which otherwise swallow the `S` grid and `D` debug
   shortcuts. Load-bearing; don't restore the defaults.
 - `noRotate` is toggled for the duration of a Shift-drag roll (see
-  § Roll gestures).
+  [Roll gestures](#roll-gestures)).
 - `minDistance = GLOBAL_MIN_DIST_PC = 5e-3` (when no star is focused;
   per-star `minOrbitDistForStar` overrides on focus). `maxDistance = 100_000`.
 - `staticMoving` is also written **per frame** by `TrackballSettle` —
-  § Damping settle floor. The `false` above is the seed, not a constant.
+  [Damping settle floor](#damping-settle-floor). The `false` above is the seed, not a constant.
 
 ## Damping settle floor
 
@@ -179,7 +179,7 @@ third vector behind them.
   `lookAt` reads it, so the roll the user is holding is carried forward frame
   to frame by the library itself. While an **animation** owns the camera
   instead, nothing transports `up` — so `stellata.ts` re-derives it per
-  animating frame; § The perpendicular invariant.
+  animating frame; [The perpendicular invariant](#the-perpendicular-invariant).
 - **OBSERVE** — `adoptFromCamera(camera)` each frame, ahead of the
   animation dispatch in `stellata.ts`'s `animate()`: there the quaternion
   is the authority (a direct-manipulation drag rolls by construction), so
@@ -248,7 +248,7 @@ Two things went with that correction, and neither should come back:
 
 **The rule that replaces the deadband: steady-state navigate writes
 `camera.up` on no frame of its own.** Only a gesture, a level, a URL restore,
-a frame an animation owns (§ The perpendicular invariant), the landing
+a frame an animation owns ([The perpendicular invariant](#the-perpendicular-invariant)), the landing
 of a captured-endpoint animation, or the attitude indicator's **orbit lock**
 writes it. That last one is per-frame and is admissible for the reason a
 gesture is: it writes only on a frame where the orbit datum it rides moved far
@@ -271,7 +271,7 @@ Camera animations split into two classes, and only one needs care:
 
 Class A inherits the authority for free — it reads `camera.up`, so the roll
 comes along. What it does not inherit is the perpendicular invariant, which
-the per-animating-frame adopt supplies (§ The perpendicular invariant).
+the per-animating-frame adopt supplies ([The perpendicular invariant](#the-perpendicular-invariant)).
 **A Class-B endpoint must be built
 from the same `camera.up` the camera is actually holding**, and the
 animation must **re-derive `camera.up` from the landed quaternion** before
@@ -309,7 +309,7 @@ subsequent orbit / dolly.
   `gesturechange` / `gestureend` trio (WebKit only). `event.rotation` is
   cumulative degrees since gesture start, positive clockwise; we
   `preventDefault` to suppress Safari's page zoom. The same events carry
-  pinch as `event.scale` — see § Pinch-to-zoom. Chrome / Firefox expose no
+  pinch as `event.scale` — see [Pinch-to-zoom](#pinch-to-zoom). Chrome / Firefox expose no
   rotate gesture — Shift-drag is the roll path there. Do not try to
   polyfill.
 

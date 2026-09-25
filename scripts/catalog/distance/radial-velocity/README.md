@@ -26,7 +26,7 @@ scripts/catalog/distance/radial-velocity/
 
 ```
 Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
-  → SIMBAD rvz_radvel      bibcoded, over the § 5 value cohort
+  → SIMBAD rvz_radvel      bibcoded, over the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort
   → zero radial term
 ```
 
@@ -119,13 +119,13 @@ A DR4 release adds one entry to `GAIA_CATALOGUE_BIBCODES`
 **The tangential term now answers the same question the same way.**
 `../pm-rescue/` refuses a Gaia-bibcoded proper motion on a 2p row for the
 reason this section gives, over a 273-row cohort where 241 of the printed
-`pm_src` cells read `G_R2` — so the skip rule and the § 5 retirement land on
+`pm_src` cells read `G_R2` — so the skip rule and the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) retirement land on
 the same number from two directions.
 
 ## What the tier reaches is decided by other fields
 
 `simbad_value_cohort` (`scripts/refresh/simbad/inputs.py`) enumerates a
-manifest row unless Gaia's own 5p table states every § 5 value for its
+manifest row unless Gaia's own 5p table states every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for its
 source_id **and** its identity is first-hand (a `crosswalk_gated` binding
 plus a TYC or a HIP). So this tier's reach is the union cohort, not an
 rv-specific one — but the value half now includes Gaia's own `radial_velocity`
@@ -134,7 +134,7 @@ identity says. That is what the spine-scoped predicate could not express: it
 reached a row only where AT-HYG had *printed* a second-order rv, and 5,135 of
 the rows it selected were `rv_src`-only for that reason.
 
-**No SIMBAD-based rv validation exists to exclude these rows from.** § 5's
+**No SIMBAD-based rv validation exists to exclude these rows from.** [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s
 validation-independence rule bites where a SIMBAD tier and a SIMBAD validator
 meet the same field; `data/simbad/simbad_sample.tsv` carries no rv column and
 neither `validate-simbad-sample` nor the distance-regression check reads one,
@@ -183,7 +183,7 @@ rejection was for rather than a case where it made no difference.
 What the rejection buys is that the ratchet names the right failure, and
 that a row arriving with both a real PM and a nonphysical rv keeps the PM. The rejected row is still counted under the tier that supplied the
 value (`rvSimbad`) — the cascade routed correctly and the threshold, not the
-cascade, refused it. No |rv| bound is added to the tier itself: § 5
+cascade, refused it. No |rv| bound is added to the tier itself: [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 authorises none, and this reuses the ceiling the assembly already enforces.
 
 Note what these thresholds do NOT cover: all are ceilings, so they see a

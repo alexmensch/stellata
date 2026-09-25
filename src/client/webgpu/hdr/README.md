@@ -14,20 +14,19 @@ src/client/webgpu/hdr/
   hdr-pipeline-webgpu.ts      WebGpuHdrPipeline — the lazy MRT target
     (+ test)                  (RGBA16F + RG16F + RGBA16F over a
                               requested Depth32Float reversed-z depth
-                              attachment, § below),
+                              attachment, README.md#the-depth-format-is-requested-not-asserted),
                               bind/resolve, chart bypass, syncMode, the
                               dev switches, the resolve material, and
                               ownership of the gates and the reduction.
   emitter-gates.ts            The statistic write mask as a uniform node
-                              (§ The gate becomes the output struct).
+                              (README.md#the-gate-becomes-the-output-struct).
   mrt-material.ts (+ test)    finishMrtMaterial — the single-output ↔
                               three-member-struct swap every
                               emitter carries, and the two material flags
                               that would demote the struct.
                               finishMrtOutputMaterial is the same swap on
                               `outputNode` for a material whose own
-                              fragment stage must survive (§ Composing
-                              over three's fragment).
+                              fragment stage must survive (README.md#composing-over-threes-fragment).
   summation-tsl.ts            The summation convolution and the box
                               downsample, over summation-pure's
                               constants.
@@ -37,7 +36,7 @@ src/client/webgpu/hdr/
   reduction-webgpu.ts         WebGpuLuminanceReduction — the mip chain
     (+ test)                  (reduction-pure is the spec) and its
                               readRenderTargetPixelsAsync readback
-                              (§ Reduction).
+                              (README.md#reduction--an-asynchronous-readback).
 ```
 
 ## Reduction — an asynchronous readback

@@ -30,11 +30,11 @@ import { hybridUSeam } from '../arrival/arrival-curves';
 
 // Source→dest separations below this have no reliable travel direction —
 // AB/distPc is float32 noise (coincident catalog baselines / orbit
-// crossing). See README § OBSERVE mode and the warp state machine.
+// crossing). See README.md#observe-mode-and-the-warp-state-machine.
 const WARP_DEGENERATE_DIST_PC = 1e-9;
 
-// Settled plateau-trigger shape — see README § Chart-mode
-// plateau-trigger for what each value does to the cue.
+// Settled plateau-trigger shape — see README.md#chart-mode-plateau-trigger
+// for what each value does to the cue.
 const CHART_PLATEAU_MARGIN = 0.7;
 const CHART_PHASE3_ALPHA = 0.2;
 
@@ -162,9 +162,7 @@ export class WarpController {
   }
 
   /** Per-frame tick. The integration shell dispatches here exactly when
-   *  `isActive()` is true; the controller doesn't gate on
-   *  observe-transition / aim / focus-lerp because those are mutually
-   *  exclusive with warp by construction (startWarp cancels each). */
+   *  `isActive()` is true, ahead of every other camera animation. */
   tick(nowMs: number): void {
     if (!this.state) return;
     this.updateWarp(nowMs);
@@ -239,11 +237,10 @@ export class WarpController {
     source: FocusTarget,
     dest: FocusTarget,
   ): void {
-    if (this.state) return;
     const focus = this.deps.focus;
+    if (this.state || focus.isObserveTransitionActive()) return;
     focus.cancelUnfocusLerp();
     focus.cancelFocusLerp();
-    if (focus.isObserveTransitionActive()) return;
     // Warp launched from OBSERVE: leave cameraMode='observe' for the
     // duration so search-row, mode toggle, and any mode-bound UI don't
     // flicker through navigate. The animate loop branches off the

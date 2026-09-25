@@ -66,7 +66,7 @@ no `color` to resolve — `materialColor` would silently fall back to
 
 A fat line (`Line2` / `Line2NodeMaterial`) cannot be built this way — its
 fragment stage is three's own segment coverage, which `fragmentNode` would
-replace. That one is § The fat stroke keeps three's fragment.
+replace. That one is [The fat stroke keeps three's fragment](#the-fat-stroke-keeps-threes-fragment).
 
 ## The fat stroke keeps three's fragment
 

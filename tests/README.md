@@ -88,7 +88,7 @@ node-import-boundary.test.ts
                          data/ off disk takes the `-fixture` suffix and
                          is exempt by it; a type-only import of one still
                          crosses, since it erases before the bundler
-                         runs. § Node import boundary below carries the
+                         runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
@@ -171,7 +171,7 @@ tsl-standin-filters.test.ts
                          onto the node afterwards cannot undo. Every
                          construction under src/ must state its pair
                          (/src/client/webgpu/solar-system/README.md#a-stand-ins-filters);
-                         § TSL stand-in filters below
+                         README.md#tsl-stand-in-filters below
                          carries the scan's one limit.
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
@@ -208,7 +208,10 @@ belong here.
 **What a pointer is.** One token, `<path>.md#<slug>`: a path ending
 `.md`, then `#`, then a GitHub heading slug. Markdown writes it as a link
 target, `[Heading words](<path>.md#<slug>)`, so GitHub and editors can
-follow it; code comments and fenced blocks write the bare token. A pointer
+follow it; code comments and fenced blocks write the bare token. A
+markdown file citing its own section writes `[Heading words](#<slug>)`,
+checked against that file's anchors; inside its fenced blocks it names
+itself instead (`README.md#<slug>`), since a fence renders no link. A pointer
 never wraps across lines — a token split at a slash reads as a shorter path
 and fails to resolve, which is the loud direction. A path after `~` or
 another `/` is not a pointer: the user's global rules and URLs live outside
@@ -225,14 +228,23 @@ is never a heading, and a repeated heading takes `-1`, `-2`), or an explicit
 such an anchor at the start of its line. Matching is exact set membership:
 any rename of a cited heading fails the suite, subtitle and all.
 
-**Bare `§` refs are not pointers.** A `§ 5` or `§ Heading` naming no file
-is invisible to the check. A file followed by `§` is the retired form
-and fails the suite wherever it appears, quoted or wrapped, since the
-resolver cannot see it.
+**The section sign lives only in numbered link text.** Markdown may
+write it as the opening of a link's text before a number —
+`[§ 3.5](#<slug>)` — and nowhere else; code carries none at all.
+Anything the resolver cannot see therefore fails the suite instead of
+rotting: a section named without its file, and a file followed by the
+sign. A section of an outside paper is `Sect. 6.2`; a section of a
+user-level skill or of `~/.claude/CLAUDE.md` is quoted by name. Runtime
+strings (log lines, error messages, test titles) name the concept in
+words; a message that sends its reader to a doc carries the token.
 
 **Scope is git's.** Every tracked or untracked-but-not-ignored file with
-a scanned extension, symlinks excluded (`CLAUDE.md` would double
-`AGENTS.md`). Tracking puts `.claude/skills` in; `.gitignore` keeps
+a scanned extension (or a scanned name, for `.gitignore`), symlinks
+excluded (`CLAUDE.md` would double `AGENTS.md`). Files Git LFS stores
+are out — the pulled survey tables, about 1 GB — so a hand-written
+comment in one (`data/classic-ids/cross_index_corrections.tsv`) is
+unchecked. `data/sid/retirements.tsv` is out because the sid ledger
+guard freezes its existing rows. Tracking puts `.claude/skills` in; `.gitignore` keeps
 `worktrees/` out, so no folder list exists to drift. Untracked files
 count, so a new doc is checked before its first `git add` — and a local
 draft with a broken pointer fails the suite here while CI never sees
@@ -291,9 +303,9 @@ Work every line, then record the findings in the PR body:
   ([The gate becomes the output struct](/src/client/webgpu/hdr/README.md#the-gate-becomes-the-output-struct)).
 - **`NodeMaterial.setupOutput` still wraps the output under `premultipliedAlpha`
   and `fog`, and `buildCode` still tests `isOutputStructNode` on the top-level
-  node** — § Two material flags silently demote the struct, same README.
+  node** — [Two material flags silently demote the struct](/src/client/webgpu/hdr/README.md#two-material-flags-silently-demote-the-struct), same README.
 - **A render target's auto-created depth texture is still `Depth24Plus` under
-  `reversedDepthBuffer`** — § The depth format is requested, not asserted.
+  `reversedDepthBuffer`** — [The depth format is requested, not asserted](/src/client/webgpu/hdr/README.md#the-depth-format-is-requested-not-asserted).
 - **`renderer.backend.device` and `renderer.backend.get(…)`** in
   `src/client/webgpu/timestamps/timestamp-probe.ts`,
   `src/client/webgpu/extinction/extinction-parity.ts` and

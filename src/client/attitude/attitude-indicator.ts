@@ -279,7 +279,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // nothing, so an unselected grid resolves to the focus default.
   let captured: ReferenceFrame | null = null;
   // ORB is neither: it is rebuilt from the live orbit every tick, so what the
-  // flag holds is the choice, not a frame — § Orbit rate.
+  // flag holds is the choice, not a frame — orbit-frame/README.md#orbit-rate.
   let orbitActive = false;
   // Ride the orbit: hold the attitude the ball is showing as the frame turns
   // beneath it, so the camera swings round with the object. ORB only — it is
@@ -299,7 +299,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   const orbitFrame = emptyReferenceFrame();
   // ORB as it stood when the lock last rode it — the whole basis, not just the
   // datum: the plane precesses under a moon and the ride has to carry that
-  // too. § The lock.
+  // too. orbit-frame/README.md#the-lock.
   const riddenFrame = emptyReferenceFrame();
   const rideRotation = new THREE.Quaternion();
   let riding = false;
@@ -426,7 +426,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     ridePoseBy(camera.position, camera.up, pivot, rideRotation);
     // Required: `ridePoseBy` writes only the pose, and nothing re-derives the
     // quaternion every reader takes until the next tick — drop this and the
-    // frame draws through an aim one turn stale. § The lock.
+    // frame draws through an aim one turn stale. orbit-frame/README.md#the-lock.
     camera.lookAt(pivot);
     return true;
   }

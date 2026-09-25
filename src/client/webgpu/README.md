@@ -4,7 +4,7 @@ The renderer the app boots: the capability route, the async
 `WebGPURenderer` boot, what it draws, and the rules a layer lands under
 (output colour space, import boundary, early-z, timestamps). The
 authoring scaffolding it builds *with* is `tsl/`. Only the entry-bundle
-members reach a browser that cannot run it (§ Import boundary).
+members reach a browser that cannot run it ([Import boundary](#import-boundary--nothing-webgpu-in-the-entry-bundle)).
 
 ## Files in this area
 
@@ -13,7 +13,7 @@ src/client/webgpu/
   boot-route.ts (+ test)            resolveBootRoute — gate page or
                                     renderer, off the capability probe and
                                     the gate's dev switch. In the entry
-                                    bundle (§ Import boundary).
+                                    bundle (README.md#import-boundary--nothing-webgpu-in-the-entry-bundle).
   chrome-lines/                     The line overlays' strokes — solid
                                     and dashed, over three's own line
                                     fragment — its own README.
@@ -34,8 +34,7 @@ src/client/webgpu/
                                     uncaptured GPUOutOfMemoryError reports,
                                     fanned out to subscribers — and
                                     allocatesWithinMemory, the scoped
-                                    upload behind uploadTexture (§ Out of
-                                    memory). Imports nothing from three.
+                                    upload behind uploadTexture (README.md#out-of-memory). Imports nothing from three.
   reversed-depth-sort.ts (+ test)   Render-list comparators countering
                                     r185's reversed-depth list reversal;
                                     retire with the three bump.
@@ -70,8 +69,6 @@ src/client/webgpu/
   fresnel-shell/                    The boundary-shell surface shared by
                                     the heliopause and the Local Bubble —
                                     its own README.
-  dust/                             The dust-particle sprite, whose layer
-                                    is shelved — its own README.
   molecular-clouds/                 The cloud absorption raymarch (both
                                     tiers) and the rim shell — its own
                                     README.
@@ -131,14 +128,12 @@ it.
 
 **The whole app.** Every CPU subsystem (catalog, star frame, focus,
 picker, typeahead, URL state, overlays, HUD, render gate) is
-renderer-blind, and the renderer draws the shell's one scene (§ One scene
-per boot) plus the local depth pass, which runs as a single reversed-z
+renderer-blind, and the renderer draws the shell's one scene ([One scene
+per boot](#one-scene-per-boot)) plus the local depth pass, which runs as a single reversed-z
 bracket (K = 1 — [Decision](../local-depth/bracket/README.md#decision--keep-the-pass-collapse-to-k--1)). Every
 layer takes its surfaces from the seam — the subfolders above, one per
 family — and every line overlay takes its stroke from the chrome line seam
-(`../chrome-lines/README.md`). The dust sprite (`dust/`) is built, but its
-layer is shelved at strength 0 so nothing of it is visible without a
-console call. The HDR chain runs through `hdr/` behind the `HdrSeam`
+(`../chrome-lines/README.md`). The HDR chain runs through `hdr/` behind the `HdrSeam`
 interface (`../hdr/hdr-seam.ts`).
 
 ### One scene per boot
@@ -188,7 +183,7 @@ Three tiers, and a new allocation has to pick one:
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, depth funcs remapped, clear inverted, all
 upstream in three r185 — and `trackTimestamp: true` for the `gpu.frame`
-perf row (§ Timestamps). `Depth32Float` is picked automatically for the
+perf row ([Timestamps](#timestamps)). `Depth32Float` is picked automatically for the
 CANVAS only; a render target needs an explicit `FloatType` depth
 texture ([Precision analysis](../local-depth/bracket/README.md#precision-analysis)) — a
 request nothing can confirm landed, [The depth format is requested, not asserted](hdr/README.md#the-depth-format-is-requested-not-asserted).
@@ -226,7 +221,7 @@ correct only because output is pinned to working here. A new clear colour
 owes the same treatment.
 
 Cross-copy caveat: `three/webgpu` is a second bundled copy of three's
-core (§ Import boundary), so app objects built from `'three'` (camera,
+core ([Import boundary](#import-boundary--nothing-webgpu-in-the-entry-bundle)), so app objects built from `'three'` (camera,
 vectors, textures) flow into the WebGPU renderer across copies. three
 dispatches on `.isX` flags rather than instanceof, and the spike ran a
 `'three'`-built LUT texture through both browsers — but treat any
@@ -273,10 +268,10 @@ no WebGPU identifier appears in the entry either way).
 How app data reaches a TSL graph, and what a layer's tests look like,
 is `tsl/README.md`: the
 uniform-node mirror's reference-vs-sync contract and the texture-slot
-exception (§ Shared uniform nodes), the @types/three gaps worth casting
-around (§ TSL typing shim), the 8-vertex-buffer limit and the two ways
-a population answers it (§ Per-instance data), and the three legs a
-layer is covered by (§ TSL test pattern).
+exception ([Shared uniform nodes](tsl/README.md#shared-uniform-nodes)), the @types/three gaps worth casting
+around ([TSL typing shim](tsl/README.md#tsl-typing-shim)), the 8-vertex-buffer limit and the two ways
+a population answers it ([Per-instance data](tsl/README.md#per-instance-data)), and the three legs a
+layer is covered by ([TSL test pattern](tsl/README.md#tsl-test-pattern--what-a-layers-suite-covers)).
 
 ## Early-z — the star layer's depth-honest redesign
 

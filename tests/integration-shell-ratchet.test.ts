@@ -6,7 +6,7 @@ import ts from 'typescript';
 const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
-  'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
+  'adaptation', 'aim', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters',
   'floatingOrigin', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
@@ -22,10 +22,10 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coreMaskEnabled',
-  'dust', 'dustParticleSource', 'dustParticles',
+  'dust',
   'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced',
   'frameCtx', 'glslResidentsChecked',
-  'lastParticleStrength', 'offCatalogRecords', 'passDebugScratch',
+  'offCatalogRecords', 'passDebugScratch',
   'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',
   'starLocalCluster', 'tmpConstellationAbs',
   'trackballSettle', 'webgpuStarLayer',

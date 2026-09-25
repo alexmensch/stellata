@@ -46,7 +46,7 @@ gitignored mirror.
   ([Texture tier selection](/src/client/solar-system/planets/README.md#texture-tier-selection)).
 - **Every rung of a body shares one mean luminance**, measured at build
   from the top rung and shipped in `texture-ladder-generated.ts`. The
-  renderer divides it out of `uSurfaceLuminance` (§ Colour fidelity),
+  renderer divides it out of `uSurfaceLuminance` ([Colour fidelity](#colour-fidelity--index-anchored-calibration)),
   so a per-rung measurement would make each tier swap a brightness step
   on a body whose magnitude is physically pinned.
 - **Uranus has no texture by design** — a featureless cyan spheroid

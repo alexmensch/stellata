@@ -52,6 +52,24 @@ export interface AimControllerDeps {
   getCameraMode: () => CameraMode;
 }
 
+export interface AimClaimGates {
+  isWarpActive: () => boolean;
+  isAimActive: () => boolean;
+  isObserveTransitionActive: () => boolean;
+  cancelUnfocusLerp: () => void;
+  cancelFocusLerp: () => void;
+}
+
+// see ../README.md#the-claim-the-camera-sequence
+export function claimCameraForAim(gates: AimClaimGates): boolean {
+  if (gates.isWarpActive() || gates.isAimActive() || gates.isObserveTransitionActive()) {
+    return false;
+  }
+  gates.cancelUnfocusLerp();
+  gates.cancelFocusLerp();
+  return true;
+}
+
 export class AimController {
   private readonly deps: AimControllerDeps;
   private navigate: NavigateAimState | null = null;

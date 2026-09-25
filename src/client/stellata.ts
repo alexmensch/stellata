@@ -5,13 +5,12 @@ import { createBinarySystemMembership } from './binaries/binary-system-membershi
 import type { ChromeLineMaterials } from './chrome-lines/chrome-line-materials';
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
-import type { DustField, DustParticleData } from './loaders/dust-loader';
+import type { DustField } from './loaders/dust-loader';
 import {
   formatVerifyReports,
   verifyDustChunks,
   type ChunkVerifyReport,
 } from './loaders/dust-voxel-readback';
-import { DustParticleLayer } from './dust/dust-particle-layer';
 import { galacticDiscSceneLayer } from './galactic/galactic-disc';
 import { CoordSpheres } from './galactic/coord-spheres/coord-spheres';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
@@ -53,7 +52,7 @@ import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
 import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
-import { AimController } from './camera/controls/aim-controller';
+import { AimController, claimCameraForAim, type AimClaimGates } from './camera/controls/aim-controller';
 import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
@@ -232,9 +231,6 @@ export class Stellata implements FrameAnchor {
   // — every per-frame write goes through this field, never
   // through a star material's uniforms object.
   private sharedUniforms!: SharedUniforms;
-  // Dust-particle render layer. Currently shelved — see
-  // src/client/star-pipeline/extinction/README.md.
-  private dustParticles!: DustParticleLayer;
 
   // The floating-origin service — worldOffset, the ordered recentre
   // fan-out, and the focal anchor policy (frame/README.md).
@@ -343,6 +339,13 @@ export class Stellata implements FrameAnchor {
   private monochrome = false;
   readonly warp!: WarpController;
   readonly aim!: AimController;
+  private readonly cameraClaim: AimClaimGates = {
+    isWarpActive: () => this.warp.isActive(),
+    isAimActive: () => this.aim.isActive(),
+    isObserveTransitionActive: () => this.observe.isActive(),
+    cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
+    cancelFocusLerp: () => this.focus.cancelFocusLerp(),
+  };
 
   readonly pois!: PoiStore;
   // Canvas pointer input — click FSM (single/double, both modes) and the
@@ -591,11 +594,6 @@ export class Stellata implements FrameAnchor {
     this.offCatalogRecords = this.catalog.onRecordsDecoded(
       () => this.absorbCatalogRecords());
     this.absorbCatalogRecords();
-
-    this.dustParticles = new DustParticleLayer(
-      this.scene,
-      this.webgpu.dustParticleMaterials,
-    );
 
     // Galactic reference layers — disc is always added; grid hides itself
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
@@ -1000,7 +998,7 @@ export class Stellata implements FrameAnchor {
     // Sequencing only, owning nothing — the second such entry, and the last
     // camera WRITE of the frame. Every camera reader is registered below it;
     // the argument for that, and for `static`, is scene/README.md#not-every-entry-owns-a-layer
-    // and § Camera writes, then camera reads.
+    // and scene/README.md#camera-writes-then-camera-reads.
     this.layers.register({
       timeBehaviour: { kind: 'static' },
       contribution: { kind: 'always' },
@@ -1136,12 +1134,6 @@ export class Stellata implements FrameAnchor {
       // disc, so membership has to be this frame's.
       update: () => this.setCoreMaskVisible(this.coreMaskEnabled),
       dispose: () => {},
-    });
-    this.layers.register({
-      // Teardown leg only — the layer is shelved and draws nothing.
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      dispose: () => this.dustParticles.dispose(),
     });
     this.layers.register({
       // Teardown leg only; the per-frame work rides the 'frame' event, so
@@ -1841,45 +1833,6 @@ export class Stellata implements FrameAnchor {
     this.webgpuStarLayer.setCoreMaskVisible(on);
   }
 
-  /** The layer is shelved — see src/client/dust/README.md before
-   *  re-enabling. */
-  attachDustParticles(data: DustParticleData) {
-    this.renderGate.invalidate('attach:dustParticles');
-    this.dustParticles.attach(data);
-  }
-
-  /** Register a lazy fetch for particles.bin. Invoked (once) on the first
-   *  setParticleStrength(>0), so the shelved particle layer costs no wire
-   *  bytes on loads that never opt in. */
-  setDustParticleSource(source: () => Promise<DustParticleData | null>) {
-    this.dustParticleSource = source;
-  }
-
-  private dustParticleSource: (() => Promise<DustParticleData | null>) | null = null;
-  private lastParticleStrength = 0;
-
-  /** User-facing dust-particle visibility (`stellata.setParticleStrength`
-   *  console knob). 0 = hidden (default); higher = stronger additive
-   *  contribution. First call above 0 triggers the lazy particles.bin
-   *  fetch when a source is registered; the requested strength is
-   *  re-applied once the mesh attaches. */
-  setParticleStrength(x: number) {
-    this.lastParticleStrength = Math.max(0, x);
-    if (x > 0 && this.dustParticleSource !== null) {
-      const source = this.dustParticleSource;
-      this.dustParticleSource = null;
-      void source().then((data) => {
-        if (data === null || this.disposed) return;
-        this.dustParticles.attach(data);
-        this.dustParticles.setStrength(this.lastParticleStrength);
-        this.renderGate.invalidate('dust-particles:loaded');
-      });
-    }
-    this.dustParticles.setStrength(x);
-    this.renderGate.invalidate('dust-particles:strength');
-  }
-
-
   // Read-only view of the local-frame star positions, bound to the GPU
   // iPosition attribute. Overlays should project through this rather than
   // catalog.positions so their math runs in the same frame as the camera.
@@ -1952,7 +1905,6 @@ export class Stellata implements FrameAnchor {
   // dominate from the user's current vantage, even when the user has
   // travelled deep into 3D space.
   aimAtConstellation(conIndex: number) {
-    if (!this.claimCameraForAim()) return;
     const cons = this.catalog.constellations;
     const lines = conIndex >= 0 && conIndex < cons.length ? cons[conIndex].lines : undefined;
     if (!lines || lines.length === 0) return;
@@ -1997,6 +1949,7 @@ export class Stellata implements FrameAnchor {
 
     const dir = new THREE.Vector3().subVectors(c, t);
     if (dir.lengthSq() < 1e-6) return; // aim point coincides with target
+    if (!claimCameraForAim(this.cameraClaim)) return;
     dir.normalize();
 
     const r = this.camera.position.distanceTo(t);
@@ -2015,14 +1968,9 @@ export class Stellata implements FrameAnchor {
    * the quaternion rotates. Called by the Sol / GC label click handlers,
    * the search typeahead, the distance-vector label, and the POI overlay.
    * A caller holding a direction rather than an object wants `aimAlong`.
-   *
-   * No-ops during warp, mid-aim, focus-lerp, or observe-transition. The
-   * actual slerp + controls.enabled / observeControls handoff lives in
-   * `AimController`; this dispatcher owns the composition-layer busy
-   * gates the controller doesn't see.
    */
   aimAt(pointLocal: THREE.Vector3) {
-    if (!this.claimCameraForAim()) return;
+    if (!claimCameraForAim(this.cameraClaim)) return;
     this.aim.aimAt(pointLocal);
   }
 
@@ -2035,19 +1983,8 @@ export class Stellata implements FrameAnchor {
    * Shares `aimAt`'s composition-layer busy gates.
    */
   aimAlong(dirLocal: THREE.Vector3) {
-    if (!this.claimCameraForAim()) return;
+    if (!claimCameraForAim(this.cameraClaim)) return;
     this.aim.aimAlong(dirLocal);
-  }
-
-  /** Take the camera for an aim, reporting whether it was free: false while
-   *  warp, another aim, or an observe transition owns it. Cancels the focus
-   *  lerps on the way through, so a granted claim hands the camera over with
-   *  nothing else still driving it. */
-  private claimCameraForAim(): boolean {
-    if (this.warp.isActive() || this.aim.isActive()) return false;
-    this.focus.cancelUnfocusLerp();
-    this.focus.cancelFocusLerp();
-    return !this.observe.isActive();
   }
 
   /**
@@ -2060,7 +1997,7 @@ export class Stellata implements FrameAnchor {
    * `AimController`.
    */
   invertView() {
-    if (!this.claimCameraForAim()) return;
+    if (!claimCameraForAim(this.cameraClaim)) return;
     this.aim.invert();
   }
 
@@ -2115,11 +2052,7 @@ export class Stellata implements FrameAnchor {
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getVectorTarget: () => this.focus.getVectorTarget(),
       setVector: (target) => this.focus.setVector(target),
-      isWarpActive: () => this.warp.isActive(),
-      isAimActive: () => this.aim.isActive(),
-      isObserveTransitionActive: () => this.observe.isActive(),
-      cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
-      cancelFocusLerp: () => this.focus.cancelFocusLerp(),
+      ...this.cameraClaim,
       flyTo: (target) => this.focus.flyTo(target),
       setOrbitTarget: (target) => this.focus.setOrbitTarget(target),
       unfocus: () => this.focus.unfocus(),

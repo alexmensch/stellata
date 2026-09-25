@@ -241,11 +241,11 @@ describe('MilkyWay population tints', () => {
   });
 });
 
-// Bland-Hawthorn & Gerhard 2016 § 5.1. The thick disc is for the EXTERNAL
+// Bland-Hawthorn & Gerhard 2016 Sect. 5.1. The thick disc is for the EXTERNAL
 // edge-on view — from Sol it is a small correction, and it is emphatically
 // not a fix for a high-latitude deficit (README.md#density-profiles).
 describe('MilkyWay vertical profile', () => {
-  it('pins the thin/thick split against BHG16 § 5.1', () => {
+  it('pins the thin/thick split against BHG16 Sect. 5.1', () => {
     expect(DISC_SCALE_HEIGHT_PC).toBe(300);
     expect(DISC_THICK_SCALE_HEIGHT_PC).toBe(900);
     expect(DISC_THICK_DENSITY_FRACTION).toBe(0.04);

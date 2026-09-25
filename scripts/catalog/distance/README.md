@@ -40,7 +40,7 @@ scripts/catalog/distance/
   parallax/                       The measured parallax every distance inverts
                                   — the cascade, its two precision constants,
                                   the bound-sibling index, and the two ledgers
-                                  the build commits (§ 6.1 parked rows and the
+                                  the build commits (/docs/catalog-driver.md#61-record-parity parked rows and the
                                   SIMBAD-sourced exclusion list). Its own
                                   README; this file's override stack sits above
                                   it.
@@ -111,7 +111,7 @@ and **`directionOnPm`** is the single call that advances it — once, in
 the rescue cascade's. Only the caller knows which won, so a cascade that
 returned a direction would be returning one advanced on a motion the row may
 not keep. That single call site is what keeps the position and the velocity
-reading one motion (§ The proper-motion rescue cascade).
+reading one motion ([The proper-motion rescue cascade](#the-proper-motion-rescue-cascade)).
 
 | Tier | Epoch of the position it reads |
 |---|---|
@@ -145,7 +145,7 @@ of arcsec. The propagation formula itself (PM sign / cos δ /
 Δt-direction) is exercised by the 24.75-yr HIP2 tier and pinned
 independently against SIMBAD J2000 in `direction-cascade.test.ts`.
 
-**§ 5's validation-independence rule has nothing to exclude here.** It
+**[§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s validation-independence rule has nothing to exclude here.** It
 bites where a SIMBAD tier and a SIMBAD-based validator meet the same
 field, and no validator reads a position: `simbad_sample.tsv` carries
 `ra` / `dec` / `pmra` / `pmdec` columns, but `validate-simbad-sample.ts`
@@ -182,8 +182,8 @@ the same `directionOnPm` every tier's own PM goes through, so no row tracks a
 rate from a place its tier left stale. Only the 3 Tycho-2 rows move (2.337″ /
 0.149″ / 0.109″); the 36 Gaia rows are native J2016.0 and the advance is a
 zero-Δt no-op. [The rescued motion advances the position too](pm-rescue/README.md#the-rescued-motion-advances-the-position-too)
-carries the check that says it lands right, and § Whether the rescuing
-source should supply the position too records why it does not.
+carries the check that says it lands right, and [Whether the rescuing
+source should supply the position too](pm-rescue/README.md#whether-the-rescuing-source-should-supply-the-position-too--no) records why it does not.
 
 `velocityVia` credits the catalogue rather than the route to it, so
 `velocityTycho2Pm` **43** counts this cascade's 5 rows alongside the
@@ -198,7 +198,7 @@ for the physical rationale; the
 diagram below is the build-side view:
 
 ```
-1000 / resolveParallax(...)          the § 5 parallax cascade — parallax/
+1000 / resolveParallax(...)          the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers parallax cascade — parallax/
    │                                   README.md. No owned parallax parks the
    │                                   row: it builds no record at all.
    ▼
@@ -214,7 +214,7 @@ diagram below is the build-side view:
 [ Layer 3: MAX_DIST_PC = 50,000 gate ]   drops anything still beyond LMC
    │
    ▼
-dist × cascade direction (§ Direction resolution) → `public/catalog.bin` xyz
+dist × cascade direction (README.md#direction-resolution) → `public/catalog.bin` xyz
 ```
 
 **The stack's input is a parallax this build pulled, and so is its gate.**
@@ -228,7 +228,7 @@ LMC layer an `LmcKinematicVerdict` — and absmag is recomputed from the
 settled distance afterwards, because skipping that places the star at
 the new distance but lights it at the old one, breaking the disc/glow
 size chain in the renderer. Position is assembled afterwards as
-`direction × dist` (§ Direction resolution), so the overrides carry
+`direction × dist` ([Direction resolution](#direction-resolution)), so the overrides carry
 no xyz. Both override helpers (`applyBailerJonesOverride`,
 `applyLmcKinematicOverride`) live in `../record/catalog-pure.ts` so the algebra
 is testable in isolation (`../record/catalog-pure.test.ts`).
@@ -275,7 +275,7 @@ the only one a given layer needs — a layer keyed on proper motion or
 cross-match coverage enumerates that dimension too. The rule is to name
 the dimensions the gate depends on and count them.
 
-`distance-regression-check.ts` (§ Post-build distance-regression check)
+`distance-regression-check.ts` ([Post-build distance-regression check](#post-build-distance-regression-check))
 is the after-the-fact detector for the same class of bug; this section is
 the write-time complement.
 
@@ -301,7 +301,7 @@ al. 2021 (CDS I/352). The pipeline:
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
    in `../build-catalog-expected.json`, and the **shortfall between the two
-   is pinned at zero** as `bjEligibleNotPulled` — § Scope-derived pulls
+   is pinned at zero** as `bjEligibleNotPulled` — [Scope-derived pulls](#scope-derived-pulls--why-the-zero-pin-is-here)
    below.
 5. The override also rescues stars the Layer 3 cap would otherwise drop:
    catastrophic-parallax-inversion supergiants whose Bayesian

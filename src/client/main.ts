@@ -1,4 +1,4 @@
-import { DustField, loadDustManifest, loadDustParticles } from './loaders/dust-loader';
+import { DustField, loadDustManifest } from './loaders/dust-loader';
 import { loadBinaries } from './binaries/binaries-loader';
 import { loadBoundaries } from './constellation-boundaries/boundary-artifact-loader';
 import { createMilkyWayLabel } from './local-group/local-group';
@@ -218,12 +218,6 @@ async function main() {
       }
       const dust = new DustField(stellata.renderer, dustBase, manifest);
       stellata.attachDust(dust);
-      // Particles are lazy — the shelved layer's ~800 KiB fetch fires
-      // only on the first console opt-in (setParticleStrength > 0).
-      if (manifest.particles) {
-        const particlesMeta = manifest.particles;
-        stellata.setDustParticleSource(() => loadDustParticles(dustBase, particlesMeta));
-      }
       await dust.startLoading();
     })();
 
@@ -324,7 +318,7 @@ async function main() {
     awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
     // Out of the root stacking context and into the instrument stack —
-    // styles.css § .loading.
+    // `.loading` in styles.css.
     document.getElementById('bottom-left-stack')!.prepend(loading);
     document.body.classList.add('scene-live');
     // README.md#boot-in-two-waves the dead-control rule.

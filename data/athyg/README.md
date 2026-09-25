@@ -8,13 +8,12 @@ HIP, HD, HR, or Gliese).
 
 ```
 athyg_33_classic_ids.csv   ~64 MB, LFS. Upstream. ~317k rows. NOT a build
-                           input — see § Consumed by.
+                           input — see README.md#consumed-by.
 inherited-spine.tsv        ~40 MB, LFS. Generated provenance data: AT-HYG's
-                           merge decisions, frozen — see § The inherited
-                           spine. 313,257 rows.
+                           merge decisions, frozen — see README.md#the-inherited-spine. 313,257 rows.
 stale_gaia_source_ids.tsv  ~1 KB, regular git. Review queue: the 6 spine
                            rows whose gaia_source_id Gaia DR3 publishes no
-                           row for — see § Six DR2 ids in the DR3 column.
+                           row for — see README.md#six-dr2-ids-in-the-dr3-column.
 simbad_sourced_distances.tsv
                            ~2 KB, regular git. The records whose distance
                            came from the cascade's SIMBAD tier, excluded from
@@ -24,7 +23,7 @@ simbad_sourced_distances.tsv
 ```
 
 Three kinds of file: the CSV is frozen **external** data under the policy in
-[`../README.md`](../README.md) § Frozen external data; the spine is a frozen
+`../README.md` [Frozen external data](/data/README.md#frozen-external-data); the spine is a frozen
 **Stellata build artifact** that happens to live beside it; the last three are
 **emitted by every build** and committed so a reviewer and a test can read what
 the build decided. Regenerate them with `pnpm run build:catalog` — never by
@@ -72,9 +71,9 @@ the build driver, which has happened. It has since handed the membership term
 to the primaries-derived manifest, and what it still uniquely supplies is the
 merge decisions behind it — audited against the primaries, with a residual
 carried on AT-HYG's authority alone of zero
-([`scripts/catalog/spine/README.md`](../../scripts/catalog/spine/README.md)
-§ The primaries audit). Contract:
-[`docs/catalog-driver.md`](../../docs/catalog-driver.md) § 3 and § 3.1.
+(`scripts/catalog/spine/README.md`
+[The primaries audit](/scripts/catalog/spine/README.md#the-primaries-audit)). Contract:
+`docs/catalog-driver.md` [§ 3](/docs/catalog-driver.md#3-the-inherited-spine) and [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 Generator,
 column origins, and why nothing regenerates it in CI:
 [`scripts/catalog/spine/README.md`](../../scripts/catalog/spine/README.md).
@@ -91,7 +90,7 @@ AT-HYG did not follow. `stale_gaia_source_ids.tsv` enumerates all six with
 that status, and `scripts/catalog/spine/inherited-spine-guard.test.ts`
 holds the enumeration to what the committed spine and 5p pull actually say.
 
-**The spine's cells stay as they are** — § 3 makes the spine frozen — and the
+**The spine's cells stay as they are** — [§ 3](/docs/catalog-driver.md#3-the-inherited-spine) makes the spine frozen — and the
 manifest derives its own. For the four with a DR3 successor, SIMBAD's object
 carries the record's TYC or GJ under the DR3 id, so the derivation proposes
 the successor and a disposition on `simbad_dr2_object` accepts it
@@ -122,7 +121,7 @@ in: [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-colum
 
 **`build:catalog` does not read it.** `readStars` walks
 `../membership/membership-manifest.tsv`; membership is that file less the
-§ 6.1 parks. Reference epoch J2000.0.
+[§ 6.1](/docs/catalog-driver.md#61-record-parity) parks. Reference epoch J2000.0.
 
 `athyg_33_classic_ids.csv` is **no longer an input to the record build, and no
 refresh script reads it.** It stays committed as the spine's provenance and for

@@ -75,7 +75,7 @@ describe('mergeClassicIdLabels', () => {
 
   // Gl 563.2 A/B: CNS5, SIMBAD and the HIP letter HIP 72509 as B where AT-HYG
   // letters it A. Both sides name exactly one component, so the letters are a
-  // real disagreement and § 4 precedence has to reach it.
+  // real disagreement and the HD-route precedence (/docs/catalog-driver.md#4-how-hd-reaches-gaia) has to reach it.
   it('reads a swapped GJ component letter as a disagreement', () => {
     const records = [record({ gl: 'Gl 563.2A' })];
     const { counts } = merge(records, new Map([[SRC_A, entry({ gj: ['563.2B'] })]]));

@@ -851,10 +851,6 @@
       ]
     }
   ],
-  "particles": {
-    "file": "particles.bin",
-    "count": 50000
-  },
   "zucker": {
     "gridMaxZgr": 0.1346,
     "clouds": [

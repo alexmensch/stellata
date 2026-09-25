@@ -51,8 +51,7 @@ src/client/solar-system/
                                   docs/science-solar-system.md).
   sol-object-sids.ts              SOL_OBJECT_SIDS — hand-written key →
                                   frozen Stellata ID pins (Sun + planets +
-                                  moons + probes). See § Sol-system SID
-                                  pins.
+                                  moons + probes). See README.md#sol-system-sid-pins.
   planet-system-membership.ts     Planet-system implementation of the
                                   kind-generic system-membership contract
                                   (../system-membership/README.md), one

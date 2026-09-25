@@ -147,7 +147,7 @@ precision to the near plane: the probe sits inside it.
 
 **Precondition: this covers standard-depth materials only.** Every
 non-raw material in the main pass currently writes the three.js
-log-depth chunk (MW band, molecular clouds, dust particles, planet
+log-depth chunk (MW band, molecular clouds, planet
 glare, probes), which overwrites projection depth with the ~0.14 AU
 quantum of [Why the main pass cannot do this](../README.md#why-the-main-pass-cannot-do-this) —
 reversed-z does nothing for those. The migration retires that whole

@@ -388,7 +388,7 @@ export const setMwInsideDiscPc = (pc: number): void => { mwInsideDiscPc = pc; };
 
 // Scratch for the ranking helper. Lives at module scope so the per-frame
 // ranking pass allocates zero. One frame handler serves every label
-// family (§ Label engine), so there is no aliasing concern — a second
+// family (README.md#label-engine), so there is no aliasing concern — a second
 // concurrent caller would need its own buffers.
 const tmpProj = /*@__PURE__*/ new THREE.Vector3();
 // The top-N survivors, descending, as two parallel arrays rather than

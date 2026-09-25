@@ -73,7 +73,7 @@ def pull_slices(
     resumes at the first stale output.
 
     VizieR's TAP default MAXREC is ~1e9, so whole-table slices need none of
-    the MAXREC sizing the Gaia sync endpoints demand (README § Gaia TAP);
+    the MAXREC sizing the Gaia sync endpoints demand (/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only);
     the row-count gate is what catches an upstream row loss here.
     """
     force = "--force" in argv

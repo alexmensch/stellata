@@ -13,11 +13,11 @@ it never replaces it.
 
 ## Priority order — stellata readings
 
-- **(2) Resource and performance cost** is § GPU and memory cost below.
+- **(2) Resource and performance cost** is [GPU and memory cost](#gpu-and-memory-cost--scrutinise-every-pr-for-it) below.
 - **(5) Architectural fit**: a diff touching `src/client/stellata.ts` is
   checked against [the integration-shell rule](/AGENTS.md#folder--module-conventions--where-new-code-lands) —
   any new field, tick or module-scope function landing there is a finding.
-- **(7) Plan drift** is § Epic drift below.
+- **(7) Plan drift** is [Epic drift](#epic-drift) below.
 
 ## Getting the diff — the design docs are the folder READMEs
 
@@ -132,7 +132,7 @@ README, and "settled" is spelled SETTLED.
   bullet; reword rather than ship a mangled spec.
 
 A deferred finding's bead goes under whichever epic owns the code
-(`stellata-beads` skill § Choosing the parent epic).
+([Choosing the parent epic](../stellata-beads/SKILL.md#choosing-the-parent-epic) in the `stellata-beads` skill).
 
 ## Mark the PR reviewed once the fixes are on it
 
@@ -143,6 +143,6 @@ a reader of the PR list cannot otherwise tell from a green tick.
 Add it only once every agreed finding is pushed — a finding deferred to a bead
 counts as landed, an unpushed commit does not. A review that ends in approval
 with no changes agreed earns it too; a review whose findings the author has not
-acted on does not. Do not wait on CI for it (§ Never wait on PR CI checks in
+acted on does not. Do not wait on CI for it ("Never wait on PR CI checks" in
 the user-level `~/.claude/CLAUDE.md`), and do not treat it as approval to
 merge, which stays a separate per-PR decision.

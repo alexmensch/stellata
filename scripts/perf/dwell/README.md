@@ -36,14 +36,14 @@ holds the statistic readback at one request per that many rendered frames
 from before the warmup until the restore, through
 `reduction.readbackCadence` ([Latency](/src/client/hdr/exposure/reduction/README.md#latency)).
 Emergent, the rate is whatever the readback's round trip leaves
-it at — 0.25 to 0.975 across the archive — and § Where the frame has two
-classes below is what that costs a median. Four is the rate every clean
+it at — 0.25 to 0.975 across the archive — and [Where the frame has two
+classes](#where-the-frame-has-two-classes-the-gpu-stream-median-follows-the) below is what that costs a median. Four is the rate every clean
 `earth` dwell ran at and the app's own at the Sol default view, so the pin
 holds the frame the archive measured rather than inventing one. It is a cap,
 never a floor: a vantage whose round trip outruns the cadence requests less
 often, which is sound and recorded. A rate ABOVE the cap cannot happen if
 the lever took, so one is read as the lever not having taken and fails the
-scenario (§ Five checks below).
+scenario ([Five checks](#five-checks-each-able-to-fail) below).
 
 **Several cadences make the run a PROBE, not a comparison.**
 `--readback-every 4,1,2` visits the scenario once per value, and since every
@@ -83,7 +83,7 @@ of work on a 120 Hz panel reads 16.67, still the display's number. A clamped
 dwell is refused by `--baseline` and makes a sweep inconclusive.
 
 **The period is the one the run measured, not 60 Hz assumed.** The rAF probe
-taken after settle ([What a run does,](../README.md#what-a-run-does) step 4) is the
+taken after settle ([What a run does](../README.md#what-a-run-does), step 4) is the
 display's cadence with the gate idle, and
 the clamp test is judged against it: 16.67 ms on a 60 Hz panel, 8.33 on a
 120 Hz one. Headless Chromium's virtual display idles at 16.70 ms (59.9 Hz),
@@ -186,7 +186,7 @@ stop. The **counters** are what says there are two classes to find:
 `renderPasses` min against max. Without that gate a vantage that merely
 wanders takes a cut of its own, `lg` on every dwell it has ever recorded.
 What the pin then holds, and what the band is built from:
-[The compute row,](../pins/README.md#the-compute-row) last.
+[The compute row](../pins/README.md#the-compute-row), last.
 
 `READBACK_TOLERANCE` (25 %) bounds the rate drift, clear of the 7 % spread
 `earth` holds across 25 cold runs. **The guard is gated on the frame being
@@ -241,7 +241,7 @@ the pass-roster module over the dev server (`PASS_TOGGLES_MODULE_URL`), never
 a second spelling of it; a pass not active at the vantage fails the scenario
 rather than round-tripping nothing under the pass's name.
 
-**Five checks, each able to fail.** A hold already live when the dwell starts
+<a id="five-checks-each-able-to-fail"></a>**Five checks, each able to fail.** A hold already live when the dwell starts
 fails it — settle requires an unheld gate, and the debug panel takes one,
 whose per-tick DOM writes would sit inside a wall-clock dwell. A clock that
 was not still stopped at the end of the timed frames fails it: the frames

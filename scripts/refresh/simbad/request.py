@@ -32,7 +32,7 @@ class CorroborationVerdicts:
     the asking id itself. `uncorroborated` is "nothing published that could
     contradict it", which admits an object holding only a differing
     EARLIER-release id as well as one holding no Gaia id at all: under
-    § The corroboration rule, only DR3 contradicts."""
+    README.md#the-corroboration-rule, only DR3 contradicts."""
 
     corroborated: int = 0
     vetoed: int = 0

@@ -42,8 +42,8 @@ interleaved buffers counted once) and every texture reachable from a
 material — including the ones hanging off `ShaderMaterial.uniforms`,
 which is how the dust `Data3DTexture`, the cloud bricks and the
 extinction A_V target are found by the walk. A TSL material
-holds no `uniforms` slot, so none of that reaches a ported layer — § Re-running
-it after the WebGPU port.
+holds no `uniforms` slot, so none of that reaches a ported layer — re-run it
+after the WebGPU port.
 
 A row's `basis` says how it was priced:
 
@@ -85,7 +85,7 @@ opposite things:
 target lands in the table because the star pipeline reads it through a
 uniform; the HDR MRT's statistic attachment and its depth buffer are
 sampled by nothing and appear in neither table. Don't read the walk's
-total as the whole picture — § below prices the rest by hand, and
+total as the whole picture — [Pricing the off-scene targets by hand](#pricing-the-off-scene-targets-by-hand) prices the rest by hand, and
 `stellata-8cg.42` replaces that with a declaration on the seams once the
 WebGPU ports land.
 

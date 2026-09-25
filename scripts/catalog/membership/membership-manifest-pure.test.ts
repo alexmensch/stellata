@@ -592,7 +592,7 @@ describe('buildMembership — the additions', () => {
     expect(result.rows.filter((r) => r.hip === '30')).toHaveLength(1);
   });
 
-  it('ledgers each admitted row under the § 6.1 reason its designation earns', () => {
+  it('ledgers each admitted row under the record-parity reason its designation earns', () => {
     const reasons = new Map(result.ledger.map((l) => [manifestKey(l), l.reason]));
     expect(reasons.get(manifestKey(byTyc.get('2-1-1')!))).toBe('admitted:hd_link_gap');
     expect(reasons.get(manifestKey(byTyc.get('2-2-1')!))).toBe('admitted:hd_omitted');
@@ -671,7 +671,7 @@ describe('buildMembership — the additions', () => {
     expect(result.counts.additionSourceShared).toBe(1);
   });
 
-  // § 4 gives the HD route label authority; the source follows it too.
+  // The HD route (/docs/catalog-driver.md#4-how-hd-reaches-gaia) carries label authority; the source follows it too.
   it("takes the TYC route's source where the HIP route binds another", () => {
     expect(byTyc.get('3-3-1')).toMatchObject({ hip: '50', gaia_source_id: '1313' });
     expect(result.counts.additionRouteSourceDisagree).toBe(1);
@@ -698,7 +698,7 @@ describe('buildMembership — the additions', () => {
   });
 });
 
-// § 6.1 forbids a silent drop, and admission reads one item per cohort: a
+// Record parity (/docs/catalog-driver.md#61-record-parity) forbids a silent drop, and admission reads one item per cohort: a
 // group holding two would leave a primary's row in no manifest row and on no
 // ledger line. Two IV/25 TYCs naming one HIP is the shape that gets there.
 describe('a group holding two items of one cohort', () => {

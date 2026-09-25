@@ -30,7 +30,7 @@ export function focalChainRelationSet(
 
 /** The innermost pair `starIdx` is itself a member of, or `NO_PARENT` when
  *  it is a member of none. Ancestors are excluded, unlike
- *  `focalChainRelationSet` — README § Which pair a star rides. */
+ *  `focalChainRelationSet` — README.md#which-pair-a-star-rides. */
 export function innermostRelationOf(
   binaries: BinariesData,
   starIdx: number,

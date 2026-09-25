@@ -10,7 +10,7 @@ close-approach focused star sitting at exactly NDC origin.
 
 - `focus-controller.ts` (+ test) — the FSM. Owns the focused object
   and the distance-vector destination (one `Target` slot each — see
-  § Focus state), `cameraMode`, `focusedPlanetSystem`, the focus-park
+  [Focus state](#focus-state)), `cameraMode`, `focusedPlanetSystem`, the focus-park
   lerp state, pin-engage geometry, and the generic `makeFocusTarget` /
   `currentFocusTarget` builders. Canonical home for
   `GLOBAL_MIN_DIST_PC` + `PIN_ENGAGE_THRESHOLD_SQ_PC`.
@@ -19,7 +19,7 @@ close-approach focused star sitting at exactly NDC origin.
 - `focus-target.ts` (+ test) — the `Target` sum type (`{kind, idx}`,
   kind = `'star' | 'cloud' | 'lg' | 'planet' | 'shell' | 'probe'`), the
   `KIND_TRAITS` hard/moving declarations, the `FocusableProviders`
-  registry contract (§ FocusableProviders), and the `FocusTarget`
+  registry contract ([FocusableProviders](#focusableproviders--the-kind-agnostic-geometry-registry)), and the `FocusTarget`
   camera-transition view built generically from it, so warp / overlays /
   arrival math can read positions and emit events without knowing the
   kind. A planet Target's idx is the PlanetBodyField flat global
@@ -215,7 +215,7 @@ leg runs, differing only in its `bidirectional` flag — so a fourth hard
 kind supplies only its provider legs and traits row. The one star-only
 branch: the star's target snap runs through `setFocus`, whose float64
 live-position accessor (baseline + orbital perturbation) the provider's
-buffer-read leg can't replace — see § Pin-to-center. Displacing a
+buffer-read leg can't replace — see [Pin-to-center](#pin-to-center-upinfocustocenter). Displacing a
 non-star hard focus — `setFocus(null)`, a soft kind, or Esc — runs the
 same detach side effects a star unfocus does (floor clamp to
 `min(GLOBAL_MIN_DIST_PC, eye)`, planet-system detach).
@@ -308,8 +308,10 @@ and draws throughout every lerp (`../../constellation-figure/README.md`).
 
 `cancelFocusLerp` is wired at every site that already calls
 `cancelUnfocusLerp` (`focusHardTarget`, `flyTo`, `unfocus`,
-`startWarp`, the shell's `claimCameraForAim`, `onPointerUp`) so a
-follow-up camera-changing action can't race the in-flight lerp.
+`startWarp`, `claimCameraForAim`, `onPointerUp`) so a follow-up
+camera-changing action can't race the in-flight lerp. Where each site
+cancels relative to its refusals is
+[The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence).
 
 The per-frame motion (camera position + orientation) delegates to
 `../arrival/camera-motion.ts:tickArrival` so focus-park, warp Fly,
@@ -371,7 +373,7 @@ silently disengages the pin. Residual sources that have bitten this:
    `worldOffset` put (no `recenterOrigin(0,0,0)`).
 4. **Orbital drift of a binary focal.** The focal star moves along its
    orbit each frame; a static target would fall off it. The focal-frame
-   ride (§ binaries/README) translates `controls.target` by the star's
+   ride ([`binaries/README.md`](../../binaries/README.md)) translates `controls.target` by the star's
    per-frame perturbation so target stays on the star.
 5. **Space-motion re-advance under time scrubbing.** A scrubbed clock
    re-runs the epoch-advance pass, moving the focal star's baseline

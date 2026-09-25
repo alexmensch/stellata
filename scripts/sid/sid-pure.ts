@@ -76,7 +76,7 @@ export interface StarDesignationFields {
    *  divergence `catalog-designations.ts` exists to prevent. */
   hdAlt: readonly number[];
   hrAlt: readonly number[];
-  /** Raw AT-HYG Gliese/GJ cell; whitespace collapses to `_` per § 3. */
+  /** Raw AT-HYG Gliese/GJ cell; whitespace collapses to `_` per /docs/sid.md#3-designation-namespaces. */
   gl: string | null;
   gaiaSourceId: string | null;
   /** Synthetic key WITH its `synth-` prefix, or null. */
@@ -369,7 +369,7 @@ export function validateLedger(rows: LedgerRow[]): string[] {
       errors.push(`sid ${row.sid} at row ${i + 1}: sids must be dense and ascending from 1`);
     }
     if (!isValidDesignation(row.canonicalKey)) {
-      errors.push(`sid ${row.sid}: canonical key "${row.canonicalKey}" fails the § 3 grammar`);
+      errors.push(`sid ${row.sid}: canonical key "${row.canonicalKey}" fails the designation grammar`);
     } else {
       try {
         namespaceRank(parseDesignation(row.canonicalKey).ns);

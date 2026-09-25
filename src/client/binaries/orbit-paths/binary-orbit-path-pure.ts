@@ -24,8 +24,8 @@ export function keplerChainRelationIdxs(
 
 /** Sample one pair's orbit over a full period into the two members'
  *  barycentric ellipses — ICRS pc offsets from the common barycentre,
- *  primary `−q·R(φ)` / secondary `+(1−q)·R(φ)`. See README § Binary
- *  orbit paths. */
+ *  primary `−q·R(φ)` / secondary `+(1−q)·R(φ)`. See
+ *  README.md#binary-orbit-paths. */
 export function buildBinaryOrbitRingPoints(
   elements: OrbitalElements,
   tier: 1 | 2,

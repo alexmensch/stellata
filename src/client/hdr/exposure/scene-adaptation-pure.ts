@@ -17,7 +17,7 @@ export const L_TARGET = 0.89;
 /** Reference coverage — the frame fraction a body lands exactly on
  *  `L_TARGET` at. Not free: it is the park coverage, derived from
  *  `PLANET_PARK_FILL_FRACTION` on the calibration viewport's minor axis
- *  (§ 3.1 carries the derivation). */
+ *  (/docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut carries the derivation). */
 export const ADAPT_REF_COVERAGE = 0.0685;
 
 /** Adaptation anchor — `L̄` at which the perception branch's cut is
@@ -32,8 +32,8 @@ export const ADAPT_PIN_COVERAGE = ADAPT_REF_COVERAGE;
 
 /** Coverage at or below which the perception branch governs alone: the
  *  smallest framing the EV trim can still pull back to `L_TARGET`
- *  (§ 3.2). Under it a body is past the trim's reach and reads as the
- *  brilliant dot § 3.2 says it should. */
+ *  (/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix). Under it a body is past the trim's reach and reads as the
+ *  brilliant dot that section says it should. */
 export const ADAPT_DOT_COVERAGE = ADAPT_REF_COVERAGE / 2 ** EV_MAX_STOPS;
 
 /** Time constant of the slew limit on the **applied** cut, in real
@@ -243,7 +243,7 @@ export function loneBodyStatistic(coverage: number, discMeanL: number): FrameSta
 /** Disc-mean luminance a body settles at — `L_TARGET` wherever the pin
  *  governs, `L_ADAPT / f` under the perception branch, and clipped
  *  wherever the display floor binds, which is why the disc's own
- *  luminance is an input (§ 3.2's sensitivity analysis). */
+ *  luminance is an input (the model-limits sensitivity analysis, /docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix). */
 export function adaptedDiscMeanL(
   coverage: number,
   discMeanL: number,

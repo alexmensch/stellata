@@ -42,8 +42,8 @@ would silently make the next `hold()` a no-op.
    idempotent.
 2. **Continuous conditions**, recomputed each tick by `animate()`: a
    camera transition in flight, or a `'realtime'` layer asking for
-   wall-clock frames (there are none — § Declaring how time moves a
-   layer in `../scene/README.md`). **A running clock is NOT one of
+   wall-clock frames (there are none — [Declaring how time moves a
+   layer](/src/client/scene/README.md#declaring-how-time-moves-a-layer) in `../scene/README.md`). **A running clock is NOT one of
    them**: it schedules through the cadence below instead, which is what
    lets the out-of-the-box live-1× view idle. The transition half is
    **not re-derived** — it falls out of the controller dispatch chain
@@ -62,8 +62,8 @@ would silently make the next `hold()` a no-op.
 
 2b. **The clock cadence**: the running clock has outrun the sim-time
    budget the last rendered frame computed. A cadence frame renders THIS
-   tick without stamping activity, so no settle tail rides it (§ The
-   clock cadence).
+   tick without stamping activity, so no settle tail rides it ([The
+   clock cadence](#the-clock-cadence)).
 3. <a id="pose-change"></a>**Pose change**: a 14-slot exact-equality snapshot — camera position,
    quaternion, fov, `controls.target`, `worldOffset`. Catches every
    camera mutation whatever its source (trackball damping, observe
@@ -119,7 +119,7 @@ frames, every one of those frames re-measures, and the measurement's own
 noise re-armed the tail before it could expire — so a static view at a
 vantage with any real cut rendered continuously, reporting `TAIL NEVER
 EXPIRES` with nothing stamping it. That is the focal ride's shape by
-another route (§ The focal ride), and the same lesson: a wake that
+another route ([The focal ride](#the-focal-ride)), and the same lesson: a wake that
 produces the frames that produce the next wake never settles.
 
 `exposureCutMoved` therefore compares against `CADENCE_JND_MAG` — the
@@ -146,7 +146,7 @@ carry a threshold below the measurement's own noise.
 - Canvas `pointerdown/move/up/cancel` + `wheel`, window `keydown`
   (`attachDom`) — hover, drags, and shortcuts repaint within one tick.
 - Resize (`onResize`).
-- The `attach*` family (dust, binaries, dust particles, constellation
+- The `attach*` family (dust, binaries, constellation
   boundaries) and each streamed dust voxel chunk landing.
 - An applied adaptation `dm` that moved this frame (see above).
 - `KindContext.requestRender(reason)` — the seam for a kind module's own
@@ -243,8 +243,8 @@ values, and those derivations are not exact. Three of them existed:
 `TrackballControls.update()` rebuilds `position` from `target + eye` and
 re-derives orientation with `lookAt(target)` (navigate), and the OBSERVE
 look pin recomputed `target = position + forward` every frame. Each landed
-a few ULP from what the ride wrote, every frame, forever — the § Pose
-change failure class, let in by this very paragraph. With a moving focus
+a few ULP from what the ride wrote, every frame, forever — the [Pose
+change](#pose-change) failure class, let in by this very paragraph. With a moving focus
 and the clock running the gate woke on 28–55 % of ticks.
 
 The fix is at the derivations, not here: the navigate pair is floored and

@@ -65,7 +65,7 @@ carries no occlusion test of its own.
 What this bounds is the **direct beam**: the shadow cylinder IS the airless
 terminator, and no sample inside it sees the host, full stop. Light past that
 line is the atmosphere's own doing, and it has two routes — the shell above the
-shadow edge, lit out to `acos(1/r)` for a sample at radius r, and § Skylight
+shadow edge, lit out to `acos(1/r)` for a sample at radius r, and [Skylight](#skylight--the-lit-air-scattering-light-back-down)
 onto the ground below. So the *illuminated* terminator is soft and reaches
 further than the geometric one; the *lit* one is exact and does not.
 
@@ -184,7 +184,7 @@ Titan's noon ground light **2.8× the ~10 % of incident Huygens/DISR measured**
 (Tomasko et al. 2008). Same direction, same cause: the isotropic-redistribution
 ½ and ¼ stop being upper bounds once τ ≫ 1, and nothing here loses photons back
 to space. Titan's is invisible in the render — its own haze extincts its ground
-to nothing (⟨μ·T_view⟩ = 0.006, § Flux bookkeeping) — but it is the number to
+to nothing (⟨μ·T_view⟩ = 0.006, [Flux bookkeeping](#flux-bookkeeping)) — but it is the number to
 beat if this term ever gets the two-stream treatment τ ≈ 5 wants. Note too that
 `TWILIGHT_TAIL_AMP` is an Earth fit carried unchanged: the *reach* is in scale
 heights and transfers, the amplitude is the multiple-scatter share at Earth's
@@ -196,7 +196,7 @@ p/π relation above means it needs no extra factor. The twilight band reads
 when the adaptation follows a night-side-dominated frame; the day-side term
 is a ~9 % lift under the direct sun. `Planet.terminatorSoftness` is the older
 by-eye widening of the Lambert edge and is deliberately untouched here
-([Planet mesh LOD,](../planets/README.md#planet-mesh-lod) the **Lighting** bullet).
+([Planet mesh LOD](../planets/README.md#planet-mesh-lod), the **Lighting** bullet).
 
 <a id="flux-bookkeeping"></a>**Flux bookkeeping.** `uSurfaceLuminance` divides out the disc mean of
 everything the shader multiplies on top so the disc integrates to the body's
@@ -265,7 +265,7 @@ irradiance spread over 4π sr — and the radiance a view path collects from a
 uniform source is source × emergent opacity, which is exactly this term's
 shape with weight 1/(4π). It is the same isotropic-redistribution
 approximation the skylight terminator anchor's ¼ comes from (¼ = π·(1/4π),
-the hemispheric down-flux of that source), so § Skylight and this fill are one
+the hemispheric down-flux of that source), so [Skylight](#skylight--the-lit-air-scattering-light-back-down) and this fill are one
 model pointed at the ground and at the eye. The eye-approved slider value was
 0.0667 — 19 % under the derivation, which is how close the by-eye pass had
 already landed.
@@ -287,7 +287,7 @@ albedo, because scattered sunlight doesn't depend on the ground's
 reflectance. The surface multiplies a *different* scalar that does
 (`uSurfaceLuminance`), and in the transparent limit the two sit **exactly p/π
 apart** (`mesh-surface-pure.test.ts`); at real depths the surface scalar also
-carries the flux share the airlight has taken (§ Flux bookkeeping), which is
+carries the flux share the airlight has taken ([Flux bookkeeping](#flux-bookkeeping)), which is
 the general form of the same statement. That is what closes the calibration:
 the integrator's `∫β_s·P·T dl` is already a dimensionless fraction of incident
 irradiance, so the product IS the physical airlight radiance and the only
@@ -318,7 +318,7 @@ Three sources, three fixes.
    lit-fraction (`litSum / ATMO_N_VIEW`) and the single-scatter edge in
    `1/ATMO_N_VIEW` increments, drawing ~`ATMO_N_VIEW` brightness contours across
    the terminator that beat against the jitter into the dominant moiré. The
-   analytic shadow span (§ The model) removes them at the root: coverage
+   analytic shadow span ([The model](#the-model)) removes them at the root: coverage
    weights make `litSum` **continuous in the ray's geometry**, so there is no
    quantum to contour. This replaced a fixed `SHADOW_SOFT = 0.15` planet-radius
    smoothing of the shadow edge — 956 km on Earth, 120 scale heights, which hid
@@ -336,7 +336,7 @@ Every real image (Blue Marble included) is exposure- and
 white-balance-processed, so pixel-matching is a trap. Instead:
 
 - The drawn *disc* renders at the Mallama-correct apparent magnitude — surface,
-  skylight and airlight together, § Flux bookkeeping — so absolute brightness is
+  skylight and airlight together, [Flux bookkeeping](#flux-bookkeeping) — so absolute brightness is
   anchored and the optical depths only move *hue*, limb behaviour, and how the
   flux splits between ground and air. Titan is the exception: its airlight
   alone overshoots, so raising its τ raises its total brightness.
@@ -362,7 +362,7 @@ intensity) existed while the depths were by-eye, when the workflow was "read a
 good value off the slider and bake it into the table". With every row a
 published measurement that inverts: a value disagreeing with the render is a
 question for the source or the row, never for a global multiplier over all four
-bodies. They were also a hazard — § Flux bookkeeping normalises what the shader
+bodies. They were also a hazard — [Flux bookkeeping](#flux-bookkeeping) normalises what the shader
 emits, so a slider silently moved the calibration it was meant to test.
 Generally: **perceptual knobs get sliders, derived physics doesn't.** Star-disc
 sizing is legitimately by eye; τ_R at 450 nm is not.
@@ -398,7 +398,7 @@ thickness, which is what an atmosphere does. (Near: polar thickness comes out
 the 21 % error being fixed here.) The map is linear about the centre,
 so ray parameters are unchanged and only directions need renormalising. **The
 sun direction has to be deflattened too** or the shadow cylinder tilts against
-the body casting it; **`sunCos` for § Skylight must not be**, since solar
+the body casting it; **`sunCos` for [Skylight](#skylight--the-lit-air-scattering-light-back-down) must not be**, since solar
 depression is measured against the true local horizontal.
 
 The shell MESH stays a real-space sphere: it equals the deflattened shell at the

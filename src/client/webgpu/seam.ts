@@ -10,7 +10,6 @@ import type {
   PlanetGlareSources,
 } from '../solar-system/planets/planet-body-field';
 import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
-import type { DustParticleMaterials } from '../dust/dust-particle-layer';
 import type { CloudMaterials } from '../molecular-clouds/cloud-materials';
 import type { LgEmissionMaterials } from '../local-group/emission/lg-emission-materials';
 import type { BandMaterials } from '../milkyway/band-materials';
@@ -139,9 +138,6 @@ export interface WebGpuSeam {
   /** The TSL boundary-shell surface (heliopause, Local Bubble). Each
    *  consumer builds its own — colour, limb alpha and blend are per-shell. */
   readonly shellMaterials: ShellMaterials;
-  /** Its six shared slots come off the uniform-node mirror, so the factory
-   *  takes no uniform argument of its own (`dust/tsl-dust-materials.ts`). */
-  readonly dustParticleMaterials: DustParticleMaterials;
   /** The TSL molecular-cloud surfaces: one absorption material per cloud
    *  (the traced / analytic tier is compile-time, so they cannot share) and
    *  one rim shell for all of them. */

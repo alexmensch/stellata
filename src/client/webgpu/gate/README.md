@@ -17,7 +17,7 @@ src/client/webgpu/gate/
                                  `.webgpu-gate*`.
   gate-override.ts (+ test)      parseGateOverride — the #webgpu-gate dev
                                  switch, off the URL fragment
-                                 (§ The dev switch).
+                                 (README.md#the-dev-switch).
 ```
 
 ## Not behind the import boundary
@@ -67,7 +67,7 @@ is withholding the GPU — hardware acceleration switched off, a driver the
 browser blocks, a remote or virtual session with no GPU to hand out. Two
 branches differ again: a phone has neither a hardware-acceleration switch
 nor a driver to update, and Firefox gets Chrome on this verdict too
-(§ UA picks the wording).
+([UA picks the wording](#ua-picks-the-wording-never-the-verdict)).
 
 The parameter is **required, with no default**, so the advice cannot
 ignore a verdict the lead sentence branches on.
