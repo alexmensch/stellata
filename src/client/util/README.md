@@ -240,6 +240,8 @@ build scripts, tests, and shader uniforms.
   from the interface is what makes a field added there a compile error
   until the owner fills it.
 - `event-bus/` — typed pub/sub used by `stellata.ts` for fan-out.
+- `late/` — `Late<T>`: a value that lands after its reader exists, as
+  pending / ready / absent with no nullable accessor.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts ([§ 8](/docs/sid.md#8-runtime-resolver-b4)).
 - `url-state/` — `?v=` URL wire format (v1/v2/v3) and the address-bar
