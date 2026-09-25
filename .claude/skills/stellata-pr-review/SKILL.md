@@ -13,6 +13,8 @@ it never replaces it.
 
 ## Priority order — stellata readings
 
+- **(1) Correctness** includes every citation the diff adds or touches:
+  [Citations](#citations--two-checks-on-every-diff) below.
 - **(2) Resource and performance cost** is [GPU and memory cost](#gpu-and-memory-cost--scrutinise-every-pr-for-it) below.
 - **(5) Architectural fit**: a diff touching `src/client/stellata.ts` is
   checked against [the integration-shell rule](/AGENTS.md#folder--module-conventions--where-new-code-lands) —
@@ -26,6 +28,37 @@ every folder in the diff's file list, before any source file in it —
 [Folder READMEs](/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
 `readme-guard` blocks the source read until you do, but only per file; batch
 the reads up front, including folders the diff implicates without editing.
+
+## Citations — two checks on every diff
+
+The citation index is `data/papers/index.md`; the rules are
+[Cited papers](/data/papers/README.md#cited-papers). `citation-index.test.ts`
+catches a pointer to a missing key, an uncited entry and manifest drift. It
+cannot see a citation written without a pointer, or a value that disagrees
+with its paper. Those two are review's.
+
+**1. A citation without an index pointer.** Every added line that credits a
+work — a DOI, an arXiv ID, a bibcode, or an author-year credited for a value,
+method or claim — carries `/data/papers/index.md#<key>` on that line or in
+the same comment block or sentence. Journal, volume or DOI text next to the
+pointer duplicates the entry: a finding. A work with no entry: the diff adds
+it, with its `manifest.json` row, or the finding is P1. Exempt: public copy
+(`src/client/index.html`, `public/`, `CITATION.cff`, strings rendered to
+users), dataset DOIs and download URLs, and vendored upstream files. A first
+pass over the diff:
+
+```bash
+git diff origin/main... -U0 | grep -E '^\+.*(10\.[0-9]{4,}/|arXiv|[0-9]{4}[A-Za-z&]+\.{2,}|(19|20)[0-9]{2}[a-z]?\b)'
+```
+
+**2. A cited value that disagrees with its claims-table row.** When the diff
+adds or changes a number beside a pointer, open the key's entry. A row
+holding that value: compare, and a mismatch is P1. A row reading
+`unverified`, or no row: the diff fills it — value, page, quoted passage —
+checked against the copy at `data/papers/pdf/<key>.pdf` when that path
+exists (read through the symlink, never its target), with page numbers read
+the way the entry's **Copy** version says. Without the copies (CI, a
+fresh clone), say the value is unchecked rather than pass it.
 
 ## GPU and memory cost — scrutinise every PR for it
 
