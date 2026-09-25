@@ -84,8 +84,8 @@ integration-shell-ratchet.test.ts
 late-read-contract.test.ts
                          The wave-2 read contract (/src/client/README.md#boot-in-two-waves),
                          two halves. A `for` loop bounded by `X.count`
-                         where X's type is a streaming catalogue without
-                         the CompleteCatalog brand fails; this half uses the
+                         where X's type is assignable to `Catalog` but not
+                         to `CompleteCatalog` fails; this half uses the
                          type checker over src/client (~3 s), since a
                          syntactic scan cannot tell a catalogue's `count`
                          from a planet host's. And every public method or

@@ -7,6 +7,7 @@ import { isProductionTs, walkFiles } from './walk-files';
 const ROOT = resolve(__dirname, '..');
 const CLIENT = resolve(ROOT, 'src/client');
 const SHELL = resolve(CLIENT, 'stellata.ts');
+const CATALOG_LOADER = resolve(CLIENT, 'loaders/catalog-loader.ts');
 
 function parse(path: string): ts.SourceFile {
   return ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
@@ -26,17 +27,29 @@ function compilerOptions(): ts.CompilerOptions {
   return config.options;
 }
 
-/** A catalogue type (it streams) that does not carry the CompleteCatalog brand. */
-function isUnbrandedCatalogue(type: ts.Type, checker: ts.TypeChecker): boolean {
-  const names = checker.getPropertiesOfType(type).map((p) => p.escapedName.toString());
-  const isCatalogue = names.includes('loadedCount') && names.includes('onRecordsDecoded');
-  return isCatalogue && !names.some((n) => n.startsWith('__@complete@'));
+/** A type that is a streaming `Catalog` but not a `CompleteCatalog`. */
+function unbrandedCatalogueTest(program: ts.Program): (type: ts.Type) => boolean {
+  const checker = program.getTypeChecker();
+  const loader = program.getSourceFile(CATALOG_LOADER);
+  const module = loader && checker.getSymbolAtLocation(loader);
+  if (!module) throw new Error('catalog-loader.ts missing from the program');
+  const exported = (name: string) => {
+    const symbol = checker.getExportsOfModule(module).find((s) => s.name === name);
+    if (!symbol) throw new Error(`catalog-loader.ts no longer exports ${name}`);
+    return checker.getDeclaredTypeOfSymbol(symbol);
+  };
+  const catalog = exported('Catalog');
+  const complete = exported('CompleteCatalog');
+  return (type) => checker.isTypeAssignableTo(type, catalog)
+    && !checker.isTypeAssignableTo(type, complete);
 }
 
 function countBoundedLoops(
   file: ts.SourceFile,
-  checker: ts.TypeChecker,
+  program: ts.Program,
 ): { line: number; receiver: string }[] {
+  const checker = program.getTypeChecker();
+  const isUnbranded = unbrandedCatalogueTest(program);
   const out: { line: number; receiver: string }[] = [];
   for (const node of descendants(file)) {
     if (!ts.isForStatement(node) || !node.condition) continue;
@@ -46,7 +59,7 @@ function countBoundedLoops(
     if (op !== ts.SyntaxKind.LessThanToken && op !== ts.SyntaxKind.LessThanEqualsToken) continue;
     const bound = cond.right;
     if (!ts.isPropertyAccessExpression(bound) || bound.name.text !== 'count') continue;
-    if (!isUnbrandedCatalogue(checker.getTypeAtLocation(bound.expression), checker)) continue;
+    if (!isUnbranded(checker.getTypeAtLocation(bound.expression))) continue;
     out.push({
       line: file.getLineAndCharacterOfPosition(node.getStart()).line + 1,
       receiver: bound.expression.getText(),
@@ -83,12 +96,11 @@ describe('wave-2 read contract (/src/client/README.md#boot-in-two-waves)', () =>
   it('bounds no loop by a catalogue count unless the receiver is a CompleteCatalog', () => {
     const files = [...walkFiles(CLIENT, { include: isProductionTs })];
     const program = ts.createProgram(files, compilerOptions());
-    const checker = program.getTypeChecker();
     const offenders: string[] = [];
     for (const path of files) {
       const file = program.getSourceFile(path);
       if (!file) throw new Error(`${path} missing from the program`);
-      for (const { line, receiver } of countBoundedLoops(file, checker)) {
+      for (const { line, receiver } of countBoundedLoops(file, program)) {
         offenders.push(`${relative(ROOT, path)}:${line} (${receiver}.count)`);
       }
     }
@@ -118,7 +130,7 @@ describe('wave-2 read contract (/src/client/README.md#boot-in-two-waves)', () =>
       : getSource(f, lang));
     const program = ts.createProgram([probe], options, host);
     const file = program.getSourceFile(probe)!;
-    expect(countBoundedLoops(file, program.getTypeChecker()).map((o) => o.line)).toEqual([2]);
+    expect(countBoundedLoops(file, program).map((o) => o.line)).toEqual([2]);
   });
 
   it('classifies every nullable return on the shell surface', () => {
