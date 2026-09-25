@@ -189,6 +189,7 @@ export function createShellKindModule(): ShellKindModule {
           ctx!.camera.position,
           ctx!.angularToPx(),
         ),
+      peakDiscSizePx: () => 0,
       chartPlateauDistance: () => null,
       planetSystemHost: () => null,
     }),

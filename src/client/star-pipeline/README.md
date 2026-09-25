@@ -63,7 +63,7 @@ attribute writers here.
   in, which is what withholds a half-built card. The render layers
   stay shell-wired (`attach` returns null), and
   the legs reach the shell-owned machinery — StarFrame positions, park
-  solve, rendered size, the Picker's star pick, the binaries table —
+  solve, rendered and peak-disc size, the Picker's star pick, the binaries table —
   through the single injected `StarModuleRuntime`. `photometry()` is
   the one leg a *non*-star module reads, via
   `KindContext.starPhotometry`.

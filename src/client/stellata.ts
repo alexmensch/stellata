@@ -67,14 +67,16 @@ import {
 import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
 import {
+  collectFocusables,
   collectKindDetailBinds,
   collectKindPicks,
+  collectPinnable,
   KIND_ROSTER,
   type BuiltKindModules,
 } from './kinds/kind-modules';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
-import { focalRideStep } from './camera/focus/focal-ride-pure';
-import { makeFocalAnchorPolicy } from './camera/focus/focal-anchor-policy';
+import { focalRideStep } from './camera/focus/focal-ride/focal-ride-pure';
+import { makeFocalAnchorPolicy } from './camera/focus/focal-ride/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
 import type { SurvivorCountsRead } from './debug/survivor-counts';
 import type { PlanetSystem } from './solar-system/planet-system';
@@ -292,7 +294,7 @@ export class Stellata implements FrameAnchor {
   // local-position delta so it stays under the camera and user pan
   // offsets survive. `_movingRideIdx` reseeds on every 'focus' event,
   // which is what makes the shared slot safe across kinds — see
-  // camera/focus/README.md#moving-focal-ride.
+  // camera/focus/focal-ride/README.md#moving-focal-ride.
   private readonly _movingRideLast = new THREE.Vector3();
   private readonly _movingRideLive = new THREE.Vector3();
   private readonly _movingRideDelta = new THREE.Vector3();
@@ -422,12 +424,10 @@ export class Stellata implements FrameAnchor {
   // must not clobber a pick walk mid-flight.
   private readonly passDebugScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
+  private readonly starSizeInputs: starPhysics.StarSizeInputs;
 
   readonly picker!: Picker;
 
-  // Per-kind geometry registry (camera/focus/focus-target.ts). Overlays
-  // and pickers dispatch `focusables[target.kind].<leg>(target.idx)`
-  // instead of per-kind shell methods.
   readonly focusables!: FocusableProviders;
 
   constructor({ canvas, catalog, kinds, webgpu }: StellataOptions) {
@@ -553,6 +553,7 @@ export class Stellata implements FrameAnchor {
       localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
       parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
       renderedSizePx: (idx) => this.renderedSizePxFor(idx),
+      peakDiscSizePx: (idx) => starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
       getBinaries: () => this.getBinaries(),
     });
@@ -769,18 +770,8 @@ export class Stellata implements FrameAnchor {
       focalPerturbationInto: (idx, out) =>
         this.binaryOrbitField?.focalPerturbationInto(idx, this.getT(), out) ?? false,
     });
-    // Kind-agnostic geometry + focus-state registry — the shell's
-    // per-kind knowledge in one exhaustive record. Lazily-attached
-    // layers are read through closures, so attach cycles need no
-    // re-registration. See camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry.
-    this.focusables = {
-      star: this.kinds.star.focusable(),
-      cloud: this.kinds.cloud.focusable(),
-      lg: this.kinds.lg.focusable(),
-      shell: this.kinds.shell.focusable(),
-      probe: this.kinds.probe.focusable(),
-      planet: this.kinds.planet.focusable(),
-    };
+    // see camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry
+    this.focusables = collectFocusables(this.kinds);
     this.warp = new WarpController({
       camera: this.camera,
       controls: this.controls,
@@ -873,6 +864,14 @@ export class Stellata implements FrameAnchor {
       refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
       declutter: this.declutter,
     });
+    this.starSizeInputs = {
+      catalog,
+      camPos: this.camera.position,
+      localPositions: this.starFrame.localPositions,
+      uniforms: sharedUniforms,
+      filter: this.filter,
+      suppressPulsation: this._suppressPulsation,
+    };
 
     // Engage focus on Sol if it exists so measurement and per-star zoom
     // work from the start. setFocus (rather than raw field assignment)
@@ -901,18 +900,7 @@ export class Stellata implements FrameAnchor {
     this.syncPixelSolidAngle();
 
     this.pois = new PoiStore({
-      pinnable: {
-        star: (idx) => this.kinds.star.pinnable(idx),
-        // Pinnable ⊇ URL-encodable: any attached planet pins in-session,
-        // but only Sol's SID domain is wired (main.ts planetDomainIndexOf),
-        // so a future non-Sol host's pin works live yet won't round-trip
-        // through ?v=.
-        planet: (idx) => this.kinds.planet.pinnable(idx),
-        probe: (idx) => this.kinds.probe.pinnable(idx),
-        lg: (idx) => this.kinds.lg.pinnable(idx),
-        shell: (idx) => this.kinds.shell.pinnable(idx),
-        cloud: (idx) => this.kinds.cloud.pinnable(idx),
-      },
+      pinnable: collectPinnable(this.kinds),
       onChange: (pois) => {
         this.bus.emit('pois', pois);
         this.bus.emit('state');
@@ -1177,25 +1165,12 @@ export class Stellata implements FrameAnchor {
     return this.solarSystem.orbitRings.anyOrbitRingVisible()
       || this.binaryOrbitPathLayer.anyOrbitRingVisible();
   }
-  /** Rendered disc radius (CSS px) of the focused object, any kind; 0
-   *  when nothing is focused. Single source for the arrow-fade coverage
-   *  inputs (HUD Sol/GC pair, POI arrows). */
+  /** Peak opaque-disc radius (CSS px) of the focused object, via its kind's
+   *  `peakDiscSizePx`; 0 when nothing is focused. Single source for every
+   *  arrow fade's disc coverage. */
   getFocusedDiscRadiusPx(): number {
     const t = this.focus.getFocusedTarget();
-    if (t?.kind === 'star') {
-      return starPhysics.renderedDiscPxAtPeak({
-        catalog: this.catalog,
-        idx: t.idx,
-        camPos: this.camera.position,
-        localPositions: this.localPositions,
-        uniforms: this.sharedUniforms,
-      }) * 0.5;
-    }
-    if (t?.kind === 'planet') {
-      return this.planetBodyField.renderedPlanetSizePx(t.idx, this.camera.position) * 0.5;
-    }
-    if (t?.kind === 'probe') return this.focusables.probe.renderedSizePx(t.idx) * 0.5;
-    return 0;
+    return t === null ? 0 : this.focusables[t.kind].peakDiscSizePx(t.idx) * 0.5;
   }
 
   /** Absolute-space coordinate of the renderer's current local origin.
@@ -1678,15 +1653,7 @@ export class Stellata implements FrameAnchor {
    *  shader's `max(appSize, physSize)` sizing (`star-physics.ts`). Shared
    *  by the navigate-mode fade closure and the overlay/pick paths. */
   private renderedSizePxFor(idx: number): number {
-    return starPhysics.renderedSizePx({
-      catalog: this.catalog,
-      idx,
-      camPos: this.camera.position,
-      localPositions: this.localPositions,
-      uniforms: this.sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-    });
+    return starPhysics.renderedSizePx(this.starSizeInputs, idx);
   }
 
   /** Component split of `renderedSizePxFor` — the star local cluster's
@@ -1695,15 +1662,7 @@ export class Stellata implements FrameAnchor {
     idx: number,
     out: starPhysics.RenderedSizeComponents,
   ): starPhysics.RenderedSizeComponents {
-    return starPhysics.renderedSizeComponents({
-      catalog: this.catalog,
-      idx,
-      camPos: this.camera.position,
-      localPositions: this.localPositions,
-      uniforms: this.sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-    }, out);
+    return starPhysics.renderedSizeComponents(this.starSizeInputs, idx, out);
   }
 
   private chartDiscPxFor(appMag: number): number {
@@ -1746,16 +1705,9 @@ export class Stellata implements FrameAnchor {
    *  candidate, never per frame
    *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
   private resolveStarPick(idx: number): ResolvedCandidate {
-    const c = starPhysics.renderedSizeComponents({
-      catalog: this.catalog,
-      idx,
-      camPos: this.camera.position,
-      localPositions: this.localPositions,
-      uniforms: this.sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-      extinctionAvMag: this.extinctionAvMagFor(idx),
-    }, this.pickSizeScratch);
+    const c = starPhysics.renderedSizeComponents(
+      this.starSizeInputs, idx, this.pickSizeScratch, this.extinctionAvMagFor(idx),
+    );
     return resolveStarPickVisibility({
       focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
       eclipseDim: this._eclipseDim[idx],

@@ -225,8 +225,11 @@ toggle-on flash that the prior last-frame-drawn-lengths design
 produced). The shared smoothstep
 lives in `../overlays/arrow-fade.ts`. Coverage is
 `(discRadius − shaftStart) / shaftLength`, where `discRadius` is the
-focal star's *peak-amplitude* disc radius (so a high-amplitude
-variable's pulsation doesn't oscillate the fade). Smoothstep eased over
+focused object's `Stellata.getFocusedDiscRadiusPx` — the kind table's
+`peakDiscSizePx`, which every arrow and the debug readout share. For a
+star that is the *peak-amplitude* disc (so a high-amplitude variable's
+pulsation doesn't oscillate the fade); a kind drawing no opaque disc
+answers 0 and never fades. Smoothstep eased over
 [0.5, 0.75] (`COVERAGE_FADE_START`, `COVERAGE_FADE_END`). During an
 in-flight observe transition the alpha holds the *source*-mode value
 (navigate-style disc-coverage fade during enter, alpha=1 during exit)

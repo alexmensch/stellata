@@ -26,17 +26,8 @@ close-approach focused star sitting at exactly NDC origin.
   instance index; (host, planet-within-host) resolve through the
   field's attach table. A probe Target's idx is the ProbeField
   loaded-roster index.
-- `focal-anchor-policy.ts` (+ test) — `makeFocalAnchorPolicy`, the
-  `AnchorPolicy` (`../../frame/README.md`) that keeps the floating
-  origin on the focal object under time advance. Deps are live
-  references + two gate closures; the shell supplies which controllers
-  count as camera-busy ([Moving-focal ride](#moving-focal-ride)).
-- `focal-ride-pure.ts` (+ test) — `focalRideStep`, one frame of the ride
-  both moving-focal kinds and the binary walk drive, plus
-  `shouldRecenterFocalOrigin`. The seed frame measures from `target` in
-  navigate and from `cameraPosition` in observe, because observe parks the
-  camera — not the target — on the object; [Focal-frame ride](../../binaries/README.md#focal-frame-ride-no-rebase)
-  is the authority.
+- `focal-ride/` — the moving-focal ride step and the focal anchor
+  policy; own README.
 - `focus-transition.ts` (+ test) — `tickFocusLerp` + the generic
   `parkDistance(...)` + `newFocusLerpFrom(...)` primitives. Star-,
   cloud-, and future-focusable-park-arrivals all compose these. The
@@ -99,9 +90,10 @@ generically by `FocusController.makeFocusTarget` from the kind's
 `FocusableProvider` — there are no per-kind factories. Adding a new
 focusable kind (nebula, exoplanet, …) consists of:
 
-1. Declaring the kind's `KIND_TRAITS` row and its `FocusableProvider`
-   entry in `stellata.focusables` (both records are exhaustive over
-   `TargetKind`, so `tsc` fails until both exist).
+1. Declaring the kind's `KIND_TRAITS` row and its module's `focusable()`
+   leg (`stellata.focusables` is built from `KIND_ROSTER`, and both the
+   traits record and the roster are exhaustive over `TargetKind`, so
+   `tsc` fails until both exist).
 2. Plumbing pick / click handling for the new kind so its `Target` can
    be passed to `warpTo` / `flyTo`-style entry points.
 
@@ -164,6 +156,9 @@ anchor), `localPositionInto`, `focusParkDistance` (the landing distance
 of every park), `orbitFloor` (the manual-zoom floor a focus applies),
 `arrivalRadiusPc` (angular-size ease input; null → log-d fallback),
 `renderedSizePx` (overlay chevron / silhouette sizing),
+`peakDiscSizePx` (the opaque disc at its pulsation peak — the focused-object
+arrow fade's coverage bound, `Stellata.getFocusedDiscRadiusPx`; 0 for the
+soft kinds, which draw no opaque disc),
 `chartPlateauDistance` (warp chart-mode pivot; null → no chart disc),
 and `planetSystemHost` (which star's planet system attaches; null →
 detach). Hard/soft and moving membership are NOT provider legs — they
@@ -171,9 +166,10 @@ are declared data in `KIND_TRAITS`, readable without the registry
 (`isHardTarget` is the predicate).
 The registry is constructed once in `stellata.ts` (exposed as
 `stellata.focusables`); lazily-attached layers are read through
-closures, so attach cycles need no re-registration. Every kind supplies its row via its module's `focusable()` leg
-(`src/client/kinds/README.md`); the record itself, and its
-exhaustiveness, stay here. Overlays and
+closures, so attach cycles need no re-registration. Every kind supplies
+its row via its module's `focusable()` leg, collected over `KIND_ROSTER`
+by `collectFocusables()` (`src/client/kinds/README.md`); the record type,
+and its exhaustiveness, stay here. Overlays and
 pickers dispatch `focusables[target.kind].<leg>(target.idx)` instead
 of per-kind shell methods.
 
@@ -248,38 +244,8 @@ hard-kind + shell legs to real fields to avoid.
   (`getFocusedHardTarget`); the focal-body hide dispatches per kind
   through `setFocalBodyHidden` in `stellata.ts`.
 - **No shader pin.** `uPinFocusToCenter` is a star-instance pin; the
-  moving kinds are kept under the camera by the ride below instead.
-
-## Moving-focal ride
-
-A focused planet sweeps its orbit and a focused probe runs its
-trajectory, both fast under scrubber fast-forward. `applyMovingFocalRide`
-in `stellata.ts` — the sibling of the binary focal-frame ride, over the
-shared `focalRideStep` — translates camera + orbit target + in-flight
-pose caches by the object's per-frame local-position delta, so pan
-offsets survive and the object stays glued to `controls.target` at any
-rate. That is what makes the probe flythrough hold.
-
-It is one slot for both kinds, read through
-`focusables[kind].localPositionInto`, with membership declared as
-`moving: true` in `KIND_TRAITS`. Two things keep it correct:
-
-- **The ride reseeds on every `'focus'` event.** Each hard focus
-  recentres the origin, staleing the cached last position — and it is
-  also what makes the shared slot safe when the kind changes but the
-  index collides (planet 3 → probe 3), since the slot is keyed on index
-  alone.
-- **It must run after every moving-body field has written this frame's
-  positions.** The probe and planet module layers register in roster
-  order ahead of every inline layer, and the ride sits in the first
-  inline entry (with the planet mesh update, which needs the post-ride
-  camera) — so both fields are fresh when it fires. One frame of lag is
-  invisible at 1× and a visible offset at high fast-forward.
-
-Float32 precision as the object travels far from the focus-time origin
-is held generically by the origin-follow recentre
-([Focal-frame ride](../../binaries/README.md#focal-frame-ride-no-rebase) — kind-agnostic, no
-per-kind pin), which reseeds the ride when it fires.
+  moving kinds are kept under the camera by the moving-focal ride
+  (`focal-ride/README.md`) instead.
 
 ## Focus-park lerp
 

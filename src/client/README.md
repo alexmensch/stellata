@@ -223,11 +223,10 @@ an empty awaiting list.
 | Cluster | Target | Bead |
 | --- | --- | --- |
 | Focal rides | `camera/focus/` | `hhaw.32.2` |
-| Star size + pick | the kind table (`kinds/`, `camera/focus/`) | `hhaw.32.4` |
 | Binaries | `binaries/` | `hhaw.32.5` |
 | Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
-| Star render machinery | `star-pipeline/` | `hhaw.32.13` |
+| Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 
 **Values crossing a row boundary** — whichever row moves first settles the

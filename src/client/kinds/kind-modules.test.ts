@@ -7,8 +7,10 @@ import { KIND_TRAITS, type TargetKind } from '../camera/focus/focus-target';
 import type { ObjectKindModule } from './kind-module';
 import {
   buildKindModules,
+  collectFocusables,
   collectKindDetailBinds,
   collectKindPicks,
+  collectPinnable,
   displayNameOf,
   KIND_ROSTER,
   loadKindModules,
@@ -154,6 +156,35 @@ describe('displayNameOf', () => {
       displayName: () => 'Voyager 1',
     }), { kind: 'cloud', idx: 0 });
     expect(name).toBe('');
+  });
+});
+
+describe('collectFocusables / collectPinnable', () => {
+  it('carries one row per TargetKind, each the module leg', () => {
+    const modules = buildKindModules();
+    const focusables = collectFocusables(modules);
+    const pinnable = collectPinnable(modules);
+    expect(Object.keys(focusables).sort()).toEqual(Object.keys(KIND_TRAITS).sort());
+    expect(Object.keys(pinnable).sort()).toEqual(Object.keys(KIND_TRAITS).sort());
+    for (const kind of KIND_ROSTER) {
+      expect(Object.keys(focusables[kind]).sort())
+        .toEqual(Object.keys(modules[kind].focusable()).sort());
+    }
+  });
+
+  it('routes each kind to its own module pin rule', () => {
+    const modules = buildKindModules();
+    const calls: string[] = [];
+    for (const kind of KIND_ROSTER) {
+      vi.spyOn(modules[kind], 'pinnable').mockImplementation((idx) => {
+        calls.push(`${kind}:${idx}`);
+        return kind === 'lg';
+      });
+    }
+    const pinnable = collectPinnable(modules);
+    expect(pinnable.lg(3)).toBe(true);
+    expect(pinnable.star(4)).toBe(false);
+    expect(calls).toEqual(['lg:3', 'star:4']);
   });
 });
 

@@ -167,6 +167,7 @@ export function createProbeKindModule(): ProbeKindModule {
       orbitFloor: () => PROBE_ORBIT_FLOOR_PC,
       arrivalRadiusPc: () => null,
       renderedSizePx: () => PROBE_MARKER_PX,
+      peakDiscSizePx: () => PROBE_MARKER_PX,
       chartPlateauDistance: () => null,
       planetSystemHost: () => (ctx ? ctx.solIndex : null),
     }),

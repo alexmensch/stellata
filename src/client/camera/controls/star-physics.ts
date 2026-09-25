@@ -137,9 +137,8 @@ export function parkDistForPlanet(radiusPc: number, fovMinorRad: number): number
   return distAtFillFraction(radiusPc, fovMinorRad, PLANET_PARK_FILL_FRACTION);
 }
 
-export interface RenderedSizeArgs {
+export interface StarSizeInputs {
   catalog: Catalog;
-  idx: number;
   camPos: Readonly<THREE.Vector3>;
   localPositions: Float32Array;
   uniforms: StarPhysicsUniforms;
@@ -152,13 +151,6 @@ export interface RenderedSizeArgs {
    *  access to the runtime suppress array fall through to the
    *  unsuppressed behaviour. */
   suppressPulsation?: Float32Array;
-  /** Dust extinction to fold into the magnitude, as the shader does.
-   *  Omitted by the overlay consumers (focus ring, distance-vector tip),
-   *  which track a star the user is already looking at and would pay a
-   *  GPU readback per frame for a sub-pixel size change. The pick paths
-   *  pass it: there the dust term decides whether the star is on screen
-   *  at all (`../../hdr/exposure/visibility/emitter-visibility-pure.ts`). */
-  extinctionAvMag?: number;
 }
 
 /** The GCVS amplitude the vertex shader will actually swing this star
@@ -272,25 +264,34 @@ export function livePulsationRadiusFactor(
 // components; everything sizing against the rendered disc edge takes the
 // max via `renderedSizePx`. If the shader's size computation changes,
 // this must change in lockstep.
+//
+// `extinctionAvMag` folds dust into the magnitude, as the shader does. The
+// overlay consumers (focus ring, distance-vector tip) leave it at 0: they
+// track a star the user is already looking at and would pay a GPU readback
+// per frame for a sub-pixel size change. The pick paths pass it, since there
+// the dust term decides whether the star is on screen at all
+// (`../../hdr/exposure/visibility/emitter-visibility-pure.ts`).
 export function renderedSizeComponents(
-  args: RenderedSizeArgs,
+  inputs: StarSizeInputs,
+  idx: number,
   out: RenderedSizeComponents,
+  extinctionAvMag = 0,
 ): RenderedSizeComponents {
-  const { catalog, idx, camPos, localPositions, uniforms: u, filter } = args;
+  const { catalog, camPos, localPositions, uniforms: u, filter } = inputs;
   const { physicalRadius, absmag } = catalog;
 
   const dx = localPositions[idx * 3] - camPos.x;
   const dy = localPositions[idx * 3 + 1] - camPos.y;
   const dz = localPositions[idx * 3 + 2] - camPos.z;
   const dCam = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-  let appMag = apparentMagnitude(absmag[idx], dCam) + (args.extinctionAvMag ?? 0);
+  let appMag = apparentMagnitude(absmag[idx], dCam) + extinctionAvMag;
 
   const fovYRad = u.uFovYRad.value;
   const viewport = u.uViewport.value;
   const R = Math.max(physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC;
   const maxPhysSize = ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y);
 
-  const phase = pulsationPhaseInto(catalog, idx, args.suppressPulsation, u, phaseScratch);
+  const phase = pulsationPhaseInto(catalog, idx, inputs.suppressPulsation, u, phaseScratch);
   // magMod carries the full V-band amplitude; radiusFactor swings the
   // ρ-bounded disc. Both vanish on a non-pulsator, where amp and cos are 0.
   appMag += -0.5 * phase.amp * phase.cos;
@@ -317,18 +318,14 @@ const sizeScratch: RenderedSizeComponents =
 // Rendered quad diameter (px) — `max(appSize, physSize)` over the
 // components above. What SVG / overlay code (focus ring, distance-vector
 // tip) aligns to.
-export function renderedSizePx(args: RenderedSizeArgs): number {
-  const c = renderedSizeComponents(args, sizeScratch);
+export function renderedSizePx(inputs: StarSizeInputs, idx: number): number {
+  const c = renderedSizeComponents(inputs, idx, sizeScratch);
   return Math.max(c.appSizePx, c.physSizePx);
 }
 
-export interface PeakDiscArgs {
-  catalog: Catalog;
-  idx: number;
-  camPos: Readonly<THREE.Vector3>;
-  localPositions: Float32Array;
+export type PeakDiscInputs = Pick<StarSizeInputs, 'catalog' | 'camPos' | 'localPositions'> & {
   uniforms: Pick<StarPhysicsUniforms, 'uFovYRad' | 'uViewport'>;
-}
+};
 
 // Peak-amplitude rendered disc diameter in pixels. Mirrors the physSize
 // branch of `renderedSizePx` but with the variable held at its peak
@@ -336,8 +333,8 @@ export interface PeakDiscArgs {
 // reads a stable disc envelope across the variability cycle. Used only
 // for fade gating — visible disc rendering and other overlays still
 // call `renderedSizePx` so they track the actual rendered disc edge.
-export function renderedDiscPxAtPeak(args: PeakDiscArgs): number {
-  const { catalog, idx, camPos, localPositions, uniforms: u } = args;
+export function renderedDiscPxAtPeak(inputs: PeakDiscInputs, idx: number): number {
+  const { catalog, camPos, localPositions, uniforms: u } = inputs;
   const dx = localPositions[idx * 3] - camPos.x;
   const dy = localPositions[idx * 3 + 1] - camPos.y;
   const dz = localPositions[idx * 3 + 2] - camPos.z;

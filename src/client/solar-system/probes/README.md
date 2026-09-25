@@ -383,7 +383,7 @@ Under focus the camera follows the probe along its **whole** trajectory
 as `t` advances, at any fast-forward rate: focus Voyager 2, scrub from
 1977, and the camera rides past Jupiter, Saturn, Uranus, Neptune, and out
 through the heliopause. That is the kind-generic moving-focal ride in
-`../../stellata.ts` ([Moving-focal ride](../../camera/focus/README.md#moving-focal-ride)),
+`../../stellata.ts` ([Moving-focal ride](../../camera/focus/focal-ride/README.md#moving-focal-ride)),
 shared with planet focus — a probe needed no ride of its own, only a
 provider leg. Sol's planet system stays attached under probe focus, the
 same way a planet focus keeps its host's: the orbit rings and planet

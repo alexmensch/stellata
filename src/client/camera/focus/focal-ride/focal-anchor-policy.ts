@@ -2,7 +2,7 @@
 // it moves under time advance. See ./README.md#moving-focal-ride.
 
 import * as THREE from 'three';
-import type { AnchorPolicy } from '../../frame/floating-origin';
+import type { AnchorPolicy } from '../../../frame/floating-origin';
 import { shouldRecenterFocalOrigin } from './focal-ride-pure';
 
 export interface FocalAnchorDeps {

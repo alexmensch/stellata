@@ -156,6 +156,7 @@ describe('planet kind module', () => {
     expect(provider.orbitFloor(MARS)).toBeLessThan(provider.focusParkDistance(MARS));
     expect(provider.arrivalRadiusPc(MARS)).toBeGreaterThan(0);
     expect(provider.chartPlateauDistance(MARS, 0)).toBeNull();
+    expect(provider.peakDiscSizePx(MARS)).toBe(provider.renderedSizePx(MARS));
     expect(provider.planetSystemHost(MARS)).toBe(0);
   });
 

@@ -1,7 +1,8 @@
 // The kind-module roster: KIND_ROSTER order + buildKindModules record.
 // See ./README.md.
 
-import type { Target, TargetKind } from '../camera/focus/focus-target';
+import type { FocusableProviders, Target, TargetKind } from '../camera/focus/focus-target';
+import type { PoiStoreDeps } from '../poi/poi-store';
 import { createShellKindModule } from '../fresnel-shell/shell-module';
 import { createLgKindModule } from '../local-group/lg-module';
 import { createCloudKindModule } from '../molecular-clouds/cloud-module';
@@ -97,6 +98,19 @@ export function collectKindPicks(modules: KindModules): Partial<Record<TargetKin
     if (pick) picks[kind] = pick;
   }
   return picks;
+}
+
+export function collectFocusables(modules: BuiltKindModules): FocusableProviders {
+  return rosterRecord((kind) => modules[kind].focusable());
+}
+
+export function collectPinnable(modules: BuiltKindModules): PoiStoreDeps['pinnable'] {
+  return rosterRecord((kind) => (idx: number) => modules[kind].pinnable(idx));
+}
+
+// The cast is sound only because RosterCoversEveryKind holds KIND_ROSTER to every TargetKind.
+function rosterRecord<V>(row: (kind: TargetKind) => V): { readonly [K in TargetKind]: V } {
+  return Object.fromEntries(KIND_ROSTER.map((kind) => [kind, row(kind)])) as { [K in TargetKind]: V };
 }
 
 /** Every module's declutter pushes, in roster order, for `SceneDeclutter`

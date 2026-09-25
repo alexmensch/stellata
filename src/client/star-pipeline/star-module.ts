@@ -42,6 +42,8 @@ export interface StarModuleRuntime {
   parkDistForStar(idx: number): number;
   /** Rendered disc diameter in CSS px — the shader-sizing CPU mirror. */
   renderedSizePx(idx: number): number;
+  /** Peak-amplitude opaque-disc diameter in CSS px (`renderedDiscPxAtPeak`). */
+  peakDiscSizePx(idx: number): number;
   /** The Picker's star pick, shared by hover and the click FSM. */
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
   /** Orbital elements for the companion lines; null with no artifact.
@@ -221,6 +223,7 @@ export function createStarKindModule(): StarKindModule {
         : 0),
       arrivalRadiusPc: (idx) => photometryOf(idx)?.radiusPc ?? null,
       renderedSizePx: (idx) => runtime?.renderedSizePx(idx) ?? 0,
+      peakDiscSizePx: (idx) => runtime?.peakDiscSizePx(idx) ?? 0,
       chartPlateauDistance: (idx, magBright) => (catalog
         ? chartPlateauDistancePc(catalog.absmag[idx], magBright)
         : null),
