@@ -416,12 +416,16 @@
  "cardelli1989": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 1292222,
   "doi": "10.1086/167900",
   "openalex_first_author": "Jason A. Cardelli",
   "openalex_title": "The relationship between infrared, optical, and ultraviolet extinction",
   "openalex_year": 1989,
-  "status": "manual",
-  "tried": []
+  "sha256": "e3db684021b80d7c161499f8e6257df9881251b0fb0382a3d9d30b2ae0e6fd73",
+  "source_url": "https://doi.org/10.1086/167900",
+  "status": "ok",
+  "tried": [],
+  "version": "ADS scan of published article"
  },
  "casagrande2018": {
   "arxiv": "1806.01953",
