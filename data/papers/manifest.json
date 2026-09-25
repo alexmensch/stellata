@@ -1,4 +1,24 @@
 {
+ "abazajian2009": {
+  "arxiv": null,
+  "bibcode": "2009ApJS..182..543A",
+  "bytes": 3374724,
+  "doi": null,
+  "sha256": "af5711ed1eb727df27cad55a47161aa6f621233d6bbeaa1b15c82b5953746ddf",
+  "source_url": "https://arxiv.org/pdf/0812.0649",
+  "status": "ok",
+  "tried": [
+   {
+    "error": "not a PDF (text/html; charset=UTF-8)",
+    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/PUB_PDF"
+   },
+   {
+    "error": "IncompleteRead(3145728 bytes read, 228996 more expected)",
+    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/EPRINT_PDF"
+   }
+  ],
+  "version": "submittedVersion"
+ },
  "abdurrouf2022": {
   "arxiv": "2112.02026",
   "bibcode": "2022ApJS..259...35A",
@@ -242,79 +262,6 @@
   ],
   "version": "ADS scan of published article"
  },
- "bib2009apjs182543a": {
-  "arxiv": null,
-  "bibcode": "2009ApJS..182..543A",
-  "bytes": 3374724,
-  "doi": null,
-  "sha256": "af5711ed1eb727df27cad55a47161aa6f621233d6bbeaa1b15c82b5953746ddf",
-  "source_url": "https://arxiv.org/pdf/0812.0649",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/PUB_PDF"
-   },
-   {
-    "error": "IncompleteRead(3145728 bytes read, 228996 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/EPRINT_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "bib2011ycat3265": {
-  "arxiv": null,
-  "bibcode": "2011yCat.3265....0S",
-  "bytes": 9533,
-  "doi": null,
-  "file": "bib2011ycat3265.readme.txt",
-  "sha256": "c975658fc9ec7eee0ee0a61ebea8c4357608908510438bab42ec75f891d319ea",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/265/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "bib2014apj784156d": {
-  "arxiv": null,
-  "bibcode": "2014ApJ...784..156D",
-  "bytes": 844192,
-  "doi": null,
-  "sha256": "04bf6146837d1c8115068db55b184b84dc438a7ee030270362d53fcff007c164",
-  "source_url": "https://arxiv.org/pdf/1312.3241",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2014ApJ...784..156D/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "bib2021mnras5085148c": {
-  "arxiv": null,
-  "bibcode": "2021MNRAS.508.5148C",
-  "bytes": 1833094,
-  "doi": null,
-  "sha256": "25fb5e6ccd6a0f9fe4616b92a61bea0c718a15dbcf880bfaee055e34187c7ffa",
-  "source_url": "https://arxiv.org/pdf/2110.01658",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2021MNRAS.508.5148C/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
  "blandhawthorn2016": {
   "arxiv": "1602.07702",
   "bibcode": null,
@@ -473,13 +420,6 @@
   ],
   "version": "submittedVersion"
  },
- "charlot1997": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
  "cioni2000": {
   "arxiv": "astro-ph/0003223",
   "bibcode": "2000A&A...359..601C",
@@ -538,6 +478,22 @@
    {
     "error": "HTTP Error 403: Forbidden",
     "url": "https://www.aanda.org/articles/aa/pdf/2014/12/aa24033-14.pdf"
+   }
+  ],
+  "version": "submittedVersion"
+ },
+ "costaalmeida2021": {
+  "arxiv": null,
+  "bibcode": "2021MNRAS.508.5148C",
+  "bytes": 1833094,
+  "doi": null,
+  "sha256": "25fb5e6ccd6a0f9fe4616b92a61bea0c718a15dbcf880bfaee055e34187c7ffa",
+  "source_url": "https://arxiv.org/pdf/2110.01658",
+  "status": "ok",
+  "tried": [
+   {
+    "error": "HTTP Error 403: Forbidden",
+    "url": "https://ui.adsabs.harvard.edu/link_gateway/2021MNRAS.508.5148C/PUB_PDF"
    }
   ],
   "version": "submittedVersion"
@@ -733,6 +689,22 @@
   "doi": null,
   "status": "unidentified",
   "tried": []
+ },
+ "dittmann2014": {
+  "arxiv": null,
+  "bibcode": "2014ApJ...784..156D",
+  "bytes": 844192,
+  "doi": null,
+  "sha256": "04bf6146837d1c8115068db55b184b84dc438a7ee030270362d53fcff007c164",
+  "source_url": "https://arxiv.org/pdf/1312.3241",
+  "status": "ok",
+  "tried": [
+   {
+    "error": "not a PDF (text/html; charset=UTF-8)",
+    "url": "https://ui.adsabs.harvard.edu/link_gateway/2014ApJ...784..156D/PUB_PDF"
+   }
+  ],
+  "version": "submittedVersion"
  },
  "dolan2002": {
   "arxiv": "astro-ph/0110160",
@@ -2686,13 +2658,6 @@
   ],
   "version": "submittedVersion"
  },
- "padova1994": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
  "pecaut2013": {
   "arxiv": "1307.2657",
   "bibcode": "2013ApJS..208....9P",
@@ -3065,6 +3030,27 @@
   ],
   "version": "submittedVersion"
  },
+ "siebert2011": {
+  "arxiv": null,
+  "bibcode": "2011yCat.3265....0S",
+  "bytes": 9533,
+  "doi": null,
+  "file": "siebert2011.readme.txt",
+  "sha256": "c975658fc9ec7eee0ee0a61ebea8c4357608908510438bab42ec75f891d319ea",
+  "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/265/ReadMe",
+  "status": "ok",
+  "tried": [
+   {
+    "error": "HTTP Error 404: NOT FOUND",
+    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/PUB_PDF"
+   },
+   {
+    "error": "HTTP Error 404: NOT FOUND",
+    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/EPRINT_PDF"
+   }
+  ],
+  "version": "VizieR ReadMe"
+ },
  "simondiaz2015": {
   "arxiv": "1412.3469",
   "bibcode": "2015ApJ...799..169S",
@@ -3350,13 +3336,6 @@
    }
   ],
   "version": "submittedVersion"
- },
- "tokovinin2023": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
  },
  "tomasko2008": {
   "arxiv": null,
@@ -3994,13 +3973,6 @@
    }
   ],
   "version": "submittedVersion"
- },
- "zucker2020b": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
  },
  "zucker2021": {
   "arxiv": "2109.09765",

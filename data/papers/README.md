@@ -26,6 +26,7 @@ the store exists only so claims can be checked against the paper itself.
 
 | File | Holds |
 |---|---|
+| `index.md` | One entry per cited work under an explicit `<a id="<key>">` anchor: full citation, identifiers, the private copy's version, identification status, and a claims table (claim, value, page, passage). The target every tree citation points at. |
 | `inventory.json` | Every cited work (`papers`) and every cited dataset / service / standard (`non_papers`), each with its occurrences (`file`, `line`, the text as cited, the claim it backs). `inconsistencies` lists the same work cited differently across the tree. A snapshot: `line` is where `text` sat when last synced, and drifts as the tree is edited. |
 | `resolution.json` | For each work the tree cites without a DOI, arXiv ID or bibcode: its identification (`identified`, `book`, `ambiguous`, `not_found`, `mismatch`) with the evidence. `mismatch` means the paper exists but does not carry the claim the tree credits it with. |
 | `manifest.json` | Per key: download `status` (`ok`, `manual` = needs a hand download, `unobtainable` = no copy reachable, so the claim needs another source, `unidentified`), `source_url`, `version`, `sha256` and `bytes` of the private copy, and a `note` when the copy is partial or the status needs a reason. |
