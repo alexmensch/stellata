@@ -25,7 +25,6 @@ import {
 } from './solar-system/tsl-materials';
 import { makeTslChromeLineMaterials } from './chrome-lines/tsl-chrome-lines';
 import { makeTslShellMaterials } from './fresnel-shell/tsl-shell-materials';
-import { makeTslDustParticleMaterials } from './dust/tsl-dust-materials';
 import { makeTslCloudMaterials } from './molecular-clouds/tsl-cloud-materials';
 import { makeTslLgEmissionMaterials } from './local-group/tsl-lg-materials';
 import { makeTslBandMaterials } from './milkyway/tsl-band-materials';
@@ -154,11 +153,6 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     },
     get shellMaterials() {
       return makeTslShellMaterials({ registerMrtLayer });
-    },
-    get dustParticleMaterials() {
-      return makeTslDustParticleMaterials({
-        nodes: nodesOrThrow('dustParticleMaterials'), registerMrtLayer,
-      });
     },
     get cloudMaterials() {
       return makeTslCloudMaterials({

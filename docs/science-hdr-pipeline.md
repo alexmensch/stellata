@@ -1538,7 +1538,7 @@ Physical layers (emit `L`, exposure-multiplied, pre-tone-map):
 
 Non-physical chrome (galactic disc + grid, LG wireframes, constellation
 figure, orbit rings, binary orbit paths, heliopause + Local Bubble
-fresnel shells, cloud rim shells, dust particles if unshelved): these
+fresnel shells, cloud rim shells): these
 render **into the HDR RT** (they must depth-test against the scene) but
 **never multiply `uExposure`**, and their authored display colours are
 mapped through the CPU-side inverse of the tone-map

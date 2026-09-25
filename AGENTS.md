@@ -218,7 +218,7 @@ src/      Worker entry (worker.ts) + client. src/client/ has one
           subfolder per subsystem (solar-system/, local-group/, milkyway/,
           galactic/, molecular-clouds/, chart-mode/, star-pipeline/, hover/,
           focus-card/, format/, overlays/, camera/, filters/, scene/, poi/,
-          ui/, typeahead/, modals/, debug/, util/, loaders/, dust/, binaries/,
+          ui/, typeahead/, modals/, debug/, util/, loaders/, binaries/,
           chrome-lines/, render-gate/, webgpu/) — each with its own README.
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, render-rules.md, ux-tweaks.md,

@@ -5,7 +5,6 @@ import { isDustPublicAsset } from './sync-dust-pure';
 describe('sync-dust / isDustPublicAsset', () => {
   it('allows the runtime-consumed artifacts', () => {
     expect(isDustPublicAsset('manifest.json')).toBe(true);
-    expect(isDustPublicAsset('particles.bin')).toBe(true);
     expect(isDustPublicAsset('chunk_0_0_0.bin')).toBe(true);
     expect(isDustPublicAsset('chunk_3_12_3.bin')).toBe(true);
   });

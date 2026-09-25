@@ -69,8 +69,6 @@ src/client/webgpu/
   fresnel-shell/                    The boundary-shell surface shared by
                                     the heliopause and the Local Bubble —
                                     its own README.
-  dust/                             The dust-particle sprite, whose layer
-                                    is shelved — its own README.
   molecular-clouds/                 The cloud absorption raymarch (both
                                     tiers) and the rim shell — its own
                                     README.
@@ -135,9 +133,7 @@ per boot](#one-scene-per-boot)) plus the local depth pass, which runs as a singl
 bracket (K = 1 — [Decision](../local-depth/bracket/README.md#decision--keep-the-pass-collapse-to-k--1)). Every
 layer takes its surfaces from the seam — the subfolders above, one per
 family — and every line overlay takes its stroke from the chrome line seam
-(`../chrome-lines/README.md`). The dust sprite (`dust/`) is built, but its
-layer is shelved at strength 0 so nothing of it is visible without a
-console call. The HDR chain runs through `hdr/` behind the `HdrSeam`
+(`../chrome-lines/README.md`). The HDR chain runs through `hdr/` behind the `HdrSeam`
 interface (`../hdr/hdr-seam.ts`).
 
 ### One scene per boot
