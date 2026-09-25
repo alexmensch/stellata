@@ -30,6 +30,7 @@ import { buildStarLabels, seedStarLabelsFromNames } from '../typeahead/star-name
 import { loadSearchIndex } from '../typeahead/search-index-host';
 import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
+import type { Late, LateState } from '../util/late/late';
 
 /** Shell-owned star machinery the module's legs read through closures —
  *  the star render pipeline, its frame state, and the picker stay on the
@@ -44,10 +45,9 @@ export interface StarModuleRuntime {
   renderedSizePx(idx: number): number;
   /** The Picker's star pick, shared by hover and the click FSM. */
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
-  /** Orbital elements for the companion lines; null with no artifact.
-   *  Read per format call — the shell can re-attach binaries after the
-   *  card provider is built. */
-  getBinaries(): BinariesData | null;
+  /** Orbital elements for the companion lines. Read per format call — the
+   *  shell attaches binaries after the card provider is built. */
+  getBinaries(): Late<BinariesData>;
 }
 
 export interface StarKindModule extends ObjectKindModule<'star'> {
@@ -107,6 +107,9 @@ export function createStarKindModule(): StarKindModule {
     gaiaSourceId: catalog!.gaiaSourceId,
     sid: catalog!.sid,
   });
+
+  const binariesState = (): LateState<BinariesData> =>
+    (runtime ? runtime.getBinaries().state() : { status: 'pending' });
 
   const photometryOf = (idx: number) => (catalog && idx >= 0 && idx < catalog.count
     ? {
@@ -239,7 +242,7 @@ export function createStarKindModule(): StarKindModule {
         starLabels,
         spectralMap,
         searchEntries: searchEntryById,
-        getBinaries: () => runtime?.getBinaries() ?? null,
+        binaries: binariesState,
         tablesComplete: () => searchTables !== null,
         cameraDistancePc: (idx) => (runtime
           ? runtime.localPositionInto(idx, tmpLocal).distanceTo(attached.camera.position)
@@ -253,8 +256,10 @@ export function createStarKindModule(): StarKindModule {
       pick: (x, y, pxThreshold) => runtime?.pickStarHit(x, y, pxThreshold) ?? null,
       // `nowJd` is sampled fresh so the Tier-1 live separation tracks
       // the sim clock.
-      format: (hit) => (catalog && ctx
-        ? formatStarHover(hit.idx, hit.cameraDistancePc, {
+      format: (hit) => {
+        if (!catalog || !ctx) return null;
+        const binaries = binariesState();
+        return formatStarHover(hit.idx, hit.cameraDistancePc, {
           ...nameCtx(),
           spectralMap,
           spectClass: catalog.spectClass,
@@ -264,11 +269,11 @@ export function createStarKindModule(): StarKindModule {
           constellations: catalog.constellations,
           periodDays: catalog.periodDays,
           amplitudeMag: catalog.amplitudeMag,
-          binaries: runtime?.getBinaries() ?? null,
+          binaries: binaries.status === 'ready' ? binaries.value : null,
           nowJd: tToJdUt(ctx.getT()),
           membership: ctx.systemMembership,
-        })
-        : null),
+        });
+      },
     }),
 
     pinnable: (idx) =>

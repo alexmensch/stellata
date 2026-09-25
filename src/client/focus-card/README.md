@@ -135,7 +135,7 @@ The catalogue streams ([Progressive catalog load](../loaders/README.md#progressi
 the tables the providers read — `starLabels`, `spectralMap`,
 `searchEntryById`, the binaries relation — keep filling until wave 2 ends. A
 provider always answers correctly: each holds its table by reference and
-`getBinaries` is a thunk. **The rendered card is what goes stale**, because
+reads the binaries `Late` per call. **The rendered card is what goes stale**, because
 `reconcile` runs on `'focus'` / `'cameraMode'` / `'pois'` and a header click,
 and a table filling fires none of them. A card built at first paint therefore
 kept the designation, spectral class and companions the partial catalogue

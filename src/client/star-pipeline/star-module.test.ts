@@ -14,6 +14,8 @@ import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { Catalog } from '../loaders/catalog-loader';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
+import { LateCell } from '../util/late/late';
+import { lateAbsent } from '../util/late/late-fixture';
 import { createStarKindModule, type StarModuleRuntime } from './star-module';
 
 const loadCatalogMock = vi.hoisted(() => vi.fn());
@@ -34,7 +36,7 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
     parkDistForStar: () => 1.5,
     renderedSizePx: () => 12,
     pickStarHit: () => null,
-    getBinaries: () => null,
+    getBinaries: () => lateAbsent(),
     ...overrides,
   };
 }
@@ -201,14 +203,14 @@ describe('star kind module', () => {
     const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
     const ctx = makeKindContext();
     m.attach(ctx);
-    let binaries: BinariesData | null = null;
+    const binaries = new LateCell<BinariesData>();
     m.setRuntime(makeRuntime({ getBinaries: () => binaries }));
     const card = m.card();
     const companionsOf = (idx: number) =>
       card.format(idx).rows.find((r) => r.label === 'Known companions')?.value;
 
     expect(companionsOf(0)).toBeUndefined();
-    binaries = {
+    binaries.land({
       version: 1,
       relations: [{
         primaryIdx: 0,
@@ -229,7 +231,7 @@ describe('star kind module', () => {
       }],
       primaryIdxToRelations: new Map([[0, [0]]]),
       secondaryIdxToRelations: new Map([[1, [0]]]),
-    };
+    });
     expect(companionsOf(0)).toBe('HIP 91262');
   });
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { makeBinaries, makeRelation } from './binary-relation-fixture';
 import { createBinarySystemMembership } from './binary-system-membership';
+import { lateAbsent, lateReady } from '../util/late/late-fixture';
 
 // Castor-like shape: 0=A, 1=Aa2 (inner of A), 2=B, 4=C — A anchors
 // B and C; Aa2 is A's inner spectroscopic partner.
@@ -12,7 +13,7 @@ const BINARIES = makeBinaries([
 
 const provider = (collapsed: (i: number) => boolean, binaries = BINARIES) =>
   createBinarySystemMembership({
-    getBinaries: () => binaries,
+    binaries: lateReady(binaries),
     isCollapsed: collapsed,
   });
 
@@ -49,7 +50,7 @@ describe('createBinarySystemMembership', () => {
   });
 
   it('returns [] for everything when binaries.bin is absent', () => {
-    const p = createBinarySystemMembership({ getBinaries: () => null, isCollapsed: () => true });
+    const p = createBinarySystemMembership({ binaries: lateAbsent(), isCollapsed: () => true });
     expect(p.membersOf({ kind: 'star', idx: 0 })).toEqual([]);
     expect(p.collapsedClusterOf({ kind: 'star', idx: 0 })).toEqual([]);
   });

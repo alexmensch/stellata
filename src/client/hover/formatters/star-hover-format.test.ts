@@ -10,6 +10,7 @@ import {
 } from '../../binaries/binaries-loader';
 import { makeBinaries } from '../../binaries/binary-relation-fixture';
 import { createBinarySystemMembership } from '../../binaries/binary-system-membership';
+import { lateReady } from '../../util/late/late-fixture';
 import { SystemMembershipRegistry } from '../../system-membership/system-membership';
 import { formatStarHover, type StarHoverFormatContext } from './star-hover-format';
 
@@ -88,7 +89,7 @@ function membershipOf(
   isCollapsed: (i: number) => boolean,
 ): SystemMembershipRegistry {
   const reg = new SystemMembershipRegistry();
-  reg.register(createBinarySystemMembership({ getBinaries: () => binaries, isCollapsed }));
+  reg.register(createBinarySystemMembership({ binaries: lateReady(binaries), isCollapsed }));
   return reg;
 }
 

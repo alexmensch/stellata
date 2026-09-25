@@ -110,6 +110,7 @@ export {
   WARP_T_MIN_MS,
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
+import { LateCell, type Late } from './util/late/late';
 import {
   DEFAULT_FILTER,
   DEFAULT_FOV,
@@ -267,7 +268,7 @@ export class Stellata implements FrameAnchor {
   // then — the renderer functions identically with the static catalog
   // positions; binary orbital evolution simply doesn't fire.
   private binaryOrbitField: BinaryOrbitField | null = null;
-  private binariesData: BinariesData | null = null;
+  private readonly binariesData = new LateCell<BinariesData>();
 
   /** Kind-generic system membership (multi-star clusters, planet
    *  systems) — hover roster cards and collapsed-pick resolution both
@@ -707,7 +708,7 @@ export class Stellata implements FrameAnchor {
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
       createBinarySystemMembership({
-        getBinaries: () => this.getBinaries(),
+        binaries: this.binariesData,
         isCollapsed: (i) => this.isCompositeSuppressed(i),
       }),
     );
@@ -811,8 +812,9 @@ export class Stellata implements FrameAnchor {
     // Orbit paths rebuild on every focus mutation: the focused system's
     // Kepler pairs, or none when focus leaves a multi-star system.
     this.on('focus', () => {
+      const binaries = this.binariesData.state();
       this.binaryOrbitPathLayer.setSystem(
-        this.binariesData,
+        binaries.status === 'ready' ? binaries.value : null,
         this.focus.getFocusedStar(),
         this.catalog.positions,
       );
@@ -1478,8 +1480,8 @@ export class Stellata implements FrameAnchor {
     return report;
   }
 
-  /** The attached binaries.bin runtime table, or null before it lands. */
-  getBinaries(): BinariesData | null { return this.binariesData; }
+  /** The binaries.bin runtime table: absent when the artifact is missing. */
+  getBinaries(): Late<BinariesData> { return this.binariesData; }
 
   /** Attach (or replace) the parsed binaries.bin runtime table. Idempotent;
    *  passing null detaches. From the moment the field is attached every
@@ -1489,11 +1491,11 @@ export class Stellata implements FrameAnchor {
     this.renderGate.invalidate('attach:binaries');
     this.binaryOrbitField?.dispose();
     this.eclipsePhotometryField?.dispose();
-    this.binariesData = binaries;
     this.starLocalCluster.setBinaries(binaries);
     if (binaries === null) {
       this.binaryOrbitField = null;
       this.eclipsePhotometryField = null;
+      this.binariesData.conclude();
       return;
     }
     this.binaryOrbitField = new BinaryOrbitField({
@@ -1523,6 +1525,7 @@ export class Stellata implements FrameAnchor {
       eclipseDimBuffer: this._eclipseDim,
       iEclipseDimAttr: this.starAttrs.iEclipseDimAttr,
     });
+    this.binariesData.land(binaries);
   }
 
   private updateBinaryOrbits(): void {

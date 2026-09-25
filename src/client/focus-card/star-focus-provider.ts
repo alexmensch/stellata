@@ -13,6 +13,7 @@ import {
 } from '../../../scripts/catalog/spectral/physical-radius';
 import type { Catalog } from '../loaders/catalog-loader';
 import type { BinariesData } from '../binaries/binaries-loader';
+import type { LateState } from '../util/late/late';
 import type { SearchEntry } from '../typeahead/search';
 import { starDesignations } from '../typeahead/star-designations';
 import { fmtDistAuto } from '../ui/distance-util';
@@ -38,9 +39,8 @@ export interface StarFocusProviderConfig {
   starLabels: Map<number, string>;
   spectralMap: Map<number, string>;
   searchEntries: Map<number, SearchEntry>;
-  /** Orbital elements for the companion rows; null with no artifact.
-   *  Read per format call, so a late `attachBinaries` reaches the card. */
-  getBinaries: () => BinariesData | null;
+  /** Orbital elements for the companion rows, read per format call. */
+  binaries: () => LateState<BinariesData>;
   /** Live camera→star distance in the local frame, pc. */
   cameraDistancePc: (idx: number) => number;
   /** Current sim time as JD — drives the Tier-1 live companion separation. */
@@ -55,6 +55,10 @@ export function createStarFocusProvider(
 ): FocusCardProvider<'star'> {
   const { catalog, starLabels, spectralMap, searchEntries } = config;
   const nameCtx = { starLabels, gaiaSourceId: catalog.gaiaSourceId, sid: catalog.sid };
+  const binariesNow = (): BinariesData | null => {
+    const binaries = config.binaries();
+    return binaries.status === 'ready' ? binaries.value : null;
+  };
 
   return {
     kind: 'star',
@@ -104,7 +108,7 @@ export function createStarFocusProvider(
       if (vel) rows.push({ label: 'Velocity', value: formatSpaceVelocity(vel) });
       const names = companionNames(idx, {
         ...nameCtx,
-        binaries: config.getBinaries(),
+        binaries: binariesNow(),
         nowJd: 0,
       });
       if (names.length > 0) {
@@ -133,7 +137,7 @@ export function createStarFocusProvider(
       // hover card's does — shared fields must agree between tiers.
       const orbits = () => companionOfLines(idx, {
         ...nameCtx,
-        binaries: config.getBinaries(),
+        binaries: binariesNow(),
         nowJd: config.nowJd(),
       }).join('\n');
       if (orbits()) lines.push(orbits);

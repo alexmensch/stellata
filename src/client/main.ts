@@ -371,7 +371,7 @@ async function main() {
     // position, and `relationIndicesInBounds` tests against the full
     // allocation — so a pair in a late chunk would cache (0,0,0) as its
     // anchor and project the whole orbit in the wrong frame, silently.
-    if (binaries) stellata.attachBinaries(binaries);
+    stellata.attachBinaries(binaries);
     await frame();
 
     // Chart mode bound against this map in wave 1 and holds it by

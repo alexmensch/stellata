@@ -3,6 +3,7 @@
 `late.ts` (+ test) — `Late<T>`, the one representation of a value that lands
 after its reader exists, and `LateCell<T>`, its writer. It is the contract
 [Boot in two waves](../../README.md#boot-in-two-waves) points at.
+`late-fixture.ts` — test-only `lateReady` / `lateAbsent`.
 
 ## The three states
 
