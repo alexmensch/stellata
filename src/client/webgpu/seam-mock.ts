@@ -30,9 +30,6 @@ export function fakeWebGpuSeam(overrides: Partial<WebGpuSeam> = {}): WebGpuSeam 
       return refuse('chromeLineMaterials');
     },
     get shellMaterials(): WebGpuSeam['shellMaterials'] { return refuse('shellMaterials'); },
-    get dustParticleMaterials(): WebGpuSeam['dustParticleMaterials'] {
-      return refuse('dustParticleMaterials');
-    },
     get cloudMaterials(): WebGpuSeam['cloudMaterials'] { return refuse('cloudMaterials'); },
     get lgEmissionMaterials(): WebGpuSeam['lgEmissionMaterials'] {
       return refuse('lgEmissionMaterials');

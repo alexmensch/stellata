@@ -76,11 +76,10 @@ the material's MRT-mode registration.
 It lives here, beside `SceneLayer`, because every material-building
 subsystem takes its surfaces through it — the solar-system family
 (`../solar-system/materials/README.md`), the Milky Way band, the
-molecular clouds, the Local Group glow, the boundary shells
-(`../fresnel-shell/README.md`) and the dust sprite (`../dust/README.md`).
+molecular clouds, the Local Group glow and the boundary shells
+(`../fresnel-shell/README.md`).
 Each subsystem's own factory interface (`SolarSystemMaterials`,
-`BandMaterials`, `CloudMaterials`, `LgEmissionMaterials`, `ShellMaterials`,
-`DustParticleMaterials`) stays
+`BandMaterials`, `CloudMaterials`, `LgEmissionMaterials`, `ShellMaterials`) stays
 with the layer that owns it; only the surface handle is shared. The
 `IUniform` face over a TSL node record is `uniformSlotsOf`
 ([Uniform slots](../webgpu/tsl/README.md#uniform-slots--the-face-a-layer-writes)).
@@ -334,7 +333,6 @@ SVG mask (`../constellation-figure/README.md`).
 | Planet glow (inactive-cluster hosts)             | canvas  | `renderOrder: 4`                                   |       | [solar-system/planets/](../solar-system/planets/README.md) |
 | Probe markers (cluster inactive)                  | canvas  | `renderOrder: 3.5`                                 |       | [solar-system/probes/](../solar-system/probes/README.md) |
 | Probe trails (cluster inactive)                   | canvas  | `renderOrder: 3.4`                                 |       | [solar-system/probes/](../solar-system/probes/README.md) |
-| Dust particles                                   | canvas  | `renderOrder: 2`                                   |       | [dust/](../dust/README.md) |
 | Star glow + heliopause shell                     | canvas  | `renderOrder: 1`                                   |       | [star-pipeline/](../star-pipeline/README.md), [solar-system/heliopause/](../solar-system/heliopause/README.md) |
 | Star disc                                        | canvas  | `renderOrder: 0`                                   |       | [star-pipeline/](../star-pipeline/README.md) |
 | Constellation figure                             | canvas  | `renderOrder: -0.75`                               |       | [constellation-figure/](../constellation-figure/README.md) |

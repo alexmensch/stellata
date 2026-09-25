@@ -5,13 +5,12 @@ import { createBinarySystemMembership } from './binaries/binary-system-membershi
 import type { ChromeLineMaterials } from './chrome-lines/chrome-line-materials';
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
-import type { DustField, DustParticleData } from './loaders/dust-loader';
+import type { DustField } from './loaders/dust-loader';
 import {
   formatVerifyReports,
   verifyDustChunks,
   type ChunkVerifyReport,
 } from './loaders/dust-voxel-readback';
-import { DustParticleLayer } from './dust/dust-particle-layer';
 import { galacticDiscSceneLayer } from './galactic/galactic-disc';
 import { CoordSpheres } from './galactic/coord-spheres/coord-spheres';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
@@ -230,9 +229,6 @@ export class Stellata implements FrameAnchor {
   // — every per-frame write goes through this field, never
   // through a star material's uniforms object.
   private sharedUniforms!: SharedUniforms;
-  // Dust-particle render layer. Currently shelved — see
-  // src/client/star-pipeline/extinction/README.md.
-  private dustParticles!: DustParticleLayer;
 
   // The floating-origin service — worldOffset, the ordered recentre
   // fan-out, and the focal anchor policy (frame/README.md).
@@ -590,11 +586,6 @@ export class Stellata implements FrameAnchor {
     this.offCatalogRecords = this.catalog.onRecordsDecoded(
       () => this.absorbCatalogRecords());
     this.absorbCatalogRecords();
-
-    this.dustParticles = new DustParticleLayer(
-      this.scene,
-      this.webgpu.dustParticleMaterials,
-    );
 
     // Galactic reference layers — disc is always added; grid hides itself
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
@@ -1148,12 +1139,6 @@ export class Stellata implements FrameAnchor {
       // disc, so membership has to be this frame's.
       update: () => this.setCoreMaskVisible(this.coreMaskEnabled),
       dispose: () => {},
-    });
-    this.layers.register({
-      // Teardown leg only — the layer is shelved and draws nothing.
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      dispose: () => this.dustParticles.dispose(),
     });
     this.layers.register({
       // Teardown leg only; the per-frame work rides the 'frame' event, so
@@ -1888,45 +1873,6 @@ export class Stellata implements FrameAnchor {
   private setCoreMaskVisible(on: boolean): void {
     this.webgpuStarLayer.setCoreMaskVisible(on);
   }
-
-  /** The layer is shelved — see src/client/dust/README.md before
-   *  re-enabling. */
-  attachDustParticles(data: DustParticleData) {
-    this.renderGate.invalidate('attach:dustParticles');
-    this.dustParticles.attach(data);
-  }
-
-  /** Register a lazy fetch for particles.bin. Invoked (once) on the first
-   *  setParticleStrength(>0), so the shelved particle layer costs no wire
-   *  bytes on loads that never opt in. */
-  setDustParticleSource(source: () => Promise<DustParticleData | null>) {
-    this.dustParticleSource = source;
-  }
-
-  private dustParticleSource: (() => Promise<DustParticleData | null>) | null = null;
-  private lastParticleStrength = 0;
-
-  /** User-facing dust-particle visibility (`stellata.setParticleStrength`
-   *  console knob). 0 = hidden (default); higher = stronger additive
-   *  contribution. First call above 0 triggers the lazy particles.bin
-   *  fetch when a source is registered; the requested strength is
-   *  re-applied once the mesh attaches. */
-  setParticleStrength(x: number) {
-    this.lastParticleStrength = Math.max(0, x);
-    if (x > 0 && this.dustParticleSource !== null) {
-      const source = this.dustParticleSource;
-      this.dustParticleSource = null;
-      void source().then((data) => {
-        if (data === null || this.disposed) return;
-        this.dustParticles.attach(data);
-        this.dustParticles.setStrength(this.lastParticleStrength);
-        this.renderGate.invalidate('dust-particles:loaded');
-      });
-    }
-    this.dustParticles.setStrength(x);
-    this.renderGate.invalidate('dust-particles:strength');
-  }
-
 
   // Read-only view of the local-frame star positions, bound to the GPU
   // iPosition attribute. Overlays should project through this rather than

@@ -93,7 +93,7 @@ describe('shipped scene-layer time declarations', () => {
     // layer alongside. Everything else is fixed geometry, pure projection,
     // or the orbit lock's sequencing-only entry — which draws nothing, so
     // it must never ask the cadence for a frame of its own.
-    expect(census).toEqual({ static: 11, clock: 10, realtime: 0 });
+    expect(census).toEqual({ static: 10, clock: 10, realtime: 0 });
   });
 
   it('every inline register({...}) in the shell carries a declaration', () => {
@@ -138,7 +138,7 @@ describe('shipped scene-layer contribution declarations', () => {
     // admissible test can ever fire on it.
     const census: Record<string, number> = { always: 0, gated: 0 };
     for (const d of contributions) census[d.kind]++;
-    expect(census).toEqual({ always: 13, gated: 8 });
+    expect(census).toEqual({ always: 12, gated: 8 });
   });
 
   it('every inline register({...}) in the shell carries one', () => {
