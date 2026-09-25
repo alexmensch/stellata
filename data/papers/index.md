@@ -218,6 +218,17 @@ ApJ 224, 132 (1978) · [doi:10.1086/156357](https://doi.org/10.1086/156357) · [
 | N_H/E(B-V) | 5.8×10²¹ cm⁻² mag⁻¹ | verified | p. 132 (abstract) | “(N(H I + H2)/E(B − V)) = 5.8 × 10^21 atoms cm−2 mag−1” |
 | N_H per A_V (derived at R_V = 3.1) | 1.87×10²¹ cm⁻² mag⁻¹ | verified | p. 132 (abstract) | “(N(H I + H2)/E(B − V)) = 5.8 × 10^21 atoms cm−2 mag−1” |
 
+<a id="bond2018"></a>
+### Bond et al. 2018 — Hubble Space Telescope Trigonometric Parallax of Polaris B, Companion of the Nearest Cepheid
+
+Bond H. E., Nelan E. P., Remage Evans N., Schaefer G. H. & Harmer D.; ApJ 853, 55 (2018) · [doi:10.3847/1538-4357/aaa3f9](https://doi.org/10.3847/1538-4357/aaa3f9) · [arXiv:1712.08139](https://arxiv.org/abs/1712.08139) · [2018ApJ...853...55B](https://ui.adsabs.harvard.edu/abs/2018ApJ...853...55B)
+
+- **Copy:** `submittedVersion`
+
+| Claim | Value | Status | Page | Passage |
+|---|---|---|---|---|
+| Polaris B HST FGS absolute parallax | 6.26 ± 0.24 mas (158 ± 6 pc) | verified | p. 2, Abstract; p. 11, Sect. 2.3 | “Our solution results in an absolute parallax of Polaris B of 6.26 ± 0.24 mas (d = 158 ± 6 pc)” |
+
 <a id="bruzual2003"></a>
 ### Bruzual & Charlot 2003 — Stellar population synthesis at the resolution of 2003
 
@@ -242,7 +253,8 @@ A&A 570, A62 (2014) · [doi:10.1051/0004-6361/201424483](https://doi.org/10.1051
 
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
-| rigorous epoch-propagation form |  | verified | p. 1 (abstract) | “We present rigorous and explicit formulae for the transformation of stellar positions, parallaxes, proper motions, and radial velocities from one epoch to another” |
+| light-time terms on top of uniform rectilinear motion |  | verified | p. 1 (abstract) | “assuming uniform rectilinear motion and taking light-time effects into account” |
+| size of the light-time terms | > 0.1 mas over 100 yr for at least 33 Hipparcos stars | verified | p. 1 (abstract) | “light-time effects are generally very small, but exceed 0.1 mas or 0.1 m s−1 over 100 yr for at least 33 stars in the Hipparcos catalogue.” |
 
 <a id="cardelli1989"></a>
 ### Cardelli, Clayton & Mathis 1989 — The relationship between infrared, optical, and ultraviolet extinction
@@ -269,6 +281,18 @@ MNRAS 479, L102-L107 (2018) · [doi:10.1093/mnrasl/sly104](https://doi.org/10.10
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
 | solar BP-RP | 0.82 | verified | p. 4, Sect. 4 | “(GBP − GRP ) = 0.82 for the Sun” |
+
+<a id="chabrier2003"></a>
+### Chabrier 2003 — Galactic Stellar and Substellar Initial Mass Function
+
+Chabrier G.; PASP 115, 763-796 (2003) · [doi:10.1086/376392](https://doi.org/10.1086/376392) · [arXiv:astro-ph/0304382](https://arxiv.org/abs/astro-ph/0304382) · [2003PASP..115..763C](https://ui.adsabs.harvard.edu/abs/2003PASP..115..763C)
+
+- **Copy:** `submittedVersion`
+- **Note:** BC03 cites it as Chabrier (2003b) and truncates it at 0.1 and 100 M⊙ (`bruzual2003`, p. 8); the mass limits are BC03's, not this paper's
+
+| Claim | Value | Status | Page | Passage |
+|---|---|---|---|---|
+| disk IMF form: lognormal at m ≤ 1 M⊙, power law x = 1.3 above | lognormal (m_c = 0.079 M⊙, σ = 0.69) + x = 1.3 | verified | p. 16, eq. 17; p. 66, Table 1 | “IMF A=0.158 ... mc = 0.079 ... σ = 0.69 ... A=4.43×10−2 x=1.3 ±0.3” |
 
 <a id="chapman2009"></a>
 ### Chapman et al. 2009 — The Mid-Infrared Extinction Law in the Ophiuchus, Perseus, and Serpens Molecular Clouds
@@ -453,6 +477,7 @@ ApJ 268, 451 (1983) · [doi:10.1086/160971](https://doi.org/10.1086/160971) · [
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
 | Galaxy total absolute B magnitude | M_B = −20.2 ± 0.15 | verified | p. 451, Abstract | “RQ = 8.5 ± 0.5 kpc, M°T(B) = −20.2 ± 0.15, (B − V)°T = 0.53 ± 0.04” |
+| Galaxy integrated colour, carrying M_B to V | (B−V) = 0.53 | verified | p. 451, Abstract | “M°T(B) = −20.2 ± 0.15, (B − V)°T = 0.53 ± 0.04” |
 
 <a id="devaucouleurs1991"></a>
 ### de Vaucouleurs et al. 1991 — Third Reference Catalogue of Bright Galaxies (RC3)
@@ -545,7 +570,7 @@ ApJ 618, 973-986 (2005) · [doi:10.1086/426050](https://doi.org/10.1086/426050) 
 A&A 685, A82 · [doi:10.1051/0004-6361/202347628](https://doi.org/10.1051/0004-6361/202347628) · [arXiv:2308.01295](https://arxiv.org/abs/2308.01295)
 
 - **Copy:** `submittedVersion`
-- **Note:** The paper gives the map's Zenodo DOI as 10.5281/zenodo.8187942 (pp. 7, 12, 24); 8187943 is a different record of the deposit
+- **Note:** The paper gives the map's Zenodo DOI as 10.5281/zenodo.8187942 (pp. 7, 12, 24), the concept DOI covering all versions; 8187943, which the tree cites, is its v1.0 record
 
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
@@ -567,7 +592,8 @@ ESA SP-1200 · [1997HIP...C......0E](https://ui.adsabs.harvard.edu/abs/1997HIP..
 | BT−VT validity range of the reduction | [−0.25, 2.0] | disagrees | p. 57, Sect. 1.3 Appendix 4; p. 142, Sect. 2.2 | “the following approximate linear transformations were derived between the two systems over the range −0.2 < (B − V)T < 1.8” |
 | Hipparcos main catalogue entry count | 118,218 | verified | p. 6, Sect. 1.1 | “The Hipparcos Catalogue contains 118 218 entries corresponding to 129 332 stellar components” |
 | I/239 fields used: printed Johnson V (H5), B−V (H37), CCDM (H55), MultFlag (H59), HD (H71) |  | verified | p. 107, Field H5; p. 115, Field H37; p. 124, Field H55; p. 126, Field H59; p. 133, Field H71 | “The magnitude, V, in the Johnson UBV photometric system.” |
-| Standard epoch-transformation model | linear space motion (Vol. 1 Sect. 1.5.5) | verified | p. 94, Sect. 1.5.5 | “the standard model assumes uniform space velocity for the object: its path on the celestial sphere ... is a great-circle arc.” |
+| Rigorous epoch-transformation model: uniform space motion | uniform space motion (Vol. 1 Sect. 1.5.5) | verified | p. 94, Sect. 1.5.5 | “the standard model assumes uniform space velocity for the object: its path on the celestial sphere ... is a great-circle arc.” |
+| The standard model carries perspective acceleration | perspective acceleration included | verified | p. 32, Sect. 1.2.8 | “The factor (1+ ζ0 t) appearing in the normalising factors of Equations 1.2.16 and 1.2.18 thus accounts for the perspective diminishing of the proper motion of a receding object.” |
 | Hipparcos catalogue epoch | J1991.25 | verified | p. xv, Summary of the Hipparcos and Tycho Catalogues | “Catalogue epoch J1991.25” |
 
 <a id="espenak2006"></a>
@@ -879,7 +905,7 @@ AJ 126, 2048-2059 (2003) · [doi:10.1086/378365](https://doi.org/10.1086/378365)
 
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
-| Castor A (HIP 36850, HD 60178) spectral type | A1.5IV | verified | p. 18, Table 1 | “36850 60178 A1.5 IV+” |
+| Castor A (HIP 36850, HD 60178) spectral type | A1.5 IV+ (curated in code as A1.5IV) | verified | p. 18, Table 1 | “36850 60178 A1.5 IV+” |
 
 <a id="gurnett2013"></a>
 ### Gurnett et al. 2013 — In Situ Observations of Interstellar Plasma with Voyager 1
@@ -1127,6 +1153,17 @@ Planet. Space Sci. 206, 105310 (2021) · [doi:10.1016/j.pss.2021.105310](https:/
 |---|---|---|---|---|
 | Ganymede global colour mosaic |  | verified | p. 1, Abstract; p. 4 | “version of the global Ganymede image mosaic using a combination of Voyager 1 and 2 and Galileo” |
 
+<a id="kervella2003"></a>
+### Kervella et al. 2003 — The interferometric diameter and internal structure of Sirius A
+
+Kervella P., Thévenin F., Morel P., Bordé P. & Di Folco E.; A&A 408, 681-688 (2003) · [doi:10.1051/0004-6361:20030994](https://doi.org/10.1051/0004-6361:20030994) · [arXiv:astro-ph/0306604](https://arxiv.org/abs/astro-ph/0306604) · [2003A&A...408..681K](https://ui.adsabs.harvard.edu/abs/2003A%26A...408..681K)
+
+- **Copy:** `submittedVersion`
+
+| Claim | Value | Status | Page | Passage |
+|---|---|---|---|---|
+| Sirius A interferometric radius (linear diameter in solar diameters) | 1.711 R☉ | verified | p. 1, Abstract; p. 5, Sect. 5.3 | “this translates into a linear diameter of 1.711 ± 0.013 D⊙” |
+
 <a id="kilic2020"></a>
 ### Kilic M. et al. 2020 — The 100 pc White Dwarf Sample in the SDSS Footprint
 
@@ -1282,7 +1319,8 @@ ApJ 809, 96 (2015) · [doi:10.1088/0004-637X/809/1/96](https://doi.org/10.1088/0
 
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
-| Milky Way analogues behind BHG16 M_V and colour | M_V = −21.37, B−V = 0.73 (via BHG16 Table 2) | verified | p. 15, Table 3; p. 17 | “these compare well with our slightly brighter estimates of 0MB = −20.84 and 0MV = −21.51” |
+| Milky Way-analogue analysis behind BHG16 Table 2 (BHG16's −21.37 / 0.73 are its own transformation, not this paper's numbers) |  | verified | p. 1, Abstract | “by selecting a sample of Milky Way analog galaxies designed to reproduce the best Galactic M? and Ṁ? measurements” |
+| Licquia's own Galaxy M_V | M_V = −21.51 | verified | p. 17 | “these compare well with our slightly brighter estimates of 0MB = −20.84 and 0MV = −21.51” |
 
 <a id="lieske1979"></a>
 ### Lieske 1979 — Precession matrix based on IAU (1976) system of astronomical constants
@@ -1619,6 +1657,17 @@ Nicholson P. D., Mosqueira I. & Matthews K.; Icarus 113, 295-330 (1995) · [1995
 |---|---|---|---|---|
 | stellar-occultation source for the Neptune ring table |  | verified | p. 295, Abstract | “Data from eight stellar occultations by Neptune between 1984 and 1988 are analyzed to set limits on the optical depths of the continuous Adams and Le Verrier Rings” |
 
+<a id="north2007"></a>
+### North et al. 2007 — γ² Velorum: Orbital Solution and Fundamental Parameter Determination with SUSI
+
+North J. R., Tuthill P. G., Tango W. J. & Davis J.; MNRAS 377, 415-424 (2007) · [doi:10.1111/j.1365-2966.2007.11608.x](https://doi.org/10.1111/j.1365-2966.2007.11608.x) · [arXiv:astro-ph/0702375](https://arxiv.org/abs/astro-ph/0702375) · [2007MNRAS.377..415N](https://ui.adsabs.harvard.edu/abs/2007MNRAS.377..415N)
+
+- **Copy:** `submittedVersion`
+
+| Claim | Value | Status | Page | Passage |
+|---|---|---|---|---|
+| γ² Vel distance from the interferometric orbit | 336 +8/−7 pc | verified | p. 1, Abstract; p. 10, Table 4 | “our orbital solution produces a distance of 336+8 −7 pc, significantly more distant than the Hipparcos estimation” |
+
 <a id="osterbrock2006"></a>
 ### Osterbrock & Ferland 2006 — Astrophysics of Gaseous Nebulae and Active Galactic Nuclei, 2nd ed.
 
@@ -1629,7 +1678,7 @@ University Science Books, Sausalito (2006); ISBN 1-891389-34-3 · [2006agna.book
 
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
-| case-B recombination coefficient alpha_B | 2.6e-13 cm^3 s^-1 | unverified |  |  |
+| case-B recombination coefficient alpha_B at 10^4 K | 2.6e-13 cm^3 s^-1 | unverified |  |  |
 
 <a id="pace2025"></a>
 ### Pace et al. 2025 — The Local Volume Database: a library of the observed properties of nearby dwarf galaxies and star clusters
@@ -1687,7 +1736,7 @@ Nature 567, 200 · [doi:10.1038/s41586-019-0999-4](https://doi.org/10.1038/s4158
 
 | Claim | Value | Status | Page | Passage |
 |---|---|---|---|---|
-| LMC distance | 49.594 kpc (also written 49.59, 49.6 kpc) | verified | p. 1, Abstract; p. 3 | “The final distane is 49.59 ± 0.09 (statistical) ± 0.54 (systematic) kiloparsecs.” |
+| LMC distance | 49.594 kpc shipped (prose 49.59, 49.6 kpc); the paper prints 49.59, and its μ = 18.477 gives 49.591 | disagrees | p. 1, Abstract; p. 3 | “The final distane is 49.59 ± 0.09 (statistical) ± 0.54 (systematic) kiloparsecs.” |
 | LMC distance uncertainty | ± 0.55 kpc | verified | p. 1, Abstract | “49.59 ± 0.09 (statistical) ± 0.54 (systematic) kiloparsecs” |
 | distance is to the LMC centre |  | verified | p. 3 | “We adopted the centre of the young stellar population in the LMC (right ascension RA = 5 h 20 min 12 s, declination dec. = –69° 18′ 00′′” |
 

@@ -315,6 +315,17 @@
   ],
   "version": "ADS scan of published article"
  },
+ "bond2018": {
+  "arxiv": "1712.08139",
+  "bibcode": "2018ApJ...853...55B",
+  "bytes": 202732,
+  "doi": "10.3847/1538-4357/aaa3f9",
+  "sha256": "d38dd87cd5893de92f453d7c929fe2ceebf1f459e9a77a62ebcd25b93588415b",
+  "source_url": "https://arxiv.org/pdf/1712.08139",
+  "status": "ok",
+  "tried": [],
+  "version": "submittedVersion"
+ },
  "bruzual2003": {
   "arxiv": "astro-ph/0309134",
   "bibcode": null,
@@ -392,6 +403,17 @@
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2018MNRAS.479L.102C/PUB_PDF"
    }
   ],
+  "version": "submittedVersion"
+ },
+ "chabrier2003": {
+  "arxiv": "astro-ph/0304382",
+  "bibcode": "2003PASP..115..763C",
+  "bytes": 676479,
+  "doi": "10.1086/376392",
+  "sha256": "1308007b5fd7130033234df7bb76c8976fa055a823fa1b4a6bc64b298b03df92",
+  "source_url": "https://arxiv.org/pdf/astro-ph/0304382",
+  "status": "ok",
+  "tried": [],
   "version": "submittedVersion"
  },
  "chapman2009": {
@@ -1767,6 +1789,17 @@
   ],
   "version": "submittedVersion"
  },
+ "kervella2003": {
+  "arxiv": "astro-ph/0306604",
+  "bibcode": "2003A&A...408..681K",
+  "bytes": 238383,
+  "doi": "10.1051/0004-6361:20030994",
+  "sha256": "37dc0f11f4e90bdadf4a8f2ce96820a158c1bf1fc1f10d396c55831068a48411",
+  "source_url": "https://arxiv.org/pdf/astro-ph/0306604",
+  "status": "ok",
+  "tried": [],
+  "version": "submittedVersion"
+ },
  "kilic2020": {
   "arxiv": "2006.00323",
   "bibcode": "2020ApJ...898...84K",
@@ -2528,6 +2561,17 @@
    }
   ],
   "version": "publishedVersion"
+ },
+ "north2007": {
+  "arxiv": "astro-ph/0702375",
+  "bibcode": "2007MNRAS.377..415N",
+  "bytes": 369501,
+  "doi": "10.1111/j.1365-2966.2007.11608.x",
+  "sha256": "698a1d287963e1091a0a5952e7ffb0ec0f2269672b7a6c7d719fe091ec422cc7",
+  "source_url": "https://arxiv.org/pdf/astro-ph/0702375",
+  "status": "ok",
+  "tried": [],
+  "version": "submittedVersion"
  },
  "osterbrock2006": {
   "arxiv": null,
