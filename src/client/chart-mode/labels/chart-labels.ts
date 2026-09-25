@@ -364,11 +364,10 @@ export class ChartLabels {
     // (stop() empties the SVG pools).
     this.forceNextTick();
     this.unsubs.push(stellata.catalog.complete.observe((settled) => {
-      if (this.tables.status !== 'ready') {
-        this.tables = settled.status === 'ready'
-          ? { status: 'ready', value: buildChartCatalogTables(settled.value) }
-          : settled;
-      }
+      if (this.tables.status !== 'pending') return;
+      this.tables = settled.status === 'ready'
+        ? { status: 'ready', value: buildChartCatalogTables(settled.value) }
+        : settled;
       this.forceNextTick();
       stellata.renderGate.invalidate('chart:catalog-settled');
     }));

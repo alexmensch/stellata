@@ -856,6 +856,21 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         h.landCatalog();
         expect(h.invalidations()).toEqual([]);
       });
+
+      it('settles once: chart re-entry neither rebuilds nor re-invalidates', () => {
+        installDomStubs();
+        const h = streamingHarness();
+        const labels = new ChartLabels(h.stellata, h.distSol);
+        labels.start(h.ctx);
+        h.landCatalog();
+        const builds = h.tableBuilds();
+        labels.stop();
+        labels.start(h.ctx);
+
+        expect(h.tableBuilds()).toBe(builds);
+        expect(h.invalidations()).toEqual(['chart:catalog-settled']);
+        labels.dispose();
+      });
     });
 
     // Serpens' one member drops under the instrument limit as well, so both its
