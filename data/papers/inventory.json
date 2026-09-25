@@ -11045,18 +11045,6 @@
      "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
     },
     {
-     "file": "src/client/dust/README.md",
-     "line": 3,
-     "text": "Instanced additive billboards for the Edenhofer 2024 dust map's",
-     "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
-    },
-    {
-     "file": "src/client/dust/README.md",
-     "line": 13,
-     "text": "are not visualising the Edenhofer dust field: two treatments were built",
-     "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
-    },
-    {
      "file": "src/client/index.html",
      "line": 417,
      "text": "catalogues and the Edenhofer 3D dust map; the nearest galaxies come",
@@ -11114,12 +11102,6 @@
      "file": "src/client/stellata.ts",
      "line": 1387,
      "text": "// attenuation shows the actual Edenhofer voxel structure (Great Rift,",
-     "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
-    },
-    {
-     "file": "src/client/webgpu/dust/dust-particle-tsl.ts",
-     "line": 34,
-     "text": "// uses, so the scale matches the visible range of real Edenhofer",
      "claim": "3D dust extinction map (E_ZGR units) resampled into the voxel grid; per-star extinction raymarch"
     },
     {
