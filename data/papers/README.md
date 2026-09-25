@@ -78,6 +78,7 @@ from the tree as it stands.
 | `publishedVersion`, `ADS scan of published article` | The journal's |
 | `acceptedVersion`, `submittedVersion` | The arXiv preprint's — does **not** match the journal's page numbers |
 | `VizieR ReadMe` | Line numbers in the catalogue ReadMe |
+| `web page, retrieved <date>`, `text table, version <v>, retrieved <date>` | None — locators name the section, table or row; the date (and version) pin what was read |
 
 A page locator is only meaningful alongside the version of the copy it was
 read from, and `sha256` pins that copy.

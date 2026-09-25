@@ -102,7 +102,7 @@ swing-by reads as a distant pass. That is what the tables are for, and it
 is why they cover only the epochs a mission actually happened in.
 
 Pluto's row is the pre-removal Table 2a one **plus** its Table 2b `b`
-term. The widely reproduced linear-elements row is [Standish](/data/papers/index.md#standishwilliams)'s Table 1
+term. The widely reproduced linear-elements row is [Standish](/data/papers/index.md#standish1992)'s Table 1
 (1800–2050) — it holds 0.016 AU near now but grows quadratically to
 ~25 AU at the clamp bound, on the wrong side of the orbit, and the
 model clock reaches there.

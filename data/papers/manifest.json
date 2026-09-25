@@ -45,6 +45,23 @@
   ],
   "version": "submittedVersion"
  },
+ "archinal2011": {
+  "arxiv": null,
+  "bibcode": "2011CeMDA.109..101A",
+  "doi": "10.1007/s10569-010-9320-4",
+  "source_url": "https://doi.org/10.1007/s10569-010-9320-4",
+  "status": "manual",
+  "tried": [
+   {
+    "error": "connect timeout",
+    "url": "https://astropedia.astrogeology.usgs.gov/download/Docs/WGCCRE/WGCCRE2009reprint.pdf"
+   },
+   {
+    "error": "not a PDF (HTTP 200)",
+    "url": "https://link.springer.com/content/pdf/10.1007/s10569-010-9320-4.pdf"
+   }
+  ]
+ },
  "archinal2018": {
   "arxiv": null,
   "bibcode": null,
@@ -436,7 +453,7 @@
   "arxiv": "2306.06271",
   "bibcode": null,
   "bytes": 4129558,
-  "doi": null,
+  "doi": "10.3847/1538-4365/acdd06",
   "sha256": "75ef3e69050c8230be1ffeb78f74011c770450d9d62a49886fb15b576b28f58a",
   "source_url": "https://arxiv.org/pdf/2306.06271",
   "status": "ok",
@@ -466,7 +483,7 @@
   "arxiv": null,
   "bibcode": "2021MNRAS.508.5148C",
   "bytes": 1833094,
-  "doi": null,
+  "doi": "10.1093/mnras/stab2831",
   "sha256": "25fb5e6ccd6a0f9fe4616b92a61bea0c718a15dbcf880bfaee055e34187c7ffa",
   "source_url": "https://arxiv.org/pdf/2110.01658",
   "status": "ok",
@@ -617,29 +634,6 @@
   ],
   "version": "ADS scan of published article"
  },
- "devaucouleurs1978": {
-  "arxiv": null,
-  "bibcode": "1978AJ.....83.1163D",
-  "bytes": 1158958,
-  "doi": "10.1086/112305",
-  "openalex_first_author": "G. de Vaucouleurs",
-  "openalex_title": "An outsider's view of the Galaxy - Photometric parameters, scale lengths, and absolute magnitudes of the spheroidal and disk components of our Galaxy",
-  "openalex_year": 1978,
-  "sha256": "90f15e10b0fc3066df0c42da5040b0fc76bf4d268c106325a5620c994589829a",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1978AJ.....83.1163D",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1978AJ.....83.1163D/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1978AJ.....83.1163D/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
  "devaucouleurs1983": {
   "arxiv": null,
   "bibcode": "1983ApJ...268..451D",
@@ -666,9 +660,14 @@
  "devaucouleurs1991": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 21246,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "file": "devaucouleurs1991.readme.txt",
+  "sha256": "d182c7db2f0f280313680727217d732925a2ae3067c0a4bee733ee6be5ed0c0d",
+  "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/VII/155/ReadMe",
+  "status": "ok",
+  "tried": [],
+  "version": "VizieR ReadMe"
  },
  "dolan2002": {
   "arxiv": "astro-ph/0110160",
@@ -695,10 +694,15 @@
  },
  "dommanget1994": {
   "arxiv": null,
-  "bibcode": null,
+  "bibcode": "1994CoORB.115....1D",
+  "bytes": 7317,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "file": "dommanget1994.readme.txt",
+  "sha256": "51c779cf5fe5dc07e5eeb0004269b879f1f1def9718f55d48db1452b8a6ae1a3",
+  "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/I/211/ReadMe",
+  "status": "ok",
+  "tried": [],
+  "version": "VizieR ReadMe"
  },
  "drimmel2001": {
   "arxiv": "astro-ph/0101259",
@@ -859,6 +863,17 @@
   "tried": [],
   "version": "publishedVersion"
  },
+ "espenak2009lunar": {
+  "arxiv": null,
+  "bibcode": null,
+  "bytes": 14477450,
+  "doi": null,
+  "sha256": "c21e3d13662669ef7609a9624061fcbd9e16d666c97733b5013762019d1fee60",
+  "source_url": "https://eclipse.gsfc.nasa.gov/5MCLE/5MKLE-214173.pdf",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
+ },
  "esposito2002": {
   "arxiv": null,
   "bibcode": null,
@@ -970,26 +985,6 @@
    }
   ],
   "version": "submittedVersion"
- },
- "fitzgerald1970": {
-  "arxiv": null,
-  "bibcode": "1970A&A.....4..234F",
-  "bytes": 190075,
-  "doi": null,
-  "sha256": "923cf7807cc6e9f9733cd167df52da81161542511943280a183cb854d63f06a4",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1970A%26A.....4..234F",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1970A%26A.....4..234F/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1970A%26A.....4..234F/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
  },
  "flynn2006": {
   "arxiv": "astro-ph/0608193",
@@ -1148,6 +1143,19 @@
   ],
   "version": "VizieR ReadMe"
  },
+ "gaiadr3doc": {
+  "arxiv": null,
+  "bibcode": null,
+  "bytes": 21901,
+  "doi": null,
+  "file": "gaiadr3doc.txt",
+  "note": "The 1.75 M-giant limit is Table 5.10 note k, not a Table 5.9 note",
+  "sha256": "6cb95bdbb601bdfcf315f11014a999bd971634087cdc2579f286771982e41f11",
+  "source_url": "https://gea.esac.esa.int/archive/documentation/GDR3/Data_processing/chap_cu5pho/cu5pho_sec_photSystem/cu5pho_ssec_photRelations.html",
+  "status": "ok",
+  "tried": [],
+  "version": "web page, retrieved 2026-09-25"
+ },
  "gieren2013": {
   "arxiv": "1305.4258",
   "bibcode": null,
@@ -1193,9 +1201,14 @@
  "gliese1991": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 10587,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "file": "gliese1991.readme.txt",
+  "sha256": "ccd1e958e18e5ffd0b6ee2df4c399b6a24984e2264bbf6d5fc26e5f53da52032",
+  "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/V/70A/ReadMe",
+  "status": "ok",
+  "tried": [],
+  "version": "VizieR ReadMe"
  },
  "golovin2023": {
   "arxiv": "2211.01449",
@@ -1407,7 +1420,7 @@
     "url": "https://arxiv.org/pdf/2206.05726"
    }
   ],
-  "version": "submittedVersion"
+  "version": "publishedVersion"
  },
  "hamann2006": {
   "arxiv": null,
@@ -1490,10 +1503,15 @@
  },
  "hoffleit1991": {
   "arxiv": null,
-  "bibcode": null,
+  "bibcode": "1991bsc..book.....H",
+  "bytes": 11571,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "file": "hoffleit1991.readme.txt",
+  "sha256": "44fd9c73e2eecad0beb47bdfa3f01c60fd43f93d6964198e31fcd48732de5b33",
+  "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/V/50/ReadMe",
+  "status": "ok",
+  "tried": [],
+  "version": "VizieR ReadMe"
  },
  "hog2000": {
   "arxiv": null,
@@ -1517,9 +1535,9 @@
  },
  "huchra2012": {
   "arxiv": "1108.0669",
-  "bibcode": null,
+  "bibcode": "2012ApJS..199...26H",
   "bytes": 3483855,
-  "doi": null,
+  "doi": "10.1088/0067-0049/199/2/26",
   "sha256": "c3666947cb3bd3bfa318accbb993b37ce53d259b9bc7ff5c4a563d9858f2459d",
   "source_url": "https://arxiv.org/pdf/1108.0669",
   "status": "ok",
@@ -1562,7 +1580,7 @@
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0B43I/PUB_PDF"
    }
   ],
-  "version": "submittedVersion"
+  "version": "publishedVersion"
  },
  "ireland2004": {
   "arxiv": null,
@@ -1820,14 +1838,19 @@
     "url": "http://eprints.keele.ac.uk/1133/1/Spectroscopically%20resolving%20the%20Algol%20triple%20system.pdf"
    }
   ],
-  "version": "submittedVersion"
+  "version": "publishedVersion"
  },
  "kostjuk2002": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 11980,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "file": "kostjuk2002.readme.txt",
+  "sha256": "a88f0b63e8c08dd835e90cbfa6856ed8b24ec71f4e11ecadab9ea90d08adc6b4",
+  "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/IV/27A/ReadMe",
+  "status": "ok",
+  "tried": [],
+  "version": "VizieR ReadMe"
  },
  "lacour2009": {
   "arxiv": "0910.3869",
@@ -1939,7 +1962,7 @@
     "url": "https://aas.aanda.org/10.1051/aas:1998105/pdf"
    }
   ],
-  "version": "submittedVersion"
+  "version": "publishedVersion"
  },
  "lemmon2015": {
   "arxiv": "1403.4234",
@@ -2042,6 +2065,17 @@
   ],
   "version": "ADS scan of published article"
  },
+ "limaneto1999": {
+  "arxiv": "astro-ph/9905048",
+  "bibcode": "1999MNRAS.309..481L",
+  "bytes": 426477,
+  "doi": "10.1046/j.1365-8711.1999.02849.x",
+  "sha256": "33105db737523a7cb25ad1f89bd255705962f466330dafe82a1a8fa7c97847d3",
+  "source_url": "https://arxiv.org/pdf/astro-ph/9905048",
+  "status": "ok",
+  "tried": [],
+  "version": "submittedVersion"
+ },
  "lindal1983": {
   "arxiv": null,
   "bibcode": "1983Icar...53..348L",
@@ -2074,15 +2108,12 @@
   "version": "publishedVersion"
  },
  "lindegren2021": {
-  "arxiv": "2012.03380",
+  "arxiv": "2012.01742",
   "bibcode": null,
-  "bytes": 13249401,
+  "bytes": 10476846,
   "doi": "10.1051/0004-6361/202039653",
-  "openalex_first_author": "L. Lindegren",
-  "openalex_title": "Gaia Early Data Release 3",
-  "openalex_year": 2020,
-  "sha256": "cf235eec3d2dfd71046ddb776273b28896c2621d147ba2452a519c56380c95d9",
-  "source_url": "https://arxiv.org/pdf/2012.03380",
+  "sha256": "29f4e07d8a887de601d935db8e61f758c1e9103b91138140e6c2407a24fc4150",
+  "source_url": "https://arxiv.org/pdf/2012.01742",
   "status": "ok",
   "tried": [],
   "version": "submittedVersion"
@@ -2099,7 +2130,7 @@
   "source_url": "https://arxiv.org/pdf/1408.3476",
   "status": "ok",
   "tried": [],
-  "version": "publishedVersion"
+  "version": "submittedVersion"
  },
  "mallama2012": {
   "arxiv": null,
@@ -2165,6 +2196,18 @@
   ],
   "version": "submittedVersion"
  },
+ "mamajek2022": {
+  "arxiv": null,
+  "bibcode": null,
+  "bytes": 55680,
+  "doi": null,
+  "file": "mamajek2022.txt",
+  "sha256": "1de2edeec17bb3346e0e4e70b999de5ee29947df38474e64cddb7cfacc164b7f",
+  "source_url": "https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt",
+  "status": "ok",
+  "tried": [],
+  "version": "text table, version 2022.04.16, retrieved 2026-09-25"
+ },
  "martins2005": {
   "arxiv": "astro-ph/0503346",
   "bibcode": "2005A&A...436.1049M",
@@ -2206,13 +2249,6 @@
    }
   ],
   "version": "publishedVersion"
- },
- "mason2020": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
  },
  "mccomas2015": {
   "arxiv": null,
@@ -2343,15 +2379,12 @@
   "version": "acceptedVersion"
  },
  "montegriffo2023": {
-  "arxiv": "2206.06205",
+  "arxiv": "2206.06215",
   "bibcode": null,
-  "bytes": 8221710,
-  "doi": "10.1051/0004-6361/202243880",
-  "openalex_first_author": "P. Montegriffo",
-  "openalex_title": "Gaia Data Release 3",
-  "openalex_year": 2022,
-  "sha256": "255dbc64363fdd205a59c4d17e730a4da58c7bfca42f0021b4df2d9917d6a15a",
-  "source_url": "https://arxiv.org/pdf/2206.06205",
+  "bytes": 21169617,
+  "doi": "10.1051/0004-6361/202243709",
+  "sha256": "9c3d77df96c92c23ef31dff5c3637ad0871e2baf59564ca6e89d0efc16ca4b22",
+  "source_url": "https://arxiv.org/pdf/2206.06215",
   "status": "ok",
   "tried": [
    {
@@ -2432,6 +2465,17 @@
     "url": "https://escholarship.org/content/qt5cj0x5sm/qt5cj0x5sm.pdf"
    }
   ],
+  "version": "submittedVersion"
+ },
+ "muterspaugh2010": {
+  "arxiv": "1010.4043",
+  "bibcode": "2010AJ....140.1623M",
+  "bytes": 250705,
+  "doi": "10.1088/0004-6256/140/6/1623",
+  "sha256": "270fe68a3bc9a9290ce3a2adf0f1825bb318d2618ffc4b6caf508581e05498c2",
+  "source_url": "https://arxiv.org/pdf/1010.4043",
+  "status": "ok",
+  "tried": [],
   "version": "submittedVersion"
  },
  "newburn1973": {
@@ -2547,6 +2591,17 @@
    }
   ],
   "version": "submittedVersion"
+ },
+ "pelgrims2020": {
+  "arxiv": "1911.09691",
+  "bibcode": "2020A&A...636A..17P",
+  "bytes": 8049641,
+  "doi": "10.1051/0004-6361/201937157",
+  "sha256": "9d83b6e8e47e187d97adc3f41620c96b7a12e189d9e4752d9e6c12575046e1bb",
+  "source_url": "https://arxiv.org/pdf/1911.09691",
+  "status": "ok",
+  "tried": [],
+  "version": "acceptedVersion"
  },
  "pietrzynski2019": {
   "arxiv": "1903.08096",
@@ -2688,15 +2743,30 @@
   ],
   "version": "submittedVersion"
  },
- "reid": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
+ "reid2019": {
+  "arxiv": "1910.03357",
+  "bibcode": "2019ApJ...885..131R",
+  "bytes": 1430563,
+  "doi": "10.3847/1538-4357/ab4a11",
+  "sha256": "07ef9a014fbd1d2fc83b0aebbbfa1d6be2170fad0e8ee0b52e987faddc4613a1",
+  "source_url": "https://arxiv.org/pdf/1910.03357",
+  "status": "ok",
+  "tried": [],
+  "version": "submittedVersion"
+ },
+ "rhode2013": {
+  "arxiv": "1305.0270",
+  "bibcode": "2013AJ....145..149R",
+  "bytes": 1083860,
+  "doi": "10.1088/0004-6256/145/6/149",
+  "sha256": "2dca9a0f827d4eaea94ea8a9631fb86a9a615b87de84a40d3934674278979415",
+  "source_url": "https://arxiv.org/pdf/1305.0270",
+  "status": "ok",
+  "tried": [],
+  "version": "acceptedVersion"
  },
  "riello2021": {
-  "arxiv": null,
+  "arxiv": "2012.01916",
   "bibcode": null,
   "bytes": 20032919,
   "doi": "10.1051/0004-6361/202039587",
@@ -2837,13 +2907,6 @@
   ],
   "version": "ADS scan of published article"
  },
- "savary1828": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
  "schaefer2016": {
   "arxiv": "1610.01984",
   "bibcode": "2016AJ....152..213S",
@@ -2895,6 +2958,17 @@
     "url": "https://iopscience.iop.org/article/10.1086/305772/pdf"
    }
   ],
+  "version": "submittedVersion"
+ },
+ "simondiaz2011": {
+  "arxiv": "1108.4622",
+  "bibcode": "2011ApJ...742...55S",
+  "bytes": 258672,
+  "doi": "10.1088/0004-637X/742/1/55",
+  "sha256": "82cebfcdd99e069ab39827ac4dc9d220ac51d021cc554d3d6fce04ea2b599ad6",
+  "source_url": "https://arxiv.org/pdf/1108.4622",
+  "status": "ok",
+  "tried": [],
   "version": "submittedVersion"
  },
  "simondiaz2015": {
@@ -3000,16 +3074,14 @@
  "standish1992": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 69605,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "standishwilliams": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "note": "Second copy: standish1992.page.txt, text of https://ssd.jpl.nasa.gov/planets/approx_pos.html retrieved 2026-09-25 (carries the Accuracy table)",
+  "sha256": "e3c91d80e622c74d42fb9ecdb8cd8adc4fac22d1178c7257e9f4f8c62355843f",
+  "source_url": "https://web.archive.org/web/20201111194551/https://ssd.jpl.nasa.gov/txt/aprx_pos_planets.pdf",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
  },
  "steinmetz2020": {
   "arxiv": null,
@@ -3214,6 +3286,24 @@
   ],
   "version": "publishedVersion"
  },
+ "tomasko2008b": {
+  "arxiv": null,
+  "bibcode": "2008P&SS...56..648T",
+  "doi": "10.1016/j.pss.2007.10.012",
+  "source_url": "https://doi.org/10.1016/j.pss.2007.10.012",
+  "status": "manual",
+  "note": "Elsevier, not open access",
+  "tried": [
+   {
+    "error": "no OA location",
+    "url": "https://api.unpaywall.org/v2/10.1016/j.pss.2007.10.012"
+   },
+   {
+    "error": "no result",
+    "url": "https://ntrs.nasa.gov/api/citations/search?q=Heat balance in Titan's atmosphere"
+   }
+  ]
+ },
  "torra2021": {
   "arxiv": null,
   "bibcode": null,
@@ -3250,6 +3340,17 @@
    }
   ],
   "version": "submittedVersion"
+ },
+ "torres2022": {
+  "arxiv": "2210.16322",
+  "bibcode": "2022ApJ...941....8T",
+  "bytes": 3132760,
+  "doi": "10.3847/1538-4357/ac9d8d",
+  "sha256": "ce78f555b41650c923101b6afea9c2dacf97dc8f13388b1e9c96879d5750ec90",
+  "source_url": "https://arxiv.org/pdf/2210.16322",
+  "status": "ok",
+  "tried": [],
+  "version": "acceptedVersion"
  },
  "tully2023": {
   "arxiv": "2209.11238",
@@ -3332,23 +3433,15 @@
   ],
   "version": "ADS scan of published article"
  },
- "vandermarel2001": {
-  "arxiv": "astro-ph/0105339",
-  "bibcode": null,
-  "bytes": 604379,
-  "doi": "10.1086/323099",
-  "openalex_first_author": "Roeland P. van der Marel",
-  "openalex_title": "Magellanic Cloud Structure from Near-Infrared Surveys. I. The Viewing Angles of the Large Magellanic Cloud",
-  "openalex_year": 2001,
-  "sha256": "b4f2e09ae4be88685f0696efb889c5f2cddf7d8006bcd0feb227d9f8e7ad3062",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0105339",
+ "vandermarel2001b": {
+  "arxiv": "astro-ph/0105340",
+  "bibcode": "2001AJ....122.1827V",
+  "bytes": 787084,
+  "doi": "10.1086/323100",
+  "sha256": "ad500f5aa12fc959a0189eb342ae03dab987f482bc955bd242a59424929ffb48",
+  "source_url": "https://arxiv.org/pdf/astro-ph/0105340",
   "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1086/323099/pdf"
-   }
-  ],
+  "tried": [],
   "version": "submittedVersion"
  },
  "vandermarel2014": {

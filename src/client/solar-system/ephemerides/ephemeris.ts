@@ -126,7 +126,7 @@ const ELEMENTS: ElementSet[] = [
   // reclassification; this is the pre-removal Table 2a row plus its
   // Table 2b b term, valid over the same 3000 BC – 3000 AD window the
   // model clock spans. The widely reproduced Standish & Williams
-  // (/data/papers/index.md#standishwilliams) linear-elements row is a
+  // (/data/papers/index.md#standish1992) linear-elements row is a
   // few-centuries fit that reaches tens of AU of error at the clamp bound — do
   // not substitute it.
   {

@@ -490,7 +490,7 @@ science it relates to.
   distort correctly as the camera flies; a boundary has no 3D referent
   and describes nothing from another star, so it is never given depth.
 - **Spiral-arm overdensities** in the Milky Way volumetric background.
-  The [Reid et al.](/data/papers/index.md#reid) masers offer a maser-anchored spiral model that could
+  The [Reid et al.](/data/papers/index.md#reid2019) masers offer a maser-anchored spiral model that could
   ride atop the smooth disc profile, but the smooth band reads
   convincingly enough that re-introducing higher spatial frequency
   (and the aliasing risk it carries through 32-step raymarching) isn't
