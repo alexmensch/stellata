@@ -809,16 +809,18 @@ export class Stellata implements FrameAnchor {
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
     this.buildFocalAnchorPolicy();
-    // Orbit paths rebuild on every focus mutation: the focused system's
-    // Kepler pairs, or none when focus leaves a multi-star system.
-    this.on('focus', () => {
+    // Orbit paths rebuild on every focus mutation and when binaries land:
+    // the focused system's Kepler pairs, or none outside a multi-star system.
+    const refreshOrbitPaths = () => {
       const binaries = this.binariesData.state();
       this.binaryOrbitPathLayer.setSystem(
         binaries.status === 'ready' ? binaries.value : null,
         this.focus.getFocusedStar(),
         this.catalog.positions,
       );
-    });
+    };
+    this.on('focus', refreshOrbitPaths);
+    this.binariesData.observe(refreshOrbitPaths);
     // Reseed the moving-focal ride on every focus mutation: a focus
     // change AND a same-object refocus both recentre the floating
     // origin, which stales the ride's cached last position. The seed

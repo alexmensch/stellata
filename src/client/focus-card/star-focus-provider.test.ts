@@ -7,6 +7,7 @@ import { J2000_JD } from '../util/astronomy-constants';
 import type { SearchEntry } from '../typeahead/search';
 import type { BinariesData, BinaryRelation } from '../binaries/binaries-loader';
 import { NO_PARENT } from '../binaries/binaries-loader';
+import type { LateState } from '../util/late/late';
 import { KMS_PER_PC_YR } from '../format/velocity-format';
 import {
   createStarFocusProvider,
@@ -50,6 +51,14 @@ function rowValue(rows: FocusCardRow[], label: string): string | undefined {
 
 describe('createStarFocusProvider', () => {
   beforeEach(() => setUnit('pc'));
+
+  it('is not ready while binaries are still pending', () => {
+    let binaries: LateState<BinariesData> = { status: 'pending' };
+    const provider = createStarFocusProvider(buildConfig({ binaries: () => binaries }));
+    expect(provider.ready?.(0)).toBe(false);
+    binaries = { status: 'absent' };
+    expect(provider.ready?.(0)).toBe(true);
+  });
 
   it('assembles the identity block: name, alternate designations, cleaned spectral', () => {
     const out = createStarFocusProvider(buildConfig()).format(0);

@@ -199,6 +199,20 @@ describe('star kind module', () => {
     expect(payload?.name).toBe('Gaia DR3 123');
   });
 
+  it('holds the card until binaries settle, and counts the settle as a fill', async () => {
+    const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
+    m.attach(makeKindContext());
+    const binaries = new LateCell<BinariesData>();
+    m.setRuntime(makeRuntime({ getBinaries: () => binaries }));
+    const card = m.card();
+    const before = m.derivedGeneration();
+
+    expect(card.ready?.(0)).toBe(false);
+    binaries.conclude();
+    expect(card.ready?.(0)).toBe(true);
+    expect(m.derivedGeneration()).toBe(before + 1);
+  });
+
   it('reads binaries per format call, so a late attach reaches a built card', async () => {
     const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
     const ctx = makeKindContext();

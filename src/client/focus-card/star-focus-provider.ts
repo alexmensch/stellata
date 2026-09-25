@@ -62,7 +62,9 @@ export function createStarFocusProvider(
 
   return {
     kind: 'star',
-    ready: (idx: number) => idx < catalog.loadedCount && config.tablesComplete(),
+    ready: (idx: number) => idx < catalog.loadedCount
+      && config.tablesComplete()
+      && config.binaries().status !== 'pending',
     format(idx: number): FocusCardContent {
       const name = resolveStarName(nameCtx, idx);
       const identityLines: string[] = [];

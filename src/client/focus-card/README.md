@@ -117,9 +117,13 @@ rendered a card from the name table alone while the focus was still
 suppressed. `FocusCardProvider.ready(idx)` is the per-kind answer, and the
 rolodex asks it for the focus and filters the pin list through it. Kinds
 whose artifact lands whole omit the leg; star is the only implementor, and
-its answer is "record decoded **and** the search-index derivations landed" —
-a decoded record alone composes the designation line from the name table
-only, which is how a star with no proper name showed its Gaia DR3 source id.
+its answer is "record decoded **and** the search-index derivations landed
+**and** the binaries slot settled" — a decoded record alone composes the
+designation line from the name table only, which is how a star with no
+proper name showed its Gaia DR3 source id. Binaries attach after the tables,
+so without the third term the card formatted with no companion rows and kept
+them. "Settled" includes absent: a checkout with no `binaries.bin` still gets
+a card.
 
 The one condition that is not a subject's own readiness is a focus that has
 not resolved at all: there the session has no subject to ask about, so boot
@@ -170,10 +174,11 @@ is what catches the omission instead.
 The same convention binds `ready()`: **it may only answer from quantities
 that bump the generation.** A predicate reading something that moves
 silently would flip on a frame nothing reconciles, and the card would wait
-for an unrelated table to land. The star provider's two terms — the decoded
-record count and `tablesComplete` — both move at a bump, and the gate test
-drives the generation by hand, so this is the one part of the mechanism no
-test can check for you.
+for an unrelated table to land. The star provider's three terms all move at a
+bump: the decoded record count and `tablesComplete` at the fill sites, and the
+binaries state through the star module's `observe` on the slot, which
+`star-module.test.ts` pins. The gate test drives the generation by hand, so a
+new term needs its own bump and its own pin.
 
 ## Files
 

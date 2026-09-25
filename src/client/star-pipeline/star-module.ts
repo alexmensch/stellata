@@ -92,6 +92,7 @@ export function createStarKindModule(): StarKindModule {
   let runtime: StarModuleRuntime | null = null;
   let ready: Promise<void> = Promise.resolve();
   let offRecords: (() => void) | null = null;
+  let offBinaries: (() => void) | null = null;
   let searchTables: SearchIndexPayload | null = null;
   // Filled in place rather than reassigned — every card provider, chart
   // binding and hover formatter captures these at boot, before the search
@@ -146,7 +147,10 @@ export function createStarKindModule(): StarKindModule {
     },
     photometry: photometryOf,
     setRuntime(rt) {
+      offBinaries?.();
       runtime = rt;
+      // The card's `ready` reads the binaries state, so its settle is a fill.
+      offBinaries = rt.getBinaries().observe(() => { derivedGeneration++; });
     },
 
     /** Resolves on the catalogue's FIRST chunk, so boot can paint. The
