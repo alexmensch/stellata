@@ -2,7 +2,13 @@ import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
 import type { ChartModeContext } from '../chart-mode';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
-import { FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING } from '../../../../scripts/catalog/record/catalog-pure';
+import {
+  FLAG_BINARY_PRIMARY,
+  NO_CONSTELLATION_INDEX,
+  VAR_TYPE_ECLIPSING,
+} from '../../../../scripts/catalog/record/catalog-pure';
+import type { CompleteCatalog } from '../../loaders/catalog-loader';
+import type { LateState } from '../../util/late/late';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import { setNumAttr } from '../../overlays/dirty-attr';
 import { getChartDiscParams } from '../../camera/controls/star-physics';
@@ -190,17 +196,45 @@ export function filterByDistAndSpect(
   return out;
 }
 
-function buildConstellationMembership(stellata: Stellata): Map<number, ConMembership> {
-  const cat = stellata.catalog;
-  const out = new Map<number, ConMembership>();
+export interface ChartCatalogTables {
+  readonly conStars: Map<number, ConMembership>;
+  readonly variableIdxs: number[];
+  readonly binaryIdxs: number[];
+  /** Sol distance per record, pc; the GPU mirrors this via iDistSol. */
+  readonly distSol: Float32Array;
+}
+
+export function buildChartCatalogTables(cat: CompleteCatalog): ChartCatalogTables {
+  const conStars = new Map<number, ConMembership>();
+  const variableIdxs: number[] = [];
+  const binaryIdxs: number[] = [];
+  const distSol = new Float32Array(cat.count);
+  const pos = cat.positions;
   for (let i = 0; i < cat.count; i++) {
     const conIdx = cat.constellation[i];
-    if (conIdx === 255) continue;
-    const m = out.get(conIdx);
-    if (!m) out.set(conIdx, { stars: [i], minAppMag: Infinity });
-    else m.stars.push(i);
+    if (conIdx !== NO_CONSTELLATION_INDEX) {
+      const m = conStars.get(conIdx);
+      if (!m) conStars.set(conIdx, { stars: [i], minAppMag: Infinity });
+      else m.stars.push(i);
+    }
+    // Rings are intrinsic-only; eclipsers surface via the wings glyph,
+    // not a ring. See README.md#label-engine--glyphs Variable rings.
+    if (
+      cat.periodDays[i] > 0 &&
+      cat.amplitudeMag[i] > 0 &&
+      cat.varType[i] !== VAR_TYPE_ECLIPSING
+    ) {
+      variableIdxs.push(i);
+    }
+    // Primary-only set so each system gets one wings glyph anchored on
+    // the brighter component.
+    if ((cat.flags[i] & FLAG_BINARY_PRIMARY) !== 0) binaryIdxs.push(i);
+    const x = pos[i * 3];
+    const y = pos[i * 3 + 1];
+    const z = pos[i * 3 + 2];
+    distSol[i] = Math.sqrt(x * x + y * y + z * z);
   }
-  return out;
+  return { conStars, variableIdxs, binaryIdxs, distSol };
 }
 
 /**
@@ -215,10 +249,8 @@ export class ChartLabels {
   private layer: SVGGElement | null = null;
   private conLayer: SVGGElement | null = null;
   private glyphLayer: SVGGElement | null = null;
-  private conStars: Map<number, ConMembership> | null = null;
-  private variableIdxs: number[] | null = null;
-  private binaryIdxs: number[] | null = null;
-  // Filter-derived subsets of the static lists above. Eligibility encodes
+  private tables: LateState<ChartCatalogTables> = { status: 'pending' };
+  // Filter-derived subsets of the tables' lists. Eligibility encodes
   // the *static* parts of renderableAppMag: spectral-mask and Sol-distance
   // bounds. Rebuilt on filter change so the per-frame variable/binary
   // loops only walk stars that already passed those gates — typically 50–
@@ -226,10 +258,6 @@ export class ChartLabels {
   private variableEligible: number[] | null = null;
   private binaryEligible: number[] | null = null;
   private eligibleDirty = true;
-  // distSol[i] = distance from Sol to star i, in parsecs. Catalog positions
-  // are absolute (Sol-centred ICRS), so |position| is the absolute distance.
-  // Precomputed on first chart entry; the GPU mirrors this via iDistSol.
-  private distSolCache: Float32Array | null = null;
 
   // Scratch slots for per-tick projection. Avoids a Vector3 allocation per
   // cloud / planet / star per frame in the chart-mode labels pass.
@@ -325,38 +353,8 @@ export class ChartLabels {
     this.forEachLayer((g) => { g.style.display = ''; });
 
     const stellata = this.stellata;
-    if (!this.conStars) this.conStars = buildConstellationMembership(stellata);
-    if (!this.distSolCache) {
-      const cat = stellata.catalog;
-      const vs: number[] = [];
-      const bs: number[] = [];
-      const ds = new Float32Array(cat.count);
-      const pos = cat.positions;
-      for (let i = 0; i < cat.count; i++) {
-        // Rings are intrinsic-only; eclipsers surface via the wings glyph,
-        // not a ring. See README.md#label-engine--glyphs Variable rings.
-        if (
-          cat.periodDays[i] > 0 &&
-          cat.amplitudeMag[i] > 0 &&
-          cat.varType[i] !== VAR_TYPE_ECLIPSING
-        ) {
-          vs.push(i);
-        }
-        // Primary-only set so each system gets one wings glyph anchored on
-        // the brighter component.
-        if ((cat.flags[i] & FLAG_BINARY_PRIMARY) !== 0) bs.push(i);
-        const x = pos[i * 3];
-        const y = pos[i * 3 + 1];
-        const z = pos[i * 3 + 2];
-        ds[i] = Math.sqrt(x * x + y * y + z * z);
-      }
-      this.variableIdxs = vs;
-      this.binaryIdxs = bs;
-      this.distSolCache = ds;
-    }
-
     this.unsubs.push(stellata.on('frame', () => {
-      if (this.conStars && this.ctx) this.tick(this.ctx, this.conStars);
+      if (this.ctx) this.tick(this.ctx);
     }));
     this.unsubs.push(stellata.on('filter', () => {
       this.filterVersion++;
@@ -367,6 +365,19 @@ export class ChartLabels {
     // brightest-member magnitude measured from a prior session's vantage, and
     // so the full-tick skip definitely runs the first frame after re-entry
     // (stop() empties the SVG pools).
+    this.forceNextTick();
+    this.unsubs.push(stellata.catalog.complete.observe((settled) => {
+      if (this.tables.status !== 'ready') {
+        this.tables = settled.status === 'ready'
+          ? { status: 'ready', value: buildChartCatalogTables(settled.value) }
+          : settled;
+      }
+      this.forceNextTick();
+      stellata.renderGate.invalidate('chart:catalog-settled');
+    }));
+  }
+
+  private forceNextTick(): void {
     this.lastBrightestCamPos.set(NaN, NaN, NaN);
     this.lastTickCamPos.set(NaN, NaN, NaN);
     this.eligibleDirty = true;
@@ -415,12 +426,9 @@ export class ChartLabels {
     this.layer = null;
     this.conLayer = null;
     this.glyphLayer = null;
-    this.conStars = null;
-    this.variableIdxs = null;
-    this.binaryIdxs = null;
+    this.tables = { status: 'pending' };
     this.variableEligible = null;
     this.binaryEligible = null;
-    this.distSolCache = null;
     this.nameKeys.clear();
     this.bayerKeys.clear();
     this.conKeys.clear();
@@ -431,15 +439,15 @@ export class ChartLabels {
   }
 
   private rebuildEligible(): void {
-    const { variableIdxs, binaryIdxs, distSolCache } = this;
-    if (!variableIdxs || !binaryIdxs || !distSolCache) return;
+    if (this.tables.status !== 'ready') return;
+    const { variableIdxs, binaryIdxs, distSol } = this.tables.value;
     const f = this.stellata.filters.getFilter();
     const cat = this.stellata.catalog;
     this.variableEligible = filterByDistAndSpect(
-      variableIdxs, distSolCache, cat.spectClass, f.minDistSol, f.maxDistSol, f.spectMask,
+      variableIdxs, distSol, cat.spectClass, f.minDistSol, f.maxDistSol, f.spectMask,
     );
     this.binaryEligible = filterByDistAndSpect(
-      binaryIdxs, distSolCache, cat.spectClass, f.minDistSol, f.maxDistSol, f.spectMask,
+      binaryIdxs, distSol, cat.spectClass, f.minDistSol, f.maxDistSol, f.spectMask,
     );
     this.eligibleDirty = false;
   }
@@ -486,10 +494,7 @@ export class ChartLabels {
     return projectVecInto(this.tmpV3, camera, w, h, out);
   }
 
-  private tick(
-    ctx: ChartModeContext,
-    conStars: Map<number, ConMembership>,
-  ): void {
+  private tick(ctx: ChartModeContext): void {
     const { layer, conLayer, glyphLayer, stellata } = this;
     if (!layer || !conLayer || !glyphLayer) return;
     const labelLayer = layer;
@@ -546,7 +551,9 @@ export class ChartLabels {
     // See /src/client/scene/declutter/README.md#detail-level-declutter-cycle.
     const showStarNames = stellata.declutter.permits('chartStarNameLabels');
     const showBayer = stellata.declutter.permits('chartBayerGlyphs');
-    const showConNames = stellata.declutter.permits('chartConstellationNames');
+    const tables = this.tables;
+    const showConNames = tables.status === 'ready'
+      && stellata.declutter.permits('chartConstellationNames');
     const showCloudNames = stellata.declutter.permits('chartCloudNames');
     const showVariableRings = stellata.declutter.permits('chartVariableRings');
 
@@ -631,7 +638,7 @@ export class ChartLabels {
     if (recompute) {
       this.lastBrightestCamPos.copy(camera.position);
       this.lastBrightestVersion = this.filterVersion;
-      for (const m of conStars.values()) {
+      for (const m of tables.value.conStars.values()) {
         let minAppMag = Infinity;
         for (const i of m.stars) {
           const appMag = computeAppMag(i, positions, cat.absmag);
@@ -643,7 +650,7 @@ export class ChartLabels {
     if (showConNames) {
       const worldOffset = stellata.getWorldOffset();
       for (const anchor of stellata.constellationLabelAnchors) {
-        const minAppMag = conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
+        const minAppMag = tables.value.conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > limitMag) continue;
         if (!projectVecInto(
           this.tmpV3.copy(anchor.position).sub(worldOffset), camera, w, h, xy)) continue;

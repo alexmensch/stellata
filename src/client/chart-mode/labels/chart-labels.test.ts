@@ -3,6 +3,13 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect, afterEach } from 'vitest';
 import * as THREE from 'three';
 import {
+  FLAG_BINARY_PRIMARY,
+  NO_CONSTELLATION_INDEX,
+  VAR_TYPE_ECLIPSING,
+} from '../../../../scripts/catalog/record/catalog-pure';
+import { assumeComplete, makeEmptyCatalog } from '../../loaders/catalog-mock';
+import {
+  buildChartCatalogTables,
   ChartLabels,
   CHART_LAYER_IDS,
   computeAppMag,
@@ -15,6 +22,8 @@ import {
 } from './chart-labels';
 import type { Stellata } from '../../stellata';
 import type { ChartModeContext } from '../chart-mode';
+import type { CompleteCatalog } from '../../loaders/catalog-loader';
+import { LateCell } from '../../util/late/late';
 
 describe('chart-labels / computeAppMag', () => {
   it('equals absmag at exactly 10 pc (distance modulus = 0)', () => {
@@ -301,6 +310,25 @@ describe('chart-labels / filterByDistAndSpect', () => {
   });
 });
 
+describe('chart-labels / buildChartCatalogTables', () => {
+  it('buckets members, rings intrinsic variables, wings primaries, measures Sol distance', () => {
+    const cat = makeEmptyCatalog(4);
+    cat.constellation.set([3, NO_CONSTELLATION_INDEX, 3, 7]);
+    cat.periodDays.set([10, 10, 0, 10]);
+    cat.amplitudeMag.set([1, 1, 0, 1]);
+    cat.varType.set([0, VAR_TYPE_ECLIPSING, 0, 0]);
+    cat.flags.set([0, FLAG_BINARY_PRIMARY, FLAG_BINARY_PRIMARY, 0]);
+    cat.positions.set([3, 4, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0]);
+
+    const t = buildChartCatalogTables(assumeComplete(cat));
+
+    expect([...t.conStars.entries()].map(([k, m]) => [k, m.stars])).toEqual([[3, [0, 2]], [7, [3]]]);
+    expect(t.variableIdxs).toEqual([0, 3]);
+    expect(t.binaryIdxs).toEqual([1, 2]);
+    expect([...t.distSol]).toEqual([5, 0, 2, 1]);
+  });
+});
+
 describe('chart-labels / projectVecInto', () => {
   /** The helper writes into a caller-owned tuple and reports whether the
    *  point survived the near clip and the cull margin; these cases read
@@ -476,6 +504,8 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     ticks: () => number;
     positionsReads: () => number;
     memberWalks: () => number;
+    landCatalog: () => void;
+    invalidations: () => string[];
   }
 
   interface HarnessPatch {
@@ -486,6 +516,8 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     constellations?: { code: string; name: string }[];
     anchors?: { code: string; name: string; conIndex: number; position: THREE.Vector3 }[];
     detailPermits?: (id: string) => boolean;
+    /** Start with the catalogue still streaming; `landCatalog` completes it. */
+    catalogPending?: boolean;
   }
 
   function makeHarness(patch: HarnessPatch = {}): Harness {
@@ -496,6 +528,8 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     const stars = patch.stars ?? [];
     const positions = new Float32Array(stars.flatMap((s) => [0, 0, -s.distPc]));
     const absmag = new Float32Array(stars.map((s) => s.absmag));
+    const complete = new LateCell<CompleteCatalog>();
+    const invalidations: string[] = [];
     const catalog = {
       count: stars.length,
       names: patch.names ?? new Map<number, string>(),
@@ -512,7 +546,10 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       varType: new Uint8Array(stars.length),
       flags: new Uint8Array(stars.length),
       get positions() { positionsReads++; return positions; },
+      complete,
     };
+    const landCatalog = () => complete.land(catalog as unknown as CompleteCatalog);
+    if (!patch.catalogPending) landCatalog();
     const camera = new THREE.PerspectiveCamera(50, 4 / 3, 0.01, 1000);
     camera.updateMatrixWorld(true);
     const stellata = {
@@ -537,6 +574,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         }),
       },
       declutter: { permits: patch.detailPermits ?? (() => true) },
+      renderGate: { invalidate: (reason: string) => { invalidations.push(reason); } },
       getCloudCatalog: () => null,
       kinds: { planet: { field: { liveInstanceCount: 0 } } },
       on: (name: string, fn: () => void) => {
@@ -554,6 +592,8 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       ticks: () => ticks,
       positionsReads: () => positionsReads,
       memberWalks: () => absmagReads,
+      landCatalog,
+      invalidations: () => invalidations,
     };
   }
 
@@ -761,6 +801,60 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
       expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
       labels.dispose();
+    });
+
+    describe('while the catalogue is still streaming', () => {
+      const above = new THREE.Vector3(0, 30, -100);
+      const streamingHarness = () => makeHarness({
+        constellations: CONSTELLATIONS,
+        stars: [
+          { con: SERPENS, absmag: 1, distPc: 10 },
+          { con: ORION, absmag: 20, distPc: 10 },
+        ],
+        names: new Map([[0, 'Unukalhai']]),
+        anchors: [
+          { code: 'SER1', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+          { code: 'SER2', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
+        ],
+        catalogPending: true,
+      });
+
+      it('withholds constellation names but still draws star names', () => {
+        const groups = installDomStubs();
+        const h = streamingHarness();
+        const labels = new ChartLabels(h.stellata);
+        labels.start(h.ctx);
+        h.emit('frame');
+
+        expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
+        expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Unukalhai']);
+        labels.dispose();
+      });
+
+      it('draws them on the first frame after completion, with the camera still', () => {
+        const groups = installDomStubs();
+        const h = streamingHarness();
+        const labels = new ChartLabels(h.stellata);
+        labels.start(h.ctx);
+        h.emit('frame');
+
+        h.landCatalog();
+        expect(h.invalidations()).toEqual(['chart:catalog-settled']);
+        h.emit('frame');
+        expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual(['SERPENS', 'SERPENS']);
+        labels.dispose();
+      });
+
+      it('stops listening for completion on stop', () => {
+        installDomStubs();
+        const h = streamingHarness();
+        const labels = new ChartLabels(h.stellata);
+        labels.start(h.ctx);
+        labels.stop();
+
+        h.landCatalog();
+        expect(h.invalidations()).toEqual([]);
+      });
     });
 
     // Serpens' one member drops under the instrument limit as well, so both its

@@ -86,6 +86,19 @@ bug where constellations with no single dominant intrinsic-brightest star
 under a 0.5 pc camera-translation threshold + filter version, since
 apparent magnitude barely moves under a small camera nudge.
 
+**Constellation names, variable rings and binary wings wait for the complete
+catalogue.** All three read tables built over every record: constellation
+membership, the variable and binary-primary index lists, and the Sol-distance
+mirror (`ChartCatalogTables`). `buildChartCatalogTables` takes a
+`CompleteCatalog`, so it cannot be built from the first-paint prefix. That
+matters because an undecoded record reads constellation 0, which is a real
+constellation. `start()` subscribes to `catalog.complete`. Until it lands,
+those three families draw nothing, while star names, Bayer glyphs, planets and
+clouds draw as usual. When it lands, the engine builds the tables, clears the
+full-tick skip and the brightest-member cache, and invalidates the render
+gate, so the names appear with the camera still. The tables are kept across
+`stop()` and dropped by `dispose()`.
+
 **Variable rings** are **intrinsic-only** — the ring set gates on
 `periodDays > 0 && amplitudeMag > 0 && varType !== VAR_TYPE_ECLIPSING`.
 Eclipsing binaries are extrinsically variable (line-of-sight
