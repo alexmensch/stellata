@@ -73,7 +73,7 @@ themselves.
   `warp/`, `observe/`, `arrival/`.
 - `star-pipeline/`, `solar-system/`, `local-group/`, `milkyway/`,
   `galactic/` (galactic reference geometry + both coordinate
-  spheres), `molecular-clouds/`, `chart-mode/`, `dust/`,
+  spheres), `molecular-clouds/`, `chart-mode/`,
   `local-bubble/`, `constellation-figure/` — render layers.
 - `constellation-boundaries/` — the IAU (Delporte 1930) boundary arcs:
   the B1875 edge set, the positional lookup answering which constellation
@@ -242,7 +242,6 @@ an empty awaiting list.
 | Star size + pick | the kind table (`kinds/`, `camera/focus/`) | `hhaw.32.4` |
 | Binaries | `binaries/` | `hhaw.32.5` |
 | Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
-| Dust particles (shelved) | `dust/`, or removed — a product call | `hhaw.32.7` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
@@ -283,7 +282,6 @@ no late slot do not wait either.
 | Binaries (both fields + table) | wave 2, after `kinds.star.ready`; also handed to `starLocalCluster.setBinaries` | the table is a `Late` (`getBinaries()`), absent when `binaries.bin` is missing; the two fields still answer `?.… ?? false` (the focus controller's perturbation read), `?? CADENCE_REPORT_STILL` (the binaries rate), the binary ride skipped |
 | Dust + extinction prepass | when the dust manifest resolves — no wave | `?.` no-op; `extinctionAvMagFor` 0 (deliberately pickable); `isExtinctionPrepassActive` false; survivor `inFrame` null |
 | Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
-| Dust-particle source | first opt-in | shelved |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 
 Two catalogue-prefix reads also sit in the shell: the constellation figure

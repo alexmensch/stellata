@@ -4,7 +4,7 @@ Covers the shared galactic coordinate
 frame, Milky Way stellar density profiles, interstellar dust
 extinction, and constellation stick-figure geometry. Spans
 `src/client/galactic/galactic-coords.ts`, `src/client/milkyway/`,
-`src/client/dust/`, `scripts/dust/`, `src/client/overlays/`.
+`src/client/star-pipeline/extinction/`, `scripts/dust/`, `src/client/overlays/`.
 
 ## Galactic coordinate system
 
@@ -180,7 +180,7 @@ to make room is [The dust stack](#the-dust-stack--sources-domains-and-the-partit
 
 Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (per-star) and
 `../src/client/webgpu/milkyway/milkyway-band-tsl.ts` (volumetric); see
-`src/client/star-pipeline/extinction/README.md` + the shelved particle layer and
+`src/client/star-pipeline/extinction/README.md` and
 `src/client/milkyway/README.md`.
 
 Sources for the volumetric path: **Drimmel & Spergel 2001**, *ApJ* 556, 181

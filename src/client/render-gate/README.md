@@ -146,7 +146,7 @@ carry a threshold below the measurement's own noise.
 - Canvas `pointerdown/move/up/cancel` + `wheel`, window `keydown`
   (`attachDom`) — hover, drags, and shortcuts repaint within one tick.
 - Resize (`onResize`).
-- The `attach*` family (dust, binaries, dust particles, constellation
+- The `attach*` family (dust, binaries, constellation
   boundaries) and each streamed dust voxel chunk landing.
 - An applied adaptation `dm` that moved this frame (see above).
 - `KindContext.requestRender(reason)` — the seam for a kind module's own

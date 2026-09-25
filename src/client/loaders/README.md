@@ -99,8 +99,8 @@ dust-loader.ts           public/dust/manifest.json + chunk_X_Y_Z.bin →
                          the contract with
                          scripts/dust/build-dust.py — both derive
                          gridSize / chunkSize / bounds / encoding from it.
-                         Build-side counterpart: scripts/catalog/
-                         dust-deextinction.ts reads the same artifact to
+                         Build-side counterpart: scripts/catalog/distance/
+                         dust/dust-deextinction.ts reads the same artifact to
                          de-extinct absmag/ci (mirrored decode + integral).
 dust-voxel-upload.ts     Landing one chunk inside the volume texture
   (+ test)               (README.md#dust-voxel-upload). Also owns
