@@ -1,24 +1,4 @@
 {
- "abazajian2009": {
-  "arxiv": null,
-  "bibcode": "2009ApJS..182..543A",
-  "bytes": 3374724,
-  "doi": null,
-  "sha256": "af5711ed1eb727df27cad55a47161aa6f621233d6bbeaa1b15c82b5953746ddf",
-  "source_url": "https://arxiv.org/pdf/0812.0649",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/PUB_PDF"
-   },
-   {
-    "error": "IncompleteRead(3145728 bytes read, 228996 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/EPRINT_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
  "abdurrouf2022": {
   "arxiv": "2112.02026",
   "bibcode": "2022ApJS..259...35A",
@@ -690,22 +670,6 @@
   "status": "unidentified",
   "tried": []
  },
- "dittmann2014": {
-  "arxiv": null,
-  "bibcode": "2014ApJ...784..156D",
-  "bytes": 844192,
-  "doi": null,
-  "sha256": "04bf6146837d1c8115068db55b184b84dc438a7ee030270362d53fcff007c164",
-  "source_url": "https://arxiv.org/pdf/1312.3241",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2014ApJ...784..156D/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
  "dolan2002": {
   "arxiv": "astro-ph/0110160",
   "bibcode": "2002AJ....123..387D",
@@ -1142,66 +1106,6 @@
   "tried": [],
   "version": "publishedVersion"
  },
- "gaiacollab2016a": {
-  "arxiv": null,
-  "bibcode": "2016A&A...595A...1G",
-  "bytes": 4866808,
-  "doi": null,
-  "sha256": "410a7efd93de56078257568b308eb4e0d0767e469b8acaad2212de9eb3a72cf7",
-  "source_url": "https://arxiv.org/pdf/1609.04153",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2016A%26A...595A...1G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gaiacollab2016b": {
-  "arxiv": null,
-  "bibcode": "2016A&A...595A...2G",
-  "bytes": 9781777,
-  "doi": null,
-  "sha256": "0f1db64da7baba4dcd0f51daa9fd51b0b7b43f276757908e047e01101dad43f4",
-  "source_url": "https://arxiv.org/pdf/1609.04172",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2016A%26A...595A...2G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gaiacollab2018": {
-  "arxiv": null,
-  "bibcode": "2018A&A...616A...1G",
-  "bytes": 5422527,
-  "doi": null,
-  "sha256": "c801989e551d07667482b1540b2ae4d41aa0a41c77791aace822bd897f73876e",
-  "source_url": "https://arxiv.org/pdf/1804.09365",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/ADS_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
  "gaiacollab2018cat": {
   "arxiv": null,
   "bibcode": "2018yCat.1345....0G",
@@ -1222,43 +1126,6 @@
    }
   ],
   "version": "VizieR ReadMe"
- },
- "gaiacollab2020cat": {
-  "arxiv": null,
-  "bibcode": "2020yCat.1350....0G",
-  "bytes": 77635,
-  "doi": null,
-  "file": "gaiacollab2020cat.readme.txt",
-  "sha256": "c0e7eede6faad2bdd4c32ebaa3fc6e2a10077afbad5c4f846837da26adba6cab",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/350/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020yCat.1350....0G/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020yCat.1350....0G/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "gaiacollab2021": {
-  "arxiv": null,
-  "bibcode": "2021A&A...649A...1G",
-  "bytes": 657275,
-  "doi": null,
-  "sha256": "43b8727ddb12b08d485a03d26a6b92b01d2a4d91c42dd9888c9827000888862a",
-  "source_url": "https://arxiv.org/pdf/2012.01533",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2021A%26A...649A...1G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
  },
  "gaiacollab2022cat": {
   "arxiv": null,
@@ -3030,27 +2897,6 @@
   ],
   "version": "submittedVersion"
  },
- "siebert2011": {
-  "arxiv": null,
-  "bibcode": "2011yCat.3265....0S",
-  "bytes": 9533,
-  "doi": null,
-  "file": "siebert2011.readme.txt",
-  "sha256": "c975658fc9ec7eee0ee0a61ebea8c4357608908510438bab42ec75f891d319ea",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/265/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
  "simondiaz2015": {
   "arxiv": "1412.3469",
   "bibcode": "2015ApJ...799..169S",
@@ -3919,26 +3765,6 @@
    {
     "error": "curl 0 HTTP 403",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2023MNRAS.524.1855Z/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "zucker2019": {
-  "arxiv": null,
-  "bibcode": "2019ApJ...879..125Z",
-  "bytes": 11878121,
-  "doi": null,
-  "sha256": "e54db728d05d5cfdd080566b078184680ae0e9a90051aec35fee396625e3d760",
-  "source_url": "https://arxiv.org/pdf/1902.01425",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019ApJ...879..125Z/PUB_PDF"
-   },
-   {
-    "error": "IncompleteRead(3145728 bytes read, 8732393 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019ApJ...879..125Z/EPRINT_PDF"
    }
   ],
   "version": "submittedVersion"

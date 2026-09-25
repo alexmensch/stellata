@@ -17,17 +17,6 @@ a row reads `unverified` until its value is checked against a page of the copy.
 
 ## Entries
 
-<a id="abazajian2009"></a>
-### Abazajian K. N. et al. 2009 — The Seventh Data Release of the Sloan Digital Sky Survey
-
-ApJS 182, 543 · [2009ApJS..182..543A](https://ui.adsabs.harvard.edu/abs/2009ApJS..182..543A)
-
-- **Copy:** `submittedVersion`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| SIMBAD redshift-type rv test fixture | | unverified | |
-
 <a id="abdurrouf2022"></a>
 ### Abdurro'uf et al. 2022 — The Seventeenth Data Release of the Sloan Digital Sky Surveys: Complete Release of MaNGA, MaStar, and APOGEE-2 Data
 
@@ -406,17 +395,6 @@ Springer-Verlag, New York (1991), 3 vols; de Vaucouleurs, de Vaucouleurs, Corwin
 |---|---|---|---|
 | M31/M33 integrated V magnitudes | | unverified | |
 
-<a id="dittmann2014"></a>
-### Dittmann J. A. et al. 2014 — Trigonometric Parallaxes for 1,507 Nearby Mid-to-late M Dwarfs
-
-ApJ 784, 156 · [2014ApJ...784..156D](https://ui.adsabs.harvard.edu/abs/2014ApJ...784..156D)
-
-- **Copy:** `submittedVersion`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| LITERATURE bibcode test fixture | | unverified | |
-
 <a id="dolan2002"></a>
 ### Dolan & Mathieu 2002 — A Photometric Study of the Young Stellar Population throughout the lambda Orionis Star-Forming Region
 
@@ -661,39 +639,6 @@ NASA Goddard Space Flight Center report X-922-74-112 (April 1974); NTRS 19740014
 |---|---|---|---|
 | satellite B-V / V-R (Table IV), filter wavelengths (Table III) | | unverified | |
 
-<a id="gaiacollab2016a"></a>
-### Gaia Collaboration, Prusti T. et al. 2016 — The Gaia mission
-
-A&A 595, A1 · [2016A&A...595A...1G](https://ui.adsabs.harvard.edu/abs/2016A%26A...595A...1G)
-
-- **Copy:** `submittedVersion`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| DR1/TGAS bibcode deliberately NOT treated as a Gaia catalogue bibcode | | unverified | |
-
-<a id="gaiacollab2016b"></a>
-### Gaia Collaboration, Brown A. G. A. et al. 2016 — Gaia Data Release 1: Summary of the astrometric, photometric, and survey properties
-
-A&A 595, A2 · [2016A&A...595A...2G](https://ui.adsabs.harvard.edu/abs/2016A%26A...595A...2G)
-
-- **Copy:** `submittedVersion`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| DR1/TGAS bibcode deliberately NOT treated as a Gaia catalogue bibcode (and a test fixture) | | unverified | |
-
-<a id="gaiacollab2018"></a>
-### Gaia Collaboration, Brown A. G. A. et al. 2018 — Gaia Data Release 2: Summary of the contents and survey properties
-
-A&A 616, A1 · [2018A&A...616A...1G](https://ui.adsabs.harvard.edu/abs/2018A%26A...616A...1G)
-
-- **Copy:** `submittedVersion`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| DR2 release-paper bibcode (cited by CNS5) counted as Gaia catalogue bibcode by the skip rule | | unverified | |
-
 <a id="gaiacollab2018cat"></a>
 ### Gaia Collaboration (VizieR I/345) 2018 — Gaia DR2 catalogue (VizieR record)
 
@@ -704,28 +649,6 @@ A&A 616, A1 · [2018A&A...616A...1G](https://ui.adsabs.harvard.edu/abs/2018A%26A
 | Claim | Value | Page | Passage |
 |---|---|---|---|
 | Gaia DR2 catalogue bibcode: SIMBAD values citing it are skipped on 2p rows | | unverified | |
-
-<a id="gaiacollab2020cat"></a>
-### Gaia Collaboration (VizieR I/350) 2020 — Gaia EDR3 catalogue (VizieR record)
-
-[2020yCat.1350....0G](https://ui.adsabs.harvard.edu/abs/2020yCat.1350....0G)
-
-- **Copy:** `VizieR ReadMe`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| Gaia EDR3 catalogue bibcode: CNS5/SIMBAD values citing it are skipped on 2p rows | | unverified | |
-
-<a id="gaiacollab2021"></a>
-### Gaia Collaboration, Brown A. G. A. et al. 2021 — Gaia Early Data Release 3: Summary of the contents and survey properties
-
-A&A 649, A1 · [2021A&A...649A...1G](https://ui.adsabs.harvard.edu/abs/2021A%26A...649A...1G)
-
-- **Copy:** `submittedVersion`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| EDR3 release-paper bibcode counted as a Gaia catalogue bibcode by the skip rule | | unverified | |
 
 <a id="gaiacollab2022cat"></a>
 ### Gaia Collaboration (VizieR I/355) 2022 — Gaia DR3 catalogue (VizieR record)
@@ -1728,17 +1651,6 @@ ApJ 500, 525 · [doi:10.1086/305772](https://doi.org/10.1086/305772) · [arXiv:a
 |---|---|---|---|
 | polar A_V spread the dust normalisation is checked against | | unverified | |
 
-<a id="siebert2011"></a>
-### Siebert A. et al. 2011 — The Radial Velocity Experiment (RAVE): third data release
-
-VizieR III/265 · [2011yCat.3265....0S](https://ui.adsabs.harvard.edu/abs/2011yCat.3265....0S)
-
-- **Copy:** `VizieR ReadMe`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| non-Gaia bibcode test fixture | | unverified | |
-
 <a id="simondiaz2015"></a>
 ### Simon-Diaz et al. 2015 — Orbital and physical properties of the sigma Ori Aa, Ab, B triple system
 
@@ -2169,17 +2081,6 @@ MNRAS 524, 1855-1884 (2023) · [doi:10.1093/mnras/stad1941](https://doi.org/10.1
 | Claim | Value | Page | Passage |
 |---|---|---|---|
 | E_ZGR -> A_V conversion (A_lambda/E = 2.78) | | unverified | |
-
-<a id="zucker2019"></a>
-### Zucker C. et al. 2019 — A Large Catalog of Accurate Distances to Local Molecular Clouds: The Gaia DR2 Edition
-
-ApJ 879, 125 (bibcode) · [2019ApJ...879..125Z](https://ui.adsabs.harvard.edu/abs/2019ApJ...879..125Z)
-
-- **Copy:** `submittedVersion`
-
-| Claim | Value | Page | Passage |
-|---|---|---|---|
-| earlier sightlines flagged in Zucker 2020 Table A1 | | unverified | |
 
 <a id="zucker2020"></a>
 ### Zucker 2020 — A compendium of distances to molecular clouds in the Star Formation Handbook
