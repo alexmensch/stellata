@@ -58,7 +58,7 @@ cross-script policy and pointers.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the
-  [Zucker et al. 2022](/data/papers/index.md#zucker2022) inner-surface
+  [Pelgrims et al. 2020](/data/papers/index.md#pelgrims2020) inner-surface
   HEALPix map into `public/local-bubble.bin` (shell mesh), cross-checked
   against the [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) dust grid;
   `cloud-surfaces/` traces per-cloud isosurface meshes from the

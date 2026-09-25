@@ -155,7 +155,7 @@ def _thiele_innes_to_campbell(
     A: float, B: float, F: float, G: float,
 ) -> tuple[float, float, float, float] | None:
     """Heintz 1978 (/data/papers/index.md#heintz1978) / Halbwachs+ 2023
-    (/data/papers/index.md#halbwachs2023) Appendix C closed form.
+    (/data/papers/index.md#halbwachs2023) Appendix A closed form (Eqs. A.1–A.3).
 
     Inputs A,B,F,G in mas (Gaia DR3 NSS native). Returns
     ``(a_mas, i_rad, Omega_rad, omega_rad)`` where ``Omega`` is the

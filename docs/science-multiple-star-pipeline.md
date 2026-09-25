@@ -83,13 +83,17 @@ freshness policy in [Frozen external data](/data/README.md#frozen-external-data)
   Aa1,Aa2), per-component spectral types, and pair-side V magnitudes
   for sub-resolution pairs. Full source entry in [Data sources](/SCIENCE.md#data-sources).
 - **Curated per-component spectral types** —
-  `data/binaries/component_sptype_overrides.tsv`. Literature MK
-  types for spectroscopic sub-components no machine source
-  enumerates (SIMBAD has no object for Algol Aa2): Algol Aa2 K0IV
+  `data/binaries/component_sptype_overrides.tsv`. MK types for
+  spectroscopic sub-components no machine source enumerates (SIMBAD
+  has no object for Algol Aa2), picked within the literature's
+  classification: Algol Aa2 K0IV for an early-K subgiant
   ([Kolbas et al. 2015](/data/papers/index.md#kolbas2015)), δ Vel Ab A4V
-  ([Mérand et al. 2011](/data/papers/index.md#merand2011)), σ Ori Ab B0.5V
-  ([Simón-Díaz et al. 2015](/data/papers/index.md#simondiaz2015)), Castor Ab/Bb late-K /
-  early-M ([Stelzer & Burwitz 2003](/data/papers/index.md#stelzer2003)). Top tier of the Stage 6 spectral cascade;
+  (uncited; [Mérand et al. 2011](/data/papers/index.md#merand2011) say only
+  early A-type main sequence, mean T_eff 9830 K), σ Ori Ab B0.5V
+  ([Simón-Díaz et al. 2011](/data/papers/index.md#simondiaz2011); T_eff 31 kK in
+  [Simón-Díaz et al. 2015](/data/papers/index.md#simondiaz2015)), Castor Ab/Bb K7Ve /
+  M1Ve for late-K / early-M
+  ([Stelzer & Burwitz 2003](/data/papers/index.md#stelzer2003)). Top tier of the Stage 6 spectral cascade;
   each entry cites its source in the file.
 
 **Layer 2 — manual-run refresh scripts.** One per dataset, idempotent,
@@ -180,7 +184,7 @@ astronomer-relevant summary:
    SB1 period could be stamped onto a centuries-period visual pair.
    The Thiele-Innes → Campbell algebra recovers
    (a0, i, Ω, ω) from NSS's stored (A, B, F, G) quartet via the
-   [Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs+ 2023](/data/papers/index.md#halbwachs2023) Appendix C closed form, inlined
+   [Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs+ 2023](/data/papers/index.md#halbwachs2023) Appendix A closed form, inlined
    rather than imported from ESA's unmaintained NSSTools package —
    but the TI fit tracks the photocentre, so a0 = |q − β|·a_rel
    underestimates the relative separation by the mass-vs-flux
@@ -200,8 +204,11 @@ astronomer-relevant summary:
    photometry cannot constrain one — so for the non-visual routes
    the pipeline estimates it from Kepler's third law,
    a = M_total^⅓ · P_yr^⅔ AU, with M_total = M₁/(1−q) from the
-   primary's spectral-class mass ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2 /
-   [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013), the same tables the q backfill uses; 1 M☉ when the type is
+   primary's spectral-class mass ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2,
+   with main-sequence anchors not yet checked against
+   [Mamajek's online dwarf table](/data/papers/index.md#mamajek2022) —
+   [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) tabulate no
+   masses; the same tables the q backfill uses; 1 M☉ when the type is
    unparseable). Where no mass ratio is derivable the companion is
    assumed at half the primary's mass (q = ⅓, near the SB1
    mass-ratio distribution's mode). Both estimates enter a ∝ M^⅓,
@@ -236,8 +243,8 @@ astronomer-relevant summary:
    Spectral type resolves curated → SIMBAD per-component → MSC
    pair-side → AT-HYG per-system inherited; mass ratio `q` rides through
    from Gaia NSS / SB2 spectroscopy where present, with per-class
-   mass-table backfill from [Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2 /
-   [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) for visual orbits without spectroscopy.
+   mass-table backfill (the same tables) for visual orbits without
+   spectroscopy.
 7. **Assert against snapshots.** Per-stage counts gate
    `build-binaries-expected.json`; per-strategy rates gate
    `build-binaries-rates-expected.json`. A regression in either
@@ -322,9 +329,12 @@ pairs) is tracked as its own follow-up.
   (`data/binaries/orb6_component_overrides.tsv`) keys it to Ca,Cb
   and the pipeline synthesizes the pair row WDS lacks. ORB6's
   eclipse fit gives P and i = 86.5° but no semi-major axis; the
-  Kepler estimate from two M0.5Ve table masses
-  ([Torres & Ribas 2002](/data/papers/index.md#torres2002): 0.599 + 0.601 M☉) lands at 0.0171 AU vs the published
-  0.0182 AU. All six components render, three inner pairs animate,
+  Kepler estimate from the curated M0.5Ve type's table masses lands
+  at 0.0171 AU. [Torres & Ribas 2002](/data/papers/index.md#torres2002)
+  quote YY Gem as M1.0 Ve and give 0.5975 + 0.6009 M☉ (formal; they
+  adopt the mean, 0.5992 M☉, for each); their a sin i = 3.888 R☉ and
+  i = 86.29° give a = 0.0181 AU, as does Kepler's law with their
+  masses. All six components render, three inner pairs animate,
   and YY Gem's eclipses come from real orbital geometry.
 - **HIP 25733 — a [Bailer-Jones](/data/papers/index.md#bailerjones2021) refinement case.** AT-HYG's `dist_src`
   marks this row's catalogued 14.3 kpc as a Gaia DR3 inverse-parallax

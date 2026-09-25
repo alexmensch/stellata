@@ -11,7 +11,7 @@ mass-to-light ratios for 1 M⊙ formed.
 | Source | [Bruzual & Charlot 2003](/data/papers/index.md#bruzual2003) |
 | Distribution | `http://www.bruzual.org/bc03/Original_version_2003/bc03.models.padova_1994_chabrier_imf.tar.gz` |
 | Retrieved | 2026-08-09 |
-| Tracks | [Padova 1994 + Charlot 1997](/data/papers/index.md#bruzual2003) (section 2.1) |
+| Tracks | Padova 1994 ([Bruzual & Charlot 2003](/data/papers/index.md#bruzual2003) Sect. 2.1, Table 1) |
 | IMF | Chabrier (lognormal 0.1–1 M⊙ + x = 1.3 power law to 100 M⊙) |
 | Resolution | `hr` (high spectral resolution variant of the same SSP) |
 | Photometry | Vega system |

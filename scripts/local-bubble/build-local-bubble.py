@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build public/local-bubble.bin (shell mesh) from the Zucker 2022 (/data/papers/index.md#zucker2022)
+"""Build public/local-bubble.bin (shell mesh) from the Pelgrims 2020 (/data/papers/index.md#pelgrims2020)
 wall-distance HEALPix map, cross-checked against the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
 dust grid. See scripts/local-bubble/README.md."""
 

@@ -27,7 +27,7 @@ export const BALLESTEROS_QUAD_LINEAR = 2.32;
 export const BALLESTEROS_DISC_K2 = 1.1664;
 
 /**
- * Ballesteros 2012 (/data/papers/index.md#ballesteros2012) empirical relation:
+ * Ballesteros 2012 (/data/papers/index.md#ballesteros2012) black-body relation:
  * B-V → Teff in Kelvin.
  *
  *   Teff = 4600 × ( 1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62) )

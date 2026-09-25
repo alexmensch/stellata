@@ -221,8 +221,10 @@ under `stellata-zsr`, since the infrastructure overlap is total.
 
 ### Tier 3 — Deferred / opportunistic
 
-- **[Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) extended
-  T_TABLE** (class × lumClass) baked
+- **Extended T_TABLE** (class × lumClass) — dwarf rows from
+  [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) Table 4, which
+  covers only dwarfs and 5–30 Myr pre-main-sequence stars, so the giant
+  and supergiant rows need another source — baked
   into `catalog-pure.ts` as a richer offline fallback for the ~30%
   of catalogue that has lumClass but won't get Apsis. Refines Tier 1.
   No new data ingest; library lookup + recompute. Defer until Tier 2
@@ -349,16 +351,16 @@ Low gravity = puffed-out atmosphere = orders-of-magnitude lower density = pertur
 **Effective temperature (Teff).** Temperature of a blackbody emitting the same total bolometric flux as the star. It's the *physical* quantity; colour and spectral class are *observational proxies*. Inference paths (most → least direct):
 - Detailed spectroscopic model-atmosphere fit (Apsis GSP-Spec) — best.
 - Multi-band photometric SED fit + parallax (Apsis GSP-Phot) — good.
-- Single colour index → empirical relation ([Ballesteros 2012](/data/papers/index.md#ballesteros2012)) — workable.
+- Single colour index → colour–temperature relation ([Ballesteros 2012](/data/papers/index.md#ballesteros2012)) — workable.
 - Spectral class look-up (`T_TABLE`) — coarsest.
 
-**[Ballesteros 2012](/data/papers/index.md#ballesteros2012) relation.** Clean empirical fit mapping B−V → Teff, calibrated against stars with both measured independently:
+**[Ballesteros 2012](/data/papers/index.md#ballesteros2012) relation.** A black-body-derived B−V → Teff relation (eq. 14: the paper's black-body colour-temperature estimator with its γ fine-tuned for B and V), which the paper reports as comparable to published stellar relations:
 
 ```
 Teff = 4600 × (1/(0.92(B−V) + 1.7) + 1/(0.92(B−V) + 0.62))   [K]
 ```
 
-Works well A through K; less accurate for extreme M dwarfs and hot O stars. The basis for Tier 1's continuous-chroma LUT routing where `ci` is present — every star with a `ci` value gets a continuous Teff out, no discretisation, which is why Panel C in `hr_panels.png` is smooth.
+The paper states no validity range in spectral type; real stars depart from a black body most at the cool end (M). The basis for Tier 1's continuous-chroma LUT routing where `ci` is present — every star with a `ci` value gets a continuous Teff out, no discretisation, which is why Panel C in `hr_panels.png` is smooth.
 
 **logg.** log₁₀ of surface gravity in cgs (cm/s²). g = GM/R², so big radius ⇒ low logg. Ballparks: supergiant ~0–1, giant ~2–3, subgiant ~3.5, MS dwarf ~4–4.5, white dwarf ~8. *The* spectroscopic discriminator between a K-giant and a K-dwarf at identical Teff.
 

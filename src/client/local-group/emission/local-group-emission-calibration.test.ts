@@ -455,7 +455,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   }
 
   it("the disc's face-on central surface brightness satisfies Freeman's law", () => {
-    // Freeman (1970, /data/papers/index.md#freeman1970) μ₀(V) = 21.65 ± 0.30
+    // Freeman (1970, /data/papers/index.md#freeman1970) μ₀(B) = 21.65 ± 0.30
     // for spiral discs. The model was never fitted to this — it falls out
     // of the solved flux plus the published R_d — so agreement is a real
     // check on the deprojection.

@@ -1,7 +1,7 @@
 # Local Bubble build
 
 `build-local-bubble.py` turns the
-[Zucker et al. 2022](/data/papers/index.md#zucker2022) inner-surface
+[Pelgrims et al. 2020](/data/papers/index.md#pelgrims2020) inner-surface
 HEALPix map (`data/local-bubble/`) into
 `data/local-bubble/local-bubble.bin` — a star-shaped triangle-mesh shell
 of the Local Bubble's dust wall, consumed by `src/client/local-bubble/`.

@@ -24,13 +24,16 @@ several ℓmax (`r_in_lmax-02` … `-40`); the build defaults to `lmax-08`
 
 ## Provenance
 
-- [**Zucker C., Goodman A. A., Alves J., et al. 2022**](/data/papers/index.md#zucker2022)
-  ("Star formation near the Sun is driven by the expansion of the Local
-  Bubble").
+- **Surface model**: [Pelgrims et al. 2020](/data/papers/index.md#pelgrims2020)
+  — the inner surface and its spherical-harmonic reconstructions.
 - **Surface data**: Harvard Dataverse
-  [doi:10.7910/DVN/RHPVNC](https://doi.org/10.7910/DVN/RHPVNC),
+  [doi:10.7910/DVN/RHPVNC](https://doi.org/10.7910/DVN/RHPVNC)
+  (V. Pelgrims, "The shape of the shell of the Local Bubble"),
   file `L19_map-inner_final.fits` (renamed here). The wall is traced
   through the [Lallement et al. 2019](/data/papers/index.md#lallement2019) (L19) 3D dust map.
+- **Context**: [Zucker et al. 2022](/data/papers/index.md#zucker2022) uses
+  this surface to tie nearby star formation to the Local Bubble's
+  expansion.
 - **Licence**: as published on the Dataverse record.
 
 ## Refresh

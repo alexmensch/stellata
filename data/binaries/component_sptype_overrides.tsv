@@ -1,4 +1,4 @@
-# Hand-curated per-component MK spectral types — literature values for
+# Hand-curated per-component MK spectral types — literature-based picks for
 # WDS components that neither SIMBAD's per-component cross-IDs nor
 # AT-HYG carry. SIMBAD enumerates Algol's WDS components as A/F/G only,
 # so its per-component sp_type join can never supply Aa2's K0IV; the
@@ -16,11 +16,11 @@
 #                 parse it).
 #   source      — literature reference for the classification.
 wds_id	component	sp_type	source
-03082+4057	2	K0IV	Algol Aa2 — Kolbas et al. 2015 /data/papers/index.md#kolbas2015 (B8V + K0IV + A7m)
-08447-5443	Ab	A4V	delta Vel Ab — Merand et al. 2011 /data/papers/index.md#merand2011 (Aa=A2IV, Ab=A4V)
-05387-0236	Ab	B0.5V	sigma Ori Ab — Simon-Diaz et al. 2015 /data/papers/index.md#simondiaz2015 (Aa=O9.5V, Ab=B0.5V)
-07346+3153	Ab	K7Ve	Castor Ab — Stelzer & Burwitz 2003 /data/papers/index.md#stelzer2003 (late-K companion, P=9.21 d)
-07346+3153	Bb	M1Ve	Castor Bb — Stelzer & Burwitz 2003 /data/papers/index.md#stelzer2003 (early-M companion, P=2.93 d)
+03082+4057	2	K0IV	Algol Aa2 — Kolbas et al. 2015 /data/papers/index.md#kolbas2015 (early-K subgiant, Teff 4900 K; K0IV is a representative type)
+08447-5443	Ab	A4V	delta Vel Ab — Merand et al. 2011 /data/papers/index.md#merand2011 (two early A-type main-sequence stars, Ab mean Teff 9830 K; no MK subtype given, A4V is uncited)
+05387-0236	Ab	B0.5V	sigma Ori Ab — Simon-Diaz et al. 2011 /data/papers/index.md#simondiaz2011 (Aa=O9.5V, Ab=B0.5V); Teff(Ab) 31 kK in Simon-Diaz et al. 2015 /data/papers/index.md#simondiaz2015
+07346+3153	Ab	K7Ve	Castor Ab — Stelzer & Burwitz 2003 /data/papers/index.md#stelzer2003 (late-K companion, P=9.21 d; K7Ve is a representative subtype)
+07346+3153	Bb	M1Ve	Castor Bb — Stelzer & Burwitz 2003 /data/papers/index.md#stelzer2003 (early-M companion, P=2.93 d; M1Ve is a representative subtype)
 07346+3153	Ca	M0.5Ve	Castor Ca (YY Gem A) — Torres & Ribas 2002 /data/papers/index.md#torres2002 (0.599 M_sun eclipsing twin)
 07346+3153	Cb	M0.5Ve	Castor Cb (YY Gem B) — Torres & Ribas 2002 /data/papers/index.md#torres2002 (0.601 M_sun eclipsing twin)
 05145-0812	Ba	B9V	Rigel Ba — Tokovinin 2018 /data/papers/index.md#tokovinin2018 (MSC B side V=7.6 B9V); Sanford 1942 /data/papers/index.md#sanford1942 SB orbit

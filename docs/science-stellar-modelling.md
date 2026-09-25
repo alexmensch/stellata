@@ -167,11 +167,11 @@ and bound to the star shader as a 256×1 `DataTexture`. Each entry
 folds three physically-grounded steps:
 
 1. **B-V → effective temperature** via the
-   [Ballesteros (2012)](/data/papers/index.md#ballesteros2012) empirical relation,
-   `T_eff = 4600 × (1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62))`,
-   calibrated against stars with both indices measured independently.
-   Accurate across A–K main-sequence, with reasonable extrapolation
-   into M and hot B.
+   [Ballesteros (2012)](/data/papers/index.md#ballesteros2012) relation,
+   `T_eff = 4600 × (1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62))` (eq. 14),
+   derived from black-body colour temperatures and reported as
+   comparable to published stellar B-V–T_eff relations. The paper
+   states no validity range in spectral type.
 2. **Planck × CIE 1931** — the Planck spectrum at T_eff is integrated
    against the CIE 1931 2° standard-observer colour-matching functions,
    using the analytical multi-Gaussian fits in
@@ -285,15 +285,23 @@ magnitude wrong, in two ways:
    *temperature* swing — cooling drives TiO band opacity up and shifts
    the Planck peak out of V — so its bolometric amplitude is only ~1 mag.
    Ascribing all of `L_V` to radius implied a modelled disc swing of
-   ~25–150× (before display compression) versus the ~1.1–1.5× the
-   physical radius actually varies
-   ([Woodruff et al. 2008](/data/papers/index.md#woodruff2008) / [2009](/data/papers/index.md#woodruff2009);
-   [Ireland et al. 2004](/data/papers/index.md#ireland2004);
-   [Wittkowski et al. 2016](/data/papers/index.md#wittkowski2016)). χ Cyg's interferometric
+   ~25–150× (before display compression) versus the ~1.1–1.5× used
+   here for the physical radius. The measured swing: peak-to-peak
+   uniform-disc diameter amplitudes of 6–22 % from J to L for M-type
+   Miras, ~35 % in J for the S-type χ Cyg
+   ([Woodruff et al. 2008](/data/papers/index.md#woodruff2008)); dynamic
+   models give ≈ ±30 % for the near-infrared continuum layers
+   ([Ireland et al. 2004](/data/papers/index.md#ireland2004)). The apparent
+   diameter also depends strongly on wavelength — a factor ~2 in
+   uniform-disc size between 1 and 3 µm
+   ([Woodruff et al. 2009](/data/papers/index.md#woodruff2009)) — because
+   extended molecular layers sit above the continuum radius
+   ([Wittkowski et al. 2016](/data/papers/index.md#wittkowski2016)). χ Cyg's interferometric
    disc varies by up to ~40 % ([Lacour et al. 2009](/data/papers/index.md#lacour2009)).
 2. **Sign.** Interferometry places the **minimum** diameter near
    **maximum** light ([Lacour 2009](/data/papers/index.md#lacour2009): minimum at φ ≈ 0.94; diameter
-   anti-correlates with flux). The constant-T model had maximum radius
+   anti-correlates with temperature and visual brightness, while the
+   bolometric flux follows the diameter). The constant-T model had maximum radius
    at maximum light — inverted. The negative exponent on `ρ^(…)` fixes
    this: the disc is smallest at φ = 0.
 
