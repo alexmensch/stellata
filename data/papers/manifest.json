@@ -919,6 +919,21 @@
   "tried": [],
   "version": "publishedVersion"
  },
+ "esposito2002": {
+  "arxiv": null,
+  "bibcode": null,
+  "bytes": 1216572,
+  "doi": "10.1088/0034-4885/65/12/201",
+  "note": "Table 1 (p. 1747): Uranus ring radii and single-value optical depths, no widths",
+  "openalex_first_author": "L. W. Esposito",
+  "openalex_title": "Planetary rings",
+  "openalex_year": 2002,
+  "sha256": "b7e2e309d9cbca72c5668ee5a581abdf78a7c7b9e0a814bd9aca53f7f3cb3e6c",
+  "source_url": "https://doi.org/10.1088/0034-4885/65/12/201",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
+ },
  "fabricius2002a": {
   "arxiv": null,
   "bibcode": null,
@@ -1133,7 +1148,7 @@
   "arxiv": null,
   "bibcode": null,
   "doi": "10.2307/j.ctv1v7zdtq.13",
-  "note": "University of Arizona Press 1991 chapter; no digital or print copy reachable. rings-uranus.tsv radii match french1988 Tables XIV-XV to 1 km; its widths and optical depths are midpoints of the chapter's ranges and appear in neither french1986 nor french1988. Candidate for those: Esposito 2002, Rep. Prog. Phys. 65, 1741, doi:10.1088/0034-4885/65/12/201",
+  "note": "University of Arizona Press 1991 chapter; no digital or print copy reachable. rings-uranus.tsv radii match french1988 Tables XIV-XV to 1 km and esposito2002 Table 1 exactly. Its widths appear in neither; its optical depths match neither french1986 nor esposito2002 (lambda: tsv 0.15, esposito2002 1e-3)",
   "openalex_first_author": "R. G. French",
   "openalex_title": "DYNAMICS AND STRUCTURE OF THE URANIAN RINGS",
   "openalex_year": 1991,
