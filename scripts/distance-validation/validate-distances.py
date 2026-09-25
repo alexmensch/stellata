@@ -117,8 +117,8 @@ def read_bailer_jones_tsv(path: Path) -> dict[int, float]:
     """Parse data/bailer-jones/bailer-jones-dr3.tsv into a
     {source_id: r_med_photogeo} dict. Skips rows where r_med_photogeo is
     masked — Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) leaves
-    the photogeo posterior blank for stars that fail their photometric joint
-    fit and the TSV carries those cells as the astropy "--" sentinel."""
+    the photogeo posterior blank where G or BP-RP is missing or the colour
+    falls outside their prior model's range, and the TSV carries those cells as the astropy "--" sentinel."""
     out: dict[int, float] = {}
     for row in read_tsv_rows(path):
         dist_cell = row["r_med_photogeo"]

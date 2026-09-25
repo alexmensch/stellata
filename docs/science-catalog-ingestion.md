@@ -125,7 +125,7 @@ on every AT-HYG row before the bounded-scope cutoff above fires:
 2. **LMC kinematic override** — replaces B-J's mis-anchored posterior
    for stars in the LMC field, using a sky-cone + bulk-PM
    identification pinned to [Pietrzyński et al. (2019)](/data/papers/index.md#pietrzynski2019)'s eclipsing-
-   binary distance to the LMC's centre of mass. Motion alone is not
+   binary distance to the LMC's centre. Motion alone is not
    membership: a star whose own parallax sits more than 10σ above the
    LMC's ~0.02 mas is a foreground star sharing the Cloud's apparent
    motion, and keeps its own distance.
@@ -154,7 +154,7 @@ volume) the inverse-parallax estimator catastrophically fails:
 its sampling distribution has a long tail to large distances, and a
 handful of supergiants end up at 9–14 kpc instead of their true
 2–5 kpc. [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) (CDS I/352)
-publishes Bayesian distance posteriors for every Gaia DR3 source that
+publishes Bayesian distance posteriors for every Gaia (E)DR3 source with a parallax that
 combine the parallax likelihood with a Galactic-density prior; the
 photogeometric variant additionally combines the prior with G and BP–RP
 photometry. The parallax-zero-point bias documented in
@@ -206,12 +206,14 @@ Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (365,980 rows,
 refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
 <a id="distance-override-validation-against-vaidman-et-al-2025"></a>**Distance-override validation against Vaidman et al. 2025.**
-[Vaidman, Khokhlov, Miroshnichenko, Agishev & Yermekbayev 2025](/data/papers/index.md#vaidman2025)
+[Vaidman et al. 2025](/data/papers/index.md#vaidman2025)
 publish a Bayesian recalculation of Gaia DR3 distances for 132 Galactic
 BA-type supergiants — exactly the failure-mode population the [Bailer-Jones](/data/papers/index.md#bailerjones2021)
 override above is designed to rescue. The paper's appendix tables list
 their adopted distance per star together with [Bailer-Jones](/data/papers/index.md#bailerjones2021)'s
-`r_med_photogeo` (their direct comparand) and the parallax SNR each
+median distance (the paper does not say which median; its values match
+I/352's `r_med_photogeo` to 0.1% on 130 of the 131 stars present in
+`bailer-jones-dr3.tsv`) and the parallax SNR each
 decision rode on, an independent third-party reference set we use to
 spot-check the override on a recurring basis.
 
@@ -256,11 +258,13 @@ parallax — [Andrae et al. 2023](/data/papers/index.md#andrae2023)) and `gspspe
 (spectroscopic fit to RVS spectra —
 [Recio-Blanco et al. 2023](/data/papers/index.md#recioblanco2023)). Each emits (T_eff, log g, [M/H]);
 gspphot additionally emits `A0` (line-of-sight monochromatic
-extinction at 547.7 nm) and gspspec additionally emits a coarse
-spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
-`unknown`).
+extinction at 541.4 nm). A third Apsis module, ESP-ELS, classifies the
+BP/RP spectra into a coarse spectral-type enum, `spectraltype_esphs`
+(`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`, `unknown`) — the field is
+named for ESP-HS but written by ESP-ELS
+([Creevey et al. 2023](/data/papers/index.md#creevey2023), Sect. 6.1.3).
 
-Stellata pulls all seven Apsis floats plus the gspspec spectral-type
+Stellata pulls all seven Apsis floats plus the ESP-ELS spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
 writes them per record into the binary at offsets 52–79 (see
 [Binary catalog format](/scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest)). Coverage: ~99.6% of
@@ -281,7 +285,7 @@ Three downstream paths consume Apsis directly:
   beats [Ballesteros](/data/papers/index.md#ballesteros2012)(B-V) here (gspphot fits include `A0` explicitly,
   so dust reddening composes downstream without double-counting
   extinction).
-- **Spectral classification fall-through** uses gspspec's
+- **Spectral classification fall-through** uses ESP-ELS's
   `spectraltype_esphs` enum as the second tier after SIMBAD sp_type.
   Letter-only — no subclass or luminosity class — but anchors the
   colour ramp where SIMBAD missed.
@@ -427,7 +431,7 @@ with the per-tier counts:
    astrometry — ~310.6k rows (~99.2%), mas-grade or better, including
    ~10k NSS-flagged rows whose `gaia_source` astrometry is the
    centre-of-mass refit.
-2. **HIP2 [van Leeuwen](/data/papers/index.md#vanleeuwen2007)** (ra, dec at J1991.25, PM-propagated forward to
+2. **HIP2 [van Leeuwen](/data/papers/index.md#vanleeuwen2007)** (ra, dec at the Hipparcos catalogue epoch J1991.25 — [ESA 1997](/data/papers/index.md#esa1997), p. xv — PM-propagated forward to
    J2016.0) for the Gaia-saturated bright set — 2,509 rows with no
    usable Gaia parallax, plus 138 whose Gaia-vs-HIP2 PM disagrees by
    > 50 mas/yr on either axis (orbit-corrupted 5p PM).

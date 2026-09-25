@@ -1686,7 +1686,8 @@ export function resolveGaiaSourceId(
  *  `r_med_photogeo` is preferred when available
  *  (combines the parallax likelihood with a colour-and-magnitude
  *  population prior); `r_med_geo` is the geometric-only fallback for
- *  rows without photogeo (no usable G or BP–RP). */
+ *  rows without photogeo (no usable G or BP–RP, or a colour outside the
+ *  prior model's range). */
 export function parseBailerJonesTsv(text: string): Map<string, number> {
   const out = new Map<string, number>();
   const lines = text.split(/\r?\n/);
@@ -1719,8 +1720,8 @@ export function parseBailerJonesTsv(text: string): Map<string, number> {
  *  float columns (gspphot ∪ gspspec) are `number | null` — gspphot and
  *  gspspec are independent solutions and either or both may be absent
  *  for a given source_id. NaN-when-empty decoding lifts to the binary
- *  layer via `NO_APSIS`. `spectraltypeEsphs` is the GSP-Spec spectral-type
- *  enum (Recio-Blanco+23 (/data/papers/index.md#recioblanco2023)): one of "O", "B", "A", "F", "G", "K", "M",
+ *  layer via `NO_APSIS`. `spectraltypeEsphs` is the ESP-ELS spectral-type
+ *  enum (Creevey+23 (/data/papers/index.md#creevey2023)): one of "O", "B", "A", "F", "G", "K", "M",
  *  "CSTAR", or "unknown"; consumed by the spectral resolver as the
  *  second tier after SIMBAD sp_type. */
 export interface ApsisRow {

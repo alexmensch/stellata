@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Refresh data/hipparcos/hip2_van_leeuwen.tsv — Hipparcos-2
-(van Leeuwen 2007, /data/papers/index.md#vanleeuwen2007; VizieR I/311/hip2) astrometric
-reduction at J1991.25."""
+"""Refresh data/hipparcos/hip2_van_leeuwen.tsv — Hipparcos-2 (van Leeuwen 2007,
+/data/papers/index.md#vanleeuwen2007; VizieR I/311/hip2) astrometric reduction at
+the Hipparcos epoch J1991.25 (ESA 1997, /data/papers/index.md#esa1997)."""
 
 from __future__ import annotations
 

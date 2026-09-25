@@ -303,7 +303,7 @@ export class MilkyWay {
     (c.tint.value as THREE.Color).copy(tintColor(r, g, b));
   }
 
-  /** CCM (/data/papers/index.md#cardelli1989) default is (0.751, 1.0, 1.32); larger spread reddens harder. */
+  /** Shipped default is `REDDENING_RGB` (0.76, 1.0, 1.35); CCM (/data/papers/index.md#cardelli1989) gives (0.751, 1.0, 1.337). Larger spread reddens harder. */
   setReddeningRGB(r: number, g: number, b: number) {
     (this.shared.uReddeningRGB.value as THREE.Vector3).set(r, g, b);
   }

@@ -65,7 +65,8 @@ export interface GaiaAstrometryCatalogRow {
 }
 
 /** van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007) reduction row from
- *  `data/hipparcos/hip2_van_leeuwen.tsv`. ra/dec are at J1991.25. */
+ *  `data/hipparcos/hip2_van_leeuwen.tsv`. ra/dec are at the Hipparcos epoch
+ *  J1991.25 (ESA 1997, /data/papers/index.md#esa1997). */
 export interface Hip2AstrometryRow {
   raDeg: number;
   decDeg: number;
@@ -202,7 +203,7 @@ export function directionOnPm(
 export const KM_S_TO_PC_YR = 3.15576e7 / 3.0856775814913673e13;
 
 // Space-velocity sanity ceiling. The Galactic escape velocity near Sol is
-// ~550 km/s; the fastest known hypervelocity stars reach ~1700 km/s but none
+// ~530 km/s; the fastest known hypervelocity stars reach ~1700 km/s but none
 // is a record here, so a ceiling at 1500 (~3× escape) clamps no real star. A
 // computed speed past it is a
 // PM×distance artifact — noisy proper motion on a faint distant star, where
@@ -214,8 +215,9 @@ export const VELOCITY_SANITY_CEILING_KM_S = 1500;
 export const VELOCITY_SANITY_CEILING_PC_YR =
   VELOCITY_SANITY_CEILING_KM_S * KM_S_TO_PC_YR;
 
-// Local Galactic escape velocity (~550 km/s, Piffl et al. 2014
-// (/data/papers/index.md#piffl2014)). A star
+// Local Galactic escape velocity: Piffl et al. 2014
+// (/data/papers/index.md#piffl2014) measure 533 +54/−41 km/s in the Galactic
+// rest frame; the threshold here is 550. A star
 // faster than this is unbound — genuinely exceptional (a handful of proven
 // hypervelocity stars Galaxy-wide), so a large above-escape population is
 // almost entirely PM×distance / bad-RV artifacts. These rows are NOT

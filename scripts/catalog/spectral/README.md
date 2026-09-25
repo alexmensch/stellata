@@ -10,7 +10,7 @@ keeps the SIMBAD namespace ladder this folder joins through.
 ```
 scripts/catalog/spectral/
   spectral-classify.ts (+ test)   The MK walker over SIMBAD `sp_type`, the
-                                  GSP-Spec letter enum, the `SpectralInfo`
+                                  ESP-ELS letter enum, the `SpectralInfo`
                                   shape both produce, and the hover-display
                                   string. No catalogue joins — pure parsing.
   spectral-resolve.ts (+ test)    The seven-tier resolver and the SIMBAD
@@ -62,8 +62,8 @@ priority chain:
    Gaia source_id**, so tier 1's source_id key misses them. Without it the
    radius chain runs the cool unknown-Teff fallback against a bright absmag
    and inflates R ~4× (Algol 12.47 → 3.2 R☉; Alsephina 12.0 → 4.0).
-   SIMBAD's full MK is preferred over GSP-Spec's letter-only enum, so this
-   tier sits above GSP-Spec.
+   SIMBAD's full MK is preferred over the ESP-ELS letter-only enum, so this
+   tier sits above the ESP-ELS tier.
 
    It also carries the population tier 1 reaches and cannot answer: a
    source_id that resolves onto a component-lettered object with no
@@ -95,7 +95,7 @@ priority chain:
    count rather than as noise inside a 280k total. Read the per-tier figures
    there rather than restating them here, which is how the ones this section
    used to carry went stale.
-5. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
+5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey et al. 2023](/data/papers/index.md#creevey2023); a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.
@@ -104,7 +104,7 @@ priority chain:
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
 classification (build-counts over the walked records: ~91.3% SIMBAD /
-~8.3% GSP-Spec / ~0.4% fallback); it is still used as a
+~8.3% ESP-ELS / ~0.4% fallback); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
@@ -119,7 +119,7 @@ R/R☉    = sqrt(L/L☉) × (T_sun/T)²
 ```
 
 `resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window);
-R ∝ T⁻², so the class-table fallback misized GSP-Spec-tier stars
+R ∝ T⁻², so the class-table fallback misized ESP-ELS-tier stars
 (letter-only, subclass defaulted to 5) by up to ~36% and unknown-class
 stars by up to ~2×. Tables are main-sequence values — cooler for
 giants/supergiants in reality — but the Mbol side of the equation

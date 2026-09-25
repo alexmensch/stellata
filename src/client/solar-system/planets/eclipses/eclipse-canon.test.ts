@@ -197,7 +197,7 @@ describe('solar eclipses vs the Five Millennium Canon', () => {
     // The deep-time worst case (198 km, -1977) is the canon-agreement
     // floor, not the model's accuracy: at that epoch the chain sits
     // within 6″ of DE441 in Moon−Sun elongation while the canon's
-    // ELP2000-85 Moon drifts ~160″ from DE441 by 2000 BC. See README.md#where-the-remaining-error-is.
+    // ELP-2000/82 Moon drifts ~160″ from DE441 by 2000 BC. See README.md#where-the-remaining-error-is.
     for (const r of solarResults) {
       expect(r.offsetKm, r.row.date).toBeLessThan(200);
     }
@@ -307,7 +307,8 @@ describe('lunar eclipses vs the Five Millennium Canon', () => {
 
 describe('ΔT against the canon\'s own column', () => {
   it('agrees within 2 s at every canon epoch, from 2000 BC on', () => {
-    // Espenak (/data/papers/index.md#espenak2009) tabulates the ΔT he used per
+    // Espenak (/data/papers/index.md#espenak2009,
+    // /data/papers/index.md#espenak2009lunar) tabulates the ΔT he used per
     // eclipse. Reproducing it is a direct check on delta-t-pure.ts against the
     // same authority the ground tracks are being checked against. The bound is
     // absolute: a relative one cannot tell "reproduces Espenak" from

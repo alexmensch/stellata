@@ -349,7 +349,9 @@ describe('displayName overrides + default type suffix', () => {
   });
   it('explicitly overrides the named non-dSph dwarfs that the regex misses', () => {
     expect(displayName('Leo A')).toBe('Leo A');
-    expect(displayName('Leo P')).toBe('Leo P');           // dIrr per Giovanelli 2013 (/data/papers/index.md#giovanelli2013)
+    // Gas-rich star-forming dwarf (Giovanelli 2013, /data/papers/index.md#giovanelli2013),
+    // classed irregular by Rhode 2013 (/data/papers/index.md#rhode2013).
+    expect(displayName('Leo P')).toBe('Leo P');
     expect(displayName('WLM')).toBe('WLM');
     expect(displayName('Phoenix')).toBe('Phoenix Dwarf');
     expect(displayName('Pegasus dIrr')).toBe('Pegasus Dwarf Irregular');

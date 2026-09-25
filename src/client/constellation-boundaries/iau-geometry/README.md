@@ -105,7 +105,8 @@ digit, which splinters 236 RA bounds into 259.
 31.76**, by the Besselian epoch formula, not a Julian-year offset from
 J2000. The rotation is the IAU 1976
 ([Lieske](/data/papers/index.md#lieske1979)) composition
-Rz(−z)·Ry(−θ)·Rz(−ζ).
+R(−z)·Q(θ)·R(−ζ) (eq. 5; R and Q are the frame rotations about z and y
+of eq. 3), so θ enters with the opposite sign to ζ and z.
 
 Two ways to get this wrong, both of which still produce a
 plausible-looking sky:

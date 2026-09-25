@@ -8,10 +8,8 @@ independently-derived posterior.
 
 132 Galactic BA-type supergiants with Bayesian distance posteriors from:
 
-> [Vaidman, N.L., Khokhlov, S.A., Miroshnichenko, A.S., Agishev, A.T.,
-> Yermekbayev, B.S., 2025](/data/papers/index.md#vaidman2025). *A
-> Quality-Controlled Bayesian Recalculation of Gaia DR3/EDR3 Distances for
-> 132 Galactic BA-Type Supergiants*.
+> [Vaidman et al. 2025](/data/papers/index.md#vaidman2025). *Evaluating
+> Gaia Astrometric Quality and Distances for Galactic Hot Supergiants*.
 
 Open-access under [Creative Commons CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 The table contents in this TSV are reproduced from the paper's appendix
@@ -23,7 +21,7 @@ Tables A1 (119 rows) and A2 (13 rows) verbatim; the only added column is
 | Column                  | Source            | Notes                                                                                   |
 | ----------------------- | ----------------- | --------------------------------------------------------------------------------------- |
 | `name`                  | paper Table A1/A2 | Star name as printed (`HD 1070`, `BD+60 51`, `V755 Cas`, Greek-letter Bayer, etc.)      |
-| `d_bj_paper_pc`         | paper             | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) r_med_photogeo as the paper read it (pc). |
+| `d_bj_paper_pc`         | paper             | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) median distance as the paper read it (pc). The paper does not name the median; its values match I/352 `r_med_photogeo` to 0.1% on 130 of 131 stars. |
 | `sigma_d_bj_paper_pc`   | paper             | [Bailer-Jones](/data/papers/index.md#bailerjones2021) 1-σ (pc). |
 | `ruwe`                  | paper             | Gaia DR3 renormalised unit-weight error.                                                |
 | `g_mag`                 | paper             | Gaia DR3 G magnitude.                                                                   |

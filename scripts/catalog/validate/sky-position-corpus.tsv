@@ -14,13 +14,16 @@
 #   Δt direction) is exercised by the 24.75-yr HIP2 tier below and
 #   pinned independently against SIMBAD J2000 in direction-cascade.test.ts.
 # - Sirius/Vega (hip2_saturated): van Leeuwen 2007
-#   (/data/papers/index.md#vanleeuwen2007) J1991.25 PM-propagated
+#   (/data/papers/index.md#vanleeuwen2007) at the Hipparcos epoch J1991.25
+#   (ESA 1997, /data/papers/index.md#esa1997), PM-propagated
 #   24.75 yr forward to J2016.0 — this DOES exercise the propagation.
 # - Gl 863.1A (simbad): no Gaia source, and HIP 111293 is absent from
-#   HIP2, so the bottom tier places it — SIMBAD's bibcoded J2000
+#   HIP2, so the bottom tier places it — SIMBAD's bibcoded equinox-J2000
 #   coordinate (2MASS, Cutri et al. 2003 (/data/papers/index.md#cutri2003))
 #   advanced 16 yr on SIMBAD's own bibcoded PM (1368.0, 111.0 mas/yr, Lépine &
-#   Shara 2005 (/data/papers/index.md#lepine2005)). RE-PINNED
+#   Shara 2005 (/data/papers/index.md#lepine2005)). 2MASS measured it at
+#   epoch ≈2000.39, not 2000.0, so the 16 yr overshoots by 0.39 yr and puts
+#   the pin ~0.54" east of the correctly propagated place. RE-PINNED
 #   DELIBERATELY when the printed cell retired, and the move is the point:
 #   this row used to hold that cell UNPROPAGATED, and the new value is
 #   49.2" away. That splits into two separate corrections — the printed

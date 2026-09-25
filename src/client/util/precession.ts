@@ -55,9 +55,10 @@ export function precessionAnglesFromJ2000(jd: number): PrecessionAngles {
 }
 
 /** Rotation carrying an ICRS/J2000 direction to the mean equator and equinox
- *  of `jd`. Composed as Rz(−z)·Ry(−θ)·Rz(−ζ): θ turns the pole the SAME way
- *  ζ and z turn the equinox, and negating it lands every position 2θ ≈ 1.4°
- *  off the correct declination while still looking plausible. */
+ *  of `jd`. Composed as R(−z)·Q(θ)·R(−ζ), Lieske eq. 5, with R and Q the
+ *  frame rotations about z and y: θ enters with the opposite sign to ζ and z,
+ *  and giving it theirs lands every position 2θ ≈ 1.4° off the correct
+ *  declination while still looking plausible. */
 export function precessionRotationFromJ2000(jd: number): Rotation3 {
   const { zetaRad, zRad, thetaRad } = precessionAnglesFromJ2000(jd);
   const cZeta = Math.cos(zetaRad);

@@ -345,7 +345,7 @@ Constants in `../record/catalog-pure.ts`:
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `LMC_DISTANCE_PC` | 49,594 | [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) LMC centre-of-mass distance. |
+| `LMC_DISTANCE_PC` | 49,594 | [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) LMC centre distance. |
 | `LMC_CENTRE_RA_HOURS` | 5.25067 (= 78.76°) | LMC PM dynamical centre RA ([van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014)). |
 | `LMC_CENTRE_DEC_DEG` | −69.19 | LMC PM dynamical centre Dec ([van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014)). |
 | `LMC_CONE_HALF_ANGLE_DEG` | 15 | Sky-cone half-angle. |
