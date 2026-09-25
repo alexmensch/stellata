@@ -7,7 +7,7 @@ import {
   NO_CONSTELLATION_INDEX,
   VAR_TYPE_ECLIPSING,
 } from '../../../../scripts/catalog/record/catalog-pure';
-import { assumeComplete, makeEmptyCatalog } from '../../loaders/catalog-mock';
+import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import {
   buildChartCatalogTables,
   ChartLabels,
@@ -22,7 +22,7 @@ import {
 } from './chart-labels';
 import type { Stellata } from '../../stellata';
 import type { ChartModeContext } from '../chart-mode';
-import type { CompleteCatalog } from '../../loaders/catalog-loader';
+import { assumeComplete, type CompleteCatalog } from '../../loaders/catalog-loader';
 import { LateCell } from '../../util/late/late';
 
 describe('chart-labels / computeAppMag', () => {

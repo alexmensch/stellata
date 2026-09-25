@@ -115,9 +115,17 @@ export interface Catalog {
 
 declare const complete: unique symbol;
 
-/** A catalogue whose every record has decoded. `whenComplete` is the only
+/** A catalogue whose every record has decoded. `assumeComplete` is the only
  *  source, so a function taking one cannot run on a prefix. */
 export type CompleteCatalog = Catalog & { readonly [complete]: true };
+
+/** Throws on a catalogue still streaming. */
+export function assumeComplete(catalog: Catalog): CompleteCatalog {
+  if (catalog.loadedCount !== catalog.count) {
+    throw new Error(`Catalog complete at ${catalog.loadedCount} of ${catalog.count} records`);
+  }
+  return catalog as CompleteCatalog;
+}
 
 /** The half-open record window one chunk's decode filled. */
 export interface DecodedSpan {
@@ -264,12 +272,8 @@ function beginCatalog(
   let loadedCount = 0;
   let solIndex = -1;
   let settle!: (rest: Promise<void>) => void;
-  const whenComplete = new Promise<void>((resolve) => { settle = resolve; }).then(() => {
-    if (loadedCount !== count) {
-      throw new Error(`Catalog load settled at ${loadedCount} of ${count} records`);
-    }
-    return (catalog as Catalog) as CompleteCatalog;
-  });
+  const whenComplete = new Promise<void>((resolve) => { settle = resolve; })
+    .then(() => assumeComplete(catalog));
 
   const catalog: GrowingCatalog = {
     count,

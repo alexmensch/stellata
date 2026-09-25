@@ -19,8 +19,8 @@ import {
 } from './search';
 import { displayNamesFromSearchIndex } from '../../../scripts/catalog/naming/star-naming-pure';
 import type { SearchIndex as SearchIndexLike } from './search-corpus';
-import { assumeComplete, makeEmptyCatalog } from '../loaders/catalog-mock';
-import type { Catalog } from '../loaders/catalog-loader';
+import { makeEmptyCatalog } from '../loaders/catalog-mock';
+import { assumeComplete, type Catalog } from '../loaders/catalog-loader';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import type { KindSearchEntry, ObjectKindModule } from '../kinds/kind-module';
 import type { TargetKind } from '../camera/focus/focus-target';

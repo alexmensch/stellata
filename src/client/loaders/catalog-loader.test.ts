@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { loadCatalog, parseBinary, type Constellation } from './catalog-loader';
+import { assumeComplete, loadCatalog, parseBinary, type Constellation } from './catalog-loader';
 import {
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
@@ -461,6 +461,7 @@ describe('catalog-loader / parseBinary', () => {
       expect(cat.loadedCount).toBeGreaterThan(0);
       expect(cat.loadedCount).toBeLessThan(cat.count);
       expect(cat.count).toBe(3);
+      expect(() => assumeComplete(cat)).toThrow(/of 3 records/);
 
       const complete = await cat.whenComplete;
       expect(complete).toBe(cat);

@@ -19,7 +19,10 @@ import { lateAbsent } from '../util/late/late-fixture';
 import { createStarKindModule, type StarModuleRuntime } from './star-module';
 
 const loadCatalogMock = vi.hoisted(() => vi.fn());
-vi.mock('../loaders/catalog-loader', () => ({ loadCatalog: loadCatalogMock }));
+vi.mock('../loaders/catalog-loader', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../loaders/catalog-loader')>()),
+  loadCatalog: loadCatalogMock,
+}));
 
 function makeMockCatalog(): Catalog {
   const cat = makeEmptyCatalog(4);

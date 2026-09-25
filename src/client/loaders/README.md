@@ -135,12 +135,13 @@ last one lands (and rejects if a chunk fails, so a caller waiting for the full
 population sees the same error boot would).
 
 **`whenComplete` resolves to the catalogue itself, typed `CompleteCatalog`**,
-and it is the only place that type comes from. Anything that walks every
+minted by `assumeComplete` — the type's one cast, which throws on a
+catalogue still streaming. Anything that walks every
 record — a lookup map, a membership table, a filtered index list — takes a
 `CompleteCatalog`, so calling it on the first-paint prefix does not compile.
 `catalog.complete` is the same fact for a synchronous reader, as a
-`Late<CompleteCatalog>` ([Late values](../util/late/README.md)). Tests brand a fully populated fixture with `assumeComplete`
-(`catalog-mock.ts`), which throws on a prefix.
+`Late<CompleteCatalog>` ([Late values](../util/late/README.md)). Tests brand a fully
+populated fixture through the same `assumeComplete`.
 
 **Every column is allocated at the full `count` from chunk 0**, because the
 count is in the header. Nothing reallocates, no GPU buffer resizes, and every

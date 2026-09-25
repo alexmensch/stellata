@@ -4,19 +4,12 @@
 import { APSIS_FIELDS, type ApsisField } from '../../../scripts/catalog/record/catalog-pure';
 import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
 import { LateCell } from '../util/late/late';
-import type { Catalog, CompleteCatalog } from './catalog-loader';
+import { assumeComplete, type Catalog, type CompleteCatalog } from './catalog-loader';
 
 function nanFloat32(count: number): Float32Array {
   const a = new Float32Array(count);
   a.fill(NaN);
   return a;
-}
-
-export function assumeComplete(catalog: Catalog): CompleteCatalog {
-  if (catalog.loadedCount !== catalog.count) {
-    throw new Error(`assumeComplete on ${catalog.loadedCount} of ${catalog.count} records`);
-  }
-  return catalog as CompleteCatalog;
 }
 
 export interface MockCatalog extends Catalog {
