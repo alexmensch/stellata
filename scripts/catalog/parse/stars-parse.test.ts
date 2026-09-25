@@ -160,7 +160,8 @@ describe('readStars Gaia source_id', () => {
       {
         conAssignment: CON_ASSIGNMENT,
         // Gaia places it (outranking Tycho-2); Tycho-2 still has to light it,
-        // since this Gaia row carries no BP/RP for the Riello transform.
+        // since this Gaia row carries no BP/RP for the Riello et al. 2021
+        // (/data/papers/index.md#riello2021) transform.
         directions: tycho2Sources(
           [{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 1.33 }],
           { gaiaAstrometry },

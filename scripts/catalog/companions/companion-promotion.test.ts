@@ -522,7 +522,8 @@ describe('anchor flux dimming', () => {
   ];
 
   it('no dim when the Gaia-derived anchor V already reads as one component (HD 18455)', () => {
-    // Gaia DR3 5076269164798851712 → Riello V 8.040 at 22.467 pc, which is
+    // Gaia DR3 5076269164798851712 → Riello et al. 2021
+    // (/data/papers/index.md#riello2021) V 8.040 at 22.467 pc, which is
     // WDS's component A (8.06), not the AB blend (7.37) SIMBAD prints as
     // V = 7.331. B's light was never in it, so the pre-cascade dim of
     // +0.684 mag would subtract the companion a second time.
@@ -559,7 +560,8 @@ describe('anchor flux dimming', () => {
   });
 
   it("a member with its own Gaia source never dims a Gaia-derived anchor (HD 153557's 5″ B)", () => {
-    // WDS reads A at 7.93 and B 2.92 mag down; the anchor's Riello V is 7.806,
+    // WDS reads A at 7.93 and B 2.92 mag down; the anchor's Riello et al. 2021
+    // (/data/papers/index.md#riello2021) V is 7.806,
     // which the pair blend (7.859) fits better than A alone — so the subset
     // solve WOULD dim it. Gaia gave B its own source at 5″ separation, which
     // settles it: B's light is not in the anchor's G, whatever the fit prefers.
@@ -842,7 +844,7 @@ describe('anchor flux dimming', () => {
 
   // HD 64315's shape: multiples.tsv carries a system distance that predates the
   // record's own override stack (its rows say 12.66 kpc against a Bailer-Jones
-  // 6.2 kpc), and the observed frame every hypothesis is compared against has
+  // et al. 2021 (/data/papers/index.md#bailerjones2021) 6.2 kpc), and the observed frame every hypothesis is compared against has
   // to be the one the anchor's absmag was actually derived at.
   it('the observed frame comes from the anchor position, not the row dist_pc', () => {
     const blend = blendMag(2.1, 4.1);
@@ -1152,7 +1154,8 @@ describe('imputeCompanionCi', () => {
       photometryVia: 'athyg_system_inherited',
     });
     const bv = imputeCompanionCi(sec, wdInfo);
-    // T_eff(DA1.9) = 50400/2 = 25200 K → Ballesteros⁻¹ ≈ -0.44.
+    // T_eff(DA1.9) = 50400/2 = 25200 K → Ballesteros 2012
+    // (/data/papers/index.md#ballesteros2012) inverse ≈ -0.44.
     // The shader's LUT clamps to BV_MIN=-0.4 at lookup time; we store
     // the unclamped value so the raw temperature stays recoverable.
     expect(bv).toBeLessThan(-0.4);
@@ -1238,7 +1241,8 @@ describe('promoteCompanions build-time de-extinction', () => {
 
   it('leaves intrinsic spectral-derived absmag and Ballesteros ci untouched', () => {
     // Inherited photometry + per-component type → class→M_V absmag and
-    // Ballesteros ci: both already extinction-free, so no subtraction.
+    // Ballesteros 2012 (/data/papers/index.md#ballesteros2012) ci: both
+    // already extinction-free, so no subtraction.
     const intrinsic: Partial<MultiplesTsvRow> = {
       photometryVia: 'athyg_system_inherited', spectVia: 'simbad',
       spect: 'B8V', dmag: null,
@@ -1311,8 +1315,8 @@ describe('promoteCompanions', () => {
     expect(b.spectClass).toBe(8);
     expect(b.lumClass).toBe(0);
     // ci is recomputed from the WD's blackbody temperature rather
-    // than inherited from Sirius A. T(DA1.9)=25200 K → Ballesteros⁻¹
-    // ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
+    // than inherited from Sirius A. T(DA1.9)=25200 K → Ballesteros 2012
+    // (/data/papers/index.md#ballesteros2012) inverse ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
     expect(b.ci).toBeLessThan(-0.4);
   });
 

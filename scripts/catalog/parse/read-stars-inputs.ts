@@ -142,7 +142,8 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     pairMemberSiblingBelowSnFloor: 0,
   };
 
-  // Bailer-Jones DR3 distance posteriors. Optional in CI / fresh-clone
+  // Bailer-Jones et al. 2021 (/data/papers/index.md#bailerjones2021) DR3
+  // distance posteriors. Optional in CI / fresh-clone
   // builds where the LFS file hasn't pulled yet — without it every star
   // keeps the cascade's naive 1/π inversion.
   let bjMap = new Map<string, number>();
@@ -225,8 +226,8 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     );
   }
 
-  // Direction-cascade inputs: Gaia DR3 5p astrometry, HIP2 van Leeuwen,
-  // and the NSS two-body source_id set. Each optional in CI / fresh-clone
+  // Direction-cascade inputs: Gaia DR3 5p astrometry, HIP2 van Leeuwen 2007
+  // (/data/papers/index.md#vanleeuwen2007), and the NSS two-body source_id set. Each optional in CI / fresh-clone
   // builds — a missing file degrades that tier and the cascade falls
   // through, which the build-counts assertion then flags.
   const directions: DirectionSources = {
@@ -346,7 +347,8 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     );
   }
 
-  // Printed Gliese V/70A values — the V cascade's tier under Tycho-2, and the
+  // Printed Gliese & Jahreiss 1991 (/data/papers/index.md#gliese1991) V/70A
+  // values — the V cascade's tier under Tycho-2, and the
   // only source reaching the GJ-only cohort at all (SIMBAD holds no V flux
   // for those rows). Absent costs each of them its V, and a row with no V
   // parks, so this shows up on the record-parity ledger (/docs/catalog-driver.md#61-record-parity) rather than as a routing

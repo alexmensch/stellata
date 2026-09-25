@@ -143,7 +143,8 @@ describe('resolveVMagnitude cascade', () => {
 });
 
 describe('tycho2VMagnitude', () => {
-  // SP-1200 Sect. 1.3: V = VT − 0.090(BT−VT).
+  // ESA 1997 (/data/papers/index.md#esa1997) SP-1200 Sect. 1.3:
+  // V = VT − 0.090(BT−VT).
   it('reduces VT to Johnson V through the published coefficient', () => {
     expect(tycho2VMagnitude(9.5, 8.9).v).toBeCloseTo(8.9 - 0.090 * 0.6, 12);
   });

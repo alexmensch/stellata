@@ -70,7 +70,9 @@ export interface BuildCounts {
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
   droppedTooFar: number;
-  /** Total entries in the Bailer-Jones DR3 distance TSV (parsed map size). */
+  /** Total entries in the Bailer-Jones et al. 2021
+   *  (/data/papers/index.md#bailerjones2021) DR3 distance TSV (parsed map
+   *  size). */
   bjEntries: number;
   /** Rows the Bailer-Jones override is allowed to fire on: a Gaia DR3
    *  source_id present AND the parallax cascade resolved `gaia_dr3_inversion`
@@ -96,7 +98,8 @@ export interface BuildCounts {
    *  population the LMC kinematic PM gate is evaluated against. */
   lmcCandidates: number;
   /** Rows that ALSO pass the LMC bulk-PM gate; their dist/x/y/z/absmag
-   *  were snapped to Pietrzyński 2019's eclipsing-binary distance. */
+   *  were snapped to Pietrzyński 2019's
+   *  (/data/papers/index.md#pietrzynski2019) eclipsing-binary distance. */
   lmcOverridden: number;
   /** Cone + PM matches the snap refuses on their own parallax, split by the
    *  tier they keep. See distance/README.md#layer-2--lmc-kinematic-override. */
@@ -429,7 +432,8 @@ export interface BuildCounts {
   /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;
-  /** Total entries in the HIP2 van Leeuwen TSV (parsed map size) —
+  /** Total entries in the HIP2 van Leeuwen 2007
+   *  (/data/papers/index.md#vanleeuwen2007) TSV (parsed map size) —
    *  direction-cascade tier 2 coverage, and the `hip2_parallax` tier's reach
    *  in the parallax cascade. */
   hip2Entries: number;
@@ -449,7 +453,8 @@ export interface BuildCounts {
   /** CNS5 rows carrying a position AND the epoch to state it at, keyed on
    *  their own GJ — the direction cascade's CNS5 tier reach. */
   cns5AstrometryEntries: number;
-  /** Rows in the committed Gliese V/70A slice — the V cascade's bottom
+  /** Rows in the committed Gliese & Jahreiss 1991
+   *  (/data/papers/index.md#gliese1991) V/70A slice — the V cascade's bottom
    *  tier's reach. */
   glieseEntries: number;
   /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
@@ -485,7 +490,8 @@ export interface BuildCounts {
   distCurated: number;
   distNone: number;
   /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
-   *  fractional error, so the result is biased. Bailer-Jones rows are excluded:
+   *  fractional error, so the result is biased. Bailer-Jones et al. 2021
+   *  (/data/papers/index.md#bailerjones2021) rows are excluded:
    *  there the posterior, not the inversion, handles the low-S/N case.
    *
    *  These rows have no second source, so refusing one would cost it its record
@@ -542,23 +548,26 @@ export interface BuildCounts {
   /** Direction cascade: Sol, whose curated tier exists because it carries no
    *  identifier any tier above can key on. Pinned at 1. */
   directionCurated: number;
-  /** V cascade: rows whose Johnson V came from the Riello+ 2021 G,BP−RP
-   *  transform — unsaturated Gaia photometry inside the relation's
-   *  validity range. See scripts/catalog/photometry/README.md. */
+  /** V cascade: rows whose Johnson V came from the Riello+ 2021
+   *  (/data/papers/index.md#riello2021) G,BP−RP transform — unsaturated Gaia
+   *  photometry inside the relation's validity range. See
+   *  scripts/catalog/photometry/README.md. */
   vGaiaRiello: number;
   /** V cascade: the bright rescue tier. Rows whose Gaia photometry is
    *  saturated (G < 4), incomplete, or outside the transform's colour
    *  range, resolved against printed I/239 Vmag instead. */
   vPrintedHip: number;
   /** V cascade: rows with no Gaia photometry and no printed HIP V, taking
-   *  Tycho-2's `VT` reduced to Johnson V by the SP-1200 relation. */
+   *  Tycho-2's `VT` reduced to Johnson V by the ESA 1997
+   *  (/data/papers/index.md#esa1997) SP-1200 relation. */
   vTycho2: number;
-  /** The `vTycho2` subset whose `BT−VT` sits outside the range SP-1200
-   *  publishes that relation over. Counted, not gated: none of these rows
-   *  carries a `gl`, so gating would cost each its only V and hence its
-   *  record — ../photometry/v-magnitude-pure.ts `tycho2VMagnitude`. */
+  /** The `vTycho2` subset whose `BT−VT` sits outside the range ESA 1997
+   *  (/data/papers/index.md#esa1997) SP-1200 publishes that relation over.
+   *  Counted, not gated: none of these rows carries a `gl`, so gating would
+   *  cost each its only V and hence its record — ../photometry/v-magnitude-pure.ts `tycho2VMagnitude`. */
   vTycho2OutsideBtVtRange: number;
-  /** V cascade: the GJ-only cohort, taking Gliese V/70A's printed `Vmag`.
+  /** V cascade: the GJ-only cohort, taking Gliese & Jahreiss 1991
+   *  (/data/papers/index.md#gliese1991) V/70A's printed `Vmag`.
    *  The tier below Tycho-2 and the last one: SIMBAD publishes no V flux at
    *  all for the rows that reach here. */
   vGliese: number;

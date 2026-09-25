@@ -11,7 +11,7 @@ import type { GspcColour } from './gspc-parse';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 
 /** Gaia DR3 documentation Table 5.9 (the release-3 restatement of Riello+
- *  2021, A&A 649, A3 App. C) — `G − B` as a quartic in `BP − RP`, ascending
+ *  2021 (/data/papers/index.md#riello2021) App. C) — `G − B` as a quartic in `BP − RP`, ascending
  *  powers. Sibling of the `G − V` cubic in the same table, which is what makes
  *  their difference a published B−V rather than a composed guess. */
 export const GAIA_G_MINUS_B_COEFFS = [

@@ -45,14 +45,16 @@ function interpolate(table: [number, number][], key: number): number {
 }
 
 // Wolf-Rayet Teff / BC by ionization subclass — one shared WN/WC ramp
-// (WN2 ~141 kK … WN8 ~45 kK, Hamann+ 2006; WC4 ~117 kK … WC9 ~44 kK,
-// Sander+ 2012), within the sizing scatter for display radii.
+// (WN2 ~141 kK … WN8 ~45 kK, Hamann+ 2006 (/data/papers/index.md#hamann2006);
+// WC4 ~117 kK … WC9 ~44 kK, Sander+ 2012 (/data/papers/index.md#sander2012)),
+// within the sizing scatter for display radii.
 const WR_T_TABLE: [number, number][] = [[0, 140000], [5, 75000], [9, 44000]];
 const WR_BC_TABLE: [number, number][] = [[0, -6.0], [5, -4.0], [9, -2.7]];
 
 export function tempKelvin(info: SpectralInfo): number {
   if (info.isWhiteDwarf) {
-    // WD spectral number is T_eff / 50400 × 10 (inverted from Sion et al.);
+    // WD spectral number is T_eff / 50400 × 10 (inverted from Sion et al. 1983
+    // (/data/papers/index.md#sion));
     // so T_eff ≈ 50400 / N for N=1..9.
     const n = Math.max(1, info.wdSubclass);
     return 50400 / n;
@@ -65,7 +67,8 @@ export function tempKelvin(info: SpectralInfo): number {
 
 /** Intrinsic (extinction-free) B−V from a parsed spectral class — the
  *  build-side tier-4/5/6 colour bake. White dwarfs / class stars route
- *  their `tempKelvin` through Ballesteros; an unparseable class falls to
+ *  their `tempKelvin` through Ballesteros 2012
+ *  (/data/papers/index.md#ballesteros2012); an unparseable class falls to
  *  `SOLAR_BV_FALLBACK` rather than `tempKelvin`'s neutral 5000 K row (a
  *  yellow-white default that would misrepresent an unknown star as solar).
  *  Shared by the main-catalog read (`stars-parse.ts`) and companion
@@ -167,8 +170,9 @@ export function physicalRadius(
 }
 
 // Absolute visual magnitude M_V by spectral class + subclass, calibrated
-// per luminosity class (Cox 2000 Sect. 15.3, Pecaut & Mamajek 2013 — the same
-// tables mass_estimate.py reads for the mass-ratio backfill).
+// per luminosity class (Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.3,
+// Pecaut & Mamajek 2013 (/data/papers/index.md#pecaut2013) — the same tables
+// mass_estimate.py reads for the mass-ratio backfill).
 const MV_MS_TABLE: Record<number, [number, number][]> = {
   0: [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V
   1: [[0, -4.0], [5, -1.2], [9,  0.4]],   // B V

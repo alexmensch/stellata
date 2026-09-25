@@ -8,7 +8,8 @@ const GSPC_COLUMNS = [
 ] as const;
 
 /** `1` = the source's G and BP−RP lie where the JKC standardisation was
- *  validated (Montegriffo+ 2023 Sect. 6.2). The archive states no polarity;
+ *  validated (Montegriffo+ 2023 (/data/papers/index.md#montegriffo2023)
+ *  Sect. 6.2). The archive states no polarity;
  *  `/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range` carries the quote
  *  and the measured region. */
 const FLAG_IN_VALIDATED_RANGE = '1';

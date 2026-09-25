@@ -60,7 +60,8 @@ scripts/catalog/photometry/
 
 Both transforms come from **one table** — Gaia DR3 documentation Table 5.9,
 section *Photometric relationships with other photometric systems*, the release-3
-restatement of Riello+ 2021 App. C — as polynomials in `BP − RP`:
+restatement of [Riello et al. 2021](/data/papers/index.md#riello2021) App. C —
+as polynomials in `BP − RP`:
 
 | Relation | Degree | σ | Stated range |
 | --- | --- | --- | --- |
@@ -106,7 +107,8 @@ to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 
 ### The Tycho-2 tier runs outside its published colour range
 
-SP-1200 states `V = VT − 0.090(BT−VT)` over `BT−VT` ∈ [−0.25, 2.0].
+[ESA 1997](/data/papers/index.md#esa1997) (SP-1200) states
+`V = VT − 0.090(BT−VT)` over `BT−VT` ∈ [−0.25, 2.0].
 **44** of the tier's 3,784 rows sit outside it, on both the red and the blue
 side, where the linear form runs bright against the printed cell it replaces.
 `tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
@@ -171,7 +173,8 @@ from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relati
 **that bound is on a fit, this one is mostly on a correction.** The relation
 is a polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
 GSPC's magnitudes are each star's own BP/RP spectrum integrated through the
-passband — a measurement of that star — and Montegriffo+ 2023 Sect. 6.2 calls a
+passband — a measurement of that star — and
+[Montegriffo et al. 2023](/data/papers/index.md#montegriffo2023) Sect. 6.2 calls a
 flag-0 magnitude *"an extrapolation of the adopted standardisation"*, i.e. of
 the correction tying the result to the ground system, not of the integration.
 
@@ -334,8 +337,7 @@ for the same gate on the label side).
 
 ## Citation
 
-Riello, M., De Angeli, F., Evans, D. W., et al. 2021, *A&A* 649, A3 — "Gaia
-Early Data Release 3: Photometric content and validation", section *Photometric
+[Riello et al. 2021](/data/papers/index.md#riello2021), section *Photometric
 relationships with other photometric systems*. DR3 ships EDR3's photometry
 unchanged, so the EDR3 calibration is the one that applies. The coefficients,
 σ, and colour range are pinned as literals in the test rather than imported
