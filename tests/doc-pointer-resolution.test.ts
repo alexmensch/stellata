@@ -3,36 +3,27 @@
 // pointer that still reads as authoritative.
 
 import { describe, expect, it } from 'vitest';
-import { existsSync, lstatSync, readFileSync } from 'node:fs';
-import { basename, dirname, extname, join, relative, resolve } from 'node:path';
-import { docAnchors, extractPointers, extractSameFileLinks, resolveDocPath, strayedSectionSigns } from './doc-pointer-pure';
-import { gitFiles, lfsTracked } from './walk-files';
+import { readFileSync } from 'node:fs';
+import { dirname, extname, join, relative, resolve } from 'node:path';
+import {
+  SCANNED_KINDS,
+  docAnchors,
+  explicitAnchors,
+  extractPointers,
+  extractSameFileLinks,
+  kindOf,
+  pointerCorpus,
+  resolveDocPath,
+  strayedSectionSigns,
+} from './doc-pointer-pure';
+import { lfsTracked } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
-const UNSCANNED = [
-  // Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
-  'data/sid/retirements.tsv',
-  // Quotes tree lines verbatim, pointers included, as evidence of where a paper is cited.
-  'data/papers/inventory.json',
-];
-const kindOf = (name: string): string => extname(name) || basename(name);
 
 // Fixtures interpolate their `#` and section sign from here, so no literal
 // pointer or sign appears in this file and it stays out of its own scan.
 const H = '#';
 const S = '\u00a7';
-
-function scannedFiles(): string[] {
-  const names = gitFiles(ROOT, [], { untracked: true }).filter(
-    (name) => SCANNED_KINDS.includes(kindOf(name)) && !UNSCANNED.includes(name),
-  );
-  const lfs = lfsTracked(ROOT, names);
-  return names
-    .filter((name) => !lfs.has(name))
-    .map((name) => join(ROOT, name))
-    .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());
-}
 
 describe('doc pointers resolve', () => {
   const anchors = new Map<string, Set<string>>();
@@ -44,7 +35,7 @@ describe('doc pointers resolve', () => {
     return parsed;
   };
 
-  const texts = scannedFiles().map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
+  const texts = pointerCorpus(ROOT).map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
   const pointers = texts.flatMap(({ file, text }) => extractPointers(text).map((pointer) => ({ file, pointer })));
 
   it(`no ${S} appears outside "[${S} N](…)" link text in markdown, or anywhere in code`, () => {
@@ -167,6 +158,11 @@ describe('anchors', () => {
   it('adds explicit anchors, and never a comment line inside a code block', () => {
     const doc = ['- <a id="two-disc-means"></a>**Two disc means** — one', '', '```bash', '# not a heading', '```'].join('\n');
     expect([...docAnchors(doc)]).toEqual(['two-disc-means']);
+  });
+
+  it('collects explicit anchors alone when asked, leaving heading slugs out', () => {
+    const doc = ['<a id="french1988"></a>', '### French et al. 1988 — Uranian ring orbits'].join('\n');
+    expect([...explicitAnchors(doc)]).toEqual(['french1988']);
   });
 });
 

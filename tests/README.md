@@ -189,8 +189,10 @@ webgpu-import-boundary.test.ts
                          outside src/client/webgpu/, so the ~1 MB second
                          copy of three's core stays out of the entry
                          bundle (/src/client/webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle).
-doc-pointer-pure.ts      Not a test — extraction, anchor collection and
-                         path resolution for doc-pointer-resolution.test.ts.
+doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
+                         resolution and the scanned corpus, shared by
+                         doc-pointer-resolution.test.ts and
+                         citation-index.test.ts.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows

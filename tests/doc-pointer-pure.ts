@@ -1,9 +1,10 @@
 // Extraction and resolution for `<path>.md#<slug>` doc pointers — the
 // codebase's wiki links. Grammar and scope: /tests/README.md#doc-pointer-resolution.
-import { existsSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, lstatSync } from 'node:fs';
+import { basename, extname, join, relative } from 'node:path';
 import GithubSlugger from 'github-slugger';
 import { Lexer, type Token, walkTokens } from 'marked';
+import { gitFiles, lfsTracked } from './walk-files';
 
 export interface DocPointer {
   citedPath: string;
@@ -46,11 +47,11 @@ const plainText = (tokens: Token[]): string =>
 
 const HTML_ANCHOR = /<a\s+(?:id|name)="([^"]+)"/g;
 
-export function docAnchors(markdown: string): Set<string> {
+function collectAnchors(markdown: string, headings: boolean): Set<string> {
   const slugger = new GithubSlugger();
   const anchors = new Set<string>();
   walkTokens(new Lexer({ gfm: true }).lex(markdown), (token) => {
-    if (token.type === 'heading') anchors.add(slugger.slug(plainText(token.tokens)));
+    if (headings && token.type === 'heading') anchors.add(slugger.slug(plainText(token.tokens)));
     if (token.type === 'html') {
       for (const m of token.raw.matchAll(HTML_ANCHOR)) anchors.add(m[1]);
     }
@@ -58,7 +59,30 @@ export function docAnchors(markdown: string): Set<string> {
   return anchors;
 }
 
+export const docAnchors = (markdown: string): Set<string> => collectAnchors(markdown, true);
+export const explicitAnchors = (markdown: string): Set<string> => collectAnchors(markdown, false);
+
 export function resolveDocPath(citedPath: string, fromDir: string, root: string): string | null {
   const path = citedPath.startsWith('/') ? join(root, citedPath) : join(fromDir, citedPath);
   return !relative(root, path).startsWith('..') && existsSync(path) ? path : null;
+}
+
+export const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
+const UNSCANNED = [
+  // Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
+  'data/sid/retirements.tsv',
+  // Quotes tree lines verbatim, pointers included, as evidence of where a paper is cited.
+  'data/papers/inventory.json',
+];
+export const kindOf = (name: string): string => extname(name) || basename(name);
+
+export function pointerCorpus(root: string): string[] {
+  const names = gitFiles(root, [], { untracked: true }).filter(
+    (name) => SCANNED_KINDS.includes(kindOf(name)) && !UNSCANNED.includes(name),
+  );
+  const lfs = lfsTracked(root, names);
+  return names
+    .filter((name) => !lfs.has(name))
+    .map((name) => join(root, name))
+    .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());
 }
