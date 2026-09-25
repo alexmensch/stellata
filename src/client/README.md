@@ -167,8 +167,11 @@ Four things follow, and each has cost a defect:
   an unbranded catalogue's `count`, and any unclassified `| null` return on
   the shell's public surface.
 - **Review, for what neither reaches.** A one-shot reader can still write a
-  fallback into its `pending` branch, and a walk can still bound itself by a
-  column's `.length`.
+  fallback into its `pending` branch. The loop scan sees only a literal
+  `i < X.count`, so a walk bounded by a column's `.length`, by a count
+  copied into a local, or by one passed into a helper gets past it. The
+  nullable scan reads written return types, so an inferred `| null` gets
+  past that.
 
 ## Public surface of `Stellata`
 
