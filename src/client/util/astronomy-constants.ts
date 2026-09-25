@@ -20,8 +20,8 @@ export const KM_PC = AU_PC / AU_KM;
 // Also uploaded to the star vertex shader as the `uRSunPc` uniform.
 export const R_SUN_PC = 2.2543e-8;
 
-// Absolute V-band magnitude of the Sun (IAU / Willmer 2018,
-// /data/papers/index.md#willmer2018). Anchors the host-irradiance reference in
+// Absolute V-band magnitude of the Sun; Willmer 2018
+// (/data/papers/index.md#willmer2018) Table 3 gives 4.81 (Vega). Anchors the host-irradiance reference in
 // perceptual-magnitude.ts so reflected-light surface brightness scales with the
 // host star's luminosity class rather than assuming solar output — a body 1 AU
 // from an O star is far brighter than one 1 AU from Sol.

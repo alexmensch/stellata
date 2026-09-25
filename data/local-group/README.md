@@ -53,7 +53,7 @@ the major spirals).
 | `distance_kpc`      | *Optional standalone position.* Same. |
 | `m_v`               | *Optional.* Integrated apparent V magnitude — standalone rows only (M31 / M33, [RC3](/data/papers/index.md#devaucouleurs1991)); LVDB-merge rows take photometry from LVDB. |
 | `profile`           | *Optional.* Emission family `disc` \| `sersic`; empty falls to the family rule (Sérsic spheroid). Set `disc` for LMC / M31 / M33. |
-| `n_sersic`          | *Optional.* Hand-curated Sérsic index (M 32 → 1.5, [Graham 2002](/data/papers/index.md#graham2002)). |
+| `n_sersic`          | *Optional.* Hand-curated Sérsic index (M 32 → 1.5: the bulge component of [Graham 2002](/data/papers/index.md#graham2002)'s bulge + exponential-disc fit, applied here as a single-component index). |
 | `r_d_pc`            | *Optional.* Exponential-disc scale length; required on `disc` rows. |
 | `bulge_to_total` / `bulge_re_pc` / `bulge_n` | *Optional.* Sérsic-bulge composite (M31 only) — all three set together or all empty. |
 | `ref_doi_profile`   | *Optional.* Profile-parameter source, separate from the structural `ref_doi`. |

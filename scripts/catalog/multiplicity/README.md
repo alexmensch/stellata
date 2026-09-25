@@ -137,9 +137,10 @@ Why this and not TDSC or WDS directly:
 
 - <a id="tdsc"></a>**TDSC**
   ([Fabricius & Makarov 2002](/data/papers/index.md#fabricius2002b)) is built
-  from Tycho-2, which
-  saturates on the brightest stars (V ≲ 3) — Sirius, Mizar, Castor,
-  α Cen, Polaris are all *missing* from TDSC. CCDM has no such gap.
+  from Tycho-2, which misses some very bright doubles outright
+  (Sect. 3.2); bright components Tycho-2 did not detect reach TDSC only
+  through its Supplement's Hipparcos / Tycho-1 data (Sect. 3.4). CCDM
+  has no such gap.
 - **WDS** itself doesn't carry HIP. Doing positional matching
   ourselves would invite false positives in dense fields. CCDM
   side-steps that by giving us the HIP↔system mapping pre-built.

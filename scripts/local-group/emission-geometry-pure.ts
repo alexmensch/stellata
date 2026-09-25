@@ -14,7 +14,8 @@ export function bnCoeff(n: number): number {
 }
 
 /** Prugniel–Simien 1997 (/data/papers/index.md#prugniel) deprojection
- *  exponent p_n. The 3D density ν(u) = u^(−p_n)·exp(−b_n·u^(1/n)) projects
+ *  exponent p_n, with the Lima Neto et al. 1999
+ *  (/data/papers/index.md#limaneto1999) coefficients. The 3D density ν(u) = u^(−p_n)·exp(−b_n·u^(1/n)) projects
  *  to the observed 2D Sérsic law to ~1%; raymarching the 2D law as 3D density is a
  *  deprojection error (visibly too-shallow centre for n > 1). */
 export function pnCoeff(n: number): number {

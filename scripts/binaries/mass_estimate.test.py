@@ -98,9 +98,9 @@ class MassFromSpectralClassTests(unittest.TestCase):
         self.assertAlmostEqual(m, 1.0, places=2)
 
     def test_a1v_near_two_point_six(self) -> None:
-        # Sirius A: A1V. Per the MS table A1V → 2.6 M_sun (Pecaut/Mamajek
-        # 2013 (/data/papers/index.md#pecaut2013) zero-age values; true Sirius A = 2.06 M_sun, but the table is
-        # a generic A1V anchor not a Sirius-specific calibration).
+        # Sirius A: A1V. Per the MS table A1V → 2.6 M_sun (true Sirius A =
+        # 2.06 M_sun, but the table is a generic A1V anchor not a
+        # Sirius-specific calibration).
         m = mass_from_spectral_class("A1V")
         assert m is not None
         self.assertAlmostEqual(m, 2.6, places=2)
@@ -178,10 +178,10 @@ class MassRatioFromComponentsTests(unittest.TestCase):
 
     def test_alpha_cen_like_g2v_plus_k1v(self) -> None:
         # α Cen A (G2V) + α Cen B (K1V). Model: M_A=1.0, M_B=0.76 →
-        # q ≈ 0.43. External truth (Pourbaix 2016,
-        # /data/papers/index.md#pourbaix2016): q=0.453. The MS+MS
-        # case lands within ~5% of the external value because there is
-        # no WD mass-recovery uncertainty.
+        # q ≈ 0.43. External truth (Pourbaix & Boffin 2016,
+        # /data/papers/index.md#pourbaix2016, Table 1 κ): q=0.4617. The
+        # MS+MS case lands within ~6.5% of the external value because
+        # there is no WD mass-recovery uncertainty.
         q = mass_ratio_from_components("G2V", "K1V")
         assert q is not None
         self.assertAlmostEqual(q, 0.4318, places=4)

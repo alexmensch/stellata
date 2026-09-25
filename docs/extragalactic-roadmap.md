@@ -62,7 +62,8 @@ the authoritative pointer set.
   `https://cdsarc.cds.unistra.fr/ftp/J/ApJS/215/22/` (`table2.dat`
   ~297 KB, 1,589 galaxies; `table3.dat` adds 1,183 VCC-only).
 - **2MRS** — [Huchra et al. 2012](/data/papers/index.md#huchra2012).
-  44,599 galaxies, Ks ≤ 11.75, 97.6% complete all-sky. Primary
+  44,599 galaxies, Ks ≤ 11.75, 97.6% complete over 91% of the sky (|b| ≥ 5°, ≥ 8° toward
+  the bulge). Primary
   tarball `http://tdc-www.harvard.edu/2mrs/2mrs_v240.tgz` (~37.7 MB)
   — **HTTP only** (see flags). Alternative: CDS `J/ApJS/199/26`
   `table3.dat.gz` (~3.4 MB) carries the catalogue proper; prefer CDS.

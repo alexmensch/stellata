@@ -311,11 +311,12 @@ what made the focus card's alias row repeat itself.
 - [**Subramanian & Subramaniam 2012**](/data/papers/index.md#subramanian2012) — SMC structure.
 - [**Ibata et al. 1997**](/data/papers/index.md#ibata1997) —
   Sagittarius dSph structure: prolate 3:1:1, line-of-sight depth.
-- [**McConnachie et al. 2018**](/data/papers/index.md#mcconnachie2018) — M31 inclined-disc
-  structure from the PAndAS survey (i ≈ 77°, PA ≈ 37°).
+- [**McConnachie et al. 2018**](/data/papers/index.md#mcconnachie2018) — M31 disc
+  inclination from the PAndAS survey (i ≈ 77°).
 - [**Gieren et al. 2013**](/data/papers/index.md#gieren2013) —
   M33 Cepheid distance (µ = 24.62 ± 0.07, 840 ± 27 kpc).
 - [**Corbelli et al. 2014**](/data/papers/index.md#corbelli2014) —
   M33 disc orientation (tilted-ring fit) and 1.8 kpc scale length.
 - [**McConnachie 2012**](/data/papers/index.md#mcconnachie2012) — Local Group structural
-  review used for the M 32 + NGC 205 override entries.
+  review: the ellipticities behind the M 32 + NGC 205 axis ratios and
+  M 32's PA (Table 3).

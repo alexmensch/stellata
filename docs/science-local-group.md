@@ -41,8 +41,10 @@ structural detail for the singular cases LVDB's summary row can't
 capture, and add the two major spirals LVDB's `dwarf_all` table omits:
 
 - **LMC (49.59 kpc)**: inclined disc at i = 32°, line of nodes PA =
-  135° ([van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014);
-  distance [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019)). Scale length
+  135°. [van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014)'s
+  fits give i = 26.2–39.6° and Θ = 139.1–154.5° (Table 1), so neither
+  value is theirs. Distance
+  [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019). Scale length
   4.5 kpc, scale height 1 kpc.
 - **SMC (62.81 kpc)**: triaxial 1 : 1.33 : 1.61 with the longest axis
   along line of sight ([Subramanian & Subramaniam 2012](/data/papers/index.md#subramanian2012);
@@ -56,18 +58,27 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   projected ellipticity captures the sky-plane shape but not the
   line-of-sight extent. [Ibata et al. 1997](/data/papers/index.md#ibata1997) measure a
   red-clump line-of-sight depth of 1.2 kpc
-  and conclude Sgr is a prolate spheroid with axis ratios 3:1:1.
-- **M 32 (~773 kpc)**: optical-extent ellipsoid 1.6 / 1.2 / 1.2 kpc
-  at PA 159°. LVDB's half-light radius of 105 pc renders sub-pixel
-  at LG distances; the override uses the broader optical/D₂₅ extent
-  cited in [McConnachie 2012](/data/papers/index.md#mcconnachie2012).
-- **NGC 205 / M 110 (~835 kpc)**: 2.7 / 1.5 / 1.5 kpc at PA 170° from
-  the same [McConnachie 2012](/data/papers/index.md#mcconnachie2012) review — again the optical extent rather
-  than the small half-light radius.
+  and conclude Sgr is a prolate spheroid with axis ratios 3:1:1. That
+  depth is a full half-brightness depth, a ~0.6 kpc semi-axis, and
+  their half-brightness minor axis is 2 × 550 pc; the override's
+  semi-axes, 2616 / 942 / 1000 pc, are neither.
+- **M 32 (~773 kpc)**: ellipsoid 1.6 / 1.2 / 1.2 kpc at PA 159°.
+  LVDB's half-light radius of 105 pc renders sub-pixel at LG
+  distances, so the override is broader. Its PA and axis ratio (0.75)
+  match [McConnachie 2012](/data/papers/index.md#mcconnachie2012)'s
+  PA = 159° and ε = 0.25 (Table 3); the review gives only a half-light
+  radius (110 pc), not the 1.6 kpc extent.
+- **NGC 205 / M 110 (~835 kpc)**: 2.7 / 1.5 / 1.5 kpc at PA 170°.
+  The axis ratio (0.56) matches
+  [McConnachie 2012](/data/papers/index.md#mcconnachie2012)'s
+  ε = 0.43; the review's PA is 28° and its half-light radius 590 pc,
+  and it gives no 2.7 kpc extent.
 - **M31 / Andromeda (776 kpc)**: inclined disc at i = 77°, line of
-  nodes PA = 37°, 15 kpc disc radius × 500 pc thickness — the
-  structural parameters from the PAndAS survey
-  ([McConnachie et al. 2018](/data/papers/index.md#mcconnachie2018)). Standalone row
+  nodes PA = 37°, 15 kpc disc radius × 500 pc thickness. The
+  inclination is the one
+  [McConnachie et al. 2018](/data/papers/index.md#mcconnachie2018)
+  draw the PAndAS disc at (Fig. 4); their disc radius is 1.25° =
+  17 kpc, and they give no PA or thickness. Standalone row
   (not in LVDB's `dwarf_all` table; the override carries RA, Dec,
   distance directly).
 - **M33 / Triangulum (840 kpc)**: inclined disc at i = 54°, line of
@@ -113,7 +124,9 @@ the profile and never re-derives photometry.
   dSph, M 32, NGC 205). The 3D density is the
   [Prugniel–Simien](/data/papers/index.md#prugniel) deprojection ν(u) = ρ₀ · u^(−pₙ) · exp(−bₙ · u^(1/n)), with u the
   ellipsoidal radius in units of the R_e ellipsoid,
-  pₙ = 1 − 0.6097/n + 0.05463/n², and bₙ = 2n − 1/3 + 4/(405n)
+  pₙ = 1 − 0.6097/n + 0.05463/n²
+  ([Lima Neto et al. 1999](/data/papers/index.md#limaneto1999)'s refit
+  of Prugniel & Simien's 1 − 0.594/n + 0.055/n²), and bₙ = 2n − 1/3 + 4/(405n)
   ([Ciotti & Bertin 1999](/data/papers/index.md#ciotti1999)). This projects to the observed 2D Sérsic law
   to ~1%; raymarching the 2D law as if it were 3D density is a
   deprojection error, visibly too shallow in the centre for n > 1.
@@ -124,14 +137,18 @@ the profile and never re-derives photometry.
   exact by solver construction regardless of profile shape.
 - **Exponential thin disc, optional Sérsic bulge** (LMC, M31, M33):
   ρ(R, z) = ρ₀ · exp(−R/R_d) · exp(−|z|/z_d) in the disc frame the
-  wireframe quaternion already defines. LMC R_d = 1.5 kpc
-  ([van der Marel & Cioni 2001](/data/papers/index.md#vandermarel2001)), pure disc —
+  wireframe quaternion already defines. LMC R_d = 1.5 kpc, an
+  exponential profile after
+  [van der Marel 2001](/data/papers/index.md#vandermarel2001b), pure disc —
   bar and arms are below this detail tier. M31 R_d = 5.3 kpc with a
-  spherical Sérsic bulge (R_e = 1.0 kpc, n = 2.2, B/T = 0.31;
-  [Courteau et al. 2011](/data/papers/index.md#courteau2011)). M33 R_d = 1.8 kpc
-  ([Corbelli et al. 2014](/data/papers/index.md#corbelli2014)), pure disc — B/T ≲ 0.04 and the
-  "bulge" is a nuclear cluster far below render scale, costing
-  < 0.05 mag on the total. z_d = c_wireframe / 3 (the wireframe shell
+  spherical Sérsic bulge (R_e = 1.0 kpc, n = 2.2;
+  [Courteau et al. 2011](/data/papers/index.md#courteau2011)) carrying
+  B/T = 0.31 of the light; Courteau's bulge light fractions are 21–29%,
+  29% for the 2D bulge + disc fit (Sect. 7). M33 R_d = 1.8 kpc
+  ([Corbelli et al. 2014](/data/papers/index.md#corbelli2014)), pure disc —
+  Corbelli et al. find M33 hosts no bulge, reading its inner light as a
+  raised mass-to-light ratio inside 1.5 kpc (p. 11), and its nuclear
+  cluster is far below render scale. z_d = c_wireframe / 3 (the wireframe shell
   sits at 3 scale heights ≈ 95% of the vertical light). SMC stays a
   spheroid: no coherent disc; the line-of-sight elongation IS the
   structure.

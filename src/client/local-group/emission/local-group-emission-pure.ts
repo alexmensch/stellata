@@ -25,9 +25,10 @@ import type { LgEmission, LgObject } from '../local-group-loader';
 export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
 
 /**
- * Courteau et al. 2011 (/data/papers/index.md#courteau2011) — the **same**
- * `bulge_to_total` the emission solver splits M31's flux by
+ * The **same** `bulge_to_total` the emission solver splits M31's flux by
  * (`data/local-group/overrides.tsv`, pinned in `local-group-emission.test.ts`).
+ * Courteau et al. 2011 (/data/papers/index.md#courteau2011) Sect. 7 give 0.29
+ * for their 2D bulge + disc fit.
  */
 export const M31_BULGE_TO_TOTAL_LIGHT = 0.31;
 
