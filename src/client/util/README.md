@@ -153,7 +153,7 @@ build scripts, tests, and shader uniforms.
   under camera motion at close framings (the Pluto-focus wobble).
 - <a id="precessionts"></a>`precession.ts` (+ test) — ICRS/J2000 ↔ the mean equator and equinox
   of another epoch, in **two models with different validity windows**:
-  - **IAU 1976 (Lieske)** — `precessionAnglesFromJ2000`, the rotation
+  - **IAU 1976 ([Lieske](/data/papers/index.md#lieske1979))** — `precessionAnglesFromJ2000`, the rotation
     they compose (`precessionRotationFromJ2000`), and its forward /
     inverse application to a direction or a `SkyPosition`.
     `besselianEpochToJd` supplies `B1875_JD`, the equinox the IAU
@@ -162,7 +162,7 @@ build scripts, tests, and shader uniforms.
     [B1875](../constellation-boundaries/iau-geometry/README.md#b1875). Cubic
     polynomials: right for the 125 years back to B1875, arcminutes off at
     the model clock's bounds.
-  - **Vondrák, Capitaine & Wallace 2011** — `longTermEclipticPole` /
+  - **[Vondrák, Capitaine & Wallace 2011](/data/papers/index.md#vondrak2011)** — `longTermEclipticPole` /
     `longTermEquatorPole` / `longTermEquinox` and the two frames they
     build (`longTermEclipticRotationFromJ2000`,
     `longTermEquatorRotationFromJ2000`), valid ±200 kyr. This is the one
@@ -171,9 +171,9 @@ build scripts, tests, and shader uniforms.
 
   The two coexist deliberately and are pinned against each other inside
   the overlap (they agree to 0.15″ near the present, 0.37″ at B1875).
-  Don't replace the Lieske path with the long-term one to "DRY them up" —
+  Don't replace the [Lieske](/data/papers/index.md#lieske1979) path with the long-term one to "DRY them up" —
   the boundary geometry is pinned to arcsecond edge cases at B1875.
-  Vondrák carries its own obliquity constant (84381.406″, IAU 2006) for
+  [Vondrák](/data/papers/index.md#vondrak2011) carries its own obliquity constant (84381.406″, IAU 2006) for
   the same reason: it is part of the published series, not a duplicate of
   `J2000_OBLIQUITY_RAD`.
 - `polar-scale.ts` (+ test) — `scalePolarInto`, scaling a vector's

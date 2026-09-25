@@ -1,5 +1,5 @@
-// Truncated ELP-2000/82 lunar theory (Meeus, Astronomical Algorithms
-// 2nd ed., ch. 47): the Moon's geocentric position in the mean ecliptic
+// Truncated ELP-2000/82 lunar theory (Meeus, /data/papers/index.md#meeus,
+// ch. 47): the Moon's geocentric position in the mean ecliptic
 // and equinox of date. See README.md#moon-ephemeris.
 
 import { J2000_JD } from '../../util/astronomy-constants';
@@ -175,9 +175,9 @@ export interface MoonGeocentric {
  * omitted: the caller rotates onto the J2000 mean ecliptic, and mean-to-mean
  * is exactly the precession-only chain.
  *
- * Meeus quotes ~10″ in λ and ~4″ in β near the present epoch, degrading
- * away from it; `moon-vector-truth.test.ts` measures the real figure
- * across the model clock's whole span against JPL Horizons.
+ * Meeus (/data/papers/index.md#meeus) quotes ~10″ in λ and ~4″ in β near the
+ * present epoch, degrading away from it; `moon-vector-truth.test.ts` measures
+ * the real figure across the model clock's whole span against JPL Horizons.
  */
 export function moonGeocentricOfDate(jdTt: number): MoonGeocentric {
   const T = (jdTt - J2000_JD) / DAYS_PER_JULIAN_CENTURY;
@@ -235,8 +235,8 @@ export function moonGeocentricOfDate(jdTt: number): MoonGeocentric {
 
 /** The five fundamental arguments (deg, wrapped) and the eccentricity
  *  factor. Exported for the worked-example test, which pins them against
- *  Meeus's own intermediate values — a mistyped polynomial otherwise only
- *  shows as a slow drift in the summed series. */
+ *  Meeus's (/data/papers/index.md#meeus) own intermediate values — a mistyped
+ *  polynomial otherwise only shows as a slow drift in the summed series. */
 export function lunarArgumentsDeg(jdTt: number): {
   lp: number; d: number; m: number; mp: number; f: number; e: number;
 } {

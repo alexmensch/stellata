@@ -6,7 +6,8 @@ import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-
 
 /**
  * (B−V) of an old, metal-rich simple stellar population: Bruzual &
- * Charlot 2003, Chabrier IMF, Z = 0.02, 10 Gyr —
+ * Charlot 2003 (/data/papers/index.md#bruzual2003), Chabrier IMF,
+ * Z = 0.02, 10 Gyr —
  * `data/bc03/bc2003_hr_m62_chab_ssp.4color` column 3 minus column 4 at
  * `log-age-yr = 10.000`, read back and pinned in
  * `../../milkyway/calibration/diffuse-reference.test.ts` beside the

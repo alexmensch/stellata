@@ -13,7 +13,7 @@ comes out* is here.
 - `diffuse-reference.ts` — `GALAXY_TOTAL_ABSMAG_V`, the mass-to-light
   inputs, `bulgeToTotalLight` and the `BULGE_TO_TOTAL_LIGHT_V` it derives,
   `GALAXY_TOTAL_COLOUR_INDEX_BV` and the two component indices, the
-  Leinert totals, the resolved-catalogue subtraction, and
+  [Leinert](/data/papers/index.md#leinert1998) totals, the resolved-catalogue subtraction, and
   `diffuseResidualMagArcsec2`.
 - `diffuse-reference.test.ts` — the residual arithmetic, the light-ratio
   derivation and the colour solve, reading all three `data/bc03/` tables
@@ -50,7 +50,7 @@ DISC_DENSITY0  = 100·10^(−0.4·M_V)·(1 − B/T) / ∫ discShape  dV ≈ 6.13
 BULGE_DENSITY0 = 100·10^(−0.4·M_V)·     B/T  / ∫ bulgeShape dV ≈ 2.074e−1
 ```
 
-`GALAXY_TOTAL_ABSMAG_V` = **−21.37** (BHG16 Table 2). **Zero free
+`GALAXY_TOTAL_ABSMAG_V` = **−21.37** ([BHG16](/data/papers/index.md#blandhawthorn2016) Table 2). **Zero free
 parameters, and no march feeds the calibration.**
 
 Three properties a change here must keep:
@@ -92,9 +92,9 @@ B/T_light = 1 / (1 + ((1 − f_M)/f_M) · (Υ_b/Υ_d))
 
 | term | value | source |
 | --- | --- | --- |
-| `BULGE_TO_TOTAL_MASS` | 0.150 | Licquia & Newman 2015, stellar **mass** |
-| `BULGE_ML_V` | 3.15 | BC03 Chabrier SSP, Z = 0.02, 10 Gyr (`data/bc03/`) |
-| `DISC_ML_V` | 1.5 | Flynn et al. 2006, **measured** local disc column |
+| `BULGE_TO_TOTAL_MASS` | 0.150 | [Licquia & Newman 2015](/data/papers/index.md#licquia2015), stellar **mass** |
+| `BULGE_ML_V` | 3.15 | [BC03](/data/papers/index.md#bruzual2003) Chabrier SSP, Z = 0.02, 10 Gyr (`data/bc03/`) |
+| `DISC_ML_V` | 1.5 | [Flynn et al. 2006](/data/papers/index.md#flynn2006), **measured** local disc column |
 
 **Only the RATIO Υ_b/Υ_d survives the algebra**, which is what makes a
 measured disc value and a modelled bulge one commensurable: the IMF
@@ -116,9 +116,9 @@ Three things a change here has to know:
   not quoted. Ages from 8 to 13 Gyr move it far less. Both brackets stay
   under the mass ratio, so the MDF moves the size of the correction and
   never its sign.
-- **The disc value has an independent check.** The same BC03 grid
+- **The disc value has an independent check.** The same [BC03](/data/papers/index.md#bruzual2003) grid
   composited over an exponentially declining SFH (τ ≈ 8 Gyr, solar Z)
-  returns Υ\*_V = 1.34 against Flynn's measured 1.5 ± 0.2 — two routes,
+  returns Υ\*_V = 1.34 against [Flynn](/data/papers/index.md#flynn2006)'s measured 1.5 ± 0.2 — two routes,
   one measured and one modelled, agreeing inside the measurement's error.
 
 **From Sol this correction is nearly invisible and that is the trap.** The
@@ -142,30 +142,30 @@ the SSP grid and returns the disc:
 
 | term | value | source |
 | --- | --- | --- |
-| `GALAXY_TOTAL_COLOUR_INDEX_BV` | 0.73 | BHG16 Table 2 |
-| `BULGE_COLOUR_INDEX_BV` | 0.9574 | BC03 Chabrier SSP, Z = 0.02, 10 Gyr |
+| `GALAXY_TOTAL_COLOUR_INDEX_BV` | 0.73 | [BHG16](/data/papers/index.md#blandhawthorn2016) Table 2 |
+| `BULGE_COLOUR_INDEX_BV` | 0.9574 | [BC03](/data/papers/index.md#bruzual2003) Chabrier SSP, Z = 0.02, 10 Gyr |
 | `BULGE_TO_TOTAL_LIGHT_V` | 0.0775 | [The light ratio](#the-light-ratio--bt-in-the-solve-is-not-the-published-number), above |
 | `DISC_COLOUR_INDEX_BV` | **0.7129** | solved |
 
-Both then go through the star field's own chain — Ballesteros → Planck →
+Both then go through the star field's own chain — [Ballesteros](/data/papers/index.md#ballesteros2012) → Planck →
 CIE 1931 → linear sRGB (`scripts/colour/README.md`), unquantised — so a
 component's hue and a single star's are the same function of B−V. A
 stellar population is not a blackbody; what survives the chain is the
 colour index, not the SED.
 
-**The decision this encodes: BHG16's integrated colour wins over a
+**The decision this encodes: [BHG16](/data/papers/index.md#blandhawthorn2016)'s integrated colour wins over a
 physically-plausible disc/bulge contrast.** 0.7129 makes the disc only
 0.24 mag bluer than the bulge, which is a weaker contrast than a textbook
-Sbc shows, and the same BC03 grid over a τ ≈ 8 Gyr declining SFH at solar
+Sbc shows, and the same [BC03](/data/papers/index.md#bruzual2003) grid over a τ ≈ 8 Gyr declining SFH at solar
 Z returns 0.54 for a disc-like population. Four reasons the published
 total still wins:
 
 - **The layer's photometry is already one system.** `GALAXY_TOTAL_ABSMAG_V`
-  and the 0.73 are the same BHG16 table and the same MW-analogue analysis
-  behind it (Licquia, Newman & Brinchmann 2015). Solving preserves that
+  and the 0.73 are the same [BHG16](/data/papers/index.md#blandhawthorn2016) table and the same MW-analogue analysis
+  behind it ([Licquia, Newman & Brinchmann 2015](/data/papers/index.md#licquia2015b)). Solving preserves that
   colour by construction; an independent pair puts the rendered Galaxy at
   **0.567** — 0.163 mag bluer than published, which is *larger* than the
-  ~0.1 mag magnitude-vs-colour inconsistency BHG16 flags in itself, so it
+  ~0.1 mag magnitude-vs-colour inconsistency [BHG16](/data/papers/index.md#blandhawthorn2016) flags in itself, so it
   cannot be absorbed as that.
 - **The disc carries 92 % of the V light, so the composite colour IS
   essentially the disc colour** — and the composite is what the camera
@@ -333,13 +333,13 @@ hole in the model column.
 | check | published | model | model is |
 | --- | --- | --- | --- |
 | NGP diffuse residual | 25.44 | 24.13 | **1.308 mag brighter** |
-| Galactic centre, Leinert total | 22.92 | 22.54 | **0.385 mag brighter** |
+| Galactic centre, [Leinert](/data/papers/index.md#leinert1998) total | 22.92 | 22.54 | **0.385 mag brighter** |
 
 The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 
 | | mag/arcsec² |
 | --- | --- |
-| Leinert et al. 1998 Table 24, NGP — **total** starlight | 23.83 |
+| [Leinert et al. 1998](/data/papers/index.md#leinert1998) Table 24, NGP — **total** starlight | 23.83 |
 | The 983,068 catalogue stars Stellata draws at V ≤ 11 | 24.111 |
 | Residual left for the diffuse band | **25.44** |
 
@@ -348,12 +348,12 @@ beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
 with them. The 388k catalogue before the floor read 24.271 at the pole over
 1,155 stars and 22.368 toward the centre over 11,776; V ≤ 11 takes the pole
 to 24.110 over 2,763 and the centre to 22.187 over 16,960, so the star field's
-share of Leinert's pole total goes from two thirds to **77 %**. **A record
+share of [Leinert](/data/papers/index.md#leinert1998)'s pole total goes from two thirds to **77 %**. **A record
 has to land INSIDE a 10° cap to move a row**, so `recordCount` can move
 without moving either: re-derive when a record lands within 10° of a centre,
 not whenever the count changes.
 
-Leinert's table is a sky model (Wainscoat et al. 1992) for *all* stars,
+[Leinert](/data/papers/index.md#leinert1998)'s table is a sky model ([Wainscoat et al. 1992](/data/papers/index.md#wainscoat1992)) for *all* stars,
 resolved or not, so pinning the published figure would double-count the
 star field — the retired `GC_BAND_REFERENCE_MAG_ARCSEC2 = 20.0` anchor's
 exact defect. The GC row is graded against the total rather than a
@@ -369,7 +369,7 @@ ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
 than M31 — and the residual anchor re-run at V ≤ 11 would put it a
 magnitude fainter still. What the deeper catalogue changed is the size of
 the disagreement, not its sign: **band plus catalogue at the pole reads
-23.42 against Leinert's 23.83**, 0.41 mag over, where band-without-hole
+23.42 against [Leinert](/data/papers/index.md#leinert1998)'s 23.83**, 0.41 mag over, where band-without-hole
 plus catalogue read 0.88 over — the double count was the other 0.47. That
 0.41 is the scale disagreement proper. eso0932a sides with the total but
 confirms a pole-side excess independently ([§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7),
@@ -412,7 +412,7 @@ under sits on the dither floor. Nothing pins the band to the threshold.
 solve does not.** [The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition) fixes
 which is which: the solve, its inputs and the dust-free NGP residual are
 anchors carrying no slack; this table, the plane-to-pole contrast and the
-Leinert GC check are outcomes that move when the measured tiers land, to
+[Leinert](/data/papers/index.md#leinert1998) GC check are outcomes that move when the measured tiers land, to
 21.09 / 21.91 / 21.91 / 22.83 / 23.33 and a 1.42 contrast on the measured
 cascade. Re-pin them there; do not treat a moved row as a calibration error.
 

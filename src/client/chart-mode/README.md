@@ -267,7 +267,7 @@ Wings are driven by `flags` bit 4. Three build-time passes set that bit:
   (~14 systems; α Cen-style cases).
 - **CCDM + MultFlag HIP-keyed cross-match** — every Hipparcos star
   carries a `CCDM` column linking it to the Catalog of the
-  Components of Double and Multiple stars (Dommanget & Nys 1994).
+  Components of Double and Multiple stars ([Dommanget & Nys 1994](/data/papers/index.md#dommanget1994)).
   CCDM alone is too permissive (tags ~19k stars including many
   wide line-of-sight optical pairs like Vega and Pollux), so the
   build gates it with Hipparcos's own `MultFlag` — keep only

@@ -27,7 +27,7 @@ src/client/solar-system/planets/eclipses/
                                   solarEclipseAt / lunarEclipseAt and the
                                   two greatest-eclipse searches.
   eclipse-canon.test.ts           23 solar and 12 lunar named eclipses from
-                                  NASA's Five Millennium Canon, 1978 BC to
+                                  NASA's [Five Millennium Canon](/data/papers/index.md#espenak2009), 1978 BC to
                                   2928 AD. See README.md#what-is-pinned.
   umbral-glow-pure.ts (+ test)    Refracted, reddened sunlight inside a
                                   caster's umbra, and the umbral depth both
@@ -51,7 +51,7 @@ module yet — and cost the greatest-eclipse search its cache regardless.
 
 ## What is pinned
 
-`data/eclipse-canon/` freezes Espenak's catalogue rows; the test
+`data/eclipse-canon/` freezes [Espenak](/data/papers/index.md#espenak2009)'s catalogue rows; the test
 reproduces each event end-to-end and asserts:
 
 - the shadow axis reaches Earth at all (γ < 1) at every canon epoch;
@@ -67,8 +67,8 @@ reproduces each event end-to-end and asserts:
 - lunar umbral magnitude matches to 0.04, with the Moon fully inside the
   umbra at every canon total;
 - ΔT reproduces the canon's own per-eclipse column to **2 s, absolute** —
-  a relative bound cannot tell "reproduces Espenak" from "reproduces
-  Espenak minus a systematic 200 s".
+  a relative bound cannot tell "reproduces [Espenak](/data/papers/index.md#espenak2009)" from "reproduces
+  [Espenak](/data/papers/index.md#espenak2009) minus a systematic 200 s".
 
 The corpus is deliberately central (|γ| < 0.95): a grazing event would
 satisfy every assertion above without saying anything about the shadow
@@ -106,10 +106,10 @@ what `SolarEclipse.magnitude` carries.
 
 The canon test calls `installPlanetElementTables` in `beforeAll`, because
 the app does at runtime and the test should measure the shipped
-configuration. It matters: on Standish alone the greatest-eclipse residual
-across 1900–2100 is 48 s rather than 9 s, because Standish's ~20″ of
+configuration. It matters: on [Standish](/data/papers/index.md#standish1992) alone the greatest-eclipse residual
+across 1900–2100 is 48 s rather than 9 s, because [Standish](/data/papers/index.md#standish1992)'s ~20″ of
 Earth-longitude error is ~38 km of shadow displacement. Outside 1900–2100
-the ephemeris falls back to Standish by itself, exactly as it does for a
+the ephemeris falls back to [Standish](/data/papers/index.md#standish1992) by itself, exactly as it does for a
 user scrubbing to 1200 BC.
 
 ## Where the remaining error is
@@ -118,8 +118,8 @@ At the 2000 BC end the residual is the canon's own vintage, not the
 model. Measured at the two worst canon epochs (−1977, −1912): the model's
 geocentric Moon sits within 4–20 km of DE441 and its Moon−Sun elongation
 within 6″ — about 12 s of eclipse timing — while the canon's
-greatest-eclipse instants sit ~325 s of TT away, because the Five
-Millennium Canon's ELP2000-85 Moon (tidal acceleration −25.858″/cy²)
+greatest-eclipse instants sit ~325 s of TT away, because the
+[Five Millennium Canon](/data/papers/index.md#espenak2009)'s ELP2000-85 Moon (tidal acceleration −25.858″/cy²)
 drifts that far from DE441 over four millennia. Matching the canon
 tighter would mean degrading the model toward the older ephemeris, so
 the 200 km / 7-minute corpus bounds are the canon-agreement floor, not

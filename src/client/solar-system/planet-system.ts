@@ -85,15 +85,15 @@ export interface Planet {
   // doesn't exist yet, so per-planet appearance refinements are
   // deferred until that lands.
   readonly colour: readonly [number, number, number];
-  // Geometric albedo (V-band). Drives the apparent-magnitude
- // calculation in the planet pipeline. Mallama 2017 +
-  // NASA fact-sheet values.
+  // Geometric albedo (V-band). Drives the apparent-magnitude calculation in the
+  // planet pipeline. Mallama 2017 (/data/papers/index.md#mallama2017) + NASA
+  // fact-sheet values.
   readonly albedo: number;
-  // Optional Mallama 2017 empirical phase-curve coefficients —
-  // overrides the default Lambertian phase function in the renderer
-  // when present. See `phase-function.ts` for the polynomial form
-  // and per-planet citations. Pluto and every exoplanet under
-  // the exoplanet epic leave this undefined and fall back to Lambert.
+  // Optional Mallama 2017 (/data/papers/index.md#mallama2017) empirical
+  // phase-curve coefficients — overrides the default Lambertian phase function
+  // in the renderer when present. See `phase-function.ts` for the polynomial
+  // form and per-planet citations. Pluto and every exoplanet under the
+  // exoplanet epic leave this undefined and fall back to Lambert.
   readonly phaseCoefficients?: PhaseCoefficients;
   // Optional IAU rotation elements (pole + prime meridian on the model
   // clock). Bodies without published elements leave this undefined —
@@ -246,11 +246,11 @@ export function defaultOrbitGeometry(
 /** Sol's positionsAt — heliocentric ecliptic positions in parsecs, in
  *  SOL_BODIES order: the nine planets (PLANET_ORDER) first, then the 18
  *  moons (SOL_MOONS order). Each moon is `parent_ecliptic +
- *  moonOffsetEcliptic`; the Earth slot and the Moon slot are jointly
- *  resolved from the Standish EM-barycentre via `earthMoonSplit`, so
- *  Earth sits ~4700 km off-barycentre. The caller applies the single
- *  ecliptic→ICRS host quaternion to the whole vector, so composing the
- *  offset in the ecliptic frame here lands the moon at parent+offset in
+ *  moonOffsetEcliptic`; the Earth slot and the Moon slot are jointly resolved
+ *  from the Standish (/data/papers/index.md#standish1992) EM-barycentre via
+ *  `earthMoonSplit`, so Earth sits ~4700 km off-barycentre. The caller applies
+ *  the single ecliptic→ICRS host quaternion to the whole vector, so composing
+ *  the offset in the ecliptic frame here lands the moon at parent+offset in
  *  ICRS. Planet and moon Kepler solves both run at every distinct `t`
  *  (getPlanetPositions memoises same-`t` repeat calls only). */
 function solPositionsAt(t: number, out: Float64Array): void {
@@ -336,9 +336,10 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
-    // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine et al. 1999); the
-    // Mie term is the clean maritime background aerosol column. Sources +
-    // derivations: /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
+    // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine et al. 1999,
+    // /data/papers/index.md#bodhaine1999); the Mie term is the clean maritime
+    // background aerosol column. Sources + derivations:
+    // /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
     atmosphere: {
       heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,
       rayleighCoeff: [0.049, 0.097, 0.221], mieCoeff: 0.05,
@@ -439,9 +440,9 @@ export const SOL_PLANETS: readonly Planet[] = [
   // really an icy-rocky body but bins with the inner terrestrials for
   // disc-rendering purposes (sharp silhouette, not a gas-giant gradient).
   // Tan-pink colour reflects New Horizons MVIC imagery. Albedo from
-  // HST + New Horizons reconnaissance. No `phaseCoefficients` — Mallama
-  // 2018 doesn't publish a polynomial fit for Pluto, so the renderer
-  // uses the Lambertian default.
+  // HST + New Horizons reconnaissance. No `phaseCoefficients` — Mallama 2018
+  // (/data/papers/index.md#mallama2017) doesn't publish a polynomial fit
+  // for Pluto, so the renderer uses the Lambertian default.
   {
     name: 'Pluto',
     radiusKm: 1188,
@@ -578,14 +579,14 @@ const DEG = Math.PI / 180;
 
 const EARTH_GRAV_PARAM_GM = SOL_PLANETS.find((p) => p.name === 'Earth')!.gravParamGM!;
 
-/** Sol's orbitGeometryAt — planets from the live Standish elements
- *  (secular a/e + orientation at `t`), moons from MOON_ELEMENTS through
- *  `keplerMoonAnglesAt`, the same helper that positions them, in
- *  SOL_BODIES order. Those elements are J2000 osculating, so most rows
- *  are constant in `t` — but not all: Triton's node precesses, and its
- *  ring has to precess with it. The Moon is the exception on both
- *  counts: its ring is the osculating ellipse through the lunar
- *  theory's own state, because that is what positions it. */
+/** Sol's orbitGeometryAt — planets from the live Standish
+ *  (/data/papers/index.md#standish1992) elements (secular a/e + orientation at
+ *  `t`), moons from MOON_ELEMENTS through `keplerMoonAnglesAt`, the same helper
+ *  that positions them, in SOL_BODIES order. Those elements are J2000
+ *  osculating, so most rows are constant in `t` — but not all: Triton's node
+ *  precesses, and its ring has to precess with it. The Moon is the exception on
+ *  both counts: its ring is the osculating ellipse through the lunar theory's
+ *  own state, because that is what positions it. */
 export function solOrbitGeometryAt(t: number): BodyOrbitGeometry[] {
   const out: BodyOrbitGeometry[] = getPlanetOrbitShapes(t).map((s) => ({
     ...s,

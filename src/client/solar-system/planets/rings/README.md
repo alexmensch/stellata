@@ -75,9 +75,10 @@ back in over a shadowed ring section ([Everything that dims the field](../../../
 ## Ring photometry — the unresolved magnitude
 
 Both halves — the billboard's magnitude and the drawn annulus's
-brightness — run one law from `ring-photometry-pure.ts`: Mallama & Hilton
-2018 Eq. 10 (the whole system, `V₁(0) = −8.914`) differenced against the
-globe-alone Eq. 11/12 curve `Planet.phaseCoefficients` holds. That
+brightness — run one law from `ring-photometry-pure.ts`:
+[Mallama & Hilton 2018](/data/papers/index.md#mallamahilton2018) Eq. 10 (the whole system,
+`V₁(0) = −8.914`) differenced against the globe-alone Eq. 11/12 curve
+`Planet.phaseCoefficients` holds. That
 difference is the **ring flux, in units of the globe's own flux at
 α = 0** — the same unit `empiricalPhaseFactor` reports the globe in, so
 the system's φ(α) is simply the two added.
@@ -162,7 +163,7 @@ against a black band is the trade.
   clamp, not a silent extrapolation.
 - **Backlit — the host and the viewer on opposite faces.** Out of
   domain, not merely unfitted: from Earth β_v and β_h never differ in
-  sign, and Mallama's own rule is β = 0, no ring term at all. Stellata's
+  sign, and [Mallama](/data/papers/index.md#mallamahilton2018)'s own rule is β = 0, no ring term at all. Stellata's
   camera reaches this routinely, so the term survives scaled by
   `RING_BACKLIT_TRANSMIT` — **the same constant the annulus graph above
   dims its unlit face by**, which it imports from here. That shared
@@ -203,7 +204,7 @@ as carrying the shadow term, so folding the phase factor in there would
 let the opposition surge vote on how much lit ring surface the exposure
 pin divides its masked mean by — brightness masquerading as area. Pinned.
 
-**Cassini corroborates the width, independently.** Déau et al. 2013
+**Cassini corroborates the width, independently.** [Déau et al. 2013](/data/papers/index.md#deau2013)
 (Cassini/ISS) measure the surge half-width at 0.20° in the A and B rings
 and 0.26–0.28° in the C ring and the Cassini Division. Eq. 10's own
 `exp(−2.25·α)` half-falls at `ln2/2.25` = 0.308°. An Earth-based
@@ -212,7 +213,7 @@ feature at one width, which is why the annulus needs no second
 parametrisation.
 
 **The surge is strip-averaged, deliberately — a per-radius one is not
-derivable.** Déau's per-region amplitudes are 1.25 (B), 1.39 (A), 1.45
+derivable.** [Déau](/data/papers/index.md#deau2013)'s per-region amplitudes are 1.25 (B), 1.39 (A), 1.45
 (C) and 1.47 (Cassini Division): the two regions furthest from the B
 ring's value are also the faintest, so flux-weighting collapses the
 spread to a few percent, and matching the disc-integrated law would then

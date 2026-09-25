@@ -11,7 +11,7 @@ decoupled components per cloud:
   `absorption/README.md`.
 - **Rim shell** — the Local-Bubble fresnel-rim treatment
   (`../fresnel-shell/`) on a per-cloud **isosurface mesh** traced from
-  the Edenhofer dust field (`cloud-surfaces.bin`; clouds without one
+  the [Edenhofer](/data/papers/index.md#edenhofer2024) dust field (`cloud-surfaces.bin`; clouds without one
   fall back to their ellipsoid envelope), in the shared
   `SHELL_RIM_BLUE`. An orientation annotation, gated at the
   `representational` declutter floor (`molecularCloudEllipsoids`,

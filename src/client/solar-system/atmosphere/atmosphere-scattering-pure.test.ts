@@ -316,9 +316,10 @@ describe('how far past the terminator sunlight reaches', () => {
 });
 
 describe('skylight on the surface — derived, anchored to measured Earth twilight', () => {
-  // Measured Earth horizontal illuminance (lx) against ~100 klx full sun,
-  // by solar depression angle (Allen's Astrophysical Quantities): the
-  // geometric terminator, then civil / nautical / astronomical twilight.
+  // Measured Earth horizontal illuminance (lx) against ~100 klx full sun, by
+  // solar depression angle (Allen's Astrophysical Quantities,
+  // /data/papers/index.md#cox2000): the geometric terminator, then civil /
+  // nautical / astronomical twilight.
   const MEASURED_LX: Record<number, number> = { 0: 400, 6: 3.4, 12: 0.008, 18: 0.0006 };
   const FULL_SUN_LX = 100000;
 

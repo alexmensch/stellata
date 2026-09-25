@@ -58,7 +58,7 @@ the widget's single `afterClockJump`, so the debt is paid structurally
 rather than remembered at each call site. A rate change is not a jump —
 FF/RW/play/pause snapshot `t` and need nothing.
 
-`t` itself is clamped to the Standish ephemeris validity window
+`t` itself is clamped to the [Standish](/data/papers/index.md#standish1992) ephemeris validity window
 (3000 BC – 3000 AD; `T_CLAMP_MIN_S` / `T_CLAMP_MAX_S`) — every clock
 mutation and `getT()` read clamps, so no consumer ever sees an epoch
 where planet positions (or linear star propagation) are garbage. The
@@ -80,7 +80,7 @@ that carry it to and from a Julian Date in that same scale. Everything
 whose epoch argument is a wall-clock instant — the readout, the scrubber,
 the star-catalogue epoch advance, binary orbits — reads that pair.
 
-**The ephemerides do not.** JPL's element tables and the Standish series
+**The ephemerides do not.** JPL's element tables and the [Standish](/data/papers/index.md#standish1992) series
 are both defined against **TDB**, which runs ahead of universal time by
 ΔT. `tToJdTdb` / `jdTdbToT` add and remove it, and `../ephemerides/`
 reads through them exclusively — planets and moons alike. Feeding a
@@ -88,8 +88,8 @@ UT-scale JD to the element evaluation instead moves Mercury by 2.2e-5 AU,
 which was the dominant term left once the element tables landed.
 
 **ΔT is not a constant, and at this clock's range it is not small.**
-`delta-t-pure.ts` is the Espenak & Meeus polynomial set (−1999 to +3000),
-thirteen fitted intervals with the Morrison & Stephenson long-term
+`delta-t-pure.ts` is the [Espenak & Meeus](/data/papers/index.md#espenak2006) polynomial set (−1999 to +3000),
+thirteen fitted intervals with the [Morrison & Stephenson](/data/papers/index.md#morrisonstephenson) long-term
 parabola carrying each tail, plus NASA's lunar-secular-acceleration
 correction −0.000012932·(y−1955)² s: the polynomials assume the Moon's
 secular acceleration is −26″/cy², the eclipse canons and the ELP/DE
@@ -112,7 +112,7 @@ The split that makes eclipses work is therefore:
 ΔT depends on the epoch being solved for. It converges immediately: ΔT
 changes by under 1e-6 of itself across one ΔT.
 
-**Known departure.** Espenak's 2005–2050 segment was extrapolated in
+**Known departure.** [Espenak](/data/papers/index.md#espenak2006)'s 2005–2050 segment was extrapolated in
 2006 and Earth's rotation did not slow as projected, so it reads ~75 s in
 2026 against an observed ~69 s. Using it uniformly rather than splicing
 in the exact leap-second constant keeps the function continuous; the 6 s

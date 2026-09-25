@@ -1356,8 +1356,9 @@ export class Stellata implements FrameAnchor {
       this.renderGate.invalidate('dust-chunk');
     });
     // Share the same DustField with the Milky Way pass so the band's dust
-    // attenuation shows the actual Edenhofer voxel structure (Great Rift,
-    // Coalsack, etc.) rather than only the analytic slab.
+    // attenuation shows the actual Edenhofer (/data/papers/index.md#edenhofer2024)
+    // voxel structure (Great Rift, Coalsack, etc.) rather than only the analytic
+    // slab.
     this.milkyway.attachDust(dust);
   }
 

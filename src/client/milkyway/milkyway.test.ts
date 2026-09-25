@@ -191,8 +191,9 @@ describe('MilkyWay population tints', () => {
   });
 
   // The palette is a pair of colour indices through the star field's own
-  // Ballesteros → Planck → CIE path, so the bulge must read WARMER: same
-  // red channel at the gamut peak, less blue.
+  // Ballesteros (/data/papers/index.md#ballesteros2012) → Planck → CIE path,
+  // so the bulge must read WARMER: same red channel at the gamut peak, less
+  // blue.
   it('orders the two hues by their colour indices', () => {
     expect(BULGE_COLOUR_INDEX_BV).toBeGreaterThan(DISC_COLOUR_INDEX_BV);
     expect(BULGE_COLOR_RGB[0]).toBe(1);
@@ -241,9 +242,10 @@ describe('MilkyWay population tints', () => {
   });
 });
 
-// Bland-Hawthorn & Gerhard 2016 Sect. 5.1. The thick disc is for the EXTERNAL
-// edge-on view — from Sol it is a small correction, and it is emphatically
-// not a fix for a high-latitude deficit (README.md#density-profiles).
+// Bland-Hawthorn & Gerhard 2016 (/data/papers/index.md#blandhawthorn2016)
+// Sect. 5.1. The thick disc is for the EXTERNAL edge-on view — from Sol it is
+// a small correction, and it is emphatically not a fix for a high-latitude
+// deficit (README.md#density-profiles).
 describe('MilkyWay vertical profile', () => {
   it('pins the thin/thick split against BHG16 Sect. 5.1', () => {
     expect(DISC_SCALE_HEIGHT_PC).toBe(300);
@@ -254,7 +256,8 @@ describe('MilkyWay vertical profile', () => {
 
   // The disagreement itself is the assertion, not the arithmetic that
   // produces it: sharing a radial scale length puts the thick/thin
-  // LUMINOSITY ratio at 0.12, and Mosenkov et al. 2021 measure
+  // LUMINOSITY ratio at 0.12, and Mosenkov et al. 2021
+  // (/data/papers/index.md#mosenkov2021) measure
   // 0.71 ± 0.45 at 3.4 µm — outside their interval on the low side, where
   // their thick disc is radially longer as well. Stated rather than tuned
   // (README.md#density-profiles), so a future session that "fixes" the
@@ -347,9 +350,10 @@ describe('MilkyWay luminosity solve', () => {
   });
 
   // Check 2, the sightline the ORIGINAL anchor used. Compared against
-  // Leinert's total rather than a residual: the catalogue row toward the
-  // centre is de-extincted and so not commensurable there
-  // (calibration/diffuse-reference.ts), and it would only widen the gap.
+  // Leinert's (/data/papers/index.md#leinert1998) total rather than a
+  // residual: the catalogue row toward the centre is de-extincted and so not
+  // commensurable there (calibration/diffuse-reference.ts), and it would
+  // only widen the gap.
   // Same species of disagreement as the pole, which is what says it is a
   // scale difference between two published sources and not a shape error.
   it('states the Galactic-centre sightline against Leinert’s total', () => {
@@ -451,7 +455,8 @@ describe('MilkyWay luminosity solve', () => {
   });
 });
 
-// A_V range the SFD map spans toward the galactic poles. The literature
+// A_V range the SFD (/data/papers/index.md#schlegel1998) map spans toward the
+// galactic poles. The literature
 // figure is an interval, so containment is the assertion; the model's own
 // number is pinned exactly alongside it.
 const SFD_POLAR_AV_MIN = 0.03;
@@ -489,7 +494,8 @@ describe('MilkyWay analytical dust', () => {
   // Marched through the profile rather than re-arranged out of the
   // normalisation, so a change to the radial term, the A_V-per-density
   // wiring or a re-introduced 0.45 multiplier all show up here.
-  // Schlegel/Finkbeiner/Davis publishes no per-kpc rate at all — the
+  // Schlegel/Finkbeiner/Davis (/data/papers/index.md#schlegel1998) publishes
+  // no per-kpc rate at all — the
   // figure this replaced cited it anyway.
   it('marches the stated plane rate at (R₀, z = 0)', () => {
     const magPerPc =
@@ -500,7 +506,8 @@ describe('MilkyWay analytical dust', () => {
 
   // The second constraint the 1.0 mag/kpc rate has to satisfy, and the one
   // the scale height controls: integrate the slab straight up from Sol and
-  // the perpendicular column has to land in SFD's polar range. Marched, so
+  // the perpendicular column has to land in SFD's
+  // (/data/papers/index.md#schlegel1998) polar range. Marched, so
   // moving ANALYTICAL_DUST_SCALE_HEIGHT_PC fails it — which is the whole
   // reason the two constraints are described as independent.
   it('lands the polar column inside the SFD polar spread', () => {

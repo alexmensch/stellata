@@ -6,9 +6,10 @@ import {
   lunarSecularAccelerationCorrection,
 } from './delta-t-pure';
 
-// Every interval boundary in the Espenak set. Each side is its own
-// polynomial in its own re-centred argument, so a mistyped coefficient or a
-// mis-ordered branch shows here as a step and nowhere else.
+// Every interval boundary in the Espenak (/data/papers/index.md#espenak2006)
+// set. Each side is its own polynomial in its own re-centred argument, so a
+// mistyped coefficient or a mis-ordered branch shows here as a step and nowhere
+// else.
 const BOUNDARIES = [
   -500, 500, 1600, 1700, 1800, 1860, 1900, 1920, 1941, 1961, 1986, 2005,
   2050, 2150,

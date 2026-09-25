@@ -31,7 +31,7 @@ fragment shader raymarches the ellipsoid segment (4–14 jittered steps,
 screen-adaptive) and converts the A_V column to `α = 1 − exp(−0.921·A_V)`,
 capped at 0.95.
 
-**Traced clouds march the per-cloud Edenhofer density brick** (a builder
+**Traced clouds march the per-cloud [Edenhofer](/data/papers/index.md#edenhofer2024) density brick** (a builder
 branch, [The material seam](../README.md#the-material-seam); a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
 `A_V = 2.742·∫E dl`, clip at the brick's u = 1.05 taper edge) — the same
 volume the rim isosurface was traced from, so the shadow matches the

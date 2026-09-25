@@ -41,9 +41,10 @@ describe('equinoctial round trip', () => {
   });
 
   it('a negative tabulated inclination comes back canonical, same position', () => {
-    // Standish's EM Bary row carries I = −0.00054346°. The round trip returns
-    // (|i|, Ω + 180°, ω + 180°), which is the same rotation — and leaves ϖ and
-    // λ untouched, because the two 180° shifts cancel in ϖ = Ω + ω.
+    // Standish's (/data/papers/index.md#standish1992) EM Bary row carries
+    // I = −0.00054346°. The round trip returns (|i|, Ω + 180°, ω + 180°), which is
+    // the same rotation — and leaves ϖ and λ untouched, because the two 180°
+    // shifts cancel in ϖ = Ω + ω.
     const flipped = positionFromAngles(1.0, 0.01673, -0.00054346, -5.1126, 102.9301, 100.4669);
     const canonical = positionFromAngles(1.0, 0.01673, 0.00054346, -5.1126 + 180, 102.9301, 100.4669);
     expect(flipped.x).toBeCloseTo(canonical.x, 12);

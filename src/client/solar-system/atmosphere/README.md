@@ -133,9 +133,10 @@ reaches the scattering column through · ω̃ = τ_s/τ_ext
   scattering — the reason real twilight persists to ~18° — with amplitude
   `TWILIGHT_TAIL_AMP` = 1.459e-4 and reach `TWILIGHT_TAIL_REACH` = 8.95 scale
   heights, the closed-form fit through measured Earth horizontal illuminance
-  at 12° and 18° of solar depression (0.008 lx / 0.0006 lx, Allen's
-  Astrophysical Quantities). The test re-derives both from the table; civil
-  twilight at 6° falls out within 1.5×. Both terms scale with the body's own
+  at 12° and 18° of solar depression (0.008 lx / 0.0006 lx,
+  [Allen's Astrophysical Quantities](/data/papers/index.md#cox2000)). The test
+  re-derives both from the table; civil twilight at 6° falls out within 1.5×.
+  Both terms scale with the body's own
   `H`, so Venus / Mars / Titan follow with **no per-body constant** — Titan's
   band is ~10× Earth's angular width because its scale height is.
 - **The day side is beam interception, anchored at noon.** Of the direct flux
@@ -181,7 +182,7 @@ a conservative-scattering model of the same τ_ext would claim.
 
 **Where the model is over.** Earth's terminator anchor runs 1.75× (above) and
 Titan's noon ground light **2.8× the ~10 % of incident Huygens/DISR measured**
-(Tomasko et al. 2008). Same direction, same cause: the isotropic-redistribution
+([Tomasko et al. 2008](/data/papers/index.md#tomasko2008)). Same direction, same cause: the isotropic-redistribution
 ½ and ¼ stop being upper bounds once τ ≫ 1, and nothing here loses photons back
 to space. Titan's is invisible in the render — its own haze extincts its ground
 to nothing (⟨μ·T_view⟩ = 0.006, [Flux bookkeeping](#flux-bookkeeping)) — but it is the number to

@@ -140,13 +140,13 @@ export function createPlanetKindModule(): PlanetKindModule {
       glare = webgpu.attachPlanetGlare(
         kindCtx.scene, field.glareSources(), field.localGroup);
 
-      // Horizons element tables — 1.5 MB that upgrades the ephemeris from
-      // the Standish series' 0.06 AU to ~5e-6 AU across 1900–2100. Fired
-      // at attach, not load: load runs inside the boot Promise.all, where
-      // this fetch would contend with the catalog download. Deliberately
-      // NOT awaited — the first frame is Sol-focused, where the outer
-      // planets the tables move are sub-pixel discs, so paying for it
-      // before first paint would buy nothing visible.
+      // Horizons element tables — 1.5 MB that upgrades the ephemeris from the
+      // Standish (/data/papers/index.md#standish1992) series' 0.06 AU to ~5e-6
+      // AU across 1900–2100. Fired at attach, not load: load runs inside the
+      // boot Promise.all, where this fetch would contend with the catalog
+      // download. Deliberately NOT awaited — the first frame is Sol-focused,
+      // where the outer planets the tables move are sub-pixel discs, so paying
+      // for it before first paint would buy nothing visible.
       void loadPlanetElementTables(baseUrl);
 
       // Attach Sol's planet system once at boot. Bodies render from now

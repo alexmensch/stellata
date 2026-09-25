@@ -1,6 +1,6 @@
-// ICRS/J2000 ↔ the mean equator and equinox of another epoch: the IAU 1976
-// (Lieske) angles for near-epoch work, and the Vondrák long-term model for
-// the whole model-clock span. See README.md#precessionts.ts.
+// ICRS/J2000 ↔ the mean equator and equinox of another epoch: the IAU 1976 (Lieske,
+// /data/papers/index.md#lieske1979) angles near epoch, and the Vondrák long-term model
+// (/data/papers/index.md#vondrak2011) for the model-clock span. See README.md#precessionts.ts.
 
 import { ARCSEC_TO_RAD, DAYS_PER_JULIAN_YEAR, J2000_JD } from './astronomy-constants';
 import {
@@ -21,15 +21,17 @@ export type Rotation3 = readonly [
   number, number, number,
 ];
 
-/** Besselian epoch → JD (Lieske 1979): tropical years counted from B1900.0. */
+/** Besselian epoch → JD (Lieske 1979, /data/papers/index.md#lieske1979):
+ *  tropical years counted from B1900.0. */
 export function besselianEpochToJd(besselianYear: number): number {
   return BESSELIAN_B1900_JD + (besselianYear - 1900) * TROPICAL_YEAR_DAYS;
 }
 
-/** The equinox the IAU constellation boundaries are drawn at (Delporte 1930):
- *  1874 Dec 31.76. Getting this epoch wrong by months leaves the boundaries
- *  looking plausible while flipping positions that sit within an arcsecond of
- *  a wall — see ../constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
+/** The equinox the IAU constellation boundaries are drawn at (Delporte 1930,
+ *  /data/papers/index.md#delporte1930): 1874 Dec 31.76. Getting this epoch
+ *  wrong by months leaves the boundaries looking plausible while flipping
+ *  positions that sit within an arcsecond of a wall — see
+ *  ../constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
  * */
 export const B1875_JD = besselianEpochToJd(1875);
 
@@ -92,11 +94,11 @@ export function unprecessDirection(rotation: Rotation3, v: UnitVector): UnitVect
   };
 }
 
-// Vondrák, Capitaine & Wallace 2011 (A&A 534 A22) + 2012 corrigendum:
-// precession of the ecliptic and of the equator over ±200 kyr. Agrees with
-// IAU 2006 at J2000 and stays within 100 µas through the 20th–21st
-// centuries — the Lieske cubics above reach arcminutes at the model
-// clock's bounds, where these hold to a few arcseconds.
+// Vondrák, Capitaine & Wallace 2011 (/data/papers/index.md#vondrak2011) + 2012
+// corrigendum: precession of the ecliptic and of the equator over ±200 kyr.
+// Agrees with IAU 2006 at J2000 and stays within 100 µas through the 20th–21st
+// centuries — the Lieske (/data/papers/index.md#lieske1979) cubics above reach
+// arcminutes at the model clock's bounds, where these hold to a few arcseconds.
 //
 // Rows: period (yr), then the cosine and sine amplitudes (arcsec) of the
 // two pole components.
@@ -132,17 +134,18 @@ const EQUATOR_POLE_PERIODIC = [
 const EQUATOR_POLE_POLY_X = [5453.282155, 0.4252841, -0.00037173, -0.000000152];
 const EQUATOR_POLE_POLY_Y = [-73750.930350, -0.7675452, -0.00018725, 0.000000231];
 
-// The obliquity the Vondrák model is defined against (84381.406″, IAU
-// 2006). Deliberately NOT J2000_OBLIQUITY_RAD (84381.448″, IAU 1976):
-// substituting the shared constant perturbs a published series by 0.042″
-// for no gain, and the two are used for different things.
+// The obliquity the Vondrák (/data/papers/index.md#vondrak2011) model is
+// defined against (84381.406″, IAU 2006). Deliberately NOT J2000_OBLIQUITY_RAD
+// (84381.448″, IAU 1976): substituting the shared constant perturbs a published
+// series by 0.042″ for no gain, and the two are used for different things.
 const VONDRAK_EPS0_RAD = 84381.406 * ARCSEC_TO_RAD;
 
 function julianEpochOf(jd: number): number {
   return 2000 + (jd - J2000_JD) / DAYS_PER_JULIAN_YEAR;
 }
 
-/** Evaluate one Vondrák pole pair (periodic + polynomial), arcsec. */
+/** Evaluate one Vondrák (/data/papers/index.md#vondrak2011) pole pair
+ *  (periodic + polynomial), arcsec. */
 function vondrakPair(
   jd: number,
   periodic: readonly number[],

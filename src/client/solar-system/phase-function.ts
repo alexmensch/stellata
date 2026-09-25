@@ -2,12 +2,12 @@
 // — Lambertian default + a published empirical curve where one exists.
 // See /docs/science-solar-system.md#planet-phase-functions.
 
-/** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2017 for the
- *  planets that have a fit, Allen's lunar law for the Moon. Every curve
- *  describes the body's GLOBE and is anchored at its α=0 geometric
- *  albedo, so c0 = 0 throughout; a ring system's contribution rides the
- *  separate joint α/tilt law in
- *  `planets/rings/ring-photometry-pure.ts`. c7 = 0 for every body
+/** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2017
+ *  (/data/papers/index.md#mallama2017) for the planets that have a fit, Allen's
+ *  (/data/papers/index.md#cox2000) lunar law for the Moon. Every curve
+ *  describes the body's GLOBE and is anchored at its α=0 geometric albedo, so
+ *  c0 = 0 throughout; a ring system's contribution rides the separate joint
+ *  α/tilt law in `planets/rings/ring-photometry-pure.ts`. c7 = 0 for every body
  *  except Mercury — the only published fit beyond degree 6. */
 export interface PhaseCoefficients {
   readonly c0: number;
@@ -207,15 +207,15 @@ export function phaseRatioToLambert(
   return Math.min(PHASE_RATIO_MAX, Math.max(PHASE_RATIO_MIN, ratio));
 }
 
-// Per-body coefficients: Mallama 2017 (Icarus 282) for the planets it
-// fits, Allen's lunar law for the Moon. Each alphaMaxDeg is the upper
-// bound observed in the cited data; outside that range the renderer
-// falls back to anchor-scaled Lambert.
+// Per-body coefficients: Mallama 2017 (/data/papers/index.md#mallama2017) for
+// the planets it fits, Allen's (/data/papers/index.md#cox2000) lunar law for
+// the Moon. Each alphaMaxDeg is the upper bound observed in the cited data;
+// outside that range the renderer falls back to anchor-scaled Lambert.
 
-/** Mercury — Mallama 2017 Table A-1.2 full 7th-order fit, valid to
- *  the paper's 170° bound. c7 rides the third per-instance vec4
- *  (`iPhaseCoefsC`); the degree-6 storage era capped alphaMaxDeg at
- *  87° because the dropped c7·α⁷ term diverged past that. */
+/** Mercury — Mallama 2017 (/data/papers/index.md#mallama2017) Table A-1.2 full
+ *  7th-order fit, valid to the paper's 170° bound. c7 rides the third
+ *  per-instance vec4 (`iPhaseCoefsC`); the degree-6 storage era capped
+ *  alphaMaxDeg at 87° because the dropped c7·α⁷ term diverged past that. */
 export const MERCURY_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: 6.617e-2,
@@ -228,9 +228,9 @@ export const MERCURY_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 170,
 };
 
-/** Venus — Mallama 2017 Table A-2.2 4th-order fit, valid to 165°.
- *  The α = 170° forward-scattering peak isn't captured by the
- *  polynomial — Lambert takes over there. */
+/** Venus — Mallama 2017 (/data/papers/index.md#mallama2017) Table A-2.2
+ *  4th-order fit, valid to 165°. The α = 170° forward-scattering peak isn't
+ *  captured by the polynomial — Lambert takes over there. */
 export const VENUS_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: -1.044e-3,
@@ -243,9 +243,9 @@ export const VENUS_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 165,
 };
 
-/** Earth — closed-form cubic fit through the four discrete values
- *  in Mallama 2017 Table A-3.1 (the paper publishes a table, not a
- *  polynomial). alphaMaxDeg = 135°, the table's last datum. */
+/** Earth — closed-form cubic fit through the four discrete values in Mallama
+ *  2017 (/data/papers/index.md#mallama2017) Table A-3.1 (the paper publishes a
+ *  table, not a polynomial). alphaMaxDeg = 135°, the table's last datum. */
 export const EARTH_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: 3.406e-2,
@@ -258,9 +258,9 @@ export const EARTH_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 135,
 };
 
-/** Mars — Mallama 2017 Table A-4.2 2nd-order fit, valid to ~50°.
- *  The published rotation + orbital-longitude phase terms (L₁, L₂)
- *  aren't modelled. */
+/** Mars — Mallama 2017 (/data/papers/index.md#mallama2017) Table A-4.2
+ *  2nd-order fit, valid to ~50°. The published rotation + orbital-longitude
+ *  phase terms (L₁, L₂) aren't modelled. */
 export const MARS_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: 2.267e-2,
@@ -273,8 +273,8 @@ export const MARS_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 50,
 };
 
-/** Jupiter — Mallama 2017 Table A-5.2 2nd-order fit, observed range
- *  α = 0–12°. */
+/** Jupiter — Mallama 2017 (/data/papers/index.md#mallama2017) Table A-5.2
+ *  2nd-order fit, observed range α = 0–12°. */
 export const JUPITER_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: -3.7e-4,
@@ -287,13 +287,14 @@ export const JUPITER_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 12,
 };
 
-/** Saturn's GLOBE — Mallama & Hilton 2018 Eq. 12, the 4th-order fit to
- *  Dyudina's Pioneer-derived scattering model, valid 6°–150° and carried
- *  down to 0° where it tracks the α < 6.5° globe fit (Eq. 11) inside
- *  0.01 mag. Eq. 12's own +0.01 zero-point splice is dropped: φ(0) = 1
- *  is what anchors the curve on the geometric albedo, the same
- *  normalisation every other body's curve uses. The ring system is a
- *  separate joint α/tilt term — `planets/rings/ring-photometry-pure.ts`. */
+/** Saturn's GLOBE — Mallama & Hilton 2018
+ *  (/data/papers/index.md#mallamahilton2018) Eq. 12, the 4th-order fit to
+ *  Dyudina's (/data/papers/index.md#dyudina) Pioneer-derived scattering model,
+ *  valid 6°–150° and carried down to 0° where it tracks the α < 6.5° globe fit
+ *  (Eq. 11) inside 0.01 mag. Eq. 12's own +0.01 zero-point splice is dropped:
+ *  φ(0) = 1 is what anchors the curve on the geometric albedo, the same
+ *  normalisation every other body's curve uses. The ring system is a separate
+ *  joint α/tilt term — `planets/rings/ring-photometry-pure.ts`. */
 export const SATURN_PHASE: PhaseCoefficients = {
   c0: 0,
   c1: 2.446e-4,
@@ -306,11 +307,12 @@ export const SATURN_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 150,
 };
 
-/** Earth's Moon — Allen's lunar phase law, not Mallama (that paper
- *  fits planets only): ΔV(α°) = 0.026·α + 4e-9·α⁴, its fitted range
- *  ending at 150°. Derivation from Allen's radian form, the
- *  full-to-quarter check, the clamp arithmetic, and why no other moon
- *  gets a curve: /docs/science-solar-system.md#planet-phase-functions.
+/** Earth's Moon — Allen's (/data/papers/index.md#cox2000) lunar phase law, not
+ *  Mallama (/data/papers/index.md#mallama2017) (that paper fits planets only):
+ *  ΔV(α°) = 0.026·α + 4e-9·α⁴, its fitted range ending at 150°. Derivation from
+ *  Allen's radian form, the full-to-quarter check, the clamp arithmetic, and
+ *  why no other moon gets a curve:
+ *  /docs/science-solar-system.md#planet-phase-functions.
  * */
 export const MOON_PHASE: PhaseCoefficients = {
   c0: 0,
@@ -324,8 +326,8 @@ export const MOON_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 150,
 };
 
-// Uranus and Neptune fall through to Lambert by design — Mallama
-// 2018 Tables A-7.2 / A-8.2 model sub-latitude (Uranus) and temporal
-// (Neptune) effects, not α, because Earth-bound max α is negligible
-// for both. Pluto, every moon but Earth's, and every exoplanet share
+// Uranus and Neptune fall through to Lambert by design — Mallama 2018
+// (/data/papers/index.md#mallama2017) Tables A-7.2 / A-8.2 model sub-latitude
+// (Uranus) and temporal (Neptune) effects, not α, because Earth-bound max α is
+// negligible for both. Pluto, every moon but Earth's, and every exoplanet share
 // the Lambert fallback.

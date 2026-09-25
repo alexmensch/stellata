@@ -185,13 +185,13 @@ describe('the annulus phase scalar', () => {
   });
 
   it('carries the surge Cassini measured, at the width it measured', () => {
-    // Déau et al. 2013 (Cassini/ISS) put the surge HWHM at 0.20° in the
-    // A and B rings and 0.26–0.28° in the C ring and Cassini Division.
-    // The Earth-based law's own exp(-2.25·α) has HWHM ln2/2.25 = 0.308°,
-    // so the two independent measurements describe one feature — which is
-    // why the annulus can ride the law the billboard already uses instead
-    // of a second parametrisation. Pin the surge's half-fall inside the
-    // measured spread.
+    // Déau et al. 2013 (/data/papers/index.md#deau2013) (Cassini/ISS) put the
+    // surge HWHM at 0.20° in the A and B rings and 0.26–0.28° in the C ring and
+    // Cassini Division. The Earth-based law's own exp(-2.25·α) has HWHM
+    // ln2/2.25 = 0.308°, so the two independent measurements describe one
+    // feature — which is why the annulus can ride the law the billboard already
+    // uses instead of a second parametrisation. Pin the surge's half-fall
+    // inside the measured spread.
     expect(Math.LN2 / -P.surgeDecayPerDeg).toBeCloseTo(0.308, 3);
     const surgeOnly = (alphaDeg: number) => {
       const sinB = Math.sin(20 * DEG);

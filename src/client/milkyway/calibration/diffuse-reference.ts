@@ -11,15 +11,18 @@ import { RESOLVED_CATALOGUE_CAP } from './resolved-hole-table';
 
 /**
  * Integrated V-band absolute magnitude of the Galaxy, Bland-Hawthorn &
- * Gerhard 2016 Table 2 — the total the emissivity is solved against.
+ * Gerhard 2016 (/data/papers/index.md#blandhawthorn2016) Table 2 — the
+ * total the emissivity is solved against.
  *
  * **Cite the spread, do not imply consensus.** BHG16's figure derives from
- * Milky Way analogues (Licquia, Newman & Brinchmann 2015) rather than from
- * direct integration, and it flags its own SDSS-vs-colour-index
- * inconsistency. Older direct-integration work runs 0.3–0.5 mag dimmer
- * once its B-band results are carried across at the Galaxy's integrated
- * colour: de Vaucouleurs & Pence 1978 M_B = −20.2 ± 0.15 and van der
- * Kruit 1986 M_B = −20.3 ± 0.2, against (B−V) ≈ 0.83.
+ * Milky Way analogues (Licquia, Newman & Brinchmann 2015,
+ * /data/papers/index.md#licquia2015b) rather than from direct integration,
+ * and it flags its own SDSS-vs-colour-index inconsistency. Older
+ * direct-integration work runs 0.3–0.5 mag dimmer once its B-band results
+ * are carried across at the Galaxy's integrated colour: de Vaucouleurs &
+ * Pence 1978 (/data/papers/index.md#devaucouleurs1978) M_B = −20.2 ± 0.15
+ * and van der Kruit 1986 (/data/papers/index.md#vanderkruit1986)
+ * M_B = −20.3 ± 0.2, against (B−V) ≈ 0.83.
  *
  * Intrinsic, i.e. corrected for internal extinction — which is what the
  * emissivity has to be, because the layer applies its own dust at render
@@ -29,15 +32,16 @@ export const GALAXY_TOTAL_ABSMAG_V = -21.37;
 
 /**
  * Bulge share of the Galaxy's stellar **mass**, Licquia & Newman 2015
- * (DOI 10.1088/0004-637X/806/1/96): 0.150 (+0.028/−0.019), from
+ * (/data/papers/index.md#licquia2015): 0.150 (+0.028/−0.019), from
  * M\* = 0.91 ± 0.07 bulge against 6.08 ± 1.14 × 10¹⁰ M⊙ total, Chabrier
  * IMF. Not the light ratio — see `BULGE_TO_TOTAL_LIGHT_V`.
  */
 export const BULGE_TO_TOTAL_MASS = 0.15;
 
 /**
- * Υ\*_V of the bulge population: Bruzual & Charlot 2003 SSP, Chabrier
- * IMF, Z = 0.02, 10 Gyr — `data/bc03/bc2003_hr_m62_chab_ssp.4color`
+ * Υ\*_V of the bulge population: Bruzual & Charlot 2003
+ * (/data/papers/index.md#bruzual2003) SSP, Chabrier IMF, Z = 0.02, 10 Gyr —
+ * `data/bc03/bc2003_hr_m62_chab_ssp.4color`
  * column 6 at `log-age-yr = 10.000`, read back and pinned in
  * `diffuse-reference.test.ts`.
  *
@@ -49,8 +53,8 @@ export const BULGE_TO_TOTAL_MASS = 0.15;
 export const BULGE_ML_V = 3.15;
 
 /**
- * Υ\*_V of the disc, Flynn et al. 2006 (DOI
- * 10.1111/j.1365-2966.2006.10911.x): 1.5 ± 0.2 for the local column,
+ * Υ\*_V of the disc, Flynn et al. 2006
+ * (/data/papers/index.md#flynn2006): 1.5 ± 0.2 for the local column,
  * **measured** from the solar-cylinder luminosity function and mass
  * density rather than modelled. Their column includes remnants, matching
  * the mass definition behind `BULGE_TO_TOTAL_MASS`, and the paper states
@@ -90,9 +94,10 @@ export const BULGE_TO_TOTAL_LIGHT_V = bulgeToTotalLight(
 );
 
 /**
- * Integrated (B−V) of the Galaxy, Bland-Hawthorn & Gerhard 2016 Table 2 —
- * the same table and the same MW-analogue analysis
- * (Licquia, Newman & Brinchmann 2015) behind `GALAXY_TOTAL_ABSMAG_V`, so
+ * Integrated (B−V) of the Galaxy, Bland-Hawthorn & Gerhard 2016
+ * (/data/papers/index.md#blandhawthorn2016) Table 2 — the same table and
+ * the same MW-analogue analysis (Licquia, Newman & Brinchmann 2015,
+ * /data/papers/index.md#licquia2015b) behind `GALAXY_TOTAL_ABSMAG_V`, so
  * the layer's luminosity and its colour come from one system.
  *
  * BHG16 flags a ~0.1 mag inconsistency between its magnitudes and its
@@ -103,7 +108,8 @@ export const GALAXY_TOTAL_COLOUR_INDEX_BV = 0.73;
 
 /**
  * (B−V) of the Galactic bulge population. The old metal-rich SSP, taken
- * from the same BC03 row as `BULGE_ML_V`.
+ * from the same BC03 (/data/papers/index.md#bruzual2003) row as
+ * `BULGE_ML_V`.
  */
 export const BULGE_COLOUR_INDEX_BV = OLD_SPHEROID_COLOUR_INDEX_BV;
 
@@ -126,15 +132,16 @@ export const DISC_COLOUR_INDEX_BV = discColourIndex(
 );
 
 /**
- * Integrated starlight at 0.55 µm from Leinert et al. 1998, A&AS 127, 1
- * (DOI 10.1051/aas:1998105) Table 24, converted to V mag/arcsec².
+ * Integrated starlight at 0.55 µm from Leinert et al. 1998
+ * (/data/papers/index.md#leinert1998) Table 24, converted to V mag/arcsec².
  *
  * λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the Galactic centre / the
  * NGP, against λF_λ = 1.9965e−8 W m⁻² for a V = 0 point source and
  * 1 arcsec² = 2.3504e−11 sr.
  *
- * These are **sky-model predictions** (Wainscoat et al. 1992) for TOTAL
- * starlight — every star, resolved or not.
+ * These are **sky-model predictions** (Wainscoat et al. 1992,
+ * /data/papers/index.md#wainscoat1992) for TOTAL starlight — every star,
+ * resolved or not.
  */
 export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
   galacticCentre: 22.92,
@@ -181,8 +188,9 @@ if (ngpResidual === null) {
 
 /**
  * What is left at the NGP after the star field's own contribution comes
- * off Leinert's total — a **check** on the emissivity, not its anchor:
- * the model is solved against the Galaxy's total luminosity above, and
+ * off Leinert's (/data/papers/index.md#leinert1998) total — a **check** on
+ * the emissivity, not its anchor: the model is solved against the Galaxy's
+ * total luminosity above, and
  * the two do not agree (README.md#two-checks-and-both-disagree-by-the-same-sign-and-order).
  *
  * The NGP is the only sightline where the two inputs are commensurable.

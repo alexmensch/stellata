@@ -161,8 +161,9 @@ export const PLUTO_ROTATION: RotationElements = {
   mapCenterLonDeg: 180,
 };
 
-// The 18 major moons — same IAU WG 2015 linear terms as the planets
-// (sub-degree periodic librations dropped; ../README.md#planet-rotation).
+// The 18 major moons — same IAU WG 2015 (Archinal et al. 2018,
+// /data/papers/index.md#archinal2018) linear terms as the planets (sub-degree
+// periodic librations dropped; ../README.md#planet-rotation).
 // Every entry is tidally locked, so |wDegPerDay| equals the
 // orbital mean motion 360/periodDays (rotation-elements-pure.test.ts
 // pins the parity against MOON_ELEMENTS). mapCenterLonDeg matches each
