@@ -12,8 +12,10 @@ read from ([What a page number means](README.md#version-decides-what-a-page-numb
 or why none is held. **Identification** appears only when the work is not
 plainly identified: `book`, `ambiguous` (the tree's wording fits several works,
 listed), `mismatch` (the work exists but does not carry the claim credited to
-it) or `not_found`. The claims table holds what the tree takes from the work;
-a row reads `unverified` until its value is checked against a page of the copy.
+it) or `not_found`. A **Note** records what identification found beside that:
+an erratum, a near-namesake, a value the abstract gives differently. The
+claims table holds what the tree takes from the work; a row reads
+`unverified` until its value is checked against a page of the copy.
 
 ## Entries
 
@@ -78,6 +80,7 @@ A&A 621, A42 (2019) · [doi:10.1051/0004-6361/201832725](https://doi.org/10.1051
 ApJS 44, 73 (1980) · [doi:10.1086/190685](https://doi.org/10.1086/190685) · [1980ApJS...44...73B](https://ui.adsabs.harvard.edu/abs/1980ApJS...44...73B)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** M_V=-20.5 not verified against text
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -210,6 +213,7 @@ ApJ 345, 245 · [doi:10.1086/167900](https://doi.org/10.1086/167900)
 MNRAS 479, L102-L107 (2018) · [doi:10.1093/mnrasl/sly104](https://doi.org/10.1093/mnrasl/sly104) · [arXiv:1806.01953](https://arxiv.org/abs/1806.01953) · [2018MNRAS.479L.102C](https://ui.adsabs.harvard.edu/abs/2018MNRAS.479L.102C)
 
 - **Copy:** `submittedVersion`
+- **Note:** Same authors also have 2018 MNRAS 475, 5023 (Synthetic photometry II); the Gaia-colour letter is the one carrying BP-RP of the Sun
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -221,6 +225,7 @@ MNRAS 479, L102-L107 (2018) · [doi:10.1093/mnrasl/sly104](https://doi.org/10.10
 ApJ 690, 496-511 (2009) · [doi:10.1088/0004-637X/690/1/496](https://doi.org/10.1088/0004-637X/690/1/496) · [arXiv:0809.1106](https://arxiv.org/abs/0809.1106) · [2009ApJ...690..496C](https://ui.adsabs.harvard.edu/abs/2009ApJ...690..496C)
 
 - **Copy:** `submittedVersion`
+- **Note:** Crossref issued-date 2008 (online); print 2009
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -232,6 +237,7 @@ ApJ 690, 496-511 (2009) · [doi:10.1088/0004-637X/690/1/496](https://doi.org/10.
 A&A 359, 601 (2000) · [arXiv:astro-ph/0003223](https://arxiv.org/abs/astro-ph/0003223) · [2000A&A...359..601C](https://ui.adsabs.harvard.edu/abs/2000A%26A...359..601C)
 
 - **Copy:** `submittedVersion`
+- **Note:** No DOI (A&A 2000)
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -332,6 +338,7 @@ VizieR II/246 · [2003yCat.2246....0C](https://ui.adsabs.harvard.edu/abs/2003yCa
 Icarus 226, 591-603 (2013) · [doi:10.1016/j.icarus.2013.01.015](https://doi.org/10.1016/j.icarus.2013.01.015) · [2013Icar..226..591D](https://ui.adsabs.harvard.edu/abs/2013Icar..226..591D)
 
 - **Copy:** `acceptedVersion`
+- **Note:** HWHM 0.20 deg not verified in text; Paper 2 is Icarus 253 (2015)
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -490,6 +497,7 @@ ESA SP-1200 · [1997HIP...C......0E](https://ui.adsabs.harvard.edu/abs/1997HIP..
 NASA Goddard Space Flight Center Technical Publications
 
 - **Copy:** `publishedVersion` — Text volume only; the eclipse map plates are separate PDFs
+- **Note:** Carries the Delta-T polynomial set
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -501,6 +509,7 @@ NASA Goddard Space Flight Center Technical Publications
 NASA Goddard Space Flight Center Technical Publications
 
 - **Copy:** `publishedVersion`
+- **Note:** Carries the eclipse rows, including the per-event Delta-T
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -567,6 +576,7 @@ ApJ 763, 51 (2013) · [doi:10.1088/0004-637X/763/1/51](https://doi.org/10.1088/0
 A&A 4, 234 (1970) · [1970A&A.....4..234F](https://ui.adsabs.harvard.edu/abs/1970A%26A.....4..234F)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** No DOI; title from standard usage, not network-verified
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -589,6 +599,7 @@ MNRAS 372, 1149 · [doi:10.1111/j.1365-2966.2006.10911.x](https://doi.org/10.111
 ApJ 160, 811 (1970) · [doi:10.1086/150474](https://doi.org/10.1086/150474) · [1970ApJ...160..811F](https://ui.adsabs.harvard.edu/abs/1970ApJ...160..811F)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** Erratum ApJ 161, 802 (10.1086/150583)
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -622,6 +633,7 @@ Icarus 67, 134 (bibcode in URL) · [1986Icar...67..134F](https://ui.adsabs.harva
 In Uranus (Bergstralh, Miner & Matthews eds), Univ. of Arizona Press (1991), pp. 327-409 · [doi:10.2307/j.ctv1v7zdtq.13](https://doi.org/10.2307/j.ctv1v7zdtq.13)
 
 - **Copy:** unobtainable — University of Arizona Press 1991 chapter; no digital or print copy reachable. rings-uranus.tsv radii match french1988 Tables XIV-XV to 1 km and esposito2002 Table 1 exactly. Its widths appear in neither; its optical depths match neither french1986 nor esposito2002 (lambda: tsv 0.15, esposito2002 1e-3)
+- **Note:** CSL authors: French, Nicholson, Porco, Marouf. Tree's 'French, Nicholson, Porco & Elliot' has the wrong fourth author (Marouf, not Elliot); bibcode 1991uran.book..327F did not resolve via ADS link gateway (may be valid but lacks a full-text link)
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -767,6 +779,7 @@ AJ 126, 2048-2059 (2003) · [doi:10.1086/378365](https://doi.org/10.1086/378365)
 Science 341, 1489-1492 (2013) · [doi:10.1126/science.1241681](https://doi.org/10.1126/science.1241681) · [2013Sci...341.1489G](https://ui.adsabs.harvard.edu/abs/2013Sci...341.1489G)
 
 - **Copy:** `publishedVersion`
+- **Note:** Authors are Gurnett, Kurth, Burlaga & Ness, not 'Gurnett & Kurth'
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -924,6 +937,7 @@ MNRAS 352, 318-324 (2004) · [doi:10.1111/j.1365-2966.2004.07928.x](https://doi.
 MNRAS 527, 11521-11538 (2024) · [doi:10.1093/mnras/stad3761](https://doi.org/10.1093/mnras/stad3761) · [2024MNRAS.52711521I](https://ui.adsabs.harvard.edu/abs/2024MNRAS.52711521I)
 
 - **Copy:** `publishedVersion`
+- **Note:** Correction: 10.1093/mnras/stae304
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1068,6 +1082,7 @@ A&A 625, A135 (2019) · [doi:10.1051/0004-6361/201834695](https://doi.org/10.105
 A&A 157, 59-70 (1986) · [1986A&A...157...59L](https://ui.adsabs.harvard.edu/abs/1986A%26A...157...59L)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** No DOI; title not network-verified
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1145,6 +1160,7 @@ ApJ 809, 96 (2015) · [doi:10.1088/0004-637X/809/1/96](https://doi.org/10.1088/0
 A&A 73, 282-284 (1979) · [1979A&A....73..282L](https://ui.adsabs.harvard.edu/abs/1979A%26A....73..282L)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** No DOI; the defining IAU 1976 precession paper is Lieske et al. 1977 A&A 58, 1 — tree's 'Lieske 1979' is the matrix paper, fine for the rotation; title not network-verified
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1211,6 +1227,7 @@ Icarus 282, 19-33 · [doi:10.1016/j.icarus.2016.09.023](https://doi.org/10.1016/
 Astronomy and Computing 25, 10-24 (2018) · [doi:10.1016/j.ascom.2018.08.002](https://doi.org/10.1016/j.ascom.2018.08.002) · [2018A&C....25...10M](https://ui.adsabs.harvard.edu/abs/2018A%26C....25...10M)
 
 - **Copy:** `submittedVersion`
+- **Note:** Equation numbers (10, 12) not verified
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1287,6 +1304,7 @@ ApJ 868, 55 · [doi:10.3847/1538-4357/aae8e7](https://doi.org/10.3847/1538-4357/
 MNRAS 465, 76-94 (2017) · [doi:10.1093/mnras/stw2759](https://doi.org/10.1093/mnras/stw2759) · [arXiv:1608.00971](https://arxiv.org/abs/1608.00971) · [2017MNRAS.465...76M](https://ui.adsabs.harvard.edu/abs/2017MNRAS.465...76M)
 
 - **Copy:** `submittedVersion`
+- **Note:** No year in tree; R0 ~8.2 selects McMillan 2017 over McMillan 2011 (MNRAS 414, 2446, R0=8.29)
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1343,6 +1361,7 @@ A&A 674, A33 · [doi:10.1051/0004-6361/202243880](https://doi.org/10.1051/0004-6
 J. Hist. Astron. 35, 327-336 (2004) · [doi:10.1177/002182860403500305](https://doi.org/10.1177/002182860403500305) · [2004JHA....35..327M](https://ui.adsabs.harvard.edu/abs/2004JHA....35..327M)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** No year in tree; add 2004 (addendum JHA 36, 339, 2005)
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1432,6 +1451,7 @@ MNRAS 288, 145-152 (1997) · [doi:10.1093/mnras/288.1.145](https://doi.org/10.10
 ApJS 208, 9 (2013) · [doi:10.1088/0067-0049/208/1/9](https://doi.org/10.1088/0067-0049/208/1/9) · [arXiv:1307.2657](https://arxiv.org/abs/1307.2657) · [2013ApJS..208....9P](https://ui.adsabs.harvard.edu/abs/2013ApJS..208....9P)
 
 - **Copy:** `submittedVersion`
+- **Note:** Table 5 of PM13 is the main-sequence dwarf table; the mass/radius columns are in the online 'modern mean dwarf' extension maintained by Mamajek — worth checking which one the values came from
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1454,6 +1474,7 @@ Nature 567, 200 · [doi:10.1038/s41586-019-0999-4](https://doi.org/10.1038/s4158
 A&A 562, A91 (2014) · [doi:10.1051/0004-6361/201322531](https://doi.org/10.1051/0004-6361/201322531) · [arXiv:1309.4293](https://arxiv.org/abs/1309.4293) · [2014A&A...562A..91P](https://ui.adsabs.harvard.edu/abs/2014A%26A...562A..91P)
 
 - **Copy:** `submittedVersion`
+- **Note:** Abstract value is 533 (+54/-41) km/s, not ~550; tree's '~550' is loose
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1500,6 +1521,7 @@ A&A 586, A90 (2016) · [doi:10.1051/0004-6361/201527859](https://doi.org/10.1051
 A&A 321, 111 (1997) · [1997A&A...321..111P](https://ui.adsabs.harvard.edu/abs/1997A%26A...321..111P)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** Tree cites without year; title from standard usage, not network-verified
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1679,6 +1701,7 @@ ApJ 269, 253 (1983) · [doi:10.1086/161036](https://doi.org/10.1086/161036) · [
 J. Atmos. Sci. 59, 501-523 (2002) · [doi:10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2](https://doi.org/10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2)
 
 - **Copy:** `publishedVersion`
+- **Note:** Same-year Smirnov et al. Persian Gulf paper (J. Atmos. Sci. 59, 620) exists; the maritime one matches the claim
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1813,6 +1836,7 @@ ApJS 235, 6 · [doi:10.3847/1538-4365/aaa1a5](https://doi.org/10.3847/1538-4365/
 Planet. Space Sci. 56, 669-707 (2008) · [doi:10.1016/j.pss.2007.11.019](https://doi.org/10.1016/j.pss.2007.11.019) · [2008P&SS...56..669T](https://ui.adsabs.harvard.edu/abs/2008P%26SS...56..669T)
 
 - **Copy:** `publishedVersion`
+- **Note:** Tomasko et al. also have 2008 PSS 56, 624 (heat balance, DISR). If the 'ground light' claim is from the heat-balance paper it would need that one; haze tau matches this aerosol paper
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1879,6 +1903,7 @@ A&A 674, A1 · [doi:10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-63
 A&A 157, 230 (1986) · [1986A&A...157..230V](https://ui.adsabs.harvard.edu/abs/1986A%26A...157..230V)
 
 - **Copy:** `ADS scan of published article`
+- **Note:** No DOI; title and the M_B=-20.3 value not network-verified
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|
@@ -1934,6 +1959,7 @@ ApJ 423, 681 (1994) · [doi:10.1086/173847](https://doi.org/10.1086/173847) · [
 A&A 534, A22 (2011) · [doi:10.1051/0004-6361/201117274](https://doi.org/10.1051/0004-6361/201117274) · [2011A&A...534A..22V](https://ui.adsabs.harvard.edu/abs/2011A%26A...534A..22V)
 
 - **Copy:** `publishedVersion`
+- **Note:** Corrigendum A&A 541, C1 (2012)
 
 | Claim | Value | Page | Passage |
 |---|---|---|---|

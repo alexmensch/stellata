@@ -71,8 +71,6 @@ export const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html
 const UNSCANNED = [
   // Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
   'data/sid/retirements.tsv',
-  // Quotes tree lines verbatim, pointers included, as evidence of where a paper is cited.
-  'data/papers/inventory.json',
 ];
 export const kindOf = (name: string): string => extname(name) || basename(name);
 
