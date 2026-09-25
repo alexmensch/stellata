@@ -64,11 +64,11 @@ identity. The authoritative source per identifier:
 |---|---|---|---|---|
 | Tycho-2→DR3 cross-walk | `gaiadr3.tycho2tdsc_merge_best_neighbour` | 2,518,330 (in-tree) | TYC → `gaia_source_id` | already `data/gaia/gaia_dr3_tyc_xmatch.tsv` |
 | HIP→DR3 cross-walk | `gaiadr3.hipparcos2_best_neighbour` | 99,525 (in-tree) | HIP → `gaia_source_id` | already `data/gaia/gaia_dr3_hip_xmatch.tsv` |
-| Tycho-2 HD identifications | `IV/25/tyc2_hd` | 353,527 | HD ↔ TYC (with `n_HD`/`n_TYC` ambiguity flags) | Fabricius, Makarov, Knude & Wycoff 2002, A&A 386, 709 |
-| Cross index | `IV/27A/catalog` | 3,690 | Bayer + Flamsteed ↔ HD/HIP | Kostjuk N.D. 2002, VizieR IV/27A |
-| Bright Star Catalogue 5th rev. | `V/50/catalog` | 9,110 (9,096 with HD) | HR ↔ HD | Hoffleit & Warren 1991 |
-| CNS5 | `J/A+A/670/A19/cns5` | 5,909 (corrected 2023-12-13) | GJ ↔ Gaia EDR3 source_id ↔ HIP, component letters | Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023, A&A 670, A19 |
-| Hipparcos main (V slice) | `I/239/hip_main` | 118,218 | printed Johnson V (`Vmag`) for the bright/printed tier | ESA 1997, SP-1200 |
+| Tycho-2 HD identifications | `IV/25/tyc2_hd` | 353,527 | HD ↔ TYC (with `n_HD`/`n_TYC` ambiguity flags) | [Fabricius, Makarov, Knude & Wycoff 2002](/data/papers/index.md#fabricius2002a) |
+| Cross index | `IV/27A/catalog` | 3,690 | Bayer + Flamsteed ↔ HD/HIP | [Kostjuk N.D. 2002](/data/papers/index.md#kostjuk2002) |
+| Bright Star Catalogue 5th rev. | `V/50/catalog` | 9,110 (9,096 with HD) | HR ↔ HD | [Hoffleit & Warren 1991](/data/papers/index.md#hoffleit1991) |
+| CNS5 | `J/A+A/670/A19/cns5` | 5,909 (corrected 2023-12-13) | GJ ↔ Gaia EDR3 source_id ↔ HIP, component letters | [Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023](/data/papers/index.md#golovin2023) |
+| Hipparcos main (V slice) | `I/239/hip_main` | 118,218 | printed Johnson V (`Vmag`) for the bright/printed tier | [ESA 1997](/data/papers/index.md#esa1997) |
 
 Caveats verified at the gate:
 
@@ -275,7 +275,7 @@ is 63,676 records, and that paragraph reconciles the two. IV/25 numbers
 **60,344** Tycho-2 stars no
 spine row carries (a further 394 HD numbers, on 393 TYCs, land on existing
 records). AT-HYG's version notes take HD "from HYG if known, otherwise
-Tycho-2" through the Fabricius 2002 link table — IV/25 itself — yet of its
+Tycho-2" through the [Fabricius 2002](/data/papers/index.md#fabricius2002a) link table — IV/25 itself — yet of its
 Tycho-2-sourced HD rows 198,130 carry a six-digit number and **74** a shorter
 one, against 53,956 / 44,899 for its HYG-sourced rows. AT-HYG publishes no
 per-row HD provenance, so that split reads "descends from HYG" off the `hyg`
@@ -611,7 +611,7 @@ being retired; the tier after each is its replacement:
 | direction / xyz | SHIPPED — Gaia DR3 5p → HIP2 → Tycho-2 position, PM-propagated to J2016 from its per-star, per-coordinate mean epochs (record's own TYC) → CNS5 astrometry, from the row's own `pos_epoch` (GJ) → SIMBAD coordinates (bibcoded, J2000) → curated (Sol) |
 | space-motion velocity | SHIPPED — PM from whichever tier direction selected (Gaia / HIP2 / Tycho-2 / CNS5 / SIMBAD) + rv; where that tier states a position but no PM, a designation-keyed rescue cascade (Tycho-2 by TYC → CNS5 by GJ → bibcoded SIMBAD, Gaia-bibcode skip rule below) supplies the tangential term, and carries that tier's position to J2016.0 as well so the two read one motion; zero where that too finds nothing |
 | distance | SHIPPED — B-J posterior → LMC kinematic → DR3 parallax inversion (in-tree pull) → HIP2 parallax (own HIP, above an S/N floor) → CNS5 parallax → Gliese `V/70A` printed trigonometric parallax → SIMBAD `plx_value` (bibcoded) → a bound sibling's clean DR3 parallax → curated (Sol); no owned parallax is a [§ 6](#6-parity--the-gate-on-any-membership-change) ledger drop — ~~spine printed~~ |
-| V magnitude | SHIPPED — Riello+ 2021 transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) (SP-1200) → Gliese `V/70A` printed `Vmag` → curated (Sol). **No SIMBAD flux tier**: Gliese reaches every row Tycho-2 misses, and SIMBAD publishes no `V` flux at all for the nine it would have been asked for |
+| V magnitude | SHIPPED — [Riello+ 2021](/data/papers/index.md#riello2021) transform V = G − f(BP−RP) inside validity → printed HIP V (`I/239` Vmag) → Tycho-2 V = VT − 0.090(BT−VT) ([ESA 1997](/data/papers/index.md#esa1997)) → Gliese `V/70A` printed `Vmag` → curated (Sol). **No SIMBAD flux tier**: Gliese reaches every row Tycho-2 misses, and SIMBAD publishes no `V` flux at all for the nine it would have been asked for |
 | absmag | always derived from (V, distance) + build-time de-extinction — one code path, no tabulated absmag |
 | ci (B−V) | Gaia Table-5.9 relation, BP−RP ≤ 1.75 → printed `I/239` B−V (HIP) → GSPC synthetic B−V (BP−RP ≤ 3.0, a **measured** bound — see the ci bullet) → intrinsic spectral-class colour → solar — ~~spine `ci`~~ |
 | spectral string | SIMBAD sp_type (in-tree; request set keyed source_id → HIP → TYC) → unknown — ~~spine `spect` display fallback~~ |
@@ -626,12 +626,12 @@ which were reproduced from the pinned counts before probing):
 
 | Source | Id | Supplies | Citation |
 |---|---|---|---|
-| Gaia DR3 synthetic photometry (GSPC) | `gaiadr3.synthetic_photometry_gspc` / `I/360` | Johnson-Kron-Cousins B, V per `source_id` (+ fluxes, flux errors, per-band validated-range flags) — SHIPPED `data/gaia/gaia_dr3_gspc.tsv` | Gaia Collaboration, Montegriffo et al. 2023, A&A 674, A33 |
-| Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | positions (per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | Høg et al. 2000, A&A 355, L27 |
-| Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | ESA 1997, SP-1200 |
-| CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | Golovin et al. 2023, A&A 670, A19 |
-| SIMBAD values pull | `basic` + `flux` | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → TYC → GJ, with a corroborated widening ladder over the source_ids that namespace misses | Wenger et al. 2000, A&AS 143, 9 |
-| Gliese third catalogue of nearby stars | `V/70A/catalog` (whole table) | printed Johnson V (+ B−V, spectral type, parallax, rv) — SHIPPED `data/gliese/gliese_v70a.tsv`; the first-order source behind every `mag_src=GJ` cell | Gliese & Jahreiss 1991, CDS `V/70A` |
+| Gaia DR3 synthetic photometry (GSPC) | `gaiadr3.synthetic_photometry_gspc` / `I/360` | Johnson-Kron-Cousins B, V per `source_id` (+ fluxes, flux errors, per-band validated-range flags) — SHIPPED `data/gaia/gaia_dr3_gspc.tsv` | [Gaia Collaboration, Montegriffo et al. 2023](/data/papers/index.md#montegriffo2023) |
+| Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | positions (per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | [Høg et al. 2000](/data/papers/index.md#hog2000) |
+| Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | [ESA 1997](/data/papers/index.md#esa1997) |
+| CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | [Golovin et al. 2023](/data/papers/index.md#golovin2023) |
+| SIMBAD values pull | `basic` + `flux` | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → TYC → GJ, with a corroborated widening ladder over the source_ids that namespace misses | [Wenger et al. 2000](/data/papers/index.md#wenger2000) |
+| Gliese third catalogue of nearby stars | `V/70A/catalog` (whole table) | printed Johnson V (+ B−V, spectral type, parallax, rv) — SHIPPED `data/gliese/gliese_v70a.tsv`; the first-order source behind every `mag_src=GJ` cell | [Gliese & Jahreiss 1991](/data/papers/index.md#gliese1991), CDS `V/70A` |
 
 Measured exposure and expected coverage (2026-08-14; pins in
 `build-catalog-expected.json` unless noted):
@@ -643,7 +643,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   `spectral_derived` **279** · `solar_fallback` **1,525** — a 1,804-row
   derived residual against the ≈1.0–1.5k this section projected, and the
   right colour family since it is M-class dominated. **No Tycho BT−VT ci
-  tier**: the SP-1200 colour transform's validity ends near BT−VT ≈ 1.8,
+  tier**: the [ESA 1997](/data/papers/index.md#esa1997) colour transform's validity ends near BT−VT ≈ 1.8,
   exactly this population — adopting it would rebuild the out-of-validity
   transform the printed cell embeds. Extending the Table-5.9 relation past
   1.75 is equally inadmissible: note (k) publishes that range **for M
@@ -656,7 +656,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   1. *"GSPC reaches ≈90% of the red rows"* measured GSPC **row presence**
      (91.0% of the request set), not validity. The per-band flag reads
      `1` for in-range, not `0` — the archive publishes no polarity;
-     Montegriffo+ 2023 Sect. 6.2 does, and the numeric region was measured.
+     [Montegriffo+ 2023](/data/papers/index.md#montegriffo2023) Sect. 6.2 does, and the numeric region was measured.
      It does not intersect the red rows on a single row of this
      catalogue, which is bright enough that 96% of it sits below the
      flag's bright bound. A flag-valid gate would have shipped the tier
@@ -665,7 +665,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
      BELOW printed `I/239` B−V rather than above it, and carries a
      measured red bound of BP−RP 3.0. This is not the extrapolation the
      paragraph above rejects twice: GSPC integrates each star's own
-     BP/RP spectrum through the passband, and Montegriffo+ 2023 Sect. 6.2 calls a flag-0
+     BP/RP spectrum through the passband, and [Montegriffo+ 2023](/data/papers/index.md#montegriffo2023) Sect. 6.2 calls a flag-0
      magnitude an extrapolation of the *standardisation* — the
      ground-tying correction — not of the integration. Out-of-flag
      values agree with the Table-5.9 relation as closely as in-flag ones
@@ -720,7 +720,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
      Retiring the printed cell therefore costs no record and moves no
      value. Detail: `data/gliese/README.md`.
 
-  The Tycho-2 tier applies SP-1200's `V = VT − 0.090(BT−VT)` **ungated**,
+  The Tycho-2 tier applies the [ESA 1997](/data/papers/index.md#esa1997) `V = VT − 0.090(BT−VT)` **ungated**,
   and `vTycho2OutsideBtVtRange` pins the **5** rows outside the published
   `BT−VT` ∈ [−0.25, 2.0] (four red to 2.69, one blue at −0.282), where the
   linear form runs ~0.19–0.24 mag bright. Gating there would not hand those
@@ -851,7 +851,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   refuses a parked record, and the tier supplies an owned distance where
   a bound sibling carries a clean DR3 fit: σ Ori ships at HIP 26551 D's
   404.1 ± 10.2 pc, against a dynamical parallax of 387.5 ± 1.3 pc
-  (Schaefer+ 2016) agreeing at 1.62 σ. Of the 44 parked rows multiples.tsv
+  ([Schaefer+ 2016](/data/papers/index.md#schaefer2016)) agreeing at 1.62 σ. Of the 44 parked rows multiples.tsv
   covers, 15 have a sibling carrying its own source_id and 8 rescue; the
   other 7 have a sibling the anchor gate refuses on RUWE or a blended
   image. The astrometry request was widened to cover those siblings — they
@@ -917,7 +917,7 @@ Rules:
   implementation.
 - **Bright tier** = rows the direction cascade already routes to
   HIP2/printed, plus rows whose Gaia photometry is missing or outside
-  the Riello validity range: printed `I/239` V applies. The validity
+  the [Riello](/data/papers/index.md#riello2021) validity range: printed `I/239` V applies. The validity
   bound is a build-time calibration pinned in build-counts with
   per-tier routing counts (same discipline as the direction cascade).
 - **No-Gaia tier** = empty-`gaia_source_id` spine rows: every cascade
@@ -954,7 +954,7 @@ Rules:
   ([The values pull](/data/simbad/README.md#the-values-pull)) — a cost the V cascade no
   longer pays either way, since Gliese `V/70A` reaches that whole cohort
   first-hand and the cascade has no SIMBAD flux tier.
-- Photometric transforms cite **Riello et al. 2021, A&A 649, A3**
+- Photometric transforms cite **[Riello et al. 2021](/data/papers/index.md#riello2021)**
   (Gaia EDR3 photometry; Table C.2 relations). The ci relation chain
   was left to implementation, against the parity distribution; the
   contract here is the fallback ladder and the acceptance mechanism (a
@@ -969,7 +969,7 @@ Rules:
   tiers stay intrinsic.
 - **The designation constellation is keyed on the DESIGNATION, not on
   `gaia_source_id`.** A Bayer or Flamsteed name is fixed by nomenclature — it
-  predates the 1930 Delporte boundaries and does not migrate when proper motion
+  predates the 1930 [Delporte](/data/papers/index.md#delporte1930) boundaries and does not migrate when proper motion
   carries the star across one — so no positional or per-record editorial cell
   may supply it. IV/27A keyed on the record's own HD/HIP is the source: a
   designation → designation cross index asserts no binding to a Gaia source, so

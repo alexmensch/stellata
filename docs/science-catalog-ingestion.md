@@ -1,6 +1,6 @@
 # Stellar catalog ingestion
 
-Covers the AT-HYG/Gaia/Hipparcos merge, the Bailer-Jones and
+Covers the AT-HYG/Gaia/Hipparcos merge, the [Bailer-Jones](/data/papers/index.md#bailerjones2021) and
 LMC-kinematic distance overrides, driver-astrometry precision, and
 current-epoch space-motion propagation. Spans `scripts/catalog/`, `data/athyg/`,
 `data/gaia/`, `data/bailer-jones/`. See `SCIENCE.md` for scope
@@ -23,7 +23,7 @@ document deliberately carries none of that.
 
 What that means for reading the rest of this file:
 
-- **Still current.** The distance stack (Bailer-Jones → LMC kinematic →
+- **Still current.** The distance stack ([Bailer-Jones](/data/papers/index.md#bailerjones2021) → LMC kinematic →
   bounded-scope cutoff), the direction cascade, Apsis parameters, and
   space-motion propagation are all driver-independent — they key on
   `gaia_source_id`, and the swap does not touch them. That is why the
@@ -91,7 +91,7 @@ manifest row leaves without a record in one of two ways
 
 That distance cutoff is a **bounded-scope statement about which populations
 the model represents**, not a primary include/exclude filter. It is positioned
-just past the LMC distance (49.59 kpc, Pietrzyński et al. 2019) because the
+just past the LMC distance (49.59 kpc, [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019)) because the
 stellar populations currently modelled reach from Sol out to and including the
 LMC. Stars beyond LMC depth are unmodelled extragalactic by construction; SMC,
 Sgr dSph, and M31 supergiants would be candidates for future modelled
@@ -115,7 +115,7 @@ and Apsis-direct stellar parameters) key off.
 <a id="multi-layer-distance-refinement"></a>**Multi-layer distance refinement.** Three overrides run in fixed order
 on every AT-HYG row before the bounded-scope cutoff above fires:
 
-1. **Bailer-Jones (2021) Bayesian posterior** — replaces the catastrophic
+1. **[Bailer-Jones (2021)](/data/papers/index.md#bailerjones2021) Bayesian posterior** — replaces the catastrophic
    1/π Gaia inverse-parallax estimator for AT-HYG rows whose distance
    was sourced from Gaia DR3 (or DR2) parallax. Targets the noisy
    regime that hosts the brightest, most luminous, longest-baseline
@@ -124,7 +124,7 @@ on every AT-HYG row before the bounded-scope cutoff above fires:
    order of magnitude.
 2. **LMC kinematic override** — replaces B-J's mis-anchored posterior
    for stars in the LMC field, using a sky-cone + bulk-PM
-   identification pinned to Pietrzyński et al. (2019)'s eclipsing-
+   identification pinned to [Pietrzyński et al. (2019)](/data/papers/index.md#pietrzynski2019)'s eclipsing-
    binary distance to the LMC's centre of mass. Motion alone is not
    membership: a star whose own parallax sits more than 10σ above the
    LMC's ~0.02 mas is a foreground star sharing the Cloud's apparent
@@ -132,7 +132,7 @@ on every AT-HYG row before the bounded-scope cutoff above fires:
 3. **Bounded-scope cutoff** at 50,000 pc — drops rows still beyond LMC
    depth as unmodelled extragalactic per the framing above.
 
-Ordering is non-commutative. Bailer-Jones runs first because its
+Ordering is non-commutative. [Bailer-Jones](/data/papers/index.md#bailerjones2021) runs first because its
 posterior is well-calibrated everywhere the Galactic-density prior is
 valid; the LMC kinematic layer runs second so it can override B-J on
 the ~110 rows where B-J's smooth prior fails (B-J has no LMC).
@@ -146,28 +146,26 @@ kinematic layer (same sky-cone + bulk-PM identification pattern and
 parallax-consistency veto, distinct anchor distances) and bump the
 cutoff as each new modelled population enters scope.
 
-**Bailer-Jones DR3 distance override (Layer 1).** AT-HYG's `dist` for
+**[Bailer-Jones](/data/papers/index.md#bailerjones2021) DR3 distance override (Layer 1).** AT-HYG's `dist` for
 the ~98% G_R3 majority is Gaia DR3's naive `1 / π` parallax inversion —
 unbiased only when parallax S/N is high. For low-S/N parallaxes (the
 distant luminous stars that dominate the visual scene's outer
 volume) the inverse-parallax estimator catastrophically fails:
 its sampling distribution has a long tail to large distances, and a
 handful of supergiants end up at 9–14 kpc instead of their true
-2–5 kpc. Bailer-Jones et al. 2021 (*AJ* 161, 147,
-DOI 10.3847/1538-3881/abd806; CDS I/352) publishes Bayesian distance
-posteriors for every Gaia DR3 source that combine the parallax
-likelihood with a Galactic-density prior; the photogeometric variant
-additionally combines the prior with G and BP–RP photometry. The
-parallax-zero-point bias documented in Lindegren et al. 2021
-(*A&A* 649, A4, DOI 10.1051/0004-6361/202039653) is applied upstream
-in B-J's own pipeline, so we consume the posteriors directly without
+2–5 kpc. [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) (CDS I/352)
+publishes Bayesian distance posteriors for every Gaia DR3 source that
+combine the parallax likelihood with a Galactic-density prior; the
+photogeometric variant additionally combines the prior with G and BP–RP
+photometry. The parallax-zero-point bias documented in
+[Lindegren et al. 2021](/data/papers/index.md#lindegren2021) is applied upstream in B-J's own pipeline, so we consume the posteriors directly without
 applying a separate correction. At high S/N the posterior collapses
 onto the likelihood (well-measured stars don't move); at low S/N it
 collapses onto the prior (catastrophic outliers get pulled back to
 plausible disc distances). This is the principled fix and we apply it where
 the underlying distance actually is a Gaia inverse-parallax estimate
 — i.e. AT-HYG rows whose `dist_src` is `G_R3` or `G_R2`. For those
-rows we take the Bailer-Jones distance (photogeometric `r_med_photogeo`
+rows we take the [Bailer-Jones](/data/papers/index.md#bailerjones2021) distance (photogeometric `r_med_photogeo`
 preferred, geometric `r_med_geo` as fallback when photogeo is absent);
 position follows as the direction-cascade unit vector × the new distance
 ([Driver astrometry](#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)). Brightness needs no separate correction here:
@@ -187,14 +185,14 @@ B-J's posterior collapses onto its Galactic-density prior tail at
 10–40 kpc and pushes a well-known nearby star out by 1–2 orders of
 magnitude. The override fires for ~99.5% of Gaia-inverse-distanced
 AT-HYG rows; the residual 0.5% are source_ids absent from the
-Bailer-Jones publication and keep their AT-HYG values. The override
+[Bailer-Jones](/data/papers/index.md#bailerjones2021) publication and keep their AT-HYG values. The override
 also rescues ~15 stars previously dropped at filter (3): catastrophic
 parallax inversions whose Bayesian distance is < 50 kpc.
 
 **The override is at its DR3 ceiling — don't re-probe.** A 2026-05
 audit walked every identifier chain for the residual: of the AT-HYG
 rows with a source_id but no B-J posterior (~1.6k), the HIP-consistent
-subset are genuine DR3 sources that Bailer-Jones simply didn't publish
+subset are genuine DR3 sources that [Bailer-Jones](/data/papers/index.md#bailerjones2021) simply didn't publish
 (2-parameter position-only solutions, or excluded by their quality
 filter), and none of the alternative source_ids recoverable through
 the HIP or Tycho-2 cross-walks appear in B-J either. The empty-`gaia`
@@ -207,13 +205,12 @@ republication, not with more cross-walk work.
 Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (365,980 rows,
 refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
-<a id="distance-override-validation-against-vaidman-et-al-2025"></a>**Distance-override validation against Vaidman et al. 2025.** Vaidman,
-Khokhlov, Miroshnichenko, Agishev & Yermekbayev 2025 (*Universe* 11, 359;
-DOI [10.3390/universe11110359](https://doi.org/10.3390/universe11110359))
+<a id="distance-override-validation-against-vaidman-et-al-2025"></a>**Distance-override validation against Vaidman et al. 2025.**
+[Vaidman, Khokhlov, Miroshnichenko, Agishev & Yermekbayev 2025](/data/papers/index.md#vaidman2025)
 publish a Bayesian recalculation of Gaia DR3 distances for 132 Galactic
-BA-type supergiants — exactly the failure-mode population the Bailer-Jones
+BA-type supergiants — exactly the failure-mode population the [Bailer-Jones](/data/papers/index.md#bailerjones2021)
 override above is designed to rescue. The paper's appendix tables list
-their adopted distance per star together with Bailer-Jones's
+their adopted distance per star together with [Bailer-Jones](/data/papers/index.md#bailerjones2021)'s
 `r_med_photogeo` (their direct comparand) and the parallax SNR each
 decision rode on, an independent third-party reference set we use to
 spot-check the override on a recurring basis.
@@ -224,28 +221,27 @@ SIMBAD name-resolution recipe in `data/distance-validation/README.md`);
 `scripts/distance-validation/validate-distances.py` runs the comparison
 end-to-end and reports the per-star fractional difference distribution
 (median, 84th-pct, and top-5 disagreements) against the override's
-Bailer-Jones input. The harness is built to re-run on every distance-
-source change — a DR4 Bailer-Jones refresh, a switch to StarHorse or a
+[Bailer-Jones](/data/papers/index.md#bailerjones2021) input. The harness is built to re-run on every distance-
+source change — a DR4 [Bailer-Jones](/data/papers/index.md#bailerjones2021) refresh, a switch to StarHorse or a
 B-J successor, or any change to `build-catalog.ts`'s distance-priority
 logic — so each migration gets a calibrated named-disagreements report
 rather than a "trust the diff" sign-off.
 
-**LMC kinematic distance refinement (Layer 2).** Bailer-Jones's
+**LMC kinematic distance refinement (Layer 2).** [Bailer-Jones](/data/papers/index.md#bailerjones2021)'s
 Galactic-density prior has no LMC — so for AT-HYG's ~60 LMC
 supergiants (HDE 268xxx range), the posterior peaks somewhere
 intermediate (5–20 kpc) instead of the LMC's true ~50 kpc. Without a
 second layer this regresses today's behaviour: a "line of stars
 between MW and LMC in the intergalactic void". After the B-J override
 fires we run a population-specific second pass: any row inside a 15°
-cone of the LMC's PM dynamical centre (RA 78.76°, Dec −69.19°; van
-der Marel & Kallivayalil 2014, *ApJ* 781, 121,
-DOI 10.1088/0004-637X/781/2/121) whose proper motion lies within
+cone of the LMC's PM dynamical centre (RA 78.76°, Dec −69.19°;
+[van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014)) whose proper motion lies within
 ±0.5 mas/yr of the gate centre (+1.85 mas/yr in RA, +0.20 mas/yr in
 Dec — a rounded working value near the same paper's centre-of-mass
 PM of μ_α* = 1.910 ± 0.020, μ_δ = 0.229 ± 0.047 mas/yr, well inside
 the tolerance) has its `dist` snapped to the LMC's eclipsing-binary distance
-(49.594 kpc, Pietrzyński et al. 2019, *Nature* 567, 200,
-DOI 10.1038/s41586-019-0999-4; CDS J/other/Natur/567.200), with
+(49.594 kpc, [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019); CDS
+J/other/Natur/567.200), with
 `absmag` recomputed from the new distance. ~54 rows are
 flagged at LMC depth each build — close to the ~60 estimated from the
 AT-HYG/Gaia source data. SMC, Sgr dSph, and other Magellanic-system
@@ -253,13 +249,12 @@ populations are too faint for AT-HYG's brightness cut today; the same
 approach will extend when DR4 lands or AT-HYG goes deeper.
 
 <a id="astrophysical-parameters-from-gaia-dr3-apsis"></a>**Astrophysical parameters from Gaia DR3 Apsis.** Apsis is Gaia DR3's
-astrophysical-parameters pipeline (Creevey et al. 2023, *A&A* 674,
-A26, DOI 10.1051/0004-6361/202243688). It publishes two independent
+astrophysical-parameters pipeline
+([Creevey et al. 2023](/data/papers/index.md#creevey2023)). It publishes two independent
 solutions per source: `gspphot` (photometric fit to BP/RP spectra +
-parallax — Andrae et al. 2023, *A&A* 674, A27,
-DOI 10.1051/0004-6361/202243462) and `gspspec` (spectroscopic fit to
-RVS spectra — Recio-Blanco et al. 2023, *A&A* 674, A29,
-DOI 10.1051/0004-6361/202243750). Each emits (T_eff, log g, [M/H]);
+parallax — [Andrae et al. 2023](/data/papers/index.md#andrae2023)) and `gspspec`
+(spectroscopic fit to RVS spectra —
+[Recio-Blanco et al. 2023](/data/papers/index.md#recioblanco2023)). Each emits (T_eff, log g, [M/H]);
 gspphot additionally emits `A0` (line-of-sight monochromatic
 extinction at 547.7 nm) and gspspec additionally emits a coarse
 spectral-type enum (`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`,
@@ -272,7 +267,7 @@ writes them per record into the binary at offsets 52–79 (see
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
 last number is the population the renderer's colour LUT path can re-
-key from the Ballesteros (2012) B-V relation to Apsis-direct T_eff;
+key from the [Ballesteros (2012)](/data/papers/index.md#ballesteros2012) B-V relation to Apsis-direct T_eff;
 the ~15% gap (typically faint Tycho-only stars without high-S/N BP/RP
 photometry, plus hot O/B stars where gspphot doesn't converge) falls
 back to spectral-class T_TABLE.
@@ -283,7 +278,7 @@ Three downstream paths consume Apsis directly:
   temperature when available — see [Star colour calibration](/docs/science-stellar-modelling.md#star-colour-calibration)
   and [Per-star intrinsic Teff routing](/docs/science-stellar-modelling.md#per-star-intrinsic-teff-routing) for the
   six-tier resolver and why Apsis
-  beats Ballesteros(B-V) here (gspphot fits include `A0` explicitly,
+  beats [Ballesteros](/data/papers/index.md#ballesteros2012)(B-V) here (gspphot fits include `A0` explicitly,
   so dust reddening composes downstream without double-counting
   extinction).
 - **Spectral classification fall-through** uses gspspec's
@@ -347,7 +342,7 @@ carries field values identical to the full AT-HYG (upstream
 tabulation, not our subsetting. The same rows print `ra`/`dec` at 8
 decimal places and `dist` at 4 (a 1e-4 pc ≈ 20.6 AU radial grid);
 1,901 of the 1,903 HIP-distanced rows reproduce `dist = 1000/plx`
-from the van Leeuwen HIP2 file we already commit, to the printed 4 dp
+from the [van Leeuwen](/data/papers/index.md#vanleeuwen2007) HIP2 file we already commit, to the printed 4 dp
 exactly. Full-precision *columns* are therefore recoverable without
 any new data source. The real problem is provenance, below.
 
@@ -372,7 +367,7 @@ Tycho/GJ rows near J2000 — [Stage 2](/scripts/binaries/README.md#stage-2--wds-
 
 **Finding 3 — the current build splits the catalogue into two
 position regimes, and the bright famous stars are in the worse one.**
-The Bailer-Jones override already recomputes xyz from printed ra/dec
+The [Bailer-Jones](/data/papers/index.md#bailerjones2021) override already recomputes xyz from printed ra/dec
 for the ~310.4k rows it fires on, so those carry Tycho-2-grade
 (~10–100 mas), mixed-epoch tangential positions at full column
 precision — including, for high-PM stars, silently *replacing* the
@@ -432,7 +427,7 @@ with the per-tier counts:
    astrometry — ~310.6k rows (~99.2%), mas-grade or better, including
    ~10k NSS-flagged rows whose `gaia_source` astrometry is the
    centre-of-mass refit.
-2. **HIP2 van Leeuwen** (ra, dec at J1991.25, PM-propagated forward to
+2. **HIP2 [van Leeuwen](/data/papers/index.md#vanleeuwen2007)** (ra, dec at J1991.25, PM-propagated forward to
    J2016.0) for the Gaia-saturated bright set — 2,509 rows with no
    usable Gaia parallax, plus 138 whose Gaia-vs-HIP2 PM disagrees by
    > 50 mas/yr on either axis (orbit-corrupted 5p PM).
@@ -442,9 +437,9 @@ with the per-tier counts:
    Stage 3's `athyg_position`.
 
 Distance is resolved the same way, from a parallax this build pulls
-first-hand: an ordered cascade over Gaia DR3, HIP2, CNS5, Gliese
+first-hand: an ordered cascade over Gaia DR3, HIP2, CNS5, [Gliese](/data/papers/index.md#gliese1991)
 V/70A and bibcoded SIMBAD values settles which parallax a record
-inverts, and the Bailer-Jones → LMC-kinematic → cutoff stack above
+inverts, and the [Bailer-Jones](/data/papers/index.md#bailerjones2021) → LMC-kinematic → cutoff stack above
 then overrides that inversion where its own gate fires. A record no
 tier reaches is a ledgered [§ 6.1](catalog-driver.md#61-record-parity) drop rather than a silent keep of a
 printed cell. The tier order, the two precision constants, and why
@@ -510,7 +505,7 @@ from the same solution:
    columns.
 2. **HIP2 PM** for the rows the cascade routes to HIP2 (2,509
    without usable Gaia parallax + 138 PM-discrepant) —
-   `data/hipparcos/` van Leeuwen columns already committed.
+   `data/hipparcos/` [van Leeuwen](/data/papers/index.md#vanleeuwen2007) columns already committed.
 3. **AT-HYG `pm_ra`/`pm_dec`** (mas/yr, 98.9% coverage,
    merge-artifact provenance) for rows with neither, else **zero**.
    Rows with no PM from any source stay at J2016.0 — that residual
@@ -543,8 +538,9 @@ basis (the same basis `directionAtEpoch` in
 so the basis math extracts into a shared helper), `d` the final
 stack distance, and `v_r` in pc/yr via 1 km/s = 1.0227×10⁻⁶ pc/yr.
 μ_α* is the cos δ-applied rate — never divide by cos δ. This is the
-standard epoch-transformation model (ESA SP-1200 Vol. 1 Sect. 1.5.5;
-Butkevich & Lindegren 2014, A&A 570, A62 give the rigorous form).
+standard epoch-transformation model ([ESA 1997](/data/papers/index.md#esa1997) Vol. 1
+Sect. 1.5.5; [Butkevich & Lindegren 2014](/data/papers/index.md#butkevich2014) give the
+rigorous form).
 Deliberately omitted: perspective acceleration and light-time
 terms. The perspective term is the largest omission and grows
 quadratically — from the J2016.0 base it is ~0.07″ at J2026 for
@@ -554,7 +550,7 @@ propagation is therefore faithful at arcsecond fidelity for
 decades and at arcminute fidelity for ~±1 kyr on the fastest
 stars (far longer for everything else); a future deep-time
 scrubber that exceeds that window revisits with the rigorous
-model, alongside the Standish ephemeris window it already has to
+model, alongside the [Standish](/data/papers/index.md#standish1992) ephemeris window it already has to
 respect.
 
 **Decision — runtime propagation at load-time granularity, not a
@@ -600,14 +596,14 @@ compose with the planned time scrubber (`stellata-nmu`). Instead:
   core-mask scan window widens by the load-computed worst-case drift
   bound so a star that drifted toward the camera still enables the
   mask. Per-star dust extinction is likewise not recomputed: maximum
-  drift is sub-voxel for the Edenhofer grid.
+  drift is sub-voxel for the [Edenhofer](/data/papers/index.md#edenhofer2024) grid.
 
 **Scrub-range clamp — what moves with `t`, and why nothing fades.**
-The model clock is clamped to the Standish ephemeris window
+The model clock is clamped to the [Standish](/data/papers/index.md#standish1992) ephemeris window
 (3000 BC – 3000 AD, `docs/science-solar-system.md`); the scrubber
 pins at the bound with its rate intact.
 Within that window every layer is honest without hide/fade machinery:
-planets are arcsecond-faithful inside 1900–2100 and within Standish's
+planets are arcsecond-faithful inside 1900–2100 and within [Standish](/data/papers/index.md#standish1992)'s
 published budget outside it ([Planet positions](/docs/science-solar-system.md#planet-positions));
 stars carry real 3D space
 motion (linear propagation degrades gracefully — arcminute-faithful

@@ -2138,9 +2138,9 @@ ApJ 691, 1328-1336 (2009) · [doi:10.1088/0004-637X/691/2/1328](https://doi.org/
 | Mira radius variation | | unverified | |
 
 <a id="wyman2013"></a>
-### Wyman, Sloan & Shirley 2013 — alexysong/inkstone: v0.3.10
+### Wyman, Sloan & Shirley 2013 — Simple Analytic Approximations to the CIE XYZ Color Matching Functions
 
-JCGT 2(2), 1-11 · [doi:10.5281/zenodo.10049479](https://doi.org/10.5281/zenodo.10049479)
+JCGT 2(2), 1-11 · [jcgt.org/published/0002/02/01](https://jcgt.org/published/0002/02/01/)
 
 - **Copy:** `publishedVersion`
 

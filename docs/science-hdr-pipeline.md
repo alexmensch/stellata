@@ -384,8 +384,8 @@ rgb_out = rgb · (Yd / Y), then highlight desaturation, then sRGB encode
   faint edge tightens rather than moves, since the taper already ends
   0.5 mag past threshold.
 - **Scaling luminance and preserving the RGB ratio keeps hue exact** —
-  the calibrated Ballesteros/blackbody star colours and the CCM
-  reddening ratios survive the operator untouched. ACES/filmic was
+  the calibrated [Ballesteros](/data/papers/index.md#ballesteros2012)/blackbody star colours and the
+  [CCM](/data/papers/index.md#cardelli1989) reddening ratios survive the operator untouched. ACES/filmic was
   rejected for exactly this: its per-channel fits skew hue (blue→purple,
   orange→red) and its fixed S-curve toe crushes the faint MW wings that
   the calibration effort centres on.
@@ -1668,7 +1668,7 @@ fullscreen resolve and the inline path can never drift.
   cause of the too-steep gradient was **not** the density profile: the
   analytic dust was an order of magnitude thin and mis-cited to a source
   publishing no per-kpc rate. And the model was never "1.17 mag too faint
-  at the NGP" — Leinert's table is *total* starlight, two thirds of which
+  at the NGP" — [Leinert](/data/papers/index.md#leinert1998)'s table is *total* starlight, two thirds of which
   the star pipeline already draws as individual quads, so comparing the
   diffuse layer against it double-counted the star field. Subtract the
   resolved catalogue and the pole was already right, to 0.08 mag.
@@ -1728,7 +1728,7 @@ band table as it stood before the resolution hole
 ([*The gradient*](/src/client/milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen) carries the
 current one), FOV-invariant by construction and computed at `DR_MAG` 7.5
 through the shipped operator (C1 toe → extended Reinhard → sRGB encode);
-the two Leinert columns shift that table's `S` by the disagreements pinned
+the two [Leinert](/data/papers/index.md#leinert1998) columns shift that table's `S` by the disagreements pinned
 at the time (+1.02 GC-anchored, +1.68 pole-anchored), which bracket that
 scale. **The panorama's pixels hold the resolved stars too**, so once the
 hole moved their light out of the band the model row to grade is the band
@@ -1744,7 +1744,7 @@ first-magnitude peaks read 20–75/255, Arcturus at 22 sitting *below* the
 b = 10 band at 80, nothing like the eye's view — and the LMC/SMC/M31 in
 frame are the Local Group layer's validation, not this one's.
 
-| sightline | panorama /255 | shipped | Leinert −1.02 | Leinert −1.68 |
+| sightline | panorama /255 | shipped | [Leinert](/data/papers/index.md#leinert1998) −1.02 | [Leinert](/data/papers/index.md#leinert1998) −1.68 |
 | --- | --- | --- | --- | --- |
 | b = +5, l = 0 | 75.7 | 68.4 | 42.5 | 24.9 |
 | GC | 144 (174 at the px) | 40.3 | 7.6 | 0.3 |
@@ -1759,24 +1759,24 @@ airglow, zodiacal light, unresolved stars, JPEG) where the model
 deliberately renders black ([§ 2](#2-tone-map-operator) rejected the pedestal); floor-subtracted
 comparisons remove it in linear luminance.
 
-**Verdict: the sky looks like the BHG16 total; the Leinert scale is
-excluded.** Three measurements carry it:
+**Verdict: the sky looks like the [BHG16](/data/papers/index.md#blandhawthorn2016) total; the
+[Leinert](/data/papers/index.md#leinert1998) scale is excluded.** Three measurements carry it:
 
 - **Latitude extent.** The band stays above the panorama floor to
   |b| ≈ 45–60 at l ≈ 0 (b = 45 reads 11, b = 60 reads 10, the poles 6).
   Shipped holds the same shape — 6.9 at b = 45, 2.4 at b = 60, reaching
-  the toe floor only at the pole. The Leinert scale puts b = 45 at 0.03
+  the toe floor only at the pole. The [Leinert](/data/papers/index.md#leinert1998) scale puts b = 45 at 0.03
   and everything past it at zero, confining the visible band to the
   inner plane.
 - **The inner-plane floor.** The darkest 3.1° patch on the plane (the
-  Aquila rift, 24/255) still exceeds the Leinert counterfactual's GC —
+  Aquila rift, 24/255) still exceeds the [Leinert](/data/papers/index.md#leinert1998) counterfactual's GC —
   its *brightest* row — by 1.14 mag on the −1.02 scale and 4.5 mag on
   the −1.68 one.
 - **Mid-latitude level.** b = +30 is the cleanest row — no discrete
-  clouds, and the floor is measurable beside it. The Leinert
-  counterfactuals land at 0.38 and 0.005 of 255, i.e. 3.2 and 8.0 mag
+  clouds, and the floor is measurable beside it. The
+  [Leinert](/data/papers/index.md#leinert1998) counterfactuals land at 0.38 and 0.005 of 255, i.e. 3.2 and 8.0 mag
   faint and both under one 8-bit step, where the panorama plainly shows
-  band. This row excludes Leinert; it does **not** endorse the shipped
+  band. This row excludes [Leinert](/data/papers/index.md#leinert1998); it does **not** endorse the shipped
   level, which now runs 1.40 mag bright against the same measurement.
 
 Per-row residuals are ordered by contamination, not by scale: the
@@ -1787,7 +1787,7 @@ pole's light is catalogue stars; the plane's fraction is lower but its
 absolute column far larger) and the discrete star clouds and rift the
 smooth slab averages over. The panorama's own inner-plane spread is
 2.3 mag (Baade's window 191, Aquila rift 24), wider than the
-BHG16-vs-Leinert gap — so the low-|b| rows bound the scale only from
+[BHG16](/data/papers/index.md#blandhawthorn2016)-vs-[Leinert](/data/papers/index.md#leinert1998) gap — so the low-|b| rows bound the scale only from
 below, and the arbitration rests on the three measurements above.
 
 ### The high-|b| excess this measurement exposes
@@ -1805,7 +1805,7 @@ Three readings of the same fact:
 - **Level**, 1.40 mag model-bright at b = +30, 1.10 at b = +45.
 - **Gradient**, the model spanning 1.76 mag over b = 5 → 30 where the
   floor-subtracted panorama spans ≈ 4.2.
-- **The Leinert pole check**, 1.68 mag in the same direction
+- **The [Leinert](/data/papers/index.md#leinert1998) pole check**, 1.68 mag in the same direction
   ([The luminosity solve](/docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)).
 
 Both known measurement biases inflate it — floor subtraction eats real
@@ -1814,11 +1814,12 @@ draws separately — so 1.40 mag is an upper bound on the disagreement,
 not an estimate of it. The sign is not in doubt: the disc's vertical
 profile carries too much light at high |b|.
 
-That this coexists with a panorama that *excludes* the Leinert global
+That this coexists with a panorama that *excludes* the
+[Leinert](/data/papers/index.md#leinert1998) global
 scale is not a contradiction. The far-field emissivity-grid work carries
 the reconciliation hypothesis: the Sun sits interarm (the Orion Spur), so the local
 vertical column can sit below the azimuthal mean at the same
-latitude — BHG16's integrated total and Leinert's sightlines can both be
+latitude — [BHG16](/data/papers/index.md#blandhawthorn2016)'s integrated total and [Leinert](/data/papers/index.md#leinert1998)'s sightlines can both be
 right, disagreeing only through the smooth axisymmetric interpolation
 between them. A measured emissivity grid captures that; a solved
 constant cannot.
