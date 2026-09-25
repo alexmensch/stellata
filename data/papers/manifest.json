@@ -1114,11 +1114,26 @@
   ],
   "version": "publishedVersion"
  },
+ "french1988": {
+  "arxiv": null,
+  "bibcode": "1988Icar...73..349F",
+  "bytes": 2387012,
+  "doi": "10.1016/0019-1035(88)90104-2",
+  "note": "Carries the ring semimajor axes (Tables XIV, XV); widths and optical depths are not tabulated here",
+  "openalex_first_author": "Richard G. French",
+  "openalex_title": "Uranian ring orbits from earth-based and Voyager occultation observations",
+  "openalex_year": 1988,
+  "sha256": "916f79b2aa12c4d586b76421d083ee4b00301664b7b88a7470a460aa0fcf2f7c",
+  "source_url": "https://doi.org/10.1016/0019-1035(88)90104-2",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
+ },
  "french1991": {
   "arxiv": null,
   "bibcode": null,
   "doi": "10.2307/j.ctv1v7zdtq.13",
-  "note": "University of Arizona Press 1991 chapter; no digital or print copy reachable. Candidate replacement for the ring radii and widths: French et al. 1988, Icarus 73, 349, doi:10.1016/0019-1035(88)90104-2",
+  "note": "University of Arizona Press 1991 chapter; no digital or print copy reachable. rings-uranus.tsv radii match french1988 Tables XIV-XV to 1 km; its widths and optical depths are midpoints of the chapter's ranges and appear in neither french1986 nor french1988. Candidate for those: Esposito 2002, Rep. Prog. Phys. 65, 1741, doi:10.1088/0034-4885/65/12/201",
   "openalex_first_author": "R. G. French",
   "openalex_title": "DYNAMICS AND STRUCTURE OF THE URANIAN RINGS",
   "openalex_year": 1991,
@@ -1592,17 +1607,21 @@
  "hartkopf2001": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 5703602,
   "doi": "10.1086/323921",
   "openalex_first_author": "William I. Hartkopf",
   "openalex_title": "The 2001 US Naval Observatory Double Star CD-ROM. II. The Fifth Catalog of Orbits of Visual Binary Stars",
   "openalex_year": 2001,
-  "status": "manual",
+  "sha256": "bfb0035fb59583a2f9600c44f184c910b99119f1c5a0b82390dfc541b74fb028",
+  "source_url": "https://doi.org/10.1086/323921",
+  "status": "ok",
   "tried": [
    {
     "error": "not a PDF (text/html; charset=UTF-8)",
     "url": "https://iopscience.iop.org/article/10.1086/323923/pdf"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "heintz1978": {
   "arxiv": null,
