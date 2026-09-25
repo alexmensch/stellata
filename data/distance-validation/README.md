@@ -1,18 +1,17 @@
 # Distance-validation reference data
 
 External reference distances for cross-checking the catalogue's adopted
-Bailer-Jones override (`scripts/catalog/build-catalog.ts`) against an
+[Bailer-Jones](/data/papers/index.md#bailerjones2021) override (`scripts/catalog/build-catalog.ts`) against an
 independently-derived posterior.
 
 ## `vaidman-2025-supergiants.tsv`
 
 132 Galactic BA-type supergiants with Bayesian distance posteriors from:
 
-> Vaidman, N.L., Khokhlov, S.A., Miroshnichenko, A.S., Agishev, A.T.,
-> Yermekbayev, B.S., 2025. *A Quality-Controlled Bayesian Recalculation of
-> Gaia DR3/EDR3 Distances for 132 Galactic BA-Type Supergiants*,
-> **Universe**, 11(11), 359.
-> DOI: [10.3390/universe11110359](https://doi.org/10.3390/universe11110359)
+> [Vaidman, N.L., Khokhlov, S.A., Miroshnichenko, A.S., Agishev, A.T.,
+> Yermekbayev, B.S., 2025](/data/papers/index.md#vaidman2025). *A
+> Quality-Controlled Bayesian Recalculation of Gaia DR3/EDR3 Distances for
+> 132 Galactic BA-Type Supergiants*.
 
 Open-access under [Creative Commons CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 The table contents in this TSV are reproduced from the paper's appendix
@@ -24,8 +23,8 @@ Tables A1 (119 rows) and A2 (13 rows) verbatim; the only added column is
 | Column                  | Source            | Notes                                                                                   |
 | ----------------------- | ----------------- | --------------------------------------------------------------------------------------- |
 | `name`                  | paper Table A1/A2 | Star name as printed (`HD 1070`, `BD+60 51`, `V755 Cas`, Greek-letter Bayer, etc.)      |
-| `d_bj_paper_pc`         | paper             | Bailer-Jones 2021 r_med_photogeo as the paper read it (pc).                             |
-| `sigma_d_bj_paper_pc`   | paper             | Bailer-Jones 1-σ (pc).                                                                  |
+| `d_bj_paper_pc`         | paper             | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) r_med_photogeo as the paper read it (pc). |
+| `sigma_d_bj_paper_pc`   | paper             | [Bailer-Jones](/data/papers/index.md#bailerjones2021) 1-σ (pc). |
 | `ruwe`                  | paper             | Gaia DR3 renormalised unit-weight error.                                                |
 | `g_mag`                 | paper             | Gaia DR3 G magnitude.                                                                   |
 | `d_new_pc`              | paper             | Paper's recalculated Bayesian distance under their EDSD prior + ZP correction (pc).     |
@@ -37,7 +36,8 @@ Tables A1 (119 rows) and A2 (13 rows) verbatim; the only added column is
 
 `adopted` is the paper's own quality flag. `EDSD_new` rows passed their
 SNR + RUWE quality cut and their EDSD-prior posterior is the adopted
-distance. `BJ_old` rows failed the cut; the paper reverts to Bailer-Jones
+distance. `BJ_old` rows failed the cut; the paper reverts to
+[Bailer-Jones](/data/papers/index.md#bailerjones2021)
 and explicitly does NOT recommend `d_new_pc` for quantitative use on
 this subset.
 
@@ -79,8 +79,8 @@ validate against.
 
 ## Known outlier
 
-`HD 22227` (Gaia DR3 3274329517095420544): the catalogue's Bailer-Jones
-photogeometric distance (~390 pc) is about 60 % short of the paper's
+`HD 22227` (Gaia DR3 3274329517095420544): the catalogue's
+[Bailer-Jones](/data/papers/index.md#bailerjones2021) photogeometric distance (~390 pc) is about 60 % short of the paper's
 `d_new` (~992 pc). Both numbers come from the same Gaia source_id, so
 the disagreement reflects either a posterior-tail difference at this
 SNR or a name-resolution ambiguity in the paper's own input list. Out
@@ -89,7 +89,7 @@ of scope for this PR; surfaces in the validator's top-N report.
 ## License — attribution of derived work
 
 The numeric contents of this TSV (every column except `gaia_source_id`)
-are © Vaidman et al. 2025 and reproduced under CC BY 4.0. The
+are © [Vaidman et al. 2025](/data/papers/index.md#vaidman2025) and reproduced under CC BY 4.0. The
 `gaia_source_id` column is derived from SIMBAD / VizieR. The TSV is
 redistributed in this repository in the same spirit (research /
 reproducibility) the paper itself adopts in publishing the appendix

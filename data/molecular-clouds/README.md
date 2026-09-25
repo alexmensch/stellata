@@ -1,7 +1,7 @@
 # Molecular cloud reference data
 
-Zucker 2020 + Zucker 2021 cloud distance / geometry tables, consumed
-at build time by `scripts/clouds/build-clouds.py` →
+[Zucker 2020](/data/papers/index.md#zucker2020) + [Zucker 2021](/data/papers/index.md#zucker2021) cloud distance / geometry
+tables, consumed at build time by `scripts/clouds/build-clouds.py` →
 `public/clouds.json`, rendered by `src/client/molecular-clouds/`
 (see that folder's README).
 
@@ -18,7 +18,5 @@ All files ride regular git (small).
 
 ## References
 
-- Zucker C. et al. 2020, *A&A* 633, A51.
-  DOI: 10.1051/0004-6361/201936145.
-- Zucker C. et al. 2021, *ApJ* 919, 35.
-  DOI: 10.3847/1538-4357/ac1f96.
+- [Zucker C. et al. 2020](/data/papers/index.md#zucker2020).
+- [Zucker C. et al. 2021](/data/papers/index.md#zucker2021).

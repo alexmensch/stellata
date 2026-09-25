@@ -5,8 +5,9 @@ Frozen reference data feeding the build script
 which the runtime renderer (`src/client/local-group/`) consumes.
 
 ```
-lvdb-snapshot.csv   committed snapshot of Pace et al. 2025 dwarf_all
-                    (CC0, peer-reviewed; arXiv:2411.07424). 909 rows.
+lvdb-snapshot.csv   committed snapshot of Pace et al. 2025
+                    (/data/papers/index.md#pace2025) dwarf_all
+                    (CC0, peer-reviewed). 909 rows.
 overrides.tsv       hand-curated structural detail for LMC, SMC,
                     Sagittarius dSph, M 32, NGC 205, plus full
                     standalone rows for M31 and M33 (omitted from
@@ -50,9 +51,9 @@ the major spirals).
 | `ra_deg`            | *Optional standalone position.* Populated for objects not in LVDB; leave empty for LVDB-merge rows. |
 | `dec_deg`           | *Optional standalone position.* Same — all three must be set together or all three empty. |
 | `distance_kpc`      | *Optional standalone position.* Same. |
-| `m_v`               | *Optional.* Integrated apparent V magnitude — standalone rows only (M31 / M33, RC3); LVDB-merge rows take photometry from LVDB. |
+| `m_v`               | *Optional.* Integrated apparent V magnitude — standalone rows only (M31 / M33, [RC3](/data/papers/index.md#devaucouleurs1991)); LVDB-merge rows take photometry from LVDB. |
 | `profile`           | *Optional.* Emission family `disc` \| `sersic`; empty falls to the family rule (Sérsic spheroid). Set `disc` for LMC / M31 / M33. |
-| `n_sersic`          | *Optional.* Hand-curated Sérsic index (M 32 → 1.5, Graham 2002). |
+| `n_sersic`          | *Optional.* Hand-curated Sérsic index (M 32 → 1.5, [Graham 2002](/data/papers/index.md#graham2002)). |
 | `r_d_pc`            | *Optional.* Exponential-disc scale length; required on `disc` rows. |
 | `bulge_to_total` / `bulge_re_pc` / `bulge_n` | *Optional.* Sérsic-bulge composite (M31 only) — all three set together or all empty. |
 | `ref_doi_profile`   | *Optional.* Profile-parameter source, separate from the structural `ref_doi`. |

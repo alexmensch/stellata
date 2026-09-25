@@ -4,7 +4,7 @@ Frozen geocentric astrometric RA/Dec for the eight major planets,
 Pluto, and the Sun at three fixed epochs, fetched once from the JPL
 Horizons API. Consumed only by the sky-truth regression corpus
 (`src/client/solar-system/ephemerides/sky-truth.test.ts`), which asserts the
-production Standish-ephemeris → ecliptic→ICRS chain lands each body
+production [Standish](/data/papers/index.md#standish1992)-ephemeris → ecliptic→ICRS chain lands each body
 within tolerance of these positions. Never read at build time.
 
 A second table, `sub-observer-truth.tsv`, freezes geocentric
@@ -79,7 +79,7 @@ its own section below.
 
 Epochs: JD 2451545.0 (J2000.0, 2000-01-01 12:00 UT), JD 2461223.5
 (2026-07-02 00:00 UT), JD 2466154.5 (2040-01-01 00:00 UT) — past /
-present / near-future, all inside the Standish 1800–2050 primary fit
+present / near-future, all inside the [Standish](/data/papers/index.md#standish1992) 1800–2050 primary fit
 window.
 
 Astrometric (light-time-corrected) rather than geometric positions:
@@ -101,7 +101,7 @@ the element evaluation against these vectors directly — no clock, no
 ecliptic→ICRS rotation, no light-time. Three deliberate differences
 from the RA/Dec tables:
 
-- **Barycentre targets, not body centres** (`1`…`9`). Standish's
+- **Barycentre targets, not body centres** (`1`…`9`). [Standish](/data/papers/index.md#standish1992)'s
   elements fit the barycentric orbits, and `earth` is the Earth/Moon
   barycentre the ephemeris actually resolves. The body-vs-barycentre
   offset is ≤1.4e-5 AU (Pluto, the largest), three orders under the

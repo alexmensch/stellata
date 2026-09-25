@@ -159,5 +159,5 @@ future refresh does not "correct" them back.
   Horizons `-24` header states this date). A final degraded contact was
   received in November 1995; the displayed value is the year either way.
 - **Voyager 2 heliopause crossing.** The coherence test uses
-  2018-11-05 (Gurnett & Kurth 2019). The Horizons `-32` header says
+  2018-11-05 ([Gurnett & Kurth 2019](/data/papers/index.md#gurnett2019)). The Horizons `-32` header says
   2018-Nov-15.

@@ -14,9 +14,8 @@ bailer-jones-dr3.tsv   ~95 MB, LFS. Keyed by Gaia DR3 source_id.
 
 ## Provenance
 
-- **Citation**: Bailer-Jones C. A. L., Rybizki J., Fouesneau M.,
-  Demleitner M., Andrae R. 2021, *AJ* 161, 147.
-  DOI: [10.3847/1538-3881/abd806](https://doi.org/10.3847/1538-3881/abd806).
+- **Citation**: [Bailer-Jones C. A. L., Rybizki J., Fouesneau M.,
+  Demleitner M., Andrae R. 2021](/data/papers/index.md#bailerjones2021).
 - **Table**: `external.gaiaedr3_distance` on the ESA Gaia archive — the
   archive's own copy of what VizieR publishes as `I/352/gedr3dis`, already
   on the paper's column names. [Why the pull is ESA-side](#why-the-pull-is-esa-side).

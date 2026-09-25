@@ -13,25 +13,25 @@ this file carries only the cross-folder policies.
 | [`classic-ids/`](classic-ids/README.md) | Frozen CDS HD/HR/Bayer/Flamsteed/GJ cross indexes + the source_id-keyed overlay joined from them. |
 | [`membership/`](membership/README.md) | Pipeline-derived membership manifest (`build:membership`): **the record build's membership term**, its [§ 6.1](/docs/catalog-driver.md#61-record-parity) additions and parked ledgers, and the binding review queue. |
 | [`iau-wgsn/`](iau-wgsn/README.md) | IAU WGSN approved names + glyph-bearing designations (the naming authority) + the derived keyed tables. |
-| [`bailer-jones/`](bailer-jones/README.md) | Bailer-Jones 2021 Bayesian distance posteriors. |
+| [`bailer-jones/`](bailer-jones/README.md) | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) Bayesian distance posteriors. |
 | [`gaia/`](gaia/README.md) | Gaia DR3 — cross-walks, astrometry, NSS orbits, Apsis, and the `G ≤ 11` magnitude term of membership. |
 | [`hipparcos/`](hipparcos/README.md) | Hipparcos CCDM cross-reference + HIP2 reduction. |
 | [`tycho2/`](tycho2/README.md) | Tycho-2 mean positions + per-star mean epochs, PM, BT/VT — the first-order source for TYC-bearing rows Gaia misses. |
-| [`gliese/`](gliese/README.md) | Gliese & Jahreiss V/70A printed Johnson V + B−V, spectral type, parallax — the first-order source behind every `mag_src=GJ` cell. |
+| [`gliese/`](gliese/README.md) | [Gliese & Jahreiss](/data/papers/index.md#gliese1991) V/70A printed Johnson V + B−V, spectral type, parallax — the first-order source behind every `mag_src=GJ` cell. |
 | [`gcvs/`](gcvs/README.md) | GCVS 5.1 variable-star catalogue + cross-IDs. |
 | [`wds/`](wds/README.md) | Washington Double Star + ORB6 visual binary orbits. |
-| [`msc/`](msc/README.md) | Pulkovo MSC (Tokovinin) multiple-star hierarchies, orbits, per-component data. |
+| [`msc/`](msc/README.md) | Pulkovo MSC ([Tokovinin](/data/papers/index.md#tokovinin2018)) multiple-star hierarchies, orbits, per-component data. |
 | [`simbad/`](simbad/README.md) | SIMBAD sample, per-source sp_type, bibcoded values, WDS↔Gaia cross-IDs. |
 | [`binaries/`](binaries/README.md) | Pipeline-derived `multiples.tsv` (output of `build-binaries.py`). |
-| [`distance-validation/`](distance-validation/README.md) | Vaidman 2025 BA-supergiant Bayesian distance reference set. |
+| [`distance-validation/`](distance-validation/README.md) | [Vaidman 2025](/data/papers/index.md#vaidman2025) BA-supergiant Bayesian distance reference set. |
 | [`stellarium/`](stellarium/README.md) | Stellarium modern sky culture (HIP-indexed constellation lines). |
-| [`local-group/`](local-group/README.md) | Pace 2025 LVDB dwarf snapshot + hand-curated structural overrides. |
-| [`molecular-clouds/`](molecular-clouds/README.md) | Zucker 2020 / 2021 cloud distances + 3D bounding boxes. |
-| [`local-bubble/`](local-bubble/README.md) | Zucker 2022 Local Bubble inner-surface HEALPix map (dust-wall distance). |
-| [`dust/`](dust/README.md) | Edenhofer 2024 3D dust map (resampled voxel grid + particle field). |
-| [`bc03/`](bc03/README.md) | Bruzual & Charlot 2003 SSP colour / mass-to-light tables (Chabrier IMF). |
+| [`local-group/`](local-group/README.md) | [Pace 2025](/data/papers/index.md#pace2025) LVDB dwarf snapshot + hand-curated structural overrides. |
+| [`molecular-clouds/`](molecular-clouds/README.md) | [Zucker 2020](/data/papers/index.md#zucker2020) / [2021](/data/papers/index.md#zucker2021) cloud distances + 3D bounding boxes. |
+| [`local-bubble/`](local-bubble/README.md) | [Zucker 2022](/data/papers/index.md#zucker2022) Local Bubble inner-surface HEALPix map (dust-wall distance). |
+| [`dust/`](dust/README.md) | [Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust map (resampled voxel grid + particle field). |
+| [`bc03/`](bc03/README.md) | [Bruzual & Charlot 2003](/data/papers/index.md#bruzual2003) SSP colour / mass-to-light tables (Chabrier IMF). |
 | [`horizons/`](horizons/README.md) | JPL Horizons planet RA/Dec + deep-time vector truth sets for the ephemeris regression corpora, plus Earth's orientation across the model clock. |
-| [`eclipse-canon/`](eclipse-canon/README.md) | NASA GSFC Five Millennium Canon rows — named solar / lunar eclipses, 1978 BC to 2928 AD, as an independent check that the model produces the event and not just the positions. |
+| [`eclipse-canon/`](eclipse-canon/README.md) | NASA GSFC [Five Millennium Canon](/data/papers/index.md#espenak2009) rows — named solar / lunar eclipses, 1978 BC to 2928 AD, as an independent check that the model produces the event and not just the positions. |
 | [`ephemerides/`](ephemerides/README.md) | JPL Horizons osculating-element tables for the nine planets across 1900–2100. |
 | [`probes/`](probes/README.md) | JPL Horizons heliocentric state vectors for the five Sun-escape deep-space probes. |
 | [`textures/`](textures/README.md) | Planet surface/cloud equirect maps + Saturn-ring radial profile (frozen sources + built artifacts). |
@@ -104,9 +104,9 @@ measured moved to J2016.0.
 | GCVS variables | n/a (period + amplitude only) | We never consume GCVS positions; the variable rides on its AT-HYG row via the HIP/HD cross-match, so position inherits J2016.0 transitively. |
 | Hipparcos CCDM | n/a (flag-only) | We consume `MultFlag` only, never position. |
 | Constellation stick figures | n/a (HIP-indexed) | Stellarium's polylines reference HIP IDs; geometry deforms to wherever the catalogue places the figure stars, so the line endpoints inherit J2016.0 transitively. |
-| Local Group dwarfs | J2000.0 | Pace 2025 LVDB's `ra`/`dec` are J2000.0; the hand-curated overrides (LMC, SMC, M31, M33, Sgr dSph) likewise. Extragalactic distances are large enough that arcsecond-scale tangential drift over decades is invisible, so the 16 yr offset from the stellar scene epoch is immaterial. |
-| Edenhofer 2024 dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
-| Solar system | Live UTC each frame | No committed positions — the renderer evaluates elements per frame at the model clock, converted to TDB. Frozen JPL Horizons element tables ([`ephemerides/`](ephemerides/README.md)) across 1900–2100; the inlined Standish 1992 series outside them. |
+| Local Group dwarfs | J2000.0 | [Pace 2025](/data/papers/index.md#pace2025) LVDB's `ra`/`dec` are J2000.0; the hand-curated overrides (LMC, SMC, M31, M33, Sgr dSph) likewise. Extragalactic distances are large enough that arcsecond-scale tangential drift over decades is invisible, so the 16 yr offset from the stellar scene epoch is immaterial. |
+| [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust | n/a (spatial grid in ICRS) | The voxel grid is ICRS-axis-aligned, so it shares orientation with everything else. Dust drift over decades is sub-pixel at the grid's 1.25 kpc / 512³ resolution. |
+| Solar system | Live UTC each frame | No committed positions — the renderer evaluates elements per frame at the model clock, converted to TDB. Frozen JPL Horizons element tables ([`ephemerides/`](ephemerides/README.md)) across 1900–2100; the inlined [Standish 1992](/data/papers/index.md#standish1992) series outside them. |
 
 ### J2016.0 is the wire epoch; the runtime advances to `t`
 

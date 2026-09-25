@@ -31,12 +31,15 @@
 #                         (M31, M33); leave empty for LVDB-merge rows.
 #                         All three must be set together or all empty.
 #   m_v                — integrated apparent V magnitude; standalone rows
-#                         only (M31/M33 via RC3). LVDB-merge rows take
+#                         only (M31/M33 via RC3,
+#                         /data/papers/index.md#devaucouleurs1991).
+#                         LVDB-merge rows take
 #                         photometry from LVDB apparent_magnitude_v.
 #   profile            — emission family: "disc" | "sersic"; empty falls
 #                         to the family rule (Sérsic spheroid).
 #   n_sersic           — hand-curated Sérsic index override (M32: Graham
-#                         2002 outer-profile fit).
+#                         2002 outer-profile fit,
+#                         /data/papers/index.md#graham2002).
 #   r_d_pc             — exponential-disc scale length; disc rows only.
 #   bulge_to_total,    — Sérsic-bulge composite (M31 only). All three
 #   bulge_re_pc,          set together or all empty.
