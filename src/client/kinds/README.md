@@ -17,7 +17,9 @@ inside a kind stays module-internal.
   list), the exhaustive `KindModules` mapped type,
   `buildKindModules()`, `loadKindModules()` (boot's fan-out, where the
   never-rejects rule is enforced), `displayNameOf()`,
-  `collectKindPicks()`, and `collectKindDetailBinds()`.
+  `collectKindPicks()`, `collectKindDetailBinds()`, and the two
+  exhaustive records the shell hands on — `collectFocusables()` (the
+  `focusables` registry) and `collectPinnable()` (`PoiStore`'s pin rules).
 - `kind-geometry.ts` — leg helpers shared across modules:
   `absCameraDistancePc(ctx, centerAbs)`, the card
   `cameraDistancePc` leg for every kind whose centre is absolute
@@ -144,9 +146,9 @@ the current rate; `setFocalBodyHidden` fans out `setFocalHidden`,
 and `collectKindPicks()` hands the Picker each module's hover `pick`
 for its `pickKindHit` dispatch (the click FSM's planet / cloud / lg /
 shell / probe picks all route through it). The `focusables` record and
-`PoiStore.pinnable` rows for migrated kinds are the modules'
-`focusable()` / `pinnable` legs; both records stay exhaustive in the
-shell.
+`PoiStore.pinnable` are built from the roster by `collectFocusables()` /
+`collectPinnable()` over the modules' `focusable()` / `pinnable` legs, so
+both are exhaustive by the roster's own coverage pin.
 
 Planet-kind exceptions the roster consumers must know: its SID domain
 is keyed body-within-host, not Target idx — url-state translates at

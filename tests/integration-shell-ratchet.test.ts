@@ -6,9 +6,9 @@ import ts from 'typescript';
 const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
-  'adaptation', 'aim', 'bus', 'cadence', 'camera', 'catalog', 'chartLabels', 'chromeLines',
+  'adaptation', 'aim', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters',
-  'floatingOrigin', 'focus', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
+  'floatingOrigin', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
   'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
@@ -23,10 +23,10 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coreMaskEnabled',
   'dust',
-  'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced', 'focusables',
+  'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced',
   'frameCtx', 'glslResidentsChecked',
   'offCatalogRecords', 'passDebugScratch',
-  'pickSizeScratch', 'starAttrs', 'starFrame',
+  'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',
   'starLocalCluster', 'tmpConstellationAbs',
   'trackballSettle', 'webgpuStarLayer',
 ];

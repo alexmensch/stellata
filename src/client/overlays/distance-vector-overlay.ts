@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 import { fmtDistAuto } from '../ui/distance-util';
 import { targetDisplayName } from './target-name';
 import type { Target } from '../camera/focus/focus-target';
@@ -201,23 +200,13 @@ export function createDistanceVectorOverlay(stellata: Stellata) {
     // Sol/GC arrows compute their own shared alpha inside hud-overlay.ts
     // against `max(solShaftLen, gcShaftLen)`.
     //
-    // discRadius = 0 when the source end is a cloud (no stellar disc) —
-    // the fade is then alpha=1 (no disc-coverage problem to solve).
-    // Likewise alpha=1 in steady-state observe mode (focal star isn't
-    // centred so there's nothing to clear chrome out of the way for).
+    // Alpha=1 in steady-state observe mode (focal star isn't centred so
+    // there's nothing to clear chrome out of the way for).
     //
     // Drawn-shaft length is the distance from shaftStart to tip (with
     // SOURCE_OFFSET_PX inset at the source end and the destination's
     // rendered silhouette inset at the tip end) — i.e., the visible line.
-    const discRadiusPx = from.kind === 'star'
-      ? renderedDiscPxAtPeak({
-          catalog: stellata.catalog,
-          idx: from.idx,
-          camPos: stellata.camera.position,
-          localPositions: stellata.localPositions,
-          uniforms: stellata.uniforms,
-        }) * 0.5
-      : 0;
+    const discRadiusPx = stellata.getFocusedDiscRadiusPx();
     const shaftDrawnLenPx = Math.hypot(tipX - shaftStartX, tipY - shaftStartY);
     const arrowAlpha = focusedArrowFadeAlpha(
       stellata.focus.getCameraMode(),

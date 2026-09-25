@@ -1,6 +1,5 @@
 import type { Stellata } from '../stellata';
 import type { ArrowDebugRecord } from '../overlays/hud-overlay';
-import { renderedDiscPxAtPeak } from '../camera/controls/star-physics';
 import { type DebugSection, buildDiagnosticReadout, setReadoutText } from './debug-panel';
 
 // Live diagnostic readouts for the navigate-mode Sol/GC arrow fade.
@@ -67,16 +66,8 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
     // hud-overlay. The distance vector solves its own alpha independently in
     // distance-vector-overlay and is not surfaced here.
     const alpha = stellata.hud.getCurrentFadeAlpha();
-    const focused = stellata.focus.getFocusedStar();
-    const discRadius = focused !== null
-      ? renderedDiscPxAtPeak({
-          catalog: stellata.catalog,
-          idx: focused,
-          camPos: stellata.camera.position,
-          localPositions: stellata.localPositions,
-          uniforms: stellata.uniforms,
-        }) * 0.5
-      : 0;
+    const focused = stellata.focus.getFocusedTarget();
+    const discRadius = stellata.getFocusedDiscRadiusPx();
     const refLen = Math.max(lengths.sol, lengths.gc);
     const coverage = refLen > 0 ? Math.max(0, discRadius - shaftStart) / refLen : 0;
 
@@ -95,7 +86,7 @@ export function buildArrowSection(stellata: Stellata): DebugSection {
     if (!visible) return;
 
     setReadoutText(body,
-      `focus: ${focused}  mode: ${stellata.focus.getCameraMode()}\n` +
+      `focus: ${focused === null ? 'none' : `${focused.kind} ${focused.idx}`}  mode: ${stellata.focus.getCameraMode()}\n` +
       `shaftStart: ${fmt(shaftStart)} px\n` +
       `discRadius (peak): ${fmt(discRadius)} px  range:[${fmt(latch.discMin)}, ${fmt(latch.discMax)}]\n` +
       `refLen: ${fmt(refLen)} px  coverage: ${fmt(coverage)}\n` +

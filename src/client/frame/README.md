@@ -100,7 +100,7 @@ this frame" ([Free-fly constraints](/docs/architecture-modularity.md#free-fly-co
 frame by `animate()`, before `flushLocalPositions` — asks the policy
 for a desired origin and recentres onto it. The service knows nothing
 about cameras or focus: the focal policy is
-`makeFocalAnchorPolicy` (`../camera/focus/focal-anchor-policy.ts`),
+`makeFocalAnchorPolicy` (`../camera/focus/focal-ride/focal-anchor-policy.ts`),
 and the shell supplies only which controllers count as camera-busy.
 
 **`tick()`'s return is the policy-recentre signal, not `onRecenter`.**

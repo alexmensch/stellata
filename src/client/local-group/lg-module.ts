@@ -169,6 +169,7 @@ export function createLgKindModule(): LgKindModule {
       renderedSizePx: (idx) =>
         layer?.renderedLgSizePx(idx, ctx!.camera, ctx!.getWorldOffset(), () =>
           ctx!.angularToPx()) ?? 0,
+      peakDiscSizePx: () => 0,
       chartPlateauDistance: () => null,
       planetSystemHost: () => null,
     }),

@@ -130,6 +130,7 @@ export function createCloudKindModule(): CloudKindModule {
       orbitFloor: softOrbitFloor(cloudPark),
       arrivalRadiusPc: () => null,
       renderedSizePx,
+      peakDiscSizePx: () => 0,
       chartPlateauDistance: () => null,
       planetSystemHost: () => null,
     }),

@@ -1582,7 +1582,7 @@ const encodeTgt = new THREE.Vector3();
  * (`applyDecodedView` recentres onto it before either lands).
  *
  * The sender's own origin recentres only once the camera has drifted 16× the
- * eye distance (`../../camera/focus/focal-ride-pure.ts`), and between two of
+ * eye distance (`../../camera/focus/focal-ride/focal-ride-pure.ts`), and between two of
  * those the moving-focal ride translates camera and target together every
  * frame. Raw local values therefore drift out of any frame the receiver
  * rebuilds — up to 16 eye distances of pose error — while carrying motion the

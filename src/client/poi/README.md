@@ -44,7 +44,8 @@ apart.
   catalogue rebuilds. A planet Target's idx is the body-field flat
   instance index; its SID rides the planet domain. The per-kind pin
   rules live on `PoiStoreDeps.pinnable`, a map EXHAUSTIVE over
-  `TargetKind` (wired in `stellata.ts`) — a new focusable kind must
+  `TargetKind` (each kind module's `pinnable` leg, collected over the
+  roster by `collectPinnable` — `../kinds/README.md`) — a new focusable kind must
   state its rule to compile, like the focusable / focus-card provider
   registries.
 - **Every catalog star with a SID pins — Sol included.** Sol was once

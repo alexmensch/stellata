@@ -140,7 +140,6 @@ describe('star-physics / activePulsationAmp', () => {
     });
     const base = {
       catalog: cat,
-      idx: 0,
       camPos: new THREE.Vector3(0, 0, 0),
       localPositions: new Float32Array([0, 0, -10]),
       // Half phase: cos = −1, the swing's far extreme. Quarter phase is
@@ -148,12 +147,12 @@ describe('star-physics / activePulsationAmp', () => {
       uniforms: makeUniforms({ uModelDays: 50 }),
       filter: makeFilter(),
     };
-    const pulsing = renderedSizePx(base);
-    const suppressed = renderedSizePx({ ...base, suppressPulsation: new Float32Array([1]) });
+    const pulsing = renderedSizePx(base, 0);
+    const suppressed = renderedSizePx({ ...base, suppressPulsation: new Float32Array([1]) }, 0);
     const nonVariable = renderedSizePx({
       ...base,
       catalog: makeCatalog(1, c => { c.absmag[0] = 5; c.physicalRadius[0] = 1; c.pulsRho[0] = 1.4; }),
-    });
+    }, 0);
     expect(suppressed).toBeCloseTo(nonVariable, 10);
     expect(pulsing).not.toBeCloseTo(nonVariable, 6);
   });
@@ -291,7 +290,7 @@ describe('star-physics / renderedSizePx', () => {
     // appSize = sizeMin + sqrt(brightness) * (sizeMax - sizeMin).
     // Float32 round-trip on absmag is the precision-leaking step; compute
     // expected via the rounded value so the toBe is bit-exact.
-    const got = renderedSizePx({ catalog, idx: 0, camPos, localPositions, uniforms, filter });
+    const got = renderedSizePx({ catalog, camPos, localPositions, uniforms, filter }, 0);
     const appMag = catalog.absmag[0] + 5 * (Math.log10(5) - 1);
     const brightness = Math.max(0, Math.min(1, (limitMagOf(filter) - appMag) / 8));
     const appSize = 1.5 + Math.sqrt(brightness) * (6 - 1.5);
@@ -310,8 +309,8 @@ describe('star-physics / renderedSizePx', () => {
     const uniforms = makeUniforms();
     const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6 });
     const got = renderedSizePx({
-      catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
-    });
+      catalog: cat, camPos, localPositions: cat.positions, uniforms, filter,
+    }, 0);
     const appMag = cat.absmag[0] + 5 * (Math.log10(5) - 1);
     const dM = limitMagOf(filter) - appMag;
     const over = dM - 8;
@@ -331,8 +330,8 @@ describe('star-physics / renderedSizePx', () => {
     const uniforms = makeUniforms({ uSizeKnee: 0 });
     const filter = makeFilter({ sizeMin: 1.5, sizeMax: 6 });
     const got = renderedSizePx({
-      catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms, filter,
-    });
+      catalog: cat, camPos, localPositions: cat.positions, uniforms, filter,
+    }, 0);
     expect(got).toBe(filter.sizeMax);
   });
 
@@ -343,7 +342,7 @@ describe('star-physics / renderedSizePx', () => {
     // Camera 0.01 AU away → R/d is huge → physSize wins, then hits the
     // uMaxPhysFrac up-clamp (mirrors ../../webgpu/star/star-vertex-tsl.ts).
     const camPos = new THREE.Vector3(0.01 * AU_PC, 0, 0);
-    const got = renderedSizePx({ catalog, idx: 0, camPos, localPositions, uniforms, filter });
+    const got = renderedSizePx({ catalog, camPos, localPositions, uniforms, filter }, 0);
     // Reconstruct via the float32-rounded catalog value so the pin is exact.
     const dCam = Math.abs(catalog.positions[0] - camPos.x); // 0.01 AU_PC
     const R = catalog.physicalRadius[0] * R_SUN_PC;
@@ -368,9 +367,9 @@ describe('star-physics / renderedSizePx', () => {
     const localPositions = cat.positions;
     const filter = makeFilter({ sizeMin: 1, sizeMax: 8 });
     const at = (phase: number) => renderedSizePx({
-      catalog: cat, idx: 0, camPos, localPositions,
+      catalog: cat, camPos, localPositions,
       uniforms: makeUniforms({ uModelDays: phase * 2.87 }), filter,
-    });
+    }, 0);
     // φ=0 = maximum light → brightest + largest; φ=½ = minimum → smallest;
     // φ=¼ = mean → in between. The cos convention (φ=0=max) is what the
     // GCVS M0-anchoring folds onto.
@@ -398,15 +397,15 @@ describe('star-physics / renderedSizePx', () => {
     const rate = 1e6 / 86400;
     const floorDays = rate * 4;
     const min = renderedSizePx({
-      catalog: cat, idx: 0, camPos, localPositions,
+      catalog: cat, camPos, localPositions,
       uniforms: makeUniforms({ uModelDays: floorDays / 2, uModelDaysPerRealSec: rate }),
       filter,
-    });
+    }, 0);
     const max = renderedSizePx({
-      catalog: cat, idx: 0, camPos, localPositions,
+      catalog: cat, camPos, localPositions,
       uniforms: makeUniforms({ uModelDays: floorDays, uModelDaysPerRealSec: rate }),
       filter,
-    });
+    }, 0);
     // With the floor engaged, φ=1 (== φ=0, max) is larger than φ=½ (min).
     expect(max).toBeGreaterThan(min);
   });
@@ -417,7 +416,7 @@ describe('star-physics / renderedDiscPxAtPeak', () => {
     const cat = makeCatalog(1, c => { c.physicalRadius[0] = 1; });
     const camPos = new THREE.Vector3(AU_PC * 100, 0, 0);
     const uniforms = makeUniforms();
-    const got = renderedDiscPxAtPeak({ catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms });
+    const got = renderedDiscPxAtPeak({ catalog: cat, camPos, localPositions: cat.positions, uniforms }, 0);
     const dCam = camPos.x; // star at origin
     const R = cat.physicalRadius[0] * R_SUN_PC;
     const fovY = Math.PI / 3;
@@ -434,7 +433,7 @@ describe('star-physics / renderedDiscPxAtPeak', () => {
     });
     const camPos = new THREE.Vector3(AU_PC * 100, 0, 0);
     const uniforms = makeUniforms();
-    const got = renderedDiscPxAtPeak({ catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms });
+    const got = renderedDiscPxAtPeak({ catalog: cat, camPos, localPositions: cat.positions, uniforms }, 0);
     const dCam = camPos.x;
     const R = cat.physicalRadius[0] * R_SUN_PC;
     const peak = Math.sqrt(cat.pulsRho[0]);
@@ -447,7 +446,7 @@ describe('star-physics / renderedDiscPxAtPeak', () => {
     const cat = makeCatalog(1, c => { c.physicalRadius[0] = 1; });
     const camPos = new THREE.Vector3(0, 0, 0); // identical to star pos
     const uniforms = makeUniforms();
-    const got = renderedDiscPxAtPeak({ catalog: cat, idx: 0, camPos, localPositions: cat.positions, uniforms });
+    const got = renderedDiscPxAtPeak({ catalog: cat, camPos, localPositions: cat.positions, uniforms }, 0);
     expect(Number.isFinite(got)).toBe(true);
   });
 });

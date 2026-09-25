@@ -91,7 +91,8 @@ in both navigate and observe modes.
   where `sizeMax` clears the floor.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
   + observe quaternion-in-place), the point (`aimAt`) and direction
-  (`aimAlong`) entry points, shared `aimDurationMs` ramp.
+  (`aimAlong`) entry points, shared `aimDurationMs` ramp, and
+  `claimCameraForAim` — the busy-gate claim every shell aim takes.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
   reducers and their scorers ([Ranking a pick](#ranking-a-pick)). Owns `PICK_THRESHOLD_PX`,
@@ -289,21 +290,18 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
 
 [Focus-park lerp](../focus/README.md#focus-park-lerp) owns this — the stay-put/lerp
 branch, the `controls.enabled` contract, the pin suppression, and the
-overlay hide. Two things that belong here rather than there:
+overlay hide, and the list of sites that cancel the lerp. One thing
+belongs here rather than there:
 
 `CAMERA_LERP_MS = 2000` is the canonical 2 s constant for non-warp
 camera lerps — `AIM_T_MAX_MS` and `FOCUS_LERP_MS` alias it so the
 focus-park glide and aim animation read as the same family. The warp's
-`WARP_REORIENT_MS = 1800` was once part of this family but tuning
-moved it slightly under the canonical lerp — the reorient phase reads
-snappier than a generic camera glide. `WARP_T_K_MS = 3000` is a
-separate literal — a log-scale flight coefficient (see
-`../warp/README.md`), not a duration.
+`WARP_REORIENT_MS = 1800` sits deliberately under the canonical lerp —
+the reorient phase reads snappier than a generic camera glide.
+`WARP_T_K_MS = 3000` is a separate literal — a log-scale flight
+coefficient (see `../warp/README.md`), not a duration.
 
-`cancelFocusLerp` is wired at every site that already calls
-`cancelUnfocusLerp` (`focusStar`, `flyTo`, `unfocus`, `startWarp`,
-`aimAt`, `aimAtConstellation`, `onPointerUp`) so a follow-up
-camera-changing action can't race the in-flight lerp.
+The sites cancelling it are listed in [Focus-park lerp](../focus/README.md#focus-park-lerp).
 
 ## Aim controller (`camera/controls/aim-controller.ts`)
 
@@ -358,17 +356,21 @@ the boresight by construction, which is what makes the endpoint exact as well
 as the route predictable. [Inverting the view](../../attitude/README.md#inverting-the-view)
 owns the user-facing definition.
 
-Composition split — `Stellata.aimAt(pointLocal)` is the dispatcher that
-owns the cross-controller busy gates (`warp.isActive()`,
-`cancelUnfocusLerp`, `cancelFocusLerp`, `isObserveTransitionActive`)
-before delegating to `this.aim.aimAt(pointLocal)`. The controller knows
-only the mode it runs in and its own slot state.
+Composition split — the controller knows only the mode it runs in and its
+own slot state. The cross-controller busy gates (warp, aim, observe
+transition) and the focus-lerp cancels are `claimCameraForAim`, a free
+function taking them as `AimClaimGates` closures. The shell builds that
+object once (`cameraClaim`) and hands the same one to `InputController`,
+whose deps extend the type; the shell's aims (`aimAt`, `aimAlong`,
+`aimAtConstellation`, `invertView`) delegate to `this.aim` only on a
+granted claim. A refused claim cancels
+nothing ([The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence)).
 
 Cancellation contract — `aim.cancel()` drops both slot states but does
 **not** touch `controls.enabled` or call `observeControls.enable()`.
 That re-enable only happens on natural completion of the slerp.
-Cancellation sites (warp start, observe-exit, focus change while in
-observe) are moving control elsewhere and own the next input-handler
+Cancellation sites (observe-exit, focus change while in observe) are
+moving control elsewhere and own the next input-handler
 transition themselves.
 
 ## Picking a constellation aims the camera

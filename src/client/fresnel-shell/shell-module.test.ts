@@ -107,6 +107,7 @@ describe('shell kind module', () => {
     expect(provider.focusParkDistance(0)).toBeCloseTo(240, 6);
     expect(provider.orbitFloor(0)).toBe(GLOBAL_MIN_DIST_PC);
     expect(provider.arrivalRadiusPc(0)).toBeNull();
+    expect(provider.peakDiscSizePx(0)).toBe(0);
 
     const card = m.card();
     expect(card.kind).toBe('shell');
