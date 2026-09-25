@@ -326,7 +326,7 @@ export const MOON_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 150,
 };
 
-// Uranus and Neptune fall through to Lambert by design — Mallama 2018
+// Uranus and Neptune fall through to Lambert by design — Mallama 2017
 // (/data/papers/index.md#mallama2017) Tables A-7.2 / A-8.2 model sub-latitude
 // (Uranus) and temporal (Neptune) effects, not α, because Earth-bound max α is
 // negligible for both. Pluto, every moon but Earth's, and every exoplanet share

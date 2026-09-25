@@ -3,7 +3,7 @@
 `molecular-clouds.ts` renders the ~96 named local SF clouds as two
 decoupled components per cloud:
 
-- **Absorption** — a per-fragment raymarch of the calibrated Zucker
+- **Absorption** — a per-fragment raymarch of the calibrated [Zucker 2021](/data/papers/index.md#zucker2021)
   density model ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field), [§ 9](/docs/science-molecular-clouds.md#9-presence-pass)) that dims every
   diffuse layer drawn behind the cloud (the MW band, LG emission).
   Physics, so it is **always on in realistic mode — never
@@ -198,11 +198,11 @@ instead of the star 90 %-fill solve.
 <a id="effective-focus-geometry"></a>**Effective focus geometry.** Fly-to / orbit / warp / labels / the
 distance vector all aim at the layer's per-cloud **effective centre**
 — the traced mesh's vertex centroid (with its max vertex radius as the
-extent) — never at the Zucker bbox centroid, which can sit far from
+extent) — never at the [Zucker 2021](/data/papers/index.md#zucker2021) bbox centroid, which can sit far from
 the actual dust (Orion λ's traced knot is well off its ring-shaped
 bbox centre). Fallback clouds keep the ellipsoid centroid with extent
-`max(axes) × uEnv`. The absorption meshes stay anchored at the Zucker
-centroid — the calibrated density model is defined in that frame.
+`max(axes) × uEnv`. The absorption meshes stay anchored at the [Zucker 2021](/data/papers/index.md#zucker2021)
+centroid ([Zucker 2020](/data/papers/index.md#zucker2020) sightlines for the clouds only that paper covers) — the calibrated density model is defined in that frame.
 
 ## Picking + hover
 

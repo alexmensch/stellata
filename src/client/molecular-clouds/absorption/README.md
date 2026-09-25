@@ -1,6 +1,6 @@
 # src/client/molecular-clouds/absorption/ — the cloud absorption raymarch
 
-The per-fragment raymarch of the calibrated Zucker density model that dims
+The per-fragment raymarch of the calibrated [Zucker 2021](/data/papers/index.md#zucker2021) density model that dims
 every diffuse layer drawn behind a cloud ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field),
 [§ 9](/docs/science-molecular-clouds.md#9-presence-pass)). **Physics, so it is always on in realistic mode — never
 declutter-gated** — and it hides only in chart mode. The rim shell that

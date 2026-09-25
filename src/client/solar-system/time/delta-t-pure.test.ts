@@ -55,7 +55,8 @@ describe('deltaTSecondsAtYear', () => {
     expect(deltaTSecondsAtYear(-2999) / 3600).toBeCloseTo(20.55, 1);
   });
 
-  it('reads ~75 s today — Espenak\'s 2005–2050 segment, extrapolated in 2006', () => {
+  it('reads ~75 s today — Espenak & Meeus\'s 2005–2050 segment, extrapolated in 2006', () => {
+    // Espenak & Meeus 2006 (/data/papers/index.md#espenak2006) Sect. 2.7.
     // Earth did not slow as projected, so this sits ~6 s above the observed
     // ~69 s. Kept rather than spliced, to hold the function continuous; the
     // cost is bounded in README.md#timescales.

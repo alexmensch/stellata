@@ -178,7 +178,7 @@ distance per HOST maximised over every body, and for Sol that maximum is
 a moon — [Per-host distance cull](../../README.md#per-host-distance-cull).
 
 **Uranus and Neptune ship strips but no photometry.** Their rings are
-true-opacity charcoal threads, and the brightness-vs-inclination Mallama
+true-opacity charcoal threads, and the brightness-vs-inclination [Mallama 2017](/data/papers/index.md#mallama2017)
 publishes for Uranus is polar methane depletion — not a ring term.
 
 ### The drawn annulus rides the same curve

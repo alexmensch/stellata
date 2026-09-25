@@ -48,7 +48,7 @@ Every object is placed from a published observational catalogue or direct measur
 - [JPL Solar System Dynamics](https://ssd.jpl.nasa.gov/sats/elem/): mean orbital elements for the 18 major moons.
 - [NASA planetary fact sheets](https://nssdc.gsfc.nasa.gov/planetary/factsheet/): radii and mean elements; Pluto from New Horizons 2015.
 - [IAU WGCCRE (Archinal et al. 2018)](https://doi.org/10.1007/s10569-017-9805-5): planet and moon axial tilt and rotation.
-- [Mallama, Krobusek & Pavlov 2018](https://doi.org/10.1016/j.icarus.2016.09.023): V-band albedos and phase curves.
+- [Mallama, Krobusek & Pavlov 2017](https://doi.org/10.1016/j.icarus.2016.09.023): V-band albedos and phase curves.
 
 ### Heliopause boundary
 

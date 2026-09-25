@@ -219,7 +219,8 @@ describe('SOL_PLANETS data', () => {
   it('Saturn is the one body whose rings carry system photometry', () => {
     // Uranus and Neptune ship ring strips but no photometry: their rings
     // are true-opacity charcoal threads, and the brightness-vs-
-    // inclination Mallama publishes for Uranus is polar methane
+    // inclination Mallama 2017 (/data/papers/index.md#mallama2017) publishes
+    // for Uranus is polar methane
     // depletion, not a ring term.
     const ringed = SOL_BODIES.filter((b) => b.rings);
     expect(ringed.map((b) => b.name)).toEqual(['Saturn', 'Uranus', 'Neptune']);

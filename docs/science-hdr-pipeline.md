@@ -556,7 +556,7 @@ are why the statistic is now a **reduction over what the frame drew**
 rather than a walk over a per-source model. Occlusion went first: coverage
 alone counted a body's flux whether or not anything was in front of it, so
 Sol behind the night side of Saturn still dimmed the star field. Emission
-followed: a body's sample carried reflected host light through the Mallama
+followed: a body's sample carried reflected host light through the [Mallama 2017](/data/papers/index.md#mallama2017)
 phase curve and nothing else, so a backlit Titan's forward-scattered Mie
 ring — of order the host's irradiance, against the ~1e-4 the sample
 reported — was **~11 magnitudes** of light the exposure never knew about.

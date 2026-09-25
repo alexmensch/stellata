@@ -151,7 +151,8 @@ export interface PlanetRings {
   /** Joint phase-angle / ring-tilt law for the ring system's share of
    *  the body's unresolved apparent magnitude. Absent for Uranus and
    *  Neptune: their rings are true-opacity charcoal threads, and the
-   *  brightness-vs-inclination Mallama publishes for Uranus is methane
+   *  brightness-vs-inclination Mallama 2017
+   *  (/data/papers/index.md#mallama2017) publishes for Uranus is methane
    *  depletion toward its poles, not a ring term. */
   readonly systemPhotometry?: RingSystemPhotometry;
 }
@@ -440,7 +441,7 @@ export const SOL_PLANETS: readonly Planet[] = [
   // really an icy-rocky body but bins with the inner terrestrials for
   // disc-rendering purposes (sharp silhouette, not a gas-giant gradient).
   // Tan-pink colour reflects New Horizons MVIC imagery. Albedo from
-  // HST + New Horizons reconnaissance. No `phaseCoefficients` — Mallama 2018
+  // HST + New Horizons reconnaissance. No `phaseCoefficients` — Mallama 2017
   // (/data/papers/index.md#mallama2017) doesn't publish a polynomial fit
   // for Pluto, so the renderer uses the Lambertian default.
   {

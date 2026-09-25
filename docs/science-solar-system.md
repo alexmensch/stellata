@@ -278,7 +278,7 @@ opposition by what the point source does and the resolvedness band
 cannot step. Cassini/ISS corroborates the width independently:
 [Déau et al. 2013](/data/papers/index.md#deau2013) measure the surge half-width at 0.20° in the A and B rings
 and ≥ 0.26° in the C ring and Cassini Division, against the
-`ln2/2.25` = 0.308° of Mallama's Earth-based exponential. The surge is
+`ln2/2.25` = 0.308° of the Earth-based exponential in [Mallama & Hilton 2018](/data/papers/index.md#mallamahilton2018) Eq. 10 (from [Mallama 2012](/data/papers/index.md#mallama2012) Table 2). The surge is
 strip-averaged rather than per-radius because the per-region amplitudes
 (1.25 B, 1.39 A, ~1.5 C and Cassini Division) collapse to a few
 percent once flux-weighted, and because amplitude is not simply

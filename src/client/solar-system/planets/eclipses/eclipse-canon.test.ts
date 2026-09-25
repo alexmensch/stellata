@@ -307,7 +307,7 @@ describe('lunar eclipses vs the Five Millennium Canon', () => {
 
 describe('ΔT against the canon\'s own column', () => {
   it('agrees within 2 s at every canon epoch, from 2000 BC on', () => {
-    // Espenak (/data/papers/index.md#espenak2009,
+    // Espenak & Meeus 2009 (/data/papers/index.md#espenak2009,
     // /data/papers/index.md#espenak2009lunar) tabulates the ΔT he used per
     // eclipse. Reproducing it is a direct check on delta-t-pure.ts against the
     // same authority the ground tracks are being checked against. The bound is

@@ -222,7 +222,7 @@ running the **same march the shader runs**, not an analytic stand-in:
   top — `π/p·⟨airlight⟩`, a fifth of Earth's disc and near half of Mars's —
   and the reflected terms get the remainder. Geometric albedo already counts
   the light a body's air scatters, so leaving that share in the surface term
-  draws it twice: before this, Earth's disc ran +7 % over its Mallama flux,
+  draws it twice: before this, Earth's disc ran +7 % over its [Mallama 2017](/data/papers/index.md#mallama2017) flux,
   Mars +18 %, Titan +15 %.
 
 **Titan is over its measured flux and the clamp says so.** Its share is 1.137
@@ -336,7 +336,7 @@ black rim).
 Every real image (Blue Marble included) is exposure- and
 white-balance-processed, so pixel-matching is a trap. Instead:
 
-- The drawn *disc* renders at the Mallama-correct apparent magnitude — surface,
+- The drawn *disc* renders at the [Mallama 2017](/data/papers/index.md#mallama2017)-correct apparent magnitude — surface,
   skylight and airlight together, [Flux bookkeeping](#flux-bookkeeping) — so absolute brightness is
   anchored and the optical depths only move *hue*, limb behaviour, and how the
   flux splits between ground and air. Titan is the exception: its airlight

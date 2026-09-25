@@ -28,7 +28,7 @@ src/client/solar-system/planets/eclipses/
                                   two greatest-eclipse searches.
   eclipse-canon.test.ts           23 solar and 12 lunar named eclipses from
                                   NASA's Five Millennium Catalogs
-                                  ([solar](/data/papers/index.md#espenak2009), [lunar](/data/papers/index.md#espenak2009lunar)), 1978 BC to
+                                  ([solar](/data/papers/index.md#espenak2009), [lunar](/data/papers/index.md#espenak2009lunar)), 1983 BC to
                                   2928 AD. See README.md#what-is-pinned.
   umbral-glow-pure.ts (+ test)    Refracted, reddened sunlight inside a
                                   caster's umbra, and the umbral depth both
@@ -52,7 +52,7 @@ module yet — and cost the greatest-eclipse search its cache regardless.
 
 ## What is pinned
 
-`data/eclipse-canon/` freezes rows of [Espenak](/data/papers/index.md#espenak2009)'s solar and
+`data/eclipse-canon/` freezes rows of [Espenak & Meeus 2009](/data/papers/index.md#espenak2009)'s solar and
 [lunar](/data/papers/index.md#espenak2009lunar) catalogues; the test
 reproduces each event end-to-end and asserts:
 
@@ -69,8 +69,8 @@ reproduces each event end-to-end and asserts:
 - lunar umbral magnitude matches to 0.04, with the Moon fully inside the
   umbra at every canon total;
 - ΔT reproduces the canon's own per-eclipse column to **2 s, absolute** —
-  a relative bound cannot tell "reproduces [Espenak](/data/papers/index.md#espenak2009)" from "reproduces
-  [Espenak](/data/papers/index.md#espenak2009) minus a systematic 200 s".
+  a relative bound cannot tell "reproduces [Espenak & Meeus 2009](/data/papers/index.md#espenak2009)" from "reproduces
+  Espenak & Meeus minus a systematic 200 s".
 
 The corpus is deliberately central (|γ| < 0.95): a grazing event would
 satisfy every assertion above without saying anything about the shadow

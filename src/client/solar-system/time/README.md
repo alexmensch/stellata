@@ -9,8 +9,9 @@ codebase reads `Date.now()` for the model clock.
 
 ```
 src/client/solar-system/time/
-  delta-t-pure.ts (+ test)        ΔT = TT − UT, Espenak & Meeus, -1999 to
-                                  +3000. See README.md#timescales.
+  delta-t-pure.ts (+ test)        ΔT = TT − UT, Espenak & Meeus 2006
+                                  Canon Sect. 2.7, -1999 to +3000. See
+                                  README.md#timescales.
   time.ts (+ test)                Simulation time `t` + the UT ↔ Julian-day
                                   and TDB helpers (README.md#timescales). Owns
                                   VirtualClock, the clock behind
@@ -88,7 +89,7 @@ UT-scale JD to the element evaluation instead moves Mercury by 2.2e-5 AU,
 which was the dominant term left once the element tables landed.
 
 **ΔT is not a constant, and at this clock's range it is not small.**
-`delta-t-pure.ts` is the [Espenak & Meeus](/data/papers/index.md#espenak2006) polynomial set (−1999 to +3000),
+`delta-t-pure.ts` is the [Espenak & Meeus 2006](/data/papers/index.md#espenak2006) Canon Sect. 2.7 polynomial set (−1999 to +3000),
 thirteen fitted intervals with the [Morrison & Stephenson](/data/papers/index.md#morrisonstephenson) long-term
 parabola carrying each tail, plus NASA's lunar-secular-acceleration
 correction −0.000012932·(y−1955)² s: the polynomials assume the Moon's
@@ -112,7 +113,7 @@ The split that makes eclipses work is therefore:
 ΔT depends on the epoch being solved for. It converges immediately: ΔT
 changes by under 1e-6 of itself across one ΔT.
 
-**Known departure.** [Espenak](/data/papers/index.md#espenak2006)'s 2005–2050 segment was extrapolated in
+**Known departure.** [Espenak & Meeus 2006](/data/papers/index.md#espenak2006)'s 2005–2050 segment was extrapolated in
 2006 and Earth's rotation did not slow as projected, so it reads ~75 s in
 2026 against an observed ~69 s. Using it uniformly rather than splicing
 in the exact leap-second constant keeps the function continuous; the 6 s
