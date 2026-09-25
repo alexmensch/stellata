@@ -391,7 +391,7 @@ export class Stellata implements FrameAnchor {
   readonly hud: HudOverlay;
   /** `chart-mode.ts` starts / stops it on the chart activation predicate;
    *  the shell owns its lifetime. */
-  readonly chartLabels = new ChartLabels(this);
+  readonly chartLabels: ChartLabels;
 
   // Milky Way analytic background. Constructed eagerly so the
   // band is on during first paint. Dust is wired in once the volumetric
@@ -540,6 +540,7 @@ export class Stellata implements FrameAnchor {
         this.binaryOrbitField?.markBaselinesDirty();
       },
     });
+    this.chartLabels = new ChartLabels(this, this.starFrame.distSol);
     // The star kind module's legs read the shell-owned star machinery
     // through these closures — all deref lazily, so the picker and
     // focus controller constructed below are fine.

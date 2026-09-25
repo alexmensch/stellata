@@ -200,18 +200,15 @@ export interface ChartCatalogTables {
   readonly conStars: Map<number, ConMembership>;
   readonly variableIdxs: number[];
   readonly binaryIdxs: number[];
-  /** Sol distance per record, pc; the GPU mirrors this via iDistSol. */
-  readonly distSol: Float32Array;
 }
 
 export function buildChartCatalogTables(cat: CompleteCatalog): ChartCatalogTables {
   const conStars = new Map<number, ConMembership>();
   const variableIdxs: number[] = [];
   const binaryIdxs: number[] = [];
-  const distSol = new Float32Array(cat.count);
-  const pos = cat.positions;
+  const { constellation, periodDays, amplitudeMag, varType, flags } = cat;
   for (let i = 0; i < cat.count; i++) {
-    const conIdx = cat.constellation[i];
+    const conIdx = constellation[i];
     if (conIdx !== NO_CONSTELLATION_INDEX) {
       const m = conStars.get(conIdx);
       if (!m) conStars.set(conIdx, { stars: [i], minAppMag: Infinity });
@@ -220,21 +217,17 @@ export function buildChartCatalogTables(cat: CompleteCatalog): ChartCatalogTable
     // Rings are intrinsic-only; eclipsers surface via the wings glyph,
     // not a ring. See README.md#label-engine--glyphs Variable rings.
     if (
-      cat.periodDays[i] > 0 &&
-      cat.amplitudeMag[i] > 0 &&
-      cat.varType[i] !== VAR_TYPE_ECLIPSING
+      periodDays[i] > 0 &&
+      amplitudeMag[i] > 0 &&
+      varType[i] !== VAR_TYPE_ECLIPSING
     ) {
       variableIdxs.push(i);
     }
     // Primary-only set so each system gets one wings glyph anchored on
     // the brighter component.
-    if ((cat.flags[i] & FLAG_BINARY_PRIMARY) !== 0) binaryIdxs.push(i);
-    const x = pos[i * 3];
-    const y = pos[i * 3 + 1];
-    const z = pos[i * 3 + 2];
-    distSol[i] = Math.sqrt(x * x + y * y + z * z);
+    if ((flags[i] & FLAG_BINARY_PRIMARY) !== 0) binaryIdxs.push(i);
   }
-  return { conStars, variableIdxs, binaryIdxs, distSol };
+  return { conStars, variableIdxs, binaryIdxs };
 }
 
 /**
@@ -245,6 +238,9 @@ export function buildChartCatalogTables(cat: CompleteCatalog): ChartCatalogTable
  */
 export class ChartLabels {
   private readonly stellata: Stellata;
+  /** `StarFrame.distSol`, the array `iDistSol` uploads, so the glyph gate
+   *  and the GPU disc agree. */
+  private readonly distSol: Float32Array;
   private ctx: ChartModeContext | null = null;
   private layer: SVGGElement | null = null;
   private conLayer: SVGGElement | null = null;
@@ -336,8 +332,9 @@ export class ChartLabels {
   // teardown, so it captures its own unsubscribes (/src/client/util/event-bus/README.md#who-must-capture-the-unsubscribe).
   private unsubs: Array<() => void> = [];
 
-  constructor(stellata: Stellata) {
+  constructor(stellata: Stellata, distSol: Float32Array) {
     this.stellata = stellata;
+    this.distSol = distSol;
   }
 
   get running(): boolean {
@@ -418,8 +415,8 @@ export class ChartLabels {
 
   /** Teardown. `stop()` releases the subscriptions, the SVG pools and the
    *  per-tick scratch; dispose additionally drops the catalog-derived caches
-   *  (the distSol mirror is one float per star, the interned keys one string
-   *  per addressable label) that `stop()` deliberately keeps for chart
+   *  (the membership and index tables, the interned keys one string per
+   *  addressable label) that `stop()` deliberately keeps for chart
    *  re-entry. */
   dispose(): void {
     this.stop();
@@ -440,7 +437,8 @@ export class ChartLabels {
 
   private rebuildEligible(): void {
     if (this.tables.status !== 'ready') return;
-    const { variableIdxs, binaryIdxs, distSol } = this.tables.value;
+    const { variableIdxs, binaryIdxs } = this.tables.value;
+    const { distSol } = this;
     const f = this.stellata.filters.getFilter();
     const cat = this.stellata.catalog;
     this.variableEligible = filterByDistAndSpect(

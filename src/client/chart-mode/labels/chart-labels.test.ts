@@ -311,21 +311,19 @@ describe('chart-labels / filterByDistAndSpect', () => {
 });
 
 describe('chart-labels / buildChartCatalogTables', () => {
-  it('buckets members, rings intrinsic variables, wings primaries, measures Sol distance', () => {
+  it('buckets members, rings intrinsic variables, wings primaries', () => {
     const cat = makeEmptyCatalog(4);
     cat.constellation.set([3, NO_CONSTELLATION_INDEX, 3, 7]);
     cat.periodDays.set([10, 10, 0, 10]);
     cat.amplitudeMag.set([1, 1, 0, 1]);
     cat.varType.set([0, VAR_TYPE_ECLIPSING, 0, 0]);
     cat.flags.set([0, FLAG_BINARY_PRIMARY, FLAG_BINARY_PRIMARY, 0]);
-    cat.positions.set([3, 4, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0]);
 
     const t = buildChartCatalogTables(assumeComplete(cat));
 
     expect([...t.conStars.entries()].map(([k, m]) => [k, m.stars])).toEqual([[3, [0, 2]], [7, [3]]]);
     expect(t.variableIdxs).toEqual([0, 3]);
     expect(t.binaryIdxs).toEqual([1, 2]);
-    expect([...t.distSol]).toEqual([5, 0, 2, 1]);
   });
 });
 
@@ -502,10 +500,11 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     emit: (name: 'frame' | 'filter') => void;
     handlerCount: () => number;
     ticks: () => number;
-    positionsReads: () => number;
+    tableBuilds: () => number;
     memberWalks: () => number;
     landCatalog: () => void;
     invalidations: () => string[];
+    distSol: Float32Array;
   }
 
   interface HarnessPatch {
@@ -523,18 +522,19 @@ describe('chart-labels / ChartLabels lifecycle', () => {
   function makeHarness(patch: HarnessPatch = {}): Harness {
     const handlers = new Map<string, Set<() => void>>();
     let ticks = 0;
-    let positionsReads = 0;
+    let tableBuilds = 0;
     let absmagReads = 0;
     const stars = patch.stars ?? [];
     const positions = new Float32Array(stars.flatMap((s) => [0, 0, -s.distPc]));
     const absmag = new Float32Array(stars.map((s) => s.absmag));
+    const constellation = new Uint8Array(stars.map((s) => s.con));
     const complete = new LateCell<CompleteCatalog>();
     const invalidations: string[] = [];
     const catalog = {
       count: stars.length,
       names: patch.names ?? new Map<number, string>(),
       constellations: patch.constellations ?? ([] as unknown[]),
-      constellation: new Uint8Array(stars.map((s) => s.con)),
+      get constellation() { tableBuilds++; return constellation; },
       // With no star names, no Bayer glyphs and no variables, the only readers
       // are the glyph pass — once per tick, unconditionally — and the member
       // walk, once per member star. So the per-frame delta is 1 with the walk
@@ -545,7 +545,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       amplitudeMag: new Float32Array(stars.length),
       varType: new Uint8Array(stars.length),
       flags: new Uint8Array(stars.length),
-      get positions() { positionsReads++; return positions; },
+      positions,
       complete,
     };
     const landCatalog = () => complete.land(catalog as unknown as CompleteCatalog);
@@ -590,10 +590,11 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       emit: (name) => { for (const fn of handlers.get(name) ?? []) fn(); },
       handlerCount: () => [...handlers.values()].reduce((n, s) => n + s.size, 0),
       ticks: () => ticks,
-      positionsReads: () => positionsReads,
+      tableBuilds: () => tableBuilds,
       memberWalks: () => absmagReads,
       landCatalog,
       invalidations: () => invalidations,
+      distSol: new Float32Array(stars.map((s) => s.distPc)),
     };
   }
 
@@ -623,7 +624,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
   it('start subscribes, stop unsubscribes, and both are idempotent', () => {
     installDomStubs();
     const h = makeHarness();
-    const labels = new ChartLabels(h.stellata);
+    const labels = new ChartLabels(h.stellata, h.distSol);
     expect(labels.running).toBe(false);
     expect(h.handlerCount()).toBe(0);
 
@@ -647,7 +648,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
   it('ticks on frame while running and not after stop', () => {
     installDomStubs();
     const h = makeHarness();
-    const labels = new ChartLabels(h.stellata);
+    const labels = new ChartLabels(h.stellata, h.distSol);
 
     labels.start(h.ctx);
     h.emit('frame');
@@ -661,7 +662,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
   it('hides every SVG layer and drains their pooled children on stop', () => {
     const groups = installDomStubs();
     const h = makeHarness();
-    const labels = new ChartLabels(h.stellata);
+    const labels = new ChartLabels(h.stellata, h.distSol);
 
     labels.start(h.ctx);
     const layers = CHART_LAYER_IDS.map((id) => groups.get(id)!);
@@ -681,7 +682,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
   it.each(CHART_LAYER_IDS)('start throws when index.html is missing #%s', (missing) => {
     installDomStubs(CHART_LAYER_IDS.filter((id) => id !== missing));
     const h = makeHarness();
-    const labels = new ChartLabels(h.stellata);
+    const labels = new ChartLabels(h.stellata, h.distSol);
 
     expect(() => labels.start(h.ctx)).toThrow(missing);
     expect(labels.running).toBe(false);
@@ -690,30 +691,30 @@ describe('chart-labels / ChartLabels lifecycle', () => {
   it('stop keeps the catalog-derived caches; dispose drops them', () => {
     installDomStubs();
     const h = makeHarness();
-    const labels = new ChartLabels(h.stellata);
+    const labels = new ChartLabels(h.stellata, h.distSol);
 
     labels.start(h.ctx);
-    const afterFirstStart = h.positionsReads();
+    const afterFirstStart = h.tableBuilds();
     expect(afterFirstStart).toBeGreaterThan(0);
 
-    // Chart re-entry reuses the distSol mirror + membership map — walking
+    // Chart re-entry reuses the membership and index tables — walking
     // the catalog again per toggle is the cost the cache exists to avoid.
     labels.stop();
     labels.start(h.ctx);
-    expect(h.positionsReads()).toBe(afterFirstStart);
+    expect(h.tableBuilds()).toBe(afterFirstStart);
 
     // dispose is the teardown boundary: the next start rebuilds from the
     // catalog rather than inheriting a prior instance's arrays.
     labels.dispose();
     expect(labels.running).toBe(false);
     labels.start(h.ctx);
-    expect(h.positionsReads()).toBeGreaterThan(afterFirstStart);
+    expect(h.tableBuilds()).toBeGreaterThan(afterFirstStart);
   });
 
   it('dispose from a running engine releases the subscriptions', () => {
     installDomStubs();
     const h = makeHarness();
-    const labels = new ChartLabels(h.stellata);
+    const labels = new ChartLabels(h.stellata, h.distSol);
 
     labels.start(h.ctx);
     labels.dispose();
@@ -763,7 +764,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     it('draws one label per anchor, so Serpens is named twice', () => {
       const groups = installDomStubs();
       const h = anchorHarness();
-      const labels = new ChartLabels(h.stellata);
+      const labels = new ChartLabels(h.stellata, h.distSol);
       labels.start(h.ctx);
       h.emit('frame');
 
@@ -794,7 +795,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
           { code: 'SER2', name: 'Serpens', conIndex: SERPENS, position: above.clone() },
         ],
       });
-      const labels = new ChartLabels(h.stellata);
+      const labels = new ChartLabels(h.stellata, h.distSol);
       labels.start(h.ctx);
       h.emit('frame');
 
@@ -822,7 +823,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       it('withholds constellation names but still draws star names', () => {
         const groups = installDomStubs();
         const h = streamingHarness();
-        const labels = new ChartLabels(h.stellata);
+        const labels = new ChartLabels(h.stellata, h.distSol);
         labels.start(h.ctx);
         h.emit('frame');
 
@@ -834,7 +835,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       it('draws them on the first frame after completion, with the camera still', () => {
         const groups = installDomStubs();
         const h = streamingHarness();
-        const labels = new ChartLabels(h.stellata);
+        const labels = new ChartLabels(h.stellata, h.distSol);
         labels.start(h.ctx);
         h.emit('frame');
 
@@ -848,7 +849,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       it('stops listening for completion on stop', () => {
         installDomStubs();
         const h = streamingHarness();
-        const labels = new ChartLabels(h.stellata);
+        const labels = new ChartLabels(h.stellata, h.distSol);
         labels.start(h.ctx);
         labels.stop();
 
@@ -867,7 +868,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
           { con: ORION, absmag: 20, distPc: 10 },
         ],
       });
-      const labels = new ChartLabels(h.stellata);
+      const labels = new ChartLabels(h.stellata, h.distSol);
       labels.start(h.ctx);
       h.emit('frame');
 
@@ -884,7 +885,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       function readsForOneFrame(patch: HarnessPatch): number {
         installDomStubs();
         const h = anchorHarness(patch);
-        const labels = new ChartLabels(h.stellata);
+        const labels = new ChartLabels(h.stellata, h.distSol);
         labels.start(h.ctx);
         const before = h.memberWalks();
         h.emit('frame');
@@ -909,7 +910,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       const h = anchorHarness({
         detailPermits: (id) => id !== 'chartConstellationNames' || namesOn,
       });
-      const labels = new ChartLabels(h.stellata);
+      const labels = new ChartLabels(h.stellata, h.distSol);
       labels.start(h.ctx);
       h.emit('frame');
       expect(drawnLabels(groups.get('chart-con-labels')!)).toEqual([]);
@@ -948,7 +949,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         ],
         detailPermits: (id) => id !== 'chartConstellationNames' || conNamesOn,
       });
-      const labels = new ChartLabels(h.stellata);
+      const labels = new ChartLabels(h.stellata, h.distSol);
       labels.start(h.ctx);
       h.emit('frame');
       expect(drawnLabels(groups.get('chart-con-labels')!))
@@ -992,7 +993,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         anchors: [{ code: 'ORI', name: 'Orion', conIndex: ORION, position: AHEAD.clone() }],
         detailPermits: (id) => id !== 'chartConstellationNames' || conNamesOn,
       });
-      const labels = new ChartLabels(h.stellata);
+      const labels = new ChartLabels(h.stellata, h.distSol);
       labels.start(h.ctx);
 
       // Frame 1: both names claim a slot and both are measured; the long one

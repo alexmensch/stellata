@@ -88,8 +88,8 @@ apparent magnitude barely moves under a small camera nudge.
 
 **Constellation names, variable rings and binary wings wait for the complete
 catalogue.** All three read tables built over every record: constellation
-membership, the variable and binary-primary index lists, and the Sol-distance
-mirror (`ChartCatalogTables`). `buildChartCatalogTables` takes a
+membership and the variable and binary-primary index lists
+(`ChartCatalogTables`). `buildChartCatalogTables` takes a
 `CompleteCatalog`, so it cannot be built from the first-paint prefix. That
 matters because an undecoded record reads constellation 0, which is a real
 constellation. `start()` subscribes to `catalog.complete`. Until it lands,
@@ -274,7 +274,9 @@ list, applied the spectral-mask + min/max distance-from-Sol gates
 (static parts of `renderableAppMag`), then projected.
 
 Pre-bin into `variableEligible` / `binaryEligible` on filter change
-(via `stellata.on('filter', …)`); the per-frame loops drop the
+(via `stellata.on('filter', …)`). The distance gate reads
+`StarFrame.distSol`, handed in at construction — the array `iDistSol`
+uploads, so a glyph and its GPU disc pass the same distance test. The per-frame loops drop the
 spectral + distance-from-Sol checks because eligibility already
 encodes them, and the cheap remaining work (magnitude gate +
 projection) only runs against the pruned set. Restrictive filters
