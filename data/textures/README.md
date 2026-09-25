@@ -131,16 +131,20 @@ calibrates every map with a published disc-integrated colour to a
   [Harris 1961](/data/papers/index.md#harris1961) via [Newburn & Gulkis 1973](/data/papers/index.md#newburn1973).
 - **The photometric system is stored per row**, because the two sources
   are not on the same one. [Frey & Lowman](/data/papers/index.md#frey1974)'s Table III puts its R filter at
-  0.69 µm — Johnson R, against Cousins Rc's ~0.64 — and the solar anchor
-  (`SUN_VRC` = 0.352) is Cousins. Reading a Johnson index against it
+  0.69 µm, against Cousins Rc's ~0.64, and the solar anchor
+  (`SUN_VRC` = 0.352) is Cousins. [Newburn & Gulkis](/data/papers/index.md#newburn1973)
+  (Appendix B) name that R as Hardie's passband, not Johnson's standard,
+  with the Sun at V−R 0.45 in it; the rows are stored as Johnson, the
+  standard system nearest it. Reading such an index against the Cousins anchor
   reddens the body: **0.26 mag on Titan**, worse than the hand tint it
   replaces. Each row keeps the number its source published and
-  `vrc_of` converts, interpolating the paired Johnson/Cousins columns of
-  [Fitzgerald 1970](/data/papers/index.md#fitzgerald1970) + [Ducati et al. 2001](/data/papers/index.md#ducati2001) as tabulated by
-  STScI, whose Cousins side is [Bessell 1979](/data/papers/index.md#bessell1979). Inverting that transform at the adopted
-  solar V−Rc returns a Johnson solar V−R of 0.53 against the ~0.52 the
-  system is usually quoted at, which is the cross-check that it is
-  pointing the right way.
+  `vrc_of` converts, interpolating paired Johnson/Cousins columns as
+  tabulated by STScI: the Johnson side is [Ducati et al. 2001](/data/papers/index.md#ducati2001) Table 3,
+  the Cousins side [Bessell 1979](/data/papers/index.md#bessell1979)'s transform of it (bar the 0.45 row,
+  where Bessell's relation gives 0.33 against the table's 0.30). Inverting
+  that transform at the adopted solar V−Rc returns a Johnson solar V−R of
+  0.52, the value the system is usually quoted at, which is the cross-check
+  that it is pointing the right way.
 - Per-map linear-RGB gains move the map's **sphere-weighted mean**
   (rows weighted by cos-latitude; no-data gaps excluded) onto the
   target. The triple is **normalised so its largest member is 1**, so a

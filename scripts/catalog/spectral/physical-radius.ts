@@ -45,9 +45,10 @@ function interpolate(table: [number, number][], key: number): number {
 }
 
 // Wolf-Rayet Teff / BC by ionization subclass — one shared WN/WC ramp
-// (WN2 ~141 kK … WN8 ~45 kK, Hamann+ 2006 (/data/papers/index.md#hamann2006);
-// WC4 ~117 kK … WC9 ~44 kK, Sander+ 2012 (/data/papers/index.md#sander2012)),
-// within the sizing scatter for display radii.
+// (WN2 ~141 kK … WN8 ~45 kK, Hamann+ 2006 (/data/papers/index.md#hamann2006)).
+// Sander+ 2012 (/data/papers/index.md#sander2012) Table 6 puts WC4 at ~117 kK
+// and WC9 at ~44 kK; the ramp meets it only at WC9 and runs 8–29 kK under it
+// for WC4–WC8.
 const WR_T_TABLE: [number, number][] = [[0, 140000], [5, 75000], [9, 44000]];
 const WR_BC_TABLE: [number, number][] = [[0, -6.0], [5, -4.0], [9, -2.7]];
 
@@ -170,9 +171,7 @@ export function physicalRadius(
 }
 
 // Absolute visual magnitude M_V by spectral class + subclass, calibrated
-// per luminosity class (Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.3,
-// Pecaut & Mamajek 2013 (/data/papers/index.md#pecaut2013) — the same tables
-// mass_estimate.py reads for the mass-ratio backfill).
+// per luminosity class (Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.3).
 const MV_MS_TABLE: Record<number, [number, number][]> = {
   0: [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V
   1: [[0, -4.0], [5, -1.2], [9,  0.4]],   // B V

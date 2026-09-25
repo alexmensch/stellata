@@ -21,9 +21,11 @@ from PIL import Image
 #
 # SATELLITES — Frey & Lowman 1974 (/data/papers/index.md#frey1974), Table
 # IV, carrying Harris 1961 (/data/papers/index.md#harris1961) as reported by
-# Newburn & Gulkis 1973 (/data/papers/index.md#newburn1973). Its Table III
-# states the filter effective wavelengths (U .35, B .45, V .55, R .69, I .82
-# µm), which is what fixes the R column as Johnson rather than Cousins.
+# Newburn & Gulkis 1973 (/data/papers/index.md#newburn1973). Frey & Lowman's
+# Table III states the filter effective wavelengths (U .35, B .45, V .55, R
+# .69, I .82 µm). Newburn & Gulkis (Appendix B) name Harris' R and I as
+# Hardie's passbands, not Johnson's standards, and put the Sun at V−R 0.45 in
+# them; the rows are stored as Johnson, the standard system nearest that R.
 # Bodies the table gives B−V for but no V−R (Enceladus, Tethys, Iapetus) and
 # Mimas, which it has no colour for at all, are absent here and keep the
 # hand treatments in `build-textures.py` — a red target cannot be invented
@@ -47,17 +49,17 @@ COLOUR_INDICES = {
     "triton": (0.77, 0.58, "johnson"),
 }
 
-# Johnson V−R → Cousins V−Rc, as paired columns of the intrinsic-colour
-# tables of Fitzgerald 1970 (/data/papers/index.md#fitzgerald1970) and
-# Ducati et al. 2001 (/data/papers/index.md#ducati2001) tabulated by STScI,
-# whose Cousins columns are the Johnson ones transformed by Bessell 1979
-# (/data/papers/index.md#bessell1979). G0 through K5, which brackets every
-# satellite row above (0.48–0.84).
+# Johnson V−R → Cousins V−Rc, as paired columns tabulated by STScI: the
+# Johnson side is Ducati et al. 2001 (/data/papers/index.md#ducati2001) Table
+# 3, the Cousins side that transformed by Bessell 1979
+# (/data/papers/index.md#bessell1979), except at 0.45, where Bessell's
+# relation gives 0.33. G0 through K5, which brackets every satellite row
+# above (0.48–0.84).
 #
 # Interpolating a published pair beats restating Bessell's coefficients from
 # memory, and it cross-checks: inverting it at the adopted solar V−Rc gives a
-# Johnson solar V−R of 0.53, against the ~0.52 the system is usually quoted
-# at. The relation is calibrated on stellar spectra and these bodies are not
+# Johnson solar V−R of 0.52, the value the system is usually quoted at. The
+# relation is calibrated on stellar spectra and these bodies are not
 # stars — but they shine by reflected sunlight off smooth-sloped surfaces, so
 # they sit near the locus rather than off it, and the residual is far under
 # the 0.17 mag the conversion removes.

@@ -78,9 +78,11 @@ scripts/binaries/
   stage7_counts.py                Build-counts + build-rates snapshot writer
                                   (mirrors scripts/catalog/build-counts.ts).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
-                                  (Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013:
-                                  /data/papers/index.md#cox2000,
-                                  /data/papers/index.md#pecaut2013).
+                                  (Cox 2000 Sect. 15.2,
+                                  /data/papers/index.md#cox2000; dwarf
+                                  anchors unverified against Mamajek's
+                                  online table,
+                                  /data/papers/index.md#mamajek2022).
   build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
                                   public/binaries.bin. Detects hierarchical
                                   chains via component-letter prefix matching
@@ -501,7 +503,7 @@ in `ORBIT_VIA_VALUES`, in priority order:
 | `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit, so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below — Stage 6 estimates one for the non-visual routes). |
 | `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`), AND the pair's WDS separation isn't far too wide to be that orbit (`_nss_separation_consistent`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
 | `orb6_spectroscopic` | ORB6 grade ∈ {7, 8, 9} — non-visual fits: 8 = interferometric-visibilities-only, 9 = astrometric / spectroscopic per orb6text.html; grade 7 is undocumented there but the file's grade-7 rows are photometric / eclipsing orbits (YY Gem, EQ Tau, BX And) with real fitted elements. |
-| `msc` | Pulkovo MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year OR a truncated JD with no unit flag — `msc_T0_jd` disambiguates by magnitude, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
+| `msc` | Pulkovo MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year when the period unit is years and JD−2400000 when it is days (Tokovinin 2018, /data/papers/index.md#tokovinin2018); `msc_T0_jd` disambiguates by magnitude instead of reading the period unit, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
 | `none` | Visual-only pair with no orbital information on file. |
 
 An NSS orbit is keyed to a Gaia **source**, not a WDS pair, so it can
@@ -522,7 +524,7 @@ The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
 (`Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
 `AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell`
 ([Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs et al. 2023](/data/papers/index.md#halbwachs2023)
-Appendix C). The ESA NSSTools package isn't a dependency — the closed form is ~10 lines and NSSTools has been
+Appendix A). The ESA NSSTools package isn't a dependency — the closed form is ~10 lines and NSSTools has been
 unmaintained since 2022.
 
 The TI constants describe the **photocentre's** orbit around the
@@ -749,8 +751,11 @@ Three system-level mechanisms run at emit time:
   preferred, AT-HYG inherited fallback) into class / subclass / lum
   class and reads a `q = M_secondary / (M_primary + M_secondary)` off
   per-class mass tables for MS / III / IV / I
-  ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2,
-  [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013)). White dwarfs default to 0.6 M☉; carbon / S / WR
+  ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2; the
+  main-sequence anchors are unverified —
+  [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) tabulate no
+  masses, [Mamajek's online dwarf table](/data/papers/index.md#mamajek2022)
+  does). White dwarfs default to 0.6 M☉; carbon / S / WR
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.
 - **Renderable-element finalization.** After the q backfill,

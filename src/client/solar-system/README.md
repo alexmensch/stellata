@@ -213,8 +213,9 @@ sphere), pure Lambertian `(sin α + (π − α)·cos α)/π` for bodies
 without published curves. Every curve is the body's **globe** anchored on
 its α=0 geometric albedo, so `c0 = 0` throughout — a ring system's share
 rides its own joint α/ring-tilt law
-([Ring photometry](planets/rings/README.md#ring-photometry--the-unresolved-magnitude)), never `c0`. [Mallama](/data/papers/index.md#mallama2017) covers
-Mercury, Venus, Earth, Mars, Jupiter and Saturn; Earth's Moon takes the
+([Ring photometry](planets/rings/README.md#ring-photometry--the-unresolved-magnitude)), never `c0`. [Mallama 2017](/data/papers/index.md#mallama2017) gives
+polynomials for Mercury, Venus, Mars and Jupiter and a table for Earth;
+Saturn's globe is [Mallama & Hilton 2018](/data/papers/index.md#mallamahilton2018) Eq. 12. Earth's Moon takes the
 classic lunar phase law in the same polynomial form (`MOON_PHASE`, the
 only moon with a curve measured across the phases a camera can occupy).
 Uranus, Neptune, Pluto,

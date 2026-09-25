@@ -202,8 +202,9 @@ Scoring the Gaia value needs a velocity measured somewhere else, and the only
 non-Gaia radial velocities here are the SIMBAD tier's 7,171 — led by
 [Gontcharov 2006](/data/papers/index.md#gontcharov2006)'s Pulkovo compilation (2,809 rows) and
 the GCRV ([Wilson 1953](/data/papers/index.md#wilson1953), 884), which is the same pre-Gaia literature the
-retired spine cells transcribed, quoted to the nearest km/s or half rather
-than measured by a better instrument. Nine of those rows sit on a Gaia row
+retired spine cells transcribed. The GCRV tabulates to 0.1 km/s, but its
+quality classes run from 0.5 km/s mean error (class A) to over 10 (class E),
+so it is no better an instrument. Nine of those rows sit on a Gaia row
 stating more than 20 km/s of uncertainty, and their median disagreement is
 4.9 km/s. The one large disagreement in that set (Gaia 7.26 ± 23.94 against
 −148.00) is a 6σ gap in which the older value is the likelier suspect. Nine

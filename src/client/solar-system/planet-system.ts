@@ -337,8 +337,8 @@ export const SOL_PLANETS: readonly Planet[] = [
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
     // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine et al. 1999,
-    // /data/papers/index.md#bodhaine1999); the Mie term is the clean maritime
-    // background aerosol column. Sources + derivations:
+    // /data/papers/index.md#bodhaine1999); the Mie term stands in for the clean
+    // maritime background aerosol column. Sources + derivations:
     // /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
     atmosphere: {
       heightKm: 100, rayleighHeightKm: 8, mieHeightKm: 1.2,

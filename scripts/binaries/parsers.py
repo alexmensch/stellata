@@ -867,9 +867,10 @@ def parse_msc_systems(path: Path) -> list[MscSystemRow]:
 @dataclass
 class MscOrbitRow:
     """One MSC orbit (``data/msc/msc_orbits.tsv``). ``syst`` is the
-    Tokovinin 2018 (/data/papers/index.md#tokovinin2018) pair label (``"Aa,Ab"``). ``t0`` is a Besselian year OR a
-    truncated JD with no unit flag — ``stage4_orbits.msc_T0_jd``
-    disambiguates by magnitude + plausibility window."""
+    Tokovinin 2018 (/data/papers/index.md#tokovinin2018) pair label (``"Aa,Ab"``). ``t0`` is a Besselian year when
+    ``per_unit`` is years and JD−2400000 when it is days (Table 4 note a);
+    ``stage4_orbits.msc_T0_jd`` disambiguates by magnitude + plausibility
+    window instead of reading ``per_unit``."""
 
     wds_id: str
     syst: str

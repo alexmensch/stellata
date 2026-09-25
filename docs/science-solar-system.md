@@ -120,32 +120,38 @@ channels, sourced rather than read off a slider:
 
 - **Earth** — τ_R = [0.049, 0.097, 0.221]: sea-level Rayleigh optical depth,
   [Bodhaine et al. 1999](/data/papers/index.md#bodhaine1999) eq. 30.
-  τ_Mie = 0.05: clean maritime background aerosol
-  ([Smirnov et al. 2002](/data/papers/index.md#smirnov2002)).
+  τ_Mie = 0.05, for the clean maritime background aerosol, which
+  [Smirnov et al. 2002](/data/papers/index.md#smirnov2002) measure at 500 nm as
+  a mode of 0.06 and a mean of 0.07.
 - **Venus** — τ_R = Earth's scaled by the CO₂ column above the τ=1 cloud tops
-  (~74 km, P ≈ 40 hPa —
-  [Ignatiev et al. 2009](/data/papers/index.md#ignatiev2009)) × the CO₂/air
-  Rayleigh cross-section ratio ≈ 2.45
-  ([Sneep & Ubachs 2005](/data/papers/index.md#sneep2005)): 0.070× Earth. The
+  (~74 km, [Ignatiev et al. 2009](/data/papers/index.md#ignatiev2009)) at
+  P ≈ 40 hPa — the pressure Ignatiev quote from Pioneer Venus for the polar
+  cloud top at 68 km (28 mbar at 70 km for the equatorial level) — × the
+  CO₂/air Rayleigh cross-section ratio ≈ 2.45 (at 532 nm
+  [Sneep & Ubachs 2005](/data/papers/index.md#sneep2005) measure CO₂ at 2.43×
+  N₂, and air scatters within a few percent of N₂): 0.070× Earth. The
   clouds below are the *texture*; only the column above it belongs to the
-  overlay. τ_Mie = 0.12 sits in the measured 0.05–0.3 upper-haze range
-  ([Wilquet et al. 2009](/data/papers/index.md#wilquet2009)). `absorbCoeff`
-  stands in for the unidentified UV-blue absorber, whose visible-band τ has no
-  published table — the one judged value left, kept small enough to tint without
-  hiding the cloud texture.
+  overlay. τ_Mie = 0.12 for the 70–90 km upper haze, whose local extinction
+  profiles and particle sizes
+  [Wilquet et al. 2009](/data/papers/index.md#wilquet2009) measure; the paper
+  states no column optical depth. `absorbCoeff` stands in for the
+  unidentified UV-blue absorber, whose visible-band τ has no published table —
+  a judged value, kept small enough to tint without hiding the cloud texture.
 - **Mars** — τ_R from the 6.1 hPa mean CO₂ column × 2.45 (same scaling): 0.026×
   Earth. τ_Mie = 0.2: the LOW end of the measured 0.2–0.5 background dust column
   ([Lemmon et al. 2015](/data/papers/index.md#lemmon2015)) — the global mosaics
   are imaged through that same dust, so the low end limits double-counting.
   `absorbCoeff` from measured dust single-scattering albedo ω̃ ≈
-  [0.97, 0.90, 0.75] ([Wolff et al. 2009](/data/papers/index.md#wolff2009)):
-  τ_a = τ_Mie·(1/ω̃ − 1).
+  [0.97, 0.90, 0.75] ([Wolff et al. 2009](/data/papers/index.md#wolff2009)
+  Fig. 12, whose bluest measured point, at 440 nm, is ≈ 0.77 — the blue 0.75
+  extrapolates below the data): τ_a = τ_Mie·(1/ω̃ − 1).
 - **Titan** — τ_R from the full 1.5-bar N₂ column
   ([Lindal et al. 1983](/data/papers/index.md#lindal1983); 10.9× Earth's column
   at 1.35 m/s²): mostly buried under the haze, but its top is the real
-  high-altitude blue limb Cassini images show. τ_Mie = 2.5 sits in the measured
-  visible haze range τ ≈ 2–5
-  ([Tomasko et al. 2008](/data/papers/index.md#tomasko2008)).
+  high-altitude blue limb Cassini images show. τ_Mie = 2.5, below the haze
+  column the Huygens DISR model of
+  [Tomasko et al. 2008](/data/papers/index.md#tomasko2008) gives: ≈ 8 at
+  550 nm (≈ 6–12 across 650–450 nm), reaching 2–5 only past ~900 nm.
 
 <a id="moons"></a>**Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
@@ -271,13 +277,15 @@ zero-phase geometric albedo — so the resolved rings brighten through
 opposition by what the point source does and the resolvedness band
 cannot step. Cassini/ISS corroborates the width independently:
 [Déau et al. 2013](/data/papers/index.md#deau2013) measure the surge half-width at 0.20° in the A and B rings
-and 0.26–0.28° in the C ring and Cassini Division, against the
+and ≥ 0.26° in the C ring and Cassini Division, against the
 `ln2/2.25` = 0.308° of Mallama's Earth-based exponential. The surge is
 strip-averaged rather than per-radius because the per-region amplitudes
-(1.25 B, 1.39 A, 1.45 C, 1.47 Cassini Division) collapse to a few
-percent once flux-weighted, and because amplitude's correlation with
-optical depth turns over near τ ≈ 0.5–1 — so the strip's own opacity
-channel is not a usable proxy for it.
+(1.25 B, 1.39 A, ~1.5 C and Cassini Division) collapse to a few
+percent once flux-weighted, and because amplitude is not simply
+correlated with optical depth — it falls with τ below τ ≈ 0.7 in the A, B
+and C rings with wide scatter, holds near-constant above τ ≈ 1, and the
+Cassini Division follows neither — so the strip's own opacity channel is
+not a usable proxy for it.
 [Ring photometry](/src/client/solar-system/planets/rings/README.md#ring-photometry--the-unresolved-magnitude).
 
 **Earth night lights.** NASA Black Marble 2016 (Suomi NPP VIIRS)

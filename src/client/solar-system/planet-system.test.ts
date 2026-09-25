@@ -191,7 +191,9 @@ describe('SOL_PLANETS data', () => {
 
   it('every Mallama-published planet carries the matching phase coefficients', () => {
     // Mallama 2017 (/data/papers/index.md#mallama2017) publishes phase-angle
-    // polynomials for Mercury, Venus, Earth, Mars, Jupiter and Saturn. Uranus,
+    // polynomials for Mercury, Venus, Mars and Jupiter and a table for Earth;
+    // Saturn's globe curve is Mallama & Hilton 2018
+    // (/data/papers/index.md#mallamahilton2018) Eq. 12. Uranus,
     // Neptune and Pluto have no published phase polynomial — Uranus and Neptune
     // because their max α from Earth is "negligible" so the paper models
     // latitude/temporal effects instead, Pluto because the paper doesn't cover
@@ -364,7 +366,7 @@ describe('atmosphere shells', () => {
   it('every Rayleigh row keeps the 1/λ⁴ blue-to-red shape', () => {
     // (650/450)⁴ = 4.35; dispersion of the refractive index steepens the real
     // ratio slightly (Earth's Bodhaine (/data/papers/index.md#bodhaine1999)
-    // value is 4.51).
+    // value is 4.50).
     for (const name of ['Venus', 'Earth', 'Mars', 'Titan']) {
       const [r, , b] = atmoOf(name).rayleighCoeff;
       expect(b / r).toBeGreaterThan(4.3);
