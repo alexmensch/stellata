@@ -49,6 +49,9 @@ the store exists only so claims can be checked against the paper itself.
 
 - Files are named `<key>.pdf` (VizieR catalogues: `<key>.readme.txt`), `<key>`
   being the entry's key.
+- Beside each PDF with a text layer sits `<key>.txt`, its `pdftotext -layout`
+  output (pages split by form feed) for grepping. It is derived: regenerate it
+  whenever the PDF is replaced. Image-only scans have none; read the PDF.
 - Sessions read and write only through `data/papers/pdf`, never through the
   path it resolves to.
 - A worktree has no copy of the symlink (it is gitignored). Link it to the main
