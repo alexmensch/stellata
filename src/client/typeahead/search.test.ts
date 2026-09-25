@@ -20,7 +20,7 @@ import {
 import { displayNamesFromSearchIndex } from '../../../scripts/catalog/naming/star-naming-pure';
 import type { SearchIndex as SearchIndexLike } from './search-corpus';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
-import type { Catalog } from '../loaders/catalog-loader';
+import { assumeComplete, type Catalog } from '../loaders/catalog-loader';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import type { KindSearchEntry, ObjectKindModule } from '../kinds/kind-module';
 import type { TargetKind } from '../camera/focus/focus-target';
@@ -179,7 +179,7 @@ describe('search / component-letter aliases', () => {
       constellation: Float32Array.from([0, 0, 0]),
       names: new Map([[0, 'Rigil Kentaurus'], [1, 'Toliman'], [2, 'Proxima Centauri']]),
     };
-    const run = createSearchRunner(catalog, raw);
+    const run = createSearchRunner(assumeComplete(catalog), raw);
     const top = (q: string) => run(q)[0]?.index;
     expect(top('Alpha Centauri C')).toBe(2);
     expect(top('α Cen C')).toBe(2);
@@ -617,7 +617,7 @@ describe('search / Local Group entries', () => {
   ]);
 
   it('resolves aliases and display names to the same object with type + distance rows', () => {
-    const run = createSearchRunner(catalog, [], kinds);
+    const run = createSearchRunner(assumeComplete(catalog), [], kinds);
     for (const q of ['Andromeda Galaxy', 'NGC 224', 'Messier 31', 'M31']) {
       const hit = run(q)[0];
       expect(hit?.kind).toBe('lg');
@@ -632,7 +632,7 @@ describe('search / Local Group entries', () => {
   });
 
   it('dedupes multiple alias matches of one object to a single dropdown row', () => {
-    const run = createSearchRunner(catalog, [], kinds);
+    const run = createSearchRunner(assumeComplete(catalog), [], kinds);
     const rows = run('andromeda');
     expect(rows.filter((e) => e.kind === 'lg' && e.index === 0)).toHaveLength(1);
   });
@@ -651,7 +651,7 @@ describe('search / kind-module corpus rows (cloud shape)', () => {
   ]);
 
   it('resolves the display name + every alias to the same cloud', () => {
-    const run = createSearchRunner(catalog, [], kinds);
+    const run = createSearchRunner(assumeComplete(catalog), [], kinds);
     for (const q of ['Eagle Nebula', 'M16', 'NGC 6611']) {
       const hit = run(q)[0];
       expect(hit?.kind, q).toBe('cloud');
@@ -662,12 +662,12 @@ describe('search / kind-module corpus rows (cloud shape)', () => {
   });
 
   it('dedupes multiple alias matches of one cloud to a single dropdown row', () => {
-    const run = createSearchRunner(catalog, [], kinds);
+    const run = createSearchRunner(assumeComplete(catalog), [], kinds);
     expect(run('eagle').filter((e) => e.kind === 'cloud' && e.index === 0)).toHaveLength(1);
   });
 
   it('indexes an alias-less cloud by name alone', () => {
-    const run = createSearchRunner(catalog, [], kinds);
+    const run = createSearchRunner(assumeComplete(catalog), [], kinds);
     const hit = run('Taurus')[0];
     expect(hit?.kind).toBe('cloud');
     expect(hit?.index).toBe(1);
@@ -702,7 +702,7 @@ describe('search / ranking tiers', () => {
       displayCon: 'Galaxy · 813 kpc',
     },
   ]);
-  const run = createSearchRunner(catalog, raw, lg);
+  const run = createSearchRunner(assumeComplete(catalog), raw, lg);
 
   it('tags constellation-expansion labels and only them', () => {
     const { fuzzyEntries } = buildSearchIndex(raw, CONS);
@@ -741,7 +741,7 @@ describe('search / Sol planet entries', () => {
   ]);
 
   it('planet names resolve to planet-kind entries with the module index', () => {
-    const run = createSearchRunner(catalog, [], kinds);
+    const run = createSearchRunner(assumeComplete(catalog), [], kinds);
     const mars = run('mars')[0];
     expect(mars?.kind).toBe('planet');
     expect(mars?.index).toBe(3);
@@ -751,7 +751,7 @@ describe('search / Sol planet entries', () => {
   });
 
   it('planet entries are absent when the module contributes none', () => {
-    const run = createSearchRunner(catalog, []);
+    const run = createSearchRunner(assumeComplete(catalog), []);
     expect(run('mars')).toEqual([]);
   });
 });
@@ -773,7 +773,7 @@ describe('search / Gaia + SID direct dispatch', () => {
     gaiaSourceId: BigUint64Array.from([0n, 4472832130942575872n, 0n]),
     sid: Uint32Array.from([11, 22, 33]),
   };
-  const run = createSearchRunner(catalog, []);
+  const run = createSearchRunner(assumeComplete(catalog), []);
 
   it.each([
     'Gaia DR3 4472832130942575872',
@@ -806,7 +806,7 @@ describe('search / Gliese direct dispatch', () => {
     { i: 2, gl: 'GJ 452.1' },
     { i: 3, gl: 'GJ 2060AB' },
   ];
-  const run = createSearchRunner(makeEmptyCatalog(4), raw);
+  const run = createSearchRunner(assumeComplete(makeEmptyCatalog(4)), raw);
 
   it.each([
     ['Gl 559A', 0], ['gliese 559 a', 0],
@@ -840,7 +840,7 @@ describe('search / Gliese-based component composites', () => {
     { i: 2, gl: 'Gl 791.2', c: 0, cl: 'A', cp: 2 },
     { i: 3, c: 0, cl: 'B', cp: 2 },
   ];
-  const run = createSearchRunner(makeEmptyCatalog(4), raw);
+  const run = createSearchRunner(assumeComplete(makeEmptyCatalog(4)), raw);
 
   it.each([
     ['GJ 3915 Ab', 1],

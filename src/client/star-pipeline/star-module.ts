@@ -30,6 +30,7 @@ import { buildStarLabels, seedStarLabelsFromNames } from '../typeahead/star-name
 import { loadSearchIndex } from '../typeahead/search-index-host';
 import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
+import type { Late, LateState } from '../util/late/late';
 
 /** Shell-owned star machinery the module's legs read through closures —
  *  the star render pipeline, its frame state, and the picker stay on the
@@ -46,10 +47,9 @@ export interface StarModuleRuntime {
   peakDiscSizePx(idx: number): number;
   /** The Picker's star pick, shared by hover and the click FSM. */
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
-  /** Orbital elements for the companion lines; null with no artifact.
-   *  Read per format call — the shell can re-attach binaries after the
-   *  card provider is built. */
-  getBinaries(): BinariesData | null;
+  /** Orbital elements for the companion lines. Read per format call — the
+   *  shell attaches binaries after the card provider is built. */
+  getBinaries(): Late<BinariesData>;
 }
 
 export interface StarKindModule extends ObjectKindModule<'star'> {
@@ -94,6 +94,7 @@ export function createStarKindModule(): StarKindModule {
   let runtime: StarModuleRuntime | null = null;
   let ready: Promise<void> = Promise.resolve();
   let offRecords: (() => void) | null = null;
+  let offBinaries: (() => void) | null = null;
   let searchTables: SearchIndexPayload | null = null;
   // Filled in place rather than reassigned — every card provider, chart
   // binding and hover formatter captures these at boot, before the search
@@ -109,6 +110,9 @@ export function createStarKindModule(): StarKindModule {
     gaiaSourceId: catalog!.gaiaSourceId,
     sid: catalog!.sid,
   });
+
+  const binariesState = (): LateState<BinariesData> =>
+    (runtime ? runtime.getBinaries().state() : { status: 'pending' });
 
   const photometryOf = (idx: number) => (catalog && idx >= 0 && idx < catalog.count
     ? {
@@ -145,7 +149,10 @@ export function createStarKindModule(): StarKindModule {
     },
     photometry: photometryOf,
     setRuntime(rt) {
+      offBinaries?.();
       runtime = rt;
+      // The card's `ready` reads the binaries state, so its settle is a fill.
+      offBinaries = rt.getBinaries().observe(() => { derivedGeneration++; });
     },
 
     /** Resolves on the catalogue's FIRST chunk, so boot can paint. The
@@ -242,7 +249,7 @@ export function createStarKindModule(): StarKindModule {
         starLabels,
         spectralMap,
         searchEntries: searchEntryById,
-        getBinaries: () => runtime?.getBinaries() ?? null,
+        binaries: binariesState,
         tablesComplete: () => searchTables !== null,
         cameraDistancePc: (idx) => (runtime
           ? runtime.localPositionInto(idx, tmpLocal).distanceTo(attached.camera.position)
@@ -267,7 +274,7 @@ export function createStarKindModule(): StarKindModule {
           constellations: catalog.constellations,
           periodDays: catalog.periodDays,
           amplitudeMag: catalog.amplitudeMag,
-          binaries: runtime?.getBinaries() ?? null,
+          binaries: binariesState(),
           nowJd: tToJdUt(ctx.getT()),
           membership: ctx.systemMembership,
         })

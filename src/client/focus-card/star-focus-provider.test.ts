@@ -7,6 +7,7 @@ import { J2000_JD } from '../util/astronomy-constants';
 import type { SearchEntry } from '../typeahead/search';
 import type { BinariesData, BinaryRelation } from '../binaries/binaries-loader';
 import { NO_PARENT } from '../binaries/binaries-loader';
+import type { LateState } from '../util/late/late';
 import { KMS_PER_PC_YR } from '../format/velocity-format';
 import {
   createStarFocusProvider,
@@ -34,7 +35,7 @@ function buildConfig(overrides: Partial<StarFocusProviderConfig> = {}): StarFocu
     starLabels: new Map([[0, 'Vega'], [1, 'Star B'], [2, 'Star C']]),
     spectralMap: new Map([[0, 'A0V']]),
     searchEntries,
-    getBinaries: () => null,
+    binaries: () => ({ status: 'absent' }),
     cameraDistancePc: () => 7.68,
     nowJd: () => J2000_JD,
     tablesComplete: () => true,
@@ -50,6 +51,14 @@ function rowValue(rows: FocusCardRow[], label: string): string | undefined {
 
 describe('createStarFocusProvider', () => {
   beforeEach(() => setUnit('pc'));
+
+  it('is not ready while binaries are still pending', () => {
+    let binaries: LateState<BinariesData> = { status: 'pending' };
+    const provider = createStarFocusProvider(buildConfig({ binaries: () => binaries }));
+    expect(provider.ready?.(0)).toBe(false);
+    binaries = { status: 'absent' };
+    expect(provider.ready?.(0)).toBe(true);
+  });
 
   it('assembles the identity block: name, alternate designations, cleaned spectral', () => {
     const out = createStarFocusProvider(buildConfig()).format(0);
@@ -164,7 +173,7 @@ describe('createStarFocusProvider', () => {
       primaryIdxToRelations: new Map([[0, [0, 1]]]),
       secondaryIdxToRelations: new Map([[1, [0]], [2, [1]]]),
     };
-    const out = createStarFocusProvider(buildConfig({ getBinaries: () => binaries })).format(0);
+    const out = createStarFocusProvider(buildConfig({ binaries: () => ({ status: 'ready', value: binaries }) })).format(0);
     expect(rowValue(out.rows, 'Known companions')).toBe('Star B\nStar C');
     // Primary side renders as a row, not a full-width line block.
     expect(out.lines).toHaveLength(0);
@@ -194,7 +203,7 @@ describe('createStarFocusProvider', () => {
       primaryIdxToRelations: new Map([[0, [0]]]),
       secondaryIdxToRelations: new Map([[1, [0]]]),
     };
-    const out = createStarFocusProvider(buildConfig({ getBinaries: () => binaries })).format(1);
+    const out = createStarFocusProvider(buildConfig({ binaries: () => ({ status: 'ready', value: binaries }) })).format(1);
     expect(out.lines).toHaveLength(1);
     const line = out.lines[0];
     const text = typeof line === 'function' ? line() : line;

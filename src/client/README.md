@@ -151,8 +151,27 @@ Four things follow, and each has cost a defect:
   somewhere unrelated — a camera parked on a bare baseline, a pin that
   disengages on the next mode exit. Sampling such a value in wave 1 means
   owning its reconciliation when the real one lands; a delta-tracking
-  consumer cannot, since it only ever sees CHANGES. Making this a contract
-  rather than a habit is `stellata-cns.16`.
+  consumer cannot, since it only ever sees CHANGES.
+
+**The contract, by what enforces it:**
+
+- **The compiler: completion is a value.** `catalog.whenComplete` resolves
+  to a `CompleteCatalog`, and `catalog.complete` is the same fact for a
+  synchronous reader. A walk over every record takes one, so it cannot run
+  on the prefix ([Progressive catalog load](loaders/README.md#progressive-catalog-load)).
+- **The compiler: a late slot is a `Late<T>`.** It is pending, ready or
+  absent, with no nullable accessor, and `observe` is where a reader that
+  sampled early rebuilds ([Late values](util/late/README.md)). An artifact
+  that can be missing must be concluded, or its readers wait forever.
+- **A test: `tests/late-read-contract.test.ts`.** It fails a loop bounded by
+  an unbranded catalogue's `count`, and any unclassified `| null` return on
+  the shell's public surface.
+- **Review, for what neither reaches.** A one-shot reader can still write a
+  fallback into its `pending` branch. The loop scan sees only a literal
+  `i < X.count`, so a walk bounded by a column's `.length`, by a count
+  copied into a local, or by one passed into a helper gets past it. The
+  nullable scan reads written return types, so an inferred `| null` gets
+  past that.
 
 ## Public surface of `Stellata`
 
@@ -243,27 +262,26 @@ interface for both:
   constellation-figure entries of other rows. The first of 32.13 / 32.8 to
   move lifts it into one shell function and takes it as a `(cc) =>
   CadenceReport` callback; the callback's type carries no `null`, so the
-  not-ready answer stays inside the provider for 32.5 and cns.16 to change
-  in one place.
+  not-ready answer stays inside the provider for 32.5 to change in one
+  place.
 - **The planet rate** — settled as `solarSystem.planetRate`, a `(cc) =>
   CadenceReport` ([Wiring](solar-system/README.md#wiring)); the moving-focal-ride
   entry takes it, and the rides carry that `rate` with them.
 
 ### Late-attached slots
 
-A cluster holding a value that lands after construction cannot move without
-choosing how "not yet" is represented — the question `stellata-cns.16`
-answers. **So cns.16's design lands before the binaries, dust + extinction
-and constellation extractions**, and each of those implements its contract
-once rather than moving a `T | null` twice. The focal rides read the binaries
-slot, so they follow both. A cluster that reaches a late slot only through
+A cluster holding a value that lands after construction moves it as a
+`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the binaries, dust +
+extinction and constellation extractions each convert their row's slots as
+they move rather than carrying a `T | null` twice. The focal rides read the
+binaries slot, so they follow the binaries extraction. A cluster that reaches a late slot only through
 the binaries rate — the star render machinery — does not wait: it takes the
 rate as a callback (above), which leaves the slot behind. Clusters holding
 no late slot do not wait either.
 
 | Slot | Lands | Not-ready answer today |
 | --- | --- | --- |
-| Binaries (both fields + table) | wave 2, after `kinds.star.ready`; also handed to `starLocalCluster.setBinaries` | `?.… ?? false` (the focus controller's perturbation read), `?? CADENCE_REPORT_STILL` (the binaries rate), `?? []`, `?? 0`, `binariesData` null in the orbit-path focus handler, the binary ride skipped |
+| Binaries (both fields + table) | wave 2, after `kinds.star.ready`; also handed to `starLocalCluster.setBinaries` | the table is a `Late` (`getBinaries()`), absent when `binaries.bin` is missing; the two fields still answer `?.… ?? false` (the focus controller's perturbation read), `?? CADENCE_REPORT_STILL` (the binaries rate), the binary ride skipped |
 | Dust + extinction prepass | when the dust manifest resolves — no wave | `?.` no-op; `extinctionAvMagFor` 0 (deliberately pickable); `isExtinctionPrepassActive` false; survivor `inFrame` null |
 | Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
@@ -278,12 +296,11 @@ while every vertex sits in chunk 0 — measured on today's build (the
 `recordsInFirstChunk`): 708 distinct vertices, highest record index
 10,288, chunk 0 ending at 10,411, a margin of 124 records that nothing
 checks yet.
-The build-time assert is 32.8's; the read is an instance on cns.16.
+The build-time assert and the centroid's move onto the contract are 32.8's.
 A third prefix read sits outside the shell: the extinction prepass sorts its
 dispatch order over the table it attaches to, which is normally still
 streaming, and re-sorts once on the refresh that completes it
-([What a CACHE owes](webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)) — another cns.16 instance,
-answered inside the pass.
+([What a CACHE owes](webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)), answered inside the pass.
 
 ## Event bus on `Stellata`
 

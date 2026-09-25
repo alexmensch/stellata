@@ -2,7 +2,7 @@ import Fuse from 'fuse.js';
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
 import { isHardTarget, type Target } from '../camera/focus/focus-target';
-import type { Catalog } from '../loaders/catalog-loader';
+import type { CompleteCatalog } from '../loaders/catalog-loader';
 import { displayNameOf, KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
 import { Typeahead, TypeaheadGroup } from './typeahead';
@@ -49,7 +49,7 @@ import type { FuzzyEntry } from './search-corpus';
 // runs the same corpus through this, so ranking + ID dispatch never
 // diverge between them.
 export function createSearchRunner(
-  catalog: Catalog,
+  catalog: CompleteCatalog,
   raw: SearchEntry[],
   kinds: KindModules | null = null,
   /** `./README.md#the-search-index-worker`. */
@@ -268,7 +268,7 @@ const rowFor = (e: FuzzyEntry) => ({ primary: e.primary, sub: e.displayCon || 'â
 
 export function bindSearch(
   stellata: Stellata,
-  catalog: Catalog,
+  catalog: CompleteCatalog,
   raw: SearchEntry[],
   corpus?: SearchIndex,
 ) {
@@ -398,7 +398,7 @@ export function bindSearch(
 // keyboard-shortcut handler, exactly like the Go / Constellation pickers.
 export function bindFindSearch(
   stellata: Stellata,
-  catalog: Catalog,
+  catalog: CompleteCatalog,
   raw: SearchEntry[],
   corpus?: SearchIndex,
 ): void {

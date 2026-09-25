@@ -14,10 +14,15 @@ import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import type { Catalog } from '../loaders/catalog-loader';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
+import { LateCell } from '../util/late/late';
+import { lateAbsent } from '../util/late/late-fixture';
 import { createStarKindModule, type StarModuleRuntime } from './star-module';
 
 const loadCatalogMock = vi.hoisted(() => vi.fn());
-vi.mock('../loaders/catalog-loader', () => ({ loadCatalog: loadCatalogMock }));
+vi.mock('../loaders/catalog-loader', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../loaders/catalog-loader')>()),
+  loadCatalog: loadCatalogMock,
+}));
 
 function makeMockCatalog(): Catalog {
   const cat = makeEmptyCatalog(4);
@@ -35,7 +40,7 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
     renderedSizePx: () => 12,
     peakDiscSizePx: () => 9,
     pickStarHit: () => null,
-    getBinaries: () => null,
+    getBinaries: () => lateAbsent(),
     ...overrides,
   };
 }
@@ -199,18 +204,32 @@ describe('star kind module', () => {
     expect(payload?.name).toBe('Gaia DR3 123');
   });
 
+  it('holds the card until binaries settle, and counts the settle as a fill', async () => {
+    const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
+    m.attach(makeKindContext());
+    const binaries = new LateCell<BinariesData>();
+    m.setRuntime(makeRuntime({ getBinaries: () => binaries }));
+    const card = m.card();
+    const before = m.derivedGeneration();
+
+    expect(card.ready?.(0)).toBe(false);
+    binaries.conclude();
+    expect(card.ready?.(0)).toBe(true);
+    expect(m.derivedGeneration()).toBe(before + 1);
+  });
+
   it('reads binaries per format call, so a late attach reaches a built card', async () => {
     const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
     const ctx = makeKindContext();
     m.attach(ctx);
-    let binaries: BinariesData | null = null;
+    const binaries = new LateCell<BinariesData>();
     m.setRuntime(makeRuntime({ getBinaries: () => binaries }));
     const card = m.card();
     const companionsOf = (idx: number) =>
       card.format(idx).rows.find((r) => r.label === 'Known companions')?.value;
 
     expect(companionsOf(0)).toBeUndefined();
-    binaries = {
+    binaries.land({
       version: 1,
       relations: [{
         primaryIdx: 0,
@@ -231,7 +250,7 @@ describe('star kind module', () => {
       }],
       primaryIdxToRelations: new Map([[0, [0]]]),
       secondaryIdxToRelations: new Map([[1, [0]]]),
-    };
+    });
     expect(companionsOf(0)).toBe('HIP 91262');
   });
 

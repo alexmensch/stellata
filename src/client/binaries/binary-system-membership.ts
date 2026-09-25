@@ -12,10 +12,11 @@ import {
   type SystemMember,
   type SystemMembershipProvider,
 } from '../system-membership/system-membership';
+import type { Late } from '../util/late/late';
 import type { BinariesData } from './binaries-loader';
 
 export interface BinarySystemMembershipDeps {
-  getBinaries: () => BinariesData | null;
+  binaries: Late<BinariesData>;
   /** Live per-star composite-suppress verdict — the orbit walk's own
    *  sub-pixel LOD (Stellata.isCompositeSuppressed). */
   isCollapsed: (starIdx: number) => boolean;
@@ -33,15 +34,15 @@ export function createBinarySystemMembership(
   return {
     membersOf(target: Target): SystemMember[] {
       if (target.kind !== 'star') return [];
-      const binaries = deps.getBinaries();
-      if (!binaries) return [];
-      return systemMemberIndices(binaries, target.idx).map(starMember);
+      const binaries = deps.binaries.state();
+      if (binaries.status !== 'ready') return [];
+      return systemMemberIndices(binaries.value, target.idx).map(starMember);
     },
     collapsedClusterOf(target: Target): SystemMember[] {
       if (target.kind !== 'star') return [];
-      const binaries = deps.getBinaries();
-      if (!binaries) return [];
-      const cluster = collapsedClusterIndices(binaries, target.idx, deps.isCollapsed);
+      const binaries = deps.binaries.state();
+      if (binaries.status !== 'ready') return [];
+      const cluster = collapsedClusterIndices(binaries.value, target.idx, deps.isCollapsed);
       // A singleton is "nothing collapsed here" (covers both a star in
       // no relation and a visibly separated member like Proxima).
       return cluster.length < MIN_CLUSTER_MEMBERS ? [] : cluster.map(starMember);

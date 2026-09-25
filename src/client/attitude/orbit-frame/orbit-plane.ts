@@ -53,8 +53,9 @@ export function resolveFocusedOrbit(
       : { kind: 'planet', bodyIdx: target.idx };
   }
   if (target.kind !== 'star') return null;
-  const binaries = stellata.getBinaries();
-  if (binaries === null) return null;
+  const late = stellata.getBinaries().state();
+  if (late.status !== 'ready') return null;
+  const binaries = late.value;
   const pos = stellata.catalog.positions;
   const base = target.idx * 3;
   if (base < 0 || base + 2 >= pos.length) return null;

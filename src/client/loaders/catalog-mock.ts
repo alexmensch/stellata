@@ -3,7 +3,8 @@
 
 import { APSIS_FIELDS, type ApsisField } from '../../../scripts/catalog/record/catalog-pure';
 import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
-import type { Catalog } from './catalog-loader';
+import { LateCell } from '../util/late/late';
+import { assumeComplete, type Catalog, type CompleteCatalog } from './catalog-loader';
 
 function nanFloat32(count: number): Float32Array {
   const a = new Float32Array(count);
@@ -11,15 +12,24 @@ function nanFloat32(count: number): Float32Array {
   return a;
 }
 
+export interface MockCatalog extends Catalog {
+  /** Land every remaining record and settle `whenComplete`. */
+  finishLoading(): void;
+}
+
 /** `loadedCount` defaults to the whole catalogue; pass fewer to express a
  *  progressive load mid-flight, and raise it on the returned object to land
  *  a chunk (`./README.md#progressive-catalog-load`). */
-export function makeEmptyCatalog(count: number, loadedCount = count): Catalog {
+export function makeEmptyCatalog(count: number, loadedCount = count): MockCatalog {
   const apsis = {} as Record<ApsisField, Float32Array>;
   for (const name of APSIS_FIELDS) apsis[name] = nanFloat32(count);
   const varType = new Uint8Array(count);
   const { rho: pulsRho, colorSwing: pulsColorSwing } = buildPulsationParams(varType);
-  return {
+  let settle!: () => void;
+  const complete = new LateCell<CompleteCatalog>();
+  const whenComplete = new Promise<void>((resolve) => { settle = resolve; })
+    .then(() => assumeComplete(catalog));
+  const catalog: MockCatalog = {
     count,
     loadedCount,
     positions: new Float32Array(count * 3),
@@ -47,6 +57,14 @@ export function makeEmptyCatalog(count: number, loadedCount = count): Catalog {
     constellations: [],
     sidSuccessors: new Map(),
     onRecordsDecoded: () => () => {},
-    whenComplete: Promise.resolve(),
+    whenComplete,
+    complete,
+    finishLoading() {
+      catalog.loadedCount = count;
+      settle();
+      complete.land(assumeComplete(catalog));
+    },
   };
+  if (loadedCount === count) catalog.finishLoading();
+  return catalog;
 }

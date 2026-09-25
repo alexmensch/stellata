@@ -10,6 +10,7 @@ import {
 } from '../../binaries/binaries-loader';
 import { makeBinaries } from '../../binaries/binary-relation-fixture';
 import { createBinarySystemMembership } from '../../binaries/binary-system-membership';
+import { lateReady } from '../../util/late/late-fixture';
 import { SystemMembershipRegistry } from '../../system-membership/system-membership';
 import { formatStarHover, type StarHoverFormatContext } from './star-hover-format';
 
@@ -50,7 +51,7 @@ function buildCtx(overrides: Partial<StarHoverFormatContext> = {}): StarHoverFor
     constellations,
     periodDays,
     amplitudeMag,
-    binaries: null,
+    binaries: { status: 'absent' },
     nowJd: J2000_JD,
     ...overrides,
   };
@@ -88,7 +89,7 @@ function membershipOf(
   isCollapsed: (i: number) => boolean,
 ): SystemMembershipRegistry {
   const reg = new SystemMembershipRegistry();
-  reg.register(createBinarySystemMembership({ getBinaries: () => binaries, isCollapsed }));
+  reg.register(createBinarySystemMembership({ binaries: lateReady(binaries), isCollapsed }));
   return reg;
 }
 
@@ -103,7 +104,7 @@ function binaryCtx(
       [0, 'Sirius A'],
       [1, 'Sirius B'],
     ]),
-    binaries: makeBinaries(relations),
+    binaries: lateReady(makeBinaries(relations)).state(),
     ...overrides,
   });
 }
@@ -369,7 +370,7 @@ describe('formatStarHover — binary companions', () => {
   });
 
   it('drops companion lines entirely when binaries.bin is absent', () => {
-    const out = formatStarHover(1, D_CAM, binaryCtx([], { binaries: null }));
+    const out = formatStarHover(1, D_CAM, binaryCtx([], { binaries: { status: 'absent' } }));
     expect(out.lines.some((l) => /orbits|companion/i.test(l))).toBe(false);
   });
 });
@@ -403,7 +404,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
       amplitudeMag: new Float32Array(6),
       gaiaSourceId: new BigUint64Array(6),
       sid: new Uint32Array(6),
-      binaries: makeBinaries(SYSTEM_RELS),
+      binaries: lateReady(makeBinaries(SYSTEM_RELS)).state(),
       ...over,
     });
 
@@ -449,7 +450,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
     ];
     const ctx = buildCtx({
       starLabels: new Map([[0, 'Rigil Kentaurus'], [1, 'Toliman'], [2, 'Proxima Centauri']]),
-      binaries: makeBinaries(rels),
+      binaries: lateReady(makeBinaries(rels)).state(),
       membership: membershipOf(makeBinaries(rels), (i) => i === 1),
     });
     expect(formatStarHover(2, D_CAM, ctx).name).toBe('Proxima Centauri');
@@ -464,7 +465,7 @@ describe('formatStarHover — system card for screen-collapsed multiples', () =>
   it('plain binary never swaps to a system card, suppressed or not', () => {
     const rels = [makeRelation({ primaryIdx: 0, secondaryIdx: 1 })];
     const ctx = buildCtx({
-      binaries: makeBinaries(rels),
+      binaries: lateReady(makeBinaries(rels)).state(),
       membership: membershipOf(makeBinaries(rels), () => true),
     });
     expect(formatStarHover(0, D_CAM, ctx).name).toBe('Vega');

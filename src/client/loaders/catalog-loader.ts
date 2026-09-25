@@ -7,6 +7,7 @@ import {
   type CatalogManifest,
   type RecordSpan,
 } from '../../../scripts/catalog/record/catalog-pure';
+import { lateFromPromise, type Late } from '../util/late/late';
 import { chunkRecordSpan, startChunkFetches } from './catalog-progressive';
 import { createCatalogDecoder, decodeInline } from './catalog-decode-host';
 import {
@@ -106,7 +107,24 @@ export interface Catalog {
   onRecordsDecoded(listener: (span: DecodedSpan) => void): () => void;
   /** Settles when `loadedCount === count`. Rejects if any chunk fails, so a
    *  caller awaiting the full catalogue sees the same error boot would. */
-  readonly whenComplete: Promise<void>;
+  readonly whenComplete: Promise<CompleteCatalog>;
+  /** `whenComplete` for a synchronous reader: pending until it resolves,
+   *  absent if it rejects. */
+  readonly complete: Late<CompleteCatalog>;
+}
+
+declare const complete: unique symbol;
+
+/** A catalogue whose every record has decoded. `assumeComplete` is the only
+ *  source, so a function taking one cannot run on a prefix. */
+export type CompleteCatalog = Catalog & { readonly [complete]: true };
+
+/** Throws on a catalogue still streaming. */
+export function assumeComplete(catalog: Catalog): CompleteCatalog {
+  if (catalog.loadedCount !== catalog.count) {
+    throw new Error(`Catalog complete at ${catalog.loadedCount} of ${catalog.count} records`);
+  }
+  return catalog as CompleteCatalog;
 }
 
 /** The half-open record window one chunk's decode filled. */
@@ -253,6 +271,9 @@ function beginCatalog(
   const listeners = new Set<(span: DecodedSpan) => void>();
   let loadedCount = 0;
   let solIndex = -1;
+  let settle!: (rest: Promise<void>) => void;
+  const whenComplete = new Promise<void>((resolve) => { settle = resolve; })
+    .then(() => assumeComplete(catalog));
 
   const catalog: GrowingCatalog = {
     count,
@@ -262,7 +283,8 @@ function beginCatalog(
     get solIndex() { return solIndex; },
     constellations,
     sidSuccessors: new Map(manifest.sidSuccessors ?? []),
-    whenComplete: Promise.resolve(),
+    whenComplete,
+    complete: lateFromPromise(whenComplete),
 
     onRecordsDecoded(listener) {
       listeners.add(listener);
@@ -291,15 +313,7 @@ function beginCatalog(
     },
 
     settleOn(rest) {
-      // Writable only here: the interface exposes it readonly so a consumer
-      // cannot swap the promise the boot sequence is gated on.
-      (catalog as { whenComplete: Promise<void> }).whenComplete = rest.then(() => {
-        if (loadedCount !== count) {
-          throw new Error(
-            `Catalog load settled at ${loadedCount} of ${count} records`,
-          );
-        }
-      });
+      settle(rest);
     },
   };
 

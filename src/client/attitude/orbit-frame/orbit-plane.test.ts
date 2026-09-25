@@ -51,6 +51,7 @@ import {
   type FocusedOrbit,
 } from './orbit-plane';
 import type { Stellata } from '../../stellata';
+import { lateAbsent, lateReady } from '../../util/late/late-fixture';
 
 const DEG = Math.PI / 180;
 const J2000_T = 0;
@@ -762,7 +763,7 @@ describe('focusedOrbitInto', () => {
     return {
       kinds: {},
       getT: () => 0,
-      getBinaries: () => binaries,
+      getBinaries: () => (binaries === null ? lateAbsent() : lateReady(binaries)),
       catalog: { positions },
       localPositions: localPositions(),
     } as unknown as Stellata;

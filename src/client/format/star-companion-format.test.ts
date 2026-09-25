@@ -6,6 +6,7 @@ import {
   type BinaryRelation,
 } from '../binaries/binaries-loader';
 import { makeBinaries, makeRelation } from '../binaries/binary-relation-fixture';
+import { lateReady } from '../util/late/late-fixture';
 import {
   collapsedClusterIndices,
   companionLines,
@@ -30,7 +31,7 @@ function ctxOf(
     starLabels: LABELS,
     gaiaSourceId: new BigUint64Array(4),
     sid: new Uint32Array([101, 102, 103, 104]),
-    binaries: makeBinaries(rels),
+    binaries: lateReady(makeBinaries(rels)).state(),
     nowJd: J2000_JD,
     ...over,
   };
@@ -206,7 +207,7 @@ describe('companionNames / companionLines', () => {
   });
 
   it('drops every line when binaries.bin is absent', () => {
-    expect(companionLines(1, ctxOf(rels, { binaries: null }))).toEqual([]);
+    expect(companionLines(1, ctxOf(rels, { binaries: { status: 'absent' } }))).toEqual([]);
   });
 });
 
