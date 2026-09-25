@@ -48,12 +48,16 @@
  "archinal2018": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 938181,
   "doi": "10.1007/s10569-017-9805-5",
   "openalex_first_author": "B. A. Archinal",
   "openalex_title": "Report of the IAU Working Group on Cartographic Coordinates and Rotational Elements: 2015",
   "openalex_year": 2018,
-  "status": "manual",
-  "tried": []
+  "sha256": "291c6fc48d6c6c93d0a55463c238d2b2e3c89920a0678aa04faf8f075e3aa4ca",
+  "source_url": "https://doi.org/10.1007/s10569-017-9805-5",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
  },
  "arzoumanian2011": {
   "arxiv": "1103.0201",
@@ -328,17 +332,21 @@
  "bodhaine1999": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 96772,
   "doi": "10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2",
   "openalex_first_author": "Barry A. Bodhaine",
   "openalex_title": "On Rayleigh Optical Depth Calculations",
   "openalex_year": 1999,
-  "status": "manual",
+  "sha256": "e81ff2a075595a094f34e651d879c71a4aa63eac55969a009aaee88a65a4e835",
+  "source_url": "https://doi.org/10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 403",
     "url": "https://journals.ametsoc.org/downloadpdf/journals/atot/16/11/1520-0426_1999_016_1854_orodc_2_0_co_2.pdf"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "bohlin1978": {
   "arxiv": null,
@@ -603,11 +611,14 @@
  "deau2013": {
   "arxiv": null,
   "bibcode": "2013Icar..226..591D",
+  "bytes": 2336245,
   "doi": "10.1016/j.icarus.2013.01.015",
   "openalex_first_author": "E. D\u00e9au",
   "openalex_title": "The opposition effect in Saturn\u2019s main rings as seen by Cassini ISS: 1. Morphology of phase functions and dependence on the local optical depth",
   "openalex_year": 2013,
-  "status": "manual",
+  "sha256": "ffa0564127ae8959dc9beb5f8ca806935bee4d59caa9901d61c8550dd6117466",
+  "source_url": "https://doi.org/10.1016/j.icarus.2013.01.015",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -625,7 +636,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Icar..226..591D/ADS_PDF"
    }
-  ]
+  ],
+  "version": "acceptedVersion"
  },
  "delporte1930": {
   "arxiv": null,
@@ -637,11 +649,14 @@
  "devaucouleurs1960": {
   "arxiv": null,
   "bibcode": "1960ApJ...131..574D",
+  "bytes": 636514,
   "doi": "10.1086/146870",
   "openalex_first_author": "Gerard de Vaucouleurs",
   "openalex_title": "Magnitudes and Colors of the Magellanic Clouds.",
   "openalex_year": 1960,
-  "status": "manual",
+  "sha256": "ec820c797acfa37cc4c2197b49b5f89879545f963426ea447a66ed747297d667",
+  "source_url": "https://doi.org/10.1086/146870",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 47 HTTP 302",
@@ -659,7 +674,8 @@
     "error": "HTTP 504",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/1960ApJ...131..574D/ADS_PDF"
    }
-  ]
+  ],
+  "version": "ADS scan of published article"
  },
  "devaucouleurs1978": {
   "arxiv": null,
@@ -854,8 +870,12 @@
  "esa1997": {
   "arxiv": null,
   "bibcode": "1997HIP...C......0E",
+  "bytes": 11456841,
   "doi": null,
-  "status": "manual",
+  "note": "Volume 1 (Introduction and Guide to the Data) only",
+  "sha256": "f6182096bf31bbdd2e37516da98619305de15cb06c9eecf713cdd3e8a9c6e1be",
+  "source_url": "https://www.cosmos.esa.int/documents/532822/552851/vol1_all.pdf",
+  "status": "ok",
   "tried": [
    {
     "error": "HTTP Error 404: NOT FOUND",
@@ -873,23 +893,43 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/1997HIP...C......0E/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
- "espenakmeeus": {
+ "espenak2006": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 2040207,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "note": "Text volume only; the eclipse map plates are separate PDFs",
+  "sha256": "c8de965a05bf6b55cc2a451456fafb78507ac329cc0a27f3c553bbf70d4a180c",
+  "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/5MCSE-Text11.pdf",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
+ },
+ "espenak2009": {
+  "arxiv": null,
+  "bibcode": null,
+  "bytes": 13866196,
+  "doi": null,
+  "sha256": "19cb7687d96030164756af44938c8a686c814dbeca919a862d1fe6dbc9ecbc87",
+  "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/TP2009-214174.pdf",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
  },
  "fabricius2002a": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 86292,
   "doi": "10.1051/0004-6361:20020249",
   "openalex_first_author": "C. Fabricius",
   "openalex_title": "Henry Draper catalogue identifications for Tycho-2 stars",
   "openalex_year": 2002,
-  "status": "manual",
+  "sha256": "9daf0f7db32fb21824322ab4db86d3939f3eaf7ed0e1e22fbae133523333f334",
+  "source_url": "https://doi.org/10.1051/0004-6361:20020249",
+  "status": "ok",
   "tried": [
    {
     "error": "HTTP Error 403: Forbidden",
@@ -899,13 +939,17 @@
     "error": "HTTP Error 403: Forbidden",
     "url": "https://www.aanda.org/10.1051/0004-6361:20020249/pdf"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "fabricius2002b": {
   "arxiv": null,
   "bibcode": "2002A&A...384..180F",
+  "bytes": 757360,
   "doi": null,
-  "status": "manual",
+  "sha256": "886d9450fcefe49187a72b8dffd7a40f962556b3d4cc2424c98fc628b265057a",
+  "source_url": "https://ui.adsabs.harvard.edu/abs/2002A&A...384..180F",
+  "status": "ok",
   "tried": [
    {
     "error": "HTTP Error 403: Forbidden",
@@ -923,7 +967,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2002A%26A...384..180F/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "federrath2010": {
   "arxiv": "0905.1060",
@@ -1044,8 +1089,11 @@
  "french1986": {
   "arxiv": null,
   "bibcode": "1986Icar...67..134F",
+  "bytes": 2206955,
   "doi": null,
-  "status": "manual",
+  "sha256": "fec4a8f415f2a201017bbbe9f56f82ed1c99436b8b120c43b4e17d81d54b2adf",
+  "source_url": "https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F",
+  "status": "ok",
   "tried": [
    {
     "error": "HTTP Error 404: NOT FOUND",
@@ -1063,24 +1111,30 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/1986Icar...67..134F/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "french1991": {
   "arxiv": null,
   "bibcode": null,
   "doi": "10.2307/j.ctv1v7zdtq.13",
+  "note": "University of Arizona Press 1991 chapter; no digital or print copy reachable. Candidate replacement for the ring radii and widths: French et al. 1988, Icarus 73, 349, doi:10.1016/0019-1035(88)90104-2",
   "openalex_first_author": "R. G. French",
   "openalex_title": "DYNAMICS AND STRUCTURE OF THE URANIAN RINGS",
   "openalex_year": 1991,
-  "status": "manual",
+  "status": "unobtainable",
   "tried": []
  },
  "frey1974": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 1347501,
   "doi": null,
-  "status": "unidentified",
-  "tried": []
+  "sha256": "96fcf0aacc3a3e2ab2a757b130d9ed1c4eb9cbfecf22ae4bd4477f60f77900ab",
+  "source_url": "https://ntrs.nasa.gov/citations/19740014371",
+  "status": "ok",
+  "tried": [],
+  "version": "publishedVersion"
  },
  "gaiacollab2016a": {
   "arxiv": null,
@@ -1400,11 +1454,14 @@
  "gurnett2013": {
   "arxiv": null,
   "bibcode": "2013Sci...341.1489G",
+  "bytes": 1318568,
   "doi": "10.1126/science.1241681",
   "openalex_first_author": "D. A. Gurnett",
   "openalex_title": "In Situ Observations of Interstellar Plasma with Voyager 1",
   "openalex_year": 2013,
-  "status": "manual",
+  "sha256": "e16f728abcecd0475185ab03a5c374a45e213fe15e63de4e9095c8ac4e713470",
+  "source_url": "https://doi.org/10.1126/science.1241681",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 403",
@@ -1422,16 +1479,20 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Sci...341.1489G/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "gurnett2019": {
   "arxiv": null,
   "bibcode": "2019NatAs...3.1024G",
+  "bytes": 1287190,
   "doi": "10.1038/s41550-019-0918-5",
   "openalex_first_author": "D. A. Gurnett",
   "openalex_title": "Plasma densities near and beyond the heliopause from the Voyager 1 and 2 plasma wave instruments",
   "openalex_year": 2019,
-  "status": "manual",
+  "sha256": "758ec4497375f15a95051db815f8ef790c3927fd4790465b2019812efa4a6d47",
+  "source_url": "https://doi.org/10.1038/s41550-019-0918-5",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -1449,7 +1510,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2019NatAs...3.1024G/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "halbwachs2023": {
   "arxiv": "2206.05726",
@@ -1655,11 +1717,14 @@
  "irwin2024": {
   "arxiv": null,
   "bibcode": "2024MNRAS.52711521I",
+  "bytes": 2288007,
   "doi": "10.1093/mnras/stad3761",
   "openalex_first_author": "P. G. J. Irwin",
   "openalex_title": "Modelling the seasonal cycle of Uranus\u2019s colour and magnitude, and comparison with Neptune",
   "openalex_year": 2023,
-  "status": "manual",
+  "sha256": "aec051d06bccfcd344021f753963804092534fd00fca99b34755ab555825e4ce",
+  "source_url": "https://doi.org/10.1093/mnras/stad3761",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 403",
@@ -1681,7 +1746,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2024MNRAS.52711521I/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "jonsson2020": {
   "arxiv": null,
@@ -2102,11 +2168,14 @@
  "lindal1983": {
   "arxiv": null,
   "bibcode": "1983Icar...53..348L",
+  "bytes": 1101041,
   "doi": "10.1016/0019-1035(83)90155-0",
   "openalex_first_author": "Gunnar F. Lindal",
   "openalex_title": "The atmosphere of Titan: An analysis of the Voyager 1 radio occultation measurements",
   "openalex_year": 1983,
-  "status": "manual",
+  "sha256": "f3cc8c780a5786e48698386ea242fee55229ec8d6e1056ba0b6120316d643be8",
+  "source_url": "https://doi.org/10.1016/0019-1035(83)90155-0",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -2124,7 +2193,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/1983Icar...53..348L/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "lindegren2021": {
   "arxiv": "2012.03380",
@@ -2157,11 +2227,14 @@
  "mallama2012": {
   "arxiv": null,
   "bibcode": "2012Icar..218...56M",
+  "bytes": 227694,
   "doi": "10.1016/j.icarus.2011.11.035",
   "openalex_first_author": "Anthony D. Mallama",
   "openalex_title": "Improved luminosity model and albedo for Saturn",
   "openalex_year": 2011,
-  "status": "manual",
+  "sha256": "079164927f1bde446c2ae5486eb1d0dc074c94507665bfab521a2add7b8dce9e",
+  "source_url": "https://doi.org/10.1016/j.icarus.2011.11.035",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -2179,7 +2252,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2012Icar..218...56M/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "mallama2017": {
   "arxiv": "1609.05048",
@@ -2240,17 +2314,21 @@
  "mason2001": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 79731,
   "doi": "10.1086/323920",
   "openalex_first_author": "Brian D. Mason",
   "openalex_title": "The 2001 US Naval Observatory Double Star CD-ROM. I. The Washington Double Star Catalog",
   "openalex_year": 2001,
-  "status": "manual",
+  "sha256": "963385497c38da25058c67df2ab2633687aeae4e81a341b661a9bab848e0b8bd",
+  "source_url": "https://doi.org/10.1086/323920",
+  "status": "ok",
   "tried": [
    {
     "error": "not a PDF (text/html; charset=UTF-8)",
     "url": "https://iopscience.iop.org/article/10.1086/323920/pdf"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "mason2020": {
   "arxiv": null,
@@ -2262,17 +2340,21 @@
  "mccomas2015": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 2281058,
   "doi": "10.1088/0067-0049/220/2/22",
   "openalex_first_author": "David J. McComas",
   "openalex_title": "LOCAL INTERSTELLAR MEDIUM: SIX YEARS OF DIRECT SAMPLING BY IBEX",
   "openalex_year": 2015,
-  "status": "manual",
+  "sha256": "2642b5b04f6e1827ed6947b45c5f8e9bbb995230c937e05df7e6ea4f0d7f6808",
+  "source_url": "https://doi.org/10.1088/0067-0049/220/2/22",
+  "status": "ok",
   "tried": [
    {
     "error": "not a PDF (text/html; charset=UTF-8)",
     "url": "https://iopscience.iop.org/article/10.1088/0067-0049/220/2/22/pdf"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "mcconnachie2012": {
   "arxiv": "1204.1562",
@@ -2501,8 +2583,11 @@
  "nicholson1995": {
   "arxiv": null,
   "bibcode": "1995Icar..113..295N",
+  "bytes": 1940228,
   "doi": null,
-  "status": "manual",
+  "sha256": "aa25b274571a462a27845a295e0321ee835cbf97fd8e468536cd783eb258d18d",
+  "source_url": "https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N",
+  "status": "ok",
   "tried": [
    {
     "error": "HTTP Error 404: NOT FOUND",
@@ -2520,7 +2605,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/1995Icar..113..295N/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "osterbrock2006": {
   "arxiv": null,
@@ -2799,11 +2885,14 @@
  "samus2017": {
   "arxiv": null,
   "bibcode": "2017ARep...61...80S",
+  "bytes": 686466,
   "doi": "10.1134/S1063772917010085",
   "openalex_first_author": "N. N. Samus\u2019",
   "openalex_title": "General catalogue of variable stars: Version GCVS 5.1",
   "openalex_year": 2017,
-  "status": "manual",
+  "sha256": "d5216358e8add7178331d747e108af4996d8c75346871d8bb4f6acff107995fe",
+  "source_url": "https://doi.org/10.1134/S1063772917010085",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -2821,7 +2910,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2017ARep...61...80S/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "sander2012": {
   "arxiv": null,
@@ -2849,11 +2939,14 @@
  "sanford1942": {
   "arxiv": null,
   "bibcode": "1942ApJ....95..421S",
+  "bytes": 251532,
   "doi": "10.1086/144412",
   "openalex_first_author": "Roscoe Frank Sanford",
   "openalex_title": "The Spectrographic Orbit of the Companion to Rigel.",
   "openalex_year": 1942,
-  "status": "manual",
+  "sha256": "82726517b1f9acba54b650510a8a9a7f0506f97b60f8a669b3eebe0bcf956c09",
+  "source_url": "https://doi.org/10.1086/144412",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 47 HTTP 302",
@@ -2871,7 +2964,8 @@
     "error": "HTTP 504",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/1942ApJ....95..421S/ADS_PDF"
    }
-  ]
+  ],
+  "version": "ADS scan of published article"
  },
  "savary1828": {
   "arxiv": null,
@@ -2982,11 +3076,14 @@
  "smirnov2002": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 597809,
   "doi": "10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2",
   "openalex_first_author": "A. Smirnov",
   "openalex_title": "Optical Properties of Atmospheric Aerosol in Maritime Environments",
   "openalex_year": 2002,
-  "status": "manual",
+  "sha256": "d4a6f285e3082c5f2d4358f91ab0dcc80debb400c4746956bc8071bde5c7700e",
+  "source_url": "https://doi.org/10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 403",
@@ -2996,16 +3093,20 @@
     "error": "curl 0 HTTP 400",
     "url": "https://mdsoar.org/bitstreams/c799061f-ef52-474c-b5e3-1f69fca643e7/download"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "sneep2005": {
   "arxiv": null,
   "bibcode": "2005JQSRT..92..293S",
+  "bytes": 839841,
   "doi": "10.1016/j.jqsrt.2004.07.025",
   "openalex_first_author": "Maarten Sneep",
   "openalex_title": "Direct measurement of the Rayleigh scattering cross section in various gases",
   "openalex_year": 2004,
-  "status": "manual",
+  "sha256": "484ad18eece29b98c8ca9aa49e6691f4a030045e8037667fab9836ce38299a3e",
+  "source_url": "https://doi.org/10.1016/j.jqsrt.2004.07.025",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -3023,7 +3124,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2005JQSRT..92..293S/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "standish1992": {
   "arxiv": null,
@@ -3221,11 +3323,14 @@
  "tomasko2008": {
   "arxiv": null,
   "bibcode": "2008P&SS...56..669T",
+  "bytes": 5417409,
   "doi": "10.1016/j.pss.2007.11.019",
   "openalex_first_author": "Martin G. Tomasko",
   "openalex_title": "A model of Titan's aerosols based on measurements made inside the atmosphere",
   "openalex_year": 2007,
-  "status": "manual",
+  "sha256": "e745b6ccbaef2c3deb2c5e22228acf43b7c91bd49b61b737db0a7f30523bdcac",
+  "source_url": "https://doi.org/10.1016/j.pss.2007.11.019",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -3243,7 +3348,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2008P%26SS...56..669T/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "torra2021": {
   "arxiv": null,
@@ -3304,17 +3410,21 @@
  "vaidman2025": {
   "arxiv": null,
   "bibcode": null,
+  "bytes": 350620,
   "doi": "10.3390/universe11110359",
   "openalex_first_author": "Nadezhda L. Vaidman",
   "openalex_title": "Evaluating Gaia Astrometric Quality and Distances for Galactic Hot Supergiants",
   "openalex_year": 2025,
-  "status": "manual",
+  "sha256": "8ff172b2e0aedc86866edcad1bf2e1948e226a62fe2f5fc175a8a009df18c720",
+  "source_url": "https://doi.org/10.3390/universe11110359",
+  "status": "ok",
   "tried": [
    {
     "error": "HTTP Error 403: Forbidden",
     "url": "https://www.mdpi.com/2218-1997/11/11/359/pdf?version=1761807199"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "vallenari2023": {
   "arxiv": "2208.00211",
@@ -3446,11 +3556,14 @@
  "vondrak2011": {
   "arxiv": null,
   "bibcode": "2011A&A...534A..22V",
+  "bytes": 2321205,
   "doi": "10.1051/0004-6361/201117274",
   "openalex_first_author": "J. Vondr\u00e1k",
   "openalex_title": "New precession expressions, valid for long time intervals",
   "openalex_year": 2011,
-  "status": "manual",
+  "sha256": "db762fd5723d745fdc0796cd5929653df105a368810e25e894f289509a16a8fd",
+  "source_url": "https://doi.org/10.1051/0004-6361/201117274",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 403",
@@ -3480,7 +3593,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2011A%26A...534A..22V/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "wainscoat1992": {
   "arxiv": null,
@@ -3573,11 +3687,14 @@
  "wilquet2009": {
   "arxiv": null,
   "bibcode": "2009JGRE..114.0B42W",
+  "bytes": 855100,
   "doi": "10.1029/2008JE003186",
   "openalex_first_author": "V. Wilquet",
   "openalex_title": "Preliminary characterization of the upper haze by SPICAV/SOIR solar occultation in UV to mid\u2010IR onboard Venus Express",
   "openalex_year": 2009,
-  "status": "manual",
+  "sha256": "5d7373403377cb62301a52003651d5670e07ce8befe99228c4bcdfda37619f28",
+  "source_url": "https://doi.org/10.1029/2008JE003186",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 403",
@@ -3599,13 +3716,18 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0B42W/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "wilson1953": {
   "arxiv": null,
   "bibcode": "1953GCRV..C......0W",
+  "bytes": 6567,
   "doi": null,
-  "status": "manual",
+  "file": "wilson1953.readme.txt",
+  "sha256": "4d7ba1e14a2d444a28c6c139138fbef07917bcfb24c24ac55a3610e77f026ca3",
+  "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/21/ReadMe",
+  "status": "ok",
   "tried": [
    {
     "error": "HTTP Error 404: NOT FOUND",
@@ -3623,7 +3745,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/1953GCRV..C......0W/ADS_PDF"
    }
-  ]
+  ],
+  "version": "VizieR ReadMe"
  },
  "wittkowski2016": {
   "arxiv": "1601.02368",
@@ -3651,11 +3774,14 @@
  "wolff2009": {
   "arxiv": null,
   "bibcode": "2009JGRE..114.0D04W",
+  "bytes": 473983,
   "doi": "10.1029/2009JE003350",
   "openalex_first_author": "M. J. Wolff",
   "openalex_title": "Wavelength dependence of dust aerosol single scattering albedo as observed by the Compact Reconnaissance Imaging Spectrometer",
   "openalex_year": 2009,
-  "status": "manual",
+  "sha256": "fd914449a8fc27f522f8eda8c4e9ed918055529ad39bfdc5517b83feb24de253",
+  "source_url": "https://doi.org/10.1029/2009JE003350",
+  "status": "ok",
   "tried": [
    {
     "error": "curl 0 HTTP 404",
@@ -3673,7 +3799,8 @@
     "error": "HTTP 404",
     "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0D04W/ADS_PDF"
    }
-  ]
+  ],
+  "version": "publishedVersion"
  },
  "woodruff2008": {
   "arxiv": "0709.3878",

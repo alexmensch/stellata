@@ -13918,13 +13918,13 @@
    ]
   },
   {
-   "key": "espenakmeeus",
+   "key": "espenak2006",
    "authors_as_cited": [
     "Espenak & Meeus",
     "Espenak"
    ],
    "year_as_cited": [],
-   "title_as_cited": "Five Millennium Canon / Catalog of Solar Eclipses: -1999 to +3000 (NASA GSFC)",
+   "title_as_cited": "Five Millennium Canon of Solar Eclipses: -1999 to +3000 (NASA GSFC)",
    "journal_as_cited": null,
    "doi": null,
    "arxiv": null,
@@ -13932,63 +13932,9 @@
    "has_identifier": false,
    "occurrences": [
     {
-     "file": "data/eclipse-canon/README.md",
-     "line": 3,
-     "text": "Frozen rows from Espenak & Meeus's *Five Millennium Catalog of Solar",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "data/eclipse-canon/README.md",
-     "line": 19,
-     "text": "- Espenak's own computation uses VSOP87/ELP-2000-85 with a lunar tidal",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "data/eclipse-canon/README.md",
-     "line": 32,
-     "text": "| `delta_t_s` | ΔT Espenak used for this event, seconds. |",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
      "file": "src/client/solar-system/ephemerides/README.md",
      "line": 237,
      "text": "correction Espenak's eclipse canons apply for the lunar tidal",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "src/client/solar-system/planets/eclipses/README.md",
-     "line": 54,
-     "text": "`data/eclipse-canon/` freezes Espenak's catalogue rows; the test",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "src/client/solar-system/planets/eclipses/README.md",
-     "line": 70,
-     "text": "a relative bound cannot tell \"reproduces Espenak\" from \"reproduces",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "src/client/solar-system/planets/eclipses/README.md",
-     "line": 71,
-     "text": "Espenak minus a systematic 200 s\".",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "src/client/solar-system/planets/eclipses/eclipse-canon.test.ts",
-     "line": 309,
-     "text": "// Espenak tabulates the ΔT he used per eclipse. Reproducing it is a",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "src/client/solar-system/planets/eclipses/eclipse-canon.test.ts",
-     "line": 312,
-     "text": "// a relative one cannot tell \"reproduces Espenak\" from \"reproduces",
-     "claim": "Delta-T polynomial set; eclipse truth corpus"
-    },
-    {
-     "file": "src/client/solar-system/planets/eclipses/eclipse-canon.test.ts",
-     "line": 313,
-     "text": "// Espenak minus a systematic 200 s\". What is left (≤1.2 s measured)",
      "claim": "Delta-T polynomial set; eclipse truth corpus"
     },
     {
@@ -14025,6 +13971,76 @@
      "file": "src/client/solar-system/time/delta-t-pure.ts",
      "line": 2,
      "text": "// Espenak & Meeus polynomial set, -1999 to +3000. See README.md#timescales.",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    }
+   ]
+  },
+  {
+   "key": "espenak2009",
+   "authors_as_cited": [
+    "Espenak & Meeus",
+    "Espenak"
+   ],
+   "year_as_cited": [],
+   "title_as_cited": "Five Millennium Catalog of Solar Eclipses: -1999 to +3000 (NASA GSFC)",
+   "journal_as_cited": null,
+   "doi": null,
+   "arxiv": null,
+   "bibcode": null,
+   "has_identifier": false,
+   "occurrences": [
+    {
+     "file": "data/eclipse-canon/README.md",
+     "line": 3,
+     "text": "Frozen rows from Espenak & Meeus's *Five Millennium Catalog of Solar",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "data/eclipse-canon/README.md",
+     "line": 19,
+     "text": "- Espenak's own computation uses VSOP87/ELP-2000-85 with a lunar tidal",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "data/eclipse-canon/README.md",
+     "line": 32,
+     "text": "| `delta_t_s` | ΔT Espenak used for this event, seconds. |",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "src/client/solar-system/planets/eclipses/README.md",
+     "line": 54,
+     "text": "`data/eclipse-canon/` freezes Espenak's catalogue rows; the test",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "src/client/solar-system/planets/eclipses/README.md",
+     "line": 70,
+     "text": "a relative bound cannot tell \"reproduces Espenak\" from \"reproduces",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "src/client/solar-system/planets/eclipses/README.md",
+     "line": 71,
+     "text": "Espenak minus a systematic 200 s\".",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "src/client/solar-system/planets/eclipses/eclipse-canon.test.ts",
+     "line": 309,
+     "text": "// Espenak tabulates the ΔT he used per eclipse. Reproducing it is a",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "src/client/solar-system/planets/eclipses/eclipse-canon.test.ts",
+     "line": 312,
+     "text": "// a relative one cannot tell \"reproduces Espenak\" from \"reproduces",
+     "claim": "Delta-T polynomial set; eclipse truth corpus"
+    },
+    {
+     "file": "src/client/solar-system/planets/eclipses/eclipse-canon.test.ts",
+     "line": 313,
+     "text": "// Espenak minus a systematic 200 s\". What is left (≤1.2 s measured)",
      "claim": "Delta-T polynomial set; eclipse truth corpus"
     }
    ]

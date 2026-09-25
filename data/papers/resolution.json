@@ -1209,17 +1209,6 @@
   "notes": null,
   "bibcode_check": "ADS gateway resolves (PUB_HTML)"
  },
- "espenakmeeus": {
-  "status": "book",
-  "doi": null,
-  "bibcode": null,
-  "arxiv": null,
-  "title": "Five Millennium Canon of Solar Eclipses: -1999 to +3000 (NASA/TP-2006-214141) and Five Millennium Catalog of Solar Eclipses: -1999 to +3000 (NASA/TP-2009-214174)",
-  "journal": "NASA Goddard Space Flight Center Technical Publications",
-  "evidence": "Delta-T polynomials are in the 2006 Canon; eclipse rows in the 2009 Catalog",
-  "candidates": [],
-  "notes": "Tree gives no year and uses both titles; cite both. Not network-verified"
- },
  "morrisonstephenson": {
   "status": "identified",
   "doi": "10.1177/002182860403500305",
@@ -1434,5 +1423,27 @@
   "candidates": [],
   "notes": null,
   "bibcode_check": "ADS gateway resolves (PUB_PDF)"
+ },
+ "espenak2006": {
+  "status": "identified",
+  "doi": null,
+  "bibcode": null,
+  "arxiv": null,
+  "title": "Five Millennium Canon of Solar Eclipses: -1999 to +3000 (NASA/TP-2006-214141)",
+  "journal": "NASA Goddard Space Flight Center Technical Publications",
+  "evidence": "NASA GSFC publication page; Delta-T polynomials are section 2.7",
+  "candidates": [],
+  "notes": "Carries the Delta-T polynomial set"
+ },
+ "espenak2009": {
+  "status": "identified",
+  "doi": null,
+  "bibcode": null,
+  "arxiv": null,
+  "title": "Five Millennium Catalog of Solar Eclipses: -1999 to +3000 (NASA/TP-2009-214174)",
+  "journal": "NASA Goddard Space Flight Center Technical Publications",
+  "evidence": "NASA GSFC publication page",
+  "candidates": [],
+  "notes": "Carries the eclipse rows, including the per-event Delta-T"
  }
 }
