@@ -1,3 +1,14 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:f98d6e44911e4bc134fc54b74eb8d1600a6a1662c0ac06e4b10c4c13acc936d1
-size 876
+# Hand-curated WDS component letters for ORB6 rows whose fixed-width
+# components field is blank — the catalog names the pair only by its
+# variable-star designation, so the pipeline cannot key the orbit to a
+# WDS pair. subdivide.apply_orb6_component_overrides rewrites the
+# entry's components before orphan sub-pair synthesis; the mapping is
+# per (wds_id, discoverer) exactly as parse_orb6 strips them.
+#
+# Schema (4 tab-separated columns):
+#   wds_id      — WDS positional anchor (e.g. "07346+3153").
+#   discoverer  — ORB6 discoverer cell, stripped (e.g. "YY Gem").
+#   components  — WDS component letters the orbit belongs to.
+#   source      — literature reference for the identification.
+wds_id	discoverer	components	source
+07346+3153	YY Gem	Ca,Cb	Castor C = YY Gem, eclipsing pair Ca+Cb — Torres & Ribas 2002 /data/papers/index.md#torres2002 (P=0.814 d)

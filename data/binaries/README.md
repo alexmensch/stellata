@@ -20,7 +20,9 @@ component_sptype_overrides.tsv  Hand-curated per-component MK types for
                                 Component keys use the raw multiples
                                 comp form (Algol's Aa1,2 secondary is
                                 "2"); every entry cites its literature
-                                source. LFS (data/binaries/*.tsv).
+                                source through the citation index. Plain
+                                git, not LFS, so doc-pointer checks see
+                                its pointers.
 orb6_component_overrides.tsv    Hand-curated WDS component letters for
                                 ORB6 rows whose components field is
                                 blank — the catalog names the pair only
@@ -28,8 +30,8 @@ orb6_component_overrides.tsv    Hand-curated WDS component letters for
                                 (YY Gem = Castor Ca,Cb). Keyed on
                                 (wds_id, discoverer); applied before
                                 orphan sub-pair synthesis; every entry
-                                cites its literature source. LFS
-                                (data/binaries/*.tsv).
+                                cites its literature source through the
+                                citation index. Plain git, as above.
 astrometry_exclusions.tsv       Hand-curated Gaia DR3 source_ids whose
                                 5p astrometry is unusable — a companion
                                 blended with a Gaia-saturating primary
