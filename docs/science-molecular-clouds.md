@@ -130,8 +130,9 @@ Scaling `u` by the *smallest* semi-axis maps the fitted radial profile
 onto the cloud's narrow dimension: [Zucker 2021](/data/papers/index.md#zucker2021) fitted the
 volume-density profile perpendicular to each cloud's filamentary spine, and the
 ellipsoid's short axis is our best available proxy for "distance from
-the spine" (the bboxes are what Table 1 publishes; we do not have the
-spine skeletons).
+the spine" (Table 1's x/y/z extents bound each cloud's spine skeleton,
+not its volume, which reaches past them by the fitted profile width; the
+skeletons themselves are not ingested).
 
 ## 4. Per-cloud density model — the presence-pass field
 
@@ -283,14 +284,15 @@ R_V(ρ) = 3.1 + 2.4 · smoothstep(ρ₁, ρ₂, ρ)
 ```
 
 R_V is a *measured observable* with a known column dependence, not a
-look-knob. [Chapman et al. 2009](/data/papers/index.md#chapman2009) measure R_V ≈ 3.1–3.5 for A_V ≲ 4–5,
-reaching ~5 only at A_V ≳ 10–18. Our per-star columns are
+look-knob. [Chapman et al. 2009](/data/papers/index.md#chapman2009) find the mid-IR extinction law matches
+the Weingartner & Draine R_V = 3.1 model below A_Ks = 0.5 (A_V ≈ 4),
+flattening toward their R_V = 5.5 model only at A_Ks ≳ 1 (A_V ≳ 9). Our per-star columns are
 voxel-averaged and bounded: the pinned peak (dust manifest `zucker`
 block) is Ophiuchus at A_V = 2.73, everything else ≤ 1.75, and the
 grid-max density (0.135 E_ZGR/pc → 0.37 A_V/pc) makes A_V ≳ 4 physically
 unreachable on any realistic chord. The R_V = 5.5 grain-growth regime is
 the sub-0.1 pc pencil-beam column the 4.88 pc grid deliberately does not
-resolve ([§ 2.1](#21-what-realistic-a_v-means-at-our-resolution)). At A_V ≤ 2.73 the measured R_V is ≈ 3.1–3.5, so the
+resolve ([§ 2.1](#21-what-realistic-a_v-means-at-our-resolution)). At A_V ≤ 2.73 the measured law is the R_V = 3.1 one, so the
 global R_V = 3.1 is correct to ≲ 0.1 mag of B−V even on the densest
 core; the ρ₂ = 0.08 trigger above would over-correct and slightly
 *under*-redden it. The constant law is the physically-grounded choice at
@@ -358,10 +360,16 @@ O5V 49.3 · O6V 48.9 · O7V 48.6 · O8V 48.3 · O9V 48.0 · B0V 47.6 · B1V 45.7
 giants/supergiants: use the same class row +0.3 dex
 ```
 
+Not every row is the papers' value. [Martins](/data/papers/index.md#martins2005) Table 1 gives O6V 48.96 and
+O9V 47.90; [Sternberg](/data/papers/index.md#sternberg2003) Table 1 gives B0V 48.02 and stops at B0.5V
+(47.71), with no B1V row. The flat +0.3 dex is a stellata simplification:
+the papers' giant-minus-dwarf offsets run +0.2 to +0.5 dex and their
+supergiant ones +0.35 to +0.9 dex, growing toward late O.
+
 Representative scale: an O6V in n = 100 cm⁻³ gives R_S ≈ 2.9 pc; a B0V
 ≈ 1.1 pc. Evolved regions exceed the instantaneous Strömgren sphere
-(D-type expansion, stellar winds) — the λ Ori ring (≈ 30 pc,
-[Dolan & Mathieu 2002](/data/papers/index.md#dolan2002)) is the canonical local example and a validation case:
+(D-type expansion, stellar winds) — the λ Ori ring (40 pc across, a
+~20 pc radius, [Dolan & Mathieu 2002](/data/papers/index.md#dolan2002)) is the canonical local example and a validation case:
 
 ```
 R_cav = max( R_S , R_curated )     R_curated: Orion Nebula 4 pc,
@@ -500,9 +508,9 @@ on Earth. Everything falls out of the two mechanisms already specified:
 - [Cardelli, Clayton & Mathis 1989](/data/papers/index.md#cardelli1989) — extinction law, R_V = 3.1.
 - [Bohlin, Savage & Drake 1978](/data/papers/index.md#bohlin1978) — N_H / E(B−V) = 5.8×10²¹ cm⁻² mag⁻¹.
 - [Zucker et al. 2020](/data/papers/index.md#zucker2020) — cloud distances (Table A1).
-- [Zucker et al. 2021](/data/papers/index.md#zucker2021) — 3D bboxes, Plummer profile fits, masses, peak A_K (Tables 1–3).
+- [Zucker et al. 2021](/data/papers/index.md#zucker2021) — 3D skeleton extents, Plummer profile fits, masses, peak A_K (Tables 1–3).
 - [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) — 3D dust map; E_ZGR units.
-- [Leike, Glatzle & Enßlin 2020](/data/papers/index.md#leike2020) — the 3D map behind `mass_leike` / `max_ak_leike`.
+- [Leike, Glatzle & Enßlin 2020](/data/papers/index.md#leike2020) — the 3D G-band extinction map (natural-log optical depth per pc) that [Zucker 2021](/data/papers/index.md#zucker2021) converts into `mass_leike` and the K-band `max_ak_leike`.
 - [Vazquez-Semadeni 1994](/data/papers/index.md#vazquez1994); [Padoan, Nordlund & Jones 1997](/data/papers/index.md#padoan1997) — log-normal density PDF.
 - [Federrath et al. 2010](/data/papers/index.md#federrath2010) — σ_s² = ln(1 + b²M²), b by forcing.
 - [Federrath & Klessen 2013](/data/papers/index.md#federrath2013); [Kainulainen et al. 2009](/data/papers/index.md#kainulainen2009) — power-law tail in SF clouds.

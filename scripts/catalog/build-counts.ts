@@ -561,8 +561,9 @@ export interface BuildCounts {
    *  Tycho-2's `VT` reduced to Johnson V by the ESA 1997
    *  (/data/papers/index.md#esa1997) SP-1200 relation. */
   vTycho2: number;
-  /** The `vTycho2` subset whose `BT−VT` sits outside the range ESA 1997
-   *  (/data/papers/index.md#esa1997) SP-1200 publishes that relation over.
+  /** The `vTycho2` subset whose `BT−VT` sits outside [−0.25, 2.0], wider
+   *  than the −0.2 < BT−VT < 1.8 ESA 1997 (/data/papers/index.md#esa1997)
+   *  SP-1200 publishes that relation over.
    *  Counted, not gated: none of these rows carries a `gl`, so gating would
    *  cost each its only V and hence its record — ../photometry/v-magnitude-pure.ts `tycho2VMagnitude`. */
   vTycho2OutsideBtVtRange: number;
@@ -619,7 +620,7 @@ export interface BuildCounts {
   /** Rows whose computed space velocity exceeded VELOCITY_SANITY_CEILING
    *  (PM×distance artifact) and was zeroed — a subset of velocityZero. */
   velocityClamped: number;
-  /** Kept rows above the Galactic escape velocity (~550 km/s). Unbound
+  /** Kept rows above the Galactic escape velocity `GALACTIC_ESCAPE_VELOCITY_KM_S`. Unbound
    *  stars are genuinely exceptional, so this band is almost all PM×distance
    *  / bad-RV artifacts — tracked as a ratchet (not clamped) so a proven
    *  hypervelocity star survives and the artifact tail stays visible for

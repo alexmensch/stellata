@@ -294,9 +294,13 @@ optical-depth maths needs.
 
 ## Dust — the analytic tier, and what composes with it
 
-Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` —
-[Drimmel & Spergel](/data/papers/index.md#drimmel2001)-style thin-disc dust. Per step, opacity converts to per-channel
-optical depth via [CCM](/data/papers/index.md#cardelli1989)-derived reddening multipliers `(0.76, 1.0, 1.35)` —
+Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — a simplified
+exponential thin dust disc with its own parameters. [Drimmel & Spergel](/data/papers/index.md#drimmel2001)'s
+dust disc has h_r = 2.26 kpc and a sech² vertical profile of 134 pc base
+scale height, flaring outward, with a central hole and arm components; the
+slab keeps none of those. Per step, opacity converts to per-channel optical
+depth via reddening multipliers `(0.76, 1.0, 1.35)`, approximating
+[CCM](/data/papers/index.md#cardelli1989) Table 3 at R_V = 3.1 (R 0.751, V 1.000, B 1.337) —
 red transmits most, blue extincts away — applied with Beer-Lambert
 running attenuation including a half-step self-shielding term.
 
@@ -310,7 +314,9 @@ rate, not the norm.
 solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs to
 1.8). Two independent constraints meet at that value: the 125 pc scale
 height ties the plane rate to the perpendicular column, and 1.0 mag/kpc
-puts the pole at A_V = 0.125, inside the [SFD](/data/papers/index.md#schlegel1998) polar spread (~0.03–0.15).
+puts the pole at A_V = 0.125 — inside the older A_V ≈ 0.06–0.15 polar range
+[SFD](/data/papers/index.md#schlegel1998) review, and 2.7× their own polar measurement (E(B−V) =
+0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05).
 
 **What this replaced was wrong by an order of magnitude and mis-cited** —
 0.0679 mag/kpc attributed to [SFD 1998](/data/papers/index.md#schlegel1998), a 2D E(B−V) map publishing no

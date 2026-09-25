@@ -67,7 +67,7 @@ identity. The authoritative source per identifier:
 | Tycho-2 HD identifications | `IV/25/tyc2_hd` | 353,527 | HD ↔ TYC (with `n_HD`/`n_TYC` ambiguity flags) | [Fabricius, Makarov, Knude & Wycoff 2002](/data/papers/index.md#fabricius2002a) |
 | Cross index | `IV/27A/catalog` | 3,690 | Bayer + Flamsteed ↔ HD/HIP | [Kostjuk N.D. 2002](/data/papers/index.md#kostjuk2002) |
 | Bright Star Catalogue 5th rev. | `V/50/catalog` | 9,110 (9,096 with HD) | HR ↔ HD | [Hoffleit & Warren 1991](/data/papers/index.md#hoffleit1991) |
-| CNS5 | `J/A+A/670/A19/cns5` | 5,909 (corrected 2023-12-13) | GJ ↔ Gaia EDR3 source_id ↔ HIP, component letters | [Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023](/data/papers/index.md#golovin2023) |
+| CNS5 | `J/A+A/670/A19/cns5` | 5,909 (VizieR table as corrected 2023-12-13; the paper counts 5,931 objects) | GJ ↔ Gaia EDR3 source_id ↔ HIP, component letters | [Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023](/data/papers/index.md#golovin2023) |
 | Hipparcos main (V slice) | `I/239/hip_main` | 118,218 | printed Johnson V (`Vmag`) for the bright/printed tier | [ESA 1997](/data/papers/index.md#esa1997) |
 
 Caveats verified at the gate:
@@ -627,7 +627,7 @@ which were reproduced from the pinned counts before probing):
 | Source | Id | Supplies | Citation |
 |---|---|---|---|
 | Gaia DR3 synthetic photometry (GSPC) | `gaiadr3.synthetic_photometry_gspc` / `I/360` | Johnson-Kron-Cousins B, V per `source_id` (+ fluxes, flux errors, per-band validated-range flags) — SHIPPED `data/gaia/gaia_dr3_gspc.tsv` | [Gaia Collaboration, Montegriffo et al. 2023](/data/papers/index.md#montegriffo2023) |
-| Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | positions (per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | [Høg et al. 2000](/data/papers/index.md#hog2000) |
+| Tycho-2 main + supplement 1 | `I/259` `tyc2`+`suppl_1`, filtered to mentioned TYCs | mean positions at J2000.0 (fits centred on per-star mean epochs), PM, BT/VT — keyed on the record's own TYC | [Høg et al. 2000](/data/papers/index.md#hog2000) |
 | Hipparcos main, B−V re-slice | `I/239/hip_main` | printed Johnson B−V (widens the existing V slice; 98.9% fill) | [ESA 1997](/data/papers/index.md#esa1997) |
 | CNS5 astrometry re-slice | `J/A+A/670/A19/cns5` | ra/dec/parallax/PM for the GJ-keyed cohort (widens the existing id slice) | [Golovin et al. 2023](/data/papers/index.md#golovin2023) |
 | SIMBAD values pull | `basic` + `flux` | rv / parallax / PM / coordinates with per-value bibcodes, V/B fluxes; keyed source_id → HIP → TYC → GJ, with a corroborated widening ladder over the source_ids that namespace misses | [Wenger et al. 2000](/data/papers/index.md#wenger2000) |
@@ -721,8 +721,8 @@ Measured exposure and expected coverage (2026-08-14; pins in
      value. Detail: `data/gliese/README.md`.
 
   The Tycho-2 tier applies the [ESA 1997](/data/papers/index.md#esa1997) `V = VT − 0.090(BT−VT)` **ungated**,
-  and `vTycho2OutsideBtVtRange` pins the **5** rows outside the published
-  `BT−VT` ∈ [−0.25, 2.0] (four red to 2.69, one blue at −0.282), where the
+  and `vTycho2OutsideBtVtRange` pins the **5** rows outside
+  `BT−VT` ∈ [−0.25, 2.0] — wider than the paper's −0.2 < `BT−VT` < 1.8 — (four red to 2.69, one blue at −0.282), where the
   linear form runs ~0.19–0.24 mag bright. Gating there would not hand those
   rows to a better tier — none carries a `gl`, so nothing sits below them —
   it would cost each its only V and hence its record, a row with no V being

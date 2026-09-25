@@ -111,9 +111,9 @@ enough to see it.
     - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
       direction cascade and the input [Bailer-Jones](/data/papers/index.md#bailerjones2021) inverts (below).
     - **Johnson V** — `G` and `BP − RP` transformed through [**Riello M., De
-      Angeli F., Evans D. W. et al. 2021**](/data/papers/index.md#riello2021), section *Photometric
-      relationships with other photometric systems* (`G − V` as a cubic in
-      `BP − RP`, σ = 0.03017 mag over −0.5 ≤ `BP − RP` ≤ 5.0). Every record's
+      Angeli F., Evans D. W. et al. 2021**](/data/papers/index.md#riello2021), App. C,
+      Table C.2 (`G − V` as a cubic in `BP − RP`, σ = 0.03017 mag over
+      −0.5 ≤ `BP − RP` ≤ 5.0). Every record's
       absolute magnitude is derived from this V, so it sets what the whole
       scene looks like; DR3 ships EDR3's photometry unchanged, so the EDR3
       calibration applies. Gaia's CCDs saturate below `G` = 4.0, where the
@@ -126,7 +126,8 @@ enough to see it.
       each source's own BP/RP spectrum (`gaiadr3.synthetic_photometry_gspc`,
       [**Gaia Collaboration, Montegriffo P., Bellazzini M., De Angeli F. et
       al. 2023**](/data/papers/index.md#montegriffo2023)). B − V from it is the ci cascade's tier below the
-      Table-5.9 relation, and unlike that relation it measures the individual
+      Table-5.9 relation ([Gaia DR3 documentation](/data/papers/index.md#gaiadr3doc)
+      Sect. 5.5.1), and unlike that relation it measures the individual
       star rather than fitting a population — which is what lets it serve the
       red rows the relation's colour bound excludes
       ([The ci cascade](scripts/catalog/photometry/README.md#the-ci-cascade)).
@@ -184,12 +185,13 @@ enough to see it.
 - **Tycho-2** (`I/259` `tyc2` + `suppl_1`, filtered to the mentioned TYCs
   at `data/tycho2/`): [Høg E. et al. 2000](/data/papers/index.md#hog2000). Retrieved
   2026-08-25, public domain via CDS. The first-order source for the
-  TYC-bearing rows Gaia does not reach — mean positions with **per-star,
-  per-coordinate mean epochs**, proper motions, and BT/VT photometry, so
+  TYC-bearing rows Gaia does not reach — mean positions at **J2000.0**
+  (each fit centred on per-star, per-coordinate mean observation epochs),
+  proper motions, and BT/VT photometry, so
   the direction, PM and V cascades of [§ 5](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) route
   here rather than to any printed cell. It reaches every one of the
-  TYC-bearing membership rows; the mean epochs are what fix the
-  printed cells' unpropagated staleness (~27″ worst case).
+  TYC-bearing membership rows; propagating from those J2000.0 positions is
+  what fixes the printed cells' unpropagated staleness (~27″ worst case).
 - **Gliese third catalogue of nearby stars** (`V/70A/catalog`, whole table
   at `data/gliese/gliese_v70a.tsv`): [Gliese W., Jahreiss H. 1991](/data/papers/index.md#gliese1991),
   *Preliminary Version of the Third Catalogue of Nearby Stars*, CDS
@@ -344,11 +346,15 @@ enough to see it.
   the nine planets AND the 18 major moons): IAU WG on Cartographic
   Coordinates and Rotational Elements 2015 report
   ([Archinal et al. 2018](/data/papers/index.md#archinal2018)), values as
-  distributed in NAIF `pck00011.tpc`; linear terms only (see
+  distributed in NAIF `pck00011.tpc` — except Earth and the Moon, which the
+  2015 report defers to IERS and a lunar ephemeris: their rows are the 2009
+  report's ([Archinal et al. 2011](/data/papers/index.md#archinal2011)), which
+  `pck00011.tpc` still carries. Linear terms plus the periodic terms above
+  the visibility bar (see
   [Planet rotation](docs/science-solar-system.md#planet-rotation)). Every moon is
   tidally locked — its Ẇ equals the orbital mean motion, test-pinned
   against the JPL mean elements. Tables in
-  `src/client/solar-system/planets/rotation-elements-pure.ts`.
+  `src/client/solar-system/planets/rotation/rotation-elements-pure.ts`.
 - **Deep-space probe trajectories** (the five Sun-escape probes —
   Pioneer 10/11, Voyager 1/2, New Horizons; retrieved 2026-07-25):
   JPL Horizons API (https://ssd.jpl.nasa.gov/api/horizons.api),
@@ -380,9 +386,10 @@ enough to see it.
       0.15).
     - [**Leinert et al. 1998**](/data/papers/index.md#leinert1998) — "The 1997 reference of diffuse night sky
       brightness". Table 24's integrated starlight at 0.55 µm
-      (λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the Galactic centre / the
-      NGP, i.e. 22.92 / 23.83 mag/arcsec²) is what the band is CHECKED
-      against. These are SKY-model predictions ([Wainscoat et al. 1992](/data/papers/index.md#wainscoat1992)) for
+      (λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ at b = 30° / the NGP, i.e.
+      22.92 / 23.83 mag/arcsec²) is what the band is CHECKED against; the
+      b = 30° value is graded against the model's Galactic-centre
+      sightline. These are SKY-model predictions ([Wainscoat et al. 1992](/data/papers/index.md#wainscoat1992)) for
       *total* starlight, so they include the resolved stars the catalogue
       draws separately — at the NGP that overlap is two thirds of the
       light, and the check subtracts it (24.99, not 23.83). The
@@ -392,7 +399,7 @@ enough to see it.
     - [**Licquia & Newman 2015**](/data/papers/index.md#licquia2015) — hierarchical Bayesian
       meta-analysis giving M\* = 6.08 ± 1.14 × 10¹⁰ M⊙ split
       0.91 ± 0.07 bulge / 5.17 ± 1.11 disc, i.e. B/T = 0.150 in stellar
-      **mass**. Chabrier IMF.
+      **mass**. Kroupa IMF.
     - [**Flynn et al. 2006**](/data/papers/index.md#flynn2006) — the local Galactic disc
       column's measured mass-to-light ratios, (M/L)_B = 1.4 ± 0.2,
       (M/L)_V = 1.5 ± 0.2, (M/L)_I = 1.2 ± 0.2. Measured for the Milky
@@ -406,20 +413,23 @@ enough to see it.
   density0 is solved so the proxy volumes integrate to it at the V-band
   LIGHT B/T derived from the three sources above. The two [Leinert](/data/papers/index.md#leinert1998) checks
   then disagree with it by 1.68 mag
-  at the pole and 1.02 toward the centre, in the same direction, and no
+  at the pole and 1.02 toward the centre (the model's centre sightline
+  against Leinert's b = 30° value), in the same direction, and no
   shape parameter bridges that — [The luminosity solve](docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)
   argues it out;
   `src/client/milkyway/calibration/README.md` carries the numbers.
 
 > **Molecular cloud sources.** [Zucker et al. 2020](/data/papers/index.md#zucker2020) + [2021](/data/papers/index.md#zucker2021) cloud
-> distances, 3D bounding boxes, and radial profiles drive the
+> distances, 3D skeleton extents (Table 1 bounds each cloud's spine, not
+> its volume), and radial profiles drive the
 > molecular-cloud presence layer (`scripts/clouds/build-clouds.py`,
 > `data/molecular-clouds/`; physics model in
 > `docs/science-molecular-clouds.md`). Cloud masses come from
 > [Zucker 2021](/data/papers/index.md#zucker2021)
 > Table 3's NICEST extinction-map column (`mass_nicest`); the
-> [Leike](/data/papers/index.md#leike2020)-map alternative saturates in dense gas and underestimates by
-> up to ~14× (the paper's own `mass_ratio` column), so it is not used
+> [Leike](/data/papers/index.md#leike2020)-map alternative underestimates it by 1.0–1.6× for clouds
+> wholly inside the Leike grid, and by up to ~14× for clouds at its edge (the paper's
+> own `mass_ratio` column), so it is not used
 > for display (the Leike-resolution `mass_leike` / `max_ak_leike`
 > columns do calibrate the presence-pass density model).
 

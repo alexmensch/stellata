@@ -163,7 +163,7 @@ consumers:
   (`spectral/physical-radius.ts`) derives when a no-Apsis star has no
   measured B−V but a parseable class (`ciSpectralDerived` in build-counts),
   else the solar fallback.
-- **Spectral classification fall-through** — GSP-Spec's
+- **Spectral classification fall-through** — ESP-ELS's
   `spectraltype_esphs` enum is the tier above `SPECTRAL_UNKNOWN` in
   `spectral/README.md`'s resolver chain.
 - **Per-record handles** for future Phase 5 consumers (geometric

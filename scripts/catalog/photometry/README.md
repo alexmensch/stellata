@@ -58,10 +58,10 @@ scripts/catalog/photometry/
 
 ## The published relations
 
-Both transforms come from **one table** — Gaia DR3 documentation Table 5.9,
-section *Photometric relationships with other photometric systems*, the release-3
-restatement of [Riello et al. 2021](/data/papers/index.md#riello2021) App. C —
-as polynomials in `BP − RP`:
+Both transforms come from **one table** — [Gaia DR3 documentation](/data/papers/index.md#gaiadr3doc)
+Sect. 5.5.1, Table 5.9 — as polynomials in `BP − RP`. Its `G − V` row is
+[Riello et al. 2021](/data/papers/index.md#riello2021)'s App. C cubic (Tables C.1–C.2); its `G − B` row is
+a DR3-era fit the paper does not carry:
 
 | Relation | Degree | σ | Stated range |
 | --- | --- | --- | --- |
@@ -108,8 +108,8 @@ to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 ### The Tycho-2 tier runs outside its published colour range
 
 [ESA 1997](/data/papers/index.md#esa1997) (SP-1200) states
-`V = VT − 0.090(BT−VT)` over `BT−VT` ∈ [−0.25, 2.0].
-**44** of the tier's 3,784 rows sit outside it, on both the red and the blue
+`V = VT − 0.090(BT−VT)` over −0.2 < `BT−VT` < 1.8; the build counts against
+a wider [−0.25, 2.0]. **44** of the tier's 3,784 rows sit outside that, on both the red and the blue
 side, where the linear form runs bright against the printed cell it replaces.
 `tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
 the count.
@@ -337,8 +337,9 @@ for the same gate on the label side).
 
 ## Citation
 
-[Riello et al. 2021](/data/papers/index.md#riello2021), section *Photometric
-relationships with other photometric systems*. DR3 ships EDR3's photometry
+[Riello et al. 2021](/data/papers/index.md#riello2021) App. C, Table C.2 for
+`G − V`; [Gaia DR3 documentation](/data/papers/index.md#gaiadr3doc) Sect. 5.5.1, Table 5.9 for
+`G − B`. DR3 ships EDR3's photometry
 unchanged, so the EDR3 calibration is the one that applies. The coefficients,
 σ, and colour range are pinned as literals in the test rather than imported
 from the module, so a transcription slip fails rather than round-trips.

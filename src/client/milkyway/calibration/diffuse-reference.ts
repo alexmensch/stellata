@@ -19,8 +19,8 @@ import { RESOLVED_CATALOGUE_CAP } from './resolved-hole-table';
  * /data/papers/index.md#licquia2015b) rather than from direct integration,
  * and it flags its own SDSS-vs-colour-index inconsistency. Older
  * direct-integration work runs 0.3–0.5 mag dimmer once its B-band results
- * are carried across at the Galaxy's integrated colour: de Vaucouleurs &
- * Pence 1978 (/data/papers/index.md#devaucouleurs1978) M_B = −20.2 ± 0.15
+ * are carried across at the Galaxy's integrated colour: de Vaucouleurs
+ * 1983 (/data/papers/index.md#devaucouleurs1983) M_B = −20.2 ± 0.15
  * and van der Kruit 1986 (/data/papers/index.md#vanderkruit1986)
  * M_B = −20.3 ± 0.2, against (B−V) ≈ 0.83.
  *
@@ -33,7 +33,7 @@ export const GALAXY_TOTAL_ABSMAG_V = -21.37;
 /**
  * Bulge share of the Galaxy's stellar **mass**, Licquia & Newman 2015
  * (/data/papers/index.md#licquia2015): 0.150 (+0.028/−0.019), from
- * M\* = 0.91 ± 0.07 bulge against 6.08 ± 1.14 × 10¹⁰ M⊙ total, Chabrier
+ * M\* = 0.91 ± 0.07 bulge against 6.08 ± 1.14 × 10¹⁰ M⊙ total, Kroupa
  * IMF. Not the light ratio — see `BULGE_TO_TOTAL_LIGHT_V`.
  */
 export const BULGE_TO_TOTAL_MASS = 0.15;
@@ -135,13 +135,13 @@ export const DISC_COLOUR_INDEX_BV = discColourIndex(
  * Integrated starlight at 0.55 µm from Leinert et al. 1998
  * (/data/papers/index.md#leinert1998) Table 24, converted to V mag/arcsec².
  *
- * λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the Galactic centre / the
- * NGP, against λF_λ = 1.9965e−8 W m⁻² for a V = 0 point source and
+ * λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ at b = 30° / the NGP, against λF_λ = 1.9965e−8 W m⁻² for a V = 0 point source and
  * 1 arcsec² = 2.3504e−11 sr.
  *
  * These are **sky-model predictions** (Wainscoat et al. 1992,
  * /data/papers/index.md#wainscoat1992) for TOTAL starlight — every star,
- * resolved or not.
+ * resolved or not. `galacticCentre` holds the b = 30° column, which the
+ * check grades the model's Galactic-centre sightline against.
  */
 export const LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2 = {
   galacticCentre: 22.92,

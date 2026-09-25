@@ -111,8 +111,8 @@ which the catalogue is a third of a percent. A single emissivity field
 anchored on the subtracted pole therefore runs a factor of three low
 everywhere else. With the hole taking the resolved share out of both
 sides, the shipped solve is 1.35 mag brighter than that residual at the
-pole and 0.37 mag brighter than [Leinert](/data/papers/index.md#leinert1998)'s total toward the Galactic
-centre; band plus catalogue at the pole is 0.43 mag over [Leinert](/data/papers/index.md#leinert1998)'s total,
+pole and 0.37 mag brighter toward the Galactic centre than
+[Leinert](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus catalogue at the pole is 0.43 mag over [Leinert](/data/papers/index.md#leinert1998)'s total,
 where band-without-hole plus catalogue was 0.88 over.
 
 Two things make what remains a scale disagreement between published
@@ -163,17 +163,22 @@ directly). Invariant: any change to this runtime stack ships with the
 mirrored build-side integral + catalog rebuild in the same release.
 
 **Volumetric Milky Way dust.** The analytic profile is
-`norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — [Drimmel & Spergel](/data/papers/index.md#drimmel2001)-style
-thin-disc dust. Per step, opacity converts to per-channel optical depth via
-CCM-derived reddening multipliers `(0.76, 1.0, 1.35)` — red transmits most,
+`norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — a simplified exponential
+thin dust disc with its own parameters: [Drimmel & Spergel](/data/papers/index.md#drimmel2001)'s dust disc has
+h_r = 2.26 kpc and a sech² vertical profile of 134 pc base scale height,
+flaring outward, with a central hole and arm components. Per step, opacity
+converts to per-channel optical depth via reddening multipliers
+`(0.76, 1.0, 1.35)`, approximating CCM Table 3 at R_V = 3.1
+(R 0.751, V 1.000, B 1.337) — red transmits most,
 blue extincts away — applied with Beer-Lambert running attenuation including
 a half-step self-shielding term. Default global strength = 1.0.
 
 `norm` is derived from a declarative rate: 1.0 mag/kpc of V extinction
 at (R₀, z = 0), the top of the range commonly adopted for the
 solar-neighbourhood plane. At the 125 pc scale height that also puts the
-perpendicular column to the pole at A_V = 0.125, inside the
-[SFD](/data/papers/index.md#schlegel1998) polar spread — two independent constraints meeting at one normalisation.
+perpendicular column to the pole at A_V = 0.125 — inside the older
+A_V ≈ 0.06–0.15 polar range [SFD](/data/papers/index.md#schlegel1998) review, and 2.7× their own polar
+measurement (E(B−V) = 0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05).
 
 **That analytic profile is the fallback tier, not the whole band column.**
 What composes with it, over which volumes, and why the slab is not rescaled
@@ -185,10 +190,12 @@ Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (per-star) and
 `src/client/milkyway/README.md`.
 
 Sources for the volumetric path: [**Drimmel & Spergel 2001**](/data/papers/index.md#drimmel2001)
-for the thin-disc dust distribution;
-[**Cardelli, Clayton & Mathis 1989**](/data/papers/index.md#cardelli1989) for the per-channel
-reddening multipliers; [**Schlegel, Finkbeiner & Davis 1998**](/data/papers/index.md#schlegel1998)
-for the polar A_V spread the perpendicular column is checked against.
+for the thin-disc dust model the slab simplifies (their h_r = 2.26 kpc and
+134 pc sech² scale height; the slab uses 3.5 kpc and a 125 pc exponential);
+[**Cardelli, Clayton & Mathis 1989**](/data/papers/index.md#cardelli1989) Table 3, which the per-channel
+reddening multipliers approximate; [**Schlegel, Finkbeiner & Davis 1998**](/data/papers/index.md#schlegel1998)
+for the polar reddening the perpendicular column is checked against (their
+own A_V ≈ 0.05, and the older A_V ≈ 0.06–0.15 range they review).
 
 [SFD](/data/papers/index.md#schlegel1998) used to be cited for something it
 does not publish: a "0.15 mag/kpc local rate", under a shipped 0.45 multiplier
@@ -258,8 +265,9 @@ handoff is close to flux-neutral on the mean and **redistributes** — windows
 and lanes replacing a smooth field at nearly the same total, which is the
 entire point. Both of the slab's independent constraints also survive: the
 plane-rate anchor is untouched, and the polar constraint transfers from model
-to measurement, the grid's NGP column reading **0.049 mag** against the slab's
-0.125, both inside the [SFD](/data/papers/index.md#schlegel1998) polar spread (0.03–0.15).
+to measurement, the grid's NGP column reading **0.049 mag** — matching
+[SFD](/data/papers/index.md#schlegel1998)'s own NGP value, A_V ≈ 0.047 — against the slab's 0.125, which sits
+only inside the older A_V ≈ 0.06–0.15 range SFD review.
 
 ### Which clouds are carved, and which are folded in
 

@@ -23,8 +23,8 @@ built.
 Sources under `data/molecular-clouds/`:
 
 - `zucker2020-tablea1.tsv` — 326 sightlines, ~96 unique cloud names.
-- `zucker2021-table1.dat` — 12 famous local SF clouds with 3D bounding
-  boxes.
+- `zucker2021-table1.dat` — 12 famous local SF clouds with the 3D
+  bounding box of each cloud's spine skeleton.
 - `zucker2021-table2.dat` — fitted radial profiles (Plummer columns)
   for 11 of the 12 (Corona Australis has no fit and takes class
   defaults).
@@ -51,7 +51,7 @@ One entry per cloud:
 | `quat`     | `[qx, qy, qz, qw]` rotation. Identity = `[0, 0, 0, 1]`. |
 | `source`   | `"Z2021T1"` or `"Z2020"` provenance. |
 | `distance` | Heliocentric distance to centroid (pc). |
-| `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the [Leike et al. 2020](/data/papers/index.md#leike2020) map's `mass_leike` saturates in dense gas and underestimates by up to ~14×). Absent for Z2020 clouds. |
+| `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the [Leike et al. 2020](/data/papers/index.md#leike2020) map's `mass_leike` underestimates it by 1.0–1.6× for clouds wholly inside the Leike grid, and by up to ~14× for clouds at its edge). Absent for Z2020 clouds. |
 | `sid`      | Frozen Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)). |
 | `class`    | `dark` / `sf` / `hii` taxonomy (curated seed; a planned build-time embedded-star cross-match will supersede). |
 | `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field)). |
@@ -69,7 +69,8 @@ a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scrip
 ## Merge logic
 
 - **[Zucker 2021](/data/papers/index.md#zucker2021) Table 1** → 12 ellipsoid
-  clouds with axis-aligned bounding boxes in galactic Cartesian. The bbox is
+  clouds from axis-aligned bounding boxes in galactic Cartesian — the extents
+  of each cloud's spine skeleton, not of its volume. The bbox is
   converted to centroid + semi-axes; the orientation `quat` is the `GAL_TO_ICRS`
   rotation so the ellipsoid local axes correctly point along galactic +X/+Y/+Z
   when scaled by the renderer.

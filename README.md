@@ -214,8 +214,8 @@ The Milky Way is volumetric, not a skybox. These viewpoints prove it:
   a flat backdrop.
 - **Fly toward the galactic centre.** As you cross into the bulge,
   the surface brightness of the volumetric band ramps. The dark
-  dust lane along the midplane (a [Drimmel–Spergel](/data/papers/index.md#drimmel2001) analytical
-  profile baked into the band's own raymarch) reads correctly as
+  dust lane along the midplane (a simplified exponential dust disc,
+  after [Drimmel–Spergel](/data/papers/index.md#drimmel2001), baked into the band's own raymarch) reads correctly as
   you orient along the disc plane.
 
 ### Local Group destinations
@@ -312,8 +312,8 @@ Data sources retain their own licences:
   astrophysical parameters, NSS orbits) —
   ESA / Gaia / DPAC, [Gaia archive](https://gea.esac.esa.int/archive/),
   CC-BY-4.0 (Gaia data-release policy).
-- **Tycho-2** (positions at each star's own mean epoch, proper
-  motions, `BT`/`VT` photometry) — [Høg et al. 2000](/data/papers/index.md#hog2000), via
+- **Tycho-2** (mean positions at J2000.0, per-star mean observation
+  epochs, proper motions, `BT`/`VT` photometry) — [Høg et al. 2000](/data/papers/index.md#hog2000), via
   [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/259);
   cite the paper.
 - **CNS5** (the fifth catalogue of nearby stars — `GJ` designations,

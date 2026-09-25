@@ -409,8 +409,9 @@ def calibrate(rflat: float, p: float, axes: tuple[float, float, float],
 def profiled_clouds() -> list[ProfiledCloud]:
     """The calibrated per-cloud parameter set driving both the voxel bake
     and the clouds.json v3 fields. Calibration: solve n0_cal so the
-    shortest-axis column through the centroid equals the observed
-    Leike 2020 (/data/papers/index.md#leike2020) resolution peak column,
+    shortest-axis column through the centroid equals Zucker 2021's
+    (/data/papers/index.md#zucker2021) Table 3 `max_ak_leike` peak column,
+    at Leike 2020 (/data/papers/index.md#leike2020) map resolution,
     under the mass budget
     (/docs/science-molecular-clouds.md#42-calibration-procedure-per-cloud)."""
     t1 = parse_z2021_table1()

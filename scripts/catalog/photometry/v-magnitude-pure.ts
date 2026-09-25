@@ -9,9 +9,8 @@ import {
 import { lookupGliese, type GlieseIndex } from '../gliese-parse';
 import type { Tycho2Row } from '../tycho2-parse';
 
-/** Riello et al. 2021 (/data/papers/index.md#riello2021) — Gaia EDR3
- *  photometric relationships with other photometric systems, `G − V` as a
- *  cubic in `BP − RP`. Ascending powers. The DR3 photometry is unchanged from EDR3, so the EDR3 calibration
+/** Riello et al. 2021 (/data/papers/index.md#riello2021) App. C,
+ *  Table C.2 — `G − V` as a cubic in `BP − RP`. Ascending powers. The DR3 photometry is unchanged from EDR3, so the EDR3 calibration
  *  is the one that applies. */
 export const RIELLO_G_MINUS_V_COEFFS = [
   -0.02704, 0.01424, -0.2156, 0.01426,
@@ -22,15 +21,15 @@ export const RIELLO_G_MINUS_V_COEFFS = [
  *  uncertainty rather than a guess. */
 export const RIELLO_G_MINUS_V_SIGMA = 0.03017;
 
-/** Colour range Riello+ 2021 (/data/papers/index.md#riello2021) states the
- *  relation over. Outside it the cubic diverges fast, so this is a validity gate rather than a quality hint. */
+/** Colour range Riello+ 2021 (/data/papers/index.md#riello2021) Table C.1
+ *  states the relation over. Outside it the cubic diverges fast, so this is a validity gate rather than a quality hint. */
 export const RIELLO_BP_RP_MIN = -0.5;
 export const RIELLO_BP_RP_MAX = 5.0;
 
 /** ESA 1997 (/data/papers/index.md#esa1997) SP-1200 Sect. 1.3's linear
- *  reduction of Tycho `VT` to Johnson `V`, `V = VT − 0.090·(BT−VT)`. Published over `BT−VT` ∈ [−0.25, 2.0]; nothing
- *  is published above it, which is what {@link tycho2VMagnitude} documents
- *  rather than gates on. */
+ *  reduction of Tycho `VT` to Johnson `V`, `V = VT − 0.090·(BT−VT)`, published
+ *  over −0.2 < `BT−VT` < 1.8. The MIN/MAX below are wider than that, and
+ *  {@link tycho2VMagnitude} counts rows outside them rather than gating. */
 export const TYCHO2_V_FROM_VT_COEFF = 0.090;
 export const TYCHO2_BT_MINUS_VT_MIN = -0.25;
 export const TYCHO2_BT_MINUS_VT_MAX = 2.0;

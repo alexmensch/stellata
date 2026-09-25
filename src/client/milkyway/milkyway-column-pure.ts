@@ -73,8 +73,9 @@ export const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
  *  solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs
  *  to 1.8). Two independent constraints meet here: at the 125 pc scale
  *  height it also puts the perpendicular column to the pole at
- *  A_V = 0.125, inside the SFD (/data/papers/index.md#schlegel1998) polar
- *  spread. See
+ *  A_V = 0.125: inside the older A_V ≈ 0.06–0.15 polar range SFD
+ *  (/data/papers/index.md#schlegel1998) review, 2.7× their own polar
+ *  measurement (E(B−V) = 0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05). See
  *  README.md#dust--the-analytic-tier-and-what-composes-with-it. */
 export const LOCAL_DUST_RATE_MAG_PER_KPC = 1.0;
 

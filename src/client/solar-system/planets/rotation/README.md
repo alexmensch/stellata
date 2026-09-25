@@ -65,7 +65,10 @@ Horizons' apparent-quantity convention.
 pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
 `W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
 Cartographic Coordinates and Rotational Elements 2015 report
-([Archinal et al. 2018](/data/papers/index.md#archinal2018)), as distributed in NAIF `pck00011.tpc`, plus the
+([Archinal et al. 2018](/data/papers/index.md#archinal2018)) — Earth's and
+the Moon's from the 2009 report
+([Archinal et al. 2011](/data/papers/index.md#archinal2011)), which the 2015
+one drops — as distributed in NAIF `pck00011.tpc`, plus the
 periodic terms above the visibility bar ([Librations](#librations)). Mars is the one
 body whose linear row is incomplete WITHOUT its ~71-kyr slow terms
 (1.55° of pole Dec, 0.58° of W): those linearise cleanly at J2000 and are

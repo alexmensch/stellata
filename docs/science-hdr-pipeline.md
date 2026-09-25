@@ -1729,8 +1729,9 @@ band table as it stood before the resolution hole
 current one), FOV-invariant by construction and computed at `DR_MAG` 7.5
 through the shipped operator (C1 toe → extended Reinhard → sRGB encode);
 the two [Leinert](/data/papers/index.md#leinert1998) columns shift that table's `S` by the disagreements pinned
-at the time (+1.02 GC-anchored, +1.68 pole-anchored), which bracket that
-scale. **The panorama's pixels hold the resolved stars too**, so once the
+at the time (+1.02 GC-anchored — the model's centre sightline against
+Leinert's b = 30° column, the table having no Galactic-centre value — and
++1.68 pole-anchored), which bracket that scale. **The panorama's pixels hold the resolved stars too**, so once the
 hole moved their light out of the band the model row to grade is the band
 plus the catalogue's patch sum, not the band alone — the re-grade is
 stellata-xypg.43, and until it lands the pre-hole table below remains the

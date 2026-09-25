@@ -358,8 +358,8 @@ export function readStars(
     lmcOverriddenByDistVia: Record<DistVia, number>;
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
-    // tycho2-tier rows outside the BT−VT range ESA 1997
-    // (/data/papers/index.md#esa1997) SP-1200 publishes
+    // tycho2-tier rows outside BT−VT ∈ [−0.25, 2.0], wider than ESA 1997
+    // (/data/papers/index.md#esa1997) SP-1200's published −0.2 … 1.8
     vTycho2OutsideBtVtRange: number;
     directionTycho2FromIcrs: number;    // tycho2-tier rows placed at the J2000 cell, no mean solution
     directionTycho2Photocentre: number; // tycho2-tier rows whose mean solution is a double's photocentre
@@ -380,7 +380,7 @@ export function readStars(
     spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found that row
-    spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
+    spectralByGspspec: number;     // rows that fell through to Gaia DR3 ESP-ELS spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range

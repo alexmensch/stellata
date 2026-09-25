@@ -99,7 +99,8 @@ all four; cite the paper per table.
   the fifth Catalogue of Nearby Stars. Carries
   GJ ↔ Gaia EDR3 source_id ↔ HIP directly plus component letters, which
   is why it beats hand-rolling [Gliese](/data/papers/index.md#gliese1991) from V/70A (CNS3, not ingested).
-  5,237 of 5,909 rows carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
+  The corrected table holds 5,909 rows (the paper counts 5,931 objects);
+  5,237 carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
   volume-limited to 25 pc** — see [Coverage](#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
 ### The astrometry re-slice

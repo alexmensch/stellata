@@ -92,7 +92,7 @@ B/T_light = 1 / (1 + ((1 − f_M)/f_M) · (Υ_b/Υ_d))
 
 | term | value | source |
 | --- | --- | --- |
-| `BULGE_TO_TOTAL_MASS` | 0.150 | [Licquia & Newman 2015](/data/papers/index.md#licquia2015), stellar **mass** |
+| `BULGE_TO_TOTAL_MASS` | 0.150 | [Licquia & Newman 2015](/data/papers/index.md#licquia2015), stellar **mass**, Kroupa IMF |
 | `BULGE_ML_V` | 3.15 | [BC03](/data/papers/index.md#bruzual2003) Chabrier SSP, Z = 0.02, 10 Gyr (`data/bc03/`) |
 | `DISC_ML_V` | 1.5 | [Flynn et al. 2006](/data/papers/index.md#flynn2006), **measured** local disc column |
 
@@ -333,7 +333,7 @@ hole in the model column.
 | check | published | model | model is |
 | --- | --- | --- | --- |
 | NGP diffuse residual | 25.44 | 24.13 | **1.308 mag brighter** |
-| Galactic centre, [Leinert](/data/papers/index.md#leinert1998) total | 22.92 | 22.54 | **0.385 mag brighter** |
+| Galactic centre vs [Leinert](/data/papers/index.md#leinert1998)'s b = 30° total | 22.92 | 22.54 | **0.385 mag brighter** |
 
 The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 

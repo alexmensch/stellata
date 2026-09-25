@@ -73,7 +73,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 - **Photometry citation**: [Riello M., De Angeli F., Evans D. W. et al.
   2021](/data/papers/index.md#riello2021) (Gaia EDR3 photometric content and
   validation).
-  Its section *Photometric relationships with other photometric systems* gives the
+  Its App. C, Table C.2 gives the
   `G − V` cubic in `BP − RP` the V cascade transforms through; DR3 ships EDR3's
   photometry unchanged, so the EDR3 calibration is the one that applies.
 - **Synthetic-photometry citation**: [Gaia Collaboration, Montegriffo P.,
