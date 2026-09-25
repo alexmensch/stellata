@@ -91,5 +91,4 @@ migrated with the first second population:
 
 `CATALOG_BOUNDING_RADIUS_PC` is shard 0's extent AND the star pipeline's
 bounding-sphere radius — one constant, imported by both plus the
-pipeline test. The dust particle layer's like-valued never-cull sphere
-is unrelated and deliberately not unified.
+pipeline test.

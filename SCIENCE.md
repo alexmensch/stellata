@@ -307,8 +307,7 @@ enough to see it.
   https://doi.org/10.5281/zenodo.8187943 — Gordian Edenhofer & Greg Green.
   Downloaded via the `dustmaps` Python package and resampled by
   `scripts/dust/build-dust.py` onto a 512³ Cartesian voxel grid in ICRS pc.
-  Produces `data/dust/chunk_*.bin` (64 chunks, 128 MiB total, LFS) plus
-  `data/dust/particles.bin` (50K importance-sampled dust points, LFS).
+  Produces `data/dust/chunk_*.bin` (64 chunks, 128 MiB total, LFS).
   Density in E_ZGR per parsec; A_V/E_ZGR ≈ 2.742 at V band.
 - **Planet surface/cloud maps** (per-body equirectangular textures,
   retrieved 2026-07-18): NASA Photojournal mosaics for Mercury

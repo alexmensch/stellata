@@ -114,6 +114,11 @@ B–V or the spectral-class colour baked at build — see [Colour routing](../RE
 Looking through dust dims and reddens stars behind
 it, which is what you'd actually see.
 
+**Extinction is the only way the dust field is drawn.** A visible-dust
+treatment starts from the look, not from an implementation: a fullscreen
+fog raymarch banded and jittered at far zoom, and density-sampled
+additive sprites never read well enough to ship.
+
 ## The prepass cache
 
 The prepass computes one raymarch per *star* into a star-indexed

@@ -23,12 +23,7 @@ returns them at their authored appearance at any exposure.
 
 A probe marker counts as chrome for the same reason its own README gives
 for the glyph — the spacecraft subtends no angle at any range, so the
-marker stands in for it rather than depicting its light. The
-dust-particle layer is the one chrome layer left unmapped: it is shelved
-at strength 0 and carries no colour uniform to map, only a shader
-constant. That debt now retires with the layer rather than being paid —
-the decision is to remove the particle layer, not to un-shelve it
-(`../../dust/README.md`).
+marker stands in for it rather than depicting its light.
 
 `chrome-colour.ts` exposes two setters, and **which one a call site
 wants depends on how its shader emits colour** — this is the one part

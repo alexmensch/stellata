@@ -39,7 +39,6 @@ export type SceneElementId =
   | 'localBubbleShell'
   | 'constellationFigures'
   | 'molecularCloudEllipsoids'
-  | 'dustParticles'
   // Labels tier.
   | 'planetLabels'
   | 'probeLabels'
@@ -82,7 +81,6 @@ export const SCENE_ELEMENT_FLOORS: Record<SceneElementId, ElementFloors> = {
   localBubbleShell:          { realistic: 'representational', chart: 'never' },
   constellationFigures:      { realistic: 'representational', chart: 'representational' },
   molecularCloudEllipsoids:  { realistic: 'representational', chart: 'representational' },
-  dustParticles:             { realistic: 'representational', chart: 'never' },
   planetLabels:              { realistic: 'all',              chart: 'never' },
   probeLabels:               { realistic: 'all',              chart: 'never' },
   heliopauseLabel:           { realistic: 'all',              chart: 'never' },

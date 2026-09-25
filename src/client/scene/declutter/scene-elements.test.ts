@@ -16,7 +16,7 @@ describe('SCENE_ELEMENT_FLOORS contract', () => {
       stars: { realistic: 'physical', chart: 'physical' },
     };
     expect(partial).toBeDefined();
-    expect(SCENE_ELEMENT_IDS.length).toBe(29);
+    expect(SCENE_ELEMENT_IDS.length).toBe(28);
   });
 
   it('SCENE_ELEMENT_IDS matches the floor-table keys exactly', () => {
@@ -44,8 +44,8 @@ describe('visibleSet — cumulative floor derivation', () => {
     // 'physical' is the naked-eye tier: stars, planet bodies, the MW band,
     // LG emission. Nothing else an unaided eye at the camera would see.
     expect(visibleSet('physical', 'realistic').size).toBe(4);
-    expect(visibleSet('representational', 'realistic').size).toBe(15);
-    expect(visibleSet('all', 'realistic').size).toBe(22);
+    expect(visibleSet('representational', 'realistic').size).toBe(14);
+    expect(visibleSet('all', 'realistic').size).toBe(21);
   });
 
   it('chart cumulative sizes are pinned', () => {
