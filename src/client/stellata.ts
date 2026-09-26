@@ -32,9 +32,7 @@ import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples'
 import { RenderGate } from './render-gate/render-gate';
 import { TrackballSettle } from './camera/controls/input/trackball-settle';
 import {
-  CADENCE_REPORT_STILL,
   cadenceVisibleTurnRad,
-  maxCadenceReport,
   pulsationCadenceBudgetS,
 } from './render-gate/cadence/clock-cadence-pure';
 import {
@@ -111,7 +109,6 @@ export {
   WARP_T_MIN_MS,
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
-import { LateCell, type Late } from './util/late/late';
 import {
   DEFAULT_FILTER,
   DEFAULT_FOV,
@@ -145,8 +142,7 @@ import { formatAvParity, type AvParityReport } from './star-pipeline/extinction/
 import type {
   ExtinctionPrepassSeam, ExtinctionView,
 } from './star-pipeline/extinction/extinction-seam';
-import { BinaryOrbitField } from './binaries/binary-orbit-field';
-import { BinaryOrbitPathLayer } from './binaries/orbit-paths/binary-orbit-path-layer';
+import { BinariesAttachment, type FocalPerturbationSource } from './binaries/binaries-attachment';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { selectFigures } from './constellation-figure/constellation-figure-pure';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
@@ -156,11 +152,6 @@ import {
   type ConstellationNamer,
 } from './constellation-boundaries/constellation-regions';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import {
-  EclipsePhotometryField,
-  type EclipseRelationDebugRow,
-} from './binaries/eclipse/eclipse-photometry';
-import { type BinariesData } from './binaries/binaries-loader';
 import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
 
 export interface StellataOptions {
@@ -244,14 +235,6 @@ export class Stellata implements FrameAnchor {
   private get worldOffset(): THREE.Vector3 { return this.floatingOrigin.worldOffset; }
   // Scratch for the focused star's per-re-advance space-motion delta.
   private readonly _epochFollowDelta = new THREE.Vector3();
-  // Composite-suppress flag per catalog instance. 0 = render normally;
-  // 1 = drop the disc + core depth-mask passes (additive glow still
-  // runs). BinaryOrbitField writes per-frame for sub-pixel secondaries.
-  private _compositeSuppress: Float32Array;
-  // Per-instance geometric-eclipse dim factor. 1 = no occlusion;
-  // EclipsePhotometryField writes per-frame for the back component of
-  // orbital pairs whose discs overlap from the camera viewpoint.
-  private _eclipseDim: Float32Array;
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
   // radial pulsation in the vertex shader for every eclipsing binary
   // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
@@ -262,17 +245,12 @@ export class Stellata implements FrameAnchor {
   private absorbedSuppressCount = 0;
   /** Unsubscribe from the catalog's chunk-decode fan-out. */
   private offCatalogRecords: (() => void) | null = null;
-  // Lazily attached when main.ts loads public/binaries.bin. Null until
-  // then — the renderer functions identically with the static catalog
-  // positions; binary orbital evolution simply doesn't fire.
-  private binaryOrbitField: BinaryOrbitField | null = null;
-  private readonly binariesData = new LateCell<BinariesData>();
 
   /** Kind-generic system membership (multi-star clusters, planet
    *  systems) — hover roster cards and collapsed-pick resolution both
    *  consume this. See src/client/system-membership/README.md. */
   readonly systemMembership = new SystemMembershipRegistry();
-  private eclipsePhotometryField: EclipsePhotometryField | null = null;
+  readonly binaries: BinariesAttachment;
 
   // Focal-frame ride state. The focal star (when a binary member) drifts
   // along its orbit; the camera + orbit target track that drift so the
@@ -354,7 +332,6 @@ export class Stellata implements FrameAnchor {
   readonly input!: InputController;
 
   readonly coordSpheres: CoordSpheres;
-  private binaryOrbitPathLayer: BinaryOrbitPathLayer;
   private constellationFigureLayer: ConstellationFigureLayer;
   private constellationBoundaryLayer: ConstellationBoundaryLayer;
   // Empty / null until attachConstellationBoundaries lands the artifact, which
@@ -439,7 +416,7 @@ export class Stellata implements FrameAnchor {
         {
           milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
           orbitRings: (on) => this.solarSystem.orbitRings.setPermitted(on),
-          binaryOrbitRings: (on) => this.binaryOrbitPathLayer.setPermitted(on),
+          binaryOrbitRings: (on) => this.binaries.orbitPaths.setPermitted(on),
           constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
         },
         ...collectKindDetailBinds(this.kinds),
@@ -544,7 +521,7 @@ export class Stellata implements FrameAnchor {
       t: this.getT(),
       onLocalPositionsWritten: () => {
         uploadFull(this.starAttrs.iPositionAttr);
-        this.binaryOrbitField?.markBaselinesDirty();
+        this.binaries.markBaselinesDirty();
       },
     });
     this.chartLabels = new ChartLabels(this, this.starFrame.distSol);
@@ -557,7 +534,7 @@ export class Stellata implements FrameAnchor {
       renderedSizePx: (idx) => this.renderedSizePxFor(idx),
       peakDiscSizePx: (idx) => starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
-      getBinaries: () => this.getBinaries(),
+      getBinaries: () => this.binaries.data,
     });
     // Recentre fan-out, in load-bearing order: star buffer rewrite →
     // camera / orbit-target shift → scene-layer recenter hooks.
@@ -567,16 +544,29 @@ export class Stellata implements FrameAnchor {
       this.controls.target.sub(delta);
     });
     this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
-    this._compositeSuppress = new Float32Array(catalog.count);
-    this._eclipseDim = new Float32Array(catalog.count).fill(1);
-    // Built here (not attachBinaries) because the gate is varType-driven
+    this.binaries = new BinariesAttachment({
+      catalog,
+      basePositions: this.starFrame.basePositions,
+      localPositions: this.starFrame.localPositions,
+      attributes: () => this.starAttrs,
+      uniforms: sharedUniforms,
+      chromeLines: this.chromeLines,
+      camera: this.camera,
+      worldOffset: this.worldOffset,
+      getT: () => this.getT(),
+      thresholdMag: () => this.exposure.getThresholdMag(),
+      focusedStar: () => this.focus.getFocusedStar(),
+      observeAnchorStar: () => this.observe.observeAnchorOf('star'),
+      onFocus: (handler) => this.bus.on('focus', handler),
+      rideFocal: (source) => this.applyFocalFrameRide(source),
+    });
+    // Built here (not on binaries attach) because the gate is varType-driven
     // and binary-independent; see the field declaration for the rationale.
     this._suppressPulsation = new Float32Array(catalog.count);
 
     this.starAttrs = buildStarSourceAttributes({
       localPositions: this.starFrame.localPositions,
-      compositeSuppress: this._compositeSuppress,
-      eclipseDim: this._eclipseDim,
+      ...this.binaries.sourceArrays(),
       suppressPulsation: this._suppressPulsation,
     });
 
@@ -608,10 +598,9 @@ export class Stellata implements FrameAnchor {
       worldOffset: this.worldOffset,
       detailPermits: (id) => this.declutter.permits(id),
     });
-    this.binaryOrbitPathLayer = new BinaryOrbitPathLayer(this.chromeLines);
     this.starLocalCluster = new StarLocalCluster(
       this.webgpuStarLayer.localMirror,
-      this.binaryOrbitPathLayer,
+      this.binaries.orbitPaths,
       sharedUniforms.uLocalMemberIdx as { value: Int32Array },
       {
         catalog,
@@ -630,6 +619,10 @@ export class Stellata implements FrameAnchor {
       },
     );
     this.localDepthPass.register(this.starLocalCluster);
+    this.binaries.data.observe((settled) => {
+      this.renderGate.invalidate('attach:binaries');
+      this.starLocalCluster.setBinaries(settled.status === 'ready' ? settled.value : null);
+    });
     this.constellationFigureLayer = new ConstellationFigureLayer(this.chromeLines);
     this.scene.add(this.constellationFigureLayer.group);
     this.constellationBoundaryLayer =
@@ -708,8 +701,8 @@ export class Stellata implements FrameAnchor {
     // outer primary leads the union over the member's planet-host role.
     this.systemMembership.register(
       createBinarySystemMembership({
-        binaries: this.binariesData,
-        isCollapsed: (i) => this.isCompositeSuppressed(i),
+        binaries: this.binaries.data,
+        isCollapsed: (i) => this.binaries.isCompositeSuppressed(i),
       }),
     );
     this.systemMembership.register(
@@ -769,8 +762,11 @@ export class Stellata implements FrameAnchor {
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       getFocusables: () => this.focusables,
-      focalPerturbationInto: (idx, out) =>
-        this.binaryOrbitField?.focalPerturbationInto(idx, this.getT(), out) ?? false,
+      focalPerturbationInto: (idx, out) => {
+        const source = this.binaries.focalPerturbation.state();
+        return source.status === 'ready'
+          && source.value.focalPerturbationInto(idx, this.getT(), out);
+      },
     });
     // see camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry
     this.focusables = collectFocusables(this.kinds);
@@ -799,18 +795,6 @@ export class Stellata implements FrameAnchor {
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
     this.buildFocalAnchorPolicy();
-    // Orbit paths rebuild on every focus mutation and when binaries land:
-    // the focused system's Kepler pairs, or none outside a multi-star system.
-    const refreshOrbitPaths = () => {
-      const binaries = this.binariesData.state();
-      this.binaryOrbitPathLayer.setSystem(
-        binaries.status === 'ready' ? binaries.value : null,
-        this.focus.getFocusedStar(),
-        this.catalog.positions,
-      );
-    };
-    this.on('focus', refreshOrbitPaths);
-    this.binariesData.observe(refreshOrbitPaths);
     // Reseed the moving-focal ride on every focus mutation: a focus
     // change AND a same-object refocus both recentre the floating
     // origin, which stales the ride's cached last position. The seed
@@ -972,34 +956,7 @@ export class Stellata implements FrameAnchor {
     // iLocalRel — reading it before the field's walk left the rings one frame
     // of sim-time behind the bodies, a visible lag under fast scrub.
     this.layers.register(this.solarSystem.orbitRingsEntry);
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: (cc) => maxCadenceReport(
-          this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
-          this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
-        ),
-      },
-      contribution: { kind: 'always' },
-      update: (ctx) => {
-        this.updateBinaryOrbits();
-        // After the walk wrote this frame's slots, so each path rides its
-        // pair's live barycentre drift.
-        this.binaryOrbitPathLayer.update(
-          this.binaryOrbitField,
-          this.localPositions,
-          ctx.camera,
-          window.innerHeight,
-          this.observe.observeAnchorOf('star'),
-        );
-      },
-      recenter: (newOrigin) => this.binaryOrbitField?.recenter(newOrigin),
-      dispose: () => {
-        this.binaryOrbitField?.dispose();
-        this.eclipsePhotometryField?.dispose();
-        this.binaryOrbitPathLayer.dispose();
-      },
-    });
+    this.layers.register(this.binaries.entry);
     // Sequencing only, owning nothing — the second such entry, and the last
     // camera WRITE of the frame. Every camera reader is registered below it;
     // the argument for that, and for `static`, is scene/README.md#not-every-entry-owns-a-layer
@@ -1028,10 +985,7 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
-        rate: (cc) => maxCadenceReport(
-          this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
-          this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
-        ),
+        rate: this.binaries.rate,
       },
       contribution: { kind: 'always' },
       // After the binary walk + eclipse photometry + path-layer update:
@@ -1047,10 +1001,7 @@ export class Stellata implements FrameAnchor {
     this.layers.register({
       timeBehaviour: {
         kind: 'clock',
-        rate: (cc) => maxCadenceReport(
-          this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
-          this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
-        ),
+        rate: this.binaries.rate,
       },
       contribution: { kind: 'always' },
       // After the binary + planet walks so a figure vertex that is a binary
@@ -1107,10 +1058,7 @@ export class Stellata implements FrameAnchor {
         // Anchored content: the mask stamps the cores of the same stars the
         // local cluster mirrors, so it declares that subsystem's rate rather
         // than a global minimum (scene/README.md#anchored-content-declares-its-anchors-rate).
-        rate: (cc) => maxCadenceReport(
-          this.binaryOrbitField?.cadenceReport(cc) ?? CADENCE_REPORT_STILL,
-          this.eclipsePhotometryField?.cadenceReport(cc.simDtS) ?? CADENCE_REPORT_STILL,
-        ),
+        rate: this.binaries.rate,
       },
       contribution: {
         kind: 'gated',
@@ -1168,7 +1116,7 @@ export class Stellata implements FrameAnchor {
    *  driven by the frame loop (focus ring, etc.) read current-frame data. */
   anyOrbitRingVisible(): boolean {
     return this.solarSystem.orbitRings.anyOrbitRingVisible()
-      || this.binaryOrbitPathLayer.anyOrbitRingVisible();
+      || this.binaries.orbitPaths.anyOrbitRingVisible();
   }
   /** Peak opaque-disc radius (CSS px) of the focused object, via its kind's
    *  `peakDiscSizePx`; 0 when nothing is focused. Single source for every
@@ -1450,80 +1398,6 @@ export class Stellata implements FrameAnchor {
     return report;
   }
 
-  /** The binaries.bin runtime table: absent when the artifact is missing. */
-  getBinaries(): Late<BinariesData> { return this.binariesData; }
-
-  /** Attach (or replace) the parsed binaries.bin runtime table. Idempotent;
-   *  passing null detaches. From the moment the field is attached every
-   *  frame walks the binary relation list and perturbs the relevant
-   *  star-pipeline `iPosition` slots against `getT()`. */
-  attachBinaries(binaries: BinariesData | null): void {
-    this.renderGate.invalidate('attach:binaries');
-    this.binaryOrbitField?.dispose();
-    this.eclipsePhotometryField?.dispose();
-    this.starLocalCluster.setBinaries(binaries);
-    if (binaries === null) {
-      this.binaryOrbitField = null;
-      this.eclipsePhotometryField = null;
-      this.binariesData.conclude();
-      return;
-    }
-    this.binaryOrbitField = new BinaryOrbitField({
-      binaries,
-      absolutePositions: this.catalog.positions,
-      basePositions: this.starFrame.basePositions,
-      velocities: this.catalog.velocities,
-      absoluteMags: this.catalog.absmag,
-      localPositions: this.localPositions,
-      compositeSuppress: this._compositeSuppress,
-      iPositionAttr: this.starAttrs.iPositionAttr,
-      iCompositeSuppressAttr: this.starAttrs.iCompositeSuppressAttr,
-    });
-    this.binaryOrbitField.recenter(this.worldOffset);
-    // Re-attach scrubs the prior attach's residual per-instance state.
-    // EclipsePhotometryField tracks only the new binaries set's member
-    // slots, so values written under the previous set would otherwise
-    // persist on stars the new one doesn't touch.
-    this._eclipseDim.fill(1);
-    uploadFull(this.starAttrs.iEclipseDimAttr);
-    this.eclipsePhotometryField = new EclipsePhotometryField({
-      binaries,
-      absolutePositions: this.catalog.positions,
-      localPositions: this.localPositions,
-      absoluteMags: this.catalog.absmag,
-      physicalRadiusSolar: this.catalog.physicalRadius,
-      eclipseDimBuffer: this._eclipseDim,
-      iEclipseDimAttr: this.starAttrs.iEclipseDimAttr,
-    });
-    this.binariesData.land(binaries);
-  }
-
-  private updateBinaryOrbits(): void {
-    if (!this.binaryOrbitField) return;
-    const uniforms = this.sharedUniforms;
-    const viewport = uniforms.uViewport.value;
-    const fovYRad = uniforms.uFovYRad.value;
-    this.binaryOrbitField.update(
-      this.getT(),
-      this.camera.position,
-      this.exposure.getThresholdMag(),
-      viewport.y,
-      fovYRad,
-      this.focus.getFocusedStar(),
-    );
-    this.applyFocalFrameRide();
-    // Runs after the orbit walk so the camera→primary line of sight
-    // reads post-perturbation positions; the pair-relative geometry is
-    // evaluated independently in float64. See
-    // src/client/binaries/eclipse/README.md.
-    this.eclipsePhotometryField?.update(
-      this.getT(),
-      this.camera.position,
-      this.exposure.getThresholdMag(),
-      performance.now(),
-    );
-  }
-
   // Focal-frame ride: translate the camera, orbit target, and any
   // in-flight camera-transition pose caches by the focal star's per-frame
   // orbital drift so the star stays glued under the camera. Runs right
@@ -1535,12 +1409,10 @@ export class Stellata implements FrameAnchor {
   // position: setFocus sampled the perturbation at focus-event time, but
   // under fast scrub sim-time advances between that event and this frame,
   // so the event-time snap goes stale and the star would land off-centre.
-  private applyFocalFrameRide(): void {
-    const field = this.binaryOrbitField;
-    if (!field) return;
+  private applyFocalFrameRide(source: FocalPerturbationSource): void {
     const focal = this.focus.getFocusedStar();
     const hasPert = focal !== null
-      && field.focalPerturbationInto(focal, this.getT(), this._focalPert);
+      && source.focalPerturbationInto(focal, this.getT(), this._focalPert);
     if (!hasPert) this._focalPert.set(0, 0, 0);
 
     const live = focal !== null
@@ -1618,22 +1490,6 @@ export class Stellata implements FrameAnchor {
     this._movingRideLast.set(step.px, step.py, step.pz);
     this._movingRideDelta.set(step.dx, step.dy, step.dz);
     this.applyRideDelta(this._movingRideDelta);
-  }
-
-  /** Debug-HUD view into the eclipse field's per-relation walk for the
-   *  current camera/filter/sim-time. Empty when no binaries attached. */
-  eclipseDebugRows(starIdx: number | null): EclipseRelationDebugRow[] {
-    return this.eclipsePhotometryField?.debugRows(
-      this.getT(),
-      this.camera.position,
-      this.exposure.getThresholdMag(),
-      starIdx,
-    ) ?? [];
-  }
-
-  /** Active eclipse-dim slot count (occluding or decaying). */
-  get eclipseActiveDimCount(): number {
-    return this.eclipsePhotometryField?.activeDimCount ?? 0;
   }
 
   /** Debug-HUD view of the disc/glow routing for one star at a given
@@ -1716,7 +1572,7 @@ export class Stellata implements FrameAnchor {
     );
     return resolveStarPickVisibility({
       focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
-      eclipseDim: this._eclipseDim[idx],
+      eclipseDim: this.binaries.eclipseDimAt(idx),
       chartDiscPx: this.filter.chart ? this.chartDiscPxFor(c.appMag) : null,
       limitMag: this.exposure.getLimitMag(),
       components: c,
@@ -2034,14 +1890,6 @@ export class Stellata implements FrameAnchor {
   private collapsedClusterLead(idx: number): number {
     const lead = this.systemMembership.collapsedLeadOf({ kind: 'star', idx });
     return lead.kind === 'star' ? lead.idx : idx;
-  }
-
-  /** True when BinaryOrbitField's sub-pixel LOD gate collapsed this
-   *  star onto its primary this frame — the renderer's own "these read
-   *  as one point" verdict. The star hover provider keys the
-   *  system-card swap on it so card and rendering can't disagree. */
-  isCompositeSuppressed(idx: number): boolean {
-    return this._compositeSuppress[idx] === 1;
   }
 
   private createInputController(): InputController {

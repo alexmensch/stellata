@@ -763,7 +763,7 @@ describe('focusedOrbitInto', () => {
     return {
       kinds: {},
       getT: () => 0,
-      getBinaries: () => (binaries === null ? lateAbsent() : lateReady(binaries)),
+      binaries: { data: binaries === null ? lateAbsent() : lateReady(binaries) },
       catalog: { positions },
       localPositions: localPositions(),
     } as unknown as Stellata;

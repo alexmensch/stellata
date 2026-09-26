@@ -9,13 +9,16 @@ star catalog records.
 ## Subfolders
 
 - `eclipse/` — the per-frame geometric-occlusion dim on a binary's back
-  component. Depends one-directionally on the loader and relation cache
-  here; nothing in this folder imports it back.
+  component. Depends on the loader and relation cache here; the one file
+  here that imports it back is `binaries-attachment.ts`, which constructs it.
 - `orbit-paths/` — `BinaryOrbitPathLayer`, the drawn two-ellipse orbital
-  paths of the focused system. Same one-directional shape as `eclipse/`.
+  paths of the focused system. Same shape as `eclipse/`.
 
 ## Files
 
+- `binaries-attachment.ts` (+ test) — `BinariesAttachment`, the shell's
+  `binaries` namespace: everything that exists only once a table is
+  attached, from attach to dispose ([The attachment](#the-attachment)).
 - `binaries-loader.ts` — parses the v1 `BIN1` format ([Format contract](#format-contract))
   into a `BinariesData` struct: per-pair Kepler elements + `sep_arcsec` /
   `pa_deg` for the static-placement fallback, plus the index maps
@@ -71,6 +74,33 @@ star catalog records.
 `ECLIPSE_DIM_TAU_S` lives in `binary-tuning.ts` rather than `eclipse/`
 because the tuning module is the one place every runtime constant this
 layer reads is pinned by tests.
+
+## The attachment
+
+`binaries.bin` lands in wave 2, after the whole catalogue
+([Boot in two waves](../README.md#boot-in-two-waves)), so the orbit walk, the eclipse
+photometry and the table they share arrive long after their readers exist.
+`BinariesAttachment` holds all three in **one** `Late` cell and hands each
+part out as a projection of it (`mapLate`, [Late values](../util/late/README.md)):
+
+- `data` — the table. The star module, the multi-star system membership, ORB
+  and the star local cluster read it; `absent` when the artifact is missing.
+- `focalPerturbation` — the orbit walk's `focalPerturbationInto`, which the
+  focus controller reads to place a focused member on its live orbit.
+- `rate` — the binaries' cadence report, the faster of the walk and the
+  photometry; still until attached. Every layer anchored on a binary member
+  declares it ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)).
+
+It also owns the two per-star buffers those fields write — composite-suppress
+(0) and eclipse dim (1, and reset to 1 on every re-attach) — which the star
+pipeline wraps as attributes through `sourceArrays()`, and the orbit-path
+layer, whose system rebuilds on every focus change and on every settle.
+
+**The frame order is the entry's**: walk, then the focal ride (the shell's
+`rideFocal`, handed the walk's perturbation source), then photometry, whose
+line of sight reads the camera the ride moved, then the paths. The scene
+registry places the entry after every moving-body field and before the
+frame's last camera write ([How the shell uses it](../scene/README.md#how-the-shell-uses-it)).
 
 ## Format contract
 
@@ -307,8 +337,8 @@ with identical inputs skips the walk itself. It saves the CPU pass only;
 what the frame uploads is decided separately ([Partial re-upload](#partial-re-upload)).
 Focal-chain relations are always Kepler-active (they bypass the gates
 above), so a focused orbit never skips. `recenter()` and
-`markBaselinesDirty()` — the latter called by the shell whenever it
-rewrites `localPositions` wholesale (epoch re-advance, origin recentre)
+`markBaselinesDirty()` — the latter reached through the attachment whenever
+the star frame rewrites `localPositions` wholesale (epoch re-advance, origin recentre)
 — force the next walk, so suppressed secondaries get their `baseDiffPc`
 placement re-applied on top of the fresh baselines.
 

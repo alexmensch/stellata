@@ -104,12 +104,12 @@ exactly 1.0. Tracking this frame's occluding pairs instead would drop a
 slot while it was still moving and freeze it mid-decay.
 
 **The first WRITING flush after construction or dispose uploads in
-full.** The integration shell fills the whole buffer with 1.0 on every
-re-attach, reaching stars outside the tracked member set, and three.js
-honours a non-empty range list *over* the full array — so ranges
-appended before a render consumed that fill would strand every
-untracked star at the previous attach's value. The shell's own init
-goes through `uploadFull` for the same reason.
+full.** `BinariesAttachment` (`../binaries-attachment.ts`) fills the whole
+buffer with 1.0 on every re-attach, reaching stars outside the tracked
+member set, and three.js honours a non-empty range list *over* the full
+array — so ranges appended before a render consumed that fill would strand
+every untracked star at the previous attach's value. The attachment's own
+fill goes through `uploadFull` for the same reason.
 
 #### What the render cadence reads
 
@@ -143,7 +143,7 @@ is what the 30 s cap is for.
 
 `iEclipseDim` is folded into appMag in the **glow pass only**
 (`uRenderMode == 0`) — applying the dim in the disc pass would also
-dim the back disc's non-occluded fragments. The integration shell
+dim the back disc's non-occluded fragments. `BinariesAttachment`
 initialises the buffer to 1.0 at allocation and on every re-attach.
 
 **It is kept out of the disc/glow pass-split solve entirely**, on both

@@ -178,7 +178,7 @@ Four things follow, and each has cost a defect:
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
-`solarSystem`, `coordSpheres`, plus the
+`solarSystem`, `coordSpheres`, `binaries`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -202,9 +202,9 @@ belongs on the controller.
 
 **Forwarders still on the shell leave with their cluster, and so do their
 callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
-`attachBinaries`, `attachDust` and `attachConstellationBoundaries` — moves
+`attachDust` and `attachConstellationBoundaries` — moves
 with its row, and `main.ts` calls the new owner through a readonly
-namespace. The star-frame reads (`localPositions`, `uniforms`) and the
+namespace (`stellata.binaries.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
 `FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
 `starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
 `floatingOrigin`; with the star render machinery, the focus controller's
@@ -242,7 +242,6 @@ an empty awaiting list.
 | Cluster | Target | Bead |
 | --- | --- | --- |
 | Focal rides | `camera/focus/` | `hhaw.32.2` |
-| Binaries | `binaries/` | `hhaw.32.5` |
 | Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
@@ -256,14 +255,10 @@ interface for both:
   reports each ride step through `noteRideStep`, and the rides take that
   call with them. `maybeReAdvanceEpoch`'s translate skips it today — the
   suspected bug 32.2 carries.
-- **The binaries rate** — `binaryOrbitField?.cadenceReport(cc) ??
-  CADENCE_REPORT_STILL` maxed with the eclipse field's, written out in four
-  entries: the binary walk, and the star-local-cluster, core-mask and
-  constellation-figure entries of other rows. The first of 32.13 / 32.8 to
-  move lifts it into one shell function and takes it as a `(cc) =>
-  CadenceReport` callback; the callback's type carries no `null`, so the
-  not-ready answer stays inside the provider for 32.5 to change in one
-  place.
+- **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
+  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the star-local-cluster,
+  core-mask and constellation-figure entries take it, and carry it when
+  their rows move.
 - **The planet rate** — settled as `solarSystem.planetRate`, a `(cc) =>
   CadenceReport` ([Wiring](solar-system/README.md#wiring)); the moving-focal-ride
   entry takes it, and the rides carry that `rate` with them.
@@ -271,17 +266,14 @@ interface for both:
 ### Late-attached slots
 
 A cluster holding a value that lands after construction moves it as a
-`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the binaries, dust +
-extinction and constellation extractions each convert their row's slots as
-they move rather than carrying a `T | null` twice. The focal rides read the
-binaries slot, so they follow the binaries extraction. A cluster that reaches a late slot only through
-the binaries rate — the star render machinery — does not wait: it takes the
-rate as a callback (above), which leaves the slot behind. Clusters holding
-no late slot do not wait either.
+`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the dust + extinction
+and constellation extractions each convert their row's slots as they move
+rather than carrying a `T | null` twice. The binaries slot has converted
+([The attachment](binaries/README.md#the-attachment)), so the focal rides, which read it, are
+unblocked. Clusters holding no late slot do not wait.
 
 | Slot | Lands | Not-ready answer today |
 | --- | --- | --- |
-| Binaries (both fields + table) | wave 2, after `kinds.star.ready`; also handed to `starLocalCluster.setBinaries` | the table is a `Late` (`getBinaries()`), absent when `binaries.bin` is missing; the two fields still answer `?.… ?? false` (the focus controller's perturbation read), `?? CADENCE_REPORT_STILL` (the binaries rate), the binary ride skipped |
 | Dust + extinction prepass | when the dust manifest resolves — no wave | `?.` no-op; `extinctionAvMagFor` 0 (deliberately pickable); `isExtinctionPrepassActive` false; survivor `inFrame` null |
 | Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
