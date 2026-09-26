@@ -109,6 +109,7 @@ export {
   WARP_T_MIN_MS,
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
+import { mapLate } from './util/late/late';
 import {
   DEFAULT_FILTER,
   DEFAULT_FOV,
@@ -762,11 +763,8 @@ export class Stellata implements FrameAnchor {
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       getFocusables: () => this.focusables,
-      focalPerturbationInto: (idx, out) => {
-        const source = this.binaries.focalPerturbation.state();
-        return source.status === 'ready'
-          && source.value.focalPerturbationInto(idx, this.getT(), out);
-      },
+      focalPerturbation: mapLate(this.binaries.focalPerturbation,
+        (source) => (idx, out) => source.focalPerturbationInto(idx, this.getT(), out)),
     });
     // see camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry
     this.focusables = collectFocusables(this.kinds);

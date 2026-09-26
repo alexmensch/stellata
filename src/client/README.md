@@ -144,8 +144,8 @@ Four things follow, and each has cost a defect:
   unless each hands the render loop a frame.
 - **A wave-1 read of a wave-2-backed value returns a plausible zero, not
   an error**, and that is the defect shape this split keeps producing.
-  An unattached optional field coalesces (`binaryOrbitField?.…  ?? false`
-  reports "no perturbation" and "not attached" identically), an unfilled
+  An unattached optional field coalesces (`field?.… ?? false` reports
+  "no perturbation" and "not attached" identically), an unfilled
   buffer slot reads `(0,0,0)`, and a still-filling index answers off its
   prefix. Nothing throws, so the wrong value is *kept* and surfaces later
   somewhere unrelated — a camera parked on a bare baseline, a pin that

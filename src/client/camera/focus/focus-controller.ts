@@ -6,6 +6,7 @@ import type { TrackballControls } from 'three/examples/jsm/controls/TrackballCon
 import type { Catalog } from '../../loaders/catalog-loader';
 import type { CameraMode, StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
+import type { Late } from '../../util/late/late';
 import type { AimController } from '../controls/aim-controller';
 import type { RollController } from '../controls/input/roll-controller';
 import type { ObserveControls } from '../observe/observe-controls';
@@ -123,14 +124,13 @@ export interface FocusControllerDeps {
    *  registry. Lazy for the same construction-cycle reason: the star
    *  provider's focusParkDistance closes back over this controller. */
   getFocusables: () => FocusableProviders;
-  /** Focal star's float64 orbital perturbation from its catalog baseline
-   *  at the current sim time, written into `out`; false when the star is
-   *  in no binary relation. Wired to BinaryOrbitField.focalPerturbationInto
-   *  through the integration shell. Read at focus-entry (before the walk
-   *  has perturbed the star's buffer slot) to snap the orbit target onto
-   *  the star's live position. */
-  focalPerturbationInto: (idx: number, out: THREE.Vector3) => boolean;
+  focalPerturbation: Late<FocalPerturbationInto>;
 }
+
+/** Focal star's float64 orbital perturbation from its catalog baseline at
+ *  the current sim time, written into `out`; false when the star is in no
+ *  binary relation. */
+export type FocalPerturbationInto = (idx: number, out: THREE.Vector3) => boolean;
 
 export class FocusController implements FocusOps {
   private readonly deps: FocusControllerDeps;
@@ -307,7 +307,9 @@ export class FocusController implements FocusOps {
     const wo = this.deps.frameAnchor.getWorldOffset();
     const p = this.deps.catalog.positions;
     out.set(p[idx * 3] - wo.x, p[idx * 3 + 1] - wo.y, p[idx * 3 + 2] - wo.z);
-    if (this.deps.focalPerturbationInto(idx, this.tmpPert)) out.add(this.tmpPert);
+    const pert = this.deps.focalPerturbation.state();
+    // Pending answers the bare baseline: README.md#pin-to-center-upinfocustocenter.
+    if (pert.status === 'ready' && pert.value(idx, this.tmpPert)) out.add(this.tmpPert);
     return out;
   }
 
