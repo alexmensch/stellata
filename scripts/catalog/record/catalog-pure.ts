@@ -1098,9 +1098,10 @@ export const SOL_PROPER_NAME = 'Sol';
  *
  *  4.85 is the value the AT-HYG-driven build carried, kept so the swap does
  *  not move the Stefan-Boltzmann chain's calibration point (known-stars.tsv
- *  pins Sol's radius at 1.035 R☉ against it). The IAU 2015 Resolution B2
- *  nominal value is 4.83; adopting it is a deliberate recalibration, not a
- *  drift fix, and moves the pinned radius. */
+ *  pins Sol's radius at 1.035 R☉ against it). Willmer 2018
+ *  (/data/papers/index.md#willmer2018) gives M_V = 4.81 (Vega); adopting it
+ *  is a deliberate recalibration, not a drift fix, and moves the pinned
+ *  radius. */
 export const SOL_ABSOLUTE_V_MAGNITUDE = 4.85;
 
 /** Sol's apparent V, curated for the same reason its direction is: it carries
@@ -1721,8 +1722,9 @@ export function parseBailerJonesTsv(text: string): Map<string, number> {
  *  gspspec are independent solutions and either or both may be absent
  *  for a given source_id. NaN-when-empty decoding lifts to the binary
  *  layer via `NO_APSIS`. `spectraltypeEsphs` is the ESP-ELS spectral-type
- *  enum (Creevey 2023 (/data/papers/index.md#creevey2023)): one of "O", "B", "A", "F", "G", "K", "M",
- *  "CSTAR", or "unknown"; consumed by the spectral resolver as the
+ *  enum: one of "O", "B", "A", "F", "G", "K", "M", "CSTAR" (Creevey 2023
+ *  (/data/papers/index.md#creevey2023)), or the archive column's own
+ *  "unknown"; consumed by the spectral resolver as the
  *  second tier after SIMBAD sp_type. */
 export interface ApsisRow {
   teffGspphot: number | null;

@@ -721,9 +721,9 @@ Measured exposure and expected coverage (2026-08-14; pins in
      value. Detail: `data/gliese/README.md`.
 
   The Tycho-2 tier applies the [ESA 1997](/data/papers/index.md#esa1997) `V = VT − 0.090(BT−VT)` **ungated**,
-  and `vTycho2OutsideBtVtRange` pins the **5** rows outside
-  `BT−VT` ∈ [−0.25, 2.0] — wider than the paper's −0.2 < `BT−VT` < 1.8 — (four red to 2.69, one blue at −0.282), where the
-  linear form runs ~0.19–0.24 mag bright. Gating there would not hand those
+  and `vTycho2OutsideBtVtRange` pins the **44** of its 3,784 rows outside
+  `BT−VT` ∈ [−0.25, 2.0] — wider than the paper's −0.2 < `BT−VT` < 1.8 — on
+  both the red and the blue side, where the linear form runs bright. Gating there would not hand those
   rows to a better tier — none carries a `gl`, so nothing sits below them —
   it would cost each its only V and hence its record, a row with no V being
   a [§ 6.1](#61-record-parity) park. That is the opposite call from the ci cascade's refusal to

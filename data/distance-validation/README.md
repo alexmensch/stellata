@@ -23,8 +23,8 @@ Tables A1 (119 rows) and A2 (13 rows) verbatim; the only added column is
 | `name`                  | paper Table A1/A2 | Star name as printed (`HD 1070`, `BD+60 51`, `V755 Cas`, Greek-letter Bayer, etc.)      |
 | `d_bj_paper_pc`         | paper             | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) median distance as the paper read it (pc). The paper does not name the median; its values match I/352 `r_med_photogeo` to 0.1% on 130 of 131 stars. |
 | `sigma_d_bj_paper_pc`   | paper             | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) 1-σ (pc). |
-| `ruwe`                  | paper             | Gaia DR3 renormalised unit-weight error.                                                |
-| `g_mag`                 | paper             | Gaia DR3 G magnitude.                                                                   |
+| `ruwe`                  | paper             | Gaia renormalised unit-weight error, from whichever of DR3 / EDR3 the paper adopted for the star (the smaller penalised total uncertainty, p. 1). |
+| `g_mag`                 | paper             | Gaia G magnitude, from the same adopted release as `ruwe`.                              |
 | `d_new_pc`              | paper             | Paper's recalculated Bayesian distance under their EDSD prior + ZP correction (pc).     |
 | `sigma_d_new_pc`        | paper             | Paper's 1-σ on `d_new_pc` (pc).                                                         |
 | `snr_tot`               | paper             | Total parallax SNR after RUWE-inflated uncertainty.                                     |

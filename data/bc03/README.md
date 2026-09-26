@@ -1,6 +1,6 @@
 # BC03 — Bruzual 2003 simple stellar populations
 
-GALAXEV SSP model output. Three `.4color` tables carrying, per log-age,
+GALAXEV SSP model output of [Bruzual 2003](/data/papers/index.md#bruzual2003). Three `.4color` tables carrying, per log-age,
 the population's absolute B and V magnitudes and its stellar
 mass-to-light ratios for 1 M⊙ formed.
 

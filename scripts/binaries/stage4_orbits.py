@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Stage 4 — orbital-element selection per WDS pair. Picks between
-ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Pulkovo MSC orbits.
+ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Tokovinin MSC orbits.
 """
 
 from __future__ import annotations
@@ -672,7 +672,7 @@ def select_orbit(
        systemic source).
     3. ``orb6_spectroscopic`` — ORB6 non-visual orbits
        (grade ∈ {7,8,9}). Same tiebreaks.
-    4. ``msc`` — Pulkovo MSC compiled orbit, SUB-RESOLUTION PAIRS ONLY
+    4. ``msc`` — MSC compiled orbit, SUB-RESOLUTION PAIRS ONLY
        (ρ = 0 or unmeasured). MSC compiles from the same primary
        sources the routes above curate, so it ranks below all of them;
        the sub-resolution gate keeps measured WDS placements from

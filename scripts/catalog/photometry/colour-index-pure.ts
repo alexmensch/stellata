@@ -12,7 +12,7 @@ import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 
 /** Gaia DR3 documentation, Carrasco 2022 (/data/papers/index.md#gaiadr3doc) Sect. 5.5.1
  *  Table 5.9 — `G − B` as a quartic in `BP − RP`, ascending powers; a DR3-era
- *  fit Riello 2021 does not carry. Sibling of the `G − V` cubic in the same table, which is what makes
+ *  fit Riello 2021 (/data/papers/index.md#riello2021) does not carry. Sibling of the `G − V` cubic in the same table, which is what makes
  *  their difference a published B−V rather than a composed guess. */
 export const GAIA_G_MINUS_B_COEFFS = [
   0.01448, -0.6874, -0.3604, 0.06718, -0.006061,

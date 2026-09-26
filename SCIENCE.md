@@ -110,10 +110,9 @@ enough to see it.
       ([Why the floor carries no margin](data/gaia/README.md#why-the-floor-carries-no-margin)).
     - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
       direction cascade and the input [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) inverts (below).
-    - **Johnson V** — `G` and `BP − RP` transformed through [**Riello M., De
-      Angeli F., Evans D. W. et al. 2021**](/data/papers/index.md#riello2021), App. C,
+    - **Johnson V** — `G` and `BP − RP` transformed through [**Riello 2021**](/data/papers/index.md#riello2021), App. C,
       Table C.2 (`G − V` as a cubic in `BP − RP`, σ = 0.03017 mag over
-      −0.5 ≤ `BP − RP` ≤ 5.0). Every record's
+      −0.5 < `BP − RP` < 5.0, Table C.1). Every record's
       absolute magnitude is derived from this V, so it sets what the whole
       scene looks like; DR3 ships EDR3's photometry unchanged, so the EDR3
       calibration applies. Gaia's CCDs saturate below `G` = 4.0, where the
@@ -124,8 +123,7 @@ enough to see it.
       feed the spectral resolver and the Stefan-Boltzmann radii.
     - **Synthetic photometry** — Johnson-Kron-Cousins B and V integrated from
       each source's own BP/RP spectrum (`gaiadr3.synthetic_photometry_gspc`,
-      [**Gaia Collaboration, Montegriffo P., Bellazzini M., De Angeli F. et
-      al. 2023**](/data/papers/index.md#montegriffo2023)). B − V from it is the ci cascade's tier below the
+      [**Montegriffo 2023**](/data/papers/index.md#montegriffo2023)). B − V from it is the ci cascade's tier below the
       Table-5.9 relation ([Carrasco 2022](/data/papers/index.md#gaiadr3doc)
       Sect. 5.5.1), and unlike that relation it measures the individual
       star rather than fitting a population — which is what lets it serve the
@@ -156,7 +154,8 @@ enough to see it.
       HD ↔ Tycho-2, with the upstream `n_HD`/`n_TYC`
       ambiguity flags.
     - `IV/27A/catalog` — [Kostjuk 2002](/data/papers/index.md#kostjuk2002). Bayer + Flamsteed ↔
-      HD/HR/HIP (as TAP serves it, the Bayer/Flamsteed-bearing subset).
+      HD/HR/HIP — the whole 3,690-row table, every row carrying a Bayer or
+      Flamsteed designation.
     - `V/50/catalog` — [Hoffleit 1991](/data/papers/index.md#hoffleit1991), Bright Star
       Catalogue 5th revised ed. HR ↔ HD.
     - `J/A+A/670/A19/cns5` — [Golovin 2023](/data/papers/index.md#golovin2023). GJ ↔ Gaia EDR3 source_id ↔ HIP,
@@ -241,7 +240,7 @@ enough to see it.
   the ORB6 ReadMe; consulted by `scripts/binaries/build-binaries.py`
   but not committed. Retrieved 2026-05-11. Public-domain
   (U.S. Government work).
-- **Pulkovo Multiple Star Catalog (MSC)**: [Tokovinin 2018](/data/papers/index.md#tokovinin2018)
+- **Tokovinin's Multiple Star Catalog (MSC)**: [Tokovinin 2018](/data/papers/index.md#tokovinin2018)
   — author-maintained curated hierarchies of ≥3-component systems,
   VizieR `J/ApJS/235/6` (`systems`, `orbits`, `catalog` tables).
   Supplies what WDS/ORB6/Gaia-NSS miss: hierarchy-resolved
@@ -288,9 +287,10 @@ enough to see it.
   publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in
   [The values pull](data/simbad/README.md#the-values-pull). Same citation as above.
 - **Gaia DR2↔(E)DR3 cross-match** (`gaiadr3.dr2_neighbourhood`):
-  [Torra 2021](/data/papers/index.md#torra2021) — the DPAC-published mapping between DR2 and (E)DR3 source_ids with
-  per-pair angular distance (mas), magnitude difference, and a
-  PM-propagation flag. Queried by `dr3_source_id` for the Gaia-only
+  [Torra 2021](/data/papers/index.md#torra2021) — the DPAC-published mapping between DR2 and (E)DR3 source_ids
+  (the paper, Sect. 7, names the table; its columns — per-pair angular
+  distance (mas), magnitude difference, and a PM-propagation flag — are the
+  archive data model's). Queried by `dr3_source_id` for the Gaia-only
   catalog stars (no HIP/HD/HR/GJ designation) and committed as
   `data/gaia/gaia_dr2_neighbourhood.tsv` (+ the request-file snapshot
   of that risk set). Retrieved 2026-07-07. Empirical input to the
@@ -380,7 +380,8 @@ enough to see it.
       length (2.6 ± 0.5 kpc), and the thick-disc normalisations
       (f_ρ = 4 ± 2 %, f_Σ = 12 ± 4 %). The review is explicit that the
       quoted magnitudes and colour indices come from different calibrations
-      and are mutually inconsistent at the ~0.1 mag level, and that older
+      and are mutually inconsistent (Table 2 note b, which gives no size;
+      note a puts the typical calibration error at ~0.1 mag), and that older
       direct-integration values run dimmer and bluer ([Bahcall 1980](/data/papers/index.md#bahcall1980): M_V = −20.5; [de Vaucouleurs 1983](/data/papers/index.md#devaucouleurs1983): M_B = −20.2 ±
       0.15).
     - [**Leinert 1998**](/data/papers/index.md#leinert1998) — "The 1997 reference of diffuse night sky
@@ -390,8 +391,8 @@ enough to see it.
       b = 30° value is graded against the model's Galactic-centre
       sightline. These are SKY-model predictions ([Wainscoat 1992](/data/papers/index.md#wainscoat1992)) for
       *total* starlight, so they include the resolved stars the catalogue
-      draws separately — at the NGP that overlap is two thirds of the
-      light, and the check subtracts it (24.99, not 23.83). The
+      draws separately — at the NGP that overlap is 77 % of the
+      light, and the check subtracts it (25.44, not 23.83). The
       subtraction is only meaningful at the pole, where extinction is
       ~0.03 mag and a de-extincted catalogue sum and an observed sky model
       are commensurable.
@@ -411,8 +412,8 @@ enough to see it.
   [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016)'s M_V = −21.37 is the INPUT: both components'
   density0 is solved so the proxy volumes integrate to it at the V-band
   LIGHT B/T derived from the three sources above. The two [Leinert 1998](/data/papers/index.md#leinert1998) checks
-  then disagree with it by 1.68 mag
-  at the pole and 1.02 toward the centre (the model's centre sightline
+  then disagree with it by 1.31 mag
+  at the pole and 0.385 toward the centre (the model's centre sightline
   against Leinert's b = 30° value), in the same direction, and no
   shape parameter bridges that — [The luminosity solve](docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)
   argues it out;

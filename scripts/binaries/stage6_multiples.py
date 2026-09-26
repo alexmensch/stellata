@@ -627,16 +627,20 @@ def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
 # and full source citations.
 
 # Gaia EDR3 → Johnson V: G − V as a cubic in (BP − RP). Riello 2021
-# (/data/papers/index.md#riello2021), Table 5.7 (σ = 0.030 mag; valid −0.5 < BP−RP < 5.0).
+# (/data/papers/index.md#riello2021), App. C, Table C.2 (σ = 0.030 mag; valid
+# −0.5 < BP−RP < 5.0, Table C.1).
 GAIA_G_MINUS_V_COEFFS: tuple[float, ...] = (
     -0.02704, 0.01424, -0.2156, 0.01426,
 )
 GAIA_G_MINUS_V_COLOR_RANGE: tuple[float, float] = (-0.5, 5.0)
 
 # Gaia (BP − RP) → effective temperature: fifth-order fit, Montalto 2021
-# (/data/papers/index.md#montalto2021; PLATO Input Catalogue) (valid
-# 0.5 < BP−RP < 5.0). Feeds the catalogue's Ballesteros 2012
-# (/data/papers/index.md#ballesteros2012) B−V↔Teff convention so the
+# (/data/papers/index.md#montalto2021; PLATO Input Catalogue), eq. 4 (valid
+# 0.5 < BP−RP < 5.0). Montalto fits de-reddened (BP − RP)₀; this is fed the
+# observed colour, an open departure stated in
+# /docs/science-multiple-star-pipeline.md#catalog-side-binary-detection.
+# Feeds the catalogue's Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
+# B−V↔Teff convention so the
 # recovered ci lands on the same colour manifold every other star uses
 # (ballesteros_bv_from_teff mirrors scripts/colour/blackbody-lut-pure.ts).
 GAIA_BPRP_TEFF_COEFFS: tuple[float, ...] = (

@@ -9,8 +9,10 @@ Approach:
      5 nm resolution.
   2. Multiply by CIE 1931 colour-matching functions (x̄, ȳ, z̄) — using
      the multi-lobe Gaussian analytical fits from Wyman 2013
-     (/data/papers/index.md#wyman2013). Accurate to ~1%
-     vs the tabulated CIE 1931 2° standard.
+     (/data/papers/index.md#wyman2013). RMS residual ~0.3–0.6% and worst
+     case ≤ ~2% vs the tabulated CIE 1931 2° standard — square roots of the
+     multi-lobe fit's mean and maximum squared errors in its Table 2; the
+     paper prints no percentage for this fit.
   3. Integrate → XYZ tristimulus.
   4. Linear-sRGB transform (D65 illuminant).
   5. Normalize each blackbody so its brightest linear channel = 1.0

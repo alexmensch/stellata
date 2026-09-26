@@ -1,8 +1,7 @@
 # NASA Five Millennium Canon — eclipse truth set
 
 Frozen rows from [Espenak 2009a](/data/papers/index.md#espenak2009)'s *Five Millennium Catalog of
-Solar Eclipses: −1999 to +3000* and its lunar companion, the [*Five
-Millennium Catalog of Lunar Eclipses*](/data/papers/index.md#espenak2009lunar),
+Solar Eclipses: −1999 to +3000* and its lunar companion, the *Five Millennium Catalog of Lunar Eclipses* ([Espenak 2009b](/data/papers/index.md#espenak2009lunar)),
 published by NASA GSFC. Consumed only by
 `src/client/solar-system/planets/eclipses/eclipse-canon.test.ts`. Never
 read at build time.

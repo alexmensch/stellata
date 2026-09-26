@@ -71,7 +71,7 @@ the authoritative pointer set.
 ### Tier 3 — Laniakea
 
 - **Cosmicflows-4** — [Tully 2023](/data/papers/index.md#tully2023). 55,877
-  galaxies/groups with distances (38,065 groups). EDD web export
+  galaxies with distances, gathered into 38,065 groups. EDD web export
   (`https://edd.ifa.hawaii.edu`, table "CF4 All Groups") or VizieR
   mirror `J/ApJ/944/94`; prefer VizieR (scriptable). Tens of MB max.
   PGC-keyed.

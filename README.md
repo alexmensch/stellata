@@ -90,7 +90,7 @@ Everything you see is calibrated against the source data. Star sizes
 come from absolute magnitudes via Stefan–Boltzmann; halo softness
 tracks MK luminosity class; double and multiple stars come from the
 Washington Double Star Catalog and ORB6, with Gaia DR3 NSS and the
-Pulkovo Multiple Star Catalog for orbits; dwarf galaxies in the Local
+Tokovinin's Multiple Star Catalog for orbits; dwarf galaxies in the Local
 Group come from [Pace 2025](/data/papers/index.md#pace2025)'s Local Volume Database with hand-curated
 structural detail for the LMC, SMC, M31, M33, and Sagittarius dSph
 from the primary literature.
@@ -369,7 +369,7 @@ Data sources retain their own licences:
   `dwarf_all` snapshot at `data/local-group/lvdb-snapshot.csv` is a
   frozen copy of the upstream table.
 - [**Zucker 2020**](/data/papers/index.md#zucker2020) + [**Zucker 2021**](/data/papers/index.md#zucker2021) (molecular cloud
-  distances and bounding boxes).
+  distances and 3D skeleton extents).
 
 See [SCIENCE.md](./SCIENCE.md) and
 [docs/science-local-group.md](./docs/science-local-group.md) for

@@ -14,7 +14,8 @@ scripts/catalog/photometry/
                                  (the validity gate both relations share),
                                  and the ascending-powers polynomial
                                  evaluator. Pure.
-  v-magnitude-pure.ts (+ test)   Riello 2021 G−V relation, the gated
+  v-magnitude-pure.ts (+ test)   Riello 2021 (/data/papers/index.md#riello2021)
+                                 G−V relation, the gated
                                  transform over it, the three-tier V
                                  cascade, which tiers yield a system blend,
                                  and `printedVBelowHip` — the cascade's two
@@ -81,7 +82,7 @@ relation then applies its own colour range on top.
 ## The V cascade
 
 ```
-V = G − f(BP−RP)      Riello 2021, inside the relation's validity
+V = G − f(BP−RP)      Riello 2021 (/data/papers/index.md#riello2021), inside the relation's validity
   → printed HIP V      data/hipparcos/hip_main_vmag.tsv (I/239 Vmag)
   → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 Sect. 1.3, on the record's TYC
   → Gliese Vmag        data/gliese/gliese_v70a.tsv, on the record's GJ

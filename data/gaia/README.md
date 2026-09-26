@@ -68,16 +68,13 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 
 ## Provenance
 
-- **Mission citation**: [Gaia Collaboration, Vallenari A. et al.
-  2023](/data/papers/index.md#vallenari2023) (Gaia DR3 overview).
-- **Photometry citation**: [Riello M., De Angeli F., Evans D. W. et al.
-  2021](/data/papers/index.md#riello2021) (Gaia EDR3 photometric content and
+- **Mission citation**: [Vallenari 2023](/data/papers/index.md#vallenari2023) (Gaia DR3 overview).
+- **Photometry citation**: [Riello 2021](/data/papers/index.md#riello2021) (Gaia EDR3 photometric content and
   validation).
   Its App. C, Table C.2 gives the
   `G − V` cubic in `BP − RP` the V cascade transforms through; DR3 ships EDR3's
   photometry unchanged, so the EDR3 calibration is the one that applies.
-- **Synthetic-photometry citation**: [Gaia Collaboration, Montegriffo P.,
-  Bellazzini M., De Angeli F. et al. 2023](/data/papers/index.md#montegriffo2023)
+- **Synthetic-photometry citation**: [Montegriffo 2023](/data/papers/index.md#montegriffo2023)
   (Gaia DR3: The Galaxy in your preferred colours).
 - **Upstream tables**: ESA Gaia Archive at
   https://gea.esac.esa.int/archive/.
@@ -85,7 +82,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 - **Source tables** (queried via ADQL over the synchronous Gaia TAP
   endpoints — [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only)):
   - `gaia_dr3_hip_xmatch.tsv` ← `hipparcos2_best_neighbour`.
-  - `gaia_dr3_tyc_xmatch.tsv` ← `tyco2tdsc_merge_best_neighbour`.
+  - `gaia_dr3_tyc_xmatch.tsv` ← `tycho2tdsc_merge_best_neighbour`.
   - `gaia_dr3_astrometry.tsv` ← `gaia_source` (binaries subset queried
     by deduped source_id).
   - `gaia_dr3_astrometry_catalog.tsv` ← `gaia_source` (full-catalog

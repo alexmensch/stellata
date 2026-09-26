@@ -19,7 +19,7 @@ flowchart TD
     BJ["Bailer-Jones et al.<br/>probabilistic distances from Gaia parallaxes"]
     SIMBAD["SIMBAD<br/>spectral types · cross-identifications"]
     GCVS["GCVS<br/>variable-star periods and amplitudes"]
-    WDS["WDS · ORB6 · Pulkovo MSC<br/>double stars · published orbits ·<br/>multiple-system hierarchies"]
+    WDS["WDS · ORB6 · MSC<br/>double stars · published orbits ·<br/>multiple-system hierarchies"]
     EDEN["Edenhofer et al. 3D dust map"]
     ZUCKER["Zucker et al. molecular-cloud<br/>catalogues + Local Bubble surface"]
     LVDB["Local Volume Database (Pace)<br/>nearby galaxies"]

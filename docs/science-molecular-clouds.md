@@ -72,7 +72,7 @@ The units chain, end to end:
 | 1 cm⁻³ · pc | 3.086×10¹⁸ cm⁻² | definition |
 | A_V rate for n_H [cm⁻³] | 1.65×10⁻³ · n_H mag pc⁻¹ | product of the above |
 | ρ_ZGR for n_H [cm⁻³] | 6.02×10⁻⁴ · n_H E_ZGR pc⁻¹ | ÷ 2.742 |
-| A_K / A_V | 0.117 | [Cardelli 1989](/data/papers/index.md#cardelli1989) at R_V = 3.1 |
+| A_K / A_V | 0.117 | [Cardelli 1989](/data/papers/index.md#cardelli1989) eq. 2 evaluated at 2.159 µm (2MASS Ks), R_V = 3.1 — not Table 3's K row, 0.114 |
 
 The [Zucker 2021](/data/papers/index.md#zucker2021) profile amplitudes (n0 in cm⁻³) convert
 through this chain, but their absolute normalisation is **not trusted** — the
@@ -144,7 +144,7 @@ check).
 
 ### 4.1 The 11 profiled clouds (Zucker 2021)
 
-Plummer-like profile, parameters from Table 2 (`n0`, `rflat`, `p` —
+Plummer-like profile, parameters from [Zucker 2021](/data/papers/index.md#zucker2021) Table 2 (`n0`, `rflat`, `p` —
 Plummer columns, not the Gaussian fits). Corona Australis has a Table 1
 bbox but **no Table 2/3 rows** — it takes the [§ 4.3](#43-the-sphere-clouds-zucker-2020--corona-australis) class defaults, so
 11 of the 12 ellipsoids are profiled. Semi-axes floor at 3 pc per axis
@@ -186,7 +186,8 @@ drift is caught.
 
 ### 4.3 The sphere clouds (Zucker 2020) + Corona Australis
 
-No density data → class-based default column, amplitude derived from the
+The spheres are [Zucker 2020](/data/papers/index.md#zucker2020) Table A1's
+sightline-aggregated clouds. No density data → class-based default column, amplitude derived from the
 sphere radius R (Coraus: its floored shortest semi-axis):
 
 ```
@@ -210,9 +211,10 @@ truth to pick up. No client code reads it today.
 
 ### 5.1 Physical basis
 
-Supersonic turbulence gives a log-normal volume-density PDF
-([Vazquez-Semadeni 1994](/data/papers/index.md#vazquez1994);
-[Padoan 1997](/data/papers/index.md#padoan1997)): `s = ln(ρ/ρ̄)` is
+Compressible turbulence gives a log-normal volume-density PDF — in a
+transonic 2D simulation (M_rms = 0.58,
+[Vazquez-Semadeni 1994](/data/papers/index.md#vazquez1994)) and in
+supersonic random flows ([Padoan 1997](/data/papers/index.md#padoan1997)): `s = ln(ρ/ρ̄)` is
 Gaussian with
 
 ```
@@ -337,7 +339,7 @@ flag → `sf`; else `dark`. A small curated override table in
 ionising stars may be missing/too-faint in the catalog (Carina, W3, W4,
 W5, M16, M17, Rosette, IC 2944, NGC 6604, Gem OB1), (b) IC 443 (a
 supernova remnant — treated as `hii` for tinting), (c) any
-misclassification found during smoke. The 12 Zucker 2021 clouds carry
+misclassification found during smoke. The 12 [Zucker 2021](/data/papers/index.md#zucker2021) clouds carry
 curated seed classes (Taurus/Chamaeleon/Musca/Pipe/Lupus/Cepheus dark;
 Ophiuchus/Perseus/Coraus sf; the three Orion clouds hii) that the
 in-grid cross-match supersedes.
@@ -365,8 +367,8 @@ giants/supergiants: use the same class row +0.3 dex
 Not every row is the papers' value. [Martins 2005](/data/papers/index.md#martins2005) Table 1 gives O6V 48.96 and
 O9V 47.90; [Sternberg 2003](/data/papers/index.md#sternberg2003) Table 1 gives B0V 48.02 and stops at B0.5V
 (47.71), with no B1V row. The flat +0.3 dex is a stellata simplification:
-the papers' giant-minus-dwarf offsets run +0.2 to +0.5 dex and their
-supergiant ones +0.35 to +0.9 dex, growing toward late O.
+the papers' giant-minus-dwarf offsets run +0.1 to +0.5 dex and their
+supergiant ones +0.2 to +0.9 dex, growing toward late O.
 
 Representative scale: an O6V in n = 100 cm⁻³ gives R_S ≈ 2.9 pc; a B0V
 ≈ 1.1 pc. Evolved regions exceed the instantaneous Strömgren sphere

@@ -222,8 +222,8 @@ under `stellata-zsr`, since the infrastructure overlap is total.
 ### Tier 3 — Deferred / opportunistic
 
 - **Extended T_TABLE** (class × lumClass) — dwarf rows from
-  [Pecaut 2013](/data/papers/index.md#pecaut2013) Table 4, which
-  covers only dwarfs and 5–30 Myr pre-main-sequence stars, so the giant
+  [Pecaut 2013](/data/papers/index.md#pecaut2013) Table 4 (dwarfs;
+  its Table 6 covers 5–30 Myr pre-main-sequence stars), so the giant
   and supergiant rows need another source — baked
   into `catalog-pure.ts` as a richer offline fallback for the ~30%
   of catalogue that has lumClass but won't get Apsis. Refines Tier 1.

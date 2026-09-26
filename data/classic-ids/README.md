@@ -89,8 +89,9 @@ all four; cite the paper per table.
   ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - **`bsc5.tsv`** ← VizieR `V/50/catalog`. [Hoffleit 1991](/data/papers/index.md#hoffleit1991),
   Bright Star Catalogue 5th revised ed. Supplies HR ↔ HD (9,096 of 9,110 rows
-  carry an HD; the 14 HD-less entries are non-stellar — novae/SNe, four
-  clusters, M 31 — so none needs a route and no record carries one,
+  carry an HD; the 14 HD-less entries are non-stellar — by the table's own
+  names novae/SNe, four clusters and M 31, though the ReadMe (l. 35–37)
+  calls all 14 "novae or extragalactic objects" — so none needs a route and no record carries one,
   both pinned by `scripts/catalog/classic-ids/parity-ledger.test.ts`).
   `name` is the BSC's own designation string (`"3Alp Lyr"`), committed
   for the naming ladder and read by nothing today.

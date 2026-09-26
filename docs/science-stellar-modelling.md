@@ -42,6 +42,11 @@ don't produce absurd sizes. White dwarfs are special-cased to 0.013 R☉ (absmag
 doesn't translate reliably for them) and Wolf-Rayets to their own
 Teff/BC ramps — gspphot models neither atmosphere, so a published
 Apsis value there is the companion's light or a misfit and is ignored.
+The WR Teff ramp departs from its sources: WN2 / WN5 / WN8 read 114 / 75 /
+51.75 kK against [Hamann 2006](/data/papers/index.md#hamann2006) Table 2's
+141 / 63 / 45 kK, and WC4–WC8 run 8–29 kK under
+[Sander 2012](/data/papers/index.md#sander2012) Table 6 — which to adopt is
+an open decision (`stellata-uadc.69`; the WC half is `stellata-uadc.69.14`).
 The famous-star radius and colour claims are pinned end-to-end against
 `public/catalog.bin` by `scripts/catalog/validate/known-stars.test.ts`
 (`primary_radius_rsun` / `primary_ci` corpus columns).
@@ -175,7 +180,10 @@ folds three physically-grounded steps:
 2. **Planck × CIE 1931** — the Planck spectrum at T_eff is integrated
    against the CIE 1931 2° standard-observer colour-matching functions,
    using the analytical multi-Gaussian fits in
-   [Wyman 2013](/data/papers/index.md#wyman2013). The fits reproduce the tabulated CMFs to ~1%, well below
+   [Wyman 2013](/data/papers/index.md#wyman2013). The fits reproduce the tabulated CMFs to
+   ~0.3–0.6 % RMS and ≤ ~2 % worst case — square roots of the multi-lobe fit's
+   mean and maximum squared errors (Table 2; the percentages are derived here,
+   the paper prints none) — well below
    the chromaticity threshold relevant for star rendering.
 3. **XYZ → sRGB D65** — the standard linear sRGB transform (IEC
    61966-2-1), peak-normalised per entry to preserve chroma, then
@@ -291,7 +299,9 @@ magnitude wrong, in two ways:
    Miras, ~35 % in J for the S-type χ Cyg
    ([Woodruff 2008](/data/papers/index.md#woodruff2008)); dynamic
    models give ≈ ±30 % for the near-infrared continuum layers
-   ([Ireland 2004](/data/papers/index.md#ireland2004)). The apparent
+   ([Ireland 2004](/data/papers/index.md#ireland2004)), a max/min ratio of
+   ~1.7–1.85 against the 1.4 the Mira row ships (the per-type table
+   below). Which to adopt is an open decision, `stellata-uadc.69.19`. The apparent
    diameter also depends strongly on wavelength — a factor ~2 in
    uniform-disc size between 1 and 3 µm
    ([Woodruff 2009](/data/papers/index.md#woodruff2009)) — because

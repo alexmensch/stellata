@@ -44,8 +44,9 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   135°. [van der Marel 2014](/data/papers/index.md#vandermarel2014)'s
   fits give i = 26.2–39.6° and Θ = 139.1–154.5° (Table 1), so neither
   value is theirs. Distance
-  [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019). Scale length
-  4.5 kpc, scale height 1 kpc.
+  [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019). Semi-axes
+  4.5 kpc in the disc plane and 1 kpc normal to it — the wireframe
+  extent, not the emission profile's R_d = 1.5 kpc below.
 - **SMC (62.81 kpc)**: triaxial 1 : 1.33 : 1.61 with the longest axis
   along line of sight ([Subramanian 2012](/data/papers/index.md#subramanian2012);
   distance from LVDB's SMC row, µ = 18.99 ± 0.1 —
@@ -126,7 +127,7 @@ the profile and never re-derives photometry.
   ellipsoidal radius in units of the R_e ellipsoid,
   pₙ = 1 − 0.6097/n + 0.05463/n²
   ([Lima Neto 1999](/data/papers/index.md#limaneto1999)'s refit
-  of Prugniel & Simien's 1 − 0.594/n + 0.055/n²), and bₙ = 2n − 1/3 + 4/(405n)
+  of the 1 − 0.594/n + 0.055/n² in [Prugniel 1997](/data/papers/index.md#prugniel)), and bₙ = 2n − 1/3 + 4/(405n)
   ([Ciotti 1999](/data/papers/index.md#ciotti1999)). This projects to the observed 2D Sérsic law
   to ~1%; raymarching the 2D law as if it were 3D density is a
   deprojection error, visibly too shallow in the centre for n > 1.
@@ -143,8 +144,9 @@ the profile and never re-derives photometry.
   bar and arms are below this detail tier. M31 R_d = 5.3 kpc with a
   spherical Sérsic bulge (R_e = 1.0 kpc, n = 2.2;
   [Courteau 2011](/data/papers/index.md#courteau2011)) carrying
-  B/T = 0.31 of the light; Courteau's bulge light fractions are 21–29%,
-  29% for the 2D bulge + disc fit (Sect. 7). M33 R_d = 1.8 kpc
+  B/T = 0.31 of the V-band light; Courteau's bulge light fractions are
+  21–29% of the IRAC 3.6 µm light, 29% for the 2D bulge + disc fit (Sect. 7)
+  — a near-infrared split applied here in V. M33 R_d = 1.8 kpc
   ([Corbelli 2014](/data/papers/index.md#corbelli2014)), pure disc —
   Corbelli et al. find M33 hosts no bulge, reading its inner light as a
   raised mass-to-light ratio inside 1.5 kpc (p. 11), and its nuclear

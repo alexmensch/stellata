@@ -19,8 +19,7 @@ import type { LgEmission, LgObject } from '../local-group-loader';
 
 /**
  * Intrinsic integrated (B−V)₀ of M31, Tempel 2011
- * (/data/papers/index.md#tempel2011) Table 2 — the only Local Group disc
- * galaxy with a published dereddened integrated colour.
+ * (/data/papers/index.md#tempel2011) Table 2.
  */
 export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
 
@@ -28,7 +27,8 @@ export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
  * The **same** `bulge_to_total` the emission solver splits M31's flux by
  * (`data/local-group/overrides.tsv`, pinned in `local-group-emission.test.ts`).
  * Courteau 2011 (/data/papers/index.md#courteau2011) Sect. 7 give 0.29
- * for their 2D bulge + disc fit.
+ * for their 2D bulge + disc fit — a Spitzer/IRAC 3.6 µm light fraction, which
+ * this applies as the V-band split.
  */
 export const M31_BULGE_TO_TOTAL_LIGHT = 0.31;
 

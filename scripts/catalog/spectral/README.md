@@ -132,6 +132,15 @@ sizes. White dwarfs are special-cased to 0.013 R☉ (typical WD radius;
 absmag doesn't translate reliably for them); Wolf-Rayets ride their
 own Teff/BC ramps and ignore Apsis.
 
+### The absolute-magnitude tables
+
+`absmagFromSpectral` reads `MV_MS_TABLE` / `MV_GIANT_TABLE`, credited to
+[Cox 2000](/data/papers/index.md#cox2000) Sect. 15.3 (no copy held). The dwarf
+row departs from the online table of [Mamajek 2022](/data/papers/index.md#mamajek2022):
+of its anchors only M0V (8.80) agrees — A0V ships 0.65 against 0.99, B5V −1.2
+against −0.85, M5V 12.3 against 14.15, M9V 16.0 against 19.40. Which source to
+adopt is an open decision, `stellata-uadc.69.28`.
+
 ### A stated Gaia id the record contradicts ends the walk
 
 `matchSimbadRow` refuses a row whose `source_id` cell is non-empty and is

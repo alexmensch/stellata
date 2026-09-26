@@ -1,4 +1,4 @@
-# Pulkovo MSC — Tokovinin Multiple Star Catalog
+# MSC — Tokovinin's Multiple Star Catalog
 
 Three TSVs from VizieR `J/ApJS/235/6` (author-updated edition — orbit
 rows carry post-2018 references like `Tok 2023`). Curated hierarchies

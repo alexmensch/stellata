@@ -158,9 +158,10 @@ def parse_spectral_type(raw: str | None) -> ParsedSpect | None:
 # class index (0=O .. 6=M). Class 7 (C/S/WR) and 8 (unknown) fall back
 # to a single representative mass at the bottom.
 #
-# Main-sequence (V) anchors: the online dwarf table of Mamajek 2022
-# (/data/papers/index.md#mamajek2022), with the Cox high-mass O/B end
-# ramping to canonical zero-age MS values.
+# Main-sequence (V) anchors are not the dwarf-table masses of Mamajek 2022
+# (/data/papers/index.md#mamajek2022): A0V ships 2.9 against its 2.18 M_sun,
+# K5V 0.65 against 0.70. Which source to adopt is open — see
+# /scripts/binaries/README.md#stage-6--multiplestsv-emit.
 _MS_MASS: tuple[tuple[float, ...], ...] = (
     # O0 .. O9
     (60.0, 50.0, 40.0, 32.0, 28.0, 25.0, 22.0, 20.0, 18.0, 17.0),
@@ -223,8 +224,9 @@ _I_MASS: tuple[tuple[float, ...], ...] = (
 )
 
 
-# Mean solar-neighbourhood WD mass (Kepler 2007 (/data/papers/index.md#kepler2007),
-# Kilic 2020 (/data/papers/index.md#kilic2020)). True
+# Solar-neighbourhood WD mass: the DA mean 0.593 of Kepler 2007
+# (/data/papers/index.md#kepler2007) and the narrow distribution peak at 0.59
+# of Kilic 2020 (/data/papers/index.md#kilic2020). True
 # range is 0.3 - 1.4; without a cooling-track model we cannot do
 # better from sp_type alone.
 WD_MASS_DEFAULT = 0.6

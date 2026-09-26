@@ -183,9 +183,8 @@ the Milky Way's palette by import:
 | spheroid | 0.9574 | old metal-rich SSP, [Bruzual 2003](/data/papers/index.md#bruzual2003) Z = 0.02 / 10 Gyr |
 | disc | 0.8189 | **solved** from M31 |
 
-M31 is the only LG disc with a published dereddened integrated colour —
-(B−V)₀ = 0.86, [Tempel 2011](/data/papers/index.md#tempel2011) Table 2 — and it is
-solved against the **same** B/T = 0.31 the flux split uses
+The disc seed is solved from M31's dereddened integrated colour —
+(B−V)₀ = 0.86, [Tempel 2011](/data/papers/index.md#tempel2011) Table 2 — against the **same** B/T = 0.31 the flux split uses
 (`data/local-group/overrides.tsv`, pinned), so M31's own integrated colour
 and its bulge/disc contrast are both right by construction. That is what the
 two-tint scheme can do; here is what it cannot:

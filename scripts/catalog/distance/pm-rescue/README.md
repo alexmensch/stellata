@@ -197,9 +197,10 @@ reaches them at all.
 
 EZ Aqr and Gl 747A route `cns5` rather than `simbad` because CNS5's GJ coverage
 now reaches them, and the cascade's order prefers the catalogue to the index.
-The value is unchanged on EZ Aqr — CNS5 and SIMBAD both carry
-[Zacharias 2012](/data/papers/index.md#zacharias2012)'s 2314.8 / 2295.3 mas/yr, so only the
-credited route moved.
+The value is unchanged on EZ Aqr — CNS5 and SIMBAD both carry 2314.8 /
+2295.3 mas/yr, each crediting it to bibcode `2012yCat.1322....0Z`, the UCAC4
+catalogue of [Zacharias 2012](/data/papers/index.md#zacharias2012) — so only
+the credited route moved.
 
 EZ Aqr is the case the rv cascade predicted: its 6,824.7 km/s SIMBAD velocity
 is still rejected on its own, and the row keeps the 3.26″/yr motion the

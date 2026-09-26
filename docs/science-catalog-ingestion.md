@@ -193,8 +193,8 @@ parallax inversions whose Bayesian distance is < 50 kpc.
 audit walked every identifier chain for the residual: of the AT-HYG
 rows with a source_id but no B-J posterior (~1.6k), the HIP-consistent
 subset are genuine DR3 sources that [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) simply didn't publish
-(2-parameter position-only solutions, or excluded by their quality
-filter), and none of the alternative source_ids recoverable through
+(2-parameter position-only solutions, which have no DR3 parallax to
+invert — the paper covers every EDR3 source that has one), and none of the alternative source_ids recoverable through
 the HIP or Tycho-2 cross-walks appear in B-J either. The empty-`gaia`
 AT-HYG rows recover ~190 source_ids via the HIP cross-walk (now wired
 into `resolveGaiaSourceId` — the `gaiaSourceIdBackfilled` build count)
@@ -207,7 +207,8 @@ refreshed by `scripts/refresh/refresh-bailer-jones.py`).
 
 <a id="distance-override-validation-against-vaidman-et-al-2025"></a>**Distance-override validation against Vaidman 2025.**
 [Vaidman 2025](/data/papers/index.md#vaidman2025)
-publish a Bayesian recalculation of Gaia DR3 distances for 132 Galactic
+publish a Bayesian recalculation of distances from Gaia DR3 and EDR3
+parallaxes (whichever has the smaller penalised total uncertainty) for 132 Galactic
 BA-type supergiants — exactly the failure-mode population the [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)
 override above is designed to rescue. The paper's appendix tables list
 their adopted distance per star together with [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)'s
@@ -260,9 +261,11 @@ parallax — [Andrae 2023](/data/papers/index.md#andrae2023)) and `gspspec`
 gspphot additionally emits `A0` (line-of-sight monochromatic
 extinction at 541.4 nm). A third Apsis module, ESP-ELS, classifies the
 BP/RP spectra into a coarse spectral-type enum, `spectraltype_esphs`
-(`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`, `unknown`) — the field is
+(`O`, `B`, `A`, `F`, `G`, `K`, `M`, `CSTAR`) — the field is
 named for ESP-HS but written by ESP-ELS
-([Creevey 2023](/data/papers/index.md#creevey2023), Sect. 6.1.3).
+([Creevey 2023](/data/papers/index.md#creevey2023), Sect. 6.1.3). The archive
+column also carries `unknown` (3,327 rows of `data/gaia/gaia_dr3_apsis.tsv`),
+a value the paper's tag list does not include.
 
 Stellata pulls all seven Apsis floats plus the ESP-ELS spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and

@@ -112,7 +112,7 @@ class IdentifierIndices:
     # respectively. Audit surface for the build log + Stage 7 counters.
     xwalk_mag_rejected: list[tuple[int, int]]
     athyg_gaia_mag_rejected: list[tuple[int | None, int]]
-    # Pulkovo MSC lookup tables (WDS-token-keyed orbits, pair mags,
+    # MSC lookup tables (WDS-token-keyed orbits, pair mags,
     # per-component spectral types) — see msc_map.build_msc_lookup.
     # ``None`` in contexts that load no MSC data (unit-test fixtures).
     msc: MscLookup | None = None
