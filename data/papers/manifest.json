@@ -983,6 +983,14 @@
       "bytes": 1940228
     }
   ],
+  "nimmo2017": [
+    {
+      "file": "nimmo2017.pdf",
+      "source_url": "https://arxiv.org/pdf/1603.00821",
+      "sha256": "6ae877e5e5d1d8d2ebf14f7556ef753aea8de4f69523a42ade3e9d0559e94444",
+      "bytes": 1623794
+    }
+  ],
   "north2007": [
     {
       "file": "north2007.pdf",

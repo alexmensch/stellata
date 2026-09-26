@@ -4,7 +4,22 @@ import { describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { citationsIn, citesByLabel, holdsCopy, labelDefects, parseIndex, type PinnedCopy } from './citation-index-pure';
+import {
+  citationsIn,
+  citesByLabel,
+  type CopyText,
+  holdsCopy,
+  type IndexEntry,
+  labelDefects,
+  lineText,
+  paginatedText,
+  paginationOf,
+  parseIndex,
+  passageDefect,
+  type PinnedCopy,
+  uncitedIdentifiers,
+  unpaginatedText,
+} from './citation-index-pure';
 import { extractPointers, pointerCorpus, resolveDocPath } from './doc-pointer-pure';
 
 const ROOT = resolve(__dirname, '..');
@@ -13,6 +28,8 @@ const INDEX = join(PAPERS, 'index.md');
 const STORE = join(PAPERS, 'pdf');
 const ROOTED_INDEX = '/data/papers/index.md';
 const IN_CI = Boolean(process.env.CI);
+const PUBLIC_COPY = ['public/', 'src/client/index.html', 'CITATION.cff'];
+const DATA_TABLE = /^data\/.*\.(tsv|csv)$/;
 
 const entries = parseIndex(readFileSync(INDEX, 'utf-8'));
 const entryKeys = new Set(entries.map(({ key }) => key));
@@ -56,6 +73,15 @@ describe('citation index', () => {
     expect(wrong, wrong.join('\n')).toEqual([]);
   });
 
+  it('no DOI, arXiv ID or bibcode is cited outside the index; datasets, data values and public copy aside', () => {
+    const stray = citingFiles
+      .filter(({ file }) => !PUBLIC_COPY.some((path) => relative(ROOT, file).startsWith(path)) && !DATA_TABLE.test(relative(ROOT, file)))
+      .flatMap(({ file, text }) =>
+        uncitedIdentifiers(text).map(({ line, identifier }) => `${relative(ROOT, file)}:${line} — ${identifier}`),
+      );
+    expect(stray, stray.join('\n')).toEqual([]);
+  });
+
   it('every entry is cited from outside data/papers/', () => {
     const cited = new Set(citations.map(({ key }) => key));
     const orphans = [...entryKeys].filter((key) => !cited.has(key));
@@ -76,6 +102,24 @@ describe('citation index', () => {
 });
 
 const COPY_NAMES = ['.pdf', '.readme.txt', '.page.txt'];
+const TEXT_LAYERS = ['.txt', '.flow.txt'];
+const PRINTED_PAGINATION = /^`(publishedVersion|ADS scan of published article)`/;
+const IMAGE_ONLY = /image-only scan/;
+const READ_ON_PAGE_IMAGE = /read on the page image/;
+
+const textLayers = (pdf: string): string[] => TEXT_LAYERS.map((suffix) => join(STORE, pdf.replace(/\.pdf$/, suffix)));
+
+function copyTexts(entry: IndexEntry): CopyText[] {
+  return (manifest[entry.key] ?? []).flatMap(({ file }): CopyText[] => {
+    if (file.endsWith('.readme.txt')) return [lineText(readFileSync(join(STORE, file), 'utf-8'))];
+    if (file.endsWith('.page.txt')) return [unpaginatedText(readFileSync(join(STORE, file), 'utf-8'))];
+    if (IMAGE_ONLY.test(entry.copy)) return [];
+    const layers = textLayers(file).filter(existsSync);
+    return layers.length
+      ? [paginatedText(layers.map((layer) => readFileSync(layer, 'utf-8')), paginationOf(entry.copy, PRINTED_PAGINATION.test(entry.copy)))]
+      : [];
+  });
+}
 
 describe.skipIf(IN_CI)('private paper store', () => {
   it('data/papers/pdf is a link to the store, not missing and not a copy', () => {
@@ -96,5 +140,28 @@ describe.skipIf(IN_CI)('private paper store', () => {
       })
       .map(({ file }) => file);
     expect(drift, `missing or changed since pinned:\n${drift.join('\n')}`).toEqual([]);
+  });
+
+  it('every PDF copy has both text layers, unless its Copy says it is an image-only scan', () => {
+    const missing = entries
+      .filter((entry) => !IMAGE_ONLY.test(entry.copy))
+      .flatMap((entry) => (manifest[entry.key] ?? []).filter(({ file }) => file.endsWith('.pdf')))
+      .flatMap(({ file }) => textLayers(file).filter((layer) => !existsSync(layer)))
+      .map((layer) => relative(STORE, layer));
+    expect(missing, `regenerate (see /data/papers/README.md#the-pdfs-are-private):\n${missing.join('\n')}`).toEqual([]);
+  });
+
+  it('every verified row quotes a passage its copy carries, on the page or line it names', () => {
+    const defects = entries.flatMap((entry) => {
+      const texts = copyTexts(entry);
+      if (!texts.length) return [];
+      return entry.rows
+        .filter(({ status, page }) => status === 'verified' && !READ_ON_PAGE_IMAGE.test(page))
+        .flatMap((row) => {
+          const found = texts.map((text) => passageDefect(row, text));
+          return found.includes(null) ? [] : [`index.md:${row.line} ${entry.key} — ${found[0]}`];
+        });
+    });
+    expect(defects, defects.join('\n')).toEqual([]);
   });
 });
