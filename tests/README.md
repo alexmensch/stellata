@@ -134,6 +134,44 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in the sid-ledger-guard
                          job and locally.
+site-claims.test.ts      No figure on a public page is a literal: each
+                         readout cell must still carry its %VITE_*%
+                         substitution rather than a number. Then the
+                         derivations behind them
+                         (scripts/site/site-metrics.ts) — the credited
+                         source count pinned, the per-subsystem table
+                         still summing to it, and the reference scan
+                         bounded both ways, since a pattern that matches
+                         nothing and one that matches ordinary prose fail
+                         in opposite directions.
+                         /src/site/README.md#numbers-in-copy.
+site-css-rules.test.ts   The public stylesheet answers to its container and
+                         to the reader's font size, never to a viewport
+                         measurement, and paints nothing it has not
+                         tokenised. Eleven assertions in four groups: no
+                         width/height media query, no pixel type size, every
+                         font-size a Utopia scale step, every grid minimum
+                         guarded by min() · no colour literal outside :root,
+                         every space a scale step, every leading/tracking/
+                         weight/radius a token · the CUBE cascade order
+                         (compositions → blocks → utilities) with every
+                         utility declaration !important · no physical box
+                         property and no text-align: left/right. A bespoke
+                         clamp() is the drift the scale-step rules catch —
+                         it breaks the property that a heading and the space
+                         above it move together; an unguarded minmax() is
+                         the one that overflows at the 32px root WCAG
+                         1.4.4's 200% text resize implies. Scans the file
+                         with comments stripped, so prose naming a property
+                         cannot register as CSS.
+                         /src/site/styles/README.md#house-style,
+                         /src/site/styles/README.md#responsiveness-has-no-breakpoints.
+site-dev-routing.test.ts The dev server's routing table held against the
+                         deploy's: both legacy share transports 301,
+                         /app/** gets the application document, the root
+                         gets the homepage, everything else 404s. Pairs
+                         with src/worker.test.ts, which pins the same
+                         table on the production side.
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.
@@ -145,7 +183,7 @@ star-count-consistency.test.ts
                          separators included, which is how an
                          underscore-separated literal in a dust-cost
                          script outlived two count changes — and holds
-                         every size figure on the four user-facing prose
+                         every size figure on the five user-facing prose
                          surfaces to that one rounding, `public/llms.txt`
                          among them since `public/` is gitignored and no
                          directory root reaches it. The AT-HYG spine's own
@@ -196,9 +234,6 @@ webgpu-import-boundary.test.ts
 doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
                          resolution and the scanned corpus, shared by
                          doc-pointer-resolution.test.ts and
-                         citation-index.test.ts.
-citation-index-pure.ts   Not a test — parsing of data/papers/index.md
-                         entries and manifest.json pins, for
                          citation-index.test.ts.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking

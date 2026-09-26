@@ -5,7 +5,7 @@ import {
   orbitRadius,
   poseChanged,
 } from './pose-change-pure';
-import { AU_PC, KM_PC } from '../astronomy-constants';
+import { AU_PC, KM_PC } from '../../astronomy-constants';
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 

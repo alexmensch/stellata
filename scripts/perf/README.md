@@ -212,7 +212,7 @@ differential mode and the dwell's in the other two, defaulting to the same
 boot — `--hash webgpu-gate=force` shows the requires-WebGPU page on a
 browser that supports it, the one way to exercise the gate's `BootError`
 end to end (the app reads every switch off one hash, `&`-joined). `--url`
-cannot carry it: the base is prefixed with `/v/<blob>/`, so a fragment
+cannot carry it: the base is prefixed with `/app/v/<blob>/`, so a fragment
 there lands mid-path.
 
 **Contexts run in the scenario order given; `all` is the canon order
@@ -281,7 +281,7 @@ device pixel ratio, with `localStorage['stellata.info-dismissed']` and
 `sessionStorage['stellata.mobile-advisory-dismissed']` seeded to `'1'` so
 neither modal ever shows:
 
-1. **Boot** `<url>/v/<blob>/` ([The renderer is WebGPU](/src/client/webgpu/README.md#the-renderer-is-webgpu)).
+1. **Boot** `<url>/app/v/<blob>/` ([The renderer is WebGPU](/src/client/webgpu/README.md#the-renderer-is-webgpu)).
    Wait for `window.debug`,
    `window.stellata` and `#loading` gone; a `#loading-status` starting
    `Error:` is a `BootError`. The requires-WebGPU gate is read *before*

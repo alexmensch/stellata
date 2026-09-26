@@ -6,7 +6,9 @@ Stellata simulates what it would actually look like to move through the universe
 
 ## About
 
-- [Stellata](https://stellata.xyz/): the live WebGPU application.
+- [Stellata](https://stellata.xyz/): what the project is, where its data comes from, and what it deliberately excludes. Readable without WebGPU.
+- [Stellata as markdown](https://stellata.xyz/index.md): the same page as markdown, derived from it at build time. `https://stellata.xyz/` serves this rendition to any client whose `Accept` header names `text/markdown`.
+- [The model](https://stellata.xyz/app): the live WebGPU application itself.
 - [Source on GitHub](https://github.com/alexmensch/stellata): full source, released under AGPL-3.0-only.
 - [SCIENCE.md](https://github.com/alexmensch/stellata/blob/main/SCIENCE.md): data sources, modelling notes, and project scope.
 - [10.5281/zenodo.22392528](https://doi.org/10.5281/zenodo.22392528): Zenodo archive — the concept DOI to cite, resolving to the latest release.
@@ -20,8 +22,8 @@ Every object is placed from a published observational catalogue or direct measur
 - [Gaia DR3](https://gea.esac.esa.int/archive/): ESA / DPAC — raw astrometry, broadband photometry, astrophysical parameters (Teff, log g, [M/H]), and non-single-star orbits.
 - [Tycho-2](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/259): Høg et al. 2000 — positions at each star's own mean epoch, proper motions, BT/VT photometry.
 - [CNS5](https://doi.org/10.1051/0004-6361/202244250): Golovin et al. 2023 — the fifth catalogue of nearby stars, supplying GJ designations and parallaxes inside 25 pc.
-- Classic designation cross indexes: Tycho-2 HD identifications (Fabricius et al. 2002), the Bayer / Flamsteed cross index (Kostjuk 2004), and the [Bright Star Catalogue](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50) 5th revised (Hoffleit & Warren 1991) — every classical designation the catalogue carries.
-- [IAU Working Group on Star Names](https://www.iau.org/science/scientific_bodies/working_groups/280/): the naming authority behind every proper name displayed.
+- Classic designation cross indexes: Tycho-2 HD identifications (Fabricius et al. 2002), the Bayer / Flamsteed cross index (Kostjuk 2002), and the [Bright Star Catalogue](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50) 5th revised (Hoffleit & Warren 1991) — every classical designation the catalogue carries.
+- [IAU Working Group on Star Names](https://www.pas.rochester.edu/~emamajek/WGSN/): the naming authority behind every proper name displayed.
 - [AT-HYG v3.3](https://codeberg.org/astronexus/athyg): David Nash's combined Tycho-2 / Hipparcos / Gaia catalogue — the authority on which stars are one object and which Gaia source each is bound to.
 - [SIMBAD](https://simbad.cds.unistra.fr/simbad/): CDS Strasbourg — cross-identifications and catalogue validation.
 - [Riello et al. 2021](https://doi.org/10.1051/0004-6361/202039587): Gaia photometric relations — the G → Johnson V transform every star's brightness is derived through.
@@ -34,12 +36,12 @@ Every object is placed from a published observational catalogue or direct measur
 
 - [Washington Double Star Catalog](http://www.astro.gsu.edu/wds/): USNO — resolved pair geometry.
 - [Sixth Orbit Catalog (ORB6)](http://www.astro.gsu.edu/wds/orb6.html): USNO — computed visual orbits.
-- [Multiple Star Catalog](https://doi.org/10.3847/1538-4365/aaa7d9): Tokovinin 2018 (Pulkovo) — hierarchical subsystem orbits.
+- [Multiple Star Catalog](https://doi.org/10.3847/1538-4365/aaa1a5): Tokovinin 2018 (Pulkovo) — hierarchical subsystem orbits.
 - [Hipparcos CCDM](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239): ESA — HIP double-star cross-match (Dommanget & Nys 1994 component register).
 
 ### Interstellar medium
 
-- [Edenhofer et al. 2024](https://doi.org/10.5281/zenodo.8187943): 3D dust extinction map of the local Milky Way.
+- [Edenhofer et al. 2024](https://doi.org/10.1051/0004-6361/202347628): 3D dust extinction map of the local Milky Way.
 - [Zucker et al. 2020 & 2021](https://doi.org/10.3847/1538-4357/ac1f96): molecular-cloud distances, 3D bounding boxes, and density profiles.
 
 ### Planets & moons
@@ -52,13 +54,13 @@ Every object is placed from a published observational catalogue or direct measur
 
 ### Heliopause boundary
 
-- [Voyager 1 & 2](https://voyager.jpl.nasa.gov/): boundary crossings (2012, 2018), plus IBEX / Cassini ENA heliotail estimates.
-- [Frisch & Slavin 2013](https://doi.org/10.1146/annurev-astro-082312-140843): solar apex direction through the local ISM.
+- [Voyager 1 & 2](https://science.nasa.gov/mission/voyager/): boundary crossings (2012, 2018), plus IBEX / Cassini ENA heliotail estimates.
+- [McComas et al. 2015](https://doi.org/10.1088/0067-0049/220/2/22): IBEX interstellar inflow — the heliosphere's nose direction.
 
 ### Nearby galaxies
 
 - [McConnachie 2012](https://doi.org/10.1088/0004-6256/144/1/4): Local Group positions, distances, and luminosities.
-- Local Volume Database (Pace 2024): dwarf-galaxy parameters.
+- Local Volume Database (Pace 2025): dwarf-galaxy parameters.
 
 ## License
 

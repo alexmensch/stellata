@@ -1,0 +1,693 @@
+/* Every page of the public content site. The app's chrome is the reference;
+   this scales it up to reading sizes and adds nothing it does not have.
+   Organised CUBE-style — see /src/site/styles/README.md#house-style. */
+
+@import '../../design-tokens.css';
+
+/* ── Tokens ─────────────────────────────────────────────────────────── */
+/* Fluid Utopia scales, 320px → 1440px. Generated, not tuned by hand:
+   README.md#the-scales carries the parameters and how to regenerate. */
+
+:root {
+  --step--2: clamp(0.6944rem, 0.6643rem + 0.1508vw, 0.8rem);
+  --step--1: clamp(0.8333rem, 0.7857rem + 0.2381vw, 1rem);
+  --step-0: clamp(1rem, 0.9286rem + 0.3571vw, 1.25rem);
+  --step-1: clamp(1.2rem, 1.0964rem + 0.5179vw, 1.5625rem);
+  --step-2: clamp(1.44rem, 1.2934rem + 0.733vw, 1.9531rem);
+  --step-3: clamp(1.728rem, 1.5242rem + 1.0192vw, 2.4414rem);
+  --step-4: clamp(2.0736rem, 1.7941rem + 1.3974vw, 3.0518rem);
+  --step-5: clamp(2.4883rem, 2.1094rem + 1.8948vw, 3.8147rem);
+  --step-6: clamp(2.986rem, 2.4767rem + 2.5463vw, 4.7684rem);
+
+  --space-3xs: clamp(0.25rem, 0.2321rem + 0.0893vw, 0.3125rem);
+  --space-2xs: clamp(0.5rem, 0.4643rem + 0.1786vw, 0.625rem);
+  --space-xs: clamp(0.75rem, 0.6964rem + 0.2679vw, 0.9375rem);
+  --space-s: clamp(1rem, 0.9286rem + 0.3571vw, 1.25rem);
+  --space-m: clamp(1.5rem, 1.3929rem + 0.5357vw, 1.875rem);
+  --space-l: clamp(2rem, 1.8571rem + 0.7143vw, 2.5rem);
+  --space-xl: clamp(3rem, 2.7857rem + 1.0714vw, 3.75rem);
+  --space-2xl: clamp(4rem, 3.7143rem + 1.4286vw, 5rem);
+  --space-3xl: clamp(6rem, 5.5714rem + 2.1429vw, 7.5rem);
+  --space-s-m: clamp(1rem, 0.75rem + 1.25vw, 1.875rem);
+  --space-l-xl: clamp(2rem, 1.5rem + 2.5vw, 3.75rem);
+  --space-xl-2xl: clamp(3rem, 2.4286rem + 2.8571vw, 5rem);
+
+  --measure: 62ch;
+  --measure-micro: 26ch;
+  --measure-compact: 34ch;
+  --measure-short: 40ch;
+  --measure-medium: 46ch;
+  --measure-lead: 54ch;
+
+  --gutter: var(--space-s-m);
+  --column: 72rem;
+  --hairline: 1px;
+  --rule: var(--hairline) solid var(--border);
+  --rule-strong: var(--hairline) solid var(--border-strong);
+  --cluster-space-tight: var(--space-2xs) var(--space-m);
+  --underline-offset: 3px;
+  --focus-offset: 3px;
+  /* In em, so the halo grows with the type it backs rather than thinning
+     out under a display heading. */
+  --text-halo: 0 0 0.12em var(--halo), 0 0.04em 0.5em var(--halo);
+
+  --halo: color-mix(in srgb, var(--bg) 88%, transparent);
+  --wash-accent: color-mix(in srgb, var(--accent) 9%, transparent);
+  --wash-accent-faint: color-mix(in srgb, var(--accent) 5%, transparent);
+  --selection-bg: color-mix(in srgb, var(--accent) 22%, transparent);
+  --pill-bg: color-mix(in srgb, var(--bg) 85%, transparent);
+  --bg-sunken: #04060d;
+
+  --switcher-item: 16rem;
+  --switcher-item-sight: 20rem;
+  --switcher-item-requirement: 15rem;
+  --readout-item: 11rem;
+  --switcher-flip: 999;
+
+  --hero-wash:
+    radial-gradient(120% 90% at 70% 15%, var(--wash-accent), transparent 60%),
+    radial-gradient(90% 70% at 20% 80%, var(--wash-accent-faint), transparent 55%);
+  --hero-min: clamp(30rem, 82svh, 48rem);
+  --hero-fade: 30%;
+  --notfound-min: min(62svh, 35rem);
+  --holder-min: clamp(11rem, 24vw, 17rem);
+
+  --layer-masthead: 1;
+  --layer-skip-link: 2;
+
+  --leading-body: 1.6;
+  --leading-flat: 1.12;
+  --leading-tight: 1.25;
+  --leading-snug: 1.5;
+  --tracking-display: -0.02em;
+  --tracking-heading: -0.015em;
+  --tracking-subhead: -0.01em;
+  --tracking-cta: 0.06em;
+  --tracking-caps: 0.22em;
+  --tracking-wordmark: 0.34em;
+  --weight-medium: 500;
+  --radius-pill: 999px;
+  /* The mono face reads larger than the body at the same size. */
+  --code-size: 0.95em;
+  --sources-name-min: 15ch;
+}
+
+/* ── Global ─────────────────────────────────────────────────────────── */
+
+/* Read on the child .flow spaces, so a value set on a container must not
+   reach a nested .flow's children. Set it on `X > *`, never on X. */
+@property --flow-space {
+  syntax: '*';
+  inherits: false;
+}
+
+* {
+  box-sizing: border-box;
+  max-inline-size: var(--measure);
+}
+html,
+body,
+div,
+header,
+nav,
+main,
+footer,
+section,
+article,
+figure,
+img,
+video,
+table,
+thead,
+tbody,
+tr,
+th,
+td,
+dl,
+a {
+  max-inline-size: none;
+}
+
+html {
+  background: var(--bg);
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-mono);
+  font-size: var(--step-0);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+ul,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-flat);
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--step-5);
+}
+h2 {
+  font-size: var(--step-3);
+  letter-spacing: var(--tracking-heading);
+}
+h3 {
+  font-size: var(--step-1);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-subhead);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--link-color, var(--accent));
+  text-decoration: underline;
+  text-underline-offset: var(--underline-offset);
+  text-decoration-thickness: var(--hairline);
+}
+a:hover {
+  text-decoration: none;
+}
+a:where(:hover) {
+  color: var(--accent);
+}
+
+code {
+  font-family: inherit;
+  font-size: var(--code-size);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+::selection {
+  background: var(--selection-bg);
+}
+
+:focus-visible {
+  outline: var(--hairline) solid var(--accent);
+  outline-offset: var(--focus-offset);
+}
+
+img,
+video {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+/* ── Composition ────────────────────────────────────────────────────── */
+
+.region {
+  padding-block: var(--region-space, var(--space-xl-2xl));
+}
+
+.flow > * + * {
+  margin-block-start: var(--flow-space, var(--space-m));
+}
+.flow > h2 {
+  --flow-space: var(--space-l);
+}
+.flow > .label + * {
+  --flow-space: var(--space-2xs);
+}
+.flow > p + p {
+  --flow-space: var(--space-s);
+}
+
+/* States declare directly rather than through the channels, so they cannot
+   inherit into a nested cluster. */
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: var(--cluster-align, center);
+  gap: var(--cluster-space, var(--space-s) var(--space-m));
+}
+.cluster[data-state='repel'] {
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--cluster-space-tight);
+}
+
+/* --switcher-flip is not a number to tidy — README.md#responsiveness-has-no-breakpoints. */
+.switcher {
+  --switcher-items: 2;
+  --switcher-threshold: calc(
+    var(--switcher-items) * var(--switcher-item) +
+      (var(--switcher-items) - 1) * var(--switcher-space, var(--space-l))
+  );
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--switcher-space, var(--space-l));
+}
+.switcher > * {
+  flex-grow: 1;
+  flex-basis: calc((var(--switcher-threshold) - 100%) * var(--switcher-flip));
+}
+
+/* ── Block: masthead ───────────────────────────────────────────────── */
+
+.masthead {
+  padding-block: var(--space-s);
+  border-block-end: var(--rule);
+}
+.wordmark {
+  font-size: var(--step--1);
+  letter-spacing: var(--tracking-wordmark);
+  text-transform: uppercase;
+  color: var(--fg);
+  text-decoration: none;
+}
+.wordmark:hover {
+  color: var(--accent);
+}
+.masthead nav {
+  --cluster-align: baseline;
+  --cluster-space: var(--cluster-space-tight);
+  --link-color: var(--fg-dim);
+
+  font-size: var(--step--1);
+}
+
+/* ── Block: banner ─────────────────────────────────────────────────── */
+
+.banner {
+  position: relative;
+}
+.masthead[data-overlay] {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline: 0;
+  z-index: var(--layer-masthead);
+  border-block-end: none;
+  text-shadow: var(--text-halo);
+}
+
+/* ── Block: hero ───────────────────────────────────────────────────── */
+
+.hero {
+  display: grid;
+  min-block-size: var(--hero-min);
+}
+.hero > * {
+  grid-area: 1 / 1;
+}
+.hero-media {
+  position: relative;
+  display: grid;
+  align-content: start;
+  overflow: hidden;
+  background: var(--hero-wash), var(--bg);
+}
+/* Never tall enough to sit behind the copy — ../README.md#the-homepages-shape. */
+.hero-media::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  block-size: var(--hero-fade);
+  background: linear-gradient(to top, var(--bg), transparent);
+}
+.hero-media > img,
+.hero-media > video {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+/* Positioned because .hero-media is (for its fade): an unpositioned
+   sibling paints beneath it whatever the DOM order. Being later in the DOM
+   is then what puts the copy on top, so it needs no z-index. */
+.hero-copy {
+  position: relative;
+  align-self: end;
+  padding-block: var(--space-xl) var(--space-l-xl);
+  text-shadow: var(--text-halo);
+}
+.hero-copy .pill {
+  text-shadow: none;
+}
+.hero-copy h1 {
+  max-inline-size: var(--measure-micro);
+}
+
+/* ── Block: readout ────────────────────────────────────────────────── */
+
+.readout-band {
+  --region-space: var(--space-l);
+}
+.readout {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(var(--readout-item), 100%), 1fr)
+  );
+  gap: var(--hairline);
+  background: var(--border);
+  border: var(--rule);
+}
+/* No row gap on the cell: README.md#responsiveness-has-no-breakpoints. */
+.readout-cell {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  padding-block: var(--space-xs) var(--space-s);
+  padding-inline: var(--space-s);
+  background: var(--bg);
+}
+.readout-cell dt {
+  align-self: start;
+  padding-block-end: var(--space-3xs);
+}
+.readout-value {
+  align-self: center;
+  font-size: var(--step-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Block: section ────────────────────────────────────────────────── */
+
+.section {
+  border-block-start: var(--rule);
+}
+.section[data-tight] {
+  --region-space: var(--space-l-xl);
+}
+.section-head {
+  max-inline-size: var(--measure-short);
+}
+
+/* ── Block: claim ──────────────────────────────────────────────────── */
+
+.claim {
+  padding-block-start: var(--space-m);
+  border-block-start: var(--rule);
+}
+.claim h3 {
+  max-inline-size: var(--measure-compact);
+}
+
+/* ── Block: sight ──────────────────────────────────────────────────── */
+
+.sights > * {
+  --flow-space: var(--space-xl);
+}
+.sight {
+  --switcher-item: var(--switcher-item-sight);
+
+  align-items: center;
+}
+.sight:nth-child(even of .sight) {
+  flex-direction: row-reverse;
+}
+.sight-copy {
+  max-inline-size: var(--measure-medium);
+}
+.sight-copy > * {
+  --flow-space: var(--space-s);
+}
+.sight-media {
+  display: block;
+  text-decoration: none;
+  border: var(--rule);
+}
+.sight-media:hover {
+  border-color: var(--accent);
+}
+.sight-media > img,
+.sight-media > video {
+  inline-size: 100%;
+}
+/* Built by ../replay.ts. */
+.replay-frame {
+  position: relative;
+}
+.replay {
+  position: absolute;
+  inset-block-end: var(--space-2xs);
+  inset-inline-end: var(--space-2xs);
+  padding: var(--space-3xs);
+  font: inherit;
+  font-size: var(--step-2);
+  line-height: var(--leading-flat);
+  color: var(--fg-dim);
+  text-shadow: var(--text-halo);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.replay:hover {
+  color: var(--fg);
+}
+.sight-go {
+  letter-spacing: var(--tracking-cta);
+}
+
+/* ── Block: plate ──────────────────────────────────────────────────── */
+
+.plate img {
+  border: var(--rule);
+}
+.plate-caption {
+  --flow-space: var(--space-2xs);
+
+  font-size: var(--step--2);
+  line-height: var(--leading-snug);
+  color: var(--fg-dim);
+}
+
+/* Sized by min-block-size rather than aspect-ratio: a ratio box clips its
+   own instructions at narrow widths, and a real <img width height> brings
+   its own ratio when it lands. */
+.holder {
+  display: grid;
+  align-content: center;
+  gap: var(--space-2xs);
+  min-block-size: var(--holder-min);
+  padding: var(--space-s);
+  border: var(--hairline) dashed var(--border-strong);
+  background: var(--bg-sunken);
+  font-size: var(--step--2);
+  line-height: var(--leading-snug);
+  color: var(--fg-dim);
+}
+.holder b {
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+/* ── Block: pill ───────────────────────────────────────────────────── */
+
+.pill {
+  padding-block: var(--space-2xs);
+  padding-inline: var(--space-m);
+  font-size: var(--step--1);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg);
+  background: var(--pill-bg);
+  border: var(--rule-strong);
+  border-radius: var(--radius-pill);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pill[data-primary] {
+  color: var(--bg);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+/* Must follow [data-primary] — README.md#house-style. */
+.pill:hover {
+  color: var(--accent);
+  background: var(--pill-bg);
+  border-color: var(--accent);
+}
+
+/* ── Block: prose ──────────────────────────────────────────────────── */
+
+.label {
+  display: block;
+}
+.label,
+.sources th {
+  font-size: var(--step--2);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.label[data-accent] {
+  color: var(--accent);
+}
+
+.lead {
+  max-inline-size: var(--measure-lead);
+  font-size: var(--step-1);
+  line-height: var(--leading-snug);
+}
+
+.aside,
+.claim p,
+.sight-copy p,
+.spec-list li,
+.requirement p,
+.footer {
+  font-size: var(--step--1);
+  color: var(--fg-dim);
+}
+.aside,
+.footer {
+  --link-color: var(--fg-dim);
+}
+
+/* ── Block: skip link ──────────────────────────────────────────────── */
+
+.skip-link {
+  position: absolute;
+  inset-block-start: var(--space-2xs);
+  inset-inline-start: var(--gutter);
+  z-index: var(--layer-skip-link);
+  padding-block: var(--space-2xs);
+  padding-inline: var(--space-s);
+  background: var(--bg-2);
+  border: var(--rule-strong);
+  color: var(--fg);
+  text-decoration: none;
+}
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+  block-size: var(--hairline);
+  inline-size: var(--hairline);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ── Block: sources table ──────────────────────────────────────────── */
+
+.table-scroll {
+  overflow-x: auto;
+  border: var(--rule);
+}
+.sources {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--step--1);
+}
+/* On the cells, not the table: the UA centres a th whose inherited
+   text-align is the initial value, and `start` is the initial value. */
+.sources :is(th, td) {
+  padding-inline: var(--space-s);
+  text-align: start;
+}
+.sources th {
+  padding-block: var(--space-2xs);
+  font-weight: normal;
+  border-block-end: var(--rule);
+  white-space: nowrap;
+}
+.sources td {
+  padding-block: var(--space-xs);
+  vertical-align: top;
+  line-height: var(--leading-snug);
+  color: var(--fg-dim);
+}
+.sources tr + tr td {
+  border-block-start: var(--rule);
+}
+.sources td:first-child {
+  color: var(--fg);
+  min-inline-size: var(--sources-name-min);
+}
+.sources :is(th, td):nth-child(2) {
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  white-space: nowrap;
+}
+
+/* ── Block: spec list ──────────────────────────────────────────────── */
+
+.spec-list {
+  padding: 0;
+  list-style: none;
+}
+.spec-list li {
+  padding-block: var(--space-xs);
+  line-height: var(--leading-snug);
+}
+.spec-list li + li {
+  border-block-start: var(--rule);
+}
+.spec-list li:first-child {
+  padding-block-start: 0;
+}
+.spec-list b {
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+}
+
+/* ── Block: requirement ────────────────────────────────────────────── */
+
+.requirements {
+  --switcher-item: var(--switcher-item-requirement);
+}
+.requirement > * {
+  --flow-space: var(--space-2xs);
+}
+.requirement {
+  padding-block-start: var(--space-xs);
+  border-block-start: var(--rule-strong);
+}
+.requirement p {
+  max-inline-size: var(--measure-short);
+}
+
+/* ── Block: footer ─────────────────────────────────────────────────── */
+
+.footer {
+  padding-block: var(--space-m) var(--space-l);
+  border-block-start: var(--rule);
+}
+.footer-version {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Block: not found ──────────────────────────────────────────────── */
+
+.notfound {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: var(--notfound-min);
+}
+/* Auto inline margins on a flex item stop it stretching, so the .wrapper
+   would shrink to its text rather than take the page's column. */
+.notfound > * {
+  inline-size: 100%;
+}
+
+/* ── Utilities ──────────────────────────────────────────────────────── */
+
+.wrapper {
+  max-inline-size: var(--column) !important;
+  margin-inline: auto !important;
+  padding-inline: var(--gutter) !important;
+}

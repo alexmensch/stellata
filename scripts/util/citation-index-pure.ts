@@ -222,7 +222,7 @@ export function passageDefect(row: ClaimRow, copy: CopyText): string | null {
     if (missing !== undefined) return notInCopy(missing);
     const wanted = lineLocators(row.page);
     if (!wanted.size) return `no line locator for a ReadMe copy: "${row.page}"`;
-    const hits = offsets(copy.flat, fragments[0]).map((at) => copy.lineStarts.findLastIndex((start) => start <= at) + 1);
+    const hits = offsets(copy.flat, fragments[0]).map((at) => copy.lineStarts.filter((start) => start <= at).length);
     return hits.some((n) => wanted.has(n)) ? null : `"${row.page}", but the passage is at l. ${hits.slice(0, 3).join(', ')}`;
   }
   const pagesWith = (fragment: string): number[] => [

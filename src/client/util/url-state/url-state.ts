@@ -17,10 +17,10 @@ import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
-import { buildSharePath, pickShareBlob } from './share-path-pure';
+import { APP_PATH, buildSharePath, pickShareBlob } from './share-path-pure';
 import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
-} from './pose-change-pure';
+} from './pose-change/pose-change-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import type {
   CoordSphereFrame,
@@ -51,7 +51,7 @@ const SCHEMA_VERSION_V3 = 3;
 const SCHEMA_VERSION = 4;
 // Quantised-scalar slots only — `fov` in degrees and `ev` in stops, each far
 // coarser than this. Pose vectors carry no absolute threshold at all; they go
-// through `pose-change-pure.ts`.
+// through `pose-change/pose-change-pure.ts`.
 const SCALAR_EPS = 1e-3;
 
 // Default values that the encoder uses to decide whether to omit a field.
@@ -1139,8 +1139,8 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   const t = encodeTgt;
   anchoredPose(stellata, focused, c, t);
   const u = stellata.camera.up;
-  // README.md#what-counts-as-a-camera-move owns every gate below — each a
-  // fraction of the orbit radius, none a distance.
+  // pose-change/README.md#what-counts-as-a-camera-move owns every gate
+  // below — each a fraction of the orbit radius, none a distance.
   //
   // Don't collapse this to one predicate: vec3FieldV3.isPresent re-checks at
   // strict equality, and that inner layer is what keeps sub-µpc floating-origin
@@ -1507,36 +1507,38 @@ function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   // and is also passed to encodeBlobWithMask so the encoder doesn't
   // re-walk FIELDS_V4.
   const mask = computePresence(view);
-  const path = mask === 0 ? '/' : buildSharePath(encodeBlobWithMask(view, mask));
+  const path = mask === 0 ? APP_PATH : buildSharePath(encodeBlobWithMask(view, mask));
   if (path !== location.pathname + location.search) {
     replacePathKeepHash(path);
   }
 }
 
-// Nothing decodable in the URL (bogus path, stray query, or a `/v/<blob>/`
-// whose blob won't decode) → strip the address bar back to bare `/`. The
-// SPA not_found_handling already served index.html for any path; this is
-// the client half that keeps the bar off junk the user can't act on,
-// rather than leaving the unmatched path sitting there.
+// Nothing decodable in the URL (a stray query, or a share path whose blob
+// won't decode) → strip the address bar back to the app's own bare path.
+// The document was served for an unmatched path under /app (src/worker.ts);
+// this is the client half that keeps the bar off junk the user can't act
+// on, rather than leaving that path sitting there. It must NOT reset to
+// `/` — that is the public homepage, and resetting there would throw the
+// user out of the app over a typo.
 function resetJunkUrl(): void {
-  if (location.pathname !== '/' || location.search !== '') {
-    replacePathKeepHash('/');
+  if (location.pathname !== APP_PATH || location.search !== '') {
+    replacePathKeepHash(APP_PATH);
   }
 }
 
 export interface AppliedUrl {
-  /** A state blob was present and applied — from the canonical `/v/<blob>/`
-   *  path or the legacy `?v=` query param, any schema version. False sends
-   *  the caller to the canonical first-load view; a malformed blob is false
-   *  too, so the user lands on the framed default rather than the unframed
-   *  canvas-default pose. */
+  /** A state blob was present and applied — from the canonical
+   *  `/app/v/<blob>/` path or either legacy transport, any schema version.
+   *  False sends the caller to the canonical first-load view; a malformed
+   *  blob is false too, so the user lands on the framed default rather than
+   *  the unframed canvas-default pose. */
   applied: boolean;
   /** README.md#a-focus-that-resolves-after-the-pose. */
   focusPending: Promise<void> | null;
 }
 
 export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
-  const { blob, legacyQueryForm } = pickShareBlob(location.pathname, location.search);
+  const { blob, legacyTransport } = pickShareBlob(location.pathname, location.search);
   if (!blob) {
     resetJunkUrl();
     return { applied: false, focusPending: null };
@@ -1554,12 +1556,13 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
   // the canonical path form when the link arrived in legacy query form OR
   // in a superseded schema (the /docs/sid.md#94-migration-semantics--exact-table migration: HIP refs land
   // exactly, index/cloud refs freeze to the current build, unresolvable
-  // refs drop). Both conditions must stay — a current-schema `?v=` link
-  // needs the query→path rewrite even though its bytes wouldn't change.
-  // The rewrite is address-bar only; already-posted `?v=` links keep
-  // decoding forever. Defers past state-change events the apply itself
-  // triggers, which would otherwise schedule their own write on top.
-  if (legacyQueryForm || decoded.version !== SCHEMA_VERSION) {
+  // refs drop). Both conditions must stay — a current-schema link on a
+  // legacy transport needs the rewrite even though its bytes wouldn't
+  // change. The rewrite is address-bar only; already-posted `?v=` and
+  // root-relative `/v/` links keep decoding forever. Defers past
+  // state-change events the apply itself triggers, which would otherwise
+  // schedule their own write on top.
+  if (legacyTransport || decoded.version !== SCHEMA_VERSION) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
   return { applied: true, focusPending };
@@ -1668,8 +1671,8 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
     const u = stellata.camera.up;
     // Steady-state path: one scale-free comparison against the snapshot
-    // (`pose-change-pure.ts`). No allocations on the no-change path — this
-    // used to be 10+ string allocations per frame from a toFixed(3)×9 hash.
+    // (`pose-change/pose-change-pure.ts`). No allocations on the no-change
+    // path: this runs every frame.
     if (poseChanged(lastCam, frameCam, frameTgt, u)) {
       snapshotCam(lastCam, frameCam, frameTgt, u);
       changed = true;

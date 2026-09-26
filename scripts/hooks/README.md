@@ -58,8 +58,9 @@ scripts/hooks/
   skill-guard.sh           Blocks Write / Edit / NotebookEdit against a
                            file a rule names until that rule's skill has
                            been invoked this session; a Skill call naming
-                           it arms the session. Rules: *.css → cube-css;
-                           code (ts/tsx/js/mjs/cjs/py/sh/wgsl/glsl) →
+                           it arms the session. Rules: *.css → cube-css,
+                           Read / Grep gated too; code
+                           (ts/tsx/js/mjs/cjs/py/sh/wgsl/glsl) →
                            code-craft.
                            Behaviour pinned by tests/skill-guard.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
@@ -201,13 +202,21 @@ without it the call is denied with the skill named. Arming every invoked
 name rather than only the guarded ones keeps the rule table the single list
 of which skills gate anything.
 
+**cube-css gates the read, not only the edit.** Reading a stylesheet is
+where planning starts, and a session that reads one, designs its change and
+only then meets the gate at the edit has already designed without the
+skill. A Grep into a single `.css` file is a read; a Grep over a directory
+carries no `.css` path, so no rule claims it. code-craft gates edits only:
+reading code is how every investigation starts, most of which change
+nothing.
+
 The gate exists because the load looks redundant from inside the repo and
-is not. A folder README documents the **house style** — which layer each
-rule landed in here, and why — while the system underneath it (the layout
-primitives, the no-width-query mandate, the review gates) belongs to the
-skill, and a README describing the one reads convincingly like coverage of
-the other. A session that has read the README therefore believes it is
-already briefed.
+is not. [House style](/src/site/styles/README.md#house-style) documents the **house
+style** — which layer each rule landed in here, and why — while the system
+underneath it (the layout primitives, the no-width-query mandate, the
+review gates) belongs to the skill, and a README describing the one reads
+convincingly like coverage of the other. A session that has read the
+README therefore believes it is already briefed.
 
 **code-craft has a second trap: the change does not look like design.**
 Its trigger names design, refactor and review, and a bug fix reads as none

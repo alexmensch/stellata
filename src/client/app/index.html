@@ -9,7 +9,7 @@
       name="description"
       content="A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented."
     />
-    <link rel="canonical" href="https://stellata.xyz/" />
+    <link rel="canonical" href="https://stellata.xyz/app" />
     <meta name="robots" content="index,follow,max-image-preview:large" />
     <meta name="author" content="Alex Marshall" />
     <meta name="theme-color" content="#000000" />
@@ -21,7 +21,7 @@
       property="og:description"
       content="A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented."
     />
-    <meta property="og:url" content="https://stellata.xyz/" />
+    <meta property="og:url" content="https://stellata.xyz/app" />
     <meta property="og:image" content="https://stellata.xyz/og-image.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
@@ -63,7 +63,7 @@
             "@id": "https://stellata.xyz/#webapp",
             "name": "Stellata",
             "alternateName": "Stellata Star Catalog",
-            "url": "https://stellata.xyz/",
+            "url": "https://stellata.xyz/app",
             "image": "https://stellata.xyz/og-image.jpg",
             "description": "A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented.",
             "applicationCategory": "EducationalApplication",
@@ -80,7 +80,7 @@
       }
     </script>
 
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="../styles.css" />
   </head>
   <body>
     <canvas id="scene"></canvas>
@@ -143,7 +143,7 @@
            chart-labels.ts (which refuses to mint a missing one). This
            sequence is their paint order and it is load-bearing: con names
            under star names, all three under the HUD stack below — see
-           chart-mode/labels/README.md#label-engine--glyphs. -->
+           ../chart-mode/labels/README.md#label-engine--glyphs. -->
       <g id="chart-con-labels" class="chart-label-layer" style="display: none"></g>
       <g id="chart-labels" class="chart-label-layer" style="display: none"></g>
       <g id="chart-glyphs" style="display: none"></g>
@@ -443,8 +443,8 @@
               <div><a href="https://gea.esac.esa.int/archive/" target="_blank" rel="noopener noreferrer">Gaia DR3</a> — ESA / DPAC: raw astrometry, broadband photometry, astrophysical parameters (Teff, log g, [M/H]), and non-single-star orbits</div>
               <div><a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/I/259" target="_blank" rel="noopener noreferrer">Tycho-2</a> — Høg et al. 2000: positions at each star's own mean epoch, proper motions, <em>B</em><sub>T</sub>/<em>V</em><sub>T</sub> photometry</div>
               <div><a href="https://doi.org/10.1051/0004-6361/202244250" target="_blank" rel="noopener noreferrer">CNS5</a> — Golovin et al. 2023: the fifth catalogue of nearby stars, supplying <em>GJ</em> designations and parallaxes inside 25 pc</div>
-              <div>Classic designation cross indexes — Tycho-2 <em>HD</em> identifications (Fabricius et al. 2002), the Bayer / Flamsteed cross index (Kostjuk 2004), and the <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50" target="_blank" rel="noopener noreferrer">Bright Star Catalogue</a> 5th revised (Hoffleit &amp; Warren 1991): every classical designation the catalogue carries</div>
-              <div><a href="https://www.iau.org/science/scientific_bodies/working_groups/280/" target="_blank" rel="noopener noreferrer">IAU Working Group on Star Names</a> — the naming authority behind every proper name displayed</div>
+              <div>Classic designation cross indexes — Tycho-2 <em>HD</em> identifications (Fabricius et al. 2002), the Bayer / Flamsteed cross index (Kostjuk 2002), and the <a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50" target="_blank" rel="noopener noreferrer">Bright Star Catalogue</a> 5th revised (Hoffleit &amp; Warren 1991): every classical designation the catalogue carries</div>
+              <div><a href="https://www.pas.rochester.edu/~emamajek/WGSN/" target="_blank" rel="noopener noreferrer">IAU Working Group on Star Names</a> — the naming authority behind every proper name displayed</div>
               <div><a href="https://codeberg.org/astronexus/athyg" target="_blank" rel="noopener noreferrer">AT-HYG v3.3</a> — David Nash's combined Tycho-2 / Hipparcos / Gaia catalogue: the authority on which stars are one object and which Gaia source each is bound to</div>
               <div><a href="https://simbad.cds.unistra.fr/simbad/" target="_blank" rel="noopener noreferrer">SIMBAD</a> — CDS Strasbourg: cross-identifications and catalogue validation</div>
               <div><a href="https://doi.org/10.1051/0004-6361/202039587" target="_blank" rel="noopener noreferrer">Riello et al. 2021</a> — Gaia photometric relations: the <em>G</em> → Johnson <em>V</em> transform every star's brightness is derived through</div>
@@ -457,7 +457,7 @@
               <div class="credit-label">Double &amp; multiple stars</div>
               <div><a href="http://www.astro.gsu.edu/wds/" target="_blank" rel="noopener noreferrer">Washington Double Star Catalog</a> — USNO: resolved pair geometry</div>
               <div><a href="http://www.astro.gsu.edu/wds/orb6.html" target="_blank" rel="noopener noreferrer">Sixth Orbit Catalog (ORB6)</a> — USNO: computed visual orbits</div>
-              <div><a href="https://doi.org/10.3847/1538-4365/aaa7d9" target="_blank" rel="noopener noreferrer">Multiple Star Catalog</a> — Tokovinin 2018 (Pulkovo): hierarchical subsystem orbits</div>
+              <div><a href="https://doi.org/10.3847/1538-4365/aaa1a5" target="_blank" rel="noopener noreferrer">Multiple Star Catalog</a> — Tokovinin 2018 (Pulkovo): hierarchical subsystem orbits</div>
               <div><a href="https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239" target="_blank" rel="noopener noreferrer">Hipparcos CCDM</a> — ESA: HIP double-star cross-match (Dommanget &amp; Nys 1994 component register)</div>
             </div>
             <div class="credit-entry">
@@ -471,7 +471,7 @@
             </div>
             <div class="credit-entry">
               <div class="credit-label">Interstellar medium</div>
-              <div><a href="https://doi.org/10.5281/zenodo.8187943" target="_blank" rel="noopener noreferrer">Edenhofer et al. 2024</a> — 3D dust extinction map of the local Milky Way</div>
+              <div><a href="https://doi.org/10.1051/0004-6361/202347628" target="_blank" rel="noopener noreferrer">Edenhofer et al. 2024</a> — 3D dust extinction map of the local Milky Way</div>
               <div><a href="https://doi.org/10.3847/1538-4357/ac1f96" target="_blank" rel="noopener noreferrer">Zucker et al. 2020 &amp; 2021</a> — molecular-cloud distances, 3D bounding boxes, density profiles</div>
               <div><a href="https://doi.org/10.1038/s41586-021-04286-5" target="_blank" rel="noopener noreferrer">Zucker et al. 2022</a> — Local Bubble inner-surface map</div>
             </div>
@@ -485,13 +485,13 @@
             </div>
             <div class="credit-entry">
               <div class="credit-label">Heliopause boundary</div>
-              <div><a href="https://voyager.jpl.nasa.gov/" target="_blank" rel="noopener noreferrer">Voyager 1 &amp; 2</a> — boundary crossings (2012, 2018) + IBEX / Cassini ENA heliotail estimates</div>
-              <div><a href="https://doi.org/10.1146/annurev-astro-082312-140843" target="_blank" rel="noopener noreferrer">Frisch &amp; Slavin 2013</a> — solar apex direction through the local ISM</div>
+              <div><a href="https://science.nasa.gov/mission/voyager/" target="_blank" rel="noopener noreferrer">Voyager 1 &amp; 2</a> — boundary crossings (2012, 2018) + IBEX / Cassini ENA heliotail estimates</div>
+              <div><a href="https://doi.org/10.1088/0067-0049/220/2/22" target="_blank" rel="noopener noreferrer">McComas et al. 2015</a> — IBEX interstellar inflow: the heliosphere's nose direction</div>
             </div>
             <div class="credit-entry">
               <div class="credit-label">Nearby galaxies</div>
               <div><a href="https://doi.org/10.1088/0004-6256/144/1/4" target="_blank" rel="noopener noreferrer">McConnachie 2012</a> — Local Group positions, distances, luminosities</div>
-              <div><a href="https://doi.org/10.33232/001c.144859" target="_blank" rel="noopener noreferrer">Local Volume Database</a> — Pace 2024: dwarf-galaxy positions, distances, structural parameters and photometry</div>
+              <div><a href="https://doi.org/10.33232/001c.144859" target="_blank" rel="noopener noreferrer">Local Volume Database</a> — Pace 2025: dwarf-galaxy positions, distances, structural parameters and photometry</div>
             </div>
           </div>
           <p style="margin-top: 16px;">
@@ -756,6 +756,6 @@
       <span class="controls-restore-label"><span class="controls-restore-text">Show controls</span></span>
     </button>
 
-    <script type="module" src="./main.ts"></script>
+    <script type="module" src="../main.ts"></script>
   </body>
 </html>

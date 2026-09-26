@@ -1,47 +1,27 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
-import { readFileSync } from 'node:fs';
-import { catalogChunkFilename, readCatalogHeader } from './scripts/catalog/record/catalog-pure.ts';
+import { publishBuildEnv } from './vite.env.ts';
+import { documentRoutingInDev } from './vite.site-dev.ts';
 
-// Expose package.json version as `import.meta.env.VITE_APP_VERSION`. The
-// VITE_ prefix is the supported way to inject build-time values that work
-// in both dev and prod (define behaves differently across the two).
-const pkgVersion: string = JSON.parse(
-  readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf8'),
-).version;
-process.env.VITE_APP_VERSION = pkgVersion;
-
-/**
- * The star count, read from the built catalogue's own header — never a
- * literal, so it cannot outlive the catalogue it describes. Empty string
- * on a checkout that has not run `build:catalog`; every consumer needs a
- * wording that works without it (`docs/authoring-patterns.md#the-star-count-is-never-a-literal`).
- */
-function builtStarCount(): string {
-  try {
-    const buf = readFileSync(resolve(import.meta.dirname, 'public', catalogChunkFilename(0)));
-    const bytes = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    return readCatalogHeader(bytes as ArrayBuffer).count.toLocaleString('en-US');
-  } catch {
-    return '';
-  }
-}
-process.env.VITE_STAR_COUNT = builtStarCount();
+publishBuildEnv(import.meta.dirname);
 
 export default defineConfig(() => ({
   base: '/',
+  // Drop it and Vite's fallback serves the homepage for every path.
+  // src/site/README.md#reading-it-in-dev.
+  appType: 'custom' as const,
+  plugins: [documentRoutingInDev(import.meta.dirname)],
   root: resolve(import.meta.dirname, 'src/client'),
   publicDir: resolve(import.meta.dirname, 'public'),
   build: {
     outDir: resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
     target: 'es2022',
-    // Sits above the entry chunk on purpose. JS is ~1% of the bytes before
-    // first frame (the catalogue fetch dominates), and a three/app vendor
-    // split leaves both halves near 500 kB, so it silences nothing.
+    // src/client/app/README.md#the-chunk-size-limit-is-raised-not-chased.
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
-      input: resolve(import.meta.dirname, 'src/client/index.html'),
+      // src/client/app/README.md#why-one-file-has-a-folder-to-itself.
+      input: resolve(import.meta.dirname, 'src/client/app/index.html'),
     },
   },
   server: {

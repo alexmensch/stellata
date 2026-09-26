@@ -1,8 +1,8 @@
 {
   "name": "Stellata",
   "short_name": "Stellata",
-  "description": "A browser-based 3D model of our galaxy rendering 313,257 real stars.",
-  "start_url": "/",
+  "description": "A browser-based 3D model of the real universe, every object placed from published astronomical measurement and drawn in true colour.",
+  "start_url": "/app",
   "display": "browser",
   "background_color": "#000000",
   "theme_color": "#000000",

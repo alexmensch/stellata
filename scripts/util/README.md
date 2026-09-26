@@ -1,8 +1,21 @@
 # Util — shared build-script helpers
 
 Cross-pipeline helpers that don't belong to any single per-pipeline
-folder. New entries land here only when at least two build scripts
-need the same thing — single-use helpers stay with their consumer.
+folder. New entries land here only when at least two consumers need the
+same thing — single-use helpers stay with their consumer. One entry is
+shared with `tests/` rather than with a second pipeline, and that is the
+bar: repo plumbing with several callers, not a build helper with one.
+
+- `citation-index-pure.ts` — the parser for `data/papers/index.md`
+  entries and `manifest.json` pins. Read by `site/site-metrics.ts`, whose
+  reference count is the index's entry count, and by
+  `tests/citation-index.test.ts`, which holds the index to its rules
+  ([Cited papers](/data/papers/README.md#what-enforces-it)).
+
+- `escape-regexp.ts` (+ test) — `escapeRegExp(text)`, text made literal
+  inside a `RegExp` source, backslash included. Every pattern built from
+  page text or a figure goes through it; a hand-rolled character class
+  beside it is the defect CodeQL's `js/incomplete-sanitization` flags.
 
 - `astronomy_constants.py` — Python mirror of
   `src/client/util/astronomy-constants.ts`. `J2000_JD`,
