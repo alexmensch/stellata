@@ -235,20 +235,21 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
                          resolution and the scanned corpus, shared by
                          doc-pointer-resolution.test.ts and
                          citation-index.test.ts.
+walk-files.ts            Not a test — file enumeration the scanners above
+                         share. `walkFiles` is a recursive walk taking
+                         `include` / `skipDir` predicates, and follows
+                         symlinked directories, which public/ carries.
+                         `gitFiles` is git's list (tracked, optionally
+                         untracked-but-not-ignored), for a scan whose
+                         scope is the repo rather than a folder list.
+                         Also `isProductionTs`, the include predicate the
+                         TSL scanners share: a .ts that is neither a test
+                         nor an ambient declaration.
+                         webgpu-import-boundary.test.ts keeps
+                         its own broader `isClientSource` — a declaration
+                         file can carry an import, so that corpus wants
+                         globals.d.ts in scope.
 ```
-
-The recursive file walk the scanners above share lives in
-`scripts/util/walk-files.ts` — `scripts/site/site-metrics.ts` reads the
-same corpus at build time, so it is repo plumbing rather than a test
-helper. `walkFiles` is a recursive walk taking `include` / `skipDir`
-predicates, and follows symlinked directories, which public/ carries.
-`gitFiles` is git's list (tracked, optionally untracked-but-not-ignored),
-for a scan whose scope is the repo rather than a folder list. It carries
-`isProductionTs` too, the include predicate the three
-TSL scanners share: a `.ts` that is neither a test nor an ambient
-declaration. `webgpu-import-boundary.test.ts` keeps its own broader
-`isClientSource` — a declaration file can carry an import, so that corpus
-wants `globals.d.ts` in scope.
 
 Per-subsystem tests live next to their code (`*.test.ts` / `*.test.py`
 co-located with the module under test); only repo-wide invariants

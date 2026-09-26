@@ -6,12 +6,6 @@ same thing — single-use helpers stay with their consumer. One entry is
 shared with `tests/` rather than with a second pipeline, and that is the
 bar: repo plumbing with several callers, not a build helper with one.
 
-- `walk-files.ts` — the recursive file walk over a directory, taking
-  `include` / `skipDir` predicates. Follows symlinked directories, which
-  `public/` carries. Read by every repo-meta scanner in `tests/`
-  (code-comment rules, bundle content, both TSL rosters, doc pointers). Carries `isProductionTs`
-  too: a `.ts` that is neither a test nor an ambient declaration.
-
 - `citation-index-pure.ts` — the parser for `data/papers/index.md`
   entries and `manifest.json` pins. Read by `site/site-metrics.ts`, whose
   reference count is the index's entry count, and by

@@ -4,7 +4,7 @@ import { existsSync, lstatSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
 import GithubSlugger from 'github-slugger';
 import { Lexer, type Token, walkTokens } from 'marked';
-import { gitFiles, lfsTracked } from '../scripts/util/walk-files';
+import { gitFiles, lfsTracked } from './walk-files';
 
 export interface DocPointer {
   citedPath: string;
