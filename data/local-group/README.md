@@ -47,7 +47,7 @@ the major spirals).
 | `name`              | Matches LVDB's `name` column for merge, **or** names a standalone object not in LVDB. |
 | `a_pc / b_pc / c_pc`| Local-frame semi-axes in parsecs. |
 | `orient`            | Orientation spec: `pa:X` (sky-plane PA), `disc:i=X,pa=Y` (Magellanic-style inclined disc), `los` (line-of-sight elongated). |
-| `source`            | Primary structural reference, as an index citation (`Label (/data/papers/index.md#key)`). Documentation only; the build does not read it. |
+| `source`            | Primary structural reference, as an index citation in label form ([Cited papers](/data/papers/README.md#how-the-tree-cites-a-work)). Documentation only; the build does not read it. |
 | `ra_deg`            | *Optional standalone position.* Populated for objects not in LVDB; leave empty for LVDB-merge rows. |
 | `dec_deg`           | *Optional standalone position.* Same — all three must be set together or all three empty. |
 | `distance_kpc`      | *Optional standalone position.* Same. |
