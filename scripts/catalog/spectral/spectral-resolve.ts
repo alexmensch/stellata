@@ -128,7 +128,7 @@ function matchSimbadRow(
 export const CURATED_SPTYPE_BY_HIP: ReadonlyMap<number, string> = new Map([
   // Castor A (α Gem) — SIMBAD * alf Gem A sp_type=A1.5IV+ (Gray 2003
   // (/data/papers/index.md#gray2003)).
-  [36850, 'A1.5IV'],
+  [36850, 'A1.5IV+'],
 ]);
 
 export type SpectralSource = 'curated' | 'simbad' | 'gspspec' | 'fallback';

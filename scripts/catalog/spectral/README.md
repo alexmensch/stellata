@@ -45,7 +45,7 @@ priority chain:
 0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
    saturated stars whose SIMBAD entry is a component-lettered main_id
    carrying neither hip nor source_id, so both machine tiers below miss
-   (Castor: '* alf Gem A' A1.5IV+, curated as A1.5IV). Mirrors the
+   (Castor: '* alf Gem A' A1.5IV+, curated as Gray 2003's A1.5 IV+). Mirrors the
    binaries pipeline's `component_sptype_overrides.tsv` curated tier. Sol takes the same
    curated route via a proper-name special case in `stars-parse.ts`.
 1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`

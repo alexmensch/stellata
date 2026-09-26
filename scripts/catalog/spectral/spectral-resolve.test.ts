@@ -46,7 +46,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     expect(out.source).toBe('curated');
     expect(out.info.classIdx).toBe(2); // A
     expect(out.info.lumClass).toBe(3); // IV
-    expect(out.spectDisplay).toBe('A1.5IV');
+    expect(out.spectDisplay).toBe('A1.5IV+');
   });
 
   it('tier 1: SIMBAD-by-source_id wins when present and parseable', () => {
