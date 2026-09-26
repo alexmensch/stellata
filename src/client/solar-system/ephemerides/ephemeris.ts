@@ -19,9 +19,9 @@ const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;
 
 // JPL Table 2a — J2000 mean elements + Julian-century rates. Angles in
-// degrees / deg-per-century; semi-major axis in AU. EM Bary stands in
-// for Earth at this approximation level (sub-arcsec offset between Earth
-// and EM-Bary is irrelevant at pixel scale).
+// degrees / deg-per-century; semi-major axis in AU. The EM Bary row is the
+// Earth/Moon barycentre, not Earth: `earthMoonSplit` (moon-ephemeris.ts)
+// divides it into the two bodies.
 interface ElementSet {
   a: number;  aDot: number;  // semi-major axis (AU)
   e: number;  eDot: number;  // eccentricity
@@ -31,7 +31,7 @@ interface ElementSet {
   longperi: number;  longperiDot: number;
   // longitude of ascending node Ω (deg)
   longnode: number;  longnodeDot: number;
-  // Cubic Jupiter–Pluto perturbation terms for the mean anomaly. Zero
+  // Table 2b quadratic + periodic Jupiter–Pluto terms for the mean anomaly. Zero
   // for inner planets — the (b·T² + c·cos(fT) + s·sin(fT)) correction is
   // a numerical patch for the linear-elements model's blind spots near
   // mean-motion resonances (Jupiter–Saturn, Uranus–Neptune, Neptune–Pluto).

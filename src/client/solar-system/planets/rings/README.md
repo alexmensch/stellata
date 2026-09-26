@@ -162,8 +162,9 @@ against a black band is the trade.
   anything an Earth-bound fit saw. Held at the 27° value: a stated
   clamp, not a silent extrapolation.
 - **Backlit — the host and the viewer on opposite faces.** Out of
-  domain, not merely unfitted: from Earth β_v and β_h never differ in
-  sign, and [Mallama 2018](/data/papers/index.md#mallamahilton2018)'s own rule is β = 0, no ring term at all. Stellata's
+  domain, not merely unfitted: from Earth β_v and β_h differ in sign only
+  rarely, briefly around a ring-plane crossing, and [Mallama 2018](/data/papers/index.md#mallamahilton2018)'s own rule
+  for that case is β = 0, no ring term at all. Stellata's
   camera reaches this routinely, so the term survives scaled by
   `RING_BACKLIT_TRANSMIT` — **the same constant the annulus graph above
   dims its unlit face by**, which it imports from here. That shared
@@ -205,15 +206,15 @@ let the opposition surge vote on how much lit ring surface the exposure
 pin divides its masked mean by — brightness masquerading as area. Pinned.
 
 **Cassini corroborates the width, independently.** [Déau 2013](/data/papers/index.md#deau2013)
-(Cassini/ISS) measure the surge half-width at 0.20° in the A and B rings
-and at ≥ 0.26° in the C ring and the Cassini Division. Eq. 10's own
+(Cassini/ISS) measure the surge half-width at 0.2° where τ > 1.5 (0.25° over
+τ > 1) and at ≥ 0.26° in the C ring and the Cassini Division. Eq. 10's own
 `exp(−2.25·α)` half-falls at `ln2/2.25` = 0.308°. An Earth-based
 disc-integrated fit and a spacecraft's resolved scans describe one
 feature at one width, which is why the annulus needs no second
 parametrisation.
 
 **The surge is strip-averaged, deliberately — a per-radius one is not
-derivable.** [Déau 2013](/data/papers/index.md#deau2013)'s per-region amplitudes are 1.25 (B), 1.39 (A) and
+derivable.** [Déau 2013](/data/papers/index.md#deau2013)'s per-region amplitudes are ~1.25 (B), ~1.4 (A) and
 ~1.5 for the C ring and the Cassini Division alike: the two regions furthest from the B
 ring's value are also the faintest, so flux-weighting collapses the
 spread to a few percent, and matching the disc-integrated law would then

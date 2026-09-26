@@ -15,8 +15,9 @@ from PIL import Image
 #
 # PLANETS — the adopted reference magnitudes of Mallama 2017
 # (/data/papers/index.md#mallama2017), Table 3. Saturn's V−Rc uses the
-# paper's internally-consistent synthetic pair (its photometric V and
-# synthetic Rc disagree by 0.17 mag, which would inflate the index). Uranus
+# paper's internally-consistent synthetic pair, 0.51: its photometric V
+# (−8.91) and synthetic V (−9.08) disagree by 0.17 mag, so the Reference
+# row's V−Rc (0.68) mixes systems and would inflate the index. Uranus
 # is carried for completeness though it ships no map.
 #
 # SATELLITES — Frey 1974 (/data/papers/index.md#frey1974), Table
@@ -52,9 +53,8 @@ COLOUR_INDICES = {
 # Johnson V−R → Cousins V−Rc, as paired columns tabulated by STScI: the
 # Johnson side is Ducati 2001 (/data/papers/index.md#ducati2001) Table
 # 3, the Cousins side that transformed by Bessell 1979
-# (/data/papers/index.md#bessell1979), except at 0.45, where Bessell's
-# relation gives 0.33. G0 through K5, which brackets every satellite row
-# above (0.48–0.84).
+# (/data/papers/index.md#bessell1979). G0 through K5, which brackets every
+# satellite row above (0.48–0.84).
 #
 # Interpolating a published pair beats restating Bessell's coefficients from
 # memory, and it cross-checks: inverting it at the adopted solar V−Rc gives a
@@ -82,7 +82,7 @@ def vrc_of(vr: float, system: str) -> float:
     )
 
 # Solar colour, same system (Ramírez 2012
-# (/data/papers/index.md#ramirez2012) solar-analog values). The renderer's
+# (/data/papers/index.md#ramirez2012) solar-twin values). The renderer's
 # reference white is the SOLAR SPECTRUM: a body reflecting sunlight
 # neutrally renders R = G = B, so a body's target chromaticity is its index
 # OFFSET from the Sun, as flux ratios.

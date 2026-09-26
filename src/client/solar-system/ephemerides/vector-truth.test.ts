@@ -156,8 +156,8 @@ describe('element tables vs JPL Horizons (DE441), inside 1900–2100', () => {
 
   it('beats the Standish series everywhere, by 3–4 orders at Jupiter and beyond', () => {
     // Mercury is the shallow end at ~3×: Standish 1992
-    // (/data/papers/index.md#standish1992) is already within 2e-5 AU there,
-    // because a 20″ longitude error at 0.39 AU is a small distance.
+    // (/data/papers/index.md#standish1992) is already close there — its
+    // 1800–2050 Mercury budget, 15″ in longitude, is under 3e-5 AU at 0.39 AU.
     // What the tables are for is Saturn outward, where the same series is off
     // by 0.05 AU and the camera can stand inside that.
     const OUTER: PlanetName[] = ['jupiter', 'saturn', 'uranus', 'neptune', 'pluto'];

@@ -14,8 +14,7 @@ manifest.json     grid params + chunk index.
 
 ## Provenance
 
-- **Citation**: [Edenhofer G., Zucker C., Frank P., Saydjari A. K.,
-  Schlafly E. F., Green G. M., Enßlin T. A. 2024](/data/papers/index.md#edenhofer2024)
+- **Citation**: [Edenhofer 2024](/data/papers/index.md#edenhofer2024)
   (`dustmaps` calls it `edenhofer2023`, after the preprint).
 - **Upstream data**: [Zenodo 8187943](https://doi.org/10.5281/zenodo.8187943).
 - **Licence**: CC-BY-4.0. The resampled grid here is a

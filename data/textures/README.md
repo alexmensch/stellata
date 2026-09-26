@@ -140,8 +140,7 @@ calibrates every map with a published disc-integrated colour to a
   replaces. Each row keeps the number its source published and
   `vrc_of` converts, interpolating paired Johnson/Cousins columns as
   tabulated by STScI: the Johnson side is [Ducati 2001](/data/papers/index.md#ducati2001) Table 3,
-  the Cousins side [Bessell 1979](/data/papers/index.md#bessell1979)'s transform of it (bar the 0.45 row,
-  where Bessell's relation gives 0.33 against the table's 0.30). Inverting
+  the Cousins side [Bessell 1979](/data/papers/index.md#bessell1979)'s transform of it. Inverting
   that transform at the adopted solar V−Rc returns a Johnson solar V−R of
   0.52, the value the system is usually quoted at, which is the cross-check
   that it is pointing the right way.
@@ -183,8 +182,9 @@ What the calibration corrects, per planet:
   tint: measured warm gray, replacing the old hand-tuned half-chroma
   judgement.
 - **Saturn** — Jónsson reconstruction, small warm correction. (Its
-  V−Rc uses the paper's internally-consistent synthetic pair; the
-  photometric V and synthetic Rc rows disagree by 0.17 mag.)
+  V−Rc is the paper's internally-consistent synthetic pair, 0.51: the
+  photometric V (−8.91) and synthetic V (−9.08) disagree by 0.17 mag, so
+  the Reference row's V−Rc (0.68) mixes systems.)
 - **Pluto** — NOT calibrated: no adopted index row in [Mallama 2017](/data/papers/index.md#mallama2017),
   and the New Horizons natural-ish colour is trusted as shipped. The
   un-imaged southern band (real data gap) is filled with the map's
@@ -205,7 +205,8 @@ Moon treatments:
   replaces the old half-chroma hand tint against each body's
   representative colour.
 - **Saturnian mids (Mimas, Enceladus, Tethys, Dione, Rhea, Iapetus)
-  and Triton** — [Schenk 2014](/data/papers/index.md#schenk2014) IR-G-UV *enhanced-colour* mosaics; the
+  and Triton** — [Schenk 2014](/data/papers/index.md#schenk2014) *enhanced-colour* mosaics (Cassini IR-G-UV
+  for the Saturnian six, Voyager 2 for Triton); the
   colour separation is exaggerated far past what the eye would see on
   these near-neutral ices, so the build pulls chroma halfway back
   toward gray (`DESATURATE`). **Desaturation runs before calibration**

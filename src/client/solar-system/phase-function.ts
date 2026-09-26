@@ -291,7 +291,7 @@ export const JUPITER_PHASE: PhaseCoefficients = {
  *  (/data/papers/index.md#mallamahilton2018) Eq. 12, the 4th-order fit to
  *  Dyudina 2005's (/data/papers/index.md#dyudina) Pioneer-derived scattering model,
  *  valid 6°–150° and carried down to 0° where it tracks the α < 6.5° globe fit
- *  (Eq. 11) inside 0.01 mag. Eq. 12's own +0.01 zero-point splice is dropped:
+ *  (Eq. 11) inside 0.011 mag. Eq. 12's own +0.01 zero-point splice is dropped:
  *  φ(0) = 1 is what anchors the curve on the geometric albedo, the same
  *  normalisation every other body's curve uses. The ring system is a separate
  *  joint α/tilt term — `planets/rings/ring-photometry-pure.ts`. */

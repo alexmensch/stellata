@@ -26,8 +26,9 @@ layer consumes elements natively, which is what keeps a ring on its body.
 
 *Outside it, to the 3000 BC – 3000 AD clamp:* the **JPL [Standish 1992](/data/papers/index.md#standish1992)
 Keplerian-elements approximation**
-(https://ssd.jpl.nasa.gov/planets/approx_pos.html) with the cubic
-correction terms for Jupiter through Pluto, working directly from the
+(https://ssd.jpl.nasa.gov/planets/approx_pos.html) with the Table 2b
+quadratic + periodic correction to the mean anomaly for Jupiter through
+Pluto, working directly from the
 published Table 2a/2b values — no external library, no network fetch.
 Its accuracy is **not** sub-arcminute: [Standish 1992](/data/papers/index.md#standish1992)'s published budget
 reaches λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at
@@ -40,9 +41,9 @@ The table's weight ramps over one Julian year at each window edge rather
 than switching, so scrubbing across 1900 or 2100 under planet focus does
 not pop the outer planets by 0.05 AU.
 
-Both sources evaluate against **TDB**, not the UTC clock `t` runs in
-([Timescales](/src/client/solar-system/time/README.md#timescales)); the 69.184 s
-offset is 2.2e-5 AU at Mercury.
+Both sources evaluate against **TDB**, not the UT clock `t` runs in
+([Timescales](/src/client/solar-system/time/README.md#timescales)); ΔT between
+them (69 s today) is 2.2e-5 AU at Mercury.
 
 The full position chain (elements → ecliptic→ICRS rotation) is pinned
 against external sky truth: geocentric RA/Dec for all nine bodies plus
@@ -72,9 +73,10 @@ No scrubbable epoch can leave it.
 
 **Planet physical data.** Equatorial radii from NASA Planetary Fact
 Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major
-axes and eccentricities from JPL DE440 mean elements at J2000. Pluto
-data from New Horizons 2015 reconnaissance (mean radius 1188 km,
-tan-pink colour from MVIC imagery). Representative single-colour RGB
+axes and eccentricities from JPL DE440 mean elements at J2000. Pluto's
+mean radius, 1188 km, is [Nimmo 2017](/data/papers/index.md#nimmo2017)'s 1188.3 ± 1.6 km from New
+Horizons images, rounded; its tan-pink colour is from New Horizons MVIC
+imagery. Representative single-colour RGB
 values per planet are observation-derived.
 
 <a id="naked-eye-colour-calibration--reference-white-is-the-solar"></a>**Naked-eye colour calibration — reference white is the solar
@@ -88,11 +90,13 @@ calibrated at build time so its sphere-weighted mean chromaticity
 equals the body's **measured disc-integrated colour**: the adopted
 B−V and V−Rc indices of [Mallama 2017](/data/papers/index.md#mallama2017)
 (Table 3), expressed as flux ratios relative to the Sun's own
-indices (B−V 0.653, V−Rc 0.352 — [Ramírez 2012](/data/papers/index.md#ramirez2012) solar analogs)
+indices (B−V 0.653, V−Rc 0.352 — [Ramírez 2012](/data/papers/index.md#ramirez2012) solar twins)
 and mapped onto the sRGB channels as B→blue, V→green, Rc→red (the
 band/primary mismatch is second-order against the instrument-era
-spread this removes). Per-map linear-RGB gains preserve mean
-luminance, so only chromaticity moves. This replaces hand-tuned
+spread this removes). Per-map linear-RGB gains are normalised so the
+largest is 1 — a map is only darkened, never clipped — and the renderer
+divides each map's own mean luminance back out, so only chromaticity
+reaches the screen. This replaces hand-tuned
 per-map tint/desaturation judgement with measured targets, and the
 corrections it makes are the known biases of the source imagery: the
 Viking Mars mosaic's blue boost, the 1989 Voyager Neptune's
@@ -138,9 +142,10 @@ channels, sourced rather than read off a slider:
   unidentified UV-blue absorber, whose visible-band τ has no published table —
   a judged value, kept small enough to tint without hiding the cloud texture.
 - **Mars** — τ_R from the 6.1 hPa mean CO₂ column × 2.45 (same scaling): 0.026×
-  Earth. τ_Mie = 0.2: the LOW end of the measured 0.2–0.5 background dust column
-  ([Lemmon 2015](/data/papers/index.md#lemmon2015)) — the global mosaics
-  are imaged through that same dust, so the low end limits double-counting.
+  Earth. τ_Mie = 0.2, under the clear-season dust columns
+  [Lemmon 2015](/data/papers/index.md#lemmon2015) Sect. 4.1 report (Spirit below ~0.3,
+  Opportunity below ~0.5) — the global mosaics are imaged through that same
+  dust, so a value under the measured column limits double-counting.
   `absorbCoeff` from measured dust single-scattering albedo ω̃ ≈
   [0.97, 0.90, 0.75] ([Wolff 2009](/data/papers/index.md#wolff2009)
   Fig. 12, whose bluest measured point, at 440 nm, is ≈ 0.77 — the blue 0.75
@@ -276,11 +281,11 @@ opposition — which is the anchor its strip already carries, a
 zero-phase geometric albedo — so the resolved rings brighten through
 opposition by what the point source does and the resolvedness band
 cannot step. Cassini/ISS corroborates the width independently:
-[Déau 2013](/data/papers/index.md#deau2013) measure the surge half-width at 0.20° in the A and B rings
-and ≥ 0.26° in the C ring and Cassini Division, against the
+[Déau 2013](/data/papers/index.md#deau2013) measure the surge half-width at 0.2° where τ > 1.5 (0.25°
+over τ > 1) and ≥ 0.26° in the C ring and Cassini Division, against the
 `ln2/2.25` = 0.308° of the Earth-based exponential in [Mallama 2018](/data/papers/index.md#mallamahilton2018) Eq. 10 (from [Mallama 2012](/data/papers/index.md#mallama2012) Table 2). The surge is
 strip-averaged rather than per-radius because the per-region amplitudes
-(1.25 B, 1.39 A, ~1.5 C and Cassini Division) collapse to a few
+(~1.25 B, ~1.4 A, ~1.5 C and Cassini Division) collapse to a few
 percent once flux-weighted, and because amplitude is not simply
 correlated with optical depth — it falls with τ below τ ≈ 0.7 in the A, B
 and C rings with wide scatter, holds near-constant above τ ≈ 1, and the

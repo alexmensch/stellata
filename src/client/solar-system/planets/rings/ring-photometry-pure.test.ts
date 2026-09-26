@@ -186,7 +186,7 @@ describe('the annulus phase scalar', () => {
 
   it('carries the surge Cassini measured, at the width it measured', () => {
     // Déau 2013 (/data/papers/index.md#deau2013) (Cassini/ISS) put the
-    // surge HWHM at 0.20° in the A and B rings and ≥ 0.26° in the C ring and
+    // surge HWHM at 0.2° where τ > 1.5 and ≥ 0.26° in the C ring and
     // Cassini Division. The Earth-based law's own exp(-2.25·α) has HWHM
     // ln2/2.25 = 0.308°, so the two independent measurements describe one
     // feature — which is why the annulus can ride the law the billboard already

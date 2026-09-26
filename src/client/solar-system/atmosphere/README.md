@@ -223,13 +223,14 @@ running the **same march the shader runs**, not an analytic stand-in:
   and the reflected terms get the remainder. Geometric albedo already counts
   the light a body's air scatters, so leaving that share in the surface term
   draws it twice: before this, Earth's disc ran +7 % over its [Mallama 2017](/data/papers/index.md#mallama2017) flux,
-  Mars +18 %, Titan +15 %.
+  Mars +18 %, and Titan +15 % over the flux its own `MOON_PHYSICAL` albedo gives.
 
 **Titan is over its measured flux and the clamp says so.** Its share is 1.137
 — the haze model alone is 14 % brighter than the measured body, and its
 ⟨μ·T_view⟩ = 0.006 means the ground supplies nothing to trade against it. The
 surface scalar clamps to zero and the residual stands: that is a per-body
-optical-depth error (τ_Mie 2.5 sits mid-range in the measured 2–5), not
+optical-depth error (τ_Mie 2.5 sits ~3× below the visible haze column
+[Tomasko 2008a](/data/papers/index.md#tomasko2008) gives, ≈ 6–12 across 650–450 nm), not
 something to absorb into a gain on a calibrated airlight.
 
 The fold is a luma scalar at full phase, so per-channel hue and phase-angle
@@ -336,7 +337,8 @@ black rim).
 Every real image (Blue Marble included) is exposure- and
 white-balance-processed, so pixel-matching is a trap. Instead:
 
-- The drawn *disc* renders at the [Mallama 2017](/data/papers/index.md#mallama2017)-correct apparent magnitude — surface,
+- The drawn *disc* renders at its body's albedo-correct apparent magnitude
+  ([Mallama 2017](/data/papers/index.md#mallama2017) for the three planets, the `MOON_PHYSICAL` row for Titan) — surface,
   skylight and airlight together, [Flux bookkeeping](#flux-bookkeeping) — so absolute brightness is
   anchored and the optical depths only move *hue*, limb behaviour, and how the
   flux splits between ground and air. Titan is the exception: its airlight

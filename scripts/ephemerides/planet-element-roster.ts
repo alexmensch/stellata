@@ -21,10 +21,12 @@ export const POSITION_TOLERANCE_AU = 1e-5;
 
 export interface PlanetElementTarget {
   id: PlanetName;
-  /** Horizons **barycentre** id. Standish's series (Standish 1992,
-   *  /data/papers/index.md#standish1992) fits the barycentric orbits, `earth` is the
-   *  Earth/Moon barycentre `earthMoonSplit` divides, and a Pluto barycentre
-   *  skips the 6.4 d Pluto–Charon wobble. */
+  /** Horizons **barycentre** id. That Standish's series (Standish 1992,
+   *  /data/papers/index.md#standish1992) fits the outer planets' system
+   *  barycentres is this project's reading; the memo says only
+   *  "heliocentric" (/data/ephemerides/README.md). `earth` is the Earth/Moon
+   *  barycentre `earthMoonSplit` divides, and a Pluto barycentre skips the
+   *  6.4 d Pluto–Charon wobble. */
   horizonsId: string;
   /** Uniform sample spacing, days. Every value divides the window exactly, so
    *  the last sample lands on `TABLE_JD_END` rather than past it. Measured

@@ -164,9 +164,10 @@ total still wins:
   and the 0.73 are the same [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016) table and the same MW-analogue analysis
   behind it ([Licquia 2015b](/data/papers/index.md#licquia2015b)). Solving preserves that
   colour by construction; an independent pair puts the rendered Galaxy at
-  **0.567** — 0.163 mag bluer than published, which is *larger* than the
-  ~0.1 mag magnitude-vs-colour inconsistency [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016) flags in itself, so it
-  cannot be absorbed as that.
+  **0.567** — 0.163 mag bluer than published, which is *larger* than both
+  the ~0.1 mag typical calibration error of [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016) Table 2 (note a)
+  and the magnitude-vs-colour inconsistency its note b flags (B − V from
+  the table's own magnitudes 0.67, tabulated 0.73), so it cannot be absorbed as either.
 - **The disc carries 92 % of the V light, so the composite colour IS
   essentially the disc colour** — and the composite is what the camera
   reads from outside, the one directly checkable observable. Handing it to

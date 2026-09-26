@@ -436,7 +436,8 @@ export const SOL_PLANETS: readonly Planet[] = [
     terminatorSoftness: 0.03,
     rings: { innerRadiusKm: 40900, outerRadiusKm: 63100 },
   },
-  // Pluto — mean radius from New Horizons 2015 reconnaissance. Type
+  // Pluto — mean radius Nimmo 2017 (/data/papers/index.md#nimmo2017)'s
+  // 1188.3 ± 1.6 km from New Horizons images, rounded. Type
   // 'rocky' is the closest match in our existing tri-state; Pluto is
   // really an icy-rocky body but bins with the inner terrestrials for
   // disc-rendering purposes (sharp silhouette, not a gas-giant gradient).

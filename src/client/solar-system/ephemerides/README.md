@@ -15,14 +15,16 @@ src/client/solar-system/ephemerides/
                                   and equinox of date. See README.md#moon-ephemeris.
   moon-vector-truth.test.ts       The theory + precession chain vs frozen
                                   Horizons geocentric vectors spanning
-                                  the whole clock, plus Meeus's own
-                                  worked example 47.a.
+                                  the whole clock, plus worked example
+                                  47.a of Meeus 1998 (/data/papers/index.md#meeus).
   ephemeris.ts (+ test)           The two element sources and the seam
                                   between them: JPL Standish 1992
-                                  Keplerian elements + cubic Jupiter–Pluto
-                                  correction terms, plus the frozen
-                                  Horizons tables where they reach.
-                                  Heliocentric ecliptic parsecs out.
+                                  (/data/papers/index.md#standish1992)
+                                  Keplerian elements + the Table 2b
+                                  quadratic + periodic Jupiter–Pluto terms
+                                  in M, plus the frozen Horizons tables
+                                  where they reach. Heliocentric ecliptic
+                                  parsecs out.
   equinoctial-pure.ts (+ test)    The non-singular element representation
                                   every source is expressed in, and the
                                   blend. See README.md#equinoctial-elements.
@@ -78,7 +80,7 @@ picked by epoch:
 - **Frozen Horizons element tables** across 1900–2100, ~5e-6 AU
   ([Horizons element tables](#horizons-element-tables)).
 - **The JPL [Standish 1992](/data/papers/index.md#standish1992) Keplerian-elements approximation** with the
-  cubic Jupiter–Pluto correction terms (Table 2a/2b inlined) everywhere
+  Table 2b quadratic + periodic Jupiter–Pluto terms in M (Table 2a/2b inlined) everywhere
   else — the whole 3000 BC – 3000 AD span the model clock clamps to
   (`../time/README.md`).
 

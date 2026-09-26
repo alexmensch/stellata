@@ -10,6 +10,7 @@ codebase reads `Date.now()` for the model clock.
 ```
 src/client/solar-system/time/
   delta-t-pure.ts (+ test)        ΔT = TT − UT, Espenak 2006
+                                  (/data/papers/index.md#espenak2006)
                                   Canon Sect. 2.7, -1999 to +3000. See
                                   README.md#timescales.
   time.ts (+ test)                Simulation time `t` + the UT ↔ Julian-day

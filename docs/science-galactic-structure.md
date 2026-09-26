@@ -110,9 +110,9 @@ entirely local, but one that says nothing about the Galaxy's total, of
 which the catalogue is a third of a percent. A single emissivity field
 anchored on the subtracted pole therefore runs a factor of three low
 everywhere else. With the hole taking the resolved share out of both
-sides, the shipped solve is 1.35 mag brighter than that residual at the
-pole and 0.37 mag brighter toward the Galactic centre than
-[Leinert 1998](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus catalogue at the pole is 0.43 mag over [Leinert 1998](/data/papers/index.md#leinert1998)'s total,
+sides, the shipped solve is 1.31 mag brighter than that residual at the
+pole and 0.385 mag brighter toward the Galactic centre than
+[Leinert 1998](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus catalogue at the pole is 0.41 mag over [Leinert 1998](/data/papers/index.md#leinert1998)'s total,
 where band-without-hole plus catalogue was 0.88 over.
 
 Two things make what remains a scale disagreement between published
@@ -201,7 +201,8 @@ own A_V ≈ 0.05, and the older A_V ≈ 0.06–0.15 range they review).
 does not publish: a "0.15 mag/kpc local rate", under a shipped 0.45 multiplier
 that took the effective rate to 0.068 mag/kpc. Both parts were wrong.
 [Schlegel 1998](/data/papers/index.md#schlegel1998) is a 2D full-sky E(B−V) map and
-gives no per-kpc rate at all — only the polar spread above — and 0.068 mag/kpc
+gives no per-kpc rate at all — only its own polar values (E(B−V) 0.015 / 0.018)
+and its review of the older 0.02–0.05 range — and 0.068 mag/kpc
 is 10–25× below the measured solar-neighbourhood plane rate. The
 under-extinction, not the density profile, was why the band's plane read ~3
 mag too bright against its poles.

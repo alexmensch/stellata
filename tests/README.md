@@ -67,7 +67,8 @@ commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
                          Every `<path>.md#<slug>` pointer in a
-                         git-listed .ts .md .py .sh file names a heading
+                         git-listed file of a kind `SCANNED_KINDS`
+                         (doc-pointer-pure.ts) lists names a heading
                          or anchor that exists — the codebase's wiki
                          links, checked. Grammar, scope and resolution:
                          README.md#doc-pointer-resolution.

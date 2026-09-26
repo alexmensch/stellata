@@ -358,7 +358,8 @@ describe('atmosphere shells', () => {
   const atmoOf = (name: string) => SOL_BODIES.find((b) => b.name === name)!.atmosphere!;
 
   it('Earth carries the Bodhaine 1999 sea-level Rayleigh depths', () => {
-    // The published table IS the calibration (/docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources);
+    // Bodhaine 1999 (/data/papers/index.md#bodhaine1999) eq. 30. The published
+    // table IS the calibration (/docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources);
     // a drift back toward slider values is the
     // regression this pins against.
     expect(atmoOf('Earth').rayleighCoeff).toEqual([0.049, 0.097, 0.221]);
@@ -385,8 +386,9 @@ describe('atmosphere shells', () => {
   });
 
   it('Mars aerosol absorption encodes the measured dust single-scattering albedo', () => {
-    // τ_a = τ_Mie·(1/ω̃ − 1) with ω̃ ≈ [0.97, 0.90, 0.75] (Wolff 2009,
-    // /data/papers/index.md#wolff2009).
+    // τ_a = τ_Mie·(1/ω̃ − 1) with ω̃ ≈ [0.97, 0.90, 0.75] after Wolff 2009
+    // (/data/papers/index.md#wolff2009) Fig. 12; the blue 0.75 extrapolates below
+    // their bluest measured point, ≈ 0.77 at 440 nm.
     const mars = atmoOf('Mars');
     const omega = mars.absorbCoeff.map((a) => mars.mieCoeff / (mars.mieCoeff + a));
     expect(omega[0]).toBeCloseTo(0.97, 2);

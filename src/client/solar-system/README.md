@@ -126,7 +126,8 @@ per-host JSON shards without changing the call sites.
 
 `SOL_PLANETS` is the eight major planets + Pluto with constants
 sourced from NASA Planetary Fact Sheets (radii) and JPL DE440 (mean
-elements at J2000). Pluto comes from New Horizons 2015 reconnaissance.
+elements at J2000). Pluto's radius is [Nimmo 2017](/data/papers/index.md#nimmo2017)'s, from New Horizons
+images; its colour and albedo are from New Horizons reconnaissance.
 See [Solar system](/docs/science-solar-system.md#solar-system) for the citation rationale.
 
 ### Bodies: planets and moons are one array

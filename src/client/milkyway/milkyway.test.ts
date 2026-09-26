@@ -455,12 +455,12 @@ describe('MilkyWay luminosity solve', () => {
   });
 });
 
-// A_V range the Schlegel 1998 (/data/papers/index.md#schlegel1998) map spans toward the
-// galactic poles. The literature
-// figure is an interval, so containment is the assertion; the model's own
-// number is pinned exactly alongside it.
-const SFD_POLAR_AV_MIN = 0.03;
-const SFD_POLAR_AV_MAX = 0.15;
+// The pre-SFD polar reddening Schlegel 1998 (/data/papers/index.md#schlegel1998)
+// Sect. 7.3 reviews, E(B−V) ≈ 0.02–0.05 → A_V ≈ 0.06–0.15 at R_V 3.1; their own
+// map reads A_V ≈ 0.05 at the poles. The reviewed figure is an interval, so
+// containment is the assertion; the model's own number is pinned alongside it.
+const REVIEWED_POLAR_AV_MIN = 0.06;
+const REVIEWED_POLAR_AV_MAX = 0.15;
 
 /** Reference viewport for every figure that still depends on plate scale
  *  — the statistic, and the pixel-solid-angle level the display path used
@@ -506,11 +506,11 @@ describe('MilkyWay analytical dust', () => {
 
   // The second constraint the 1.0 mag/kpc rate has to satisfy, and the one
   // the scale height controls: integrate the slab straight up from Sol and
-  // the perpendicular column has to land in Schlegel 1998's
-  // (/data/papers/index.md#schlegel1998) polar range. Marched, so
+  // the perpendicular column has to land in the pre-SFD polar range Schlegel 1998
+  // (/data/papers/index.md#schlegel1998) reviews. Marched, so
   // moving ANALYTICAL_DUST_SCALE_HEIGHT_PC fails it — which is the whole
   // reason the two constraints are described as independent.
-  it('lands the polar column inside the SFD polar spread', () => {
+  it('lands the polar column inside the pre-SFD polar range SFD review', () => {
     const tau = foregroundDustTauRgb(
       SOL_GALACTOCENTRIC_PC,
       galacticDirection(0, 90),
@@ -522,8 +522,8 @@ describe('MilkyWay analytical dust', () => {
     // 0.125 analytically; the march starts at S_MIN_PC like the shader's
     // does, which drops the first parsec (0.8%).
     expect(av).toBeCloseTo(0.124, 3);
-    expect(av).toBeGreaterThan(SFD_POLAR_AV_MIN);
-    expect(av).toBeLessThan(SFD_POLAR_AV_MAX);
+    expect(av).toBeGreaterThan(REVIEWED_POLAR_AV_MIN);
+    expect(av).toBeLessThan(REVIEWED_POLAR_AV_MAX);
   });
 
   // A multiplier of anything but 1 means the shipped extinction disagrees

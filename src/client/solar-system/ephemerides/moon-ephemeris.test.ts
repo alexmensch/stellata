@@ -10,7 +10,7 @@ import {
 } from './moon-ephemeris';
 import type { Vec3 } from './ephemeris';
 import { SOL_MOONS } from '../planet-system';
-import { julianEpochYearToT } from '../time/time';
+import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, julianEpochYearToT } from '../time/time';
 
 const DEG = Math.PI / 180;
 const elem = (name: string): MoonElements =>
@@ -142,11 +142,11 @@ describe('moonOffsetEcliptic', () => {
   // gets its own, sharper pins straight after.
   const KEPLER_MOONS = MOON_ELEMENTS.filter((m) => !m.useLunarTheory);
 
-  it('keeps parent distance within [a(1−e), a(1+e)] across ±3000 yr', () => {
+  it('keeps parent distance within [a(1−e), a(1+e)] across the clock window', () => {
     // 40 samples spanning the Standish 1992 (/data/papers/index.md#standish1992)
-    // window for every moon.
-    const tMin = julianEpochYearToT(-1000.0);
-    const tMax = julianEpochYearToT(3000.0);
+    // window the clock clamps to, for every moon.
+    const tMin = T_CLAMP_MIN_S;
+    const tMax = T_CLAMP_MAX_S;
     for (const m of KEPLER_MOONS) {
       const aPc = m.aKm * KM_PC;
       const lo = aPc * (1 - m.e);
