@@ -6,15 +6,10 @@ import { join } from 'node:path';
 import { selectAll } from 'hast-util-select';
 
 import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
-import { walkFiles } from '../util/walk-files.ts';
+import { parseIndex } from '../util/citation-index-pure.ts';
 import { parseHtml } from './parse-html.ts';
 
-/** The modelling record the reference count describes: the two root docs
- *  plus every markdown file under these roots — the science docs and the
- *  folder READMEs, which carry a subsystem's citations next to its code. */
-const RECORD_DOCS = ['SCIENCE.md', 'README.md'];
-const RECORD_ROOTS = ['docs', 'src', 'scripts', 'data'];
-
+const CITATION_INDEX = 'data/papers/index.md';
 const APP_DOC = 'src/client/app/index.html';
 
 // Resolved from this module rather than from the caller's root: the snapshot
@@ -52,31 +47,11 @@ export function creditedSourceCount(root: string): number {
   return credits.length;
 }
 
-function recordFiles(root: string): string[] {
-  const walked = RECORD_ROOTS.flatMap((dir) => [
-    ...walkFiles(join(root, dir), {
-      include: (path) => path.endsWith('.md'),
-      skipDir: (name) => name === 'node_modules' || name === 'public',
-    }),
-  ]);
-  return [...RECORD_DOCS.map((f) => join(root, f)), ...walked];
-}
-
-/**
- * Distinct author-year citations across the modelling record, counting only
- * the multi-author forms (`Høg et al. 2000`, `Bland-Hawthorn & Gerhard
- * 2016`). Single-author citations are real references this cannot see, so
- * the result is a floor on the record rather than a measure of it — which is
- * the direction a public claim needs to be wrong in.
- */
-export function citedReferences(root: string): Set<string> {
-  const pattern =
-    /\b([A-Z][A-Za-zÀ-ÿ'-]+)(?:,? (?:et al\.|(?:&(?:amp;)?|and) [A-Z][A-Za-zÀ-ÿ'-]+)) \(?((?:1[89]|20)\d{2})[ab]?\)?/g;
-  const refs = new Set<string>();
-  for (const file of recordFiles(root)) {
-    for (const [, author, year] of readFileSync(file, 'utf8').matchAll(pattern)) {
-      refs.add(`${author} ${year}`);
-    }
+/** Every cited work has one entry in the citation index. */
+export function citedReferenceCount(root: string): number {
+  const entries = parseIndex(readFileSync(join(root, CITATION_INDEX), 'utf8'));
+  if (entries.length === 0) {
+    throw new Error(`site metrics: no entries found in ${CITATION_INDEX}`);
   }
-  return refs;
+  return entries.length;
 }

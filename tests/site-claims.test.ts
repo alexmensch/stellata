@@ -13,7 +13,7 @@ import { parseHtml } from '../scripts/site/parse-html';
 import { escapeRegExp } from '../scripts/util/escape-regexp';
 import {
   catalogueRecordCount,
-  citedReferences,
+  citedReferenceCount,
   creditedSourceCount,
 } from '../scripts/site/site-metrics';
 
@@ -47,7 +47,7 @@ describe('the pages ask for their figures rather than quoting them', () => {
   it.each([
     ['catalogue size', catalogueRecordCount(ROOT).toLocaleString('en-US')],
     ['credited source count', String(creditedSourceCount(ROOT))],
-    ['reference count', String(citedReferences(ROOT).size)],
+    ['reference count', String(citedReferenceCount(ROOT))],
   ])('never states the %s as a literal', (_, figure) => {
     const body = textOf(select('body', HOME));
     expect(body).not.toMatch(new RegExp(`(^|[^\\d,.])${escapeRegExp(figure)}($|[^\\d,])`));
@@ -96,13 +96,8 @@ describe('the derivations behind those figures', () => {
     expect(perRow.reduce((a, b) => a + b, 0)).toBe(creditedSourceCount(ROOT));
   });
 
-  // Bounds, not a pin: the page reads this number, so drift cannot make it
-  // wrong. What can is the pattern: matching nothing collapses the count, and
-  // matching ordinary prose ("Table 3 shows 2021") inflates it.
-  it('finds a reference record neither collapsed nor inflated', () => {
-    const derived = citedReferences(ROOT).size;
-    expect(derived).toBeGreaterThan(80);
-    expect(derived).toBeLessThan(400);
+  it('counts the works the citation index records', () => {
+    expect(citedReferenceCount(ROOT)).toBe(200);
   });
 
   it('reads the catalogue size with no built artifact to read', () => {

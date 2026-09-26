@@ -40,21 +40,11 @@ application and the marketing page is good for.
   parsed document, so reformatting the markup cannot move the figure.
   Adding a source to the app moves the homepage in the same build, with
   nobody counting; finding none stops the build.
-- **Cited references** — distinct author-year citations across the two root
-  docs plus every `*.md` under `docs/ src/ scripts/ data/`. The pattern
-  matches only the multi-author forms (`Høg et al. 2000`,
-  `Bland-Hawthorn & Gerhard 2016`), so single-author citations
-  (Pace 2025, Tokovinin 2018, McConnachie 2012) are real references it
-  cannot see. **The count is a floor on the record, never a measure of
-  it** — which is the direction a public claim has to be wrong in. Widen
-  the pattern and it starts matching ordinary prose ("Table 3 shows 2021"),
-  which is the wrong direction.
-
-## The walk
-
-`../util/walk-files.ts`, shared with the repo-meta scanners in `tests/`.
-`public/` and `node_modules` are skipped: the first is generated and the
-second is not ours to cite.
+- **Cited references** — the entries in `data/papers/index.md`, parsed by
+  `../util/citation-index-pure.ts`. The index holds every work the tree
+  cites, one entry each, and `tests/citation-index.test.ts` fails a citation
+  that points anywhere else, so the entry count is the record's size, not
+  an estimate of it. An index with no entries stops the build.
 
 ## The markdown rendition
 

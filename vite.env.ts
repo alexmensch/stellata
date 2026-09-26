@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   catalogueRecordCount,
-  citedReferences,
+  citedReferenceCount,
   creditedSourceCount,
 } from './scripts/site/site-metrics.ts';
 
@@ -18,5 +18,5 @@ export function publishBuildEnv(root: string): void {
   ).version;
   process.env.VITE_STAR_COUNT = catalogueRecordCount(root).toLocaleString('en-US');
   process.env.VITE_SOURCE_COUNT = String(creditedSourceCount(root));
-  process.env.VITE_REFERENCE_COUNT = String(citedReferences(root).size);
+  process.env.VITE_REFERENCE_COUNT = String(citedReferenceCount(root));
 }
