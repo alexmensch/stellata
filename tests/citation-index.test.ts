@@ -21,7 +21,7 @@ import {
   STATUSES,
   uncitedIdentifiers,
   unpaginatedText,
-} from './citation-index-pure';
+} from '../scripts/util/citation-index-pure';
 import { extractPointers, pointerCorpus, resolveDocPath } from './doc-pointer-pure';
 
 const ROOT = resolve(__dirname, '..');

@@ -13,6 +13,11 @@ bar: repo plumbing with several callers, not a build helper with one.
   content, both TSL rosters, doc pointers). Carries `isProductionTs`
   too: a `.ts` that is neither a test nor an ambient declaration.
 
+- `citation-index-pure.ts` — the parser for `data/papers/index.md`
+  entries and `manifest.json` pins. Read by
+  `tests/citation-index.test.ts`, which holds the index to its rules
+  ([Cited papers](/data/papers/README.md#what-enforces-it)).
+
 - `escape-regexp.ts` (+ test) — `escapeRegExp(text)`, text made literal
   inside a `RegExp` source, backslash included. Every pattern built from
   page text or a figure goes through it; a hand-rolled character class
