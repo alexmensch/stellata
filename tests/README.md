@@ -196,6 +196,9 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
                          resolution and the scanned corpus, shared by
                          doc-pointer-resolution.test.ts and
                          citation-index.test.ts.
+citation-index-pure.ts   Not a test — parsing of data/papers/index.md
+                         entries and manifest.json pins, for
+                         citation-index.test.ts.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows

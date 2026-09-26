@@ -8,7 +8,7 @@ Rules, tests and file roles: [Cited papers](README.md#cited-papers).
 
 Each entry opens with an explicit anchor, so its key stays fixed whatever the
 heading says. **Copy** names the version of the private copy a page number was
-read from ([What a page number means](README.md#version-decides-what-a-page-number-means)),
+read from ([What a page number means](README.md#the-copys-version-decides-what-a-page-number-means)),
 or why none is held. **Identification** appears only when the work is not
 plainly identified: `book`, `ambiguous` (the tree's wording fits several works,
 listed), `mismatch` (the work exists but does not carry the claim credited to
