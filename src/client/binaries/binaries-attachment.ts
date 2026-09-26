@@ -70,10 +70,12 @@ export class BinariesAttachment {
     this.compositeSuppress = new Float32Array(deps.catalog.count);
     this.eclipseDim = new Float32Array(deps.catalog.count).fill(1);
     this.orbitPaths = new BinaryOrbitPathLayer(deps.chromeLines);
-    this.rate = (cc) => this.whenAttached(
-      (a) => maxCadenceReport(a.orbits.cadenceReport(cc), a.eclipse.cadenceReport(cc.simDtS)),
-      CADENCE_REPORT_STILL,
-    );
+    this.rate = (cc) => {
+      const s = this.attached.state();
+      return s.status === 'ready'
+        ? maxCadenceReport(s.value.orbits.cadenceReport(cc), s.value.eclipse.cadenceReport(cc.simDtS))
+        : CADENCE_REPORT_STILL;
+    };
     const refreshOrbitPaths = () => this.orbitPaths.setSystem(
       this.whenAttached((a) => a.data, null),
       deps.focusedStar(),
@@ -84,18 +86,22 @@ export class BinariesAttachment {
       timeBehaviour: { kind: 'clock', rate: this.rate },
       contribution: { kind: 'always' },
       update: (ctx) => {
-        this.whenAttached((a) => this.walk(a), undefined);
+        const s = this.attached.state();
+        if (s.status === 'ready') this.walk(s.value);
         // After the walk wrote this frame's slots, so each path rides its
         // pair's live barycentre drift.
         this.orbitPaths.update(
-          this.whenAttached((a) => a.orbits, null),
+          s.status === 'ready' ? s.value.orbits : null,
           deps.localPositions,
           ctx.camera,
           window.innerHeight,
           deps.observeAnchorStar(),
         );
       },
-      recenter: (origin) => this.whenAttached((a) => a.orbits.recenter(origin), undefined),
+      recenter: (origin) => {
+        const s = this.attached.state();
+        if (s.status === 'ready') s.value.orbits.recenter(origin);
+      },
       dispose: () => this.dispose(),
     };
   }
