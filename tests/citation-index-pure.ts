@@ -197,8 +197,10 @@ export function lineText(text: string): CopyText {
 
 export const unpaginatedText = (text: string): CopyText => ({ kind: 'unpaginated', flat: matchable(text) });
 
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+
 const printsPage = ({ edge }: PreparedPage, token: string): boolean =>
-  new RegExp(`(?<![\\w.])${token.replace(/-/g, '\\-')}(?![\\w])`).test(edge);
+  new RegExp(`(?<![\\w.])${escapeRegExp(token)}(?![\\w])`).test(edge);
 
 function offsets(flat: string, fragment: string): number[] {
   const at: number[] = [];
