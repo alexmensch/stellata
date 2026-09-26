@@ -111,8 +111,10 @@ stamps make the copy safe — when the worktree's inputs match what the main
 checkout last built from, the dev server starts without rebuilding; when they
 differ (main checkout built from an older commit, a pipeline change on the
 branch), the stamp mismatches and the step rebuilds. Only stamped outputs
-belong in that list: an mtime-gated step reads any fresh copy as up to date,
-whatever it was built from. A worktree made any other way
+belong in that list, plus the private paper-store link
+([The PDFs are private](/data/papers/README.md#the-pdfs-are-private)): an
+mtime-gated step reads any fresh copy as up to date, whatever it was built
+from. A worktree made any other way
 (`git worktree add`) builds from scratch.
 
 `pnpm run dev` preprocesses and then serves, so starting the worktree's dev

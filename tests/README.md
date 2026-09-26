@@ -52,12 +52,9 @@ cadence-pulsation-bound.test.ts
                          buildPulsationSuppressMask rather than
                          re-deriving the eclipser rule. Self-skips when
                          public/ is unbuilt.
-citation-index.test.ts   The citation index and the tree agree: every
-                         pointer into data/papers/index.md names an entry
-                         key (an explicit anchor, never a heading slug),
-                         every entry is cited from outside data/papers/,
-                         and manifest.json keys exactly the entries
-                         (/data/papers/README.md#what-enforces-it).
+citation-index.test.ts   The citation index, the tree's citations and the
+                         private paper store agree. The checks are listed
+                         once, in /data/papers/README.md#what-enforces-it.
 code-comment-rules.test.ts
                          Comment-hygiene scanner over `*.ts` / `*.js` /
                          `*.py` under src/ and scripts/ (/AGENTS.md#code-comments--what-ci-enforces-here):

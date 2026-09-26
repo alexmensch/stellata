@@ -1,13 +1,15 @@
 // See /data/papers/README.md#what-enforces-it.
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { explicitAnchors, extractPointers, pointerCorpus, resolveDocPath } from './doc-pointer-pure';
 
 const ROOT = resolve(__dirname, '..');
 const PAPERS = join(ROOT, 'data/papers');
 const INDEX = join(PAPERS, 'index.md');
+const STORE = join(PAPERS, 'pdf');
+const IN_CI = Boolean(process.env.CI);
 
 const entryKeys = explicitAnchors(readFileSync(INDEX, 'utf-8'));
 const manifestKeys = new Set(Object.keys(JSON.parse(readFileSync(join(PAPERS, 'manifest.json'), 'utf-8'))));
@@ -37,5 +39,14 @@ describe('citation index', () => {
     const noManifest = [...entryKeys].filter((key) => !manifestKeys.has(key)).map((key) => `index only: ${key}`);
     const drift = [...noEntry, ...noManifest];
     expect(drift, drift.join('\n')).toEqual([]);
+  });
+});
+
+describe.skipIf(IN_CI)('private paper store', () => {
+  it('data/papers/pdf is a link to the store, not missing and not a copy', () => {
+    const state = !existsSync(STORE) ? 'missing' : lstatSync(STORE).isSymbolicLink() ? 'link' : 'copied folder';
+    expect(state, 'link it: ln -s "<paper store>" data/papers/pdf (see /data/papers/README.md#the-pdfs-are-private)').toBe(
+      'link',
+    );
   });
 });

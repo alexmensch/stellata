@@ -34,7 +34,8 @@ change; fetch the copy into `pdf/<key>.pdf` and pin its `sha256`.
 
 - `tests/citation-index.test.ts`: every pointer into `index.md` names an entry
   key (an explicit anchor, never a heading slug); every entry is cited from
-  outside this folder; `manifest.json` keys exactly the entries.
+  outside this folder; `manifest.json` keys exactly the entries; `pdf` is a
+  link to the store ([The PDFs are private](#the-pdfs-are-private)).
 - `tests/doc-pointer-resolution.test.ts`: a pointer to a key with no entry.
 - Review, for what no scan can judge: a citation written without a pointer,
   and a cited value that disagrees with its claims-table row. Both are named
@@ -54,10 +55,13 @@ the store exists only so claims can be checked against the paper itself.
   whenever the PDF is replaced. Image-only scans have none; read the PDF.
 - Sessions read and write only through `data/papers/pdf`, never through the
   path it resolves to.
-- A worktree has no copy of the symlink (it is gitignored). Link it to the main
-  checkout's: `ln -s <main-checkout>/data/papers/pdf data/papers/pdf`.
-- Anything that needs the PDFs must skip, not fail, when `pdf` is absent —
-  CI never has it.
+- Every checkout has it. `.worktreeinclude` lists it, so a worktree Claude Code
+  creates gets it; anywhere else, link it by hand:
+  `ln -s "<paper store>" data/papers/pdf`. It must be the link, never a copied
+  folder — a copy takes writes the store never sees.
+- `tests/citation-index.test.ts` fails when `pdf` is missing or is not a link,
+  and checks every held copy against its pin. CI is the one place without the
+  store (`CI` set), and there those checks skip.
 - `tests/folder-readme-coverage.test.ts` excludes the path, since it follows
   symlinks.
 
