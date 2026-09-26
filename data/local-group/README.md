@@ -47,7 +47,7 @@ the major spirals).
 | `name`              | Matches LVDB's `name` column for merge, **or** names a standalone object not in LVDB. |
 | `a_pc / b_pc / c_pc`| Local-frame semi-axes in parsecs. |
 | `orient`            | Orientation spec: `pa:X` (sky-plane PA), `disc:i=X,pa=Y` (Magellanic-style inclined disc), `los` (line-of-sight elongated). |
-| `ref_doi`           | Primary structural reference. |
+| `source`            | Primary structural reference, as an index citation (`Label (/data/papers/index.md#key)`). Documentation only; the build does not read it. |
 | `ra_deg`            | *Optional standalone position.* Populated for objects not in LVDB; leave empty for LVDB-merge rows. |
 | `dec_deg`           | *Optional standalone position.* Same — all three must be set together or all three empty. |
 | `distance_kpc`      | *Optional standalone position.* Same. |
@@ -56,7 +56,7 @@ the major spirals).
 | `n_sersic`          | *Optional.* Hand-curated Sérsic index (M 32 → 1.5: the bulge component of [Graham 2002](/data/papers/index.md#graham2002)'s bulge + exponential-disc fit, applied here as a single-component index). |
 | `r_d_pc`            | *Optional.* Exponential-disc scale length; required on `disc` rows. |
 | `bulge_to_total` / `bulge_re_pc` / `bulge_n` | *Optional.* Sérsic-bulge composite (M31 only) — all three set together or all empty. |
-| `ref_doi_profile`   | *Optional.* Profile-parameter source, separate from the structural `ref_doi`. |
+| `source_profile`    | *Optional.* Profile-parameter source, separate from the structural `source`. |
 | `color`             | *Optional.* Population tint (hex); empty → the renderer's per-family default. |
 
 For LVDB-merge rows, the override **replaces** the structural detail

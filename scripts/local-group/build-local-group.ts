@@ -74,11 +74,11 @@ export function parseLvdb(csv: string): LvdbRow[] {
  *  Schema (6 required columns; optional columns follow, looked up by
  *  header name):
  *
- *    name<TAB>a_pc<TAB>b_pc<TAB>c_pc<TAB>orient<TAB>ref_doi
+ *    name<TAB>a_pc<TAB>b_pc<TAB>c_pc<TAB>orient<TAB>source
  *      [<TAB>ra_deg<TAB>dec_deg<TAB>distance_kpc]
  *      [<TAB>m_v<TAB>profile<TAB>n_sersic<TAB>r_d_pc
  *       <TAB>bulge_to_total<TAB>bulge_re_pc<TAB>bulge_n
- *       <TAB>ref_doi_profile<TAB>color]
+ *       <TAB>source_profile<TAB>color]
  *
  *  ra_deg/dec_deg/distance_kpc are populated only for objects that
  *  aren't in LVDB at all (M31, M33). When present, the row is fully
@@ -102,7 +102,7 @@ export function parseOverrides(tsv: string): OverrideRow[] {
       // required leading columns are present in the expected order so a
       // schema drift surfaces loudly at build time; optional columns are
       // resolved by name from the header so their order can evolve.
-      const required = ['name', 'a_pc', 'b_pc', 'c_pc', 'orient', 'ref_doi'];
+      const required = ['name', 'a_pc', 'b_pc', 'c_pc', 'orient', 'source'];
       if (fields.length < required.length) {
         throw new Error(`overrides.tsv: malformed header (got ${fields.length} fields, expected ≥ ${required.length})`);
       }
@@ -134,7 +134,6 @@ export function parseOverrides(tsv: string): OverrideRow[] {
       name: fields[0].trim(),
       axes: [parseFloat(fields[1]), parseFloat(fields[2]), parseFloat(fields[3])],
       orient: fields[4].trim(),
-      refDoi: fields[5].trim(),
     };
     // Standalone position columns: all three must be present and
     // non-empty for the row to stand alone — partial population is a
@@ -184,8 +183,6 @@ export function parseOverrides(tsv: string): OverrideRow[] {
         row.bulgeN = bn;
       }
     }
-    const refDoiProfile = opt('ref_doi_profile');
-    if (refDoiProfile !== undefined) row.refDoiProfile = refDoiProfile;
     const color = opt('color');
     if (color !== undefined) row.color = color;
     out.push(row);

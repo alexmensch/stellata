@@ -42,7 +42,6 @@ export interface OverrideRow {
    *  "pa:102"). Parsed by `buildOrientation` against the object's
    *  sky direction. */
   orient: string;
-  refDoi: string;
   /** Optional standalone position. Populated only for rows that name
    *  objects not in LVDB (M31, M33). When present, the row builds a
    *  full LgObject without an LVDB merge; the three values must all be
@@ -65,8 +64,6 @@ export interface OverrideRow {
   bulgeToTotal?: number;
   bulgeRePc?: number;
   bulgeN?: number;
-  /** Profile-parameter source, separate from the structural refDoi. */
-  refDoiProfile?: string;
   /** Optional population tint (hex, e.g. "#ffd9b0"); empty → the
    *  renderer's per-family default. */
   color?: string;
