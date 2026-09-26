@@ -18,16 +18,18 @@ import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-
 import type { LgEmission, LgObject } from '../local-group-loader';
 
 /**
- * Intrinsic integrated (B−V)₀ of M31, Tempel et al. 2011 (A&A 526, A155,
- * DOI 10.1051/0004-6361/201015000) Table 2 — the only Local Group disc
- * galaxy with a published dereddened integrated colour.
+ * Intrinsic integrated (B−V)₀ of M31, Tempel 2011
+ * (/data/papers/index.md#tempel2011) Table 2.
  */
 export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
 
 /**
- * Courteau et al. 2011 — the **same** `bulge_to_total` the emission
- * solver splits M31's flux by (`data/local-group/overrides.tsv`, pinned
- * in `local-group-emission.test.ts`).
+ * The **same** `bulge_to_total` the emission solver splits M31's flux by
+ * (`data/local-group/overrides.tsv`, pinned in `local-group-emission.test.ts`).
+ * 0.31 has no recorded source: Courteau 2011 (/data/papers/index.md#courteau2011)
+ * Sect. 7 give 0.29 for their 2D bulge + disc fit, a Spitzer/IRAC 3.6 µm light
+ * fraction, here applied in V. Which value to ship is open
+ * (/docs/science-local-group.md#local-group-luminosity-model).
  */
 export const M31_BULGE_TO_TOTAL_LIGHT = 0.31;
 
@@ -39,7 +41,8 @@ export const DISC_COLOUR_INDEX_BV = discColourIndex(
 );
 
 /** Population tints, each a colour index through the star field's own
- *  Ballesteros → Planck → CIE path. Per-object `emission.color` overrides. */
+ *  Ballesteros 2012 (/data/papers/index.md#ballesteros2012) → Planck → CIE path.
+ *  Per-object `emission.color` overrides. */
 export const SPHEROID_COLOR_RGB: [number, number, number] = OLD_SPHEROID_COLOR_RGB;
 export const DISC_COLOR_RGB: [number, number, number] =
   linearSrgbFromColourIndex(DISC_COLOUR_INDEX_BV);

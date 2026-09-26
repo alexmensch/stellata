@@ -1,6 +1,6 @@
 # src/client/molecular-clouds/absorption/ — the cloud absorption raymarch
 
-The per-fragment raymarch of the calibrated Zucker density model that dims
+The per-fragment raymarch of the calibrated [Zucker 2021](/data/papers/index.md#zucker2021) density model that dims
 every diffuse layer drawn behind a cloud ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field),
 [§ 9](/docs/science-molecular-clouds.md#9-presence-pass)). **Physics, so it is always on in realistic mode — never
 declutter-gated** — and it hides only in chart mode. The rim shell that
@@ -31,7 +31,7 @@ fragment shader raymarches the ellipsoid segment (4–14 jittered steps,
 screen-adaptive) and converts the A_V column to `α = 1 − exp(−0.921·A_V)`,
 capped at 0.95.
 
-**Traced clouds march the per-cloud Edenhofer density brick** (a builder
+**Traced clouds march the per-cloud [Edenhofer 2024](/data/papers/index.md#edenhofer2024) density brick** (a builder
 branch, [The material seam](../README.md#the-material-seam); a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
 `A_V = 2.742·∫E dl`, clip at the brick's u = 1.05 taper edge) — the same
 volume the rim isosurface was traced from, so the shadow matches the

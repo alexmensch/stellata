@@ -63,7 +63,7 @@ the answer — a wide field toward the galactic centre, which is what the canon
 `mw120` and `mw50` vantages already look at.
 
 So positions are drawn against the band's **own** density profile, imported
-from `src/client/milkyway/milkyway-column-pure.ts` rather than restated:
+from `src/client/milkyway/column/milkyway-column-pure.ts` rather than restated:
 `discDensity + bulgeDensity`, each clamped to its proxy ellipsoid because the
 profiles do not stop there on their own — at render time the shader's
 ray-sphere intersection is what bounds them.
@@ -107,13 +107,16 @@ against the previous paragraph's over-count.
 
 ## The band double-counts, and it moves the number
 
-The band's density solve is anchored to the Leinert 1998 **total**, which
-covers resolved and unresolved stars alike, so the resolved catalogue is
-already double-counted: `src/client/milkyway/calibration/README.md` records
-the cost as diffuse + catalogue reading 23.00 mag/arcsec² at the pole against
-Leinert's 23.83. Deepening the catalogue widens that gap, and the
-resolved-catalogue subtraction constants are read by tests alone — nothing
-rendered self-corrects.
+The band's density solve is anchored to the Galaxy's integrated
+M_V = −21.37 from [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016), the light of
+resolved and unresolved stars alike. The resolution hole takes the drawn
+stars' share back out, but it is measured on the real catalogue
+(`RESOLVED_HOLE_CATALOGUE_RECORDS`), so every synthetic star appended here is
+drawn twice — once as a point, once in the band. Even on the real catalogue,
+band plus catalogue reads 23.42 mag/arcsec² at the pole against
+[Leinert 1998](/data/papers/index.md#leinert1998)'s 23.83
+([Two checks](/src/client/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order)).
+Deepening the catalogue widens that gap, and nothing rendered self-corrects.
 
 This reaches the measurement, not just the look. A brighter sky pulls exposure
 adaptation down, the derived `uCullMag` follows, and fewer stars survive the

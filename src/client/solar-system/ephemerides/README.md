@@ -15,14 +15,16 @@ src/client/solar-system/ephemerides/
                                   and equinox of date. See README.md#moon-ephemeris.
   moon-vector-truth.test.ts       The theory + precession chain vs frozen
                                   Horizons geocentric vectors spanning
-                                  the whole clock, plus Meeus's own
-                                  worked example 47.a.
+                                  the whole clock, plus worked example
+                                  47.a of Meeus 1998 (/data/papers/index.md#meeus).
   ephemeris.ts (+ test)           The two element sources and the seam
                                   between them: JPL Standish 1992
-                                  Keplerian elements + cubic Jupiter–Pluto
-                                  correction terms, plus the frozen
-                                  Horizons tables where they reach.
-                                  Heliocentric ecliptic parsecs out.
+                                  (/data/papers/index.md#standish1992)
+                                  Keplerian elements + the Table 2b
+                                  quadratic + periodic Jupiter–Pluto terms
+                                  in M, plus the frozen Horizons tables
+                                  where they reach. Heliocentric ecliptic
+                                  parsecs out.
   equinoctial-pure.ts (+ test)    The non-singular element representation
                                   every source is expressed in, and the
                                   blend. See README.md#equinoctial-elements.
@@ -77,8 +79,8 @@ picked by epoch:
 
 - **Frozen Horizons element tables** across 1900–2100, ~5e-6 AU
   ([Horizons element tables](#horizons-element-tables)).
-- **The JPL Standish 1992 Keplerian-elements approximation** with the
-  cubic Jupiter–Pluto correction terms (Table 2a/2b inlined) everywhere
+- **The JPL [Standish 1992](/data/papers/index.md#standish1992) Keplerian-elements approximation** with the
+  Table 2b quadratic + periodic Jupiter–Pluto terms in M (Table 2a/2b inlined) everywhere
   else — the whole 3000 BC – 3000 AD span the model clock clamps to
   (`../time/README.md`).
 
@@ -90,7 +92,7 @@ drift off its body — including through the seam.
 
 ### The Standish series is not sub-arcminute, and its error is not invisible
 
-Standish's published budget for the Table 2a elements
+[Standish 1992](/data/papers/index.md#standish1992)'s published budget for the Table 2a elements
 (`ssd.jpl.nasa.gov/planets/approx_pos.html`, section *Accuracy*) reaches
 λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at Uranus;
 measured against DE441 the giants sit at 0.05–0.14 AU across the clamp
@@ -102,7 +104,7 @@ swing-by reads as a distant pass. That is what the tables are for, and it
 is why they cover only the epochs a mission actually happened in.
 
 Pluto's row is the pre-removal Table 2a one **plus** its Table 2b `b`
-term. The widely reproduced linear-elements row is Standish's Table 1
+term. The widely reproduced linear-elements row is [Standish 1992](/data/papers/index.md#standish1992)'s Table 1
 (1800–2050) — it holds 0.016 AU near now but grows quadratically to
 ~25 AU at the clamp bound, on the wrong side of the orbit, and the
 model clock reaches there.
@@ -122,7 +124,7 @@ the measured per-planet accuracy are in
   `loadPlanetElementTables` without awaiting it. 1.5 MB behind first
   paint would buy nothing: the first frame is Sol-focused, where the
   outer planets the tables move are sub-pixel discs. Until it lands,
-  every planet is on Standish and the scene is simply the old one.
+  every planet is on [Standish 1992](/data/papers/index.md#standish1992) and the scene is simply the old one.
 - **A missing artifact is not an error.** A checkout that never ran the
   `public/` sync gets nine null table slots and the series everywhere.
 - **`installPlanetElementTables` resets the per-`t` cache.** The swap
@@ -165,7 +167,7 @@ The cost is one convention: `equinoctialToClassical` returns the
 canonical `i ≥ 0` form, so a **negative tabulated inclination comes back
 as `(|i|, Ω + 180°, ω + 180°)`**. That is the same rotation
 (`Rz(π)·Rx(i)·Rz(π) = Rx(−i)`), so positions and rings are unaffected —
-but Standish's EM Bary row carries `I = −0.00054346°`, and a test reading
+but [Standish 1992](/data/papers/index.md#standish1992)'s EM Bary row carries `I = −0.00054346°`, and a test reading
 `getPlanetOrbitShapes(...).orientation.longAscNode` back for Earth sees
 the shifted pair, not the table's. `ephemeris.test.ts` pins exactly
 that.
@@ -190,8 +192,8 @@ solves that already run unbucketed.
 ### The Moon runs on a series, not on its element row
 
 Earth's Moon is the one satellite **not** positioned by a Kepler solve.
-`lunar-theory-pure.ts` is the truncated ELP-2000/82 series (Meeus,
-*Astronomical Algorithms* 2nd ed., ch. 47): 60 longitude / 60 latitude /
+`lunar-theory-pure.ts` is the truncated ELP-2000/82 series
+([Meeus 1998](/data/papers/index.md#meeus), ch. 47): 60 longitude / 60 latitude /
 46 distance periodic terms over the five fundamental arguments, returning
 λ, β, Δ in the **mean ecliptic and equinox of date**.
 
@@ -212,7 +214,7 @@ Frame: the series is referred to the equinox of date, and the model works
 in the J2000 ecliptic. Over the clock's span the equinox sweeps ~42° and
 the ecliptic plane itself moves ~0.5°, so the conversion is a full
 three-angle rotation, not a longitude offset —
-`../../util/precession.ts`'s Vondrák long-term model supplies it.
+`../../util/precession.ts`'s [Vondrák 2011](/data/papers/index.md#vondrak2011) long-term model supplies it.
 Nutation is deliberately omitted: mean-of-date → mean-of-J2000 is exactly
 the precession-only chain, and the Sun's position carries no nutation
 either, so the pair stays consistent.
@@ -234,13 +236,13 @@ four small pairs beat any deeper polynomial on the mean longitude alone
 (a T⁴ term there raises the worst residual), and it pulls latitude along
 for free — the arguments feed both sums. A correction to M (the Sun's
 mean anomaly) fits only noise and is left out. It is the same kind of
-correction Espenak's eclipse canons apply for the lunar tidal
+correction [Espenak 2006](/data/papers/index.md#espenak2006)'s eclipse canons apply for the lunar tidal
 acceleration, and the same kind of measured fit Triton's node rate and
 Mimas's libration amplitude already carry in `MOON_ELEMENTS`.
 
 Resulting geocentric accuracy vs Horizons/DE441, pinned in
 `moon-vector-truth.test.ts`: **≲20 km across 1900–2100** (the truncation
-floor — Meeus quotes ~10″ ≈ 19 km near the present), **≲30 km over the
+floor — [Meeus 1998](/data/papers/index.md#meeus) quotes ~10″ ≈ 19 km near the present), **≲30 km over the
 whole independent `check` grid, ≲45 km over the whole
 3000 BC – 3000 AD span** (≲150 km with the mean-longitude term alone,
 ~1000 km with none, tens of thousands from the element row).
@@ -275,13 +277,13 @@ the planet ephemeris), then reference-plane → ICRS `Rz(α0+90°)·Rx(90°−δ
 (IAU pole convention — node from the plane's ascending node on the ICRS
 equator) → ecliptic `Rx(−ε)`, so the result adds straight onto the
 parent's ecliptic position. The Moon skips the rotation (already
-ecliptic). `earthMoonSplit` then divides Standish's EM-barycentre into
+ecliptic). `earthMoonSplit` then divides [Standish 1992](/data/papers/index.md#standish1992)'s EM-barycentre into
 Earth-centre and Moon by `MOON_MASS_FRACTION` (Earth ~4700 km
 off-barycentre, resolvable at Earth-zoom).
 
 `solPositionsAt` calls the resolver each frame: after the nine planet
 positions it appends `parent_ecliptic + moonOffsetEcliptic` per moon,
-and jointly resolves the Earth slot + Moon slot from the Standish
+and jointly resolves the Earth slot + Moon slot from the [Standish 1992](/data/papers/index.md#standish1992)
 EM-barycentre via `earthMoonSplit`. The single ecliptic→ICRS host
 quaternion the field already applies then rotates the whole vector, so
 the offset composes in the ecliptic frame here and lands at
@@ -297,7 +299,7 @@ reference plane, rotated to the ecliptic by the same pole convention
 the moon resolver applies — parity vitest-pinned).
 
 **Geometry comes from `PlanetSystem.orbitGeometryAt(t)` — the SAME
-element source that positions the bodies** (Sol: live Standish
+element source that positions the bodies** (Sol: live [Standish 1992](/data/papers/index.md#standish1992)
 elements for planets, `MOON_ELEMENTS` for moons, and for **the Moon**
 the osculating ellipse through the lunar theory's own state, via
 `moonOsculatingOrbit` — its element row would leave the ring behind the
@@ -434,7 +436,7 @@ reach for `orbitPlaneNormalInto`, never `orbitalPlaneNormalFor`.
   `orbit-rings-layer.ts`'s `refPlaneToEclipticQuat` the one quaternion
   form. Use J2000 ε = 23.4392911° consistently when composing the
   Sol-host quaternion, and do not reach for the time-varying obliquity
-  term — Standish's accuracy budget doesn't need it and the
+  term — [Standish 1992](/data/papers/index.md#standish1992)'s accuracy budget doesn't need it and the
   apparent-position match is unaffected. (The lunar theory's
   equinox-of-date frame is a different question and does move — see
   [Moon ephemeris](#moon-ephemeris).)

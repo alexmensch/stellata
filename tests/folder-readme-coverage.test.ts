@@ -20,12 +20,16 @@ const EXCLUDED_DIRS = new Set([
  *  this suite fails for anyone who runs the tests meanwhile. */
 const EXCLUDED_SUFFIXES = ['.ckpt'];
 
+// see /data/papers/README.md#the-pdfs-are-private
+const EXCLUDED_PATHS = new Set(['data/papers/pdf']);
+
 function collectFolders(dir: string, out: string[]): void {
   out.push(dir);
   for (const entry of readdirSync(dir)) {
     if (EXCLUDED_DIRS.has(entry)) continue;
     if (EXCLUDED_SUFFIXES.some((s) => entry.endsWith(s))) continue;
     const full = join(dir, entry);
+    if (EXCLUDED_PATHS.has(relative(ROOT, full))) continue;
     if (statSync(full).isDirectory()) {
       collectFolders(full, out);
     }

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Resample the Edenhofer+ 2023 3D dust map onto a Cartesian voxel grid
-and emit it as 64 chunks for progressive client-side loading. See
-scripts/dust/README.md for grid params, encoding, and CLI usage."""
+"""Resample the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) 3D dust map onto a
+Cartesian voxel grid and emit it as 64 chunks for progressive client-side loading.
+See scripts/dust/README.md for grid params, encoding, and CLI usage."""
 
 from __future__ import annotations
 
@@ -26,11 +26,12 @@ BOUNDS_PC = cloud_model.DUST_GRID_HALF_EXTENT_PC  # half-extent; full cube is 2*
 VOXEL_SIZE_PC = 2.0 * BOUNDS_PC / GRID_SIZE  # ≈ 4.883
 
 # Encoding params. DENSITY_MIN is fixed below the real-data noise floor;
-# DENSITY_MAX is a fixed ceiling covering the raw Edenhofer peak with
-# headroom (grid max 0.135 E_ZGR/pc, in the rho Oph core). The previous
-# 99.95th-percentile autotune (0.0053) silently clipped dense molecular
-# cloud cores 25x — peak cloud columns encoded at 0.06-0.6 mag A_V where
-# the raw field carries 0.8-2.7 mag (/docs/science-molecular-clouds.md#22-encoding-ceiling--the-fixed-density_max).
+# DENSITY_MAX is a fixed ceiling covering the raw Edenhofer 2024
+# (/data/papers/index.md#edenhofer2024) peak with headroom (grid max 0.135
+# E_ZGR/pc, in the rho Oph core). The previous 99.95th-percentile autotune
+# (0.0053) silently clipped dense molecular cloud cores 25x — peak cloud
+# columns encoded at 0.06-0.6 mag A_V where the raw field carries 0.8-2.7 mag
+# (/docs/science-molecular-clouds.md#22-encoding-ceiling--the-fixed-density_max).
 # The build asserts the ceiling still covers the data each run.
 # Synthetic mode uses the same DENSITY_MIN and a fixed DENSITY_MAX matching
 # the real-data scale, so both pipelines share a single shader decode.
@@ -81,7 +82,7 @@ def main() -> int:
             print(f"Loading cached voxel grid from {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             voxels = np.load(cache_path)
         else:
-            print(f"Fetching + resampling Edenhofer 2023 dust map (flavor={args.flavor})…", file=sys.stderr)
+            print(f"Fetching + resampling Edenhofer 2024 dust map (flavor={args.flavor})…", file=sys.stderr)
             voxels = resample_edenhofer(flavor=args.flavor)
             print(f"Saving raw grid cache to {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             np.save(cache_path, voxels)
@@ -154,14 +155,16 @@ def _peak_column_av(voxels: np.ndarray, cloud, rot: np.ndarray,
 
 
 def zucker_column_check(voxels: np.ndarray) -> dict:
-    """Compare peak extinction columns through the raw Edenhofer field
-    against the Zucker 2021 Leike-resolution peak columns, per profiled
-    cloud. Read-only: per-star extinction reads pure Edenhofer — the
-    real reconstruction carries each cloud's morphology (cores sit
-    off-centre in their bboxes), and the analytic cloud model in
-    clouds.json drives only the presence pass. The ratios below run
-    0.3–1.0 with the fixed DENSITY_MAX ceiling, consistent with 1 pc →
-    4.9 pc beam dilution of the Leike peaks (/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field).
+    """Compare peak extinction columns through the raw Edenhofer 2024
+    (/data/papers/index.md#edenhofer2024) field against the Zucker 2021
+    (/data/papers/index.md#zucker2021) Leike 2020
+    (/data/papers/index.md#leike2020) resolution peak columns, per profiled
+    cloud. Read-only: per-star extinction reads pure Edenhofer — the real
+    reconstruction carries each cloud's morphology (cores sit off-centre in
+    their bboxes), and the analytic cloud model in clouds.json drives only the
+    presence pass. The ratios below run 0.3–1.0 with the fixed DENSITY_MAX
+    ceiling, consistent with 1 pc → 4.9 pc beam dilution of the Leike peaks
+    (/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field).
     Also asserts the encode ceiling covers the data."""
     cm = cloud_model
     rot = np.array(cm.GAL_TO_ICRS, dtype=np.float64)
@@ -232,7 +235,8 @@ def make_synthetic_grid() -> np.ndarray:
 
 
 def resample_edenhofer(*, flavor: str) -> np.ndarray:
-    """Load the Edenhofer 2023 dust map and resample onto our Cartesian grid.
+    """Load the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust map and resample
+    onto our Cartesian grid.
 
     Imports dustmaps/astropy lazily so --synthetic mode has zero extra deps.
     """

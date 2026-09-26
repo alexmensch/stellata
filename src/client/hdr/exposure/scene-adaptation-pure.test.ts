@@ -13,7 +13,7 @@ import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   sightlineSurfaceBrightness,
-} from '../../milkyway/milkyway-column-pure';
+} from '../../milkyway/column/milkyway-column-pure';
 import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 import {
   ADAPT_DISPLAY_FLOOR_DM,

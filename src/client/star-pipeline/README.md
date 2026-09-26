@@ -164,7 +164,7 @@ halo is where the kernel stops reading as the photosphere.
 ## Colour routing
 
 Runtime colour is **two-tier** — `iTeffApsis > 0 ? Ballesteros(iTeffApsis)
-: iCi` in `../webgpu/star/star-vertex-tsl.ts` — where `iCi` is the build-time-baked
+: iCi` ([Ballesteros 2012](/data/papers/index.md#ballesteros2012)) in `../webgpu/star/star-vertex-tsl.ts` — where `iCi` is the build-time-baked
 intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
 `spectralClassCi` bakes in
 `scripts/catalog/spectral/physical-radius.ts`).

@@ -16,7 +16,7 @@ crossid.txt    ~12 MB, LFS. Hip/HD/Tyc/etc. → GCVS name mappings.
   Astronomical Institute, Moscow.
 - **Distribution**: http://www.sai.msu.su/gcvs/gcvs/.
 - **Licence**: Free for research and educational use with
-  attribution; cite Samus et al. 2017, *Astronomy Reports* 61, 80.
+  attribution; cite [Samus 2017](/data/papers/index.md#samus2017).
 - **Cadence**: yearly-ish; update by fetching the latest text files
   from the SAI mirror and replacing the files in place.
 

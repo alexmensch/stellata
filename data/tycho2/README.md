@@ -186,11 +186,12 @@ and 3.7″ away on the observation epochs.
 
 ## Provenance
 
-- **Citation**: Høg E. et al. 2000, *A&A* 355, L27 (Tycho-2).
+- **Citation**: [Høg 2000](/data/papers/index.md#hog2000) (Tycho-2).
 - **VizieR**: `I/259` (`tyc2`, `suppl_1` tables), over the CDS TAP endpoint
   `refresh_lib.CDS_TAP_URL` names.
 - **Retrieved**: 2026-08-25.
-- **Licence**: CDS/VizieR standard academic use; cite Høg et al. 2000.
+- **Licence**: CDS/VizieR standard academic use; cite
+  [Høg 2000](/data/papers/index.md#hog2000).
 
 Tycho-2 is a completed 1997-epoch publication, so upstream will not
 republish; a re-pull is warranted only when the request set moves.

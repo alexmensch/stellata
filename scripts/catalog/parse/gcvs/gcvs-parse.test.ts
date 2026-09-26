@@ -290,7 +290,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
   });
 
   it('has no opinion on a designation that names no constellation', () => {
-    // 6.1k of the 14.1k named variables are these: an NSV serial or an
+    // Thousands of the named variables are these: an NSV serial or an
     // LMC/SMC field number, where the trailing token is a number.
     expect(gcvsDesignationConIndex('NSV 04199')).toBe(NO_CONSTELLATION_INDEX);
     expect(gcvsDesignationConIndex('LMC V0471')).toBe(NO_CONSTELLATION_INDEX);

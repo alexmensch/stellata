@@ -217,11 +217,11 @@ export const MOON_ELEMENTS: readonly MoonElements[] = [
 ] as const;
 
 // Moon mass as a fraction of the Earth–Moon total,
-// m_moon/(m_earth+m_moon), from the IAU Moon:Earth mass ratio
-// 0.0123000371. Standish's ephemeris gives the Earth–Moon barycentre;
-// Earth's centre lies this fraction of the geocentric Moon vector back
-// from the barycentre (~4700 km — sub-pixel at disc scale, resolvable at
-// Earth-zoom).
+// m_moon/(m_earth+m_moon), from the IAU Moon:Earth mass ratio 0.0123000371.
+// Standish 1992's (/data/papers/index.md#standish1992) ephemeris gives the
+// Earth–Moon barycentre; Earth's centre lies this fraction of the geocentric
+// Moon vector back from the barycentre (~4700 km — sub-pixel at disc scale,
+// resolvable at Earth-zoom).
 export const MOON_EARTH_MASS_RATIO = 0.0123000371;
 export const MOON_MASS_FRACTION = MOON_EARTH_MASS_RATIO / (1 + MOON_EARTH_MASS_RATIO);
 
@@ -361,8 +361,9 @@ export function moonOffsetEcliptic(elem: MoonElements, t: number, out: Vec3): vo
   icrsToEcliptic(out, out);
 }
 
-/** `bary` is the Standish EM-barycentre; `moonGeoOffset` is the Moon's
- *  geocentric offset from `moonOffsetEcliptic`. All vectors ecliptic pc. */
+/** `bary` is the Standish 1992 (/data/papers/index.md#standish1992) EM-barycentre;
+ *  `moonGeoOffset` is the Moon's geocentric offset from `moonOffsetEcliptic`.
+ *  All vectors ecliptic pc. */
 export function earthMoonSplit(
   bary: Readonly<Vec3>,
   moonGeoOffset: Readonly<Vec3>,

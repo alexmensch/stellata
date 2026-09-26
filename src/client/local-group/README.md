@@ -303,24 +303,20 @@ what made the focus card's alias row repeat itself.
 
 ## References
 
-- **Pace et al. 2024**, *Local Volume Database*, Open Journal of
-  Astrophysics (arXiv:2411.07424). CC0.
+- [**Pace 2025**](/data/papers/index.md#pace2025) — *Local Volume Database*. CC0.
   <https://github.com/apace7/local_volume_database>
-- **Pietrzyński et al. 2019**, *Nature* 567, 200
-  (DOI: 10.1038/s41586-019-0999-4) — LMC distance.
-- **van der Marel & Kallivayalil 2014**, *ApJ* 781, 121
-  (DOI: 10.1088/0004-637X/781/2/121) — LMC structure.
-- **Graczyk et al. 2020**, *ApJ* 904, 13
-  (DOI: 10.3847/1538-4357/abbb2b) — SMC distance.
-- **Subramanian & Subramaniam 2012**, *ApJ* 744, 128
-  (DOI: 10.1088/0004-637X/744/2/128) — SMC structure.
-- **Ibata et al. 1995**, *AJ* 110, 632 (DOI: 10.1086/192237) —
-  Sagittarius dSph discovery + structure.
-- **McConnachie et al. 2018**, *ApJ* 868, 55
-  (DOI: 10.3847/1538-4357/aae8e7) — M31 inclined-disc structure from
-  the PAndAS survey (i ≈ 77°, PA ≈ 37°).
-- **Bonanos et al. 2006**, *ApJ* 652, 313 (DOI: 10.1086/508140) —
-  M33 Cepheid distance (840 ± 11 kpc) + disc inclination.
-- **McConnachie 2012**, *AJ* 144, 4
-  (DOI: 10.1088/0004-6256/144/1/4) — Local Group structural review
-  used for the M 32 + NGC 205 override entries.
+- [**Pietrzyński 2019**](/data/papers/index.md#pietrzynski2019) — LMC distance.
+- [**van der Marel 2014**](/data/papers/index.md#vandermarel2014) — LMC structure.
+- [**Graczyk 2020**](/data/papers/index.md#graczyk2020) — SMC distance cross-check.
+- [**Subramanian 2012**](/data/papers/index.md#subramanian2012) — SMC structure.
+- [**Ibata 1997**](/data/papers/index.md#ibata1997) —
+  Sagittarius dSph structure: prolate 3:1:1, line-of-sight depth.
+- [**McConnachie 2018**](/data/papers/index.md#mcconnachie2018) — M31 disc
+  inclination from the PAndAS survey (i ≈ 77°).
+- [**Gieren 2013**](/data/papers/index.md#gieren2013) —
+  M33 Cepheid distance (µ = 24.62 ± 0.07, 840 ± 27 kpc).
+- [**Corbelli 2014**](/data/papers/index.md#corbelli2014) —
+  M33 disc orientation (tilted-ring fit) and 1.8 kpc scale length.
+- [**McConnachie 2012**](/data/papers/index.md#mcconnachie2012) — Local Group structural
+  review: the ellipticities behind the M 32 + NGC 205 axis ratios and
+  M 32's PA (Table 3).

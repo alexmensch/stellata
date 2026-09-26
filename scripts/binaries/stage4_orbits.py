@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Stage 4 — orbital-element selection per WDS pair. Picks between
-ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Pulkovo MSC orbits.
+ORB6 visual, Gaia NSS, ORB6 spectroscopic, and Tokovinin MSC orbits.
 """
 
 from __future__ import annotations
@@ -154,7 +154,8 @@ class OrbitElements:
 def _thiele_innes_to_campbell(
     A: float, B: float, F: float, G: float,
 ) -> tuple[float, float, float, float] | None:
-    """Heintz 1978 / Halbwachs+ 2023 Appendix C closed form.
+    """Heintz 1978 (/data/papers/index.md#heintz1978) / Halbwachs 2023
+    (/data/papers/index.md#halbwachs2023) Appendix A closed form (Eqs. A.1–A.3).
 
     Inputs A,B,F,G in mas (Gaia DR3 NSS native). Returns
     ``(a_mas, i_rad, Omega_rad, omega_rad)`` where ``Omega`` is the
@@ -254,7 +255,7 @@ def nss_to_canonical_elements(
 
     * TI-derived (``Orbital``, ``OrbitalAlternative*``,
       ``OrbitalTargetedSearch*``, ``AstroSpectroSB1``) — recover
-      i/Ω/ω from A,B,F,G via Heintz 1978 algebra. The TI semi-major
+      i/Ω/ω from A,B,F,G via Heintz 1978 (/data/papers/index.md#heintz1978) algebra. The TI semi-major
       axis is the photocentre's a0, not the relative A–B orbit, so
       ``a_AU`` is always left ``None`` (README.md#stage-4--orbital-element-selection-per-pair); ω is
       the photocentre's, π away from the secondary's relative-orbit
@@ -272,7 +273,8 @@ def nss_to_canonical_elements(
     DR3 today, but a forward guard against future NSS extensions); the
     caller falls through to ORB6.
 
-    Cross-checked against the ESA NSSTools algebra (Halbwachs+ 2023);
+    Cross-checked against the ESA NSSTools algebra (Halbwachs 2023,
+    /data/papers/index.md#halbwachs2023);
     the algebra is inlined rather than imported because the package
     has not been maintained for 2+ years and the closed form is ~10
     lines.
@@ -670,7 +672,7 @@ def select_orbit(
        systemic source).
     3. ``orb6_spectroscopic`` — ORB6 non-visual orbits
        (grade ∈ {7,8,9}). Same tiebreaks.
-    4. ``msc`` — Pulkovo MSC compiled orbit, SUB-RESOLUTION PAIRS ONLY
+    4. ``msc`` — MSC compiled orbit, SUB-RESOLUTION PAIRS ONLY
        (ρ = 0 or unmeasured). MSC compiles from the same primary
        sources the routes above curate, so it ranks below all of them;
        the sub-resolution gate keeps measured WDS placements from

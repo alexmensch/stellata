@@ -1,0 +1,1520 @@
+{
+  "abdurrouf2022": [
+    {
+      "file": "abdurrouf2022.pdf",
+      "source_url": "https://arxiv.org/pdf/2112.02026",
+      "sha256": "ff6ff496d0ae1e2f092fc15e4118c688afed11f9bc9e0a708d52edcaeabd4c8e",
+      "bytes": 15322915
+    }
+  ],
+  "andrae2023": [
+    {
+      "file": "andrae2023.pdf",
+      "source_url": "https://curis.ku.dk/ws/files/367298692/aa43462_22.pdf",
+      "sha256": "1dfb1562fabc59b2e4bffb8af32623b95a137621c2ebfcf51e8cee41d0123981",
+      "bytes": 3644180
+    }
+  ],
+  "archinal2018": [
+    {
+      "file": "archinal2018.pdf",
+      "source_url": "https://doi.org/10.1007/s10569-017-9805-5",
+      "sha256": "291c6fc48d6c6c93d0a55463c238d2b2e3c89920a0678aa04faf8f075e3aa4ca",
+      "bytes": 938181
+    }
+  ],
+  "arzoumanian2011": [
+    {
+      "file": "arzoumanian2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1103.0201",
+      "sha256": "591d82039bc64303579b83d9417353dd30accba30ea30387672b88c2483c539c",
+      "bytes": 3674121
+    }
+  ],
+  "arzoumanian2019": [
+    {
+      "file": "arzoumanian2019.pdf",
+      "source_url": "https://real.mtak.hu/186593/1/1810.00721.pdf",
+      "sha256": "02aef8f66b54cba13351708ea75f215a99934aeb2267088e6292c76de829e45e",
+      "bytes": 14685755
+    }
+  ],
+  "bahcall1980": [
+    {
+      "file": "bahcall1980.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1980ApJS...44...73B",
+      "sha256": "1d1e77d724dcba9f6d570bee8c069141d583616b203d8c18bef6aa8f3149d6ac",
+      "bytes": 3522904
+    }
+  ],
+  "bailerjones2015": [
+    {
+      "file": "bailerjones2015.pdf",
+      "source_url": "https://arxiv.org/pdf/1507.02105",
+      "sha256": "8f86ef1b3cc7e9257ce6541e4d1620e7102bb1b74677137a27bf0fcd3184f14d",
+      "bytes": 2793443
+    }
+  ],
+  "bailerjones2021": [
+    {
+      "file": "bailerjones2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.05220",
+      "sha256": "5ee4da1580b679706a073c6b4dc8cedc840ede3c486c00d28cabbf81e61cdfd9",
+      "bytes": 12833923
+    }
+  ],
+  "ballesteros2012": [
+    {
+      "file": "ballesteros2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1201.1809",
+      "sha256": "c1f856f4f7d71bc59b1e41b204c143ba35e12c3b165126bca99af00798f3b532",
+      "bytes": 283855
+    }
+  ],
+  "benedict2002": [
+    {
+      "file": "benedict2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0206214",
+      "sha256": "9f82a056e0baea7ae25bdb89576b0eecb9c1b05a2d01b999710158c09b320c80",
+      "bytes": 276940
+    }
+  ],
+  "bessell1979": [
+    {
+      "file": "bessell1979.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1979PASP...91..589B",
+      "sha256": "702c505ef44b0d9151de23963bd38c377ae39d65e15cdace4eef71429269d52c",
+      "bytes": 1842464
+    }
+  ],
+  "blandhawthorn2016": [
+    {
+      "file": "blandhawthorn2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1602.07702",
+      "sha256": "d6f92a288422385776b1dbc7d9d0818b523ce92e25a1bb5eadaa70b3c416f500",
+      "bytes": 8492213
+    }
+  ],
+  "bodhaine1999": [
+    {
+      "file": "bodhaine1999.pdf",
+      "source_url": "https://doi.org/10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2",
+      "sha256": "e81ff2a075595a094f34e651d879c71a4aa63eac55969a009aaee88a65a4e835",
+      "bytes": 96772
+    }
+  ],
+  "bohlin1978": [
+    {
+      "file": "bohlin1978.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1978ApJ...224..132B",
+      "sha256": "46544b0541add68036f46f8b4134fd740b4eaef411746ce417898723dfa469d0",
+      "bytes": 1104686
+    }
+  ],
+  "bond2018": [
+    {
+      "file": "bond2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1712.08139",
+      "sha256": "d38dd87cd5893de92f453d7c929fe2ceebf1f459e9a77a62ebcd25b93588415b",
+      "bytes": 202732
+    }
+  ],
+  "bruzual2003": [
+    {
+      "file": "bruzual2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0309134",
+      "sha256": "072998f68479ea6c604fe62f6dd1d3a13d478d788ea767546deb12d20b89391f",
+      "bytes": 1104870
+    }
+  ],
+  "butkevich2014": [
+    {
+      "file": "butkevich2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1407.4664",
+      "sha256": "eb55fd546f09db94de743de16f1f8f0d20fa9d58b23b4a493d4f51782fe5a33d",
+      "bytes": 353399
+    }
+  ],
+  "cardelli1989": [
+    {
+      "file": "cardelli1989.pdf",
+      "source_url": "https://doi.org/10.1086/167900",
+      "sha256": "e3db684021b80d7c161499f8e6257df9881251b0fb0382a3d9d30b2ae0e6fd73",
+      "bytes": 1292222
+    }
+  ],
+  "casagrande2018": [
+    {
+      "file": "casagrande2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1806.01953",
+      "sha256": "da6ae62684b506d1977308847238f28e43abe9fed18dcabd78b15db2ee2ad81d",
+      "bytes": 1473430
+    }
+  ],
+  "chabrier2003": [
+    {
+      "file": "chabrier2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0304382",
+      "sha256": "1308007b5fd7130033234df7bb76c8976fa055a823fa1b4a6bc64b298b03df92",
+      "bytes": 676479
+    }
+  ],
+  "chapman2009": [
+    {
+      "file": "chapman2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0809.1106",
+      "sha256": "d2ac37e5b7ceeb5b778d0bd44b26ecbe653e4ac3597f7181f33e67f3c0cbf151",
+      "bytes": 2343176
+    }
+  ],
+  "cioni2000": [
+    {
+      "file": "cioni2000.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0003223",
+      "sha256": "d5423090942c377e25fe1b2c6353cc2cb22935c1eb12d574ce9f6ef1bb3362f9",
+      "bytes": 1420802
+    }
+  ],
+  "ciotti1999": [
+    {
+      "file": "ciotti1999.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9911078",
+      "sha256": "9b2af79fd1730eedaa2205e2f3690018ae21768092312d3bae4d6bde14d097c9",
+      "bytes": 141692
+    }
+  ],
+  "cook2023": [
+    {
+      "file": "cook2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2306.06271",
+      "sha256": "75ef3e69050c8230be1ffeb78f74011c770450d9d62a49886fb15b576b28f58a",
+      "bytes": 4129558
+    }
+  ],
+  "corbelli2014": [
+    {
+      "file": "corbelli2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1409.2665",
+      "sha256": "732101ce21fa2101f0f78e3d4923d229a0f7fffed9aa5119f6a0545ea3f24437",
+      "bytes": 7402865
+    }
+  ],
+  "costaalmeida2021": [
+    {
+      "file": "costaalmeida2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2110.01658",
+      "sha256": "25fb5e6ccd6a0f9fe4616b92a61bea0c718a15dbcf880bfaee055e34187c7ffa",
+      "bytes": 1833094
+    }
+  ],
+  "courteau2011": [
+    {
+      "file": "courteau2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1106.3564",
+      "sha256": "718400d7670006f036040284c5c1d5bb719a7ba43c3317fe9d9f035ceca71238",
+      "bytes": 863193
+    }
+  ],
+  "creevey2023": [
+    {
+      "file": "creevey2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2206.05864",
+      "sha256": "32ed85613c76f3d5d6da53cbc9a4e6f0a33e65a38ee5ead30a4d1f385aafe244",
+      "bytes": 5231986
+    }
+  ],
+  "cutri2003": [
+    {
+      "file": "cutri2003.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/II/246/ReadMe",
+      "sha256": "9c95e07f242f547264257815898c1a2ca8a4bd10729f33c4ae1cfc462463e781",
+      "bytes": 30905
+    }
+  ],
+  "deau2013": [
+    {
+      "file": "deau2013.pdf",
+      "source_url": "https://doi.org/10.1016/j.icarus.2013.01.015",
+      "sha256": "ffa0564127ae8959dc9beb5f8ca806935bee4d59caa9901d61c8550dd6117466",
+      "bytes": 2336245
+    }
+  ],
+  "devaucouleurs1960": [
+    {
+      "file": "devaucouleurs1960.pdf",
+      "source_url": "https://doi.org/10.1086/146870",
+      "sha256": "ec820c797acfa37cc4c2197b49b5f89879545f963426ea447a66ed747297d667",
+      "bytes": 636514
+    }
+  ],
+  "devaucouleurs1983": [
+    {
+      "file": "devaucouleurs1983.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1983ApJ...268..451D",
+      "sha256": "7316f2c08260776de0e742ed946ff2835cc8cbc30ee0675bd3fac618dd83a91e",
+      "bytes": 2296431
+    }
+  ],
+  "devaucouleurs1991": [
+    {
+      "file": "devaucouleurs1991.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/VII/155/ReadMe",
+      "sha256": "d182c7db2f0f280313680727217d732925a2ae3067c0a4bee733ee6be5ed0c0d",
+      "bytes": 21246
+    }
+  ],
+  "dolan2002": [
+    {
+      "file": "dolan2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0110160",
+      "sha256": "9646e5f06595fe63d48a55ebeb3724746007acb46e83a4d01f2d280dfaceec91",
+      "bytes": 527306
+    }
+  ],
+  "dommanget1994": [
+    {
+      "file": "dommanget1994.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/I/211/ReadMe",
+      "sha256": "51c779cf5fe5dc07e5eeb0004269b879f1f1def9718f55d48db1452b8a6ae1a3",
+      "bytes": 7317
+    }
+  ],
+  "drimmel2001": [
+    {
+      "file": "drimmel2001.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0101259",
+      "sha256": "3e19cea6fb0e51abceab0f869b3dea9babfbfd1bb6e4a9ddd6ce2e3a837eb2d7",
+      "bytes": 679937
+    }
+  ],
+  "ducati2001": [
+    {
+      "file": "ducati2001.pdf",
+      "source_url": "https://lume.ufrgs.br/bitstream/handle/10183/108885/000306128.pdf;jsessionid=CC0A0C840CDBABCAF2B71FFBF193E198?sequence=1",
+      "sha256": "0d5452f4e6aaba64df5ac586db6b8f67c0202bfcb5b9adaa33084372ba654fec",
+      "bytes": 690519
+    }
+  ],
+  "dupuy2023": [
+    {
+      "file": "dupuy2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2305.02339",
+      "sha256": "74b121436f5d704cb480c8779988e13e3955204161543f48fbf33ac4e39d2807",
+      "bytes": 23273607
+    }
+  ],
+  "dyudina": [
+    {
+      "file": "dyudina.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0406390",
+      "sha256": "34721b3cc65d029871c88098c8a1bc9edfabc87275dae7e8d947dcff74a74725",
+      "bytes": 970196
+    }
+  ],
+  "edenhofer2024": [
+    {
+      "file": "edenhofer2024.pdf",
+      "source_url": "https://arxiv.org/pdf/2308.01295",
+      "sha256": "151b9f76ca950b67547fb7b94131f751ff7d549ffe97d81e08900ceec7199f63",
+      "bytes": 6980483
+    }
+  ],
+  "esa1997": [
+    {
+      "file": "esa1997.pdf",
+      "source_url": "https://www.cosmos.esa.int/documents/532822/552851/vol1_all.pdf",
+      "sha256": "f6182096bf31bbdd2e37516da98619305de15cb06c9eecf713cdd3e8a9c6e1be",
+      "bytes": 11456841
+    }
+  ],
+  "espenak2006": [
+    {
+      "file": "espenak2006.pdf",
+      "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/5MCSE-Text11.pdf",
+      "sha256": "c8de965a05bf6b55cc2a451456fafb78507ac329cc0a27f3c553bbf70d4a180c",
+      "bytes": 2040207
+    }
+  ],
+  "espenak2009": [
+    {
+      "file": "espenak2009.pdf",
+      "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/TP2009-214174.pdf",
+      "sha256": "19cb7687d96030164756af44938c8a686c814dbeca919a862d1fe6dbc9ecbc87",
+      "bytes": 13866196
+    }
+  ],
+  "espenak2009lunar": [
+    {
+      "file": "espenak2009lunar.pdf",
+      "source_url": "https://eclipse.gsfc.nasa.gov/5MCLE/5MKLE-214173.pdf",
+      "sha256": "c21e3d13662669ef7609a9624061fcbd9e16d666c97733b5013762019d1fee60",
+      "bytes": 14477450
+    }
+  ],
+  "esposito2002": [
+    {
+      "file": "esposito2002.pdf",
+      "source_url": "https://doi.org/10.1088/0034-4885/65/12/201",
+      "sha256": "b7e2e309d9cbca72c5668ee5a581abdf78a7c7b9e0a814bd9aca53f7f3cb3e6c",
+      "bytes": 1216572
+    }
+  ],
+  "fabricius2002a": [
+    {
+      "file": "fabricius2002a.pdf",
+      "source_url": "https://doi.org/10.1051/0004-6361:20020249",
+      "sha256": "9daf0f7db32fb21824322ab4db86d3939f3eaf7ed0e1e22fbae133523333f334",
+      "bytes": 86292
+    }
+  ],
+  "fabricius2002b": [
+    {
+      "file": "fabricius2002b.pdf",
+      "source_url": "https://ui.adsabs.harvard.edu/abs/2002A&A...384..180F",
+      "sha256": "886d9450fcefe49187a72b8dffd7a40f962556b3d4cc2424c98fc628b265057a",
+      "bytes": 757360
+    }
+  ],
+  "federrath2010": [
+    {
+      "file": "federrath2010.pdf",
+      "source_url": "https://arxiv.org/pdf/0905.1060",
+      "sha256": "3b8d4bced598feae286c1af5289eaf7fc85e55a6595a27c58ffa337102b0ef2a",
+      "bytes": 2131514
+    }
+  ],
+  "federrath2013": [
+    {
+      "file": "federrath2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1211.6433",
+      "sha256": "21a6540817ac091ec0962ffd2b6ad32d556ad0a124411cd6ed66b293061850d6",
+      "bytes": 5552305
+    }
+  ],
+  "flynn2006": [
+    {
+      "file": "flynn2006.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0608193",
+      "sha256": "b24f390fde81bfcea12dfce920a3be72237c6a3bb3e0f4260db0d2324f392cc1",
+      "bytes": 433281
+    }
+  ],
+  "freeman1970": [
+    {
+      "file": "freeman1970.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1970ApJ...160..811F",
+      "sha256": "7e84b483ae33938ab45865c555d63076d35df161ed30d7c9f037e48399583cc4",
+      "bytes": 1511339
+    }
+  ],
+  "french1986": [
+    {
+      "file": "french1986.pdf",
+      "source_url": "https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F",
+      "sha256": "fec4a8f415f2a201017bbbe9f56f82ed1c99436b8b120c43b4e17d81d54b2adf",
+      "bytes": 2206955
+    }
+  ],
+  "french1988": [
+    {
+      "file": "french1988.pdf",
+      "source_url": "https://doi.org/10.1016/0019-1035(88)90104-2",
+      "sha256": "916f79b2aa12c4d586b76421d083ee4b00301664b7b88a7470a460aa0fcf2f7c",
+      "bytes": 2387012
+    }
+  ],
+  "frey1974": [
+    {
+      "file": "frey1974.pdf",
+      "source_url": "https://ntrs.nasa.gov/citations/19740014371",
+      "sha256": "96fcf0aacc3a3e2ab2a757b130d9ed1c4eb9cbfecf22ae4bd4477f60f77900ab",
+      "bytes": 1347501
+    }
+  ],
+  "gaiacollab2018cat": [
+    {
+      "file": "gaiacollab2018cat.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/345/ReadMe",
+      "sha256": "e238fd712f562dc3d2003bf646653a8991a7820847c7a39127fb8526f15d747c",
+      "bytes": 125506
+    }
+  ],
+  "gaiacollab2022cat": [
+    {
+      "file": "gaiacollab2022cat.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/355/ReadMe",
+      "sha256": "4a82cc91aa9dba0e33112041a046d1bbad515bd99a792526a798bf569cd9c234",
+      "bytes": 215224
+    }
+  ],
+  "gaiadr3doc": [
+    {
+      "file": "gaiadr3doc.page.txt",
+      "source_url": "https://gea.esac.esa.int/archive/documentation/GDR3/Data_processing/chap_cu5pho/cu5pho_sec_photSystem/cu5pho_ssec_photRelations.html",
+      "sha256": "6cb95bdbb601bdfcf315f11014a999bd971634087cdc2579f286771982e41f11",
+      "bytes": 21901
+    }
+  ],
+  "gieren2013": [
+    {
+      "file": "gieren2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.4258",
+      "sha256": "2107799b3a126cc838da569257729a62eb35f2cf2ee01fb78e1ebc77c4c92c24",
+      "bytes": 2283755
+    }
+  ],
+  "giovanelli2013": [
+    {
+      "file": "giovanelli2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.0272",
+      "sha256": "0298bf8f0d09128351b8837e76e2f208e77e63dc38233280ce7298cfbd6513eb",
+      "bytes": 2065530
+    }
+  ],
+  "gliese1991": [
+    {
+      "file": "gliese1991.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/V/70A/ReadMe",
+      "sha256": "ccd1e958e18e5ffd0b6ee2df4c399b6a24984e2264bbf6d5fc26e5f53da52032",
+      "bytes": 10587
+    }
+  ],
+  "golovin2023": [
+    {
+      "file": "golovin2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2211.01449",
+      "sha256": "301d8241c9bc02d13ae88b1b693cb88cbea6ea15f9e93e90cdc649812c0510da",
+      "bytes": 5940295
+    }
+  ],
+  "gontcharov2006": [
+    {
+      "file": "gontcharov2006.pdf",
+      "source_url": "https://arxiv.org/pdf/1606.08053",
+      "sha256": "573c8fa005c57230c3194b74ddea21eb721c19828576b940c17e7e3b94b043e1",
+      "bytes": 542872
+    }
+  ],
+  "graczyk2020": [
+    {
+      "file": "graczyk2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2010.08754",
+      "sha256": "6e3dd9d45208af0cefaec579deee84f5e6726bfb7e3c7a2257facacbf790711d",
+      "bytes": 3328489
+    }
+  ],
+  "graham2002": [
+    {
+      "file": "graham2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0202307",
+      "sha256": "5ee7e159b1518d8616936b4426547a53bd37c30135646f2470ab22466354b484",
+      "bytes": 233425
+    }
+  ],
+  "gravity2018": [
+    {
+      "file": "gravity2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1807.09409",
+      "sha256": "bd620d1136eb396beee040a6a4cfc39ac980b8b3a1369a867839b0283577d185",
+      "bytes": 2077687
+    }
+  ],
+  "gray2003": [
+    {
+      "file": "gray2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0308182",
+      "sha256": "82641994402a10f68cf633f94cb882202e897a40d0b2e9dacd732c45b29d80d8",
+      "bytes": 573604
+    }
+  ],
+  "gurnett2013": [
+    {
+      "file": "gurnett2013.pdf",
+      "source_url": "https://doi.org/10.1126/science.1241681",
+      "sha256": "e16f728abcecd0475185ab03a5c374a45e213fe15e63de4e9095c8ac4e713470",
+      "bytes": 1318568
+    }
+  ],
+  "gurnett2019": [
+    {
+      "file": "gurnett2019.pdf",
+      "source_url": "https://doi.org/10.1038/s41550-019-0918-5",
+      "sha256": "758ec4497375f15a95051db815f8ef790c3927fd4790465b2019812efa4a6d47",
+      "bytes": 1287190
+    }
+  ],
+  "halbwachs2023": [
+    {
+      "file": "halbwachs2023.pdf",
+      "source_url": "https://dipot.ulb.ac.be/dspace/bitstream/2013/371501/1/doi_355145.pdf",
+      "sha256": "1a04a582b732e478880a03870866f7044cc54ac67a1e5769e9225c45ab1803ea",
+      "bytes": 4591604
+    }
+  ],
+  "hamann2006": [
+    {
+      "file": "hamann2006.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0608078",
+      "sha256": "3cc786671e99fa4c1be02d9c70515332aa43423c7ed75662c14696bdead73237",
+      "bytes": 546635
+    }
+  ],
+  "hargis2020": [
+    {
+      "file": "hargis2020.pdf",
+      "source_url": "https://arxiv.org/pdf/1907.07185",
+      "sha256": "9f58dbeab5e9af4672b2ebd8a9de670ef589f25b31127fcef7b830370afc869e",
+      "bytes": 9350702
+    }
+  ],
+  "hartkopf2001": [
+    {
+      "file": "hartkopf2001.pdf",
+      "source_url": "https://doi.org/10.1086/323921",
+      "sha256": "bfb0035fb59583a2f9600c44f184c910b99119f1c5a0b82390dfc541b74fb028",
+      "bytes": 5703602
+    }
+  ],
+  "hoffleit1991": [
+    {
+      "file": "hoffleit1991.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/V/50/ReadMe",
+      "sha256": "44fd9c73e2eecad0beb47bdfa3f01c60fd43f93d6964198e31fcd48732de5b33",
+      "bytes": 11571
+    }
+  ],
+  "hog2000": [
+    {
+      "file": "hog2000.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/2000A%26A...355L..27H",
+      "sha256": "c9cd3e8a27b37207a2f744a537f76f75385af62205315d6f17d3d7af0fbbe76e",
+      "bytes": 104794
+    }
+  ],
+  "huchra2012": [
+    {
+      "file": "huchra2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1108.0669",
+      "sha256": "c3666947cb3bd3bfa318accbb993b37ce53d259b9bc7ff5c4a563d9858f2459d",
+      "bytes": 3483855
+    }
+  ],
+  "ibata1997": [
+    {
+      "file": "ibata1997.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9612025",
+      "sha256": "f4e3158330bae624eb3218ff83df96b845c76df5c258ee7faeba9b9482cfa2a7",
+      "bytes": 899736
+    }
+  ],
+  "ignatiev2009": [
+    {
+      "file": "ignatiev2009.pdf",
+      "source_url": "https://hal.science/hal-03786221/document",
+      "sha256": "113cf6641167cc3cf401647f75888a9e8c5c3820a4d29edd6351079c22175bb2",
+      "bytes": 2302796
+    }
+  ],
+  "ireland2004": [
+    {
+      "file": "ireland2004.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/2004MNRAS.352..318I",
+      "sha256": "7255958041e9c1285c22c3cd58ddf5bd529e91fc1892d1700d01b74d6decbb87",
+      "bytes": 409858
+    }
+  ],
+  "irwin2024": [
+    {
+      "file": "irwin2024.pdf",
+      "source_url": "https://doi.org/10.1093/mnras/stad3761",
+      "sha256": "aec051d06bccfcd344021f753963804092534fd00fca99b34755ab555825e4ce",
+      "bytes": 2288007
+    }
+  ],
+  "jonsson2020": [
+    {
+      "file": "jonsson2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2007.05537",
+      "sha256": "2f1b7c73986a5450826534de6deff2916fba157f10c5db5d05cd01a1609f36dd",
+      "bytes": 11578216
+    }
+  ],
+  "juric": [
+    {
+      "file": "juric.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0510520",
+      "sha256": "00ebf3722f91c665a00d02bad84f4d05ec68f818677f2d191f228b53502bf010",
+      "bytes": 3643900
+    }
+  ],
+  "kainulainen2009": [
+    {
+      "file": "kainulainen2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0911.5648",
+      "sha256": "fd36f7c85f4f0a5716e38554294406ad613d6a757ba103ae936ee63d2ca7ab5c",
+      "bytes": 539126
+    }
+  ],
+  "karachentsev2013": [
+    {
+      "file": "karachentsev2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1303.5328",
+      "sha256": "f9806dfc550382291711e4164dd36177b900ee3078ae10343bde74c93408c30e",
+      "bytes": 3351048
+    }
+  ],
+  "kepler2007": [
+    {
+      "file": "kepler2007.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0612277",
+      "sha256": "5c7f0ded7da1985be3f2018c0a74dba7ad8ee7bd240741dd535f25070060e144",
+      "bytes": 1067333
+    }
+  ],
+  "kersten2021": [
+    {
+      "file": "kersten2021.pdf",
+      "source_url": "https://elib.dlr.de/142500/1/Kersten_New_Ganymede_Basemap_final_resub.pdf",
+      "sha256": "ffb5911ae615e13d6e642bff59babfd5aa15c64575093246fb675a163d298c8f",
+      "bytes": 2488238
+    }
+  ],
+  "kervella2003": [
+    {
+      "file": "kervella2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0306604",
+      "sha256": "37dc0f11f4e90bdadf4a8f2ce96820a158c1bf1fc1f10d396c55831068a48411",
+      "bytes": 238383
+    }
+  ],
+  "kilic2020": [
+    {
+      "file": "kilic2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2006.00323",
+      "sha256": "84c8e94fb8ca2492409c6360921221da1433612ad56c42f5857e01b81043e0eb",
+      "bytes": 3137975
+    }
+  ],
+  "kim2014": [
+    {
+      "file": "kim2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1409.3283",
+      "sha256": "a85ff3b178ea76a521dc41ecaf0f3f54edb5d4701262c0d3aa8f84827d12ec77",
+      "bytes": 4978483
+    }
+  ],
+  "kolbas2015": [
+    {
+      "file": "kolbas2015.pdf",
+      "source_url": "https://lirias.kuleuven.be/retrieve/292c0ea4-68f0-4052-920d-897500897e6f",
+      "sha256": "f46364dc1f465b1519bd8090cd8b694f66da05455e7587c17545fe6ab0eef7c6",
+      "bytes": 808905
+    }
+  ],
+  "kostjuk2002": [
+    {
+      "file": "kostjuk2002.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/IV/27A/ReadMe",
+      "sha256": "a88f0b63e8c08dd835e90cbfa6856ed8b24ec71f4e11ecadab9ea90d08adc6b4",
+      "bytes": 11980
+    }
+  ],
+  "lacour2009": [
+    {
+      "file": "lacour2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0910.3869",
+      "sha256": "7d029d64944b4d73a4e20cc43ba9fbf0db4f84ef376c669c51fb42ef8233e446",
+      "bytes": 879131
+    }
+  ],
+  "lallement2019": [
+    {
+      "file": "lallement2019.pdf",
+      "source_url": "https://arxiv.org/pdf/1902.04116",
+      "sha256": "7668d890035fed9622d6757ccd945c33f9e9f9e8a5e129d3086279433e2eb4d4",
+      "bytes": 23535539
+    }
+  ],
+  "laskar1986": [
+    {
+      "file": "laskar1986.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1986A%26A...157...59L",
+      "sha256": "5c68679eade7dfd82f43114522ad66ebf76a6f3d4f14a98551df28a21c4e4898",
+      "bytes": 266670
+    }
+  ],
+  "leike2020": [
+    {
+      "file": "leike2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2004.06732",
+      "sha256": "61d41d4af14872fdf538eace480009df9fb8ffc159dfff2ef9b4669ff460ce6e",
+      "bytes": 6069916
+    }
+  ],
+  "leinert1998": [
+    {
+      "file": "leinert1998.pdf",
+      "source_url": "https://insu.hal.science/insu-03527749/document",
+      "sha256": "39be7e993ad07aa3d5eb467666fe08cc81e3b6219be5aed14761a50bb76f82cf",
+      "bytes": 3667685
+    }
+  ],
+  "lemmon2015": [
+    {
+      "file": "lemmon2015.pdf",
+      "source_url": "https://arxiv.org/pdf/1403.4234",
+      "sha256": "e5d36c83cfcfef84e5384eec0acdb050597d0d0b564cfd8d94ccb5036b4f35d9",
+      "bytes": 1765654
+    }
+  ],
+  "lepine2005": [
+    {
+      "file": "lepine2005.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0412070",
+      "sha256": "883b034e282b145adcf573e11e2d4feadec930dce6879e55c97966118998ad91",
+      "bytes": 1463223
+    }
+  ],
+  "licquia2015": [
+    {
+      "file": "licquia2015.pdf",
+      "source_url": "https://arxiv.org/pdf/1407.1078",
+      "sha256": "7b8aec6f2f68b603bc844d62682f10571bcd284d3c6a463f41a7206bb721c287",
+      "bytes": 900870
+    }
+  ],
+  "licquia2015b": [
+    {
+      "file": "licquia2015b.pdf",
+      "source_url": "https://arxiv.org/pdf/1508.04446",
+      "sha256": "036349033cc9ca546f5072074c35bd9ee504761ca493bbbedea0807a91e91e43",
+      "bytes": 1399460
+    }
+  ],
+  "lieske1979": [
+    {
+      "file": "lieske1979.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1979A%26A....73..282L",
+      "sha256": "aecc39006c076efa2dbda911ded14e60382e704a43a0f95ce9ca68f3727a6f7e",
+      "bytes": 96130
+    }
+  ],
+  "limaneto1999": [
+    {
+      "file": "limaneto1999.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9905048",
+      "sha256": "33105db737523a7cb25ad1f89bd255705962f466330dafe82a1a8fa7c97847d3",
+      "bytes": 426477
+    }
+  ],
+  "lindal1983": [
+    {
+      "file": "lindal1983.pdf",
+      "source_url": "https://doi.org/10.1016/0019-1035(83)90155-0",
+      "sha256": "f3cc8c780a5786e48698386ea242fee55229ec8d6e1056ba0b6120316d643be8",
+      "bytes": 1101041
+    }
+  ],
+  "lindegren2021": [
+    {
+      "file": "lindegren2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.01742",
+      "sha256": "29f4e07d8a887de601d935db8e61f758c1e9103b91138140e6c2407a24fc4150",
+      "bytes": 10476846
+    }
+  ],
+  "makarov2014": [
+    {
+      "file": "makarov2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1408.3476",
+      "sha256": "d3f492d2916b9de5198be9824bcd50b427775695fcf697b04ce64340426c0a41",
+      "bytes": 6613359
+    }
+  ],
+  "mallama2012": [
+    {
+      "file": "mallama2012.pdf",
+      "source_url": "https://doi.org/10.1016/j.icarus.2011.11.035",
+      "sha256": "079164927f1bde446c2ae5486eb1d0dc074c94507665bfab521a2add7b8dce9e",
+      "bytes": 227694
+    }
+  ],
+  "mallama2017": [
+    {
+      "file": "mallama2017.pdf",
+      "source_url": "https://arxiv.org/pdf/1609.05048",
+      "sha256": "7feb8edb372502cee5dc9c6a7656205e3279353bb38f9a98cbecbe8e8d733f91",
+      "bytes": 915468
+    }
+  ],
+  "mallamahilton2018": [
+    {
+      "file": "mallamahilton2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1808.01973",
+      "sha256": "805e53ab8f921c55e1c5e3dd64bbd567f806cdba56148625afcddfc650b6f9a7",
+      "bytes": 2164274
+    }
+  ],
+  "mamajek2022": [
+    {
+      "file": "mamajek2022.page.txt",
+      "source_url": "https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt",
+      "sha256": "1de2edeec17bb3346e0e4e70b999de5ee29947df38474e64cddb7cfacc164b7f",
+      "bytes": 55680
+    }
+  ],
+  "martins2005": [
+    {
+      "file": "martins2005.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0503346",
+      "sha256": "86fda37c1e52b419cb8bc4a92ef68b1f247af8fb5ad6b2cf13a6ea5ddef7966e",
+      "bytes": 574969
+    }
+  ],
+  "mason2001": [
+    {
+      "file": "mason2001.pdf",
+      "source_url": "https://doi.org/10.1086/323920",
+      "sha256": "963385497c38da25058c67df2ab2633687aeae4e81a341b661a9bab848e0b8bd",
+      "bytes": 79731
+    }
+  ],
+  "mccomas2015": [
+    {
+      "file": "mccomas2015.pdf",
+      "source_url": "https://doi.org/10.1088/0067-0049/220/2/22",
+      "sha256": "2642b5b04f6e1827ed6947b45c5f8e9bbb995230c937e05df7e6ea4f0d7f6808",
+      "bytes": 2281058
+    }
+  ],
+  "mcconnachie2012": [
+    {
+      "file": "mcconnachie2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1204.1562",
+      "sha256": "c5f8472d0e00565ea695522d1267041082786ecdc1e16e1e3d5f78f578274593",
+      "bytes": 1307476
+    }
+  ],
+  "mcconnachie2018": [
+    {
+      "file": "mcconnachie2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1810.08234",
+      "sha256": "8ed3bc28558863d7f26d6a4c8b28fdb3f36cc324d7fa38c3d018a0bfdadc98f8",
+      "bytes": 8862024
+    }
+  ],
+  "mcmillan": [
+    {
+      "file": "mcmillan.pdf",
+      "source_url": "https://arxiv.org/pdf/1608.00971",
+      "sha256": "e693abb0cfd9b6cf5f4e4780928fcd24ab16300db3eeba51dfe49904388ff099",
+      "bytes": 611252
+    }
+  ],
+  "merand2011": [
+    {
+      "file": "merand2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1106.2383",
+      "sha256": "2c1f749b21765cf95219533ae106862223ed61a7f4e2c6e99bb37539160acd3d",
+      "bytes": 1097675
+    }
+  ],
+  "montalto2021": [
+    {
+      "file": "montalto2021.pdf",
+      "source_url": "https://elib.dlr.de/144454/1/2108.13712.pdf",
+      "sha256": "47cf39ecb58ce81b414401f5811edf46bf293a36ee0dba4539d2362aac21be4c",
+      "bytes": 2519835
+    }
+  ],
+  "montegriffo2023": [
+    {
+      "file": "montegriffo2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2206.06215",
+      "sha256": "9c3d77df96c92c23ef31dff5c3637ad0871e2baf59564ca6e89d0efc16ca4b22",
+      "bytes": 21169617
+    }
+  ],
+  "morrisonstephenson": [
+    {
+      "file": "morrisonstephenson.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/2004JHA....35..327M",
+      "sha256": "88d3b3246005d7811e4c0373abed8180d3d99685b1083a18e4783004e2ce825e",
+      "bytes": 90969
+    }
+  ],
+  "mosenkov2021": [
+    {
+      "file": "mosenkov2021.pdf",
+      "source_url": "https://backoffice.biblio.ugent.be/download/8737340/8737342",
+      "sha256": "a7e627c4bdcdc6926569c4c44f47b04345110f87cb760d35a1e96b33a1bb28ed",
+      "bytes": 8252058
+    }
+  ],
+  "moustakas2023": [
+    {
+      "file": "moustakas2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2307.04888",
+      "sha256": "fcb797e17447b3a8622a55ae91f81f7ce8163ec2fe9d275ca4119dbe60ebec1d",
+      "bytes": 34011170
+    }
+  ],
+  "muterspaugh2010": [
+    {
+      "file": "muterspaugh2010.pdf",
+      "source_url": "https://arxiv.org/pdf/1010.4043",
+      "sha256": "270fe68a3bc9a9290ce3a2adf0f1825bb318d2618ffc4b6caf508581e05498c2",
+      "bytes": 250705
+    }
+  ],
+  "newburn1973": [
+    {
+      "file": "newburn1973.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1973SSRv...14..179N",
+      "sha256": "3217ace272f823d6eff2e5c6b6b1016997b251e71e2552d911062490d86b3f1d",
+      "bytes": 1247888
+    }
+  ],
+  "nicholson1995": [
+    {
+      "file": "nicholson1995.pdf",
+      "source_url": "https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N",
+      "sha256": "aa25b274571a462a27845a295e0321ee835cbf97fd8e468536cd783eb258d18d",
+      "bytes": 1940228
+    }
+  ],
+  "nimmo2017": [
+    {
+      "file": "nimmo2017.pdf",
+      "source_url": "https://arxiv.org/pdf/1603.00821",
+      "sha256": "6ae877e5e5d1d8d2ebf14f7556ef753aea8de4f69523a42ade3e9d0559e94444",
+      "bytes": 1623794
+    }
+  ],
+  "north2007": [
+    {
+      "file": "north2007.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0702375",
+      "sha256": "698a1d287963e1091a0a5952e7ffb0ec0f2269672b7a6c7d719fe091ec422cc7",
+      "bytes": 369501
+    }
+  ],
+  "pace2025": [
+    {
+      "file": "pace2025.pdf",
+      "source_url": "https://arxiv.org/pdf/2411.07424",
+      "sha256": "2cdd94693b32d67928891793944575e1c53e24b043a672ae0924b09cd6baaf21",
+      "bytes": 1584819
+    }
+  ],
+  "padoan1997": [
+    {
+      "file": "padoan1997.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9703110",
+      "sha256": "d13219cf9412759382ebb2d587bb6e325b5387769059261d777c7ed3373e2d4a",
+      "bytes": 281426
+    }
+  ],
+  "pecaut2013": [
+    {
+      "file": "pecaut2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1307.2657",
+      "sha256": "0c36ba619d64a228bcbcb2866f714c8eb3e11260bd41e11b36e4368e04898ea9",
+      "bytes": 1252676
+    }
+  ],
+  "pelgrims2020": [
+    {
+      "file": "pelgrims2020.pdf",
+      "source_url": "https://arxiv.org/pdf/1911.09691",
+      "sha256": "9d83b6e8e47e187d97adc3f41620c96b7a12e189d9e4752d9e6c12575046e1bb",
+      "bytes": 8049641
+    }
+  ],
+  "pietrzynski2019": [
+    {
+      "file": "pietrzynski2019.pdf",
+      "source_url": "https://arxiv.org/pdf/1903.08096",
+      "sha256": "493bc9f8f817a69560bc8fef8aedb75d311bc1d0f65a48ca10dd7370957407b5",
+      "bytes": 706606
+    }
+  ],
+  "piffl2014": [
+    {
+      "file": "piffl2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1309.4293",
+      "sha256": "4ea941269f9d11fe5244984a949532ba11874dcf551b652275251b86ddcf7147",
+      "bytes": 1363621
+    }
+  ],
+  "planck2020": [
+    {
+      "file": "planck2020.pdf",
+      "source_url": "https://arxiv.org/pdf/1807.06205",
+      "sha256": "dca932893b7d2724aa2b8d33170fc1b5682c425dd56fcd3c5d7b2098d377db5c",
+      "bytes": 24358959
+    }
+  ],
+  "pourbaix2016": [
+    {
+      "file": "pourbaix2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1601.01636",
+      "sha256": "7d7ae4a69341abf2cb9aa30bbd9f914c68d78ef0e3d95941041fe4ce3325a0be",
+      "bytes": 156000
+    }
+  ],
+  "prugniel": [
+    {
+      "file": "prugniel.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1997A%26A...321..111P",
+      "sha256": "25d11dfd60b4de584fdaea7e470329cc2c62fed96bb8aeb91081c81ed33f36aa",
+      "bytes": 262570
+    }
+  ],
+  "ramirez2012": [
+    {
+      "file": "ramirez2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1204.0828",
+      "sha256": "5c22774fc6868c8aab4aa47a93dcbf171d1215521f0ff53b79c41a5aa7541d0e",
+      "bytes": 421582
+    }
+  ],
+  "recioblanco2023": [
+    {
+      "file": "recioblanco2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2206.05541",
+      "sha256": "b30ca567cff481ddd3130617deb3bae6eba9741af0ce56394fe034f2c68237e8",
+      "bytes": 13483970
+    }
+  ],
+  "reid2019": [
+    {
+      "file": "reid2019.pdf",
+      "source_url": "https://arxiv.org/pdf/1910.03357",
+      "sha256": "07ef9a014fbd1d2fc83b0aebbbfa1d6be2170fad0e8ee0b52e987faddc4613a1",
+      "bytes": 1430563
+    }
+  ],
+  "rhode2013": [
+    {
+      "file": "rhode2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.0270",
+      "sha256": "2dca9a0f827d4eaea94ea8a9631fb86a9a615b87de84a40d3934674278979415",
+      "bytes": 1083860
+    }
+  ],
+  "riello2021": [
+    {
+      "file": "riello2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.01916",
+      "sha256": "b262c07af92a63d9454faeb30b1f7850b08e76719f818f8657690859b055295b",
+      "bytes": 20032919
+    }
+  ],
+  "roman1987": [
+    {
+      "file": "roman1987.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1987PASP...99..695R",
+      "sha256": "3d0ac3112bd43e1d7273385441d9b142bbdc6c917d8d384b5df7baec21d5f5cd",
+      "bytes": 541463
+    }
+  ],
+  "ross2020": [
+    {
+      "file": "ross2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2007.09000",
+      "sha256": "23dff68ae61ea8172dd8f7367b21663604d31008762d47efdded2b406e622d72",
+      "bytes": 1659317
+    }
+  ],
+  "samus2017": [
+    {
+      "file": "samus2017.pdf",
+      "source_url": "https://doi.org/10.1134/S1063772917010085",
+      "sha256": "d5216358e8add7178331d747e108af4996d8c75346871d8bb4f6acff107995fe",
+      "bytes": 686466
+    }
+  ],
+  "sander2012": [
+    {
+      "file": "sander2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1201.6354",
+      "sha256": "27ea7d26433bc65ca8a060bc4d021f336c53d191afbfc93d45d566c0c9487484",
+      "bytes": 764042
+    }
+  ],
+  "sanford1942": [
+    {
+      "file": "sanford1942.pdf",
+      "source_url": "https://doi.org/10.1086/144412",
+      "sha256": "82726517b1f9acba54b650510a8a9a7f0506f97b60f8a669b3eebe0bcf956c09",
+      "bytes": 251532
+    }
+  ],
+  "schaefer2016": [
+    {
+      "file": "schaefer2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1610.01984",
+      "sha256": "816e80a1f0d5a45733c32b626a1b86f364a7b3f01c8bb13bab0094632242b044",
+      "bytes": 1356143
+    }
+  ],
+  "schlegel1998": [
+    {
+      "file": "schlegel1998.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9710327",
+      "sha256": "e2c383d16427224b10efc55e7fdadc8f24936c77b03bdd2c29df8bd44dea60f7",
+      "bytes": 770793
+    }
+  ],
+  "simondiaz2011": [
+    {
+      "file": "simondiaz2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1108.4622",
+      "sha256": "82cebfcdd99e069ab39827ac4dc9d220ac51d021cc554d3d6fce04ea2b599ad6",
+      "bytes": 258672
+    }
+  ],
+  "simondiaz2015": [
+    {
+      "file": "simondiaz2015.pdf",
+      "source_url": "https://real.mtak.hu/29063/1/Sergio_sigmaOri_ApJ.pdf.pdf",
+      "sha256": "9431ca82ba7f597d7d2ebc8215438d14a975443cf57ab60a111ebe03f89a7db6",
+      "bytes": 1133961
+    }
+  ],
+  "sion": [
+    {
+      "file": "sion.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1983ApJ...269..253S",
+      "sha256": "0587e290dee24e32c3796af354e79c0580390d767f56c49fade0794a4480ace2",
+      "bytes": 449830
+    }
+  ],
+  "smirnov2002": [
+    {
+      "file": "smirnov2002.pdf",
+      "source_url": "https://doi.org/10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2",
+      "sha256": "d4a6f285e3082c5f2d4358f91ab0dcc80debb400c4746956bc8071bde5c7700e",
+      "bytes": 597809
+    }
+  ],
+  "sneep2005": [
+    {
+      "file": "sneep2005.pdf",
+      "source_url": "https://doi.org/10.1016/j.jqsrt.2004.07.025",
+      "sha256": "484ad18eece29b98c8ca9aa49e6691f4a030045e8037667fab9836ce38299a3e",
+      "bytes": 839841
+    }
+  ],
+  "standish1992": [
+    {
+      "file": "standish1992.pdf",
+      "source_url": "https://web.archive.org/web/20201111194551/https://ssd.jpl.nasa.gov/txt/aprx_pos_planets.pdf",
+      "sha256": "e3c91d80e622c74d42fb9ecdb8cd8adc4fac22d1178c7257e9f4f8c62355843f",
+      "bytes": 69605
+    },
+    {
+      "file": "standish1992.page.txt",
+      "source_url": "https://ssd.jpl.nasa.gov/planets/approx_pos.html",
+      "sha256": "ce66bd0935180ed37ec579599e37a638428a866abc16bc0c1ab0bd58df1100cb",
+      "bytes": 11084
+    }
+  ],
+  "steinmetz2020": [
+    {
+      "file": "steinmetz2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2002.04377",
+      "sha256": "1014f3d184f76522399ff18d972d6104812021b77691d4811897d7b54d7d1435",
+      "bytes": 1550314
+    }
+  ],
+  "stelzer2003": [
+    {
+      "file": "stelzer2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0302570",
+      "sha256": "43a608f538f2d875af51c2bcc2f519f16b2520c2f682c03229ee5f72d79860ab",
+      "bytes": 435840
+    }
+  ],
+  "sternberg2003": [
+    {
+      "file": "sternberg2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0312232",
+      "sha256": "4041a5585cd98f0344a8168dd1aae370530fe533d10e7090896a1214a4aca267",
+      "bytes": 568267
+    }
+  ],
+  "strauss2002": [
+    {
+      "file": "strauss2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0206225",
+      "sha256": "99c824bc05873da149bf36d50316dcfc7cd65c352cc30ad48bed479948b0739e",
+      "bytes": 1129497
+    }
+  ],
+  "stromgren1939": [
+    {
+      "file": "stromgren1939.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1939ApJ....89..526S",
+      "sha256": "5125565d1d006e4c6ce131b8c3e9047159cea826e3239446ed31cad57483ff36",
+      "bytes": 1133000
+    }
+  ],
+  "subramanian2012": [
+    {
+      "file": "subramanian2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1109.3980",
+      "sha256": "91985469cb1d6bd8803ea5340191be857065751891cc4a84e2550f847adfb706",
+      "bytes": 1069633
+    }
+  ],
+  "tempel2011": [
+    {
+      "file": "tempel2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1012.3591",
+      "sha256": "425ce797df82d4ec3930c52f8d100e5379c9fa7e5435bf223f38d2efbb5ca9ed",
+      "bytes": 926068
+    }
+  ],
+  "tokovinin2018": [
+    {
+      "file": "tokovinin2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1712.04750",
+      "sha256": "29435c55f4628f5505b627e06c84b50fc86d9cfb5fb8ca6cfc914d46c34e6666",
+      "bytes": 637111
+    }
+  ],
+  "tomasko2008": [
+    {
+      "file": "tomasko2008.pdf",
+      "source_url": "https://doi.org/10.1016/j.pss.2007.11.019",
+      "sha256": "e745b6ccbaef2c3deb2c5e22228acf43b7c91bd49b61b737db0a7f30523bdcac",
+      "bytes": 5417409
+    }
+  ],
+  "torra2021": [
+    {
+      "file": "torra2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.06420",
+      "sha256": "4edaf6c44fb5e0af75a8da2ab778fbc16bac56e5e30bf06aff1b28d72fb4cdc0",
+      "bytes": 18540758
+    }
+  ],
+  "torres2002": [
+    {
+      "file": "torres2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0111167",
+      "sha256": "7cc051956e6e8fb90d9d53e87f9436146d2fd3257776f8a190f2796995282c9e",
+      "bytes": 919259
+    }
+  ],
+  "torres2022": [
+    {
+      "file": "torres2022.pdf",
+      "source_url": "https://arxiv.org/pdf/2210.16322",
+      "sha256": "ce78f555b41650c923101b6afea9c2dacf97dc8f13388b1e9c96879d5750ec90",
+      "bytes": 3132760
+    }
+  ],
+  "tully2023": [
+    {
+      "file": "tully2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2209.11238",
+      "sha256": "5562be287b6cadd3034a1e4c63a4488de16eb0591de794989506e068ec4477aa",
+      "bytes": 5103262
+    }
+  ],
+  "vaidman2025": [
+    {
+      "file": "vaidman2025.pdf",
+      "source_url": "https://doi.org/10.3390/universe11110359",
+      "sha256": "8ff172b2e0aedc86866edcad1bf2e1948e226a62fe2f5fc175a8a009df18c720",
+      "bytes": 350620
+    }
+  ],
+  "vallenari2023": [
+    {
+      "file": "vallenari2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2208.00211",
+      "sha256": "c59aec14d95cf790b1e6271a410e049fe3d8688b810954771d9f124a6e053bb3",
+      "bytes": 1324639
+    }
+  ],
+  "vanderkruit1986": [
+    {
+      "file": "vanderkruit1986.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1986A%26A...157..230V",
+      "sha256": "cf3532bf845bca9829c74e0d6ec22d8dd2987702feb11c0096029fac25140fe5",
+      "bytes": 423647
+    }
+  ],
+  "vandermarel2001b": [
+    {
+      "file": "vandermarel2001b.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0105340",
+      "sha256": "ad500f5aa12fc959a0189eb342ae03dab987f482bc955bd242a59424929ffb48",
+      "bytes": 787084
+    }
+  ],
+  "vandermarel2014": [
+    {
+      "file": "vandermarel2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.4641",
+      "sha256": "ea11b071f48aae06d741dd94b4335ea8159b6f29b2c02b21b1c6b574ea08a253",
+      "bytes": 4785094
+    }
+  ],
+  "vanleeuwen2007": [
+    {
+      "file": "vanleeuwen2007.pdf",
+      "source_url": "https://arxiv.org/pdf/0708.1752",
+      "sha256": "5b91b118f1769dad68162e635eb6a4cce7b245951826cfab26ececf41d6a590d",
+      "bytes": 1882902
+    }
+  ],
+  "vazquez1994": [
+    {
+      "file": "vazquez1994.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1994ApJ...423..681V",
+      "sha256": "cb557faaa8166510ee32461b6a337ae509d80a00f70a10782b490e7018a34982",
+      "bytes": 268153
+    }
+  ],
+  "vondrak2011": [
+    {
+      "file": "vondrak2011.pdf",
+      "source_url": "https://doi.org/10.1051/0004-6361/201117274",
+      "sha256": "db762fd5723d745fdc0796cd5929653df105a368810e25e894f289509a16a8fd",
+      "bytes": 2321205
+    }
+  ],
+  "wainscoat1992": [
+    {
+      "file": "wainscoat1992.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1992ApJS...83..111W",
+      "sha256": "43636046c7b664069cd9adf85f343b83783db65ba738bec309ac557d60898b58",
+      "bytes": 3518598
+    }
+  ],
+  "weingartner2001": [
+    {
+      "file": "weingartner2001.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0008146",
+      "sha256": "9acdfac75b37be6375ecbdfe1c7ae965b9206bf288b798716f26ad8a7918e525",
+      "bytes": 1014251
+    }
+  ],
+  "wenger2000": [
+    {
+      "file": "wenger2000.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0002110",
+      "sha256": "8df399ca5a121a8717e74de4c41da5a21271081427d85b6dd173af10b7115b35",
+      "bytes": 474497
+    }
+  ],
+  "willmer2018": [
+    {
+      "file": "willmer2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1804.07788",
+      "sha256": "3836b15f0abe96ca525a84726bda623c0f9417f0ea1163a2400cc97652664bd2",
+      "bytes": 634206
+    }
+  ],
+  "wilquet2009": [
+    {
+      "file": "wilquet2009.pdf",
+      "source_url": "https://doi.org/10.1029/2008JE003186",
+      "sha256": "5d7373403377cb62301a52003651d5670e07ce8befe99228c4bcdfda37619f28",
+      "bytes": 855100
+    }
+  ],
+  "wilson1953": [
+    {
+      "file": "wilson1953.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/21/ReadMe",
+      "sha256": "4d7ba1e14a2d444a28c6c139138fbef07917bcfb24c24ac55a3610e77f026ca3",
+      "bytes": 6567
+    }
+  ],
+  "wittkowski2016": [
+    {
+      "file": "wittkowski2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1601.02368",
+      "sha256": "3be95300c99512d2834fe4ea4804ef1198c935a95e3265731f7d86702c1fcf1d",
+      "bytes": 1524923
+    }
+  ],
+  "wolff2009": [
+    {
+      "file": "wolff2009.pdf",
+      "source_url": "https://doi.org/10.1029/2009JE003350",
+      "sha256": "fd914449a8fc27f522f8eda8c4e9ed918055529ad39bfdc5517b83feb24de253",
+      "bytes": 473983
+    }
+  ],
+  "woodruff2008": [
+    {
+      "file": "woodruff2008.pdf",
+      "source_url": "https://arxiv.org/pdf/0709.3878",
+      "sha256": "aa10dd299413c50f24e21091fab33eff2b9bf5666ef51ebf572945e5b1dc8e2c",
+      "bytes": 1033455
+    }
+  ],
+  "woodruff2009": [
+    {
+      "file": "woodruff2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0811.1642",
+      "sha256": "447dc35aeee5e5c032e86571b2c886d7769cef4d857d60257d239837b8e72ec7",
+      "bytes": 916766
+    }
+  ],
+  "wyman2013": [
+    {
+      "file": "wyman2013.pdf",
+      "source_url": "https://jcgt.org/published/0002/02/01/paper.pdf",
+      "sha256": "3ed4e42f0247d98f6a082a5c432d337f7bea23cf46792408f5161032a94d7256",
+      "bytes": 1271772
+    }
+  ],
+  "zacharias2012": [
+    {
+      "file": "zacharias2012.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/322A/ReadMe",
+      "sha256": "89679e0e8c5037337ae1a6d498b128c4fc8c2e049c4fd3b72697119531975469",
+      "bytes": 19090
+    }
+  ],
+  "zhang2023": [
+    {
+      "file": "zhang2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2303.03420",
+      "sha256": "f5ed13eefa97bb45a6c8643432f674eddc519fb84888fd6f9fb94b86a3b79cb9",
+      "bytes": 9104244
+    }
+  ],
+  "zucker2020": [
+    {
+      "file": "zucker2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2001.00591",
+      "sha256": "91b98f98e7303ef9348a312ef459f0a62dde92ba0510f578fd728d5ce57e09cb",
+      "bytes": 2100882
+    }
+  ],
+  "zucker2021": [
+    {
+      "file": "zucker2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2109.09765",
+      "sha256": "6744d706f6706543f625c31d6f5c6f301d0989cdc449db76980d62a96e4c4a3f",
+      "bytes": 9490940
+    }
+  ],
+  "zucker2022": [
+    {
+      "file": "zucker2022.pdf",
+      "source_url": "https://arxiv.org/pdf/2201.05124",
+      "sha256": "ed99e544a21d7fb2ab3ed0d7a48d8805ae54f4024bc04f4769d131a1abc6f460",
+      "bytes": 1628894
+    }
+  ]
+}

@@ -99,21 +99,20 @@ enough to see it.
 
 - **Gaia DR3** (astrometry, photometry, astrophysical parameters,
   non-single-star orbits): ESA / DPAC, https://gea.esac.esa.int/archive/ —
-  Gaia Collaboration, Vallenari A. et al. 2023, *A&A* 674, A1. Licence
+  [Vallenari 2023](/data/papers/index.md#vallenari2023). Licence
   CC-BY-4.0. Per-source ADQL pulls under `data/gaia/`; per-table provenance in
   `data/gaia/README.md`. The roles the rest of the model rests on:
     - **Membership** — every `gaia_source` row at `G ≤ 11` is the magnitude
       term of catalogue membership, unioned with the designation-keyed term
       ([§ 1](docs/catalog-driver.md#1-the-driver-model)). The bound is on `G` alone and is
-      nonetheless complete for a `V ≤ 11` floor, because the Riello relation
+      nonetheless complete for a `V ≤ 11` floor, because the [Riello 2021](/data/papers/index.md#riello2021) relation
       below keeps `V` fainter than `G` across its whole validity range
       ([Why the floor carries no margin](data/gaia/README.md#why-the-floor-carries-no-margin)).
     - **Sky direction and parallax** — 5-parameter solutions are tier 1 of the
-      direction cascade and the input Bailer-Jones inverts (below).
-    - **Johnson V** — `G` and `BP − RP` transformed through **Riello M., De
-      Angeli F., Evans D. W. et al. 2021, *A&A* 649, A3**, section *Photometric
-      relationships with other photometric systems* (`G − V` as a cubic in
-      `BP − RP`, σ = 0.03017 mag over −0.5 ≤ `BP − RP` ≤ 5.0). Every record's
+      direction cascade and the input [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) inverts (below).
+    - **Johnson V** — `G` and `BP − RP` transformed through [**Riello 2021**](/data/papers/index.md#riello2021), App. C,
+      Table C.2 (`G − V` as a cubic in `BP − RP`, σ = 0.03017 mag over
+      −0.5 < `BP − RP` < 5.0, Table C.1). Every record's
       absolute magnitude is derived from this V, so it sets what the whole
       scene looks like; DR3 ships EDR3's photometry unchanged, so the EDR3
       calibration applies. Gaia's CCDs saturate below `G` = 4.0, where the
@@ -124,9 +123,9 @@ enough to see it.
       feed the spectral resolver and the Stefan-Boltzmann radii.
     - **Synthetic photometry** — Johnson-Kron-Cousins B and V integrated from
       each source's own BP/RP spectrum (`gaiadr3.synthetic_photometry_gspc`,
-      **Gaia Collaboration, Montegriffo P., Bellazzini M., De Angeli F. et al.
-      2023, *A&A* 674, A33**). B − V from it is the ci cascade's tier below the
-      Table-5.9 relation, and unlike that relation it measures the individual
+      [**Montegriffo 2023**](/data/papers/index.md#montegriffo2023)). B − V from it is the ci cascade's tier below the
+      Table-5.9 relation ([Carrasco 2022](/data/papers/index.md#gaiadr3doc)
+      Sect. 5.5.1), and unlike that relation it measures the individual
       star rather than fitting a population — which is what lets it serve the
       red rows the relation's colour bound excludes
       ([The ci cascade](scripts/catalog/photometry/README.md#the-ci-cascade)).
@@ -151,15 +150,15 @@ enough to see it.
   `data/classic-ids/README.md`; the sourcing decision is
   [§ 2](docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad). Retrieved 2026-07-28, public domain via
   CDS:
-    - `IV/25/tyc2_hd` — Fabricius, Makarov, Knude & Wycoff 2002,
-      *A&A* 386, 709. HD ↔ Tycho-2, with the upstream `n_HD`/`n_TYC`
+    - `IV/25/tyc2_hd` — [Fabricius 2002a](/data/papers/index.md#fabricius2002a).
+      HD ↔ Tycho-2, with the upstream `n_HD`/`n_TYC`
       ambiguity flags.
-    - `IV/27A/catalog` — Kostjuk N.D. 2004. Bayer + Flamsteed ↔
-      HD/HR/HIP (as TAP serves it, the Bayer/Flamsteed-bearing subset).
-    - `V/50/catalog` — Hoffleit & Warren 1991, Bright Star Catalogue 5th
-      revised ed. HR ↔ HD.
-    - `J/A+A/670/A19/cns5` — Golovin, Reffert, Just, Jordan, Vani &
-      Jahreiß 2023, *A&A* 670, A19. GJ ↔ Gaia EDR3 source_id ↔ HIP,
+    - `IV/27A/catalog` — [Kostjuk 2002](/data/papers/index.md#kostjuk2002). Bayer + Flamsteed ↔
+      HD/HR/HIP — the whole 3,690-row table, every row carrying a Bayer or
+      Flamsteed designation.
+    - `V/50/catalog` — [Hoffleit 1991](/data/papers/index.md#hoffleit1991), Bright Star
+      Catalogue 5th revised ed. HR ↔ HD.
+    - `J/A+A/670/A19/cns5` — [Golovin 2023](/data/papers/index.md#golovin2023). GJ ↔ Gaia EDR3 source_id ↔ HIP,
       volume-limited to 25 pc.
   Live SIMBAD/VizieR resolution is deliberately **not** used for the
   identifier spine — the build never touches the network, and
@@ -175,23 +174,24 @@ enough to see it.
   text file. Normalised + keyed by `pnpm run build:wgsn`
   (`data/iau-wgsn/README.md`).
 - **Hipparcos printed V and B − V** (`I/239/hip_main`, `HIP`+`Vmag`+`B-V`
-  slice at `data/hipparcos/hip_main_vmag.tsv`): ESA 1997, SP-1200. The
+  slice at `data/hipparcos/hip_main_vmag.tsv`): [ESA 1997](/data/papers/index.md#esa1997). The
   printed tier of the V-magnitude cascade for stars whose Gaia photometry
-  is saturated or outside the Riello+ 2021 transform's validity range,
+  is saturated or outside the [Riello 2021](/data/papers/index.md#riello2021) transform's validity range,
   and the printed tier of the ci cascade below the synthetic photometry —
   the only measured colour reaching the rows with no Gaia source at all.
   Public domain via CDS.
 - **Tycho-2** (`I/259` `tyc2` + `suppl_1`, filtered to the mentioned TYCs
-  at `data/tycho2/`): Høg E. et al. 2000, *A&A* 355, L27. Retrieved
+  at `data/tycho2/`): [Høg 2000](/data/papers/index.md#hog2000). Retrieved
   2026-08-25, public domain via CDS. The first-order source for the
-  TYC-bearing rows Gaia does not reach — mean positions with **per-star,
-  per-coordinate mean epochs**, proper motions, and BT/VT photometry, so
+  TYC-bearing rows Gaia does not reach — mean positions at **J2000.0**
+  (each fit centred on per-star, per-coordinate mean observation epochs),
+  proper motions, and BT/VT photometry, so
   the direction, PM and V cascades of [§ 5](docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) route
   here rather than to any printed cell. It reaches every one of the
-  TYC-bearing membership rows; the mean epochs are what fix the
-  printed cells' unpropagated staleness (~27″ worst case).
+  TYC-bearing membership rows; propagating from those J2000.0 positions is
+  what fixes the printed cells' unpropagated staleness (~27″ worst case).
 - **Gliese third catalogue of nearby stars** (`V/70A/catalog`, whole table
-  at `data/gliese/gliese_v70a.tsv`): Gliese W., Jahreiss H. 1991,
+  at `data/gliese/gliese_v70a.tsv`): [Gliese 1991](/data/papers/index.md#gliese1991),
   *Preliminary Version of the Third Catalogue of Nearby Stars*, CDS
   `V/70A`. Retrieved 2026-08-27, CDS/VizieR academic use. Printed Johnson
   V (+ B−V, spectral type, parallax, rv) — the V cascade's tier under
@@ -200,16 +200,16 @@ enough to see it.
   printed cell exactly. CNS5 does not retire it — the newer catalogue
   publishes no Johnson V at all (Gaia `G`/`BP`/`RP`, 2MASS, WISE only).
 - **GCVS 5.1** (variable-star catalogue + cross-identification):
-  http://www.sai.msu.su/gcvs/gcvs/ — Samus et al, Sternberg Astronomical
+  http://www.sai.msu.su/gcvs/gcvs/ — [Samus 2017](/data/papers/index.md#samus2017), Sternberg Astronomical
   Institute. `data/gcvs/gcvs5.txt` (main file) + `data/gcvs/crossid.txt`
   (Hip/HD/Tyc/etc. → GCVS name mappings). Free for research/educational
   use with attribution.
 - **Hipparcos CCDM + MultFlag cross-reference**: VizieR
-  `I/239/hip_main`, HIP main catalogue. We commit a three-column
+  `I/239/hip_main`, HIP main catalogue ([ESA 1997](/data/papers/index.md#esa1997)). We commit a three-column
   slice (`-out=HIP,CCDM,MultFlag`) as `data/hipparcos/hip_ccdm.tsv`, used as
   the HIP-keyed visual-doubles flag. CCDM links each Hipparcos
   star to the Catalog of the Components of Double and Multiple
-  stars (Dommanget & Nys 1994); `MultFlag` is Hipparcos's own
+  stars ([Dommanget 1994](/data/papers/index.md#dommanget1994)); `MultFlag` is Hipparcos's own
   multiplicity confidence flag. A star is flagged as a visual
   double when both CCDM is non-blank *and* `MultFlag ∈ {C, G, O}`,
   which keeps Hipparcos-confirmed pairs and rejects CCDM-listed
@@ -218,8 +218,8 @@ enough to see it.
   gap (Sirius, Mizar, Castor, α Cen, Albireo all carry CCDM IDs
   with confirming `MultFlag`).
 - **Washington Double Star Catalog (WDS)** + **Sixth Catalog of Orbits
-  of Visual Binary Stars (ORB6)**: Mason et al (2001), AJ 122, 3466
-  (WDS); Hartkopf, Mason & Worley (2001), AJ 122, 3472 (ORB6).
+  of Visual Binary Stars (ORB6)**: [Mason 2001](/data/papers/index.md#mason2001) (WDS);
+  [Hartkopf 2001](/data/papers/index.md#hartkopf2001) (ORB6).
   Maintained continuously at the U.S. Naval Observatory and Georgia
   State University. Used to recover binary-pair geometry that AT-HYG
   collapses to a single row: visually-resolved separations ρ and
@@ -240,9 +240,7 @@ enough to see it.
   the ORB6 ReadMe; consulted by `scripts/binaries/build-binaries.py`
   but not committed. Retrieved 2026-05-11. Public-domain
   (U.S. Government work).
-- **Pulkovo Multiple Star Catalog (MSC)**: Tokovinin (2018),
-  *ApJS* 235, 6,
-  DOI [10.3847/1538-4365/aaa1a5](https://doi.org/10.3847/1538-4365/aaa1a5)
+- **Tokovinin's Multiple Star Catalog (MSC)**: [Tokovinin 2018](/data/papers/index.md#tokovinin2018)
   — author-maintained curated hierarchies of ≥3-component systems,
   VizieR `J/ApJS/235/6` (`systems`, `orbits`, `catalog` tables).
   Supplies what WDS/ORB6/Gaia-NSS miss: hierarchy-resolved
@@ -256,7 +254,7 @@ enough to see it.
   orbit route ranks below ORB6 and Gaia NSS and fires for
   sub-resolution pairs only ([Stage 4](scripts/binaries/README.md#stage-4--orbital-element-selection-per-pair)).
   Retrieved 2026-07-11. CDS/VizieR standard academic use; cite
-  Tokovinin 2018.
+  [Tokovinin 2018](/data/papers/index.md#tokovinin2018).
 - **SIMBAD WDS↔Gaia DR3 cross-identifications** (CDS Strasbourg).
   Curated per-component cross-IDs between WDS pair identifiers
   (`WDS J<id><comp>`) and Gaia DR3 source_ids, drawn from SIMBAD's
@@ -270,8 +268,8 @@ enough to see it.
   cross-IDs) and commits `data/simbad/simbad_wds_xids.tsv` (~23k
   components, ~1.2 MB,
   regular git). Public access policy: SIMBAD is open via CDS's TAP
-  service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite Wenger et
-  al (2000), A&AS 143, 9.
+  service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite
+  [Wenger 2000](/data/papers/index.md#wenger2000).
 - **SIMBAD bibcoded values** (CDS Strasbourg). Radial velocity,
   parallax, proper motion, coordinates and Johnson B/V fluxes, each
   carrying the `bibcode` of the measurement SIMBAD compiled it from —
@@ -289,11 +287,10 @@ enough to see it.
   publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in
   [The values pull](data/simbad/README.md#the-values-pull). Same citation as above.
 - **Gaia DR2↔(E)DR3 cross-match** (`gaiadr3.dr2_neighbourhood`):
-  Torra et al. 2021, *A&A* 649, A10,
-  DOI [10.1051/0004-6361/202039637](https://doi.org/10.1051/0004-6361/202039637)
-  — the DPAC-published mapping between DR2 and (E)DR3 source_ids with
-  per-pair angular distance (mas), magnitude difference, and a
-  PM-propagation flag. Queried by `dr3_source_id` for the Gaia-only
+  [Torra 2021](/data/papers/index.md#torra2021) — the DPAC-published mapping between DR2 and (E)DR3 source_ids
+  (the paper, Sect. 7, names the table; its columns — per-pair angular
+  distance (mas), magnitude difference, and a PM-propagation flag — are the
+  archive data model's). Queried by `dr3_source_id` for the Gaia-only
   catalog stars (no HIP/HD/HR/GJ designation) and committed as
   `data/gaia/gaia_dr2_neighbourhood.tsv` (+ the request-file snapshot
   of that risk set). Retrieved 2026-07-07. Empirical input to the
@@ -303,8 +300,9 @@ enough to see it.
   https://github.com/Stellarium/stellarium/tree/master/skycultures/modern
   — MIT-licensed JSON, HIP-indexed polylines. Committed as
   `data/stellarium/stellarium-modern-skyculture.json`; essentially never changes.
-- **Edenhofer 2023 3D dust map** (interstellar extinction + ISM density):
-  https://doi.org/10.5281/zenodo.8187943 — Gordian Edenhofer & Greg Green.
+- **Edenhofer 2024 3D dust map** (interstellar extinction + ISM density):
+  [Edenhofer 2024](/data/papers/index.md#edenhofer2024); data
+  https://doi.org/10.5281/zenodo.8187943.
   Downloaded via the `dustmaps` Python package and resampled by
   `scripts/dust/build-dust.py` onto a 512³ Cartesian voxel grid in ICRS pc.
   Produces `data/dust/chunk_*.bin` (64 chunks, 128 MiB total, LFS).
@@ -319,8 +317,8 @@ enough to see it.
   (https://bjj.mmedia.is/) — free use with attribution; USGS Viking
   MDIM 2.1 colorized mosaic for Mars — public domain. Uranus and
   Neptune ring strips are built from authored tables of occultation +
-  Voyager 2 ring parameters (French et al. 1991 in *Uranus*; Porco
-  et al. 1995 in *Neptune and Triton* — per-file rows in
+  Voyager 2 ring parameters ([French 1991](/data/papers/index.md#french1991) in *Uranus*;
+  [Porco 1995](/data/papers/index.md#porco1995) in *Neptune and Triton* — per-file rows in
   `data/textures/src/README.md`). Frozen in
   `data/textures/src/` (per-file table in its README), downsampled to
   ≤2048-wide lazy-load JPEGs by `scripts/textures/build-textures.py`.
@@ -337,21 +335,25 @@ enough to see it.
   Galileo/Voyager global mosaics for the Galileans (Io + Ganymede in
   colour; Europa + Callisto grayscale, tinted); USGS Cassini ISS
   938 nm mosaic for Titan (tinted to the visible haze orange);
-  Schenk/LPI 2014 Cassini enhanced-colour mosaics (PIA18434–18439)
+  [Schenk 2014](/data/papers/index.md#schenk2014) Cassini enhanced-colour mosaics (PIA18434–18439)
   for the mid-sized Saturnians, chroma-halved toward their true
-  near-neutral ice tones; Schenk's Voyager 2 mosaic (PIA18668) for
+  near-neutral ice tones; [Schenk 2014](/data/papers/index.md#schenk2014)'s Voyager 2 mosaic (PIA18668) for
   Triton — all public domain. The Uranian moons ship texture-less
   (Voyager southern-hemisphere coverage only). Per-file provenance
   in `data/textures/src/README.md`.
 - **IAU rotation elements** (pole RA/Dec + prime meridian per body,
   the nine planets AND the 18 major moons): IAU WG on Cartographic
-  Coordinates and Rotational Elements 2015 report (Archinal et al.
-  2018, https://doi.org/10.1007/s10569-017-9805-5), values as
-  distributed in NAIF `pck00011.tpc`; linear terms only (see
+  Coordinates and Rotational Elements 2015 report
+  ([Archinal 2018](/data/papers/index.md#archinal2018)), values as
+  distributed in NAIF `pck00011.tpc` — except Earth and the Moon, which the
+  2015 report defers to IERS and a lunar ephemeris: their rows are the 2009
+  report's ([Archinal 2011](/data/papers/index.md#archinal2011)), which
+  `pck00011.tpc` still carries. Linear terms plus the periodic terms above
+  the visibility bar (see
   [Planet rotation](docs/science-solar-system.md#planet-rotation)). Every moon is
   tidally locked — its Ẇ equals the orbital mean motion, test-pinned
   against the JPL mean elements. Tables in
-  `src/client/solar-system/planets/rotation-elements-pure.ts`.
+  `src/client/solar-system/planets/rotation/rotation-elements-pure.ts`.
 - **Deep-space probe trajectories** (the five Sun-escape probes —
   Pioneer 10/11, Voyager 1/2, New Horizons; retrieved 2026-07-25):
   JPL Horizons API (https://ssd.jpl.nasa.gov/api/horizons.api),
@@ -366,64 +368,68 @@ enough to see it.
   Public-domain (U.S. Government work).
 
 - **Milky Way integrated properties and structure** (the volumetric band's
-  photometric anchors; constants only, apart from the BC03 grid below):
-    - **Bland-Hawthorn & Gerhard 2016**, *ARA&A* 54, 529
-      (DOI 10.1146/annurev-astro-081915-023441). Table 2 gives the Galaxy's
+  photometric anchors; constants only, apart from the
+  [Bruzual 2003](/data/papers/index.md#bruzual2003) grid below):
+    - [**Bland-Hawthorn 2016**](/data/papers/index.md#blandhawthorn2016). Table 2 gives the Galaxy's
       global absolute magnitudes and colour indices as an external observer
-      would measure them (M_V = −21.37, B−V = 0.73, from Licquia, Newman &
-      Brinchmann 2015's Milky Way analogues); Bland-Hawthorn & Gerhard 2016 Sect. 5.1 gives the thin/thick
+      would measure them (M_V = −21.37, B−V = 0.73, BHG16's own transformation
+      of [Licquia 2015b](/data/papers/index.md#licquia2015b)'s Milky Way analogues, whose
+      own estimate is M_V = −21.51);
+      [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016) Sect. 5.1 gives the thin/thick
       disc scale heights (300 ± 50 / 900 ± 180 pc), the thin-disc scale
       length (2.6 ± 0.5 kpc), and the thick-disc normalisations
       (f_ρ = 4 ± 2 %, f_Σ = 12 ± 4 %). The review is explicit that the
       quoted magnitudes and colour indices come from different calibrations
-      and are mutually inconsistent at the ~0.1 mag level, and that older
-      direct-integration values run dimmer and bluer (Bahcall & Soneira
-      1980: M_V = −20.5; de Vaucouleurs 1983: M_B = −20.2 ± 0.15).
-    - **Leinert et al. 1998**, *A&AS* 127, 1
-      (DOI 10.1051/aas:1998105) — "The 1997 reference of diffuse night sky
+      and are mutually inconsistent (Table 2 note b, which gives no size;
+      note a puts the typical calibration error at ~0.1 mag), and that older
+      direct-integration values run dimmer and bluer ([Bahcall 1980](/data/papers/index.md#bahcall1980): M_V = −20.5; [de Vaucouleurs 1983](/data/papers/index.md#devaucouleurs1983): M_B = −20.2 ±
+      0.15).
+    - [**Leinert 1998**](/data/papers/index.md#leinert1998) — "The 1997 reference of diffuse night sky
       brightness". Table 24's integrated starlight at 0.55 µm
-      (λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ toward the Galactic centre / the
-      NGP, i.e. 22.92 / 23.83 mag/arcsec²) is what the band is CHECKED
-      against. These are SKY-model predictions (Wainscoat et al. 1992) for
+      (λI_λ = 577 / 250 × 10⁻⁹ W m⁻² sr⁻¹ at b = 30° / the NGP, i.e.
+      22.92 / 23.83 mag/arcsec²) is what the band is CHECKED against; the
+      b = 30° value is graded against the model's Galactic-centre
+      sightline. These are SKY-model predictions ([Wainscoat 1992](/data/papers/index.md#wainscoat1992)) for
       *total* starlight, so they include the resolved stars the catalogue
-      draws separately — at the NGP that overlap is two thirds of the
-      light, and the check subtracts it (24.99, not 23.83). The
+      draws separately — at the NGP that overlap is 77 % of the
+      light, and the check subtracts it (25.44, not 23.83). The
       subtraction is only meaningful at the pole, where extinction is
       ~0.03 mag and a de-extincted catalogue sum and an observed sky model
       are commensurable.
-    - **Licquia & Newman 2015**, *ApJ* 806, 96
-      (DOI 10.1088/0004-637X/806/1/96) — hierarchical Bayesian
+    - [**Licquia 2015a**](/data/papers/index.md#licquia2015) — hierarchical Bayesian
       meta-analysis giving M\* = 6.08 ± 1.14 × 10¹⁰ M⊙ split
       0.91 ± 0.07 bulge / 5.17 ± 1.11 disc, i.e. B/T = 0.150 in stellar
-      **mass**. Chabrier IMF.
-    - **Flynn et al. 2006**, *MNRAS* 372, 1149
-      (DOI 10.1111/j.1365-2966.2006.10911.x) — the local Galactic disc
+      **mass**. Kroupa IMF.
+    - [**Flynn 2006**](/data/papers/index.md#flynn2006) — the local Galactic disc
       column's measured mass-to-light ratios, (M/L)_B = 1.4 ± 0.2,
       (M/L)_V = 1.5 ± 0.2, (M/L)_I = 1.2 ± 0.2. Measured for the Milky
       Way rather than modelled, and the paper states the result agrees
       with population synthesis at solar-neighbourhood IMFs.
-    - **Bruzual & Charlot 2003**, *MNRAS* 344, 1000
-      (DOI 10.1046/j.1365-8711.2003.06897.x) — GALAXEV SSP grids,
+    - [**Bruzual 2003**](/data/papers/index.md#bruzual2003) — GALAXEV SSP grids,
       `data/bc03/`. Supplies Υ\*_V for the bulge's old, metal-rich
-      population, which is what turns Licquia & Newman's mass B/T into
+      population, which is what turns [Licquia 2015a](/data/papers/index.md#licquia2015)'s mass B/T into
       the V-band light ratio the solve actually needs.
-  Bland-Hawthorn & Gerhard's M_V = −21.37 is the INPUT: both components'
+  [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016)'s M_V = −21.37 is the INPUT: both components'
   density0 is solved so the proxy volumes integrate to it at the V-band
-  LIGHT B/T derived from the three sources above. The two Leinert checks
-  then disagree with it by 1.68 mag
-  at the pole and 1.02 toward the centre, in the same direction, and no
+  LIGHT B/T derived from the three sources above. The two [Leinert 1998](/data/papers/index.md#leinert1998) checks
+  then disagree with it by 1.31 mag
+  at the pole and 0.385 toward the centre (the model's centre sightline
+  against Leinert's b = 30° value), in the same direction, and no
   shape parameter bridges that — [The luminosity solve](docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)
   argues it out;
   `src/client/milkyway/calibration/README.md` carries the numbers.
 
-> **Molecular cloud sources.** Zucker et al. 2020 + 2021 cloud
-> distances, 3D bounding boxes, and radial profiles drive the
+> **Molecular cloud sources.** [Zucker 2020](/data/papers/index.md#zucker2020) + [Zucker 2021](/data/papers/index.md#zucker2021) cloud
+> distances, 3D skeleton extents (Table 1 bounds each cloud's spine, not
+> its volume), and radial profiles drive the
 > molecular-cloud presence layer (`scripts/clouds/build-clouds.py`,
 > `data/molecular-clouds/`; physics model in
-> `docs/science-molecular-clouds.md`). Cloud masses come from Zucker 2021
+> `docs/science-molecular-clouds.md`). Cloud masses come from
+> [Zucker 2021](/data/papers/index.md#zucker2021)
 > Table 3's NICEST extinction-map column (`mass_nicest`); the
-> Leike-map alternative saturates in dense gas and underestimates by
-> up to ~14× (the paper's own `mass_ratio` column), so it is not used
+> [Leike 2020](/data/papers/index.md#leike2020)-map alternative underestimates it by 1.0–1.6× for clouds
+> wholly inside the Leike grid, and by up to ~14× for clouds at its edge (the paper's
+> own `mass_ratio` column), so it is not used
 > for display (the Leike-resolution `mass_leike` / `max_ak_leike`
 > columns do calibrate the presence-pass density model).
 
@@ -476,15 +482,15 @@ These are the science-flavoured items from the project-wide scope list
 in `AGENTS.md`. Restated here so the rationale lives alongside the
 science it relates to.
 
-- **Constellation boundaries as 3D structures.** The IAU (Delporte
-  1930) boundary arcs are modelled — they resolve the constellation of
+- **Constellation boundaries as 3D structures.** The IAU
+  ([Delporte 1930](/data/papers/index.md#delporte1930)) boundary arcs are modelled — they resolve the constellation of
   any position, catalogued or not
   (`src/client/constellation-boundaries/README.md`) — but only as a
   Sol-frame projection. An asterism line's endpoints are real stars and
   distort correctly as the camera flies; a boundary has no 3D referent
   and describes nothing from another star, so it is never given depth.
 - **Spiral-arm overdensities** in the Milky Way volumetric background.
-  The Reid et al. masers offer a maser-anchored spiral model that could
+  The [Reid 2019](/data/papers/index.md#reid2019) masers offer a maser-anchored spiral model that could
   ride atop the smooth disc profile, but the smooth band reads
   convincingly enough that re-introducing higher spatial frequency
   (and the aliasing risk it carries through 32-step raymarching) isn't

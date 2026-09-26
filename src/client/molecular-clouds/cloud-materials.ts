@@ -4,9 +4,10 @@
 import * as THREE from 'three';
 import type { EmitterMaterial } from '../scene/emitter-material';
 
-/** The traced tier: the per-cloud Edenhofer density brick and the frame
- *  that maps a cloud-local sample point into it. Its presence is what
- *  selects the brick-marching graph. */
+/** The traced tier: the per-cloud Edenhofer 2024
+ *  (/data/papers/index.md#edenhofer2024) density brick and the frame that
+ *  maps a cloud-local sample point into it. Its presence is what selects
+ *  the brick-marching graph. */
 export interface CloudFieldSpec {
   brick: THREE.Data3DTexture;
   densityMax: number;

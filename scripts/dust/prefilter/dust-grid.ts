@@ -1,6 +1,6 @@
-// Node-side reader for the Edenhofer voxel chunks in data/dust/, plus the
-// cascade's analytic tier — the two dust sources the sweep reads. Grid
-// geometry and the log-window decode come from the manifest beside the chunks.
+// Node-side reader for the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) voxel chunks in
+// data/dust/, plus the cascade's analytic tier — the two dust sources the sweep reads.
+// Grid geometry and the log-window decode come from the manifest beside the chunks.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -10,7 +10,7 @@ import {
   ANALYTICAL_DUST_NORM_PER_PC,
   ANALYTICAL_DUST_SCALE_HEIGHT_PC,
   ANALYTICAL_DUST_SCALE_LENGTH_PC,
-} from '../../../src/client/milkyway/milkyway-column-pure';
+} from '../../../src/client/milkyway/column/milkyway-column-pure';
 
 export interface DustParams {
   readonly gridSize: number;

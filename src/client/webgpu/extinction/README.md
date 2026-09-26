@@ -1,7 +1,7 @@
 # Per-star dust extinction on WebGPU
 
 The implementation behind `../../star-pipeline/extinction/`'s seam: the
-camera→star Edenhofer raymarch as a **compute kernel**, and the per-star A_V buffer
+camera→star [Edenhofer 2024](/data/papers/index.md#edenhofer2024) raymarch as a **compute kernel**, and the per-star A_V buffer
 the star vertex stage indexes instead of re-marching. What the read
 *means* — the two-tier colour routing it reddens, the clip and tap rule,
 and above all the **cancellation invariant** (catalog `absmag`/`ci` are

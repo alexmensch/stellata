@@ -6,7 +6,7 @@ import {
   galacticDirection,
   sightlineColumn,
   type Vec3,
-} from '../../../src/client/milkyway/milkyway-column-pure';
+} from '../../../src/client/milkyway/column/milkyway-column-pure';
 
 const GRID = 32;
 const PARAMS: DustParams = {

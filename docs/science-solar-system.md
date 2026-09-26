@@ -24,12 +24,13 @@ so the table only has to resolve the slow perturbation on top — some
 fifty times more compact at equal accuracy — and because the orbit-ring
 layer consumes elements natively, which is what keeps a ring on its body.
 
-*Outside it, to the 3000 BC – 3000 AD clamp:* the **JPL Standish 1992
+*Outside it, to the 3000 BC – 3000 AD clamp:* the **JPL [Standish 1992](/data/papers/index.md#standish1992)
 Keplerian-elements approximation**
-(https://ssd.jpl.nasa.gov/planets/approx_pos.html) with the cubic
-correction terms for Jupiter through Pluto, working directly from the
+(https://ssd.jpl.nasa.gov/planets/approx_pos.html) with the Table 2b
+quadratic + periodic correction to the mean anomaly for Jupiter through
+Pluto, working directly from the
 published Table 2a/2b values — no external library, no network fetch.
-Its accuracy is **not** sub-arcminute: Standish's published budget
+Its accuracy is **not** sub-arcminute: [Standish 1992](/data/papers/index.md#standish1992)'s published budget
 reaches λ 1000″ / ρ 4.0e6 km at Saturn and λ 2000″ / ρ 8.0e6 km at
 Uranus, and measured against DE441 the giants sit at 0.05–0.14 AU. The
 tables exist because that error is not invisible — under a Voyager 2
@@ -40,9 +41,9 @@ The table's weight ramps over one Julian year at each window edge rather
 than switching, so scrubbing across 1900 or 2100 under planet focus does
 not pop the outer planets by 0.05 AU.
 
-Both sources evaluate against **TDB**, not the UTC clock `t` runs in
-([Timescales](/src/client/solar-system/time/README.md#timescales)); the 69.184 s
-offset is 2.2e-5 AU at Mercury.
+Both sources evaluate against **TDB**, not the UT clock `t` runs in
+([Timescales](/src/client/solar-system/time/README.md#timescales)); ΔT between
+them (69 s today) is 2.2e-5 AU at Mercury.
 
 The full position chain (elements → ecliptic→ICRS rotation) is pinned
 against external sky truth: geocentric RA/Dec for all nine bodies plus
@@ -55,7 +56,7 @@ Earth's own centre rather than the Earth/Moon barycentre, and includes
 solstice/equinox declination checks that would fail by ~47° on any
 mirror-image error in the ecliptic→ICRS rotation. The vector corpus
 (`vector-truth.test.ts`) pins the tables against their own tolerance
-in-window, the Standish fallback against its published budget at the
+in-window, the [Standish 1992](/data/papers/index.md#standish1992) fallback against its published budget at the
 clamp bounds, and the continuity of the seam between them.
 
 VSOP87 was the originally-planned model and offers sub-arcsecond
@@ -63,7 +64,7 @@ accuracy ±4000 years from J2000. It stays rejected as a *runtime*
 dependency — ~500 KB of coefficients plus a new solver, for accuracy a
 frozen table gets more cheaply, and its own Pluto is valid 1885–2099
 only. **Decision (closes the deep-time question):** the model clock
-clamps to the Standish validity window (3000 BC – 3000 AD;
+clamps to the [Standish 1992](/data/papers/index.md#standish1992) validity window (3000 BC – 3000 AD;
 `T_CLAMP_MIN_S`/`T_CLAMP_MAX_S` in
 `src/client/solar-system/time/time.ts`) — the same window at which
 linear star propagation and the static background layers stop being
@@ -72,9 +73,10 @@ No scrubbable epoch can leave it.
 
 **Planet physical data.** Equatorial radii from NASA Planetary Fact
 Sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/). Semi-major
-axes and eccentricities from JPL DE440 mean elements at J2000. Pluto
-data from New Horizons 2015 reconnaissance (mean radius 1188 km,
-tan-pink colour from MVIC imagery). Representative single-colour RGB
+axes and eccentricities from JPL DE440 mean elements at J2000. Pluto's
+mean radius, 1188 km, is [Nimmo 2017](/data/papers/index.md#nimmo2017)'s 1188.3 ± 1.6 km from New
+Horizons images, rounded; its tan-pink colour is from New Horizons MVIC
+imagery. Representative single-colour RGB
 values per planet are observation-derived.
 
 <a id="naked-eye-colour-calibration--reference-white-is-the-solar"></a>**Naked-eye colour calibration — reference white is the solar
@@ -82,21 +84,23 @@ spectrum.** The renderer's white point is sunlight, not D65: a body
 reflecting the solar spectrum neutrally renders R = G = B. This is
 the physically meaningful choice for a scene whose sole illuminant is
 Sol — the eye white-balances to the ambient illuminant, and the star
-pipeline's Ballesteros B−V mapping already places the Sun near
+pipeline's [Ballesteros 2012](/data/papers/index.md#ballesteros2012) B−V mapping already places the Sun near
 neutral. On top of that white point, each shipped surface map is
 calibrated at build time so its sphere-weighted mean chromaticity
 equals the body's **measured disc-integrated colour**: the adopted
-B−V and V−Rc indices of Mallama, Krobusek & Pavlov 2017 (Icarus 282,
-19, Table 3), expressed as flux ratios relative to the Sun's own
-indices (B−V 0.653, V−Rc 0.352 — Ramírez et al. 2012 solar analogs)
+B−V and V−Rc indices of [Mallama 2017](/data/papers/index.md#mallama2017)
+(Table 3), expressed as flux ratios relative to the Sun's own
+indices (B−V 0.653, V−Rc 0.352 — [Ramírez 2012](/data/papers/index.md#ramirez2012) solar twins)
 and mapped onto the sRGB channels as B→blue, V→green, Rc→red (the
 band/primary mismatch is second-order against the instrument-era
-spread this removes). Per-map linear-RGB gains preserve mean
-luminance, so only chromaticity moves. This replaces hand-tuned
+spread this removes). Per-map linear-RGB gains are normalised so the
+largest is 1 — a map is only darkened, never clipped — and the renderer
+divides each map's own mean luminance back out, so only chromaticity
+reaches the screen. This replaces hand-tuned
 per-map tint/desaturation judgement with measured targets, and the
 corrections it makes are the known biases of the source imagery: the
 Viking Mars mosaic's blue boost, the 1989 Voyager Neptune's
-over-deep azure (Irwin et al. 2024), Venus's near-neutral white.
+over-deep azure ([Irwin 2024](/data/papers/index.md#irwin2024)), Venus's near-neutral white.
 Machinery in `scripts/textures/texture_calibration.py`; per-body
 numbers in the committed `data/textures/calibration.json`, pinned by
 `scripts/textures/texture-calibration.test.ts`.
@@ -119,26 +123,44 @@ TRUE vertical optical depths at the shader's (650, 550, 450) nm
 channels, sourced rather than read off a slider:
 
 - **Earth** — τ_R = [0.049, 0.097, 0.221]: sea-level Rayleigh optical depth,
-  Bodhaine et al. 1999 (J. Atmos. Oceanic Technol. 16, 1854) eq. 30.
-  τ_Mie = 0.05: clean maritime background aerosol (Smirnov et al. 2002).
+  [Bodhaine 1999](/data/papers/index.md#bodhaine1999) eq. 30.
+  τ_Mie = 0.05, for the clean maritime background aerosol, which
+  [Smirnov 2002](/data/papers/index.md#smirnov2002) measure at 500 nm as
+  a mode of 0.06 and a mean of 0.07; nothing records why 0.05, an open
+  decision (`stellata-uadc.69.16`).
 - **Venus** — τ_R = Earth's scaled by the CO₂ column above the τ=1 cloud tops
-  (~74 km, P ≈ 40 hPa — Ignatiev et al. 2009) × the CO₂/air Rayleigh
-  cross-section ratio ≈ 2.45 (Sneep & Ubachs 2005): 0.070× Earth. The clouds
-  below are the *texture*; only the column above it belongs to the overlay.
-  τ_Mie = 0.12 sits in the measured 0.05–0.3 upper-haze range (Wilquet et al.
-  2009). `absorbCoeff` stands in for the unidentified UV-blue absorber, whose
-  visible-band τ has no published table — the one judged value left, kept
-  small enough to tint without hiding the cloud texture.
-- **Mars** — τ_R from the 6.1 hPa mean CO₂ column × 2.45 (same scaling):
-  0.026× Earth. τ_Mie = 0.2: the LOW end of the measured 0.2–0.5 background
-  dust column (Lemmon et al. 2015) — the global mosaics are imaged through
-  that same dust, so the low end limits double-counting. `absorbCoeff` from
-  measured dust single-scattering albedo ω̃ ≈ [0.97, 0.90, 0.75] (Wolff et al.
-  2009): τ_a = τ_Mie·(1/ω̃ − 1).
-- **Titan** — τ_R from the full 1.5-bar N₂ column (Lindal et al. 1983;
-  10.9× Earth's column at 1.35 m/s²): mostly buried under the haze, but its
-  top is the real high-altitude blue limb Cassini images show. τ_Mie = 2.5
-  sits in the measured visible haze range τ ≈ 2–5 (Tomasko et al. 2008).
+  (~74 km, [Ignatiev 2009](/data/papers/index.md#ignatiev2009)) at
+  P ≈ 40 hPa — the pressure Ignatiev quote from Pioneer Venus for the polar
+  cloud top at 68 km (28 mbar at 70 km for the equatorial level), applied
+  at 74 km for no recorded reason (open: `stellata-uadc.69.9`) — × the
+  CO₂/air Rayleigh cross-section ratio ≈ 2.45 (at 532 nm
+  [Sneep 2005](/data/papers/index.md#sneep2005) measure CO₂ at 2.43×
+  N₂, and air scatters within a few percent of N₂): 0.070× Earth. The
+  clouds below are the *texture*; only the column above it belongs to the
+  overlay. τ_Mie = 0.12 for the 70–90 km upper haze, whose local extinction
+  profiles and particle sizes
+  [Wilquet 2009](/data/papers/index.md#wilquet2009) measure; the paper
+  states no column optical depth. `absorbCoeff` stands in for the
+  unidentified UV-blue absorber, whose visible-band τ has no published table —
+  a judged value, kept small enough to tint without hiding the cloud texture.
+- **Mars** — τ_R from the 6.1 hPa mean CO₂ column × 2.45 (same scaling): 0.026×
+  Earth. τ_Mie = 0.2, under the clear-season dust columns
+  [Lemmon 2015](/data/papers/index.md#lemmon2015) Sect. 4.1 report (Spirit below ~0.3,
+  Opportunity below ~0.5) — the global mosaics are imaged through that same
+  dust, so a value under the measured column limits double-counting.
+  `absorbCoeff` from measured dust single-scattering albedo ω̃ ≈
+  [0.97, 0.90, 0.75] ([Wolff 2009](/data/papers/index.md#wolff2009)
+  Fig. 12, whose bluest measured point, at 440 nm, is ≈ 0.77 — the blue 0.75
+  extrapolates below the data, an open decision, `stellata-uadc.69.22`):
+  τ_a = τ_Mie·(1/ω̃ − 1).
+- **Titan** — τ_R from the full 1.5-bar N₂ column
+  ([Lindal 1983](/data/papers/index.md#lindal1983); 10.9× Earth's column
+  at 1.35 m/s²): mostly buried under the haze, but its top is the real
+  high-altitude blue limb Cassini images show. τ_Mie = 2.5, below the haze
+  column the Huygens DISR model of
+  [Tomasko 2008a](/data/papers/index.md#tomasko2008) gives: ≈ 8 at
+  550 nm (≈ 6–12 across 650–450 nm), reaching 2–5 only past ~900 nm —
+  an open decision (`stellata-uadc.69.17`).
 
 <a id="moons"></a>**Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
@@ -180,16 +202,16 @@ Minor / irregular moons, Pluto's satellites, and moon ring systems are
 out of scope. Parent gravitational parameters GM (Kepler III → a moon's
 period) live on the parent `Planet` entries. The resolver
 (`moonOffsetEcliptic`) Kepler-solves each moon in its reference plane
-and rotates it into the ecliptic; `earthMoonSplit` divides Standish's
+and rotates it into the ecliptic; `earthMoonSplit` divides [Standish 1992](/data/papers/index.md#standish1992)'s
 Earth–Moon barycentre into Earth-centre and Moon. Phase photometry is
 per-body: only the Moon carries a measured curve ([Planet phase
 functions](#planet-phase-functions)), the rest render Lambertian.
 
 <a id="planet-rotation"></a>**Planet rotation.** Per-body pole (RA/Dec, ICRS) and prime-meridian
 angle `W(t) = W0 + Ẇ·d` from the IAU Working Group on Cartographic
-Coordinates and Rotational Elements 2015 report (Archinal et al. 2018,
-Celest Mech Dyn Astr 130:22, https://doi.org/10.1007/s10569-017-9805-5),
-values as distributed in NAIF `pck00011.tpc`. Only the main linear
+Coordinates and Rotational Elements 2015 report
+([Archinal 2018](/data/papers/index.md#archinal2018)), values as distributed in NAIF
+`pck00011.tpc`. Only the main linear
 terms ship: the periodic nutation/precession corrections are sub-degree
 (largest: Neptune's ±0.7° pole nod) and invisible at render scale,
 while the linear pole rates keep the visually meaningful long-term
@@ -230,7 +252,8 @@ irradiance at any solar elevation above ~1° (`stellata-2f6.61`).
 <a id="saturns-ring-brightness"></a>**Saturn's ring brightness.** The ring system carries most of
 Saturn's light and its contribution swings with the tilt of the ring
 plane, so the *unresolved* magnitude runs the joint phase-angle /
-ring-tilt law of Mallama & Hilton 2018 Eq. 10 (Mallama 2012),
+ring-tilt law of [Mallama 2018](/data/papers/index.md#mallamahilton2018) Eq. 10
+([Mallama 2012](/data/papers/index.md#mallama2012)),
 `ΔV = −1.825·sin β + 0.026·α − 0.378·sin β·e^(−2.25·α)`, differenced
 against the globe-alone curve to give a flux multiplier on φ(α). β is
 the effective inclination `√(β_v·β_h)` built from the viewer's and
@@ -261,15 +284,17 @@ The **drawn annulus rides the same curve**, normalised to 1 at
 opposition — which is the anchor its strip already carries, a
 zero-phase geometric albedo — so the resolved rings brighten through
 opposition by what the point source does and the resolvedness band
-cannot step. Cassini/ISS corroborates the width independently: Déau
-et al. 2013 measure the surge half-width at 0.20° in the A and B rings
-and 0.26–0.28° in the C ring and Cassini Division, against the
-`ln2/2.25` = 0.308° of Mallama's Earth-based exponential. The surge is
+cannot step. Cassini/ISS corroborates the width independently:
+[Déau 2013](/data/papers/index.md#deau2013) measure the surge half-width at 0.2° where τ > 1.5 (0.25°
+over τ > 1) and ≥ 0.26° in the C ring and Cassini Division, against the
+`ln2/2.25` = 0.308° of the Earth-based exponential in [Mallama 2018](/data/papers/index.md#mallamahilton2018) Eq. 10 (from [Mallama 2012](/data/papers/index.md#mallama2012) Table 2). The surge is
 strip-averaged rather than per-radius because the per-region amplitudes
-(1.25 B, 1.39 A, 1.45 C, 1.47 Cassini Division) collapse to a few
-percent once flux-weighted, and because amplitude's correlation with
-optical depth turns over near τ ≈ 0.5–1 — so the strip's own opacity
-channel is not a usable proxy for it.
+(~1.25 B, ~1.4 A, ~1.5 C and Cassini Division) collapse to a few
+percent once flux-weighted, and because amplitude is not simply
+correlated with optical depth — it falls with τ below τ ≈ 0.7 in the A, B
+and C rings with wide scatter, holds near-constant above τ ≈ 1, and the
+Cassini Division follows neither — so the strip's own opacity channel is
+not a usable proxy for it.
 [Ring photometry](/src/client/solar-system/planets/rings/README.md#ring-photometry--the-unresolved-magnitude).
 
 **Earth night lights.** NASA Black Marble 2016 (Suomi NPP VIIRS)
@@ -288,23 +313,20 @@ stays undimmed — the halo is a rendering artefact, not a surface. The
 reverse transit (planet in front) would dim the host by (R_p/R_host)²
 ≲ 10⁻² mag and is deliberately not modelled.
 
-**Planet geometric albedos** (V-band) from Mallama et al. 2018
-(https://doi.org/10.1016/j.icarus.2017.05.018) and the NASA fact
-sheets above: Mercury 0.142, Venus 0.689, Earth 0.434, Mars 0.170,
+**Planet geometric albedos** (V-band) from [Mallama 2017](/data/papers/index.md#mallama2017) and the NASA fact sheets
+above: Mercury 0.142, Venus 0.689, Earth 0.434, Mars 0.170,
 Jupiter 0.538, Saturn 0.499, Uranus 0.488, Neptune 0.442, Pluto 0.49
 (HST + New Horizons reconnaissance). Drives the reflected-light
 apparent magnitude formula in `src/client/solar-system/`.
 
 <a id="planet-phase-functions"></a>**Planet phase functions.** Per-planet empirical V-band phase curves
-from Mallama, Krobusek, Pavlov 2018, "Comprehensive wide-band
-magnitudes and albedos for the planets, with applications to
-exo-planets and Planet Nine" (Icarus 282, 2017, 19–33,
-https://doi.org/10.1016/j.icarus.2016.09.023). Mercury,
+from [Mallama 2017](/data/papers/index.md#mallama2017). Mercury,
 Venus, Mars and Jupiter each carry a polynomial
 `ΔV(α°) = c1·α + c2·α² + …` from the paper's Tables A-1.2, A-2.2,
 A-4.2, A-5.2; Earth uses a cubic fit through the four discrete
-values published in Table A-3.1; Saturn's **globe** uses Mallama &
-Hilton 2018 Eq. 12, the 4th-order fit to Dyudina's Pioneer-derived
+values published in Table A-3.1; Saturn's **globe** uses
+[Mallama 2018](/data/papers/index.md#mallamahilton2018) Eq. 12, the 4th-order fit to
+[Dyudina 2005](/data/papers/index.md#dyudina)'s Pioneer-derived
 scattering model, valid 6°–150° and carried down to 0° where it tracks
 the α < 6.5° globe fit (Eq. 11) inside 0.011 mag. Every curve is a
 globe anchored on its α=0 geometric albedo, so `c0 = 0` throughout;
@@ -312,7 +334,7 @@ Saturn's rings are a separate term ([Saturn's ring brightness](#saturns-ring-bri
 The renderer multiplies the flux factor `10^(−ΔV/2.5)` into
 the apparent-magnitude formula in place of the Lambertian default
 whenever a planet carries coefficients and α is inside the published
-validity bound. Mallama 2018 publishes no phase polynomial for
+validity bound. [Mallama 2017](/data/papers/index.md#mallama2017) publishes no phase polynomial for
 Uranus, Neptune or Pluto — the first two because their max α from
 Earth is "negligible" (the paper models latitude/temporal effects
 instead), Pluto because the paper doesn't cover it. Those three —
@@ -320,9 +342,10 @@ and every future exoplanet — fall back to the Lambertian phase
 function `φ(α) = (sin α + (π − α)·cos α)/π`. See
 `src/client/solar-system/phase-function.ts` for the per-planet coefficients.
 
-**The Moon's phase curve.** Mallama 2018 covers planets only, so Earth's
+**The Moon's phase curve.** [Mallama 2017](/data/papers/index.md#mallama2017) covers planets only, so Earth's
 Moon takes the classic lunar phase law from Allen's *Astrophysical
-Quantities*: `m = −12.73 + 1.49·|φ| + 0.043·φ⁴` for φ in radians, which
+Quantities* ([Cox 2000](/data/papers/index.md#cox2000)):
+`m = −12.73 + 1.49·|φ| + 0.043·φ⁴` for φ in radians, which
 in the ΔV(α°) form the renderer stores is
 `ΔV = 0.026·α + 4e-9·α⁴`, valid to α ≈ 150°. It reproduces the measured
 full-to-quarter brightness ratio of ~11×, against the 3.14× a Lambertian
@@ -389,10 +412,10 @@ nearby stars. The cited measurements:
 - Flank inferred at **~115 AU** from Voyager 2 heliopause crossing
   2018-11-05, combined with the apex-aligned ellipsoid model.
 - Heliotail at **200 AU** — IBEX / Cassini ENA observations.
-- Nose (upwind apex) direction: the IBEX/Ulysses interstellar He
-  inflow, J2000 ecliptic (λ, β) = (255.7°, 5.1°) ≈ ICRS RA 17h00m,
-  Dec −17.6° — McComas et al. 2015, *ApJS* 220, 22,
-  DOI 10.1088/0067-0049/220/2/22. (An earlier revision anchored the
+- Nose (upwind apex) direction: where the IBEX/Ulysses interstellar He
+  inflow arrives from, J2000 ecliptic (λ, β) = (255.7°, 5.1°) ≈ ICRS RA
+  17h00m, Dec −17.6° — the reverse of the flow direction (75.7°, −5.1°)
+  [McComas 2015](/data/papers/index.md#mccomas2015) Table 3 gives. (An earlier revision anchored the
   nose at the solar apex, RA 17h53m Dec +27.4° — ~47° off; Voyager 1's
   outbound direction sits ~30° from the corrected nose, consistent
   with its 122 AU crossing.)

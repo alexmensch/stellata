@@ -1,5 +1,6 @@
 // Build-time Sol→star extinction integral through the same encoded
-// Edenhofer dust grid the runtime march samples — README.md.
+// Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid the runtime
+// march samples — README.md.
 
 import {
   segmentCubeOverlap,

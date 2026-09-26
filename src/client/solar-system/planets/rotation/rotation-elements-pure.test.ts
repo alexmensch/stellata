@@ -104,7 +104,8 @@ describe('spinDegAt', () => {
 describe('subObserverLongitudeEastDeg — Earth sub-solar point', () => {
   // 2026-06-13 sits at an equation-of-time zero crossing, so the
   // sub-solar longitude at 12:00 UTC is ~0° (Greenwich noon). Budget:
-  // EoT residual ±0.3°, UTC-vs-TDB ~0.3°, Standish/EM-bary ≪ 0.1°.
+  // EoT residual ±0.3°, UTC-vs-TDB ~0.3°, EM-bary in Standish 1992
+  // (/data/papers/index.md#standish1992) ≪ 0.1°.
   const NOON = Date.UTC(2026, 5, 13, 12) / 1000;
 
   it('Greenwich noon puts the sub-solar point near 0° longitude', () => {

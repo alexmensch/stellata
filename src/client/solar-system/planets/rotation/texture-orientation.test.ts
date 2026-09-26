@@ -56,9 +56,9 @@ function rotationFor(body: TruthRow['body']): RotationElements {
   return MOON_ROTATION_BY_NAME.get(MOON_NAME[body])!;
 }
 
-/** Body→Earth unit direction (ICRS) and the body's distance (pc)
- *  through the production chain: Standish heliocentric ecliptic
- *  (+ moon offset), subtract Earth, ecliptic→ICRS quaternion. */
+/** Body→Earth unit direction (ICRS) and the body's distance (pc) through the
+ *  production chain: Standish 1992 (/data/papers/index.md#standish1992) heliocentric
+ *  ecliptic (+ moon offset), subtract Earth, ecliptic→ICRS quaternion. */
 function bodyToEarthIcrs(
   body: TruthRow['body'],
   t: number,

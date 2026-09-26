@@ -213,8 +213,9 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): Spectr
   return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
 }
 
-/** Map Gaia DR3 GSP-Spec's `spectraltype_esphs` enum to a SpectralInfo.
- *  The enum is letter-only (Recio-Blanco et al. 2023, A&A 674, A29);
+/** Map Gaia DR3 ESP-ELS's `spectraltype_esphs` enum to a SpectralInfo.
+ *  The enum is letter-only (Creevey 2023
+ *  (/data/papers/index.md#creevey2023));
  *  there's no subclass or luminosity class, so subclass defaults to 5
  *  (mid-range) and lumClass to 255 (unknown). Returns null for the
  *  catch-all "unknown" value and for unrecognised letters. */

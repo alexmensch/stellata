@@ -137,7 +137,7 @@ a heuristic guard — it requires the un-extincted CPU disc to be
 dust to attenuate the GPU disc without orphaning the glyph. The
 trade is a few legitimate wings dropped on faint un-extincted
 stars near the magnitude limit. **The proper fix when needed:**
-ship a coarser (~128³ resample of Edenhofer 2023, ~2 MiB) CPU-side
+ship a coarser (~128³ resample of [Edenhofer 2024](/data/papers/index.md#edenhofer2024), ~2 MiB) CPU-side
 voxel grid and raymarch per CCDM-flagged binary in the per-frame
 label loop, cached by camera position. That's the right answer for
 chart-mode use from far-from-Sol viewpoints, where this heuristic

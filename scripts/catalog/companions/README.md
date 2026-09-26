@@ -116,9 +116,10 @@ Per-row gates and resolution:
   What it takes: the WDS (ρ, θ) tangent projection off the anchor, the
   anchor's `distVia` (as a minted member does — it now sits at the anchor's
   distance, not its own fit's), the anchor's systemic velocity,
-  and a **curated** brightness with its Ballesteros colour — A+Δmag, the
-  row's WDS magnitude referenced to the distance the member now sits at, or
-  class→M_V. Photometry travels with the astrometry here because ONE cause
+  and a **curated** brightness with its
+  [Ballesteros 2012](/data/papers/index.md#ballesteros2012) colour — A+Δmag,
+  the row's WDS magnitude referenced to the distance the member now sits at,
+  or class→M_V. Photometry travels with the astrometry here because ONE cause
   rejects both — the brighter star's light inside the detection window — and
   BP/RP see more of it than G does. With no curated source the member keeps
   its own apparent brightness across the move (absmag shifts by the distance
@@ -130,7 +131,8 @@ Per-row gates and resolution:
   star 9.91 mag brighter, RUWE 2.42 and a blended image on 18% of transits,
   and a V ≤ 11 floor admits it in its own right — its own fit put the pair
   at 19.1 AU against the measured 29.27, took M_V 11.467 against A+Δmag's
-  11.360 and B−V −0.224 against the DA1.9 Ballesteros −0.443, and fed the
+  11.360 and B−V −0.224 against the DA1.9
+  [Ballesteros 2012](/data/papers/index.md#ballesteros2012) −0.443, and fed the
   systemic blend below a proper motion that dragged **Sirius A** from
   1339.4 mas/yr to 1282.7. Counted `companionExistingMemberRecurated`, per
   brightness source (`held` for the fallback), once per member however many
@@ -470,7 +472,7 @@ carries the worked case and imports the same predicate for naming.
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
 | `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
 | `absmag` | per-component | Stage-5 decomposition / dmag / blend split. |
-| `ci` | per-component | own observed B–V, else Ballesteros from the resolved spectral type. |
+| `ci` | per-component | own observed B–V, else [Ballesteros 2012](/data/papers/index.md#ballesteros2012) from the resolved spectral type. |
 | `spectClass`, `lumClass`, `spectDisplay` | per-component | SIMBAD/curated type, else a main-sequence estimate from the own M_V. |
 | `physicalRadius` | per-component | Stefan-Boltzmann from the per-component absmag + Teff. |
 | `flags` | per-component | `FLAG_BINARY_COMPANION_ONLY` (+ `_SYNTHETIC`). |

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build data/distance-validation/vaidman-2025-supergiants.tsv from the
-Vaidman et al. 2025 paper PDF. One-shot reference-data builder; see
-data/distance-validation/README.md for provenance and license."""
+Vaidman 2025 (/data/papers/index.md#vaidman2025) paper PDF. One-shot
+reference-data builder; see data/distance-validation/README.md (provenance, license)."""
 
 from __future__ import annotations
 
@@ -316,7 +316,7 @@ def main() -> None:
         "--pdf",
         type=Path,
         default=ROOT / "universe-11-00359.pdf",
-        help="Path to the Vaidman et al. 2025 paper PDF (CC BY 4.0).",
+        help="Path to the Vaidman 2025 paper PDF (CC BY 4.0).",
     )
     args = parser.parse_args()
 

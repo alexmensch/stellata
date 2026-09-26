@@ -102,8 +102,9 @@ for its coverage and the runtime colour-LUT re-key it enables.
 - Record (100 bytes per star)
   - 0–11  `float32 × 3`  x, y, z in parsecs (equatorial, Sol at origin)
   - 12–15 `float32`      absmag — **intrinsic** (de-extincted). The build
-                          subtracts the Sol→star Edenhofer A_V so the runtime
-                          raymarch re-adds it without double-counting (see
+                          subtracts the Sol→star
+                          [Edenhofer 2024](/data/papers/index.md#edenhofer2024)
+                          A_V so the runtime raymarch re-adds it without double-counting (see
                           [Build-time de-extinction](../distance/dust/README.md#build-time-de-extinction)).
   - 16–19 `float32`      ci (intrinsic B–V colour index, de-reddened by the
                           same integral; default 0.65 for missing)
@@ -355,8 +356,8 @@ not display — the manifest's `hd_alt` / `hr_alt` cells
 the raw spectral designation the spectral resolver settled on ("G2 V",
 "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display. The `g` field carries the GCVS variable-star
 designation (`R CrB`, `VY CMa`, `V0645 Cen`) the cross-match attaches
-(`../parse/gcvs/README.md`). ~14.1k stars are named (`gcvsNamed`), a superset
-of the ~4.1k with a renderable period (`gcvsMatched`): a designation is
+(`../parse/gcvs/README.md`). ~15.2k stars are named (`gcvsNamed`), a superset
+of the ~4.6k with a renderable period (`gcvsMatched`): a designation is
 attached on name-resolution alone, so aperiodic variables (Proxima =
 V0645 Cen, R CrB, T Tau, novae) are searchable but never pulsate.
 

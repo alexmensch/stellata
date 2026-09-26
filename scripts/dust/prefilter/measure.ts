@@ -29,7 +29,7 @@ import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   type Vec3,
-} from '../../../src/client/milkyway/milkyway-column-pure';
+} from '../../../src/client/milkyway/column/milkyway-column-pure';
 
 const PATCH_SAMPLES = 32;
 const STRIP_STEP_DEG = 0.25;

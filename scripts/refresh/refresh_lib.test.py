@@ -1216,8 +1216,9 @@ class ValidateSpotRowsTests(unittest.TestCase):
 
 
 class CheckSpotRowsTolerantTests(unittest.TestCase):
-    """Soft-tolerance retirement tier (Bailer-Jones): 0 missing silent,
-    ≤max_missing warns without failing, >max_missing hard-fails."""
+    """Soft-tolerance retirement tier (Bailer-Jones 2021,
+    /data/papers/index.md#bailerjones2021): 0 missing silent, ≤max_missing warns without
+    failing, >max_missing hard-fails."""
 
     _KW = dict(
         script_name="refresh-bailer-jones",

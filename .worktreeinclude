@@ -7,3 +7,4 @@ public/binaries.bin
 build/catalog-row-index-map.json
 build/binding-integrity-verdicts.tsv
 build/stamps/*.json
+data/papers/pdf

@@ -7,7 +7,7 @@ import {
   DISC_RADIUS_PC,
   type Vec3,
   sightlineSurfaceBrightness,
-} from './milkyway-column-pure';
+} from './column/milkyway-column-pure';
 
 const REFERENCE_STEPS = 4096;
 

@@ -1,8 +1,8 @@
 # Build-time de-extinction
 
 The Sol→star extinction the catalogue build subtracts from every record's
-`absmag` and observed `ci`, integrated through the same encoded Edenhofer
-dust grid the runtime march samples. The cancellation invariant below is
+`absmag` and observed `ci`, integrated through the same encoded
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust grid the runtime march samples. The cancellation invariant below is
 the load-bearing content — a change to either side of it ships with the
 other.
 
@@ -39,7 +39,7 @@ and once in the raymarch.
 The fix de-extincts at build time against **the same encoded dust the
 shader raymarches**: `absmag' = absmag − A_map(Sol→star)` and
 `ci' = ci − A_map/R_V`, where `A_map` is a converged Sol→star integral
-through the Edenhofer voxel grid. Because the source is the same model
+through the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) voxel grid. Because the source is the same model
 the runtime re-adds, at camera=Sol the build subtraction and the runtime
 addition cancel identically for every star — map calibration, cube
 truncation at 1.25 kpc, and the `avPerDensityPerPc` conversion all cancel
@@ -56,7 +56,8 @@ within the cube, vantages get physically consistent re-lighting.
 - Promoted companions de-extinct along their own sightline in
   `../../companions/companion-promotion.ts`, except where the value is
   already intrinsic: a spectral-derived absmag (class→M_V) and a derived
-  ci (Ballesteros / solar fallback) are left untouched; observed-photometry
+  ci ([Ballesteros 2012](/data/papers/index.md#ballesteros2012) / solar fallback) are left
+  untouched; observed-photometry
   absmag and the row's own observed ci get the subtraction.
 - **Dust data absent at build → HARD FAIL** (`loadDustGrid` throws). The
   Bailer-Jones soft-continue precedent does not apply: a soft-continue

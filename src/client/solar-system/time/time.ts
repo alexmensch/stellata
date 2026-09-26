@@ -15,18 +15,20 @@ const UNIX_EPOCH_JD = 2440587.5;
 // tick still reads as live, large enough to absorb scheduler jitter.
 const LIVE_TOLERANCE_SEC = 1;
 
-/** Unix-seconds → Julian Date, **UT** scale — the scale `t` itself runs in.
- *  Not UTC: the model's day is a uniform 86400 s with no leap seconds, and
- *  UTC did not exist before 1972. Not JDE either — Meeus's JDE is
- *  conventionally TT; `tToJdTdb` is the sibling that carries ΔT. */
+/** Unix-seconds → Julian Date, **UT** scale — the scale `t` itself runs in. Not
+ *  UTC: the model's day is a uniform 86400 s with no leap seconds, and UTC did
+ *  not exist before 1972. Not JDE either — Meeus 1998's
+ *  (/data/papers/index.md#meeus) JDE is conventionally TT; `tToJdTdb` is the
+ *  sibling that carries ΔT. */
 export function tToJdUt(t: number): number {
   return t / 86400 + UNIX_EPOCH_JD;
 }
 
 /** Unix-seconds → Julian Date in the **TDB** scale the JPL element tables and
- *  the Standish series are both defined against. Every ephemeris evaluation
- *  reads through here; `tToJdUt` is the universal-time sibling, ΔT earlier.
- *  TDB departs from TT by under 2 ms, which no ephemeris here resolves. */
+ *  the Standish 1992 (/data/papers/index.md#standish1992) series are both defined
+ *  against. Every ephemeris evaluation reads through here; `tToJdUt` is the
+ *  universal-time sibling, ΔT earlier. TDB departs from TT by under 2 ms, which
+ *  no ephemeris here resolves. */
 export function tToJdTdb(t: number): number {
   const jdUt = tToJdUt(t);
   return jdUt + deltaTSeconds(jdUt) / 86400;
@@ -51,10 +53,11 @@ export function julianEpochYearToT(jyr: number): number {
   return jdUtToT(J2000_JD + (jyr - 2000) * DAYS_PER_JULIAN_YEAR);
 }
 
-// Model-clock clamp: the Standish 1992 ephemeris window (3000 BC – 3000 AD;
-// /docs/science-solar-system.md#solar-system). Outside it planet positions
-// are garbage and
-// linear star propagation has long since degraded, so `t` never leaves it.
+// Model-clock clamp: the Standish 1992 (/data/papers/index.md#standish1992)
+// ephemeris window (3000 BC – 3000 AD;
+// /docs/science-solar-system.md#solar-system). Outside it planet positions are
+// garbage and linear star propagation has long since degraded, so `t` never
+// leaves it.
 export const T_CLAMP_MIN_S = julianEpochYearToT(-2999.0);
 export const T_CLAMP_MAX_S = julianEpochYearToT(3001.0);
 

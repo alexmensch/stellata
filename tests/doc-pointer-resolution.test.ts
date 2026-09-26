@@ -3,32 +3,26 @@
 // pointer that still reads as authoritative.
 
 import { describe, expect, it } from 'vitest';
-import { existsSync, lstatSync, readFileSync } from 'node:fs';
-import { basename, dirname, extname, join, relative, resolve } from 'node:path';
-import { docAnchors, extractPointers, extractSameFileLinks, resolveDocPath, strayedSectionSigns } from './doc-pointer-pure';
-import { gitFiles, lfsTracked } from './walk-files';
+import { readFileSync } from 'node:fs';
+import { dirname, extname, join, relative, resolve } from 'node:path';
+import {
+  SCANNED_KINDS,
+  docAnchors,
+  extractPointers,
+  extractSameFileLinks,
+  kindOf,
+  pointerCorpus,
+  resolveDocPath,
+  strayedSectionSigns,
+} from './doc-pointer-pure';
+import { lfsTracked } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
-const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
-// Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
-const FROZEN = ['data/sid/retirements.tsv'];
-const kindOf = (name: string): string => extname(name) || basename(name);
 
 // Fixtures interpolate their `#` and section sign from here, so no literal
 // pointer or sign appears in this file and it stays out of its own scan.
 const H = '#';
 const S = '\u00a7';
-
-function scannedFiles(): string[] {
-  const names = gitFiles(ROOT, [], { untracked: true }).filter(
-    (name) => SCANNED_KINDS.includes(kindOf(name)) && !FROZEN.includes(name),
-  );
-  const lfs = lfsTracked(ROOT, names);
-  return names
-    .filter((name) => !lfs.has(name))
-    .map((name) => join(ROOT, name))
-    .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());
-}
 
 describe('doc pointers resolve', () => {
   const anchors = new Map<string, Set<string>>();
@@ -40,7 +34,7 @@ describe('doc pointers resolve', () => {
     return parsed;
   };
 
-  const texts = scannedFiles().map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
+  const texts = pointerCorpus(ROOT).map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
   const pointers = texts.flatMap(({ file, text }) => extractPointers(text).map((pointer) => ({ file, pointer })));
 
   it(`no ${S} appears outside "[${S} N](…)" link text in markdown, or anywhere in code`, () => {
