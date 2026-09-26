@@ -81,7 +81,7 @@ spheroid population, 0.14–0.18 mag on their discs. What moves a
 
 **The separation holds at the emission site and not one step past it.**
 The Milky Way's raymarch attenuates per channel inside the same loop
-([Dust](../../milkyway/README.md#dust--the-analytic-tier-and-what-composes-with-it)), so a redder component
+([Dust](../../milkyway/column/README.md#dust--the-analytic-tier-and-what-composes-with-it)), so a redder component
 transmits more of its own light through the same dust: every dust-free
 column is bit-identical under any hue, and every extincted one is not.
 0.012 mag toward the Galactic centre for a disc 0.3 mag bluer in B−V,
@@ -148,7 +148,7 @@ component is modelled and the other is solved:
 ```
 
 `OLD_SPHEROID_COLOUR_INDEX_BV` = **0.9574** supplies the spheroid term —
-BC03 Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
+[Bruzual 2003](/data/papers/index.md#bruzual2003) Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
 Υ\*_V comes off. It is a *population* constant, not either layer's: the
 Galactic bulge, M31's bulge and the luminous early-type spheroids are the
 same population. It is **not** the metal-poor dwarf spheroids

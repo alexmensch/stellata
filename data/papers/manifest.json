@@ -1,4042 +1,1520 @@
 {
- "abdurrouf2022": {
-  "arxiv": "2112.02026",
-  "bibcode": "2022ApJS..259...35A",
-  "bytes": 15322915,
-  "doi": "10.3847/1538-4365/ac4414",
-  "openalex_first_author": "Abdurrouf",
-  "openalex_title": "The Seventeenth Data Release of the Sloan Digital Sky Surveys: Complete Release of MaNGA, MaStar, and APOGEE-2 Data",
-  "openalex_year": 2022,
-  "sha256": "ff6ff496d0ae1e2f092fc15e4118c688afed11f9bc9e0a708d52edcaeabd4c8e",
-  "source_url": "https://arxiv.org/pdf/2112.02026",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4365/ac4414/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2022ApJS..259...35A/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "andrae2023": {
-  "arxiv": "2206.06138",
-  "bibcode": null,
-  "bytes": 3644180,
-  "doi": "10.1051/0004-6361/202243462",
-  "openalex_first_author": "R. Andrae",
-  "openalex_title": "Gaia Data Release 3",
-  "openalex_year": 2022,
-  "sha256": "1dfb1562fabc59b2e4bffb8af32623b95a137621c2ebfcf51e8cee41d0123981",
-  "source_url": "https://curis.ku.dk/ws/files/367298692/aa43462_22.pdf",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/forth/aa43462-22.pdf"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/2206.06138"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "archinal2018": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 938181,
-  "doi": "10.1007/s10569-017-9805-5",
-  "openalex_first_author": "B. A. Archinal",
-  "openalex_title": "Report of the IAU Working Group on Cartographic Coordinates and Rotational Elements: 2015",
-  "openalex_year": 2018,
-  "sha256": "291c6fc48d6c6c93d0a55463c238d2b2e3c89920a0678aa04faf8f075e3aa4ca",
-  "source_url": "https://doi.org/10.1007/s10569-017-9805-5",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "arzoumanian2011": {
-  "arxiv": "1103.0201",
-  "bibcode": "2011A&A...529L...6A",
-  "bytes": 3674121,
-  "doi": "10.1051/0004-6361/201116596",
-  "openalex_first_author": "D. Arzoumanian",
-  "openalex_title": "Characterizing interstellar filaments with Herschel in IC 5146",
-  "openalex_year": 2011,
-  "sha256": "591d82039bc64303579b83d9417353dd30accba30ea30387672b88c2483c539c",
-  "source_url": "https://arxiv.org/pdf/1103.0201",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011A%26A...529L...6A/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2011/05/aa16596-11.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://orca.cardiff.ac.uk/id/eprint/10956/1/Characterizing_interstellar_filaments_with_Herschel.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://oro.open.ac.uk/31794/1/Characterizing_interstellar_filaments.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "arzoumanian2019": {
-  "arxiv": "1810.00721",
-  "bibcode": "2019A&A...621A..42A",
-  "bytes": 14685755,
-  "doi": "10.1051/0004-6361/201832725",
-  "openalex_first_author": "D. Arzoumanian",
-  "openalex_title": "Characterizing the properties of nearby molecular filaments observed with Herschel",
-  "openalex_year": 2018,
-  "sha256": "02aef8f66b54cba13351708ea75f215a99934aeb2267088e6292c76de829e45e",
-  "source_url": "https://real.mtak.hu/186593/1/1810.00721.pdf",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019A%26A...621A..42A/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2019/01/aa32725-18.pdf"
-   }
-  ],
-  "version": "acceptedVersion"
- },
- "bahcall1980": {
-  "arxiv": null,
-  "bibcode": "1980ApJS...44...73B",
-  "bytes": 3522904,
-  "doi": "10.1086/190685",
-  "openalex_first_author": "J. N. Bahcall",
-  "openalex_title": "The universe at faint magnitudes. I - Models for the galaxy and the predicted star counts",
-  "openalex_year": 1980,
-  "sha256": "1d1e77d724dcba9f6d570bee8c069141d583616b203d8c18bef6aa8f3149d6ac",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1980ApJS...44...73B",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1980ApJS...44...73B/PUB_PDF"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1980ApJS...44...73B/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "bailerjones2015": {
-  "arxiv": "1507.02105",
-  "bibcode": "2015PASP..127..994B",
-  "bytes": 2793443,
-  "doi": "10.1086/683116",
-  "openalex_first_author": "Coryn A. L. Bailer\u2010Jones",
-  "openalex_title": "Estimating Distances from Parallaxes",
-  "openalex_year": 2015,
-  "sha256": "8f86ef1b3cc7e9257ce6541e4d1620e7102bb1b74677137a27bf0fcd3184f14d",
-  "source_url": "https://arxiv.org/pdf/1507.02105",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2015PASP..127..994B/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "bailerjones2021": {
-  "arxiv": "2012.05220",
-  "bibcode": null,
-  "bytes": 12833923,
-  "doi": "10.3847/1538-3881/abd806",
-  "openalex_first_author": "C. A. L. Bailer-Jones",
-  "openalex_title": "Estimating Distances from Parallaxes. V. Geometric and Photogeometric Distances to 1.47 Billion Stars in Gaia Early Data Release 3",
-  "openalex_year": 2021,
-  "sha256": "5ee4da1580b679706a073c6b4dc8cedc840ede3c486c00d28cabbf81e61cdfd9",
-  "source_url": "https://arxiv.org/pdf/2012.05220",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-3881/abd806/pdf"
-   },
-   {
-    "error": "IncompleteRead(1048576 bytes read, 11785347 more expected)",
-    "url": "https://arxiv.org/pdf/2012.05220"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "ballesteros2012": {
-  "arxiv": "1201.1809",
-  "bibcode": null,
-  "bytes": 283855,
-  "doi": "10.1209/0295-5075/97/34008",
-  "openalex_first_author": "F. J. Ballesteros",
-  "openalex_title": "New insights into black bodies",
-  "openalex_year": 2012,
-  "sha256": "c1f856f4f7d71bc59b1e41b204c143ba35e12c3b165126bca99af00798f3b532",
-  "source_url": "https://arxiv.org/pdf/1201.1809",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "benedict2002": {
-  "arxiv": "astro-ph/0206214",
-  "bibcode": "2002AJ....124.1695B",
-  "bytes": 276940,
-  "doi": "10.1086/342014",
-  "openalex_first_author": "George F. Benedict",
-  "openalex_title": "Astrometry with the [ITAL]Hubble Space Telescope[/ITAL]: A Parallax of the Fundamental Distance Calibrator \u03b4 Cephei",
-  "openalex_year": 2002,
-  "sha256": "9f82a056e0baea7ae25bdb89576b0eecb9c1b05a2d01b999710158c09b320c80",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0206214",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/342014/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002AJ....124.1695B/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "bessell1979": {
-  "arxiv": null,
-  "bibcode": "1979PASP...91..589B",
-  "bytes": 1842464,
-  "doi": "10.1086/130542",
-  "openalex_first_author": "M. S. Bessell",
-  "openalex_title": "UBVRI photometry. II - The Cousins VRI system, its temperature and absolute flux calibration, and relevance for two-dimensional photometry",
-  "openalex_year": 1979,
-  "sha256": "702c505ef44b0d9151de23963bd38c377ae39d65e15cdace4eef71429269d52c",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1979PASP...91..589B",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/130542/pdf"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1979PASP...91..589B/PUB_PDF"
-   },
-   {
-    "error": "curl 3 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1979PASP...91..589B/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "bib2009apjs182543a": {
-  "arxiv": null,
-  "bibcode": "2009ApJS..182..543A",
-  "bytes": 3374724,
-  "doi": null,
-  "sha256": "af5711ed1eb727df27cad55a47161aa6f621233d6bbeaa1b15c82b5953746ddf",
-  "source_url": "https://arxiv.org/pdf/0812.0649",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/PUB_PDF"
-   },
-   {
-    "error": "IncompleteRead(3145728 bytes read, 228996 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJS..182..543A/EPRINT_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "bib2011ycat3265": {
-  "arxiv": null,
-  "bibcode": "2011yCat.3265....0S",
-  "bytes": 9533,
-  "doi": null,
-  "file": "bib2011ycat3265.readme.txt",
-  "sha256": "c975658fc9ec7eee0ee0a61ebea8c4357608908510438bab42ec75f891d319ea",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/265/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011yCat.3265....0S/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "bib2014apj784156d": {
-  "arxiv": null,
-  "bibcode": "2014ApJ...784..156D",
-  "bytes": 844192,
-  "doi": null,
-  "sha256": "04bf6146837d1c8115068db55b184b84dc438a7ee030270362d53fcff007c164",
-  "source_url": "https://arxiv.org/pdf/1312.3241",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2014ApJ...784..156D/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "bib2021mnras5085148c": {
-  "arxiv": null,
-  "bibcode": "2021MNRAS.508.5148C",
-  "bytes": 1833094,
-  "doi": null,
-  "sha256": "25fb5e6ccd6a0f9fe4616b92a61bea0c718a15dbcf880bfaee055e34187c7ffa",
-  "source_url": "https://arxiv.org/pdf/2110.01658",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2021MNRAS.508.5148C/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "blandhawthorn2016": {
-  "arxiv": "1602.07702",
-  "bibcode": null,
-  "bytes": 8492213,
-  "doi": "10.1146/annurev-astro-081915-023441",
-  "openalex_first_author": "Joss Bland\u2010Hawthorn",
-  "openalex_title": "The Galaxy in Context: Structural, Kinematic, and Integrated Properties",
-  "openalex_year": 2016,
-  "sha256": "d6f92a288422385776b1dbc7d9d0818b523ce92e25a1bb5eadaa70b3c416f500",
-  "source_url": "https://arxiv.org/pdf/1602.07702",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "bodhaine1999": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 96772,
-  "doi": "10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2",
-  "openalex_first_author": "Barry A. Bodhaine",
-  "openalex_title": "On Rayleigh Optical Depth Calculations",
-  "openalex_year": 1999,
-  "sha256": "e81ff2a075595a094f34e651d879c71a4aa63eac55969a009aaee88a65a4e835",
-  "source_url": "https://doi.org/10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://journals.ametsoc.org/downloadpdf/journals/atot/16/11/1520-0426_1999_016_1854_orodc_2_0_co_2.pdf"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "bohlin1978": {
-  "arxiv": null,
-  "bibcode": "1978ApJ...224..132B",
-  "bytes": 1104686,
-  "doi": "10.1086/156357",
-  "openalex_first_author": "R. C. Bohlin",
-  "openalex_title": "A survey of interstellar H I from L-alpha absorption measurements. II",
-  "openalex_year": 1978,
-  "sha256": "46544b0541add68036f46f8b4134fd740b4eaef411746ce417898723dfa469d0",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1978ApJ...224..132B",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1978ApJ...224..132B/PUB_PDF"
-   },
-   {
-    "error": "curl 3 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1978ApJ...224..132B/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "bruzual2003": {
-  "arxiv": "astro-ph/0309134",
-  "bibcode": null,
-  "bytes": 1104870,
-  "doi": "10.1046/j.1365-8711.2003.06897.x",
-  "openalex_first_author": "Gustavo A. Bruzual",
-  "openalex_title": "Stellar population synthesis at the resolution of 2003",
-  "openalex_year": 2003,
-  "sha256": "072998f68479ea6c604fe62f6dd1d3a13d478d788ea767546deb12d20b89391f",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0309134",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "IncompleteRead(1048576 bytes read, 56294 more expected)",
-    "url": "https://arxiv.org/pdf/astro-ph/0309134"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "butkevich2014": {
-  "arxiv": "1407.4664",
-  "bibcode": "2014A&A...570A..62B",
-  "bytes": 353399,
-  "doi": "10.1051/0004-6361/201424483",
-  "openalex_first_author": "Alexey G. Butkevich",
-  "openalex_title": "Rigorous treatment of barycentric stellar motion",
-  "openalex_year": 2014,
-  "sha256": "eb55fd546f09db94de743de16f1f8f0d20fa9d58b23b4a493d4f51782fe5a33d",
-  "source_url": "https://arxiv.org/pdf/1407.4664",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2014A%26A...570A..62B/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2014/10/aa24483-14.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "cardelli1989": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 1292222,
-  "doi": "10.1086/167900",
-  "openalex_first_author": "Jason A. Cardelli",
-  "openalex_title": "The relationship between infrared, optical, and ultraviolet extinction",
-  "openalex_year": 1989,
-  "sha256": "e3db684021b80d7c161499f8e6257df9881251b0fb0382a3d9d30b2ae0e6fd73",
-  "source_url": "https://doi.org/10.1086/167900",
-  "status": "ok",
-  "tried": [],
-  "version": "ADS scan of published article"
- },
- "casagrande2018": {
-  "arxiv": "1806.01953",
-  "bibcode": "2018MNRAS.479L.102C",
-  "bytes": 1473430,
-  "doi": "10.1093/mnrasl/sly104",
-  "openalex_first_author": "Luca Casagrande",
-  "openalex_title": "On the use of Gaia magnitudes and new tables of bolometric corrections",
-  "openalex_year": 2018,
-  "sha256": "da6ae62684b506d1977308847238f28e43abe9fed18dcabd78b15db2ee2ad81d",
-  "source_url": "https://arxiv.org/pdf/1806.01953",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://academic.oup.com/mnrasl/article-pdf/479/1/L102/25145760/sly104.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018MNRAS.479L.102C/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "chapman2009": {
-  "arxiv": "0809.1106",
-  "bibcode": "2009ApJ...690..496C",
-  "bytes": 2343176,
-  "doi": "10.1088/0004-637X/690/1/496",
-  "openalex_first_author": "Nicholas L. Chapman",
-  "openalex_title": "THE MID-INFRARED EXTINCTION LAW IN THE OPHIUCHUS, PERSEUS, AND SERPENS MOLECULAR CLOUDS",
-  "openalex_year": 2008,
-  "sha256": "d2ac37e5b7ceeb5b778d0bd44b26ecbe653e4ac3597f7181f33e67f3c0cbf151",
-  "source_url": "https://arxiv.org/pdf/0809.1106",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/690/1/496/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJ...690..496C/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "charlot1997": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "cioni2000": {
-  "arxiv": "astro-ph/0003223",
-  "bibcode": "2000A&A...359..601C",
-  "bytes": 1420802,
-  "doi": null,
-  "sha256": "d5423090942c377e25fe1b2c6353cc2cb22935c1eb12d574ce9f6ef1bb3362f9",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0003223",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2000A%26A...359..601C/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "ciotti1999": {
-  "arxiv": "astro-ph/9911078",
-  "bibcode": "1999A&A...352..447C",
-  "bytes": 141692,
-  "doi": null,
-  "sha256": "9b2af79fd1730eedaa2205e2f3690018ae21768092312d3bae4d6bde14d097c9",
-  "source_url": "https://arxiv.org/pdf/astro-ph/9911078",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1999A%26A...352..447C/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "cook2023": {
-  "arxiv": "2306.06271",
-  "bibcode": null,
-  "bytes": 4129558,
-  "doi": null,
-  "sha256": "75ef3e69050c8230be1ffeb78f74011c770450d9d62a49886fb15b576b28f58a",
-  "source_url": "https://arxiv.org/pdf/2306.06271",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "corbelli2014": {
-  "arxiv": "1409.2665",
-  "bibcode": null,
-  "bytes": 7402865,
-  "doi": "10.1051/0004-6361/201424033",
-  "openalex_first_author": "Edvige Corbelli",
-  "openalex_title": "Dynamical signatures of a \u039bCDM-halo and the distribution of the baryons in M 33",
-  "openalex_year": 2014,
-  "sha256": "732101ce21fa2101f0f78e3d4923d229a0f7fffed9aa5119f6a0545ea3f24437",
-  "source_url": "https://arxiv.org/pdf/1409.2665",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/2014/12/aa24033-14.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "courteau2011": {
-  "arxiv": "1106.3564",
-  "bibcode": null,
-  "bytes": 863193,
-  "doi": "10.1088/0004-637X/739/1/20",
-  "openalex_first_author": "St\u00e9phane Courteau",
-  "openalex_title": "THE LUMINOSITY PROFILE AND STRUCTURAL PARAMETERS OF THE ANDROMEDA GALAXY",
-  "openalex_year": 2011,
-  "sha256": "718400d7670006f036040284c5c1d5bb719a7ba43c3317fe9d9f035ceca71238",
-  "source_url": "https://arxiv.org/pdf/1106.3564",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/739/1/20/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "cox2000": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "creevey2023": {
-  "arxiv": "2206.05864",
-  "bibcode": null,
-  "bytes": 5231986,
-  "doi": "10.1051/0004-6361/202243688",
-  "openalex_first_author": "O. L. Creevey",
-  "openalex_title": "Gaia Data Release 3",
-  "openalex_year": 2022,
-  "sha256": "32ed85613c76f3d5d6da53cbc9a4e6f0a33e65a38ee5ead30a4d1f385aafe244",
-  "source_url": "https://arxiv.org/pdf/2206.05864",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/forth/aa43688-22.pdf"
-   },
-   {
-    "error": "IncompleteRead(3145728 bytes read, 2086258 more expected)",
-    "url": "https://arxiv.org/pdf/2206.05864"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "cutri2003": {
-  "arxiv": null,
-  "bibcode": "2003yCat.2246....0C",
-  "bytes": 30905,
-  "doi": null,
-  "file": "cutri2003.readme.txt",
-  "sha256": "9c95e07f242f547264257815898c1a2ca8a4bd10729f33c4ae1cfc462463e781",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/II/246/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2003yCat.2246....0C/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2003yCat.2246....0C/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "deau2013": {
-  "arxiv": null,
-  "bibcode": "2013Icar..226..591D",
-  "bytes": 2336245,
-  "doi": "10.1016/j.icarus.2013.01.015",
-  "openalex_first_author": "E. D\u00e9au",
-  "openalex_title": "The opposition effect in Saturn\u2019s main rings as seen by Cassini ISS: 1. Morphology of phase functions and dependence on the local optical depth",
-  "openalex_year": 2013,
-  "sha256": "ffa0564127ae8959dc9beb5f8ca806935bee4d59caa9901d61c8550dd6117466",
-  "source_url": "https://doi.org/10.1016/j.icarus.2013.01.015",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Icar..226..591D/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Icar..226..591D/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Icar..226..591D/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Icar..226..591D/ADS_PDF"
-   }
-  ],
-  "version": "acceptedVersion"
- },
- "delporte1930": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "devaucouleurs1960": {
-  "arxiv": null,
-  "bibcode": "1960ApJ...131..574D",
-  "bytes": 636514,
-  "doi": "10.1086/146870",
-  "openalex_first_author": "Gerard de Vaucouleurs",
-  "openalex_title": "Magnitudes and Colors of the Magellanic Clouds.",
-  "openalex_year": 1960,
-  "sha256": "ec820c797acfa37cc4c2197b49b5f89879545f963426ea447a66ed747297d667",
-  "source_url": "https://doi.org/10.1086/146870",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1960ApJ...131..574D/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1960ApJ...131..574D/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 504",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1960ApJ...131..574D/ADS_PDF"
-   },
-   {
-    "error": "HTTP 504",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1960ApJ...131..574D/ADS_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "devaucouleurs1978": {
-  "arxiv": null,
-  "bibcode": "1978AJ.....83.1163D",
-  "bytes": 1158958,
-  "doi": "10.1086/112305",
-  "openalex_first_author": "G. de Vaucouleurs",
-  "openalex_title": "An outsider's view of the Galaxy - Photometric parameters, scale lengths, and absolute magnitudes of the spheroidal and disk components of our Galaxy",
-  "openalex_year": 1978,
-  "sha256": "90f15e10b0fc3066df0c42da5040b0fc76bf4d268c106325a5620c994589829a",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1978AJ.....83.1163D",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1978AJ.....83.1163D/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1978AJ.....83.1163D/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "devaucouleurs1983": {
-  "arxiv": null,
-  "bibcode": "1983ApJ...268..451D",
-  "bytes": 2296431,
-  "doi": "10.1086/160971",
-  "openalex_first_author": "G. de Vaucouleurs",
-  "openalex_title": "The galaxy as fundamental calibrator of the extragalactic distance scale. I - The basic scale factors of the galaxy and two kinematic tests of the long and short distance scales",
-  "openalex_year": 1983,
-  "sha256": "7316f2c08260776de0e742ed946ff2835cc8cbc30ee0675bd3fac618dd83a91e",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1983ApJ...268..451D",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983ApJ...268..451D/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983ApJ...268..451D/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "devaucouleurs1991": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "dolan2002": {
-  "arxiv": "astro-ph/0110160",
-  "bibcode": "2002AJ....123..387D",
-  "bytes": 527306,
-  "doi": "10.1086/324631",
-  "openalex_first_author": "Christopher J. Dolan",
-  "openalex_title": "A Photometric Study of the Young Stellar Population throughout the \u03bb Orionis Star-Forming Region",
-  "openalex_year": 2002,
-  "sha256": "9646e5f06595fe63d48a55ebeb3724746007acb46e83a4d01f2d280dfaceec91",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0110160",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/324631/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002AJ....123..387D/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "dommanget1994": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "drimmel2001": {
-  "arxiv": "astro-ph/0101259",
-  "bibcode": null,
-  "bytes": 679937,
-  "doi": "10.1086/321556",
-  "openalex_first_author": "R. Drimmel",
-  "openalex_title": "Three\u2010dimensional Structure of the Milky Way Disk: The Distribution of Stars and Dust beyond 0.35R\u2299",
-  "openalex_year": 2001,
-  "sha256": "3e19cea6fb0e51abceab0f869b3dea9babfbfd1bb6e4a9ddd6ce2e3a837eb2d7",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0101259",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1086/321556/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "ducati2001": {
-  "arxiv": null,
-  "bibcode": "2001ApJ...558..309D",
-  "bytes": 690519,
-  "doi": "10.1086/322439",
-  "openalex_first_author": "Jorge Ricardo Ducati",
-  "openalex_title": "Intrinsic Colors of Stars in the Near\u2010Infrared",
-  "openalex_year": 2001,
-  "sha256": "0d5452f4e6aaba64df5ac586db6b8f67c0202bfcb5b9adaa33084372ba654fec",
-  "source_url": "https://lume.ufrgs.br/bitstream/handle/10183/108885/000306128.pdf;jsessionid=CC0A0C840CDBABCAF2B71FFBF193E198?sequence=1",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/322439/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2001ApJ...558..309D/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "dupuy2023": {
-  "arxiv": "2305.02339",
-  "bibcode": null,
-  "bytes": 23273607,
-  "doi": "10.1051/0004-6361/202346802",
-  "openalex_first_author": "Alexandra Dupuy",
-  "openalex_title": "Dynamic cosmography of the local Universe: Laniakea and five more watershed superclusters",
-  "openalex_year": 2023,
-  "sha256": "74b121436f5d704cb480c8779988e13e3955204161543f48fbf33ac4e39d2807",
-  "source_url": "https://arxiv.org/pdf/2305.02339",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "IncompleteRead(10485760 bytes read, 12787847 more expected)",
-    "url": "https://arxiv.org/pdf/2305.02339"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "dyudina": {
-  "arxiv": "astro-ph/0406390",
-  "bibcode": "2005ApJ...618..973D",
-  "bytes": 970196,
-  "doi": "10.1086/426050",
-  "openalex_first_author": "Ulyana A. Dyudina",
-  "openalex_title": "Phase Light Curves for Extrasolar Jupiters and Saturns",
-  "openalex_year": 2005,
-  "sha256": "34721b3cc65d029871c88098c8a1bc9edfabc87275dae7e8d947dcff74a74725",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0406390",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/426050/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005ApJ...618..973D/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "edenhofer2024": {
-  "arxiv": "2308.01295",
-  "bibcode": null,
-  "bytes": 6980483,
-  "doi": "10.1051/0004-6361/202347628",
-  "openalex_first_author": "Gordian Edenhofer",
-  "openalex_title": "A parsec-scale Galactic 3D dust map out to 1.25 kpc from the Sun",
-  "openalex_year": 2024,
-  "sha256": "151b9f76ca950b67547fb7b94131f751ff7d549ffe97d81e08900ceec7199f63",
-  "source_url": "https://arxiv.org/pdf/2308.01295",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/forth/aa47628-23.pdf"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/10.1051/0004-6361/202347628/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "esa1997": {
-  "arxiv": null,
-  "bibcode": "1997HIP...C......0E",
-  "bytes": 11456841,
-  "doi": null,
-  "note": "Volume 1 (Introduction and Guide to the Data) only",
-  "sha256": "f6182096bf31bbdd2e37516da98619305de15cb06c9eecf713cdd3e8a9c6e1be",
-  "source_url": "https://www.cosmos.esa.int/documents/532822/552851/vol1_all.pdf",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1997HIP...C......0E/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1997HIP...C......0E/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1997HIP...C......0E/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1997HIP...C......0E/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "espenak2006": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 2040207,
-  "doi": null,
-  "note": "Text volume only; the eclipse map plates are separate PDFs",
-  "sha256": "c8de965a05bf6b55cc2a451456fafb78507ac329cc0a27f3c553bbf70d4a180c",
-  "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/5MCSE-Text11.pdf",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "espenak2009": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 13866196,
-  "doi": null,
-  "sha256": "19cb7687d96030164756af44938c8a686c814dbeca919a862d1fe6dbc9ecbc87",
-  "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/TP2009-214174.pdf",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "esposito2002": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 1216572,
-  "doi": "10.1088/0034-4885/65/12/201",
-  "note": "Table 1 (p. 1747): Uranus ring radii and single-value optical depths, no widths",
-  "openalex_first_author": "L. W. Esposito",
-  "openalex_title": "Planetary rings",
-  "openalex_year": 2002,
-  "sha256": "b7e2e309d9cbca72c5668ee5a581abdf78a7c7b9e0a814bd9aca53f7f3cb3e6c",
-  "source_url": "https://doi.org/10.1088/0034-4885/65/12/201",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "fabricius2002a": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 86292,
-  "doi": "10.1051/0004-6361:20020249",
-  "openalex_first_author": "C. Fabricius",
-  "openalex_title": "Henry Draper catalogue identifications for Tycho-2 stars",
-  "openalex_year": 2002,
-  "sha256": "9daf0f7db32fb21824322ab4db86d3939f3eaf7ed0e1e22fbae133523333f334",
-  "source_url": "https://doi.org/10.1051/0004-6361:20020249",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/2002/17/aah3397.pdf"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/10.1051/0004-6361:20020249/pdf"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "fabricius2002b": {
-  "arxiv": null,
-  "bibcode": "2002A&A...384..180F",
-  "bytes": 757360,
-  "doi": null,
-  "sha256": "886d9450fcefe49187a72b8dffd7a40f962556b3d4cc2424c98fc628b265057a",
-  "source_url": "https://ui.adsabs.harvard.edu/abs/2002A&A...384..180F",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002A%26A...384..180F/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002A%26A...384..180F/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002A%26A...384..180F/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002A%26A...384..180F/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "federrath2010": {
-  "arxiv": "0905.1060",
-  "bibcode": "2010A&A...512A..81F",
-  "bytes": 2131514,
-  "doi": "10.1051/0004-6361/200912437",
-  "openalex_first_author": "Christoph Federrath",
-  "openalex_title": "Comparing the statistics of interstellar turbulence in simulations and observations",
-  "openalex_year": 2010,
-  "sha256": "3b8d4bced598feae286c1af5289eaf7fc85e55a6595a27c58ffa337102b0ef2a",
-  "source_url": "https://arxiv.org/pdf/0905.1060",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2010A%26A...512A..81F/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2010/04/aa12437-09.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "federrath2013": {
-  "arxiv": "1211.6433",
-  "bibcode": "2013ApJ...763...51F",
-  "bytes": 5552305,
-  "doi": "10.1088/0004-637X/763/1/51",
-  "openalex_first_author": "Christoph Federrath",
-  "openalex_title": "ON THE STAR FORMATION EFFICIENCY OF TURBULENT MAGNETIZED CLOUDS",
-  "openalex_year": 2013,
-  "sha256": "21a6540817ac091ec0962ffd2b6ad32d556ad0a124411cd6ed66b293061850d6",
-  "source_url": "https://arxiv.org/pdf/1211.6433",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/763/1/51/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013ApJ...763...51F/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "fitzgerald1970": {
-  "arxiv": null,
-  "bibcode": "1970A&A.....4..234F",
-  "bytes": 190075,
-  "doi": null,
-  "sha256": "923cf7807cc6e9f9733cd167df52da81161542511943280a183cb854d63f06a4",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1970A%26A.....4..234F",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1970A%26A.....4..234F/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1970A%26A.....4..234F/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "flynn2006": {
-  "arxiv": "astro-ph/0608193",
-  "bibcode": null,
-  "bytes": 433281,
-  "doi": "10.1111/j.1365-2966.2006.10911.x",
-  "openalex_first_author": "Chris Flynn",
-  "openalex_title": "On the mass-to-light ratio of the local Galactic disc and the optical luminosity of the Galaxy",
-  "openalex_year": 2006,
-  "sha256": "b24f390fde81bfcea12dfce920a3be72237c6a3bb3e0f4260db0d2324f392cc1",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0608193",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://academic.oup.com/mnras/article-pdf/372/3/1149/2954531/mnras0372-1149.pdf"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/astro-ph/0608193"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "freeman1970": {
-  "arxiv": null,
-  "bibcode": "1970ApJ...160..811F",
-  "bytes": 1511339,
-  "doi": "10.1086/150474",
-  "openalex_first_author": "K. C. Freeman",
-  "openalex_title": "On the Disks of Spiral and so Galaxies",
-  "openalex_year": 1970,
-  "sha256": "7e84b483ae33938ab45865c555d63076d35df161ed30d7c9f037e48399583cc4",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1970ApJ...160..811F",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1970ApJ...160..811F/PUB_PDF"
-   },
-   {
-    "error": "curl 3 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1970ApJ...160..811F/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 504",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1970ApJ...160..811F/ADS_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "french1986": {
-  "arxiv": null,
-  "bibcode": "1986Icar...67..134F",
-  "bytes": 2206955,
-  "doi": null,
-  "sha256": "fec4a8f415f2a201017bbbe9f56f82ed1c99436b8b120c43b4e17d81d54b2adf",
-  "source_url": "https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986Icar...67..134F/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986Icar...67..134F/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986Icar...67..134F/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986Icar...67..134F/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "french1988": {
-  "arxiv": null,
-  "bibcode": "1988Icar...73..349F",
-  "bytes": 2387012,
-  "doi": "10.1016/0019-1035(88)90104-2",
-  "note": "Carries the ring semimajor axes (Tables XIV, XV); widths and optical depths are not tabulated here",
-  "openalex_first_author": "Richard G. French",
-  "openalex_title": "Uranian ring orbits from earth-based and Voyager occultation observations",
-  "openalex_year": 1988,
-  "sha256": "916f79b2aa12c4d586b76421d083ee4b00301664b7b88a7470a460aa0fcf2f7c",
-  "source_url": "https://doi.org/10.1016/0019-1035(88)90104-2",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "french1991": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": "10.2307/j.ctv1v7zdtq.13",
-  "note": "University of Arizona Press 1991 chapter; no digital or print copy reachable. rings-uranus.tsv radii match french1988 Tables XIV-XV to 1 km and esposito2002 Table 1 exactly. Its widths appear in neither; its optical depths match neither french1986 nor esposito2002 (lambda: tsv 0.15, esposito2002 1e-3)",
-  "openalex_first_author": "R. G. French",
-  "openalex_title": "DYNAMICS AND STRUCTURE OF THE URANIAN RINGS",
-  "openalex_year": 1991,
-  "status": "unobtainable",
-  "tried": []
- },
- "frey1974": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 1347501,
-  "doi": null,
-  "sha256": "96fcf0aacc3a3e2ab2a757b130d9ed1c4eb9cbfecf22ae4bd4477f60f77900ab",
-  "source_url": "https://ntrs.nasa.gov/citations/19740014371",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "gaiacollab2016a": {
-  "arxiv": null,
-  "bibcode": "2016A&A...595A...1G",
-  "bytes": 4866808,
-  "doi": null,
-  "sha256": "410a7efd93de56078257568b308eb4e0d0767e469b8acaad2212de9eb3a72cf7",
-  "source_url": "https://arxiv.org/pdf/1609.04153",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2016A%26A...595A...1G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gaiacollab2016b": {
-  "arxiv": null,
-  "bibcode": "2016A&A...595A...2G",
-  "bytes": 9781777,
-  "doi": null,
-  "sha256": "0f1db64da7baba4dcd0f51daa9fd51b0b7b43f276757908e047e01101dad43f4",
-  "source_url": "https://arxiv.org/pdf/1609.04172",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2016A%26A...595A...2G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gaiacollab2018": {
-  "arxiv": null,
-  "bibcode": "2018A&A...616A...1G",
-  "bytes": 5422527,
-  "doi": null,
-  "sha256": "c801989e551d07667482b1540b2ae4d41aa0a41c77791aace822bd897f73876e",
-  "source_url": "https://arxiv.org/pdf/1804.09365",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...616A...1G/ADS_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gaiacollab2018cat": {
-  "arxiv": null,
-  "bibcode": "2018yCat.1345....0G",
-  "bytes": 125506,
-  "doi": null,
-  "file": "gaiacollab2018cat.readme.txt",
-  "sha256": "e238fd712f562dc3d2003bf646653a8991a7820847c7a39127fb8526f15d747c",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/345/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018yCat.1345....0G/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018yCat.1345....0G/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "gaiacollab2020cat": {
-  "arxiv": null,
-  "bibcode": "2020yCat.1350....0G",
-  "bytes": 77635,
-  "doi": null,
-  "file": "gaiacollab2020cat.readme.txt",
-  "sha256": "c0e7eede6faad2bdd4c32ebaa3fc6e2a10077afbad5c4f846837da26adba6cab",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/350/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020yCat.1350....0G/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020yCat.1350....0G/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "gaiacollab2021": {
-  "arxiv": null,
-  "bibcode": "2021A&A...649A...1G",
-  "bytes": 657275,
-  "doi": null,
-  "sha256": "43b8727ddb12b08d485a03d26a6b92b01d2a4d91c42dd9888c9827000888862a",
-  "source_url": "https://arxiv.org/pdf/2012.01533",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2021A%26A...649A...1G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gaiacollab2022cat": {
-  "arxiv": null,
-  "bibcode": "2022yCat.1355....0G",
-  "bytes": 215224,
-  "doi": null,
-  "file": "gaiacollab2022cat.readme.txt",
-  "sha256": "4a82cc91aa9dba0e33112041a046d1bbad515bd99a792526a798bf569cd9c234",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/355/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2022yCat.1355....0G/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2022yCat.1355....0G/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "gieren2013": {
-  "arxiv": "1305.4258",
-  "bibcode": null,
-  "bytes": 2283755,
-  "doi": "10.1088/0004-637X/773/1/69",
-  "openalex_first_author": "Wolfgang Gieren",
-  "openalex_title": "THE ARAUCARIA PROJECT. A DISTANCE DETERMINATION TO THE LOCAL GROUP SPIRAL M33 FROM NEAR-INFRARED PHOTOMETRY OF CEPHEID VARIABLES",
-  "openalex_year": 2013,
-  "sha256": "2107799b3a126cc838da569257729a62eb35f2cf2ee01fb78e1ebc77c4c92c24",
-  "source_url": "https://arxiv.org/pdf/1305.4258",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/773/1/69/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "giovanelli2013": {
-  "arxiv": "1305.0272",
-  "bibcode": "2013AJ....146...15G",
-  "bytes": 2065530,
-  "doi": "10.1088/0004-6256/146/1/15",
-  "openalex_first_author": "Riccardo Giovanelli",
-  "openalex_title": "ALFALFA DISCOVERY OF THE NEARBY GAS-RICH DWARF GALAXY LEO P. I. H I OBSERVATIONS",
-  "openalex_year": 2013,
-  "sha256": "0298bf8f0d09128351b8837e76e2f208e77e63dc38233280ce7298cfbd6513eb",
-  "source_url": "https://arxiv.org/pdf/1305.0272",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-6256/146/1/15/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013AJ....146...15G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gliese1991": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "golovin2023": {
-  "arxiv": "2211.01449",
-  "bibcode": null,
-  "bytes": 5940295,
-  "doi": "10.1051/0004-6361/202244250",
-  "openalex_first_author": "Alex Golovin",
-  "openalex_title": "The Fifth Catalogue of Nearby Stars (CNS5)",
-  "openalex_year": 2022,
-  "sha256": "301d8241c9bc02d13ae88b1b693cb88cbea6ea15f9e93e90cdc649812c0510da",
-  "source_url": "https://arxiv.org/pdf/2211.01449",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/2023/02/aa44250-22.pdf"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/10.1051/0004-6361/202244250/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gontcharov2006": {
-  "arxiv": null,
-  "bibcode": "2006AstL...32..759G",
-  "bytes": 542872,
-  "doi": null,
-  "sha256": "573c8fa005c57230c3194b74ddea21eb721c19828576b940c17e7e3b94b043e1",
-  "source_url": "https://arxiv.org/pdf/1606.08053",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2006AstL...32..759G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "graczyk2020": {
-  "arxiv": "2010.08754",
-  "bibcode": null,
-  "bytes": 3328489,
-  "doi": "10.3847/1538-4357/abbb2b",
-  "openalex_first_author": "Dariusz Graczyk",
-  "openalex_title": "A Distance Determination to the Small Magellanic Cloud with an Accuracy of Better than Two Percent Based on Late-type Eclipsing Binary Stars",
-  "openalex_year": 2020,
-  "sha256": "6e3dd9d45208af0cefaec579deee84f5e6726bfb7e3c7a2257facacbf790711d",
-  "source_url": "https://arxiv.org/pdf/2010.08754",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4357/abbb2b/pdf"
-   },
-   {
-    "error": "IncompleteRead(1048576 bytes read, 2279913 more expected)",
-    "url": "https://arxiv.org/pdf/2010.08754"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "graham2002": {
-  "arxiv": "astro-ph/0202307",
-  "bibcode": null,
-  "bytes": 233425,
-  "doi": "10.1086/340274",
-  "openalex_first_author": "Alister W. Graham",
-  "openalex_title": "Evidence for an Outer Disk in the Prototype \u201cCompact Elliptical\u201d Galaxy M32",
-  "openalex_year": 2002,
-  "sha256": "5ee7e159b1518d8616936b4426547a53bd37c30135646f2470ab22466354b484",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0202307",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1086/340274/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gravity2018": {
-  "arxiv": "1807.09409",
-  "bibcode": "2018A&A...615L..15G",
-  "bytes": 2077687,
-  "doi": "10.1051/0004-6361/201833718",
-  "openalex_first_author": "R. Abuter",
-  "openalex_title": "Detection of the gravitational redshift in the orbit of the star S2 near the Galactic centre massive black hole",
-  "openalex_year": 2018,
-  "sha256": "bd620d1136eb396beee040a6a4cfc39ac980b8b3a1369a867839b0283577d185",
-  "source_url": "https://arxiv.org/pdf/1807.09409",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26A...615L..15G/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2018/07/aa33718-18.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gray2003": {
-  "arxiv": "astro-ph/0308182",
-  "bibcode": "2003AJ....126.2048G",
-  "bytes": 573604,
-  "doi": "10.1086/378365",
-  "openalex_first_author": "R. O. Gray",
-  "openalex_title": "Contributions to the Nearby Stars (NStars) Project: Spectroscopy of Stars Earlier than M0 within 40 Parsecs: The Northern Sample. I.",
-  "openalex_year": 2003,
-  "sha256": "82641994402a10f68cf633f94cb882202e897a40d0b2e9dacd732c45b29d80d8",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0308182",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/378365/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2003AJ....126.2048G/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "gurnett2013": {
-  "arxiv": null,
-  "bibcode": "2013Sci...341.1489G",
-  "bytes": 1318568,
-  "doi": "10.1126/science.1241681",
-  "openalex_first_author": "D. A. Gurnett",
-  "openalex_title": "In Situ Observations of Interstellar Plasma with Voyager 1",
-  "openalex_year": 2013,
-  "sha256": "e16f728abcecd0475185ab03a5c374a45e213fe15e63de4e9095c8ac4e713470",
-  "source_url": "https://doi.org/10.1126/science.1241681",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Sci...341.1489G/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Sci...341.1489G/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Sci...341.1489G/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013Sci...341.1489G/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "gurnett2019": {
-  "arxiv": null,
-  "bibcode": "2019NatAs...3.1024G",
-  "bytes": 1287190,
-  "doi": "10.1038/s41550-019-0918-5",
-  "openalex_first_author": "D. A. Gurnett",
-  "openalex_title": "Plasma densities near and beyond the heliopause from the Voyager 1 and 2 plasma wave instruments",
-  "openalex_year": 2019,
-  "sha256": "758ec4497375f15a95051db815f8ef790c3927fd4790465b2019812efa4a6d47",
-  "source_url": "https://doi.org/10.1038/s41550-019-0918-5",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019NatAs...3.1024G/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019NatAs...3.1024G/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019NatAs...3.1024G/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019NatAs...3.1024G/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "halbwachs2023": {
-  "arxiv": "2206.05726",
-  "bibcode": null,
-  "bytes": 4591604,
-  "doi": "10.1051/0004-6361/202243969",
-  "openalex_first_author": "J. L. Halbwachs",
-  "openalex_title": "Gaia Data Release 3",
-  "openalex_year": 2022,
-  "sha256": "1a04a582b732e478880a03870866f7044cc54ac67a1e5769e9225c45ab1803ea",
-  "source_url": "https://dipot.ulb.ac.be/dspace/bitstream/2013/371501/1/doi_355145.pdf",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/forth/aa43969-22.pdf"
-   },
-   {
-    "error": "IncompleteRead(3145728 bytes read, 1405661 more expected)",
-    "url": "https://arxiv.org/pdf/2206.05726"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "hamann2006": {
-  "arxiv": null,
-  "bibcode": "2006A&A...457.1015H",
-  "bytes": 546635,
-  "doi": "10.1051/0004-6361:20065052",
-  "openalex_first_author": "W.\u2010R. Hamann",
-  "openalex_title": "The Galactic WN stars",
-  "openalex_year": 2006,
-  "sha256": "3cc786671e99fa4c1be02d9c70515332aa43423c7ed75662c14696bdead73237",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0608078",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2006A%26A...457.1015H/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2006/39/aa5052-06.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "hargis2020": {
-  "arxiv": null,
-  "bibcode": "2020ApJ...888...31H",
-  "bytes": 9350702,
-  "doi": "10.3847/1538-4357/ab58d2",
-  "openalex_first_author": "Jonathan R. Hargis",
-  "openalex_title": "Hubble Space Telescope Imaging of Antlia B: Star Formation History and a New Tip of the Red Giant Branch Distance",
-  "openalex_year": 2020,
-  "sha256": "9f58dbeab5e9af4672b2ebd8a9de670ef589f25b31127fcef7b830370afc869e",
-  "source_url": "https://arxiv.org/pdf/1907.07185",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4357/ab58d2/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020ApJ...888...31H/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "harris1961": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "hartkopf2001": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 5703602,
-  "doi": "10.1086/323921",
-  "openalex_first_author": "William I. Hartkopf",
-  "openalex_title": "The 2001 US Naval Observatory Double Star CD-ROM. II. The Fifth Catalog of Orbits of Visual Binary Stars",
-  "openalex_year": 2001,
-  "sha256": "bfb0035fb59583a2f9600c44f184c910b99119f1c5a0b82390dfc541b74fb028",
-  "source_url": "https://doi.org/10.1086/323921",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1086/323923/pdf"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "heintz1978": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "hoffleit1991": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "hog2000": {
-  "arxiv": null,
-  "bibcode": "2000A&A...355L..27H",
-  "bytes": 104794,
-  "doi": null,
-  "sha256": "c9cd3e8a27b37207a2f744a537f76f75385af62205315d6f17d3d7af0fbbe76e",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/2000A%26A...355L..27H",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2000A%26A...355L..27H/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2000A%26A...355L..27H/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "huchra2012": {
-  "arxiv": "1108.0669",
-  "bibcode": null,
-  "bytes": 3483855,
-  "doi": null,
-  "sha256": "c3666947cb3bd3bfa318accbb993b37ce53d259b9bc7ff5c4a563d9858f2459d",
-  "source_url": "https://arxiv.org/pdf/1108.0669",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/1108.0669"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "ibata1997": {
-  "arxiv": "astro-ph/9612025",
-  "bibcode": null,
-  "bytes": 899736,
-  "doi": "10.1086/118283",
-  "openalex_first_author": "Rodrigo Ibata",
-  "openalex_title": "The Kinematics, Orbit, and Survival of the Sagittarius Dwarf Spheroidal Galaxy",
-  "openalex_year": 1997,
-  "sha256": "f4e3158330bae624eb3218ff83df96b845c76df5c258ee7faeba9b9482cfa2a7",
-  "source_url": "https://arxiv.org/pdf/astro-ph/9612025",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "ignatiev2009": {
-  "arxiv": null,
-  "bibcode": "2009JGRE..114.0B43I",
-  "bytes": 2302796,
-  "doi": "10.1029/2008JE003320",
-  "openalex_first_author": "N. Ignatiev",
-  "openalex_title": "Altimetry of the Venus cloud tops from the Venus Express observations",
-  "openalex_year": 2009,
-  "sha256": "113cf6641167cc3cf401647f75888a9e8c5c3820a4d29edd6351079c22175bb2",
-  "source_url": "https://hal.science/hal-03786221/document",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0B43I/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "ireland2004": {
-  "arxiv": null,
-  "bibcode": "2004MNRAS.352..318I",
-  "bytes": 409858,
-  "doi": "10.1111/j.1365-2966.2004.07928.x",
-  "openalex_first_author": "Michael Ireland",
-  "openalex_title": "On the observability of geometric pulsation of M-type Mira variables",
-  "openalex_year": 2004,
-  "sha256": "7255958041e9c1285c22c3cd58ddf5bd529e91fc1892d1700d01b74d6decbb87",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/2004MNRAS.352..318I",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://academic.oup.com/mnras/article-pdf/352/1/318/3192197/352-1-318.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2004MNRAS.352..318I/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2004MNRAS.352..318I/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "irwin2024": {
-  "arxiv": null,
-  "bibcode": "2024MNRAS.52711521I",
-  "bytes": 2288007,
-  "doi": "10.1093/mnras/stad3761",
-  "openalex_first_author": "P. G. J. Irwin",
-  "openalex_title": "Modelling the seasonal cycle of Uranus\u2019s colour and magnitude, and comparison with Neptune",
-  "openalex_year": 2023,
-  "sha256": "aec051d06bccfcd344021f753963804092534fd00fca99b34755ab555825e4ce",
-  "source_url": "https://doi.org/10.1093/mnras/stad3761",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://academic.oup.com/mnras/article-pdf/527/4/11521/55118402/stad3761.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2024MNRAS.52711521I/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2024MNRAS.52711521I/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2024MNRAS.52711521I/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2024MNRAS.52711521I/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "jonsson2020": {
-  "arxiv": null,
-  "bibcode": "2020AJ....160..120J",
-  "bytes": 11578216,
-  "doi": null,
-  "sha256": "2f1b7c73986a5450826534de6deff2916fba157f10c5db5d05cd01a1609f36dd",
-  "source_url": "https://arxiv.org/pdf/2007.05537",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020AJ....160..120J/PUB_PDF"
-   },
-   {
-    "error": "IncompleteRead(1048576 bytes read, 10529640 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020AJ....160..120J/EPRINT_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "juric": {
-  "arxiv": "astro-ph/0510520",
-  "bibcode": "2008ApJ...673..864J",
-  "bytes": 3643900,
-  "doi": "10.1086/523619",
-  "openalex_first_author": "Mario Juri\u0107",
-  "openalex_title": "The Milky Way Tomography with SDSS. I. Stellar Number Density Distribution",
-  "openalex_year": 2008,
-  "sha256": "00ebf3722f91c665a00d02bad84f4d05ec68f818677f2d191f228b53502bf010",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0510520",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/523619/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2008ApJ...673..864J/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "kainulainen2009": {
-  "arxiv": "0911.5648",
-  "bibcode": "2009A&A...508L..35K",
-  "bytes": 539126,
-  "doi": "10.1051/0004-6361/200913605",
-  "openalex_first_author": "J. Kainulainen",
-  "openalex_title": "Probing the evolution of molecular cloud structure",
-  "openalex_year": 2009,
-  "sha256": "fd36f7c85f4f0a5716e38554294406ad613d6a757ba103ae936ee63d2ca7ab5c",
-  "source_url": "https://arxiv.org/pdf/0911.5648",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009A%26A...508L..35K/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2009/48/aa13605-09.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "karachentsev2013": {
-  "arxiv": "1303.5328",
-  "bibcode": null,
-  "bytes": 3351048,
-  "doi": null,
-  "sha256": "f9806dfc550382291711e4164dd36177b900ee3078ae10343bde74c93408c30e",
-  "source_url": "https://arxiv.org/pdf/1303.5328",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "kepler2007": {
-  "arxiv": "astro-ph/0612277",
-  "bibcode": "2007MNRAS.375.1315K",
-  "bytes": 1067333,
-  "doi": "10.1111/j.1365-2966.2006.11388.x",
-  "openalex_first_author": "S. O. Kepler",
-  "openalex_title": "White dwarf mass distribution in the SDSS",
-  "openalex_year": 2007,
-  "sha256": "5c7f0ded7da1985be3f2018c0a74dba7ad8ee7bd240741dd535f25070060e144",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0612277",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://academic.oup.com/mnras/article-pdf/375/4/1315/18673650/mnras0375-1315.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2007MNRAS.375.1315K/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "kersten2021": {
-  "arxiv": null,
-  "bibcode": "2021P&SS..20605310K",
-  "bytes": 2488238,
-  "doi": "10.1016/j.pss.2021.105310",
-  "openalex_first_author": "Elke Kersten",
-  "openalex_title": "Controlled Global Ganymede mosaic from Voyager and Galileo images",
-  "openalex_year": 2021,
-  "sha256": "ffb5911ae615e13d6e642bff59babfd5aa15c64575093246fb675a163d298c8f",
-  "source_url": "https://elib.dlr.de/142500/1/Kersten_New_Ganymede_Basemap_final_resub.pdf",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2021P%26SS..20605310K/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.sciencedirect.com/science/article/pii/S0032063321001495/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "kilic2020": {
-  "arxiv": "2006.00323",
-  "bibcode": "2020ApJ...898...84K",
-  "bytes": 3137975,
-  "doi": "10.3847/1538-4357/ab9b8d",
-  "openalex_first_author": "Mukremin Kilic",
-  "openalex_title": "The 100 pc White Dwarf Sample in the SDSS Footprint",
-  "openalex_year": 2020,
-  "sha256": "84c8e94fb8ca2492409c6360921221da1433612ad56c42f5857e01b81043e0eb",
-  "source_url": "https://arxiv.org/pdf/2006.00323",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4357/ab9b8d/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020ApJ...898...84K/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "kim2014": {
-  "arxiv": "1409.3283",
-  "bibcode": "2014ApJS..215...22K",
-  "bytes": 4978483,
-  "doi": "10.1088/0067-0049/215/2/22",
-  "openalex_first_author": "Suk Kim",
-  "openalex_title": "THE EXTENDED VIRGO CLUSTER CATALOG",
-  "openalex_year": 2014,
-  "sha256": "a85ff3b178ea76a521dc41ecaf0f3f54edb5d4701262c0d3aa8f84827d12ec77",
-  "source_url": "https://arxiv.org/pdf/1409.3283",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0067-0049/215/2/22/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2014ApJS..215...22K/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "kolbas2015": {
-  "arxiv": null,
-  "bibcode": "2015MNRAS.451.4150K",
-  "bytes": 808905,
-  "doi": "10.1093/mnras/stv1261",
-  "openalex_first_author": "V. Kolbas",
-  "openalex_title": "Spectroscopically resolving the Algol triple system",
-  "openalex_year": 2015,
-  "sha256": "f46364dc1f465b1519bd8090cd8b694f66da05455e7587c17545fe6ab0eef7c6",
-  "source_url": "https://lirias.kuleuven.be/retrieve/292c0ea4-68f0-4052-920d-897500897e6f",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://academic.oup.com/mnras/article-pdf/451/4/4150/3900260/stv1261.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2015MNRAS.451.4150K/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "http://eprints.keele.ac.uk/1133/1/Spectroscopically%20resolving%20the%20Algol%20triple%20system.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "kostjuk2002": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "lacour2009": {
-  "arxiv": "0910.3869",
-  "bibcode": "2009ApJ...707..632L",
-  "bytes": 879131,
-  "doi": "10.1088/0004-637X/707/1/632",
-  "openalex_first_author": "S. Lacour",
-  "openalex_title": "THE PULSATION OF \u03c7 CYGNI IMAGED BY OPTICAL INTERFEROMETRY: A NOVEL TECHNIQUE TO DERIVE DISTANCE AND MASS OF MIRA STARS",
-  "openalex_year": 2009,
-  "sha256": "7d029d64944b4d73a4e20cc43ba9fbf0db4f84ef376c669c51fb42ef8233e446",
-  "source_url": "https://arxiv.org/pdf/0910.3869",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/707/1/632/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJ...707..632L/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "lallement2019": {
-  "arxiv": "1902.04116",
-  "bibcode": "2019A&A...625A.135L",
-  "bytes": 23535539,
-  "doi": "10.1051/0004-6361/201834695",
-  "openalex_first_author": "Rosine Lallement",
-  "openalex_title": "Gaia-2MASS 3D maps of Galactic interstellar dust within 3 kpc",
-  "openalex_year": 2019,
-  "sha256": "7668d890035fed9622d6757ccd945c33f9e9f9e8a5e129d3086279433e2eb4d4",
-  "source_url": "https://arxiv.org/pdf/1902.04116",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019A%26A...625A.135L/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2019/05/aa34695-18.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "laskar1986": {
-  "arxiv": null,
-  "bibcode": "1986A&A...157...59L",
-  "bytes": 266670,
-  "doi": null,
-  "sha256": "5c68679eade7dfd82f43114522ad66ebf76a6f3d4f14a98551df28a21c4e4898",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1986A%26A...157...59L",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986A%26A...157...59L/PUB_PDF"
-   },
-   {
-    "error": "not a PDF (HTTP 202)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986A%26A...157...59L/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "leike2020": {
-  "arxiv": "2004.06732",
-  "bibcode": "2020A&A...639A.138L",
-  "bytes": 6069916,
-  "doi": "10.1051/0004-6361/202038169",
-  "openalex_first_author": "Reimar Leike",
-  "openalex_title": "Resolving nearby dust clouds",
-  "openalex_year": 2020,
-  "sha256": "61d41d4af14872fdf538eace480009df9fb8ffc159dfff2ef9b4669ff460ce6e",
-  "source_url": "https://arxiv.org/pdf/2004.06732",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020A%26A...639A.138L/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2020/07/aa38169-20.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "leinert1998": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 3667685,
-  "doi": "10.1051/aas:1998105",
-  "openalex_first_author": "Ch. Leinert",
-  "openalex_title": "The 1997 reference of diffuse night sky brightness",
-  "openalex_year": 1998,
-  "sha256": "39be7e993ad07aa3d5eb467666fe08cc81e3b6219be5aed14761a50bb76f82cf",
-  "source_url": "https://insu.hal.science/insu-03527749/document",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://aas.aanda.org/articles/aas/pdf/1998/01/ds1449.pdf"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://aas.aanda.org/10.1051/aas:1998105/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "lemmon2015": {
-  "arxiv": "1403.4234",
-  "bibcode": "2015Icar..251...96L",
-  "bytes": 1765654,
-  "doi": "10.1016/j.icarus.2014.03.029",
-  "openalex_first_author": "Mark T Lemmon",
-  "openalex_title": "Dust aerosol, clouds, and the atmospheric optical depth record over 5 Mars years of the Mars Exploration Rover mission",
-  "openalex_year": 2014,
-  "sha256": "e5d36c83cfcfef84e5384eec0acdb050597d0d0b564cfd8d94ccb5036b4f35d9",
-  "source_url": "https://arxiv.org/pdf/1403.4234",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2015Icar..251...96L/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "lepine2005": {
-  "arxiv": null,
-  "bibcode": "2005AJ....129.1483L",
-  "bytes": 1463223,
-  "doi": null,
-  "sha256": "883b034e282b145adcf573e11e2d4feadec930dce6879e55c97966118998ad91",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0412070",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005AJ....129.1483L/PUB_PDF"
-   },
-   {
-    "error": "IncompleteRead(1048576 bytes read, 414647 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005AJ....129.1483L/EPRINT_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "licquia2015": {
-  "arxiv": "1407.1078",
-  "bibcode": null,
-  "bytes": 900870,
-  "doi": "10.1088/0004-637X/806/1/96",
-  "openalex_first_author": "Timothy C. Licquia",
-  "openalex_title": "IMPROVED ESTIMATES OF THE MILKY WAY\u2019S STELLAR MASS AND STAR FORMATION RATE FROM HIERARCHICAL BAYESIAN META-ANALYSIS",
-  "openalex_year": 2015,
-  "sha256": "7b8aec6f2f68b603bc844d62682f10571bcd284d3c6a463f41a7206bb721c287",
-  "source_url": "https://arxiv.org/pdf/1407.1078",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/806/1/96/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "licquia2015b": {
-  "arxiv": "1508.04446",
-  "bibcode": "2015ApJ...809...96L",
-  "bytes": 1399460,
-  "doi": "10.1088/0004-637X/809/1/96",
-  "openalex_first_author": "Timothy C. Licquia",
-  "openalex_title": "UNVEILING THE MILKY WAY: A NEW TECHNIQUE FOR DETERMINING THE OPTICAL COLOR AND LUMINOSITY OF OUR GALAXY",
-  "openalex_year": 2015,
-  "sha256": "036349033cc9ca546f5072074c35bd9ee504761ca493bbbedea0807a91e91e43",
-  "source_url": "https://arxiv.org/pdf/1508.04446",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/809/1/96/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2015ApJ...809...96L/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "lieske1979": {
-  "arxiv": null,
-  "bibcode": "1979A&A....73..282L",
-  "bytes": 96130,
-  "doi": null,
-  "sha256": "aecc39006c076efa2dbda911ded14e60382e704a43a0f95ce9ca68f3727a6f7e",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1979A%26A....73..282L",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1979A%26A....73..282L/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1979A%26A....73..282L/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "lindal1983": {
-  "arxiv": null,
-  "bibcode": "1983Icar...53..348L",
-  "bytes": 1101041,
-  "doi": "10.1016/0019-1035(83)90155-0",
-  "openalex_first_author": "Gunnar F. Lindal",
-  "openalex_title": "The atmosphere of Titan: An analysis of the Voyager 1 radio occultation measurements",
-  "openalex_year": 1983,
-  "sha256": "f3cc8c780a5786e48698386ea242fee55229ec8d6e1056ba0b6120316d643be8",
-  "source_url": "https://doi.org/10.1016/0019-1035(83)90155-0",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983Icar...53..348L/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983Icar...53..348L/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983Icar...53..348L/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983Icar...53..348L/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "lindegren2021": {
-  "arxiv": "2012.03380",
-  "bibcode": null,
-  "bytes": 13249401,
-  "doi": "10.1051/0004-6361/202039653",
-  "openalex_first_author": "L. Lindegren",
-  "openalex_title": "Gaia Early Data Release 3",
-  "openalex_year": 2020,
-  "sha256": "cf235eec3d2dfd71046ddb776273b28896c2621d147ba2452a519c56380c95d9",
-  "source_url": "https://arxiv.org/pdf/2012.03380",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "makarov2014": {
-  "arxiv": "1408.3476",
-  "bibcode": "2014A&A...570A..13M",
-  "bytes": 6613359,
-  "doi": "10.1051/0004-6361/201423496",
-  "openalex_first_author": "D. I. Makarov",
-  "openalex_title": "HyperLEDA. III. The catalogue of extragalactic distances",
-  "openalex_year": 2014,
-  "sha256": "d3f492d2916b9de5198be9824bcd50b427775695fcf697b04ce64340426c0a41",
-  "source_url": "https://arxiv.org/pdf/1408.3476",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "mallama2012": {
-  "arxiv": null,
-  "bibcode": "2012Icar..218...56M",
-  "bytes": 227694,
-  "doi": "10.1016/j.icarus.2011.11.035",
-  "openalex_first_author": "Anthony D. Mallama",
-  "openalex_title": "Improved luminosity model and albedo for Saturn",
-  "openalex_year": 2011,
-  "sha256": "079164927f1bde446c2ae5486eb1d0dc074c94507665bfab521a2add7b8dce9e",
-  "source_url": "https://doi.org/10.1016/j.icarus.2011.11.035",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012Icar..218...56M/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012Icar..218...56M/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012Icar..218...56M/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012Icar..218...56M/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "mallama2017": {
-  "arxiv": "1609.05048",
-  "bibcode": null,
-  "bytes": 915468,
-  "doi": "10.1016/j.icarus.2016.09.023",
-  "openalex_first_author": "Anthony D. Mallama",
-  "openalex_title": "Comprehensive wide-band magnitudes and albedos for the planets, with applications to exo-planets and Planet Nine",
-  "openalex_year": 2016,
-  "sha256": "7feb8edb372502cee5dc9c6a7656205e3279353bb38f9a98cbecbe8e8d733f91",
-  "source_url": "https://arxiv.org/pdf/1609.05048",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "mallamahilton2018": {
-  "arxiv": null,
-  "bibcode": "2018A&C....25...10M",
-  "bytes": 2164274,
-  "doi": "10.1016/j.ascom.2018.08.002",
-  "openalex_first_author": "Anthony D. Mallama",
-  "openalex_title": "Computing apparent planetary magnitudes for The Astronomical Almanac",
-  "openalex_year": 2018,
-  "sha256": "805e53ab8f921c55e1c5e3dd64bbd567f806cdba56148625afcddfc650b6f9a7",
-  "source_url": "https://arxiv.org/pdf/1808.01973",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018A%26C....25...10M/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "martins2005": {
-  "arxiv": "astro-ph/0503346",
-  "bibcode": "2005A&A...436.1049M",
-  "bytes": 574969,
-  "doi": "10.1051/0004-6361:20042386",
-  "openalex_first_author": "F. Martins",
-  "openalex_title": "A new calibration of stellar parameters of Galactic O stars",
-  "openalex_year": 2005,
-  "sha256": "86fda37c1e52b419cb8bc4a92ef68b1f247af8fb5ad6b2cf13a6ea5ddef7966e",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0503346",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005A%26A...436.1049M/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2005/24/aa2386-04.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "mason2001": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 79731,
-  "doi": "10.1086/323920",
-  "openalex_first_author": "Brian D. Mason",
-  "openalex_title": "The 2001 US Naval Observatory Double Star CD-ROM. I. The Washington Double Star Catalog",
-  "openalex_year": 2001,
-  "sha256": "963385497c38da25058c67df2ab2633687aeae4e81a341b661a9bab848e0b8bd",
-  "source_url": "https://doi.org/10.1086/323920",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1086/323920/pdf"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "mason2020": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "mccomas2015": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 2281058,
-  "doi": "10.1088/0067-0049/220/2/22",
-  "openalex_first_author": "David J. McComas",
-  "openalex_title": "LOCAL INTERSTELLAR MEDIUM: SIX YEARS OF DIRECT SAMPLING BY IBEX",
-  "openalex_year": 2015,
-  "sha256": "2642b5b04f6e1827ed6947b45c5f8e9bbb995230c937e05df7e6ea4f0d7f6808",
-  "source_url": "https://doi.org/10.1088/0067-0049/220/2/22",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1088/0067-0049/220/2/22/pdf"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "mcconnachie2012": {
-  "arxiv": "1204.1562",
-  "bibcode": null,
-  "bytes": 1307476,
-  "doi": "10.1088/0004-6256/144/1/4",
-  "openalex_first_author": "Alan W. McConnachie",
-  "openalex_title": "THE OBSERVED PROPERTIES OF DWARF GALAXIES IN AND AROUND THE LOCAL GROUP",
-  "openalex_year": 2012,
-  "sha256": "c5f8472d0e00565ea695522d1267041082786ecdc1e16e1e3d5f78f578274593",
-  "source_url": "https://arxiv.org/pdf/1204.1562",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "mcconnachie2018": {
-  "arxiv": "1810.08234",
-  "bibcode": null,
-  "bytes": 8862024,
-  "doi": "10.3847/1538-4357/aae8e7",
-  "openalex_first_author": "Alan W. McConnachie",
-  "openalex_title": "The Large-scale Structure of the Halo of the Andromeda Galaxy. II. Hierarchical Structure in the Pan-Andromeda Archaeological Survey",
-  "openalex_year": 2018,
-  "sha256": "8ed3bc28558863d7f26d6a4c8b28fdb3f36cc324d7fa38c3d018a0bfdadc98f8",
-  "source_url": "https://arxiv.org/pdf/1810.08234",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4357/aae8e7/pdf"
-   },
-   {
-    "error": "not a PDF (text/html)",
-    "url": "http://epubs.surrey.ac.uk/852650/1/MC_McConnachie_2018_ApJ_868_55.pdf"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/1810.08234"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.research.ed.ac.uk/files/76296439/1810.08234v1.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "mcmillan": {
-  "arxiv": "1608.00971",
-  "bibcode": "2017MNRAS.465...76M",
-  "bytes": 611252,
-  "doi": "10.1093/mnras/stw2759",
-  "openalex_first_author": "P. J. McMillan",
-  "openalex_title": "The mass distribution and gravitational potential of the Milky Way",
-  "openalex_year": 2016,
-  "sha256": "e693abb0cfd9b6cf5f4e4780928fcd24ab16300db3eeba51dfe49904388ff099",
-  "source_url": "https://arxiv.org/pdf/1608.00971",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2017MNRAS.465...76M/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "meeus": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "merand2011": {
-  "arxiv": null,
-  "bibcode": "2011A&A...532A..50M",
-  "bytes": 1097675,
-  "doi": "10.1051/0004-6361/201116896",
-  "openalex_first_author": "A. M\u00e9rand",
-  "openalex_title": "The nearby eclipsing stellar system \u03b4 Velorum. III. Self-consistent fundamental parameters and distance",
-  "openalex_year": 2011,
-  "sha256": "2c1f749b21765cf95219533ae106862223ed61a7f4e2c6e99bb37539160acd3d",
-  "source_url": "https://arxiv.org/pdf/1106.2383",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011A%26A...532A..50M/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "montalto2021": {
-  "arxiv": "2108.13712",
-  "bibcode": null,
-  "bytes": 2519835,
-  "doi": "10.1051/0004-6361/202140717",
-  "openalex_first_author": "M. Montalto",
-  "openalex_title": "The all-sky PLATO input catalogue",
-  "openalex_year": 2021,
-  "sha256": "47cf39ecb58ce81b414401f5811edf46bf293a36ee0dba4539d2362aac21be4c",
-  "source_url": "https://elib.dlr.de/144454/1/2108.13712.pdf",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/2021/09/aa40717-21.pdf"
-   }
-  ],
-  "version": "acceptedVersion"
- },
- "montegriffo2023": {
-  "arxiv": "2206.06205",
-  "bibcode": null,
-  "bytes": 8221710,
-  "doi": "10.1051/0004-6361/202243880",
-  "openalex_first_author": "P. Montegriffo",
-  "openalex_title": "Gaia Data Release 3",
-  "openalex_year": 2022,
-  "sha256": "255dbc64363fdd205a59c4d17e730a4da58c7bfca42f0021b4df2d9917d6a15a",
-  "source_url": "https://arxiv.org/pdf/2206.06205",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/forth/aa43880-22.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "morrisonstephenson": {
-  "arxiv": null,
-  "bibcode": "2004JHA....35..327M",
-  "bytes": 90969,
-  "doi": "10.1177/002182860403500305",
-  "openalex_first_author": "Leslie V. Morrison",
-  "openalex_title": "Historical Values of the Earth's Clock Error \u0394 and the Calculation of Eclipses",
-  "openalex_year": 2004,
-  "sha256": "88d3b3246005d7811e4c0373abed8180d3d99685b1083a18e4783004e2ce825e",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/2004JHA....35..327M",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2004JHA....35..327M/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2004JHA....35..327M/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 504",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2004JHA....35..327M/ADS_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "mosenkov2021": {
-  "arxiv": "2108.10413",
-  "bibcode": null,
-  "bytes": 8252058,
-  "doi": "10.1093/mnras/stab2445",
-  "openalex_first_author": "Aleksandr V Mosenkov",
-  "openalex_title": "The structure of the Milky Way based on unWISE 3.4 \u03bcm integrated photometry",
-  "openalex_year": 2021,
-  "sha256": "a7e627c4bdcdc6926569c4c44f47b04345110f87cb760d35a1e96b33a1bb28ed",
-  "source_url": "https://backoffice.biblio.ugent.be/download/8737340/8737342",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://academic.oup.com/mnras/article-pdf/507/4/5246/40392793/stab2445.pdf"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/2108.10413"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "moustakas2023": {
-  "arxiv": "2307.04888",
-  "bibcode": null,
-  "bytes": 34011170,
-  "doi": "10.3847/1538-4365/acfaa2",
-  "openalex_first_author": "John Moustakas",
-  "openalex_title": "Siena Galaxy Atlas 2020",
-  "openalex_year": 2023,
-  "sha256": "fcb797e17447b3a8622a55ae91f81f7ce8163ec2fe9d275ca4119dbe60ebec1d",
-  "source_url": "https://arxiv.org/pdf/2307.04888",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/2307.04888"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://escholarship.org/content/qt5cj0x5sm/qt5cj0x5sm.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "newburn1973": {
-  "arxiv": null,
-  "bibcode": "1973SSRv...14..179N",
-  "bytes": 1247888,
-  "doi": "10.1007/BF02432098",
-  "openalex_first_author": "R. L. Newburn",
-  "openalex_title": "A survey of the outer planets Jupiter, Saturn, Uranus, Neptune, Pluto, and their satellites",
-  "openalex_year": 1973,
-  "sha256": "3217ace272f823d6eff2e5c6b6b1016997b251e71e2552d911062490d86b3f1d",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1973SSRv...14..179N",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1973SSRv...14..179N/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1973SSRv...14..179N/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "nicholson1995": {
-  "arxiv": null,
-  "bibcode": "1995Icar..113..295N",
-  "bytes": 1940228,
-  "doi": null,
-  "sha256": "aa25b274571a462a27845a295e0321ee835cbf97fd8e468536cd783eb258d18d",
-  "source_url": "https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1995Icar..113..295N/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1995Icar..113..295N/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1995Icar..113..295N/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1995Icar..113..295N/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "osterbrock2006": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "pace2025": {
-  "arxiv": "2411.07424",
-  "bibcode": null,
-  "bytes": 1584819,
-  "doi": "10.33232/001c.144859",
-  "openalex_first_author": "Andrew B. Pace",
-  "openalex_title": "The Local Volume Database: a library of the observed properties of nearby dwarf galaxies and star clusters",
-  "openalex_year": 2025,
-  "sha256": "2cdd94693b32d67928891793944575e1c53e24b043a672ae0924b09cd6baaf21",
-  "source_url": "https://arxiv.org/pdf/2411.07424",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "padoan1997": {
-  "arxiv": "astro-ph/9703110",
-  "bibcode": "1997MNRAS.288..145P",
-  "bytes": 281426,
-  "doi": "10.1093/mnras/288.1.145",
-  "openalex_first_author": "Paolo Padoan",
-  "openalex_title": "The universality of the stellar initial mass function",
-  "openalex_year": 1997,
-  "sha256": "d13219cf9412759382ebb2d587bb6e325b5387769059261d777c7ed3373e2d4a",
-  "source_url": "https://arxiv.org/pdf/astro-ph/9703110",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1997MNRAS.288..145P/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "padova1994": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "pecaut2013": {
-  "arxiv": "1307.2657",
-  "bibcode": "2013ApJS..208....9P",
-  "bytes": 1252676,
-  "doi": "10.1088/0067-0049/208/1/9",
-  "openalex_first_author": "Mark J. Pecaut",
-  "openalex_title": "INTRINSIC COLORS, TEMPERATURES, AND BOLOMETRIC CORRECTIONS OF PRE-MAIN-SEQUENCE STARS",
-  "openalex_year": 2013,
-  "sha256": "0c36ba619d64a228bcbcb2866f714c8eb3e11260bd41e11b36e4368e04898ea9",
-  "source_url": "https://arxiv.org/pdf/1307.2657",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0067-0049/208/1/9/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2013ApJS..208....9P/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "pietrzynski2019": {
-  "arxiv": "1903.08096",
-  "bibcode": null,
-  "bytes": 706606,
-  "doi": "10.1038/s41586-019-0999-4",
-  "openalex_first_author": "G. Pietrzy\u0144ski",
-  "openalex_title": "A distance to the Large Magellanic Cloud that is precise to one per cent",
-  "openalex_year": 2019,
-  "sha256": "493bc9f8f817a69560bc8fef8aedb75d311bc1d0f65a48ca10dd7370957407b5",
-  "source_url": "https://arxiv.org/pdf/1903.08096",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "piffl2014": {
-  "arxiv": "1309.4293",
-  "bibcode": "2014A&A...562A..91P",
-  "bytes": 1363621,
-  "doi": "10.1051/0004-6361/201322531",
-  "openalex_first_author": "T. Piffl",
-  "openalex_title": "The RAVE survey: the Galactic escape speed and the mass of the Milky Way",
-  "openalex_year": 2013,
-  "sha256": "4ea941269f9d11fe5244984a949532ba11874dcf551b652275251b86ddcf7147",
-  "source_url": "https://arxiv.org/pdf/1309.4293",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2014A%26A...562A..91P/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2014/02/aa22531-13.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "planck2020": {
-  "arxiv": "1807.06205",
-  "bibcode": null,
-  "bytes": 24358959,
-  "doi": null,
-  "sha256": "dca932893b7d2724aa2b8d33170fc1b5682c425dd56fcd3c5d7b2098d377db5c",
-  "source_url": "https://arxiv.org/pdf/1807.06205",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "porco1995": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "pourbaix2016": {
-  "arxiv": "1601.01636",
-  "bibcode": "2016A&A...586A..90P",
-  "bytes": 156000,
-  "doi": "10.1051/0004-6361/201527859",
-  "openalex_first_author": "Dimitri Pourbaix",
-  "openalex_title": "Parallax and masses of\u03b1Centauri revisited",
-  "openalex_year": 2016,
-  "sha256": "7d7ae4a69341abf2cb9aa30bbd9f914c68d78ef0e3d95941041fe4ce3325a0be",
-  "source_url": "https://arxiv.org/pdf/1601.01636",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2016A%26A...586A..90P/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2016/02/aa27859-15.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "prugniel": {
-  "arxiv": null,
-  "bibcode": "1997A&A...321..111P",
-  "bytes": 262570,
-  "doi": null,
-  "sha256": "25d11dfd60b4de584fdaea7e470329cc2c62fed96bb8aeb91081c81ed33f36aa",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1997A%26A...321..111P",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1997A%26A...321..111P/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1997A%26A...321..111P/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "ramirez2012": {
-  "arxiv": "1204.0828",
-  "bibcode": "2012ApJ...752....5R",
-  "bytes": 421582,
-  "doi": "10.1088/0004-637X/752/1/5",
-  "openalex_first_author": "I. Ram\u00edrez",
-  "openalex_title": "THEUBV(RI)CCOLORS OF THE SUN",
-  "openalex_year": 2012,
-  "sha256": "5c22774fc6868c8aab4aa47a93dcbf171d1215521f0ff53b79c41a5aa7541d0e",
-  "source_url": "https://arxiv.org/pdf/1204.0828",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/752/1/5/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012ApJ...752....5R/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "recioblanco2023": {
-  "arxiv": "2206.05541",
-  "bibcode": null,
-  "bytes": 13483970,
-  "doi": "10.1051/0004-6361/202243750",
-  "openalex_first_author": "Alejandra Recio-Blanco",
-  "openalex_title": "Gaia Data Release 3",
-  "openalex_year": 2022,
-  "sha256": "b30ca567cff481ddd3130617deb3bae6eba9741af0ce56394fe034f2c68237e8",
-  "source_url": "https://arxiv.org/pdf/2206.05541",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/forth/aa43750-22.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "reid": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "riello2021": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 20032919,
-  "doi": "10.1051/0004-6361/202039587",
-  "openalex_first_author": "M. Riello",
-  "openalex_title": "Gaia Early Data Release 3",
-  "openalex_year": 2020,
-  "sha256": "b262c07af92a63d9454faeb30b1f7850b08e76719f818f8657690859b055295b",
-  "source_url": "https://arxiv.org/pdf/2012.01916",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/2021/05/aa39587-20.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "roman1987": {
-  "arxiv": null,
-  "bibcode": "1987PASP...99..695R",
-  "bytes": 541463,
-  "doi": "10.1086/132034",
-  "openalex_first_author": "Nancy Grace Roman",
-  "openalex_title": "Identification of a constellation from a position",
-  "openalex_year": 1987,
-  "sha256": "3d0ac3112bd43e1d7273385441d9b142bbdc6c917d8d384b5df7baec21d5f5cd",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1987PASP...99..695R",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/132034/pdf"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1987PASP...99..695R/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1987PASP...99..695R/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "ross2020": {
-  "arxiv": "2007.09000",
-  "bibcode": null,
-  "bytes": 1659317,
-  "doi": null,
-  "sha256": "23dff68ae61ea8172dd8f7367b21663604d31008762d47efdded2b406e622d72",
-  "source_url": "https://arxiv.org/pdf/2007.09000",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "samus2017": {
-  "arxiv": null,
-  "bibcode": "2017ARep...61...80S",
-  "bytes": 686466,
-  "doi": "10.1134/S1063772917010085",
-  "openalex_first_author": "N. N. Samus\u2019",
-  "openalex_title": "General catalogue of variable stars: Version GCVS 5.1",
-  "openalex_year": 2017,
-  "sha256": "d5216358e8add7178331d747e108af4996d8c75346871d8bb4f6acff107995fe",
-  "source_url": "https://doi.org/10.1134/S1063772917010085",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2017ARep...61...80S/PUB_PDF"
-   },
-   {
-    "error": "curl 3 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2017ARep...61...80S/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2017ARep...61...80S/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2017ARep...61...80S/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "sander2012": {
-  "arxiv": null,
-  "bibcode": "2012A&A...540A.144S",
-  "bytes": 764042,
-  "doi": "10.1051/0004-6361/201117830",
-  "openalex_first_author": "Andreas A. C. Sander",
-  "openalex_title": "The Galactic WC stars",
-  "openalex_year": 2012,
-  "sha256": "27ea7d26433bc65ca8a060bc4d021f336c53d191afbfc93d45d566c0c9487484",
-  "source_url": "https://arxiv.org/pdf/1201.6354",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012A%26A...540A.144S/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2012/04/aa17830-11.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "sanford1942": {
-  "arxiv": null,
-  "bibcode": "1942ApJ....95..421S",
-  "bytes": 251532,
-  "doi": "10.1086/144412",
-  "openalex_first_author": "Roscoe Frank Sanford",
-  "openalex_title": "The Spectrographic Orbit of the Companion to Rigel.",
-  "openalex_year": 1942,
-  "sha256": "82726517b1f9acba54b650510a8a9a7f0506f97b60f8a669b3eebe0bcf956c09",
-  "source_url": "https://doi.org/10.1086/144412",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1942ApJ....95..421S/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1942ApJ....95..421S/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 504",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1942ApJ....95..421S/ADS_PDF"
-   },
-   {
-    "error": "HTTP 504",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1942ApJ....95..421S/ADS_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "savary1828": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "schaefer2016": {
-  "arxiv": "1610.01984",
-  "bibcode": "2016AJ....152..213S",
-  "bytes": 1356143,
-  "doi": "10.3847/0004-6256/152/6/213",
-  "openalex_first_author": "G. H. Schaefer",
-  "openalex_title": "ORBITS, DISTANCE, AND STELLAR MASSES OF THE MASSIVE TRIPLE STAR \u03c3 ORIONIS",
-  "openalex_year": 2016,
-  "sha256": "816e80a1f0d5a45733c32b626a1b86f364a7b3f01c8bb13bab0094632242b044",
-  "source_url": "https://arxiv.org/pdf/1610.01984",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.3847/0004-6256/152/6/213/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2016AJ....152..213S/PUB_PDF"
-   },
-   {
-    "error": "not a PDF (HTTP 202)",
-    "url": "http://hdl.handle.net/10871/28817"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "schenk2014": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "schlegel1998": {
-  "arxiv": "astro-ph/9710327",
-  "bibcode": null,
-  "bytes": 770793,
-  "doi": "10.1086/305772",
-  "openalex_first_author": "David J. Schlegel",
-  "openalex_title": "Maps of Dust Infrared Emission for Use in Estimation of Reddening and Cosmic Microwave Background Radiation Foregrounds",
-  "openalex_year": 1998,
-  "sha256": "e2c383d16427224b10efc55e7fdadc8f24936c77b03bdd2c29df8bd44dea60f7",
-  "source_url": "https://arxiv.org/pdf/astro-ph/9710327",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1086/305772/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "simondiaz2015": {
-  "arxiv": "1412.3469",
-  "bibcode": "2015ApJ...799..169S",
-  "bytes": 1133961,
-  "doi": "10.1088/0004-637X/799/2/169",
-  "openalex_first_author": "S. Sim\u00f3n\u2010D\u00edaz",
-  "openalex_title": "ORBITAL AND PHYSICAL PROPERTIES OF THE \u03c3 Ori Aa, Ab, B TRIPLE SYSTEM",
-  "openalex_year": 2015,
-  "sha256": "9431ca82ba7f597d7d2ebc8215438d14a975443cf57ab60a111ebe03f89a7db6",
-  "source_url": "https://real.mtak.hu/29063/1/Sergio_sigmaOri_ApJ.pdf.pdf",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/799/2/169/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2015ApJ...799..169S/PUB_PDF"
-   }
-  ],
-  "version": "acceptedVersion"
- },
- "sion": {
-  "arxiv": null,
-  "bibcode": "1983ApJ...269..253S",
-  "bytes": 449830,
-  "doi": "10.1086/161036",
-  "openalex_first_author": "E. M. Sion",
-  "openalex_title": "A proposed new white dwarf spectral classification system",
-  "openalex_year": 1983,
-  "sha256": "0587e290dee24e32c3796af354e79c0580390d767f56c49fade0794a4480ace2",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1983ApJ...269..253S",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983ApJ...269..253S/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1983ApJ...269..253S/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "smirnov2002": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 597809,
-  "doi": "10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2",
-  "openalex_first_author": "A. Smirnov",
-  "openalex_title": "Optical Properties of Atmospheric Aerosol in Maritime Environments",
-  "openalex_year": 2002,
-  "sha256": "d4a6f285e3082c5f2d4358f91ab0dcc80debb400c4746956bc8071bde5c7700e",
-  "source_url": "https://doi.org/10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://journals.ametsoc.org/downloadpdf/journals/atsc/59/3/1520-0469_2002_059_0501_opoaai_2.0.co_2.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 400",
-    "url": "https://mdsoar.org/bitstreams/c799061f-ef52-474c-b5e3-1f69fca643e7/download"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "sneep2005": {
-  "arxiv": null,
-  "bibcode": "2005JQSRT..92..293S",
-  "bytes": 839841,
-  "doi": "10.1016/j.jqsrt.2004.07.025",
-  "openalex_first_author": "Maarten Sneep",
-  "openalex_title": "Direct measurement of the Rayleigh scattering cross section in various gases",
-  "openalex_year": 2004,
-  "sha256": "484ad18eece29b98c8ca9aa49e6691f4a030045e8037667fab9836ce38299a3e",
-  "source_url": "https://doi.org/10.1016/j.jqsrt.2004.07.025",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005JQSRT..92..293S/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005JQSRT..92..293S/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005JQSRT..92..293S/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2005JQSRT..92..293S/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "standish1992": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "standishwilliams": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "steinmetz2020": {
-  "arxiv": null,
-  "bibcode": "2020AJ....160...83S",
-  "bytes": 1550314,
-  "doi": null,
-  "sha256": "1014f3d184f76522399ff18d972d6104812021b77691d4811897d7b54d7d1435",
-  "source_url": "https://arxiv.org/pdf/2002.04377",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020AJ....160...83S/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020AJ....160...83S/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020AJ....160...83S/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020AJ....160...83S/ADS_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "stelzer2003": {
-  "arxiv": "astro-ph/0302570",
-  "bibcode": "2003A&A...402..719S",
-  "bytes": 435840,
-  "doi": "10.1051/0004-6361:20030286",
-  "openalex_first_author": "B. Stelzer",
-  "openalex_title": "Castor A and Castor B resolved in a simultaneous Chandra and XMM-Newton observation",
-  "openalex_year": 2003,
-  "sha256": "43a608f538f2d875af51c2bcc2f519f16b2520c2f682c03229ee5f72d79860ab",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0302570",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2003A%26A...402..719S/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2003/17/aah4213.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "sternberg2003": {
-  "arxiv": "astro-ph/0312232",
-  "bibcode": "2003ApJ...599.1333S",
-  "bytes": 568267,
-  "doi": "10.1086/379506",
-  "openalex_first_author": "A. Sternberg",
-  "openalex_title": "Ionizing Photon Emission Rates from O\u2010 and Early B\u2010Type Stars and Clusters",
-  "openalex_year": 2003,
-  "sha256": "4041a5585cd98f0344a8168dd1aae370530fe533d10e7090896a1214a4aca267",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0312232",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2003ApJ...599.1333S/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "strauss2002": {
-  "arxiv": "astro-ph/0206225",
-  "bibcode": "2002AJ....124.1810S",
-  "bytes": 1129497,
-  "doi": "10.1086/342343",
-  "openalex_first_author": "Michael A. Strauss",
-  "openalex_title": "Spectroscopic Target Selection in the Sloan Digital Sky Survey: The Main Galaxy Sample",
-  "openalex_year": 2002,
-  "sha256": "99c824bc05873da149bf36d50316dcfc7cd65c352cc30ad48bed479948b0739e",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0206225",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/342343/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002AJ....124.1810S/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "stromgren1939": {
-  "arxiv": null,
-  "bibcode": "1939ApJ....89..526S",
-  "bytes": 1133000,
-  "doi": "10.1086/144074",
-  "openalex_first_author": "Bengt Str\u00f6mgren",
-  "openalex_title": "The Physical State of Interstellar Hydrogen.",
-  "openalex_year": 1939,
-  "sha256": "5125565d1d006e4c6ce131b8c3e9047159cea826e3239446ed31cad57483ff36",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1939ApJ....89..526S",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1939ApJ....89..526S/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1939ApJ....89..526S/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "subramanian2012": {
-  "arxiv": "1109.3980",
-  "bibcode": null,
-  "bytes": 1069633,
-  "doi": "10.1088/0004-637X/744/2/128",
-  "openalex_first_author": "Smitha Subramanian",
-  "openalex_title": "THE THREE-DIMENSIONAL STRUCTURE OF THE SMALL MAGELLANIC CLOUD",
-  "openalex_year": 2011,
-  "sha256": "91985469cb1d6bd8803ea5340191be857065751891cc4a84e2550f847adfb706",
-  "source_url": "https://arxiv.org/pdf/1109.3980",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/744/2/128/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "tempel2011": {
-  "arxiv": "1012.3591",
-  "bibcode": null,
-  "bytes": 926068,
-  "doi": "10.1051/0004-6361/201016067",
-  "openalex_first_author": "E. Tempel",
-  "openalex_title": "SDSS surface photometry of M 31 with absorption corrections",
-  "openalex_year": 2010,
-  "sha256": "425ce797df82d4ec3930c52f8d100e5379c9fa7e5435bf223f38d2efbb5ca9ed",
-  "source_url": "https://arxiv.org/pdf/1012.3591",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "tokovinin2018": {
-  "arxiv": "1712.04750",
-  "bibcode": null,
-  "bytes": 637111,
-  "doi": "10.3847/1538-4365/aaa1a5",
-  "openalex_first_author": "Andrei Tokovinin",
-  "openalex_title": "The Updated Multiple Star Catalog",
-  "openalex_year": 2018,
-  "sha256": "29435c55f4628f5505b627e06c84b50fc86d9cfb5fb8ca6cfc914d46c34e6666",
-  "source_url": "https://arxiv.org/pdf/1712.04750",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4365/aaa1a5/pdf"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/1712.04750"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "tokovinin2023": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "tomasko2008": {
-  "arxiv": null,
-  "bibcode": "2008P&SS...56..669T",
-  "bytes": 5417409,
-  "doi": "10.1016/j.pss.2007.11.019",
-  "openalex_first_author": "Martin G. Tomasko",
-  "openalex_title": "A model of Titan's aerosols based on measurements made inside the atmosphere",
-  "openalex_year": 2007,
-  "sha256": "e745b6ccbaef2c3deb2c5e22228acf43b7c91bd49b61b737db0a7f30523bdcac",
-  "source_url": "https://doi.org/10.1016/j.pss.2007.11.019",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2008P%26SS...56..669T/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2008P%26SS...56..669T/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2008P%26SS...56..669T/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2008P%26SS...56..669T/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "torra2021": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 18540758,
-  "doi": "10.1051/0004-6361/202039637",
-  "openalex_first_author": "F. Torra",
-  "openalex_title": "Gaia Early Data Release 3",
-  "openalex_year": 2020,
-  "sha256": "4edaf6c44fb5e0af75a8da2ab778fbc16bac56e5e30bf06aff1b28d72fb4cdc0",
-  "source_url": "https://arxiv.org/pdf/2012.06420",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- },
- "torres2002": {
-  "arxiv": "astro-ph/0111167",
-  "bibcode": "2002ApJ...567.1140T",
-  "bytes": 919259,
-  "doi": "10.1086/338587",
-  "openalex_first_author": "Guillermo Torres",
-  "openalex_title": "Absolute Dimensions of the M\u2010Type Eclipsing Binary YY Geminorum (Castor C): A Challenge to Evolutionary Models in the Lower Main Sequence",
-  "openalex_year": 2002,
-  "sha256": "7cc051956e6e8fb90d9d53e87f9436146d2fd3257776f8a190f2796995282c9e",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0111167",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/338587/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2002ApJ...567.1140T/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "tully2023": {
-  "arxiv": "2209.11238",
-  "bibcode": null,
-  "bytes": 5103262,
-  "doi": "10.3847/1538-4357/ac94d8",
-  "openalex_first_author": "R. Brent Tully",
-  "openalex_title": "Cosmicflows-4",
-  "openalex_year": 2023,
-  "sha256": "5562be287b6cadd3034a1e4c63a4488de16eb0591de794989506e068ec4477aa",
-  "source_url": "https://arxiv.org/pdf/2209.11238",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4357/ac94d8/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "vaidman2025": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 350620,
-  "doi": "10.3390/universe11110359",
-  "openalex_first_author": "Nadezhda L. Vaidman",
-  "openalex_title": "Evaluating Gaia Astrometric Quality and Distances for Galactic Hot Supergiants",
-  "openalex_year": 2025,
-  "sha256": "8ff172b2e0aedc86866edcad1bf2e1948e226a62fe2f5fc175a8a009df18c720",
-  "source_url": "https://doi.org/10.3390/universe11110359",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.mdpi.com/2218-1997/11/11/359/pdf?version=1761807199"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "vallenari2023": {
-  "arxiv": "2208.00211",
-  "bibcode": "2023A&A...674A...1G",
-  "bytes": 1324639,
-  "doi": "10.1051/0004-6361/202243940",
-  "openalex_first_author": "Antonella Vallenari",
-  "openalex_title": "Gaia Data Release 3",
-  "openalex_year": 2022,
-  "sha256": "c59aec14d95cf790b1e6271a410e049fe3d8688b810954771d9f124a6e053bb3",
-  "source_url": "https://arxiv.org/pdf/2208.00211",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2023A%26A...674A...1G/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/forth/aa43940-22.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "vanderkruit1986": {
-  "arxiv": null,
-  "bibcode": "1986A&A...157..230V",
-  "bytes": 423647,
-  "doi": null,
-  "sha256": "cf3532bf845bca9829c74e0d6ec22d8dd2987702feb11c0096029fac25140fe5",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1986A%26A...157..230V",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986A%26A...157..230V/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1986A%26A...157..230V/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "vandermarel2001": {
-  "arxiv": "astro-ph/0105339",
-  "bibcode": null,
-  "bytes": 604379,
-  "doi": "10.1086/323099",
-  "openalex_first_author": "Roeland P. van der Marel",
-  "openalex_title": "Magellanic Cloud Structure from Near-Infrared Surveys. I. The Viewing Angles of the Large Magellanic Cloud",
-  "openalex_year": 2001,
-  "sha256": "b4f2e09ae4be88685f0696efb889c5f2cddf7d8006bcd0feb227d9f8e7ad3062",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0105339",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1086/323099/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "vandermarel2014": {
-  "arxiv": "1305.4641",
-  "bibcode": null,
-  "bytes": 4785094,
-  "doi": "10.1088/0004-637X/781/2/121",
-  "openalex_first_author": "Roeland P. van der Marel",
-  "openalex_title": "THIRD-EPOCH MAGELLANIC CLOUD PROPER MOTIONS. II. THE LARGE MAGELLANIC CLOUD ROTATION FIELD IN THREE DIMENSIONS",
-  "openalex_year": 2014,
-  "sha256": "ea11b071f48aae06d741dd94b4335ea8159b6f29b2c02b21b1c6b574ea08a253",
-  "source_url": "https://arxiv.org/pdf/1305.4641",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/781/2/121/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "vanleeuwen2007": {
-  "arxiv": "0708.1752",
-  "bibcode": "2007A&A...474..653V",
-  "bytes": 1882902,
-  "doi": "10.1051/0004-6361:20078357",
-  "openalex_first_author": "Floor van Leeuwen",
-  "openalex_title": "Validation of the new Hipparcos reduction",
-  "openalex_year": 2007,
-  "sha256": "5b91b118f1769dad68162e635eb6a4cce7b245951826cfab26ececf41d6a590d",
-  "source_url": "https://arxiv.org/pdf/0708.1752",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2007A%26A...474..653V/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/2007/41/aa8357-07.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "vazquez1994": {
-  "arxiv": null,
-  "bibcode": "1994ApJ...423..681V",
-  "bytes": 268153,
-  "doi": "10.1086/173847",
-  "openalex_first_author": "Enrique Vazquez\u2010Semadeni",
-  "openalex_title": "Hierarchical Structure in Nearly Pressureless Flows as a Consequence of Self-similar Statistics",
-  "openalex_year": 1994,
-  "sha256": "cb557faaa8166510ee32461b6a337ae509d80a00f70a10782b490e7018a34982",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1994ApJ...423..681V",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1994ApJ...423..681V/PUB_PDF"
-   },
-   {
-    "error": "not a PDF (HTTP 202)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1994ApJ...423..681V/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "vondrak2011": {
-  "arxiv": null,
-  "bibcode": "2011A&A...534A..22V",
-  "bytes": 2321205,
-  "doi": "10.1051/0004-6361/201117274",
-  "openalex_first_author": "J. Vondr\u00e1k",
-  "openalex_title": "New precession expressions, valid for long time intervals",
-  "openalex_year": 2011,
-  "sha256": "db762fd5723d745fdc0796cd5929653df105a368810e25e894f289509a16a8fd",
-  "source_url": "https://doi.org/10.1051/0004-6361/201117274",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011A%26A...534A..22V/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2011/10/aa17274-11.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011A%26A...534A..22V/EPRINT_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/10.1051/0004-6361/201117274/pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/10.1051/0004-6361/201117274e/pdf"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011A%26A...534A..22V/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2011A%26A...534A..22V/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "wainscoat1992": {
-  "arxiv": null,
-  "bibcode": "1992ApJS...83..111W",
-  "bytes": 3518598,
-  "doi": "10.1086/191733",
-  "openalex_first_author": "Richard J. Wainscoat",
-  "openalex_title": "A model of the 8-25 micron point source infrared sky",
-  "openalex_year": 1992,
-  "sha256": "43636046c7b664069cd9adf85f343b83783db65ba738bec309ac557d60898b58",
-  "source_url": "https://articles.adsabs.harvard.edu/pdf/1992ApJS...83..111W",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 47 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1992ApJS...83..111W/PUB_PDF"
-   },
-   {
-    "error": "curl 3 HTTP 302",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1992ApJS...83..111W/EPRINT_PDF"
-   }
-  ],
-  "version": "ADS scan of published article"
- },
- "weingartner2001": {
-  "arxiv": "astro-ph/0008146",
-  "bibcode": "2001ApJ...548..296W",
-  "bytes": 1014251,
-  "doi": "10.1086/318651",
-  "openalex_first_author": "Joseph C. Weingartner",
-  "openalex_title": "Dust Grain\u2013Size Distributions and Extinction in the Milky Way, Large Magellanic Cloud, and Small Magellanic Cloud",
-  "openalex_year": 2001,
-  "sha256": "9acdfac75b37be6375ecbdfe1c7ae965b9206bf288b798716f26ad8a7918e525",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0008146",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/318651/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2001ApJ...548..296W/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "wenger2000": {
-  "arxiv": "astro-ph/0002110",
-  "bibcode": null,
-  "bytes": 474497,
-  "doi": "10.1051/aas:2000332",
-  "openalex_first_author": "M. Wenger",
-  "openalex_title": "The SIMBAD astronomical database",
-  "openalex_year": 2000,
-  "sha256": "8df399ca5a121a8717e74de4c41da5a21271081427d85b6dd173af10b7115b35",
-  "source_url": "https://arxiv.org/pdf/astro-ph/0002110",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://aas.aanda.org/articles/aas/pdf/2000/07/ds1821.pdf"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://aas.aanda.org/10.1051/aas:2000332/pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "willmer2018": {
-  "arxiv": "1804.07788",
-  "bibcode": "2018ApJS..236...47W",
-  "bytes": 634206,
-  "doi": "10.3847/1538-4365/aabfdf",
-  "openalex_first_author": "Christopher N. A. Willmer",
-  "openalex_title": "The Absolute Magnitude of the Sun in Several Filters",
-  "openalex_year": 2018,
-  "sha256": "3836b15f0abe96ca525a84726bda623c0f9417f0ea1163a2400cc97652664bd2",
-  "source_url": "https://arxiv.org/pdf/1804.07788",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2018ApJS..236...47W/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "wilquet2009": {
-  "arxiv": null,
-  "bibcode": "2009JGRE..114.0B42W",
-  "bytes": 855100,
-  "doi": "10.1029/2008JE003186",
-  "openalex_first_author": "V. Wilquet",
-  "openalex_title": "Preliminary characterization of the upper haze by SPICAV/SOIR solar occultation in UV to mid\u2010IR onboard Venus Express",
-  "openalex_year": 2009,
-  "sha256": "5d7373403377cb62301a52003651d5670e07ce8befe99228c4bcdfda37619f28",
-  "source_url": "https://doi.org/10.1029/2008JE003186",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://onlinelibrary.wiley.com/doi/pdfdirect/10.1029/2008JE003186"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0B42W/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0B42W/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0B42W/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0B42W/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "wilson1953": {
-  "arxiv": null,
-  "bibcode": "1953GCRV..C......0W",
-  "bytes": 6567,
-  "doi": null,
-  "file": "wilson1953.readme.txt",
-  "sha256": "4d7ba1e14a2d444a28c6c139138fbef07917bcfb24c24ac55a3610e77f026ca3",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/21/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1953GCRV..C......0W/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1953GCRV..C......0W/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1953GCRV..C......0W/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/1953GCRV..C......0W/ADS_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "wittkowski2016": {
-  "arxiv": "1601.02368",
-  "bibcode": "2016A&A...587A..12W",
-  "bytes": 1524923,
-  "doi": "10.1051/0004-6361/201527614",
-  "openalex_first_author": "M. Wittkowski",
-  "openalex_title": "Near-infrared spectro-interferometry of Mira variables and comparisons to 1D dynamic model atmospheres and 3D convection simulations",
-  "openalex_year": 2016,
-  "sha256": "3be95300c99512d2834fe4ea4804ef1198c935a95e3265731f7d86702c1fcf1d",
-  "source_url": "https://arxiv.org/pdf/1601.02368",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2016A%26A...587A..12W/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://www.aanda.org/articles/aa/pdf/2016/03/aa27614-15.pdf"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "wolff2009": {
-  "arxiv": null,
-  "bibcode": "2009JGRE..114.0D04W",
-  "bytes": 473983,
-  "doi": "10.1029/2009JE003350",
-  "openalex_first_author": "M. J. Wolff",
-  "openalex_title": "Wavelength dependence of dust aerosol single scattering albedo as observed by the Compact Reconnaissance Imaging Spectrometer",
-  "openalex_year": 2009,
-  "sha256": "fd914449a8fc27f522f8eda8c4e9ed918055529ad39bfdc5517b83feb24de253",
-  "source_url": "https://doi.org/10.1029/2009JE003350",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0D04W/PUB_PDF"
-   },
-   {
-    "error": "curl 0 HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0D04W/EPRINT_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0D04W/ADS_PDF"
-   },
-   {
-    "error": "HTTP 404",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009JGRE..114.0D04W/ADS_PDF"
-   }
-  ],
-  "version": "publishedVersion"
- },
- "woodruff2008": {
-  "arxiv": "0709.3878",
-  "bibcode": "2008ApJ...673..418W",
-  "bytes": 1033455,
-  "doi": "10.1086/523936",
-  "openalex_first_author": "Henry C. Woodruff",
-  "openalex_title": "The Keck Aperture Masking Experiment: Multiwavelength Observations of Six Mira Variables",
-  "openalex_year": 2008,
-  "sha256": "aa10dd299413c50f24e21091fab33eff2b9bf5666ef51ebf572945e5b1dc8e2c",
-  "source_url": "https://arxiv.org/pdf/0709.3878",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1086/523936/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2008ApJ...673..418W/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "woodruff2009": {
-  "arxiv": "0811.1642",
-  "bibcode": "2009ApJ...691.1328W",
-  "bytes": 916766,
-  "doi": "10.1088/0004-637X/691/2/1328",
-  "openalex_first_author": "Henry C. Woodruff",
-  "openalex_title": "THE KECK APERTURE MASKING EXPERIMENT: SPECTRO-INTERFEROMETRY OF THREE MIRA VARIABLES FROM 1.1 TO 3.8 \u03bcm",
-  "openalex_year": 2009,
-  "sha256": "447dc35aeee5e5c032e86571b2c886d7769cef4d857d60257d239837b8e72ec7",
-  "source_url": "https://arxiv.org/pdf/0811.1642",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://iopscience.iop.org/article/10.1088/0004-637X/691/2/1328/pdf"
-   },
-   {
-    "error": "not a PDF (HTTP 200)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2009ApJ...691.1328W/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "wyman2013": {
-  "arxiv": null,
-  "bibcode": null,
-  "bytes": 1271772,
-  "doi": null,
-  "openalex_first_author": "Alex Song",
-  "openalex_title": "alexysong/inkstone: v0.3.10",
-  "openalex_year": 2023,
-  "sha256": "3ed4e42f0247d98f6a082a5c432d337f7bea23cf46792408f5161032a94d7256",
-  "source_url": "https://jcgt.org/published/0002/02/01/paper.pdf",
-  "status": "ok",
-  "tried": [],
-  "version": "publishedVersion"
- },
- "zacharias2012": {
-  "arxiv": null,
-  "bibcode": "2012yCat.1322....0Z",
-  "bytes": 19090,
-  "doi": null,
-  "file": "zacharias2012.readme.txt",
-  "sha256": "89679e0e8c5037337ae1a6d498b128c4fc8c2e049c4fd3b72697119531975469",
-  "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/322A/ReadMe",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012yCat.1322....0Z/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 404: NOT FOUND",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2012yCat.1322....0Z/EPRINT_PDF"
-   }
-  ],
-  "version": "VizieR ReadMe"
- },
- "zhang2023": {
-  "arxiv": null,
-  "bibcode": "2023MNRAS.524.1855Z",
-  "bytes": 9104244,
-  "doi": "10.1093/mnras/stad1941",
-  "openalex_first_author": "Xiangyu Zhang",
-  "openalex_title": "Parameters of 220 million stars from Gaia BP/RP spectra",
-  "openalex_year": 2023,
-  "sha256": "f5ed13eefa97bb45a6c8643432f674eddc519fb84888fd6f9fb94b86a3b79cb9",
-  "source_url": "https://arxiv.org/pdf/2303.03420",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://academic.oup.com/mnras/advance-article-pdf/doi/10.1093/mnras/stad1941/50729300/stad1941.pdf"
-   },
-   {
-    "error": "curl 0 HTTP 403",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2023MNRAS.524.1855Z/PUB_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "zucker2019": {
-  "arxiv": null,
-  "bibcode": "2019ApJ...879..125Z",
-  "bytes": 11878121,
-  "doi": null,
-  "sha256": "e54db728d05d5cfdd080566b078184680ae0e9a90051aec35fee396625e3d760",
-  "source_url": "https://arxiv.org/pdf/1902.01425",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019ApJ...879..125Z/PUB_PDF"
-   },
-   {
-    "error": "IncompleteRead(3145728 bytes read, 8732393 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2019ApJ...879..125Z/EPRINT_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "zucker2020": {
-  "arxiv": "2001.00591",
-  "bibcode": "2020A&A...633A..51Z",
-  "bytes": 2100882,
-  "doi": "10.1051/0004-6361/201936145",
-  "openalex_first_author": "Catherine Zucker",
-  "openalex_title": "A compendium of distances to molecular clouds in the Star Formation Handbook",
-  "openalex_year": 2020,
-  "sha256": "91b98f98e7303ef9348a312ef459f0a62dde92ba0510f578fd728d5ce57e09cb",
-  "source_url": "https://arxiv.org/pdf/2001.00591",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020A%26A...633A..51Z/PUB_PDF"
-   },
-   {
-    "error": "HTTP Error 403: Forbidden",
-    "url": "https://www.aanda.org/articles/aa/pdf/2020/01/aa36145-19.pdf"
-   },
-   {
-    "error": "IncompleteRead(1048576 bytes read, 1052306 more expected)",
-    "url": "https://arxiv.org/pdf/2001.00591"
-   },
-   {
-    "error": "IncompleteRead(1048576 bytes read, 1052306 more expected)",
-    "url": "https://ui.adsabs.harvard.edu/link_gateway/2020A%26A...633A..51Z/EPRINT_PDF"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "zucker2020b": {
-  "arxiv": null,
-  "bibcode": null,
-  "doi": null,
-  "status": "unidentified",
-  "tried": []
- },
- "zucker2021": {
-  "arxiv": "2109.09765",
-  "bibcode": null,
-  "bytes": 9490940,
-  "doi": "10.3847/1538-4357/ac1f96",
-  "openalex_first_author": "Catherine Zucker",
-  "openalex_title": "On the Three-dimensional Structure of Local Molecular Clouds",
-  "openalex_year": 2021,
-  "sha256": "6744d706f6706543f625c31d6f5c6f301d0989cdc449db76980d62a96e4c4a3f",
-  "source_url": "https://arxiv.org/pdf/2109.09765",
-  "status": "ok",
-  "tried": [
-   {
-    "error": "not a PDF (text/html; charset=UTF-8)",
-    "url": "https://iopscience.iop.org/article/10.3847/1538-4357/ac1f96/pdf"
-   },
-   {
-    "error": "HTTP Error 406: Not Acceptable",
-    "url": "https://arxiv.org/pdf/2109.09765"
-   }
-  ],
-  "version": "submittedVersion"
- },
- "zucker2022": {
-  "arxiv": "2201.05124",
-  "bibcode": null,
-  "bytes": 1628894,
-  "doi": "10.1038/s41586-021-04286-5",
-  "openalex_first_author": "Catherine Zucker",
-  "openalex_title": "Star formation near the Sun is driven by expansion of the Local Bubble",
-  "openalex_year": 2022,
-  "sha256": "ed99e544a21d7fb2ab3ed0d7a48d8805ae54f4024bc04f4769d131a1abc6f460",
-  "source_url": "https://arxiv.org/pdf/2201.05124",
-  "status": "ok",
-  "tried": [],
-  "version": "submittedVersion"
- }
+  "abdurrouf2022": [
+    {
+      "file": "abdurrouf2022.pdf",
+      "source_url": "https://arxiv.org/pdf/2112.02026",
+      "sha256": "ff6ff496d0ae1e2f092fc15e4118c688afed11f9bc9e0a708d52edcaeabd4c8e",
+      "bytes": 15322915
+    }
+  ],
+  "andrae2023": [
+    {
+      "file": "andrae2023.pdf",
+      "source_url": "https://curis.ku.dk/ws/files/367298692/aa43462_22.pdf",
+      "sha256": "1dfb1562fabc59b2e4bffb8af32623b95a137621c2ebfcf51e8cee41d0123981",
+      "bytes": 3644180
+    }
+  ],
+  "archinal2018": [
+    {
+      "file": "archinal2018.pdf",
+      "source_url": "https://doi.org/10.1007/s10569-017-9805-5",
+      "sha256": "291c6fc48d6c6c93d0a55463c238d2b2e3c89920a0678aa04faf8f075e3aa4ca",
+      "bytes": 938181
+    }
+  ],
+  "arzoumanian2011": [
+    {
+      "file": "arzoumanian2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1103.0201",
+      "sha256": "591d82039bc64303579b83d9417353dd30accba30ea30387672b88c2483c539c",
+      "bytes": 3674121
+    }
+  ],
+  "arzoumanian2019": [
+    {
+      "file": "arzoumanian2019.pdf",
+      "source_url": "https://real.mtak.hu/186593/1/1810.00721.pdf",
+      "sha256": "02aef8f66b54cba13351708ea75f215a99934aeb2267088e6292c76de829e45e",
+      "bytes": 14685755
+    }
+  ],
+  "bahcall1980": [
+    {
+      "file": "bahcall1980.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1980ApJS...44...73B",
+      "sha256": "1d1e77d724dcba9f6d570bee8c069141d583616b203d8c18bef6aa8f3149d6ac",
+      "bytes": 3522904
+    }
+  ],
+  "bailerjones2015": [
+    {
+      "file": "bailerjones2015.pdf",
+      "source_url": "https://arxiv.org/pdf/1507.02105",
+      "sha256": "8f86ef1b3cc7e9257ce6541e4d1620e7102bb1b74677137a27bf0fcd3184f14d",
+      "bytes": 2793443
+    }
+  ],
+  "bailerjones2021": [
+    {
+      "file": "bailerjones2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.05220",
+      "sha256": "5ee4da1580b679706a073c6b4dc8cedc840ede3c486c00d28cabbf81e61cdfd9",
+      "bytes": 12833923
+    }
+  ],
+  "ballesteros2012": [
+    {
+      "file": "ballesteros2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1201.1809",
+      "sha256": "c1f856f4f7d71bc59b1e41b204c143ba35e12c3b165126bca99af00798f3b532",
+      "bytes": 283855
+    }
+  ],
+  "benedict2002": [
+    {
+      "file": "benedict2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0206214",
+      "sha256": "9f82a056e0baea7ae25bdb89576b0eecb9c1b05a2d01b999710158c09b320c80",
+      "bytes": 276940
+    }
+  ],
+  "bessell1979": [
+    {
+      "file": "bessell1979.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1979PASP...91..589B",
+      "sha256": "702c505ef44b0d9151de23963bd38c377ae39d65e15cdace4eef71429269d52c",
+      "bytes": 1842464
+    }
+  ],
+  "blandhawthorn2016": [
+    {
+      "file": "blandhawthorn2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1602.07702",
+      "sha256": "d6f92a288422385776b1dbc7d9d0818b523ce92e25a1bb5eadaa70b3c416f500",
+      "bytes": 8492213
+    }
+  ],
+  "bodhaine1999": [
+    {
+      "file": "bodhaine1999.pdf",
+      "source_url": "https://doi.org/10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2",
+      "sha256": "e81ff2a075595a094f34e651d879c71a4aa63eac55969a009aaee88a65a4e835",
+      "bytes": 96772
+    }
+  ],
+  "bohlin1978": [
+    {
+      "file": "bohlin1978.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1978ApJ...224..132B",
+      "sha256": "46544b0541add68036f46f8b4134fd740b4eaef411746ce417898723dfa469d0",
+      "bytes": 1104686
+    }
+  ],
+  "bond2018": [
+    {
+      "file": "bond2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1712.08139",
+      "sha256": "d38dd87cd5893de92f453d7c929fe2ceebf1f459e9a77a62ebcd25b93588415b",
+      "bytes": 202732
+    }
+  ],
+  "bruzual2003": [
+    {
+      "file": "bruzual2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0309134",
+      "sha256": "072998f68479ea6c604fe62f6dd1d3a13d478d788ea767546deb12d20b89391f",
+      "bytes": 1104870
+    }
+  ],
+  "butkevich2014": [
+    {
+      "file": "butkevich2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1407.4664",
+      "sha256": "eb55fd546f09db94de743de16f1f8f0d20fa9d58b23b4a493d4f51782fe5a33d",
+      "bytes": 353399
+    }
+  ],
+  "cardelli1989": [
+    {
+      "file": "cardelli1989.pdf",
+      "source_url": "https://doi.org/10.1086/167900",
+      "sha256": "e3db684021b80d7c161499f8e6257df9881251b0fb0382a3d9d30b2ae0e6fd73",
+      "bytes": 1292222
+    }
+  ],
+  "casagrande2018": [
+    {
+      "file": "casagrande2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1806.01953",
+      "sha256": "da6ae62684b506d1977308847238f28e43abe9fed18dcabd78b15db2ee2ad81d",
+      "bytes": 1473430
+    }
+  ],
+  "chabrier2003": [
+    {
+      "file": "chabrier2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0304382",
+      "sha256": "1308007b5fd7130033234df7bb76c8976fa055a823fa1b4a6bc64b298b03df92",
+      "bytes": 676479
+    }
+  ],
+  "chapman2009": [
+    {
+      "file": "chapman2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0809.1106",
+      "sha256": "d2ac37e5b7ceeb5b778d0bd44b26ecbe653e4ac3597f7181f33e67f3c0cbf151",
+      "bytes": 2343176
+    }
+  ],
+  "cioni2000": [
+    {
+      "file": "cioni2000.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0003223",
+      "sha256": "d5423090942c377e25fe1b2c6353cc2cb22935c1eb12d574ce9f6ef1bb3362f9",
+      "bytes": 1420802
+    }
+  ],
+  "ciotti1999": [
+    {
+      "file": "ciotti1999.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9911078",
+      "sha256": "9b2af79fd1730eedaa2205e2f3690018ae21768092312d3bae4d6bde14d097c9",
+      "bytes": 141692
+    }
+  ],
+  "cook2023": [
+    {
+      "file": "cook2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2306.06271",
+      "sha256": "75ef3e69050c8230be1ffeb78f74011c770450d9d62a49886fb15b576b28f58a",
+      "bytes": 4129558
+    }
+  ],
+  "corbelli2014": [
+    {
+      "file": "corbelli2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1409.2665",
+      "sha256": "732101ce21fa2101f0f78e3d4923d229a0f7fffed9aa5119f6a0545ea3f24437",
+      "bytes": 7402865
+    }
+  ],
+  "costaalmeida2021": [
+    {
+      "file": "costaalmeida2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2110.01658",
+      "sha256": "25fb5e6ccd6a0f9fe4616b92a61bea0c718a15dbcf880bfaee055e34187c7ffa",
+      "bytes": 1833094
+    }
+  ],
+  "courteau2011": [
+    {
+      "file": "courteau2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1106.3564",
+      "sha256": "718400d7670006f036040284c5c1d5bb719a7ba43c3317fe9d9f035ceca71238",
+      "bytes": 863193
+    }
+  ],
+  "creevey2023": [
+    {
+      "file": "creevey2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2206.05864",
+      "sha256": "32ed85613c76f3d5d6da53cbc9a4e6f0a33e65a38ee5ead30a4d1f385aafe244",
+      "bytes": 5231986
+    }
+  ],
+  "cutri2003": [
+    {
+      "file": "cutri2003.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/II/246/ReadMe",
+      "sha256": "9c95e07f242f547264257815898c1a2ca8a4bd10729f33c4ae1cfc462463e781",
+      "bytes": 30905
+    }
+  ],
+  "deau2013": [
+    {
+      "file": "deau2013.pdf",
+      "source_url": "https://doi.org/10.1016/j.icarus.2013.01.015",
+      "sha256": "ffa0564127ae8959dc9beb5f8ca806935bee4d59caa9901d61c8550dd6117466",
+      "bytes": 2336245
+    }
+  ],
+  "devaucouleurs1960": [
+    {
+      "file": "devaucouleurs1960.pdf",
+      "source_url": "https://doi.org/10.1086/146870",
+      "sha256": "ec820c797acfa37cc4c2197b49b5f89879545f963426ea447a66ed747297d667",
+      "bytes": 636514
+    }
+  ],
+  "devaucouleurs1983": [
+    {
+      "file": "devaucouleurs1983.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1983ApJ...268..451D",
+      "sha256": "7316f2c08260776de0e742ed946ff2835cc8cbc30ee0675bd3fac618dd83a91e",
+      "bytes": 2296431
+    }
+  ],
+  "devaucouleurs1991": [
+    {
+      "file": "devaucouleurs1991.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/VII/155/ReadMe",
+      "sha256": "d182c7db2f0f280313680727217d732925a2ae3067c0a4bee733ee6be5ed0c0d",
+      "bytes": 21246
+    }
+  ],
+  "dolan2002": [
+    {
+      "file": "dolan2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0110160",
+      "sha256": "9646e5f06595fe63d48a55ebeb3724746007acb46e83a4d01f2d280dfaceec91",
+      "bytes": 527306
+    }
+  ],
+  "dommanget1994": [
+    {
+      "file": "dommanget1994.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/I/211/ReadMe",
+      "sha256": "51c779cf5fe5dc07e5eeb0004269b879f1f1def9718f55d48db1452b8a6ae1a3",
+      "bytes": 7317
+    }
+  ],
+  "drimmel2001": [
+    {
+      "file": "drimmel2001.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0101259",
+      "sha256": "3e19cea6fb0e51abceab0f869b3dea9babfbfd1bb6e4a9ddd6ce2e3a837eb2d7",
+      "bytes": 679937
+    }
+  ],
+  "ducati2001": [
+    {
+      "file": "ducati2001.pdf",
+      "source_url": "https://lume.ufrgs.br/bitstream/handle/10183/108885/000306128.pdf;jsessionid=CC0A0C840CDBABCAF2B71FFBF193E198?sequence=1",
+      "sha256": "0d5452f4e6aaba64df5ac586db6b8f67c0202bfcb5b9adaa33084372ba654fec",
+      "bytes": 690519
+    }
+  ],
+  "dupuy2023": [
+    {
+      "file": "dupuy2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2305.02339",
+      "sha256": "74b121436f5d704cb480c8779988e13e3955204161543f48fbf33ac4e39d2807",
+      "bytes": 23273607
+    }
+  ],
+  "dyudina": [
+    {
+      "file": "dyudina.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0406390",
+      "sha256": "34721b3cc65d029871c88098c8a1bc9edfabc87275dae7e8d947dcff74a74725",
+      "bytes": 970196
+    }
+  ],
+  "edenhofer2024": [
+    {
+      "file": "edenhofer2024.pdf",
+      "source_url": "https://arxiv.org/pdf/2308.01295",
+      "sha256": "151b9f76ca950b67547fb7b94131f751ff7d549ffe97d81e08900ceec7199f63",
+      "bytes": 6980483
+    }
+  ],
+  "esa1997": [
+    {
+      "file": "esa1997.pdf",
+      "source_url": "https://www.cosmos.esa.int/documents/532822/552851/vol1_all.pdf",
+      "sha256": "f6182096bf31bbdd2e37516da98619305de15cb06c9eecf713cdd3e8a9c6e1be",
+      "bytes": 11456841
+    }
+  ],
+  "espenak2006": [
+    {
+      "file": "espenak2006.pdf",
+      "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/5MCSE-Text11.pdf",
+      "sha256": "c8de965a05bf6b55cc2a451456fafb78507ac329cc0a27f3c553bbf70d4a180c",
+      "bytes": 2040207
+    }
+  ],
+  "espenak2009": [
+    {
+      "file": "espenak2009.pdf",
+      "source_url": "https://eclipse.gsfc.nasa.gov/5MCSE/TP2009-214174.pdf",
+      "sha256": "19cb7687d96030164756af44938c8a686c814dbeca919a862d1fe6dbc9ecbc87",
+      "bytes": 13866196
+    }
+  ],
+  "espenak2009lunar": [
+    {
+      "file": "espenak2009lunar.pdf",
+      "source_url": "https://eclipse.gsfc.nasa.gov/5MCLE/5MKLE-214173.pdf",
+      "sha256": "c21e3d13662669ef7609a9624061fcbd9e16d666c97733b5013762019d1fee60",
+      "bytes": 14477450
+    }
+  ],
+  "esposito2002": [
+    {
+      "file": "esposito2002.pdf",
+      "source_url": "https://doi.org/10.1088/0034-4885/65/12/201",
+      "sha256": "b7e2e309d9cbca72c5668ee5a581abdf78a7c7b9e0a814bd9aca53f7f3cb3e6c",
+      "bytes": 1216572
+    }
+  ],
+  "fabricius2002a": [
+    {
+      "file": "fabricius2002a.pdf",
+      "source_url": "https://doi.org/10.1051/0004-6361:20020249",
+      "sha256": "9daf0f7db32fb21824322ab4db86d3939f3eaf7ed0e1e22fbae133523333f334",
+      "bytes": 86292
+    }
+  ],
+  "fabricius2002b": [
+    {
+      "file": "fabricius2002b.pdf",
+      "source_url": "https://ui.adsabs.harvard.edu/abs/2002A&A...384..180F",
+      "sha256": "886d9450fcefe49187a72b8dffd7a40f962556b3d4cc2424c98fc628b265057a",
+      "bytes": 757360
+    }
+  ],
+  "federrath2010": [
+    {
+      "file": "federrath2010.pdf",
+      "source_url": "https://arxiv.org/pdf/0905.1060",
+      "sha256": "3b8d4bced598feae286c1af5289eaf7fc85e55a6595a27c58ffa337102b0ef2a",
+      "bytes": 2131514
+    }
+  ],
+  "federrath2013": [
+    {
+      "file": "federrath2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1211.6433",
+      "sha256": "21a6540817ac091ec0962ffd2b6ad32d556ad0a124411cd6ed66b293061850d6",
+      "bytes": 5552305
+    }
+  ],
+  "flynn2006": [
+    {
+      "file": "flynn2006.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0608193",
+      "sha256": "b24f390fde81bfcea12dfce920a3be72237c6a3bb3e0f4260db0d2324f392cc1",
+      "bytes": 433281
+    }
+  ],
+  "freeman1970": [
+    {
+      "file": "freeman1970.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1970ApJ...160..811F",
+      "sha256": "7e84b483ae33938ab45865c555d63076d35df161ed30d7c9f037e48399583cc4",
+      "bytes": 1511339
+    }
+  ],
+  "french1986": [
+    {
+      "file": "french1986.pdf",
+      "source_url": "https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F",
+      "sha256": "fec4a8f415f2a201017bbbe9f56f82ed1c99436b8b120c43b4e17d81d54b2adf",
+      "bytes": 2206955
+    }
+  ],
+  "french1988": [
+    {
+      "file": "french1988.pdf",
+      "source_url": "https://doi.org/10.1016/0019-1035(88)90104-2",
+      "sha256": "916f79b2aa12c4d586b76421d083ee4b00301664b7b88a7470a460aa0fcf2f7c",
+      "bytes": 2387012
+    }
+  ],
+  "frey1974": [
+    {
+      "file": "frey1974.pdf",
+      "source_url": "https://ntrs.nasa.gov/citations/19740014371",
+      "sha256": "96fcf0aacc3a3e2ab2a757b130d9ed1c4eb9cbfecf22ae4bd4477f60f77900ab",
+      "bytes": 1347501
+    }
+  ],
+  "gaiacollab2018cat": [
+    {
+      "file": "gaiacollab2018cat.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/345/ReadMe",
+      "sha256": "e238fd712f562dc3d2003bf646653a8991a7820847c7a39127fb8526f15d747c",
+      "bytes": 125506
+    }
+  ],
+  "gaiacollab2022cat": [
+    {
+      "file": "gaiacollab2022cat.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/355/ReadMe",
+      "sha256": "4a82cc91aa9dba0e33112041a046d1bbad515bd99a792526a798bf569cd9c234",
+      "bytes": 215224
+    }
+  ],
+  "gaiadr3doc": [
+    {
+      "file": "gaiadr3doc.page.txt",
+      "source_url": "https://gea.esac.esa.int/archive/documentation/GDR3/Data_processing/chap_cu5pho/cu5pho_sec_photSystem/cu5pho_ssec_photRelations.html",
+      "sha256": "6cb95bdbb601bdfcf315f11014a999bd971634087cdc2579f286771982e41f11",
+      "bytes": 21901
+    }
+  ],
+  "gieren2013": [
+    {
+      "file": "gieren2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.4258",
+      "sha256": "2107799b3a126cc838da569257729a62eb35f2cf2ee01fb78e1ebc77c4c92c24",
+      "bytes": 2283755
+    }
+  ],
+  "giovanelli2013": [
+    {
+      "file": "giovanelli2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.0272",
+      "sha256": "0298bf8f0d09128351b8837e76e2f208e77e63dc38233280ce7298cfbd6513eb",
+      "bytes": 2065530
+    }
+  ],
+  "gliese1991": [
+    {
+      "file": "gliese1991.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/V/70A/ReadMe",
+      "sha256": "ccd1e958e18e5ffd0b6ee2df4c399b6a24984e2264bbf6d5fc26e5f53da52032",
+      "bytes": 10587
+    }
+  ],
+  "golovin2023": [
+    {
+      "file": "golovin2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2211.01449",
+      "sha256": "301d8241c9bc02d13ae88b1b693cb88cbea6ea15f9e93e90cdc649812c0510da",
+      "bytes": 5940295
+    }
+  ],
+  "gontcharov2006": [
+    {
+      "file": "gontcharov2006.pdf",
+      "source_url": "https://arxiv.org/pdf/1606.08053",
+      "sha256": "573c8fa005c57230c3194b74ddea21eb721c19828576b940c17e7e3b94b043e1",
+      "bytes": 542872
+    }
+  ],
+  "graczyk2020": [
+    {
+      "file": "graczyk2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2010.08754",
+      "sha256": "6e3dd9d45208af0cefaec579deee84f5e6726bfb7e3c7a2257facacbf790711d",
+      "bytes": 3328489
+    }
+  ],
+  "graham2002": [
+    {
+      "file": "graham2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0202307",
+      "sha256": "5ee7e159b1518d8616936b4426547a53bd37c30135646f2470ab22466354b484",
+      "bytes": 233425
+    }
+  ],
+  "gravity2018": [
+    {
+      "file": "gravity2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1807.09409",
+      "sha256": "bd620d1136eb396beee040a6a4cfc39ac980b8b3a1369a867839b0283577d185",
+      "bytes": 2077687
+    }
+  ],
+  "gray2003": [
+    {
+      "file": "gray2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0308182",
+      "sha256": "82641994402a10f68cf633f94cb882202e897a40d0b2e9dacd732c45b29d80d8",
+      "bytes": 573604
+    }
+  ],
+  "gurnett2013": [
+    {
+      "file": "gurnett2013.pdf",
+      "source_url": "https://doi.org/10.1126/science.1241681",
+      "sha256": "e16f728abcecd0475185ab03a5c374a45e213fe15e63de4e9095c8ac4e713470",
+      "bytes": 1318568
+    }
+  ],
+  "gurnett2019": [
+    {
+      "file": "gurnett2019.pdf",
+      "source_url": "https://doi.org/10.1038/s41550-019-0918-5",
+      "sha256": "758ec4497375f15a95051db815f8ef790c3927fd4790465b2019812efa4a6d47",
+      "bytes": 1287190
+    }
+  ],
+  "halbwachs2023": [
+    {
+      "file": "halbwachs2023.pdf",
+      "source_url": "https://dipot.ulb.ac.be/dspace/bitstream/2013/371501/1/doi_355145.pdf",
+      "sha256": "1a04a582b732e478880a03870866f7044cc54ac67a1e5769e9225c45ab1803ea",
+      "bytes": 4591604
+    }
+  ],
+  "hamann2006": [
+    {
+      "file": "hamann2006.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0608078",
+      "sha256": "3cc786671e99fa4c1be02d9c70515332aa43423c7ed75662c14696bdead73237",
+      "bytes": 546635
+    }
+  ],
+  "hargis2020": [
+    {
+      "file": "hargis2020.pdf",
+      "source_url": "https://arxiv.org/pdf/1907.07185",
+      "sha256": "9f58dbeab5e9af4672b2ebd8a9de670ef589f25b31127fcef7b830370afc869e",
+      "bytes": 9350702
+    }
+  ],
+  "hartkopf2001": [
+    {
+      "file": "hartkopf2001.pdf",
+      "source_url": "https://doi.org/10.1086/323921",
+      "sha256": "bfb0035fb59583a2f9600c44f184c910b99119f1c5a0b82390dfc541b74fb028",
+      "bytes": 5703602
+    }
+  ],
+  "hoffleit1991": [
+    {
+      "file": "hoffleit1991.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/V/50/ReadMe",
+      "sha256": "44fd9c73e2eecad0beb47bdfa3f01c60fd43f93d6964198e31fcd48732de5b33",
+      "bytes": 11571
+    }
+  ],
+  "hog2000": [
+    {
+      "file": "hog2000.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/2000A%26A...355L..27H",
+      "sha256": "c9cd3e8a27b37207a2f744a537f76f75385af62205315d6f17d3d7af0fbbe76e",
+      "bytes": 104794
+    }
+  ],
+  "huchra2012": [
+    {
+      "file": "huchra2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1108.0669",
+      "sha256": "c3666947cb3bd3bfa318accbb993b37ce53d259b9bc7ff5c4a563d9858f2459d",
+      "bytes": 3483855
+    }
+  ],
+  "ibata1997": [
+    {
+      "file": "ibata1997.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9612025",
+      "sha256": "f4e3158330bae624eb3218ff83df96b845c76df5c258ee7faeba9b9482cfa2a7",
+      "bytes": 899736
+    }
+  ],
+  "ignatiev2009": [
+    {
+      "file": "ignatiev2009.pdf",
+      "source_url": "https://hal.science/hal-03786221/document",
+      "sha256": "113cf6641167cc3cf401647f75888a9e8c5c3820a4d29edd6351079c22175bb2",
+      "bytes": 2302796
+    }
+  ],
+  "ireland2004": [
+    {
+      "file": "ireland2004.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/2004MNRAS.352..318I",
+      "sha256": "7255958041e9c1285c22c3cd58ddf5bd529e91fc1892d1700d01b74d6decbb87",
+      "bytes": 409858
+    }
+  ],
+  "irwin2024": [
+    {
+      "file": "irwin2024.pdf",
+      "source_url": "https://doi.org/10.1093/mnras/stad3761",
+      "sha256": "aec051d06bccfcd344021f753963804092534fd00fca99b34755ab555825e4ce",
+      "bytes": 2288007
+    }
+  ],
+  "jonsson2020": [
+    {
+      "file": "jonsson2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2007.05537",
+      "sha256": "2f1b7c73986a5450826534de6deff2916fba157f10c5db5d05cd01a1609f36dd",
+      "bytes": 11578216
+    }
+  ],
+  "juric": [
+    {
+      "file": "juric.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0510520",
+      "sha256": "00ebf3722f91c665a00d02bad84f4d05ec68f818677f2d191f228b53502bf010",
+      "bytes": 3643900
+    }
+  ],
+  "kainulainen2009": [
+    {
+      "file": "kainulainen2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0911.5648",
+      "sha256": "fd36f7c85f4f0a5716e38554294406ad613d6a757ba103ae936ee63d2ca7ab5c",
+      "bytes": 539126
+    }
+  ],
+  "karachentsev2013": [
+    {
+      "file": "karachentsev2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1303.5328",
+      "sha256": "f9806dfc550382291711e4164dd36177b900ee3078ae10343bde74c93408c30e",
+      "bytes": 3351048
+    }
+  ],
+  "kepler2007": [
+    {
+      "file": "kepler2007.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0612277",
+      "sha256": "5c7f0ded7da1985be3f2018c0a74dba7ad8ee7bd240741dd535f25070060e144",
+      "bytes": 1067333
+    }
+  ],
+  "kersten2021": [
+    {
+      "file": "kersten2021.pdf",
+      "source_url": "https://elib.dlr.de/142500/1/Kersten_New_Ganymede_Basemap_final_resub.pdf",
+      "sha256": "ffb5911ae615e13d6e642bff59babfd5aa15c64575093246fb675a163d298c8f",
+      "bytes": 2488238
+    }
+  ],
+  "kervella2003": [
+    {
+      "file": "kervella2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0306604",
+      "sha256": "37dc0f11f4e90bdadf4a8f2ce96820a158c1bf1fc1f10d396c55831068a48411",
+      "bytes": 238383
+    }
+  ],
+  "kilic2020": [
+    {
+      "file": "kilic2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2006.00323",
+      "sha256": "84c8e94fb8ca2492409c6360921221da1433612ad56c42f5857e01b81043e0eb",
+      "bytes": 3137975
+    }
+  ],
+  "kim2014": [
+    {
+      "file": "kim2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1409.3283",
+      "sha256": "a85ff3b178ea76a521dc41ecaf0f3f54edb5d4701262c0d3aa8f84827d12ec77",
+      "bytes": 4978483
+    }
+  ],
+  "kolbas2015": [
+    {
+      "file": "kolbas2015.pdf",
+      "source_url": "https://lirias.kuleuven.be/retrieve/292c0ea4-68f0-4052-920d-897500897e6f",
+      "sha256": "f46364dc1f465b1519bd8090cd8b694f66da05455e7587c17545fe6ab0eef7c6",
+      "bytes": 808905
+    }
+  ],
+  "kostjuk2002": [
+    {
+      "file": "kostjuk2002.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/cats/IV/27A/ReadMe",
+      "sha256": "a88f0b63e8c08dd835e90cbfa6856ed8b24ec71f4e11ecadab9ea90d08adc6b4",
+      "bytes": 11980
+    }
+  ],
+  "lacour2009": [
+    {
+      "file": "lacour2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0910.3869",
+      "sha256": "7d029d64944b4d73a4e20cc43ba9fbf0db4f84ef376c669c51fb42ef8233e446",
+      "bytes": 879131
+    }
+  ],
+  "lallement2019": [
+    {
+      "file": "lallement2019.pdf",
+      "source_url": "https://arxiv.org/pdf/1902.04116",
+      "sha256": "7668d890035fed9622d6757ccd945c33f9e9f9e8a5e129d3086279433e2eb4d4",
+      "bytes": 23535539
+    }
+  ],
+  "laskar1986": [
+    {
+      "file": "laskar1986.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1986A%26A...157...59L",
+      "sha256": "5c68679eade7dfd82f43114522ad66ebf76a6f3d4f14a98551df28a21c4e4898",
+      "bytes": 266670
+    }
+  ],
+  "leike2020": [
+    {
+      "file": "leike2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2004.06732",
+      "sha256": "61d41d4af14872fdf538eace480009df9fb8ffc159dfff2ef9b4669ff460ce6e",
+      "bytes": 6069916
+    }
+  ],
+  "leinert1998": [
+    {
+      "file": "leinert1998.pdf",
+      "source_url": "https://insu.hal.science/insu-03527749/document",
+      "sha256": "39be7e993ad07aa3d5eb467666fe08cc81e3b6219be5aed14761a50bb76f82cf",
+      "bytes": 3667685
+    }
+  ],
+  "lemmon2015": [
+    {
+      "file": "lemmon2015.pdf",
+      "source_url": "https://arxiv.org/pdf/1403.4234",
+      "sha256": "e5d36c83cfcfef84e5384eec0acdb050597d0d0b564cfd8d94ccb5036b4f35d9",
+      "bytes": 1765654
+    }
+  ],
+  "lepine2005": [
+    {
+      "file": "lepine2005.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0412070",
+      "sha256": "883b034e282b145adcf573e11e2d4feadec930dce6879e55c97966118998ad91",
+      "bytes": 1463223
+    }
+  ],
+  "licquia2015": [
+    {
+      "file": "licquia2015.pdf",
+      "source_url": "https://arxiv.org/pdf/1407.1078",
+      "sha256": "7b8aec6f2f68b603bc844d62682f10571bcd284d3c6a463f41a7206bb721c287",
+      "bytes": 900870
+    }
+  ],
+  "licquia2015b": [
+    {
+      "file": "licquia2015b.pdf",
+      "source_url": "https://arxiv.org/pdf/1508.04446",
+      "sha256": "036349033cc9ca546f5072074c35bd9ee504761ca493bbbedea0807a91e91e43",
+      "bytes": 1399460
+    }
+  ],
+  "lieske1979": [
+    {
+      "file": "lieske1979.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1979A%26A....73..282L",
+      "sha256": "aecc39006c076efa2dbda911ded14e60382e704a43a0f95ce9ca68f3727a6f7e",
+      "bytes": 96130
+    }
+  ],
+  "limaneto1999": [
+    {
+      "file": "limaneto1999.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9905048",
+      "sha256": "33105db737523a7cb25ad1f89bd255705962f466330dafe82a1a8fa7c97847d3",
+      "bytes": 426477
+    }
+  ],
+  "lindal1983": [
+    {
+      "file": "lindal1983.pdf",
+      "source_url": "https://doi.org/10.1016/0019-1035(83)90155-0",
+      "sha256": "f3cc8c780a5786e48698386ea242fee55229ec8d6e1056ba0b6120316d643be8",
+      "bytes": 1101041
+    }
+  ],
+  "lindegren2021": [
+    {
+      "file": "lindegren2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.01742",
+      "sha256": "29f4e07d8a887de601d935db8e61f758c1e9103b91138140e6c2407a24fc4150",
+      "bytes": 10476846
+    }
+  ],
+  "makarov2014": [
+    {
+      "file": "makarov2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1408.3476",
+      "sha256": "d3f492d2916b9de5198be9824bcd50b427775695fcf697b04ce64340426c0a41",
+      "bytes": 6613359
+    }
+  ],
+  "mallama2012": [
+    {
+      "file": "mallama2012.pdf",
+      "source_url": "https://doi.org/10.1016/j.icarus.2011.11.035",
+      "sha256": "079164927f1bde446c2ae5486eb1d0dc074c94507665bfab521a2add7b8dce9e",
+      "bytes": 227694
+    }
+  ],
+  "mallama2017": [
+    {
+      "file": "mallama2017.pdf",
+      "source_url": "https://arxiv.org/pdf/1609.05048",
+      "sha256": "7feb8edb372502cee5dc9c6a7656205e3279353bb38f9a98cbecbe8e8d733f91",
+      "bytes": 915468
+    }
+  ],
+  "mallamahilton2018": [
+    {
+      "file": "mallamahilton2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1808.01973",
+      "sha256": "805e53ab8f921c55e1c5e3dd64bbd567f806cdba56148625afcddfc650b6f9a7",
+      "bytes": 2164274
+    }
+  ],
+  "mamajek2022": [
+    {
+      "file": "mamajek2022.page.txt",
+      "source_url": "https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt",
+      "sha256": "1de2edeec17bb3346e0e4e70b999de5ee29947df38474e64cddb7cfacc164b7f",
+      "bytes": 55680
+    }
+  ],
+  "martins2005": [
+    {
+      "file": "martins2005.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0503346",
+      "sha256": "86fda37c1e52b419cb8bc4a92ef68b1f247af8fb5ad6b2cf13a6ea5ddef7966e",
+      "bytes": 574969
+    }
+  ],
+  "mason2001": [
+    {
+      "file": "mason2001.pdf",
+      "source_url": "https://doi.org/10.1086/323920",
+      "sha256": "963385497c38da25058c67df2ab2633687aeae4e81a341b661a9bab848e0b8bd",
+      "bytes": 79731
+    }
+  ],
+  "mccomas2015": [
+    {
+      "file": "mccomas2015.pdf",
+      "source_url": "https://doi.org/10.1088/0067-0049/220/2/22",
+      "sha256": "2642b5b04f6e1827ed6947b45c5f8e9bbb995230c937e05df7e6ea4f0d7f6808",
+      "bytes": 2281058
+    }
+  ],
+  "mcconnachie2012": [
+    {
+      "file": "mcconnachie2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1204.1562",
+      "sha256": "c5f8472d0e00565ea695522d1267041082786ecdc1e16e1e3d5f78f578274593",
+      "bytes": 1307476
+    }
+  ],
+  "mcconnachie2018": [
+    {
+      "file": "mcconnachie2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1810.08234",
+      "sha256": "8ed3bc28558863d7f26d6a4c8b28fdb3f36cc324d7fa38c3d018a0bfdadc98f8",
+      "bytes": 8862024
+    }
+  ],
+  "mcmillan": [
+    {
+      "file": "mcmillan.pdf",
+      "source_url": "https://arxiv.org/pdf/1608.00971",
+      "sha256": "e693abb0cfd9b6cf5f4e4780928fcd24ab16300db3eeba51dfe49904388ff099",
+      "bytes": 611252
+    }
+  ],
+  "merand2011": [
+    {
+      "file": "merand2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1106.2383",
+      "sha256": "2c1f749b21765cf95219533ae106862223ed61a7f4e2c6e99bb37539160acd3d",
+      "bytes": 1097675
+    }
+  ],
+  "montalto2021": [
+    {
+      "file": "montalto2021.pdf",
+      "source_url": "https://elib.dlr.de/144454/1/2108.13712.pdf",
+      "sha256": "47cf39ecb58ce81b414401f5811edf46bf293a36ee0dba4539d2362aac21be4c",
+      "bytes": 2519835
+    }
+  ],
+  "montegriffo2023": [
+    {
+      "file": "montegriffo2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2206.06215",
+      "sha256": "9c3d77df96c92c23ef31dff5c3637ad0871e2baf59564ca6e89d0efc16ca4b22",
+      "bytes": 21169617
+    }
+  ],
+  "morrisonstephenson": [
+    {
+      "file": "morrisonstephenson.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/2004JHA....35..327M",
+      "sha256": "88d3b3246005d7811e4c0373abed8180d3d99685b1083a18e4783004e2ce825e",
+      "bytes": 90969
+    }
+  ],
+  "mosenkov2021": [
+    {
+      "file": "mosenkov2021.pdf",
+      "source_url": "https://backoffice.biblio.ugent.be/download/8737340/8737342",
+      "sha256": "a7e627c4bdcdc6926569c4c44f47b04345110f87cb760d35a1e96b33a1bb28ed",
+      "bytes": 8252058
+    }
+  ],
+  "moustakas2023": [
+    {
+      "file": "moustakas2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2307.04888",
+      "sha256": "fcb797e17447b3a8622a55ae91f81f7ce8163ec2fe9d275ca4119dbe60ebec1d",
+      "bytes": 34011170
+    }
+  ],
+  "muterspaugh2010": [
+    {
+      "file": "muterspaugh2010.pdf",
+      "source_url": "https://arxiv.org/pdf/1010.4043",
+      "sha256": "270fe68a3bc9a9290ce3a2adf0f1825bb318d2618ffc4b6caf508581e05498c2",
+      "bytes": 250705
+    }
+  ],
+  "newburn1973": [
+    {
+      "file": "newburn1973.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1973SSRv...14..179N",
+      "sha256": "3217ace272f823d6eff2e5c6b6b1016997b251e71e2552d911062490d86b3f1d",
+      "bytes": 1247888
+    }
+  ],
+  "nicholson1995": [
+    {
+      "file": "nicholson1995.pdf",
+      "source_url": "https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N",
+      "sha256": "aa25b274571a462a27845a295e0321ee835cbf97fd8e468536cd783eb258d18d",
+      "bytes": 1940228
+    }
+  ],
+  "nimmo2017": [
+    {
+      "file": "nimmo2017.pdf",
+      "source_url": "https://arxiv.org/pdf/1603.00821",
+      "sha256": "6ae877e5e5d1d8d2ebf14f7556ef753aea8de4f69523a42ade3e9d0559e94444",
+      "bytes": 1623794
+    }
+  ],
+  "north2007": [
+    {
+      "file": "north2007.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0702375",
+      "sha256": "698a1d287963e1091a0a5952e7ffb0ec0f2269672b7a6c7d719fe091ec422cc7",
+      "bytes": 369501
+    }
+  ],
+  "pace2025": [
+    {
+      "file": "pace2025.pdf",
+      "source_url": "https://arxiv.org/pdf/2411.07424",
+      "sha256": "2cdd94693b32d67928891793944575e1c53e24b043a672ae0924b09cd6baaf21",
+      "bytes": 1584819
+    }
+  ],
+  "padoan1997": [
+    {
+      "file": "padoan1997.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9703110",
+      "sha256": "d13219cf9412759382ebb2d587bb6e325b5387769059261d777c7ed3373e2d4a",
+      "bytes": 281426
+    }
+  ],
+  "pecaut2013": [
+    {
+      "file": "pecaut2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1307.2657",
+      "sha256": "0c36ba619d64a228bcbcb2866f714c8eb3e11260bd41e11b36e4368e04898ea9",
+      "bytes": 1252676
+    }
+  ],
+  "pelgrims2020": [
+    {
+      "file": "pelgrims2020.pdf",
+      "source_url": "https://arxiv.org/pdf/1911.09691",
+      "sha256": "9d83b6e8e47e187d97adc3f41620c96b7a12e189d9e4752d9e6c12575046e1bb",
+      "bytes": 8049641
+    }
+  ],
+  "pietrzynski2019": [
+    {
+      "file": "pietrzynski2019.pdf",
+      "source_url": "https://arxiv.org/pdf/1903.08096",
+      "sha256": "493bc9f8f817a69560bc8fef8aedb75d311bc1d0f65a48ca10dd7370957407b5",
+      "bytes": 706606
+    }
+  ],
+  "piffl2014": [
+    {
+      "file": "piffl2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1309.4293",
+      "sha256": "4ea941269f9d11fe5244984a949532ba11874dcf551b652275251b86ddcf7147",
+      "bytes": 1363621
+    }
+  ],
+  "planck2020": [
+    {
+      "file": "planck2020.pdf",
+      "source_url": "https://arxiv.org/pdf/1807.06205",
+      "sha256": "dca932893b7d2724aa2b8d33170fc1b5682c425dd56fcd3c5d7b2098d377db5c",
+      "bytes": 24358959
+    }
+  ],
+  "pourbaix2016": [
+    {
+      "file": "pourbaix2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1601.01636",
+      "sha256": "7d7ae4a69341abf2cb9aa30bbd9f914c68d78ef0e3d95941041fe4ce3325a0be",
+      "bytes": 156000
+    }
+  ],
+  "prugniel": [
+    {
+      "file": "prugniel.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1997A%26A...321..111P",
+      "sha256": "25d11dfd60b4de584fdaea7e470329cc2c62fed96bb8aeb91081c81ed33f36aa",
+      "bytes": 262570
+    }
+  ],
+  "ramirez2012": [
+    {
+      "file": "ramirez2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1204.0828",
+      "sha256": "5c22774fc6868c8aab4aa47a93dcbf171d1215521f0ff53b79c41a5aa7541d0e",
+      "bytes": 421582
+    }
+  ],
+  "recioblanco2023": [
+    {
+      "file": "recioblanco2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2206.05541",
+      "sha256": "b30ca567cff481ddd3130617deb3bae6eba9741af0ce56394fe034f2c68237e8",
+      "bytes": 13483970
+    }
+  ],
+  "reid2019": [
+    {
+      "file": "reid2019.pdf",
+      "source_url": "https://arxiv.org/pdf/1910.03357",
+      "sha256": "07ef9a014fbd1d2fc83b0aebbbfa1d6be2170fad0e8ee0b52e987faddc4613a1",
+      "bytes": 1430563
+    }
+  ],
+  "rhode2013": [
+    {
+      "file": "rhode2013.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.0270",
+      "sha256": "2dca9a0f827d4eaea94ea8a9631fb86a9a615b87de84a40d3934674278979415",
+      "bytes": 1083860
+    }
+  ],
+  "riello2021": [
+    {
+      "file": "riello2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.01916",
+      "sha256": "b262c07af92a63d9454faeb30b1f7850b08e76719f818f8657690859b055295b",
+      "bytes": 20032919
+    }
+  ],
+  "roman1987": [
+    {
+      "file": "roman1987.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1987PASP...99..695R",
+      "sha256": "3d0ac3112bd43e1d7273385441d9b142bbdc6c917d8d384b5df7baec21d5f5cd",
+      "bytes": 541463
+    }
+  ],
+  "ross2020": [
+    {
+      "file": "ross2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2007.09000",
+      "sha256": "23dff68ae61ea8172dd8f7367b21663604d31008762d47efdded2b406e622d72",
+      "bytes": 1659317
+    }
+  ],
+  "samus2017": [
+    {
+      "file": "samus2017.pdf",
+      "source_url": "https://doi.org/10.1134/S1063772917010085",
+      "sha256": "d5216358e8add7178331d747e108af4996d8c75346871d8bb4f6acff107995fe",
+      "bytes": 686466
+    }
+  ],
+  "sander2012": [
+    {
+      "file": "sander2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1201.6354",
+      "sha256": "27ea7d26433bc65ca8a060bc4d021f336c53d191afbfc93d45d566c0c9487484",
+      "bytes": 764042
+    }
+  ],
+  "sanford1942": [
+    {
+      "file": "sanford1942.pdf",
+      "source_url": "https://doi.org/10.1086/144412",
+      "sha256": "82726517b1f9acba54b650510a8a9a7f0506f97b60f8a669b3eebe0bcf956c09",
+      "bytes": 251532
+    }
+  ],
+  "schaefer2016": [
+    {
+      "file": "schaefer2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1610.01984",
+      "sha256": "816e80a1f0d5a45733c32b626a1b86f364a7b3f01c8bb13bab0094632242b044",
+      "bytes": 1356143
+    }
+  ],
+  "schlegel1998": [
+    {
+      "file": "schlegel1998.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/9710327",
+      "sha256": "e2c383d16427224b10efc55e7fdadc8f24936c77b03bdd2c29df8bd44dea60f7",
+      "bytes": 770793
+    }
+  ],
+  "simondiaz2011": [
+    {
+      "file": "simondiaz2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1108.4622",
+      "sha256": "82cebfcdd99e069ab39827ac4dc9d220ac51d021cc554d3d6fce04ea2b599ad6",
+      "bytes": 258672
+    }
+  ],
+  "simondiaz2015": [
+    {
+      "file": "simondiaz2015.pdf",
+      "source_url": "https://real.mtak.hu/29063/1/Sergio_sigmaOri_ApJ.pdf.pdf",
+      "sha256": "9431ca82ba7f597d7d2ebc8215438d14a975443cf57ab60a111ebe03f89a7db6",
+      "bytes": 1133961
+    }
+  ],
+  "sion": [
+    {
+      "file": "sion.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1983ApJ...269..253S",
+      "sha256": "0587e290dee24e32c3796af354e79c0580390d767f56c49fade0794a4480ace2",
+      "bytes": 449830
+    }
+  ],
+  "smirnov2002": [
+    {
+      "file": "smirnov2002.pdf",
+      "source_url": "https://doi.org/10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2",
+      "sha256": "d4a6f285e3082c5f2d4358f91ab0dcc80debb400c4746956bc8071bde5c7700e",
+      "bytes": 597809
+    }
+  ],
+  "sneep2005": [
+    {
+      "file": "sneep2005.pdf",
+      "source_url": "https://doi.org/10.1016/j.jqsrt.2004.07.025",
+      "sha256": "484ad18eece29b98c8ca9aa49e6691f4a030045e8037667fab9836ce38299a3e",
+      "bytes": 839841
+    }
+  ],
+  "standish1992": [
+    {
+      "file": "standish1992.pdf",
+      "source_url": "https://web.archive.org/web/20201111194551/https://ssd.jpl.nasa.gov/txt/aprx_pos_planets.pdf",
+      "sha256": "e3c91d80e622c74d42fb9ecdb8cd8adc4fac22d1178c7257e9f4f8c62355843f",
+      "bytes": 69605
+    },
+    {
+      "file": "standish1992.page.txt",
+      "source_url": "https://ssd.jpl.nasa.gov/planets/approx_pos.html",
+      "sha256": "ce66bd0935180ed37ec579599e37a638428a866abc16bc0c1ab0bd58df1100cb",
+      "bytes": 11084
+    }
+  ],
+  "steinmetz2020": [
+    {
+      "file": "steinmetz2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2002.04377",
+      "sha256": "1014f3d184f76522399ff18d972d6104812021b77691d4811897d7b54d7d1435",
+      "bytes": 1550314
+    }
+  ],
+  "stelzer2003": [
+    {
+      "file": "stelzer2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0302570",
+      "sha256": "43a608f538f2d875af51c2bcc2f519f16b2520c2f682c03229ee5f72d79860ab",
+      "bytes": 435840
+    }
+  ],
+  "sternberg2003": [
+    {
+      "file": "sternberg2003.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0312232",
+      "sha256": "4041a5585cd98f0344a8168dd1aae370530fe533d10e7090896a1214a4aca267",
+      "bytes": 568267
+    }
+  ],
+  "strauss2002": [
+    {
+      "file": "strauss2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0206225",
+      "sha256": "99c824bc05873da149bf36d50316dcfc7cd65c352cc30ad48bed479948b0739e",
+      "bytes": 1129497
+    }
+  ],
+  "stromgren1939": [
+    {
+      "file": "stromgren1939.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1939ApJ....89..526S",
+      "sha256": "5125565d1d006e4c6ce131b8c3e9047159cea826e3239446ed31cad57483ff36",
+      "bytes": 1133000
+    }
+  ],
+  "subramanian2012": [
+    {
+      "file": "subramanian2012.pdf",
+      "source_url": "https://arxiv.org/pdf/1109.3980",
+      "sha256": "91985469cb1d6bd8803ea5340191be857065751891cc4a84e2550f847adfb706",
+      "bytes": 1069633
+    }
+  ],
+  "tempel2011": [
+    {
+      "file": "tempel2011.pdf",
+      "source_url": "https://arxiv.org/pdf/1012.3591",
+      "sha256": "425ce797df82d4ec3930c52f8d100e5379c9fa7e5435bf223f38d2efbb5ca9ed",
+      "bytes": 926068
+    }
+  ],
+  "tokovinin2018": [
+    {
+      "file": "tokovinin2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1712.04750",
+      "sha256": "29435c55f4628f5505b627e06c84b50fc86d9cfb5fb8ca6cfc914d46c34e6666",
+      "bytes": 637111
+    }
+  ],
+  "tomasko2008": [
+    {
+      "file": "tomasko2008.pdf",
+      "source_url": "https://doi.org/10.1016/j.pss.2007.11.019",
+      "sha256": "e745b6ccbaef2c3deb2c5e22228acf43b7c91bd49b61b737db0a7f30523bdcac",
+      "bytes": 5417409
+    }
+  ],
+  "torra2021": [
+    {
+      "file": "torra2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2012.06420",
+      "sha256": "4edaf6c44fb5e0af75a8da2ab778fbc16bac56e5e30bf06aff1b28d72fb4cdc0",
+      "bytes": 18540758
+    }
+  ],
+  "torres2002": [
+    {
+      "file": "torres2002.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0111167",
+      "sha256": "7cc051956e6e8fb90d9d53e87f9436146d2fd3257776f8a190f2796995282c9e",
+      "bytes": 919259
+    }
+  ],
+  "torres2022": [
+    {
+      "file": "torres2022.pdf",
+      "source_url": "https://arxiv.org/pdf/2210.16322",
+      "sha256": "ce78f555b41650c923101b6afea9c2dacf97dc8f13388b1e9c96879d5750ec90",
+      "bytes": 3132760
+    }
+  ],
+  "tully2023": [
+    {
+      "file": "tully2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2209.11238",
+      "sha256": "5562be287b6cadd3034a1e4c63a4488de16eb0591de794989506e068ec4477aa",
+      "bytes": 5103262
+    }
+  ],
+  "vaidman2025": [
+    {
+      "file": "vaidman2025.pdf",
+      "source_url": "https://doi.org/10.3390/universe11110359",
+      "sha256": "8ff172b2e0aedc86866edcad1bf2e1948e226a62fe2f5fc175a8a009df18c720",
+      "bytes": 350620
+    }
+  ],
+  "vallenari2023": [
+    {
+      "file": "vallenari2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2208.00211",
+      "sha256": "c59aec14d95cf790b1e6271a410e049fe3d8688b810954771d9f124a6e053bb3",
+      "bytes": 1324639
+    }
+  ],
+  "vanderkruit1986": [
+    {
+      "file": "vanderkruit1986.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1986A%26A...157..230V",
+      "sha256": "cf3532bf845bca9829c74e0d6ec22d8dd2987702feb11c0096029fac25140fe5",
+      "bytes": 423647
+    }
+  ],
+  "vandermarel2001b": [
+    {
+      "file": "vandermarel2001b.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0105340",
+      "sha256": "ad500f5aa12fc959a0189eb342ae03dab987f482bc955bd242a59424929ffb48",
+      "bytes": 787084
+    }
+  ],
+  "vandermarel2014": [
+    {
+      "file": "vandermarel2014.pdf",
+      "source_url": "https://arxiv.org/pdf/1305.4641",
+      "sha256": "ea11b071f48aae06d741dd94b4335ea8159b6f29b2c02b21b1c6b574ea08a253",
+      "bytes": 4785094
+    }
+  ],
+  "vanleeuwen2007": [
+    {
+      "file": "vanleeuwen2007.pdf",
+      "source_url": "https://arxiv.org/pdf/0708.1752",
+      "sha256": "5b91b118f1769dad68162e635eb6a4cce7b245951826cfab26ececf41d6a590d",
+      "bytes": 1882902
+    }
+  ],
+  "vazquez1994": [
+    {
+      "file": "vazquez1994.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1994ApJ...423..681V",
+      "sha256": "cb557faaa8166510ee32461b6a337ae509d80a00f70a10782b490e7018a34982",
+      "bytes": 268153
+    }
+  ],
+  "vondrak2011": [
+    {
+      "file": "vondrak2011.pdf",
+      "source_url": "https://doi.org/10.1051/0004-6361/201117274",
+      "sha256": "db762fd5723d745fdc0796cd5929653df105a368810e25e894f289509a16a8fd",
+      "bytes": 2321205
+    }
+  ],
+  "wainscoat1992": [
+    {
+      "file": "wainscoat1992.pdf",
+      "source_url": "https://articles.adsabs.harvard.edu/pdf/1992ApJS...83..111W",
+      "sha256": "43636046c7b664069cd9adf85f343b83783db65ba738bec309ac557d60898b58",
+      "bytes": 3518598
+    }
+  ],
+  "weingartner2001": [
+    {
+      "file": "weingartner2001.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0008146",
+      "sha256": "9acdfac75b37be6375ecbdfe1c7ae965b9206bf288b798716f26ad8a7918e525",
+      "bytes": 1014251
+    }
+  ],
+  "wenger2000": [
+    {
+      "file": "wenger2000.pdf",
+      "source_url": "https://arxiv.org/pdf/astro-ph/0002110",
+      "sha256": "8df399ca5a121a8717e74de4c41da5a21271081427d85b6dd173af10b7115b35",
+      "bytes": 474497
+    }
+  ],
+  "willmer2018": [
+    {
+      "file": "willmer2018.pdf",
+      "source_url": "https://arxiv.org/pdf/1804.07788",
+      "sha256": "3836b15f0abe96ca525a84726bda623c0f9417f0ea1163a2400cc97652664bd2",
+      "bytes": 634206
+    }
+  ],
+  "wilquet2009": [
+    {
+      "file": "wilquet2009.pdf",
+      "source_url": "https://doi.org/10.1029/2008JE003186",
+      "sha256": "5d7373403377cb62301a52003651d5670e07ce8befe99228c4bcdfda37619f28",
+      "bytes": 855100
+    }
+  ],
+  "wilson1953": [
+    {
+      "file": "wilson1953.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/III/21/ReadMe",
+      "sha256": "4d7ba1e14a2d444a28c6c139138fbef07917bcfb24c24ac55a3610e77f026ca3",
+      "bytes": 6567
+    }
+  ],
+  "wittkowski2016": [
+    {
+      "file": "wittkowski2016.pdf",
+      "source_url": "https://arxiv.org/pdf/1601.02368",
+      "sha256": "3be95300c99512d2834fe4ea4804ef1198c935a95e3265731f7d86702c1fcf1d",
+      "bytes": 1524923
+    }
+  ],
+  "wolff2009": [
+    {
+      "file": "wolff2009.pdf",
+      "source_url": "https://doi.org/10.1029/2009JE003350",
+      "sha256": "fd914449a8fc27f522f8eda8c4e9ed918055529ad39bfdc5517b83feb24de253",
+      "bytes": 473983
+    }
+  ],
+  "woodruff2008": [
+    {
+      "file": "woodruff2008.pdf",
+      "source_url": "https://arxiv.org/pdf/0709.3878",
+      "sha256": "aa10dd299413c50f24e21091fab33eff2b9bf5666ef51ebf572945e5b1dc8e2c",
+      "bytes": 1033455
+    }
+  ],
+  "woodruff2009": [
+    {
+      "file": "woodruff2009.pdf",
+      "source_url": "https://arxiv.org/pdf/0811.1642",
+      "sha256": "447dc35aeee5e5c032e86571b2c886d7769cef4d857d60257d239837b8e72ec7",
+      "bytes": 916766
+    }
+  ],
+  "wyman2013": [
+    {
+      "file": "wyman2013.pdf",
+      "source_url": "https://jcgt.org/published/0002/02/01/paper.pdf",
+      "sha256": "3ed4e42f0247d98f6a082a5c432d337f7bea23cf46792408f5161032a94d7256",
+      "bytes": 1271772
+    }
+  ],
+  "zacharias2012": [
+    {
+      "file": "zacharias2012.readme.txt",
+      "source_url": "https://cdsarc.cds.unistra.fr/ftp/I/322A/ReadMe",
+      "sha256": "89679e0e8c5037337ae1a6d498b128c4fc8c2e049c4fd3b72697119531975469",
+      "bytes": 19090
+    }
+  ],
+  "zhang2023": [
+    {
+      "file": "zhang2023.pdf",
+      "source_url": "https://arxiv.org/pdf/2303.03420",
+      "sha256": "f5ed13eefa97bb45a6c8643432f674eddc519fb84888fd6f9fb94b86a3b79cb9",
+      "bytes": 9104244
+    }
+  ],
+  "zucker2020": [
+    {
+      "file": "zucker2020.pdf",
+      "source_url": "https://arxiv.org/pdf/2001.00591",
+      "sha256": "91b98f98e7303ef9348a312ef459f0a62dde92ba0510f578fd728d5ce57e09cb",
+      "bytes": 2100882
+    }
+  ],
+  "zucker2021": [
+    {
+      "file": "zucker2021.pdf",
+      "source_url": "https://arxiv.org/pdf/2109.09765",
+      "sha256": "6744d706f6706543f625c31d6f5c6f301d0989cdc449db76980d62a96e4c4a3f",
+      "bytes": 9490940
+    }
+  ],
+  "zucker2022": [
+    {
+      "file": "zucker2022.pdf",
+      "source_url": "https://arxiv.org/pdf/2201.05124",
+      "sha256": "ed99e544a21d7fb2ab3ed0d7a48d8805ae54f4024bc04f4769d131a1abc6f460",
+      "bytes": 1628894
+    }
+  ]
 }

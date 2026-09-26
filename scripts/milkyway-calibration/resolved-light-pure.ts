@@ -10,7 +10,7 @@ import {
   type Vec3,
   bulgeDensity,
   discDensity,
-} from '../../src/client/milkyway/milkyway-column-pure';
+} from '../../src/client/milkyway/column/milkyway-column-pure';
 import {
   RESOLVED_HOLE_BANDS,
   RESOLVED_HOLE_DEX_PER_SHELL,

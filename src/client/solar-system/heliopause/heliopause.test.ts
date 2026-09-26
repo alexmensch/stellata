@@ -20,9 +20,10 @@ describe('HELIOPAUSE_APEX_SOL_PC', () => {
     expect(r).toBeCloseTo(122 * AU_PC, 12);
   });
 
-  it('points toward the ISM inflow nose (McComas+ 2015: ecliptic λ 255.7°, β 5.1°)', () => {
-    // Independent expected value: explicit Rx(ε) rotation of the
-    // published ecliptic inflow direction — not the quaternion path
+  it('points toward the ISM inflow nose (McComas 2015: ecliptic λ 255.7°, β 5.1°)', () => {
+    // The upwind antipode of McComas 2015 (/data/papers/index.md#mccomas2015)
+    // Table 3's flow direction (λ 75.7°, β −5.1°). Independent expected
+    // value: explicit Rx(ε) rotation of the published ecliptic inflow direction — not the quaternion path
     // the production code uses.
     const eps = 23.4392911 * Math.PI / 180;
     const lon = 255.7 * Math.PI / 180;

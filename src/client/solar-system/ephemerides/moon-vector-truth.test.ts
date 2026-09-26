@@ -57,7 +57,7 @@ function worstError(keep: (row: TruthRow) => boolean): { km: number; jdTt: numbe
 }
 
 describe('truncated ELP series', () => {
-  // Meeus, Astronomical Algorithms 2nd ed., example 47.a: 1992 April 12.0
+  // Meeus 1998 (/data/papers/index.md#meeus), example 47.a: 1992 April 12.0
   // TD. Pinning his own intermediate arguments as well as the result is
   // what localises a mistyped table row — a wrong coefficient in one of
   // the 120 periodic terms otherwise only shows as a small offset.

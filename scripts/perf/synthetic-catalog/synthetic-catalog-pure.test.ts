@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DISC_SCALE_HEIGHT_PC,
   SOL_GALACTOCENTRIC_PC,
-} from '../../../src/client/milkyway/milkyway-column-pure';
+} from '../../../src/client/milkyway/column/milkyway-column-pure';
 import {
   GAIA_CENSUS_BY_G,
   buildIntrinsicPool,

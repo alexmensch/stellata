@@ -60,14 +60,14 @@ Every table is a whole-table column slice pulled over CDS/VizieR TAP by
 verified against VizieR 2026-07-28. Licence: public domain via CDS for
 all four; cite the paper per table.
 
-- **`tyc2_hd.tsv`** ← VizieR `IV/25/tyc2_hd`. Fabricius, Makarov, Knude &
-  Wycoff 2002, *A&A* 386, 709 — the HD identifications for Tycho-2.
+- **`tyc2_hd.tsv`** ← VizieR `IV/25/tyc2_hd`.
+  [Fabricius 2002a](/data/papers/index.md#fabricius2002a) — the HD identifications for Tycho-2.
   Columns `tyc1`/`tyc2`/`tyc3` stay as three upstream integers; the
   `"1-381-1"` key the Gaia best-neighbour cross-walks use is composed at
   parse time, so the committed file remains a faithful slice. `n_hd` /
   `n_tyc` are the upstream ambiguity flags (394 rows with `n_hd` > 1,
   16 with `n_tyc` > 1).
-- **`cross_index.tsv`** ← VizieR `IV/27A/catalog`. Kostjuk N.D. 2002 —
+- **`cross_index.tsv`** ← VizieR `IV/27A/catalog`. [Kostjuk 2002](/data/papers/index.md#kostjuk2002) —
   the HD-DM-GC-HR-HIP-Bayer-Flamsteed cross index. The whole table is
   3,690 rows, every one Bayer- or Flamsteed-bearing (HR 8832 is absent) —
   a cross index for those designations, with no larger slice behind it;
@@ -87,19 +87,22 @@ all four; cite the paper per table.
   constellation the Bayer / Flamsteed designation belongs to — never the
   IAU-positional constellation the catalogue assigns per record
   ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
-- **`bsc5.tsv`** ← VizieR `V/50/catalog`. Hoffleit & Warren 1991, Bright
-  Star Catalogue 5th revised ed. Supplies HR ↔ HD (9,096 of 9,110 rows
-  carry an HD; the 14 HD-less entries are non-stellar — novae/SNe, four
-  clusters, M 31 — so none needs a route and no record carries one,
+- **`bsc5.tsv`** ← VizieR `V/50/catalog`. [Hoffleit 1991](/data/papers/index.md#hoffleit1991),
+  Bright Star Catalogue 5th revised ed. Supplies HR ↔ HD (9,096 of 9,110 rows
+  carry an HD; the 14 HD-less entries are non-stellar — by the table's own
+  names novae/SNe, four clusters and M 31, though the ReadMe (l. 35–37)
+  calls all 14 "novae or extragalactic objects" — so none needs a route and no record carries one,
   both pinned by `scripts/catalog/classic-ids/parity-ledger.test.ts`).
   `name` is the BSC's own designation string (`"3Alp Lyr"`), committed
   for the naming ladder and read by nothing today.
 - **`cns5.tsv`** ← VizieR `J/A+A/670/A19/cns5`, the 2023-12-13 corrected
-  version. Golovin, Reffert, Just, Jordan, Vani & Jahreiß 2023, *A&A*
-  670, A19 — the fifth Catalogue of Nearby Stars. Carries
+  version. [Golovin 2023](/data/papers/index.md#golovin2023) —
+  the fifth Catalogue of Nearby Stars. Carries
   GJ ↔ Gaia EDR3 source_id ↔ HIP directly plus component letters, which
-  is why it beats hand-rolling Gliese from V/70A (CNS3, not ingested).
-  5,237 of 5,909 rows carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
+  is why it beats hand-rolling [Gliese 1991](/data/papers/index.md#gliese1991) from V/70A (CNS3, which [`data/gliese/`](../gliese/README.md) ingests for its
+  photometry, not as a cross index).
+  The corrected table holds 5,909 rows (the paper counts 5,931 objects);
+  5,237 carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
   volume-limited to 25 pc** — see [Coverage](#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
 ### The astrometry re-slice

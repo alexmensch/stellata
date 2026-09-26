@@ -17,12 +17,8 @@ orb6_orbits.txt    ~1.1 MB, LFS. Sixth catalog of visual binary
 
 ## Provenance
 
-- **WDS citation**: Mason B. D., Wycoff G. L., Hartkopf W. I.,
-  Douglass G. G., Worley C. E. 2001, *AJ* 122, 3466.
-  DOI: [10.1086/323920](https://doi.org/10.1086/323920).
-- **ORB6 citation**: Hartkopf W. I., Mason B. D., Worley C. E.
-  2001, *AJ* 122, 3472.
-  DOI: [10.1086/323921](https://doi.org/10.1086/323921).
+- **WDS citation**: [Mason 2001](/data/papers/index.md#mason2001).
+- **ORB6 citation**: [Hartkopf 2001](/data/papers/index.md#hartkopf2001).
 - **Maintainers**: U.S. Naval Observatory (WDS) and Georgia State
   University (ORB6), continuously updated.
 - **Source URLs**: http://www.astro.gsu.edu/wds/ — `Webtextfiles/`

@@ -60,8 +60,9 @@ describe('getPlanetSystem', () => {
 });
 
 describe('solPositionsAt moon composition', () => {
-  // A fixed epoch inside the Standish window; the concrete instant is
-  // irrelevant — the assertions are frame-invariant distance bounds.
+  // A fixed epoch inside the Standish 1992 (/data/papers/index.md#standish1992)
+  // window; the concrete instant is irrelevant — the assertions are
+  // frame-invariant distance bounds.
   const T_UNIX = 1_700_000_000;
   const planetCount = PLANET_ORDER.length;
 
@@ -173,9 +174,9 @@ describe('SOL_PLANETS data', () => {
   });
 
   it('every body has a published geometric albedo in (0, 1)', () => {
-    // Mallama 2017 + NASA fact-sheet values; pinned here so an
-    // accidental edit doesn't silently drift the apparent-magnitude
-    // calculation.
+    // Mallama 2017 (/data/papers/index.md#mallama2017) + NASA fact-sheet
+    // values; pinned here so an accidental edit doesn't silently drift the
+    // apparent-magnitude calculation.
     const expected: Record<string, number> = {
       Mercury: 0.142, Venus: 0.689, Earth: 0.434, Mars: 0.170,
       Jupiter: 0.538, Saturn: 0.499, Uranus: 0.488, Neptune: 0.442,
@@ -189,12 +190,14 @@ describe('SOL_PLANETS data', () => {
   });
 
   it('every Mallama-published planet carries the matching phase coefficients', () => {
-    // Mallama 2017 publishes phase-angle polynomials for Mercury,
-    // Venus, Earth, Mars, Jupiter and Saturn. Uranus, Neptune and
-    // Pluto have no published phase polynomial — Uranus and Neptune
-    // because their max α from Earth is "negligible" so the paper
-    // models latitude/temporal effects instead, Pluto because the
-    // paper doesn't cover it. All three fall back to Lambertian.
+    // Mallama 2017 (/data/papers/index.md#mallama2017) publishes phase-angle
+    // polynomials for Mercury, Venus, Mars and Jupiter and a table for Earth;
+    // Saturn's globe curve is Mallama 2018
+    // (/data/papers/index.md#mallamahilton2018) Eq. 12. Uranus,
+    // Neptune and Pluto have no published phase polynomial — Uranus and Neptune
+    // because their max α from Earth is "negligible" so the paper models
+    // latitude/temporal effects instead, Pluto because the paper doesn't cover
+    // it. All three fall back to Lambertian.
     const expected: Record<string, unknown> = {
       Mercury: MERCURY_PHASE,
       Venus: VENUS_PHASE,
@@ -216,7 +219,8 @@ describe('SOL_PLANETS data', () => {
   it('Saturn is the one body whose rings carry system photometry', () => {
     // Uranus and Neptune ship ring strips but no photometry: their rings
     // are true-opacity charcoal threads, and the brightness-vs-
-    // inclination Mallama publishes for Uranus is polar methane
+    // inclination Mallama 2017 (/data/papers/index.md#mallama2017) publishes
+    // for Uranus is polar methane
     // depletion, not a ring term.
     const ringed = SOL_BODIES.filter((b) => b.rings);
     expect(ringed.map((b) => b.name)).toEqual(['Saturn', 'Uranus', 'Neptune']);
@@ -354,7 +358,8 @@ describe('atmosphere shells', () => {
   const atmoOf = (name: string) => SOL_BODIES.find((b) => b.name === name)!.atmosphere!;
 
   it('Earth carries the Bodhaine 1999 sea-level Rayleigh depths', () => {
-    // The published table IS the calibration (/docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources);
+    // Bodhaine 1999 (/data/papers/index.md#bodhaine1999) eq. 30. The published
+    // table IS the calibration (/docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources);
     // a drift back toward slider values is the
     // regression this pins against.
     expect(atmoOf('Earth').rayleighCoeff).toEqual([0.049, 0.097, 0.221]);
@@ -362,7 +367,8 @@ describe('atmosphere shells', () => {
 
   it('every Rayleigh row keeps the 1/λ⁴ blue-to-red shape', () => {
     // (650/450)⁴ = 4.35; dispersion of the refractive index steepens the real
-    // ratio slightly (Earth's Bodhaine value is 4.51).
+    // ratio slightly (Earth's Bodhaine 1999 (/data/papers/index.md#bodhaine1999)
+    // value is 4.50).
     for (const name of ['Venus', 'Earth', 'Mars', 'Titan']) {
       const [r, , b] = atmoOf(name).rayleighCoeff;
       expect(b / r).toBeGreaterThan(4.3);
@@ -380,7 +386,9 @@ describe('atmosphere shells', () => {
   });
 
   it('Mars aerosol absorption encodes the measured dust single-scattering albedo', () => {
-    // τ_a = τ_Mie·(1/ω̃ − 1) with ω̃ ≈ [0.97, 0.90, 0.75] (Wolff et al. 2009).
+    // τ_a = τ_Mie·(1/ω̃ − 1) with ω̃ ≈ [0.97, 0.90, 0.75] after Wolff 2009
+    // (/data/papers/index.md#wolff2009) Fig. 12; the blue 0.75 extrapolates below
+    // their bluest measured point, ≈ 0.77 at 440 nm.
     const mars = atmoOf('Mars');
     const omega = mars.absorbCoeff.map((a) => mars.mieCoeff / (mars.mieCoeff + a));
     expect(omega[0]).toBeCloseTo(0.97, 2);

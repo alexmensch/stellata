@@ -42,6 +42,11 @@ don't produce absurd sizes. White dwarfs are special-cased to 0.013 R☉ (absmag
 doesn't translate reliably for them) and Wolf-Rayets to their own
 Teff/BC ramps — gspphot models neither atmosphere, so a published
 Apsis value there is the companion's light or a misfit and is ignored.
+The WR Teff ramp departs from its sources: WN2 / WN5 / WN8 read 114 / 75 /
+51.75 kK against [Hamann 2006](/data/papers/index.md#hamann2006) Table 2's
+141 / 63 / 45 kK, and WC4–WC8 run 8–29 kK under
+[Sander 2012](/data/papers/index.md#sander2012) Table 6 — which to adopt is
+an open decision (`stellata-uadc.69`; the WC half is `stellata-uadc.69.14`).
 The famous-star radius and colour claims are pinned end-to-end against
 `public/catalog.bin` by `scripts/catalog/validate/known-stars.test.ts`
 (`primary_radius_rsun` / `primary_ci` corpus columns).
@@ -166,16 +171,19 @@ lookup table indexed by B-V. The table is precomputed at build time
 and bound to the star shader as a 256×1 `DataTexture`. Each entry
 folds three physically-grounded steps:
 
-1. **B-V → effective temperature** via the Ballesteros (2012) empirical
-   relation,
-   `T_eff = 4600 × (1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62))`,
-   calibrated against stars with both indices measured independently.
-   Accurate across A–K main-sequence, with reasonable extrapolation
-   into M and hot B.
+1. **B-V → effective temperature** via the
+   [Ballesteros 2012](/data/papers/index.md#ballesteros2012) relation,
+   `T_eff = 4600 × (1/(0.92(B-V) + 1.7) + 1/(0.92(B-V) + 0.62))` (eq. 14),
+   derived from black-body colour temperatures and reported as
+   comparable to published stellar B-V–T_eff relations. The paper
+   states no validity range in spectral type.
 2. **Planck × CIE 1931** — the Planck spectrum at T_eff is integrated
    against the CIE 1931 2° standard-observer colour-matching functions,
-   using the analytical multi-Gaussian fits in Wyman, Sloan & Shirley
-   (2013). The fits reproduce the tabulated CMFs to ~1%, well below
+   using the analytical multi-Gaussian fits in
+   [Wyman 2013](/data/papers/index.md#wyman2013). The fits reproduce the tabulated CMFs to
+   ~0.3–0.6 % RMS and ≤ ~2 % worst case — square roots of the multi-lobe fit's
+   mean and maximum squared errors (Table 2; the percentages are derived here,
+   the paper prints none) — well below
    the chromaticity threshold relevant for star rendering.
 3. **XYZ → sRGB D65** — the standard linear sRGB transform (IEC
    61966-2-1), peak-normalised per entry to preserve chroma, then
@@ -209,7 +217,7 @@ first match wins:
    bakes `Ballesteros(tempKelvin(class))` into `iCi` — the intrinsic
    class colour, so a class star renders its true hue rather than
    solar-yellow. Counted `ciSpectralDerived`.
-5. **White-dwarf Sion Teff** — `50400 / wd_subclass`, baked into `iCi`
+5. **White-dwarf [Sion 1983](/data/papers/index.md#sion) Teff** — `50400 / wd_subclass`, baked into `iCi`
    through the same `spectralClassCi` path.
 6. **Solar fallback** — `SOLAR_BV_FALLBACK` (0.65 ≈ 5778 K) baked into
    `iCi` when nothing else resolves.
@@ -217,7 +225,7 @@ first match wins:
 Tiers 3–6 are shared by the main-catalog read (`stars-parse.ts`) and
 companion promotion (`imputeCompanionCi`) through `spectralClassCi`.
 Where Apsis Teff is used (tiers 1–2), the shader recovers the LUT-input
-B-V via the analytic Ballesteros inverse so the LUT (keyed on B-V)
+B-V via an analytic inverse of [Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14 — this project's algebra, since the paper gives only B-V → Teff — so the LUT (keyed on B-V)
 samples the chromaticity expected for that Teff. Apsis Teff is the
 **intrinsic** parameter (Apsis fits include line-of-sight extinction
 `A0` explicitly), so the camera-position-dependent dust reddening
@@ -226,7 +234,7 @@ tiers are likewise intrinsic — the spectral-class / solar colours are
 never de-reddened at build, only observed B-V is.
 
 Dust reddening composes upstream of the LUT: the shader integrates A_V
-along the camera-to-star sightline via the Edenhofer 3D dust map and
+along the camera-to-star sightline via the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust map and
 shifts the LUT-input B-V by `E(B-V) = A_V / 3.1`. The LUT input is
 therefore the **observed** (dust-reddened) B-V from the camera's
 vantage, not the intrinsic value, so colour drifts physically as the
@@ -242,13 +250,10 @@ reach B-V ≈ +2.0–2.5 only after substantial line-of-sight extinction).
 
 Sources:
 
-- Ballesteros, F.J. (2012). New insights into black bodies.
-  *Europhysics Letters* 97, 34008.
-  https://doi.org/10.1209/0295-5075/97/34008
-- Wyman, C., Sloan, P.-P., Shirley, P. (2013). Simple analytic
-  approximations to the CIE XYZ color matching functions. *Journal of
-  Computer Graphics Techniques* 2(2), 1–11.
-  https://jcgt.org/published/0002/02/01/
+- [**Ballesteros 2012**](/data/papers/index.md#ballesteros2012) — the B-V →
+  effective-temperature relation.
+- [**Wyman 2013**](/data/papers/index.md#wyman2013) — the
+  analytic multi-Gaussian fits to the CIE XYZ colour-matching functions.
 - IEC 61966-2-1:1999. Multimedia systems and equipment — Colour
   measurement and management — Part 2-1: Colour management — Default
   RGB colour space — sRGB.
@@ -288,14 +293,25 @@ magnitude wrong, in two ways:
    *temperature* swing — cooling drives TiO band opacity up and shifts
    the Planck peak out of V — so its bolometric amplitude is only ~1 mag.
    Ascribing all of `L_V` to radius implied a modelled disc swing of
-   ~25–150× (before display compression) versus the ~1.1–1.5× the
-   physical radius actually varies (Woodruff et al. 2008 ApJ 673 418 /
-   2009 ApJ 691 1328; Ireland et al. 2004 MNRAS 352 318; Wittkowski et
-   al. 2016). χ Cyg's interferometric disc varies by up to ~40 %
-   (Lacour et al. 2009 ApJ 707 632).
+   ~25–150× (before display compression) versus the ~1.1–1.5× used
+   here for the physical radius. The measured swing: peak-to-peak
+   uniform-disc diameter amplitudes of 6–22 % from J to L for M-type
+   Miras, ~35 % in J for the S-type χ Cyg
+   ([Woodruff 2008](/data/papers/index.md#woodruff2008)); dynamic
+   models give ≈ ±30 % for the near-infrared continuum layers
+   ([Ireland 2004](/data/papers/index.md#ireland2004)), a max/min ratio of
+   ~1.7–1.85 against the 1.4 the Mira row ships (the per-type table
+   below). Which to adopt is an open decision, `stellata-uadc.69.19`. The apparent
+   diameter also depends strongly on wavelength — a factor ~2 in
+   uniform-disc size between 1 and 3 µm
+   ([Woodruff 2009](/data/papers/index.md#woodruff2009)) — because
+   extended molecular layers sit above the continuum radius
+   ([Wittkowski 2016](/data/papers/index.md#wittkowski2016)). χ Cyg's interferometric
+   disc varies by up to ~40 % ([Lacour 2009](/data/papers/index.md#lacour2009)).
 2. **Sign.** Interferometry places the **minimum** diameter near
-   **maximum** light (Lacour 2009: minimum at φ ≈ 0.94; diameter
-   anti-correlates with flux). The constant-T model had maximum radius
+   **maximum** light ([Lacour 2009](/data/papers/index.md#lacour2009): minimum at φ ≈ 0.94; diameter
+   anti-correlates with temperature and visual brightness, while the
+   bolometric flux follows the diameter). The constant-T model had maximum radius
    at maximum light — inverted. The negative exponent on `ρ^(…)` fixes
    this: the disc is smallest at φ = 0.
 

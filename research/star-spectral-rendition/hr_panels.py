@@ -7,6 +7,7 @@ Panels:
   (A) ciToColor(B-V)          — current shader piecewise gradient
   (B) blackbody @ Teff(spect) — T_TABLE MS lookup
   (C) blackbody @ Teff(B-V)   — Ballesteros 2012
+      (/data/papers/index.md#ballesteros2012)
 
 Reads research/star-spectral-rendition/per_star.tsv (produced by coverage.py).
 

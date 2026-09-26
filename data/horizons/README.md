@@ -4,7 +4,7 @@ Frozen geocentric astrometric RA/Dec for the eight major planets,
 Pluto, and the Sun at three fixed epochs, fetched once from the JPL
 Horizons API. Consumed only by the sky-truth regression corpus
 (`src/client/solar-system/ephemerides/sky-truth.test.ts`), which asserts the
-production Standish-ephemeris → ecliptic→ICRS chain lands each body
+production [Standish 1992](/data/papers/index.md#standish1992)-ephemeris → ecliptic→ICRS chain lands each body
 within tolerance of these positions. Never read at build time.
 
 A second table, `sub-observer-truth.tsv`, freezes geocentric
@@ -79,8 +79,9 @@ its own section below.
 
 Epochs: JD 2451545.0 (J2000.0, 2000-01-01 12:00 UT), JD 2461223.5
 (2026-07-02 00:00 UT), JD 2466154.5 (2040-01-01 00:00 UT) — past /
-present / near-future, all inside the Standish 1800–2050 primary fit
-window.
+present / near-future, all inside the 1800–2050 fit interval of
+[Standish 1992](/data/papers/index.md#standish1992)'s Table 1 as well as the
+3000 BC – 3000 AD interval of the Table 2a series the runtime evaluates.
 
 Astrometric (light-time-corrected) rather than geometric positions:
 the difference is bounded by ~0.03° (Mercury), far under the corpus
@@ -101,9 +102,12 @@ the element evaluation against these vectors directly — no clock, no
 ecliptic→ICRS rotation, no light-time. Three deliberate differences
 from the RA/Dec tables:
 
-- **Barycentre targets, not body centres** (`1`…`9`). Standish's
-  elements fit the barycentric orbits, and `earth` is the Earth/Moon
-  barycentre the ephemeris actually resolves. The body-vs-barycentre
+- **Barycentre targets, not body centres** (`1`…`9`). [Standish 1992](/data/papers/index.md#standish1992)
+  calls his output heliocentric coordinates and names only the Earth/Moon
+  barycentre; the barycentre targets are this project's reading, since
+  his elements were fit to JPL's DE ephemerides, whose outer-planet
+  entries are system barycentres. `earth` is the Earth/Moon barycentre
+  the ephemeris actually resolves. The body-vs-barycentre
   offset is ≤1.4e-5 AU (Pluto, the largest), three orders under the
   corpus tolerance.
 - **`jd_tdb`, and the consumer feeds it straight in** as

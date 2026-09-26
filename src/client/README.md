@@ -80,7 +80,7 @@ themselves.
   `galactic/` (galactic reference geometry + both coordinate
   spheres), `molecular-clouds/`, `chart-mode/`,
   `local-bubble/`, `constellation-figure/` — render layers.
-- `constellation-boundaries/` — the IAU (Delporte 1930) boundary arcs:
+- `constellation-boundaries/` — the IAU ([Delporte 1930](/data/papers/index.md#delporte1930)) boundary arcs:
   the B1875 edge set, the positional lookup answering which constellation
   any position falls in, and the chart-mode layer that draws the
   partition on a Sol-centred sphere.

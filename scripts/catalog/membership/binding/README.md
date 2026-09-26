@@ -105,7 +105,8 @@ source it has a row for, which no request can supply.
 Most of the fills are saturated stars whose source is a 2-parameter solution:
 sky position only, no parallax, no proper motion. Such a source satisfies
 neither the direction cascade (5p) nor the distance cascade (a parallax), and
-`GAIA_PHOTOMETRY_SATURATION_G` refuses the Riello V transform below G 4, so
+`GAIA_PHOTOMETRY_SATURATION_G` refuses the
+[Riello 2021](/data/papers/index.md#riello2021) V transform below G 4, so
 those records keep their Hipparcos-2 astrometry and printed V whatever goes
 in the identifier cell. The bright end is protected by evidence-keyed
 conditions; an empty cell is the worse way to express one.

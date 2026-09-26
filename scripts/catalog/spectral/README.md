@@ -10,7 +10,7 @@ keeps the SIMBAD namespace ladder this folder joins through.
 ```
 scripts/catalog/spectral/
   spectral-classify.ts (+ test)   The MK walker over SIMBAD `sp_type`, the
-                                  GSP-Spec letter enum, the `SpectralInfo`
+                                  ESP-ELS letter enum, the `SpectralInfo`
                                   shape both produce, and the hover-display
                                   string. No catalogue joins — pure parsing.
   spectral-resolve.ts (+ test)    The seven-tier resolver and the SIMBAD
@@ -45,8 +45,8 @@ priority chain:
 0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
    saturated stars whose SIMBAD entry is a component-lettered main_id
    carrying neither hip nor source_id, so both machine tiers below miss
-   (Castor: '* alf Gem A' A1.5IV). Mirrors the binaries pipeline's
-   `component_sptype_overrides.tsv` curated tier. Sol takes the same
+   (Castor: '* alf Gem A' A1.5IV+, curated as Gray 2003's A1.5 IV+). Mirrors the
+   binaries pipeline's `component_sptype_overrides.tsv` curated tier. Sol takes the same
    curated route via a proper-name special case in `stars-parse.ts`.
 1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
    from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
@@ -62,8 +62,8 @@ priority chain:
    Gaia source_id**, so tier 1's source_id key misses them. Without it the
    radius chain runs the cool unknown-Teff fallback against a bright absmag
    and inflates R ~4× (Algol 12.47 → 3.2 R☉; Alsephina 12.0 → 4.0).
-   SIMBAD's full MK is preferred over GSP-Spec's letter-only enum, so this
-   tier sits above GSP-Spec.
+   SIMBAD's full MK is preferred over the ESP-ELS letter-only enum, so this
+   tier sits above the ESP-ELS tier.
 
    It also carries the population tier 1 reaches and cannot answer: a
    source_id that resolves onto a component-lettered object with no
@@ -95,7 +95,7 @@ priority chain:
    count rather than as noise inside a 280k total. Read the per-tier figures
    there rather than restating them here, which is how the ones this section
    used to carry went stale.
-5. **Gaia DR3 GSP-Spec `spectraltype_esphs`** (a column on
+5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.
@@ -104,7 +104,7 @@ priority chain:
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
 classification (build-counts over the walked records: ~91.3% SIMBAD /
-~8.3% GSP-Spec / ~0.4% fallback); it is still used as a
+~8.3% ESP-ELS / ~0.4% fallback); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
@@ -119,7 +119,7 @@ R/R☉    = sqrt(L/L☉) × (T_sun/T)²
 ```
 
 `resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window);
-R ∝ T⁻², so the class-table fallback misized GSP-Spec-tier stars
+R ∝ T⁻², so the class-table fallback misized ESP-ELS-tier stars
 (letter-only, subclass defaulted to 5) by up to ~36% and unknown-class
 stars by up to ~2×. Tables are main-sequence values — cooler for
 giants/supergiants in reality — but the Mbol side of the equation
@@ -131,6 +131,15 @@ corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
 sizes. White dwarfs are special-cased to 0.013 R☉ (typical WD radius;
 absmag doesn't translate reliably for them); Wolf-Rayets ride their
 own Teff/BC ramps and ignore Apsis.
+
+### The absolute-magnitude tables
+
+`absmagFromSpectral` reads `MV_MS_TABLE` / `MV_GIANT_TABLE`, credited to
+[Cox 2000](/data/papers/index.md#cox2000) Sect. 15.3 (no copy held). The dwarf
+row departs from the online table of [Mamajek 2022](/data/papers/index.md#mamajek2022):
+of its anchors only M0V (8.80) agrees — A0V ships 0.65 against 0.99, B5V −1.2
+against −0.85, M5V 12.3 against 14.15, M9V 16.0 against 19.40. Which source to
+adopt is an open decision, `stellata-uadc.69.28`.
 
 ### A stated Gaia id the record contradicts ends the walk
 

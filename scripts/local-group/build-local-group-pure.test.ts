@@ -279,7 +279,6 @@ describe('mergeRowAndOverride — override-vs-LVDB precedence', () => {
     name: 'Test',
     axes: [100, 200, 300],
     orient: 'los',
-    refDoi: '10.1234/test',
   };
   it('override replaces axes + orient; LVDB position survives', () => {
     const row = makeRow({
@@ -314,7 +313,6 @@ describe('mergeRowAndOverride — override-vs-LVDB precedence', () => {
       name: 'LMC',
       axes: [4500, 4500, 1000],
       orient: 'disc:i=32,pa=135',
-      refDoi: '10.1088/0004-637X/781/2/121',
       profile: 'disc',
       rdPc: 1500,
     };
@@ -349,7 +347,9 @@ describe('displayName overrides + default type suffix', () => {
   });
   it('explicitly overrides the named non-dSph dwarfs that the regex misses', () => {
     expect(displayName('Leo A')).toBe('Leo A');
-    expect(displayName('Leo P')).toBe('Leo P');           // dIrr per Giovanelli 2013
+    // Gas-rich star-forming dwarf (Giovanelli 2013, /data/papers/index.md#giovanelli2013),
+    // classed irregular by Rhode 2013 (/data/papers/index.md#rhode2013).
+    expect(displayName('Leo P')).toBe('Leo P');
     expect(displayName('WLM')).toBe('WLM');
     expect(displayName('Phoenix')).toBe('Phoenix Dwarf');
     expect(displayName('Pegasus dIrr')).toBe('Pegasus Dwarf Irregular');
@@ -357,7 +357,7 @@ describe('displayName overrides + default type suffix', () => {
     expect(displayName('Sextans B')).toBe('Sextans B');
     expect(displayName('Sagittarius dIrr')).toBe('Sagittarius Dwarf Irregular');
     expect(displayName('Aquarius')).toBe('Aquarius Dwarf');     // DDO 210, dTr
-    expect(displayName('Antlia B')).toBe('Antlia B Dwarf');     // dTr per Hargis 2020
+    expect(displayName('Antlia B')).toBe('Antlia B Dwarf');     // dTr per Hargis 2020 (/data/papers/index.md#hargis2020)
   });
   it('Aquarius II / III remain dSph — only the bare "Aquarius" (DDO 210) is overridden', () => {
     expect(displayName('Aquarius II')).toBe('Aquarius II Dwarf Spheroidal');
@@ -394,7 +394,6 @@ describe('displayName overrides + default type suffix', () => {
       name: 'LMC',
       axes: [4500, 4500, 1000],
       orient: 'disc:i=32,pa=135',
-      refDoi: '10.1088/0004-637X/781/2/121',
       profile: 'disc',
       rdPc: 1500,
     };
@@ -449,7 +448,6 @@ describe('buildStandaloneOverride', () => {
     name: 'M31',
     axes: [15000, 15000, 500],
     orient: 'disc:i=77,pa=37',
-    refDoi: '10.3847/1538-4357/aae8e7',
     raDeg: 10.6847,
     decDeg: 41.2687,
     distanceKpc: 776,
@@ -490,7 +488,6 @@ describe('buildStandaloneOverride', () => {
       name: 'NoPos',
       axes: [1, 1, 1],
       orient: 'los',
-      refDoi: 'x',
     };
     expect(() => buildStandaloneOverride(noPos)).toThrow(/no LVDB match/);
   });
@@ -538,7 +535,7 @@ describe('buildEmission', () => {
     expect(e1.n).toBe(0.83);
     const e2 = buildEmission({
       ...base,
-      override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0', refDoi: 'x', nSersic: 1.5 },
+      override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0', nSersic: 1.5 },
     });
     if (e2.family !== 'sersic') throw new Error('expected sersic');
     expect(e2.n).toBe(1.5);
@@ -555,7 +552,6 @@ describe('buildEmission', () => {
       name: 'SMC',
       axes: [3730, 4960, 6000],
       orient: 'los',
-      refDoi: 'x',
     };
     const e = buildEmission({
       row: smc,
@@ -577,7 +573,7 @@ describe('buildEmission', () => {
     const lmc = makeRow({ name: 'LMC', distanceKpc: 49.59, apparentMagV: 0.4 });
     const e = buildEmission({
       row: lmc,
-      override: { name: 'LMC', axes: [4500, 4500, 1000], orient: 'disc:i=32,pa=135', refDoi: 'x', profile: 'disc', rdPc: 1500 },
+      override: { name: 'LMC', axes: [4500, 4500, 1000], orient: 'disc:i=32,pa=135', profile: 'disc', rdPc: 1500 },
       structuralAxes: [4500, 4500, 1000],
       orient: parseOrient('disc:i=32,pa=135'),
       distancePc: 49_590,
@@ -595,7 +591,7 @@ describe('buildEmission', () => {
     const e = buildEmission({
       row: null,
       override: {
-        name: 'M31', axes: [15000, 15000, 500], orient: 'disc:i=77,pa=37', refDoi: 'x',
+        name: 'M31', axes: [15000, 15000, 500], orient: 'disc:i=77,pa=37',
         mV: 3.44, profile: 'disc', rdPc: 5300, bulgeToTotal: 0.31, bulgeRePc: 1000, bulgeN: 2.2,
       },
       structuralAxes: [15000, 15000, 500],
@@ -635,7 +631,7 @@ describe('buildEmission', () => {
     expect(() =>
       buildEmission({
         row: makeRow({}),
-        override: { name: 'X', axes: [1, 1, 1], orient: 'disc:i=0,pa=0', refDoi: 'x', profile: 'disc' },
+        override: { name: 'X', axes: [1, 1, 1], orient: 'disc:i=0,pa=0', profile: 'disc' },
         structuralAxes: [1, 1, 1],
         orient: parseOrient('disc:i=0,pa=0'),
         distancePc: 1000,
@@ -648,7 +644,7 @@ describe('buildEmission', () => {
     expect(() =>
       buildEmission({
         row: makeRow({ rhalfPhysicalPc: null }),
-        override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0', refDoi: 'x' },
+        override: { name: 'X', axes: [300, 200, 200], orient: 'pa:0' },
         structuralAxes: [300, 200, 200],
         orient: parseOrient('pa:0'),
         distancePc: 1000,

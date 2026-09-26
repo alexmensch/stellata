@@ -1,7 +1,7 @@
 # Per-star dust extinction
 
 The camera→star V-band extinction read: one raymarch per star through
-the Edenhofer 3D dust texture, cached in a star-indexed render target
+the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust texture, cached in a star-indexed render target
 that the star vertex stage consumes with a single indexed read.
 
 The **cancellation invariant** below is the load-bearing content here —
@@ -106,9 +106,9 @@ only at-Sol residual is this march's quadrature.
 ## What the read produces
 
 Each star is dimmed by the V-band extinction A_V integrated through
-the Edenhofer 3D dust texture along the camera→star sightline, and
+the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust texture along the camera→star sightline, and
 reddened by E(B−V) = A_V/3.1 on the intrinsic LUT-input B–V. That input
-is the shader's two-tier routing: `Ballesteros(iTeffApsis)` when an
+is the shader's two-tier routing: `Ballesteros(iTeffApsis)` ([Ballesteros 2012](/data/papers/index.md#ballesteros2012)) when an
 Apsis Teff is present, else the baked intrinsic `iCi` (observed AT-HYG
 B–V or the spectral-class colour baked at build — see [Colour routing](../README.md#colour-routing)).
 Looking through dust dims and reddens stars behind

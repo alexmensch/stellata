@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Refresh data/tycho2/ — Tycho-2 (VizieR I/259) main catalogue and
-supplement 1, filtered to the TYCs our designation sources mention.
-Two TSVs, one per upstream table."""
+"""Refresh data/tycho2/ — Tycho-2 (Høg 2000, /data/papers/index.md#hog2000; VizieR I/259)
+main catalogue and supplement 1, filtered to the TYCs our designation sources
+mention. Two TSVs, one per upstream table."""
 
 from __future__ import annotations
 

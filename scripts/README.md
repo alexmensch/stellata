@@ -19,7 +19,9 @@ cross-script policy and pointers.
   (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
   `public/binaries.bin` (runtime artifact, one record per pair, for
   the `BinaryOrbitField` per-frame Kepler walk).
-- `distance-validation/` — Vaidman 2025 BA-supergiant cross-check.
+- `distance-validation/` —
+  [Vaidman 2025](/data/papers/index.md#vaidman2025) BA-supergiant
+  cross-check.
 - `refresh/` — Layer 2 external-catalogue refresh (manual,
   infrequent).
 - `probes/` — JPL Horizons fetch for the five Sun-escape deep-space
@@ -33,7 +35,8 @@ cross-script policy and pointers.
 - `colour/` — blackbody → sRGB LUT generator.
 - `milkyway-calibration/` — the resolved catalogue measured against the
   Milky Way band model off a built `catalog.bin`
-  (`pnpm run measure:band-resolved`): the Leinert cap rows and the
+  (`pnpm run measure:band-resolved`): the
+  [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
   `src/client/milkyway/calibration/`. Not part of the build.
 - `release/` — `deploy.yml`'s release step: plans and cuts one tag +
@@ -58,10 +61,13 @@ cross-script policy and pointers.
   cache's key.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
-  `local-bubble/` turns the Zucker 2022 inner-surface HEALPix map into
-  `public/local-bubble.bin` (shell mesh), cross-checked against the
-  Edenhofer dust grid; `cloud-surfaces/` traces per-cloud isosurface
-  meshes from the Edenhofer posterior (offline, LFS-committed).
+  `local-bubble/` turns the
+  [Pelgrims 2020](/data/papers/index.md#pelgrims2020) inner-surface
+  HEALPix map into `public/local-bubble.bin` (shell mesh), cross-checked
+  against the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust grid;
+  `cloud-surfaces/` traces per-cloud isosurface meshes from the
+  [Edenhofer 2024](/data/papers/index.md#edenhofer2024) posterior (offline,
+  LFS-committed).
 
 ## What ships
 
@@ -109,8 +115,10 @@ stamps make the copy safe — when the worktree's inputs match what the main
 checkout last built from, the dev server starts without rebuilding; when they
 differ (main checkout built from an older commit, a pipeline change on the
 branch), the stamp mismatches and the step rebuilds. Only stamped outputs
-belong in that list: an mtime-gated step reads any fresh copy as up to date,
-whatever it was built from. A worktree made any other way
+belong in that list, plus the private paper-store link
+([The PDFs are private](/data/papers/README.md#the-pdfs-are-private)): an
+mtime-gated step reads any fresh copy as up to date, whatever it was built
+from. A worktree made any other way
 (`git worktree add`) builds from scratch.
 
 `pnpm run dev` preprocesses and then serves, so starting the worktree's dev

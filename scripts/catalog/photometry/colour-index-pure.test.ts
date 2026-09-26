@@ -50,7 +50,8 @@ describe('gaiaBMinusV', () => {
     expect(gaiaBMinusV(atColour(x))).toBeCloseTo(rielloGMinusV(x) - gaiaGMinusB(x), 12);
   });
 
-  // Solar BP−RP is 0.82 (Casagrande & VandenBerg 2018); the true solar B−V is
+  // Solar BP−RP is 0.82 (Casagrande 2018
+  // (/data/papers/index.md#casagrande2018)); the true solar B−V is
   // 0.65, so this pins both the sign of the difference and the ~0.05 mag
   // offset the |Δci| distribution in README.md#the-ci-cascade reports.
   it('lands near the solar B−V at the solar colour', () => {

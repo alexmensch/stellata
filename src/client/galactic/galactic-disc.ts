@@ -12,7 +12,7 @@ import {
   BULGE_RADIUS_PC,
   DISC_HALF_THICKNESS_PC,
   DISC_RADIUS_PC,
-} from '../milkyway/milkyway-column-pure';
+} from '../milkyway/column/milkyway-column-pure';
 
 // Every extent here is the matching Milky Way proxy-mesh envelope, taken
 // by import rather than restated: the wireframe's job is to outline the

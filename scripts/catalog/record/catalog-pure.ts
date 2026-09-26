@@ -1098,16 +1098,17 @@ export const SOL_PROPER_NAME = 'Sol';
  *
  *  4.85 is the value the AT-HYG-driven build carried, kept so the swap does
  *  not move the Stefan-Boltzmann chain's calibration point (known-stars.tsv
- *  pins Sol's radius at 1.035 R☉ against it). The IAU 2015 Resolution B2
- *  nominal value is 4.83; adopting it is a deliberate recalibration, not a
- *  drift fix, and moves the pinned radius. */
+ *  pins Sol's radius at 1.035 R☉ against it). Willmer 2018
+ *  (/data/papers/index.md#willmer2018) gives M_V = 4.81 (Vega); adopting it
+ *  is a deliberate recalibration, not a drift fix, and moves the pinned
+ *  radius. */
 export const SOL_ABSOLUTE_V_MAGNITUDE = 4.85;
 
 /** Sol's apparent V, curated for the same reason its direction is: it carries
  *  no identifier any cascade can key on, so every machine tier misses it and
- *  V is a membership gate. Cox 2000, *Allen's Astrophysical Quantities* 4th
- *  ed. Sect. 12 — the published value, not the printed cell the retired
- *  AT-HYG-driven build happened to carry.
+ *  V is a membership gate. Cox 2000 (/data/papers/index.md#cox2000) Sect. 12
+ *  — the published value, not the printed cell the retired AT-HYG-driven
+ *  build happened to carry.
  *
  *  It reaches no shipped byte: absmag takes `SOL_ABSOLUTE_V_MAGNITUDE` above
  *  rather than deriving from this, because Sol sits at distance zero. */
@@ -1288,7 +1289,8 @@ export const OPTICAL_DOUBLE_MIN_SEP_PC = 1.0;
 
 // Fields isOpticalDoublePrimary reads. Star satisfies this structurally.
 /** Whether a record's distance rests on a Gaia parallax, raw or through the
- *  Bailer-Jones posterior over it. The optical-double suppression needs it
+ *  Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) posterior
+ *  over it. The optical-double suppression needs it
  *  because a separation is only trustworthy when both stars' distances are: a
  *  Hipparcos or courier parallax carries error bars wide enough to put a bound
  *  pair kiloparsecs apart, which reads as an optical double. */
@@ -1681,10 +1683,12 @@ export function resolveGaiaSourceId(
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
  *  numeric parse would silently corrupt the join key.
  *
- *  Per Bailer-Jones 2021, `r_med_photogeo` is preferred when available
+ *  Per Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021),
+ *  `r_med_photogeo` is preferred when available
  *  (combines the parallax likelihood with a colour-and-magnitude
  *  population prior); `r_med_geo` is the geometric-only fallback for
- *  rows without photogeo (no usable G or BP–RP). */
+ *  rows without photogeo (no usable G or BP–RP, or a colour outside the
+ *  prior model's range). */
 export function parseBailerJonesTsv(text: string): Map<string, number> {
   const out = new Map<string, number>();
   const lines = text.split(/\r?\n/);
@@ -1717,9 +1721,10 @@ export function parseBailerJonesTsv(text: string): Map<string, number> {
  *  float columns (gspphot ∪ gspspec) are `number | null` — gspphot and
  *  gspspec are independent solutions and either or both may be absent
  *  for a given source_id. NaN-when-empty decoding lifts to the binary
- *  layer via `NO_APSIS`. `spectraltypeEsphs` is the GSP-Spec spectral-type
- *  enum (Recio-Blanco+23): one of "O", "B", "A", "F", "G", "K", "M",
- *  "CSTAR", or "unknown"; consumed by the spectral resolver as the
+ *  layer via `NO_APSIS`. `spectraltypeEsphs` is the ESP-ELS spectral-type
+ *  enum: one of "O", "B", "A", "F", "G", "K", "M", "CSTAR" (Creevey 2023
+ *  (/data/papers/index.md#creevey2023)), or the archive column's own
+ *  "unknown"; consumed by the spectral resolver as the
  *  second tier after SIMBAD sp_type. */
 export interface ApsisRow {
   teffGspphot: number | null;
@@ -1823,13 +1828,15 @@ export function applyBailerJonesOverride(
 // ---- LMC kinematic distance override -------------------------------------
 
 // LMC kinematic parameters. References:
-//   - Pietrzyński et al. 2019 (Nature 567, 200): eclipsing-binary distance
-//     49.594 ± 0.55 kpc.
-//   - van der Marel & Kallivayalil 2014 (ApJ 781, 121): PM dynamical centre
-//     (RA, Dec) = (78.76°, −69.19°) = (05h 15m 02s, −69° 11′ 24″) — their
-//     PM-field fit, not the NED/SIMBAD photometric centre (05h 23m 34s,
-//     −69° 45′). Same paper's centre-of-mass bulk PM: μ_α* = +1.910 ± 0.020,
-//     μ_δ = +0.229 ± 0.047 mas/yr. The gate centre below (1.85, 0.20) is a
+//   - Pietrzyński 2019 (/data/papers/index.md#pietrzynski2019):
+//     eclipsing-binary distance 49.59 kpc, ± 0.09 statistical ± 0.54
+//     systematic (shipped as 49.594, an open decision:
+//     /scripts/catalog/distance/README.md#layer-2--lmc-kinematic-override).
+//   - van der Marel 2014 (/data/papers/index.md#vandermarel2014):
+//     PM dynamical centre (RA, Dec) = (78.76°, −69.19°)
+//     = (05h 15m 02s, −69° 11′ 24″) — their PM-field fit, not the NED/SIMBAD
+//     photometric centre (05h 23m 34s, −69° 45′). Same paper's centre-of-mass
+//     bulk PM: μ_α* = +1.910 ± 0.020, μ_δ = +0.229 ± 0.047 mas/yr. The gate centre below (1.85, 0.20) is a
 //     rounded working value toward the field-mean (centroid) PM — the
 //     COM−gate difference (≤ 0.07 mas/yr) and the disc's internal-rotation
 //     spread (±0.3 mas/yr) both sit well inside the ±0.5 tolerance.

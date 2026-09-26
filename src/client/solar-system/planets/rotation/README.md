@@ -35,7 +35,7 @@ worth most of a hemisphere at the clock's bounds:
   from the node of the equator of date on the ICRS equator, and that node
   precesses non-linearly. `earthSpinDeg` therefore composes W as
   *node→equinox arc* + *Greenwich mean sidereal time*, the first straight
-  off the Vondrák precession frames and the second as ERA plus the IAU
+  off the [Vondrák 2011](/data/papers/index.md#vondrak2011) precession frames and the second as ERA plus the IAU
   2006 precession-in-right-ascension polynomial.
 - **Its pole rate is not linear either.** `poleRaDegPerCty: -0.641` is a
   chord across a 25 772-yr circle of 23.4° radius; over 3000 yr it misses
@@ -65,7 +65,10 @@ Horizons' apparent-quantity convention.
 pole RA/Dec (ICRS) + linear century rates, and prime-meridian angle
 `W(t) = W0 + Ẇ·d` — the main linear terms from the IAU WG on
 Cartographic Coordinates and Rotational Elements 2015 report
-(Archinal et al. 2018), as distributed in NAIF `pck00011.tpc`, plus the
+([Archinal 2018](/data/papers/index.md#archinal2018)) — Earth's and
+the Moon's from the 2009 report
+([Archinal 2011](/data/papers/index.md#archinal2011)), which the 2015
+one drops — as distributed in NAIF `pck00011.tpc`, plus the
 periodic terms above the visibility bar ([Librations](#librations)). Mars is the one
 body whose linear row is incomplete WITHOUT its ~71-kyr slow terms
 (1.55° of pole Dec, 0.58° of W): those linearise cleanly at J2000 and are

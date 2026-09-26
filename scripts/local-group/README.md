@@ -19,7 +19,8 @@ override rows; optional emission columns are resolved by header name.
 
 Reads two committed source files under `data/local-group/`:
 
-- `lvdb-snapshot.csv` — Pace et al. 2025 LVDB dwarf_all table (CC0).
+- `lvdb-snapshot.csv` — [Pace 2025](/data/papers/index.md#pace2025)
+  LVDB dwarf_all table (CC0).
 - `overrides.tsv` — hand-curated structural detail for LMC, SMC,
   Sagittarius dSph, M 32, NGC 205; plus standalone-position rows for
   M31 and M33 which LVDB's dwarf_all table excludes.

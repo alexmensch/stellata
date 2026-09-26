@@ -52,6 +52,9 @@ cadence-pulsation-bound.test.ts
                          buildPulsationSuppressMask rather than
                          re-deriving the eclipser rule. Self-skips when
                          public/ is unbuilt.
+citation-index.test.ts   The citation index, the tree's citations and the
+                         private paper store agree. The checks are listed
+                         once, in /data/papers/README.md#what-enforces-it.
 code-comment-rules.test.ts
                          Comment-hygiene scanner over `*.ts` / `*.js` /
                          `*.py` under src/ and scripts/ (/AGENTS.md#code-comments--what-ci-enforces-here):
@@ -64,7 +67,8 @@ commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
 doc-pointer-resolution.test.ts
                          Every `<path>.md#<slug>` pointer in a
-                         git-listed .ts .md .py .sh file names a heading
+                         git-listed file of a kind `SCANNED_KINDS`
+                         (doc-pointer-pure.ts) lists names a heading
                          or anchor that exists — the codebase's wiki
                          links, checked. Grammar, scope and resolution:
                          README.md#doc-pointer-resolution.
@@ -227,8 +231,13 @@ webgpu-import-boundary.test.ts
                          outside src/client/webgpu/, so the ~1 MB second
                          copy of three's core stays out of the entry
                          bundle (/src/client/webgpu/README.md#import-boundary--nothing-webgpu-in-the-entry-bundle).
-doc-pointer-pure.ts      Not a test — extraction, anchor collection and
-                         path resolution for doc-pointer-resolution.test.ts.
+doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
+                         resolution and the scanned corpus, shared by
+                         doc-pointer-resolution.test.ts and
+                         citation-index.test.ts.
+citation-index-pure.ts   Not a test — parsing of data/papers/index.md
+                         entries and manifest.json pins, for
+                         citation-index.test.ts.
 ```
 
 The recursive file walk the scanners above share lives in

@@ -283,9 +283,9 @@ export interface ReadStarsOptions {
   /** Printed Johnson B−V per HIP — the ci cascade's printed tier, and the
    *  only measured colour reaching rows with no Gaia source at all. */
   hipBv?: Map<number, number>;
-  /** Printed Gliese V/70A values keyed on the record's own `gl` — the V
-   *  cascade's tier below Tycho-2, and the only one reaching the GJ-only
-   *  cohort. Absent parks those rows. */
+  /** Printed Gliese 1991 (/data/papers/index.md#gliese1991) V/70A
+   *  values keyed on the record's own `gl` — the V cascade's tier below
+   *  Tycho-2, and the only one reaching the GJ-only cohort. Absent parks those rows. */
   gliese?: GlieseIndex;
   /** Anchor-grade parallaxes of each record's own bound siblings — the
    *  cascade's tier below SIMBAD. Absent parks the rows it would have
@@ -344,8 +344,9 @@ export function readStars(
     /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
      *  fractional error, so the result is biased. They ship — no second source
      *  reaches them — and this count is how they stay visible for a Gaia DR4
-     *  revisit. Bailer-Jones rows are excluded: there the posterior, not the
-     *  inversion, handles the low-S/N case. */
+     *  revisit. Bailer-Jones 2021
+     *  (/data/papers/index.md#bailerjones2021) rows are excluded: there the
+     *  posterior, not the inversion, handles the low-S/N case. */
     distLowPrecisionParallax: number;
     distVia: Record<DistVia, number>;
     lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
@@ -357,7 +358,9 @@ export function readStars(
     lmcOverriddenByDistVia: Record<DistVia, number>;
     directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
     vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
-    vTycho2OutsideBtVtRange: number; // tycho2-tier rows outside SP-1200's published BT−VT range
+    // tycho2-tier rows outside BT−VT ∈ [−0.25, 2.0], wider than ESA 1997
+    // (/data/papers/index.md#esa1997) SP-1200's published −0.2 … 1.8
+    vTycho2OutsideBtVtRange: number;
     directionTycho2FromIcrs: number;    // tycho2-tier rows placed at the J2000 cell, no mean solution
     directionTycho2Photocentre: number; // tycho2-tier rows whose mean solution is a double's photocentre
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
@@ -377,7 +380,7 @@ export function readStars(
     spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
     spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
     spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found that row
-    spectralByGspspec: number;     // rows that fell through to Gaia DR3 GSP-Spec spectraltype_esphs
+    spectralByGspspec: number;     // rows that fell through to Gaia DR3 ESP-ELS spectraltype_esphs
     spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
@@ -510,7 +513,8 @@ export function readStars(
       continue;
     }
 
-    // V through the Riello transform → printed HIP V → Tycho-2's reduced VT →
+    // V through the Riello 2021 (/data/papers/index.md#riello2021)
+    // transform → printed HIP V → Tycho-2's reduced VT →
     // Gliese's printed Vmag → curated. See ../photometry/README.md. A row no
     // tier lights parks like one no tier places: a record needs both.
     const tychoV = tycho2VMagnitude(
@@ -566,7 +570,8 @@ export function readStars(
     const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr;
     const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr;
 
-    // Bailer-Jones supersedes the raw inversion wherever the parallax the
+    // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
+    // supersedes the raw inversion wherever the parallax the
     // cascade settled on is Gaia's own — its Bayesian posterior treats exactly
     // that measurement, and a non-Gaia parallax must not be regressed onto
     // B-J's Galactic-density prior tail (~10–40 kpc). A null parallax here is
@@ -615,7 +620,8 @@ export function readStars(
     // sums to the record count.
     distViaCounts[distVia]++;
     // Counted against the SHIPPED tier, not the resolved parallax: where
-    // Bailer-Jones supersedes the inversion its posterior is what handles a
+    // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
+    // supersedes the inversion its posterior is what handles a
     // low-S/N parallax, so flagging those rows would report a bias the record
     // does not carry. The LMC snap replaces the distance outright.
     if (plxRes.lowPrecision && distVia === plxRes.via) distLowPrecisionParallax++;

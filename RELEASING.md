@@ -543,7 +543,8 @@ action. Archiving starts at v3.44.2, the release that minted both DOIs.
 ## Catalogue refresh policy
 
 External catalogues (AT-HYG, Gaia DR3 cross-walks + 5p astrometry +
-NSS + Apsis, Bailer-Jones DR3, Hipparcos-2 van Leeuwen, SIMBAD pulls)
+NSS + Apsis, [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) DR3,
+Hipparcos-2 [van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007), SIMBAD pulls)
 are refreshed by manual `pnpm run refresh:*` invocations, **not** by
 `pnpm run build` or the deploy workflow. The build reads the committed
 files under `data/<source>/` and never hits the network — see

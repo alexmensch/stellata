@@ -19,12 +19,12 @@ consumers and refresh cadences differ.
 
 ## `hip_ccdm.tsv`
 
-- **Source**: VizieR `I/239/hip_main` (Hipparcos main catalogue, ESA
-  SP-1200, 1997). Three-column slice
+- **Source**: VizieR `I/239/hip_main` (Hipparcos main catalogue,
+  [ESA 1997](/data/papers/index.md#esa1997)). Three-column slice
   (`-out=HIP,CCDM,MultFlag`).
 - **Licence**: Public domain via CDS.
 - **CCDM**: Catalog of the Components of Double and Multiple stars
-  (Dommanget & Nys 1994) — the curated pre-WDS register of visual
+  ([Dommanget 1994](/data/papers/index.md#dommanget1994)) — the curated pre-WDS register of visual
   doubles. Each Hipparcos row's `CCDM` column carries the
   cross-reference into that catalogue.
 - **MultFlag gate**: a star is flagged as a visual double when
@@ -54,14 +54,14 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   rewrite an LFS object and a pinned count key to no consumer's benefit,
   so the name stays and this line is the pointer.
 - **Licence**: Public domain via CDS.
-- **Citation**: ESA 1997, *The Hipparcos and Tycho Catalogues*, ESA SP-1200.
+- **Citation**: [ESA 1997](/data/papers/index.md#esa1997), *The Hipparcos and Tycho Catalogues*.
   `Vmag` and `B-V` are Johnson on the catalogue's own photometric system;
   for a resolved double both are the entry's combined value, which is what
   makes this tier a system blend where a Gaia-derived V is not
   ([Which tiers give a system blend](/scripts/catalog/photometry/README.md#which-tiers-give-a-system-blend--vtierissystemblend)).
 - **Role**: the printed tier of two cascades ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
   `Vmag` serves the V-magnitude cascade for rows whose Gaia photometry is
-  missing or outside the Riello+ 2021 transform's validity range — 2,174
+  missing or outside the [Riello 2021](/data/papers/index.md#riello2021) transform's validity range — 2,174
   records in the current build. `B-V` serves the ci cascade below the
   synthetic-photometry tier, and is the only **measured** colour reaching
   the rows with no Gaia source at all.
@@ -79,8 +79,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 
 ## `hip2_van_leeuwen.tsv`
 
-- **Citation**: van Leeuwen F. 2007, *A&A* 474, 653.
-  DOI: [10.1051/0004-6361:20078357](https://doi.org/10.1051/0004-6361:20078357).
+- **Citation**: [van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007).
 - **VizieR catalog**: `I/311/hip2`.
 - **Licence**: Public domain via CDS.
 - **Role**: long-baseline (≈1991.25 epoch) astrometry that complements

@@ -104,9 +104,9 @@ def parse_spectral_type(raw: str | None) -> ParsedSpect | None:
         return ParsedSpect(classIdx=cls, subclass=sub, lumClass=1, isWhiteDwarf=False)
 
     # Strip a leading composite k/h/m tag so "kA5hA8mF1(III)" lands on
-    # the m-body ("F1") for the first-letter gate below; per Pecaut &
-    # Mamajek the metallic-line type is closest to the effective
-    # surface temperature.
+    # the m-body ("F1") for the first-letter gate below, taking the
+    # metallic-line type as the one closest to the effective surface
+    # temperature.
     composite_iter = list(re.finditer(r"([khm])([OBAFGKM])(\d(?:\.\d)?)?", s))
     if composite_iter:
         m_body = h_body = k_body = ""
@@ -153,13 +153,15 @@ def parse_spectral_type(raw: str | None) -> ParsedSpect | None:
 
 
 # Each row is mass (M_sun) at subclass 0,1,...,9 for that spectral
-# class — entries cover Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013 with
-# linear interpolation between published anchors. Rows are indexed by
+# class — entries cover Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.2
+# with linear interpolation between published anchors. Rows are indexed by
 # class index (0=O .. 6=M). Class 7 (C/S/WR) and 8 (unknown) fall back
 # to a single representative mass at the bottom.
 #
-# Main-sequence (V) anchors — Pecaut & Mamajek 2013, Table 5, with the
-# Cox high-mass O/B end ramping to canonical zero-age MS values.
+# Main-sequence (V) anchors are not the dwarf-table masses of Mamajek 2022
+# (/data/papers/index.md#mamajek2022): A0V ships 2.9 against its 2.18 M_sun,
+# K5V 0.65 against 0.70. Which source to adopt is open — see
+# /scripts/binaries/README.md#stage-6--multiplestsv-emit.
 _MS_MASS: tuple[tuple[float, ...], ...] = (
     # O0 .. O9
     (60.0, 50.0, 40.0, 32.0, 28.0, 25.0, 22.0, 20.0, 18.0, 17.0),
@@ -178,7 +180,7 @@ _MS_MASS: tuple[tuple[float, ...], ...] = (
 )
 
 
-# Giant (III) anchors — Cox 2000 Table 15.7; less subclass dependence
+# Giant (III) anchors — Cox 2000 (/data/papers/index.md#cox2000) Table 15.7; less subclass dependence
 # than MS so the rows are flatter.
 _III_MASS: tuple[tuple[float, ...], ...] = (
     (40.0,) * 10,                                      # O III — extrapolated
@@ -192,7 +194,7 @@ _III_MASS: tuple[tuple[float, ...], ...] = (
 
 
 # Subgiant (IV) interpolation between the MS and III rows. The giant
-# bias reflects Cox 2000 Sect. 15.7 evolutionary tracks (a subgiant is
+# bias reflects Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.7 evolutionary tracks (a subgiant is
 # post-MS, closer to III than to V on the HRD); the F5IV output is
 # pinned against Procyon A's measured mass in
 # MassFromSpectralClassTests.
@@ -207,7 +209,7 @@ def _iv_mass(class_idx: int, sub: int) -> float:
     )
 
 
-# Supergiant (I, Ia, Iab, Ib) — Cox 2000 Table 15.7. Masses are much
+# Supergiant (I, Ia, Iab, Ib) — Cox 2000 (/data/papers/index.md#cox2000) Table 15.7. Masses are much
 # larger and span a wider range; we approximate Ia ~ Iab ~ Ib with one
 # row since the per-luminosity-tier resolution doesn't beat the input
 # spectral-type granularity.
@@ -222,7 +224,9 @@ _I_MASS: tuple[tuple[float, ...], ...] = (
 )
 
 
-# Mean solar-neighbourhood WD mass (Kepler+ 2007, Kilic+ 2020). True
+# Solar-neighbourhood WD mass: the DA mean 0.593 of Kepler 2007
+# (/data/papers/index.md#kepler2007) and the narrow distribution peak at 0.59
+# of Kilic 2020 (/data/papers/index.md#kilic2020). True
 # range is 0.3 - 1.4; without a cooling-track model we cannot do
 # better from sp_type alone.
 WD_MASS_DEFAULT = 0.6

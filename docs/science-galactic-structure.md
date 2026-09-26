@@ -15,6 +15,7 @@ used wherever the code needs to anchor in galactic geometry:
   galactic-pole and galactic-centre angles, with explicit
   re-orthogonalisation to suppress float drift.
 - `GALACTIC_CENTRE_PC` — a `Vector3` placing Sgr A* at R₀ = 8.122 kpc
+  ([GRAVITY 2018](/data/papers/index.md#gravity2018))
   along the galactic +X axis (then rotated into ICRS by `GAL_TO_ICRS`).
 
 These are reused by:
@@ -29,11 +30,10 @@ Implementation details: see `src/client/galactic/README.md`.
 ## Milky Way density profiles
 
 Integrated properties and the thin/thick/halo structural parameters come
-from **Bland-Hawthorn & Gerhard 2016**, *ARA&A* 54, 529
-(DOI 10.1146/annurev-astro-081915-023441); the sightline surface
-brightnesses the model is checked against come from **Leinert et al. 1998**,
-*A&AS* 127, 1 (DOI 10.1051/aas:1998105) Table 24. See [Data sources](/SCIENCE.md#data-sources)
-for the values and their caveats.
+from [**Bland-Hawthorn 2016**](/data/papers/index.md#blandhawthorn2016); the sightline
+surface brightnesses the model is checked against come from
+[**Leinert 1998**](/data/papers/index.md#leinert1998) Table 24. See
+[Data sources](/SCIENCE.md#data-sources) for the values and their caveats.
 
 The volumetric Milky Way layer raymarches through two proxy meshes —
 a disc and a bulge — and accumulates emission along the camera→fragment
@@ -41,18 +41,18 @@ ray. The density at each step is:
 
 - **Disc**: `density0 × exp(-(R-R₀)/3000pc) × (exp(-|z|/300pc) +
   0.04·exp(-|z|/900pc))` — thin plus thick in galactocentric cylindrical
-  coordinates, the thick term at BHG16 Sect. 5.1's z_T = 900 ± 180 pc and
+  coordinates, the thick term at [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016) Sect. 5.1's z_T = 900 ± 180 pc and
   f_ρ = 4 ± 2 %. It exists for the **external** view: edge-on from the LMC
   or a few hundred kpc out, a galaxy with no thick disc reads as a
   hard-edged lens. Both components share one radial scale length, which
-  puts the thick/thin luminosity ratio at 0.12 against Mosenkov et al.
-  2021's 0.71 ± 0.45 (unWISE 3.4 µm, DOI 10.1093/mnras/stab2445) — whose
+  puts the thick/thin luminosity ratio at 0.12 against
+  [Mosenkov 2021](/data/papers/index.md#mosenkov2021)'s 0.71 ± 0.45 (unWISE 3.4 µm) — whose
   thick disc is radially longer as well as thicker. The halo is still
-  absent; the Jurić decomposition's third component was never worth its
+  absent; the [Jurić 2008](/data/papers/index.md#juric) decomposition's third component was never worth its
   calibration cost.
 - **Bulge**: `density0 × exp(-r'/1000pc)` where
   `r' = sqrt(R² + (z/q)²)` is the oblate-spheroid radius with q = 0.6.
-  Simple exponential rather than McMillan's power-law-times-Gaussian —
+  Simple exponential rather than [McMillan 2017](/data/papers/index.md#mcmillan)'s power-law-times-Gaussian —
   the latter produced too-tight a "ball" that read as point-source-like
   in iteration.
 
@@ -74,13 +74,14 @@ Both components' `density0` is **solved**, not authored: each proxy
 volume integrates to its share of the Galaxy's published integrated
 luminosity, through the same `ρ₀ = d²·F/G` the Local Group build solves
 per object, at d = 10 pc because the anchor is an absolute magnitude.
-Inputs are BHG16 Table 2's M_V = −21.37 and a V-band **light**
+Inputs are [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016) Table 2's M_V = −21.37 and a V-band **light**
 B/T = 0.0775. No publication gives that second number for the Milky Way,
-so it is derived: Licquia & Newman 2015's B/T = 0.150 is measured in
+so it is derived: [Licquia 2015a](/data/papers/index.md#licquia2015)'s B/T = 0.150 is measured in
 stellar *mass*, and the bulge's older, more metal-rich population carries
 a higher Υ\*_V than the disc's, so the same mass share buys less V light.
 Dividing through leaves only the RATIO of the two Υ\*_V — 3.15 from a
-BC03 Chabrier SSP at Z = 0.02, 10 Gyr, against Flynn et al. 2006's
+[Bruzual 2003](/data/papers/index.md#bruzual2003) Chabrier SSP at Z = 0.02, 10 Gyr, against
+[Flynn 2006](/data/papers/index.md#flynn2006)'s
 measured 1.5 for the local disc column. There is no free parameter left;
 [The light ratio](/src/client/milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number) carries the
 closed form and the metallicity brackets.
@@ -95,7 +96,7 @@ built catalogue ([The resolution hole](/src/client/milkyway/calibration/README.m
 At V ≤ 11 the hole removes **0.35 %** of the model's
 light over the tabulated volume — 1.03× the catalogue's own light there,
 the shell average being blind to structure in longitude — while the
-catalogue carries **77 %** of Leinert's total starlight at the pole, where
+catalogue carries **77 %** of [Leinert 1998](/data/papers/index.md#leinert1998)'s total starlight at the pole, where
 the column is almost entirely local. In the plane the hole keeps half the
 model's light resolved out to 500 pc and a third at 1 kpc, and the dusty
 column toward the centre — the nearest two kiloparsecs, the dust takes the
@@ -103,22 +104,22 @@ rest — dims 0.68 mag when that share comes out.
 
 **The model cannot also satisfy the sightline it used to be anchored on,
 and no shape parameter bridges the gap.** The earlier calibration pinned
-the north galactic pole to Leinert's total starlight there *minus* the
+the north galactic pole to [Leinert 1998](/data/papers/index.md#leinert1998)'s total starlight there *minus* the
 catalogue stars — a defensible target for the pole column, which is almost
 entirely local, but one that says nothing about the Galaxy's total, of
 which the catalogue is a third of a percent. A single emissivity field
 anchored on the subtracted pole therefore runs a factor of three low
 everywhere else. With the hole taking the resolved share out of both
-sides, the shipped solve is 1.35 mag brighter than that residual at the
-pole and 0.37 mag brighter than Leinert's total toward the Galactic
-centre; band plus catalogue at the pole is 0.43 mag over Leinert's total,
+sides, the shipped solve is 1.31 mag brighter than that residual at the
+pole and 0.385 mag brighter toward the Galactic centre than
+[Leinert 1998](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus catalogue at the pole is 0.41 mag over [Leinert 1998](/data/papers/index.md#leinert1998)'s total,
 where band-without-hole plus catalogue was 0.88 over.
 
 Two things make what remains a scale disagreement between published
 sources rather than a shape error in the model. The two checks have the
 **same sign and the same order**, which a wrong profile would not
 produce; and 0.5–0.9 mag is the real spread across M_V determinations,
-which BHG16's own figure carries — its value comes from Milky Way
+which [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016)'s own figure carries — its value comes from Milky Way
 analogues rather than direct integration, and it flags an internal
 SDSS-vs-colour-index inconsistency.
 
@@ -137,8 +138,8 @@ numbers and the pins.
 
 Two distinct dust paths exist in the renderer:
 
-**Per-star extinction.** `../src/client/webgpu/star/star-vertex-tsl.ts` raymarches the Edenhofer 2024
-voxel grid camera→star and applies:
+**Per-star extinction.** `../src/client/webgpu/star/star-vertex-tsl.ts` raymarches the
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) voxel grid camera→star and applies:
 
 - `A_V` to `appMag` (dimming).
 - `E(B−V) = A_V / 3.1` to `iCi` (reddening of the colour index).
@@ -162,17 +163,24 @@ directly). Invariant: any change to this runtime stack ships with the
 mirrored build-side integral + catalog rebuild in the same release.
 
 **Volumetric Milky Way dust.** The analytic profile is
-`norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — Drimmel & Spergel-style
-thin-disc dust. Per step, opacity converts to per-channel optical depth via
-CCM-derived reddening multipliers `(0.76, 1.0, 1.35)` — red transmits most,
-blue extincts away — applied with Beer-Lambert running attenuation including
-a half-step self-shielding term. Default global strength = 1.0.
+`norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — a simplified exponential
+thin dust disc with its own parameters: [Drimmel 2001](/data/papers/index.md#drimmel2001)'s dust disc has
+h_r = 2.26 kpc and a sech² vertical profile of 134 pc base scale height,
+flaring outward, with a central hole and arm components; nothing records
+why the slab departs from it, an open decision (`stellata-uadc.69.4`). Per
+step, opacity converts to per-channel optical depth via reddening multipliers
+`(0.76, 1.0, 1.35)` against [Cardelli 1989](/data/papers/index.md#cardelli1989) Table 3's
+(R 0.751, V 1.000, B 1.337) at R_V = 3.1 — also unexplained, and open
+(`stellata-uadc.69.1`) — red transmits most, blue extincts away — applied
+with Beer-Lambert running attenuation including a half-step self-shielding
+term. Default global strength = 1.0.
 
 `norm` is derived from a declarative rate: 1.0 mag/kpc of V extinction
 at (R₀, z = 0), the top of the range commonly adopted for the
 solar-neighbourhood plane. At the 125 pc scale height that also puts the
-perpendicular column to the pole at A_V = 0.125, inside the SFD polar
-spread — two independent constraints meeting at one normalisation.
+perpendicular column to the pole at A_V = 0.125 — inside the older
+A_V ≈ 0.06–0.15 polar range [Schlegel 1998](/data/papers/index.md#schlegel1998) review, and 2.7× their own polar
+measurement (E(B−V) = 0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05).
 
 **That analytic profile is the fallback tier, not the whole band column.**
 What composes with it, over which volumes, and why the slab is not rescaled
@@ -183,26 +191,26 @@ Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (per-star) and
 `src/client/star-pipeline/extinction/README.md` and
 `src/client/milkyway/README.md`.
 
-Sources for the volumetric path: **Drimmel & Spergel 2001**, *ApJ* 556, 181
-(DOI 10.1086/321556) for the thin-disc dust distribution; **Cardelli,
-Clayton & Mathis 1989**, *ApJ* 345, 245 (DOI 10.1086/167900) for the
-per-channel reddening multipliers; **Schlegel, Finkbeiner & Davis 1998**,
-*ApJ* 500, 525 (DOI 10.1086/305772) for the polar A_V spread the
-perpendicular column is checked against.
+Sources for the volumetric path: [**Drimmel 2001**](/data/papers/index.md#drimmel2001)
+for the thin-disc dust model the slab simplifies (their h_r = 2.26 kpc and
+134 pc sech² scale height; the slab uses 3.5 kpc and a 125 pc exponential);
+[**Cardelli 1989**](/data/papers/index.md#cardelli1989) Table 3 (0.751 / 1.000 / 1.337 at R_V = 3.1; the
+multipliers ship 0.76 / 1.0 / 1.35); [**Schlegel 1998**](/data/papers/index.md#schlegel1998)
+for the polar reddening the perpendicular column is checked against (their
+own A_V ≈ 0.05, and the older A_V ≈ 0.06–0.15 range they review).
 
-SFD used to be cited for something it does not publish: a "0.15 mag/kpc
-local rate", under a shipped 0.45 multiplier that took the effective rate
-to 0.068 mag/kpc. Both parts were wrong. SFD is a 2D full-sky E(B−V) map
-and gives no per-kpc rate at all — only the polar spread above — and 0.068
-mag/kpc is 10–25× below the measured solar-neighbourhood plane rate. The
-under-extinction, not the density profile, was why the band's plane read
-~3 mag too bright against its poles.
+The 0.068 mag/kpc the slab once shipped (a 0.15 mag/kpc rate under a 0.45
+multiplier) was this project's own figure, not from
+[Schlegel 1998](/data/papers/index.md#schlegel1998), and 10–25× below the measured
+solar-neighbourhood plane rate. The under-extinction, not the density
+profile, was why the band's plane read ~3 mag too bright against its
+poles.
 
 ## The dust stack — sources, domains, and the partition
 
 Design gate output (stellata-36y.3). Several sources want to write dust into
 the band's raymarch: the shared analytic function, its spiral-arm term, its
-procedural turbulence, the Edenhofer voxel grid, and a measured mid-shell.
+procedural turbulence, the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) voxel grid, and a measured mid-shell.
 They cannot be layered — the analytic slab is normalised to a **total**
 extinction rate, so anything measured added inside its volume double-counts.
 This section settles the composition once, so each of those lands against a
@@ -216,7 +224,7 @@ source that covers that point**, and from that one only:
 | tier | source | scale | domain |
 | --- | --- | --- | --- |
 | 1 | per-cloud traced density brick | 0.5–4.1 pc | inside a rendered cloud whose brick out-resolves the grid |
-| 2 | Edenhofer voxel grid | 4.88 pc | ≤ 1.25 kpc of Sol, minus tier 1 |
+| 2 | [Edenhofer 2024](/data/papers/index.md#edenhofer2024) voxel grid | 4.88 pc | ≤ 1.25 kpc of Sol, minus tier 1 |
 | 3 | a cloud's own absorption model | brick or envelope | rendered clouds beyond grid coverage |
 | 4 | analytic slab + arms + turbulence | ~kpc | beyond all measured coverage |
 
@@ -247,7 +255,7 @@ the same 0–1250 pc volume, all-sky, the two sources agree to 5 %:
 
 | | sky-mean A_V | median | p90 |
 | --- | --- | --- | --- |
-| Edenhofer grid | 0.377 | 0.160 | 1.074 |
+| [Edenhofer 2024](/data/papers/index.md#edenhofer2024) grid | 0.377 | 0.160 | 1.074 |
 | analytic slab | 0.359 | 0.245 | 0.792 |
 
 (5° grid, solid-angle weighted throughout.)
@@ -257,8 +265,9 @@ handoff is close to flux-neutral on the mean and **redistributes** — windows
 and lanes replacing a smooth field at nearly the same total, which is the
 entire point. Both of the slab's independent constraints also survive: the
 plane-rate anchor is untouched, and the polar constraint transfers from model
-to measurement, the grid's NGP column reading **0.049 mag** against the slab's
-0.125, both inside the SFD polar spread (0.03–0.15).
+to measurement, the grid's NGP column reading **0.049 mag** — matching
+[Schlegel 1998](/data/papers/index.md#schlegel1998)'s own NGP value, A_V ≈ 0.047 — against the slab's 0.125, which sits
+only inside the older A_V ≈ 0.06–0.15 range SFD review.
 
 ### Which clouds are carved, and which are folded in
 

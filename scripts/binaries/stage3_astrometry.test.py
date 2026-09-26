@@ -410,8 +410,8 @@ class AthygPositionFallbackTests(unittest.TestCase):
     HIP2 miss for a component but the WDS precise_coord position-matches
     an AT-HYG row whose stored ra/dec/dist_pc carry a usable astrometric
     anchor. Canonical population: ξ UMa-shape systems where the bright
-    primary is Gaia-saturated AND HIP2 dropped the entry (van Leeuwen
-    excludes orbit-corrupted HIP fits).
+    primary is Gaia-saturated AND the committed HIP2 table has no row for
+    it.
     """
 
     def test_athyg_position_fires_when_gaia_and_hip2_miss(self) -> None:
