@@ -47,20 +47,17 @@ const plainText = (tokens: Token[]): string =>
 
 const HTML_ANCHOR = /<a\s+(?:id|name)="([^"]+)"/g;
 
-function collectAnchors(markdown: string, headings: boolean): Set<string> {
+export function docAnchors(markdown: string): Set<string> {
   const slugger = new GithubSlugger();
   const anchors = new Set<string>();
   walkTokens(new Lexer({ gfm: true }).lex(markdown), (token) => {
-    if (headings && token.type === 'heading') anchors.add(slugger.slug(plainText(token.tokens)));
+    if (token.type === 'heading') anchors.add(slugger.slug(plainText(token.tokens)));
     if (token.type === 'html') {
       for (const m of token.raw.matchAll(HTML_ANCHOR)) anchors.add(m[1]);
     }
   });
   return anchors;
 }
-
-export const docAnchors = (markdown: string): Set<string> => collectAnchors(markdown, true);
-export const explicitAnchors = (markdown: string): Set<string> => collectAnchors(markdown, false);
 
 export function resolveDocPath(citedPath: string, fromDir: string, root: string): string | null {
   const path = citedPath.startsWith('/') ? join(root, citedPath) : join(fromDir, citedPath);

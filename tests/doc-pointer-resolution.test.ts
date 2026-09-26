@@ -8,7 +8,6 @@ import { dirname, extname, join, relative, resolve } from 'node:path';
 import {
   SCANNED_KINDS,
   docAnchors,
-  explicitAnchors,
   extractPointers,
   extractSameFileLinks,
   kindOf,
@@ -158,11 +157,6 @@ describe('anchors', () => {
   it('adds explicit anchors, and never a comment line inside a code block', () => {
     const doc = ['- <a id="two-disc-means"></a>**Two disc means** — one', '', '```bash', '# not a heading', '```'].join('\n');
     expect([...docAnchors(doc)]).toEqual(['two-disc-means']);
-  });
-
-  it('collects explicit anchors alone when asked, leaving heading slugs out', () => {
-    const doc = ['<a id="french1988"></a>', '### French et al. 1988 — Uranian ring orbits'].join('\n');
-    expect([...explicitAnchors(doc)]).toEqual(['french1988']);
   });
 });
 
