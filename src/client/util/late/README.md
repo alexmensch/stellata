@@ -39,6 +39,11 @@ stop the others hearing about the settle.
 reject. It adds a rejection handler, so anything that has to surface the
 error must also await the promise itself.
 
+`mapLate` hands readers one part of a late value — an owner holding several
+things that land together keeps ONE cell and exposes each part as a
+projection of it, so the parts cannot disagree about whether they have
+landed. The projection runs once per settle, not per `state()` read.
+
 ## What it cannot enforce
 
 A one-shot reader can still write a fallback into its `pending` branch and
