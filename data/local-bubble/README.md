@@ -24,14 +24,14 @@ several ℓmax (`r_in_lmax-02` … `-40`); the build defaults to `lmax-08`
 
 ## Provenance
 
-- **Surface model**: [Pelgrims et al. 2020](/data/papers/index.md#pelgrims2020)
+- **Surface model**: [Pelgrims 2020](/data/papers/index.md#pelgrims2020)
   — the inner surface and its spherical-harmonic reconstructions.
 - **Surface data**: Harvard Dataverse
   [doi:10.7910/DVN/RHPVNC](https://doi.org/10.7910/DVN/RHPVNC)
   (V. Pelgrims, "The shape of the shell of the Local Bubble"),
   file `L19_map-inner_final.fits` (renamed here). The wall is traced
-  through the [Lallement et al. 2019](/data/papers/index.md#lallement2019) (L19) 3D dust map.
-- **Context**: [Zucker et al. 2022](/data/papers/index.md#zucker2022) uses
+  through the [Lallement 2019](/data/papers/index.md#lallement2019) (L19) 3D dust map.
+- **Context**: [Zucker 2022](/data/papers/index.md#zucker2022) uses
   this surface to tie nearby star formation to the Local Bubble's
   expansion.
 - **Licence**: as published on the Dataverse record.
@@ -50,7 +50,7 @@ pnpm run build:local-bubble
 ## Cross-validation
 
 `build-local-bubble.py` asserts this surface against the **independent**
-[Edenhofer](/data/papers/index.md#edenhofer2024) 3D dust grid (`data/dust/`): the dust density must peak at the
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust grid (`data/dust/`): the dust density must peak at the
 wall this map marks (per-ray peak-density radius median ≈ 0.96 R). The
 two dust maps mutually confirm each other; the assertion also guards the
 galactic→ICRS frame and pc-scale handling in the ingest.

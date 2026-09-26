@@ -1,5 +1,5 @@
 // Build-time Sol→star extinction integral through the same encoded
-// Edenhofer et al. 2024 (/data/papers/index.md#edenhofer2024) dust grid the runtime
+// Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid the runtime
 // march samples — README.md.
 
 import {

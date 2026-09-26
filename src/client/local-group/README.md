@@ -303,19 +303,19 @@ what made the focus card's alias row repeat itself.
 
 ## References
 
-- [**Pace et al. 2025**](/data/papers/index.md#pace2025) — *Local Volume Database*. CC0.
+- [**Pace 2025**](/data/papers/index.md#pace2025) — *Local Volume Database*. CC0.
   <https://github.com/apace7/local_volume_database>
-- [**Pietrzyński et al. 2019**](/data/papers/index.md#pietrzynski2019) — LMC distance.
-- [**van der Marel & Kallivayalil 2014**](/data/papers/index.md#vandermarel2014) — LMC structure.
-- [**Graczyk et al. 2020**](/data/papers/index.md#graczyk2020) — SMC distance cross-check.
-- [**Subramanian & Subramaniam 2012**](/data/papers/index.md#subramanian2012) — SMC structure.
-- [**Ibata et al. 1997**](/data/papers/index.md#ibata1997) —
+- [**Pietrzyński 2019**](/data/papers/index.md#pietrzynski2019) — LMC distance.
+- [**van der Marel 2014**](/data/papers/index.md#vandermarel2014) — LMC structure.
+- [**Graczyk 2020**](/data/papers/index.md#graczyk2020) — SMC distance cross-check.
+- [**Subramanian 2012**](/data/papers/index.md#subramanian2012) — SMC structure.
+- [**Ibata 1997**](/data/papers/index.md#ibata1997) —
   Sagittarius dSph structure: prolate 3:1:1, line-of-sight depth.
-- [**McConnachie et al. 2018**](/data/papers/index.md#mcconnachie2018) — M31 disc
+- [**McConnachie 2018**](/data/papers/index.md#mcconnachie2018) — M31 disc
   inclination from the PAndAS survey (i ≈ 77°).
-- [**Gieren et al. 2013**](/data/papers/index.md#gieren2013) —
+- [**Gieren 2013**](/data/papers/index.md#gieren2013) —
   M33 Cepheid distance (µ = 24.62 ± 0.07, 840 ± 27 kpc).
-- [**Corbelli et al. 2014**](/data/papers/index.md#corbelli2014) —
+- [**Corbelli 2014**](/data/papers/index.md#corbelli2014) —
   M33 disc orientation (tilted-ring fit) and 1.8 kpc scale length.
 - [**McConnachie 2012**](/data/papers/index.md#mcconnachie2012) — Local Group structural
   review: the ellipticities behind the M 32 + NGC 205 axis ratios and

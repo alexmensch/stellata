@@ -70,7 +70,7 @@ export interface BuildCounts {
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
   droppedTooFar: number;
-  /** Total entries in the Bailer-Jones et al. 2021
+  /** Total entries in the Bailer-Jones 2021
    *  (/data/papers/index.md#bailerjones2021) DR3 distance TSV (parsed map
    *  size). */
   bjEntries: number;
@@ -453,7 +453,7 @@ export interface BuildCounts {
   /** CNS5 rows carrying a position AND the epoch to state it at, keyed on
    *  their own GJ — the direction cascade's CNS5 tier reach. */
   cns5AstrometryEntries: number;
-  /** Rows in the committed Gliese & Jahreiss 1991
+  /** Rows in the committed Gliese 1991
    *  (/data/papers/index.md#gliese1991) V/70A slice — the V cascade's bottom
    *  tier's reach. */
   glieseEntries: number;
@@ -490,7 +490,7 @@ export interface BuildCounts {
   distCurated: number;
   distNone: number;
   /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
-   *  fractional error, so the result is biased. Bailer-Jones et al. 2021
+   *  fractional error, so the result is biased. Bailer-Jones 2021
    *  (/data/papers/index.md#bailerjones2021) rows are excluded:
    *  there the posterior, not the inversion, handles the low-S/N case.
    *
@@ -548,7 +548,7 @@ export interface BuildCounts {
   /** Direction cascade: Sol, whose curated tier exists because it carries no
    *  identifier any tier above can key on. Pinned at 1. */
   directionCurated: number;
-  /** V cascade: rows whose Johnson V came from the Riello+ 2021
+  /** V cascade: rows whose Johnson V came from the Riello 2021
    *  (/data/papers/index.md#riello2021) G,BP−RP transform — unsaturated Gaia
    *  photometry inside the relation's validity range. See
    *  scripts/catalog/photometry/README.md. */
@@ -567,7 +567,7 @@ export interface BuildCounts {
    *  Counted, not gated: none of these rows carries a `gl`, so gating would
    *  cost each its only V and hence its record — ../photometry/v-magnitude-pure.ts `tycho2VMagnitude`. */
   vTycho2OutsideBtVtRange: number;
-  /** V cascade: the GJ-only cohort, taking Gliese & Jahreiss 1991
+  /** V cascade: the GJ-only cohort, taking Gliese 1991
    *  (/data/papers/index.md#gliese1991) V/70A's printed `Vmag`.
    *  The tier below Tycho-2 and the last one: SIMBAD publishes no V flux at
    *  all for the rows that reach here. */

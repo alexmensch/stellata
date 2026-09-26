@@ -57,7 +57,7 @@ function groundOffsetKm(
 
 beforeAll(() => {
   // The app installs these at runtime, so the test measures the shipped
-  // configuration. Outside 1900–2100 the ephemeris falls back to Standish
+  // configuration. Outside 1900–2100 the ephemeris falls back to Standish 1992
   // (/data/papers/index.md#standish1992) on its own, exactly as it does for a
   // user scrubbing to 1200 BC.
   const tables = new Map<PlanetName, PlanetElementTable>();
@@ -307,8 +307,8 @@ describe('lunar eclipses vs the Five Millennium Canon', () => {
 
 describe('ΔT against the canon\'s own column', () => {
   it('agrees within 2 s at every canon epoch, from 2000 BC on', () => {
-    // Espenak & Meeus 2009 (/data/papers/index.md#espenak2009,
-    // /data/papers/index.md#espenak2009lunar) tabulates the ΔT he used per
+    // Espenak 2009a (/data/papers/index.md#espenak2009) and
+    // Espenak 2009b (/data/papers/index.md#espenak2009lunar) tabulates the ΔT he used per
     // eclipse. Reproducing it is a direct check on delta-t-pure.ts against the
     // same authority the ground tracks are being checked against. The bound is
     // absolute: a relative one cannot tell "reproduces Espenak" from

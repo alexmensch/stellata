@@ -178,7 +178,7 @@ class MassRatioFromComponentsTests(unittest.TestCase):
 
     def test_alpha_cen_like_g2v_plus_k1v(self) -> None:
         # α Cen A (G2V) + α Cen B (K1V). Model: M_A=1.0, M_B=0.76 →
-        # q ≈ 0.43. External truth (Pourbaix & Boffin 2016,
+        # q ≈ 0.43. External truth (Pourbaix 2016,
         # /data/papers/index.md#pourbaix2016, Table 1 κ): q=0.4617. The
         # MS+MS case lands within ~6.5% of the external value because
         # there is no WD mass-recovery uncertainty.

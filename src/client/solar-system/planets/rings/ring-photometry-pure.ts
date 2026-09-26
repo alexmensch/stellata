@@ -1,5 +1,5 @@
 // Ring-system contribution to a ringed body's unresolved apparent magnitude:
-// Mallama & Hilton's (/data/papers/index.md#mallamahilton2018) joint phase-angle /
+// Mallama 2018's (/data/papers/index.md#mallamahilton2018) joint phase-angle /
 // ring-tilt law. See README.md#ring-photometry--the-unresolved-magnitude.
 
 import {
@@ -34,7 +34,7 @@ export interface RingSystemPhotometry {
 }
 
 /**
- * Saturn — Mallama & Hilton 2018 (/data/papers/index.md#mallamahilton2018)
+ * Saturn — Mallama 2018 (/data/papers/index.md#mallamahilton2018)
  * Eq. 10 (Mallama 2012, /data/papers/index.md#mallama2012), the whole system at
  * V₁(0) = −8.914 against the globe-alone −8.95 of Eq. 11. Fitted over α < 6.5°,
  * β < 27°.
@@ -67,7 +67,7 @@ const DEG = Math.PI / 180;
 
 /**
  * Ring-plane elevation of a direction, in degrees, signed north-positive about
- * the ring pole: the planetocentric latitude Mallama's
+ * the ring pole: the planetocentric latitude Mallama 2018's
  * (/data/papers/index.md#mallamahilton2018) β is built from. `dir` is a body →
  * target displacement (any consistent frame with `pole`), `pole` the body's
  * ring-plane normal. Returns 0 for a degenerate zero-length leg.
@@ -88,7 +88,7 @@ export function ringPlaneElevationDeg(
 }
 
 /**
- * Mallama's (/data/papers/index.md#mallamahilton2018) effective ring
+ * Mallama 2018's (/data/papers/index.md#mallamahilton2018) effective ring
  * inclination β from the viewer's and the host's planetocentric latitudes: the
  * geometric mean √(β_v·β_h) when both sit on the same side of the ring plane.
  * Contrary signs are the backlit case, which the published law zeroes; the sign

@@ -56,7 +56,7 @@ const NO_PM = { pmRaMasyr: null, pmDecMasyr: null } as const;
  *  than the one it published: CNS5 and SIMBAD both republish Gaia's own earlier
  *  fit under a release bibcode, so admitting it would return the motion DR3
  *  declined to state. Tycho-2 needs no such check — no Gaia reduction can be
- *  hiding behind Høg et al. 2000 (/data/papers/index.md#hog2000).
+ *  hiding behind Høg 2000 (/data/papers/index.md#hog2000).
  *  `gaiaIs2p` gates the rule rather than the tier, because a row with no Gaia
  *  solution has no blend to distrust and its Gaia bibcode is an ordinary
  *  citation. */

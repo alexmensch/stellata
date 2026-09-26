@@ -522,7 +522,7 @@ describe('anchor flux dimming', () => {
   ];
 
   it('no dim when the Gaia-derived anchor V already reads as one component (HD 18455)', () => {
-    // Gaia DR3 5076269164798851712 → Riello et al. 2021
+    // Gaia DR3 5076269164798851712 → Riello 2021
     // (/data/papers/index.md#riello2021) V 8.040 at 22.467 pc, which is
     // WDS's component A (8.06), not the AB blend (7.37) SIMBAD prints as
     // V = 7.331. B's light was never in it, so the pre-cascade dim of
@@ -560,7 +560,7 @@ describe('anchor flux dimming', () => {
   });
 
   it("a member with its own Gaia source never dims a Gaia-derived anchor (HD 153557's 5″ B)", () => {
-    // WDS reads A at 7.93 and B 2.92 mag down; the anchor's Riello et al. 2021
+    // WDS reads A at 7.93 and B 2.92 mag down; the anchor's Riello 2021
     // (/data/papers/index.md#riello2021) V is 7.806,
     // which the pair blend (7.859) fits better than A alone — so the subset
     // solve WOULD dim it. Gaia gave B its own source at 5″ separation, which
@@ -843,8 +843,8 @@ describe('anchor flux dimming', () => {
   });
 
   // HD 64315's shape: multiples.tsv carries a system distance that predates the
-  // record's own override stack (its rows say 12.66 kpc against a Bailer-Jones
-  // et al. 2021 (/data/papers/index.md#bailerjones2021) 6.2 kpc), and the observed frame every hypothesis is compared against has
+  // record's own override stack (its rows say 12.66 kpc against a Bailer-Jones 2021
+  // (/data/papers/index.md#bailerjones2021) 6.2 kpc), and the observed frame every hypothesis is compared against has
   // to be the one the anchor's absmag was actually derived at.
   it('the observed frame comes from the anchor position, not the row dist_pc', () => {
     const blend = blendMag(2.1, 4.1);

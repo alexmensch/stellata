@@ -1,6 +1,6 @@
 # NASA Five Millennium Canon — eclipse truth set
 
-Frozen rows from [Espenak & Meeus 2009](/data/papers/index.md#espenak2009)'s *Five Millennium Catalog of
+Frozen rows from [Espenak 2009a](/data/papers/index.md#espenak2009)'s *Five Millennium Catalog of
 Solar Eclipses: −1999 to +3000* and its lunar companion, the [*Five
 Millennium Catalog of Lunar Eclipses*](/data/papers/index.md#espenak2009lunar),
 published by NASA GSFC. Consumed only by
@@ -17,7 +17,7 @@ globe.
 
 - Source: `https://eclipse.gsfc.nasa.gov/SEcat5/` and `.../LEcat5/`,
   100-year catalogue pages, retrieved 2026-08-15.
-- [Espenak & Meeus 2009](/data/papers/index.md#espenak2009)'s own computation uses VSOP87/ELP-2000/82 with a lunar tidal
+- [Espenak 2009a](/data/papers/index.md#espenak2009)'s own computation uses VSOP87/ELP-2000/82 with a lunar tidal
   acceleration of −25.858″/cy², and the same ΔT polynomial set the model
   carries in `src/client/solar-system/time/delta-t-pure.ts` — including
   the −0.000012932·(y−1955)² s correction reconciling the polynomials'
@@ -30,7 +30,7 @@ globe.
 |---|---|
 | `date` | Catalogue date label, astronomical year numbering (`-0584` = 585 BC). |
 | `jd_tt` | Julian Date **TT** of greatest eclipse, derived from the catalogue's calendar date + TD time. |
-| `delta_t_s` | ΔT [Espenak & Meeus 2009](/data/papers/index.md#espenak2009) used for this event, seconds. |
+| `delta_t_s` | ΔT [Espenak 2009a](/data/papers/index.md#espenak2009) used for this event, seconds. |
 | `type` | `T` total, `A` annular, `H` hybrid, plus the catalogue's suffix (`Tm`, `H2`, …). |
 | `gamma` | Least distance from Earth's centre to the shadow axis, Earth radii, **signed**. |
 | `magnitude` | Ratio of apparent lunar to solar diameter at greatest eclipse. |
@@ -39,7 +39,7 @@ globe.
 
 ## `lunar-eclipse-canon.tsv`
 
-Rows from the [lunar Catalog](/data/papers/index.md#espenak2009lunar).
+Rows from the [Espenak 2009b](/data/papers/index.md#espenak2009lunar).
 Same leading columns; then `umbral_magnitude` (fraction of the Moon's
 diameter inside Earth's umbra at greatest eclipse) and the zenith point.
 Only total eclipses are carried, deep ones (umbral magnitude > 1.2), so
@@ -54,7 +54,7 @@ error.
 
 The catalogue tabulates dates in the **Julian** calendar before
 1582 Oct 15 and the Gregorian one after, which is what the `jd_tt` column
-was derived with ([Meeus](/data/papers/index.md#meeus) ch. 7). Getting that wrong shifts pre-1582 events
+was derived with ([Meeus 1998](/data/papers/index.md#meeus) ch. 7). Getting that wrong shifts pre-1582 events
 by up to 10 days while leaving every modern one correct — so it would
 look like a deep-time model failure rather than a date bug.
 

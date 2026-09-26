@@ -283,7 +283,7 @@ export interface ReadStarsOptions {
   /** Printed Johnson B−V per HIP — the ci cascade's printed tier, and the
    *  only measured colour reaching rows with no Gaia source at all. */
   hipBv?: Map<number, number>;
-  /** Printed Gliese & Jahreiss 1991 (/data/papers/index.md#gliese1991) V/70A
+  /** Printed Gliese 1991 (/data/papers/index.md#gliese1991) V/70A
    *  values keyed on the record's own `gl` — the V cascade's tier below
    *  Tycho-2, and the only one reaching the GJ-only cohort. Absent parks those rows. */
   gliese?: GlieseIndex;
@@ -344,7 +344,7 @@ export function readStars(
     /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
      *  fractional error, so the result is biased. They ship — no second source
      *  reaches them — and this count is how they stay visible for a Gaia DR4
-     *  revisit. Bailer-Jones et al. 2021
+     *  revisit. Bailer-Jones 2021
      *  (/data/papers/index.md#bailerjones2021) rows are excluded: there the
      *  posterior, not the inversion, handles the low-S/N case. */
     distLowPrecisionParallax: number;
@@ -513,7 +513,7 @@ export function readStars(
       continue;
     }
 
-    // V through the Riello et al. 2021 (/data/papers/index.md#riello2021)
+    // V through the Riello 2021 (/data/papers/index.md#riello2021)
     // transform → printed HIP V → Tycho-2's reduced VT →
     // Gliese's printed Vmag → curated. See ../photometry/README.md. A row no
     // tier lights parks like one no tier places: a record needs both.
@@ -570,7 +570,7 @@ export function readStars(
     const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr;
     const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr;
 
-    // Bailer-Jones et al. 2021 (/data/papers/index.md#bailerjones2021)
+    // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
     // supersedes the raw inversion wherever the parallax the
     // cascade settled on is Gaia's own — its Bayesian posterior treats exactly
     // that measurement, and a non-Gaia parallax must not be regressed onto
@@ -620,7 +620,7 @@ export function readStars(
     // sums to the record count.
     distViaCounts[distVia]++;
     // Counted against the SHIPPED tier, not the resolved parallax: where
-    // Bailer-Jones et al. 2021 (/data/papers/index.md#bailerjones2021)
+    // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
     // supersedes the inversion its posterior is what handles a
     // low-S/N parallax, so flagging those rows would report a bias the record
     // does not carry. The LMC snap replaces the distance outright.

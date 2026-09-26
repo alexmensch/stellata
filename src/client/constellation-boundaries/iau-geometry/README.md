@@ -1,6 +1,6 @@
 # The B1875 edge set and its decomposition
 
-The [Delporte (1930)](/data/papers/index.md#delporte1930) boundary geometry: parsing the edge records,
+The [Delporte 1930](/data/papers/index.md#delporte1930) boundary geometry: parsing the edge records,
 decomposing them into the 89 named sky regions, the point lookup and
 nearest-edge distance over that decomposition, the per-region label
 anchors, and the ICRS polyline resampling the drawn arcs come from.
@@ -104,7 +104,7 @@ digit, which splinters 236 RA bounds into 259.
 `B1875_JD` (`../../util/precession.ts`) is 2405889.2586 — **1874 Dec
 31.76**, by the Besselian epoch formula, not a Julian-year offset from
 J2000. The rotation is the IAU 1976
-([Lieske](/data/papers/index.md#lieske1979)) composition
+([Lieske 1979](/data/papers/index.md#lieske1979)) composition
 R(−z)·Q(θ)·R(−ζ) (eq. 5; R and Q are the frame rotations about z and y
 of eq. 3), so θ enters with the opposite sign to ζ and z.
 

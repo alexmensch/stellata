@@ -1,5 +1,5 @@
 // Parses public/cloud-surfaces.bin (magic CSUR) — per-cloud isosurface meshes +
-// density bricks traced from the Edenhofer (/data/papers/index.md#edenhofer2024)
+// density bricks traced from the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
 // dust field, keyed by cloud sid. Format: scripts/cloud-surfaces/README.md.
 
 const MAGIC = 0x43535552; // 'CSUR' big-endian read of bytes C,S,U,R

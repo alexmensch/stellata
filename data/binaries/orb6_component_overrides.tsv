@@ -11,4 +11,4 @@
 #   components  — WDS component letters the orbit belongs to.
 #   source      — literature reference for the identification.
 wds_id	discoverer	components	source
-07346+3153	YY Gem	Ca,Cb	Castor C = YY Gem, eclipsing pair Ca+Cb — Torres & Ribas 2002 /data/papers/index.md#torres2002 (P=0.814 d)
+07346+3153	YY Gem	Ca,Cb	Castor C = YY Gem, eclipsing pair Ca+Cb — Torres 2002 (/data/papers/index.md#torres2002) (P=0.814 d)

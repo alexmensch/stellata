@@ -209,7 +209,7 @@ describe('boloCorr', () => {
 describe('absmagFromSpectral', () => {
   const mv = (spect: string) => absmagFromSpectral(classifyFromSimbad(spect)!);
 
-  it('pins main-sequence anchors (Pecaut & Mamajek 2013)', () => {
+  it('pins main-sequence anchors (Pecaut 2013)', () => {
     expect(mv('G2V')).toBeCloseTo(4.68, 2);
     expect(mv('K0V')).toBeCloseTo(5.9, 2);
     expect(mv('M1V')).toBeCloseTo(9.5, 2);

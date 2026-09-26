@@ -20,7 +20,7 @@ cross-script policy and pointers.
   `public/binaries.bin` (runtime artifact, one record per pair, for
   the `BinaryOrbitField` per-frame Kepler walk).
 - `distance-validation/` —
-  [Vaidman et al. 2025](/data/papers/index.md#vaidman2025) BA-supergiant
+  [Vaidman 2025](/data/papers/index.md#vaidman2025) BA-supergiant
   cross-check.
 - `refresh/` — Layer 2 external-catalogue refresh (manual,
   infrequent).
@@ -36,7 +36,7 @@ cross-script policy and pointers.
 - `milkyway-calibration/` — the resolved catalogue measured against the
   Milky Way band model off a built `catalog.bin`
   (`pnpm run measure:band-resolved`): the
-  [Leinert et al. 1998](/data/papers/index.md#leinert1998) cap rows and the
+  [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
   `src/client/milkyway/calibration/`. Not part of the build.
 - `release/` — `deploy.yml`'s release step: plans and cuts one tag +
@@ -58,11 +58,11 @@ cross-script policy and pointers.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the
-  [Pelgrims et al. 2020](/data/papers/index.md#pelgrims2020) inner-surface
+  [Pelgrims 2020](/data/papers/index.md#pelgrims2020) inner-surface
   HEALPix map into `public/local-bubble.bin` (shell mesh), cross-checked
-  against the [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) dust grid;
+  against the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust grid;
   `cloud-surfaces/` traces per-cloud isosurface meshes from the
-  [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) posterior (offline,
+  [Edenhofer 2024](/data/papers/index.md#edenhofer2024) posterior (offline,
   LFS-committed).
 
 ## What ships

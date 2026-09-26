@@ -212,7 +212,7 @@ describe('empiricalPhaseFactor', () => {
     // The defining win for Venus from the bead description: at large phase
     // angle Venus's atmosphere forward-scatters, leaving the crescent
     // meaningfully brighter than a perfectly diffuse sphere would predict. The
-    // asymmetry grows with α — at 130° Mallama
+    // asymmetry grows with α — at 130° Mallama 2017
     // (/data/papers/index.md#mallama2017) is ~1.6× Lambert; by 160° it's nearly
     // an order of magnitude.
     const a130 = 130 * DEG;

@@ -114,7 +114,7 @@ function deltaE255(
 
 describe('sampleLut at named-star B-V values', () => {
   // Expected RGBs come from the direct Python pipeline at T =
-  // Ballesteros(B-V) (/data/papers/index.md#ballesteros2012); the LUT samples
+  // Ballesteros 2012 (/data/papers/index.md#ballesteros2012) B-V; the LUT samples
   // agree within quantisation noise.
   const cases: ReadonlyArray<[string, number, [number, number, number]]> = [
     ['Sol',        0.656, [255, 241, 233]],

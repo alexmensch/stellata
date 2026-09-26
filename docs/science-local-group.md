@@ -14,7 +14,7 @@ IC 10, IC 1613, Leo A, WLM, Sextans A/B, …). Geometry is representational
 (stylised LineLoop ellipsoids and discs), but every position, distance,
 and structural parameter comes from peer-reviewed catalogues:
 
-**Primary catalogue**: [Pace et al. 2025](/data/papers/index.md#pace2025), *Local Volume
+**Primary catalogue**: [Pace 2025](/data/papers/index.md#pace2025), *Local Volume
 Database* (CC0). A frozen snapshot of
 the `dwarf_all` table lives at `data/local-group/lvdb-snapshot.csv` —
 909 rows covering the full Local Volume. The build pipeline
@@ -41,22 +41,22 @@ structural detail for the singular cases LVDB's summary row can't
 capture, and add the two major spirals LVDB's `dwarf_all` table omits:
 
 - **LMC (49.59 kpc)**: inclined disc at i = 32°, line of nodes PA =
-  135°. [van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014)'s
+  135°. [van der Marel 2014](/data/papers/index.md#vandermarel2014)'s
   fits give i = 26.2–39.6° and Θ = 139.1–154.5° (Table 1), so neither
   value is theirs. Distance
-  [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019). Scale length
+  [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019). Scale length
   4.5 kpc, scale height 1 kpc.
 - **SMC (62.81 kpc)**: triaxial 1 : 1.33 : 1.61 with the longest axis
-  along line of sight ([Subramanian & Subramaniam 2012](/data/papers/index.md#subramanian2012);
+  along line of sight ([Subramanian 2012](/data/papers/index.md#subramanian2012);
   distance from LVDB's SMC row, µ = 18.99 ± 0.1 —
-  [Cioni et al. 2000](/data/papers/index.md#cioni2000), DENIS TRGB.
-  [Graczyk et al. 2020](/data/papers/index.md#graczyk2020)'s eclipsing-binary result is
-  62.44 kpc, µ = 18.977; LVDB pins [Cioni](/data/papers/index.md#cioni2000) and the two
+  [Cioni 2000](/data/papers/index.md#cioni2000), DENIS TRGB.
+  [Graczyk 2020](/data/papers/index.md#graczyk2020)'s eclipsing-binary result is
+  62.44 kpc, µ = 18.977; LVDB pins [Cioni 2000](/data/papers/index.md#cioni2000) and the two
   agree well within its
   ±0.1 mag uncertainty). Resulting semi-axes 3.73 / 4.96 / 6.0 kpc.
 - **Sagittarius dSph (26.3 kpc)**: 3D axis allocation — LVDB's
   projected ellipticity captures the sky-plane shape but not the
-  line-of-sight extent. [Ibata et al. 1997](/data/papers/index.md#ibata1997) measure a
+  line-of-sight extent. [Ibata 1997](/data/papers/index.md#ibata1997) measure a
   red-clump line-of-sight depth of 1.2 kpc
   and conclude Sgr is a prolate spheroid with axis ratios 3:1:1. That
   depth is a full half-brightness depth, a ~0.6 kpc semi-axis, and
@@ -76,7 +76,7 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
 - **M31 / Andromeda (776 kpc)**: inclined disc at i = 77°, line of
   nodes PA = 37°, 15 kpc disc radius × 500 pc thickness. The
   inclination is the one
-  [McConnachie et al. 2018](/data/papers/index.md#mcconnachie2018)
+  [McConnachie 2018](/data/papers/index.md#mcconnachie2018)
   draw the PAndAS disc at (Fig. 4); their disc radius is 1.25° =
   17 kpc, and they give no PA or thickness. Standalone row
   (not in LVDB's `dwarf_all` table; the override carries RA, Dec,
@@ -84,8 +84,8 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
 - **M33 / Triangulum (840 kpc)**: inclined disc at i = 54°, line of
   nodes PA = 22°, 8.5 kpc disc radius × 400 pc thickness — disc
   orientation from the tilted-ring fit of
-  [Corbelli et al. 2014](/data/papers/index.md#corbelli2014); distance from the near-infrared
-  Cepheid measurement of [Gieren et al. 2013](/data/papers/index.md#gieren2013)
+  [Corbelli 2014](/data/papers/index.md#corbelli2014); distance from the near-infrared
+  Cepheid measurement of [Gieren 2013](/data/papers/index.md#gieren2013)
   (µ = 24.62 ± 0.07). Standalone row.
 
 Per the build's data-freshness policy ([Frozen external data](/data/README.md#frozen-external-data)),
@@ -122,12 +122,12 @@ the profile and never re-derives photometry.
 
 - **Sérsic spheroid** (120 objects: the LVDB dwarfs + SMC, Sagittarius
   dSph, M 32, NGC 205). The 3D density is the
-  [Prugniel–Simien](/data/papers/index.md#prugniel) deprojection ν(u) = ρ₀ · u^(−pₙ) · exp(−bₙ · u^(1/n)), with u the
+  [Prugniel 1997](/data/papers/index.md#prugniel) deprojection ν(u) = ρ₀ · u^(−pₙ) · exp(−bₙ · u^(1/n)), with u the
   ellipsoidal radius in units of the R_e ellipsoid,
   pₙ = 1 − 0.6097/n + 0.05463/n²
-  ([Lima Neto et al. 1999](/data/papers/index.md#limaneto1999)'s refit
+  ([Lima Neto 1999](/data/papers/index.md#limaneto1999)'s refit
   of Prugniel & Simien's 1 − 0.594/n + 0.055/n²), and bₙ = 2n − 1/3 + 4/(405n)
-  ([Ciotti & Bertin 1999](/data/papers/index.md#ciotti1999)). This projects to the observed 2D Sérsic law
+  ([Ciotti 1999](/data/papers/index.md#ciotti1999)). This projects to the observed 2D Sérsic law
   to ~1%; raymarching the 2D law as if it were 3D density is a
   deprojection error, visibly too shallow in the centre for n > 1.
   n comes from LVDB `n_sersic` where measured (43 objects, median
@@ -142,10 +142,10 @@ the profile and never re-derives photometry.
   [van der Marel 2001](/data/papers/index.md#vandermarel2001b), pure disc —
   bar and arms are below this detail tier. M31 R_d = 5.3 kpc with a
   spherical Sérsic bulge (R_e = 1.0 kpc, n = 2.2;
-  [Courteau et al. 2011](/data/papers/index.md#courteau2011)) carrying
+  [Courteau 2011](/data/papers/index.md#courteau2011)) carrying
   B/T = 0.31 of the light; Courteau's bulge light fractions are 21–29%,
   29% for the 2D bulge + disc fit (Sect. 7). M33 R_d = 1.8 kpc
-  ([Corbelli et al. 2014](/data/papers/index.md#corbelli2014)), pure disc —
+  ([Corbelli 2014](/data/papers/index.md#corbelli2014)), pure disc —
   Corbelli et al. find M33 hosts no bulge, reading its inner light as a
   raised mass-to-light ratio inside 1.5 kpc (p. 11), and its nuclear
   cluster is far below render scale. z_d = c_wireframe / 3 (the wireframe shell
@@ -227,7 +227,7 @@ photometric.
 
 **Photometry.** LVDB `apparent_magnitude_v` is 100% complete over the
 121 dwarfs; M31 (m_V = 3.44) and M33 (m_V = 5.72) carry RC3 integrated
-V ([de Vaucouleurs et al. 1991](/data/papers/index.md#devaucouleurs1991)) in `overrides.tsv`. A definitional
+V ([de Vaucouleurs 1991](/data/papers/index.md#devaucouleurs1991)) in `overrides.tsv`. A definitional
 consistency test pins ⟨μ⟩_e = m_V + 0.753 + 2.5·log₁₀(π·a·b) against
 LVDB's `surface_brightness_rhalf` across the catalogue (median
 deviation 0.008 mag).

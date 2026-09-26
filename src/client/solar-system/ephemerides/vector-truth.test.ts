@@ -66,7 +66,7 @@ beforeAll(() => {
   installPlanetElementTables(tables);
 });
 
-/** Standish's (/data/papers/index.md#standish1992) published nominal errors for
+/** Standish 1992's (/data/papers/index.md#standish1992) published nominal errors for
  *  the 3000 BC – 3000 AD elements (approx_pos.html, section *Accuracy*):
  *  heliocentric longitude λ and latitude φ in arcsec, distance ρ in 1000 km.
  *  Combined at the body's semi-major axis these give a position budget in AU. */
@@ -100,7 +100,7 @@ function standishBudgetAu(body: PlanetName): number {
   return NOMINAL_SLACK * Math.hypot(lam, phi, rho);
 }
 
-/** Standish (/data/papers/index.md#standish1992) alone at a TDB epoch, no
+/** Standish 1992 (/data/papers/index.md#standish1992) alone at a TDB epoch, no
  *  element table and no seam. */
 function standishAu(body: PlanetName, jdTdb: number): Vec3 {
   const out: Vec3 = { x: 0, y: 0, z: 0 };
@@ -155,7 +155,7 @@ describe('element tables vs JPL Horizons (DE441), inside 1900–2100', () => {
   }
 
   it('beats the Standish series everywhere, by 3–4 orders at Jupiter and beyond', () => {
-    // Mercury is the shallow end at ~3×: Standish
+    // Mercury is the shallow end at ~3×: Standish 1992
     // (/data/papers/index.md#standish1992) is already within 2e-5 AU there,
     // because a 20″ longitude error at 0.39 AU is a small distance.
     // What the tables are for is Saturn outward, where the same series is off

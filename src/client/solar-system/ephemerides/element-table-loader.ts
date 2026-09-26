@@ -10,7 +10,7 @@ import type { PlanetName } from './ephemeris';
 
 /**
  * Load every table whose artifact is present and install it. A missing or
- * malformed file drops that planet onto the Standish
+ * malformed file drops that planet onto the Standish 1992
  * (/data/papers/index.md#standish1992) series rather than failing the load —
  * the scene renders identically, at the series' own accuracy, which is what a
  * checkout that never ran the `public/` sync gets.
@@ -28,7 +28,7 @@ export async function loadPlanetElementTables(baseUrl: string): Promise<void> {
         if (!res.ok) return;
         loaded.set(target.id, buildElementTable(await res.json() as PlanetElementTableFile));
       } catch {
-        // Left out of the map: that planet keeps the Standish series
+        // Left out of the map: that planet keeps the series of Standish 1992
         // (/data/papers/index.md#standish1992).
       }
     }),

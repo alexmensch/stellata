@@ -1,7 +1,7 @@
 # Catalog build
 
 Single-star catalogue build pipeline: the membership manifest + GCVS + CCDM +
-[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) + Gaia
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) + Gaia
 Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +

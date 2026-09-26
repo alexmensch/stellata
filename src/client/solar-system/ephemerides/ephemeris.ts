@@ -1,5 +1,5 @@
 // Heliocentric ecliptic positions for the nine planets at any wall-clock `t`
-// (Unix-seconds): frozen Horizons element tables where they reach, the Standish
+// (Unix-seconds): frozen Horizons element tables where they reach, the Standish 1992
 // (/data/papers/index.md#standish1992) series elsewhere. See README.md#planet-ephemeris.
 
 import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
@@ -125,7 +125,7 @@ const ELEMENTS: ElementSet[] = [
   // Pluto. JPL removed Pluto from approx_pos.html at the IAU
   // reclassification; this is the pre-removal Table 2a row plus its
   // Table 2b b term, valid over the same 3000 BC – 3000 AD window the
-  // model clock spans. The widely reproduced Standish & Williams
+  // model clock spans. The widely reproduced Standish 1992
   // (/data/papers/index.md#standish1992) linear-elements row is a
   // few-centuries fit that reaches tens of AU of error at the clamp bound — do
   // not substitute it.
@@ -171,7 +171,7 @@ let cachedPositions: PlanetPositions | null = null;
 let cachedShapesT: number | null = null;
 let cachedShapes: PlanetOrbitShape[] | null = null;
 
-/** Standish (/data/papers/index.md#standish1992) elements at
+/** Standish 1992 (/data/papers/index.md#standish1992) elements at
  *  centuries-past-J2000 `T`, in the equinoctial form every element source here
  *  is expressed in. The b/c/s/f correction lands on the mean longitude
  *  directly: Standish's M = L − ϖ + (b·T² + c·cos fT + s·sin fT), so λ = M + ϖ
@@ -196,7 +196,7 @@ export function standishEquinoctialAt(
   );
 }
 
-/** Heliocentric ecliptic position (AU) of a single planet from its Standish
+/** Heliocentric ecliptic position (AU) of a single planet from its Standish 1992
  *  (/data/papers/index.md#standish1992) row alone at centuries-past-J2000 `T`,
  *  with no element table and no seam. Pure helper exposed for tests; the public
  *  API is `getPlanetPositions(t)`. */
@@ -218,7 +218,7 @@ function positionFromEquinoctial(eq: EquinoctialElements, out: Vec3): void {
   );
 }
 
-/** Element tables in PLANET_ORDER; a null slot rides the Standish
+/** Element tables in PLANET_ORDER; a null slot rides the Standish 1992
  *  (/data/papers/index.md#standish1992) series at every epoch. Populated once
  *  by `element-table-loader.ts` — until then, and in a checkout that never ran
  *  the `public/` sync, every slot is null and the ephemeris behaves exactly as
@@ -240,7 +240,7 @@ function tableWeight(table: PlanetElementTable, jdTdb: number): number {
 
 /**
  * The elements one planet is positioned from at `jdTdb`: the frozen Horizons
- * table inside its span, the Standish (/data/papers/index.md#standish1992)
+ * table inside its span, the Standish 1992 (/data/papers/index.md#standish1992)
  * series outside it, and a blend of the two across `SEAM_DAYS` at each edge.
  *
  * Blending in equinoctial space rather than blending two positions is what

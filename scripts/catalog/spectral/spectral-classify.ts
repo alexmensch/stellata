@@ -214,7 +214,7 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): Spectr
 }
 
 /** Map Gaia DR3 ESP-ELS's `spectraltype_esphs` enum to a SpectralInfo.
- *  The enum is letter-only (Creevey et al. 2023
+ *  The enum is letter-only (Creevey 2023
  *  (/data/papers/index.md#creevey2023));
  *  there's no subclass or luminosity class, so subclass defaults to 5
  *  (mid-range) and lumClass to 255 (unknown). Returns null for the

@@ -45,8 +45,8 @@ function interpolate(table: [number, number][], key: number): number {
 }
 
 // Wolf-Rayet Teff / BC by ionization subclass — one shared WN/WC ramp
-// (WN2 ~141 kK … WN8 ~45 kK, Hamann+ 2006 (/data/papers/index.md#hamann2006)).
-// Sander+ 2012 (/data/papers/index.md#sander2012) Table 6 puts WC4 at ~117 kK
+// (WN2 ~141 kK … WN8 ~45 kK, Hamann 2006 (/data/papers/index.md#hamann2006)).
+// Sander 2012 (/data/papers/index.md#sander2012) Table 6 puts WC4 at ~117 kK
 // and WC9 at ~44 kK; the ramp meets it only at WC9 and runs 8–29 kK under it
 // for WC4–WC8.
 const WR_T_TABLE: [number, number][] = [[0, 140000], [5, 75000], [9, 44000]];
@@ -54,7 +54,7 @@ const WR_BC_TABLE: [number, number][] = [[0, -6.0], [5, -4.0], [9, -2.7]];
 
 export function tempKelvin(info: SpectralInfo): number {
   if (info.isWhiteDwarf) {
-    // WD temperature index N = 50400 / T_eff (Sion et al. 1983
+    // WD temperature index N = 50400 / T_eff (Sion 1983
     // (/data/papers/index.md#sion)), so T_eff ≈ 50400 / N for N=1..9.
     const n = Math.max(1, info.wdSubclass);
     return 50400 / n;

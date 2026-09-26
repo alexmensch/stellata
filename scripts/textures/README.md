@@ -168,7 +168,7 @@ rather than shipping it.
   each row carries its own and `vrc_of` converts a Johnson V−R onto the
   Cousins system `SUN_VRC` is measured on. Planets from
   [Mallama 2017](/data/papers/index.md#mallama2017), satellites from
-  [Frey & Lowman 1974](/data/papers/index.md#frey1974). Writes per-body
+  [Frey 1974](/data/papers/index.md#frey1974). Writes per-body
   numbers into `data/textures/calibration.json`;
   `texture-calibration.test.ts` pins targets, achieved means, the index
   table and that conversion. Rationale:

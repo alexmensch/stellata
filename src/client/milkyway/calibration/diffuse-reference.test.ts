@@ -21,7 +21,7 @@ import {
   discColourIndex,
 } from '../../hdr/emission/population-colour-pure';
 
-/** The log-age-yr = 10.000 row of one committed BC03
+/** The log-age-yr = 10.000 row of one committed Bruzual 2003
  *  (/data/papers/index.md#bruzual2003) table, whitespace-split. */
 function bc03RowAt10Gyr(metallicityCode: 'm52' | 'm62' | 'm72'): string[] {
   const row = readFileSync(
@@ -148,7 +148,7 @@ describe('MilkyWay population colour indices', () => {
   // The constraint the solve exists to preserve: recombining the two at
   // the shipped light B/T returns the published integrated colour exactly.
   // An independently synthesised pair would violate this silently — the
-  // same BC03 (/data/papers/index.md#bruzual2003) grid over a τ ≈ 8 Gyr
+  // same Bruzual 2003 (/data/papers/index.md#bruzual2003) grid over a τ ≈ 8 Gyr
   // declining SFH gives the disc 0.54, which recombines to 0.567, 0.163 mag
   // bluer than published.
   it('recombines to the published integrated colour', () => {

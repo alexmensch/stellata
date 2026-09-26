@@ -127,7 +127,7 @@ Every input is a frozen local copy of a published dataset, so the
 build is reproducible and never depends on a remote service being up.
 A separate set of manual refresh scripts re-downloads the Gaia-era
 sources (Gaia, Hipparcos, SIMBAD,
-[Bailer-Jones](/data/papers/index.md#bailerjones2021), the Pulkovo
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021), the Pulkovo
 multiple-star compilation) when something upstream changes —
 infrequently, and always as a deliberate, reviewed step. The base star
 list itself is swapped only when a new AT-HYG release lands.
@@ -176,7 +176,7 @@ sources.
 
 **Brightness.** A star's visual (Johnson V) magnitude is transformed
 from Gaia's own broadband measurements through a published relation
-([Riello et al. 2021](/data/papers/index.md#riello2021)) — that covers 310,939 of the 313,257 stars. Gaia's
+([Riello 2021](/data/papers/index.md#riello2021)) — that covers 310,939 of the 313,257 stars. Gaia's
 detectors saturate on the brightest stars, so those fall back to
 Hipparcos' printed V, and a residual 144 take the base catalogue's
 printed magnitude. Intrinsic brightness is always *derived* from that
@@ -193,11 +193,11 @@ and is listed as having done so — it keeps its identity and returns when
 a future Gaia release measures it.
 
 One over a parallax is biased and noisy, so the raw inversion is then
-refined in a fixed order: the [Bailer-Jones](/data/papers/index.md#bailerjones2021) probabilistic distance
+refined in a fixed order: the [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) probabilistic distance
 replaces it for Gaia-measured stars; stars in the direction of the Large
 Magellanic Cloud that also share its motion are snapped to its precisely
 known distance of 49.6 kpc (from eclipsing binaries,
-[Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) — parallax is
+[Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) — parallax is
 useless that far out); and anything still beyond 50 kpc is out of scope
 and dropped. Because intrinsic brightness is derived from the final
 distance rather than tabulated, a star moved to a new distance is lit

@@ -9,7 +9,7 @@ import {
 import { lookupGliese, type GlieseIndex } from '../gliese-parse';
 import type { Tycho2Row } from '../tycho2-parse';
 
-/** Riello et al. 2021 (/data/papers/index.md#riello2021) App. C,
+/** Riello 2021 (/data/papers/index.md#riello2021) App. C,
  *  Table C.2 — `G − V` as a cubic in `BP − RP`. Ascending powers. The DR3 photometry is unchanged from EDR3, so the EDR3 calibration
  *  is the one that applies. */
 export const RIELLO_G_MINUS_V_COEFFS = [
@@ -21,7 +21,7 @@ export const RIELLO_G_MINUS_V_COEFFS = [
  *  uncertainty rather than a guess. */
 export const RIELLO_G_MINUS_V_SIGMA = 0.03017;
 
-/** Colour range Riello+ 2021 (/data/papers/index.md#riello2021) Table C.1
+/** Colour range Riello 2021 (/data/papers/index.md#riello2021) Table C.1
  *  states the relation over. Outside it the cubic diverges fast, so this is a validity gate rather than a quality hint. */
 export const RIELLO_BP_RP_MIN = -0.5;
 export const RIELLO_BP_RP_MAX = 5.0;

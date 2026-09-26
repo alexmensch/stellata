@@ -57,7 +57,7 @@ scripts/catalog/distance/
                                   is that a column added to the interface
                                   lands in one place.
   dust/                           Build-time de-extinction against the
-                                  Edenhofer dust grid
+                                  dust grid of Edenhofer 2024
                                   (/data/papers/index.md#edenhofer2024), and
                                   the invariant tying it to the runtime
                                   march. Its own README.
@@ -284,7 +284,7 @@ the write-time complement.
 
 `scripts/catalog/build-catalog.ts` swaps the cascade's naive `1 / π`
 inversion for the Bayesian posteriors published by
-[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) (CDS I/352).
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) (CDS I/352).
 The pipeline:
 
 1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via
@@ -333,24 +333,24 @@ The rule, the other gated pulls, and why a forced rebuild cannot substitute:
 
 ### Layer 2 — LMC kinematic override
 
-The [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021)
+The [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)
 Galactic-density prior doesn't cover the LMC, so the
 LMC supergiants in the catalogue (HDE 268xxx range) land somewhere
 intermediate (5–20 kpc) after Layer 1 instead of the LMC's true
 ~50 kpc. Layer 2 identifies these stars by sky-cone + bulk proper
 motion and snaps their distance to the eclipsing-binary anchor in
-[Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) (49.59 kpc, shipped as 49.594).
+[Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) (49.59 kpc, shipped as 49.594).
 
 Constants in `../record/catalog-pure.ts`:
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `LMC_DISTANCE_PC` | 49,594 | [Pietrzyński et al. 2019](/data/papers/index.md#pietrzynski2019) LMC centre distance. |
-| `LMC_CENTRE_RA_HOURS` | 5.25067 (= 78.76°) | LMC PM dynamical centre RA ([van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014)). |
-| `LMC_CENTRE_DEC_DEG` | −69.19 | LMC PM dynamical centre Dec ([van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014)). |
+| `LMC_DISTANCE_PC` | 49,594 | [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) LMC centre distance. |
+| `LMC_CENTRE_RA_HOURS` | 5.25067 (= 78.76°) | LMC PM dynamical centre RA ([van der Marel 2014](/data/papers/index.md#vandermarel2014)). |
+| `LMC_CENTRE_DEC_DEG` | −69.19 | LMC PM dynamical centre Dec ([van der Marel 2014](/data/papers/index.md#vandermarel2014)). |
 | `LMC_CONE_HALF_ANGLE_DEG` | 15 | Sky-cone half-angle. |
-| `LMC_PM_RA_CENTRE` | 1.85 mas/yr | PM gate centre μ_α* (≈ [van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014) COM 1.910). |
-| `LMC_PM_DEC_CENTRE` | 0.20 mas/yr | PM gate centre μ_δ (≈ [van der Marel & Kallivayalil 2014](/data/papers/index.md#vandermarel2014) COM 0.229). |
+| `LMC_PM_RA_CENTRE` | 1.85 mas/yr | PM gate centre μ_α* (≈ [van der Marel 2014](/data/papers/index.md#vandermarel2014) COM 1.910). |
+| `LMC_PM_DEC_CENTRE` | 0.20 mas/yr | PM gate centre μ_δ (≈ [van der Marel 2014](/data/papers/index.md#vandermarel2014) COM 0.229). |
 | `LMC_PM_TOLERANCE` | 0.5 mas/yr | Per-axis tolerance around the gate centre. |
 | `LMC_PARALLAX_MAS` | 1000 / `LMC_DISTANCE_PC` ≈ 0.0202 mas | The LMC's own parallax, the zero the consistency test measures from. |
 | `LMC_PARALLAX_CONSISTENCY_SIGMA` | 10 | Errors above `LMC_PARALLAX_MAS` past which a row's own parallax refuses the snap. |

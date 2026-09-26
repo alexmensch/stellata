@@ -51,12 +51,12 @@ One entry per cloud:
 | `quat`     | `[qx, qy, qz, qw]` rotation. Identity = `[0, 0, 0, 1]`. |
 | `source`   | `"Z2021T1"` or `"Z2020"` provenance. |
 | `distance` | Heliocentric distance to centroid (pc). |
-| `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the [Leike et al. 2020](/data/papers/index.md#leike2020) map's `mass_leike` underestimates it by 1.0–1.6× for clouds wholly inside the Leike grid, and by up to ~14× for clouds at its edge). Absent for Z2020 clouds. |
+| `mass`     | Cloud mass, M☉ (Z2021 clouds only — Table 3 `mass_nicest`; the [Leike 2020](/data/papers/index.md#leike2020) map's `mass_leike` underestimates it by 1.0–1.6× for clouds wholly inside the Leike grid, and by up to ~14× for clouds at its edge). Absent for Z2020 clouds. |
 | `sid`      | Frozen Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)). |
 | `class`    | `dark` / `sf` / `hii` taxonomy (curated seed; a planned build-time embedded-star cross-match will supersede). |
 | `n0Cal`, `uEnv`, `rflat`, `p` | Calibrated presence-pass density model ([§ 4](/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field)). |
 | `sigmaS`, `seed` | Log-normal σ_s by class + FNV-1a noise seed. |
-| `massLeike`, `akPeak` | [Zucker 2021](/data/papers/index.md#zucker2021) Table 3 [Leike et al. 2020](/data/papers/index.md#leike2020)-resolution calibration anchors; null unless profiled. |
+| `massLeike`, `akPeak` | [Zucker 2021](/data/papers/index.md#zucker2021) Table 3 [Leike 2020](/data/papers/index.md#leike2020)-resolution calibration anchors; null unless profiled. |
 | `inGrid`   | Cloud lies fully inside the ±1250 pc dust voxel cube. |
 | `embedded` | Embedded-star/cavity list — currently empty (the cross-match + cavity carve are tracked, not yet shipped). |
 

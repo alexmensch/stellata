@@ -6,13 +6,16 @@ citation that cannot be traced to a real paper carrying the claim is a defect.
 
 ## How the tree cites a work
 
-Every citation points at the work's entry in `index.md` by key, always in the
-rooted form: `[Zucker et al. 2020](/data/papers/index.md#zucker2020)` in
-markdown, the bare `/data/papers/index.md#zucker2020` beside the author-year
-in a code comment, docstring or data-file header. The entry is the only place
-the journal, volume, DOI, arXiv ID, bibcode and identifier URLs live; the
-citing text keeps the author-year and any in-paper locator that explains the
-claim (Table A1, eq. 2, Sect. 2.7).
+Every citation names the work by its **label** and points at its entry by
+key, always in the rooted form: `[Zucker 2020](/data/papers/index.md#zucker2020)`
+in markdown; `Zucker 2020 (/data/papers/index.md#zucker2020)` — or
+`(Zucker 2020, /data/papers/index.md#zucker2020)` — in a code comment,
+docstring or data file. The label is the entry heading's text before the dash:
+the first author's surname and the year, never co-authors or "et al.", with a
+letter (`Tomasko 2008a`, `2008b`) only where two entries would otherwise share
+one. The full author list, journal, volume, DOI, arXiv ID, bibcode and
+identifier URLs live only in the entry; the citing text adds just the in-paper
+locator that explains the claim (Table A1, eq. 2, Sect. 2.7).
 
 Outside the rule:
 
@@ -33,7 +36,9 @@ the store and pin it in `manifest.json`.
 ## What enforces it
 
 - `tests/citation-index.test.ts`: every pointer into `index.md` names an entry
-  key (an explicit anchor, never a heading slug); every entry is cited from
+  key (an explicit anchor, never a heading slug); every entry's label has the
+  first-author-and-year form, and every citation names its entry by that
+  label, in one of the forms above; every entry is cited from
   outside this folder; `manifest.json` pins exactly the entries whose **Copy**
   is held, each copy named for its entry; `pdf` is a link to the store and
   every pinned copy in it still has its pinned bytes

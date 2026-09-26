@@ -103,7 +103,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 0–11  `float32 × 3`  x, y, z in parsecs (equatorial, Sol at origin)
   - 12–15 `float32`      absmag — **intrinsic** (de-extincted). The build
                           subtracts the Sol→star
-                          [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024)
+                          [Edenhofer 2024](/data/papers/index.md#edenhofer2024)
                           A_V so the runtime raymarch re-adds it without double-counting (see
                           [Build-time de-extinction](../distance/dust/README.md#build-time-de-extinction)).
   - 16–19 `float32`      ci (intrinsic B–V colour index, de-reddened by the

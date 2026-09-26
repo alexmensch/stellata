@@ -24,7 +24,7 @@ consumers and refresh cadences differ.
   (`-out=HIP,CCDM,MultFlag`).
 - **Licence**: Public domain via CDS.
 - **CCDM**: Catalog of the Components of Double and Multiple stars
-  ([Dommanget & Nys 1994](/data/papers/index.md#dommanget1994)) — the curated pre-WDS register of visual
+  ([Dommanget 1994](/data/papers/index.md#dommanget1994)) — the curated pre-WDS register of visual
   doubles. Each Hipparcos row's `CCDM` column carries the
   cross-reference into that catalogue.
 - **MultFlag gate**: a star is flagged as a visual double when
@@ -61,7 +61,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   ([Which tiers give a system blend](/scripts/catalog/photometry/README.md#which-tiers-give-a-system-blend--vtierissystemblend)).
 - **Role**: the printed tier of two cascades ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
   `Vmag` serves the V-magnitude cascade for rows whose Gaia photometry is
-  missing or outside the [Riello+ 2021](/data/papers/index.md#riello2021) transform's validity range — 2,174
+  missing or outside the [Riello 2021](/data/papers/index.md#riello2021) transform's validity range — 2,174
   records in the current build. `B-V` serves the ci cascade below the
   synthetic-photometry tier, and is the only **measured** colour reaching
   the rows with no Gaia source at all.
@@ -79,7 +79,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 
 ## `hip2_van_leeuwen.tsv`
 
-- **Citation**: [van Leeuwen F. 2007](/data/papers/index.md#vanleeuwen2007).
+- **Citation**: [van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007).
 - **VizieR catalog**: `I/311/hip2`.
 - **Licence**: Public domain via CDS.
 - **Role**: long-baseline (≈1991.25 epoch) astrometry that complements

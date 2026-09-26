@@ -28,7 +28,7 @@ changes.
 ## Entries
 
 <a id="abdurrouf2022"></a>
-### Abdurro'uf et al. 2022 — The Seventeenth Data Release of the Sloan Digital Sky Surveys: Complete Release of MaNGA, MaStar, and APOGEE-2 Data
+### Abdurro'uf 2022 — The Seventeenth Data Release of the Sloan Digital Sky Surveys: Complete Release of MaNGA, MaStar, and APOGEE-2 Data
 
 ApJS 259, 35 (2022) · [doi:10.3847/1538-4365/ac4414](https://doi.org/10.3847/1538-4365/ac4414) · [arXiv:2112.02026](https://arxiv.org/abs/2112.02026) · [2022ApJS..259...35A](https://ui.adsabs.harvard.edu/abs/2022ApJS..259...35A)
 
@@ -39,7 +39,7 @@ ApJS 259, 35 (2022) · [doi:10.3847/1538-4365/ac4414](https://doi.org/10.3847/15
 | SDSS DR17 release paper (planned Tier-4 citation for the SDSS Main Galaxy Sample route) |  | verified | p. 1 | “THE SEVENTEENTH DATA RELEASE OF THE SLOAN DIGITAL SKY SURVEYS: COMPLETE RELEASE OF MANGA, MASTAR AND APOGEE-2 DATA” |
 
 <a id="andrae2023"></a>
-### Andrae et al. 2023 — Gaia Data Release 3
+### Andrae 2023 — Gaia Data Release 3
 
 A&A 674, A27 · [doi:10.1051/0004-6361/202243462](https://doi.org/10.1051/0004-6361/202243462) · [arXiv:2206.06138](https://arxiv.org/abs/2206.06138)
 
@@ -51,7 +51,7 @@ A&A 674, A27 · [doi:10.1051/0004-6361/202243462](https://doi.org/10.1051/0004-6
 | A0 reference wavelength | 541.4 nm | verified | p. 3, Sect. 2.1 | “the line-of-sight monochromatic extinction A0 at 541.4 nm, where A0 is the extinction parameter from the adopted Fitzpatrick extinction law” |
 
 <a id="archinal2011"></a>
-### Archinal et al. 2011 — Report of the IAU Working Group on Cartographic Coordinates and Rotational Elements: 2009
+### Archinal 2011 — Report of the IAU Working Group on Cartographic Coordinates and Rotational Elements: 2009
 
 Celest Mech Dyn Astr 109, 101-135 (2011) · [doi:10.1007/s10569-010-9320-4](https://doi.org/10.1007/s10569-010-9320-4) · [2011CeMDA.109..101A](https://ui.adsabs.harvard.edu/abs/2011CeMDA.109..101A)
 
@@ -63,7 +63,7 @@ Celest Mech Dyn Astr 109, 101-135 (2011) · [doi:10.1007/s10569-010-9320-4](http
 | Moon pole/W linear row and E1/E2 libration terms | 269.9949 +0.0031T, 66.5392 +0.0130T, W 38.3213 + 13.17635815d; E1 −3.8787/1.5419/3.561, E2 −0.1204/0.0239/0.1208 | unverified |  |  |
 
 <a id="archinal2018"></a>
-### Archinal et al. 2018 — Report of the IAU Working Group on Cartographic Coordinates and Rotational Elements: 2015
+### Archinal 2018 — Report of the IAU Working Group on Cartographic Coordinates and Rotational Elements: 2015
 
 Celest Mech Dyn Astr 130:22 · [doi:10.1007/s10569-017-9805-5](https://doi.org/10.1007/s10569-017-9805-5)
 
@@ -80,7 +80,7 @@ Celest Mech Dyn Astr 130:22 · [doi:10.1007/s10569-017-9805-5](https://doi.org/1
 | Moon periodic terms kept (Europa J4, Ganymede J5, Callisto J6, Mimas S3/S5, Tethys S4/S5, Rhea S6, Triton N7 series) | e.g. Mimas 13.56/-1.53/-13.48 on S3 = 177.40 - 36505.5T, W -44.85 sin S5; Triton -32.35/22.55/22.25 ... on N7 = 177.85 + 52.316T | verified | pp. 11-14, Table 2 | “W = 333.46 + 381.9945550d − 13.48 sin S3 − 44.85 sin S5” |
 
 <a id="arzoumanian2011"></a>
-### Arzoumanian et al. 2011 — Characterizing interstellar filaments with Herschel in IC 5146
+### Arzoumanian 2011 — Characterizing interstellar filaments with Herschel in IC 5146
 
 A&A 529, L6 (2011) · [doi:10.1051/0004-6361/201116596](https://doi.org/10.1051/0004-6361/201116596) · [arXiv:1103.0201](https://arxiv.org/abs/1103.0201) · [2011A&A...529L...6A](https://ui.adsabs.harvard.edu/abs/2011A%26A...529L...6A)
 
@@ -91,7 +91,7 @@ A&A 529, L6 (2011) · [doi:10.1051/0004-6361/201116596](https://doi.org/10.1051/
 | 0.1 pc filament width | ~0.1 pc | verified | p. 1 (abstract) | “a narrow distribution of widths having a median value of 0.10 ± 0.03 pc” |
 
 <a id="arzoumanian2019"></a>
-### Arzoumanian et al. 2019 — Characterizing the properties of nearby molecular filaments observed with Herschel
+### Arzoumanian 2019 — Characterizing the properties of nearby molecular filaments observed with Herschel
 
 A&A 621, A42 (2019) · [doi:10.1051/0004-6361/201832725](https://doi.org/10.1051/0004-6361/201832725) · [arXiv:1810.00721](https://arxiv.org/abs/1810.00721) · [2019A&A...621A..42A](https://ui.adsabs.harvard.edu/abs/2019A%26A...621A..42A)
 
@@ -102,7 +102,7 @@ A&A 621, A42 (2019) · [doi:10.1051/0004-6361/201832725](https://doi.org/10.1051
 | 0.1 pc filament width | ~0.1 pc | verified | p. 1 (abstract) | “crest-averaged inner widths, with a median value of 0.10 pc and an interquartile range of 0.07 pc” |
 
 <a id="bahcall1980"></a>
-### Bahcall & Soneira 1980 — The universe at faint magnitudes. I - Models for the galaxy and the predicted star counts
+### Bahcall 1980 — The universe at faint magnitudes. I - Models for the galaxy and the predicted star counts
 
 ApJS 44, 73 (1980) · [doi:10.1086/190685](https://doi.org/10.1086/190685) · [1980ApJS...44...73B](https://ui.adsabs.harvard.edu/abs/1980ApJS...44...73B)
 
@@ -124,7 +124,7 @@ PASP 127, 994-1009 (2015) · [doi:10.1086/683116](https://doi.org/10.1086/683116
 | parallax-inversion bias at 1 < S/N < 5 (~20% fractional-error bound) | ~20% fractional parallax error (S/N 5) | verified | p. 1 (abstract) | “doing this is not trivial once the fractional parallax error is larger than about 20%” |
 
 <a id="bailerjones2021"></a>
-### Bailer-Jones et al. 2021 — Estimating Distances from Parallaxes. V. Geometric and Photogeometric Distances to 1.47 Billion Stars in Gaia Early Data Release 3
+### Bailer-Jones 2021 — Estimating Distances from Parallaxes. V. Geometric and Photogeometric Distances to 1.47 Billion Stars in Gaia Early Data Release 3
 
 AJ 161, 147 · [doi:10.3847/1538-3881/abd806](https://doi.org/10.3847/1538-3881/abd806) · [arXiv:2012.05220](https://arxiv.org/abs/2012.05220)
 
@@ -176,7 +176,7 @@ PASP 91, 589 (1979) · [doi:10.1086/130542](https://doi.org/10.1086/130542) · [
 | table pair at Johnson V-R = 0.45 | (0.45, 0.30) | disagrees | p. 591 | “(V−R)c = 0.73 (V−R)J − 0.03, (V−R)J < 1.0” |
 
 <a id="blandhawthorn2016"></a>
-### Bland-Hawthorn & Gerhard 2016 — The Galaxy in Context: Structural, Kinematic, and Integrated Properties
+### Bland-Hawthorn 2016 — The Galaxy in Context: Structural, Kinematic, and Integrated Properties
 
 ARA&A 54, 529 · [doi:10.1146/annurev-astro-081915-023441](https://doi.org/10.1146/annurev-astro-081915-023441) · [arXiv:1602.07702](https://arxiv.org/abs/1602.07702)
 
@@ -195,7 +195,7 @@ ARA&A 54, 529 · [doi:10.1146/annurev-astro-081915-023441](https://doi.org/10.11
 | thick/thin surface density ratio | f_Σ = 12 ± 4 % | verified | p. 561, Sect. 5.1 (margin summary) | “fΣ : 12%±4%, thick / thin disk surface density ratio at R0” |
 
 <a id="bodhaine1999"></a>
-### Bodhaine et al. 1999 — On Rayleigh Optical Depth Calculations
+### Bodhaine 1999 — On Rayleigh Optical Depth Calculations
 
 J. Atmos. Oceanic Technol. 16, 1854-1861 (1999) · [doi:10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2](https://doi.org/10.1175/1520-0426(1999)016<1854:ORODC>2.0.CO;2)
 
@@ -207,7 +207,7 @@ J. Atmos. Oceanic Technol. 16, 1854-1861 (1999) · [doi:10.1175/1520-0426(1999)0
 | blue/red Rayleigh ratio (450/650 nm) | 4.50 | verified | p. 1859, eq. 30 |  |
 
 <a id="bohlin1978"></a>
-### Bohlin, Savage & Drake 1978 — A survey of interstellar H I from L-alpha absorption measurements. II
+### Bohlin 1978 — A survey of interstellar H I from L-alpha absorption measurements. II
 
 ApJ 224, 132 (1978) · [doi:10.1086/156357](https://doi.org/10.1086/156357) · [1978ApJ...224..132B](https://ui.adsabs.harvard.edu/abs/1978ApJ...224..132B)
 
@@ -219,7 +219,7 @@ ApJ 224, 132 (1978) · [doi:10.1086/156357](https://doi.org/10.1086/156357) · [
 | N_H per A_V (derived at R_V = 3.1) | 1.87×10²¹ cm⁻² mag⁻¹ | verified | p. 132 (abstract) | “(N(H I + H2)/E(B − V)) = 5.8 × 10^21 atoms cm−2 mag−1” |
 
 <a id="bond2018"></a>
-### Bond et al. 2018 — Hubble Space Telescope Trigonometric Parallax of Polaris B, Companion of the Nearest Cepheid
+### Bond 2018 — Hubble Space Telescope Trigonometric Parallax of Polaris B, Companion of the Nearest Cepheid
 
 Bond H. E., Nelan E. P., Remage Evans N., Schaefer G. H. & Harmer D.; ApJ 853, 55 (2018) · [doi:10.3847/1538-4357/aaa3f9](https://doi.org/10.3847/1538-4357/aaa3f9) · [arXiv:1712.08139](https://arxiv.org/abs/1712.08139) · [2018ApJ...853...55B](https://ui.adsabs.harvard.edu/abs/2018ApJ...853...55B)
 
@@ -230,7 +230,7 @@ Bond H. E., Nelan E. P., Remage Evans N., Schaefer G. H. & Harmer D.; ApJ 853, 5
 | Polaris B HST FGS absolute parallax | 6.26 ± 0.24 mas (158 ± 6 pc) | verified | p. 2, Abstract; p. 11, Sect. 2.3 | “Our solution results in an absolute parallax of Polaris B of 6.26 ± 0.24 mas (d = 158 ± 6 pc)” |
 
 <a id="bruzual2003"></a>
-### Bruzual & Charlot 2003 — Stellar population synthesis at the resolution of 2003
+### Bruzual 2003 — Stellar population synthesis at the resolution of 2003
 
 MNRAS 344, 1000 · [doi:10.1046/j.1365-8711.2003.06897.x](https://doi.org/10.1046/j.1365-8711.2003.06897.x) · [arXiv:astro-ph/0309134](https://arxiv.org/abs/astro-ph/0309134)
 
@@ -245,7 +245,7 @@ MNRAS 344, 1000 · [doi:10.1046/j.1365-8711.2003.06897.x](https://doi.org/10.104
 | evolutionary tracks | Padova 1994 (Sect. 2.1, Table 1) | verified | p. 2-3, Sect. 2.1 |  |
 
 <a id="butkevich2014"></a>
-### Butkevich & Lindegren 2014 — Rigorous treatment of barycentric stellar motion
+### Butkevich 2014 — Rigorous treatment of barycentric stellar motion
 
 A&A 570, A62 (2014) · [doi:10.1051/0004-6361/201424483](https://doi.org/10.1051/0004-6361/201424483) · [arXiv:1407.4664](https://arxiv.org/abs/1407.4664) · [2014A&A...570A..62B](https://ui.adsabs.harvard.edu/abs/2014A%26A...570A..62B)
 
@@ -257,7 +257,7 @@ A&A 570, A62 (2014) · [doi:10.1051/0004-6361/201424483](https://doi.org/10.1051
 | size of the light-time terms | > 0.1 mas over 100 yr for at least 33 Hipparcos stars | verified | p. 1 (abstract) | “light-time effects are generally very small, but exceed 0.1 mas or 0.1 m s−1 over 100 yr for at least 33 stars in the Hipparcos catalogue.” |
 
 <a id="cardelli1989"></a>
-### Cardelli, Clayton & Mathis 1989 — The relationship between infrared, optical, and ultraviolet extinction
+### Cardelli 1989 — The relationship between infrared, optical, and ultraviolet extinction
 
 ApJ 345, 245 · [doi:10.1086/167900](https://doi.org/10.1086/167900)
 
@@ -271,7 +271,7 @@ ApJ 345, 245 · [doi:10.1086/167900](https://doi.org/10.1086/167900)
 | 'CCM default' reddening in milkyway.ts / milkyway-tuning.ts | (0.751, 1.0, 1.32) | disagrees | p. 249, Table 3 | “B 2.27 0.9982 1.0495 1.337 1.322 1.325” |
 
 <a id="casagrande2018"></a>
-### Casagrande & VandenBerg 2018 — On the use of Gaia magnitudes and new tables of bolometric corrections
+### Casagrande 2018 — On the use of Gaia magnitudes and new tables of bolometric corrections
 
 MNRAS 479, L102-L107 (2018) · [doi:10.1093/mnrasl/sly104](https://doi.org/10.1093/mnrasl/sly104) · [arXiv:1806.01953](https://arxiv.org/abs/1806.01953) · [2018MNRAS.479L.102C](https://ui.adsabs.harvard.edu/abs/2018MNRAS.479L.102C)
 
@@ -295,7 +295,7 @@ Chabrier G.; PASP 115, 763-796 (2003) · [doi:10.1086/376392](https://doi.org/10
 | disk IMF form: lognormal at m ≤ 1 M⊙, power law x = 1.3 above | lognormal (m_c = 0.079 M⊙, σ = 0.69) + x = 1.3 | verified | p. 16, eq. 17; p. 66, Table 1 | “IMF A=0.158 ... mc = 0.079 ... σ = 0.69 ... A=4.43×10−2 x=1.3 ±0.3” |
 
 <a id="chapman2009"></a>
-### Chapman et al. 2009 — The Mid-Infrared Extinction Law in the Ophiuchus, Perseus, and Serpens Molecular Clouds
+### Chapman 2009 — The Mid-Infrared Extinction Law in the Ophiuchus, Perseus, and Serpens Molecular Clouds
 
 ApJ 690, 496-511 (2009) · [doi:10.1088/0004-637X/690/1/496](https://doi.org/10.1088/0004-637X/690/1/496) · [arXiv:0809.1106](https://arxiv.org/abs/0809.1106) · [2009ApJ...690..496C](https://ui.adsabs.harvard.edu/abs/2009ApJ...690..496C)
 
@@ -309,7 +309,7 @@ ApJ 690, 496-511 (2009) · [doi:10.1088/0004-637X/690/1/496](https://doi.org/10.
 | R_V ≈ 5.5 in dense cores | 5.5 | verified | p. 1 (abstract) | “the data are more consistent with the Weingartner & Draine RV = 5.5 model that uses larger maximum dust grain sizes” |
 
 <a id="cioni2000"></a>
-### Cioni et al. 2000 — The tip of the red giant branch and distance of the Magellanic Clouds: results from the DENIS survey
+### Cioni 2000 — The tip of the red giant branch and distance of the Magellanic Clouds: results from the DENIS survey
 
 A&A 359, 601 (2000) · [arXiv:astro-ph/0003223](https://arxiv.org/abs/astro-ph/0003223) · [2000A&A...359..601C](https://ui.adsabs.harvard.edu/abs/2000A%26A...359..601C)
 
@@ -321,7 +321,7 @@ A&A 359, 601 (2000) · [arXiv:astro-ph/0003223](https://arxiv.org/abs/astro-ph/0
 | SMC distance modulus (DENIS TRGB, via LVDB) | µ = 18.99 ± 0.1 (62.81 kpc) | verified | p. 1 (abstract); p. 10 | “m − M = 18.99 ± 0.03 (formal) ±0.08 (systematic) for the Small Magellanic Cloud (SMC)” |
 
 <a id="ciotti1999"></a>
-### Ciotti & Bertin 1999 — Analytical properties of the R^(1/m) luminosity law
+### Ciotti 1999 — Analytical properties of the R^(1/m) luminosity law
 
 A&A 352, 447 (1999) · [arXiv:astro-ph/9911078](https://arxiv.org/abs/astro-ph/9911078) · [1999A&A...352..447C](https://ui.adsabs.harvard.edu/abs/1999A%26A...352..447C)
 
@@ -332,7 +332,7 @@ A&A 352, 447 (1999) · [arXiv:astro-ph/9911078](https://arxiv.org/abs/astro-ph/9
 | Sérsic b_n asymptotic expansion | b_n = 2n - 1/3 + 4/(405n) | verified | p. 5, eq. 18 | “b(m) ∼ 2m − 1/3 + 4/(405m) + 46/(25515m²) + 131/(1148175m³)” |
 
 <a id="cook2023"></a>
-### Cook et al. 2023 — Completeness of the NASA/IPAC Extragalactic Database (NED) Local Volume Sample
+### Cook 2023 — Completeness of the NASA/IPAC Extragalactic Database (NED) Local Volume Sample
 
 ApJS 268, 14 (2023) · [doi:10.3847/1538-4365/acdd06](https://doi.org/10.3847/1538-4365/acdd06) · [arXiv:2306.06271](https://arxiv.org/abs/2306.06271)
 
@@ -344,7 +344,7 @@ ApJS 268, 14 (2023) · [doi:10.3847/1538-4365/acdd06](https://doi.org/10.3847/15
 | NED-LVS dataset DOI | 10.26132/NED8 | verified | p. 34 (references) | “NED Local Volume Sample (NED-LVS), IPAC, doi: 10.26132/NED8” |
 
 <a id="corbelli2014"></a>
-### Corbelli et al. 2014 — Dynamical signatures of a ΛCDM-halo and the distribution of the baryons in M 33
+### Corbelli 2014 — Dynamical signatures of a ΛCDM-halo and the distribution of the baryons in M 33
 
 A&A 572, A23 · [doi:10.1051/0004-6361/201424033](https://doi.org/10.1051/0004-6361/201424033) · [arXiv:1409.2665](https://arxiv.org/abs/1409.2665)
 
@@ -358,7 +358,7 @@ A&A 572, A23 · [doi:10.1051/0004-6361/201424033](https://doi.org/10.1051/0004-6
 | M33 has no genuine bulge (pure-disc model) | no bulge; inner light read as raised M/L inside 1.5 kpc | verified | p. 1; p. 11 | “it hosts no bulge nor prominent bars / the M33 disk has larger mass-to-light ratio in the innermost 1.5 kpc rather than a genuine bulge” |
 
 <a id="costaalmeida2021"></a>
-### Costa-Almeida E. et al. 2021 — M dwarf spectral indices at moderate resolution: accurate Teff and [Fe/H] for 178 southern stars
+### Costa-Almeida 2021 — M dwarf spectral indices at moderate resolution: accurate Teff and [Fe/H] for 178 southern stars
 
 MNRAS 508, 5148-5162 (2021) · [doi:10.1093/mnras/stab2831](https://doi.org/10.1093/mnras/stab2831) · [2021MNRAS.508.5148C](https://ui.adsabs.harvard.edu/abs/2021MNRAS.508.5148C)
 
@@ -369,7 +369,7 @@ MNRAS 508, 5148-5162 (2021) · [doi:10.1093/mnras/stab2831](https://doi.org/10.1
 | EZ Aqr (GJ 866) radial velocity as published | 6824.7 km/s | verified | p. 19, Table A3 | “GJ 866 22:38:33.7 -15:17:57.3 3480 305 0.16 0.46 6824.7 3.3” |
 
 <a id="courteau2011"></a>
-### Courteau et al. 2011 — THE LUMINOSITY PROFILE AND STRUCTURAL PARAMETERS OF THE ANDROMEDA GALAXY
+### Courteau 2011 — THE LUMINOSITY PROFILE AND STRUCTURAL PARAMETERS OF THE ANDROMEDA GALAXY
 
 ApJ 739, 20 · [doi:10.1088/0004-637X/739/1/20](https://doi.org/10.1088/0004-637X/739/1/20) · [arXiv:1106.3564](https://arxiv.org/abs/1106.3564)
 
@@ -400,7 +400,7 @@ AIP Press / Springer, New York (2000); ISBN 0-387-98746-0 · [doi:10.1007/978-1-
 | twilight illuminance 0.008 lx at 12 deg / 0.0006 lx at 18 deg solar depression |  | unverified |  |  |
 
 <a id="creevey2023"></a>
-### Creevey et al. 2023 — Gaia Data Release 3
+### Creevey 2023 — Gaia Data Release 3
 
 A&A 674, A26 · [doi:10.1051/0004-6361/202243688](https://doi.org/10.1051/0004-6361/202243688) · [arXiv:2206.05864](https://arxiv.org/abs/2206.05864)
 
@@ -414,7 +414,7 @@ A&A 674, A26 · [doi:10.1051/0004-6361/202243688](https://doi.org/10.1051/0004-6
 | spectraltype_esphs is a letter-only enum from ESP-ELS (catalog-pure ApsisRow, spectral-classify classifyFromGspspec) | CSTAR, M, K, G, F, A, B, O | verified | p. 16, Sect. 6.1.3 and fn. 16 | “ESP-ELS provides for 218 million targets with G ≤ 17.65 one of the following spectral type tags spectraltype_esphs” |
 
 <a id="cutri2003"></a>
-### Cutri R. M. et al. 2003 — The 2MASS All-Sky Catalog of Point Sources
+### Cutri 2003 — The 2MASS All-Sky Catalog of Point Sources
 
 VizieR II/246 · [2003yCat.2246....0C](https://ui.adsabs.harvard.edu/abs/2003yCat.2246....0C)
 
@@ -426,7 +426,7 @@ VizieR II/246 · [2003yCat.2246....0C](https://ui.adsabs.harvard.edu/abs/2003yCa
 | 2MASS coordinate treated as epoch J2000 and advanced 16 yr | epoch 2000.0, Δt = 16 yr | disagrees | l. 146; l. 485 | “JD (jdate) Julian date of source measurement” |
 
 <a id="deau2013"></a>
-### Déau et al. 2013 — The opposition effect in Saturn's main rings as seen by Cassini ISS: 1. Morphology of phase functions and dependence on the local optical depth
+### Déau 2013 — The opposition effect in Saturn's main rings as seen by Cassini ISS: 1. Morphology of phase functions and dependence on the local optical depth
 
 Icarus 226, 591-603 (2013) · [doi:10.1016/j.icarus.2013.01.015](https://doi.org/10.1016/j.icarus.2013.01.015) · [2013Icar..226..591D](https://ui.adsabs.harvard.edu/abs/2013Icar..226..591D)
 
@@ -480,7 +480,7 @@ ApJ 268, 451 (1983) · [doi:10.1086/160971](https://doi.org/10.1086/160971) · [
 | Galaxy integrated colour, carrying M_B to V | (B−V) = 0.53 | verified | p. 451, Abstract | “M°T(B) = −20.2 ± 0.15, (B − V)°T = 0.53 ± 0.04” |
 
 <a id="devaucouleurs1991"></a>
-### de Vaucouleurs et al. 1991 — Third Reference Catalogue of Bright Galaxies (RC3)
+### de Vaucouleurs 1991 — Third Reference Catalogue of Bright Galaxies (RC3)
 
 Springer-Verlag, New York (1991), 3 vols; de Vaucouleurs, de Vaucouleurs, Corwin, Buta, Paturel, Fouque · [doi:10.1007/978-1-4757-4363-0](https://doi.org/10.1007/978-1-4757-4363-0)
 
@@ -494,7 +494,7 @@ Springer-Verlag, New York (1991), 3 vols; de Vaucouleurs, de Vaucouleurs, Corwin
 | M33 integrated V magnitude | 5.72 mag | verified | l. 152, l. 165 (VII/155 ReadMe); rc3 row NGC 598 | “BT (total B magnitude) ... (B-V)T (total (B-V))” |
 
 <a id="dolan2002"></a>
-### Dolan & Mathieu 2002 — A Photometric Study of the Young Stellar Population throughout the lambda Orionis Star-Forming Region
+### Dolan 2002 — A Photometric Study of the Young Stellar Population throughout the lambda Orionis Star-Forming Region
 
 AJ 123, 387-403 (2002) · [doi:10.1086/324631](https://doi.org/10.1086/324631) · [arXiv:astro-ph/0110160](https://arxiv.org/abs/astro-ph/0110160) · [2002AJ....123..387D](https://ui.adsabs.harvard.edu/abs/2002AJ....123..387D)
 
@@ -505,7 +505,7 @@ AJ 123, 387-403 (2002) · [doi:10.1086/324631](https://doi.org/10.1086/324631) �
 | λ Ori ring size (used as a curated cavity radius) | ≈ 30 pc (R_curated = 30 pc, a radius) | disagrees | p. 4, Sect. 1 | “The star-forming complex contains a tight knot of OB stars encircled by a 40 pc diameter ring of dense molecular gas and dust” |
 
 <a id="dommanget1994"></a>
-### Dommanget & Nys 1994 — Catalogue of the Components of Double and Multiple stars (CCDM), first edition
+### Dommanget 1994 — Catalogue of the Components of Double and Multiple stars (CCDM), first edition
 
 Comm. Obs. Royal de Belgique, Ser. A, No. 115 (1994); VizieR I/211 · [1994CoORB.115....1D](https://ui.adsabs.harvard.edu/abs/1994CoORB.115....1D)
 
@@ -518,7 +518,7 @@ Comm. Obs. Royal de Belgique, Ser. A, No. 115 (1994); VizieR I/211 · [1994CoORB
 | CCDM register behind the Hipparcos CCDM column (visual-doubles flag) |  | verified | l. 15-17 | “the fundamental ties between the CCDM and the HIPPARCOS INPUT CATALOGUE (HIC)” |
 
 <a id="drimmel2001"></a>
-### Drimmel & Spergel 2001 — Three‐dimensional Structure of the Milky Way Disk: The Distribution of Stars and Dust beyond 0.35R⊙
+### Drimmel 2001 — Three‐dimensional Structure of the Milky Way Disk: The Distribution of Stars and Dust beyond 0.35R⊙
 
 ApJ 556, 181 · [doi:10.1086/321556](https://doi.org/10.1086/321556) · [arXiv:astro-ph/0101259](https://arxiv.org/abs/astro-ph/0101259)
 
@@ -530,7 +530,7 @@ ApJ 556, 181 · [doi:10.1086/321556](https://doi.org/10.1086/321556) · [arXiv:a
 | Thin-disc dust vertical profile / scale height | exp(−\|z\|/125pc) | disagrees | p. 8, eqs. 13-14; p. 35, Table 1 | “ρaxi = ρ0 exp(−r/hr) sech2(z/hd)” |
 
 <a id="ducati2001"></a>
-### Ducati et al. 2001 — Intrinsic Colors of Stars in the Near-Infrared
+### Ducati 2001 — Intrinsic Colors of Stars in the Near-Infrared
 
 ApJ 558, 309-322 (2001) · [doi:10.1086/322439](https://doi.org/10.1086/322439) · [2001ApJ...558..309D](https://ui.adsabs.harvard.edu/abs/2001ApJ...558..309D)
 
@@ -542,7 +542,7 @@ ApJ 558, 309-322 (2001) · [doi:10.1086/322439](https://doi.org/10.1086/322439) 
 | Johnson V−R column of the V−R → V−Rc pairs (as tabulated by STScI) | 0.41–0.97 (G0–K5) | verified | Table 3 |  |
 
 <a id="dupuy2023"></a>
-### Dupuy & Courtois 2023 — Dynamic cosmography of the local Universe: Laniakea and five more watershed superclusters
+### Dupuy 2023 — Dynamic cosmography of the local Universe: Laniakea and five more watershed superclusters
 
 A&A 678, A176 · [doi:10.1051/0004-6361/202346802](https://doi.org/10.1051/0004-6361/202346802) · [arXiv:2305.02339](https://arxiv.org/abs/2305.02339)
 
@@ -554,7 +554,7 @@ A&A 678, A176 · [doi:10.1051/0004-6361/202346802](https://doi.org/10.1051/0004-
 | Watershed data product: 128³ integer-labelled grid (1 = Laniakea, 2 = Apus), hosted on the IP2I CosmicFlows page | 128³ voxels; 1 = Laniakea, 2 = Apus; projets.ip2i.in2p3.fr/cosmicflows/ | verified | p. 6, Availability of data and materials | “voxels filled with 1 are part of Laniakea, 2 of Apus, 3 of Hercules, etc.” |
 
 <a id="dyudina"></a>
-### Dyudina U. A. et al. 2005 — Phase Light Curves for Extrasolar Jupiters and Saturns
+### Dyudina 2005 — Phase Light Curves for Extrasolar Jupiters and Saturns
 
 ApJ 618, 973-986 (2005) · [doi:10.1086/426050](https://doi.org/10.1086/426050) · [arXiv:astro-ph/0406390](https://arxiv.org/abs/astro-ph/0406390) · [2005ApJ...618..973D](https://ui.adsabs.harvard.edu/abs/2005ApJ...618..973D)
 
@@ -565,7 +565,7 @@ ApJ 618, 973-986 (2005) · [doi:10.1086/426050](https://doi.org/10.1086/426050) 
 | Pioneer-derived Saturn scattering model behind M&H Eq. 12 |  | verified | p. 12, Sect. 2.1.2, Table 2 | “The coefficients are fitted by Dones et al. (1993) to Pioneer 11 fitted phase function tables” |
 
 <a id="edenhofer2024"></a>
-### Edenhofer et al. 2024 — A parsec-scale Galactic 3D dust map out to 1.25 kpc from the Sun
+### Edenhofer 2024 — A parsec-scale Galactic 3D dust map out to 1.25 kpc from the Sun
 
 A&A 685, A82 · [doi:10.1051/0004-6361/202347628](https://doi.org/10.1051/0004-6361/202347628) · [arXiv:2308.01295](https://arxiv.org/abs/2308.01295)
 
@@ -597,7 +597,7 @@ ESA SP-1200 · [1997HIP...C......0E](https://ui.adsabs.harvard.edu/abs/1997HIP..
 | Hipparcos catalogue epoch | J1991.25 | verified | p. xv, Summary of the Hipparcos and Tycho Catalogues | “Catalogue epoch J1991.25” |
 
 <a id="espenak2006"></a>
-### Espenak F. & Meeus J. 2006 — Five Millennium Canon of Solar Eclipses: -1999 to +3000 (NASA/TP-2006-214141)
+### Espenak 2006 — Five Millennium Canon of Solar Eclipses: -1999 to +3000 (NASA/TP-2006-214141)
 
 NASA Goddard Space Flight Center Technical Publications
 
@@ -611,7 +611,7 @@ NASA Goddard Space Flight Center Technical Publications
 | 2005–2050 segment is a 2006 extrapolation | reads ~75 s in 2026 | verified | p. 16, eq. 23 | “This expression is derived from estimated values of ∆T in the years 2010 and 2050.” |
 
 <a id="espenak2009"></a>
-### Espenak F. & Meeus J. 2009 — Five Millennium Catalog of Solar Eclipses: -1999 to +3000 (NASA/TP-2009-214174)
+### Espenak 2009a — Five Millennium Catalog of Solar Eclipses: -1999 to +3000 (NASA/TP-2009-214174)
 
 NASA Goddard Space Flight Center Technical Publications
 
@@ -625,7 +625,7 @@ NASA Goddard Space Flight Center Technical Publications
 | Catalog uses the same ΔT polynomial set and −0.000012932(y−1955)² correction |  | verified | p. 6, eq. 1-1 and Table 1-2; p. 12, Sect. 2.7 | “The Canon and the Catalog both use the same solar and lunar ephemerides as well as the same values of ∆T.” |
 
 <a id="espenak2009lunar"></a>
-### Espenak F. & Meeus J. 2009 — Five Millennium Catalog of Lunar Eclipses: -1999 to +3000 (NASA/TP-2009-214173)
+### Espenak 2009b — Five Millennium Catalog of Lunar Eclipses: -1999 to +3000 (NASA/TP-2009-214173)
 
 NASA Goddard Space Flight Center Technical Publications (January 2009) · [eclipse.gsfc.nasa.gov/SEpubs/5MKLE.html](https://eclipse.gsfc.nasa.gov/SEpubs/5MKLE.html)
 
@@ -637,7 +637,7 @@ NASA Goddard Space Flight Center Technical Publications (January 2009) · [eclip
 | Lunar eclipse truth rows (ΔT, type, γ, umbral magnitude, greatest-eclipse lat/lon) | 12 rows in data/eclipse-canon/lunar-eclipse-canon.tsv; spot-checked −1982 Jul 18, −0583 May 03, 1938 Nov 07, 2080 Apr 04, 2912 Jul 20 | verified | pp. A-1, A-57, A-159, A-164, A-198 | “9509 476 1938 Nov 07 22:26:42 24 -757 125 T -p 0.2738 2.3585 1.3525 ... 17N 19E” |
 
 <a id="esposito2002"></a>
-### Esposito L. W. 2002 — Planetary rings
+### Esposito 2002 — Planetary rings
 
 [doi:10.1088/0034-4885/65/12/201](https://doi.org/10.1088/0034-4885/65/12/201)
 
@@ -648,7 +648,7 @@ NASA Goddard Space Flight Center Technical Publications (January 2009) · [eclip
 | Uranus main-ring radii (Table 1) | 6 41837, 5 42234, 4 42570, α 44718, β 45661, η 47175, γ 47627, δ 48300, λ 50023, ε 51149 km | verified | p. 1747, Table 1 | “6 41 837 0.3 <1% q > 3.5” |
 
 <a id="fabricius2002a"></a>
-### Fabricius, Makarov, Knude & Wycoff 2002 — Henry Draper catalogue identifications for Tycho-2 stars
+### Fabricius 2002a — Henry Draper catalogue identifications for Tycho-2 stars
 
 A&A 386, 709 · [doi:10.1051/0004-6361:20020249](https://doi.org/10.1051/0004-6361:20020249)
 
@@ -659,7 +659,7 @@ A&A 386, 709 · [doi:10.1051/0004-6361:20020249](https://doi.org/10.1051/0004-63
 | IV/25 HD ↔ Tycho-2 cross index with ambiguity flags |  | verified | p. 710, Sect. 3 | “253 Tycho-2 stars are identified with two HD stars each, and 10 HD stars are resolved in Tycho-2. All these cases are flagged in the list” |
 
 <a id="fabricius2002b"></a>
-### Fabricius et al. 2002 — The Tycho double star catalogue
+### Fabricius 2002b — The Tycho double star catalogue
 
 Fabricius C., Høg E., Makarov V. V., Mason B. D., Wycoff G. L. & Urban S. E.; A&A 384, 180-189 (2002) · [2002A&A...384..180F](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..180F)
 
@@ -672,7 +672,7 @@ Fabricius C., Høg E., Makarov V. V., Mason B. D., Wycoff G. L. & Urban S. E.; A
 | Literature proper-motion bibcode used by the PM-rescue tier | 2002A&A...384..180F | verified | p. 181, Sect. 1 | “It presents accurate positions, proper motions, BT and VT photometry for 66 219 components” |
 
 <a id="federrath2010"></a>
-### Federrath et al. 2010 — Comparing the statistics of interstellar turbulence in simulations and observations
+### Federrath 2010 — Comparing the statistics of interstellar turbulence in simulations and observations
 
 A&A 512, A81 (2010) · [doi:10.1051/0004-6361/200912437](https://doi.org/10.1051/0004-6361/200912437) · [arXiv:0905.1060](https://arxiv.org/abs/0905.1060) · [2010A&A...512A..81F](https://ui.adsabs.harvard.edu/abs/2010A%26A...512A..81F)
 
@@ -684,7 +684,7 @@ A&A 512, A81 (2010) · [doi:10.1051/0004-6361/200912437](https://doi.org/10.1051
 | b for mixed forcing | b ≈ 0.4 | verified | p. 11, Sect. 5 (Fig. 8 discussion) | “For ζ ≳ 0.5 the b-parameter remains close to the value obtained for purely solenoidal forcing, i.e. b ≈ 0.3 − 0.4 in 3D” |
 
 <a id="federrath2013"></a>
-### Federrath & Klessen 2013 — On the Star Formation Efficiency of Turbulent Magnetized Clouds
+### Federrath 2013 — On the Star Formation Efficiency of Turbulent Magnetized Clouds
 
 ApJ 763, 51 (2013) · [doi:10.1088/0004-637X/763/1/51](https://doi.org/10.1088/0004-637X/763/1/51) · [arXiv:1211.6433](https://arxiv.org/abs/1211.6433) · [2013ApJ...763...51F](https://ui.adsabs.harvard.edu/abs/2013ApJ...763...51F)
 
@@ -695,7 +695,7 @@ ApJ 763, 51 (2013) · [doi:10.1088/0004-637X/763/1/51](https://doi.org/10.1088/0
 | High-density power-law tail in star-forming clouds |  | verified | p. 1, Abstract | “develop power-law tails of flattening slope with increasing SFE” |
 
 <a id="flynn2006"></a>
-### Flynn et al. 2006 — On the mass-to-light ratio of the local Galactic disc and the optical luminosity of the Galaxy
+### Flynn 2006 — On the mass-to-light ratio of the local Galactic disc and the optical luminosity of the Galaxy
 
 MNRAS 372, 1149 · [doi:10.1111/j.1365-2966.2006.10911.x](https://doi.org/10.1111/j.1365-2966.2006.10911.x) · [arXiv:astro-ph/0608193](https://arxiv.org/abs/astro-ph/0608193)
 
@@ -719,7 +719,7 @@ ApJ 160, 811 (1970) · [doi:10.1086/150474](https://doi.org/10.1086/150474) · [
 | Disc central surface brightness (Freeman's law), M31 check | μ₀(B) = 21.65 ± 0.30 mag/arcsec² (test compares the model's V-band 21.45) | disagrees | p. 818, Sect. III; p. 811, Abstract | “B(0)c is nearly constant at B(0)c = 21.65 ± 0.30(σ) mag per square second of arc” |
 
 <a id="french1986"></a>
-### French R. G., Elliot J. L. & Levine S. E. 1986 — Structure of the Uranian Rings. II. Ring Orbits and Widths
+### French 1986 — Structure of the Uranian Rings. II. Ring Orbits and Widths
 
 Icarus 67, 134 (bibcode in URL) · [1986Icar...67..134F](https://ui.adsabs.harvard.edu/abs/1986Icar...67..134F)
 
@@ -730,7 +730,7 @@ Icarus 67, 134 (bibcode in URL) · [1986Icar...67..134F](https://ui.adsabs.harva
 | Per-occultation ring profile fits (midtimes, widths, optical depths), 1977–1983 |  | verified | p. 134, Abstract | “to determine the midtimes, widths, and optical depths of all available Uranus ring occultation observations from 1977 to 1983” |
 
 <a id="french1988"></a>
-### French R. G. et al. 1988 — Uranian ring orbits from earth-based and Voyager occultation observations
+### French 1988 — Uranian ring orbits from earth-based and Voyager occultation observations
 
 [doi:10.1016/0019-1035(88)90104-2](https://doi.org/10.1016/0019-1035(88)90104-2) · [1988Icar...73..349F](https://ui.adsabs.harvard.edu/abs/1988Icar...73..349F)
 
@@ -741,7 +741,7 @@ Icarus 67, 134 (bibcode in URL) · [1986Icar...67..134F](https://ui.adsabs.harva
 | Uranus main-ring semimajor axes (Tables XIV, XV) | 6 41837, 5 42234, 4 42570, α 44718, β 45661, η 47175, γ 47627, δ 48300, λ 50023, ε 51149 km | verified | p. 369, Table XIV; p. 372, Table XV | “6 41837.15 ± 0.26 ... F 51149.32 ± 0.13” |
 
 <a id="french1991"></a>
-### French, Nicholson, Porco & Elliot 1991 — Dynamics and structure of the Uranian rings
+### French 1991 — Dynamics and structure of the Uranian rings
 
 In Uranus (Bergstralh, Miner & Matthews eds), Univ. of Arizona Press (1991), pp. 327-409 · [doi:10.2307/j.ctv1v7zdtq.13](https://doi.org/10.2307/j.ctv1v7zdtq.13)
 
@@ -753,7 +753,7 @@ In Uranus (Bergstralh, Miner & Matthews eds), Univ. of Arizona Press (1991), pp.
 | Uranus ring radii, widths, optical depths |  | unverified |  |  |
 
 <a id="frey1974"></a>
-### Frey & Lowman 1974 — Studies of the Major Planet Satellite Systems
+### Frey 1974 — Studies of the Major Planet Satellite Systems
 
 NASA Goddard Space Flight Center report X-922-74-112 (April 1974); NTRS 19740014371
 
@@ -767,7 +767,7 @@ NASA Goddard Space Flight Center report X-922-74-112 (April 1974); NTRS 19740014
 | coverage: B-V but no V-R for Enceladus, Tethys, Iapetus; nothing for Mimas; Titania and Oberon both indices; no lunar row |  | verified | p. 15, Table IV | “S I Mimas 12.1 -- -- -- -- +2.5; S II Enceladus 11.7 -- 0.62 -- --” |
 
 <a id="gaiacollab2018cat"></a>
-### Gaia Collaboration (VizieR I/345) 2018 — Gaia DR2 catalogue (VizieR record)
+### Gaia Collaboration 2018 — Gaia DR2 catalogue (VizieR record)
 
 [2018yCat.1345....0G](https://ui.adsabs.harvard.edu/abs/2018yCat.1345....0G)
 
@@ -778,7 +778,7 @@ NASA Goddard Space Flight Center report X-922-74-112 (April 1974); NTRS 19740014
 | Gaia DR2 catalogue bibcode 2018yCat.1345....0G (VizieR I/345): SIMBAD rv values citing it are skipped on 2p rows | 2018yCat.1345....0G | verified | l. 7 | “=2018yCat.1345....0G” |
 
 <a id="gaiacollab2022cat"></a>
-### Gaia Collaboration (VizieR I/355) 2022 — Gaia DR3 catalogue (VizieR record)
+### Gaia Collaboration 2022 — Gaia DR3 catalogue (VizieR record)
 
 [2022yCat.1355....0G](https://ui.adsabs.harvard.edu/abs/2022yCat.1355....0G)
 
@@ -789,7 +789,7 @@ NASA Goddard Space Flight Center report X-922-74-112 (April 1974); NTRS 19740014
 | Gaia DR3 catalogue bibcode 2022yCat.1355....0G (VizieR I/355) for the rv skip rule | 2022yCat.1355....0G | verified | l. 6 | “=2022yCat.1355....0G” |
 
 <a id="gaiadr3doc"></a>
-### Carrasco & Bellazzini 2022 — Gaia DR3 documentation, Sect. 5.5.1: Photometric relationships with other photometric systems
+### Carrasco 2022 — Gaia DR3 documentation, Sect. 5.5.1: Photometric relationships with other photometric systems
 
 Gaia Data Release 3 Documentation, Chapter 5 (Photometric data), ESA · [gea.esac.esa.int/…/cu5pho_ssec_photRelations.html](https://gea.esac.esa.int/archive/documentation/GDR3/Data_processing/chap_cu5pho/cu5pho_sec_photSystem/cu5pho_ssec_photRelations.html)
 
@@ -801,7 +801,7 @@ Gaia Data Release 3 Documentation, Chapter 5 (Photometric data), ESA · [gea.esa
 | G − B validity range and M-giant-only branch | −0.5 < BP−RP < 4.0; M giants only above BP−RP 1.75 | verified | Table 5.10, note k | “G − B = f(GBP − GRP) is only valid for M giants when GBP − GRP > 1.75” |
 
 <a id="gieren2013"></a>
-### Gieren et al. 2013 — THE ARAUCARIA PROJECT. A DISTANCE DETERMINATION TO THE LOCAL GROUP SPIRAL M33 FROM NEAR-INFRARED PHOTOMETRY OF CEPHEID VARIABLES
+### Gieren 2013 — THE ARAUCARIA PROJECT. A DISTANCE DETERMINATION TO THE LOCAL GROUP SPIRAL M33 FROM NEAR-INFRARED PHOTOMETRY OF CEPHEID VARIABLES
 
 ApJ 773, 69 · [doi:10.1088/0004-637X/773/1/69](https://doi.org/10.1088/0004-637X/773/1/69) · [arXiv:1305.4258](https://arxiv.org/abs/1305.4258)
 
@@ -824,7 +824,7 @@ AJ 146, 15 (2013) · [doi:10.1088/0004-6256/146/1/15](https://doi.org/10.1088/00
 | Leo P is a gas-rich star-forming dwarf | gas-rich star-forming dwarf | verified | p. 2 | “an alternative interpretation: that of a very faint, nearby, star forming dwarf galaxy” |
 
 <a id="gliese1991"></a>
-### Gliese & Jahreiss 1991 — Preliminary Version of the Third Catalogue of Nearby Stars
+### Gliese 1991 — Preliminary Version of the Third Catalogue of Nearby Stars
 
 Astron. Rechen-Institut, Heidelberg (1991); VizieR V/70A · [1991adc..rept.....G](https://ui.adsabs.harvard.edu/abs/1991adc..rept.....G)
 
@@ -840,7 +840,7 @@ Astron. Rechen-Institut, Heidelberg (1991); VizieR V/70A · [1991adc..rept.....G
 | xi UMa photometric parallax (Gl 423 A) | 96.0 +/- 13.0 mas, n_plx=r -> 10.417 pc | verified | l. 92-94, l. 151; catalog row Gl 423 A | “r    parallax from spectral types and broad-band colors” |
 
 <a id="golovin2023"></a>
-### Golovin et al. 2023 — The Fifth Catalogue of Nearby Stars (CNS5)
+### Golovin 2023 — The Fifth Catalogue of Nearby Stars (CNS5)
 
 A&A 670, A19 · [doi:10.1051/0004-6361/202244250](https://doi.org/10.1051/0004-6361/202244250) · [arXiv:2211.01449](https://arxiv.org/abs/2211.01449)
 
@@ -864,7 +864,7 @@ Astron. Lett. 32, 759 (bibcode) · [2006AstL...32..759G](https://ui.adsabs.harva
 | Pulkovo Compilation of Radial Velocities (PCRV): literature rv tier, bibcode 2006AstL...32..759G |  | verified | p. 1, Abstract | “The PCRV contains weighted mean absolute radial velocities for 35 495 Hipparcos stars” |
 
 <a id="graczyk2020"></a>
-### Graczyk et al. 2020 — A Distance Determination to the Small Magellanic Cloud with an Accuracy of Better than Two Percent Based on Late-type Eclipsing Binary Stars
+### Graczyk 2020 — A Distance Determination to the Small Magellanic Cloud with an Accuracy of Better than Two Percent Based on Late-type Eclipsing Binary Stars
 
 ApJ 904, 13 · [doi:10.3847/1538-4357/abbb2b](https://doi.org/10.3847/1538-4357/abbb2b) · [arXiv:2010.08754](https://arxiv.org/abs/2010.08754)
 
@@ -897,7 +897,7 @@ A&A 615, L15 (2018) · [doi:10.1051/0004-6361/201833718](https://doi.org/10.1051
 | R0 (Sun to Galactic centre distance) | 8.122 kpc (R0_PC = 8122) | verified | p. 10, Table A.1 | “R0 8127 ± 31 8122 ± 31 pc” |
 
 <a id="gray2003"></a>
-### Gray R. O. et al. 2003 — Contributions to the Nearby Stars (NStars) Project: Spectroscopy of Stars Earlier than M0 within 40 Parsecs: The Northern Sample. I.
+### Gray 2003 — Contributions to the Nearby Stars (NStars) Project: Spectroscopy of Stars Earlier than M0 within 40 Parsecs: The Northern Sample. I.
 
 AJ 126, 2048-2059 (2003) · [doi:10.1086/378365](https://doi.org/10.1086/378365) · [arXiv:astro-ph/0308182](https://arxiv.org/abs/astro-ph/0308182) · [2003AJ....126.2048G](https://ui.adsabs.harvard.edu/abs/2003AJ....126.2048G)
 
@@ -908,7 +908,7 @@ AJ 126, 2048-2059 (2003) · [doi:10.1086/378365](https://doi.org/10.1086/378365)
 | Castor A (HIP 36850, HD 60178) spectral type | A1.5 IV+ (curated in code as A1.5IV) | verified | p. 18, Table 1 | “36850 60178 A1.5 IV+” |
 
 <a id="gurnett2013"></a>
-### Gurnett et al. 2013 — In Situ Observations of Interstellar Plasma with Voyager 1
+### Gurnett 2013 — In Situ Observations of Interstellar Plasma with Voyager 1
 
 Gurnett D. A., Kurth W. S., Burlaga L. F. & Ness N. F.; Science 341, 1489-1492 (2013) · [doi:10.1126/science.1241681](https://doi.org/10.1126/science.1241681) · [2013Sci...341.1489G](https://ui.adsabs.harvard.edu/abs/2013Sci...341.1489G)
 
@@ -919,7 +919,7 @@ Gurnett D. A., Kurth W. S., Burlaga L. F. & Ness N. F.; Science 341, 1489-1492 (
 | Voyager 1 heliopause crossing epoch | 2012-08-25 | verified | p. 1491 | “the GCR intensity increase on 25 August 2012 marked the crossing of Voyager 1 into the interstellar plasma” |
 
 <a id="gurnett2019"></a>
-### Gurnett & Kurth 2019 — Plasma densities near and beyond the heliopause from the Voyager 1 and 2 plasma wave instruments
+### Gurnett 2019 — Plasma densities near and beyond the heliopause from the Voyager 1 and 2 plasma wave instruments
 
 Nature Astronomy 3, 1024-1028 (2019) · [doi:10.1038/s41550-019-0918-5](https://doi.org/10.1038/s41550-019-0918-5) · [2019NatAs...3.1024G](https://ui.adsabs.harvard.edu/abs/2019NatAs...3.1024G)
 
@@ -930,7 +930,7 @@ Nature Astronomy 3, 1024-1028 (2019) · [doi:10.1038/s41550-019-0918-5](https://
 | Voyager 2 heliopause crossing | 2018-11-05 | verified | p. 1024 | “V2 tentatively reached the heliopause13–16 on 5 November 2018 at a heliocentric radial distance of 119.0 au” |
 
 <a id="halbwachs2023"></a>
-### Halbwachs et al. 2023 — Gaia Data Release 3: Astrometric binary star processing
+### Halbwachs 2023 — Gaia Data Release 3: Astrometric binary star processing
 
 A&A 674, A9 · [doi:10.1051/0004-6361/202243969](https://doi.org/10.1051/0004-6361/202243969) · [arXiv:2206.05726](https://arxiv.org/abs/2206.05726)
 
@@ -943,7 +943,7 @@ A&A 674, A9 · [doi:10.1051/0004-6361/202243969](https://doi.org/10.1051/0004-63
 | TI elements describe the photocentre orbit; a0 = \|q − β\|·a_rel | a0 = \|q − β\|·a_rel | verified | p. 7, Eq. (14) | “Taking into account that a0 refers to the orbit of the photocentre, the third Kepler law gives the following expression” |
 
 <a id="hamann2006"></a>
-### Hamann W.-R. et al. 2006 — The Galactic WN stars
+### Hamann 2006 — The Galactic WN stars
 
 A&A 457, 1015-1031 (2006) · [doi:10.1051/0004-6361:20065052](https://doi.org/10.1051/0004-6361:20065052) · [2006A&A...457.1015H](https://ui.adsabs.harvard.edu/abs/2006A%26A...457.1015H)
 
@@ -977,7 +977,7 @@ Ch. 8 in Planets and Satellites (The Solar System vol. III), Kuiper & Middlehurs
 | satellite colours carried by Frey & Lowman / Newburn & Gulkis |  | unverified |  |  |
 
 <a id="hartkopf2001"></a>
-### Hartkopf, Mason & Worley 2001 — The 2001 US Naval Observatory Double Star CD-ROM. II. The Fifth Catalog of Orbits of Visual Binary Stars
+### Hartkopf 2001 — The 2001 US Naval Observatory Double Star CD-ROM. II. The Fifth Catalog of Orbits of Visual Binary Stars
 
 AJ 122, 3472 · [doi:10.1086/323921](https://doi.org/10.1086/323921)
 
@@ -1000,7 +1000,7 @@ D. Reidel (Geophysics and Astrophysics Monographs 15), 1978 · [doi:10.1007/978-
 | Thiele-Innes -> Campbell element algebra |  | unverified |  |  |
 
 <a id="hoffleit1991"></a>
-### Hoffleit & Warren 1991 — The Bright Star Catalogue, 5th Revised Ed. (Preliminary Version)
+### Hoffleit 1991 — The Bright Star Catalogue, 5th Revised Ed. (Preliminary Version)
 
 Astronomical Data Center, NSSDC/ADC (1991); VizieR V/50 · [1991bsc..book.....H](https://ui.adsabs.harvard.edu/abs/1991bsc..book.....H)
 
@@ -1014,7 +1014,7 @@ Astronomical Data Center, NSSDC/ADC (1991); VizieR V/50 · [1991bsc..book.....H]
 | rows carrying an HD; the 14 HD-less entries are non-stellar | 9,096 with HD | verified | l. 35-37 | “14 objects catalogued in the original compilation of 1908 are novae or extragalactic objects” |
 
 <a id="hog2000"></a>
-### Høg et al. 2000 — The Tycho-2 Catalogue
+### Høg 2000 — The Tycho-2 Catalogue
 
 A&A 355, L27 · [2000A&A...355L..27H](https://ui.adsabs.harvard.edu/abs/2000A%26A...355L..27H)
 
@@ -1027,7 +1027,7 @@ A&A 355, L27 · [2000A&A...355L..27H](https://ui.adsabs.harvard.edu/abs/2000A%26
 | no Gaia reduction behind Tycho-2 |  | verified | p. L27, Sect. 1 | “The proper motions are derived for 96 per cent of the stars from the observed positions in Tycho-2, the Astrographic Catalogue and 143 other ground-based catalogues” |
 
 <a id="huchra2012"></a>
-### Huchra et al. 2012 — The 2MASS Redshift Survey — Description and Data Release
+### Huchra 2012 — The 2MASS Redshift Survey — Description and Data Release
 
 ApJS 199, 26 (2012) · [doi:10.1088/0067-0049/199/2/26](https://doi.org/10.1088/0067-0049/199/2/26) · [arXiv:1108.0669](https://arxiv.org/abs/1108.0669) · [2012ApJS..199...26H](https://ui.adsabs.harvard.edu/abs/2012ApJS..199...26H)
 
@@ -1040,7 +1040,7 @@ ApJS 199, 26 (2012) · [doi:10.1088/0067-0049/199/2/26](https://doi.org/10.1088/
 | 2MRS sky coverage | 97.6% complete over 91% of the sky (\|b\| ≥ 5°, ≥ 8° toward the bulge) | verified | p. 1, Abstract | “covers 91% of the sky” |
 
 <a id="ibata1997"></a>
-### Ibata et al. 1997 — The Kinematics, Orbit, and Survival of the Sagittarius Dwarf Spheroidal Galaxy
+### Ibata 1997 — The Kinematics, Orbit, and Survival of the Sagittarius Dwarf Spheroidal Galaxy
 
 AJ 113, 634 · [doi:10.1086/118283](https://doi.org/10.1086/118283) · [arXiv:astro-ph/9612025](https://arxiv.org/abs/astro-ph/9612025)
 
@@ -1053,7 +1053,7 @@ AJ 113, 634 · [doi:10.1086/118283](https://doi.org/10.1086/118283) · [arXiv:as
 | Sagittarius override semi-axes | a/b/c = 2616 / 942 / 1000 pc (c = line of sight), ref_doi 10.1086/118283 | disagrees | p. 7 | “the half-brightness minor axis diameter, for a distance of 25 kpc, is 2 × 550 pc” |
 
 <a id="ignatiev2009"></a>
-### Ignatiev et al. 2009 — Altimetry of the Venus cloud tops from the Venus Express observations
+### Ignatiev 2009 — Altimetry of the Venus cloud tops from the Venus Express observations
 
 JGR Planets 114, E00B43 (2009) · [doi:10.1029/2008JE003320](https://doi.org/10.1029/2008JE003320) · [2009JGRE..114.0B43I](https://ui.adsabs.harvard.edu/abs/2009JGRE..114.0B43I)
 
@@ -1065,7 +1065,7 @@ JGR Planets 114, E00B43 (2009) · [doi:10.1029/2008JE003320](https://doi.org/10.
 | pressure at the cloud top | P ≈ 40 hPa at ~74 km | disagrees | p. 1, Sect. 1 | “above the main cloud which top is located at about 40 mbar (68 km)” |
 
 <a id="ireland2004"></a>
-### Ireland et al. 2004 — On the observability of geometric pulsation of M-type Mira variables
+### Ireland 2004 — On the observability of geometric pulsation of M-type Mira variables
 
 MNRAS 352, 318-324 (2004) · [doi:10.1111/j.1365-2966.2004.07928.x](https://doi.org/10.1111/j.1365-2966.2004.07928.x) · [2004MNRAS.352..318I](https://ui.adsabs.harvard.edu/abs/2004MNRAS.352..318I)
 
@@ -1076,7 +1076,7 @@ MNRAS 352, 318-324 (2004) · [doi:10.1111/j.1365-2966.2004.07928.x](https://doi.
 | Mira near-IR continuum-layer radius pulsation amplitude (models) | ≈ ±30 % | verified | p. 323, Sect. 6; p. 321, Fig. 4 | “The amplitude of geometric pulsation of near-infrared-continuum forming layers is of the order of ±30 per cent for the P model series” |
 
 <a id="irwin2024"></a>
-### Irwin et al. 2024 — Modelling the seasonal cycle of Uranus's colour and magnitude, and comparison with Neptune
+### Irwin 2024 — Modelling the seasonal cycle of Uranus's colour and magnitude, and comparison with Neptune
 
 MNRAS 527, 11521-11538 (2024) · [doi:10.1093/mnras/stad3761](https://doi.org/10.1093/mnras/stad3761) · [2024MNRAS.52711521I](https://ui.adsabs.harvard.edu/abs/2024MNRAS.52711521I)
 
@@ -1088,7 +1088,7 @@ MNRAS 527, 11521-11538 (2024) · [doi:10.1093/mnras/stad3761](https://doi.org/10
 | Neptune's true colour is paler than the Voyager 2 images (the contrast-enhanced 'OGB' composite) |  | verified | p. 11522 | “the early-Neptune images were contrast-enhanced to accentuate fainter features and do not accurately represent the true colour of this planet” |
 
 <a id="jonsson2020"></a>
-### Jönsson H. et al. 2020 — APOGEE Data and Spectral Analysis from SDSS Data Release 16
+### Jönsson 2020 — APOGEE Data and Spectral Analysis from SDSS Data Release 16
 
 AJ 160, 120 · [2020AJ....160..120J](https://ui.adsabs.harvard.edu/abs/2020AJ....160..120J)
 
@@ -1099,7 +1099,7 @@ AJ 160, 120 · [2020AJ....160..120J](https://ui.adsabs.harvard.edu/abs/2020AJ...
 | literature rv bibcode 2020AJ....160..120J (APOGEE DR16 radial velocities); source of most above-escape rv values |  | verified | p. 11, Sect. 5.1 | “The radial velocities are provided in the VHELIO AVG entry in the allStar file.” |
 
 <a id="juric"></a>
-### Jurić M. et al. 2008 — The Milky Way Tomography with SDSS. I. Stellar Number Density Distribution
+### Jurić 2008 — The Milky Way Tomography with SDSS. I. Stellar Number Density Distribution
 
 ApJ 673, 864-914 (2008) · [doi:10.1086/523619](https://doi.org/10.1086/523619) · [arXiv:astro-ph/0510520](https://arxiv.org/abs/astro-ph/0510520) · [2008ApJ...673..864J](https://ui.adsabs.harvard.edu/abs/2008ApJ...673..864J)
 
@@ -1110,7 +1110,7 @@ ApJ 673, 864-914 (2008) · [doi:10.1086/523619](https://doi.org/10.1086/523619) 
 | Milky Way decomposition into thin disc, thick disc and halo (third component, not adopted) |  | verified | p. 1, Abstract | “The data show strong evidence for a Galaxy consisting of an oblate halo, a disk component, and a number of localized overdensities.” |
 
 <a id="kainulainen2009"></a>
-### Kainulainen et al. 2009 — Probing the evolution of molecular cloud structure: From quiescence to birth
+### Kainulainen 2009 — Probing the evolution of molecular cloud structure: From quiescence to birth
 
 A&A 508, L35-L38 (2009) · [doi:10.1051/0004-6361/200913605](https://doi.org/10.1051/0004-6361/200913605) · [arXiv:0911.5648](https://arxiv.org/abs/0911.5648) · [2009A&A...508L..35K](https://ui.adsabs.harvard.edu/abs/2009A%26A...508L..35K)
 
@@ -1121,7 +1121,7 @@ A&A 508, L35-L38 (2009) · [doi:10.1051/0004-6361/200913605](https://doi.org/10.
 | power-law tail in SF clouds |  | verified | p. 1, Abstract | “at higher column densities prominent, power-law-like wings are common. In particular, we identify a trend among the PDFs: active star-forming clouds always have prominent non-log-normal wings” |
 
 <a id="karachentsev2013"></a>
-### Karachentsev, Makarov & Kaisina 2013 — UNGC
+### Karachentsev 2013 — UNGC
 
 AJ 145, 101 · [arXiv:1303.5328](https://arxiv.org/abs/1303.5328)
 
@@ -1132,7 +1132,7 @@ AJ 145, 101 · [arXiv:1303.5328](https://arxiv.org/abs/1303.5328)
 | planned Tier-1 Local Volume source (UNGC, 869 galaxies) | 869 galaxies | verified | p. 2, Abstract | “We present an all-sky catalog of 869 nearby galaxies, having individual distance estimates within 11 Mpc or corrected radial velocities VLG < 600 km s−1” |
 
 <a id="kepler2007"></a>
-### Kepler S. O. et al. 2007 — White dwarf mass distribution in the SDSS
+### Kepler 2007 — White dwarf mass distribution in the SDSS
 
 MNRAS 375, 1315-1324 (2007) · [doi:10.1111/j.1365-2966.2006.11388.x](https://doi.org/10.1111/j.1365-2966.2006.11388.x) · [arXiv:astro-ph/0612277](https://arxiv.org/abs/astro-ph/0612277) · [2007MNRAS.375.1315K](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375.1315K)
 
@@ -1143,7 +1143,7 @@ MNRAS 375, 1315-1324 (2007) · [doi:10.1111/j.1365-2966.2006.11388.x](https://do
 | mean WD mass 0.6 | 0.6 M☉ | verified | p. 1, Abstract | “The mean mass for the DA stars brighter than g=19 and hotter than Teff = 12 000 K is ⟨M⟩DA ≃ 0.593 ± 0.016 M⊙” |
 
 <a id="kersten2021"></a>
-### Kersten et al. 2021 — Controlled global Ganymede mosaic from Voyager and Galileo images
+### Kersten 2021 — Controlled global Ganymede mosaic from Voyager and Galileo images
 
 Planet. Space Sci. 206, 105310 (2021) · [doi:10.1016/j.pss.2021.105310](https://doi.org/10.1016/j.pss.2021.105310) · [2021P&SS..20605310K](https://ui.adsabs.harvard.edu/abs/2021P%26SS..20605310K)
 
@@ -1154,7 +1154,7 @@ Planet. Space Sci. 206, 105310 (2021) · [doi:10.1016/j.pss.2021.105310](https:/
 | Ganymede global colour mosaic |  | verified | p. 1, Abstract; p. 4 | “version of the global Ganymede image mosaic using a combination of Voyager 1 and 2 and Galileo” |
 
 <a id="kervella2003"></a>
-### Kervella et al. 2003 — The interferometric diameter and internal structure of Sirius A
+### Kervella 2003 — The interferometric diameter and internal structure of Sirius A
 
 Kervella P., Thévenin F., Morel P., Bordé P. & Di Folco E.; A&A 408, 681-688 (2003) · [doi:10.1051/0004-6361:20030994](https://doi.org/10.1051/0004-6361:20030994) · [arXiv:astro-ph/0306604](https://arxiv.org/abs/astro-ph/0306604) · [2003A&A...408..681K](https://ui.adsabs.harvard.edu/abs/2003A%26A...408..681K)
 
@@ -1165,7 +1165,7 @@ Kervella P., Thévenin F., Morel P., Bordé P. & Di Folco E.; A&A 408, 681-688 (
 | Sirius A interferometric radius (linear diameter in solar diameters) | 1.711 R☉ | verified | p. 1, Abstract; p. 5, Sect. 5.3 | “this translates into a linear diameter of 1.711 ± 0.013 D⊙” |
 
 <a id="kilic2020"></a>
-### Kilic M. et al. 2020 — The 100 pc White Dwarf Sample in the SDSS Footprint
+### Kilic 2020 — The 100 pc White Dwarf Sample in the SDSS Footprint
 
 ApJ 898, 84 (2020) · [doi:10.3847/1538-4357/ab9b8d](https://doi.org/10.3847/1538-4357/ab9b8d) · [arXiv:2006.00323](https://arxiv.org/abs/2006.00323) · [2020ApJ...898...84K](https://ui.adsabs.harvard.edu/abs/2020ApJ...898...84K)
 
@@ -1176,7 +1176,7 @@ ApJ 898, 84 (2020) · [doi:10.3847/1538-4357/ab9b8d](https://doi.org/10.3847/153
 | mean WD mass 0.6 | 0.6 M☉ | verified | p. 1, Abstract | “mass distribution has an extremely narrow peak at 0.59 M” |
 
 <a id="kim2014"></a>
-### Kim et al. 2014 — The Extended Virgo Cluster Catalog
+### Kim 2014 — The Extended Virgo Cluster Catalog
 
 ApJS 215, 22 (2014) · [doi:10.1088/0067-0049/215/2/22](https://doi.org/10.1088/0067-0049/215/2/22) · [arXiv:1409.3283](https://arxiv.org/abs/1409.3283) · [2014ApJS..215...22K](https://ui.adsabs.harvard.edu/abs/2014ApJS..215...22K)
 
@@ -1187,7 +1187,7 @@ ApJS 215, 22 (2014) · [doi:10.1088/0067-0049/215/2/22](https://doi.org/10.1088/
 | planned Tier-2 Virgo source (EVCC, 1,589 galaxies; 1,183 VCC-only) | 1,589 galaxies; 1,183 VCC-only | verified | p. 2, Abstract; p. 4 | “The EVCC contains a total of 1589 galaxies of which 676 galaxies are not included in the VCC” |
 
 <a id="kolbas2015"></a>
-### Kolbas et al. 2015 — Spectroscopically resolving the Algol triple system
+### Kolbas 2015 — Spectroscopically resolving the Algol triple system
 
 MNRAS 451, 4150-4161 (2015) · [doi:10.1093/mnras/stv1261](https://doi.org/10.1093/mnras/stv1261) · [2015MNRAS.451.4150K](https://ui.adsabs.harvard.edu/abs/2015MNRAS.451.4150K)
 
@@ -1200,7 +1200,7 @@ MNRAS 451, 4150-4161 (2015) · [doi:10.1093/mnras/stv1261](https://doi.org/10.10
 | Algol Aa2 is an early-K subgiant (K0IV is stellata's representative type) | early K-type subgiant, Teff 4900 ± 300 K | verified | p. 2 (printed 4151), Sect. 1; Sect. 4 | “The inner pair consists of a late B-type star in orbit with an early K-type subgiant which fills its Roche lobe” |
 
 <a id="kostjuk2002"></a>
-### Kostjuk N.D. 2002 — HD-DM-GC-HR-HIP-Bayer-Flamsteed Cross Index
+### Kostjuk 2002 — HD-DM-GC-HR-HIP-Bayer-Flamsteed Cross Index
 
 VizieR IV/27A; Institute of Astronomy, Russian Academy of Sciences (2002)
 
@@ -1214,7 +1214,7 @@ VizieR IV/27A; Institute of Astronomy, Russian Academy of Sciences (2002)
 | catalogue row count | 3,690 | verified | l. 33 | “catalog.dat    77     3690   HD-DM-GC-HR-HIP-Bayer-Flamsteed Cross Index” |
 
 <a id="lacour2009"></a>
-### Lacour et al. 2009 — The Pulsation of chi Cygni Imaged by Optical Interferometry
+### Lacour 2009 — The Pulsation of chi Cygni Imaged by Optical Interferometry
 
 ApJ 707, 632-643 (2009) · [doi:10.1088/0004-637X/707/1/632](https://doi.org/10.1088/0004-637X/707/1/632) · [arXiv:0910.3869](https://arxiv.org/abs/0910.3869) · [2009ApJ...707..632L](https://ui.adsabs.harvard.edu/abs/2009ApJ...707..632L)
 
@@ -1227,7 +1227,7 @@ ApJ 707, 632-643 (2009) · [doi:10.1088/0004-637X/707/1/632](https://doi.org/10.
 | diameter anti-correlates with temperature and visual brightness; bolometric flux follows the diameter |  | verified | p. 9, Sect. 5.1.4 | “On the other hand, the bolometric flux is mostly correlated with the diameter” |
 
 <a id="lallement2019"></a>
-### Lallement et al. 2019 — Gaia-2MASS 3D maps of Galactic interstellar dust within 3 kpc
+### Lallement 2019 — Gaia-2MASS 3D maps of Galactic interstellar dust within 3 kpc
 
 A&A 625, A135 (2019) · [doi:10.1051/0004-6361/201834695](https://doi.org/10.1051/0004-6361/201834695) · [arXiv:1902.04116](https://arxiv.org/abs/1902.04116) · [2019A&A...625A.135L](https://ui.adsabs.harvard.edu/abs/2019A%26A...625A.135L)
 
@@ -1250,7 +1250,7 @@ A&A 157, 59-70 (1986) · [1986A&A...157...59L](https://ui.adsabs.harvard.edu/abs
 | obliquity 24.0165 deg at -2950 (cross-check) | 24.0165° | verified | p. 68, Table 8; p. 69, eq. 35 | “The general accumulated precession pA and the obliquity εA are given in arcseconds and the time t is measured in units of 10000 julian years from J2000” |
 
 <a id="leike2020"></a>
-### Leike, Glatzle & Enßlin 2020 — Resolving nearby dust clouds
+### Leike 2020 — Resolving nearby dust clouds
 
 A&A 639, A138 (2020) · [doi:10.1051/0004-6361/202038169](https://doi.org/10.1051/0004-6361/202038169) · [arXiv:2004.06732](https://arxiv.org/abs/2004.06732) · [2020A&A...639A.138L](https://ui.adsabs.harvard.edu/abs/2020A%26A...639A.138L)
 
@@ -1263,7 +1263,7 @@ A&A 639, A138 (2020) · [doi:10.1051/0004-6361/202038169](https://doi.org/10.105
 | the map's quantity | Gaia G-band extinction optical depth per pc (natural-log units); no K-band quantity | verified | p. 2, Fig. 1 caption; p. 5 | “A Mollweide projection of the G-band extinction optical depth a to all sources in the used dataset.” |
 
 <a id="leinert1998"></a>
-### Leinert et al. 1998 — The 1997 reference of diffuse night sky brightness
+### Leinert 1998 — The 1997 reference of diffuse night sky brightness
 
 A&AS 127, 1 · [doi:10.1051/aas:1998105](https://doi.org/10.1051/aas:1998105)
 
@@ -1276,7 +1276,7 @@ A&AS 127, 1 · [doi:10.1051/aas:1998105](https://doi.org/10.1051/aas:1998105)
 | Table 24 is a SKY-model prediction of total starlight |  | verified | p. 57 (printed p. 56), Sect. 10.1 | “A more detailed model (SKY), both in terms of Galactic shape and the list of sources, has been constructed by M. Cohen and collaborators (Wainscoat et al. 1992” |
 
 <a id="lemmon2015"></a>
-### Lemmon et al. 2015 — Dust aerosol, clouds, and the atmospheric optical depth record over 5 Mars years of the Mars Exploration Rover mission
+### Lemmon 2015 — Dust aerosol, clouds, and the atmospheric optical depth record over 5 Mars years of the Mars Exploration Rover mission
 
 Icarus 251, 96-111 (2015) · [doi:10.1016/j.icarus.2014.03.029](https://doi.org/10.1016/j.icarus.2014.03.029) · [arXiv:1403.4234](https://arxiv.org/abs/1403.4234) · [2015Icar..251...96L](https://ui.adsabs.harvard.edu/abs/2015Icar..251...96L)
 
@@ -1287,7 +1287,7 @@ Icarus 251, 96-111 (2015) · [doi:10.1016/j.icarus.2014.03.029](https://doi.org/
 | Mars background dust tau 0.2-0.5 | τ = 0.2-0.5 | verified | p. 22, Sect. 4.1; p. 55, Fig. 7 | “below ~0.3 by sol 155 (LS=45°), and remained similarly low until about sol 350 (LS=135°). During this time, Opportunity optical depths declined from 0.95 to below ~0.5.” |
 
 <a id="lepine2005"></a>
-### Lépine S. & Shara M. M. 2005 — A Catalog of Northern Stars with Annual Proper Motions Larger than 0.15 Seconds of Arc (LSPM Catalog – North)
+### Lépine 2005 — A Catalog of Northern Stars with Annual Proper Motions Larger than 0.15 Seconds of Arc (LSPM Catalog – North)
 
 AJ 129, 1483 · [2005AJ....129.1483L](https://ui.adsabs.harvard.edu/abs/2005AJ....129.1483L)
 
@@ -1298,7 +1298,7 @@ AJ 129, 1483 · [2005AJ....129.1483L](https://ui.adsabs.harvard.edu/abs/2005AJ..
 | Gl 863.1A SIMBAD PM source | (1368.0, 111.0) mas/yr | verified | p. 1, Abstract | “A CATALOG OF NORTHERN STARS WITH ANNUAL PROPER MOTIONS LARGER THAN 0.15 SECONDS OF ARC” |
 
 <a id="licquia2015"></a>
-### Licquia & Newman 2015 — IMPROVED ESTIMATES OF THE MILKY WAY’S STELLAR MASS AND STAR FORMATION RATE FROM HIERARCHICAL BAYESIAN META-ANALYSIS
+### Licquia 2015a — IMPROVED ESTIMATES OF THE MILKY WAY’S STELLAR MASS AND STAR FORMATION RATE FROM HIERARCHICAL BAYESIAN META-ANALYSIS
 
 ApJ 806, 96 · [doi:10.1088/0004-637X/806/1/96](https://doi.org/10.1088/0004-637X/806/1/96) · [arXiv:1407.1078](https://arxiv.org/abs/1407.1078)
 
@@ -1311,7 +1311,7 @@ ApJ 806, 96 · [doi:10.1088/0004-637X/806/1/96](https://doi.org/10.1088/0004-637
 | IMF of the mass estimates | Kroupa IMF | verified | p. 1, Abstract | “Kroupa initial mass function (IMF)” |
 
 <a id="licquia2015b"></a>
-### Licquia, Newman & Brinchmann 2015 — Unveiling the Milky Way: A New Technique for Determining the Optical Color and Luminosity of Our Galaxy
+### Licquia 2015b — Unveiling the Milky Way: A New Technique for Determining the Optical Color and Luminosity of Our Galaxy
 
 ApJ 809, 96 (2015) · [doi:10.1088/0004-637X/809/1/96](https://doi.org/10.1088/0004-637X/809/1/96) · [arXiv:1508.04446](https://arxiv.org/abs/1508.04446) · [2015ApJ...809...96L](https://ui.adsabs.harvard.edu/abs/2015ApJ...809...96L)
 
@@ -1337,7 +1337,7 @@ A&A 73, 282-284 (1979) · [1979A&A....73..282L](https://ui.adsabs.harvard.edu/ab
 | rotation composition | R(−z)·Q(θ)·R(−ζ), frame rotations (eq. 5) | verified | p. 283, eqs. 3, 5, 6 | “r=R(−zA)Q(θA)R(−ζA)r0” |
 
 <a id="limaneto1999"></a>
-### Lima Neto, Gerbal & Márquez 1999 — The specific entropy of elliptical galaxies: an explanation for profile-shape distance indicators?
+### Lima Neto 1999 — The specific entropy of elliptical galaxies: an explanation for profile-shape distance indicators?
 
 MNRAS 309, 481 (1999) · [doi:10.1046/j.1365-8711.1999.02849.x](https://doi.org/10.1046/j.1365-8711.1999.02849.x) · [arXiv:astro-ph/9905048](https://arxiv.org/abs/astro-ph/9905048) · [1999MNRAS.309..481L](https://ui.adsabs.harvard.edu/abs/1999MNRAS.309..481L)
 
@@ -1349,7 +1349,7 @@ MNRAS 309, 481 (1999) · [doi:10.1046/j.1365-8711.1999.02849.x](https://doi.org/
 | Sérsic deprojection exponent p_n = 1 − 0.6097/n + 0.05463/n² | 0.05463 | verified | p. 4, eq. 19 | “p = 1.0 − 0.6097ν + 0.05463ν 2” |
 
 <a id="lindal1983"></a>
-### Lindal et al. 1983 — The atmosphere of Titan: An analysis of the Voyager 1 radio occultation measurements
+### Lindal 1983 — The atmosphere of Titan: An analysis of the Voyager 1 radio occultation measurements
 
 Icarus 53, 348-363 (1983) · [doi:10.1016/0019-1035(83)90155-0](https://doi.org/10.1016/0019-1035(83)90155-0) · [1983Icar...53..348L](https://ui.adsabs.harvard.edu/abs/1983Icar...53..348L)
 
@@ -1360,7 +1360,7 @@ Icarus 53, 348-363 (1983) · [doi:10.1016/0019-1035(83)90155-0](https://doi.org/
 | Titan 1.5-bar N2 column | 1.5 bar | verified | p. 348, Abstract; p. 354 | “temperature and pressure at the surface of 94.0 ± 0.7°K and 1496 ± 20 mbar, respectively.” |
 
 <a id="lindegren2021"></a>
-### Lindegren et al. 2021 — Gaia Early Data Release 3: Parallax bias versus magnitude, colour, and position
+### Lindegren 2021 — Gaia Early Data Release 3: Parallax bias versus magnitude, colour, and position
 
 A&A 649, A4 · [doi:10.1051/0004-6361/202039653](https://doi.org/10.1051/0004-6361/202039653) · [arXiv:2012.01742](https://arxiv.org/abs/2012.01742)
 
@@ -1371,7 +1371,7 @@ A&A 649, A4 · [doi:10.1051/0004-6361/202039653](https://doi.org/10.1051/0004-63
 | parallax zero-point bias (applied upstream in Bailer-Jones) |  | verified | p. 1, Abstract | “The parallax bias is found to depend in a non-trivial way on (at least) the magnitude, colour, and ecliptic latitude of the source.” |
 
 <a id="makarov2014"></a>
-### Makarov et al. 2014 — HyperLEDA. III. The catalogue of extragalactic distances
+### Makarov 2014 — HyperLEDA. III. The catalogue of extragalactic distances
 
 A&A 570, A13 (2014) · [doi:10.1051/0004-6361/201423496](https://doi.org/10.1051/0004-6361/201423496) · [arXiv:1408.3476](https://arxiv.org/abs/1408.3476) · [2014A&A...570A..13M](https://ui.adsabs.harvard.edu/abs/2014A%26A...570A..13M)
 
@@ -1393,7 +1393,7 @@ Icarus 218, 56-59 (2012) · [doi:10.1016/j.icarus.2011.11.035](https://doi.org/1
 | origin of the Saturn ring-tilt law | ΔV = −1.825·sin β + 0.026·α − 0.378·sin β·e^(−2.25·α), V₁(0) = −8.914 | verified | p. 58, Table 2; p. 56, eq. 1 | “b is the effective inclination of the ring system (specifically, the square root of the product of the saturnicentric latitude of the Sun and the saturnicentric latitude of the Earth, set to zero when the signs are opposite)” |
 
 <a id="mallama2017"></a>
-### Mallama, Krobusek & Pavlov 2017 — Comprehensive wide-band magnitudes and albedos for the planets, with applications to exo-planets and Planet Nine
+### Mallama 2017 — Comprehensive wide-band magnitudes and albedos for the planets, with applications to exo-planets and Planet Nine
 
 Icarus 282, 19-33 · [doi:10.1016/j.icarus.2016.09.023](https://doi.org/10.1016/j.icarus.2016.09.023) · [arXiv:1609.05048](https://arxiv.org/abs/1609.05048)
 
@@ -1416,7 +1416,7 @@ Icarus 282, 19-33 · [doi:10.1016/j.icarus.2016.09.023](https://doi.org/10.1016/
 | Moon not covered (planets only) |  | verified |  |  |
 
 <a id="mallamahilton2018"></a>
-### Mallama & Hilton 2018 — Computing apparent planetary magnitudes for The Astronomical Almanac
+### Mallama 2018 — Computing apparent planetary magnitudes for The Astronomical Almanac
 
 Astronomy and Computing 25, 10-24 (2018) · [doi:10.1016/j.ascom.2018.08.002](https://doi.org/10.1016/j.ascom.2018.08.002) · [2018A&C....25...10M](https://ui.adsabs.harvard.edu/abs/2018A%26C....25...10M)
 
@@ -1430,7 +1430,7 @@ Astronomy and Computing 25, 10-24 (2018) · [doi:10.1016/j.ascom.2018.08.002](ht
 | Saturn globe phase fit (Eq. 12) | c1..c4 = 2.446e-4, 2.672e-4, −1.505e-6, 4.767e-9; valid 6°-150°; fit to Dyudina's Pioneer-based model | verified | p. 20, Eq. 12 | “Eq. 12 may be used to compute an approximate V magnitude for the globe of Saturn only when 6 < α < 150” |
 
 <a id="mamajek2022"></a>
-### Mamajek — A Modern Mean Dwarf Stellar Color and Effective Temperature Sequence
+### Mamajek 2022 — A Modern Mean Dwarf Stellar Color and Effective Temperature Sequence
 
 E. Mamajek, online table (version 2022.04.16) · [pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt](https://www.pas.rochester.edu/~emamajek/EEM_dwarf_UBVIJHK_colors_Teff.txt)
 
@@ -1449,7 +1449,7 @@ E. Mamajek, online table (version 2022.04.16) · [pas.rochester.edu/~emamajek/EE
 | dwarf M_V anchors at subclasses 0/5/9 (MV_MS_TABLE) | O −5.8/−5.5/−4.3; B −4.0/−1.2/0.4; A 0.65/1.9/2.55; F 2.7/3.5/4.3; G 4.4/5.1/5.8; K 5.9/7.4/8.6; M 8.8/12.3/16.0 | disagrees | l. 26-109 | “Mv: O5V −5.35, O9V −4.20, B0V −3.90, B5V −0.85, B9V 0.50, A0V 0.99, A5V 2.01, A9V 2.43, M5V 14.15, M9V 19.40” |
 
 <a id="martins2005"></a>
-### Martins, Schaerer & Hillier 2005 — A new calibration of stellar parameters of Galactic O stars
+### Martins 2005 — A new calibration of stellar parameters of Galactic O stars
 
 A&A 436, 1049-1065 (2005) · [doi:10.1051/0004-6361:20042386](https://doi.org/10.1051/0004-6361:20042386) · [arXiv:astro-ph/0503346](https://arxiv.org/abs/astro-ph/0503346) · [2005A&A...436.1049M](https://ui.adsabs.harvard.edu/abs/2005A%26A...436.1049M)
 
@@ -1465,7 +1465,7 @@ A&A 436, 1049-1065 (2005) · [doi:10.1051/0004-6361:20042386](https://doi.org/10
 | giants/supergiants: same class row +0.3 dex | +0.3 dex | disagrees | p. 15, Tables 2-3 | “Table 2. Same as Table 1 for luminosity class III stars.” |
 
 <a id="mason2001"></a>
-### Mason et al. 2001 — The 2001 US Naval Observatory Double Star CD-ROM. I. The Washington Double Star Catalog
+### Mason 2001 — The 2001 US Naval Observatory Double Star CD-ROM. I. The Washington Double Star Catalog
 
 AJ 122, 3466 · [doi:10.1086/323920](https://doi.org/10.1086/323920)
 
@@ -1476,7 +1476,7 @@ AJ 122, 3466 · [doi:10.1086/323920](https://doi.org/10.1086/323920)
 | WDS pair separations/PAs/magnitudes |  | verified | p. 3466, Abstract | “The WDS contains positions (J2000), discoverer designations, epochs, position angles, separations, magnitudes, spectral types, proper motions” |
 
 <a id="mccomas2015"></a>
-### McComas et al. 2015 — LOCAL INTERSTELLAR MEDIUM: SIX YEARS OF DIRECT SAMPLING BY IBEX
+### McComas 2015 — LOCAL INTERSTELLAR MEDIUM: SIX YEARS OF DIRECT SAMPLING BY IBEX
 
 ApJS 220, 22 · [doi:10.1088/0067-0049/220/2/22](https://doi.org/10.1088/0067-0049/220/2/22)
 
@@ -1503,7 +1503,7 @@ AJ 144, 4 · [doi:10.1088/0004-6256/144/1/4](https://doi.org/10.1088/0004-6256/1
 | Aquarius = DDO 210 as a transition (dIrr/dSph) dwarf | dTr / dIrr | verified | p. 92, Table 1; p. 32 | “these so-called transition systems, such as DDO210, distinguish themselves from dIrrs” |
 
 <a id="mcconnachie2018"></a>
-### McConnachie et al. 2018 — The Large-scale Structure of the Halo of the Andromeda Galaxy. II. Hierarchical Structure in the Pan-Andromeda Archaeological Survey
+### McConnachie 2018 — The Large-scale Structure of the Halo of the Andromeda Galaxy. II. Hierarchical Structure in the Pan-Andromeda Archaeological Survey
 
 ApJ 868, 55 · [doi:10.3847/1538-4357/aae8e7](https://doi.org/10.3847/1538-4357/aae8e7) · [arXiv:1810.08234](https://arxiv.org/abs/1810.08234)
 
@@ -1517,7 +1517,7 @@ ApJ 868, 55 · [doi:10.3847/1538-4357/aae8e7](https://doi.org/10.3847/1538-4357/
 | M31 disc thickness | 500 pc | not in paper |  |  |
 
 <a id="mcmillan"></a>
-### McMillan P. J. 2017 — The mass distribution and gravitational potential of the Milky Way
+### McMillan 2017 — The mass distribution and gravitational potential of the Milky Way
 
 MNRAS 465, 76-94 (2017) · [doi:10.1093/mnras/stw2759](https://doi.org/10.1093/mnras/stw2759) · [arXiv:1608.00971](https://arxiv.org/abs/1608.00971) · [2017MNRAS.465...76M](https://ui.adsabs.harvard.edu/abs/2017MNRAS.465...76M)
 
@@ -1530,7 +1530,7 @@ MNRAS 465, 76-94 (2017) · [doi:10.1093/mnras/stw2759](https://doi.org/10.1093/m
 | Sun–Galactic-Centre distance | R0 ≈ 8.2 kpc (viewpoint vector \|(−58.9, 7237.9, −3846.9)\| = 8197 pc) | verified | p. 1, Abstract | “we find that the Sun is R0 = (8.20 ± 0.09) kpc from the Galactic Centre” |
 
 <a id="meeus"></a>
-### Meeus J. 1998 — Astronomical Algorithms, 2nd ed.
+### Meeus 1998 — Astronomical Algorithms, 2nd ed.
 
 Willmann-Bell, Richmond VA (1998); ISBN 0-943396-61-1 · [1998aalg.book.....M](https://ui.adsabs.harvard.edu/abs/1998aalg.book.....M)
 
@@ -1546,7 +1546,7 @@ Willmann-Bell, Richmond VA (1998); ISBN 0-943396-61-1 · [1998aalg.book.....M](h
 | JDE is conventionally TT |  | unverified |  |  |
 
 <a id="merand2011"></a>
-### Merand et al. 2011 — The nearby eclipsing stellar system delta Velorum
+### Mérand 2011 — The nearby eclipsing stellar system delta Velorum
 
 A&A 532, A50 (2011) · [doi:10.1051/0004-6361/201116896](https://doi.org/10.1051/0004-6361/201116896) · [2011A&A...532A..50M](https://ui.adsabs.harvard.edu/abs/2011A%26A...532A..50M)
 
@@ -1557,7 +1557,7 @@ A&A 532, A50 (2011) · [doi:10.1051/0004-6361/201116896](https://doi.org/10.1051
 | δ Vel Aa, Ab are two early A-type main-sequence stars; Ab parameters | Ab: 2.27 M☉, mean Teff 9830 K | verified | p. 1, Abstract; Table 3 | “The main component is an eclipsing binary composed of two early A-type stars in rapid rotation.” |
 
 <a id="montalto2021"></a>
-### Montalto et al. 2021 — The all-sky PLATO input catalogue
+### Montalto 2021 — The all-sky PLATO input catalogue
 
 A&A 653, A98 · [doi:10.1051/0004-6361/202140717](https://doi.org/10.1051/0004-6361/202140717) · [arXiv:2108.13712](https://arxiv.org/abs/2108.13712)
 
@@ -1569,7 +1569,7 @@ A&A 653, A98 · [doi:10.1051/0004-6361/202140717](https://doi.org/10.1051/0004-6
 | validity range of the Teff relation | 0.5 < BP−RP < 5.0 | verified | p. 11, below eq. 4 | “where the relation is valid for 0.5 <(GBP − GRP ) < 5.” |
 
 <a id="montegriffo2023"></a>
-### Gaia Collaboration, Montegriffo P., Bellazzini M., De Angeli F. et al. 2023 — Gaia Data Release 3: The Galaxy in your preferred colours. Synthetic photometry from Gaia low-resolution spectra
+### Montegriffo 2023 — Gaia Data Release 3: The Galaxy in your preferred colours. Synthetic photometry from Gaia low-resolution spectra
 
 A&A 674, A33 · [doi:10.1051/0004-6361/202243709](https://doi.org/10.1051/0004-6361/202243709) · [arXiv:2206.06215](https://arxiv.org/abs/2206.06215)
 
@@ -1582,7 +1582,7 @@ A&A 674, A33 · [doi:10.1051/0004-6361/202243709](https://doi.org/10.1051/0004-6
 | loss of millimag accuracy at bright magnitudes from an XP instrument-setup change (Sect. 3.2) | G ≈ 11.5 | verified | p. 12, Sect. 3.2 | “the loss of millimag accuracy for G < ∼ 11.5 mag in correspondence with a transition to different setups of the BP and RP spectrometers” |
 
 <a id="morrisonstephenson"></a>
-### Morrison L. V. & Stephenson F. R. 2004 — Historical Values of the Earth's Clock Error Delta T and the Calculation of Eclipses
+### Morrison 2004 — Historical Values of the Earth's Clock Error Delta T and the Calculation of Eclipses
 
 J. Hist. Astron. 35, 327-336 (2004) · [doi:10.1177/002182860403500305](https://doi.org/10.1177/002182860403500305) · [2004JHA....35..327M](https://ui.adsabs.harvard.edu/abs/2004JHA....35..327M)
 
@@ -1594,7 +1594,7 @@ J. Hist. Astron. 35, 327-336 (2004) · [doi:10.1177/002182860403500305](https://
 | long-term ΔT parabola | ΔT = −20 + 32·u² s, u = (year − 1820)/100 | verified | p. 332 | “the long-term mean parabolic trend has the equation ΔT = −20 + 32t² sec, where t is measured in (Julian) centuries from the reference epoch A.D. 1820.” |
 
 <a id="mosenkov2021"></a>
-### Mosenkov et al. 2021 — The structure of the Milky Way based on unWISE 3.4 μm integrated photometry
+### Mosenkov 2021 — The structure of the Milky Way based on unWISE 3.4 μm integrated photometry
 
 [doi:10.1093/mnras/stab2445](https://doi.org/10.1093/mnras/stab2445) · [arXiv:2108.10413](https://arxiv.org/abs/2108.10413)
 
@@ -1606,7 +1606,7 @@ J. Hist. Astron. 35, 327-336 (2004) · [doi:10.1177/002182860403500305](https://
 | their thick disc is radially longer than the thin disc |  | verified | p. 9, Table 2 | “hR, T pc 3219 ± 417” |
 
 <a id="moustakas2023"></a>
-### Moustakas et al. 2023 — Siena Galaxy Atlas 2020
+### Moustakas 2023 — Siena Galaxy Atlas 2020
 
 ApJS · [doi:10.3847/1538-4365/acfaa2](https://doi.org/10.3847/1538-4365/acfaa2) · [arXiv:2307.04888](https://arxiv.org/abs/2307.04888)
 
@@ -1618,7 +1618,7 @@ ApJS · [doi:10.3847/1538-4365/acfaa2](https://doi.org/10.3847/1538-4365/acfaa2)
 | number of galaxies in SGA-2020 | 383,620 | verified | p. 1, Abstract | “imaging atlas of 383,620 nearby galaxies” |
 
 <a id="muterspaugh2010"></a>
-### Muterspaugh et al. 2010 — The PHASES Differential Astrometry Data Archive. II. Updated Binary Star Orbits and a Long Period Eclipsing Binary
+### Muterspaugh 2010 — The PHASES Differential Astrometry Data Archive. II. Updated Binary Star Orbits and a Long Period Eclipsing Binary
 
 Muterspaugh M. W., Hartkopf W. I., Lane B. F. et al.; AJ 140, 1623-1630 (2010) · [doi:10.1088/0004-6256/140/6/1623](https://doi.org/10.1088/0004-6256/140/6/1623) · [arXiv:1010.4043](https://arxiv.org/abs/1010.4043) · [2010AJ....140.1623M](https://ui.adsabs.harvard.edu/abs/2010AJ....140.1623M)
 
@@ -1632,7 +1632,7 @@ Muterspaugh M. W., Hartkopf W. I., Lane B. F. et al.; AJ 140, 1623-1630 (2010) �
 | eta CrB AB eccentricity | e = 0.27907 | verified | p. 9, Table 6 | “137107 15204.9 42612.9 0.86226 0.27907” |
 
 <a id="newburn1973"></a>
-### Newburn & Gulkis 1973 — A survey of the outer planets Jupiter, Saturn, Uranus, Neptune, Pluto, and their satellites
+### Newburn 1973 — A survey of the outer planets Jupiter, Saturn, Uranus, Neptune, Pluto, and their satellites
 
 Space Science Reviews 14, 179-271 (1973) · [doi:10.1007/BF02432098](https://doi.org/10.1007/BF02432098) · [1973SSRv...14..179N](https://ui.adsabs.harvard.edu/abs/1973SSRv...14..179N)
 
@@ -1647,7 +1647,7 @@ Space Science Reviews 14, 179-271 (1973) · [doi:10.1007/BF02432098](https://doi
 | Harris filter effective wavelengths fix the R column as Johnson rather than Cousins | U .35, B .45, V .55, R .69, I .82 µm; system stored as 'johnson' | disagrees | p. 257, Appendix B | “Harris’ passbands R and I are those of Hardie and are at different effective wavelengths than the standards of Johnson (1966)” |
 
 <a id="nicholson1995"></a>
-### Nicholson, Mosqueira & Matthews 1995 — Stellar Occultation Observations of Neptune's Rings: 1984–1988
+### Nicholson 1995 — Stellar Occultation Observations of Neptune's Rings: 1984–1988
 
 Nicholson P. D., Mosqueira I. & Matthews K.; Icarus 113, 295-330 (1995) · [1995Icar..113..295N](https://ui.adsabs.harvard.edu/abs/1995Icar..113..295N)
 
@@ -1658,7 +1658,7 @@ Nicholson P. D., Mosqueira I. & Matthews K.; Icarus 113, 295-330 (1995) · [1995
 | stellar-occultation source for the Neptune ring table |  | verified | p. 295, Abstract | “Data from eight stellar occultations by Neptune between 1984 and 1988 are analyzed to set limits on the optical depths of the continuous Adams and Le Verrier Rings” |
 
 <a id="north2007"></a>
-### North et al. 2007 — γ² Velorum: Orbital Solution and Fundamental Parameter Determination with SUSI
+### North 2007 — γ² Velorum: Orbital Solution and Fundamental Parameter Determination with SUSI
 
 North J. R., Tuthill P. G., Tango W. J. & Davis J.; MNRAS 377, 415-424 (2007) · [doi:10.1111/j.1365-2966.2007.11608.x](https://doi.org/10.1111/j.1365-2966.2007.11608.x) · [arXiv:astro-ph/0702375](https://arxiv.org/abs/astro-ph/0702375) · [2007MNRAS.377..415N](https://ui.adsabs.harvard.edu/abs/2007MNRAS.377..415N)
 
@@ -1669,7 +1669,7 @@ North J. R., Tuthill P. G., Tango W. J. & Davis J.; MNRAS 377, 415-424 (2007) ·
 | γ² Vel distance from the interferometric orbit | 336 +8/−7 pc | verified | p. 1, Abstract; p. 10, Table 4 | “our orbital solution produces a distance of 336+8 −7 pc, significantly more distant than the Hipparcos estimation” |
 
 <a id="osterbrock2006"></a>
-### Osterbrock & Ferland 2006 — Astrophysics of Gaseous Nebulae and Active Galactic Nuclei, 2nd ed.
+### Osterbrock 2006 — Astrophysics of Gaseous Nebulae and Active Galactic Nuclei, 2nd ed.
 
 University Science Books, Sausalito (2006); ISBN 1-891389-34-3 · [2006agna.book.....O](https://ui.adsabs.harvard.edu/abs/2006agna.book.....O)
 
@@ -1681,7 +1681,7 @@ University Science Books, Sausalito (2006); ISBN 1-891389-34-3 · [2006agna.book
 | case-B recombination coefficient alpha_B at 10^4 K | 2.6e-13 cm^3 s^-1 | unverified |  |  |
 
 <a id="pace2025"></a>
-### Pace et al. 2025 — The Local Volume Database: a library of the observed properties of nearby dwarf galaxies and star clusters
+### Pace 2025 — The Local Volume Database: a library of the observed properties of nearby dwarf galaxies and star clusters
 
 Open Journal of Astrophysics / OJAp 8 · [doi:10.33232/001c.144859](https://doi.org/10.33232/001c.144859) · [arXiv:2411.07424](https://arxiv.org/abs/2411.07424)
 
@@ -1693,7 +1693,7 @@ Open Journal of Astrophysics / OJAp 8 · [doi:10.33232/001c.144859](https://doi.
 | LVDB ra/dec are J2000.0 | J2000.0 | verified | p. 20, App. B | “ra and dec. Location of system [degrees, ICRS frame, J2000.0].” |
 
 <a id="padoan1997"></a>
-### Padoan, Nordlund & Jones 1997 — The universality of the stellar initial mass function
+### Padoan 1997 — The universality of the stellar initial mass function
 
 MNRAS 288, 145-152 (1997) · [doi:10.1093/mnras/288.1.145](https://doi.org/10.1093/mnras/288.1.145) · [arXiv:astro-ph/9703110](https://arxiv.org/abs/astro-ph/9703110) · [1997MNRAS.288..145P](https://ui.adsabs.harvard.edu/abs/1997MNRAS.288..145P)
 
@@ -1704,7 +1704,7 @@ MNRAS 288, 145-152 (1997) · [doi:10.1093/mnras/288.1.145](https://doi.org/10.10
 | log-normal volume-density PDF from supersonic turbulence, s = ln(ρ/ρ̄) Gaussian with σ² = ln(1 + b²M²) |  | verified | p. 4, eqs. 1–4 | “The probability density function of the density field is well approximated by a Log-Normal distribution” |
 
 <a id="pecaut2013"></a>
-### Pecaut & Mamajek 2013 — Intrinsic Colors, Temperatures, and Bolometric Corrections of Pre-main-sequence Stars
+### Pecaut 2013 — Intrinsic Colors, Temperatures, and Bolometric Corrections of Pre-main-sequence Stars
 
 ApJS 208, 9 (2013) · [doi:10.1088/0067-0049/208/1/9](https://doi.org/10.1088/0067-0049/208/1/9) · [arXiv:1307.2657](https://arxiv.org/abs/1307.2657) · [2013ApJS..208....9P](https://ui.adsabs.harvard.edu/abs/2013ApJS..208....9P)
 
@@ -1717,7 +1717,7 @@ ApJS 208, 9 (2013) · [doi:10.1088/0067-0049/208/1/9](https://doi.org/10.1088/00
 | dwarf Teff sequence (Table 4) and 5–30 Myr pre-MS sequence (Table 6) only; no giant/supergiant classes |  | verified | p. 26, Table 4; p. 29, Table 6 | “Intrinsic colors of 5-30 Myr old Stars and Adopted Teff , Bolometric Correction Values” |
 
 <a id="pelgrims2020"></a>
-### Pelgrims et al. 2020 — Modeling the magnetized Local Bubble from dust data
+### Pelgrims 2020 — Modeling the magnetized Local Bubble from dust data
 
 Pelgrims V., Ferrière K., Boulanger F., Lallement R. & Montier L.; A&A 636, A17 (2020) · [doi:10.1051/0004-6361/201937157](https://doi.org/10.1051/0004-6361/201937157) · [arXiv:1911.09691](https://arxiv.org/abs/1911.09691) · [2020A&A...636A..17P](https://ui.adsabs.harvard.edu/abs/2020A%26A...636A..17P)
 
@@ -1728,7 +1728,7 @@ Pelgrims V., Ferrière K., Boulanger F., Lallement R. & Montier L.; A&A 636, A17
 | Local Bubble inner-surface model: spherical-harmonic reconstruction on a HEALPix grid, lmax variants (the build reads r_in_lmax-08 / -10) | lmax 2–10 | verified | p. 1, Abstract; p. 4, Sect. 2.2.2 and Fig. 3 | “We expanded the shell inner surface in spherical harmonics, up to a variable maximum multipole degree” |
 
 <a id="pietrzynski2019"></a>
-### Pietrzyński et al. 2019 — A distance to the Large Magellanic Cloud that is precise to one per cent
+### Pietrzyński 2019 — A distance to the Large Magellanic Cloud that is precise to one per cent
 
 Nature 567, 200 · [doi:10.1038/s41586-019-0999-4](https://doi.org/10.1038/s41586-019-0999-4) · [arXiv:1903.08096](https://arxiv.org/abs/1903.08096)
 
@@ -1741,7 +1741,7 @@ Nature 567, 200 · [doi:10.1038/s41586-019-0999-4](https://doi.org/10.1038/s4158
 | distance is to the LMC centre |  | verified | p. 3 | “We adopted the centre of the young stellar population in the LMC (right ascension RA = 5 h 20 min 12 s, declination dec. = –69° 18′ 00′′” |
 
 <a id="piffl2014"></a>
-### Piffl et al. 2014 — The RAVE survey: the Galactic escape speed and the mass of the Milky Way
+### Piffl 2014 — The RAVE survey: the Galactic escape speed and the mass of the Milky Way
 
 A&A 562, A91 (2014) · [doi:10.1051/0004-6361/201322531](https://doi.org/10.1051/0004-6361/201322531) · [arXiv:1309.4293](https://arxiv.org/abs/1309.4293) · [2014A&A...562A..91P](https://ui.adsabs.harvard.edu/abs/2014A%26A...562A..91P)
 
@@ -1765,7 +1765,7 @@ A&A 641, A1 · [arXiv:1807.06205](https://arxiv.org/abs/1807.06205)
 | SMICA CMB map (planned skybox) |  | verified | p. 10 | “SMICA, which uses an independent component analysis of” |
 
 <a id="porco1995"></a>
-### Porco et al. 1995 — Neptune's ring system
+### Porco 1995 — Neptune's ring system
 
 In Neptune and Triton (Cruikshank ed.), Univ. of Arizona Press (1995), pp. 703-804; Porco, Nicholson, Cuzzi, Lissauer & Esposito
 
@@ -1789,7 +1789,7 @@ A&A 586, A90 (2016) · [doi:10.1051/0004-6361/201527859](https://doi.org/10.1051
 | α Cen mass ratio q = M_B/(M_A+M_B), external truth in the mass-ratio test | q = 0.4617 (κ) | verified | p. 3, Table 1 | “κ 0.4581 ± 0.00098 0.4617 ± 0.00044” |
 
 <a id="prugniel"></a>
-### Prugniel P. & Simien F. 1997 — The fundamental plane of early-type galaxies: non-homology of the spatial structure?
+### Prugniel 1997 — The fundamental plane of early-type galaxies: non-homology of the spatial structure?
 
 A&A 321, 111-122 (1997) · [1997A&A...321..111P](https://ui.adsabs.harvard.edu/abs/1997A%26A...321..111P)
 
@@ -1802,7 +1802,7 @@ A&A 321, 111-122 (1997) · [1997A&A...321..111P](https://ui.adsabs.harvard.edu/a
 | Sérsic deprojection form ν(u) = u^(−p_n)·exp(−b_n·u^(1/n)) and its own p_n fit | α(n) = 1 − 0.594/n + 0.055/n² (the tree uses the Lima Neto refit) | verified | p. 120, App. B.1, eq. B7 | “Then, we fit α(n) by: α(n) = 1 − 1.188/2n + 0.22/4n²” |
 
 <a id="ramirez2012"></a>
-### Ramírez et al. 2012 — The UBV(RI)C Colors of the Sun
+### Ramírez 2012 — The UBV(RI)C Colors of the Sun
 
 ApJ 752, 5 (2012) · [doi:10.1088/0004-637X/752/1/5](https://doi.org/10.1088/0004-637X/752/1/5) · [arXiv:1204.0828](https://arxiv.org/abs/1204.0828) · [2012ApJ...752....5R](https://ui.adsabs.harvard.edu/abs/2012ApJ...752....5R)
 
@@ -1814,7 +1814,7 @@ ApJ 752, 5 (2012) · [doi:10.1088/0004-637X/752/1/5](https://doi.org/10.1088/000
 | solar V−Rc | 0.352 | verified | p. 1, Abstract | “(V − R)⊙ = 0.352 ± 0.007” |
 
 <a id="recioblanco2023"></a>
-### Recio-Blanco et al. 2023 — Gaia Data Release 3
+### Recio-Blanco 2023 — Gaia Data Release 3
 
 A&A 674, A29 · [doi:10.1051/0004-6361/202243750](https://doi.org/10.1051/0004-6361/202243750) · [arXiv:2206.05541](https://arxiv.org/abs/2206.05541)
 
@@ -1825,7 +1825,7 @@ A&A 674, A29 · [doi:10.1051/0004-6361/202243750](https://doi.org/10.1051/0004-6
 | GSP-Spec emits Teff, log g, [M/H] from RVS spectra |  | verified | p. 2, Sect. 1 | “GSP-Spec estimates (i) the stellar effective temperature T eff , reported as teff_gspspec; (ii) ... logg_gspspec; (iii) ... mh_gspspec” |
 
 <a id="reid2019"></a>
-### Reid et al. 2019 — Trigonometric Parallaxes of High-mass Star-forming Regions: Our View of the Milky Way
+### Reid 2019 — Trigonometric Parallaxes of High-mass Star-forming Regions: Our View of the Milky Way
 
 Reid M. J., Menten K. M., Brunthaler A. et al.; ApJ 885, 131 (2019) · [doi:10.3847/1538-4357/ab4a11](https://doi.org/10.3847/1538-4357/ab4a11) · [arXiv:1910.03357](https://arxiv.org/abs/1910.03357) · [2019ApJ...885..131R](https://ui.adsabs.harvard.edu/abs/2019ApJ...885..131R)
 
@@ -1837,7 +1837,7 @@ Reid M. J., Menten K. M., Brunthaler A. et al.; ApJ 885, 131 (2019) · [doi:10.3
 | maser-parallax spiral-arm model (named as a declined option) |  | verified | p. 2, Abstract | “Fitting log-periodic spirals to the locations of the masers ... allows us to significantly expand our view of the structure of the Milky Way.” |
 
 <a id="rhode2013"></a>
-### Rhode et al. 2013 — ALFALFA Discovery of the Nearby Gas-Rich Dwarf Galaxy Leo P. II. Optical Imaging Observations
+### Rhode 2013 — ALFALFA Discovery of the Nearby Gas-Rich Dwarf Galaxy Leo P. II. Optical Imaging Observations
 
 Rhode K. L., Salzer J. J., Haurberg N. C. et al.; AJ 145, 149 (2013) · [doi:10.1088/0004-6256/145/6/149](https://doi.org/10.1088/0004-6256/145/6/149) · [arXiv:1305.0270](https://arxiv.org/abs/1305.0270) · [2013AJ....145..149R](https://ui.adsabs.harvard.edu/abs/2013AJ....145..149R)
 
@@ -1849,7 +1849,7 @@ Rhode K. L., Salzer J. J., Haurberg N. C. et al.; AJ 145, 149 (2013) · [doi:10.
 | Leo P classified as a dwarf irregular | Dwarf irregular | verified | p. 1, Abstract and subject headings | “Subject headings: galaxies: irregular — galaxies: dwarf” |
 
 <a id="riello2021"></a>
-### Riello et al. 2021 — Gaia Early Data Release 3: Photometric content and validation
+### Riello 2021 — Gaia Early Data Release 3: Photometric content and validation
 
 A&A 649, A3 · [doi:10.1051/0004-6361/202039587](https://doi.org/10.1051/0004-6361/202039587) · [arXiv:2012.01916](https://arxiv.org/abs/2012.01916)
 
@@ -1875,7 +1875,7 @@ PASP 99, 695 (1987) · [doi:10.1086/132034](https://doi.org/10.1086/132034) · [
 | Roman 1987 (VI/42) is the constellation lookup table that the boundary walk makes unnecessary |  | verified | p. 695, Abstract | “A table permits rapid determination of the constellation in which an object is located from its 1875.0 position.” |
 
 <a id="ross2020"></a>
-### Ross et al. 2020 — eBOSS DR16 LSS catalogues
+### Ross 2020 — eBOSS DR16 LSS catalogues
 
 MNRAS 498, 2354 · [arXiv:2007.09000](https://arxiv.org/abs/2007.09000)
 
@@ -1886,7 +1886,7 @@ MNRAS 498, 2354 · [arXiv:2007.09000](https://arxiv.org/abs/2007.09000)
 | eBOSS DR16 LSS catalogues (planned Tier 5) and target-selection definitions in Sect. 2 |  | verified | p. 3, Sect. 2 | “2 EBOSS TARGETS” |
 
 <a id="samus2017"></a>
-### Samus et al. 2017 — General catalogue of variable stars: Version GCVS 5.1
+### Samus 2017 — General catalogue of variable stars: Version GCVS 5.1
 
 Astronomy Reports 61, 80-88 (2017) · [doi:10.1134/S1063772917010085](https://doi.org/10.1134/S1063772917010085) · [2017ARep...61...80S](https://ui.adsabs.harvard.edu/abs/2017ARep...61...80S)
 
@@ -1897,7 +1897,7 @@ Astronomy Reports 61, 80-88 (2017) · [doi:10.1134/S1063772917010085](https://do
 | GCVS 5.1 catalogue (gcvs5.txt main table + crossid.txt cross-identifications) |  | verified | p. 83, Sect. 3 | “In addition to the main table, the GCVS 5.1 contains a table of 203 000 identifications of variable stars with other catalogs (crossid.txt)” |
 
 <a id="sander2012"></a>
-### Sander A. et al. 2012 — The Galactic WC stars
+### Sander 2012 — The Galactic WC stars
 
 A&A 540, A144 (2012) · [doi:10.1051/0004-6361/201117830](https://doi.org/10.1051/0004-6361/201117830) · [2012A&A...540A.144S](https://ui.adsabs.harvard.edu/abs/2012A%26A...540A.144S)
 
@@ -1922,7 +1922,7 @@ ApJ 95, 421 (1942) · [doi:10.1086/144412](https://doi.org/10.1086/144412) · [1
 | Rigel Ba and Bb both of class B9 | B9V + B9V | verified | p. 421 | “eleven of which show satisfactory lines of the components, both of which are of spectral class B9” |
 
 <a id="schaefer2016"></a>
-### Schaefer et al. 2016 — Orbits, Distance, and Stellar Masses of the Massive Triple Star sigma Orionis
+### Schaefer 2016 — Orbits, Distance, and Stellar Masses of the Massive Triple Star sigma Orionis
 
 AJ 152, 213 (2016) · [doi:10.3847/0004-6256/152/6/213](https://doi.org/10.3847/0004-6256/152/6/213) · [arXiv:1610.01984](https://arxiv.org/abs/1610.01984) · [2016AJ....152..213S](https://ui.adsabs.harvard.edu/abs/2016AJ....152..213S)
 
@@ -1946,7 +1946,7 @@ NASA Photojournal PIA18434-18439, PIA18668 (Paul Schenk, LPI, 2014)
 | Triton Voyager 2 global colour mosaic (PIA18668) |  | verified | photojournal.jpl.nasa.gov/catalog/PIA18668 | “Map of Triton” |
 
 <a id="schlegel1998"></a>
-### Schlegel, Finkbeiner & Davis 1998 — Maps of Dust Infrared Emission for Use in Estimation of Reddening and Cosmic Microwave Background Radiation Foregrounds
+### Schlegel 1998 — Maps of Dust Infrared Emission for Use in Estimation of Reddening and Cosmic Microwave Background Radiation Foregrounds
 
 ApJ 500, 525 · [doi:10.1086/305772](https://doi.org/10.1086/305772) · [arXiv:astro-ph/9710327](https://arxiv.org/abs/astro-ph/9710327)
 
@@ -1958,7 +1958,7 @@ ApJ 500, 525 · [doi:10.1086/305772](https://doi.org/10.1086/305772) · [arXiv:a
 | SFD publish no per-kpc extinction rate | (absence claim) | verified | whole paper |  |
 
 <a id="simondiaz2011"></a>
-### Simón-Díaz, Caballero & Lorenzo 2011 — A third massive star component in the σ Orionis AB system
+### Simón-Díaz 2011 — A third massive star component in the σ Orionis AB system
 
 ApJ 742, 55 (2011) · [doi:10.1088/0004-637X/742/1/55](https://doi.org/10.1088/0004-637X/742/1/55) · [arXiv:1108.4622](https://arxiv.org/abs/1108.4622) · [2011ApJ...742...55S](https://ui.adsabs.harvard.edu/abs/2011ApJ...742...55S)
 
@@ -1969,7 +1969,7 @@ ApJ 742, 55 (2011) · [doi:10.1088/0004-637X/742/1/55](https://doi.org/10.1088/0
 | sigma Ori Aa O9.5V + Ab B0.5V | O9.5 V + B0.5 V | verified | p. 4, Sect. 3 | “the two spectroscopic components are nicely fitted by the spectra of the O9.5 V and B0.5 V standards” |
 
 <a id="simondiaz2015"></a>
-### Simon-Diaz et al. 2015 — Orbital and physical properties of the sigma Ori Aa, Ab, B triple system
+### Simón-Díaz 2015 — Orbital and physical properties of the sigma Ori Aa, Ab, B triple system
 
 ApJ 799, 169 (2015) · [doi:10.1088/0004-637X/799/2/169](https://doi.org/10.1088/0004-637X/799/2/169) · [arXiv:1412.3469](https://arxiv.org/abs/1412.3469) · [2015ApJ...799..169S](https://ui.adsabs.harvard.edu/abs/2015ApJ...799..169S)
 
@@ -1980,7 +1980,7 @@ ApJ 799, 169 (2015) · [doi:10.1088/0004-637X/799/2/169](https://doi.org/10.1088
 | sigma Ori Ab effective temperature | Teff(Ab) = 31.0 ± 1.0 kK | verified | p. 11, Table 4 | “Teff 35.0 ± 1.0 31.0 ± 1.0 29.0 ± 2.0 kK” |
 
 <a id="sion"></a>
-### Sion E. M. et al. 1983 — A proposed new white dwarf spectral classification system
+### Sion 1983 — A proposed new white dwarf spectral classification system
 
 ApJ 269, 253 (1983) · [doi:10.1086/161036](https://doi.org/10.1086/161036) · [1983ApJ...269..253S](https://ui.adsabs.harvard.edu/abs/1983ApJ...269..253S)
 
@@ -1991,7 +1991,7 @@ ApJ 269, 253 (1983) · [doi:10.1086/161036](https://doi.org/10.1086/161036) · [
 | WD temperature index = 50400/Teff, so Teff = 50400/N | Teff = 50400 / N | verified | p. 255, Sect. II b; also p. 253 abstract | “a quantative temperature index from 0 to 9 will be used, defined by 10 times θ (θ = 5040/T). This quantity 50,400/T given as an integer” |
 
 <a id="smirnov2002"></a>
-### Smirnov et al. 2002 — Optical Properties of Atmospheric Aerosol in Maritime Environments
+### Smirnov 2002 — Optical Properties of Atmospheric Aerosol in Maritime Environments
 
 J. Atmos. Sci. 59, 501-523 (2002) · [doi:10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2](https://doi.org/10.1175/1520-0469(2002)059<0501:OPOAAI>2.0.CO;2)
 
@@ -2003,7 +2003,7 @@ J. Atmos. Sci. 59, 501-523 (2002) · [doi:10.1175/1520-0469(2002)059<0501:OPOAAI
 | clean maritime background aerosol optical depth | τ_Mie = 0.05 (grey, all channels) | disagrees | p. 501 (abstract); p. 510, Table 3 | “The optical thickness is remarkably stable with mean value of τa (500 nm) = 0.07, mode value at τam = 0.06” |
 
 <a id="sneep2005"></a>
-### Sneep & Ubachs 2005 — Direct measurement of the Rayleigh scattering cross section in various gases
+### Sneep 2005 — Direct measurement of the Rayleigh scattering cross section in various gases
 
 JQSRT 92, 293-310 (2005) · [doi:10.1016/j.jqsrt.2004.07.025](https://doi.org/10.1016/j.jqsrt.2004.07.025) · [2005JQSRT..92..293S](https://ui.adsabs.harvard.edu/abs/2005JQSRT..92..293S)
 
@@ -2037,7 +2037,7 @@ E. M. Standish, Solar System Dynamics Group, JPL/Caltech (memo, undated; content
 | the widely reproduced linear-elements (Table 1, 1800-2050) Pluto row must not be substituted for the Table 2a row |  | verified | memo p. 3, Table 1; approx_pos.html, Table 1 | “valid for the time-interval 1800 AD - 2050 AD” |
 
 <a id="steinmetz2020"></a>
-### Steinmetz M. et al. 2020 — The Sixth Data Release of the Radial Velocity Experiment (RAVE) – I: Survey Description, Spectra and Radial Velocities
+### Steinmetz 2020 — The Sixth Data Release of the Radial Velocity Experiment (RAVE) – I: Survey Description, Spectra and Radial Velocities
 
 AJ 160, 83 · [2020AJ....160...83S](https://ui.adsabs.harvard.edu/abs/2020AJ....160...83S)
 
@@ -2048,7 +2048,7 @@ AJ 160, 83 · [2020AJ....160...83S](https://ui.adsabs.harvard.edu/abs/2020AJ....
 | bibcode 2020AJ....160...83S identifies the RAVE DR6 radial-velocity paper |  | verified | p. 2, abstract | “data release (DR6 or FDR) is based on 518 387 observations of 451 783 unique stars” |
 
 <a id="stelzer2003"></a>
-### Stelzer & Burwitz 2003 — Castor A and Castor B resolved in a simultaneous Chandra and XMM-Newton observation
+### Stelzer 2003 — Castor A and Castor B resolved in a simultaneous Chandra and XMM-Newton observation
 
 A&A 402, 719-728 (2003) · [doi:10.1051/0004-6361:20030286](https://doi.org/10.1051/0004-6361:20030286) · [arXiv:astro-ph/0302570](https://arxiv.org/abs/astro-ph/0302570) · [2003A&A...402..719S](https://ui.adsabs.harvard.edu/abs/2003A%26A...402..719S)
 
@@ -2060,7 +2060,7 @@ A&A 402, 719-728 (2003) · [doi:10.1051/0004-6361:20030286](https://doi.org/10.1
 | Castor Ab late-K, Bb early-M (K7Ve / M1Ve are stellata's representative subtypes) | late-K, early-M | verified | p. 1, Sect. 1 | “most likely a late-K star ... seems to be an early-M dwarf” |
 
 <a id="sternberg2003"></a>
-### Sternberg et al. 2003 — Ionizing Photon Emission Rates from O- and Early B-Type Stars and Clusters
+### Sternberg 2003 — Ionizing Photon Emission Rates from O- and Early B-Type Stars and Clusters
 
 ApJ 599, 1333-1343 (2003) · [doi:10.1086/379506](https://doi.org/10.1086/379506) · [arXiv:astro-ph/0312232](https://arxiv.org/abs/astro-ph/0312232) · [2003ApJ...599.1333S](https://ui.adsabs.harvard.edu/abs/2003ApJ...599.1333S)
 
@@ -2073,7 +2073,7 @@ ApJ 599, 1333-1343 (2003) · [doi:10.1086/379506](https://doi.org/10.1086/379506
 | giants/supergiants: same class row +0.3 dex | +0.3 dex | disagrees | p. 22-23, Tables 1-3 | “O9 ... 49.24 (class I) vs O9 ... 48.47 (class V)” |
 
 <a id="strauss2002"></a>
-### Strauss et al. 2002 — Spectroscopic Target Selection in the Sloan Digital Sky Survey: The Main Galaxy Sample
+### Strauss 2002 — Spectroscopic Target Selection in the Sloan Digital Sky Survey: The Main Galaxy Sample
 
 AJ 124, 1810-1824 (2002) · [doi:10.1086/342343](https://doi.org/10.1086/342343) · [arXiv:astro-ph/0206225](https://arxiv.org/abs/astro-ph/0206225) · [2002AJ....124.1810S](https://ui.adsabs.harvard.edu/abs/2002AJ....124.1810S)
 
@@ -2095,7 +2095,7 @@ ApJ 89, 526 (1939) · [doi:10.1086/144074](https://doi.org/10.1086/144074) · [1
 | Strömgren radius (ionised-sphere radius) R_S |  | verified | p. 530, eq. 16 | “The value of s corresponding to [x] = 1, which we shall call s0” |
 
 <a id="subramanian2012"></a>
-### Subramanian & Subramaniam 2012 — THE THREE-DIMENSIONAL STRUCTURE OF THE SMALL MAGELLANIC CLOUD
+### Subramanian 2012 — THE THREE-DIMENSIONAL STRUCTURE OF THE SMALL MAGELLANIC CLOUD
 
 ApJ 744, 128 · [doi:10.1088/0004-637X/744/2/128](https://doi.org/10.1088/0004-637X/744/2/128) · [arXiv:1109.3980](https://arxiv.org/abs/1109.3980)
 
@@ -2106,7 +2106,7 @@ ApJ 744, 128 · [doi:10.1088/0004-637X/744/2/128](https://doi.org/10.1088/0004-6
 | SMC triaxial shape 1:1.33:1.61, longest axis along line of sight | 1 : 1.33 : 1.61 | verified | p. 1, abstract | “we estimated an axes ratio of 1:1.33:1.61 with i = 2◦.6 and φ = 70◦.2” |
 
 <a id="tempel2011"></a>
-### Tempel et al. 2011 — SDSS surface photometry of M 31 with absorption corrections
+### Tempel 2011 — SDSS surface photometry of M 31 with absorption corrections
 
 A&A 526, A155 · [doi:10.1051/0004-6361/201016067](https://doi.org/10.1051/0004-6361/201016067) · [arXiv:1012.3591](https://arxiv.org/abs/1012.3591)
 
@@ -2132,7 +2132,7 @@ ApJS 235, 6 · [doi:10.3847/1538-4365/aaa1a5](https://doi.org/10.3847/1538-4365/
 | Rigel Ba/Bb MSC values: B side V = 7.6, B9V; masses 2.94 + 2.11 Msun | V 7.6, B9V; 2.94 + 2.11 M☉ | verified |  |  |
 
 <a id="tomasko2008"></a>
-### Tomasko et al. 2008 — A model of Titan's aerosols based on measurements made inside the atmosphere
+### Tomasko 2008a — A model of Titan's aerosols based on measurements made inside the atmosphere
 
 Planet. Space Sci. 56, 669-707 (2008) · [doi:10.1016/j.pss.2007.11.019](https://doi.org/10.1016/j.pss.2007.11.019) · [2008P&SS...56..669T](https://ui.adsabs.harvard.edu/abs/2008P%26SS...56..669T)
 
@@ -2144,7 +2144,7 @@ Planet. Space Sci. 56, 669-707 (2008) · [doi:10.1016/j.pss.2007.11.019](https:/
 | Titan visible haze optical depth τ ≈ 2–5 | τ ≈ 2–5 (tree τ_Mie = 2.5, grey) | disagrees | p. 699, Fig. 52; p. 697, Table 3 and Fig. 50 | “The vertical distribution of cumulative extinction optical depth at 500 nm is shown versus altitude.” |
 
 <a id="tomasko2008b"></a>
-### Tomasko et al. 2008 — Heat balance in Titan's atmosphere
+### Tomasko 2008b — Heat balance in Titan's atmosphere
 
 Tomasko M. G., Bézard B., Doose L. et al.; Planet. Space Sci. 56, 648-659 (2008) · [doi:10.1016/j.pss.2007.10.012](https://doi.org/10.1016/j.pss.2007.10.012) · [2008P&SS...56..648T](https://ui.adsabs.harvard.edu/abs/2008P%26SS...56..648T)
 
@@ -2155,7 +2155,7 @@ Tomasko M. G., Bézard B., Doose L. et al.; Planet. Space Sci. 56, 648-659 (2008
 | Titan noon ground light ~10% of incident (Huygens/DISR) | ~10 % of incident | unverified |  |  |
 
 <a id="torra2021"></a>
-### Torra et al. 2021 — Gaia Early Data Release 3
+### Torra 2021 — Gaia Early Data Release 3
 
 A&A 649, A10 · [doi:10.1051/0004-6361/202039637](https://doi.org/10.1051/0004-6361/202039637)
 
@@ -2166,7 +2166,7 @@ A&A 649, A10 · [doi:10.1051/0004-6361/202039637](https://doi.org/10.1051/0004-6
 | Gaia DR2 → (E)DR3 dr2_neighbourhood cross-match table |  | verified | p. 17, Sect. 7 | “A table tracing the sources from Gaia DR2 to Gaia EDR3, gaiaedr3.dr2_neighbourhood, is provided in Gaia archive” |
 
 <a id="torres2002"></a>
-### Torres & Ribas 2002 — Absolute Dimensions of the M-Type Eclipsing Binary YY Geminorum (Castor C)
+### Torres 2002 — Absolute Dimensions of the M-Type Eclipsing Binary YY Geminorum (Castor C)
 
 ApJ 567, 1140-1165 (2002) · [doi:10.1086/338587](https://doi.org/10.1086/338587) · [arXiv:astro-ph/0111167](https://arxiv.org/abs/astro-ph/0111167) · [2002ApJ...567.1140T](https://ui.adsabs.harvard.edu/abs/2002ApJ...567.1140T)
 
@@ -2180,7 +2180,7 @@ ApJ 567, 1140-1165 (2002) · [doi:10.1086/338587](https://doi.org/10.1086/338587
 | Castor C semi-major axis, derived from a sin i and i | 0.0181 AU (a sin i = 3.8882 R☉, i = 86.29°) | verified | p. 28, Table 2; p. 32, Table 4 | “a sin i (R⊙ ) . . . 3.8882 ± 0.0095” |
 
 <a id="torres2022"></a>
-### Torres et al. 2022 — The Orbits and Dynamical Masses of the Castor System
+### Torres 2022 — The Orbits and Dynamical Masses of the Castor System
 
 Torres G., Schaefer G. H., Monnier J. D. et al.; ApJ 941, 8 (2022) · [doi:10.3847/1538-4357/ac9d8d](https://doi.org/10.3847/1538-4357/ac9d8d) · [arXiv:2210.16322](https://arxiv.org/abs/2210.16322) · [2022ApJ...941....8T](https://ui.adsabs.harvard.edu/abs/2022ApJ...941....8T)
 
@@ -2193,7 +2193,7 @@ Torres G., Schaefer G. H., Monnier J. D. et al.; ApJ 941, 8 (2022) · [doi:10.38
 | Castor AB semimajor axis, via ORB6 | a = 6.722″ | verified | p. 9, Table 5 (cont.) | “a″AB (″) 6.722 ± 0.021” |
 
 <a id="tully2023"></a>
-### Tully et al. 2023 — Cosmicflows-4
+### Tully 2023 — Cosmicflows-4
 
 ApJ 944, 94 · [doi:10.3847/1538-4357/ac94d8](https://doi.org/10.3847/1538-4357/ac94d8) · [arXiv:2209.11238](https://arxiv.org/abs/2209.11238)
 
@@ -2204,7 +2204,7 @@ ApJ 944, 94 · [doi:10.3847/1538-4357/ac94d8](https://doi.org/10.3847/1538-4357/
 | Cosmicflows-4: 55,877 galaxies in 38,065 groups with distances | 55,877 galaxies/groups (38,065 groups) | verified | p. 1, abstract | “With Cosmicflows-4, distances are compiled for 55,877 galaxies gathered into 38,065 groups.” |
 
 <a id="vaidman2025"></a>
-### Vaidman et al. 2025 — Evaluating Gaia Astrometric Quality and Distances for Galactic Hot Supergiants
+### Vaidman 2025 — Evaluating Gaia Astrometric Quality and Distances for Galactic Hot Supergiants
 
 Universe 11, 359 · [doi:10.3390/universe11110359](https://doi.org/10.3390/universe11110359)
 
@@ -2218,7 +2218,7 @@ Universe 11, 359 · [doi:10.3390/universe11110359](https://doi.org/10.3390/unive
 | citation author-year and title | Vaidman et al. 2025, 'Evaluating Gaia Astrometric Quality and Distances for Galactic Hot Supergiants' | verified | p. 1 | “Evaluating Gaia Astrometric Quality and Distances for Galactic Hot Supergiants ... Nadezhda L. Vaidman, Shakhida T. Nurmakhametova, Aziza B. Umirova, Serik A. Khokhlov, Aldiyar T. Agishev and Berik S. Yermekbayev” |
 
 <a id="vallenari2023"></a>
-### Gaia Collaboration, Vallenari A. et al. 2023 — Gaia Data Release 3
+### Vallenari 2023 — Gaia Data Release 3
 
 A&A 674, A1 · [doi:10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-6361/202243940) · [arXiv:2208.00211](https://arxiv.org/abs/2208.00211) · [2023A&A...674A...1G](https://ui.adsabs.harvard.edu/abs/2023A%26A...674A...1G)
 
@@ -2230,7 +2230,7 @@ A&A 674, A1 · [doi:10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-63
 | Gaia DR3 cross-walks hipparcos2_best_neighbour / tycho2tdsc_merge_best_neighbour |  | verified | p. 3; p. 22 | “the Gaia archive includes pre-computed cross-matches with selected external optical and near-infrared photometric and spectroscopic” |
 
 <a id="vanderkruit1986"></a>
-### van der Kruit P. C. 1986 — Surface photometry of edge-on spiral galaxies. V. The distribution of luminosity in the disk of the Galaxy derived from the Pioneer 10 background experiment
+### van der Kruit 1986 — Surface photometry of edge-on spiral galaxies. V. The distribution of luminosity in the disk of the Galaxy derived from the Pioneer 10 background experiment
 
 A&A 157, 230-244 (1986) · [1986A&A...157..230V](https://ui.adsabs.harvard.edu/abs/1986A%26A...157..230V)
 
@@ -2255,7 +2255,7 @@ AJ 122, 1827 (2001) · [doi:10.1086/323100](https://doi.org/10.1086/323100) · [
 | LMC disc scale length | 1.5 kpc | verified | p. 22, Sect. 6; p. 12, Sect. 4.3 | “The best-fitting exponential disk scale length is now rd ≈ 1.5 kpc” |
 
 <a id="vandermarel2014"></a>
-### van der Marel & Kallivayalil 2014 — THIRD-EPOCH MAGELLANIC CLOUD PROPER MOTIONS. II. THE LARGE MAGELLANIC CLOUD ROTATION FIELD IN THREE DIMENSIONS
+### van der Marel 2014 — THIRD-EPOCH MAGELLANIC CLOUD PROPER MOTIONS. II. THE LARGE MAGELLANIC CLOUD ROTATION FIELD IN THREE DIMENSIONS
 
 ApJ 781, 121 · [doi:10.1088/0004-637X/781/2/121](https://doi.org/10.1088/0004-637X/781/2/121) · [arXiv:1305.4641](https://arxiv.org/abs/1305.4641)
 
@@ -2290,7 +2290,7 @@ ApJ 423, 681 (1994) · [doi:10.1086/173847](https://doi.org/10.1086/173847) · [
 | log-normal volume-density PDF of turbulent (supersonic) flow |  | verified | p. 687, Fig. 3; p. 682, Sect. 1 | “shows that the density pdf is, at least in the transonic regime, very well approximated by a lognormal distribution” |
 
 <a id="vondrak2011"></a>
-### Vondrák, Capitaine & Wallace 2011 — New precession expressions, valid for long time intervals
+### Vondrák 2011 — New precession expressions, valid for long time intervals
 
 A&A 534, A22 (2011) · [doi:10.1051/0004-6361/201117274](https://doi.org/10.1051/0004-6361/201117274) · [2011A&A...534A..22V](https://ui.adsabs.harvard.edu/abs/2011A%26A...534A..22V)
 
@@ -2307,7 +2307,7 @@ A&A 534, A22 (2011) · [doi:10.1051/0004-6361/201117274](https://doi.org/10.1051
 | matches IAU 2006 at J2000; within 100 µas in the 20th–21st centuries; a few arcseconds over the historical period |  | verified | p. 4, Sect. 4.1; p. 11, Sect. 6.4; p. 1, Abstract | “changes in the 20th and 21st centuries that are rather less than 100 μas” |
 
 <a id="wainscoat1992"></a>
-### Wainscoat et al. 1992 — A model of the 8-25 micron point source infrared sky
+### Wainscoat 1992 — A model of the 8-25 micron point source infrared sky
 
 ApJS 83, 111 (1992) · [doi:10.1086/191733](https://doi.org/10.1086/191733) · [1992ApJS...83..111W](https://ui.adsabs.harvard.edu/abs/1992ApJS...83..111W)
 
@@ -2318,7 +2318,7 @@ ApJS 83, 111 (1992) · [doi:10.1086/191733](https://doi.org/10.1086/191733) · [
 | SKY model behind Leinert Table 24's integrated-starlight values (visible band) |  | verified | p. 112, Sect. 1 | “our model also operates at JHK and BV(visible light) wavelengths, permitting self-consistency checks” |
 
 <a id="weingartner2001"></a>
-### Weingartner & Draine 2001 — Dust Grain-Size Distributions and Extinction in the Milky Way, Large Magellanic Cloud, and Small Magellanic Cloud
+### Weingartner 2001 — Dust Grain-Size Distributions and Extinction in the Milky Way, Large Magellanic Cloud, and Small Magellanic Cloud
 
 ApJ 548, 296-309 (2001) · [doi:10.1086/318651](https://doi.org/10.1086/318651) · [arXiv:astro-ph/0008146](https://arxiv.org/abs/astro-ph/0008146) · [2001ApJ...548..296W](https://ui.adsabs.harvard.edu/abs/2001ApJ...548..296W)
 
@@ -2330,7 +2330,7 @@ ApJ 548, 296-309 (2001) · [doi:10.1086/318651](https://doi.org/10.1086/318651) 
 | grain growth as the cause |  | verified | p. 13, Sect. 7 | “small grains coagulate onto large grains in relatively dense environments, as expected” |
 
 <a id="wenger2000"></a>
-### Wenger et al. 2000 — The SIMBAD astronomical database
+### Wenger 2000 — The SIMBAD astronomical database
 
 A&AS 143, 9 · [doi:10.1051/aas:2000332](https://doi.org/10.1051/aas:2000332) · [arXiv:astro-ph/0002110](https://arxiv.org/abs/astro-ph/0002110)
 
@@ -2352,7 +2352,7 @@ ApJS 236, 47 (2018) · [doi:10.3847/1538-4365/aabfdf](https://doi.org/10.3847/15
 | solar absolute V magnitude | 4.83 | disagrees | p. 1, Abstract; p. 6, Table 3 (Johnson V) | “estimated absolute magnitudes of the Sun are MB = 5.44, MV = 4.81 and MK = 3.27 mag in the vegamag system” |
 
 <a id="wilquet2009"></a>
-### Wilquet et al. 2009 — Preliminary characterization of the upper haze by SPICAV/SOIR solar occultation in UV to mid-IR onboard Venus Express
+### Wilquet 2009 — Preliminary characterization of the upper haze by SPICAV/SOIR solar occultation in UV to mid-IR onboard Venus Express
 
 JGR Planets 114, E00B42 (2009) · [doi:10.1029/2008JE003186](https://doi.org/10.1029/2008JE003186) · [2009JGRE..114.0B42W](https://ui.adsabs.harvard.edu/abs/2009JGRE..114.0B42W)
 
@@ -2363,7 +2363,7 @@ JGR Planets 114, E00B42 (2009) · [doi:10.1029/2008JE003186](https://doi.org/10.
 | 70–90 km upper-haze extinction profiles and particle sizes (no column optical depth) |  | verified | p. 1, Abstract | “two types of particles coexist in the upper haze of Venus” |
 
 <a id="wilson1953"></a>
-### Wilson R. E. 1953 — General Catalogue of Stellar Radial Velocities
+### Wilson 1953 — General Catalogue of Stellar Radial Velocities
 
 [1953GCRV..C......0W](https://ui.adsabs.harvard.edu/abs/1953GCRV..C......0W)
 
@@ -2376,7 +2376,7 @@ JGR Planets 114, E00B42 (2009) · [doi:10.1029/2008JE003186](https://doi.org/10.
 | GCRV velocity precision / quality classes | tabulated to 0.1 km/s; quality classes A 0.5 … E >10 km/s mean error | verified | l. 51; l. 68–75 | “42- 46  I5   0.1km/s  RV      ?=9999 Heliocentric radial velocity” |
 
 <a id="wittkowski2016"></a>
-### Wittkowski et al. 2016 — Near-infrared spectro-interferometry of Mira variables and comparisons to 1D dynamic model atmospheres and 3D convection simulations
+### Wittkowski 2016 — Near-infrared spectro-interferometry of Mira variables and comparisons to 1D dynamic model atmospheres and 3D convection simulations
 
 A&A 587, A12 (2016) · [doi:10.1051/0004-6361/201527614](https://doi.org/10.1051/0004-6361/201527614) · [arXiv:1601.02368](https://arxiv.org/abs/1601.02368) · [2016A&A...587A..12W](https://ui.adsabs.harvard.edu/abs/2016A%26A...587A..12W)
 
@@ -2387,7 +2387,7 @@ A&A 587, A12 (2016) · [doi:10.1051/0004-6361/201527614](https://doi.org/10.1051
 | Mira extended molecular atmospheres sit above the continuum radius |  | verified | p. 1, Abstract | “Our visibility data confirm the presence of spatially extended molecular atmospheres located above the continuum radii” |
 
 <a id="wolff2009"></a>
-### Wolff et al. 2009 — Wavelength dependence of dust aerosol single scattering albedo as observed by the Compact Reconnaissance Imaging Spectrometer
+### Wolff 2009 — Wavelength dependence of dust aerosol single scattering albedo as observed by the Compact Reconnaissance Imaging Spectrometer
 
 JGR Planets 114, E00D04 (2009) · [doi:10.1029/2009JE003350](https://doi.org/10.1029/2009JE003350) · [2009JGRE..114.0D04W](https://ui.adsabs.harvard.edu/abs/2009JGRE..114.0D04W)
 
@@ -2400,7 +2400,7 @@ JGR Planets 114, E00D04 (2009) · [doi:10.1029/2009JE003350](https://doi.org/10.
 | Mars dust single-scattering albedo, blue channel | ω̃ ≈ 0.75 | disagrees | p. 11, Fig. 12 | “Figure 12. Average ω0 spectra (both MER sites) as a function of the assumed reff.” |
 
 <a id="woodruff2008"></a>
-### Woodruff et al. 2008 — The Keck Aperture Masking Experiment: Multiwavelength Observations of Six Mira Variables
+### Woodruff 2008 — The Keck Aperture Masking Experiment: Multiwavelength Observations of Six Mira Variables
 
 ApJ 673, 418-433 (2008) · [doi:10.1086/523936](https://doi.org/10.1086/523936) · [arXiv:0709.3878](https://arxiv.org/abs/0709.3878) · [2008ApJ...673..418W](https://ui.adsabs.harvard.edu/abs/2008ApJ...673..418W)
 
@@ -2411,7 +2411,7 @@ ApJ 673, 418-433 (2008) · [doi:10.1086/523936](https://doi.org/10.1086/523936) 
 | Mira peak-to-peak uniform-disc diameter amplitudes | 6–22 % (J to L) for M-type Miras; ~35 % in J for χ Cyg | verified | p. 20, Sect. 4.2; p. 23, Sect. 4.3 | “The peak-to-peak sinusoidal pulsation amplitudes for the J 1.24, H 1.65 and L 3.08 bandpasses are 14%, 22% and 6% respectively” |
 
 <a id="woodruff2009"></a>
-### Woodruff et al. 2009 — The Keck Aperture Masking Experiment: Spectro-interferometry of Three Mira Variables from 1.1 to 3.8 um
+### Woodruff 2009 — The Keck Aperture Masking Experiment: Spectro-interferometry of Three Mira Variables from 1.1 to 3.8 um
 
 ApJ 691, 1328-1336 (2009) · [doi:10.1088/0004-637X/691/2/1328](https://doi.org/10.1088/0004-637X/691/2/1328) · [arXiv:0811.1642](https://arxiv.org/abs/0811.1642) · [2009ApJ...691.1328W](https://ui.adsabs.harvard.edu/abs/2009ApJ...691.1328W)
 
@@ -2422,7 +2422,7 @@ ApJ 691, 1328-1336 (2009) · [doi:10.1088/0004-637X/691/2/1328](https://doi.org/
 | Mira apparent diameter depends strongly on wavelength | factor ~2 in UD diameter between 1.0 and 3.0 µm | verified | p. 6, Sect. 5 | “exhibiting a factor of ∼ 2 in UD diameter between 1.0 µm and 3.0 µm” |
 
 <a id="wyman2013"></a>
-### Wyman, Sloan & Shirley 2013 — Simple Analytic Approximations to the CIE XYZ Color Matching Functions
+### Wyman 2013 — Simple Analytic Approximations to the CIE XYZ Color Matching Functions
 
 JCGT 2(2), 1-11 · [jcgt.org/published/0002/02/01](https://jcgt.org/published/0002/02/01/)
 
@@ -2446,7 +2446,7 @@ JCGT 2(2), 1-11 · [jcgt.org/published/0002/02/01](https://jcgt.org/published/00
 | EZ Aqr literature PM | 2314.8 / 2295.3 mas/yr | unverified |  |  |
 
 <a id="zhang2023"></a>
-### Zhang-Green-Rix 2023 — Parameters of 220 million stars from Gaia BP/RP spectra
+### Zhang 2023 — Parameters of 220 million stars from Gaia BP/RP spectra
 
 MNRAS 524, 1855-1884 (2023) · [doi:10.1093/mnras/stad1941](https://doi.org/10.1093/mnras/stad1941) · [2023MNRAS.524.1855Z](https://ui.adsabs.harvard.edu/abs/2023MNRAS.524.1855Z)
 
@@ -2487,7 +2487,7 @@ ApJ 919, 35 · [doi:10.3847/1538-4357/ac1f96](https://doi.org/10.3847/1538-4357/
 | Leike-map mass underestimate (mass_ratio) | 1.0–1.6× for clouds wholly inside the Leike grid, up to ~14× for clouds at its edge | verified | p. 19, Sect. 5 | “the ratio of the NICEST mass to the 3D dust mass ranges from 1.0 to 1.6, with an average of 1.2, for the “complete clouds,” |
 
 <a id="zucker2022"></a>
-### Zucker et al. 2022 — Star formation near the Sun is driven by expansion of the Local Bubble
+### Zucker 2022 — Star formation near the Sun is driven by expansion of the Local Bubble
 
 Nature 601, 334 · [doi:10.1038/s41586-021-04286-5](https://doi.org/10.1038/s41586-021-04286-5) · [arXiv:2201.05124](https://arxiv.org/abs/2201.05124)
 

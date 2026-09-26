@@ -70,9 +70,9 @@ The Fresnel shell's material seam and gating base live in
 
 ## Data + validation
 
-Built from the [Pelgrims et al. 2020](/data/papers/index.md#pelgrims2020) inner-surface
+Built from the [Pelgrims 2020](/data/papers/index.md#pelgrims2020) inner-surface
 HEALPix map; the build cross-checks the surface against the independent
-[Edenhofer](/data/papers/index.md#edenhofer2024) dust grid
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust grid
 ([Dust cross-check](/scripts/local-bubble/README.md#dust-cross-check-build-guard)). Wall distance
 ~75–300 pc; the Sun is inside, off-centre.
 

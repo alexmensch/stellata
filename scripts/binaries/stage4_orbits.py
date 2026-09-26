@@ -154,7 +154,7 @@ class OrbitElements:
 def _thiele_innes_to_campbell(
     A: float, B: float, F: float, G: float,
 ) -> tuple[float, float, float, float] | None:
-    """Heintz 1978 (/data/papers/index.md#heintz1978) / Halbwachs+ 2023
+    """Heintz 1978 (/data/papers/index.md#heintz1978) / Halbwachs 2023
     (/data/papers/index.md#halbwachs2023) Appendix A closed form (Eqs. A.1–A.3).
 
     Inputs A,B,F,G in mas (Gaia DR3 NSS native). Returns
@@ -273,7 +273,7 @@ def nss_to_canonical_elements(
     DR3 today, but a forward guard against future NSS extensions); the
     caller falls through to ORB6.
 
-    Cross-checked against the ESA NSSTools algebra (Halbwachs+ 2023,
+    Cross-checked against the ESA NSSTools algebra (Halbwachs 2023,
     /data/papers/index.md#halbwachs2023);
     the algebra is inlined rather than imported because the package
     has not been maintained for 2+ years and the closed form is ~10

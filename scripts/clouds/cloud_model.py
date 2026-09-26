@@ -17,9 +17,9 @@ SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 # extinction rate; n_H [cm^-3] converts through these.
 AV_PER_NH_PC = 1.65e-3      # mag A_V per pc per (n_H cm^-3)
 ZGR_PER_NH = 6.02e-4        # E_ZGR per pc per (n_H cm^-3)
-AK_OVER_AV = 0.117          # CCM 1989 (/data/papers/index.md#cardelli1989) at R_V = 3.1
+AK_OVER_AV = 0.117          # Cardelli 1989 (/data/papers/index.md#cardelli1989) at R_V = 3.1
 
-# Zhang-Green-Rix 2023 (/data/papers/index.md#zhang2023) "E" unit → V-band
+# Zhang 2023 (/data/papers/index.md#zhang2023) "E" unit → V-band
 # extinction: A_V = ZGR_TO_AV * E_ZGR. Edenhofer 2024
 # (/data/papers/index.md#edenhofer2024) densities are E_ZGR/pc, so a path
 # integral times this yields A_V. The ZGR23 curve (Zenodo

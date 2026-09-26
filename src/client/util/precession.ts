@@ -1,5 +1,5 @@
-// ICRS/J2000 ↔ the mean equator and equinox of another epoch: the IAU 1976 (Lieske,
-// /data/papers/index.md#lieske1979) angles near epoch, and the Vondrák long-term model
+// ICRS/J2000 ↔ the mean equator and equinox of another epoch: the IAU 1976 (Lieske 1979,
+// /data/papers/index.md#lieske1979) angles near epoch, and the long-term model of Vondrák 2011
 // (/data/papers/index.md#vondrak2011) for the model-clock span. See README.md#precessionts.ts.
 
 import { ARCSEC_TO_RAD, DAYS_PER_JULIAN_YEAR, J2000_JD } from './astronomy-constants';
@@ -95,10 +95,10 @@ export function unprecessDirection(rotation: Rotation3, v: UnitVector): UnitVect
   };
 }
 
-// Vondrák, Capitaine & Wallace 2011 (/data/papers/index.md#vondrak2011) + 2012
+// Vondrák 2011 (/data/papers/index.md#vondrak2011) + 2012
 // corrigendum: precession of the ecliptic and of the equator over ±200 kyr.
 // Agrees with IAU 2006 at J2000 and stays within 100 µas through the 20th–21st
-// centuries — the Lieske (/data/papers/index.md#lieske1979) cubics above reach
+// centuries — the Lieske 1979 (/data/papers/index.md#lieske1979) cubics above reach
 // arcminutes at the model clock's bounds, where these hold to a few arcseconds.
 //
 // Rows: period (yr), then the cosine and sine amplitudes (arcsec) of the
@@ -135,7 +135,7 @@ const EQUATOR_POLE_PERIODIC = [
 const EQUATOR_POLE_POLY_X = [5453.282155, 0.4252841, -0.00037173, -0.000000152];
 const EQUATOR_POLE_POLY_Y = [-73750.930350, -0.7675452, -0.00018725, 0.000000231];
 
-// The obliquity the Vondrák (/data/papers/index.md#vondrak2011) model is
+// The obliquity the Vondrák 2011 (/data/papers/index.md#vondrak2011) model is
 // defined against (84381.406″, IAU 2006). Deliberately NOT J2000_OBLIQUITY_RAD
 // (84381.448″, IAU 1976): substituting the shared constant perturbs a published
 // series by 0.042″ for no gain, and the two are used for different things.
@@ -145,7 +145,7 @@ function julianEpochOf(jd: number): number {
   return 2000 + (jd - J2000_JD) / DAYS_PER_JULIAN_YEAR;
 }
 
-/** Evaluate one Vondrák (/data/papers/index.md#vondrak2011) pole pair
+/** Evaluate one Vondrák 2011 (/data/papers/index.md#vondrak2011) pole pair
  *  (periodic + polynomial), arcsec. */
 function vondrakPair(
   jd: number,

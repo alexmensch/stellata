@@ -1,5 +1,5 @@
 // ΔT = TT − UT: how far Earth's rotation has drifted from uniform time.
-// Espenak & Meeus 2006 (/data/papers/index.md#espenak2006) Sect. 2.7
+// Espenak 2006 (/data/papers/index.md#espenak2006) Sect. 2.7
 // polynomial set, -1999 to +3000. See README.md#timescales.
 
 import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
@@ -10,7 +10,7 @@ function poly(x: number, coeffs: readonly number[]): number {
   return sum;
 }
 
-// The long-term parabola (Morrison & Stephenson,
+// The long-term parabola (Morrison 2004,
 // /data/papers/index.md#morrisonstephenson) both tails run on, in centuries
 // from 1820. It carries the whole pre-Roman range on its own: 74 000 s — a full
 // 20.6 h — at the clock's lower bound.

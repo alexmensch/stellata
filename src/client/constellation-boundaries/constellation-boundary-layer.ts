@@ -42,7 +42,7 @@ export const BOUNDARY_DOT_PX = 1.5;
 export const BOUNDARY_GAP_PX = 3;
 
 /**
- * The Delporte (/data/papers/index.md#delporte1930) boundary arcs,
+ * The Delporte 1930 (/data/papers/index.md#delporte1930) boundary arcs,
  * Sol-centred at `SPHERE_RADIUS_PC` and faded out by camera distance from Sol.
  */
 export class ConstellationBoundaryLayer {

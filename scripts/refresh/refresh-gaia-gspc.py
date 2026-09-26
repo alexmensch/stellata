@@ -87,7 +87,7 @@ FLUX_DECIMALS = 6
 
 # Self-consistency spot-checks pinned from the live ESA archive on 2026-08-15,
 # chosen to span the flag's validated-range boundary in both directions and to
-# pin the flag polarity itself (Montegriffo+ 2023
+# pin the flag polarity itself (Montegriffo 2023
 # (/data/papers/index.md#montegriffo2023) Sect. 6.2 defines it;
 # /data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range carries
 # the quote and the measured region):

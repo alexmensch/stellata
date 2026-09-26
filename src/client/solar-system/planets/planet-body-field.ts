@@ -533,8 +533,8 @@ export class PlanetBodyField {
   }
 
   /** One body's ring flux in the globe's α = 0 flux unit, from the viewer's and
-   *  the host's elevation above its ring plane (Mallama's β_E / β_S,
-   *  /data/papers/index.md#mallamahilton2018). `(dvx, dvy, dvz)` is the
+   *  the host's elevation above its ring plane (β_E / β_S of Mallama 2018
+   *  (/data/papers/index.md#mallamahilton2018)). `(dvx, dvy, dvz)` is the
    *  planet-minus-viewer displacement the phase angle was taken from; the host
    *  leg is the body's own host-relative position, negated. 0 for every body
    *  without ring photometry. */
@@ -1594,8 +1594,8 @@ export class PlanetBodyField {
 
   /** Resolve planet positions at time `t` into the host's `localRel64` slots,
    *  then bake the float32 iLocalRel attribute from them. Uses the host's
-   *  positionsAt resolver when present (Sol via JPL Standish,
-   *  /data/papers/index.md#standish1992), else the placeholder
+   *  positionsAt resolver when present (Sol via JPL Standish 1992
+   *  (/data/papers/index.md#standish1992)), else the placeholder
    *  eccentric-anomaly layout. */
   private writeHostPositions(host: AttachedHost, t: number): void {
     const base = host.startInstance * 3;

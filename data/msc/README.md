@@ -24,7 +24,7 @@ msc_components.tsv  Per-component rows (12.5k): SpT, V/B mags,
 
 ## Label convention — NOT raw WDS letters
 
-`prim` / `sec` / `parent` / `syst` are [Tokovinin](/data/papers/index.md#tokovinin2018)'s hierarchy
+`prim` / `sec` / `parent` / `syst` are [Tokovinin 2018](/data/papers/index.md#tokovinin2018)'s hierarchy
 labels.
 Top-level letters match WDS, but subsystems are re-labelled: a union
 label names a pair treated as one object (`Aab` = the Aa+Ab pair), and
@@ -38,7 +38,7 @@ labels.
 
 ## Provenance
 
-- **Citation**: [Tokovinin A. 2018](/data/papers/index.md#tokovinin2018) (updated MSC).
+- **Citation**: [Tokovinin 2018](/data/papers/index.md#tokovinin2018) (updated MSC).
   Maintained by the author; VizieR copy tracks updates.
 - **VizieR**: `J/ApJS/235/6` (`systems`, `orbits`, `catalog` tables),
   over the CDS TAP endpoint `refresh_lib.CDS_TAP_URL` names.

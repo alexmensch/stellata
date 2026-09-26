@@ -41,7 +41,7 @@ describe('equinoctial round trip', () => {
   });
 
   it('a negative tabulated inclination comes back canonical, same position', () => {
-    // Standish's (/data/papers/index.md#standish1992) EM Bary row carries
+    // Standish 1992's (/data/papers/index.md#standish1992) EM Bary row carries
     // I = −0.00054346°. The round trip returns (|i|, Ω + 180°, ω + 180°), which is
     // the same rotation — and leaves ϖ and λ untouched, because the two 180°
     // shifts cancel in ϖ = Ω + ω.

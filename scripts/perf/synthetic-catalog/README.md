@@ -108,11 +108,11 @@ against the previous paragraph's over-count.
 ## The band double-counts, and it moves the number
 
 The band's density solve is anchored to the
-[Leinert et al. 1998](/data/papers/index.md#leinert1998) **total**, which
+[Leinert 1998](/data/papers/index.md#leinert1998) **total**, which
 covers resolved and unresolved stars alike, so the resolved catalogue is
 already double-counted: `src/client/milkyway/calibration/README.md` records the
 cost as diffuse + catalogue reading 23.00 mag/arcsec² at the pole against
-[Leinert et al. 1998](/data/papers/index.md#leinert1998)'s 23.83. Deepening the
+[Leinert 1998](/data/papers/index.md#leinert1998)'s 23.83. Deepening the
 catalogue widens that gap, and the resolved-catalogue subtraction constants are
 read by tests alone — nothing rendered self-corrects.
 

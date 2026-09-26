@@ -192,10 +192,10 @@ off across multiple surfaces beyond colour.
    same shader path, different upstream Teff source. Tier 1 stays
    in production unchanged for stars without Apsis.
 5. Optional follow-ons enabled by Apsis:
-   - Cross-check `azero_gspphot` vs the [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024)
+   - Cross-check `azero_gspphot` vs the [Edenhofer 2024](/data/papers/index.md#edenhofer2024)
      dust map along the same line of sight; surface disagreements as a
      research diagnostic (NOT a swap —
-     [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) remains canonical,
+     [Edenhofer 2024](/data/papers/index.md#edenhofer2024) remains canonical,
      but disagreement locations are interesting).
    - Use `logg_gspphot` to refine the Stefan-Boltzmann physical-radius
      chain (`physicalRadius` in `catalog-pure.ts` currently uses
@@ -222,7 +222,7 @@ under `stellata-zsr`, since the infrastructure overlap is total.
 ### Tier 3 — Deferred / opportunistic
 
 - **Extended T_TABLE** (class × lumClass) — dwarf rows from
-  [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) Table 4, which
+  [Pecaut 2013](/data/papers/index.md#pecaut2013) Table 4, which
   covers only dwarfs and 5–30 Myr pre-main-sequence stars, so the giant
   and supergiant rows need another source — baked
   into `catalog-pure.ts` as a richer offline fallback for the ~30%
@@ -251,7 +251,7 @@ under `stellata-zsr`, since the infrastructure overlap is total.
 `dch` was rewritten 2026-05-15 as the source-ID-anchored catalogue
 pipeline rewrite (5-layer architecture, ~28 children under it). Phase 1
 acquires Gaia DR3 HIP/Tycho cross-walks, astrometry, NSS orbits, and
-[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) distances —
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distances —
 all routed through a shared
 `scripts/refresh_lib.py` TAP client. **It does not currently include
 Apsis.** Tier 2 above is the proposed extension.
@@ -516,7 +516,7 @@ The "Garnet Star" name is therefore a perceptual / contextual story, not a chrom
 
 ### Position-dependent colour: the Stellata pipeline's key property
 
-The most interesting feature of the pipeline for this case study is **observer-position-dependent dust reddening**. The dust-reddening correction `effectiveCi = iCi + A_V / R_V` (R_V = 3.1) samples A_V along the **line of sight from camera to star** via the [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) 3D dust map. As the camera moves, the integral changes.
+The most interesting feature of the pipeline for this case study is **observer-position-dependent dust reddening**. The dust-reddening correction `effectiveCi = iCi + A_V / R_V` (R_V = 3.1) samples A_V along the **line of sight from camera to star** via the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust map. As the camera moves, the integral changes.
 
 The consequence for the Garnet Star specifically — and for every dust-reddened star in the catalogue — is that:
 
@@ -524,7 +524,7 @@ The consequence for the Garnet Star specifically — and for every dust-reddened
 - **Viewed up close (camera near Mu Cep):** the line-of-sight integral covers essentially zero dust (Mu Cep's local cavity is mostly cleared by its own wind). The rendered colour drifts toward the **intrinsic** stellar blackbody, ~(255, 206, 153), a warm peach.
 - **Viewed from somewhere beyond Mu Cep (camera far side of the dust column):** the integral covers a different dust subset — possibly *less* than the Earth-side column, depending on the 3D dust geometry. Local dust geometry along *the new* line of sight is what determines reddening, not "how far from Mu Cep the camera is" in a 1D sense.
 
-This is **a genuine feature, not a bug**. In real astrophysics, the colour of a star **is observer-dependent**: a hypothetical observer near Mu Cephei would see a noticeably less-red star than we do from Earth, because their photons travel through less dust to reach them. Stellata's pipeline reproduces this faithfully via the 3D [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) map and per-frame line-of-sight integration. Stars are not "labelled with a colour" in the model — they have an intrinsic spectrum which is filtered through the actual interstellar medium between camera and star at every frame.
+This is **a genuine feature, not a bug**. In real astrophysics, the colour of a star **is observer-dependent**: a hypothetical observer near Mu Cephei would see a noticeably less-red star than we do from Earth, because their photons travel through less dust to reach them. Stellata's pipeline reproduces this faithfully via the 3D [Edenhofer 2024](/data/papers/index.md#edenhofer2024) map and per-frame line-of-sight integration. Stars are not "labelled with a colour" in the model — they have an intrinsic spectrum which is filtered through the actual interstellar medium between camera and star at every frame.
 
 ### Implications for visiting Mu Cephei in Stellata
 

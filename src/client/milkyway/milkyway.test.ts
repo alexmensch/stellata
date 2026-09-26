@@ -191,7 +191,7 @@ describe('MilkyWay population tints', () => {
   });
 
   // The palette is a pair of colour indices through the star field's own
-  // Ballesteros (/data/papers/index.md#ballesteros2012) → Planck → CIE path,
+  // Ballesteros 2012 (/data/papers/index.md#ballesteros2012) → Planck → CIE path,
   // so the bulge must read WARMER: same red channel at the gamut peak, less
   // blue.
   it('orders the two hues by their colour indices', () => {
@@ -242,7 +242,7 @@ describe('MilkyWay population tints', () => {
   });
 });
 
-// Bland-Hawthorn & Gerhard 2016 (/data/papers/index.md#blandhawthorn2016)
+// Bland-Hawthorn 2016 (/data/papers/index.md#blandhawthorn2016)
 // Sect. 5.1. The thick disc is for the EXTERNAL edge-on view — from Sol it is
 // a small correction, and it is emphatically not a fix for a high-latitude
 // deficit (README.md#density-profiles).
@@ -256,7 +256,7 @@ describe('MilkyWay vertical profile', () => {
 
   // The disagreement itself is the assertion, not the arithmetic that
   // produces it: sharing a radial scale length puts the thick/thin
-  // LUMINOSITY ratio at 0.12, and Mosenkov et al. 2021
+  // LUMINOSITY ratio at 0.12, and Mosenkov 2021
   // (/data/papers/index.md#mosenkov2021) measure
   // 0.71 ± 0.45 at 3.4 µm — outside their interval on the low side, where
   // their thick disc is radially longer as well. Stated rather than tuned
@@ -350,7 +350,7 @@ describe('MilkyWay luminosity solve', () => {
   });
 
   // Check 2, the sightline the ORIGINAL anchor used. Compared against
-  // Leinert's (/data/papers/index.md#leinert1998) total rather than a
+  // Leinert 1998's (/data/papers/index.md#leinert1998) total rather than a
   // residual: the catalogue row toward the centre is de-extincted and so not
   // commensurable there (calibration/diffuse-reference.ts), and it would
   // only widen the gap.
@@ -455,7 +455,7 @@ describe('MilkyWay luminosity solve', () => {
   });
 });
 
-// A_V range the SFD (/data/papers/index.md#schlegel1998) map spans toward the
+// A_V range the Schlegel 1998 (/data/papers/index.md#schlegel1998) map spans toward the
 // galactic poles. The literature
 // figure is an interval, so containment is the assertion; the model's own
 // number is pinned exactly alongside it.
@@ -494,7 +494,7 @@ describe('MilkyWay analytical dust', () => {
   // Marched through the profile rather than re-arranged out of the
   // normalisation, so a change to the radial term, the A_V-per-density
   // wiring or a re-introduced 0.45 multiplier all show up here.
-  // Schlegel/Finkbeiner/Davis (/data/papers/index.md#schlegel1998) publishes
+  // Schlegel 1998 (/data/papers/index.md#schlegel1998) publishes
   // no per-kpc rate at all — the
   // figure this replaced cited it anyway.
   it('marches the stated plane rate at (R₀, z = 0)', () => {
@@ -506,7 +506,7 @@ describe('MilkyWay analytical dust', () => {
 
   // The second constraint the 1.0 mag/kpc rate has to satisfy, and the one
   // the scale height controls: integrate the slab straight up from Sol and
-  // the perpendicular column has to land in SFD's
+  // the perpendicular column has to land in Schlegel 1998's
   // (/data/papers/index.md#schlegel1998) polar range. Marched, so
   // moving ANALYTICAL_DUST_SCALE_HEIGHT_PC fails it — which is the whole
   // reason the two constraints are described as independent.

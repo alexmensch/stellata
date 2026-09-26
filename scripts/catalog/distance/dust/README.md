@@ -2,7 +2,7 @@
 
 The Sol→star extinction the catalogue build subtracts from every record's
 `absmag` and observed `ci`, integrated through the same encoded
-[Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) dust grid the runtime march samples. The cancellation invariant below is
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust grid the runtime march samples. The cancellation invariant below is
 the load-bearing content — a change to either side of it ships with the
 other.
 
@@ -39,7 +39,7 @@ and once in the raymarch.
 The fix de-extincts at build time against **the same encoded dust the
 shader raymarches**: `absmag' = absmag − A_map(Sol→star)` and
 `ci' = ci − A_map/R_V`, where `A_map` is a converged Sol→star integral
-through the [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) voxel grid. Because the source is the same model
+through the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) voxel grid. Because the source is the same model
 the runtime re-adds, at camera=Sol the build subtraction and the runtime
 addition cancel identically for every star — map calibration, cube
 truncation at 1.25 kpc, and the `avPerDensityPerPc` conversion all cancel

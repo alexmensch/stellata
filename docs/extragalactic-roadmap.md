@@ -21,10 +21,10 @@ fetched once by a one-off `scripts/refresh-*` script excluded from
 | --- | --- | --- | --- | --- |
 | 1 Local Volume | ~12 Mpc | UNGC + LVDB (+ SGA-2020 structure) | ~50 wireframes + billboards | JSON |
 | 2 LSC + Virgo | ~30 Mpc | EVCC + 2MRS | billboards + cluster shells | JSON |
-| 3 Laniakea | ~150 Mpc | Cosmicflows-4 + [Dupuy](/data/papers/index.md#dupuy2023) watersheds | billboards + 6 basin shells | binary |
+| 3 Laniakea | ~150 Mpc | Cosmicflows-4 + [Dupuy 2023](/data/papers/index.md#dupuy2023) watersheds | billboards + 6 basin shells | binary |
 | 4 Cosmic web | ~1 Gpc | NED-LVS + SDSS Main | point glows, chunked | binary, chunked |
 | 5 BOSS/eBOSS | ~3 Gpc | eBOSS DR16 LSS catalogues | z-coloured point glows | binary, chunked |
-| 6 CMB | ~14 Gpc | [Planck 2018](/data/papers/index.md#planck2020) SMICA | skybox sphere | cubemap/texture |
+| 6 CMB | ~14 Gpc | [Planck Collaboration 2020](/data/papers/index.md#planck2020) SMICA | skybox sphere | cubemap/texture |
 
 ## 1. Data inventory
 
@@ -34,7 +34,7 @@ the authoritative pointer set.
 
 ### Tier 1 — Local Volume
 
-- **UNGC** — [Karachentsev, Makarov & Kaisina 2013](/data/papers/index.md#karachentsev2013).
+- **UNGC** — [Karachentsev 2013](/data/papers/index.md#karachentsev2013).
   Fixed-width tables from CDS:
   `https://cdsarc.cds.unistra.fr/ftp/J/AJ/145/101/` (`table1.dat`
   ~108 KB, 869 galaxies; full 7-table set a few hundred KB). Browse
@@ -48,7 +48,7 @@ the authoritative pointer set.
   Tier-1 ingest decision deferred to 0hx.3 as specced there: UNGC vs
   uncapped LVDB, keyed on what UNGC adds (structural columns, KLum).
 - **SGA-2020** (structural overrides for the wireframe tier) —
-  [Moustakas et al. 2023](/data/papers/index.md#moustakas2023). `SGA-2020.fits` ~675 MB from
+  [Moustakas 2023](/data/papers/index.md#moustakas2023). `SGA-2020.fits` ~675 MB from
   `https://sga.legacysurvey.org` (mirror:
   `https://portal.nersc.gov/project/cosmo/data/sga/2020/data`).
   383,620 galaxies, DESI footprint. Do NOT commit the full file —
@@ -58,10 +58,10 @@ the authoritative pointer set.
 
 ### Tier 2 — LSC + Virgo
 
-- **EVCC** — [Kim et al. 2014](/data/papers/index.md#kim2014). CDS
+- **EVCC** — [Kim 2014](/data/papers/index.md#kim2014). CDS
   `https://cdsarc.cds.unistra.fr/ftp/J/ApJS/215/22/` (`table2.dat`
   ~297 KB, 1,589 galaxies; `table3.dat` adds 1,183 VCC-only).
-- **2MRS** — [Huchra et al. 2012](/data/papers/index.md#huchra2012).
+- **2MRS** — [Huchra 2012](/data/papers/index.md#huchra2012).
   44,599 galaxies, Ks ≤ 11.75, 97.6% complete over 91% of the sky (|b| ≥ 5°, ≥ 8° toward
   the bulge). Primary
   tarball `http://tdc-www.harvard.edu/2mrs/2mrs_v240.tgz` (~37.7 MB)
@@ -70,12 +70,12 @@ the authoritative pointer set.
 
 ### Tier 3 — Laniakea
 
-- **Cosmicflows-4** — [Tully et al. 2023](/data/papers/index.md#tully2023). 55,877
+- **Cosmicflows-4** — [Tully 2023](/data/papers/index.md#tully2023). 55,877
   galaxies/groups with distances (38,065 groups). EDD web export
   (`https://edd.ifa.hawaii.edu`, table "CF4 All Groups") or VizieR
   mirror `J/ApJ/944/94`; prefer VizieR (scriptable). Tens of MB max.
   PGC-keyed.
-- **[Dupuy & Courtois 2023](/data/papers/index.md#dupuy2023) watersheds** — NOT on
+- **[Dupuy 2023](/data/papers/index.md#dupuy2023) watersheds** — NOT on
   VizieR/Zenodo; hosted at
   `https://projets.ip2i.in2p3.fr/cosmicflows/` —
   `CF4_new_128-z008_watersheds-fits.zip` (~64 MB): a 128³ voxel grid
@@ -86,7 +86,7 @@ the authoritative pointer set.
 
 ### Tier 4 — cosmic web
 
-- **NED-LVS** — [Cook et al. 2023](/data/papers/index.md#cook2023) (dataset DOI
+- **NED-LVS** — [Cook 2023](/data/papers/index.md#cook2023) (dataset DOI
   10.26132/NED8). FITS from
   `https://ned.ipac.caltech.edu/NED::LVS/fits/AsPublished/` (~1 GB).
   **Pin the version**: the live file grows (2.10M objects as of
@@ -97,12 +97,12 @@ the authoritative pointer set.
   ~700k galaxy rows (class GALAXY, sdss_main target flags, z ≤ 0.3;
   columns ra, dec, z, petroMag_r) rather than the 6.7 GB
   `specObj-dr17.fits`. Citation:
-  [Abdurro'uf et al. 2022](/data/papers/index.md#abdurrouf2022) (DR17); selection per
-  [Strauss et al. 2002](/data/papers/index.md#strauss2002).
+  [Abdurro'uf 2022](/data/papers/index.md#abdurrouf2022) (DR17); selection per
+  [Strauss 2002](/data/papers/index.md#strauss2002).
 
 ### Tier 5 — BOSS/eBOSS
 
-- **eBOSS DR16 LSS catalogues** — [Ross et al. 2020](/data/papers/index.md#ross2020).
+- **eBOSS DR16 LSS catalogues** — [Ross 2020](/data/papers/index.md#ross2020).
   Direct HTTPS listing:
   `https://data.sdss.org/sas/dr16/eboss/lss/catalogs/DR16/`. Files:
   `eBOSS_LRG_full_ALLdata-vDR16.fits` (~196 MB, 377,458 combined
@@ -124,14 +124,14 @@ the authoritative pointer set.
 ### Name / structure services (cross-tier)
 
 - **HyperLEDA** (PA / axial ratio / T-type bulk source) —
-  [Makarov et al. 2014](/data/papers/index.md#makarov2014). **Deferred**: canonical HTTPS cert
+  [Makarov 2014](/data/papers/index.md#makarov2014). **Deferred**: canonical HTTPS cert
   expired since 2020 (see flags), and Tier 1–2 structural needs are
   covered by UNGC + EVCC + SGA-2020 overrides. Revisit only if a
   tier's T-type coverage proves insufficient.
 
 ## 2. Cosmology — Planck 2018, baked at build
 
-**Decision**: flat ΛCDM, [Planck 2018](/data/papers/index.md#planck2020): H0 = 67.4 km/s/Mpc,
+**Decision**: flat ΛCDM, [Planck Collaboration 2020](/data/papers/index.md#planck2020): H0 = 67.4 km/s/Mpc,
 Ωm = 0.315, ΩΛ = 0.685 (Ω_r = 9.2e-5 included in the integrand —
 negligible below z ~ 10, cheap to keep exact).
 
@@ -257,7 +257,7 @@ visible structure is partly the selection function.
   follow-up under 0hx.7, not a gate.
 - The tier's data README documents the three target classes, their
   z-ranges, footprints, and the "structure ≠ selection" caveat, and
-  cites [Ross et al. 2020](/data/papers/index.md#ross2020) Sect. 2 for the selection definitions.
+  cites [Ross 2020](/data/papers/index.md#ross2020) Sect. 2 for the selection definitions.
 
 ## 7. Architecture sketches (impl in 0hx.2 / 0hx.3)
 
@@ -293,7 +293,7 @@ build scripts under `scripts/extragalactic/` + one-off
 - **HyperLEDA** `leda.univ-lyon1.fr`: HTTPS cert expired 2020;
   HTTP redirects to mirror `atlas.obs-hp.fr/hyperleda/`. Deferred
   from v1 ([§ 1](#1-data-inventory)).
-- **[Dupuy & Courtois](/data/papers/index.md#dupuy2023) watersheds**: only source is the IP2I
+- **[Dupuy 2023](/data/papers/index.md#dupuy2023) watersheds**: only source is the IP2I
   CosmicFlows page (no VizieR/Zenodo record) — treat as fragile;
   commit the derived shells promptly.
 - **NED-LVS**: live file is a moving target — pin + record version

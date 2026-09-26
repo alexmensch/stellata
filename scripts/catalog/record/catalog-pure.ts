@@ -1288,7 +1288,7 @@ export const OPTICAL_DOUBLE_MIN_SEP_PC = 1.0;
 
 // Fields isOpticalDoublePrimary reads. Star satisfies this structurally.
 /** Whether a record's distance rests on a Gaia parallax, raw or through the
- *  Bailer-Jones et al. 2021 (/data/papers/index.md#bailerjones2021) posterior
+ *  Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) posterior
  *  over it. The optical-double suppression needs it
  *  because a separation is only trustworthy when both stars' distances are: a
  *  Hipparcos or courier parallax carries error bars wide enough to put a bound
@@ -1721,7 +1721,7 @@ export function parseBailerJonesTsv(text: string): Map<string, number> {
  *  gspspec are independent solutions and either or both may be absent
  *  for a given source_id. NaN-when-empty decoding lifts to the binary
  *  layer via `NO_APSIS`. `spectraltypeEsphs` is the ESP-ELS spectral-type
- *  enum (Creevey+23 (/data/papers/index.md#creevey2023)): one of "O", "B", "A", "F", "G", "K", "M",
+ *  enum (Creevey 2023 (/data/papers/index.md#creevey2023)): one of "O", "B", "A", "F", "G", "K", "M",
  *  "CSTAR", or "unknown"; consumed by the spectral resolver as the
  *  second tier after SIMBAD sp_type. */
 export interface ApsisRow {
@@ -1826,9 +1826,9 @@ export function applyBailerJonesOverride(
 // ---- LMC kinematic distance override -------------------------------------
 
 // LMC kinematic parameters. References:
-//   - Pietrzyński et al. 2019 (/data/papers/index.md#pietrzynski2019):
+//   - Pietrzyński 2019 (/data/papers/index.md#pietrzynski2019):
 //     eclipsing-binary distance 49.59 ± 0.55 kpc (shipped as 49.594).
-//   - van der Marel & Kallivayalil 2014 (/data/papers/index.md#vandermarel2014):
+//   - van der Marel 2014 (/data/papers/index.md#vandermarel2014):
 //     PM dynamical centre (RA, Dec) = (78.76°, −69.19°)
 //     = (05h 15m 02s, −69° 11′ 24″) — their PM-field fit, not the NED/SIMBAD
 //     photometric centre (05h 23m 34s, −69° 45′). Same paper's centre-of-mass

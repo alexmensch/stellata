@@ -1,4 +1,4 @@
-// Loads the LFS-committed Edenhofer et al. 2024 (/data/papers/index.md#edenhofer2024)
+// Loads the LFS-committed Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
 // dust artifact (data/dust/) into a DustGrid for the build-time
 // de-extinction integral — README.md.
 

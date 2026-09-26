@@ -78,11 +78,11 @@ scripts/binaries/
   stage7_counts.py                Build-counts + build-rates snapshot writer
                                   (mirrors scripts/catalog/build-counts.ts).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
-                                  (Cox 2000 Sect. 15.2,
-                                  /data/papers/index.md#cox2000; dwarf
-                                  anchors unverified against Mamajek's
-                                  online table,
-                                  /data/papers/index.md#mamajek2022).
+                                  (Cox 2000
+                                  (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
+                                  anchors unverified against the online table of
+                                  Mamajek 2022
+                                  (/data/papers/index.md#mamajek2022)).
   build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
                                   public/binaries.bin. Detects hierarchical
                                   chains via component-letter prefix matching
@@ -134,7 +134,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    reach. Seven stages, one module per stage. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
    Reads AT-HYG + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /
-   [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) / Gaia
+   [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) / Gaia
    HIP-xmatch side-files + Stellarium + GCVS + CCDM.
    Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
    `constellations.json`, `search-index.json`, and
@@ -523,12 +523,12 @@ orbit was attaching to the 5.5″ and 49″ visual companions.
 The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
 (`Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
 `AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell`
-([Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs et al. 2023](/data/papers/index.md#halbwachs2023)
+([Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs 2023](/data/papers/index.md#halbwachs2023)
 Appendix A). The ESA NSSTools package isn't a dependency — the closed form is ~10 lines and NSSTools has been
 unmaintained since 2022.
 
 The TI constants describe the **photocentre's** orbit around the
-system barycentre, not the relative A–B orbit ([Halbwachs et al. 2023](/data/papers/index.md#halbwachs2023)): the
+system barycentre, not the relative A–B orbit ([Halbwachs 2023](/data/papers/index.md#halbwachs2023)): the
 recovered semi-major axis is `a0 = |q − β|·a_rel`, where
 `q = M₂/(M₁+M₂)` is the secondary's mass fraction (the same q the
 pipeline stores per pair) and `β = F₂/(F₁+F₂)` its flux fraction — so
@@ -753,8 +753,8 @@ Three system-level mechanisms run at emit time:
   per-class mass tables for MS / III / IV / I
   ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2; the
   main-sequence anchors are unverified —
-  [Pecaut & Mamajek 2013](/data/papers/index.md#pecaut2013) tabulate no
-  masses, [Mamajek's online dwarf table](/data/papers/index.md#mamajek2022)
+  [Pecaut 2013](/data/papers/index.md#pecaut2013) tabulate no
+  masses, [Mamajek 2022](/data/papers/index.md#mamajek2022)
   does). White dwarfs default to 0.6 M☉; carbon / S / WR
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.

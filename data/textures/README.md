@@ -126,20 +126,20 @@ calibrates every map with a published disc-integrated colour to a
 - Each body's target chromaticity is its published **B−V / V−R**,
   expressed as flux ratios against the Sun's own indices and mapped
   B→blue, V→green, Rc→red. Planets take
-  [Mallama, Krobusek & Pavlov 2017](/data/papers/index.md#mallama2017) Table 3; satellites
-  take [Frey & Lowman 1974](/data/papers/index.md#frey1974) Table IV, carrying
-  [Harris 1961](/data/papers/index.md#harris1961) via [Newburn & Gulkis 1973](/data/papers/index.md#newburn1973).
+  [Mallama 2017](/data/papers/index.md#mallama2017) Table 3; satellites
+  take [Frey 1974](/data/papers/index.md#frey1974) Table IV, carrying
+  [Harris 1961](/data/papers/index.md#harris1961) via [Newburn 1973](/data/papers/index.md#newburn1973).
 - **The photometric system is stored per row**, because the two sources
-  are not on the same one. [Frey & Lowman](/data/papers/index.md#frey1974)'s Table III puts its R filter at
+  are not on the same one. [Frey 1974](/data/papers/index.md#frey1974)'s Table III puts its R filter at
   0.69 µm, against Cousins Rc's ~0.64, and the solar anchor
-  (`SUN_VRC` = 0.352) is Cousins. [Newburn & Gulkis](/data/papers/index.md#newburn1973)
+  (`SUN_VRC` = 0.352) is Cousins. [Newburn 1973](/data/papers/index.md#newburn1973)
   (Appendix B) name that R as Hardie's passband, not Johnson's standard,
   with the Sun at V−R 0.45 in it; the rows are stored as Johnson, the
   standard system nearest it. Reading such an index against the Cousins anchor
   reddens the body: **0.26 mag on Titan**, worse than the hand tint it
   replaces. Each row keeps the number its source published and
   `vrc_of` converts, interpolating paired Johnson/Cousins columns as
-  tabulated by STScI: the Johnson side is [Ducati et al. 2001](/data/papers/index.md#ducati2001) Table 3,
+  tabulated by STScI: the Johnson side is [Ducati 2001](/data/papers/index.md#ducati2001) Table 3,
   the Cousins side [Bessell 1979](/data/papers/index.md#bessell1979)'s transform of it (bar the 0.45 row,
   where Bessell's relation gives 0.33 against the table's 0.30). Inverting
   that transform at the adopted solar V−Rc returns a Johnson solar V−R of
@@ -158,7 +158,7 @@ calibrates every map with a published disc-integrated colour to a
   Achieved-vs-target numbers live in the committed `calibration.json`,
   pinned by `scripts/textures/texture-calibration.test.ts`.
 - **Eight moons are now index-calibrated** — Io, Europa, Ganymede,
-  Callisto, Dione, Rhea, Titan and Triton, the bodies [Frey & Lowman](/data/papers/index.md#frey1974) give
+  Callisto, Dione, Rhea, Titan and Triton, the bodies [Frey 1974](/data/papers/index.md#frey1974) give
   both indices for. Enceladus, Tethys and Iapetus have a published B−V
   but **no V−R**, and Mimas has neither, so they keep the hand
   treatment: a red target cannot be invented for them, and half a
@@ -175,7 +175,7 @@ What the calibration corrects, per planet:
   (B−V 0.70 is barely off the Sun's 0.653). Cloud FEATURES remain UV
   structure — in visible light the deck is nearly featureless.
 - **Neptune** — 1989 Voyager OGB deep azure paled toward the measured
-  tone, consistent with [Irwin et al. 2024](/data/papers/index.md#irwin2024).
+  tone, consistent with [Irwin 2024](/data/papers/index.md#irwin2024).
 - **Mars** — the Viking MDIM 2.1 mosaic's blue boost dimmed ~0.57×;
   lands on the muted butterscotch Mars presents from space.
 - **Mercury** — the MESSENGER mosaic is monochrome (every MESSENGER
@@ -194,7 +194,7 @@ What the calibration corrects, per planet:
 Moon treatments:
 
 - **Moon** — LROC WAC colour (NASA SVS CGI Moon Kit), untouched.
-  [Frey & Lowman](/data/papers/index.md#frey1974) covers outer-planet satellites only, so it carries no lunar row;
+  [Frey 1974](/data/papers/index.md#frey1974) covers outer-planet satellites only, so it carries no lunar row;
   its map is already natural colour rather than tinted or enhanced, which
   is why it is the one body that loses nothing by waiting.
 - **Io / Ganymede** — USGS Galileo/Voyager colour merges, now calibrated
@@ -223,7 +223,7 @@ Moon treatments:
   measurement replaces a hand-picked full-chroma orange.
 - **Uranian moons** — no texture by design: Voyager southern-
   hemisphere-only coverage; they exercise the renderer's texture-less
-  base path. [Frey & Lowman](/data/papers/index.md#frey1974) does give Titania and Oberon, so a row exists
+  base path. [Frey 1974](/data/papers/index.md#frey1974) does give Titania and Oberon, so a row exists
   if one ever ships a map.
 
 The remaining hand treatments live in `build-textures.py` (`DESATURATE`,

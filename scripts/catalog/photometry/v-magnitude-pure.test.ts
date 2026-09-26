@@ -19,7 +19,7 @@ import {
 import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
 import { photometry, printedVOf } from './photometry-fixture';
 
-describe('Riello+ 2021 G−V relation', () => {
+describe('Riello 2021 G−V relation', () => {
   // The literals ARE the assertion: these are the published Table 5.9 values
   // (Gaia EDR3 documentation, section "Photometric relationships with other
   // photometric systems"). A transcription slip is the failure this catches,

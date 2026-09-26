@@ -126,7 +126,7 @@ function matchSimbadRow(
  *  binaries pipeline's component_sptype_overrides.tsv curated tier;
  *  literature citation per entry. */
 export const CURATED_SPTYPE_BY_HIP: ReadonlyMap<number, string> = new Map([
-  // Castor A (α Gem) — SIMBAD * alf Gem A sp_type=A1.5IV+ (Gray+ 2003
+  // Castor A (α Gem) — SIMBAD * alf Gem A sp_type=A1.5IV+ (Gray 2003
   // (/data/papers/index.md#gray2003)).
   [36850, 'A1.5IV'],
 ]);

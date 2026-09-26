@@ -13,15 +13,15 @@ from PIL import Image
 # converts; the system is stored per row rather than converted at authoring
 # time so each row keeps the number its source actually published.
 #
-# PLANETS — the adopted reference magnitudes of Mallama, Krobusek & Pavlov
-# 2017 (/data/papers/index.md#mallama2017), Table 3. Saturn's V−Rc uses the
+# PLANETS — the adopted reference magnitudes of Mallama 2017
+# (/data/papers/index.md#mallama2017), Table 3. Saturn's V−Rc uses the
 # paper's internally-consistent synthetic pair (its photometric V and
 # synthetic Rc disagree by 0.17 mag, which would inflate the index). Uranus
 # is carried for completeness though it ships no map.
 #
-# SATELLITES — Frey & Lowman 1974 (/data/papers/index.md#frey1974), Table
+# SATELLITES — Frey 1974 (/data/papers/index.md#frey1974), Table
 # IV, carrying Harris 1961 (/data/papers/index.md#harris1961) as reported by
-# Newburn & Gulkis 1973 (/data/papers/index.md#newburn1973). Frey & Lowman's
+# Newburn 1973 (/data/papers/index.md#newburn1973). Frey & Lowman's
 # Table III states the filter effective wavelengths (U .35, B .45, V .55, R
 # .69, I .82 µm). Newburn & Gulkis (Appendix B) name Harris' R and I as
 # Hardie's passbands, not Johnson's standards, and put the Sun at V−R 0.45 in
@@ -50,7 +50,7 @@ COLOUR_INDICES = {
 }
 
 # Johnson V−R → Cousins V−Rc, as paired columns tabulated by STScI: the
-# Johnson side is Ducati et al. 2001 (/data/papers/index.md#ducati2001) Table
+# Johnson side is Ducati 2001 (/data/papers/index.md#ducati2001) Table
 # 3, the Cousins side that transformed by Bessell 1979
 # (/data/papers/index.md#bessell1979), except at 0.45, where Bessell's
 # relation gives 0.33. G0 through K5, which brackets every satellite row
@@ -81,7 +81,7 @@ def vrc_of(vr: float, system: str) -> float:
                   [c for _, c in _VR_JOHNSON_COUSINS])
     )
 
-# Solar colour, same system (Ramírez et al. 2012
+# Solar colour, same system (Ramírez 2012
 # (/data/papers/index.md#ramirez2012) solar-analog values). The renderer's
 # reference white is the SOLAR SPECTRUM: a body reflecting sunlight
 # neutrally renders R = G = B, so a body's target chromaticity is its index

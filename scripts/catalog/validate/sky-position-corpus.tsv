@@ -19,9 +19,9 @@
 #   24.75 yr forward to J2016.0 — this DOES exercise the propagation.
 # - Gl 863.1A (simbad): no Gaia source, and HIP 111293 is absent from
 #   HIP2, so the bottom tier places it — SIMBAD's bibcoded equinox-J2000
-#   coordinate (2MASS, Cutri et al. 2003 (/data/papers/index.md#cutri2003))
-#   advanced 16 yr on SIMBAD's own bibcoded PM (1368.0, 111.0 mas/yr, Lépine &
-#   Shara 2005 (/data/papers/index.md#lepine2005)). 2MASS measured it at
+#   coordinate (2MASS, Cutri 2003 (/data/papers/index.md#cutri2003))
+#   advanced 16 yr on SIMBAD's own bibcoded PM (1368.0, 111.0 mas/yr, Lépine 2005
+#   (/data/papers/index.md#lepine2005)). 2MASS measured it at
 #   epoch ≈2000.39, not 2000.0, so the 16 yr overshoots by 0.39 yr and puts
 #   the pin ~0.54" east of the correctly propagated place. RE-PINNED
 #   DELIBERATELY when the printed cell retired, and the move is the point:

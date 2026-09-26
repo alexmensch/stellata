@@ -13,11 +13,11 @@ numbers and the derivations behind them.
 Molecular clouds touch the render in two decoupled ways, and the split
 is load-bearing:
 
-1. **Per-star extinction is pure [Edenhofer](/data/papers/index.md#edenhofer2024).** The dust voxel volume
+1. **Per-star extinction is pure [Edenhofer 2024](/data/papers/index.md#edenhofer2024).** The dust voxel volume
    (`scripts/dust/`) is the single extinction field; stars dim and
-   redden by the raymarched [Edenhofer](/data/papers/index.md#edenhofer2024) column and nothing else. The
+   redden by the raymarched [Edenhofer 2024](/data/papers/index.md#edenhofer2024) column and nothing else. The
    Zucker analytic model does **not** modify it. Measured peak
-   [Edenhofer](/data/papers/index.md#edenhofer2024) columns reach 0.3–1.0× the [Zucker](/data/papers/index.md#zucker2021) Leike-resolution
+   [Edenhofer 2024](/data/papers/index.md#edenhofer2024) columns reach 0.3–1.0× the [Zucker 2021](/data/papers/index.md#zucker2021) Leike-resolution
    targets (Ophiuchus 1.03×), consistent with 1 pc → 4.9 pc beam dilution —
    the field is not materially biased at our grid scale, so a
    centroid-anchored `max(edenhofer, model)` overlay would only mint a
@@ -42,7 +42,7 @@ Two consequences:
   receiving none. Closing that gap is deferred work (galactic-arm dust /
   grid extension).
 - **Substructure comes from real data, not procedural noise.** Cloud
-  shape is a per-cloud isosurface mesh traced from the [Edenhofer](/data/papers/index.md#edenhofer2024)
+  shape is a per-cloud isosurface mesh traced from the [Edenhofer 2024](/data/papers/index.md#edenhofer2024)
   field at build time ([§ 9](#9-presence-pass), `scripts/cloud-surfaces/`). The log-normal octave
   model ([§ 5](#5-substructure-noise-build-side-spec)) is retained only as the build-side spec for a possible
   future volumetric-substructure upgrade; no client code reads the
@@ -60,19 +60,19 @@ ship as curated seeds.
 Optical depth along a sightline: `τ_V = ∫ κ_V ρ dl`, and
 `A_V = 1.086 τ_V`. We never handle κ and ρ separately — every layer
 works in **extinction rate** (A_V magnitudes per parsec), which is
-what the [Edenhofer](/data/papers/index.md#edenhofer2024) field natively encodes.
+what the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) field natively encodes.
 
 The units chain, end to end:
 
 | Quantity | Value | Source |
 | --- | --- | --- |
-| Voxel unit | E_ZGR pc⁻¹ ([ZGR23](/data/papers/index.md#zhang2023) extinction density) | [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) |
+| Voxel unit | E_ZGR pc⁻¹ ([Zhang 2023](/data/papers/index.md#zhang2023) extinction density) | [Edenhofer 2024](/data/papers/index.md#edenhofer2024) |
 | A_V per E_ZGR | 2.742 | manifest `avPerDensityPerPc` |
-| N_H per A_V | 1.87×10²¹ cm⁻² mag⁻¹ | [Bohlin, Savage & Drake 1978](/data/papers/index.md#bohlin1978) (N_H/E(B−V) = 5.8×10²¹, R_V = 3.1) |
+| N_H per A_V | 1.87×10²¹ cm⁻² mag⁻¹ | [Bohlin 1978](/data/papers/index.md#bohlin1978) (N_H/E(B−V) = 5.8×10²¹, R_V = 3.1) |
 | 1 cm⁻³ · pc | 3.086×10¹⁸ cm⁻² | definition |
 | A_V rate for n_H [cm⁻³] | 1.65×10⁻³ · n_H mag pc⁻¹ | product of the above |
 | ρ_ZGR for n_H [cm⁻³] | 6.02×10⁻⁴ · n_H E_ZGR pc⁻¹ | ÷ 2.742 |
-| A_K / A_V | 0.117 | [CCM 1989](/data/papers/index.md#cardelli1989) at R_V = 3.1 |
+| A_K / A_V | 0.117 | [Cardelli 1989](/data/papers/index.md#cardelli1989) at R_V = 3.1 |
 
 The [Zucker 2021](/data/papers/index.md#zucker2021) profile amplitudes (n0 in cm⁻³) convert
 through this chain, but their absolute normalisation is **not trusted** — the
@@ -87,7 +87,7 @@ face value.
 pencil beams (2D NICEST-style maps: Taurus max A_K 0.90 → A_V ≈ 7.7;
 Ophiuchus 1.99 → ≈ 17). At the 4.88 pc voxel scale the correct,
 area-averaged columns are what the Leike-resolution 3D values give:
-[Zucker](/data/papers/index.md#zucker2021) Table 3 `max_ak_leike` 0.19 – 0.38 → **A_V ≈ 1.6 – 3.3 through
+[Zucker 2021](/data/papers/index.md#zucker2021) Table 3 `max_ak_leike` 0.19 – 0.38 → **A_V ≈ 1.6 – 3.3 through
 the densest cores** — and those are themselves 1 pc-beam peaks, so the
 4.9 pc grid's peak columns legitimately land below them (measured
 0.3–1.0×, [§ 1](#1-overview--two-independent-fields)). The presence pass conveys the darker sub-beam cores
@@ -202,7 +202,7 @@ only shape silhouettes.
 ## 5. Substructure noise (build-side spec)
 
 Cloud substructure ships as real data — per-cloud isosurface meshes
-traced from the [Edenhofer](/data/papers/index.md#edenhofer2024) field ([§ 9](#9-presence-pass)). The presence shader carries no
+traced from the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) field ([§ 9](#9-presence-pass)). The presence shader carries no
 noise. The log-normal octave model below is retained as the build-side
 spec: `cloud_model.py` still emits the `noiseModel` block ([§ 8](#8-per-cloud-parameter-schema)) so a
 future volumetric-substructure upgrade has one calibrated source of
@@ -212,20 +212,20 @@ truth to pick up. No client code reads it today.
 
 Supersonic turbulence gives a log-normal volume-density PDF
 ([Vazquez-Semadeni 1994](/data/papers/index.md#vazquez1994);
-[Padoan, Nordlund & Jones 1997](/data/papers/index.md#padoan1997)): `s = ln(ρ/ρ̄)` is
+[Padoan 1997](/data/papers/index.md#padoan1997)): `s = ln(ρ/ρ̄)` is
 Gaussian with
 
 ```
-σ_s² = ln(1 + b² M²)        b ≈ 0.4 (mixed forcing; Federrath et al. 2010)
+σ_s² = ln(1 + b² M²)        b ≈ 0.4 (mixed forcing; Federrath 2010)
 ```
 
-Through [Federrath et al. 2010](/data/papers/index.md#federrath2010)'s relation, the class-based Mach numbers
+Through [Federrath 2010](/data/papers/index.md#federrath2010)'s relation, the class-based Mach numbers
 ([§ 7](#7-taxonomy-and-embedded-stars)) give dark M ≈ 5 → σ_s ≈ 1.3; sf M ≈ 8 → σ_s ≈ 1.56;
 hii M ≈ 10 → σ_s ≈ 1.68. The shipped
 `SIGMA_S_BY_CLASS` carries 1.3 / 1.7 / 1.9. Actively star-forming clouds
 additionally develop a high-density power-law tail
-([Federrath & Klessen 2013](/data/papers/index.md#federrath2013);
-[Kainulainen et al. 2009](/data/papers/index.md#kainulainen2009)) — represented in the fine octaves'
+([Federrath 2013](/data/papers/index.md#federrath2013);
+[Kainulainen 2009](/data/papers/index.md#kainulainen2009)) — represented in the fine octaves'
 ridged shaping, not a separate PDF term.
 
 ### 5.2 The multiplicative field
@@ -254,7 +254,7 @@ the structure is static and per-cloud distinct.
 ### 5.3 Filamentary anisotropy
 
 Real substructure is filaments (~0.1 pc characteristic width,
-[Arzoumanian et al. 2011](/data/papers/index.md#arzoumanian2011)/[2019](/data/papers/index.md#arzoumanian2019)), not isotropic
+[Arzoumanian 2011](/data/papers/index.md#arzoumanian2011)/[Arzoumanian 2019](/data/papers/index.md#arzoumanian2019)), not isotropic
 blobs. Two cheap shaping
 terms, both in cloud-local frame:
 
@@ -269,15 +269,15 @@ terms, both in cloud-local frame:
 ## 6. Reddening
 
 `../src/client/webgpu/star/star-vertex-tsl.ts` accumulates A_V and applies `E(B−V) = A_V / 3.1` as a
-shift of the LUT-input B−V — the [CCM 1989](/data/papers/index.md#cardelli1989) diffuse-ISM law. The raymarch
+shift of the LUT-input B−V — the [Cardelli 1989](/data/papers/index.md#cardelli1989) diffuse-ISM law. The raymarch
 is single-channel in *storage* (one A_V accumulator); the colour effect
 is present. The CPU mirror (decode + integration + `E(B−V) = A_V / R_V`)
 is `dust-raymarch-pure.ts`, pinned to `toBe` precision.
 
 **Density-dependent R_V — resolved analytically, not shipped.** The
 upgrade would raise R_V from 3.1 toward ~5.5 in dense cores (grain
-growth; [Weingartner & Draine 2001](/data/papers/index.md#weingartner2001);
-[Chapman et al. 2009](/data/papers/index.md#chapman2009)):
+growth; [Weingartner 2001](/data/papers/index.md#weingartner2001);
+[Chapman 2009](/data/papers/index.md#chapman2009)):
 
 ```
 E(B−V) = Σ  (dA_V/dl) / R_V(ρ)  · dl
@@ -286,7 +286,7 @@ R_V(ρ) = 3.1 + 2.4 · smoothstep(ρ₁, ρ₂, ρ)
 ```
 
 R_V is a *measured observable* with a known column dependence, not a
-look-knob. [Chapman et al. 2009](/data/papers/index.md#chapman2009) find the mid-IR extinction law matches
+look-knob. [Chapman 2009](/data/papers/index.md#chapman2009) find the mid-IR extinction law matches
 the Weingartner & Draine R_V = 3.1 model below A_Ks = 0.5 (A_V ≈ 4),
 flattening toward their R_V = 5.5 model only at A_Ks ≳ 1 (A_V ≳ 9). Our per-star columns are
 voxel-averaged and bounded: the pinned peak (dust manifest `zucker`
@@ -345,7 +345,7 @@ in-grid cross-match supersedes.
 ### 7.3 Cavities (designed, not yet shipped)
 
 The cavity carve is a planned presence-model refinement — the extinction
-voxels already resolve the real cavities ([Edenhofer](/data/papers/index.md#edenhofer2024) resolves the
+voxels already resolve the real cavities ([Edenhofer 2024](/data/papers/index.md#edenhofer2024) resolves the
 λ Ori ring), so it never touches them. Each retained ≤ B1 star carves a cavity.
 Strömgren radius:
 
@@ -354,16 +354,16 @@ R_S = ( 3 Q_H / (4π α_B n²) )^(1/3)      α_B = 2.6×10⁻¹³ cm³ s⁻¹ at
 ```
 
 `n` = analytic model density at the star's position (floor 10 cm⁻³).
-Ionising photon rates, log₁₀ Q_H [s⁻¹] ([Martins, Schaerer & Hillier 2005](/data/papers/index.md#martins2005) for O;
-[Sternberg et al. 2003](/data/papers/index.md#sternberg2003) for B):
+Ionising photon rates, log₁₀ Q_H [s⁻¹] ([Martins 2005](/data/papers/index.md#martins2005) for O;
+[Sternberg 2003](/data/papers/index.md#sternberg2003) for B):
 
 ```
 O5V 49.3 · O6V 48.9 · O7V 48.6 · O8V 48.3 · O9V 48.0 · B0V 47.6 · B1V 45.7
 giants/supergiants: use the same class row +0.3 dex
 ```
 
-Not every row is the papers' value. [Martins](/data/papers/index.md#martins2005) Table 1 gives O6V 48.96 and
-O9V 47.90; [Sternberg](/data/papers/index.md#sternberg2003) Table 1 gives B0V 48.02 and stops at B0.5V
+Not every row is the papers' value. [Martins 2005](/data/papers/index.md#martins2005) Table 1 gives O6V 48.96 and
+O9V 47.90; [Sternberg 2003](/data/papers/index.md#sternberg2003) Table 1 gives B0V 48.02 and stops at B0.5V
 (47.71), with no B1V row. The flat +0.3 dex is a stellata simplification:
 the papers' giant-minus-dwarf offsets run +0.2 to +0.5 dex and their
 supergiant ones +0.35 to +0.9 dex, growing toward late O.
@@ -371,7 +371,7 @@ supergiant ones +0.35 to +0.9 dex, growing toward late O.
 Representative scale: an O6V in n = 100 cm⁻³ gives R_S ≈ 2.9 pc; a B0V
 ≈ 1.1 pc. Evolved regions exceed the instantaneous Strömgren sphere
 (D-type expansion, stellar winds) — the λ Ori ring (40 pc across, a
-~20 pc radius, [Dolan & Mathieu 2002](/data/papers/index.md#dolan2002)) is the canonical local example and a validation case:
+~20 pc radius, [Dolan 2002](/data/papers/index.md#dolan2002)) is the canonical local example and a validation case:
 
 ```
 R_cav = max( R_S , R_curated )     R_curated: Orion Nebula 4 pc,
@@ -379,7 +379,7 @@ R_cav = max( R_S , R_curated )     R_curated: Orion Nebula 4 pc,
 ```
 
 Density modulation (applied in the presence shader; the voxel field
-already carries the real cavities — [Edenhofer](/data/papers/index.md#edenhofer2024) resolves the
+already carries the real cavities — [Edenhofer 2024](/data/papers/index.md#edenhofer2024) resolves the
 λ Ori ring):
 
 ```
@@ -412,10 +412,10 @@ components:
 
 - **Absorption (alpha-over, always on):** a per-fragment short raymarch
   through the ellipsoid segment. Traced clouds integrate the **per-cloud
-  [Edenhofer](/data/papers/index.md#edenhofer2024) density brick** (a uint8 3D texture in `cloud-surfaces.bin` —
+  [Edenhofer 2024](/data/papers/index.md#edenhofer2024) density brick** (a uint8 3D texture in `cloud-surfaces.bin` —
   the exact volume the rim isosurface was traced from, so shadow and
   silhouette agree 1:1, and the band dimming is the same
-  pure-[Edenhofer](/data/papers/index.md#edenhofer2024) physics as the per-star raymarch, `A_V = 2.742 · ∫E dl`). Fallback
+  pure-[Edenhofer 2024](/data/papers/index.md#edenhofer2024) physics as the per-star raymarch, `A_V = 2.742 · ∫E dl`). Fallback
   clouds integrate the analytic model (Plummer × cavities; smooth by
   construction). Opacity `α = 1 − exp(−0.921 · A_V_ray)`, capped at 0.95,
   emitted **alpha-only premultiplied over** (rgb = 0). Because the mesh
@@ -429,7 +429,7 @@ components:
 - **Rim silhouette (additive, whisper-level, declutter-gated):** the
   Local Bubble's fresnel-rim treatment (`src/client/fresnel-shell/`,
   shared `stellata_fresnel_rim` chunk + `SHELL_RIM_BLUE`) on a per-cloud
-  **isosurface mesh traced from the real [Edenhofer](/data/papers/index.md#edenhofer2024) field** at build
+  **isosurface mesh traced from the real [Edenhofer 2024](/data/papers/index.md#edenhofer2024) field** at build
   time
   (`scripts/cloud-surfaces/README.md`; clouds the field can't resolve
   fall back to their ellipsoid envelope). It is an orientation aid for
@@ -454,7 +454,7 @@ Intensity constants are named uniforms with dev-console levers
 ### 9.1 Sampling and anti-aliasing — banding is the known failure mode
 
 The volumetric Milky Way deliberately does not sample the
-[Edenhofer](/data/papers/index.md#edenhofer2024) voxels because fixed-step marches alias into visible streaks
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) voxels because fixed-step marches alias into visible streaks
 ([Interstellar dust extinction](/docs/science-galactic-structure.md#interstellar-dust-extinction);
 the standing spiral-arm non-goal exists for the same reason). The
 absorption integrand is the smooth analytic Plummer profile or the
@@ -495,7 +495,7 @@ on Earth. Everything falls out of the two mechanisms already specified:
 
 - **Stars:** the per-star raymarch handles camera-inside-cloud
   automatically (the camera→star segment starts inside the dense
-  region). The un-clipped [Edenhofer](/data/papers/index.md#edenhofer2024) encode ([§ 2.2](#22-encoding-ceiling--the-fixed-density_max)) is what makes this
+  region). The un-clipped [Edenhofer 2024](/data/papers/index.md#edenhofer2024) encode ([§ 2.2](#22-encoding-ceiling--the-fixed-density_max)) is what makes this
   real.
 - **Diffuse background:** the absorption mesh is `BackSide` with an
   analytic ray-envelope segment, so it renders from inside too; each
@@ -507,17 +507,17 @@ on Earth. Everything falls out of the two mechanisms already specified:
 
 ## 11. References
 
-- [Cardelli, Clayton & Mathis 1989](/data/papers/index.md#cardelli1989) — extinction law, R_V = 3.1.
-- [Bohlin, Savage & Drake 1978](/data/papers/index.md#bohlin1978) — N_H / E(B−V) = 5.8×10²¹ cm⁻² mag⁻¹.
-- [Zucker et al. 2020](/data/papers/index.md#zucker2020) — cloud distances (Table A1).
-- [Zucker et al. 2021](/data/papers/index.md#zucker2021) — 3D skeleton extents, Plummer profile fits, masses, peak A_K (Tables 1–3).
-- [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) — 3D dust map; E_ZGR units.
-- [Leike, Glatzle & Enßlin 2020](/data/papers/index.md#leike2020) — the 3D G-band extinction map (natural-log optical depth per pc) that [Zucker 2021](/data/papers/index.md#zucker2021) converts into `mass_leike` and the K-band `max_ak_leike`.
-- [Vazquez-Semadeni 1994](/data/papers/index.md#vazquez1994); [Padoan, Nordlund & Jones 1997](/data/papers/index.md#padoan1997) — log-normal density PDF.
-- [Federrath et al. 2010](/data/papers/index.md#federrath2010) — σ_s² = ln(1 + b²M²), b by forcing.
-- [Federrath & Klessen 2013](/data/papers/index.md#federrath2013); [Kainulainen et al. 2009](/data/papers/index.md#kainulainen2009) — power-law tail in SF clouds.
-- [Arzoumanian et al. 2011](/data/papers/index.md#arzoumanian2011); [2019](/data/papers/index.md#arzoumanian2019) — 0.1 pc filament width.
-- [Strömgren 1939](/data/papers/index.md#stromgren1939); [Osterbrock & Ferland 2006](/data/papers/index.md#osterbrock2006) — R_S, α_B.
-- [Martins, Schaerer & Hillier 2005](/data/papers/index.md#martins2005) — O-star Q_H calibration; [Sternberg, Hoffmann & Pauldrach 2003](/data/papers/index.md#sternberg2003) — B stars.
-- [Weingartner & Draine 2001](/data/papers/index.md#weingartner2001); [Chapman et al. 2009](/data/papers/index.md#chapman2009) — R_V ≈ 5.5 in dense cores.
-- [Dolan & Mathieu 2002](/data/papers/index.md#dolan2002) — λ Ori ring geometry.
+- [Cardelli 1989](/data/papers/index.md#cardelli1989) — extinction law, R_V = 3.1.
+- [Bohlin 1978](/data/papers/index.md#bohlin1978) — N_H / E(B−V) = 5.8×10²¹ cm⁻² mag⁻¹.
+- [Zucker 2020](/data/papers/index.md#zucker2020) — cloud distances (Table A1).
+- [Zucker 2021](/data/papers/index.md#zucker2021) — 3D skeleton extents, Plummer profile fits, masses, peak A_K (Tables 1–3).
+- [Edenhofer 2024](/data/papers/index.md#edenhofer2024) — 3D dust map; E_ZGR units.
+- [Leike 2020](/data/papers/index.md#leike2020) — the 3D G-band extinction map (natural-log optical depth per pc) that [Zucker 2021](/data/papers/index.md#zucker2021) converts into `mass_leike` and the K-band `max_ak_leike`.
+- [Vazquez-Semadeni 1994](/data/papers/index.md#vazquez1994); [Padoan 1997](/data/papers/index.md#padoan1997) — log-normal density PDF.
+- [Federrath 2010](/data/papers/index.md#federrath2010) — σ_s² = ln(1 + b²M²), b by forcing.
+- [Federrath 2013](/data/papers/index.md#federrath2013); [Kainulainen 2009](/data/papers/index.md#kainulainen2009) — power-law tail in SF clouds.
+- [Arzoumanian 2011](/data/papers/index.md#arzoumanian2011); [Arzoumanian 2019](/data/papers/index.md#arzoumanian2019) — 0.1 pc filament width.
+- [Strömgren 1939](/data/papers/index.md#stromgren1939); [Osterbrock 2006](/data/papers/index.md#osterbrock2006) — R_S, α_B.
+- [Martins 2005](/data/papers/index.md#martins2005) — O-star Q_H calibration; [Sternberg 2003](/data/papers/index.md#sternberg2003) — B stars.
+- [Weingartner 2001](/data/papers/index.md#weingartner2001); [Chapman 2009](/data/papers/index.md#chapman2009) — R_V ≈ 5.5 in dense cores.
+- [Dolan 2002](/data/papers/index.md#dolan2002) — λ Ori ring geometry.

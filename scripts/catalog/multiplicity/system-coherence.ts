@@ -49,7 +49,7 @@ export interface SystemCoherenceStats {
 export interface CoherenceSources {
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   hip2: Map<number, Hip2AstrometryRow>;
-  /** Bailer-Jones et al. 2021 (/data/papers/index.md#bailerjones2021)
+  /** Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
    *  source_id (decimal string) → distance; only membership is consulted for
    *  the tier pick. */
   bjMap: Map<string, number>;

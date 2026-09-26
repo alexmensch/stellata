@@ -626,15 +626,15 @@ def _component_astrometry_from_gaia(gaia) -> ComponentAstrometry:
 # (companion promotion) for the science framing
 # and full source citations.
 
-# Gaia EDR3 → Johnson V: G − V as a cubic in (BP − RP). Riello et al.
-# 2021 (/data/papers/index.md#riello2021), Table 5.7 (σ = 0.030 mag; valid −0.5 < BP−RP < 5.0).
+# Gaia EDR3 → Johnson V: G − V as a cubic in (BP − RP). Riello 2021
+# (/data/papers/index.md#riello2021), Table 5.7 (σ = 0.030 mag; valid −0.5 < BP−RP < 5.0).
 GAIA_G_MINUS_V_COEFFS: tuple[float, ...] = (
     -0.02704, 0.01424, -0.2156, 0.01426,
 )
 GAIA_G_MINUS_V_COLOR_RANGE: tuple[float, float] = (-0.5, 5.0)
 
-# Gaia (BP − RP) → effective temperature: fifth-order fit, Montalto et
-# al. 2021 (/data/papers/index.md#montalto2021; PLATO Input Catalogue) (valid
+# Gaia (BP − RP) → effective temperature: fifth-order fit, Montalto 2021
+# (/data/papers/index.md#montalto2021; PLATO Input Catalogue) (valid
 # 0.5 < BP−RP < 5.0). Feeds the catalogue's Ballesteros 2012
 # (/data/papers/index.md#ballesteros2012) B−V↔Teff convention so the
 # recovered ci lands on the same colour manifold every other star uses

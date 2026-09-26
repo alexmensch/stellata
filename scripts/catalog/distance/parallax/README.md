@@ -105,7 +105,7 @@ place a member either.
 parallax at all and reads `ipd_frac_multi_peak` 37; HIP2 states 3.04 ± 8.92 mas
 (S/N 0.34), which the floor refuses. The same WDS root holds HIP 26551 D on its
 own clean 5p solution — 2.4744 ± 0.0622 mas, RUWE 1.0689, `ipd` 0 — inverting
-to 404.1 ± 10.2 pc. [Schaefer et al. 2016](/data/papers/index.md#schaefer2016)'s dynamical
+to 404.1 ± 10.2 pc. [Schaefer 2016](/data/papers/index.md#schaefer2016)'s dynamical
 parallax, 387.5 ± 1.3 pc,
 agrees at 1.62 σ. Both say the 328.9 pc the floor refused is ~20% wrong.
 

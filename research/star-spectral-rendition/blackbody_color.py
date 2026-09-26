@@ -8,8 +8,8 @@ Approach:
   1. Sample Planck's law B_λ(T) over the visible band [380, 780] nm at
      5 nm resolution.
   2. Multiply by CIE 1931 colour-matching functions (x̄, ȳ, z̄) — using
-     the multi-lobe Gaussian analytical fits from Wyman/Sloan/Shirley
-     2013 (/data/papers/index.md#wyman2013). Accurate to ~1%
+     the multi-lobe Gaussian analytical fits from Wyman 2013
+     (/data/papers/index.md#wyman2013). Accurate to ~1%
      vs the tabulated CIE 1931 2° standard.
   3. Integrate → XYZ tristimulus.
   4. Linear-sRGB transform (D65 illuminant).
@@ -51,7 +51,7 @@ def _wyman_gaussian(lam: np.ndarray, alpha: float, beta_lo: float, beta_hi: floa
 
 
 def cmf_xyz(wavelength_nm: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """CIE 1931 2° colour-matching functions via Wyman et al. 2013 fits
+    """CIE 1931 2° colour-matching functions via the fits of Wyman 2013
     (/data/papers/index.md#wyman2013)."""
     lam = wavelength_nm
     x_bar = (

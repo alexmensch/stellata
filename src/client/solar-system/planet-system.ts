@@ -248,7 +248,7 @@ export function defaultOrbitGeometry(
  *  SOL_BODIES order: the nine planets (PLANET_ORDER) first, then the 18
  *  moons (SOL_MOONS order). Each moon is `parent_ecliptic +
  *  moonOffsetEcliptic`; the Earth slot and the Moon slot are jointly resolved
- *  from the Standish (/data/papers/index.md#standish1992) EM-barycentre via
+ *  from the Standish 1992 (/data/papers/index.md#standish1992) EM-barycentre via
  *  `earthMoonSplit`, so Earth sits ~4700 km off-barycentre. The caller applies
  *  the single ecliptic→ICRS host quaternion to the whole vector, so composing
  *  the offset in the ecliptic frame here lands the moon at parent+offset in
@@ -337,7 +337,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
-    // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine et al. 1999,
+    // Rayleigh: sea-level τ_R at 650/550/450 nm (Bodhaine 1999,
     // /data/papers/index.md#bodhaine1999); the Mie term stands in for the clean
     // maritime background aerosol column. Sources + derivations:
     // /docs/science-solar-system.md#atmosphere-optical-depths--per-body-sources.
@@ -580,7 +580,7 @@ const DEG = Math.PI / 180;
 
 const EARTH_GRAV_PARAM_GM = SOL_PLANETS.find((p) => p.name === 'Earth')!.gravParamGM!;
 
-/** Sol's orbitGeometryAt — planets from the live Standish
+/** Sol's orbitGeometryAt — planets from the live Standish 1992
  *  (/data/papers/index.md#standish1992) elements (secular a/e + orientation at
  *  `t`), moons from MOON_ELEMENTS through `keplerMoonAnglesAt`, the same helper
  *  that positions them, in SOL_BODIES order. Those elements are J2000

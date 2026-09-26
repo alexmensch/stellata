@@ -14,7 +14,7 @@ scripts/catalog/photometry/
                                  (the validity gate both relations share),
                                  and the ascending-powers polynomial
                                  evaluator. Pure.
-  v-magnitude-pure.ts (+ test)   Riello+ 2021 G−V relation, the gated
+  v-magnitude-pure.ts (+ test)   Riello 2021 G−V relation, the gated
                                  transform over it, the three-tier V
                                  cascade, which tiers yield a system blend,
                                  and `printedVBelowHip` — the cascade's two
@@ -58,9 +58,9 @@ scripts/catalog/photometry/
 
 ## The published relations
 
-Both transforms come from **one table** — [Gaia DR3 documentation](/data/papers/index.md#gaiadr3doc)
+Both transforms come from **one table** — [Carrasco 2022](/data/papers/index.md#gaiadr3doc)
 Sect. 5.5.1, Table 5.9 — as polynomials in `BP − RP`. Its `G − V` row is
-[Riello et al. 2021](/data/papers/index.md#riello2021)'s App. C cubic (Tables C.1–C.2); its `G − B` row is
+[Riello 2021](/data/papers/index.md#riello2021)'s App. C cubic (Tables C.1–C.2); its `G − B` row is
 a DR3-era fit the paper does not carry:
 
 | Relation | Degree | σ | Stated range |
@@ -81,7 +81,7 @@ relation then applies its own colour range on top.
 ## The V cascade
 
 ```
-V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
+V = G − f(BP−RP)      Riello 2021, inside the relation's validity
   → printed HIP V      data/hipparcos/hip_main_vmag.tsv (I/239 Vmag)
   → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 Sect. 1.3, on the record's TYC
   → Gliese Vmag        data/gliese/gliese_v70a.tsv, on the record's GJ
@@ -174,7 +174,7 @@ from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relati
 is a polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
 GSPC's magnitudes are each star's own BP/RP spectrum integrated through the
 passband — a measurement of that star — and
-[Montegriffo et al. 2023](/data/papers/index.md#montegriffo2023) Sect. 6.2 calls a
+[Montegriffo 2023](/data/papers/index.md#montegriffo2023) Sect. 6.2 calls a
 flag-0 magnitude *"an extrapolation of the adopted standardisation"*, i.e. of
 the correction tying the result to the ground system, not of the integration.
 
@@ -337,8 +337,8 @@ for the same gate on the label side).
 
 ## Citation
 
-[Riello et al. 2021](/data/papers/index.md#riello2021) App. C, Table C.2 for
-`G − V`; [Gaia DR3 documentation](/data/papers/index.md#gaiadr3doc) Sect. 5.5.1, Table 5.9 for
+[Riello 2021](/data/papers/index.md#riello2021) App. C, Table C.2 for
+`G − V`; [Carrasco 2022](/data/papers/index.md#gaiadr3doc) Sect. 5.5.1, Table 5.9 for
 `G − B`. DR3 ships EDR3's photometry
 unchanged, so the EDR3 calibration is the one that applies. The coefficients,
 σ, and colour range are pinned as literals in the test rather than imported

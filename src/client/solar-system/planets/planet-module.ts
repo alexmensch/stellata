@@ -141,7 +141,7 @@ export function createPlanetKindModule(): PlanetKindModule {
         kindCtx.scene, field.glareSources(), field.localGroup);
 
       // Horizons element tables — 1.5 MB that upgrades the ephemeris from the
-      // Standish (/data/papers/index.md#standish1992) series' 0.06 AU to ~5e-6
+      // Standish 1992 (/data/papers/index.md#standish1992) series' 0.06 AU to ~5e-6
       // AU across 1900–2100. Fired at attach, not load: load runs inside the
       // boot Promise.all, where this fetch would contend with the catalog
       // download. Deliberately NOT awaited — the first frame is Sol-focused,

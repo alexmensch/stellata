@@ -111,7 +111,7 @@ describe('planetEclipticAU at J2000.0 (T = 0) — geometric sanity', () => {
 });
 
 describe('planetEclipticAU bounding-box invariants', () => {
-  // Across a 6000-year span (±3000y from J2000, the JPL Standish
+  // Across a 6000-year span (±3000y from J2000, the JPL Standish 1992
   // (/data/papers/index.md#standish1992) validity window) every planet's
   // distance from Sol must stay within its [a(1-e), a(1+e)] orbital range.
   const T_VALUES = [-30, -10, -1, 0, 1, 10, 30]; // Centuries
@@ -303,7 +303,7 @@ describe('getPlanetOrbitShapes', () => {
     // Construct a synthetic perihelion point in the orbital frame:
     // (a(1-e), 0, 0). Apply Rz(Ω)·Rx(I)·Rz(ω). This should equal the
     // ecliptic-frame perihelion direction. Compare with the body
-    // position obtained by setting eccentric anomaly E=0 in the Standish
+    // position obtained by setting eccentric anomaly E=0 in the Standish 1992
     // (/data/papers/index.md#standish1992) formula (which gives perihelion).
     // For the test we directly call planetEclipticAU on a temporary ElementSet
     // whose mean longitude is set so M=0 → E=0 at T=0.

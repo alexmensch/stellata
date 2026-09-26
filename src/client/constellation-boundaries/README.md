@@ -1,6 +1,6 @@
 # IAU constellation boundaries
 
-The shipped [Delporte (1930)](/data/papers/index.md#delporte1930) partition: the artifact that carries it, the
+The shipped [Delporte 1930](/data/papers/index.md#delporte1930) partition: the artifact that carries it, the
 positional lookup that answers "which constellation is this position in"
 for **any** position — catalogued star, anonymous Gaia row, galaxy,
 cloud, or planet — and the chart-mode layer that draws it.

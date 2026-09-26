@@ -182,7 +182,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    states a position but no motion. See [Space-motion velocity](#space-motion-velocity).
 4. **Distance overrides**, in order, each superseding the last on the rows it
    claims. `dist = 1000/plx` from step 0, then
-   **[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) (DR3)**
+   **[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) (DR3)**
    (`applyBailerJonesOverride`), eligible where step 0 resolved
    `gaia_dr3_inversion` — the posterior treats that measurement, so a non-Gaia
    parallax must not be regressed onto its Galactic-density prior — then the

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Refresh data/gliese/gliese_v70a.tsv — the printed value columns of the
-Gliese & Jahreiss 1991 (/data/papers/index.md#gliese1991) third catalogue of nearby stars.
+Gliese 1991 (/data/papers/index.md#gliese1991) third catalogue of nearby stars.
 Cascade placement: /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers."""
 
 from __future__ import annotations

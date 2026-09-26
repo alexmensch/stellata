@@ -138,7 +138,7 @@ describe('moon sky truth vs Horizons (parent-relative position)', () => {
         // Model offset, projected exactly like the truth offset: both
         // sides go through RA/Dec so the tangent-plane convention is
         // shared, and the parent anchor is each side's own parent
-        // (Standish, /data/papers/index.md#standish1992, parent error is
+        // (Standish 1992, /data/papers/index.md#standish1992, parent error is
         // covered by sky-truth.test.ts).
         const mParent = icrsToRaDec(modelGeocentricDir(parentEcl, pos.earth));
         const mMoon = icrsToRaDec(modelGeocentricDir(moonEcl, pos.earth));

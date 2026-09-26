@@ -142,7 +142,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     pairMemberSiblingBelowSnFloor: 0,
   };
 
-  // Bailer-Jones et al. 2021 (/data/papers/index.md#bailerjones2021) DR3
+  // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) DR3
   // distance posteriors. Optional in CI / fresh-clone
   // builds where the LFS file hasn't pulled yet — without it every star
   // keeps the cascade's naive 1/π inversion.
@@ -347,7 +347,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     );
   }
 
-  // Printed Gliese & Jahreiss 1991 (/data/papers/index.md#gliese1991) V/70A
+  // Printed Gliese 1991 (/data/papers/index.md#gliese1991) V/70A
   // values — the V cascade's tier under Tycho-2, and the
   // only source reaching the GJ-only cohort at all (SIMBAD holds no V flux
   // for those rows). Absent costs each of them its V, and a row with no V

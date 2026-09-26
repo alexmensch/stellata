@@ -1,7 +1,7 @@
 # Gliese — printed values for the nearby-star cohort
 
 One TSV from VizieR `V/70A`, the whole catalogue.
-[Gliese](/data/papers/index.md#gliese1991) is the first-order source behind
+[Gliese 1991](/data/papers/index.md#gliese1991) is the first-order source behind
 every spine cell marked `mag_src=GJ`: [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 routes the V cascade's bottom tier here for the GJ-bearing records
 Tycho-2 does not carry.
@@ -122,14 +122,14 @@ resulting parallax keeps value and error bar from the same pair of columns.
 
 ## Provenance
 
-- **Citation**: [Gliese W., Jahreiss H. 1991](/data/papers/index.md#gliese1991), *Preliminary
+- **Citation**: [Gliese 1991](/data/papers/index.md#gliese1991), *Preliminary
   Version of the Third Catalogue of Nearby Stars*, CDS `V/70A`.
 - **VizieR**: `V/70A/catalog`, over the CDS TAP endpoint
   `refresh_lib.CDS_TAP_URL` names.
 - **Retrieved**: 2026-08-27; re-sliced 2026-09-06 with the astrometry and
   cross-name columns, same 3,803 rows.
 - **Licence**: CDS/VizieR standard academic use; cite
-  [Gliese & Jahreiss 1991](/data/papers/index.md#gliese1991).
+  [Gliese 1991](/data/papers/index.md#gliese1991).
 
 V/70A is a completed 1991 publication, so upstream will not republish; the
 successor is CNS5, which this repo already holds

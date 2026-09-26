@@ -302,6 +302,6 @@ from the header by name; neither assumes a column's position.
 [Streaming a committed table](../../parse/README.md#streaming-a-committed-table) carries the pattern and
 why a collect-then-rejoin reader defeats it.
 
-[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) distances and
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distances and
 Apsis parameters for the same population arrive through `refresh_lib.pull_deep_population` (`scripts/refresh/README.md`), not
 through this folder.

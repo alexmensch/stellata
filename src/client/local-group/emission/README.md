@@ -180,11 +180,11 @@ the Milky Way's palette by import:
 
 | family | (B−V) | source |
 | --- | --- | --- |
-| spheroid | 0.9574 | old metal-rich SSP, [BC03](/data/papers/index.md#bruzual2003) Z = 0.02 / 10 Gyr |
+| spheroid | 0.9574 | old metal-rich SSP, [Bruzual 2003](/data/papers/index.md#bruzual2003) Z = 0.02 / 10 Gyr |
 | disc | 0.8189 | **solved** from M31 |
 
 M31 is the only LG disc with a published dereddened integrated colour —
-(B−V)₀ = 0.86, [Tempel et al. 2011](/data/papers/index.md#tempel2011) Table 2 — and it is
+(B−V)₀ = 0.86, [Tempel 2011](/data/papers/index.md#tempel2011) Table 2 — and it is
 solved against the **same** B/T = 0.31 the flux split uses
 (`data/local-group/overrides.tsv`, pinned), so M31's own integrated colour
 and its bulge/disc contrast are both right by construction. That is what the
@@ -342,10 +342,10 @@ a converged dense march; the worst deviation is pinned (0.017 mag).
 
 **A second block pins the distribution**, which is the half a viewer reads:
 M31's face-on disc central surface brightness at 21.45 V mag/arcsec² against
-[Freeman](/data/papers/index.md#freeman1970)'s 21.65 ± 0.30, which is B-band
+[Freeman 1970](/data/papers/index.md#freeman1970)'s 21.65 ± 0.30, which is B-band
 (≈ 20.9–21.0 in V for a disc B−V of 0.6–0.7), the 1.0857
 mag-per-scale-length gradient, and R_d / R_e / n / distance against
-[Courteau et al. 2011](/data/papers/index.md#courteau2011). Because the solver
+[Courteau 2011](/data/papers/index.md#courteau2011). Because the solver
 fixes total flux while every structural input is published, the profile has
 no free parameter left — those pins are closed-form consequences, not fits.
 M31 is the only LG object with photometry detailed enough to check a profile

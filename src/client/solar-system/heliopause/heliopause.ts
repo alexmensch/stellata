@@ -21,8 +21,8 @@ import {
 const HELIOPAUSE_SHELL_IDX = SHELL_KEYS.indexOf('heliopause');
 
 // Nose (upwind apex) direction: the interstellar He inflow measured by
-// IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas et al.
-// 2015 (/data/papers/index.md#mccomas2015). NOT the solar apex of motion vs nearby stars
+// IBEX/Ulysses, J2000 ecliptic (λ, β) = (255.7°, 5.1°) — McComas 2015
+// (/data/papers/index.md#mccomas2015). NOT the solar apex of motion vs nearby stars
 // (RA 17h53m, Dec +27.4°), which sits ~47° away: the heliosphere is
 // shaped by motion relative to the Local Interstellar Cloud, not relative
 // to the stellar neighbourhood.

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { holdsCopy, parseIndex, type PinnedCopy } from './citation-index-pure';
+import { citationsIn, citesByLabel, holdsCopy, labelDefects, parseIndex, type PinnedCopy } from './citation-index-pure';
 import { extractPointers, pointerCorpus, resolveDocPath } from './doc-pointer-pure';
 
 const ROOT = resolve(__dirname, '..');
@@ -18,10 +18,11 @@ const entries = parseIndex(readFileSync(INDEX, 'utf-8'));
 const entryKeys = new Set(entries.map(({ key }) => key));
 const manifest: Record<string, PinnedCopy[]> = JSON.parse(readFileSync(join(PAPERS, 'manifest.json'), 'utf-8'));
 
-const citations = pointerCorpus(ROOT)
+const citingFiles = pointerCorpus(ROOT)
   .filter((file) => !file.startsWith(PAPERS + '/'))
-  .flatMap((file) =>
-    extractPointers(readFileSync(file, 'utf-8'))
+  .map((file) => ({ file, text: readFileSync(file, 'utf-8') }));
+const citations = citingFiles.flatMap(({ file, text }) =>
+    extractPointers(text)
       .filter((pointer) => resolveDocPath(pointer.citedPath, dirname(file), ROOT) === INDEX)
       .map((pointer) => ({ where: `${relative(ROOT, file)}:${pointer.line}`, key: pointer.slug, path: pointer.citedPath })),
   );
@@ -36,6 +37,23 @@ describe('citation index', () => {
       .filter(({ key, path }) => path !== ROOTED_INDEX || !entryKeys.has(key))
       .map(({ where, key, path }) => `${where} — ${path}#${key}`);
     expect(strays, strays.join('\n')).toEqual([]);
+  });
+
+  it('every entry is labelled "<first author> <year>", a letter added only where two would collide', () => {
+    const defects = labelDefects(entries);
+    expect(defects, defects.join('\n')).toEqual([]);
+  });
+
+  it('every citation names its entry by label: [Label](pointer), or Label (pointer) in code and data', () => {
+    const labels = new Map(entries.map(({ key, label }) => [key, label]));
+    const wrong = citingFiles.flatMap(({ file, text }) =>
+      citationsIn(text)
+        .filter((citation) => labels.has(citation.key) && !citesByLabel(citation, labels.get(citation.key)!))
+        .map(({ key, line, text: cited, form }) =>
+          `${relative(ROOT, file)}:${line} — ${labels.get(key)} — ${form === 'link' ? `[${cited}]` : `…${cited.slice(-60)}`}`,
+        ),
+    );
+    expect(wrong, wrong.join('\n')).toEqual([]);
   });
 
   it('every entry is cited from outside data/papers/', () => {

@@ -215,7 +215,7 @@ export const VELOCITY_SANITY_CEILING_KM_S = 1500;
 export const VELOCITY_SANITY_CEILING_PC_YR =
   VELOCITY_SANITY_CEILING_KM_S * KM_S_TO_PC_YR;
 
-// Local Galactic escape velocity: Piffl et al. 2014
+// Local Galactic escape velocity: Piffl 2014
 // (/data/papers/index.md#piffl2014) measure 533 +54/−41 km/s in the Galactic
 // rest frame; the threshold here is 550. A star
 // faster than this is unbound — genuinely exceptional (a handful of proven

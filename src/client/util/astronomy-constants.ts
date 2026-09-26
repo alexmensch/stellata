@@ -45,7 +45,7 @@ export const J2000_JD = 2451545.0;
 // equatorial and ecliptic planes, about the +X (vernal equinox) axis.
 // Single source so every ecliptic↔equatorial rotation (planet ephemeris
 // chain, orbit-ring plane, moon reference-frame composition) uses the
-// identical value; the Standish (/data/papers/index.md#standish1992) accuracy
+// identical value; the Standish 1992 (/data/papers/index.md#standish1992) accuracy
 // budget does not need the time-varying obliquity term.
 export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 

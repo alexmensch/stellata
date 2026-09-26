@@ -21,5 +21,5 @@ All files ride regular git (small).
 
 ## References
 
-- [Zucker C. et al. 2020](/data/papers/index.md#zucker2020).
-- [Zucker C. et al. 2021](/data/papers/index.md#zucker2021).
+- [Zucker 2020](/data/papers/index.md#zucker2020).
+- [Zucker 2021](/data/papers/index.md#zucker2021).

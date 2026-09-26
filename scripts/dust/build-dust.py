@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resample the Edenhofer+ 2024 (/data/papers/index.md#edenhofer2024) 3D dust map onto a
+"""Resample the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) 3D dust map onto a
 Cartesian voxel grid and emit it as 64 chunks for progressive client-side loading.
 See scripts/dust/README.md for grid params, encoding, and CLI usage."""
 

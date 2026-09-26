@@ -1,7 +1,7 @@
 # Cloud surface build
 
 `build-cloud-surfaces.py` traces a per-cloud **isosurface mesh** from the
-[Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) dust posterior mean
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust posterior mean
 for every Zucker cloud → `data/molecular-clouds/cloud-surfaces.bin`, consumed by
 the molecular-cloud rim shells
 ([Rim shell render](/src/client/molecular-clouds/README.md#rim-shell-render)).
@@ -9,7 +9,7 @@ In-grid clouds sample the standard 1.25 kpc posterior; out-of-grid clouds sample
 the noisier `less_data_but_2kpc` flavor (reaches 2 kpc). A cloud whose peak
 in-envelope density never clears its iso threshold gets no entry and keeps its
 ellipsoid rim shape — clouds beyond the 2 kpc reach (Carina, IC 2944, RCW38) and
-globules [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) doesn't
+globules [Edenhofer 2024](/data/papers/index.md#edenhofer2024) doesn't
 resolve (the CB/LBN/Draco spheres) among them.
 
 Like the dust grid and the Local Bubble, the Python build runs
@@ -25,7 +25,7 @@ pnpm run build:clouds                    # sid-stamped clouds.json first
 ```
 
 First run downloads the ~3 GB
-[Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) cube via `dustmaps`
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) cube via `dustmaps`
 (same cache as `scripts/dust/`). `--only <cloud-id>` and `--dry-run` help when
 tuning.
 
@@ -42,7 +42,7 @@ tuning.
 3. Marching cubes at `iso = max(floor, 0.25 × p99)` of the in-envelope
    density — per-cloud adaptive with a physical floor (0.005 E_ZGR/pc by
    default); clouds where
-   [Edenhofer et al. 2024](/data/papers/index.md#edenhofer2024) sees nothing
+   [Edenhofer 2024](/data/papers/index.md#edenhofer2024) sees nothing
    above it are skipped (renderer falls back to the ellipsoid). `ISO_FLOOR_OVERRIDES` lowers
    the floor per cloud for weak in-grid globules and distant HII regions
    that carry faint-but-real signal the global floor would reject —

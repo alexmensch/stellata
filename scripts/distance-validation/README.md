@@ -1,7 +1,7 @@
 # Distance validation
 
 Post-build cross-check of `public/catalog.bin` against
-[Vaidman et al. 2025](/data/papers/index.md#vaidman2025) BA-supergiant
+[Vaidman 2025](/data/papers/index.md#vaidman2025) BA-supergiant
 distance recalculation
 (`data/distance-validation/vaidman-2025-supergiants.tsv`). Reports
 per-star fractional difference distribution.
@@ -21,9 +21,9 @@ The upstream B-J / LMC / MAX_DIST_PC override stack lives in the
 catalog build (`scripts/catalog/`); this validator is the cross-check.
 
 The validator reads the
-[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) TSV
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) TSV
 directly rather than `public/catalog.bin` so the harness stays decoupled
 from in-flight writer-schema changes; the B-J override is the only
 distance source for these source_ids today. See
-[Distance-override validation against Vaidman et al. 2025](/docs/science-catalog-ingestion.md#distance-override-validation-against-vaidman-et-al-2025)
+[Distance-override validation against Vaidman 2025](/docs/science-catalog-ingestion.md#distance-override-validation-against-vaidman-et-al-2025)
 for the project-level rationale.

@@ -159,13 +159,13 @@ or magnitude gate here. Both moved when the tier landed, and both are pinned:
 
 - `velocityAboveEscape` **45 → 56**. Fourteen tier values exceed 550 km/s,
   most of them quality-`A` rows from one APOGEE-era compilation
-  ([Jönsson et al. 2020](/data/papers/index.md#jonsson2020)) plus τ Sco at 650 km/s — near-certainly upstream
+  ([Jönsson 2020](/data/papers/index.md#jonsson2020)) plus τ Sco at 650 km/s — near-certainly upstream
   fit artifacts on hot stars, but legitimately published and cited. Keeping
   them visible in the ratchet is exactly its stated job.
 - `rvRadialRejected` **1**, `velocityClamped` unmoved at **8**. One tier value
   exceeds the 1500 km/s ceiling: **EZ Aqr** (Gl 866A, 3.4 pc) at
   **6,824.7 km/s**, quality `D`, cited to
-  [Costa-Almeida et al. 2021](/data/papers/index.md#costaalmeida2021).
+  [Costa-Almeida 2021](/data/papers/index.md#costaalmeida2021).
 
 **A radial term past the ceiling is rejected on its own** —
 `radialTermExceedsCeiling`, applied before the velocity is assembled, so a

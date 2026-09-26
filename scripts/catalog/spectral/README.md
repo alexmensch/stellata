@@ -95,7 +95,7 @@ priority chain:
    count rather than as noise inside a 280k total. Read the per-tier figures
    there rather than restating them here, which is how the ones this section
    used to carry went stale.
-5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey et al. 2023](/data/papers/index.md#creevey2023); a column on
+5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.

@@ -60,7 +60,7 @@ describe('getPlanetSystem', () => {
 });
 
 describe('solPositionsAt moon composition', () => {
-  // A fixed epoch inside the Standish (/data/papers/index.md#standish1992)
+  // A fixed epoch inside the Standish 1992 (/data/papers/index.md#standish1992)
   // window; the concrete instant is irrelevant — the assertions are
   // frame-invariant distance bounds.
   const T_UNIX = 1_700_000_000;
@@ -192,7 +192,7 @@ describe('SOL_PLANETS data', () => {
   it('every Mallama-published planet carries the matching phase coefficients', () => {
     // Mallama 2017 (/data/papers/index.md#mallama2017) publishes phase-angle
     // polynomials for Mercury, Venus, Mars and Jupiter and a table for Earth;
-    // Saturn's globe curve is Mallama & Hilton 2018
+    // Saturn's globe curve is Mallama 2018
     // (/data/papers/index.md#mallamahilton2018) Eq. 12. Uranus,
     // Neptune and Pluto have no published phase polynomial — Uranus and Neptune
     // because their max α from Earth is "negligible" so the paper models
@@ -366,7 +366,7 @@ describe('atmosphere shells', () => {
 
   it('every Rayleigh row keeps the 1/λ⁴ blue-to-red shape', () => {
     // (650/450)⁴ = 4.35; dispersion of the refractive index steepens the real
-    // ratio slightly (Earth's Bodhaine (/data/papers/index.md#bodhaine1999)
+    // ratio slightly (Earth's Bodhaine 1999 (/data/papers/index.md#bodhaine1999)
     // value is 4.50).
     for (const name of ['Venus', 'Earth', 'Mars', 'Titan']) {
       const [r, , b] = atmoOf(name).rayleighCoeff;
@@ -385,8 +385,8 @@ describe('atmosphere shells', () => {
   });
 
   it('Mars aerosol absorption encodes the measured dust single-scattering albedo', () => {
-    // τ_a = τ_Mie·(1/ω̃ − 1) with ω̃ ≈ [0.97, 0.90, 0.75] (Wolff et al.
-    // 2009, /data/papers/index.md#wolff2009).
+    // τ_a = τ_Mie·(1/ω̃ − 1) with ω̃ ≈ [0.97, 0.90, 0.75] (Wolff 2009,
+    // /data/papers/index.md#wolff2009).
     const mars = atmoOf('Mars');
     const omega = mars.absorbCoeff.map((a) => mars.mieCoeff / (mars.mieCoeff + a));
     expect(omega[0]).toBeCloseTo(0.97, 2);

@@ -1452,7 +1452,7 @@ describe('catalog-pure / apparentToAbsoluteMagnitude', () => {
 });
 
 describe('catalog-pure / applyBailerJonesOverride', () => {
-  // Tier-A fixtures: real pre-override + Bailer-Jones et al. 2021
+  // Tier-A fixtures: real pre-override + Bailer-Jones 2021
   // (/data/papers/index.md#bailerjones2021) DR3 values for the
   // four catastrophic parallax-inversion supergiants and a
   // well-measured F-dwarf control. Numbers pin the override outcome:

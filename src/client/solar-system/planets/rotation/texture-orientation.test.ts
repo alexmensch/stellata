@@ -57,7 +57,7 @@ function rotationFor(body: TruthRow['body']): RotationElements {
 }
 
 /** Body→Earth unit direction (ICRS) and the body's distance (pc) through the
- *  production chain: Standish (/data/papers/index.md#standish1992) heliocentric
+ *  production chain: Standish 1992 (/data/papers/index.md#standish1992) heliocentric
  *  ecliptic (+ moon offset), subtract Earth, ecliptic→ICRS quaternion. */
 function bodyToEarthIcrs(
   body: TruthRow['body'],

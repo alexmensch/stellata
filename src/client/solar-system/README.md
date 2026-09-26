@@ -27,7 +27,7 @@ Rendering, ephemerides, and the clock live in the subfolders.
 - `time/` — simulation time `t`, the `VirtualClock` behind
   `Stellata.getT()`, the UT readout, and the transport scrubber widget.
 - `ephemerides/` — planet + moon position resolvers (frozen JPL Horizons
-  element tables across 1900–2100, the [Standish](/data/papers/index.md#standish1992) series outside them),
+  element tables across 1900–2100, the [Standish 1992](/data/papers/index.md#standish1992) series outside them),
   orbit-descriptor breadcrumbs, the orbit-ring layer, and the frozen
   Horizons truth corpora.
 - `heliopause/` — Sol's heliopause boundary shell.
@@ -215,7 +215,7 @@ its α=0 geometric albedo, so `c0 = 0` throughout — a ring system's share
 rides its own joint α/ring-tilt law
 ([Ring photometry](planets/rings/README.md#ring-photometry--the-unresolved-magnitude)), never `c0`. [Mallama 2017](/data/papers/index.md#mallama2017) gives
 polynomials for Mercury, Venus, Mars and Jupiter and a table for Earth;
-Saturn's globe is [Mallama & Hilton 2018](/data/papers/index.md#mallamahilton2018) Eq. 12. Earth's Moon takes the
+Saturn's globe is [Mallama 2018](/data/papers/index.md#mallamahilton2018) Eq. 12. Earth's Moon takes the
 classic lunar phase law in the same polynomial form (`MOON_PHASE`, the
 only moon with a curve measured across the phases a camera can occupy).
 Uranus, Neptune, Pluto,

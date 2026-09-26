@@ -1,12 +1,12 @@
 # Planet osculating-element tables
 
-Heliocentric osculating elements for the nine [Standish](/data/papers/index.md#standish1992) bodies across
+Heliocentric osculating elements for the nine [Standish 1992](/data/papers/index.md#standish1992) bodies across
 **1900–2100**, sampled on a uniform grid. One JSON per planet, committed
 plain text (~1.5 MB total, no LFS).
 
 Consumed at runtime by `src/client/solar-system/ephemerides/`, which
 interpolates the six elements and solves Kepler from them; outside the window
-it falls back to the inlined [Standish](/data/papers/index.md#standish1992) series.
+it falls back to the inlined [Standish 1992](/data/papers/index.md#standish1992) series.
 `scripts/ephemerides/sync-ephemerides.ts` mirrors this folder to
 `public/ephemerides/` on every `pnpm run dev` / `build`; the allowlist
 (`sync-ephemerides-pure.ts`) keeps this README out of the deployed bundle.
@@ -40,7 +40,7 @@ frozen truth rows for regression tests. No overlap with this folder.
   (Sun centre), `REF_PLANE=ECLIPTIC`, `OUT_UNITS=AU-D`, `CSV_FORMAT=YES`,
   spanning JD 2415020.0 (Julian year 1900.0) to JD 2488070.0 (year 2100.0)
   in fixed steps.
-- Horizons targets are the **barycentres** `1`…`9`: [Standish](/data/papers/index.md#standish1992)'s series
+- Horizons targets are the **barycentres** `1`…`9`: [Standish 1992](/data/papers/index.md#standish1992)'s series
   was fit to JPL's DE ephemerides, whose outer-planet entries are system
   barycentres (this project's reading — the memo itself says only
   "heliocentric"), `earth` must be the Earth/Moon barycentre that
@@ -133,6 +133,6 @@ off the model:**
   a statement about the two datasets' agreement with reality, not about the
   ephemeris.
 - **Outside the window nothing changed.** The clock reaches 3000 BC – 3000 AD,
-  and out there the [Standish](/data/papers/index.md#standish1992) series is what runs, at its published budget.
+  and out there the [Standish 1992](/data/papers/index.md#standish1992) series is what runs, at its published budget.
   The runtime blends across one Julian year at each edge so scrubbing over
   1900 or 2100 does not pop.

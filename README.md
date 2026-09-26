@@ -43,7 +43,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 - **Molecular clouds have real shape.** The local star-forming clouds
   (Taurus, Orion, Ophiuchus and their neighbours) render as dust
-  silhouettes traced directly from the [Edenhofer](/data/papers/index.md#edenhofer2024) field, and dim the
+  silhouettes traced directly from the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) field, and dim the
   diffuse background behind them.
 
 - **Variable stars pulsate.** ~2,800 stars cross-matched with GCVS
@@ -55,7 +55,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 - **The solar system at live planetary positions.** Around Sol, the
   eight planets and Pluto render at their current heliocentric
   positions — frozen JPL Horizons element tables across 1900–2100
-  (~1,000 km) and the [Standish](/data/papers/index.md#standish1992) series out to the 3000 BC – 3000 AD
+  (~1,000 km) and the [Standish 1992](/data/papers/index.md#standish1992) series out to the 3000 BC – 3000 AD
   clamp — with their major moons, atmospheres, and axial
   rotation, inside the asymmetric heliopause shell measured by Voyager
   and IBEX. A small clock in the corner shows the UTC time the
@@ -215,7 +215,7 @@ The Milky Way is volumetric, not a skybox. These viewpoints prove it:
 - **Fly toward the galactic centre.** As you cross into the bulge,
   the surface brightness of the volumetric band ramps. The dark
   dust lane along the midplane (a simplified exponential dust disc,
-  after [Drimmel–Spergel](/data/papers/index.md#drimmel2001), baked into the band's own raymarch) reads correctly as
+  after [Drimmel 2001](/data/papers/index.md#drimmel2001), baked into the band's own raymarch) reads correctly as
   you orient along the disc plane.
 
 ### Local Group destinations
@@ -269,7 +269,7 @@ navigation (orbit, zoom, pan) works the same everywhere.
   but do not pulse. Variables without a cross-reference, or whose GCVS
   entry lacks a parseable period, render as non-variable.
 - **Emission and reflection nebulae are not modelled yet.** The local
-  molecular clouds ([Zucker 2020](/data/papers/index.md#zucker2020)/[2021](/data/papers/index.md#zucker2021)) now render as
+  molecular clouds ([Zucker 2020](/data/papers/index.md#zucker2020)/[Zucker 2021](/data/papers/index.md#zucker2021)) now render as
   traced dust silhouettes, but catalogued H II regions, planetary nebulae, and
   reflection nebulae are not yet drawn as discrete objects.
 
@@ -313,43 +313,43 @@ Data sources retain their own licences:
   ESA / Gaia / DPAC, [Gaia archive](https://gea.esac.esa.int/archive/),
   CC-BY-4.0 (Gaia data-release policy).
 - **Tycho-2** (mean positions at J2000.0, per-star mean observation
-  epochs, proper motions, `BT`/`VT` photometry) — [Høg et al. 2000](/data/papers/index.md#hog2000), via
+  epochs, proper motions, `BT`/`VT` photometry) — [Høg 2000](/data/papers/index.md#hog2000), via
   [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/259);
   cite the paper.
 - **CNS5** (the fifth catalogue of nearby stars — `GJ` designations,
   astrometry and parallaxes inside 25 pc) —
-  [Golovin et al. 2023](/data/papers/index.md#golovin2023), via CDS/VizieR (`J/A+A/670/A19`).
+  [Golovin 2023](/data/papers/index.md#golovin2023), via CDS/VizieR (`J/A+A/670/A19`).
 - **Gliese & Jahreiss third catalogue of nearby stars** (`V/70A`,
-  [Gliese & Jahreiss 1991](/data/papers/index.md#gliese1991)) —
+  [Gliese 1991](/data/papers/index.md#gliese1991)) —
   printed Johnson `V`, `B−V`, spectral types and ground-based
   trigonometric parallaxes for the `GJ` cohort no Gaia release
   reaches. Via [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/70A).
 - **Classic designation cross indexes** — Tycho-2 `HD`
-  identifications (`IV/25`, [Fabricius et al. 2002](/data/papers/index.md#fabricius2002a)), the
+  identifications (`IV/25`, [Fabricius 2002a](/data/papers/index.md#fabricius2002a)), the
   Bayer / Flamsteed cross index (`IV/27A`, [Kostjuk 2002](/data/papers/index.md#kostjuk2002)), and
   the Bright Star Catalogue 5th revised (`V/50`,
-  [Hoffleit & Warren 1991](/data/papers/index.md#hoffleit1991)). Via
+  [Hoffleit 1991](/data/papers/index.md#hoffleit1991)). Via
   CDS/VizieR; these supply every classical designation the catalogue
   carries.
 - **IAU Working Group on Star Names** (approved proper names) —
   [IAU WGSN](https://www.pas.rochester.edu/~emamajek/WGSN/),
   the naming authority for every star that displays a proper name.
-- [**Riello et al. 2021**](/data/papers/index.md#riello2021) (Gaia EDR3 photometric relations —
+- [**Riello 2021**](/data/papers/index.md#riello2021) (Gaia EDR3 photometric relations —
   the `G` → Johnson `V` transform every star's brightness is derived
   through) — cite the paper.
-- [**Bailer-Jones et al. 2021**](/data/papers/index.md#bailerjones2021) (Gaia DR3 geometric
+- [**Bailer-Jones 2021**](/data/papers/index.md#bailerjones2021) (Gaia DR3 geometric
   distances) — via
   [CDS/VizieR](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/352); cite
   the paper.
 - **SIMBAD** (cross-identifications + validation sample) — CDS
   Strasbourg, [simbad.cds.unistra.fr](https://simbad.cds.unistra.fr/simbad/);
   publicly accessible per CDS policy (academic / non-commercial), cite
-  [Wenger et al. 2000](/data/papers/index.md#wenger2000).
-- **GCVS 5.1** (variable stars) — [Samus et al. 2017](/data/papers/index.md#samus2017) at the Sternberg
+  [Wenger 2000](/data/papers/index.md#wenger2000).
+- **GCVS 5.1** (variable stars) — [Samus 2017](/data/papers/index.md#samus2017) at the Sternberg
   Astronomical Institute, [http://www.sai.msu.su/gcvs/gcvs/](http://www.sai.msu.su/gcvs/gcvs/).
   Free for research and educational use with attribution.
 - **Hipparcos Main Catalogue + CCDM** ([ESA 1997](/data/papers/index.md#esa1997);
-  [Dommanget & Nys 1994](/data/papers/index.md#dommanget1994)) — printed Johnson `V` for the stars Gaia's detectors
+  [Dommanget 1994](/data/papers/index.md#dommanget1994)) — printed Johnson `V` for the stars Gaia's detectors
   saturate on, plus the double-star cross-match. Public domain via
   [CDS](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239).
 - **Washington Double Star Catalog + ORB6** (double-star geometry and
@@ -362,13 +362,13 @@ Data sources retain their own licences:
 - **Stellarium modern sky culture** (constellation stick figures) —
   [Stellarium](https://github.com/Stellarium/stellarium/tree/master/skycultures/modern),
   MIT-licensed (line data; illustrations not used).
-- [**Edenhofer et al. 2024**](/data/papers/index.md#edenhofer2024) 3D dust map — data on [Zenodo](https://doi.org/10.5281/zenodo.8187943), CC-BY-4.0. The
+- [**Edenhofer 2024**](/data/papers/index.md#edenhofer2024) 3D dust map — data on [Zenodo](https://doi.org/10.5281/zenodo.8187943), CC-BY-4.0. The
   resampled voxel grid in `data/dust/` is a derivative and carries
   the same licence.
 - [**Pace 2025**](/data/papers/index.md#pace2025) Local Volume Database (dwarf galaxies) — CC0. The
   `dwarf_all` snapshot at `data/local-group/lvdb-snapshot.csv` is a
   frozen copy of the upstream table.
-- [**Zucker 2020**](/data/papers/index.md#zucker2020) + [**2021**](/data/papers/index.md#zucker2021) (molecular cloud
+- [**Zucker 2020**](/data/papers/index.md#zucker2020) + [**Zucker 2021**](/data/papers/index.md#zucker2021) (molecular cloud
   distances and bounding boxes).
 
 See [SCIENCE.md](./SCIENCE.md) and

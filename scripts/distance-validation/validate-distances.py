@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Distance validation harness — compares the catalogue's Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
-override against the independent Bayesian distances of Vaidman et al. 2025 (/data/papers/index.md#vaidman2025)
+override against the independent Bayesian distances of Vaidman 2025 (/data/papers/index.md#vaidman2025)
 for 132 Galactic BA-supergiants. See scripts/distance-validation/README.md."""
 
 from __future__ import annotations

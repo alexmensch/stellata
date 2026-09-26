@@ -41,7 +41,7 @@ export const DISC_HALF_THICKNESS_PC = 1_800;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
 
-/** Thick disc, Bland-Hawthorn & Gerhard 2016
+/** Thick disc, Bland-Hawthorn 2016
  *  (/data/papers/index.md#blandhawthorn2016) Sect. 5.1: z_T = 900 ± 180 pc
  *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. The shared
  *  radial scale length is the one departure from the literature —
@@ -73,7 +73,7 @@ export const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
  *  solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs
  *  to 1.8). Two independent constraints meet here: at the 125 pc scale
  *  height it also puts the perpendicular column to the pole at
- *  A_V = 0.125: inside the older A_V ≈ 0.06–0.15 polar range SFD
+ *  A_V = 0.125: inside the older A_V ≈ 0.06–0.15 polar range that Schlegel 1998
  *  (/data/papers/index.md#schlegel1998) review, 2.7× their own polar
  *  measurement (E(B−V) = 0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05). See
  *  README.md#dust--the-analytic-tier-and-what-composes-with-it. */

@@ -995,7 +995,7 @@ const ANCHOR_DIM_MIN_DELTA_MAG = 0.05;
 // near-degenerate cases (Sirius, Δmag≈10: hypotheses differ by ~10⁻⁴ mag)
 // must not flip pinned values on float noise.
 //
-// A FLOOR, not the error budget. It sits at the Riello et al. 2021
+// A FLOOR, not the error budget. It sits at the Riello 2021
 // (/data/papers/index.md#riello2021) G−V scatter because a gaia_riello anchor's magnitude is only good to that σ, and no margin may
 // discriminate below the noise in its own input. Two things it does NOT model:
 // a printed-tier anchor never went through that relation (its σ is Hipparcos'

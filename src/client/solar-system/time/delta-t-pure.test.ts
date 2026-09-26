@@ -6,7 +6,7 @@ import {
   lunarSecularAccelerationCorrection,
 } from './delta-t-pure';
 
-// Every interval boundary in the Espenak (/data/papers/index.md#espenak2006)
+// Every interval boundary in the Espenak 2006 (/data/papers/index.md#espenak2006)
 // set. Each side is its own polynomial in its own re-centred argument, so a
 // mistyped coefficient or a mis-ordered branch shows here as a step and nowhere
 // else.
@@ -56,7 +56,7 @@ describe('deltaTSecondsAtYear', () => {
   });
 
   it('reads ~75 s today — Espenak & Meeus\'s 2005–2050 segment, extrapolated in 2006', () => {
-    // Espenak & Meeus 2006 (/data/papers/index.md#espenak2006) Sect. 2.7.
+    // Espenak 2006 (/data/papers/index.md#espenak2006) Sect. 2.7.
     // Earth did not slow as projected, so this sits ~6 s above the observed
     // ~69 s. Kept rather than spliced, to hold the function continuous; the
     // cost is bounded in README.md#timescales.

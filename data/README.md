@@ -17,21 +17,21 @@ this file carries only the cross-folder policies.
 | [`gaia/`](gaia/README.md) | Gaia DR3 — cross-walks, astrometry, NSS orbits, Apsis, and the `G ≤ 11` magnitude term of membership. |
 | [`hipparcos/`](hipparcos/README.md) | Hipparcos CCDM cross-reference + HIP2 reduction. |
 | [`tycho2/`](tycho2/README.md) | Tycho-2 mean positions + per-star mean epochs, PM, BT/VT — the first-order source for TYC-bearing rows Gaia misses. |
-| [`gliese/`](gliese/README.md) | [Gliese & Jahreiss](/data/papers/index.md#gliese1991) V/70A printed Johnson V + B−V, spectral type, parallax — the first-order source behind every `mag_src=GJ` cell. |
+| [`gliese/`](gliese/README.md) | [Gliese 1991](/data/papers/index.md#gliese1991) V/70A printed Johnson V + B−V, spectral type, parallax — the first-order source behind every `mag_src=GJ` cell. |
 | [`gcvs/`](gcvs/README.md) | GCVS 5.1 variable-star catalogue + cross-IDs. |
 | [`wds/`](wds/README.md) | Washington Double Star + ORB6 visual binary orbits. |
-| [`msc/`](msc/README.md) | Pulkovo MSC ([Tokovinin](/data/papers/index.md#tokovinin2018)) multiple-star hierarchies, orbits, per-component data. |
+| [`msc/`](msc/README.md) | Pulkovo MSC ([Tokovinin 2018](/data/papers/index.md#tokovinin2018)) multiple-star hierarchies, orbits, per-component data. |
 | [`simbad/`](simbad/README.md) | SIMBAD sample, per-source sp_type, bibcoded values, WDS↔Gaia cross-IDs. |
 | [`binaries/`](binaries/README.md) | Pipeline-derived `multiples.tsv` (output of `build-binaries.py`). |
 | [`distance-validation/`](distance-validation/README.md) | [Vaidman 2025](/data/papers/index.md#vaidman2025) BA-supergiant Bayesian distance reference set. |
 | [`stellarium/`](stellarium/README.md) | Stellarium modern sky culture (HIP-indexed constellation lines). |
 | [`local-group/`](local-group/README.md) | [Pace 2025](/data/papers/index.md#pace2025) LVDB dwarf snapshot + hand-curated structural overrides. |
-| [`molecular-clouds/`](molecular-clouds/README.md) | [Zucker 2020](/data/papers/index.md#zucker2020) / [2021](/data/papers/index.md#zucker2021) cloud distances + 3D bounding boxes. |
-| [`local-bubble/`](local-bubble/README.md) | [Pelgrims et al. 2020](/data/papers/index.md#pelgrims2020) Local Bubble inner-surface HEALPix map (dust-wall distance). |
+| [`molecular-clouds/`](molecular-clouds/README.md) | [Zucker 2020](/data/papers/index.md#zucker2020) / [Zucker 2021](/data/papers/index.md#zucker2021) cloud distances + 3D bounding boxes. |
+| [`local-bubble/`](local-bubble/README.md) | [Pelgrims 2020](/data/papers/index.md#pelgrims2020) Local Bubble inner-surface HEALPix map (dust-wall distance). |
 | [`dust/`](dust/README.md) | [Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust map (resampled voxel grid + particle field). |
-| [`bc03/`](bc03/README.md) | [Bruzual & Charlot 2003](/data/papers/index.md#bruzual2003) SSP colour / mass-to-light tables (Chabrier IMF). |
+| [`bc03/`](bc03/README.md) | [Bruzual 2003](/data/papers/index.md#bruzual2003) SSP colour / mass-to-light tables (Chabrier IMF). |
 | [`horizons/`](horizons/README.md) | JPL Horizons planet RA/Dec + deep-time vector truth sets for the ephemeris regression corpora, plus Earth's orientation across the model clock. |
-| [`eclipse-canon/`](eclipse-canon/README.md) | NASA GSFC Five Millennium Catalog rows ([solar](/data/papers/index.md#espenak2009), [lunar](/data/papers/index.md#espenak2009lunar)) — named solar / lunar eclipses, 1983 BC to 2928 AD, as an independent check that the model produces the event and not just the positions. |
+| [`eclipse-canon/`](eclipse-canon/README.md) | NASA GSFC Five Millennium Catalog rows ([Espenak 2009a](/data/papers/index.md#espenak2009), [Espenak 2009b](/data/papers/index.md#espenak2009lunar)) — named solar / lunar eclipses, 1983 BC to 2928 AD, as an independent check that the model produces the event and not just the positions. |
 | [`ephemerides/`](ephemerides/README.md) | JPL Horizons osculating-element tables for the nine planets across 1900–2100. |
 | [`probes/`](probes/README.md) | JPL Horizons heliocentric state vectors for the five Sun-escape deep-space probes. |
 | [`textures/`](textures/README.md) | Planet surface/cloud equirect maps + Saturn-ring radial profile (frozen sources + built artifacts). |

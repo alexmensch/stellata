@@ -51,7 +51,7 @@ slice's MAXREC off the same partition — [Gaia TAP](../README.md#gaia-tap-synch
 
 ## The deep population — a bounded leg plus a request leg
 
-[Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) and Apsis
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) and Apsis
 are scoped to every source the catalogue's RECORDS can reach, which takes two
 legs: that population has two definitions and neither contains the other.
 `pull_deep_population` is the one statement of the shape, and each script
@@ -75,7 +75,7 @@ it at 0.90.
   `gaiadr3.gaia_source`, where the bound lives; both are keyed on the indexed
   `source_id`, so the join costs about what the slice does. Why that beats an
   id list, and why
-  [Bailer-Jones et al. 2021](/data/papers/index.md#bailerjones2021) is pulled
+  [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is pulled
   from ESA rather than VizieR:
   [Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side).
 - The **request leg** is `gaia_catalog_source_id_request.tsv`, whose classic

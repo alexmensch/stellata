@@ -77,7 +77,7 @@ Constants baked into `milkyway.ts`; no runtime data loads.
 
 - **Disc**: `density0 × exp(-(R-R₀)/3000pc) × (exp(-|z|/300pc) +
   0.04·exp(-|z|/900pc))` — thin plus thick,
-  [Bland-Hawthorn & Gerhard 2016](/data/papers/index.md#blandhawthorn2016) Sect. 5.1 (z_T = 900 ± 180 pc carrying
+  [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016) Sect. 5.1 (z_T = 900 ± 180 pc carrying
   f_ρ = 4 ± 2 % of the local density). It is for the **external** view — edge-on from the LMC or a
   few hundred kpc out, a galaxy without one reads as a hard-edged lens —
   and is **not** a high-latitude fix: it brightens the pole.
@@ -92,7 +92,7 @@ Constants baked into `milkyway.ts`; no runtime data loads.
   envelope.
 - **Bulge**: `density0 × exp(-r'/1000pc)` where
   `r' = sqrt(R² + (z/q)²)` is the oblate-spheroid radius with q = 0.6.
-  Simple exponential rather than [McMillan](/data/papers/index.md#mcmillan)'s power-law-times-Gaussian
+  Simple exponential rather than [McMillan 2017](/data/papers/index.md#mcmillan)'s power-law-times-Gaussian
   — the latter produced too-tight a "ball" that read as point-source-
   like in iteration.
 
@@ -195,7 +195,7 @@ stars together, by construction.
 **The photometric calibration has its own folder and README**
 (`calibration/`): what `density0` is solved against, how the V-band light
 B/T is derived from a published mass ratio, how the two population colours
-are derived from a published integrated one, the two [Leinert](/data/papers/index.md#leinert1998) checks the
+are derived from a published integrated one, the two [Leinert 1998](/data/papers/index.md#leinert1998) checks the
 result is graded by, and the sightline table those produce.
 
 ## The brightest rendered sightline
@@ -295,12 +295,12 @@ optical-depth maths needs.
 ## Dust — the analytic tier, and what composes with it
 
 Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — a simplified
-exponential thin dust disc with its own parameters. [Drimmel & Spergel](/data/papers/index.md#drimmel2001)'s
+exponential thin dust disc with its own parameters. [Drimmel 2001](/data/papers/index.md#drimmel2001)'s
 dust disc has h_r = 2.26 kpc and a sech² vertical profile of 134 pc base
 scale height, flaring outward, with a central hole and arm components; the
 slab keeps none of those. Per step, opacity converts to per-channel optical
 depth via reddening multipliers `(0.76, 1.0, 1.35)`, approximating
-[CCM](/data/papers/index.md#cardelli1989) Table 3 at R_V = 3.1 (R 0.751, V 1.000, B 1.337) —
+[Cardelli 1989](/data/papers/index.md#cardelli1989) Table 3 at R_V = 3.1 (R 0.751, V 1.000, B 1.337) —
 red transmits most, blue extincts away — applied with Beer-Lambert
 running attenuation including a half-step self-shielding term.
 
@@ -315,11 +315,11 @@ solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs to
 1.8). Two independent constraints meet at that value: the 125 pc scale
 height ties the plane rate to the perpendicular column, and 1.0 mag/kpc
 puts the pole at A_V = 0.125 — inside the older A_V ≈ 0.06–0.15 polar range
-[SFD](/data/papers/index.md#schlegel1998) review, and 2.7× their own polar measurement (E(B−V) =
+[Schlegel 1998](/data/papers/index.md#schlegel1998) review, and 2.7× their own polar measurement (E(B−V) =
 0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05).
 
 **What this replaced was wrong by an order of magnitude and mis-cited** —
-0.0679 mag/kpc attributed to [SFD 1998](/data/papers/index.md#schlegel1998), a 2D E(B−V) map publishing no
+0.0679 mag/kpc attributed to [Schlegel 1998](/data/papers/index.md#schlegel1998), a 2D E(B−V) map publishing no
 per-kpc rate at all. That under-extinction, not the density profile, is
 why the plane read ~3 mag too bright against the poles.
 `setExtinctionStrength(x)` defaults to **1.0** and is a dev lever, not a
@@ -360,7 +360,7 @@ outside of pays anything, so sightlines that miss the bulge proxy
 (anticentre, NGP) are bit-identical. The GC sightline dims 0.013 mag,
 tapering to 0.011 mag by l = 30° (pinned).
 
-The [Edenhofer](/data/papers/index.md#edenhofer2024) voxel grid is **not sampled here yet**, but both the decision and
+The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) voxel grid is **not sampled here yet**, but both the decision and
 the mechanism are settled ([The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition)).
 The read comes from a **view-frustum froxel grid** — measured A_V column
 per (screen cell × log-distance slice), 13.0′ cells (one summation patch) × 32

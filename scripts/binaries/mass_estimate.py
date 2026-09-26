@@ -158,7 +158,7 @@ def parse_spectral_type(raw: str | None) -> ParsedSpect | None:
 # class index (0=O .. 6=M). Class 7 (C/S/WR) and 8 (unknown) fall back
 # to a single representative mass at the bottom.
 #
-# Main-sequence (V) anchors: Mamajek's online dwarf table
+# Main-sequence (V) anchors: the online dwarf table of Mamajek 2022
 # (/data/papers/index.md#mamajek2022), with the Cox high-mass O/B end
 # ramping to canonical zero-age MS values.
 _MS_MASS: tuple[tuple[float, ...], ...] = (
@@ -223,8 +223,8 @@ _I_MASS: tuple[tuple[float, ...], ...] = (
 )
 
 
-# Mean solar-neighbourhood WD mass (Kepler+ 2007 (/data/papers/index.md#kepler2007),
-# Kilic+ 2020 (/data/papers/index.md#kilic2020)). True
+# Mean solar-neighbourhood WD mass (Kepler 2007 (/data/papers/index.md#kepler2007),
+# Kilic 2020 (/data/papers/index.md#kilic2020)). True
 # range is 0.3 - 1.4; without a cooling-track model we cannot do
 # better from sp_type alone.
 WD_MASS_DEFAULT = 0.6

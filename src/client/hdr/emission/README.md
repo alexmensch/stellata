@@ -148,7 +148,7 @@ component is modelled and the other is solved:
 ```
 
 `OLD_SPHEROID_COLOUR_INDEX_BV` = **0.9574** supplies the spheroid term —
-[BC03](/data/papers/index.md#bruzual2003) Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
+[Bruzual 2003](/data/papers/index.md#bruzual2003) Chabrier SSP, Z = 0.02, 10 Gyr, the same `data/bc03/` row the band's
 Υ\*_V comes off. It is a *population* constant, not either layer's: the
 Galactic bulge, M31's bulge and the luminous early-type spheroids are the
 same population. It is **not** the metal-poor dwarf spheroids

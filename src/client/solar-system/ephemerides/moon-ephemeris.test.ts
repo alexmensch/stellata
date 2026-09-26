@@ -143,7 +143,7 @@ describe('moonOffsetEcliptic', () => {
   const KEPLER_MOONS = MOON_ELEMENTS.filter((m) => !m.useLunarTheory);
 
   it('keeps parent distance within [a(1−e), a(1+e)] across ±3000 yr', () => {
-    // 40 samples spanning the Standish (/data/papers/index.md#standish1992)
+    // 40 samples spanning the Standish 1992 (/data/papers/index.md#standish1992)
     // window for every moon.
     const tMin = julianEpochYearToT(-1000.0);
     const tMax = julianEpochYearToT(3000.0);

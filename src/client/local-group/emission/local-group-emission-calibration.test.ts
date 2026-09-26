@@ -217,7 +217,7 @@ function cameraInside(camAbs: Vec3, obj: BuildLgObject): boolean {
 }
 
 const VIEWPOINTS: Record<string, Vec3> = {
-  // Deep MW interior — the galactic centre (ICRS, McMillan
+  // Deep MW interior — the galactic centre (ICRS, McMillan 2017
   // (/data/papers/index.md#mcmillan) R0 ≈ 8.2 kpc).
   galacticCentre: [-58.9, 7237.9, -3846.9],
   sun: [0, 0, 0],
@@ -455,7 +455,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   }
 
   it("the disc's face-on central surface brightness satisfies Freeman's law", () => {
-    // Freeman (1970, /data/papers/index.md#freeman1970) μ₀(B) = 21.65 ± 0.30
+    // Freeman 1970 (/data/papers/index.md#freeman1970): μ₀(B) = 21.65 ± 0.30
     // for spiral discs. The model was never fitted to this — it falls out
     // of the solved flux plus the published R_d — so agreement is a real
     // check on the deprojection.
@@ -476,7 +476,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   it('structural inputs match the papers they are cited from', () => {
-    // Courteau et al. 2011 (/data/papers/index.md#courteau2011): R_d = 5.3 ± 0.5 kpc,
+    // Courteau 2011 (/data/papers/index.md#courteau2011): R_d = 5.3 ± 0.5 kpc,
     // R_e = 1.0 ± 0.2 kpc, n = 2.2 ± 0.3, at 785 ± 25 kpc.
     if (disc.family !== 'disc') throw new Error('expected the disc component');
     expect(disc.rdPc).toBe(5300);
@@ -489,8 +489,8 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   it('total magnitude sits between the as-observed and dereddened values', () => {
-    // Catalogue m_V = 3.44 is RC3 (/data/papers/index.md#devaucouleurs1991)
-    // as-observed; Tempel et al. 2011 (/data/papers/index.md#tempel2011)
+    // Catalogue m_V = 3.44 is RC3, de Vaucouleurs 1991 (/data/papers/index.md#devaucouleurs1991)
+    // as-observed; Tempel 2011 (/data/papers/index.md#tempel2011)
     // Table 2 gives 3.24 intrinsic. The layer calibrates to as-observed on
     // purpose (/docs/science-local-group.md#no-dust). Table 2 is already
     // corrected for Milky Way extinction and its visible row gives

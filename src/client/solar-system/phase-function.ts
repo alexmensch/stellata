@@ -3,7 +3,7 @@
 // See /docs/science-solar-system.md#planet-phase-functions.
 
 /** Empirical ΔV(α°) = c0 + c1·α + … + c7·α⁷ — Mallama 2017
- *  (/data/papers/index.md#mallama2017) for the planets that have a fit, Allen's
+ *  (/data/papers/index.md#mallama2017) for the planets that have a fit, Cox 2000
  *  (/data/papers/index.md#cox2000) lunar law for the Moon. Every curve
  *  describes the body's GLOBE and is anchored at its α=0 geometric albedo, so
  *  c0 = 0 throughout; a ring system's contribution rides the separate joint
@@ -208,7 +208,7 @@ export function phaseRatioToLambert(
 }
 
 // Per-body coefficients: Mallama 2017 (/data/papers/index.md#mallama2017) for
-// the planets it fits, Allen's (/data/papers/index.md#cox2000) lunar law for
+// the planets it fits, Cox 2000 (/data/papers/index.md#cox2000) lunar law for
 // the Moon. Each alphaMaxDeg is the upper bound observed in the cited data;
 // outside that range the renderer falls back to anchor-scaled Lambert.
 
@@ -287,9 +287,9 @@ export const JUPITER_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 12,
 };
 
-/** Saturn's GLOBE — Mallama & Hilton 2018
+/** Saturn's GLOBE — Mallama 2018
  *  (/data/papers/index.md#mallamahilton2018) Eq. 12, the 4th-order fit to
- *  Dyudina's (/data/papers/index.md#dyudina) Pioneer-derived scattering model,
+ *  Dyudina 2005's (/data/papers/index.md#dyudina) Pioneer-derived scattering model,
  *  valid 6°–150° and carried down to 0° where it tracks the α < 6.5° globe fit
  *  (Eq. 11) inside 0.01 mag. Eq. 12's own +0.01 zero-point splice is dropped:
  *  φ(0) = 1 is what anchors the curve on the geometric albedo, the same
@@ -307,8 +307,8 @@ export const SATURN_PHASE: PhaseCoefficients = {
   alphaMaxDeg: 150,
 };
 
-/** Earth's Moon — Allen's (/data/papers/index.md#cox2000) lunar phase law, not
- *  Mallama (/data/papers/index.md#mallama2017) (that paper fits planets only):
+/** Earth's Moon — Cox 2000 (/data/papers/index.md#cox2000) lunar phase law, not
+ *  Mallama 2017 (/data/papers/index.md#mallama2017) (that paper fits planets only):
  *  ΔV(α°) = 0.026·α + 4e-9·α⁴, its fitted range ending at 150°. Derivation from
  *  Allen's radian form, the full-to-quarter check, the clamp arithmetic, and
  *  why no other moon gets a curve:
