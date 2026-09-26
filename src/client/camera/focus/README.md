@@ -372,8 +372,8 @@ silently disengages the pin. Residual sources that have bitten this:
 3. **Unfocus from close approach.** `setFocus(null)` leaves
    `worldOffset` put (no `recenterOrigin(0,0,0)`).
 4. **Orbital drift of a binary focal.** The focal star moves along its
-   orbit each frame; a static target would fall off it. The focal-frame
-   ride ([`binaries/README.md`](../../binaries/README.md)) translates `controls.target` by the star's
+   orbit each frame; a static target would fall off it. The binary focal
+   ride ([Binary focal ride](focal-ride/README.md#binary-focal-ride-no-rebase)) translates `controls.target` by the star's
    per-frame perturbation so target stays on the star.
 5. **Space-motion re-advance under time scrubbing.** A scrubbed clock
    re-runs the epoch-advance pass, moving the focal star's baseline
@@ -391,6 +391,9 @@ silently disengages the pin. Residual sources that have bitten this:
 float64 orbital perturbation) and shift `camera.position` by the same
 delta (preserving the cam-to-target offset). Eliminates the residuals
 for every caller of `setFocus`; the per-frame ride then maintains #4.
+The perturbation arrives as a `Late` (binaries land in wave 2): a focus
+taken while it is pending snaps onto the bare baseline, and the ride's
+seed frame — the first after binaries land — re-snaps it onto the live slot.
 
 Limitations: pan moves target away → pin disengages (intentional;
 post-pan the focused star isn't at view centre). Doesn't fire in

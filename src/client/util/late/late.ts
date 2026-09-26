@@ -54,3 +54,17 @@ export function lateFromPromise<T>(promise: Promise<T>): Late<T> {
   promise.then((value) => cell.land(value), () => cell.conclude());
   return cell;
 }
+
+/** `source` seen through `f`, which runs once per settle, not per read. */
+export function mapLate<T, U>(source: Late<T>, f: (value: T) => U): Late<U> {
+  let current: LateState<U> = PENDING;
+  // Registered before any reader can subscribe, so `current` is already the
+  // new projection when a reader's observer runs.
+  source.observe((s) => {
+    current = s.status === 'ready' ? { status: 'ready', value: f(s.value) } : ABSENT;
+  });
+  return {
+    state: () => current,
+    observe: (fn) => source.observe(() => fn(current as SettledState<U>)),
+  };
+}

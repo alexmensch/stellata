@@ -6,11 +6,14 @@ import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
 import {
   FocusController,
+  type FocalPerturbationInto,
   type FocusControllerDeps,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
   PIN_ENGAGE_THRESHOLD_SQ_PC,
 } from './focus-controller';
+import { LateCell } from '../../util/late/late';
+import { lateReady } from '../../util/late/late-fixture';
 import { makeAimStub, makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
 import type { ObserveTransition } from '../observe/observe-transition';
 import type { WarpController } from '../warp/warp-controller';
@@ -174,6 +177,7 @@ interface Harness {
 function makeHarness(opts: {
   mode?: CameraMode;
   catalog?: Catalog;
+  perturbationPending?: boolean;
 } = {}): Harness {
   const catalog = opts.catalog ?? makeCatalog();
   const camera = new THREE.PerspectiveCamera(60, 1, 1e-10, 100_000);
@@ -348,7 +352,9 @@ function makeHarness(opts: {
     getWarp: () => warp,
     getObserve: () => observe,
     getFocusables: () => focusables,
-    focalPerturbationInto: (idx, out) => pert.fn(idx, out),
+    focalPerturbation: opts.perturbationPending
+      ? new LateCell<FocalPerturbationInto>()
+      : lateReady<FocalPerturbationInto>((idx, out) => pert.fn(idx, out)),
   };
 
   const focus = new FocusController(deps);
@@ -614,6 +620,13 @@ describe('FocusController — live focal position (binary members)', () => {
     // Camera-to-target vector preserved — the snap doesn't move the view.
     const eyeAfter = h.camera.position.clone().sub(h.controls.target);
     expect(eyeAfter.distanceTo(eyeBefore)).toBeLessThan(1e-9);
+  });
+
+  it('setFocus before binaries land snaps onto the bare baseline', () => {
+    const h = makeHarness({ perturbationPending: true });
+    h.pert.fn = (_idx, out) => { out.set(1e-4, 0, 0); return true; };
+    h.focus.setFocus(1);
+    expect(h.controls.target.toArray()).toEqual([0, 0, 0]);
   });
 
   it('isPinEngaged engages at a non-origin target that rides the perturbation', () => {

@@ -67,10 +67,11 @@ attribute writers here.
   through the single injected `StarModuleRuntime`. `photometry()` is
   the one leg a *non*-star module reads, via
   `KindContext.starPhotometry`.
-- `star-source-attributes.ts` — the four per-star buffers the shell
-  rewrites (`iPosition`, `iCompositeSuppress`, `iEclipseDim`,
-  `iSuppressPulsation`), wrapped as `BufferAttribute`s over the shell's
-  own arrays. Nothing instances them: they exist for the version and
+- `star-source-attributes.ts` — the four per-star buffers written outside
+  the star layer (`iPosition`, `iCompositeSuppress`, `iEclipseDim`,
+  `iSuppressPulsation`), wrapped as `BufferAttribute`s over their writers'
+  arrays — the two binary buffers are `BinariesAttachment`'s
+  (`../binaries/`). Nothing instances them: they exist for the version and
   dirty ranges `util/attribute-upload` flags and
   `../webgpu/star/star-tables.ts` forwards.
 - `star-blend.ts` (+ test) — `applyDiscBlendDefaults`,
@@ -314,8 +315,8 @@ overlap orders geometrically in the local depth pass instead
 solve, since it is the one per-pass term that could make the three
 compilations disagree ([Star rendering](#star-rendering-instanced-quads-three-passes)). Exactly 0 means totality: the glow quad
 collapses via the off-screen-sentinel pattern instead of taking a
-floored log. Integration shell initialises the buffer to 1.0 at
-allocation and on every re-attach, so the shader's
+floored log. `BinariesAttachment` (`../binaries/`) initialises the buffer
+to 1.0 at allocation and on every re-attach, so the shader's
 `iEclipseDim < 1.0` gate fires only on slots the field holds below 1.
 
 `iSuppressPulsation` (float, per-instance) gates the GCVS-amplitude

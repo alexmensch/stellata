@@ -9,13 +9,16 @@ star catalog records.
 ## Subfolders
 
 - `eclipse/` — the per-frame geometric-occlusion dim on a binary's back
-  component. Depends one-directionally on the loader and relation cache
-  here; nothing in this folder imports it back.
+  component. Depends on the loader and relation cache here; the one file
+  here that imports it back is `binaries-attachment.ts`, which constructs it.
 - `orbit-paths/` — `BinaryOrbitPathLayer`, the drawn two-ellipse orbital
-  paths of the focused system. Same one-directional shape as `eclipse/`.
+  paths of the focused system. Same shape as `eclipse/`.
 
 ## Files
 
+- `binaries-attachment.ts` (+ test) — `BinariesAttachment`, the shell's
+  `binaries` namespace: everything that exists only once a table is
+  attached, from attach to dispose ([The attachment](#the-attachment)).
 - `binaries-loader.ts` — parses the v1 `BIN1` format ([Format contract](#format-contract))
   into a `BinariesData` struct: per-pair Kepler elements + `sep_arcsec` /
   `pa_deg` for the static-placement fallback, plus the index maps
@@ -71,6 +74,33 @@ star catalog records.
 `ECLIPSE_DIM_TAU_S` lives in `binary-tuning.ts` rather than `eclipse/`
 because the tuning module is the one place every runtime constant this
 layer reads is pinned by tests.
+
+## The attachment
+
+`binaries.bin` lands in wave 2, after the whole catalogue
+([Boot in two waves](../README.md#boot-in-two-waves)), so the orbit walk, the eclipse
+photometry and the table they share arrive long after their readers exist.
+`BinariesAttachment` holds all three in **one** `Late` cell and hands each
+part out as a projection of it (`mapLate`, [Late values](../util/late/README.md)):
+
+- `data` — the table. The star module, the multi-star system membership, ORB
+  and the star local cluster read it; `absent` when the artifact is missing.
+- `focalPerturbation` — the orbit walk's `focalPerturbationInto`, which the
+  focus controller reads to place a focused member on its live orbit.
+- `rate` — the binaries' cadence report, the faster of the walk and the
+  photometry; still until attached. Every layer anchored on a binary member
+  declares it ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)).
+
+It also owns the two per-star buffers those fields write — composite-suppress
+(0) and eclipse dim (1, and reset to 1 on every re-attach) — which the star
+pipeline wraps as attributes through `sourceArrays()`, and the orbit-path
+layer, whose system rebuilds on every focus change and on every settle.
+
+**The frame order is the entry's**: walk, then the focal ride (the shell's
+`rideFocal`, handed the walk's perturbation source), then photometry, whose
+line of sight reads the camera the ride moved, then the paths. The scene
+registry places the entry after every moving-body field and before the
+frame's last camera write ([How the shell uses it](../scene/README.md#how-the-shell-uses-it)).
 
 ## Format contract
 
@@ -230,64 +260,11 @@ lands, the ~950 divergent-velocity Tier-3 wide pairs shear up to tens of
 arcminutes at the scrub-range extremes ([Current-epoch star](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)
 positions).
 
-### Focal-frame ride (no rebase)
+### Focal-frame ride
 
-The walk applies the barycentric split in EVERY regime — there is no
-focal rebase. Focusing a pair member writes byte-identical positions to
-being unfocused, so focus→unfocus is a pure state change with no
-position discontinuity. Instead of rebasing the focal to the local
-origin to match the disc shader's `uPinFocusToCenter`, the **camera
-rides the focal star's perturbed position**: the integration shell
-(`stellata.ts`, `applyFocalFrameRide`) translates `camera.position` +
-`controls.target` (and any in-flight camera-transition pose caches) by
-the focal's per-frame orbital drift, so `controls.target` stays glued to
-the star and `lookAt(target) == star` keeps the pin substitution valid.
-
-Both rides reach the camera through one `applyRideDelta` helper, which
-also hands the delta to the gate and the cadence
-([The focal ride](../render-gate/README.md#the-focal-ride)).
-
-`focalPerturbationInto(focalIdx, t, out)` supplies that drift in
-**float64**: it replays the focal's slot-chain ([Walk-active LOD](#walk-active-lod)) in
-double precision and returns the focal's total displacement from its
-catalog baseline — matching the walk's float32-written slot within the
-position quantum, continuous in `t`. `setFocus` reads it to snap
-`controls.target` onto the star's live position; a per-frame delta then
-drives the ride. On the frame the focal changes, the ride re-snaps
-`controls.target` onto the star's **live `_localPositions` slot** rather
-than trusting that focus-entry snap — under fast scrub sim-time advances
-between the focus event and the next frame, so the event-time sample goes
-stale and would leave the star a fixed offset off-centre. That re-snap
-measures from the CAMERA in observe mode: there `controls.target` is the
-look-direction pin one parsec ahead of the camera (not on the star), so
-re-snapping against it would drag the star-parked camera a parsec off the
-focal, while the camera is the thing observe parks on the star. Measuring
-from the camera also repairs a park taken on a **cold load**, where observe
-parked before this field attached and the sample was the bare baseline with
-no orbital displacement; the steady leg only tracks CHANGES, so nothing
-later repairs that offset and the seed frame is the one chance. Left
-uncorrected it disengages the pin on the next observe→navigate exit. The
-pure step math is `focal-ride-pure.ts:focalRideStep`. CPU consumers (focus ring,
-distance vector, HUD shafts, hover picker) read the perturbed
-`_localPositions` and project through the same `lookAt(target)` camera,
-so they land on the disc without any rebase. The ride is skipped during
-warp (the warp owns the camera and tracks the live buffer itself).
-
-**Origin-follow (drift recentre).** The ride translates the camera to
-follow the focal, so under fast scrub a far-orbiting focal (a planet
-across its orbit; a wide binary) drags the camera tens of AU from the
-fixed focus-time origin — reviving the float32 modelview cancellation
-the floating origin exists to prevent (a growing wobble on the focal
-body). The focal anchor policy
-(`../camera/focus/focal-ride/focal-anchor-policy.ts`, applied by
-`FloatingOrigin.tick()` each frame) recentres the origin back onto the
-look target once camera-from-origin exceeds
-`FOCAL_ORIGIN_DRIFT_RATIO × eye distance` (`focal-ride-pure.ts`),
-restoring camera-from-origin ≈ eye distance. It is kind-agnostic —
-keyed on camera geometry, not the focus kind — so every hard focus
-benefits with no per-kind code. The shared origin is the one precision
-lever a per-shader pin (`uPinFocusToCenter`) can't generalise; that pin
-still handles the separate close-approach-at-origin case ([Pin-to-center](../camera/focus/README.md#pin-to-center-upinfocustocenter)).
+The walk never rebases a focused member onto the origin; the camera rides
+its perturbed position instead, reading `focalPerturbationInto` below
+([Binary focal ride](../camera/focus/focal-ride/README.md#binary-focal-ride-no-rebase)).
 
 ## Walk-active LOD
 
@@ -360,8 +337,8 @@ with identical inputs skips the walk itself. It saves the CPU pass only;
 what the frame uploads is decided separately ([Partial re-upload](#partial-re-upload)).
 Focal-chain relations are always Kepler-active (they bypass the gates
 above), so a focused orbit never skips. `recenter()` and
-`markBaselinesDirty()` — the latter called by the shell whenever it
-rewrites `localPositions` wholesale (epoch re-advance, origin recentre)
+`markBaselinesDirty()` — the latter reached through the attachment whenever
+the star frame rewrites `localPositions` wholesale (epoch re-advance, origin recentre)
 — force the next walk, so suppressed secondaries get their `baseDiffPc`
 placement re-applied on top of the fresh baselines.
 

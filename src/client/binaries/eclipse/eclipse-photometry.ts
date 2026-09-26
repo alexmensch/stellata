@@ -45,7 +45,7 @@ export interface EclipsePhotometryFieldOptions {
   /** Promoted to parsecs through `R_SUN_PC` at cache build. */
   physicalRadiusSolar: Float32Array;
   /** Per-instance multiplicative dim factor on the back component's flux.
-   *  Length = catalog.count. Initialised to 1.0 by the integration shell
+   *  Length = catalog.count. Initialised to 1.0 by `BinariesAttachment`
    *  at allocation and on every re-attach. */
   eclipseDimBuffer: Float32Array;
   /** Three.js attribute carrier, flushed only on frames that write, and

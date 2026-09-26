@@ -6,7 +6,7 @@ import ts from 'typescript';
 const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
-  'adaptation', 'aim', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
+  'adaptation', 'aim', 'binaries', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters',
   'floatingOrigin', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
@@ -15,15 +15,15 @@ const COMPOSITION: readonly string[] = [
 ];
 
 const AWAITING_EXTRACTION: readonly string[] = [
-  '_compositeSuppress', '_eclipseDim', '_epochFollowDelta', '_extinctionView', '_focalPert',
+  '_epochFollowDelta', '_extinctionView', '_focalPert',
   '_lastAppliedPert', '_movingRideDelta', '_movingRideIdx', '_movingRideLast',
   '_movingRideLive', '_realtimeFramesNeeded', '_rideDelta', '_rideFocalIdx',
   '_rideLive', '_suppressPulsation', 'absorbedSuppressCount',
-  'binariesData', 'binaryOrbitField', 'binaryOrbitPathLayer', 'conFigureSig',
+  'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coreMaskEnabled',
   'dust',
-  'eclipsePhotometryField', 'extinctionPrepass', 'extinctionRecomputeForced',
+  'extinctionPrepass', 'extinctionRecomputeForced',
   'frameCtx', 'glslResidentsChecked',
   'offCatalogRecords', 'passDebugScratch',
   'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',
