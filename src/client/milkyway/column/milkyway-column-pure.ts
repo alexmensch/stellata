@@ -2,32 +2,32 @@
 // ../webgpu/milkyway/milkyway-band-tsl.ts's raymarch. Owns the constants the shader receives as
 // uniforms — README.md#density-profiles calibration/README.md.
 
-import { R0_PC } from '../galactic/galactic-coords';
+import { R0_PC } from '../../galactic/galactic-coords';
 import {
   footprintAlong,
   footprintRadiusPc,
   lumaNormalisedTint,
   softenRadius,
-} from '../hdr/emission/emission-pure';
+} from '../../hdr/emission/emission-pure';
 import {
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
   fluxNumber,
   integrateOverEllipsoidRz,
   solveDensity0,
-} from '../hdr/emission/density0-solver-pure';
+} from '../../hdr/emission/density0-solver-pure';
 import {
   BULGE_TO_TOTAL_LIGHT_V,
   DISC_COLOUR_INDEX_BV,
   GALAXY_TOTAL_ABSMAG_V,
-} from './calibration/diffuse-reference';
+} from '../calibration/diffuse-reference';
 import {
   type ResolvedHoleGrid,
   shippedResolvedHoleGrid,
   unresolvedGridLight,
-} from './calibration/resolved-fraction-pure';
-import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
-import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
-import { type Rgb, relativeLuminance } from '../hdr/tonemap/tonemap-pure';
+} from '../calibration/resolved-fraction-pure';
+import { OLD_SPHEROID_COLOR_RGB } from '../../hdr/emission/population-colour-pure';
+import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
+import { type Rgb, relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
 
@@ -150,7 +150,7 @@ function bulgeShape(rPc: number, zPc: number, footprintPc = 0): number {
  *  shapes are scalars against luma-normalised tints, so this is the
  *  LUMINANCE integral and a flux share can be split between the two
  *  without either hue moving light
- *  (`../hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density`). */
+ *  (`../../hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density`). */
 export const DISC_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
   discShape,
   DISC_RADIUS_PC,

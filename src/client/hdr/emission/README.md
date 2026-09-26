@@ -81,7 +81,7 @@ spheroid population, 0.14–0.18 mag on their discs. What moves a
 
 **The separation holds at the emission site and not one step past it.**
 The Milky Way's raymarch attenuates per channel inside the same loop
-([Dust](../../milkyway/README.md#dust--the-analytic-tier-and-what-composes-with-it)), so a redder component
+([Dust](../../milkyway/column/README.md#dust--the-analytic-tier-and-what-composes-with-it)), so a redder component
 transmits more of its own light through the same dust: every dust-free
 column is bit-identical under any hue, and every extincted one is not.
 0.012 mag toward the Galactic centre for a disc 0.3 mag bluer in B−V,

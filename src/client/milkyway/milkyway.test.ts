@@ -40,7 +40,7 @@ import {
   galacticDirection,
   sightlineColumn,
   sightlineSurfaceBrightness,
-} from './milkyway-column-pure';
+} from './column/milkyway-column-pure';
 import { R0_PC } from '../galactic/galactic-coords';
 import { ABSOLUTE_MAGNITUDE_DISTANCE_PC } from '../hdr/emission/density0-solver-pure';
 import { parseOverrides } from '../../../scripts/local-group/build-local-group';
@@ -181,7 +181,7 @@ describe('MilkyWay population tints', () => {
   // Peak-normalised chromaticities, so each authored triplet carries its
   // own luminance and neither is 1: unnormalised, the pair would move the
   // flux split by their DIFFERENCE, which is the figure pinned here. The
-  // eyeballed palette this replaced carried 0.390 mag of it (README.md#population-tints-carry-hue-never-flux).
+  // eyeballed palette this replaced carried 0.390 mag of it (column/README.md#population-tints-carry-hue-never-flux).
   // The bulge's own 0.2277 is the shared population
   // constant's, pinned in ../hdr/emission/population-colour-pure.test.ts.
   it('pins what the authored palette would cost unnormalised', () => {
@@ -245,7 +245,7 @@ describe('MilkyWay population tints', () => {
 // Bland-Hawthorn 2016 (/data/papers/index.md#blandhawthorn2016)
 // Sect. 5.1. The thick disc is for the EXTERNAL edge-on view — from Sol it is
 // a small correction, and it is emphatically not a fix for a high-latitude
-// deficit (README.md#density-profiles).
+// deficit (column/README.md#density-profiles).
 describe('MilkyWay vertical profile', () => {
   it('pins the thin/thick split against BHG16 Sect. 5.1', () => {
     expect(DISC_SCALE_HEIGHT_PC).toBe(300);
@@ -260,7 +260,7 @@ describe('MilkyWay vertical profile', () => {
   // (/data/papers/index.md#mosenkov2021) measure
   // 0.71 ± 0.45 at 3.4 µm — outside their interval on the low side, where
   // their thick disc is radially longer as well. Stated rather than tuned
-  // (README.md#density-profiles), so a future session that "fixes" the
+  // (column/README.md#density-profiles), so a future session that "fixes" the
   // ratio into their band fails here and has to argue with the README.
   it('sits below Mosenkov 2021 on the thick/thin luminosity ratio', () => {
     const ratio =

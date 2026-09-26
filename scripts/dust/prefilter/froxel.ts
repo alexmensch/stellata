@@ -14,7 +14,7 @@ import {
 import {
   ANALYTICAL_DUST_SCALE_HEIGHT_PC,
   S_MIN_PC,
-} from '../../../src/client/milkyway/milkyway-column-pure';
+} from '../../../src/client/milkyway/column/milkyway-column-pure';
 
 /** Reference integration rate, in samples per voxel. Independent of the
  *  grid's own fill rate (`FroxelConfig.fillStepsPerVoxel`) so the reference

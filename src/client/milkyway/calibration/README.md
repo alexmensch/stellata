@@ -3,7 +3,7 @@
 The published numbers the band's emissivity is solved against, the light
 ratio and the two population colours derived from them, and the two
 sightline checks the result is graded by. The solve itself —
-`DISC_DENSITY0` / `BULGE_DENSITY0` — lives in `../milkyway-column-pure.ts`
+`DISC_DENSITY0` / `BULGE_DENSITY0` — lives in `../column/milkyway-column-pure.ts`
 beside the shape integrals it divides by, and its pins live in
 `../milkyway.test.ts`; everything about *what goes in* and *how well it
 comes out* is here.
@@ -61,13 +61,13 @@ Three properties a change here must keep:
   **not** a point emissivity: the disc's vertical term is 1.04 at the
   midplane, so `DISC_DENSITY0` sits 4 % above (R₀, 0).
 - **The scalar volume integral is the LUMINANCE integral**, because both
-  tints are luma-normalised ([Population tints](../README.md#population-tints-carry-hue-never-flux)). That is
+  tints are luma-normalised ([Population tints](../column/README.md#population-tints-carry-hue-never-flux)). That is
   what lets one flux total be split between two hues without either moving
   light.
 - **Truncation compensation is inherent.** G is over the ACTUAL proxy
   volume, so the **0.076 mag** the disc envelope clips against all space is
   redistributed inward — a tighter envelope *brightens* what remains. Mostly
-  radial, against 0.018 mag vertical ([Density profiles](../README.md#density-profiles)),
+  radial, against 0.018 mag vertical ([Density profiles](../column/README.md#density-profiles)),
   and one ellipsoid does not separate into the two — the pin is the
   all-space closed form.
 

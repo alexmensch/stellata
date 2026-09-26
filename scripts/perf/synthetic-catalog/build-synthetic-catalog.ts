@@ -30,7 +30,7 @@ import {
 } from '../../catalog/record/catalog-pure';
 import { withoutPassthroughDash } from '../args';
 import { GAL_TO_ICRS } from '../../../src/client/galactic/galactic-coords';
-import { DISC_RADIUS_PC } from '../../../src/client/milkyway/milkyway-column-pure';
+import { DISC_RADIUS_PC } from '../../../src/client/milkyway/column/milkyway-column-pure';
 import {
   GAIA_CENSUS_BY_G,
   buildIntrinsicPool,

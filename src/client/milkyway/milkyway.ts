@@ -41,7 +41,7 @@ import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   sightlineColumn,
-} from './milkyway-column-pure';
+} from './column/milkyway-column-pure';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
 // bulge), AdditiveBlending. See src/client/milkyway/README.md.
@@ -303,7 +303,7 @@ export class MilkyWay {
     (c.tint.value as THREE.Color).copy(tintColor(r, g, b));
   }
 
-  /** Shipped default is `REDDENING_RGB` (0.76, 1.0, 1.35); Cardelli 1989 (/data/papers/index.md#cardelli1989) gives (0.751, 1.0, 1.337), and which to ship is open (README.md#dust--the-analytic-tier-and-what-composes-with-it). Larger spread reddens harder. */
+  /** Shipped default is `REDDENING_RGB` (0.76, 1.0, 1.35); Cardelli 1989 (/data/papers/index.md#cardelli1989) gives (0.751, 1.0, 1.337), and which to ship is open (column/README.md#dust--the-analytic-tier-and-what-composes-with-it). Larger spread reddens harder. */
   setReddeningRGB(r: number, g: number, b: number) {
     (this.shared.uReddeningRGB.value as THREE.Vector3).set(r, g, b);
   }

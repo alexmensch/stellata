@@ -63,7 +63,7 @@ the answer — a wide field toward the galactic centre, which is what the canon
 `mw120` and `mw50` vantages already look at.
 
 So positions are drawn against the band's **own** density profile, imported
-from `src/client/milkyway/milkyway-column-pure.ts` rather than restated:
+from `src/client/milkyway/column/milkyway-column-pure.ts` rather than restated:
 `discDensity + bulgeDensity`, each clamped to its proxy ellipsoid because the
 profiles do not stop there on their own — at render time the shader's
 ray-sphere intersection is what bounds them.

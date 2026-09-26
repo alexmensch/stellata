@@ -27,7 +27,7 @@ import { RESOLVED_CATALOGUE_CAP } from './resolved-hole-table';
  *
  * Intrinsic, i.e. corrected for internal extinction — which is what the
  * emissivity has to be, because the layer applies its own dust at render
- * time (../README.md#dust--the-analytic-tier-and-what-composes-with-it).
+ * time (../column/README.md#dust--the-analytic-tier-and-what-composes-with-it).
  */
 export const GALAXY_TOTAL_ABSMAG_V = -21.37;
 
