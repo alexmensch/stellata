@@ -154,6 +154,10 @@ let the dependency graph do the work.
   epic-level blocks when task-level deps express the same constraint.
 - Structured info (PR numbers, URLs, source tags) goes in labels / metadata /
   external-ref, never title prose. Conventions in [Tagging](/docs/bd-workflow.md#tagging--labels-metadata-external-ref).
+- Name a code site by something a grep finds — the file plus the symbol,
+  constant, heading or a quoted phrase — never by line number. A line number
+  moves with every edit above it, and a bead is read long after it was filed:
+  `milkyway.test.ts SFD_POLAR_AV_MIN`, not `milkyway.test.ts:458`.
 
 ## Keep this skill current — do this without being asked
 
