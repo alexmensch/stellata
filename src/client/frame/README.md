@@ -128,7 +128,7 @@ each frame; the shell translates `camera.position` + `controls.target`
 (and in-flight camera-transition pose caches) by that per-frame drift
 so the star stays under the camera and the pin stays engaged. Focus and
 unfocus of a pair member therefore cause no position discontinuity —
-see [Focal-frame ride](../binaries/README.md#focal-frame-ride-no-rebase).
+see [Binary focal ride](../camera/focus/focal-ride/README.md#binary-focal-ride-no-rebase).
 
 **Default-load** auto-engages `setFocus(catalog.solIndex)` before the
 first frame so URL-less loads start with the pin engaged and the per-Sol
