@@ -26,7 +26,10 @@
 #                                         choice for the basis seed).
 #   source             — primary structural reference, cited by index
 #                         label and pointer. Documentation: the build does
-#                         not read it.
+#                         not read it. It credits the values its paper
+#                         carries, not the whole row: the values that no
+#                         paper carries or that depart from their source
+#                         are listed in /data/local-group/README.md#override-schema.
 #   ra_deg, dec_deg,   — optional standalone position. Populated only
 #   distance_kpc          when this row names an object not in LVDB
 #                         (M31, M33); leave empty for LVDB-merge rows.

@@ -298,9 +298,10 @@ Profile is `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — a simplified
 exponential thin dust disc with its own parameters. [Drimmel 2001](/data/papers/index.md#drimmel2001)'s
 dust disc has h_r = 2.26 kpc and a sech² vertical profile of 134 pc base
 scale height, flaring outward, with a central hole and arm components; the
-slab keeps none of those. Per step, opacity converts to per-channel optical
-depth via reddening multipliers `(0.76, 1.0, 1.35)`, approximating
-[Cardelli 1989](/data/papers/index.md#cardelli1989) Table 3 at R_V = 3.1 (R 0.751, V 1.000, B 1.337) —
+slab keeps none of those, for no recorded reason (open: `stellata-uadc.69.4`).
+Per step, opacity converts to per-channel optical depth via reddening
+multipliers `(0.76, 1.0, 1.35)` against [Cardelli 1989](/data/papers/index.md#cardelli1989) Table 3's
+(0.751, 1.000, 1.337) at R_V = 3.1, also unexplained (open: `stellata-uadc.69.1`) —
 red transmits most, blue extincts away — applied with Beer-Lambert
 running attenuation including a half-step self-shielding term.
 
@@ -318,10 +319,10 @@ puts the pole at A_V = 0.125 — inside the older A_V ≈ 0.06–0.15 polar rang
 [Schlegel 1998](/data/papers/index.md#schlegel1998) review, and 2.7× their own polar measurement (E(B−V) =
 0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05).
 
-**What this replaced was wrong by an order of magnitude and mis-cited** —
-0.0679 mag/kpc attributed to [Schlegel 1998](/data/papers/index.md#schlegel1998), a 2D E(B−V) map publishing no
-per-kpc rate at all. That under-extinction, not the density profile, is
-why the plane read ~3 mag too bright against the poles.
+**The 0.0679 mag/kpc rate this replaced was this project's own, not from
+[Schlegel 1998](/data/papers/index.md#schlegel1998)**, and an order of magnitude low. That under-extinction,
+not the density profile, is why the plane read ~3 mag too bright against the
+poles.
 `setExtinctionStrength(x)` defaults to **1.0** and is a dev lever, not a
 calibration term: anything else contradicts that anchor.
 

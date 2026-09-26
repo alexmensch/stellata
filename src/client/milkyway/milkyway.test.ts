@@ -494,9 +494,8 @@ describe('MilkyWay analytical dust', () => {
   // Marched through the profile rather than re-arranged out of the
   // normalisation, so a change to the radial term, the A_V-per-density
   // wiring or a re-introduced 0.45 multiplier all show up here.
-  // Schlegel 1998 (/data/papers/index.md#schlegel1998) publishes
-  // no per-kpc rate at all — the
-  // figure this replaced cited it anyway.
+  // The plane rate is this project's, not from Schlegel 1998
+  // (/data/papers/index.md#schlegel1998).
   it('marches the stated plane rate at (R₀, z = 0)', () => {
     const magPerPc =
       dustTauVPerPc(R0_PC, 0, DEFAULT_EXTINCTION_STRENGTH) * MAG_PER_TAU;

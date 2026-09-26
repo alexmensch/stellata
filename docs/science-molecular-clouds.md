@@ -67,7 +67,7 @@ The units chain, end to end:
 | Quantity | Value | Source |
 | --- | --- | --- |
 | Voxel unit | E_ZGR pc⁻¹ ([Zhang 2023](/data/papers/index.md#zhang2023) extinction density) | [Edenhofer 2024](/data/papers/index.md#edenhofer2024) |
-| A_V per E_ZGR | 2.742 | manifest `avPerDensityPerPc` |
+| A_V per E_ZGR | 2.742 | manifest `avPerDensityPerPc`; read off a ZGR23 extinction-curve table at ≈ 544 nm, not from [Zhang 2023](/data/papers/index.md#zhang2023)'s text; [Edenhofer 2024](/data/papers/index.md#edenhofer2024) multiply by 2.8 — an open decision (`stellata-uadc.69.24`) |
 | N_H per A_V | 1.87×10²¹ cm⁻² mag⁻¹ | [Bohlin 1978](/data/papers/index.md#bohlin1978) (N_H/E(B−V) = 5.8×10²¹, R_V = 3.1) |
 | 1 cm⁻³ · pc | 3.086×10¹⁸ cm⁻² | definition |
 | A_V rate for n_H [cm⁻³] | 1.65×10⁻³ · n_H mag pc⁻¹ | product of the above |
@@ -366,14 +366,17 @@ giants/supergiants: use the same class row +0.3 dex
 
 Not every row is the papers' value. [Martins 2005](/data/papers/index.md#martins2005) Table 1 gives O6V 48.96 and
 O9V 47.90; [Sternberg 2003](/data/papers/index.md#sternberg2003) Table 1 gives B0V 48.02 and stops at B0.5V
-(47.71), with no B1V row. The flat +0.3 dex is a stellata simplification:
-the papers' giant-minus-dwarf offsets run +0.1 to +0.5 dex and their
-supergiant ones +0.2 to +0.9 dex, growing toward late O.
+(47.71), with no B1V row, so B1V 45.7 has no source. The flat +0.3 dex is a
+stellata simplification: the papers' giant-minus-dwarf offsets run +0.1 to
++0.5 dex and their supergiant ones +0.2 to +0.9 dex, growing toward late O.
+Which rows to ship is an open decision (`stellata-uadc.69.11`).
 
 Representative scale: an O6V in n = 100 cm⁻³ gives R_S ≈ 2.9 pc; a B0V
 ≈ 1.1 pc. Evolved regions exceed the instantaneous Strömgren sphere
 (D-type expansion, stellar winds) — the λ Ori ring (40 pc across, a
-~20 pc radius, [Dolan 2002](/data/papers/index.md#dolan2002)) is the canonical local example and a validation case:
+~20 pc radius, [Dolan 2002](/data/papers/index.md#dolan2002)) is the canonical local example and a validation case.
+Its R_curated below is 30 pc against that ~20 pc radius, for no recorded
+reason — an open decision (`stellata-uadc.69.3`):
 
 ```
 R_cav = max( R_S , R_curated )     R_curated: Orion Nebula 4 pc,
@@ -521,5 +524,5 @@ on Earth. Everything falls out of the two mechanisms already specified:
 - [Arzoumanian 2011](/data/papers/index.md#arzoumanian2011); [Arzoumanian 2019](/data/papers/index.md#arzoumanian2019) — 0.1 pc filament width.
 - [Strömgren 1939](/data/papers/index.md#stromgren1939); [Osterbrock 2006](/data/papers/index.md#osterbrock2006) — R_S, α_B.
 - [Martins 2005](/data/papers/index.md#martins2005) — O-star Q_H calibration; [Sternberg 2003](/data/papers/index.md#sternberg2003) — B stars.
-- [Weingartner 2001](/data/papers/index.md#weingartner2001); [Chapman 2009](/data/papers/index.md#chapman2009) — R_V ≈ 5.5 in dense cores.
+- [Weingartner 2001](/data/papers/index.md#weingartner2001) — the R_V = 5.5 dust model and grain growth; [Chapman 2009](/data/papers/index.md#chapman2009) — the extinction law matching it at A_Ks ≳ 1.
 - [Dolan 2002](/data/papers/index.md#dolan2002) — λ Ori ring geometry.

@@ -342,7 +342,8 @@ a converged dense march; the worst deviation is pinned (0.017 mag).
 **A second block pins the distribution**, which is the half a viewer reads:
 M31's face-on disc central surface brightness at 21.45 V mag/arcsec² against
 [Freeman 1970](/data/papers/index.md#freeman1970)'s 21.65 ± 0.30, which is B-band
-(≈ 20.9–21.0 in V for a disc B−V of 0.6–0.7), the 1.0857
+(≈ 20.9–21.0 in V for a disc B−V of 0.6–0.7) — a band mismatch no one has
+yet resolved (open: `stellata-uadc.69.6`), the 1.0857
 mag-per-scale-length gradient, and R_d / R_e / n / distance against
 [Courteau 2011](/data/papers/index.md#courteau2011). Because the solver
 fixes total flux while every structural input is published, the profile has

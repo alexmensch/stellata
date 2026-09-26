@@ -28,8 +28,9 @@ export const RIELLO_BP_RP_MAX = 5.0;
 
 /** ESA 1997 (/data/papers/index.md#esa1997) SP-1200 Sect. 1.3's linear
  *  reduction of Tycho `VT` to Johnson `V`, `V = VT − 0.090·(BT−VT)`, published
- *  over −0.2 < `BT−VT` < 1.8. The MIN/MAX below are wider than that, and
- *  {@link tycho2VMagnitude} counts rows outside them rather than gating. */
+ *  over −0.2 < `BT−VT` < 1.8. The MIN/MAX below are wider than that, with no
+ *  recorded source (open: README.md#the-tycho-2-tier-runs-outside-its-published-colour-range),
+ *  and {@link tycho2VMagnitude} counts rows outside them rather than gating. */
 export const TYCHO2_V_FROM_VT_COEFF = 0.090;
 export const TYCHO2_BT_MINUS_VT_MIN = -0.25;
 export const TYCHO2_BT_MINUS_VT_MAX = 2.0;

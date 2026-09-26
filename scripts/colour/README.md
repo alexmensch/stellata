@@ -2,8 +2,9 @@
 
 `blackbody-lut-pure.ts` — the chromaticity chain and the LUT shape
 constants, node-free so client code can import it:
-[Ballesteros 2012](/data/papers/index.md#ballesteros2012) (B–V → Teff)
-and its analytic inverse, the Planck spectrum, CIE 1931 colour matching
+[Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14 (B–V → Teff)
+and its analytic inverse — this project's algebra, since the paper gives only
+the forward relation — the Planck spectrum, CIE 1931 colour matching
 ([Wyman 2013](/data/papers/index.md#wyman2013) multi-Gaussian fits), the
 sRGB D65 transform, and `linearSrgbFromColourIndex` — one call from a
 colour index to a peak-normalised linear triplet.
@@ -32,7 +33,7 @@ so uint8 costs at most 0.91%.
 
 Four consumers reach past the table into the pure module:
 `scripts/catalog/spectral/physical-radius.ts` for the
-[Ballesteros 2012](/data/papers/index.md#ballesteros2012) inverse at
+inverse of [Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14 at
 build time, and — for their population tints
 ([Population colours](/src/client/milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited)) — the
 band's column integrand, the Local Group emission block, and the

@@ -59,6 +59,15 @@ the major spirals).
 | `source_profile`    | *Optional.* Profile-parameter source, separate from the structural `source`. |
 | `color`             | *Optional.* Population tint (hex); empty → the renderer's per-family default. |
 
+A `source` cell credits the values its paper carries, not the whole row.
+Values no cited paper carries, and values that depart from their source, are
+stated with both numbers in
+[Local Group wireframes](/docs/science-local-group.md#local-group-wireframes)
+and [the luminosity model](/docs/science-local-group.md#local-group-luminosity-model):
+the LMC inclination and PA, the Sagittarius semi-axes, the M 32 and NGC 205
+extents, the NGC 205 PA, the M31 PA, radius and thickness, and M31's
+`bulge_to_total` — each an open decision under `stellata-uadc.69`.
+
 For LVDB-merge rows, the override **replaces** the structural detail
 an LVDB row would otherwise produce; **position (RA/Dec/distance)
 still comes from LVDB.** For standalone rows (M31, M33), the override

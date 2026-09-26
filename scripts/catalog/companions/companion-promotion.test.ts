@@ -1154,8 +1154,8 @@ describe('imputeCompanionCi', () => {
       photometryVia: 'athyg_system_inherited',
     });
     const bv = imputeCompanionCi(sec, wdInfo);
-    // T_eff(DA1.9) = 50400/2 = 25200 K → Ballesteros 2012
-    // (/data/papers/index.md#ballesteros2012) inverse ≈ -0.44.
+    // T_eff(DA1.9) = 50400/2 = 25200 K → the inverse of Ballesteros 2012
+    // (/data/papers/index.md#ballesteros2012) eq. 14 ≈ -0.44.
     // The shader's LUT clamps to BV_MIN=-0.4 at lookup time; we store
     // the unclamped value so the raw temperature stays recoverable.
     expect(bv).toBeLessThan(-0.4);
@@ -1315,8 +1315,8 @@ describe('promoteCompanions', () => {
     expect(b.spectClass).toBe(8);
     expect(b.lumClass).toBe(0);
     // ci is recomputed from the WD's blackbody temperature rather
-    // than inherited from Sirius A. T(DA1.9)=25200 K → Ballesteros 2012
-    // (/data/papers/index.md#ballesteros2012) inverse ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
+    // than inherited from Sirius A. T(DA1.9)=25200 K → the inverse of Ballesteros 2012
+    // (/data/papers/index.md#ballesteros2012) eq. 14 ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
     expect(b.ci).toBeLessThan(-0.4);
   });
 

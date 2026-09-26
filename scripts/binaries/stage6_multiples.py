@@ -666,7 +666,7 @@ def _polyval_ascending(coeffs: tuple[float, ...], x: float) -> float:
 
 def ballesteros_bv_from_teff(teff: float) -> float:
     """Analytic inverse of Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
-    (Teff K → Johnson B−V).
+    eq. 14 (Teff K → Johnson B−V); the inversion is this project's algebra.
     Python mirror of ``ballesterosBvFromTeff`` in
     scripts/colour/blackbody-lut-pure.ts — keep the two in sync (pinned
     by the Stage-6 unit test against the solar value)."""
@@ -689,7 +689,7 @@ def gaia_photometry_absmag_ci(
     cool stars, but honest).
 
     ci: BP−RP → Teff (Montalto 2021, /data/papers/index.md#montalto2021) → B−V via the
-    catalogue's Ballesteros 2012 (/data/papers/index.md#ballesteros2012) inverse, so the stored colour round-trips to the
+    catalogue's inverse of Ballesteros 2012 (/data/papers/index.md#ballesteros2012) eq. 14, so the stored colour round-trips to the
     Gaia-implied temperature through the same relation the renderer
     reads. ``None`` when BP/RP is absent or BP−RP falls outside the Teff
     polynomial's validity range — companion promotion then falls back to

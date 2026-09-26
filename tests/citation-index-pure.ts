@@ -14,6 +14,7 @@ export interface IndexEntry {
   line: number;
   label: string;
   copy: string;
+  notes: string[];
   rows: ClaimRow[];
 }
 
@@ -27,6 +28,7 @@ export interface PinnedCopy {
 const ANCHOR = /^<a id="([^"]+)"><\/a>$/;
 const HEADING = /^### (.+?) — /;
 const COPY = /^- \*\*Copy:\*\* (.*)$/;
+const NOTE = /^- \*\*Note:\*\* (.*)$/;
 const NOT_HELD = /^(not held|unobtainable)\b/;
 const TABLE_ROW = /^\| (?!Claim \|)/;
 const CELL_SPLIT = /(?<!\\)\|/;
@@ -36,11 +38,13 @@ export function parseIndex(markdown: string): IndexEntry[] {
   const lines = markdown.split('\n');
   lines.forEach((text, i) => {
     const anchor = ANCHOR.exec(text);
-    if (anchor) entries.push({ key: anchor[1], line: i + 1, label: HEADING.exec(lines[i + 1] ?? '')?.[1] ?? '', copy: '', rows: [] });
+    if (anchor) entries.push({ key: anchor[1], line: i + 1, label: HEADING.exec(lines[i + 1] ?? '')?.[1] ?? '', copy: '', notes: [], rows: [] });
     const entry = entries[entries.length - 1];
     if (!entry || anchor) return;
     const copy = COPY.exec(text);
     if (copy) entry.copy = copy[1];
+    const note = NOTE.exec(text);
+    if (note) entry.notes.push(note[1]);
     if (TABLE_ROW.test(text)) {
       const [claim = '', value = '', status = '', page = '', passage = ''] = text.split(CELL_SPLIT).slice(1, -1).map((c) => c.trim());
       entry.rows.push({ line: i + 1, claim, value, status, page, passage });
@@ -250,5 +254,23 @@ export function uncitedIdentifiers(text: string): { line: number; identifier: st
       ...[...prose.matchAll(ARXIV)].map((m) => m[0]),
       ...[...prose.matchAll(BIBCODE)].map((m) => m[0]).filter((bibcode) => !VIZIER_BIBCODE.test(bibcode)),
     ].map((identifier) => ({ line: i + 1, identifier }));
+  });
+}
+
+export const STATUSES = ['verified', 'unverified'];
+
+const CODEBASE = /\b(?:tree|ships?|shipped|Stellata|our|the test)\b|\.(?:ts|py|tsv|md)\b|\b_?[A-Z]{2,}[A-Z0-9]*_[A-Z0-9_]{2,}\b/;
+
+export function codebaseWording(entry: IndexEntry): string[] {
+  const cells = [
+    ...entry.rows.flatMap((row) => [
+      { line: row.line, text: row.claim },
+      { line: row.line, text: row.value },
+    ]),
+    ...entry.notes.map((text) => ({ line: entry.line, text })),
+  ];
+  return cells.flatMap(({ line, text }) => {
+    const hit = CODEBASE.exec(text);
+    return hit ? [`index.md:${line} ${entry.key} — "${hit[0]}" in "${text.slice(0, 60)}"`] : [];
   });
 }

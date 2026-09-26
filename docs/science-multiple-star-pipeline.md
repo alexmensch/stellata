@@ -336,7 +336,8 @@ pairs) is tracked as its own follow-up.
   quote YY Gem as M1.0 Ve and give 0.5975 + 0.6009 M☉ (formal; they
   adopt the mean, 0.5992 M☉, for each); their a sin i = 3.888 R☉ and
   i = 86.29° give a = 0.0181 AU, as does Kepler's law with their
-  masses. All six components render, three inner pairs animate,
+  masses. The M0.5Ve type has no recorded source, and which type and
+  masses to ship is an open decision (`stellata-uadc.69.18`). All six components render, three inner pairs animate,
   and YY Gem's eclipses come from real orbital geometry.
 - **HIP 25733 — a [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) refinement case.** AT-HYG's `dist_src`
   marks this row's catalogued 14.3 kpc as a Gaia DR3 inverse-parallax
@@ -601,7 +602,7 @@ consume it in two complementary ways:
      5.0) → `B−V`. Montalto's relation is in de-reddened colour
      (G_BP − G_RP)₀; the pipeline feeds it the observed, reddened BP−RP,
      which runs cool for any companion behind dust — an open decision,
-     `stellata-uadc.69`. `B−V` then comes from the catalogue's own [Ballesteros 2012](/data/papers/index.md#ballesteros2012) inverse
+     `stellata-uadc.69`. `B−V` then comes from the catalogue's own inverse of [Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14 (this project's algebra; the paper gives only B−V → Teff)
      (`ballesteros_bv_from_teff`, mirroring
      `scripts/colour/blackbody-lut-pure.ts`). Routing colour through the
      [Ballesteros 2012](/data/papers/index.md#ballesteros2012) manifold — rather than a direct Gaia→(B−V) fit — keeps

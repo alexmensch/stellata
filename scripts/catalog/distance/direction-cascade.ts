@@ -217,7 +217,8 @@ export const VELOCITY_SANITY_CEILING_PC_YR =
 
 // Local Galactic escape velocity: Piffl 2014
 // (/data/papers/index.md#piffl2014) measure 533 +54/−41 km/s in the Galactic
-// rest frame; the threshold here is 550. A star
+// rest frame; the threshold here is 550, an open decision
+// (README.md#the-escape-speed-threshold-departs-from-its-source). A star
 // faster than this is unbound — genuinely exceptional (a handful of proven
 // hypervelocity stars Galaxy-wide), so a large above-escape population is
 // almost entirely PM×distance / bad-RV artifacts. These rows are NOT

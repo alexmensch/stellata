@@ -126,11 +126,13 @@ channels, sourced rather than read off a slider:
   [Bodhaine 1999](/data/papers/index.md#bodhaine1999) eq. 30.
   τ_Mie = 0.05, for the clean maritime background aerosol, which
   [Smirnov 2002](/data/papers/index.md#smirnov2002) measure at 500 nm as
-  a mode of 0.06 and a mean of 0.07.
+  a mode of 0.06 and a mean of 0.07; nothing records why 0.05, an open
+  decision (`stellata-uadc.69.16`).
 - **Venus** — τ_R = Earth's scaled by the CO₂ column above the τ=1 cloud tops
   (~74 km, [Ignatiev 2009](/data/papers/index.md#ignatiev2009)) at
   P ≈ 40 hPa — the pressure Ignatiev quote from Pioneer Venus for the polar
-  cloud top at 68 km (28 mbar at 70 km for the equatorial level) — × the
+  cloud top at 68 km (28 mbar at 70 km for the equatorial level), applied
+  at 74 km for no recorded reason (open: `stellata-uadc.69.9`) — × the
   CO₂/air Rayleigh cross-section ratio ≈ 2.45 (at 532 nm
   [Sneep 2005](/data/papers/index.md#sneep2005) measure CO₂ at 2.43×
   N₂, and air scatters within a few percent of N₂): 0.070× Earth. The
@@ -149,14 +151,16 @@ channels, sourced rather than read off a slider:
   `absorbCoeff` from measured dust single-scattering albedo ω̃ ≈
   [0.97, 0.90, 0.75] ([Wolff 2009](/data/papers/index.md#wolff2009)
   Fig. 12, whose bluest measured point, at 440 nm, is ≈ 0.77 — the blue 0.75
-  extrapolates below the data): τ_a = τ_Mie·(1/ω̃ − 1).
+  extrapolates below the data, an open decision, `stellata-uadc.69.22`):
+  τ_a = τ_Mie·(1/ω̃ − 1).
 - **Titan** — τ_R from the full 1.5-bar N₂ column
   ([Lindal 1983](/data/papers/index.md#lindal1983); 10.9× Earth's column
   at 1.35 m/s²): mostly buried under the haze, but its top is the real
   high-altitude blue limb Cassini images show. τ_Mie = 2.5, below the haze
   column the Huygens DISR model of
   [Tomasko 2008a](/data/papers/index.md#tomasko2008) gives: ≈ 8 at
-  550 nm (≈ 6–12 across 650–450 nm), reaching 2–5 only past ~900 nm.
+  550 nm (≈ 6–12 across 650–450 nm), reaching 2–5 only past ~900 nm —
+  an open decision (`stellata-uadc.69.17`).
 
 <a id="moons"></a>**Moons.** The 18 major moons — Earth's Moon; Jupiter's Galileans (Io,
 Europa, Ganymede, Callisto); Saturn's Mimas, Enceladus, Tethys, Dione,
@@ -408,9 +412,10 @@ nearby stars. The cited measurements:
 - Flank inferred at **~115 AU** from Voyager 2 heliopause crossing
   2018-11-05, combined with the apex-aligned ellipsoid model.
 - Heliotail at **200 AU** — IBEX / Cassini ENA observations.
-- Nose (upwind apex) direction: the IBEX/Ulysses interstellar He
-  inflow, J2000 ecliptic (λ, β) = (255.7°, 5.1°) ≈ ICRS RA 17h00m,
-  Dec −17.6° — [McComas 2015](/data/papers/index.md#mccomas2015). (An earlier revision anchored the
+- Nose (upwind apex) direction: where the IBEX/Ulysses interstellar He
+  inflow arrives from, J2000 ecliptic (λ, β) = (255.7°, 5.1°) ≈ ICRS RA
+  17h00m, Dec −17.6° — the reverse of the flow direction (75.7°, −5.1°)
+  [McComas 2015](/data/papers/index.md#mccomas2015) Table 3 gives. (An earlier revision anchored the
   nose at the solar apex, RA 17h53m Dec +27.4° — ~47° off; Voyager 1's
   outbound direction sits ~30° from the corrected nose, consistent
   with its 122 AU crossing.)

@@ -7,6 +7,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import {
   citationsIn,
   citesByLabel,
+  codebaseWording,
   type CopyText,
   holdsCopy,
   type IndexEntry,
@@ -17,6 +18,7 @@ import {
   parseIndex,
   passageDefect,
   type PinnedCopy,
+  STATUSES,
   uncitedIdentifiers,
   unpaginatedText,
 } from './citation-index-pure';
@@ -80,6 +82,18 @@ describe('citation index', () => {
         uncitedIdentifiers(text).map(({ line, identifier }) => `${relative(ROOT, file)}:${line} — ${identifier}`),
       );
     expect(stray, stray.join('\n')).toEqual([]);
+  });
+
+  it('every row is verified or unverified', () => {
+    const other = entries.flatMap(({ key, rows }) =>
+      rows.filter(({ status }) => !STATUSES.includes(status)).map(({ line, status }) => `index.md:${line} ${key} — "${status}"`),
+    );
+    expect(other, other.join('\n')).toEqual([]);
+  });
+
+  it('no row or note describes the codebase, only what the paper says', () => {
+    const wording = entries.flatMap(codebaseWording);
+    expect(wording, wording.join('\n')).toEqual([]);
   });
 
   it('every entry is cited from outside data/papers/', () => {
@@ -149,6 +163,15 @@ describe.skipIf(IN_CI)('private paper store', () => {
       .flatMap(({ file }) => textLayers(file).filter((layer) => !existsSync(layer)))
       .map((layer) => relative(STORE, layer));
     expect(missing, `regenerate (see /data/papers/README.md#the-pdfs-are-private):\n${missing.join('\n')}`).toEqual([]);
+  });
+
+  it('a row is unverified only where its entry has no readable copy', () => {
+    const readable = entries.flatMap((entry) =>
+      copyTexts(entry).length
+        ? entry.rows.filter(({ status }) => status === 'unverified').map(({ line }) => `index.md:${line} ${entry.key}`)
+        : [],
+    );
+    expect(readable, `check these against the copy:\n${readable.join('\n')}`).toEqual([]);
   });
 
   it('every verified row quotes a passage its copy carries, on the page or line it names', () => {

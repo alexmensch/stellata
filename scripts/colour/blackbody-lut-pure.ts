@@ -1,6 +1,6 @@
 // Pure colour math: Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
-// and its analytic inverse, the Planck → CIE 1931 → linear-sRGB chromaticity
-// chain, and the LUT shape constants. Node-free so client code can import it.
+// eq. 14 and its inverse (this project's algebra), the Planck → CIE 1931 →
+// linear-sRGB chain, and the LUT shape constants. Node-free so client code can import it.
 
 // ---- LUT shape (must match src/client/star-pipeline/blackbody-lut-data.ts) ----
 
@@ -40,7 +40,8 @@ export function ballesterosTeff(bv: number): number {
 
 /**
  * Analytic inverse of Ballesteros 2012
- * (/data/papers/index.md#ballesteros2012): Teff (K) → B-V. Picks the positive
+ * (/data/papers/index.md#ballesteros2012) eq. 14: Teff (K) → B-V. The paper
+ * gives only the forward relation; the inversion is this project's. Picks the positive
  * root of the quadratic that recovers `u = 0.92 · bv` from `T = 4600 · (2u +
  * 2.32) / (u² + 2.32u + 1.054)`. Discriminant `4 + 1.1664·k²` is always
  * positive (k = T/4600), so the inverse is defined for all Teff > 0.

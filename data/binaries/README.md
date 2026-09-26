@@ -15,7 +15,7 @@ multiples.tsv                   build-binaries.py output. Two rows per
 component_sptype_overrides.tsv  Hand-curated per-component MK types for
                                 components no machine source carries
                                 (Algol Aa2 K0IV, δ Vel Ab, σ Ori Ab,
-                                Castor Ab/Bb/Ca/Cb). Top tier of Stage
+                                Castor Ab/Bb/Ca/Cb, Rigel Ba/Bb). Top tier of Stage
                                 6's spectral cascade (spect_via=curated).
                                 Component keys use the raw multiples
                                 comp form (Algol's Aa1,2 secondary is

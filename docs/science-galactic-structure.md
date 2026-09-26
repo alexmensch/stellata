@@ -166,12 +166,14 @@ mirrored build-side integral + catalog rebuild in the same release.
 `norm × exp(-(R-R₀)/3500pc) × exp(-|z|/125pc)` — a simplified exponential
 thin dust disc with its own parameters: [Drimmel 2001](/data/papers/index.md#drimmel2001)'s dust disc has
 h_r = 2.26 kpc and a sech² vertical profile of 134 pc base scale height,
-flaring outward, with a central hole and arm components. Per step, opacity
-converts to per-channel optical depth via reddening multipliers
-`(0.76, 1.0, 1.35)`, approximating CCM Table 3 at R_V = 3.1
-(R 0.751, V 1.000, B 1.337) — red transmits most,
-blue extincts away — applied with Beer-Lambert running attenuation including
-a half-step self-shielding term. Default global strength = 1.0.
+flaring outward, with a central hole and arm components; nothing records
+why the slab departs from it, an open decision (`stellata-uadc.69.4`). Per
+step, opacity converts to per-channel optical depth via reddening multipliers
+`(0.76, 1.0, 1.35)` against [Cardelli 1989](/data/papers/index.md#cardelli1989) Table 3's
+(R 0.751, V 1.000, B 1.337) at R_V = 3.1 — also unexplained, and open
+(`stellata-uadc.69.1`) — red transmits most, blue extincts away — applied
+with Beer-Lambert running attenuation including a half-step self-shielding
+term. Default global strength = 1.0.
 
 `norm` is derived from a declarative rate: 1.0 mag/kpc of V extinction
 at (R₀, z = 0), the top of the range commonly adopted for the
@@ -192,20 +194,17 @@ Implementation: `../src/client/webgpu/star/star-vertex-tsl.ts` (per-star) and
 Sources for the volumetric path: [**Drimmel 2001**](/data/papers/index.md#drimmel2001)
 for the thin-disc dust model the slab simplifies (their h_r = 2.26 kpc and
 134 pc sech² scale height; the slab uses 3.5 kpc and a 125 pc exponential);
-[**Cardelli 1989**](/data/papers/index.md#cardelli1989) Table 3, which the per-channel
-reddening multipliers approximate; [**Schlegel 1998**](/data/papers/index.md#schlegel1998)
+[**Cardelli 1989**](/data/papers/index.md#cardelli1989) Table 3 (0.751 / 1.000 / 1.337 at R_V = 3.1; the
+multipliers ship 0.76 / 1.0 / 1.35); [**Schlegel 1998**](/data/papers/index.md#schlegel1998)
 for the polar reddening the perpendicular column is checked against (their
 own A_V ≈ 0.05, and the older A_V ≈ 0.06–0.15 range they review).
 
-[Schlegel 1998](/data/papers/index.md#schlegel1998) used to be cited for something it
-does not publish: a "0.15 mag/kpc local rate", under a shipped 0.45 multiplier
-that took the effective rate to 0.068 mag/kpc. Both parts were wrong.
-[Schlegel 1998](/data/papers/index.md#schlegel1998) is a 2D full-sky E(B−V) map and
-gives no per-kpc rate at all — only its own polar values (E(B−V) 0.015 / 0.018)
-and its review of the older 0.02–0.05 range — and 0.068 mag/kpc
-is 10–25× below the measured solar-neighbourhood plane rate. The
-under-extinction, not the density profile, was why the band's plane read ~3
-mag too bright against its poles.
+The 0.068 mag/kpc the slab once shipped (a 0.15 mag/kpc rate under a 0.45
+multiplier) was this project's own figure, not from
+[Schlegel 1998](/data/papers/index.md#schlegel1998), and 10–25× below the measured
+solar-neighbourhood plane rate. The under-extinction, not the density
+profile, was why the band's plane read ~3 mag too bright against its
+poles.
 
 ## The dust stack — sources, domains, and the partition
 

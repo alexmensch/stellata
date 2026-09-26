@@ -225,7 +225,7 @@ first match wins:
 Tiers 3–6 are shared by the main-catalog read (`stars-parse.ts`) and
 companion promotion (`imputeCompanionCi`) through `spectralClassCi`.
 Where Apsis Teff is used (tiers 1–2), the shader recovers the LUT-input
-B-V via the analytic [Ballesteros 2012](/data/papers/index.md#ballesteros2012) inverse so the LUT (keyed on B-V)
+B-V via an analytic inverse of [Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14 — this project's algebra, since the paper gives only B-V → Teff — so the LUT (keyed on B-V)
 samples the chromaticity expected for that Teff. Apsis Teff is the
 **intrinsic** parameter (Apsis fits include line-of-sight extinction
 `A0` explicitly), so the camera-position-dependent dust reddening

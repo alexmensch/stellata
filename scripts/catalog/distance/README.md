@@ -170,6 +170,13 @@ one of the 41 carries a HIP, a Gaia source_id or a proper name, so the other
 three ref kinds cannot name one. It is the tier's highest-PM member, which is
 what makes it the row that pins the epoch.
 
+### The escape-speed threshold departs from its source
+
+`GALACTIC_ESCAPE_VELOCITY_KM_S` is 550 against the 533 +54/−41 km/s of
+[Piffl 2014](/data/papers/index.md#piffl2014), which is in the Galactic rest frame; the count compares it
+against heliocentric space velocities. Nothing records why, and the value
+and frame are an open decision (`stellata-uadc.69.13`).
+
 ## The proper-motion rescue cascade
 
 The direction cascade leaves **39** rows without a PM — 36 on a Gaia 2p
@@ -339,13 +346,14 @@ LMC supergiants in the catalogue (HDE 268xxx range) land somewhere
 intermediate (5–20 kpc) after Layer 1 instead of the LMC's true
 ~50 kpc. Layer 2 identifies these stars by sky-cone + bulk proper
 motion and snaps their distance to the eclipsing-binary anchor in
-[Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) (49.59 kpc, shipped as 49.594).
+[Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) (49.59 kpc, shipped as 49.594; the extra digit has
+no recorded source, an open decision, `stellata-uadc.69.32`).
 
 Constants in `../record/catalog-pure.ts`:
 
 | Constant | Value | Meaning |
 |---|---|---|
-| `LMC_DISTANCE_PC` | 49,594 | [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) LMC centre distance. |
+| `LMC_DISTANCE_PC` | 49,594 | LMC centre distance; [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) print 49.59 kpc. |
 | `LMC_CENTRE_RA_HOURS` | 5.25067 (= 78.76°) | LMC PM dynamical centre RA ([van der Marel 2014](/data/papers/index.md#vandermarel2014)). |
 | `LMC_CENTRE_DEC_DEG` | −69.19 | LMC PM dynamical centre Dec ([van der Marel 2014](/data/papers/index.md#vandermarel2014)). |
 | `LMC_CONE_HALF_ANGLE_DEG` | 15 | Sky-cone half-angle. |

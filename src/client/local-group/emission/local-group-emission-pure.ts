@@ -26,9 +26,10 @@ export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
 /**
  * The **same** `bulge_to_total` the emission solver splits M31's flux by
  * (`data/local-group/overrides.tsv`, pinned in `local-group-emission.test.ts`).
- * Courteau 2011 (/data/papers/index.md#courteau2011) Sect. 7 give 0.29
- * for their 2D bulge + disc fit — a Spitzer/IRAC 3.6 µm light fraction, which
- * this applies as the V-band split.
+ * 0.31 has no recorded source: Courteau 2011 (/data/papers/index.md#courteau2011)
+ * Sect. 7 give 0.29 for their 2D bulge + disc fit, a Spitzer/IRAC 3.6 µm light
+ * fraction, here applied in V. Which value to ship is open
+ * (/docs/science-local-group.md#local-group-luminosity-model).
  */
 export const M31_BULGE_TO_TOTAL_LIGHT = 0.31;
 

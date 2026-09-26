@@ -22,8 +22,10 @@
 #   coordinate (2MASS, Cutri 2003 (/data/papers/index.md#cutri2003))
 #   advanced 16 yr on SIMBAD's own bibcoded PM (1368.0, 111.0 mas/yr, Lépine 2005
 #   (/data/papers/index.md#lepine2005)). 2MASS measured it at
-#   epoch ≈2000.39, not 2000.0, so the 16 yr overshoots by 0.39 yr and puts
-#   the pin ~0.54" east of the correctly propagated place. RE-PINNED
+#   epoch ≈2000.39 (each PSC source carries its own measurement date), not
+#   2000.0, so the 16 yr overshoots by 0.39 yr and puts the pin ~0.54" east
+#   of the correctly propagated place; nothing records why, and propagating
+#   from the measured epoch instead is an open decision. RE-PINNED
 #   DELIBERATELY when the printed cell retired, and the move is the point:
 #   this row used to hold that cell UNPROPAGATED, and the new value is
 #   49.2" away. That splits into two separate corrections — the printed

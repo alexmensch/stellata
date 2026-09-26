@@ -200,10 +200,8 @@ describe('sky-truth: Sun declination at solstices and equinoxes', () => {
 });
 
 describe('sky-truth: heliopause nose vs the IBEX ISM inflow', () => {
-  // McComas 2015 (/data/papers/index.md#mccomas2015): interstellar He
-  // inflow from J2000 ecliptic (λ, β) = (255.7°, 5.1°) — the upwind/nose
-  // direction. The solar apex of motion vs nearby stars (RA 17h53m, Dec +27.4°)
-  // sits ~47° away and once shipped as the nose anchor.
+  // Upwind of the McComas 2015 (/data/papers/index.md#mccomas2015) He inflow, not the solar apex:
+  // see /src/client/solar-system/heliopause/README.md#geometry.
   const noseLon = 255.7 * Math.PI / 180;
   const noseLat = 5.1 * Math.PI / 180;
   const noseIcrs = new THREE.Vector3(

@@ -72,7 +72,12 @@ the store and pin it in `manifest.json`.
   every pinned copy in it still has its pinned bytes
   ([The PDFs are private](#the-pdfs-are-private)).
 - `tests/doc-pointer-resolution.test.ts`: a pointer to a key with no entry.
-- `tests/citation-index.test.ts` also fails a DOI, arXiv ID or bibcode written
+- `tests/citation-index.test.ts` also fails a row whose status is neither
+  `verified` nor `unverified`, a row or **Note** that describes the codebase
+  (the tree, a shipped value, a file or constant name) rather than the paper,
+  and — where the store is linked — an `unverified` row on an entry whose
+  copy can be read.
+- It also fails a DOI, arXiv ID or bibcode written
   in prose or a comment outside the index — string literals, code spans, data
   tables under `data/`, dataset DOIs, VizieR catalogue bibcodes and public
   copy aside.

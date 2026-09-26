@@ -110,7 +110,8 @@ to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 
 [ESA 1997](/data/papers/index.md#esa1997) (SP-1200) states
 `V = VT − 0.090(BT−VT)` over −0.2 < `BT−VT` < 1.8; the build counts against
-a wider [−0.25, 2.0]. **44** of the tier's 3,784 rows sit outside that, on both the red and the blue
+a wider [−0.25, 2.0], a bound with no recorded source — which to count
+against is an open decision (`stellata-uadc.69.5`). **44** of the tier's 3,784 rows sit outside that, on both the red and the blue
 side, where the linear form runs bright against the printed cell it replaces.
 `tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
 the count.

@@ -336,6 +336,9 @@ hole in the model column.
 | NGP diffuse residual | 25.44 | 24.13 | **1.308 mag brighter** |
 | Galactic centre vs [Leinert 1998](/data/papers/index.md#leinert1998)'s b = 30° total | 22.92 | 22.54 | **0.385 mag brighter** |
 
+The second row grades a b = 0 sightline against a b = 30° value, not like
+for like; what to grade it against is an open decision (`stellata-uadc.69.10`).
+
 The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 
 | | mag/arcsec² |

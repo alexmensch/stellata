@@ -42,8 +42,9 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
 
 - **LMC (49.59 kpc)**: inclined disc at i = 32°, line of nodes PA =
   135°. [van der Marel 2014](/data/papers/index.md#vandermarel2014)'s
-  fits give i = 26.2–39.6° and Θ = 139.1–154.5° (Table 1), so neither
-  value is theirs. Distance
+  fits give i = 26.2–39.6° and Θ = 139.1–154.5° (Table 1; best fit
+  39.6° / 147.4°), so neither value is theirs, and the shipped pair has
+  no recorded source — an open decision (`stellata-uadc.69.20`). Distance
   [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019). Semi-axes
   4.5 kpc in the disc plane and 1 kpc normal to it — the wireframe
   extent, not the emission profile's R_d = 1.5 kpc below.
@@ -62,24 +63,26 @@ capture, and add the two major spirals LVDB's `dwarf_all` table omits:
   and conclude Sgr is a prolate spheroid with axis ratios 3:1:1. That
   depth is a full half-brightness depth, a ~0.6 kpc semi-axis, and
   their half-brightness minor axis is 2 × 550 pc; the override's
-  semi-axes, 2616 / 942 / 1000 pc, are neither.
+  semi-axes, 2616 / 942 / 1000 pc, are neither, and have no recorded
+  source — an open decision (`stellata-uadc.69.8`).
 - **M 32 (~773 kpc)**: ellipsoid 1.6 / 1.2 / 1.2 kpc at PA 159°.
   LVDB's half-light radius of 105 pc renders sub-pixel at LG
   distances, so the override is broader. Its PA and axis ratio (0.75)
   match [McConnachie 2012](/data/papers/index.md#mcconnachie2012)'s
-  PA = 159° and ε = 0.25 (Table 3); the review gives only a half-light
-  radius (110 pc), not the 1.6 kpc extent.
+  PA = 159° and ε = 0.25 (Table 3). The 1.6 kpc extent is unsourced:
+  the review gives only a half-light radius (110 pc).
 - **NGC 205 / M 110 (~835 kpc)**: 2.7 / 1.5 / 1.5 kpc at PA 170°.
   The axis ratio (0.56) matches
   [McConnachie 2012](/data/papers/index.md#mcconnachie2012)'s
-  ε = 0.43; the review's PA is 28° and its half-light radius 590 pc,
-  and it gives no 2.7 kpc extent.
+  ε = 0.43. The 2.7 kpc extent is unsourced (the review's half-light
+  radius is 590 pc), and the PA departs from the review's 28°.
 - **M31 / Andromeda (776 kpc)**: inclined disc at i = 77°, line of
   nodes PA = 37°, 15 kpc disc radius × 500 pc thickness. The
   inclination is the one
   [McConnachie 2018](/data/papers/index.md#mcconnachie2018)
   draw the PAndAS disc at (Fig. 4); their disc radius is 1.25° =
-  17 kpc, and they give no PA or thickness. Standalone row
+  17 kpc. The PA and the thickness are unsourced. These M 32, NGC 205 and
+  M31 values are an open decision (`stellata-uadc.69.12`). Standalone row
   (not in LVDB's `dwarf_all` table; the override carries RA, Dec,
   distance directly).
 - **M33 / Triangulum (840 kpc)**: inclined disc at i = 54°, line of
@@ -145,8 +148,9 @@ the profile and never re-derives photometry.
   spherical Sérsic bulge (R_e = 1.0 kpc, n = 2.2;
   [Courteau 2011](/data/papers/index.md#courteau2011)) carrying
   B/T = 0.31 of the V-band light; Courteau's bulge light fractions are
-  21–29% of the IRAC 3.6 µm light, 29% for the 2D bulge + disc fit (Sect. 7)
-  — a near-infrared split applied here in V. M33 R_d = 1.8 kpc
+  21–29% of the IRAC 3.6 µm light, 29% for the 2D bulge + disc fit (Sect. 7).
+  0.31 has no recorded source, and a near-infrared split is applied here in
+  V — an open decision (`stellata-uadc.69.2`). M33 R_d = 1.8 kpc
   ([Corbelli 2014](/data/papers/index.md#corbelli2014)), pure disc —
   Corbelli et al. find M33 hosts no bulge, reading its inner light as a
   raised mass-to-light ratio inside 1.5 kpc (p. 11), and its nuclear

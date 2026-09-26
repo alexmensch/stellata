@@ -24,11 +24,14 @@ AK_OVER_AV = 0.117
 # Zhang 2023 (/data/papers/index.md#zhang2023) "E" unit → V-band
 # extinction: A_V = ZGR_TO_AV * E_ZGR. Edenhofer 2024
 # (/data/papers/index.md#edenhofer2024) densities are E_ZGR/pc, so a path
-# integral times this yields A_V. The ZGR23 curve (Zenodo
-# 10.5281/zenodo.7811871; the paper's own electronic table is
-# 10.5281/zenodo.7692680) gives A_λ/E_ZGR = 2.78 at 540 nm, 2.73 at 545 nm;
-# 2.742 is λ ≈ 544 nm, inside the V-band effective wavelength (Edenhofer 2024
-# round to 2.8). Agrees with the n_H chain (AV_PER_NH_PC / ZGR_PER_NH = 2.741)
+# integral times this yields A_V. The factor is not in Zhang 2023's text: it
+# is read off a ZGR23 extinction-curve table (Zenodo 10.5281/zenodo.7811871;
+# the paper names 10.5281/zenodo.7692680 as its electronic table), which gives
+# A_λ/E_ZGR = 2.78 at 540 nm, 2.73 at 545 nm; 2.742 is λ ≈ 544 nm, inside the
+# V-band effective wavelength. Edenhofer 2024 multiply by 2.8. Which factor
+# and record to use is open
+# (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain).
+# Agrees with the n_H chain (AV_PER_NH_PC / ZGR_PER_NH = 2.741)
 # to <0.1%. Applied at runtime in the shader / dust manifest, never baked into
 # the stored density — retuning needs no re-encode.
 ZGR_TO_AV = 2.742
