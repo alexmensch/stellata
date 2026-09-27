@@ -49,10 +49,11 @@ It is one slot for both kinds, read through
   alone.
 - **It must run after every moving-body field has written this frame's
   positions.** The probe and planet module layers register in roster
-  order ahead of every inline layer, and `movingEntry` is the first
-  inline entry — so both fields are fresh when it fires. The planet mesh
-  entry, which needs the post-ride camera, registers after it. One frame of lag is
-  invisible at 1× and a visible offset at high fast-forward.
+  order ahead of every entry `registerSceneLayers` registers, and
+  `movingEntry` is the first of those — so both fields are fresh when it
+  fires. The planet mesh entry, which needs the post-ride camera,
+  registers after it. One frame of lag is invisible at 1× and a visible
+  offset at high fast-forward.
 
 Float32 precision as the object travels far from the focus-time origin
 is held generically by the origin-follow recentre

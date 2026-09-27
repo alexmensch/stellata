@@ -115,8 +115,8 @@ reading `registerSceneLayers` alone.** All five kind-module layers —
 molecular clouds, Local Group, the boundary shells, planets, probes —
 register in the constructor's roster loop, which runs *before*
 `registerSceneLayers` ([How the shell uses it](/src/client/scene/README.md#how-the-shell-uses-it)); the moving-focal ride,
-the orbit rings and the binary orbits are the three inline entries ahead
-of the lock. So clouds, the Local Group and the shells may gate on
+the orbit rings and the binary orbits are the three `registerSceneLayers`
+entries ahead of the lock. So clouds, the Local Group and the shells may gate on
 legibility and opacity but **not** on frustum, and moving them below the
 lock is not free: a module layer writes the positions the focal ride
 reads, and the ride must precede the lock. Splitting one into a

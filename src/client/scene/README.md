@@ -105,7 +105,8 @@ itself never set the latter, so the positive test is the one that admits
 
 `stellata.ts` registers one entry per render layer in its constructor.
 A subsystem that owns its wiring builds its own entries
-([Wiring](../solar-system/README.md#wiring)) and the shell only registers them,
+([Wiring](../solar-system/README.md#wiring), the focal rides'
+`movingEntry`) and the shell only registers them,
 since where each goes is a claim about *other* layers; the rest are inline
 adapters. Registration is in draw-dependency order (the continuously-ticking
 entries — the moving-focal ride, orbit rings, binary orbits — first;
@@ -114,9 +115,9 @@ HUD, which additionally need the camera-matrix refresh —
 [Camera writes, then camera reads](#camera-writes-then-camera-reads)). Kind-module layers
 (`../kinds/README.md`) register first of all: the constructor's roster
 attach loop runs before `registerSceneLayers`, so a module layer
-updates ahead of every inline-wired entry — which is what keeps the
-probe and planet fields' samples frame-fresh for the first inline
-entry, the moving-focal ride. An entry reaches its layer through a closure
+updates ahead of every entry that method registers — which is what keeps
+the probe and planet fields' samples frame-fresh for the first of them,
+the moving-focal ride (`FocalRides.movingEntry`). An entry reaches its layer through a closure
 or through the owner that built it, so a lazily-attached layer needs no
 re-registration: it answers from whatever is attached now — the binaries
 entry by matching on its owner's `Late` cell

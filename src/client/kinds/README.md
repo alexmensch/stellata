@@ -70,10 +70,10 @@ its catalog load blocks first paint and may reject) — and are only
 - **No self-registration.** `attach` *returns* its scene layer; the
   shell registers it at the kind's roster position. Update order is
   draw-dependency-load-bearing: module layers register in `KIND_ROSTER`
-  order, ahead of every inline-wired layer — and it is that boundary,
-  not the order within the roster, that keeps every moving-body field
-  fresh for the moving-focal ride, which is the first INLINE entry
-  (`../scene/README.md`). No inter-kind draw dependency exists inside
+  order, ahead of every entry `registerSceneLayers` registers — and it is
+  that boundary, not the order within the roster, that keeps every
+  moving-body field fresh for the moving-focal ride, the first of those
+  entries (`../scene/README.md`). No inter-kind draw dependency exists inside
   the roster today; `kind-modules.test.ts` pins the order so a reorder
   is a deliberate render-order change.
 - **Modules are stateful, per-shell instances.** `load` stores the
