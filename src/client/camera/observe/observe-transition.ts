@@ -3,7 +3,8 @@
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { CameraMode } from '../focus/focus-controller';
+import type { StellataEventMap } from '../../stellata';
 import type { HardKind, HardTarget, Target } from '../focus/focus-target';
 import type { EventBus } from '../../util/event-bus';
 import type { AimController } from '../controls/aim-controller';

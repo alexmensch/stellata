@@ -62,6 +62,9 @@ export interface FocalRideStep {
   readonly pz: number;
   /** New `rideFocalIdx` to store. */
   readonly rideFocalIdx: number | null;
+  /** True when the translate is the focal's motion over the frame — camera
+   *  velocity. False for a seed snap or a warp resync, which are jumps. */
+  readonly steady: boolean;
 }
 
 /**
@@ -89,6 +92,7 @@ export function focalRideStep(i: FocalRideInputs): FocalRideStep {
       dz: reSnap ? i.liveLocal.z - from.z : 0,
       px, py, pz,
       rideFocalIdx: i.focal,
+      steady: false,
     };
   }
   return {
@@ -97,5 +101,6 @@ export function focalRideStep(i: FocalRideInputs): FocalRideStep {
     dz: pz - i.lastAppliedPert.z,
     px, py, pz,
     rideFocalIdx: i.focal,
+    steady: true,
   };
 }

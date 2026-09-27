@@ -50,7 +50,7 @@ scene-layer hooks; the star-position legs read `StarFrame`
   `Target | null` payload, so a kind change is a single emit — no
   clearing emit for the displaced kind precedes it; subscribers
   re-read state or switch on `payload.kind`.
-- `cameraMode` lives here too — `getCameraMode()` is the single read
+- `cameraMode` lives here too, with its `CameraMode` type — `getCameraMode()` is the single read
   path; `setCameraModeValue()` is the raw no-emit write used by
   ObserveTransition and the observe-cleanup branch of `setFocus`.
 - `focusedPlanetSystem`, `planetSystemToken` — derived star-focus
@@ -377,12 +377,10 @@ silently disengages the pin. Residual sources that have bitten this:
    per-frame perturbation so target stays on the star.
 5. **Space-motion re-advance under time scrubbing.** A scrubbed clock
    re-runs the epoch-advance pass, moving the focal star's baseline
-   mid-focus. `maybeReAdvanceEpoch` (`stellata.ts`, over
-   `StarFrame.advanceEpochTo`) translates camera,
-   target, and the in-flight transition pose caches by the focal's
-   exact space-motion delta in the same step — the ride's follow
-   contract applied to proper motion (skipped during warp, like the
-   ride).
+   mid-focus. `FocalRides.followEpochStep` translates camera, target,
+   and the in-flight transition pose caches by the focal's exact
+   space-motion delta from `StarFrame.advanceEpochTo`, in the same step
+   ([The epoch follow](focal-ride/README.md#the-epoch-follow)).
 
 **Fix for #1, #2, #4** lives at the choke point in
 `FocusController.setFocus`'s `idx !== null` branch: after

@@ -273,7 +273,7 @@ report every distance ~1 pc off.
 
 **It is re-derived only on rotation, and that guard is load-bearing.** A
 focal ride translates camera and target together through one delta
-(`Stellata.applyRideDelta`), which is exact, so a translated pin stays
+(`FocalRides`, `../focus/focal-ride/README.md`), which is exact, so a translated pin stays
 correct for free. Re-deriving it from a translated camera instead lands
 `position + forward` a few ULP off the value the ride wrote, every frame,
 converging never. The render gate compares the pose by exact equality, so

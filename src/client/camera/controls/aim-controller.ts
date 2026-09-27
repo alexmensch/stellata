@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
-import type { CameraMode } from '../../stellata';
+import type { CameraMode } from '../focus/focus-controller';
 import type { ObserveControls } from '../observe/observe-controls';
 import { AIM_T_MAX_MS, AIM_T_MIN_MS, WARP_BASE_DIR } from '../timing';
 import { cameraLocalUpInto } from './input/roll-pure';

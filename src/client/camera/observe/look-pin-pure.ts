@@ -19,7 +19,7 @@ export const LOOK_PIN_DIST_PC = 1;
 /** Does the pin need re-deriving this frame?
  *
  *  **Only a rotation invalidates it.** A focal ride translates camera and
- *  target together through one delta (`Stellata.applyRideDelta`), which is
+ *  target together through one delta (`FocalRides`), which is
  *  exact and keeps a translated pin correct for free. Re-deriving from a
  *  translated camera instead lands `position + forward` a few ULP off the
  *  value the ride wrote — every frame, never converging — and the render

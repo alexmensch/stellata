@@ -32,6 +32,7 @@ describe('focalRideStep', () => {
     expect([s.dx, s.dy, s.dz]).toEqual([1, 0, -2]);
     expect([s.px, s.py, s.pz]).toEqual([5, 7, -3]);
     expect(s.rideFocalIdx).toBe(1);
+    expect(s.steady).toBe(true);
   });
 
   it('steady focal preserves a user pan offset (does not re-snap to live)', () => {
@@ -61,6 +62,7 @@ describe('focalRideStep', () => {
     // Baseline resyncs to this frame's perturbation.
     expect([s.px, s.py, s.pz]).toEqual([3, -1, 4]);
     expect(s.rideFocalIdx).toBe(1);
+    expect(s.steady).toBe(false);
   });
 
   it('seed frame is a no-op translate when target already matches live', () => {

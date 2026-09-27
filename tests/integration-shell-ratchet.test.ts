@@ -8,17 +8,15 @@ const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'binaries', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'exposureFrame', 'filters',
-  'floatingOrigin', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
+  'floatingOrigin', 'focalRides', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
   'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
 ];
 
 const AWAITING_EXTRACTION: readonly string[] = [
-  '_epochFollowDelta', '_extinctionView', '_focalPert',
-  '_lastAppliedPert', '_movingRideDelta', '_movingRideIdx', '_movingRideLast',
-  '_movingRideLive', '_realtimeFramesNeeded', '_rideDelta', '_rideFocalIdx',
-  '_rideLive', '_suppressPulsation', 'absorbedSuppressCount',
+  '_epochFollowDelta', '_extinctionView',
+  '_realtimeFramesNeeded', '_suppressPulsation', 'absorbedSuppressCount',
   'conFigureSig',
   'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
   'constellationNamer', 'coreMaskEnabled',
