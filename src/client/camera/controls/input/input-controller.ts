@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { EventBus } from '../../../util/event-bus';
-import type { CameraMode, StellataEventMap } from '../../../stellata';
+import type { CameraMode } from '../../focus/focus-controller';
+import type { StellataEventMap } from '../../../stellata';
 import { targetsEqual, type Target } from '../../focus/focus-target';
 import type { FilterState } from '../../../filters/filter-state';
 import type { PoiStore } from '../../../poi/poi-store';

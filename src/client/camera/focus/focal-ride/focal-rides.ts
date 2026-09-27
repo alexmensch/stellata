@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import type { CadenceReport } from '../../../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx, SceneLayer } from '../../../scene/scene-layer';
-import type { CameraMode } from '../../../stellata';
+import type { CameraMode } from '../focus-controller';
 import type { FocalPerturbationInto } from '../focus-controller';
 import { KIND_TRAITS, type FocusableProviders, type Target } from '../focus-target';
 import { focalRideStep } from './focal-ride-pure';

@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import type { Catalog } from '../../loaders/catalog-loader';
-import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 import type { Late } from '../../util/late/late';
 import type { AimController } from '../controls/aim-controller';
@@ -131,6 +131,8 @@ export interface FocusControllerDeps {
  *  the current sim time, written into `out`; false when the star is in no
  *  binary relation. */
 export type FocalPerturbationInto = (idx: number, out: THREE.Vector3) => boolean;
+
+export type CameraMode = 'navigate' | 'observe';
 
 export class FocusController implements FocusOps {
   private readonly deps: FocusControllerDeps;

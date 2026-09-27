@@ -11,7 +11,8 @@ import {
 } from './warp-controller';
 import type { FocusTarget } from '../focus/focus-target';
 import { makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
-import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { CameraMode } from '../focus/focus-controller';
+import type { StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import {
   WARP_REORIENT_MS,

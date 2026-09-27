@@ -58,6 +58,7 @@ import { ObserveLookPin } from './camera/observe/observe-look-pin';
 import { PoiStore } from './poi/poi-store';
 import { InputController } from './camera/controls/input/input-controller';
 import {
+  type CameraMode,
   FocusController,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
@@ -166,8 +167,6 @@ export interface StellataOptions {
    *  itself and that refusal is the gate page, not a fallback. */
   webgpu: WebGpuSeam;
 }
-
-export type CameraMode = 'navigate' | 'observe';
 
 /** A scene a boot draws, named so a debug read can say which one a
  *  resource came from (`sceneGraphs`). */

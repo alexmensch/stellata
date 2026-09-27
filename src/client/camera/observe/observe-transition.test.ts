@@ -9,7 +9,8 @@ import {
   type ObserveTransitionDeps,
 } from './observe-transition';
 import { makeAimStub, makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
-import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { CameraMode } from '../focus/focus-controller';
+import type { StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { OBSERVE_TRANSITION_MS } from '../timing';
 import { RollController } from '../controls/input/roll-controller';

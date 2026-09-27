@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it, vi } from 'vitest';
-import type { CameraMode } from '../../../stellata';
+import type { CameraMode } from '../focus-controller';
 import type { FrameCtx } from '../../../scene/scene-layer';
 import type { FocusableProviders, Target } from '../focus-target';
 import { FocalRides } from './focal-rides';
