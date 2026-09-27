@@ -42,20 +42,19 @@ function makeAttachment(prepass = fakePrepass()) {
     uDustEnabled: { value: 0 },
     uExtinctionStrength: { value: 1 },
   };
-  const camera = new THREE.PerspectiveCamera();
-  const worldOffset = new THREE.Vector3();
   const deps = {
     catalog: { positions: new Float32Array(0), count: 0, loadedCount: 0 },
     uniforms: uniforms as unknown as SharedUniforms,
     webgpu: { setDustTexture: vi.fn(), attachExtinctionPrepass: vi.fn(() => prepass) },
     milkyway: { attachDust: vi.fn(), setExtinctionStrength: vi.fn() },
     renderer: {} as ExtinctionAttachmentDeps['renderer'],
-    camera,
-    worldOffset,
     invalidate: vi.fn(),
   };
   const attachment = new ExtinctionAttachment(deps as unknown as ExtinctionAttachmentDeps);
-  const ctx = { camera, worldOffset } as unknown as FrameCtx;
+  const ctx = {
+    camera: new THREE.PerspectiveCamera(),
+    worldOffset: new THREE.Vector3(),
+  } as unknown as FrameCtx;
   return { attachment, deps, uniforms, prepass, ctx };
 }
 
@@ -123,17 +122,13 @@ describe('ExtinctionAttachment', () => {
     expect(attachment.isPrepassActive()).toBe(false);
   });
 
-  it('updates the prepass with the absolute camera and one stable view', () => {
+  it('updates the prepass with the absolute camera, viewed through the frame context', () => {
     const { attachment, prepass, ctx } = makeAttachment();
     attachment.attach(fakeDust().dust);
     ctx.camera.position.set(1, 2, 3);
-    ctx.worldOffset.set(100, 200, 300);
+    (ctx.worldOffset as THREE.Vector3).set(100, 200, 300);
     attachment.update(ctx);
-    attachment.update(ctx);
-    expect(prepass.update).toHaveBeenLastCalledWith(101, 202, 303, expect.anything());
-    const [first, second] = prepass.update.mock.calls.map((c) => c[3]);
-    expect(first).toBe(second);
-    expect(first).toEqual({ camera: ctx.camera, worldOffset: ctx.worldOffset });
+    expect(prepass.update).toHaveBeenLastCalledWith(101, 202, 303, ctx);
   });
 
   it('forced recompute dirties the cache before every update', () => {

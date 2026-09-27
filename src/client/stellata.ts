@@ -799,8 +799,6 @@ export class Stellata implements FrameAnchor {
       webgpu: this.webgpu,
       milkyway: this.milkyway,
       renderer: this.renderer,
-      camera: this.camera,
-      worldOffset: this.worldOffset,
       invalidate: (reason) => this.renderGate.invalidate(reason),
     });
 

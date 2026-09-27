@@ -51,7 +51,7 @@ const originShift = new Matrix4();
  *  point in the frame (README.md#only-what-is-in-frame). */
 export function composeViewProjectionAbs(
   camera: Camera,
-  worldOffset: Vector3,
+  worldOffset: Readonly<Vector3>,
   out: Matrix4,
 ): Matrix4 {
   camera.updateMatrixWorld();

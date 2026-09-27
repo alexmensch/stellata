@@ -61,8 +61,9 @@ close-approach case, where the camera's AU-scale motion moves A_V by
 nothing. State the vantage before narrowing the slack.
 
 **The prepass still composes the absolute view each frame** —
-projection × view × T(−worldOffset) in float64 from the camera the shell
-hands `update()` — to *detect* a turn (`sameView`), since a turn is a
+projection × view × T(−worldOffset) in float64 from the frame context's
+camera and offset, which the attachment hands `update()` as its view — to
+*detect* a turn (`sameView`), since a turn is a
 request ([A view change is a refill request](#a-view-change-is-a-refill-request--nothing-more)), and for `countInFrame()`.
 The shell runs the prepass after the ride fan-out and the compaction after
 that (`../../../stellata.ts` `animate`): the request the prepass raises

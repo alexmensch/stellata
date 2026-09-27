@@ -15,7 +15,7 @@ import { cameraAbsInto, type FrameCtx } from '../../scene/scene-layer';
 import { LateCell, whenReady } from '../../util/late/late';
 import type { StellataRenderer, WebGpuSeam } from '../../webgpu/seam';
 import { formatAvParity, type AvParityReport } from './av-parity-pure';
-import type { ExtinctionPrepassSeam, ExtinctionView } from './extinction-seam';
+import type { ExtinctionPrepassSeam } from './extinction-seam';
 
 export interface ExtinctionAttachmentDeps {
   catalog: Pick<Catalog, 'positions' | 'count' | 'loadedCount'>;
@@ -23,8 +23,6 @@ export interface ExtinctionAttachmentDeps {
   webgpu: Pick<WebGpuSeam, 'setDustTexture' | 'attachExtinctionPrepass'>;
   milkyway: Pick<MilkyWay, 'attachDust' | 'setExtinctionStrength'>;
   renderer: StellataRenderer;
-  camera: THREE.Camera;
-  worldOffset: THREE.Vector3;
   invalidate: (reason: string) => void;
 }
 
@@ -35,13 +33,10 @@ interface Attached {
 
 export class ExtinctionAttachment {
   private readonly attached = new LateCell<Attached>();
-  private readonly view: ExtinctionView;
   private readonly cameraAbs = new THREE.Vector3();
   private recomputeForced = false;
 
-  constructor(private readonly deps: ExtinctionAttachmentDeps) {
-    this.view = { camera: deps.camera, worldOffset: deps.worldOffset };
-  }
+  constructor(private readonly deps: ExtinctionAttachmentDeps) {}
 
   /** Settles the slot, once: null (no manifest) concludes it absent. */
   attach(dust: DustField | null): void {
@@ -83,7 +78,7 @@ export class ExtinctionAttachment {
     perfMark('extinction.prepass');
     if (this.recomputeForced) prepass.markDirty();
     const abs = cameraAbsInto(ctx, this.cameraAbs);
-    prepass.update(abs.x, abs.y, abs.z, this.view);
+    prepass.update(abs.x, abs.y, abs.z, ctx);
     perfMeasure('extinction.prepass');
   }
 
