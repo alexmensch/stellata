@@ -202,13 +202,13 @@ subtracted, the safety net and the pinned acceptance numbers — is
 Focusing a moving body — a binary member, a planet, a probe — used to pin
 the gate open for as long as the focus lasted, at any distance and any
 vantage, and not for the reason it looks like. Both rides
-(`applyFocalFrameRide`, `applyMovingFocalRide`) translate camera and
+(`FocalRides`, `../camera/focus/focal-ride/README.md`) translate camera and
 target inside the scene-layer update fan-out, which runs BELOW the gate.
 So the write lands AFTER `tick()` captured that frame's pose snapshot;
 the next tick reads it as a fresh camera move, renders, rides again, and
 stamps activity. It is self-sustaining and never reaches a skipped tick.
 
-`Stellata.applyRideDelta` — now the single place either ride reaches the
+`FocalRides`' ride step — the single place either ride reaches the
 camera — calls `RenderGate.rebasePose(delta)`, shifting the stored
 snapshot's position and target slots by the same translation. The next
 tick compares equal and the cadence owns the schedule. **A delta that
@@ -257,6 +257,6 @@ inherits this defect** — the ULP column in `debug.renderWatch()` is how you
 find it, and a handful of ULP on a slot nothing should have touched is the
 signature.
 
-`applyRideDelta` also reports each step to `ClockCadence.noteRideStep`;
+The ride step also reports to `ClockCadence.noteRideStep`;
 the frame's sum divided by the sim step IS
 `CadenceCtx.cameraVelPcPerSimS` ([Camera motion is subtracted](cadence/README.md#camera-motion-is-subtracted-never-bounded)).

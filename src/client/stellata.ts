@@ -59,11 +59,10 @@ import { PoiStore } from './poi/poi-store';
 import { InputController } from './camera/controls/input/input-controller';
 import {
   FocusController,
-  type FocalPerturbationInto,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
-import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
+import type { FocusableProviders, Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
 import {
   collectFocusables,
@@ -74,7 +73,7 @@ import {
   type BuiltKindModules,
 } from './kinds/kind-modules';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
-import { focalRideStep } from './camera/focus/focal-ride/focal-ride-pure';
+import { FocalRides } from './camera/focus/focal-ride/focal-rides';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-ride/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
 import type { SurvivorCountsRead } from './debug/survivor-counts';
@@ -253,32 +252,7 @@ export class Stellata implements FrameAnchor {
   readonly systemMembership = new SystemMembershipRegistry();
   readonly binaries: BinariesAttachment;
 
-  // Focal-frame ride state. The focal star (when a binary member) drifts
-  // along its orbit; the camera + orbit target track that drift so the
-  // pinned star stays at NDC centre and unfocus is a pure state change.
-  // `_lastAppliedPert` is the perturbation already baked into camera /
-  // target / pose caches; each frame the delta since last frame is
-  // applied and stored. `_rideFocalIdx` guards the re-seed on focus
-  // change (no translate on the frame the focal switches). float64
-  // throughout (THREE.Vector3 components are doubles).
-  private readonly _focalPert = new THREE.Vector3();
-  private readonly _lastAppliedPert = new THREE.Vector3();
-  private readonly _rideDelta = new THREE.Vector3();
-  private readonly _rideLive = new THREE.Vector3();
-  private _rideFocalIdx: number | null = null;
-
-  // Moving-focal ride state — the sibling of the binary ride above for
-  // hard focus kinds whose object moves with `t` (a planet sweeping its
-  // orbit, a probe running its trajectory; both fast under scrubber FF).
-  // The camera + orbit target translate by the object's per-frame
-  // local-position delta so it stays under the camera and user pan
-  // offsets survive. `_movingRideIdx` reseeds on every 'focus' event,
-  // which is what makes the shared slot safe across kinds — see
-  // camera/focus/focal-ride/README.md#moving-focal-ride.
-  private readonly _movingRideLast = new THREE.Vector3();
-  private readonly _movingRideLive = new THREE.Vector3();
-  private readonly _movingRideDelta = new THREE.Vector3();
-  private _movingRideIdx: number | null = null;
+  private readonly focalRides: FocalRides;
 
   // Filter / preset / render-knob state + mutations live in
   // FilterController (filters/README.md); the shell reads the live
@@ -540,7 +514,7 @@ export class Stellata implements FrameAnchor {
       focusedStar: () => this.focus.getFocusedStar(),
       observeAnchorStar: () => this.observe.observeAnchorOf('star'),
       onFocus: (handler) => this.bus.on('focus', handler),
-      rideFocal: (source) => this.applyFocalFrameRide(source),
+      rideFocal: (source) => this.focalRides.rideBinaryFocal(source),
     });
     // The star kind module's legs read the shell-owned star machinery
     // through these closures — they deref lazily, so the picker and focus
@@ -792,13 +766,19 @@ export class Stellata implements FrameAnchor {
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
     this.buildFocalAnchorPolicy();
-    // Reseed the moving-focal ride on every focus mutation: a focus
-    // change AND a same-object refocus both recentre the floating
-    // origin, which stales the ride's cached last position. The seed
-    // frame re-snaps against the fresh frame. This is also what keeps
-    // the shared ride slot safe when the kind changes but the index
-    // collides (planet 3 → probe 3).
-    this.on('focus', () => { this._movingRideIdx = null; });
+    this.focalRides = new FocalRides({
+      cameraPosition: this.camera.position,
+      orbitTarget: this.controls.target,
+      focus: this.focus,
+      observe: this.observe,
+      focusables: this.focusables,
+      starLocalPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      warpActive: () => this.warp.isActive(),
+      rebasePose: (delta) => this.renderGate.rebasePose(delta),
+      noteRideStep: (delta) => this.cadence.noteRideStep(delta),
+      planetRate: this.solarSystem.planetRate,
+      onFocus: (handler) => this.bus.on('focus', handler),
+    });
     // Every fine-grained mutation the figure's active set reads — focus,
     // filter, cameraMode — pairs with 'state', and so does the observe
     // transition's landing, which no fine-grained event covers.
@@ -939,16 +919,7 @@ export class Stellata implements FrameAnchor {
   // Registration order is per-frame update order —
   // scene/README.md#how-the-shell-uses-it.
   private registerSceneLayers(galacticDiscEntry: SceneLayer): void {
-    this.layers.register({
-      timeBehaviour: { kind: 'clock', rate: this.solarSystem.planetRate },
-      contribution: { kind: 'always' },
-      // Ride runs right after every moving-body field wrote this
-      // frame's positions — the whole module roster updates ahead of
-      // this, the first inline entry — mirroring the binary ride's
-      // placement after its orbit walk.
-      update: () => this.applyMovingFocalRide(),
-      dispose: () => {},
-    });
+    this.layers.register(this.focalRides.movingEntry);
     // AFTER the body field: a moon ring's centre is the parent's live
     // iLocalRel — reading it before the field's walk left the rings one frame
     // of sim-time behind the bodies, a visible lag under fast scrub.
@@ -1216,7 +1187,7 @@ export class Stellata implements FrameAnchor {
   // baselines in the same frame. When a star is focused, the camera +
   // orbit target (+ any in-flight transition pose caches) translate by
   // the focal's space-motion delta — the same follow contract
-  // applyFocalFrameRide implements for orbital drift — so the pin
+  // the binary focal ride implements for orbital drift — so the pin
   // invariant (target === focal live position) survives the move. Skipped
   // during warp: the warp owns the camera and re-snaps on arrival.
   private maybeReAdvanceEpoch(): void {
@@ -1394,99 +1365,6 @@ export class Stellata implements FrameAnchor {
     }
     console.log(formatAvParity(report));
     return report;
-  }
-
-  // Focal-frame ride: translate the camera, orbit target, and any
-  // in-flight camera-transition pose caches by the focal star's per-frame
-  // orbital drift so the star stays glued under the camera. Runs right
-  // after the orbit walk (which wrote this frame's perturbation into the
-  // buffer). Skipped during warp — the warp owns the camera and its
-  // per-frame lookAt already tracks the live buffer; lastAppliedPert is
-  // kept synced so no jump accrues when the warp ends. On the frame the
-  // focal star changes, re-snaps target onto the star's LIVE buffer
-  // position: setFocus sampled the perturbation at focus-event time, but
-  // under fast scrub sim-time advances between that event and this frame,
-  // so the event-time snap goes stale and the star would land off-centre.
-  private applyFocalFrameRide(perturbation: FocalPerturbationInto): void {
-    const focal = this.focus.getFocusedStar();
-    const hasPert = focal !== null && perturbation(focal, this._focalPert);
-    if (!hasPert) this._focalPert.set(0, 0, 0);
-
-    const live = focal !== null
-      ? this.starLocalPositionInto(focal, this._rideLive)
-      : this._rideLive.set(0, 0, 0);
-    const step = focalRideStep({
-      focal,
-      rideFocalIdx: this._rideFocalIdx,
-      warpActive: this.warp.isActive(),
-      focalPert: this._focalPert,
-      lastAppliedPert: this._lastAppliedPert,
-      liveLocal: live,
-      target: this.controls.target,
-      cameraPosition: this.camera.position,
-      observeMode: this.focus.getCameraMode() === 'observe',
-    });
-    this._rideFocalIdx = step.rideFocalIdx;
-    this._lastAppliedPert.set(step.px, step.py, step.pz);
-    this._rideDelta.set(step.dx, step.dy, step.dz);
-    this.applyRideDelta(this._rideDelta);
-  }
-
-  /** Translate the camera, the look target and both transition caches by
-   *  one ride step, tell the gate the step was not camera activity, and
-   *  add it to the frame's camera velocity.
-   *
-   *  Shared by both rides because a delta that reaches the camera without
-   *  reaching `rebasePose` reinstates the pin: the ride runs below the
-   *  gate, so the next tick reads the write as a fresh camera move,
-   *  renders, rides again, and never reaches a skipped tick
-   *  (render-gate/README.md#the-focal-ride). */
-  private applyRideDelta(delta: THREE.Vector3): void {
-    if (delta.lengthSq() === 0) return;
-    this.camera.position.add(delta);
-    this.controls.target.add(delta);
-    this.focus.translateFocusFrame(delta);
-    this.observe.translateFocusFrame(delta);
-    this.renderGate.rebasePose(delta);
-    this.cadence.noteRideStep(delta);
-  }
-
-  // Moving-body sibling of applyFocalFrameRide, over the shared
-  // focalRideStep. For every hard focus kind whose object MOVES in the
-  // local frame as `t` advances — a planet sweeping its orbit, a probe
-  // running its trajectory — the object's full live local position plays
-  // the role the star ride's perturbation does: its frame-to-frame delta
-  // is what the camera / target / transition caches translate by, so the
-  // object stays glued to controls.target, pan offsets survive, and the
-  // camera rides the whole trajectory at any fast-forward rate. Seed
-  // frames (focus change, warp) resync the baseline.
-  private applyMovingFocalRide(): void {
-    const focused = this.focus.getFocusedTarget();
-    if (focused === null || !KIND_TRAITS[focused.kind].moving) {
-      this._movingRideIdx = null;
-      return;
-    }
-    const idx = focused.idx;
-    const live = this._movingRideLive;
-    if (!this.focusables[focused.kind].localPositionInto(idx, live)) {
-      this._movingRideIdx = null;
-      return;
-    }
-    const step = focalRideStep({
-      focal: idx,
-      rideFocalIdx: this._movingRideIdx,
-      warpActive: this.warp.isActive(),
-      focalPert: live,
-      lastAppliedPert: this._movingRideLast,
-      liveLocal: live,
-      target: this.controls.target,
-      cameraPosition: this.camera.position,
-      observeMode: this.focus.getCameraMode() === 'observe',
-    });
-    this._movingRideIdx = step.rideFocalIdx;
-    this._movingRideLast.set(step.px, step.py, step.pz);
-    this._movingRideDelta.set(step.dx, step.dy, step.dz);
-    this.applyRideDelta(this._movingRideDelta);
   }
 
   /** Debug-HUD view of the disc/glow routing for one star at a given
@@ -2013,15 +1891,7 @@ export class Stellata implements FrameAnchor {
     // separate quantity; see solar-system/time/README.md.)
     const nowMs = performance.now();
     this.maybeReAdvanceEpoch();
-    if (this.floatingOrigin.tick()) {
-      // Policy recentre shifted the frame under the moving ride's cached
-      // position — reseed to skip a one-frame jump. Keyed on tick()'s
-      // return, never a recentre listener: a warp mid-fly recentre must
-      // NOT reseed (focalRideStep owns that transition). The binary ride
-      // tracks baseline-relative perturbation (frame-invariant) and
-      // needs none.
-      this._movingRideIdx = null;
-    }
+    if (this.floatingOrigin.tick()) this.focalRides.reseedMoving();
     // Both can invalidate the local-position buffer; StarFrame
     // coalesces them into a single rewrite. Must run before anything
     // downstream reads localPositions.
@@ -2244,6 +2114,7 @@ export class Stellata implements FrameAnchor {
     this.renderGate.dispose();
     this.trackballSettle.dispose();
     this.cadence.dispose();
+    this.focalRides.dispose();
     this._realtimeFramesNeeded = false;
     this.frameCtx.frustum.invalidate();
     this.input.dispose();

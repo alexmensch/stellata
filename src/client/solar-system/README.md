@@ -298,7 +298,7 @@ them, because each one's place in the frame is a claim about other layers that
 only registration order can state: the rings after the body field (a moon ring
 centres on its parent's live position), the planet mesh below every camera
 write ([Camera writes, then camera reads](../scene/README.md#camera-writes-then-camera-reads)), the cluster
-after both. All three, and the shell's moving-focal ride, declare
+after both. All three, and the moving-focal ride (`FocalRides`), declare
 `planetRate` — the bodies are what each one draws a view of.
 
 ## First-load default and `minDistance` relaxation

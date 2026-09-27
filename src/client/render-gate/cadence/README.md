@@ -33,7 +33,8 @@ it, each through one method:
 
 - `isDue(rate, t)` — the gate's input, read above the gate every tick.
 - `noteRideStep(delta)` — each focal-ride step, from
-  `Stellata.applyRideDelta`. Summed until the refresh.
+  `FocalRides` (`../../camera/focus/focal-ride/README.md`). Summed until
+  the refresh.
 - `tightenPulsationBound(s)` — each absorbed catalogue chunk's
   `pulsationCadenceBudgetS`. A minimum: the answer cannot rise.
 - `refresh(frame)` — once per rendered frame, **after** the layer fan-out

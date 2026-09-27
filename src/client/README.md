@@ -251,17 +251,14 @@ an empty awaiting list.
 interface for both:
 
 - The frame's camera velocity — owned by `ClockCadence`
-  ([The controller](render-gate/cadence/README.md#the-controller)); `applyRideDelta`
-  reports each ride step through `noteRideStep`, and the rides take that
-  call with them. `maybeReAdvanceEpoch`'s translate skips it today — the
+  ([The controller](render-gate/cadence/README.md#the-controller)); `FocalRides`
+  (`camera/focus/focal-ride/`) reports each ride step through
+  `noteRideStep`. `maybeReAdvanceEpoch`'s translate skips it today — the
   suspected bug 32.2 carries.
 - **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
   CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the star-local-cluster,
   core-mask and constellation-figure entries take it, and carry it when
   their rows move.
-- **The planet rate** — settled as `solarSystem.planetRate`, a `(cc) =>
-  CadenceReport` ([Wiring](solar-system/README.md#wiring)); the moving-focal-ride
-  entry takes it, and the rides carry that `rate` with them.
 
 ### Late-attached slots
 

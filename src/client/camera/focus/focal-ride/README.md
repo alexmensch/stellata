@@ -1,11 +1,19 @@
 # Focal ride
 
-Keeping a moving focused object under the camera: the per-frame ride step
-and the anchor policy that keeps the floating origin on the focal object as
-it travels. The focus state it rides lives in the parent (`../README.md`).
+Keeping a moving focused object under the camera: both rides, the
+per-frame ride step they share, and the anchor policy that keeps the
+floating origin on the focal object as it travels. The focus state they
+ride lives in the parent (`../README.md`).
 
 ## Files
 
+- `focal-rides.ts` (+ test) — `FocalRides`, the controller holding both
+  rides' state. `rideBinaryFocal` is called by the binaries attachment
+  between its orbit walk and its eclipse photometry; `movingEntry` is the
+  moving ride's scene entry, scheduled on `solarSystem.planetRate`;
+  `reseedMoving` is owed after a policy recentre (`FloatingOrigin.tick()`
+  returning true), never after a warp's mid-fly one. Its one ride step is
+  the only place either ride reaches the camera.
 - `focal-ride-pure.ts` (+ test) — `focalRideStep`, one frame of the ride
   both moving-focal kinds and the binary walk drive, plus
   `shouldRecenterFocalOrigin`. The seed frame measures from `target` in
@@ -21,8 +29,8 @@ it travels. The focus state it rides lives in the parent (`../README.md`).
 ## Moving-focal ride
 
 A focused planet sweeps its orbit and a focused probe runs its
-trajectory, both fast under scrubber fast-forward. `applyMovingFocalRide`
-in `stellata.ts` — the sibling of the binary focal-frame ride, over the
+trajectory, both fast under scrubber fast-forward. The moving ride
+(`FocalRides.movingEntry`) — the sibling of the binary focal-frame ride, over the
 shared `focalRideStep` — translates camera + orbit target + in-flight
 pose caches by the object's per-frame local-position delta, so pan
 offsets survive and the object stays glued to `controls.target` at any
@@ -39,9 +47,9 @@ It is one slot for both kinds, read through
   alone.
 - **It must run after every moving-body field has written this frame's
   positions.** The probe and planet module layers register in roster
-  order ahead of every inline layer, and the ride sits in the first
-  inline entry (with the planet mesh update, which needs the post-ride
-  camera) — so both fields are fresh when it fires. One frame of lag is
+  order ahead of every inline layer, and `movingEntry` is the first
+  inline entry — so both fields are fresh when it fires. The planet mesh
+  entry, which needs the post-ride camera, registers after it. One frame of lag is
   invisible at 1× and a visible offset at high fast-forward.
 
 Float32 precision as the object travels far from the focus-time origin
@@ -57,13 +65,13 @@ being unfocused, so focus→unfocus is a pure state change with no
 position discontinuity. Instead of rebasing the focal to the local
 origin to match the disc shader's `uPinFocusToCenter`, the **camera
 rides the focal star's perturbed position**: the integration shell
-(`stellata.ts`, `applyFocalFrameRide`) translates `camera.position` +
+(`FocalRides.rideBinaryFocal`) translates `camera.position` +
 `controls.target` (and any in-flight camera-transition pose caches) by
 the focal's per-frame orbital drift, so `controls.target` stays glued to
 the star and `lookAt(target) == star` keeps the pin substitution valid.
 
-Both rides reach the camera through one `applyRideDelta` helper, which
-also hands the delta to the gate and the cadence
+Both rides reach the camera through one ride step, which also hands the
+delta to the gate and the cadence
 ([The focal ride](../../../render-gate/README.md#the-focal-ride)).
 
 `focalPerturbationInto(focalIdx, t, out)` supplies that drift in
