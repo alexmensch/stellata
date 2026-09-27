@@ -12,7 +12,7 @@ import {
 } from '../../loaders/dust-voxel-readback';
 import type { MilkyWay } from '../../milkyway/milkyway';
 import { cameraAbsInto, type FrameCtx } from '../../scene/scene-layer';
-import { LateCell } from '../../util/late/late';
+import { LateCell, whenReady } from '../../util/late/late';
 import type { StellataRenderer, WebGpuSeam } from '../../webgpu/seam';
 import { formatAvParity, type AvParityReport } from './av-parity-pure';
 import type { ExtinctionPrepassSeam, ExtinctionView } from './extinction-seam';
@@ -77,19 +77,20 @@ export class ExtinctionAttachment {
   /** Per-frame, between the scene fan-out and the uniform-node sync
    *  (../../webgpu/extinction/refill/README.md#only-what-is-in-frame). */
   update(ctx: FrameCtx): void {
-    const a = this.attachedOrNull();
-    if (a === null) return;
+    const s = this.attached.state();
+    if (s.status !== 'ready') return;
+    const { prepass } = s.value;
     perfMark('extinction.prepass');
-    if (this.recomputeForced) a.prepass.markDirty();
+    if (this.recomputeForced) prepass.markDirty();
     const abs = cameraAbsInto(ctx, this.cameraAbs);
-    a.prepass.update(abs.x, abs.y, abs.z, this.view);
+    prepass.update(abs.x, abs.y, abs.z, this.view);
     perfMeasure('extinction.prepass');
   }
 
   /** `catalog.positions` was rewritten under the prepass's copy — an epoch
    *  re-advance or a landing chunk (README.md#the-prepass-cache). */
   refreshPositions(): void {
-    this.attachedOrNull()?.prepass.refreshPositions();
+    whenReady(this.attached.state(), (a) => a.prepass.refreshPositions(), undefined);
   }
 
   /** README.md#the-cancellation-invariant. Independent of attach. */
@@ -100,11 +101,11 @@ export class ExtinctionAttachment {
 
   /** README.md#the-prepass-cache, the A/B switch. No-op until dust attaches. */
   setPrepassEnabled(on: boolean): void {
-    this.attachedOrNull()?.prepass.setEnabled(on);
+    whenReady(this.attached.state(), (a) => a.prepass.setEnabled(on), undefined);
   }
 
   isPrepassActive(): boolean {
-    return this.attachedOrNull()?.prepass.isActive() === true;
+    return whenReady(this.attached.state(), (a) => a.prepass.isActive(), false);
   }
 
   /** Frame-cost lever — never leave it on outside a measurement dwell
@@ -119,13 +120,13 @@ export class ExtinctionAttachment {
 
   /** A pointer event says a pick is coming (README.md#reading-a_v-back-on-the-cpu). */
   warmPickReadback(): void {
-    this.attachedOrNull()?.prepass.warmAvReadback();
+    whenReady(this.attached.state(), (a) => a.prepass.warmAvReadback(), undefined);
   }
 
   /** The A_V the shader applies to this star, in magnitudes; null when there
    *  is no answer — no dust, the A/B fallback, or a cold mirror. */
   avMagAt(idx: number): number | null {
-    const raw = this.attachedOrNull()?.prepass.readAvMag(idx) ?? null;
+    const raw = whenReady(this.attached.state(), (a) => a.prepass.readAvMag(idx), null);
     if (raw === null) return null;
     const u = this.deps.uniforms;
     return raw * u.uDustEnabled.value * u.uExtinctionStrength.value;
@@ -133,26 +134,31 @@ export class ExtinctionAttachment {
 
   /** Null until dust attaches and a view has been dispatched. */
   countInFrame(): number | null {
-    return this.attachedOrNull()?.prepass.countInFrame() ?? null;
+    return whenReady(this.attached.state(), (a) => a.prepass.countInFrame(), null);
   }
 
   /** `../../loaders/README.md#dust-voxel-readback`. */
   async verifyDust(count?: number): Promise<ChunkVerifyReport[]> {
-    const a = this.attachedOrNull();
-    if (a === null) {
-      console.warn('verifyDust: no dust attached');
+    const s = this.attached.state();
+    if (s.status !== 'ready') {
+      warnUnsettled('verifyDust', s.status);
       return [];
     }
-    const reports = await verifyDustChunks({ renderer: this.deps.renderer, dust: a.dust, count });
+    const reports = await verifyDustChunks({ renderer: this.deps.renderer, dust: s.value.dust, count });
     for (const line of formatVerifyReports(reports)) console.log(line);
     return reports;
   }
 
   /** `../../webgpu/extinction/README.md#the-prepass-kernel`. */
   async verifyParity(): Promise<AvParityReport | null> {
-    const report = await this.attachedOrNull()?.prepass.verifyParity() ?? null;
+    const s = this.attached.state();
+    if (s.status !== 'ready') {
+      warnUnsettled('verifyParity', s.status);
+      return null;
+    }
+    const report = await s.value.prepass.verifyParity();
     if (report === null) {
-      console.warn('verifyParity: no compute prepass active');
+      console.warn('verifyParity: the prepass is parked on the A/B fallback');
       return null;
     }
     console.log(formatAvParity(report));
@@ -161,15 +167,16 @@ export class ExtinctionAttachment {
 
   /** Before the star layer and `WebGpuSeam.dispose` — README.md#the-attachment. */
   dispose(): void {
-    const a = this.attachedOrNull();
-    if (a === null) return;
-    a.prepass.dispose();
-    a.dust.dispose();
+    whenReady(this.attached.state(), (a) => {
+      a.prepass.dispose();
+      a.dust.dispose();
+    }, undefined);
     this.attached.conclude();
   }
+}
 
-  private attachedOrNull(): Attached | null {
-    const s = this.attached.state();
-    return s.status === 'ready' ? s.value : null;
-  }
+function warnUnsettled(check: string, status: 'pending' | 'absent'): void {
+  console.warn(status === 'pending'
+    ? `${check}: the dust manifest is still loading`
+    : `${check}: no dust this session`);
 }

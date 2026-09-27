@@ -162,6 +162,22 @@ describe('ExtinctionAttachment', () => {
     expect(attachment.avMagAt(0)).toBe(null);
   });
 
+  it('the console checks tell a loading manifest from no dust', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pending = makeAttachment();
+    expect(await pending.attachment.verifyDust()).toEqual([]);
+    expect(await pending.attachment.verifyParity()).toBe(null);
+    const absent = makeAttachment();
+    absent.attachment.attach(null);
+    expect(await absent.attachment.verifyDust()).toEqual([]);
+    expect(warn.mock.calls.map((c) => c[0])).toEqual([
+      'verifyDust: the dust manifest is still loading',
+      'verifyParity: the dust manifest is still loading',
+      'verifyDust: no dust this session',
+    ]);
+    warn.mockRestore();
+  });
+
   it('dispose releases the prepass and the field', () => {
     const { attachment, prepass } = makeAttachment();
     const f = fakeDust();
