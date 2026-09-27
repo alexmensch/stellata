@@ -212,6 +212,42 @@ describe('FocalRides — moving-focal ride', () => {
   });
 });
 
+describe('FocalRides — epoch follow', () => {
+  it('translates camera, target and both transition caches by the step', () => {
+    const r = rig();
+    r.rides.followEpochStep(new THREE.Vector3(0.25, -1, 2));
+    expect(xyz(r.camera)).toEqual([0.25, -1, 12]);
+    expect(xyz(r.target)).toEqual([0.25, -1, 2]);
+    expect(xyz(r.focusShift)).toEqual([0.25, -1, 2]);
+    expect(xyz(r.observeShift)).toEqual([0.25, -1, 2]);
+  });
+
+  it('reaches neither the gate rebase nor the cadence camera velocity', () => {
+    const r = rig();
+    r.rides.followEpochStep(new THREE.Vector3(1, 0, 0));
+    expect(r.rebasePose).not.toHaveBeenCalled();
+    expect(r.noteRideStep).not.toHaveBeenCalled();
+  });
+
+  it('moves nothing during a warp', () => {
+    const r = rig();
+    r.state.warp = true;
+    r.rides.followEpochStep(new THREE.Vector3(1, 0, 0));
+    expect(xyz(r.camera)).toEqual([0, 0, 10]);
+    expect(xyz(r.focusShift)).toEqual([0, 0, 0]);
+  });
+
+  it('leaves the binary ride steady: the next frame adds only the orbital drift', () => {
+    const r = rig();
+    r.state.star = 7;
+    r.rides.rideBinaryFocal(pertOf(new THREE.Vector3(1, 0, 0)));
+    r.rides.followEpochStep(new THREE.Vector3(0, 3, 0));
+    const cam0 = r.camera.clone();
+    r.rides.rideBinaryFocal(pertOf(new THREE.Vector3(1, 0, 0.5)));
+    expect(xyz(r.camera.clone().sub(cam0))).toEqual([0, 0, 0.5]);
+  });
+});
+
 describe('FocalRides — dispose', () => {
   it('unsubscribes from focus', () => {
     const r = rig();

@@ -218,6 +218,9 @@ regression is pinned both ways: an absorbed step stays quiet across six
 consecutive rides, and the same step unabsorbed wakes the gate on every
 one.
 
+The epoch follow shares the rides' translate but runs above the gate, so
+it owes no rebase ([The epoch follow](../camera/focus/focal-ride/README.md#the-epoch-follow)).
+
 The rebase touches exactly the six translation slots. Orientation, fov and
 `worldOffset` stay: absorbing a rotation would hide a real camera move, and
 a pan that moves `target` alone still wakes the gate.

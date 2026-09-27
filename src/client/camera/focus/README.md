@@ -377,12 +377,10 @@ silently disengages the pin. Residual sources that have bitten this:
    per-frame perturbation so target stays on the star.
 5. **Space-motion re-advance under time scrubbing.** A scrubbed clock
    re-runs the epoch-advance pass, moving the focal star's baseline
-   mid-focus. `maybeReAdvanceEpoch` (`stellata.ts`, over
-   `StarFrame.advanceEpochTo`) translates camera,
-   target, and the in-flight transition pose caches by the focal's
-   exact space-motion delta in the same step — the ride's follow
-   contract applied to proper motion (skipped during warp, like the
-   ride).
+   mid-focus. `FocalRides.followEpochStep` translates camera, target,
+   and the in-flight transition pose caches by the focal's exact
+   space-motion delta from `StarFrame.advanceEpochTo`, in the same step
+   ([The epoch follow](focal-ride/README.md#the-epoch-follow)).
 
 **Fix for #1, #2, #4** lives at the choke point in
 `FocusController.setFocus`'s `idx !== null` branch: after

@@ -1180,16 +1180,7 @@ export class Stellata implements FrameAnchor {
     return this.floatingOrigin.recenterTo(newOrigin);
   }
 
-  // Scrubber-time star motion: when the model clock crosses a re-advance
-  // bucket, StarFrame re-runs the epoch-advance pass off the immutable
-  // J2016.0 baseline. Runs at the top of animate() so BinaryOrbitField /
-  // eclipse photometry rewrite their active slots on top of the fresh
-  // baselines in the same frame. When a star is focused, the camera +
-  // orbit target (+ any in-flight transition pose caches) translate by
-  // the focal's space-motion delta — the same follow contract
-  // the binary focal ride implements for orbital drift — so the pin
-  // invariant (target === focal live position) survives the move. Skipped
-  // during warp: the warp owns the camera and re-snaps on arrival.
+  // Must run above the render gate's tick — see camera/focus/focal-ride/README.md#the-epoch-follow.
   private maybeReAdvanceEpoch(): void {
     const focal = this.focus.getFocusedStar();
     const d = this._epochFollowDelta;
@@ -1200,11 +1191,7 @@ export class Stellata implements FrameAnchor {
     this.renderGate.invalidate('epoch-bucket');
     // The pass above rewrote catalog.positions; the A_V cache holds a copy.
     this.extinctionPrepass?.refreshPositions();
-    if (this.warp.isActive() || d.lengthSq() === 0) return;
-    this.camera.position.add(d);
-    this.controls.target.add(d);
-    this.focus.translateFocusFrame(d);
-    this.observe.translateFocusFrame(d);
+    this.focalRides.followEpochStep(d);
   }
 
   // Which controllers constitute "the camera is busy" is the shell's to

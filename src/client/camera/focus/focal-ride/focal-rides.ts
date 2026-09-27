@@ -85,6 +85,12 @@ export class FocalRides {
     this.movingIdx = null;
   }
 
+  /** Call only above the render gate's `tick` — README.md#the-epoch-follow. */
+  followEpochStep(delta: THREE.Vector3): void {
+    if (this.deps.warpActive() || delta.lengthSq() === 0) return;
+    this.translatePose(delta);
+  }
+
   dispose(): void {
     this.offFocus();
     this.focalPert.set(0, 0, 0);
@@ -129,12 +135,16 @@ export class FocalRides {
    *  tick and pins the gate open (../../../render-gate/README.md#the-focal-ride). */
   private applyRideDelta(delta: THREE.Vector3): void {
     if (delta.lengthSq() === 0) return;
+    this.translatePose(delta);
+    this.deps.rebasePose(delta);
+    this.deps.noteRideStep(delta);
+  }
+
+  private translatePose(delta: THREE.Vector3): void {
     const d = this.deps;
     d.cameraPosition.add(delta);
     d.orbitTarget.add(delta);
     d.focus.translateFocusFrame(delta);
     d.observe.translateFocusFrame(delta);
-    d.rebasePose(delta);
-    d.noteRideStep(delta);
   }
 }

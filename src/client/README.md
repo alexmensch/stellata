@@ -241,7 +241,6 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Focal rides | `camera/focus/` | `hhaw.32.2` |
 | Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
@@ -250,11 +249,6 @@ an empty awaiting list.
 **Values crossing a row boundary** — whichever row moves first settles the
 interface for both:
 
-- The frame's camera velocity — owned by `ClockCadence`
-  ([The controller](render-gate/cadence/README.md#the-controller)); `FocalRides`
-  (`camera/focus/focal-ride/`) reports each ride step through
-  `noteRideStep`. `maybeReAdvanceEpoch`'s translate skips it today — the
-  suspected bug 32.2 carries.
 - **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
   CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the star-local-cluster,
   core-mask and constellation-figure entries take it, and carry it when
@@ -266,8 +260,7 @@ A cluster holding a value that lands after construction moves it as a
 `Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the dust + extinction
 and constellation extractions each convert their row's slots as they move
 rather than carrying a `T | null` twice. The binaries slot has converted
-([The attachment](binaries/README.md#the-attachment)), so the focal rides, which read it, are
-unblocked. Clusters holding no late slot do not wait.
+([The attachment](binaries/README.md#the-attachment)). Clusters holding no late slot do not wait.
 
 | Slot | Lands | Not-ready answer today |
 | --- | --- | --- |
