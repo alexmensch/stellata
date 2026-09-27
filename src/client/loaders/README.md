@@ -283,6 +283,14 @@ of leaving its caller awaiting a reply that can no longer come.
 the progress listeners and the dispose; `createVoxelChunkUploader` owns
 writing one chunk's bytes inside the volume.
 
+**`loadDustManifest` answers null for any manifest a `DustField` cannot be
+built from**, warning when it parsed but is the wrong shape
+(`dustManifestError`), silently when it is missing or not JSON — the
+single-page fallback serves index.html at 200 for a missing file. So
+`DustField`'s constructor never sees a malformed manifest, and `main.ts`
+concludes the extinction slot on every failure rather than leaving it
+pending behind a rejection.
+
 **The factory marks the volume for update and then calls
 `renderer.initTexture`, in that order, and owns both halves so a caller
 cannot get the order wrong.** A partial write needs storage to target, and
