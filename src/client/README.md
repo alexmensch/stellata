@@ -270,13 +270,9 @@ Two catalogue-prefix reads also sit in the shell: the constellation figure
 and `aimAtConstellation`'s centroid read figure vertices from
 `localPositions` in wave 1. The figure re-reads every frame, so a vertex
 outside the loaded prefix draws at `(0,0,0)` only until its chunk lands;
-the centroid is read once per aim and keeps whatever it got. Both are safe
-while every vertex sits in chunk 0 — measured on today's build (the
-`lines` indices in `public/constellations.json` against
-`recordsInFirstChunk`): 708 distinct vertices, highest record index
-10,288, chunk 0 ending at 10,411, a margin of 124 records that nothing
-checks yet.
-The build-time assert and the centroid's move onto the contract are 32.8's.
+the centroid is read once per aim and keeps whatever it got. Both are
+correct by construction, because the build fails unless every figure vertex
+sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/README.md#stick-figures-from-stellarium)).
 A third prefix read sits outside the shell: the extinction prepass sorts its
 dispatch order over the table it attaches to, which is normally still
 streaming, and re-sorts once on the refresh that completes it

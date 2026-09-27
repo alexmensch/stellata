@@ -65,6 +65,7 @@ import {
 import {
   CONSTELLATIONS,
   STELLARIUM_SKYCULTURE_JSON as SRC_STELLARIUM,
+  assertFigureVerticesInFirstChunk,
   buildFigureLines,
 } from './parse/constellations';
 import { writeBoundaryArtifact } from './boundaries/build-boundaries-artifact';
@@ -1191,6 +1192,7 @@ async function main() {
   counts.recordsInFirstChunk = recordsInChunkPrefix(
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
+  assertFigureVerticesInFirstChunk(figureLines, counts.recordsInFirstChunk);
   // record/README.md#on-disk-transport-chunking is measured from this line.
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {

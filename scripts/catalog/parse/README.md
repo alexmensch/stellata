@@ -445,3 +445,13 @@ the build fails until each is explicitly added to
 warning — the whole point of using Stellarium's HIP-indexed data (vs.
 fuzzy RA/Dec position matching) is deterministic mapping.
 
+**Every figure vertex must decode with the first transport chunk** — also a
+hard build error (`assertFigureVerticesInFirstChunk`, run once the chunk plan
+fixes `recordsInFirstChunk`). The runtime draws the figure and aims at its
+centroid from first paint, off the records chunk 0 carries
+([Late-attached slots](/src/client/README.md#late-attached-slots)); a vertex in a
+later chunk would read an undecoded `(0,0,0)` there. Records are apparent-V
+ordered, so this holds while every figure star is naked-eye bright: measured,
+708 distinct vertices, highest record index 10,289 against a chunk 0 of
+10,412 records.
+

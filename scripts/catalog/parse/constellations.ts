@@ -253,3 +253,22 @@ export function buildFigureLines(
 
   return out;
 }
+
+/** Throws unless every figure vertex decodes with the first transport chunk
+ *  (README.md#stick-figures-from-stellarium). */
+export function assertFigureVerticesInFirstChunk(
+  figureLines: ReadonlyMap<number, readonly (readonly number[])[]>,
+  recordsInFirstChunk: number,
+): void {
+  const late: string[] = [];
+  for (const [conIndex, polylines] of figureLines) {
+    const worst = Math.max(...polylines.flat());
+    if (worst >= recordsInFirstChunk) late.push(`${CONSTELLATIONS[conIndex].code}/record ${worst}`);
+  }
+  if (late.length) {
+    throw new Error(
+      `Constellation figure vertices past the first transport chunk (${recordsInFirstChunk} records): `
+        + `${late.join(', ')}. A figure star must be bright enough to decode at first paint.`,
+    );
+  }
+}
