@@ -157,7 +157,7 @@ The dust voxel volume streams and uploads through
 fallback march and the extinction prepass (`extinction/README.md`)
 sample it, and each is smoke-blind without dust in the texture. Because
 no pixel can confirm the upload, it is verified numerically instead:
-`stellata.verifyDust()` reads voxels back off the GPU and compares them
+`stellata.extinction.verifyDust()` reads voxels back off the GPU and compares them
 against the chunk files ([Dust voxel readback](/src/client/loaders/README.md#dust-voxel-readback)). A
 layer that samples the volume and renders nothing should run it before
 suspecting its own shader.

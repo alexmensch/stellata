@@ -178,7 +178,7 @@ Four things follow, and each has cost a defect:
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
-`solarSystem`, `coordSpheres`, `binaries`, plus the
+`solarSystem`, `coordSpheres`, `binaries`, `extinction`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -202,9 +202,9 @@ belongs on the controller.
 
 **Forwarders still on the shell leave with their cluster, and so do their
 callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
-`attachDust` and `attachConstellationBoundaries` — moves
+`attachConstellationBoundaries` — moves
 with its row, and `main.ts` calls the new owner through a readonly
-namespace (`stellata.binaries.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
+namespace (`stellata.binaries.attach`, `stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
 `FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
 `starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
 `floatingOrigin`; with the star render machinery, the focus controller's
@@ -241,7 +241,6 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
@@ -257,14 +256,13 @@ interface for both:
 ### Late-attached slots
 
 A cluster holding a value that lands after construction moves it as a
-`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the dust + extinction
-and constellation extractions each convert their row's slots as they move
-rather than carrying a `T | null` twice. The binaries slot has converted
-([The attachment](binaries/README.md#the-attachment)). Clusters holding no late slot do not wait.
+`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the constellation
+extraction converts its row's slots as it moves rather than carrying a
+`T | null` twice. The binaries and dust slots have converted
+([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). Clusters holding no late slot do not wait.
 
 | Slot | Lands | Not-ready answer today |
 | --- | --- | --- |
-| Dust + extinction prepass | when the dust manifest resolves — no wave | `?.` no-op; `extinctionAvMagFor` 0 (deliberately pickable); `isExtinctionPrepassActive` false; survivor `inFrame` null |
 | Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 

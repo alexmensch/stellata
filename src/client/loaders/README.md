@@ -108,7 +108,7 @@ dust-voxel-upload.ts     Landing one chunk inside the volume texture
                          volume and staging alike.
 dust-voxel-readback.ts   Reading voxels back off the GPU and comparing
   (+ test)               them against the chunk files — the numeric smoke
-                         behind `stellata.verifyDust()`
+                         behind `stellata.extinction.verifyDust()`
                          (README.md#dust-voxel-readback).
 dust-renderer-mock.ts    A recording renderer stand-in, enough surface
                          for the upload and readback tests to run
@@ -328,7 +328,7 @@ placeholder from it marks its own.
 
 ## Dust voxel readback
 
-`stellata.verifyDust()` answers "is the dust actually in the texture, at
+`stellata.extinction.verifyDust()` answers "is the dust actually in the texture, at
 the offset the uploader claimed?" numerically, because no pixel can answer
 it — a dim sky looks the same whether one chunk or sixty landed. It re-fetches chunk
 files (served from cache) and compares sampled voxels against what the GPU

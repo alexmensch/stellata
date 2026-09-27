@@ -45,7 +45,7 @@ export interface WebGpuExtinctionPrepassOptions extends WebGpuExtinctionPrepassS
   renderer: WebGPURenderer;
   nodes: SharedUniformNodes;
   /** The extinction slots, shared by object identity with the star layer's:
-   *  one `attachDust` write reaches both the kernel and the vertex fallback
+   *  one `extinction.attach` write reaches both the kernel and the vertex fallback
    *  march, and this pass points the A_V and refill slots at its own
    *  buffers rather than the shell wiring them. */
   slots: ExtinctionNodes;

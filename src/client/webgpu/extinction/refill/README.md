@@ -268,7 +268,7 @@ invariant to hold: **a change that moves the prepass after the compaction,
 or marches a class more than one frame old, corrupts the march silently**
 — the entries resolve to real stars and write a plausible A_V onto them.
 `planRefill`'s simulation pins it directly (the class marched is always
-the class built on the preceding frame), and `verifyExtinction()` cannot,
+the class built on the preceding frame), and `extinction.verifyParity()` cannot,
 since it refills whole first.
 
 ## The cursor, and why a request never stalls it
@@ -347,7 +347,7 @@ star.
   0 and every consumer runs its own in-vertex march, 8–12 times per visible
   star per frame — dearer than the dispatch it would be waiting on. So the
   boot fill is one dispatch and the cursor parks behind it.
-- **`verifyExtinction()`.** The parity check is a bit compare against one
+- **`extinction.verifyParity()`.** The parity check is a bit compare against one
   reference march at one camera, and a worklist flight leaves up to
   `REFILL_SLICES` cameras in the buffer. It refills whole first, so what it
   compares is the march rather than the schedule ([The prepass kernel](../README.md#the-prepass-kernel)).
@@ -373,7 +373,7 @@ written down here.
 **What a missing guard costs is not an out-of-bounds write.** WebGPU
 bounds-checks storage access, so the tail's read of the worklist comes back
 clamped or zero, `self` resolves to a *valid* star, and the tail writes a
-garbage A_V onto a real catalogue entry. `verifyExtinction()` cannot see it:
+garbage A_V onto a real catalogue entry. `extinction.verifyParity()` cannot see it:
 it refills whole first, and the whole dispatch is the one three's own early
 return does cover. Code review is the only thing standing behind this
 guard — keep it.

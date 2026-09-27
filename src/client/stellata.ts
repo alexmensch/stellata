@@ -5,12 +5,6 @@ import { createBinarySystemMembership } from './binaries/binary-system-membershi
 import type { ChromeLineMaterials } from './chrome-lines/chrome-line-materials';
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
-import type { DustField } from './loaders/dust-loader';
-import {
-  formatVerifyReports,
-  verifyDustChunks,
-  type ChunkVerifyReport,
-} from './loaders/dust-voxel-readback';
 import { galacticDiscSceneLayer } from './galactic/galactic-disc';
 import { CoordSpheres } from './galactic/coord-spheres/coord-spheres';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
@@ -139,10 +133,7 @@ import { CATALOG_BOUNDING_RADIUS_PC } from './star-pipeline/shards/star-shards-p
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
-import { formatAvParity, type AvParityReport } from './star-pipeline/extinction/av-parity-pure';
-import type {
-  ExtinctionPrepassSeam, ExtinctionView,
-} from './star-pipeline/extinction/extinction-seam';
+import { ExtinctionAttachment } from './star-pipeline/extinction/extinction-attachment';
 import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { selectFigures } from './constellation-figure/constellation-figure-pure';
@@ -358,18 +349,7 @@ export class Stellata implements FrameAnchor {
   // texture attaches.
   readonly milkyway: MilkyWay;
 
-  // Reference to the most recently attached DustField — kept solely so
-  // dispose() can release the ~128 MiB Data3DTexture. attachDust(null)
-  // clears it.
-  private dust: DustField | null = null;
-
-  // Per-star A_V cache, one implementation per backend behind the shared
-  // seam. Constructed lazily on the first attachDust so a dust-less
-  // session pays nothing; null again after attachDust(null).
-  private extinctionPrepass: ExtinctionPrepassSeam | null = null;
-  /** Built once — both members are stable identities mutated in place. */
-  private _extinctionView: ExtinctionView | null = null;
-  private extinctionRecomputeForced = false;
+  readonly extinction: ExtinctionAttachment;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
   // Separate from pickSizeScratch: the debug panel reads every frame and
@@ -813,6 +793,16 @@ export class Stellata implements FrameAnchor {
     // layer.
     this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.scene.add(this.milkyway.group);
+    this.extinction = new ExtinctionAttachment({
+      catalog,
+      uniforms: sharedUniforms,
+      webgpu: this.webgpu,
+      milkyway: this.milkyway,
+      renderer: this.renderer,
+      camera: this.camera,
+      worldOffset: this.worldOffset,
+      invalidate: (reason) => this.renderGate.invalidate(reason),
+    });
 
     this.filters = new FilterController({
       camera: this.camera,
@@ -1187,8 +1177,7 @@ export class Stellata implements FrameAnchor {
     // no longer assume nothing moved: a bucket crossing between cadence
     // frames must repaint.
     this.renderGate.invalidate('epoch-bucket');
-    // The pass above rewrote catalog.positions; the A_V cache holds a copy.
-    this.extinctionPrepass?.refreshPositions();
+    this.extinction.refreshPositions();
     this.focalRides.followEpochStep(d);
   }
 
@@ -1207,60 +1196,6 @@ export class Stellata implements FrameAnchor {
       orbitTarget: this.controls.target,
       worldOffset: this.floatingOrigin.worldOffset,
     }));
-  }
-
-  // Wire a loaded DustField into the star shader. Safe to call after the
-  // Stellata is already rendering — uniforms flip atomically on the next
-  // frame. Safe to call multiple times; the most recent dust wins. Pass
-  // null to detach (e.g. to disable extinction for a mode toggle).
-  attachDust(dust: DustField | null) {
-    this.renderGate.invalidate('attach:dust');
-    const u = this.sharedUniforms;
-    // Re-attach with a different DustField? Release the previous one's
-    // ~128 MiB Data3DTexture before swapping the reference, otherwise
-    // the old texture would leak. attachDust is called exactly once
-    // today, so this guard is defensive — but the contract reads as
-    // "the most recent dust wins" and that contract should hold without
-    // tying it to caller discipline.
-    if (this.dust !== null && this.dust !== dust) this.dust.dispose();
-    this.dust = dust;
-    if (dust === null) {
-      u.uDustTexture.value = null;
-      u.uDustEnabled.value = 0;
-      this.webgpu.setDustTexture(null);
-      this.extinctionPrepass?.dispose();
-      this.extinctionPrepass = null;
-      this.milkyway.attachDust(null);
-      return;
-    }
-    u.uDustTexture.value = dust.texture;
-    u.uDustBoundsPc.value = dust.params.boundsHalfPc;
-    u.uDustDensityMin.value = dust.params.densityMin;
-    u.uDustLogRatio.value = dust.params.logRatio;
-    u.uDustAvPerDensityPc.value = dust.params.avPerDensityPerPc;
-    u.uDustEnabled.value = 1;
-    // Texture slots are not part of the WebGPU uniform-node mirror, so the
-    // volume reaches the TSL march by call rather than by map write
-    // (webgpu/tsl/README.md#shared-uniform-nodes).
-    this.webgpu.setDustTexture(dust.texture);
-    if (this.extinctionPrepass === null) {
-      this.extinctionPrepass = this.webgpu.attachExtinctionPrepass({
-        catalog: this.catalog,
-        uniforms: u,
-      });
-    }
-    this.extinctionPrepass?.markDirty();
-    // Each streamed voxel chunk changes sightline integrals — refresh the
-    // cache as the texture densifies.
-    dust.onProgress(() => {
-      this.extinctionPrepass?.markDirty();
-      this.renderGate.invalidate('dust-chunk');
-    });
-    // Share the same DustField with the Milky Way pass so the band's dust
-    // attenuation shows the actual Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
-    // voxel structure (Great Rift, Coalsack, etc.) rather than only the analytic
-    // slab.
-    this.milkyway.attachDust(dust);
   }
 
   /**
@@ -1290,7 +1225,7 @@ export class Stellata implements FrameAnchor {
     this.starFrame.absorbRecords();
     this.webgpuStarLayer.absorbRecords();
     // Not markDirty — see webgpu/extinction/README.md#the-cache-gate.
-    this.extinctionPrepass?.refreshPositions();
+    this.extinction.refreshPositions();
 
     // The fastest pulsating variable bounds how long any frame may idle
     // before some star's brightness moves a JND, so a chunk carrying a
@@ -1307,26 +1242,6 @@ export class Stellata implements FrameAnchor {
     this.renderGate.invalidate('catalog-chunk');
   }
 
-  /** Numeric check that streamed dust really is in the volume texture where
-   *  the uploader put it: samples voxels off the GPU and compares them
-   *  against the chunk files — the only verification the upload has until
-   *  something samples the volume.
-   *  Logs a summary and returns the reports.
-   *  `loaders/README.md#dust-voxel-readback`. */
-  async verifyDust(count?: number): Promise<ChunkVerifyReport[]> {
-    if (this.dust === null) {
-      console.warn('verifyDust: no dust attached');
-      return [];
-    }
-    const reports = await verifyDustChunks({
-      renderer: this.renderer,
-      dust: this.dust,
-      count,
-    });
-    for (const line of formatVerifyReports(reports)) console.log(line);
-    return reports;
-  }
-
   /** How many stars each tier's draw issued, and how many passed the
    *  prefilter (`webgpu/star/compaction/README.md#reading-the-counts-back`).
    * The read waits on a dispatch to count into, which a settled
@@ -1335,21 +1250,7 @@ export class Stellata implements FrameAnchor {
     this.renderGate.invalidate('debug:survivors');
     const counts = await this.webgpuStarLayer.readSurvivorCounts();
     if (counts === null) return null;
-    return { ...counts, inFrame: this.extinctionPrepass?.countInFrame() ?? null };
-  }
-
-  /** Numeric check that the compute A_V kernel and a fragment march of the
-   *  same integral agree bit for bit over the whole catalogue — the parity
-   *  no pixel can show. Null with no dust.
-   *  `webgpu/extinction/README.md#the-prepass-kernel`. */
-  async verifyExtinction(): Promise<AvParityReport | null> {
-    const report = await this.extinctionPrepass?.verifyParity() ?? null;
-    if (report === null) {
-      console.warn('verifyExtinction: no compute prepass active');
-      return null;
-    }
-    console.log(formatAvParity(report));
-    return report;
+    return { ...counts, inFrame: this.extinction.countInFrame() };
   }
 
   /** Debug-HUD view of the disc/glow routing for one star at a given
@@ -1409,26 +1310,18 @@ export class Stellata implements FrameAnchor {
     return this.filter.chart ? Math.max(px, this.chartDiscPxFor(c.appMag)) : px;
   }
 
-  /** Dust extinction the shader will apply to this star, in magnitudes.
-   *  Zero when the prepass is inert — the in-vertex fallback still dims
-   *  the star, but reproducing its march on the CPU would need the
-   *  ~128 MiB voxel grid the loader uploads and drops. Erring toward
-   *  "pickable" there keeps the fallback path's behaviour unchanged. */
-  private extinctionAvMagFor(idx: number): number {
-    const raw = this.extinctionPrepass?.readAvMag(idx);
-    if (raw === null || raw === undefined) return 0;
-    return raw * this.sharedUniforms.uDustEnabled.value
-      * this.sharedUniforms.uExtinctionStrength.value;
-  }
-
   /** Whether the renderer puts a pixel on screen for this star, and the
    *  disc radius it actually draws — the pick gate proper, as against
    *  `drawCutoffMag`'s intrinsic-magnitude prefilter. Runs per pick
    *  candidate, never per frame
    *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
   private resolveStarPick(idx: number): ResolvedCandidate {
+    // No A_V answer errs toward pickable: the fallback path still dims the
+    // star, and reproducing its march on the CPU needs the voxel grid the
+    // loader uploads and drops.
+    const avMag = this.extinction.avMagAt(idx);
     const c = starPhysics.renderedSizeComponents(
-      this.starSizeInputs, idx, this.pickSizeScratch, this.extinctionAvMagFor(idx),
+      this.starSizeInputs, idx, this.pickSizeScratch, avMag === null ? 0 : avMag,
     );
     return resolveStarPickVisibility({
       focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
@@ -1442,53 +1335,6 @@ export class Stellata implements FrameAnchor {
       thresholdMag: this.exposure.getThresholdMag(),
       whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
     });
-  }
-
-  /** User-facing extinction multiplier scaling the A_V re-added on top of
-   *  the intrinsic (build-time de-extincted) catalog. 0 = dust-free
-   *  universe (stars at intrinsic brightness/colour everywhere, not
-   *  "observed from Sol"); 1 = physical realism; values above 1 amplify
-   *  dust visually. Independent of attachDust — if no dust is loaded, this
-   *  has no effect. Also drives the Milky Way background so the
-   *  dust-darkened regions of the band track the same knob. */
-  setExtinctionStrength(x: number) {
-    this.sharedUniforms.uExtinctionStrength.value = Math.max(0, x);
-    this.milkyway.setExtinctionStrength(x);
-  }
-
-  /** Dev-console A/B switch for the per-star A_V prepass. false parks the
-   *  star shader on the legacy in-vertex raymarch (the before/after
-   *  comparison path); true restores the cache. No-op until dust
-   *  attaches. */
-  setExtinctionPrepassEnabled(on: boolean) {
-    this.extinctionPrepass?.setEnabled(on);
-  }
-
-  /** Whether the A_V prepass cache is live this frame (dust attached,
-   *  float target, not parked by the A/B switch) — the frame-cost
-   *  harness's presence probe. */
-  isExtinctionPrepassActive(): boolean {
-    return this.extinctionPrepass?.isActive() ?? false;
-  }
-
-  /** Frame-cost lever: invalidate the A_V cache before every update, so the
-   *  recompute the camera-displacement gate skips at a parked camera runs on
-   *  every frame. Every canon vantage is camera-idle, so the kernel is
-   *  otherwise unpriced — `debug/frame-cost/passes/README.md#the-extinction-rows`.
-   * Never leave it on outside a measurement dwell. */
-  setExtinctionRecomputeForced(on: boolean) {
-    this.extinctionRecomputeForced = on;
-  }
-
-  isExtinctionRecomputeForced(): boolean {
-    return this.extinctionRecomputeForced;
-  }
-
-  /** A pointer event says a pick is coming: stage the per-star A_V table
-   *  the star pick gates on, so `extinctionAvMagFor` is exact by the time
-   *  the dwell fires (`webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity`). */
-  notifyPickImminent(): void {
-    this.extinctionPrepass?.warmAvReadback();
   }
 
   /** Debug kill switch for the star core depth-mask draw AND the
@@ -1970,22 +1816,7 @@ export class Stellata implements FrameAnchor {
     // first would otherwise drop the other's entries.
     this.occluders.beginFrame();
     this.layers.updateAll(this.frameCtx);
-    if (this.extinctionPrepass !== null) {
-      // Between the ride fan-out and syncUniformNodes, and both edges bind
-      // (webgpu/extinction/refill/README.md#only-what-is-in-frame).
-      // Absolute camera position in JS float64 — same frame convention as
-      // the shader-side iPosition + uWorldOffset reconstruction.
-      perfMark('extinction.prepass');
-      if (this.extinctionRecomputeForced) this.extinctionPrepass.markDirty();
-      this._extinctionView ??= { camera: this.camera, worldOffset: this.worldOffset };
-      this.extinctionPrepass.update(
-        this.camera.position.x + this.worldOffset.x,
-        this.camera.position.y + this.worldOffset.y,
-        this.camera.position.z + this.worldOffset.z,
-        this._extinctionView,
-      );
-      perfMeasure('extinction.prepass');
-    }
+    this.extinction.update(this.frameCtx);
     this.cadence.refresh({
       t: this.frameCtx.t,
       pxPerRadian: this.frameCtx.pxPerRadian,
@@ -2114,11 +1945,7 @@ export class Stellata implements FrameAnchor {
     this.observe.dispose();
     this.focus.dispose();
     this.controls.dispose();
-    // The prepass's refill kernel binds the compaction's dispatch buffer, so
-    // it has to drop its bind groups before the star layer releases that
-    // buffer (webgpu/extinction/refill/README.md#the-kernel-bounds-itself-by-the-listed-length).
-    this.extinctionPrepass?.dispose();
-    this.extinctionPrepass = null;
+    this.extinction.dispose();
     this.webgpuStarLayer.dispose();
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
@@ -2126,11 +1953,6 @@ export class Stellata implements FrameAnchor {
     this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
     this.hdr.dispose();
-    // The dust voxel grid is the largest single GPU allocation in the app
-    // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but
-    // doesn't own it.
-    this.dust?.dispose();
-    this.dust = null;
     // After every layer and the prepass: those hand their texture slots
     // back to the seam's placeholders, which this frees. Before the
     // renderer, so the releases go through a live device.

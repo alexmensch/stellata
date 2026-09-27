@@ -162,7 +162,7 @@ async function verifyChunk(
 }
 
 /** Compare the GPU's copy of the closest `count` chunks against the chunk
- *  files themselves. Console entry point: `stellata.verifyDust()`. */
+ *  files themselves. Console entry point: `stellata.extinction.verifyDust()`. */
 export async function verifyDustChunks(opts: {
   renderer: StellataRenderer;
   dust: VerifiableDustField;

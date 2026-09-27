@@ -24,8 +24,12 @@ without breaking the cancellation.
 
 ```
 src/client/star-pipeline/extinction/
+  extinction-attachment.ts        ExtinctionAttachment — the shell's
+    (+ test)                      `extinction` namespace: the dust field and
+                                  the prepass from attach to dispose
+                                  (#the-attachment).
   extinction-seam.ts              ExtinctionPrepassSeam — the contract the
-                                  integration shell holds, implemented in
+                                  attachment holds, implemented in
                                   ../../webgpu/extinction/, plus the shared
                                   uniform value-objects it writes.
   extinction-prepass-pure.ts      Texture geometry, position packing (the
@@ -43,6 +47,30 @@ src/client/star-pipeline/extinction/
                                   build's integral imports its clip; the
                                   runtime never calls it.
 ```
+
+## The attachment
+
+The dust manifest resolves on its own schedule, tied to neither boot wave
+([Boot in two waves](../../README.md#boot-in-two-waves)), so `ExtinctionAttachment` holds the
+`DustField` and the prepass built over it in **one** `Late` cell
+([Late values](../../util/late/README.md)): the two land, re-attach and
+detach together, and nothing can hold a prepass for a field that has gone.
+`main.ts` calls `attach(field)`; `attach(null)` detaches and concludes the
+cell. The prepass is built on the first attach and kept across a
+re-attach, which only releases the replaced field.
+
+Every reader is per-call, so each matches on the cell and none observes it:
+`update` (the frame loop, between the scene fan-out and the uniform-node
+sync), `refreshPositions` (its two callers, [The prepass cache](#the-prepass-cache)),
+the pick's `avMagAt` and `warmPickReadback` ([Reading A_V back on the CPU](#reading-a_v-back-on-the-cpu)),
+the frame-cost levers, and the two console checks, `verifyDust()` and
+`verifyParity()`. **`avMagAt` returns null for "no answer"** — no dust, the
+A/B fallback, or a cold mirror — and the pick decides what that means
+(pickable), not this owner.
+
+`dispose` releases the prepass and then the field, and runs before the star
+layer: the refill kernel binds the compaction's dispatch buffer
+([The kernel bounds itself](../../webgpu/extinction/refill/README.md#the-kernel-bounds-itself-by-the-listed-length)).
 
 ## The march
 
@@ -155,12 +183,12 @@ pass (×2–3) — 8–12 recomputations per visible star per frame.
   in-line instead, gated by the visibility prefilter, sharing the march
   with the prepass through `dust-raymarch-tsl.ts`. Only the A/B switch
   below reaches it. The march's tap count and clip are [The march](#the-march).
-- **A/B switch:** `stellata.setExtinctionPrepassEnabled(false)` (dev
+- **A/B switch:** `stellata.extinction.setPrepassEnabled(false)` (dev
   console) parks the shader on the fallback path AND pauses cache
   maintenance, so the fallback side never pays fill cost — the honest
   way to measure the prepass win on identical scenes; `true` restores
   the cache (re-validating against camera displacement).
-- **Forced-recompute lever:** `stellata.setExtinctionRecomputeForced(true)`
+- **Forced-recompute lever:** `stellata.extinction.setRecomputeForced(true)`
   invalidates the cache before every `update()`, so the fill runs on every
   frame at a parked camera. It exists because the displacement gate makes
   the fill free at exactly the vantages a measurement can hold still at —
@@ -214,7 +242,7 @@ observed magnitude. **Invariant:** any change to this runtime stack
 (map, slab) must ship with the mirrored build-side integral + catalog
 rebuild, or the cancellation breaks.
 
-`stellata.setExtinctionStrength(x)` (dev console) scales the re-added
+`stellata.extinction.setStrength(x)` (dev console) scales the re-added
 A_V: default 1 = physical realism; **0 = a dust-free universe** (every
 star at its intrinsic brightness/colour everywhere, since nothing is
 re-added on top of the de-extincted catalog); >1 amplifies dust
