@@ -10,6 +10,7 @@ import type { BinariesData } from './binaries-loader';
 import { makeBinaries, makeRelation } from './binary-relation-fixture';
 
 const log: string[] = [];
+const fail = { eclipseNew: false };
 
 const ORBIT_REPORT: CadenceReport = {
   screenPxPerSimS: 4, fluxFracPerSimS: 0, observedPx: 1, observedFluxFrac: 0,
@@ -36,7 +37,10 @@ vi.mock('./binary-orbit-field', () => ({
 vi.mock('./eclipse/eclipse-photometry', () => ({
   EclipsePhotometryField: class {
     activeDimCount = 3;
-    constructor() { log.push('eclipse.new'); }
+    constructor() {
+      if (fail.eclipseNew) throw new Error('eclipse.new');
+      log.push('eclipse.new');
+    }
     update() { log.push('eclipse.update'); }
     cadenceReport() { return ECLIPSE_REPORT; }
     debugRows(_t: number, _cam: unknown, _mag: number, starIdx: number | null) {
@@ -113,7 +117,10 @@ function rig() {
 
 const table = () => makeBinaries([makeRelation({ primaryIdx: 0, secondaryIdx: 1 })]);
 
-beforeEach(() => { log.length = 0; });
+beforeEach(() => {
+  log.length = 0;
+  fail.eclipseNew = false;
+});
 
 describe('BinariesAttachment before a table lands', () => {
   it('reads as pending, walks nothing and reports a still rate', () => {
@@ -167,6 +174,20 @@ describe('BinariesAttachment.attach', () => {
     expect(r.attachment.eclipseDimAt(2)).toBe(1);
     expect(r.attrs.iEclipseDimAttr.version).toBeGreaterThan(version);
     expect(log.filter((e) => e.endsWith('.dispose'))).toEqual(['orbits.dispose', 'eclipse.dispose']);
+  });
+
+  it('a re-attach that fails to build keeps the previous fields running', () => {
+    const r = rig();
+    const first = table();
+    r.attachment.attach(first);
+    r.attachment.sourceArrays().eclipseDim[2] = 0.3;
+    log.length = 0;
+    fail.eclipseNew = true;
+    expect(() => r.attachment.attach(table())).toThrow('eclipse.new');
+    expect(log.filter((e) => e.endsWith('.dispose'))).toEqual([]);
+    const s = r.attachment.data.state();
+    expect(s.status === 'ready' && s.value).toBe(first);
+    expect(r.attachment.eclipseDimAt(2)).toBeCloseTo(0.3);
   });
 });
 

@@ -114,8 +114,8 @@ export class BinariesAttachment {
 
   /** Null concludes the slot absent; a second table replaces the first. */
   attach(binaries: BinariesData | null): void {
-    this.disposeFields();
     if (binaries === null) {
+      this.disposeFields();
       this.attached.conclude();
       return;
     }
@@ -133,9 +133,6 @@ export class BinariesAttachment {
       iCompositeSuppressAttr: attrs.iCompositeSuppressAttr,
     });
     orbits.recenter(this.deps.worldOffset);
-    // see eclipse/README.md#partial-re-upload
-    this.eclipseDim.fill(1);
-    uploadFull(attrs.iEclipseDimAttr);
     const eclipse = new EclipsePhotometryField({
       binaries,
       absolutePositions: catalog.positions,
@@ -147,6 +144,10 @@ export class BinariesAttachment {
     });
     const perturbation: FocalPerturbationInto =
       (idx, out) => orbits.focalPerturbationInto(idx, this.deps.getT(), out);
+    this.disposeFields();
+    // see eclipse/README.md#partial-re-upload
+    this.eclipseDim.fill(1);
+    uploadFull(attrs.iEclipseDimAttr);
     this.attached.land({ data: binaries, orbits, eclipse, perturbation });
   }
 
