@@ -1,6 +1,7 @@
 // See README.md#the-attachment.
 
 import type * as THREE from 'three';
+import type { FocalPerturbationInto } from '../camera/focus/focus-controller';
 import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { Catalog } from '../loaders/catalog-loader';
@@ -20,8 +21,6 @@ import {
   type EclipseRelationDebugRow,
 } from './eclipse/eclipse-photometry';
 import { BinaryOrbitPathLayer } from './orbit-paths/binary-orbit-path-layer';
-
-export type FocalPerturbationSource = Pick<BinaryOrbitField, 'focalPerturbationInto'>;
 
 export type BinaryStarAttributes =
   Pick<StarSourceAttributes, 'iPositionAttr' | 'iCompositeSuppressAttr' | 'iEclipseDimAttr'>;
@@ -43,13 +42,14 @@ export interface BinariesAttachmentDeps {
   onFocus: (handler: () => void) => () => void;
   /** Runs after the orbit walk and before eclipse photometry, whose line of
    *  sight reads the camera this moves. */
-  rideFocal: (source: FocalPerturbationSource) => void;
+  rideFocal: (perturbation: FocalPerturbationInto) => void;
 }
 
 interface Attached {
   readonly data: BinariesData;
   readonly orbits: BinaryOrbitField;
   readonly eclipse: EclipsePhotometryField;
+  readonly perturbation: FocalPerturbationInto;
 }
 
 export class BinariesAttachment {
@@ -59,8 +59,8 @@ export class BinariesAttachment {
 
   private readonly attached = new LateCell<Attached>();
   readonly data: Late<BinariesData> = mapLate(this.attached, (a) => a.data);
-  readonly focalPerturbation: Late<FocalPerturbationSource> =
-    mapLate(this.attached, (a) => a.orbits);
+  readonly focalPerturbation: Late<FocalPerturbationInto> =
+    mapLate(this.attached, (a) => a.perturbation);
 
   private readonly compositeSuppress: Float32Array;
   private readonly eclipseDim: Float32Array;
@@ -145,7 +145,9 @@ export class BinariesAttachment {
       eclipseDimBuffer: this.eclipseDim,
       iEclipseDimAttr: attrs.iEclipseDimAttr,
     });
-    this.attached.land({ data: binaries, orbits, eclipse });
+    const perturbation: FocalPerturbationInto =
+      (idx, out) => orbits.focalPerturbationInto(idx, this.deps.getT(), out);
+    this.attached.land({ data: binaries, orbits, eclipse, perturbation });
   }
 
   markBaselinesDirty(): void {
@@ -186,7 +188,7 @@ export class BinariesAttachment {
       deps.uniforms.uFovYRad.value,
       deps.focusedStar(),
     );
-    deps.rideFocal(a.orbits);
+    deps.rideFocal(a.perturbation);
     a.eclipse.update(deps.getT(), deps.camera.position, deps.thresholdMag(), performance.now());
   }
 

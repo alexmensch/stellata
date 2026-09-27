@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { CADENCE_REPORT_STILL, type CadenceReport } from '../render-gate/cadence/clock-cadence-pure';
 import { makeCadenceCtx, makeFrameCtx } from '../scene/frame-ctx-mock';
+import type { FocalPerturbationInto } from '../camera/focus/focus-controller';
 import type { SettledState } from '../util/late/late';
 import { BinariesAttachment, type BinariesAttachmentDeps } from './binaries-attachment';
 import type { BinariesData } from './binaries-loader';
@@ -24,8 +25,8 @@ vi.mock('./binary-orbit-field', () => ({
     recenter() { log.push('orbits.recenter'); }
     markBaselinesDirty() { log.push('orbits.markBaselinesDirty'); }
     cadenceReport() { return ORBIT_REPORT; }
-    focalPerturbationInto(_idx: number, _t: number, out: THREE.Vector3) {
-      out.set(1, 2, 3);
+    focalPerturbationInto(idx: number, t: number, out: THREE.Vector3) {
+      out.set(idx, t, 0);
       return true;
     }
     dispose() { log.push('orbits.dispose'); }
@@ -61,7 +62,9 @@ const COUNT = 4;
 
 function rig() {
   const focusHandlers = new Set<() => void>();
-  const state = { focused: null as number | null, rides: 0 };
+  const state = {
+    focused: null as number | null, t: 0, rode: [] as FocalPerturbationInto[],
+  };
   const attrs = {
     iPositionAttr: new THREE.BufferAttribute(new Float32Array(COUNT * 3), 3),
     iCompositeSuppressAttr: new THREE.BufferAttribute(new Float32Array(COUNT), 1),
@@ -86,7 +89,7 @@ function rig() {
     chromeLines: fakeChromeLineMaterials(),
     camera,
     worldOffset: new THREE.Vector3(),
-    getT: () => 0,
+    getT: () => state.t,
     thresholdMag: () => 6,
     focusedStar: () => state.focused,
     observeAnchorStar: () => null,
@@ -94,7 +97,7 @@ function rig() {
       focusHandlers.add(handler);
       return () => focusHandlers.delete(handler);
     },
-    rideFocal: () => { state.rides++; log.push('ride'); },
+    rideFocal: (perturbation) => { state.rode.push(perturbation); log.push('ride'); },
   };
   const attachment = new BinariesAttachment(deps);
   return {
@@ -180,6 +183,18 @@ describe('BinariesAttachment per frame', () => {
     expect(log).toEqual(['orbits.update', 'ride', 'eclipse.update', 'paths.update']);
     expect(r.paths.updates).toHaveLength(1);
     expect(r.paths.updates[0]).not.toBeNull();
+  });
+
+  it('rides and publishes one perturbation, read at the current sim time', () => {
+    const r = rig();
+    r.attachment.attach(table());
+    r.attachment.entry.update?.(makeFrameCtx(r.camera));
+    const late = r.attachment.focalPerturbation.state();
+    expect(late.status === 'ready' && late.value).toBe(r.state.rode[0]);
+    r.state.t = 42;
+    const out = new THREE.Vector3();
+    expect(r.state.rode[0](1, out)).toBe(true);
+    expect(out.toArray()).toEqual([1, 42, 0]);
   });
 
   it('rates the faster of the orbit walk and the photometry, channel by channel', () => {

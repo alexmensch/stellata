@@ -85,8 +85,9 @@ part out as a projection of it (`mapLate`, [Late values](../util/late/README.md)
 
 - `data` — the table. The star module, the multi-star system membership, ORB
   and the star local cluster read it; `absent` when the artifact is missing.
-- `focalPerturbation` — the orbit walk's `focalPerturbationInto`, which the
-  focus controller reads to place a focused member on its live orbit.
+- `focalPerturbation` — the orbit walk's `focalPerturbationInto` bound to the
+  current sim time, which the focus controller reads to place a focused member
+  on its live orbit. The focal ride is handed the same function.
 - `rate` — the binaries' cadence report, the faster of the walk and the
   photometry; still until attached. Every layer anchored on a binary member
   declares it ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)).
@@ -97,7 +98,7 @@ pipeline wraps as attributes through `sourceArrays()`, and the orbit-path
 layer, whose system rebuilds on every focus change and on every settle.
 
 **The frame order is the entry's**: walk, then the focal ride (the shell's
-`rideFocal`, handed the walk's perturbation source), then photometry, whose
+`rideFocal`, handed `focalPerturbation`'s function), then photometry, whose
 line of sight reads the camera the ride moved, then the paths. The scene
 registry places the entry after every moving-body field and before the
 frame's last camera write ([How the shell uses it](../scene/README.md#how-the-shell-uses-it)).

@@ -59,6 +59,7 @@ import { PoiStore } from './poi/poi-store';
 import { InputController } from './camera/controls/input/input-controller';
 import {
   FocusController,
+  type FocalPerturbationInto,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
@@ -109,7 +110,6 @@ export {
   WARP_T_MIN_MS,
 } from './camera/timing';
 import { EventBus } from './util/event-bus';
-import { mapLate } from './util/late/late';
 import {
   DEFAULT_FILTER,
   DEFAULT_FOV,
@@ -143,7 +143,7 @@ import { formatAvParity, type AvParityReport } from './star-pipeline/extinction/
 import type {
   ExtinctionPrepassSeam, ExtinctionView,
 } from './star-pipeline/extinction/extinction-seam';
-import { BinariesAttachment, type FocalPerturbationSource } from './binaries/binaries-attachment';
+import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { selectFigures } from './constellation-figure/constellation-figure-pure';
 import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
@@ -763,8 +763,7 @@ export class Stellata implements FrameAnchor {
       getWarp: () => this.warp,
       getObserve: () => this.observe,
       getFocusables: () => this.focusables,
-      focalPerturbation: mapLate(this.binaries.focalPerturbation,
-        (source) => (idx, out) => source.focalPerturbationInto(idx, this.getT(), out)),
+      focalPerturbation: this.binaries.focalPerturbation,
     });
     // see camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry
     this.focusables = collectFocusables(this.kinds);
@@ -1408,10 +1407,9 @@ export class Stellata implements FrameAnchor {
   // position: setFocus sampled the perturbation at focus-event time, but
   // under fast scrub sim-time advances between that event and this frame,
   // so the event-time snap goes stale and the star would land off-centre.
-  private applyFocalFrameRide(source: FocalPerturbationSource): void {
+  private applyFocalFrameRide(perturbation: FocalPerturbationInto): void {
     const focal = this.focus.getFocusedStar();
-    const hasPert = focal !== null
-      && source.focalPerturbationInto(focal, this.getT(), this._focalPert);
+    const hasPert = focal !== null && perturbation(focal, this._focalPert);
     if (!hasPert) this._focalPert.set(0, 0, 0);
 
     const live = focal !== null
