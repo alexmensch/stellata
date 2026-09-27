@@ -378,14 +378,12 @@ transition themselves.
 `Stellata.aimAtConstellation(conIndex)` swings the camera so the chosen
 constellation is centred in view, without moving `controls.target` or
 changing orbit radius — only the camera's position on the orbit sphere
-moves. The aim point is the brightness-weighted centroid of the top-8
-figure stars as ranked by apparent magnitude **from the current orbit
-target** (not from Sol). This matters when the user has travelled far
-from Sol: the same constellation is still centred on whichever members
-visually dominate from *there*, not from Earth.
+moves. The point it centres is the figure's own
+([The aim point](../../constellation-figure/README.md#the-aim-point)), judged from the current
+orbit target rather than from Sol.
 
-Called **only from the constellation dropdown change handler** in
-`controls.ts`. URL state restore, reset button, and any other path that
+Called **only when a constellation is picked in the typeahead**
+(`../../typeahead/constellation-typeahead.ts`). URL state restore, reset button, and any other path that
 sets `highlightCon` via `setFilter` deliberately do **not** trigger the
 aim — a shareable URL's camera pose is authoritative, and the "reset"
 button means "clear the selection", not "jump somewhere".

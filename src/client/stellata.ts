@@ -86,10 +86,9 @@ import { DIM_FLOOR } from './binaries/eclipse/eclipse-photometry-pure';
 import { VirtualClock, tToJdUt } from './solar-system/time/time';
 import { J2000_JD } from './util/astronomy-constants';
 import { uploadFull } from './util/attribute-upload';
-import { apparentMagnitude } from './solar-system/perceptual-magnitude';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
-import { CAMERA_NEAR_PC, DCAM_LOG_FLOOR_PC } from './camera/timing';
+import { CAMERA_NEAR_PC } from './camera/timing';
 export {
   AIM_T_MAX_MS,
   AIM_T_MIN_MS,
@@ -133,7 +132,7 @@ import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionAttachment } from './star-pipeline/extinction/extinction-attachment';
 import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
-import { selectFigures } from './constellation-figure/constellation-figure-pure';
+import { figureAimPoint, selectFigures } from './constellation-figure/constellation-figure-pure';
 import { ConstellationBoundaries } from './constellation-boundaries/constellation-boundaries';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
@@ -1396,45 +1395,15 @@ export class Stellata implements FrameAnchor {
 
   // Swing the camera to face the selected constellation while keeping the
   // orbit target and orbit radius unchanged — only the camera's position on
-  // the orbit sphere moves. The aim point is the brightness-weighted
-  // centroid of the figure stars as seen from the current target, so a
-  // constellation looks "centered" on whichever of its members visually
-  // dominate from the user's current vantage, even when the user has
-  // travelled deep into 3D space.
+  // the orbit sphere moves.
   aimAtConstellation(conIndex: number) {
-    const cons = this.catalog.constellations;
-    const lines = conIndex >= 0 && conIndex < cons.length ? cons[conIndex].lines : undefined;
-    if (!lines || lines.length === 0) return;
-
-    const seen = new Set<number>();
-    for (const polyline of lines) for (const i of polyline) seen.add(i);
-    if (seen.size === 0) return;
-
-    // Project in local frame so camera/target math stays internally
-    // consistent under the floating origin.
-    const positions = this.localPositions;
-    const absmag = this.catalog.absmag;
     const t = this.controls.target;
-
-    const scored: Array<{ idx: number; appMag: number }> = [];
-    for (const i of seen) {
-      const dx = positions[i * 3] - t.x;
-      const dy = positions[i * 3 + 1] - t.y;
-      const dz = positions[i * 3 + 2] - t.z;
-      const dist = Math.max(Math.sqrt(dx * dx + dy * dy + dz * dz), DCAM_LOG_FLOOR_PC);
-      const appMag = apparentMagnitude(absmag[i], dist);
-      scored.push({ idx: i, appMag });
-    }
-    scored.sort((a, b) => a.appMag - b.appMag);
-    const top = scored.slice(0, Math.min(8, scored.length));
-
-    const c = new THREE.Vector3();
-    for (const { idx } of top) {
-      c.x += positions[idx * 3];
-      c.y += positions[idx * 3 + 1];
-      c.z += positions[idx * 3 + 2];
-    }
-    c.divideScalar(top.length);
+    const c = figureAimPoint(this.catalog.constellations[conIndex]?.lines, {
+      localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      absmag: this.catalog.absmag,
+      from: t,
+    });
+    if (c === null) return;
 
     if (this.focus.getCameraMode() === 'observe') {
       // Camera is parked at the focal star — just rotate the view to face

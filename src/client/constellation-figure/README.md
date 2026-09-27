@@ -17,10 +17,10 @@ the constellation hull is gone and the chart-mode Latin **name** labels stay in
   catalog's per-constellation polylines into a flat line-segment endpoint list
   (two star indices per segment), dropping any segment that touches
   `excludeStarIdx`. Plus `selectFigures`: the active set, the anchor exclusion and the
-  rebuild signature, so the whole decision is testable without a shell. Both
-  vitest-pinned.
-- `constellation-figure-pure.test.ts` — endpoint-expansion, exclusion, and
-  selection pins.
+  rebuild signature, so the whole decision is testable without a shell; and
+  `figureAimPoint` ([The aim point](#the-aim-point)). All vitest-pinned.
+- `constellation-figure-pure.test.ts` — endpoint-expansion, exclusion,
+  selection and aim-point pins.
 
 ## Why WebGL, not SVG
 
@@ -114,6 +114,19 @@ with the other line layers asking the same question.
 A planet or probe anchor suppresses nothing here yet, which is unreachable
 rather than correct: [The observe anchor in line layers](../camera/observe/README.md#the-observe-anchor-in-line-layers)
 says why and where the host resolution has to land.
+
+## The aim point
+
+Picking a constellation swings the camera to face `figureAimPoint`: the plain
+mean of the `AIM_BRIGHTEST_COUNT` (8) figure members that look brightest
+**from the orbit target**, not from Sol, each vertex counted once. Far from
+Sol the same figure is then centred on whichever members dominate from
+*there*. It reads the vertices through `localPositionInto`, the frame the
+camera and target live in, once per pick; chunk 0 holds every vertex
+([Late-attached slots](../README.md#late-attached-slots)), so a pick at first paint
+reads decoded positions. Null for a figure with no vertex, and the shell's
+`aimAtConstellation` then returns before claiming the camera, so a no-op
+pick cancels nothing ([Picking a constellation aims the camera](../camera/controls/README.md#picking-a-constellation-aims-the-camera)).
 
 ## Styling
 

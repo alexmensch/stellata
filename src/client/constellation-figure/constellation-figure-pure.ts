@@ -1,6 +1,40 @@
 // Stick-figure polylines → flat LineSegments endpoint list (two star indices
-// per segment), and the active-set selection driving the rebuild.
-// See README.md.
+// per segment), the active-set selection driving the rebuild, and the aim
+// point. See README.md.
+
+import * as THREE from 'three';
+import { DCAM_LOG_FLOOR_PC } from '../camera/timing';
+import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
+
+/** How many of a figure's members, brightest from the vantage first, the aim
+ *  point averages. */
+export const AIM_BRIGHTEST_COUNT = 8;
+
+export interface FigureAimInputs {
+  readonly localPositionInto: (idx: number, out: THREE.Vector3) => THREE.Vector3;
+  readonly absmag: ArrayLike<number>;
+  /** The vantage brightness is judged from — the orbit target. */
+  readonly from: Readonly<THREE.Vector3>;
+}
+
+/** README.md#the-aim-point. Null when the figure has no vertex. */
+export function figureAimPoint(
+  lines: readonly (readonly number[])[] | undefined,
+  inputs: FigureAimInputs,
+): THREE.Vector3 | null {
+  const members = new Set(lines?.flat());
+  if (members.size === 0) return null;
+  const p = new THREE.Vector3();
+  const scored = [...members].map((idx) => {
+    const dist = Math.max(inputs.localPositionInto(idx, p).distanceTo(inputs.from), DCAM_LOG_FLOOR_PC);
+    return { idx, appMag: apparentMagnitude(inputs.absmag[idx], dist) };
+  });
+  scored.sort((a, b) => a.appMag - b.appMag);
+  const brightest = scored.slice(0, AIM_BRIGHTEST_COUNT);
+  const centroid = new THREE.Vector3();
+  for (const { idx } of brightest) centroid.add(inputs.localPositionInto(idx, p));
+  return centroid.divideScalar(brightest.length);
+}
 
 export interface FigureConstellationLike {
   lines?: number[][];
