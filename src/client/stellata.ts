@@ -534,6 +534,16 @@ export class Stellata implements FrameAnchor {
       ...this.starAttrs,
     });
 
+    this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
+    this.extinction = new ExtinctionAttachment({
+      catalog,
+      uniforms: sharedUniforms,
+      webgpu: this.webgpu,
+      milkyway: this.milkyway,
+      renderer: this.renderer,
+      invalidate: (reason) => this.renderGate.invalidate(reason),
+    });
+
     // Chunk 0 is already decoded and the pipeline was constructed against
     // it, so this first call folds it in; every later one follows a
     // landing chunk.
@@ -791,16 +801,7 @@ export class Stellata implements FrameAnchor {
     // the galactic centre; the fragment shader does a bounded raymarch
     // through its volume. renderOrder = -3 keeps it behind every other
     // layer.
-    this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.scene.add(this.milkyway.group);
-    this.extinction = new ExtinctionAttachment({
-      catalog,
-      uniforms: sharedUniforms,
-      webgpu: this.webgpu,
-      milkyway: this.milkyway,
-      renderer: this.renderer,
-      invalidate: (reason) => this.renderGate.invalidate(reason),
-    });
 
     this.filters = new FilterController({
       camera: this.camera,
