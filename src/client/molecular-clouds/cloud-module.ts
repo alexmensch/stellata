@@ -23,7 +23,7 @@ import { loadCloudSurfaces, type CloudSurface } from './cloud-surfaces-loader';
 import { MolecularClouds } from './molecular-clouds';
 
 export interface CloudKindModule extends ObjectKindModule<'cloud'> {
-  /** The render layer, for dev-console tuning + chart-mode name rows.
+  /** The render layer, for dev-console tuning and the frame-cost levers.
    *  Null before attach and when the clouds.json artifact is absent. */
   readonly layer: MolecularClouds | null;
   /** Settles at load: absent when clouds.json is missing, empty or unreadable. */
