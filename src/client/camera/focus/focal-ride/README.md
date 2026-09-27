@@ -130,8 +130,11 @@ it is what stops the write reading as a camera move; above, where the
 shell calls it, it drops a wake the bucket's own
 `invalidate('epoch-bucket')` already covers.
 
-It deliberately does **not** report to `noteRideStep`. The cadence
-subtracts the camera velocity from each body's continuous velocity; the
-epoch step is a bucketed jump no layer's rate models, so feeding it in
-would hand every body a phantom relative velocity for one frame. A frame
-drawn for the invalidate is not one the cadence audits.
+It deliberately does **not** report to `noteRideStep`, and neither does a
+ride's seed snap (`FocalRideStep.steady` false). The cadence subtracts the
+camera velocity from each body's continuous velocity; a bucketed epoch
+step or a re-snap onto the focal is a jump no layer's rate models, so
+feeding it in would hand every body a phantom relative velocity for one
+frame. Each brings its own wake — the bucket's invalidate, and behind a
+seed either the focus change's `'state'` or the recentre's `worldOffset`
+move — and a frame drawn for one is not one the cadence audits.

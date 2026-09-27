@@ -77,7 +77,7 @@ export class FocalRides {
     this.rideFocalIdx = step.rideFocalIdx;
     this.lastAppliedPert.set(step.px, step.py, step.pz);
     this.rideDelta.set(step.dx, step.dy, step.dz);
-    this.applyRideDelta(this.rideDelta);
+    this.applyRideDelta(this.rideDelta, step.steady);
   }
 
   /** Owed after a policy recentre only — README.md#files. */
@@ -125,12 +125,12 @@ export class FocalRides {
     this.movingIdx = step.rideFocalIdx;
     this.movingLast.set(step.px, step.py, step.pz);
     this.movingDelta.set(step.dx, step.dy, step.dz);
-    this.applyRideDelta(this.movingDelta);
+    this.applyRideDelta(this.movingDelta, step.steady);
   }
 
-  private applyRideDelta(delta: Readonly<THREE.Vector3>): void {
+  private applyRideDelta(delta: Readonly<THREE.Vector3>, steady: boolean): void {
     this.translatePose(delta);
-    this.deps.noteRideStep(delta);
+    if (steady) this.deps.noteRideStep(delta);
   }
 
   /** A delta that reaches the camera without reaching `rebasePose` reads as

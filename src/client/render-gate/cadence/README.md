@@ -32,7 +32,7 @@ the pulsation bound and the frame's ride translation. Four writers reach
 it, each through one method:
 
 - `isDue(rate, t)` — the gate's input, read above the gate every tick.
-- `noteRideStep(delta)` — each focal-ride step, from
+- `noteRideStep(delta)` — each steady focal-ride step, from
   `FocalRides` (`../../camera/focus/focal-ride/README.md`). Summed until
   the refresh.
 - `tightenPulsationBound(s)` — each absorbed catalogue chunk's

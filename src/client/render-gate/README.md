@@ -262,6 +262,6 @@ inherits this defect** — the ULP column in `debug.renderWatch()` is how you
 find it, and a handful of ULP on a slot nothing should have touched is the
 signature.
 
-The ride step also reports to `ClockCadence.noteRideStep`;
-the frame's sum divided by the sim step IS
+Each steady ride step — never a seed snap, which is a jump — also reports
+to `ClockCadence.noteRideStep`; the frame's sum divided by the sim step IS
 `CadenceCtx.cameraVelPcPerSimS` ([Camera motion is subtracted](cadence/README.md#camera-motion-is-subtracted-never-bounded)).

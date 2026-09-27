@@ -99,6 +99,15 @@ describe('FocalRides — binary focal ride', () => {
     expect(xyz(r.observeShift)).toEqual([1, 2, 3]);
   });
 
+  it('a seed snap rebases the gate but is no camera velocity', () => {
+    const r = rig();
+    r.state.star = 7;
+    r.state.starLive.set(1, 2, 3);
+    r.rides.rideBinaryFocal(pertOf(new THREE.Vector3(1, 2, 3)));
+    expect(xyz(r.rebased)).toEqual([1, 2, 3]);
+    expect(r.noteRideStep).not.toHaveBeenCalled();
+  });
+
   it('seed frame measures from the camera in observe', () => {
     const r = rig();
     r.state.star = 7;
@@ -174,7 +183,7 @@ describe('FocalRides — moving-focal ride', () => {
     r.rides.movingEntry.update!(frame);
     expect(xyz(r.target)).toEqual([5, 1, 0]);
     expect(xyz(r.camera)).toEqual([5, 1, 10]);
-    expect(xyz(r.noted)).toEqual([5, 1, 0]);
+    expect(xyz(r.noted)).toEqual([0, 1, 0]);
   });
 
   it('ignores a kind that does not move', () => {
