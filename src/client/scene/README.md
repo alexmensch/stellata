@@ -116,10 +116,11 @@ HUD, which additionally need the camera-matrix refresh —
 attach loop runs before `registerSceneLayers`, so a module layer
 updates ahead of every inline-wired entry — which is what keeps the
 probe and planet fields' samples frame-fresh for the first inline
-entry, the moving-focal ride. Each inline entry is a
-closure over the shell's layer field, so a lazily-attached layer
-(binaries) reads whatever is currently attached — `null` before
-attach, the live instance after, with no re-registration.
+entry, the moving-focal ride. An entry reaches its layer through a closure
+or through the owner that built it, so a lazily-attached layer needs no
+re-registration: it answers from whatever is attached now — the binaries
+entry by matching on its owner's `Late` cell
+([The attachment](../binaries/README.md#the-attachment)).
 
 `FrameCtx` (camera, worldOffset, float64 `distFromSol`, model-clock
 `t`, `warpActive`, `pxPerRadian`, and the `frustum` — [Declaring what a

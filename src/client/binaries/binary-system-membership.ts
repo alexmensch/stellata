@@ -18,7 +18,7 @@ import type { BinariesData } from './binaries-loader';
 export interface BinarySystemMembershipDeps {
   binaries: Late<BinariesData>;
   /** Live per-star composite-suppress verdict — the orbit walk's own
-   *  sub-pixel LOD (Stellata.isCompositeSuppressed). */
+   *  sub-pixel LOD (BinariesAttachment.isCompositeSuppressed). */
   isCollapsed: (starIdx: number) => boolean;
 }
 

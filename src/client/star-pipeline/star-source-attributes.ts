@@ -1,4 +1,4 @@
-// The four per-star buffers the shell rewrites, as the three.js attributes
+// The four per-star buffers written outside the star layer, as the attributes
 // their writers flag. They exist because the writers sit outside the import
 // boundary and the storage tables that upload them are built past it.
 
@@ -13,7 +13,7 @@ export interface StarSourceArrays {
   /** Rewritten each frame by `EclipsePhotometryField` — < 1.0 dims the
    *  back component's glow through a transit. */
   eclipseDim: Float32Array;
-  /** Built once per attachBinaries from `varType` alone; 1.0 zeros the
+  /** Built once from `varType` alone, binary-independent; 1.0 zeros the
    *  GCVS-amplitude radial pulsation
    *  (`../binaries/eclipse/README.md#pulsation-gate-for-eclipsing-binaries`). */
   suppressPulsation: Float32Array;
