@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import ts from 'typescript';
 import { isProductionTs, walkFiles } from './walk-files';
@@ -8,10 +7,6 @@ const ROOT = resolve(__dirname, '..');
 const CLIENT = resolve(ROOT, 'src/client');
 const SHELL = resolve(CLIENT, 'stellata.ts');
 const CATALOG_LOADER = resolve(CLIENT, 'loaders/catalog-loader.ts');
-
-function parse(path: string): ts.SourceFile {
-  return ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
-}
 
 function* descendants(node: ts.Node): Generator<ts.Node> {
   for (const child of node.getChildren()) {
@@ -68,22 +63,50 @@ function countBoundedLoops(
   return out;
 }
 
+const NO_SELECTION = 'verdict: null is "nothing selected", its own answer';
+
+/** Keyed `method` on the shell, `namespace.method` on a readonly namespace. */
 const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   recenterOrigin: 'verdict: null is "no recentre happened"',
   getOrbitFramePort: 'install seam: null is "no instrument", which is its own answer',
   constellationOf: 'late slot awaiting Late: the boundary namer attaches after construction',
   getCloudCatalog: 'late slot awaiting Late: the cloud layer loads after construction',
+  'adaptation.getLandedStatistic': 'verdict: null is "no reduction has landed", which a dark frame\'s 0 cannot say',
+  'observe.observeAnchorOf': NO_SELECTION,
+  'observe.getProgress': 'verdict: null is "no observe transition running"',
+  'focus.getFocusedStar': NO_SELECTION,
+  'focus.getFocusedTarget': NO_SELECTION,
+  'focus.getFocusedPlanetSystem': NO_SELECTION,
+  'focus.getVectorTo': NO_SELECTION,
+  'focus.getVectorTarget': NO_SELECTION,
+  'focus.getFocusedHardTarget': NO_SELECTION,
+  'focus.recenterOrigin': 'verdict: null is "no recentre happened"',
+  'focus.hardFocusParkDist': NO_SELECTION,
+  'focus.makeFocusTarget': 'verdict: null is "this target cannot be focused"',
+  'focus.currentFocusTarget': NO_SELECTION,
+  'warp.getWarpInfo': 'verdict: null is "no warp in flight"',
+  'warp.getWarpPhase': 'verdict: null is "no warp in flight"',
+  'milkyway.contributionSkip': 'verdict: null is "no skip applies this frame"',
+  'extinction.avMagAt': 'no answer: no dust, the A/B fallback or a cold mirror; the pick decides',
+  'extinction.countInFrame': 'no answer until the prepass has dispatched a view',
+  'picker.pickStarHit': 'verdict: null is "nothing under the pointer"',
+  'picker.pickKindHit': 'verdict: null is "nothing under the pointer"',
+  'picker.pickAnyKindHit': 'verdict: null is "nothing under the pointer"',
 };
 
-function nullableShellReturns(): string[] {
-  const source = parse(SHELL);
-  const shell = source.statements.find(
-    (s): s is ts.ClassDeclaration => ts.isClassDeclaration(s) && s.name?.text === 'Stellata');
-  if (!shell) throw new Error('class Stellata not found in stellata.ts');
-  const isPrivate = (m: ts.ClassElement) =>
-    ts.getCombinedModifierFlags(m as ts.Declaration) & ts.ModifierFlags.Private
-    || (m.name !== undefined && ts.isPrivateIdentifier(m.name));
-  return shell.members
+let clientProgram: ts.Program | undefined;
+function program(): ts.Program {
+  clientProgram ??= ts.createProgram([...walkFiles(CLIENT, { include: isProductionTs })], compilerOptions());
+  return clientProgram;
+}
+
+const isPrivate = (m: ts.ClassElement) =>
+  ts.getCombinedModifierFlags(m as ts.Declaration) & ts.ModifierFlags.Private
+  || (m.name !== undefined && ts.isPrivateIdentifier(m.name));
+
+function nullableReturnsOf(cls: ts.ClassDeclaration): string[] {
+  const source = cls.getSourceFile();
+  return cls.members
     .filter((m): m is ts.MethodDeclaration | ts.GetAccessorDeclaration =>
       ts.isMethodDeclaration(m) || ts.isGetAccessorDeclaration(m))
     .filter((m) => !isPrivate(m))
@@ -92,15 +115,34 @@ function nullableShellReturns(): string[] {
     .map((m) => m.name.getText(source));
 }
 
+/** The shell's own methods, and those of every class it exposes as a readonly
+ *  namespace field — the namespaces are its public surface too. */
+function nullableShellReturns(): string[] {
+  const source = program().getSourceFile(SHELL);
+  const shell = source?.statements.find(
+    (s): s is ts.ClassDeclaration => ts.isClassDeclaration(s) && s.name?.text === 'Stellata');
+  if (!shell) throw new Error('class Stellata not found in stellata.ts');
+  const checker = program().getTypeChecker();
+  const found = nullableReturnsOf(shell);
+  for (const m of shell.members) {
+    if (!ts.isPropertyDeclaration(m) || isPrivate(m)) continue;
+    if (!(ts.getCombinedModifierFlags(m) & ts.ModifierFlags.Readonly)) continue;
+    const decl = checker.getTypeAtLocation(m).getSymbol()?.declarations?.[0];
+    if (!decl || !ts.isClassDeclaration(decl) || !decl.getSourceFile().fileName.startsWith(CLIENT)) continue;
+    const ns = m.name.getText(source);
+    found.push(...nullableReturnsOf(decl).map((name) => `${ns}.${name}`));
+  }
+  return found;
+}
+
 describe('wave-2 read contract (/src/client/README.md#boot-in-two-waves)', () => {
   it('bounds no loop by a catalogue count unless the receiver is a CompleteCatalog', () => {
-    const files = [...walkFiles(CLIENT, { include: isProductionTs })];
-    const program = ts.createProgram(files, compilerOptions());
+    const p = program();
     const offenders: string[] = [];
-    for (const path of files) {
-      const file = program.getSourceFile(path);
+    for (const path of p.getRootFileNames()) {
+      const file = p.getSourceFile(path);
       if (!file) throw new Error(`${path} missing from the program`);
-      for (const { line, receiver } of countBoundedLoops(file, program)) {
+      for (const { line, receiver } of countBoundedLoops(file, p)) {
         offenders.push(`${relative(ROOT, path)}:${line} (${receiver}.count)`);
       }
     }

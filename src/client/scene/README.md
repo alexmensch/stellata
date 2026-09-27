@@ -25,7 +25,8 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 - `scene-layer.ts` — `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
   `LayerContribution` + `ContributionSkip`, `SceneLayer`,
   `SceneLayerRegistry`, and `cameraAbsInto` — the frame's absolute ICRS
-  camera position, which both diffuse emitters' peak providers key on.
+  camera position, which both diffuse emitters' peak providers and the
+  extinction prepass key on.
 - `emitter-material.ts` — `EmitterMaterial` ([The material seam](#the-material-seam)).
   Type-only.
 - `emitter-material-mock.ts` — `fakeEmitterMaterial`, the double every

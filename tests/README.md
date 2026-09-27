@@ -84,7 +84,13 @@ integration-shell-ratchet.test.ts
                          Parses the class with the TypeScript compiler;
                          arrow-function properties count as methods.
                          Growing COMPOSITION is a review decision, never a
-                         way to land state on the shell.
+                         way to land state on the shell. Also: the
+                         constructor calls no method that reaches (through
+                         the methods it calls, never a callback) a field not
+                         yet assigned — typecheck cannot see through a call,
+                         so an extraction that turns a `T | null = null`
+                         field into a constructed namespace boots to a throw
+                         unless the namespace is built first.
 late-read-contract.test.ts
                          The wave-2 read contract (/src/client/README.md#boot-in-two-waves),
                          two halves. A `for` loop bounded by `X.count`
@@ -93,9 +99,11 @@ late-read-contract.test.ts
                          type checker over src/client (~3 s), since a
                          syntactic scan cannot tell a catalogue's `count`
                          from a planet host's. And every public method or
-                         getter on `Stellata` returning `| null` is
-                         classified in NULLABLE_SHELL_RETURNS; a late slot
-                         there converts to Late<T> and leaves the list.
+                         getter returning `| null` on `Stellata`, or on a
+                         class it exposes as a readonly namespace field
+                         (keyed `namespace.method`), is classified in
+                         NULLABLE_SHELL_RETURNS; a late slot there
+                         converts to Late<T> and leaves the list.
 node-import-boundary.test.ts
                          src/client/ ships to a browser, so no module
                          there may import a `node:` builtin or a

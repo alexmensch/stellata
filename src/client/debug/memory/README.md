@@ -150,7 +150,7 @@ size and what has streamed in both move them, so both are stated.
 Two readings worth keeping in mind when quoting the totals:
 
 - **The dust grid is three quarters of everything the walk finds.**
-  Every other decision in the table is noise beside `attachDust(null)`.
+  Every other decision in the table is noise beside `extinction.attach(null)`.
 - **461 of 549 walked geometries were never drawn.** Mostly the
   boundary loops and orbit rings the folding collapses. Their bytes are
   real CPU-side; they are not GPU residency.

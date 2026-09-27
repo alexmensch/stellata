@@ -245,7 +245,7 @@ last fill, or a dust chunk landed — and **every canon vantage is
 camera-idle**, so a plain sweep prices a recompute that never ran and
 records `computePasses 0` throughout. The row is therefore present only
 while a **forced-recompute lever** is armed, which the caller arms *before*
-the sweep: `stellata.setExtinctionRecomputeForced(true)` on the console, or
+the sweep: `stellata.extinction.setRecomputeForced(true)` on the console, or
 `--force-recompute` on the runner ([Invocation](../../../../../scripts/perf/README.md#invocation)).
 Armed, the shell invalidates the cache before every
 per-frame `update()`, so the kernel runs on every frame and the row's two

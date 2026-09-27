@@ -156,15 +156,48 @@ export class DustField {
   }
 }
 
-/** Fetch manifest.json. Returns null (without throwing) if the manifest
- *  is missing — dust is an optional feature and its absence should leave
- *  the existing renderer untouched. */
+/** see README.md#dust-voxel-upload */
 export async function loadDustManifest(baseUrl: string): Promise<DustManifest | null> {
+  let raw: unknown;
   try {
     const res = await fetch(`${baseUrl}manifest.json`);
     if (!res.ok) return null;
-    return (await res.json()) as DustManifest;
+    raw = await res.json();
   } catch {
     return null;
   }
+  const err = dustManifestError(raw);
+  if (err !== null) {
+    console.warn(`dust manifest.json ${err} — rebuild with \`pnpm run build:dust-sync\``);
+    return null;
+  }
+  return raw as DustManifest;
+}
+
+/** Why `raw` cannot build a DustField, or null when it can. */
+export function dustManifestError(raw: unknown): string | null {
+  if (typeof raw !== 'object' || raw === null) return 'is not an object';
+  const m = raw as Record<string, unknown>;
+  const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+  const positiveInt = (v: unknown) => Number.isInteger(v) && (v as number) > 0;
+  if (!positiveInt(m.gridSize) || !positiveInt(m.chunkSize)) return 'has no positive gridSize / chunkSize';
+  if ((m.gridSize as number) % (m.chunkSize as number) !== 0) return 'has a chunkSize that does not divide gridSize';
+  if (!Array.isArray(m.boundsPc) || m.boundsPc.length !== 2 || !m.boundsPc.every(finite)) {
+    return 'has no [min, max] boundsPc';
+  }
+  if (!finite(m.densityMin) || !finite(m.densityMax) || !(m.densityMin > 0 && m.densityMax > m.densityMin)) {
+    return 'needs 0 < densityMin < densityMax';
+  }
+  if (!finite(m.avPerDensityPerPc)) return 'has no avPerDensityPerPc';
+  if (!finite(m.totalChunks) || typeof m.synthetic !== 'boolean') return 'has no totalChunks / synthetic';
+  if (!Array.isArray(m.chunks)) return 'has no chunks list';
+  const chunkOk = (c: unknown) => {
+    if (typeof c !== 'object' || c === null) return false;
+    const k = c as Record<string, unknown>;
+    return Number.isInteger(k.ix) && Number.isInteger(k.iy) && Number.isInteger(k.iz)
+      && typeof k.file === 'string' && finite(k.bytes)
+      && Array.isArray(k.centerPc) && k.centerPc.length === 3 && k.centerPc.every(finite);
+  };
+  const bad = m.chunks.findIndex((c) => !chunkOk(c));
+  return bad === -1 ? null : `has a malformed chunk at index ${bad}`;
 }

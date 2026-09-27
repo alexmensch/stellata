@@ -71,7 +71,7 @@ where a name collides — `uDustEnabled`, `uExtinctionStrength`,
 `uDustAvPerDensityPc`, `uWorldOffset`. Those mirror the *frame-wide* map,
 which `registry.sync()` copies from every rendered frame; a write the band
 made into one would be overwritten on the next frame.
-`Stellata.setExtinctionStrength` writes the frame map and the band
+`ExtinctionAttachment.setStrength` writes the frame map and the band
 separately for the same reason.
 
 Only `uLimitMag`, the six HDR emitter slots and the two solid angles come

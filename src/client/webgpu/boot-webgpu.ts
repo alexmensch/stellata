@@ -114,7 +114,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   let bandMaterialsCache: BandMaterials | null = null;
   let chromeLineMaterialsCache: ChromeLineMaterials | null = null;
   // Boot-scoped so the extinction prepass, built later on the first
-  // attachDust, can gate on the tables (extinction/README.md#the-cache-gate)
+  // extinction.attach, can gate on the tables (extinction/README.md#the-cache-gate)
   // and march the worklist the compaction appends
   // (extinction/refill/README.md#the-compaction-appends-the-worklist).
   // Cleared with the layer, so a prepass built after a teardown refuses

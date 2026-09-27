@@ -119,7 +119,7 @@ async function main() {
     }
 
     const stellata = new Stellata({ canvas, catalog, kinds, webgpu });
-    // Dev-console access: `stellata.setExtinctionStrength(X)` etc. Handy for
+    // Dev-console access: `stellata.extinction.setStrength(X)` etc. Handy for
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
@@ -214,10 +214,11 @@ async function main() {
       const manifest = await loadDustManifest(dustBase);
       if (!manifest) {
         console.info('dust manifest not found; skipping extinction layer');
+        stellata.extinction.attach(null);
         return;
       }
       const dust = new DustField(stellata.renderer, dustBase, manifest);
-      stellata.attachDust(dust);
+      stellata.extinction.attach(dust);
       await dust.startLoading();
     })();
 
@@ -289,7 +290,7 @@ async function main() {
       canvas,
       tooltip,
       initialProviders: hoverProviders,
-      onPickImminent: () => stellata.notifyPickImminent(),
+      onPickImminent: () => stellata.extinction.warmPickReadback(),
       visibility: () => stellata.pickVisibility(),
     });
 

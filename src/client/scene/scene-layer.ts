@@ -170,9 +170,8 @@ export interface SceneLayer {
   dispose(): void;
 }
 
-/** The camera's absolute ICRS position this frame, into `out` — what the
- *  two diffuse emitters' peak providers are keyed on. Both terms are
- *  float32, which the providers' own margins already dominate. */
+/** The camera's absolute ICRS position this frame, into `out`, summed in
+ *  float64. */
 export function cameraAbsInto(
   ctx: FrameCtx,
   out: THREE.Vector3,

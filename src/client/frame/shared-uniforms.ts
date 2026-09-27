@@ -110,7 +110,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uSizeKnee: { value: STAR_RENDER_DEFAULTS.sizeKnee },
 
     // Interstellar-dust extinction. Off by default (uDustEnabled = 0) —
-    // attachDust() wires in the Data3DTexture progressively as chunks
+    // extinction.attach() wires in the Data3DTexture progressively as chunks
     // arrive from the network and bumps uDustEnabled to 1 once the
     // texture is GPU-resident. A separate uExtinctionStrength is a
     // user-facing knob (0 = off, 1 = realism, >1 = amplified).
@@ -121,7 +121,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uDustTexture: { value: null as THREE.Data3DTexture | null },
     uDustBoundsPc: { value: 1250.0 },
     // Log-window decode: density = uDustDensityMin * exp(sample * uDustLogRatio).
-    // Defaults are overwritten by attachDust() with the manifest's
+    // Defaults are overwritten by extinction.attach() with the manifest's
     // autotuned range; this placeholder avoids divide-by-zero if the
     // shader runs before dust attaches.
     uDustDensityMin: { value: 1e-7 },
@@ -130,7 +130,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     uDustEnabled: { value: 0.0 },
     uExtinctionStrength: { value: 1.0 },
     uWorldOffset: { value: new THREE.Vector3() },
-    // Owned by the extinction prepass (constructed on attachDust); the
+    // Owned by the extinction prepass (constructed on extinction.attach); the
     // vertex stage falls back to the in-vertex raymarch while this is 0.
     uAvPrepassEnabled: { value: 0.0 },
     // OBSERVE-mode focal-star suppression. Set to the focused-star catalog
