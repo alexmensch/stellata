@@ -214,6 +214,7 @@ async function main() {
       const manifest = await loadDustManifest(dustBase);
       if (!manifest) {
         console.info('dust manifest not found; skipping extinction layer');
+        stellata.extinction.attach(null);
         return;
       }
       const dust = new DustField(stellata.renderer, dustBase, manifest);

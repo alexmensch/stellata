@@ -55,8 +55,8 @@ The dust manifest resolves on its own schedule, tied to neither boot wave
 `DustField` and the prepass built over it in **one** `Late` cell
 ([Late values](../../util/late/README.md)): the two land, re-attach and
 detach together, and nothing can hold a prepass for a field that has gone.
-`main.ts` calls `attach(field)`; `attach(null)` detaches and concludes the
-cell. The prepass is built on the first attach and kept across a
+`main.ts` calls `attach(field)`, or `attach(null)` when the manifest is
+missing; `attach(null)` detaches and concludes the cell. The prepass is built on the first attach and kept across a
 re-attach, which only releases the replaced field.
 
 Every reader is per-call, so each matches on the cell and none observes it:
