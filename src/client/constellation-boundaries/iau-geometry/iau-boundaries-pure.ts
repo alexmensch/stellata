@@ -1,6 +1,6 @@
-// The IAU (Delporte 1930) constellation boundary edge set at equinox B1875,
-// its decomposition into named regions, and positional lookup against them.
-// See README.md.
+// The IAU (Delporte 1930, /data/papers/index.md#delporte1930) constellation
+// boundary edge set at equinox B1875, its decomposition into named regions,
+// and positional lookup against them. See README.md.
 
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import {

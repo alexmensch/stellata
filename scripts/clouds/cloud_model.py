@@ -1,5 +1,5 @@
 """Molecular-cloud density model shared by build-clouds.py (clouds.json v3)
-and build-dust.py (extinction column check): Zucker 2021 Plummer profiles,
+and build-dust.py (extinction column check): Zucker 2021 (/data/papers/index.md#zucker2021) Plummer profiles,
 column calibration, taxonomy, noise constants. /docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain through /docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec."""
 
 from __future__ import annotations
@@ -17,16 +17,23 @@ SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 # extinction rate; n_H [cm^-3] converts through these.
 AV_PER_NH_PC = 1.65e-3      # mag A_V per pc per (n_H cm^-3)
 ZGR_PER_NH = 6.02e-4        # E_ZGR per pc per (n_H cm^-3)
-AK_OVER_AV = 0.117          # CCM 1989 at R_V = 3.1
+# Cardelli 1989 (/data/papers/index.md#cardelli1989) eq. 2 evaluated at
+# 2.159 µm (2MASS Ks), R_V = 3.1 — not its Table 3 K row, which gives 0.114.
+AK_OVER_AV = 0.117
 
-# Zhang-Green-Rix 2023 "E" unit → V-band extinction: A_V = ZGR_TO_AV * E_ZGR.
-# Edenhofer densities are E_ZGR/pc, so a path integral times this yields A_V.
-# The ZGR23 curve (Zenodo 10.5281/zenodo.7811871) gives A_λ/E_ZGR = 2.78 at
-# 540 nm, 2.73 at 545 nm; 2.742 is λ ≈ 544 nm, inside the V-band effective
-# wavelength (Edenhofer 2024 round to 2.8). Agrees with the n_H chain
-# (AV_PER_NH_PC / ZGR_PER_NH = 2.741) to <0.1%. Applied at runtime in the
-# shader / dust manifest, never baked into the stored density — retuning
-# needs no re-encode.
+# Zhang 2023 (/data/papers/index.md#zhang2023) "E" unit → V-band
+# extinction: A_V = ZGR_TO_AV * E_ZGR. Edenhofer 2024
+# (/data/papers/index.md#edenhofer2024) densities are E_ZGR/pc, so a path
+# integral times this yields A_V. The factor is not in Zhang 2023's text: it
+# is read off a ZGR23 extinction-curve table (Zenodo 10.5281/zenodo.7811871;
+# the paper names 10.5281/zenodo.7692680 as its electronic table), which gives
+# A_λ/E_ZGR = 2.78 at 540 nm, 2.73 at 545 nm; 2.742 is λ ≈ 544 nm, inside the
+# V-band effective wavelength. Edenhofer 2024 multiply by 2.8. Which factor
+# and record to use is open
+# (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain).
+# Agrees with the n_H chain (AV_PER_NH_PC / ZGR_PER_NH = 2.741)
+# to <0.1%. Applied at runtime in the shader / dust manifest, never baked into
+# the stored density — retuning needs no re-encode.
 ZGR_TO_AV = 2.742
 
 # Mass integral M/Msun = MSUN_PER_NH_PC3 * ∫ n dV  (n in cm^-3, V in pc^3),
@@ -47,9 +54,10 @@ ENVELOPE_FADE_START = 0.85
 # this. Single source shared with build-clouds.py.
 MIN_AXIS_PC = 3.0
 
-# Half-extent of the Edenhofer dust voxel cube (build-dust.py bakes into
-# ±this along each ICRS axis). Clouds fully inside get baked per-star
-# extinction; the rest are presence-only (/docs/science-molecular-clouds.md#1-overview--two-independent-fields
+# Half-extent of the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust
+# voxel cube (build-dust.py bakes into ±this along each ICRS axis). Clouds
+# fully inside get baked per-star extinction; the rest are presence-only
+# (/docs/science-molecular-clouds.md#1-overview--two-independent-fields
 # decision 2).
 DUST_GRID_HALF_EXTENT_PC = 1250.0
 
@@ -68,13 +76,13 @@ AV_TARGET_BY_CLASS = {'dark': 2.0, 'sf': 3.0, 'hii': 4.0}
 SPHERE_RFLAT_FRACTION = 0.25
 SPHERE_PLUMMER_P = 2.0
 
-# Curated cloud classes. The 12 Zucker 2021 clouds by known content
-# (<=B1 star -> hii, B2-B9 -> sf, else dark); the sphere entries are the
-# out-of-grid famous HII regions + IC 443 (an SNR, tinted as hii).
-# The A.5 embedded-star cross-match supersedes this table for in-grid
-# clouds; unlisted clouds default to 'dark'.
+# Curated cloud classes. The 12 Zucker 2021 (/data/papers/index.md#zucker2021)
+# clouds by known content (<=B1 star -> hii, B2-B9 -> sf, else dark); the
+# sphere entries are the out-of-grid famous HII regions + IC 443 (an SNR,
+# tinted as hii). The A.5 embedded-star cross-match supersedes this table for
+# in-grid clouds; unlisted clouds default to 'dark'.
 CLOUD_CLASS: dict[str, str] = {
-    # Zucker 2021 (raw table names)
+    # Zucker 2021 (/data/papers/index.md#zucker2021; raw table names)
     'Chamaeleon': 'dark',
     'Ophiuchus': 'sf',
     'Lupus': 'dark',
@@ -87,7 +95,7 @@ CLOUD_CLASS: dict[str, str] = {
     'Oriona': 'hii',
     'Orionb': 'hii',
     'Orionlam': 'hii',
-    # Zucker 2020 spheres (raw table names)
+    # Zucker 2020 (/data/papers/index.md#zucker2020) spheres (raw table names)
     'Carina': 'hii',
     'W3': 'hii',
     'W4': 'hii',
@@ -103,13 +111,14 @@ CLOUD_CLASS: dict[str, str] = {
 DEFAULT_CLASS = 'dark'
 
 # Substructure noise ladder for the presence-pass shader (A.4/A.6,
-# /docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec): one geometric ladder from the cloud's
-# major diameter down to LAMBDA_MIN_PC, evaluated wholly in-shader (the
-# voxel field carries the real Edenhofer structure; no synthetic noise is
-# baked). Per-octave variance follows a turbulence power-law: variance
-# ratio per octave toward finer scales = 2^(3 - BETA_SPECTRAL) (density
-# spectral slope beta ~ 2 for supersonic turbulence), so most of
-# sigma_s^2 lives at small scales.
+# /docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec): one
+# geometric ladder from the cloud's major diameter down to LAMBDA_MIN_PC,
+# evaluated wholly in-shader (the voxel field carries the real Edenhofer 2024
+# (/data/papers/index.md#edenhofer2024) structure; no synthetic noise is
+# baked). Per-octave variance follows a turbulence power-law: variance ratio
+# per octave toward finer scales = 2^(3 - BETA_SPECTRAL) (density spectral
+# slope beta ~ 2 for supersonic turbulence), so most of sigma_s^2 lives at
+# small scales.
 NOISE_LACUNARITY = 2.0
 BETA_SPECTRAL = 2.0
 LAMBDA_MIN_PC = 0.3
@@ -230,7 +239,8 @@ def fnv1a32(s: str) -> int:
 
 
 def parse_z2021_table1(path: Path = SRC_2021_T1) -> list[dict]:
-    """Zucker 2021 Table 1 (whitespace-delimited): 3D bounding boxes."""
+    """Zucker 2021 (/data/papers/index.md#zucker2021) Table 1 (whitespace-delimited):
+    3D extents of each cloud's skeleton."""
     out: list[dict] = []
     with path.open() as fh:
         header = fh.readline().split()
@@ -255,7 +265,8 @@ def parse_z2021_table1(path: Path = SRC_2021_T1) -> list[dict]:
 
 
 def parse_z2021_table2(path: Path = SRC_2021_T2) -> dict[str, dict]:
-    """Zucker 2021 Table 2: fitted radial-profile parameters. Only the
+    """Zucker 2021 (/data/papers/index.md#zucker2021) Table 2: fitted radial-profile
+    parameters. Only the
     Plummer columns (n0, rflat, p) are consumed; the Gaussian fits are not.
     Corona Australis has a Table 1 bbox but no Table 2 row."""
     out: dict[str, dict] = {}
@@ -275,7 +286,8 @@ def parse_z2021_table2(path: Path = SRC_2021_T2) -> dict[str, dict]:
 
 
 def parse_z2021_table3(path: Path = SRC_2021_T3) -> dict[str, dict]:
-    """Zucker 2021 Table 3: masses + peak A_K at both map resolutions."""
+    """Zucker 2021 (/data/papers/index.md#zucker2021) Table 3: masses + peak A_K at both
+    map resolutions."""
     out: dict[str, dict] = {}
     with path.open() as fh:
         header = fh.readline().split()
@@ -349,9 +361,9 @@ def volume_integral_pc3(rflat: float, p: float, axes: tuple[float, float, float]
 
 @dataclass
 class ProfiledCloud:
-    """One of the 11 Zucker 2021 clouds with a fitted Plummer profile
-    (Corona Australis has a bbox but no Table 2/3 rows and is
-    presence-only, like the Zucker 2020 spheres)."""
+    """One of the 11 Zucker 2021 (/data/papers/index.md#zucker2021) clouds with a fitted
+    Plummer profile (Corona Australis has a bbox but no Table 2/3 rows and
+    is presence-only, like the Zucker 2020 (/data/papers/index.md#zucker2020) spheres)."""
     raw_name: str
     center_icrs: tuple[float, float, float]   # pc, heliocentric
     axes_gal: tuple[float, float, float]      # semi-axes along galactic XYZ, pc
@@ -403,8 +415,10 @@ def calibrate(rflat: float, p: float, axes: tuple[float, float, float],
 def profiled_clouds() -> list[ProfiledCloud]:
     """The calibrated per-cloud parameter set driving both the voxel bake
     and the clouds.json v3 fields. Calibration: solve n0_cal so the
-    shortest-axis column through the centroid equals the observed
-    Leike-resolution peak column, under the mass budget
+    shortest-axis column through the centroid equals Zucker 2021's
+    (/data/papers/index.md#zucker2021) Table 3 `max_ak_leike` peak column,
+    at Leike 2020 (/data/papers/index.md#leike2020) map resolution,
+    under the mass budget
     (/docs/science-molecular-clouds.md#42-calibration-procedure-per-cloud)."""
     t1 = parse_z2021_table1()
     t2 = parse_z2021_table2()

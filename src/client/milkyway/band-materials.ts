@@ -12,7 +12,7 @@ import {
   DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   REDDENING_RGB,
-} from './milkyway-column-pure';
+} from './column/milkyway-column-pure';
 import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
 
 /**

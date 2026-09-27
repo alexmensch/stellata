@@ -133,9 +133,10 @@ reaches the scattering column through · ω̃ = τ_s/τ_ext
   scattering — the reason real twilight persists to ~18° — with amplitude
   `TWILIGHT_TAIL_AMP` = 1.459e-4 and reach `TWILIGHT_TAIL_REACH` = 8.95 scale
   heights, the closed-form fit through measured Earth horizontal illuminance
-  at 12° and 18° of solar depression (0.008 lx / 0.0006 lx, Allen's
-  Astrophysical Quantities). The test re-derives both from the table; civil
-  twilight at 6° falls out within 1.5×. Both terms scale with the body's own
+  at 12° and 18° of solar depression (0.008 lx / 0.0006 lx,
+  [Cox 2000](/data/papers/index.md#cox2000)). The test
+  re-derives both from the table; civil twilight at 6° falls out within 1.5×.
+  Both terms scale with the body's own
   `H`, so Venus / Mars / Titan follow with **no per-body constant** — Titan's
   band is ~10× Earth's angular width because its scale height is.
 - **The day side is beam interception, anchored at noon.** Of the direct flux
@@ -181,7 +182,7 @@ a conservative-scattering model of the same τ_ext would claim.
 
 **Where the model is over.** Earth's terminator anchor runs 1.75× (above) and
 Titan's noon ground light **2.8× the ~10 % of incident Huygens/DISR measured**
-(Tomasko et al. 2008). Same direction, same cause: the isotropic-redistribution
+([Tomasko 2008b](/data/papers/index.md#tomasko2008b)). Same direction, same cause: the isotropic-redistribution
 ½ and ¼ stop being upper bounds once τ ≫ 1, and nothing here loses photons back
 to space. Titan's is invisible in the render — its own haze extincts its ground
 to nothing (⟨μ·T_view⟩ = 0.006, [Flux bookkeeping](#flux-bookkeeping)) — but it is the number to
@@ -221,14 +222,15 @@ running the **same march the shader runs**, not an analytic stand-in:
   top — `π/p·⟨airlight⟩`, a fifth of Earth's disc and near half of Mars's —
   and the reflected terms get the remainder. Geometric albedo already counts
   the light a body's air scatters, so leaving that share in the surface term
-  draws it twice: before this, Earth's disc ran +7 % over its Mallama flux,
-  Mars +18 %, Titan +15 %.
+  draws it twice: before this, Earth's disc ran +7 % over its [Mallama 2017](/data/papers/index.md#mallama2017) flux,
+  Mars +18 %, and Titan +15 % over the flux its own `MOON_PHYSICAL` albedo gives.
 
 **Titan is over its measured flux and the clamp says so.** Its share is 1.137
 — the haze model alone is 14 % brighter than the measured body, and its
 ⟨μ·T_view⟩ = 0.006 means the ground supplies nothing to trade against it. The
 surface scalar clamps to zero and the residual stands: that is a per-body
-optical-depth error (τ_Mie 2.5 sits mid-range in the measured 2–5), not
+optical-depth error (τ_Mie 2.5 sits ~3× below the visible haze column
+[Tomasko 2008a](/data/papers/index.md#tomasko2008) gives, ≈ 6–12 across 650–450 nm), not
 something to absorb into a gain on a calibrated airlight.
 
 The fold is a luma scalar at full phase, so per-channel hue and phase-angle
@@ -335,7 +337,8 @@ black rim).
 Every real image (Blue Marble included) is exposure- and
 white-balance-processed, so pixel-matching is a trap. Instead:
 
-- The drawn *disc* renders at the Mallama-correct apparent magnitude — surface,
+- The drawn *disc* renders at its body's albedo-correct apparent magnitude
+  ([Mallama 2017](/data/papers/index.md#mallama2017) for the three planets, the `MOON_PHYSICAL` row for Titan) — surface,
   skylight and airlight together, [Flux bookkeeping](#flux-bookkeeping) — so absolute brightness is
   anchored and the optical depths only move *hue*, limb behaviour, and how the
   flux splits between ground and air. Titan is the exception: its airlight

@@ -4,8 +4,9 @@
 # `aliases` is a |-separated list of additional typeable designations
 # (catalog cross-IDs + common names). Objects without a row default to
 # "Dwarf spheroidal" when their display name carries that suffix, else
-# "Dwarf galaxy". Designation sources: McConnachie 2012 (AJ 144, 4)
-# Table 1 cross-IDs + NED common names.
+# "Dwarf galaxy". Designation sources: McConnachie 2012
+# (/data/papers/index.md#mcconnachie2012) Table 1 cross-IDs + NED common
+# names.
 #
 # `canonical` promotes one of the row's own aliases to the display name,
 # per the precedence in /scripts/local-group/README.md#display-name-rules.

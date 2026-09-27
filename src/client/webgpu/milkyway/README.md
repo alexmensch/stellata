@@ -33,7 +33,7 @@ src/client/webgpu/milkyway/
 ## The bound is taken off the mirror, so this march has to match it
 
 `MilkyWay.peakSurfaceBrightnessBound` is computed from
-`../../milkyway/milkyway-column-pure.ts` and decides whether the band draws
+`../../milkyway/column/milkyway-column-pure.ts` and decides whether the band draws
 at all ([The brightest rendered sightline](../../milkyway/README.md#the-brightest-rendered-sightline)), so a
 march here that has drifted from that mirror yields a bound on a picture
 nobody is looking at — and the failure is silent,
@@ -131,4 +131,4 @@ one.
 The band marches the **analytic** dust slab; the measured-dust cascade —
 the per-cloud tiering and the voxel-grid read — is `stellata-ty4.5`'s,
 and the prefilter mechanism behind it is still behind a design gate
-([Dust](../../milkyway/README.md#dust--the-analytic-tier-and-what-composes-with-it)).
+([Dust](../../milkyway/column/README.md#dust--the-analytic-tier-and-what-composes-with-it)).

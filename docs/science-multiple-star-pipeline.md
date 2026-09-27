@@ -35,22 +35,22 @@ update.
 freshness policy in [Frozen external data](/data/README.md#frozen-external-data):
 
 - **Washington Double Star Catalog (WDS)** + **Sixth Catalog of Orbits
-  of Visual Binary Stars (ORB6)** — Mason et al. 2001, *AJ* 122, 3466
-  (WDS); Hartkopf, Mason & Worley 2001, *AJ* 122, 3472 (ORB6).
+  of Visual Binary Stars (ORB6)** — [Mason 2001](/data/papers/index.md#mason2001)
+  (WDS); [Hartkopf 2001](/data/papers/index.md#hartkopf2001) (ORB6).
   Maintained at the U.S. Naval Observatory and Georgia State
   University. Provides ρ/θ separations, position angles, component
   magnitudes, spectral types, HIP/HD cross-IDs (WDS) and full visual
   orbital element fits (P, T, e, a, i, ω, Ω) for ~4k systems (ORB6).
-- **Hipparcos van Leeuwen 2007 reduction** — van Leeuwen 2007,
-  *A&A* 474, 653, DOI 10.1051/0004-6361:20078357. VizieR I/311/hip2.
+- **Hipparcos van Leeuwen 2007 reduction** —
+  [van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007). VizieR I/311/hip2.
   Improved Hipparcos astrometry; the long-baseline PM fallback for
   bright-binary Gaia contamination.
 - **CCDM-keyed Hipparcos visual-doubles flag** — Hipparcos main
   catalogue `CCDM` + `MultFlag` columns, as described in [Data sources](/SCIENCE.md#data-sources).
 - **Gaia DR3 cross-walks** — `gaiadr3.hipparcos2_best_neighbour`,
-  `gaiadr3.tyco2tdsc_merge_best_neighbour`, queried per Gaia
-  Collaboration et al. 2023, *A&A* 674, A1,
-  DOI 10.1051/0004-6361/202243940. Committed as
+  `gaiadr3.tycho2tdsc_merge_best_neighbour`, the archive's pre-computed
+  cross-matches ([Vallenari 2023](/data/papers/index.md#vallenari2023), p. 3,
+  says only that the archive carries them, not how they are built). Committed as
   `data/gaia/gaia_dr3_hip_xmatch.tsv` + `gaia_dr3_tyc_xmatch.tsv`.
 - **Gaia DR3 5-parameter astrometry** — `gaiadr3.gaia_source`,
   queried for the deduped source_id list the WDS resolution stage
@@ -59,14 +59,13 @@ freshness policy in [Frozen external data](/data/README.md#frozen-external-data)
   `data/gaia/gaia_dr3_astrometry.tsv`.
 - **Gaia DR3 NSS two-body orbits** — `gaiadr3.nss_two_body_orbit`,
   the non-single-star catalogue, with Thiele-Innes orbital fits
-  (Halbwachs et al. 2023, *A&A* 674, A9,
-  DOI 10.1051/0004-6361/202243969). Covers the period regime
+  ([Halbwachs 2023](/data/papers/index.md#halbwachs2023)). Covers the period regime
   P < ~3 yr / sub-arcsec separation where Gaia's astrometric mission
   detects orbits directly. Committed as
   `data/gaia/gaia_dr3_nss_two_body.tsv`.
 - **SIMBAD WDS↔Gaia DR3 cross-IDs** — curated by CDS Strasbourg from
-  SIMBAD's `ident` and `basic` tables (Wenger et al. 2000,
-  *A&AS* 143, 9, DOI 10.1051/aas:2000332). Per-component cross-IDs
+  SIMBAD's `ident` and `basic` tables ([Wenger 2000](/data/papers/index.md#wenger2000)).
+  Per-component cross-IDs
   between WDS pair identifiers (`WDS J<id><comp>`) and Gaia DR3
   source_ids. The principled cross-identification path for
   sub-arcsec sub-components ORB6 doesn't enumerate (η Cas A/B/C,
@@ -78,20 +77,24 @@ freshness policy in [Frozen external data](/data/README.md#frozen-external-data)
   schema separates sp_type from object-type `otype`), so a
   mixed-class pair like Sirius A0V + DA1.9 surfaces both spectra
   rather than AT-HYG's single inherited "A0V+DA" string.
-- **Pulkovo MSC** — Tokovinin 2018, *ApJS* 235, 6 (author-updated
+- **Multiple Star Catalog (MSC)** — [Tokovinin 2018](/data/papers/index.md#tokovinin2018) (author-updated
   VizieR copy, `J/ApJS/235/6`), committed as `data/msc/`. Curated
   ≥3-component hierarchies: compiled orbits for spectroscopic
   subsystems ORB6 and Gaia NSS never cover (AR Cas Aa,Ab; ν Sco
   Aa1,Aa2), per-component spectral types, and pair-side V magnitudes
   for sub-resolution pairs. Full source entry in [Data sources](/SCIENCE.md#data-sources).
 - **Curated per-component spectral types** —
-  `data/binaries/component_sptype_overrides.tsv`. Literature MK
-  types for spectroscopic sub-components no machine source
-  enumerates (SIMBAD has no object for Algol Aa2): Algol Aa2 K0IV
-  (Kolbas et al. 2015, MNRAS 451, 4150), δ Vel Ab A4V (Mérand et
-  al. 2011, A&A 532, A50), σ Ori Ab B0.5V (Simón-Díaz et al. 2015,
-  ApJ 799, 169), Castor Ab/Bb late-K / early-M (Stelzer & Burwitz
-  2003, A&A 402, 719). Top tier of the Stage 6 spectral cascade;
+  `data/binaries/component_sptype_overrides.tsv`. MK types for
+  spectroscopic sub-components no machine source enumerates (SIMBAD
+  has no object for Algol Aa2), picked within the literature's
+  classification: Algol Aa2 K0IV for an early-K subgiant
+  ([Kolbas 2015](/data/papers/index.md#kolbas2015)), δ Vel Ab A4V
+  (uncited; [Mérand 2011](/data/papers/index.md#merand2011) say only
+  early A-type main sequence, mean T_eff 9830 K), σ Ori Ab B0.5V
+  ([Simón-Díaz 2011](/data/papers/index.md#simondiaz2011); T_eff 31 kK in
+  [Simón-Díaz 2015](/data/papers/index.md#simondiaz2015)), Castor Ab/Bb K7Ve /
+  M1Ve for late-K / early-M
+  ([Stelzer 2003](/data/papers/index.md#stelzer2003)). Top tier of the Stage 6 spectral cascade;
   each entry cites its source in the file.
 
 **Layer 2 — manual-run refresh scripts.** One per dataset, idempotent,
@@ -182,7 +185,7 @@ astronomer-relevant summary:
    SB1 period could be stamped onto a centuries-period visual pair.
    The Thiele-Innes → Campbell algebra recovers
    (a0, i, Ω, ω) from NSS's stored (A, B, F, G) quartet via the
-   Heintz 1978 / Halbwachs+ 2023 Appendix C closed form, inlined
+   [Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs 2023](/data/papers/index.md#halbwachs2023) Appendix A closed form, inlined
    rather than imported from ESA's unmaintained NSSTools package —
    but the TI fit tracks the photocentre, so a0 = |q − β|·a_rel
    underestimates the relative separation by the mass-vs-flux
@@ -191,7 +194,7 @@ astronomer-relevant summary:
    ORB6 non-visual orbits (grade 8 interferometric-visibilities,
    grade 9 astrometric / spectroscopic, and the undocumented grade 7
    the catalog uses for photometric / eclipsing fits — YY Gem,
-   EQ Tau, BX And) come next; Pulkovo MSC compiled orbits come last
+   EQ Tau, BX And) come next; MSC compiled orbits come last
    and attach to sub-resolution pairs only — MSC compiles from the
    same primary literature the routes above curate, so it never
    overrides them, and a pair with a measured WDS placement never
@@ -202,8 +205,12 @@ astronomer-relevant summary:
    photometry cannot constrain one — so for the non-visual routes
    the pipeline estimates it from Kepler's third law,
    a = M_total^⅓ · P_yr^⅔ AU, with M_total = M₁/(1−q) from the
-   primary's spectral-class mass (Cox 2000 Sect. 15.2 / Pecaut & Mamajek
-   2013, the same tables the q backfill uses; 1 M☉ when the type is
+   primary's spectral-class mass ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2,
+   with main-sequence anchors that disagree with the online table of
+   [Mamajek 2022](/data/papers/index.md#mamajek2022) (v2022.04.16) — A0V
+   2.9 against 2.18 M☉ — an open decision, `stellata-uadc.69.28`;
+   [Pecaut 2013](/data/papers/index.md#pecaut2013) tabulate no
+   masses; the same tables the q backfill uses; 1 M☉ when the type is
    unparseable). Where no mass ratio is derivable the companion is
    assumed at half the primary's mass (q = ⅓, near the SB1
    mass-ratio distribution's mode). Both estimates enter a ∝ M^⅓,
@@ -238,8 +245,8 @@ astronomer-relevant summary:
    Spectral type resolves curated → SIMBAD per-component → MSC
    pair-side → AT-HYG per-system inherited; mass ratio `q` rides through
    from Gaia NSS / SB2 spectroscopy where present, with per-class
-   mass-table backfill from Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013
-   for visual orbits without spectroscopy.
+   mass-table backfill (the same tables) for visual orbits without
+   spectroscopy.
 7. **Assert against snapshots.** Per-stage counts gate
    `build-binaries-expected.json`; per-strategy rates gate
    `build-binaries-rates-expected.json`. A regression in either
@@ -324,23 +331,26 @@ pairs) is tracked as its own follow-up.
   (`data/binaries/orb6_component_overrides.tsv`) keys it to Ca,Cb
   and the pipeline synthesizes the pair row WDS lacks. ORB6's
   eclipse fit gives P and i = 86.5° but no semi-major axis; the
-  Kepler estimate from two M0.5Ve table masses (Torres & Ribas
-  2002: 0.599 + 0.601 M☉) lands at 0.0171 AU vs the published
-  0.0182 AU. All six components render, three inner pairs animate,
+  Kepler estimate from the curated M0.5Ve type's table masses lands
+  at 0.0171 AU. [Torres 2002](/data/papers/index.md#torres2002)
+  quote YY Gem as M1.0 Ve and give 0.5975 + 0.6009 M☉ (formal; they
+  adopt the mean, 0.5992 M☉, for each); their a sin i = 3.888 R☉ and
+  i = 86.29° give a = 0.0181 AU, as does Kepler's law with their
+  masses. The M0.5Ve type has no recorded source, and which type and
+  masses to ship is an open decision (`stellata-uadc.69.18`). All six components render, three inner pairs animate,
   and YY Gem's eclipses come from real orbital geometry.
-- **HIP 25733 — a Bailer-Jones refinement case.** AT-HYG's `dist_src`
+- **HIP 25733 — a [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) refinement case.** AT-HYG's `dist_src`
   marks this row's catalogued 14.3 kpc as a Gaia DR3 inverse-parallax
-  estimate (`G_R3`) with low S/N; Bailer-Jones's photogeometric
+  estimate (`G_R3`) with low S/N; [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)'s photogeometric
   posterior pulls it back to ~5–7 kpc. This is the dominant failure
-  mode the B-J Layer 1 override is designed to rescue and is one of
-  the cases the Vaidman 2025 validation harness pins.
+  mode the B-J Layer 1 override is designed to rescue.
 - **An LMC supergiant — e.g. HDE 268743 / R 90, S Dor analogue.**
   AT-HYG's `dist_src = G_R3` plus a low-S/N Gaia parallax routes it
   through B-J first, which lands somewhere intermediate (5–20 kpc;
   B-J's smooth Galactic-density prior has no LMC). The LMC kinematic
   override fires on the second pass — sky-cone match + PM within
   ±0.5 mas/yr of (μ_α* = 1.85, μ_δ = 0.20) — and snaps `dist` to
-  Pietrzyński 2019's 49.594 kpc. The bounded-scope cutoff then keeps
+  49.594 kpc ([Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) print 49.59). The bounded-scope cutoff then keeps
   it (49.594 kpc < 50 kpc); without the LMC layer it would either
   have been dropped or rendered as a Galactic foreground star at a
   catastrophic intermediate distance.
@@ -365,7 +375,7 @@ stores the other's row index in `companionIdx`.
 
 **CCDM + MultFlag HIP-keyed cross-match.** Hipparcos's `CCDM`
 column links each HIP to the Catalog of the Components of Double
-and Multiple stars (Dommanget & Nys 1994). CCDM alone is too
+and Multiple stars ([Dommanget 1994](/data/papers/index.md#dommanget1994)). CCDM alone is too
 permissive — it tags wide line-of-sight optical pairs Hipparcos
 didn't confirm — so the build script gates it with `MultFlag`,
 keeping only `C` (component), `G` (resolved-in-field), and `O`
@@ -419,7 +429,7 @@ consume it in two complementary ways:
    that catalogue, not of the pair: a printed Hipparcos V holds one
    value per entry and so blends everything Hipparcos could not split,
    while a V transformed from Gaia G excludes any component Gaia gave
-   its own source_id (HD 18455's Riello V is component A at 8.04, not
+   its own source_id (HD 18455's [Riello 2021](/data/papers/index.md#riello2021) V is component A at 8.04, not
    the AB blend SIMBAD prints as 7.33). Where the light IS inside, the
    anchor dims so total system light stays what was measured. For
    Δmag-imputed
@@ -583,16 +593,19 @@ consume it in two complementary ways:
 
    - **Absolute magnitude (Johnson V, the catalogue convention).**
      `M_G = G + 5·log₁₀(ϖ_mas) − 10`, then `M_V = M_G − (G − V)` with the
-     Gaia EDR3 → Johnson `G − V` cubic in `(BP − RP)` (Riello et al.
-     2021, Table 5.7; σ ≈ 0.030 mag, valid −0.5 < BP−RP < 5.0). Raw
-     `M_G` is the fallback when BP or RP is missing (~0.3 mag redward
+     Gaia EDR3 → Johnson `G − V` cubic in `(BP − RP)`
+     ([Riello 2021](/data/papers/index.md#riello2021), App. C, Table C.2;
+     σ ≈ 0.030 mag, valid −0.5 < BP−RP < 5.0). Raw `M_G` is the fallback when BP or RP is missing (~0.3 mag redward
      bias for cool stars, but honest).
    - **Colour (Johnson B−V, the LUT convention).** `BP − RP → T_eff`
-     (Montalto et al. 2021 fifth-order polynomial, valid 0.5 < BP−RP <
-     5.0) → `B−V` via the catalogue's own Ballesteros (2012) inverse
+     ([Montalto 2021](/data/papers/index.md#montalto2021) fifth-order polynomial, eq. 4, valid 0.5 < BP−RP <
+     5.0) → `B−V`. Montalto's relation is in de-reddened colour
+     (G_BP − G_RP)₀; the pipeline feeds it the observed, reddened BP−RP,
+     which runs cool for any companion behind dust — an open decision,
+     `stellata-uadc.69`. `B−V` then comes from the catalogue's own inverse of [Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14 (this project's algebra; the paper gives only B−V → Teff)
      (`ballesteros_bv_from_teff`, mirroring
      `scripts/colour/blackbody-lut-pure.ts`). Routing colour through the
-     Ballesteros manifold — rather than a direct Gaia→(B−V) fit — keeps
+     [Ballesteros 2012](/data/papers/index.md#ballesteros2012) manifold — rather than a direct Gaia→(B−V) fit — keeps
      the stored `ci` round-tripping to the Gaia-implied temperature
      through the same relation the renderer reads
      ([Star colour calibration](/docs/science-stellar-modelling.md#star-colour-calibration)),
@@ -632,15 +645,13 @@ consume it in two complementary ways:
      split would fabricate skew. Total system light is preserved exactly;
      `ci` stays the shared (combined) colour.
 
-   Sources for the Gaia→Johnson transforms (Ballesteros 2012 cited under
+   Sources for the Gaia→Johnson transforms ([Ballesteros 2012](/data/papers/index.md#ballesteros2012) cited under
    [Star colour calibration](/docs/science-stellar-modelling.md#star-colour-calibration)):
 
-   - Riello, M. et al. (2021). Gaia Early Data Release 3: Photometric
-     content and validation. *A&A* 649, A3, Table 5.7 (G−V(BP−RP)).
-     https://doi.org/10.1051/0004-6361/202039587
-   - Montalto, M. et al. (2021). The all-sky PLATO input catalogue.
-     *A&A* 653, A98 (BP−RP → T_eff fifth-order relation).
-     https://doi.org/10.1051/0004-6361/202140717
+   - [**Riello 2021**](/data/papers/index.md#riello2021) — App. C, Table C.2
+     (G−V(BP−RP)); range Table C.1.
+   - [**Montalto 2021**](/data/papers/index.md#montalto2021) — BP−RP →
+     T_eff fifth-order relation.
 
 2. **Runtime artifact.** `scripts/binaries/build-runtime-binaries.py`
    emits `public/binaries.bin` — one record per kept physical pair,
@@ -680,7 +691,7 @@ radially only when their parallax gap from the anchor is **not
 significant at 3σ** of the combined parallax error — genuinely
 measured hierarchy depth (α Cen–Proxima's 0.06 pc; 61 Cyg A/B)
 survives; noise collapses. An anchor whose own rendered distance
-contradicts its parallax evidence (μ¹ Sco: Bailer-Jones places the
+contradicts its parallax evidence (μ¹ Sco: [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) places the
 RUWE-corrupted source at 1.7 kpc against HIP2's ~154 pc) disqualifies
 the whole system — members keep their own distances rather than
 following a bogus anchor. Direction is untouched (mas-accurate

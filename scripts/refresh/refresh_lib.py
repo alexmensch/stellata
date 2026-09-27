@@ -646,8 +646,9 @@ def cds_backend() -> TapBackend:
     """CDS / VizieR TAP backend. Required for VizieR-only tables (e.g.
     Hipparcos-2 I/311/hip2) that ESA does not host. Check ESA's
     `external.*` schema before assuming a catalogue is one of them — the
-    Bailer-Jones distances are there as `external.gaiaedr3_distance`, and
-    only that copy can be bounded by magnitude."""
+    Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) distances are
+    there as `external.gaiaedr3_distance`, and only that copy can be bounded
+    by magnitude."""
     return TapBackend(name="CDS", run=_cds_run)
 
 
@@ -839,9 +840,9 @@ def check_spot_row(
     values. Returns True when the row is present AND all fields match.
     Returns False when the keyed row is absent from ``rows_by_id`` —
     callers decide whether absence is a hard fail (xmatch: a HIP /
-    Tycho identifier can't retire, missing row is a real signal) or a
-    soft warning (Bailer-Jones: a DR4 maintenance reload may quietly
-    retire a handful of source_ids).
+    Tycho identifier can't retire, missing row is a real signal) or a soft
+    warning (Bailer-Jones 2021, /data/papers/index.md#bailerjones2021: a DR4
+    maintenance reload may quietly retire a handful of source_ids).
 
     Raises SystemExit when the row IS present but any field drifts.
     All field deltas are reported in a single failure message — so a
@@ -900,7 +901,8 @@ def validate_spot_rows(
     here with ``missing_hint`` (which names the retirement cause — a HIP /
     Tycho identifier can't retire, a Gaia selection can). This is the
     hard-fail contract shared by the xmatch / nss / apsis pulls; the
-    soft-tolerance retirement pattern (Bailer-Jones) stays inline —
+    soft-tolerance retirement pattern (Bailer-Jones 2021,
+    /data/papers/index.md#bailerjones2021) stays inline —
     absence there is expected within a bound.
     """
     for spec in specs:
@@ -961,7 +963,8 @@ def report_coverage(
     ``(name, predicate)``; a row counts toward the union when it satisfies
     ANY predicate. The union is the headline number a pull gates on; the
     per-group lines show which pipeline contributed it. Shared by the
-    Apsis (gspphot ∪ gspspec) and Bailer-Jones (geo ∪ photogeo) pulls so
+    Apsis (gspphot ∪ gspspec) and Bailer-Jones 2021
+    (/data/papers/index.md#bailerjones2021; geo ∪ photogeo) pulls so
     their observability reads the same way.
     """
     rows = list(rows)

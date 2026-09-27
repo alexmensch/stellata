@@ -13,6 +13,8 @@ it never replaces it.
 
 ## Priority order — stellata readings
 
+- **(1) Correctness** includes every citation the diff adds or touches:
+  [Citations](#citations--two-checks-on-every-diff) below.
 - **(2) Resource and performance cost** is [GPU and memory cost](#gpu-and-memory-cost--scrutinise-every-pr-for-it) below.
 - **(5) Architectural fit**: a diff touching `src/client/stellata.ts` is
   checked against [the integration-shell rule](/AGENTS.md#folder--module-conventions--where-new-code-lands) —
@@ -26,6 +28,38 @@ every folder in the diff's file list, before any source file in it —
 [Folder READMEs](/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
 `readme-guard` blocks the source read until you do, but only per file; batch
 the reads up front, including folders the diff implicates without editing.
+
+## Citations — two checks on every diff
+
+The citation index is `data/papers/index.md`; the rules are
+[Cited papers](/data/papers/README.md#cited-papers). `citation-index.test.ts`
+catches a pointer to a missing key, a label that does not match its entry, an
+uncited entry, a bare DOI / arXiv ID / bibcode in prose, manifest drift, and —
+where the paper store is linked — a `verified` row whose quoted passage is not
+on the page it names. It cannot see an author-year credit written without a
+pointer, or a value that departs from its paper without saying so. Those two
+are review's.
+
+**1. A credit without an index pointer.** Every added line that credits a
+work for a value, method or claim by author and year names it by its label
+and carries `/data/papers/index.md#<key>` in one of the forms the README
+gives. A work with no entry: the diff adds it, with its copy pinned in
+`manifest.json`, or the finding is P1. Exempt: public copy
+(`src/client/index.html`, `public/`, `CITATION.cff`, strings rendered to
+users) and vendored upstream files.
+
+**2. A cited value that departs from its paper without saying so.** When the
+diff adds or changes a number beside a pointer, open the key's entry. A row
+holding the paper's value: the shipped value either equals it, or the site
+states both values and the reason for the departure
+([When the codebase departs from a paper](/data/papers/README.md#when-the-codebase-departs-from-a-paper));
+a silent mismatch is P1. No row for what the site asserts: the diff adds
+one — the paper's value, page and verbatim passage — read from the entry's
+copy in the store (the manifest's `file`, through `data/papers/pdf`, never
+its target), with page numbers read the way the entry's **Copy** version
+says. Where the store is absent, say the value is unchecked rather than
+pass it. A diff that changes which source a shipped value adopts is a
+product decision: flag it for the owner, never approve it as a citation fix.
 
 ## GPU and memory cost — scrutinise every PR for it
 

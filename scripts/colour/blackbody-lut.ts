@@ -29,11 +29,12 @@ export { BV_MAX, BV_MIN, LUT_SIZE, ballesterosTeff, bvAtIndex };
 // ---- LUT build --------------------------------------------------------
 
 /**
- * Build the 256-entry RGB LUT as a flat Uint8Array of 768 bytes (R, G, B
- * × 256). Each row's Teff = Ballesteros(bvAtIndex(i)), with Planck → CIE
- * 1931 → linear sRGB → peak-normalise → uint8 quantise. Quantising in
- * linear light costs at most 0.91% on any component (the smallest
- * peak-normalised component across the table is 0.189, at the red end).
+ * Build the 256-entry RGB LUT as a flat Uint8Array of 768 bytes (R, G, B ×
+ * 256). Each row's Teff = Ballesteros(bvAtIndex(i)) (Ballesteros 2012,
+ * /data/papers/index.md#ballesteros2012), with Planck → CIE 1931 → linear
+ * sRGB → peak-normalise → uint8 quantise. Quantising in linear light costs at
+ * most 0.91% on any component (the smallest peak-normalised component across
+ * the table is 0.189, at the red end).
  */
 export function buildLut(): Uint8Array {
   const out = new Uint8Array(LUT_SIZE * 3);
@@ -90,9 +91,10 @@ function renderModule(bytes: Uint8Array): string {
 // Regenerate via: pnpm run build:lut
 //
 // 256-entry blackbody → linear-sRGB lookup indexed by B-V over [${BV_MIN}, ${BV_MAX}].
-// Each entry's Teff is derived via Ballesteros 2012; chromaticity is the
-// Planck spectrum at that Teff through CIE 1931 2° (Wyman 2013 multi-
-// Gaussian fits) and the sRGB D65 transform, peak-normalised. Values are
+// Each entry's Teff is derived via Ballesteros 2012
+// (/data/papers/index.md#ballesteros2012); chromaticity is the Planck
+// spectrum at that Teff through CIE 1931 2° (the multi-Gaussian fits of Wyman 2013
+// (/data/papers/index.md#wyman2013)) and the sRGB D65 transform, peak-normalised. Values are
 // LINEAR light, not gamma-encoded — the star shader renormalises each
 // sample to luminance 1 and the tone-map pass owns the only sRGB encode.
 // See scripts/colour/blackbody-lut.ts and

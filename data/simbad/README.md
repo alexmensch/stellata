@@ -93,11 +93,12 @@ is ever read.
 
 **rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 34,520 rv values in the pull,
 **14,725 carry a Gaia catalogue bibcode** — 13,381 `2018yCat.1345....0G`
-(DR2) and 1,344 `2022yCat.1355....0G` (DR3). Those are the values the rv
+([Gaia Collaboration 2018](/data/papers/index.md#gaiacollab2018cat)) and 1,344 `2022yCat.1355....0G` ([Gaia Collaboration 2022](/data/papers/index.md#gaiacollab2022cat)). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The rest are literature, led by
-`2020AJ....160..120J` (4,007), `2006AstL...32..759G` (3,764) and
-`2020AJ....160...83S` (1,618).
+`2020AJ....160..120J` ([Jönsson 2020](/data/papers/index.md#jonsson2020), 4,007),
+`2006AstL...32..759G` ([Gontcharov 2006](/data/papers/index.md#gontcharov2006), 3,764) and
+`2020AJ....160...83S` ([Steinmetz 2020](/data/papers/index.md#steinmetz2020), 1,618).
 
 ## The TYC → HD pull
 
@@ -144,12 +145,13 @@ what a consumer may conclude from these tables; this one owns what they are.
 
 ## Provenance
 
-- **Citation**: Wenger M. et al. 2000, *A&AS* 143, 9. SIMBAD is
+- **Citation**: [Wenger 2000](/data/papers/index.md#wenger2000). SIMBAD is
   maintained by CDS Strasbourg.
 - **TAP endpoint**:
   https://simbad.cds.unistra.fr/simbad/sim-tap.
 - **Licence**: SIMBAD content is publicly accessible per CDS policy
-  (academic / non-commercial); cite the Wenger et al. paper.
+  (academic / non-commercial); cite the
+  [Wenger 2000](/data/papers/index.md#wenger2000) paper.
 - **`sp_type`** is SIMBAD's canonicalised Morgan-Keenan string —
   variability annotations live in `otype` and never in `sp_type`, so
   the parser
@@ -376,7 +378,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   row's own bibcoded PM.
 
   **The V flux reaches no cascade at all.** [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s
-  projected SIMBAD V tier does not exist: Gliese `V/70A` reaches every row
+  projected SIMBAD V tier does not exist: [Gliese 1991](/data/papers/index.md#gliese1991) `V/70A` reaches every row
   Tycho-2 misses, and for the nine that would otherwise have fallen here
   SIMBAD publishes fluxes in `B`, `J`, `H`, `K`, `R`, `g`, `r`, `i` and `G`
   and **no `V`** — so the bibcode policy is not what stops them, and no

@@ -581,7 +581,7 @@ def classify_pair_optical(
     1. WDS Notes flag chars — T/V/Z keep (physical), S/U/X/Y reject
        (optical), other chars silent.
     2. Orbit on file — Stage 4 selected real orbital elements (Gaia NSS,
-       any ORB6 grade, or a Pulkovo MSC compiled orbit). An empirical
+       any ORB6 grade, or a MSC compiled orbit). An empirical
        orbit fit is the strongest evidence of physical association and
        wins over every gate below, including the separation limit (a
        close pair's blended Gaia parallaxes don't beat a tracked

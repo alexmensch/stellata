@@ -16,7 +16,7 @@ import {
   unresolvedBandLightAt,
   type MilkywayComponent,
   type Vec3,
-} from '../../../src/client/milkyway/milkyway-column-pure';
+} from '../../../src/client/milkyway/column/milkyway-column-pure';
 import { shippedResolvedHoleGrid } from '../../../src/client/milkyway/calibration/resolved-fraction-pure';
 import { relativeLuminance } from '../../../src/client/hdr/tonemap/tonemap-pure';
 

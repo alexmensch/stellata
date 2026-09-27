@@ -162,8 +162,8 @@ six: [Six DR2 ids in the DR3 column](/data/athyg/README.md#six-dr2-ids-in-the-dr
 Every other generated artifact in the repo has a CI step that regenerates
 it and diffs (`multiples.tsv`, `classic_id_overlay.tsv`). The spine
 deliberately does not: it is a **snapshot of the final AT-HYG-driven
-build**, so a legitimate refresh of an upstream input (a new Bailer-Jones
-pull moving one row past the distance cutoff) would make a regeneration
+build**, so a legitimate refresh of an upstream input (a new
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) pull moving one row past the distance cutoff) would make a regeneration
 gate demand rewriting a file whose whole purpose is to stop moving.
 
 `inherited-spine-guard.test.ts` is the substitute: it reads the committed
@@ -395,11 +395,14 @@ Pins: `derivationOutcome`, `derivedVia` and the review counts in
   `componentDesignations` +35, `binaryPairs` +14, `renderableCompanionWinged`
   +1, all of them record fields — byte 96 drives the chart-mode wings, so a
   gained binding reaches the multiplicity term and not only photometry.
-  The median V move is the Riello transform replacing a printed cell, inside
+  The median V move is the [Riello 2021](/data/papers/index.md#riello2021)
+  transform replacing a printed cell, inside
   the transform's σ; the tail is not the binding but the tiers behind it — a
   converged-looking G on an unconverged astrometric fit (HIP 23617: RUWE 19.7,
   `ipd_frac_multi_peak` 70, a 1.25 ± 0.83 mas parallax at S/N 1.5 against
-  HIP2's 5.84 ± 0.45, and a Bailer-Jones posterior of 1671 pc on it — where
+  HIP2's 5.84 ± 0.45, and a
+  [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) posterior of
+  1671 pc on it — where
   the parallax measures nothing the prior answers instead, so the layer that
   exists to absorb low S/N widens the error rather than absorbing it, and this
   row is the ledger's largest |Δabsmag|), or a blended source whose BP/RP feed

@@ -35,8 +35,9 @@ export interface Cloud {
   source: CloudSource;
   /** Heliocentric distance to the centroid in pc — precomputed for hover labels. */
   distanceFromSol: number;
-  /** Cloud mass in solar masses (Zucker 2021 Table 3, NICEST extinction
-   *  map). Null for Z2020 clouds, which carry no mass estimate. */
+  /** Cloud mass in solar masses (Zucker 2021
+   *  (/data/papers/index.md#zucker2021) Table 3, NICEST extinction map).
+   *  Null for Z2020 clouds, which carry no mass estimate. */
   massMsun: number | null;
   /** Taxonomy driving presence tint + noise shaping (/docs/science-molecular-clouds.md#7-taxonomy-and-embedded-stars). */
   cloudClass: CloudClass;

@@ -130,7 +130,8 @@ const IAU_EDGES_EPOCH = 'B1875';
 const IAU_EDGES_SOURCE = 'https://pbarbier.com/constellations/edges_18.txt';
 
 // The `edges` block of Stellarium's modern sky culture: the 781 IAU
-// (Delporte 1930) boundary segments at equinox B1875, parsed by
+// (Delporte 1930 (/data/papers/index.md#delporte1930)) boundary segments at
+// equinox B1875, parsed by
 // `src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure.ts`.
 export function readIauEdgeRecords(
   srcStellariumPath: string = STELLARIUM_SKYCULTURE_JSON,

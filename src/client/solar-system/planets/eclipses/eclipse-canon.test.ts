@@ -57,8 +57,9 @@ function groundOffsetKm(
 
 beforeAll(() => {
   // The app installs these at runtime, so the test measures the shipped
-  // configuration. Outside 1900–2100 the ephemeris falls back to Standish
-  // on its own, exactly as it does for a user scrubbing to 1200 BC.
+  // configuration. Outside 1900–2100 the ephemeris falls back to Standish 1992
+  // (/data/papers/index.md#standish1992) on its own, exactly as it does for a
+  // user scrubbing to 1200 BC.
   const tables = new Map<PlanetName, PlanetElementTable>();
   for (const target of ELEMENT_TARGETS) {
     const file = JSON.parse(
@@ -196,7 +197,7 @@ describe('solar eclipses vs the Five Millennium Canon', () => {
     // The deep-time worst case (198 km, -1977) is the canon-agreement
     // floor, not the model's accuracy: at that epoch the chain sits
     // within 6″ of DE441 in Moon−Sun elongation while the canon's
-    // ELP2000-85 Moon drifts ~160″ from DE441 by 2000 BC. See README.md#where-the-remaining-error-is.
+    // ELP-2000/82 Moon drifts ~160″ from DE441 by 2000 BC. See README.md#where-the-remaining-error-is.
     for (const r of solarResults) {
       expect(r.offsetKm, r.row.date).toBeLessThan(200);
     }
@@ -306,13 +307,14 @@ describe('lunar eclipses vs the Five Millennium Canon', () => {
 
 describe('ΔT against the canon\'s own column', () => {
   it('agrees within 2 s at every canon epoch, from 2000 BC on', () => {
-    // Espenak tabulates the ΔT he used per eclipse. Reproducing it is a
-    // direct check on delta-t-pure.ts against the same authority the
-    // ground tracks are being checked against. The bound is absolute:
-    // a relative one cannot tell "reproduces Espenak" from "reproduces
-    // Espenak minus a systematic 200 s". What is left (≤1.2 s measured)
-    // is the canon column's integer rounding plus the calendar-year vs
-    // Julian-year argument.
+    // Espenak 2009a (/data/papers/index.md#espenak2009) and
+    // Espenak 2009b (/data/papers/index.md#espenak2009lunar) tabulates the ΔT he used per
+    // eclipse. Reproducing it is a direct check on delta-t-pure.ts against the
+    // same authority the ground tracks are being checked against. The bound is
+    // absolute: a relative one cannot tell "reproduces Espenak" from
+    // "reproduces Espenak minus a systematic 200 s". What is left (≤1.2 s
+    // measured) is the canon column's integer rounding plus the calendar-year
+    // vs Julian-year argument.
     for (const row of [...SOLAR, ...LUNAR]) {
       const canon = Number(row.delta_t_s);
       const model = deltaTSeconds(Number(row.jd_tt));

@@ -73,7 +73,8 @@ export interface PrimaryTables extends BindingTables {
   hdI239: ReadonlySet<number>;
   /** I/239's HIP → HD pairing, for the rows publishing both. */
   i239HipHd: ReadonlyMap<number, number>;
-  /** HIP numbers carrying a van Leeuwen HIP2 re-reduction solution. */
+  /** HIP numbers carrying a van Leeuwen 2007
+   *  (/data/papers/index.md#vanleeuwen2007) HIP2 re-reduction solution. */
   hip2: ReadonlySet<number>;
   wgsn: WgsnKeys;
   tycho2: ReadonlyMap<string, Tycho2Row>;

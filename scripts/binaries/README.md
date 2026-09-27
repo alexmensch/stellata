@@ -3,7 +3,7 @@
 Developer walk-through of `scripts/binaries/build-binaries.py` — how
 WDS pairs cross-match against ORB6 + AT-HYG + GCVS + CCDM + HIP2 +
 Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS cross-IDs + SIMBAD
-per-component spectra + the Pulkovo MSC to produce
+per-component spectra + Tokovinin's Multiple Star Catalog (MSC) to produce
 `data/binaries/multiples.tsv`. The
 science of *why* the choices below are made (Gaia DR3 parallax bias,
 NSS detectability regimes, HIP2 long-baseline corrections) is in
@@ -53,7 +53,7 @@ scripts/binaries/
   component_tokens.py             WDS component-letter token helpers
                                   (truncated-form expansion, parent / child
                                   tokens).
-  msc_map.py                      Pulkovo MSC hierarchy-label → WDS token
+  msc_map.py                      MSC hierarchy-label → WDS token
                                   mapping + the MscLookup tables Stages 2/4/6
                                   consume. Label convention: data/msc/README.md.
   subdivide.py                    Synthesized sub-pair injection — ORB6 orphans
@@ -78,7 +78,11 @@ scripts/binaries/
   stage7_counts.py                Build-counts + build-rates snapshot writer
                                   (mirrors scripts/catalog/build-counts.ts).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
-                                  (Cox 2000 Sect. 15.2 / Pecaut & Mamajek 2013).
+                                  (Cox 2000
+                                  (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
+                                  anchors disagree with the online table of
+                                  Mamajek 2022
+                                  (/data/papers/index.md#mamajek2022)).
   build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
                                   public/binaries.bin. Detects hierarchical
                                   chains via component-letter prefix matching
@@ -112,7 +116,7 @@ scripts/binaries/
 
 Inputs and outputs live in their own folders, each with its own README
 this file does not restate: `data/wds/` (WDS summary / notes / refs +
-ORB6 orbits), `data/msc/` (Pulkovo MSC hierarchy / orbit / component
+ORB6 orbits), `data/msc/` (MSC hierarchy / orbit / component
 tables), `data/binaries/` (the `multiples.tsv` output plus the curated
 `component_sptype_overrides.tsv` and `orb6_component_overrides.tsv`).
 
@@ -123,14 +127,15 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
 
 1. **Binary-system pipeline** (`build-binaries.py`). Reads WDS + ORB6 +
    AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) +
-   SIMBAD WDS cross-IDs + SIMBAD per-component spectra + the Pulkovo MSC
+   SIMBAD WDS cross-IDs + SIMBAD per-component spectra + the MSC
    (`data/msc/`, mapped through `msc_map.py`). Emits
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't
    reach. Seven stages, one module per stage. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
    Reads AT-HYG + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /
-   Bailer-Jones / Gaia HIP-xmatch side-files + Stellarium + GCVS + CCDM.
+   [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) / Gaia
+   HIP-xmatch side-files + Stellarium + GCVS + CCDM.
    Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
    `constellations.json`, `search-index.json`, and
    `catalog-row-index-map.json`. `pnpm run build:catalog`.
@@ -374,7 +379,7 @@ astrometric measurement for it. Routes in `ASTROMETRY_VIA_VALUES`:
 | `hip2_long_baseline` (orbit-corrupted PM) | The system has any pair with min ρ ≤ 5″ AND `|pmRA_gaia − pmRA_hip2| > 50 mas/yr` OR same on Dec. Hipparcos averages a different window of the orbit than Gaia's 2014–2017 mission baseline; for bright close binaries with both available, HIP2 is closer to the systemic motion. |
 | `gaia_5p` | Default. The 5p row is clean and no orbit-correction signal fires. |
 | `hip2_long_baseline` (Gaia-saturated) | The component has no usable Gaia parallax — either no Gaia source resolved at all (Sirius A, α Cen, Algol, Procyon) or the Gaia row exists with ra/dec but `parallax=NULL` because Gaia couldn't fit a 5p solution (Castor STF1110 AB). HIP is known and HIP2 covers it; HIP2 is the only parallax source available. |
-| `athyg_position` | Post-pass after the Gaia / HIP2 cascade. For components still `unresolved`, the WDS precise_coord position-matches an AT-HYG row (dual-epoch: PM-propagated J1991.25→J2000 then unpropagated for GJ-anchored rows that store ra/dec at J2000). Position comes from the row's stored ra/dec; parallax = 1000/dist_pc. Canonical case: ξ UMa — Gaia source absent from `gaia_dr3_astrometry.tsv` (G≈4.3 saturated), HIP 55203 absent from HIP2 (van Leeuwen excluded orbit-corrupted entry), but AT-HYG carries the GJ-anchored distance 10.42 pc. |
+| `athyg_position` | Post-pass after the Gaia / HIP2 cascade. For components still `unresolved`, the WDS precise_coord position-matches an AT-HYG row (dual-epoch: PM-propagated J1991.25→J2000 then unpropagated for GJ-anchored rows that store ra/dec at J2000). Position comes from the row's stored ra/dec; parallax = 1000/dist_pc. Canonical case: ξ UMa — Gaia source absent from `gaia_dr3_astrometry.tsv` (G≈4.3 saturated), HIP 55203 absent from the committed HIP2 TSV, but AT-HYG carries the GJ-anchored distance 10.42 pc. |
 | `unresolved` | None of Gaia 5p, HIP2, or the AT-HYG position-match reach the component. |
 
 The HIP2-discrepancy 5″ gate runs against the **minimum** WDS ρ across
@@ -498,7 +503,7 @@ in `ORBIT_VIA_VALUES`, in priority order:
 | `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit, so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below — Stage 6 estimates one for the non-visual routes). |
 | `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`), AND the pair's WDS separation isn't far too wide to be that orbit (`_nss_separation_consistent`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
 | `orb6_spectroscopic` | ORB6 grade ∈ {7, 8, 9} — non-visual fits: 8 = interferometric-visibilities-only, 9 = astrometric / spectroscopic per orb6text.html; grade 7 is undocumented there but the file's grade-7 rows are photometric / eclipsing orbits (YY Gem, EQ Tau, BX And) with real fitted elements. |
-| `msc` | Pulkovo MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year OR a truncated JD with no unit flag — `msc_T0_jd` disambiguates by magnitude, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
+| `msc` | MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year when the period unit is years and JD−2400000 when it is days (Tokovinin 2018, /data/papers/index.md#tokovinin2018); `msc_T0_jd` disambiguates by magnitude instead of reading the period unit, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
 | `none` | Visual-only pair with no orbital information on file. |
 
 An NSS orbit is keyed to a Gaia **source**, not a WDS pair, so it can
@@ -517,13 +522,13 @@ orbit was attaching to the 5.5″ and 49″ visual companions.
 
 The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
 (`Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
-`AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell` (Heintz
-1978 / Halbwachs+ 2023 Appendix C). The ESA NSSTools package isn't a
-dependency — the closed form is ~10 lines and NSSTools has been
+`AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell`
+([Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs 2023](/data/papers/index.md#halbwachs2023)
+Appendix A). The ESA NSSTools package isn't a dependency — the closed form is ~10 lines and NSSTools has been
 unmaintained since 2022.
 
 The TI constants describe the **photocentre's** orbit around the
-system barycentre, not the relative A–B orbit (Halbwachs+ 2023): the
+system barycentre, not the relative A–B orbit ([Halbwachs 2023](/data/papers/index.md#halbwachs2023)): the
 recovered semi-major axis is `a0 = |q − β|·a_rel`, where
 `q = M₂/(M₁+M₂)` is the secondary's mass fraction (the same q the
 pipeline stores per pair) and `β = F₂/(F₁+F₂)` its flux fraction — so
@@ -745,8 +750,14 @@ Three system-level mechanisms run at emit time:
   parses both components' spectral strings (SIMBAD per-component
   preferred, AT-HYG inherited fallback) into class / subclass / lum
   class and reads a `q = M_secondary / (M_primary + M_secondary)` off
-  per-class mass tables for MS / III / IV / I (Cox 2000 Sect. 15.2, Pecaut &
-  Mamajek 2013). White dwarfs default to 0.6 M☉; carbon / S / WR
+  per-class mass tables for MS / III / IV / I
+  ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2; the
+  main-sequence anchors, checked against the online table of
+  [Mamajek 2022](/data/papers/index.md#mamajek2022) (v2022.04.16), disagree
+  with it — A0V 2.9 against 2.18 M☉, K5V 0.65 against 0.70 — and which
+  source to adopt is an open decision, `stellata-uadc.69.28`;
+  [Pecaut 2013](/data/papers/index.md#pecaut2013) tabulate no masses).
+  White dwarfs default to 0.6 M☉; carbon / S / WR
   default to 3.0 M☉; unparseable rows return `None` and `q` stays
   blank.
 - **Renderable-element finalization.** After the q backfill,
@@ -779,7 +790,7 @@ WDS cross-IDs never enumerate Algol's Aa2, so its K0IV can only come
 from here); `simbad` → SIMBAD's per-component sp_type, which beats
 AT-HYG because AT-HYG inherits the same system-level spectral string
 across all components (incorrect for mixed-class pairs like Sirius
-A0V + DA1.9); `msc` → the Pulkovo MSC's pair-side types, covering the
+A0V + DA1.9); `msc` → the MSC's pair-side types, covering the
 spectroscopic subsystem members neither SIMBAD nor AT-HYG enumerate
 (AR Cas Ab's A6); `athyg` → the inherited per-system string; `none`.
 The mass-ratio q backfill reads the resolved `spect`, so a curated or

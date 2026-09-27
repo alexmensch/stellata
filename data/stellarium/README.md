@@ -1,7 +1,8 @@
 # Stellarium modern sky culture
 
 Two datasets in one file: HIP-indexed polylines for the 88 IAU
-constellation stick figures, and the 781 IAU (Delporte 1930)
+constellation stick figures, and the 781 IAU
+([Delporte 1930](/data/papers/index.md#delporte1930))
 constellation **boundary** segments at equinox B1875.
 
 The file also carries a `common_names` block — 659 HIP-keyed folk names

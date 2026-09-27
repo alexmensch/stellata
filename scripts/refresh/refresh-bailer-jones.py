@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/bailer-jones/bailer-jones-dr3.tsv — Bailer-Jones 2021
-Bayesian DR3 distance posteriors over the catalogue's deep population.
-See data/bailer-jones/README.md."""
+(/data/papers/index.md#bailerjones2021) Bayesian DR3 distance posteriors over the
+catalogue's deep population. See data/bailer-jones/README.md."""
 
 from __future__ import annotations
 

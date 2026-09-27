@@ -1,18 +1,15 @@
 # Distance-validation reference data
 
 External reference distances for cross-checking the catalogue's adopted
-Bailer-Jones override (`scripts/catalog/build-catalog.ts`) against an
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) override (`scripts/catalog/build-catalog.ts`) against an
 independently-derived posterior.
 
 ## `vaidman-2025-supergiants.tsv`
 
 132 Galactic BA-type supergiants with Bayesian distance posteriors from:
 
-> Vaidman, N.L., Khokhlov, S.A., Miroshnichenko, A.S., Agishev, A.T.,
-> Yermekbayev, B.S., 2025. *A Quality-Controlled Bayesian Recalculation of
-> Gaia DR3/EDR3 Distances for 132 Galactic BA-Type Supergiants*,
-> **Universe**, 11(11), 359.
-> DOI: [10.3390/universe11110359](https://doi.org/10.3390/universe11110359)
+> [Vaidman 2025](/data/papers/index.md#vaidman2025). *Evaluating
+> Gaia Astrometric Quality and Distances for Galactic Hot Supergiants*.
 
 Open-access under [Creative Commons CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 The table contents in this TSV are reproduced from the paper's appendix
@@ -24,10 +21,10 @@ Tables A1 (119 rows) and A2 (13 rows) verbatim; the only added column is
 | Column                  | Source            | Notes                                                                                   |
 | ----------------------- | ----------------- | --------------------------------------------------------------------------------------- |
 | `name`                  | paper Table A1/A2 | Star name as printed (`HD 1070`, `BD+60 51`, `V755 Cas`, Greek-letter Bayer, etc.)      |
-| `d_bj_paper_pc`         | paper             | Bailer-Jones 2021 r_med_photogeo as the paper read it (pc).                             |
-| `sigma_d_bj_paper_pc`   | paper             | Bailer-Jones 1-σ (pc).                                                                  |
-| `ruwe`                  | paper             | Gaia DR3 renormalised unit-weight error.                                                |
-| `g_mag`                 | paper             | Gaia DR3 G magnitude.                                                                   |
+| `d_bj_paper_pc`         | paper             | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) median distance as the paper read it (pc). The paper does not name the median; its values match I/352 `r_med_photogeo` to 0.1% on 130 of 131 stars. |
+| `sigma_d_bj_paper_pc`   | paper             | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) 1-σ (pc). |
+| `ruwe`                  | paper             | Gaia renormalised unit-weight error, from whichever of DR3 / EDR3 the paper adopted for the star (the smaller penalised total uncertainty, p. 1). |
+| `g_mag`                 | paper             | Gaia G magnitude, from the same adopted release as `ruwe`.                              |
 | `d_new_pc`              | paper             | Paper's recalculated Bayesian distance under their EDSD prior + ZP correction (pc).     |
 | `sigma_d_new_pc`        | paper             | Paper's 1-σ on `d_new_pc` (pc).                                                         |
 | `snr_tot`               | paper             | Total parallax SNR after RUWE-inflated uncertainty.                                     |
@@ -37,7 +34,8 @@ Tables A1 (119 rows) and A2 (13 rows) verbatim; the only added column is
 
 `adopted` is the paper's own quality flag. `EDSD_new` rows passed their
 SNR + RUWE quality cut and their EDSD-prior posterior is the adopted
-distance. `BJ_old` rows failed the cut; the paper reverts to Bailer-Jones
+distance. `BJ_old` rows failed the cut; the paper reverts to
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)
 and explicitly does NOT recommend `d_new_pc` for quantitative use on
 this subset.
 
@@ -79,8 +77,8 @@ validate against.
 
 ## Known outlier
 
-`HD 22227` (Gaia DR3 3274329517095420544): the catalogue's Bailer-Jones
-photogeometric distance (~390 pc) is about 60 % short of the paper's
+`HD 22227` (Gaia DR3 3274329517095420544): the catalogue's
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) photogeometric distance (~390 pc) is about 60 % short of the paper's
 `d_new` (~992 pc). Both numbers come from the same Gaia source_id, so
 the disagreement reflects either a posterior-tail difference at this
 SNR or a name-resolution ambiguity in the paper's own input list. Out
@@ -89,7 +87,7 @@ of scope for this PR; surfaces in the validator's top-N report.
 ## License — attribution of derived work
 
 The numeric contents of this TSV (every column except `gaia_source_id`)
-are © Vaidman et al. 2025 and reproduced under CC BY 4.0. The
+are © [Vaidman 2025](/data/papers/index.md#vaidman2025) and reproduced under CC BY 4.0. The
 `gaia_source_id` column is derived from SIMBAD / VizieR. The TSV is
 redistributed in this repository in the same spirit (research /
 reproducibility) the paper itself adopts in publishing the appendix

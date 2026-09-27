@@ -995,8 +995,8 @@ const ANCHOR_DIM_MIN_DELTA_MAG = 0.05;
 // near-degenerate cases (Sirius, Δmag≈10: hypotheses differ by ~10⁻⁴ mag)
 // must not flip pinned values on float noise.
 //
-// A FLOOR, not the error budget. It sits at the Riello G−V scatter because a
-// gaia_riello anchor's magnitude is only good to that σ, and no margin may
+// A FLOOR, not the error budget. It sits at the Riello 2021
+// (/data/papers/index.md#riello2021) G−V scatter because a gaia_riello anchor's magnitude is only good to that σ, and no margin may
 // discriminate below the noise in its own input. Two things it does NOT model:
 // a printed-tier anchor never went through that relation (its σ is Hipparcos'
 // printed precision), and the hypotheses are built from WDS observed-frame
@@ -1752,8 +1752,9 @@ function promoteRow(
     stats.spectMsFromOwnAbsmag++;
   }
   let ci = imputeCompanionCi(row, spectral.info);
-  // The row's own observed ci embeds A_V too; a derived ci (Ballesteros /
-  // solar fallback) is already intrinsic.
+  // The row's own observed ci embeds A_V too; a derived ci (Ballesteros 2012
+  // (/data/papers/index.md#ballesteros2012) / solar fallback) is already
+  // intrinsic.
   if (companionCiIsObserved(row)) ci -= av / R_V;
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).

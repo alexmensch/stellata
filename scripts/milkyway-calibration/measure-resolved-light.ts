@@ -19,7 +19,7 @@ import {
   type Vec3,
   galacticDirection,
   sightlineColumn,
-} from '../../src/client/milkyway/milkyway-column-pure';
+} from '../../src/client/milkyway/column/milkyway-column-pure';
 import { SB_ZERO_POINT } from '../../src/client/hdr/emission/emission-pure';
 import {
   RESOLVED_HOLE_BANDS,

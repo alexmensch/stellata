@@ -181,7 +181,8 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
 3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
    states a position but no motion. See [Space-motion velocity](#space-motion-velocity).
 4. **Distance overrides**, in order, each superseding the last on the rows it
-   claims. `dist = 1000/plx` from step 0, then **Bailer-Jones (DR3)**
+   claims. `dist = 1000/plx` from step 0, then
+   **[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) (DR3)**
    (`applyBailerJonesOverride`), eligible where step 0 resolved
    `gaia_dr3_inversion` — the posterior treats that measurement, so a non-Gaia
    parallax must not be regressed onto its Galactic-density prior — then the
@@ -340,8 +341,8 @@ below.
 ## Positional constellation membership
 
 Catalog byte 34 is **positional**: `createConstellationAssignment`
-(`constellations.ts`) resolves the IAU (Delporte 1930) boundary region a
-record's own xyz falls in and maps it onto the `CONSTELLATIONS` index
+(`constellations.ts`) resolves the IAU ([Delporte 1930](/data/papers/index.md#delporte1930)) boundary
+region a record's own xyz falls in and maps it onto the `CONSTELLATIONS` index
 space. The geometry — the B1875 precession, the edge decomposition, and
 its self-validating 89-region invariant — is
 `src/client/constellation-boundaries/iau-geometry/README.md`; this module owns only
@@ -378,10 +379,10 @@ records IV/27A's TAP subset omits).
 
 The population that fallback would silence is not small: 65 search entries carry
 a `dc` today, dominated by Flamsteed numbers assigned under Ptolemaic
-constellations that the 1930 Delporte boundaries reassigned (15 LMi sits in Ursa
-Major, 41 Lyn — Intercrus — likewise), plus the boundary-straddling promoted
-companions whose composed names take the anchor's designation (Fomalhaut C is
-α PsA C while sitting in Aquarius).
+constellations that the [Delporte 1930](/data/papers/index.md#delporte1930) boundaries
+reassigned (15 LMi sits in Ursa Major, 41 Lyn — Intercrus — likewise), plus the
+boundary-straddling promoted companions whose composed names take the anchor's
+designation (Fomalhaut C is α PsA C while sitting in Aquarius).
 
 **A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
 whatever any catalogue column says, so `applyVariability` (`gcvs-parse.ts`)

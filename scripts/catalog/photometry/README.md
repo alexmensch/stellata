@@ -14,7 +14,8 @@ scripts/catalog/photometry/
                                  (the validity gate both relations share),
                                  and the ascending-powers polynomial
                                  evaluator. Pure.
-  v-magnitude-pure.ts (+ test)   Riello+ 2021 G−V relation, the gated
+  v-magnitude-pure.ts (+ test)   Riello 2021 (/data/papers/index.md#riello2021)
+                                 G−V relation, the gated
                                  transform over it, the three-tier V
                                  cascade, which tiers yield a system blend,
                                  and `printedVBelowHip` — the cascade's two
@@ -58,9 +59,10 @@ scripts/catalog/photometry/
 
 ## The published relations
 
-Both transforms come from **one table** — Gaia DR3 documentation Table 5.9,
-section *Photometric relationships with other photometric systems*, the release-3
-restatement of Riello+ 2021 App. C — as polynomials in `BP − RP`:
+Both transforms come from **one table** — [Carrasco 2022](/data/papers/index.md#gaiadr3doc)
+Sect. 5.5.1, Table 5.9 — as polynomials in `BP − RP`. Its `G − V` row is
+[Riello 2021](/data/papers/index.md#riello2021)'s App. C cubic (Tables C.1–C.2); its `G − B` row is
+a DR3-era fit the paper does not carry:
 
 | Relation | Degree | σ | Stated range |
 | --- | --- | --- | --- |
@@ -80,7 +82,7 @@ relation then applies its own colour range on top.
 ## The V cascade
 
 ```
-V = G − f(BP−RP)      Riello+ 2021, inside the relation's validity
+V = G − f(BP−RP)      Riello 2021 (/data/papers/index.md#riello2021), inside the relation's validity
   → printed HIP V      data/hipparcos/hip_main_vmag.tsv (I/239 Vmag)
   → Tycho-2 V          VT − 0.090(BT−VT), SP-1200 Sect. 1.3, on the record's TYC
   → Gliese Vmag        data/gliese/gliese_v70a.tsv, on the record's GJ
@@ -106,14 +108,16 @@ to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 
 ### The Tycho-2 tier runs outside its published colour range
 
-SP-1200 states `V = VT − 0.090(BT−VT)` over `BT−VT` ∈ [−0.25, 2.0].
-**44** of the tier's 3,784 rows sit outside it, on both the red and the blue
+[ESA 1997](/data/papers/index.md#esa1997) (SP-1200) states
+`V = VT − 0.090(BT−VT)` over −0.2 < `BT−VT` < 1.8; the build counts against
+a wider [−0.25, 2.0], a bound with no recorded source — which to count
+against is an open decision (`stellata-uadc.69.5`). **44** of the tier's 3,784 rows sit outside that, on both the red and the blue
 side, where the linear form runs bright against the printed cell it replaces.
 `tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
 the count.
 
 That is the opposite call from [Where the colour bound comes from](#where-the-colour-bound-comes-from), which
-refuses to extend Table 5.9 past its note (k). The difference is what sits
+refuses to extend Table 5.9 past Table 5.10 note (k). The difference is what sits
 underneath: the ci cascade has three more tiers, so a refused row still gets
 a colour, while a row this tier serves that carries no `gl` has **nothing
 below it at all** — and V is a membership gate, so gating would cost that row
@@ -171,7 +175,8 @@ from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relati
 **that bound is on a fit, this one is mostly on a correction.** The relation
 is a polynomial in `BP−RP` whose extrapolation is unconstrained by anything.
 GSPC's magnitudes are each star's own BP/RP spectrum integrated through the
-passband — a measurement of that star — and Montegriffo+ 2023 Sect. 6.2 calls a
+passband — a measurement of that star — and
+[Montegriffo 2023](/data/papers/index.md#montegriffo2023) Sect. 6.2 calls a
 flag-0 magnitude *"an extrapolation of the adopted standardisation"*, i.e. of
 the correction tying the result to the ground system, not of the integration.
 
@@ -239,7 +244,7 @@ corpus rows that carry both.
 
 ### Where the colour bound comes from
 
-Table 5.9 note (k) restricts `G − B` to **M giants** past `BP−RP` 1.75, and
+Table 5.10 note (k) restricts `G − B` to **M giants** past `BP−RP` 1.75, and
 this build cannot tell a giant from a dwarf on the no-Apsis population the
 tier serves — `lumClass` is 255 for most of it. So 1.75, not the relation's
 stated 4.0, is what `gaiaBMinusV` gates on.
@@ -334,9 +339,9 @@ for the same gate on the label side).
 
 ## Citation
 
-Riello, M., De Angeli, F., Evans, D. W., et al. 2021, *A&A* 649, A3 — "Gaia
-Early Data Release 3: Photometric content and validation", section *Photometric
-relationships with other photometric systems*. DR3 ships EDR3's photometry
+[Riello 2021](/data/papers/index.md#riello2021) App. C, Table C.2 for
+`G − V`; [Carrasco 2022](/data/papers/index.md#gaiadr3doc) Sect. 5.5.1, Table 5.9 for
+`G − B`. DR3 ships EDR3's photometry
 unchanged, so the EDR3 calibration is the one that applies. The coefficients,
 σ, and colour range are pinned as literals in the test rather than imported
 from the module, so a transcription slip fails rather than round-trips.

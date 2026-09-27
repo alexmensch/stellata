@@ -138,12 +138,12 @@ describe('empiricalPhaseFactor', () => {
   });
 
   it('Mercury matches the published 7th-order Mallama fit across 0°–170°', () => {
-    // Mallama 2018 Table A-1.2 publishes Mercury as a degree-7
-    // polynomial. c7 = 6.592e-15 now ships (third per-instance vec4),
-    // so the rendered curve IS the published fit across the full 170°
-    // validity range — the degree-6 truncation era capped αmax at 87°
-    // and fell back to anchor-Lambert (sub-0.5 mag error); with c7
-    // stored the budget collapses to float noise.
+    // Mallama 2017 (/data/papers/index.md#mallama2017) Table A-1.2 publishes
+    // Mercury as a degree-7 polynomial. c7 = 6.592e-15 now ships (third
+    // per-instance vec4), so the rendered curve IS the published fit across the
+    // full 170° validity range — the degree-6 truncation era capped αmax at 87°
+    // and fell back to anchor-Lambert (sub-0.5 mag error); with c7 stored the
+    // budget collapses to float noise.
     const fullDV = (aDeg: number): number =>
       MERCURY_PHASE.c0 +
       MERCURY_PHASE.c1 * aDeg +
@@ -184,9 +184,9 @@ describe('empiricalPhaseFactor', () => {
   });
 
   it('Mercury polynomial reproduces published ΔV at α = 30°', () => {
-    // Mallama 2018 Table A-1.2 V-band coefficients evaluated at 30°.
-    // Hand-checked to land near 1.15 mag. This is a sanity bound,
-    // not a hard pin.
+    // Mallama 2017 (/data/papers/index.md#mallama2017) Table A-1.2 V-band
+    // coefficients evaluated at 30°. Hand-checked to land near 1.15 mag. This
+    // is a sanity bound, not a hard pin.
     const a = 30 * DEG;
     const factor = empiricalPhaseFactor(MERCURY_PHASE, a);
     const dV = -Math.log(factor) * 2.5 / Math.log(10);
@@ -194,7 +194,7 @@ describe('empiricalPhaseFactor', () => {
     expect(dV).toBeLessThan(1.3);
   });
 
-  it('Earth polynomial passes through the Mallama 2018 Table A-3.1 anchor points', () => {
+  it('Earth polynomial passes through the Mallama 2017 Table A-3.1 anchor points', () => {
     // The fit was constructed to pass exactly through (45°, 1.123),
     // (90°, 2.069), (135°, 3.801) — the published table values.
     for (const [aDeg, expectedDV] of [
@@ -209,11 +209,12 @@ describe('empiricalPhaseFactor', () => {
   });
 
   it('Venus is brighter than Lambert at large α (atmospheric forward-scattering)', () => {
-    // The defining win for Venus from the bead description: at large
-    // phase angle Venus's atmosphere forward-scatters, leaving the
-    // crescent meaningfully brighter than a perfectly diffuse sphere
-    // would predict. The asymmetry grows with α — at 130° Mallama
-    // is ~1.6× Lambert; by 160° it's nearly an order of magnitude.
+    // The defining win for Venus from the bead description: at large phase
+    // angle Venus's atmosphere forward-scatters, leaving the crescent
+    // meaningfully brighter than a perfectly diffuse sphere would predict. The
+    // asymmetry grows with α — at 130° Mallama 2017
+    // (/data/papers/index.md#mallama2017) is ~1.6× Lambert; by 160° it's nearly
+    // an order of magnitude.
     const a130 = 130 * DEG;
     expect(empiricalPhaseFactor(VENUS_PHASE, a130))
       .toBeGreaterThan(lambertianPhaseFactor(a130) * 1.4);

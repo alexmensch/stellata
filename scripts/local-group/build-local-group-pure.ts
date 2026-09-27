@@ -42,7 +42,6 @@ export interface OverrideRow {
    *  "pa:102"). Parsed by `buildOrientation` against the object's
    *  sky direction. */
   orient: string;
-  refDoi: string;
   /** Optional standalone position. Populated only for rows that name
    *  objects not in LVDB (M31, M33). When present, the row builds a
    *  full LgObject without an LVDB merge; the three values must all be
@@ -65,8 +64,6 @@ export interface OverrideRow {
   bulgeToTotal?: number;
   bulgeRePc?: number;
   bulgeN?: number;
-  /** Profile-parameter source, separate from the structural refDoi. */
-  refDoiProfile?: string;
   /** Optional population tint (hex, e.g. "#ffd9b0"); empty → the
    *  renderer's per-family default. */
   color?: string;
@@ -463,9 +460,10 @@ export const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
   'Sextans A': 'Sextans A',
   'Sextans B': 'Sextans B',
   'Sagittarius dIrr': 'Sagittarius Dwarf Irregular',
-  // LVDB "Aquarius" is DDO 210 (dTr / dIrr per McConnachie 2012),
-  // distinct from the Aquarius II / III dSphs which keep the default
-  // suffix. "Antlia B" is a transition dwarf per Hargis 2020.
+  // LVDB "Aquarius" is DDO 210 (dTr / dIrr per McConnachie 2012
+  // (/data/papers/index.md#mcconnachie2012)), distinct from the Aquarius II / III dSphs
+  // which keep the default suffix. "Antlia B" is a transition dwarf per
+  // Hargis 2020 (/data/papers/index.md#hargis2020).
   Aquarius: 'Aquarius Dwarf',
   'Antlia B': 'Antlia B Dwarf',
 };

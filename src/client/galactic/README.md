@@ -58,7 +58,7 @@ loops in the galactic frame), all centred on the galactic centre — Sol
 sits ~8 kpc *inside* the disc, not at its middle.
 
 **Every extent is imported from the Milky Way proxy meshes**
-(`../milkyway/milkyway-column-pure.ts` `DISC_RADIUS_PC` /
+(`../milkyway/column/milkyway-column-pure.ts` `DISC_RADIUS_PC` /
 `DISC_HALF_THICKNESS_PC` / `BULGE_RADIUS_PC` /
 `BULGE_HALF_THICKNESS_PC`), never restated here. The wireframe's job is
 to outline the volume that emits, so any divergence renders band light
@@ -66,7 +66,7 @@ outside its own outline — which is what the previous hand-set ±400 pc and
 3 × 1.5 kpc did: 1.5× short vertically on the disc, and on the bulge 2×
 vertically and 1.67× radially. Changing a mesh envelope now moves the
 ring with it — the thickness rings tripled when the disc gained its thick
-component ([Density profiles](../milkyway/README.md#density-profiles)).
+component ([Density profiles](../milkyway/column/README.md#density-profiles)).
 
 **The disc is the one layer gating on the frustum**, and its registry
 entry declares both admissible tests in order: `'opacity'` when

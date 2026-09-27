@@ -1,7 +1,8 @@
 # Catalog build
 
 Single-star catalogue build pipeline: the membership manifest + GCVS + CCDM +
-Bailer-Jones + Gaia Apsis + SIMBAD sp_type +
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) + Gaia
+Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
 `public/search-index.json` + `public/constellation-boundaries.json`, plus the
@@ -162,7 +163,7 @@ consumers:
   (`spectral/physical-radius.ts`) derives when a no-Apsis star has no
   measured B−V but a parseable class (`ciSpectralDerived` in build-counts),
   else the solar fallback.
-- **Spectral classification fall-through** — GSP-Spec's
+- **Spectral classification fall-through** — ESP-ELS's
   `spectraltype_esphs` enum is the tier above `SPECTRAL_UNKNOWN` in
   `spectral/README.md`'s resolver chain.
 - **Per-record handles** for future Phase 5 consumers (geometric

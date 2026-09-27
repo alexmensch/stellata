@@ -1,3 +1,27 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:b53aee55d737a73465fc14e9fcbb5aea7ac54c8f8d27b1444483d01aed398e27
-size 1962
+# Hand-curated per-component MK spectral types — literature-based picks for
+# WDS components that neither SIMBAD's per-component cross-IDs nor
+# AT-HYG carry. SIMBAD enumerates Algol's WDS components as A/F/G only,
+# so its per-component sp_type join can never supply Aa2's K0IV; the
+# AT-HYG fallback inherits the system primary's type. Stage 6 reads
+# this file as the top tier of the spectral cascade
+# (spect_via=curated), ahead of the SIMBAD join.
+#
+# Schema (4 tab-separated columns):
+#   wds_id      — WDS positional anchor (e.g. "03082+4057").
+#   component   — component designator EXACTLY as emitted in the
+#                 multiples.tsv comp column, i.e. the raw WDS pair-cell
+#                 form. WDS truncates repeated stems: Algol's Aa1,2 pair
+#                 emits its secondary as comp="2" (canonical Aa2).
+#   sp_type     — SIMBAD-canonical MK string (classifyFromSimbad must
+#                 parse it).
+#   source      — literature reference for the classification.
+wds_id	component	sp_type	source
+03082+4057	2	K0IV	Algol Aa2 — Kolbas 2015 (/data/papers/index.md#kolbas2015) (early-K subgiant, Teff 4900 K; K0IV is a representative type)
+08447-5443	Ab	A4V	delta Vel Ab — Mérand 2011 (/data/papers/index.md#merand2011) (two early A-type main-sequence stars, Ab mean Teff 9830 K; no MK subtype given, A4V is uncited)
+05387-0236	Ab	B0.5V	sigma Ori Ab — Simón-Díaz 2011 (/data/papers/index.md#simondiaz2011) (Aa=O9.5V, Ab=B0.5V); Teff(Ab) 31 kK in Simón-Díaz 2015 (/data/papers/index.md#simondiaz2015)
+07346+3153	Ab	K7Ve	Castor Ab — Stelzer 2003 (/data/papers/index.md#stelzer2003) (late-K companion, P=9.21 d; K7Ve is a representative subtype)
+07346+3153	Bb	M1Ve	Castor Bb — Stelzer 2003 (/data/papers/index.md#stelzer2003) (early-M companion, P=2.93 d; M1Ve is a representative subtype)
+07346+3153	Ca	M0.5Ve	Castor Ca (YY Gem A) — Torres 2002 (/data/papers/index.md#torres2002) (eclipsing twin; the paper gives M1.0 Ve and formal M_A 0.5975 M_sun, adopted mean 0.5992 — M0.5Ve is not its type, an open decision)
+07346+3153	Cb	M0.5Ve	Castor Cb (YY Gem B) — Torres 2002 (/data/papers/index.md#torres2002) (eclipsing twin; the paper gives M1.0 Ve and formal M_B 0.6009 M_sun, adopted mean 0.5992 — M0.5Ve is not its type, an open decision)
+05145-0812	Ba	B9V	Rigel Ba — Sanford 1942 (/data/papers/index.md#sanford1942) SB orbit, both components class B9; the V class is MSC catalogue data (data/msc/: B side V=7.6, B9V)
+05145-0812	Bb	B9V	Rigel Bb — Sanford 1942 (/data/papers/index.md#sanford1942) SB orbit, both components class B9; MSC catalogue data (data/msc/) give masses 2.94+2.11 M_sun, both late-B dwarfs

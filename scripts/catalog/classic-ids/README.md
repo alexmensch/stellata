@@ -254,7 +254,8 @@ HIP 72105 to HD 129988 (ε Boo B) while SIMBAD, V/50 and the record's own
 
 `desigConIndex` (search-index `dc`) is the constellation a Bayer / Flamsteed
 designation is NAMED for. It is fixed by nomenclature and does not migrate when
-proper motion carries a star across a 1930 Delporte boundary, so it cannot be
+proper motion carries a star across a
+[Delporte 1930](/data/papers/index.md#delporte1930) boundary, so it cannot be
 derived from the record's position. The cascade:
 
 ```

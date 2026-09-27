@@ -1,15 +1,16 @@
 # Dust resampler
 
-`build-dust.py` — Edenhofer 2024 dust posteriors → resampled voxel
-chunks. Outputs to `data/dust/`
-(LFS-committed). `sync-dust.ts` mirrors `data/dust/` → `public/dust/`
-on dev/build — allowlisted runtime assets only (`manifest.json`,
-`chunk_*.bin`; predicate in `sync-dust-pure.ts`,
-mirrored by `build-dust.py`'s own `copy_to_public`), so folder docs
-and build intermediates never ship, and strays already in
-`public/dust/` are purged. `tests/bundle-content.test.ts` guards the
-built tree. `dust-manifest.test.ts` here pins the manifest encode
-contract + the Zucker column-check provenance.
+`build-dust.py` —
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust
+posteriors → resampled voxel chunks. Outputs to `data/dust/`
+(LFS-committed). `sync-dust.ts` mirrors `data/dust/` → `public/dust/` on
+dev/build — allowlisted runtime assets only (`manifest.json`,
+`chunk_*.bin`; predicate in `sync-dust-pure.ts`, mirrored by
+`build-dust.py`'s own `copy_to_public`), so folder docs and build
+intermediates never ship, and strays already in `public/dust/` are
+purged. `tests/bundle-content.test.ts` guards the built tree.
+`dust-manifest.test.ts` here pins the manifest encode contract + the
+Zucker column-check provenance.
 
 Python deps in `requirements-dust.txt`.
 
@@ -36,10 +37,10 @@ Voxel size ≈ 4.883 pc.
 
 ## Encoding
 
-Edenhofer density spans ~6 orders of magnitude (1e-7 diffuse ISM to
-~1.3e-1 dense cloud cores). Linear or log1p encoding collapses this
-range poorly. We use pure log encoding over a fixed `[DENSITY_MIN,
-DENSITY_MAX]` window:
+[Edenhofer 2024](/data/papers/index.md#edenhofer2024) density
+spans ~6 orders of magnitude (1e-7 diffuse ISM to ~1.3e-1 dense cloud
+cores). Linear or log1p encoding collapses this range poorly. We use
+pure log encoding over a fixed `[DENSITY_MIN, DENSITY_MAX]` window:
 
 ```
 log_clamped = log10(clamp(d, d_min, d_max))
@@ -61,8 +62,10 @@ the decode of every voxel, so a rebuild ships with a catalog rebuild
 [Build-time de-extinction](/scripts/catalog/distance/dust/README.md#build-time-de-extinction)).
 
 The build also runs a per-cloud column check (`zucker` block in the
-manifest): peak A_V columns through each Zucker 2021 profiled cloud
-vs the Leike-resolution targets, pinned in `dust-manifest.test.ts`.
+manifest): peak A_V columns through each
+[Zucker 2021](/data/papers/index.md#zucker2021) profiled cloud vs the
+[Leike 2020](/data/papers/index.md#leike2020)-resolution targets,
+pinned in `dust-manifest.test.ts`.
 
 ## Usage
 

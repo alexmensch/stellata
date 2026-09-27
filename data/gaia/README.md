@@ -68,26 +68,21 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
 
 ## Provenance
 
-- **Mission citation**: Gaia Collaboration, Vallenari A. et al. 2023,
-  *A&A* 674, A1 (Gaia DR3 overview).
-  DOI: [10.1051/0004-6361/202243940](https://doi.org/10.1051/0004-6361/202243940).
-- **Photometry citation**: Riello M., De Angeli F., Evans D. W. et al. 2021,
-  *A&A* 649, A3 (Gaia EDR3 photometric content and validation). DOI:
-  [10.1051/0004-6361/202039587](https://doi.org/10.1051/0004-6361/202039587).
-  Its section *Photometric relationships with other photometric systems* gives the
+- **Mission citation**: [Vallenari 2023](/data/papers/index.md#vallenari2023) (Gaia DR3 overview).
+- **Photometry citation**: [Riello 2021](/data/papers/index.md#riello2021) (Gaia EDR3 photometric content and
+  validation).
+  Its App. C, Table C.2 gives the
   `G − V` cubic in `BP − RP` the V cascade transforms through; DR3 ships EDR3's
   photometry unchanged, so the EDR3 calibration is the one that applies.
-- **Synthetic-photometry citation**: Gaia Collaboration, Montegriffo P.,
-  Bellazzini M., De Angeli F. et al. 2023, *A&A* 674, A33 (Gaia DR3: The Galaxy
-  in your preferred colours). DOI:
-  [10.1051/0004-6361/202243880](https://doi.org/10.1051/0004-6361/202243880).
+- **Synthetic-photometry citation**: [Montegriffo 2023](/data/papers/index.md#montegriffo2023)
+  (Gaia DR3: The Galaxy in your preferred colours).
 - **Upstream tables**: ESA Gaia Archive at
   https://gea.esac.esa.int/archive/.
 - **Licence**: CC-BY-4.0 (Gaia data release policy).
 - **Source tables** (queried via ADQL over the synchronous Gaia TAP
   endpoints — [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only)):
   - `gaia_dr3_hip_xmatch.tsv` ← `hipparcos2_best_neighbour`.
-  - `gaia_dr3_tyc_xmatch.tsv` ← `tyco2tdsc_merge_best_neighbour`.
+  - `gaia_dr3_tyc_xmatch.tsv` ← `tycho2tdsc_merge_best_neighbour`.
   - `gaia_dr3_astrometry.tsv` ← `gaia_source` (binaries subset queried
     by deduped source_id).
   - `gaia_dr3_astrometry_catalog.tsv` ← `gaia_source` (full-catalog
@@ -101,7 +96,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   - `gaia_dr3_gspc.tsv` ← `synthetic_photometry_gspc` (queried by the
     same catalog source_id request the astrometry pull reads).
   - `gaia_dr2_neighbourhood.tsv` ← `dr2_neighbourhood` (the DPAC
-    DR2→(E)DR3 cross-match, Torra et al. 2021; queried by
+    DR2→(E)DR3 cross-match, [Torra 2021](/data/papers/index.md#torra2021); queried by
     dr3_source_id).
 
 ## The floor is apparent magnitude, seen from Sol
@@ -151,7 +146,7 @@ keeps](#what-the-filter-keeps-and-what-falls-through-it) has the cohort that tes
 `gaia_dr3_magnitude_pull.tsv` selects on `G` alone, at `G <= 11`, and that
 is complete for a `V <= 11` floor with nothing to spare and nothing needed.
 
-The V cascade's top tier is `V = G − f(BP−RP)`, `f` the Riello+ 2021 cubic
+The V cascade's top tier is `V = G − f(BP−RP)`, `f` the [Riello 2021](/data/papers/index.md#riello2021) cubic
 (`scripts/catalog/photometry/README.md`). **`f` is negative across its whole
 validity range**, peaking at **−0.02680** at `BP−RP` 0.0331, so every source
 the transform accepts has `V >= G + 0.0268`. A `V <= 11` source therefore
@@ -254,7 +249,7 @@ what the result costs on the wire are the build's, not this folder's:
 
 The archive publishes `b_jkc_flag` / `v_jkc_flag` as *"Flag indicating if
 G mag and BP−RP color of the source lie in the validated range"* and
-states no polarity. Montegriffo+ 2023 Sect. 6.2 does: the flag *"has a value
+states no polarity. [Montegriffo 2023](/data/papers/index.md#montegriffo2023) Sect. 6.2 does: the flag *"has a value
 of 1 if the G_BP−G_RP colour and G magnitude of the considered star are
 within the ranges where standardisation and validation have been
 performed. In practice, the X magnitude of a source with Xflag = 0 should

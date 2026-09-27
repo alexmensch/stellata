@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { R0_PC } from '../../src/client/galactic/galactic-coords';
-import { bulgeDensity, discDensity } from '../../src/client/milkyway/milkyway-column-pure';
+import { bulgeDensity, discDensity } from '../../src/client/milkyway/column/milkyway-column-pure';
 import {
   RESOLVED_HOLE_BANDS,
   RESOLVED_HOLE_SHELLS,

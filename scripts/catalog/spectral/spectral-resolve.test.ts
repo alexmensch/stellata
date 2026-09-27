@@ -46,7 +46,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     expect(out.source).toBe('curated');
     expect(out.info.classIdx).toBe(2); // A
     expect(out.info.lumClass).toBe(3); // IV
-    expect(out.spectDisplay).toBe('A1.5IV');
+    expect(out.spectDisplay).toBe('A1.5IV+');
   });
 
   it('tier 1: SIMBAD-by-source_id wins when present and parseable', () => {
@@ -72,7 +72,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     expect(out.spectDisplay).toBe('B8V');
   });
 
-  it('tier 2: SIMBAD-by-HIP beats GSP-Spec (full MK over letter-only enum)', () => {
+  it('tier 2: SIMBAD-by-HIP beats ESP-ELS (full MK over letter-only enum)', () => {
     const simbad = idx([], [[HIP, row('A2IV', 'C', '**')]]);
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
@@ -174,7 +174,7 @@ describe('resolveSpectralInfo — tier priority', () => {
   it('a designation tier row naming another Gaia source does not match', () => {
     // SIMBAD holds this HIP on an object it gives a DIFFERENT DR3 id — its own
     // statement that these are separate stars. Taking the type would render
-    // this record at another star's size; GSP-Spec's honest letter is better.
+    // this record at another star's size; ESP-ELS's honest letter is better.
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
     ]);

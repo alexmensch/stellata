@@ -50,8 +50,9 @@ export function isGaiaCatalogueBibcode(bibcode: string): boolean {
   return GAIA_CATALOGUE_BIBCODES.has(bibcode);
 }
 
-/** Whether a bibcode names the Hipparcos re-reduction — van Leeuwen 2007, the
- *  publication the HIP2 tier itself reads.
+/** Whether a bibcode names the Hipparcos re-reduction — van Leeuwen 2007
+ *  (/data/papers/index.md#vanleeuwen2007), the publication the HIP2 tier itself
+ *  reads.
  *
  *  This exists because the skip rule generalises past Gaia. A courier serving a
  *  value attributed to the very publication a first-order tier above it already

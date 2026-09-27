@@ -1,6 +1,6 @@
 # The B1875 edge set and its decomposition
 
-The Delporte (1930) boundary geometry: parsing the edge records,
+The [Delporte 1930](/data/papers/index.md#delporte1930) boundary geometry: parsing the edge records,
 decomposing them into the 89 named sky regions, the point lookup and
 nearest-edge distance over that decomposition, the per-region label
 anchors, and the ICRS polyline resampling the drawn arcs come from.
@@ -103,8 +103,10 @@ digit, which splinters 236 RA bounds into 259.
 
 `B1875_JD` (`../../util/precession.ts`) is 2405889.2586 — **1874 Dec
 31.76**, by the Besselian epoch formula, not a Julian-year offset from
-J2000. The rotation is the IAU 1976 (Lieske) composition
-Rz(−z)·Ry(−θ)·Rz(−ζ).
+J2000. The rotation is the IAU 1976
+([Lieske 1979](/data/papers/index.md#lieske1979)) composition
+R(−z)·Q(θ)·R(−ζ) (eq. 5; R and Q are the frame rotations about z and y
+of eq. 3), so θ enters with the opposite sign to ζ and z.
 
 Two ways to get this wrong, both of which still produce a
 plausible-looking sky:
@@ -143,7 +145,7 @@ edge pairs alone determine it, and 89 is 88 constellations plus
 Serpens' two disjoint parts. So the count matching is a genuine
 self-check, and `buildConstellationRegions` **throws** rather than ship
 a half-resolved sky. A drift means the source data changed or the cell
-walk broke — no lookup table (Roman 1987 / VI/42) is needed or
+walk broke — no lookup table ([Roman 1987](/data/papers/index.md#roman1987) / VI/42) is needed or
 consulted.
 
 ## Serpens
@@ -179,9 +181,10 @@ wrong epoch moves the implied date by centuries.
 This is why positional membership and the designation's constellation are
 carried as separate fields (byte 34 and search-index `dc`). Both halves are
 live: ρ Aql renders and searches as ρ Aql / 67 Aql off `dc` while byte 34 puts
-it in Delphinus. `dc` is sourced from IV/27A's Bayer/Flamsteed cross index keyed
-on the record's own HD/HIP — a designation is fixed by nomenclature and never
-migrates with the star, so nothing positional may supply it
+it in Delphinus. `dc` is sourced from IV/27A's Bayer/Flamsteed cross index
+([Kostjuk 2002](/data/papers/index.md#kostjuk2002)) keyed on the record's own
+HD/HIP — a designation is fixed by nomenclature and never migrates with the
+star, so nothing positional may supply it
 ([The designation constellation](/scripts/catalog/classic-ids/README.md#the-designation-constellation)). See
 [Search index](/scripts/catalog/record/README.md#search-index-publicsearch-indexjson) for the wire split.
 

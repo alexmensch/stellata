@@ -29,8 +29,8 @@ function displayByte(linear0to255: number): number {
 //
 // Reference values from research/star-spectral-rendition/blackbody_color.py
 // (the Python source-of-truth this module ports). Computed via the
-// Ballesteros 2012 formula at 5 spanning B-V values; pinned to 0.01 K to
-// catch any drift in the TS port.
+// Ballesteros 2012 (/data/papers/index.md#ballesteros2012) formula at 5
+// spanning B-V values; pinned to 0.01 K to catch any drift in the TS port.
 
 describe('ballesterosTeff', () => {
   const cases: ReadonlyArray<[number, number]> = [
@@ -113,8 +113,9 @@ function deltaE255(
 }
 
 describe('sampleLut at named-star B-V values', () => {
-  // Expected RGBs come from the direct Python pipeline at
-  // T = Ballesteros(B-V); the LUT samples agree within quantisation noise.
+  // Expected RGBs come from the direct Python pipeline at T =
+  // Ballesteros 2012 (/data/papers/index.md#ballesteros2012) B-V; the LUT samples
+  // agree within quantisation noise.
   const cases: ReadonlyArray<[string, number, [number, number, number]]> = [
     ['Sol',        0.656, [255, 241, 233]],
     ['Sirius A',   0.009, [205, 217, 255]],

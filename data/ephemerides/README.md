@@ -1,12 +1,12 @@
 # Planet osculating-element tables
 
-Heliocentric osculating elements for the nine Standish bodies across
+Heliocentric osculating elements for the nine [Standish 1992](/data/papers/index.md#standish1992) bodies across
 **1900–2100**, sampled on a uniform grid. One JSON per planet, committed
 plain text (~1.5 MB total, no LFS).
 
 Consumed at runtime by `src/client/solar-system/ephemerides/`, which
 interpolates the six elements and solves Kepler from them; outside the window
-it falls back to the inlined Standish series.
+it falls back to the inlined [Standish 1992](/data/papers/index.md#standish1992) series.
 `scripts/ephemerides/sync-ephemerides.ts` mirrors this folder to
 `public/ephemerides/` on every `pnpm run dev` / `build`; the allowlist
 (`sync-ephemerides-pure.ts`) keeps this README out of the deployed bundle.
@@ -16,12 +16,14 @@ copying them.
 
 ## Why this exists
 
-The Standish 1992 series the runtime falls back to is within its published
-budget, and that budget is **0.05–0.06 AU at Saturn, Uranus and Neptune**
+The [Standish 1992](/data/papers/index.md#standish1992) series the runtime falls back to is within its published
+budget — ~0.05 AU at Saturn, ~0.06 at Neptune and ~0.2 at Uranus over
+3000 BC – 3000 AD — and measured against DE441 it sits **~0.05 AU off at
+Saturn, Uranus and Neptune in 1900–2100**
 ([Planet ephemeris](../../src/client/solar-system/ephemerides/README.md#planet-ephemeris)).
 That is not a precision nicety: under a probe flythrough the camera rides
 within Voyager 2's true 0.0007 AU Uranus approach while the rendered planet
-sits 0.06 AU away, so the swing-by reads as a distant pass. These tables
+sits ~0.05 AU away, so the swing-by reads as a distant pass. These tables
 bring the in-window planets to the same 1e-5 AU the probe trajectories hold.
 
 `../horizons/` is a different corpus for a different purpose — a handful of
@@ -38,8 +40,10 @@ frozen truth rows for regression tests. No overlap with this folder.
   (Sun centre), `REF_PLANE=ECLIPTIC`, `OUT_UNITS=AU-D`, `CSV_FORMAT=YES`,
   spanning JD 2415020.0 (Julian year 1900.0) to JD 2488070.0 (year 2100.0)
   in fixed steps.
-- Horizons targets are the **barycentres** `1`…`9`: Standish's series fits
-  the barycentric orbits, `earth` must be the Earth/Moon barycentre that
+- Horizons targets are the **barycentres** `1`…`9`: [Standish 1992](/data/papers/index.md#standish1992)'s series
+  was fit to JPL's DE ephemerides, whose outer-planet entries are system
+  barycentres (this project's reading — the memo itself says only
+  "heliocentric"), `earth` must be the Earth/Moon barycentre that
   `earthMoonSplit` divides, and a Pluto barycentre skips the 6.4-day
   Pluto–Charon wobble. Targets `1` and `2` resolve to the Mercury and Venus
   *body* centres, which is the same point — neither has a satellite.
@@ -129,6 +133,6 @@ off the model:**
   a statement about the two datasets' agreement with reality, not about the
   ephemeris.
 - **Outside the window nothing changed.** The clock reaches 3000 BC – 3000 AD,
-  and out there the Standish series is what runs, at its published budget.
+  and out there the [Standish 1992](/data/papers/index.md#standish1992) series is what runs, at its published budget.
   The runtime blends across one Julian year at each edge so scrubbing over
   1900 or 2100 does not pop.

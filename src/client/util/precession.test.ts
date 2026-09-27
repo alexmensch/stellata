@@ -146,9 +146,10 @@ describe('Vondrák long-term precession', () => {
   });
 
   it('tracks the obliquity back to 3000 BC', () => {
-    // Laskar 1986's 10th-degree expression gives 24.0165° at year −2950;
-    // the two models are independent, so agreement to a few arcseconds
-    // says the ecliptic and equator series are both being read right.
+    // Laskar 1986's (/data/papers/index.md#laskar1986) 10th-degree expression
+    // gives 24.0165° at year −2950; the two models are independent, so
+    // agreement to a few arcseconds says the ecliptic and equator series are
+    // both being read right.
     expect(obliquityDeg(jdOfYear(-2950))).toBeCloseTo(24.0165, 2);
     expect(obliquityDeg(jdOfYear(2950))).toBeLessThan(23.43);
   });

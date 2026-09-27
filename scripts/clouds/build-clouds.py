@@ -36,10 +36,10 @@ SRC_2021 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table1.dat'
 SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 OUT = ROOT / 'public' / 'clouds.json'
 
-# Default sphere radius for Zucker-2020 clouds with only a single sightline.
-# Most local SF clouds fall in the 5–30 pc effective-radius range; 5 pc is the
-# small end so over-estimation isn't visually dominant. Multi-sightline clouds
-# get a real spread-based radius.
+# Default sphere radius for Zucker 2020 (/data/papers/index.md#zucker2020)
+# clouds with only a single sightline. Most local SF clouds fall in the 5–30
+# pc effective-radius range; 5 pc is the small end so over-estimation isn't
+# visually dominant. Multi-sightline clouds get a real spread-based radius.
 DEFAULT_SPHERE_RADIUS_PC = 5.0
 
 
@@ -124,12 +124,12 @@ def apply_alt_names(clouds: list[dict]) -> None:
             cloud['aliases'] = aliases
 
 
-# Map from Zucker 2021 raw cloud name → canonical Z2020 cloud name to
-# suppress when the Z2021 entry is present. Without this we'd render two
-# overlapping objects (sphere from Z2020 + ellipsoid from Z2021) for the
-# same cloud. Z2020 sub-regions (Ophiuchus_Arc etc.) are NOT suppressed —
-# they're separate physical structures even when contained in the Z2021
-# parent ellipsoid.
+# Map from Zucker 2021 (/data/papers/index.md#zucker2021) raw cloud name →
+# canonical Z2020 cloud name to suppress when the Z2021 entry is present.
+# Without this we'd render two overlapping objects (sphere from Z2020 +
+# ellipsoid from Z2021) for the same cloud. Z2020 sub-regions (Ophiuchus_Arc
+# etc.) are NOT suppressed — they're separate physical structures even when
+# contained in the Z2021 parent ellipsoid.
 Z2021_TO_Z2020_SUPPRESS: dict[str, str] = {
     'Chamaeleon': 'Chamaeleon',
     'Ophiuchus': 'Ophiuchus',
@@ -152,7 +152,7 @@ def slugify(name: str) -> str:
 
 
 def parse_z2020(path: Path) -> dict[str, list[dict]]:
-    """Parse the Zucker 2020 VizieR TSV. Returns {cloud_name: [sightline,...]}.
+    """Parse the Zucker 2020 (/data/papers/index.md#zucker2020) VizieR TSV. Returns {cloud_name: [sightline,...]}.
     Each sightline carries glon, glat, d_pc."""
     rows: dict[str, list[dict]] = {}
     with path.open() as fh:

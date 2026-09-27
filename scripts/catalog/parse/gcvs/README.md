@@ -32,10 +32,10 @@ resolves a GCVS name (gaia_source_id first, then HIP, then HD), then
 looks up the period+amp. Two independent gates:
 
 - **Naming** (search) — the resolved designation is attached as
-  `gcvsName` whenever a name resolves (~14.1k stars, `gcvsNamed`). This
+  `gcvsName` whenever a name resolves (~15.2k stars, `gcvsNamed`). This
   is the `search-index.json` `g` field. The designation's trailing
   abbreviation also **supplies** `desigConIndex`, but only where IV/27A's
-  Bayer/Flamsteed cross index left it empty (`gcvsDesignationCon` pins 7,363;
+  Bayer/Flamsteed cross index left it empty (`gcvsDesignationCon` pins 7,929;
   [Positional constellation membership](../README.md#positional-constellation-membership)). On the 8 records where
   the two disagree the star carries both kinds of designation in different
   constellations and IV/27A wins — a GCVS label reads its constellation out of
@@ -44,7 +44,7 @@ looks up the period+amp. Two independent gates:
   ([The designation constellation](../../classic-ids/README.md#the-designation-constellation)).
 - **Rendering** (pulsation) — period / amplitude / varType apply only
   when the GCVS main table gave that name a parseable period+amplitude
-  (~4.1k, `gcvsMatched`). Aperiodic variables — flare stars
+  (~4.6k, `gcvsMatched`). Aperiodic variables — flare stars
   (Proxima = V0645 Cen), RCB (R CrB), irregular (T Tau), novae
   (V1500 Cyg) — are named for search but never pulsate.
 

@@ -1,6 +1,6 @@
 // The Milky Way band's graph: the log-distributed march
 // through a proxy mesh, with running per-channel dust extinction.
-// CPU mirror: ../../milkyway/milkyway-column-pure.ts.
+// CPU mirror: ../../milkyway/column/milkyway-column-pure.ts.
 
 import { AdditiveBlending, BackSide } from 'three';
 import {
@@ -12,7 +12,7 @@ import {
 import { NodeMaterial, type Node } from 'three/webgpu';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
-} from '../../milkyway/milkyway-column-pure';
+} from '../../milkyway/column/milkyway-column-pure';
 import {
   RESOLVED_HOLE_GRID_HALF_PC,
 } from '../../milkyway/calibration/resolved-fraction-pure';

@@ -1,4 +1,4 @@
-# Edenhofer 2023 3D dust map (resampled)
+# Edenhofer 2024 3D dust map (resampled)
 
 Voxel grid for interstellar dust extinction. Render-time consumers
 raymarch the voxel grid in the star vertex shader to dim and redden
@@ -14,10 +14,8 @@ manifest.json     grid params + chunk index.
 
 ## Provenance
 
-- **Citation**: Edenhofer G., Zucker C., Frank P., Saydjari A. K.,
-  Schlafly E. F., Green G. M., Enßlin T. A. 2024, *A&A* 685, A82
-  (the "Edenhofer 2023" map).
-  DOI: [10.1051/0004-6361/202347628](https://doi.org/10.1051/0004-6361/202347628).
+- **Citation**: [Edenhofer 2024](/data/papers/index.md#edenhofer2024)
+  (`dustmaps` calls it `edenhofer2023`, after the preprint).
 - **Upstream data**: [Zenodo 8187943](https://doi.org/10.5281/zenodo.8187943).
 - **Licence**: CC-BY-4.0. The resampled grid here is a
   derivative and carries the same licence.
@@ -36,8 +34,8 @@ runtime A_V is `density · avPerDensityPerPc · path_length_pc` with
 covering the raw grid max 0.135 with headroom) — see
 [Encoding](/scripts/dust/README.md#encoding) for why the old percentile
 autotune was a 25× clip of dense cloud cores. The manifest's `zucker`
-block records the per-cloud peak-column check against the Zucker 2021
-targets (pinned in `scripts/dust/dust-manifest.test.ts`).
+block records the per-cloud peak-column check against the
+[Zucker 2021](/data/papers/index.md#zucker2021) targets (pinned in `scripts/dust/dust-manifest.test.ts`).
 
 ## Consumed by
 

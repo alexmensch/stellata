@@ -6,7 +6,7 @@ import {
   type Vec3,
   galacticDirection,
   sightlineSurfaceBrightness,
-} from './milkyway-column-pure';
+} from './column/milkyway-column-pure';
 import {
   BAND_PEAK_DRIFT_MAG_PER_PC,
   BAND_PEAK_FAN_AZIMUTHS,

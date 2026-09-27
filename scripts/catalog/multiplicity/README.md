@@ -94,8 +94,9 @@ Sirius, Mizar, Castor, α Cen, Polaris, Albireo, γ And, ε Lyr, etc.
 three-column slice of the **Hipparcos main catalogue** (VizieR
 `I/239/hip_main`). The `CCDM` column on each Hipparcos row carries
 the cross-reference into the Catalog of the Components of Double
-and Multiple stars (Dommanget & Nys 1994), the curated pre-WDS
-register of visual doubles. CCDM alone is too permissive — it
+and Multiple stars
+([Dommanget 1994](/data/papers/index.md#dommanget1994)), the curated
+pre-WDS register of visual doubles. CCDM alone is too permissive — it
 lumps physical pairs together with wide line-of-sight optical
 pairs that happen to land near each other on the sky, so flagging
 on `CCDM != ""` alone tags Vega, Pollux, and ~19k other stars
@@ -134,9 +135,12 @@ conservatively.
 
 Why this and not TDSC or WDS directly:
 
-- <a id="tdsc"></a>**TDSC** (Fabricius et al. 2002) is built from Tycho-2, which
-  saturates on the brightest stars (V ≲ 3) — Sirius, Mizar, Castor,
-  α Cen, Polaris are all *missing* from TDSC. CCDM has no such gap.
+- <a id="tdsc"></a>**TDSC**
+  ([Fabricius 2002b](/data/papers/index.md#fabricius2002b)) is built
+  from Tycho-2, which misses some very bright doubles outright
+  (Sect. 3.2); bright components Tycho-2 did not detect reach TDSC only
+  through its Supplement's Hipparcos / Tycho-1 data (Sect. 3.4). CCDM
+  has no such gap.
 - **WDS** itself doesn't carry HIP. Doing positional matching
   ourselves would invite false positives in dense fields. CCDM
   side-steps that by giving us the HIP↔system mapping pre-built.
@@ -230,7 +234,8 @@ Per WDS root with ≥2 resolved own-record members:
   `anchor-grade-pure.ts` — parallax > 0,
   RUWE ≤ 1.4, ipd_frac_multi_peak ≤ 2 **percent**, the column being
   0–100 here unlike direction-cascade's fraction-scale threshold, and
-  G ≥ 3.0), then HIP2 coverage, then Bailer-Jones membership, then
+  G ≥ 3.0), then HIP2 coverage, then
+  [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) membership, then
   inherited. That predicate is exported: the parallax cascade's
   `pair_member_parallax` tier lends the same grade of fit to a member
   Gaia fitted no parallax for at all, one pass earlier
@@ -252,7 +257,8 @@ Per WDS root with ≥2 resolved own-record members:
   side**: GJ 4's wide F is the most precise member (0.020%), and anchoring
   on it leaves A and B each 3–4σ from F, so both keep their own depths and
   the tight AB orbit splits ~2,000 AU along the sightline. It stays **out of
-  the HIP2 tier**: those records are routinely placed by Bailer-Jones on a
+  the HIP2 tier**: those records are routinely placed by
+  [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) on a
   non-anchor-grade Gaia fit, so their HIP2 error ranks a fit they do not
   ship — HIP 185 / 190 would move from 87.5 to 99.4 pc against HIP2's 77–87.
 - **Precision veto on a member anchor.** Tier ranks PROVENANCE, and it is
@@ -275,7 +281,8 @@ Per WDS root with ≥2 resolved own-record members:
   catalog distance contradicts its own best parallax — by >3σ AND >20%
   of the anchor distance — poisons the whole system, so the system is
   skipped and members keep their own distances. μ¹ Sco is the case: its
-  RUWE-corrupted Gaia parallax (1.87 ± 0.74 mas) gets a Bailer-Jones
+  RUWE-corrupted Gaia parallax (1.87 ± 0.74 mas) gets a
+  [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)
   placement at 1685.7 pc while HIP2 measures ~154 pc; without this gate
   the corrupted parallax's huge σ made μ² Sco's honest 176.6 pc read as
   a <3σ gap and dragged it out to 1.7 kpc. Counted

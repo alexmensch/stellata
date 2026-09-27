@@ -115,7 +115,7 @@ belong here rather than there:
   camera likewise) because the dust grid is anchored to Sol, not to the
   renderer's floating local origin.
 - **Reddening applies to whichever colour tier won** —
-  `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — over the shared
+  `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` ([Ballesteros 2012](/data/papers/index.md#ballesteros2012)) — over the shared
   `R_V`, exactly as [Colour routing](../../star-pipeline/README.md#colour-routing)
   describes.
 

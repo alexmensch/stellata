@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh data/hipparcos/hip_main_vmag.tsv — printed Johnson V and B-V
-from the Hipparcos main catalogue (VizieR I/239/hip_main), the printed
-tiers of the V and ci cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)."""
+from the Hipparcos main catalogue (ESA 1997, /data/papers/index.md#esa1997; VizieR I/239/hip_main),
+the printed tiers of the V and ci cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)."""
 
 from __future__ import annotations
 

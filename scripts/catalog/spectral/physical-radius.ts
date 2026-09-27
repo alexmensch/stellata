@@ -44,16 +44,21 @@ function interpolate(table: [number, number][], key: number): number {
   return last[1];
 }
 
-// Wolf-Rayet Teff / BC by ionization subclass — one shared WN/WC ramp
-// (WN2 ~141 kK … WN8 ~45 kK, Hamann+ 2006; WC4 ~117 kK … WC9 ~44 kK,
-// Sander+ 2012), within the sizing scatter for display radii.
+// Wolf-Rayet Teff / BC by ionization subclass — one shared WN/WC ramp.
+// Hamann 2006 (/data/papers/index.md#hamann2006) Table 2 gives WN2 141 kK,
+// WN5 63 kK and WN8 45 kK; the ramp yields 114, 75 and 51.75 kK there, and
+// which to adopt is an open decision
+// (/docs/science-stellar-modelling.md#physical-radius). Sander 2012
+// (/data/papers/index.md#sander2012) Table 6 puts WC4 at ~117 kK
+// and WC9 at ~44 kK; the ramp meets it only at WC9 and runs 8–29 kK under it
+// for WC4–WC8.
 const WR_T_TABLE: [number, number][] = [[0, 140000], [5, 75000], [9, 44000]];
 const WR_BC_TABLE: [number, number][] = [[0, -6.0], [5, -4.0], [9, -2.7]];
 
 export function tempKelvin(info: SpectralInfo): number {
   if (info.isWhiteDwarf) {
-    // WD spectral number is T_eff / 50400 × 10 (inverted from Sion et al.);
-    // so T_eff ≈ 50400 / N for N=1..9.
+    // WD temperature index N = 50400 / T_eff (Sion 1983
+    // (/data/papers/index.md#sion)), so T_eff ≈ 50400 / N for N=1..9.
     const n = Math.max(1, info.wdSubclass);
     return 50400 / n;
   }
@@ -65,7 +70,8 @@ export function tempKelvin(info: SpectralInfo): number {
 
 /** Intrinsic (extinction-free) B−V from a parsed spectral class — the
  *  build-side tier-4/5/6 colour bake. White dwarfs / class stars route
- *  their `tempKelvin` through Ballesteros; an unparseable class falls to
+ *  their `tempKelvin` through Ballesteros 2012
+ *  (/data/papers/index.md#ballesteros2012); an unparseable class falls to
  *  `SOLAR_BV_FALLBACK` rather than `tempKelvin`'s neutral 5000 K row (a
  *  yellow-white default that would misrepresent an unknown star as solar).
  *  Shared by the main-catalog read (`stars-parse.ts`) and companion
@@ -167,8 +173,10 @@ export function physicalRadius(
 }
 
 // Absolute visual magnitude M_V by spectral class + subclass, calibrated
-// per luminosity class (Cox 2000 Sect. 15.3, Pecaut & Mamajek 2013 — the same
-// tables mass_estimate.py reads for the mass-ratio backfill).
+// per luminosity class (Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.3).
+// The dwarf row departs from Mamajek 2022 (/data/papers/index.md#mamajek2022)
+// — A0V 0.65 against its 0.99, M5V 12.3 against 14.15 — an open decision
+// (/scripts/catalog/spectral/README.md#the-absolute-magnitude-tables).
 const MV_MS_TABLE: Record<number, [number, number][]> = {
   0: [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V
   1: [[0, -4.0], [5, -1.2], [9,  0.4]],   // B V

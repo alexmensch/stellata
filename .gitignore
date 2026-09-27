@@ -60,6 +60,10 @@ data/dust/.voxels.npy
 # failed run on purpose so a re-run resumes; deleted once the pull completes.
 data/**/*.tsv.ckpt*/
 
+# Symlink to the private store of cited papers (copyrighted; never committed).
+# No trailing slash: git sees a symlink as a file, so `pdf/` would not match.
+data/papers/pdf
+
 # Python venv for scripts/dust/build-dust.py and refresh scripts
 .venv/
 

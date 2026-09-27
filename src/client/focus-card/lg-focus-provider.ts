@@ -19,7 +19,7 @@ export interface LgFocusProviderConfig {
 }
 
 const SOURCE_LABEL: Record<LgObject['source'], string> = {
-  LVDB: 'Pace 2024 LVDB',
+  LVDB: 'Pace 2025 LVDB',
   OVERRIDE: 'Curated (SCIENCE.md)',
 };
 

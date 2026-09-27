@@ -10,9 +10,9 @@ import {
 import type { GspcColour } from './gspc-parse';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 
-/** Gaia DR3 documentation Table 5.9 (the release-3 restatement of Riello+
- *  2021, A&A 649, A3 App. C) — `G − B` as a quartic in `BP − RP`, ascending
- *  powers. Sibling of the `G − V` cubic in the same table, which is what makes
+/** Gaia DR3 documentation, Carrasco 2022 (/data/papers/index.md#gaiadr3doc) Sect. 5.5.1
+ *  Table 5.9 — `G − B` as a quartic in `BP − RP`, ascending powers; a DR3-era
+ *  fit Riello 2021 (/data/papers/index.md#riello2021) does not carry. Sibling of the `G − V` cubic in the same table, which is what makes
  *  their difference a published B−V rather than a composed guess. */
 export const GAIA_G_MINUS_B_COEFFS = [
   0.01448, -0.6874, -0.3604, 0.06718, -0.006061,
@@ -35,7 +35,7 @@ export const GAIA_G_MINUS_B_BP_RP_MIN = -0.5;
  *  this constant exists only to state what was given up. */
 export const GAIA_G_MINUS_B_BP_RP_MAX = 4.0;
 
-/** Table 5.9 note (k): past this colour `G − B = f(BP − RP)` holds for M
+/** Table 5.10 note (k): past this colour `G − B = f(BP − RP)` holds for M
  *  giants only. */
 export const GAIA_G_MINUS_B_GIANT_ONLY_BP_RP = 1.75;
 

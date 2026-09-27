@@ -64,8 +64,8 @@ export function starLabelOffsetPx(discPx: number): number {
 // in the Cygnus arm) would dwarf the actual rendered disc. The margin
 // trades a few legitimate wings on faint un-extincted stars for visual
 // coherence in dusty regions. Proper fix when needed: load a coarser
-// (~128³) Edenhofer voxel resample CPU-side and raymarch per-binary in
-// the per-frame loop.
+// (~128³) Edenhofer 2024 (/data/papers/index.md#edenhofer2024) voxel resample
+// CPU-side and raymarch per-binary in the per-frame loop.
 const BINARY_WING_EXTENSION_RATIO = 0.25;
 const BINARY_WING_MIN_EXTENSION_PX = 1.5;
 // Minimum radial gap (CSS pixels) between the outer variable-ring and the

@@ -75,9 +75,10 @@ back in over a shadowed ring section ([Everything that dims the field](../../../
 ## Ring photometry — the unresolved magnitude
 
 Both halves — the billboard's magnitude and the drawn annulus's
-brightness — run one law from `ring-photometry-pure.ts`: Mallama & Hilton
-2018 Eq. 10 (the whole system, `V₁(0) = −8.914`) differenced against the
-globe-alone Eq. 11/12 curve `Planet.phaseCoefficients` holds. That
+brightness — run one law from `ring-photometry-pure.ts`:
+[Mallama 2018](/data/papers/index.md#mallamahilton2018) Eq. 10 (the whole system,
+`V₁(0) = −8.914`) differenced against the globe-alone Eq. 11/12 curve
+`Planet.phaseCoefficients` holds. That
 difference is the **ring flux, in units of the globe's own flux at
 α = 0** — the same unit `empiricalPhaseFactor` reports the globe in, so
 the system's φ(α) is simply the two added.
@@ -161,8 +162,9 @@ against a black band is the trade.
   anything an Earth-bound fit saw. Held at the 27° value: a stated
   clamp, not a silent extrapolation.
 - **Backlit — the host and the viewer on opposite faces.** Out of
-  domain, not merely unfitted: from Earth β_v and β_h never differ in
-  sign, and Mallama's own rule is β = 0, no ring term at all. Stellata's
+  domain, not merely unfitted: from Earth β_v and β_h differ in sign only
+  rarely, briefly around a ring-plane crossing, and [Mallama 2018](/data/papers/index.md#mallamahilton2018)'s own rule
+  for that case is β = 0, no ring term at all. Stellata's
   camera reaches this routinely, so the term survives scaled by
   `RING_BACKLIT_TRANSMIT` — **the same constant the annulus graph above
   dims its unlit face by**, which it imports from here. That shared
@@ -177,7 +179,7 @@ distance per HOST maximised over every body, and for Sol that maximum is
 a moon — [Per-host distance cull](../../README.md#per-host-distance-cull).
 
 **Uranus and Neptune ship strips but no photometry.** Their rings are
-true-opacity charcoal threads, and the brightness-vs-inclination Mallama
+true-opacity charcoal threads, and the brightness-vs-inclination [Mallama 2017](/data/papers/index.md#mallama2017)
 publishes for Uranus is polar methane depletion — not a ring term.
 
 ### The drawn annulus rides the same curve
@@ -203,17 +205,17 @@ as carrying the shadow term, so folding the phase factor in there would
 let the opposition surge vote on how much lit ring surface the exposure
 pin divides its masked mean by — brightness masquerading as area. Pinned.
 
-**Cassini corroborates the width, independently.** Déau et al. 2013
-(Cassini/ISS) measure the surge half-width at 0.20° in the A and B rings
-and 0.26–0.28° in the C ring and the Cassini Division. Eq. 10's own
+**Cassini corroborates the width, independently.** [Déau 2013](/data/papers/index.md#deau2013)
+(Cassini/ISS) measure the surge half-width at 0.2° where τ > 1.5 (0.25° over
+τ > 1) and at ≥ 0.26° in the C ring and the Cassini Division. Eq. 10's own
 `exp(−2.25·α)` half-falls at `ln2/2.25` = 0.308°. An Earth-based
 disc-integrated fit and a spacecraft's resolved scans describe one
 feature at one width, which is why the annulus needs no second
 parametrisation.
 
 **The surge is strip-averaged, deliberately — a per-radius one is not
-derivable.** Déau's per-region amplitudes are 1.25 (B), 1.39 (A), 1.45
-(C) and 1.47 (Cassini Division): the two regions furthest from the B
+derivable.** [Déau 2013](/data/papers/index.md#deau2013)'s per-region amplitudes are ~1.25 (B), ~1.4 (A) and
+~1.5 for the C ring and the Cassini Division alike: the two regions furthest from the B
 ring's value are also the faintest, so flux-weighting collapses the
 spread to a few percent, and matching the disc-integrated law would then
 need a build-time flux normalisation over the strip to avoid stepping
@@ -222,9 +224,10 @@ the handoff. The large per-region spread is in the linear regime's slope
 the per-region ̟₀P needed to turn it into a relative steepness is
 published only in figures. The obvious cheap proxy — key the surge on
 the strip's own opacity channel — is ruled out by the paper's own
-result: amplitude correlates with optical depth *positively* below
-τ ≈ 0.5 and *negatively* above τ ≈ 1, a turnover reported as
-per-region correlation coefficients, not as a fitted τ → A law.
+result: amplitude is not simply correlated with optical depth. It falls
+with τ below τ ≈ 0.7 in the A, B and C rings, with wide scatter, holds
+near-constant above τ ≈ 1, and the Cassini Division follows neither — a
+trend in the scatter, not a fitted τ → A law.
 
 **Still not modelled: the grazing-illumination term.** The annulus takes
 the host's irradiance with no solar-elevation factor — `lit` gates on

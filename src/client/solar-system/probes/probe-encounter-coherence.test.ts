@@ -116,10 +116,11 @@ const ENCOUNTERS: readonly Encounter[] = [
   { probe: 'newhorizons', planet: 'pluto', utc: '2015-07-14T00:00:00Z', assist: false, closestApproachKm: 13680 },
 ];
 
-// Heliopause crossing epochs (Gurnett & Kurth 2013 / 2019) with the
-// heliocentric distance and off-nose angle measured from the committed
-// trajectories. These are the two observations the shell's 122 AU upwind
-// and ~115 AU flank were derived from (../heliopause/README.md#geometry).
+// Heliopause crossing epochs (Gurnett 2013 (/data/papers/index.md#gurnett2013);
+// Gurnett 2019 (/data/papers/index.md#gurnett2019)) with
+// the heliocentric distance and off-nose angle measured from the committed
+// trajectories. These are the two observations the shell's 122 AU upwind and
+// ~115 AU flank were derived from (../heliopause/README.md#geometry).
 const CROSSINGS = [
   { probe: 'voyager1', utc: '2012-08-25T00:00:00Z', distanceAu: 121.60, offNoseDeg: 29.86 },
   { probe: 'voyager2', utc: '2018-11-05T00:00:00Z', distanceAu: 119.02, offNoseDeg: 52.56 },

@@ -16,7 +16,7 @@ import {
 } from './emission-geometry-pure';
 
 describe('Sérsic shape constants', () => {
-  it('pins b_n (Ciotti & Bertin 1999)', () => {
+  it('pins b_n (Ciotti 1999)', () => {
     expect(bnCoeff(1)).toBe(1.6765432098765434);
     expect(bnCoeff(1.5)).toBe(2.6732510288065843);
     expect(bnCoeff(2.2)).toBe(4.071156004489339);

@@ -39,10 +39,12 @@ describe('isGaiaCatalogueBibcode', () => {
     expect(isGaiaCatalogueBibcode('2018yCat.1345....0G')).toBe(true);
     expect(isGaiaCatalogueBibcode('2020yCat.1350....0G')).toBe(true);
     expect(isGaiaCatalogueBibcode('2022yCat.1355....0G')).toBe(true);
-    // Gontcharov's Pulkovo compilation — a G-initialled author, not Gaia.
+    // Gontcharov 2006 (/data/papers/index.md#gontcharov2006), the Pulkovo
+    // compilation — a G-initialled author, not Gaia.
     expect(isGaiaCatalogueBibcode('2006AstL...32..759G')).toBe(false);
     expect(isGaiaCatalogueBibcode('2011yCat.3265....0S')).toBe(false);
-    // Zacharias's UCAC4, which supplies most of the PM rescue's SIMBAD tier.
+    // Zacharias 2012 (/data/papers/index.md#zacharias2012), UCAC4, which supplies
+    // most of the PM rescue's SIMBAD tier.
     expect(isGaiaCatalogueBibcode('2012yCat.1322....0Z')).toBe(false);
   });
 });

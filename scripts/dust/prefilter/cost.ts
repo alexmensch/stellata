@@ -18,7 +18,7 @@ import {
   FOREGROUND_DUST_STEPS,
   S_MIN_PC,
   STEPS,
-} from '../../../src/client/milkyway/milkyway-column-pure';
+} from '../../../src/client/milkyway/column/milkyway-column-pure';
 import { FIXED_MARCH_TAPS } from '../march-taps/march-taps-pure';
 
 const BYTES_PER_TEXEL = 2;

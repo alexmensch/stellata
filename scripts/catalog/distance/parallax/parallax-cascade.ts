@@ -48,8 +48,9 @@ export const DIST_VIA_COUNT_KEY = {
 /** Below this the parallax is not distinguishable from zero, so its inverse is
  *  unbounded above and carries no distance at all — a different failure from
  *  imprecision, which is why this is the gate rather than the ~20% bound that
- *  governs how BIASED an inversion is (Bailer-Jones 2015). Rows between the two
- *  ship, counted as `distLowPrecisionParallax`.
+ *  governs how BIASED an inversion is (Bailer-Jones 2015,
+ *  /data/papers/index.md#bailerjones2015). Rows between the two ship, counted as
+ *  `distLowPrecisionParallax`.
  *
  *  Ungated, re-keying this tier off the spine's editorial `dist_src` puts 19
  *  rows past 1,000 pc and one at 25,000 pc off a parallax of S/N 0.11 — the
@@ -116,10 +117,11 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
  *
  *  **Two skip rules, one principle** — a courier may not re-serve a value
  *  attributed to a publication a tier above it already refused: a Gaia release
- *  cited on a 2p row, and van Leeuwen re-served after the S/N floor refused
- *  HIP2. The floor gates every tier BELOW Gaia; Gaia itself stays ungated
- *  because Bailer-Jones sits above it for exactly the low-S/N case, and a gate
- *  here would strip a record of a posterior that exists for it. */
+ *  cited on a 2p row, and van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007)
+ *  re-served after the S/N floor refused HIP2. The floor gates every tier
+ *  BELOW Gaia; Gaia itself stays ungated because Bailer-Jones sits above it
+ *  for exactly the low-S/N case, and a gate here would strip a record of a
+ *  posterior that exists for it. */
 export function resolveParallax(
   { gaia, hip2, cns5, gliese, simbad, pairMember }: ParallaxSources,
   gaiaIs2p: boolean,

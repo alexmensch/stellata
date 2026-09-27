@@ -2,32 +2,32 @@
 // ../webgpu/milkyway/milkyway-band-tsl.ts's raymarch. Owns the constants the shader receives as
 // uniforms — README.md#density-profiles calibration/README.md.
 
-import { R0_PC } from '../galactic/galactic-coords';
+import { R0_PC } from '../../galactic/galactic-coords';
 import {
   footprintAlong,
   footprintRadiusPc,
   lumaNormalisedTint,
   softenRadius,
-} from '../hdr/emission/emission-pure';
+} from '../../hdr/emission/emission-pure';
 import {
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
   fluxNumber,
   integrateOverEllipsoidRz,
   solveDensity0,
-} from '../hdr/emission/density0-solver-pure';
+} from '../../hdr/emission/density0-solver-pure';
 import {
   BULGE_TO_TOTAL_LIGHT_V,
   DISC_COLOUR_INDEX_BV,
   GALAXY_TOTAL_ABSMAG_V,
-} from './calibration/diffuse-reference';
+} from '../calibration/diffuse-reference';
 import {
   type ResolvedHoleGrid,
   shippedResolvedHoleGrid,
   unresolvedGridLight,
-} from './calibration/resolved-fraction-pure';
-import { OLD_SPHEROID_COLOR_RGB } from '../hdr/emission/population-colour-pure';
-import { linearSrgbFromColourIndex } from '../../../scripts/colour/blackbody-lut-pure';
-import { type Rgb, relativeLuminance } from '../hdr/tonemap/tonemap-pure';
+} from '../calibration/resolved-fraction-pure';
+import { OLD_SPHEROID_COLOR_RGB } from '../../hdr/emission/population-colour-pure';
+import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
+import { type Rgb, relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 
 export type Vec3 = readonly [number, number, number];
 
@@ -41,7 +41,8 @@ export const DISC_HALF_THICKNESS_PC = 1_800;
 export const DISC_SCALE_LENGTH_PC = 3_000;
 export const DISC_SCALE_HEIGHT_PC = 300;
 
-/** Thick disc, Bland-Hawthorn & Gerhard 2016 Sect. 5.1: z_T = 900 ± 180 pc
+/** Thick disc, Bland-Hawthorn 2016
+ *  (/data/papers/index.md#blandhawthorn2016) Sect. 5.1: z_T = 900 ± 180 pc
  *  carrying f_ρ = 4 ± 2 % of the local density at the midplane. The shared
  *  radial scale length is the one departure from the literature —
  *  README.md#density-profiles. */
@@ -72,7 +73,9 @@ export const ANALYTICAL_DUST_SCALE_HEIGHT_PC = 125;
  *  solar-neighbourhood plane (0.7–1.0; the historical low-|b| figure runs
  *  to 1.8). Two independent constraints meet here: at the 125 pc scale
  *  height it also puts the perpendicular column to the pole at
- *  A_V = 0.125, inside the SFD polar spread. See
+ *  A_V = 0.125: inside the older A_V ≈ 0.06–0.15 polar range that Schlegel 1998
+ *  (/data/papers/index.md#schlegel1998) review, 2.7× their own polar
+ *  measurement (E(B−V) = 0.015 / 0.018 at the NGP / SGP, A_V ≈ 0.05). See
  *  README.md#dust--the-analytic-tier-and-what-composes-with-it. */
 export const LOCAL_DUST_RATE_MAG_PER_KPC = 1.0;
 
@@ -147,7 +150,7 @@ function bulgeShape(rPc: number, zPc: number, footprintPc = 0): number {
  *  shapes are scalars against luma-normalised tints, so this is the
  *  LUMINANCE integral and a flux share can be split between the two
  *  without either hue moving light
- *  (`../hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density`). */
+ *  (`../../hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density`). */
 export const DISC_VOLUME_INTEGRAL = integrateOverEllipsoidRz(
   discShape,
   DISC_RADIUS_PC,

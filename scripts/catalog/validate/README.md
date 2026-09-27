@@ -203,7 +203,8 @@ preserved. To add a star or system:
    Those three have since moved again, and **not** back toward 4.241 — read
    their `notes_source` before "correcting" them. `stellata-3bsf.18` put their
    Gaia sources in the astrometry pull for the first time, so each takes its
-   own per-component Gaia photometry through the Riello transform instead of
+   own per-component Gaia photometry through the
+   [Riello 2021](/data/papers/index.md#riello2021) transform instead of
    the printed pair blend and its re-split. 4.241 was the WDS-implied value;
    the pins are now the Gaia-measured one.
 

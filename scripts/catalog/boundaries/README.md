@@ -1,7 +1,7 @@
 # Constellation-boundary artifact
 
-`public/constellation-boundaries.json` — the IAU (Delporte 1930) boundary
-arcs resampled and precessed into ICRS, the per-region label anchors, the
+`public/constellation-boundaries.json` — the IAU
+([Delporte 1930](/data/papers/index.md#delporte1930)) boundary arcs resampled and precessed into ICRS, the per-region label anchors, the
 resolved cell grid the runtime resolves membership against, and the
 magnitude-keyed fade-quantile table the chart-mode layer picks its fade
 window from. Runs as a stage of `build:catalog`.

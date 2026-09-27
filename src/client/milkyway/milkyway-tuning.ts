@@ -3,8 +3,8 @@ import { type DebugSection, makeColor, makeSlider } from '../debug/debug-panel';
 
 // Dev-only tuning section for the volumetric Milky Way layer.
 //
-// Reddening uses linear sliders since the CCM default has channels above
-// 1.0 (1.32 in blue), which rules out an HTML colour picker. Disc/bulge
+// Reddening uses linear sliders since the shipped default has channels above
+// 1.0 (1.35 in blue), which rules out an HTML colour picker. Disc/bulge
 // palette colours use `<input type="color">` since their channels are
 // bounded to [0,1].
 //
@@ -86,7 +86,7 @@ export function buildMilkywaySection(layer: MilkyWay): DebugSection {
   }));
 
   // Reddening RGB — linear sliders since channels can exceed 1.0
-  // (CCM default has 1.32 in blue). Updated together via a small
+  // (the shipped default has 1.35 in blue). Updated together via a small
   // closure so any slider write applies all three current values.
   const reddening = { ...v.reddening };
   const updateReddening = () => layer.setReddeningRGB(reddening.r, reddening.g, reddening.b);

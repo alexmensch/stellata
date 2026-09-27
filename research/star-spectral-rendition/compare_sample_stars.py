@@ -14,7 +14,8 @@ For each reference star, computes three RGB triplets:
           tackles whether logg-aware Teff is worth the catalog work.
 
   (C) blackbody → sRGB at Teff(B-V)
-        - Ballesteros (2012) empirical relation Teff(B-V), valid for
+        - Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
+          empirical relation Teff(B-V), valid for
           MS over -0.4 ≤ B-V ≤ 1.6. Used as a "what does the existing
           ci field alone tell us about temperature" sanity check.
 
@@ -84,7 +85,8 @@ def ci_to_color(ci: float) -> tuple[float, float, float]:
 
 
 def teff_from_bv(bv: float) -> float:
-    """Ballesteros (2012) empirical Teff from B-V index.
+    """Ballesteros 2012 (/data/papers/index.md#ballesteros2012) empirical
+    Teff from B-V index.
 
     Valid roughly -0.4 ≤ B-V ≤ 1.6 (MS regime). Clamped beyond that.
     """

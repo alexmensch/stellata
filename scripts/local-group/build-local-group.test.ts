@@ -22,10 +22,10 @@ import { lgObjectStub } from './lg-object-mock';
 
 describe('parseOverrides', () => {
   const HEADER =
-    'name\ta_pc\tb_pc\tc_pc\torient\tref_doi\tra_deg\tdec_deg\tdistance_kpc';
+    'name\ta_pc\tb_pc\tc_pc\torient\tsource\tra_deg\tdec_deg\tdistance_kpc';
   const FULL_HEADER =
     HEADER +
-    '\tm_v\tprofile\tn_sersic\tr_d_pc\tbulge_to_total\tbulge_re_pc\tbulge_n\tref_doi_profile\tcolor';
+    '\tm_v\tprofile\tn_sersic\tr_d_pc\tbulge_to_total\tbulge_re_pc\tbulge_n\tsource_profile\tcolor';
 
   it('parses an LVDB-merge row (6 columns) with empty trailing position fields', () => {
     const tsv = `${HEADER}\nLMC\t4500\t4500\t1000\tdisc:i=32,pa=135\t10.1088/0004-637X/781/2/121\n`;
@@ -35,7 +35,6 @@ describe('parseOverrides', () => {
       name: 'LMC',
       axes: [4500, 4500, 1000],
       orient: 'disc:i=32,pa=135',
-      refDoi: '10.1088/0004-637X/781/2/121',
     });
   });
 
@@ -47,7 +46,6 @@ describe('parseOverrides', () => {
       name: 'M31',
       axes: [15000, 15000, 500],
       orient: 'disc:i=77,pa=37',
-      refDoi: '10.3847/1538-4357/aae8e7',
       raDeg: 10.6847,
       decDeg: 41.2687,
       distanceKpc: 776,
@@ -87,7 +85,6 @@ describe('parseOverrides', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].profile).toBe('disc');
     expect(rows[0].rdPc).toBe(1500);
-    expect(rows[0].refDoiProfile).toBe('10.1086/323099');
     expect(rows[0].mV).toBeUndefined();
     expect(rows[0].nSersic).toBeUndefined();
     expect(rows[0].bulgeToTotal).toBeUndefined();

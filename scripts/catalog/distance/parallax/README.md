@@ -105,7 +105,8 @@ place a member either.
 parallax at all and reads `ipd_frac_multi_peak` 37; HIP2 states 3.04 ± 8.92 mas
 (S/N 0.34), which the floor refuses. The same WDS root holds HIP 26551 D on its
 own clean 5p solution — 2.4744 ± 0.0622 mas, RUWE 1.0689, `ipd` 0 — inverting
-to 404.1 ± 10.2 pc. Schaefer et al. 2016's dynamical parallax, 387.5 ± 1.3 pc,
+to 404.1 ± 10.2 pc. [Schaefer 2016](/data/papers/index.md#schaefer2016)'s orbital
+parallax, 387.5 ± 1.3 pc,
 agrees at 1.62 σ. Both say the 328.9 pc the floor refused is ~20% wrong.
 
 <a id="the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request"></a>**The tier's reach is bounded by measurement quality, not by our request**, and
@@ -157,7 +158,7 @@ failures, which is why the tighter one does not gate:
   25,000 pc off a parallax of S/N 0.11 — a V 5.89 naked-eye star — which is the
   catastrophic inversion the SU Cru report is about. None survives the floor.
 - **Between 1 and 5** the inversion is biased (the ~20% fractional-error bound;
-  Bailer-Jones 2015) but still carries information. These rows have no second
+  [Bailer-Jones 2015](/data/papers/index.md#bailerjones2015)) but still carries information. These rows have no second
   source, so refusing would cost each its record rather than its precision.
   They ship, counted as `distLowPrecisionParallax`.
 
@@ -204,8 +205,9 @@ parallax cascade is where the general shape became visible.
   that withdrawn fit returning. Where the record carries no Gaia solution there
   is no blend to distrust and the citation is ordinary, so the rule gates on the
   2p solution rather than on the tier.
-- **van Leeuwen 2007, where the S/N floor refused HIP2.** For a HIP-bearing
-  record SIMBAD's parallax usually *is* van Leeuwen's. Without this rule the
+- **[van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007), where the S/N floor refused
+  HIP2.** For a HIP-bearing record SIMBAD's parallax usually *is*
+  [van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007)'s. Without this rule the
   floor refuses a value and the tier below re-admits the identical number
   stripped of the error bar the refusal was based on — measured at **574**
   records matching to the digit. HIP 37 is the shape: HIP2 states 2.62 ± 2.55
