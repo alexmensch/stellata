@@ -40,7 +40,7 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
     renderedSizePx: () => 12,
     peakDiscSizePx: () => 9,
     pickStarHit: () => null,
-    getBinaries: () => lateAbsent(),
+    binaries: lateAbsent(),
     ...overrides,
   };
 }
@@ -208,7 +208,7 @@ describe('star kind module', () => {
     const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
     m.attach(makeKindContext());
     const binaries = new LateCell<BinariesData>();
-    m.setRuntime(makeRuntime({ getBinaries: () => binaries }));
+    m.setRuntime(makeRuntime({ binaries }));
     const card = m.card();
     const before = m.derivedGeneration();
 
@@ -223,7 +223,7 @@ describe('star kind module', () => {
     const ctx = makeKindContext();
     m.attach(ctx);
     const binaries = new LateCell<BinariesData>();
-    m.setRuntime(makeRuntime({ getBinaries: () => binaries }));
+    m.setRuntime(makeRuntime({ binaries }));
     const card = m.card();
     const companionsOf = (idx: number) =>
       card.format(idx).rows.find((r) => r.label === 'Known companions')?.value;

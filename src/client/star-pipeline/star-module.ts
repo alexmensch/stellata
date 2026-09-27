@@ -49,7 +49,7 @@ export interface StarModuleRuntime {
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
   /** Orbital elements for the companion lines. Read per format call — the
    *  shell attaches binaries after the card provider is built. */
-  getBinaries(): Late<BinariesData>;
+  binaries: Late<BinariesData>;
 }
 
 export interface StarKindModule extends ObjectKindModule<'star'> {
@@ -112,7 +112,7 @@ export function createStarKindModule(): StarKindModule {
   });
 
   const binariesState = (): LateState<BinariesData> =>
-    (runtime ? runtime.getBinaries().state() : { status: 'pending' });
+    (runtime ? runtime.binaries.state() : { status: 'pending' });
 
   const photometryOf = (idx: number) => (catalog && idx >= 0 && idx < catalog.count
     ? {
@@ -152,7 +152,7 @@ export function createStarKindModule(): StarKindModule {
       offBinaries?.();
       runtime = rt;
       // The card's `ready` reads the binaries state, so its settle is a fill.
-      offBinaries = rt.getBinaries().observe(() => { derivedGeneration++; });
+      offBinaries = rt.binaries.observe(() => { derivedGeneration++; });
     },
 
     /** Resolves on the catalogue's FIRST chunk, so boot can paint. The

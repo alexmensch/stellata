@@ -526,25 +526,6 @@ export class Stellata implements FrameAnchor {
       },
     });
     this.chartLabels = new ChartLabels(this, this.starFrame.distSol);
-    // The star kind module's legs read the shell-owned star machinery
-    // through these closures — all deref lazily, so the picker and
-    // focus controller constructed below are fine.
-    this.kinds.star.setRuntime({
-      localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
-      parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
-      renderedSizePx: (idx) => this.renderedSizePxFor(idx),
-      peakDiscSizePx: (idx) => starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, idx),
-      pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
-      getBinaries: () => this.binaries.data,
-    });
-    // Recentre fan-out, in load-bearing order: star buffer rewrite →
-    // camera / orbit-target shift → scene-layer recenter hooks.
-    this.floatingOrigin.onRecenter((origin) => this.starFrame.rewriteAt(origin));
-    this.floatingOrigin.onRecenter((_origin, delta) => {
-      this.camera.position.sub(delta);
-      this.controls.target.sub(delta);
-    });
-    this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
     this.binaries = new BinariesAttachment({
       catalog,
       basePositions: this.starFrame.basePositions,
@@ -561,6 +542,25 @@ export class Stellata implements FrameAnchor {
       onFocus: (handler) => this.bus.on('focus', handler),
       rideFocal: (source) => this.applyFocalFrameRide(source),
     });
+    // The star kind module's legs read the shell-owned star machinery
+    // through these closures — they deref lazily, so the picker and focus
+    // controller constructed below are fine. `binaries` is read now.
+    this.kinds.star.setRuntime({
+      localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
+      renderedSizePx: (idx) => this.renderedSizePxFor(idx),
+      peakDiscSizePx: (idx) => starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, idx),
+      pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
+      binaries: this.binaries.data,
+    });
+    // Recentre fan-out, in load-bearing order: star buffer rewrite →
+    // camera / orbit-target shift → scene-layer recenter hooks.
+    this.floatingOrigin.onRecenter((origin) => this.starFrame.rewriteAt(origin));
+    this.floatingOrigin.onRecenter((_origin, delta) => {
+      this.camera.position.sub(delta);
+      this.controls.target.sub(delta);
+    });
+    this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
     // Built here (not on binaries attach) because the gate is varType-driven
     // and binary-independent; see the field declaration for the rationale.
     this._suppressPulsation = new Float32Array(catalog.count);
