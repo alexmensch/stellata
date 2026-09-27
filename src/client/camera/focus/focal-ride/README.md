@@ -123,19 +123,15 @@ A scrubbed clock crossing an epoch bucket moves every star's baseline at
 once (`../../../star-pipeline/star-frame/README.md`), the focal star's
 included, so `followEpochStep` carries the camera by the focal's
 space-motion step. It shares the rides' pose translate — camera, orbit
-target, both transition caches — so the three writers cannot drift
-apart, and it is skipped during warp like the rides. It deliberately does
-**not** take the rides' other two calls:
+target, both transition caches and the gate's `rebasePose` — so the three
+writers cannot drift apart, and it is skipped during warp like the rides.
+The rebase makes it correct on either side of the gate's `tick`: below,
+it is what stops the write reading as a camera move; above, where the
+shell calls it, it drops a wake the bucket's own
+`invalidate('epoch-bucket')` already covers.
 
-- **No `rebasePose`.** The shell runs it at the top of `animate()`,
-  above the render gate's `tick`, so the gate snapshots the moved pose
-  itself: one wake, then it settles
-  ([The focal ride](../../../render-gate/README.md#the-focal-ride)). A rebase is owed only
-  by a write that lands after the snapshot. Moving the call below the
-  gate would make it owe one.
-- **No `noteRideStep`.** The cadence subtracts the camera velocity from
-  each body's continuous velocity; the epoch step is a bucketed jump no
-  layer's rate models, so feeding it in would hand every body a phantom
-  relative velocity for one frame. The bucket crossing repaints through
-  `invalidate('epoch-bucket')` instead, and a frame drawn for that reason
-  is not one the cadence audits.
+It deliberately does **not** report to `noteRideStep`. The cadence
+subtracts the camera velocity from each body's continuous velocity; the
+epoch step is a bucketed jump no layer's rate models, so feeding it in
+would hand every body a phantom relative velocity for one frame. A frame
+drawn for the invalidate is not one the cadence audits.

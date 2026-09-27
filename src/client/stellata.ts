@@ -1180,7 +1180,6 @@ export class Stellata implements FrameAnchor {
     return this.floatingOrigin.recenterTo(newOrigin);
   }
 
-  // Must run above the render gate's tick — see camera/focus/focal-ride/README.md#the-epoch-follow.
   private maybeReAdvanceEpoch(): void {
     const focal = this.focus.getFocusedStar();
     const d = this._epochFollowDelta;

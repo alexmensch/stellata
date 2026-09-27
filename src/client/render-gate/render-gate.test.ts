@@ -216,15 +216,6 @@ describe('RenderGate ride absorption', () => {
     expect(rendered).toBe(6);
   });
 
-  it('a step applied ABOVE the tick needs no rebase: one wake, then it settles', () => {
-    const { camera, target, tick, settle } = makeGate();
-    expect(settle(0)).toBe(false);
-    camera.position.y += 3;
-    target.y += 3;
-    expect(tick(SETTLE_MS)).toBe(true);
-    expect(tick(2 * SETTLE_MS)).toBe(false);
-  });
-
   it('a pan that moves target alone still wakes it', () => {
     const { gate, target, tick, settle } = makeGate();
     expect(settle(0)).toBe(false);

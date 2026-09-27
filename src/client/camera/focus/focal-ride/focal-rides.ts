@@ -85,10 +85,8 @@ export class FocalRides {
     this.movingIdx = null;
   }
 
-  /** Call only above the render gate's `tick` — README.md#the-epoch-follow. */
-  followEpochStep(delta: THREE.Vector3): void {
-    if (this.deps.warpActive() || delta.lengthSq() === 0) return;
-    this.translatePose(delta);
+  followEpochStep(delta: Readonly<THREE.Vector3>): void {
+    if (!this.deps.warpActive()) this.translatePose(delta);
   }
 
   dispose(): void {
@@ -130,21 +128,21 @@ export class FocalRides {
     this.applyRideDelta(this.movingDelta);
   }
 
-  /** A ride runs below the render gate, so a delta that reaches the camera
-   *  without reaching `rebasePose` reads as a fresh camera move on the next
-   *  tick and pins the gate open (../../../render-gate/README.md#the-focal-ride). */
-  private applyRideDelta(delta: THREE.Vector3): void {
-    if (delta.lengthSq() === 0) return;
+  private applyRideDelta(delta: Readonly<THREE.Vector3>): void {
     this.translatePose(delta);
-    this.deps.rebasePose(delta);
     this.deps.noteRideStep(delta);
   }
 
-  private translatePose(delta: THREE.Vector3): void {
+  /** A delta that reaches the camera without reaching `rebasePose` reads as
+   *  a fresh camera move on the next tick; below the gate that pins it open
+   *  (../../../render-gate/README.md#the-focal-ride). */
+  private translatePose(delta: Readonly<THREE.Vector3>): void {
+    if (delta.lengthSq() === 0) return;
     const d = this.deps;
     d.cameraPosition.add(delta);
     d.orbitTarget.add(delta);
     d.focus.translateFocusFrame(delta);
     d.observe.translateFocusFrame(delta);
+    d.rebasePose(delta);
   }
 }

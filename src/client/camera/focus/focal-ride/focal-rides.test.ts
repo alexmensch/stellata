@@ -130,10 +130,12 @@ describe('FocalRides — binary focal ride', () => {
     const p = pertOf(new THREE.Vector3(1, 0, 0));
     r.rides.rideBinaryFocal(p);
     r.rebasePose.mockClear();
-    r.noteRideStep.mockClear();
+    r.noted.set(0, 0, 0);
+    const cam0 = r.camera.clone();
     r.rides.rideBinaryFocal(p);
     expect(r.rebasePose).not.toHaveBeenCalled();
-    expect(r.noteRideStep).not.toHaveBeenCalled();
+    expect(xyz(r.camera)).toEqual(xyz(cam0));
+    expect(xyz(r.noted)).toEqual([0, 0, 0]);
   });
 
   it('a warp moves nothing and resyncs the baseline, so no jump accrues when it ends', () => {
@@ -222,10 +224,10 @@ describe('FocalRides — epoch follow', () => {
     expect(xyz(r.observeShift)).toEqual([0.25, -1, 2]);
   });
 
-  it('reaches neither the gate rebase nor the cadence camera velocity', () => {
+  it('rebases the gate snapshot but stays out of the cadence camera velocity', () => {
     const r = rig();
     r.rides.followEpochStep(new THREE.Vector3(1, 0, 0));
-    expect(r.rebasePose).not.toHaveBeenCalled();
+    expect(xyz(r.rebased)).toEqual([1, 0, 0]);
     expect(r.noteRideStep).not.toHaveBeenCalled();
   });
 
