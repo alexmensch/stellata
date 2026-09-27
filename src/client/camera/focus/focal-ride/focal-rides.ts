@@ -44,7 +44,7 @@ export class FocalRides {
       timeBehaviour: { kind: 'clock', rate: deps.planetRate },
       contribution: { kind: 'always' },
       update: () => this.rideMovingFocal(),
-      dispose: () => {},
+      dispose: () => this.dispose(),
     };
     this.offFocus = deps.onFocus(() => this.reseedMoving());
   }
@@ -84,7 +84,7 @@ export class FocalRides {
     if (!this.deps.warpActive()) this.translatePose(delta);
   }
 
-  dispose(): void {
+  private dispose(): void {
     this.offFocus();
     this.focalPert.set(0, 0, 0);
     this.lastAppliedPert.set(0, 0, 0);

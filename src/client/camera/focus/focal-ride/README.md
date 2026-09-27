@@ -10,7 +10,8 @@ ride lives in the parent (`../README.md`).
 - `focal-rides.ts` (+ test) — `FocalRides`, the controller holding both
   rides' state. `rideBinaryFocal` is called by the binaries attachment
   between its orbit walk and its eclipse photometry; `movingEntry` is the
-  moving ride's scene entry, scheduled on `solarSystem.planetRate`;
+  moving ride's scene entry, scheduled on `solarSystem.planetRate`, and
+  the rides' only dispose path — the registry's `disposeAll` reaches it;
   `reseedMoving` is owed after a policy recentre (`FloatingOrigin.tick()`
   returning true), never after a warp's mid-fly one. Its one ride step is
   the only place either ride reaches the camera; `followEpochStep` shares

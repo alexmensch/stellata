@@ -260,9 +260,9 @@ describe('FocalRides — epoch follow', () => {
 });
 
 describe('FocalRides — dispose', () => {
-  it('unsubscribes from focus', () => {
+  it('the registry disposing the moving entry disposes the rides: focus unsubscribes', () => {
     const r = rig();
-    r.rides.dispose();
+    r.rides.movingEntry.dispose();
     expect(r.offFocus).toHaveBeenCalledTimes(1);
   });
 });

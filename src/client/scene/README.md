@@ -193,9 +193,11 @@ which is not a global min in disguise —
 `min(a, a) = a` argument and the per-frame memo that keeps the walk to
 one pass.
 
-<a id="not-every-entry-owns-a-layer"></a>**Not every entry owns a layer.** Two inline entries own no GPU resources
-at all (`dispose` is empty) and exist purely to sequence a camera write
-that belongs to another owner: the **moving-focal ride**, which has to
+<a id="not-every-entry-owns-a-layer"></a>**Not every entry owns a layer.** Two entries own no GPU resources
+at all and exist purely to sequence a camera write
+that belongs to another owner: the **moving-focal ride**
+(`FocalRides.movingEntry`, built by its owner, whose `dispose` releases the
+rides' focus subscription), which has to
 land after the module layers' position writes; and the attitude
 indicator's **orbit lock** (`Stellata.setOrbitFrameTick`,
 [The lock](../attitude/orbit-frame/README.md#the-lock)), which has to land after

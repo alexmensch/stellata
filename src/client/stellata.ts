@@ -2099,7 +2099,6 @@ export class Stellata implements FrameAnchor {
     this.renderGate.dispose();
     this.trackballSettle.dispose();
     this.cadence.dispose();
-    this.focalRides.dispose();
     this._realtimeFramesNeeded = false;
     this.frameCtx.frustum.invalidate();
     this.input.dispose();
