@@ -331,7 +331,7 @@ while it is unreachable.** `observeAnchorOf('star')` is null for every
 non-star kind, so neither the host's figure segments nor its own binary
 ellipse drop. Sol is the only attached planet host, and it carries no figure
 vertex (figures resolve from Stellarium HIP lists,
-`scripts/catalog/parse/constellations.ts`) and no binary orbit. It is not
+`scripts/catalog/parse/constellations/constellations.ts`) and no binary orbit. It is not
 defensible on geometry: a planet sits ~5×10⁻⁶ pc from its host, so an
 exoplanet anchor's host lines would converge on the camera to within
 microradians and smear as a star anchor's do. When exoplanet hosts land,

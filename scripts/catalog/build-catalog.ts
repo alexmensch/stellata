@@ -67,7 +67,7 @@ import {
   STELLARIUM_SKYCULTURE_JSON as SRC_STELLARIUM,
   assertFigureVerticesInFirstChunk,
   buildFigureLines,
-} from './parse/constellations';
+} from './parse/constellations/constellations';
 import { writeBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
   parseHipCcdm,

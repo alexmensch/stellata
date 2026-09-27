@@ -29,9 +29,10 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   `gaia_source_id` column, both binding gates' candidates (overlay and
   derivation), and the bound-pair siblings. Input prep, off `build:catalog`.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
-  parsers, space-motion velocity, and Stellarium stick figures. Its
-  `gcvs/` subfolder owns the variable-star parsing and the variability
-  cross-match.
+  parsers and space-motion velocity. Its `gcvs/` subfolder owns the
+  variable-star parsing and the variability cross-match; `constellations/`
+  owns the IAU-88 table, byte 34's positional membership and the
+  Stellarium stick figures.
 - `spectral/` — Morgan-Keenan parsing of SIMBAD `sp_type`, the seven-tier
   spectral resolver, and the Stefan-Boltzmann radius chain. Imports the
   namespace ladder from `catalog-pure.ts`; nothing there imports back.

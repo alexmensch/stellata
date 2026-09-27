@@ -173,7 +173,7 @@ The whole stage costs under a second.
 
 `writeBoundaryArtifact` takes the lookup rather than building one, and
 passes it whole to `buildBoundaryArtifact`: `loadReadStarsInputs` already
-decomposed the edge set for byte 34 ([Positional constellation membership](../parse/README.md#positional-constellation-membership)),
+decomposed the edge set for byte 34 ([Positional constellation membership](../parse/constellations/README.md#positional-constellation-membership)),
 so the arcs, the label anchors and the shipped
 grid are three readings of that one decomposition — none of them can
 disagree with the membership the catalogue shipped.

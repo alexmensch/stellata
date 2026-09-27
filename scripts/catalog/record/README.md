@@ -116,7 +116,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 34    `uint8`        constellation index (0–87 into `constellations.json`;
                           255=none). **Positional**, resolved from the record's
                           own xyz against the IAU boundaries — see
-                          [Positional constellation membership](../parse/README.md#positional-constellation-membership).
+                          [Positional constellation membership](../parse/constellations/README.md#positional-constellation-membership).
                           Sol is the only record carrying 255, and
                           the build asserts it. The constellation a
                           designation is *named* for is a separate field,

@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../../util/paths';
 import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
-import { CON_INDEX } from '../parse/constellations';
+import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
 import {
   buildWgsnIndex,

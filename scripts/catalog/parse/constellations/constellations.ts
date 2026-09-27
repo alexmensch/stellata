@@ -8,9 +8,9 @@ import {
   constellationKey,
   createIauConstellationLookup,
   type IauConstellationLookup,
-} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
-import { raDecFromUnitVector } from '../../../src/client/util/equatorial-basis';
-import { REPO_ROOT } from '../../util/paths';
+} from '../../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+import { raDecFromUnitVector } from '../../../../src/client/util/equatorial-basis';
+import { REPO_ROOT } from '../../../util/paths';
 
 export const STELLARIUM_SKYCULTURE_JSON = resolve(
   REPO_ROOT,

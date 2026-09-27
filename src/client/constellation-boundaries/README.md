@@ -43,10 +43,10 @@ runtime consumer reads the built artifact, never the edges:
 
 - **Star assignment** runs at **build time**, through
   `createConstellationAssignment`
-  (`../../../scripts/catalog/parse/constellations.ts`), which binds the
+  (`../../../scripts/catalog/parse/constellations/constellations.ts`), which binds the
   geometry's lookup to the IAU-88 index space. Every record's own
   position resolves into catalog byte 34; the browser reads the answer.
-  See [Positional constellation membership](/scripts/catalog/parse/README.md#positional-constellation-membership).
+  See [Positional constellation membership](/scripts/catalog/parse/constellations/README.md#positional-constellation-membership).
 - **Drawing, labelling and runtime membership** all ride
   `public/constellation-boundaries.json` — arcs, label anchors
   ([Label anchors](#label-anchors)), and the resolved cell grid ([Runtime membership](#runtime-membership)).

@@ -4,7 +4,7 @@ import {
   buildBoundaryArtifact,
   type BoundaryArtifact,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import { CONSTELLATIONS, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
+import { CONSTELLATIONS, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { makeFrameCtx } from '../scene/frame-ctx-mock';
 import { unitVectorFromRaDec } from '../util/equatorial-basis';

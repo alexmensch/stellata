@@ -36,7 +36,7 @@ looks up the period+amp. Two independent gates:
   is the `search-index.json` `g` field. The designation's trailing
   abbreviation also **supplies** `desigConIndex`, but only where IV/27A's
   Bayer/Flamsteed cross index left it empty (`gcvsDesignationCon` pins 7,929;
-  [Positional constellation membership](../README.md#positional-constellation-membership)). On the 8 records where
+  [Positional constellation membership](../constellations/README.md#positional-constellation-membership)). On the 8 records where
   the two disagree the star carries both kinds of designation in different
   constellations and IV/27A wins — a GCVS label reads its constellation out of
   the designation string itself and loses only its expanded alias, while a
