@@ -24,6 +24,11 @@ to stop waiting. An artifact that can be missing therefore has to be
 
 - **Per-frame readers** match on `state()` every time they run. They correct
   themselves on the first frame after the value lands, so matching is enough.
+  `whenReady(state, ready, otherwise)` is that match when pending and absent
+  answer alike: the fallback is written at the call, never hidden in a
+  nullable accessor on the owner. It takes a closure, so a reader that runs
+  every frame matches on `status` directly rather than allocate one per
+  frame.
 - **Readers that sample once and hold the result** (a table build, a camera
   park, a rendered card) take `observe(fn)` as well. It runs `fn` straight
   away if the value has already settled, then again on every later settle, so

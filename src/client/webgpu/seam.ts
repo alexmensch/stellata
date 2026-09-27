@@ -95,7 +95,7 @@ export interface WebGpuSeam {
   /** Bind (or release) the dust volume for every TSL consumer that samples
    *  it. One node, shared by object identity between the star vertex
    *  stage's fallback march and the extinction prepass, so the shell's
-   *  single `attachDust` reaches both. Textures are not part of the
+   *  single `extinction.attach` reaches both. Textures are not part of the
    *  uniform-node mirror (tsl/README.md#shared-uniform-nodes), which is why
    *  this is a call rather than a map write. */
   setDustTexture(texture: THREE.Data3DTexture | null): void;

@@ -54,7 +54,7 @@ instance index itself, and the mirror draws' `iSourceIdx` indirection is
 untouched. The `RECOMPUTE_EPSILON_PC` displacement gate means an idle
 camera costs zero.
 
-`setExtinctionPrepassEnabled(false)` parks the vertex stage on its
+`extinction.setPrepassEnabled(false)` parks the vertex stage on its
 in-vertex march — the A/B that makes the prepass win measurable on
 identical scenes.
 
@@ -68,7 +68,7 @@ load-bearing in both directions:
 
 - **The dust volume is sampled from two places** — the kernel and the
   star vertex stage's fallback march. They share the node by object
-  identity, so the shell's one `attachDust` reaches both. Two nodes would
+  identity, so the one `extinction.attach` reaches both. Two nodes would
   give a bug whose symptom is that the A/B toggle changes the picture:
   one branch sampling dust, the other an empty placeholder.
 - **The A_V slot is written by the pass, not by the shell.** The prepass
@@ -85,7 +85,7 @@ which puts a 2D view on the `texture_3d` binding and invalidates the bind
 group — taking the whole submit with it, so every layer in the scene goes
 dark rather than just the dust read. Both slots are bound every frame
 regardless of their gate (it is a runtime branch; both arms compile), so
-this has to hold from the first frame, before any `attachDust`.
+this has to hold from the first frame, before any `extinction.attach`.
 `createVoxelTexture` deliberately does not mark — that is the uploader's
 job, paired with `initTexture` in an order that matters
 ([Dust voxel upload](../../loaders/README.md#dust-voxel-upload)) — so a placeholder from
@@ -140,7 +140,7 @@ A compute or vertex stage has no implicit derivatives, so three emits
 the same level 0. Same TSL graph, same WGSL arithmetic — which is why the
 parity check below is a **bit** comparison and not a tolerance.
 
-**`stellata.verifyExtinction()`** is that check: it marches every star
+**`stellata.extinction.verifyParity()`** is that check: it marches every star
 once more as a fragment pass over the *same* position buffer, at the last
 computed camera, into an R32F target of that texture layout, reads both
 back and compares float32 bit patterns over the whole catalogue —
@@ -261,7 +261,7 @@ here would be a prepass and a vertex stage that disagree about who is
 visible, which reads as a wrongly un-reddened star rather than as a
 failure. In the whole fill a skipped star's element is assigned **zero**,
 not left alone, so the buffer stays a function of the dispatch and
-`verifyExtinction()` keeps its total bit compare — the reference march runs
+`extinction.verifyParity()` keeps its total bit compare — the reference march runs
 the identical gate closure ([The prepass kernel](#the-prepass-kernel)).
 
 **The refill runs the gate in the compaction, ahead of the read, and the
@@ -352,7 +352,7 @@ bound the soft taper is exactly zero, so the star the disagreement can
 reach contributes no light from any vantage at any epoch. Do not close it
 by marching in local coordinates — the positions here are the pristine
 absolute ones and the march's bit-parity with the reference is what
-`verifyExtinction()` checks.
+`extinction.verifyParity()` checks.
 
 ### What a CACHE owes that a per-frame prefilter does not
 

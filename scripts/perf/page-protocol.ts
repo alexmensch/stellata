@@ -204,9 +204,9 @@ export function runDifferential(
     const restores: (() => void)[] = [];
     try {
       if (p.forceRecompute) {
-        const forcedWas = w.stellata.isExtinctionRecomputeForced();
-        w.stellata.setExtinctionRecomputeForced(true);
-        restores.push(() => w.stellata.setExtinctionRecomputeForced(forcedWas));
+        const forcedWas = w.stellata.extinction.isRecomputeForced();
+        w.stellata.extinction.setRecomputeForced(true);
+        restores.push(() => w.stellata.extinction.setRecomputeForced(forcedWas));
       }
       if (p.preDisable.length > 0) {
         const mod = await import(p.toggleModuleUrl) as {
@@ -335,7 +335,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     const clock = s.timeClock;
     const cadence = s.reduction.readbackCadence;
     const readbackEveryBefore = cadence.every;
-    const recomputeForcedBefore = s.isExtinctionRecomputeForced();
+    const recomputeForcedBefore = s.extinction.isRecomputeForced();
     const rateBefore = clock.getRate();
     const holdsBefore = s.renderGate.debugState.holds;
     const releaseHold = s.renderGate.hold();
@@ -377,7 +377,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       // Before the warmup, so the frames being timed are drawn at a cadence
       // the page has already been running.
       cadence.every = p.readbackEvery;
-      s.setExtinctionRecomputeForced(p.forceRecompute);
+      s.extinction.setRecomputeForced(p.forceRecompute);
       for (let f = 0; f < p.warmupFrames; f++) {
         await new Promise((r) => requestAnimationFrame(r));
       }
@@ -409,7 +409,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     } finally {
       rateDuring = clock.getRate();
       cadence.every = readbackEveryBefore;
-      s.setExtinctionRecomputeForced(recomputeForcedBefore);
+      s.extinction.setRecomputeForced(recomputeForcedBefore);
       stopGpu?.();
       stopCompute?.();
       if (origSubmit !== null && queueProto !== undefined && encoderProto !== undefined) {

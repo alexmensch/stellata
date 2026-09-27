@@ -13,7 +13,7 @@ import {
 import type { CadenceCtx, SceneLayer } from '../scene/scene-layer';
 import type { StarSourceAttributes } from '../star-pipeline/star-source-attributes';
 import { uploadFull } from '../util/attribute-upload';
-import { LateCell, mapLate, type Late } from '../util/late/late';
+import { LateCell, mapLate, whenReady, type Late } from '../util/late/late';
 import type { BinariesData } from './binaries-loader';
 import { BinaryOrbitField } from './binary-orbit-field';
 import {
@@ -77,7 +77,7 @@ export class BinariesAttachment {
         : CADENCE_REPORT_STILL;
     };
     const refreshOrbitPaths = () => this.orbitPaths.setSystem(
-      this.whenAttached((a) => a.data, null),
+      whenReady(this.attached.state(), (a) => a.data, null),
       deps.focusedStar(),
       deps.catalog.positions,
     );
@@ -152,7 +152,7 @@ export class BinariesAttachment {
   }
 
   markBaselinesDirty(): void {
-    this.whenAttached((a) => a.orbits.markBaselinesDirty(), undefined);
+    whenReady(this.attached.state(), (a) => a.orbits.markBaselinesDirty(), undefined);
   }
 
   /** True when the walk's sub-pixel gate collapsed this star onto its
@@ -169,14 +169,14 @@ export class BinariesAttachment {
   /** Debug-HUD view into the eclipse walk for the current camera, filter and
    *  sim time. Empty until a table is attached. */
   eclipseDebugRows(starIdx: number | null): EclipseRelationDebugRow[] {
-    return this.whenAttached((a) => a.eclipse.debugRows(
+    return whenReady(this.attached.state(), (a) => a.eclipse.debugRows(
       this.deps.getT(), this.deps.camera.position, this.deps.thresholdMag(), starIdx,
     ), []);
   }
 
   /** Active eclipse-dim slot count (occluding or decaying). */
   get eclipseActiveDimCount(): number {
-    return this.whenAttached((a) => a.eclipse.activeDimCount, 0);
+    return whenReady(this.attached.state(), (a) => a.eclipse.activeDimCount, 0);
   }
 
   private walk(a: Attached): void {
@@ -193,13 +193,8 @@ export class BinariesAttachment {
     a.eclipse.update(deps.getT(), deps.camera.position, deps.thresholdMag(), performance.now());
   }
 
-  private whenAttached<R>(ready: (a: Attached) => R, otherwise: R): R {
-    const s = this.attached.state();
-    return s.status === 'ready' ? ready(s.value) : otherwise;
-  }
-
   private disposeFields(): void {
-    this.whenAttached((a) => {
+    whenReady(this.attached.state(), (a) => {
       a.orbits.dispose();
       a.eclipse.dispose();
     }, undefined);

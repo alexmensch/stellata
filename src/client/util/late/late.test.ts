@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  LateCell, lateFromPromise, mapLate, type Late, type LateState, type SettledState,
+  LateCell, lateFromPromise, mapLate, whenReady, type Late, type LateState, type SettledState,
 } from './late';
 
 describe('LateCell', () => {
@@ -64,6 +64,19 @@ describe('lateFromPromise', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(late.state()).toEqual({ status: 'absent' });
+  });
+});
+
+describe('whenReady', () => {
+  it('runs ready only on a ready state, and answers otherwise for pending and absent', () => {
+    const cell = new LateCell<number>();
+    const ready = vi.fn((v: number) => v + 1);
+    expect(whenReady(cell.state(), ready, -1)).toBe(-1);
+    cell.land(2);
+    expect(whenReady(cell.state(), ready, -1)).toBe(3);
+    cell.conclude();
+    expect(whenReady(cell.state(), ready, -1)).toBe(-1);
+    expect(ready).toHaveBeenCalledTimes(1);
   });
 });
 

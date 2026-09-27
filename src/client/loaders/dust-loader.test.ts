@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DustField, type DustChunkMeta, type DustManifest } from './dust-loader';
+import {
+  DustField, dustManifestError, loadDustManifest, type DustChunkMeta, type DustManifest,
+} from './dust-loader';
 import { webGpuRendererMock } from './dust-renderer-mock';
 
 const GRID = 8;
@@ -42,6 +44,47 @@ function stubFetch(byteLengthOf: (file: string) => number) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('loadDustManifest', () => {
+  const serve = (body: unknown) => vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => body }));
+
+  it('returns a well-formed manifest', async () => {
+    const m = manifest([chunk(0, 0, 0, [0, 0, 0])]);
+    serve(m);
+    expect(await loadDustManifest('/dust/')).toEqual(m);
+  });
+
+  it('warns and returns null on a manifest a DustField cannot be built from', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const cases: [unknown, string][] = [
+      [[], 'no positive gridSize'],
+      [{ ...manifest([]), chunkSize: 3 }, 'does not divide gridSize'],
+      [{ ...manifest([]), boundsPc: [1250] }, 'boundsPc'],
+      [{ ...manifest([]), densityMin: 0 }, '0 < densityMin < densityMax'],
+      [{ ...manifest([]), chunks: [{ ix: 0 }] }, 'malformed chunk at index 0'],
+    ];
+    for (const [body, reason] of cases) {
+      serve(body);
+      expect(await loadDustManifest('/dust/')).toBe(null);
+      expect(warn).toHaveBeenLastCalledWith(expect.stringContaining(reason));
+    }
+    warn.mockRestore();
+  });
+
+  it('returns null without a warning when the body is not JSON', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', async () => ({ ok: true, json: async () => { throw new SyntaxError('html'); } }));
+    expect(await loadDustManifest('/dust/')).toBe(null);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
+
+describe('dustManifestError', () => {
+  it('accepts the fixture every DustField suite here builds from', () => {
+    expect(dustManifestError(manifest([chunk(0, 0, 0, [0, 0, 0])]))).toBe(null);
+  });
 });
 
 describe('DustField streams chunks into the volume texture', () => {

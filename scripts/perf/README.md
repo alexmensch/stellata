@@ -182,8 +182,8 @@ two different scenes.
 **`--force-recompute` is the one setup lever that switches something ON.**
 The per-star extinction cache is refilled only when the camera has moved
 more than 1 pc since the last fill, and every canon vantage is camera-idle —
-so the kernel is absent from every dwell a canon run takes. The flag arms the
-shell's forced-recompute lever before the measurement and restores it after,
+so the kernel is absent from every dwell a canon run takes. The flag arms
+`stellata.extinction`'s forced-recompute lever before the measurement and restores it after,
 which makes the `extinctionRecompute` row present in `differential` and puts
 the compute pass into a `dwell`'s `computePasses` counts. It is read by those
 two modes only; the sweep's exponent relates frame time to pixels, and a cost

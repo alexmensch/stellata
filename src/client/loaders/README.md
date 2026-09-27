@@ -108,7 +108,7 @@ dust-voxel-upload.ts     Landing one chunk inside the volume texture
                          volume and staging alike.
 dust-voxel-readback.ts   Reading voxels back off the GPU and comparing
   (+ test)               them against the chunk files — the numeric smoke
-                         behind `stellata.verifyDust()`
+                         behind `stellata.extinction.verifyDust()`
                          (README.md#dust-voxel-readback).
 dust-renderer-mock.ts    A recording renderer stand-in, enough surface
                          for the upload and readback tests to run
@@ -283,6 +283,14 @@ of leaving its caller awaiting a reply that can no longer come.
 the progress listeners and the dispose; `createVoxelChunkUploader` owns
 writing one chunk's bytes inside the volume.
 
+**`loadDustManifest` answers null for any manifest a `DustField` cannot be
+built from**, warning when it parsed but is the wrong shape
+(`dustManifestError`), silently when it is missing or not JSON — the
+single-page fallback serves index.html at 200 for a missing file. So
+`DustField`'s constructor never sees a malformed manifest, and `main.ts`
+concludes the extinction slot on every failure rather than leaving it
+pending behind a rejection.
+
 **The factory marks the volume for update and then calls
 `renderer.initTexture`, in that order, and owns both halves so a caller
 cannot get the order wrong.** A partial write needs storage to target, and
@@ -328,7 +336,7 @@ placeholder from it marks its own.
 
 ## Dust voxel readback
 
-`stellata.verifyDust()` answers "is the dust actually in the texture, at
+`stellata.extinction.verifyDust()` answers "is the dust actually in the texture, at
 the offset the uploader claimed?" numerically, because no pixel can answer
 it — a dim sky looks the same whether one chunk or sixty landed. It re-fetches chunk
 files (served from cache) and compares sampled voxels against what the GPU

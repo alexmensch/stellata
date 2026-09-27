@@ -168,7 +168,7 @@ otherwise untraceable: every source writes the same timestamp, so a
 frame rate pinned by one of a dozen callers cannot be attributed after
 the fact. `debug.renderWatch()` prints the last one verbatim
 (`../debug/render-watch/README.md`). Dev-console setters that
-bypass the bus (`stellata.hdr.*` switches, `setExtinctionStrength`, …)
+bypass the bus (`stellata.hdr.*` switches, `extinction.setStrength`, …)
 are covered in practice by the keydown/panel wake paths, but a console
 poke with hands off the keyboard can force a repaint with
 `stellata.renderGate.invalidate()`.

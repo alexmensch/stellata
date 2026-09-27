@@ -21,7 +21,7 @@ import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
  * surface-brightness anchor and the chart isobar.
  *
  * These are the layer's own objects, NOT the frame-wide shared map's, even
- * where a name collides: `Stellata.setExtinctionStrength` writes the frame
+ * where a name collides: `ExtinctionAttachment.setStrength` writes the frame
  * map and this one separately. The factory therefore builds them as its
  * own nodes rather than taking the shared uniform-node mirror's, whose
  * per-frame `sync()` copies from the frame map and would overwrite a write

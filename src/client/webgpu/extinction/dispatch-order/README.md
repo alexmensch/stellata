@@ -73,7 +73,7 @@ position table packed in one order against a slot → star table in
 another writes every star's A_V onto some other star, which reads as a
 plausible dust field rather than as a failure. `packPositionsVec4Into`
 takes the same `order` array the table is built from, the pairing is
-pinned in the test, and `verifyExtinction()` is the acceptance
+pinned in the test, and `extinction.verifyParity()` is the acceptance
 ([The prepass kernel](../README.md#the-prepass-kernel)).
 
 **That pin only bites over a field the sort actually permutes.** A
