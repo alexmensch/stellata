@@ -84,11 +84,11 @@ describe('cloud kind module', () => {
     expect(m.searchEntries()).toEqual([]);
     expect(m.displayName(0)).toBe('');
     expect(m.pinnable(0)).toBe(false);
-    await m.load('/');
     expect(m.catalog.state().status).toBe('pending');
+    await m.load('/');
+    expect(m.catalog.state().status).toBe('absent');
     const ctx = makeCtx();
     expect(m.attach(ctx)).toBeNull();
-    expect(m.catalog.state().status).toBe('absent');
     expect(m.layer).toBeNull();
     expect(m.sids()).toBeNull();
     expect(m.searchEntries()).toEqual([]);
@@ -99,17 +99,28 @@ describe('cloud kind module', () => {
     expect(m.hover?.().pick(400, 300, 14)).toBeNull();
   });
 
+  it('concludes the catalog when load rejects, so its readers stop waiting', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      json: async () => { throw new SyntaxError('truncated clouds.json'); },
+      arrayBuffer: async () => new ArrayBuffer(0),
+    }) as unknown as Response));
+    const m = createCloudKindModule();
+    await expect(m.load('/')).rejects.toThrow('truncated clouds.json');
+    expect(m.catalog.state().status).toBe('absent');
+  });
+
   it('answers every leg from the loaded catalog after attach', async () => {
     stubFetch(true);
     const m = createCloudKindModule();
     await m.load('/');
+    const loaded = m.catalog.state();
+    expect(loaded.status === 'ready' && loaded.value.clouds.map((c) => c.name))
+      .toEqual(['Eagle Nebula', 'Taurus']);
     const ctx = makeCtx();
-    expect(m.catalog.state().status).toBe('pending');
     const layer = m.attach(ctx);
     expect(layer).not.toBeNull();
-    expect(m.layer?.clouds).toHaveLength(2);
-    const settled = m.catalog.state();
-    expect(settled.status === 'ready' && settled.value.clouds).toBe(m.layer?.clouds);
+    expect(m.layer?.clouds).toBe(loaded.status === 'ready' ? loaded.value.clouds : null);
 
     expect(m.sids()).toEqual([1, 2]);
     expect(m.searchEntries().map((e) => e.label))

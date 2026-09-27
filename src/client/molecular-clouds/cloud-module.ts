@@ -26,7 +26,7 @@ export interface CloudKindModule extends ObjectKindModule<'cloud'> {
   /** The render layer, for dev-console tuning + chart-mode name rows.
    *  Null before attach and when the clouds.json artifact is absent. */
   readonly layer: MolecularClouds | null;
-  /** Settles at attach: absent when clouds.json is missing or empty. */
+  /** Settles at load: absent when clouds.json is missing, empty or unreadable. */
   readonly catalog: Late<CloudCatalog>;
   /** Silhouette pixel diameter at the live camera pose — the provider's
    *  renderedSizePx leg and the labels' screen-size gate. */
@@ -34,7 +34,6 @@ export interface CloudKindModule extends ObjectKindModule<'cloud'> {
 }
 
 export function createCloudKindModule(): CloudKindModule {
-  let catalog: CloudCatalog | null = null;
   let surfaces: Map<number, CloudSurface> | null = null;
   let ctx: KindContext | null = null;
   let layer: MolecularClouds | null = null;
@@ -42,6 +41,11 @@ export function createCloudKindModule(): CloudKindModule {
   const catalogCell = new LateCell<CloudCatalog>();
   const tmpLocal = new THREE.Vector3();
   const tmpDir = new THREE.Vector3();
+
+  const loadedCatalog = (): CloudCatalog | null => {
+    const s = catalogCell.state();
+    return s.status === 'ready' ? s.value : null;
+  };
 
   const cloudPark = (idx: number): number => {
     if (!layer?.clouds[idx]) return 0;
@@ -94,20 +98,23 @@ export function createCloudKindModule(): CloudKindModule {
     renderedSizePx,
 
     async load(baseUrl: string): Promise<void> {
-      [catalog, surfaces] = await Promise.all([
-        loadClouds(`${baseUrl}clouds.json`),
-        loadCloudSurfaces(`${baseUrl}cloud-surfaces.bin`),
-      ]);
+      let loaded: CloudCatalog | null = null;
+      try {
+        [loaded, surfaces] = await Promise.all([
+          loadClouds(`${baseUrl}clouds.json`),
+          loadCloudSurfaces(`${baseUrl}cloud-surfaces.bin`),
+        ]);
+      } finally {
+        if (loaded && loaded.clouds.length > 0) catalogCell.land(loaded);
+        else catalogCell.conclude();
+      }
     },
 
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
-      if (!catalog || catalog.clouds.length === 0) {
-        catalogCell.conclude();
-        return null;
-      }
+      const catalog = loadedCatalog();
+      if (!catalog) return null;
       layer = new MolecularClouds(catalog, surfaces, kindCtx.webgpu.cloudMaterials);
-      catalogCell.land(catalog);
       layer.setMonochrome(kindCtx.getMonochrome());
       kindCtx.scene.add(layer.group);
       return {
@@ -145,21 +152,26 @@ export function createCloudKindModule(): CloudKindModule {
     }),
 
     card: (): FocusCardProvider<'cloud'> => createCloudFocusProvider({
-      clouds: catalog?.clouds ?? null,
-      cameraDistancePc: (idx) => absCameraDistancePc(ctx!, catalog!.clouds[idx].centerAbs),
+      clouds: loadedCatalog()?.clouds ?? null,
+      cameraDistancePc: (idx) => absCameraDistancePc(ctx!, loadedCatalog()!.clouds[idx].centerAbs),
       constellationName: (idx) => ctx?.constellationOf('cloud', idx) ?? null,
     }),
 
     hover: (): HoverProvider<'cloud'> => ({
       kind: 'cloud',
       pick,
-      format: (hit) =>
-        catalog ? formatCloudHover(hit.idx, hit.cameraDistancePc, { clouds: catalog.clouds }) : null,
+      format: (hit) => {
+        const catalog = loadedCatalog();
+        return catalog
+          ? formatCloudHover(hit.idx, hit.cameraDistancePc, { clouds: catalog.clouds })
+          : null;
+      },
     }),
 
     pinnable: () => false,
 
     searchEntries: (): KindSearchEntry[] => {
+      const catalog = loadedCatalog();
       if (!catalog) return [];
       const out: KindSearchEntry[] = [];
       catalog.clouds.forEach((c, index) => {
@@ -170,9 +182,9 @@ export function createCloudKindModule(): CloudKindModule {
       return out;
     },
 
-    displayName: (idx) => catalog?.clouds[idx]?.name ?? '',
+    displayName: (idx) => loadedCatalog()?.clouds[idx]?.name ?? '',
 
-    sids: () => (catalog ? catalog.clouds.map((c) => c.sid) : null),
+    sids: () => loadedCatalog()?.clouds.map((c) => c.sid) ?? null,
 
     labels: () => {
       if (ctx && layer) disposeLabels = createMolecularCloudLabels(ctx, layer, renderedSizePx);
