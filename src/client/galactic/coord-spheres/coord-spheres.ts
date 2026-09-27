@@ -8,7 +8,7 @@ import {
 import type { Target } from '../../camera/focus/focus-target';
 import type { ChromeLineMaterials } from '../../chrome-lines/chrome-line-materials';
 import type { SceneLayer } from '../../scene/scene-layer';
-import type { CameraMode } from '../../stellata';
+import type { CameraMode } from '../../camera/focus/focus-controller';
 import { CoordSphere, type CoordSphereFrame, type DrawnCoordSphereFrame } from './coord-sphere';
 import { COORD_SPHERE_SPECS, DRAWN_COORD_SPHERE_FRAMES } from './coord-sphere-frames';
 

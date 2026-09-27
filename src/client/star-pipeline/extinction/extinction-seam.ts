@@ -19,7 +19,7 @@ export interface ExtinctionPrepassUniforms {
 /** see ../../webgpu/extinction/refill/README.md#only-what-is-in-frame */
 export interface ExtinctionView {
   camera: THREE.Camera;
-  worldOffset: THREE.Vector3;
+  worldOffset: Readonly<THREE.Vector3>;
 }
 
 export interface ExtinctionPrepassSeam {

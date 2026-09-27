@@ -8,6 +8,7 @@ import {
   FocusController,
   type FocalPerturbationInto,
   type FocusControllerDeps,
+  type CameraMode,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
   PIN_ENGAGE_THRESHOLD_SQ_PC,
@@ -44,7 +45,7 @@ import {
 } from '../../solar-system/probes/probe-focus-geometry';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
-import type { CameraMode, StellataEventMap } from '../../stellata';
+import type { StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
 import { RollController } from '../controls/input/roll-controller';

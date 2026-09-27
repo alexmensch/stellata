@@ -44,7 +44,7 @@ describe('observe look pin / a focal ride leaves the pin exact', () => {
     for (let i = 0; i < ticks; i++) {
       step.copy(DIR).multiplyScalar(stepPc);
       cam.position.add(step);
-      target.add(step);                       // applyRideDelta: exact
+      target.add(step);                       // a focal ride step: exact
       const before = target.clone();
       if (rederive || lookPinStale(pinnedAt, cam.quaternion)) {
         fwd.set(0, 0, -1).applyQuaternion(cam.quaternion);

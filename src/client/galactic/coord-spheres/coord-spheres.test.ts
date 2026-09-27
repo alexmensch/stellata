@@ -4,7 +4,7 @@ import { frameAfterFocusChange, type FocusFrameInputs } from '../../attitude/att
 import type { Target } from '../../camera/focus/focus-target';
 import { fakeChromeLineMaterials } from '../../chrome-lines/chrome-lines-mock';
 import { makeFrameCtx } from '../../scene/frame-ctx-mock';
-import type { CameraMode } from '../../stellata';
+import type { CameraMode } from '../../camera/focus/focus-controller';
 import type { CoordSphereFrame } from './coord-sphere';
 import { DRAWN_COORD_SPHERE_FRAMES } from './coord-sphere-frames';
 import { CoordSpheres } from './coord-spheres';

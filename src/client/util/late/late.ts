@@ -48,6 +48,11 @@ export class LateCell<T> implements Late<T> {
   }
 }
 
+/** see README.md#two-kinds-of-reader */
+export function whenReady<T, R>(state: LateState<T>, ready: (value: T) => R, otherwise: R): R {
+  return state.status === 'ready' ? ready(state.value) : otherwise;
+}
+
 /** Ready when `promise` resolves, absent when it rejects. */
 export function lateFromPromise<T>(promise: Promise<T>): Late<T> {
   const cell = new LateCell<T>();

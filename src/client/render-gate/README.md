@@ -168,7 +168,7 @@ otherwise untraceable: every source writes the same timestamp, so a
 frame rate pinned by one of a dozen callers cannot be attributed after
 the fact. `debug.renderWatch()` prints the last one verbatim
 (`../debug/render-watch/README.md`). Dev-console setters that
-bypass the bus (`stellata.hdr.*` switches, `setExtinctionStrength`, …)
+bypass the bus (`stellata.hdr.*` switches, `extinction.setStrength`, …)
 are covered in practice by the keydown/panel wake paths, but a console
 poke with hands off the keyboard can force a repaint with
 `stellata.renderGate.invalidate()`.
@@ -202,13 +202,13 @@ subtracted, the safety net and the pinned acceptance numbers — is
 Focusing a moving body — a binary member, a planet, a probe — used to pin
 the gate open for as long as the focus lasted, at any distance and any
 vantage, and not for the reason it looks like. Both rides
-(`applyFocalFrameRide`, `applyMovingFocalRide`) translate camera and
+(`FocalRides`, `../camera/focus/focal-ride/README.md`) translate camera and
 target inside the scene-layer update fan-out, which runs BELOW the gate.
 So the write lands AFTER `tick()` captured that frame's pose snapshot;
 the next tick reads it as a fresh camera move, renders, rides again, and
 stamps activity. It is self-sustaining and never reaches a skipped tick.
 
-`Stellata.applyRideDelta` — now the single place either ride reaches the
+`FocalRides`' ride step — the single place either ride reaches the
 camera — calls `RenderGate.rebasePose(delta)`, shifting the stored
 snapshot's position and target slots by the same translation. The next
 tick compares equal and the cadence owns the schedule. **A delta that
@@ -217,6 +217,11 @@ which is why the extraction matters as much as the call, and why the
 regression is pinned both ways: an absorbed step stays quiet across six
 consecutive rides, and the same step unabsorbed wakes the gate on every
 one.
+
+The epoch follow takes the same translate, rebase included. It runs above
+the gate, where the rebase only drops a pose wake its own
+`invalidate('epoch-bucket')` already covers — so the follow is correct
+wherever `animate()` calls it ([The epoch follow](../camera/focus/focal-ride/README.md#the-epoch-follow)).
 
 The rebase touches exactly the six translation slots. Orientation, fov and
 `worldOffset` stay: absorbing a rotation would hide a real camera move, and
@@ -257,6 +262,6 @@ inherits this defect** — the ULP column in `debug.renderWatch()` is how you
 find it, and a handful of ULP on a slot nothing should have touched is the
 signature.
 
-`applyRideDelta` also reports each step to `ClockCadence.noteRideStep`;
-the frame's sum divided by the sim step IS
+Each steady ride step — never a seed snap, which is a jump — also reports
+to `ClockCadence.noteRideStep`; the frame's sum divided by the sim step IS
 `CadenceCtx.cameraVelPcPerSimS` ([Camera motion is subtracted](cadence/README.md#camera-motion-is-subtracted-never-bounded)).

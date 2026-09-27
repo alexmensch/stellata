@@ -134,14 +134,14 @@ export function buildPassToggles(
     },
     {
       key: 'extinctionPrepass',
-      present: () => stellata.isExtinctionPrepassActive(),
-      disable: () => flag((on) => stellata.setExtinctionPrepassEnabled(on)),
+      present: () => stellata.extinction.isPrepassActive(),
+      disable: () => flag((on) => stellata.extinction.setPrepassEnabled(on)),
     },
     {
       key: 'extinctionRecompute',
       present: () =>
-        stellata.isExtinctionRecomputeForced() && stellata.isExtinctionPrepassActive(),
-      disable: () => flag((on) => stellata.setExtinctionRecomputeForced(on)),
+        stellata.extinction.isRecomputeForced() && stellata.extinction.isPrepassActive(),
+      disable: () => flag((on) => stellata.extinction.setRecomputeForced(on)),
     },
     {
       key: 'emptyPass',

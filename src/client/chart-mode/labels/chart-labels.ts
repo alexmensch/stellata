@@ -666,13 +666,13 @@ export class ChartLabels {
     // 4) Molecular clouds — name labels at the cloud centroid. Cheap to
     // iterate (count is in the hundreds at most).
     perfMark('chart.clouds');
-    const clouds = stellata.getCloudCatalog();
-    if (clouds && showCloudNames) {
-      for (let i = 0; i < clouds.clouds.length; i++) {
+    const clouds = stellata.kinds.cloud.catalog.state();
+    if (clouds.status === 'ready' && showCloudNames) {
+      for (let i = 0; i < clouds.value.clouds.length; i++) {
         if (!stellata.focusables.cloud.localPositionInto(i, this.tmpCloudLocal)) continue;
         if (!projectVecInto(this.tmpCloudLocal, camera, w, h, xy)) continue;
         this.addCandidate(
-          'cloud', clouds.clouds[i].name,
+          'cloud', clouds.value.clouds[i].name,
           xy[0] + CLOUD_LABEL_OFFSET_PX, xy[1] + CLOUD_LABEL_OFFSET_PX,
           3 + i * 0.0001, this.cloudKeys.get(i),
         );

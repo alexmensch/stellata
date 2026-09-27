@@ -30,7 +30,7 @@ entire `count`-long buffer into a `Float32Array` mirror, which
 `readAvMag` then answers out of — exactly, for every star in the
 catalogue, at no further GPU cost until the next recompute. The pointer
 events that precede a pick are what drive it (`onPickImminent` on
-`../../../hover/hover-engine.ts` → `Stellata.notifyPickImminent`), so the
+`../../../hover/hover-engine.ts` → `ExtinctionAttachment.warmPickReadback`), so the
 280 ms hover dwell and the click FSM's own hold each cover the map's
 latency and the **first** hover already rejects a star behind heavy dust.
 

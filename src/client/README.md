@@ -170,7 +170,7 @@ Four things follow, and each has cost a defect:
   that can be missing must be concluded, or its readers wait forever.
 - **A test: `tests/late-read-contract.test.ts`.** It fails a loop bounded by
   an unbranded catalogue's `count`, and any unclassified `| null` return on
-  the shell's public surface.
+  the shell's public surface — its own methods and its readonly namespaces'.
 - **Review, for what neither reaches.** A one-shot reader can still write a
   fallback into its `pending` branch. The loop scan sees only a literal
   `i < X.count`, so a walk bounded by a column's `.length`, by a count
@@ -183,7 +183,7 @@ Four things follow, and each has cost a defect:
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
-`solarSystem`, `coordSpheres`, `binaries`, plus the
+`solarSystem`, `coordSpheres`, `binaries`, `extinction`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -207,9 +207,9 @@ belongs on the controller.
 
 **Forwarders still on the shell leave with their cluster, and so do their
 callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
-`attachDust` and `attachConstellationBoundaries` — moves
+`attachConstellationBoundaries` — moves
 with its row, and `main.ts` calls the new owner through a readonly
-namespace (`stellata.binaries.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
+namespace (`stellata.binaries.attach`, `stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
 `FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
 `starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
 `floatingOrigin`; with the star render machinery, the focus controller's
@@ -246,8 +246,6 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Focal rides | `camera/focus/` | `hhaw.32.2` |
-| Dust + extinction | `star-pipeline/extinction/` | `hhaw.32.6` |
 | Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
@@ -255,31 +253,21 @@ an empty awaiting list.
 **Values crossing a row boundary** — whichever row moves first settles the
 interface for both:
 
-- The frame's camera velocity — owned by `ClockCadence`
-  ([The controller](render-gate/cadence/README.md#the-controller)); `applyRideDelta`
-  reports each ride step through `noteRideStep`, and the rides take that
-  call with them. `maybeReAdvanceEpoch`'s translate skips it today — the
-  suspected bug 32.2 carries.
 - **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
   CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the star-local-cluster,
   core-mask and constellation-figure entries take it, and carry it when
   their rows move.
-- **The planet rate** — settled as `solarSystem.planetRate`, a `(cc) =>
-  CadenceReport` ([Wiring](solar-system/README.md#wiring)); the moving-focal-ride
-  entry takes it, and the rides carry that `rate` with them.
 
 ### Late-attached slots
 
 A cluster holding a value that lands after construction moves it as a
-`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the dust + extinction
-and constellation extractions each convert their row's slots as they move
-rather than carrying a `T | null` twice. The binaries slot has converted
-([The attachment](binaries/README.md#the-attachment)), so the focal rides, which read it, are
-unblocked. Clusters holding no late slot do not wait.
+`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the constellation
+extraction converts its row's slots as it moves rather than carrying a
+`T | null` twice. The binaries and dust slots have converted
+([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). Clusters holding no late slot do not wait.
 
 | Slot | Lands | Not-ready answer today |
 | --- | --- | --- |
-| Dust + extinction prepass | when the dust manifest resolves — no wave | `?.` no-op; `extinctionAvMagFor` 0 (deliberately pickable); `isExtinctionPrepassActive` false; survivor `inFrame` null |
 | Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 

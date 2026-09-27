@@ -5,12 +5,6 @@ import { createBinarySystemMembership } from './binaries/binary-system-membershi
 import type { ChromeLineMaterials } from './chrome-lines/chrome-line-materials';
 import { createPlanetSystemMembership } from './solar-system/planet-system-membership';
 import { SystemMembershipRegistry } from './system-membership/system-membership';
-import type { DustField } from './loaders/dust-loader';
-import {
-  formatVerifyReports,
-  verifyDustChunks,
-  type ChunkVerifyReport,
-} from './loaders/dust-voxel-readback';
 import { galacticDiscSceneLayer } from './galactic/galactic-disc';
 import { CoordSpheres } from './galactic/coord-spheres/coord-spheres';
 import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
@@ -20,7 +14,6 @@ import { HudOverlay, hudElementsById } from './overlays/hud-overlay';
 import { hudSceneLayer } from './overlays/hud-scene-layer';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
-import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
 import {
@@ -58,12 +51,12 @@ import { ObserveLookPin } from './camera/observe/observe-look-pin';
 import { PoiStore } from './poi/poi-store';
 import { InputController } from './camera/controls/input/input-controller';
 import {
+  type CameraMode,
   FocusController,
-  type FocalPerturbationInto,
   type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
-import { KIND_TRAITS, type FocusableProviders, type Target } from './camera/focus/focus-target';
+import type { FocusableProviders, Target } from './camera/focus/focus-target';
 import type { KindContext } from './kinds/kind-module';
 import {
   collectFocusables,
@@ -74,7 +67,7 @@ import {
   type BuiltKindModules,
 } from './kinds/kind-modules';
 import type { ConstellationOfKind } from './focus-card/constellation-row';
-import { focalRideStep } from './camera/focus/focal-ride/focal-ride-pure';
+import { FocalRides } from './camera/focus/focal-ride/focal-rides';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-ride/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
 import type { SurvivorCountsRead } from './debug/survivor-counts';
@@ -139,10 +132,7 @@ import { CATALOG_BOUNDING_RADIUS_PC } from './star-pipeline/shards/star-shards-p
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
-import { formatAvParity, type AvParityReport } from './star-pipeline/extinction/av-parity-pure';
-import type {
-  ExtinctionPrepassSeam, ExtinctionView,
-} from './star-pipeline/extinction/extinction-seam';
+import { ExtinctionAttachment } from './star-pipeline/extinction/extinction-attachment';
 import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { selectFigures } from './constellation-figure/constellation-figure-pure';
@@ -167,8 +157,6 @@ export interface StellataOptions {
    *  itself and that refusal is the gate page, not a fallback. */
   webgpu: WebGpuSeam;
 }
-
-export type CameraMode = 'navigate' | 'observe';
 
 /** A scene a boot draws, named so a debug read can say which one a
  *  resource came from (`sceneGraphs`). */
@@ -253,32 +241,7 @@ export class Stellata implements FrameAnchor {
   readonly systemMembership = new SystemMembershipRegistry();
   readonly binaries: BinariesAttachment;
 
-  // Focal-frame ride state. The focal star (when a binary member) drifts
-  // along its orbit; the camera + orbit target track that drift so the
-  // pinned star stays at NDC centre and unfocus is a pure state change.
-  // `_lastAppliedPert` is the perturbation already baked into camera /
-  // target / pose caches; each frame the delta since last frame is
-  // applied and stored. `_rideFocalIdx` guards the re-seed on focus
-  // change (no translate on the frame the focal switches). float64
-  // throughout (THREE.Vector3 components are doubles).
-  private readonly _focalPert = new THREE.Vector3();
-  private readonly _lastAppliedPert = new THREE.Vector3();
-  private readonly _rideDelta = new THREE.Vector3();
-  private readonly _rideLive = new THREE.Vector3();
-  private _rideFocalIdx: number | null = null;
-
-  // Moving-focal ride state — the sibling of the binary ride above for
-  // hard focus kinds whose object moves with `t` (a planet sweeping its
-  // orbit, a probe running its trajectory; both fast under scrubber FF).
-  // The camera + orbit target translate by the object's per-frame
-  // local-position delta so it stays under the camera and user pan
-  // offsets survive. `_movingRideIdx` reseeds on every 'focus' event,
-  // which is what makes the shared slot safe across kinds — see
-  // camera/focus/focal-ride/README.md#moving-focal-ride.
-  private readonly _movingRideLast = new THREE.Vector3();
-  private readonly _movingRideLive = new THREE.Vector3();
-  private readonly _movingRideDelta = new THREE.Vector3();
-  private _movingRideIdx: number | null = null;
+  private readonly focalRides: FocalRides;
 
   // Filter / preset / render-knob state + mutations live in
   // FilterController (filters/README.md); the shell reads the live
@@ -385,18 +348,7 @@ export class Stellata implements FrameAnchor {
   // texture attaches.
   readonly milkyway: MilkyWay;
 
-  // Reference to the most recently attached DustField — kept solely so
-  // dispose() can release the ~128 MiB Data3DTexture. attachDust(null)
-  // clears it.
-  private dust: DustField | null = null;
-
-  // Per-star A_V cache, one implementation per backend behind the shared
-  // seam. Constructed lazily on the first attachDust so a dust-less
-  // session pays nothing; null again after attachDust(null).
-  private extinctionPrepass: ExtinctionPrepassSeam | null = null;
-  /** Built once — both members are stable identities mutated in place. */
-  private _extinctionView: ExtinctionView | null = null;
-  private extinctionRecomputeForced = false;
+  readonly extinction: ExtinctionAttachment;
   private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
     { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
   // Separate from pickSizeScratch: the debug panel reads every frame and
@@ -540,7 +492,7 @@ export class Stellata implements FrameAnchor {
       focusedStar: () => this.focus.getFocusedStar(),
       observeAnchorStar: () => this.observe.observeAnchorOf('star'),
       onFocus: (handler) => this.bus.on('focus', handler),
-      rideFocal: (source) => this.applyFocalFrameRide(source),
+      rideFocal: (source) => this.focalRides.rideBinaryFocal(source),
     });
     // The star kind module's legs read the shell-owned star machinery
     // through these closures — they deref lazily, so the picker and focus
@@ -579,6 +531,16 @@ export class Stellata implements FrameAnchor {
       teffApsis: this.starFrame.teffApsis,
       boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
       ...this.starAttrs,
+    });
+
+    this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
+    this.extinction = new ExtinctionAttachment({
+      catalog,
+      uniforms: sharedUniforms,
+      webgpu: this.webgpu,
+      milkyway: this.milkyway,
+      renderer: this.renderer,
+      invalidate: (reason) => this.renderGate.invalidate(reason),
     });
 
     // Chunk 0 is already decoded and the pipeline was constructed against
@@ -792,13 +754,19 @@ export class Stellata implements FrameAnchor {
       setCameraModeValue: (mode) => this.focus.setCameraModeValue(mode),
     });
     this.buildFocalAnchorPolicy();
-    // Reseed the moving-focal ride on every focus mutation: a focus
-    // change AND a same-object refocus both recentre the floating
-    // origin, which stales the ride's cached last position. The seed
-    // frame re-snaps against the fresh frame. This is also what keeps
-    // the shared ride slot safe when the kind changes but the index
-    // collides (planet 3 → probe 3).
-    this.on('focus', () => { this._movingRideIdx = null; });
+    this.focalRides = new FocalRides({
+      cameraPosition: this.camera.position,
+      orbitTarget: this.controls.target,
+      focus: this.focus,
+      observe: this.observe,
+      focusables: this.focusables,
+      starLocalPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      warpActive: () => this.warp.isActive(),
+      rebasePose: (delta) => this.renderGate.rebasePose(delta),
+      noteRideStep: (delta) => this.cadence.noteRideStep(delta),
+      planetRate: this.solarSystem.planetRate,
+      onFocus: (handler) => this.bus.on('focus', handler),
+    });
     // Every fine-grained mutation the figure's active set reads — focus,
     // filter, cameraMode — pairs with 'state', and so does the observe
     // transition's landing, which no fine-grained event covers.
@@ -832,7 +800,6 @@ export class Stellata implements FrameAnchor {
     // the galactic centre; the fragment shader does a bounded raymarch
     // through its volume. renderOrder = -3 keeps it behind every other
     // layer.
-    this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.scene.add(this.milkyway.group);
 
     this.filters = new FilterController({
@@ -939,16 +906,7 @@ export class Stellata implements FrameAnchor {
   // Registration order is per-frame update order —
   // scene/README.md#how-the-shell-uses-it.
   private registerSceneLayers(galacticDiscEntry: SceneLayer): void {
-    this.layers.register({
-      timeBehaviour: { kind: 'clock', rate: this.solarSystem.planetRate },
-      contribution: { kind: 'always' },
-      // Ride runs right after every moving-body field wrote this
-      // frame's positions — the whole module roster updates ahead of
-      // this, the first inline entry — mirroring the binary ride's
-      // placement after its orbit walk.
-      update: () => this.applyMovingFocalRide(),
-      dispose: () => {},
-    });
+    this.layers.register(this.focalRides.movingEntry);
     // AFTER the body field: a moon ring's centre is the parent's live
     // iLocalRel — reading it before the field's walk left the rings one frame
     // of sim-time behind the bodies, a visible lag under fast scrub.
@@ -1209,16 +1167,6 @@ export class Stellata implements FrameAnchor {
     return this.floatingOrigin.recenterTo(newOrigin);
   }
 
-  // Scrubber-time star motion: when the model clock crosses a re-advance
-  // bucket, StarFrame re-runs the epoch-advance pass off the immutable
-  // J2016.0 baseline. Runs at the top of animate() so BinaryOrbitField /
-  // eclipse photometry rewrite their active slots on top of the fresh
-  // baselines in the same frame. When a star is focused, the camera +
-  // orbit target (+ any in-flight transition pose caches) translate by
-  // the focal's space-motion delta — the same follow contract
-  // applyFocalFrameRide implements for orbital drift — so the pin
-  // invariant (target === focal live position) survives the move. Skipped
-  // during warp: the warp owns the camera and re-snaps on arrival.
   private maybeReAdvanceEpoch(): void {
     const focal = this.focus.getFocusedStar();
     const d = this._epochFollowDelta;
@@ -1227,13 +1175,8 @@ export class Stellata implements FrameAnchor {
     // no longer assume nothing moved: a bucket crossing between cadence
     // frames must repaint.
     this.renderGate.invalidate('epoch-bucket');
-    // The pass above rewrote catalog.positions; the A_V cache holds a copy.
-    this.extinctionPrepass?.refreshPositions();
-    if (this.warp.isActive() || d.lengthSq() === 0) return;
-    this.camera.position.add(d);
-    this.controls.target.add(d);
-    this.focus.translateFocusFrame(d);
-    this.observe.translateFocusFrame(d);
+    this.extinction.refreshPositions();
+    this.focalRides.followEpochStep(d);
   }
 
   // Which controllers constitute "the camera is busy" is the shell's to
@@ -1251,60 +1194,6 @@ export class Stellata implements FrameAnchor {
       orbitTarget: this.controls.target,
       worldOffset: this.floatingOrigin.worldOffset,
     }));
-  }
-
-  // Wire a loaded DustField into the star shader. Safe to call after the
-  // Stellata is already rendering — uniforms flip atomically on the next
-  // frame. Safe to call multiple times; the most recent dust wins. Pass
-  // null to detach (e.g. to disable extinction for a mode toggle).
-  attachDust(dust: DustField | null) {
-    this.renderGate.invalidate('attach:dust');
-    const u = this.sharedUniforms;
-    // Re-attach with a different DustField? Release the previous one's
-    // ~128 MiB Data3DTexture before swapping the reference, otherwise
-    // the old texture would leak. attachDust is called exactly once
-    // today, so this guard is defensive — but the contract reads as
-    // "the most recent dust wins" and that contract should hold without
-    // tying it to caller discipline.
-    if (this.dust !== null && this.dust !== dust) this.dust.dispose();
-    this.dust = dust;
-    if (dust === null) {
-      u.uDustTexture.value = null;
-      u.uDustEnabled.value = 0;
-      this.webgpu.setDustTexture(null);
-      this.extinctionPrepass?.dispose();
-      this.extinctionPrepass = null;
-      this.milkyway.attachDust(null);
-      return;
-    }
-    u.uDustTexture.value = dust.texture;
-    u.uDustBoundsPc.value = dust.params.boundsHalfPc;
-    u.uDustDensityMin.value = dust.params.densityMin;
-    u.uDustLogRatio.value = dust.params.logRatio;
-    u.uDustAvPerDensityPc.value = dust.params.avPerDensityPerPc;
-    u.uDustEnabled.value = 1;
-    // Texture slots are not part of the WebGPU uniform-node mirror, so the
-    // volume reaches the TSL march by call rather than by map write
-    // (webgpu/tsl/README.md#shared-uniform-nodes).
-    this.webgpu.setDustTexture(dust.texture);
-    if (this.extinctionPrepass === null) {
-      this.extinctionPrepass = this.webgpu.attachExtinctionPrepass({
-        catalog: this.catalog,
-        uniforms: u,
-      });
-    }
-    this.extinctionPrepass?.markDirty();
-    // Each streamed voxel chunk changes sightline integrals — refresh the
-    // cache as the texture densifies.
-    dust.onProgress(() => {
-      this.extinctionPrepass?.markDirty();
-      this.renderGate.invalidate('dust-chunk');
-    });
-    // Share the same DustField with the Milky Way pass so the band's dust
-    // attenuation shows the actual Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
-    // voxel structure (Great Rift, Coalsack, etc.) rather than only the analytic
-    // slab.
-    this.milkyway.attachDust(dust);
   }
 
   /**
@@ -1334,7 +1223,7 @@ export class Stellata implements FrameAnchor {
     this.starFrame.absorbRecords();
     this.webgpuStarLayer.absorbRecords();
     // Not markDirty — see webgpu/extinction/README.md#the-cache-gate.
-    this.extinctionPrepass?.refreshPositions();
+    this.extinction.refreshPositions();
 
     // The fastest pulsating variable bounds how long any frame may idle
     // before some star's brightness moves a JND, so a chunk carrying a
@@ -1351,26 +1240,6 @@ export class Stellata implements FrameAnchor {
     this.renderGate.invalidate('catalog-chunk');
   }
 
-  /** Numeric check that streamed dust really is in the volume texture where
-   *  the uploader put it: samples voxels off the GPU and compares them
-   *  against the chunk files — the only verification the upload has until
-   *  something samples the volume.
-   *  Logs a summary and returns the reports.
-   *  `loaders/README.md#dust-voxel-readback`. */
-  async verifyDust(count?: number): Promise<ChunkVerifyReport[]> {
-    if (this.dust === null) {
-      console.warn('verifyDust: no dust attached');
-      return [];
-    }
-    const reports = await verifyDustChunks({
-      renderer: this.renderer,
-      dust: this.dust,
-      count,
-    });
-    for (const line of formatVerifyReports(reports)) console.log(line);
-    return reports;
-  }
-
   /** How many stars each tier's draw issued, and how many passed the
    *  prefilter (`webgpu/star/compaction/README.md#reading-the-counts-back`).
    * The read waits on a dispatch to count into, which a settled
@@ -1379,114 +1248,7 @@ export class Stellata implements FrameAnchor {
     this.renderGate.invalidate('debug:survivors');
     const counts = await this.webgpuStarLayer.readSurvivorCounts();
     if (counts === null) return null;
-    return { ...counts, inFrame: this.extinctionPrepass?.countInFrame() ?? null };
-  }
-
-  /** Numeric check that the compute A_V kernel and a fragment march of the
-   *  same integral agree bit for bit over the whole catalogue — the parity
-   *  no pixel can show. Null with no dust.
-   *  `webgpu/extinction/README.md#the-prepass-kernel`. */
-  async verifyExtinction(): Promise<AvParityReport | null> {
-    const report = await this.extinctionPrepass?.verifyParity() ?? null;
-    if (report === null) {
-      console.warn('verifyExtinction: no compute prepass active');
-      return null;
-    }
-    console.log(formatAvParity(report));
-    return report;
-  }
-
-  // Focal-frame ride: translate the camera, orbit target, and any
-  // in-flight camera-transition pose caches by the focal star's per-frame
-  // orbital drift so the star stays glued under the camera. Runs right
-  // after the orbit walk (which wrote this frame's perturbation into the
-  // buffer). Skipped during warp — the warp owns the camera and its
-  // per-frame lookAt already tracks the live buffer; lastAppliedPert is
-  // kept synced so no jump accrues when the warp ends. On the frame the
-  // focal star changes, re-snaps target onto the star's LIVE buffer
-  // position: setFocus sampled the perturbation at focus-event time, but
-  // under fast scrub sim-time advances between that event and this frame,
-  // so the event-time snap goes stale and the star would land off-centre.
-  private applyFocalFrameRide(perturbation: FocalPerturbationInto): void {
-    const focal = this.focus.getFocusedStar();
-    const hasPert = focal !== null && perturbation(focal, this._focalPert);
-    if (!hasPert) this._focalPert.set(0, 0, 0);
-
-    const live = focal !== null
-      ? this.starLocalPositionInto(focal, this._rideLive)
-      : this._rideLive.set(0, 0, 0);
-    const step = focalRideStep({
-      focal,
-      rideFocalIdx: this._rideFocalIdx,
-      warpActive: this.warp.isActive(),
-      focalPert: this._focalPert,
-      lastAppliedPert: this._lastAppliedPert,
-      liveLocal: live,
-      target: this.controls.target,
-      cameraPosition: this.camera.position,
-      observeMode: this.focus.getCameraMode() === 'observe',
-    });
-    this._rideFocalIdx = step.rideFocalIdx;
-    this._lastAppliedPert.set(step.px, step.py, step.pz);
-    this._rideDelta.set(step.dx, step.dy, step.dz);
-    this.applyRideDelta(this._rideDelta);
-  }
-
-  /** Translate the camera, the look target and both transition caches by
-   *  one ride step, tell the gate the step was not camera activity, and
-   *  add it to the frame's camera velocity.
-   *
-   *  Shared by both rides because a delta that reaches the camera without
-   *  reaching `rebasePose` reinstates the pin: the ride runs below the
-   *  gate, so the next tick reads the write as a fresh camera move,
-   *  renders, rides again, and never reaches a skipped tick
-   *  (render-gate/README.md#the-focal-ride). */
-  private applyRideDelta(delta: THREE.Vector3): void {
-    if (delta.lengthSq() === 0) return;
-    this.camera.position.add(delta);
-    this.controls.target.add(delta);
-    this.focus.translateFocusFrame(delta);
-    this.observe.translateFocusFrame(delta);
-    this.renderGate.rebasePose(delta);
-    this.cadence.noteRideStep(delta);
-  }
-
-  // Moving-body sibling of applyFocalFrameRide, over the shared
-  // focalRideStep. For every hard focus kind whose object MOVES in the
-  // local frame as `t` advances — a planet sweeping its orbit, a probe
-  // running its trajectory — the object's full live local position plays
-  // the role the star ride's perturbation does: its frame-to-frame delta
-  // is what the camera / target / transition caches translate by, so the
-  // object stays glued to controls.target, pan offsets survive, and the
-  // camera rides the whole trajectory at any fast-forward rate. Seed
-  // frames (focus change, warp) resync the baseline.
-  private applyMovingFocalRide(): void {
-    const focused = this.focus.getFocusedTarget();
-    if (focused === null || !KIND_TRAITS[focused.kind].moving) {
-      this._movingRideIdx = null;
-      return;
-    }
-    const idx = focused.idx;
-    const live = this._movingRideLive;
-    if (!this.focusables[focused.kind].localPositionInto(idx, live)) {
-      this._movingRideIdx = null;
-      return;
-    }
-    const step = focalRideStep({
-      focal: idx,
-      rideFocalIdx: this._movingRideIdx,
-      warpActive: this.warp.isActive(),
-      focalPert: live,
-      lastAppliedPert: this._movingRideLast,
-      liveLocal: live,
-      target: this.controls.target,
-      cameraPosition: this.camera.position,
-      observeMode: this.focus.getCameraMode() === 'observe',
-    });
-    this._movingRideIdx = step.rideFocalIdx;
-    this._movingRideLast.set(step.px, step.py, step.pz);
-    this._movingRideDelta.set(step.dx, step.dy, step.dz);
-    this.applyRideDelta(this._movingRideDelta);
+    return { ...counts, inFrame: this.extinction.countInFrame() };
   }
 
   /** Debug-HUD view of the disc/glow routing for one star at a given
@@ -1546,26 +1308,18 @@ export class Stellata implements FrameAnchor {
     return this.filter.chart ? Math.max(px, this.chartDiscPxFor(c.appMag)) : px;
   }
 
-  /** Dust extinction the shader will apply to this star, in magnitudes.
-   *  Zero when the prepass is inert — the in-vertex fallback still dims
-   *  the star, but reproducing its march on the CPU would need the
-   *  ~128 MiB voxel grid the loader uploads and drops. Erring toward
-   *  "pickable" there keeps the fallback path's behaviour unchanged. */
-  private extinctionAvMagFor(idx: number): number {
-    const raw = this.extinctionPrepass?.readAvMag(idx);
-    if (raw === null || raw === undefined) return 0;
-    return raw * this.sharedUniforms.uDustEnabled.value
-      * this.sharedUniforms.uExtinctionStrength.value;
-  }
-
   /** Whether the renderer puts a pixel on screen for this star, and the
    *  disc radius it actually draws — the pick gate proper, as against
    *  `drawCutoffMag`'s intrinsic-magnitude prefilter. Runs per pick
    *  candidate, never per frame
    *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
   private resolveStarPick(idx: number): ResolvedCandidate {
+    // No A_V answer errs toward pickable: the fallback path still dims the
+    // star, and reproducing its march on the CPU needs the voxel grid the
+    // loader uploads and drops.
+    const avMag = this.extinction.avMagAt(idx);
     const c = starPhysics.renderedSizeComponents(
-      this.starSizeInputs, idx, this.pickSizeScratch, this.extinctionAvMagFor(idx),
+      this.starSizeInputs, idx, this.pickSizeScratch, avMag === null ? 0 : avMag,
     );
     return resolveStarPickVisibility({
       focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
@@ -1579,53 +1333,6 @@ export class Stellata implements FrameAnchor {
       thresholdMag: this.exposure.getThresholdMag(),
       whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
     });
-  }
-
-  /** User-facing extinction multiplier scaling the A_V re-added on top of
-   *  the intrinsic (build-time de-extincted) catalog. 0 = dust-free
-   *  universe (stars at intrinsic brightness/colour everywhere, not
-   *  "observed from Sol"); 1 = physical realism; values above 1 amplify
-   *  dust visually. Independent of attachDust — if no dust is loaded, this
-   *  has no effect. Also drives the Milky Way background so the
-   *  dust-darkened regions of the band track the same knob. */
-  setExtinctionStrength(x: number) {
-    this.sharedUniforms.uExtinctionStrength.value = Math.max(0, x);
-    this.milkyway.setExtinctionStrength(x);
-  }
-
-  /** Dev-console A/B switch for the per-star A_V prepass. false parks the
-   *  star shader on the legacy in-vertex raymarch (the before/after
-   *  comparison path); true restores the cache. No-op until dust
-   *  attaches. */
-  setExtinctionPrepassEnabled(on: boolean) {
-    this.extinctionPrepass?.setEnabled(on);
-  }
-
-  /** Whether the A_V prepass cache is live this frame (dust attached,
-   *  float target, not parked by the A/B switch) — the frame-cost
-   *  harness's presence probe. */
-  isExtinctionPrepassActive(): boolean {
-    return this.extinctionPrepass?.isActive() ?? false;
-  }
-
-  /** Frame-cost lever: invalidate the A_V cache before every update, so the
-   *  recompute the camera-displacement gate skips at a parked camera runs on
-   *  every frame. Every canon vantage is camera-idle, so the kernel is
-   *  otherwise unpriced — `debug/frame-cost/passes/README.md#the-extinction-rows`.
-   * Never leave it on outside a measurement dwell. */
-  setExtinctionRecomputeForced(on: boolean) {
-    this.extinctionRecomputeForced = on;
-  }
-
-  isExtinctionRecomputeForced(): boolean {
-    return this.extinctionRecomputeForced;
-  }
-
-  /** A pointer event says a pick is coming: stage the per-star A_V table
-   *  the star pick gates on, so `extinctionAvMagFor` is exact by the time
-   *  the dwell fires (`webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity`). */
-  notifyPickImminent(): void {
-    this.extinctionPrepass?.warmAvReadback();
   }
 
   /** Debug kill switch for the star core depth-mask draw AND the
@@ -1675,13 +1382,6 @@ export class Stellata implements FrameAnchor {
     const abs = this.tmpConstellationAbs;
     if (!this.focusables[kind].localPositionInto(idx, abs)) return null;
     return namer.nameAt(abs.add(this.worldOffset));
-  }
-
-  /** Catalog of clouds, or null when the cloud module has no layer.
-   *  Exposed for chart-mode name rows. */
-  getCloudCatalog(): CloudCatalog | null {
-    const layer = this.kinds.cloud.layer;
-    return layer ? { count: layer.clouds.length, clouds: layer.clouds } : null;
   }
 
   private tmpConstellationAbs = new THREE.Vector3();
@@ -2013,15 +1713,7 @@ export class Stellata implements FrameAnchor {
     // separate quantity; see solar-system/time/README.md.)
     const nowMs = performance.now();
     this.maybeReAdvanceEpoch();
-    if (this.floatingOrigin.tick()) {
-      // Policy recentre shifted the frame under the moving ride's cached
-      // position — reseed to skip a one-frame jump. Keyed on tick()'s
-      // return, never a recentre listener: a warp mid-fly recentre must
-      // NOT reseed (focalRideStep owns that transition). The binary ride
-      // tracks baseline-relative perturbation (frame-invariant) and
-      // needs none.
-      this._movingRideIdx = null;
-    }
+    if (this.floatingOrigin.tick()) this.focalRides.reseedMoving();
     // Both can invalidate the local-position buffer; StarFrame
     // coalesces them into a single rewrite. Must run before anything
     // downstream reads localPositions.
@@ -2115,22 +1807,7 @@ export class Stellata implements FrameAnchor {
     // first would otherwise drop the other's entries.
     this.occluders.beginFrame();
     this.layers.updateAll(this.frameCtx);
-    if (this.extinctionPrepass !== null) {
-      // Between the ride fan-out and syncUniformNodes, and both edges bind
-      // (webgpu/extinction/refill/README.md#only-what-is-in-frame).
-      // Absolute camera position in JS float64 — same frame convention as
-      // the shader-side iPosition + uWorldOffset reconstruction.
-      perfMark('extinction.prepass');
-      if (this.extinctionRecomputeForced) this.extinctionPrepass.markDirty();
-      this._extinctionView ??= { camera: this.camera, worldOffset: this.worldOffset };
-      this.extinctionPrepass.update(
-        this.camera.position.x + this.worldOffset.x,
-        this.camera.position.y + this.worldOffset.y,
-        this.camera.position.z + this.worldOffset.z,
-        this._extinctionView,
-      );
-      perfMeasure('extinction.prepass');
-    }
+    this.extinction.update(this.frameCtx);
     this.cadence.refresh({
       t: this.frameCtx.t,
       pxPerRadian: this.frameCtx.pxPerRadian,
@@ -2259,11 +1936,7 @@ export class Stellata implements FrameAnchor {
     this.observe.dispose();
     this.focus.dispose();
     this.controls.dispose();
-    // The prepass's refill kernel binds the compaction's dispatch buffer, so
-    // it has to drop its bind groups before the star layer releases that
-    // buffer (webgpu/extinction/refill/README.md#the-kernel-bounds-itself-by-the-listed-length).
-    this.extinctionPrepass?.dispose();
-    this.extinctionPrepass = null;
+    this.extinction.dispose();
     this.webgpuStarLayer.dispose();
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
@@ -2271,11 +1944,6 @@ export class Stellata implements FrameAnchor {
     this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
     this.hdr.dispose();
-    // The dust voxel grid is the largest single GPU allocation in the app
-    // (~128 MiB Data3DTexture). MilkyWay shares the same texture handle but
-    // doesn't own it.
-    this.dust?.dispose();
-    this.dust = null;
     // After every layer and the prepass: those hand their texture slots
     // back to the seam's placeholders, which this frees. Before the
     // renderer, so the releases go through a live device.

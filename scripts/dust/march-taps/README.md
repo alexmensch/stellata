@@ -95,6 +95,6 @@ beyond 1 Mpc is not covered by this table.
 `fp32March` prices the **geometry** alone. The sampler interpolates
 between texels at its own limited sub-texel precision and the GPU's `exp`
 is not correctly rounded; neither is modelled here, so this is a floor on
-the divergence, not a bound on it. `stellata.verifyExtinction()` cannot
+the divergence, not a bound on it. `stellata.extinction.verifyParity()` cannot
 see any of it either — it compares two single-precision stages against
 each other.

@@ -109,9 +109,11 @@ function recomputeStub(forced: boolean, prepassActive: boolean): {
 } {
   const state = { forced };
   const stellata = {
-    isExtinctionRecomputeForced: () => state.forced,
-    isExtinctionPrepassActive: () => prepassActive,
-    setExtinctionRecomputeForced: (on: boolean) => { state.forced = on; },
+    extinction: {
+      isRecomputeForced: () => state.forced,
+      isPrepassActive: () => prepassActive,
+      setRecomputeForced: (on: boolean) => { state.forced = on; },
+    },
   } as unknown as Stellata;
   return { stellata, state };
 }

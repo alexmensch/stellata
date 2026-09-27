@@ -17,7 +17,7 @@ import type {
   DrawnCoordSphereFrame,
 } from '../galactic/coord-spheres/coord-sphere';
 import type { TargetKind } from '../camera/focus/focus-target';
-import type { CameraMode } from '../stellata';
+import type { CameraMode } from '../camera/focus/focus-controller';
 
 export type ReferenceFrameKey =
   | DrawnCoordSphereFrame

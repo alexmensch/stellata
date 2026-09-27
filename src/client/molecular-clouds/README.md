@@ -44,10 +44,17 @@ reaches nothing and its A/B would price zero.
 The cloud kind module (`cloud-module.ts`) owns the runtime lifecycle:
 its `load` fetches `public/clouds.json` via `cloud-loader.ts`
 (version gate: v3; the client reads the geometry + density-model fields
-+ the curated `aliases` and ignores the build-side `noiseModel` block) and
++ the curated `aliases` and ignores the build-side `noiseModel` block and
+the `count` header, since `clouds.length` is the count) and
 `public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed
 meshes; a missing artifact means every cloud uses its ellipsoid rim),
 and its `attach` constructs the layer at the kind's roster position.
+`catalog` is the loaded catalogue as a `Late` ([Late values](../util/late/README.md)),
+settled by `load` — absent when `clouds.json` is missing, empty or
+unreadable — and the one copy every leg reads. It is ready before
+`attach` builds the layer, so a reader needing positions still asks the
+focusable leg, which answers false until then. Chart mode's cloud names
+match on it every tick.
 Each cloud carries a frozen Stellata ID (`sid`, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)); the
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
