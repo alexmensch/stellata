@@ -53,11 +53,12 @@ src/client/star-pipeline/extinction/
 The dust manifest resolves on its own schedule, tied to neither boot wave
 ([Boot in two waves](../../README.md#boot-in-two-waves)), so `ExtinctionAttachment` holds the
 `DustField` and the prepass built over it in **one** `Late` cell
-([Late values](../../util/late/README.md)): the two land, re-attach and
-detach together, and nothing can hold a prepass for a field that has gone.
+([Late values](../../util/late/README.md)): the two land and are
+released together, and nothing can hold a prepass for a field that has gone.
 `main.ts` calls `attach(field)`, or `attach(null)` when the manifest is
-missing; `attach(null)` detaches and concludes the cell. The prepass is built on the first attach and kept across a
-re-attach, which only releases the replaced field.
+missing, which concludes the cell and writes nothing — the boot defaults are
+already the no-dust state. The cell settles **once**, and a second `attach`
+throws.
 
 Every reader is per-call, so each matches on the cell and none observes it:
 `update` (the frame loop, between the scene fan-out and the uniform-node

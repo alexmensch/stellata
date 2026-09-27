@@ -27,7 +27,7 @@ function fakeDust() {
     texture: new THREE.Data3DTexture(),
     params: { boundsHalfPc: 1250, densityMin: 1e-6, logRatio: 5, avPerDensityPerPc: 3 },
     onProgress: (h: () => void) => { listeners.push(h); },
-    dispose: vi.fn(),
+    dispose: vi.fn(() => { listeners.length = 0; }),
   };
   return { dust: dust as unknown as DustField, dispose: dust.dispose, progress: () => listeners.forEach((h) => h()) };
 }
@@ -94,36 +94,30 @@ describe('ExtinctionAttachment', () => {
     expect(deps.invalidate).toHaveBeenCalledWith('dust-chunk');
   });
 
-  it('keeps one prepass across a re-attach and releases the replaced field', () => {
-    const { attachment, deps } = makeAttachment();
-    const a = fakeDust();
-    const b = fakeDust();
-    attachment.attach(a.dust);
-    attachment.attach(b.dust);
-    expect(deps.webgpu.attachExtinctionPrepass).toHaveBeenCalledTimes(1);
-    expect(a.dispose).toHaveBeenCalledTimes(1);
-    expect(b.dispose).not.toHaveBeenCalled();
+  it('a missing manifest concludes the slot and wires nothing', () => {
+    const { attachment, deps, uniforms } = makeAttachment();
+    attachment.attach(null);
+    expect(deps.webgpu.attachExtinctionPrepass).not.toHaveBeenCalled();
+    expect(deps.webgpu.setDustTexture).not.toHaveBeenCalled();
+    expect(deps.milkyway.attachDust).not.toHaveBeenCalled();
+    expect(uniforms.uDustEnabled.value).toBe(0);
   });
 
-  it('a re-attach of the same field does not release it', () => {
-    const { attachment } = makeAttachment();
-    const a = fakeDust();
-    attachment.attach(a.dust);
-    attachment.attach(a.dust);
-    expect(a.dispose).not.toHaveBeenCalled();
+  it('settles once: a second attach throws, whichever settled it', () => {
+    const attached = makeAttachment();
+    attached.attachment.attach(fakeDust().dust);
+    expect(() => attached.attachment.attach(fakeDust().dust)).toThrow(/already settled/);
+    const concluded = makeAttachment();
+    concluded.attachment.attach(null);
+    expect(() => concluded.attachment.attach(fakeDust().dust)).toThrow(/already settled/);
+    expect(concluded.deps.webgpu.attachExtinctionPrepass).not.toHaveBeenCalled();
   });
 
-  it('detach releases field and prepass, and a late chunk reaches no disposed prepass', () => {
-    const { attachment, deps, uniforms, prepass } = makeAttachment();
+  it('a chunk landing after dispose reaches no released prepass', () => {
+    const { attachment, prepass } = makeAttachment();
     const f = fakeDust();
     attachment.attach(f.dust);
-    attachment.attach(null);
-    expect(f.dispose).toHaveBeenCalledTimes(1);
-    expect(prepass.dispose).toHaveBeenCalledTimes(1);
-    expect(uniforms.uDustEnabled.value).toBe(0);
-    expect(uniforms.uDustTexture.value).toBe(null);
-    expect(deps.webgpu.setDustTexture).toHaveBeenLastCalledWith(null);
-    expect(deps.milkyway.attachDust).toHaveBeenLastCalledWith(null);
+    attachment.dispose();
     f.progress();
     expect(prepass.markDirty).toHaveBeenCalledTimes(1);
     expect(attachment.isPrepassActive()).toBe(false);

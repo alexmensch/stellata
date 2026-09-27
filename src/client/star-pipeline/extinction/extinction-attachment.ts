@@ -43,23 +43,18 @@ export class ExtinctionAttachment {
     this.view = { camera: deps.camera, worldOffset: deps.worldOffset };
   }
 
-  /** Null concludes the slot absent; a second field replaces the first and
-   *  keeps the prepass. */
+  /** Settles the slot, once: null (no manifest) concludes it absent. */
   attach(dust: DustField | null): void {
+    if (this.attached.state().status !== 'pending') {
+      throw new Error('ExtinctionAttachment.attach: the dust slot has already settled');
+    }
+    if (dust === null) {
+      this.attached.conclude();
+      return;
+    }
     const { deps } = this;
     deps.invalidate('attach:dust');
     const u = deps.uniforms;
-    const prior = this.attachedOrNull();
-    if (prior !== null && prior.dust !== dust) prior.dust.dispose();
-    if (dust === null) {
-      u.uDustTexture.value = null;
-      u.uDustEnabled.value = 0;
-      deps.webgpu.setDustTexture(null);
-      prior?.prepass.dispose();
-      this.attached.conclude();
-      deps.milkyway.attachDust(null);
-      return;
-    }
     u.uDustTexture.value = dust.texture;
     u.uDustBoundsPc.value = dust.params.boundsHalfPc;
     u.uDustDensityMin.value = dust.params.densityMin;
@@ -67,12 +62,13 @@ export class ExtinctionAttachment {
     u.uDustAvPerDensityPc.value = dust.params.avPerDensityPerPc;
     u.uDustEnabled.value = 1;
     deps.webgpu.setDustTexture(dust.texture);
-    const prepass = prior?.prepass
-      ?? deps.webgpu.attachExtinctionPrepass({ catalog: deps.catalog, uniforms: u });
+    const prepass = deps.webgpu.attachExtinctionPrepass({ catalog: deps.catalog, uniforms: u });
     this.attached.land({ dust, prepass });
     prepass.markDirty();
+    // DustField.dispose drops its listeners, and dispose() releases the field
+    // with the prepass, so this never reaches a released prepass.
     dust.onProgress(() => {
-      this.attachedOrNull()?.prepass.markDirty();
+      prepass.markDirty();
       deps.invalidate('dust-chunk');
     });
     deps.milkyway.attachDust(dust);
