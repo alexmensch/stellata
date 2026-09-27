@@ -10,6 +10,8 @@ the constellation hull is gone and the chart-mode Latin **name** labels stay in
 
 ## Files
 
+- `constellation-figure.ts` (+ test) — `ConstellationFigure`, the shell's
+  `constellationFigure` namespace ([The owner](#the-owner)).
 - `constellation-figure-layer.ts` — `ConstellationFigureLayer`: a
   `THREE.LineSegments` group. Event-driven geometry rebuild (`setFigures`) plus
   a per-frame position refresh (`update`).
@@ -21,6 +23,17 @@ the constellation hull is gone and the chart-mode Latin **name** labels stay in
   `figureAimPoint` ([The aim point](#the-aim-point)). All vitest-pinned.
 - `constellation-figure-pure.test.ts` — endpoint-expansion, exclusion,
   selection and aim-point pins.
+
+## The owner
+
+`ConstellationFigure` (`constellation-figure.ts`) holds the layer, its
+`'state'` subscription and the last selection signature, and builds its own
+scene entry: `clock` at the binaries' rate, because a vertex may be a binary
+member ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)). **It is built after the
+filter, focus and observe controllers**, because it seeds its active set
+from all three in its constructor; the declutter push reaches it through a
+closure that first fires after that. The shell registers the entry after the
+binary and planet walks ([Rebuild vs refresh](#rebuild-vs-refresh)).
 
 ## Why WebGL, not SVG
 
@@ -62,7 +75,7 @@ per-frame refill below is a fixed cost independent of the camera.
 
 - `setFigures(constellations, conIndices, localPositions, excludeStarIdx)` —
   rebuild geometry. `conIndices` is the highlighted one, all 88 (chart), or
-  empty (nothing highlighted). The shell pushes it off `'state'` and skips the
+  empty (nothing highlighted). The owner pushes it off `'state'` and skips the
   rebuild on an unchanged `selectFigures` signature: every fine-grained
   mutation the set reads (focus, filter, cameraMode) pairs with `'state'`
   ([Event bus](../README.md#event-bus-on-stellata)), and so does the observe transition's landing,

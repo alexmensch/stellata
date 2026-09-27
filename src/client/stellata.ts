@@ -131,8 +131,8 @@ import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniform
 import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionAttachment } from './star-pipeline/extinction/extinction-attachment';
 import { BinariesAttachment } from './binaries/binaries-attachment';
-import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
-import { figureAimPoint, selectFigures } from './constellation-figure/constellation-figure-pure';
+import { ConstellationFigure } from './constellation-figure/constellation-figure';
+import { figureAimPoint } from './constellation-figure/constellation-figure-pure';
 import { ConstellationBoundaries } from './constellation-boundaries/constellation-boundaries';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
@@ -290,11 +290,8 @@ export class Stellata implements FrameAnchor {
   readonly input!: InputController;
 
   readonly coordSpheres: CoordSpheres;
-  private constellationFigureLayer: ConstellationFigureLayer;
+  readonly constellationFigure: ConstellationFigure;
   readonly constellationBoundaries: ConstellationBoundaries;
-  // Active-figure-set signature; skips a rebuild when a filter emit didn't
-  // change which constellations draw. Poison '\0' forces the first refresh.
-  private conFigureSig = '\0';
   /** Kind-module record — one module per migrated TargetKind, null while
    *  a kind's wiring is still inline (kinds/README.md). Public so search
    *  and overlays dispatch generic legs (displayName, searchEntries). */
@@ -360,7 +357,7 @@ export class Stellata implements FrameAnchor {
           milkyWayIsobar: (on) => this.milkyway.setIsobar(on),
           orbitRings: (on) => this.solarSystem.orbitRings.setPermitted(on),
           binaryOrbitRings: (on) => this.binaries.orbitPaths.setPermitted(on),
-          constellationFigures: (on) => this.constellationFigureLayer.setPermitted(on),
+          constellationFigures: (on) => this.constellationFigure.setPermitted(on),
         },
         ...collectKindDetailBinds(this.kinds),
       ],
@@ -576,8 +573,6 @@ export class Stellata implements FrameAnchor {
       this.renderGate.invalidate('attach:binaries');
       this.starLocalCluster.setBinaries(settled.status === 'ready' ? settled.value : null);
     });
-    this.constellationFigureLayer = new ConstellationFigureLayer(this.chromeLines);
-    this.scene.add(this.constellationFigureLayer.group);
     this.constellationBoundaries = new ConstellationBoundaries({
       scene: this.scene,
       artifact: boundaries,
@@ -766,10 +761,6 @@ export class Stellata implements FrameAnchor {
       planetRate: this.solarSystem.planetRate,
       onFocus: (handler) => this.bus.on('focus', handler),
     });
-    // Every fine-grained mutation the figure's active set reads — focus,
-    // filter, cameraMode — pairs with 'state', and so does the observe
-    // transition's landing, which no fine-grained event covers.
-    this.on('state', () => { this.refreshConstellationFigure(); });
     this.on('cameraMode', () => this.observeLookPin.invalidate());
     this.coordSpheres = new CoordSpheres({
       scene: this.scene,
@@ -830,9 +821,19 @@ export class Stellata implements FrameAnchor {
     if (catalog.solIndex >= 0) {
       this.focus.setFocus(catalog.solIndex);
     }
-    // Seed the constellation figure now that filters + focus are live (its
-    // handlers only fire on later mutations; a URL restore emits 'filter').
-    this.refreshConstellationFigure();
+    // After filters, focus and observe: the figure seeds its active set from
+    // all three at construction.
+    this.constellationFigure = new ConstellationFigure({
+      scene: this.scene,
+      chromeLines: this.chromeLines,
+      constellations: catalog.constellations,
+      localPositions: this.starFrame.localPositions,
+      filter: () => this.filter,
+      cameraMode: () => this.focus.getCameraMode(),
+      observeAnchorStar: () => this.observe.observeAnchorOf('star'),
+      onState: (handler) => this.bus.on('state', handler),
+      rate: this.binaries.rate,
+    });
     // No camera-position park here. The bare-URL pose is fully owned by
     // first-load.ts (`applyFirstLoadView`) and `?v=` URLs apply their
     // own cam — both run before first paint in main.ts.
@@ -873,25 +874,6 @@ export class Stellata implements FrameAnchor {
     this.bus.on('planetSystem', () => this.renderGate.invalidate('bus:planetSystem'));
     this.input = this.createInputController();
     this.animate();
-  }
-
-  // Push the figure's active set, skipping the rebuild when it is unchanged
-  // ('state' fires on every discrete mutation, filter emits on every slider
-  // drag). The selection rule itself is `selectFigures`.
-  private refreshConstellationFigure(): void {
-    const f = this.filter;
-    const sel = selectFigures({
-      chart: f.chart,
-      highlightCon: f.highlightCon,
-      constellationCount: this.catalog.constellations.length,
-      inObserve: this.focus.getCameraMode() === 'observe',
-      observeAnchorStar: this.observe.observeAnchorOf('star'),
-    });
-    if (sel.signature === this.conFigureSig) return;
-    this.conFigureSig = sel.signature;
-    this.constellationFigureLayer.setFigures(
-      this.catalog.constellations, sel.conIndices, this.localPositions,
-      sel.excludeStarIdx);
   }
 
   // Registration order is per-frame update order —
@@ -944,19 +926,9 @@ export class Stellata implements FrameAnchor {
       }),
       dispose: () => this.starLocalCluster.dispose(),
     });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: this.binaries.rate,
-      },
-      contribution: { kind: 'always' },
-      // After the binary + planet walks so a figure vertex that is a binary
-      // member re-copies its live slot (orbital motion under scrub, epoch
-      // advance, recentre — all land in localPositions with no separate signal).
-      update: () => this.constellationFigureLayer.update(this.localPositions),
-      setMonochrome: (on) => this.constellationFigureLayer.setMonochrome(on),
-      dispose: () => this.constellationFigureLayer.dispose(),
-    });
+    // After the binary + planet walks, so a figure vertex that is a binary
+    // member re-copies its live slot.
+    this.layers.register(this.constellationFigure.entry);
     this.layers.register(this.constellationBoundaries.entry);
     // Below the orbit lock — galactic/README.md#wiring.
     this.layers.register(galacticDiscEntry);

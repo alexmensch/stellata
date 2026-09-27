@@ -179,7 +179,7 @@ The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
 `solarSystem`, `coordSpheres`, `binaries`, `extinction`,
-`constellationBoundaries`, plus the
+`constellationBoundaries`, `constellationFigure`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -241,7 +241,6 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 
@@ -249,9 +248,9 @@ an empty awaiting list.
 interface for both:
 
 - **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
-  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the star-local-cluster,
-  core-mask and constellation-figure entries take it, and carry it when
-  their rows move.
+  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the constellation
+  figure takes it, and the star-local-cluster and core-mask entries carry it
+  when their row moves.
 
 ### Late-attached slots
 
@@ -266,13 +265,11 @@ so it has no pending state at all — the IAU boundary artifact
 | --- | --- | --- |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 
-Two catalogue-prefix reads also sit in the shell: the constellation figure
-and `aimAtConstellation`'s centroid read figure vertices from
-`localPositions` in wave 1. The figure re-reads every frame, so a vertex
-outside the loaded prefix draws at `(0,0,0)` only until its chunk lands;
-the centroid is read once per aim and keeps whatever it got. Both are
-correct by construction, because the build fails unless every figure vertex
-sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
+Two catalogue-prefix reads are correct by construction rather than by a
+type: the constellation figure and its aim point
+([The aim point](constellation-figure/README.md#the-aim-point)) read figure vertices from
+`localPositions` from first paint, and the aim point keeps what it read.
+The build fails unless every figure vertex sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
 A third prefix read sits outside the shell: the extinction prepass sorts its
 dispatch order over the table it attaches to, which is normally still
 streaming, and re-sorts once on the refresh that completes it
