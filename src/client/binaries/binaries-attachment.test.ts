@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { CADENCE_REPORT_STILL, type CadenceReport } from '../render-gate/cadence/clock-cadence-pure';
@@ -113,11 +113,7 @@ function rig() {
 
 const table = () => makeBinaries([makeRelation({ primaryIdx: 0, secondaryIdx: 1 })]);
 
-beforeEach(() => {
-  log.length = 0;
-  vi.stubGlobal('window', { innerHeight: 600 });
-});
-afterEach(() => { vi.unstubAllGlobals(); });
+beforeEach(() => { log.length = 0; });
 
 describe('BinariesAttachment before a table lands', () => {
   it('reads as pending, walks nothing and reports a still rate', () => {

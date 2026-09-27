@@ -94,7 +94,7 @@ export class BinariesAttachment {
           s.status === 'ready' ? s.value.orbits : null,
           deps.localPositions,
           ctx.camera,
-          window.innerHeight,
+          deps.uniforms.uViewport.value.y,
           deps.observeAnchorStar(),
         );
       },
