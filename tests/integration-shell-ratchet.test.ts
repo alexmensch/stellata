@@ -7,7 +7,7 @@ const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
   'adaptation', 'aim', 'binaries', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
-  'clock', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'extinction', 'exposureFrame', 'filters',
+  'clock', 'constellationBoundaries', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'extinction', 'exposureFrame', 'filters',
   'floatingOrigin', 'focalRides', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
@@ -18,12 +18,11 @@ const AWAITING_EXTRACTION: readonly string[] = [
   '_epochFollowDelta',
   '_realtimeFramesNeeded', '_suppressPulsation', 'absorbedSuppressCount',
   'conFigureSig',
-  'constellationBoundaryLayer', 'constellationFigureLayer', 'constellationLabels',
-  'constellationNamer', 'coreMaskEnabled',
+  'constellationFigureLayer', 'coreMaskEnabled',
   'frameCtx', 'glslResidentsChecked',
   'offCatalogRecords', 'passDebugScratch',
   'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',
-  'starLocalCluster', 'tmpConstellationAbs',
+  'starLocalCluster',
   'trackballSettle', 'webgpuStarLayer',
 ];
 

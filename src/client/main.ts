@@ -118,14 +118,11 @@ async function main() {
       return;
     }
 
-    const stellata = new Stellata({ canvas, catalog, kinds, webgpu });
+    const stellata = new Stellata({ canvas, catalog, kinds, webgpu, boundaries });
     // Dev-console access: `stellata.extinction.setStrength(X)` etc. Handy for
     // dust debugging and not worth gating behind an env check on a solo
     // project.
     window.stellata = stellata;
-    // IAU constellation boundaries — a chart-only declutter element at floor
-    // 'all'; absent artifact = no arcs.
-    if (boundaries) stellata.attachConstellationBoundaries(boundaries);
 
     // Focus-card "Orbiting <host>" breadcrumbs read the same star labels
     // the search corpus shows.

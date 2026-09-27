@@ -178,7 +178,8 @@ Four things follow, and each has cost a defect:
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
-`solarSystem`, `coordSpheres`, `binaries`, `extinction`, plus the
+`solarSystem`, `coordSpheres`, `binaries`, `extinction`,
+`constellationBoundaries`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -201,10 +202,9 @@ lerps, so every aim takes it the same way),
 belongs on the controller.
 
 **Forwarders still on the shell leave with their cluster, and so do their
-callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
-`attachConstellationBoundaries` — moves
-with its row, and `main.ts` calls the new owner through a readonly
-namespace (`stellata.binaries.attach`, `stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
+callers** ([Decomposing the shell](#decomposing-the-shell)); `main.ts` reaches a late
+attachment through its owner's readonly namespace (`stellata.binaries.attach`,
+`stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
 `FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
 `starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
 `floatingOrigin`; with the star render machinery, the focus controller's
@@ -256,14 +256,14 @@ interface for both:
 ### Late-attached slots
 
 A cluster holding a value that lands after construction moves it as a
-`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the constellation
-extraction converts its row's slots as it moves rather than carrying a
-`T | null` twice. The binaries and dust slots have converted
-([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). Clusters holding no late slot do not wait.
+`Late<T>` ([Boot in two waves](#boot-in-two-waves)); the binaries and dust slots have
+([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). A value `main.ts` has
+already loaded when it builds the shell is a constructor argument instead,
+so it has no pending state at all — the IAU boundary artifact
+([The owner](constellation-boundaries/README.md#the-owner)). Clusters holding no late slot do not wait.
 
 | Slot | Lands | Not-ready answer today |
 | --- | --- | --- |
-| Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 
 Two catalogue-prefix reads also sit in the shell: the constellation figure

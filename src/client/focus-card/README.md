@@ -43,7 +43,7 @@ on Sol, so a direction from Sol is meaningless for them.
   survives a missing boundary artifact, and the designation
   constellation lives beside it
   ([ρ Aquilae](../constellation-boundaries/iau-geometry/README.md#ρ-aquilae)).
-- **Every other kind** resolves through `Stellata.constellationOf(kind,
+- **Every other kind** resolves through `stellata.constellationBoundaries.constellationOf(kind,
   idx)`, one grid lookup against the shipped IAU partition, so a galaxy
   and the stars around it are answered by the same boundaries.
   `constellation-row.ts` owns the row: zero rows or one, so a provider

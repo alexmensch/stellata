@@ -66,7 +66,6 @@ import {
   KIND_ROSTER,
   type BuiltKindModules,
 } from './kinds/kind-modules';
-import type { ConstellationOfKind } from './focus-card/constellation-row';
 import { FocalRides } from './camera/focus/focal-ride/focal-rides';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-ride/focal-anchor-policy';
 import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
@@ -117,7 +116,6 @@ import type { Mutable } from './util/mutable';
 import {
   cameraAbsInto,
   SceneLayerRegistry,
-  updateWarpGatedRefLayer,
   type ContributionCensus,
   type FrameCtx,
   type SceneLayer,
@@ -136,12 +134,7 @@ import { ExtinctionAttachment } from './star-pipeline/extinction/extinction-atta
 import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigureLayer } from './constellation-figure/constellation-figure-layer';
 import { selectFigures } from './constellation-figure/constellation-figure-pure';
-import { ConstellationBoundaryLayer } from './constellation-boundaries/constellation-boundary-layer';
-import {
-  createConstellationRegions,
-  type ConstellationLabelAnchor,
-  type ConstellationNamer,
-} from './constellation-boundaries/constellation-regions';
+import { ConstellationBoundaries } from './constellation-boundaries/constellation-boundaries';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
 
@@ -156,6 +149,8 @@ export interface StellataOptions {
    *  Built before the shell, because only a live device can refuse
    *  itself and that refusal is the gate page, not a fallback. */
   webgpu: WebGpuSeam;
+  /** The IAU boundary artifact, or null when it is missing or invalid. */
+  boundaries: BoundaryArtifact | null;
 }
 
 /** A scene a boot draws, named so a debug read can say which one a
@@ -297,11 +292,7 @@ export class Stellata implements FrameAnchor {
 
   readonly coordSpheres: CoordSpheres;
   private constellationFigureLayer: ConstellationFigureLayer;
-  private constellationBoundaryLayer: ConstellationBoundaryLayer;
-  // Empty / null until attachConstellationBoundaries lands the artifact, which
-  // is optional — every consumer must read them as "not yet".
-  private constellationLabels: readonly ConstellationLabelAnchor[] = [];
-  private constellationNamer: ConstellationNamer | null = null;
+  readonly constellationBoundaries: ConstellationBoundaries;
   // Active-figure-set signature; skips a rebuild when a filter emit didn't
   // change which constellations draw. Poison '\0' forces the first refresh.
   private conFigureSig = '\0';
@@ -361,7 +352,7 @@ export class Stellata implements FrameAnchor {
 
   readonly focusables!: FocusableProviders;
 
-  constructor({ canvas, catalog, kinds, webgpu }: StellataOptions) {
+  constructor({ canvas, catalog, kinds, webgpu, boundaries }: StellataOptions) {
     this.catalog = catalog;
     this.kinds = kinds;
     this.declutter = new SceneDeclutter({
@@ -588,9 +579,18 @@ export class Stellata implements FrameAnchor {
     });
     this.constellationFigureLayer = new ConstellationFigureLayer(this.chromeLines);
     this.scene.add(this.constellationFigureLayer.group);
-    this.constellationBoundaryLayer =
-      new ConstellationBoundaryLayer(sharedUniforms, this.chromeLines);
-    this.scene.add(this.constellationBoundaryLayer.group);
+    this.constellationBoundaries = new ConstellationBoundaries({
+      scene: this.scene,
+      artifact: boundaries,
+      constellations: catalog.constellations,
+      uniforms: sharedUniforms,
+      chromeLines: this.chromeLines,
+      limitMag: () => this.exposure.getLimitMag(),
+      onFilter: (handler) => this.bus.on('filter', handler),
+      permitted: () => this.declutter.permits('constellationBoundaries'),
+      localPositionInto: (kind, idx, out) => this.focusables[kind].localPositionInto(idx, out),
+      worldOffset: this.worldOffset,
+    });
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
     this.adaptation = new SceneAdaptation({
@@ -635,7 +635,7 @@ export class Stellata implements FrameAnchor {
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getMonochrome: () => this.monochrome,
       detailPermits: (id) => this.declutter.permits(id),
-      constellationOf: (kind, idx) => this.constellationOf(kind, idx),
+      constellationOf: (kind, idx) => this.constellationBoundaries.constellationOf(kind, idx),
       onFrame: (handler) => this.bus.on('frame', handler),
       occluders: this.occluders,
       requestRender: (reason) => this.renderGate.invalidate(`kind:${reason}`),
@@ -771,14 +771,6 @@ export class Stellata implements FrameAnchor {
     // filter, cameraMode — pairs with 'state', and so does the observe
     // transition's landing, which no fine-grained event covers.
     this.on('state', () => { this.refreshConstellationFigure(); });
-    // The boundary fade window is a function of the magnitude limit — a
-    // fainter limit admits stars nearer their walls — pushed rather than read
-    // per frame so the table interpolation runs once per instrument change.
-    // The layer draws in chart only, which hard-clips at the instrument limit
-    // and inherits no exposure state, so the EV trim must not move the window.
-    this.on('filter', () => {
-      this.constellationBoundaryLayer.setMagnitudeLimit(this.exposure.getLimitMag());
-    });
     this.on('cameraMode', () => this.observeLookPin.invalidate());
     this.coordSpheres = new CoordSpheres({
       scene: this.scene,
@@ -966,18 +958,7 @@ export class Stellata implements FrameAnchor {
       setMonochrome: (on) => this.constellationFigureLayer.setMonochrome(on),
       dispose: () => this.constellationFigureLayer.dispose(),
     });
-    this.layers.register({
-      // B1875 boundary arcs on a Sol-centred sphere: a frozen-epoch
-      // partition, camera-anchored. No term in it is a function of t.
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      // Chart-only — floor 'never' in the realistic column.
-      update: (ctx) => updateWarpGatedRefLayer(
-        this.constellationBoundaryLayer, ctx,
-        this.declutter.permits('constellationBoundaries')),
-      setMonochrome: (on) => this.constellationBoundaryLayer.setMonochrome(on),
-      dispose: () => this.constellationBoundaryLayer.dispose(),
-    });
+    this.layers.register(this.constellationBoundaries.entry);
     // Below the orbit lock — galactic/README.md#wiring.
     this.layers.register(galacticDiscEntry);
     this.layers.register(this.coordSpheres.entry);
@@ -1342,49 +1323,6 @@ export class Stellata implements FrameAnchor {
   setCoreMaskEnabled(on: boolean) {
     this.coreMaskEnabled = on;
   }
-
-  /** Attach the IAU boundary arcs. The layer is constructed in the ctor and
-   *  already in the scene; this builds its geometry and seeds the fade window
-   *  once the async load resolves, then binds the artifact's other two
-   *  readings — the chart label anchors, and the membership lookup every
-   *  non-stellar focus card resolves through. */
-  attachConstellationBoundaries(artifact: BoundaryArtifact): void {
-    this.renderGate.invalidate('attach:boundaries');
-    this.constellationBoundaryLayer.attach(artifact, this.exposure.getLimitMag());
-    this.constellationBoundaryLayer.setMonochrome(this.monochrome);
-    const regions = createConstellationRegions(artifact, this.catalog.constellations);
-    this.constellationLabels = regions.labelAnchors;
-    this.constellationNamer = regions.namer;
-  }
-
-  /** Latin-name anchors for the chart-mode label engine — one per IAU region,
-   *  so Serpens carries two. Empty until the boundary artifact loads. */
-  get constellationLabelAnchors(): readonly ConstellationLabelAnchor[] {
-    return this.constellationLabels;
-  }
-
-  /** The IAU constellation a focusable object's own position falls in, in the
-   *  Sol frame — the convention every catalogue, almanac and observing guide
-   *  reports, and one of the two exceptions the focus card's camera-relative
-   *  rule admits. For the bodies that move it is an ephemeris statement, not a
-   *  property: a planet's answer tracks `getT()` because its position does.
-   *
-   *  Null before the boundary artifact loads, for Sol at the origin, and for
-   *  an object with no resolvable position this frame.
-   *
-   *  `star` is excluded because byte 34 is the shipped authority there — it
-   *  survives a missing artifact and carries the designation-constellation
-   *  split beside it — and `shell` because the Local Bubble and the heliopause
-   *  are centred on Sol, so a direction from Sol says nothing about them. */
-  constellationOf(kind: ConstellationOfKind, idx: number): string | null {
-    const namer = this.constellationNamer;
-    if (!namer) return null;
-    const abs = this.tmpConstellationAbs;
-    if (!this.focusables[kind].localPositionInto(idx, abs)) return null;
-    return namer.nameAt(abs.add(this.worldOffset));
-  }
-
-  private tmpConstellationAbs = new THREE.Vector3();
 
   /** The core depth-mask's one visibility write. Whether it should be on
    *  is the layer's contribution verdict; this is only the apply. */

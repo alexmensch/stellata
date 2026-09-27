@@ -6,7 +6,7 @@ import type { FocusCardRow } from './focus-card-types';
 
 /** The kinds that resolve the row positionally. `star` and `shell` are
  *  excluded at the type level rather than by convention — see
- *  `Stellata.constellationOf`. */
+ *  `ConstellationBoundaries.constellationOf`. */
 export type ConstellationOfKind = Exclude<TargetKind, 'star' | 'shell'>;
 
 /**

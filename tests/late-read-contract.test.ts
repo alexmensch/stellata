@@ -69,8 +69,9 @@ const NO_SELECTION = 'verdict: null is "nothing selected", its own answer';
 const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   recenterOrigin: 'verdict: null is "no recentre happened"',
   getOrbitFramePort: 'install seam: null is "no instrument", which is its own answer',
-  constellationOf: 'late slot awaiting Late: the boundary namer attaches after construction',
   'adaptation.getLandedStatistic': 'verdict: null is "no reduction has landed", which a dark frame\'s 0 cannot say',
+  'constellationBoundaries.constellationOf':
+    'verdict: null is "nothing to name" — the artifact arrives at construction, so never "not yet"',
   'observe.observeAnchorOf': NO_SELECTION,
   'observe.getProgress': 'verdict: null is "no observe transition running"',
   'focus.getFocusedStar': NO_SELECTION,

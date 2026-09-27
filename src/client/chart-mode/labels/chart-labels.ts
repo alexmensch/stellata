@@ -646,7 +646,7 @@ export class ChartLabels {
     }
     if (showConNames) {
       const worldOffset = stellata.getWorldOffset();
-      for (const anchor of stellata.constellationLabelAnchors) {
+      for (const anchor of stellata.constellationBoundaries.labelAnchors) {
         const minAppMag = tables.value.conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > limitMag) continue;
         if (!projectVecInto(
