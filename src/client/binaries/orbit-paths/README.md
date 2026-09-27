@@ -3,7 +3,8 @@
 The render layer that traces the elliptical paths each member of the
 focused multi-star system sweeps. Depends one-directionally on the
 parent folder's loader, relation cache, Kepler math and focal chain
-(`../README.md`); nothing there imports this back.
+(`../README.md`); the one file there that imports this back is
+`../binaries-attachment.ts`, which constructs it.
 
 ## Files
 

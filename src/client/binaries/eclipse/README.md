@@ -1,8 +1,9 @@
 # Eclipse photometry
 
 `EclipsePhotometryField` — the per-frame geometric-occlusion dim on a
-binary's back component. Depends one-directionally on the shared loader
-and relation cache in `../`; nothing in `../` imports this folder.
+binary's back component. Depends on the shared loader and relation cache
+in `../`; the one file there that imports this folder is
+`../binaries-attachment.ts`, which constructs it.
 
 ## Files in this area
 
