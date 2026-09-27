@@ -44,7 +44,8 @@ reaches nothing and its A/B would price zero.
 The cloud kind module (`cloud-module.ts`) owns the runtime lifecycle:
 its `load` fetches `public/clouds.json` via `cloud-loader.ts`
 (version gate: v3; the client reads the geometry + density-model fields
-+ the curated `aliases` and ignores the build-side `noiseModel` block) and
++ the curated `aliases` and ignores the build-side `noiseModel` block and
+the `count` header, since `clouds.length` is the count) and
 `public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed
 meshes; a missing artifact means every cloud uses its ellipsoid rim),
 and its `attach` constructs the layer at the kind's roster position.

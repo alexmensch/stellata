@@ -57,7 +57,6 @@ export interface Cloud {
 }
 
 export interface CloudCatalog {
-  count: number;
   clouds: Cloud[];
 }
 
@@ -134,5 +133,5 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
     inGrid: c.inGrid,
     embedded: c.embedded,
   }));
-  return { count: raw.count, clouds };
+  return { clouds };
 }
