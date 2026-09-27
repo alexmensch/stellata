@@ -44,9 +44,9 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
   const onFrame = () => {
     if (!visible || frameCount++ % UPDATE_EVERY_N_FRAMES !== 0) return;
     const focus = stellata.focus.getFocusedStar();
-    const rows = stellata.eclipseDebugRows(focus);
+    const rows = stellata.binaries.eclipseDebugRows(focus);
     const lines = [
-      `focus: ${focus ?? 'none'}  active dims: ${stellata.eclipseActiveDimCount}`,
+      `focus: ${focus ?? 'none'}  active dims: ${stellata.binaries.eclipseActiveDimCount}`,
       `relations ${focus === null ? '(cleared gates or dimmed)' : 'touching focus'}: ${rows.length}`,
       '',
     ];
