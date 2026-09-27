@@ -72,7 +72,6 @@ const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   recenterOrigin: 'verdict: null is "no recentre happened"',
   getOrbitFramePort: 'install seam: null is "no instrument", which is its own answer',
   constellationOf: 'late slot awaiting Late: the boundary namer attaches after construction',
-  getCloudCatalog: 'late slot awaiting Late: the cloud layer loads after construction',
 };
 
 function nullableShellReturns(): string[] {

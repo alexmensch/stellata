@@ -16,6 +16,7 @@ import type {
   ObjectKindModule,
 } from '../kinds/kind-module';
 import type { SceneLayer } from '../scene/scene-layer';
+import { LateCell, type Late } from '../util/late/late';
 import { createMolecularCloudLabels } from './cloud-labels';
 import { loadClouds, type CloudCatalog } from './cloud-loader';
 import { loadCloudSurfaces, type CloudSurface } from './cloud-surfaces-loader';
@@ -25,6 +26,8 @@ export interface CloudKindModule extends ObjectKindModule<'cloud'> {
   /** The render layer, for dev-console tuning + chart-mode name rows.
    *  Null before attach and when the clouds.json artifact is absent. */
   readonly layer: MolecularClouds | null;
+  /** Settles at attach: absent when clouds.json is missing or empty. */
+  readonly catalog: Late<CloudCatalog>;
   /** Silhouette pixel diameter at the live camera pose — the provider's
    *  renderedSizePx leg and the labels' screen-size gate. */
   renderedSizePx(idx: number): number;
@@ -36,6 +39,7 @@ export function createCloudKindModule(): CloudKindModule {
   let ctx: KindContext | null = null;
   let layer: MolecularClouds | null = null;
   let disposeLabels: (() => void) | null = null;
+  const catalogCell = new LateCell<CloudCatalog>();
   const tmpLocal = new THREE.Vector3();
   const tmpDir = new THREE.Vector3();
 
@@ -86,6 +90,7 @@ export function createCloudKindModule(): CloudKindModule {
     get layer(): MolecularClouds | null {
       return layer;
     },
+    catalog: catalogCell,
     renderedSizePx,
 
     async load(baseUrl: string): Promise<void> {
@@ -97,8 +102,12 @@ export function createCloudKindModule(): CloudKindModule {
 
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
-      if (!catalog || catalog.clouds.length === 0) return null;
+      if (!catalog || catalog.clouds.length === 0) {
+        catalogCell.conclude();
+        return null;
+      }
       layer = new MolecularClouds(catalog, surfaces, kindCtx.webgpu.cloudMaterials);
+      catalogCell.land(catalog);
       layer.setMonochrome(kindCtx.getMonochrome());
       kindCtx.scene.add(layer.group);
       return {

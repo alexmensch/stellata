@@ -48,6 +48,9 @@ its `load` fetches `public/clouds.json` via `cloud-loader.ts`
 `public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed
 meshes; a missing artifact means every cloud uses its ellipsoid rim),
 and its `attach` constructs the layer at the kind's roster position.
+`catalog` is the loaded catalogue as a `Late` ([Late values](../util/late/README.md)),
+settled by `attach`: ready with the layer, absent when `clouds.json` is
+missing or empty. Chart mode's cloud names match on it every tick.
 Each cloud carries a frozen Stellata ID (`sid`, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)); the
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs

@@ -85,8 +85,10 @@ describe('cloud kind module', () => {
     expect(m.displayName(0)).toBe('');
     expect(m.pinnable(0)).toBe(false);
     await m.load('/');
+    expect(m.catalog.state().status).toBe('pending');
     const ctx = makeCtx();
     expect(m.attach(ctx)).toBeNull();
+    expect(m.catalog.state().status).toBe('absent');
     expect(m.layer).toBeNull();
     expect(m.sids()).toBeNull();
     expect(m.searchEntries()).toEqual([]);
@@ -102,9 +104,12 @@ describe('cloud kind module', () => {
     const m = createCloudKindModule();
     await m.load('/');
     const ctx = makeCtx();
+    expect(m.catalog.state().status).toBe('pending');
     const layer = m.attach(ctx);
     expect(layer).not.toBeNull();
     expect(m.layer?.clouds).toHaveLength(2);
+    const settled = m.catalog.state();
+    expect(settled.status === 'ready' && settled.value.clouds).toBe(m.layer?.clouds);
 
     expect(m.sids()).toEqual([1, 2]);
     expect(m.searchEntries().map((e) => e.label))

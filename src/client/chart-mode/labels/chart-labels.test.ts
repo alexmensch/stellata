@@ -24,6 +24,8 @@ import type { Stellata } from '../../stellata';
 import type { ChartModeContext } from '../chart-mode';
 import { assumeComplete, type CompleteCatalog } from '../../loaders/catalog-loader';
 import { LateCell } from '../../util/late/late';
+import { lateAbsent } from '../../util/late/late-fixture';
+import type { CloudCatalog } from '../../molecular-clouds/cloud-loader';
 
 describe('chart-labels / computeAppMag', () => {
   it('equals absmag at exactly 10 pc (distance modulus = 0)', () => {
@@ -575,8 +577,10 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       },
       declutter: { permits: patch.detailPermits ?? (() => true) },
       renderGate: { invalidate: (reason: string) => { invalidations.push(reason); } },
-      getCloudCatalog: () => null,
-      kinds: { planet: { field: { liveInstanceCount: 0 } } },
+      kinds: {
+        planet: { field: { liveInstanceCount: 0 } },
+        cloud: { catalog: lateAbsent<CloudCatalog>() },
+      },
       on: (name: string, fn: () => void) => {
         let set = handlers.get(name);
         if (!set) { set = new Set(); handlers.set(name, set); }
