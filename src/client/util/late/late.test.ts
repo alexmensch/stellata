@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { LateCell, lateFromPromise, mapLate, type SettledState } from './late';
+import {
+  LateCell, lateFromPromise, mapLate, type Late, type LateState, type SettledState,
+} from './late';
 
 describe('LateCell', () => {
   it('starts pending and notifies nobody', () => {
@@ -90,6 +92,31 @@ describe('mapLate', () => {
     off();
     cell.land(3);
     expect(seen).toEqual([{ status: 'ready', value: '#1' }, { status: 'absent' }]);
+  });
+
+  it('reads the fresh projection from an observer the source heard first', () => {
+    const cell = new LateCell<number>();
+    const reads: LateState<string>[] = [];
+    let late: Late<string> | null = null;
+    cell.observe(() => { if (late) reads.push(late.state()); });
+    late = mapLate(cell, (v) => `#${v}`);
+    cell.land(1);
+    expect(reads).toEqual([{ status: 'ready', value: '#1' }]);
+  });
+
+  it('composes: a projection of a projection projects each settle once', () => {
+    const cell = new LateCell<number>();
+    const inner = vi.fn((v: number) => v * 2);
+    const outer = vi.fn((v: number) => v + 1);
+    const late = mapLate(mapLate(cell, inner), outer);
+    const seen: SettledState<number>[] = [];
+    late.observe((s) => seen.push(s));
+    cell.land(3);
+    late.state();
+    expect(seen).toEqual([{ status: 'ready', value: 7 }]);
+    expect(late.state()).toEqual({ status: 'ready', value: 7 });
+    expect(inner).toHaveBeenCalledTimes(1);
+    expect(outer).toHaveBeenCalledTimes(1);
   });
 
   it('runs a late observer immediately on an already-settled source', () => {
