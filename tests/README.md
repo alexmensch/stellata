@@ -93,9 +93,11 @@ late-read-contract.test.ts
                          type checker over src/client (~3 s), since a
                          syntactic scan cannot tell a catalogue's `count`
                          from a planet host's. And every public method or
-                         getter on `Stellata` returning `| null` is
-                         classified in NULLABLE_SHELL_RETURNS; a late slot
-                         there converts to Late<T> and leaves the list.
+                         getter returning `| null` on `Stellata`, or on a
+                         class it exposes as a readonly namespace field
+                         (keyed `namespace.method`), is classified in
+                         NULLABLE_SHELL_RETURNS; a late slot there
+                         converts to Late<T> and leaves the list.
 node-import-boundary.test.ts
                          src/client/ ships to a browser, so no module
                          there may import a `node:` builtin or a

@@ -165,7 +165,7 @@ Four things follow, and each has cost a defect:
   that can be missing must be concluded, or its readers wait forever.
 - **A test: `tests/late-read-contract.test.ts`.** It fails a loop bounded by
   an unbranded catalogue's `count`, and any unclassified `| null` return on
-  the shell's public surface.
+  the shell's public surface — its own methods and its readonly namespaces'.
 - **Review, for what neither reaches.** A one-shot reader can still write a
   fallback into its `pending` branch. The loop scan sees only a literal
   `i < X.count`, so a walk bounded by a column's `.length`, by a count
