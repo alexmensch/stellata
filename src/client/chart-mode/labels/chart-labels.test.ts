@@ -24,6 +24,9 @@ import type { Stellata } from '../../stellata';
 import type { ChartModeContext } from '../chart-mode';
 import { assumeComplete, type CompleteCatalog } from '../../loaders/catalog-loader';
 import { LateCell } from '../../util/late/late';
+import { lateAbsent, lateReady } from '../../util/late/late-fixture';
+import type { CloudCatalog } from '../../molecular-clouds/cloud-loader';
+import { makeMockCatalog, makeMockCloud } from '../../molecular-clouds/cloud-mock';
 
 describe('chart-labels / computeAppMag', () => {
   it('equals absmag at exactly 10 pc (distance modulus = 0)', () => {
@@ -494,6 +497,13 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     return group;
   }
 
+  function drawnLabels(group: { children: unknown[] }): string[] {
+    return group.children
+      .map((c) => (c as { textContent?: string }).textContent)
+      .filter((t): t is string => typeof t === 'string')
+      .sort();
+  }
+
   interface Harness {
     stellata: Stellata;
     ctx: ChartModeContext;
@@ -517,6 +527,8 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     detailPermits?: (id: string) => boolean;
     /** Start with the catalogue still streaming; `landCatalog` completes it. */
     catalogPending?: boolean;
+    /** Ready cloud catalogue; cloud `i` sits 100 pc ahead, `20 * i` pc right. */
+    clouds?: CloudCatalog;
   }
 
   function makeHarness(patch: HarnessPatch = {}): Harness {
@@ -575,8 +587,18 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       },
       declutter: { permits: patch.detailPermits ?? (() => true) },
       renderGate: { invalidate: (reason: string) => { invalidations.push(reason); } },
-      getCloudCatalog: () => null,
-      kinds: { planet: { field: { liveInstanceCount: 0 } } },
+      kinds: {
+        planet: { field: { liveInstanceCount: 0 } },
+        cloud: { catalog: patch.clouds ? lateReady(patch.clouds) : lateAbsent<CloudCatalog>() },
+      },
+      focusables: {
+        cloud: {
+          localPositionInto: (i: number, out: THREE.Vector3) => {
+            out.set(20 * i, 0, -100);
+            return true;
+          },
+        },
+      },
       on: (name: string, fn: () => void) => {
         let set = handlers.get(name);
         if (!set) { set = new Set(); handlers.set(name, set); }
@@ -725,6 +747,35 @@ describe('chart-labels / ChartLabels lifecycle', () => {
 
   // Constellation names come off the shipped region anchors, not off the member
   // stars — the stars only decide whether a name is drawn at all.
+  describe('cloud names', () => {
+    const clouds = makeMockCatalog([
+      makeMockCloud({ name: 'Taurus' }),
+      makeMockCloud({ name: 'Orion A' }),
+    ]);
+
+    it('names every cloud of a ready catalogue', () => {
+      const groups = installDomStubs();
+      const h = makeHarness({ clouds });
+      const labels = new ChartLabels(h.stellata, h.distSol);
+      labels.start(h.ctx);
+      h.emit('frame');
+
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual(['Orion A', 'Taurus']);
+      labels.dispose();
+    });
+
+    it('names none while chartCloudNames is withheld', () => {
+      const groups = installDomStubs();
+      const h = makeHarness({ clouds, detailPermits: (id) => id !== 'chartCloudNames' });
+      const labels = new ChartLabels(h.stellata, h.distSol);
+      labels.start(h.ctx);
+      h.emit('frame');
+
+      expect(drawnLabels(groups.get('chart-labels')!)).toEqual([]);
+      labels.dispose();
+    });
+  });
+
   describe('region label anchors', () => {
     const CONSTELLATIONS = [
       { code: 'Ser', name: 'Serpens' },
@@ -749,13 +800,6 @@ describe('chart-labels / ChartLabels lifecycle', () => {
         ],
         ...patch,
       });
-    }
-
-    function drawnLabels(group: { children: unknown[] }): string[] {
-      return group.children
-        .map((c) => (c as { textContent?: string }).textContent)
-        .filter((t): t is string => typeof t === 'string')
-        .sort();
     }
 
     // Serpens' two anchors share a display name, so the pool has to key on the

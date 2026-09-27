@@ -14,7 +14,6 @@ import { HudOverlay, hudElementsById } from './overlays/hud-overlay';
 import { hudSceneLayer } from './overlays/hud-scene-layer';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
-import type { CloudCatalog } from './molecular-clouds/cloud-loader';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
 import {
@@ -1383,13 +1382,6 @@ export class Stellata implements FrameAnchor {
     const abs = this.tmpConstellationAbs;
     if (!this.focusables[kind].localPositionInto(idx, abs)) return null;
     return namer.nameAt(abs.add(this.worldOffset));
-  }
-
-  /** Catalog of clouds, or null when the cloud module has no layer.
-   *  Exposed for chart-mode name rows. */
-  getCloudCatalog(): CloudCatalog | null {
-    const layer = this.kinds.cloud.layer;
-    return layer ? { count: layer.clouds.length, clouds: layer.clouds } : null;
   }
 
   private tmpConstellationAbs = new THREE.Vector3();

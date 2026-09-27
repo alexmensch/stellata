@@ -32,7 +32,7 @@ export function makeMockCloud(overrides: Partial<Cloud> = {}): Cloud {
 }
 
 export function makeMockCatalog(clouds: Cloud[]): CloudCatalog {
-  return { count: clouds.length, clouds };
+  return { clouds };
 }
 
 /** Carries the real brick's linear pair — on the Data3DTexture default this
