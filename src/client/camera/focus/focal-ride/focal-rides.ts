@@ -3,22 +3,17 @@
 import * as THREE from 'three';
 import type { CadenceReport } from '../../../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx, SceneLayer } from '../../../scene/scene-layer';
-import type { CameraMode } from '../focus-controller';
-import type { FocalPerturbationInto } from '../focus-controller';
-import { KIND_TRAITS, type FocusableProviders, type Target } from '../focus-target';
+import type { ObserveTransition } from '../../observe/observe-transition';
+import type { FocalPerturbationInto, FocusController } from '../focus-controller';
+import { KIND_TRAITS, type FocusableProviders } from '../focus-target';
 import { focalRideStep } from './focal-ride-pure';
-
-type Translatable = { translateFocusFrame(delta: Readonly<THREE.Vector3>): void };
 
 export interface FocalRidesDeps {
   cameraPosition: THREE.Vector3;
   orbitTarget: THREE.Vector3;
-  focus: Translatable & {
-    getFocusedStar(): number | null;
-    getFocusedTarget(): Target | null;
-    getCameraMode(): CameraMode;
-  };
-  observe: Translatable;
+  focus: Pick<FocusController,
+    'getFocusedStar' | 'getFocusedTarget' | 'getCameraMode' | 'translateFocusFrame'>;
+  observe: Pick<ObserveTransition, 'translateFocusFrame'>;
   focusables: FocusableProviders;
   starLocalPositionInto: (idx: number, out: THREE.Vector3) => THREE.Vector3;
   warpActive: () => boolean;
