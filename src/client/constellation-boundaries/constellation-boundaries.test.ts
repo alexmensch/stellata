@@ -39,7 +39,7 @@ function build(patch: Partial<ConstellationBoundariesDeps> = {}) {
       uViewport: { value: new THREE.Vector2(1920, 1080) },
     },
     chromeLines: fakeChromeLineMaterials(),
-    limitMag: () => limitMag,
+    instrumentLimitMag: () => limitMag,
     onFilter: (handler) => {
       filterHandlers.add(handler);
       return () => { filterHandlers.delete(handler); };

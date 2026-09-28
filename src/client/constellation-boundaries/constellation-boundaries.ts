@@ -22,7 +22,9 @@ export interface ConstellationBoundariesDeps {
   constellations: readonly ConstellationTableEntry[];
   uniforms: ScreenMetricUniforms;
   chromeLines: ChromeLineMaterials;
-  limitMag: () => number;
+  /** The instrument limit, never the EV-trimmed one: the chart hard-clips at
+   *  it and inherits no exposure state, so the trim must not move the fade. */
+  instrumentLimitMag: () => number;
   onFilter: (handler: () => void) => () => void;
   /** The `constellationBoundaries` declutter floor. */
   permitted: () => boolean;
@@ -45,12 +47,11 @@ export class ConstellationBoundaries {
     deps.scene.add(this.layer.group);
     const regions = deps.artifact === null
       ? null : createConstellationRegions(deps.artifact, deps.constellations);
-    if (deps.artifact !== null) this.layer.attach(deps.artifact, deps.limitMag());
+    if (deps.artifact !== null) this.layer.attach(deps.artifact, deps.instrumentLimitMag());
     this.namer = regions?.namer ?? null;
     this.labelAnchors = regions?.labelAnchors ?? [];
-    // The chart hard-clips at the instrument limit and inherits no exposure
-    // state, so the EV trim must not move the fade window.
-    this.offFilter = deps.onFilter(() => this.layer.setMagnitudeLimit(deps.limitMag()));
+    this.offFilter = deps.onFilter(
+      () => this.layer.setMagnitudeLimit(deps.instrumentLimitMag()));
     this.entry = {
       // B1875 arcs on a Sol-centred sphere: a frozen-epoch partition. No term
       // in it is a function of t.

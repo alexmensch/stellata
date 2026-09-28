@@ -579,7 +579,7 @@ export class Stellata implements FrameAnchor {
       constellations: catalog.constellations,
       uniforms: sharedUniforms,
       chromeLines: this.chromeLines,
-      limitMag: () => this.exposure.getLimitMag(),
+      instrumentLimitMag: () => this.exposure.getLimitMag(),
       onFilter: (handler) => this.bus.on('filter', handler),
       permitted: () => this.declutter.permits('constellationBoundaries'),
       localPositionInto: (kind, idx, out) => this.focusables[kind].localPositionInto(idx, out),
