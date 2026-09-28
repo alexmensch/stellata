@@ -80,7 +80,6 @@ const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   'focus.getVectorTo': NO_SELECTION,
   'focus.getVectorTarget': NO_SELECTION,
   'focus.getFocusedHardTarget': NO_SELECTION,
-  'focus.recenterOrigin': 'verdict: null is "no recentre happened"',
   'floatingOrigin.recenterTo': 'verdict: null is "no recentre happened"',
   'focus.hardFocusParkDist': NO_SELECTION,
   'focus.makeFocusTarget': 'verdict: null is "this target cannot be focused"',

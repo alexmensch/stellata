@@ -119,7 +119,7 @@ interface FocusTarget {
 
 | Method | Role |
 |---|---|
-| `anchorInto` | Input to `recenterOrigin`. The floating origin lands here when the object is focused. |
+| `anchorInto` | Input to `FloatingOrigin.recenterTo`. The floating origin lands here when the object is focused. |
 | `localPositionInto` | Per-frame `camera.lookAt(...)` source during warp Fly. Also used by overlays that project the object's position, and as the warp's source-`A` / dest-`B` derivation in `warpTo`. |
 | `parkRadius` | The warp computes `pStart` / `pEnd` as `anchor − travelDir · parkRadius()` for source and destination respectively — symmetric across both endpoints. |
 | `applyFocus` | Writes the focus `Target` slot (cross-kind displacement is structural), applies the provider's `orbitFloor`, and attaches or detaches the planet system per its `planetSystemHost`. One shared implementation for every kind. **No events fire.** |
@@ -360,16 +360,16 @@ that engages focus while leaving target at a residual off the star
 silently disengages the pin. Residual sources that have bitten this:
 
 1. **Sol's catalog offset.** Sol is at AT-HYG `(5e-6, 0, 0)` pc, not
-   `(0,0,0)`. `recenterOrigin(solPos)` shifts target by `5e-6` →
+   `(0,0,0)`. `recenterTo(solPos)` shifts target by `5e-6` →
    guard fails on first frame.
 2. **Float32 truncation on long warps.** `finishWarp`/`focusStar`
    read target from `_localPositions` (Float32Array), then
-   `recenterOrigin` shifts target by a delta computed fresh in
+   `recenterTo` shifts target by a delta computed fresh in
    float64. The two representations of `|AB|` differ by Float32 ULP
    (~`|AB|·1e-7`); for Sol→Rigel (265 pc) that's `~5e-5 pc`,
    comparable to Rigel's arrival endOffset → 30 %-of-screen drift.
 3. **Unfocus from close approach.** `setFocus(null)` leaves
-   `worldOffset` put (no `recenterOrigin(0,0,0)`).
+   `worldOffset` put (no `recenterTo(0,0,0)`).
 4. **Orbital drift of a binary focal.** The focal star moves along its
    orbit each frame; a static target would fall off it. The binary focal
    ride ([Binary focal ride](focal-ride/README.md#binary-focal-ride-no-rebase)) translates `controls.target` by the star's
@@ -383,7 +383,7 @@ silently disengages the pin. Residual sources that have bitten this:
 
 **Fix for #1, #2, #4** lives at the choke point in
 `FocusController.setFocus`'s `idx !== null` branch: after
-`recenterOrigin`, snap target onto the focal's live local position
+the recentre, snap target onto the focal's live local position
 (`starLivePositionInto` = catalog baseline in the current frame +
 float64 orbital perturbation) and shift `camera.position` by the same
 delta (preserving the cam-to-target offset). Eliminates the residuals

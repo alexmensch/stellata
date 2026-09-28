@@ -75,16 +75,10 @@ export interface FocusOps {
   /** Build a FocusTarget for `target`, or null when its layer hasn't
    *  loaded or the index is out of range. */
   makeFocusTarget(target: Target): FocusTarget | null;
-  /** Star position in the renderer's local frame. */
-  starLocalPosition(idx: number): THREE.Vector3;
   /** Star's live local position (catalog baseline + orbital perturbation)
    *  in float64, written into `out`. Correct even right after a recentre,
    *  before the walk perturbs the buffer. */
   starLivePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
-  /** Shift the floating origin to `newOrigin`, returning the applied
-   *  delta. The returned Vector3 is shared scratch — copy if needed
-   *  beyond the synchronous call. Returns null on no-op. */
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null;
   setFocus(idx: number | null): void;
   /** Clear whichever distance-vector destination is set (any kind) —
    *  warp arrival wipes the slot regardless of the warp's kind. */
@@ -292,9 +286,6 @@ export class FocusController implements FocusOps {
 
   // ─── frame anchor + vector slot delegation ─────────────────────────
 
-  starLocalPosition(idx: number): THREE.Vector3 {
-    return this.deps.frameAnchor.stars.localPositionInto(idx, new THREE.Vector3());
-  }
   /** Star `idx`'s live local position in float64: its catalog baseline in
    *  the current floating-origin frame PLUS its orbital perturbation.
    *  Computed from the catalog + worldOffset (not the star buffer), so it
@@ -332,9 +323,6 @@ export class FocusController implements FocusOps {
   getFocusedHardTarget(): HardTarget | null {
     const t = this.getFocusedTarget();
     return isHardTarget(t) ? t : null;
-  }
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    return this.deps.frameAnchor.origin.recenterTo(newOrigin);
   }
 
   // ─── star/cloud focus FSM ──────────────────────────────────────────

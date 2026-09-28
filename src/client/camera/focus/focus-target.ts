@@ -77,7 +77,7 @@ export function isHardTarget(t: Target | null): t is HardTarget {
  *  legs — see README.md#focusableproviders--the-kind-agnostic-geometry-registry before adding one. */
 export interface FocusableProvider {
   /** Absolute-space anchor (catalog-frame parsecs) — the
-   *  `recenterOrigin` input when a hard kind is focused and when the
+   *  `FloatingOrigin.recenterTo` input when a hard kind is focused and when the
    *  warp's mid-Fly recentre pivots onto the object. False when the
    *  layer hasn't loaded or the index is out of range (out untouched). */
   anchorInto(idx: number, out: THREE.Vector3): boolean;
@@ -138,7 +138,7 @@ export interface FocusTarget {
   readonly idx: number;
 
   /** Absolute-space anchor (catalog-frame parsecs). This is the value
-   *  passed to `recenterOrigin` when the floating origin tracks this
+   *  passed to `FloatingOrigin.recenterTo` when the floating origin tracks this
    *  object. Writes into `out` and returns `true` on success; returns
    *  `false` (and leaves `out` untouched) when the underlying data is
    *  unavailable (e.g., cloud layer not loaded yet). */

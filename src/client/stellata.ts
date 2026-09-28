@@ -641,6 +641,7 @@ export class Stellata {
       getChartMagBright: () =>
         this.sharedUniforms.uChartMagBright.value,
       focus: this.focus,
+      origin: this.floatingOrigin,
     });
     this.observe = new ObserveTransition({
       camera: this.camera,
@@ -712,7 +713,7 @@ export class Stellata {
     // snaps controls.target to local (0,0,0) — without this, the
     // unfocused GLOBAL_MIN_DIST_PC clamp set above stays in place AND
     // the pin guard fails because Sol's catalog position is
-    // (5e-6, 0, 0) pc (not exactly zero), so recenterOrigin shifts
+    // (5e-6, 0, 0) pc (not exactly zero), so the recentre shifts
     // target by 5e-6 and breaks the lengthSq < 1e-12 invariant. Safe
     // at this point in the constructor: handlers aren't subscribed yet
     // and camera/aspect are already initialised.

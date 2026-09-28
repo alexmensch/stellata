@@ -113,7 +113,7 @@ must not reseed, because `focalRideStep` owns those transitions.
 
 ### Focus, unfocus, and the default load
 
-`FocusController.setFocus(idx)` calls `recenterOrigin` on focus, then
+`FocusController.setFocus(idx)` recentres the origin on focus, then
 snaps `controls.target` onto the focal star's **live** local position
 (catalog baseline + orbital perturbation), not the bare local origin —
 a binary member sits at its perturbed position. For a non-orbiting star

@@ -340,7 +340,7 @@ function makeHarness(opts: {
     uFovYRad: { value: (60 * Math.PI) / 180 },
   });
 
-  // Production recenterOrigin fans out to every scene layer's recenter
+  // Production recenterTo fans out to every scene layer's recenter
   // hook (the body field included); mirror that so a planet-focus
   // recentre updates hostLocalPos before the target snap reads it.
   const innerRecenter = frame.origin.recenterTo;
@@ -788,23 +788,6 @@ describe('FocusController.makeFocusTarget — star round-trip', () => {
     const r = target.physicalRadius();
     expect(r).not.toBeNull();
     expect(r!).toBeGreaterThan(0);
-  });
-});
-
-describe('FocusController — frame anchor delegation', () => {
-  it('starLocalPosition reflects current worldOffset', () => {
-    const h = makeHarness();
-    h.focus.setFocus(1); // worldOffset = (10,0,0)
-    const local0 = h.focus.starLocalPosition(0); // star 0 is at (0,0,0) abs
-    expect(local0.x).toBeCloseTo(-10, 6);
-    const local1 = h.focus.starLocalPosition(1);
-    expect(local1.x).toBeCloseTo(0, 6);
-  });
-
-  it('recenterOrigin delegates to the FrameAnchor', () => {
-    const h = makeHarness();
-    h.focus.recenterOrigin(new THREE.Vector3(5, 0, 0));
-    expect(h.frame.worldOffset.x).toBe(5);
   });
 });
 
