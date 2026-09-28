@@ -257,7 +257,7 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    automatically lands. Used by:
 
    - `focusStar(idx)`'s default park distance (search-select,
-     click-vector-tip, default-load Sol focus). Since r9q.2, focus is
+     click-vector-tip, default-load Sol focus). Focus is
      a lerp-or-noop: the camera glides over `FOCUS_LERP_MS` when
      currently outside park, and stays put when already inside.
    - Observe-exit landing position (camera pulls back to

@@ -1,12 +1,9 @@
 # Constellation figure
 
-The classical constellation stick figure, drawn as depth-tested WebGL line
-segments between member stars' local-frame positions. Highlight one figure in
-navigate mode, or all 88 in chart mode.
-
-This layer renders inside the WebGL scene, so it is **not** an SVG overlay —
-the constellation hull is gone and the chart-mode Latin **name** labels stay in
-`chart-mode/` / `overlays/` chrome; only the figure lines live here.
+The classical constellation stick figure, drawn as depth-tested line segments
+in the main scene between member stars' local-frame positions. Highlight one
+figure in navigate mode, or all 88 in chart mode. Only the lines live here; the
+chart-mode Latin **name** labels are `chart-mode/` / `overlays/` chrome.
 
 ## Files
 
@@ -36,14 +33,12 @@ from all three in its constructor; the declutter push reaches it through a
 closure that first fires after that. The shell registers the entry after the
 binary and planet walks ([Rebuild vs refresh](#rebuild-vs-refresh)).
 
-## Why WebGL, not SVG
+## Why scene geometry, not SVG
 
-The figure was the last line geometry drawn as SVG (a `<path>` above the
-canvas), which forced the whole disc-occlude-mask apparatus: SVG sits outside
-the depth buffer, so every occluding body needed a CPU-computed screen-space
-cutout, with unbounded shape complexity ahead (oblate limbs, ring annuli,
-moons). Drawing the figure as depth-tested geometry deletes that apparatus and
-gets correct occlusion for free.
+SVG composites above the resolved frame with no depth relationship to it, so an
+SVG figure would need a screen-space cutout for every body in front of it — of
+unbounded shape (oblate limbs, ring annuli, moons). As depth-tested geometry the
+figure is occluded by the depth buffer like everything else in the scene.
 
 ## Occlusion — no dedicated mechanism
 
@@ -54,18 +49,16 @@ The lines render at `renderOrder −0.75` with `depthTest: true`,
   `renderOrder −4` star **and** planet core depth-masks stamp near-z before the
   lines draw (the same pass that keeps the Milky Way / grid / clouds from
   bleeding through bright cores — [Full render stack](../scene/README.md#full-render-stack--front-to-back)), so a line
-  behind a close disc depth-fails. A planet is now occluding for real — the
-  bug the shelved disc-mask planet-cutout approach chased.
-- **Saturn's true mesh + ring silhouette** occludes the lines once the local
-  depth pass migrates on (`../local-depth/README.md`): that pass repaints the
-  local system over the finished frame, so the ring annulus — impossible for any
-  analytic mask shape — occludes the lines like any other geometry.
+  behind a close disc or planet depth-fails.
+- **Saturn's true mesh + ring silhouette** occludes the lines through the local
+  depth pass (`../local-depth/README.md`): that pass repaints the local system
+  over the finished frame, so the ring annulus — which no analytic mask shape
+  could describe — occludes the lines like any other geometry.
 - **Star discs / glow composite over the lines** where a member sits on one:
   discs (`renderOrder 0`) and glow (`1`) draw after the lines and `depthWrite`
   is off, so the light source wins the pixel — the same "annotation under the
-  star" convention the binary orbit paths (`−0.5`) already follow. No
-  screen-space gap around each vertex star is needed (or drawn); the SVG gap
-  existed only to fake that ordering.
+  star" convention the binary orbit paths (`−0.5`) already follow, so the line
+  needs no screen-space gap around each vertex star.
 
 ## Rebuild vs refresh
 
@@ -116,8 +109,8 @@ is nothing to see, with or without the suppression.
 **The visible window is the glide.** Entry and exit each translate the camera
 between the park distance and the star over `OBSERVE_TRANSITION_MS`. While one
 endpoint is approaching the camera the segment's projected direction runs away,
-and it whips across the sky before collapsing to a point on arrival — the
-"lines read as noise" report. Nothing gates this WebGL layer on the observe
+and it whips across the sky before collapsing to a point on arrival, which
+reads as noise. Nothing gates this scene layer on the observe
 transition (the `body.focus-lerping` class hides only the SVG overlay), so the
 glide draws every frame. Hence `selectFigures` excludes
 `ObserveTransition.observeAnchorOf('star')`, which spans both glides — the
@@ -146,8 +139,8 @@ pick cancels nothing ([Picking a constellation aims the camera](../camera/contro
 ## Styling
 
 The shared alpha-blended stroke (`chrome-lines/README.md`) +
-`util/orbit-line`'s `makeOrbitLineSegments` primitive, 1 px (the renderer runs
-`antialias: false`, so linewidth is driver-pinned to 1 regardless). Sky-blue in
+`util/orbit-line`'s `makeOrbitLineSegments` primitive, 1 px: a WebGPU line
+primitive has no width, and the renderer runs `antialias: false`. Sky-blue in
 navigate mode, chart ink in chart mode. If long figure spans alias worse than
-the short orbit rings do, the escalation is quad-strip segments with a soft-edge
-fragment alpha (same fallback noted for the orbit lines).
+the short orbit rings do, the escalation is the seam's fat stroke
+([The fat stroke brings its own object](../chrome-lines/README.md#the-fat-stroke-brings-its-own-object)).

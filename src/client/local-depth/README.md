@@ -214,8 +214,8 @@ intra-body order and orbit lines blend commutatively, argued in
 - **Observe** — `uHideIdx` / `hiddenInstanceIdx` (the observe-anchor
   hide) applies to mirror draws exactly as to main-pass instances.
 - **SVG overlays** — a separate compositing channel, always above
-  WebGL; camera near/far changes don't touch x/y projection, so overlay
-  math is untouched. The constellation figure is now WebGL line geometry
+  the canvas; camera near/far changes don't touch x/y projection, so overlay
+  math is untouched. The constellation figure is line geometry
   in the main pass (`../constellation-figure/README.md`), so the local
   pass's repaint occludes it with a body's true silhouette like any
   background — no mask.
