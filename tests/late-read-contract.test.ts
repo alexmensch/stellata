@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { relative, resolve } from 'node:path';
 import ts from 'typescript';
 import { isProductionTs, walkFiles } from './walk-files';
+import { NULLABLE_FIELDS } from './late-read-contract-fields';
 
 const ROOT = resolve(__dirname, '..');
 const CLIENT = resolve(ROOT, 'src/client');
@@ -112,6 +113,35 @@ function probeProgram(text: string): { program: ts.Program; file: ts.SourceFile 
     : getSource(f, lang));
   const program = ts.createProgram([probe], options, host);
   return { program, file: program.getSourceFile(probe)! };
+}
+
+const writesNull = (type: ts.TypeNode | undefined) => type !== undefined && ts.isUnionTypeNode(type)
+  && type.types.some((t) => ts.isLiteralTypeNode(t) && t.literal.kind === ts.SyntaxKind.NullKeyword);
+
+/** `Class.field` for each field written `X | null` and assigned outside its
+ *  constructor — a slot that can go null after its readers exist. */
+function nullableFieldsOf(file: ts.SourceFile): string[] {
+  const out: string[] = [];
+  for (const cls of descendants(file)) {
+    if (!ts.isClassDeclaration(cls) || !cls.name) continue;
+    const assigned = new Set<string>();
+    for (const member of cls.members) {
+      if (ts.isConstructorDeclaration(member)) continue;
+      for (const node of descendants(member)) {
+        if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+          && ts.isPropertyAccessExpression(node.left)
+          && node.left.expression.kind === ts.SyntaxKind.ThisKeyword) {
+          assigned.add(node.left.name.getText(file));
+        }
+      }
+    }
+    for (const member of cls.members) {
+      if (!ts.isPropertyDeclaration(member) || !writesNull(member.type)) continue;
+      const name = member.name.getText(file);
+      if (assigned.has(name)) out.push(`${cls.name.text}.${name}`);
+    }
+  }
+  return out;
 }
 
 const NO_SELECTION = 'verdict: null is "nothing selected", its own answer';
@@ -237,6 +267,32 @@ describe('wave-2 read contract (/src/client/README.md#boot-in-two-waves)', () =>
       "export const picked = (cat: Pick<Catalog, 'loadedCount'>) => cat.loadedCount;",
     ].join('\n'));
     expect(loadedCountReads(file, program)).toEqual([2, 4]);
+  });
+
+  it('classifies every nullable class field written after construction', () => {
+    const p = program();
+    const found = p.getRootFileNames().flatMap((path) => nullableFieldsOf(p.getSourceFile(path)!));
+    expect(
+      found.filter((name) => !(name in NULLABLE_FIELDS)),
+      'a value landing after construction is a Late<T> (/src/client/util/late/README.md); any other late-written null is classified in late-read-contract-fields.ts',
+    ).toEqual([]);
+    expect(
+      Object.keys(NULLABLE_FIELDS).filter((name) => !found.includes(name)),
+      'a converted field leaves NULLABLE_FIELDS',
+    ).toEqual([]);
+  });
+
+  it('flags a nullable field only when it is written after construction', () => {
+    const { file } = probeProgram([
+      'export class Probe {',
+      '  late: number | null = null;',
+      '  fixed: number | null;',
+      '  plain = 0;',
+      '  constructor() { this.fixed = null; }',
+      '  land() { this.late = 1; this.plain = 2; }',
+      '}',
+    ].join('\n'));
+    expect(nullableFieldsOf(file)).toEqual(['Probe.late']);
   });
 
   it('classifies every nullable return on the shell surface', () => {
