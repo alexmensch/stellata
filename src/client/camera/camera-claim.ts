@@ -1,4 +1,4 @@
-// The claim-the-camera sequence. See README.md#the-claim-the-camera-sequence.
+// The one claim-the-camera sequence clicks, aims and warps take. See README.md#the-claim-the-camera-sequence.
 
 export interface CameraClaimGates {
   isWarpActive: () => boolean;
@@ -8,16 +8,26 @@ export interface CameraClaimGates {
   cancelFocusLerp: () => void;
 }
 
-/** A warp, an aim or an observe transition owns the camera. */
-export function isCameraHeld(gates: CameraClaimGates): boolean {
-  return gates.isWarpActive() || gates.isAimActive() || gates.isObserveTransitionActive();
+/** The only handle a camera-claiming site holds, so none can cancel the
+ *  focus lerps outside `claim`. */
+export interface CameraClaim {
+  /** A warp, an aim or an observe transition owns the camera. */
+  isHeld(): boolean;
+  /** Refuses while held, cancelling nothing; otherwise cancels both focus
+   *  lerps and grants. */
+  claim(): boolean;
 }
 
-/** Refuses while held, cancelling nothing; otherwise cancels both focus
- *  lerps and grants. */
-export function claimCamera(gates: CameraClaimGates): boolean {
-  if (isCameraHeld(gates)) return false;
-  gates.cancelUnfocusLerp();
-  gates.cancelFocusLerp();
-  return true;
+export function createCameraClaim(gates: CameraClaimGates): CameraClaim {
+  const isHeld = () =>
+    gates.isWarpActive() || gates.isAimActive() || gates.isObserveTransitionActive();
+  return {
+    isHeld,
+    claim: () => {
+      if (isHeld()) return false;
+      gates.cancelUnfocusLerp();
+      gates.cancelFocusLerp();
+      return true;
+    },
+  };
 }

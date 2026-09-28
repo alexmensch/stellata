@@ -50,7 +50,7 @@ the ladder's pure decision function is
 `../../../poi/click-ladder-pure.ts`.
 
 The controller sees the rest of the app only through its deps
-closures (busy gates, Target-keyed focus/vector reads, flyTo /
+closures (the shared camera claim, Target-keyed focus/vector reads, flyTo /
 setOrbitTarget / unfocus / togglePoi / aimAt / aimAlong) — it owns
 dispatch order and gesture math, never focus or camera-transition
 state. The observe double-click holds a ray, so it takes `aimAlong`

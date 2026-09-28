@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
 import { InputController, type InputControllerDeps } from './input-controller';
+import { createCameraClaim } from '../../camera-claim';
 import { DEFAULT_FILTER, type FilterState } from '../../../filters/filter-state';
 import { targetsEqual, type Target } from '../../focus/focus-target';
 import type { Picker } from '../picker';
@@ -214,11 +215,13 @@ function makeHarness(): Harness {
     getFocusedTarget: () => state.focused,
     getVectorTarget: () => state.vector,
     setVector: deps.setVector,
-    isWarpActive: () => state.warpActive,
-    isAimActive: () => state.aimActive,
-    isObserveTransitionActive: () => state.observeTransitionActive,
-    cancelUnfocusLerp: () => { cancelled.push('unfocus'); },
-    cancelFocusLerp: () => { cancelled.push('focus'); },
+    claim: createCameraClaim({
+      isWarpActive: () => state.warpActive,
+      isAimActive: () => state.aimActive,
+      isObserveTransitionActive: () => state.observeTransitionActive,
+      cancelUnfocusLerp: () => { cancelled.push('unfocus'); },
+      cancelFocusLerp: () => { cancelled.push('focus'); },
+    }),
     flyTo: deps.flyTo,
     setOrbitTarget: deps.setOrbitTarget,
     unfocus: deps.unfocus,
@@ -534,7 +537,6 @@ describe('InputController deferred-click gate', () => {
   });
 });
 
-// Hoisting the observe bail above the cancels is the refactor these pin against.
 describe('InputController.onPointerUp — claim-the-camera order', () => {
   function pointerClick(canvas: Harness['canvas']) {
     const handlerFor = (name: string) => canvas.addEventListener.mock.calls
@@ -544,11 +546,11 @@ describe('InputController.onPointerUp — claim-the-camera order', () => {
     handlerFor('pointerup')(at);
   }
 
-  it('cancels both lerps before bailing on an observe transition', () => {
+  it('bails on an observe transition WITHOUT cancelling', () => {
     const { canvas, state, cancelled } = makeHarness();
     state.observeTransitionActive = true;
     pointerClick(canvas);
-    expect(cancelled).toEqual(['unfocus', 'focus']);
+    expect(cancelled).toEqual([]);
   });
 
   it('bails on warp WITHOUT cancelling — the warp owns the camera outright', () => {

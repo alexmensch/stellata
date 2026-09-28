@@ -358,10 +358,9 @@ owns the user-facing definition.
 
 Composition split — the controller knows only the mode it runs in and its
 own slot state. The cross-controller busy gates (warp, aim, observe
-transition) and the focus-lerp cancels are `claimCamera`
-(`../camera-claim.ts`), a free function taking them as `CameraClaimGates`
-closures. The shell builds that object once (`cameraClaim`) and hands the
-same one to `InputController`, whose deps extend the type; the shell's aims (`aimAt`, `aimAlong`,
+transition) and the focus-lerp cancels are one `CameraClaim`
+(`../camera-claim.ts`) the shell builds once over them (`cameraClaim`) and
+hands to `InputController` and `WarpController` too; the shell's aims (`aimAt`, `aimAlong`,
 `aimAtConstellation`, `invertView`) delegate to `this.aim` only on a
 granted claim. A refused claim cancels
 nothing ([The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence)).

@@ -198,7 +198,7 @@ the one split pair (read on `focus`, write on `observe`).
 does something no single controller can. Keep that property when adding
 one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
 `aimAt` / `aimAlong` / `aimAtConstellation` / `invertView`
-(cross-controller busy gates, shared as `claimCamera` — it reports
+(cross-controller busy gates, shared as `cameraClaim.claim()` — it reports
 whether the camera was free and, only when it was, cancels the focus
 lerps, so every aim takes it the same way),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`

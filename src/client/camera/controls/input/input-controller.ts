@@ -15,13 +15,14 @@ import {
   DBL_CLICK_MS,
   PendingClickDispatcher,
 } from '../../../util/pending-click';
-import { isCameraHeld, type CameraClaimGates } from '../../camera-claim';
+import type { CameraClaim } from '../../camera-claim';
 import type { Picker } from '../picker';
 import { PICK_THRESHOLD_PX } from '../star-geometry';
 import type { RollController } from './roll-controller';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
-export interface InputControllerDeps extends CameraClaimGates {
+export interface InputControllerDeps {
+  claim: CameraClaim;
   canvas: HTMLCanvasElement;
   camera: THREE.PerspectiveCamera;
   controls: TrackballControls;
@@ -166,10 +167,7 @@ export class InputController {
     const down = this.pointerDownAt;
     this.pointerDownAt = null;
     if (!down) return;
-    if (this.deps.isWarpActive() || this.deps.isAimActive()) return;
-    this.deps.cancelUnfocusLerp();
-    this.deps.cancelFocusLerp();
-    if (this.deps.isObserveTransitionActive()) return;
+    if (!this.deps.claim.claim()) return;
     const dx = e.clientX - down.x;
     const dy = e.clientY - down.y;
     if (dx * dx + dy * dy > 25) return;
@@ -186,7 +184,7 @@ export class InputController {
    *  including them here would make every click self-block. See
    *  `../../README.md#camera-activity-predicates`. */
   private blocksClick(): boolean {
-    return isCameraHeld(this.deps);
+    return this.deps.claim.isHeld();
   }
 
   private dispatchSingleClick(x: number, y: number) {

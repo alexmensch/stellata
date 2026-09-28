@@ -35,7 +35,7 @@ import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
 import { AimController } from './camera/controls/aim-controller';
-import { claimCamera, type CameraClaimGates } from './camera/camera-claim';
+import { createCameraClaim } from './camera/camera-claim';
 import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
@@ -233,13 +233,13 @@ export class Stellata {
   private monochrome = false;
   readonly warp!: WarpController;
   readonly aim!: AimController;
-  private readonly cameraClaim: CameraClaimGates = {
+  private readonly cameraClaim = createCameraClaim({
     isWarpActive: () => this.warp.isActive(),
     isAimActive: () => this.aim.isActive(),
     isObserveTransitionActive: () => this.observe.isActive(),
     cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
     cancelFocusLerp: () => this.focus.cancelFocusLerp(),
-  };
+  });
 
   readonly pois!: PoiStore;
   // Canvas pointer input — click FSM (single/double, both modes) and the
@@ -642,6 +642,7 @@ export class Stellata {
       getChartMagBright: () =>
         this.sharedUniforms.uChartMagBright.value,
       focus: this.focus,
+      claim: this.cameraClaim,
       origin: this.floatingOrigin,
     });
     this.observe = new ObserveTransition({
@@ -1026,7 +1027,7 @@ export class Stellata {
    * A caller holding a direction rather than an object wants `aimAlong`.
    */
   aimAt(pointLocal: THREE.Vector3) {
-    if (!claimCamera(this.cameraClaim)) return;
+    if (!this.cameraClaim.claim()) return;
     this.aim.aimAt(pointLocal);
   }
 
@@ -1039,7 +1040,7 @@ export class Stellata {
    * Shares `aimAt`'s composition-layer busy gates.
    */
   aimAlong(dirLocal: THREE.Vector3) {
-    if (!claimCamera(this.cameraClaim)) return;
+    if (!this.cameraClaim.claim()) return;
     this.aim.aimAlong(dirLocal);
   }
 
@@ -1053,7 +1054,7 @@ export class Stellata {
    * `AimController`.
    */
   invertView() {
-    if (!claimCamera(this.cameraClaim)) return;
+    if (!this.cameraClaim.claim()) return;
     this.aim.invert();
   }
 
@@ -1082,7 +1083,7 @@ export class Stellata {
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getVectorTarget: () => this.focus.getVectorTarget(),
       setVector: (target) => this.focus.setVector(target),
-      ...this.cameraClaim,
+      claim: this.cameraClaim,
       flyTo: (target) => this.focus.flyTo(target),
       setOrbitTarget: (target) => this.focus.setOrbitTarget(target),
       unfocus: () => this.focus.unfocus(),
