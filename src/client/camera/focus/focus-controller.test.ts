@@ -112,8 +112,13 @@ function makeCatalog(opts: {
 // FrameAnchor stub — mirrors the production behaviour: shifts a
 // per-instance worldOffset, lets star-local positions roll through
 // (catalog.positions - worldOffset).
+interface OriginStub {
+  worldOffset: THREE.Vector3;
+  recenterTo: (newOrigin: THREE.Vector3) => THREE.Vector3 | null;
+}
 interface FrameStub {
   anchor: FrameAnchor;
+  origin: OriginStub;
   worldOffset: THREE.Vector3;
   catalog: Catalog;
   recenterCalls: THREE.Vector3[];
@@ -138,8 +143,9 @@ function makeFrameAnchor(
     if (pert.fn(idx, scratch)) out.add(scratch);
     return out;
   };
-  const anchor: FrameAnchor = {
-    recenterOrigin: (newOrigin) => {
+  const origin: OriginStub = {
+    worldOffset,
+    recenterTo: (newOrigin) => {
       const dx = newOrigin.x - worldOffset.x;
       const dy = newOrigin.y - worldOffset.y;
       const dz = newOrigin.z - worldOffset.z;
@@ -148,11 +154,18 @@ function makeFrameAnchor(
       recenterCalls.push(new THREE.Vector3(dx, dy, dz));
       return new THREE.Vector3(dx, dy, dz);
     },
-    getWorldOffset: () => worldOffset,
-    starLocalPosition: (idx) => liveInto(idx, new THREE.Vector3()),
-    starLocalPositionInto: (idx, out) => liveInto(idx, out),
   };
-  return { anchor, worldOffset, catalog, recenterCalls };
+  const anchor: FrameAnchor = {
+    origin,
+    stars: {
+      localPositionInto: (idx, out) => liveInto(idx, out),
+      absolutePositionInto: (idx, out) => {
+        const p = catalog.positions;
+        return out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
+      },
+    },
+  };
+  return { anchor, origin, worldOffset, catalog, recenterCalls };
 }
 
 interface Harness {
@@ -232,7 +245,7 @@ function makeHarness(opts: {
       },
       localPositionInto: (idx, out) => {
         if (idx < 0 || idx >= catalog.count) return false;
-        frame.anchor.starLocalPositionInto(idx, out);
+        frame.anchor.stars.localPositionInto(idx, out);
         return true;
       },
       focusParkDistance: (idx) => focus.parkDistForStar(idx),
@@ -330,8 +343,8 @@ function makeHarness(opts: {
   // Production recenterOrigin fans out to every scene layer's recenter
   // hook (the body field included); mirror that so a planet-focus
   // recentre updates hostLocalPos before the target snap reads it.
-  const innerRecenter = frame.anchor.recenterOrigin;
-  frame.anchor.recenterOrigin = (newOrigin) => {
+  const innerRecenter = frame.origin.recenterTo;
+  frame.origin.recenterTo = (newOrigin) => {
     planetField.recenter(newOrigin);
     return innerRecenter(newOrigin);
   };
@@ -609,7 +622,7 @@ describe('FocusController — live focal position (binary members)', () => {
     };
     // Seed the pre-focus pose (focusStar's contract seeds target too).
     h.camera.position.set(10, 0, 0.5);
-    h.controls.target.copy(h.frame.anchor.starLocalPosition(1));
+    h.controls.target.copy(h.frame.anchor.stars.localPositionInto(1, new THREE.Vector3()));
     const eyeBefore = h.camera.position.clone().sub(h.controls.target);
 
     h.focus.setFocus(1);

@@ -11,7 +11,7 @@ const COMPOSITION: readonly string[] = [
   'floatingOrigin', 'focalRides', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
-  'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
+  'solarSystem', 'starFrame', 'systemMembership', 'warp', 'webgpu',
 ];
 
 const AWAITING_EXTRACTION: readonly string[] = [
@@ -20,7 +20,7 @@ const AWAITING_EXTRACTION: readonly string[] = [
   'coreMaskEnabled',
   'frameCtx', 'glslResidentsChecked',
   'offCatalogRecords', 'passDebugScratch',
-  'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',
+  'pickSizeScratch', 'starAttrs', 'starSizeInputs',
   'starLocalCluster',
   'trackballSettle', 'webgpuStarLayer',
 ];

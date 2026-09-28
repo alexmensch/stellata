@@ -59,7 +59,7 @@ export function buildPinSection(stellata: Stellata): DebugSection {
     // orbital perturbation), not target ≈ origin — a binary focal drifts.
     const focal = stellata.focus.getFocusedStar();
     const engageDistSq = focal !== null
-      ? t.distanceToSquared(stellata.starLocalPositionInto(focal, engageScratch))
+      ? t.distanceToSquared(stellata.starFrame.localPositionInto(focal, engageScratch))
       : t.lengthSq();
 
     // Latches keep updating regardless of visibility — the user's

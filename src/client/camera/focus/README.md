@@ -33,11 +33,10 @@ close-approach focused star sitting at exactly NDC origin.
   cloud-, and future-focusable-park-arrivals all compose these. The
   per-frame motion delegates to `../arrival/camera-motion.ts`.
 
-`FrameAnchor` (recenterOrigin / worldOffset / starLocalPosition) is
-implemented by `stellata.ts` as a thin seam over the `FloatingOrigin`
+`FrameAnchor` is the two frame owners themselves: the `FloatingOrigin`
 service (`../../frame/README.md`), whose recentre fan-out covers the
 star-buffer rewrite, the camera / orbit-target shift, and the
-scene-layer hooks; the star-position legs read `StarFrame`
+scene-layer hooks, and `StarFrame` for star positions
 (`../../star-pipeline/star-frame/README.md`).
 
 ## Focus state

@@ -300,7 +300,7 @@ stationary camera.
 
 `chart-labels.ts`. The chart label engine's output is purely a
 function of camera pose, filter state, viewport size, and the
-advanced catalog epoch (`stellata.advancedEpochJyr` — time scrubbing
+advanced catalog epoch (`stellata.starFrame.advancedEpochJyr` — time scrubbing
 re-advances star positions with the camera still, and the glyphs
 must follow) — variable pulsation animates on the GPU, the CPU
 labels don't otherwise move. Hash that tuple at the top of `tick()`:

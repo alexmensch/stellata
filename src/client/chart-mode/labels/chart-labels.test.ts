@@ -567,17 +567,19 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     const stellata = {
       catalog,
       camera,
-      localPositions: positions,
-      // Read exactly once per tick (the full-tick skip key), so it doubles
-      // as the tick counter.
-      get advancedEpochJyr() { ticks++; return 2016; },
+      starFrame: {
+        localPositions: positions,
+        // Read exactly once per tick (the full-tick skip key), so it doubles
+        // as the tick counter.
+        get advancedEpochJyr() { ticks++; return 2016; },
+      },
       uniforms: {
         uChartDiscMaxPx: { value: 28 },
         uChartDiscMinPx: { value: 1.5 },
         uChartMagBright: { value: -2 },
       },
       getT: () => 0,
-      getWorldOffset: () => new THREE.Vector3(),
+      floatingOrigin: { worldOffset: new THREE.Vector3() },
       constellationBoundaries: { labelAnchors: patch.anchors ?? [] },
       filters: {
         getFilter: () => ({

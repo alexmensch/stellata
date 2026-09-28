@@ -164,7 +164,7 @@ the catalog columns and `localPositions`, the epoch-advanced duplicate of
 **The two tables overlap, deliberately.** `iPosition` is `localPositions`
 itself and `iAbsmag` / `iCi` / `iSpectClass` / `iPeriodDays` /
 `iAmplitudeMag` are the catalog columns by reference
-(`../../star-pipeline/star-pipeline.ts`) — about 10.5 MiB appearing in
+(`../../webgpu/star/star-tables.ts`) — about 10.5 MiB appearing in
 both. Nothing disposes the CPU array after upload, so both copies are
 genuinely resident and the totals are each correct; it is not a
 double-count, and summing them is right.

@@ -1152,7 +1152,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // a hard focus recentres the origin (`../../camera/focus/focus-target.ts`
   // KIND_TRAITS), so a cloud, an LG object or a shell leaves the sender's frame
   // reachable through this field and no other.
-  const wo = stellata.getWorldOffset();
+  const wo = stellata.floatingOrigin.worldOffset;
   const scale = orbitRadius(c, t);
   const camDefault = defaultCamForMode(mode);
   if (!isHardTarget(focused)
@@ -1426,7 +1426,7 @@ export function applyDecodedView(
   // pose in the *new* local frame rather than the recentre-shifted
   // junk position. view.cam / view.tgt below override when present.
   if (view.worldOffset) {
-    stellata.setWorldOffset(view.worldOffset[0], view.worldOffset[1], view.worldOffset[2]);
+    stellata.floatingOrigin.recenterTo(new THREE.Vector3(...view.worldOffset));
     setCameraToDefault(stellata, view.mode);
     stellata.controls.target.set(DEFAULT_TGT[0], DEFAULT_TGT[1], DEFAULT_TGT[2]);
     controlsDirty = true;

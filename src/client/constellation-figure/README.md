@@ -62,7 +62,7 @@ The lines render at `renderOrder −0.75` with `depthTest: true`,
 
 ## Rebuild vs refresh
 
-The vertex buffer is the members' `stellata.localPositions` — the same
+The vertex buffer is the members' `stellata.starFrame.localPositions` — the same
 floating-origin frame the star instances use, so the GPU projection lines up
 with the discs automatically and **camera motion adds no CPU work** — the
 per-frame refill below is a fixed cost independent of the camera.

@@ -53,7 +53,6 @@ import { InputController } from './camera/controls/input/input-controller';
 import {
   type CameraMode,
   FocusController,
-  type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
 import type { FocusableProviders, Target } from './camera/focus/focus-target';
@@ -186,7 +185,7 @@ export type StellataEventMap = {
   frame: void;
 };
 
-export class Stellata implements FrameAnchor {
+export class Stellata {
   readonly catalog: Catalog;
   readonly renderer: StellataRenderer;
   /** The boot seam — layers reach their scene and the shared uniform
@@ -206,15 +205,8 @@ export class Stellata implements FrameAnchor {
   // through a star material's uniforms object.
   private sharedUniforms!: SharedUniforms;
 
-  // The floating-origin service — worldOffset, the ordered recentre
-  // fan-out, and the focal anchor policy (frame/README.md).
-  private floatingOrigin!: FloatingOrigin;
-  // Epoch advance, the derived per-instance buffers, and the
-  // Sol-distance proximity queries — see star-pipeline/star-frame/README.md.
-  // The shell reads `localPositions` through it and drives the
-  // per-frame calls.
-  private starFrame!: StarFrame;
-  private get worldOffset(): THREE.Vector3 { return this.floatingOrigin.worldOffset; }
+  readonly floatingOrigin: FloatingOrigin;
+  readonly starFrame: StarFrame;
   // Scratch for the focused star's per-re-advance space-motion delta.
   private readonly _epochFollowDelta = new THREE.Vector3();
   // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
@@ -472,7 +464,7 @@ export class Stellata implements FrameAnchor {
       uniforms: sharedUniforms,
       chromeLines: this.chromeLines,
       camera: this.camera,
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
       getT: () => this.getT(),
       thresholdMag: () => this.exposure.getThresholdMag(),
       focusedStar: () => this.focus.getFocusedStar(),
@@ -544,7 +536,7 @@ export class Stellata implements FrameAnchor {
     const galacticDiscEntry = galacticDiscSceneLayer({
       scene: this.scene,
       chromeLines: this.chromeLines,
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
       detailPermits: (id) => this.declutter.permits(id),
     });
     this.starLocalCluster = new StarLocalCluster(
@@ -553,7 +545,7 @@ export class Stellata implements FrameAnchor {
       sharedUniforms.uLocalMemberIdx as { value: Int32Array },
       {
         catalog,
-        localPositions: () => this.localPositions,
+        localPositions: () => this.starFrame.localPositions,
         renderedSizeComponents: (idx, out) => this.renderedSizeComponentsFor(idx, out),
         forEachStarNearCamera: (d, cb) => this.starFrame.forEachStarNearCamera(d, cb),
         // Membership needs physSize ≥ PHYS_RATIO_THRESHOLD × pxSize with
@@ -582,7 +574,7 @@ export class Stellata implements FrameAnchor {
       onFilter: (handler) => this.bus.on('filter', handler),
       permitted: () => this.declutter.permits('constellationBoundaries'),
       localPositionInto: (kind, idx, out) => this.focusables[kind].localPositionInto(idx, out),
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
     });
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
@@ -619,7 +611,7 @@ export class Stellata implements FrameAnchor {
       starPhotometry: (idx) => this.kinds.star.photometry(idx),
       systemMembership: this.systemMembership,
       getT: () => this.getT(),
-      getWorldOffset: () => this.worldOffset,
+      getWorldOffset: () => this.floatingOrigin.worldOffset,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getMonochrome: () => this.monochrome,
       detailPermits: (id) => this.declutter.permits(id),
@@ -676,7 +668,7 @@ export class Stellata implements FrameAnchor {
       catalog: this.catalog,
       sortedByDistFromSol: this.starFrame.sortedByDistFromSol,
       sortedDistFromSol: this.starFrame.sortedDistFromSol,
-      getLocalPositions: () => this.localPositions,
+      getLocalPositions: () => this.starFrame.localPositions,
       getFilter: () => this.filter,
       kindPicks: collectKindPicks(this.kinds),
       renderedSizePxFn: (idx) => this.pickPrefilterSizePxFor(idx),
@@ -706,7 +698,7 @@ export class Stellata implements FrameAnchor {
       observeControls: this.observeControls,
       catalog: this.catalog,
       bus: this.bus,
-      frameAnchor: this,
+      frameAnchor: { origin: this.floatingOrigin, stars: this.starFrame },
       aim: this.aim,
       roll: this.roll,
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
@@ -768,7 +760,7 @@ export class Stellata implements FrameAnchor {
     });
     this.hud = new HudOverlay({
       elements: hudElementsById(document),
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
       aimAt: (localPoint) => this.aimAt(localPoint),
     });
 
@@ -849,7 +841,7 @@ export class Stellata implements FrameAnchor {
 
     this.frameCtx = {
       camera: this.camera,
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
       distFromSol: 0,
       t: 0,
       warpActive: false,
@@ -1028,22 +1020,6 @@ export class Stellata implements FrameAnchor {
     return t === null ? 0 : this.focusables[t.kind].peakDiscSizePx(t.idx) * 0.5;
   }
 
-  /** Absolute-space coordinate of the renderer's current local origin.
-   *  Read-only snapshot; callers must not mutate. URL serialisation
-   *  emits this so close-orbit unfocus poses (where worldOffset sits at
-   *  the former focal star, not Sol — see the close-orbit unfocus contract) round-trip
-   *  exactly through the float32 cam/tgt fields. */
-  getWorldOffset(): Readonly<THREE.Vector3> { return this.worldOffset; }
-  /** Shift the floating origin to a new absolute position. Star instance
-   *  positions, camera, and controls.target are translated to preserve
-   *  the user-visible pose; subsequent rendering operates in the new
-   *  local frame. URL loading uses this to restore a saved worldOffset
-   *  before applying cam/tgt (which then overwrite the camera/target
-   *  translations the recentre produced). */
-  setWorldOffset(absX: number, absY: number, absZ: number): void {
-    this.recenterOrigin(this.tmpRecenter.set(absX, absY, absZ));
-  }
-
   /** Virtual clock backing `getT()`; the debug time-scrubber drives it. */
   get timeClock(): VirtualClock { return this.clock; }
 
@@ -1096,22 +1072,6 @@ export class Stellata implements FrameAnchor {
     for (const kind of KIND_ROSTER) {
       this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
     }
-  }
-
-  private tmpRecenter = new THREE.Vector3();
-
-  // Shift the renderer's local origin to `newOrigin` (an absolute-space
-  // coordinate) — FloatingOrigin.recenterTo, whose listener fan-out
-  // rewrites the star buffer, shifts camera + orbit target, and runs
-  // the scene-layer recenter hooks (frame/README.md#recentre-fan-out--order-is-load-bearing).
-  //
-  // Triggered automatically from FocusController.setFocus() and
-  // WarpController.tryMidFlyRecentre. Don't call externally — it
-  // bypasses the state-change bookkeeping that setFocus threads through.
-  // Returns the applied delta (shared scratch; null on no-op) so callers
-  // can migrate auxiliary state captured in the old frame.
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    return this.floatingOrigin.recenterTo(newOrigin);
   }
 
   private maybeReAdvanceEpoch(): void {
@@ -1296,17 +1256,6 @@ export class Stellata implements FrameAnchor {
     this.webgpuStarLayer.setCoreMaskVisible(on);
   }
 
-  // Read-only view of the local-frame star positions, bound to the GPU
-  // iPosition attribute. Overlays should project through this rather than
-  // catalog.positions so their math runs in the same frame as the camera.
-  get localPositions(): Float32Array { return this.starFrame.localPositions; }
-
-  /** Bucketised Julian epoch year the catalog positions currently sit at.
-   *  Changes exactly when a re-advance rewrote the positions buffers —
-   *  overlays that skip stationary frames must key on it alongside the
-   *  camera transform. */
-  get advancedEpochJyr(): number { return this.starFrame.advancedEpochJyr; }
-
   /** Every scene graph this boot draws, for debug-scoped READS — the
    *  memory inventory walks them (`debug/memory/README.md`).
    *
@@ -1407,24 +1356,6 @@ export class Stellata implements FrameAnchor {
   invertView() {
     if (!claimCameraForAim(this.cameraClaim)) return;
     this.aim.invert();
-  }
-
-  // Star position in the renderer's local frame — i.e. in the same space
-  // as `camera.position` and `controls.target`. This is what overlays want
-  // for projection math and what the orbit camera operates in. It is NOT
-  // the absolute (Sol-centric) catalog position when a star is focused;
-  // use `catalog.positions[i*3..]` directly if you need absolute space
-  // (e.g. distance-from-Sol labels).
-  starLocalPosition(i: number): THREE.Vector3 {
-    return this.starLocalPositionInto(i, new THREE.Vector3());
-  }
-
-  /** Non-allocating sibling of `starLocalPosition`: writes the local-frame
-   *  position of star `i` into `out` and returns `out`. Use from per-frame
-   *  callers (animate, updateWarp, overlay updates); the allocating shim
-   *  above stays for cold paths and external API. */
-  starLocalPositionInto(i: number, out: THREE.Vector3): THREE.Vector3 {
-    return this.starFrame.localPositionInto(i, out);
   }
 
   /** Lead (first-seen outermost primary) of `idx`'s collapsed cluster,
@@ -1631,7 +1562,7 @@ export class Stellata implements FrameAnchor {
     const continuous = cameraAnimating || this._realtimeFramesNeeded;
     const cadenceDue = this.cadence.isDue(this.clock.getRate(), this.frameCtx.t);
     if (!this.renderGate.tick(
-      this.camera, this.controls.target, this.worldOffset,
+      this.camera, this.controls.target, this.floatingOrigin.worldOffset,
       { continuous, cadenceDue, nowMs },
     )) {
       requestAnimationFrame(this.animate);
@@ -1728,9 +1659,9 @@ export class Stellata implements FrameAnchor {
    *  spans a small range, so precision matters). */
   private refreshFrameCtx(): void {
     const cam = this.camera.position;
-    const ax = cam.x + this.worldOffset.x;
-    const ay = cam.y + this.worldOffset.y;
-    const az = cam.z + this.worldOffset.z;
+    const ax = cam.x + this.floatingOrigin.worldOffset.x;
+    const ay = cam.y + this.floatingOrigin.worldOffset.y;
+    const az = cam.z + this.floatingOrigin.worldOffset.z;
     this.frameCtx.distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
     this.frameCtx.t = this.getT();
     this.frameCtx.warpActive = this.warp.isActive();

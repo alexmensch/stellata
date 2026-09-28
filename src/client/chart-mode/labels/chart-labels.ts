@@ -501,7 +501,7 @@ export class ChartLabels {
     const camera = stellata.camera;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const positions = stellata.localPositions;
+    const positions = stellata.starFrame.localPositions;
     const cat = stellata.catalog;
 
     // Full-tick skip. Chart-mode SVG output is fully determined by camera
@@ -510,7 +510,7 @@ export class ChartLabels {
     // ~1500 binaries / ~1000 variables and ~hundreds of named stars to
     // discover that nothing moved is the dominant idle cost; skipping the
     // entire body collapses chart.* sections to zero on stationary frames.
-    const epochJyr = stellata.advancedEpochJyr;
+    const epochJyr = stellata.starFrame.advancedEpochJyr;
     // Planet labels track the ephemeris, which moves with the model
     // clock even under a still camera — bucketed at the ephemeris
     // cache's own 60 s granularity so idle frames still skip.
@@ -645,7 +645,7 @@ export class ChartLabels {
       }
     }
     if (showConNames) {
-      const worldOffset = stellata.getWorldOffset();
+      const worldOffset = stellata.floatingOrigin.worldOffset;
       for (const anchor of stellata.constellationBoundaries.labelAnchors) {
         const minAppMag = tables.value.conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > limitMag) continue;
