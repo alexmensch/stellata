@@ -96,6 +96,9 @@ It also owns the two per-star buffers those fields write — composite-suppress
 (0) and eclipse dim (1, and reset to 1 on every re-attach) — which the star
 pipeline wraps as attributes through `sourceArrays()`, and the orbit-path
 layer, whose system rebuilds on every focus change and on every settle.
+Every settle, ready or absent, wakes the render gate (`attach:binaries`):
+a settled camera draws no frame otherwise, and the pairs would wait for the
+user to move.
 
 **The frame order is the entry's**: walk, then the focal ride (the shell's
 `rideFocal`, handed `focalPerturbation`'s function), then photometry, whose

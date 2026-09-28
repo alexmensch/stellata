@@ -424,6 +424,7 @@ export class Stellata {
       observeAnchorStar: () => this.observe.observeAnchorOf('star'),
       onFocus: (handler) => this.bus.on('focus', handler),
       rideFocal: (source) => this.focalRides.rideBinaryFocal(source),
+      invalidate: (reason) => this.renderGate.invalidate(reason),
     });
     // The star kind module's legs read the shell-owned star machinery
     // through these closures — they deref lazily, so the picker and focus
@@ -485,7 +486,6 @@ export class Stellata {
       detailPermits: (id) => this.declutter.permits(id),
     });
     this.localDepthPass.register(this.starPipeline.localCluster);
-    this.binaries.data.observe(() => this.renderGate.invalidate('attach:binaries'));
     this.constellationBoundaries = new ConstellationBoundaries({
       scene: this.scene,
       artifact: boundaries,
