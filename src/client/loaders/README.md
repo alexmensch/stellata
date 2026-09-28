@@ -160,6 +160,9 @@ What the undecoded tail holds, and why each is what it is:
 - **Positions, magnitudes and flags stay zero**, which is safe only because
   nothing walks past `loadedCount`: the compaction kernel's thread count
   is the decoded count (`../webgpu/star/compaction/README.md`).
+  A single-index read is held to the same bound through
+  `isDecodedRecord(catalog, idx)` — below `count` is not enough, since a
+  tail index reads a star at Sol.
 
 Three traps, all of them silent if missed:
 
@@ -168,8 +171,8 @@ Three traps, all of them silent if missed:
   before the tail landed would erase those records the first time the model
   clock crossed a bucket (`../star-pipeline/star-frame/README.md`).
 - **Each landing chunk must invalidate the render gate**, or a settled camera
-  never draws and the new stars simply do not appear. `Stellata`'s
-  `absorbCatalogRecords` is the single place that fans a chunk out to the star
+  never draws and the new stars simply do not appear. `StarPipeline`'s
+  chunk absorb is the single place that fans a chunk out to the star
   frame, both pipelines and the gate — same shape as the dust loader's
   `onProgress` below.
 - **The SID resolver's star domain attaches on the FIRST chunk and declares

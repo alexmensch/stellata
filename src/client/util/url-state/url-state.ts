@@ -1152,7 +1152,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // a hard focus recentres the origin (`../../camera/focus/focus-target.ts`
   // KIND_TRAITS), so a cloud, an LG object or a shell leaves the sender's frame
   // reachable through this field and no other.
-  const wo = stellata.getWorldOffset();
+  const wo = stellata.floatingOrigin.worldOffset;
   const scale = orbitRadius(c, t);
   const camDefault = defaultCamForMode(mode);
   if (!isHardTarget(focused)
@@ -1419,14 +1419,14 @@ export function applyDecodedView(
   // but apply it anyway when present (no-op when redundant). Without
   // focus, worldOffset carries the close-orbit unfocus origin
  // so cam/tgt can be tiny local-frame values that round-
-  // trip cleanly through float32. setWorldOffset also shifts camera
+  // trip cleanly through float32. The recentre also shifts camera
   // and target alongside the origin to preserve the user-visible
   // pose; for URL load we explicitly reset them to defaults here so
   // an absent view.cam / view.tgt produces the conventional default
   // pose in the *new* local frame rather than the recentre-shifted
   // junk position. view.cam / view.tgt below override when present.
   if (view.worldOffset) {
-    stellata.setWorldOffset(view.worldOffset[0], view.worldOffset[1], view.worldOffset[2]);
+    stellata.floatingOrigin.recenterTo(new THREE.Vector3(...view.worldOffset));
     setCameraToDefault(stellata, view.mode);
     stellata.controls.target.set(DEFAULT_TGT[0], DEFAULT_TGT[1], DEFAULT_TGT[2]);
     controlsDirty = true;

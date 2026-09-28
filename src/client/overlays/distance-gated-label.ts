@@ -29,7 +29,7 @@ export interface DistanceGatedLabelOptions {
    *  heliopause this is a direct array lookup since Sol is the focus
    *  whenever the label can show. For absolute-ICRS geometry (MW
    *  galactic centre, Local Group objects) the implementer subtracts
-   *  `stellata.getWorldOffset()` from the absolute position. */
+   *  `stellata.floatingOrigin.worldOffset` from the absolute position. */
   getWorldSample: (i: number, out: THREE.Vector3) => void;
   /** Per-frame visibility predicate. Returning false hides the label
    *  AND resets the screen-position smoothing so the next show snaps

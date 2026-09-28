@@ -147,7 +147,7 @@ localDepthPass.render(renderer, camera)        // after the main render
   the API just doesn't care.
 - Positions are renderer-local-frame (same floating origin as the
   camera), so brackets are camera-relative distances and the pass is
-  invariant under `recenterOrigin` — no recenter hook needed beyond
+  invariant under a recentre — no recenter hook needed beyond
   what each layer already does.
 
 Live providers:

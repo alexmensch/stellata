@@ -765,7 +765,7 @@ describe('focusedOrbitInto', () => {
       getT: () => 0,
       binaries: { data: binaries === null ? lateAbsent() : lateReady(binaries) },
       catalog: { positions },
-      localPositions: localPositions(),
+      starFrame: { localPositions: localPositions() },
     } as unknown as Stellata;
   };
 
@@ -887,7 +887,7 @@ describe('focusedOrbitInto', () => {
       expect(focusedOrbitFrom(before, source, s)).toBe(true);
 
       // Swing the partner a quarter of the way round in the local frame.
-      const local = s.localPositions;
+      const local = s.starFrame.localPositions;
       local[SECONDARY * 3 + 0] = 1;
       local[SECONDARY * 3 + 1] = 2;
       const after = out();

@@ -274,9 +274,11 @@ function makeStatefulStellata() {
     setCameraFov: () => {},
     getT: () => Date.now() / 1000,
     setT: () => {},
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getWorldOffset: () => mockVec3() as any,
-    setWorldOffset: () => {},
+    floatingOrigin: partialOf<Stellata['floatingOrigin']>({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      worldOffset: mockVec3() as any,
+      recenterTo: () => null,
+    }),
     focusables: mockFocusables(),
     getOrbitFramePort: () => mockOrbitPort(state.orbit),
     focus: partialOf<Stellata['focus']>({
@@ -1133,8 +1135,10 @@ describe('url-state', () => {
         // Live `t` — encoder gates emission on isLive(getT()), so returning
         // wall-clock now keeps the existing assertions at "no t in URL".
         getT: () => Date.now() / 1000,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getWorldOffset: () => ({ x: wo[0], y: wo[1], z: wo[2] } as any),
+        floatingOrigin: partialOf<Stellata['floatingOrigin']>({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          worldOffset: { x: wo[0], y: wo[1], z: wo[2] } as any,
+        }),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         camera: {
           position: { x: camPos[0], y: camPos[1], z: camPos[2] },
@@ -2237,9 +2241,11 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       setCameraFov: (f) => { state.fov = f; },
       getT: () => state.t,
       setT: (t) => { if (t !== null) state.t = t; },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      getWorldOffset: () => mockVec3() as any,
-      setWorldOffset: () => {},
+      floatingOrigin: partialOf<Stellata['floatingOrigin']>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        worldOffset: mockVec3() as any,
+        recenterTo: () => null,
+      }),
       focusables: mockFocusables(),
       getOrbitFramePort: () => mockOrbitPort(orbit),
       focus: partialOf<Stellata['focus']>({

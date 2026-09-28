@@ -11,18 +11,13 @@ const COMPOSITION: readonly string[] = [
   'floatingOrigin', 'focalRides', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
-  'solarSystem', 'systemMembership', 'tmpRecenter', 'warp', 'webgpu',
+  'solarSystem', 'starFrame', 'starPipeline', 'systemMembership', 'warp', 'webgpu',
 ];
 
 const AWAITING_EXTRACTION: readonly string[] = [
-  '_epochFollowDelta',
-  '_realtimeFramesNeeded', '_suppressPulsation', 'absorbedSuppressCount',
-  'coreMaskEnabled',
+  '_epochFollowDelta', '_realtimeFramesNeeded',
   'frameCtx', 'glslResidentsChecked',
-  'offCatalogRecords', 'passDebugScratch',
-  'pickSizeScratch', 'starAttrs', 'starFrame', 'starSizeInputs',
-  'starLocalCluster',
-  'trackballSettle', 'webgpuStarLayer',
+  'trackballSettle',
 ];
 
 function shellFields(): string[] {

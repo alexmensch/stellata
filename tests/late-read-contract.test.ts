@@ -67,7 +67,6 @@ const NO_SELECTION = 'verdict: null is "nothing selected", its own answer';
 
 /** Keyed `method` on the shell, `namespace.method` on a readonly namespace. */
 const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
-  recenterOrigin: 'verdict: null is "no recentre happened"',
   getOrbitFramePort: 'install seam: null is "no instrument", which is its own answer',
   'adaptation.getLandedStatistic': 'verdict: null is "no reduction has landed", which a dark frame\'s 0 cannot say',
   'constellationFigure.aimDirection': 'verdict: null is "no figure with a vertex in any direction from there"',
@@ -81,7 +80,7 @@ const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   'focus.getVectorTo': NO_SELECTION,
   'focus.getVectorTarget': NO_SELECTION,
   'focus.getFocusedHardTarget': NO_SELECTION,
-  'focus.recenterOrigin': 'verdict: null is "no recentre happened"',
+  'floatingOrigin.recenterTo': 'verdict: null is "no recentre happened"',
   'focus.hardFocusParkDist': NO_SELECTION,
   'focus.makeFocusTarget': 'verdict: null is "this target cannot be focused"',
   'focus.currentFocusTarget': NO_SELECTION,

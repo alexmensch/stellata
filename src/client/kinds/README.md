@@ -158,9 +158,9 @@ and focused planet system, both outside the module); and its mesh
 layer's update lives on the shell, after the moving-focal ride
 (`../scene/README.md`).
 
-Star-kind exceptions: the render layers are shell-wired engine
-machinery, so `attach` returns null and the legs read the shell
-through the injected `StarModuleRuntime`
+Star-kind exceptions: the render layers are `StarPipeline`'s, which the
+shell constructs, so `attach` returns null and the legs read it and the
+rest of the star machinery through the injected `StarModuleRuntime`
 (`../star-pipeline/README.md`); `searchEntries()` answers empty — the
 star corpus enters `createSearchRunner` through `buildSearchIndex`'s
 richer channel (designation-tier labels + direct-lookup ID maps);

@@ -179,7 +179,8 @@ The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
 `solarSystem`, `coordSpheres`, `binaries`, `extinction`,
-`constellationBoundaries`, `constellationFigure`, plus the
+`constellationBoundaries`, `constellationFigure`, `starPipeline`, the frame
+owners `floatingOrigin` and `starFrame`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -204,13 +205,10 @@ belongs on the controller.
 **Forwarders still on the shell leave with their cluster, and so do their
 callers** ([Decomposing the shell](#decomposing-the-shell)); `main.ts` reaches a late
 attachment through its owner's readonly namespace (`stellata.binaries.attach`,
-`stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
-`FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
-`starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
-`floatingOrigin`; with the star render machinery, the focus controller's
-`frameAnchor` dep is built from those two owners directly, and outside
-readers of `stellata.getWorldOffset()` read the floating origin's
-namespace. No extraction leaves a method behind that only forwards.
+`stellata.extinction.attach`). Star positions and the origin are read off
+their owners, `stellata.starFrame` and `stellata.floatingOrigin`, and the
+focus controller's `FrameAnchor` is those two owners. No extraction leaves
+a method behind that only forwards.
 
 **Install seams are the other admissible shape**, and they are not
 pass-throughs: a UI surface built after the shell registers itself here so
@@ -241,16 +239,7 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
-
-**Values crossing a row boundary** — whichever row moves first settles the
-interface for both:
-
-- **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
-  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the constellation
-  figure takes it, and the star-local-cluster and core-mask entries carry it
-  when their row moves.
 
 ### Late-attached slots
 
@@ -268,7 +257,7 @@ so it has no pending state at all — the IAU boundary artifact
 Two catalogue-prefix reads are correct by construction rather than by a
 type: the constellation figure and its aim direction
 ([The aim direction](constellation-figure/README.md#the-aim-direction)) read figure vertices from
-`localPositions` from first paint, and the aim keeps what it read.
+`starFrame.localPositions` from first paint, and the aim keeps what it read.
 The build fails unless every figure vertex sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
 A third prefix read sits outside the shell: the extinction prepass sorts its
 dispatch order over the table it attaches to, which is normally still
@@ -391,6 +380,6 @@ order, the anchor policy, the focus/unfocus invariants and the URL
 `worldOffset` field.
 
 The one rule every layer must respect: **projection and camera math read
-`stellata.localPositions`; distance-from-Sol reads `catalog.positions`**
+`stellata.starFrame.localPositions`; distance-from-Sol reads `catalog.positions`**
 (or sums back to absolute in float64). Mixing the two frames is the
 recurring bug this design creates.

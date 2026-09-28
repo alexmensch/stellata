@@ -43,6 +43,7 @@ export interface BinariesAttachmentDeps {
   /** Runs after the orbit walk and before eclipse photometry, whose line of
    *  sight reads the camera this moves. */
   rideFocal: (perturbation: FocalPerturbationInto) => void;
+  invalidate: (reason: string) => void;
 }
 
 interface Attached {
@@ -117,6 +118,7 @@ export class BinariesAttachment {
     if (binaries === null) {
       this.disposeFields();
       this.attached.conclude();
+      this.deps.invalidate('attach:binaries');
       return;
     }
     const { catalog, localPositions } = this.deps;
@@ -149,6 +151,7 @@ export class BinariesAttachment {
     this.eclipseDim.fill(1);
     uploadFull(attrs.iEclipseDimAttr);
     this.attached.land({ data: binaries, orbits, eclipse, perturbation });
+    this.deps.invalidate('attach:binaries');
   }
 
   markBaselinesDirty(): void {

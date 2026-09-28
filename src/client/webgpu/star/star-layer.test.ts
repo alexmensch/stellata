@@ -133,7 +133,7 @@ describe('StarLayer', () => {
   });
 
   // The mirror draws only local-pass members, and membership parks in
-  // chart mode — the same split StarPipeline.setMonochromeBlend makes.
+  // chart mode.
   it('leaves the mirror clones alone: they have nothing to draw on paper', () => {
     const { layer } = makeLayer();
     const before = layer.localMirror.group.children

@@ -21,6 +21,8 @@ import {
   type Candidate,
 } from './chart-labels';
 import type { Stellata } from '../../stellata';
+import { chartDiscPxForAppMag } from '../chart-disc-pure';
+import { instrumentLimitMag } from '../../filters/filter-state';
 import type { ChartModeContext } from '../chart-mode';
 import { assumeComplete, type CompleteCatalog } from '../../loaders/catalog-loader';
 import { LateCell } from '../../util/late/late';
@@ -567,17 +569,18 @@ describe('chart-labels / ChartLabels lifecycle', () => {
     const stellata = {
       catalog,
       camera,
-      localPositions: positions,
-      // Read exactly once per tick (the full-tick skip key), so it doubles
-      // as the tick counter.
-      get advancedEpochJyr() { ticks++; return 2016; },
-      uniforms: {
-        uChartDiscMaxPx: { value: 28 },
-        uChartDiscMinPx: { value: 1.5 },
-        uChartMagBright: { value: -2 },
+      starFrame: {
+        localPositions: positions,
+        // Read exactly once per tick (the full-tick skip key), so it doubles
+        // as the tick counter.
+        get advancedEpochJyr() { ticks++; return 2016; },
+      },
+      starPipeline: {
+        chartDiscPxFor: (m: number) => chartDiscPxForAppMag(
+          m, { maxPx: 28, minPx: 1.5, magBright: -2 }, instrumentLimitMag('unaided-eye')),
       },
       getT: () => 0,
-      getWorldOffset: () => new THREE.Vector3(),
+      floatingOrigin: { worldOffset: new THREE.Vector3() },
       constellationBoundaries: { labelAnchors: patch.anchors ?? [] },
       filters: {
         getFilter: () => ({

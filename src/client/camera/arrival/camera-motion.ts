@@ -96,7 +96,7 @@ export function newArrival(opts: NewArrivalOpts): ArrivalState {
 
 /** Migrate an in-flight `ArrivalState` into a new floating-origin frame
  *  by subtracting the recentre delta from every cached point. `delta` is
- *  the value `recenterOrigin` returns (`newOrigin − previous worldOffset`);
+ *  the value `FloatingOrigin.recenterTo` returns (`newOrigin − previous worldOffset`);
  *  every position captured in the old frame must shift by `−delta` to
  *  point at the same physical location in the new frame.
  *

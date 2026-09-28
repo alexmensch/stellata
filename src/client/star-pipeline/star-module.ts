@@ -1,5 +1,5 @@
 // The star ObjectKindModule — catalog + search-index load and the star
-// kind's capability legs. Render layers stay on the shell. See ./README.md.
+// kind's capability legs. The render layers are StarPipeline's. See ./README.md.
 
 import * as THREE from 'three';
 import {
@@ -21,7 +21,7 @@ import type {
   KindSearchEntry,
   ObjectKindModule,
 } from '../kinds/kind-module';
-import { loadCatalog, type Catalog } from '../loaders/catalog-loader';
+import { isDecodedRecord, loadCatalog, type Catalog } from '../loaders/catalog-loader';
 import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
@@ -32,13 +32,11 @@ import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 import type { Late, LateState } from '../util/late/late';
 
-/** Shell-owned star machinery the module's legs read through closures —
- *  the star render pipeline, its frame state, and the picker stay on the
- *  integration shell, so the shell injects these before it reads any
- *  leg. */
 export interface StarModuleRuntime {
   /** Local-frame position of star `idx` into `out` (StarFrame). */
   localPositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
+  /** Absolute (Sol-centred) position of star `idx` into `out` (StarFrame). */
+  absolutePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
   /** Auto-park distance for star `idx` (FocusController). */
   parkDistForStar(idx: number): number;
   /** Rendered disc diameter in CSS px — the shader-sizing CPU mirror. */
@@ -114,7 +112,7 @@ export function createStarKindModule(): StarKindModule {
   const binariesState = (): LateState<BinariesData> =>
     (runtime ? runtime.binaries.state() : { status: 'pending' });
 
-  const photometryOf = (idx: number) => (catalog && idx >= 0 && idx < catalog.count
+  const photometryOf = (idx: number) => (catalog && isDecodedRecord(catalog, idx)
     ? {
       absMag: catalog.absmag[idx],
       radiusPc: Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
@@ -203,20 +201,18 @@ export function createStarKindModule(): StarKindModule {
 
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
-      // The star render layers (pipeline, local mirror, binary fields)
-      // are shell-wired engine machinery, not a module scene layer.
+      // The star render layers are StarPipeline's, not a module scene layer.
       return null;
     },
 
     focusable: (): FocusableProvider => ({
       anchorInto: (idx, out) => {
-        if (!catalog || idx < 0 || idx >= catalog.count) return false;
-        const p = catalog.positions;
-        out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
+        if (!catalog || !runtime || !isDecodedRecord(catalog, idx)) return false;
+        runtime.absolutePositionInto(idx, out);
         return true;
       },
       localPositionInto: (idx, out) => {
-        if (!catalog || !runtime || idx < 0 || idx >= catalog.count) return false;
+        if (!catalog || !runtime || !isDecodedRecord(catalog, idx)) return false;
         runtime.localPositionInto(idx, out);
         return true;
       },
@@ -282,7 +278,7 @@ export function createStarKindModule(): StarKindModule {
     }),
 
     pinnable: (idx) =>
-      catalog !== null && idx >= 0 && idx < catalog.count && catalog.sid[idx] !== 0,
+      catalog !== null && isDecodedRecord(catalog, idx) && catalog.sid[idx] !== 0,
 
     // The star corpus enters through buildSearchIndex's richer channel
     // (designation-tier fuzzy labels + the direct-lookup ID maps that

@@ -3,7 +3,9 @@
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
+import type { FloatingOrigin } from '../../frame/floating-origin';
 import type { Catalog } from '../../loaders/catalog-loader';
+import type { StarFrame } from '../../star-pipeline/star-frame/star-frame';
 import type { StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 import type { Late } from '../../util/late/late';
@@ -58,20 +60,14 @@ export function softOrbitFloor(park: (idx: number) => number) {
  *  — under this, the geometric pin is the right answer. */
 export const PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12;
 
-/** Floating-origin primitive. Implemented by the integration shell,
- *  which owns the camera / orbit-target / scene-layer half of a
- *  recentre and delegates the position-buffer half to `StarFrame`. */
 export interface FrameAnchor {
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null;
-  getWorldOffset(): Readonly<THREE.Vector3>;
-  starLocalPosition(idx: number): THREE.Vector3;
-  starLocalPositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
+  readonly origin: Pick<FloatingOrigin, 'recenterTo' | 'worldOffset'>;
+  readonly stars: Pick<StarFrame, 'localPositionInto' | 'absolutePositionInto'>;
 }
 
 /** Cross-controller seam consumed by WarpController. FocusController
  *  implements it natively (focus, vector slot, cameraMode all live
- *  here); only the frame-anchor methods delegate to the integration
- *  shell via deps. */
+ *  here); only the frame-anchor methods read the frame owners. */
 export interface FocusOps {
   /** FocusTarget describing whichever object is currently focused,
    *  or null if nothing is focused. Source side of a warp. */
@@ -79,16 +75,10 @@ export interface FocusOps {
   /** Build a FocusTarget for `target`, or null when its layer hasn't
    *  loaded or the index is out of range. */
   makeFocusTarget(target: Target): FocusTarget | null;
-  /** Star position in the renderer's local frame. */
-  starLocalPosition(idx: number): THREE.Vector3;
   /** Star's live local position (catalog baseline + orbital perturbation)
    *  in float64, written into `out`. Correct even right after a recentre,
    *  before the walk perturbs the buffer. */
   starLivePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
-  /** Shift the floating origin to `newOrigin`, returning the applied
-   *  delta. The returned Vector3 is shared scratch — copy if needed
-   *  beyond the synchronous call. Returns null on no-op. */
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null;
   setFocus(idx: number | null): void;
   /** Clear whichever distance-vector destination is set (any kind) —
    *  warp arrival wipes the slot regardless of the warp's kind. */
@@ -267,7 +257,7 @@ export class FocusController implements FocusOps {
     // the star buffer). Panning moves target off the star → disengage.
     // For a non-orbiting star the live position is its baseline (local
     // origin under focus), so this reduces to target ≈ origin.
-    const live = this.deps.frameAnchor.starLocalPositionInto(focal, this.tmpLive);
+    const live = this.deps.frameAnchor.stars.localPositionInto(focal, this.tmpLive);
     return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC;
   }
 
@@ -296,9 +286,6 @@ export class FocusController implements FocusOps {
 
   // ─── frame anchor + vector slot delegation ─────────────────────────
 
-  starLocalPosition(idx: number): THREE.Vector3 {
-    return this.deps.frameAnchor.starLocalPosition(idx);
-  }
   /** Star `idx`'s live local position in float64: its catalog baseline in
    *  the current floating-origin frame PLUS its orbital perturbation.
    *  Computed from the catalog + worldOffset (not the star buffer), so it
@@ -306,9 +293,8 @@ export class FocusController implements FocusOps {
    *  perturbed the buffer slot — and never double-counts the perturbation.
    *  The one place "where does the focal star actually sit" is answered. */
   starLivePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3 {
-    const wo = this.deps.frameAnchor.getWorldOffset();
-    const p = this.deps.catalog.positions;
-    out.set(p[idx * 3] - wo.x, p[idx * 3 + 1] - wo.y, p[idx * 3 + 2] - wo.z);
+    const { origin, stars } = this.deps.frameAnchor;
+    stars.absolutePositionInto(idx, out).sub(origin.worldOffset);
     const pert = this.deps.focalPerturbation.state();
     // Pending answers the bare baseline: README.md#pin-to-center-upinfocustocenter.
     if (pert.status === 'ready' && pert.value(idx, this.tmpPert)) out.add(this.tmpPert);
@@ -337,9 +323,6 @@ export class FocusController implements FocusOps {
   getFocusedHardTarget(): HardTarget | null {
     const t = this.getFocusedTarget();
     return isHardTarget(t) ? t : null;
-  }
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    return this.deps.frameAnchor.recenterOrigin(newOrigin);
   }
 
   // ─── star/cloud focus FSM ──────────────────────────────────────────
@@ -448,10 +431,8 @@ export class FocusController implements FocusOps {
    *  minDistance, planet-system reload). No 'focus' / 'state' event
    *  emit — setFocus fires those when the camera has landed. */
   private recenterFocusToStar(newIdx: number): THREE.Vector3 | null {
-    const p = this.deps.catalog.positions;
-    const delta = this.deps.frameAnchor.recenterOrigin(this.tmpRecenter.set(
-      p[newIdx * 3], p[newIdx * 3 + 1], p[newIdx * 3 + 2],
-    ));
+    const { origin, stars } = this.deps.frameAnchor;
+    const delta = origin.recenterTo(stars.absolutePositionInto(newIdx, this.tmpRecenter));
     this.focused = { kind: 'star', idx: newIdx };
     this.deps.controls.minDistance = this.deps.getFocusables().star.orbitFloor(newIdx);
     this.refreshPlanetSystem(newIdx);
@@ -689,7 +670,7 @@ export class FocusController implements FocusOps {
     if (this.cameraMode === 'observe') {
       this.exitObserveForFocusChange();
     }
-    this.deps.frameAnchor.recenterOrigin(this.tmpRecenter);
+    this.deps.frameAnchor.origin.recenterTo(this.tmpRecenter);
     this.focused = target;
     this.deps.controls.minDistance = provider.orbitFloor(target.idx);
     this.refreshPlanetSystem(provider.planetSystemHost(target.idx));

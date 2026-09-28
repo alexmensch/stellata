@@ -17,9 +17,9 @@ The warp consumes focusable objects through the `FocusTarget` contract
   controller alongside Picker / AimController and delegates the
   animate-loop tick when `warp.isActive()` returns true. Cross-
   controller coupling (focus state, the FocusTarget builder,
-  floating-origin recentre, vector-slot clear) lives behind the
-  `FocusOps` interface implemented by `FocusController` (in
-  `../focus/`).
+  vector-slot clear) lives behind the `FocusOps` interface implemented
+  by `FocusController` (in `../focus/`); the two recentres call the
+  `FloatingOrigin` service directly (`../../frame/README.md`).
 - `warp-pure.ts` (+ test) — pure phase math (slerp, ease, the
   recentre predicate). Floating-origin migration of in-flight
   `WarpState` waypoints lives here as `shiftWarpWaypoints`; the

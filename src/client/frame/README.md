@@ -63,17 +63,19 @@ in registration order and returns the delta (shared scratch; null on
 no-op, in which case no listener fires).
 
 The star buffer itself lives on `StarFrame`
-(`../star-pipeline/star-frame/README.md`): `localPositions` (exposed via
-`stellata.localPositions`), a `Float32Array` of
+(`../star-pipeline/star-frame/README.md`): `localPositions` (read as
+`stellata.starFrame.localPositions`), a `Float32Array` of
 `catalog.positions − worldOffset` bound to the `iPosition` instance
 attribute, which is what every overlay and pick path projects through.
 
-`Stellata.recenterOrigin(newOrigin)` (exposed via the `FrameAnchor`
-seam) delegates here. Its two callers are
-`FocusController.recenterFocusToStar` (focus mutations) and
-`WarpController.tryMidFlyRecentre` (mid-flight pivot onto the
-destination); the focal-drift recentre runs through the anchor policy's
-per-frame `tick()` instead.
+The shell exposes the service as `stellata.floatingOrigin`, and the focus
+controller holds it through its `FrameAnchor`. `recenterTo` has three
+callers: `FocusController.recenterFocusToStar` (focus mutations),
+`WarpController.tryMidFlyRecentre` (mid-flight pivot onto the destination)
+and the URL restore of an explicit `worldOffset`; the focal-drift recentre
+runs through the anchor policy's per-frame `tick()` instead. **Nothing else
+calls it** — a recentre outside those paths skips the focus bookkeeping
+`setFocus` threads through it.
 
 ### Recentre fan-out — order is load-bearing
 
@@ -106,12 +108,12 @@ and the shell supplies only which controllers count as camera-busy.
 **`tick()`'s return is the policy-recentre signal, not `onRecenter`.**
 The shell reseeds the moving-focal ride only when `tick()` reports a
 recentre; an externally triggered recentre (focus mutation, warp
-mid-fly pivot, URL restore — all via `recenterOrigin` →`recenterTo`)
+mid-fly pivot, URL restore — each a direct `recenterTo` call)
 must not reseed, because `focalRideStep` owns those transitions.
 
 ### Focus, unfocus, and the default load
 
-`FocusController.setFocus(idx)` calls `recenterOrigin` on focus, then
+`FocusController.setFocus(idx)` recentres the origin on focus, then
 snaps `controls.target` onto the focal star's **live** local position
 (catalog baseline + orbital perturbation), not the bare local origin —
 a binary member sits at its perturbed position. For a non-orbiting star
@@ -140,7 +142,7 @@ canonical default focus and *omits* the field when focused on Sol;
 
 ### Implications for code that reads positions
 
-- **Rendering / projection math** must use `stellata.localPositions`
+- **Rendering / projection math** must use `stellata.starFrame.localPositions`
   (same frame as `camera.position` and `controls.target`). The disc
   mask, focus ring, distance vector, constellation overlay, and all
   `Picker.pickStar` / `renderedSizePx` / `aimAtConstellation` paths
@@ -154,8 +156,9 @@ canonical default focus and *omits* the field when focused on Sol;
   attribute instead of `length(iPosition)`, because the latter is now
   a local-frame value. The Sol arrow uses the float64 sum approach so
   its distance label updates correctly under any focus.
-- `starLocalPosition(i)` (formerly `starWorldPosition`) returns the
-  local-frame vector — use it for camera math, never for Sol-distance.
+- `StarFrame.localPositionInto(i, out)` is the local-frame vector — use
+  it for camera math, never for Sol-distance; `absolutePositionInto` is
+  the Sol-centred one.
 
 ### URL round-trip
 
@@ -181,7 +184,7 @@ so a cloud, an LG object or a shell is focusable without the frame moving,
 and this field is the only thing that can carry the sender's. cam/tgt
 then encode in the local frame
 and round-trip with full Float32 precision. The loader applies
-`setWorldOffset` *before* cam/tgt and resets cam/tgt to defaults so a
+recentres onto `worldOffset` *before* cam/tgt and resets cam/tgt to defaults so a
 missing `view.cam` / `view.tgt` produces a sane pose in the new local
 frame. Old URLs without `worldOffset` decode as Sol-anchored (legacy
 behaviour).
@@ -197,8 +200,8 @@ local frame, stored at full Float32 precision relative to the anchor.
 
 `buildSharedUniforms` (`shared-uniforms.ts`) returns the one uniform
 map the star disc, glow, and core-mask passes spread into their
-materials — `uRenderMode` is the only divergent slot, bound per
-material by `StarPipeline`. Every other consumer picks slots out of the
+materials; the pass is a compile-time specialisation, so no slot diverges
+between them. Every other consumer picks slots out of the
 same object **by reference**, so a single write reaches all of them
 with no bookkeeping: `FilterController` (the filter / instrument /
 render knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +

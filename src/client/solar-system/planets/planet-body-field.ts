@@ -436,7 +436,8 @@ export class PlanetBodyField {
   /**
    * Adjust each attached host's local-frame position when the
    * floating-origin shifts. Cheap — a vector subtract per host plus
-   * a buffer write. Called once by `Stellata.recenterOrigin`.
+   * a buffer write. Called once per recentre, from the planet module's
+   * scene-layer recenter leg.
    */
   recenter(newWorldOffset: Readonly<THREE.Vector3>): void {
     if (newWorldOffset.equals(this.worldOffset)) return;
@@ -951,7 +952,7 @@ export class PlanetBodyField {
     return true;
   }
 
-  /** Absolute (catalog-space) position into `out` — the recenterOrigin
+  /** Absolute (catalog-space) position into `out` — the recentre
    *  anchor when a planet is focused. */
   planetAbsolutePositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
     const host = this.hostOfInstance(instanceIdx);

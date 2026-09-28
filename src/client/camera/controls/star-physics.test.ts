@@ -14,7 +14,6 @@ import {
   PLANET_PARK_FILL_FRACTION,
   renderedSizePx,
   renderedDiscPxAtPeak,
-  getChartDiscParams,
   ZOOM_FLOOR_FRACTION,
   ORBIT_FLOOR_SURFACE_MARGIN,
 } from './star-physics';
@@ -448,17 +447,6 @@ describe('star-physics / renderedDiscPxAtPeak', () => {
     const uniforms = makeUniforms();
     const got = renderedDiscPxAtPeak({ catalog: cat, camPos, localPositions: cat.positions, uniforms }, 0);
     expect(Number.isFinite(got)).toBe(true);
-  });
-});
-
-describe('star-physics / getChartDiscParams', () => {
-  it('reads the three uniform values verbatim', () => {
-    const u = {
-      uChartDiscMaxPx: { value: 12 },
-      uChartDiscMinPx: { value: 1.5 },
-      uChartMagBright: { value: 4 },
-    };
-    expect(getChartDiscParams(u)).toEqual({ maxPx: 12, minPx: 1.5, magBright: 4 });
   });
 });
 

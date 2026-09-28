@@ -148,7 +148,7 @@ const chartT = clamp(
 pxSize.assign(mix(u.uChartDiscMaxPx, u.uChartDiscMinPx, chartT));
 ```
 
-Three tunable uniforms shared with JS via `getChartDiscParams()`:
+Three tunable uniforms, read on the CPU by `StarPipeline.chartDiscPxFor`:
 
 - `uChartDiscMaxPx` (default 28 px) — diameter at the bright end.
 - `uChartDiscMinPx` (default 1.5 px) — diameter at the faint end.
