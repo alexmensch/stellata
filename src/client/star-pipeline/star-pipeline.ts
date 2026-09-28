@@ -106,6 +106,7 @@ export class StarPipeline {
       uniforms.uLocalMemberIdx as { value: Int32Array },
       {
         catalog,
+        binaries: deps.binaries.data,
         localPositions: () => frame.localPositions,
         renderedSizeComponents: (idx, out) => starPhysics.renderedSizeComponents(this.sizeInputs, idx, out),
         forEachStarNearCamera: (d, cb) => frame.forEachStarNearCamera(d, cb),
@@ -151,9 +152,6 @@ export class StarPipeline {
     };
 
     this.unsubscribe = [
-      deps.binaries.data.observe((settled) => {
-        this.localCluster.setBinaries(settled.status === 'ready' ? settled.value : null);
-      }),
       // Chunk 0 is already decoded and the layer was built against it, so the
       // first call below folds it in; every later one follows a landing chunk.
       catalog.onRecordsDecoded(() => this.absorbRecords()),
