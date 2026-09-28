@@ -34,7 +34,8 @@ import { angularToPx as angularToPxPure } from './camera/controls/star-geometry'
 import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
-import { AimController, claimCameraForAim, type AimClaimGates } from './camera/controls/aim-controller';
+import { AimController } from './camera/controls/aim-controller';
+import { claimCamera, type CameraClaimGates } from './camera/camera-claim';
 import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
@@ -232,7 +233,7 @@ export class Stellata {
   private monochrome = false;
   readonly warp!: WarpController;
   readonly aim!: AimController;
-  private readonly cameraClaim: AimClaimGates = {
+  private readonly cameraClaim: CameraClaimGates = {
     isWarpActive: () => this.warp.isActive(),
     isAimActive: () => this.aim.isActive(),
     isObserveTransitionActive: () => this.observe.isActive(),
@@ -1025,7 +1026,7 @@ export class Stellata {
    * A caller holding a direction rather than an object wants `aimAlong`.
    */
   aimAt(pointLocal: THREE.Vector3) {
-    if (!claimCameraForAim(this.cameraClaim)) return;
+    if (!claimCamera(this.cameraClaim)) return;
     this.aim.aimAt(pointLocal);
   }
 
@@ -1038,7 +1039,7 @@ export class Stellata {
    * Shares `aimAt`'s composition-layer busy gates.
    */
   aimAlong(dirLocal: THREE.Vector3) {
-    if (!claimCameraForAim(this.cameraClaim)) return;
+    if (!claimCamera(this.cameraClaim)) return;
     this.aim.aimAlong(dirLocal);
   }
 
@@ -1052,7 +1053,7 @@ export class Stellata {
    * `AimController`.
    */
   invertView() {
-    if (!claimCameraForAim(this.cameraClaim)) return;
+    if (!claimCamera(this.cameraClaim)) return;
     this.aim.invert();
   }
 

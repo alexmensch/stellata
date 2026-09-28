@@ -23,7 +23,9 @@ across all five.
 - `arrival/` — log-distance smoothstep math shared by focus-park, warp
   Fly, and unfocus. Pure helpers + the per-frame `tickArrival` driver.
 
-`camera-config.ts` and `timing.ts` sit at this level — see [Shared](#shared).
+`camera-config.ts` and `timing.ts` sit at this level — see [Shared](#shared) —
+and so does `camera-claim.ts` (+ test), the one
+[claim-the-camera sequence](#the-claim-the-camera-sequence).
 
 ## Shared
 
@@ -171,7 +173,7 @@ focus-park lerp happened to be in flight.
 
 Three sites run it:
 
-- **Aims** — `claimCameraForAim` (`controls/aim-controller.ts`), taken by
+- **Aims** — `claimCamera` (`camera-claim.ts`), taken by
   every shell aim. All three bails come first; the cancels run only on a
   granted claim, so a refused aim leaves both lerps running.
 - **Warps** — `warp/warp-controller.ts` `startWarp` bails on a warp or an

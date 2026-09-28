@@ -15,13 +15,13 @@ import {
   DBL_CLICK_MS,
   PendingClickDispatcher,
 } from '../../../util/pending-click';
-import type { AimClaimGates } from '../aim-controller';
+import { isCameraHeld, type CameraClaimGates } from '../../camera-claim';
 import type { Picker } from '../picker';
 import { PICK_THRESHOLD_PX } from '../star-geometry';
 import type { RollController } from './roll-controller';
 import { WHEEL_NOTCH_DELTA_PX, pinchStep, scaleStepDeltaPx } from './pinch-zoom-pure';
 
-export interface InputControllerDeps extends AimClaimGates {
+export interface InputControllerDeps extends CameraClaimGates {
   canvas: HTMLCanvasElement;
   camera: THREE.PerspectiveCamera;
   controls: TrackballControls;
@@ -186,9 +186,7 @@ export class InputController {
    *  including them here would make every click self-block. See
    *  `../../README.md#camera-activity-predicates`. */
   private blocksClick(): boolean {
-    return this.deps.isWarpActive()
-      || this.deps.isAimActive()
-      || this.deps.isObserveTransitionActive();
+    return isCameraHeld(this.deps);
   }
 
   private dispatchSingleClick(x: number, y: number) {
