@@ -388,7 +388,7 @@ sets `highlightCon` via `setFilter` deliberately do **not** trigger the
 aim — a shareable URL's camera pose is authoritative, and the "reset"
 button means "clear the selection", not "jump somewhere".
 
-In OBSERVE mode the orbit-pivot rotation is degenerate (camera ≈
-target), so `aimAtConstellation` instead routes the centroid through
-`aimAt(c)`, which slerps the camera quaternion in place — same code
-path Sol/GC label clicks use.
+Both modes go through `aimAt(c)`, the same glide the Sol/GC label clicks
+take: navigate sweeps the camera around the orbit pivot so camera, pivot and
+aim point come out collinear, and observe turns the camera in place. A pick
+that yields no aim point returns before the claim, so it cancels nothing.

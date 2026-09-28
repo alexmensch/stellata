@@ -1366,33 +1366,9 @@ export class Stellata implements FrameAnchor {
     this.bus.emit('state');
   }
 
-  // Swing the camera to face the selected constellation while keeping the
-  // orbit target and orbit radius unchanged — only the camera's position on
-  // the orbit sphere moves.
   aimAtConstellation(conIndex: number) {
-    const t = this.controls.target;
-    const c = this.constellationFigure.aimPoint(conIndex, t);
-    if (c === null) return;
-
-    if (this.focus.getCameraMode() === 'observe') {
-      // Camera is parked at the focal star — just rotate the view to face
-      // the centroid through the shared observe-mode aim slerp. Distance
-      // doesn't matter; only the direction from camera to `c` is used.
-      this.aimAt(c);
-      return;
-    }
-
-    const dir = new THREE.Vector3().subVectors(c, t);
-    if (dir.lengthSq() < 1e-6) return; // aim point coincides with target
-    if (!claimCameraForAim(this.cameraClaim)) return;
-    dir.normalize();
-
-    const r = this.camera.position.distanceTo(t);
-    // Put the camera on the opposite side of target from the centroid at the
-    // current orbit radius — the forward vector (target − position) then
-    // points toward the centroid.
-    this.camera.position.copy(t).addScaledVector(dir, -r);
-    this.controls.update();
+    const c = this.constellationFigure.aimPoint(conIndex, this.controls.target);
+    if (c !== null) this.aimAt(c);
   }
 
   /**
