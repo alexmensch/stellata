@@ -72,7 +72,7 @@ export class StarPipeline {
   private readonly passDebugScratch = sizeScratch();
   // Refilled per call: chart labels solve a disc per label per tick.
   private readonly chartParams: ChartDiscParams = { maxPx: 0, minPx: 0, magBright: 0 };
-  private readonly unsubscribe: (() => void)[];
+  private readonly offRecordsDecoded: () => void;
 
   constructor(private readonly deps: StarPipelineDeps) {
     const { catalog, frame, uniforms } = deps;
@@ -151,11 +151,9 @@ export class StarPipeline {
       dispose: () => {},
     };
 
-    this.unsubscribe = [
-      // Chunk 0 is already decoded and the layer was built against it, so the
-      // first call below folds it in; every later one follows a landing chunk.
-      catalog.onRecordsDecoded(() => this.absorbRecords()),
-    ];
+    // Chunk 0 is already decoded and the layer was built against it, so the
+    // first call below folds it in; every later one follows a landing chunk.
+    this.offRecordsDecoded = catalog.onRecordsDecoded(() => this.absorbRecords());
     this.absorbRecords();
   }
 
@@ -270,7 +268,7 @@ export class StarPipeline {
   }
 
   dispose(): void {
-    for (const off of this.unsubscribe) off();
+    this.offRecordsDecoded();
     this.layer.dispose();
   }
 
