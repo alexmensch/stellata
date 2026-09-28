@@ -26,6 +26,8 @@ function build(start: { highlightCon?: number; chart?: boolean; mode?: CameraMod
     chromeLines: fakeChromeLineMaterials(),
     constellations: CONSTELLATIONS,
     localPositions,
+    localPositionInto: (idx, out) => out.fromArray(localPositions, idx * 3),
+    absmag: new Array(5).fill(0),
     filter: () => view,
     cameraMode: () => view.mode,
     observeAnchorStar: () => view.anchor,
@@ -98,6 +100,13 @@ describe('ConstellationFigure', () => {
     expect(group.visible).toBe(false);
     figure.setPermitted(true);
     expect(group.visible).toBe(true);
+  });
+
+  it('aims at the mean of a figure\'s members, and at nothing for no figure', () => {
+    const { figure } = build();
+    expect(figure.aimPoint(1, new THREE.Vector3())).toEqual(new THREE.Vector3(10.5, 11.5, 12.5));
+    expect(figure.aimPoint(2, new THREE.Vector3())).toBeNull();
+    expect(figure.aimPoint(-1, new THREE.Vector3())).toBeNull();
   });
 
   it('drops its state subscription on dispose', () => {

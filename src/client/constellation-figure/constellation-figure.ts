@@ -8,13 +8,15 @@ import type { Constellation } from '../loaders/catalog-loader';
 import type { CadenceReport } from '../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx, SceneLayer } from '../scene/scene-layer';
 import { ConstellationFigureLayer } from './constellation-figure-layer';
-import { selectFigures } from './constellation-figure-pure';
+import { figureAimPoint, selectFigures } from './constellation-figure-pure';
 
 export interface ConstellationFigureDeps {
   scene: Pick<THREE.Scene, 'add'>;
   chromeLines: ChromeLineMaterials;
   constellations: readonly Constellation[];
   localPositions: Float32Array;
+  localPositionInto: (idx: number, out: THREE.Vector3) => THREE.Vector3;
+  absmag: ArrayLike<number>;
   filter: () => Readonly<Pick<FilterState, 'chart' | 'highlightCon'>>;
   cameraMode: () => CameraMode;
   observeAnchorStar: () => number | null;
@@ -52,6 +54,16 @@ export class ConstellationFigure {
   /** The `constellationFigures` declutter floor. */
   setPermitted(on: boolean): void {
     this.layer.setPermitted(on);
+  }
+
+  /** README.md#the-aim-point, judged from `from`. Null when the index names no
+   *  figure with a vertex. */
+  aimPoint(conIndex: number, from: Readonly<THREE.Vector3>): THREE.Vector3 | null {
+    return figureAimPoint(this.deps.constellations[conIndex]?.lines, {
+      localPositionInto: this.deps.localPositionInto,
+      absmag: this.deps.absmag,
+      from,
+    });
   }
 
   private refresh(): void {

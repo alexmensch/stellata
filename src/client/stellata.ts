@@ -132,7 +132,6 @@ import { FloatingOrigin } from './frame/floating-origin';
 import { ExtinctionAttachment } from './star-pipeline/extinction/extinction-attachment';
 import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigure } from './constellation-figure/constellation-figure';
-import { figureAimPoint } from './constellation-figure/constellation-figure-pure';
 import { ConstellationBoundaries } from './constellation-boundaries/constellation-boundaries';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
@@ -828,6 +827,8 @@ export class Stellata implements FrameAnchor {
       chromeLines: this.chromeLines,
       constellations: catalog.constellations,
       localPositions: this.starFrame.localPositions,
+      localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      absmag: catalog.absmag,
       filter: () => this.filter,
       cameraMode: () => this.focus.getCameraMode(),
       observeAnchorStar: () => this.observe.observeAnchorOf('star'),
@@ -1370,11 +1371,7 @@ export class Stellata implements FrameAnchor {
   // the orbit sphere moves.
   aimAtConstellation(conIndex: number) {
     const t = this.controls.target;
-    const c = figureAimPoint(this.catalog.constellations[conIndex]?.lines, {
-      localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
-      absmag: this.catalog.absmag,
-      from: t,
-    });
+    const c = this.constellationFigure.aimPoint(conIndex, t);
     if (c === null) return;
 
     if (this.focus.getCameraMode() === 'observe') {

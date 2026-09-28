@@ -27,7 +27,8 @@ the constellation hull is gone and the chart-mode Latin **name** labels stay in
 ## The owner
 
 `ConstellationFigure` (`constellation-figure.ts`) holds the layer, its
-`'state'` subscription and the last selection signature, and builds its own
+`'state'` subscription and the last selection signature, answers the aim point
+([The aim point](#the-aim-point)), and builds its own
 scene entry: `clock` at the binaries' rate, because a vertex may be a binary
 member ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)). **It is built after the
 filter, focus and observe controllers**, because it seeds its active set
@@ -130,7 +131,8 @@ says why and where the host resolution has to land.
 
 ## The aim point
 
-Picking a constellation swings the camera to face `figureAimPoint`: the plain
+Picking a constellation swings the camera to face `aimPoint(conIndex, from)`
+(the pure half is `figureAimPoint`): the plain
 mean of the `AIM_BRIGHTEST_COUNT` (8) figure members that look brightest
 **from the orbit target**, not from Sol, each vertex counted once. Far from
 Sol the same figure is then centred on whichever members dominate from
