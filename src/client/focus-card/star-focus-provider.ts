@@ -12,7 +12,7 @@ import {
 import {
   tempKelvin,
 } from '../../../scripts/catalog/spectral/physical-radius';
-import type { Catalog } from '../loaders/catalog-loader';
+import { isDecodedRecord, type Catalog } from '../loaders/catalog-loader';
 import type { BinariesData } from '../binaries/binaries-loader';
 import type { LateState } from '../util/late/late';
 import type { SearchEntry } from '../typeahead/search';
@@ -59,7 +59,7 @@ export function createStarFocusProvider(
 
   return {
     kind: 'star',
-    ready: (idx: number) => idx < catalog.loadedCount
+    ready: (idx: number) => isDecodedRecord(catalog, idx)
       && config.tablesComplete()
       && config.binaries().status !== 'pending',
     format(idx: number): FocusCardContent {

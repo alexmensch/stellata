@@ -63,6 +63,57 @@ function countBoundedLoops(
   return out;
 }
 
+const LOADERS = resolve(CLIENT, 'loaders');
+const isCatalogueModule = (path: string) =>
+  resolve(path).startsWith(`${LOADERS}/catalog-`);
+
+/** Reads of `Catalog.loadedCount` — resolved to the declaration, so another
+ *  type's field of the same name does not count. */
+function loadedCountReads(file: ts.SourceFile, program: ts.Program): number[] {
+  const checker = program.getTypeChecker();
+  const out: number[] = [];
+  for (const node of descendants(file)) {
+    if (!ts.isPropertyAccessExpression(node) || node.name.text !== 'loadedCount') continue;
+    const decl = checker.getSymbolAtLocation(node.name)?.declarations?.[0];
+    if (!decl || resolve(decl.getSourceFile().fileName) !== CATALOG_LOADER) continue;
+    out.push(file.getLineAndCharacterOfPosition(node.getStart()).line + 1);
+  }
+  return out;
+}
+
+const PER_CHUNK_WALK = 'per-chunk absorb: walks from its own watermark to the decoded end';
+
+/** Readers outside the catalogue module, by file, with how many reads each
+ *  is allowed. A walk bounded by the decoded end is the prefix reader
+ *  /src/client/README.md#boot-in-two-waves names; anything else asks the owner. */
+const LOADED_COUNT_READERS: Readonly<Record<string, { reads: number; why: string }>> = {
+  'src/client/star-pipeline/star-frame/star-frame.ts': { reads: 3, why: PER_CHUNK_WALK },
+  'src/client/star-pipeline/star-pipeline.ts': { reads: 3, why: PER_CHUNK_WALK },
+  'src/client/webgpu/star/star-tables.ts': { reads: 1, why: PER_CHUNK_WALK },
+  'src/client/webgpu/star/star-layer.ts': { reads: 2, why: 'compaction thread count: the draw is the decoded count' },
+  'src/client/webgpu/extinction/extinction-prepass-webgpu.ts': {
+    reads: 2,
+    why: 'the one re-sort runs on the refresh the last chunk fires, a microtask before catalog.complete settles',
+  },
+};
+
+/** A throwaway program over one in-memory source file beside the client. */
+function probeProgram(text: string): { program: ts.Program; file: ts.SourceFile } {
+  const probe = resolve(CLIENT, 'late-read-contract.probe.ts');
+  const options = compilerOptions();
+  const host = ts.createCompilerHost(options);
+  const readFile = host.readFile.bind(host);
+  host.readFile = (f) => (resolve(f) === probe ? text : readFile(f));
+  const exists = host.fileExists.bind(host);
+  host.fileExists = (f) => resolve(f) === probe || exists(f);
+  const getSource = host.getSourceFile.bind(host);
+  host.getSourceFile = (f, lang) => (resolve(f) === probe
+    ? ts.createSourceFile(f, text, lang, true)
+    : getSource(f, lang));
+  const program = ts.createProgram([probe], options, host);
+  return { program, file: program.getSourceFile(probe)! };
+}
+
 const NO_SELECTION = 'verdict: null is "nothing selected", its own answer';
 
 /** Keyed `method` on the shell, `namespace.method` on a readonly namespace. */
@@ -153,26 +204,39 @@ describe('wave-2 read contract (/src/client/README.md#boot-in-two-waves)', () =>
   });
 
   it('flags a count-bounded loop over an unbranded catalogue', () => {
-    const probe = resolve(CLIENT, 'late-read-contract.probe.ts');
-    const text = [
+    const { program, file } = probeProgram([
       "import type { Catalog, CompleteCatalog } from './loaders/catalog-loader';",
       "export function prefix(cat: Catalog) { for (let i = 0; i < cat.count; i++) {} }",
       "export function whole(cat: CompleteCatalog) { for (let i = 0; i < cat.count; i++) {} }",
       "export function other(s: { count: number }) { for (let i = 0; i < s.count; i++) {} }",
-    ].join('\n');
-    const options = compilerOptions();
-    const host = ts.createCompilerHost(options);
-    const readFile = host.readFile.bind(host);
-    host.readFile = (f) => (resolve(f) === probe ? text : readFile(f));
-    const exists = host.fileExists.bind(host);
-    host.fileExists = (f) => resolve(f) === probe || exists(f);
-    const getSource = host.getSourceFile.bind(host);
-    host.getSourceFile = (f, lang) => (resolve(f) === probe
-      ? ts.createSourceFile(f, text, lang, true)
-      : getSource(f, lang));
-    const program = ts.createProgram([probe], options, host);
-    const file = program.getSourceFile(probe)!;
+    ].join('\n'));
     expect(countBoundedLoops(file, program).map((o) => o.line)).toEqual([2]);
+  });
+
+  it('reads Catalog.loadedCount only in the catalogue module and the listed readers', () => {
+    const p = program();
+    const found: Record<string, number> = {};
+    for (const path of p.getRootFileNames()) {
+      if (isCatalogueModule(path)) continue;
+      const reads = loadedCountReads(p.getSourceFile(path)!, p).length;
+      if (reads > 0) found[relative(ROOT, path)] = reads;
+    }
+    const allowed = Object.fromEntries(
+      Object.entries(LOADED_COUNT_READERS).map(([path, { reads }]) => [path, reads]));
+    expect(
+      found,
+      'ask the catalogue — isDecodedRecord, catalog.complete, onRecordsDecoded — rather than read its count; a new prefix walk is listed in LOADED_COUNT_READERS',
+    ).toEqual(allowed);
+  });
+
+  it('flags a Catalog.loadedCount read and no other loadedCount', () => {
+    const { program, file } = probeProgram([
+      "import type { Catalog } from './loaders/catalog-loader';",
+      "export const decoded = (cat: Catalog) => cat.loadedCount;",
+      "export const other = (s: { loadedCount: number }) => s.loadedCount;",
+      "export const picked = (cat: Pick<Catalog, 'loadedCount'>) => cat.loadedCount;",
+    ].join('\n'));
+    expect(loadedCountReads(file, program)).toEqual([2, 4]);
   });
 
   it('classifies every nullable return on the shell surface', () => {
