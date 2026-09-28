@@ -160,6 +160,9 @@ What the undecoded tail holds, and why each is what it is:
 - **Positions, magnitudes and flags stay zero**, which is safe only because
   nothing walks past `loadedCount`: the compaction kernel's thread count
   is the decoded count (`../webgpu/star/compaction/README.md`).
+  A single-index read is held to the same bound through
+  `isDecodedRecord(catalog, idx)` — below `count` is not enough, since a
+  tail index reads a star at Sol.
 
 Three traps, all of them silent if missed:
 

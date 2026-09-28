@@ -113,6 +113,12 @@ export interface Catalog {
   readonly complete: Late<CompleteCatalog>;
 }
 
+/** Whether `idx` names a decoded record. Past `loadedCount` every column
+ *  still reads zeros, which pass for a real star at Sol. */
+export function isDecodedRecord(catalog: Pick<Catalog, 'loadedCount'>, idx: number): boolean {
+  return idx >= 0 && idx < catalog.loadedCount;
+}
+
 declare const complete: unique symbol;
 
 /** A catalogue whose every record has decoded. `assumeComplete` is the only

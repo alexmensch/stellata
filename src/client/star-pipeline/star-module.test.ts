@@ -140,6 +140,30 @@ describe('star kind module', () => {
     expect(m.pinnable(4)).toBe(false);
   });
 
+  it('answers not-a-record for an index past the decoded prefix, then the record once it lands', async () => {
+    const cat = makeMockCatalog();
+    cat.loadedCount = 2;
+    loadCatalogMock.mockResolvedValue(cat);
+    vi.stubGlobal('fetch', vi.fn(async () => searchIndexResponse([])));
+    const m = createStarKindModule();
+    await m.load('/base/');
+    m.setRuntime(makeRuntime());
+    const f = m.focusable();
+    const out = new THREE.Vector3();
+
+    expect(m.photometry(2)).toBeNull();
+    expect(m.pinnable(2)).toBe(false);
+    expect(f.anchorInto(2, out)).toBe(false);
+    expect(f.localPositionInto(2, out)).toBe(false);
+
+    cat.loadedCount = 4;
+    expect(m.photometry(2)).not.toBeNull();
+    expect(m.pinnable(2)).toBe(true);
+    expect(f.anchorInto(2, out)).toBe(true);
+    expect(out.toArray()).toEqual([0, 0, 9]);
+    expect(f.localPositionInto(2, out)).toBe(true);
+  });
+
   it('derives its name tables at load, then resolves the label tier ladder', async () => {
     const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
     expect(m.starLabels.get(1)).toBe('HIP 91262');

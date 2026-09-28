@@ -21,7 +21,7 @@ import type {
   KindSearchEntry,
   ObjectKindModule,
 } from '../kinds/kind-module';
-import { loadCatalog, type Catalog } from '../loaders/catalog-loader';
+import { isDecodedRecord, loadCatalog, type Catalog } from '../loaders/catalog-loader';
 import type { SceneLayer } from '../scene/scene-layer';
 import { StarShardTable } from './shards/star-shard-table';
 import { catalogShard } from './shards/star-shards-pure';
@@ -110,7 +110,7 @@ export function createStarKindModule(): StarKindModule {
   const binariesState = (): LateState<BinariesData> =>
     (runtime ? runtime.binaries.state() : { status: 'pending' });
 
-  const photometryOf = (idx: number) => (catalog && idx >= 0 && idx < catalog.count
+  const photometryOf = (idx: number) => (catalog && isDecodedRecord(catalog, idx)
     ? {
       absMag: catalog.absmag[idx],
       radiusPc: Math.max(catalog.physicalRadius[idx], MIN_PHYSICAL_RADIUS_R_SUN) * R_SUN_PC,
@@ -205,13 +205,13 @@ export function createStarKindModule(): StarKindModule {
 
     focusable: (): FocusableProvider => ({
       anchorInto: (idx, out) => {
-        if (!catalog || idx < 0 || idx >= catalog.count) return false;
+        if (!catalog || !isDecodedRecord(catalog, idx)) return false;
         const p = catalog.positions;
         out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
         return true;
       },
       localPositionInto: (idx, out) => {
-        if (!catalog || !runtime || idx < 0 || idx >= catalog.count) return false;
+        if (!catalog || !runtime || !isDecodedRecord(catalog, idx)) return false;
         runtime.localPositionInto(idx, out);
         return true;
       },
@@ -277,7 +277,7 @@ export function createStarKindModule(): StarKindModule {
     }),
 
     pinnable: (idx) =>
-      catalog !== null && idx >= 0 && idx < catalog.count && catalog.sid[idx] !== 0,
+      catalog !== null && isDecodedRecord(catalog, idx) && catalog.sid[idx] !== 0,
 
     // The star corpus enters through buildSearchIndex's richer channel
     // (designation-tier fuzzy labels + the direct-lookup ID maps that
