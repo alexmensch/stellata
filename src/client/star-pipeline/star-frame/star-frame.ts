@@ -206,6 +206,12 @@ export class StarFrame {
     return out.set(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]);
   }
 
+  /** Absolute (Sol-centred) position of star `i` at the advanced epoch. */
+  absolutePositionInto(i: number, out: THREE.Vector3): THREE.Vector3 {
+    const p = this.catalog.positions;
+    return out.set(p[i * 3], p[i * 3 + 1], p[i * 3 + 2]);
+  }
+
   /**
    * Rewrite the instance-position buffer as `absolute − origin` in JS
    * Number precision (= float64) before the float32 write-back, so

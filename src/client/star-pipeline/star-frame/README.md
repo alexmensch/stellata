@@ -41,6 +41,9 @@ actually are:
   listener, it rewrites the buffer in float64 per axis before the
   float32 write-back, ahead of the camera shift and the scene-layer
   fan-out ([Recentre fan-out](../../frame/README.md#recentre-fan-out--order-is-load-bearing)).
+- **One star's position.** `localPositionInto` and `absolutePositionInto`
+  (the advanced `catalog.positions`) are the per-star reads the shell
+  and its controllers take.
 - **Epoch advance.** The immutable J2016.0 `basePositions` snapshot and
   `advanceEpochTo(t, focalIdx, outDelta)`, which re-runs the
   space-motion pass whenever the model clock crosses a

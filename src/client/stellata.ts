@@ -611,13 +611,8 @@ export class Stellata implements FrameAnchor {
       sharedUniforms,
       solIndex: catalog.solIndex,
       solAbsInto: (out) => {
-        const si = catalog.solIndex;
-        if (si < 0) return false;
-        out.set(
-          catalog.positions[si * 3],
-          catalog.positions[si * 3 + 1],
-          catalog.positions[si * 3 + 2],
-        );
+        if (catalog.solIndex < 0) return false;
+        this.starFrame.absolutePositionInto(catalog.solIndex, out);
         return true;
       },
       angularToPx: () => this.angularToPx(),
