@@ -35,6 +35,7 @@ function makeMockCatalog(loadedCount = 4): MockCatalog {
 function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRuntime {
   return {
     localPositionInto: (idx, out) => out.set(idx, 0, 0),
+    absolutePositionInto: (idx, out) => out.set(0, idx, 0),
     parkDistForStar: () => 1.5,
     renderedSizePx: () => 12,
     peakDiscSizePx: () => 9,
@@ -158,7 +159,7 @@ describe('star kind module', () => {
     expect(m.photometry(2)).not.toBeNull();
     expect(m.pinnable(2)).toBe(true);
     expect(f.anchorInto(2, out)).toBe(true);
-    expect(out.toArray()).toEqual([0, 0, 9]);
+    expect(out.toArray()).toEqual([0, 2, 0]);
     expect(f.localPositionInto(2, out)).toBe(true);
   });
 
@@ -185,12 +186,13 @@ describe('star kind module', () => {
     const { m } = await loadedModule();
     const ctx = makeKindContext();
     m.attach(ctx);
-    m.setRuntime(makeRuntime());
     const f = m.focusable();
     const out = new THREE.Vector3();
+    expect(f.anchorInto(1, out)).toBe(false);
+    m.setRuntime(makeRuntime());
 
     expect(f.anchorInto(1, out)).toBe(true);
-    expect(out.toArray()).toEqual([1, 2, 3]);
+    expect(out.toArray()).toEqual([0, 1, 0]);
     expect(f.anchorInto(-1, out)).toBe(false);
     expect(f.anchorInto(4, out)).toBe(false);
 

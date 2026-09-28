@@ -443,10 +443,8 @@ export class FocusController implements FocusOps {
    *  minDistance, planet-system reload). No 'focus' / 'state' event
    *  emit — setFocus fires those when the camera has landed. */
   private recenterFocusToStar(newIdx: number): THREE.Vector3 | null {
-    const p = this.deps.catalog.positions;
-    const delta = this.deps.frameAnchor.origin.recenterTo(this.tmpRecenter.set(
-      p[newIdx * 3], p[newIdx * 3 + 1], p[newIdx * 3 + 2],
-    ));
+    const { origin, stars } = this.deps.frameAnchor;
+    const delta = origin.recenterTo(stars.absolutePositionInto(newIdx, this.tmpRecenter));
     this.focused = { kind: 'star', idx: newIdx };
     this.deps.controls.minDistance = this.deps.getFocusables().star.orbitFloor(newIdx);
     this.refreshPlanetSystem(newIdx);

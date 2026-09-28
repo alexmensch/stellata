@@ -430,6 +430,7 @@ export class Stellata {
     // controller constructed below are fine. `binaries` is read now.
     this.kinds.star.setRuntime({
       localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      absolutePositionInto: (idx, out) => this.starFrame.absolutePositionInto(idx, out),
       parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
       renderedSizePx: (idx) => this.starPipeline.renderedSizePx(idx),
       peakDiscSizePx: (idx) => this.starPipeline.peakDiscSizePx(idx),

@@ -35,6 +35,8 @@ import type { Late, LateState } from '../util/late/late';
 export interface StarModuleRuntime {
   /** Local-frame position of star `idx` into `out` (StarFrame). */
   localPositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
+  /** Absolute (Sol-centred) position of star `idx` into `out` (StarFrame). */
+  absolutePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
   /** Auto-park distance for star `idx` (FocusController). */
   parkDistForStar(idx: number): number;
   /** Rendered disc diameter in CSS px — the shader-sizing CPU mirror. */
@@ -205,9 +207,8 @@ export function createStarKindModule(): StarKindModule {
 
     focusable: (): FocusableProvider => ({
       anchorInto: (idx, out) => {
-        if (!catalog || !isDecodedRecord(catalog, idx)) return false;
-        const p = catalog.positions;
-        out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
+        if (!catalog || !runtime || !isDecodedRecord(catalog, idx)) return false;
+        runtime.absolutePositionInto(idx, out);
         return true;
       },
       localPositionInto: (idx, out) => {
