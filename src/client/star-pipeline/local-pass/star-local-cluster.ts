@@ -14,7 +14,7 @@ import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
 import type { OccluderSet } from '../../occlusion/occluder-set';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
-import { whenReady, type Late } from '../../util/late/late';
+import type { Late } from '../../util/late/late';
 import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { isResolvedDiscStar } from './star-local-cluster-pure';
 
@@ -211,7 +211,8 @@ export class StarLocalCluster implements LocalCluster {
   }
 
   private chainStars(focalIdx: number | null): number[] {
-    const binaries = whenReady(this.deps.binaries.state(), (b) => b, null);
+    const state = this.deps.binaries.state();
+    const binaries = state.status === 'ready' ? state.value : null;
     if (focalIdx !== this.chainFocalIdx || binaries !== this.chainBinaries) {
       this.chainFocalIdx = focalIdx;
       this.chainBinaries = binaries;
