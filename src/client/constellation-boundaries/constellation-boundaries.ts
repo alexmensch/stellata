@@ -45,11 +45,15 @@ export class ConstellationBoundaries {
   constructor(private readonly deps: ConstellationBoundariesDeps) {
     this.layer = new ConstellationBoundaryLayer(deps.uniforms, deps.chromeLines);
     deps.scene.add(this.layer.group);
-    const regions = deps.artifact === null
-      ? null : createConstellationRegions(deps.artifact, deps.constellations);
-    if (deps.artifact !== null) this.layer.attach(deps.artifact, deps.instrumentLimitMag());
-    this.namer = regions?.namer ?? null;
-    this.labelAnchors = regions?.labelAnchors ?? [];
+    if (deps.artifact === null) {
+      this.namer = null;
+      this.labelAnchors = [];
+    } else {
+      const regions = createConstellationRegions(deps.artifact, deps.constellations);
+      this.namer = regions.namer;
+      this.labelAnchors = regions.labelAnchors;
+      this.layer.attach(deps.artifact, deps.instrumentLimitMag());
+    }
     this.offFilter = deps.onFilter(
       () => this.layer.setMagnitudeLimit(deps.instrumentLimitMag()));
     this.entry = {
