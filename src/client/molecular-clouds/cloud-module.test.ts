@@ -13,6 +13,7 @@ import { CLOUD_LABELS_GROUP_ID } from './cloud-labels';
 import { createCloudKindModule } from './cloud-module';
 import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import { fakeCloudMaterials } from './cloud-mock';
+import { sidsOf } from '../util/sid-resolver/sid-domain-fixture';
 
 function rawCloud(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -90,7 +91,7 @@ describe('cloud kind module', () => {
     const ctx = makeCtx();
     expect(m.attach(ctx)).toBeNull();
     expect(m.layer).toBeNull();
-    expect(m.sids()).toBeNull();
+    expect(m.sidDomain()).toBeNull();
     expect(m.searchEntries()).toEqual([]);
     expect(m.renderedSizePx(0)).toBe(0);
     const provider = m.focusable();
@@ -122,7 +123,7 @@ describe('cloud kind module', () => {
     expect(layer).not.toBeNull();
     expect(m.layer?.clouds).toBe(loaded.status === 'ready' ? loaded.value.clouds : null);
 
-    expect(m.sids()).toEqual([1, 2]);
+    expect(sidsOf(m.sidDomain(), 2)).toEqual([1, 2]);
     expect(m.searchEntries().map((e) => e.label))
       .toEqual(['Eagle Nebula', 'M16', 'NGC 6611', 'Taurus']);
     expect(m.searchEntries().every((e) => e.displayCon === 'Molecular cloud')).toBe(true);

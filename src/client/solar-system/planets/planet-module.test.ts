@@ -19,6 +19,7 @@ import { createPlanetKindModule, type PlanetKindModule } from './planet-module';
 import { fakePlanetGlare, fakeWebGpuSeam, type FakePlanetGlare } from '../../webgpu/seam-mock';
 import { fakeSolarSystemMaterials } from '../materials/solar-system-materials-mock';
 import { makeFrameCtx } from '../../scene/frame-ctx-mock';
+import { sidsOf } from '../../util/sid-resolver/sid-domain-fixture';
 
 const SOL_PHOTOMETRY = { absMag: 4.83, radiusPc: R_SUN_PC };
 const MARS = SOL_BODIES.findIndex((b) => b.name === 'Mars');
@@ -97,9 +98,8 @@ describe('planet kind module', () => {
     expect(m.pinnable(0)).toBe(false);
     expect(m.searchEntries()).toEqual([]);
     expect(m.displayName(0)).toBe('');
-    const sids = Array.from(m.sids()!);
-    expect(sids).toEqual(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()]));
-    expect(sids.every((s) => s > 0)).toBe(true);
+    expect(sidsOf(m.sidDomain(), SOL_BODIES.length))
+      .toEqual(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()]));
   });
 
   // This forwarding is the only thing that carries the field's visibility

@@ -12,6 +12,7 @@ import { HELIOPAUSE_EXTENT_PC } from '../solar-system/heliopause/heliopause';
 import { fakeShellMaterials } from './shell-materials-mock';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
 import { createShellKindModule } from './shell-module';
+import { sidsOf } from '../util/sid-resolver/sid-domain-fixture';
 
 /** Minimal LBUB buffer: an octahedron of wall vertices around a
  *  centroid at (50, 0, 0), 100 pc out along each axis. */
@@ -79,7 +80,7 @@ describe('shell kind module', () => {
     expect(m.pinnable(1)).toBe(true);
     expect(m.searchEntries().map((e) => e.label)).toEqual(['Heliopause']);
     // The SID domain is static — both slots resolve with no artifact.
-    expect(m.sids()).toEqual([SHELL_OBJECT_SIDS.local_bubble, SHELL_OBJECT_SIDS.heliopause]);
+    expect(sidsOf(m.sidDomain(), 2)).toEqual([SHELL_OBJECT_SIDS.local_bubble, SHELL_OBJECT_SIDS.heliopause]);
     const provider = m.focusable();
     expect(provider.focusParkDistance(0)).toBe(0);
     expect(provider.focusParkDistance(1)).toBeCloseTo(2.4 * HELIOPAUSE_EXTENT_PC, 10);

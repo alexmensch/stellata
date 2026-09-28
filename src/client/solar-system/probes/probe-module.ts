@@ -26,6 +26,7 @@ import { createProbeLabels } from './probe-labels';
 import { loadProbes } from './probe-loader';
 import { ProbePathLayer } from './probe-path-layer';
 import type { ProbeTrajectory } from './probe-trajectory';
+import { arrayDomain } from '../../util/sid-resolver';
 
 export interface ProbeKindModule extends ObjectKindModule<'probe'> {
   /** The marker field — the shell's solar-system cluster mirrors its
@@ -222,7 +223,7 @@ export function createProbeKindModule(): ProbeKindModule {
 
     displayName: (idx) => field?.probeAt(idx)?.label ?? '',
 
-    sids: () => trajectories.map((p) => SOL_OBJECT_SIDS[p.id] ?? 0),
+    sidDomain: () => arrayDomain(trajectories.map((p) => SOL_OBJECT_SIDS[p.id] ?? 0)),
 
     labels: () => {
       if (ctx && field) disposeLabels = createProbeLabels(ctx, field);

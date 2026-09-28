@@ -29,6 +29,7 @@ import { SHELL_OBJECT_SIDS } from './shell-object-sids';
 import { bestHitBy } from '../hover/hover-pick-disambiguator';
 import { pickShellSilhouette } from './shell-pick';
 import { SHELL_KEYS, ShellRegistry } from './shell-registry';
+import { arrayDomain } from '../util/sid-resolver';
 
 export interface ShellKindModule extends ObjectKindModule<'shell'> {
   /** The per-instance registry — the kind's internal runtime, exposed
@@ -226,7 +227,7 @@ export function createShellKindModule(): ShellKindModule {
     // Both shells carry static, always-known SIDs (generated / curated
     // objects, /docs/sid.md#7-storage--sid-in-every-artifact) — the domain attaches even when a layer
     // is absent, and focus/pin fall through to null via the empty slot.
-    sids: () => SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k]),
+    sidDomain: () => arrayDomain(SHELL_KEYS.map((k) => SHELL_OBJECT_SIDS[k])),
 
     labels: () => {
       if (!ctx) return;

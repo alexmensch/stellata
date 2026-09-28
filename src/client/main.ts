@@ -37,7 +37,7 @@ import { resolveBootRoute } from './webgpu/boot-route';
 import type { WebGpuSeam } from './webgpu/seam';
 import { showWebGpuGate } from './webgpu/gate/gate-page';
 import { detectWebGpuSupport } from './webgpu/gate/webgpu-support';
-import { SidResolver, arrayDomain } from './util/sid-resolver';
+import { SidResolver } from './util/sid-resolver';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
@@ -141,32 +141,14 @@ async function main() {
       ['star', 'planet', 'cloud', 'lg', 'shell', 'probe'],
       catalog.sidSuccessors,
     );
-    // Kind-module domains: sids() is localIndex-ordered with
-    // localIndex = Target idx — except the planet domain, keyed
-    // body-within-host and translated at the URL boundary (idMaps
-    // below). Static lists (planet, shell) attach even when a layer's
-    // artifact is absent — focus/pin then fall through to null via the
-    // empty registry slot.
-    //
-    // The STAR domain attaches now but declares itself STILL FILLING, so a
-    // hit resolves immediately and only a miss stays pending
-    // (util/sid-resolver/README.md#a-domain-that-is-still-filling). That
-    // ordering matters beyond latency: with a focus the encoder elides
-    // `worldOffset`, so the URL's cam/tgt are in the focal star's local
-    // frame — resolving the focus after they are applied puts the camera in
-    // the wrong frame and then recentres out from under it.
+    // The planet domain is keyed body-within-host and translated at the URL
+    // boundary (idMaps below). The star domain attaches still filling
+    // (util/sid-resolver/README.md#a-domain-that-is-still-filling).
     for (const kind of KIND_ROSTER) {
-      const m = kinds[kind];
-      if (!m) continue;
-      const sids = m.sids();
-      if (!sids) { sidResolver.conclude(kind); continue; }
-      sidResolver.attach(kind, kind === 'star'
-        ? arrayDomain(sids, () => catalog.loadedCount)
-        : arrayDomain(sids));
+      const domain = kinds[kind]?.sidDomain();
+      if (domain) sidResolver.attach(kind, domain);
+      else sidResolver.conclude(kind);
     }
-    // Each landing chunk can claim a queued intent, and a still-filling
-    // domain has no attach event of its own to flush on.
-    const offChunk = catalog.onRecordsDecoded(() => sidResolver.refresh());
 
     const idMaps: IdMaps = {
       solIndex: catalog.solIndex,
@@ -334,12 +316,6 @@ async function main() {
     await kinds.star.ready;
     const completeCatalog = await catalog.whenComplete;
     const searchIndex = kinds.star.searchIndex;
-    await frame();
-
-    // The column is full, so the domain now answers `unknown` for a sid
-    // nothing carries instead of holding its intent open forever.
-    offChunk();
-    sidResolver.refresh();
     await frame();
 
     // Relation caches bake each system's anchor from its primary's

@@ -133,7 +133,7 @@ callback and is the one load allowed to reject) → boot reads
 consumers that aren't kind modules (chart mode, the planet card's host
 breadcrumb, the search corpus) → hand the record to
 `new Stellata({kinds})` → roster loops for SID domains
-(`sids()`, null ⇒ conclude), hover providers, label overlays, and the
+(`sidDomain()`, null ⇒ conclude), hover providers, label overlays, and the
 search corpus (`createSearchRunner(catalog, raw, kinds)`; boot awaits
 `stellata.kinds.planet.systemsReady` first, since planet corpus rows
 bake flat Target indices the attach table supplies).
