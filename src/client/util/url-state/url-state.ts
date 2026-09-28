@@ -1419,7 +1419,7 @@ export function applyDecodedView(
   // but apply it anyway when present (no-op when redundant). Without
   // focus, worldOffset carries the close-orbit unfocus origin
  // so cam/tgt can be tiny local-frame values that round-
-  // trip cleanly through float32. setWorldOffset also shifts camera
+  // trip cleanly through float32. The recentre also shifts camera
   // and target alongside the origin to preserve the user-visible
   // pose; for URL load we explicitly reset them to defaults here so
   // an absent view.cam / view.tgt produces the conventional default

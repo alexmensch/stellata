@@ -426,9 +426,8 @@ export class Stellata {
       rideFocal: (source) => this.focalRides.rideBinaryFocal(source),
       invalidate: (reason) => this.renderGate.invalidate(reason),
     });
-    // The star kind module's legs read the shell-owned star machinery
-    // through these closures — they deref lazily, so the picker and focus
-    // controller constructed below are fine. `binaries` is read now.
+    // The star kind module's legs deref these closures lazily, so the star
+    // pipeline, picker and focus controller constructed below are fine. `binaries` is read now.
     this.kinds.star.setRuntime({
       localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
       absolutePositionInto: (idx, out) => this.starFrame.absolutePositionInto(idx, out),

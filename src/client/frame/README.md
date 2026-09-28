@@ -108,7 +108,7 @@ and the shell supplies only which controllers count as camera-busy.
 **`tick()`'s return is the policy-recentre signal, not `onRecenter`.**
 The shell reseeds the moving-focal ride only when `tick()` reports a
 recentre; an externally triggered recentre (focus mutation, warp
-mid-fly pivot, URL restore — all via `recenterOrigin` →`recenterTo`)
+mid-fly pivot, URL restore — each a direct `recenterTo` call)
 must not reseed, because `focalRideStep` owns those transitions.
 
 ### Focus, unfocus, and the default load
