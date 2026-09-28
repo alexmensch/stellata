@@ -16,7 +16,7 @@ import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
-import { isHardTarget, type Target, type TargetKind } from '../../camera/focus/focus-target';
+import { isHardTarget, targetsEqual, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
 import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
@@ -799,22 +799,18 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // Chart on/off rides FLAG_CHART, gated to observe-only at pack time.
   if (f.chart) view.chart = true;
 
-  // POIs are encoded as SIDs (not runtime indices) so a catalog rebuild
-  // can't re-point old URLs; objects without a resolvable SID can't be
-  // pinned in the first place. Any pinnable kind rides the same
-  // untagged-SID wire the focus/to refs use. Capped at POI_MAX_COUNT
-  // defensively.
+  // A link pin still pending rides along, or a reload before its chunk
+  // lands would lose it from the address bar.
   {
-    const pois = stellata.pois.get();
-    if (pois.length > 0) {
-      const sidsOut: number[] = [];
-      for (const t of pois) {
-        if (sidsOut.length >= POI_MAX_COUNT) break;
-        const ref = sidRefOf(idMaps, t.kind, t.idx);
-        if (ref !== undefined) sidsOut.push(ref.id);
-      }
-      if (sidsOut.length > 0) view.poiSids = sidsOut;
+    const sidsOut: number[] = [];
+    for (const t of stellata.pois.get()) {
+      const ref = sidRefOf(idMaps, t.kind, t.idx);
+      if (ref !== undefined) sidsOut.push(ref.id);
     }
+    for (const sid of pendingPinSids(stellata, idMaps)) {
+      if (!sidsOut.includes(sid)) sidsOut.push(sid);
+    }
+    if (sidsOut.length > 0) view.poiSids = sidsOut.slice(0, POI_MAX_COUNT);
   }
 
   const c = encodeCam;
@@ -1105,22 +1101,8 @@ export function applyDecodedView(
   // Pending focus → the deferred callback owns this leg instead.
   if (focusPending === null) restoreObserve(stellata, view);
 
-  // POI sids resolve through the resolver, any pinnable kind. Entries
-  // that don't resolve are silently dropped (graceful partial restore) — a
-  // pending POI sid included, since unlike the focus nothing re-runs this
-  // list when a later chunk lands.
-  {
-    const resolved: Target[] = [];
-    if (Array.isArray(view.poiSids)) {
-      for (const sid of view.poiSids) {
-        const r = idMaps.sidResolver.resolve(sid);
-        if (r.status !== 'resolved') continue;
-        const idx = targetIdxOf(idMaps, r.kind, r.localIndex);
-        if (idx !== null) resolved.push({ kind: r.kind, idx });
-      }
-    }
-    if (resolved.length > 0) stellata.pois.set(resolved);
-  }
+  if (Array.isArray(view.poiSids)) restorePins(stellata, view.poiSids, idMaps);
+  else linkPins.delete(stellata);
 
   // LAST, and that is the whole of this field's difficulty. Every one of the
   // three clearing rules above disarms ORB on its way past — the instrument
@@ -1131,6 +1113,57 @@ export function applyDecodedView(
   restoreOrbitFrame(stellata, view);
 
   return focusPending;
+}
+
+/** A link's pins, one slot per sid in the link's order. */
+interface LinkPins {
+  sids: readonly number[];
+  slots: (Target | null)[];
+  /** What this restore last wrote to the pin list. */
+  written: readonly Target[];
+}
+
+// Keyed by shell, since the restore and the encoder are called apart.
+const linkPins = new WeakMap<Stellata, LinkPins>();
+
+function landedPins(pins: LinkPins): Target[] {
+  return pins.slots.filter((t): t is Target => t !== null);
+}
+
+function sameTargets(a: readonly Target[], b: readonly Target[]): boolean {
+  return a.length === b.length && a.every((t, i) => targetsEqual(t, b[i]));
+}
+
+/** see README.md#a-pin-that-resolves-after-the-link */
+function restorePins(stellata: Stellata, sids: readonly number[], idMaps: IdMaps): void {
+  const pins: LinkPins = { sids, slots: sids.map(() => null), written: [] };
+  linkPins.set(stellata, pins);
+  let inline = true;
+  sids.forEach((sid, i) => {
+    idMaps.sidResolver.whenResolved(sid, (kind, localIndex) => {
+      const idx = targetIdxOf(idMaps, kind, localIndex);
+      if (idx === null) return;
+      const target = { kind, idx };
+      pins.slots[i] = target;
+      if (inline || linkPins.get(stellata) !== pins) return;
+      const live = stellata.pois.get();
+      const next = sameTargets(live, pins.written) ? landedPins(pins) : [...live, target];
+      stellata.pois.set(next);
+      pins.written = stellata.pois.get().slice();
+    });
+  });
+  inline = false;
+  const landed = landedPins(pins);
+  if (landed.length > 0) stellata.pois.set(landed);
+  pins.written = stellata.pois.get().slice();
+}
+
+/** Link pin sids the resolver still holds pending. */
+function pendingPinSids(stellata: Stellata, idMaps: IdMaps): number[] {
+  const pins = linkPins.get(stellata);
+  if (!pins) return [];
+  return pins.sids.filter((sid, i) =>
+    pins.slots[i] === null && idMaps.sidResolver.resolve(sid).status === 'pending');
 }
 
 /** Absent bits mean the gesture was never made, which is a positive

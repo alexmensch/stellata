@@ -18,7 +18,7 @@ import type { FocusableProvider, Target } from '../../camera/focus/focus-target'
 import type { OrbitFramePort } from '../../attitude/attitude-pure';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
-import { SidResolver, arrayDomain } from '../sid-resolver';
+import { SidResolver, arrayDomain, sidColumnIndex, type DomainFill, type SidDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 
 // Controller-namespace stub. `Partial<T>` keeps every member checked
@@ -1426,6 +1426,73 @@ describe('url-state', () => {
       expect(state.focusedCloud).toBeNull();
       sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
       expect(state.focusedCloud).toBe(1);
+    });
+
+    describe('a pin that resolves after the link', () => {
+      // Star domain decoded to row 2 of 4: sids 103 (row 3) arrive later.
+      function streamingStars() {
+        let decoded = 2;
+        let fill: DomainFill = 'filling';
+        const listeners = new Set<() => void>();
+        const domain: SidDomain = {
+          localIndexOf: sidColumnIndex(STAR_SIDS, () => decoded),
+          sidOf: (i) => (i >= 0 && i < decoded ? STAR_SIDS[i] : null),
+          fill: () => fill,
+          onGrow: (l) => { listeners.add(l); return () => listeners.delete(l); },
+        };
+        const sidResolver = new SidResolver(['star']);
+        sidResolver.attach('star', domain);
+        const grow = () => { decoded = STAR_SIDS.length; listeners.forEach((l) => l()); };
+        const complete = () => { fill = 'complete'; listeners.forEach((l) => l()); };
+        return { idMaps: makeIdMaps({ sidResolver }), grow, complete };
+      }
+      const star = (idx: number): Target => ({ kind: 'star', idx });
+
+      it('pins a star from a late chunk in the link\'s order', () => {
+        const s = streamingStars();
+        const { stellata, state } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103, 101] })), s.idMaps);
+        expect(state.pois).toEqual([star(1)]);
+        s.grow();
+        expect(state.pois).toEqual([star(3), star(1)]);
+      });
+
+      it('keeps a pending pin on the wire until its chunk lands', () => {
+        const s = streamingStars();
+        const { stellata } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103, 101] })), s.idMaps);
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([101, 103]);
+        s.grow();
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([103, 101]);
+      });
+
+      it('drops a pin nothing carries once the catalogue completes', () => {
+        const s = streamingStars();
+        const { stellata } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [101, 999] })), s.idMaps);
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([101, 999]);
+        s.complete();
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([101]);
+      });
+
+      it('appends to pins the user edited meanwhile, leaving their edit standing', () => {
+        const s = streamingStars();
+        const { stellata, state } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103, 101] })), s.idMaps);
+        state.pois = [star(0)];
+        s.grow();
+        expect(state.pois).toEqual([star(0), star(3)]);
+      });
+
+      it('lets a later link supersede the pending pins of an earlier one', () => {
+        const s = streamingStars();
+        const { stellata, state } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103] })), s.idMaps);
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [102] })), s.idMaps);
+        s.grow();
+        expect(state.pois).toEqual([star(2)]);
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([102]);
+      });
     });
 
     it('re-seats the camera when the focus resolves after the pose', () => {

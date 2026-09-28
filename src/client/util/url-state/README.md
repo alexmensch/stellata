@@ -413,3 +413,19 @@ reason. At the complete catalogue a focus that has not landed never will,
 and holding the cover that long is what boot did before it painted
 progressively at all — so the worst case is the old behaviour, not a black
 screen forever.
+
+## A pin that resolves after the link
+
+A POI sid in a chunk that has not arrived is `pending`, not absent, so the
+restore queues it like the focus sid rather than dropping it. `restorePins`
+keeps one slot per sid in the link's order; each late landing re-writes the
+pin list in that order — **unless the user has edited the pins since the
+restore last wrote them**, in which case the edit stands and the late pin is
+appended. A later `applyDecodedView` supersedes the earlier link's slots, and
+a blob carrying no pins forgets them.
+
+**Until it lands, the encoder keeps writing it.** Any URL write in the
+window — a state emit, a query→path rewrite — encodes the live pin list,
+which does not hold it yet, so `currentStateOf` appends every link sid the
+resolver still answers `pending` for. Once the catalogue completes, a sid
+nothing carries answers `unknown` and drops from the wire on the next write.
