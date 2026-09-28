@@ -68,20 +68,7 @@ import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemWiring } from './solar-system/solar-system-wiring';
 import { VirtualClock, tToJdUt } from './solar-system/time/time';
 import { J2000_JD } from './util/astronomy-constants';
-// Locally used subset; other warp-timing constants re-exported below
-// for external import paths still pointing at './stellata'.
 import { CAMERA_NEAR_PC } from './camera/timing';
-export {
-  AIM_T_MAX_MS,
-  AIM_T_MIN_MS,
-  CAMERA_LERP_MS,
-  FOCUS_LERP_MS,
-  OBSERVE_TRANSITION_MS,
-  WARP_REORIENT_MS,
-  WARP_T_K_MS,
-  WARP_T_MAX_MS,
-  WARP_T_MIN_MS,
-} from './camera/timing';
 import { EventBus } from './util/event-bus';
 import {
   DEFAULT_FILTER,
