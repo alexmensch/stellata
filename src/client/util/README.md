@@ -237,6 +237,15 @@ build scripts, tests, and shader uniforms.
   24-bit word costs two passes rather than three with no width argument.
   A float key sorts by its bit view only while every value is
   non-negative; that precondition belongs to the caller.
+- `page-teardown.ts` (+ test) — `bindPageTeardown(target, reload)`: runs
+  the release last passed to `hold` once, on the first `pagehide`, and
+  reloads a page the back/forward cache restores after that release, since
+  it comes back with nothing to draw with. `main.ts` holds the booted
+  renderer's `dispose` until the shell exists, then `Stellata.dispose()`.
+  **Without it a reload leaves the previous page resident**: Safari keeps
+  the old document's GPU allocations, typed arrays and heap in the same
+  content process, about 1.2 GB a reload, until the tab is killed for
+  memory ([Who releases what](../webgpu/README.md#who-releases-what)).
 - `mutable.ts` — `Mutable<T>`, `T` with `readonly` stripped. For an owner
   that rewrites a context in place which its readers see as readonly
   (`FrameCtx` in `stellata.ts`, `CadenceCtx` in

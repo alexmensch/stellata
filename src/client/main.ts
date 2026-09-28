@@ -33,6 +33,7 @@ import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
+import { bindPageTeardown } from './util/page-teardown';
 import { resolveBootRoute } from './webgpu/boot-route';
 import type { WebGpuSeam } from './webgpu/seam';
 import { showWebGpuGate } from './webgpu/gate/gate-page';
@@ -78,6 +79,8 @@ async function main() {
     return;
   }
 
+  const teardown = bindPageTeardown(window, () => location.reload());
+
   try {
     const kinds = buildKindModules();
     // Started here and awaited past the fetch: the async chunk and the
@@ -88,6 +91,10 @@ async function main() {
     // surface as an unhandled rejection instead of a refused renderer.
     const webgpuBoot: Promise<WebGpuSeam | null> = import('./webgpu/boot-webgpu')
       .then(({ bootWebGpu }) => bootWebGpu(canvas))
+      .then((seam) => {
+        if (seam) teardown.hold(() => seam.renderer.dispose());
+        return seam;
+      })
       .catch((err) => {
         console.warn('WebGPU boot rejected:', err);
         return null;
@@ -119,6 +126,7 @@ async function main() {
     }
 
     const stellata = new Stellata({ canvas, catalog, kinds, webgpu, boundaries });
+    teardown.hold(() => stellata.dispose());
     // Dev-console access: `stellata.extinction.setStrength(X)` etc. Handy for
     // dust debugging and not worth gating behind an env check on a solo
     // project.

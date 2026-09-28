@@ -27,6 +27,8 @@ themselves.
   (`local-group/local-group-loader.ts`) is the shape for shape errors. For
   kind modules the rule is enforced rather than trusted — `loadKindModules`
   swallows every non-`critical` rejection (`kinds/README.md`).
+  `main.ts` is also the one caller of `Stellata.dispose()`, through the
+  `pagehide` teardown it binds before boot (`util/page-teardown.ts`).
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `kinds/` — the `ObjectKindModule` / `KindContext` contracts and the
   kind-module roster: one module per `TargetKind` (all six migrated)
