@@ -11,8 +11,7 @@ import {
 import type { BinariesData } from '../binaries/binaries-loader';
 import { NO_PARENT } from '../binaries/binaries-loader';
 import { makeKindContext } from '../kinds/kind-context-mock';
-import { makeEmptyCatalog } from '../loaders/catalog-mock';
-import type { Catalog } from '../loaders/catalog-loader';
+import { makeEmptyCatalog, type MockCatalog } from '../loaders/catalog-mock';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 import { LateCell } from '../util/late/late';
 import { lateAbsent } from '../util/late/late-fixture';
@@ -24,8 +23,8 @@ vi.mock('../loaders/catalog-loader', async (importOriginal) => ({
   loadCatalog: loadCatalogMock,
 }));
 
-function makeMockCatalog(): Catalog {
-  const cat = makeEmptyCatalog(4);
+function makeMockCatalog(loadedCount = 4): MockCatalog {
+  const cat = makeEmptyCatalog(4, loadedCount);
   cat.constellation.fill(255);
   cat.positions.set([0, 0, 0, 1, 2, 3, 0, 0, 9, 0, 0, 0]);
   cat.sid.set([7, 42, 43, 0]);
@@ -141,8 +140,7 @@ describe('star kind module', () => {
   });
 
   it('answers not-a-record for an index past the decoded prefix, then the record once it lands', async () => {
-    const cat = makeMockCatalog();
-    cat.loadedCount = 2;
+    const cat = makeMockCatalog(2);
     loadCatalogMock.mockResolvedValue(cat);
     vi.stubGlobal('fetch', vi.fn(async () => searchIndexResponse([])));
     const m = createStarKindModule();
@@ -156,7 +154,7 @@ describe('star kind module', () => {
     expect(f.anchorInto(2, out)).toBe(false);
     expect(f.localPositionInto(2, out)).toBe(false);
 
-    cat.loadedCount = 4;
+    cat.finishLoading();
     expect(m.photometry(2)).not.toBeNull();
     expect(m.pinnable(2)).toBe(true);
     expect(f.anchorInto(2, out)).toBe(true);
