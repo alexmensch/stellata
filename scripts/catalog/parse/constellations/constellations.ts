@@ -8,9 +8,9 @@ import {
   constellationKey,
   createIauConstellationLookup,
   type IauConstellationLookup,
-} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
-import { raDecFromUnitVector } from '../../../src/client/util/equatorial-basis';
-import { REPO_ROOT } from '../../util/paths';
+} from '../../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+import { raDecFromUnitVector } from '../../../../src/client/util/equatorial-basis';
+import { REPO_ROOT } from '../../../util/paths';
 
 export const STELLARIUM_SKYCULTURE_JSON = resolve(
   REPO_ROOT,
@@ -252,4 +252,23 @@ export function buildFigureLines(
   }
 
   return out;
+}
+
+/** Throws unless every figure vertex decodes with the first transport chunk
+ *  (README.md#stick-figures-from-stellarium). */
+export function assertFigureVerticesInFirstChunk(
+  figureLines: ReadonlyMap<number, readonly (readonly number[])[]>,
+  recordsInFirstChunk: number,
+): void {
+  const late: string[] = [];
+  for (const [conIndex, polylines] of figureLines) {
+    const worst = Math.max(...polylines.flat());
+    if (worst >= recordsInFirstChunk) late.push(`${CONSTELLATIONS[conIndex].code}/record ${worst}`);
+  }
+  if (late.length) {
+    throw new Error(
+      `Constellation figure vertices past the first transport chunk (${recordsInFirstChunk} records): `
+        + `${late.join(', ')}. A figure star must be bright enough to decode at first paint.`,
+    );
+  }
 }

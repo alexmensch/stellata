@@ -178,7 +178,8 @@ Four things follow, and each has cost a defect:
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
-`solarSystem`, `coordSpheres`, `binaries`, `extinction`, plus the
+`solarSystem`, `coordSpheres`, `binaries`, `extinction`,
+`constellationBoundaries`, `constellationFigure`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -201,10 +202,9 @@ lerps, so every aim takes it the same way),
 belongs on the controller.
 
 **Forwarders still on the shell leave with their cluster, and so do their
-callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
-`attachConstellationBoundaries` — moves
-with its row, and `main.ts` calls the new owner through a readonly
-namespace (`stellata.binaries.attach`, `stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
+callers** ([Decomposing the shell](#decomposing-the-shell)); `main.ts` reaches a late
+attachment through its owner's readonly namespace (`stellata.binaries.attach`,
+`stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
 `FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
 `starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
 `floatingOrigin`; with the star render machinery, the focus controller's
@@ -241,7 +241,6 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
 | Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
 
@@ -249,34 +248,28 @@ an empty awaiting list.
 interface for both:
 
 - **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
-  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the star-local-cluster,
-  core-mask and constellation-figure entries take it, and carry it when
-  their rows move.
+  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the constellation
+  figure takes it, and the star-local-cluster and core-mask entries carry it
+  when their row moves.
 
 ### Late-attached slots
 
 A cluster holding a value that lands after construction moves it as a
-`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the constellation
-extraction converts its row's slots as it moves rather than carrying a
-`T | null` twice. The binaries and dust slots have converted
-([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). Clusters holding no late slot do not wait.
+`Late<T>` ([Boot in two waves](#boot-in-two-waves)); the binaries and dust slots have
+([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). A value `main.ts` has
+already loaded when it builds the shell is a constructor argument instead,
+so it has no pending state at all — the IAU boundary artifact
+([The owner](constellation-boundaries/README.md#the-owner)). Clusters holding no late slot do not wait.
 
 | Slot | Lands | Not-ready answer today |
 | --- | --- | --- |
-| Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 
-Two catalogue-prefix reads also sit in the shell: the constellation figure
-and `aimAtConstellation`'s centroid read figure vertices from
-`localPositions` in wave 1. The figure re-reads every frame, so a vertex
-outside the loaded prefix draws at `(0,0,0)` only until its chunk lands;
-the centroid is read once per aim and keeps whatever it got. Both are safe
-while every vertex sits in chunk 0 — measured on today's build (the
-`lines` indices in `public/constellations.json` against
-`recordsInFirstChunk`): 708 distinct vertices, highest record index
-10,288, chunk 0 ending at 10,411, a margin of 124 records that nothing
-checks yet.
-The build-time assert and the centroid's move onto the contract are 32.8's.
+Two catalogue-prefix reads are correct by construction rather than by a
+type: the constellation figure and its aim direction
+([The aim direction](constellation-figure/README.md#the-aim-direction)) read figure vertices from
+`localPositions` from first paint, and the aim keeps what it read.
+The build fails unless every figure vertex sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
 A third prefix read sits outside the shell: the extinction prepass sorts its
 dispatch order over the table it attaches to, which is normally still
 streaming, and re-sorts once on the refresh that completes it

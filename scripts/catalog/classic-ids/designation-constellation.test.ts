@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { BUILD_COUNTS_EXPECTED_FILE, type BuildCounts } from '../build-counts';
 import { DEFAULT_SEARCH_INDEX } from '../catalog-lookup';
 import type { SearchEntry } from '../record/catalog-pure';
-import { CON_INDEX } from '../parse/constellations';
+import { CON_INDEX } from '../parse/constellations/constellations';
 import { REPO_ROOT } from '../../util/paths';
 
 const built = existsSync(DEFAULT_SEARCH_INDEX);

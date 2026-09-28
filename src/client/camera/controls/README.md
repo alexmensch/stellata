@@ -257,7 +257,7 @@ disc through the camera lens — `θ = 2·atan(R / d)`:
    automatically lands. Used by:
 
    - `focusStar(idx)`'s default park distance (search-select,
-     click-vector-tip, default-load Sol focus). Since r9q.2, focus is
+     click-vector-tip, default-load Sol focus). Focus is
      a lerp-or-noop: the camera glides over `FOCUS_LERP_MS` when
      currently outside park, and stays put when already inside.
    - Observe-exit landing position (camera pulls back to
@@ -375,22 +375,19 @@ transition themselves.
 
 ## Picking a constellation aims the camera
 
-`Stellata.aimAtConstellation(conIndex)` swings the camera so the chosen
-constellation is centred in view, without moving `controls.target` or
-changing orbit radius — only the camera's position on the orbit sphere
-moves. The aim point is the brightness-weighted centroid of the top-8
-figure stars as ranked by apparent magnitude **from the current orbit
-target** (not from Sol). This matters when the user has travelled far
-from Sol: the same constellation is still centred on whichever members
-visually dominate from *there*, not from Earth.
+`Stellata.aimAtConstellation(conIndex)` turns the camera to look along the
+centre of the chosen constellation's figure as drawn
+([The aim direction](../../constellation-figure/README.md#the-aim-direction)), seen from the
+camera in OBSERVE and from the orbit target in navigate, without moving
+`controls.target` or changing orbit radius.
 
-Called **only from the constellation dropdown change handler** in
-`controls.ts`. URL state restore, reset button, and any other path that
+Called **only when a constellation is picked in the typeahead**
+(`../../typeahead/constellation-typeahead.ts`). URL state restore, reset button, and any other path that
 sets `highlightCon` via `setFilter` deliberately do **not** trigger the
 aim — a shareable URL's camera pose is authoritative, and the "reset"
 button means "clear the selection", not "jump somewhere".
 
-In OBSERVE mode the orbit-pivot rotation is degenerate (camera ≈
-target), so `aimAtConstellation` instead routes the centroid through
-`aimAt(c)`, which slerps the camera quaternion in place — same code
-path Sol/GC label clicks use.
+Both modes go through `aimAlong(dir)`: navigate sweeps the camera around the
+orbit pivot until it looks along `dir` through the pivot, and observe turns the
+camera in place. A pick that yields no direction returns before the claim, so
+it cancels nothing.

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { unitVectorFromRaDec } from '../../../src/client/util/equatorial-basis';
+import { unitVectorFromRaDec } from '../../../../src/client/util/equatorial-basis';
 import {
+  assertFigureVerticesInFirstChunk,
   CONSTELLATIONS,
   createConstellationAssignment,
   readIauEdgeRecords,
@@ -56,5 +57,21 @@ describe('createConstellationAssignment', () => {
   it('reads the committed edge set by default', () => {
     expect(createConstellationAssignment(readIauEdgeRecords()).indexAt(1, 0, 0))
       .toBe(assignment.indexAt(1, 0, 0));
+  });
+});
+
+describe('assertFigureVerticesInFirstChunk', () => {
+  const ori = conIndexOf('ori');
+  const uma = conIndexOf('uma');
+
+  it('passes when every vertex sits below the chunk boundary', () => {
+    const lines = new Map([[ori, [[0, 5], [5, 9]]], [uma, [[3, 4]]]]);
+    expect(() => assertFigureVerticesInFirstChunk(lines, 10)).not.toThrow();
+  });
+
+  it('names each constellation with a vertex at or past the boundary', () => {
+    const lines = new Map([[ori, [[0, 10]]], [uma, [[3, 4], [4, 12]]]]);
+    expect(() => assertFigureVerticesInFirstChunk(lines, 10))
+      .toThrow(/\(10 records\): Ori\/record 10, UMa\/record 12\./);
   });
 });

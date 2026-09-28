@@ -38,7 +38,7 @@ which is what lets a browser consumer have membership from the shipped
 grid alone — [Runtime membership](../README.md#runtime-membership).
 
 The edge records are read from the committed Stellarium file by
-`readIauEdgeRecords` (`../../../../scripts/catalog/parse/constellations.ts`),
+`readIauEdgeRecords` (`../../../../scripts/catalog/parse/constellations/constellations.ts`),
 a `readFileSync` against `data/`, which is not served: **nothing in the
 browser may call it.** Importing this module from a browser file is fine
 for the pure geometry; reaching for `readIauEdgeRecords` from one is how
@@ -154,7 +154,7 @@ The edge set names `SER1` (Caput) and `SER2` (Cauda) because they are
 genuinely disconnected regions. `constellationEdgeCodeAt` returns
 whichever one the position is in; `constellationKey` collapses both to
 `ser`, the lowercase key `CON_INDEX`
-(`scripts/catalog/parse/constellations.ts`) indexes the IAU-88 table
+(`scripts/catalog/parse/constellations/constellations.ts`) indexes the IAU-88 table
 by.
 
 **Membership collapses them; placement must not.** A star in either
@@ -211,7 +211,7 @@ to. Two carry **GCVS** designations, and they are different cases:
   designation and the boundaries agree with each other against the
   catalogue column, which is why the designation — not the column — is
   the authority for `desigConIndex`
-  ([Positional constellation membership](/scripts/catalog/parse/README.md#positional-constellation-membership)).
+  ([Positional constellation membership](/scripts/catalog/parse/constellations/README.md#positional-constellation-membership)).
 
 The CSV has no GCVS column — that cross-match happens later in the build
 — so this suite sees neither; `designationConMismatch` in build-counts is

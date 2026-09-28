@@ -68,7 +68,7 @@ formula.
 
 **Constellation names sit at the IAU region's own centre, not at their
 stars.** The anchor is the equal-surface-weight centre of mass of the
-region the boundary layer draws — `Stellata.constellationLabelAnchors`,
+region the boundary layer draws — `stellata.constellationBoundaries.labelAnchors`,
 one per region, off the shipped artifact
 ([Label anchors](../../constellation-boundaries/README.md#label-anchors)) — baked to the
 same Sol-centred sphere as the arcs, so `− worldOffset` is the whole

@@ -26,7 +26,7 @@ import type { DustGrid } from '../distance/dust/dust-deextinction-pure';
 import {
   createConstellationAssignment,
   STELLARIUM_SKYCULTURE_JSON,
-} from './constellations';
+} from './constellations/constellations';
 import { parseGspcTsv, type GspcColour } from '../photometry/gspc-parse';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import {

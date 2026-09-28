@@ -4,7 +4,7 @@ import {
   createIauConstellationLookup,
   parseIauEdges,
 } from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
-import { readIauEdgeRecords } from '../parse/constellations';
+import { readIauEdgeRecords } from '../parse/constellations/constellations';
 import {
   DIRECTION_DECIMALS,
   FADE_MIN_SAMPLES,

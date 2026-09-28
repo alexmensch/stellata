@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations';
+import { readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
 import { REPO_ROOT, lfsContentReadable } from '../../../../scripts/util/paths';
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';

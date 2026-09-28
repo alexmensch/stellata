@@ -23,7 +23,7 @@ import {
   serializeManifest,
   type ManifestRow,
 } from '../membership/membership-manifest-pure';
-import { CONSTELLATIONS, createConstellationAssignment } from './constellations';
+import { CONSTELLATIONS, createConstellationAssignment } from './constellations/constellations';
 import { readStars } from './stars-parse';
 
 const CON_ASSIGNMENT = createConstellationAssignment();

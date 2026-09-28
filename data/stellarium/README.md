@@ -40,13 +40,13 @@ assignment precesses positions to that equinox before testing them.
 
 ## Consumed by
 
-Both by `scripts/catalog/parse/constellations.ts`, which owns the path:
+Both by `scripts/catalog/parse/constellations/constellations.ts`, which owns the path:
 
 - `buildFigureLines(hipToIndex)` → `public/constellations.json` (absent
   for constellations with no asterism lines), from
   `scripts/catalog/build-catalog.ts`. See
   `scripts/catalog/parse/README.md`
-  [Stick figures from Stellarium](/scripts/catalog/parse/README.md#stick-figures-from-stellarium).
+  [Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium).
 - `readIauEdgeRecords()` → the boundary segments, parsed and decomposed
   into named sky regions by
   [`src/client/constellation-boundaries/`](../../src/client/constellation-boundaries/README.md).

@@ -4,7 +4,7 @@ import {
   buildBoundaryArtifact,
   type BoundaryArtifact,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import { CONSTELLATIONS, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations';
+import { CONSTELLATIONS, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { unitVectorFromRaDec } from '../util/equatorial-basis';
 import { validateBoundaryArtifact } from './boundary-artifact-loader';

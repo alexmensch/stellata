@@ -313,7 +313,9 @@ the camera standing on": the focused hard target's index while in OBSERVE
 the `unfocus` kind. Each line layer asks it for the kind it draws and
 drops only the geometry through that point:
 
-- constellation figure — every segment touching the anchor star.
+- constellation figure — every segment touching the anchor star, and the
+  anchor vertex in the pick's aim direction
+  ([The aim direction](../../constellation-figure/README.md#the-aim-direction)).
 - binary orbit paths — the anchor star's own ellipse, never its
   companion's (`../../binaries/orbit-paths/README.md`).
 - planet and moon orbit rings — the anchor body's own ring, whose vertex 0
@@ -331,7 +333,7 @@ while it is unreachable.** `observeAnchorOf('star')` is null for every
 non-star kind, so neither the host's figure segments nor its own binary
 ellipse drop. Sol is the only attached planet host, and it carries no figure
 vertex (figures resolve from Stellarium HIP lists,
-`scripts/catalog/parse/constellations.ts`) and no binary orbit. It is not
+`scripts/catalog/parse/constellations/constellations.ts`) and no binary orbit. It is not
 defensible on geometry: a planet sits ~5×10⁻⁶ pc from its host, so an
 exoplanet anchor's host lines would converge on the camera to within
 microradians and smear as a star anchor's do. When exoplanet hosts land,

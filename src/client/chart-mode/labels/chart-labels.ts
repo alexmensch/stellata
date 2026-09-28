@@ -314,7 +314,7 @@ export class ChartLabels {
   // CPU labels and ring glyphs don't move when those inputs are stable.
   // The epoch key matters under time scrubbing: a re-advance moves every
   // star with the camera still, and without it the glyphs freeze while
-  // the WebGL discs walk away. Identity-comparing the state at the top of
+  // the GPU-drawn discs walk away. Identity-comparing the state at the top of
   // tick() lets us drop ~1.6ms / frame of iteration work when the user is
   // sitting idle in chart mode.
   private readonly lastTickCamPos = new THREE.Vector3(NaN, NaN, NaN);
@@ -646,7 +646,7 @@ export class ChartLabels {
     }
     if (showConNames) {
       const worldOffset = stellata.getWorldOffset();
-      for (const anchor of stellata.constellationLabelAnchors) {
+      for (const anchor of stellata.constellationBoundaries.labelAnchors) {
         const minAppMag = tables.value.conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > limitMag) continue;
         if (!projectVecInto(

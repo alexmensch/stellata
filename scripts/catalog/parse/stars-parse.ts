@@ -107,7 +107,7 @@ import {
   MANIFEST_VALUE_SEPARATOR,
   iterManifestTsv,
 } from '../membership/membership-manifest-pure';
-import { type ConstellationAssignment } from './constellations';
+import { type ConstellationAssignment } from './constellations/constellations';
 
 // Drop stars farther than this from Sol. The catalogue carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
@@ -141,7 +141,7 @@ export interface Star {
    *  designations fall back to `conIndex`. Filled downstream of this walk:
    *  the IAU WGSN designation the naming ladder resolves states it, else
    *  IV/27A keyed on HD/HIP, else a GCVS designation's own trailing
-   *  abbreviation. See ./README.md#positional-constellation-membership. */
+   *  abbreviation. See ./constellations/README.md#positional-constellation-membership. */
   desigConIndex: number;
   flags: number;
   /** The record's display name — what `catalog.bin`'s name table carries.

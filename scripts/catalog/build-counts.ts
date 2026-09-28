@@ -142,7 +142,7 @@ export interface BuildCounts {
   designationConMismatch: number;
   /** Stars whose designation constellation came from their own GCVS
    *  designation — the only nomenclature source the build has left, since the
-   *  manifest carries no editorial `con` cell. See `parse/README.md#positional-constellation-membership`.
+   *  manifest carries no editorial `con` cell. See `parse/constellations/README.md#positional-constellation-membership`.
    * */
   gcvsDesignationCon: number;
   /** Record index of Sol after sort. -1 if Sol is not found in source. */

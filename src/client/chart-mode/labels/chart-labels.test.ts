@@ -578,7 +578,7 @@ describe('chart-labels / ChartLabels lifecycle', () => {
       },
       getT: () => 0,
       getWorldOffset: () => new THREE.Vector3(),
-      constellationLabelAnchors: patch.anchors ?? [],
+      constellationBoundaries: { labelAnchors: patch.anchors ?? [] },
       filters: {
         getFilter: () => ({
           instrument: 'unaided-eye', minDistSol: 0, maxDistSol: 1e9,
