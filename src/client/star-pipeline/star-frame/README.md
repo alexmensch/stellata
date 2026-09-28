@@ -85,10 +85,9 @@ would gate a frame against the previous one's plate scale. The slot
 seeds past any distance the model reaches, so a solve running before the
 first write takes the branch rather than eliding it.
 
-Anything that writes `onLocalPositionsWritten` side effects — the GPU
-re-upload flag and `BinaryOrbitField`'s baseline invalidation — is
-passed in by the shell, which is the only thing that knows the
-attribute and the lazily-attached binary field.
+`onLocalPositionsWritten` is `StarPipeline.localPositionsWritten`, which
+owns the `iPosition` attribute's re-upload flag and reaches
+`BinaryOrbitField`'s baseline invalidation through `BinariesAttachment`.
 
 **One rewrite per frame.** Rewriting the 390k-star local buffer costs
 a full pass plus a GPU re-upload, and two of them can be provoked in
@@ -110,7 +109,7 @@ new landing there has to sit after the flush instead.
 The catalogue arrives progressively ([Progressive catalog load](../../loaders/README.md#progressive-catalog-load)),
 so every buffer above is allocated at the full
 record count and filled forward, one window per chunk, by `absorbRecords()`.
-The shell calls it from `Stellata.absorbCatalogRecords`, never on a timer.
+`StarPipeline` calls it from its per-chunk absorb, never on a timer.
 
 Two things here are traps rather than choices:
 

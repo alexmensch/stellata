@@ -47,7 +47,7 @@ in both navigate and observe modes.
   the walk can skip a candidate that encloses the cursor — in chart mode that means
   bounding the magnitude-mapped ink disc as well as the realistic
   footprint, since either can be the larger
-  (`Stellata.pickPrefilterSizePxFor`).
+  (`StarPipeline.pickPrefilterSizePx`, `../../star-pipeline/`).
   It owns the star pick
   (`pickStar` / `pickStarHit` — the star module's hover leg calls back
   into it, so the engine-owned scan stays here); every other kind picks
@@ -108,8 +108,7 @@ in both navigate and observe modes.
   magnitude), `activePulsationAmp` (the shared
   `iSuppressPulsation` mirror both the disc-size and pick paths read —
   two mirrors of one shader gate is how they came to disagree),
-  `renderedDiscPxAtPeak`, `getChartDiscParams` +
-  canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
+  `renderedDiscPxAtPeak`, canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
   planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
   (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular
   solves, keyed on the body radius directly. Everything here is a
@@ -131,11 +130,12 @@ in both navigate and observe modes.
   `number` and read alike at a call site, which is how the occluder set
   came to mask a Mira 40 % wide of its own disc.
 
-### star-geometry vs star-physics vs stellata.ts
+### star-geometry vs star-physics vs StarPipeline
 
 - `star-geometry.ts` — pure formulae (no catalog, no uniforms).
 - `star-physics.ts` — catalog-indexed wrappers around those formulae.
-- `stellata.ts` — wires per-frame uniforms and dispatches.
+- `../../star-pipeline/star-pipeline.ts` — binds them to the live
+  uniforms, filter and suppress mask.
 
 ## Ranking a pick
 

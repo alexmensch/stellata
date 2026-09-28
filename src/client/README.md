@@ -179,8 +179,8 @@ The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
 `solarSystem`, `coordSpheres`, `binaries`, `extinction`,
-`constellationBoundaries`, `constellationFigure`, the frame owners
-`floatingOrigin` and `starFrame`, plus the
+`constellationBoundaries`, `constellationFigure`, `starPipeline`, the frame
+owners `floatingOrigin` and `starFrame`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -239,16 +239,7 @@ an empty awaiting list.
 
 | Cluster | Target | Bead |
 | --- | --- | --- |
-| Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
 | Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
-
-**Values crossing a row boundary** — whichever row moves first settles the
-interface for both:
-
-- **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
-  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the constellation
-  figure takes it, and the star-local-cluster and core-mask entries carry it
-  when their row moves.
 
 ### Late-attached slots
 

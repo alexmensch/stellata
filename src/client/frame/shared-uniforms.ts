@@ -33,9 +33,7 @@ export type SharedUniforms = ReturnType<typeof buildSharedUniforms>;
 /**
  * All three star passes
  * point at the same value objects, so any filter / theme / resize write
- * propagates to every pass without duplicate bookkeeping; `uRenderMode`
- * is the only divergent uniform and `StarPipeline` binds it per
- * material. The planet body field and the Milky Way pass pick slots out
+ * propagates to every pass without duplicate bookkeeping. The planet body field and the Milky Way pass pick slots out
  * of the same map by reference for the same reason.
  */
 export function buildSharedUniforms(opts: SharedUniformsOptions) {

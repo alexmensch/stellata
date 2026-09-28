@@ -48,7 +48,7 @@ suggests — check the test before moving either constant.
 The near plane also **decides** one focus kind's park outright rather
 than merely bounding it: a probe has no disc to solve against, so its
 fixed park / floor pair is chosen for near-plane margin
-([star-geometry vs star-physics](controls/README.md#star-geometry-vs-star-physics-vs-stellatats)). Any future fixed-pixel focusable
+([star-geometry vs star-physics](controls/README.md#star-geometry-vs-star-physics-vs-starpipeline)). Any future fixed-pixel focusable
 lands in the same regime.
 
 The constants live in their own module specifically to break the

@@ -112,7 +112,7 @@ occluded fragments from painting at all:
   occluding it; the nearest-possible stamp is safe because the local
   pass repaints the core and membership range (a ≥5 px disc)
   guarantees nothing renderable sits between camera and disc. The
-  shell ORs `starLocalCluster.hasMembers()` into the core-mask mesh
+  core-mask entry (`../star-pipeline.ts`) ORs `hasMembers()` into its
   gate so an appSize-driven member disc outside the physSize window
   still stamps.
 - **Local pass** — the mirror carries a third depth-only core-mask

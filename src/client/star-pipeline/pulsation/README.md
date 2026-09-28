@@ -29,7 +29,8 @@ src/client/star-pipeline/pulsation/
 
 Consumers: `../../loaders/catalog-loader.ts` and `catalog-mock.ts` build
 the arrays at load; `../../webgpu/star/star-tables.ts` interleaves them
-into the static record table; `stellata.ts` wires the uniforms.
+into the static record table; `../star-pipeline.ts` writes the suppress
+mask per landing chunk; `stellata.ts` wires the uniforms.
 
 ## Running on the model clock
 

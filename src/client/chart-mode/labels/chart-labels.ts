@@ -11,8 +11,6 @@ import type { CompleteCatalog } from '../../loaders/catalog-loader';
 import type { LateState } from '../../util/late/late';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import { setNumAttr } from '../../overlays/dirty-attr';
-import { getChartDiscParams } from '../../camera/controls/star-physics';
-import { chartDiscPxForAppMag } from '../chart-disc-pure';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import { limitMagOf } from '../../filters/filter-state';
 
@@ -539,9 +537,7 @@ export class ChartLabels {
     // below (variable rings + binary wings sized off the same px formula
     // the GPU disc uses).
     const limitMag = limitMagOf(f);
-    const discParams = getChartDiscParams(stellata.uniforms);
-    const discPxFor = (mag: number): number =>
-      chartDiscPxForAppMag(mag, discParams, limitMag);
+    const discPxFor = (mag: number): number => stellata.starPipeline.chartDiscPxFor(mag);
 
     // Chart-content detail gates (recomputed on chart entry + V). Planet
     // name labels ride the star-name tier; rings + wings share one element.

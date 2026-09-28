@@ -24,22 +24,13 @@ import {
 import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples';
 import { RenderGate } from './render-gate/render-gate';
 import { TrackballSettle } from './camera/controls/input/trackball-settle';
-import {
-  cadenceVisibleTurnRad,
-  pulsationCadenceBudgetS,
-} from './render-gate/cadence/clock-cadence-pure';
+import { cadenceVisibleTurnRad } from './render-gate/cadence/clock-cadence-pure';
 import {
   ClockCadence,
   type ClockCadenceDebugState,
 } from './render-gate/cadence/clock-cadence';
 import type { HdrSeam, ReductionSeam } from './hdr/hdr-seam';
-import {
-  angularToPx as angularToPxPure,
-  type ResolvedCandidate,
-} from './camera/controls/star-geometry';
-import * as starPhysics from './camera/controls/star-physics';
-import { resolveStarPickVisibility } from './camera/controls/star-pick-visibility-pure';
-import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
+import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
 import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
@@ -67,24 +58,15 @@ import {
 } from './kinds/kind-modules';
 import { FocalRides } from './camera/focus/focal-ride/focal-rides';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-ride/focal-anchor-policy';
-import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
-import type { SurvivorCountsRead } from './debug/survivor-counts';
+import type { StellataRenderer, WebGpuSeam } from './webgpu/seam';
 import type { PlanetSystem } from './solar-system/planet-system';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemWiring } from './solar-system/solar-system-wiring';
-import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
-import {
-  PHYS_RATIO_THRESHOLD,
-  RESOLVED_DISC_MIN_PX,
-} from './star-pipeline/local-pass/star-local-cluster-pure';
-import { type StarPassRouting, starPassRouting } from './star-pipeline/star-pass';
-import { DIM_FLOOR } from './binaries/eclipse/eclipse-photometry-pure';
 import { VirtualClock, tToJdUt } from './solar-system/time/time';
 import { J2000_JD } from './util/astronomy-constants';
-import { uploadFull } from './util/attribute-upload';
 // Locally used subset; other warp-timing constants re-exported below
 // for external import paths still pointing at './stellata'.
 import { CAMERA_NEAR_PC } from './camera/timing';
@@ -121,10 +103,7 @@ import {
 import { FrameFrustum } from './scene/contribution/frame-frustum';
 import { findGlslResidents } from './scene/glsl-residents-pure';
 import { SceneDeclutter } from './scene/declutter/scene-declutter';
-import {
-  buildStarSourceAttributes, type StarSourceAttributes,
-} from './star-pipeline/star-source-attributes';
-import { CATALOG_BOUNDING_RADIUS_PC } from './star-pipeline/shards/star-shards-pure';
+import { StarPipeline } from './star-pipeline/star-pipeline';
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
@@ -133,7 +112,6 @@ import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigure } from './constellation-figure/constellation-figure';
 import { ConstellationBoundaries } from './constellation-boundaries/constellation-boundaries';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
 
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
@@ -191,7 +169,6 @@ export class Stellata {
   /** The boot seam — layers reach their scene and the shared uniform
    *  nodes through it. */
   readonly webgpu: WebGpuSeam;
-  private webgpuStarLayer!: WebGpuStarLayer;
   private readonly chromeLines: ChromeLineMaterials;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
@@ -199,7 +176,6 @@ export class Stellata {
   readonly roll = new RollController();
 
   private scene: THREE.Scene;
-  private starAttrs!: StarSourceAttributes;
   // The shared view/screen uniform map (frame/README.md#shared-uniforms)
   // — every per-frame write goes through this field, never
   // through a star material's uniforms object.
@@ -209,17 +185,6 @@ export class Stellata {
   readonly starFrame: StarFrame;
   // Scratch for the focused star's per-re-advance space-motion delta.
   private readonly _epochFollowDelta = new THREE.Vector3();
-  // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
-  // radial pulsation in the vertex shader for every eclipsing binary
-  // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
-  // See /src/client/binaries/eclipse/README.md#pulsation-gate-for-eclipsing-binaries.
-  private _suppressPulsation: Float32Array;
-  /** Records already folded into `_suppressPulsation` — the mask is written
-   *  in place so the attribute bound over it keeps its array. */
-  private absorbedSuppressCount = 0;
-  /** Unsubscribe from the catalog's chunk-decode fan-out. */
-  private offCatalogRecords: (() => void) | null = null;
-
   /** Kind-generic system membership (multi-star clusters, planet
    *  systems) — hover roster cards and collapsed-pick resolution both
    *  consume this. See src/client/system-membership/README.md. */
@@ -302,8 +267,7 @@ export class Stellata {
   // whole cap for them, and forever with the clock paused. Evaluated
   // above the gate, every tick (scene/scene-layer.ts LayerTimeBehaviour).
   private _realtimeFramesNeeded = false;
-  private coreMaskEnabled = true;
-  private starLocalCluster: StarLocalCluster;
+  readonly starPipeline: StarPipeline;
   readonly solarSystem: SolarSystemWiring;
   /** The frame's near-solid-body set, published by the two local-depth
    *  clusters and read by every SVG label surface
@@ -327,14 +291,6 @@ export class Stellata {
   readonly milkyway: MilkyWay;
 
   readonly extinction: ExtinctionAttachment;
-  private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
-    { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
-  // Separate from pickSizeScratch: the debug panel reads every frame and
-  // must not clobber a pick walk mid-flight.
-  private readonly passDebugScratch: starPhysics.RenderedSizeComponents =
-    { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
-  private readonly starSizeInputs: starPhysics.StarSizeInputs;
-
   readonly picker!: Picker;
 
   readonly focusables!: FocusableProviders;
@@ -450,17 +406,14 @@ export class Stellata {
       worldOffset: this.floatingOrigin.worldOffset,
       cameraPosition: this.camera.position,
       t: this.getT(),
-      onLocalPositionsWritten: () => {
-        uploadFull(this.starAttrs.iPositionAttr);
-        this.binaries.markBaselinesDirty();
-      },
+      onLocalPositionsWritten: () => this.starPipeline.localPositionsWritten(),
     });
     this.chartLabels = new ChartLabels(this, this.starFrame.distSol);
     this.binaries = new BinariesAttachment({
       catalog,
       basePositions: this.starFrame.basePositions,
       localPositions: this.starFrame.localPositions,
-      attributes: () => this.starAttrs,
+      attributes: () => this.starPipeline.attributes,
       uniforms: sharedUniforms,
       chromeLines: this.chromeLines,
       camera: this.camera,
@@ -478,8 +431,8 @@ export class Stellata {
     this.kinds.star.setRuntime({
       localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
       parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
-      renderedSizePx: (idx) => this.renderedSizePxFor(idx),
-      peakDiscSizePx: (idx) => starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, idx),
+      renderedSizePx: (idx) => this.starPipeline.renderedSizePx(idx),
+      peakDiscSizePx: (idx) => this.starPipeline.peakDiscSizePx(idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
       binaries: this.binaries.data,
     });
@@ -491,26 +444,6 @@ export class Stellata {
       this.controls.target.sub(delta);
     });
     this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
-    // Built here (not on binaries attach) because the gate is varType-driven
-    // and binary-independent; see the field declaration for the rationale.
-    this._suppressPulsation = new Float32Array(catalog.count);
-
-    this.starAttrs = buildStarSourceAttributes({
-      localPositions: this.starFrame.localPositions,
-      ...this.binaries.sourceArrays(),
-      suppressPulsation: this._suppressPulsation,
-    });
-
-    this.webgpuStarLayer = this.webgpu.attachStarLayer(this.scene, {
-      catalog,
-      logRadii: this.starFrame.logRadii,
-      lumClassF32: this.starFrame.lumClassF32,
-      distSol: this.starFrame.distSol,
-      teffApsis: this.starFrame.teffApsis,
-      boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
-      ...this.starAttrs,
-    });
-
     this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.extinction = new ExtinctionAttachment({
       catalog,
@@ -520,13 +453,24 @@ export class Stellata {
       renderer: this.renderer,
       invalidate: (reason) => this.renderGate.invalidate(reason),
     });
-
-    // Chunk 0 is already decoded and the pipeline was constructed against
-    // it, so this first call folds it in; every later one follows a
-    // landing chunk.
-    this.offCatalogRecords = this.catalog.onRecordsDecoded(
-      () => this.absorbCatalogRecords());
-    this.absorbCatalogRecords();
+    this.starPipeline = new StarPipeline({
+      catalog,
+      frame: this.starFrame,
+      scene: this.scene,
+      camera: this.camera,
+      webgpu: this.webgpu,
+      uniforms: sharedUniforms,
+      emitterUniforms: this.hdr.emitterUniforms,
+      binaries: this.binaries,
+      extinction: this.extinction,
+      exposure: this.exposure,
+      cadence: this.cadence,
+      occluders: this.occluders,
+      filter: () => this.filter,
+      focusedStar: () => this.focus.getFocusedStar(),
+      monochrome: () => this.monochrome,
+      invalidate: (reason) => this.renderGate.invalidate(reason),
+    });
 
     // Galactic reference layers — disc is always added; grid hides itself
     // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
@@ -539,31 +483,8 @@ export class Stellata {
       worldOffset: this.floatingOrigin.worldOffset,
       detailPermits: (id) => this.declutter.permits(id),
     });
-    this.starLocalCluster = new StarLocalCluster(
-      this.webgpuStarLayer.localMirror,
-      this.binaries.orbitPaths,
-      sharedUniforms.uLocalMemberIdx as { value: Int32Array },
-      {
-        catalog,
-        localPositions: () => this.starFrame.localPositions,
-        renderedSizeComponents: (idx, out) => this.renderedSizeComponentsFor(idx, out),
-        forEachStarNearCamera: (d, cb) => this.starFrame.forEachStarNearCamera(d, cb),
-        // Membership needs physSize ≥ PHYS_RATIO_THRESHOLD × pxSize with
-        // pxSize ≥ RESOLVED_DISC_MIN_PX, so the widest useful window is
-        // where the largest star's disc crosses the product.
-        scanWindowPc: () =>
-          this.starFrame.discWindowPcFor(RESOLVED_DISC_MIN_PX * PHYS_RATIO_THRESHOLD),
-        occluders: this.occluders,
-        livePulsationRadiusFactor: (idx) => starPhysics.livePulsationRadiusFactor(
-          catalog, idx, this._suppressPulsation, this.sharedUniforms),
-        hiddenStarIdx: () => sharedUniforms.uHideFocusIdx.value,
-      },
-    );
-    this.localDepthPass.register(this.starLocalCluster);
-    this.binaries.data.observe((settled) => {
-      this.renderGate.invalidate('attach:binaries');
-      this.starLocalCluster.setBinaries(settled.status === 'ready' ? settled.value : null);
-    });
+    this.localDepthPass.register(this.starPipeline.localCluster);
+    this.binaries.data.observe(() => this.renderGate.invalidate('attach:binaries'));
     this.constellationBoundaries = new ConstellationBoundaries({
       scene: this.scene,
       artifact: boundaries,
@@ -631,7 +552,7 @@ export class Stellata {
       planetMesh: this.kinds.planet.meshLayer,
       probeField: this.kinds.probe.field,
       probeTrails: this.kinds.probe.pathLayer,
-      starCluster: this.starLocalCluster,
+      starCluster: this.starPipeline.localCluster,
       occluders: this.occluders,
       solIndex: catalog.solIndex,
       getT: () => this.getT(),
@@ -671,10 +592,10 @@ export class Stellata {
       getLocalPositions: () => this.starFrame.localPositions,
       getFilter: () => this.filter,
       kindPicks: collectKindPicks(this.kinds),
-      renderedSizePxFn: (idx) => this.pickPrefilterSizePxFor(idx),
-      getSuppressPulsation: () => this._suppressPulsation,
+      renderedSizePxFn: (idx) => this.starPipeline.pickPrefilterSizePx(idx),
+      getSuppressPulsation: () => this.starPipeline.suppressPulsation,
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
-      resolveStarPick: (idx) => this.resolveStarPick(idx),
+      resolveStarPick: (idx) => this.starPipeline.resolveStarPick(idx),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
       visibility: () => this.pickVisibility(),
     });
@@ -785,15 +706,6 @@ export class Stellata {
       refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
       declutter: this.declutter,
     });
-    this.starSizeInputs = {
-      catalog,
-      camPos: this.camera.position,
-      localPositions: this.starFrame.localPositions,
-      uniforms: sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-    };
-
     // Engage focus on Sol if it exists so measurement and per-star zoom
     // work from the start. setFocus (rather than raw field assignment)
     // wires up controls.minDistance to the per-star orbit floor and
@@ -897,22 +809,8 @@ export class Stellata {
     // render its suppression uniforms gate. Owns no GPU resources — the star
     // mirror it feeds is disposed with the star cluster.
     this.layers.register(this.solarSystem.clusterEntry);
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: this.binaries.rate,
-      },
-      contribution: { kind: 'always' },
-      // After the binary walk + eclipse photometry + path-layer update:
-      // membership reads this frame's positions and path visibility, and
-      // the mirror sync re-copies the slots those fields just wrote.
-      update: (ctx) => this.starLocalCluster.update(ctx.camera, {
-        monochrome: this.monochrome,
-        focalIdx: this.focus.getFocusedStar(),
-        thresholdMag: this.exposure.getThresholdMag(),
-      }),
-      dispose: () => this.starLocalCluster.dispose(),
-    });
+    // see star-pipeline/README.md#the-pipeline for both entries' places.
+    this.layers.register(this.starPipeline.localClusterEntry);
     // After the binary + planet walks, so a figure vertex that is a binary
     // member re-copies its live slot.
     this.layers.register(this.constellationFigure.entry);
@@ -946,42 +844,7 @@ export class Stellata {
       update: (ctx) => this.milkyway.update(ctx.camera, ctx.worldOffset),
       dispose: () => this.milkyway.dispose(),
     });
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        // Anchored content: the mask stamps the cores of the same stars the
-        // local cluster mirrors, so it declares that subsystem's rate rather
-        // than a global minimum (scene/README.md#anchored-content-declares-its-anchors-rate).
-        rate: this.binaries.rate,
-      },
-      contribution: {
-        kind: 'gated',
-        // The star pipeline's own pass, registered here and nowhere else in
-        // the registry, because this is the one part of it with a per-frame
-        // visibility verdict. Its floor is `RESOLVED_DISC_MIN_PX` rather
-        // than the shared one: below that the bleed-through it stamps
-        // against is too small to see, and a wider floor would reject
-        // frames the mask does change.
-        skip: () => {
-          // The `coreMask` lever's A/B prices this walk, and the walk is
-          // now inside the predicate — so a disabled lever has to refuse
-          // above it or both sides of the A/B pay it and the row prices
-          // nothing (debug/frame-cost/passes/README.md).
-          if (!this.coreMaskEnabled) return null;
-          perfMark('coreMask');
-          const on = this.starLocalCluster.hasMembers()
-            || this.starFrame.shouldEnableCoreMask();
-          perfMeasure('coreMask');
-          return on ? null : 'legibility';
-        },
-        setContributing: (on) => { if (!on) this.setCoreMaskVisible(false); },
-      },
-      // After the star local cluster's entry: a member's stamp must render
-      // even when the physSize-only window misses an appSize-driven member
-      // disc, so membership has to be this frame's.
-      update: () => this.setCoreMaskVisible(this.coreMaskEnabled),
-      dispose: () => {},
-    });
+    this.layers.register(this.starPipeline.coreMaskEntry);
     this.layers.register({
       // Teardown leg only; the per-frame work rides the 'frame' event, so
       // it runs on rendered frames and cannot need one of its own.
@@ -1103,159 +966,6 @@ export class Stellata {
     }));
   }
 
-  /**
-   * Fold a landing transport chunk's records into everything derived from
-   * the catalogue, in dependency order, and wake the frame.
-   *
-   * Registered against `catalog.onRecordsDecoded` by the constructor, so the
-   * shell never polls. The order matters: the star frame advances the new
-   * records to the model epoch and rewrites the local-position buffer, and
-   * only then do the GPU tables have current values to interleave.
-   *
-   * The render gate invalidation is not optional — a settled camera draws no
-   * frame, so without it the newly-decoded stars would not appear until the
-   * user moved.
-   */
-  private absorbCatalogRecords(): void {
-    const absorbedFrom = this.absorbedSuppressCount;
-    writePulsationSuppressMask(
-      this.catalog.varType,
-      this._suppressPulsation,
-      this.absorbedSuppressCount,
-      this.catalog.loadedCount,
-    );
-    this.absorbedSuppressCount = this.catalog.loadedCount;
-    uploadFull(this.starAttrs.iSuppressPulsationAttr);
-
-    this.starFrame.absorbRecords();
-    this.webgpuStarLayer.absorbRecords();
-    // Not markDirty — see webgpu/extinction/README.md#the-cache-gate.
-    this.extinction.refreshPositions();
-
-    // The fastest pulsating variable bounds how long any frame may idle
-    // before some star's brightness moves a JND, so a chunk carrying a
-    // faster one has to shorten the budget. A minimum over the window
-    // alone: rescanning every record per chunk is main-thread time the
-    // frame is waiting on, and the answer cannot rise.
-    this.cadence.tightenPulsationBound(pulsationCadenceBudgetS(
-      this.catalog.periodDays,
-      this.catalog.amplitudeMag,
-      this._suppressPulsation,
-      absorbedFrom,
-      this.catalog.loadedCount,
-    ));
-    this.renderGate.invalidate('catalog-chunk');
-  }
-
-  /** How many stars each tier's draw issued, and how many passed the
-   *  prefilter (`webgpu/star/compaction/README.md#reading-the-counts-back`).
-   * The read waits on a dispatch to count into, which a settled
-   *  camera has parked the gate out of. */
-  async readSurvivorCounts(): Promise<SurvivorCountsRead | null> {
-    this.renderGate.invalidate('debug:survivors');
-    const counts = await this.webgpuStarLayer.readSurvivorCounts();
-    if (counts === null) return null;
-    return { ...counts, inFrame: this.extinction.countInFrame() };
-  }
-
-  /** Debug-HUD view of the disc/glow routing for one star at a given
-   *  eclipse dim: the pass the shaders route it to, and the pass a
-   *  dimmed quad would have picked (`star-pipeline/README.md#star-rendering-instanced-quads-three-passes`).
-   * The only way to see the trap band, which draws
-   *  identically either side of it. */
-  starPassRoutingFor(idx: number, eclipseDim: number): StarPassRouting {
-    const c = this.renderedSizeComponentsFor(idx, this.passDebugScratch);
-    const appSizeAtDim = (dim: number) => (dim >= 1
-      ? c.appSizePx
-      : starPhysics.appSizePxForMag(
-        c.appMag - 2.5 * Math.log10(Math.max(dim, DIM_FLOOR)),
-        this.filter,
-        this.sharedUniforms.uSizeKnee.value,
-      ));
-    return starPassRouting(
-      c.appSizePx, c.physSizePx, eclipseDim, DIM_FLOOR, appSizeAtDim,
-    );
-  }
-
-  /** Rendered disc diameter (px) for one instance — the CPU mirror of the
-   *  shader's `max(appSize, physSize)` sizing (`star-physics.ts`). Shared
-   *  by the navigate-mode fade closure and the overlay/pick paths. */
-  private renderedSizePxFor(idx: number): number {
-    return starPhysics.renderedSizePx(this.starSizeInputs, idx);
-  }
-
-  /** Component split of `renderedSizePxFor` — the star local cluster's
-   *  membership test needs the disc/glow dominance, not just the max. */
-  private renderedSizeComponentsFor(
-    idx: number,
-    out: starPhysics.RenderedSizeComponents,
-  ): starPhysics.RenderedSizeComponents {
-    return starPhysics.renderedSizeComponents(this.starSizeInputs, idx, out);
-  }
-
-  private chartDiscPxFor(appMag: number): number {
-    return chartDiscPxForAppMag(
-      appMag,
-      starPhysics.getChartDiscParams(this.sharedUniforms),
-      this.exposure.getLimitMag(),
-    );
-  }
-
-  /** Upper bound on the radius `resolveStarPick` will report — what
-   *  `pickFromCandidatesResolved`'s eligibility pass requires of
-   *  the prefilter, and the reason the two can't just call the same
-   *  function: chart inks a magnitude-mapped disc rather than the
-   *  realistic footprint and either curve can be the larger, so the
-   *  bound has to cover both. Extinction only dims, and a dimmer star
-   *  maps to a smaller disc on both curves, so the resolved radius can
-   *  only shrink from here. */
-  private pickPrefilterSizePxFor(idx: number): number {
-    const c = this.renderedSizeComponentsFor(idx, this.pickSizeScratch);
-    const px = Math.max(c.appSizePx, c.physSizePx);
-    return this.filter.chart ? Math.max(px, this.chartDiscPxFor(c.appMag)) : px;
-  }
-
-  /** Whether the renderer puts a pixel on screen for this star, and the
-   *  disc radius it actually draws — the pick gate proper, as against
-   *  `drawCutoffMag`'s intrinsic-magnitude prefilter. Runs per pick
-   *  candidate, never per frame
-   *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
-  private resolveStarPick(idx: number): ResolvedCandidate {
-    // No A_V answer errs toward pickable: the fallback path still dims the
-    // star, and reproducing its march on the CPU needs the voxel grid the
-    // loader uploads and drops.
-    const avMag = this.extinction.avMagAt(idx);
-    const c = starPhysics.renderedSizeComponents(
-      this.starSizeInputs, idx, this.pickSizeScratch, avMag === null ? 0 : avMag,
-    );
-    return resolveStarPickVisibility({
-      focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
-      eclipseDim: this.binaries.eclipseDimAt(idx),
-      chartDiscPx: this.filter.chart ? this.chartDiscPxFor(c.appMag) : null,
-      limitMag: this.exposure.getLimitMag(),
-      components: c,
-      appSizePxForMag: (m) =>
-        starPhysics.appSizePxForMag(m, this.filter, this.sharedUniforms.uSizeKnee.value),
-      exposure: this.hdr.emitterUniforms.uExposure.value,
-      thresholdMag: this.exposure.getThresholdMag(),
-      whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
-    });
-  }
-
-  /** Debug kill switch for the star core depth-mask draw AND the
-   *  per-frame near-camera scan that gates it (frame-cost
-   *  differentials). Backgrounds bleed through close star cores while
-   *  false — never leave it off outside a measurement dwell. */
-  setCoreMaskEnabled(on: boolean) {
-    this.coreMaskEnabled = on;
-  }
-
-  /** The core depth-mask's one visibility write. Whether it should be on
-   *  is the layer's contribution verdict; this is only the apply. */
-  private setCoreMaskVisible(on: boolean): void {
-    this.webgpuStarLayer.setCoreMaskVisible(on);
-  }
-
   /** Every scene graph this boot draws, for debug-scoped READS — the
    *  memory inventory walks them (`debug/memory/README.md`).
    *
@@ -1264,19 +974,6 @@ export class Stellata {
    *  dispose fan-out misses them. */
   get sceneGraphs(): readonly NamedScene[] {
     return [{ name: 'shell', scene: this.scene }];
-  }
-
-  // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
-  // distance vector tip) thread this through renderedSizePx so
-  // the SVG estimate tracks the rendered disc on eclipsing-binary
-  // primaries whose pulsation has been gated off.
-  get suppressPulsation(): Float32Array { return this._suppressPulsation; }
-
-  // Read-only view of the shared uniform map, typed against the subsets
-  // consumed by star-physics.ts. Overlays / chart / debug surfaces that
-  // call the per-star geometry helpers thread these through.
-  get uniforms(): starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms {
-    return this.sharedUniforms;
   }
 
   /** FOV mutations stay a shell dispatcher (not `filters.setCameraFov`
@@ -1292,7 +989,7 @@ export class Stellata {
     if (this.monochrome === on) return;
     this.monochrome = on;
     this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
-    this.webgpuStarLayer.setMonochrome(on);
+    this.starPipeline.setMonochrome(on);
     this.renderer.setClearColor(
       on ? paperClearColour(this.renderer.outputColorSpace) : 0x000000, on ? 1 : 0);
     // Per-layer palette swaps fan out through the registry. The milky-way
@@ -1610,7 +1307,7 @@ export class Stellata {
     // star draw below reads — its own submit, so it has to sit between
     // the two (webgpu/star/compaction/README.md).
     perfMark('star.compaction');
-    this.webgpuStarLayer.update(this.camera);
+    this.starPipeline.update(this.camera);
     perfMeasure('star.compaction');
     // One walk on the first rendered frame: every layer is parented by
     // then (the roster attach loop and registerSceneLayers both run in
@@ -1694,8 +1391,6 @@ export class Stellata {
 
   dispose() {
     this.disposed = true;
-    this.offCatalogRecords?.();
-    this.offCatalogRecords = null;
     this.observeLookPin.invalidate();
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
@@ -1717,7 +1412,7 @@ export class Stellata {
     this.focus.dispose();
     this.controls.dispose();
     this.extinction.dispose();
-    this.webgpuStarLayer.dispose();
+    this.starPipeline.dispose();
     // Every scene layer (eager or lazily attached) disposes through the
     // registry — a registered layer can't be missing here.
     this.layers.disposeAll();

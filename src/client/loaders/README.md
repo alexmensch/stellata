@@ -168,8 +168,8 @@ Three traps, all of them silent if missed:
   before the tail landed would erase those records the first time the model
   clock crossed a bucket (`../star-pipeline/star-frame/README.md`).
 - **Each landing chunk must invalidate the render gate**, or a settled camera
-  never draws and the new stars simply do not appear. `Stellata`'s
-  `absorbCatalogRecords` is the single place that fans a chunk out to the star
+  never draws and the new stars simply do not appear. `StarPipeline`'s
+  chunk absorb is the single place that fans a chunk out to the star
   frame, both pipelines and the gate — same shape as the dust loader's
   `onProgress` below.
 - **The SID resolver's star domain attaches on the FIRST chunk and declares

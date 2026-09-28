@@ -1,5 +1,5 @@
 // The star ObjectKindModule — catalog + search-index load and the star
-// kind's capability legs. Render layers stay on the shell. See ./README.md.
+// kind's capability legs. The render layers are StarPipeline's. See ./README.md.
 
 import * as THREE from 'three';
 import {
@@ -32,10 +32,6 @@ import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 import type { Late, LateState } from '../util/late/late';
 
-/** Shell-owned star machinery the module's legs read through closures —
- *  the star render pipeline, its frame state, and the picker stay on the
- *  integration shell, so the shell injects these before it reads any
- *  leg. */
 export interface StarModuleRuntime {
   /** Local-frame position of star `idx` into `out` (StarFrame). */
   localPositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
@@ -203,8 +199,7 @@ export function createStarKindModule(): StarKindModule {
 
     attach(kindCtx: KindContext): SceneLayer | null {
       ctx = kindCtx;
-      // The star render layers (pipeline, local mirror, binary fields)
-      // are shell-wired engine machinery, not a module scene layer.
+      // The star render layers are StarPipeline's, not a module scene layer.
       return null;
     },
 

@@ -200,8 +200,8 @@ local frame, stored at full Float32 precision relative to the anchor.
 
 `buildSharedUniforms` (`shared-uniforms.ts`) returns the one uniform
 map the star disc, glow, and core-mask passes spread into their
-materials — `uRenderMode` is the only divergent slot, bound per
-material by `StarPipeline`. Every other consumer picks slots out of the
+materials; the pass is a compile-time specialisation, so no slot diverges
+between them. Every other consumer picks slots out of the
 same object **by reference**, so a single write reaches all of them
 with no bookkeeping: `FilterController` (the filter / instrument /
 render knobs), `PlanetBodyField` (via `pickPerceptualDiscUniforms` +
