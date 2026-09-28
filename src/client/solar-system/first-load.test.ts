@@ -51,7 +51,7 @@ describe('first-load', () => {
       // Belt-and-suspenders: the constant must decode to itself when
       // pushed through the same encoder/decoder applyFromUrl uses.
       const blob = encodeBlob(FIRST_LOAD_VIEW);
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.con).toBe(FIRST_LOAD_VIEW.con);
       expect(view.showHud).toBe(true);
       const cam = view.cam!;

@@ -82,9 +82,6 @@ migrated with the first second population:
 - `../star-module.ts` — `pinnable`, `focusable.anchorInto` /
   `localPositionInto`, `displayName`, and the `card()` / `hover()`
   providers all bound-check against `catalog.count`.
-- `../../main.ts` — `idMaps.starCount = catalog.count`, which
-  `../../util/url-state/url-state.ts` uses to reject out-of-range star
-  refs, so a shard-1 focus would not round-trip through the URL.
 - `../star-frame/` — `StarFrame` owns `catalog.positions` as one buffer;
   per-shard instancing and the deferred-rewrite uniform path arrive with
   those buffers.

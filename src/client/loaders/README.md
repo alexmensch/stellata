@@ -185,7 +185,6 @@ Three traps, all of them silent if missed:
   wrong — a `?v=` link's cam/tgt are in the focal object's frame, so the
   focus has to resolve before the pose is applied, not eventually
   ([A focus that resolves after the pose](../util/url-state/README.md#a-focus-that-resolves-after-the-pose)).
-  `idMaps.hipToIndex` grows per chunk for the same reason.
 
 ## The catalog-decode worker
 

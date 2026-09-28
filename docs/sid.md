@@ -548,33 +548,21 @@ Default-focus semantics unchanged: Sol focus is encoded by omission;
 continues within v4 (unknown high mask bits are ignored by the
 decoder).
 
-### 9.3 Freeze before change
+### 9.3 Pre-SID formats are retired
 
-`FIELDS_V2` and `FIELDS_V3` were both derived from a shared
-`buildFields` factory, so a ref-shape edit for v4 would have silently
-corrupted both legacy decoders. B5 step 1 — landed before any v4
-edit — snapshotted every legacy table into standalone frozen literal
-arrays and committed a golden-blob corpus (real v1/v2/v3 `?v=` blobs
-with their expected decoded fields) to `url-state.test.ts`, so v4
-work provably cannot alter legacy decoding.
+v1–v3 carried stars as a HIP or a raw row index and clouds as a row
+index, so after any re-sort an index ref named whichever record now sat
+in that row. None of those formats decode: `decodeBlob` refuses any
+version byte but 4, so a pre-SID link lands at the first-load view with
+its address-bar param stripped, never at a partial or guessed focus.
 
 ### 9.4 Migration semantics — exact table
 
-`applyFromUrl` decodes any version and re-encodes v4 after the
-existing 300 ms debounce (the v2→v3 auto-upgrade path, retargeted).
-Row by row:
+What a v4 link meets on a receiver:
 
-| Legacy field (v1/v2/v3) | Wire form | v4 resolution |
+| Case | Wire form | Resolution |
 | --- | --- | --- |
-| `focus` / `to`, HIP-tagged | v1: u32 tag-bit; v2/v3: u24 tag-bit | `hip → record index → sid` (hipToIndex → indexToSid). **Exact** — resolves to the same physical object; the rewrite pins it as a SID so it can never drift again. |
-| `focus` / `to`, HIP-tagged, HIP unknown to this build | 〃 | drop the field (same as today's failed-HIP lookup); focus falls back to default. |
-| `focus` / `to`, index-tagged | u32 / u24 raw index | **Best-effort**: resolve as *current-build* row index → sid. Pre-SID URLs sharing an index-addressed star may already point at the wrong object after any rebuild — decoding preserves the status quo, and the v4 rewrite freezes whatever the index resolves to *now*, so the reference stops drifting from this point on. |
-| `focus` / `to`, index out of range | 〃 | drop the field. |
-| `cloud` / `toc` | v1: u16 index; v2/v3: u8 index | **Best-effort**: current `clouds.json` order → cloud sid, emitted into v4 `focus` / `to`. Out-of-range → drop. |
-| `pois` | count + u32 (v1) / u24 (v2/v3) HIPs | per entry `hip → sid`; unresolvable HIPs dropped (today they're silently unaddressable anyway); order preserved; count capped at `POI_MAX_COUNT`. |
-| `focusCleared` | zero-byte bit | unchanged. |
-| every other field | — | value-identical re-encode into the v4 field of the same bit. |
-| absent presence bits | — | stay absent (fields keep canonical defaults). |
+| v1 / v2 / v3 blob | version byte 1–3 | unsupported version → first-load view, param stripped ([§ 9.3](#93-pre-sid-formats-are-retired)). |
 | v4 blob, decoder from an older deploy | version byte = 4 | unknown version → decode returns null → default view. Unavoidable on a SCHEMA_VERSION bump; single-deploy site makes the overlap window short. |
 | unknown high mask bits in a v4 blob | — | ignored (forward tolerance for future append-only fields). |
 | retired/parked SID arriving in v4 | LEB128 | `retirements.successor_sid` set → resolve to successor; else unresolved → deferred intent that expires ([§ 8](#8-runtime-resolver-b4)): the field degrades, the rest of the state applies. |

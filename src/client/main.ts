@@ -134,16 +134,6 @@ async function main() {
     // all read it, so settle it first.
     await stellata.kinds.planet.systemsReady;
 
-    // util/url-state/README.md#legacy-hip-refs.
-    const hipToIndex = new Map<number, number>();
-    let hipIndexed = 0;
-    const indexHips = () => {
-      for (; hipIndexed < catalog.loadedCount; hipIndexed++) {
-        const h = catalog.hip[hipIndexed];
-        if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, hipIndexed);
-      }
-    };
-    indexHips();
     // Global SID resolver (/docs/sid.md#8-runtime-resolver-b4). `sun` is not in the planet
     // domain — Sol's catalog record carries the same sid, so the star
     // domain claims it (see util/sid-resolver/README.md).
@@ -176,15 +166,9 @@ async function main() {
     }
     // Each landing chunk can claim a queued intent, and a still-filling
     // domain has no attach event of its own to flush on.
-    const offChunk = catalog.onRecordsDecoded(() => {
-      indexHips();
-      sidResolver.refresh();
-    });
+    const offChunk = catalog.onRecordsDecoded(() => sidResolver.refresh());
 
     const idMaps: IdMaps = {
-      hipToIndex,
-      indexToHip: catalog.hip,
-      starCount: catalog.count,
       solIndex: catalog.solIndex,
       sidResolver,
       // The planet SID domain is keyed planet-within-host with the host
@@ -355,7 +339,6 @@ async function main() {
     // The column is full, so the domain now answers `unknown` for a sid
     // nothing carries instead of holding its intent open forever.
     offChunk();
-    indexHips();
     sidResolver.refresh();
     await frame();
 
