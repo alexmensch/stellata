@@ -375,12 +375,11 @@ transition themselves.
 
 ## Picking a constellation aims the camera
 
-`Stellata.aimAtConstellation(conIndex)` swings the camera so the chosen
-constellation is centred in view, without moving `controls.target` or
-changing orbit radius — only the camera's position on the orbit sphere
-moves. The point it centres is the figure's own
-([The aim point](../../constellation-figure/README.md#the-aim-point)), judged from the current
-orbit target rather than from Sol.
+`Stellata.aimAtConstellation(conIndex)` turns the camera to look along the
+centre of the chosen constellation's figure as drawn
+([The aim direction](../../constellation-figure/README.md#the-aim-direction)), seen from the
+camera in OBSERVE and from the orbit target in navigate, without moving
+`controls.target` or changing orbit radius.
 
 Called **only when a constellation is picked in the typeahead**
 (`../../typeahead/constellation-typeahead.ts`). URL state restore, reset button, and any other path that
@@ -388,7 +387,7 @@ sets `highlightCon` via `setFilter` deliberately do **not** trigger the
 aim — a shareable URL's camera pose is authoritative, and the "reset"
 button means "clear the selection", not "jump somewhere".
 
-Both modes go through `aimAt(c)`, the same glide the Sol/GC label clicks
-take: navigate sweeps the camera around the orbit pivot so camera, pivot and
-aim point come out collinear, and observe turns the camera in place. A pick
-that yields no aim point returns before the claim, so it cancels nothing.
+Both modes go through `aimAlong(dir)`: navigate sweeps the camera around the
+orbit pivot until it looks along `dir` through the pivot, and observe turns the
+camera in place. A pick that yields no direction returns before the claim, so
+it cancels nothing.

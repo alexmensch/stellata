@@ -266,9 +266,9 @@ so it has no pending state at all — the IAU boundary artifact
 | Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
 
 Two catalogue-prefix reads are correct by construction rather than by a
-type: the constellation figure and its aim point
-([The aim point](constellation-figure/README.md#the-aim-point)) read figure vertices from
-`localPositions` from first paint, and the aim point keeps what it read.
+type: the constellation figure and its aim direction
+([The aim direction](constellation-figure/README.md#the-aim-direction)) read figure vertices from
+`localPositions` from first paint, and the aim keeps what it read.
 The build fails unless every figure vertex sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
 A third prefix read sits outside the shell: the extinction prepass sorts its
 dispatch order over the table it attaches to, which is normally still

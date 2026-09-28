@@ -17,15 +17,15 @@ chart-mode Latin **name** labels are `chart-mode/` / `overlays/` chrome.
   (two star indices per segment), dropping any segment that touches
   `excludeStarIdx`. Plus `selectFigures`: the active set, the anchor exclusion and the
   rebuild signature, so the whole decision is testable without a shell; and
-  `figureAimPoint` ([The aim point](#the-aim-point)). All vitest-pinned.
+  `figureAimDirection` ([The aim direction](#the-aim-direction)). All vitest-pinned.
 - `constellation-figure-pure.test.ts` — endpoint-expansion, exclusion,
-  selection and aim-point pins.
+  selection and aim-direction pins.
 
 ## The owner
 
 `ConstellationFigure` (`constellation-figure.ts`) holds the layer, its
-`'state'` subscription and the last selection signature, answers the aim point
-([The aim point](#the-aim-point)), and builds its own
+`'state'` subscription and the last selection signature, answers the aim direction
+([The aim direction](#the-aim-direction)), and builds its own
 scene entry: `clock` at the binaries' rate, because a vertex may be a binary
 member ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)). **It is built after the
 filter, focus and observe controllers**, because it seeds its active set
@@ -122,19 +122,36 @@ A planet or probe anchor suppresses nothing here yet, which is unreachable
 rather than correct: [The observe anchor in line layers](../camera/observe/README.md#the-observe-anchor-in-line-layers)
 says why and where the host resolution has to land.
 
-## The aim point
+## The aim direction
 
-Picking a constellation swings the camera to face `aimPoint(conIndex, from)`
-(the pure half is `figureAimPoint`): the plain
-mean of the `AIM_BRIGHTEST_COUNT` (8) figure members that look brightest
-**from the orbit target**, not from Sol, each vertex counted once. Far from
-Sol the same figure is then centred on whichever members dominate from
-*there*. It reads the vertices through `localPositionInto`, the frame the
-camera and target live in, once per pick; chunk 0 holds every vertex
-([Late-attached slots](../README.md#late-attached-slots)), so a pick at first paint
-reads decoded positions. Null for a figure with no vertex, and the shell's
-`aimAtConstellation` then returns before claiming the camera, so a no-op
-pick cancels nothing ([Picking a constellation aims the camera](../camera/controls/README.md#picking-a-constellation-aims-the-camera)).
+Picking a constellation turns the camera to look along
+`aimDirection(conIndex, from)` (the pure half is `figureAimDirection`): the
+mean of the **unit** directions from the vantage to each figure vertex, each
+vertex counted once. That is the centre of the figure as drawn on screen, from
+any vantage, because every member weighs the same however far away it is. A
+mean of 3D positions is not: the farthest members have the largest coordinates
+and drag it towards themselves (Orion from Sol: the ~400 pc belt outweighs
+Betelgeuse at ~150 pc).
+
+**The vantage is the camera in OBSERVE and the orbit target in navigate.** In
+OBSERVE `controls.target` is the look pin, a point 1 pc down the view axis
+(`../camera/observe/README.md`), so directions measured from it are wrong. In
+navigate the aim moves the camera around the target, so the target is the one
+vantage the aim itself does not move; it matches the camera's view to within
+the orbit radius against the members' distances.
+
+**The observe anchor is skipped by index**, as the drawn figure drops its
+segments ([The observe anchor](#the-observe-anchor)): the camera sits on that star, which has no
+direction from there, and a direction off a near-zero offset would be noise.
+Null when no vertex is left with a direction — no figure, or members arranged
+symmetrically round the vantage — and the shell's `aimAtConstellation` then
+returns before claiming the camera, so a no-op pick cancels nothing
+([Picking a constellation aims the camera](../camera/controls/README.md#picking-a-constellation-aims-the-camera)).
+
+It reads the vertices through `localPositionInto`, the frame the camera and
+target live in, once per pick; chunk 0 holds every vertex
+([Late-attached slots](../README.md#late-attached-slots)), so a pick at first paint reads
+decoded positions.
 
 ## Styling
 

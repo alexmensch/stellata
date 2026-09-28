@@ -27,7 +27,6 @@ function build(start: { highlightCon?: number; chart?: boolean; mode?: CameraMod
     constellations: CONSTELLATIONS,
     localPositions,
     localPositionInto: (idx, out) => out.fromArray(localPositions, idx * 3),
-    absmag: new Array(5).fill(0),
     filter: () => view,
     cameraMode: () => view.mode,
     observeAnchorStar: () => view.anchor,
@@ -102,11 +101,21 @@ describe('ConstellationFigure', () => {
     expect(group.visible).toBe(true);
   });
 
-  it('aims at the mean of a figure\'s members, and at nothing for no figure', () => {
+  it('aims along the mean direction to a figure\'s members, and nowhere for no figure', () => {
     const { figure } = build();
-    expect(figure.aimPoint(1, new THREE.Vector3())).toEqual(new THREE.Vector3(10.5, 11.5, 12.5));
-    expect(figure.aimPoint(2, new THREE.Vector3())).toBeNull();
-    expect(figure.aimPoint(-1, new THREE.Vector3())).toBeNull();
+    const want = new THREE.Vector3(9, 10, 11).normalize()
+      .add(new THREE.Vector3(12, 13, 14).normalize()).normalize();
+    const got = figure.aimDirection(1, new THREE.Vector3())!;
+    expect(got.distanceTo(want)).toBeLessThan(1e-12);
+    expect(figure.aimDirection(2, new THREE.Vector3())).toBeNull();
+    expect(figure.aimDirection(-1, new THREE.Vector3())).toBeNull();
+  });
+
+  it('aims past the observe anchor: the star the camera sits on has no direction', () => {
+    const { figure, view } = build();
+    view.anchor = 3;
+    const got = figure.aimDirection(1, new THREE.Vector3(9, 10, 11))!;
+    expect(got.distanceTo(new THREE.Vector3(1, 1, 1).normalize())).toBeLessThan(1e-12);
   });
 
   it('drops its state subscription on dispose', () => {

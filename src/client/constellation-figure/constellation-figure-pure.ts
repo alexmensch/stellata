@@ -1,39 +1,35 @@
 // Stick-figure polylines → flat LineSegments endpoint list (two star indices
 // per segment), the active-set selection driving the rebuild, and the aim
-// point. See README.md.
+// direction. See README.md.
 
 import * as THREE from 'three';
-import { DCAM_LOG_FLOOR_PC } from '../camera/timing';
-import { apparentMagnitude } from '../solar-system/perceptual-magnitude';
-
-/** How many of a figure's members, brightest from the vantage first, the aim
- *  point averages. */
-export const AIM_BRIGHTEST_COUNT = 8;
+import { AIM_DEGENERATE_DIST_PC } from '../camera/controls/aim-controller';
 
 export interface FigureAimInputs {
   readonly localPositionInto: (idx: number, out: THREE.Vector3) => THREE.Vector3;
-  readonly absmag: ArrayLike<number>;
-  /** The vantage brightness is judged from — the orbit target. */
+  /** The vantage the figure is seen from. */
   readonly from: Readonly<THREE.Vector3>;
+  /** The observe anchor: the vantage's own star, which has no direction. */
+  readonly excludeStarIdx: number | null;
 }
 
-/** README.md#the-aim-point. Null when the figure has no vertex. */
-export function figureAimPoint(
+/** README.md#the-aim-direction: the mean unit direction from the vantage to each
+ *  distinct vertex. Null when no vertex has a direction from there. */
+export function figureAimDirection(
   lines: readonly (readonly number[])[] | undefined,
   inputs: FigureAimInputs,
 ): THREE.Vector3 | null {
   const members = new Set(lines?.flat());
-  if (members.size === 0) return null;
   const p = new THREE.Vector3();
-  const scored = [...members].map((idx) => {
-    const dist = Math.max(inputs.localPositionInto(idx, p).distanceTo(inputs.from), DCAM_LOG_FLOOR_PC);
-    return { idx, appMag: apparentMagnitude(inputs.absmag[idx], dist) };
-  });
-  scored.sort((a, b) => a.appMag - b.appMag);
-  const brightest = scored.slice(0, AIM_BRIGHTEST_COUNT);
-  const centroid = new THREE.Vector3();
-  for (const { idx } of brightest) centroid.add(inputs.localPositionInto(idx, p));
-  return centroid.divideScalar(brightest.length);
+  const sum = new THREE.Vector3();
+  for (const idx of members) {
+    if (idx === inputs.excludeStarIdx) continue;
+    inputs.localPositionInto(idx, p).sub(inputs.from);
+    const dist = p.length();
+    if (dist >= AIM_DEGENERATE_DIST_PC) sum.addScaledVector(p, 1 / dist);
+  }
+  const len = sum.length();
+  return len >= AIM_DEGENERATE_DIST_PC ? sum.divideScalar(len) : null;
 }
 
 export interface FigureConstellationLike {

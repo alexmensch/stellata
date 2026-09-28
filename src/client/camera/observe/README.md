@@ -313,7 +313,9 @@ the camera standing on": the focused hard target's index while in OBSERVE
 the `unfocus` kind. Each line layer asks it for the kind it draws and
 drops only the geometry through that point:
 
-- constellation figure — every segment touching the anchor star.
+- constellation figure — every segment touching the anchor star, and the
+  anchor vertex in the pick's aim direction
+  ([The aim direction](../../constellation-figure/README.md#the-aim-direction)).
 - binary orbit paths — the anchor star's own ellipse, never its
   companion's (`../../binaries/orbit-paths/README.md`).
 - planet and moon orbit rings — the anchor body's own ring, whose vertex 0

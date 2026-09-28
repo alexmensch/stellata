@@ -828,7 +828,6 @@ export class Stellata implements FrameAnchor {
       constellations: catalog.constellations,
       localPositions: this.starFrame.localPositions,
       localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
-      absmag: catalog.absmag,
       filter: () => this.filter,
       cameraMode: () => this.focus.getCameraMode(),
       observeAnchorStar: () => this.observe.observeAnchorOf('star'),
@@ -1367,8 +1366,11 @@ export class Stellata implements FrameAnchor {
   }
 
   aimAtConstellation(conIndex: number) {
-    const c = this.constellationFigure.aimPoint(conIndex, this.controls.target);
-    if (c !== null) this.aimAt(c);
+    // In OBSERVE controls.target is the look pin, 1 pc down the view axis.
+    const from = this.focus.getCameraMode() === 'observe'
+      ? this.camera.position : this.controls.target;
+    const dir = this.constellationFigure.aimDirection(conIndex, from);
+    if (dir !== null) this.aimAlong(dir);
   }
 
   /**

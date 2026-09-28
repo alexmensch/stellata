@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
 import {
-  AIM_BRIGHTEST_COUNT,
   collectFigureSegmentEndpoints,
-  figureAimPoint,
+  figureAimDirection,
   selectFigures,
   type FigureConstellationLike,
   type FigureSelectionInput,
@@ -123,39 +122,57 @@ describe('selectFigures', () => {
   });
 });
 
-describe('figureAimPoint', () => {
-  // Star i sits at (i, 0, 0) with absmag i: from the origin the low indices are
-  // both nearer and intrinsically brighter, so they are the brightest seen.
-  const inputs = (from = new THREE.Vector3()) => ({
-    localPositionInto: (idx: number, out: THREE.Vector3) => out.set(idx, 0, 0),
-    absmag: Array.from({ length: 32 }, (_, i) => i),
+describe('figureAimDirection', () => {
+  const at = (positions: Record<number, [number, number, number]>, from = new THREE.Vector3()) => ({
+    localPositionInto: (idx: number, out: THREE.Vector3) => out.set(...positions[idx]),
     from,
+    excludeStarIdx: null,
   });
+  const expectDir = (got: THREE.Vector3 | null, x: number, y: number, z: number) => {
+    const want = new THREE.Vector3(x, y, z).normalize();
+    expect(got).not.toBeNull();
+    expect(got!.x).toBeCloseTo(want.x, 12);
+    expect(got!.y).toBeCloseTo(want.y, 12);
+    expect(got!.z).toBeCloseTo(want.z, 12);
+  };
 
   it('is null for a figure with no vertex', () => {
-    expect(figureAimPoint(undefined, inputs())).toBeNull();
-    expect(figureAimPoint([], inputs())).toBeNull();
-    expect(figureAimPoint([[]], inputs())).toBeNull();
+    const inputs = at({});
+    expect(figureAimDirection(undefined, inputs)).toBeNull();
+    expect(figureAimDirection([], inputs)).toBeNull();
+    expect(figureAimDirection([[]], inputs)).toBeNull();
   });
 
-  it('averages every member when there are few, counting a shared vertex once', () => {
-    expect(figureAimPoint([[1, 2], [2, 6]], inputs())).toEqual(new THREE.Vector3(3, 0, 0));
+  it('weights each member once, however far away it is', () => {
+    // A 3D mean of these positions points almost straight up y; the figure as
+    // drawn is centred halfway between the two directions.
+    expectDir(figureAimDirection([[0, 1]], at({ 0: [1, 0, 0], 1: [0, 100, 0] })), 1, 1, 0);
   });
 
-  it('averages only the brightest members as seen from the vantage', () => {
-    expect(AIM_BRIGHTEST_COUNT).toBe(8);
-    const figure = [Array.from({ length: 20 }, (_, i) => 19 - i)];
-    // The eight brightest from the origin are 0..7, listed in reverse.
-    expect(figureAimPoint(figure, inputs())).toEqual(new THREE.Vector3(3.5, 0, 0));
+  it('counts a vertex shared by two polylines once', () => {
+    const positions: Record<number, [number, number, number]> = { 0: [1, 0, 0], 1: [0, 1, 0], 2: [0, 0, 1] };
+    expectDir(figureAimDirection([[0, 1], [1, 2]], at(positions)), 1, 1, 1);
   });
 
-  it('judges brightness from the vantage, not from the origin', () => {
-    // Nine equal stars at x = 0..8: the one dropped is the farthest from the vantage.
-    const equal = { localPositionInto: inputs().localPositionInto, absmag: new Array(9).fill(0) };
-    const figure = [[0, 1, 2, 3, 4, 5, 6, 7, 8]];
-    expect(figureAimPoint(figure, { ...equal, from: new THREE.Vector3(0, 0, 0) }))
-      .toEqual(new THREE.Vector3(3.5, 0, 0));
-    expect(figureAimPoint(figure, { ...equal, from: new THREE.Vector3(8, 0, 0) }))
-      .toEqual(new THREE.Vector3(4.5, 0, 0));
+  it('judges direction from the vantage', () => {
+    const positions: Record<number, [number, number, number]> = { 0: [10, 0, 0], 1: [-10, 0, 0] };
+    expectDir(figureAimDirection([[0, 1]], at(positions, new THREE.Vector3(0, -10, 0))), 0, 1, 0);
+  });
+
+  it('is null when the members surround the vantage symmetrically', () => {
+    expect(figureAimDirection([[0, 1]], at({ 0: [10, 0, 0], 1: [-10, 0, 0] }))).toBeNull();
+  });
+
+  it('skips the observe anchor wherever it sits', () => {
+    // Observing from star 0, which drifted off the exact vantage.
+    const positions: Record<number, [number, number, number]> = { 0: [0, -1e-6, 0], 1: [0, 0, 5] };
+    expectDir(figureAimDirection([[0, 1]], { ...at(positions), excludeStarIdx: 0 }), 0, 0, 1);
+    expect(figureAimDirection([[0, 0]], { ...at(positions), excludeStarIdx: 0 })).toBeNull();
+  });
+
+  it('skips a member at the vantage, which has no direction from there', () => {
+    const positions: Record<number, [number, number, number]> = { 0: [0, 0, 0], 1: [0, 0, 5] };
+    expectDir(figureAimDirection([[0, 1]], at(positions)), 0, 0, 1);
+    expect(figureAimDirection([[0, 0]], at(positions))).toBeNull();
   });
 });
