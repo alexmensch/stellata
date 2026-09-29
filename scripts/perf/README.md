@@ -57,7 +57,8 @@ scripts/perf/
                             width/alignment pass.
   perf-section-check.sh     perf-section-guard's check: a render-path diff,
     (+ test)                or a catalogue-membership move over 1 %, needs a
-                            `## Perf` section, every ✗ accepted.
+                            `## Perf` section, every ✗ accepted, and a
+                            table row under a Tier 1 or 2 claim.
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
   diff/                     Two runs differenced: the band and its floor, the

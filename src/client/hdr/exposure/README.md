@@ -151,7 +151,7 @@ replaces this file for reads in there.
 
 ## Adaptation — the frame measures itself
 
-`SceneAdaptation.measure()` runs in `animate()` before the first draw and
+`SceneAdaptation.measure()` runs in the frame loop before the first draw and
 consumes the reduction that landed for an **earlier** frame
 (`reduction/README.md`). It is not one frame's own measurement, and does
 not need to be: the applied cut is slew-limited over 300 ms, so a frame or
@@ -361,7 +361,7 @@ all gone; what replaces them is GPU work on half the frames.
 ### The frame step
 
 `ExposureFrameStep` is everything the frame loop asks of this folder, in
-three calls at three points of `animate()`:
+three calls at three points of the frame loop's tick:
 
 - `frameExposure()` — above the gate, every tick, for `FrameCtx.exposure`.
 - `measure(nowMs, warpActive)` — after the layer fan-out, before the first

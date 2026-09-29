@@ -8,8 +8,9 @@ import {
 import {
   Fn, If, compute, distance, float, instanceIndex, int, max, storage, uint, uniform,
 } from 'three/tsl';
+import { cameraAbsInto, type CameraPose } from '../../scene/scene-layer';
 import type {
-  ExtinctionPrepassSeam, ExtinctionPrepassUniforms, ExtinctionView,
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../../star-pipeline/extinction/extinction-seam';
 import type { AvParityReport } from '../../star-pipeline/extinction/av-parity-pure';
 import {
@@ -80,12 +81,13 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Dispatch slot → catalogue index, the CPU copy the parity check needs
    *  to put the reference march's slot-indexed target back into star order.
    *  Shares its array with the `order` buffer, so dispose has to drop both
-   *  or the 1.48 MiB outlives the pass. */
+   *  or the array outlives the pass. */
   private dispatchOrder: Uint32Array | null;
   /** Sorted while the catalogue tail was still zero (README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not).
    * */
   private orderIsProvisional: boolean;
   private readonly absCameraPos = uniform(new Vector3());
+  private readonly cameraAbsScratch = new Vector3();
   private readonly viewScratch = new Matrix4();
   private lastView: Matrix4 | null = null;
   private refill: RefillCursor = idleRefill();
@@ -101,15 +103,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
   /** The pick's CPU copy of the table (mirror/README.md). */
   private readonly mirror: AvMirror;
-  /** Bumped on every dispatch: a read that resolves against an older
-   *  buffer's contents lands in a generation nobody will consult. */
-  private generation = 0;
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
-  private lastCamX = Infinity;
-  private lastCamY = Infinity;
-  private lastCamZ = Infinity;
 
   constructor({
     renderer, catalog, nodes, slots, uniforms, tables, compaction,
@@ -254,29 +250,28 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     return this.hasComputed && !this.forceDisabled && this.fillKernel !== null;
   }
 
-  update(absCamX: number, absCamY: number, absCamZ: number, view?: ExtinctionView): void {
+  update(view: CameraPose): void {
     if (this.fillKernel === null || this.refillKernel === null) return;
     if (this.dustTexture === null) return;
     if (this.forceDisabled) return;
+    const cam = cameraAbsInto(view, this.cameraAbsScratch);
+    const generationCam = this.absCameraPos.value;
     const moved = movedBeyondEpsilon(
-      this.lastCamX, this.lastCamY, this.lastCamZ,
-      absCamX, absCamY, absCamZ,
+      generationCam.x, generationCam.y, generationCam.z,
+      cam.x, cam.y, cam.z,
       RECOMPUTE_EPSILON_PC,
     );
     if (this.syncGateBounds()) this.dirty = true;
     const bump = this.dirty || moved;
-    let viewChanged = false;
-    if (view !== undefined) {
-      composeViewProjectionAbs(view.camera, view.worldOffset, this.viewScratch);
-      viewChanged = !sameView(this.lastView, this.viewScratch);
-      if (viewChanged) {
-        this.lastView = (this.lastView ?? new Matrix4()).copy(this.viewScratch);
-      }
+    composeViewProjectionAbs(view.camera, view.worldOffset, this.viewScratch);
+    const viewChanged = !sameView(this.lastView, this.viewScratch);
+    if (viewChanged) {
+      this.lastView = (this.lastView ?? new Matrix4()).copy(this.viewScratch);
     }
     // The first fill is whole (refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one).
     if (!this.hasComputed) {
       if (!bump) return;
-      this.setCameraGeneration(absCamX, absCamY, absCamZ);
+      this.setCameraGeneration(cam);
       this.fillWhole();
       this.hasComputed = true;
       this.dirty = false;
@@ -286,7 +281,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     const { refill } = this.slots;
     if (bump) {
       refill.cameraGeneration.value += 1;
-      this.setCameraGeneration(absCamX, absCamY, absCamZ);
+      this.setCameraGeneration(cam);
     }
     // Consume before produce: the class marched now is the one the
     // compaction built LAST frame; the compaction this frame reads the arm
@@ -296,7 +291,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (plan.dispatch) {
       refill.quarter.value = plan.quarter;
       this.renderer.compute(this.refillKernel);
-      this.generation++;
       this.mirror.invalidate();
     }
     refill.quarter.value = plan.next.quarter;
@@ -305,11 +299,8 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   }
 
   /** see refill/README.md#the-generation-stamp */
-  private setCameraGeneration(x: number, y: number, z: number): void {
-    this.absCameraPos.value.set(x, y, z);
-    this.lastCamX = x;
-    this.lastCamY = y;
-    this.lastCamZ = z;
+  private setCameraGeneration(cam: Readonly<Vector3>): void {
+    this.absCameraPos.value.copy(cam);
   }
 
   /** Every slot at one camera, and nothing owed after it (refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one).
@@ -320,7 +311,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.refill = idleRefill();
     this.slots.refill.arm.value = 0;
     this.slots.refill.quarter.value = 0;
-    this.generation++;
     this.mirror.invalidate();
   }
 
@@ -338,14 +328,14 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
   /** Stage the whole table for the picks a pointer event is about to
    *  make. One `copyBufferToBuffer` + map of the buffer, issued at most
-   *  once per recompute and never while the camera is under way, landing
+   *  once per dispatch and never while a refill is in flight, landing
    *  inside the hover dwell. */
   warmAvReadback(): void {
     if (!this.isActive() || this.av === null) return;
     // Nothing in flight only: a copy taken mid-flight is superseded before
     // the dwell that wanted it can read a byte (README.md#cold-reads--the-one-behaviour-that-is-not-parity).
     if (refillInFlight(this.refill)) return;
-    this.mirror.stage(this.av, this.generation);
+    this.mirror.stage(this.av);
   }
 
   /** The parity check of README.md#the-prepass-kernel: the same march as
@@ -415,8 +405,5 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.lastView = null;
     this.hasComputed = false;
     this.dirty = true;
-    this.lastCamX = Infinity;
-    this.lastCamY = Infinity;
-    this.lastCamZ = Infinity;
   }
 }

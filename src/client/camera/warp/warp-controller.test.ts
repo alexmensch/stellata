@@ -10,6 +10,7 @@ import {
   type WarpControllerDeps,
 } from './warp-controller';
 import type { FocusTarget } from '../focus/focus-target';
+import { createCameraClaim } from '../camera-claim';
 import { makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
 import type { CameraMode } from '../focus/focus-controller';
 import type { StellataEventMap } from '../../stellata';
@@ -36,7 +37,7 @@ function flyDurMs(distPc: number): number {
 // FocusOps double — backed by simple per-kind position tables so the
 // controller can resolve `dest.localPositionInto` / `anchorInto` /
 // `parkRadius` / `physicalRadius` deterministically. The mutating side
-// (`applyFocus`, `setFocus`, `recenterOrigin`, etc.) records calls so
+// (`applyFocus`, `setFocus`, the origin's `recenterTo`, etc.) records calls so
 // individual tests can assert which path fired.
 interface StarRow {
   abs: THREE.Vector3;
@@ -51,6 +52,7 @@ interface CloudRow {
 
 interface FocusFixture {
   ops: FocusOps;
+  origin: WarpControllerDeps['origin'];
   worldOffset: THREE.Vector3;
   setFocusedStar: (idx: number | null) => void;
   setFocusedCloud: (idx: number | null) => void;
@@ -58,7 +60,7 @@ interface FocusFixture {
   clouds: Map<number, CloudRow>;
   planets: Map<number, StarRow>;
   calls: {
-    recenterOrigin: number;
+    recenterTo: number;
     setFocus: Array<number | null>;
     clearVector: number;
     cancelFocusLerp: number;
@@ -77,7 +79,7 @@ function makeFocus(): FocusFixture {
   let focusedCloud: number | null = null;
   let focusedPlanet: number | null = null;
   const calls: FocusFixture['calls'] = {
-    recenterOrigin: 0,
+    recenterTo: 0,
     setFocus: [],
     clearVector: 0,
     cancelFocusLerp: 0,
@@ -163,24 +165,10 @@ function makeFocus(): FocusFixture {
       if (target.kind === 'cloud') return makeCloudTarget(target.idx);
       return null;
     },
-    starLocalPosition: (idx) => {
-      const row = stars.get(idx);
-      if (!row) throw new Error(`star ${idx} not seeded`);
-      return row.abs.clone().sub(worldOffset);
-    },
     starLivePositionInto: (idx, out) => {
       const row = stars.get(idx);
       if (!row) throw new Error(`star ${idx} not seeded`);
       return out.copy(row.abs).sub(worldOffset);
-    },
-    recenterOrigin: (newOrigin) => {
-      const dx = newOrigin.x - worldOffset.x;
-      const dy = newOrigin.y - worldOffset.y;
-      const dz = newOrigin.z - worldOffset.z;
-      if (dx === 0 && dy === 0 && dz === 0) return null;
-      worldOffset.copy(newOrigin);
-      calls.recenterOrigin++;
-      return new THREE.Vector3(dx, dy, dz);
     },
     setFocus: (idx) => {
       focusedStar = idx;
@@ -195,13 +183,23 @@ function makeFocus(): FocusFixture {
       if (focusedCloud !== null) return { kind: 'cloud', idx: focusedCloud };
       return null;
     },
-    isObserveTransitionActive: () => false,
-    cancelFocusLerp: () => { calls.cancelFocusLerp++; },
-    cancelUnfocusLerp: () => { calls.cancelUnfocusLerp++; },
+  };
+
+  const origin: FocusFixture['origin'] = {
+    recenterTo: (newOrigin) => {
+      const dx = newOrigin.x - worldOffset.x;
+      const dy = newOrigin.y - worldOffset.y;
+      const dz = newOrigin.z - worldOffset.z;
+      if (dx === 0 && dy === 0 && dz === 0) return null;
+      worldOffset.copy(newOrigin);
+      calls.recenterTo++;
+      return new THREE.Vector3(dx, dy, dz);
+    },
   };
 
   return {
     ops,
+    origin,
     worldOffset,
     setFocusedStar: (idx) => { focusedStar = idx; focusedCloud = null; focusedPlanet = null; },
     setFocusedCloud: (idx) => { focusedCloud = idx; focusedStar = null; focusedPlanet = null; },
@@ -214,6 +212,8 @@ function makeFocus(): FocusFixture {
 
 interface Harness {
   warp: WarpController;
+  /** What else holds the camera, as the shell's claim sees it. */
+  busy: { aim: boolean; observe: boolean };
   camera: THREE.PerspectiveCamera;
   controls: ReturnType<typeof makeControlsStub>;
   observeControls: ReturnType<typeof makeObserveControlsStub>;
@@ -247,6 +247,8 @@ function makeHarness(opts: {
     });
   }
 
+  const busy = { aim: false, observe: false };
+  let warp: WarpController | undefined;
   const deps: WarpControllerDeps = {
     camera,
     controls,
@@ -260,10 +262,20 @@ function makeHarness(opts: {
     isChartMode: () => opts.isChart ?? false,
     getChartMagBright: () => 4.0,
     focus: focus.ops,
+    claim: createCameraClaim({
+      isWarpActive: () => warp?.isActive() ?? false,
+      isAimActive: () => busy.aim,
+      isObserveTransitionActive: () => busy.observe,
+      cancelUnfocusLerp: () => { focus.calls.cancelUnfocusLerp++; },
+      cancelFocusLerp: () => { focus.calls.cancelFocusLerp++; },
+    }),
+    origin: focus.origin,
   };
+  warp = new WarpController(deps);
 
   return {
-    warp: new WarpController(deps),
+    warp,
+    busy,
     camera,
     controls,
     observeControls,
@@ -686,7 +698,7 @@ describe('WarpController — mid-Fly recentre + isRecenteredToDest', () => {
       if (h.warp.isRecenteredToDest()) break;
     }
     expect(h.warp.isRecenteredToDest()).toBe(true);
-    expect(h.focus.calls.recenterOrigin).toBeGreaterThanOrEqual(1);
+    expect(h.focus.calls.recenterTo).toBeGreaterThanOrEqual(1);
     // applyFocus fires inside tryMidFlyRecentre for the destination.
     expect(h.focus.calls.applyFocus.some((c) => c.kind === 'star' && c.idx === 1)).toBe(true);
   });
@@ -700,7 +712,7 @@ describe('WarpController — mid-Fly recentre + isRecenteredToDest', () => {
     for (let dt = WARP_REORIENT_MS + 10; dt < WARP_REORIENT_MS + WARP_T_MAX_MS; dt += 50) {
       h.warp.tick(t0 + dt);
     }
-    expect(h.focus.calls.recenterOrigin).toBe(1);
+    expect(h.focus.calls.recenterTo).toBe(1);
   });
 
   it('navigate finish after mid-Fly recentre fires emitFocusEvents instead of setFocus', () => {
@@ -799,7 +811,7 @@ describe('WarpController — bus emit shape', () => {
     expect(seq).toEqual([true, false]);
   });
 
-  it('startWarp cancels in-flight unfocus + focus lerps via the shim', () => {
+  it('startWarp cancels in-flight unfocus + focus lerps through the claim', () => {
     const h = makeHarness();
     seedStarStar(h);
     h.warp.warpTo({ kind: 'star', idx: 1 });
@@ -810,7 +822,17 @@ describe('WarpController — bus emit shape', () => {
   it('a warp refused during an observe transition leaves both focus lerps running', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.focus.ops.isObserveTransitionActive = () => true;
+    h.busy.observe = true;
+    h.warp.warpTo({ kind: 'star', idx: 1 });
+    expect(h.warp.isActive()).toBe(false);
+    expect(h.focus.calls.cancelUnfocusLerp).toBe(0);
+    expect(h.focus.calls.cancelFocusLerp).toBe(0);
+  });
+
+  it('a warp started while an aim slerps is refused, like every camera claim', () => {
+    const h = makeHarness();
+    seedStarStar(h);
+    h.busy.aim = true;
     h.warp.warpTo({ kind: 'star', idx: 1 });
     expect(h.warp.isActive()).toBe(false);
     expect(h.focus.calls.cancelUnfocusLerp).toBe(0);

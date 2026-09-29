@@ -36,6 +36,10 @@ attribute writers here.
 
 ## Files
 
+- `star-pipeline.ts` (+ test) — `StarPipeline`, the shell's `starPipeline`
+  namespace: the source attributes, the WebGPU star layer, the
+  pulsation-suppress mask, the local cluster, the core-mask gate and the
+  per-star size / pick answers ([The pipeline](#the-pipeline)).
 - `star-module.ts` (+ test) — the star `ObjectKindModule`
   (`../kinds/README.md`): catalog + search-index load (`critical:
   true` — its load may reject and boot treats that as fatal) and the
@@ -60,11 +64,12 @@ attribute writers here.
   counts those fills so a retained surface can tell that a table moved
   under it ([Surfaces retained over a growing catalogue](../focus-card/README.md#surfaces-retained-over-a-growing-catalogue));
   `card()`'s `tablesComplete` leg answers whether they are all
-  in, which is what withholds a half-built card. The render layers
-  stay shell-wired (`attach` returns null), and
-  the legs reach the shell-owned machinery — StarFrame positions, park
-  solve, rendered and peak-disc size, the Picker's star pick, the binaries table —
-  through the single injected `StarModuleRuntime`. `photometry()` is
+  in, which is what withholds a half-built card. The render layers are
+  `StarPipeline`'s, not the module's (`attach` returns null), and the legs
+  reach them — StarFrame positions, the focus controller's park solve, the
+  pipeline's rendered and peak-disc size, the Picker's star pick, the
+  binaries table — through the single `StarModuleRuntime` the shell
+  injects. `photometry()` is
   the one leg a *non*-star module reads, via
   `KindContext.starPhotometry`.
 - `star-source-attributes.ts` — the four per-star buffers written outside
@@ -104,6 +109,42 @@ attribute writers here.
   Source-level, because no behavioural suite can reach it: the CPU
   mirror takes resolved size terms and agrees with itself whichever
   value the shader routes on.
+
+## The pipeline
+
+`StarPipeline` (`star-pipeline.ts`) owns everything the star passes need
+that is not a star position: the four source attributes, the layer
+`WebGpuSeam.attachStarLayer` builds over them, the pulsation-suppress mask
+(`pulsation/README.md`), `StarLocalCluster` (`local-pass/README.md`) and
+the core-mask gate, plus the CPU mirrors every size and pick question is
+answered from — `renderedSizePx`, `peakDiscSizePx`, `chartDiscPxFor`,
+`pickPrefilterSizePx`, `resolveStarPick`, `passRoutingFor`.
+
+**It does not own `StarFrame`, and cannot.** `BinariesAttachment` needs the
+frame's position arrays at construction and the pipeline needs the
+attachment's two buffers for its attributes, so a pipeline that built the
+frame would be a construction cycle. The shell builds them in the order
+frame → binaries → extinction → pipeline, and hands the pipeline the frame;
+`SolarSystemWiring` follows, since it takes `localCluster`. The frame's
+`onLocalPositionsWritten` is `localPositionsWritten`, which uploads
+`iPosition` in full and marks the binary baselines dirty.
+
+**Each landing chunk is absorbed here, in dependency order**: the suppress
+mask extends in place from where the last chunk stopped (the attribute
+wraps the array, so it is never reallocated), then the star frame, then the
+layer's static table, then the extinction positions, then the cadence's
+pulsation bound tightens over the new window, and the render gate wakes —
+a settled camera otherwise draws no frame and the stars wait for the user
+to move.
+
+The filter is read through a closure on every size question, so the
+pipeline may be built before `FilterController`.
+
+**The shell registers two entries it exposes**: `localClusterEntry` after
+the binary walk, eclipse photometry and path-layer update, and
+`coreMaskEntry` after that. The rest runs on explicit calls — `update`
+(the compaction dispatch, after `syncUniformNodes` and before the
+render), `setMonochrome`, `dispose`.
 
 ## Physical-luminance emission
 
@@ -200,11 +241,11 @@ Rendering is **three passes over the same instanced geometry**:
   `depthTest: true`) to depth-fail behind close-range disc cores
   rather than bleeding through.
 
-  **This pass is the one part of the star pipeline that registers as a
-  scene layer**, and it does so because it is the only part with a
-  per-frame visibility verdict of its own. Its entry declares
+  **This pass is the one part of the star pipeline with a per-frame
+  visibility verdict of its own**, so `coreMaskEntry` is the pipeline's
+  one gated entry. It declares
   `contribution: { kind: 'gated' }` on
-  `starLocalCluster.hasMembers() || starFrame.shouldEnableCoreMask()`
+  `localCluster.hasMembers() || frame.shouldEnableCoreMask()`
   (members stamp regardless of the physSize window —
   `local-pass/README.md`), reported as `'legibility'`: the gate walks a
   bounded window of the Sol-distance-sorted index and skips the whole draw
@@ -216,8 +257,8 @@ Rendering is **three passes over the same instanced geometry**:
   mask does change. The entry is registered **after** the star local
   cluster's, so membership is this frame's, and it declares the binary
   walk's rate as anchored content ([Anchored content](../scene/README.md#anchored-content-declares-its-anchors-rate)).
-  Everything else in this folder keeps explicit lifecycle calls
-  in `stellata.ts`.
+  The rest of the pipeline runs on the calls the shell's frame loop makes
+  ([The pipeline](#the-pipeline)).
 
   **The predicate refuses above the walk while the `coreMask` lever is
   off.** That walk is what the lever's own A/B prices
@@ -289,12 +330,15 @@ paints from the same varying the flux integral is taken over.
 
 `uHideFocusIdx` (int) suppresses a single star across all three passes by
 collapsing its vertex to a clip-space sentinel outside the frustum when
-the star being drawn is the one it names. Defaults to `-1` (no
-suppression). Set to the focal-star index in OBSERVE
+the star being drawn is the one it names. Defaults to `NO_INSTANCE`
+(no suppression; `../frame/shared-uniforms.ts`). Set to the focal-star index in OBSERVE
 mode (camera parked at the focal star — disc would render from inside) and
 held pinned to the source star throughout an observe-launched warp so the
 reorient phase doesn't flash the focal disc as the camera pulls away; the
 pick path mirrors it (`../camera/controls/star-pick-visibility-pure.ts`).
+`StarPipeline.setHiddenStar` is its only writer and holds the hidden star
+as `number | null`, which the pick and the local cluster read — never the
+uniform back.
 
 `iCompositeSuppress` (float, per-instance) collapses a star's disc and
 core depth-mask passes — but not the additive glow — under the same
@@ -328,7 +372,7 @@ variable, so the cosmetic pulse is always dishonest; orbital pairs
 additionally get the geometric dip from `iEclipseDim`, orbit-less
 eclipsers simply render static.
 
-`uPinFocusToCenter` (int, default `-1`) replaces the standard
+`uPinFocusToCenter` (int, default `NO_INSTANCE`) replaces the standard
 projection chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the
 matched instance, sidestepping float32 cancellation in the projection
 chain at sub-µpc orbit distances. Set per-frame by the integration

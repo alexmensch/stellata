@@ -10,7 +10,7 @@ close-approach focused star sitting at exactly NDC origin.
 
 - `focus-controller.ts` (+ test) — the FSM. Owns the focused object
   and the distance-vector destination (one `Target` slot each — see
-  [Focus state](#focus-state)), `cameraMode`, `focusedPlanetSystem`, the focus-park
+  [Focus state](#focus-state)), `cameraMode`, the focused planet system, the focus-park
   lerp state, pin-engage geometry, and the generic `makeFocusTarget` /
   `currentFocusTarget` builders. Canonical home for
   `GLOBAL_MIN_DIST_PC` + `PIN_ENGAGE_THRESHOLD_SQ_PC`.
@@ -33,11 +33,10 @@ close-approach focused star sitting at exactly NDC origin.
   cloud-, and future-focusable-park-arrivals all compose these. The
   per-frame motion delegates to `../arrival/camera-motion.ts`.
 
-`FrameAnchor` (recenterOrigin / worldOffset / starLocalPosition) is
-implemented by `stellata.ts` as a thin seam over the `FloatingOrigin`
+`FrameAnchor` is the two frame owners themselves: the `FloatingOrigin`
 service (`../../frame/README.md`), whose recentre fan-out covers the
 star-buffer rewrite, the camera / orbit-target shift, and the
-scene-layer hooks; the star-position legs read `StarFrame`
+scene-layer hooks, and `StarFrame` for star positions
 (`../../star-pipeline/star-frame/README.md`).
 
 ## Focus state
@@ -53,8 +52,13 @@ scene-layer hooks; the star-position legs read `StarFrame`
 - `cameraMode` lives here too, with its `CameraMode` type — `getCameraMode()` is the single read
   path; `setCameraModeValue()` is the raw no-emit write used by
   ObserveTransition and the observe-cleanup branch of `setFocus`.
-- `focusedPlanetSystem`, `planetSystemToken` — derived star-focus
-  state.
+- `planetSystemHost` and `planetSystem` — derived star-focus state: the
+  host whose system is attached or loading, and that system as a
+  `LateState` (`../../util/late/README.md`). A switch to a new host goes
+  `pending` at once, so the previous host's system never outlives the
+  switch; refocusing the same host reloads nothing; a failed load settles
+  `absent`, so no reader waits on it forever. `'planetSystem'`
+  carries the ready system or null, and fires only when that changes.
 - Click/select-driven entry points are Target-keyed: `flyTo(target)`
   (hard kinds route through `focusHardTarget`; soft kinds share one
   provider-driven focus-park path), `setOrbitTarget(target)`,
@@ -120,7 +124,7 @@ interface FocusTarget {
 
 | Method | Role |
 |---|---|
-| `anchorInto` | Input to `recenterOrigin`. The floating origin lands here when the object is focused. |
+| `anchorInto` | Input to `FloatingOrigin.recenterTo`. The floating origin lands here when the object is focused. |
 | `localPositionInto` | Per-frame `camera.lookAt(...)` source during warp Fly. Also used by overlays that project the object's position, and as the warp's source-`A` / dest-`B` derivation in `warpTo`. |
 | `parkRadius` | The warp computes `pStart` / `pEnd` as `anchor − travelDir · parkRadius()` for source and destination respectively — symmetric across both endpoints. |
 | `applyFocus` | Writes the focus `Target` slot (cross-kind displacement is structural), applies the provider's `orbitFloor`, and attaches or detaches the planet system per its `planetSystemHost`. One shared implementation for every kind. **No events fire.** |
@@ -284,7 +288,7 @@ run, taking `bidirectional` for the soft-kind rule below:
   snaps to the park pose.
 
 `controls.enabled` is **not** toggled during the lerp — the
-`animate()` dispatcher routes through `updateFocusLerp` before
+`CameraStep` dispatch routes through `updateFocusLerp` before
 `controls.update()`, so user drag accumulates inside
 `TrackballControls` without visible effect until the lerp lands.
 Disabling explicitly would race `TrackballControls`' pointerup
@@ -307,8 +311,8 @@ the SVG overlay only — the constellation figure is WebGL line geometry
 and draws throughout every lerp (`../../constellation-figure/README.md`).
 
 `cancelFocusLerp` is wired at every site that already calls
-`cancelUnfocusLerp` (`focusHardTarget`, `flyTo`, `unfocus`,
-`startWarp`, `claimCameraForAim`, `onPointerUp`) so a follow-up
+`cancelUnfocusLerp` (`focusHardTarget`, `flyTo`, `unfocus`, and the
+camera claim every aim, click and warp takes) so a follow-up
 camera-changing action can't race the in-flight lerp. Where each site
 cancels relative to its refusals is
 [The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence).
@@ -326,13 +330,14 @@ float32 cancellation in the projection chain
 centre by visible pixels even though the focused star is
 mathematically at view-origin. Float64 emulation was rejected as too
 heavy; instead the star vertex graph exposes a `uPinFocusToCenter`
-uniform (-1 = disabled). When set, the shader replaces the projection
+uniform (`NO_INSTANCE`, -1, = disabled; `../../frame/shared-uniforms.ts`). When set, the shader replaces the projection
 chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the matched
 instance — bypassing matrix-multiply cancellation entirely.
 One uniform, a handful of nodes, no CPU cost.
 
-JS-side per frame in `stellata.ts`: pin engages iff
-`FocusController.isPinEngaged()`, which checks
+JS-side per frame in the frame loop (`../../scene/frame-loop/`): the
+uniform holds `FocusController.pinnedStar()`, or `NO_INSTANCE` when it
+is null. The pin engages iff
 `focusedStar !== null && cameraMode === 'navigate'
 && (!warp.isActive() || warp.isRecenteredToDest())
 && !aim.isActive() && !focusLerpState
@@ -361,16 +366,16 @@ that engages focus while leaving target at a residual off the star
 silently disengages the pin. Residual sources that have bitten this:
 
 1. **Sol's catalog offset.** Sol is at AT-HYG `(5e-6, 0, 0)` pc, not
-   `(0,0,0)`. `recenterOrigin(solPos)` shifts target by `5e-6` →
+   `(0,0,0)`. `recenterTo(solPos)` shifts target by `5e-6` →
    guard fails on first frame.
 2. **Float32 truncation on long warps.** `finishWarp`/`focusStar`
    read target from `_localPositions` (Float32Array), then
-   `recenterOrigin` shifts target by a delta computed fresh in
+   `recenterTo` shifts target by a delta computed fresh in
    float64. The two representations of `|AB|` differ by Float32 ULP
    (~`|AB|·1e-7`); for Sol→Rigel (265 pc) that's `~5e-5 pc`,
    comparable to Rigel's arrival endOffset → 30 %-of-screen drift.
 3. **Unfocus from close approach.** `setFocus(null)` leaves
-   `worldOffset` put (no `recenterOrigin(0,0,0)`).
+   `worldOffset` put (no `recenterTo(0,0,0)`).
 4. **Orbital drift of a binary focal.** The focal star moves along its
    orbit each frame; a static target would fall off it. The binary focal
    ride ([Binary focal ride](focal-ride/README.md#binary-focal-ride-no-rebase)) translates `controls.target` by the star's
@@ -384,7 +389,7 @@ silently disengages the pin. Residual sources that have bitten this:
 
 **Fix for #1, #2, #4** lives at the choke point in
 `FocusController.setFocus`'s `idx !== null` branch: after
-`recenterOrigin`, snap target onto the focal's live local position
+the recentre, snap target onto the focal's live local position
 (`starLivePositionInto` = catalog baseline in the current frame +
 float64 orbital perturbation) and shift `camera.position` by the same
 delta (preserving the cam-to-target offset). Eliminates the residuals
@@ -403,10 +408,10 @@ camera is flying toward.
 **Where to look:**
 - `../../webgpu/star/star-vertex-tsl.ts` — `uPinFocusToCenter` use site.
 - `focus-controller.ts` — `GLOBAL_MIN_DIST_PC = 5e-3`,
-  `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body, `isPinEngaged`
+  `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body, `pinnedStar`
   gating rules.
-- `../../stellata.ts` — per-frame pin guard in the animate loop
-  (reads `focus.isPinEngaged()` + `focus.getFocusedStar()`).
+- `../../scene/frame-loop/frame-loop.ts` — the per-frame pin write
+  (reads `focus.pinnedStar()`).
 - `../../util/url-state/url-state.ts` — `DecodedView.worldOffset`,
   encoder/loader.
 - `../../debug/pin-debug-hud.ts` — Pin section in the unified debug

@@ -77,10 +77,9 @@ folder-readme-coverage.test.ts
                          docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
 integration-shell-ratchet.test.ts
                          stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands).
-                         Every `Stellata` field is in
-                         COMPOSITION (stays) or AWAITING_EXTRACTION
-                         (shrinks to empty); a field in neither fails, and
-                         so does a listed name the class no longer has.
+                         Every `Stellata` field is on COMPOSITION; a
+                         field off it fails, and so does a listed name
+                         the class no longer has.
                          Parses the class with the TypeScript compiler;
                          arrow-function properties count as methods.
                          Growing COMPOSITION is a review decision, never a
@@ -93,7 +92,7 @@ integration-shell-ratchet.test.ts
                          unless the namespace is built first.
 late-read-contract.test.ts
                          The wave-2 read contract (/src/client/README.md#boot-in-two-waves),
-                         two halves. A `for` loop bounded by `X.count`
+                         four scans. A `for` loop bounded by `X.count`
                          where X's type is assignable to `Catalog` but not
                          to `CompleteCatalog` fails; this half uses the
                          type checker over src/client (~3 s), since a
@@ -103,7 +102,17 @@ late-read-contract.test.ts
                          class it exposes as a readonly namespace field
                          (keyed `namespace.method`), is classified in
                          NULLABLE_SHELL_RETURNS; a late slot there
-                         converts to Late<T> and leaves the list.
+                         converts to Late<T> and leaves the list. Every
+                         src/client class field written `X | null` and
+                         assigned outside its constructor is classified
+                         in late-read-contract-fields.ts, the open defects
+                         citing their beads. And `Catalog.loadedCount` is
+                         read only in loaders/catalog-* and the per-chunk
+                         walkers LOADED_COUNT_READERS lists, pinned by
+                         read count per file. Each scan has a probe case.
+late-read-contract-fields.ts
+                         Not a test — NULLABLE_FIELDS, the field half's
+                         classified list.
 node-import-boundary.test.ts
                          src/client/ ships to a browser, so no module
                          there may import a `node:` builtin or a
@@ -122,6 +131,9 @@ perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          armed or not, and the fail-closed paths — no git
                          checkout, unreadable marker age. The protocol and
                          the escape routes are asserted in the deny reason.
+paper-store-link.test.ts Behavioural pins for scripts/hooks/paper-store-link.sh
+                         over a throwaway repo with real linked worktrees;
+                         /scripts/hooks/README.md#how-paper-store-link-works.
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
 readme-size.test.ts      450-line cap per folder README — length is a tax
                          on every future session, so the answer over the

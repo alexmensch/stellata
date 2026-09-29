@@ -41,7 +41,7 @@ layer that owns the roster ([Per-instance data](#per-instance-data)).
 `buildSharedUniformNodes(shared)` mirrors the shared-uniforms-by-reference
 map (`../../frame/shared-uniforms.ts`) as TSL `uniform()` nodes, so every
 writer — `FilterController`, `ExposureController`, `FloatingOrigin`,
-`animate()` — writes the plain map and never learns about the nodes. The
+the frame loop — writes the plain map and never learns about the nodes. The
 contract:
 
 - **Vector slots** (`uCameraPos`, `uViewport`, `uWorldOffset`) hold the
@@ -49,7 +49,7 @@ contract:
   reaches the node with no copy.
 - **Scalar slots** (float, int, uint — the hdr emitter slots included)
   are **copied by `registry.sync()`**, called once per rendered frame
-  from `animate()` before the render.
+  from the frame loop before the render.
 - **`uLocalMemberIdx`** (Int32Array(8)) splits into two `ivec4` nodes
   (`uLocalMemberIdx0/1`) — WGSL uniform arrays pad to a 16-byte stride.
 - **Texture slots** (`FRAME_TEXTURE_SLOTS`) are not mirrored: textures bind as

@@ -11,8 +11,7 @@ import {
 import type { BinariesData } from '../binaries/binaries-loader';
 import { NO_PARENT } from '../binaries/binaries-loader';
 import { makeKindContext } from '../kinds/kind-context-mock';
-import { makeEmptyCatalog } from '../loaders/catalog-mock';
-import type { Catalog } from '../loaders/catalog-loader';
+import { makeEmptyCatalog, type MockCatalog } from '../loaders/catalog-mock';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 import { LateCell } from '../util/late/late';
 import { lateAbsent } from '../util/late/late-fixture';
@@ -24,8 +23,8 @@ vi.mock('../loaders/catalog-loader', async (importOriginal) => ({
   loadCatalog: loadCatalogMock,
 }));
 
-function makeMockCatalog(): Catalog {
-  const cat = makeEmptyCatalog(4);
+function makeMockCatalog(loadedCount = 4): MockCatalog {
+  const cat = makeEmptyCatalog(4, loadedCount);
   cat.constellation.fill(255);
   cat.positions.set([0, 0, 0, 1, 2, 3, 0, 0, 9, 0, 0, 0]);
   cat.sid.set([7, 42, 43, 0]);
@@ -36,10 +35,12 @@ function makeMockCatalog(): Catalog {
 function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRuntime {
   return {
     localPositionInto: (idx, out) => out.set(idx, 0, 0),
+    absolutePositionInto: (idx, out) => out.set(0, idx, 0),
     parkDistForStar: () => 1.5,
     renderedSizePx: () => 12,
     peakDiscSizePx: () => 9,
     pickStarHit: () => null,
+    setHiddenStar: () => {},
     binaries: lateAbsent(),
     ...overrides,
   };
@@ -71,7 +72,7 @@ describe('star kind module', () => {
     expect(m.critical).toBe(true);
     expect(m.pinnable(0)).toBe(false);
     expect(m.displayName(0)).toBe('');
-    expect(m.sids()).toBeNull();
+    expect(m.sidDomain()).toBeNull();
     expect(m.searchEntries()).toEqual([]);
     expect(m.photometry(0)).toBeNull();
     expect(() => m.catalog).toThrow(/before load/);
@@ -127,9 +128,11 @@ describe('star kind module', () => {
     await expect(m.ready).rejects.toThrow(/HTTP 404/);
   });
 
-  it('answers the SID domain as the catalog column itself', async () => {
+  it('answers the SID domain off the catalog column', async () => {
     const { m, cat } = await loadedModule();
-    expect(m.sids()).toBe(cat.sid);
+    const d = m.sidDomain()!;
+    expect(d.localIndexOf(cat.sid[1])).toBe(1);
+    expect(d.sidOf(1)).toBe(cat.sid[1]);
   });
 
   it('pins only in-range records with an allocated SID', async () => {
@@ -140,6 +143,29 @@ describe('star kind module', () => {
     expect(m.pinnable(4)).toBe(false);
   });
 
+  it('answers not-a-record for an index past the decoded prefix, then the record once it lands', async () => {
+    const cat = makeMockCatalog(2);
+    loadCatalogMock.mockResolvedValue(cat);
+    vi.stubGlobal('fetch', vi.fn(async () => searchIndexResponse([])));
+    const m = createStarKindModule();
+    await m.load('/base/');
+    m.setRuntime(makeRuntime());
+    const f = m.focusable();
+    const out = new THREE.Vector3();
+
+    expect(m.photometry(2)).toBeNull();
+    expect(m.pinnable(2)).toBe(false);
+    expect(f.anchorInto(2, out)).toBe(false);
+    expect(f.localPositionInto(2, out)).toBe(false);
+
+    cat.finishLoading();
+    expect(m.photometry(2)).not.toBeNull();
+    expect(m.pinnable(2)).toBe(true);
+    expect(f.anchorInto(2, out)).toBe(true);
+    expect(out.toArray()).toEqual([0, 2, 0]);
+    expect(f.localPositionInto(2, out)).toBe(true);
+  });
+
   it('derives its name tables at load, then resolves the label tier ladder', async () => {
     const { m } = await loadedModule([{ i: 1, hip: 91262 }]);
     expect(m.starLabels.get(1)).toBe('HIP 91262');
@@ -148,27 +174,27 @@ describe('star kind module', () => {
     expect(m.displayName(0)).toBe('Unnamed (SID #7)');
   });
 
-  it('attaches layer-less and drives the uHideFocusIdx pin', async () => {
+  it('attaches layer-less and hands the focal hide to the pipeline', async () => {
     const { m } = await loadedModule();
-    const ctx = makeKindContext();
+    const hidden: (number | null)[] = [];
+    m.setRuntime(makeRuntime({ setHiddenStar: (idx) => { hidden.push(idx); } }));
+    expect(m.attach(makeKindContext())).toBeNull();
     m.setFocalHidden?.(5);
-    expect(m.attach(ctx)).toBeNull();
-    m.setFocalHidden?.(5);
-    expect((ctx.sharedUniforms.uHideFocusIdx as { value: number }).value).toBe(5);
-    m.setFocalHidden?.(-1);
-    expect((ctx.sharedUniforms.uHideFocusIdx as { value: number }).value).toBe(-1);
+    m.setFocalHidden?.(null);
+    expect(hidden).toEqual([5, null]);
   });
 
   it('serves the focusable legs from catalog + runtime', async () => {
     const { m } = await loadedModule();
     const ctx = makeKindContext();
     m.attach(ctx);
-    m.setRuntime(makeRuntime());
     const f = m.focusable();
     const out = new THREE.Vector3();
+    expect(f.anchorInto(1, out)).toBe(false);
+    m.setRuntime(makeRuntime());
 
     expect(f.anchorInto(1, out)).toBe(true);
-    expect(out.toArray()).toEqual([1, 2, 3]);
+    expect(out.toArray()).toEqual([0, 1, 0]);
     expect(f.anchorInto(-1, out)).toBe(false);
     expect(f.anchorInto(4, out)).toBe(false);
 

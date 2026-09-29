@@ -6,14 +6,10 @@ import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
 import {
-  SRC_TYC2_HD,
   bindingCandidateSourceIds,
   loadBindingCandidateInputs,
 } from '../classic-ids/binding-candidates';
-import { parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
-import {
-  HIP_VMAG_HINT, SRC_GLIESE, SRC_HIP_VMAG, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1,
-} from '../classic-ids/binding-evidence';
+import { HIP_VMAG_HINT, SRC_HIP_VMAG } from '../classic-ids/binding-evidence';
 import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
@@ -22,27 +18,32 @@ import {
 } from '../membership/binding/binding-derivation-pure';
 import {
   MEMBERSHIP_MANIFEST_FILE,
+  SPINE_CORRECTIONS_FILE,
+  additionItemCells,
+  applySpineCorrections,
   iterManifestTsv,
+  parseSpineCorrectionsTsv,
 } from '../membership/membership-manifest-pure';
-import { parseGlieseTsv } from '../gliese-parse';
+import { isMagnitudeTermRow } from '../membership/magnitude-term/magnitude-term-pure';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
-import { parseTycho2Tsvs } from '../tycho2-parse';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
-import { LFS_HINT, loadBindingTables } from '../spine/primaries-tables';
+import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 
 const SRC_MANIFEST = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
 const OUT = resolve(ROOT, 'data/gaia/gaia_catalog_source_id_request.tsv');
 
 const MANIFEST_HINT = 'run `pnpm run build:membership`, or `git lfs pull` if it is an LFS stub.';
+const CORRECTIONS_HINT = 'it is committed and hand-curated (../membership/README.md#correcting-a-merge-decision).';
 
 async function main(): Promise<void> {
   const ids = new Set<string>();
   let rows = 0;
   let withoutSourceId = 0;
   for (const row of iterManifestTsv(readRequired(SRC_MANIFEST, MANIFEST_HINT))) {
+    if (isMagnitudeTermRow(row)) continue;
     rows++;
     if (row.gaia_source_id === '') withoutSourceId++;
     else ids.add(row.gaia_source_id);
@@ -55,27 +56,24 @@ async function main(): Promise<void> {
   // read the same tables the derivation's do, and the TYC cross-walk has to
   // cover IV/25's Tycho ids as well as the spine's for the gate's arm.
   const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
-  const iv25 = parseTyc2HdTsv(readRequired(SRC_TYC2_HD, LFS_HINT));
-  const keepTycs = new Set(iv25.map((r) => r.tyc));
-  for (const row of spine) if (row.tyc !== '') keepTycs.add(row.tyc);
-  const tables = await loadBindingTables(keepTycs);
-  const tycho2 = parseTycho2Tsvs(
-    readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
-  );
-  const gliese = parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT));
+  const { kept } = applySpineCorrections(spine, parseSpineCorrectionsTsv(
+    readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
+  ));
+  const tables = await loadPrimaryTables(kept.map((r) => r.tyc).filter((t) => t !== ''));
 
   const candidates = bindingCandidateSourceIds({
     inputs: loadBindingCandidateInputs(),
     hipVMag,
-    printedV: printedVLookups(tycho2, gliese),
+    printedV: printedVLookups(tables.tycho2, tables.gliese),
     tycToSource: tables.tycToSource,
-    tyc2Hd: iv25,
+    tyc2Hd: tables.iv25,
   });
   for (const id of candidates) ids.add(id);
   const afterGate = ids.size;
 
   const derivation = derivationCandidateSourceIds(
-    spine, tables, indexCns5(tables.cns5).cns5ByOwnKey, indexSimbadSources(tables.simbadBySourceId),
+    [...kept, ...additionItemCells(tables, kept)], tables, indexCns5(tables.cns5).cns5ByOwnKey,
+    indexSimbadSources(tables.simbadBySourceId),
   );
   for (const id of derivation) ids.add(id);
   const afterDerivation = ids.size;
@@ -86,7 +84,7 @@ async function main(): Promise<void> {
   const sorted = sortSourceIdsNumeric(ids);
   writeFileSync(OUT, `gaia_source_id\n${sorted.join('\n')}\n`);
   console.log(
-    `manifest: ${rows} rows → ${membership} source_ids (${withoutSourceId} carry none)`,
+    `manifest primaries rows: ${rows} → ${membership} source_ids (${withoutSourceId} carry none; the magnitude term reads its own pull)`,
   );
   console.log(
     `classic-ID gate candidates: ${candidates.size} ` +

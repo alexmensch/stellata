@@ -10,9 +10,13 @@ artifact carries the object.
 ```
 sid-resolver.ts (+ test)   SidResolver (domain roster, attach/conclude
                            lifecycle, resolve, deferred intents, reverse
-                           sidOf), arrayDomain (domain over an artifact's
-                           sid column), sidColumnError (loader-side parse
-                           validation shared by cloud + LG loaders).
+                           sidOf), the SidDomain contract, arrayDomain
+                           (domain over a complete artifact's sid column),
+                           sidColumnIndex (the lazy sid → position map both
+                           it and the star domain use), sidColumnError
+                           (loader-side parse validation shared by cloud +
+                           LG loaders).
+sid-domain-fixture.ts      test-only sidsOf, a domain read back as a list.
 index.ts                   Re-export.
 ```
 
@@ -23,7 +27,7 @@ client may ever attach (`star`, `planet`, `cloud`, `lg`, `shell`,
 `probe`). Each domain then reaches exactly one terminal state:
 
 - **attached** — its artifact loaded; `attach(kind, domain)` wires a
-  `{ localIndexOf, sidOf }` pair over the artifact's sid column.
+  `SidDomain` over the artifact's sid column.
 - **absent** — its artifact will never load this session (missing file,
   shelved layer); `conclude(kind)` records that so resolution can stop
   waiting for it.
@@ -58,12 +62,13 @@ sid whose artifact is absent or disabled.
 
 ## Wiring map (who attaches what, where)
 
-All in `main.ts`, keyed off the same artifact loads that gate each
-layer:
+Each kind module builds its own domain (`sidDomain()`, null ⇒ conclude);
+`main.ts` attaches them in one roster loop, keyed off the same artifact
+loads that gate each layer:
 
 | kind | attach point | sid source | localIndex meaning |
 | --- | --- | --- | --- |
-| `star` | after catalog load | `catalog.sid` column (`arrayDomain`) | catalog record index |
+| `star` | after catalog load | `catalog.sid` column (`catalogSidDomain`, `../../loaders/`) | catalog record index |
 | `planet` | boot | `SOL_OBJECT_SIDS` in `SOL_BODIES` order | index into `SOL_BODIES` (planets then moons) |
 | `probe` | boot, after `loadProbes` resolves | `SOL_OBJECT_SIDS` in LOADED-roster order | ProbeField roster index = Target `{kind:'probe'}` idx |
 | `lg` | after `loadLocalGroup` resolves (concluded when the artifact is missing) | `local-group.json` per-object `sid` | `LgCatalog.objects` index |
@@ -96,11 +101,11 @@ generalisation to non-star kinds is `stellata-o6nx.1`.
 
 ## A domain that is still filling
 
-`SidDomain.isComplete` is the third state between "attached" and "not
-attached". A domain that answers `false` makes a **miss** indeterminate
-rather than absent: the sid may sit in a part of the artifact that has not
-arrived, so resolution stays `pending` and the intent queues instead of
-being dropped.
+`SidDomain.fill()` is the third state between "attached" and "not
+attached", and every domain states it — there is no default. A domain
+answering `'filling'` makes a **miss** indeterminate rather than absent:
+the sid may sit in a part of the artifact that has not arrived, so
+resolution stays `pending` and the intent queues instead of being dropped.
 
 The star domain needs it because the catalogue streams
 ([Progressive catalog load](../../loaders/README.md#progressive-catalog-load)). The alternative —
@@ -113,9 +118,13 @@ recentres out from under it. A star in the first chunk — which is most of
 them, the order being apparent brightness — has to resolve *synchronously*,
 during `applyFromUrl`, for the restore to be right.
 
-`arrayDomain` takes an optional `loadedCount` thunk for this. It indexes
-lazily up to that bound on every lookup, so a growing column needs no
-re-attach; the owner calls `SidResolver.refresh()` as it fills, which is
-what retries the queued intents. When the column completes, `isComplete`
-starts answering `true` and a sid nothing carries finally settles to
-`unknown` instead of holding its intent open forever.
+The star domain is `catalogSidDomain`, built by the catalogue module —
+the one owner of which records have decoded. It indexes lazily up to the
+decoded prefix on each lookup, so a growing column needs no re-attach, and
+its `fill()` reads `catalog.complete`, so it cannot disagree with the
+catalogue about being done. The resolver subscribes to each domain's
+`onGrow` on attach and retries the queued intents on every call: each
+landing chunk, then the completion, at which a sid nothing carries
+finally settles to `unknown` instead of holding its intent open forever.
+A catalogue whose chunk fails settles `complete` too, since no further
+records can land.

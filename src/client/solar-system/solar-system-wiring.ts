@@ -23,7 +23,6 @@ export interface SolarSystemWiringDeps {
   occluders: OccluderSet;
   solIndex: number;
   getT: () => number;
-  focusedPlanetSystem: () => PlanetSystem | null;
   /** The planet OBSERVE stands on, as a flat body-field instance index. */
   observeAnchorPlanet: () => number | null;
   onPlanetSystem: (handler: (ps: PlanetSystem | null) => void) => () => void;
@@ -61,7 +60,7 @@ export class SolarSystemWiring {
       timeBehaviour: { kind: 'clock', rate: this.planetRate },
       contribution: { kind: 'always' },
       update: (ctx) => {
-        const ps = deps.focusedPlanetSystem();
+        const ps = orbitRings.planetSystem();
         const hostPos = ps !== null
           && field.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
           ? this.tmpHostLocal : null;

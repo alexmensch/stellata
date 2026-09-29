@@ -21,6 +21,7 @@ import { createMolecularCloudLabels } from './cloud-labels';
 import { loadClouds, type CloudCatalog } from './cloud-loader';
 import { loadCloudSurfaces, type CloudSurface } from './cloud-surfaces-loader';
 import { MolecularClouds } from './molecular-clouds';
+import { arrayDomain } from '../util/sid-resolver';
 
 export interface CloudKindModule extends ObjectKindModule<'cloud'> {
   /** The render layer, for dev-console tuning and the frame-cost levers.
@@ -184,7 +185,10 @@ export function createCloudKindModule(): CloudKindModule {
 
     displayName: (idx) => loadedCatalog()?.clouds[idx]?.name ?? '',
 
-    sids: () => loadedCatalog()?.clouds.map((c) => c.sid) ?? null,
+    sidDomain: () => {
+      const cat = loadedCatalog();
+      return cat ? arrayDomain(cat.clouds.map((c) => c.sid)) : null;
+    },
 
     labels: () => {
       if (ctx && layer) disposeLabels = createMolecularCloudLabels(ctx, layer, renderedSizePx);

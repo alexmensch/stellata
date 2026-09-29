@@ -138,9 +138,7 @@ function copyTexts(entry: IndexEntry): CopyText[] {
 describe.skipIf(IN_CI)('private paper store', () => {
   it('data/papers/pdf is a link to the store, not missing and not a copy', () => {
     const state = !existsSync(STORE) ? 'missing' : lstatSync(STORE).isSymbolicLink() ? 'link' : 'copied folder';
-    expect(state, 'link it: ln -s "<paper store>" data/papers/pdf (see /data/papers/README.md#the-pdfs-are-private)').toBe(
-      'link',
-    );
+    expect(state, 'copy the main checkout\'s link: see /data/papers/README.md#the-pdfs-are-private').toBe('link');
   });
 
   it('every pinned copy is in the store with its pinned bytes', () => {

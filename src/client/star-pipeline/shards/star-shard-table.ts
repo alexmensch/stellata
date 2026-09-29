@@ -6,7 +6,6 @@ export class StarShardTable {
   readonly shards: readonly StarShard[];
   readonly flatCount: number;
   private readonly starts: number[];
-  private flatSids: Uint32Array | null = null;
 
   constructor(shards: readonly StarShard[]) {
     this.shards = [...shards];
@@ -38,19 +37,6 @@ export class StarShardTable {
     let shard = 0;
     while (shard + 1 < this.starts.length && flat >= this.starts[shard + 1]) shard++;
     return { shard, local: flat - this.starts[shard] };
-  }
-
-  /** The kind's SID domain in flat order — the sole shard's column by
-   *  reference, else the columns concatenated once and cached. */
-  sids(): Uint32Array {
-    if (this.shards.length === 1) return this.shards[0].sid;
-    if (this.flatSids === null) {
-      this.flatSids = new Uint32Array(this.flatCount);
-      for (let i = 0; i < this.shards.length; i++) {
-        this.flatSids.set(this.shards[i].sid, this.starts[i]);
-      }
-    }
-    return this.flatSids;
   }
 
   /** Absolute position of flat idx `flat` — chunk origin plus the

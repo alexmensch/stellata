@@ -43,7 +43,7 @@ export interface WebGpuExtinctionPrepassSources {
 }
 
 export interface WebGpuStarLayer {
-  /** The shell's per-frame CPU gate on the depth-only core-mask draw. */
+  /** StarPipeline's per-frame CPU gate on the depth-only core-mask draw. */
   setCoreMaskVisible(on: boolean): void;
   /** Chart mode's flat-ink blend swap. */
   setMonochrome(on: boolean): void;
@@ -63,7 +63,7 @@ export interface WebGpuStarLayer {
    *  resolves frames later (star/compaction/README.md#reading-the-counts-back).
    * Null once the layer is disposed. */
   readSurvivorCounts(): Promise<SurvivorCounts | null>;
-  /** The shell hands it to StarLocalCluster, which parents its group into
+  /** StarPipeline hands it to StarLocalCluster, which parents its group into
    *  the pass scene and owns its dispose. */
   readonly localMirror: StarMirror;
   dispose(): void;
@@ -83,7 +83,7 @@ export interface WebGpuSeam {
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;
   /** Per-frame scalar copy from the shared uniform map into the nodes —
-   *  called from animate() before the render (tsl/README.md#shared-uniform-nodes).
+   *  called from FrameLoop before the render (tsl/README.md#shared-uniform-nodes).
    * */
   syncUniformNodes(): void;
   /** Requires bindSharedUniforms to have run — the materials take their

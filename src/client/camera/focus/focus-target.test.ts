@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FocusableProvider, FocusableProviders, TargetKind } from './focus-target';
-import { KIND_TRAITS, isHardTarget, targetsEqual } from './focus-target';
+import { KIND_TRAITS, isHardTarget, targetListsEqual, targetsEqual, type Target } from './focus-target';
 
 const provider: FocusableProvider = {
   anchorInto: () => false,
@@ -64,5 +64,16 @@ describe('targetsEqual', () => {
     expect(targetsEqual(null, null)).toBe(true);
     expect(targetsEqual({ kind: 'star', idx: 3 }, null)).toBe(false);
     expect(targetsEqual(null, { kind: 'star', idx: 3 })).toBe(false);
+  });
+});
+
+describe('targetListsEqual', () => {
+  it('needs the same targets in the same order', () => {
+    const a: Target = { kind: 'star', idx: 1 };
+    const b: Target = { kind: 'planet', idx: 1 };
+    expect(targetListsEqual([a, b], [{ ...a }, { ...b }])).toBe(true);
+    expect(targetListsEqual([a, b], [b, a])).toBe(false);
+    expect(targetListsEqual([a], [a, b])).toBe(false);
+    expect(targetListsEqual([], [])).toBe(true);
   });
 });

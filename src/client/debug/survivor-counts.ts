@@ -63,7 +63,7 @@ export function formatSurvivorReport(r: SurvivorReport): string {
 
 /** Null once the star layer is disposed. */
 export async function readSurvivorReport(stellata: Stellata): Promise<SurvivorReport | null> {
-  const counts = await stellata.readSurvivorCounts();
+  const counts = await stellata.starPipeline.readSurvivorCounts();
   if (counts === null) return null;
   return survivorReport(counts, stellata.catalog.count);
 }

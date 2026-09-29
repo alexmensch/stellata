@@ -125,6 +125,15 @@ describe('StarFrame.rewriteAt via the FloatingOrigin recentre fan-out', () => {
     expect(Array.from(catalog.positions.slice(0, 3))).toEqual([10, 0, 0]);
   });
 
+  it('answers absolute positions unchanged by a recentre, local ones in the new frame', () => {
+    const catalog = makeCatalog([[10, 0, 0], [12, 3, 4]]);
+    const { frame, origin } = makeFrame(catalog);
+    origin.recenterTo(new THREE.Vector3(10, 0, 0));
+
+    expect(frame.absolutePositionInto(1, new THREE.Vector3()).toArray()).toEqual([12, 3, 4]);
+    expect(frame.localPositionInto(1, new THREE.Vector3()).toArray()).toEqual([2, 3, 4]);
+  });
+
   it('does not rewrite on the recentre no-op path', () => {
     const catalog = makeCatalog([[10, 0, 0]]);
     const { origin, writeCount } = makeFrame(catalog);

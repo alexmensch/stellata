@@ -16,34 +16,20 @@ import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
-import {
-  mark as perfMark,
-  measure as perfMeasure,
-  frame as perfFrame,
-} from './debug/perf-hud';
-import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples';
 import { RenderGate } from './render-gate/render-gate';
-import { TrackballSettle } from './camera/controls/input/trackball-settle';
-import {
-  cadenceVisibleTurnRad,
-  pulsationCadenceBudgetS,
-} from './render-gate/cadence/clock-cadence-pure';
+import { CameraStep } from './camera/camera-step/camera-step';
+import { cadenceVisibleTurnRad } from './render-gate/cadence/clock-cadence-pure';
 import {
   ClockCadence,
   type ClockCadenceDebugState,
 } from './render-gate/cadence/clock-cadence';
 import type { HdrSeam, ReductionSeam } from './hdr/hdr-seam';
-import {
-  angularToPx as angularToPxPure,
-  type ResolvedCandidate,
-} from './camera/controls/star-geometry';
-import * as starPhysics from './camera/controls/star-physics';
-import { resolveStarPickVisibility } from './camera/controls/star-pick-visibility-pure';
-import { chartDiscPxForAppMag } from './chart-mode/chart-disc-pure';
+import { angularToPx as angularToPxPure } from './camera/controls/star-geometry';
 import { paperClearColour } from './chart-mode/chart-palette';
 import { applyChartPaletteSwap } from './chart-mode/chart-swap-pure';
 import { Picker } from './camera/controls/picker';
-import { AimController, claimCameraForAim, type AimClaimGates } from './camera/controls/aim-controller';
+import { AimController } from './camera/controls/aim-controller';
+import { createCameraClaim } from './camera/camera-claim';
 import { RollController } from './camera/controls/input/roll-controller';
 import { WarpController } from './camera/warp/warp-controller';
 import { ObserveTransition } from './camera/observe/observe-transition';
@@ -53,7 +39,6 @@ import { InputController } from './camera/controls/input/input-controller';
 import {
   type CameraMode,
   FocusController,
-  type FrameAnchor,
   GLOBAL_MIN_DIST_PC,
 } from './camera/focus/focus-controller';
 import type { FocusableProviders, Target } from './camera/focus/focus-target';
@@ -68,38 +53,15 @@ import {
 } from './kinds/kind-modules';
 import { FocalRides } from './camera/focus/focal-ride/focal-rides';
 import { makeFocalAnchorPolicy } from './camera/focus/focal-ride/focal-anchor-policy';
-import type { StellataRenderer, WebGpuSeam, WebGpuStarLayer } from './webgpu/seam';
-import type { SurvivorCountsRead } from './debug/survivor-counts';
+import type { StellataRenderer, WebGpuSeam } from './webgpu/seam';
 import type { PlanetSystem } from './solar-system/planet-system';
 import type { PlanetBodyField } from './solar-system/planets/planet-body-field';
 import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemWiring } from './solar-system/solar-system-wiring';
-import { StarLocalCluster } from './star-pipeline/local-pass/star-local-cluster';
-import {
-  PHYS_RATIO_THRESHOLD,
-  RESOLVED_DISC_MIN_PX,
-} from './star-pipeline/local-pass/star-local-cluster-pure';
-import { type StarPassRouting, starPassRouting } from './star-pipeline/star-pass';
-import { DIM_FLOOR } from './binaries/eclipse/eclipse-photometry-pure';
-import { VirtualClock, tToJdUt } from './solar-system/time/time';
-import { J2000_JD } from './util/astronomy-constants';
-import { uploadFull } from './util/attribute-upload';
-// Locally used subset; other warp-timing constants re-exported below
-// for external import paths still pointing at './stellata'.
+import { VirtualClock } from './solar-system/time/time';
 import { CAMERA_NEAR_PC } from './camera/timing';
-export {
-  AIM_T_MAX_MS,
-  AIM_T_MIN_MS,
-  CAMERA_LERP_MS,
-  FOCUS_LERP_MS,
-  OBSERVE_TRANSITION_MS,
-  WARP_REORIENT_MS,
-  WARP_T_K_MS,
-  WARP_T_MAX_MS,
-  WARP_T_MIN_MS,
-} from './camera/timing';
 import { EventBus } from './util/event-bus';
 import {
   DEFAULT_FILTER,
@@ -111,21 +73,15 @@ import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { ExposureFrameStep } from './hdr/exposure/exposure-frame-step';
-import type { Mutable } from './util/mutable';
 import {
   cameraAbsInto,
   SceneLayerRegistry,
   type ContributionCensus,
-  type FrameCtx,
   type SceneLayer,
 } from './scene/scene-layer';
-import { FrameFrustum } from './scene/contribution/frame-frustum';
-import { findGlslResidents } from './scene/glsl-residents-pure';
 import { SceneDeclutter } from './scene/declutter/scene-declutter';
-import {
-  buildStarSourceAttributes, type StarSourceAttributes,
-} from './star-pipeline/star-source-attributes';
-import { CATALOG_BOUNDING_RADIUS_PC } from './star-pipeline/shards/star-shards-pure';
+import { FrameLoop } from './scene/frame-loop/frame-loop';
+import { StarPipeline } from './star-pipeline/star-pipeline';
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
 import { FloatingOrigin } from './frame/floating-origin';
@@ -134,44 +90,26 @@ import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigure } from './constellation-figure/constellation-figure';
 import { ConstellationBoundaries } from './constellation-boundaries/constellation-boundaries';
 import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import { writePulsationSuppressMask } from './star-pipeline/pulsation/pulsation-suppress-pure';
 
 export interface StellataOptions {
   canvas: HTMLCanvasElement;
   catalog: Catalog;
-  /** Kind-module record with every artifact already loaded — the
-   *  constructor attaches each module, and an unloaded one attaches to
-   *  an empty roster (kinds/kind-modules.ts). */
+  /** An unloaded module attaches to an empty roster. */
   kinds: BuiltKindModules;
-  /** The booted renderer and everything hung off it (webgpu/README.md).
-   *  Built before the shell, because only a live device can refuse
-   *  itself and that refusal is the gate page, not a fallback. */
+  /** Built before the shell: only a live device can refuse itself, and
+   *  that refusal is the gate page, not a fallback. */
   webgpu: WebGpuSeam;
-  /** The IAU boundary artifact, or null when it is missing or invalid. */
+  /** Null when the artifact is missing or invalid. */
   boundaries: BoundaryArtifact | null;
 }
 
-/** A scene a boot draws, named so a debug read can say which one a
- *  resource came from (`sceneGraphs`). */
 export interface NamedScene {
   readonly name: string;
   readonly scene: THREE.Scene;
 }
 
-// Subscribers register via `Stellata.on(name, fn)` and the compiler enforces
-// the payload type per event. `state` and `frame` are no-payload events.
-//
-// `focus` / `vector` carry the full kind-tagged Target (or null) — one
-// event each for every focusable kind; a payload change from kind A to
-// kind B is a single emit, never a clearing emit followed by a set.
-//
-// Emission pairing contract: every discrete state mutation emits its
-// fine-grained event and THEN `state` (the URL-sync trigger) from the
-// same mutation site — subscribing to `state` alone observes every
-// mutation. The exceptions emit alone: `planetSystem` (derived from a
-// focus change that already paired with `state`), `frame` (render-tick
-// fanout), and the `focusLerp` / warp-end animation edges (transient,
-// not URL-encoded state). Per-event list: /src/client/README.md#event-bus-on-stellata.
+// Payloads and the emit-then-`state` pairing every mutation owes:
+// README.md#event-bus-on-stellata.
 export type StellataEventMap = {
   focus: Target | null;
   planetSystem: PlanetSystem | null;
@@ -186,13 +124,10 @@ export type StellataEventMap = {
   frame: void;
 };
 
-export class Stellata implements FrameAnchor {
+export class Stellata {
   readonly catalog: Catalog;
   readonly renderer: StellataRenderer;
-  /** The boot seam — layers reach their scene and the shared uniform
-   *  nodes through it. */
   readonly webgpu: WebGpuSeam;
-  private webgpuStarLayer!: WebGpuStarLayer;
   private readonly chromeLines: ChromeLineMaterials;
   readonly camera: THREE.PerspectiveCamera;
   readonly controls: TrackballControls;
@@ -200,149 +135,76 @@ export class Stellata implements FrameAnchor {
   readonly roll = new RollController();
 
   private scene: THREE.Scene;
-  private starAttrs!: StarSourceAttributes;
-  // The shared view/screen uniform map (frame/README.md#shared-uniforms)
-  // — every per-frame write goes through this field, never
-  // through a star material's uniforms object.
+  // Every per-frame uniform write goes through this map, never a material's
+  // own uniforms object (frame/README.md#shared-uniforms).
   private sharedUniforms!: SharedUniforms;
 
-  // The floating-origin service — worldOffset, the ordered recentre
-  // fan-out, and the focal anchor policy (frame/README.md).
-  private floatingOrigin!: FloatingOrigin;
-  // Epoch advance, the derived per-instance buffers, and the
-  // Sol-distance proximity queries — see star-pipeline/star-frame/README.md.
-  // The shell reads `localPositions` through it and drives the
-  // per-frame calls.
-  private starFrame!: StarFrame;
-  private get worldOffset(): THREE.Vector3 { return this.floatingOrigin.worldOffset; }
-  // Scratch for the focused star's per-re-advance space-motion delta.
-  private readonly _epochFollowDelta = new THREE.Vector3();
-  // Per-instance pulsation-suppress flag. 1 zeros the GCVS-amplitude
-  // radial pulsation in the vertex shader for every eclipsing binary
-  // (varType == ECLIPSING). Built once at catalog-load (binary-independent).
-  // See /src/client/binaries/eclipse/README.md#pulsation-gate-for-eclipsing-binaries.
-  private _suppressPulsation: Float32Array;
-  /** Records already folded into `_suppressPulsation` — the mask is written
-   *  in place so the attribute bound over it keeps its array. */
-  private absorbedSuppressCount = 0;
-  /** Unsubscribe from the catalog's chunk-decode fan-out. */
-  private offCatalogRecords: (() => void) | null = null;
-
-  /** Kind-generic system membership (multi-star clusters, planet
-   *  systems) — hover roster cards and collapsed-pick resolution both
-   *  consume this. See src/client/system-membership/README.md. */
+  readonly floatingOrigin: FloatingOrigin;
+  readonly starFrame: StarFrame;
   readonly systemMembership = new SystemMembershipRegistry();
   readonly binaries: BinariesAttachment;
 
   private readonly focalRides: FocalRides;
 
-  // Filter / preset / render-knob state + mutations live in
-  // FilterController (filters/README.md); the shell reads the live
-  // state through this getter for per-frame gates and dep closures.
   readonly filters!: FilterController;
   private get filter(): Readonly<FilterState> { return this.filters.getFilter(); }
-  // Owns the exposure scalar and the three magnitude bounds derived from
-  // it — instrument limit, just-visible threshold, population cull
-  // (hdr/exposure/README.md#one-writer-five-slots).
   readonly exposure!: ExposureController;
-  // Per-frame scene-luminance measurement feeding the automatic exposure
-  // cut (hdr/exposure/README.md#adaptation--the-frame-measures-itself).
   readonly adaptation!: SceneAdaptation;
   get reduction(): ReductionSeam { return this.hdr.reduction; }
   private readonly exposureFrame!: ExposureFrameStep;
 
   readonly declutter: SceneDeclutter;
 
-  private disposed = false;
   private bus = new EventBus<StellataEventMap>();
 
-  // Scene layers register once (registerSceneLayers) and the registry
-  // fans out per-frame update / setMonochrome / recenter / dispose —
-  // see scene/README.md. frameCtx is the shared per-frame input struct,
-  // mutated in place each frame to avoid a per-frame allocation.
   private readonly layers = new SceneLayerRegistry();
-  private frameCtx!: Mutable<FrameCtx>;
+  private readonly frameLoop: FrameLoop;
 
   readonly observe!: ObserveTransition;
   private observeControls!: ObserveControls;
 
   private clock = new VirtualClock();
 
-  // Focus, distance-vector destination, and cameraMode all live on
-  // FocusController (camera/focus/README.md) as Target sum types,
-  // exposed as a readonly namespace like every controller below.
   readonly focus!: FocusController;
   private monochrome = false;
   readonly warp!: WarpController;
   readonly aim!: AimController;
-  private readonly cameraClaim: AimClaimGates = {
+  private readonly cameraClaim = createCameraClaim({
     isWarpActive: () => this.warp.isActive(),
     isAimActive: () => this.aim.isActive(),
     isObserveTransitionActive: () => this.observe.isActive(),
     cancelUnfocusLerp: () => this.focus.cancelUnfocusLerp(),
     cancelFocusLerp: () => this.focus.cancelFocusLerp(),
-  };
+  });
 
   readonly pois!: PoiStore;
-  // Canvas pointer input — click FSM (single/double, both modes) and the
-  // roll gestures. See camera/controls/input/README.md#input-controller.
   readonly input!: InputController;
 
   readonly coordSpheres: CoordSpheres;
   readonly constellationFigure: ConstellationFigure;
   readonly constellationBoundaries: ConstellationBoundaries;
-  /** Kind-module record — one module per migrated TargetKind, null while
-   *  a kind's wiring is still inline (kinds/README.md). Public so search
-   *  and overlays dispatch generic legs (displayName, searchEntries). */
   readonly kinds: BuiltKindModules;
-  // Physical layer — renders for every attached host regardless of
-  // focus, gated by per-planet apparent magnitude + per-host distance
-  // cull. Owned by the planet module; read here for cross-kind wiring.
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   readonly localDepthPass = new LocalDepthPass();
   readonly renderGate = new RenderGate();
-  private readonly trackballSettle: TrackballSettle;
+  private readonly cameraStep: CameraStep;
   private readonly observeLookPin: ObserveLookPin;
-  private glslResidentsChecked = false;
   private readonly cadence: ClockCadence;
-  // Read on the NEXT tick is NOT good enough for this one: a layer that
-  // starts needing wall-clock frames while the gate idles would wait a
-  // whole cap for them, and forever with the clock paused. Evaluated
-  // above the gate, every tick (scene/scene-layer.ts LayerTimeBehaviour).
-  private _realtimeFramesNeeded = false;
-  private coreMaskEnabled = true;
-  private starLocalCluster: StarLocalCluster;
+  readonly starPipeline: StarPipeline;
   readonly solarSystem: SolarSystemWiring;
-  /** The frame's near-solid-body set, published by the two local-depth
-   *  clusters and read by every SVG label surface
-   *  (`occlusion/README.md`). */
   readonly occluders = new OccluderSet();
 
-  /** What every pick path gates on, in one place: the frame's solid
-   *  bodies and the camera reading them. Hover and click both take it,
-   *  so no kind can be visible to one and hidden from the other. */
+  /** Hover and click both gate on this, so no kind is visible to one and
+   *  hidden from the other. */
   pickVisibility(): PickVisibility {
     return { occluders: this.occluders, cameraPos: this.camera.position };
   }
   readonly hud: HudOverlay;
-  /** `chart-mode.ts` starts / stops it on the chart activation predicate;
-   *  the shell owns its lifetime. */
   readonly chartLabels: ChartLabels;
 
-  // Milky Way analytic background. Constructed eagerly so the
-  // band is on during first paint. Dust is wired in once the volumetric
-  // texture attaches.
   readonly milkyway: MilkyWay;
 
   readonly extinction: ExtinctionAttachment;
-  private readonly pickSizeScratch: starPhysics.RenderedSizeComponents =
-    { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
-  // Separate from pickSizeScratch: the debug panel reads every frame and
-  // must not clobber a pick walk mid-flight.
-  private readonly passDebugScratch: starPhysics.RenderedSizeComponents =
-    { appMag: 0, appSizePx: 0, physSizePx: 0, physSizePxUncapped: 0 };
-  private readonly starSizeInputs: starPhysics.StarSizeInputs;
-
   readonly picker!: Picker;
 
   readonly focusables!: FocusableProviders;
@@ -374,9 +236,6 @@ export class Stellata implements FrameAnchor {
 
     this.scene = new THREE.Scene();
 
-    // `CAMERA_FAR_PC` is paired with `MAX_DISTANCE_PC` so the build filter
-    // and camera can never drift; see build-local-group-pure.ts. Near-plane
-    // derivation lives on `CAMERA_NEAR_PC` in camera/timing.ts.
     this.camera = new THREE.PerspectiveCamera(
       DEFAULT_FOV,
       window.innerWidth / window.innerHeight,
@@ -390,9 +249,7 @@ export class Stellata implements FrameAnchor {
       collectReport: (cc) => this.layers.cadenceReport(cc),
     });
 
-    // TrackballControls (instead of OrbitControls) because we want
-    // unconstrained rotation — no polar clamping at the zenith/nadir, so
-    // the user can orbit past the poles continuously.
+    // Not OrbitControls: that clamps at the poles, and orbiting past them is wanted.
     this.controls = new TrackballControls(this.camera, canvas);
     this.observeLookPin = new ObserveLookPin(this.camera, this.controls.target);
     this.controls.rotateSpeed = 3.0;
@@ -406,11 +263,7 @@ export class Stellata implements FrameAnchor {
     // Empty drag-mode key slots: TrackballControls' A/S/D defaults would
     // otherwise claim the S grid / D debug shortcuts.
     this.controls.keys = ['', '', ''];
-    this.trackballSettle = new TrackballSettle(this.controls);
 
-    // OBSERVE-mode look-around controller. Starts disabled; enable() runs
-    // when the camera mode flips, with TrackballControls.enabled toggled
-    // off in the same step so the two schemes never compete for input.
     this.observeControls = new ObserveControls(
       canvas,
       this.camera,
@@ -430,9 +283,8 @@ export class Stellata implements FrameAnchor {
     // Must follow bindSharedUniforms: the TSL factory resolves the shared
     // uniform nodes on read and throws while the registry is unbound.
     this.chromeLines = this.webgpu.chromeLineMaterials;
-    // Constructed before every consumer of the magnitude bounds: it
-    // rewrites all five slots from its own constructor, so the seeds in
-    // buildSharedUniforms never reach a shader.
+    // Before every consumer of the magnitude bounds: its constructor rewrites
+    // all five slots, so buildSharedUniforms' seeds never reach a shader.
     this.exposure = new ExposureController({
       uniforms: {
         uExposure: this.hdr.emitterUniforms.uExposure,
@@ -448,47 +300,41 @@ export class Stellata implements FrameAnchor {
     }, DEFAULT_FILTER.instrument);
 
     this.floatingOrigin = new FloatingOrigin(sharedUniforms.uWorldOffset);
-    // Advances catalog.positions to the model clock and derives every
-    // per-instance buffer off the result, so the pipeline attributes
-    // below and every consumer downstream read current-epoch positions
-    // by construction.
     this.starFrame = new StarFrame({
       catalog,
       uniforms: sharedUniforms,
       worldOffset: this.floatingOrigin.worldOffset,
       cameraPosition: this.camera.position,
       t: this.getT(),
-      onLocalPositionsWritten: () => {
-        uploadFull(this.starAttrs.iPositionAttr);
-        this.binaries.markBaselinesDirty();
-      },
+      onLocalPositionsWritten: () => this.starPipeline.localPositionsWritten(),
     });
     this.chartLabels = new ChartLabels(this, this.starFrame.distSol);
     this.binaries = new BinariesAttachment({
       catalog,
       basePositions: this.starFrame.basePositions,
       localPositions: this.starFrame.localPositions,
-      attributes: () => this.starAttrs,
+      attributes: () => this.starPipeline.attributes,
       uniforms: sharedUniforms,
       chromeLines: this.chromeLines,
       camera: this.camera,
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
       getT: () => this.getT(),
       thresholdMag: () => this.exposure.getThresholdMag(),
       focusedStar: () => this.focus.getFocusedStar(),
       observeAnchorStar: () => this.observe.observeAnchorOf('star'),
       onFocus: (handler) => this.bus.on('focus', handler),
       rideFocal: (source) => this.focalRides.rideBinaryFocal(source),
+      invalidate: (reason) => this.renderGate.invalidate(reason),
     });
-    // The star kind module's legs read the shell-owned star machinery
-    // through these closures — they deref lazily, so the picker and focus
-    // controller constructed below are fine. `binaries` is read now.
+    // Closures deref lazily, so owners built below are fine; `binaries` is read now.
     this.kinds.star.setRuntime({
       localPositionInto: (idx, out) => this.starFrame.localPositionInto(idx, out),
+      absolutePositionInto: (idx, out) => this.starFrame.absolutePositionInto(idx, out),
       parkDistForStar: (idx) => this.focus.parkDistForStar(idx),
-      renderedSizePx: (idx) => this.renderedSizePxFor(idx),
-      peakDiscSizePx: (idx) => starPhysics.renderedDiscPxAtPeak(this.starSizeInputs, idx),
+      renderedSizePx: (idx) => this.starPipeline.renderedSizePx(idx),
+      peakDiscSizePx: (idx) => this.starPipeline.peakDiscSizePx(idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
+      setHiddenStar: (idx) => this.starPipeline.setHiddenStar(idx),
       binaries: this.binaries.data,
     });
     // Recentre fan-out, in load-bearing order: star buffer rewrite →
@@ -499,26 +345,6 @@ export class Stellata implements FrameAnchor {
       this.controls.target.sub(delta);
     });
     this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
-    // Built here (not on binaries attach) because the gate is varType-driven
-    // and binary-independent; see the field declaration for the rationale.
-    this._suppressPulsation = new Float32Array(catalog.count);
-
-    this.starAttrs = buildStarSourceAttributes({
-      localPositions: this.starFrame.localPositions,
-      ...this.binaries.sourceArrays(),
-      suppressPulsation: this._suppressPulsation,
-    });
-
-    this.webgpuStarLayer = this.webgpu.attachStarLayer(this.scene, {
-      catalog,
-      logRadii: this.starFrame.logRadii,
-      lumClassF32: this.starFrame.lumClassF32,
-      distSol: this.starFrame.distSol,
-      teffApsis: this.starFrame.teffApsis,
-      boundingSphereRadiusPc: CATALOG_BOUNDING_RADIUS_PC,
-      ...this.starAttrs,
-    });
-
     this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
     this.extinction = new ExtinctionAttachment({
       catalog,
@@ -528,50 +354,33 @@ export class Stellata implements FrameAnchor {
       renderer: this.renderer,
       invalidate: (reason) => this.renderGate.invalidate(reason),
     });
+    this.starPipeline = new StarPipeline({
+      catalog,
+      frame: this.starFrame,
+      scene: this.scene,
+      camera: this.camera,
+      webgpu: this.webgpu,
+      uniforms: sharedUniforms,
+      emitterUniforms: this.hdr.emitterUniforms,
+      binaries: this.binaries,
+      extinction: this.extinction,
+      exposure: this.exposure,
+      cadence: this.cadence,
+      occluders: this.occluders,
+      filter: () => this.filter,
+      focusedStar: () => this.focus.getFocusedStar(),
+      monochrome: () => this.monochrome,
+      invalidate: (reason) => this.renderGate.invalidate(reason),
+    });
 
-    // Chunk 0 is already decoded and the pipeline was constructed against
-    // it, so this first call folds it in; every later one follows a
-    // landing chunk.
-    this.offCatalogRecords = this.catalog.onRecordsDecoded(
-      () => this.absorbCatalogRecords());
-    this.absorbCatalogRecords();
-
-    // Galactic reference layers — disc is always added; grid hides itself
-    // until enabled. The HUD (ring + Sol/GC arrows) is pure SVG inside the
-    // existing #overlay so it shares the distance vector's stroke + halo
-    // styling and inherits the `body.warping` hide rule for free.
-    // Constructed here, ahead of the kind modules — galactic/README.md#wiring.
+    // Ahead of the kind modules — galactic/README.md#wiring.
     const galacticDiscEntry = galacticDiscSceneLayer({
       scene: this.scene,
       chromeLines: this.chromeLines,
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
       detailPermits: (id) => this.declutter.permits(id),
     });
-    this.starLocalCluster = new StarLocalCluster(
-      this.webgpuStarLayer.localMirror,
-      this.binaries.orbitPaths,
-      sharedUniforms.uLocalMemberIdx as { value: Int32Array },
-      {
-        catalog,
-        localPositions: () => this.localPositions,
-        renderedSizeComponents: (idx, out) => this.renderedSizeComponentsFor(idx, out),
-        forEachStarNearCamera: (d, cb) => this.starFrame.forEachStarNearCamera(d, cb),
-        // Membership needs physSize ≥ PHYS_RATIO_THRESHOLD × pxSize with
-        // pxSize ≥ RESOLVED_DISC_MIN_PX, so the widest useful window is
-        // where the largest star's disc crosses the product.
-        scanWindowPc: () =>
-          this.starFrame.discWindowPcFor(RESOLVED_DISC_MIN_PX * PHYS_RATIO_THRESHOLD),
-        occluders: this.occluders,
-        livePulsationRadiusFactor: (idx) => starPhysics.livePulsationRadiusFactor(
-          catalog, idx, this._suppressPulsation, this.sharedUniforms),
-        hiddenStarIdx: () => sharedUniforms.uHideFocusIdx.value,
-      },
-    );
-    this.localDepthPass.register(this.starLocalCluster);
-    this.binaries.data.observe((settled) => {
-      this.renderGate.invalidate('attach:binaries');
-      this.starLocalCluster.setBinaries(settled.status === 'ready' ? settled.value : null);
-    });
+    this.localDepthPass.register(this.starPipeline.localCluster);
     this.constellationBoundaries = new ConstellationBoundaries({
       scene: this.scene,
       artifact: boundaries,
@@ -582,7 +391,7 @@ export class Stellata implements FrameAnchor {
       onFilter: (handler) => this.bus.on('filter', handler),
       permitted: () => this.declutter.permits('constellationBoundaries'),
       localPositionInto: (kind, idx, out) => this.focusables[kind].localPositionInto(idx, out),
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
     });
     // Measured against the instrument's OWN exposure, never the live
     // scalar the cut then writes — that would be a feedback loop.
@@ -600,10 +409,8 @@ export class Stellata implements FrameAnchor {
       drawingBufferSizeInto: (out) => this.renderer.getDrawingBufferSize(out),
       noteExposureCut: (dm) => this.renderGate.noteExposureCut(dm),
     });
-    // Kind-module attach, in roster order. Each returned scene layer
-    // registers HERE — before every inline-wired layer — so every
-    // moving-body field has written this frame's positions by the time
-    // the first inline entry runs the moving-focal ride.
+    // Registered before every other layer, so each moving-body field has
+    // written this frame's positions before the moving-focal ride reads them.
     const kindCtx: KindContext = {
       scene: this.scene,
       camera: this.camera,
@@ -611,20 +418,15 @@ export class Stellata implements FrameAnchor {
       sharedUniforms,
       solIndex: catalog.solIndex,
       solAbsInto: (out) => {
-        const si = catalog.solIndex;
-        if (si < 0) return false;
-        out.set(
-          catalog.positions[si * 3],
-          catalog.positions[si * 3 + 1],
-          catalog.positions[si * 3 + 2],
-        );
+        if (catalog.solIndex < 0) return false;
+        this.starFrame.absolutePositionInto(catalog.solIndex, out);
         return true;
       },
       angularToPx: () => this.angularToPx(),
       starPhotometry: (idx) => this.kinds.star.photometry(idx),
       systemMembership: this.systemMembership,
       getT: () => this.getT(),
-      getWorldOffset: () => this.worldOffset,
+      getWorldOffset: () => this.floatingOrigin.worldOffset,
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getMonochrome: () => this.monochrome,
       detailPermits: (id) => this.declutter.permits(id),
@@ -644,17 +446,16 @@ export class Stellata implements FrameAnchor {
       planetMesh: this.kinds.planet.meshLayer,
       probeField: this.kinds.probe.field,
       probeTrails: this.kinds.probe.pathLayer,
-      starCluster: this.starLocalCluster,
+      starCluster: this.starPipeline.localCluster,
       occluders: this.occluders,
       solIndex: catalog.solIndex,
       getT: () => this.getT(),
-      focusedPlanetSystem: () => this.focus.getFocusedPlanetSystem(),
       observeAnchorPlanet: () => this.observe.observeAnchorOf('planet'),
       onPlanetSystem: (handler) => this.bus.on('planetSystem', handler),
     });
     this.localDepthPass.register(this.solarSystem.cluster);
-    // System-membership registry: binaries FIRST so a collapsed pair's
-    // outer primary leads the union over the member's planet-host role.
+    // Binaries FIRST: a collapsed pair's outer primary leads over a member's
+    // planet-host role.
     this.systemMembership.register(
       createBinarySystemMembership({
         binaries: this.binaries.data,
@@ -671,47 +472,36 @@ export class Stellata implements FrameAnchor {
       }),
     );
 
-    // Picker resolves every layer's "what's under (x, y)?" — composed
-    // by the click FSM in onPointerUp and by the hover providers.
-    // Kind-module surfaces dispatch through `kindPicks`; the remaining
-    // getters cover the inline-wired star path.
     this.picker = new Picker({
       domElement: this.renderer.domElement,
       camera: this.camera,
       catalog: this.catalog,
       sortedByDistFromSol: this.starFrame.sortedByDistFromSol,
       sortedDistFromSol: this.starFrame.sortedDistFromSol,
-      getLocalPositions: () => this.localPositions,
+      getLocalPositions: () => this.starFrame.localPositions,
       getFilter: () => this.filter,
       kindPicks: collectKindPicks(this.kinds),
-      renderedSizePxFn: (idx) => this.pickPrefilterSizePxFor(idx),
-      getSuppressPulsation: () => this._suppressPulsation,
+      renderedSizePxFn: (idx) => this.starPipeline.pickPrefilterSizePx(idx),
+      getSuppressPulsation: () => this.starPipeline.suppressPulsation,
       drawCutoffMagFn: (chart) => this.exposure.drawCutoffMag(chart),
-      resolveStarPick: (idx) => this.resolveStarPick(idx),
+      resolveStarPick: (idx) => this.starPipeline.resolveStarPick(idx),
       resolveCollapsedLead: (idx) => this.collapsedClusterLead(idx),
       visibility: () => this.pickVisibility(),
     });
-    // The warp / focus-lerp / observe-transition busy checks stay on
-    // stellata's aimAt dispatcher because they gate behaviour the
-    // controller doesn't know about.
     this.aim = new AimController({
       camera: this.camera,
       controls: this.controls,
       observeControls: this.observeControls,
       getCameraMode: () => this.focus.getCameraMode(),
     });
-    // FocusController implements the FocusOps / ObserveFocusOps
-    // surfaces consumed by WarpController + ObserveTransition.
-    // getWarp / getObserve are lazy because those controllers depend
-    // back on FocusController — the construct cycle is broken by
-    // deferred resolution at first request.
+    // getWarp / getObserve are lazy: both controllers are built from this one.
     this.focus = new FocusController({
       camera: this.camera,
       controls: this.controls,
       observeControls: this.observeControls,
       catalog: this.catalog,
       bus: this.bus,
-      frameAnchor: this,
+      frameAnchor: { origin: this.floatingOrigin, stars: this.starFrame },
       aim: this.aim,
       roll: this.roll,
       setFocalBodyHidden: (target) => this.setFocalBodyHidden(target),
@@ -720,7 +510,6 @@ export class Stellata implements FrameAnchor {
       getFocusables: () => this.focusables,
       focalPerturbation: this.binaries.focalPerturbation,
     });
-    // see camera/focus/README.md#focusableproviders--the-kind-agnostic-geometry-registry
     this.focusables = collectFocusables(this.kinds);
     this.warp = new WarpController({
       camera: this.camera,
@@ -733,6 +522,8 @@ export class Stellata implements FrameAnchor {
       getChartMagBright: () =>
         this.sharedUniforms.uChartMagBright.value,
       focus: this.focus,
+      claim: this.cameraClaim,
+      origin: this.floatingOrigin,
     });
     this.observe = new ObserveTransition({
       camera: this.camera,
@@ -773,14 +564,10 @@ export class Stellata implements FrameAnchor {
     });
     this.hud = new HudOverlay({
       elements: hudElementsById(document),
-      worldOffset: this.worldOffset,
+      worldOffset: this.floatingOrigin.worldOffset,
       aimAt: (localPoint) => this.aimAt(localPoint),
     });
 
-    // Milky Way volumetric disc. A flattened ellipsoid mesh anchored at
-    // the galactic centre; the fragment shader does a bounded raymarch
-    // through its volume. renderOrder = -3 keeps it behind every other
-    // layer.
     this.scene.add(this.milkyway.group);
 
     this.filters = new FilterController({
@@ -789,34 +576,14 @@ export class Stellata implements FrameAnchor {
       bus: this.bus,
       onFilterApplied: (f) => {
         this.exposure.setInstrument(f.instrument);
-        // Per-host distance cull on the planet body field is closed-form
-        // in the population bound — refresh the cached cullDistancePc
-        // whenever the instrument moves it.
         this.planetBodyField.setCullMag(sharedUniforms.uCullMag.value);
         this.declutter.refreshLgEmission();
       },
       refreshOrbitFloor: () => this.focus.refreshOrbitFloor(),
       declutter: this.declutter,
     });
-    this.starSizeInputs = {
-      catalog,
-      camPos: this.camera.position,
-      localPositions: this.starFrame.localPositions,
-      uniforms: sharedUniforms,
-      filter: this.filter,
-      suppressPulsation: this._suppressPulsation,
-    };
-
-    // Engage focus on Sol if it exists so measurement and per-star zoom
-    // work from the start. setFocus (rather than raw field assignment)
-    // wires up controls.minDistance to the per-star orbit floor and
-    // snaps controls.target to local (0,0,0) — without this, the
-    // unfocused GLOBAL_MIN_DIST_PC clamp set above stays in place AND
-    // the pin guard fails because Sol's catalog position is
-    // (5e-6, 0, 0) pc (not exactly zero), so recenterOrigin shifts
-    // target by 5e-6 and breaks the lengthSq < 1e-12 invariant. Safe
-    // at this point in the constructor: handlers aren't subscribed yet
-    // and camera/aspect are already initialised.
+    // setFocus, never a raw field write: Sol sits 5e-6 pc off the origin, so
+    // only the recentre it runs satisfies the pin's lengthSq < 1e-12 guard.
     if (catalog.solIndex >= 0) {
       this.focus.setFocus(catalog.solIndex);
     }
@@ -834,13 +601,7 @@ export class Stellata implements FrameAnchor {
       onState: (handler) => this.bus.on('state', handler),
       rate: this.binaries.rate,
     });
-    // No camera-position park here. The bare-URL pose is fully owned by
-    // first-load.ts (`applyFirstLoadView`) and `?v=` URLs apply their
-    // own cam — both run before first paint in main.ts.
-
-    // Compute initial pixel sizes for the instrument against the real
-    // viewport. DEFAULT_FILTER carries placeholder pixel values; this call
-    // replaces them with the right numbers before the first frame.
+    // DEFAULT_FILTER's pixel sizes are placeholders until this runs.
     this.filters.recomputeStarPxSizes();
     this.syncPixelSolidAngle();
 
@@ -852,28 +613,55 @@ export class Stellata implements FrameAnchor {
       },
     });
 
-    this.frameCtx = {
+    this.cameraStep = new CameraStep({
+      canvas,
       camera: this.camera,
-      worldOffset: this.worldOffset,
-      distFromSol: 0,
-      t: 0,
-      warpActive: false,
-      pxPerRadian: 0,
-      frustum: new FrameFrustum(),
-      exposure: null,
-    };
+      controls: this.controls,
+      observeControls: this.observeControls,
+      observeLookPin: this.observeLookPin,
+      roll: this.roll,
+      warp: this.warp,
+      aim: this.aim,
+      focus: this.focus,
+      observe: this.observe,
+      pxPerRadian: () => this.angularToPx(),
+      fovYRad: () => this.sharedUniforms.uFovYRad.value,
+    });
+    this.frameLoop = new FrameLoop({
+      scene: this.scene,
+      camera: this.camera,
+      orbitTarget: this.controls.target,
+      webgpu: this.webgpu,
+      hdr: this.hdr,
+      uniforms: sharedUniforms,
+      clock: this.clock,
+      origin: this.floatingOrigin,
+      starFrame: this.starFrame,
+      focalRides: this.focalRides,
+      cameraStep: this.cameraStep,
+      focus: this.focus,
+      warp: this.warp,
+      layers: this.layers,
+      cadence: this.cadence,
+      renderGate: this.renderGate,
+      occluders: this.occluders,
+      extinction: this.extinction,
+      exposureFrame: this.exposureFrame,
+      starPipeline: this.starPipeline,
+      localDepthPass: this.localDepthPass,
+      pxPerRadian: () => this.angularToPx(),
+      emitFrame: () => this.bus.emit('frame'),
+    });
     this.registerSceneLayers(galacticDiscEntry);
-    // Seed the declutter cycle: a layer that only learns its permission from
-    // a push (both boundary shells, the orbit/probe overlays) otherwise sits
-    // at whatever its constructor guessed until the level is cycled.
+    // A layer that learns its permission only from a push sits at its
+    // constructor's guess until this seeds it.
     this.filters.reapplyDetailFloors();
     window.addEventListener('resize', this.onResize);
     this.renderGate.attachDom(canvas);
-    this.trackballSettle.attachDom(canvas);
     this.bus.on('state', () => this.renderGate.invalidate('bus:state'));
     this.bus.on('planetSystem', () => this.renderGate.invalidate('bus:planetSystem'));
     this.input = this.createInputController();
-    this.animate();
+    this.frameLoop.start();
   }
 
   // Registration order is per-frame update order —
@@ -885,47 +673,16 @@ export class Stellata implements FrameAnchor {
     // of sim-time behind the bodies, a visible lag under fast scrub.
     this.layers.register(this.solarSystem.orbitRingsEntry);
     this.layers.register(this.binaries.entry);
-    // Sequencing only, owning nothing — the second such entry, and the last
-    // camera WRITE of the frame. Every camera reader is registered below it;
-    // the argument for that, and for `static`, is scene/README.md#not-every-entry-owns-a-layer
-    // and scene/README.md#camera-writes-then-camera-reads.
-    this.layers.register({
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      update: () => {
-        this.orbitFrameTick?.();
-        // The frame's last camera write has landed: every frustum test
-        // below reads this pose.
-        this.frameCtx.frustum.refresh(this.camera);
-      },
-      dispose: () => {},
-    });
-    // Below every camera write in the frame — both focal rides and the
-    // orbit lock — because it caches `camera.matrixWorld` for its view-space
-    // sun, pole and caster uniforms, and sizes the mesh off camera distance
-    // (scene/README.md#camera-writes-then-camera-reads). That is why the
-    // planet module's own layer does not run this update.
+    // The frame's last camera WRITE; every camera reader registers below it
+    // (scene/README.md#camera-writes-then-camera-reads).
+    this.layers.register(this.frameLoop.lastCameraWriteEntry(() => this.orbitFrameTick?.()));
+    // A camera reader (it caches camera.matrixWorld), which is why the
+    // planet module's own layer does not run it.
     this.layers.register(this.solarSystem.planetMeshEntry);
-    // After the field, rings and mesh updates it reads; before the main
-    // render its suppression uniforms gate. Owns no GPU resources — the star
-    // mirror it feeds is disposed with the star cluster.
+    // After the field, rings and mesh it reads.
     this.layers.register(this.solarSystem.clusterEntry);
-    this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        rate: this.binaries.rate,
-      },
-      contribution: { kind: 'always' },
-      // After the binary walk + eclipse photometry + path-layer update:
-      // membership reads this frame's positions and path visibility, and
-      // the mirror sync re-copies the slots those fields just wrote.
-      update: (ctx) => this.starLocalCluster.update(ctx.camera, {
-        monochrome: this.monochrome,
-        focalIdx: this.focus.getFocusedStar(),
-        thresholdMag: this.exposure.getThresholdMag(),
-      }),
-      dispose: () => this.starLocalCluster.dispose(),
-    });
+    // see star-pipeline/README.md#the-pipeline for both entries' places.
+    this.layers.register(this.starPipeline.localClusterEntry);
     // After the binary + planet walks, so a figure vertex that is a binary
     // member re-copies its live slot.
     this.layers.register(this.constellationFigure.entry);
@@ -945,8 +702,6 @@ export class Stellata implements FrameAnchor {
     }));
     const milkyWayCameraAbs = new THREE.Vector3();
     this.layers.register({
-      // Skybox re-anchored to camera.position; the raymarch reads the
-      // absolute camera. No `t` dependence.
       timeBehaviour: { kind: 'static' },
       contribution: {
         kind: 'gated',
@@ -954,112 +709,43 @@ export class Stellata implements FrameAnchor {
           ctx.exposure, cameraAbsInto(ctx, milkyWayCameraAbs), ctx.warpActive),
         setContributing: (on) => this.milkyway.setContributing(on),
       },
-      // Re-anchors the skybox mesh to camera.position and refreshes the
-      // absolute-camera uniform for the raymarch. Visible during warp.
       update: (ctx) => this.milkyway.update(ctx.camera, ctx.worldOffset),
       dispose: () => this.milkyway.dispose(),
     });
+    this.layers.register(this.starPipeline.coreMaskEntry);
     this.layers.register({
-      timeBehaviour: {
-        kind: 'clock',
-        // Anchored content: the mask stamps the cores of the same stars the
-        // local cluster mirrors, so it declares that subsystem's rate rather
-        // than a global minimum (scene/README.md#anchored-content-declares-its-anchors-rate).
-        rate: this.binaries.rate,
-      },
-      contribution: {
-        kind: 'gated',
-        // The star pipeline's own pass, registered here and nowhere else in
-        // the registry, because this is the one part of it with a per-frame
-        // visibility verdict. Its floor is `RESOLVED_DISC_MIN_PX` rather
-        // than the shared one: below that the bleed-through it stamps
-        // against is too small to see, and a wider floor would reject
-        // frames the mask does change.
-        skip: () => {
-          // The `coreMask` lever's A/B prices this walk, and the walk is
-          // now inside the predicate — so a disabled lever has to refuse
-          // above it or both sides of the A/B pay it and the row prices
-          // nothing (debug/frame-cost/passes/README.md).
-          if (!this.coreMaskEnabled) return null;
-          perfMark('coreMask');
-          const on = this.starLocalCluster.hasMembers()
-            || this.starFrame.shouldEnableCoreMask();
-          perfMeasure('coreMask');
-          return on ? null : 'legibility';
-        },
-        setContributing: (on) => { if (!on) this.setCoreMaskVisible(false); },
-      },
-      // After the star local cluster's entry: a member's stamp must render
-      // even when the physSize-only window misses an appSize-driven member
-      // disc, so membership has to be this frame's.
-      update: () => this.setCoreMaskVisible(this.coreMaskEnabled),
-      dispose: () => {},
-    });
-    this.layers.register({
-      // Teardown leg only; the per-frame work rides the 'frame' event, so
-      // it runs on rendered frames and cannot need one of its own.
+      // Teardown only: its per-frame work rides the 'frame' event.
       timeBehaviour: { kind: 'static' },
       contribution: { kind: 'always' },
-      // Per-frame work rides the 'frame' event (chart-mode.ts drives
-      // start / stop on the activation predicate), so only the teardown
-      // leg registers here.
       dispose: () => this.chartLabels.dispose(),
     });
   }
 
-  /** Subscribe to any event in `StellataEventMap`. Returns an unsubscribe
-   *  function. Payload type is inferred from the event name; payload-less
-   *  events (`'state'`, `'frame'`) are called without a payload arg. */
   on<K extends keyof StellataEventMap>(
     name: K,
     handler: (payload: StellataEventMap[K]) => void,
   ): () => void {
     return this.bus.on(name, handler);
   }
-  /** True when planet orbit rings OR binary orbit paths are currently
-   *  circumscribing the focus — either already marks the focal object, so
-   *  the focus ring suppresses itself. Frame-coherent — the scene-layer
-   *  update fan-out runs before `'frame'` event handlers, so overlays
-   *  driven by the frame loop (focus ring, etc.) read current-frame data. */
+  /** Either already marks the focal object, so the focus ring suppresses itself. */
   anyOrbitRingVisible(): boolean {
     return this.solarSystem.orbitRings.anyOrbitRingVisible()
       || this.binaries.orbitPaths.anyOrbitRingVisible();
   }
-  /** Peak opaque-disc radius (CSS px) of the focused object, via its kind's
-   *  `peakDiscSizePx`; 0 when nothing is focused. Single source for every
-   *  arrow fade's disc coverage. */
+  /** CSS px; 0 when nothing is focused. */
   getFocusedDiscRadiusPx(): number {
     const t = this.focus.getFocusedTarget();
     return t === null ? 0 : this.focusables[t.kind].peakDiscSizePx(t.idx) * 0.5;
   }
 
-  /** Absolute-space coordinate of the renderer's current local origin.
-   *  Read-only snapshot; callers must not mutate. URL serialisation
-   *  emits this so close-orbit unfocus poses (where worldOffset sits at
-   *  the former focal star, not Sol — see the close-orbit unfocus contract) round-trip
-   *  exactly through the float32 cam/tgt fields. */
-  getWorldOffset(): Readonly<THREE.Vector3> { return this.worldOffset; }
-  /** Shift the floating origin to a new absolute position. Star instance
-   *  positions, camera, and controls.target are translated to preserve
-   *  the user-visible pose; subsequent rendering operates in the new
-   *  local frame. URL loading uses this to restore a saved worldOffset
-   *  before applying cam/tgt (which then overwrite the camera/target
-   *  translations the recentre produced). */
-  setWorldOffset(absX: number, absY: number, absZ: number): void {
-    this.recenterOrigin(this.tmpRecenter.set(absX, absY, absZ));
-  }
-
-  /** Virtual clock backing `getT()`; the debug time-scrubber drives it. */
   get timeClock(): VirtualClock { return this.clock; }
 
-  /** Virtual-clock `t` (Unix-seconds) driving the solar-system layer.
-   *  Recomputed on every call — callers that need a frame-stable value
-   *  should snapshot at the start of the frame. */
+  /** Unix seconds: held for the whole tick, live outside one
+   *  (solar-system/time/README.md#one-instant-per-frame). */
   getT(): number {
     return this.clock.getT();
   }
-  /** Freeze `t` at a specific Unix-seconds value (URL-restore of a
-   *  scrubbed view), or pass `null` to return to live tracking. */
+  /** `null` returns to live tracking. */
   setT(t: number | null): void {
     if (t === null) {
       this.clock.reset();
@@ -1070,70 +756,26 @@ export class Stellata implements FrameAnchor {
     this.notifyClockJumped();
   }
 
-  /** Owed by every discrete jump of the clock, whoever moved it — the
-   *  scrubber's Jump and Reset mutate the `VirtualClock` directly to keep
-   *  the current rate, so they cannot rely on `setT`. Reseeds t-sampled
-   *  kind state at the NEW `t` (a URL restore applies its focus before the
-   *  next frame, and a stale probe sample recentres onto where the object
-   *  was at page load), then emits — which is also what repaints a jump
-   *  made while the clock is paused (`render-gate/README.md`). */
+  /** Owed by every discrete clock jump, whoever moved the clock — the
+   *  scrubber's Jump and Reset bypass `setT`. */
   notifyClockJumped(): void {
     for (const kind of KIND_ROSTER) this.kinds[kind]?.clockJumped?.(this.getT());
     this.bus.emit('state');
   }
   getMonochrome(): boolean { return this.monochrome; }
 
-  // True whenever a camera-position lerp is in flight — warp, observe
-  // enter/exit, OR the navigate-mode unfocus zoom-out. URL-state writes
-  // gate on this to avoid serialising transient mid-lerp poses; the end
-  // of each animation schedules a final write with the settled pose.
+  // camera/README.md#camera-activity-predicates
   isCameraTransitionActive(): boolean {
     return this.warp.isActive() || this.observe.isAnyActive();
   }
 
-  /** Hide/unhide the rendered body of a hard-focus target — observe
-   *  parks the camera AT the object, whose disc would render from the
-   *  interior. One choke point dispatching through every module's
-   *  setFocalHidden leg (the star module's writes the uHideFocusIdx
-   *  shader pin). Passing null (or a kind switch) unhides the other
-   *  kinds' slots. */
+  /** Observe parks the camera inside the object. Null unhides every kind. */
   private setFocalBodyHidden(target: Target | null): void {
     for (const kind of KIND_ROSTER) {
-      this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
+      this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : null);
     }
   }
 
-  private tmpRecenter = new THREE.Vector3();
-
-  // Shift the renderer's local origin to `newOrigin` (an absolute-space
-  // coordinate) — FloatingOrigin.recenterTo, whose listener fan-out
-  // rewrites the star buffer, shifts camera + orbit target, and runs
-  // the scene-layer recenter hooks (frame/README.md#recentre-fan-out--order-is-load-bearing).
-  //
-  // Triggered automatically from FocusController.setFocus() and
-  // WarpController.tryMidFlyRecentre. Don't call externally — it
-  // bypasses the state-change bookkeeping that setFocus threads through.
-  // Returns the applied delta (shared scratch; null on no-op) so callers
-  // can migrate auxiliary state captured in the old frame.
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    return this.floatingOrigin.recenterTo(newOrigin);
-  }
-
-  private maybeReAdvanceEpoch(): void {
-    const focal = this.focus.getFocusedStar();
-    const d = this._epochFollowDelta;
-    if (!this.starFrame.advanceEpochTo(this.getT(), focal, d)) return;
-    // The rewrite changed what the frame would draw, and the cadence can
-    // no longer assume nothing moved: a bucket crossing between cadence
-    // frames must repaint.
-    this.renderGate.invalidate('epoch-bucket');
-    this.extinction.refreshPositions();
-    this.focalRides.followEpochStep(d);
-  }
-
-  // Which controllers constitute "the camera is busy" is the shell's to
-  // know; the policy itself lives in camera/focus/ so frame/ imports no
-  // camera code.
   private buildFocalAnchorPolicy(): void {
     this.floatingOrigin.setPolicy(makeFocalAnchorPolicy({
       hasHardFocus: () => this.focus.getFocusedHardTarget() !== null,
@@ -1148,197 +790,12 @@ export class Stellata implements FrameAnchor {
     }));
   }
 
-  /**
-   * Fold a landing transport chunk's records into everything derived from
-   * the catalogue, in dependency order, and wake the frame.
-   *
-   * Registered against `catalog.onRecordsDecoded` by the constructor, so the
-   * shell never polls. The order matters: the star frame advances the new
-   * records to the model epoch and rewrites the local-position buffer, and
-   * only then do the GPU tables have current values to interleave.
-   *
-   * The render gate invalidation is not optional — a settled camera draws no
-   * frame, so without it the newly-decoded stars would not appear until the
-   * user moved.
-   */
-  private absorbCatalogRecords(): void {
-    const absorbedFrom = this.absorbedSuppressCount;
-    writePulsationSuppressMask(
-      this.catalog.varType,
-      this._suppressPulsation,
-      this.absorbedSuppressCount,
-      this.catalog.loadedCount,
-    );
-    this.absorbedSuppressCount = this.catalog.loadedCount;
-    uploadFull(this.starAttrs.iSuppressPulsationAttr);
-
-    this.starFrame.absorbRecords();
-    this.webgpuStarLayer.absorbRecords();
-    // Not markDirty — see webgpu/extinction/README.md#the-cache-gate.
-    this.extinction.refreshPositions();
-
-    // The fastest pulsating variable bounds how long any frame may idle
-    // before some star's brightness moves a JND, so a chunk carrying a
-    // faster one has to shorten the budget. A minimum over the window
-    // alone: rescanning every record per chunk is main-thread time the
-    // frame is waiting on, and the answer cannot rise.
-    this.cadence.tightenPulsationBound(pulsationCadenceBudgetS(
-      this.catalog.periodDays,
-      this.catalog.amplitudeMag,
-      this._suppressPulsation,
-      absorbedFrom,
-      this.catalog.loadedCount,
-    ));
-    this.renderGate.invalidate('catalog-chunk');
-  }
-
-  /** How many stars each tier's draw issued, and how many passed the
-   *  prefilter (`webgpu/star/compaction/README.md#reading-the-counts-back`).
-   * The read waits on a dispatch to count into, which a settled
-   *  camera has parked the gate out of. */
-  async readSurvivorCounts(): Promise<SurvivorCountsRead | null> {
-    this.renderGate.invalidate('debug:survivors');
-    const counts = await this.webgpuStarLayer.readSurvivorCounts();
-    if (counts === null) return null;
-    return { ...counts, inFrame: this.extinction.countInFrame() };
-  }
-
-  /** Debug-HUD view of the disc/glow routing for one star at a given
-   *  eclipse dim: the pass the shaders route it to, and the pass a
-   *  dimmed quad would have picked (`star-pipeline/README.md#star-rendering-instanced-quads-three-passes`).
-   * The only way to see the trap band, which draws
-   *  identically either side of it. */
-  starPassRoutingFor(idx: number, eclipseDim: number): StarPassRouting {
-    const c = this.renderedSizeComponentsFor(idx, this.passDebugScratch);
-    const appSizeAtDim = (dim: number) => (dim >= 1
-      ? c.appSizePx
-      : starPhysics.appSizePxForMag(
-        c.appMag - 2.5 * Math.log10(Math.max(dim, DIM_FLOOR)),
-        this.filter,
-        this.sharedUniforms.uSizeKnee.value,
-      ));
-    return starPassRouting(
-      c.appSizePx, c.physSizePx, eclipseDim, DIM_FLOOR, appSizeAtDim,
-    );
-  }
-
-  /** Rendered disc diameter (px) for one instance — the CPU mirror of the
-   *  shader's `max(appSize, physSize)` sizing (`star-physics.ts`). Shared
-   *  by the navigate-mode fade closure and the overlay/pick paths. */
-  private renderedSizePxFor(idx: number): number {
-    return starPhysics.renderedSizePx(this.starSizeInputs, idx);
-  }
-
-  /** Component split of `renderedSizePxFor` — the star local cluster's
-   *  membership test needs the disc/glow dominance, not just the max. */
-  private renderedSizeComponentsFor(
-    idx: number,
-    out: starPhysics.RenderedSizeComponents,
-  ): starPhysics.RenderedSizeComponents {
-    return starPhysics.renderedSizeComponents(this.starSizeInputs, idx, out);
-  }
-
-  private chartDiscPxFor(appMag: number): number {
-    return chartDiscPxForAppMag(
-      appMag,
-      starPhysics.getChartDiscParams(this.sharedUniforms),
-      this.exposure.getLimitMag(),
-    );
-  }
-
-  /** Upper bound on the radius `resolveStarPick` will report — what
-   *  `pickFromCandidatesResolved`'s eligibility pass requires of
-   *  the prefilter, and the reason the two can't just call the same
-   *  function: chart inks a magnitude-mapped disc rather than the
-   *  realistic footprint and either curve can be the larger, so the
-   *  bound has to cover both. Extinction only dims, and a dimmer star
-   *  maps to a smaller disc on both curves, so the resolved radius can
-   *  only shrink from here. */
-  private pickPrefilterSizePxFor(idx: number): number {
-    const c = this.renderedSizeComponentsFor(idx, this.pickSizeScratch);
-    const px = Math.max(c.appSizePx, c.physSizePx);
-    return this.filter.chart ? Math.max(px, this.chartDiscPxFor(c.appMag)) : px;
-  }
-
-  /** Whether the renderer puts a pixel on screen for this star, and the
-   *  disc radius it actually draws — the pick gate proper, as against
-   *  `drawCutoffMag`'s intrinsic-magnitude prefilter. Runs per pick
-   *  candidate, never per frame
-   *  (`camera/controls/star-geometry.ts` `pickFromCandidatesResolved`). */
-  private resolveStarPick(idx: number): ResolvedCandidate {
-    // No A_V answer errs toward pickable: the fallback path still dims the
-    // star, and reproducing its march on the CPU needs the voxel grid the
-    // loader uploads and drops.
-    const avMag = this.extinction.avMagAt(idx);
-    const c = starPhysics.renderedSizeComponents(
-      this.starSizeInputs, idx, this.pickSizeScratch, avMag === null ? 0 : avMag,
-    );
-    return resolveStarPickVisibility({
-      focalHidden: this.sharedUniforms.uHideFocusIdx.value === idx,
-      eclipseDim: this.binaries.eclipseDimAt(idx),
-      chartDiscPx: this.filter.chart ? this.chartDiscPxFor(c.appMag) : null,
-      limitMag: this.exposure.getLimitMag(),
-      components: c,
-      appSizePxForMag: (m) =>
-        starPhysics.appSizePxForMag(m, this.filter, this.sharedUniforms.uSizeKnee.value),
-      exposure: this.hdr.emitterUniforms.uExposure.value,
-      thresholdMag: this.exposure.getThresholdMag(),
-      whitePoint: this.hdr.emitterUniforms.uWhitePoint.value,
-    });
-  }
-
-  /** Debug kill switch for the star core depth-mask draw AND the
-   *  per-frame near-camera scan that gates it (frame-cost
-   *  differentials). Backgrounds bleed through close star cores while
-   *  false — never leave it off outside a measurement dwell. */
-  setCoreMaskEnabled(on: boolean) {
-    this.coreMaskEnabled = on;
-  }
-
-  /** The core depth-mask's one visibility write. Whether it should be on
-   *  is the layer's contribution verdict; this is only the apply. */
-  private setCoreMaskVisible(on: boolean): void {
-    this.webgpuStarLayer.setCoreMaskVisible(on);
-  }
-
-  // Read-only view of the local-frame star positions, bound to the GPU
-  // iPosition attribute. Overlays should project through this rather than
-  // catalog.positions so their math runs in the same frame as the camera.
-  get localPositions(): Float32Array { return this.starFrame.localPositions; }
-
-  /** Bucketised Julian epoch year the catalog positions currently sit at.
-   *  Changes exactly when a re-advance rewrote the positions buffers —
-   *  overlays that skip stationary frames must key on it alongside the
-   *  camera transform. */
-  get advancedEpochJyr(): number { return this.starFrame.advancedEpochJyr; }
-
-  /** Every scene graph this boot draws, for debug-scoped READS — the
-   *  memory inventory walks them (`debug/memory/README.md`).
-   *
-   *  Adding or removing objects through these handles bypasses the
-   *  scene-layer registry, so every update / monochrome / recenter /
-   *  dispose fan-out misses them. */
+  /** Read-only: adding through these bypasses every registry fan-out. */
   get sceneGraphs(): readonly NamedScene[] {
     return [{ name: 'shell', scene: this.scene }];
   }
 
-  // Read-only view of the pulsation-suppress mask. Overlays (focus ring,
-  // distance vector tip) thread this through renderedSizePx so
-  // the SVG estimate tracks the rendered disc on eclipsing-binary
-  // primaries whose pulsation has been gated off.
-  get suppressPulsation(): Float32Array { return this._suppressPulsation; }
-
-  // Read-only view of the shared uniform map, typed against the subsets
-  // consumed by star-physics.ts. Overlays / chart / debug surfaces that
-  // call the per-star geometry helpers thread these through.
-  get uniforms(): starPhysics.StarPhysicsUniforms & starPhysics.ChartDiscUniforms {
-    return this.sharedUniforms;
-  }
-
-  /** FOV mutations stay a shell dispatcher (not `filters.setCameraFov`
-   *  directly): every surface-brightness emitter scales by the pixel
-   *  solid angle, so a FOV write must reach the HDR seam in the same
-   *  call. */
+  /** Use this, not `filters.setCameraFov`: the pixel solid angle moves too. */
   setCameraFov(fov: number) {
     this.filters.setCameraFov(fov);
     this.syncPixelSolidAngle();
@@ -1348,15 +805,10 @@ export class Stellata implements FrameAnchor {
     if (this.monochrome === on) return;
     this.monochrome = on;
     this.sharedUniforms.uMonochrome.value = on ? 1 : 0;
-    this.webgpuStarLayer.setMonochrome(on);
+    this.starPipeline.setMonochrome(on);
     this.renderer.setClearColor(
       on ? paperClearColour(this.renderer.outputColorSpace) : 0x000000, on ? 1 : 0);
-    // Per-layer palette swaps fan out through the registry. The milky-way
-    // layer has no monochrome hook: chart mode re-purposes it as an isobar
-    // contour via the `milkyWayIsobar` detail bind (chart floor); the cloud
-    // layer's stippled chart outline rides its registry setMonochrome hook.
-    // The fan-out and the HDR swap run in opposite orders per direction —
-    // chart-mode/README.md#entry-and-exit-are-not-mirror-images.
+    // chart-mode/README.md#entry-and-exit-are-not-mirror-images
     applyChartPaletteSwap(
       on,
       (v) => this.hdr.setChartMode(v),
@@ -1373,71 +825,24 @@ export class Stellata implements FrameAnchor {
     if (dir !== null) this.aimAlong(dir);
   }
 
-  /**
-   * Smoothly rotate the camera so that `pointLocal` (a world point in
-   * the renderer's local frame) ends up at the centre of the view.
-   * Mode-aware: in navigate the orbit-pivot is held and the camera
-   * sweeps around it; in observe the camera position is held and only
-   * the quaternion rotates. Called by the Sol / GC label click handlers,
-   * the search typeahead, the distance-vector label, and the POI overlay.
-   * A caller holding a direction rather than an object wants `aimAlong`.
-   */
+  /** A caller holding a direction rather than a point wants `aimAlong`. */
   aimAt(pointLocal: THREE.Vector3) {
-    if (!claimCameraForAim(this.cameraClaim)) return;
+    if (!this.cameraClaim.claim()) return;
     this.aim.aimAt(pointLocal);
   }
 
-  /**
-   * Smoothly rotate the camera to look along `dirLocal` — the aim for a
-   * caller that holds a direction rather than an object, where standing a
-   * point up at some radius and aiming at that would land the boresight
-   * elsewhere in navigate (`camera/controls/README.md#aim-controller-cameracontrolsaim-controllerts`).
-   *
-   * Shares `aimAt`'s composition-layer busy gates.
-   */
+  /** camera/controls/README.md#aim-controller-cameracontrolsaim-controllerts */
   aimAlong(dirLocal: THREE.Vector3) {
-    if (!claimCameraForAim(this.cameraClaim)) return;
+    if (!this.cameraClaim.claim()) return;
     this.aim.aimAlong(dirLocal);
   }
 
-  /**
-   * Swing the camera to the reciprocal of the direction it holds — in
-   * navigate around to the far side of the focused object at the same
-   * distance, in observe a half turn in place. Bound to the instrument's
-   * INV chip and `Shift`+`V` (`attitude/README.md#inverting-the-view`).
-   *
-   * Shares `aimAt`'s composition-layer busy gates; the sweep itself lives in
-   * `AimController`.
-   */
+  /** attitude/README.md#inverting-the-view */
   invertView() {
-    if (!claimCameraForAim(this.cameraClaim)) return;
+    if (!this.cameraClaim.claim()) return;
     this.aim.invert();
   }
 
-  // Star position in the renderer's local frame — i.e. in the same space
-  // as `camera.position` and `controls.target`. This is what overlays want
-  // for projection math and what the orbit camera operates in. It is NOT
-  // the absolute (Sol-centric) catalog position when a star is focused;
-  // use `catalog.positions[i*3..]` directly if you need absolute space
-  // (e.g. distance-from-Sol labels).
-  starLocalPosition(i: number): THREE.Vector3 {
-    return this.starLocalPositionInto(i, new THREE.Vector3());
-  }
-
-  /** Non-allocating sibling of `starLocalPosition`: writes the local-frame
-   *  position of star `i` into `out` and returns `out`. Use from per-frame
-   *  callers (animate, updateWarp, overlay updates); the allocating shim
-   *  above stays for cold paths and external API. */
-  starLocalPositionInto(i: number, out: THREE.Vector3): THREE.Vector3 {
-    return this.starFrame.localPositionInto(i, out);
-  }
-
-  /** Lead (first-seen outermost primary) of `idx`'s collapsed cluster,
-   *  or `idx` itself when nothing around it is suppressed. The Picker
-   *  routes every star pick through this so hover, POI pin, vector,
-   *  and focus all act on the object the system card names. A host
-   *  star always leads its own planet cluster, so the resolved lead is
-   *  star-kind by construction. */
   private collapsedClusterLead(idx: number): number {
     const lead = this.systemMembership.collapsedLeadOf({ kind: 'star', idx });
     return lead.kind === 'star' ? lead.idx : idx;
@@ -1457,7 +862,7 @@ export class Stellata implements FrameAnchor {
       getFocusedTarget: () => this.focus.getFocusedTarget(),
       getVectorTarget: () => this.focus.getVectorTarget(),
       setVector: (target) => this.focus.setVector(target),
-      ...this.cameraClaim,
+      claim: this.cameraClaim,
       flyTo: (target) => this.focus.flyTo(target),
       setOrbitTarget: (target) => this.focus.setOrbitTarget(target),
       unfocus: () => this.focus.unfocus(),
@@ -1474,34 +879,21 @@ export class Stellata implements FrameAnchor {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h, false);
-    // TrackballControls caches the canvas rect once, in its constructor, and
-    // its rotate math measures the drag against that cached centre and width.
+    // TrackballControls caches the canvas rect at construction.
     this.controls.handleResize();
     this.hdr.syncSize();
     this.sharedUniforms.uPixelRatio.value = this.renderer.getPixelRatio();
     this.sharedUniforms.uViewport.value.set(w, h);
-    // Aspect change → fov_minor moves → the focused object's orbit floor
-    // needs a refresh, whatever its kind. (FOV-only changes go through
-    // setCameraFov, which does its own recompute.)
     this.focus.refreshOrbitFloor();
     this.syncPixelSolidAngle();
-    // Recompute pixel sizes from the instrument's plate scale so
-    // non-overridden fields stay proportional to the bulge across screen
-    // sizes and orientation changes. sizeSpan doesn't depend on the
-    // viewport and is deliberately untouched here.
     this.filters.recomputeStarPxSizes();
   };
 
-  // Every surface-brightness emitter scales by the pixel's solid angle,
-  // so both of its inputs — viewport height and FOV — have to reach the
-  // HDR seam. Resize and setCameraFov are the only writers of either.
+  // Resize and setCameraFov are the only writers of either input.
   private syncPixelSolidAngle(): void {
     this.hdr.setPixelSolidAngle(this.angularToPx());
   }
 
-  // Pixel-per-radian conversion for the active viewport / FOV. Shared
-  // by every screen-space size calc (star disc, cloud silhouette, peak-
-  // amplitude disc, glsl `physSizePx` mirror).
   private angularToPx(): number {
     const u = this.sharedUniforms;
     return angularToPxPure(u.uViewport.value.y, u.uFovYRad.value);
@@ -1509,246 +901,35 @@ export class Stellata implements FrameAnchor {
 
   private orbitFrameTick: (() => void) | null = null;
 
-  /** Install the attitude indicator's per-frame ORB tick — the live datum
-   *  re-read, and the orbit lock's camera write with it. The shell owns WHEN
-   *  it runs, the registry being the only place that can express "after every
-   *  camera write, before every camera read"; the indicator owns what it does
-   *  (`attitude/orbit-frame/README.md#the-lock`). Read through the field on
-   *  every frame, so installing it after the layers are registered works,
-   *  exactly as a lazily-attached layer does. */
+  /** README.md#public-surface-of-stellata, install seams. */
   setOrbitFrameTick(tick: () => void): void {
     this.orbitFrameTick = tick;
   }
 
   private orbitFramePort: OrbitFramePort | null = null;
 
-  /** Install the attitude instrument's URL seam. ORB and the orbit lock are
-   *  the two pieces of view state the instrument holds itself rather than in
-   *  `filter.coordSphere`, so the blob cannot reach them any other way
-   *  (`util/url-state/README.md#orb-and-the-orbit-lock`). Same lazy shape as
-   *  the tick above: the instrument is built after the shell. */
+  /** util/url-state/README.md#orb-and-the-orbit-lock */
   setOrbitFramePort(port: OrbitFramePort): void {
     this.orbitFramePort = port;
   }
 
-  /** Null before the instrument is built, and on a boot that has none —
-   *  callers treat that as "neither armed nor locked". */
+  /** Null: neither armed nor locked. */
   getOrbitFramePort(): OrbitFramePort | null {
     return this.orbitFramePort;
   }
 
-  /** Owed by every gesture that arms, disarms, or locks ORB. Both are URL
-   *  state held on the instrument rather than in `FilterState`, so no
-   *  fine-grained event covers them and the URL writer would otherwise see a
-   *  lock engaged on a still camera as nothing at all — the second case of the
-   *  bare-'state' pairing `README.md#event-bus-on-stellata` documents, after
-   *  `notifyClockJumped`. Not owed by a URL restore, which is applying the
-   *  blob it would ask to rewrite. */
+  /** Owed by every gesture that arms, disarms or locks ORB; not by a URL
+   *  restore (README.md#event-bus-on-stellata). */
   notifyOrbitFrameChanged(): void {
     this.bus.emit('state');
   }
 
-  /** The smallest camera turn two rendered frames could show apart, at the
-   *  current viewport and FOV. A per-frame camera writer below the gate
-   *  reads this and declines anything smaller, which is what keeps it from
-   *  waking the gate on every tick — `render-gate/cadence/README.md`.
-   *  The pixel ratio stays on this side of the call, as it does for the
-   *  layers' rate reports. */
+  /** A per-frame camera writer declines any smaller turn, or it wakes the
+   *  gate every tick (render-gate/cadence/README.md). */
   visibleCameraTurnRad(): number {
     return cadenceVisibleTurnRad(this.angularToPx(), this.renderer.getPixelRatio());
   }
 
-  private animate = () => {
-    if (this.disposed) return;
-    perfMark('frame.total');
-    // One wall-clock read for the whole tick — the camera transitions,
-    // the gate's activity stamp, and the adaptation slew all have to
-    // agree on when this frame is. (`getT()` is the SIM clock and a
-    // separate quantity; see solar-system/time/README.md.)
-    const nowMs = performance.now();
-    this.maybeReAdvanceEpoch();
-    if (this.floatingOrigin.tick()) this.focalRides.reseedMoving();
-    // Both can invalidate the local-position buffer; StarFrame
-    // coalesces them into a single rewrite. Must run before anything
-    // downstream reads localPositions.
-    this.starFrame.flushLocalPositions();
-    perfMark('controls.update');
-    // Observe's quaternion is the roll authority, so camera.up follows it
-    // each frame, keeping the observe→navigate handover a no-op. Steady-state
-    // navigate needs no step at all: camera.up IS the authority there and
-    // TrackballControls transports it alongside the eye vector.
-    // See camera/controls/input/README.md#roll-authority.
-    if (this.focus.getCameraMode() === 'observe') {
-      this.roll.adoptFromCamera(this.camera);
-    }
-    // Cleared by the two steady-state branches alone, so a transition
-    // added to this chain renders every frame by default — the safe
-    // direction: a gate that guesses wrong here freezes the animation
-    // it cannot see (render-gate/README.md).
-    let cameraAnimating = true;
-    if (this.warp.isActive()) {
-      this.warp.tick(nowMs);
-    } else if (this.aim.isActive()) {
-      this.aim.tick(nowMs);
-    } else if (this.focus.isFocusLerpActive()) {
-      this.focus.tick(nowMs);
-    } else if (this.aim.isObserveAimActive()) {
-      this.aim.tickObserve(nowMs);
-      this.observeLookPin.update();
-    } else if (this.observe.isAnyActive()) {
-      this.observe.tick(nowMs);
-    } else if (this.focus.getCameraMode() === 'observe') {
-      cameraAnimating = false;
-      this.observeControls.update();
-      this.observeLookPin.update();
-    } else {
-      cameraAnimating = false;
-      this.trackballSettle.capture(this.camera);
-      this.controls.update();
-      this.trackballSettle.tick(
-        this.camera, this.angularToPx(), this.sharedUniforms.uFovYRad.value,
-      );
-    }
-    // A navigate animation drives orientation through lookAt while nothing
-    // transports camera.up, so the view axis sweeps away from it and the two
-    // can finish parallel — where the image-plane projection every lookAt and
-    // roll measurement rides collapses, and TrackballControls then preserves
-    // that angle indefinitely. Re-deriving per animating frame transports up
-    // the way a drag does, without touching the pose just rendered. Gated on
-    // an animation owning the camera: the steady state must still write on no
-    // frame of its own (camera/controls/input/README.md#roll-authority).
-    if (cameraAnimating && this.focus.getCameraMode() === 'navigate') {
-      this.roll.adoptFromCamera(this.camera);
-    }
-    perfMeasure('controls.update');
-    // The frame context is built ABOVE the gate now, because the
-    // 'realtime' predicate has to be asked every tick: a layer that
-    // starts needing wall-clock frames while the gate idles would
-    // otherwise wait a whole cap for one, and forever with the clock
-    // paused, which fires no cadence frame at all. Every input it needs
-    // (camera, distance from Sol, t) is available pre-render.
-    this.refreshFrameCtx();
-    this._realtimeFramesNeeded = this.layers.realtimeFramesNeeded(this.frameCtx);
-    // A running clock is no longer continuous by itself: the cadence
-    // decides when elapsed sim time could visibly move anything drawn,
-    // from the rate the layers reported on the LAST rendered frame
-    // (render-gate/README.md#the-clock-cadence).
-    const continuous = cameraAnimating || this._realtimeFramesNeeded;
-    const cadenceDue = this.cadence.isDue(this.clock.getRate(), this.frameCtx.t);
-    if (!this.renderGate.tick(
-      this.camera, this.controls.target, this.worldOffset,
-      { continuous, cadenceDue, nowMs },
-    )) {
-      requestAnimationFrame(this.animate);
-      return;
-    }
-    perfMark('pre-render');
-    this.sharedUniforms.uCameraPos.value.copy(this.camera.position);
-    // Pin the focused star at NDC (0,0) only when the geometric
-    // invariant holds: navigate mode, no warp/aim animation, and the
-    // user hasn't panned the camera target away from the focused star
-    // (target ≈ local origin). Pan moves target away from the star and
-    // we want it to render at its actual projected position again.
-    const pinTarget = this.focus.isPinEngaged() ? this.focus.getFocusedStar() : -1;
-    this.sharedUniforms.uPinFocusToCenter.value = pinTarget ?? -1;
-    // Advance the variability clock on the model time base (shared with the
-    // glow material via sharedUniforms). Days since J2000 from getT(), plus
-    // the warp rate in model-days/real-second for the anti-strobe floor.
-    this.sharedUniforms.uModelDays.value = tToJdUt(this.getT()) - J2000_JD;
-    this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
-    // Cleared here rather than by either publisher: both local-depth
-    // clusters push into it during the fan-out below, and whichever ran
-    // first would otherwise drop the other's entries.
-    this.occluders.beginFrame();
-    this.layers.updateAll(this.frameCtx);
-    this.extinction.update(this.frameCtx);
-    this.cadence.refresh({
-      t: this.frameCtx.t,
-      pxPerRadian: this.frameCtx.pxPerRadian,
-      pixelRatio: this.sharedUniforms.uPixelRatio.value,
-      cadenceScheduled: this.renderGate.lastFrameWasCadenceScheduled,
-    });
-    // After the fan-out: the statistic reads this frame's ephemeris
-    // positions, and the cut it writes has to land before the first draw
-    // so measurement and frame can never be one frame apart.
-    const measurementParked = this.exposureFrame.measure(nowMs, this.frameCtx.warpActive);
-    perfMeasure('pre-render');
-    perfMark('submit.main');
-    this.hdr.bind();
-    // Ahead of the node sync that copies it: the window moves with FOV,
-    // viewport and the two distN sliders, so a stale one would elide the
-    // physical-size branch against last frame's plate scale.
-    this.starFrame.syncPhysSizeWindow();
-    this.webgpu.syncUniformNodes();
-    // Reads the scalars the sync above just copied, writes the lists every
-    // star draw below reads — its own submit, so it has to sit between
-    // the two (webgpu/star/compaction/README.md).
-    perfMark('star.compaction');
-    this.webgpuStarLayer.update(this.camera);
-    perfMeasure('star.compaction');
-    // One walk on the first rendered frame: every layer is parented by
-    // then (the roster attach loop and registerSceneLayers both run in
-    // this constructor, ahead of animate), and a GLSL material here
-    // discards the whole submit rather than dropping one layer
-    // (webgpu/README.md#one-scene-per-boot).
-    if (!this.glslResidentsChecked) {
-      this.glslResidentsChecked = true;
-      const residents = findGlslResidents(this.scene);
-      if (residents.length > 0) {
-        console.error(
-          'GLSL materials in the rendered scene — the submit '
-          + `will draw nothing: ${residents.join(', ')}`,
-        );
-      }
-    }
-    this.renderer.render(this.scene, this.camera);
-    perfMeasure('submit.main');
-    perfMark('submit.localDepth');
-    this.localDepthPass.render(this.renderer, this.camera);
-    perfMeasure('submit.localDepth');
-    perfMark('submit.tonemap');
-    this.hdr.resolve();
-    perfMeasure('submit.tonemap');
-    // After the resolve, so reducing the statistic attachment never delays
-    // the frame it measures. The readback lands a frame or two later, far
-    // inside the slew (hdr/exposure/reduction/README.md#latency).
-    perfMark('submit.reduction');
-    this.exposureFrame.reduce(measurementParked);
-    perfMeasure('submit.reduction');
-    // After the frame's LAST pass, whatever is listening: a pool nothing
-    // resolves overruns and stops sampling.
-    resolveAndPublishGpuFrame(this.webgpu.renderer, this.webgpu.timestampsAvailable);
-    perfMark('frame.handlers');
-    this.bus.emit('frame');
-    perfMeasure('frame.handlers');
-    perfMeasure('frame.total');
-    perfFrame();
-    requestAnimationFrame(this.animate);
-  };
-
-  /** Runs ABOVE the gate: the `'realtime'` predicate needs it on skipped
-   *  ticks too, and every input is available pre-render. `distFromSol` is the
-   *  camera's absolute ICRS distance, summed in JS float64 so it stays exact
-   *  with kpc-scale worldOffset values (the disc-fade smoothstep consuming it
-   *  spans a small range, so precision matters). */
-  private refreshFrameCtx(): void {
-    const cam = this.camera.position;
-    const ax = cam.x + this.worldOffset.x;
-    const ay = cam.y + this.worldOffset.y;
-    const az = cam.z + this.worldOffset.z;
-    this.frameCtx.distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
-    this.frameCtx.t = this.getT();
-    this.frameCtx.warpActive = this.warp.isActive();
-    this.frameCtx.pxPerRadian = this.angularToPx();
-    this.frameCtx.exposure = this.exposureFrame.frameExposure();
-    // Stale until the orbit-lock entry re-reads the camera after the
-    // frame's last write (scene/README.md#camera-writes-then-camera-reads reads).
-    this.frameCtx.frustum.invalidate();
-  }
-
-  /** Debug-scoped view of the clock-cadence state, joined with the clock,
-   *  the pixel ratio and the layer census, for the render watcher
-   *  (`debug/render-watch/README.md`). */
   get cadenceDebugState(): ClockCadenceDebugState & {
     clockRate: number;
     pixelRatio: number;
@@ -1760,29 +941,21 @@ export class Stellata implements FrameAnchor {
       ...this.cadence.debugState,
       clockRate: this.clock.getRate(),
       pixelRatio: this.sharedUniforms.uPixelRatio.value,
-      realtimeNeeded: this._realtimeFramesNeeded,
+      realtimeNeeded: this.frameLoop.realtimeFramesNeeded,
       census: this.layers.behaviourCensus(),
       contribution: this.layers.contributionCensus(),
     };
   }
 
   dispose() {
-    this.disposed = true;
-    this.offCatalogRecords?.();
-    this.offCatalogRecords = null;
+    this.frameLoop.dispose();
     this.observeLookPin.invalidate();
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
-    this.trackballSettle.dispose();
+    this.cameraStep.dispose();
     this.cadence.dispose();
-    this._realtimeFramesNeeded = false;
-    this.frameCtx.frustum.invalidate();
     this.input.dispose();
-    // observeControls owns its own pointer + wheel listeners; disable() is
-    // idempotent so it's safe regardless of current mode.
     this.observeControls.disable();
-    // The indicator has no dispose of its own, so the shell drops the closure
-    // rather than holding its ball canvas for the instance's lifetime.
     this.orbitFrameTick = null;
     this.orbitFramePort = null;
     this.aim.dispose();
@@ -1791,16 +964,13 @@ export class Stellata implements FrameAnchor {
     this.focus.dispose();
     this.controls.dispose();
     this.extinction.dispose();
-    this.webgpuStarLayer.dispose();
-    // Every scene layer (eager or lazily attached) disposes through the
-    // registry — a registered layer can't be missing here.
+    this.starPipeline.dispose();
     this.layers.disposeAll();
     this.floatingOrigin.dispose();
     this.localDepthPass.dispose();
     this.hdr.dispose();
-    // After every layer and the prepass: those hand their texture slots
-    // back to the seam's placeholders, which this frees. Before the
-    // renderer, so the releases go through a live device.
+    // After every layer (they hand texture slots back to it), before the
+    // renderer (the releases need a live device).
     this.webgpu.dispose();
     this.renderer.dispose();
     this.bus.clear();

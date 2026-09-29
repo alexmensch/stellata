@@ -13,6 +13,7 @@ import type { SceneElementId } from '../scene/declutter/scene-elements';
 import type { SceneLayer } from '../scene/scene-layer';
 import type { SharedUniforms } from '../frame/shared-uniforms';
 import type { SystemMembershipProvider } from '../system-membership/system-membership';
+import type { SidDomain } from '../util/sid-resolver';
 
 /** What a kind module may depend on — the documented answer to "what may
  *  a layer reach?". Built once by the integration shell and handed to
@@ -119,11 +120,9 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
   searchEntries(): readonly KindSearchEntry[];
   /** Display name for a Target of this kind; '' when unresolvable. */
   displayName(idx: number): string;
-  /** SIDs in localIndex order (localIndex = Target idx), or null when
-   *  the domain can never attach this session (resolver concludes it).
-   *  ArrayLike so the star module answers its Uint32Array column
-   *  without a 390k-element copy. */
-  sids(): ArrayLike<number> | null;
+  /** The kind's SID domain, localIndex = Target idx; null when it can never
+   *  attach this session (the resolver concludes it). */
+  sidDomain(): SidDomain | null;
   /** SVG label overlay factory — separate from `attach` because label
    *  overlays mount into the DOM, which the shell constructor must not
    *  require (headless tests attach without one). The module keeps the
@@ -136,6 +135,6 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
    *  t-sampled state before the next frame reads it. */
   clockJumped?(t: number): void;
   /** Hide slot for the kind's focal body while observe parks the camera
-   *  at it; -1 unhides. */
-  setFocalHidden?(idx: number): void;
+   *  at it; null unhides. */
+  setFocalHidden?(idx: number | null): void;
 }

@@ -4,16 +4,17 @@
 
 export type SidRuntimeKind = 'star' | 'planet' | 'cloud' | 'lg' | 'shell' | 'probe';
 
+export type DomainFill = 'filling' | 'complete';
+
 export interface SidDomain {
   /** sid → this domain's local index, or null when it doesn't carry it. */
   localIndexOf(sid: number): number | null;
   /** local index → sid, or null when the object carries none. */
   sidOf(localIndex: number): number | null;
-  /** False while the domain is still filling, which makes a MISS
-   *  indeterminate rather than absent — the sid may be in a part that has
-   *  not arrived. Omitted means complete on attach, which every static
-   *  artifact is. See README.md#a-domain-that-is-still-filling. */
-  isComplete?(): boolean;
+  /** see README.md#a-domain-that-is-still-filling */
+  fill(): DomainFill;
+  /** Calls `listener` each time the domain grows or completes. */
+  onGrow(listener: () => void): () => void;
 }
 
 export type SidResolution =
@@ -29,6 +30,7 @@ interface DeferredIntent {
 export class SidResolver {
   private readonly roster: readonly SidRuntimeKind[];
   private readonly domains = new Map<SidRuntimeKind, SidDomain | 'absent'>();
+  private readonly offGrow = new Map<SidRuntimeKind, () => void>();
   private readonly successors: ReadonlyMap<number, number>;
   private intents: DeferredIntent[] = [];
 
@@ -48,7 +50,9 @@ export class SidResolver {
    *  attach (or an earlier conclude) and flushes matching intents. */
   attach(kind: SidRuntimeKind, domain: SidDomain): void {
     this.assertRegistered(kind);
+    this.offGrow.get(kind)?.();
     this.domains.set(kind, domain);
+    this.offGrow.set(kind, domain.onGrow(() => this.flushIntents()));
     this.flushIntents();
   }
 
@@ -93,17 +97,10 @@ export class SidResolver {
       } else if (d !== 'absent') {
         const localIndex = d.localIndexOf(sid);
         if (localIndex !== null) return { status: 'resolved', kind, localIndex };
-        if (d.isComplete !== undefined && !d.isComplete()) undetermined = true;
+        if (d.fill() === 'filling') undetermined = true;
       }
     }
     return undetermined ? { status: 'pending' } : { status: 'unknown' };
-  }
-
-  /** Re-run every queued intent — the domains answer differently once one
-   *  of them has grown. A still-filling domain has no attach event of its
-   *  own to flush on, so its owner calls this as it fills. */
-  refresh(): void {
-    this.flushIntents();
   }
 
   /** Reverse lookup for encoders; null while the domain isn't attached. */
@@ -140,34 +137,35 @@ export class SidResolver {
   }
 }
 
-/** Domain over an artifact's in-record sid column, keyed by array
- *  position. sid 0 (NO_SID) is unclaimable in both directions. */
-export function arrayDomain(
+/** The sid → position index over the first `decoded()` entries of a
+ *  column, extended lazily on each lookup. First-seen wins, and entries
+ *  never move, so a growing prefix picks the winner a complete pass would.
+ *  sid 0 (NO_SID) is unclaimable. */
+export function sidColumnIndex(
   sids: ArrayLike<number>,
-  /** How many leading entries are populated, when the column is still
-   *  filling. Re-read on every call, so a growing column needs no
-   *  re-attach — only a `refresh()` to retry the queued intents. */
-  loadedCount?: () => number,
-): SidDomain {
+  decoded: () => number,
+): (sid: number) => number | null {
   const bySid = new Map<number, number>();
   let indexed = 0;
-  const index = () => {
-    const end = loadedCount ? loadedCount() : sids.length;
-    for (; indexed < end; indexed++) {
+  return (sid) => {
+    for (const end = decoded(); indexed < end; indexed++) {
       const s = sids[indexed];
       if (s > 0 && !bySid.has(s)) bySid.set(s, indexed);
     }
+    return bySid.get(sid) ?? null;
   };
-  index();
+}
+
+const NEVER_GROWS = () => () => {};
+
+/** Domain over a complete artifact's in-record sid column, keyed by array
+ *  position. sid 0 (NO_SID) is unclaimable in both directions. */
+export function arrayDomain(sids: ArrayLike<number>): SidDomain {
   return {
-    localIndexOf: (sid) => {
-      index();
-      return bySid.get(sid) ?? null;
-    },
+    localIndexOf: sidColumnIndex(sids, () => sids.length),
     sidOf: (i) => (i >= 0 && i < sids.length && sids[i] > 0 ? sids[i] : null),
-    ...(loadedCount
-      ? { isComplete: () => loadedCount() >= sids.length }
-      : {}),
+    fill: () => 'complete',
+    onGrow: NEVER_GROWS,
   };
 }
 

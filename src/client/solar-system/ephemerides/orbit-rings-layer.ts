@@ -423,6 +423,11 @@ export class OrbitRingsLayer {
    * rewrites it once the elements drift past what the polyline resolves
    * (`RING_GEOMETRY_DRIFT_TOLERANCE`).
    */
+  /** The system the rings are built for, or null while none is attached. */
+  planetSystem(): PlanetSystem | null {
+    return this.ps;
+  }
+
   setPlanetSystem(ps: PlanetSystem | null, solIndex: number, t: number): void {
     this.disposeRings();
     this.ps = ps;

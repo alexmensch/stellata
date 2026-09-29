@@ -133,7 +133,7 @@ callback and is the one load allowed to reject) → boot reads
 consumers that aren't kind modules (chart mode, the planet card's host
 breadcrumb, the search corpus) → hand the record to
 `new Stellata({kinds})` → roster loops for SID domains
-(`sids()`, null ⇒ conclude), hover providers, label overlays, and the
+(`sidDomain()`, null ⇒ conclude), hover providers, label overlays, and the
 search corpus (`createSearchRunner(catalog, raw, kinds)`; boot awaits
 `stellata.kinds.planet.systemsReady` first, since planet corpus rows
 bake flat Target indices the attach table supplies).
@@ -158,9 +158,9 @@ and focused planet system, both outside the module); and its mesh
 layer's update lives on the shell, after the moving-focal ride
 (`../scene/README.md`).
 
-Star-kind exceptions: the render layers are shell-wired engine
-machinery, so `attach` returns null and the legs read the shell
-through the injected `StarModuleRuntime`
+Star-kind exceptions: the render layers are `StarPipeline`'s, which the
+shell constructs, so `attach` returns null and the legs read it and the
+rest of the star machinery through the injected `StarModuleRuntime`
 (`../star-pipeline/README.md`); `searchEntries()` answers empty — the
 star corpus enters `createSearchRunner` through `buildSearchIndex`'s
 richer channel (designation-tier labels + direct-lookup ID maps);

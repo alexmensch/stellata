@@ -83,12 +83,14 @@ nothing. The exposure is on the approach, not at the default view, and
 what bounds it is the probe interval.
 
 **The landing struct is caller-owned and reused.** `SceneAdaptation` holds
-one `ParkLanding` and refills its five fields every rendered frame rather
-than building a fresh one, so the machine costs no allocation on the render
+one `ParkLanding` and one `LandedCut`, refills them every rendered frame
+rather than building fresh ones, and points `landed` at the cut only on a
+live landing — a frame without one has no measured cut or regime to read,
+so the type carries none. The machine costs no allocation on the render
 path. `parkTick` may therefore read the landing but must never retain it —
 the `ParkState` it returns has to stand on its own.
 
-**One read gates both halves.** `animate()` reads `isMeasurementParked()`
+**One read gates both halves.** The frame loop reads `isMeasurementParked()`
 once and hands it to `HdrPipeline.setStatisticWritesParked` before `bind()`
 and to `reduction.measure`'s `parked` argument after the resolve. Two reads
 could pay the writes with nothing reducing them, or run the chain over an

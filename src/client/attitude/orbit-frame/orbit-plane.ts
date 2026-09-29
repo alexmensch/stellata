@@ -87,7 +87,7 @@ export function focusedOrbitFrom(
     return field.orbitPlaneNormalOf(source.bodyIdx, stellata.getT(), out.normal)
       && field.orbitCentreOffsetInto(source.bodyIdx, out.toCentre);
   }
-  const local = stellata.localPositions;
+  const local = stellata.starFrame.localPositions;
   const pBase = source.partnerIdx * 3;
   const sBase = source.starIdx * 3;
   if (pBase < 0 || pBase + 2 >= local.length) return false;

@@ -2,7 +2,7 @@
 
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— **379,135** ids, the union of four contributions the table's four
+— **383,056** ids, the union of four contributions the table's four
 consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -38,8 +38,11 @@ comparator — and it is what matches the ordering
 
 ## Request and record build name the same set by construction
 
-**370,994 source_ids** over 376,932 manifest rows; the 5,938 rows carrying
-none are the no-Gaia tier. The row total is pinned as `rows` in
+**374,932 source_ids** over the 376,909 `term = primaries` manifest rows; the
+1,977 rows carrying none are the no-Gaia tier. The `term = magnitude` rows are
+not requested: their astrometry is the magnitude pull's own
+([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
+and requesting them would re-pull 598,664 rows that file already holds. The row total is pinned as `rows` in
 `../membership/membership-manifest-expected.json`; the split is a walk over
 `data/membership/membership-manifest.tsv`'s own `gaia_source_id` column, and
 every id in it is distinct.
@@ -58,10 +61,10 @@ different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column | 370,994 | the record build: direction / rv / V / ci cascades |
-| `../classic-ids/`' binding-gate candidates | 354,987, +1,128 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 313,290, +128 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
-| `multiples.tsv`' kept-physical pair members | 16,108, +6,885 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
+| the manifest's `gaia_source_id` column, primaries rows | 374,932 | the record build: direction / rv / V / ci cascades |
+| `../classic-ids/`' binding-gate candidates | 354,987, +1,119 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
+| `../membership/`' binding-derivation candidates | 375,976, +198 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
+| `multiples.tsv`' kept-physical pair members | 16,108, +6,807 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
 
 `build:astrometry-request` prints every figure in this table — each
 contribution's own size and its increment over the ones above it — so all four
@@ -72,7 +75,10 @@ make the four sum to the total above.
 **The derivation's contribution is the second one's shape again, on the record
 side**: the manifest generator weighs candidates before it writes a binding,
 so the candidates cannot be read off the manifest column — the column is the
-outcome. Requesting them all, whatever a row ends up bound to, is what lets
+outcome — nor off its identifier cells, since which addition items admission
+turns into rows is an output of the build this request feeds.
+`additionItemCells` reads them off the primaries and the corrected spine
+instead, the same enumeration `buildMembership` derives. Requesting them all, whatever a row ends up bound to, is what lets
 the generator's `derivedWeighedNoGMag` pin at zero the same way the overlay's
 `gateSkippedNoGMag` does; the reviewed bindings a disposition keeps
 against every source are in the manifest column and so requested by the first
@@ -130,10 +136,14 @@ archive returns no row for lands the gate right back in pass-by-default, which
 is why `gateSkippedNoGMag` and `derivedWeighedNoGMag` are pinned at **0**: each
 counts candidates that reached its gate with no row in the pull, so a request
 that quietly stops covering them fails a snapshot instead of silently accepting
-bindings. Both read 0 today — the pull does return 2 fewer rows than the
-request (379,133 of 379,135), but both are reviewed bindings rather than
-candidates: the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
+bindings. Both read 0 today. The pull holds 383,055 rows against the request's
+383,056: 2 requested ids have no row, and both are reviewed bindings rather
+than candidates — the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
+One pulled row is no longer requested: HD 2094 B's source, which only the
+spine's uncorrected TYC reached ([Correcting a merge decision](../membership/README.md#correcting-a-merge-decision)) and which ships as
+a magnitude-term row on the magnitude pull's own astrometry. The next re-pull
+drops it.
 What no request can fix is `gateSkippedNullGMag` (112) and
 `derivedWeighedNullGMag` (77): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.

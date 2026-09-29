@@ -16,6 +16,10 @@ import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
 import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
 
+/** An instance-index uniform (`uPinFocusToCenter`, `uHideFocusIdx`, the
+ *  planet glare's `uHideIdx`) naming no instance. */
+export const NO_INSTANCE = -1;
+
 export interface SharedUniformsOptions {
   pixelRatio: number;
   /** Camera vertical FOV in radians — mirrored from `camera.fov`
@@ -33,9 +37,7 @@ export type SharedUniforms = ReturnType<typeof buildSharedUniforms>;
 /**
  * All three star passes
  * point at the same value objects, so any filter / theme / resize write
- * propagates to every pass without duplicate bookkeeping; `uRenderMode`
- * is the only divergent uniform and `StarPipeline` binds it per
- * material. The planet body field and the Milky Way pass pick slots out
+ * propagates to every pass without duplicate bookkeeping. The planet body field and the Milky Way pass pick slots out
  * of the same map by reference for the same reason.
  */
 export function buildSharedUniforms(opts: SharedUniformsOptions) {
@@ -137,7 +139,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // index when the camera is parked on it; -1 disables the gate. All
     // three star passes (disc, glow, core mask) share these uniforms so
     // the suppression fires uniformly.
-    uHideFocusIdx: { value: -1 },
+    uHideFocusIdx: { value: NO_INSTANCE },
     // Member stars of the active local-depth clusters; a member's
     // main-pass instance collapses and the pass's mirror draws render
     // it. Written per frame by StarLocalCluster.update. -1 = empty slot.
@@ -152,8 +154,8 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // mathematically at view-origin (controls.target = star, lookAt
     // aligns -Z with target). This uniform names the instance to pin;
     // the shader replaces its centreClip with projectionMatrix *
-    // (0, 0, -distCam, 1) to bypass the cancellation. -1 disables.
-    // Updated each frame in animate() since pan can move target away.
-    uPinFocusToCenter: { value: -1 },
+    // (0, 0, -distCam, 1) to bypass the cancellation.
+    // Updated each rendered frame by FrameLoop since pan can move target away.
+    uPinFocusToCenter: { value: NO_INSTANCE },
   } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 }

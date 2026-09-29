@@ -283,7 +283,7 @@ export function buildPerfSection(): DebugSection {
     element: div,
     dispose: () => {
       // Re-arm the always-callable no-op contract: every perfMark /
-      // perfMeasure / perfFrame call site (stellata.ts animate() loop,
+      // perfMeasure / perfFrame call site (the FrameLoop tick,
       // chart-labels.ts) keeps calling through the module-level
       // _mark/_measure/_frame, so the cheapest way to make those calls
       // free again is to point those bindings back at no-op stubs.

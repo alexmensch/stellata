@@ -17,8 +17,8 @@ stale_gaia_source_ids.tsv  ~1 KB, regular git. Review queue: the 6 spine
 simbad_sourced_distances.tsv
                            ~2 KB, regular git. The records whose distance
                            came from the cascade's SIMBAD tier, excluded from
-                           SIMBAD-based validation of the same field. 4,058
-                           rows, of which 375 name a record and 3,683 carry
+                           SIMBAD-based validation of the same field. 297
+                           rows, of which 211 name a record and 86 carry
                            neither cell and so address none — `stellata-hooj.15`.
 ```
 

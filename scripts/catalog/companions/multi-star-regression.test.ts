@@ -101,7 +101,7 @@ const KNOWN_HIP_ROUNDTRIP_VIOLATIONS = 0;
 // R(epoch) and as pairs stop being emitted, and RISES when pairs enter the
 // sweep for the first time — new coverage, not a placement regression. Say
 // which of the two moved it before changing the number.
-const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1442;
+const KNOWN_BAKED_VS_ELEMENTS_DISAGREEMENTS = 1441;
 
 // ---- Corpus row types ----------------------------------------------------
 
@@ -673,6 +673,37 @@ describe.runIf(FIXTURES_READY)('component display-name uniqueness', () => {
       `naming-duplicates.tsv does not enumerate — a focus card lists the ` +
       `same name twice:\n${unpinned.slice(0, 10).join('\n')}`,
     ).toEqual([]);
+  });
+});
+
+describe.runIf(FIXTURES_READY)('a named component and its Gaia source are one record', () => {
+  const SYSTEMS = [
+    {
+      labels: { '53 Aqr A': '2595463992699783424', '53 Aqr B': '2595463996992115840', '53 Aqr Ab': null },
+      relations: [['53 Aqr A', '53 Aqr B'], ['53 Aqr A', '53 Aqr Ab']],
+    },
+    {
+      labels: { Alrakis: '1420101696287738368', 'Alrakis B': '1420101696285626624', 'Alrakis Bb': null },
+      relations: [['Alrakis', 'Alrakis B'], ['Alrakis B', 'Alrakis Bb']],
+    },
+  ] as const;
+
+  it.each(SYSTEMS)('$labels', ({ labels, relations }) => {
+    const holders = new Map<string, number[]>(Object.keys(labels).map((l) => [l, []]));
+    for (let i = 0; i < catalog.count; i++) holders.get(displayLabel(catalog, i) ?? '')?.push(i);
+    const indexOf = new Map<string, number>();
+    for (const [label, sourceId] of Object.entries(labels)) {
+      const held = holders.get(label)!;
+      expect(held, `${label} is on exactly one record`).toHaveLength(1);
+      indexOf.set(label, held[0]);
+      if (sourceId !== null) {
+        expect(lookupByGaiaSourceId(catalog, sourceId)?.i, `${label} carries its own source`).toBe(held[0]);
+      }
+    }
+    for (const [primary, secondary] of relations) {
+      expect(findRelation(indexOf.get(secondary)!)?.primaryIdx, `${primary} → ${secondary}`)
+        .toBe(indexOf.get(primary));
+    }
   });
 });
 

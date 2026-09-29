@@ -115,7 +115,7 @@ information.
 
 - **Tier 0 — the diff reaches no per-frame code.** No run. The section
   carries the reachability argument in prose instead of a table: which
-  functions the diff touches, and that none is reachable from `animate()`,
+  functions the diff touches, and that none is reachable from the frame loop (`src/client/scene/frame-loop/`),
   a pass, or a per-frame buffer write. A camera-gesture change whose
   handlers run on a keypress is the canonical instance. The guard already
   accepts this — it requires a non-empty section and an `accepted:` line
@@ -450,11 +450,15 @@ that marked a frame row carries its confirming run's table too
 ([What a mark means](#what-a-mark-means)).
 
 The `perf-section-guard` workflow fails the PR when the section is
-missing, empty, or has a `✗` without an `accepted:` line — CI has no GPU,
-so it checks the section the way `release-notes-guard` does — and the
-`stellata-pr-review` skill refuses a render-path diff without it. Naming the tier
-is for the reviewer, who is the one who can dispute it; the guard cannot
-read a reachability argument and does not try. There is no skip label: a
+missing, empty, has a `✗` without an `accepted:` line, or claims Tier 1 or
+2 with no `--against-pin` table row in it — CI has no GPU, so it checks the
+section the way `release-notes-guard` does — and the `stellata-pr-review`
+skill refuses a render-path diff without it. The claim is the first
+`Tier N` the section names, and a table row is a line opening with a
+verdict mark and a `<scenario>|<backend>` key, so "needs a run before
+merge" under Tier 2 fails. Whether the claimed tier is the right one is
+for the reviewer, who is the one who can dispute it; the guard cannot read
+a reachability argument and does not try. There is no skip label: a
 change that costs nothing says why, or shows a table of `~`.
 
 **The character is the mark, wherever it sits on the line.** The guard
@@ -465,11 +469,13 @@ optional `|compute`, emphasis and punctuation stripped — and demands an
 pasted table row. A marked line naming no key fails on its own text: there
 is no row an `accepted:` line could answer it with.
 
-So **`✗` inside the section is reserved for rows you are accepting** —
-never for prose about the convention. "No `✗` rows" fails the guard, and
-it fails for the right reason, because the guard cannot tell that sentence
-from a regression reported in words. Say it as *every row within band*, or
-show the table. This bites hardest at Tier 0, whose section is prose only.
+So **a bare `✗` inside the section is reserved for rows you are
+accepting.** To name the character in prose, put it alone in an inline
+code span: the guard drops a code span holding only the glyph, so "no
+`✗` rows" written that way passes. Written bare, it fails, and for the
+right reason — the guard cannot tell that sentence from a regression
+reported in words. A code span that also names a row (`` `lg|webgpu +0.4 ✗` ``)
+still marks it. This bites hardest at Tier 0, whose section is prose only.
 
 **How the pin advances.** A Tier 2 PR commits its re-taken pin in the same
 PR, so the pin always describes what the version bump deploys. A `✗` is

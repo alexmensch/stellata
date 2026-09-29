@@ -15,7 +15,7 @@ export interface WarpPositionalFields {
 /**
  * Migrate a warp's positional fields into a new floating-origin frame
  * by subtracting the recentre delta in place. `delta` is the value
- * `recenterOrigin` returns (`newOrigin − previous worldOffset`); every
+ * `FloatingOrigin.recenterTo` returns (`newOrigin − previous worldOffset`); every
  * point captured in the old frame must shift by `−delta` to point at
  * the same physical location in the new frame.
  *

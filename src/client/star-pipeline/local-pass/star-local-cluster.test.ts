@@ -8,6 +8,7 @@ import type { RenderedSizeComponents } from '../../camera/controls/star-physics'
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { OccluderSet } from '../../occlusion/occluder-set';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
+import { LateCell } from '../../util/late/late';
 import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { StarLocalCluster } from './star-local-cluster';
 import { RESOLVED_DISC_MIN_PX } from './star-local-cluster-pure';
@@ -50,6 +51,7 @@ function makeBinaries(relations = [makeRelation({ primaryIdx: 4, secondaryIdx: 5
 
 interface Fixture {
   cluster: StarLocalCluster;
+  binaries: LateCell<BinariesData>;
   mirror: FakeMirror;
   uniform: { value: Int32Array };
   occluders: OccluderSet;
@@ -87,8 +89,10 @@ function makeFixture(): Fixture {
   const occluders = new OccluderSet();
   const radiusFactors = new Map<number, number>();
   const hiddenStarIdx = { value: -1 };
+  const binaries = new LateCell<BinariesData>();
   const cluster = new StarLocalCluster(mirror, pathLayer, uniform, {
     catalog: makeEmptyCatalog(STAR_COUNT),
+    binaries,
     localPositions: () => new Float32Array(STAR_COUNT * 3),
     renderedSizeComponents: (idx, out) => {
       const c = sizes.get(idx) ?? { appMag: 99, appSizePx: 0, physSizePx: 0 };
@@ -107,6 +111,7 @@ function makeFixture(): Fixture {
   });
   return {
     cluster,
+    binaries,
     mirror,
     uniform,
     occluders,
@@ -181,7 +186,7 @@ describe('StarLocalCluster membership', () => {
   });
 
   it('mirrors the whole focal Kepler chain once its paths draw', () => {
-    fx.cluster.setBinaries(makeBinaries());
+    fx.binaries.land(makeBinaries());
     fx.frame.focalIdx = 4;
     fx.cluster.update(fx.camera, fx.frame);
     expect(members(fx)).toEqual([]);
@@ -191,8 +196,19 @@ describe('StarLocalCluster membership', () => {
     expect(members(fx)).toEqual([4, 5]);
   });
 
+  it('picks the chain up on the first frame after the table lands', () => {
+    fx.pathsVisible.value = true;
+    fx.frame.focalIdx = 4;
+    fx.cluster.update(fx.camera, fx.frame);
+    expect(members(fx)).toEqual([]);
+
+    fx.binaries.land(makeBinaries());
+    fx.cluster.update(fx.camera, fx.frame);
+    expect(members(fx)).toEqual([4, 5]);
+  });
+
   it('mirrors the whole chain when any one member resolves as a disc', () => {
-    fx.cluster.setBinaries(makeBinaries());
+    fx.binaries.land(makeBinaries());
     fx.frame.focalIdx = 5;
     resolvedDisc(fx, 4);
     fx.cluster.update(fx.camera, fx.frame);
@@ -201,7 +217,7 @@ describe('StarLocalCluster membership', () => {
 
   it('deduplicates a star reported by several triggers', () => {
     fx.cluster.setHostMember(4);
-    fx.cluster.setBinaries(makeBinaries());
+    fx.binaries.land(makeBinaries());
     fx.frame.focalIdx = 4;
     fx.nearStars.push(4, 5);
     resolvedDisc(fx, 4);

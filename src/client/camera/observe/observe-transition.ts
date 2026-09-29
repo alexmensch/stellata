@@ -336,9 +336,7 @@ export class ObserveTransition {
    *  camera-changing action (focus, warp, aim, click) can proceed without
    *  the lerp's next tick lerping the camera away from the action's
    *  destination. No-op for observe enter/exit transitions and when no
-   *  transition is active. Public so the FocusOps shim WarpController
-   *  consumes can route through here without reaching into the
-   *  controller's privates. */
+   *  transition is active. */
   cancelUnfocusLerp(): void {
     if (this.state?.kind === 'unfocus') {
       this.state = null;

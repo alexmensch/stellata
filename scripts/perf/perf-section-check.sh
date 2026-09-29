@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails a PR whose diff touches a render path, or moves catalogue membership,
 # unless its body carries a non-empty `## Perf` section with an `accepted:`
-# line for every ✗ row.
+# line for every ✗ row, and a runner table row when it claims Tier 1 or 2.
 # Usage: perf-section-check.sh <body-file> <changed-files-file>
 #          [<base-record-count> <head-record-count>]. /RELEASING.md#perf-pin.
 set -euo pipefail
@@ -28,6 +28,10 @@ record_tolerance_percent=1
 # escapes the gate until somebody notices. /RELEASING.md#perf-pin owns this
 # list, and perf-section-check.test.ts fails when the two drift apart.
 exempt='calibration|debug|focus-card|format|hover|kinds|loaders|modals|overlays|poi|system-membership|typeahead|ui'
+
+# Bracketed rather than escaped: awk -v expands escapes, and a \| there reads
+# as alternation.
+row_key='^[A-Za-z0-9-]+[|](webgpu|webgl2)([|]compute)?$'
 
 touched=()
 while IFS= read -r f; do
@@ -80,25 +84,40 @@ if ! printf '%s' "$stripped" | grep -qE '[^[:space:]]'; then
   exit 1
 fi
 
+# The first tier the section names is the one it claims; later mentions are
+# prose ("Tier 0, so no Tier 2 sweep").
+tier=$(printf '%s\n' "$stripped" | awk 'match($0, /Tier [0-2]/) { print substr($0, RSTART + 5, 1); exit }')
+if [[ "$tier" == 1 || "$tier" == 2 ]]; then
+  rows=$(printf '%s\n' "$stripped" | awk -v key_re="$row_key" '
+    ($1 == "✓" || $1 == "✗" || $1 == "~" || $1 == "·") && $2 ~ key_re { n++ }
+    END { print n + 0 }')
+  if [ "$rows" -eq 0 ]; then
+    echo "::error::${reason}; '## Perf' claims Tier ${tier} but carries no --against-pin table row. Paste the runner's table — /RELEASING.md#what-the-section-carries."
+    exit 1
+  fi
+fi
+
 # A ✗ anywhere on a line marks that line, not only one in the first field: a
 # mark reported inline in prose escapes a line-start match and passes a body
 # that accepted nothing. Every row key on a marked line (scenario|backend, with
 # an optional |compute, emphasis and punctuation stripped) owes an accepted:
 # line, and a marked line naming no row fails on its own text — there is no
-# row an accepted: line could name for it.
+# row an accepted: line could name for it. A ✗ alone in an inline code span
+# names the glyph rather than marking a row, so it is dropped before the scan.
 missing=()
 while IFS= read -r key; do
   [ -z "$key" ] && continue
   if ! printf '%s\n' "$stripped" | awk -v k="$key" '$1 == "accepted:" && $2 == k { found=1 } END { exit !found }'; then
     missing+=("$key")
   fi
-done < <(printf '%s\n' "$stripped" | awk '
+done < <(printf '%s\n' "$stripped" | awk -v key_re="$row_key" '
+  { gsub(/`✗`/, "") }
   index($0, "✗") {
     named = 0
     for (i = 1; i <= NF; i++) {
       f = $i
       gsub(/[*`_,;:()]/, "", f)
-      if (f ~ /^[A-Za-z0-9-]+\|(webgpu|webgl2)(\|compute)?$/) { print f; named = 1 }
+      if (f ~ key_re) { print f; named = 1 }
     }
     if (!named) print "<unnamed row on line " NR ">"
   }')

@@ -257,5 +257,5 @@ build scripts, tests, and shader uniforms.
   pending / ready / absent with no nullable accessor.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts ([§ 8](/docs/sid.md#8-runtime-resolver-b4)).
-- `url-state/` — `?v=` URL wire format (v1/v2/v3) and the address-bar
+- `url-state/` — the share-URL wire format (v4) and the address-bar
   round-trip.

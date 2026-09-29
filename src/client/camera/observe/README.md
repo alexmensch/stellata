@@ -125,7 +125,7 @@ to.
   and the release is ≤ `MOMENTUM_MAX_RELEASE_GAP_MS` (80 ms — releases
   after a longer pause are deliberate stops, not flicks), we promote
   that to an angular velocity (`momentumAxis`, `momentumSpeed` in
-  rad/sec). `update()` runs every frame from Stellata's animate loop
+  rad/sec). `update()` runs every frame from the `CameraStep` dispatch
   while in observe (and not in a transition / aim slerp): it applies
   `momentumSpeed · dt` of rotation around `momentumAxis` and decays
   `momentumSpeed` by `exp(-dt / MOMENTUM_TAU_SEC)` per step. `dt` is
@@ -217,7 +217,7 @@ Skipped (snap) when already at or beyond the floor; cancelled cleanly
 by any new camera-changing action via `cancelUnfocusLerp` calls at
 the entry points (`focusStar`, `startWarp`, `aimAt`,
 `aimAtConstellation`, `onPointerUp`). `controls.enabled` is **not**
-toggled during the lerp — the `animate()` dispatcher routes to the
+toggled during the lerp — the `CameraStep` dispatch routes to the
 lerp tick instead of `controls.update()`, so user input accumulates
 inside TrackballControls but doesn't apply visually. Disabling
 explicitly would race the click-to-unfocus event chain and leave
@@ -293,8 +293,8 @@ round-trips with zero error beyond the float32 floor itself — worst
 and the shell's `'cameraMode'` handler calls
 `invalidate()` because the transitions write `controls.target` directly —
 without that, a mode round-trip with no rotation would keep the
-transition's target as the pin. The shell calls `update()` on two
-`animate()` branches: the observe aim slerp and steady observe.
+transition's target as the pin. `CameraStep` calls `update()` on two
+branches: the observe aim slerp and steady observe.
 
 ## The observe anchor in line layers
 

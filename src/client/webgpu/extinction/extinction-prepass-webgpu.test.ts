@@ -6,6 +6,7 @@ import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
 import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';
+import type { CameraPose } from '../../scene/scene-layer';
 import { StarCompaction } from '../star/compaction/star-compaction';
 import { STAR_VISIBILITY_BOUND_KEYS } from '../star/star-visibility-tsl';
 import { makeStarLayerSources } from '../star/star-sources-mock';
@@ -71,8 +72,8 @@ const tableOf = (count = COUNT) => Float32Array.from({ length: count }, (_, i) =
  *  compaction and the quarters it lists are marched over the next
  *  REFILL_SLICES frames. Only a frame after the last is one a pick can be
  *  staged for, which is the shape every warming test wants. */
-function moveAndSettle(prepass: { update(x: number, y: number, z: number): void }, x: number) {
-  for (let frame = 0; frame <= REFILL_SLICES; frame++) prepass.update(x, 0, 0);
+function moveAndSettle(prepass: { update(view: CameraPose): void }, x: number) {
+  for (let frame = 0; frame <= REFILL_SLICES; frame++) prepass.update(at(x));
 }
 
 /** Star i at (3i, 3i+1, 3i+2) unless a test wants a field of its own: a
@@ -92,12 +93,15 @@ function permutations(released: readonly BufferAttribute[]): Uint32Array[] {
     .filter((a): a is Uint32Array => a instanceof Uint32Array && a.some((v) => v !== 0));
 }
 
-/** A camera at the origin looking down −z, as the shell would hand it. */
-function viewAt(yawRad: number) {
+/** A camera at absolute (x, 0, 0) turned `yawRad` off −z, as the shell would hand it. */
+function viewAt(yawRad: number, x = 0): CameraPose {
   const camera = new PerspectiveCamera(50, 16 / 9, 0.01, 1e5);
   camera.rotation.set(0, yawRad, 0);
+  camera.position.set(x, 0, 0);
   return { camera, worldOffset: new Vector3() };
 }
+
+const at = (x: number) => viewAt(0, x);
 
 function makePrepass(
   count = COUNT, positions: Float32Array = diagonal(count), loadedCount = count,
@@ -161,7 +165,7 @@ describe('construction', () => {
   it('the whole fill dispatches one thread per star', () => {
     const { prepass, computes, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes[0].count).toBe(COUNT);
     expect(computes[0].name).toBe('extinction-prepass-fill');
   });
@@ -173,10 +177,10 @@ describe('the worklist refill', () => {
   it('fills whole on the first frame; a request then arms the compaction and marches nothing yet', () => {
     const { prepass, dispatched, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(dispatched).toEqual([COUNT]);
     expect(refill.arm.value).toBe(0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(dispatched).toEqual([COUNT]);
     expect(refill.arm.value).toBe(1);
     expect(refill.cameraGeneration.value).toBe(2);
@@ -191,12 +195,12 @@ describe('the worklist refill', () => {
       prepass, computes, dispatched, dispatchedQuarter, refill, compaction, attachDust,
     } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(0));
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     const quarters: number[] = [];
     const arms: number[] = [];
     for (let frame = 0; frame < REFILL_SLICES; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+      prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
       quarters.push(refill.quarter.value);
       arms.push(refill.arm.value);
     }
@@ -215,16 +219,16 @@ describe('the worklist refill', () => {
     // the compaction built LAST frame, not the one the same call goes on to
     // arm. The uniform holds the first value only across that one line.
     expect(dispatchedQuarter.slice(1)).toEqual([0, 1, 2, 3]);
-    for (let frame = 0; frame < 5; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    for (let frame = 0; frame < 5; frame++) prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(computes).toHaveLength(1 + REFILL_SLICES);
   });
 
   it('keeps the compaction armed and a quarter marching under a request every frame', () => {
     const { prepass, computes, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     for (let frame = 1; frame <= 2 * REFILL_SLICES; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 2 * frame, 0, 0);
+      prepass.update(at(RECOMPUTE_EPSILON_PC * 2 * frame));
       expect(refill.arm.value).toBe(1);
     }
     expect(computes).toHaveLength(2 * REFILL_SLICES);
@@ -234,8 +238,8 @@ describe('the worklist refill', () => {
   it('refills the whole catalogue before the parity march and leaves nothing owed', () => {
     const { prepass, dispatched, reads, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(0));
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     dispatched.length = 0;
     // The reference march wants a render target the fake has no answer for;
     // the dispatch that precedes it is what a bit compare rests on.
@@ -252,8 +256,8 @@ describe('only what is in frame', () => {
   it('a still view at a parked camera dispatches nothing', () => {
     const { prepass, dispatched, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0, viewAt(0));
-    prepass.update(0, 0, 0, viewAt(0));
+    prepass.update(viewAt(0, 0));
+    prepass.update(viewAt(0, 0));
     expect(dispatched).toEqual([COUNT]);
     expect(refill.arm.value).toBe(0);
   });
@@ -263,22 +267,22 @@ describe('only what is in frame', () => {
   it('a turned view arms the compaction and marches the quarters, one a frame', () => {
     const { prepass, dispatched, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0, viewAt(0));
-    prepass.update(0, 0, 0, viewAt(0.1));
+    prepass.update(viewAt(0, 0));
+    prepass.update(viewAt(0.1, 0));
     expect(refill.arm.value).toBe(1);
     // A turn bumps no generation: the stamps decide what is new.
     expect(refill.cameraGeneration.value).toBe(1);
-    for (let frame = 0; frame < REFILL_SLICES; frame++) prepass.update(0, 0, 0, viewAt(0.1));
+    for (let frame = 0; frame < REFILL_SLICES; frame++) prepass.update(viewAt(0.1, 0));
     expect(dispatched).toEqual([COUNT, undefined, undefined, undefined, undefined]);
   });
 
   it('a translation and a turn on the same frame are one request', () => {
     const { prepass, computes, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0, viewAt(0));
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0, viewAt(0.1));
+    prepass.update(viewAt(0, 0));
+    prepass.update(viewAt(0.1, RECOMPUTE_EPSILON_PC * 2));
     for (let frame = 0; frame < REFILL_SLICES + 2; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0, viewAt(0.1));
+      prepass.update(viewAt(0.1, RECOMPUTE_EPSILON_PC * 2));
     }
     expect(computes).toHaveLength(1 + REFILL_SLICES);
   });
@@ -286,12 +290,12 @@ describe('only what is in frame', () => {
   it('a turning view stages no mirror until every quarter has marched', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0, viewAt(0));
-    prepass.update(0, 0, 0, viewAt(0.1));
+    prepass.update(viewAt(0, 0));
+    prepass.update(viewAt(0.1, 0));
     prepass.warmAvReadback();
     expect(reads).toHaveLength(0);
     for (let frame = 0; frame < REFILL_SLICES; frame++) {
-      prepass.update(0, 0, 0, viewAt(0.1));
+      prepass.update(viewAt(0.1, 0));
     }
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
@@ -302,12 +306,12 @@ describe('only what is in frame', () => {
     const { prepass, shared, attachDust } = makePrepass();
     attachDust();
     expect(prepass.countInFrame()).toBeNull();
-    prepass.update(0, 0, 0, viewAt(0));
+    prepass.update(viewAt(0, 0));
     const view = composeViewProjectionAbs(viewAt(0).camera, new Vector3(), new Matrix4());
     const viewport = shared.uViewport.value;
     expect(prepass.countInFrame())
       .toBe(countInFrameAbs(diagonal(COUNT), COUNT, view, viewport.x, viewport.y, -1));
-    prepass.update(0, 0, 0, viewAt(Math.PI));
+    prepass.update(viewAt(Math.PI, 0));
     const turned = composeViewProjectionAbs(viewAt(Math.PI).camera, new Vector3(), new Matrix4());
     expect(prepass.countInFrame())
       .toBe(countInFrameAbs(diagonal(COUNT), COUNT, turned, viewport.x, viewport.y, -1));
@@ -318,9 +322,9 @@ describe('only what is in frame', () => {
   it('a camera creeping under epsilon per frame keeps recomputing', () => {
     const { prepass, computes, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     for (let frame = 1; frame <= 40; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 0.6 * frame, 0, 0);
+      prepass.update(at(RECOMPUTE_EPSILON_PC * 0.6 * frame));
     }
     // 40 frames × 0.6 ε is 24 ε of travel: a bump every second frame, each
     // owing the quarters again, so the kernel ran on nearly every frame.
@@ -337,7 +341,7 @@ describe('the dispatch order', () => {
   function tables(count: number, positions: Float32Array) {
     const { prepass, released, attachDust } = makePrepass(count, positions);
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.dispose();
     const [starOfSlot, refillTable] = permutations(released);
     return {
@@ -404,7 +408,7 @@ describe('the dispatch order under a streaming catalogue', () => {
     const { full, positions, prepass, catalog, released, attachDust } = streaming();
     const attachOrder = sortedOver(positions);
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     const half = LATTICE_COUNT / 2;
     positions.set(full.subarray(LOADED * 3, half * 3), LOADED * 3);
     catalog.loadedCount = half;
@@ -427,7 +431,7 @@ describe('the dispatch order under a streaming catalogue', () => {
     const { full, positions, prepass, catalog, released, attachDust } = streaming();
     const attachOrder = sortedOver(positions);
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     positions.set(full.subarray(0, (LATTICE_COUNT - 1) * 3));
     catalog.loadedCount = LATTICE_COUNT - 1;
     prepass.refreshPositions();
@@ -440,7 +444,7 @@ describe('the dispatch order under a streaming catalogue', () => {
     const attachOrder = sortedOver(positions);
     const { prepass, released, attachDust } = makePrepass(LATTICE_COUNT, positions);
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     positions.reverse();
     prepass.refreshPositions();
     prepass.dispose();
@@ -461,8 +465,8 @@ describe('the dispatch order under a streaming catalogue', () => {
   it('parks a refill in flight and re-requests', () => {
     const { full, positions, prepass, catalog, computes, refill, attachDust } = streaming();
     attachDust();
-    prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(0));
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(refill.arm.value).toBe(1);
     const generation = refill.cameraGeneration.value;
     positions.set(full);
@@ -470,7 +474,7 @@ describe('the dispatch order under a streaming catalogue', () => {
     prepass.refreshPositions();
     expect(refill.arm.value).toBe(0);
     const held = computes.length;
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(computes).toHaveLength(held);
     expect(refill.cameraGeneration.value).toBe(generation + 1);
     expect(refill.arm.value).toBe(1);
@@ -480,34 +484,53 @@ describe('the dispatch order under a streaming catalogue', () => {
 describe('the displacement gate', () => {
   it('costs nothing without dust, then computes once on the first frame', () => {
     const { prepass, computes, attachDust } = makePrepass();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes).toHaveLength(0);
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes).toHaveLength(1);
   });
 
-  it('an idle camera is free; a move past epsilon requests, and the next frame marches', () => {
+  it('a move under epsilon keeps the generation; a move past it bumps, and the next frame marches', () => {
     const { prepass, computes, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 0.5, 0, 0);
-    expect(computes).toHaveLength(1);
-    expect(refill.arm.value).toBe(0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(0));
+    const generation = refill.cameraGeneration.value;
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 0.5));
+    expect(refill.cameraGeneration.value).toBe(generation);
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
+    expect(refill.cameraGeneration.value).toBe(generation + 1);
     expect(refill.arm.value).toBe(1);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
-    expect(computes).toHaveLength(2);
+    const bumped = computes.length;
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
+    expect(computes).toHaveLength(bumped + 1);
+  });
+
+  it('the absolute camera is position plus world offset, so a rebase moves nothing', () => {
+    const { prepass, computes, refill, attachDust } = makePrepass();
+    attachDust();
+    prepass.update(at(0));
+    const generation = refill.cameraGeneration.value;
+    const rebased = at(RECOMPUTE_EPSILON_PC * 2);
+    rebased.worldOffset.set(-RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(rebased);
+    expect(refill.cameraGeneration.value).toBe(generation);
+    expect(refill.arm.value).toBe(0);
+    const offsetOnly = at(0);
+    offsetOnly.worldOffset.set(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(offsetOnly);
+    expect(refill.cameraGeneration.value).toBe(generation + 1);
+    expect(computes).toHaveLength(1);
   });
 
   it('an idle camera stays free once the quarters the move owed have marched', () => {
     const { prepass, computes, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
     const settled = computes.length;
     expect(settled).toBe(1 + REFILL_SLICES);
-    for (let frame = 0; frame < 10; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    for (let frame = 0; frame < 10; frame++) prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(computes).toHaveLength(settled);
   });
 
@@ -516,18 +539,18 @@ describe('the displacement gate', () => {
   it('never touches the render-target binding', () => {
     const { prepass, setRenderTarget, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(setRenderTarget).not.toHaveBeenCalled();
   });
 
   it('markDirty requests without any camera motion — a voxel chunk landed', () => {
     const { prepass, computes, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.markDirty();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(refill.arm.value).toBe(1);
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes).toHaveLength(2);
   });
 
@@ -535,13 +558,13 @@ describe('the displacement gate', () => {
   it('the A/B switch disarms the compaction and marches nothing', () => {
     const { prepass, computes, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(0));
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(refill.arm.value).toBe(1);
     prepass.setEnabled(false);
     expect(refill.arm.value).toBe(0);
     const held = computes.length;
-    for (let frame = 0; frame < 10; frame++) prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    for (let frame = 0; frame < 10; frame++) prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(computes).toHaveLength(held);
     expect(refill.arm.value).toBe(0);
   });
@@ -554,8 +577,8 @@ describe('the displacement gate', () => {
   it('the A/B switch parks the cursor and re-requests rather than resuming', () => {
     const { prepass, computes, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(0));
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(refill.arm.value).toBe(1);
     const generation = refill.cameraGeneration.value;
     prepass.setEnabled(false);
@@ -563,12 +586,12 @@ describe('the displacement gate', () => {
     const held = computes.length;
     // Same camera: without the park this frame would march the class built
     // before the switch.
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     expect(computes).toHaveLength(held);
     expect(refill.cameraGeneration.value).toBe(generation + 1);
     expect(refill.arm.value).toBe(1);
     for (let frame = 0; frame < REFILL_SLICES; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+      prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     }
     expect(computes).toHaveLength(held + REFILL_SLICES);
   });
@@ -576,10 +599,10 @@ describe('the displacement gate', () => {
   it('the A/B switch pauses maintenance, so the fallback side pays no fill', () => {
     const { prepass, computes, shared, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.setEnabled(false);
     expect(shared.uAvPrepassEnabled.value).toBe(0);
-    prepass.update(1e6, 0, 0);
+    prepass.update(at(1e6));
     expect(computes).toHaveLength(1);
     prepass.setEnabled(true);
     expect(shared.uAvPrepassEnabled.value).toBe(1);
@@ -595,23 +618,23 @@ describe('the cache gate', () => {
   it.each(STAR_VISIBILITY_BOUND_KEYS)('%s moving refills a parked camera', (key) => {
     const { prepass, computes, shared, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes).toHaveLength(1);
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes).toHaveLength(1);
     shared[key].value += 1;
     // The request bumps the generation, so the compaction lists everything
     // in frame and the quarters refill it over the next REFILL_SLICES frames
     // — a bound that landed in one quarter and nowhere else would leave most
     // of the buffer answering to the old aperture.
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(refill.arm.value).toBe(1);
     expect(refill.cameraGeneration.value).toBe(2);
-    for (let frame = 0; frame < REFILL_SLICES; frame++) prepass.update(0, 0, 0);
+    for (let frame = 0; frame < REFILL_SLICES; frame++) prepass.update(at(0));
     expect(computes).toHaveLength(1 + REFILL_SLICES);
     // And settles again: a watch that re-fired every frame would cost the
     // whole march per frame at a parked camera.
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes).toHaveLength(1 + REFILL_SLICES);
     expect(refill.arm.value).toBe(0);
   });
@@ -642,12 +665,12 @@ describe('the epoch refresh', () => {
     const positions = diagonal(COUNT);
     const { prepass, computes, released, refill, attachDust } = makePrepass(COUNT, positions);
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     positions[0] = 4321;
     prepass.refreshPositions();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(refill.arm.value).toBe(1);
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(computes).toHaveLength(2);
     prepass.dispose();
     const slotPositions = released.find((a) => a.itemSize === 4)!.array as Float32Array;
@@ -659,7 +682,7 @@ describe('the epoch refresh', () => {
   it('is inert after dispose rather than writing a released buffer', () => {
     const { prepass, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.dispose();
     expect(() => prepass.refreshPositions()).not.toThrow();
   });
@@ -678,7 +701,7 @@ describe('the pick mirror', () => {
   it('a pick that never warmed reads null and issues no copy of its own', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     expect(prepass.readAvMag(1029)).toBeNull();
     expect(reads).toHaveLength(0);
   });
@@ -686,7 +709,7 @@ describe('the pick mirror', () => {
   it('warms off one copy of the whole buffer, then answers every star exactly', async () => {
     const { prepass, reads, slots, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
     expect(reads[0].attr).toBe(slots.av.value);
@@ -703,7 +726,7 @@ describe('the pick mirror', () => {
   it('a star past the catalogue reads null rather than undefined', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.warmAvReadback();
     reads[0].land(tableOf());
     await flush();
@@ -713,17 +736,17 @@ describe('the pick mirror', () => {
   it('costs one copy per pointer sweep, not one per event', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     for (let i = 0; i < 5; i++) prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
   });
 
-  // The read can outlive the buffer's contents, so the generation counter
-  // is what invalidates it (README.md#cold-reads--the-one-behaviour-that-is-not-parity).
+  // The read can outlive the buffer's contents, so every dispatch orphans it
+  // (mirror/README.md#the-copys-four-states).
   it('drops a read that resolves against a superseded buffer', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.warmAvReadback();
     moveAndSettle(prepass, RECOMPUTE_EPSILON_PC * 2);
     reads[0].land(tableOf());
@@ -736,7 +759,7 @@ describe('the pick mirror', () => {
   it('a recompute re-asks rather than serving the previous frame\'s table', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.warmAvReadback();
     reads[0].land(tableOf());
     await flush();
@@ -752,7 +775,7 @@ describe('the pick mirror', () => {
   it('a refused map costs one attempt per recompute, not one per event', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.warmAvReadback();
     reads[0].fail(new Error('map failed'));
     await flush();
@@ -769,9 +792,9 @@ describe('the pick mirror', () => {
   it('spends nothing while the camera is still requesting every frame', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     for (let frame = 1; frame <= 5; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 2 * frame, 0, 0);
+      prepass.update(at(RECOMPUTE_EPSILON_PC * 2 * frame));
       prepass.warmAvReadback();
       prepass.warmAvReadback();
     }
@@ -784,13 +807,13 @@ describe('the pick mirror', () => {
   it('warms on the frame the last owed quarter marches, not before', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     for (let frame = 1; frame <= REFILL_SLICES; frame++) {
-      prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+      prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
       prepass.warmAvReadback();
       expect(reads, `frame ${frame} of the flight`).toHaveLength(0);
     }
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
   });
@@ -801,11 +824,11 @@ describe('the pick mirror', () => {
   it('warms through a dirty recompute the camera did not cause', () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.warmAvReadback();
     reads.length = 0;
     prepass.markDirty();
-    for (let frame = 0; frame <= REFILL_SLICES; frame++) prepass.update(0, 0, 0);
+    for (let frame = 0; frame <= REFILL_SLICES; frame++) prepass.update(at(0));
     prepass.warmAvReadback();
     expect(reads).toHaveLength(1);
   });
@@ -815,7 +838,7 @@ describe('dispose', () => {
   it('releases the consumer slot and the gate', () => {
     const { prepass, slots, shared, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     const av = slots.av.value;
     prepass.dispose();
     expect(shared.uAvPrepassEnabled.value).toBe(0);
@@ -826,8 +849,8 @@ describe('dispose', () => {
   it('hands the refill slots back to their placeholders, disarmed', () => {
     const { prepass, refill, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
-    prepass.update(RECOMPUTE_EPSILON_PC * 2, 0, 0);
+    prepass.update(at(0));
+    prepass.update(at(RECOMPUTE_EPSILON_PC * 2));
     const stamps = refill.stamps.value;
     const table = refill.table.value;
     prepass.dispose();
@@ -842,7 +865,7 @@ describe('dispose', () => {
   it('frees all five storage buffers through the renderer registry', () => {
     const { prepass, slots, released, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     const av = slots.av.value as StorageBufferAttribute;
     prepass.dispose();
     expect(released).toContain(av);
@@ -859,7 +882,7 @@ describe('dispose', () => {
   it('drops the CPU order copy with the buffer', async () => {
     const { prepass, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.dispose();
     await expect(prepass.verifyParity()).resolves.toBeNull();
   });
@@ -867,7 +890,7 @@ describe('dispose', () => {
   it('a read in flight at dispose cannot land on a released cache', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();
-    prepass.update(0, 0, 0);
+    prepass.update(at(0));
     prepass.warmAvReadback();
     prepass.dispose();
     reads[0].land(tableOf());

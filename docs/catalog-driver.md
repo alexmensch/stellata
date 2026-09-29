@@ -271,7 +271,7 @@ identity bullet, which measures the frozen column.
 **Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
 them are one upstream defect.** Every figure in this paragraph is counted per
 primary, before the grouping and admission *The rule* below applies; what ships
-is 63,676 records, and that paragraph reconciles the two. IV/25 numbers
+is 63,653 records, and that paragraph reconciles the two. IV/25 numbers
 **60,344** Tycho-2 stars no
 spine row carries (a further 394 HD numbers, on 393 TYCs, land on existing
 records). AT-HYG's version notes take HD "from HYG if known, otherwise
@@ -321,14 +321,14 @@ a [§ 6.1](#61-record-parity) ledger row under a closed reason enum: `admitted:h
 `admitted:hd_omitted` · `admitted:hip_omitted` · `admitted:cns5_census` ·
 `component:<anchor>`. The audit's cohorts above (55,008 / 5,336 / 566 /
 3,362) are counted per primary, before grouping and admission.
-`pnpm run build:membership` (measured 2026-09-06) groups one star's items
+`pnpm run build:membership` (measured 2026-09-29) groups one star's items
 across primaries and **admits a group only on designations no record already
 answers to** — a designation on two records keys no SID ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)),
 so attaching one another record holds would cost that record its key. The claim
 set is the spine's after the label merge and grows as each group is admitted,
 so an earlier addition blocks a later one exactly as a spine row does. That
-lands **63,676** records — `hd_link_gap` 54,813 · `hd_omitted` 5,063 ·
-`hip_omitted` 444 · `cns5_census` 3,356 — and ledgers **466** groups as
+lands **63,653** records — `hd_link_gap` 54,813 · `hd_omitted` 5,063 ·
+`hip_omitted` 425 · `cns5_census` 3,352 — and ledgers **465** groups as
 `component:<anchor>`, not as records. They are not the ~90 bright-double
 secondaries above, which reach the manifest as HD-addition records or as second
 HD numbers on spine TYCs: five are the second of such a pair with neither
@@ -345,11 +345,11 @@ parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
 as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
 on the manifest's `binding` column, four classes: `crosswalk_gated`
-358,458 (a TYC, HIP or CNS5 candidate through the gates) ·
-`simbad_corroborated` 12,483 (SIMBAD's source for the record's own
+358,464 (a TYC, HIP or CNS5 candidate through the gates) ·
+`simbad_corroborated` 16,415 (SIMBAD's source for the record's own
 designation, through the gates) · `reviewed` 53 (a disposition row's value) ·
-`none` 5,938 (the 576 derived refusals, the withheld collision, Sol;
-additions no gated walk binds). The review queue is
+`none` 1,977 (derived refusals, Sol, and additions the derivation cannot
+bind) — spine rows and additions through the one derivation. The review queue is
 `data/membership/binding-review.tsv` with its dispositions beside it, 53
 rows. The swap itself was 63,672 mints,
 zero retirements, zero reinstatements; deriving the binding then retired
@@ -363,7 +363,7 @@ because it snapshots a build that no longer exists; the primaries-derived
 membership is a pure function of committed inputs, so it can be, and that
 is what replaces the byte guard with a regenerate-and-diff. The swap emits a
 committed **membership manifest** (`data/membership/membership-manifest.tsv`,
-376,932 rows = 313,257 spine less the one folded + 63,676 admitted) — one
+376,909 rows = 313,257 spine less the one folded + 63,653 admitted) — one
 row per admitted record: admitting designations, route, source_id and its
 provenance class — regenerated in CI and diffed like
 `classic_id_overlay.tsv`. Those four counts are `rows` / `spineRows` /
@@ -479,7 +479,7 @@ is held by the gates that remain:
 
 **Expected movement, stated in advance.** Records: **zero** drops at every
 step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s residual is zero, so every row keeps an attested key; `rows`
-(376,932) and `bindingByClass` hold across the epic except as this
+(376,909) and `bindingByClass` hold across the epic except as this
 paragraph enumerates. `17.6` moved none of them, as predicted. Labels: `17.2`
 moves at most the 136 cells above, each
 re-attested by the positional witness, corrected with evidence, or on a

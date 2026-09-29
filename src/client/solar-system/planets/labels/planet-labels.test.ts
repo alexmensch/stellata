@@ -44,7 +44,7 @@ describe('createPlanetLabels — sentinel-init', () => {
     withDocument(group, () => {
       const stellata = {
         on: () => () => {},
-        focus: { getFocusedPlanetSystem: () => null },
+        focus: { getFocusedPlanetSystem: () => ({ status: 'absent' }) },
       } as unknown as Stellata;
       createPlanetLabels(stellata);
     });
@@ -69,7 +69,7 @@ describe('createPlanetLabels — the OBSERVE anchor body', () => {
           if (ev === 'frame') onFrame = fn;
           return () => {};
         },
-        focus: { getFocusedPlanetSystem: () => ps },
+        focus: { getFocusedPlanetSystem: () => ({ status: 'ready', value: ps }) },
         observe: {
           observeAnchorOf: (kind: string) => (kind === 'planet' ? observeAnchorFlat : null),
         },

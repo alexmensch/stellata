@@ -2,6 +2,7 @@
 // behind the import boundary in ../../webgpu/extinction/.
 
 import type * as THREE from 'three';
+import type { CameraPose } from '../../scene/scene-layer';
 import type { AvParityReport } from './av-parity-pure';
 
 /** Uniform value-objects shared by reference with the star pipeline's
@@ -14,12 +15,6 @@ export interface ExtinctionPrepassUniforms {
   uDustLogRatio: { value: number };
   uDustAvPerDensityPc: { value: number };
   uAvPrepassEnabled: { value: number };
-}
-
-/** see ../../webgpu/extinction/refill/README.md#only-what-is-in-frame */
-export interface ExtinctionView {
-  camera: THREE.Camera;
-  worldOffset: Readonly<THREE.Vector3>;
 }
 
 export interface ExtinctionPrepassSeam {
@@ -35,13 +30,13 @@ export interface ExtinctionPrepassSeam {
   setEnabled(on: boolean): void;
   /** Whether the star vertex stage is consuming the cache this frame. */
   isActive(): boolean;
-  /** Per-frame hook, taking the camera's absolute (heliocentric ICRS)
-   *  position before the main render. Refills when dirty or the camera moved
-   *  beyond RECOMPUTE_EPSILON_PC, and when the view turned — a turn is an
+  /** Per-frame hook, before the main render. Refills when dirty, when the
+   *  view's absolute (heliocentric ICRS) camera moved beyond
+   *  RECOMPUTE_EPSILON_PC, and when the view turned — a turn is an
    *  ordinary refill request
    *  (`../../webgpu/extinction/refill/README.md#a-view-change-is-a-refill-request--nothing-more`).
    * Free only with the camera parked and the view still. */
-  update(absCamX: number, absCamY: number, absCamZ: number, view?: ExtinctionView): void;
+  update(view: CameraPose): void;
   /** Raw physical A_V for one star, out of the buffer the star vertex
    *  stage fetches. Null when the cache is inert, and until
    *  `warmAvReadback` has landed the table
@@ -49,7 +44,7 @@ export interface ExtinctionPrepassSeam {
   readAvMag(idx: number): number | null;
   /** A pick is imminent, so stage the whole A_V table onto the CPU before
    *  anything asks for it. One mapped copy of the buffer, at most one per
-   *  recompute and none while the camera is under way, and the pointer
+   *  dispatch and none while a refill is in flight, and the pointer
    *  dwell covers its latency — which is what lets `readAvMag` answer the
    *  first pick exactly rather than a jiggle later. */
   warmAvReadback(): void;

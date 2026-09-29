@@ -25,6 +25,17 @@ import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
 import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
+
+const planetSystemLoad = vi.hoisted(() => ({ fails: false }));
+vi.mock('../../solar-system/planet-system', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../solar-system/planet-system')>();
+  return {
+    ...actual,
+    getPlanetSystem: (solIndex: number, starIdx: number | null) => (planetSystemLoad.fails
+      ? Promise.reject(new Error('planet system fetch failed'))
+      : actual.getPlanetSystem(solIndex, starIdx)),
+  };
+});
 import { PROBE_MARKER_PX, ProbeField } from '../../solar-system/probes/probe-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
 import {
@@ -112,8 +123,13 @@ function makeCatalog(opts: {
 // FrameAnchor stub — mirrors the production behaviour: shifts a
 // per-instance worldOffset, lets star-local positions roll through
 // (catalog.positions - worldOffset).
+interface OriginStub {
+  worldOffset: THREE.Vector3;
+  recenterTo: (newOrigin: THREE.Vector3) => THREE.Vector3 | null;
+}
 interface FrameStub {
   anchor: FrameAnchor;
+  origin: OriginStub;
   worldOffset: THREE.Vector3;
   catalog: Catalog;
   recenterCalls: THREE.Vector3[];
@@ -138,8 +154,9 @@ function makeFrameAnchor(
     if (pert.fn(idx, scratch)) out.add(scratch);
     return out;
   };
-  const anchor: FrameAnchor = {
-    recenterOrigin: (newOrigin) => {
+  const origin: OriginStub = {
+    worldOffset,
+    recenterTo: (newOrigin) => {
       const dx = newOrigin.x - worldOffset.x;
       const dy = newOrigin.y - worldOffset.y;
       const dz = newOrigin.z - worldOffset.z;
@@ -148,11 +165,18 @@ function makeFrameAnchor(
       recenterCalls.push(new THREE.Vector3(dx, dy, dz));
       return new THREE.Vector3(dx, dy, dz);
     },
-    getWorldOffset: () => worldOffset,
-    starLocalPosition: (idx) => liveInto(idx, new THREE.Vector3()),
-    starLocalPositionInto: (idx, out) => liveInto(idx, out),
   };
-  return { anchor, worldOffset, catalog, recenterCalls };
+  const anchor: FrameAnchor = {
+    origin,
+    stars: {
+      localPositionInto: (idx, out) => liveInto(idx, out),
+      absolutePositionInto: (idx, out) => {
+        const p = catalog.positions;
+        return out.set(p[idx * 3], p[idx * 3 + 1], p[idx * 3 + 2]);
+      },
+    },
+  };
+  return { anchor, origin, worldOffset, catalog, recenterCalls };
 }
 
 interface Harness {
@@ -232,7 +256,7 @@ function makeHarness(opts: {
       },
       localPositionInto: (idx, out) => {
         if (idx < 0 || idx >= catalog.count) return false;
-        frame.anchor.starLocalPositionInto(idx, out);
+        frame.anchor.stars.localPositionInto(idx, out);
         return true;
       },
       focusParkDistance: (idx) => focus.parkDistForStar(idx),
@@ -327,11 +351,11 @@ function makeHarness(opts: {
     uFovYRad: { value: (60 * Math.PI) / 180 },
   });
 
-  // Production recenterOrigin fans out to every scene layer's recenter
+  // Production recenterTo fans out to every scene layer's recenter
   // hook (the body field included); mirror that so a planet-focus
   // recentre updates hostLocalPos before the target snap reads it.
-  const innerRecenter = frame.anchor.recenterOrigin;
-  frame.anchor.recenterOrigin = (newOrigin) => {
+  const innerRecenter = frame.origin.recenterTo;
+  frame.origin.recenterTo = (newOrigin) => {
     planetField.recenter(newOrigin);
     return innerRecenter(newOrigin);
   };
@@ -387,7 +411,7 @@ describe('FocusController — initial state', () => {
     const h = makeHarness();
     expect(h.focus.getFocusedStar()).toBeNull();
     expect(h.focus.getFocusedTarget()).toBeNull();
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
     expect(h.focus.isFocusLerpActive()).toBe(false);
   });
 
@@ -409,6 +433,54 @@ describe('FocusController.setFocus — star focus FSM', () => {
     // Emitted events end with 'focus' + 'state'.
     expect(h.busEvents.map((e) => e.name)).toEqual(['focus', 'state']);
     expect(h.busEvents[0].payload).toEqual({ kind: 'star', idx: 1 });
+  });
+
+  describe('the focused planet system', () => {
+    const planetSystemEvents = (h: ReturnType<typeof makeHarness>) =>
+      h.busEvents.filter((e) => e.name === 'planetSystem');
+
+    it('is pending between a host focus and its load, not absent', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(1);
+      h.focus.setFocus(0);
+      expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'pending' });
+      await Promise.resolve();
+      expect(h.focus.getFocusedPlanetSystem()).toMatchObject({ status: 'ready', value: { hostStarIdx: 0 } });
+    });
+
+    it('does not reload or re-emit when the host is unchanged', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(0);
+      await Promise.resolve();
+      const before = planetSystemEvents(h).length;
+      h.focus.setFocus(0);
+      expect(h.focus.getFocusedPlanetSystem().status).toBe('ready');
+      await Promise.resolve();
+      expect(planetSystemEvents(h).length).toBe(before);
+    });
+
+    it('settles absent when the load fails, rather than pending forever', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(1);
+      planetSystemLoad.fails = true;
+      try {
+        h.focus.setFocus(0);
+        await Promise.resolve();
+      } finally {
+        planetSystemLoad.fails = false;
+      }
+      expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
+      expect(planetSystemEvents(h)).toEqual([]);
+    });
+
+    it('drops a load still in flight at dispose', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(1);
+      h.focus.setFocus(0);
+      h.focus.dispose();
+      await Promise.resolve();
+      expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
+    });
   });
 
   it('setFocus(null) does NOT recentre worldOffset)', () => {
@@ -555,24 +627,24 @@ describe('FocusController.focusStar — focus-park lerp', () => {
   });
 });
 
-describe('FocusController.isPinEngaged', () => {
+describe('FocusController.pinnedStar', () => {
   it('engages when focused, navigate, target ≈ origin, no other animation', () => {
     const h = makeHarness();
     h.focus.setFocus(1);
     h.controls.target.set(0, 0, 0);
-    expect(h.focus.isPinEngaged()).toBe(true);
+    expect(h.focus.pinnedStar()).toBe(1);
   });
 
   it('disengages when no star is focused', () => {
     const h = makeHarness();
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('disengages when target is past the threshold', () => {
     const h = makeHarness();
     h.focus.setFocus(1);
     h.controls.target.set(1e-3, 0, 0); // 1e-6 pc² > 1e-12 threshold
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('disengages during warp until recenteredToDest', () => {
@@ -580,9 +652,9 @@ describe('FocusController.isPinEngaged', () => {
     h.focus.setFocus(1);
     h.controls.target.set(0, 0, 0);
     h.warp.isActive.mockReturnValue(true);
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
     h.warp.isRecenteredToDest.mockReturnValue(true);
-    expect(h.focus.isPinEngaged()).toBe(true);
+    expect(h.focus.pinnedStar()).toBe(1);
   });
 
   it('disengages during aim slerp', () => {
@@ -590,7 +662,7 @@ describe('FocusController.isPinEngaged', () => {
     h.focus.setFocus(1);
     h.controls.target.set(0, 0, 0);
     h.aim.isActive.mockReturnValue(true);
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('getPinEngageThresholdSq returns the constant', () => {
@@ -609,7 +681,7 @@ describe('FocusController — live focal position (binary members)', () => {
     };
     // Seed the pre-focus pose (focusStar's contract seeds target too).
     h.camera.position.set(10, 0, 0.5);
-    h.controls.target.copy(h.frame.anchor.starLocalPosition(1));
+    h.controls.target.copy(h.frame.anchor.stars.localPositionInto(1, new THREE.Vector3()));
     const eyeBefore = h.camera.position.clone().sub(h.controls.target);
 
     h.focus.setFocus(1);
@@ -630,7 +702,7 @@ describe('FocusController — live focal position (binary members)', () => {
     expect(h.controls.target.toArray()).toEqual([0, 0, 0]);
   });
 
-  it('isPinEngaged engages at a non-origin target that rides the perturbation', () => {
+  it('pinnedStar engages at a non-origin target that rides the perturbation', () => {
     const h = makeHarness();
     // Perturbation well above the pin threshold (5e-5 pc ≫ 1e-6 pc): the
     // old target.lengthSq() check would read this as disengaged.
@@ -641,10 +713,10 @@ describe('FocusController — live focal position (binary members)', () => {
     };
     h.focus.setFocus(1);
     expect(h.controls.target.x).toBeCloseTo(P.x, 9);
-    expect(h.focus.isPinEngaged()).toBe(true);
+    expect(h.focus.pinnedStar()).toBe(1);
     // Pan the target off the star past the engage threshold → disengage.
     h.controls.target.x += 1e-3;
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('translateFocusFrame rides an in-flight focus-park lerp landing; idle is a no-op', () => {
@@ -775,23 +847,6 @@ describe('FocusController.makeFocusTarget — star round-trip', () => {
     const r = target.physicalRadius();
     expect(r).not.toBeNull();
     expect(r!).toBeGreaterThan(0);
-  });
-});
-
-describe('FocusController — frame anchor delegation', () => {
-  it('starLocalPosition reflects current worldOffset', () => {
-    const h = makeHarness();
-    h.focus.setFocus(1); // worldOffset = (10,0,0)
-    const local0 = h.focus.starLocalPosition(0); // star 0 is at (0,0,0) abs
-    expect(local0.x).toBeCloseTo(-10, 6);
-    const local1 = h.focus.starLocalPosition(1);
-    expect(local1.x).toBeCloseTo(0, 6);
-  });
-
-  it('recenterOrigin delegates to the FrameAnchor', () => {
-    const h = makeHarness();
-    h.focus.recenterOrigin(new THREE.Vector3(5, 0, 0));
-    expect(h.frame.worldOffset.x).toBe(5);
   });
 });
 
@@ -992,7 +1047,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     // The HOST's planet system attaches (async resolve), keeping orbit
     // rings / labels alive exactly as the host's own focus would.
     await Promise.resolve();
-    expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
+    expect(h.focus.getFocusedPlanetSystem()).toMatchObject({ status: 'ready', value: { hostStarIdx: 0 } });
   });
 
   it('planet flyTo preserves the camera absolute pose at lerp start (no teleport)', () => {
@@ -1024,7 +1079,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     // controls don't shove the camera outward from the parked pose.
     expect(h.controls.minDistance).toBeLessThanOrEqual(eye);
     expect(h.controls.minDistance).toBeLessThanOrEqual(GLOBAL_MIN_DIST_PC);
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
     const focusEvent = h.busEvents.find((e) => e.name === 'focus');
     expect(focusEvent).toBeDefined();
     expect(focusEvent!.payload).toBeNull();
@@ -1051,7 +1106,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     h.focus.flyTo({ kind: 'cloud', idx: 0 }, { animate: false });
     expect(h.focus.getFocusedTarget()).toEqual({ kind: 'cloud', idx: 0 });
     expect(h.controls.minDistance).toBeLessThanOrEqual(GLOBAL_MIN_DIST_PC);
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
   });
 
   it('currentFocusTarget round-trips the planet kind geometry', () => {
@@ -1168,7 +1223,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     expect(h.controls.minDistance)
       .toBeCloseTo(minOrbitDistForPlanet(RADIUS_PC, fovMinorRad(h.camera)), 15);
     await Promise.resolve();
-    expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
+    expect(h.focus.getFocusedPlanetSystem()).toMatchObject({ status: 'ready', value: { hostStarIdx: 0 } });
   });
 
   it('applyFocus on a soft kind detaches the planet system a hard focus attached', async () => {
@@ -1176,13 +1231,13 @@ describe('FocusController — planet focus (kind "planet")', () => {
     const idx = attachTestPlanet(h);
     h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
     await Promise.resolve();
-    expect(h.focus.getFocusedPlanetSystem()).not.toBeNull();
+    expect(h.focus.getFocusedPlanetSystem().status).toBe('ready');
 
     h.focus.makeFocusTarget({ kind: 'cloud', idx: 0 })!.applyFocus();
     expect(h.focus.getFocusedTarget()).toEqual({ kind: 'cloud', idx: 0 });
     // planetSystemHost is null for a soft kind, so the shared leg detaches
     // where the retired factories relied on a hard→soft branch.
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
     expect(h.controls.minDistance).toBe(GLOBAL_MIN_DIST_PC);
   });
 

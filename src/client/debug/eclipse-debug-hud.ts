@@ -23,7 +23,7 @@ export function buildEclipseSection(stellata: Stellata): DebugSection {
   // band renders identically either side of itself and a bare ratio
   // leaves you guessing which way to move.
   const route = (label: string, idx: number, dim: number) => {
-    const r = stellata.starPassRoutingFor(idx, dim);
+    const r = stellata.starPipeline.passRoutingFor(idx, dim);
     const back = dim < 1;
     const head = `${back ? '>' : ' '}${label}`
       + ` ${r.routed === STAR_PASS_DISC ? 'DISC' : 'GLOW'} r=${r.physRatio.toFixed(3)}`;

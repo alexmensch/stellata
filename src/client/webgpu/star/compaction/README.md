@@ -164,7 +164,7 @@ parked camera does not.
 
 **The caller owes it a rendered frame.** A settled camera has parked the
 render gate, and an armed read waits on a dispatch that will never come, so
-`Stellata.readSurvivorCounts` invalidates the gate before awaiting. Dispose
+`StarPipeline.readSurvivorCounts` invalidates the gate before awaiting. Dispose
 releases a waiter rather than leaving it pending for the boot's life. Take
 the number with the camera settled all the same: the one frame the
 invalidation buys draws the settled view.

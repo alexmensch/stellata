@@ -14,11 +14,13 @@ import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
 import type { OccluderSet } from '../../occlusion/occluder-set';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
+import type { Late } from '../../util/late/late';
 import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { isResolvedDiscStar } from './star-local-cluster-pure';
 
 export interface StarLocalClusterDeps {
   catalog: Catalog;
+  binaries: Late<BinariesData>;
   localPositions: () => Float32Array;
   /** CPU mirror of the shader's per-star size terms (star-physics
    *  `renderedSizeComponents`) — the shell owns the uniform / filter
@@ -38,10 +40,10 @@ export interface StarLocalClusterDeps {
    *  `livePulsationRadiusFactor`) — what the disc is drawn at, not the
    *  cycle's peak. The shell owns the clock / suppress references. */
   livePulsationRadiusFactor: (idx: number) => number;
-  /** The observe-anchor star (`uHideFocusIdx`), or -1. Drawn nowhere, so
-   *  it must not take a label off screen — the planet cluster skips its
-   *  own anchor body for the same reason. */
-  hiddenStarIdx: () => number;
+  /** The observe-anchor star, or null. Drawn nowhere, so it must not take a
+   *  label off screen — the planet cluster skips its own anchor body for the
+   *  same reason. */
+  hiddenStarIdx: () => number | null;
 }
 
 export interface StarLocalClusterFrame {
@@ -74,7 +76,6 @@ export class StarLocalCluster implements LocalCluster {
   private readonly deps: StarLocalClusterDeps;
 
   private hostMemberIdx: number | null = null;
-  private binaries: BinariesData | null = null;
   private chainStarsCache: number[] = [];
   private chainFocalIdx: number | null = null;
   private chainBinaries: BinariesData | null = null;
@@ -107,11 +108,6 @@ export class StarLocalCluster implements LocalCluster {
    *  the layer registry); consumed by `update` below. */
   setHostMember(idx: number | null): void {
     this.hostMemberIdx = idx;
-  }
-
-  setBinaries(binaries: BinariesData | null): void {
-    this.binaries = binaries;
-    this.chainBinaries = null;
   }
 
   /** Runs in the scene-layer registry AFTER the binary orbit walk +
@@ -215,14 +211,16 @@ export class StarLocalCluster implements LocalCluster {
   }
 
   private chainStars(focalIdx: number | null): number[] {
-    if (focalIdx !== this.chainFocalIdx || this.binaries !== this.chainBinaries) {
+    const state = this.deps.binaries.state();
+    const binaries = state.status === 'ready' ? state.value : null;
+    if (focalIdx !== this.chainFocalIdx || binaries !== this.chainBinaries) {
       this.chainFocalIdx = focalIdx;
-      this.chainBinaries = this.binaries;
+      this.chainBinaries = binaries;
       this.chainStarsCache.length = 0;
-      if (this.binaries !== null) {
+      if (binaries !== null) {
         const seen = new Set<number>();
-        for (const ri of keplerChainRelationIdxs(this.binaries, focalIdx)) {
-          const r = this.binaries.relations[ri];
+        for (const ri of keplerChainRelationIdxs(binaries, focalIdx)) {
+          const r = binaries.relations[ri];
           for (const idx of [r.primaryIdx, r.secondaryIdx]) {
             if (!seen.has(idx)) { seen.add(idx); this.chainStarsCache.push(idx); }
           }

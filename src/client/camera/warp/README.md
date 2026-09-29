@@ -17,9 +17,9 @@ The warp consumes focusable objects through the `FocusTarget` contract
   controller alongside Picker / AimController and delegates the
   animate-loop tick when `warp.isActive()` returns true. Cross-
   controller coupling (focus state, the FocusTarget builder,
-  floating-origin recentre, vector-slot clear) lives behind the
-  `FocusOps` interface implemented by `FocusController` (in
-  `../focus/`).
+  vector-slot clear) lives behind the `FocusOps` interface implemented
+  by `FocusController` (in `../focus/`); the two recentres call the
+  `FloatingOrigin` service directly (`../../frame/README.md`).
 - `warp-pure.ts` (+ test) — pure phase math (slerp, ease, the
   recentre predicate). Floating-origin migration of in-flight
   `WarpState` waypoints lives here as `shiftWarpWaypoints`; the
@@ -70,7 +70,7 @@ Camera orientation during the reorient depends on launch mode:
   around it. Roll comes along for free: `lookAt` reads `camera.up`, the
   navigate roll authority ([Roll authority](../controls/input/README.md#roll-authority)),
   so a swing that crosses the sky carries the roll the camera launched
-  with rather than acquiring one from the new view axis. The animate loop
+  with rather than acquiring one from the new view axis. The `CameraStep` dispatch
   transports `camera.up` across each of those frames — the controls are
   disabled, so nothing else would, and a reorient whose travel direction sits
   near screen-up would otherwise close the angle between `up` and the
@@ -225,7 +225,7 @@ switch from A to B at arrival.
 ## OBSERVE mode and the warp state machine
 
 Warp launched from OBSERVE leaves `cameraMode` as `'observe'` for the
-duration (the animate loop branches on `warpState` first, so the
+duration (the `CameraStep` dispatch branches on the warp first, so the
 value is purely cosmetic). Two gotchas worth noting up front:
 
 1. **`cameraMode` stays `'observe'` throughout an observe→observe
@@ -238,7 +238,7 @@ value is purely cosmetic). Two gotchas worth noting up front:
 2. **`finishWarp` re-anchors via `finishObserveAnchorSwap`**, not
    `setFocus`, when `returnToObserve` is true. `setFocus` would see
    `cameraMode === 'observe'` and run its observe-cleanup branch
-   (`uHideFocusIdx = -1`, emit `'cameraMode'`), recreating the
+   (unhide the focal body, emit `'cameraMode'`), recreating the
    flicker. `finishObserveAnchorSwap` recentres the floating origin,
    updates `focusedStar`, repoints `uHideFocusIdx` to the new
    anchor, and snaps the camera to `(0, 0, 0)` local without

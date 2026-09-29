@@ -29,20 +29,23 @@ const PARKED_STATE: ParkState = { phase: 'parked', framesSinceProbe: 0 };
 
 const PROBING_STATE: ParkState = { phase: 'probing' };
 
+/** The cut a live landing measured, and which term set it. */
+export interface LandedCut {
+  measuredDm: number;
+  regime: AdaptationRegime;
+}
+
 /** One rendered frame's evidence, as the park machine reads it. The caller
  *  owns the struct and refills it every rendered frame, so `parkTick` may
  *  read it but must never retain it — the state it returns has to stand on
  *  its own. */
 export interface ParkLanding {
   /** A LIVE landing — a reduction of a frame whose statistic writes were
-   *  open. The stale readbacks the parked fence keeps issuing never surface
-   *  as one. */
-  fresh: boolean;
-  /** This frame's measurement, and the slew-limited cut actually applied. */
-  measuredDm: number;
+   *  open — or null on a frame without one. The stale readbacks the parked
+   *  fence keeps issuing never surface as one. */
+  landed: LandedCut | null;
+  /** The slew-limited cut actually applied. */
   appliedDm: number;
-  /** Which term set the measured cut. */
-  regime: AdaptationRegime;
   /** The reduction has no readback in flight, so a probe opened this frame
    *  draws on this frame. */
   probeReady: boolean;
@@ -74,9 +77,9 @@ function noCut(dm: number): boolean {
  * cut" cannot express it. Equivalent for the no-cut case, where `slewDm`
  * has already collapsed the applied cut to exactly 0.
  */
-function parkable(landing: ParkLanding): boolean {
-  if (Math.abs(landing.measuredDm - landing.appliedDm) > ADAPT_SLEW_SETTLE_MAG) return false;
-  return noCut(landing.measuredDm) || landing.regime === 'floor';
+function parkable(cut: LandedCut, appliedDm: number): boolean {
+  if (Math.abs(cut.measuredDm - appliedDm) > ADAPT_SLEW_SETTLE_MAG) return false;
+  return noCut(cut.measuredDm) || cut.regime === 'floor';
 }
 
 /**
@@ -87,8 +90,8 @@ function parkable(landing: ParkLanding): boolean {
  * including a request still in flight when the park engaged.
  */
 export function parkTick(state: ParkState, landing: ParkLanding): ParkState {
-  if (landing.fresh) {
-    if (!parkable(landing)) return INITIAL_PARK_STATE;
+  if (landing.landed !== null) {
+    if (!parkable(landing.landed, landing.appliedDm)) return INITIAL_PARK_STATE;
     if (state.phase === 'active') {
       const settledLandings = state.settledLandings + 1;
       if (settledLandings < ADAPT_PARK_SETTLED_LANDINGS) {

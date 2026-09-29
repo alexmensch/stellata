@@ -47,7 +47,7 @@ in both navigate and observe modes.
   the walk can skip a candidate that encloses the cursor — in chart mode that means
   bounding the magnitude-mapped ink disc as well as the realistic
   footprint, since either can be the larger
-  (`Stellata.pickPrefilterSizePxFor`).
+  (`StarPipeline.pickPrefilterSizePx`, `../../star-pipeline/`).
   It owns the star pick
   (`pickStar` / `pickStarHit` — the star module's hover leg calls back
   into it, so the engine-owned scan stays here); every other kind picks
@@ -91,8 +91,8 @@ in both navigate and observe modes.
   where `sizeMax` clears the floor.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
   + observe quaternion-in-place), the point (`aimAt`) and direction
-  (`aimAlong`) entry points, shared `aimDurationMs` ramp, and
-  `claimCameraForAim` — the busy-gate claim every shell aim takes.
+  (`aimAlong`) entry points and the shared `aimDurationMs` ramp. The
+  busy-gate claim every shell aim takes is `../camera-claim.ts`.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
   reducers and their scorers ([Ranking a pick](#ranking-a-pick)). Owns `PICK_THRESHOLD_PX`,
@@ -108,8 +108,7 @@ in both navigate and observe modes.
   magnitude), `activePulsationAmp` (the shared
   `iSuppressPulsation` mirror both the disc-size and pick paths read —
   two mirrors of one shader gate is how they came to disagree),
-  `renderedDiscPxAtPeak`, `getChartDiscParams` +
-  canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
+  `renderedDiscPxAtPeak`, canonical `ZOOM_FLOOR_FRACTION`, `VAR_TROUGH_FLOOR_FRACTION`. The
   planet siblings `minOrbitDistForPlanet` / `parkDistForPlanet`
   (+ `PLANET_PARK_FILL_FRACTION`) live here too — same angular
   solves, keyed on the body radius directly. Everything here is a
@@ -131,11 +130,12 @@ in both navigate and observe modes.
   `number` and read alike at a call site, which is how the occluder set
   came to mask a Mira 40 % wide of its own disc.
 
-### star-geometry vs star-physics vs stellata.ts
+### star-geometry vs star-physics vs StarPipeline
 
 - `star-geometry.ts` — pure formulae (no catalog, no uniforms).
 - `star-physics.ts` — catalog-indexed wrappers around those formulae.
-- `stellata.ts` — wires per-frame uniforms and dispatches.
+- `../../star-pipeline/star-pipeline.ts` — binds them to the live
+  uniforms, filter and suppress mask.
 
 ## Ranking a pick
 
@@ -358,10 +358,9 @@ owns the user-facing definition.
 
 Composition split — the controller knows only the mode it runs in and its
 own slot state. The cross-controller busy gates (warp, aim, observe
-transition) and the focus-lerp cancels are `claimCameraForAim`, a free
-function taking them as `AimClaimGates` closures. The shell builds that
-object once (`cameraClaim`) and hands the same one to `InputController`,
-whose deps extend the type; the shell's aims (`aimAt`, `aimAlong`,
+transition) and the focus-lerp cancels are one `CameraClaim`
+(`../camera-claim.ts`) the shell builds once over them (`cameraClaim`) and
+hands to `InputController` and `WarpController` too; the shell's aims (`aimAt`, `aimAlong`,
 `aimAtConstellation`, `invertView`) delegate to `this.aim` only on a
 granted claim. A refused claim cancels
 nothing ([The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence)).

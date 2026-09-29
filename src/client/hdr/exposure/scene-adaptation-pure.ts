@@ -76,12 +76,6 @@ export function slewDm(applied: number, measured: number, blend: number): number
  *  else in frame that owns less than half the masked area. */
 export type FrameStatistic = TileReduction;
 
-export const EMPTY_FRAME_STATISTIC: FrameStatistic = {
-  meanL: 0,
-  coverage: 0,
-  discL: 0,
-};
-
 /** The two levels the branches are measured against. Ships at the
  *  constants above; the debug panel overrides `lAdapt` / `lTarget` live,
  *  and `whitePoint` tracks the operator's own `DR_MAG` knob — the floor is
@@ -155,6 +149,7 @@ export type AdaptationRegime = 'open' | 'eye' | 'floor' | 'surface' | 'handover'
 /** Every term behind one frame's cut, so a readout never has to recompute
  *  a branch and risk disagreeing with the frame it describes. */
 export interface AdaptationBranches {
+  meanL: number;
   eye: number;
   pin: number;
   floor: number;
@@ -176,6 +171,7 @@ export interface AdaptationBranches {
 export function adaptationBranches(
   stat: FrameStatistic,
   tuning = DEFAULT_ADAPTATION_TUNING,
+  out: AdaptationBranches = newAdaptationBranches(),
 ): AdaptationBranches {
   const eye = eyeAdaptationDm(stat.meanL, tuning.lAdapt);
   const pin = surfacePinDm(stat, tuning.lTarget);
@@ -183,16 +179,21 @@ export function adaptationBranches(
   const weight = surfacePinWeight(stat.coverage);
   const perception = Math.max(eye, floor);
   const dm = perception + (pin - perception) * weight;
-  return {
-    eye,
-    pin,
-    floor,
-    discL: stat.discL,
-    coverage: stat.coverage,
-    weight,
-    dm,
-    regime: adaptationRegime(dm, eye, weight),
-  };
+  out.meanL = stat.meanL;
+  out.eye = eye;
+  out.pin = pin;
+  out.floor = floor;
+  out.discL = stat.discL;
+  out.coverage = stat.coverage;
+  out.weight = weight;
+  out.dm = dm;
+  out.regime = adaptationRegime(dm, eye, weight);
+  return out;
+}
+
+/** A write target for `adaptationBranches`; every field is overwritten. */
+export function newAdaptationBranches(): AdaptationBranches {
+  return { meanL: 0, eye: 0, pin: 0, floor: 0, discL: 0, coverage: 0, weight: 0, dm: 0, regime: 'open' };
 }
 
 function adaptationRegime(dm: number, eye: number, weight: number): AdaptationRegime {

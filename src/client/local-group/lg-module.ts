@@ -32,6 +32,7 @@ import {
   maxSemiAxisPc,
   type LgCatalog,
 } from './local-group-loader';
+import { arrayDomain } from '../util/sid-resolver';
 
 /** Spellings of a designation a user might type that the catalog doesn't
  *  carry — it emits one conventional form per designation ("M31"), and
@@ -205,7 +206,7 @@ export function createLgKindModule(): LgKindModule {
 
     displayName: (idx) => catalog?.objects[idx]?.name ?? '',
 
-    sids: () => (catalog ? catalog.objects.map((o) => o.sid) : null),
+    sidDomain: () => (catalog ? arrayDomain(catalog.objects.map((o) => o.sid)) : null),
 
     labels: () => {
       if (ctx && layer) disposeLabels = createLocalGroupLabels(ctx, layer);
