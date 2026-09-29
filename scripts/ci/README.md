@@ -26,9 +26,9 @@ is no substitute, as it matches no dotted name like
 refresh suites `skipTest` when pyvo, astropy or requests is missing, so a
 run that tolerated skips could be green while testing almost nothing. The
 job installs `scripts/refresh/requirements-refresh.txt` and
-`scripts/textures/requirements.txt`; locally, run it from the project venv
-that holds them (`.venv/bin/python scripts/ci/python_tests.py`) — under a
-bare `python3`, the suites that import numpy fail.
+`scripts/textures/requirements.txt`; locally, `pnpm run test:py` with the
+venv that holds them activated, as for every other `python3` package
+script — without it, the suites that import numpy fail.
 
 ## The catalogue build cache
 
