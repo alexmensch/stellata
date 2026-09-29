@@ -46,6 +46,8 @@ export interface StarModuleRuntime {
   peakDiscSizePx(idx: number): number;
   /** The Picker's star pick, shared by hover and the click FSM. */
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
+  /** The observe-anchor hide (StarPipeline); null unhides. */
+  setHiddenStar(idx: number | null): void;
   /** Orbital elements for the companion lines. Read per format call — the
    *  shell attaches binaries after the card provider is built. */
   binaries: Late<BinariesData>;
@@ -290,8 +292,6 @@ export function createStarKindModule(): StarKindModule {
 
     sidDomain: () => (catalog ? catalogSidDomain(catalog) : null),
 
-    setFocalHidden: (idx) => {
-      if (ctx) ctx.sharedUniforms.uHideFocusIdx.value = idx;
-    },
+    setFocalHidden: (idx) => runtime?.setHiddenStar(idx),
   };
 }

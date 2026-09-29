@@ -131,6 +131,9 @@ perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          armed or not, and the fail-closed paths — no git
                          checkout, unreadable marker age. The protocol and
                          the escape routes are asserted in the deny reason.
+paper-store-link.test.ts Behavioural pins for scripts/hooks/paper-store-link.sh
+                         over a throwaway repo with real linked worktrees;
+                         /scripts/hooks/README.md#how-paper-store-link-works.
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
 readme-size.test.ts      450-line cap per folder README — length is a tax
                          on every future session, so the answer over the

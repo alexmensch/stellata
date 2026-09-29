@@ -334,6 +334,7 @@ export class Stellata {
       renderedSizePx: (idx) => this.starPipeline.renderedSizePx(idx),
       peakDiscSizePx: (idx) => this.starPipeline.peakDiscSizePx(idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
+      setHiddenStar: (idx) => this.starPipeline.setHiddenStar(idx),
       binaries: this.binaries.data,
     });
     // Recentre fan-out, in load-bearing order: star buffer rewrite →
@@ -449,7 +450,6 @@ export class Stellata {
       occluders: this.occluders,
       solIndex: catalog.solIndex,
       getT: () => this.getT(),
-      focusedPlanetSystem: () => this.focus.getFocusedPlanetSystem(),
       observeAnchorPlanet: () => this.observe.observeAnchorOf('planet'),
       onPlanetSystem: (handler) => this.bus.on('planetSystem', handler),
     });
@@ -740,7 +740,8 @@ export class Stellata {
 
   get timeClock(): VirtualClock { return this.clock; }
 
-  /** Unix seconds, re-read per call — snapshot it for a frame-stable value. */
+  /** Unix seconds: held for the whole tick, live outside one
+   *  (solar-system/time/README.md#one-instant-per-frame). */
   getT(): number {
     return this.clock.getT();
   }
@@ -771,7 +772,7 @@ export class Stellata {
   /** Observe parks the camera inside the object. Null unhides every kind. */
   private setFocalBodyHidden(target: Target | null): void {
     for (const kind of KIND_ROSTER) {
-      this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
+      this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : null);
     }
   }
 
