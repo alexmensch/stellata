@@ -212,8 +212,8 @@ All survive on an integrated or mobile GPU without argument.
 
 The pick mirror ([Cold reads](#cold-reads--the-one-behaviour-that-is-not-parity)) is a third heap allocation, the A_V row's
 3.75 MiB again — but only from the first pointer event that asks for it,
-and re-allocated per recompute the pick actually reaches, never per
-recompute.
+and re-allocated only by a warm after a dispatch, never by the dispatch
+itself.
 
 **What does not survive everywhere is the vertex stage's right to read the
 buffer at all.** A texture layout's floor would be
@@ -442,5 +442,5 @@ unmarched until some later request.
 `readAvMag` answers out of a CPU mirror of the buffer, staged by the pointer
 events that precede a pick, because WebGPU has no synchronous readback and a
 copy issued *by* a pick resolves after the verdict it was meant to decide.
-`mirror/README.md` owns it — the staging gate, the two counters, and why a
-refill still cycling warms nothing.
+`mirror/README.md` owns it — the staging gate, the copy's four states, and
+why a refill still cycling warms nothing.

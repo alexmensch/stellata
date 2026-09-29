@@ -38,7 +38,9 @@ latency and the **first** hover already rejects a star behind heavy dust.
 them.** A candidate list is what the pick's own catalogue scan produces,
 one dwell later; the pointer event that has to start the copy knows only
 that *a* pick is coming. Warming what the event knows means warming
-everything — and 1.48 MiB copied once beats racing the scan.
+everything — and one whole-table copy (the A_V row of
+[What it costs, and what it holds](../README.md#what-it-costs-and-what-it-holds))
+beats racing the scan.
 
 **The dispatch is what bounds the cost, not the event rate.** The
 mirror is dropped on every dispatch and re-read at most once per
@@ -51,7 +53,7 @@ a focus lerp or a camera simply turning asks for a refill every frame
 ([A view change is a refill request](../refill/README.md#a-view-change-is-a-refill-request--nothing-more)), so the cursor
 never parks, a dispatch lands every frame, and a copy issued before
 one is superseded before the 280 ms dwell that wanted it can read a byte —
-every such copy is spent and dropped, at 1.48 MiB a frame for as long as the
+every such copy is spent and dropped, a whole table a frame for as long as the
 motion lasts. `warmAvReadback` therefore returns early while the cursor is
 mid-cycle, and the pick reads `null` and errs pickable across that stretch
 either way. **The gate is the cursor, not the recompute**: a dust chunk
@@ -62,8 +64,8 @@ gate on the recompute instead would swallow it — it would also spend 1.48
 MiB a frame on a live pointer, which is why that lever is dwell-only
 ([The extinction rows](../../../debug/frame-cost/passes/README.md#the-extinction-rows)). A
 parked cursor also means the buffer belongs to one completed cycle rather
-than to a half-written one, which is the second thing the mirror needs and
-the camera the old gate watched never said ([Three places](../refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one)).
+than to a half-written one, which is the second thing the mirror needs
+([Three places](../refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one)).
 
 A drag announces nothing either: hover is suppressed for its duration
 anyway, and the camera motion under it would invalidate each copy before
@@ -73,8 +75,8 @@ pick dispatched while the camera is still crossing more than
 pick did before. Hover cannot reach it (it needs a `pointermove` the
 drag latch swallows); a click during a focus lerp can.
 
-Why not the alternatives: reading the buffer on every recompute is
-1.5 MB per read and a warp recomputes every frame, which spends it
+Why not the alternatives: reading the buffer on every recompute is a
+whole-table copy per read and a warp recomputes every frame, which spends it
 exactly where nobody picks; marching on the CPU needs the ~128 MiB voxel
 grid the loader uploads and drops, and would be a second implementation
 of the integral free to drift from the shader's.
@@ -82,11 +84,11 @@ of the integral free to drift from the shader's.
 The copy goes through `getArrayBufferAsync` with a **null target**, which
 creates its staging buffer per call and destroys it after the map. three
 also offers a `ReadbackBuffer` target that holds one across calls; it
-trades 1.48 MiB of VRAM for the renderer's whole life against a create
-and destroy per warm, and with the camera gate above a warm is a
+trades a table's worth of VRAM for the renderer's whole life against a
+create and destroy per warm, and with the cursor gate above a warm is a
 per-settle event rather than a per-frame one. On the integrated and
 mobile floor the parent sizes for ([What it costs, and what it holds](../README.md#what-it-costs-and-what-it-holds)),
-the resident megabyte is the dearer half of that trade.
+the resident buffer is the dearer half of that trade.
 
 ## The copy's four states
 
@@ -101,7 +103,7 @@ state:
 - **`landed`** — the table; `read` answers out of it.
 - **`failed`** — the map was refused. It stays refused until the next
   dispatch, so a device refusing the copy cannot turn a pointer sweep into
-  a 1.48 MiB-per-event drip.
+  a table-per-event drip.
 
 **`invalidate` — every dispatch — resets it to `unstaged`**, and that one
 reset is both halves of the bound: it re-arms staging, and it orphans any
