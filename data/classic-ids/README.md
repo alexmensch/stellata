@@ -186,10 +186,10 @@ counts as a bad binding:
 - **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — 50 rows. Catches
   the similar-brightness sibling that slips the magnitude gate: HD 70492 B's
   source carried HD 70492 · HIP 41098. It keys on a HIP, so it reaches only
-  HIP-bearing rows however far the magnitude arm's evidence widens. A row whose
-  Tycho-2 entry SIMBAD puts on the candidate's own object is that component,
-  and a system-level HIP does not refuse it
-  ([A component designation outranks a system-level HIP](/scripts/catalog/membership/binding/README.md#a-component-designation-outranks-a-system-level-hip-at-the-sibling-gate)).
+  HIP-bearing rows however far the magnitude arm's evidence widens. The
+  membership derivation can rescue a row this gate would leave unbound; the
+  overlay, which weighs each source alone, cannot
+  ([A component designation rescues a row the sibling gate leaves unbound](/scripts/catalog/membership/binding/README.md#a-component-designation-rescues-a-row-the-sibling-gate-leaves-unbound)).
 
 The two counts trade rows as G coverage changes — `reason` is the first gate
 that fired — so their sum, **460**, is the queue's size

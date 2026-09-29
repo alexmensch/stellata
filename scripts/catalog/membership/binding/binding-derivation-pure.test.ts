@@ -177,6 +177,36 @@ describe('deriveBinding', () => {
     expect(d.rejected).toEqual([{ sourceId: 'a', via: ['simbad'], reason: 'mag' }]);
   });
 
+  describe('the component witness', () => {
+    // HIP 60 sits on both letters, so the gate reads a HIP 60 row as the system.
+    const xids = parseSimbadWdsXidsTsv([
+      'wds_id\tcomponent\tgaia_source_id\thip',
+      '00002+0000\tA\t600\t60',
+      '00002+0000\tB\t601\t60',
+    ].join('\n'));
+    const witnessed = bindingEvidence(
+      new Map([['600', 5.0], ['601', 5.2]]), new Map([[60, 5.0]]), xids, NO_PRINTED_V_BELOW_HIP,
+      null, new Map([['6-6-1', '601']]),
+    );
+    const gate = rowGateEvidence({ tyc: '6-6-1', hip: '60', gl: '' }, witnessed, () => null);
+
+    it('rescues a row whose only candidate SIMBAD indexes its own TYC under (53 Aqr B)', () => {
+      const d = deriveBinding(candidates({ simbad: '601' }), gate);
+      expect(d).toMatchObject({ sourceId: '601', rejected: [] });
+    });
+
+    it('never outranks a candidate that passes on its own (HD 17743)', () => {
+      const d = deriveBinding(candidates({ tyc: '601', hip: '600' }), gate);
+      expect(d.sourceId).toBe('600');
+      expect(d.rejected).toEqual([{ sourceId: '601', via: ['tyc'], reason: 'sibling' }]);
+    });
+
+    it('does not rescue on a TYC SIMBAD indexes under another source', () => {
+      const other = rowGateEvidence({ tyc: '7-7-1', hip: '60', gl: '' }, witnessed, () => null);
+      expect(deriveBinding(candidates({ simbad: '601' }), other).sourceId).toBeNull();
+    });
+  });
+
   it('cannot weigh a row with no printed V, and says so', () => {
     const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, () => null);
     expect(gate).toMatchObject({ vMag: null, vVia: null });

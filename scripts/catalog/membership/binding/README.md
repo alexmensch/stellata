@@ -63,16 +63,24 @@ gates refuse 317 candidates on G − V and 119 on sibling-letter attribution
 `derivedUngateable` (7) is the rows that reached a candidate with no printed V
 under any tier, so nothing could be weighed against it.
 
-**A component designation outranks a system-level HIP at the sibling gate.**
+**A component designation rescues a row the sibling gate leaves unbound.**
 Where SIMBAD puts the row's HIP on both components (or on neither), the gate
-reads the row as the system and refuses any source but the primary's. That
-reading yields when SIMBAD's object for the candidate carries the row's own
-TYC (`BindingEvidence.simbadTycOf`): Tycho-2 resolved the pair, so the row is
-that component carrying the pair's shared HIP. 53 Aqr B (HD 212697 · TYC
-6385-683-1 on HIP 110778) and μ Dra B (HD 154905 · GJ 9584B on HIP 83608) are
-the shape — AT-HYG merged B's cells onto the system's HIP, and the refusal left
-B's own source to come back through the magnitude term as an unnamed twin. A
-HIP SIMBAD gives to the other component alone still refuses.
+reads the row as the system and refuses any source but the primary's. When
+that leaves the row with **no** passing candidate, a refused candidate SIMBAD
+indexes the row's own TYC under — and no other source under it
+(`BindingEvidence.simbadSourceOfTyc`, the SIMBAD route's two-claimants rule) —
+binds after all: Tycho-2 resolved the pair, so the row is that component
+carrying the pair's shared HIP. 53 Aqr B (HD 212697 · TYC 6385-683-1 on
+HIP 110778) and μ Dra B (HD 154905 · GJ 9584B on HIP 83608) are the shape —
+AT-HYG merged B's cells onto the system's HIP, and the refusal left B's own
+source to come back through the magnitude term as an unnamed twin.
+
+**It never outranks a candidate that passes on its own.** A TYC alone is not a
+component attribution: SIMBAD files HR 846's TYC 3700-1745-1 under HD 17743 C
+while its HIP, HD and HR name the unresolved AB, and letting the TYC win
+re-bound 32 such rows onto a companion. A HIP SIMBAD gives to the other
+component alone still refuses. The overlay gate weighs each source alone, with
+no rival to defer to, so it applies no rescue.
 
 **The losers are weighed too, not only the candidates ahead of the winner.**
 `passingRunnersUp` reads the rejections to decide whether a row's sources

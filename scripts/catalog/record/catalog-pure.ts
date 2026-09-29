@@ -1646,7 +1646,7 @@ export function resolveGaiaSourceId(
   vMag: number | null = null,
   gMagOf: ((sourceId: string) => number | null) | null = null,
   wdsXids: SimbadWdsXidIndex | null = null,
-  rowNamesSource: ((sourceId: string) => boolean) | null = null,
+  rowNamesSource = false,
 ): {
   gaiaSourceId: string | null;
   backfilled: boolean;
@@ -1663,7 +1663,7 @@ export function resolveGaiaSourceId(
         return false;
       }
     }
-    if (isSiblingLetterAttribution(id, hip, wdsXids, rowNamesSource?.(id) ?? false)) {
+    if (isSiblingLetterAttribution(id, hip, wdsXids, rowNamesSource)) {
       siblingRejected = true;
       return false;
     }

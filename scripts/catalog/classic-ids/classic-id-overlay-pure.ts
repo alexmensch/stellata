@@ -66,9 +66,9 @@ export interface BindingEvidence {
    *  (`../photometry/README.md#the-v-cascade`). */
   printedV: PrintedVLookups;
   wdsXids: SimbadWdsXidIndex | null;
-  /** The TYC SIMBAD's object for a source carries — the witness that a row's
-   *  own Tycho-2 entry names that source (`isSiblingLetterAttribution`). */
-  simbadTycOf: (sourceId: string) => string | null;
+  /** The one source SIMBAD indexes a TYC under, null where none or two do —
+   *  the derivation's component witness (`../membership/binding/README.md`). */
+  simbadSourceOfTyc: (tyc: string) => string | null;
 }
 
 export function bindingEvidence(
@@ -77,10 +77,10 @@ export function bindingEvidence(
   wdsXids: SimbadWdsXidIndex | null,
   printedV: PrintedVLookups,
   pulledSourceIds: ReadonlySet<string> | ReadonlyMap<string, unknown> | null = null,
-  simbadTycBySource: ReadonlyMap<string, string> = new Map(),
+  simbadSourceByTyc: ReadonlyMap<string, string | null> = new Map(),
 ): BindingEvidence {
   return {
-    simbadTycOf: (sourceId) => simbadTycBySource.get(sourceId) ?? null,
+    simbadSourceOfTyc: (tyc) => simbadSourceByTyc.get(tyc) ?? null,
     gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
     hasPulledRow: (sourceId) => (pulledSourceIds ?? sourceGMag).has(sourceId),
     vMagOfHip: (hip) => hipVMag.get(hip) ?? null,
@@ -181,10 +181,8 @@ export function applyBindingGate(
     // its own null cell and `isSiblingLetterAttribution` short-circuits on it,
     // so a 0 here would apply a gate to the label side that the record side
     // does not (/docs/catalog-driver.md#4-how-hd-reaches-gaia — the two must not drift).
-    const tycs = tycsBySource.get(sourceId) ?? [];
     const verdict = resolveGaiaSourceId(
       sourceId, hip === 0 ? null : hip, null, vMag, evidence.gMagOf, evidence.wdsXids,
-      (id) => tycs.includes(evidence.simbadTycOf(id) ?? ''),
     );
     if (verdict.gaiaSourceId !== null) continue;
     rejected.push({

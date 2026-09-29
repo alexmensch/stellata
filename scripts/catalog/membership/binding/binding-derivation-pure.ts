@@ -200,12 +200,24 @@ export function deriveBinding(
     }
     const verdict = resolveGaiaSourceId(
       candidate.sourceId, gate.hip, null, gate.vMag, evidence.gMagOf, evidence.wdsXids,
-      (id) => gate.tyc !== '' && evidence.simbadTycOf(id) === gate.tyc,
     );
     if (verdict.gaiaSourceId === null) {
       rejected.push({ ...candidate, reason: verdict.magRejected ? 'mag' : 'sibling' });
     } else if (winner === null) {
       winner = candidate;
+    }
+  }
+  // The component witness rescues a row the sibling gate left unbound; it never
+  // outranks a candidate that passes on its own — see README.md.
+  if (winner === null && gate.tyc !== '') {
+    const named = rejected.findIndex((r) => r.reason === 'sibling'
+      && evidence.simbadSourceOfTyc(gate.tyc) === r.sourceId
+      && resolveGaiaSourceId(
+        r.sourceId, gate.hip, null, gate.vMag, evidence.gMagOf, evidence.wdsXids, true,
+      ).gaiaSourceId !== null);
+    if (named >= 0) {
+      const [rescued] = rejected.splice(named, 1);
+      winner = { sourceId: rescued.sourceId, via: rescued.via };
     }
   }
   return {

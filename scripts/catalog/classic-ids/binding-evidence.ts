@@ -13,6 +13,7 @@ import { parseGlieseTsv } from '../gliese-parse';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { readSimbadXids } from '../spine/primaries-tables';
+import { indexSimbadSources } from '../membership/binding/binding-derivation-pure';
 import { parseTycho2Tsvs } from '../tycho2-parse';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 import { bindingEvidence, type BindingEvidence } from './classic-id-overlay-pure';
@@ -52,14 +53,11 @@ export function loadBindingEvidence(): LoadedBindingEvidence {
   for (const [sourceId, row] of gaiaAstrometry) {
     if (row.gMag !== null) sourceGMag.set(sourceId, row.gMag);
   }
-  const simbadTycBySource = new Map<string, string>();
-  for (const [sourceId, xids] of readSimbadXids()) {
-    if (xids.tyc !== null) simbadTycBySource.set(sourceId, xids.tyc);
-  }
+  const { byTyc: simbadSourceByTyc } = indexSimbadSources(readSimbadXids());
   return {
     evidence: bindingEvidence(
       sourceGMag, hipVMag, wdsXids, printedVLookups(tycho2, gliese), gaiaAstrometry,
-      simbadTycBySource,
+      simbadSourceByTyc,
     ),
     gaiaAstrometry,
     hipVMag,
