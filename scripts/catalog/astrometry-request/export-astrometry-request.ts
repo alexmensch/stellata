@@ -79,10 +79,12 @@ async function main(): Promise<void> {
   for (const id of candidates) ids.add(id);
   const afterGate = ids.size;
 
-  // Spine rows derive on their pre-merge cells, additions on their manifest
-  // cells, so both sets are walked.
+  // Spine rows derive on their pre-merge cells and additions on their manifest
+  // cells; every IV/25 TYC is walked too, because which groups admission turns
+  // into rows is an output of the build this request feeds.
+  const iv25Cells = [...new Set(iv25.map((r) => r.tyc))].map((tyc) => ({ tyc, hip: '', gl: '' }));
   const derivation = derivationCandidateSourceIds(
-    [...spine, ...primariesCells], tables, indexCns5(tables.cns5).cns5ByOwnKey,
+    [...spine, ...primariesCells, ...iv25Cells], tables, indexCns5(tables.cns5).cns5ByOwnKey,
     indexSimbadSources(tables.simbadBySourceId),
   );
   for (const id of derivation) ids.add(id);
