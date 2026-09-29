@@ -62,7 +62,7 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 - `declutter/` — the detail-level declutter cycle: the exhaustive
   scene-element floor table, its derivation and tests. Own README.
 - `glsl-residents-pure.ts` (+ test) — `findGlslResidents`, the walk
-  behind the shell's first-frame check that no raw-GLSL material reached
+  behind the frame loop's first-frame check that no raw-GLSL material reached
   the rendered scene ([No GLSL material may reach a WebGPU boot](#no-glsl-material-may-reach-a-webgpu-boot)).
 - `render-order.ts` (+ test) — `DEPTH_MASK_RENDER_ORDER`, the one
   draw-order slot two subsystems both write into. The ladder it belongs
@@ -96,7 +96,7 @@ The shipped renderer draws the one scene every layer builds into
 in it fails WGSL pipeline creation — which discards the entire submit,
 so the symptom is a black frame naming nothing, not one absent layer.
 `findGlslResidents` walks the graph and returns a description per
-offending material; the shell runs it once, on the first rendered frame,
+offending material; the frame loop runs it once, on the first rendered frame,
 and logs what it finds. Every layer is parented by then, since the roster
 attach loop and `registerSceneLayers` both run in the constructor ahead
 of the frame loop's first tick.
