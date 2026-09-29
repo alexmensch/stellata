@@ -6,8 +6,8 @@ buffer needs a CPU copy. This folder owns that copy; the kernel that fills the b
 ```
 src/client/webgpu/extinction/mirror/
   av-mirror.ts    AvMirror — one mapped copy of the count-long A_V buffer,
-                  its per-generation staging gate, and the epoch that drops
-                  a copy the next dispatch has already superseded.
+    (+ test)      as a four-state copy that each dispatch resets
+                  (#the-copys-four-states).
 ```
 
 ## Cold reads — the one behaviour that is not parity
@@ -40,26 +40,16 @@ one dwell later; the pointer event that has to start the copy knows only
 that *a* pick is coming. Warming what the event knows means warming
 everything — and 1.48 MiB copied once beats racing the scan.
 
-**The generation is what bounds the cost, not the event rate.** The
-mirror is dropped on every recompute and re-read at most once per
-recompute, so a `pointermove` sweep across a dusty field costs one copy
-and a still pointer costs none. `AvMirror`'s own **epoch** — bumped by every
-`invalidate` — drops a read that resolves against a superseded buffer — a promise can
-outlive the thing it was reading. A map that *fails* consumes that one
-attempt rather than re-arming, so a device refusing the copy cannot turn a
-pointer sweep into a 1.48 MiB-per-event drip.
-
-**Two counters, because they answer different questions.** `staged` is the
-generation a copy was issued for and stops a second copy inside one
-generation; the epoch is what the resolve checks, and it moves on every
-dispatch whether or not anything asked for a copy. Collapsing them would
-let a copy issued before a dispatch answer picks after it.
+**The dispatch is what bounds the cost, not the event rate.** The
+mirror is dropped on every dispatch and re-read at most once per
+dispatch, so a `pointermove` sweep across a dusty field costs one copy
+and a still pointer costs none ([The copy's four states](#the-copys-four-states)).
 
 **A refill still cycling warms nothing at all**, which is the other half of
-that bound and the one the generation counter alone does not give. A warp,
+that bound and the one resetting per dispatch alone does not give. A warp,
 a focus lerp or a camera simply turning asks for a refill every frame
 ([A view change is a refill request](../refill/README.md#a-view-change-is-a-refill-request--nothing-more)), so the cursor
-never parks, the generation advances every frame, and a copy issued against
+never parks, a dispatch lands every frame, and a copy issued before
 one is superseded before the 280 ms dwell that wanted it can read a byte —
 every such copy is spent and dropped, at 1.48 MiB a frame for as long as the
 motion lasts. `warmAvReadback` therefore returns early while the cursor is
@@ -97,3 +87,24 @@ and destroy per warm, and with the camera gate above a warm is a
 per-settle event rather than a per-frame one. On the integrated and
 mobile floor the parent sizes for ([What it costs, and what it holds](../README.md#what-it-costs-and-what-it-holds)),
 the resident megabyte is the dearer half of that trade.
+
+## The copy's four states
+
+`AvMirror` holds one copy of the buffer's *current* contents as a tagged
+state:
+
+- **`unstaged`** — nothing asked since the last dispatch. `stage` acts only
+  from here.
+- **`in-flight`** — a map is outstanding. Each `stage` mints its own
+  in-flight object, and the resolve writes only if that object is still
+  the current state — a promise can outlive the buffer it was reading.
+- **`landed`** — the table; `read` answers out of it.
+- **`failed`** — the map was refused. It stays refused until the next
+  dispatch, so a device refusing the copy cannot turn a pointer sweep into
+  a 1.48 MiB-per-event drip.
+
+**`invalidate` — every dispatch — resets it to `unstaged`**, and that one
+reset is both halves of the bound: it re-arms staging, and it orphans any
+copy in flight, so a copy issued before a dispatch never answers picks
+after it. `read` returns null in every state but `landed`, which is "no
+answer yet", not "no dust" ([Reading A_V back](../../../star-pipeline/extinction/README.md#reading-a_v-back-on-the-cpu)).

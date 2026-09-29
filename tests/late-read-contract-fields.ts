@@ -68,7 +68,6 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'WebGpuExtinctionPrepass.refillKernel': RESOURCE,
   'WebGpuExtinctionPrepass.dispatchOrder': RESOURCE,
   'WebGpuExtinctionPrepass.lastView': CACHE,
-  'AvMirror.values': OPEN,
   'WebGpuHdrPipeline.rt': RESOURCE,
   'WebGpuHdrPipeline.summation': RESOURCE,
   'WebGpuHdrPipeline.resolveQuad': RESOURCE,

@@ -741,8 +741,8 @@ describe('the pick mirror', () => {
     expect(reads).toHaveLength(1);
   });
 
-  // The read can outlive the buffer's contents, so the generation counter
-  // is what invalidates it (README.md#cold-reads--the-one-behaviour-that-is-not-parity).
+  // The read can outlive the buffer's contents, so every dispatch orphans it
+  // (mirror/README.md#the-copys-four-states).
   it('drops a read that resolves against a superseded buffer', async () => {
     const { prepass, reads, attachDust } = makePrepass();
     attachDust();

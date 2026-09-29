@@ -103,9 +103,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
   /** The pick's CPU copy of the table (mirror/README.md). */
   private readonly mirror: AvMirror;
-  /** Bumped on every dispatch: a read that resolves against an older
-   *  buffer's contents lands in a generation nobody will consult. */
-  private generation = 0;
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
@@ -296,8 +293,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (plan.dispatch) {
       refill.quarter.value = plan.quarter;
       this.renderer.compute(this.refillKernel);
-      this.generation++;
-      this.mirror.invalidate();
+        this.mirror.invalidate();
     }
     refill.quarter.value = plan.next.quarter;
     refill.arm.value = plan.arm ? 1 : 0;
@@ -320,7 +316,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.refill = idleRefill();
     this.slots.refill.arm.value = 0;
     this.slots.refill.quarter.value = 0;
-    this.generation++;
     this.mirror.invalidate();
   }
 
@@ -345,7 +340,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     // Nothing in flight only: a copy taken mid-flight is superseded before
     // the dwell that wanted it can read a byte (README.md#cold-reads--the-one-behaviour-that-is-not-parity).
     if (refillInFlight(this.refill)) return;
-    this.mirror.stage(this.av, this.generation);
+    this.mirror.stage(this.av);
   }
 
   /** The parity check of README.md#the-prepass-kernel: the same march as

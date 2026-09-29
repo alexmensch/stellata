@@ -25,9 +25,9 @@ src/client/webgpu/extinction/
                               staleness bound, the three dispatches that
                               stay whole — its own README.
   mirror/                     The pick's CPU copy of the A_V table: the
-                              mapped readback, its staging gate and the
-                              epoch that drops a superseded copy — its own
-                              README.
+                              mapped readback as a four-state copy each
+                              dispatch resets, and its staging gate — its
+                              own README.
   extinction-nodes.ts         The shared slots as nodes — the dust volume
     (+ test)                  (texture), the A_V cache (storage buffer)
                               and the refill worklist's — with their
