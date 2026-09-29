@@ -329,6 +329,9 @@ export interface MembershipInput {
   corrections: readonly SpineCorrectionRow[];
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
+  /** Whether the pulled astrometry gives this source a parallax — what decides
+   *  which of two groups contesting a designation ships (README.md#the-additions). */
+  publishesGaiaParallax: (sourceId: string) => boolean;
 }
 
 export interface MembershipCounts extends LabelMergeCounts {
@@ -1116,9 +1119,16 @@ function additionGroup(
  *  group whose Gaia binding survives the HD-route gate (/docs/catalog-driver.md#4-how-hd-reaches-gaia) first, since the other
  *  component would otherwise park for want of a parallax this one has, then by
  *  TYC, HIP and GJ — a total order over content, never over walk order. */
-function compareAdditionGroups(a: AdditionGroup, b: AdditionGroup): number {
-  const bound = Number(a.source === null) - Number(b.source === null);
-  if (bound !== 0) return bound;
+function additionGroupOrder(
+  publishesGaiaParallax: (sourceId: string) => boolean,
+): (a: AdditionGroup, b: AdditionGroup) => number {
+  const rank = (g: AdditionGroup): number => (
+    g.source === null ? 2 : publishesGaiaParallax(g.source) ? 0 : 1
+  );
+  return (a, b) => rank(a) - rank(b) || compareAdditionGroupCells(a, b);
+}
+
+function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
   if (a.tyc !== b.tyc) return a.tyc < b.tyc ? -1 : 1;
   const hipA = a.hip?.hip ?? 0;
   const hipB = b.hip?.hip ?? 0;
@@ -1379,7 +1389,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
   const groups = derivedGroups
     .map((g) => additionGroup(g.items, g.derived, claims, sharedSources))
-    .sort(compareAdditionGroups);
+    .sort(additionGroupOrder(input.publishesGaiaParallax));
 
   const ledger: AdditionLedgerRow[] = [];
   const additionsByReason = Object.fromEntries(

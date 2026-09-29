@@ -277,10 +277,13 @@ pre-admission; the table above is what the manifest carries.
 lose it to.** IV/25 resolves HD 23068, 37703, 45900, 63846 and 86269 onto two
 Tycho-2 stars each — close doubles at 1.5–3″, HD 45900's pair at 8.5″, flagged
 `n_tyc > 1` — and neither component is on the spine. Admission is sequential,
-so its order fixes which one takes the designation: the group whose Gaia
-binding survives the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gate first, since the other would park for want of a
-parallax this one has (HD 86269's two entries both bind, so the TYC decides),
-then TYC, HIP, GJ. A total order over content, never over walk order.
+so its order fixes which one takes the designation: the group whose bound
+source publishes a Gaia parallax first, then one bound to a source with none,
+then an unbound one — the designation goes to the record that ships, since the
+others park for want of a parallax — then TYC, HIP, GJ. A total order over
+content, never over walk order. HD 86269 is why the parallax is read rather
+than inferred from the binding: both entries bind, and SIMBAD's A (the lower
+TYC) sits on a 2-parameter source, so the number goes to B and ships.
 
 The guard is keyed on the **normalised GJ, letter included**: `GJ 3131B` is the
 other component of `GJ 3131A`'s pair, a second star under a second designation,

@@ -182,6 +182,7 @@ const input = {
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   magnitudeTerm: null,
+  publishesGaiaParallax: (_sourceId: string) => true,
 };
 const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
@@ -651,6 +652,22 @@ describe('buildMembership — the additions', () => {
     expect(result.ledger).toContainEqual({
       tyc: '2-7-1', hip: '', hd: '70', gl: '', gaia_source_id: '', reason: 'component:hd:70',
     });
+  });
+
+  it('gives a designation both groups bind to the one whose source has a parallax (HD 86269)', () => {
+    const pair = (publishesGaiaParallax: (sourceId: string) => boolean) => buildMembership({
+      ...input,
+      publishesGaiaParallax,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '6-1-1', hd: 90, nHd: 1, nTyc: 2 }, { tyc: '6-2-1', hd: 90, nHd: 1, nTyc: 2 }],
+        tycho2: new Map([...tables.tycho2, ['6-1-1', tycho2(9)], ['6-2-1', tycho2(9)]]),
+        tycToSource: new Map([...tables.tycToSource, ['6-1-1', '6101'], ['6-2-1', '6201']]),
+      },
+    });
+    const holder = (r: ReturnType<typeof pair>) => r.rows.find((row) => row.hd === '90')?.tyc;
+    expect(holder(pair((id) => id !== '6101'))).toBe('6-2-1');
+    expect(holder(pair(() => true))).toBe('6-1-1');
   });
 
   it('leaves the source empty where the walk binds a spine record\'s own source', () => {
