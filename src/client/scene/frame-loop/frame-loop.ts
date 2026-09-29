@@ -77,7 +77,6 @@ export class FrameLoop {
     };
   }
 
-  /** Whether a `'realtime'` layer asked for this tick's frame. */
   get realtimeFramesNeeded(): boolean { return this.realtimeNeeded; }
 
   /** The frame's last camera write, then the frustum refresh every camera
@@ -191,7 +190,6 @@ export class FrameLoop {
     d.focalRides.followEpochStep(delta);
   }
 
-  /** `distFromSol` sums in float64: kpc-scale worldOffset values. */
   private refreshFrameCtx(): void {
     const d = this.deps;
     this.frameCtx.distFromSol = cameraAbsInto(this.frameCtx, this.cameraAbs).length();
