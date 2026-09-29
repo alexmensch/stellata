@@ -6,18 +6,12 @@ import ts from 'typescript';
 const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
-  'adaptation', 'aim', 'binaries', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
-  'clock', 'constellationBoundaries', 'constellationFigure', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'extinction', 'exposureFrame', 'filters',
-  'floatingOrigin', 'focalRides', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
+  'adaptation', 'aim', 'binaries', 'bus', 'cadence', 'camera', 'cameraClaim', 'cameraStep', 'catalog', 'chartLabels', 'chromeLines',
+  'clock', 'constellationBoundaries', 'constellationFigure', 'controls', 'coordSpheres', 'declutter', 'exposure', 'extinction', 'exposureFrame', 'filters',
+  'floatingOrigin', 'focalRides', 'frameLoop', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
   'picker', 'pois', 'renderGate', 'renderer', 'roll', 'scene', 'sharedUniforms',
   'solarSystem', 'starFrame', 'starPipeline', 'systemMembership', 'warp', 'webgpu',
-];
-
-const AWAITING_EXTRACTION: readonly string[] = [
-  '_epochFollowDelta', '_realtimeFramesNeeded',
-  'frameCtx', 'glslResidentsChecked',
-  'trackballSettle',
 ];
 
 function shellFields(): string[] {
@@ -130,8 +124,8 @@ describe('stellata.ts constructor order', () => {
 describe('stellata.ts integration-shell ratchet', () => {
   const fields = shellFields();
 
-  it('admits no field outside the two lists', () => {
-    const allowed = new Set([...COMPOSITION, ...AWAITING_EXTRACTION]);
+  it('admits no field outside the composition list', () => {
+    const allowed = new Set(COMPOSITION);
     expect(
       fields.filter((f) => !allowed.has(f)),
       'stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands): new state belongs in its subsystem folder',
@@ -141,13 +135,8 @@ describe('stellata.ts integration-shell ratchet', () => {
   it('lists no field the shell no longer declares', () => {
     const declared = new Set(fields);
     expect(
-      [...COMPOSITION, ...AWAITING_EXTRACTION].filter((f) => !declared.has(f)),
-      'an extraction deletes its fields from AWAITING_EXTRACTION',
+      COMPOSITION.filter((f) => !declared.has(f)),
+      'a field that leaves the shell leaves this list',
     ).toEqual([]);
-  });
-
-  it('keeps the two lists disjoint', () => {
-    const composition = new Set(COMPOSITION);
-    expect(AWAITING_EXTRACTION.filter((f) => composition.has(f))).toEqual([]);
   });
 });

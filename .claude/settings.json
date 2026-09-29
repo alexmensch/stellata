@@ -54,6 +54,21 @@
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/prime-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/paper-store-link.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "EnterWorktree",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/scripts/hooks/paper-store-link.sh"
           }
         ]
       }

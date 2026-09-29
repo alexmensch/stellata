@@ -244,7 +244,7 @@ export class WarpController {
     if (!this.deps.claim.claim()) return;
     // Warp launched from OBSERVE: leave cameraMode='observe' for the
     // duration so search-row, mode toggle, and any mode-bound UI don't
-    // flicker through navigate. The animate loop branches off the
+    // flicker through navigate. The CameraStep dispatch branches off the
     // warp slot first, so the cosmetic mode value never reaches
     // ObserveLookPin. uHideFocusIdx stays pinned to the source
     // for the reorient — unhiding it would briefly render the source

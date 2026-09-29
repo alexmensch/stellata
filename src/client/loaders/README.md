@@ -75,7 +75,7 @@ epoch-advance-pure.ts    space-motion propagation:
                          catalog.positions before `localPositions` is
                          derived, so every downstream consumer inherits
                          current-epoch positions by construction; the
-                         per-frame `maybeReAdvanceEpoch` re-runs the same
+                         per-frame epoch step (`FrameLoop`) re-runs the same
                          pass whenever the (scrubbed) model clock crosses a
                          `bucketEpochJyr` bucket (1/20 Julian year —
                          sub-pixel drift per bucket even for Barnard's).

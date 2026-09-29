@@ -16,14 +16,8 @@ import { ChartLabels } from './chart-mode/labels/chart-labels';
 import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
-import {
-  mark as perfMark,
-  measure as perfMeasure,
-  frame as perfFrame,
-} from './debug/perf-hud';
-import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples';
 import { RenderGate } from './render-gate/render-gate';
-import { TrackballSettle } from './camera/controls/input/trackball-settle';
+import { CameraStep } from './camera/camera-step/camera-step';
 import { cadenceVisibleTurnRad } from './render-gate/cadence/clock-cadence-pure';
 import {
   ClockCadence,
@@ -66,8 +60,7 @@ import { LocalDepthPass } from './local-depth/local-depth-pass';
 import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemWiring } from './solar-system/solar-system-wiring';
-import { VirtualClock, tToJdUt } from './solar-system/time/time';
-import { J2000_JD } from './util/astronomy-constants';
+import { VirtualClock } from './solar-system/time/time';
 import { CAMERA_NEAR_PC } from './camera/timing';
 import { EventBus } from './util/event-bus';
 import {
@@ -80,17 +73,14 @@ import { ExposureController } from './hdr/exposure/exposure-controller';
 import { exposureForMagLimit } from './hdr/exposure/exposure-epoch';
 import { SceneAdaptation } from './hdr/exposure/scene-adaptation';
 import { ExposureFrameStep } from './hdr/exposure/exposure-frame-step';
-import type { Mutable } from './util/mutable';
 import {
   cameraAbsInto,
   SceneLayerRegistry,
   type ContributionCensus,
-  type FrameCtx,
   type SceneLayer,
 } from './scene/scene-layer';
-import { FrameFrustum } from './scene/contribution/frame-frustum';
-import { findGlslResidents } from './scene/glsl-residents-pure';
 import { SceneDeclutter } from './scene/declutter/scene-declutter';
+import { FrameLoop } from './scene/frame-loop/frame-loop';
 import { StarPipeline } from './star-pipeline/star-pipeline';
 import { StarFrame } from './star-pipeline/star-frame/star-frame';
 import { buildSharedUniforms, type SharedUniforms } from './frame/shared-uniforms';
@@ -151,7 +141,6 @@ export class Stellata {
 
   readonly floatingOrigin: FloatingOrigin;
   readonly starFrame: StarFrame;
-  private readonly _epochFollowDelta = new THREE.Vector3();
   readonly systemMembership = new SystemMembershipRegistry();
   readonly binaries: BinariesAttachment;
 
@@ -166,11 +155,10 @@ export class Stellata {
 
   readonly declutter: SceneDeclutter;
 
-  private disposed = false;
   private bus = new EventBus<StellataEventMap>();
 
   private readonly layers = new SceneLayerRegistry();
-  private frameCtx!: Mutable<FrameCtx>;
+  private readonly frameLoop: FrameLoop;
 
   readonly observe!: ObserveTransition;
   private observeControls!: ObserveControls;
@@ -199,12 +187,9 @@ export class Stellata {
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   readonly localDepthPass = new LocalDepthPass();
   readonly renderGate = new RenderGate();
-  private readonly trackballSettle: TrackballSettle;
+  private readonly cameraStep: CameraStep;
   private readonly observeLookPin: ObserveLookPin;
-  private glslResidentsChecked = false;
   private readonly cadence: ClockCadence;
-  // Evaluated above the gate every tick — see refreshFrameCtx.
-  private _realtimeFramesNeeded = false;
   readonly starPipeline: StarPipeline;
   readonly solarSystem: SolarSystemWiring;
   readonly occluders = new OccluderSet();
@@ -278,7 +263,6 @@ export class Stellata {
     // Empty drag-mode key slots: TrackballControls' A/S/D defaults would
     // otherwise claim the S grid / D debug shortcuts.
     this.controls.keys = ['', '', ''];
-    this.trackballSettle = new TrackballSettle(this.controls);
 
     this.observeControls = new ObserveControls(
       canvas,
@@ -629,27 +613,55 @@ export class Stellata {
       },
     });
 
-    this.frameCtx = {
+    this.cameraStep = new CameraStep({
+      canvas,
       camera: this.camera,
-      worldOffset: this.floatingOrigin.worldOffset,
-      distFromSol: 0,
-      t: 0,
-      warpActive: false,
-      pxPerRadian: 0,
-      frustum: new FrameFrustum(),
-      exposure: null,
-    };
+      controls: this.controls,
+      observeControls: this.observeControls,
+      observeLookPin: this.observeLookPin,
+      roll: this.roll,
+      warp: this.warp,
+      aim: this.aim,
+      focus: this.focus,
+      observe: this.observe,
+      pxPerRadian: () => this.angularToPx(),
+      fovYRad: () => this.sharedUniforms.uFovYRad.value,
+    });
+    this.frameLoop = new FrameLoop({
+      scene: this.scene,
+      camera: this.camera,
+      orbitTarget: this.controls.target,
+      webgpu: this.webgpu,
+      hdr: this.hdr,
+      uniforms: sharedUniforms,
+      clock: this.clock,
+      origin: this.floatingOrigin,
+      starFrame: this.starFrame,
+      focalRides: this.focalRides,
+      cameraStep: this.cameraStep,
+      focus: this.focus,
+      warp: this.warp,
+      layers: this.layers,
+      cadence: this.cadence,
+      renderGate: this.renderGate,
+      occluders: this.occluders,
+      extinction: this.extinction,
+      exposureFrame: this.exposureFrame,
+      starPipeline: this.starPipeline,
+      localDepthPass: this.localDepthPass,
+      pxPerRadian: () => this.angularToPx(),
+      emitFrame: () => this.bus.emit('frame'),
+    });
     this.registerSceneLayers(galacticDiscEntry);
     // A layer that learns its permission only from a push sits at its
     // constructor's guess until this seeds it.
     this.filters.reapplyDetailFloors();
     window.addEventListener('resize', this.onResize);
     this.renderGate.attachDom(canvas);
-    this.trackballSettle.attachDom(canvas);
     this.bus.on('state', () => this.renderGate.invalidate('bus:state'));
     this.bus.on('planetSystem', () => this.renderGate.invalidate('bus:planetSystem'));
     this.input = this.createInputController();
-    this.animate();
+    this.frameLoop.start();
   }
 
   // Registration order is per-frame update order —
@@ -663,15 +675,7 @@ export class Stellata {
     this.layers.register(this.binaries.entry);
     // The frame's last camera WRITE; every camera reader registers below it
     // (scene/README.md#camera-writes-then-camera-reads).
-    this.layers.register({
-      timeBehaviour: { kind: 'static' },
-      contribution: { kind: 'always' },
-      update: () => {
-        this.orbitFrameTick?.();
-        this.frameCtx.frustum.refresh(this.camera);
-      },
-      dispose: () => {},
-    });
+    this.layers.register(this.frameLoop.lastCameraWriteEntry(() => this.orbitFrameTick?.()));
     // A camera reader (it caches camera.matrixWorld), which is why the
     // planet module's own layer does not run it.
     this.layers.register(this.solarSystem.planetMeshEntry);
@@ -769,15 +773,6 @@ export class Stellata {
     for (const kind of KIND_ROSTER) {
       this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
     }
-  }
-
-  private maybeReAdvanceEpoch(): void {
-    const focal = this.focus.getFocusedStar();
-    const d = this._epochFollowDelta;
-    if (!this.starFrame.advanceEpochTo(this.getT(), focal, d)) return;
-    this.renderGate.invalidate('epoch-bucket');
-    this.extinction.refreshPositions();
-    this.focalRides.followEpochStep(d);
   }
 
   private buildFocalAnchorPolicy(): void {
@@ -934,143 +929,6 @@ export class Stellata {
     return cadenceVisibleTurnRad(this.angularToPx(), this.renderer.getPixelRatio());
   }
 
-  private animate = () => {
-    if (this.disposed) return;
-    perfMark('frame.total');
-    // One wall-clock read per tick: every reader must agree on this frame.
-    const nowMs = performance.now();
-    this.maybeReAdvanceEpoch();
-    if (this.floatingOrigin.tick()) this.focalRides.reseedMoving();
-    // Before anything reads localPositions.
-    this.starFrame.flushLocalPositions();
-    perfMark('controls.update');
-    // camera/controls/input/README.md#roll-authority
-    if (this.focus.getCameraMode() === 'observe') {
-      this.roll.adoptFromCamera(this.camera);
-    }
-    // Cleared by the steady-state branches alone, so a new transition here
-    // renders every frame by default rather than freezing.
-    let cameraAnimating = true;
-    if (this.warp.isActive()) {
-      this.warp.tick(nowMs);
-    } else if (this.aim.isActive()) {
-      this.aim.tick(nowMs);
-    } else if (this.focus.isFocusLerpActive()) {
-      this.focus.tick(nowMs);
-    } else if (this.aim.isObserveAimActive()) {
-      this.aim.tickObserve(nowMs);
-      this.observeLookPin.update();
-    } else if (this.observe.isAnyActive()) {
-      this.observe.tick(nowMs);
-    } else if (this.focus.getCameraMode() === 'observe') {
-      cameraAnimating = false;
-      this.observeControls.update();
-      this.observeLookPin.update();
-    } else {
-      cameraAnimating = false;
-      this.trackballSettle.capture(this.camera);
-      this.controls.update();
-      this.trackballSettle.tick(
-        this.camera, this.angularToPx(), this.sharedUniforms.uFovYRad.value,
-      );
-    }
-    // camera/controls/input/README.md#the-perpendicular-invariant
-    if (cameraAnimating && this.focus.getCameraMode() === 'navigate') {
-      this.roll.adoptFromCamera(this.camera);
-    }
-    perfMeasure('controls.update');
-    // Above the gate: a layer that starts needing wall-clock frames while the
-    // gate idles would otherwise wait a whole cap, or forever when paused.
-    this.refreshFrameCtx();
-    this._realtimeFramesNeeded = this.layers.realtimeFramesNeeded(this.frameCtx);
-    // render-gate/README.md#the-clock-cadence
-    const continuous = cameraAnimating || this._realtimeFramesNeeded;
-    const cadenceDue = this.cadence.isDue(this.clock.getRate(), this.frameCtx.t);
-    if (!this.renderGate.tick(
-      this.camera, this.controls.target, this.floatingOrigin.worldOffset,
-      { continuous, cadenceDue, nowMs },
-    )) {
-      requestAnimationFrame(this.animate);
-      return;
-    }
-    perfMark('pre-render');
-    this.sharedUniforms.uCameraPos.value.copy(this.camera.position);
-    const pinTarget = this.focus.isPinEngaged() ? this.focus.getFocusedStar() : -1;
-    this.sharedUniforms.uPinFocusToCenter.value = pinTarget ?? -1;
-    this.sharedUniforms.uModelDays.value = tToJdUt(this.getT()) - J2000_JD;
-    this.sharedUniforms.uModelDaysPerRealSec.value = Math.abs(this.clock.getRate()) / 86400;
-    // Here, not by either publisher: each would drop the other's entries.
-    this.occluders.beginFrame();
-    this.layers.updateAll(this.frameCtx);
-    this.extinction.update(this.frameCtx);
-    this.cadence.refresh({
-      t: this.frameCtx.t,
-      pxPerRadian: this.frameCtx.pxPerRadian,
-      pixelRatio: this.sharedUniforms.uPixelRatio.value,
-      cadenceScheduled: this.renderGate.lastFrameWasCadenceScheduled,
-    });
-    // After the fan-out and before the first draw, so measurement and frame
-    // are never one frame apart.
-    const measurementParked = this.exposureFrame.measure(nowMs, this.frameCtx.warpActive);
-    perfMeasure('pre-render');
-    perfMark('submit.main');
-    this.hdr.bind();
-    // Ahead of the node sync that copies it.
-    this.starFrame.syncPhysSizeWindow();
-    this.webgpu.syncUniformNodes();
-    // Between the sync it reads and the draws it feeds
-    // (webgpu/star/compaction/README.md).
-    perfMark('star.compaction');
-    this.starPipeline.update(this.camera);
-    perfMeasure('star.compaction');
-    // webgpu/README.md#one-scene-per-boot
-    if (!this.glslResidentsChecked) {
-      this.glslResidentsChecked = true;
-      const residents = findGlslResidents(this.scene);
-      if (residents.length > 0) {
-        console.error(
-          'GLSL materials in the rendered scene — the submit '
-          + `will draw nothing: ${residents.join(', ')}`,
-        );
-      }
-    }
-    this.renderer.render(this.scene, this.camera);
-    perfMeasure('submit.main');
-    perfMark('submit.localDepth');
-    this.localDepthPass.render(this.renderer, this.camera);
-    perfMeasure('submit.localDepth');
-    perfMark('submit.tonemap');
-    this.hdr.resolve();
-    perfMeasure('submit.tonemap');
-    // After the resolve, so it never delays the frame it measures.
-    perfMark('submit.reduction');
-    this.exposureFrame.reduce(measurementParked);
-    perfMeasure('submit.reduction');
-    // After the LAST pass, listened to or not: an unresolved pool overruns.
-    resolveAndPublishGpuFrame(this.webgpu.renderer, this.webgpu.timestampsAvailable);
-    perfMark('frame.handlers');
-    this.bus.emit('frame');
-    perfMeasure('frame.handlers');
-    perfMeasure('frame.total');
-    perfFrame();
-    requestAnimationFrame(this.animate);
-  };
-
-  /** `distFromSol` sums in float64: kpc-scale worldOffset values. */
-  private refreshFrameCtx(): void {
-    const cam = this.camera.position;
-    const ax = cam.x + this.floatingOrigin.worldOffset.x;
-    const ay = cam.y + this.floatingOrigin.worldOffset.y;
-    const az = cam.z + this.floatingOrigin.worldOffset.z;
-    this.frameCtx.distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
-    this.frameCtx.t = this.getT();
-    this.frameCtx.warpActive = this.warp.isActive();
-    this.frameCtx.pxPerRadian = this.angularToPx();
-    this.frameCtx.exposure = this.exposureFrame.frameExposure();
-    // Refreshed after the frame's last camera write.
-    this.frameCtx.frustum.invalidate();
-  }
-
   get cadenceDebugState(): ClockCadenceDebugState & {
     clockRate: number;
     pixelRatio: number;
@@ -1082,21 +940,19 @@ export class Stellata {
       ...this.cadence.debugState,
       clockRate: this.clock.getRate(),
       pixelRatio: this.sharedUniforms.uPixelRatio.value,
-      realtimeNeeded: this._realtimeFramesNeeded,
+      realtimeNeeded: this.frameLoop.realtimeFramesNeeded,
       census: this.layers.behaviourCensus(),
       contribution: this.layers.contributionCensus(),
     };
   }
 
   dispose() {
-    this.disposed = true;
+    this.frameLoop.dispose();
     this.observeLookPin.invalidate();
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
-    this.trackballSettle.dispose();
+    this.cameraStep.dispose();
     this.cadence.dispose();
-    this._realtimeFramesNeeded = false;
-    this.frameCtx.frustum.invalidate();
     this.input.dispose();
     this.observeControls.disable();
     this.orbitFrameTick = null;

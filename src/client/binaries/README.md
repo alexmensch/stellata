@@ -233,7 +233,7 @@ The epoch-advance (`loaders/epoch-advance-pure.ts`) shifts
 `catalog.positions` by each star's baked space-motion velocity *before*
 `BinaryOrbitField` runs, so the pair's systemic drift is already in the
 primary slot this field reads. That ordering holds per frame under time
-scrubbing too: `maybeReAdvanceEpoch` runs at the top of `animate()`,
+scrubbing too: the frame loop's epoch step runs at the top of every tick,
 rewriting `catalog.positions` + `_localPositions` off the immutable
 J2016.0 baseline, and this field's walk then re-perturbs its active
 slots on top of the fresh baselines in the same frame. Unfocused, that

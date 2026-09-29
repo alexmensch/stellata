@@ -226,10 +226,9 @@ export class FocusController implements FocusOps {
    *  rule matches the runtime constant exactly. */
   getPinEngageThresholdSq(): number { return PIN_ENGAGE_THRESHOLD_SQ_PC; }
 
-  /** Whether the focused-star pin (uPinFocusToCenter) would engage right
-   *  now, mirroring the per-frame guard in animate(). Read by the pin
-   *  section of the unified debug panel (`debug.panel()`) to display
-   *  live state.
+  /** The star the focused-star pin (uPinFocusToCenter) holds right now,
+   *  null when it is disengaged. Written to the uniform every rendered frame by
+   *  FrameLoop and shown by the pin section of `debug.panel()`.
    *
    *  The warp guard releases when `warp.isRecenteredToDest()` is true:
    *  after the mid-Fly recentre the destination is at
@@ -237,7 +236,7 @@ export class FocusController implements FocusOps {
    *  frame. focus-park lerp stays guarded — that path slerps through a
    *  non-lookAt arc where pin-to-centre would snap the focal star to
    *  NDC origin before the slerp finishes turning into it. */
-  isPinEngaged(): boolean {
+  pinnedStar(): number | null {
     const warp = this.deps.getWarp();
     const focal = this.focusedStar;
     if (
@@ -246,14 +245,15 @@ export class FocusController implements FocusOps {
       || (warp.isActive() && !warp.isRecenteredToDest())
       || this.deps.aim.isActive()
       || this.focusLerpState !== null
-    ) return false;
+    ) return null;
     // Engage iff the orbit target coincides with the focal star's LIVE
     // local position (catalog baseline + orbital perturbation, read from
     // the star buffer). Panning moves target off the star → disengage.
     // For a non-orbiting star the live position is its baseline (local
     // origin under focus), so this reduces to target ≈ origin.
     const live = this.deps.frameAnchor.stars.localPositionInto(focal, this.tmpLive);
-    return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC;
+    return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC
+      ? focal : null;
   }
 
   /** Re-solve the focused object's manual-zoom floor against the current
@@ -478,7 +478,7 @@ export class FocusController implements FocusOps {
     shiftArrivalWaypoints(this.focusLerpState, -delta.x, -delta.y, -delta.z);
   }
 
-  /** Per-frame tick. Stellata's animate() dispatches here when
+  /** Per-frame tick. CameraStep dispatches here when
    *  `isFocusLerpActive()` is true. controls.enabled is left true
    *  throughout; the dispatcher routes here instead of controls.update(),
    *  so user drag accumulates in TC without visible effect until the
@@ -802,8 +802,8 @@ export class FocusController implements FocusOps {
         // fight the lerp's outward motion. After the lerp lands, the
         // controller's finish branch tightens minDistance to minDist.
         this.setFocus(null);
-        // Don't toggle controls.enabled during the lerp. The animate()
-        // dispatcher routes to observe.tick(), which lerps
+        // Don't toggle controls.enabled during the lerp. The CameraStep
+        // dispatch routes to observe.tick(), which lerps
         // camera.position directly and skips controls.update().
         // Disabling explicitly would race the click-to-unfocus event
         // chain (see ObserveTransition.startUnfocusLerp docblock).

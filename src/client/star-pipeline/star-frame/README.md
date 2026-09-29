@@ -95,7 +95,7 @@ the same frame: a fast time-scrub crosses an epoch bucket while a hard
 focus has drifted past `FOCAL_ORIGIN_DRIFT_RATIO`, so the epoch
 re-advance and the origin recentre both invalidate it. So
 `advanceEpochTo` only marks the buffer stale and
-`flushLocalPositions` — called by `animate()` right after the
+`flushLocalPositions` — called by the frame loop right after the
 re-advance / recentre pair — does the single rewrite at whatever the
 origin ended up being; a recentre in between rewrites it directly and
 clears the flag. That leaves exactly one window where

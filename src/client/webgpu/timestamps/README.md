@@ -47,7 +47,7 @@ as the withheld case does — per pool, so a lying compute pool leaves
 
 ## Why the resolve is not gated on the HUD
 
-`animate()` resolves on **every rendered frame the probe left timestamps
+The frame loop resolves on **every rendered frame the probe left timestamps
 live on** — not only while the inspector is open, and gated on
 `timestampsAvailable` alone — and it resolves **both pools**, render and
 compute. A resolve is what recycles a query pool, and three keeps one per

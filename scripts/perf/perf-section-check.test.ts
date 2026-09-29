@@ -225,7 +225,7 @@ describe('perf-section-check', () => {
       const r = check([
         '## Perf',
         '',
-        'Tier 0 — no per-frame code reachable from animate(), so no ✗ rows.',
+        'Tier 0 — no per-frame code reachable from the frame loop, so no ✗ rows.',
         '',
         '## Release notes',
         '',
@@ -239,7 +239,7 @@ describe('perf-section-check', () => {
       const r = check([
         '## Perf',
         '',
-        'Tier 0 — no per-frame code reachable from animate(), so no `✗` rows.',
+        'Tier 0 — no per-frame code reachable from the frame loop, so no `✗` rows.',
         '',
         '## Release notes',
         '',
@@ -264,7 +264,7 @@ describe('perf-section-check', () => {
       const r = check([
         '## Perf',
         '',
-        'Tier 0 — no per-frame code reachable from animate(); every row within band.',
+        'Tier 0 — no per-frame code reachable from the frame loop; every row within band.',
         '',
         '## Release notes',
         '',
