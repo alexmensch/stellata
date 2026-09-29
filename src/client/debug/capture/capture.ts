@@ -54,7 +54,7 @@ const DEFAULT_SECONDS = 5;
 function decodeInput(input: string, which: string): DecodedView {
   const blob = shareBlobFrom(input);
   if (blob === null) throw new Error(`capture: ${which} carries no view blob`);
-  return decodeBlob(blob).view;
+  return decodeBlob(blob);
 }
 
 function resolveTime(value: number | string | undefined, which: string): number | null {

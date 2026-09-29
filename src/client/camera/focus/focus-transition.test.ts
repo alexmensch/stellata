@@ -12,7 +12,7 @@ import {
   CAMERA_LERP_MS,
   FOCUS_LERP_MS,
   WARP_REORIENT_MS,
-} from '../../stellata';
+} from '../timing';
 import { RollController } from '../controls/input/roll-controller';
 
 describe('camera-lerp duration consolidation)', () => {

@@ -85,11 +85,6 @@ export interface FocusOps {
   clearVector(): void;
   getFocusedStar(): number | null;
   getFocusedTarget(): Target | null;
-  /** True when an observe enter / exit transition is in flight ('unfocus'
-   *  excluded). startWarp bails so warp doesn't collide. */
-  isObserveTransitionActive(): boolean;
-  cancelFocusLerp(): void;
-  cancelUnfocusLerp(): void;
 }
 
 export interface FocusControllerDeps {
@@ -464,13 +459,12 @@ export class FocusController implements FocusOps {
 
   // ─── focus-park lerp (private state, public cancel) ────────────────
 
-  /** Public for WarpController's FocusOps seam: cancel at startWarp
-   *  time so the in-flight lerp doesn't fight the warp claim. */
+  /** Public for the shell's camera claim (`../camera-claim.ts`). */
   cancelFocusLerp(): void {
     this.endFocusLerp();
   }
 
-  /** Public for WarpController's FocusOps seam. */
+  /** Public for the shell's camera claim (`../camera-claim.ts`). */
   cancelUnfocusLerp(): void {
     this.deps.getObserve().cancelUnfocusLerp();
   }

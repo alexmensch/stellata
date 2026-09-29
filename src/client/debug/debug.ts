@@ -148,7 +148,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
   const tools: DebugTools = {
     panel: togglePanel,
     decodeView: (blob) => {
-      const { view } = decodeBlob(shareBlobFrom(blob) ?? blob);
+      const view = decodeBlob(shareBlobFrom(blob) ?? blob);
       console.table(view);
       return view;
     },

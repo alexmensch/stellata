@@ -91,8 +91,8 @@ in both navigate and observe modes.
   where `sizeMax` clears the floor.
 - `aim-controller.ts` — mode-aware aim slerps (navigate orbit-pivot
   + observe quaternion-in-place), the point (`aimAt`) and direction
-  (`aimAlong`) entry points, shared `aimDurationMs` ramp, and
-  `claimCameraForAim` — the busy-gate claim every shell aim takes.
+  (`aimAlong`) entry points and the shared `aimDurationMs` ramp. The
+  busy-gate claim every shell aim takes is `../camera-claim.ts`.
 - `star-geometry.ts` — pure star angular-geometry formulae
   (θ = 2·atan(R/d), `parkDistForStar` derivations) plus the shared pick
   reducers and their scorers ([Ranking a pick](#ranking-a-pick)). Owns `PICK_THRESHOLD_PX`,
@@ -358,10 +358,9 @@ owns the user-facing definition.
 
 Composition split — the controller knows only the mode it runs in and its
 own slot state. The cross-controller busy gates (warp, aim, observe
-transition) and the focus-lerp cancels are `claimCameraForAim`, a free
-function taking them as `AimClaimGates` closures. The shell builds that
-object once (`cameraClaim`) and hands the same one to `InputController`,
-whose deps extend the type; the shell's aims (`aimAt`, `aimAlong`,
+transition) and the focus-lerp cancels are one `CameraClaim`
+(`../camera-claim.ts`) the shell builds once over them (`cameraClaim`) and
+hands to `InputController` and `WarpController` too; the shell's aims (`aimAt`, `aimAlong`,
 `aimAtConstellation`, `invertView`) delegate to `this.aim` only on a
 granted claim. A refused claim cancels
 nothing ([The claim-the-camera sequence](../README.md#the-claim-the-camera-sequence)).

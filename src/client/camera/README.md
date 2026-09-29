@@ -23,7 +23,9 @@ across all five.
 - `arrival/` — log-distance smoothstep math shared by focus-park, warp
   Fly, and unfocus. Pure helpers + the per-frame `tickArrival` driver.
 
-`camera-config.ts` and `timing.ts` sit at this level — see [Shared](#shared).
+`camera-config.ts` and `timing.ts` sit at this level — see [Shared](#shared) —
+and so does `camera-claim.ts` (+ test), the one
+[claim-the-camera sequence](#the-claim-the-camera-sequence).
 
 ## Shared
 
@@ -169,17 +171,14 @@ the incoming action, never blocked by it**: a gate that folded them in —
 i.e. `isCameraBusy()` — would make every click self-block whenever a
 focus-park lerp happened to be in flight.
 
-Three sites run it:
-
-- **Aims** — `claimCameraForAim` (`controls/aim-controller.ts`), taken by
-  every shell aim. All three bails come first; the cancels run only on a
-  granted claim, so a refused aim leaves both lerps running.
-- **Warps** — `warp/warp-controller.ts` `startWarp` bails on a warp or an
-  observe transition, then cancels. It does not bail on an aim.
-- **Clicks** — `controls/input/input-controller.ts` `onPointerUp` bails on
-  warp / aim, cancels, and only then bails on an observe transition, so a
-  click refused by the transition still cancels the lerps. Pinned by its
-  test; whether that order is wanted is open (`stellata-hhaw.32.17`).
+**One `CameraClaim` runs it for every site** (`camera-claim.ts`): the
+shell builds it once over its gates and hands the same object to its aims
+(`aimAt`, `aimAlong`, `aimAtConstellation`, `invertView`), to
+`InputController`'s `onPointerUp` and to `WarpController`'s `startWarp`.
+All three bails come first and the cancels run only on a granted claim,
+so a refused aim, click or warp leaves both lerps running — a warp
+pressed mid-aim included. The sites hold the claim object and not the
+gates, so none can cancel the lerps in any other order.
 
 ### Verdict per input-controller gate
 
@@ -188,14 +187,13 @@ Three sites run it:
 
 | Site | Shape | Verdict |
 |---|---|---|
-| `onPointerUp` | the click sequence above | **narrower, deliberate** — the lerps are cancelled, not blocked |
-| `dispatchSingleClick` | `blocksClick()` | 3-term; focus-park already cancelled at pointer-up |
-| `dispatchDoubleClick` | `blocksClick()` | same 3 terms — shares the one predicate |
+| `onPointerUp` | `claim.claim()` | **narrower, deliberate** — the lerps are cancelled, not blocked |
+| `dispatchSingleClick` | `claim.isHeld()` | 3-term; focus-park already cancelled at pointer-up |
+| `dispatchDoubleClick` | `claim.isHeld()` | same 3 terms — shares the one predicate |
 
 **No site is strict-equivalent to `isCameraBusy()`.** Every one is
 narrower on two axes at once: it excludes the focus-park lerp (which
 the click cancels) and excludes the observe `unfocus` kind (a
-navigate-mode lerp a click should be free to interrupt). `blocksClick()`
-is therefore a pure de-duplication of the two deferred-dispatch gates,
-not a widening — the deliberate narrowness is the reason the shared
-helper is local to `InputController` rather than a `Stellata` method.
+navigate-mode lerp a click should be free to interrupt). The deferred
+re-checks read the claim's own `isHeld`, so they and the pointer-up
+claim cannot disagree about what holds the camera.

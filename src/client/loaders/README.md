@@ -37,6 +37,9 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          `multiplicityStatus: Uint8Array` (v9:
                          single/resolved/unresolved — see
                          /scripts/catalog/multiplicity/README.md#multiplicity-status).
+catalog-sid-domain.ts    catalogSidDomain — the star SID domain, still
+  (+ test)               filling until catalog.complete settles
+                         (README.md#progressive-catalog-load).
 catalog-progressive.ts   chunk fetch scheduling + the record window each
                          landing chunk unlocks (README.md#progressive-catalog-load).
 catalog-window.ts        one record window's decode as plain typed arrays,
@@ -176,16 +179,16 @@ Three traps, all of them silent if missed:
   frame, both pipelines and the gate — same shape as the dust loader's
   `onProgress` below.
 - **The SID resolver's star domain attaches on the FIRST chunk and declares
-  itself still filling.** A domain that answers `isComplete() === false`
-  makes a miss indeterminate rather than absent, so a sid in a chunk that
-  has not arrived stays `pending` and queues instead of being dropped, and
-  every landing chunk calls `refresh()` to retry the queue
+  itself still filling.** `catalogSidDomain` answers `fill() === 'filling'`
+  until `catalog.complete` settles, which makes a miss indeterminate rather
+  than absent, so a sid in a chunk that has not arrived stays `pending` and
+  queues instead of being dropped; each landing chunk and the completion
+  reach the resolver through `onGrow`
   ([A domain that is still filling](../util/sid-resolver/README.md#a-domain-that-is-still-filling)).
   Withholding it until the last chunk is the obvious alternative and is
   wrong — a `?v=` link's cam/tgt are in the focal object's frame, so the
   focus has to resolve before the pose is applied, not eventually
   ([A focus that resolves after the pose](../util/url-state/README.md#a-focus-that-resolves-after-the-pose)).
-  `idMaps.hipToIndex` grows per chunk for the same reason.
 
 ## The catalog-decode worker
 

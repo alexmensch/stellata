@@ -28,6 +28,7 @@ import { WARP_BASE_DIR } from '../timing';
 import { arrivalEaseFn, cameraConfig } from '../camera-config';
 import { recordLastWarp } from './warp-telemetry';
 import { hybridUSeam } from '../arrival/arrival-curves';
+import type { CameraClaim } from '../camera-claim';
 
 // Source→dest separations below this have no reliable travel direction —
 // AB/distPc is float32 noise (coincident catalog baselines / orbit
@@ -78,6 +79,7 @@ export interface WarpControllerDeps {
    *  `dest.chartPlateauDistance(magBright)`. */
   getChartMagBright: () => number;
   focus: FocusOps;
+  claim: CameraClaim;
   origin: Pick<FloatingOrigin, 'recenterTo'>;
 }
 
@@ -239,10 +241,7 @@ export class WarpController {
     source: FocusTarget,
     dest: FocusTarget,
   ): void {
-    const focus = this.deps.focus;
-    if (this.state || focus.isObserveTransitionActive()) return;
-    focus.cancelUnfocusLerp();
-    focus.cancelFocusLerp();
+    if (!this.deps.claim.claim()) return;
     // Warp launched from OBSERVE: leave cameraMode='observe' for the
     // duration so search-row, mode toggle, and any mode-bound UI don't
     // flicker through navigate. The animate loop branches off the

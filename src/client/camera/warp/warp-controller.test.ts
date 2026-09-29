@@ -10,6 +10,7 @@ import {
   type WarpControllerDeps,
 } from './warp-controller';
 import type { FocusTarget } from '../focus/focus-target';
+import { createCameraClaim } from '../camera-claim';
 import { makeControlsStub, makeObserveControlsStub } from '../camera-test-stubs';
 import type { CameraMode } from '../focus/focus-controller';
 import type { StellataEventMap } from '../../stellata';
@@ -182,9 +183,6 @@ function makeFocus(): FocusFixture {
       if (focusedCloud !== null) return { kind: 'cloud', idx: focusedCloud };
       return null;
     },
-    isObserveTransitionActive: () => false,
-    cancelFocusLerp: () => { calls.cancelFocusLerp++; },
-    cancelUnfocusLerp: () => { calls.cancelUnfocusLerp++; },
   };
 
   const origin: FocusFixture['origin'] = {
@@ -214,6 +212,8 @@ function makeFocus(): FocusFixture {
 
 interface Harness {
   warp: WarpController;
+  /** What else holds the camera, as the shell's claim sees it. */
+  busy: { aim: boolean; observe: boolean };
   camera: THREE.PerspectiveCamera;
   controls: ReturnType<typeof makeControlsStub>;
   observeControls: ReturnType<typeof makeObserveControlsStub>;
@@ -247,6 +247,8 @@ function makeHarness(opts: {
     });
   }
 
+  const busy = { aim: false, observe: false };
+  let warp: WarpController | undefined;
   const deps: WarpControllerDeps = {
     camera,
     controls,
@@ -260,11 +262,20 @@ function makeHarness(opts: {
     isChartMode: () => opts.isChart ?? false,
     getChartMagBright: () => 4.0,
     focus: focus.ops,
+    claim: createCameraClaim({
+      isWarpActive: () => warp?.isActive() ?? false,
+      isAimActive: () => busy.aim,
+      isObserveTransitionActive: () => busy.observe,
+      cancelUnfocusLerp: () => { focus.calls.cancelUnfocusLerp++; },
+      cancelFocusLerp: () => { focus.calls.cancelFocusLerp++; },
+    }),
     origin: focus.origin,
   };
+  warp = new WarpController(deps);
 
   return {
-    warp: new WarpController(deps),
+    warp,
+    busy,
     camera,
     controls,
     observeControls,
@@ -800,7 +811,7 @@ describe('WarpController — bus emit shape', () => {
     expect(seq).toEqual([true, false]);
   });
 
-  it('startWarp cancels in-flight unfocus + focus lerps via the shim', () => {
+  it('startWarp cancels in-flight unfocus + focus lerps through the claim', () => {
     const h = makeHarness();
     seedStarStar(h);
     h.warp.warpTo({ kind: 'star', idx: 1 });
@@ -811,7 +822,17 @@ describe('WarpController — bus emit shape', () => {
   it('a warp refused during an observe transition leaves both focus lerps running', () => {
     const h = makeHarness();
     seedStarStar(h);
-    h.focus.ops.isObserveTransitionActive = () => true;
+    h.busy.observe = true;
+    h.warp.warpTo({ kind: 'star', idx: 1 });
+    expect(h.warp.isActive()).toBe(false);
+    expect(h.focus.calls.cancelUnfocusLerp).toBe(0);
+    expect(h.focus.calls.cancelFocusLerp).toBe(0);
+  });
+
+  it('a warp started while an aim slerps is refused, like every camera claim', () => {
+    const h = makeHarness();
+    seedStarStar(h);
+    h.busy.aim = true;
     h.warp.warpTo({ kind: 'star', idx: 1 });
     expect(h.warp.isActive()).toBe(false);
     expect(h.focus.calls.cancelUnfocusLerp).toBe(0);

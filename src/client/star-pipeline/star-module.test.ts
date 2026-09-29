@@ -71,7 +71,7 @@ describe('star kind module', () => {
     expect(m.critical).toBe(true);
     expect(m.pinnable(0)).toBe(false);
     expect(m.displayName(0)).toBe('');
-    expect(m.sids()).toBeNull();
+    expect(m.sidDomain()).toBeNull();
     expect(m.searchEntries()).toEqual([]);
     expect(m.photometry(0)).toBeNull();
     expect(() => m.catalog).toThrow(/before load/);
@@ -127,9 +127,11 @@ describe('star kind module', () => {
     await expect(m.ready).rejects.toThrow(/HTTP 404/);
   });
 
-  it('answers the SID domain as the catalog column itself', async () => {
+  it('answers the SID domain off the catalog column', async () => {
     const { m, cat } = await loadedModule();
-    expect(m.sids()).toBe(cat.sid);
+    const d = m.sidDomain()!;
+    expect(d.localIndexOf(cat.sid[1])).toBe(1);
+    expect(d.sidOf(1)).toBe(cat.sid[1]);
   });
 
   it('pins only in-range records with an allocated SID', async () => {

@@ -31,6 +31,7 @@ import { loadSearchIndex } from '../typeahead/search-index-host';
 import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
 import type { Late, LateState } from '../util/late/late';
+import { catalogSidDomain } from '../loaders/catalog-sid-domain';
 
 export interface StarModuleRuntime {
   /** Local-frame position of star `idx` into `out` (StarFrame). */
@@ -169,8 +170,6 @@ export function createStarKindModule(): StarKindModule {
         `${baseUrl}constellations.json`,
         onProgress,
       );
-      // Sized off the header count, which chunk 0 carries, so the shard's
-      // SID domain spans the whole population from the start.
       shardTable = new StarShardTable([catalogShard(catalog)]);
       // Names ride chunk 0 and every chunk after it, so the label ladder's
       // authority tier is live from first paint — a focused Sol shows
@@ -289,7 +288,7 @@ export function createStarKindModule(): StarKindModule {
 
     displayName: (idx) => (catalog ? resolveStarName(nameCtx(), idx) : ''),
 
-    sids: () => shardTable?.sids() ?? null,
+    sidDomain: () => (catalog ? catalogSidDomain(catalog) : null),
 
     setFocalHidden: (idx) => {
       if (ctx) ctx.sharedUniforms.uHideFocusIdx.value = idx;

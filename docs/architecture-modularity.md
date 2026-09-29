@@ -348,7 +348,7 @@ dependency-linked in order. Sizing per bead-authoring rules.
    which the MW label also reads) is ref-counted rather than owned, so
    the last release resets it; one pick per kind
    through `Picker.pickKindHit` — the cloud click's old warp gate is
-   subsumed by the click FSM's `blocksClick()`, and the kind-specific
+   subsumed by the click FSM's camera claim (`claim.isHeld()`), and the kind-specific
    `Picker` methods and hover-provider files are gone. What the planet
    pass settled: the module owns the boot host attach behind a
    `systemsReady` promise boot reads off the module

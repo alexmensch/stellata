@@ -11,8 +11,6 @@ star-shards-pure.ts (+ test)   StarShard, catalogShard, shardRecentreEager,
                                FLOAT32_EPS / DEFER_MAX_ERROR_PX /
                                CATALOG_BOUNDING_RADIUS_PC.
 star-shard-table.ts (+ test)   StarShardTable — the flat Target.idx space.
-                               Stateful (memoised SID domain), so it sits
-                               outside the -pure module.
 star-shard-mock.ts             test-only StarShard factory.
 ```
 
@@ -31,10 +29,9 @@ difference.
 
 ## Per-shard SID columns
 
-Each shard carries its own frozen SID column; the kind's resolver domain
-is their flat-order concatenation (`StarShardTable.sids` — the sole
-shard's column by reference, no 390k copy), so the SID resolver and the
-URL wire need no shard awareness.
+Each shard carries its own frozen SID column, so the URL wire needs no
+shard awareness; the resolver domain over them is not shard-aware yet
+([What is NOT shard-aware yet](#what-is-not-shard-aware-yet)).
 
 ## Chunk-local coordinates — the format law
 
@@ -74,17 +71,18 @@ wires its own buffers in.
 
 The design goal is that a second population costs data plus a shard
 entry and nothing else ([Tier 3](/docs/architecture-modularity.md#tier-3--populations-shards-within-a-kind)).
-What landed here is the format, the flat-index mapping, and the SID
-domain — `StarKindModule.sids()` is the only leg routed through the
-table. These still read `catalog` directly at a flat index and must be
-migrated with the first second population:
+What landed here is the format and the flat-index mapping. These still
+read `catalog` directly at a flat index and must be migrated with the
+first second population:
+
+- `../star-module.ts` `sidDomain()` — `catalogSidDomain(catalog)`
+  (`../../loaders/catalog-sid-domain.ts`) covers shard 0 alone, because
+  it streams: a second shard's domain has to compose with it rather than
+  concatenate columns.
 
 - `../star-module.ts` — `pinnable`, `focusable.anchorInto` /
   `localPositionInto`, `displayName`, and the `card()` / `hover()`
   providers all bound-check against `catalog.count`.
-- `../../main.ts` — `idMaps.starCount = catalog.count`, which
-  `../../util/url-state/url-state.ts` uses to reject out-of-range star
-  refs, so a shard-1 focus would not round-trip through the URL.
 - `../star-frame/` — `StarFrame` owns `catalog.positions` as one buffer;
   per-shard instancing and the deferred-rewrite uniform path arrive with
   those buffers.

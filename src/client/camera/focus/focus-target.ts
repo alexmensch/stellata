@@ -26,6 +26,10 @@ export function targetsEqual(a: Target | null, b: Target | null): boolean {
   return a.kind === b.kind && a.idx === b.idx;
 }
 
+export function targetListsEqual(a: readonly Target[], b: readonly Target[]): boolean {
+  return a.length === b.length && a.every((t, i) => targetsEqual(t, b[i]));
+}
+
 /** Per-kind interaction traits.
  *  `hard`: focus recentres the floating origin onto the object and drops
  *  the orbit floor to a per-object physical solve; hard kinds are also

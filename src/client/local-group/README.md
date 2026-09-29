@@ -55,7 +55,7 @@ a frozen Stellata ID (`sid`, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifac
 artifact (warn + null) when the version mismatches or any sid is
 missing or duplicated — a stale or pre-stamp `local-group.json` needs
 `pnpm run build:local-group`. The `lg` SID domain is the module's
-`sids()` leg, attached by main.ts's roster loop (see
+`sidDomain()` leg, attached by main.ts's roster loop (see
 `../util/sid-resolver/README.md`).
 
 Each object also carries an `emission` block — the solved luminosity

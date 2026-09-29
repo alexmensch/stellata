@@ -11,6 +11,7 @@ import { createLgKindModule, designationVariants } from './lg-module';
 import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { fakeLgEmissionMaterials } from './emission/lg-emission-materials-mock';
+import { sidsOf } from '../util/sid-resolver/sid-domain-fixture';
 
 function rawObject(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -84,7 +85,7 @@ describe('lg kind module', () => {
     expect(m.attach(makeCtx())).toBeNull();
     expect(m.layer).toBeNull();
     expect(m.emission).toBeNull();
-    expect(m.sids()).toBeNull();
+    expect(m.sidDomain()).toBeNull();
     const provider = m.focusable();
     expect(provider.anchorInto(0, new THREE.Vector3())).toBe(false);
     expect(provider.focusParkDistance(0)).toBe(0);
@@ -111,7 +112,7 @@ describe('lg kind module', () => {
     expect(m.layer?.objects).toHaveLength(2);
     expect(m.emission).not.toBeNull();
 
-    expect(m.sids()).toEqual([1, 2]);
+    expect(sidsOf(m.sidDomain(), 2)).toEqual([1, 2]);
     expect(m.searchEntries().map((e) => e.label))
       .toEqual([
         'M31', 'Andromeda Galaxy', 'NGC 224', 'M 31', 'Messier 31',
