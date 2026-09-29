@@ -154,12 +154,15 @@ export interface DerivedBinding {
 }
 
 /** The evidence a row's candidates are weighed against: the row's own HIP, its
- *  printed V, plus the shared per-source tables. */
+ *  printed V, the source SIMBAD files its own TYC under, plus the shared
+ *  per-source tables. */
 export interface RowGateEvidence {
   hip: number | null;
-  tyc: string;
   vMag: number | null;
   vVia: GateVVia | null;
+  /** The component witness — null where SIMBAD files the TYC under no source
+   *  or under two (README.md#both-gates-weigh-every-candidate). */
+  tycWitness: string | null;
   evidence: BindingEvidence;
 }
 
@@ -169,12 +172,14 @@ export function rowGateEvidence(
   row: BindingCells,
   evidence: BindingEvidence,
   printedVBelowHip: (row: BindingCells) => PrintedV | null,
+  simbad: SimbadSourceIndex,
 ): RowGateEvidence {
   const hip = parseIntOrNull(row.hip);
+  const tycWitness = row.tyc === '' ? null : simbad.byTyc.get(row.tyc) ?? null;
   const hipV = hip === null ? null : evidence.vMagOfHip(hip);
-  if (hipV !== null) return { hip, tyc: row.tyc, vMag: hipV, vVia: 'hip', evidence };
+  if (hipV !== null) return { hip, vMag: hipV, vVia: 'hip', tycWitness, evidence };
   const below = printedVBelowHip(row);
-  return { hip, tyc: row.tyc, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, evidence };
+  return { hip, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, tycWitness, evidence };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {
@@ -214,10 +219,9 @@ export function deriveBinding(
   // The component witness rescues a row the sibling gate left unbound; it never
   // outranks a candidate that passes on its own — see README.md. A sibling
   // rejection is one the magnitude gate already passed.
-  const witnessed = gate.tyc === '' ? null : evidence.simbadSourceOfTyc(gate.tyc);
-  if (winner === null && witnessed !== null) {
+  if (winner === null && gate.tycWitness !== null) {
     const named = rejected.findIndex((r) => r.reason === 'sibling'
-      && r.sourceId === witnessed
+      && r.sourceId === gate.tycWitness
       && !isSiblingLetterAttribution(r.sourceId, gate.hip, evidence.wdsXids, true));
     if (named >= 0) {
       const [rescued] = rejected.splice(named, 1);

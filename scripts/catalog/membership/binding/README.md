@@ -68,7 +68,7 @@ Where SIMBAD puts the row's HIP on both components, the gate reads the row as
 the system and refuses any source but the primary's. When that leaves the row
 with **no** passing candidate, a refused candidate SIMBAD
 indexes the row's own TYC under — and no other source under it
-(`BindingEvidence.simbadSourceOfTyc`, the SIMBAD route's two-claimants rule) —
+(`RowGateEvidence.tycWitness`, read off the SIMBAD route's own index and its two-claimants rule) —
 binds after all: Tycho-2 resolved the pair, so the row is that component
 carrying the pair's shared HIP. 53 Aqr B (HD 212697 · TYC 6385-683-1 on
 HIP 110778) and μ Dra B (HD 154905 · GJ 9584B on HIP 83608) are the shape —

@@ -66,9 +66,6 @@ export interface BindingEvidence {
    *  (`../photometry/README.md#the-v-cascade`). */
   printedV: PrintedVLookups;
   wdsXids: SimbadWdsXidIndex | null;
-  /** The one source SIMBAD indexes a TYC under, null where none or two do —
-   *  the derivation's component witness (`../membership/binding/README.md`). */
-  simbadSourceOfTyc: (tyc: string) => string | null;
 }
 
 export function bindingEvidence(
@@ -77,10 +74,8 @@ export function bindingEvidence(
   wdsXids: SimbadWdsXidIndex | null,
   printedV: PrintedVLookups,
   pulledSourceIds: ReadonlySet<string> | ReadonlyMap<string, unknown> | null = null,
-  simbadSourceByTyc: ReadonlyMap<string, string | null> = new Map(),
 ): BindingEvidence {
   return {
-    simbadSourceOfTyc: (tyc) => simbadSourceByTyc.get(tyc) ?? null,
     gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
     hasPulledRow: (sourceId) => (pulledSourceIds ?? sourceGMag).has(sourceId),
     vMagOfHip: (hip) => hipVMag.get(hip) ?? null,

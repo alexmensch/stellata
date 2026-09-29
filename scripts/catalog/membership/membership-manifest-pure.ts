@@ -752,7 +752,7 @@ function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingE
     row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], printedV,
   );
   return (row) => {
-    const gate = rowGateEvidence(row, evidence, belowHip);
+    const gate = rowGateEvidence(row, evidence, belowHip, simbad);
     return { derived: deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate), gate };
   };
 }

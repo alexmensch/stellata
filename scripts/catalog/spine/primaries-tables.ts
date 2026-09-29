@@ -96,7 +96,7 @@ function readWgsn(): WgsnKeys {
   return { names, hd, hip, flamByHd, flamByHip };
 }
 
-export function readSimbadXids(): Map<string, SimbadXids> {
+function readSimbadXids(): Map<string, SimbadXids> {
   const out = new Map<string, SimbadXids>();
   for (const { cells, idx } of dataRows(
     readRequired(SRC_SIMBAD_SPTYPE, LFS_HINT), ['source_id', 'hip', 'tyc', 'gj'],
