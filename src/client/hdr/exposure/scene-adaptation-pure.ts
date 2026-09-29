@@ -171,6 +171,7 @@ export interface AdaptationBranches {
 export function adaptationBranches(
   stat: FrameStatistic,
   tuning = DEFAULT_ADAPTATION_TUNING,
+  out: AdaptationBranches = newAdaptationBranches(),
 ): AdaptationBranches {
   const eye = eyeAdaptationDm(stat.meanL, tuning.lAdapt);
   const pin = surfacePinDm(stat, tuning.lTarget);
@@ -178,17 +179,21 @@ export function adaptationBranches(
   const weight = surfacePinWeight(stat.coverage);
   const perception = Math.max(eye, floor);
   const dm = perception + (pin - perception) * weight;
-  return {
-    meanL: stat.meanL,
-    eye,
-    pin,
-    floor,
-    discL: stat.discL,
-    coverage: stat.coverage,
-    weight,
-    dm,
-    regime: adaptationRegime(dm, eye, weight),
-  };
+  out.meanL = stat.meanL;
+  out.eye = eye;
+  out.pin = pin;
+  out.floor = floor;
+  out.discL = stat.discL;
+  out.coverage = stat.coverage;
+  out.weight = weight;
+  out.dm = dm;
+  out.regime = adaptationRegime(dm, eye, weight);
+  return out;
+}
+
+/** A write target for `adaptationBranches`; every field is overwritten. */
+export function newAdaptationBranches(): AdaptationBranches {
+  return { meanL: 0, eye: 0, pin: 0, floor: 0, discL: 0, coverage: 0, weight: 0, dm: 0, regime: 'open' };
 }
 
 function adaptationRegime(dm: number, eye: number, weight: number): AdaptationRegime {

@@ -97,6 +97,21 @@ describe('SceneAdaptation', () => {
     expect(adaptation.branches()).toBeNull();
   });
 
+  it('rewrites one statistic and one tuning in place across landings', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    adaptation.measure(false, 0, false);
+    const statistic = adaptation.getLandedStatistic();
+    const tuning = adaptation.getTuning();
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    whitePoint *= 2;
+    adaptation.measure(false, 16, false);
+    expect(adaptation.getLandedStatistic()).toBe(statistic);
+    expect(statistic!.meanL).toBeCloseTo(1e4 * L_ADAPT, 6);
+    expect(adaptation.getTuning()).toBe(tuning);
+    expect(tuning.whitePoint).toBe(whitePoint);
+  });
+
   it('cuts on the reduced mean once it does', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);

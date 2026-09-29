@@ -13,6 +13,7 @@ import {
   ADAPT_SLEW_TAU_S,
   L_ADAPT,
   L_TARGET,
+  newAdaptationBranches,
   slewDm,
 } from './scene-adaptation-pure';
 import {
@@ -26,7 +27,7 @@ import {
 } from './park/adaptation-park-pure';
 
 interface LandedStatistic extends FrameStatistic {
-  readonly from: ReducedStatistic;
+  from: ReducedStatistic;
 }
 
 export interface SceneAdaptationDeps {
@@ -58,18 +59,19 @@ export class SceneAdaptation {
 
   private dm = 0;
   private landed: LandedStatistic | null = null;
+  private readonly measured = newAdaptationBranches();
   private park: ParkState = INITIAL_PARK_STATE;
   private readonly landedCut: LandedCut = { measuredDm: 0, regime: 'open' };
   private readonly landing: ParkLanding = { landed: null, appliedDm: 0, probeReady: false };
   private lastNowMs: number | null = null;
-  private lAdapt = L_ADAPT;
-  private lTarget = L_TARGET;
+  private readonly tuning: AdaptationTuning;
   private slewTauS = ADAPT_SLEW_TAU_S;
   private held = false;
   private parkEnabled = true;
 
   constructor(deps: SceneAdaptationDeps) {
     this.deps = deps;
+    this.tuning = { lAdapt: L_ADAPT, lTarget: L_TARGET, whitePoint: deps.whitePoint() };
   }
 
   /**
@@ -90,14 +92,13 @@ export class SceneAdaptation {
       // Rescaling the landed median is exact, not an approximation: the
       // divisor is positive, so it orders the tiles the same way and the
       // same tile wins either side of it. No need to rescale per tile.
-      this.landed = {
-        from: reduced,
-        meanL: rescaleToBaseExposure(reduced.meanL, reduced.renderExposure, base),
-        discL: rescaleToBaseExposure(reduced.discL, reduced.renderExposure, base),
-        coverage: reduced.coverage,
-      };
+      const landed = (this.landed ??= { from: reduced, meanL: 0, discL: 0, coverage: 0 });
+      landed.from = reduced;
+      landed.meanL = rescaleToBaseExposure(reduced.meanL, reduced.renderExposure, base);
+      landed.discL = rescaleToBaseExposure(reduced.discL, reduced.renderExposure, base);
+      landed.coverage = reduced.coverage;
     }
-    const branches = this.branches();
+    const branches = this.branches(this.measured);
     const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, branches === null ? 0 : branches.dm, blend);
@@ -143,9 +144,11 @@ export class SceneAdaptation {
     return this.park.phase;
   }
 
-  /** The live levels the branches measure against. */
-  getTuning(): AdaptationTuning {
-    return { lAdapt: this.lAdapt, lTarget: this.lTarget, whitePoint: this.deps.whitePoint() };
+  /** The live levels the branches measure against. The one object is
+   *  rewritten in place, so read it within the frame; never hold it. */
+  getTuning(): Readonly<AdaptationTuning> {
+    this.tuning.whitePoint = this.deps.whitePoint();
+    return this.tuning;
   }
 
   /** This frame's decomposition — the three branch terms and which of them
@@ -154,21 +157,21 @@ export class SceneAdaptation {
    *  its effect on the same statistic instead of one frame late. `dm` here is
    *  the *measurement*; the applied cut is `getDm()`, which trails it by the
    *  slew. */
-  branches(): AdaptationBranches | null {
-    return this.landed === null ? null : adaptationBranches(this.landed, this.getTuning());
+  branches(out?: AdaptationBranches): AdaptationBranches | null {
+    return this.landed === null ? null : adaptationBranches(this.landed, this.getTuning(), out);
   }
 
   /** Adaptation anchor — `L̄` at which the perception branch's cut is zero.
    *  A debug knob only: ships at `L_ADAPT`, which the adaptation section (/docs/science-hdr-pipeline.md#31-adaptation--what-drives-the-cut) measured. */
-  setLAdapt(l: number): void { this.lAdapt = l; }
+  setLAdapt(l: number): void { this.tuning.lAdapt = l; }
 
-  getLAdapt(): number { return this.lAdapt; }
+  getLAdapt(): number { return this.tuning.lAdapt; }
 
   /** The level the resolved-surface pin holds a dominant lit surface's own
    *  disc mean at — the one knob smoke-tuning moves (/docs/science-hdr-pipeline.md#32-what-the-model-does-and-does-not-fix). */
-  setLTarget(l: number): void { this.lTarget = l; }
+  setLTarget(l: number): void { this.tuning.lTarget = l; }
 
-  getLTarget(): number { return this.lTarget; }
+  getLTarget(): number { return this.tuning.lTarget; }
 
   /** Time constant of the slew limit on the applied cut, in real seconds.
    *  The only tunable in the transient: the filter is one-pole, and the
