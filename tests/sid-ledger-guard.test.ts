@@ -36,9 +36,6 @@ const REINSTATEMENTS_PATH = resolve(SID_DIR, 'reinstatements.tsv');
 const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
 
 const ledgerText = existsSync(LEDGER_PATH) ? readFileSync(LEDGER_PATH, 'utf-8') : null;
-// ledger.tsv rides LFS: a checkout without LFS smudging (the bare CI test
-// job) sees a pointer stub. The guard runs for real in the sid-ledger-guard
-// job, which names this file, and in any local clone.
 const available = ledgerText !== null && !isLfsPointer(ledgerText);
 
 function git(...args: string[]): string {

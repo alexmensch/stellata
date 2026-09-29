@@ -146,15 +146,9 @@ jobs:
       - name: SID ledger–artifact consistency
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm run sid:check
-      # Tier-A validation against the built artifacts: the known-stars
-      # corpus plus the multi-star render-geometry regression (which needs
-      # public/binaries.bin, built here from the committed multiples.tsv).
-      # Also the home for LFS-gated catalogue-wide sweeps that self-skip in
-      # the bare `test` job — every such suite must be named in the vitest
-      # invocation below, or it never runs smudged anywhere.
-      - name: Tier-A star corpus
+      - name: Full vitest, smudged and built
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
-        run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
+        run: pnpm test
       - id: deploy-build
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm run build:client
@@ -162,10 +156,9 @@ jobs:
         if: ${{ !cancelled() && steps.deploy-build.outcome == 'success' }}
         run: pnpm run check:asset-sizes
 
-  # Append-only ledger guard (needs full history for the merge-base
-  # read), the DR-reconciliation classifier against its committed dry-run
-  # snapshots, and the swap parity ledger's ledger/spine/V-50 gates. All
-  # self-skip in the bare `test` job.
+  # Append-only ledger guard: the one suite that needs full history, for
+  # its merge-base read. `build-catalog`'s full vitest runs it shallow,
+  # where that check skips.
   sid-ledger-guard:
     name: SID ledger append-only guard
     runs-on: ubuntu-latest
@@ -181,4 +174,4 @@ jobs:
           node-version: '24'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts scripts/catalog/classic-ids/parity-ledger.test.ts
+      - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts
