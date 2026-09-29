@@ -188,12 +188,12 @@ gates, so none can cancel the lerps in any other order.
 | Site | Shape | Verdict |
 |---|---|---|
 | `onPointerUp` | `claim.claim()` | **narrower, deliberate** — the lerps are cancelled, not blocked |
-| `dispatchSingleClick` | `blocksClick()` = `claim.isHeld()` | 3-term; focus-park already cancelled at pointer-up |
-| `dispatchDoubleClick` | `blocksClick()` | same 3 terms — shares the one predicate |
+| `dispatchSingleClick` | `claim.isHeld()` | 3-term; focus-park already cancelled at pointer-up |
+| `dispatchDoubleClick` | `claim.isHeld()` | same 3 terms — shares the one predicate |
 
 **No site is strict-equivalent to `isCameraBusy()`.** Every one is
 narrower on two axes at once: it excludes the focus-park lerp (which
 the click cancels) and excludes the observe `unfocus` kind (a
-navigate-mode lerp a click should be free to interrupt). `blocksClick()`
-is the claim's own `isHeld`, so the deferred re-checks and the pointer-up
+navigate-mode lerp a click should be free to interrupt). The deferred
+re-checks read the claim's own `isHeld`, so they and the pointer-up
 claim cannot disagree about what holds the camera.

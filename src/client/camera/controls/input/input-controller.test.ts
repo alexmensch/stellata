@@ -482,7 +482,7 @@ describe('InputController click dispatch', () => {
   });
 });
 
-// The deferred-dispatch gate (`blocksClick`). Both handlers share one
+// The deferred-dispatch gate (`claim.isHeld()`). Both handlers share one
 // predicate, so each term is pinned on both to catch a one-sided edit.
 describe('InputController deferred-click gate', () => {
   const gates = ['warpActive', 'aimActive', 'observeTransitionActive'] as const;
