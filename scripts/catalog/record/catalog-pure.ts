@@ -1615,7 +1615,7 @@ export function isSiblingLetterAttribution(
       if (anyRelated && !anyDisjoint) continue;
       if (anyDisjoint && !anyRelated) return true;
     }
-    if (rowNamesSource) continue;
+    if (rowNamesSource && hLetters.some((l) => !wdsComponentsDisjoint(l, x))) continue;
     const p = xids.primarySourceLetterByWds.get(wdsId);
     if (p !== undefined && wdsComponentsDisjoint(p, x)) return true;
   }

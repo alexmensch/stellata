@@ -64,16 +64,24 @@ gates refuse 317 candidates on G − V and 119 on sibling-letter attribution
 under any tier, so nothing could be weighed against it.
 
 **A component designation rescues a row the sibling gate leaves unbound.**
-Where SIMBAD puts the row's HIP on both components (or on neither), the gate
-reads the row as the system and refuses any source but the primary's. When
-that leaves the row with **no** passing candidate, a refused candidate SIMBAD
+Where SIMBAD puts the row's HIP on both components, the gate reads the row as
+the system and refuses any source but the primary's. When that leaves the row
+with **no** passing candidate, a refused candidate SIMBAD
 indexes the row's own TYC under — and no other source under it
 (`BindingEvidence.simbadSourceOfTyc`, the SIMBAD route's two-claimants rule) —
 binds after all: Tycho-2 resolved the pair, so the row is that component
 carrying the pair's shared HIP. 53 Aqr B (HD 212697 · TYC 6385-683-1 on
 HIP 110778) and μ Dra B (HD 154905 · GJ 9584B on HIP 83608) are the shape —
 AT-HYG merged B's cells onto the system's HIP, and the refusal left B's own
-source to come back through the magnitude term as an unnamed twin.
+source to come back through the magnitude term as an unnamed twin. VV Crv
+(HIP 61910) is the third.
+
+**A HIP on neither component is the system's, and no witness overrides it.**
+HIP 62686 and HIP 52774 carry only a HIP and a TYC SIMBAD files under B; their
+Hipparcos entry lives on SIMBAD's system object, and `multiples.tsv` anchors
+component A on it. Rescued, the row sat on B's source and companion promotion
+minted a synthetic B beside it — one star drawn twice. 30 rows are that shape;
+they stay refused and count under `magnitudeRowsOwnCandidate.refused_sibling`.
 
 **It never outranks a candidate that passes on its own.** A TYC alone is not a
 component attribution: SIMBAD files HR 846's TYC 3700-1745-1 under HD 17743 C

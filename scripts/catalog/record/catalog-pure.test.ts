@@ -1770,6 +1770,12 @@ describe('catalog-pure / sibling-letter attribution gate', () => {
     expect(isSiblingLetterAttribution('1420101696285626624', 83608, xids, true)).toBe(false);
   });
 
+  // HD 70492's HIP sits on a system-level object, on neither letter: the row
+  // is the system, so a component witness does not make it B.
+  it('still scrubs a system-level HIP on neither letter, witness or not', () => {
+    expect(isSiblingLetterAttribution('663434291018997248', 41098, xids, true)).toBe(true);
+  });
+
   it('still scrubs a HIP attributed to the other letter alone, witness or not', () => {
     expect(isSiblingLetterAttribution('777', 32349, xids, true)).toBe(true);
   });
