@@ -1,10 +1,11 @@
-# Harness guard hooks
+# Harness hooks
 
 Harness hooks for Claude Code, registered in `.claude/settings.json`. Claude
 Code's settings file watcher applies a registration change mid-session, so a
 session that adds or edits a hook here is governed by it from the next call.
 Each hook reads its payload as JSON on stdin. The five guards are PreToolUse /
-SessionStart hooks answering with a `permissionDecision`. The review
+SessionStart hooks answering with a `permissionDecision`; paper-store-link
+answers nothing and acts only on the filesystem. The review
 design-pass reminder lives at user level, in the code-standards bundle
 (`~/.claude/hooks/code-standards/`).
 
@@ -395,8 +396,8 @@ Two paths:
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked. For `skill-guard`: invoke the
    skill, which is the intended route rather than an escape.
-2. **Across the session.** Remove the entry from
-   `.claude/settings.json`'s `hooks.PreToolUse` array, or
+2. **Across the session.** Remove the entry from its event's array
+   under `.claude/settings.json`'s `hooks`, or
    temporarily move the hook script aside.
 
 Disabling is the right call when investigating a folder that
