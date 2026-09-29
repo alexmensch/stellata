@@ -73,9 +73,9 @@ describe.skipIf(!available)('committed inherited spine', () => {
 
   it('matches the pinned row + per-column counts', () => {
     const expected = JSON.parse(readFileSync(EXPECTED_PATH, 'utf-8')) as SpineCounts;
-    const mismatches = compareBuildCounts(expected, spineCounts(rows))
-      .filter((d) => d.status === 'mismatch');
-    expect(mismatches).toEqual([]);
+    const drifted = compareBuildCounts(expected, spineCounts(rows))
+      .filter((d) => d.status !== 'match');
+    expect(drifted).toEqual([]);
   });
 
   it('gives every row a designation, so no row is keyless for SID resolution', () => {
