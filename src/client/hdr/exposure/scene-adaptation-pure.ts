@@ -191,8 +191,6 @@ export function adaptationBranches(
   };
 }
 
-export const UNMEASURED_CUT: Pick<AdaptationBranches, 'dm' | 'regime'> = { dm: 0, regime: 'open' };
-
 function adaptationRegime(dm: number, eye: number, weight: number): AdaptationRegime {
   if (dm === 0) return 'open';
   if (weight >= 1) return 'surface';

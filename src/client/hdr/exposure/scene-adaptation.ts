@@ -14,10 +14,10 @@ import {
   L_ADAPT,
   L_TARGET,
   slewDm,
-  UNMEASURED_CUT,
 } from './scene-adaptation-pure';
 import {
   INITIAL_PARK_STATE,
+  type LandedCut,
   type ParkLanding,
   type ParkPhase,
   type ParkState,
@@ -59,9 +59,8 @@ export class SceneAdaptation {
   private dm = 0;
   private landed: LandedStatistic | null = null;
   private park: ParkState = INITIAL_PARK_STATE;
-  private readonly landing: ParkLanding = {
-    fresh: false, measuredDm: 0, appliedDm: 0, regime: 'open', probeReady: false,
-  };
+  private readonly landedCut: LandedCut = { measuredDm: 0, regime: 'open' };
+  private readonly landing: ParkLanding = { landed: null, appliedDm: 0, probeReady: false };
   private lastNowMs: number | null = null;
   private lAdapt = L_ADAPT;
   private lTarget = L_TARGET;
@@ -75,7 +74,8 @@ export class SceneAdaptation {
 
   /**
    * Fold this frame's landed measurement into the applied cut, in
-   * magnitudes. Chart measures nothing and reports no cut. `nowMs` is
+   * magnitudes. Chart measures nothing and reports no cut; before the first
+   * landing the cut slews toward none. `nowMs` is
    * wall-clock — the slew limit is a render filter, not sim time, so a
    * time-warped frame must not slew faster; warp itself snaps.
    */
@@ -97,14 +97,18 @@ export class SceneAdaptation {
         coverage: reduced.coverage,
       };
     }
-    const { dm: measured, regime } = this.branches() ?? UNMEASURED_CUT;
+    const branches = this.branches();
     const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
-    this.dm = slewDm(this.dm, measured, blend);
-    this.landing.fresh = landedFresh;
-    this.landing.measuredDm = measured;
+    this.dm = slewDm(this.dm, branches === null ? 0 : branches.dm, blend);
+    if (landedFresh && branches !== null) {
+      this.landedCut.measuredDm = branches.dm;
+      this.landedCut.regime = branches.regime;
+      this.landing.landed = this.landedCut;
+    } else {
+      this.landing.landed = null;
+    }
     this.landing.appliedDm = this.dm;
-    this.landing.regime = regime;
     this.landing.probeReady = this.deps.measurementReady();
     this.park = this.parkEnabled ? parkTick(this.park, this.landing) : INITIAL_PARK_STATE;
     perfMeasure('adaptation');
