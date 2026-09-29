@@ -9,6 +9,7 @@ import type {
   PerceptualDiscUniforms,
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
+import { NO_INSTANCE } from '../../frame/shared-uniforms';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES, type PlanetSystem, type Planet } from '../planet-system';
 import {
@@ -1087,7 +1088,7 @@ describe('PlanetBodyField.pick', () => {
     f.setHiddenInstance(0);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
 
-    f.setHiddenInstance(-1);
+    f.setHiddenInstance(null);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
     f.dispose();
   });
@@ -1368,13 +1369,15 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
   it('setHiddenInstance drives the one hide slot the glare layer reads', () => {
     const f = makeField();
     attach(f, 0, 2);
-    expect(f.hiddenInstanceIdx).toBe(-1);
+    expect(f.hiddenInstanceIdx).toBeNull();
+    expect(f.glareSources().hideIdx()).toBe(NO_INSTANCE);
     f.setHiddenInstance(1);
     expect(f.hiddenInstanceIdx).toBe(1);
     // The one slot the glare layer reads its uniform from.
     expect(f.glareSources().hideIdx()).toBe(1);
-    f.setHiddenInstance(-1);
-    expect(f.hiddenInstanceIdx).toBe(-1);
+    f.setHiddenInstance(null);
+    expect(f.hiddenInstanceIdx).toBeNull();
+    expect(f.glareSources().hideIdx()).toBe(NO_INSTANCE);
   });
 
 

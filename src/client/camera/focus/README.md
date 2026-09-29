@@ -10,7 +10,7 @@ close-approach focused star sitting at exactly NDC origin.
 
 - `focus-controller.ts` (+ test) — the FSM. Owns the focused object
   and the distance-vector destination (one `Target` slot each — see
-  [Focus state](#focus-state)), `cameraMode`, `focusedPlanetSystem`, the focus-park
+  [Focus state](#focus-state)), `cameraMode`, the focused planet system, the focus-park
   lerp state, pin-engage geometry, and the generic `makeFocusTarget` /
   `currentFocusTarget` builders. Canonical home for
   `GLOBAL_MIN_DIST_PC` + `PIN_ENGAGE_THRESHOLD_SQ_PC`.
@@ -52,8 +52,13 @@ scene-layer hooks, and `StarFrame` for star positions
 - `cameraMode` lives here too, with its `CameraMode` type — `getCameraMode()` is the single read
   path; `setCameraModeValue()` is the raw no-emit write used by
   ObserveTransition and the observe-cleanup branch of `setFocus`.
-- `focusedPlanetSystem`, `planetSystemToken` — derived star-focus
-  state.
+- `planetSystemHost` and `planetSystem` — derived star-focus state: the
+  host whose system is attached or loading, and that system as a
+  `LateState` (`../../util/late/README.md`). A switch to a new host goes
+  `pending` at once, so the previous host's system never outlives the
+  switch; refocusing the same host reloads nothing; a failed load settles
+  `absent`, so no reader waits on it forever. `'planetSystem'`
+  carries the ready system or null, and fires only when that changes.
 - Click/select-driven entry points are Target-keyed: `flyTo(target)`
   (hard kinds route through `focusHardTarget`; soft kinds share one
   provider-driven focus-park path), `setOrbitTarget(target)`,
@@ -325,13 +330,13 @@ float32 cancellation in the projection chain
 centre by visible pixels even though the focused star is
 mathematically at view-origin. Float64 emulation was rejected as too
 heavy; instead the star vertex graph exposes a `uPinFocusToCenter`
-uniform (`NO_PINNED_STAR`, -1, = disabled). When set, the shader replaces the projection
+uniform (`NO_INSTANCE`, -1, = disabled; `../../frame/shared-uniforms.ts`). When set, the shader replaces the projection
 chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the matched
 instance — bypassing matrix-multiply cancellation entirely.
 One uniform, a handful of nodes, no CPU cost.
 
 JS-side per frame in the frame loop (`../../scene/frame-loop/`): the
-uniform holds `FocusController.pinnedStar()`, or `NO_PINNED_STAR` when it
+uniform holds `FocusController.pinnedStar()`, or `NO_INSTANCE` when it
 is null. The pin engages iff
 `focusedStar !== null && cameraMode === 'navigate'
 && (!warp.isActive() || warp.isRecenteredToDest())

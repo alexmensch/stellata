@@ -8,7 +8,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import type { StarFrame } from '../../star-pipeline/star-frame/star-frame';
 import type { StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
-import type { Late } from '../../util/late/late';
+import { type Late, type LateState, whenReady } from '../../util/late/late';
 import type { AimController } from '../controls/aim-controller';
 import type { RollController } from '../controls/input/roll-controller';
 import type { ObserveControls } from '../observe/observe-controls';
@@ -119,6 +119,12 @@ export type FocalPerturbationInto = (idx: number, out: THREE.Vector3) => boolean
 
 export type CameraMode = 'navigate' | 'observe';
 
+const NO_PLANET_SYSTEM: LateState<PlanetSystem> = { status: 'absent' };
+const PLANET_SYSTEM_PENDING: LateState<PlanetSystem> = { status: 'pending' };
+
+const attachedSystem = (s: LateState<PlanetSystem>): PlanetSystem | null =>
+  whenReady<PlanetSystem, PlanetSystem | null>(s, (ps) => ps, null);
+
 export class FocusController implements FocusOps {
   private readonly deps: FocusControllerDeps;
   // Focused object and distance-vector destination, one Target each.
@@ -127,7 +133,8 @@ export class FocusController implements FocusOps {
   private focused: Target | null = null;
   private vector: Target | null = null;
   private cameraMode: CameraMode = 'navigate';
-  private focusedPlanetSystem: PlanetSystem | null = null;
+  private planetSystemHost: number | null = null;
+  private planetSystem: LateState<PlanetSystem> = NO_PLANET_SYSTEM;
   private planetSystemToken = 0;
   private focusLerpState: FocusLerpState | null = null;
 
@@ -150,7 +157,7 @@ export class FocusController implements FocusOps {
 
   getFocusedStar(): number | null { return this.focusedStar; }
   getFocusedTarget(): Target | null { return this.focused; }
-  getFocusedPlanetSystem(): PlanetSystem | null { return this.focusedPlanetSystem; }
+  getFocusedPlanetSystem(): LateState<PlanetSystem> { return this.planetSystem; }
   isFocusLerpActive(): boolean { return this.focusLerpState !== null; }
 
   getCameraMode(): CameraMode { return this.cameraMode; }
@@ -441,20 +448,30 @@ export class FocusController implements FocusOps {
   // introduces truly async fetches; for Sol the resolve happens on the
   // next microtask, ahead of the next animation frame.
   private refreshPlanetSystem(idx: number | null): void {
+    const { solIndex } = this.deps.catalog;
+    const host = idx !== null && hasPlanets(solIndex, idx) ? idx : null;
+    if (host === this.planetSystemHost) return;
+    this.planetSystemHost = host;
     const token = ++this.planetSystemToken;
-    if (idx === null || !hasPlanets(this.deps.catalog.solIndex, idx)) {
-      if (this.focusedPlanetSystem !== null) {
-        this.focusedPlanetSystem = null;
-        this.deps.bus.emit('planetSystem', null);
-      }
+    if (host === null) {
+      this.setPlanetSystem(NO_PLANET_SYSTEM);
       return;
     }
-    void getPlanetSystem(this.deps.catalog.solIndex, idx).then((ps) => {
-      if (token !== this.planetSystemToken) return;
-      if (this.focusedPlanetSystem === ps) return;
-      this.focusedPlanetSystem = ps;
-      this.deps.bus.emit('planetSystem', ps);
-    });
+    this.setPlanetSystem(PLANET_SYSTEM_PENDING);
+    const settle = (next: LateState<PlanetSystem>) => {
+      if (token === this.planetSystemToken) this.setPlanetSystem(next);
+    };
+    void getPlanetSystem(solIndex, host).then(
+      (ps) => settle(ps === null ? NO_PLANET_SYSTEM : { status: 'ready', value: ps }),
+      () => settle(NO_PLANET_SYSTEM),
+    );
+  }
+
+  private setPlanetSystem(next: LateState<PlanetSystem>): void {
+    const was = attachedSystem(this.planetSystem);
+    this.planetSystem = next;
+    const now = attachedSystem(next);
+    if (now !== was) this.deps.bus.emit('planetSystem', now);
   }
 
   // ─── focus-park lerp (private state, public cancel) ────────────────
@@ -874,6 +891,8 @@ export class FocusController implements FocusOps {
     this.focusLerpState = null;
     this.focused = null;
     this.vector = null;
-    this.focusedPlanetSystem = null;
+    this.planetSystemHost = null;
+    this.planetSystem = NO_PLANET_SYSTEM;
+    this.planetSystemToken++;
   }
 }

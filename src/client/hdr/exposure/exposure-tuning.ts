@@ -20,19 +20,10 @@ import {
 
 function readState(stellata: Stellata): ExposureReadout {
   const { adaptation, exposure, hdr } = stellata;
-  const branches = adaptation.branches();
   const tuning = adaptation.getTuning();
   return {
-    meanL: adaptation.getStatistic().meanL,
-    discL: branches.discL,
-    coverage: branches.coverage,
-    weight: branches.weight,
-    eye: branches.eye,
-    pin: branches.pin,
-    floor: branches.floor,
-    measuredDm: branches.dm,
+    measurement: adaptation.branches(),
     appliedDm: adaptation.getDm(),
-    regime: branches.regime,
     parkPhase: adaptation.getParkPhase(),
     limitMag: exposure.getLimitMag(),
     ev: exposure.getEv(),

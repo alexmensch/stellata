@@ -13,7 +13,7 @@ import {
 } from '../../debug/perf-hud';
 import { resolveAndPublishGpuFrame } from '../../debug/gpu-timing/gpu-frame-samples';
 import type { FloatingOrigin } from '../../frame/floating-origin';
-import { NO_PINNED_STAR, type SharedUniforms } from '../../frame/shared-uniforms';
+import { NO_INSTANCE, type SharedUniforms } from '../../frame/shared-uniforms';
 import type { HdrSeam } from '../../hdr/hdr-seam';
 import type { ExposureFrameStep } from '../../hdr/exposure/exposure-frame-step';
 import type { LocalDepthPass } from '../../local-depth/local-depth-pass';
@@ -38,7 +38,7 @@ export interface FrameLoopDeps {
   webgpu: Pick<WebGpuSeam, 'renderer' | 'timestampsAvailable' | 'syncUniformNodes'>;
   hdr: Pick<HdrSeam, 'bind' | 'resolve'>;
   uniforms: SharedUniforms;
-  clock: Pick<VirtualClock, 'getT' | 'getRate'>;
+  clock: Pick<VirtualClock, 'getT' | 'getRate' | 'inFrame'>;
   origin: Pick<FloatingOrigin, 'tick' | 'worldOffset'>;
   starFrame: Pick<StarFrame, 'advanceEpochTo' | 'flushLocalPositions' | 'syncPhysSizeWindow'>;
   focalRides: Pick<FocalRides, 'reseedMoving' | 'followEpochStep'>;
@@ -106,6 +106,10 @@ export class FrameLoop {
 
   private tick = () => {
     if (this.disposed) return;
+    this.deps.clock.inFrame(this.runTick);
+  };
+
+  private runTick = (): void => {
     const d = this.deps;
     perfMark('frame.total');
     // One wall-clock read per tick: every reader must agree on this frame.
@@ -132,8 +136,8 @@ export class FrameLoop {
     }
     perfMark('pre-render');
     d.uniforms.uCameraPos.value.copy(d.camera.position);
-    d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_PINNED_STAR;
-    d.uniforms.uModelDays.value = tToJdUt(d.clock.getT()) - J2000_JD;
+    d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_INSTANCE;
+    d.uniforms.uModelDays.value = tToJdUt(this.frameCtx.t) - J2000_JD;
     d.uniforms.uModelDaysPerRealSec.value = Math.abs(d.clock.getRate()) / 86400;
     // Here, not by either publisher: each would drop the other's entries.
     d.occluders.beginFrame();

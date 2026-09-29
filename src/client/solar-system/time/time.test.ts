@@ -172,6 +172,74 @@ describe('nextRewindRate', () => {
   });
 });
 
+describe('VirtualClock — one instant per frame', () => {
+  it('answers the frame-start instant until the frame ends, at a non-unit rate', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.setRate(MAX_RATE);
+    const t = c.inFrame(() => {
+      const held = c.getT();
+      w.advance(2 ** -10);
+      expect(c.getT()).toBe(held);
+      return held;
+    });
+    expect(c.getT()).toBe(t + MAX_RATE * 2 ** -10);
+  });
+
+  it('a write inside a frame moves the frame instant with it', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.inFrame(() => {
+      c.setTimeAbsolute(1e9);
+      expect(c.getT()).toBe(1e9);
+      c.pause();
+      w.advance(5);
+      expect(c.getT()).toBe(1e9);
+    });
+  });
+
+  it('a rate change inside a frame snapshots live time, not the held instant', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.setRate(64);
+    c.inFrame(() => {
+      const held = c.getT();
+      w.advance(1);
+      c.pause();
+      expect(c.getT()).toBe(held + 64);
+    });
+  });
+
+  it('a reset inside a frame moves the frame instant to live wall time', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.setTimeAbsolute(1e9);
+    c.inFrame(() => {
+      c.reset();
+      expect(c.getT()).toBe(w.now());
+      w.advance(5);
+      expect(c.getT()).toBe(w.now() - 5);
+    });
+  });
+
+  it('releases the frame when the body throws', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    let held = 0;
+    expect(() => c.inFrame(() => {
+      held = c.getT();
+      w.advance(1);
+      throw new Error('tick');
+    })).toThrow('tick');
+    expect(c.getT()).toBe(held + 1);
+  });
+
+  it('refuses a nested frame', () => {
+    const c = new VirtualClock(fakeWall().now);
+    expect(() => c.inFrame(() => c.inFrame(() => {}))).toThrow('already open');
+  });
+});
+
 describe('VirtualClock', () => {
   it('tracks wall-clock at rate 1 in steady state', () => {
     const w = fakeWall();

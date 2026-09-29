@@ -39,6 +39,24 @@ it from a `VirtualClock`: `t = simT0 + rate · (wallNow − wallT0)`, so at
 parity every existing consumer relies on). This is the ONLY place
 wall-clock is sampled for the simulation `t`.
 
+### One instant per frame
+
+`getT()` samples wall time on every call, and at the rate ceiling one
+millisecond between two reads is ~50 sim days — so inside one frame the
+epoch step, `FrameCtx.t`, the shader's `uModelDays`, every layer's own
+`getT` closure and the `'frame'` handlers would each describe a different
+instant. The frame loop therefore runs every tick inside
+`VirtualClock.inFrame`, which samples once on entry and closes the frame in
+its own `finally`, so refused ticks and throws close it too; a nested
+`inFrame` throws. Inside, `getT()` answers the entry instant; outside a tick
+(input handlers, interval readouts) it samples live.
+
+A clock write inside a frame (`setRate`, `setTimeAbsolute`, `reset`) moves
+the frame's instant to the post-write time, and `setRate` snapshots from
+live wall time rather than the held instant, so a mid-frame rate change
+loses no sim time. The one writer that does this is the debug capture
+loop, which follows with `notifyClockJumped()`.
+
 The scrubber widget (`time-scrubber-widget.ts`) drives the clock:
 play / pause / fast-forward / rewind / reset / jump-to-date. FF and RW
 step through **powers of two** (`±1, ±2, … ±2³²`) and cross zero directly

@@ -3,17 +3,17 @@ import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
 import {
   type ExposureReadout,
   formatExposureReadout,
-  hasMeasurement,
   regimeLine,
 } from './exposure-tuning-pure';
 import {
+  type AdaptationBranches,
   ADAPT_DISPLAY_FLOOR_DM,
   ADAPT_DOT_COVERAGE,
   ADAPT_PIN_COVERAGE,
   ADAPT_SLEW_SETTLE_MAG,
 } from './scene-adaptation-pure';
 
-const SETTLED: ExposureReadout = {
+const SURFACE: AdaptationBranches = {
   meanL: 7.13e4,
   discL: 3.57e5,
   coverage: 0.2,
@@ -21,9 +21,13 @@ const SETTLED: ExposureReadout = {
   eye: -17.52,
   pin: -14.01,
   floor: ADAPT_DISPLAY_FLOOR_DM,
-  measuredDm: -14.01,
-  appliedDm: -14.01,
+  dm: -14.01,
   regime: 'surface',
+};
+
+const SETTLED: ExposureReadout = {
+  measurement: SURFACE,
+  appliedDm: -14.01,
   parkPhase: 'active',
   limitMag: 7.8,
   ev: 0,
@@ -35,40 +39,43 @@ const SETTLED: ExposureReadout = {
   dotCoverage: ADAPT_DOT_COVERAGE,
 };
 
-describe('hasMeasurement', () => {
-  // A cold start and chart's reset both leave a zero statistic, which the
-  // branches read as the `open` regime — a true statement about a frame,
-  // and a wrong one about a frame nothing has measured yet.
-  it('is false only when neither channel carries anything', () => {
-    expect(hasMeasurement({ ...SETTLED, meanL: 0, coverage: 0 })).toBe(false);
-    expect(hasMeasurement({ ...SETTLED, meanL: 0 })).toBe(true);
-    expect(hasMeasurement({ ...SETTLED, coverage: 0 })).toBe(true);
+const UNMEASURED: ExposureReadout = { ...SETTLED, measurement: null, appliedDm: 0 };
+const regime = (r: AdaptationBranches['regime']): ExposureReadout =>
+  ({ ...SETTLED, measurement: { ...SURFACE, regime: r } });
+
+describe('an unmeasured frame', () => {
+  it('says so rather than naming a branch', () => {
+    expect(regimeLine(UNMEASURED)).toBe('no measurement — no cut');
   });
 
-  it('says so rather than naming a branch', () => {
-    expect(regimeLine({ ...SETTLED, meanL: 0, coverage: 0 }))
-      .toBe('no measurement — no cut');
+  it('is not a measured frame that happens to be dark', () => {
+    const dark = { ...SURFACE, meanL: 0, coverage: 0, discL: 0, dm: 0, regime: 'open' as const };
+    expect(regimeLine({ ...SETTLED, measurement: dark, appliedDm: 0 })).toBe('OPEN (no term cut)');
+  });
+
+  it('prints no statistic, and still the applied cut', () => {
+    const text = formatExposureReadout({ ...UNMEASURED, appliedDm: -1.5 });
+    expect(text).toContain('L̄ —   cover —   D —');
+    expect(text).toContain('measured —   applied -1.50');
   });
 });
 
 describe('regimeLine', () => {
   it('names each of the five regimes', () => {
     expect(regimeLine(SETTLED)).toBe('SURFACE (resolved pin)');
-    expect(regimeLine({ ...SETTLED, regime: 'eye' })).toBe('EYE (perception)');
-    expect(regimeLine({ ...SETTLED, regime: 'floor' }))
-      .toBe('FLOOR (display bound)');
-    expect(regimeLine({ ...SETTLED, regime: 'handover' }))
-      .toBe('HANDOVER (ramp)');
+    expect(regimeLine(regime('eye'))).toBe('EYE (perception)');
+    expect(regimeLine(regime('floor'))).toBe('FLOOR (display bound)');
+    expect(regimeLine(regime('handover'))).toBe('HANDOVER (ramp)');
     // A frame no term cut says exactly that, instead of handing the credit
     // to whichever branch happened to clamp at zero.
-    expect(regimeLine({ ...SETTLED, regime: 'open' })).toBe('OPEN (no term cut)');
+    expect(regimeLine(regime('open'))).toBe('OPEN (no term cut)');
   });
 
   // The slew flag is the panel's answer to "is the frame still ramping?",
   // and it has to use the same settle band the slew itself snaps inside or
   // a settled frame reads as permanently slewing.
   it('flags slewing exactly outside the slew settle band', () => {
-    const nudge = (d: number) => ({ ...SETTLED, appliedDm: SETTLED.measuredDm + d });
+    const nudge = (d: number) => ({ ...SETTLED, appliedDm: SURFACE.dm + d });
     expect(regimeLine(nudge(0))).not.toContain('slewing');
     expect(regimeLine(nudge(ADAPT_SLEW_SETTLE_MAG))).not.toContain('slewing');
     expect(regimeLine(nudge(2 * ADAPT_SLEW_SETTLE_MAG))).toContain('slewing');
@@ -83,7 +90,7 @@ describe('regimeLine', () => {
     expect(regimeLine({ ...SETTLED, parkPhase: 'parked' }))
       .toBe('SURFACE (resolved pin) · PARKED (measurement gated)');
     expect(regimeLine({ ...SETTLED, parkPhase: 'probing' })).toContain('· probing');
-    expect(regimeLine({ ...SETTLED, meanL: 0, coverage: 0, parkPhase: 'parked' }))
+    expect(regimeLine({ ...UNMEASURED, parkPhase: 'parked' }))
       .toBe('no measurement — no cut · PARKED (measurement gated)');
   });
 });

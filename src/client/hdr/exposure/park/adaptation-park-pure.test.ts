@@ -3,6 +3,7 @@ import {
   ADAPT_PARK_PROBE_INTERVAL_FRAMES,
   ADAPT_PARK_SETTLED_LANDINGS,
   INITIAL_PARK_STATE,
+  type LandedCut,
   type ParkLanding,
   type ParkState,
   parkTick,
@@ -10,15 +11,15 @@ import {
 } from './adaptation-park-pure';
 import { ADAPT_DISPLAY_FLOOR_DM, ADAPT_SLEW_SETTLE_MAG } from '../scene-adaptation-pure';
 
-function landing(over: Partial<ParkLanding> = {}): ParkLanding {
-  return {
-    fresh: true,
-    measuredDm: 0,
-    appliedDm: 0,
-    regime: 'open',
-    probeReady: true,
-    ...over,
-  };
+interface LandingOpts extends Partial<LandedCut> {
+  fresh?: boolean;
+  appliedDm?: number;
+  probeReady?: boolean;
+}
+
+function landing(over: LandingOpts = {}): ParkLanding {
+  const { fresh = true, measuredDm = 0, regime = 'open', appliedDm = 0, probeReady = true } = over;
+  return { landed: fresh ? { measuredDm, regime } : null, appliedDm, probeReady };
 }
 
 function landZeros(state: ParkState, n: number): ParkState {
@@ -76,9 +77,7 @@ describe('parkTick — engaging', () => {
   it('retains nothing from the landing the caller refills each frame', () => {
     const reused = landing();
     const parked = parkTick(landZeros(INITIAL_PARK_STATE, ADAPT_PARK_SETTLED_LANDINGS - 1), reused);
-    reused.fresh = true;
-    reused.measuredDm = -12;
-    reused.regime = 'surface';
+    reused.landed = { measuredDm: -12, regime: 'surface' };
     expect(parked).toEqual({ phase: 'parked', framesSinceProbe: 0 });
   });
 

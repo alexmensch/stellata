@@ -93,15 +93,30 @@ describe('SceneAdaptation', () => {
   it('reports no cut before the first measurement lands', () => {
     const adaptation = makeAdaptation();
     expect(settle(adaptation)).toBe(0);
-    expect(adaptation.getStatistic().meanL).toBe(0);
-    expect(adaptation.getStatistic()).toEqual({ meanL: 0, coverage: 0, discL: 0 });
+    expect(adaptation.getLandedStatistic()).toBeNull();
+    expect(adaptation.branches()).toBeNull();
+  });
+
+  it('rewrites one statistic and one tuning in place across landings', () => {
+    const adaptation = makeAdaptation();
+    reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    adaptation.measure(false, 0, false);
+    const statistic = adaptation.getLandedStatistic();
+    const tuning = adaptation.getTuning();
+    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    whitePoint *= 2;
+    adaptation.measure(false, 16, false);
+    expect(adaptation.getLandedStatistic()).toBe(statistic);
+    expect(statistic!.meanL).toBeCloseTo(1e4 * L_ADAPT, 6);
+    expect(adaptation.getTuning()).toBe(tuning);
+    expect(tuning.whitePoint).toBe(whitePoint);
   });
 
   it('cuts on the reduced mean once it does', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     expectSettled(settle(adaptation), eyeAdaptationDm(100 * L_ADAPT));
-    expect(adaptation.getStatistic().meanL).toBeCloseTo(100 * L_ADAPT, 9);
+    expect(adaptation.getLandedStatistic()!.meanL).toBeCloseTo(100 * L_ADAPT, 9);
   });
 
   it('divides out the exposure the frame was rendered with', () => {
@@ -118,9 +133,9 @@ describe('SceneAdaptation', () => {
       renderExposure: cutExposure,
     };
     expect(adaptation.measure(false, 0, false)).toBe(0);
-    expect(adaptation.getStatistic().meanL).toBeCloseTo(L_ADAPT, 9);
-    expect(adaptation.getStatistic().discL).toBeCloseTo(L_ADAPT, 9);
-    expect(adaptation.getStatistic().coverage).toBe(0.3);
+    expect(adaptation.getLandedStatistic()!.meanL).toBeCloseTo(L_ADAPT, 9);
+    expect(adaptation.getLandedStatistic()!.discL).toBeCloseTo(L_ADAPT, 9);
+    expect(adaptation.getLandedStatistic()!.coverage).toBe(0.3);
   });
 
   it('takes the pin where a surface dominates, shallower than the eye alone', () => {
@@ -192,7 +207,7 @@ describe('SceneAdaptation', () => {
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     settle(adaptation);
     expect(adaptation.measure(true, 1e6, false)).toBe(0);
-    expect(adaptation.getStatistic().meanL).toBe(0);
+    expect(adaptation.getLandedStatistic()).toBeNull();
     // lastNowMs dropped with the reset, so the first scene frame back is a
     // full blend rather than a ramp up from chart's zero cut.
     expect(adaptation.measure(false, 1e6 + 16, false)).toBeCloseTo(target(), 9);
@@ -212,13 +227,13 @@ describe('SceneAdaptation', () => {
     reduced = frame(1e6 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     expect(adaptation.measure(false, SETTLED_MS + 16, false)).toBe(pinned);
     expect(adaptation.measure(true, SETTLED_MS + 32, false)).toBe(pinned);
-    expect(adaptation.getStatistic().meanL).toBeCloseTo(100 * L_ADAPT, 6);
+    expect(adaptation.getLandedStatistic()!.meanL).toBeCloseTo(100 * L_ADAPT, 6);
 
     // Released, the next frame snaps to the live measurement rather than
     // ramping from a cut that is now stale by the whole hold.
     adaptation.setHeld(false);
     const snapped = adaptation.measure(false, SETTLED_MS + 48, false);
-    expect(snapped).toBeCloseTo(adaptation.branches().dm, 9);
+    expect(snapped).toBeCloseTo(adaptation.branches()!.dm, 9);
     expect(snapped).toBeLessThan(pinned);
   });
 
@@ -226,10 +241,10 @@ describe('SceneAdaptation', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     settle(adaptation);
-    const atDefault = adaptation.getStatistic().meanL;
+    const atDefault = adaptation.getLandedStatistic()!.meanL;
     base = exposureForMagLimit(12.8);
     adaptation.measure(false, 1e6, false);
-    expect(adaptation.getStatistic().meanL / atDefault)
+    expect(adaptation.getLandedStatistic()!.meanL / atDefault)
       .toBeCloseTo(exposureForMagLimit(12.8) / BASE_EXPOSURE, 6);
   });
 });
@@ -348,7 +363,7 @@ describe('SceneAdaptation — the measurement park', () => {
   it('parks the floor regime, where the cut is a constant the frame cannot move', () => {
     const adaptation = makeAdaptation();
     settleAtFloor(adaptation);
-    expect(adaptation.branches().regime).toBe('floor');
+    expect(adaptation.branches()!.regime).toBe('floor');
     expectSettled(adaptation.getDm(), ADAPT_DISPLAY_FLOOR_DM);
     expect(adaptation.isMeasurementParked()).toBe(false);
 
@@ -387,7 +402,7 @@ describe('SceneAdaptation — the measurement park', () => {
     // the cut is the measurement's again.
     reduced = frame(0.5 * tonemapWhitePoint() / POINT_COVERAGE, POINT_COVERAGE);
     step(adaptation);
-    expect(adaptation.branches().regime).toBe('eye');
+    expect(adaptation.branches()!.regime).toBe('eye');
     expect(adaptation.getParkPhase()).toBe('active');
   });
 
@@ -459,7 +474,7 @@ describe('SceneAdaptation — the panel overrides', () => {
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     adaptation.setLAdapt(2 * L_ADAPT);
     adaptation.measure(false, 0, false);
-    expect(adaptation.branches().dm).toBe(adaptation.getDm());
+    expect(adaptation.branches()!.dm).toBe(adaptation.getDm());
   });
 
   it('applies a swept L_ADAPT to an eye-governed cut', () => {
