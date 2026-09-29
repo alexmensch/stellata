@@ -28,7 +28,7 @@ import type { Mutable } from '../../util/mutable';
 import type { WebGpuSeam } from '../../webgpu/seam';
 import { FrameFrustum } from '../contribution/frame-frustum';
 import { findGlslResidents } from '../glsl-residents-pure';
-import type { FrameCtx, SceneLayer, SceneLayerRegistry } from '../scene-layer';
+import { cameraAbsInto, type FrameCtx, type SceneLayer, type SceneLayerRegistry } from '../scene-layer';
 
 export interface FrameLoopDeps {
   scene: THREE.Scene;
@@ -59,6 +59,7 @@ export interface FrameLoopDeps {
 export class FrameLoop {
   private readonly frameCtx: Mutable<FrameCtx>;
   private readonly epochFollowDelta = new THREE.Vector3();
+  private readonly cameraAbs = new THREE.Vector3();
   private realtimeNeeded = false;
   private glslResidentsChecked = false;
   private disposed = false;
@@ -194,11 +195,7 @@ export class FrameLoop {
   /** `distFromSol` sums in float64: kpc-scale worldOffset values. */
   private refreshFrameCtx(): void {
     const d = this.deps;
-    const cam = d.camera.position;
-    const ax = cam.x + d.origin.worldOffset.x;
-    const ay = cam.y + d.origin.worldOffset.y;
-    const az = cam.z + d.origin.worldOffset.z;
-    this.frameCtx.distFromSol = Math.sqrt(ax * ax + ay * ay + az * az);
+    this.frameCtx.distFromSol = cameraAbsInto(this.frameCtx, this.cameraAbs).length();
     this.frameCtx.t = d.clock.getT();
     this.frameCtx.warpActive = d.warpActive();
     this.frameCtx.pxPerRadian = d.pxPerRadian();
