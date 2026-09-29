@@ -123,8 +123,10 @@ picking the wrong one is the standing risk every new camera feature
 runs. There are **four independent animation sources** — warp, aim
 slerp, focus-park lerp, and the `ObserveTransition` slot (which itself
 carries three kinds: `enter` / `exit` / `unfocus`, see
-[ObserveTransition kinds](observe/README.md#observetransition-kinds)). Each predicate is a
-different subset:
+[ObserveTransition kinds](observe/README.md#observetransition-kinds)). Aim has a second
+slot, the observe-mode slerp (`isObserveAimActive`), which no predicate
+below reads: observe exit and warp start cancel it rather than wait on it.
+Each predicate is a different subset:
 
 | Predicate | Warp | Aim | Focus-park lerp | Observe `enter`/`exit` | Observe `unfocus` |
 |---|:-:|:-:|:-:|:-:|:-:|

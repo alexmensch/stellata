@@ -38,8 +38,8 @@ the pose it measures against
 ## The verdict
 
 `advance` returns true on branches 1–5 and false on 6–7. It is the render
-gate's transition input, **not re-derived anywhere**: a sixth animation
-source added as a new branch is animating by default, because only the two
+gate's transition input, **not re-derived anywhere**: a new animation
+source added as a branch is animating by default, because only the two
 steady-state branches return false. Asking the five predicates again
 beside the dispatch would be a second definition of "camera busy" for a new
 source to drift out of ([The decision](../../render-gate/README.md#the-decision-in-priority-order)).
