@@ -106,9 +106,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   private dirty = true;
   private hasComputed = false;
   private forceDisabled = false;
-  private lastCamX = Infinity;
-  private lastCamY = Infinity;
-  private lastCamZ = Infinity;
 
   constructor({
     renderer, catalog, nodes, slots, uniforms, tables, compaction,
@@ -258,8 +255,9 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (this.dustTexture === null) return;
     if (this.forceDisabled) return;
     const cam = cameraAbsInto(view, this.cameraAbsScratch);
+    const generationCam = this.absCameraPos.value;
     const moved = movedBeyondEpsilon(
-      this.lastCamX, this.lastCamY, this.lastCamZ,
+      generationCam.x, generationCam.y, generationCam.z,
       cam.x, cam.y, cam.z,
       RECOMPUTE_EPSILON_PC,
     );
@@ -303,9 +301,6 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** see refill/README.md#the-generation-stamp */
   private setCameraGeneration(cam: Readonly<Vector3>): void {
     this.absCameraPos.value.copy(cam);
-    this.lastCamX = cam.x;
-    this.lastCamY = cam.y;
-    this.lastCamZ = cam.z;
   }
 
   /** Every slot at one camera, and nothing owed after it (refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one).
@@ -410,8 +405,5 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     this.lastView = null;
     this.hasComputed = false;
     this.dirty = true;
-    this.lastCamX = Infinity;
-    this.lastCamY = Infinity;
-    this.lastCamZ = Infinity;
   }
 }
