@@ -2,7 +2,7 @@
 
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— **379,135** ids, the union of four contributions the table's four
+— **383,052** ids, the union of four contributions the table's four
 consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -38,8 +38,11 @@ comparator — and it is what matches the ordering
 
 ## Request and record build name the same set by construction
 
-**370,994 source_ids** over 376,932 manifest rows; the 5,938 rows carrying
-none are the no-Gaia tier. The row total is pinned as `rows` in
+**370,994 source_ids** over the 376,932 `term = primaries` manifest rows; the
+5,938 rows carrying none are the no-Gaia tier. The `term = magnitude` rows are
+not requested: their astrometry is the magnitude pull's own
+([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
+and requesting them would re-pull 602k rows that file already holds. The row total is pinned as `rows` in
 `../membership/membership-manifest-expected.json`; the split is a walk over
 `data/membership/membership-manifest.tsv`'s own `gaia_source_id` column, and
 every id in it is distinct.
@@ -58,10 +61,10 @@ different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column | 370,994 | the record build: direction / rv / V / ci cascades |
+| the manifest's `gaia_source_id` column, primaries rows | 370,994 | the record build: direction / rv / V / ci cascades |
 | `../classic-ids/`' binding-gate candidates | 354,987, +1,128 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 313,290, +128 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any spine row could be bound to |
-| `multiples.tsv`' kept-physical pair members | 16,108, +6,885 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
+| `../membership/`' binding-derivation candidates | 375,709, +4,116 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any primaries row, spine or addition, could be bound to |
+| `multiples.tsv`' kept-physical pair members | 16,108, +6,814 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
 
 `build:astrometry-request` prints every figure in this table — each
 contribution's own size and its increment over the ones above it — so all four

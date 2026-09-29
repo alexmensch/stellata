@@ -19,11 +19,13 @@ import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
   derivationCandidateSourceIds,
   indexSimbadSources,
+  type BindingCells,
 } from '../membership/binding/binding-derivation-pure';
 import {
   MEMBERSHIP_MANIFEST_FILE,
   iterManifestTsv,
 } from '../membership/membership-manifest-pure';
+import { isMagnitudeTermRow } from '../membership/magnitude-term/magnitude-term-pure';
 import { parseGlieseTsv } from '../gliese-parse';
 import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
@@ -40,12 +42,15 @@ const MANIFEST_HINT = 'run `pnpm run build:membership`, or `git lfs pull` if it 
 
 async function main(): Promise<void> {
   const ids = new Set<string>();
+  const primariesCells: BindingCells[] = [];
   let rows = 0;
   let withoutSourceId = 0;
   for (const row of iterManifestTsv(readRequired(SRC_MANIFEST, MANIFEST_HINT))) {
+    if (isMagnitudeTermRow(row)) continue;
     rows++;
     if (row.gaia_source_id === '') withoutSourceId++;
     else ids.add(row.gaia_source_id);
+    primariesCells.push({ tyc: row.tyc, hip: row.hip, gl: row.gl });
   }
   const membership = ids.size;
 
@@ -74,8 +79,11 @@ async function main(): Promise<void> {
   for (const id of candidates) ids.add(id);
   const afterGate = ids.size;
 
+  // Spine rows derive on their pre-merge cells, additions on their manifest
+  // cells, so both sets are walked.
   const derivation = derivationCandidateSourceIds(
-    spine, tables, indexCns5(tables.cns5).cns5ByOwnKey, indexSimbadSources(tables.simbadBySourceId),
+    [...spine, ...primariesCells], tables, indexCns5(tables.cns5).cns5ByOwnKey,
+    indexSimbadSources(tables.simbadBySourceId),
   );
   for (const id of derivation) ids.add(id);
   const afterDerivation = ids.size;
@@ -86,7 +94,7 @@ async function main(): Promise<void> {
   const sorted = sortSourceIdsNumeric(ids);
   writeFileSync(OUT, `gaia_source_id\n${sorted.join('\n')}\n`);
   console.log(
-    `manifest: ${rows} rows → ${membership} source_ids (${withoutSourceId} carry none)`,
+    `manifest primaries rows: ${rows} → ${membership} source_ids (${withoutSourceId} carry none; the magnitude term reads its own pull)`,
   );
   console.log(
     `classic-ID gate candidates: ${candidates.size} ` +

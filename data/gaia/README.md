@@ -46,11 +46,12 @@ gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
                                        source_id request list (build-binaries.py output).
 gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
                                        source_id request list — the membership
-                                       manifest's gaia_source_id column UNION
-                                       the classic-ID binding gate's candidates
-                                       UNION the membership derivation's
-                                       candidates UNION the kept-physical
-                                       multiples.tsv pair members, 379,135 ids
+                                       manifest's gaia_source_id column over its
+                                       primaries rows UNION the classic-ID
+                                       binding gate's candidates UNION the
+                                       membership derivation's candidates UNION
+                                       the kept-physical multiples.tsv pair
+                                       members, 383,052 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
