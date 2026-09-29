@@ -65,8 +65,8 @@ sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:
 it guards committed data, not this folder's code). It self-skips where
 `ledger.tsv` is an LFS pointer stub — the bare CI `test` job — and runs
-for real in the `sid-ledger-guard` job, the one checkout with the full
-history its merge-base check reads, and locally.
+for real in `build-catalog`, checked out with the full history its
+merge-base check reads, and locally.
 
 The LFS-stub predicates themselves (`isLfsPointer`, `isLfsPointerFile`,
 and `lfsContentReadable`, the present-and-smudged gate a `skipIf` takes)

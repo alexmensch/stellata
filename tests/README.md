@@ -152,8 +152,8 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          rewrite means editing the guard itself with
                          explicit user sign-off. Self-skips where
                          ledger.tsv is an LFS pointer stub (the bare CI
-                         test job); runs for real in the sid-ledger-guard
-                         job and locally.
+                         test job); runs for real in build-catalog's
+                         full vitest and locally.
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.

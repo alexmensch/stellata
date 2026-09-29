@@ -82,8 +82,9 @@ fan-out of jobs beyond the bare checks:
 - `build-binaries` / `spotcheck` — rebuild `multiples.tsv` and assert it
   matches the committed artifact; resolve Stage 2 against the curated
   ground-truth corpus.
-- `build-catalog` — the catalogue stage with its regenerate-and-diff
-  gates, then `build:layers` (everything `pnpm run build` does after
+- `build-catalog` — checked out with full history, which the SID
+  ledger's append-only guard reads for its merge-base. The catalogue
+  stage with its regenerate-and-diff gates, then `build:layers` (everything `pnpm run build` does after
   `build:catalog` except the client), then every check that reads the
   built artifacts, as named steps. On a pull request
   the catalogue stage (`build:classic-ids` through `build:catalog`, ~5 min)
@@ -110,8 +111,6 @@ fan-out of jobs beyond the bare checks:
   output in jobs of their own: a job costs ~45 s of checkout, LFS
   restore and install before it starts, and here that setup would sit
   on the pipeline's critical path.
-- `sid-ledger-guard` — the append-only ledger guard alone: the one suite
-  that needs full history, for its merge-base read.
 
 **No workflow edit adds a suite.** A new `describe.skipIf` vitest suite
 runs smudged in `build-catalog` whatever it gates on, and a new

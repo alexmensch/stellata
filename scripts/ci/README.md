@@ -38,8 +38,8 @@ script — without it, the suites that import numpy fail.
 `build-catalog`'s `Full vitest, smudged and built` step runs `pnpm test`
 through `vitest-no-skip.ts`, which reads vitest's JSON report and **fails
 on any test that did not run** — skipped, pending or todo. That job holds
-every input a suite can gate on: LFS content and the built catalogue and
-layers. A suite skipping there has lost its input (an
+every input a suite can gate on: LFS content, the built catalogue and
+layers, and full history. A suite skipping there has lost its input (an
 artifact renamed, a build step dropped), and would otherwise go green
 without running, in the one job meant to run it.
 
