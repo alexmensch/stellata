@@ -1588,11 +1588,13 @@ function wdsComponentsDisjoint(a: string, b: string): boolean {
  *    from the system's per-component xids (Hipparcos blend entries live
  *    on SIMBAD system-level objects) → the AT-HYG row is the system
  *    record and must key on the primary lineage: scrubbed when the
- *    system's source-bearing primary letter is disjoint from X. */
+ *    system's source-bearing primary letter is disjoint from X, unless
+ *    `rowNamesSource` (/scripts/catalog/membership/binding/README.md#a-component-designation-outranks-a-system-level-hip-at-the-sibling-gate). */
 export function isSiblingLetterAttribution(
   sourceId: string,
   hip: number | null,
   xids: SimbadWdsXidIndex | null,
+  rowNamesSource = false,
 ): boolean {
   if (hip === null || xids === null) return false;
   const srcAttrs = xids.bySource.get(sourceId);
@@ -1613,6 +1615,7 @@ export function isSiblingLetterAttribution(
       if (anyRelated && !anyDisjoint) continue;
       if (anyDisjoint && !anyRelated) return true;
     }
+    if (rowNamesSource) continue;
     const p = xids.primarySourceLetterByWds.get(wdsId);
     if (p !== undefined && wdsComponentsDisjoint(p, x)) return true;
   }
@@ -1643,6 +1646,7 @@ export function resolveGaiaSourceId(
   vMag: number | null = null,
   gMagOf: ((sourceId: string) => number | null) | null = null,
   wdsXids: SimbadWdsXidIndex | null = null,
+  rowNamesSource: ((sourceId: string) => boolean) | null = null,
 ): {
   gaiaSourceId: string | null;
   backfilled: boolean;
@@ -1659,7 +1663,7 @@ export function resolveGaiaSourceId(
         return false;
       }
     }
-    if (isSiblingLetterAttribution(id, hip, wdsXids)) {
+    if (isSiblingLetterAttribution(id, hip, wdsXids, rowNamesSource?.(id) ?? false)) {
       siblingRejected = true;
       return false;
     }

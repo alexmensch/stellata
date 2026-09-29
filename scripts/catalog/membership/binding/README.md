@@ -63,6 +63,17 @@ gates refuse 317 candidates on G − V and 119 on sibling-letter attribution
 `derivedUngateable` (7) is the rows that reached a candidate with no printed V
 under any tier, so nothing could be weighed against it.
 
+**A component designation outranks a system-level HIP at the sibling gate.**
+Where SIMBAD puts the row's HIP on both components (or on neither), the gate
+reads the row as the system and refuses any source but the primary's. That
+reading yields when SIMBAD's object for the candidate carries the row's own
+TYC (`BindingEvidence.simbadTycOf`): Tycho-2 resolved the pair, so the row is
+that component carrying the pair's shared HIP. 53 Aqr B (HD 212697 · TYC
+6385-683-1 on HIP 110778) and μ Dra B (HD 154905 · GJ 9584B on HIP 83608) are
+the shape — AT-HYG merged B's cells onto the system's HIP, and the refusal left
+B's own source to come back through the magnitude term as an unnamed twin. A
+HIP SIMBAD gives to the other component alone still refuses.
+
 **The losers are weighed too, not only the candidates ahead of the winner.**
 `passingRunnersUp` reads the rejections to decide whether a row's sources
 genuinely disagree, so a candidate left unweighed would read as passing on a

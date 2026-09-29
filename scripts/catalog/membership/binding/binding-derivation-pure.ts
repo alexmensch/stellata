@@ -153,6 +153,7 @@ export interface DerivedBinding {
  *  printed V, plus the shared per-source tables. */
 export interface RowGateEvidence {
   hip: number | null;
+  tyc: string;
   vMag: number | null;
   vVia: GateVVia | null;
   evidence: BindingEvidence;
@@ -167,9 +168,9 @@ export function rowGateEvidence(
 ): RowGateEvidence {
   const hip = parseIntOrNull(row.hip);
   const hipV = hip === null ? null : evidence.vMagOfHip(hip);
-  if (hipV !== null) return { hip, vMag: hipV, vVia: 'hip', evidence };
+  if (hipV !== null) return { hip, tyc: row.tyc, vMag: hipV, vVia: 'hip', evidence };
   const below = printedVBelowHip(row);
-  return { hip, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, evidence };
+  return { hip, tyc: row.tyc, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, evidence };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {
@@ -199,6 +200,7 @@ export function deriveBinding(
     }
     const verdict = resolveGaiaSourceId(
       candidate.sourceId, gate.hip, null, gate.vMag, evidence.gMagOf, evidence.wdsXids,
+      (id) => gate.tyc !== '' && evidence.simbadTycOf(id) === gate.tyc,
     );
     if (verdict.gaiaSourceId === null) {
       rejected.push({ ...candidate, reason: verdict.magRejected ? 'mag' : 'sibling' });
