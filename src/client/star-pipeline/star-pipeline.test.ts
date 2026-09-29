@@ -6,7 +6,7 @@ import type { BinaryOrbitPathLayer } from '../binaries/orbit-paths/binary-orbit-
 import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';
 import { DEFAULT_FILTER, type FilterState } from '../filters/filter-state';
 import { FloatingOrigin } from '../frame/floating-origin';
-import { buildSharedUniforms } from '../frame/shared-uniforms';
+import { buildSharedUniforms, NO_INSTANCE } from '../frame/shared-uniforms';
 import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import { OccluderSet } from '../occlusion/occluder-set';
@@ -240,11 +240,15 @@ describe('StarPipeline — per-star answers', () => {
     expect(h.pipeline.resolveStarPick(0)).toEqual(unanswered);
   });
 
-  it('refuses the star the focal hide collapses', () => {
+  it('refuses the star the focal hide collapses, and writes the hide once', () => {
     const h = makeHarness({ nearStar: true });
-    h.uniforms.uHideFocusIdx.value = 0;
-
+    h.pipeline.setHiddenStar(0);
+    expect(h.uniforms.uHideFocusIdx.value).toBe(0);
     expect(h.pipeline.resolveStarPick(0).visible).toBe(false);
+
+    h.pipeline.setHiddenStar(null);
+    expect(h.uniforms.uHideFocusIdx.value).toBe(NO_INSTANCE);
+    expect(h.pipeline.resolveStarPick(0).visible).toBe(true);
   });
 });
 

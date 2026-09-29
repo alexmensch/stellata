@@ -42,7 +42,11 @@ function rig(): Rig {
   vi.spyOn(OrbitRingsLayer.prototype, 'update')
     .mockImplementation((...args: unknown[]) => { r.ringUpdates.push(args); });
   vi.spyOn(OrbitRingsLayer.prototype, 'setPlanetSystem')
-    .mockImplementation((...args: unknown[]) => { r.setPlanetSystemCalls.push(args); });
+    .mockImplementation((...args: unknown[]) => {
+      r.setPlanetSystemCalls.push(args);
+      r.state.ps = args[0] as PlanetSystem | null;
+    });
+  vi.spyOn(OrbitRingsLayer.prototype, 'planetSystem').mockImplementation(() => r.state.ps);
   vi.spyOn(OrbitRingsLayer.prototype, 'dispose')
     .mockImplementation(() => { r.ringsDisposed++; });
   const field = {
@@ -77,7 +81,6 @@ function rig(): Rig {
     occluders: new OccluderSet(),
     solIndex: SOL_INDEX,
     getT: () => T,
-    focusedPlanetSystem: () => r.state.ps,
     observeAnchorPlanet: () => r.state.anchor,
     onPlanetSystem: (h) => {
       handler = h;
@@ -138,7 +141,7 @@ describe('SolarSystemWiring', () => {
 
   it('feeds the rings the host position, the anchor ring and parent-relative moons', () => {
     const r = rig();
-    r.state.ps = SYSTEM;
+    r.emitPlanetSystem(SYSTEM);
     r.state.anchor = 103;
     r.wiring.orbitRingsEntry.update!(makeFrameCtx(camera));
     const [, , hostPos, , anchorRing, parentRelInto] = r.ringUpdates[0];
@@ -151,7 +154,7 @@ describe('SolarSystemWiring', () => {
 
   it('passes a null host position when the host has not landed', () => {
     const r = rig();
-    r.state.ps = SYSTEM;
+    r.emitPlanetSystem(SYSTEM);
     r.state.hostKnown = false;
     r.wiring.orbitRingsEntry.update!(makeFrameCtx(camera));
     expect(r.ringUpdates[0][2]).toBeNull();

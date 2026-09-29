@@ -34,8 +34,9 @@ export function createPlanetLabels(stellata: Stellata): void {
 
   function rebuildEntries(): void {
     clearEntries();
-    const ps = stellata.focus.getFocusedPlanetSystem();
-    if (!ps) return;
+    const system = stellata.focus.getFocusedPlanetSystem();
+    if (system.status !== 'ready') return;
+    const ps = system.value;
     const NS = 'http://www.w3.org/2000/svg';
     for (const p of ps.planets) {
       const text = document.createElementNS(NS, 'text') as SVGTextElement;
@@ -83,11 +84,12 @@ export function createPlanetLabels(stellata: Stellata): void {
       setGroupVisible(false);
       return;
     }
-    const ps = stellata.focus.getFocusedPlanetSystem();
-    if (ps === null) {
+    const system = stellata.focus.getFocusedPlanetSystem();
+    if (system.status !== 'ready') {
       setGroupVisible(false);
       return;
     }
+    const ps = system.value;
     const field = stellata.kinds.planet.field;
 
     const camera = stellata.camera;
