@@ -22,9 +22,10 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
 
 ## Files
 
-- `scene-layer.ts` — `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
+- `scene-layer.ts` — `CameraPose` (camera + world offset, which
+  `FrameCtx` extends), `FrameCtx`, `CadenceCtx`, `LayerTimeBehaviour`,
   `LayerContribution` + `ContributionSkip`, `SceneLayer`,
-  `SceneLayerRegistry`, and `cameraAbsInto` — the frame's absolute ICRS
+  `SceneLayerRegistry`, and `cameraAbsInto` — a pose's absolute ICRS
   camera position, which both diffuse emitters' peak providers and the
   extinction prepass key on.
 - `emitter-material.ts` — `EmitterMaterial` ([The material seam](#the-material-seam)).

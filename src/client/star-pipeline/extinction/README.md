@@ -194,7 +194,8 @@ pass (×2–3) — 8–12 recomputations per visible star per frame.
   frame at a parked camera. It exists because the displacement gate makes
   the fill free at exactly the vantages a measurement can hold still at —
   [The extinction rows](../../debug/frame-cost/passes/README.md#the-extinction-rows). Dwell
-  only; it re-arms the pick mirror's copy every frame in the live app.
+  only: in the live app the refill cursor never parks under it, so the pick
+  mirror is never staged and every pick errs pickable.
 
 The prepass stores raw physical A_V; `uDustEnabled ×
 uExtinctionStrength` scales it at the point of consumption, so

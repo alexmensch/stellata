@@ -1,6 +1,5 @@
 // See README.md#the-attachment.
 
-import * as THREE from 'three';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import type { SharedUniforms } from '../../frame/shared-uniforms';
 import type { Catalog } from '../../loaders/catalog-loader';
@@ -11,7 +10,7 @@ import {
   type ChunkVerifyReport,
 } from '../../loaders/dust-voxel-readback';
 import type { MilkyWay } from '../../milkyway/milkyway';
-import { cameraAbsInto, type FrameCtx } from '../../scene/scene-layer';
+import type { FrameCtx } from '../../scene/scene-layer';
 import { LateCell, whenReady } from '../../util/late/late';
 import type { StellataRenderer, WebGpuSeam } from '../../webgpu/seam';
 import { formatAvParity, type AvParityReport } from './av-parity-pure';
@@ -33,7 +32,6 @@ interface Attached {
 
 export class ExtinctionAttachment {
   private readonly attached = new LateCell<Attached>();
-  private readonly cameraAbs = new THREE.Vector3();
   private recomputeForced = false;
 
   constructor(private readonly deps: ExtinctionAttachmentDeps) {}
@@ -77,8 +75,7 @@ export class ExtinctionAttachment {
     const { prepass } = s.value;
     perfMark('extinction.prepass');
     if (this.recomputeForced) prepass.markDirty();
-    const abs = cameraAbsInto(ctx, this.cameraAbs);
-    prepass.update(abs.x, abs.y, abs.z, ctx);
+    prepass.update(ctx);
     perfMeasure('extinction.prepass');
   }
 

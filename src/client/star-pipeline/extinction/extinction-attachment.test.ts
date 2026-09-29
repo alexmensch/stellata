@@ -122,13 +122,11 @@ describe('ExtinctionAttachment', () => {
     expect(attachment.isPrepassActive()).toBe(false);
   });
 
-  it('updates the prepass with the absolute camera, viewed through the frame context', () => {
+  it('hands the prepass the frame context as its view', () => {
     const { attachment, prepass, ctx } = makeAttachment();
     attachment.attach(fakeDust().dust);
-    ctx.camera.position.set(1, 2, 3);
-    (ctx.worldOffset as THREE.Vector3).set(100, 200, 300);
     attachment.update(ctx);
-    expect(prepass.update).toHaveBeenLastCalledWith(101, 202, 303, ctx);
+    expect(prepass.update).toHaveBeenLastCalledWith(ctx);
   });
 
   it('forced recompute dirties the cache before every update', () => {

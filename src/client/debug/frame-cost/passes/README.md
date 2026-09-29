@@ -285,10 +285,10 @@ Two things that look like defects and are not:
   recompute left to force.
 
 **Never leave the lever on outside a measurement dwell.** In the live app
-the recompute advances the cache generation every frame, so a moving
-pointer re-arms the pick mirror's 1.48 MiB copy every frame
-([Cold reads](../../../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity)). Headless runs send
-no pointer events, so a measurement is unaffected.
+every frame is a fresh refill request, so the refill cursor never parks,
+the pick mirror is never staged, and every pick reads no extinction and
+errs pickable ([Cold reads](../../../webgpu/extinction/README.md#cold-reads--the-one-behaviour-that-is-not-parity)). Headless
+runs pick nothing, so a measurement is unaffected.
 
 ## Decomposing the HDR chain
 
