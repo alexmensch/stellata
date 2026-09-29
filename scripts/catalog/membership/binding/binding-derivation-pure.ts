@@ -2,7 +2,11 @@
 // two-source consensus first, each candidate through both binding gates.
 // See README.md.
 
-import { normaliseGjKey, resolveGaiaSourceId } from '../../record/catalog-pure';
+import {
+  isSiblingLetterAttribution,
+  normaliseGjKey,
+  resolveGaiaSourceId,
+} from '../../record/catalog-pure';
 import type { GateVVia, PrintedV } from '../../photometry/v-magnitude-pure';
 import type { BindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
@@ -179,9 +183,9 @@ export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingCla
 }
 
 /** Weighs **every** ranked candidate, the winner's losing rivals included,
- *  through the same `resolveGaiaSourceId` call `applyBindingGate` makes — so
- *  the label side and the record side cannot drift on what counts as a bad
- *  binding. Nothing passing is a derived refusal. */
+ *  through the same `resolveGaiaSourceId` call `applyBindingGate` makes; the
+ *  component witness is the one verdict the overlay does not share. Nothing
+ *  passing is a derived refusal. */
 export function deriveBinding(
   candidates: BindingCandidates,
   gate: RowGateEvidence,
@@ -208,13 +212,13 @@ export function deriveBinding(
     }
   }
   // The component witness rescues a row the sibling gate left unbound; it never
-  // outranks a candidate that passes on its own — see README.md.
-  if (winner === null && gate.tyc !== '') {
+  // outranks a candidate that passes on its own — see README.md. A sibling
+  // rejection is one the magnitude gate already passed.
+  const witnessed = gate.tyc === '' ? null : evidence.simbadSourceOfTyc(gate.tyc);
+  if (winner === null && witnessed !== null) {
     const named = rejected.findIndex((r) => r.reason === 'sibling'
-      && evidence.simbadSourceOfTyc(gate.tyc) === r.sourceId
-      && resolveGaiaSourceId(
-        r.sourceId, gate.hip, null, gate.vMag, evidence.gMagOf, evidence.wdsXids, true,
-      ).gaiaSourceId !== null);
+      && r.sourceId === witnessed
+      && !isSiblingLetterAttribution(r.sourceId, gate.hip, evidence.wdsXids, true));
     if (named >= 0) {
       const [rescued] = rejected.splice(named, 1);
       winner = { sourceId: rescued.sourceId, via: rescued.via };
