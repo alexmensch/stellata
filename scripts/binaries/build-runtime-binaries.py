@@ -743,11 +743,11 @@ def run(force: bool) -> int:
         f"duplicate_relation={stats.pairs_dropped_duplicate_relation}"
     )
 
-    if not assert_or_update_counts(stats_to_counts(stats), EXPECTED_COUNTS, "build-runtime-binaries"):
-        log(
-            f"counts assertion failed. If intentional, refresh with: "
-            f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime"
-        )
+    if not assert_or_update_counts(
+        stats_to_counts(stats), EXPECTED_COUNTS,
+        label="build-runtime-binaries",
+        refresh_command=f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime",
+    ):
         return 1
     write_stamp(BINARIES_BIN_STAMP, inputs, [OUT_BIN])
     return 0

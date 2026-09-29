@@ -116,15 +116,13 @@ from scripts.binaries.stage6_multiples import (  # noqa: E402
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
     LABEL,
+    REFRESH_COMMAND,
     assert_or_update_rates,
     build_binaries_counts,
     build_binaries_rates,
 )
 
-from scripts.util.snapshot_assert import (  # noqa: E402
-    UPDATE_COUNTS_ENV_VAR,
-    assert_or_update_counts,
-)
+from scripts.util.snapshot_assert import assert_or_update_counts  # noqa: E402
 
 SRC_WDS_SUMM = DATA / "wds" / "wds_summ.txt"
 SRC_ORB6 = DATA / "wds" / "orb6_orbits.txt"
@@ -684,15 +682,12 @@ def run(force: bool) -> int:
             "athyg_match_sibling_claimed_rejected", 0,
         ),
     )
-    counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS, LABEL)
+    counts_match = assert_or_update_counts(
+        counts, EXPECTED_COUNTS, label=LABEL, refresh_command=REFRESH_COMMAND,
+    )
     rates = build_binaries_rates(counts)
     rates_match = assert_or_update_rates(rates, EXPECTED_RATES)
     if not counts_match or not rates_match:
-        log(
-            f"build-binaries assertion failed. If the change is "
-            f"intentional, refresh with: "
-            f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries"
-        )
         return 1
 
     log(

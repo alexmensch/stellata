@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import sys
 import tempfile
 import unittest
@@ -17,6 +19,8 @@ from scripts.util.snapshot_assert import (  # noqa: E402
 )
 
 LABEL = "test"
+REFRESH = "UPDATE_BUILD_COUNTS=1 pnpm run build:test"
+KW = {"label": LABEL, "refresh_command": REFRESH}
 
 
 class CompareBuildCountsTests(unittest.TestCase):
@@ -52,11 +56,15 @@ class FormatCountDiffTests(unittest.TestCase):
 
 class AssertOrUpdateCountsTests(unittest.TestCase):
     def test_a_missing_snapshot_fails_and_writes_nothing(self) -> None:
-        with tempfile.TemporaryDirectory() as td:
+        out = io.StringIO()
+        with tempfile.TemporaryDirectory() as td, contextlib.redirect_stdout(out):
             p = Path(td) / "snapshot.json"
-            ok = assert_or_update_counts({"x": 1, "y": 2}, p, LABEL)
+            ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
             self.assertFalse(ok)
             self.assertFalse(p.exists())
+        self.assertIn("is missing", out.getvalue())
+        self.assertIn(REFRESH, out.getvalue())
+        self.assertNotIn("assertion failed", out.getvalue())
 
     def test_env_var_writes_a_missing_snapshot(self) -> None:
         import json as _json
@@ -65,7 +73,7 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
             p = Path(td) / "snapshot.json"
             try:
                 _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
-                ok = assert_or_update_counts({"x": 1, "y": 2}, p, LABEL)
+                ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
             finally:
                 _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
             self.assertTrue(ok)
@@ -76,15 +84,18 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "snapshot.json"
             p.write_text('{"x": 1, "y": 2}\n')
-            ok = assert_or_update_counts({"x": 1, "y": 2}, p, LABEL)
+            ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
         self.assertTrue(ok)
 
     def test_compares_against_existing_snapshot_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "snapshot.json"
             p.write_text('{"x": 1, "y": 2}\n')
-            ok = assert_or_update_counts({"x": 1, "y": 3}, p, LABEL)
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                ok = assert_or_update_counts({"x": 1, "y": 3}, p, **KW)
             self.assertFalse(ok)
+            self.assertIn(f"refresh the snapshot with: {REFRESH}", out.getvalue())
             # Snapshot file must NOT be silently rewritten on mismatch.
             self.assertEqual(p.read_text(), '{"x": 1, "y": 2}\n')
 
@@ -96,7 +107,7 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
             p.write_text('{"x": 1}\n')
             try:
                 _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
-                ok = assert_or_update_counts({"x": 2}, p, LABEL)
+                ok = assert_or_update_counts({"x": 2}, p, **KW)
             finally:
                 _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
             self.assertTrue(ok)

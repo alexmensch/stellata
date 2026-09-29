@@ -95,13 +95,14 @@ def assert_or_update_snapshot(
     expected_path: Path,
     *,
     label: str,
+    refresh_command: str,
     build_payload: Callable[[dict[str, float], Path], dict[str, Any]],
     compare: Callable[[dict[str, Any], dict[str, float]], list[SnapshotDiff]],
     format_diff: Callable[[list[SnapshotDiff]], str],
 ) -> bool:
-    """True on a full match; False on drift or a missing snapshot. Under
-    ``UPDATE_BUILD_COUNTS=1`` writes ``build_payload(actual, expected_path)``
-    instead and returns True."""
+    """True on a full match; False on drift or a missing snapshot, after
+    printing ``refresh_command``. Under ``UPDATE_BUILD_COUNTS=1`` writes
+    ``build_payload(actual, expected_path)`` instead and returns True."""
     try:
         shown = expected_path.relative_to(REPO_ROOT)
     except ValueError:
@@ -113,13 +114,19 @@ def assert_or_update_snapshot(
         return True
 
     if not expected_path.exists():
-        print(f"[{label}] snapshot {shown} is missing; write it with {UPDATE_COUNTS_ENV_VAR}=1")
+        print(f"[{label}] snapshot {shown} is missing. To write it:\n  {refresh_command}")
         return False
 
     expected = json.loads(expected_path.read_text())
     diff = compare(expected, actual)
     print(f"[{label}] {format_diff(diff)}")
-    return all(d.status == "match" for d in diff)
+    if all(d.status == "match" for d in diff):
+        return True
+    print(
+        f"[{label}] {shown} assertion failed. If the change is intentional, "
+        f"refresh the snapshot with: {refresh_command}"
+    )
+    return False
 
 
 def compare_build_counts(
@@ -153,11 +160,14 @@ def format_count_diff(diff: list[SnapshotDiff], label: str) -> str:
     )
 
 
-def assert_or_update_counts(actual: dict[str, int], expected_path: Path, label: str) -> bool:
+def assert_or_update_counts(
+    actual: dict[str, int], expected_path: Path, *, label: str, refresh_command: str,
+) -> bool:
     """Exact-match snapshot assert/refresh for an int-count JSON."""
     return assert_or_update_snapshot(
         actual, expected_path,
         label=label,
+        refresh_command=refresh_command,
         build_payload=lambda a, _path: a,
         compare=compare_build_counts,
         format_diff=lambda diff: format_count_diff(diff, label),
