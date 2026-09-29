@@ -95,6 +95,8 @@ fan-out of jobs beyond the bare checks:
     content and every built artifact present, so each suite that
     self-skips in the bare `test` job runs here: the known-stars corpus,
     the render-geometry regression and every LFS-gated sweep among them.
+    Any test that skips here fails the step
+    ([Vitest with every input](/scripts/ci/README.md#vitest-with-every-input)).
   - `Deploy asset sizes` — finishes the deploy build with
     `build:client` (`pnpm run build`'s one stage this job skips is
     `build:binaries`, pinned by `build-binaries`), then
@@ -113,7 +115,7 @@ fan-out of jobs beyond the bare checks:
 
 **No workflow edit adds a suite.** A new `describe.skipIf` vitest suite
 runs smudged in `build-catalog` whatever it gates on, and a new
-`*.test.py` runs in `python-tests`. The cost is every data-free test
+`*.test.py` runs in `python-tests`; in both, a skip fails the job. The cost is every data-free test
 running twice, once per job, which buys that no list exists to
 fall out of step.
 

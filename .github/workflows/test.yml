@@ -146,9 +146,10 @@ jobs:
       - name: SID ledger–artifact consistency
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm run sid:check
+      # see /scripts/ci/README.md#vitest-with-every-input
       - name: Full vitest, smudged and built
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
-        run: pnpm test
+        run: pnpm run test:no-skip
       - id: deploy-build
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm run build:client

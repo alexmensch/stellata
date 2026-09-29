@@ -10,8 +10,11 @@ Scripts that `.github/workflows/` runs.
   `paths` prints the keyed files instead, which is how to audit a surprising
   miss or hit; `run` runs each step, then fails on any diff in its pinned
   paths.
-- `python_tests.py` (+ test) — the Python suites' runner, below. The one
-  script here with a local entry too, `pnpm run test:py`.
+- `python_tests.py` (+ test) — the Python suites' runner, below; locally
+  `pnpm run test:py`.
+- `vitest-no-skip.ts`, `vitest-skips-pure.ts` (+ test) — the whole vitest
+  suite, failing on any test that did not run, below; locally
+  `pnpm run test:no-skip`.
 
 ## Python suites
 
@@ -29,6 +32,21 @@ job installs `scripts/refresh/requirements-refresh.txt` and
 `scripts/textures/requirements.txt`; locally, `pnpm run test:py` with the
 venv that holds them activated, as for every other `python3` package
 script — without it, the suites that import numpy fail.
+
+## Vitest with every input
+
+`build-catalog`'s `Full vitest, smudged and built` step runs `pnpm test`
+through `vitest-no-skip.ts`, which reads vitest's JSON report and **fails
+on any test that did not run** — skipped, pending or todo. That job holds
+every input a suite can gate on: LFS content and the built catalogue and
+layers. A suite skipping there has lost its input (an
+artifact renamed, a build step dropped), and would otherwise go green
+without running, in the one job meant to run it.
+
+A suite that can never run in CI — the private paper store in
+`tests/citation-index.test.ts` — is not registered under `CI` rather
+than skipped. The bare `test` job still allows skips; it has none of
+these inputs.
 
 ## The catalogue build cache
 
