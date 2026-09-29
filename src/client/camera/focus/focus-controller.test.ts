@@ -400,7 +400,7 @@ describe('FocusController — initial state', () => {
     const h = makeHarness();
     expect(h.focus.getFocusedStar()).toBeNull();
     expect(h.focus.getFocusedTarget()).toBeNull();
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
     expect(h.focus.isFocusLerpActive()).toBe(false);
   });
 
@@ -422,6 +422,40 @@ describe('FocusController.setFocus — star focus FSM', () => {
     // Emitted events end with 'focus' + 'state'.
     expect(h.busEvents.map((e) => e.name)).toEqual(['focus', 'state']);
     expect(h.busEvents[0].payload).toEqual({ kind: 'star', idx: 1 });
+  });
+
+  describe('the focused planet system', () => {
+    const planetSystemEvents = (h: ReturnType<typeof makeHarness>) =>
+      h.busEvents.filter((e) => e.name === 'planetSystem');
+
+    it('is pending between a host focus and its load, not absent', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(1);
+      h.focus.setFocus(0);
+      expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'pending' });
+      await Promise.resolve();
+      expect(h.focus.getFocusedPlanetSystem()).toMatchObject({ status: 'ready', value: { hostStarIdx: 0 } });
+    });
+
+    it('does not reload or re-emit when the host is unchanged', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(0);
+      await Promise.resolve();
+      const before = planetSystemEvents(h).length;
+      h.focus.setFocus(0);
+      expect(h.focus.getFocusedPlanetSystem().status).toBe('ready');
+      await Promise.resolve();
+      expect(planetSystemEvents(h).length).toBe(before);
+    });
+
+    it('drops a load still in flight at dispose', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(1);
+      h.focus.setFocus(0);
+      h.focus.dispose();
+      await Promise.resolve();
+      expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
+    });
   });
 
   it('setFocus(null) does NOT recentre worldOffset)', () => {
@@ -988,7 +1022,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     // The HOST's planet system attaches (async resolve), keeping orbit
     // rings / labels alive exactly as the host's own focus would.
     await Promise.resolve();
-    expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
+    expect(h.focus.getFocusedPlanetSystem()).toMatchObject({ status: 'ready', value: { hostStarIdx: 0 } });
   });
 
   it('planet flyTo preserves the camera absolute pose at lerp start (no teleport)', () => {
@@ -1020,7 +1054,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     // controls don't shove the camera outward from the parked pose.
     expect(h.controls.minDistance).toBeLessThanOrEqual(eye);
     expect(h.controls.minDistance).toBeLessThanOrEqual(GLOBAL_MIN_DIST_PC);
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
     const focusEvent = h.busEvents.find((e) => e.name === 'focus');
     expect(focusEvent).toBeDefined();
     expect(focusEvent!.payload).toBeNull();
@@ -1047,7 +1081,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     h.focus.flyTo({ kind: 'cloud', idx: 0 }, { animate: false });
     expect(h.focus.getFocusedTarget()).toEqual({ kind: 'cloud', idx: 0 });
     expect(h.controls.minDistance).toBeLessThanOrEqual(GLOBAL_MIN_DIST_PC);
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
   });
 
   it('currentFocusTarget round-trips the planet kind geometry', () => {
@@ -1164,7 +1198,7 @@ describe('FocusController — planet focus (kind "planet")', () => {
     expect(h.controls.minDistance)
       .toBeCloseTo(minOrbitDistForPlanet(RADIUS_PC, fovMinorRad(h.camera)), 15);
     await Promise.resolve();
-    expect(h.focus.getFocusedPlanetSystem()?.hostStarIdx).toBe(0);
+    expect(h.focus.getFocusedPlanetSystem()).toMatchObject({ status: 'ready', value: { hostStarIdx: 0 } });
   });
 
   it('applyFocus on a soft kind detaches the planet system a hard focus attached', async () => {
@@ -1172,13 +1206,13 @@ describe('FocusController — planet focus (kind "planet")', () => {
     const idx = attachTestPlanet(h);
     h.focus.flyTo({ kind: 'planet', idx }, { animate: false });
     await Promise.resolve();
-    expect(h.focus.getFocusedPlanetSystem()).not.toBeNull();
+    expect(h.focus.getFocusedPlanetSystem().status).toBe('ready');
 
     h.focus.makeFocusTarget({ kind: 'cloud', idx: 0 })!.applyFocus();
     expect(h.focus.getFocusedTarget()).toEqual({ kind: 'cloud', idx: 0 });
     // planetSystemHost is null for a soft kind, so the shared leg detaches
     // where the retired factories relied on a hard→soft branch.
-    expect(h.focus.getFocusedPlanetSystem()).toBeNull();
+    expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
     expect(h.controls.minDistance).toBe(GLOBAL_MIN_DIST_PC);
   });
 

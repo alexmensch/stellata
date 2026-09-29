@@ -10,7 +10,7 @@ close-approach focused star sitting at exactly NDC origin.
 
 - `focus-controller.ts` (+ test) — the FSM. Owns the focused object
   and the distance-vector destination (one `Target` slot each — see
-  [Focus state](#focus-state)), `cameraMode`, `focusedPlanetSystem`, the focus-park
+  [Focus state](#focus-state)), `cameraMode`, the focused planet system, the focus-park
   lerp state, pin-engage geometry, and the generic `makeFocusTarget` /
   `currentFocusTarget` builders. Canonical home for
   `GLOBAL_MIN_DIST_PC` + `PIN_ENGAGE_THRESHOLD_SQ_PC`.
@@ -52,8 +52,12 @@ scene-layer hooks, and `StarFrame` for star positions
 - `cameraMode` lives here too, with its `CameraMode` type — `getCameraMode()` is the single read
   path; `setCameraModeValue()` is the raw no-emit write used by
   ObserveTransition and the observe-cleanup branch of `setFocus`.
-- `focusedPlanetSystem`, `planetSystemToken` — derived star-focus
-  state.
+- `planetSystemHost` and `planetSystem` — derived star-focus state: the
+  host whose system is attached or loading, and that system as a
+  `LateState` (`../../util/late/README.md`). A switch to a new host goes
+  `pending` at once, so the previous host's system never outlives the
+  switch; refocusing the same host reloads nothing. `'planetSystem'`
+  carries the ready system or null, and fires only when that changes.
 - Click/select-driven entry points are Target-keyed: `flyTo(target)`
   (hard kinds route through `focusHardTarget`; soft kinds share one
   provider-driven focus-park path), `setOrbitTarget(target)`,

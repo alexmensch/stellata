@@ -159,7 +159,6 @@ const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   'observe.getProgress': 'verdict: null is "no observe transition running"',
   'focus.getFocusedStar': NO_SELECTION,
   'focus.getFocusedTarget': NO_SELECTION,
-  'focus.getFocusedPlanetSystem': NO_SELECTION,
   'focus.getVectorTo': NO_SELECTION,
   'focus.getVectorTarget': NO_SELECTION,
   'focus.getFocusedHardTarget': NO_SELECTION,

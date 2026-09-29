@@ -5,7 +5,6 @@ const SELECTION = 'selection: null is "nothing selected", its own answer';
 const CACHE = 'cache: null is "nothing seen yet", and the owner recomputes on it';
 const RESOURCE = 'resource: built on first use or attach, nulled by dispose; readers skip on null';
 const SEAM = 'install seam: null is "nothing installed"';
-const OPEN = 'open defect: null also means "not landed yet"; a bead names this field';
 
 export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'BinaryOrbitField.focalChainIdx': CACHE,
@@ -22,7 +21,7 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'FocalRides.movingIdx': CACHE,
   'FocusController.focused': SELECTION,
   'FocusController.vector': SELECTION,
-  'FocusController.focusedPlanetSystem': OPEN,
+  'FocusController.planetSystemHost': SELECTION,
   'FocusController.focusLerpState': IN_FLIGHT,
   'ObserveControls.activePointerId': IN_FLIGHT,
   'ObserveTransition.state': IN_FLIGHT,

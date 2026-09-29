@@ -77,7 +77,9 @@ function rig(): Rig {
     occluders: new OccluderSet(),
     solIndex: SOL_INDEX,
     getT: () => T,
-    focusedPlanetSystem: () => r.state.ps,
+    focusedPlanetSystem: () => (r.state.ps === null
+      ? { status: 'absent' }
+      : { status: 'ready', value: r.state.ps }),
     observeAnchorPlanet: () => r.state.anchor,
     onPlanetSystem: (h) => {
       handler = h;
