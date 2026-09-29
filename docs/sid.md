@@ -473,8 +473,9 @@ In-record, not a runtime sidecar:
   owns (the heliopause has no artifact rows; `local-bubble.bin` carries
   no sid field) — so they mint like the Sol system, not like the
   in-record sibling artifacts.
-- **Loader maps (B4):** `catalog-loader.ts` inverts the sid column
-  into `sidToIndex` / `indexToSid`, mirroring `hipToIndex`.
+- **Loader domain (B4):** `loaders/catalog-sid-domain.ts` serves the
+  catalogue's sid column as the star domain ([§ 8](#8-runtime-resolver-b4)), indexed lazily over
+  the decoded prefix.
 
 ## 8. Runtime resolver (B4)
 
@@ -492,9 +493,13 @@ One global resolver built at boot from whatever artifacts attach:
   the remaining probes keep resolving without an index shift), Local
   Group and clouds when their fetches resolve (concluded when the
   artifact is missing) (`src/client/util/sid-resolver/README.md`).
+  The star domain attaches on the catalogue's first chunk and states
+  itself still **filling** until the last one lands, announcing each
+  chunk as it grows
+  ([A domain that is still filling](/src/client/util/sid-resolver/README.md#a-domain-that-is-still-filling)).
 - `resolveSid(sid)` → `{ kind, localIndex }`, or `pending` while any
-  registered-but-unattached domain remains, or `unknown` once all
-  attached domains have disclaimed it.
+  registered-but-unattached or still-filling domain remains, or
+  `unknown` once every domain has settled and disclaimed it.
 - **Successor following ([§ 9.4](#94-migration-semantics--exact-table)'s last row):** resolution first
   canonicalises through the retired-sid → successor-sid map, derived
   at catalog build time from `retirements.tsv` net of
@@ -504,8 +509,8 @@ One global resolver built at boot from whatever artifacts attach:
   survivor with no extra fetch.
 - **Deferred-resolution contract (pin):** applying a URL must never
   block on a late artifact. Unresolved sids from `applyFromUrl`
-  register as deferred intents (focus / to / POI); each domain attach
-  flushes matching intents; intents for domains that never attach
+  register as deferred intents (focus / to / POI); each domain attach,
+  and each growth of a filling domain, flushes matching intents; intents for domains that never attach
   (a missing artifact) or sids no domain claims (a URL minted by a newer
   deploy carrying an object type this client doesn't ship) expire
   silently, leaving the rest of the decoded state applied. This is
@@ -563,7 +568,7 @@ What a v4 link meets on a receiver:
 | Case | Wire form | Resolution |
 | --- | --- | --- |
 | v1 / v2 / v3 blob | version byte 1–3 | unsupported version → first-load view, param stripped ([§ 9.3](#93-pre-sid-formats-are-retired)). |
-| v4 blob, decoder from an older deploy | version byte = 4 | unknown version → decode returns null → default view. Unavoidable on a SCHEMA_VERSION bump; single-deploy site makes the overlap window short. |
+| v4 blob, decoder from an older deploy | version byte = 4 | unknown version → `decodeBlob` throws → first-load view, param stripped. Unavoidable on a SCHEMA_VERSION bump; single-deploy site makes the overlap window short. |
 | unknown high mask bits in a v4 blob | — | ignored (forward tolerance for future append-only fields). |
 | retired/parked SID arriving in v4 | LEB128 | `retirements.successor_sid` set → resolve to successor; else unresolved → deferred intent that expires ([§ 8](#8-runtime-resolver-b4)): the field degrades, the rest of the state applies. |
 
@@ -602,9 +607,8 @@ migration**.
   build hard-fail [§ 4.4](#44-allocation).
 - **B3 sibling artifacts** (`stellata-efju.4`): [§ 7](#7-storage--sid-in-every-artifact) clouds / LG /
   sol-objects + `SOL_OBJECT_SIDS` pin test.
-- **B4 runtime resolver** (`stellata-efju.5`): [§ 7](#7-storage--sid-in-every-artifact) loader maps + [§ 8](#8-runtime-resolver-b4)
+- **B4 runtime resolver** (`stellata-efju.5`): [§ 7](#7-storage--sid-in-every-artifact) loader domain + [§ 8](#8-runtime-resolver-b4)
   (domains, pending/unknown, deferred intents).
-- **B5 v4 wire** (`stellata-efju.6`): [§ 9.1](#91-sid-ref)–9.4, including the
-  freeze-first step and the golden-blob corpus.
+- **B5 v4 wire** (`stellata-efju.6`): [§ 9.1](#91-sid-ref)–9.4.
 - **POI generalisation** (`stellata-o6nx.1`): consumes [§ 8](#8-runtime-resolver-b4) + [§ 9](#9-wire-format-v4-b5);
   no identity work left in it.
