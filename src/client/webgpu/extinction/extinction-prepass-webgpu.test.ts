@@ -6,7 +6,7 @@ import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { createVoxelTexture } from '../../loaders/dust-voxel-upload';
 import { makeColorLutTexture } from '../../star-pipeline/blackbody-lut';
 import { RECOMPUTE_EPSILON_PC } from '../../star-pipeline/extinction/extinction-prepass-pure';
-import type { ExtinctionView } from '../../star-pipeline/extinction/extinction-seam';
+import type { CameraPose } from '../../scene/scene-layer';
 import { StarCompaction } from '../star/compaction/star-compaction';
 import { STAR_VISIBILITY_BOUND_KEYS } from '../star/star-visibility-tsl';
 import { makeStarLayerSources } from '../star/star-sources-mock';
@@ -72,7 +72,7 @@ const tableOf = (count = COUNT) => Float32Array.from({ length: count }, (_, i) =
  *  compaction and the quarters it lists are marched over the next
  *  REFILL_SLICES frames. Only a frame after the last is one a pick can be
  *  staged for, which is the shape every warming test wants. */
-function moveAndSettle(prepass: { update(view: ExtinctionView): void }, x: number) {
+function moveAndSettle(prepass: { update(view: CameraPose): void }, x: number) {
   for (let frame = 0; frame <= REFILL_SLICES; frame++) prepass.update(at(x));
 }
 
@@ -94,7 +94,7 @@ function permutations(released: readonly BufferAttribute[]): Uint32Array[] {
 }
 
 /** A camera at absolute (x, 0, 0) turned `yawRad` off −z, as the shell would hand it. */
-function viewAt(yawRad: number, x = 0): ExtinctionView {
+function viewAt(yawRad: number, x = 0): CameraPose {
   const camera = new PerspectiveCamera(50, 16 / 9, 0.01, 1e5);
   camera.rotation.set(0, yawRad, 0);
   camera.position.set(x, 0, 0);

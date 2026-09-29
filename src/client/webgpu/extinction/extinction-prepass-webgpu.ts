@@ -8,9 +8,9 @@ import {
 import {
   Fn, If, compute, distance, float, instanceIndex, int, max, storage, uint, uniform,
 } from 'three/tsl';
-import { cameraAbsInto } from '../../scene/scene-layer';
+import { cameraAbsInto, type CameraPose } from '../../scene/scene-layer';
 import type {
-  ExtinctionPrepassSeam, ExtinctionPrepassUniforms, ExtinctionView,
+  ExtinctionPrepassSeam, ExtinctionPrepassUniforms,
 } from '../../star-pipeline/extinction/extinction-seam';
 import type { AvParityReport } from '../../star-pipeline/extinction/av-parity-pure';
 import {
@@ -250,7 +250,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     return this.hasComputed && !this.forceDisabled && this.fillKernel !== null;
   }
 
-  update(view: ExtinctionView): void {
+  update(view: CameraPose): void {
     if (this.fillKernel === null || this.refillKernel === null) return;
     if (this.dustTexture === null) return;
     if (this.forceDisabled) return;

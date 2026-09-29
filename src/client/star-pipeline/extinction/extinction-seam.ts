@@ -2,6 +2,7 @@
 // behind the import boundary in ../../webgpu/extinction/.
 
 import type * as THREE from 'three';
+import type { CameraPose } from '../../scene/scene-layer';
 import type { AvParityReport } from './av-parity-pure';
 
 /** Uniform value-objects shared by reference with the star pipeline's
@@ -14,12 +15,6 @@ export interface ExtinctionPrepassUniforms {
   uDustLogRatio: { value: number };
   uDustAvPerDensityPc: { value: number };
   uAvPrepassEnabled: { value: number };
-}
-
-/** see ../../webgpu/extinction/refill/README.md#only-what-is-in-frame */
-export interface ExtinctionView {
-  camera: THREE.Camera;
-  worldOffset: Readonly<THREE.Vector3>;
 }
 
 export interface ExtinctionPrepassSeam {
@@ -41,7 +36,7 @@ export interface ExtinctionPrepassSeam {
    *  ordinary refill request
    *  (`../../webgpu/extinction/refill/README.md#a-view-change-is-a-refill-request--nothing-more`).
    * Free only with the camera parked and the view still. */
-  update(view: ExtinctionView): void;
+  update(view: CameraPose): void;
   /** Raw physical A_V for one star, out of the buffer the star vertex
    *  stage fetches. Null when the cache is inert, and until
    *  `warmAvReadback` has landed the table

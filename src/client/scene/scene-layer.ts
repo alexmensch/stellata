@@ -12,12 +12,17 @@ import {
 import type { FrameFrustum } from './contribution/frame-frustum';
 import type { FrameExposure } from '../hdr/exposure/visibility/emitter-visibility-pure';
 
+/** A camera and the floating-origin offset its position is relative to. */
+export interface CameraPose {
+  readonly camera: THREE.Camera;
+  readonly worldOffset: Readonly<THREE.Vector3>;
+}
+
 /** Per-frame inputs shared by every layer, computed ONCE per frame by
  *  the integration shell. Layers keep their own visibility gates
  *  internally (including how they behave while a warp is in flight). */
-export interface FrameCtx {
+export interface FrameCtx extends CameraPose {
   readonly camera: THREE.PerspectiveCamera;
-  readonly worldOffset: Readonly<THREE.Vector3>;
   /** Camera distance from Sol in absolute ICRS pc (float64 sum). */
   readonly distFromSol: number;
   /** Model clock (Unix seconds) — Stellata.getT() snapshot. */
@@ -173,7 +178,7 @@ export interface SceneLayer {
 /** The camera's absolute ICRS position this frame, into `out`, summed in
  *  float64. */
 export function cameraAbsInto(
-  ctx: { readonly camera: THREE.Camera; readonly worldOffset: Readonly<THREE.Vector3> },
+  ctx: CameraPose,
   out: THREE.Vector3,
 ): THREE.Vector3 {
   return out.copy(ctx.camera.position).add(ctx.worldOffset);
