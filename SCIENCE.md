@@ -413,7 +413,7 @@ enough to see it.
   density0 is solved so the proxy volumes integrate to it at the V-band
   LIGHT B/T derived from the three sources above. The two [Leinert 1998](/data/papers/index.md#leinert1998) checks
   then disagree with it by 1.31 mag
-  at the pole and 0.385 toward the centre (the model's centre sightline
+  at the pole and 0.389 toward the centre (the model's centre sightline
   against Leinert's b = 30° value), in the same direction, and no
   shape parameter bridges that — [The luminosity solve](docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)
   argues it out;

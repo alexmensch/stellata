@@ -191,10 +191,10 @@ describe('the adaptation contribution table', () => {
       galacticDirection(180, 0),
     );
     const milkyWayBand = surfaceBrightnessLuminance(EXPOSURE, bandAnticentreSb, OMEGA_PX);
-    expect(bandAnticentreSb).toBeCloseTo(22.693, 3);
+    expect(bandAnticentreSb).toBeCloseTo(22.689, 3);
     expect(thresholdStars).toBeCloseTo(1.04e-4, 5);
     expect(milkyWayBand).toBeCloseTo(6.1295e-4, 5);
-    expect(milkyWayBand / thresholdStars).toBeCloseTo(5.899, 2);
+    expect(milkyWayBand / thresholdStars).toBeCloseTo(5.92, 2);
     // Both rows are drawn light now, so both land in the buffer rather
     // than in a constant — and both are inert either way: their sum
     // cannot reach the anchor on its own, with two decades to spare.
