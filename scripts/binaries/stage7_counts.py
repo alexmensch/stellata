@@ -318,7 +318,7 @@ def assert_or_update_rates(
         refresh_command=REFRESH_COMMAND,
         build_payload=_rates_snapshot_payload,
         compare=compare_build_rates,
-        format_diff=format_rate_diff,
+        render=format_rate_diff,
     )
 
 

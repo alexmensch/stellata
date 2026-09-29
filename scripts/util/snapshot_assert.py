@@ -98,7 +98,7 @@ def assert_or_update_snapshot(
     refresh_command: str,
     build_payload: Callable[[dict[str, float], Path], dict[str, Any]],
     compare: Callable[[dict[str, Any], dict[str, float]], list[SnapshotDiff]],
-    format_diff: Callable[[list[SnapshotDiff]], str],
+    render: Callable[[list[SnapshotDiff]], str],
 ) -> bool:
     """True on a full match; False on drift or a missing snapshot, after
     printing ``refresh_command``. Under ``UPDATE_BUILD_COUNTS=1`` writes
@@ -119,7 +119,7 @@ def assert_or_update_snapshot(
 
     expected = json.loads(expected_path.read_text())
     diff = compare(expected, actual)
-    print(f"[{label}] {format_diff(diff)}")
+    print(f"[{label}] {render(diff)}")
     if all(d.status == "match" for d in diff):
         return True
     print(
@@ -170,5 +170,5 @@ def assert_or_update_counts(
         refresh_command=refresh_command,
         build_payload=lambda a, _path: a,
         compare=compare_build_counts,
-        format_diff=lambda diff: format_count_diff(diff, label),
+        render=lambda diff: format_count_diff(diff, label),
     )
