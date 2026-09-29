@@ -53,6 +53,7 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'ProbeField.hiddenIdx': SELECTION,
   'PlanetBodyField.hideIdx': SELECTION,
   'PlanetBodyField.lastDimNowMs': CACHE,
+  'VirtualClock.frameT': IN_FLIGHT,
   'StarLocalCluster.hostMemberIdx': SELECTION,
   'StarPipeline.hiddenStar': SELECTION,
   'StarLocalCluster.chainFocalIdx': CACHE,

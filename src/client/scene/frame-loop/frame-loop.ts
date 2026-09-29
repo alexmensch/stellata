@@ -38,7 +38,7 @@ export interface FrameLoopDeps {
   webgpu: Pick<WebGpuSeam, 'renderer' | 'timestampsAvailable' | 'syncUniformNodes'>;
   hdr: Pick<HdrSeam, 'bind' | 'resolve'>;
   uniforms: SharedUniforms;
-  clock: Pick<VirtualClock, 'getT' | 'getRate'>;
+  clock: Pick<VirtualClock, 'getT' | 'getRate' | 'inFrame'>;
   origin: Pick<FloatingOrigin, 'tick' | 'worldOffset'>;
   starFrame: Pick<StarFrame, 'advanceEpochTo' | 'flushLocalPositions' | 'syncPhysSizeWindow'>;
   focalRides: Pick<FocalRides, 'reseedMoving' | 'followEpochStep'>;
@@ -106,6 +106,10 @@ export class FrameLoop {
 
   private tick = () => {
     if (this.disposed) return;
+    this.deps.clock.inFrame(this.runTick);
+  };
+
+  private runTick = (): void => {
     const d = this.deps;
     perfMark('frame.total');
     // One wall-clock read per tick: every reader must agree on this frame.
@@ -133,7 +137,7 @@ export class FrameLoop {
     perfMark('pre-render');
     d.uniforms.uCameraPos.value.copy(d.camera.position);
     d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_INSTANCE;
-    d.uniforms.uModelDays.value = tToJdUt(d.clock.getT()) - J2000_JD;
+    d.uniforms.uModelDays.value = tToJdUt(this.frameCtx.t) - J2000_JD;
     d.uniforms.uModelDaysPerRealSec.value = Math.abs(d.clock.getRate()) / 86400;
     // Here, not by either publisher: each would drop the other's entries.
     d.occluders.beginFrame();
