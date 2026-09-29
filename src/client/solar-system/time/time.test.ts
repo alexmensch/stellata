@@ -177,36 +177,54 @@ describe('VirtualClock — one instant per frame', () => {
     const w = fakeWall();
     const c = new VirtualClock(w.now);
     c.setRate(MAX_RATE);
-    c.beginFrame();
-    const t = c.getT();
-    w.advance(2 ** -10);
-    expect(c.getT()).toBe(t);
-    c.endFrame();
+    const t = c.inFrame(() => {
+      const held = c.getT();
+      w.advance(2 ** -10);
+      expect(c.getT()).toBe(held);
+      return held;
+    });
     expect(c.getT()).toBe(t + MAX_RATE * 2 ** -10);
   });
 
   it('a write inside a frame moves the frame instant with it', () => {
     const w = fakeWall();
     const c = new VirtualClock(w.now);
-    c.beginFrame();
-    c.setTimeAbsolute(1e9);
-    expect(c.getT()).toBe(1e9);
-    c.pause();
-    w.advance(5);
-    expect(c.getT()).toBe(1e9);
-    c.endFrame();
+    c.inFrame(() => {
+      c.setTimeAbsolute(1e9);
+      expect(c.getT()).toBe(1e9);
+      c.pause();
+      w.advance(5);
+      expect(c.getT()).toBe(1e9);
+    });
   });
 
   it('a rate change inside a frame snapshots live time, not the held instant', () => {
     const w = fakeWall();
     const c = new VirtualClock(w.now);
     c.setRate(64);
-    c.beginFrame();
-    const held = c.getT();
-    w.advance(1);
-    c.pause();
-    expect(c.getT()).toBe(held + 64);
-    c.endFrame();
+    c.inFrame(() => {
+      const held = c.getT();
+      w.advance(1);
+      c.pause();
+      expect(c.getT()).toBe(held + 64);
+    });
+  });
+
+  it('releases the frame when the body throws', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    let held = 0;
+    expect(() => c.inFrame(() => {
+      held = c.getT();
+      w.advance(1);
+      throw new Error('tick');
+    })).toThrow('tick');
+    expect(c.getT()).toBe(held + 1);
+  });
+
+  it('refuses a nested frame', () => {
+    const c = new VirtualClock(fakeWall().now);
+    expect(() => c.inFrame(() => c.inFrame(() => {}))).toThrow('already open');
   });
 });
 

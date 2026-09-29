@@ -17,7 +17,7 @@ interface Knobs {
 }
 
 const FIXED_CLOCK = {
-  getT: () => 946_728_000, getRate: () => 86_400, beginFrame: () => {}, endFrame: () => {},
+  getT: () => 946_728_000, getRate: () => 86_400, inFrame: <T>(fn: () => T): T => fn(),
 };
 
 function harness(overrides: Partial<Knobs> = {}, clock: FrameLoopDeps['clock'] = FIXED_CLOCK) {

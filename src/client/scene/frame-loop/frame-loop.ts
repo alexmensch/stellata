@@ -38,7 +38,7 @@ export interface FrameLoopDeps {
   webgpu: Pick<WebGpuSeam, 'renderer' | 'timestampsAvailable' | 'syncUniformNodes'>;
   hdr: Pick<HdrSeam, 'bind' | 'resolve'>;
   uniforms: SharedUniforms;
-  clock: Pick<VirtualClock, 'getT' | 'getRate' | 'beginFrame' | 'endFrame'>;
+  clock: Pick<VirtualClock, 'getT' | 'getRate' | 'inFrame'>;
   origin: Pick<FloatingOrigin, 'tick' | 'worldOffset'>;
   starFrame: Pick<StarFrame, 'advanceEpochTo' | 'flushLocalPositions' | 'syncPhysSizeWindow'>;
   focalRides: Pick<FocalRides, 'reseedMoving' | 'followEpochStep'>;
@@ -106,16 +106,10 @@ export class FrameLoop {
 
   private tick = () => {
     if (this.disposed) return;
-    // ../../solar-system/time/README.md#one-instant-per-frame
-    this.deps.clock.beginFrame();
-    try {
-      this.runTick();
-    } finally {
-      this.deps.clock.endFrame();
-    }
+    this.deps.clock.inFrame(this.runTick);
   };
 
-  private runTick(): void {
+  private runTick = (): void => {
     const d = this.deps;
     perfMark('frame.total');
     // One wall-clock read per tick: every reader must agree on this frame.
@@ -190,7 +184,7 @@ export class FrameLoop {
     perfMeasure('frame.total');
     perfFrame();
     requestAnimationFrame(this.tick);
-  }
+  };
 
   private maybeReAdvanceEpoch(): void {
     const d = this.deps;

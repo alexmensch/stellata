@@ -188,12 +188,14 @@ export class VirtualClock {
     return this.frameT ?? this.liveT();
   }
 
-  beginFrame(): void {
+  inFrame<T>(fn: () => T): T {
+    if (this.frameT !== null) throw new Error('VirtualClock.inFrame: a frame is already open');
     this.frameT = this.liveT();
-  }
-
-  endFrame(): void {
-    this.frameT = null;
+    try {
+      return fn();
+    } finally {
+      this.frameT = null;
+    }
   }
 
   private liveT(): number {
