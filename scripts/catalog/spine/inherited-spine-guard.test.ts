@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { compareBuildCounts } from '../build-counts';
+import { compareCountSnapshot } from '../build-counts';
 import { dataRows } from '../parse/corpus-tsv';
 import { REPO_ROOT, isLfsPointer, lfsContentReadable } from '../../util/paths';
 import {
@@ -73,9 +73,8 @@ describe.skipIf(!available)('committed inherited spine', () => {
 
   it('matches the pinned row + per-column counts', () => {
     const expected = JSON.parse(readFileSync(EXPECTED_PATH, 'utf-8')) as SpineCounts;
-    const drifted = compareBuildCounts(expected, spineCounts(rows))
-      .filter((d) => d.status !== 'match');
-    expect(drifted).toEqual([]);
+    const { drifted, report } = compareCountSnapshot(expected, spineCounts(rows));
+    expect(drifted, report).toBe(false);
   });
 
   it('gives every row a designation, so no row is keyless for SID resolution', () => {

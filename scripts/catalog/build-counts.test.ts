@@ -3,6 +3,7 @@ import { emptyTallyPartition } from '../util/tally';
 import {
   compareBuildCounts,
   compareCountSnapshot,
+  driftedRows,
   formatCountDiff,
   formatPartition,
   spectralSimbadPartitionError,
@@ -235,7 +236,7 @@ function expectedDiffRows(counts: BuildCounts): number {
 }
 
 function drifted(expected: BuildCounts, actual: BuildCounts) {
-  return compareBuildCounts(expected, actual).filter((d) => d.status !== 'match');
+  return driftedRows(compareBuildCounts(expected, actual));
 }
 
 describe('compareBuildCounts', () => {

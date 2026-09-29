@@ -724,10 +724,16 @@ export function formatPartition(partition: Readonly<Record<string, number>>): st
   return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
 }
 
+type DriftedRow = Exclude<CountDiff, { status: 'match' }>;
+
+export function driftedRows(diff: CountDiff[]): DriftedRow[] {
+  return diff.filter((d): d is DriftedRow => d.status !== 'match');
+}
+
 /** Only drifted rows are listed, so a fatal exit doesn't scroll the
  *  actionable ones off-screen. */
 export function formatCountDiff(diff: CountDiff[]): string {
-  const drifted = diff.filter((d) => d.status !== 'match');
+  const drifted = driftedRows(diff);
   if (drifted.length === 0) return `build-counts: all ${diff.length} counts match`;
   const width = Math.max(...drifted.map((d) => d.key.length));
   const lines = [`build-counts: ${drifted.length} of ${diff.length} counts differ`];
@@ -758,7 +764,7 @@ export function compareCountSnapshot<T extends object>(
 ): { drifted: boolean; report: string } {
   const diff = compareBuildCounts(expected, actual);
   return {
-    drifted: diff.some((d) => d.status !== 'match'),
+    drifted: driftedRows(diff).length > 0,
     report: formatCountDiff(diff),
   };
 }
