@@ -227,7 +227,7 @@ export class FocusController implements FocusOps {
   getPinEngageThresholdSq(): number { return PIN_ENGAGE_THRESHOLD_SQ_PC; }
 
   /** The star the focused-star pin (uPinFocusToCenter) holds right now,
-   *  null when it is disengaged. Written to the uniform every frame by
+   *  null when it is disengaged. Written to the uniform every rendered frame by
    *  FrameLoop and shown by the pin section of `debug.panel()`.
    *
    *  The warp guard releases when `warp.isRecenteredToDest()` is true:

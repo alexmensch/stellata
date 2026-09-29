@@ -154,7 +154,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // aligns -Z with target). This uniform names the instance to pin;
     // the shader replaces its centreClip with projectionMatrix *
     // (0, 0, -distCam, 1) to bypass the cancellation.
-    // Updated each frame by FrameLoop since pan can move target away.
+    // Updated each rendered frame by FrameLoop since pan can move target away.
     uPinFocusToCenter: { value: NO_PINNED_STAR },
   } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 }
