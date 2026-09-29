@@ -8,6 +8,7 @@ import {
 import {
   Fn, If, compute, distance, float, instanceIndex, int, max, storage, uint, uniform,
 } from 'three/tsl';
+import { cameraAbsInto } from '../../scene/scene-layer';
 import type {
   ExtinctionPrepassSeam, ExtinctionPrepassUniforms, ExtinctionView,
 } from '../../star-pipeline/extinction/extinction-seam';
@@ -86,6 +87,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
    * */
   private orderIsProvisional: boolean;
   private readonly absCameraPos = uniform(new Vector3());
+  private readonly cameraAbsScratch = new Vector3();
   private readonly viewScratch = new Matrix4();
   private lastView: Matrix4 | null = null;
   private refill: RefillCursor = idleRefill();
@@ -254,29 +256,27 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     return this.hasComputed && !this.forceDisabled && this.fillKernel !== null;
   }
 
-  update(absCamX: number, absCamY: number, absCamZ: number, view?: ExtinctionView): void {
+  update(view: ExtinctionView): void {
     if (this.fillKernel === null || this.refillKernel === null) return;
     if (this.dustTexture === null) return;
     if (this.forceDisabled) return;
+    const cam = cameraAbsInto(view, this.cameraAbsScratch);
     const moved = movedBeyondEpsilon(
       this.lastCamX, this.lastCamY, this.lastCamZ,
-      absCamX, absCamY, absCamZ,
+      cam.x, cam.y, cam.z,
       RECOMPUTE_EPSILON_PC,
     );
     if (this.syncGateBounds()) this.dirty = true;
     const bump = this.dirty || moved;
-    let viewChanged = false;
-    if (view !== undefined) {
-      composeViewProjectionAbs(view.camera, view.worldOffset, this.viewScratch);
-      viewChanged = !sameView(this.lastView, this.viewScratch);
-      if (viewChanged) {
-        this.lastView = (this.lastView ?? new Matrix4()).copy(this.viewScratch);
-      }
+    composeViewProjectionAbs(view.camera, view.worldOffset, this.viewScratch);
+    const viewChanged = !sameView(this.lastView, this.viewScratch);
+    if (viewChanged) {
+      this.lastView = (this.lastView ?? new Matrix4()).copy(this.viewScratch);
     }
     // The first fill is whole (refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one).
     if (!this.hasComputed) {
       if (!bump) return;
-      this.setCameraGeneration(absCamX, absCamY, absCamZ);
+      this.setCameraGeneration(cam);
       this.fillWhole();
       this.hasComputed = true;
       this.dirty = false;
@@ -286,7 +286,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     const { refill } = this.slots;
     if (bump) {
       refill.cameraGeneration.value += 1;
-      this.setCameraGeneration(absCamX, absCamY, absCamZ);
+      this.setCameraGeneration(cam);
     }
     // Consume before produce: the class marched now is the one the
     // compaction built LAST frame; the compaction this frame reads the arm
@@ -305,11 +305,11 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   }
 
   /** see refill/README.md#the-generation-stamp */
-  private setCameraGeneration(x: number, y: number, z: number): void {
-    this.absCameraPos.value.set(x, y, z);
-    this.lastCamX = x;
-    this.lastCamY = y;
-    this.lastCamZ = z;
+  private setCameraGeneration(cam: Readonly<Vector3>): void {
+    this.absCameraPos.value.copy(cam);
+    this.lastCamX = cam.x;
+    this.lastCamY = cam.y;
+    this.lastCamZ = cam.z;
   }
 
   /** Every slot at one camera, and nothing owed after it (refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one).

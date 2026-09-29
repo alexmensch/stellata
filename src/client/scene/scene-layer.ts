@@ -173,7 +173,7 @@ export interface SceneLayer {
 /** The camera's absolute ICRS position this frame, into `out`, summed in
  *  float64. */
 export function cameraAbsInto(
-  ctx: FrameCtx,
+  ctx: { readonly camera: THREE.Camera; readonly worldOffset: Readonly<THREE.Vector3> },
   out: THREE.Vector3,
 ): THREE.Vector3 {
   return out.copy(ctx.camera.position).add(ctx.worldOffset);
