@@ -699,6 +699,22 @@ describe('buildMembership — the additions', () => {
       .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0, component: 0 });
   });
 
+  it('groups a HIP item with the TYC item whose derived source it shares', () => {
+    const oneStar = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
+        hipI239: new Set([...tables.hipI239, 61]),
+        tycho2: new Map([...tables.tycho2, ['5-6-1', tycho2(9)]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+      },
+    });
+    expect(oneStar.rows.filter((r) => r.gaia_source_id === '5151'))
+      .toEqual([expect.objectContaining({ tyc: '5-6-1', hd: '501', hip: '61' })]);
+    expect(oneStar.counts.additionSourceShared).toBe(result.counts.additionSourceShared);
+  });
+
   // Admitted, but one designation short: HD 5 is a spine record's, so the
   // record ships without a number the primaries publish for it.
   it('counts an admitted row the guard withheld a designation from', () => {

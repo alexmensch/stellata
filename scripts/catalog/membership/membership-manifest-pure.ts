@@ -940,7 +940,8 @@ interface AdditionItem {
   hd: HdAddition | null;
   hip: HipAddition | null;
   cns5: Cns5Row | null;
-  rawSource: string | null;
+  /** The source this item alone derives — two items deriving one are one star. */
+  source: string | null;
 }
 
 /** Designation-keyed indexes over the primaries the additions join through. */
@@ -991,8 +992,8 @@ function groupAdditions(
   }
   const bySource = new Map<string, AdditionItem[]>();
   for (const i of items) {
-    if (i.rawSource === null) continue;
-    pushKeyed(bySource, i.rawSource, i);
+    if (i.source === null) continue;
+    pushKeyed(bySource, i.source, i);
   }
   for (const list of bySource.values()) {
     const tycItems = list.filter((i) => i.hd !== null);
@@ -1343,18 +1344,16 @@ export function buildMembership(input: MembershipInput): MembershipResult {
 
   const claims = spineClaims(records);
   const additions = findAdditions(tables, spineKeys(kept), idx);
-  const items: AdditionItem[] = [
-    ...additions.hd.map((hd) => ({
-      key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null,
-      rawSource: tables.tycToSource.get(hd.tyc) ?? null,
-    })),
-    ...additions.hip.map((hip) => ({
-      key: `hip:${hip.hip}`, hd: null, hip, cns5: null, rawSource: hip.gaiaSourceId,
-    })),
+  const bare: Array<Omit<AdditionItem, 'source'>> = [
+    ...additions.hd.map((hd) => ({ key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null })),
+    ...additions.hip.map((hip) => ({ key: `hip:${hip.hip}`, hd: null, hip, cns5: null })),
     ...additions.cns5.newRecords.map((cns5) => ({
-      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5, rawSource: cns5.gaiaSourceId,
+      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5,
     })),
   ];
+  const items: AdditionItem[] = bare.map((i) => ({
+    ...i, source: derive(additionCells([{ ...i, source: null }])).derived.sourceId,
+  }));
   const index = indexAdditions(tables);
   const derivedGroups = groupAdditions(items, tables, index)
     .map((g) => ({ items: g, derived: derive(additionCells(g)).derived }));
