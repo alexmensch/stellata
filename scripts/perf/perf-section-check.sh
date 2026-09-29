@@ -29,6 +29,10 @@ record_tolerance_percent=1
 # list, and perf-section-check.test.ts fails when the two drift apart.
 exempt='calibration|debug|focus-card|format|hover|kinds|loaders|modals|overlays|poi|system-membership|typeahead|ui'
 
+# Bracketed rather than escaped: awk -v expands escapes, and a \| there reads
+# as alternation.
+row_key='^[A-Za-z0-9-]+[|](webgpu|webgl2)([|]compute)?$'
+
 touched=()
 while IFS= read -r f; do
   if [ -z "$f" ]; then continue; fi
@@ -93,14 +97,14 @@ while IFS= read -r key; do
   if ! printf '%s\n' "$stripped" | awk -v k="$key" '$1 == "accepted:" && $2 == k { found=1 } END { exit !found }'; then
     missing+=("$key")
   fi
-done < <(printf '%s\n' "$stripped" | awk '
+done < <(printf '%s\n' "$stripped" | awk -v key_re="$row_key" '
   { gsub(/`✗`/, "") }
   index($0, "✗") {
     named = 0
     for (i = 1; i <= NF; i++) {
       f = $i
       gsub(/[*`_,;:()]/, "", f)
-      if (f ~ /^[A-Za-z0-9-]+\|(webgpu|webgl2)(\|compute)?$/) { print f; named = 1 }
+      if (f ~ key_re) { print f; named = 1 }
     }
     if (!named) print "<unnamed row on line " NR ">"
   }')
