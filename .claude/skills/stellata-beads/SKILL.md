@@ -77,16 +77,22 @@ Audit: `bd list --status=open --no-parent --exclude-type=epic`.
 
 ### Choosing the parent epic
 
-The parent is a claim about **when the work must happen**, not which folder the
-code sits in:
+The parent is a claim about **which queue owns the work and when it must
+happen**:
 
-- **A defect reachable by a user on the shipped path** → `stellata-uadc`.
+- **A catalogue or pipeline defect** — the root cause is a value, identity,
+  placement or record that `scripts/` builds or `data/` holds, even when a user
+  can see it → `stellata-hooj`, or a narrower topic epic the bug is an instance
+  of (a Cepheid distance → `stellata-wf08`). `hooj` is the catalogue's bug queue.
+- **Any other defect reachable by a user on the shipped path** →
+  `stellata-uadc`.
 - **A defect that only reproduces on a path still being migrated** → the epic
   doing that migration, with the cutover bead taking a `bd dep add` on it, so
   the graph says "this blocks cutover" instead of leaving a loose bug.
 
-So establish which backend, renderer or vantage a report came from *before*
-picking — usually one question to the reporter.
+So establish whether the root cause is in the build or the runtime, and which
+backend, renderer or vantage a report came from, *before* picking — usually
+one question to the reporter.
 
 ### Filing a defect bead — check it still reproduces
 
