@@ -48,6 +48,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
+  # see /scripts/ci/README.md#python-suites
+  python-tests:
+    name: Python suites
+    runs-on: ubuntu-latest
+    needs: lfs-data
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+          cache: 'pip'
+          cache-dependency-path: |
+            scripts/refresh/requirements-refresh.txt
+            scripts/textures/requirements.txt
+      - run: pip install -r scripts/refresh/requirements-refresh.txt -r scripts/textures/requirements.txt
+      - run: python scripts/ci/python_tests.py
+
   # Reproducibility: the committed multiples.tsv (and the astrometry
   # request list) must be exactly what the committed pipeline code
   # produces — a stage change can't land with a stale artifact. The
@@ -84,7 +102,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: lfs-data
     steps:
+      # Full history: tests/sid-ledger-guard.test.ts reads the merge-base.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/lfs-cache
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
@@ -128,39 +149,13 @@ jobs:
       - name: SID ledger–artifact consistency
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm run sid:check
-      # Tier-A validation against the built artifacts: the known-stars
-      # corpus plus the multi-star render-geometry regression (which needs
-      # public/binaries.bin, built here from the committed multiples.tsv).
-      # Also the home for LFS-gated catalogue-wide sweeps that self-skip in
-      # the bare `test` job — every such suite must be named in the vitest
-      # invocation below, or it never runs smudged anywhere.
-      - name: Tier-A star corpus
+      # see /scripts/ci/README.md#vitest-with-every-input
+      - name: Full vitest, smudged and built
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
-        run: pnpm exec vitest run scripts/catalog/validate/known-stars.test.ts scripts/catalog/companions/multi-star-regression.test.ts scripts/catalog/validate/sky-position.test.ts scripts/catalog/membership/membership-manifest-gate.test.ts scripts/clouds/clouds-json.test.ts scripts/dust/dust-manifest.test.ts src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts
+        run: pnpm run test:no-skip
       - id: deploy-build
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
         run: pnpm run build:client
       - name: Deploy asset sizes
         if: ${{ !cancelled() && steps.deploy-build.outcome == 'success' }}
         run: pnpm run check:asset-sizes
-
-  # Append-only ledger guard (needs full history for the merge-base
-  # read), the DR-reconciliation classifier against its committed dry-run
-  # snapshots, and the swap parity ledger's ledger/spine/V-50 gates. All
-  # self-skip in the bare `test` job.
-  sid-ledger-guard:
-    name: SID ledger append-only guard
-    runs-on: ubuntu-latest
-    needs: lfs-data
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: ./.github/actions/lfs-cache
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vitest run tests/sid-ledger-guard.test.ts scripts/sid/dr-reconcile-pure.test.ts scripts/catalog/classic-ids/parity-ledger.test.ts

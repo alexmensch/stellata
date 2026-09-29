@@ -79,6 +79,8 @@
     "perf:pin": "tsx scripts/perf/pin.ts",
     "perf:synthetic": "tsx scripts/perf/synthetic-catalog/build-synthetic-catalog.ts",
     "test": "vitest run",
+    "test:py": "python3 scripts/ci/python_tests.py",
+    "test:no-skip": "tsx scripts/ci/vitest-no-skip.ts",
     "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

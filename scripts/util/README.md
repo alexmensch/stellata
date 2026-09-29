@@ -8,8 +8,8 @@ need the same thing — single-use helpers stay with their consumer.
   `src/client/util/astronomy-constants.ts`. `J2000_JD`,
   `DAYS_PER_JULIAN_YEAR`, and any future physics constants Python-side
   build scripts share with the client runtime. Keep value-by-value in
-  sync with the TS canonical; the `astronomy_constants_sync.test.py`
-  sibling test pins equality at CI time.
+  sync with the TS canonical; `tests/astronomy-constants-sync.test.ts`
+  pins equality.
 - `paths.py` — `REPO_ROOT`, the repo-root `Path` every top-level
   Python build/refresh script under `scripts/binaries/` and
   `scripts/refresh/` imports instead of independently walking
