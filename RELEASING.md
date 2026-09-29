@@ -450,11 +450,15 @@ that marked a frame row carries its confirming run's table too
 ([What a mark means](#what-a-mark-means)).
 
 The `perf-section-guard` workflow fails the PR when the section is
-missing, empty, or has a `✗` without an `accepted:` line — CI has no GPU,
-so it checks the section the way `release-notes-guard` does — and the
-`stellata-pr-review` skill refuses a render-path diff without it. Naming the tier
-is for the reviewer, who is the one who can dispute it; the guard cannot
-read a reachability argument and does not try. There is no skip label: a
+missing, empty, has a `✗` without an `accepted:` line, or claims Tier 1 or
+2 with no `--against-pin` table row in it — CI has no GPU, so it checks the
+section the way `release-notes-guard` does — and the `stellata-pr-review`
+skill refuses a render-path diff without it. The claim is the first
+`Tier N` the section names, and a table row is a line opening with a
+verdict mark and a `<scenario>|<backend>` key, so "needs a run before
+merge" under Tier 2 fails. Whether the claimed tier is the right one is
+for the reviewer, who is the one who can dispute it; the guard cannot read
+a reachability argument and does not try. There is no skip label: a
 change that costs nothing says why, or shows a table of `~`.
 
 **The character is the mark, wherever it sits on the line.** The guard

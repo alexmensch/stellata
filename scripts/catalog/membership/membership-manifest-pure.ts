@@ -313,8 +313,8 @@ export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], s
 export interface MembershipInput {
   spine: readonly SpineRow[];
   tables: PrimaryTables;
-  /** The committed post-gate overlay: `has(source)` is the HD-route gate's verdict (/docs/catalog-driver.md#4-how-hd-reaches-gaia)
-   *  on every raw cross-walk binding, spine row or not. */
+  /** The committed post-gate overlay the spine side's label merge reads:
+   *  `has(source)` is the HD-route gate's verdict (/docs/catalog-driver.md#4-how-hd-reaches-gaia). */
   overlay: ClassicIdOverlay;
   overrides: LabelOverrides;
   siblingRenderedSourceIds: ReadonlySet<string>;
@@ -329,6 +329,9 @@ export interface MembershipInput {
   corrections: readonly SpineCorrectionRow[];
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
+  /** Whether the pulled astrometry gives this source a parallax — what decides
+   *  which of two groups contesting a designation ships (README.md#the-additions). */
+  publishesGaiaParallax: (sourceId: string) => boolean;
 }
 
 export interface MembershipCounts extends LabelMergeCounts {
@@ -339,6 +342,8 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  while the floor is null. */
   magnitudeTerm: MagnitudeTermCounts;
   magnitudeRows: number;
+  /** README.md#the-additions. */
+  magnitudeRowsOwnCandidate: Record<OwnCandidateReason, number>;
   additionsByReason: Record<AdditionReason, number>;
   /** Groups a primary admits that resolve onto an existing record instead. */
   componentRows: number;
@@ -375,10 +380,16 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Addition groups whose raw source is a spine record's, so the cell stays
    *  empty: Gaia fitted one source where Tycho-2 resolved two stars. */
   additionSourceOnSpine: number;
-  /** Addition groups whose raw source the HD-route gate (/docs/catalog-driver.md#4-how-hd-reaches-gaia) refused. */
+  /** Addition groups with candidates, every one of which a gate refused. */
   additionSourceGateRefused: number;
-  /** Raw sources two or more addition groups reach; no group takes one. */
+  /** Derived sources two or more addition groups reach; no group takes one. */
   additionSourceShared: number;
+  /** Addition candidates weighed with no row in the astrometry pull — the
+   *  `derivedWeighedNoGMag` pin, over every derivation the additions run: each
+   *  item's, which decides the grouping, and each merged group's. */
+  additionWeighedNoGMag: number;
+  /** Addition groups whose winner has a gate-passing runner-up. */
+  additionContested: number;
   /** Admitted rows whose only designation is the Gaia id — the mints
    *  `sid:allocate` would key `gaia_dr3:`. Zero by construction, since a group
    *  with no classical designation left is ledgered rather than admitted; the
@@ -391,8 +402,7 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  (/docs/sid.md#41-same-as-equivalence-graph). Admission leaves none that involves an addition;
    *  what remains is the spine's own, which key on a higher rung. */
   sharedDesignations: number;
-  /** Groups whose TYC route and HIP route bind different sources; the TYC
-   *  route's stands, as the HD route does for labels (/docs/catalog-driver.md#4-how-hd-reaches-gaia). */
+  /** Groups whose TYC route and HIP route propose different sources. */
   additionRouteSourceDisagree: number;
   /** Admitted rows the guard withheld a designation from — the record ships,
    *  but without a designation the primaries publish for it, because another
@@ -718,21 +728,46 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
   return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
 }
 
-/** Withholds any source two rows derive — see binding/README.md. */
-function deriveSpineBindings(
-  spine: readonly SpineRow[], tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence,
-): SpineBinding[] {
+export const OWN_CANDIDATE_REASONS = [
+  'refused_mag', 'refused_sibling', 'withheld', 'runner_up', 'component',
+] as const;
+export type OwnCandidateReason = (typeof OWN_CANDIDATE_REASONS)[number];
+
+/** Every candidate a row's derivation proposed other than the value it ships,
+ *  with why it was not shipped. */
+function unshippedCandidates(
+  d: DerivedBinding, shipped: string | null,
+): Array<[string, OwnCandidateReason]> {
+  return d.ranked.flatMap((c): Array<[string, OwnCandidateReason]> => {
+    if (c.sourceId === shipped) return [];
+    const refusal = d.rejected.find((r) => r.sourceId === c.sourceId);
+    if (refusal !== undefined) return [[c.sourceId, `refused_${refusal.reason}`]];
+    return [[c.sourceId, c.sourceId === d.sourceId ? 'withheld' : 'runner_up']];
+  });
+}
+
+type RowDeriver =(row: BindingCells) => { derived: DerivedBinding; gate: RowGateEvidence };
+
+/** The one derivation every primaries row — spine or addition — binds through. */
+function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence): RowDeriver {
   const simbad = indexSimbadSources(tables.simbadBySourceId);
   const printedV = printedVLookups(tables.tycho2, tables.gliese);
   const belowHip = (row: BindingCells): PrintedV | null => printedVBelowHip(
     row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], printedV,
   );
+  return (row) => {
+    const gate = rowGateEvidence(row, evidence, belowHip, simbad);
+    return { derived: deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate), gate };
+  };
+}
+
+/** Withholds any source two rows derive — see binding/README.md. */
+function deriveSpineBindings(spine: readonly SpineRow[], derive: RowDeriver): SpineBinding[] {
   const bindings: SpineBinding[] = spine.map((row) => {
     if (row.proper === SOL_PROPER_NAME) {
       return { derived: null, gate: null, outcome: 'sol' };
     }
-    const gate = rowGateEvidence(row, evidence, belowHip);
-    const derived = deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate);
+    const { derived, gate } = derive(row);
     return { derived, gate, outcome: bindingOutcome(derived, false) };
   });
   const holders = new Map<string, number[]>();
@@ -904,13 +939,13 @@ export function magnitudeTermRow(sourceId: string): ManifestRow {
 
 /** One primary's row the spine lacks, before the cohorts are merged: the same
  *  star reaches this list once per primary that names it. */
-interface AdditionItem {
+interface AdditionItem extends AdditionCohorts {
   key: string;
-  hd: HdAddition | null;
-  hip: HipAddition | null;
-  cns5: Cns5Row | null;
-  rawSource: string | null;
+  /** What this item alone derives — two items deriving one source are one star. */
+  derived: DerivedBinding;
 }
+
+type AdditionCohorts = { hd: HdAddition | null; hip: HipAddition | null; cns5: Cns5Row | null };
 
 /** Designation-keyed indexes over the primaries the additions join through. */
 interface AdditionIndex {
@@ -960,8 +995,8 @@ function groupAdditions(
   }
   const bySource = new Map<string, AdditionItem[]>();
   for (const i of items) {
-    if (i.rawSource === null) continue;
-    pushKeyed(bySource, i.rawSource, i);
+    if (i.derived.sourceId === null) continue;
+    pushKeyed(bySource, i.derived.sourceId, i);
   }
   for (const list of bySource.values()) {
     const tycItems = list.filter((i) => i.hd !== null);
@@ -975,8 +1010,8 @@ function groupAdditions(
   return [...groups.values()];
 }
 
-/** One star's items merged across the primaries, with the HD-route gate's verdict (/docs/catalog-driver.md#4-how-hd-reaches-gaia) on
- *  the source they reach. Everything admission needs except the claim set,
+/** One star's items merged across the primaries, with the derivation's verdict
+ *  on the source they reach. Everything admission needs except the claim set,
  *  which grows under it — so these are resolved before the first group is
  *  admitted and fix the order the contested designations go in. */
 interface AdditionGroup {
@@ -986,16 +1021,62 @@ interface AdditionGroup {
   rawGl: string | null;
   tyc: string;
   source: string | null;
+  binding: BindingClass;
+  derived: DerivedBinding;
   sourceOnSpine: boolean;
   sourceGateRefused: boolean;
   routeSourceDisagree: boolean;
 }
 
+function soleItem<K extends keyof AdditionCohorts>(
+  items: readonly AdditionCohorts[], cohort: K,
+): AdditionCohorts[K] | null {
+  return items.find((i) => i[cohort] !== null)?.[cohort] ?? null;
+}
+
+function cns5Gl(cns5: Cns5Row | null): string | null {
+  return cns5 === null ? null : `GJ ${cns5.gj}${cns5.gjComp ?? ''}`;
+}
+
+/** The cells a group derives its binding from — the same three a spine row's
+ *  derivation reads. */
+function additionCells(items: readonly AdditionCohorts[]): BindingCells {
+  const hip = soleItem(items, 'hip');
+  return {
+    tyc: soleItem(items, 'hd')?.tyc ?? '',
+    hip: hip === null ? '' : String(hip.hip),
+    gl: cns5Gl(soleItem(items, 'cns5')) ?? '',
+  };
+}
+
+function additionCohortItems(
+  tables: PrimaryTables, kept: readonly SpineRow[], idx: PrimaryIndex,
+): Array<Omit<AdditionItem, 'derived'>> {
+  const additions = findAdditions(tables, spineKeys(kept), idx);
+  return [
+    ...additions.hd.map((hd) => ({ key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null })),
+    ...additions.hip.map((hip) => ({ key: `hip:${hip.hip}`, hd: null, hip, cns5: null })),
+    ...additions.cns5.newRecords.map((cns5) => ({
+      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5,
+    })),
+  ];
+}
+
+/** ../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise. */
+export function additionItemCells(
+  tables: PrimaryTables, kept: readonly SpineRow[],
+): BindingCells[] {
+  return additionCohortItems(tables, kept, indexPrimaries(tables)).map((i) => additionCells([i]));
+}
+
+function candidateVia(d: DerivedBinding, source: BindingSource): string | null {
+  return d.ranked.find((c) => c.via.includes(source))?.sourceId ?? null;
+}
+
 function additionGroup(
   items: readonly AdditionItem[],
+  derived: DerivedBinding,
   claims: Claims,
-  tables: PrimaryTables,
-  overlay: ClassicIdOverlay,
   sharedSources: ReadonlySet<string>,
 ): AdditionGroup {
   // One item per cohort is what the grouping rules produce and what admission
@@ -1011,25 +1092,22 @@ function additionGroup(
       );
     }
   }
-  const hd = items.find((i) => i.hd !== null)?.hd ?? null;
-  const hip = items.find((i) => i.hip !== null)?.hip ?? null;
-  const cns5 = items.find((i) => i.cns5 !== null)?.cns5 ?? null;
-
-  const tycSource = hd === null ? null : tables.tycToSource.get(hd.tyc) ?? null;
-  const hipSource = hip?.gaiaSourceId ?? null;
-  const rawSource = tycSource ?? hipSource ?? cns5?.gaiaSourceId ?? null;
-  const sourceOnSpine = rawSource !== null && claims.gaia.has(rawSource);
-  const sourceGateRefused = rawSource !== null && !sourceOnSpine && !overlay.has(rawSource);
+  const hd = soleItem(items, 'hd');
+  const cns5 = soleItem(items, 'cns5');
+  const winner = derived.sourceId;
+  const sourceOnSpine = winner !== null && claims.gaia.has(winner);
+  const source = winner !== null && !sourceOnSpine && !sharedSources.has(winner) ? winner : null;
+  const tycSource = candidateVia(derived, 'tyc');
+  const hipSource = candidateVia(derived, 'hip');
   return {
-    hd, hip, cns5,
-    rawGl: cns5 === null ? null : `GJ ${cns5.gj}${cns5.gjComp ?? ''}`,
+    hd, hip: soleItem(items, 'hip'), cns5,
+    rawGl: cns5Gl(cns5),
     tyc: hd?.tyc ?? '',
-    source: rawSource !== null && !sourceOnSpine && !sourceGateRefused
-      && !sharedSources.has(rawSource)
-      ? rawSource
-      : null,
+    source,
+    binding: source === null ? 'none' : derived.binding,
+    derived,
     sourceOnSpine,
-    sourceGateRefused,
+    sourceGateRefused: derived.ranked.length > 0 && winner === null,
     routeSourceDisagree: tycSource !== null && hipSource !== null && tycSource !== hipSource,
   };
 }
@@ -1041,9 +1119,16 @@ function additionGroup(
  *  group whose Gaia binding survives the HD-route gate (/docs/catalog-driver.md#4-how-hd-reaches-gaia) first, since the other
  *  component would otherwise park for want of a parallax this one has, then by
  *  TYC, HIP and GJ — a total order over content, never over walk order. */
-function compareAdditionGroups(a: AdditionGroup, b: AdditionGroup): number {
-  const bound = Number(a.source === null) - Number(b.source === null);
-  if (bound !== 0) return bound;
+function additionGroupOrder(
+  publishesGaiaParallax: (sourceId: string) => boolean,
+): (a: AdditionGroup, b: AdditionGroup) => number {
+  const rank = (g: AdditionGroup): number => (
+    g.source === null ? 2 : publishesGaiaParallax(g.source) ? 0 : 1
+  );
+  return (a, b) => rank(a) - rank(b) || compareAdditionGroupCells(a, b);
+}
+
+function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
   if (a.tyc !== b.tyc) return a.tyc < b.tyc ? -1 : 1;
   const hipA = a.hip?.hip ?? 0;
   const hipB = b.hip?.hip ?? 0;
@@ -1128,9 +1213,7 @@ function admitGroup(
     hip, hd: hds[0] ?? null, hr: hrs[0] ?? null, gl, flam,
     hdAlt: hds.slice(1), hrAlt: hrs.slice(1),
   };
-  const row = manifestRowFromRecord(
-    { tyc, bayer: '', proper: '' }, record, source === null ? 'none' : 'crosswalk_gated',
-  );
+  const row = manifestRowFromRecord({ tyc, bayer: '', proper: '' }, record, group.binding);
   return {
     row,
     record,
@@ -1193,7 +1276,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let derivedWeighedNullGMag = 0;
   const applied = new Set<string>();
 
-  const spineBindings = deriveSpineBindings(kept, tables, idx, evidence);
+  const derive = rowDeriver(tables, idx, evidence);
+  const spineBindings = deriveSpineBindings(kept, derive);
   const settled = spineBindings.map((b, i) => {
     const spineRow = kept[i];
     derivationOutcome[b.outcome]++;
@@ -1289,30 +1373,23 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   }
 
   const claims = spineClaims(records);
-  const additions = findAdditions(tables, spineKeys(kept), idx);
-  const items: AdditionItem[] = [
-    ...additions.hd.map((hd) => ({
-      key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null,
-      rawSource: tables.tycToSource.get(hd.tyc) ?? null,
-    })),
-    ...additions.hip.map((hip) => ({
-      key: `hip:${hip.hip}`, hd: null, hip, cns5: null, rawSource: hip.gaiaSourceId,
-    })),
-    ...additions.cns5.newRecords.map((cns5) => ({
-      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5, rawSource: cns5.gaiaSourceId,
-    })),
-  ];
+  const items: AdditionItem[] = additionCohortItems(tables, kept, idx).map((i) => ({
+    ...i, derived: derive(additionCells([i])).derived,
+  }));
   const index = indexAdditions(tables);
-  const itemGroups = groupAdditions(items, tables, index);
+  const derivedGroups = groupAdditions(items, tables, index).map((g) => ({
+    items: g, derived: g.length === 1 ? g[0].derived : derive(additionCells(g)).derived,
+  }));
   const sourceGroups = new Map<string, number>();
-  for (const g of itemGroups) {
-    const sources = new Set(g.map((i) => i.rawSource).filter((s): s is string => s !== null));
-    for (const s of sources) sourceGroups.set(s, (sourceGroups.get(s) ?? 0) + 1);
+  for (const { derived } of derivedGroups) {
+    if (derived.sourceId !== null) {
+      sourceGroups.set(derived.sourceId, (sourceGroups.get(derived.sourceId) ?? 0) + 1);
+    }
   }
   const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
-  const groups = itemGroups
-    .map((g) => additionGroup(g, claims, tables, overlay, sharedSources))
-    .sort(compareAdditionGroups);
+  const groups = derivedGroups
+    .map((g) => additionGroup(g.items, g.derived, claims, sharedSources))
+    .sort(additionGroupOrder(input.publishesGaiaParallax));
 
   const ledger: AdditionLedgerRow[] = [];
   const additionsByReason = Object.fromEntries(
@@ -1324,8 +1401,27 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let additionRouteSourceDisagree = 0;
   let additionGaiaKeyedOnly = 0;
   let additionsWithBlockedDesignation = 0;
+  const additionWeighedNoGMag = [
+    ...items.map((i) => i.derived),
+    ...derivedGroups.filter((g) => g.items.length > 1).map((g) => g.derived),
+  ].reduce((n, d) => n + d.weighedNoGMag, 0);
+  let additionContested = 0;
+  const ownCandidates = new Map<string, OwnCandidateReason>();
+  const noteUnshipped = (d: DerivedBinding, shipped: string | null): void => {
+    for (const [id, reason] of unshippedCandidates(d, shipped)) {
+      if (!ownCandidates.has(id)) ownCandidates.set(id, reason);
+    }
+  };
+  spineBindings.forEach((b, i) => {
+    if (b.derived !== null) noteUnshipped(b.derived, settled[i].value);
+  });
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
+    if (g.source !== null && passingRunnersUp(g.derived).length > 0) additionContested++;
+    if (a.row === null && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
+      ownCandidates.set(g.derived.sourceId, 'component');
+    }
+    noteUnshipped(g.derived, a.row === null ? null : g.source);
     if (g.sourceOnSpine) additionSourceOnSpine++;
     if (g.sourceGateRefused) additionSourceGateRefused++;
     if (g.routeSourceDisagree) additionRouteSourceDisagree++;
@@ -1346,10 +1442,15 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const boundSourceIds = new Set(
     rows.map((r) => r.gaia_source_id).filter((s) => s !== ''),
   );
+  const magnitudeRowsOwnCandidate = Object.fromEntries(
+    OWN_CANDIDATE_REASONS.map((r) => [r, 0]),
+  ) as Record<OwnCandidateReason, number>;
   for (const sourceId of magnitudeTermNewcomers(
     input.magnitudeTerm?.keptSourceIds ?? new Set(),
     boundSourceIds,
   )) {
+    const own = ownCandidates.get(sourceId);
+    if (own !== undefined) magnitudeRowsOwnCandidate[own]++;
     const row = magnitudeTermRow(sourceId);
     bindingByClass[row.binding as BindingClass]++;
     rows.push(row);
@@ -1370,6 +1471,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     magnitudeTerm: input.magnitudeTerm?.counts
       ?? { rows: 0, kept: 0, above_floor: 0, no_v: 0 },
     magnitudeRows: sorted.length - primariesRows,
+    magnitudeRowsOwnCandidate,
     additionsByReason,
     componentRows,
     bindingByClass,
@@ -1391,6 +1493,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     additionSourceOnSpine,
     additionSourceGateRefused,
     additionSourceShared: sharedSources.size,
+    additionWeighedNoGMag,
+    additionContested,
     additionGaiaKeyedOnly,
     additionRouteSourceDisagree,
     additionsWithBlockedDesignation,

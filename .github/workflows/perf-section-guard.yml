@@ -11,7 +11,8 @@ permissions:
 
 # Asserts that a PR whose diff touches a render path, or moves catalogue
 # membership by more than 1 %, carries a non-empty `## Perf` section with an
-# `accepted:` line for every ✗ row. CI has no GPU, so this checks the section,
+# `accepted:` line for every ✗ row, and a table row under a Tier 1 or 2
+# claim. CI has no GPU, so this checks the section,
 # not the numbers — the runner produces those on the developer's machine.
 # Rules: /RELEASING.md#perf-pin; the check itself is
 # scripts/perf/perf-section-check.sh so it can be tested.

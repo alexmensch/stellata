@@ -17,7 +17,7 @@ gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
                                        catalog source_id, both binding gates'
                                        candidates and the bound-pair
-                                       siblings (379,133 rows) — tier 1 of
+                                       siblings (383,055 rows) — tier 1 of
                                        the direction, rv, V and ci cascades,
                                        the G evidence the overlay gate and the
                                        membership derivation weigh, and the
@@ -33,24 +33,25 @@ gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~70 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs,
-                                       over the deep population (1,284,663).
+                                       over the deep population (1,284,982).
 gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
-                                       per-band validated-range flag. 342,953
+                                       per-band validated-range flag. 346,758
                                        rows, pulled against the catalog request
-                                       at its then-size of 378,840 ids — the ci
+                                       at 383,057 ids — the ci
                                        cascade's tier below the Table-5.9
                                        relation.
 gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
                                        source_id request list (build-binaries.py output).
 gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
                                        source_id request list — the membership
-                                       manifest's gaia_source_id column UNION
-                                       the classic-ID binding gate's candidates
-                                       UNION the membership derivation's
-                                       candidates UNION the kept-physical
-                                       multiples.tsv pair members, 379,135 ids
+                                       manifest's gaia_source_id column over its
+                                       primaries rows UNION the classic-ID
+                                       binding gate's candidates UNION the
+                                       membership derivation's candidates UNION
+                                       the kept-physical multiples.tsv pair
+                                       members, 383,056 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
@@ -243,7 +244,7 @@ standing gap rather than one the floor move creates.
 
 The record total that floor implies, what promotion and parking do to it, and
 what the result costs on the wire are the build's, not this folder's:
-[The record total the floor implies](../../scripts/catalog/membership/magnitude-term/README.md#the-record-total-the-floor-implies--983068-measured).
+[The record total the floor implies](../../scripts/catalog/membership/magnitude-term/README.md#the-record-total-the-floor-implies--measured).
 
 ## The GSPC validated-range flag — `1` means IN range
 

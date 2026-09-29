@@ -1,11 +1,11 @@
 {
-  "labelNoOverlayEntry": 14982,
+  "labelNoOverlayEntry": 14981,
   "labelAgree": {
     "hip": 99059,
-    "hd": 280524,
-    "hr": 7283,
+    "hd": 280525,
+    "hr": 7284,
     "gl": 1840,
-    "flam": 2028
+    "flam": 2029
   },
   "labelAdded": {
     "hip": 0,
@@ -23,10 +23,10 @@
   },
   "labelSpineOnly": {
     "hip": 18593,
-    "hd": 12751,
-    "hr": 1700,
+    "hd": 12750,
+    "hr": 1699,
     "gl": 1226,
-    "flam": 694
+    "flam": 693
   },
   "labelSuppressed": {
     "hip": 1,
@@ -63,33 +63,40 @@
     "gl": 1,
     "flam": 0
   },
-  "rows": 979160,
+  "rows": 975573,
   "spineRows": 313257,
   "spineRowsFolded": 1,
   "spineCellsCorrected": {
     "tyc": 1
   },
-  "additionRows": 63676,
+  "additionRows": 63653,
   "magnitudeTerm": {
     "rows": 1247240,
     "kept": 929929,
     "above_floor": 312475,
     "no_v": 4836
   },
-  "magnitudeRows": 602228,
+  "magnitudeRows": 598664,
+  "magnitudeRowsOwnCandidate": {
+    "refused_mag": 203,
+    "refused_sibling": 100,
+    "withheld": 0,
+    "runner_up": 162,
+    "component": 243
+  },
   "additionsByReason": {
     "admitted:hd_link_gap": 54813,
     "admitted:hd_omitted": 5063,
-    "admitted:hip_omitted": 444,
-    "admitted:cns5_census": 3356
+    "admitted:hip_omitted": 425,
+    "admitted:cns5_census": 3352
   },
-  "componentRows": 466,
+  "componentRows": 465,
   "bindingByClass": {
-    "crosswalk_gated": 358458,
-    "simbad_corroborated": 12483,
+    "crosswalk_gated": 358465,
+    "simbad_corroborated": 16414,
     "reviewed": 53,
-    "gaia_native": 602228,
-    "none": 5938
+    "gaia_native": 598664,
+    "none": 1977
   },
   "bindingReviewRows": 280,
   "bindingReviewByVerdict": {
@@ -103,23 +110,23 @@
     "none": 0
   },
   "derivationOutcome": {
-    "bound": 312405,
-    "refused": 619,
+    "bound": 312408,
+    "refused": 616,
     "contested": 231,
     "collision": 0,
     "sol": 1
   },
   "derivedVia": {
-    "tyc": 298440,
+    "tyc": 298442,
     "hip": 866,
     "cns5": 839,
-    "simbad": 12487
+    "simbad": 12488
   },
-  "derivedConsensus": 295202,
+  "derivedConsensus": 295204,
   "dispositionAsserted": 36,
   "derivedRejected": {
     "mag": 317,
-    "sibling": 119
+    "sibling": 116
   },
   "derivedUngateable": 7,
   "derivedWeighedNoGMag": 0,
@@ -137,16 +144,18 @@
     "flam": 0,
     "proper": 46
   },
-  "additionSourceOnSpine": 108,
-  "additionSourceGateRefused": 121,
+  "additionSourceOnSpine": 133,
+  "additionSourceGateRefused": 170,
   "additionSourceShared": 0,
+  "additionWeighedNoGMag": 0,
+  "additionContested": 6,
   "additionGaiaKeyedOnly": 0,
   "additionRouteSourceDisagree": 3,
-  "additionsWithBlockedDesignation": 2,
+  "additionsWithBlockedDesignation": 3,
   "sharedDesignations": 68,
   "rowsWithHdAlt": 102,
   "rowsWithHrAlt": 0,
-  "spineRowsWithoutSourceId": 577,
+  "spineRowsWithoutSourceId": 574,
   "spineBrightRows": 178,
   "spineBrightRowsWithoutOverlayEntry": 114
 }

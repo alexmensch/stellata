@@ -9,6 +9,7 @@ import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 import { compareBuildCounts, formatCountDiff } from '../build-counts';
 import { loadBindingEvidence } from '../classic-ids/binding-evidence';
+import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
   BRIGHT_TIER_MAG_CEILING,
   parseOverlayTsv,
@@ -90,6 +91,7 @@ async function main(): Promise<void> {
   const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const overridesPath = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
+  const { evidence, gaiaAstrometry } = loadBindingEvidence();
   const result = buildMembership({
     spine,
     tables,
@@ -98,7 +100,7 @@ async function main(): Promise<void> {
       ? parseLabelOverridesTsv(readFileSync(overridesPath, 'utf8'))
       : new Map(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv(MULTIPLES_TSV)),
-    evidence: loadBindingEvidence().evidence,
+    evidence,
     dispositions: parseBindingDispositionsTsv(
       readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),
     ),
@@ -108,6 +110,10 @@ async function main(): Promise<void> {
     magnitudeTerm: MAGNITUDE_FLOOR_V === null
       ? null
       : await readMagnitudeTerm(MAGNITUDE_FLOOR_V),
+    publishesGaiaParallax: (sourceId) => {
+      const row = gaiaAstrometry.get(sourceId);
+      return row !== undefined && gaiaHas5pSolution(row);
+    },
   });
 
   writeArtifact(LABEL_FLIPS_FILE, labelFlipsTsv(result.flips));
