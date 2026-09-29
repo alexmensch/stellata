@@ -291,7 +291,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
     if (plan.dispatch) {
       refill.quarter.value = plan.quarter;
       this.renderer.compute(this.refillKernel);
-        this.mirror.invalidate();
+      this.mirror.invalidate();
     }
     refill.quarter.value = plan.next.quarter;
     refill.arm.value = plan.arm ? 1 : 0;
