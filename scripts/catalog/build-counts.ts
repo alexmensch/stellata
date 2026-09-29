@@ -711,6 +711,9 @@ function flattenCounts(counts: object): Map<string, number> {
       rows.set(key, value);
       continue;
     }
+    if (value === null || typeof value !== 'object') {
+      throw new Error(`count ${key} is ${JSON.stringify(value)}, not a number or a partition`);
+    }
     for (const [bucket, n] of Object.entries(value as Record<string, number>)) {
       rows.set(`${key}.${bucket}`, n);
     }

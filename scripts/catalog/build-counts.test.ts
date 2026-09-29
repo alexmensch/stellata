@@ -314,6 +314,12 @@ describe('compareBuildCounts', () => {
     }]);
   });
 
+  it('names a snapshot count that is null rather than a number', () => {
+    const expected = { ...baseCounts(), gcvsMatched: null } as unknown as BuildCounts;
+    expect(() => compareBuildCounts(expected, baseCounts()))
+      .toThrow('count gcvsMatched is null, not a number or a partition');
+  });
+
   it('lists snapshot-only rows after the actual rows', () => {
     const expected = baseCounts();
     const actual = baseCounts();
