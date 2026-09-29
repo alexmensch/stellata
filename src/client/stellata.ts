@@ -334,6 +334,7 @@ export class Stellata {
       renderedSizePx: (idx) => this.starPipeline.renderedSizePx(idx),
       peakDiscSizePx: (idx) => this.starPipeline.peakDiscSizePx(idx),
       pickStarHit: (x, y, pxThreshold) => this.picker.pickStarHit(x, y, pxThreshold),
+      setHiddenStar: (idx) => this.starPipeline.setHiddenStar(idx),
       binaries: this.binaries.data,
     });
     // Recentre fan-out, in load-bearing order: star buffer rewrite →

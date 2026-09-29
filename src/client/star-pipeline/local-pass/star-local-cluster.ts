@@ -40,10 +40,10 @@ export interface StarLocalClusterDeps {
    *  `livePulsationRadiusFactor`) — what the disc is drawn at, not the
    *  cycle's peak. The shell owns the clock / suppress references. */
   livePulsationRadiusFactor: (idx: number) => number;
-  /** The observe-anchor star (`uHideFocusIdx`), or `NO_INSTANCE`. Drawn nowhere, so
-   *  it must not take a label off screen — the planet cluster skips its
-   *  own anchor body for the same reason. */
-  hiddenStarIdx: () => number;
+  /** The observe-anchor star, or null. Drawn nowhere, so it must not take a
+   *  label off screen — the planet cluster skips its own anchor body for the
+   *  same reason. */
+  hiddenStarIdx: () => number | null;
 }
 
 export interface StarLocalClusterFrame {

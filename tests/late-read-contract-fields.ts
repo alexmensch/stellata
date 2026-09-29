@@ -54,6 +54,7 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'PlanetBodyField.hideIdx': SELECTION,
   'PlanetBodyField.lastDimNowMs': CACHE,
   'StarLocalCluster.hostMemberIdx': SELECTION,
+  'StarPipeline.hiddenStar': SELECTION,
   'StarLocalCluster.chainFocalIdx': CACHE,
   'StarLocalCluster.chainBinaries': CACHE,
   'Stellata.orbitFrameTick': SEAM,

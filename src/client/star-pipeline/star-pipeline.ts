@@ -10,7 +10,7 @@ import { chartDiscPxForAppMag, type ChartDiscParams } from '../chart-mode/chart-
 import type { SurvivorCountsRead } from '../debug/survivor-counts';
 import { mark as perfMark, measure as perfMeasure } from '../debug/perf-hud';
 import type { FilterState } from '../filters/filter-state';
-import type { SharedUniforms } from '../frame/shared-uniforms';
+import { NO_INSTANCE, type SharedUniforms } from '../frame/shared-uniforms';
 import type { ExposureController } from '../hdr/exposure/exposure-controller';
 import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import type { Catalog } from '../loaders/catalog-loader';
@@ -65,6 +65,7 @@ export class StarPipeline {
   private readonly suppressPulsationMask: Float32Array;
   private absorbedSuppressCount = 0;
   private coreMaskEnabled = true;
+  private hiddenStar: number | null = null;
   private readonly sizeInputs: starPhysics.StarSizeInputs;
   private readonly pickScratch = sizeScratch();
   // Apart from pickScratch: the debug panel reads every frame and must not
@@ -117,7 +118,7 @@ export class StarPipeline {
         occluders: deps.occluders,
         livePulsationRadiusFactor: (idx) => starPhysics.livePulsationRadiusFactor(
           catalog, idx, this.suppressPulsationMask, uniforms),
-        hiddenStarIdx: () => uniforms.uHideFocusIdx.value,
+        hiddenStarIdx: () => this.hiddenStar,
       },
     );
     this.localClusterEntry = {
@@ -183,6 +184,13 @@ export class StarPipeline {
     this.coreMaskEnabled = on;
   }
 
+  /** The observe-anchor star, drawn nowhere; null unhides. The only writer
+   *  of `uHideFocusIdx`. */
+  setHiddenStar(idx: number | null): void {
+    this.hiddenStar = idx;
+    this.deps.uniforms.uHideFocusIdx.value = idx ?? NO_INSTANCE;
+  }
+
   /** Rendered disc diameter (CSS px) — the CPU mirror of the shader's
    *  `max(appSize, physSize)` sizing. */
   renderedSizePx(idx: number): number {
@@ -232,7 +240,7 @@ export class StarPipeline {
     );
     const filter = deps.filter();
     return resolveStarPickVisibility({
-      focalHidden: deps.uniforms.uHideFocusIdx.value === idx,
+      focalHidden: this.hiddenStar === idx,
       eclipseDim: deps.binaries.eclipseDimAt(idx),
       chartDiscPx: filter.chart ? this.chartDiscPxFor(c.appMag) : null,
       limitMag: deps.exposure.getLimitMag(),

@@ -10,7 +10,6 @@ import type { BinariesData } from '../binaries/binaries-loader';
 import * as starPhysics from '../camera/controls/star-physics';
 import type { FocusableProvider } from '../camera/focus/focus-target';
 import { chartPlateauDistancePc } from '../chart-mode/chart-disc-pure';
-import { NO_INSTANCE } from '../frame/shared-uniforms';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import { createStarFocusProvider } from '../focus-card/star-focus-provider';
 import { resolveStarName } from '../format/star-companion-format';
@@ -47,6 +46,8 @@ export interface StarModuleRuntime {
   peakDiscSizePx(idx: number): number;
   /** The Picker's star pick, shared by hover and the click FSM. */
   pickStarHit(clientX: number, clientY: number, pixelThreshold: number): HoverHit | null;
+  /** The observe-anchor hide (StarPipeline); null unhides. */
+  setHiddenStar(idx: number | null): void;
   /** Orbital elements for the companion lines. Read per format call — the
    *  shell attaches binaries after the card provider is built. */
   binaries: Late<BinariesData>;
@@ -291,8 +292,6 @@ export function createStarKindModule(): StarKindModule {
 
     sidDomain: () => (catalog ? catalogSidDomain(catalog) : null),
 
-    setFocalHidden: (idx) => {
-      if (ctx) ctx.sharedUniforms.uHideFocusIdx.value = idx ?? NO_INSTANCE;
-    },
+    setFocalHidden: (idx) => runtime?.setHiddenStar(idx),
   };
 }

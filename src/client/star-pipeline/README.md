@@ -336,6 +336,9 @@ mode (camera parked at the focal star — disc would render from inside) and
 held pinned to the source star throughout an observe-launched warp so the
 reorient phase doesn't flash the focal disc as the camera pulls away; the
 pick path mirrors it (`../camera/controls/star-pick-visibility-pure.ts`).
+`StarPipeline.setHiddenStar` is its only writer and holds the hidden star
+as `number | null`, which the pick and the local cluster read — never the
+uniform back.
 
 `iCompositeSuppress` (float, per-instance) collapses a star's disc and
 core depth-mask passes — but not the additive glow — under the same
