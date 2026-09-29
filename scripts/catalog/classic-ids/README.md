@@ -296,7 +296,7 @@ constellation out of the designation string and loses only its expanded alias
 ## Counts and the parity measurement
 
 `classic-id-overlay-expected.json` pins the counts through the same
-`compareBuildCounts` / `UPDATE_BUILD_COUNTS` machinery
+`compareCountSnapshot` / `UPDATE_BUILD_COUNTS` machinery
 `build-catalog.ts` uses (`assertOrUpdateSnapshot` in
 `../../util/snapshot-assert.ts`). Three groups:
 

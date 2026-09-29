@@ -75,8 +75,10 @@ scripts/binaries/
                                   columns + per-pair WDS sep/PA/epoch/Δmag +
                                   system-anchor inheritance for tight inner
                                   binaries + SIMBAD standalone augmentation.
-  stage7_counts.py                Build-counts + build-rates snapshot writer
-                                  (mirrors scripts/catalog/build-counts.ts).
+  stage7_counts.py                Build-counts + build-rates snapshots. The
+                                  assert / refresh they share with
+                                  build-runtime-binaries.py is
+                                  scripts/util/snapshot_assert.py.
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
                                   (Cox 2000
                                   (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
