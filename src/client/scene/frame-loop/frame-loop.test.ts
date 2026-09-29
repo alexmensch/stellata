@@ -9,14 +9,14 @@ interface Knobs {
   realtime: boolean;
   epochStep: boolean;
   recentred: boolean;
-  pinEngaged: boolean;
+  pinnedStar: number | null;
   focusedStar: number | null;
 }
 
 function harness(overrides: Partial<Knobs> = {}) {
   const knobs: Knobs = {
     render: true, animating: false, realtime: false, epochStep: false,
-    recentred: false, pinEngaged: false, focusedStar: 7, ...overrides,
+    recentred: false, pinnedStar: null, focusedStar: 7, ...overrides,
   };
   const log: string[] = [];
   const note = (name: string) => () => { log.push(name); };
@@ -62,7 +62,7 @@ function harness(overrides: Partial<Knobs> = {}) {
     cameraStep: { advance: () => { log.push('cameraStep'); return knobs.animating; } },
     focus: {
       getFocusedStar: () => knobs.focusedStar,
-      isPinEngaged: () => knobs.pinEngaged,
+      pinnedStar: () => knobs.pinnedStar,
     },
     warpActive: () => true,
     layers: {
@@ -165,7 +165,7 @@ describe('FrameLoop tick', () => {
   });
 
   it('writes the per-frame uniforms', () => {
-    const { loop, uniforms } = harness({ pinEngaged: true, focusedStar: 7 });
+    const { loop, uniforms } = harness({ pinnedStar: 7 });
     loop.start();
     expect(uniforms.uPinFocusToCenter.value).toBe(7);
     expect(uniforms.uModelDays.value).toBeCloseTo(0, 6);
@@ -174,7 +174,7 @@ describe('FrameLoop tick', () => {
   });
 
   it('writes the disabled pin sentinel when the pin is not engaged', () => {
-    const { loop, uniforms } = harness({ pinEngaged: false });
+    const { loop, uniforms } = harness({ pinnedStar: null });
     loop.start();
     expect(uniforms.uPinFocusToCenter.value).toBe(-1);
   });

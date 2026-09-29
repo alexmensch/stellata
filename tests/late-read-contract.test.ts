@@ -164,6 +164,7 @@ const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   'floatingOrigin.recenterTo': 'verdict: null is "no recentre happened"',
   'focus.hardFocusParkDist': NO_SELECTION,
   'focus.makeFocusTarget': 'verdict: null is "this target cannot be focused"',
+  'focus.pinnedStar': 'verdict: null is "the pin is disengaged"',
   'focus.currentFocusTarget': NO_SELECTION,
   'warp.getWarpInfo': 'verdict: null is "no warp in flight"',
   'warp.getWarpPhase': 'verdict: null is "no warp in flight"',

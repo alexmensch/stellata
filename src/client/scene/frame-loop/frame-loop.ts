@@ -12,7 +12,7 @@ import {
 } from '../../debug/perf-hud';
 import { resolveAndPublishGpuFrame } from '../../debug/gpu-timing/gpu-frame-samples';
 import type { FloatingOrigin } from '../../frame/floating-origin';
-import type { SharedUniforms } from '../../frame/shared-uniforms';
+import { NO_PINNED_STAR, type SharedUniforms } from '../../frame/shared-uniforms';
 import type { HdrSeam } from '../../hdr/hdr-seam';
 import type { ExposureFrameStep } from '../../hdr/exposure/exposure-frame-step';
 import type { LocalDepthPass } from '../../local-depth/local-depth-pass';
@@ -42,7 +42,7 @@ export interface FrameLoopDeps {
   starFrame: Pick<StarFrame, 'advanceEpochTo' | 'flushLocalPositions' | 'syncPhysSizeWindow'>;
   focalRides: Pick<FocalRides, 'reseedMoving' | 'followEpochStep'>;
   cameraStep: Pick<CameraStep, 'advance'>;
-  focus: Pick<FocusController, 'getFocusedStar' | 'isPinEngaged'>;
+  focus: Pick<FocusController, 'getFocusedStar' | 'pinnedStar'>;
   warpActive: () => boolean;
   layers: Pick<SceneLayerRegistry, 'realtimeFramesNeeded' | 'updateAll'>;
   cadence: Pick<ClockCadence, 'isDue' | 'refresh'>;
@@ -132,8 +132,7 @@ export class FrameLoop {
     }
     perfMark('pre-render');
     d.uniforms.uCameraPos.value.copy(d.camera.position);
-    const pinTarget = d.focus.isPinEngaged() ? d.focus.getFocusedStar() : -1;
-    d.uniforms.uPinFocusToCenter.value = pinTarget ?? -1;
+    d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_PINNED_STAR;
     d.uniforms.uModelDays.value = tToJdUt(d.clock.getT()) - J2000_JD;
     d.uniforms.uModelDaysPerRealSec.value = Math.abs(d.clock.getRate()) / 86400;
     // Here, not by either publisher: each would drop the other's entries.

@@ -568,24 +568,24 @@ describe('FocusController.focusStar — focus-park lerp', () => {
   });
 });
 
-describe('FocusController.isPinEngaged', () => {
+describe('FocusController.pinnedStar', () => {
   it('engages when focused, navigate, target ≈ origin, no other animation', () => {
     const h = makeHarness();
     h.focus.setFocus(1);
     h.controls.target.set(0, 0, 0);
-    expect(h.focus.isPinEngaged()).toBe(true);
+    expect(h.focus.pinnedStar()).toBe(1);
   });
 
   it('disengages when no star is focused', () => {
     const h = makeHarness();
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('disengages when target is past the threshold', () => {
     const h = makeHarness();
     h.focus.setFocus(1);
     h.controls.target.set(1e-3, 0, 0); // 1e-6 pc² > 1e-12 threshold
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('disengages during warp until recenteredToDest', () => {
@@ -593,9 +593,9 @@ describe('FocusController.isPinEngaged', () => {
     h.focus.setFocus(1);
     h.controls.target.set(0, 0, 0);
     h.warp.isActive.mockReturnValue(true);
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
     h.warp.isRecenteredToDest.mockReturnValue(true);
-    expect(h.focus.isPinEngaged()).toBe(true);
+    expect(h.focus.pinnedStar()).toBe(1);
   });
 
   it('disengages during aim slerp', () => {
@@ -603,7 +603,7 @@ describe('FocusController.isPinEngaged', () => {
     h.focus.setFocus(1);
     h.controls.target.set(0, 0, 0);
     h.aim.isActive.mockReturnValue(true);
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('getPinEngageThresholdSq returns the constant', () => {
@@ -643,7 +643,7 @@ describe('FocusController — live focal position (binary members)', () => {
     expect(h.controls.target.toArray()).toEqual([0, 0, 0]);
   });
 
-  it('isPinEngaged engages at a non-origin target that rides the perturbation', () => {
+  it('pinnedStar engages at a non-origin target that rides the perturbation', () => {
     const h = makeHarness();
     // Perturbation well above the pin threshold (5e-5 pc ≫ 1e-6 pc): the
     // old target.lengthSq() check would read this as disengaged.
@@ -654,10 +654,10 @@ describe('FocusController — live focal position (binary members)', () => {
     };
     h.focus.setFocus(1);
     expect(h.controls.target.x).toBeCloseTo(P.x, 9);
-    expect(h.focus.isPinEngaged()).toBe(true);
+    expect(h.focus.pinnedStar()).toBe(1);
     // Pan the target off the star past the engage threshold → disengage.
     h.controls.target.x += 1e-3;
-    expect(h.focus.isPinEngaged()).toBe(false);
+    expect(h.focus.pinnedStar()).toBeNull();
   });
 
   it('translateFocusFrame rides an in-flight focus-park lerp landing; idle is a no-op', () => {
