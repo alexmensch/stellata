@@ -59,10 +59,10 @@ mid-cycle, and the pick reads `null` and errs pickable across that stretch
 either way. **The gate is the cursor, not the recompute**: a dust chunk
 landing on a parked camera recomputes too, and the frame its cycle parks on
 is one a pick can still be staged for. The frame-cost lever that forces a
-recompute every frame at a parked camera is the same shape, and keying this
-gate on the recompute instead would swallow it — it would also spend 1.48
-MiB a frame on a live pointer, which is why that lever is dwell-only
-([The extinction rows](../../../debug/frame-cost/passes/README.md#the-extinction-rows)). A
+recompute every frame at a parked camera is the case that never parks:
+every frame is a fresh request, so while it is on nothing is ever staged
+and every pick reads `null` and errs pickable — which is why that lever is
+dwell-only ([The extinction rows](../../../debug/frame-cost/passes/README.md#the-extinction-rows)). A
 parked cursor also means the buffer belongs to one completed cycle rather
 than to a half-written one, which is the second thing the mirror needs
 ([Three places](../refill/README.md#three-places-a-whole-catalogue-dispatch-is-still-the-right-one)).
