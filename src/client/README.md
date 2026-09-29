@@ -40,10 +40,12 @@ themselves.
   limiting magnitude, plate-scale star sizing) + render knobs and the
   `FilterController` that owns every mutation.
 - `scene/` — the `SceneLayer` contract + registry driving the
-  per-layer update / monochrome / recenter / dispose fan-outs, and the
+  per-layer update / monochrome / recenter / dispose fan-outs, the
   full render stack: which layer wins which pixel, canvas and SVG
-  ([Full render stack](scene/README.md#full-render-stack--front-to-back)).
-- `render-gate/` — the on-demand render gate: `animate()` skips the
+  ([Full render stack](scene/README.md#full-render-stack--front-to-back)),
+  and the `requestAnimationFrame` loop that runs every tick
+  (`scene/frame-loop/`).
+- `render-gate/` — the on-demand render gate: the frame loop skips the
   draw (and the `'frame'` emit) on ticks where nothing invalidated the
   frame. Its README owns the invalidation-source inventory and the
   hold contract.
@@ -162,7 +164,12 @@ Four things follow, and each has cost a defect:
 - **The compiler: a late slot is a `Late<T>`.** It is pending, ready or
   absent, with no nullable accessor, and `observe` is where a reader that
   sampled early rebuilds ([Late values](util/late/README.md)). An artifact
-  that can be missing must be concluded, or its readers wait forever.
+  that can be missing must be concluded, or its readers wait forever. The
+  binaries and dust slots are the shell's instances
+  ([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)).
+  A value `main.ts` has already loaded when it builds the shell is a
+  constructor argument instead, with no pending state at all — the IAU
+  boundary artifact ([The owner](constellation-boundaries/README.md#the-owner)).
 - **A test: `tests/late-read-contract.test.ts`.** It fails a loop bounded by
   an unbranded catalogue's `count`, any unclassified `| null` return on
   the shell's public surface — its own methods and its readonly namespaces'
@@ -177,6 +184,18 @@ Four things follow, and each has cost a defect:
   nullable scans read written types, so an inferred `| null` gets past
   them, and so does a not-yet answered with a legal-looking value in a
   non-null type.
+
+### Prefix reads correct by construction
+
+Two catalogue-prefix reads are correct by construction rather than by a
+type: the constellation figure and its aim direction
+([The aim direction](constellation-figure/README.md#the-aim-direction)) read figure vertices from
+`starFrame.localPositions` from first paint, and the aim keeps what it read.
+The build fails unless every figure vertex sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
+A third prefix read sits outside the shell: the extinction prepass sorts its
+dispatch order over the table it attaches to, which is normally still
+streaming, and re-sorts once on the refresh that completes it
+([What a CACHE owes](webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)), answered inside the pass.
 
 ## Public surface of `Stellata`
 
@@ -207,13 +226,12 @@ lerps, so every aim takes it the same way),
 (clockJumped fan-out) and `setMonochrome`. A new zero-logic pass-through
 belongs on the controller.
 
-**Forwarders still on the shell leave with their cluster, and so do their
-callers** ([Decomposing the shell](#decomposing-the-shell)); `main.ts` reaches a late
-attachment through its owner's readonly namespace (`stellata.binaries.attach`,
-`stellata.extinction.attach`). Star positions and the origin are read off
-their owners, `stellata.starFrame` and `stellata.floatingOrigin`, and the
-focus controller's `FrameAnchor` is those two owners. No extraction leaves
-a method behind that only forwards.
+**Callers reach an owner, never a forwarder on the shell.** `main.ts`
+reaches a late attachment through its owner's readonly namespace
+(`stellata.binaries.attach`, `stellata.extinction.attach`). Star positions
+and the origin are read off their owners, `stellata.starFrame` and
+`stellata.floatingOrigin`, and the focus controller's `FrameAnchor` is
+those two owners.
 
 **Install seams are the other admissible shape**, and they are not
 pass-throughs: a UI surface built after the shell registers itself here so
@@ -225,49 +243,14 @@ the orbit lock on the share URL — state no controller owns,
 Each reads through its field every time, so installing after construction
 works exactly as a lazily-attached layer does, and `dispose` clears both.
 
-## Decomposing the shell
+## The shell is wiring only
 
-`stellata.ts` is headed for wiring only — construct, connect, dispose
-(epic `stellata-hhaw.32`). Its fields fall into clusters: fields read and
-written together, plus the methods touching them. Each cluster leaves for
-the named folder with its tests; which fields and methods it takes is its
-bead's description, and the order is the bead graph's (`bd show
-stellata-hhaw.32`), not this table's.
-
-`tests/integration-shell-ratchet.test.ts` is what holds the file to the
-rule: every `Stellata` field is either composition that stays or awaiting
-extraction, a new field in neither fails, and an extraction deletes its
-fields from the awaiting list. **Every bead named in this section leaves
-with the PR that closes it** — a row, a cross-row bullet, a clause — and
-the last extraction (32.15) deletes the section, leaving the ratchet with
-an empty awaiting list.
-
-| Cluster | Target | Bead |
-| --- | --- | --- |
-| Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
-
-### Late-attached slots
-
-A cluster holding a value that lands after construction moves it as a
-`Late<T>` ([Boot in two waves](#boot-in-two-waves)); the binaries and dust slots have
-([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). A value `main.ts` has
-already loaded when it builds the shell is a constructor argument instead,
-so it has no pending state at all — the IAU boundary artifact
-([The owner](constellation-boundaries/README.md#the-owner)). Clusters holding no late slot do not wait.
-
-| Slot | Lands | Not-ready answer today |
-| --- | --- | --- |
-| Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
-
-Two catalogue-prefix reads are correct by construction rather than by a
-type: the constellation figure and its aim direction
-([The aim direction](constellation-figure/README.md#the-aim-direction)) read figure vertices from
-`starFrame.localPositions` from first paint, and the aim keeps what it read.
-The build fails unless every figure vertex sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
-A third prefix read sits outside the shell: the extinction prepass sorts its
-dispatch order over the table it attaches to, which is normally still
-streaming, and re-sorts once on the refresh that completes it
-([What a CACHE owes](webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)), answered inside the pass.
+`stellata.ts` constructs, connects and disposes; state with a tick or a
+lifecycle of its own lives in its subsystem folder
+([AGENTS.md](/AGENTS.md#folder--module-conventions--where-new-code-lands)).
+`tests/integration-shell-ratchet.test.ts` holds it there: every `Stellata`
+field is on its composition list, so a new field fails until it is argued
+onto the list or moved out.
 
 ## Event bus on `Stellata`
 

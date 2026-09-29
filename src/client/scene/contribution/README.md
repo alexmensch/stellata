@@ -105,7 +105,7 @@ before the skip is exactly what refuses to repaint on re-entry.
 **The frustum is valid only below the orbit lock.** The focal rides and
 the lock move the camera *inside* the fan-out, and the lock is a
 rotation — so `FrameCtx.frustum` is invalidated every tick in
-`refreshFrameCtx` and refreshed by the orbit-lock entry after its write
+the frame loop and refreshed by the orbit-lock entry after its write
 ([Camera writes, then camera reads](/src/client/scene/README.md#camera-writes-then-camera-reads)). A `'frustum'` test on an entry
 registered above the lock throws on its first frame rather than culling
 against a pose the frame does not render.
@@ -189,7 +189,7 @@ motion wakes the gate on its own — that answer is free.
 wake is discharged by construction rather than by a scheduler: every
 input to the verdict changes only on a rendered frame. The instrument
 and the EV trim invalidate through `onChange`; the applied cut
-invalidates from `animate()` whenever it moves past `CADENCE_JND_MAG`;
+invalidates from the frame loop whenever it moves past `CADENCE_JND_MAG`;
 `Ω_px` moves only on a resize or an FOV change; a statistic lands only
 off a rendered frame's reduction; and camera pose renders. What is left
 is sub-JND drift of the applied cut, which renders nothing and can leave

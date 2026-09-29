@@ -115,7 +115,7 @@ information.
 
 - **Tier 0 — the diff reaches no per-frame code.** No run. The section
   carries the reachability argument in prose instead of a table: which
-  functions the diff touches, and that none is reachable from `animate()`,
+  functions the diff touches, and that none is reachable from the frame loop (`src/client/scene/frame-loop/`),
   a pass, or a per-frame buffer write. A camera-gesture change whose
   handlers run on a keypress is the canonical instance. The guard already
   accepts this — it requires a non-empty section and an `accepted:` line

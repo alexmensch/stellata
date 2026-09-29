@@ -283,7 +283,7 @@ run, taking `bidirectional` for the soft-kind rule below:
   snaps to the park pose.
 
 `controls.enabled` is **not** toggled during the lerp — the
-`animate()` dispatcher routes through `updateFocusLerp` before
+`CameraStep` dispatch routes through `updateFocusLerp` before
 `controls.update()`, so user drag accumulates inside
 `TrackballControls` without visible effect until the lerp lands.
 Disabling explicitly would race `TrackballControls`' pointerup
@@ -325,13 +325,14 @@ float32 cancellation in the projection chain
 centre by visible pixels even though the focused star is
 mathematically at view-origin. Float64 emulation was rejected as too
 heavy; instead the star vertex graph exposes a `uPinFocusToCenter`
-uniform (-1 = disabled). When set, the shader replaces the projection
+uniform (`NO_PINNED_STAR`, -1, = disabled). When set, the shader replaces the projection
 chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the matched
 instance — bypassing matrix-multiply cancellation entirely.
 One uniform, a handful of nodes, no CPU cost.
 
-JS-side per frame in `stellata.ts`: pin engages iff
-`FocusController.isPinEngaged()`, which checks
+JS-side per frame in the frame loop (`../../scene/frame-loop/`): the
+uniform holds `FocusController.pinnedStar()`, or `NO_PINNED_STAR` when it
+is null. The pin engages iff
 `focusedStar !== null && cameraMode === 'navigate'
 && (!warp.isActive() || warp.isRecenteredToDest())
 && !aim.isActive() && !focusLerpState
@@ -402,10 +403,10 @@ camera is flying toward.
 **Where to look:**
 - `../../webgpu/star/star-vertex-tsl.ts` — `uPinFocusToCenter` use site.
 - `focus-controller.ts` — `GLOBAL_MIN_DIST_PC = 5e-3`,
-  `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body, `isPinEngaged`
+  `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body, `pinnedStar`
   gating rules.
-- `../../stellata.ts` — per-frame pin guard in the animate loop
-  (reads `focus.isPinEngaged()` + `focus.getFocusedStar()`).
+- `../../scene/frame-loop/frame-loop.ts` — the per-frame pin write
+  (reads `focus.pinnedStar()`).
 - `../../util/url-state/url-state.ts` — `DecodedView.worldOffset`,
   encoder/loader.
 - `../../debug/pin-debug-hud.ts` — Pin section in the unified debug

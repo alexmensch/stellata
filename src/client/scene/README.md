@@ -56,10 +56,13 @@ already flipped, so re-entering the mode was a no-op (`stellata-59sg`).
   brightness number is quoted against.
 - `contribution/` — what a layer may put on screen: the two kinds, the
   four skip reasons, and the frustum module only they use. Own README.
+- `frame-loop/` — `FrameLoop`, the `requestAnimationFrame` loop: every
+  step of a tick in order, above and below the render gate, and the
+  frame's `FrameCtx`. Own README.
 - `declutter/` — the detail-level declutter cycle: the exhaustive
   scene-element floor table, its derivation and tests. Own README.
 - `glsl-residents-pure.ts` (+ test) — `findGlslResidents`, the walk
-  behind the shell's first-frame check that no raw-GLSL material reached
+  behind the frame loop's first-frame check that no raw-GLSL material reached
   the rendered scene ([No GLSL material may reach a WebGPU boot](#no-glsl-material-may-reach-a-webgpu-boot)).
 - `render-order.ts` (+ test) — `DEPTH_MASK_RENDER_ORDER`, the one
   draw-order slot two subsystems both write into. The ladder it belongs
@@ -93,10 +96,10 @@ The shipped renderer draws the one scene every layer builds into
 in it fails WGSL pipeline creation — which discards the entire submit,
 so the symptom is a black frame naming nothing, not one absent layer.
 `findGlslResidents` walks the graph and returns a description per
-offending material; the shell runs it once, on the first rendered frame,
+offending material; the frame loop runs it once, on the first rendered frame,
 and logs what it finds. Every layer is parented by then, since the roster
 attach loop and `registerSceneLayers` both run in the constructor ahead
-of `animate()`.
+of the frame loop's first tick.
 
 It keys on `isShaderMaterial` rather than on `isNodeMaterial`: three's
 node materials never set the former, and built-ins the renderer converts
@@ -179,11 +182,8 @@ source: it pins the realtime count at zero, pins the static/clock split,
 and pins that every inline `register({…})` in the shell carries a
 declaration.
 
-Its predicate is evaluated **above** the gate, every tick, which is why
-`animate()` builds `FrameCtx` before the render decision rather than
-after it — a layer that starts needing wall-clock frames while the gate
-idles would otherwise wait a whole cap for one, and forever with the
-clock paused, which fires no cadence frame at all.
+Its predicate is evaluated **above** the gate, every tick
+([Above the gate](frame-loop/README.md#above-the-gate)).
 
 ### Anchored content declares its anchor's rate
 
@@ -264,8 +264,8 @@ it is worth knowing why before anyone attempts one: the binary walk both
 means splitting that entry first.
 
 Not in the registry: camera controllers, the star pipeline, and the
-extinction prepass — they aren't scene layers and keep explicit
-lifecycle calls in `stellata.ts`. `setMonochrome`'s star-pipeline
+extinction prepass — they aren't scene layers, so the frame loop calls
+each per frame and `stellata.ts` disposes each. `setMonochrome`'s star-pipeline
 blend swap and renderer clear-colour also stay on the shell; the
 registry carries the per-layer legs.
 

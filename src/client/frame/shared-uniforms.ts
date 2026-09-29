@@ -16,6 +16,9 @@ import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
 import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
 
+/** `uPinFocusToCenter` when no star is pinned. */
+export const NO_PINNED_STAR = -1;
+
 export interface SharedUniformsOptions {
   pixelRatio: number;
   /** Camera vertical FOV in radians — mirrored from `camera.fov`
@@ -150,8 +153,8 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // mathematically at view-origin (controls.target = star, lookAt
     // aligns -Z with target). This uniform names the instance to pin;
     // the shader replaces its centreClip with projectionMatrix *
-    // (0, 0, -distCam, 1) to bypass the cancellation. -1 disables.
-    // Updated each frame in animate() since pan can move target away.
-    uPinFocusToCenter: { value: -1 },
+    // (0, 0, -distCam, 1) to bypass the cancellation.
+    // Updated each rendered frame by FrameLoop since pan can move target away.
+    uPinFocusToCenter: { value: NO_PINNED_STAR },
   } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 }

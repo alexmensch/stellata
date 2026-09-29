@@ -70,7 +70,7 @@ Camera orientation during the reorient depends on launch mode:
   around it. Roll comes along for free: `lookAt` reads `camera.up`, the
   navigate roll authority ([Roll authority](../controls/input/README.md#roll-authority)),
   so a swing that crosses the sky carries the roll the camera launched
-  with rather than acquiring one from the new view axis. The animate loop
+  with rather than acquiring one from the new view axis. The `CameraStep` dispatch
   transports `camera.up` across each of those frames — the controls are
   disabled, so nothing else would, and a reorient whose travel direction sits
   near screen-up would otherwise close the angle between `up` and the
@@ -225,7 +225,7 @@ switch from A to B at arrival.
 ## OBSERVE mode and the warp state machine
 
 Warp launched from OBSERVE leaves `cameraMode` as `'observe'` for the
-duration (the animate loop branches on `warpState` first, so the
+duration (the `CameraStep` dispatch branches on the warp first, so the
 value is purely cosmetic). Two gotchas worth noting up front:
 
 1. **`cameraMode` stays `'observe'` throughout an observe→observe

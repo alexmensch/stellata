@@ -239,7 +239,7 @@ refuses to touch the levels while a readback is in flight.
 
 ## Where it runs in the frame
 
-`stellata.ts` `animate()`, after `hdr.resolve()`, so reducing the
+the frame loop (`../../../scene/frame-loop/`), after `hdr.resolve()`, so reducing the
 attachment never delays the frame it measures. It leaves the render target
 at the canvas, the same contract the local depth pass keeps.
 

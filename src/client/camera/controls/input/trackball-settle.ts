@@ -51,7 +51,7 @@ export class TrackballSettle {
 
   /** Per frame, immediately after `controls.update()` — it reads what
    *  that call did. Only valid in the navigate steady state; every other
-   *  branch of the animate dispatch leaves `update()` uncalled, so there
+   *  branch of the `CameraStep` dispatch leaves `update()` uncalled, so there
    *  is no tail to measure. */
   tick(camera: THREE.PerspectiveCamera, pxPerRad: number, fovYRad: number): void {
     if (this.captured) {

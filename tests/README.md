@@ -77,10 +77,9 @@ folder-readme-coverage.test.ts
                          docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
 integration-shell-ratchet.test.ts
                          stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands).
-                         Every `Stellata` field is in
-                         COMPOSITION (stays) or AWAITING_EXTRACTION
-                         (shrinks to empty); a field in neither fails, and
-                         so does a listed name the class no longer has.
+                         Every `Stellata` field is on COMPOSITION; a
+                         field off it fails, and so does a listed name
+                         the class no longer has.
                          Parses the class with the TypeScript compiler;
                          arrow-function properties count as methods.
                          Growing COMPOSITION is a review decision, never a
