@@ -51,11 +51,7 @@ would silently make the next `hold()` a no-op.
    ([The verdict](../camera/camera-step/README.md#the-verdict)).
 
    The `'realtime'` predicate is evaluated **above** the gate, on every
-   tick, which is why the frame loop builds `frameCtx` before the decision
-   rather than after it. Asking it only on rendered frames would make a
-   layer that starts needing wall-clock frames wait one whole cap for
-   them — and wait forever with the clock paused, which fires no cadence
-   frame to be read on.
+   tick ([Above the gate](../scene/frame-loop/README.md#above-the-gate)).
 
 2b. **The clock cadence**: the running clock has outrun the sim-time
    budget the last rendered frame computed. A cadence frame renders THIS

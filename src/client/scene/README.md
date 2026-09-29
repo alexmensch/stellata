@@ -182,11 +182,8 @@ source: it pins the realtime count at zero, pins the static/clock split,
 and pins that every inline `register({…})` in the shell carries a
 declaration.
 
-Its predicate is evaluated **above** the gate, every tick, which is why
-the frame loop builds `FrameCtx` before the render decision rather than
-after it — a layer that starts needing wall-clock frames while the gate
-idles would otherwise wait a whole cap for one, and forever with the
-clock paused, which fires no cadence frame at all.
+Its predicate is evaluated **above** the gate, every tick
+([Above the gate](frame-loop/README.md#above-the-gate)).
 
 ### Anchored content declares its anchor's rate
 
