@@ -113,8 +113,10 @@ scripts/catalog/
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json. Generic over
-                                  the count record — classic-ids/ pins its
-                                  own snapshot through the same helper.
+                                  the count record: compareCountSnapshot is
+                                  the compare every count snapshot passes
+                                  (consumer list: the snapshot-assert.ts
+                                  entry of ../util/README.md).
 ```
 
 ## SID allocation

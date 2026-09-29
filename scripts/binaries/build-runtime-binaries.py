@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import struct
 import sys
 from dataclasses import dataclass
@@ -30,6 +29,10 @@ from scripts.binaries.component_tokens import (  # noqa: E402
     related_hier,
 )
 from scripts.util.paths import REPO_ROOT  # noqa: E402
+from scripts.util.snapshot_assert import (  # noqa: E402
+    UPDATE_COUNTS_ENV_VAR,
+    assert_or_update_counts,
+)
 
 ROOT = REPO_ROOT
 SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"
@@ -37,8 +40,6 @@ SRC_ROW_INDEX_MAP = ROOT / "build" / "catalog-row-index-map.json"
 OUT_BIN = ROOT / "public" / "binaries.bin"
 EXPECTED_COUNTS = SCRIPT.parent / "build-runtime-binaries-expected.json"
 BINARIES_BIN_STAMP = stamp_path("binaries-bin")
-
-UPDATE_COUNTS_ENV_VAR = "UPDATE_BUILD_COUNTS"
 
 
 # ─── Binary format ──────────────────────────────────────────────────
@@ -674,32 +675,6 @@ def stats_to_counts(stats: WriteStats) -> dict[str, int]:
     }
 
 
-def assert_or_update_counts(actual: dict[str, int], expected_path: Path) -> bool:
-    should_update = os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1"
-    if should_update or not expected_path.exists():
-        expected_path.write_text(json.dumps(actual, indent=2) + "\n")
-        try:
-            shown = expected_path.relative_to(ROOT)
-        except ValueError:
-            shown = expected_path
-        log(f"{'Updated' if should_update else 'Wrote initial'} {shown}")
-        return True
-    expected = json.loads(expected_path.read_text())
-    drift = [(k, expected.get(k), actual.get(k)) for k in sorted(expected.keys() | actual.keys())
-             if expected.get(k) != actual.get(k)]
-    if not drift:
-        log(f"build-runtime-binaries counts: all {len(actual)} counts match")
-        return True
-    log(
-        f"build-runtime-binaries counts: {len(drift)} of {len(actual)} differ",
-    )
-    for k, e, a in drift:
-        delta = (a or 0) - (e or 0)
-        sign = "+" if delta > 0 else ""
-        log(f"  {k:<40} expected {e}, got {a} ({sign}{delta})")
-    return False
-
-
 # ─── Driver ─────────────────────────────────────────────────────────
 
 
@@ -768,11 +743,11 @@ def run(force: bool) -> int:
         f"duplicate_relation={stats.pairs_dropped_duplicate_relation}"
     )
 
-    if not assert_or_update_counts(stats_to_counts(stats), EXPECTED_COUNTS):
-        log(
-            f"counts assertion failed. If intentional, refresh with: "
-            f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime"
-        )
+    if not assert_or_update_counts(
+        stats_to_counts(stats), EXPECTED_COUNTS,
+        label="build-runtime-binaries",
+        refresh_command=f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime",
+    ):
         return 1
     write_stamp(BINARIES_BIN_STAMP, inputs, [OUT_BIN])
     return 0
