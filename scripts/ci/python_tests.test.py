@@ -89,5 +89,36 @@ class DiscoveryTests(unittest.TestCase):
         self.assertIn(Path(__file__).resolve(), pt.discover())
 
 
+class SpawnTests(unittest.TestCase):
+    def _spawn(self, body: str) -> pt.Outcome:
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "pkg"
+            folder.mkdir()
+            (folder / "sibling.py").write_text("VALUE = 7\n")
+            suite = folder / "stage9_x.test.py"
+            suite.write_text("import unittest\nimport sibling\n\n" + body)
+            _, outcome, _ = pt.spawn(suite)
+            return outcome
+
+    def test_a_suite_imports_its_sibling_by_bare_name(self) -> None:
+        body = (
+            "class T(unittest.TestCase):\n"
+            "    def test_it(self):\n"
+            "        self.assertEqual(sibling.VALUE, 7)\n"
+        )
+        self.assertIs(self._spawn(body), pt.Outcome.PASSED)
+
+    def test_a_skip_reaches_the_parent_as_skipped(self) -> None:
+        body = (
+            "class T(unittest.TestCase):\n"
+            "    def test_it(self):\n"
+            "        self.skipTest('library absent')\n"
+        )
+        self.assertIs(self._spawn(body), pt.Outcome.SKIPPED)
+
+    def test_an_import_error_reaches_the_parent_as_failed(self) -> None:
+        self.assertIs(self._spawn("import no_such_module_anywhere\n"), pt.Outcome.FAILED)
+
+
 if __name__ == "__main__":
     unittest.main()
