@@ -5,14 +5,33 @@ function pageshow(persisted: boolean): Event {
   return Object.assign(new Event('pageshow'), { persisted });
 }
 
+type Global = EventTarget & { handle?: object };
+
 function make() {
-  const target = new EventTarget();
+  const target: Global = new EventTarget();
   const reload = vi.fn();
   const teardown = bindPageTeardown(target, reload);
   return { target, reload, teardown };
 }
 
 describe('bindPageTeardown', () => {
+  it('exposes a global until pagehide, then deletes it', () => {
+    const { target, teardown } = make();
+    const handle = {};
+    teardown.expose('handle', handle);
+    expect(target.handle).toBe(handle);
+    teardown.hold(vi.fn());
+    target.dispatchEvent(new Event('pagehide'));
+    expect('handle' in target).toBe(false);
+  });
+
+  it('deletes exposed globals when nothing was held to release', () => {
+    const { target, teardown } = make();
+    teardown.expose('handle', {});
+    target.dispatchEvent(new Event('pagehide'));
+    expect('handle' in target).toBe(false);
+  });
+
   it('runs the held release on pagehide', () => {
     const { target, teardown } = make();
     const release = vi.fn();

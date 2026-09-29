@@ -189,6 +189,5 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     },
   };
 
-  (window as unknown as { debug: DebugTools }).debug = tools;
   return tools;
 }

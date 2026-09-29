@@ -242,10 +242,17 @@ build scripts, tests, and shader uniforms.
   reloads a page the back/forward cache restores after that release, since
   it comes back with nothing to draw with. `main.ts` holds the booted
   renderer's `dispose` until the shell exists, then `Stellata.dispose()`.
-  **Without it a reload leaves the previous page resident**: Safari keeps
-  the old document's GPU allocations, typed arrays and heap in the same
-  content process, about 1.2 GB a reload, until the tab is killed for
-  memory ([Who releases what](../webgpu/README.md#who-releases-what)).
+  `expose(name, value)` is the only way a value becomes a `window` global
+  (`window.stellata`, `window.debug`); `pagehide` deletes every one, and
+  drops the held release once it has run.
+  **Why both matter**: WebKit keeps a reloaded page's global object alive
+  in the same content process, and everything reachable from it — a
+  global, a listener on `window` — survives the page. It frees whatever
+  the old page stops referencing: a 128 MB typed array held on `window`
+  costs 128 MB a reload, and 4 MB once `pagehide` clears it. A new global
+  set any other way keeps the whole app resident across every reload
+  until Safari kills the tab for memory
+  ([Who releases what](../webgpu/README.md#who-releases-what)).
 - `mutable.ts` — `Mutable<T>`, `T` with `readonly` stripped. For an owner
   that rewrites a context in place which its readers see as readonly
   (`FrameCtx` in `stellata.ts`, `CadenceCtx` in

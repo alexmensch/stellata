@@ -127,10 +127,7 @@ async function main() {
 
     const stellata = new Stellata({ canvas, catalog, kinds, webgpu, boundaries });
     teardown.hold(() => stellata.dispose());
-    // Dev-console access: `stellata.extinction.setStrength(X)` etc. Handy for
-    // dust debugging and not worth gating behind an env check on a solo
-    // project.
-    window.stellata = stellata;
+    teardown.expose('stellata', stellata);
 
     // Focus-card "Orbiting <host>" breadcrumbs read the same star labels
     // the search corpus shows.
@@ -174,6 +171,7 @@ async function main() {
     };
 
     const debugTools = setupDebug(stellata, idMaps);
+    teardown.expose('debug', debugTools);
 
     // Interstellar dust loads in the background — never blocks first paint.
     // Extinction fades in as each voxel chunk lands on the GPU. If the

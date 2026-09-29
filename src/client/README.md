@@ -28,7 +28,9 @@ themselves.
   kind modules the rule is enforced rather than trusted — `loadKindModules`
   swallows every non-`critical` rejection (`kinds/README.md`).
   `main.ts` is also the one caller of `Stellata.dispose()`, through the
-  `pagehide` teardown it binds before boot (`util/page-teardown.ts`).
+  `pagehide` teardown it binds before boot (`util/page-teardown.ts`), and
+  sets the `window` globals `globals.d.ts` declares only through that
+  teardown's `expose`.
 - `stellata-events.test.ts` — integration-shell event-emission test.
 - `kinds/` — the `ObjectKindModule` / `KindContext` contracts and the
   kind-module roster: one module per `TargetKind` (all six migrated)
