@@ -30,9 +30,9 @@ export interface ExtinctionPrepassSeam {
   setEnabled(on: boolean): void;
   /** Whether the star vertex stage is consuming the cache this frame. */
   isActive(): boolean;
-  /** Per-frame hook, before the main render; the camera's absolute
-   *  (heliocentric ICRS) position is the view's. Refills when dirty or the camera moved
-   *  beyond RECOMPUTE_EPSILON_PC, and when the view turned — a turn is an
+  /** Per-frame hook, before the main render. Refills when dirty, when the
+   *  view's absolute (heliocentric ICRS) camera moved beyond
+   *  RECOMPUTE_EPSILON_PC, and when the view turned — a turn is an
    *  ordinary refill request
    *  (`../../webgpu/extinction/refill/README.md#a-view-change-is-a-refill-request--nothing-more`).
    * Free only with the camera parked and the view still. */
@@ -44,7 +44,7 @@ export interface ExtinctionPrepassSeam {
   readAvMag(idx: number): number | null;
   /** A pick is imminent, so stage the whole A_V table onto the CPU before
    *  anything asks for it. One mapped copy of the buffer, at most one per
-   *  recompute and none while the camera is under way, and the pointer
+   *  dispatch and none while a refill is in flight, and the pointer
    *  dwell covers its latency — which is what lets `readAvMag` answer the
    *  first pick exactly rather than a jiggle later. */
   warmAvReadback(): void;

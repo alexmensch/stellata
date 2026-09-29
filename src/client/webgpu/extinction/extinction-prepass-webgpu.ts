@@ -81,7 +81,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
   /** Dispatch slot → catalogue index, the CPU copy the parity check needs
    *  to put the reference march's slot-indexed target back into star order.
    *  Shares its array with the `order` buffer, so dispose has to drop both
-   *  or the 1.48 MiB outlives the pass. */
+   *  or the array outlives the pass. */
   private dispatchOrder: Uint32Array | null;
   /** Sorted while the catalogue tail was still zero (README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not).
    * */
@@ -328,7 +328,7 @@ export class WebGpuExtinctionPrepass implements ExtinctionPrepassSeam {
 
   /** Stage the whole table for the picks a pointer event is about to
    *  make. One `copyBufferToBuffer` + map of the buffer, issued at most
-   *  once per recompute and never while the camera is under way, landing
+   *  once per dispatch and never while a refill is in flight, landing
    *  inside the hover dwell. */
   warmAvReadback(): void {
     if (!this.isActive() || this.av === null) return;
