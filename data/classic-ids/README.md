@@ -189,7 +189,7 @@ counts as a bad binding:
   HIP-bearing rows however far the magnitude arm's evidence widens. The
   membership derivation can rescue a row this gate would leave unbound; the
   overlay, which weighs each source alone, cannot
-  ([A component designation rescues a row the sibling gate leaves unbound](/scripts/catalog/membership/binding/README.md#a-component-designation-rescues-a-row-the-sibling-gate-leaves-unbound)).
+  ([A component designation rescues a row the sibling gate leaves unbound](/scripts/catalog/membership/binding/README.md#both-gates-weigh-every-candidate)).
 
 The two counts trade rows as G coverage changes — `reason` is the first gate
 that fired — so their sum, **460**, is the queue's size
