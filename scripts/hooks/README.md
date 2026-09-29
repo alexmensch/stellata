@@ -62,6 +62,12 @@ scripts/hooks/
                            code (ts/tsx/js/mjs/cjs/py/sh/wgsl/glsl) →
                            code-craft.
                            Behaviour pinned by tests/skill-guard.test.ts.
+  paper-store-link.sh      SessionStart + PostToolUse on EnterWorktree:
+                           copies the main checkout's data/papers/pdf
+                           link into every linked worktree that lacks
+                           it — README.md#how-paper-store-link-works.
+                           Behaviour pinned by
+                           tests/paper-store-link.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
                            commit-sweep-guard.sh. The two hand-copied
@@ -347,6 +353,35 @@ stderr and exits **2**, the harness's other blocking spelling, instead of
 dying mid-pipe. The `stat` portability trap that first exposed this — the
 hook erroring, and therefore permitting, on every Linux checkout while the
 macOS suite stayed green — is [Traps](/scripts/perf/arming/README.md#traps).
+
+## How paper-store-link works
+
+`data/papers/pdf` is a gitignored symlink to a private store
+([The PDFs are private](/data/papers/README.md#the-pdfs-are-private)). `.worktreeinclude` cannot carry it: the
+copy Claude Code makes when it creates a worktree skips symlinks, so without
+this hook every new worktree starts with `tests/citation-index.test.ts`
+failing. A `WorktreeCreate` hook is not the fix either — it replaces git's
+worktree creation outright rather than running after it.
+
+Hooks load from the main checkout's `.claude/settings.json`, and
+`$CLAUDE_PROJECT_DIR` stays at the main checkout after `EnterWorktree`; the
+sweep uses it only to find the repo, so either checkout serves.
+
+The hook is a sweep, not a per-worktree copy: it lists the repo's worktrees
+(`git worktree list`, whose first entry is the main checkout) and, for each
+linked one with no link or a link to a different target, copies main's link
+with `cp -P`. So it needs nothing from the payload, works from whichever
+checkout the session is in, reaches worktrees made by hand with
+`git worktree add`, and re-points every worktree after the store moves.
+
+- **Main's link is the only authority.** The store's path is read from it at
+  run time and written nowhere in the tree.
+- **It never replaces a real folder or file** at that path — only a missing
+  entry or a symlink.
+- **Fails open**, like prime-guard: any error exits 0 silently, since a
+  missing link is a test failure, not a reason to stop a session.
+- **Two events.** SessionStart covers a session opened in an existing
+  worktree; PostToolUse on `EnterWorktree` covers one created mid-session.
 
 ## Disabling
 
