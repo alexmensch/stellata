@@ -58,7 +58,7 @@ Below the gate — rendered frames only:
 14. The `'frame'` emit, then the next tick is scheduled.
 
 The perf HUD's sections (`frame.total`, `controls.update`, `pre-render`,
-`submit.*`, `frame.handlers`) bracket these steps
+`star.compaction`, `submit.*`, `frame.handlers`) bracket these steps
 ([debug/](../../debug/README.md)).
 
 ## Above the gate

@@ -139,12 +139,13 @@ after exiting chart mode (otherwise the average would lag forever).
 | Label                   | Where (`src/client/`)            | What it measures |
 | ----------------------- | -------------------------------- | ---------------- |
 | `frame.total`           | `scene/frame-loop/`             | Full frame body, the histogram source. |
-| `controls.update`       | `scene/frame-loop/`             | TrackballControls / observe-controls update branch. |
+| `controls.update`       | `scene/frame-loop/`             | `CameraStep.advance` — whichever controller moves the camera this tick, plus the roll adoption around it ([camera-step/](../camera/camera-step/README.md)). |
 | `pre-render`            | `scene/frame-loop/`             | Per-frame uniform writes **and the whole layer fan-out** (`layers.updateAll` — star frame, binaries, planets, Milky Way, galactic, clouds), plus the adaptation fold. Normally the largest CPU section, and it *contains* the `extinction.prepass` / `coreMask` rows below rather than sitting beside them. |
-| `extinction.prepass`    | `scene/frame-loop/`             | Per-star A_V cache recompute submission (near-zero on skipped frames). |
+| `extinction.prepass`    | `extinction-attachment.ts` `update()` | Per-star A_V cache recompute submission (near-zero on skipped frames). |
 | `coreMask`              | core-mask layer's `skip`         | The binary-search `shouldEnableCoreMask()` (see below), run as that layer's contribution test. |
 | `adaptation`            | `scene-adaptation.ts` `measure()` | Folding the landed reduction into the applied cut — a handful of arithmetic, since the measurement itself is GPU work priced under `submit.reduction` ([Adaptation](../hdr/exposure/README.md#adaptation--the-frame-measures-itself)). Not measured in chart mode — the row goes quiet like any silent section. |
 | `submit.main`           | `scene/frame-loop/`             | CPU wall-time around `renderer.render()` — submission, not GPU work. |
+| `star.compaction`       | `scene/frame-loop/`             | CPU submission of the star compaction dispatch, inside `submit.main` ([compaction/](../webgpu/star/compaction/README.md)). |
 | `submit.localDepth`     | `scene/frame-loop/`             | CPU wall-time around the local depth pass's bracketed renders — one for the whole bracket under reversed-z (K = 1). |
 | `submit.tonemap`        | `scene/frame-loop/`             | CPU wall-time around the HDR resolve. Near-zero in chart mode, where the seam has no target to resolve. |
 | `submit.reduction`      | `scene/frame-loop/`             | CPU wall-time around the statistic attachment's mip reduction. Zero on frames whose readback has not landed, and in chart mode ([Latency](../hdr/exposure/reduction/README.md#latency)). |
