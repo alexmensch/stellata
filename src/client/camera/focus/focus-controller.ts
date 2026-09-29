@@ -227,7 +227,7 @@ export class FocusController implements FocusOps {
   getPinEngageThresholdSq(): number { return PIN_ENGAGE_THRESHOLD_SQ_PC; }
 
   /** Whether the focused-star pin (uPinFocusToCenter) would engage right
-   *  now, mirroring the per-frame guard in animate(). Read by the pin
+   *  now, mirroring the per-frame guard in FrameLoop. Read by the pin
    *  section of the unified debug panel (`debug.panel()`) to display
    *  live state.
    *
@@ -478,7 +478,7 @@ export class FocusController implements FocusOps {
     shiftArrivalWaypoints(this.focusLerpState, -delta.x, -delta.y, -delta.z);
   }
 
-  /** Per-frame tick. Stellata's animate() dispatches here when
+  /** Per-frame tick. CameraStep dispatches here when
    *  `isFocusLerpActive()` is true. controls.enabled is left true
    *  throughout; the dispatcher routes here instead of controls.update(),
    *  so user drag accumulates in TC without visible effect until the
@@ -802,8 +802,8 @@ export class FocusController implements FocusOps {
         // fight the lerp's outward motion. After the lerp lands, the
         // controller's finish branch tightens minDistance to minDist.
         this.setFocus(null);
-        // Don't toggle controls.enabled during the lerp. The animate()
-        // dispatcher routes to observe.tick(), which lerps
+        // Don't toggle controls.enabled during the lerp. The CameraStep
+        // dispatch routes to observe.tick(), which lerps
         // camera.position directly and skips controls.update().
         // Disabling explicitly would race the click-to-unfocus event
         // chain (see ObserveTransition.startUnfocusLerp docblock).

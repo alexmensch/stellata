@@ -283,7 +283,7 @@ run, taking `bidirectional` for the soft-kind rule below:
   snaps to the park pose.
 
 `controls.enabled` is **not** toggled during the lerp — the
-`animate()` dispatcher routes through `updateFocusLerp` before
+`CameraStep` dispatch routes through `updateFocusLerp` before
 `controls.update()`, so user drag accumulates inside
 `TrackballControls` without visible effect until the lerp lands.
 Disabling explicitly would race `TrackballControls`' pointerup
@@ -404,7 +404,7 @@ camera is flying toward.
 - `focus-controller.ts` — `GLOBAL_MIN_DIST_PC = 5e-3`,
   `PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12`, `setFocus` body, `isPinEngaged`
   gating rules.
-- `../../stellata.ts` — per-frame pin guard in the animate loop
+- `../../scene/frame-loop/frame-loop.ts` — per-frame pin write in the frame loop
   (reads `focus.isPinEngaged()` + `focus.getFocusedStar()`).
 - `../../util/url-state/url-state.ts` — `DecodedView.worldOffset`,
   encoder/loader.
