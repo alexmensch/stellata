@@ -38,8 +38,8 @@ comparator — and it is what matches the ordering
 
 ## Request and record build name the same set by construction
 
-**374,939 source_ids** over the 376,932 `term = primaries` manifest rows; the
-1,993 rows carrying none are the no-Gaia tier. The `term = magnitude` rows are
+**374,932 source_ids** over the 376,909 `term = primaries` manifest rows; the
+1,977 rows carrying none are the no-Gaia tier. The `term = magnitude` rows are
 not requested: their astrometry is the magnitude pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
 and requesting them would re-pull 602k rows that file already holds. The row total is pinned as `rows` in
@@ -61,7 +61,7 @@ different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column, primaries rows | 374,939 | the record build: direction / rv / V / ci cascades |
+| the manifest's `gaia_source_id` column, primaries rows | 374,932 | the record build: direction / rv / V / ci cascades |
 | `../classic-ids/`' binding-gate candidates | 354,987, +1,115 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
 | `../membership/`' binding-derivation candidates | 375,980, +199 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any primaries row, spine or addition, could be bound to, over every IV/25 TYC whether admitted or not |
 | `multiples.tsv`' kept-physical pair members | 16,108, +6,804 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
