@@ -341,9 +341,10 @@ declare its type and bytes, and add encode/decode logic in
 because their bit is 0 in the presence mask. Don't repurpose retired
 bits (16/17) for ~6 months of deploy overlap. Breaking-shape changes
 (resizing existing fields, semantic shifts) need a new
-`SCHEMA_VERSION` and a new `FIELDS_V<n>` table; `FIELDS_V4` then stays
-as a standalone frozen decoder beside it, pinned by golden blobs, since
-v4 links are in the wild.
+`SCHEMA_VERSION` and a new `FIELDS_V<n>` table, and v4 links are in the
+wild, so `FIELDS_V4` stays beside it as a standalone frozen decoder.
+Before editing anything for the new version, commit a golden corpus of
+real v4 blobs with their expected decoded views to `url-state.test.ts`, so the new work provably cannot alter v4 decoding.
 
 **Adding an object kind** costs nothing here: focus / to / POIs
 already carry any-kind SIDs — register a resolver domain for the new
