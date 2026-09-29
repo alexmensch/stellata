@@ -472,7 +472,7 @@ describe('url-state', () => {
       // Encode cam=[5,0,0] in observe mode: only x diverges from
       // observe default [0,0,0]. sub=1, payload = x. Decoder must fill
       // z=0 (not z=30, the static-table default) once flags reveals
-      // mode=observe — that's the post-pass in decodeV3.
+      // mode=observe — that's the post-pass in decodeBlob.
       const view = roundtrip({ cam: [5, 0, 0], mode: 'observe' });
       expect(view.cam).toEqual([5, 0, 0]);
     });
@@ -505,7 +505,7 @@ describe('url-state', () => {
     });
   });
 
-  describe('quantised u8 fields (v2)', () => {
+  describe('quantised u8 fields', () => {
     it('round-trips fov at slider step boundaries', () => {
       // fov: min=10, max=120, step=1 — integer values round-trip exactly
       for (const fov of [10, 30, 60, 90, 120]) {
@@ -1169,7 +1169,7 @@ describe('url-state', () => {
 
   });
 
-  describe('LEB128 presence mask (v3)', () => {
+  describe('LEB128 presence mask', () => {
     // Verify the wire-format size for representative mask shapes. The
     // numbers here are the bytes-on-wire after base64url; we infer
     // the underlying byte count via the module-scoped blobBytes helper.
@@ -1214,7 +1214,7 @@ describe('url-state', () => {
     });
   });
 
-  describe('vec3 sub-mask elision byte budgets (v3)', () => {
+  describe('vec3 sub-mask elision byte budgets', () => {
     // The headline win of v3 is per-component vec3 elision. The cam
     // case is covered by the "emits the headline 10-char" test above;
     // these tests pin the exact byte counts for tgt, up, and

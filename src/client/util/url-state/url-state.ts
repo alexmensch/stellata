@@ -219,7 +219,7 @@ export interface DecodedView {
 
 type Vec3Key = 'cam' | 'tgt' | 'up' | 'worldOffset';
 type ComponentDefaults = (v: DecodedView) => readonly [number, number, number];
-/** Mode-dependent post-decode fix-up for vec3FieldV3 fields whose
+/** Mode-dependent post-decode fix-up for vec3SubMaskField fields whose
  *  default depends on view state populated by a *later* field in the
  *  decode loop (currently just cam, whose z-default depends on mode
  *  set by flags at bit 13). `sub` is the sub-mask byte the field
@@ -241,12 +241,12 @@ interface FieldSpec {
   isPresent(v: DecodedView): boolean;
   /** Encode the field at `off`. Returns the number of bytes written so
    *  the caller can advance `off` without a second `encodeBytes` call —
-   *  matters for vec3FieldV3 / poiSids where the byte count requires
+   *  matters for vec3SubMaskField / poiSids where the byte count requires
    *  recomputing the sub-mask or list length. */
   encode(v: DecodedView, dv: DataView, off: number): number;
   decode(v: DecodedView, dv: DataView, off: number): void;
   /** Optional post-pass invoked after the full field-decode loop, only
-   *  when the field's mask bit is set this round. Used by vec3FieldV3
+   *  when the field's mask bit is set this round. Used by vec3SubMaskField
    *  to apply mode-dependent default fix-up that can't run during
    *  decode itself because the relevant view field decodes later. */
   postDecode?(v: DecodedView): void;
@@ -256,7 +256,7 @@ function fixed(n: number) {
   return { encodeBytes: (_v: DecodedView) => n, decodeBytes: (_dv: DataView, _o: number) => n };
 }
 
-// v3 vec3 — 1-byte sub-mask (low 3 bits = which components diverge
+// Sub-masked vec3 — 1-byte sub-mask (low 3 bits = which components diverge
 // from default) + per-set-bit float32 LE. A vec3 matching its default
 // in all three components has isPresent=false and is omitted from the
 // outer presence mask entirely.
@@ -278,7 +278,7 @@ function fixed(n: number) {
 // inside the URL-write debouncer's 1e-3 epsilon. Eliding those as
 // "approximately default" would round the camera silently to the
 // frame origin on round-trip and break the close-orbit unfocus contract.
-function vec3FieldV3(
+function vec3SubMaskField(
   bit: number,
   key: Vec3Key,
   getDefault: ComponentDefaults,
@@ -338,8 +338,6 @@ function vec3FieldV3(
       // bits correctly.
       const sub = dv.getUint8(o);
       lastSub = sub;
-      // `getDefault` rather than a captured record: `up`'s default differs
-      // per schema version (v3 predates the galactic reference axis), and
       // cam's mode-dependent default resolves to its navigate value here
       // because `v.mode` decodes later — which is what postDecode fixes.
       const d = getDefault(v);
@@ -624,9 +622,9 @@ const camObservePostDecode: ApplyMode = (v, sub) => {
 // spec-less bit would leave those bytes unconsumed, shifting every later
 // field's offset.
 const FIELDS_V4: FieldSpec[] = [
-  vec3FieldV3(0, 'cam', camDefault, camObservePostDecode),
-  vec3FieldV3(1, 'tgt', () => DEFAULT_TGT),
-  vec3FieldV3(2, 'up', () => DEFAULT_UP),
+  vec3SubMaskField(0, 'cam', camDefault, camObservePostDecode),
+  vec3SubMaskField(1, 'tgt', () => DEFAULT_TGT),
+  vec3SubMaskField(2, 'up', () => DEFAULT_UP),
   u8Field(3,  'fov',  { min: 10, max: 120, step: 1   }),
   decodeOnly(u8Field(4, 'mag', { min: -2, max: 15, step: 0.1 })),
   u16Field(5, 'dmin'),
@@ -642,7 +640,7 @@ const FIELDS_V4: FieldSpec[] = [
   sidRefField(15, 'to'),
   focusClearedField(18),
   poiSidsField(19),
-  vec3FieldV3(20, 'worldOffset', () => DEFAULT_WORLD_OFFSET),
+  vec3SubMaskField(20, 'worldOffset', () => DEFAULT_WORLD_OFFSET),
   tField(21),
   lgEmissionDisabledField(22),
   detailLevelField(23),
@@ -820,7 +818,7 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   // README.md#what-counts-as-a-camera-move owns every gate below — each a
   // fraction of the orbit radius, none a distance.
   //
-  // Don't collapse this to one predicate: vec3FieldV3.isPresent re-checks at
+  // Don't collapse this to one predicate: vec3SubMaskField.isPresent re-checks at
   // strict equality, and that inner layer is what keeps sub-µpc floating-origin
   // cam values any outer band would round to the frame origin.
   //
