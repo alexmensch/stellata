@@ -313,8 +313,8 @@ export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], s
 export interface MembershipInput {
   spine: readonly SpineRow[];
   tables: PrimaryTables;
-  /** The committed post-gate overlay: `has(source)` is the HD-route gate's verdict (/docs/catalog-driver.md#4-how-hd-reaches-gaia)
-   *  on every raw cross-walk binding, spine row or not. */
+  /** The committed post-gate overlay the spine side's label merge reads:
+   *  `has(source)` is the HD-route gate's verdict (/docs/catalog-driver.md#4-how-hd-reaches-gaia). */
   overlay: ClassicIdOverlay;
   overrides: LabelOverrides;
   siblingRenderedSourceIds: ReadonlySet<string>;
