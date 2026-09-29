@@ -301,6 +301,11 @@ write ([Camera writes, then camera reads](../scene/README.md#camera-writes-then-
 after both. All three, and the moving-focal ride (`FocalRides`), declare
 `planetRate` — the bodies are what each one draws a view of.
 
+The `'planetSystem'` event is the wiring's one input for the focused system:
+it builds the rings, and the rings entry's per-frame update reads the system
+back off `OrbitRingsLayer.planetSystem()` rather than asking focus a second
+time.
+
 ## First-load default and `minDistance` relaxation
 
 When the URL carries no view state, `first-load.ts` applies a

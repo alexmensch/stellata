@@ -449,7 +449,6 @@ export class Stellata {
       occluders: this.occluders,
       solIndex: catalog.solIndex,
       getT: () => this.getT(),
-      focusedPlanetSystem: () => this.focus.getFocusedPlanetSystem(),
       observeAnchorPlanet: () => this.observe.observeAnchorOf('planet'),
       onPlanetSystem: (handler) => this.bus.on('planetSystem', handler),
     });

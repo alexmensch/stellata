@@ -5,7 +5,6 @@ import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials'
 import type { OccluderSet } from '../occlusion/occluder-set';
 import type { CadenceReport } from '../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx, SceneLayer } from '../scene/scene-layer';
-import type { LateState } from '../util/late/late';
 import { OrbitRingsLayer } from './ephemerides/orbit-rings-layer';
 import { type HostStarMemberSink, SolarSystemCluster } from './local-cluster';
 import type { PlanetSystem } from './planet-system';
@@ -24,7 +23,6 @@ export interface SolarSystemWiringDeps {
   occluders: OccluderSet;
   solIndex: number;
   getT: () => number;
-  focusedPlanetSystem: () => LateState<PlanetSystem>;
   /** The planet OBSERVE stands on, as a flat body-field instance index. */
   observeAnchorPlanet: () => number | null;
   onPlanetSystem: (handler: (ps: PlanetSystem | null) => void) => () => void;
@@ -62,8 +60,7 @@ export class SolarSystemWiring {
       timeBehaviour: { kind: 'clock', rate: this.planetRate },
       contribution: { kind: 'always' },
       update: (ctx) => {
-        const system = deps.focusedPlanetSystem();
-        const ps = system.status === 'ready' ? system.value : null;
+        const ps = orbitRings.planetSystem();
         const hostPos = ps !== null
           && field.getHostLocalPositionInto(ps.hostStarIdx, this.tmpHostLocal)
           ? this.tmpHostLocal : null;
