@@ -145,7 +145,7 @@ const tables: PrimaryTables = {
   },
   tycho2: new Map([
     ['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['2-1-1', tycho2(9.1, 30)],
-    ['2-2-1', tycho2(9.9)], ['2-3-1', tycho2(11)], ['2-4-1', tycho2(11)], ['2-5-1', tycho2(11)],
+    ['2-2-1', tycho2(9.9)], ['2-3-1', tycho2(11)], ['2-4-1', tycho2(11)], ['2-5-1', { ...tycho2(11), btMag: 11.2 }],
     ['2-6-1', tycho2(11)], ['2-7-1', tycho2(11)], ['2-8-1', tycho2(11)],
     ['3-1-1', tycho2(11)], ['3-2-1', tycho2(11)], ['3-3-1', tycho2(11, 50)],
     ['3-4-1', tycho2(11)],
@@ -176,7 +176,7 @@ const overlay: ClassicIdOverlay = new Map([
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: bindingEvidence(
-    new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP, new Set(['888', '6060']),
+    new Map([['777', 14.0]]), new Map(), null, NO_PRINTED_V_BELOW_HIP, new Set(['888', '6060', '777']),
   ),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
@@ -675,6 +675,28 @@ describe('buildMembership — the additions', () => {
   it("takes the TYC route's source where the HIP route binds another", () => {
     expect(byTyc.get('3-3-1')).toMatchObject({ hip: '50', gaia_source_id: '1313' });
     expect(result.counts.additionRouteSourceDisagree).toBe(1);
+  });
+
+  it('binds an addition through SIMBAD and dedupes the magnitude term against it', () => {
+    const viaSimbad = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-5-1', hd: 500, nHd: 1, nTyc: 1 }],
+        tycho2: new Map([...tables.tycho2, ['5-5-1', tycho2(9)]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5050', { hip: null, tyc: '5-5-1', gj: null }]]),
+      },
+      magnitudeTerm: {
+        keptSourceIds: new Set(['5050', '777']),
+        counts: { rows: 2, kept: 2, above_floor: 0, no_v: 0 },
+      },
+    });
+    expect(viaSimbad.rows.find((r) => r.tyc === '5-5-1'))
+      .toMatchObject({ hd: '500', gaia_source_id: '5050', binding: 'simbad_corroborated' });
+    expect(viaSimbad.rows.filter((r) => r.gaia_source_id === '5050')).toHaveLength(1);
+    expect(viaSimbad.counts.magnitudeRows).toBe(1);
+    expect(viaSimbad.counts.magnitudeRowsOwnCandidate)
+      .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0 });
   });
 
   // Admitted, but one designation short: HD 5 is a spine record's, so the

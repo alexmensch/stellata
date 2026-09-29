@@ -265,7 +265,7 @@ The consequences, measured 2026-09-06:
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
 | `component:<anchor>` | 466 | every designation it arrived with is another record's. 461 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to. Five left the class when the curated HD corrections freed the number their anchor was wrongly displaying ([Curated overrides](../classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them)) |
 | source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
-| source left empty, gate refused | 121 | the raw binding is in `rejected_bindings.tsv` |
+| source left empty, gate refused | 121 | the derivation reached candidates and both gates refused every one |
 
 The audit's headline cohort sizes (60,344 / 566 / 3,362) are pre-grouping and
 pre-admission; the table above is what the manifest carries.
@@ -305,11 +305,21 @@ term; the record count is that term less the parks.
 
 An addition's other labels come by **designation-keyed** joins over the same
 primaries — HR from V/50 by HD, HIP and Flamsteed from IV/27A by HD, HIP from
-Tycho-2's own column — never through the source-keyed overlay, whose gate the
-group's `gaia_source_id` already passed (`overlay.has(source)` is the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia)
-verdict on every raw binding, spine row or not). An addition's source is the
-TYC route's where it has one; 3 groups have a HIP route binding a different
-source and follow the HD-route authority of [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia).
+Tycho-2's own column — never through the source-keyed overlay.
+
+**An addition binds through the spine's own derivation** — the same four
+sources, consensus ranking and both gates
+([The four sources, in precedence order](binding/README.md#the-four-sources-in-precedence-order)),
+on the group's TYC, HIP and CNS5 GJ. One derivation for every primaries row is
+what keeps the magnitude term from drawing a named star twice: the union
+dedupes on bound source_ids only ([The union dedupes on the derived binding](magnitude-term/README.md#the-union-dedupes-on-the-derived-binding)),
+so a source an addition could bind but does not comes back as a second,
+unnamed record. SIMBAD is the route that matters here — its object under the
+row's own TYC names the source where Tycho-2's best-neighbour walk reaches
+nothing. A winner a spine record already holds, or that two groups reach,
+leaves the cell empty, as a spine collision does. `magnitudeRowsOwnCandidate`
+counts the magnitude rows that are still some primaries row's unshipped
+candidate, by why it was not shipped.
 
 ## The parity gate
 
