@@ -715,6 +715,37 @@ describe('buildMembership — the additions', () => {
     expect(oneStar.counts.additionSourceShared).toBe(result.counts.additionSourceShared);
   });
 
+  // The TYC item and the merged group each weigh 5151 against Tycho-2's V with
+  // no pulled row; the HIP item has no printed V to weigh it against.
+  it('counts an unpulled candidate in the item derivations that group, not only the group\'s', () => {
+    const oneStar = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
+        hipI239: new Set([...tables.hipI239, 61]),
+        tycho2: new Map([...tables.tycho2, ['5-6-1', { ...tycho2(9), btMag: 9.2 }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+      },
+    });
+    expect(oneStar.counts.additionWeighedNoGMag - result.counts.additionWeighedNoGMag).toBe(2);
+  });
+
+  it('counts an admitted addition whose winner has a passing runner-up as contested', () => {
+    const twoSources = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-7-1', hd: 502, nHd: 1, nTyc: 1 }],
+        tycho2: new Map([...tables.tycho2, ['5-7-1', tycho2(9)]]),
+        tycToSource: new Map([...tables.tycToSource, ['5-7-1', '5171']]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5172', { hip: null, tyc: '5-7-1', gj: null }]]),
+      },
+    });
+    expect(twoSources.rows.find((r) => r.tyc === '5-7-1')?.gaia_source_id).toBe('5171');
+    expect(twoSources.counts.additionContested - result.counts.additionContested).toBe(1);
+  });
+
   // Admitted, but one designation short: HD 5 is a spine record's, so the
   // record ships without a number the primaries publish for it.
   it('counts an admitted row the guard withheld a designation from', () => {

@@ -382,7 +382,8 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Derived sources two or more addition groups reach; no group takes one. */
   additionSourceShared: number;
   /** Addition candidates weighed with no row in the astrometry pull — the
-   *  `derivedWeighedNoGMag` pin, over the additions. */
+   *  `derivedWeighedNoGMag` pin, over every derivation the additions run: each
+   *  item's, which decides the grouping, and each merged group's. */
   additionWeighedNoGMag: number;
   /** Addition groups whose winner has a gate-passing runner-up. */
   additionContested: number;
@@ -1376,7 +1377,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let additionRouteSourceDisagree = 0;
   let additionGaiaKeyedOnly = 0;
   let additionsWithBlockedDesignation = 0;
-  let additionWeighedNoGMag = 0;
+  const additionWeighedNoGMag = [
+    ...items.map((i) => i.derived),
+    ...derivedGroups.filter((g) => g.items.length > 1).map((g) => g.derived),
+  ].reduce((n, d) => n + d.weighedNoGMag, 0);
   let additionContested = 0;
   const ownCandidates = new Map<string, OwnCandidateReason>();
   const noteUnshipped = (d: DerivedBinding, shipped: string | null): void => {
@@ -1389,7 +1393,6 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   });
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
-    additionWeighedNoGMag += g.derived.weighedNoGMag;
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) additionContested++;
     if (a.row === null && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
       ownCandidates.set(g.derived.sourceId, 'component');
