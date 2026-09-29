@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Copies the main checkout's data/papers/pdf link into every linked worktree
-# that lacks it or holds a different one. See README.md#how-paper-store-link-works.
+# Links data/papers/pdf in every linked worktree that lacks it or holds a
+# different one to the main checkout's store. See README.md#how-paper-store-link-works.
 
 set -u
 cat >/dev/null 2>&1 || true
@@ -13,6 +13,10 @@ worktrees=$(git -C "$repo" worktree list --porcelain 2>/dev/null | sed -n 's/^wo
 main=$(printf '%s\n' "$worktrees" | head -n 1)
 [ -L "$main/$LINK" ] || exit 0
 target=$(readlink "$main/$LINK")
+case $target in
+  /*) ;;
+  *) target="$main/data/papers/$target" ;;
+esac
 
 printf '%s\n' "$worktrees" | tail -n +2 | while IFS= read -r wt; do
   [ -d "$wt/data/papers" ] || continue
@@ -23,6 +27,6 @@ printf '%s\n' "$worktrees" | tail -n +2 | while IFS= read -r wt; do
   elif [ -e "$dest" ]; then
     continue
   fi
-  cp -P "$main/$LINK" "$dest" 2>/dev/null
+  ln -s "$target" "$dest" 2>/dev/null
 done
 exit 0

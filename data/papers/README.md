@@ -104,12 +104,11 @@ the store exists only so claims can be checked against the paper itself.
 - Sessions read and write only through `data/papers/pdf`, never through the
   path it resolves to.
 - Every checkout has it. The main checkout's link is the one authority for
-  where the store is; `scripts/hooks/paper-store-link.sh` copies that link
-  into every linked worktree
+  where the store is; `scripts/hooks/paper-store-link.sh` gives every linked
+  worktree a link to that store
   ([How paper-store-link works](/scripts/hooks/README.md#how-paper-store-link-works)), so the store's path is
   written nowhere in the tree. Moving the store means re-pointing main's link
-  alone. Outside Claude Code, copy it by hand: `cp -P <main>/data/papers/pdf
-  data/papers/pdf`. It must be the link, never a copied folder — a copy takes
+  alone. Outside Claude Code, run that script by hand from any checkout. It must be the link, never a copied folder — a copy takes
   writes the store never sees.
 - `tests/citation-index.test.ts` fails when `pdf` is missing or is not a link;
   checks every held copy against its pin and for both text layers; and checks

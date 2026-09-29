@@ -80,6 +80,14 @@ describe('paper-store-link', () => {
     expect(linkOf(wt)).toBe(join(root, 'store-b'));
   });
 
+  it('resolves a relative main link so a worktree at another depth reaches the same store', () => {
+    rmSync(join(main, LINK));
+    symlinkSync('../../../store-a', join(main, LINK));
+    const wt = addWorktree('nested/deeper/wt1');
+    run();
+    expect(realpathSync(join(wt, LINK))).toBe(join(root, 'store-a'));
+  });
+
   it('never replaces a real folder in a worktree', () => {
     const wt = addWorktree('wt1');
     mkdirSync(join(wt, LINK));

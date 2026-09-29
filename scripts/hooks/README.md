@@ -64,9 +64,10 @@ scripts/hooks/
                            code-craft.
                            Behaviour pinned by tests/skill-guard.test.ts.
   paper-store-link.sh      SessionStart + PostToolUse on EnterWorktree:
-                           copies the main checkout's data/papers/pdf
-                           link into every linked worktree that lacks
-                           it — README.md#how-paper-store-link-works.
+                           links data/papers/pdf in every linked
+                           worktree that lacks it to the main
+                           checkout's store —
+                           README.md#how-paper-store-link-works.
                            Behaviour pinned by
                            tests/paper-store-link.test.ts.
   comment-rules.json       The forbidden comment patterns, once. Read
@@ -370,8 +371,10 @@ sweep uses it only to find the repo, so either checkout serves.
 
 The hook is a sweep, not a per-worktree copy: it lists the repo's worktrees
 (`git worktree list`, whose first entry is the main checkout) and, for each
-linked one with no link or a link to a different target, copies main's link
-with `cp -P`. So it needs nothing from the payload, works from whichever
+linked one with no link or a link to a different target, links it to main's
+target. A relative target is first resolved against main's `data/papers/`,
+since a worktree sits at another depth and would read it as a different
+path. So it needs nothing from the payload, works from whichever
 checkout the session is in, and reaches worktrees made by hand with
 `git worktree add`. Main's link is the authority for where the store is
 ([The PDFs are private](/data/papers/README.md#the-pdfs-are-private)).
