@@ -210,6 +210,18 @@ describe('VirtualClock — one instant per frame', () => {
     });
   });
 
+  it('a reset inside a frame moves the frame instant to live wall time', () => {
+    const w = fakeWall();
+    const c = new VirtualClock(w.now);
+    c.setTimeAbsolute(1e9);
+    c.inFrame(() => {
+      c.reset();
+      expect(c.getT()).toBe(w.now());
+      w.advance(5);
+      expect(c.getT()).toBe(w.now() - 5);
+    });
+  });
+
   it('releases the frame when the body throws', () => {
     const w = fakeWall();
     const c = new VirtualClock(w.now);
