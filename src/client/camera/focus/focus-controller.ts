@@ -8,7 +8,7 @@ import type { Catalog } from '../../loaders/catalog-loader';
 import type { StarFrame } from '../../star-pipeline/star-frame/star-frame';
 import type { StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
-import type { Late, LateState } from '../../util/late/late';
+import { type Late, type LateState, whenReady } from '../../util/late/late';
 import type { AimController } from '../controls/aim-controller';
 import type { RollController } from '../controls/input/roll-controller';
 import type { ObserveControls } from '../observe/observe-controls';
@@ -123,7 +123,7 @@ const NO_PLANET_SYSTEM: LateState<PlanetSystem> = { status: 'absent' };
 const PLANET_SYSTEM_PENDING: LateState<PlanetSystem> = { status: 'pending' };
 
 const attachedSystem = (s: LateState<PlanetSystem>): PlanetSystem | null =>
-  (s.status === 'ready' ? s.value : null);
+  whenReady<PlanetSystem, PlanetSystem | null>(s, (ps) => ps, null);
 
 export class FocusController implements FocusOps {
   private readonly deps: FocusControllerDeps;
