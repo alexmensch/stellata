@@ -83,7 +83,7 @@ export interface WebGpuSeam {
   readonly uniformNodes: SharedUniformNodes | null;
   bindSharedUniforms(shared: SharedUniforms): void;
   /** Per-frame scalar copy from the shared uniform map into the nodes —
-   *  called from animate() before the render (tsl/README.md#shared-uniform-nodes).
+   *  called from FrameLoop before the render (tsl/README.md#shared-uniform-nodes).
    * */
   syncUniformNodes(): void;
   /** Requires bindSharedUniforms to have run — the materials take their

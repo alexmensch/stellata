@@ -124,7 +124,7 @@ fuzzy RA/Dec position matching) is deterministic mapping.
 hard build error (`assertFigureVerticesInFirstChunk`, run once the chunk plan
 fixes `recordsInFirstChunk`). The runtime draws the figure and aims at its
 centroid from first paint, off the records chunk 0 carries
-([Late-attached slots](/src/client/README.md#late-attached-slots)); a vertex in a
+([Late-attached slots](/src/client/README.md#prefix-reads-correct-by-construction)); a vertex in a
 later chunk would read an undecoded `(0,0,0)` there. Records are apparent-V
 ordered, so this holds while every figure star is naked-eye bright: measured,
 708 distinct vertices, highest record index 10,289 against a chunk 0 of

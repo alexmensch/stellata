@@ -1473,7 +1473,7 @@ verdict is the conjunction of the wireframe's distance fade and this test.
 **The wake path is the render gate's, and needs nothing new.** Every input
 to the verdict changes only on a rendered frame: `uExposure` through the
 instrument or the trim (`onChange` → invalidate) or the applied cut
-(`animate()` invalidates when it moved past `CADENCE_JND_MAG`); `Ω_px`
+(the frame loop invalidates when it moved past `CADENCE_JND_MAG`); `Ω_px`
 through resize or FOV; the statistic lands only off a rendered frame's
 reduction; camera pose renders. A sub-JND drift of the applied cut renders
 nothing and can leave the verdict stale by under 0.01 mag of exposure —

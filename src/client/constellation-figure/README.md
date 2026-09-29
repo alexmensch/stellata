@@ -150,7 +150,7 @@ returns before claiming the camera, so a no-op pick cancels nothing
 
 It reads the vertices through `localPositionInto`, the frame the camera and
 target live in, once per pick; chunk 0 holds every vertex
-([Late-attached slots](../README.md#late-attached-slots)), so a pick at first paint reads
+([Late-attached slots](../README.md#prefix-reads-correct-by-construction)), so a pick at first paint reads
 decoded positions.
 
 ## Styling

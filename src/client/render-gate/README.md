@@ -1,7 +1,7 @@
 # Render gate — draw only when something changed
 
 `RenderGate` decides, once per `requestAnimationFrame` tick, whether
-`stellata.ts` `animate()` submits the frame. The rAF loop, the camera
+the frame loop (`../scene/frame-loop/`) submits the frame. The rAF loop, the camera
 controllers, and `controls.update()` run every tick regardless — input
 stays responsive and momentum keeps decaying — but on a skipped tick
 everything from the per-frame uniform writes through the GPU passes and
@@ -40,7 +40,7 @@ would silently make the next `hold()` a no-op.
    a sweep (its dwells count `gpu.frame` samples per frame — a skipped
    frame would read as the run aborting). Ref-counted; releases are
    idempotent.
-2. **Continuous conditions**, recomputed each tick by `animate()`: a
+2. **Continuous conditions**, recomputed each tick by the frame loop: a
    camera transition in flight, or a `'realtime'` layer asking for
    wall-clock frames (there are none — [Declaring how time moves a
    layer](/src/client/scene/README.md#declaring-how-time-moves-a-layer) in `../scene/README.md`). **A running clock is NOT one of
@@ -51,7 +51,7 @@ would silently make the next `hold()` a no-op.
    ([The verdict](../camera/camera-step/README.md#the-verdict)).
 
    The `'realtime'` predicate is evaluated **above** the gate, on every
-   tick, which is why `animate()` builds `frameCtx` before the decision
+   tick, which is why the frame loop builds `frameCtx` before the decision
    rather than after it. Asking it only on rendered frames would make a
    layer that starts needing wall-clock frames wait one whole cap for
    them — and wait forever with the clock paused, which fires no cadence
@@ -218,7 +218,7 @@ one.
 The epoch follow takes the same translate, rebase included. It runs above
 the gate, where the rebase only drops a pose wake its own
 `invalidate('epoch-bucket')` already covers — so the follow is correct
-wherever `animate()` calls it ([The epoch follow](../camera/focus/focal-ride/README.md#the-epoch-follow)).
+wherever the frame loop calls it ([The epoch follow](../camera/focus/focal-ride/README.md#the-epoch-follow)).
 
 The rebase touches exactly the six translation slots. Orientation, fov and
 `worldOffset` stay: absorbing a rotation would hide a real camera move, and

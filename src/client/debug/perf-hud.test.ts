@@ -15,7 +15,7 @@ describe('perf-hud / no-op API', () => {
   it('mark/measure/frame are safe to call without installing the HUD', () => {
     // The API contract is "always callable, no-op until buildPerfSection
     // runs". Production code calls these unconditionally; if they ever
-    // start throwing without the HUD installed, every animate() tick
+    // start throwing without the HUD installed, every FrameLoop tick
     // would crash.
     expect(() => {
       mark('test.section');
@@ -131,7 +131,7 @@ describe('perf-hud / install → dispose teardown', () => {
   });
 
   it('records a published frame sample as the whole-frame scope only while open', () => {
-    // animate() resolves the renderer's timestamps every rendered frame
+    // FrameLoop resolves the renderer's timestamps every rendered frame
     // regardless — the resolve
     // is what recycles the query pool — so a sample arrives whether or not
     // anything is listening, and an unsubscribed HUD must drop it rather

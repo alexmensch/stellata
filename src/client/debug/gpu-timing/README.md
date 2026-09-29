@@ -53,7 +53,7 @@ grants the feature.
 **The two pools answer for the same frame.** three tags every query
 `<type>:<call>:<id>:f<frame>` off the renderer's frame counter, whichever
 pool it lands in, and each resolve returns the newest frame's total. Both
-are resolved from one call at the end of `animate()`, after the frame's
+are resolved from one call at the end of the frame loop's tick, after the frame's
 last pass, so a render sample and the compute sample published beside it
 describe one frame. A frame that dispatched no compute — no pool exists
 yet — publishes a render sample alone.
@@ -165,7 +165,7 @@ whether a sample lands, never whether the resolve runs, and the resolve
 names both pools.
 
 The single admissible gate is `WebGpuSeam.timestampsAvailable`, which
-`animate()` passes to `resolveAndPublishGpuFrame`. Where the probe cleared
+the frame loop passes to `resolveAndPublishGpuFrame`. Where the probe cleared
 `trackTimestamp`, three's `initTimestampQuery` returns before allocating a
 pool, so that frame has no queries to overrun and the resolve would only
 log `WebGPURenderer: Timestamp tracking is disabled.` — the warning Safari

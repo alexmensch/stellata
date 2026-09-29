@@ -99,7 +99,7 @@ them reintroduces one-frame-stale reads.
 `AnchorPolicy` is the pluggable answer to "where should the origin sit
 this frame" ([Free-fly constraints](/docs/architecture-modularity.md#free-fly-constraints-on-the-engine-tier):
 `focal` today, `follow` for free-fly later). `tick()` — called once per
-frame by `animate()`, before `flushLocalPositions` — asks the policy
+frame by the frame loop, before `flushLocalPositions` — asks the policy
 for a desired origin and recentres onto it. The service knows nothing
 about cameras or focus: the focal policy is
 `makeFocalAnchorPolicy` (`../camera/focus/focal-ride/focal-anchor-policy.ts`),

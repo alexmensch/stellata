@@ -1031,7 +1031,7 @@ describe('BinaryOrbitField.update — epoch drift precision', () => {
     let maxStepAu = 0;
     // Sweep 1.5 yr of epoch in fine steps (~0.005 yr): each true systemic
     // step is ~0.004 AU. Each frame also re-advances the float32 absolute
-    // buffer exactly as `maybeReAdvanceEpoch` does at runtime — the abs-reset
+    // buffer exactly as the frame loop's epoch step does at runtime — the abs-reset
     // path (focused/pre-fix) reads it and snaps in ~0.4 AU ULP jumps. Both
     // assertions discriminate the fix: smoothness fails on the snap, total
     // drift confirms the float64 reset tracks the systemic motion at all.

@@ -88,7 +88,7 @@ than building a fresh one, so the machine costs no allocation on the render
 path. `parkTick` may therefore read the landing but must never retain it —
 the `ParkState` it returns has to stand on its own.
 
-**One read gates both halves.** `animate()` reads `isMeasurementParked()`
+**One read gates both halves.** The frame loop reads `isMeasurementParked()`
 once and hands it to `HdrPipeline.setStatisticWritesParked` before `bind()`
 and to `reduction.measure`'s `parked` argument after the resolve. Two reads
 could pay the writes with nothing reducing them, or run the chain over an

@@ -1,7 +1,8 @@
 # Camera step — which controller moves the camera this tick
 
 `CameraStep.advance(nowMs)` runs once per `requestAnimationFrame` tick,
-above the render gate, from `stellata.ts` `animate()`. Exactly one
+above the render gate, from the frame loop
+([scene/frame-loop/](../../scene/frame-loop/README.md)). Exactly one
 controller moves the camera per tick, chosen in a fixed priority order, and
 the step answers whether that controller was a transition.
 
