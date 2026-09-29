@@ -244,7 +244,7 @@ standing gap rather than one the floor move creates.
 
 The record total that floor implies, what promotion and parking do to it, and
 what the result costs on the wire are the build's, not this folder's:
-[The record total the floor implies](../../scripts/catalog/membership/magnitude-term/README.md#the-record-total-the-floor-implies--983068-measured).
+[The record total the floor implies](../../scripts/catalog/membership/magnitude-term/README.md#the-record-total-the-floor-implies--measured).
 
 ## The GSPC validated-range flag — `1` means IN range
 
