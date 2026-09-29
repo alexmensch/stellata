@@ -372,11 +372,10 @@ The hook is a sweep, not a per-worktree copy: it lists the repo's worktrees
 (`git worktree list`, whose first entry is the main checkout) and, for each
 linked one with no link or a link to a different target, copies main's link
 with `cp -P`. So it needs nothing from the payload, works from whichever
-checkout the session is in, reaches worktrees made by hand with
-`git worktree add`, and re-points every worktree after the store moves.
+checkout the session is in, and reaches worktrees made by hand with
+`git worktree add`. Main's link is the authority for where the store is
+([The PDFs are private](/data/papers/README.md#the-pdfs-are-private)).
 
-- **Main's link is the only authority.** The store's path is read from it at
-  run time and written nowhere in the tree.
 - **It never replaces a real folder or file** at that path — only a missing
   entry or a symlink.
 - **Fails open**, like prime-guard: any error exits 0 silently, since a

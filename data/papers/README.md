@@ -105,7 +105,7 @@ the store exists only so claims can be checked against the paper itself.
   path it resolves to.
 - Every checkout has it. The main checkout's link is the one authority for
   where the store is; `scripts/hooks/paper-store-link.sh` copies that link
-  into every linked worktree that lacks it or holds a stale one
+  into every linked worktree
   ([How paper-store-link works](/scripts/hooks/README.md#how-paper-store-link-works)), so the store's path is
   written nowhere in the tree. Moving the store means re-pointing main's link
   alone. Outside Claude Code, copy it by hand: `cp -P <main>/data/papers/pdf
