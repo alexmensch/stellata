@@ -220,11 +220,8 @@ describe('perf-section-check', () => {
       expect(r.code, r.stdout).toBe(0);
     });
 
-    // The cost of matching anywhere, pinned rather than discovered in CI: the
-    // guard cannot tell a sentence ABOUT the marker from a regression written
-    // out in words, so the character is reserved for rows being accepted and
-    // /RELEASING.md#what-the-section-carries says so.
-    it('fails a section that merely talks about the marker', () => {
+    // see /RELEASING.md#what-the-section-carries
+    it('fails a section that talks about the marker with the bare character', () => {
       const r = check([
         '## Perf',
         '',
@@ -236,6 +233,31 @@ describe('perf-section-check', () => {
       ].join('\n'), ['src/client/milkyway/band.ts']);
       expect(r.code, r.stdout).toBe(1);
       expect(r.stdout).toContain('unnamed row');
+    });
+
+    it('passes the marker named alone in a code span', () => {
+      const r = check([
+        '## Perf',
+        '',
+        'Tier 0 — no per-frame code reachable from animate(), so no `✗` rows.',
+        '',
+        '## Release notes',
+        '',
+        '- x',
+      ].join('\n'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(0);
+    });
+
+    it('still marks a code span that names a row beside the character', () => {
+      const r = check(inline('`mw50|webgpu +1.7 ✗`'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(1);
+      expect(r.stdout).toContain('mw50|webgpu');
+    });
+
+    it('still marks a bare ✗ on a line that also names the glyph in a code span', () => {
+      const r = check(inline('lg|webgpu +0.4 ✗, per the `✗` convention'), ['src/client/milkyway/band.ts']);
+      expect(r.code, r.stdout).toBe(1);
+      expect(r.stdout).toContain('lg|webgpu');
     });
 
     it('passes the same claim written without the character', () => {

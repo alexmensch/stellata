@@ -85,7 +85,8 @@ fi
 # that accepted nothing. Every row key on a marked line (scenario|backend, with
 # an optional |compute, emphasis and punctuation stripped) owes an accepted:
 # line, and a marked line naming no row fails on its own text — there is no
-# row an accepted: line could name for it.
+# row an accepted: line could name for it. A ✗ alone in an inline code span
+# names the glyph rather than marking a row, so it is dropped before the scan.
 missing=()
 while IFS= read -r key; do
   [ -z "$key" ] && continue
@@ -93,6 +94,7 @@ while IFS= read -r key; do
     missing+=("$key")
   fi
 done < <(printf '%s\n' "$stripped" | awk '
+  { gsub(/`✗`/, "") }
   index($0, "✗") {
     named = 0
     for (i = 1; i <= NF; i++) {

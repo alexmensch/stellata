@@ -465,11 +465,13 @@ optional `|compute`, emphasis and punctuation stripped — and demands an
 pasted table row. A marked line naming no key fails on its own text: there
 is no row an `accepted:` line could answer it with.
 
-So **`✗` inside the section is reserved for rows you are accepting** —
-never for prose about the convention. "No `✗` rows" fails the guard, and
-it fails for the right reason, because the guard cannot tell that sentence
-from a regression reported in words. Say it as *every row within band*, or
-show the table. This bites hardest at Tier 0, whose section is prose only.
+So **a bare `✗` inside the section is reserved for rows you are
+accepting.** To name the character in prose, put it alone in an inline
+code span: the guard drops a code span holding only the glyph, so "no
+`✗` rows" written that way passes. Written bare, it fails, and for the
+right reason — the guard cannot tell that sentence from a regression
+reported in words. A code span that also names a row (`` `lg|webgpu +0.4 ✗` ``)
+still marks it. This bites hardest at Tier 0, whose section is prose only.
 
 **How the pin advances.** A Tier 2 PR commits its re-taken pin in the same
 PR, so the pin always describes what the version bump deploys. A `✗` is
