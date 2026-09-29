@@ -44,8 +44,7 @@ import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
-  compareBuildCounts,
-  formatCountDiff,
+  compareCountSnapshot,
   formatPartition,
   spectralSimbadPartitionError,
   type BuildCounts,
@@ -1344,13 +1343,7 @@ async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
     envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: EXPECTED_COUNTS,
     actual,
-    compare: (expected, actual) => {
-      const diff = compareBuildCounts(expected, actual);
-      return {
-        drifted: diff.some((d) => d.status === 'mismatch'),
-        report: formatCountDiff(diff),
-      };
-    },
+    compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:catalog',
   });

@@ -746,6 +746,18 @@ export function formatCountDiff(diff: CountDiff[]): string {
   return lines.join('\n');
 }
 
+/** The `compare` every count snapshot passes to `assertOrUpdateSnapshot`. */
+export function compareCountSnapshot<T extends object>(
+  expected: T,
+  actual: T,
+): { drifted: boolean; report: string } {
+  const diff = compareBuildCounts(expected, actual);
+  return {
+    drifted: diff.some((d) => d.status === 'mismatch'),
+    report: formatCountDiff(diff),
+  };
+}
+
 /** The SIMBAD namespace tallies must exhaust the SIMBAD tier: every record the
  *  resolver credits to SIMBAD reports exactly one namespace that found it, so a
  *  shortfall means a tier returned a row without naming its key and the
