@@ -1,6 +1,6 @@
 # CI helpers
 
-Scripts that `.github/workflows/` runs and nothing else does.
+Scripts that `.github/workflows/` runs.
 
 - `catalog-stage-pure.ts` (+ test) — the catalogue build stage's steps
   (`CATALOG_STAGE`: each package script and the committed paths it must
@@ -10,6 +10,25 @@ Scripts that `.github/workflows/` runs and nothing else does.
   `paths` prints the keyed files instead, which is how to audit a surprising
   miss or hit; `run` runs each step, then fails on any diff in its pinned
   paths.
+- `python_tests.py` (+ test) — the Python suites' runner, below. The one
+  script here with a local entry too, `pnpm run test:py`.
+
+## Python suites
+
+`test.yml`'s `Python suites` job runs every `scripts/**/*.test.py`: the
+glob is the list, so a new suite runs without a workflow edit. Each file
+runs in its own interpreter, since the suites put their own folder on
+`sys.path` and several import siblings by bare name; `unittest discover`
+is no substitute, as it matches no dotted name like
+`stage2_resolve.test.py`.
+
+**A skip fails the run**, and so does a file that runs no tests. The
+refresh suites `skipTest` when pyvo, astropy or requests is missing, so a
+run that tolerated skips could be green while testing almost nothing. The
+job installs `scripts/refresh/requirements-refresh.txt` and
+`scripts/textures/requirements.txt`; locally, run it from the project venv
+that holds them (`.venv/bin/python scripts/ci/python_tests.py`) — under a
+bare `python3`, the suites that import numpy fail.
 
 ## The catalogue build cache
 

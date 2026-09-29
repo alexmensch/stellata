@@ -48,6 +48,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
+  # see /scripts/ci/README.md#python-suites
+  python-tests:
+    name: Python suites
+    runs-on: ubuntu-latest
+    needs: lfs-data
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+          cache-dependency-path: |
+            scripts/refresh/requirements-refresh.txt
+            scripts/textures/requirements.txt
+      - run: pip install -r scripts/refresh/requirements-refresh.txt -r scripts/textures/requirements.txt
+      - run: python scripts/ci/python_tests.py
+
   # Reproducibility: the committed multiples.tsv (and the astrometry
   # request list) must be exactly what the committed pipeline code
   # produces — a stage change can't land with a stale artifact. The
