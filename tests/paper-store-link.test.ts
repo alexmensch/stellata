@@ -1,9 +1,10 @@
 // Behavioural test for scripts/hooks/paper-store-link.sh over a throwaway repo
 // with real linked worktrees.
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
-  existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync,
+  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, realpathSync, rmSync, symlinkSync,
+  writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -18,11 +19,13 @@ let main: string;
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
 
-function run(projectDir = main): void {
-  execFileSync('bash', [HOOK], {
+function run(projectDir = main): { status: number | null; stderr: string } {
+  const { status, stderr } = spawnSync('bash', [HOOK], {
     input: JSON.stringify({ hook_event_name: 'SessionStart' }),
     env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+    encoding: 'utf-8',
   });
+  return { status, stderr };
 }
 
 function addWorktree(name: string): string {
@@ -91,7 +94,25 @@ describe('paper-store-link', () => {
     expect(existsSync(join(wt, LINK))).toBe(false);
   });
 
-  it('exits cleanly outside a git repository', () => {
-    expect(() => run(root)).not.toThrow();
+  it('never replaces a real file in a worktree', () => {
+    const wt = addWorktree('wt1');
+    writeFileSync(join(wt, LINK), 'not a link\n');
+    run();
+    expect(lstatSync(join(wt, LINK)).isFile()).toBe(true);
+  });
+
+  it('exits 0 with empty stderr outside a git repository', () => {
+    expect(run(root)).toEqual({ status: 0, stderr: '' });
+  });
+
+  it('exits 0 with empty stderr when a worktree cannot take the link', () => {
+    const wt = addWorktree('wt1');
+    chmodSync(join(wt, 'data/papers'), 0o555);
+    try {
+      expect(run()).toEqual({ status: 0, stderr: '' });
+      expect(existsSync(join(wt, LINK))).toBe(false);
+    } finally {
+      chmodSync(join(wt, 'data/papers'), 0o755);
+    }
   });
 });
