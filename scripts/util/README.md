@@ -73,6 +73,14 @@ need the same thing — single-use helpers stay with their consumer.
   WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
   `snapshot-assert.test.ts` pins the missing-snapshot case.
+- `snapshot_assert.py` — the Python sibling, for the two binaries steps
+  (`build-binaries.py`'s counts, `build-runtime-binaries.py`'s pair
+  counts; `binaries/stage7_counts.py` builds its rates snapshot on the same
+  primitives). A leaf on purpose: `build_stamp.py` hashes every module a
+  step imports, so the runtime step reaching this through `stage7_counts`
+  would restamp `binaries.bin` on every pipeline-stage edit. Returns a
+  bool where the TS side exits, since the Python drivers own their exit.
+  Pinned by `snapshot_assert.test.py`.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
   `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed

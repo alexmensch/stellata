@@ -24,14 +24,12 @@ from scripts.binaries.stage5_optical import (  # noqa: E402
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
     DEFAULT_RATE_TOLERANCE,
-    UPDATE_COUNTS_ENV_VAR,
-    assert_or_update_counts,
     assert_or_update_rates,
     build_binaries_counts,
     build_binaries_rates,
-    compare_build_counts,
     compare_build_rates,
 )
+from scripts.util.snapshot_assert import UPDATE_COUNTS_ENV_VAR  # noqa: E402
 from scripts.binaries.pipeline_test_fixtures import (  # noqa: E402
     _component_astrometry,
     _resolved,
@@ -67,68 +65,6 @@ class BuildBinariesCountsTests(unittest.TestCase):
         self.assertEqual(counts["decomposing_pairs"], 1)
         self.assertEqual(counts["components_total"], 2)
         self.assertEqual(counts["optical_wds_notes_kept"], 1)
-
-
-class CompareBuildCountsTests(unittest.TestCase):
-    def test_match_when_equal(self) -> None:
-        a = {"x": 1, "y": 2}
-        diff = compare_build_counts(a, a)
-        self.assertTrue(all(d.status == "match" for d in diff))
-
-    def test_mismatch_signed_delta(self) -> None:
-        diff = compare_build_counts({"x": 10, "y": 5}, {"x": 12, "y": 5})
-        statuses = {d.key: d.status for d in diff}
-        self.assertEqual(statuses, {"x": "mismatch", "y": "match"})
-
-    def test_missing_keys_classified(self) -> None:
-        diff = compare_build_counts({"a": 1, "b": 2}, {"b": 2, "c": 3})
-        statuses = {d.key: d.status for d in diff}
-        self.assertEqual(statuses["a"], "missing_actual")
-        self.assertEqual(statuses["b"], "match")
-        self.assertEqual(statuses["c"], "missing_expected")
-
-
-class AssertOrUpdateCountsTests(unittest.TestCase):
-    def test_writes_initial_snapshot_when_missing(self) -> None:
-        import json as _json
-        with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "snapshot.json"
-            ok = assert_or_update_counts({"x": 1, "y": 2}, p)
-            self.assertTrue(ok)
-            self.assertTrue(p.exists())
-            written = _json.loads(p.read_text())
-        self.assertEqual(written, {"x": 1, "y": 2})
-
-    def test_compares_against_existing_snapshot_match(self) -> None:
-        with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "snapshot.json"
-            p.write_text('{"x": 1, "y": 2}\n')
-            ok = assert_or_update_counts({"x": 1, "y": 2}, p)
-        self.assertTrue(ok)
-
-    def test_compares_against_existing_snapshot_mismatch(self) -> None:
-        with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "snapshot.json"
-            p.write_text('{"x": 1, "y": 2}\n')
-            ok = assert_or_update_counts({"x": 1, "y": 3}, p)
-            self.assertFalse(ok)
-            # Snapshot file must NOT be silently rewritten on mismatch.
-            self.assertEqual(p.read_text(), '{"x": 1, "y": 2}\n')
-
-    def test_env_var_forces_update_on_mismatch(self) -> None:
-        import json as _json
-        import os as _os
-        with tempfile.TemporaryDirectory() as td:
-            p = Path(td) / "snapshot.json"
-            p.write_text('{"x": 1}\n')
-            try:
-                _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
-                ok = assert_or_update_counts({"x": 2}, p)
-            finally:
-                _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
-            self.assertTrue(ok)
-            written = _json.loads(p.read_text())
-        self.assertEqual(written, {"x": 2})
 
 
 class BuildBinariesRatesTests(unittest.TestCase):

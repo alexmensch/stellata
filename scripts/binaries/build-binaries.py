@@ -115,11 +115,15 @@ from scripts.binaries.stage6_multiples import (  # noqa: E402
     write_multiples_tsv,
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
-    UPDATE_COUNTS_ENV_VAR,
-    assert_or_update_counts,
+    LABEL,
     assert_or_update_rates,
     build_binaries_counts,
     build_binaries_rates,
+)
+
+from scripts.util.snapshot_assert import (  # noqa: E402
+    UPDATE_COUNTS_ENV_VAR,
+    assert_or_update_counts,
 )
 
 SRC_WDS_SUMM = DATA / "wds" / "wds_summ.txt"
@@ -154,10 +158,6 @@ OUT_ASTROMETRY_REQUEST = DATA / "gaia" / "gaia_astrometry_source_id_request.tsv"
 # contradiction detector.
 OUT_BINDING_VERDICTS = ROOT / "build" / "binding-integrity-verdicts.tsv"
 
-# Committed snapshot of per-strategy / per-tier counts emitted at the
-# end of every build. The Python comparator in stage7_counts.py mirrors
-# ``scripts/catalog/build-catalog.ts``'s ``assertOrUpdateBuildCounts``
-# flow — refresh deliberately with ``UPDATE_BUILD_COUNTS=1``.
 EXPECTED_COUNTS = SCRIPT.parent / "build-binaries-expected.json"
 EXPECTED_RATES = SCRIPT.parent / "build-binaries-rates-expected.json"
 
@@ -684,7 +684,7 @@ def run(force: bool) -> int:
             "athyg_match_sibling_claimed_rejected", 0,
         ),
     )
-    counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS)
+    counts_match = assert_or_update_counts(counts, EXPECTED_COUNTS, LABEL)
     rates = build_binaries_rates(counts)
     rates_match = assert_or_update_rates(rates, EXPECTED_RATES)
     if not counts_match or not rates_match:
