@@ -76,12 +76,6 @@ export function slewDm(applied: number, measured: number, blend: number): number
  *  else in frame that owns less than half the masked area. */
 export type FrameStatistic = TileReduction;
 
-export const EMPTY_FRAME_STATISTIC: FrameStatistic = {
-  meanL: 0,
-  coverage: 0,
-  discL: 0,
-};
-
 /** The two levels the branches are measured against. Ships at the
  *  constants above; the debug panel overrides `lAdapt` / `lTarget` live,
  *  and `whitePoint` tracks the operator's own `DR_MAG` knob — the floor is
@@ -155,6 +149,7 @@ export type AdaptationRegime = 'open' | 'eye' | 'floor' | 'surface' | 'handover'
 /** Every term behind one frame's cut, so a readout never has to recompute
  *  a branch and risk disagreeing with the frame it describes. */
 export interface AdaptationBranches {
+  meanL: number;
   eye: number;
   pin: number;
   floor: number;
@@ -184,6 +179,7 @@ export function adaptationBranches(
   const perception = Math.max(eye, floor);
   const dm = perception + (pin - perception) * weight;
   return {
+    meanL: stat.meanL,
     eye,
     pin,
     floor,
@@ -194,6 +190,8 @@ export function adaptationBranches(
     regime: adaptationRegime(dm, eye, weight),
   };
 }
+
+export const UNMEASURED_CUT: Pick<AdaptationBranches, 'dm' | 'regime'> = { dm: 0, regime: 'open' };
 
 function adaptationRegime(dm: number, eye: number, weight: number): AdaptationRegime {
   if (dm === 0) return 'open';

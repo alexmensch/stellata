@@ -11,10 +11,10 @@ import {
   type FrameStatistic,
   adaptationBranches,
   ADAPT_SLEW_TAU_S,
-  EMPTY_FRAME_STATISTIC,
   L_ADAPT,
   L_TARGET,
   slewDm,
+  UNMEASURED_CUT,
 } from './scene-adaptation-pure';
 import {
   INITIAL_PARK_STATE,
@@ -24,6 +24,10 @@ import {
   parkTick,
   parkUnderHold,
 } from './park/adaptation-park-pure';
+
+interface LandedStatistic extends FrameStatistic {
+  readonly from: ReducedStatistic;
+}
 
 export interface SceneAdaptationDeps {
   /** The instrument's own exposure — no adaptation, no trim. Measuring
@@ -53,12 +57,11 @@ export class SceneAdaptation {
   private readonly deps: SceneAdaptationDeps;
 
   private dm = 0;
-  private stat: FrameStatistic = EMPTY_FRAME_STATISTIC;
+  private landed: LandedStatistic | null = null;
   private park: ParkState = INITIAL_PARK_STATE;
   private readonly landing: ParkLanding = {
     fresh: false, measuredDm: 0, appliedDm: 0, regime: 'open', probeReady: false,
   };
-  private lastLanded: ReducedStatistic | null = null;
   private lastNowMs: number | null = null;
   private lAdapt = L_ADAPT;
   private lTarget = L_TARGET;
@@ -81,20 +84,20 @@ export class SceneAdaptation {
     if (chart) return this.reset();
     perfMark('adaptation');
     const reduced = this.deps.reduced();
-    const landedFresh = reduced !== null && reduced !== this.lastLanded;
+    const landedFresh = reduced !== null && reduced !== this.landed?.from;
     if (reduced !== null) {
-      this.lastLanded = reduced;
       const base = this.deps.baseExposure();
       // Rescaling the landed median is exact, not an approximation: the
       // divisor is positive, so it orders the tiles the same way and the
       // same tile wins either side of it. No need to rescale per tile.
-      this.stat = {
+      this.landed = {
+        from: reduced,
         meanL: rescaleToBaseExposure(reduced.meanL, reduced.renderExposure, base),
         discL: rescaleToBaseExposure(reduced.discL, reduced.renderExposure, base),
         coverage: reduced.coverage,
       };
     }
-    const { dm: measured, regime } = this.branches();
+    const { dm: measured, regime } = this.branches() ?? UNMEASURED_CUT;
     const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, measured, blend);
@@ -142,12 +145,13 @@ export class SceneAdaptation {
   }
 
   /** This frame's decomposition — the three branch terms and which of them
-   *  set the cut. Recomputed on read rather than cached at `measure()`, so
-   *  a knob moved between frames shows its effect on the same statistic
-   *  instead of one frame late. `dm` here is the *measurement*; the applied
-   *  cut is `getDm()`, which trails it by the slew. */
-  branches(): AdaptationBranches {
-    return adaptationBranches(this.stat, this.getTuning());
+   *  set the cut — or null where no reduction has landed. Recomputed on read
+   *  rather than cached at `measure()`, so a knob moved between frames shows
+   *  its effect on the same statistic instead of one frame late. `dm` here is
+   *  the *measurement*; the applied cut is `getDm()`, which trails it by the
+   *  slew. */
+  branches(): AdaptationBranches | null {
+    return this.landed === null ? null : adaptationBranches(this.landed, this.getTuning());
   }
 
   /** Adaptation anchor — `L̄` at which the perception branch's cut is zero.
@@ -196,20 +200,14 @@ export class SceneAdaptation {
     return this.dm;
   }
 
-  /** The whole frame statistic at the base exposure: `L̄`, the lit-surface
-   *  coverage, and the modal masked surface's own brightness the pin
-   *  holds. */
-  getStatistic(): FrameStatistic {
-    return this.stat;
-  }
-
-  /** The same statistic, or **null** where none has landed — before the
-   *  first reduction, and after chart's reset. The brightness skip needs
-   *  that distinction where the readout does not: a genuinely dark frame
-   *  also measures `L̄` = 0, and rule 2 cannot be evaluated without a real
-   *  `L̄` (`/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound`). */
+  /** The whole frame statistic at the base exposure — `L̄`, the lit-surface
+   *  coverage, and the modal masked surface's own brightness the pin holds —
+   *  or **null** where none has landed: before the first reduction, and
+   *  after chart's reset. A genuinely dark frame also measures `L̄` = 0, and
+   *  the brightness skip's rule 2 cannot be evaluated without a real `L̄`
+   *  (`/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound`). */
   getLandedStatistic(): FrameStatistic | null {
-    return this.lastLanded === null ? null : this.stat;
+    return this.landed;
   }
 
   /** Chart's bypass, and the slew's own first-frame state: dropping
@@ -217,9 +215,8 @@ export class SceneAdaptation {
    *  ramp up from chart's zero cut. */
   private reset(): number {
     this.dm = 0;
-    this.stat = EMPTY_FRAME_STATISTIC;
     this.park = INITIAL_PARK_STATE;
-    this.lastLanded = null;
+    this.landed = null;
     this.lastNowMs = null;
     return 0;
   }

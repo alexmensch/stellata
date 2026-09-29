@@ -145,11 +145,13 @@ function nullableFieldsOf(file: ts.SourceFile): string[] {
 }
 
 const NO_SELECTION = 'verdict: null is "nothing selected", its own answer';
+const NO_REDUCTION = 'verdict: null is "no reduction has landed", which a dark frame\'s 0 cannot say';
 
 /** Keyed `method` on the shell, `namespace.method` on a readonly namespace. */
 const NULLABLE_SHELL_RETURNS: Readonly<Record<string, string>> = {
   getOrbitFramePort: 'install seam: null is "no instrument", which is its own answer',
-  'adaptation.getLandedStatistic': 'verdict: null is "no reduction has landed", which a dark frame\'s 0 cannot say',
+  'adaptation.getLandedStatistic': NO_REDUCTION,
+  'adaptation.branches': NO_REDUCTION,
   'constellationFigure.aimDirection': 'verdict: null is "no figure with a vertex in any direction from there"',
   'constellationBoundaries.constellationOf':
     'verdict: null is "nothing to name" — the artifact arrives at construction, so never "not yet"',

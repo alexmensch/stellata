@@ -39,7 +39,7 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'ConstellationFigureLayer.lineSegments': RESOURCE,
   'ConstellationFigureLayer.positions': RESOURCE,
   'FloatingOrigin.policy': SEAM,
-  'SceneAdaptation.lastLanded': CACHE,
+  'SceneAdaptation.landed': CACHE,
   'SceneAdaptation.lastNowMs': CACHE,
   'LocalBubbleShell.geometry': RESOURCE,
   'LocalBubbleShell.mesh': RESOURCE,
