@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { NO_PINNED_STAR } from '../../frame/shared-uniforms';
+import { tToJdUt, VirtualClock } from '../../solar-system/time/time';
+import { J2000_JD } from '../../util/astronomy-constants';
 import type { FrameCtx } from '../scene-layer';
 import { FrameLoop, type FrameLoopDeps } from './frame-loop';
 
@@ -14,7 +16,11 @@ interface Knobs {
   focusedStar: number | null;
 }
 
-function harness(overrides: Partial<Knobs> = {}) {
+const FIXED_CLOCK = {
+  getT: () => 946_728_000, getRate: () => 86_400, beginFrame: () => {}, endFrame: () => {},
+};
+
+function harness(overrides: Partial<Knobs> = {}, clock: FrameLoopDeps['clock'] = FIXED_CLOCK) {
   const knobs: Knobs = {
     render: true, animating: false, realtime: false, epochStep: false,
     recentred: false, pinnedStar: null, focusedStar: 7, ...overrides,
@@ -34,6 +40,7 @@ function harness(overrides: Partial<Knobs> = {}) {
   };
   const gateInputs: { continuous: boolean; cadenceDue: boolean }[] = [];
   const ctxs: FrameCtx[] = [];
+  const reads: Record<string, number> = {};
   const renderer = { render: note('render') };
   const deps = {
     scene,
@@ -42,14 +49,15 @@ function harness(overrides: Partial<Knobs> = {}) {
     webgpu: { renderer, timestampsAvailable: false, syncUniformNodes: note('syncUniformNodes') },
     hdr: { bind: note('hdr.bind'), resolve: note('hdr.resolve') },
     uniforms,
-    clock: { getT: () => 946_728_000, getRate: () => 86_400 },
+    clock,
     origin: {
       worldOffset,
       tick: () => { log.push('origin.tick'); return knobs.recentred; },
     },
     starFrame: {
-      advanceEpochTo: (_t: number, _focal: number | null, out: THREE.Vector3) => {
+      advanceEpochTo: (t: number, _focal: number | null, out: THREE.Vector3) => {
         log.push('advanceEpochTo');
+        reads.epoch = t;
         if (knobs.epochStep) out.set(0.5, 0, 0);
         return knobs.epochStep;
       },
@@ -68,7 +76,11 @@ function harness(overrides: Partial<Knobs> = {}) {
     warp: { isActive: () => true },
     layers: {
       realtimeFramesNeeded: () => { log.push('realtime?'); return knobs.realtime; },
-      updateAll: (ctx: FrameCtx) => { log.push('updateAll'); ctxs.push({ ...ctx }); },
+      updateAll: (ctx: FrameCtx) => {
+        log.push('updateAll');
+        ctxs.push({ ...ctx });
+        reads.layer = clock.getT();
+      },
     },
     cadence: {
       isDue: () => false,
@@ -93,10 +105,10 @@ function harness(overrides: Partial<Knobs> = {}) {
     starPipeline: { update: note('starPipeline.update') },
     localDepthPass: { render: note('localDepth.render') },
     pxPerRadian: () => 1234,
-    emitFrame: note('emitFrame'),
+    emitFrame: () => { log.push('emitFrame'); reads.frameEvent = clock.getT(); },
   } as unknown as FrameLoopDeps;
   const loop = new FrameLoop(deps);
-  return { loop, log, knobs, uniforms, gateInputs, ctxs, scene, deps };
+  return { loop, log, knobs, uniforms, gateInputs, ctxs, scene, deps, reads };
 }
 
 let scheduled: FrameRequestCallback[] = [];
@@ -192,6 +204,36 @@ describe('FrameLoop tick', () => {
     const { loop, log } = harness({ recentred: true, render: false });
     loop.start();
     expect(log).toContain('reseedMoving');
+  });
+});
+
+describe('FrameLoop — one sim instant per tick', () => {
+  const T0 = 946_728_000;
+  // A millisecond of wall time between reads is ~50 sim days at this rate.
+  function steppingClock(): VirtualClock {
+    let wall = 1_000;
+    const clock = new VirtualClock(() => (wall += 1e-3));
+    clock.setRate(2 ** 32);
+    clock.setTimeAbsolute(T0);
+    return clock;
+  }
+
+  it('the epoch step, FrameCtx.t, uModelDays and every reader in the tick agree', () => {
+    const clock = steppingClock();
+    const { loop, ctxs, uniforms, reads } = harness({}, clock);
+    loop.start();
+    const t = ctxs[0].t;
+    expect(reads).toEqual({ epoch: t, layer: t, frameEvent: t });
+    expect(uniforms.uModelDays.value).toBe(tToJdUt(t) - J2000_JD);
+  });
+
+  it('releases the clock after a rendered tick and after a refused one', () => {
+    for (const render of [true, false]) {
+      const clock = steppingClock();
+      const { loop, reads } = harness({ render }, clock);
+      loop.start();
+      expect(clock.getT()).toBeGreaterThan(reads.epoch);
+    }
   });
 });
 

@@ -169,16 +169,13 @@ export function parseJumpEntry(value: string): number {
   return Number.isNaN(ms) ? parseJulianDateValue(value) : ms / 1000;
 }
 
-/** Virtual clock behind `Stellata.getT()`. `getT() = simT0 + rate ·
- *  (wallNow − wallT0)`, so at `rate = 1` in steady state it tracks
- *  wall-clock exactly. Rate flips snapshot the current virtual time so
- *  time never teleports. This is the ONLY place wall-clock is sampled
- *  for the simulation `t`; every consumer reads through `getT()`. */
+/** Virtual clock behind `Stellata.getT()`; see README.md#time-t-and-the-readout. */
 export class VirtualClock {
   private simT0: number;
   private wallT0: number;
   private rate = 1;
   private lastPositiveRate = 1;
+  private frameT: number | null = null;
   private readonly wallNow: () => number;
 
   constructor(wallNow: () => number = () => Date.now() / 1000) {
@@ -188,6 +185,18 @@ export class VirtualClock {
   }
 
   getT(): number {
+    return this.frameT ?? this.liveT();
+  }
+
+  beginFrame(): void {
+    this.frameT = this.liveT();
+  }
+
+  endFrame(): void {
+    this.frameT = null;
+  }
+
+  private liveT(): number {
     const now = this.wallNow();
     const raw = this.simT0 + this.rate * (now - this.wallT0);
     if (raw < T_CLAMP_MIN_S || raw > T_CLAMP_MAX_S) {
@@ -211,11 +220,13 @@ export class VirtualClock {
     this.wallT0 = now;
     this.rate = r;
     if (r > 0) this.lastPositiveRate = r;
+    this.relatch();
   }
 
   setTimeAbsolute(secs: number): void {
     this.simT0 = clampT(secs);
     this.wallT0 = this.wallNow();
+    this.relatch();
   }
 
   reset(): void {
@@ -224,6 +235,11 @@ export class VirtualClock {
     this.wallT0 = now;
     this.rate = 1;
     this.lastPositiveRate = 1;
+    this.relatch();
+  }
+
+  private relatch(): void {
+    if (this.frameT !== null) this.frameT = this.liveT();
   }
 
   play(): void { this.setRate(this.lastPositiveRate); }

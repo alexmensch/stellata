@@ -15,6 +15,11 @@ registers its `lastCameraWriteEntry`, and calls `start()`.
 
 ## The tick
 
+Every tick runs inside one clock frame, so every sim-time read in it —
+the steps below, the layers' own `getT` closures, the `'frame'` handlers —
+answers the same instant
+([One instant per frame](../../solar-system/time/README.md#one-instant-per-frame)).
+
 Above the gate — every tick, rendered or not:
 
 1. **Epoch step.** `StarFrame.advanceEpochTo(t, focusedStar)`; when it

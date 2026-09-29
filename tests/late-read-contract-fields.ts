@@ -52,6 +52,7 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'RenderGate.lastDecision': CACHE,
   'OrbitRingsLayer.ps': SELECTION,
   'PlanetBodyField.lastDimNowMs': CACHE,
+  'VirtualClock.frameT': IN_FLIGHT,
   'StarLocalCluster.hostMemberIdx': SELECTION,
   'StarLocalCluster.chainFocalIdx': CACHE,
   'StarLocalCluster.chainBinaries': CACHE,
