@@ -201,7 +201,7 @@ inside the layer.
   when `appMag > uThresholdMag + 0.5`, and `forEachDrawnBodyView` mirrors
   that — as an OR with `physDiscPx >= MESH_FADE_MIN_PX`, since a body
   whose mesh is up is visible whatever its glare does. NO additional gate
-  on `focusedPlanetSystem !== null`. The magnitude half of that OR still
+  on the focused planet system being ready. The magnitude half of that OR still
   compares against `uThresholdMag` and so carries the adaptation blind
   spot described above; the mesh half does not, which is why a parked
   body — the case that drives the cut deepest — still picks correctly.

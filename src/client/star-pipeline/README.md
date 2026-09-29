@@ -330,12 +330,15 @@ paints from the same varying the flux integral is taken over.
 
 `uHideFocusIdx` (int) suppresses a single star across all three passes by
 collapsing its vertex to a clip-space sentinel outside the frustum when
-the star being drawn is the one it names. Defaults to `-1` (no
-suppression). Set to the focal-star index in OBSERVE
+the star being drawn is the one it names. Defaults to `NO_INSTANCE`
+(no suppression; `../frame/shared-uniforms.ts`). Set to the focal-star index in OBSERVE
 mode (camera parked at the focal star — disc would render from inside) and
 held pinned to the source star throughout an observe-launched warp so the
 reorient phase doesn't flash the focal disc as the camera pulls away; the
 pick path mirrors it (`../camera/controls/star-pick-visibility-pure.ts`).
+`StarPipeline.setHiddenStar` is its only writer and holds the hidden star
+as `number | null`, which the pick and the local cluster read — never the
+uniform back.
 
 `iCompositeSuppress` (float, per-instance) collapses a star's disc and
 core depth-mask passes — but not the additive glow — under the same
@@ -369,7 +372,7 @@ variable, so the cosmetic pulse is always dishonest; orbital pairs
 additionally get the geometric dip from `iEclipseDim`, orbit-less
 eclipsers simply render static.
 
-`uPinFocusToCenter` (int, default `-1`) replaces the standard
+`uPinFocusToCenter` (int, default `NO_INSTANCE`) replaces the standard
 projection chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the
 matched instance, sidestepping float32 cancellation in the projection
 chain at sub-µpc orbit distances. Set per-frame by the integration

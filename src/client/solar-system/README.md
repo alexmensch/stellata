@@ -301,6 +301,11 @@ write ([Camera writes, then camera reads](../scene/README.md#camera-writes-then-
 after both. All three, and the moving-focal ride (`FocalRides`), declare
 `planetRate` — the bodies are what each one draws a view of.
 
+The `'planetSystem'` event is the wiring's one input for the focused system:
+it builds the rings, and the rings entry's per-frame update reads the system
+back off `OrbitRingsLayer.planetSystem()` rather than asking focus a second
+time.
+
 ## First-load default and `minDistance` relaxation
 
 When the URL carries no view state, `first-load.ts` applies a
@@ -364,8 +369,9 @@ moon at its park distance.
   and already handles this; any new focus path must as well.
 - **Planet-system attach is async.** `getPlanetSystem` is a Promise
   even for Sol (which currently resolves synchronously). Don't assume the
-  system is attached the same frame `setFocus` fires; the renderer
-  handles `planetSystem === null` gracefully.
+  system is attached the same frame `setFocus` fires:
+  `getFocusedPlanetSystem()` is `pending` until it lands, and every
+  reader draws nothing until it is `ready`.
 - **Orbital plane rule for new hosts.** Any new planet-bearing host
   must declare its plane via the orientation quaternion. The default
   for non-Sol hosts is the galactic plane — don't accidentally

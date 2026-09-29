@@ -13,7 +13,7 @@ import {
 } from '../../debug/perf-hud';
 import { resolveAndPublishGpuFrame } from '../../debug/gpu-timing/gpu-frame-samples';
 import type { FloatingOrigin } from '../../frame/floating-origin';
-import { NO_PINNED_STAR, type SharedUniforms } from '../../frame/shared-uniforms';
+import { NO_INSTANCE, type SharedUniforms } from '../../frame/shared-uniforms';
 import type { HdrSeam } from '../../hdr/hdr-seam';
 import type { ExposureFrameStep } from '../../hdr/exposure/exposure-frame-step';
 import type { LocalDepthPass } from '../../local-depth/local-depth-pass';
@@ -136,7 +136,7 @@ export class FrameLoop {
     }
     perfMark('pre-render');
     d.uniforms.uCameraPos.value.copy(d.camera.position);
-    d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_PINNED_STAR;
+    d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_INSTANCE;
     d.uniforms.uModelDays.value = tToJdUt(this.frameCtx.t) - J2000_JD;
     d.uniforms.uModelDaysPerRealSec.value = Math.abs(d.clock.getRate()) / 86400;
     // Here, not by either publisher: each would drop the other's entries.

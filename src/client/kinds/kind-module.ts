@@ -135,6 +135,6 @@ export interface ObjectKindModule<K extends TargetKind = TargetKind> {
    *  t-sampled state before the next frame reads it. */
   clockJumped?(t: number): void;
   /** Hide slot for the kind's focal body while observe parks the camera
-   *  at it; -1 unhides. */
-  setFocalHidden?(idx: number): void;
+   *  at it; null unhides. */
+  setFocalHidden?(idx: number | null): void;
 }

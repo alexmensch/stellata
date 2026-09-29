@@ -150,7 +150,7 @@ describe('probe kind module', () => {
     expect(pick(0, 0, 14)).toBeNull();
   });
 
-  it('setFocalHidden suppresses the marker from the pick surface; -1 restores it', async () => {
+  it('setFocalHidden suppresses the marker from the pick surface; null restores it', async () => {
     stubFetch(['voyager1']);
     const m = createProbeKindModule();
     await m.load('/');
@@ -165,7 +165,7 @@ describe('probe kind module', () => {
     layer.update?.(probeFrameCtx(ctx));
     expect(pick(400, 300, 14)).toBeNull();
 
-    m.setFocalHidden!(-1);
+    m.setFocalHidden!(null);
     layer.update?.(probeFrameCtx(ctx));
     expect(pick(400, 300, 14)?.idx).toBe(0);
   });

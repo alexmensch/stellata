@@ -238,6 +238,11 @@ Many slots are star-specific (`uColorLut`, `uLocalMemberIdx`,
 read, and narrowing per consumer happens at the type level
 (`PerceptualDiscUniforms`, `StarPhysicsUniforms`), not by cloning slots.
 
+`NO_INSTANCE` (-1) is the one "names no instance" value for every
+instance-index slot — `uPinFocusToCenter`, `uHideFocusIdx`, and the planet
+glare's `uHideIdx`. Callers carry absence as `null` and write the sentinel
+only where the value reaches the uniform.
+
 The renderer mirrors this map as TSL uniform nodes
 ([Shared uniform nodes](../webgpu/tsl/README.md#shared-uniform-nodes)); a key-parity test pins
 the mirror, so adding a slot here fails CI until the node counterpart

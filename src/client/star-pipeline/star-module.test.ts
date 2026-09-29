@@ -40,6 +40,7 @@ function makeRuntime(overrides: Partial<StarModuleRuntime> = {}): StarModuleRunt
     renderedSizePx: () => 12,
     peakDiscSizePx: () => 9,
     pickStarHit: () => null,
+    setHiddenStar: () => {},
     binaries: lateAbsent(),
     ...overrides,
   };
@@ -173,15 +174,14 @@ describe('star kind module', () => {
     expect(m.displayName(0)).toBe('Unnamed (SID #7)');
   });
 
-  it('attaches layer-less and drives the uHideFocusIdx pin', async () => {
+  it('attaches layer-less and hands the focal hide to the pipeline', async () => {
     const { m } = await loadedModule();
-    const ctx = makeKindContext();
+    const hidden: (number | null)[] = [];
+    m.setRuntime(makeRuntime({ setHiddenStar: (idx) => { hidden.push(idx); } }));
+    expect(m.attach(makeKindContext())).toBeNull();
     m.setFocalHidden?.(5);
-    expect(m.attach(ctx)).toBeNull();
-    m.setFocalHidden?.(5);
-    expect((ctx.sharedUniforms.uHideFocusIdx as { value: number }).value).toBe(5);
-    m.setFocalHidden?.(-1);
-    expect((ctx.sharedUniforms.uHideFocusIdx as { value: number }).value).toBe(-1);
+    m.setFocalHidden?.(null);
+    expect(hidden).toEqual([5, null]);
   });
 
   it('serves the focusable legs from catalog + runtime', async () => {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { NO_PINNED_STAR } from '../../frame/shared-uniforms';
+import { NO_INSTANCE } from '../../frame/shared-uniforms';
 import { tToJdUt, VirtualClock } from '../../solar-system/time/time';
 import { J2000_JD } from '../../util/astronomy-constants';
 import type { FrameCtx } from '../scene-layer';
@@ -189,7 +189,7 @@ describe('FrameLoop tick', () => {
   it('writes the disabled pin sentinel when the pin is not engaged', () => {
     const { loop, uniforms } = harness({ pinnedStar: null });
     loop.start();
-    expect(uniforms.uPinFocusToCenter.value).toBe(NO_PINNED_STAR);
+    expect(uniforms.uPinFocusToCenter.value).toBe(NO_INSTANCE);
   });
 
   it('an epoch step invalidates, refreshes extinction and hands the follow its delta', () => {

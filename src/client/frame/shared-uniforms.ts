@@ -16,8 +16,9 @@ import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
 import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
 
-/** `uPinFocusToCenter` when no star is pinned. */
-export const NO_PINNED_STAR = -1;
+/** An instance-index uniform (`uPinFocusToCenter`, `uHideFocusIdx`, the
+ *  planet glare's `uHideIdx`) naming no instance. */
+export const NO_INSTANCE = -1;
 
 export interface SharedUniformsOptions {
   pixelRatio: number;
@@ -138,7 +139,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // index when the camera is parked on it; -1 disables the gate. All
     // three star passes (disc, glow, core mask) share these uniforms so
     // the suppression fires uniformly.
-    uHideFocusIdx: { value: -1 },
+    uHideFocusIdx: { value: NO_INSTANCE },
     // Member stars of the active local-depth clusters; a member's
     // main-pass instance collapses and the pass's mirror draws render
     // it. Written per frame by StarLocalCluster.update. -1 = empty slot.
@@ -155,6 +156,6 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // the shader replaces its centreClip with projectionMatrix *
     // (0, 0, -distCam, 1) to bypass the cancellation.
     // Updated each rendered frame by FrameLoop since pan can move target away.
-    uPinFocusToCenter: { value: NO_PINNED_STAR },
+    uPinFocusToCenter: { value: NO_INSTANCE },
   } satisfies PerceptualDiscUniforms & Record<string, THREE.IUniform>;
 }
