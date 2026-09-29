@@ -16,7 +16,7 @@ import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
-import { isHardTarget, targetsEqual, type Target, type TargetKind } from '../../camera/focus/focus-target';
+import { isHardTarget, targetListsEqual, type Target, type TargetKind } from '../../camera/focus/focus-target';
 import { buildSharePath, pickShareBlob } from './share-path-pure';
 import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
@@ -1130,10 +1130,6 @@ function landedPins(pins: LinkPins): Target[] {
   return pins.slots.filter((t): t is Target => t !== null);
 }
 
-function sameTargets(a: readonly Target[], b: readonly Target[]): boolean {
-  return a.length === b.length && a.every((t, i) => targetsEqual(t, b[i]));
-}
-
 /** see README.md#a-pin-that-resolves-after-the-link */
 function restorePins(stellata: Stellata, sids: readonly number[], idMaps: IdMaps): void {
   const pins: LinkPins = { sids, slots: sids.map(() => null), written: [] };
@@ -1147,7 +1143,7 @@ function restorePins(stellata: Stellata, sids: readonly number[], idMaps: IdMaps
       pins.slots[i] = target;
       if (inline || linkPins.get(stellata) !== pins) return;
       const live = stellata.pois.get();
-      const next = sameTargets(live, pins.written) ? landedPins(pins) : [...live, target];
+      const next = targetListsEqual(live, pins.written) ? landedPins(pins) : [...live, target];
       stellata.pois.set(next);
       pins.written = stellata.pois.get().slice();
     });
