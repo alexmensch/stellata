@@ -58,7 +58,7 @@ jobs:
       - uses: ./.github/actions/lfs-cache
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.x'
+          python-version-file: .python-version
           cache: 'pip'
           cache-dependency-path: |
             scripts/refresh/requirements-refresh.txt
