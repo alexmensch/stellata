@@ -14,6 +14,7 @@ import {
   COMPONENT_REASON_PREFIX,
   MANIFEST_COLUMNS,
   bindingReviewKey,
+  additionItemCells,
   buildMembership,
   manifestDesignations,
   manifestKey,
@@ -583,6 +584,15 @@ describe('spine corrections', () => {
 });
 
 describe('buildMembership — the additions', () => {
+  it('enumerates every addition item\'s cells off the primaries and the spine alone', () => {
+    const cells = additionItemCells(tables, spine);
+    expect(cells).toContainEqual({ tyc: '2-3-1', hip: '', gl: '' });
+    expect(cells).toContainEqual({ tyc: '', hip: '40', gl: '' });
+    expect(cells).toContainEqual({ tyc: '', hip: '', gl: 'GJ 10001' });
+    expect(cells.filter((c) => c.tyc === '1-1-1')).toEqual([]);
+    expect(cells).toHaveLength(12 + 3 + 3); // IV/25 TYCs, I/239 HIPs, CNS5 rows the spine lacks
+  });
+
   it('admits an IV/25 star and merges the HIP Tycho-2 names for it into one row', () => {
     const row = byTyc.get('2-1-1')!;
     expect(row).toMatchObject({

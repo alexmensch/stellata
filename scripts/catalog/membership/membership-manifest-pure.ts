@@ -1046,6 +1046,26 @@ function additionCells(items: readonly AdditionCohorts[]): BindingCells {
   };
 }
 
+function additionCohortItems(
+  tables: PrimaryTables, kept: readonly SpineRow[], idx: PrimaryIndex,
+): Array<Omit<AdditionItem, 'derived'>> {
+  const additions = findAdditions(tables, spineKeys(kept), idx);
+  return [
+    ...additions.hd.map((hd) => ({ key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null })),
+    ...additions.hip.map((hip) => ({ key: `hip:${hip.hip}`, hd: null, hip, cns5: null })),
+    ...additions.cns5.newRecords.map((cns5) => ({
+      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5,
+    })),
+  ];
+}
+
+/** ../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise. */
+export function additionItemCells(
+  tables: PrimaryTables, kept: readonly SpineRow[],
+): BindingCells[] {
+  return additionCohortItems(tables, kept, indexPrimaries(tables)).map((i) => additionCells([i]));
+}
+
 function candidateVia(d: DerivedBinding, source: BindingSource): string | null {
   return d.ranked.find((c) => c.via.includes(source))?.sourceId ?? null;
 }
@@ -1343,15 +1363,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   }
 
   const claims = spineClaims(records);
-  const additions = findAdditions(tables, spineKeys(kept), idx);
-  const bare: Array<Omit<AdditionItem, 'derived'>> = [
-    ...additions.hd.map((hd) => ({ key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null })),
-    ...additions.hip.map((hip) => ({ key: `hip:${hip.hip}`, hd: null, hip, cns5: null })),
-    ...additions.cns5.newRecords.map((cns5) => ({
-      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5,
-    })),
-  ];
-  const items: AdditionItem[] = bare.map((i) => ({ ...i, derived: derive(additionCells([i])).derived }));
+  const items: AdditionItem[] = additionCohortItems(tables, kept, idx).map((i) => ({
+    ...i, derived: derive(additionCells([i])).derived,
+  }));
   const index = indexAdditions(tables);
   const derivedGroups = groupAdditions(items, tables, index).map((g) => ({
     items: g, derived: g.length === 1 ? g[0].derived : derive(additionCells(g)).derived,

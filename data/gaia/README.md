@@ -51,7 +51,7 @@ gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
                                        binding gate's candidates UNION the
                                        membership derivation's candidates UNION
                                        the kept-physical multiples.tsv pair
-                                       members, 383,057 ids
+                                       members, 383,056 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
