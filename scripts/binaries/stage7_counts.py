@@ -180,9 +180,7 @@ def build_binaries_counts(
 
 
 # Default ±tolerance (relative to expected value) applied when a rate
-# is first written into the snapshot. Hand-edited per-key tolerances
-# survive refreshes via mergeReasonsFromSnapshot-style preservation in
-# ``assert_or_update_rates``.
+# is first written into the snapshot.
 DEFAULT_RATE_TOLERANCE = 0.20
 
 # Stage-2 resolution tiers that carry a source-ID anchor. ``ccdm_hip``
