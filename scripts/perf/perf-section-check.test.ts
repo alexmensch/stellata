@@ -295,6 +295,44 @@ describe('perf-section-check', () => {
     expect(r.stdout).toContain('every ✗ accepted');
   });
 
+  describe('a Tier 1 or Tier 2 claim carries the table', () => {
+    const section = (...lines: string[]) =>
+      ['## Summary', '', 'x', '', '## Perf', '', ...lines, '', '## Release notes', '', '- x'].join('\n');
+    const RENDER = ['src/client/milkyway/band.ts'];
+
+    it('fails a claim that promises the run instead of pasting it', () => {
+      for (const tier of ['Tier 1', '**Tier 2**']) {
+        const r = check(section(`${tier} — the catalogue changed. Needs a run before merge.`), RENDER);
+        expect(r.code, tier).toBe(1);
+        expect(r.stdout).toContain('carries no --against-pin table row');
+      }
+    });
+
+    it('passes a claim whose table has a row, marked or not', () => {
+      const table = PERF_SECTION.replace('## Perf\n', '## Perf\n\nTier 2 — the catalogue changed.\n');
+      expect(check(table, RENDER).code).toBe(0);
+      const tier1 = section('Tier 1, pin 09b675c2', ' ~  mw120|webgpu  wall-p50  8.3  8.3  0  0.250',
+        ' ~  sol|webgpu    gpu-p50   21.8  21.9  0.1  0.250');
+      expect(check(tier1, RENDER).code).toBe(0);
+    });
+
+    it('does not count a row key in prose as a table row', () => {
+      const r = check(section('Tier 2; mw50|webgpu is the row most likely to move.'), RENDER);
+      expect(r.code, r.stdout).toBe(1);
+    });
+
+    it('reads the first tier named as the claim', () => {
+      const r = check(section('Tier 0 — keypress handlers only, so no Tier 2 sweep.'), RENDER);
+      expect(r.code, r.stdout).toBe(0);
+    });
+
+    it('applies to a membership trigger the same way', () => {
+      const r = check(section('Tier 2. Needs a run before merge.'), [], pair(RECORDS, 420_000));
+      expect(r.code).toBe(1);
+      expect(r.stdout).toContain('catalogue membership');
+    });
+  });
+
   it('declares that locale itself, so the caller-s awk cannot decide it', () => {
     expect(readFileSync(SCRIPT, 'utf-8')).toMatch(/^export LC_ALL=C$/m);
   });

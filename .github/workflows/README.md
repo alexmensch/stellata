@@ -37,8 +37,9 @@ labelled `skip-version-bump`. See `RELEASING.md` for the block format.
 ## `perf-section-guard.yml`
 
 CI check on every PR. Fails the PR unless the body carries a non-empty
-`## Perf` section with an `accepted:` line for every `✗` row, whenever the
-diff does either of:
+`## Perf` section with an `accepted:` line for every `✗` row — and, when
+the section claims Tier 1 or 2, at least one `--against-pin` table row —
+whenever the diff does either of:
 
 - **touches a render path** — any `.ts` or `.wgsl` under
   `src/client/` outside the folders [Perf pin](/RELEASING.md#perf-pin) exempts;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails a PR whose diff touches a render path, or moves catalogue membership,
 # unless its body carries a non-empty `## Perf` section with an `accepted:`
-# line for every ✗ row.
+# line for every ✗ row, and a runner table row when it claims Tier 1 or 2.
 # Usage: perf-section-check.sh <body-file> <changed-files-file>
 #          [<base-record-count> <head-record-count>]. /RELEASING.md#perf-pin.
 set -euo pipefail
@@ -82,6 +82,19 @@ stripped=$(printf '%s' "$section" | perl -0777 -pe 's/<!--.*?-->//gs')
 if ! printf '%s' "$stripped" | grep -qE '[^[:space:]]'; then
   echo "::error::${reason} but the PR body has no non-empty '## Perf' section. Run the perf runner with --against-pin and paste its table — /RELEASING.md#perf-pin."
   exit 1
+fi
+
+# The first tier the section names is the one it claims; later mentions are
+# prose ("Tier 0, so no Tier 2 sweep").
+tier=$(printf '%s\n' "$stripped" | awk 'match($0, /Tier [0-2]/) { print substr($0, RSTART + 5, 1); exit }')
+if [[ "$tier" == 1 || "$tier" == 2 ]]; then
+  rows=$(printf '%s\n' "$stripped" | awk -v key_re="$row_key" '
+    ($1 == "✓" || $1 == "✗" || $1 == "~" || $1 == "·") && $2 ~ key_re { n++ }
+    END { print n + 0 }')
+  if [ "$rows" -eq 0 ]; then
+    echo "::error::${reason}; '## Perf' claims Tier ${tier} but carries no --against-pin table row. Paste the runner's table — /RELEASING.md#what-the-section-carries."
+    exit 1
+  fi
 fi
 
 # A ✗ anywhere on a line marks that line, not only one in the first field: a
