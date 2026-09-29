@@ -640,7 +640,7 @@ export class Stellata {
       focalRides: this.focalRides,
       cameraStep: this.cameraStep,
       focus: this.focus,
-      warpActive: () => this.warp.isActive(),
+      warp: this.warp,
       layers: this.layers,
       cadence: this.cadence,
       renderGate: this.renderGate,

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { CameraStep } from '../../camera/camera-step/camera-step';
 import type { FocalRides } from '../../camera/focus/focal-ride/focal-rides';
 import type { FocusController } from '../../camera/focus/focus-controller';
+import type { WarpController } from '../../camera/warp/warp-controller';
 import {
   mark as perfMark,
   measure as perfMeasure,
@@ -43,7 +44,7 @@ export interface FrameLoopDeps {
   focalRides: Pick<FocalRides, 'reseedMoving' | 'followEpochStep'>;
   cameraStep: Pick<CameraStep, 'advance'>;
   focus: Pick<FocusController, 'getFocusedStar' | 'pinnedStar'>;
-  warpActive: () => boolean;
+  warp: Pick<WarpController, 'isActive'>;
   layers: Pick<SceneLayerRegistry, 'realtimeFramesNeeded' | 'updateAll'>;
   cadence: Pick<ClockCadence, 'isDue' | 'refresh'>;
   renderGate: Pick<RenderGate, 'tick' | 'invalidate' | 'lastFrameWasCadenceScheduled'>;
@@ -194,7 +195,7 @@ export class FrameLoop {
     const d = this.deps;
     this.frameCtx.distFromSol = cameraAbsInto(this.frameCtx, this.cameraAbs).length();
     this.frameCtx.t = d.clock.getT();
-    this.frameCtx.warpActive = d.warpActive();
+    this.frameCtx.warpActive = d.warp.isActive();
     this.frameCtx.pxPerRadian = d.pxPerRadian();
     this.frameCtx.exposure = d.exposureFrame.frameExposure();
     // Refreshed after the frame's last camera write.

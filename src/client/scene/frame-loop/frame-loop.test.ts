@@ -65,7 +65,7 @@ function harness(overrides: Partial<Knobs> = {}) {
       getFocusedStar: () => knobs.focusedStar,
       pinnedStar: () => knobs.pinnedStar,
     },
-    warpActive: () => true,
+    warp: { isActive: () => true },
     layers: {
       realtimeFramesNeeded: () => { log.push('realtime?'); return knobs.realtime; },
       updateAll: (ctx: FrameCtx) => { log.push('updateAll'); ctxs.push({ ...ctx }); },
