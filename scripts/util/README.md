@@ -64,12 +64,15 @@ need the same thing — single-use helpers stay with their consumer.
   failure. `tally.test.ts` pins all four cascades' key coverage.
 - `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
   script's computed snapshot against its committed JSON, or rewrite the
-  JSON when the spec's env var is `1`. Exits non-zero on drift, since a
-  drifted snapshot must not ship an artifact; a missing snapshot writes
-  itself, which is what bootstraps a new one. Shared by
-  `build-catalog.ts` (build counts, distance outliers) and
-  `catalog/classic-ids/build-classic-id-overlay.ts` — all three under
-  `UPDATE_BUILD_COUNTS` / `UPDATE_DISTANCE_OUTLIERS`.
+  JSON when the spec's env var is `1`. Exits non-zero on drift, and on a
+  missing snapshot too: a deleted `*-expected.json` must fail, not
+  re-baseline itself, so the env var is the only way any snapshot is
+  written, a new one included. Used by `build-catalog.ts` (build counts
+  under `UPDATE_BUILD_COUNTS`, distance outliers under
+  `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
+  WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
+  `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
+  `snapshot-assert.test.ts` pins the missing-snapshot case.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
   `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed
