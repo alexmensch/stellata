@@ -935,14 +935,13 @@ export function magnitudeTermRow(sourceId: string): ManifestRow {
 
 /** One primary's row the spine lacks, before the cohorts are merged: the same
  *  star reaches this list once per primary that names it. */
-interface AdditionItem {
+interface AdditionItem extends AdditionCohorts {
   key: string;
-  hd: HdAddition | null;
-  hip: HipAddition | null;
-  cns5: Cns5Row | null;
-  /** The source this item alone derives — two items deriving one are one star. */
-  source: string | null;
+  /** What this item alone derives — two items deriving one source are one star. */
+  derived: DerivedBinding;
 }
+
+type AdditionCohorts = { hd: HdAddition | null; hip: HipAddition | null; cns5: Cns5Row | null };
 
 /** Designation-keyed indexes over the primaries the additions join through. */
 interface AdditionIndex {
@@ -992,8 +991,8 @@ function groupAdditions(
   }
   const bySource = new Map<string, AdditionItem[]>();
   for (const i of items) {
-    if (i.source === null) continue;
-    pushKeyed(bySource, i.source, i);
+    if (i.derived.sourceId === null) continue;
+    pushKeyed(bySource, i.derived.sourceId, i);
   }
   for (const list of bySource.values()) {
     const tycItems = list.filter((i) => i.hd !== null);
@@ -1025,9 +1024,9 @@ interface AdditionGroup {
   routeSourceDisagree: boolean;
 }
 
-function soleItem<K extends 'hd' | 'hip' | 'cns5'>(
-  items: readonly AdditionItem[], cohort: K,
-): AdditionItem[K] | null {
+function soleItem<K extends keyof AdditionCohorts>(
+  items: readonly AdditionCohorts[], cohort: K,
+): AdditionCohorts[K] | null {
   return items.find((i) => i[cohort] !== null)?.[cohort] ?? null;
 }
 
@@ -1037,7 +1036,7 @@ function cns5Gl(cns5: Cns5Row | null): string | null {
 
 /** The cells a group derives its binding from — the same three a spine row's
  *  derivation reads. */
-function additionCells(items: readonly AdditionItem[]): BindingCells {
+function additionCells(items: readonly AdditionCohorts[]): BindingCells {
   const hip = soleItem(items, 'hip');
   return {
     tyc: soleItem(items, 'hd')?.tyc ?? '',
@@ -1344,19 +1343,18 @@ export function buildMembership(input: MembershipInput): MembershipResult {
 
   const claims = spineClaims(records);
   const additions = findAdditions(tables, spineKeys(kept), idx);
-  const bare: Array<Omit<AdditionItem, 'source'>> = [
+  const bare: Array<Omit<AdditionItem, 'derived'>> = [
     ...additions.hd.map((hd) => ({ key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null })),
     ...additions.hip.map((hip) => ({ key: `hip:${hip.hip}`, hd: null, hip, cns5: null })),
     ...additions.cns5.newRecords.map((cns5) => ({
       key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5,
     })),
   ];
-  const items: AdditionItem[] = bare.map((i) => ({
-    ...i, source: derive(additionCells([{ ...i, source: null }])).derived.sourceId,
-  }));
+  const items: AdditionItem[] = bare.map((i) => ({ ...i, derived: derive(additionCells([i])).derived }));
   const index = indexAdditions(tables);
-  const derivedGroups = groupAdditions(items, tables, index)
-    .map((g) => ({ items: g, derived: derive(additionCells(g)).derived }));
+  const derivedGroups = groupAdditions(items, tables, index).map((g) => ({
+    items: g, derived: g.length === 1 ? g[0].derived : derive(additionCells(g)).derived,
+  }));
   const sourceGroups = new Map<string, number>();
   for (const { derived } of derivedGroups) {
     if (derived.sourceId !== null) {
