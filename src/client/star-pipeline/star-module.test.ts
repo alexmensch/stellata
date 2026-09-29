@@ -10,6 +10,7 @@ import {
 } from '../../../scripts/catalog/record/catalog-pure';
 import type { BinariesData } from '../binaries/binaries-loader';
 import { NO_PARENT } from '../binaries/binaries-loader';
+import { NO_INSTANCE } from '../frame/shared-uniforms';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeEmptyCatalog, type MockCatalog } from '../loaders/catalog-mock';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
@@ -180,8 +181,8 @@ describe('star kind module', () => {
     expect(m.attach(ctx)).toBeNull();
     m.setFocalHidden?.(5);
     expect((ctx.sharedUniforms.uHideFocusIdx as { value: number }).value).toBe(5);
-    m.setFocalHidden?.(-1);
-    expect((ctx.sharedUniforms.uHideFocusIdx as { value: number }).value).toBe(-1);
+    m.setFocalHidden?.(null);
+    expect((ctx.sharedUniforms.uHideFocusIdx as { value: number }).value).toBe(NO_INSTANCE);
   });
 
   it('serves the focusable legs from catalog + runtime', async () => {

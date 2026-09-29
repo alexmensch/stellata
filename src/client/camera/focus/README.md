@@ -329,13 +329,13 @@ float32 cancellation in the projection chain
 centre by visible pixels even though the focused star is
 mathematically at view-origin. Float64 emulation was rejected as too
 heavy; instead the star vertex graph exposes a `uPinFocusToCenter`
-uniform (`NO_PINNED_STAR`, -1, = disabled). When set, the shader replaces the projection
+uniform (`NO_INSTANCE`, -1, = disabled; `../../frame/shared-uniforms.ts`). When set, the shader replaces the projection
 chain with `projectionMatrix * vec4(0, 0, -dPc, 1)` for the matched
 instance — bypassing matrix-multiply cancellation entirely.
 One uniform, a handful of nodes, no CPU cost.
 
 JS-side per frame in the frame loop (`../../scene/frame-loop/`): the
-uniform holds `FocusController.pinnedStar()`, or `NO_PINNED_STAR` when it
+uniform holds `FocusController.pinnedStar()`, or `NO_INSTANCE` when it
 is null. The pin engages iff
 `focusedStar !== null && cameraMode === 'navigate'
 && (!warp.isActive() || warp.isRecenteredToDest())

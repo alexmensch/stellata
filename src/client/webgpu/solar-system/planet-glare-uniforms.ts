@@ -3,16 +3,16 @@
 
 import { Vector2 } from 'three';
 import { uniform } from 'three/tsl';
+import { NO_INSTANCE } from '../../frame/shared-uniforms';
 import {
   GLARE_PHOTOCENTRE_SHIFT, MESH_FADE_FULL_PX, MESH_FADE_MIN_PX,
 } from '../../solar-system/planets/mesh-crossfade';
 
 export function glareUniformNodes() {
   return {
-    /** Flat instance index to hide (−1 = none): observe mode parks the
-     *  camera AT the focal body, whose glare would otherwise render from
-     *  the interior. */
-    uHideIdx: uniform(-1, 'int'),
+    /** Flat instance index to hide: observe mode parks the camera AT the
+     *  focal body, whose glare would otherwise render from the interior. */
+    uHideIdx: uniform(NO_INSTANCE, 'int'),
     /** The active local-depth cluster's (start, count) slot range;
      *  (−1, 0) = none. One value drives the main-pass suppression and the
      *  mirror's member gate at opposite sense. */

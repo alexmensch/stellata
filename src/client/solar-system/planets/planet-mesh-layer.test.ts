@@ -151,7 +151,7 @@ function harness(
     liveInstanceCount: planets.length,
     // The observe anchor — settable, because hiding the body the camera is
     // parked at is the one hide that leaves an opaque body on screen.
-    hiddenInstanceIdx: -1,
+    hiddenInstanceIdx: null as number | null,
     planetAt: (i: number) => planets[i] ?? null,
     planetLocalPositionInto: (i: number, out: THREE.Vector3) => {
       out.set(i + 1, 0, 0);
@@ -215,7 +215,7 @@ function harness(
     },
     /** Park the camera at a body, as observe mode does. */
     hide(i: number): void {
-      (field as { hiddenInstanceIdx: number }).hiddenInstanceIdx = i;
+      (field as { hiddenInstanceIdx: number | null }).hiddenInstanceIdx = i;
     },
     pendingFor(key: string): boolean {
       return loads.some((l) => l.url.includes(key));
@@ -653,7 +653,7 @@ describe('the ring annulus phase scalar', () => {
       drawn: true,
       monochrome: false,
       liveInstanceCount: 1,
-      hiddenInstanceIdx: -1,
+      hiddenInstanceIdx: null as number | null,
       planetAt: () => saturn,
       planetLocalPositionInto: (_i: number, out: THREE.Vector3) => {
         out.copy(planetPos);

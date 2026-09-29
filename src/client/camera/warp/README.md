@@ -238,7 +238,7 @@ value is purely cosmetic). Two gotchas worth noting up front:
 2. **`finishWarp` re-anchors via `finishObserveAnchorSwap`**, not
    `setFocus`, when `returnToObserve` is true. `setFocus` would see
    `cameraMode === 'observe'` and run its observe-cleanup branch
-   (`uHideFocusIdx = -1`, emit `'cameraMode'`), recreating the
+   (unhide the focal body, emit `'cameraMode'`), recreating the
    flicker. `finishObserveAnchorSwap` recentres the floating origin,
    updates `focusedStar`, repoints `uHideFocusIdx` to the new
    anchor, and snaps the camera to `(0, 0, 0)` local without

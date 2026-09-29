@@ -50,6 +50,8 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'RenderGate.lastWake': CACHE,
   'RenderGate.lastDecision': CACHE,
   'OrbitRingsLayer.ps': SELECTION,
+  'ProbeField.hiddenIdx': SELECTION,
+  'PlanetBodyField.hideIdx': SELECTION,
   'PlanetBodyField.lastDimNowMs': CACHE,
   'StarLocalCluster.hostMemberIdx': SELECTION,
   'StarLocalCluster.chainFocalIdx': CACHE,

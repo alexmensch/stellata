@@ -84,7 +84,7 @@ export class ProbeField {
   private permitted = true;
   private mono = false;
   private localPassActive = false;
-  private hiddenIdx = -1;
+  private hiddenIdx: number | null = null;
   private worldOffset = new THREE.Vector3();
   /** Sol is the catalog origin, so this is just the negated
    *  floating-origin offset — non-zero under any focus other than Sol. */
@@ -370,8 +370,8 @@ export class ProbeField {
 
   /** Suppress one probe's marker (and, through `visible`, its label and
    *  trail) — the observe-anchor hide, since the camera parks exactly on
-   *  the marker. -1 unhides. */
-  setHiddenInstance(idx: number): void {
+   *  the marker. null unhides. */
+  setHiddenInstance(idx: number | null): void {
     this.hiddenIdx = idx;
   }
 

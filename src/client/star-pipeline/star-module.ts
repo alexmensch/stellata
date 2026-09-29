@@ -10,6 +10,7 @@ import type { BinariesData } from '../binaries/binaries-loader';
 import * as starPhysics from '../camera/controls/star-physics';
 import type { FocusableProvider } from '../camera/focus/focus-target';
 import { chartPlateauDistancePc } from '../chart-mode/chart-disc-pure';
+import { NO_INSTANCE } from '../frame/shared-uniforms';
 import type { FocusCardProvider } from '../focus-card/focus-card-types';
 import { createStarFocusProvider } from '../focus-card/star-focus-provider';
 import { resolveStarName } from '../format/star-companion-format';
@@ -291,7 +292,7 @@ export function createStarKindModule(): StarKindModule {
     sidDomain: () => (catalog ? catalogSidDomain(catalog) : null),
 
     setFocalHidden: (idx) => {
-      if (ctx) ctx.sharedUniforms.uHideFocusIdx.value = idx;
+      if (ctx) ctx.sharedUniforms.uHideFocusIdx.value = idx ?? NO_INSTANCE;
     },
   };
 }

@@ -771,7 +771,7 @@ export class Stellata {
   /** Observe parks the camera inside the object. Null unhides every kind. */
   private setFocalBodyHidden(target: Target | null): void {
     for (const kind of KIND_ROSTER) {
-      this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : -1);
+      this.kinds[kind]?.setFocalHidden?.(target?.kind === kind ? target.idx : null);
     }
   }
 
