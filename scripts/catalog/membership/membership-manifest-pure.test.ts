@@ -696,7 +696,7 @@ describe('buildMembership — the additions', () => {
     expect(viaSimbad.rows.filter((r) => r.gaia_source_id === '5050')).toHaveLength(1);
     expect(viaSimbad.counts.magnitudeRows).toBe(1);
     expect(viaSimbad.counts.magnitudeRowsOwnCandidate)
-      .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0 });
+      .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0, component: 0 });
   });
 
   // Admitted, but one designation short: HD 5 is a spine record's, so the

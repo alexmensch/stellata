@@ -4,8 +4,8 @@
 primaries admit: the spine's 313,257 rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
 ([Correcting a merge decision](#correcting-a-merge-decision)), plus the 63,676 records the primaries name
-that AT-HYG's subset never carried — 376,932 rows, and the 602,228 the V <= 11
-magnitude term adds on top (`magnitude-term/README.md`), 979,160 in
+that AT-HYG's subset never carried — 376,932 rows, and the 598,660 the V <= 11
+magnitude term adds on top (`magnitude-term/README.md`), 975,592 in
 all. **`readStars` walks it, and
 membership is exactly these rows less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks**
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
@@ -255,7 +255,7 @@ keys no SID ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)), so attaching 
 cost that record its key for nothing. The claim set is the spine's after the
 label merge and **grows as each group is admitted**, so the rule reads the same
 whether the record already answering is a spine row or an earlier addition.
-The consequences, measured 2026-09-06:
+The consequences, measured 2026-09-29:
 
 | Outcome | Groups | What it is |
 |---|---|---|
@@ -264,8 +264,9 @@ The consequences, measured 2026-09-06:
 | `admitted:hip_omitted` | 444 | I/239 HIP with no IV/25 star |
 | `admitted:cns5_census` | 3,356 | CNS5 `GJ 1xxxx` row |
 | `component:<anchor>` | 466 | every designation it arrived with is another record's. 461 are the second Tycho-2 entry of a resolved pair whose HD (and, through Tycho-2's `hip`, HIP) a spine record carries; 5 are the second of a pair neither component of which is on the spine. Not a row; ledgered onto the record it resolves to. Five left the class when the curated HD corrections freed the number their anchor was wrongly displaying ([Curated overrides](../classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them)) |
-| source left empty, on a spine record | 108 | Gaia fitted one source where Tycho-2 resolved two stars |
-| source left empty, gate refused | 121 | the derivation reached candidates and both gates refused every one |
+| source left empty, on a spine record | 133 | Gaia fitted one source where Tycho-2 resolved two stars |
+| source left empty, two groups derive it | 23 | withheld from both, as a spine collision is |
+| source left empty, gate refused | 170 | the derivation reached candidates and both gates refused every one |
 
 The audit's headline cohort sizes (60,344 / 566 / 3,362) are pre-grouping and
 pre-admission; the table above is what the manifest carries.

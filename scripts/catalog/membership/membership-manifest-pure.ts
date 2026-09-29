@@ -724,7 +724,9 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
   return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
 }
 
-export const OWN_CANDIDATE_REASONS = ['refused_mag', 'refused_sibling', 'withheld', 'runner_up'] as const;
+export const OWN_CANDIDATE_REASONS = [
+  'refused_mag', 'refused_sibling', 'withheld', 'runner_up', 'component',
+] as const;
 export type OwnCandidateReason = (typeof OWN_CANDIDATE_REASONS)[number];
 
 /** Every candidate a row's derivation proposed other than the value it ships,
@@ -1392,6 +1394,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const a = admitGroup(g, claims, index);
     additionWeighedNoGMag += g.derived.weighedNoGMag;
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) additionContested++;
+    if (a.row === null && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
+      ownCandidates.set(g.derived.sourceId, 'component');
+    }
     noteUnshipped(g.derived, a.row === null ? null : g.source);
     if (g.sourceOnSpine) additionSourceOnSpine++;
     if (g.sourceGateRefused) additionSourceGateRefused++;

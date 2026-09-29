@@ -10,8 +10,8 @@ membership-manifest.tsv  ~64 MB, LFS. One row per admitted record: final
                          bayer/proper), gaia_source_id with its binding class,
                          the primary attesting each cell, and `term` — which
                          side of /docs/catalog-driver.md#1-the-driver-model's union admitted
-                         the row. 979,160 rows: 376,932 `primaries` and
-                         602,228 `magnitude` at the V <= 11 floor
+                         the row. 975,592 rows: 376,932 `primaries` and
+                         598,660 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
 additions-ledger.tsv     ~3.6 MB, LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the
                          primaries admit that the spine lacked: one row per
