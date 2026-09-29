@@ -25,6 +25,17 @@ import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
 import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
+
+const planetSystemLoad = vi.hoisted(() => ({ fails: false }));
+vi.mock('../../solar-system/planet-system', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../solar-system/planet-system')>();
+  return {
+    ...actual,
+    getPlanetSystem: (solIndex: number, starIdx: number | null) => (planetSystemLoad.fails
+      ? Promise.reject(new Error('planet system fetch failed'))
+      : actual.getPlanetSystem(solIndex, starIdx)),
+  };
+});
 import { PROBE_MARKER_PX, ProbeField } from '../../solar-system/probes/probe-field';
 import type { PlanetSystem } from '../../solar-system/planet-system';
 import {
@@ -446,6 +457,20 @@ describe('FocusController.setFocus — star focus FSM', () => {
       expect(h.focus.getFocusedPlanetSystem().status).toBe('ready');
       await Promise.resolve();
       expect(planetSystemEvents(h).length).toBe(before);
+    });
+
+    it('settles absent when the load fails, rather than pending forever', async () => {
+      const h = makeHarness();
+      h.focus.setFocus(1);
+      planetSystemLoad.fails = true;
+      try {
+        h.focus.setFocus(0);
+        await Promise.resolve();
+      } finally {
+        planetSystemLoad.fails = false;
+      }
+      expect(h.focus.getFocusedPlanetSystem()).toEqual({ status: 'absent' });
+      expect(planetSystemEvents(h)).toEqual([]);
     });
 
     it('drops a load still in flight at dispose', async () => {

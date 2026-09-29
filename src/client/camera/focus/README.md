@@ -56,7 +56,8 @@ scene-layer hooks, and `StarFrame` for star positions
   host whose system is attached or loading, and that system as a
   `LateState` (`../../util/late/README.md`). A switch to a new host goes
   `pending` at once, so the previous host's system never outlives the
-  switch; refocusing the same host reloads nothing. `'planetSystem'`
+  switch; refocusing the same host reloads nothing; a failed load settles
+  `absent`, so no reader waits on it forever. `'planetSystem'`
   carries the ready system or null, and fires only when that changes.
 - Click/select-driven entry points are Target-keyed: `flyTo(target)`
   (hard kinds route through `focusHardTarget`; soft kinds share one

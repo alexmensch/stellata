@@ -458,10 +458,13 @@ export class FocusController implements FocusOps {
       return;
     }
     this.setPlanetSystem(PLANET_SYSTEM_PENDING);
-    void getPlanetSystem(solIndex, host).then((ps) => {
-      if (token !== this.planetSystemToken) return;
-      this.setPlanetSystem(ps === null ? NO_PLANET_SYSTEM : { status: 'ready', value: ps });
-    });
+    const settle = (next: LateState<PlanetSystem>) => {
+      if (token === this.planetSystemToken) this.setPlanetSystem(next);
+    };
+    void getPlanetSystem(solIndex, host).then(
+      (ps) => settle(ps === null ? NO_PLANET_SYSTEM : { status: 'ready', value: ps }),
+      () => settle(NO_PLANET_SYSTEM),
+    );
   }
 
   private setPlanetSystem(next: LateState<PlanetSystem>): void {
