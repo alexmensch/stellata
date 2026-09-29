@@ -740,7 +740,8 @@ export class Stellata {
 
   get timeClock(): VirtualClock { return this.clock; }
 
-  /** Unix seconds, re-read per call — snapshot it for a frame-stable value. */
+  /** Unix seconds: held for the whole tick, live outside one
+   *  (solar-system/time/README.md#one-instant-per-frame). */
   getT(): number {
     return this.clock.getT();
   }
