@@ -99,19 +99,22 @@ def assert_or_update_snapshot(
     compare: Callable[[dict[str, Any], dict[str, float]], list[SnapshotDiff]],
     format_diff: Callable[[list[SnapshotDiff]], str],
 ) -> bool:
-    """True on a full match. Writes ``build_payload(actual, expected_path)``
-    instead when ``UPDATE_BUILD_COUNTS=1`` is set or the snapshot is
-    missing, and returns True."""
-    should_update = os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1"
+    """True on a full match; False on drift or a missing snapshot. Under
+    ``UPDATE_BUILD_COUNTS=1`` writes ``build_payload(actual, expected_path)``
+    instead and returns True."""
+    try:
+        shown = expected_path.relative_to(REPO_ROOT)
+    except ValueError:
+        shown = expected_path
 
-    if should_update or not expected_path.exists():
+    if os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1":
         expected_path.write_text(json.dumps(build_payload(actual, expected_path), indent=2) + "\n")
-        try:
-            shown = expected_path.relative_to(REPO_ROOT)
-        except ValueError:
-            shown = expected_path
-        print(f"[{label}] {'Updated' if should_update else 'Wrote initial'} {shown}")
+        print(f"[{label}] Updated {shown}")
         return True
+
+    if not expected_path.exists():
+        print(f"[{label}] snapshot {shown} is missing; write it with {UPDATE_COUNTS_ENV_VAR}=1")
+        return False
 
     expected = json.loads(expected_path.read_text())
     diff = compare(expected, actual)

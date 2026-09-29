@@ -151,11 +151,22 @@ class CompareBuildRatesTests(unittest.TestCase):
 
 
 class AssertOrUpdateRatesTests(unittest.TestCase):
-    def test_writes_initial_snapshot_with_default_tolerance(self) -> None:
-        import json as _json
+    def test_a_missing_snapshot_fails_and_writes_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            ok = assert_or_update_rates({"r": 0.42}, p)
+            self.assertFalse(assert_or_update_rates({"r": 0.42}, p))
+            self.assertFalse(p.exists())
+
+    def test_writes_a_missing_snapshot_with_default_tolerance_under_the_env_var(self) -> None:
+        import json as _json
+        import os as _os
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "rates.json"
+            try:
+                _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
+                ok = assert_or_update_rates({"r": 0.42}, p)
+            finally:
+                _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
         self.assertEqual(written["r"]["value"], 0.42)

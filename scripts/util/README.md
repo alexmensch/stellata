@@ -78,8 +78,10 @@ need the same thing — single-use helpers stay with their consumer.
   counts; `binaries/stage7_counts.py` builds its rates snapshot on the same
   primitives). A leaf on purpose: `build_stamp.py` hashes every module a
   step imports, so the runtime step reaching this through `stage7_counts`
-  would restamp `binaries.bin` on every pipeline-stage edit. Returns a
-  bool where the TS side exits, since the Python drivers own their exit.
+  would restamp `binaries.bin` on every pipeline-stage edit. Same rule
+  on a missing snapshot: it fails, and only `UPDATE_BUILD_COUNTS=1`
+  writes one. Returns a bool where the TS side exits, since the Python
+  drivers own their exit.
   Pinned by `snapshot_assert.test.py`.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
