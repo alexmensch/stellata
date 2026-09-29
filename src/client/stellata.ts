@@ -23,7 +23,7 @@ import {
 } from './debug/perf-hud';
 import { resolveAndPublishGpuFrame } from './debug/gpu-timing/gpu-frame-samples';
 import { RenderGate } from './render-gate/render-gate';
-import { TrackballSettle } from './camera/controls/input/trackball-settle';
+import { CameraStep } from './camera/camera-step/camera-step';
 import { cadenceVisibleTurnRad } from './render-gate/cadence/clock-cadence-pure';
 import {
   ClockCadence,
@@ -199,7 +199,7 @@ export class Stellata {
   private get planetBodyField(): PlanetBodyField { return this.kinds.planet.field; }
   readonly localDepthPass = new LocalDepthPass();
   readonly renderGate = new RenderGate();
-  private readonly trackballSettle: TrackballSettle;
+  private readonly cameraStep: CameraStep;
   private readonly observeLookPin: ObserveLookPin;
   private glslResidentsChecked = false;
   private readonly cadence: ClockCadence;
@@ -278,7 +278,6 @@ export class Stellata {
     // Empty drag-mode key slots: TrackballControls' A/S/D defaults would
     // otherwise claim the S grid / D debug shortcuts.
     this.controls.keys = ['', '', ''];
-    this.trackballSettle = new TrackballSettle(this.controls);
 
     this.observeControls = new ObserveControls(
       canvas,
@@ -645,7 +644,20 @@ export class Stellata {
     this.filters.reapplyDetailFloors();
     window.addEventListener('resize', this.onResize);
     this.renderGate.attachDom(canvas);
-    this.trackballSettle.attachDom(canvas);
+    this.cameraStep = new CameraStep({
+      canvas,
+      camera: this.camera,
+      controls: this.controls,
+      observeControls: this.observeControls,
+      observeLookPin: this.observeLookPin,
+      roll: this.roll,
+      warp: this.warp,
+      aim: this.aim,
+      focus: this.focus,
+      observe: this.observe,
+      pxPerRadian: () => this.angularToPx(),
+      fovYRad: () => this.sharedUniforms.uFovYRad.value,
+    });
     this.bus.on('state', () => this.renderGate.invalidate('bus:state'));
     this.bus.on('planetSystem', () => this.renderGate.invalidate('bus:planetSystem'));
     this.input = this.createInputController();
@@ -944,40 +956,7 @@ export class Stellata {
     // Before anything reads localPositions.
     this.starFrame.flushLocalPositions();
     perfMark('controls.update');
-    // camera/controls/input/README.md#roll-authority
-    if (this.focus.getCameraMode() === 'observe') {
-      this.roll.adoptFromCamera(this.camera);
-    }
-    // Cleared by the steady-state branches alone, so a new transition here
-    // renders every frame by default rather than freezing.
-    let cameraAnimating = true;
-    if (this.warp.isActive()) {
-      this.warp.tick(nowMs);
-    } else if (this.aim.isActive()) {
-      this.aim.tick(nowMs);
-    } else if (this.focus.isFocusLerpActive()) {
-      this.focus.tick(nowMs);
-    } else if (this.aim.isObserveAimActive()) {
-      this.aim.tickObserve(nowMs);
-      this.observeLookPin.update();
-    } else if (this.observe.isAnyActive()) {
-      this.observe.tick(nowMs);
-    } else if (this.focus.getCameraMode() === 'observe') {
-      cameraAnimating = false;
-      this.observeControls.update();
-      this.observeLookPin.update();
-    } else {
-      cameraAnimating = false;
-      this.trackballSettle.capture(this.camera);
-      this.controls.update();
-      this.trackballSettle.tick(
-        this.camera, this.angularToPx(), this.sharedUniforms.uFovYRad.value,
-      );
-    }
-    // camera/controls/input/README.md#the-perpendicular-invariant
-    if (cameraAnimating && this.focus.getCameraMode() === 'navigate') {
-      this.roll.adoptFromCamera(this.camera);
-    }
+    const cameraAnimating = this.cameraStep.advance(nowMs);
     perfMeasure('controls.update');
     // Above the gate: a layer that starts needing wall-clock frames while the
     // gate idles would otherwise wait a whole cap, or forever when paused.
@@ -1093,7 +1072,7 @@ export class Stellata {
     this.observeLookPin.invalidate();
     window.removeEventListener('resize', this.onResize);
     this.renderGate.dispose();
-    this.trackballSettle.dispose();
+    this.cameraStep.dispose();
     this.cadence.dispose();
     this._realtimeFramesNeeded = false;
     this.frameCtx.frustum.invalidate();

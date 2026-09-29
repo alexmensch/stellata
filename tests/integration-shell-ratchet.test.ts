@@ -6,7 +6,7 @@ import ts from 'typescript';
 const SHELL = resolve(__dirname, '../src/client/stellata.ts');
 
 const COMPOSITION: readonly string[] = [
-  'adaptation', 'aim', 'binaries', 'bus', 'cadence', 'camera', 'cameraClaim', 'catalog', 'chartLabels', 'chromeLines',
+  'adaptation', 'aim', 'binaries', 'bus', 'cadence', 'camera', 'cameraClaim', 'cameraStep', 'catalog', 'chartLabels', 'chromeLines',
   'clock', 'constellationBoundaries', 'constellationFigure', 'controls', 'coordSpheres', 'declutter', 'disposed', 'exposure', 'extinction', 'exposureFrame', 'filters',
   'floatingOrigin', 'focalRides', 'focus', 'focusables', 'hdr', 'hud', 'input', 'kinds', 'layers', 'localDepthPass', 'milkyway', 'monochrome',
   'observe', 'observeControls', 'observeLookPin', 'occluders', 'orbitFramePort', 'orbitFrameTick',
@@ -17,7 +17,6 @@ const COMPOSITION: readonly string[] = [
 const AWAITING_EXTRACTION: readonly string[] = [
   '_epochFollowDelta', '_realtimeFramesNeeded',
   'frameCtx', 'glslResidentsChecked',
-  'trackballSettle',
 ];
 
 function shellFields(): string[] {

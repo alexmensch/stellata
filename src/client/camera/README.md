@@ -22,6 +22,8 @@ across all five.
   navigate↔observe transition FSM.
 - `arrival/` — log-distance smoothstep math shared by focus-park, warp
   Fly, and unfocus. Pure helpers + the per-frame `tickArrival` driver.
+- `camera-step/` — the per-tick controller dispatch: which one controller
+  moves the camera this tick, and whether it was a transition.
 
 `camera-config.ts` and `timing.ts` sit at this level — see [Shared](#shared) —
 and so does `camera-claim.ts` (+ test), the one

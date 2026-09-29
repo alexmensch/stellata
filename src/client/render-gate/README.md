@@ -46,12 +46,9 @@ would silently make the next `hold()` a no-op.
    layer](/src/client/scene/README.md#declaring-how-time-moves-a-layer) in `../scene/README.md`). **A running clock is NOT one of
    them**: it schedules through the cadence below instead, which is what
    lets the out-of-the-box live-1× view idle. The transition half is
-   **not re-derived** — it falls out of the controller dispatch chain
-   that runs immediately above, which already picked the branch:
-   `cameraAnimating` defaults true and only the two steady-state
-   branches (observe look-around, trackball) clear it. Re-asking the
-   five predicates would be a second definition of "camera busy" for a
-   new transition to drift out of.
+   **not re-derived** — it is the verdict of the controller dispatch
+   that runs immediately above
+   ([The verdict](../camera/camera-step/README.md#the-verdict)).
 
    The `'realtime'` predicate is evaluated **above** the gate, on every
    tick, which is why `animate()` builds `frameCtx` before the decision
