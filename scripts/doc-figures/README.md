@@ -70,11 +70,9 @@ with the snapshot, so it is the shipped catalogue's size. Three surfaces:
 
 - **Markdown and HTML** quote it through a marker, usually `k2` (980k) or
   `sig2` (980,000).
-- **`CITATION.cff`, `public/llms.txt` and `src/site/index.html`** cannot hold
-  a marker (a YAML string, a file served verbatim, a page whose markdown
-  rendition carries HTML comments through literally), so `MARKERLESS_SURFACES`
-  lets them quote the current `sig2` / `k2` rounding unmarked, and nothing
-  else.
+- **`CITATION.cff` and `public/llms.txt`** cannot hold a marker (a YAML string,
+  a file served verbatim), so `MARKERLESS_SURFACES` lets them quote the
+  current `sig2` / `k2` rounding unmarked, and nothing else.
 - **Code** never quotes it — a comment says "the full catalogue".
 
 `scanCatalogueSize` enforces all three. It reads every tracked text file
