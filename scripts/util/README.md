@@ -8,8 +8,8 @@ need the same thing — single-use helpers stay with their consumer.
   `src/client/util/astronomy-constants.ts`. `J2000_JD`,
   `DAYS_PER_JULIAN_YEAR`, and any future physics constants Python-side
   build scripts share with the client runtime. Keep value-by-value in
-  sync with the TS canonical; the `astronomy_constants_sync.test.py`
-  sibling test pins equality at CI time.
+  sync with the TS canonical; `tests/astronomy-constants-sync.test.ts`
+  pins equality.
 - `paths.py` — `REPO_ROOT`, the repo-root `Path` every top-level
   Python build/refresh script under `scripts/binaries/` and
   `scripts/refresh/` imports instead of independently walking
@@ -55,6 +55,20 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/` module the process has imported, so the import statements are
   the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+- `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
+  build's code inputs. `scriptClosure(names)` is every module the named
+  `package.json` scripts import, read from an esbuild metafile, so a new
+  import joins without anyone listing it; `tsxEntry` holds each such script
+  to exactly `tsx <file>.ts`, so `package.json` is the one place an entry is
+  named; `closureWithSiblings(closure, files)` adds every file beside a
+  closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
+  snapshots a build reads by path get keyed. Shared by the catalogue stamp and
+  CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
+  cannot disagree on what the build reads. `trackedFiles()` is the listing the
+  stamp passes as `files`.
+- `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
+  `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
+  [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from
@@ -64,12 +78,25 @@ need the same thing — single-use helpers stay with their consumer.
   failure. `tally.test.ts` pins all four cascades' key coverage.
 - `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
   script's computed snapshot against its committed JSON, or rewrite the
-  JSON when the spec's env var is `1`. Exits non-zero on drift, since a
-  drifted snapshot must not ship an artifact; a missing snapshot writes
-  itself, which is what bootstraps a new one. Shared by
-  `build-catalog.ts` (build counts, distance outliers) and
-  `catalog/classic-ids/build-classic-id-overlay.ts` — all three under
-  `UPDATE_BUILD_COUNTS` / `UPDATE_DISTANCE_OUTLIERS`.
+  JSON when the spec's env var is `1`. Exits non-zero on drift, and on a
+  missing snapshot too: a deleted `*-expected.json` must fail, not
+  re-baseline itself, so the env var is the only way any snapshot is
+  written, a new one included. Used by `build-catalog.ts` (build counts
+  under `UPDATE_BUILD_COUNTS`, distance outliers under
+  `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
+  WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
+  `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
+  `snapshot-assert.test.ts` pins the missing-snapshot case.
+- `snapshot_assert.py` — the Python sibling, for the two binaries steps
+  (`build-binaries.py`'s counts, `build-runtime-binaries.py`'s pair
+  counts; `binaries/stage7_counts.py` builds its rates snapshot on the same
+  primitives). A leaf on purpose: `build_stamp.py` hashes every module a
+  step imports, so the runtime step reaching this through `stage7_counts`
+  would restamp `binaries.bin` on every pipeline-stage edit. Same rule
+  on a missing snapshot: it fails, and only `UPDATE_BUILD_COUNTS=1`
+  writes one. Returns a bool where the TS side exits, since the Python
+  drivers own their exit.
+  Pinned by `snapshot_assert.test.py`.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
   `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed
@@ -96,3 +123,30 @@ need the same thing — single-use helpers stay with their consumer.
   `tests/bundle-content.test.ts` asserts the built tree against the same
   predicates. The single-file copies (`sync-local-bubble.ts`,
   `sync-cloud-surfaces.ts`) are a different shape and stay standalone.
+
+## Proving a restructuring byte-identical
+
+A pipeline restructuring promises unchanged outputs; prove it, don't
+eyeball it. Both commands first rebuild everything from scratch: they delete
+the gitignored files under `public/` and every stamp, then run
+`pnpm run build:data`. A stamp's input list can miss a file the step reads, so
+a skipped step proves nothing; a missing output is what makes every
+mtime-gated emitter rebuild too. Each run costs a cold catalogue build (about
+six minutes), and a dev server on the same checkout serves nothing meanwhile.
+
+1. On the base commit, `pnpm run identity:snapshot` hashes every output into
+   the gitignored `build/output-identity.json`: every file under `public/`
+   (the emitters, the `*-sync` mirrors and the committed static assets) plus
+   each stamp's recorded outputs outside it, such as
+   `build/catalog-row-index-map.json`. Both sets are read off disk, so a new
+   step or emitter joins without an edit, and a stray file reads as appeared.
+2. Check out the branch; `pnpm run identity:diff` prints
+   `identical: N outputs` and exits 0, or names each changed, appeared and
+   vanished file and exits 1.
+
+Quote the `identical` line in the PR body. `data/binaries/multiples.tsv` is
+also committed, so `git diff` shows it field by field; for the catalogue,
+`pnpm run validate:record-parity` gives the field diff keyed by SID.
+`public/binaries.bin` has a golden test besides
+([binaries.bin golden](../binaries/golden/README.md)), which runs in
+`pnpm test` with no build.

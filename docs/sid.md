@@ -296,8 +296,9 @@ snapshot gate but deliberately stricter:
    grammar-valid ([§ 3](#3-designation-namespaces)); kind in enum; sid 0 absent;
    `ledger-head.json` exactly matches a recomputation over the
    working files.
-2. **Append-only** (runs when a git base is resolvable, i.e. CI and
-   any local checkout with `origin/main`): read the *base* head file
+2. **Append-only** (runs when a git base is resolvable, i.e. CI's
+   `build-catalog` and any local checkout with `origin/main`; skips
+   otherwise): read the *base* head file
    via `git show <merge-base>:data/sid/ledger-head.json` — it is
    regular git, so no LFS smudge is needed — then assert the working
    ledger's first `base.rows` lines hash to `base.sha256`
@@ -312,10 +313,10 @@ snapshot gate but deliberately stricter:
    than `UPDATE_BUILD_COUNTS=1` — build counts describe a build,
    the ledger IS the identity contract.
 
-The guard runs as its own CI check with real LFS content and full
-history (`.github/workflows/test.yml`; LFS objects come from the shared
-Actions cache, `.github/actions/lfs-cache`); in the bare `test` job it
-sees an LFS pointer stub and self-skips.
+The guard runs in `build-catalog`'s full vitest, with real LFS content
+and full history (`.github/workflows/test.yml`; LFS objects come from the
+shared Actions cache, `.github/actions/lfs-cache`), where a skip fails the
+step; in the bare `test` job it sees an LFS pointer stub and self-skips.
 
 The guard protects the ledger *file*; `pnpm run sid:check` (its own CI
 check, against the built artifacts) protects its *consistency with the build*: a

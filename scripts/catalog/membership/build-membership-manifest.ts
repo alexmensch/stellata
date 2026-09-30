@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
-import { compareBuildCounts, formatCountDiff } from '../build-counts';
+import { compareCountSnapshot } from '../build-counts';
 import { loadBindingEvidence } from '../classic-ids/binding-evidence';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
@@ -170,13 +170,7 @@ async function main(): Promise<void> {
     envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
     actual: c,
-    compare: (expected, actual) => {
-      const diff = compareBuildCounts(expected, actual);
-      return {
-        drifted: diff.some((d) => d.status === 'mismatch'),
-        report: formatCountDiff(diff),
-      };
-    },
+    compare: compareCountSnapshot,
     failureLabel: 'membership-manifest count',
     refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:membership',
   });

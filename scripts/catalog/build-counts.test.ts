@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { emptyTallyPartition } from '../util/tally';
 import {
   compareBuildCounts,
+  compareCountSnapshot,
+  driftedRows,
   formatCountDiff,
   formatPartition,
   spectralSimbadPartitionError,
@@ -233,6 +235,10 @@ function expectedDiffRows(counts: BuildCounts): number {
   );
 }
 
+function drifted(expected: BuildCounts, actual: BuildCounts) {
+  return driftedRows(compareBuildCounts(expected, actual));
+}
+
 describe('compareBuildCounts', () => {
   it('reports every key as match when expected === actual', () => {
     const counts = baseCounts();
@@ -272,12 +278,54 @@ describe('compareBuildCounts', () => {
     const expected = baseCounts();
     const actual = baseCounts();
     delete (expected.lmcOverriddenByDistVia as Partial<Record<string, number>>).gaia_dr3_inversion;
-    const mismatches = compareBuildCounts(expected, actual)
-      .filter((d) => d.status === 'mismatch');
-    expect(mismatches).toHaveLength(1);
-    expect(mismatches[0].key).toBe('lmcOverriddenByDistVia.gaia_dr3_inversion');
-    expect(mismatches[0].status === 'mismatch'
-      && Number.isNaN(mismatches[0].expected)).toBe(true);
+    expect(drifted(expected, actual)).toEqual([{
+      key: 'lmcOverriddenByDistVia.gaia_dr3_inversion',
+      status: 'absent-from-snapshot',
+      actual: actual.lmcOverriddenByDistVia.gaia_dr3_inversion,
+    }]);
+  });
+
+  it('flags a new count the snapshot has no entry for', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    delete (expected as Partial<BuildCounts>).gcvsMatched;
+    expect(drifted(expected, actual)).toEqual([
+      { key: 'gcvsMatched', status: 'absent-from-snapshot', actual: actual.gcvsMatched },
+    ]);
+  });
+
+  it('flags a count present in the snapshot but absent from the build', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    delete (actual as Partial<BuildCounts>).gcvsMatched;
+    expect(drifted(expected, actual)).toEqual([
+      { key: 'gcvsMatched', status: 'absent-from-build', expected: expected.gcvsMatched },
+    ]);
+  });
+
+  it('flags a partition bucket the build no longer produces', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    delete (actual.lmcOverriddenByDistVia as Partial<Record<string, number>>).bailer_jones;
+    expect(drifted(expected, actual)).toEqual([{
+      key: 'lmcOverriddenByDistVia.bailer_jones',
+      status: 'absent-from-build',
+      expected: expected.lmcOverriddenByDistVia.bailer_jones,
+    }]);
+  });
+
+  it('names a snapshot count that is null rather than a number', () => {
+    const expected = { ...baseCounts(), gcvsMatched: null } as unknown as BuildCounts;
+    expect(() => compareBuildCounts(expected, baseCounts()))
+      .toThrow('count gcvsMatched is null, not a number or a partition');
+  });
+
+  it('lists snapshot-only rows after the actual rows', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    delete (actual as Partial<BuildCounts>).recordCount;
+    const keys = compareBuildCounts(expected, actual).map((d) => d.key);
+    expect(keys.at(-1)).toBe('recordCount');
   });
 
   it('preserves the key order of the actual object, partitions expanded', () => {
@@ -336,6 +384,29 @@ describe('formatCountDiff', () => {
       /lmcOverriddenByDistVia\.bailer_jones\s+absent from snapshot, got 58/,
     );
     expect(out).not.toMatch(/NaN/);
+  });
+
+  it('says "absent from build" for a count the build stopped producing', () => {
+    const expected = baseCounts();
+    const actual = baseCounts();
+    delete (actual as Partial<BuildCounts>).gcvsMatched;
+    const out = formatCountDiff(compareBuildCounts(expected, actual));
+    expect(out).toMatch(/1 of \d+ counts differ/);
+    expect(out).toMatch(/gcvsMatched\s+expected 3677, absent from build/);
+  });
+});
+
+describe('compareCountSnapshot', () => {
+  it('is clean only when every row matches', () => {
+    expect(compareCountSnapshot(baseCounts(), baseCounts()).drifted).toBe(false);
+  });
+
+  it('drifts on a count missing from either side', () => {
+    const full = baseCounts();
+    const short = baseCounts();
+    delete (short as Partial<BuildCounts>).gcvsMatched;
+    expect(compareCountSnapshot(full, short).drifted).toBe(true);
+    expect(compareCountSnapshot(short, full).drifted).toBe(true);
   });
 });
 

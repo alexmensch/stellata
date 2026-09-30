@@ -36,9 +36,6 @@ const REINSTATEMENTS_PATH = resolve(SID_DIR, 'reinstatements.tsv');
 const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
 
 const ledgerText = existsSync(LEDGER_PATH) ? readFileSync(LEDGER_PATH, 'utf-8') : null;
-// ledger.tsv rides LFS: a checkout without LFS smudging (the bare CI test
-// job) sees a pointer stub. The guard runs for real in the sid-ledger-guard
-// job, which names this file, and in any local clone.
 const available = ledgerText !== null && !isLfsPointer(ledgerText);
 
 function git(...args: string[]): string {
@@ -89,13 +86,10 @@ describe.skipIf(!available)('sid ledger guard', () => {
     );
   });
 
-  it('the frozen prefix is append-only against the merge-base head', () => {
+  it('the frozen prefix is append-only against the merge-base head', ({ skip }) => {
     const base = baseHead();
     if (base === null) {
-      console.warn(
-        'sid-ledger-guard: no merge-base ledger-head.json (first PR, shallow clone, or no ' +
-          'origin/main) — append-only check skipped',
-      );
+      skip('no merge-base ledger-head.json (first PR, shallow clone, or no origin/main)');
       return;
     }
     const ledgerLines = splitTsv(ledgerText!, LEDGER_HEADER, 'ledger.tsv').dataLines;

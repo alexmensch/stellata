@@ -84,8 +84,11 @@ the PR, not the post-merge deploy.
 
 `build:binaries`, `build:catalog` and `build:binaries-runtime` — together
 `build:stamped` — skip on a **content-hash stamp**, never on mtimes. Each hashes every input it reads —
-data tables, the SID registry, every non-test module under the script folders
-it imports — and skips when that set matches `build/stamps/<step>.json` and
+data tables, the SID registry, and every module it imports: for the Python
+steps, each `scripts/` module the process imported; for `build:catalog`, the
+esbuild import closure (`src/client/` modules included) plus the snapshots
+beside it, the same set CI's cache key reads
+([The catalogue build cache](ci/README.md#the-catalogue-build-cache)) — and skips when that set matches `build/stamps/<step>.json` and
 every output the stamp recorded still hashes the same. The stamp is cleared
 before the build writes anything and rewritten only once the build's snapshot
 asserts pass, so a failed or interrupted build always reruns. Hashing the

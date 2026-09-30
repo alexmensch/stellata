@@ -13,9 +13,6 @@ import { PROBE_MISSIONS } from '../../../scripts/probes/probe-roster';
 import { SOL_BODIES } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
 
-// The append-only ledger is LFS; in the bare CI `test` job it is a pointer
-// stub, so this suite self-skips there and runs for real locally + in the
-// lfs-enabled build-catalog job (mirrors tests/sid-ledger-guard.test.ts).
 let registry: Registry | null = null;
 try {
   registry = loadRegistry();

@@ -77,11 +77,15 @@ fan-out of jobs beyond the bare checks:
 - `typecheck` / `test` — `pnpm run typecheck` and `pnpm test`. The bare
   `test` job has no LFS content, so data-dependent suites self-skip
   there and run for real in the jobs below.
+- `python-tests` — every `scripts/**/*.test.py`, failing on any skip
+  ([Python suites](/scripts/ci/README.md#python-suites)). Its Python, and
+  `deploy.yml`'s, is the minor version in the repo-root `.python-version`.
 - `build-binaries` / `spotcheck` — rebuild `multiples.tsv` and assert it
   matches the committed artifact; resolve Stage 2 against the curated
   ground-truth corpus.
-- `build-catalog` — the catalogue stage with its regenerate-and-diff
-  gates, then `build:layers` (everything `pnpm run build` does after
+- `build-catalog` — checked out with full history, which the SID
+  ledger's append-only guard reads for its merge-base. The catalogue
+  stage with its regenerate-and-diff gates, then `build:layers` (everything `pnpm run build` does after
   `build:catalog` except the client), then every check that reads the
   built artifacts, as named steps. On a pull request
   the catalogue stage (`build:classic-ids` through `build:catalog`, ~5 min)
@@ -89,8 +93,12 @@ fan-out of jobs beyond the bare checks:
   set and the one way to get a stale hit: `scripts/ci/README.md`. The
   checks:
   - `SID ledger–artifact consistency` — `pnpm run sid:check`.
-  - `Tier-A star corpus` — the known-stars corpus + render-geometry
-    regression, and the LFS-gated catalogue-wide sweeps.
+  - `Full vitest, smudged and built` — `pnpm test` again, now with LFS
+    content and every built artifact present, so each suite that
+    self-skips in the bare `test` job runs here: the known-stars corpus,
+    the render-geometry regression and every LFS-gated sweep among them.
+    Any test that skips here fails the step
+    ([Vitest with every input](/scripts/ci/README.md#vitest-with-every-input)).
   - `Deploy asset sizes` — finishes the deploy build with
     `build:client` (`pnpm run build`'s one stage this job skips is
     `build:binaries`, pinned by `build-binaries`), then
@@ -104,13 +112,12 @@ fan-out of jobs beyond the bare checks:
   output in jobs of their own: a job costs ~45 s of checkout, LFS
   restore and install before it starts, and here that setup would sit
   on the pipeline's critical path.
-- `sid-ledger-guard` — append-only ledger guard, DR-reconciliation
-  classifier, swap parity ledger.
 
-Both LFS vitest runs take an explicit file list, so a `describe.skipIf`
-suite no list names skips everywhere and reports green. Adding one means
-adding it to the `Tier-A star corpus` step (needs built artifacts) or
-`sid-ledger-guard` (needs committed LFS inputs only).
+**No workflow edit adds a suite.** A new `describe.skipIf` vitest suite
+runs smudged in `build-catalog` whatever it gates on, and a new
+`*.test.py` runs in `python-tests`; in both, a skip fails the job. The cost is every data-free test
+running twice, once per job, which buys that no list exists to
+fall out of step.
 
 The `main` ruleset requires these jobs by display name
 ([Merge gating](/RELEASING.md#merge-gating)): renaming, merging or splitting a job

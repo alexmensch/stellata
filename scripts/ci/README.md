@@ -1,6 +1,6 @@
 # CI helpers
 
-Scripts that `.github/workflows/` runs and nothing else does.
+Scripts that `.github/workflows/` runs.
 
 - `catalog-stage-pure.ts` (+ test) — the catalogue build stage's steps
   (`CATALOG_STAGE`: each package script and the committed paths it must
@@ -10,6 +10,43 @@ Scripts that `.github/workflows/` runs and nothing else does.
   `paths` prints the keyed files instead, which is how to audit a surprising
   miss or hit; `run` runs each step, then fails on any diff in its pinned
   paths.
+- `python_tests.py` (+ test) — the Python suites' runner, below; locally
+  `pnpm run test:py`.
+- `vitest-no-skip.ts`, `vitest-skips-pure.ts` (+ test) — the whole vitest
+  suite, failing on any test that did not run, below; locally
+  `pnpm run test:no-skip`.
+
+## Python suites
+
+`test.yml`'s `Python suites` job runs every `scripts/**/*.test.py`: the
+glob is the list, so a new suite runs without a workflow edit. Each file
+runs in its own interpreter, since the suites put their own folder on
+`sys.path` and several import siblings by bare name; `unittest discover`
+is no substitute, as it matches no dotted name like
+`stage2_resolve.test.py`.
+
+**A skip fails the run**, and so does a file that runs no tests. The
+refresh suites `skipTest` when pyvo, astropy or requests is missing, so a
+run that tolerated skips could be green while testing almost nothing. The
+job installs `scripts/refresh/requirements-refresh.txt` and
+`scripts/textures/requirements.txt`; locally, `pnpm run test:py` with the
+venv that holds them activated, as for every other `python3` package
+script — without it, the suites that import numpy fail.
+
+## Vitest with every input
+
+`build-catalog`'s `Full vitest, smudged and built` step runs `pnpm test`
+through `vitest-no-skip.ts`, which reads vitest's JSON report and **fails
+on any test that did not run** — skipped, pending or todo. That job holds
+every input a suite can gate on: LFS content, the built catalogue and
+layers, and full history. A suite skipping there has lost its input (an
+artifact renamed, a build step dropped), and would otherwise go green
+without running, in the one job meant to run it.
+
+A suite that can never run in CI — the private paper store in
+`tests/citation-index.test.ts` — is not registered under `CI` rather
+than skipped. The bare `test` job still allows skips; it has none of
+these inputs.
 
 ## The catalogue build cache
 
@@ -26,8 +63,10 @@ the Node version:
 
 - the TypeScript import closure of each entry, read from an esbuild
   metafile, so a new import is keyed without anyone listing it;
-- every tracked file beside a closure module except `.ts` and `.md` — the
-  build reads its `*-expected.json` count snapshots by path, not by import;
+- every tracked file beside a closure module except `.ts`, `.py` and `.md` — the
+  build reads its `*-expected.json` count snapshots by path, not by import.
+  These two are `../util/import-closure.ts`, which the local catalogue stamp
+  keys too;
 - all of `data/`, `package.json`, `pnpm-lock.yaml`, `tsconfig.json`,
   `test.yml` and this folder.
 

@@ -21,7 +21,7 @@ import {
   parseNssSourceIdSet,
   type DirectionSources,
 } from '../distance/direction-cascade';
-import { loadDustGrid } from '../distance/dust/dust-deextinction';
+import { dustGridInputPaths, loadDustGrid } from '../distance/dust/dust-deextinction';
 import type { DustGrid } from '../distance/dust/dust-deextinction-pure';
 import {
   createConstellationAssignment,
@@ -52,6 +52,7 @@ import {
 } from '../distance/parallax/pair-member-parallax';
 import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-pure';
 import {
+  MAGNITUDE_PULL_TSV,
   readMagnitudeTermAstrometry,
   readMagnitudeTermSourceIds,
 } from '../membership/magnitude-term/magnitude-term';
@@ -74,16 +75,18 @@ const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
 const SRC_CNS5 = resolve(ROOT, 'data/classic-ids/cns5.tsv');
 const SRC_GLIESE = resolve(ROOT, 'data/gliese/gliese_v70a.tsv');
 const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
-const SRC_DUST_MANIFEST = resolve(SRC_DUST_DIR, 'manifest.json');
 
-/** Every file a readStars walk reads — the input set an artifact derived
+/** Every file a readStars walk can read — the input set an artifact derived
  *  from that walk must invalidate against. */
-export const READ_STARS_INPUT_PATHS: readonly string[] = [
-  MEMBERSHIP_MANIFEST_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
-  SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
-  SRC_SIMBAD_VALUES, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_CNS5, SRC_GLIESE,
-  SRC_DUST_MANIFEST, STELLARIUM_SKYCULTURE_JSON, MULTIPLES_TSV,
-];
+export function readStarsInputPaths(): string[] {
+  return [
+    MEMBERSHIP_MANIFEST_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
+    SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
+    SRC_SIMBAD_VALUES, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_CNS5, SRC_GLIESE,
+    STELLARIUM_SKYCULTURE_JSON, MULTIPLES_TSV, MAGNITUDE_PULL_TSV,
+    ...dustGridInputPaths(SRC_DUST_DIR),
+  ];
+}
 
 /** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
  *  consumer folds them in wholesale rather than field by field. */

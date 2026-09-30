@@ -16,9 +16,7 @@ export interface SnapshotAssertion<T> {
   refreshCommand: string;
 }
 
-/** Exits the process non-zero on drift — callers are build scripts, so a
- *  drifted snapshot must not ship an artifact. A missing snapshot writes
- *  itself rather than failing, which is what bootstraps a new one. */
+/** Exits the process non-zero on drift or on a missing snapshot. */
 export async function assertOrUpdateSnapshot<T>(
   opts: SnapshotAssertion<T>,
 ): Promise<void> {
@@ -27,13 +25,21 @@ export async function assertOrUpdateSnapshot<T>(
     ? (JSON.parse(readFileSync(opts.snapshotPath, 'utf8')) as T)
     : null;
 
-  if (shouldUpdate || !expected) {
-    const toWrite = expected && opts.refreshTransform
+  if (shouldUpdate) {
+    const toWrite = expected !== null && opts.refreshTransform
       ? opts.refreshTransform(expected, opts.actual)
       : opts.actual;
     await writeFile(opts.snapshotPath, JSON.stringify(toWrite, null, 2) + '\n');
-    console.log(`${shouldUpdate ? 'Updated' : 'Wrote initial'} ${opts.snapshotPath}`);
+    console.log(`Updated ${opts.snapshotPath}`);
     return;
+  }
+
+  if (expected === null) {
+    console.error(
+      `\n${opts.failureLabel} snapshot ${opts.snapshotPath} is missing. To write it:\n` +
+        `  ${opts.refreshCommand}`,
+    );
+    process.exit(1);
   }
 
   const { drifted, report } = opts.compare(expected, opts.actual);

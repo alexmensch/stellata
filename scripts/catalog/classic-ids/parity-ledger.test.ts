@@ -65,9 +65,6 @@ describe('HD/HIP route-disagreement review', () => {
   });
 });
 
-// The three inputs below ride LFS, so the bare CI `test` job sees pointer
-// stubs and these suites self-skip there. They run smudged in the
-// sid-ledger-guard job, which names this file, and locally.
 const ledgerReadable = lfsContentReadable(LEDGER_PATH);
 const bsc5Readable = lfsContentReadable(BSC5_PATH);
 const spineReadable = lfsContentReadable(SPINE_PATH);

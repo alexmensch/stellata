@@ -75,8 +75,10 @@ scripts/binaries/
                                   columns + per-pair WDS sep/PA/epoch/Δmag +
                                   system-anchor inheritance for tight inner
                                   binaries + SIMBAD standalone augmentation.
-  stage7_counts.py                Build-counts + build-rates snapshot writer
-                                  (mirrors scripts/catalog/build-counts.ts).
+  stage7_counts.py                Build-counts + build-rates snapshots. The
+                                  assert / refresh they share with
+                                  build-runtime-binaries.py is
+                                  scripts/util/snapshot_assert.py.
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
                                   (Cox 2000
                                   (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
@@ -88,6 +90,9 @@ scripts/binaries/
                                   chains via component-letter prefix matching
                                   and writes outer-before-inner. See
                                   README.md#pipeline-at-a-glance, step 3.
+  golden/                         binaries.bin golden test: encode() on a
+                                  committed non-LFS fixture, byte for byte.
+                                  Own README.
   build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
                                   asserts the strongest-priority resolution per
                                   (wds_id, component) against
