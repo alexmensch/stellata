@@ -13,11 +13,14 @@ doc-figures-pure.ts        Marker grammar, key resolution, formatting, and
                            renderFigures (text + snapshots → rewritten text,
                            stale figures, problems). No I/O.
 doc-figures-pure.test.ts   Grammar, resolution and format cases.
-doc-figures.ts             loadSnapshots (every tracked *-expected.json, keyed
-                           by stem; a repeated stem throws) and docFiles (tracked
-                           and untracked-but-not-ignored *.md). Both list
-                           through presentFiles, so a symlink or a deleted,
-                           unstaged file is skipped.
+doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
+                           a repeated stem throws) and docFiles (every *.md).
+                           Both take tracked and untracked-but-not-ignored
+                           files, so a snapshot just written by
+                           UPDATE_BUILD_COUNTS=1 resolves before its git add,
+                           and both list through presentFiles, so a symlink or
+                           a deleted, unstaged file is skipped.
+doc-figures.test.ts        Both listings over a throwaway repo.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
                            the run exits 1.

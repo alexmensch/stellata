@@ -6,7 +6,7 @@ import { SNAPSHOT_SUFFIX, type Snapshots } from './doc-figures-pure';
 
 export function loadSnapshots(root: string): Snapshots {
   const snapshots = new Map<string, unknown>();
-  for (const path of presentFiles(root, gitFiles(root, [`*${SNAPSHOT_SUFFIX}`]))) {
+  for (const path of presentFiles(root, gitFiles(root, [`*${SNAPSHOT_SUFFIX}`], { untracked: true }))) {
     const stem = basename(path, SNAPSHOT_SUFFIX);
     if (snapshots.has(stem)) throw new Error(`two snapshots share the stem ${stem}; doc-figure keys would be ambiguous`);
     snapshots.set(stem, JSON.parse(readFileSync(join(root, path), 'utf8')));
