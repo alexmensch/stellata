@@ -1,9 +1,9 @@
 # Public content site
 
 The pages served from `stellata.xyz` that are **not** the 3D application:
-authored HTML, no framework, and one small script ([One script](#one-script)). The homepage is the only one so
-far, and it is the site root — the application lives at `/app`
-(`src/client/app/README.md`).
+authored HTML, no framework, and one small script ([One script](#one-script)). They are the
+homepage, which is the site root, and the 404 page — the application lives
+at `/app` (`src/client/app/README.md`).
 
 ```
 index.html   The homepage, served at /. Documented below. Its markdown
