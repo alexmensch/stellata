@@ -36,8 +36,7 @@ Vite's own `%ENV%` pass; the markdown rendition goes through the same
 `substituteFigures`. A token naming no listed figure, or a figure with no
 value, stops the build — Vite's own pass would leave the token in the
 page and only warn. So a figure on the homepage is a lookup, not a
-literal — which is the one thing a monorepo holding the model, the
-application and the marketing page is good for.
+literal.
 
 `tests/site-claims.test.ts` imports this module and holds the pages to it.
 
