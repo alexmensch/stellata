@@ -32,6 +32,7 @@ const ALWAYS_KEYED_FILES = new Set([
 ]);
 const ALWAYS_KEYED_DIRS = ['data/', 'scripts/ci/'];
 
+/** Path → content digest: the git blob id, except `package.json` once `withVersionlessPackageJson` has run. */
 export type BlobIndex = ReadonlyMap<string, string>;
 
 /** `git ls-files -s -z` output → path → blob id. */
