@@ -49,6 +49,13 @@ unmarked.
 exact value, or a rounded one with a format. Rounded prose without a marker is
 only for a figure where any exact-looking value would mislead.
 
+**A marker asserts the sentence stays true at any value the snapshot takes.**
+So a figure tied to a date or a past build ("measured 2026-08-01", a column of
+a build-comparison table) is history and stays unmarked, and so does a figure
+whose sentence reasons from it: other unpinned numbers measured alongside it,
+arithmetic on it (bytes = count × size), or a population the key does not
+count. That prose is rewritten first, then marked.
+
 One value per marker. A figure computed from several values — a difference, a
 sum, a percentage, "X of Y" where Y is not itself pinned — stays prose, and the
 pinned values inside the sentence carry their own markers. Nothing checks an
