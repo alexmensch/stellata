@@ -16,15 +16,20 @@ export function attachReplay(clip: ReplayableClip, button: ReplayButton): void {
   const show = (): void => {
     button.hidden = false;
   };
-  button.hidden = true;
-  clip.addEventListener('play', () => {
+  const hide = (): void => {
     button.hidden = true;
-  });
+  };
+  hide();
+  clip.addEventListener('play', hide);
   clip.addEventListener('pause', show);
   clip.addEventListener('ended', show);
   button.addEventListener('click', () => {
-    clip.currentTime = 0;
-    void clip.play();
+    hide();
+    // play() on an ended clip restarts it from 0 itself. Seeking first races
+    // that restart in Safari: play fires before the seek paints, and the clip
+    // sits frozen on its last frame until it "ends" again.
+    if (!clip.ended) clip.currentTime = 0;
+    clip.play().catch(show);
   });
 
   // Autoplay refused (a power-saving mode, a site setting) fires no event;
