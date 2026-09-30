@@ -707,12 +707,30 @@ def run(force: bool) -> int:
         return 0
     clear_stamp(BINARIES_BIN_STAMP)
 
-    log(f"loading {SRC_MULTIPLES.relative_to(ROOT)} …")
-    pairs = load_pairs(SRC_MULTIPLES)
+    stats = encode(SRC_MULTIPLES, SRC_ROW_INDEX_MAP, OUT_BIN)
+    if not assert_or_update_counts(
+        stats_to_counts(stats), EXPECTED_COUNTS,
+        label="build-runtime-binaries",
+        refresh_command=f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime",
+    ):
+        return 1
+    write_stamp(BINARIES_BIN_STAMP, inputs, [OUT_BIN])
+    return 0
+
+
+def _display(path: Path) -> Path:
+    return path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
+
+
+def encode(multiples: Path, row_index_map: Path, out_bin: Path) -> WriteStats:
+    """multiples.tsv + row-index map → binaries.bin, with no stamp or
+    snapshot gate; the golden test drives this directly."""
+    log(f"loading {_display(multiples)} …")
+    pairs = load_pairs(multiples)
     log(f"loaded {len(pairs):,} physical pair relations")
 
-    log(f"loading {SRC_ROW_INDEX_MAP.relative_to(ROOT)} …")
-    row_map = load_row_index_map(SRC_ROW_INDEX_MAP)
+    log(f"loading {_display(row_index_map)} …")
+    row_map = load_row_index_map(row_index_map)
     log(
         f"loaded row-index map: {len(row_map.by_gaia):,} Gaia entries, "
         f"{len(row_map.by_hip):,} HIP entries, "
@@ -725,10 +743,10 @@ def run(force: bool) -> int:
 
     walk_order = topological_walk_order(parents)
 
-    stats = write_binary(pairs, parents, walk_order, row_map, OUT_BIN)
-    size_kb = OUT_BIN.stat().st_size / 1024
+    stats = write_binary(pairs, parents, walk_order, row_map, out_bin)
+    size_kb = out_bin.stat().st_size / 1024
     log(
-        f"wrote {OUT_BIN.relative_to(ROOT)} ({stats.pairs_emitted:,} pairs, "
+        f"wrote {_display(out_bin)} ({stats.pairs_emitted:,} pairs, "
         f"{size_kb:.1f} KB)"
     )
     log(
@@ -742,15 +760,7 @@ def run(force: bool) -> int:
         f"same_relation_alias={stats.pairs_dropped_same_relation_alias}, "
         f"duplicate_relation={stats.pairs_dropped_duplicate_relation}"
     )
-
-    if not assert_or_update_counts(
-        stats_to_counts(stats), EXPECTED_COUNTS,
-        label="build-runtime-binaries",
-        refresh_command=f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime",
-    ):
-        return 1
-    write_stamp(BINARIES_BIN_STAMP, inputs, [OUT_BIN])
-    return 0
+    return stats
 
 
 def main() -> int:
