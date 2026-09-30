@@ -49,6 +49,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
       case 'page':
       case 'rendition':
         return siteDocument(route.page.source, 200);
+      case 'notFoundPage':
       case 'notFound':
         return siteDocument(NOT_FOUND_SOURCE, 404);
     }
@@ -78,7 +79,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
 
           // Answered ahead of the Accept gate, matching the Worker.
           if (route.kind === 'redirect') {
-            res.statusCode = 301;
+            res.statusCode = route.status;
             res.setHeader('Location', route.to);
             res.end();
             return;

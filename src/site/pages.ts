@@ -8,12 +8,16 @@ export interface SitePage {
 
 export const SITE_PAGES: readonly SitePage[] = [{ source: 'index.html', hasRendition: true }];
 
-/** Served with a 404 status for every unmatched path; answers at no URL of its own. */
+/** Served with a 404 status for every unmatched path, and at its own path too. */
 export const NOT_FOUND_SOURCE = '404.html';
 
+/** Where a built HTML file answers under `html_handling = "drop-trailing-slash"`. */
+export function servedPath(source: string): string {
+  return `/${source.replace(/(^|\/)index\.html$/, '').replace(/\.html$/, '')}`;
+}
+
 export function pagePath(page: SitePage): string {
-  const folder = page.source.replace(/(^|\/)index\.html$/, '');
-  return `/${folder}`;
+  return servedPath(page.source);
 }
 
 /** Beside the document it renders, so the built tree still mirrors the URL space. */

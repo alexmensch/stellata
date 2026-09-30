@@ -33,7 +33,7 @@ export default {
     const readable = request.method === 'GET' || request.method === 'HEAD';
 
     if (decided.kind === 'redirect' && readable) {
-      return Response.redirect(new URL(decided.to, url).toString(), 301);
+      return Response.redirect(new URL(decided.to, url).toString(), decided.status);
     }
 
     const accept = request.headers.get('accept');
@@ -69,6 +69,10 @@ export default {
     // After the probe, so a real asset under /app keeps winning.
     if (response.status === 404 && decided.kind === 'app' && readable && wantsDocument(accept)) {
       return env.ASSETS.fetch(new Request(new URL(APP_PATH, url).toString(), request));
+    }
+
+    if (decided.kind === 'notFoundPage' && response.status === 200) {
+      return new Response(response.body, { status: 404, headers: response.headers });
     }
 
     return response;

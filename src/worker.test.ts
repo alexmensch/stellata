@@ -29,6 +29,7 @@ const BUILT = {
   '/': DOCUMENTS.homepage,
   '/index.md': DOCUMENTS.rendition,
   '/app': DOCUMENTS.app,
+  '/404': DOCUMENTS.notFound,
   '/assets/index-abc.js': 'console.log(1)',
   '/catalog.bin.0': 'binary',
 };
@@ -52,7 +53,7 @@ describe('the routing table', () => {
   it.each(ROUTING_CASES)('answers $pathname $search', async ({ pathname, search, answer }) => {
     const { response } = await route(pathname + search, BROWSER);
     if ('redirect' in answer) {
-      expect(response.status).toBe(301);
+      expect(response.status).toBe(answer.status);
       expect(response.headers.get('location')).toBe(`https://stellata.xyz${answer.redirect}`);
     } else {
       expect(response.status).toBe(answer.document === 'notFound' ? 404 : 200);

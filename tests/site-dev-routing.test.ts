@@ -99,7 +99,7 @@ describe('the dev server answers the deploy’s routing table', () => {
   it.each(ROUTING_CASES)('answers $pathname $search', async ({ pathname, search, answer }) => {
     const served = await fetchPath(pathname + search, 'text/html');
     if ('redirect' in answer) {
-      expect(served.status).toBe(301);
+      expect(served.status).toBe(answer.status);
       expect(served.headers.location).toBe(answer.redirect);
     } else {
       expect(served.status).toBe(answer.document === 'notFound' ? 404 : 200);

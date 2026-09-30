@@ -7,7 +7,7 @@ describe('route', () => {
   it.each(ROUTING_CASES)('decides $pathname $search is $kind', ({ pathname, search, kind, answer }) => {
     const decided = route(pathname, search);
     expect(decided.kind).toBe(kind);
-    if ('redirect' in answer) expect(decided).toEqual({ kind: 'redirect', to: answer.redirect });
+    if ('redirect' in answer) expect(decided).toEqual({ kind: 'redirect', to: answer.redirect, status: answer.status });
   });
 
   it('carries the page’s rendition beside it', () => {

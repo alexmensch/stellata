@@ -125,6 +125,18 @@ describe.skipIf(worker === null)('behind the real assets layer', () => {
     expect(headers.vary).toMatch(/\bAccept\b/);
   });
 
+  it('answers the 404 page’s own path with a 404 too', async () => {
+    const { status, body } = await navigate('/404');
+    expect(status).toBe(404);
+    expect(body).toBe(BUILT['404.html']);
+  });
+
+  it('answers a document’s file path by redirecting to where it is served', async () => {
+    const { status, location } = await navigate('/index.html');
+    expect(status).toBe(307);
+    expect(pathOf(location)).toBe('/');
+  });
+
   it('answers a junk path with the 404 page at a 404', async () => {
     const { status, body } = await navigate('/nonsense');
     expect(status).toBe(404);

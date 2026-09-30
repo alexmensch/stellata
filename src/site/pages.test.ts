@@ -9,6 +9,7 @@ import {
   pagePath,
   pageRenderedAt,
   renditionPath,
+  servedPath,
 } from './pages';
 
 describe('a page answers at its folder', () => {
@@ -17,6 +18,10 @@ describe('a page answers at its folder', () => {
     ['science/index.html', '/science'],
   ])('%s serves at %s', (source, path) => {
     expect(pagePath({ source, hasRendition: false })).toBe(path);
+  });
+
+  it('answers a non-index document at its name, without the extension', () => {
+    expect(servedPath(NOT_FOUND_SOURCE)).toBe('/404');
   });
 
   it('puts a rendition beside the document it renders', () => {

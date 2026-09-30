@@ -76,7 +76,8 @@ the deploy, and nobody sees it until someone pastes a real URL.
 ### The three `[assets]` keys the rules depend on
 
 **`run_worker_first` names every path a rule above answers** — `/`, `/v`,
-`/v/*`, `/app`, `/app/*`. By default the assets layer answers first: a path
+`/v/*`, `/app`, `/app/*` — plus `/404`, where the 404 page is itself an
+asset and would otherwise answer 200. By default the assets layer answers first: a path
 that matches an asset (`/` is `dist/index.html`) never reaches the Worker,
 and a browser navigation (`Sec-Fetch-Mode: navigate`) to a path matching
 none is handed the 404 page without the Worker running either. Drop a
