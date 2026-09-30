@@ -9,7 +9,7 @@ import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './src/negotiation-pure.ts';
 import { negotiatedRendition, route as decide, type Route } from './src/routing-pure.ts';
 import { NOT_FOUND_SOURCE } from './src/site/pages.ts';
-import { buildFigures } from './vite.env.ts';
+import type { Figures } from './scripts/site/figures-pure.ts';
 
 function varyOnAccept(res: ServerResponse): void {
   const current = res.getHeader('Vary');
@@ -29,9 +29,8 @@ const SIBLING_OF_ROOT = /(src|href)="\.\.\//g;
 const SIBLING_OF_PAGE = /(src|href)="\.\//g;
 
 /** Requires `appType: 'custom'`. src/site/README.md#reading-it-in-dev. */
-export function documentRoutingInDev(repoRoot: string): Plugin {
+export function documentRoutingInDev(repoRoot: string, figures: Figures): Plugin {
   const siteDir = resolve(repoRoot, 'src/site');
-  const figures = buildFigures(repoRoot);
   const appDocument: Document = {
     file: resolve(repoRoot, 'src/client/app/index.html'),
     base: '/app/index.html',

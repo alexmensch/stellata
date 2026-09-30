@@ -14,7 +14,7 @@ export default defineConfig(() => ({
   appType: 'custom' as const,
   plugins: [
     figureSubstitution(figures),
-    documentRoutingInDev(import.meta.dirname),
+    documentRoutingInDev(import.meta.dirname, figures),
     indexCitations(import.meta.dirname),
   ],
   root: resolve(import.meta.dirname, 'src/client'),

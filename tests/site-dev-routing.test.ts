@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { ROUTING_CASES, type ServedDocument } from '../src/routing-cases-fixture';
+import { buildFigures } from '../vite.env';
 import { documentRoutingInDev } from '../vite.site-dev';
 
 const ROOT = resolve(__dirname, '..');
@@ -34,7 +35,7 @@ function start(): Server {
   const watched: string[] = [];
   const changed: ((file: string) => void)[] = [];
   const sent: { type: string; path?: string }[] = [];
-  const plugin = documentRoutingInDev(ROOT);
+  const plugin = documentRoutingInDev(ROOT, buildFigures(ROOT));
   const post = plugin.configureServer!({
     middlewares: { use: (fn: never) => registered.push(fn) },
     transformIndexHtml: async (_base: string, html: string) => html,
