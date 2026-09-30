@@ -273,7 +273,7 @@ video {
   border-block-end: var(--rule);
 }
 .wordmark {
-  font-size: var(--step--1);
+  font-size: var(--step-1);
   letter-spacing: var(--tracking-wordmark);
   text-transform: uppercase;
   color: var(--fg);
