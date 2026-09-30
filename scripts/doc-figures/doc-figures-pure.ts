@@ -22,7 +22,6 @@ export type Resolution = { ok: true; value: number } | { ok: false; reason: stri
 
 export interface FigureReport {
   rendered: string;
-  markers: number;
   problems: string[];
   stale: string[];
 }
@@ -124,5 +123,5 @@ export function renderFigures(text: string, snapshots: Snapshots): FigureReport 
     rendered += text.slice(cursor, m.bodyStart) + figure;
     cursor = m.bodyEnd;
   }
-  return { rendered: rendered + text.slice(cursor), markers: markers.length, problems, stale };
+  return { rendered: rendered + text.slice(cursor), problems, stale };
 }

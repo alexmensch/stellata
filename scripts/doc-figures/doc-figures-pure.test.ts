@@ -94,12 +94,11 @@ describe('renderFigures', () => {
     expect(report.rendered).toBe(`x ${mark('membership-manifest/rows', '975,573')} y`);
     expect(report.stale).toEqual(['line 1: count:membership-manifest/rows quotes 975,000, snapshot gives 975,573']);
     expect(report.problems).toEqual([]);
-    expect(report.markers).toBe(1);
   });
 
   it('leaves a current figure and every unmarked number alone', () => {
     const text = `1,977 ${mark('membership-manifest/bindingByClass.none', '1,977')} 975,573`;
-    expect(renderFigures(text, snapshots)).toEqual({ rendered: text, markers: 1, problems: [], stale: [] });
+    expect(renderFigures(text, snapshots)).toEqual({ rendered: text, problems: [], stale: [] });
   });
 
   it('leaves an unresolvable marker untouched and reports it', () => {
