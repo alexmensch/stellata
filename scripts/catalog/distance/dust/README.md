@@ -23,7 +23,9 @@ scripts/catalog/distance/dust/
   dust-deextinction.ts (+ test)   `loadDustGrid` assembles data/dust/
                                   (manifest + 64 chunks) into one flat grid;
                                   decode constants come from the manifest,
-                                  never redefined.
+                                  never redefined. `dustGridInputPaths` is
+                                  the manifest plus the chunks it lists, for
+                                  the catalogue stamp.
 ```
 
 ## Why the build subtracts

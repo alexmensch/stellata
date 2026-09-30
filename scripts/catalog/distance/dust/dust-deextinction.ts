@@ -26,6 +26,21 @@ interface DustManifest {
   chunks: DustManifestChunk[];
 }
 
+function readDustManifest(manifestPath: string): DustManifest {
+  return JSON.parse(readFileSync(manifestPath, 'utf8')) as DustManifest;
+}
+
+/** The manifest plus every chunk it lists; the manifest alone while it is
+ *  absent, whose null hash already marks the input set as changed. */
+export function dustGridInputPaths(dustDir: string): string[] {
+  const manifestPath = resolve(dustDir, 'manifest.json');
+  if (!existsSync(manifestPath)) return [manifestPath];
+  return [
+    manifestPath,
+    ...readDustManifest(manifestPath).chunks.map((chunk) => resolve(dustDir, chunk.file)),
+  ];
+}
+
 export function loadDustGrid(dustDir: string): DustGrid {
   const manifestPath = resolve(dustDir, 'manifest.json');
   if (!existsSync(manifestPath)) {
@@ -35,7 +50,7 @@ export function loadDustGrid(dustDir: string): DustGrid {
         `pull LFS (git lfs pull) or run scripts/dust/build-dust.py.`,
     );
   }
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as DustManifest;
+  const manifest = readDustManifest(manifestPath);
   const n = manifest.gridSize;
   const c = manifest.chunkSize;
   const data = new Uint8Array(n * n * n);

@@ -55,6 +55,17 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/` module the process has imported, so the import statements are
   the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+- `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
+  build's code inputs. `scriptClosure(names)` is every module the named
+  `package.json` scripts import, read from an esbuild metafile, so a new
+  import joins without anyone listing it; `tsxEntry` holds each such script
+  to exactly `tsx <file>.ts`, so `package.json` is the one place an entry is
+  named; `closureWithSiblings(closure, files)` adds every file beside a
+  closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
+  snapshots a build reads by path get keyed. Shared by the catalogue stamp and
+  CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
+  cannot disagree on what the build reads. `trackedFiles()` is the listing the
+  stamp passes as `files`.
 - `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
