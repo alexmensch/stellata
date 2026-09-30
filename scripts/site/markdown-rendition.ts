@@ -10,6 +10,7 @@ import remarkStringify from 'remark-stringify';
 import { unified } from 'unified';
 import { SKIP, visit } from 'unist-util-visit';
 
+import { substituteFigures } from './figures-pure.ts';
 import { collapseWhitespace, parseHtml, textOf } from './parse-html.ts';
 
 const DROPPED = '.holder, .skip-link';
@@ -163,18 +164,11 @@ function metaContent(tree: Root, name: string): string | null {
   return typeof content === 'string' ? content : null;
 }
 
-function substitute(markdown: string, env: NodeJS.ProcessEnv): string {
-  return markdown.replace(/%(VITE_[A-Z_]+)%/g, (raw, name: string) => {
-    const value = env[name];
-    if (value === undefined || value === '') {
-      throw new Error(`markdown rendition: ${raw} has no value — publishBuildEnv did not run`);
-    }
-    return value;
-  });
-}
-
-export function markdownRendition(source: string, env: NodeJS.ProcessEnv = process.env): string {
-  const html = substitute(source, env);
+export function markdownRendition(
+  source: string,
+  figures: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  const html = substituteFigures(source, figures, 'markdown rendition');
   const tree = parseHtml(html);
 
   const canonical = select('link[rel="canonical"]', tree)?.properties?.href;

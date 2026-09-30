@@ -3,6 +3,8 @@
 ```
 site-metrics.ts        Counts the catalogue records, the credited sources
                        and the cited references off the things themselves.
+figures-pure.ts        The figure names a page may ask for and the one
+                       `%VITE_…%` substitution (+ test).
 json-ld-citations.ts   The Vite plugin appending every citation-index work to
                        a page's JSON-LD `citation` array; the merge itself is
                        json-ld-citations-pure.ts (+ test). Contract:
@@ -19,10 +21,16 @@ something a page states is never *also* written down by hand.
 
 ## The figures
 
-`site-metrics.ts` is read at **config load** by `vite.env.ts`, which
-publishes each count as a `VITE_` value, and Vite substitutes those into
-the pages as `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
-`%VITE_REFERENCE_COUNT%`. So a figure on the homepage is a lookup, not a
+`site-metrics.ts` is read at **config load** by `vite.env.ts`, whose
+`buildFigures` is the one map of every figure a page may ask for —
+`%VITE_APP_VERSION%`, `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
+`%VITE_REFERENCE_COUNT%`, the names `figures-pure.ts` lists. Both Vite
+configs publish it to `import.meta.env` and substitute it into every HTML
+document through `figureSubstitution`, a `pre` hook that runs ahead of
+Vite's own `%ENV%` pass; the markdown rendition goes through the same
+`substituteFigures`. A token naming no listed figure, or a figure with no
+value, stops the build — Vite's own pass would leave the token in the
+page and only warn. So a figure on the homepage is a lookup, not a
 literal — which is the one thing a monorepo holding the model, the
 application and the marketing page is good for.
 

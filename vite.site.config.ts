@@ -4,9 +4,10 @@ import { resolve } from 'node:path';
 import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
-import { publishBuildEnv } from './vite.env.ts';
+import { buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
-publishBuildEnv(import.meta.dirname);
+const figures = buildFigures(import.meta.dirname);
+publishBuildEnv(figures);
 
 const SITE_DIR = resolve(import.meta.dirname, 'src/site');
 
@@ -22,7 +23,7 @@ function markdownRenditions(): Plugin {
         this.emitFile({
           type: 'asset',
           fileName: rendition.slice(1),
-          source: markdownRendition(readFileSync(resolve(SITE_DIR, page.source), 'utf8')),
+          source: markdownRendition(readFileSync(resolve(SITE_DIR, page.source), 'utf8'), figures),
         });
       }
     },
@@ -31,7 +32,7 @@ function markdownRenditions(): Plugin {
 
 export default defineConfig(() => ({
   base: '/',
-  plugins: [indexCitations(import.meta.dirname), markdownRenditions()],
+  plugins: [figureSubstitution(figures), indexCitations(import.meta.dirname), markdownRenditions()],
   root: SITE_DIR,
   // Both of these belong to the app pass, which runs first. Reversing
   // either wipes dist/ — src/site/README.md#the-build-seam.
