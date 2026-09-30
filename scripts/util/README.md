@@ -2,9 +2,7 @@
 
 Cross-pipeline helpers that don't belong to any single per-pipeline
 folder. New entries land here only when at least two consumers need the
-same thing — single-use helpers stay with their consumer. One entry is
-shared with `tests/` rather than with a second pipeline, and that is the
-bar: repo plumbing with several callers, not a build helper with one.
+same thing — single-use helpers stay with their consumer.
 
 - `citation-index-pure.ts` — the parser for `data/papers/index.md`
   entries (key, label, title, reference line, copy, notes, claims rows)
