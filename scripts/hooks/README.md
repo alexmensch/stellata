@@ -342,8 +342,8 @@ It mirrors each workflow's triggers rather than the checks alone:
   the PR will carry after this call: `-l/--label`/`--add-label` add,
   `--remove-label` removes, and on `edit` the PR's existing labels (again
   from `gh pr view`) start the set.
-- **The diff is the checkout's `HEAD` against `origin/<base>`**, three-dot,
-  as CI reads the PR. A stale `origin/main` reads a wider diff than GitHub
+- **The diff is the checkout's `HEAD` against its merge base with
+  `origin/<base>`**, files and record count alike, as CI reads the PR. A stale `origin/main` reads a wider diff than GitHub
   will; fetch first if the verdict surprises.
 
 **Only a verdict denies.** A check's output carrying `::error::` is a

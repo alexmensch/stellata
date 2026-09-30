@@ -421,6 +421,15 @@ describe('perf-section-guard gathers the inputs from git', () => {
     expect(guard('## Summary\n\nx\n').code).toBe(0);
   });
 
+  it('ignores a record count the base moved after the branch point', () => {
+    git('checkout', '-q', 'base');
+    commit('scripts/catalog/build-catalog-expected.json', expected(420_000));
+    git('checkout', '-q', 'main');
+    commit('README.md');
+    const r = guard('## Summary\n\nx\n');
+    expect(r.code, r.stdout).toBe(0);
+  });
+
   it('reads the record count off both refs', () => {
     commit('scripts/catalog/build-catalog-expected.json', expected(420_000));
     const r = guard('## Summary\n\nx\n');
