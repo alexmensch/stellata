@@ -173,6 +173,11 @@ describe('the middleware answers whatever the client accepts', () => {
     expect(answer.fellThrough).toBe(true);
   });
 
+  it('keeps the whole query on a redirect, as the Worker’s URL parse does', async () => {
+    const answer = await fetchPath('/?v=AQAA&x=a?b', 'text/html');
+    expect(answer.headers.location).toBe('/app?v=AQAA&x=a?b');
+  });
+
   it('redirects only a GET or HEAD, as the Worker does', async () => {
     expect((await fetchPath('/v/AQAA/', 'text/html', 'HEAD')).status).toBe(301);
     expect((await fetchPath('/v/AQAA/', 'text/html', 'POST')).fellThrough).toBe(true);

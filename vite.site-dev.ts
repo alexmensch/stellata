@@ -74,8 +74,8 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             next();
             return;
           }
-          const [pathname, query] = (req.url ?? '/').split('?');
-          const route = decide(pathname, query === undefined ? '' : `?${query}`);
+          const { pathname, search } = new URL(req.url ?? '/', 'http://dev');
+          const route = decide(pathname, search);
 
           // Answered ahead of the Accept gate, matching the Worker.
           if (route.kind === 'redirect') {
