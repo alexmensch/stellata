@@ -10,7 +10,9 @@ import {
   CATALOG_STAGE,
   catalogCacheKey,
   keyedPaths,
+  PACKAGE_JSON,
   parseLsFilesStage,
+  withVersionlessPackageJson,
 } from './catalog-stage-pure';
 
 const index = (paths: string[], blob = 'b0'): Map<string, string> =>
@@ -76,6 +78,26 @@ describe('catalogCacheKey', () => {
     expect(catalogCacheKey(new Map([['a', 'b0'], ['b', 'b1']]), paths, 'node-a')).not.toBe(key);
     expect(catalogCacheKey(index(['a', 'b', 'c']), ['a', 'b', 'c'], 'node-a')).not.toBe(key);
     expect(catalogCacheKey(index(paths), paths, 'node-b')).not.toBe(key);
+  });
+});
+
+describe('withVersionlessPackageJson', () => {
+  const paths = [PACKAGE_JSON];
+  const keyOf = (pkg: object): string =>
+    catalogCacheKey(withVersionlessPackageJson(index(paths), JSON.stringify(pkg)), paths, 'node-a');
+  const base = { name: 'stellata', version: '6.0.6', scripts: { 'build:catalog': 'tsx a.ts' } };
+
+  it('ignores a version bump, which no stage step reads', () => {
+    expect(keyOf({ ...base, version: '6.1.0' })).toBe(keyOf(base));
+  });
+
+  it('moves with any other field', () => {
+    expect(keyOf({ ...base, scripts: { 'build:catalog': 'tsx b.ts' } })).not.toBe(keyOf(base));
+  });
+
+  it('replaces only the package.json entry', () => {
+    const tracked = index(['data/a.tsv', PACKAGE_JSON]);
+    expect(withVersionlessPackageJson(tracked, JSON.stringify(base)).get('data/a.tsv')).toBe('b0');
   });
 });
 

@@ -70,10 +70,16 @@ the Node version:
 - all of `data/`, `package.json`, `pnpm-lock.yaml`, `tsconfig.json`,
   `test.yml` and this folder.
 
+**`package.json` is keyed without its `version`**
+(`withVersionlessPackageJson`): a digest of every other field stands in for
+its blob id. Most pull requests bump the version, so keying it would miss
+main's build on every first run. No stage step reads the version.
+
 The stage reads nothing outside that set. **A new read outside it is the one
 way to get a stale hit:** a build that reads a
 file by path from a folder holding none of its modules must add that folder
-to `ALWAYS_KEYED_DIRS`. The key errs the other way everywhere else — any
+to `ALWAYS_KEYED_DIRS`, and a step that starts reading the package version
+must drop `withVersionlessPackageJson`. The key errs the other way everywhere else — any
 `data/` change misses.
 
 **What is cached** is the stage's untracked files under `public/` and
