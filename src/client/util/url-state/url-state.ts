@@ -1294,6 +1294,8 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
   wirePose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt, frameUp);
   snapshotCam(lastCam, frameCam, frameTgt, frameUp);
   let lastT = persistedT(stellata);
+  const posePending = () => stellata.getOrbitFramePort()?.posePending() ?? false;
+  let heldLastFrame = posePending();
 
   const schedule = () => {
     if (timer !== undefined) clearTimeout(timer);
@@ -1322,6 +1324,16 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
     }
 
     wirePose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt, frameUp);
+    // The tick seats a held pose before this frame drew, so the frame after a
+    // hold is the restore's own move: re-baseline rather than write it.
+    // orbit-pose/README.md#the-tick-seats-it
+    const held = posePending();
+    if (held || heldLastFrame) {
+      heldLastFrame = held;
+      snapshotCam(lastCam, frameCam, frameTgt, frameUp);
+      if (changed) schedule();
+      return;
+    }
     // Steady-state path: one scale-free comparison against the snapshot
     // (`pose-change-pure.ts`). No allocations on the no-change path — this
     // used to be 10+ string allocations per frame from a toFixed(3)×9 hash.

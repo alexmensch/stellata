@@ -130,10 +130,11 @@ So the restore:
   attaches binaries on a chain of its own rather than inline in wave 2, which
   would otherwise wait on the cover waiting on it.
 
-**No URL is written while a pose is held** (`writeUrl` checks
-`posePending()`): the live pose is the stand-in, and the address bar already
-holds the link. Seating it moves the camera, which the change detector then
-writes as usual.
+**No URL is written while a pose is held, nor for its seating** (`writeUrl`
+checks `posePending()`; the change detector re-baselines on the frame a hold
+ends). The live pose is the stand-in, the address bar already holds the link,
+and the seat is the restore's own move rather than the user's — which is what
+keeps a bare `/` first load at `/`.
 
 The holder, its render-gate hold and the user-input veto are
 [A pose held for ORB](../../../attitude/orbit-frame/README.md#a-pose-held-for-orb). A focus with no ORB

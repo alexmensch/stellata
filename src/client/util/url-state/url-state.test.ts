@@ -2163,6 +2163,8 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       }),
       isCameraTransitionActive: () => state.transition,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      renderGate: { sawUserInput: false } as any,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       camera: cam as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       controls: controls as any,
@@ -2398,6 +2400,33 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       frame();
       vi.advanceTimersByTime(1000);
       expect(replaceState).not.toHaveBeenCalled();
+    });
+
+    // The first-load view is the case: bare / has to stay bare once the tick
+    // seats Earth's pose, and a link has to stay the link it was.
+    it('reads a held pose seating as the restore, not a camera move', () => {
+      const { replaceState } = installUrl('/');
+      const pole = new THREE.Vector3(0, -0.3978, 0.9175).normalize();
+      const frame = captureOrbitFrame(new THREE.PerspectiveCamera(), pole, new THREE.Vector3(1, 0, 0));
+      const orbit: MockOrbitState = {
+        armed: true, locked: true, frame: { status: 'ready', value: frame },
+      };
+      const { stellata, cam, frame: drawFrame } = makeSyncStellata({ orbit });
+      cam.position.set(3, 4, 5);
+      cam.up.set(0, 0, 1);
+      void stellata.getOrbitFramePort()!.holdPose({ x: -2, y: 1, z: 0.5 }, { x: 0, y: 0, z: 1 });
+      startUrlSync(stellata, syncIdMaps());
+
+      tickSeat(stellata, orbit, frame);
+      drawFrame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+
+      // The next real move still writes.
+      cam.position.set(30, 40, 50);
+      drawFrame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).toHaveBeenCalled();
     });
 
     it('writes no URL while a pose waits for its tick', () => {
