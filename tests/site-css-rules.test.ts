@@ -46,19 +46,26 @@ const TOKENS = new Map(
   [...TOKENS_CSS.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]),
 );
 
-/** A value with every balanced `var(…)` removed; balanced because a fallback nests. */
+/** Each balanced `var(…)` replaced by its fallback, stripped likewise, so a literal fallback still counts. */
 function stripVars(value: string): string {
   let out = '';
-  for (let i = 0; i < value.length; i += 1) {
-    if (value.startsWith('var(', i)) {
-      let depth = 0;
-      for (; i < value.length; i += 1) {
-        if (value[i] === '(') depth += 1;
-        else if (value[i] === ')' && (depth -= 1) === 0) break;
-      }
-    } else {
+  let i = 0;
+  while (i < value.length) {
+    if (!value.startsWith('var(', i)) {
       out += value[i];
+      i += 1;
+      continue;
     }
+    let depth = 0;
+    let comma = -1;
+    let j = i;
+    for (; j < value.length; j += 1) {
+      if (value[j] === '(') depth += 1;
+      else if (value[j] === ')' && (depth -= 1) === 0) break;
+      else if (value[j] === ',' && depth === 1 && comma < 0) comma = j;
+    }
+    if (comma >= 0) out += stripVars(value.slice(comma + 1, j));
+    i = j + 1;
   }
   return out;
 }
