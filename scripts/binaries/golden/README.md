@@ -15,16 +15,25 @@ restructuring of it can prove it writes the same `public/binaries.bin`.
   cut down to the gaia / hip ids those rows carry and the `synth-<wds>-`
   keys of those systems. Row indices are the real ones, so the drops and
   re-homes are the ones the full build makes.
+- `cut-fixture.ts` (+ `cut-fixture-pure.ts`, its cut and test) — writes both
+  fixtures from the real `multiples.tsv` and a built row-index map.
+  `FIXTURE_SYSTEMS` is the system list; the test holds the committed
+  fixture to it.
 - `binaries.golden.bin` — the encoder's output on the two fixtures:
   54 pairs.
 - `binaries-bin-golden.test.ts` — runs `encode()` through `python3`, pins
   its `WriteStats` (every counter, each nonzero), and compares against the
-  golden, naming the first differing record and field; then parses the golden with the client loader
-  (`src/client/binaries/binaries-loader.ts`) so writer and reader agree.
+  golden, naming the first differing record and field; then parses the
+  golden with the client loader (`src/client/binaries/binaries-loader.ts`)
+  so writer and reader agree.
 
-The fixtures are frozen inputs, never regenerated: the golden pins the
-encoder, not the current data. When a change is meant to alter the bytes,
-re-baseline with `UPDATE_BINARIES_GOLDEN=1` (the failing test prints
-the full command) and say so in the commit. A missing golden fails;
-the env var is the only writer. When the encoder moves to TypeScript, the
-test drives the TS encoder on the same fixtures against the same golden.
+The fixtures are frozen inputs: the golden pins the encoder, not the current
+data. Re-cut them (`tsx scripts/binaries/golden/cut-fixture.ts`, which needs
+the LFS `multiples.tsv` and a built catalogue) only when the encoder starts
+reading a column the fixture lacks, or `FIXTURE_SYSTEMS` changes; the cut
+takes the current row indices, so re-baseline the golden in the same commit.
+When a change is meant to alter the bytes, re-baseline with
+`UPDATE_BINARIES_GOLDEN=1` (the failing test prints the full command) and say
+so in the commit. A missing golden fails; the env var is the only writer. When
+the encoder moves to TypeScript, the test drives the TS encoder on the same
+fixtures against the same golden.
