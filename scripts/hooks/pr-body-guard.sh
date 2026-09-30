@@ -5,6 +5,8 @@
 
 here="$(cd "$(dirname "$0")" && pwd)"
 . "$here/command-match.sh"
+ci_base=main
+skip_label=skip-version-bump
 input="$(cat)"
 
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // "" | gsub("\\\\\n"; " ")' 2>/dev/null | tr '\n' ';')" || exit 0
@@ -81,10 +83,10 @@ fi
 if [ -z "$base" ] && [ "$sub" = create ]; then
   base="$(git config "branch.$(git branch --show-current 2>/dev/null).gh-merge-base" 2>/dev/null)"
 fi
-[ -n "$base" ] || base=main
-[ "$base" = main ] || exit 0
+[ -n "$base" ] || base="$ci_base"
+[ "$base" = "$ci_base" ] || exit 0
 
-has_label() { [[ ",$1," == *",skip-version-bump,"* ]]; }
+has_label() { [[ ",$1," == *",${skip_label},"* ]]; }
 skip=false
 if { has_label "$labels" || has_label "$added"; } && ! has_label "$removed"; then skip=true; fi
 

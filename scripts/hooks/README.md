@@ -244,7 +244,10 @@ push. The hook runs the **same scripts** the workflows run
 `scripts/perf/perf-section-guard.sh`), so there is no second copy of either
 rule; a test fails when a workflow stops calling its script.
 
-It mirrors each workflow's triggers rather than the checks alone:
+It mirrors each workflow's triggers rather than the checks alone. The base
+branch and the exempting label are the hook's `ci_base` and `skip_label`,
+and a test fails when a workflow's `branches:` filter or label condition
+stops naming the same values:
 
 - **Base `main` only**, both workflows' `branches:` filter. `-B/--base`
   decides; otherwise `create` resolves it as gh does — the current branch's

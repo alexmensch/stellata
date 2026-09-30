@@ -184,3 +184,21 @@ describe('CI and the hook run one check each', () => {
     expect(readFileSync(HOOK, 'utf-8')).toContain(script.replace(/^scripts\//, '$here/../'));
   });
 });
+
+describe('the hook triggers where the workflows do', () => {
+  const hookValue = (name: string): string => {
+    const line = new RegExp(`^${name}=(\\S+)$`, 'm').exec(readFileSync(HOOK, 'utf-8'));
+    expect(line, `pr-body-guard.sh no longer declares ${name}=`).not.toBeNull();
+    return line![1];
+  };
+  const workflow = (name: string) => readFileSync(resolve(__dirname, '../.github/workflows', name), 'utf-8');
+
+  it.each(['release-notes-guard.yml', 'perf-section-guard.yml'])('%s runs on the base the hook gates', (name) => {
+    expect(workflow(name)).toMatch(new RegExp(`^\\s+branches: \\[${hookValue('ci_base')}\\]$`, 'm'));
+  });
+
+  it('release-notes-guard.yml skips on the label the hook exempts', () => {
+    expect(workflow('release-notes-guard.yml')).toContain(
+      `contains(github.event.pull_request.labels.*.name, '${hookValue('skip_label')}')`);
+  });
+});
