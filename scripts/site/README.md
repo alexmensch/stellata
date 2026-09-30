@@ -9,7 +9,9 @@ figures-pure.ts        The figure names a page may ask for and the one
                        `%VITE_…%` substitution (+ test).
 json-ld-citations.ts   The Vite plugin appending every citation-index work to
                        a page's JSON-LD `citation` array; the merge itself is
-                       json-ld-citations-pure.ts (+ test). Contract:
+                       json-ld-citations-pure.ts (+ test). The index is
+                       parsed once per build or dev-server start, like the
+                       figures, so an index edit shows after a restart. Contract:
                        /src/site/README.md#the-json-ld-citation-list.
 markdown-rendition.ts  A page's markdown rendition, derived from the page's
                        own HTML. Emitted as `dist/index.md`.
