@@ -9,10 +9,11 @@ or when a marked figure disagrees with its snapshot.
 ## Files
 
 ```
-doc-figures-pure.ts        Marker grammar, key resolution, formatting, and
-                           renderFigures (text + snapshots → rewritten text,
-                           stale figures, problems). No I/O.
-doc-figures-pure.test.ts   Grammar, resolution and format cases.
+doc-figures-pure.ts        Marker grammar, code masking, key resolution,
+                           formatting, and renderFigures (text + snapshots +
+                           doc kind → rewritten text, stale figures, problems).
+                           No I/O.
+doc-figures-pure.test.ts   Grammar, masking, resolution and format cases.
 doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
                            a repeated stem throws) and docFiles (every *.md).
                            Both take tracked and untracked-but-not-ignored
@@ -31,6 +32,7 @@ rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
 ## The marker
 
 ```
+<!-- count:<stem>/<json.path>[ sigN|kN] -->FIGURE<!-- /count -->
 the manifest holds <!-- count:membership-manifest/rows -->975,573<!-- /count --> rows
 ```
 
@@ -46,9 +48,11 @@ the manifest holds <!-- count:membership-manifest/rows -->975,573<!-- /count -->
   "about", "~" — sit outside the marker.
 - **One line** — the figure never wraps, and markers never nest.
 
-HTML comments render as nothing on GitHub, in table cells too. Inside a fenced
-block or a mermaid diagram they render literally, so a figure there stays
-unmarked.
+HTML comments render as nothing on GitHub, in table cells too. Inside a code
+block, inline code or a mermaid diagram they render literally, so the scan
+skips markdown code entirely (`maskCode`, over the same `marked` lexer the
+doc-pointer suite uses) and a figure there stays unmarked — which is also how
+the grammar line above can show placeholders.
 
 ## What gets a marker
 

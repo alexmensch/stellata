@@ -28,6 +28,6 @@ export function scanDocFigures(root: string): DocFigureScan[] {
   const snapshots = loadSnapshots(root);
   return docFiles(root).map((file) => {
     const text = readFileSync(join(root, file), 'utf8');
-    return { file, text, report: renderFigures(text, snapshots) };
+    return { file, text, report: renderFigures(text, snapshots, 'markdown') };
   });
 }

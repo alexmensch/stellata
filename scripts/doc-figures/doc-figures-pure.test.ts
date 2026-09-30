@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatFigure, parseFormat, parseMarkers, renderFigures, resolveFigure } from './doc-figures-pure';
+import { formatFigure, maskCode, parseFormat, parseMarkers, renderFigures, resolveFigure } from './doc-figures-pure';
 
 const snapshots = new Map<string, unknown>([
   ['membership-manifest', { rows: 975573, bindingByClass: { none: 1977 }, additionsByReason: { 'admitted:hd_omitted': 5063 } }],
@@ -100,10 +100,35 @@ describe('formatFigure', () => {
   });
 });
 
+describe('maskCode', () => {
+  it('blanks fenced blocks and inline code, keeping length and newlines', () => {
+    const text = 'a `x <!-- /count -->` b\n```\n<!-- count:a/b -->\n```\nc';
+    const masked = maskCode(text);
+    expect(masked).toHaveLength(text.length);
+    expect(masked.split('\n')).toHaveLength(text.split('\n').length);
+    expect(masked).not.toContain('<!--');
+    expect(masked.startsWith('a ')).toBe(true);
+    expect(masked.endsWith('\nc')).toBe(true);
+  });
+
+  it('finds code a list item or blockquote wraps across lines', () => {
+    const text = '- item `a <!-- /count -->\n  b` end\n\n> quote `c\n> d <!-- /count -->` end';
+    expect(maskCode(text)).not.toContain('<!--');
+  });
+});
+
 describe('renderFigures', () => {
+  it('reads no marker inside markdown code, but reads it in html', () => {
+    const inCode = `\`${mark('nope/x', '1')}\`\n\n    ${mark('nope/y', '2')}\n\n\`\`\`\n<!-- count:<stem>/<path> -->N<!-- /count -->\n\`\`\``;
+    expect(renderFigures(inCode, snapshots, 'markdown')).toEqual({ rendered: inCode, problems: [], stale: [] });
+    expect(renderFigures(`<p>${mark('nope/x', '1')}</p>`, snapshots, 'html').problems).toEqual([
+      'line 1: no snapshot nope-expected.json',
+    ]);
+  });
+
   it('rewrites a stale figure and reports it', () => {
     const text = `x ${mark('membership-manifest/rows', '975,000')} y`;
-    const report = renderFigures(text, snapshots);
+    const report = renderFigures(text, snapshots, 'markdown');
     expect(report.rendered).toBe(`x ${mark('membership-manifest/rows', '975,573')} y`);
     expect(report.stale).toEqual(['line 1: count:membership-manifest/rows quotes 975,000, snapshot gives 975,573']);
     expect(report.problems).toEqual([]);
@@ -111,12 +136,12 @@ describe('renderFigures', () => {
 
   it('leaves a current figure and every unmarked number alone', () => {
     const text = `1,977 ${mark('membership-manifest/bindingByClass.none', '1,977')} 975,573`;
-    expect(renderFigures(text, snapshots)).toEqual({ rendered: text, problems: [], stale: [] });
+    expect(renderFigures(text, snapshots, 'markdown')).toEqual({ rendered: text, problems: [], stale: [] });
   });
 
   it('leaves an unresolvable marker untouched and reports it', () => {
     const text = mark('membership-manifest/gone', '5');
-    const report = renderFigures(text, snapshots);
+    const report = renderFigures(text, snapshots, 'markdown');
     expect(report.rendered).toBe(text);
     expect(report.problems).toEqual(['line 1: membership-manifest-expected.json has no gone']);
   });

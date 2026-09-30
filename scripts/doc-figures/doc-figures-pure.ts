@@ -1,4 +1,5 @@
 // Doc-figure markers: parse them, resolve each key against the count snapshots, render the figure.
+import { Lexer, walkTokens } from 'marked';
 import { roundSignificant } from '../util/frozen-json';
 
 export type FigureFormat =
@@ -36,6 +37,26 @@ function lineAt(text: string, index: number): number {
   let line = 1;
   for (let i = text.indexOf('\n'); i !== -1 && i < index; i = text.indexOf('\n', i + 1)) line++;
   return line;
+}
+
+/** A token's raw text as a source pattern: inside a list item or blockquote the lexer strips each continuation line's indent and `>`. */
+const sourcePattern = (raw: string): RegExp =>
+  new RegExp(raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\n/g, '\\n[ \\t>]*'), 'g');
+
+/** Markdown with every code block and inline code span blanked to spaces, newlines and offsets kept. */
+export function maskCode(markdown: string): string {
+  let masked = markdown;
+  let cursor = 0;
+  walkTokens(new Lexer({ gfm: true }).lex(markdown), (token) => {
+    if (token.type !== 'code' && token.type !== 'codespan') return;
+    const pattern = sourcePattern(token.raw);
+    pattern.lastIndex = cursor;
+    const found = pattern.exec(markdown);
+    if (!found) throw new Error(`code token not found in source after offset ${cursor}: ${token.raw.slice(0, 40)}`);
+    cursor = found.index + found[0].length;
+    masked = masked.slice(0, found.index) + found[0].replace(/[^\n]/g, ' ') + masked.slice(cursor);
+  });
+  return masked;
 }
 
 export function parseFormat(token: string | undefined): FigureFormat | null {
@@ -104,8 +125,12 @@ export function formatFigure(value: number, format: FigureFormat): string {
   }
 }
 
-export function renderFigures(text: string, snapshots: Snapshots): FigureReport {
-  const { markers, problems } = parseMarkers(text);
+export type DocKind = 'markdown' | 'html';
+
+export const scannable = (text: string, kind: DocKind): string => (kind === 'markdown' ? maskCode(text) : text);
+
+export function renderFigures(text: string, snapshots: Snapshots, kind: DocKind): FigureReport {
+  const { markers, problems } = parseMarkers(scannable(text, kind));
   const stale: string[] = [];
   let rendered = '';
   let cursor = 0;
