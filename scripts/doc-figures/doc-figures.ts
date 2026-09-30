@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { gitFiles, presentFiles } from '../util/git-files';
-import { SNAPSHOT_SUFFIX, type Snapshots } from './doc-figures-pure';
+import { type FigureReport, renderFigures, SNAPSHOT_SUFFIX, type Snapshots } from './doc-figures-pure';
 
 export function loadSnapshots(root: string): Snapshots {
   const snapshots = new Map<string, unknown>();
@@ -16,4 +16,18 @@ export function loadSnapshots(root: string): Snapshots {
 
 export function docFiles(root: string): string[] {
   return presentFiles(root, gitFiles(root, ['*.md'], { untracked: true }));
+}
+
+export interface DocFigureScan {
+  file: string;
+  text: string;
+  report: FigureReport;
+}
+
+export function scanDocFigures(root: string): DocFigureScan[] {
+  const snapshots = loadSnapshots(root);
+  return docFiles(root).map((file) => {
+    const text = readFileSync(join(root, file), 'utf8');
+    return { file, text, report: renderFigures(text, snapshots) };
+  });
 }

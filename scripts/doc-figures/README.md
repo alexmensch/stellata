@@ -19,7 +19,9 @@ doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
                            files, so a snapshot just written by
                            UPDATE_BUILD_COUNTS=1 resolves before its git add,
                            and both list through presentFiles, so a symlink or
-                           a deleted, unstaged file is skipped.
+                           a deleted, unstaged file is skipped. scanDocFigures
+                           renders every doc against the snapshots — the one
+                           scan the rewrite and tests/doc-figures.test.ts share.
 doc-figures.test.ts        Both listings over a throwaway repo.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
