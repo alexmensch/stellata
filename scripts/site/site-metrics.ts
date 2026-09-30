@@ -14,7 +14,6 @@ const APP_DOC = 'src/client/app/index.html';
 
 const COUNT_SNAPSHOT = 'scripts/catalog/build-catalog-expected.json';
 
-/** README.md#why-each-count-is-derived-where-it-is. */
 export function catalogueRecordCount(root: string): number {
   let buf: Buffer;
   try {
@@ -35,8 +34,6 @@ function snapshotRecordCount(root: string): number {
   return recordCount as number;
 }
 
-/** Every credited source in the application's Credits tab is one `<div>`
- *  child of a `.credit-entry` that is not the entry's own label. */
 export function creditedSourceCount(root: string): number {
   const app = parseHtml(readFileSync(join(root, APP_DOC), 'utf8'));
   const credits = selectAll('.modal-credits > .credit-entry > div:not(.credit-label)', app);
@@ -62,7 +59,6 @@ export function appVersion(root: string): string {
   return version;
 }
 
-/** Every cited work has one entry in the citation index. */
 export function citedReferenceCount(root: string): number {
   return citationEntries(root).length;
 }
