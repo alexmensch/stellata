@@ -1,25 +1,18 @@
 // see /scripts/hooks/README.md#how-pr-body-guard-works
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { commitFile, gitIn } from './git-fixture';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/pr-body-guard.sh');
 
 let repo: string;
 let stubs: string;
 
-const git = (...args: string[]) => spawnSync('git', args, { cwd: repo, encoding: 'utf-8' });
-
-function commit(path: string): void {
-  const full = join(repo, path);
-  mkdirSync(dirname(full), { recursive: true });
-  writeFileSync(full, 'x');
-  git('add', path);
-  git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', path);
-}
+const git = (...args: string[]) => gitIn(repo)(...args);
 
 /** `gh pr view` answers with this base and these labels, one per line. */
 function ghView(base: string, ...labels: string[]): void {
@@ -58,9 +51,9 @@ beforeEach(() => {
   stubs = join(repo, '.stubs');
   mkdirSync(stubs);
   git('init', '-q', '-b', 'feature');
-  commit('README.md');
+  commitFile(repo, 'README.md');
   git('update-ref', 'refs/remotes/origin/main', 'HEAD');
-  commit('src/client/milkyway/band.ts');
+  commitFile(repo, 'src/client/milkyway/band.ts');
 });
 
 afterEach(() => {

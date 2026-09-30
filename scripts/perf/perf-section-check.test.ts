@@ -3,10 +3,11 @@
 // section must carry when one fires.
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { commitFile, gitIn } from '../../tests/git-fixture';
 import { RECORD_COUNT_TOLERANCE } from './diff/diff-pure';
 
 const SCRIPT = resolve(__dirname, 'perf-section-check.sh');
@@ -388,15 +389,8 @@ describe('catalogue membership is a render-path trigger of its own', () => {
 
 describe('perf-section-guard gathers the inputs from git', () => {
   const GUARD = resolve(__dirname, 'perf-section-guard.sh');
-  const git = (...args: string[]) => spawnSync('git', args, { cwd: repo, encoding: 'utf-8' });
-
-  function commit(path: string, content: string): void {
-    const full = join(repo, path);
-    mkdirSync(dirname(full), { recursive: true });
-    writeFileSync(full, content);
-    git('add', path);
-    git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', path);
-  }
+  const git = (...args: string[]) => gitIn(repo)(...args);
+  const commit = (path: string, content?: string) => commitFile(repo, path, content);
 
   const expected = (n: number) => JSON.stringify({ recordCount: n });
 

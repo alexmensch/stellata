@@ -220,6 +220,9 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
 citation-index-pure.ts   Not a test — parsing of data/papers/index.md
                          entries and manifest.json pins, for
                          citation-index.test.ts.
+git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
+                         repo's git runner and one-file commit, for suites
+                         that drive a script over real history.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
