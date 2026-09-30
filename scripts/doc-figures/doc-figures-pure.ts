@@ -1,5 +1,6 @@
 // Doc-figure markers: parse them, resolve each key against the count snapshots, render the figure.
 import { Lexer, walkTokens } from 'marked';
+import { escapeRegExp } from '../util/escape-regexp';
 import { roundSignificant } from '../util/frozen-json';
 
 export type FigureFormat =
@@ -38,8 +39,6 @@ function lineAt(text: string, index: number): number {
   for (let i = text.indexOf('\n'); i !== -1 && i < index; i = text.indexOf('\n', i + 1)) line++;
   return line;
 }
-
-const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** A token's raw text as a source pattern: inside a list item or blockquote the lexer strips each continuation line's indent and `>`. */
 const sourcePattern = (raw: string): RegExp => new RegExp(escapeRegExp(raw).replace(/\n/g, '\\n[ \\t>]*'), 'g');

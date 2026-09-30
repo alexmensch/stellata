@@ -1,5 +1,7 @@
 // Parsing for data/papers/index.md entries and manifest.json copies. Rules: /data/papers/README.md#cited-papers.
 
+import { escapeRegExp } from './escape-regexp.ts';
+
 export interface ClaimRow {
   line: number;
   claim: string;
@@ -204,8 +206,6 @@ export function lineText(text: string): CopyText {
 }
 
 export const unpaginatedText = (text: string): CopyText => ({ kind: 'unpaginated', flat: matchable(text) });
-
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
 
 const printsPage = ({ edge }: PreparedPage, token: string): boolean =>
   new RegExp(`(?<![\\w.])${escapeRegExp(token)}(?![\\w])`).test(edge);

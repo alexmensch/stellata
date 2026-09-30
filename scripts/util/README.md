@@ -16,8 +16,10 @@ bar: repo plumbing with several callers, not a build helper with one.
 
 - `escape-regexp.ts` (+ test) — `escapeRegExp(text)`, text made literal
   inside a `RegExp` source, backslash included. Every pattern built from
-  page text or a figure goes through it; a hand-rolled character class
-  beside it is the defect CodeQL's `js/incomplete-sanitization` flags.
+  page text or a figure goes through it — `citation-index-pure.ts`'s page
+  locators, `doc-figures/doc-figures-pure.ts`'s source and key patterns,
+  the site suites; a hand-rolled character class beside it is the defect
+  CodeQL's `js/incomplete-sanitization` flags.
 
 - `astronomy_constants.py` — Python mirror of
   `src/client/util/astronomy-constants.ts`. `J2000_JD`,
