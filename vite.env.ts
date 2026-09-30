@@ -1,10 +1,9 @@
 /** Build-time figures every Vite config publishes, so app and site read one set. */
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import { type Figures, substituteFigures } from './scripts/site/figures-pure.ts';
 import {
+  appVersion,
   catalogueRecordCount,
   citedReferenceCount,
   creditedSourceCount,
@@ -12,7 +11,7 @@ import {
 
 export function buildFigures(root: string): Figures {
   return {
-    VITE_APP_VERSION: JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version,
+    VITE_APP_VERSION: appVersion(root),
     VITE_STAR_COUNT: catalogueRecordCount(root).toLocaleString('en-US'),
     VITE_SOURCE_COUNT: String(creditedSourceCount(root)),
     VITE_REFERENCE_COUNT: String(citedReferenceCount(root)),

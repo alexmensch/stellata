@@ -55,6 +55,14 @@ export function citationEntries(root: string): IndexEntry[] {
   return entries;
 }
 
+export function appVersion(root: string): string {
+  const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version?: unknown };
+  if (typeof version !== 'string' || version === '') {
+    throw new Error('site metrics: package.json states no version');
+  }
+  return version;
+}
+
 /** Every cited work has one entry in the citation index. */
 export function citedReferenceCount(root: string): number {
   return citationEntries(root).length;

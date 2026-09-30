@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { catalogChunkFilename } from '../catalog/record/catalog-pure';
-import { catalogueRecordCount, creditedSourceCount } from './site-metrics';
+import { appVersion, catalogueRecordCount, creditedSourceCount } from './site-metrics';
 
 let root: string | null = null;
 
@@ -33,6 +33,17 @@ describe('a figure that cannot be read stops the build', () => {
       'src/client/app/index.html': '<div class="modal-credits"><div class="credit-entry"><div class="credit-label">Stars</div></div></div>',
     });
     expect(() => creditedSourceCount(dir)).toThrow(/no credited sources/);
+  });
+
+  it.each([
+    ['no version', '{}'],
+    ['an empty version', '{"version":""}'],
+  ])('refuses a package.json with %s', (_, manifest) => {
+    expect(() => appVersion(scratchRoot({ 'package.json': manifest }))).toThrow(/states no version/);
+  });
+
+  it('reads the version package.json states', () => {
+    expect(appVersion(scratchRoot({ 'package.json': '{"version":"7.0.0"}' }))).toBe('7.0.0');
   });
 });
 

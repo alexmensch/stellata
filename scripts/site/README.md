@@ -2,7 +2,9 @@
 
 ```
 site-metrics.ts        Counts the catalogue records, the credited sources
-                       and the cited references off the things themselves.
+                       and the cited references off the things themselves,
+                       and reads the version off package.json; a figure it
+                       cannot read stops the build.
 figures-pure.ts        The figure names a page may ask for and the one
                        `%VITE_…%` substitution (+ test).
 json-ld-citations.ts   The Vite plugin appending every citation-index work to
