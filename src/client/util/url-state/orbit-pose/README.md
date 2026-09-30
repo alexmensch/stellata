@@ -83,7 +83,7 @@ cost is no bytes at all, since 28 already opened the mask group.
 `controls.target`, so the wire does the same: `cam` becomes `tgt` plus the
 offset's ORB components, `tgt` stays anchored ICRS, and `up` is ORB
 components. `|cam − tgt|` survives, which keeps every scale-relative test in
-`../pose-change-pure.ts` — the move threshold and the default elision — true
+`../pose-change/pose-change-pure.ts` — the move threshold and the default elision — true
 of the rotated pose unchanged.
 
 **Level means level on ORB.** A bit-29 link omits `up` when the view is level
@@ -134,7 +134,7 @@ So the restore:
 checks `posePending()`; the change detector re-baselines on the frame a hold
 ends). The live pose is the stand-in, the address bar already holds the link,
 and the seat is the restore's own move rather than the user's — which is what
-keeps a bare `/` first load at `/`.
+keeps a bare `/app` first load at `/app`.
 
 The holder, its render-gate hold and the user-input veto are
 [A pose held for ORB](../../../attitude/orbit-frame/README.md#a-pose-held-for-orb). A focus with no ORB
