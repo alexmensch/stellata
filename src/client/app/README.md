@@ -59,16 +59,9 @@ reference added here needs the same treatment.
 
 The SEO surface: title, description, canonical (`https://stellata.xyz/app`),
 OpenGraph and Twitter cards, the favicon and manifest links, and a
-Schema.org JSON-LD graph. **The `Person` and `WebApplication` nodes are
-shared with the homepage** — same `@id`s, same `description` string — so a
-crawler resolves one application described twice rather than two
-applications. Editing either node here means editing it in
-`src/site/index.html` in the same change; [Numbers in copy](/src/site/README.md#numbers-in-copy) carries the rule.
-
-The `@id`s keep the bare-root form (`https://stellata.xyz/#webapp`). An
-`@id` is an identifier, not an address — it does not have to equal the
-node's `url`, and churning it would break the association for anything
-that already recorded it.
+Schema.org JSON-LD graph. **Its `Person` and `WebApplication` nodes are
+shared with the homepage's, so edit both in one change** — [Numbers in copy](/src/site/README.md#numbers-in-copy)
+owns the rule and why the `@id`s keep the bare-root form.
 
 ## What the `<body>` owns
 
