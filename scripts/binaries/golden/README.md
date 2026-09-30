@@ -17,9 +17,9 @@ restructuring of it can prove it writes the same `public/binaries.bin`.
   re-homes are the ones the full build makes.
 - `binaries.golden.bin` — the encoder's output on the two fixtures:
   54 pairs.
-- `binaries-bin-golden.test.ts` — runs `encode()` through `python3` and
-  compares against the golden, naming the first differing record and
-  field; then parses the golden with the client loader
+- `binaries-bin-golden.test.ts` — runs `encode()` through `python3`, pins
+  its `WriteStats` (every counter, each nonzero), and compares against the
+  golden, naming the first differing record and field; then parses the golden with the client loader
   (`src/client/binaries/binaries-loader.ts`) so writer and reader agree.
 
 The fixtures are frozen inputs, never regenerated: the golden pins the
