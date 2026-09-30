@@ -14,10 +14,11 @@ let stubs: string;
 
 const git = (...args: string[]) => gitIn(repo)(...args);
 
-/** `gh pr view` answers with this base, head commit and labels, one per line. */
+/** `gh pr view` answers with this base, head commit and labels as JSON. */
 function ghView(base: string, labels: readonly string[] = [], head = git('rev-parse', 'HEAD').stdout.trim()): void {
-  const out = [base, head, ...labels].join('\n');
-  writeFileSync(join(stubs, 'gh'), `#!/bin/sh\nprintf '%s\\n' '${out}'\n`);
+  const view = { baseRefName: base, headRefOid: head, labels: labels.map((name) => ({ name })) };
+  writeFileSync(join(stubs, 'view.json'), JSON.stringify(view));
+  writeFileSync(join(stubs, 'gh'), `#!/bin/sh\ncat '${join(stubs, 'view.json')}'\n`);
   chmodSync(join(stubs, 'gh'), 0o755);
 }
 
