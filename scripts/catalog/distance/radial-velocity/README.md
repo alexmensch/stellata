@@ -35,7 +35,7 @@ an AT-HYG transcription we cannot re-pull, so [§ 5](/docs/catalog-driver.md#5-p
 retires it. Its 871 `rv_src=OTHER` cells were unattributable even by that
 standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
-Per-tier counts are pinned as `rvGaiaDr3` **<!-- count:build-catalog/rvGaiaDr3 -->869,112<!-- /count -->** / `rvSimbad` **7,171** /
+Per-tier counts are pinned as `rvGaiaDr3` **<!-- count:build-catalog/rvGaiaDr3 -->869,112<!-- /count -->** / `rvSimbad` **<!-- count:build-catalog/rvSimbad -->22,048<!-- /count -->** /
 `rvNone` **<!-- count:build-catalog/rvNone -->84,413<!-- /count -->**, the same discipline the direction cascade pins
 `directionVia` under. The SIMBAD tier is not the printed cell renamed:
 against the 7,126 rows that cell used to cover it drops 689 (562 the pull
