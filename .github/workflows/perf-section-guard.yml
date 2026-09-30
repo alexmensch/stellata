@@ -15,7 +15,8 @@ permissions:
 # claim. CI has no GPU, so this checks the section,
 # not the numbers — the runner produces those on the developer's machine.
 # Rules: /RELEASING.md#perf-pin; the check itself is
-# scripts/perf/perf-section-check.sh so it can be tested.
+# scripts/perf/perf-section-check.sh so it can be tested, and
+# scripts/perf/perf-section-guard.sh gathers its inputs from git.
 
 jobs:
   perf-section-guard:
@@ -24,28 +25,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - name: List the files this PR changes
-        run: git diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
-      # The membership term's own committed record: it cannot move without a
-      # deliberate UPDATE_BUILD_COUNTS refresh (scripts/catalog/README.md).
-      # Unreadable on either side prints nothing, and the check stays silent.
-      - name: Read the catalogue record count either side
-        id: records
-        env:
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          set -uo pipefail
-          counts=scripts/catalog/build-catalog-expected.json
-          base="$(git show "origin/${BASE_REF}:${counts}" 2>/dev/null | jq -r '.recordCount // empty')" || base=''
-          head="$(jq -r '.recordCount // empty' "$counts" 2>/dev/null)" || head=''
-          printf 'base=%s\nhead=%s\n' "$base" "$head" >> "$GITHUB_OUTPUT"
       - name: Check the `## Perf` section
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
-          BASE_RECORDS: ${{ steps.records.outputs.base }}
-          HEAD_RECORDS: ${{ steps.records.outputs.head }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
           set -euo pipefail
           printf '%s\n' "${PR_BODY:-}" > "$RUNNER_TEMP/body.md"
-          bash scripts/perf/perf-section-check.sh "$RUNNER_TEMP/body.md" "$RUNNER_TEMP/changed.txt" \
-            "${BASE_RECORDS:-}" "${HEAD_RECORDS:-}"
+          bash scripts/perf/perf-section-guard.sh "$RUNNER_TEMP/body.md" "origin/${BASE_REF}"

@@ -59,6 +59,10 @@ scripts/perf/
     (+ test)                or a catalogue-membership move over 1 %, needs a
                             `## Perf` section, every ✗ accepted, and a
                             table row under a Tier 1 or 2 claim.
+  perf-section-guard.sh     Gathers that check's inputs from git — the files
+                            HEAD changed since a base ref and the catalogue
+                            record count on each — and runs it. Called by
+                            perf-section-guard.yml; tested beside the check.
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
   diff/                     Two runs differenced: the band and its floor, the

@@ -3,9 +3,9 @@
 // section must carry when one fires.
 
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { RECORD_COUNT_TOLERANCE } from './diff/diff-pure';
 
@@ -383,5 +383,54 @@ describe('catalogue membership is a render-path trigger of its own', () => {
       const r = check('## Summary\n\nx\n', [], bad as [string, string]);
       expect(r.code, bad.join('/')).toBe(0);
     }
+  });
+});
+
+describe('perf-section-guard gathers the inputs from git', () => {
+  const GUARD = resolve(__dirname, 'perf-section-guard.sh');
+  const git = (...args: string[]) => spawnSync('git', args, { cwd: repo, encoding: 'utf-8' });
+
+  function commit(path: string, content: string): void {
+    const full = join(repo, path);
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, content);
+    git('add', path);
+    git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-qm', path);
+  }
+
+  const expected = (n: number) => JSON.stringify({ recordCount: n });
+
+  function guard(body: string): Exit {
+    writeFileSync(join(repo, 'body.md'), body);
+    const r = spawnSync('bash', [GUARD, 'body.md', 'base'], { cwd: repo, encoding: 'utf-8' });
+    return { code: r.status, stdout: r.stdout, stderr: r.stderr };
+  }
+
+  beforeEach(() => {
+    git('init', '-q', '-b', 'main');
+    commit('scripts/catalog/build-catalog-expected.json', expected(RECORDS));
+    git('branch', 'base');
+  });
+
+  it('reads the files HEAD changed since the base', () => {
+    commit('src/client/milkyway/band.ts', 'x');
+    const r = guard('## Summary\n\nx\n');
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('render path touched (src/client/milkyway/band.ts)');
+  });
+
+  it('ignores what the base gained after the branch point', () => {
+    git('checkout', '-q', 'base');
+    commit('src/client/milkyway/band.ts', 'x');
+    git('checkout', '-q', 'main');
+    commit('README.md', 'x');
+    expect(guard('## Summary\n\nx\n').code).toBe(0);
+  });
+
+  it('reads the record count off both refs', () => {
+    commit('scripts/catalog/build-catalog-expected.json', expected(420_000));
+    const r = guard('## Summary\n\nx\n');
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('catalogue membership 388063 -> 420000');
   });
 });

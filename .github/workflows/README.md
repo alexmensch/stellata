@@ -53,7 +53,9 @@ whenever the diff does either of:
   drift apart — they have to agree, or a change under the trigger would
   ship a pin that refuses every row.
 
-The check is `scripts/perf/perf-section-check.sh`, tested in vitest; CI has
+The check is `scripts/perf/perf-section-check.sh`, run through
+`scripts/perf/perf-section-guard.sh`, which reads the changed files and
+both record counts from git; both tested in vitest. CI has
 no GPU, so it checks the section, never the numbers. The exempt list is
 stated once, in `RELEASING.md`, and a test fails when the script drifts from
 it. Counts unreadable on either side leave that half of the trigger silent —
