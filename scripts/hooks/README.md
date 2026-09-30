@@ -340,7 +340,8 @@ rule; a test fails when a workflow stops calling its script.
 It mirrors each workflow's triggers rather than the checks alone:
 
 - **Base `main` only**, both workflows' `branches:` filter. `-B/--base`
-  decides; otherwise `create` means the default branch and `edit` asks
+  decides; otherwise `create` resolves it as gh does — the current branch's
+  `gh-merge-base` git config, else the default branch — and `edit` asks
   `gh pr view` for the PR's current base.
 - **`skip-version-bump` exempts the release notes.** The label set is what
   the PR will carry after this call: `-l/--label`/`--add-label` add,

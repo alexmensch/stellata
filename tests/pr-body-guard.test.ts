@@ -135,6 +135,13 @@ describe('pr-body-guard', () => {
     expect(decision(`gh pr edit 12 -F ${file} --base main`).denied).toBe(true);
   });
 
+  it('reads the branch gh-merge-base config gh itself defaults to on create', () => {
+    const file = body();
+    git('config', 'branch.feature.gh-merge-base', 'stack-base');
+    expect(decision(`gh pr create -F ${file}`).denied).toBe(false);
+    expect(decision(`gh pr create -B main -F ${file}`).denied).toBe(true);
+  });
+
   describe('fails open where it cannot judge', () => {
     it('an inline body, stdin, or a file that is not there', () => {
       body();

@@ -78,6 +78,9 @@ if [ "$sub" = edit ]; then
   [ -n "$base" ] || base="$(printf '%s\n' "$view" | head -n 1)"
   labels="$(printf '%s\n' "$view" | tail -n +2 | paste -sd, -)"
 fi
+if [ -z "$base" ] && [ "$sub" = create ]; then
+  base="$(git config "branch.$(git branch --show-current 2>/dev/null).gh-merge-base" 2>/dev/null)"
+fi
 [ -n "$base" ] || base=main
 [ "$base" = main ] || exit 0
 
