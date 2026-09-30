@@ -482,7 +482,6 @@ video {
   border: var(--rule-strong);
   border-radius: var(--radius-pill);
   text-decoration: none;
-  white-space: nowrap;
 }
 .pill[data-primary] {
   color: var(--bg);
