@@ -1,21 +1,36 @@
 // CI's catalogue build stage: `key` prints its cache key, `paths` the keyed files, `run` builds and diff-gates it.
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { scriptClosure } from '../util/import-closure';
-import { REPO_ROOT } from '../util/paths';
-import { CATALOG_STAGE, catalogCacheKey, keyedPaths, parseLsFilesStage } from './catalog-stage-pure';
+import { tsxEntry } from '../util/import-closure-pure';
+import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
+import {
+  type BlobIndex,
+  CATALOG_STAGE,
+  catalogCacheKey,
+  keyedPaths,
+  parseLsFilesStage,
+  withVersionlessPackageJson,
+} from './catalog-stage-pure';
 
-async function stageKeyInputs(): Promise<{ index: ReturnType<typeof parseLsFilesStage>; paths: string[] }> {
+async function stageKeyInputs(): Promise<{ index: BlobIndex; paths: string[] }> {
   const closure = await scriptClosure(CATALOG_STAGE.map((step) => step.script));
-  const index = parseLsFilesStage(execFileSync('git', ['ls-files', '-s', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' }));
+  const index = withVersionlessPackageJson(
+    parseLsFilesStage(execFileSync('git', ['ls-files', '-s', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' })),
+    readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'),
+  );
   return { index, paths: keyedPaths(closure, index) };
 }
 
 function runStage(): void {
+  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'));
   for (const { script, pinned } of CATALOG_STAGE) {
-    console.log(`::group::pnpm run ${script}`);
-    execFileSync('pnpm', ['run', script], { cwd: REPO_ROOT, stdio: 'inherit' });
+    console.log(`::group::${script}`);
+    // `pnpm run` would export npm_package_version, which the cache key excludes.
+    execFileSync('pnpm', ['exec', 'tsx', tsxEntry(scripts, script)], { cwd: REPO_ROOT, stdio: 'inherit' });
     console.log('::endgroup::');
     const diff = spawnSync('git', ['diff', '--exit-code', '--', ...pinned], { cwd: REPO_ROOT, stdio: 'inherit' });
     if (diff.status !== 0) {

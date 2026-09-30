@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 
 import { closureWithSiblings } from '../util/import-closure-pure';
+import { PACKAGE_JSON } from '../util/paths';
 
 export interface StageStep {
   script: string;
@@ -24,13 +25,14 @@ export const CATALOG_STAGE: readonly StageStep[] = [
 export const CATALOG_CACHE_KEY_PREFIX = 'catalog-build';
 
 const ALWAYS_KEYED_FILES = new Set([
-  'package.json',
+  PACKAGE_JSON,
   'pnpm-lock.yaml',
   'tsconfig.json',
   '.github/workflows/test.yml',
 ]);
 const ALWAYS_KEYED_DIRS = ['data/', 'scripts/ci/'];
 
+/** Path → content digest: the git blob id, except `package.json` once `withVersionlessPackageJson` has run. */
 export type BlobIndex = ReadonlyMap<string, string>;
 
 /** `git ls-files -s -z` output → path → blob id. */
@@ -58,6 +60,13 @@ export function keyedPaths(closure: ReadonlySet<string>, index: BlobIndex): stri
       || ALWAYS_KEYED_FILES.has(path)
       || ALWAYS_KEYED_DIRS.some((dir) => path.startsWith(dir)))
     .sort();
+}
+
+// see README.md#the-catalogue-build-cache
+export function withVersionlessPackageJson(index: BlobIndex, packageJson: string): BlobIndex {
+  const fields = JSON.parse(packageJson);
+  delete fields.version;
+  return new Map(index).set(PACKAGE_JSON, createHash('sha256').update(JSON.stringify(fields)).digest('hex'));
 }
 
 export function catalogCacheKey(index: BlobIndex, paths: readonly string[], nodeVersion: string): string {

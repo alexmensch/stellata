@@ -5,7 +5,9 @@ Scripts that `.github/workflows/` runs.
 - `catalog-stage-pure.ts` (+ test) — the catalogue build stage's steps
   (`CATALOG_STAGE`: each package script and the committed paths it must
   regenerate unchanged), which tracked files the stage can depend on
-  (`keyedPaths`), and the cache key they digest to (`catalogCacheKey`).
+  (`keyedPaths`), `package.json`'s version-free digest
+  (`withVersionlessPackageJson`), and the cache key they digest to
+  (`catalogCacheKey`).
 - `catalog-stage.ts` — the CLI `test.yml` calls. `key` prints the key;
   `paths` prints the keyed files instead, which is how to audit a surprising
   miss or hit; `run` runs each step, then fails on any diff in its pinned
@@ -70,11 +72,19 @@ the Node version:
 - all of `data/`, `package.json`, `pnpm-lock.yaml`, `tsconfig.json`,
   `test.yml` and this folder.
 
+**`package.json` is keyed without its `version`**
+(`withVersionlessPackageJson`): a digest of every other field stands in for
+its blob id. Most pull requests bump the version, so keying it would miss
+main's build on every first run. No stage step reads the version, and `run`
+starts each step's `tsx` entry directly rather than through `pnpm run`, so
+`npm_package_version` never reaches its environment.
+
 The stage reads nothing outside that set. **A new read outside it is the one
-way to get a stale hit:** a build that reads a
-file by path from a folder holding none of its modules must add that folder
-to `ALWAYS_KEYED_DIRS`. The key errs the other way everywhere else — any
-`data/` change misses.
+way to get a stale hit:** a build that reads a file by path from a folder
+holding none of its modules must add that folder to `ALWAYS_KEYED_DIRS`, and
+a step that starts reading `package.json`'s `version` must drop
+`withVersionlessPackageJson`. The key errs the other way everywhere else —
+any `data/` change misses.
 
 **What is cached** is the stage's untracked files under `public/` and
 `build/`, found with `git ls-files --others --ignored`. On a fresh checkout

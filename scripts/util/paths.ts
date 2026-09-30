@@ -17,6 +17,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // (repo/scripts/util), matching every scripts/<folder>/*.ts consumer.
 export const REPO_ROOT = resolve(__dirname, '..', '..');
 
+export const PACKAGE_JSON = 'package.json';
+
 const LFS_PROBE_BYTES = 128;
 
 /** Git-LFS pointer stub — the file content is elsewhere; content checks

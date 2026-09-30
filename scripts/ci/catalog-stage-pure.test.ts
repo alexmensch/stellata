@@ -4,13 +4,14 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { tsxEntry } from '../util/import-closure-pure';
-import { REPO_ROOT } from '../util/paths';
+import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
 import {
   CATALOG_CACHE_KEY_PREFIX,
   CATALOG_STAGE,
   catalogCacheKey,
   keyedPaths,
   parseLsFilesStage,
+  withVersionlessPackageJson,
 } from './catalog-stage-pure';
 
 const index = (paths: string[], blob = 'b0'): Map<string, string> =>
@@ -29,7 +30,7 @@ describe('parseLsFilesStage', () => {
 describe('keyedPaths', () => {
   const tracked = index([
     'data/sub/input.tsv',
-    'package.json',
+    PACKAGE_JSON,
     'pnpm-lock.yaml',
     'tsconfig.json',
     '.github/workflows/test.yml',
@@ -48,7 +49,7 @@ describe('keyedPaths', () => {
     expect(keyedPaths(new Set(['scripts/cat/build.ts', 'src/client/util/helper.ts']), tracked)).toEqual([
       '.github/workflows/test.yml',
       'data/sub/input.tsv',
-      'package.json',
+      PACKAGE_JSON,
       'pnpm-lock.yaml',
       'scripts/cat/build-expected.json',
       'scripts/cat/build.ts',
@@ -79,8 +80,28 @@ describe('catalogCacheKey', () => {
   });
 });
 
+describe('withVersionlessPackageJson', () => {
+  const paths = [PACKAGE_JSON];
+  const keyOf = (pkg: object): string =>
+    catalogCacheKey(withVersionlessPackageJson(index(paths), JSON.stringify(pkg)), paths, 'node-a');
+  const base = { name: 'stellata', version: '6.0.6', scripts: { 'build:catalog': 'tsx a.ts' } };
+
+  it('ignores a version bump, which no stage step reads', () => {
+    expect(keyOf({ ...base, version: '6.1.0' })).toBe(keyOf(base));
+  });
+
+  it('moves with any other field', () => {
+    expect(keyOf({ ...base, scripts: { 'build:catalog': 'tsx b.ts' } })).not.toBe(keyOf(base));
+  });
+
+  it('replaces only the package.json entry', () => {
+    const tracked = index(['data/a.tsv', PACKAGE_JSON]);
+    expect(withVersionlessPackageJson(tracked, JSON.stringify(base)).get('data/a.tsv')).toBe('b0');
+  });
+});
+
 describe('CATALOG_STAGE', () => {
-  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8'));
+  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'));
 
   it('names only single-entry tsx scripts, so every step is keyed', () => {
     for (const { script } of CATALOG_STAGE) expect(() => tsxEntry(scripts, script)).not.toThrow();

@@ -15,7 +15,8 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/refresh/` imports instead of independently walking
   `Path(__file__).resolve().parent...`.
 - `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
-  `scripts/catalog/*.ts` scripts.
+  `scripts/catalog/*.ts` scripts, and `PACKAGE_JSON`, the manifest's
+  repo-relative name, for the readers of its `scripts` table.
   `isLfsPointer(text)` recognises a pointer stub from a head string and
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the
