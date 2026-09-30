@@ -41,9 +41,12 @@ in markdown; `Zucker 2020 (/data/papers/index.md#zucker2020)` — or
 docstring or data file. The label is the entry heading's text before the dash:
 the first author's surname and the year, never co-authors or "et al.", with a
 letter (`Tomasko 2008a`, `2008b`) only where two entries would otherwise share
-one. The full author list, journal, volume, DOI, arXiv ID, bibcode and
-identifier URLs live only in the entry; the citing text adds just the in-paper
-locator that explains the claim (Table A1, eq. 2, Sect. 2.7).
+one. The title, journal, volume, DOI, arXiv ID, bibcode and identifier URLs
+live only in the entry; the citing text adds just the in-paper locator that
+explains the claim (Table A1, eq. 2, Sect. 2.7). The homepage's JSON-LD
+citation list is built from the entries
+([The JSON-LD citation list](/src/site/README.md#the-json-ld-citation-list)), so an entry's
+heading and reference line are published as written.
 
 Outside the rule:
 
