@@ -46,7 +46,7 @@ split_words "${cmd#*"$match"}"
 
 [[ "$match" == *GH_REPO=* ]] && exit 0
 
-body='' base='' target='' added='' removed=''
+body='' base='' head='' target='' added='' removed=''
 i=0
 while [ "$i" -lt "${#args[@]}" ]; do
   a="${args[$i]}"
@@ -57,6 +57,8 @@ while [ "$i" -lt "${#args[@]}" ]; do
     -F?*) body="${a#-F}" ;;
     -B | --base) base="$next"; i=$((i + 1)) ;;
     --base=*) base="${a#*=}" ;;
+    -H | --head) head="$next"; i=$((i + 1)) ;;
+    --head=*) head="${a#*=}" ;;
     -l | --label | --add-label) added="${added},${next}"; i=$((i + 1)) ;;
     --label=* | --add-label=*) added="${added},${a#*=}" ;;
     --remove-label) removed="${removed},${next}"; i=$((i + 1)) ;;
@@ -64,7 +66,7 @@ while [ "$i" -lt "${#args[@]}" ]; do
     -R | --repo | --repo=*) exit 0 ;;
     # gh's other flags that take a value; their value is not the PR argument.
     -t | --title | -b | --body | -a | --assignee | -r | --reviewer | -m | --milestone | \
-      -p | --project | -H | --head | -T | --template | \
+      -p | --project | -T | --template | \
       --add-* | --remove-assignee | --remove-reviewer | --remove-project) i=$((i + 1)) ;;
     -*) ;;
     *) [ -z "$target" ] && target="$a" ;;
@@ -76,9 +78,17 @@ done
 
 labels=''
 if [ "$sub" = edit ]; then
-  view="$(gh pr view ${target:+"$target"} --json baseRefName,labels --jq '.baseRefName, (.labels[].name)' 2>/dev/null)" || exit 0
-  [ -n "$base" ] || base="$(printf '%s\n' "$view" | head -n 1)"
-  labels="$(printf '%s\n' "$view" | tail -n +2 | paste -sd, -)"
+  view="$(gh pr view ${target:+"$target"} --json baseRefName,headRefOid,labels --jq '.baseRefName, .headRefOid, (.labels[].name)' 2>/dev/null)" || exit 0
+  [ -n "$base" ] || base="$(printf '%s\n' "$view" | sed -n 1p)"
+  head="$(printf '%s\n' "$view" | sed -n 2p)"
+  labels="$(printf '%s\n' "$view" | tail -n +3 | paste -sd, -)"
+fi
+
+if [ -n "$head" ]; then
+  [[ "$head" == *:* ]] && exit 0
+  if git rev-parse -q --verify "${head}^{commit}" >/dev/null; then :
+  elif git rev-parse -q --verify "origin/${head}^{commit}" >/dev/null; then head="origin/${head}"
+  else exit 0; fi
 fi
 if [ -z "$base" ] && [ "$sub" = create ]; then
   base="$(git config "branch.$(git branch --show-current 2>/dev/null).gh-merge-base" 2>/dev/null)"
@@ -106,7 +116,7 @@ check() {
 }
 
 if [ "$skip" = false ]; then record release-notes-guard "$(check release/release-notes-check.sh)" "$body"; fi
-record perf-section-guard "$(check perf/perf-section-guard.sh)" "$body" "origin/${base}"
+record perf-section-guard "$(check perf/perf-section-guard.sh)" "$body" "origin/${base}" ${head:+"$head"}
 
 [ -z "$failures" ] && exit 0
 

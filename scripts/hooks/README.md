@@ -261,8 +261,13 @@ stops naming the same values:
   the PR will carry after this call: `-l/--label`/`--add-label` add,
   `--remove-label` removes, and on `edit` the PR's existing labels (again
   from `gh pr view`) start the set.
-- **The diff is the checkout's `HEAD` against its merge base with
-  `origin/<base>`**, files and record count alike, as CI reads the PR. A stale `origin/main` reads a wider diff than GitHub
+- **The diff is the PR's head against its merge base with
+  `origin/<base>`**, files and record count alike, as CI reads the PR. The
+  head is the checkout's `HEAD` on a bare `create`; `create -H <branch>`
+  uses that branch (or `origin/<branch>`), and `edit` the `headRefOid`
+  `gh pr view` reports, so editing one PR from a worktree on another judges
+  the right diff. A head this checkout does not hold, or a fork's
+  `owner:branch`, lets the call through rather than judging `HEAD`. A stale `origin/main` reads a wider diff than GitHub
   will; fetch first if the verdict surprises.
 
 **Only a verdict denies.** A check's output carrying `::error::` is a

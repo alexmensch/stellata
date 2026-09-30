@@ -394,9 +394,10 @@ describe('perf-section-guard gathers the inputs from git', () => {
 
   const expected = (n: number) => JSON.stringify({ recordCount: n });
 
-  function guard(body: string): Exit {
+  function guard(body: string, head?: string): Exit {
     writeFileSync(join(repo, 'body.md'), body);
-    const r = spawnSync('bash', [GUARD, 'body.md', 'base'], { cwd: repo, encoding: 'utf-8' });
+    const argv = [GUARD, 'body.md', 'base', ...(head === undefined ? [] : [head])];
+    const r = spawnSync('bash', argv, { cwd: repo, encoding: 'utf-8' });
     return { code: r.status, stdout: r.stdout, stderr: r.stderr };
   }
 
@@ -434,6 +435,18 @@ describe('perf-section-guard gathers the inputs from git', () => {
     commit('scripts/catalog/build-catalog-expected.json', expected(420_000));
     const r = guard('## Summary\n\nx\n');
     expect(r.code).toBe(1);
+    expect(r.stdout).toContain('catalogue membership 388063 -> 420000');
+  });
+
+  it('judges the head it is given rather than the checkout', () => {
+    git('checkout', '-q', '-b', 'pr');
+    commit('src/client/milkyway/band.ts');
+    commit('scripts/catalog/build-catalog-expected.json', expected(420_000));
+    git('checkout', '-q', 'main');
+    expect(guard('## Summary\n\nx\n').code).toBe(0);
+    const r = guard('## Summary\n\nx\n', 'pr');
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('render path touched (src/client/milkyway/band.ts)');
     expect(r.stdout).toContain('catalogue membership 388063 -> 420000');
   });
 });

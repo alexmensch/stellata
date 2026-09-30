@@ -60,9 +60,10 @@ scripts/perf/
                             `## Perf` section, every ✗ accepted, and a
                             table row under a Tier 1 or 2 claim.
   perf-section-guard.sh     Gathers that check's inputs from git — the files
-                            HEAD changed since its merge base with a base
-                            ref, and the catalogue record count at that
-                            merge base and at HEAD — and runs it. A count
+                            a head ref (default HEAD) changed since its
+                            merge base with a base ref, and the catalogue
+                            record count at that merge base and at the
+                            head — and runs it. A count
                             main moved after the fork is not the PR's. Called by
                             perf-section-guard.yml and, before the body
                             reaches GitHub, scripts/hooks/pr-body-guard.sh;

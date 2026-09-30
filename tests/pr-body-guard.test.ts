@@ -14,9 +14,9 @@ let stubs: string;
 
 const git = (...args: string[]) => gitIn(repo)(...args);
 
-/** `gh pr view` answers with this base and these labels, one per line. */
-function ghView(base: string, ...labels: string[]): void {
-  const out = [base, ...labels].join('\n');
+/** `gh pr view` answers with this base, head commit and labels, one per line. */
+function ghView(base: string, labels: readonly string[] = [], head = git('rev-parse', 'HEAD').stdout.trim()): void {
+  const out = [base, head, ...labels].join('\n');
   writeFileSync(join(stubs, 'gh'), `#!/bin/sh\nprintf '%s\\n' '${out}'\n`);
   chmodSync(join(stubs, 'gh'), 0o755);
 }
@@ -118,10 +118,10 @@ describe('pr-body-guard', () => {
 
     it('on edit, from the labels the PR already carries', () => {
       const file = body(PERF);
-      ghView('main', 'docs');
+      ghView('main', ['docs']);
       expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(true);
       expect(decision(`gh pr edit 12 -F ${file} --add-label skip-version-bump`).denied).toBe(false);
-      ghView('main', 'skip-version-bump');
+      ghView('main', ['skip-version-bump']);
       expect(decision(`gh pr edit 12 --title "x y" -F ${file}`).denied).toBe(false);
       expect(decision(`gh pr edit 12 -F ${file} --remove-label skip-version-bump`).denied).toBe(true);
     });
@@ -133,6 +133,43 @@ describe('pr-body-guard', () => {
     ghView('stack-base');
     expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(false);
     expect(decision(`gh pr edit 12 -F ${file} --base main`).denied).toBe(true);
+  });
+
+  describe('judges the head of the PR, not whatever is checked out', () => {
+    const PR_HEAD = 'feature';
+
+    beforeEach(() => {
+      git('checkout', '-q', '-b', 'elsewhere', 'origin/main');
+    });
+
+    it('on edit, from the head commit gh reports', () => {
+      const file = body(NOTES);
+      ghView('main', [], git('rev-parse', PR_HEAD).stdout.trim());
+      const d = decision(`gh pr edit 12 -F ${file}`);
+      expect(d.denied).toBe(true);
+      expect(d.reason).toContain('src/client/milkyway/band.ts');
+      ghView('main');
+      expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(false);
+    });
+
+    it('on create -H, from that branch or its origin copy', () => {
+      const file = body(NOTES);
+      expect(decision(`gh pr create -F ${file}`).denied).toBe(false);
+      expect(decision(`gh pr create -H ${PR_HEAD} -F ${file}`).denied).toBe(true);
+      git('update-ref', `refs/remotes/origin/${PR_HEAD}`, PR_HEAD);
+      git('branch', '-q', '-D', PR_HEAD);
+      expect(decision(`gh pr create --head=${PR_HEAD} -F ${file}`).denied).toBe(true);
+    });
+
+    it('stands down on a head this checkout does not hold, rather than judging HEAD', () => {
+      git('checkout', '-q', PR_HEAD);
+      const file = body(NOTES);
+      expect(decision(`gh pr create -F ${file}`).denied).toBe(true);
+      ghView('main', [], 'deadbeef'.repeat(5));
+      expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(false);
+      expect(decision(`gh pr create -H nowhere -F ${file}`).denied).toBe(false);
+      expect(decision(`gh pr create -H someone:${PR_HEAD} -F ${file}`).denied).toBe(false);
+    });
   });
 
   it('reads the branch gh-merge-base config gh itself defaults to on create', () => {
