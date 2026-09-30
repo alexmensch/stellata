@@ -315,6 +315,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   let orbitSource: LateState<FocusedOrbitSource> | null = null;
   // orbit-frame/README.md#a-pose-held-for-orb
   const heldPose = new HeldOrbitPose(() => stellata.renderGate.hold());
+  // What the tick last built `orbitFrame` for; NaN so the first read rebuilds.
+  let tickedFocus: Target | null = null;
+  let tickedT = Number.NaN;
 
   /** Which orbit the focus rides, resolved once and held: for a pair that
    *  settles the plane normal, which is a static function of frozen elements
@@ -472,6 +475,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       return;
     }
     frame = orbitFrame;
+    tickedFocus = focused;
+    tickedT = stellata.getT();
     if (seatHeldPose()) riding = false;
     const rideable = orbitLocked
       && stellata.focus.getCameraMode() === 'navigate'
@@ -711,8 +716,15 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // Never `orbitFrame`: the ball is drawn against it, so an off-tick write moves the drawn datum.
   const portFrame = emptyReferenceFrame();
   const portFrameReady = { status: 'ready', value: portFrame } as const;
+  const tickedFrameReady = { status: 'ready', value: orbitFrame } as const;
   stellata.setOrbitFramePort({
     orbitFrame: () => {
+      // The tick's frame, read-only, when it is this frame's: one orbit
+      // evaluation per frame however many readers ask.
+      if (orbitActive && captured === null && tickedFocus === focused
+        && tickedT === stellata.getT()) {
+        return tickedFrameReady;
+      }
       const status = refreshOrbitFrame(portFrame);
       if (status === 'ready') return portFrameReady;
       return status === 'pending' ? ORBIT_PENDING : ORBIT_ABSENT;

@@ -79,6 +79,11 @@ Two consequences anything touching this has to honour:
   the 27 rows. Doing that per frame reinstates exactly the cost the ring
   layer's visibility gate exists to skip
   ([Orbit rings](../../solar-system/ephemerides/README.md#orbit-rings)).
+  **Other readers take the tick's frame, not a second evaluation.**
+  `OrbitFramePort.orbitFrame()` hands back the tick's own frame while it was
+  built for this focus at this `t`, and rebuilds only off-tick (a restore, a
+  debounced URL write). The URL change detector reads it every frame the
+  lock rides.
 
 ## What each frame re-reads, and what it must not
 
