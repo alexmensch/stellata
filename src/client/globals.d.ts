@@ -11,7 +11,8 @@ interface ImportMeta {
 }
 
 // Dev-console handles, set and cleared through util/page-teardown.ts.
-interface Window {
-  stellata?: import('./stellata').Stellata;
-  debug?: import('./debug/debug').DebugTools;
+interface DevConsoleGlobals {
+  stellata: import('./stellata').Stellata;
+  debug: import('./debug/debug').DebugTools;
 }
+interface Window extends Partial<DevConsoleGlobals> {}

@@ -1,19 +1,20 @@
 /** Page-lifetime teardown: the GPU holder's release and the dev-console globals (util/README.md). */
 
-export interface PageTeardown<G> {
+export interface PageTeardown<N> {
   hold(release: () => void): void;
-  expose<K extends keyof G>(name: K, value: G[K]): void;
+  expose<K extends keyof N>(name: K, value: N[K]): void;
 }
 
-export function bindPageTeardown<G extends EventTarget>(
-  target: G,
+export function bindPageTeardown<N extends object>(
+  target: EventTarget & Partial<N>,
   reload: () => void,
-): PageTeardown<G> {
+): PageTeardown<N> {
+  const globals: Partial<N> = target;
   let release: (() => void) | null = null;
   let released = false;
-  const exposed = new Set<keyof G>();
+  const exposed = new Set<keyof N>();
   target.addEventListener('pagehide', () => {
-    for (const name of exposed) Reflect.deleteProperty(target, name);
+    for (const name of exposed) Reflect.deleteProperty(globals, name);
     exposed.clear();
     if (released || release === null) return;
     released = true;
@@ -30,7 +31,7 @@ export function bindPageTeardown<G extends EventTarget>(
       release = next;
     },
     expose(name, value) {
-      target[name] = value;
+      globals[name] = value;
       exposed.add(name);
     },
   };

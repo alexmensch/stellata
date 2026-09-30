@@ -242,8 +242,10 @@ build scripts, tests, and shader uniforms.
   reloads a page the back/forward cache restores after that release, since
   it comes back with nothing to draw with. `main.ts` holds the booted
   renderer's `dispose` until the shell exists, then `Stellata.dispose()`.
-  `expose(name, value)` is the only way a value becomes a `window` global
-  (`window.stellata`, `window.debug`); `pagehide` deletes every one, and
+  `expose(name, value)` is the only way a value becomes a `window` global:
+  `main.ts` binds it to `DevConsoleGlobals` (`../globals.d.ts`), so only
+  `stellata` and `debug` compile, and the test fails any other `window`
+  assignment under `src/client`. `pagehide` deletes every exposed name, and
   drops the held release once it has run.
   **Why both matter**: WebKit keeps a reloaded page's global object alive
   in the same content process, and everything reachable from it — a

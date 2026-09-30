@@ -79,7 +79,7 @@ async function main() {
     return;
   }
 
-  const teardown = bindPageTeardown(window, () => location.reload());
+  const teardown = bindPageTeardown<DevConsoleGlobals>(window, () => location.reload());
 
   try {
     const kinds = buildKindModules();

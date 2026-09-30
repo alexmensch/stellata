@@ -1,16 +1,23 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { bindPageTeardown } from './page-teardown';
+
+const WINDOW_WRITE =
+  /\bwindow\s*(?:\.\s*[A-Za-z_$][\w$]*|\[[^\]]+\])\s*=(?!=)|\(\s*window\s+as\b[^)]*\)\s*(?:\.\s*[A-Za-z_$][\w$]*|\[[^\]]+\])\s*=(?!=)|(?:Object\.assign|Reflect\.set|Object\.defineProperty)\(\s*window\b/;
 
 function pageshow(persisted: boolean): Event {
   return Object.assign(new Event('pageshow'), { persisted });
 }
 
-type Global = EventTarget & { handle?: object };
+interface Handles { handle: object }
+type Global = EventTarget & Partial<Handles>;
 
 function make() {
   const target: Global = new EventTarget();
   const reload = vi.fn();
-  const teardown = bindPageTeardown(target, reload);
+  const teardown = bindPageTeardown<Handles>(target, reload);
   return { target, reload, teardown };
 }
 
@@ -29,7 +36,7 @@ describe('bindPageTeardown', () => {
     const target = {
       addEventListener: (type: string, listener: (event: Event) => void) => listeners.set(type, listener),
     } as unknown as Global;
-    const teardown = bindPageTeardown(target, vi.fn());
+    const teardown = bindPageTeardown<Handles>(target, vi.fn());
     const release = vi.fn(() => {
       throw new Error('dispose failed');
     });
@@ -91,5 +98,38 @@ describe('bindPageTeardown', () => {
     target.dispatchEvent(new Event('pagehide'));
     target.dispatchEvent(pageshow(false));
     expect(reload).not.toHaveBeenCalled();
+  });
+});
+
+describe('window globals under src/client', () => {
+  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+  const sources = readdirSync(root, { recursive: true, encoding: 'utf8' })
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.endsWith('.d.ts'));
+
+  it('scans the client tree', () => {
+    expect(sources).toContain(join('util', 'page-teardown.ts'));
+  });
+
+  it('are assigned only through expose', () => {
+    const writers = sources.filter((f) =>
+      readFileSync(join(root, f), 'utf8').split('\n').some((line) => WINDOW_WRITE.test(line)));
+    expect(writers).toEqual([]);
+  });
+
+  it.each([
+    'window.foo = 1;',
+    "window['foo'] = x;",
+    '(window as unknown as { foo: X }).foo = x;',
+    'Object.assign(window, { foo });',
+  ])('flags %s', (line) => {
+    expect(WINDOW_WRITE.test(line)).toBe(true);
+  });
+
+  it.each([
+    'if (window.foo === 1) {}',
+    'const w = window.innerWidth;',
+    'window.addEventListener("resize", f);',
+  ])('passes %s', (line) => {
+    expect(WINDOW_WRITE.test(line)).toBe(false);
   });
 });
