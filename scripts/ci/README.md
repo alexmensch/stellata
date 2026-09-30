@@ -5,7 +5,9 @@ Scripts that `.github/workflows/` runs.
 - `catalog-stage-pure.ts` (+ test) — the catalogue build stage's steps
   (`CATALOG_STAGE`: each package script and the committed paths it must
   regenerate unchanged), which tracked files the stage can depend on
-  (`keyedPaths`), and the cache key they digest to (`catalogCacheKey`).
+  (`keyedPaths`), `package.json`'s version-free digest
+  (`withVersionlessPackageJson`), and the cache key they digest to
+  (`catalogCacheKey`).
 - `catalog-stage.ts` — the CLI `test.yml` calls. `key` prints the key;
   `paths` prints the keyed files instead, which is how to audit a surprising
   miss or hit; `run` runs each step, then fails on any diff in its pinned
