@@ -51,15 +51,15 @@ export function buildPinSection(stellata: Stellata): DebugSection {
     const c = stellata.camera.position;
     const distCam = Math.hypot(c.x - t.x, c.y - t.y, c.z - t.z);
     const tLen = Math.hypot(t.x, t.y, t.z);
-    const pinNow = stellata.focus.isPinEngaged();
-    // isPinEngaged() gates on navigate, so OBSERVE can only ever read NO —
+    const pinNow = stellata.focus.pinnedStar() !== null;
+    // pinnedStar() gates on navigate, so OBSERVE can only ever read NO —
     // labelled, or the readout looks like a fault and off-frames like a leak.
     const observing = stellata.focus.getCameraMode() === 'observe';
     // Pin engages on target ≈ focal's LIVE local position (baseline +
     // orbital perturbation), not target ≈ origin — a binary focal drifts.
     const focal = stellata.focus.getFocusedStar();
     const engageDistSq = focal !== null
-      ? t.distanceToSquared(stellata.starLocalPositionInto(focal, engageScratch))
+      ? t.distanceToSquared(stellata.starFrame.localPositionInto(focal, engageScratch))
       : t.lengthSq();
 
     // Latches keep updating regardless of visibility — the user's

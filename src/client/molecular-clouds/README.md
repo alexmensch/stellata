@@ -59,7 +59,7 @@ Each cloud carries a frozen Stellata ID (`sid`, [§ 7](/docs/sid.md#7-storage--s
 loader rejects the artifact (warn + null, same as a version mismatch)
 when any sid is missing or duplicated — a pre-stamp `clouds.json` needs
 `pnpm run build:clouds`. The resolver's `cloud` SID domain is the
-module's `sids()` leg, attached by main.ts's roster loop (see
+module's `sidDomain()` leg, attached by main.ts's roster loop (see
 `../util/sid-resolver/README.md`).
 
 ## Files

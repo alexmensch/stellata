@@ -58,10 +58,37 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse 317 candidates on G − V and 119 on sibling-letter attribution
+gates refuse <!-- count:membership-manifest/derivedRejected.mag -->317<!-- /count --> candidates on G − V and <!-- count:membership-manifest/derivedRejected.sibling -->116<!-- /count --> on sibling-letter attribution
 (`derivedRejected`); falling off the end is a derived refusal.
-`derivedUngateable` (7) is the rows that reached a candidate with no printed V
+`derivedUngateable` (<!-- count:membership-manifest/derivedUngateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
 under any tier, so nothing could be weighed against it.
+
+**A component designation rescues a row the sibling gate leaves unbound.**
+Where SIMBAD puts the row's HIP on both components, the gate reads the row as
+the system and refuses any source but the primary's. When that leaves the row
+with **no** passing candidate, a refused candidate SIMBAD
+indexes the row's own TYC under — and no other source under it
+(`RowGateEvidence.tycWitness`, read off the SIMBAD route's own index and its two-claimants rule) —
+binds after all: Tycho-2 resolved the pair, so the row is that component
+carrying the pair's shared HIP. 53 Aqr B (HD 212697 · TYC 6385-683-1 on
+HIP 110778) and μ Dra B (HD 154905 · GJ 9584B on HIP 83608) are the shape —
+AT-HYG merged B's cells onto the system's HIP, and the refusal left B's own
+source to come back through the magnitude term as an unnamed twin. VV Crv
+(HIP 61910) is the third.
+
+**A HIP on neither component is the system's, and no witness overrides it.**
+HIP 62686 and HIP 52774 carry only a HIP and a TYC SIMBAD files under B; their
+Hipparcos entry lives on SIMBAD's system object, and `multiples.tsv` anchors
+component A on it. Rescued, the row sat on B's source and companion promotion
+minted a synthetic B beside it — one star drawn twice. 30 rows are that shape;
+they stay refused and count under `magnitudeRowsOwnCandidate.refused_sibling`.
+
+**It never outranks a candidate that passes on its own.** A TYC alone is not a
+component attribution: SIMBAD files HR 846's TYC 3700-1745-1 under HD 17743 C
+while its HIP, HD and HR name the unresolved AB, and letting the TYC win
+re-bound 32 such rows onto a companion. A HIP SIMBAD gives to the other
+component alone still refuses. The overlay gate weighs each source alone, with
+no rival to defer to, so it applies no rescue.
 
 **The losers are weighed too, not only the candidates ahead of the winner.**
 `passingRunnersUp` reads the rejections to decide whether a row's sources
@@ -96,8 +123,8 @@ walk order.
 A missing G is a pass at
 the gate, so `derivationCandidateSourceIds` feeds every source any row could be
 bound to into `../../astrometry-request/` and `derivedWeighedNoGMag` is pinned at
-**0** — a candidate weighed with no pulled row is the request under-covering
-the derivation. `derivedWeighedNullGMag` (77) is Gaia publishing no G for a
+**<!-- count:membership-manifest/derivedWeighedNoGMag -->0<!-- /count -->** — a candidate weighed with no pulled row is the request under-covering
+the derivation. `derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->) is Gaia publishing no G for a
 source it has a row for, which no request can supply.
 
 ## A Gaia id for a bright star is an identity statement, not a data source

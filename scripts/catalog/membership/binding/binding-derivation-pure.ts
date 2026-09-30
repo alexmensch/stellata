@@ -2,7 +2,11 @@
 // two-source consensus first, each candidate through both binding gates.
 // See README.md.
 
-import { normaliseGjKey, resolveGaiaSourceId } from '../../record/catalog-pure';
+import {
+  isSiblingLetterAttribution,
+  normaliseGjKey,
+  resolveGaiaSourceId,
+} from '../../record/catalog-pure';
 import type { GateVVia, PrintedV } from '../../photometry/v-magnitude-pure';
 import type { BindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
@@ -150,11 +154,15 @@ export interface DerivedBinding {
 }
 
 /** The evidence a row's candidates are weighed against: the row's own HIP, its
- *  printed V, plus the shared per-source tables. */
+ *  printed V, the source SIMBAD files its own TYC under, plus the shared
+ *  per-source tables. */
 export interface RowGateEvidence {
   hip: number | null;
   vMag: number | null;
   vVia: GateVVia | null;
+  /** The component witness — null where SIMBAD files the TYC under no source
+   *  or under two (README.md#both-gates-weigh-every-candidate). */
+  tycWitness: string | null;
   evidence: BindingEvidence;
 }
 
@@ -164,12 +172,14 @@ export function rowGateEvidence(
   row: BindingCells,
   evidence: BindingEvidence,
   printedVBelowHip: (row: BindingCells) => PrintedV | null,
+  simbad: SimbadSourceIndex,
 ): RowGateEvidence {
   const hip = parseIntOrNull(row.hip);
+  const tycWitness = row.tyc === '' ? null : simbad.byTyc.get(row.tyc) ?? null;
   const hipV = hip === null ? null : evidence.vMagOfHip(hip);
-  if (hipV !== null) return { hip, vMag: hipV, vVia: 'hip', evidence };
+  if (hipV !== null) return { hip, vMag: hipV, vVia: 'hip', tycWitness, evidence };
   const below = printedVBelowHip(row);
-  return { hip, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, evidence };
+  return { hip, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, tycWitness, evidence };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {
@@ -178,9 +188,9 @@ export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingCla
 }
 
 /** Weighs **every** ranked candidate, the winner's losing rivals included,
- *  through the same `resolveGaiaSourceId` call `applyBindingGate` makes — so
- *  the label side and the record side cannot drift on what counts as a bad
- *  binding. Nothing passing is a derived refusal. */
+ *  through the same `resolveGaiaSourceId` call `applyBindingGate` makes; the
+ *  component witness is the one verdict the overlay does not share. Nothing
+ *  passing is a derived refusal. */
 export function deriveBinding(
   candidates: BindingCandidates,
   gate: RowGateEvidence,
@@ -204,6 +214,18 @@ export function deriveBinding(
       rejected.push({ ...candidate, reason: verdict.magRejected ? 'mag' : 'sibling' });
     } else if (winner === null) {
       winner = candidate;
+    }
+  }
+  // The component witness rescues a row the sibling gate left unbound; it never
+  // outranks a candidate that passes on its own — see README.md. A sibling
+  // rejection is one the magnitude gate already passed.
+  if (winner === null && gate.tycWitness !== null) {
+    const named = rejected.findIndex((r) => r.reason === 'sibling'
+      && r.sourceId === gate.tycWitness
+      && !isSiblingLetterAttribution(r.sourceId, gate.hip, evidence.wdsXids, true));
+    if (named >= 0) {
+      const [rescued] = rejected.splice(named, 1);
+      winner = { sourceId: rescued.sourceId, via: rescued.via };
     }
   }
   return {

@@ -68,6 +68,7 @@ function rig() {
   const focusHandlers = new Set<() => void>();
   const state = {
     focused: null as number | null, t: 0, rode: [] as FocalPerturbationInto[],
+    invalidations: [] as string[],
   };
   const attrs = {
     iPositionAttr: new THREE.BufferAttribute(new Float32Array(COUNT * 3), 3),
@@ -102,6 +103,7 @@ function rig() {
       return () => focusHandlers.delete(handler);
     },
     rideFocal: (perturbation) => { state.rode.push(perturbation); log.push('ride'); },
+    invalidate: (reason) => { state.invalidations.push(reason); },
   };
   const attachment = new BinariesAttachment(deps);
   return {
@@ -152,6 +154,7 @@ describe('BinariesAttachment.attach', () => {
     expect(seen).toEqual([{ status: 'ready', value: binaries }]);
     expect(r.attachment.focalPerturbation.state().status).toBe('ready');
     expect(log).toEqual(['orbits.new', 'orbits.recenter', 'eclipse.new']);
+    expect(r.state.invalidations).toEqual(['attach:binaries']);
   });
 
   it('null concludes absent, disposing a previous attach', () => {
@@ -162,6 +165,7 @@ describe('BinariesAttachment.attach', () => {
     expect(r.attachment.data.state().status).toBe('absent');
     expect(r.attachment.focalPerturbation.state().status).toBe('absent');
     expect(log).toEqual(['orbits.dispose', 'eclipse.dispose']);
+    expect(r.state.invalidations).toEqual(['attach:binaries', 'attach:binaries']);
     expect(r.attachment.rate(makeCadenceCtx(r.camera))).toBe(CADENCE_REPORT_STILL);
   });
 
@@ -185,6 +189,7 @@ describe('BinariesAttachment.attach', () => {
     fail.eclipseNew = true;
     expect(() => r.attachment.attach(table())).toThrow('eclipse.new');
     expect(log.filter((e) => e.endsWith('.dispose'))).toEqual([]);
+    expect(r.state.invalidations).toEqual(['attach:binaries']);
     const s = r.attachment.data.state();
     expect(s.status === 'ready' && s.value).toBe(first);
     expect(r.attachment.eclipseDimAt(2)).toBeCloseTo(0.3);

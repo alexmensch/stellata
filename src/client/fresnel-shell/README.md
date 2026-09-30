@@ -252,7 +252,7 @@ dispatch + exhaustive-map entries, and each shell instance registers into
   (representative radius). An absent shell leaves its slot empty and
   every dispatch falls through to null (same graceful path as an
   unloaded `lg` layer); the SID domain attaches regardless — the
-  module's `sids()` list is static.
+  module's `sidDomain()` is over a static list.
 - **Framing.** Focus parks at `viewingDistanceForExtent(extent)` via the
   generic park-radius path — no new camera code. This aligns with the
   hide-when-inside invariant above: the pulled-out "whole shell on screen"

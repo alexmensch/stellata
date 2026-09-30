@@ -3,8 +3,8 @@
 All Stellata UI state — camera pose, focus, exposure trim, overlay
 toggles, observe-mode flag, POIs — is a single opaque base64url blob.
 The blob is a binary, versioned envelope —
-`[1 byte version] [LEB128 presence mask, 1–4 bytes] [payload]` in
-v3/v4 — and only the fields that diverge from canonical defaults
+`[1 byte version = 4] [LEB128 presence mask, 1–5 bytes] [payload]` —
+and only the fields that diverge from canonical defaults
 occupy bytes. A typical share lands at ~10–25 chars, and worst-case
 (every field overridden) tops out around 70 chars. See `url-state.ts`
 for the format and the `FIELDS_V4` table.
@@ -43,6 +43,8 @@ decodable — a bogus sub-path, a stray query, or a blob that won't decode —
 so the bar never lingers on junk. **The reset target is `/app`, never
 `/`**: resetting to the site root would throw the user out of the
 application and onto the homepage over a typo.
+A pre-SID v1–v3 blob is one that won't decode: those formats are retired,
+so such a link lands at the first-load view with its param stripped.
 
 The **fragment is never URL state**: both writers (`writeUrl`, the junk
 reset) re-append `location.hash` verbatim to whatever they write, because
@@ -66,22 +68,28 @@ src/client/util/url-state/
   pose-change/                    the one scale-free test behind both the
                                   per-frame write trigger and the encoder's
                                   cam / tgt / worldOffset elision. Own README.
-  url-state.ts (+ test)           blob encode / decode (v1–v4 formats),
+  anchored-pose.ts                cam and tgt measured from the anchor the
+                                  receiver rebuilds. See
+                                  README.md#what-counts-as-a-camera-move.
+  golden-links-fixture.ts         Test-only: real share links whose
+                                  decoding the suites pin.
+  orbit-pose/                     ORB, the orbit lock, and a pose held
+                                  relative to the orbit on the wire. Own
+                                  README.
+  url-state.ts (+ test)           blob encode / decode (v4),
                                   default-compression presence mask,
                                   per-component vec3 sub-masks,
                                   applyFromUrl entry point (path + legacy
-                                  query parse) + post-debounce legacy→v4
-                                  / query→path rewrite, startUrlSync
-                                  subscription. The test file carries the
-                                  golden-blob corpus pinning the frozen
-                                  v1/v2/v3 decoders byte-for-byte, plus the
-                                  re-index survival block: a link shared
-                                  from one build must land on the same
-                                  star under a build whose rows re-sorted.
+                                  query parse) + post-debounce query→path
+                                  rewrite, startUrlSync subscription. The
+                                  test file carries the re-index survival
+                                  block: a link shared from one build must
+                                  land on the same star under a build whose
+                                  rows re-sorted.
 ```
 
-Four wire formats coexist. **v4** (current) replaces every parallel
-object-ref encoding with one universal unsigned-LEB128 **Stellata ID**
+One wire format decodes. **v4** carries every object ref as one universal
+unsigned-LEB128 **Stellata ID**
 ([§ 9](/docs/sid.md#9-wire-format-v4-b5)): `focus` and `to` each carry a SID of any kind — a
 cloud focus is just a cloud-kind SID — and POIs are a count byte plus
 one LEB128 SID per entry. No type tag rides the wire; kind comes from
@@ -103,27 +111,14 @@ byte is one byte whatever bits are set, so no offset can shift and
 comment: bit 2 (molecular clouds), bit 3 (`showMilkyway`), bit 7
 (`showConstellation`), all three now gated by the declutter floor alone
 (`../../scene/declutter/README.md`). SIDs are frozen forever in
-`data/sid/ledger.tsv`, so a v4 link survives any catalogue rebuild —
-the failure mode v1–v3's row-index fallback couldn't avoid. **v3**
-introduced the LEB128 presence mask and per-component vec3 sub-masks
-(`cam`, `tgt`, `up`, `worldOffset` prefix their payload with a 1-byte
-sub-mask; only diverging components cost a float32) — both carried
-forward into v4. **v2** packs each narrow scalar (`fov`, `mag`,
-`smin`, `smax`, `span`) into 1 byte at the slider's native step; star
-refs and POI HIPs are 3 bytes (1 tag bit + 23-bit id); cloud refs are
-1 byte; vec3s are flat 12 bytes. **v1** (legacy: 32-bit mask, float32
-scalars, uint32 ids) is still decoded. Old shared URLs auto-upgrade
-to v4 on load via `applyFromUrl`'s post-debounce rewrite per the
-[§ 9.4](/docs/sid.md#94-migration-semantics--exact-table) migration table: HIP refs re-key exactly
-(hip → index → sid), index/cloud refs freeze best-effort to whatever
-they resolve to in the current build, unresolvable refs drop while
-the rest of the state applies.
+`data/sid/ledger.tsv`, so a v4 link survives any catalogue rebuild.
+`cam`, `tgt`, `up` and `worldOffset` prefix their payload with a 1-byte
+sub-mask, so only diverging components cost a float32; each narrow
+scalar is 1 byte at its slider's native step.
 
-The v1/v2/v3 `FIELDS_V*` tables are **frozen** — standalone literal
-arrays, never edited (a golden-blob corpus in `url-state.test.ts`
-pins them byte-for-byte). SID refs that arrive before their object's
-artifact attaches ride the resolver's deferred-intent contract; a
-retired/unknown SID expires silently.
+SID refs that arrive before their object's artifact attaches ride the
+resolver's deferred-intent contract; a retired/unknown SID expires
+silently.
 
 **The STAR domain is attached but STILL FILLING when `applyFromUrl`
 runs**, because the catalogue streams ([Progressive catalog load](../../loaders/README.md#progressive-catalog-load)).
@@ -137,25 +132,15 @@ why that is wrong rather than merely slow. Every other pinnable kind's
 domain (planet, lg) attaches complete at boot, strictly before
 `applyFromUrl`.
 
-### Legacy HIP refs
-
-They resolve against a map that is also still filling.
-`idMaps.hipToIndex` is grown per landing chunk by `main.ts` for the same
-reason and with the same guarantee: records arrive in their final order,
-so first-seen-wins over a growing prefix picks the winner a complete pass
-would. A v1–v3 focus or POI list therefore restores at first paint when
-its stars are in the prefix, and its misses drop — the pre-existing
-best-effort contract, not a new one.
-
 The vec3 sub-mask uses **strict equality** (`!==`), not the EPS=1e-3
 `approx` check — under floating origin (a7d.2.11) the local-frame cam
 can land at sub-µpc magnitudes, well inside that epsilon. Eliding
 those as "approximately default" would silently round the camera to
 the frame origin on round-trip. The cam vec3 is the only one whose
 default depends on mode (`[0,0,30]` navigate / `[0,0,0]` observe);
-the v3 decoder fills missing components from the static navigate
-default, then `decodeV3`'s post-pass swaps z=0 in observe mode when
-the sub-mask leaves z unset (flags decodes after cam in `FIELDS_V3`
+the decoder fills missing components from the static navigate
+default, then `decodeBlob`'s post-pass swaps z=0 in observe mode when
+the sub-mask leaves z unset (flags decodes after cam in `FIELDS_V4`
 bit order, so mode isn't known until the field loop completes).
 
 - `url-state.ts applyFromUrl` runs **before** `startUrlSync` subscribes, so
@@ -165,8 +150,7 @@ bit order, so mode isn't known until the field loop completes).
   in one walk, then writes only the bytes for set bits. Default state
   produces no blob at all (bare `/app`).
 - Focus is encoded as the object's SID, which survives any catalog
-  reordering for every object (not just the ~37% with a HIP, which is
-  all v1–v3 could protect). Sol is the canonical default focus and is
+  reordering for every object. Sol is the canonical default focus and is
   encoded by *omitting* the field; "explicitly unfocused" uses a
   separate zero-byte presence bit so the three states (default Sol /
   specific object / cleared) stay unambiguous.
@@ -175,15 +159,14 @@ bit order, so mode isn't known until the field loop completes).
   below](pose-change/README.md#worldoffset-carries-the-frame)), so a blob carrying neither field is asserting the default frame —
   origin on Sol — and `applyDecodedView` re-establishes it before writing
   `cam` / `tgt`. A blob that states its frame some other way (an explicit
-  `worldOffset`, or a legacy v1–v3 `cloud` focus) is left alone so nothing
-  recentres twice. On a page load this changes nothing, because catalog
+  `worldOffset`) is left alone so nothing recentres twice. On a page load this changes nothing, because catalog
   attach has already focused Sol; it is what makes a blob applied to a
   **running** session — a pasted link, a `debug.capture` take — land in the
   frame its coordinates were measured in rather than whichever one the
   session had drifted to.
 - **Every focus a blob asks for lands through `applyFocusTarget`**, whatever
-  kind it names and whichever of the four routes decoded it — the asserted
-  default frame above, a v4 sid, a legacy star ref, a legacy cloud ref. Its
+  kind it names and whichever of the two routes decoded it — the asserted
+  default frame above, or a sid. Its
   one argument is whether the blob also carries `cam` or `tgt`. Without one,
   it parks: `flyTo(target, { animate: false })`, snapping rather than gliding,
   because a URL restore must not surface as a 2 s glide on page load. With
@@ -213,7 +196,8 @@ bit order, so mode isn't known until the field loop completes).
   the vector:** the field is dropped when the view is galactic-LEVEL, since
   up is the pole's image-plane projection and therefore equals the pole
   itself from no viewpoint at all. A share from a level camera omits it
-  entirely, as it always did.
+  entirely, as it always did. A pose written in ORB elides against ORB's
+  pole instead ([An orbit-relative pose](orbit-pose/README.md#an-orbit-relative-pose)).
   **An omission therefore has to be applied, not skipped** — the receiver
   restores `DEFAULT_UP`, the pole itself, and the `lookAt` below re-projects
   it against the pose this blob carries. Leaving `camera.up` alone keeps
@@ -224,11 +208,6 @@ bit order, so mode isn't known until the field loop completes).
   call `controls.update()`, which reads it — so it lands as a raw axis and
   the `lookAt` inside that update projects it. One `adoptFromCamera` after
   the final update puts `up` back on the perpendicular invariant.
-  `DEFAULT_UP_V3` keeps world `+Y` as the v3 fill value: a v3 blob was
-  written when that was the reference, and a frozen decoder has to stay
-  the one v3 meant (the golden corpus pins it). Either value restores the
-  same view, since both only ever reached the camera through a `lookAt`
-  projection — v4's default is what buys the free bytes.
 - `mode=observe` is applied **after** camera params + `controls.update()`
   so the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
@@ -252,7 +231,7 @@ The declutter `detailLevel` rides its own 1-byte enum field (bit 23,
 `all` — a fully-cluttered share stays byte-identical to before.
 
 `coordSphere` is a **four-state carried across several places**, not one
-field — and it does not carry ORB, which is [ORB and the orbit lock](#orb-and-the-orbit-lock).
+field — and it does not carry ORB, which is [ORB and the orbit lock](orbit-pose/README.md#orb-and-the-orbit-lock).
 FLAG_GRID (flags bit 0) means "a coordinate sphere is selected", and
 one zero-byte presence bit per frame past the galactic default says which —
 bit 24 equatorial, bit 26 ecliptic, both built by `coordSphereFrameField`.
@@ -268,53 +247,9 @@ rather than renumbering.
 
 ## ORB and the orbit lock
 
-**ORB is not a `coordSphere` value.** The sky frames (galactic / ecliptic /
-equatorial) are what that field carries; ORB — the focused object's own
-orbital plane — and the orbit lock over it are held by the attitude
-instrument itself (`../../attitude/orbit-frame/README.md`). Encoded through
-`coordSphere` alone, a view with ORB armed would carry whichever sky frame
-was selected *before* ORB, and the lock nothing at all: the link would come
-back reading against the wrong datum, with the camera off the orbit.
-
-Both ride **zero-payload presence bits** — 27 (ORB armed) and 28 (lock
-engaged) — because each is reconstructible from the focus the blob already
-carries. The flags byte is full, so this is the [Adding a field](#adding-a-field) route
-rather than a flag bit. Bit 28 opens the LEB128 mask's fifth 7-bit group,
-which is the lock's whole cost.
-
-They reach the instrument through `OrbitFramePort`
-(`../../attitude/attitude-pure.ts`), installed by the instrument onto the
-shell — the codec talks to `Stellata`, and this is state no controller owns.
-
-**Being on the wire is not enough: a write has to be triggered too.** The
-writer wakes on a `'state'` event or on a detected pose change, and these two
-are the only URL fields that are neither `FilterState` (whose every mutation
-emits `'state'`) nor a pose — arming ORB writes an instrument-local variable,
-and engaging the lock moves nothing a still camera would show. So the
-instrument announces them itself, through
-`Stellata.notifyOrbitFrameChanged()`, on any change to either
-([The lock](../../attitude/orbit-frame/README.md#the-lock)). Without that the bits
-reached the address bar only when some unrelated change happened to write it
-afterwards, which is why the arm survived a refresh and the lock — the last
-thing a user touches — did not.
-
-**A restore lands LAST in `applyDecodedView`, and that is the field's whole
-difficulty.** Three of the steps before it disarm ORB on their way past: the
-instrument drops it on a focus change, on a `coordSphere` change, and with
-the camera mode. A restore anywhere earlier is silently undone by a later
-step of the same function, and lands unlocked. It runs again inside the
-deferred-sid focus callback for the one case that settles after
-`applyDecodedView` returns, so `restore` is idempotent.
-
-**The blob is a request, not an instruction.** `restore` re-applies the
-receiver's own `orbitLockShowing`, so a link asking for a lock this focus
-cannot carry lands armed-but-unlocked, exactly as the gesture would. And an
-absent bit is a positive statement — a sky-frame link disarms an ORB the
-receiving session was already holding rather than leaving it standing.
-
-The REF and TGT datums stay off the wire: both are snapshots of an attitude
-rather than properties of the focus, so they need real payload and a separate
-decision about whether a captured datum means anything to a receiver.
+Bits 27 (ORB armed), 28 (lock engaged) and 29 (pose written in ORB) are
+[`orbit-pose/README.md`](orbit-pose/README.md)'s — the fields, the restore ordering, and
+why a locked link stores its pose relative to the orbit rather than the stars.
 
 The manual **EV trim** rides bit 25 as a 1-byte field quantised to the
 slider's own `EV_STEP_STOPS` grid, present only when the user moved it off
@@ -322,7 +257,7 @@ slider's own `EV_STEP_STOPS` grid, present only when the user moved it off
 from the aperture, so a receiver on a different build gets that build's
 limit and the trim applies on top.
 
-`worldOffset` (FIELDS_V2 bit 20, vec3 Float32) serialises only when nothing
+`worldOffset` (bit 20, sub-masked vec3 Float32) serialises only when nothing
 is focused AND the anchor is far enough from Sol to move the pose — see
 [URL round-trip](/src/client/frame/README.md#url-round-trip) for the precision-anchor
 semantics that make this round-trip safe, and
@@ -342,10 +277,10 @@ declare its type and bytes, and add encode/decode logic in
 because their bit is 0 in the presence mask. Don't repurpose retired
 bits (16/17) for ~6 months of deploy overlap. Breaking-shape changes
 (resizing existing fields, semantic shifts) need a new
-`SCHEMA_VERSION` and a new standalone `FIELDS_V<n>` table; the old
-one is already frozen (add corpus entries for any shape the corpus
-doesn't yet pin), and `applyFromUrl` will auto-upgrade legacy URLs to
-the new schema after the same 1 s debounce as routine URL writes.
+`SCHEMA_VERSION` and a new `FIELDS_V<n>` table, and v4 links are in the
+wild, so `FIELDS_V4` stays beside it as a standalone frozen decoder.
+Before editing anything for the new version, commit a golden corpus of
+real v4 blobs with their expected decoded views to `url-state.test.ts`, so the new work provably cannot alter v4 decoding.
 
 **Adding an object kind** costs nothing here: focus / to / POIs
 already carry any-kind SIDs — register a resolver domain for the new
@@ -409,9 +344,28 @@ that lands — including one that lands and then translates to nothing, like
 a planet whose host body field never attached. A sid that never resolves
 never fires the callback at all: `flushIntents` drops an intent that has
 gone `unknown` without calling it, so nothing on this side settles the
-promise. `kinds.star.ready` is not a belt-and-braces backstop, it is the
-*only* thing that ends that wait, and boot races the two for exactly that
-reason. At the complete catalogue a focus that has not landed never will,
-and holding the cover that long is what boot did before it painted
-progressively at all — so the worst case is the old behaviour, not a black
-screen forever.
+promise. The binaries attach, which follows the complete catalogue by a
+frame, is not a belt-and-braces backstop, it is the *only* thing that ends
+that wait, and boot races the two for exactly that reason. At the complete
+catalogue a focus that has not landed never will, and holding the cover that
+long is what boot did before it painted progressively at all — so the worst
+case is the old behaviour, not a black screen forever. The same promise also
+holds for a locked pose until the ORB tick has seated it, which for a pair
+waits on binaries.bin ([The tick seats it](orbit-pose/README.md#the-tick-seats-it)), so the race is
+against the attach rather than the catalogue alone.
+
+## A pin that resolves after the link
+
+A POI sid in a chunk that has not arrived is `pending`, not absent, so the
+restore queues it like the focus sid rather than dropping it. `restorePins`
+keeps one slot per sid in the link's order; each late landing re-writes the
+pin list in that order — **unless the user has edited the pins since the
+restore last wrote them**, in which case the edit stands and the late pin is
+appended. A later `applyDecodedView` supersedes the earlier link's slots, and
+a blob carrying no pins forgets them.
+
+**Until it lands, the encoder keeps writing it.** Any URL write in the
+window — a state emit, a query→path rewrite — encodes the live pin list,
+which does not hold it yet, so `currentStateOf` appends every link sid the
+resolver still answers `pending` for. Once the catalogue completes, a sid
+nothing carries answers `unknown` and drops from the wire on the next write.

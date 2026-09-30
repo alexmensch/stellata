@@ -31,6 +31,7 @@ import {
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { PlanetBodyField } from './planet-body-field';
 import { PlanetMeshLayer } from './planet-mesh-layer';
+import { arrayDomain } from '../../util/sid-resolver';
 
 export interface PlanetKindModule extends ObjectKindModule<'planet'> {
   /** The global body field — Target {kind:'planet'} identity plus the
@@ -297,7 +298,7 @@ export function createPlanetKindModule(): PlanetKindModule {
     // — the one domain whose localIndex is NOT the Target idx; url-state
     // translates at the boundary (IdMaps.planetDomainIndexOf). The list
     // is static, so the domain attaches whether or not a host ever does.
-    sids: () => SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0),
+    sidDomain: () => arrayDomain(SOL_BODIES.map((p) => SOL_OBJECT_SIDS[p.name.toLowerCase()] ?? 0)),
 
     setFocalHidden: (idx) => field?.setHiddenInstance(idx),
   };

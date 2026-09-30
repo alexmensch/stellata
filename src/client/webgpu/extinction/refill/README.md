@@ -65,6 +65,9 @@ projection × view × T(−worldOffset) in float64 from the frame context's
 camera and offset, which the attachment hands `update()` as its view — to
 *detect* a turn (`sameView`), since a turn is a
 request ([A view change is a refill request](#a-view-change-is-a-refill-request--nothing-more)), and for `countInFrame()`.
+**The view is `update()`'s only input**: the absolute camera the displacement
+gate measures is summed from the same pair (`cameraAbsInto`), so the two
+cannot disagree about where the camera is.
 The shell runs the prepass after the ride fan-out and the compaction after
 that (`../../../stellata.ts` `animate`): the request the prepass raises
 from this frame's camera is what the compaction answers in this frame.
@@ -113,7 +116,8 @@ change, no catalogue rebuild. `slotRefills` is the CPU form and the
 rotation case is its test.
 
 **The epsilon measures from the generation's camera, never from the last
-dispatch.** A quarter leaves `lastCam` where the bump set it. Reset it per
+dispatch.** The gate measures from `absCameraPos`, the camera the kernel
+marches from, and a quarter leaves it where the bump set it. Reset it per
 dispatch and a camera creeping under one epsilon a frame outruns the gate
 for good once a flight has run — pinned in the prepass test.
 

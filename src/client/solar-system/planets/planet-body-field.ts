@@ -19,6 +19,7 @@ import type {
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
+import { NO_INSTANCE } from '../../frame/shared-uniforms';
 import { AU_PC, KM_PC } from '../../util/astronomy-constants';
 import {
   CADENCE_REPORT_STILL,
@@ -156,7 +157,7 @@ export interface PlanetGlareSources {
    *  reallocate a buffer or move a body between slots. */
   layoutVersion(): number;
   instanceCount(): number;
-  /** Observe-anchor body to hide (−1 = none). */
+  /** Observe-anchor body to hide, as the `uHideIdx` uniform value. */
   hideIdx(): number;
   /** The active local-depth cluster's (start, count) slot range. */
   localPassRange(): Readonly<Int32Array>;
@@ -276,8 +277,8 @@ export class PlanetBodyField {
   // resolve their host in O(1) instead of an O(hosts) scan — several
   // run per-frame (focal ride, POI overlay per pin, focus-card rows).
   private instanceHost!: Int32Array;
-  // The observe-anchor body's flat index (-1 = none).
-  private hideIdx = -1;
+  // The observe-anchor body's flat index.
+  private hideIdx: number | null = null;
   // Active local-depth cluster's slot range (start, count); (-1, 0) =
   // none. It drives the main-pass suppression AND the mirror draws'
   // member gate, in opposite senses.
@@ -436,7 +437,8 @@ export class PlanetBodyField {
   /**
    * Adjust each attached host's local-frame position when the
    * floating-origin shifts. Cheap — a vector subtract per host plus
-   * a buffer write. Called once by `Stellata.recenterOrigin`.
+   * a buffer write. Called once per recentre, from the planet module's
+   * scene-layer recenter leg.
    */
   recenter(newWorldOffset: Readonly<THREE.Vector3>): void {
     if (newWorldOffset.equals(this.worldOffset)) return;
@@ -816,9 +818,9 @@ export class PlanetBodyField {
     return this.liveCount;
   }
 
-  /** Flat instance currently hidden via setHiddenInstance (-1 = none)
-   *  — the observe-anchor body; the mesh LOD must hide it too. */
-  get hiddenInstanceIdx(): number {
+  /** Flat instance currently hidden via setHiddenInstance — the
+   *  observe-anchor body; the mesh LOD must hide it too. */
+  get hiddenInstanceIdx(): number | null {
     return this.hideIdx;
   }
 
@@ -830,7 +832,7 @@ export class PlanetBodyField {
       buffers: () => this.bufs,
       layoutVersion: () => this.layoutVersion,
       instanceCount: () => this.liveCount,
-      hideIdx: () => this.hideIdx,
+      hideIdx: () => this.hideIdx ?? NO_INSTANCE,
       localPassRange: () => this.localPassRange,
     };
   }
@@ -951,7 +953,7 @@ export class PlanetBodyField {
     return true;
   }
 
-  /** Absolute (catalog-space) position into `out` — the recenterOrigin
+  /** Absolute (catalog-space) position into `out` — the recentre
    *  anchor when a planet is focused. */
   planetAbsolutePositionInto(instanceIdx: number, out: THREE.Vector3): boolean {
     const host = this.hostOfInstance(instanceIdx);
@@ -1505,11 +1507,11 @@ export class PlanetBodyField {
     return !this.hidden && this.liveCount > 0;
   }
 
-  /** Hide one body by flat instance index (-1 = none) — the planet
+  /** Hide one body by flat instance index (null unhides) — the planet
    *  sibling of the star pipeline's uHideFocusIdx, consumed by observe
    *  mode for the body the camera is parked at. Both glare draws read
    *  it, so the hidden body writes no colour and no depth. */
-  setHiddenInstance(instanceIdx: number): void {
+  setHiddenInstance(instanceIdx: number | null): void {
     this.hideIdx = instanceIdx;
   }
 

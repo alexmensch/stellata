@@ -14,6 +14,7 @@ import {
   COMPONENT_REASON_PREFIX,
   MANIFEST_COLUMNS,
   bindingReviewKey,
+  additionItemCells,
   buildMembership,
   manifestDesignations,
   manifestKey,
@@ -145,7 +146,7 @@ const tables: PrimaryTables = {
   },
   tycho2: new Map([
     ['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['2-1-1', tycho2(9.1, 30)],
-    ['2-2-1', tycho2(9.9)], ['2-3-1', tycho2(11)], ['2-4-1', tycho2(11)], ['2-5-1', tycho2(11)],
+    ['2-2-1', tycho2(9.9)], ['2-3-1', tycho2(11)], ['2-4-1', tycho2(11)], ['2-5-1', { ...tycho2(11), btMag: 11.2 }],
     ['2-6-1', tycho2(11)], ['2-7-1', tycho2(11)], ['2-8-1', tycho2(11)],
     ['3-1-1', tycho2(11)], ['3-2-1', tycho2(11)], ['3-3-1', tycho2(11, 50)],
     ['3-4-1', tycho2(11)],
@@ -176,11 +177,12 @@ const overlay: ClassicIdOverlay = new Map([
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: bindingEvidence(
-    new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP, new Set(['888', '6060']),
+    new Map([['777', 14.0]]), new Map(), null, NO_PRINTED_V_BELOW_HIP, new Set(['888', '6060', '777']),
   ),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   magnitudeTerm: null,
+  publishesGaiaParallax: (_sourceId: string) => true,
 };
 const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
@@ -583,6 +585,15 @@ describe('spine corrections', () => {
 });
 
 describe('buildMembership — the additions', () => {
+  it('enumerates every addition item\'s cells off the primaries and the spine alone', () => {
+    const cells = additionItemCells(tables, spine);
+    expect(cells).toContainEqual({ tyc: '2-3-1', hip: '', gl: '' });
+    expect(cells).toContainEqual({ tyc: '', hip: '40', gl: '' });
+    expect(cells).toContainEqual({ tyc: '', hip: '', gl: 'GJ 10001' });
+    expect(cells.filter((c) => c.tyc === '1-1-1')).toEqual([]);
+    expect(cells).toHaveLength(12 + 3 + 3); // IV/25 TYCs, I/239 HIPs, CNS5 rows the spine lacks
+  });
+
   it('admits an IV/25 star and merges the HIP Tycho-2 names for it into one row', () => {
     const row = byTyc.get('2-1-1')!;
     expect(row).toMatchObject({
@@ -643,6 +654,22 @@ describe('buildMembership — the additions', () => {
     });
   });
 
+  it('gives a designation both groups bind to the one whose source has a parallax (HD 86269)', () => {
+    const pair = (publishesGaiaParallax: (sourceId: string) => boolean) => buildMembership({
+      ...input,
+      publishesGaiaParallax,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '6-1-1', hd: 90, nHd: 1, nTyc: 2 }, { tyc: '6-2-1', hd: 90, nHd: 1, nTyc: 2 }],
+        tycho2: new Map([...tables.tycho2, ['6-1-1', tycho2(9)], ['6-2-1', tycho2(9)]]),
+        tycToSource: new Map([...tables.tycToSource, ['6-1-1', '6101'], ['6-2-1', '6201']]),
+      },
+    });
+    const holder = (r: ReturnType<typeof pair>) => r.rows.find((row) => row.hd === '90')?.tyc;
+    expect(holder(pair((id) => id !== '6101'))).toBe('6-2-1');
+    expect(holder(pair(() => true))).toBe('6-1-1');
+  });
+
   it('leaves the source empty where the walk binds a spine record\'s own source', () => {
     expect(byTyc.get('2-4-1')).toMatchObject({ hd: '61', gaia_source_id: '', binding: 'none' });
     expect(result.counts.additionSourceOnSpine).toBe(1);
@@ -675,6 +702,75 @@ describe('buildMembership — the additions', () => {
   it("takes the TYC route's source where the HIP route binds another", () => {
     expect(byTyc.get('3-3-1')).toMatchObject({ hip: '50', gaia_source_id: '1313' });
     expect(result.counts.additionRouteSourceDisagree).toBe(1);
+  });
+
+  it('binds an addition through SIMBAD and dedupes the magnitude term against it', () => {
+    const viaSimbad = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-5-1', hd: 500, nHd: 1, nTyc: 1 }],
+        tycho2: new Map([...tables.tycho2, ['5-5-1', tycho2(9)]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5050', { hip: null, tyc: '5-5-1', gj: null }]]),
+      },
+      magnitudeTerm: {
+        keptSourceIds: new Set(['5050', '777']),
+        counts: { rows: 2, kept: 2, above_floor: 0, no_v: 0 },
+      },
+    });
+    expect(viaSimbad.rows.find((r) => r.tyc === '5-5-1'))
+      .toMatchObject({ hd: '500', gaia_source_id: '5050', binding: 'simbad_corroborated' });
+    expect(viaSimbad.rows.filter((r) => r.gaia_source_id === '5050')).toHaveLength(1);
+    expect(viaSimbad.counts.magnitudeRows).toBe(1);
+    expect(viaSimbad.counts.magnitudeRowsOwnCandidate)
+      .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0, component: 0 });
+  });
+
+  it('groups a HIP item with the TYC item whose derived source it shares', () => {
+    const oneStar = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
+        hipI239: new Set([...tables.hipI239, 61]),
+        tycho2: new Map([...tables.tycho2, ['5-6-1', tycho2(9)]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+      },
+    });
+    expect(oneStar.rows.filter((r) => r.gaia_source_id === '5151'))
+      .toEqual([expect.objectContaining({ tyc: '5-6-1', hd: '501', hip: '61' })]);
+    expect(oneStar.counts.additionSourceShared).toBe(result.counts.additionSourceShared);
+  });
+
+  // The TYC item and the merged group each weigh 5151 against Tycho-2's V with
+  // no pulled row; the HIP item has no printed V to weigh it against.
+  it('counts an unpulled candidate in the item derivations that group, not only the group\'s', () => {
+    const oneStar = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
+        hipI239: new Set([...tables.hipI239, 61]),
+        tycho2: new Map([...tables.tycho2, ['5-6-1', { ...tycho2(9), btMag: 9.2 }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+      },
+    });
+    expect(oneStar.counts.additionWeighedNoGMag - result.counts.additionWeighedNoGMag).toBe(2);
+  });
+
+  it('counts an admitted addition whose winner has a passing runner-up as contested', () => {
+    const twoSources = buildMembership({
+      ...input,
+      tables: {
+        ...tables,
+        iv25: [...tables.iv25, { tyc: '5-7-1', hd: 502, nHd: 1, nTyc: 1 }],
+        tycho2: new Map([...tables.tycho2, ['5-7-1', tycho2(9)]]),
+        tycToSource: new Map([...tables.tycToSource, ['5-7-1', '5171']]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5172', { hip: null, tyc: '5-7-1', gj: null }]]),
+      },
+    });
+    expect(twoSources.rows.find((r) => r.tyc === '5-7-1')?.gaia_source_id).toBe('5171');
+    expect(twoSources.counts.additionContested - result.counts.additionContested).toBe(1);
   });
 
   // Admitted, but one designation short: HD 5 is a spine record's, so the

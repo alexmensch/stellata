@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
-import { loadCommentRules } from '../scripts/hooks/comment-rules';
+import { loadCommentRules } from '../scripts/hooks/commit-sweep/comment-rules';
 
 const ROOT = resolve(__dirname, '..');
 const SCAN_DIRS = ['src', 'scripts', 'tests'];
@@ -34,7 +34,7 @@ interface Pattern {
   re: RegExp;
 }
 
-// scripts/hooks/comment-rules.json is the single source of truth: this suite,
+// scripts/hooks/commit-sweep/comment-rules.json is the single source of truth: this suite,
 // commit-sweep-guard.sh and the generated TTSR rule all read it. It drifted
 // once already — the shell copy pinned the epic slug to three characters after
 // this file widened it to five, so every bead on a four- or five-character

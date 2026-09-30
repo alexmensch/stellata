@@ -41,11 +41,11 @@ interface FixtureOpts {
     flattening?: number;
     meshUp?: boolean;
   }[];
-  hiddenInstanceIdx?: number;
+  hiddenInstanceIdx?: number | null;
 }
 
 function makeFixture(opts: FixtureOpts = {}): Fixture {
-  const { monochrome = false, bodies = [], hiddenInstanceIdx = -1 } = opts;
+  const { monochrome = false, bodies = [], hiddenInstanceIdx = null } = opts;
   const byFlat = new Map(bodies.map((b) => [HOST_START + b.offset, b]));
   const occluders = new OccluderSet();
   const f: Partial<Fixture> = {

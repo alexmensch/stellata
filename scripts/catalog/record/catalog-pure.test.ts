@@ -1764,6 +1764,22 @@ describe('catalog-pure / sibling-letter attribution gate', () => {
     ).toBe(false);
   });
 
+  // μ Dra's spine row carries B's HD 154905, GJ 9584B and TYC 3890-1396-1 on
+  // the pair's shared HIP; the TYC is on SIMBAD's B object, so the row is B.
+  it('keeps the sibling source where the row names it by a component designation', () => {
+    expect(isSiblingLetterAttribution('1420101696285626624', 83608, xids, true)).toBe(false);
+  });
+
+  // HD 70492's HIP sits on a system-level object, on neither letter: the row
+  // is the system, so a component witness does not make it B.
+  it('still scrubs a system-level HIP on neither letter, witness or not', () => {
+    expect(isSiblingLetterAttribution('663434291018997248', 41098, xids, true)).toBe(true);
+  });
+
+  it('still scrubs a HIP attributed to the other letter alone, witness or not', () => {
+    expect(isSiblingLetterAttribution('777', 32349, xids, true)).toBe(true);
+  });
+
   it('keeps a secondary row whose own HIP is attributed to its letter', () => {
     expect(isSiblingLetterAttribution('555', 104217, xids)).toBe(false);
   });

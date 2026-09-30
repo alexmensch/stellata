@@ -146,7 +146,7 @@ export class BinaryOrbitField {
   }
 
   /** Refresh the world-origin offset used to convert absolute positions
-   *  to local-frame each frame. `Stellata.recenterOrigin` calls this so
+   *  to local-frame each frame. `BinariesAttachment`'s recenter leg calls this so
    *  the next `update()` writes positions in the new local frame.
    *  Cheap — just a vector copy; per-frame work already pulls the
    *  offset for every active relation. */

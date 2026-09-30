@@ -49,7 +49,7 @@ The pull is `data/gaia/gaia_dr3_magnitude_pull.tsv`, refreshed by
 so the saturation gate and the colour range come along for free. Writing the
 predicate as a colour range plus the cubic instead costs the gate and admits
 **633** saturated rows the cascade refuses, which is the whole difference
-between the 929,929 this filter keeps and the 930,562 an archive-side count of
+between the <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> this filter keeps and the 930,562 an archive-side count of
 the same population reports.
 
 Three verdicts partition every pull row, and two of them are **non-selection,
@@ -62,10 +62,10 @@ Measured over the committed pull at `V ≤ 11`, and pinned by the gate suite:
 
 | verdict | rows |
 |---|---|
-| `kept` | 929,929 |
-| `above_floor` | 312,475 |
-| `no_v` | 4,836 |
-| | 1,247,240 |
+| `kept` | <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> |
+| `above_floor` | <!-- count:membership-manifest/magnitudeTerm.above_floor -->312,475<!-- /count --> |
+| `no_v` | <!-- count:membership-manifest/magnitudeTerm.no_v -->4,836<!-- /count --> |
+| | <!-- count:membership-manifest/magnitudeTerm.rows -->1,247,240<!-- /count --> |
 
 ## The union dedupes on the derived binding
 
@@ -79,13 +79,13 @@ run's derivation moved.
 and loses precision silently as a float64, so a numeric key merges distinct
 sources without erroring.
 
-Against today's manifest the union measures 370,994 bound source_ids, 327,701
-of them in the kept set, so 602,228 rows are the term's own and the union is
-973,222 source_ids. The record total that implies, once promotion and parking
-apply: [The record total the floor implies](#the-record-total-the-floor-implies--983068-measured), below.
+Against today's manifest the union measures 374,932 bound source_ids, 331,265
+of them in the kept set, so <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> rows are the term's own and the union is
+973,596 source_ids. The record total that implies, once promotion and parking
+apply: [The record total the floor implies](#the-record-total-the-floor-implies--measured), below.
 
-At `V ≤ 11` the generator writes **979,160** manifest rows — 376,932 plus
-those 602,228 — and every primaries-side count holds byte for byte, which is
+At `V ≤ 11` the generator writes **<!-- count:membership-manifest/rows -->975,573<!-- /count -->** manifest rows — 376,909 plus
+those <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> — and every primaries-side count holds byte for byte, which is
 what says the term adds and moves nothing on the manifest side. The record side
 is not additive: [What the floor moves that was already there](#what-the-floor-moves-that-was-already-there).
 
@@ -96,7 +96,7 @@ A magnitude-term row carries no classical cell, `binding` `gaia_native` and
 brightness rather than on a primary naming it, and it is the whole ledger for
 this cohort — every row of it has the same admission reason, and the manifest
 already names which rows those are. An `additions-ledger.tsv` entry per row
-would restate the column 602,228 times.
+would restate the column <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> times.
 
 `gaia_native` is a fifth binding class rather than `none`, which means an empty
 cell: these rows' `gaia_source_id` is the pull row itself, justified by nothing
@@ -108,28 +108,29 @@ primaries' own additions pin at zero: an admitted group falling through to its
 Gaia id means the admission rule leaked, while a magnitude row doing so is the
 term working. The two counts must not be read against each other.
 
-## The record total the floor implies — 983,068, measured
+## The record total the floor implies — measured
 
 The catalogue is not the magnitude pull. It is the pull's `V <= 11` population
 **unioned** with the membership manifest and deduped on `source_id`, then put
 through the build's own two corrections. Projected 2026-09-19 from the
-committed files, then measured on a real floor-11 build, 2026-09-20:
+committed files, then measured on a real floor-11 build, 2026-09-20; `now` is
+the committed build (`recordCount` in `../../build-catalog-expected.json`):
 
-| term | projected | measured |
-|---|---|---|
-| `V <= 11` source_ids from the pull | 929,929 | 929,929 |
-| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 |
-| in both | 327,701 | 327,701 |
-| source_id union | 973,222 | 973,222 |
-| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 |
-| companions promoted to their own record | + 16,226 | **+ 14,656** |
-| rows parked, so never a record | − 10,429 | **− 10,748** |
-| **records** | ~984,957 | **983,068** |
+| term | projected | measured | now |
+|---|---|---|---|
+| `V <= 11` source_ids from the pull | 929,929 | 929,929 | <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> |
+| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 374,932 |
+| in both | 327,701 | 327,701 | 331,265 |
+| source_id union | 973,222 | 973,222 | 973,596 |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + <!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> |
+| companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/companionPromoted -->14,657<!-- /count --> |
+| rows parked, so never a record | − 10,429 | **− 10,748** | − 10,571 |
+| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,659<!-- /count -->** |
 
-The manifest side reproduced exactly: `build:membership` at the floor writes
-979,160 rows and every primaries-side count holds. Both build-side terms
-missed, in opposite directions, for 0.19% net. The catalogue is **2.53x**
-today's 388,071 records.
+The manifest side reproduced exactly: `build:membership` at the floor wrote
+979,160 rows and every primaries-side count held. Both build-side terms
+missed, in opposite directions, for 0.19% net. The catalogue is **2.52×** the
+388,071 records of the build before the floor.
 
 **Promotion is not carried forward unchanged**, which is what the projection
 assumed on the ground that WDS drives it and the deep population is not what
@@ -144,12 +145,12 @@ rows reach the record only through a stored same-as edge
 
 **Parking scaled close to the projection**, against today's 5,087:
 
-| reason | today | at `V <= 11` |
-|---|---|---|
-| `no_parallax_published` | 3,423 | 9,032 |
-| `refused_no_defensible_parallax` | 975 | 1,027 |
-| `no_v_magnitude` | 688 | 688 |
-| `no_position` | 1 | 1 |
+| reason | today | at `V <= 11` | now |
+|---|---|---|---|
+| `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/parkedNoParallaxPublished -->8,933<!-- /count --> |
+| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/parkedRefusedNoDefensibleParallax -->1,000<!-- /count --> |
+| `no_v_magnitude` | 688 | 688 | <!-- count:build-catalog/parkedNoVMagnitude -->637<!-- /count --> |
+| `no_position` | 1 | 1 | <!-- count:build-catalog/parkedNoPosition -->1<!-- /count --> |
 
 The newcomers publish no parallax at 0.931%, not the projected 0.887%, and the
 defensible-parallax gate refuses 52 on top — inside the "a few hundred at most"
@@ -249,7 +250,7 @@ decision.
 29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
 and fills behind it ([On-disk transport chunking](../../record/README.md#on-disk-transport-chunking),
 [Progressive catalog load](../../../../src/client/loaders/README.md#progressive-catalog-load)). That
-chunk is a fixed byte budget, so it holds the same 10,412 records to apparent
+chunk is a fixed byte budget, so it holds the same <!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records to apparent
 V 6.62 at either depth: the naked-eye sky arrives at the speed it always did
 and the depth streams in. Summed over nine separately-compressed chunks the
 transfer is 65.72 MB gz rather than the 62.4 MB the table's single-blob

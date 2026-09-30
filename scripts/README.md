@@ -56,6 +56,9 @@ cross-script policy and pointers.
   catalogue, the application's Credits tab and the modelling record.
   Writes no artifact: `vite.env.ts` reads it at config load and Vite
   substitutes each count into the HTML.
+- `doc-figures/` — counts quoted in docs, generated from the committed
+  `*-expected.json` snapshots (`pnpm run docs:figures`). Run it after any
+  snapshot regeneration. Not part of the build.
 - `hooks/` — Claude Code guard hooks (PreToolUse / SessionStart).
 - `ci/` — helpers only `.github/workflows/` runs: the catalogue build
   cache's key.
@@ -88,8 +91,11 @@ the PR, not the post-merge deploy.
 
 `build:binaries`, `build:catalog` and `build:binaries-runtime` — together
 `build:stamped` — skip on a **content-hash stamp**, never on mtimes. Each hashes every input it reads —
-data tables, the SID registry, every non-test module under the script folders
-it imports — and skips when that set matches `build/stamps/<step>.json` and
+data tables, the SID registry, and every module it imports: for the Python
+steps, each `scripts/` module the process imported; for `build:catalog`, the
+esbuild import closure (`src/client/` modules included) plus the snapshots
+beside it, the same set CI's cache key reads
+([The catalogue build cache](ci/README.md#the-catalogue-build-cache)) — and skips when that set matches `build/stamps/<step>.json` and
 every output the stamp recorded still hashes the same. The stamp is cleared
 before the build writes anything and rewritten only once the build's snapshot
 asserts pass, so a failed or interrupted build always reruns. Hashing the
@@ -115,11 +121,13 @@ stamps make the copy safe — when the worktree's inputs match what the main
 checkout last built from, the dev server starts without rebuilding; when they
 differ (main checkout built from an older commit, a pipeline change on the
 branch), the stamp mismatches and the step rebuilds. Only stamped outputs
-belong in that list, plus the private paper-store link
-([The PDFs are private](/data/papers/README.md#the-pdfs-are-private)): an
-mtime-gated step reads any fresh copy as up to date, whatever it was built
-from. A worktree made any other way
+belong in that list: an mtime-gated step reads any fresh copy as up to date,
+whatever it was built from. A worktree made any other way
 (`git worktree add`) builds from scratch.
+
+The private paper-store link is not in that list — the harness's copy skips
+symlinks — and reaches every worktree through
+[paper-store-link](hooks/README.md#how-paper-store-link-works) instead.
 
 `pnpm run dev` preprocesses and then serves, so starting the worktree's dev
 server builds whatever is missing or stale; a cold catalogue build takes about

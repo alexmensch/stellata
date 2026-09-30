@@ -4,11 +4,8 @@ import {
   cullDistancePc,
   PlanetBodyField,
 } from './planet-body-field';
-import type {
-  ChartDiscUniforms,
-  PerceptualDiscUniforms,
-} from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
+import { NO_INSTANCE } from '../../frame/shared-uniforms';
 import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES, type PlanetSystem, type Planet } from '../planet-system';
 import {
@@ -33,44 +30,12 @@ import {
   meshFadeFromPhysPx,
 } from './mesh-crossfade';
 import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
-import {
-  makeHdrEmitterUniforms,
-  type HdrEmitterUniforms,
-} from '../../hdr/hdr-emitter-uniforms';
 import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
 import { cullMagFor, exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
+import { makePlanetFieldUniforms } from './planet-field-uniforms-fixture';
 
 const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 
-function makeSharedUniforms(
-  limitMag = STUB_LIMIT_MAG,
-): PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms {
-  return {
-    ...makeHdrEmitterUniforms(),
-    uMonochrome: { value: 0 },
-    uChartDiscMaxPx: { value: 28 },
-    uChartDiscMinPx: { value: 1.5 },
-    uChartMagBright: { value: -2 },
-    uLimitMag: { value: limitMag },
-    uThresholdMag: { value: limitMag },
-    uCullMag: { value: cullMagFor(limitMag) },
-    uSizeMin: { value: 2 },
-    uSizeMax: { value: 24 },
-    uSizeSpan: { value: 8 },
-    uSizeKnee: { value: 16 },
-    uVisibleThreshold: { value: 0.2 },
-    uVisibleK: { value: -Math.log(0.2) },
-    uCoreThreshold: { value: 0.4 },
-    uDiscardThreshold: { value: 0.02 },
-    uDistNMin: { value: 2.2 },
-    uDistNMax: { value: 10.0 },
-    uLumBiasMin: { value: 1.0 },
-    uLumBiasMax: { value: 0.6 },
-    uViewport: { value: new THREE.Vector2(800, 600) },
-    uPixelRatio: { value: 1 },
-    uFovYRad: { value: (60 * Math.PI) / 180 },
-  };
-}
 
 function makePlanet(overrides: Partial<Planet> = {}): Planet {
   return {
@@ -168,7 +133,7 @@ describe('PlanetBodyField lifecycle', () => {
     // on an orbit). A moon answering with the host's
     // direction would read the same as its parent's, which is the
     // failure this pins.
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     const sol = await getPlanetSystem(0, 0);
     expect(sol).not.toBeNull();
     f.attachHost(0, sol!, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
@@ -195,14 +160,14 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('starts empty and stays hidden', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     expect(f.drawn).toBe(false);
     f.dispose();
   });
 
 
   it('attaches a host and grows the geometry instance count', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     // group becomes visible; positions buffer holds 3 entries.
     expect(f.drawn).toBe(true);
@@ -213,7 +178,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('detachHost clears the host slot and hides the group when empty', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.detachHost(0);
     expect(hostRelPositions(f, 0)).toBeNull();
@@ -222,7 +187,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('recenter shifts hostLocalPos by the new world offset', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     const hostAbs = new THREE.Vector3(1.5, 0, 2.0);
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, hostAbs, 0, 0);
     // Pre-recenter: hostLocalPos = hostAbsPos - (0,0,0) = (1.5, 0, 2.0).
@@ -238,7 +203,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('getHostLocalPositionInto returns hostAbs − worldOffset and tracks recenter', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     const hostAbs = new THREE.Vector3(1.5, 0, 2.0);
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, hostAbs, 0, 0);
     const out = new THREE.Vector3();
@@ -257,7 +222,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('handles multiple hosts in one field', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.attachHost(1, makePlanetSystem(1, 4), 4.83, R_SUN_PC, new THREE.Vector3(0.5, 0, 0), 0, 0);
     expect(hostRelPositions(f, 0)!.length).toBe(6);
@@ -266,7 +231,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('planetIdxWithin resolves a flat index only against its own host', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.attachHost(1, makePlanetSystem(1, 3), 4.83, R_SUN_PC, new THREE.Vector3(0.5, 0, 0), 0, 0);
     const secondOfHost1 = f.instanceIndexOf(1, 1)!;
@@ -278,7 +243,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('detaching the first host compacts the buffer; the second still resolves', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, makePlanetSystem(0, 2), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.attachHost(1, makePlanetSystem(1, 3), 4.83, R_SUN_PC, new THREE.Vector3(0.5, 0, 0), 0, 0);
     f.detachHost(0);
@@ -290,7 +255,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('attachHost is idempotent — re-attach replaces in place', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, makePlanetSystem(0, 3), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.attachHost(0, makePlanetSystem(0, 5), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     expect(hostRelPositions(f, 0)!.length).toBe(15);
@@ -298,7 +263,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('setCullMag is a no-op smoke (cull distances refresh internally)', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     f.setCullMag(15);
     f.setCullMag(cullMagFor(STUB_LIMIT_MAG));
@@ -308,7 +273,7 @@ describe('PlanetBodyField lifecycle', () => {
 
 
   it('host positions survive capacity grow', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(
       0,
       {
@@ -343,7 +308,7 @@ describe('PlanetBodyField lifecycle', () => {
   });
 
   it('grows capacity when many hosts attach beyond the initial budget', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     // INITIAL_CAPACITY = 32 instances; attach 40 single-planet hosts so
     // growCapacity fires and every slot survives the reallocation.
     for (let i = 0; i < 40; i++) {
@@ -364,7 +329,7 @@ describe('PlanetBodyField lifecycle', () => {
     // above exercise the mechanics; this read-back pins the buffer
     // *contents* so a swapped index, miscopied stride in growCapacity, or
     // wrong shift in detachHost can't slip past.
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     // Four planets: bare (no coefs) | bare | Saturn | Mercury (the
     // only c7 carrier). Slots 2 and 3 are the ones we read back.
     const ps: PlanetSystem = {
@@ -414,7 +379,7 @@ describe('PlanetBodyField lifecycle', () => {
     const baseR = 6000 * KM_PC;
     const aPc = 1 * AU_PC;
     const baseRefl = 0.5 * (baseR / aPc) ** 2;
-    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 6.5 }));
     // Bare planet → cull derived from base reflectance only.
     f.attachHost(
       0,
@@ -478,7 +443,7 @@ describe('PlanetBodyField lifecycle', () => {
     // formula above) but none on the gate behaviour itself. A stub
     // positionsAt with a counter pins it: inside cullDistance the
     // counter increments per update; past cullDistance it stays frozen.
-    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 6.5 }));
     let calls = 0;
     const positionsAt = (_t: number, out: Float64Array): void => {
       calls++;
@@ -530,7 +495,7 @@ describe('PlanetBodyField lifecycle', () => {
     // even though the bodies aren't drawn. Rendering gates on mono/hidden;
     // the ephemeris walk must not — freezing it strands the Earth-orbit
     // anchor (Sol + planets appear static while catalog stars still move).
-    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 6.5 }));
     let calls = 0;
     const positionsAt = (_t: number, out: Float64Array): void => {
       calls++;
@@ -571,7 +536,7 @@ describe('PlanetBodyField lifecycle', () => {
     // the rotation path: positionsAt writes [1, 0, 0] (planet on
     // +x in plane frame), orientation rotates +x → +y (90° about z),
     // expect bufLocalRel slot to read [0, 1, 0].
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     const positionsAt = (_t: number, out: Float64Array): void => {
       out[0] = 1; out[1] = 0; out[2] = 0;
     };
@@ -615,7 +580,7 @@ describe('PlanetBodyField lifecycle', () => {
     // Premise check: float32 really would mangle this by hundreds of km.
     expect(float32ErrorKm).toBeGreaterThan(50);
 
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet({ semiMajorAxisAu: 39.48, radiusKm: 1188 })],
@@ -654,7 +619,7 @@ describe('PlanetBodyField lifecycle', () => {
     // lands the only planet at the perihelion +x along the host plane,
     // which the (identity-for-Sol-index) orientation leaves on +x. The
     // magnitude equals semi-major axis × (1 − e) for e = 0 → 1 AU.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -677,7 +642,7 @@ describe('PlanetBodyField lifecycle', () => {
     // Attaches at hostAbsPos = (1.5, 0, 2.0). Pre-recenter the slot
     // reads the same values (worldOffset = 0). After recenter to
     // (0.5, 0, 1.0) the slot must read (1.0, 0, 1.0).
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     const hostAbs = new THREE.Vector3(1.5, 0, 2.0);
     f.attachHost(0, makePlanetSystem(0, 1), 4.83, R_SUN_PC, hostAbs, 0, 0);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -725,7 +690,7 @@ describe('PlanetBodyField lifecycle', () => {
       );
     };
 
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -797,13 +762,13 @@ describe('PlanetBodyField lifecycle', () => {
 
 describe('PlanetBodyField.appMagFor', () => {
   it('returns null when the host is not attached', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     expect(f.appMagFor(99, 0, new THREE.Vector3())).toBeNull();
     f.dispose();
   });
 
   it('returns null for an out-of-range planet index', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(
       0,
       {
@@ -828,7 +793,7 @@ describe('PlanetBodyField.appMagFor', () => {
     // old formula killed the quad / returned NaN there; the cancelled
     // form must yield a finite magnitude under the naked-eye cutoff
     // for a Jupiter-like planet.
-    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 6.5 }));
     f.attachHost(
       0,
       {
@@ -866,7 +831,7 @@ describe('PlanetBodyField.appMagFor', () => {
     // want renderer-local = plane-frame). Place viewer at (-0.1, 0, 0)
     // so planet→viewer and planet→host both point along −x ⇒ α = 0
     // ⇒ φ = 1 for the Lambertian fallback.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -912,7 +877,7 @@ describe('PlanetBodyField.appMagFor', () => {
     // phaseFactorFor. Plane-frame plant at +x (positionsAt) with
     // identity orientation → renderer-local plant at +x. Viewer
     // off-axis along +y so α ≠ 0.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -972,7 +937,7 @@ describe('PlanetBodyField.pick', () => {
   }
 
   it('returns null when no hosts are attached', () => {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     const camera = new THREE.PerspectiveCamera(50, 800 / 600, 1e-10, 1e5);
     camera.position.set(0, 0, 0);
     camera.updateMatrixWorld();
@@ -986,7 +951,7 @@ describe('PlanetBodyField.pick', () => {
     // plane-frame; orientation forced to identity post-attach so the
     // renderer-local planet position matches. Cursor at viewport
     // centre → pxDist = 0, hitRadius = 0.5 · pxSize → prime.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -1026,7 +991,7 @@ describe('PlanetBodyField.pick', () => {
     // Click-pick must equal render. Chart mode now DRAWS the bodies as
     // flat ink discs, so they stay pickable there; setHidden still takes
     // them out of both render and pick.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -1064,7 +1029,7 @@ describe('PlanetBodyField.pick', () => {
   // sitting dead centre of the screen. The probe field's picker already
   // honoured its own hide slot through `visible`; this one did not.
   it('the observe-anchor body is unpickable while hidden', () => {
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -1087,7 +1052,7 @@ describe('PlanetBodyField.pick', () => {
     f.setHiddenInstance(0);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).toBeNull();
 
-    f.setHiddenInstance(-1);
+    f.setHiddenInstance(null);
     expect(f.pick(camera, rectFor(800, 600), 400, 300, 8)).not.toBeNull();
     f.dispose();
   });
@@ -1098,7 +1063,7 @@ describe('PlanetBodyField.pick', () => {
   // — otherwise a bright resolved surface in frame blacks out every faint
   // body while leaving them all clickable.
   it('a sub-pixel body stops being pickable once the scene adapts down', () => {
-    const shared = makeSharedUniforms(20);
+    const shared = makePlanetFieldUniforms({ limitMag: 20 });
     const f = new PlanetBodyField(shared);
     f.attachHost(
       0,
@@ -1139,7 +1104,7 @@ describe('PlanetBodyField.pick', () => {
   });
 
   it('chart mode: hard mag clip (no soft taper) and chart-px hit radius', () => {
-    const shared = makeSharedUniforms(20);
+    const shared = makePlanetFieldUniforms({ limitMag: 20 });
     const f = new PlanetBodyField(shared);
     f.attachHost(
       0,
@@ -1184,7 +1149,7 @@ describe('PlanetBodyField.pick', () => {
     // Same setup as prime but with the planet shoved far enough away
     // that its appMag exceeds the draw cutoff. The soft-taper kill in
     // pick() must drop it; result null.
-    const f = new PlanetBodyField(makeSharedUniforms(6.5));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 6.5 }));
     f.attachHost(
       0,
       {
@@ -1213,7 +1178,7 @@ describe('PlanetBodyField.pick', () => {
     // Two single-planet hosts, identity orientation. Aim cursor at
     // the second; the picker must walk both hosts and return the
     // second's hostStarIdx.
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -1265,7 +1230,7 @@ describe('PlanetBodyField.pick', () => {
 
 describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', () => {
   it('mesh absent at planet-system range, fully on at close approach', () => {
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -1303,7 +1268,7 @@ describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', ()
   });
 
   it('keeps the resolved size at eclipse alignment, where the glare dies', () => {
-    const f = new PlanetBodyField(makeSharedUniforms(20));
+    const f = new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
     f.attachHost(
       0,
       {
@@ -1339,7 +1304,7 @@ describe('mesh-fade driver: physicalPlanetSizePx through meshFadeFromPhysPx', ()
 
 describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
   function makeField(): PlanetBodyField {
-    return new PlanetBodyField(makeSharedUniforms(20));
+    return new PlanetBodyField(makePlanetFieldUniforms({ limitMag: 20 }));
   }
   function attach(f: PlanetBodyField, hostIdx: number, n: number, hostAbs = new THREE.Vector3()): void {
     const ps: PlanetSystem = {
@@ -1368,13 +1333,15 @@ describe('PlanetBodyField flat-instance identity + geometry accessors', () => {
   it('setHiddenInstance drives the one hide slot the glare layer reads', () => {
     const f = makeField();
     attach(f, 0, 2);
-    expect(f.hiddenInstanceIdx).toBe(-1);
+    expect(f.hiddenInstanceIdx).toBeNull();
+    expect(f.glareSources().hideIdx()).toBe(NO_INSTANCE);
     f.setHiddenInstance(1);
     expect(f.hiddenInstanceIdx).toBe(1);
     // The one slot the glare layer reads its uniform from.
     expect(f.glareSources().hideIdx()).toBe(1);
-    f.setHiddenInstance(-1);
-    expect(f.hiddenInstanceIdx).toBe(-1);
+    f.setHiddenInstance(null);
+    expect(f.hiddenInstanceIdx).toBeNull();
+    expect(f.glareSources().hideIdx()).toBe(NO_INSTANCE);
   });
 
 
@@ -1498,7 +1465,7 @@ describe('PlanetBodyField true-eclipse dim', () => {
     planetDir: THREE.Vector3;
     planetDist: number;
   } {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets: [makePlanet({ semiMajorAxisAu: 1, radiusKm: 6000 })],
@@ -1608,7 +1575,7 @@ describe('PlanetBodyField moon-in-parent-shadow dim', () => {
         out[5] = 0;
       },
     };
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     f.attachHost(0, ps, 4.83, R_SUN_PC, new THREE.Vector3(), 0, 0);
     const moonPos = new THREE.Vector3();
     f.planetLocalPositionInto(1, moonPos);
@@ -1659,7 +1626,7 @@ describe('PlanetBodyField.isCollapsedOntoParent', () => {
   // the +x axis are invariant under the host orientation quaternion
   // (a rotation about x for Sol's ecliptic plane).
   function fieldWith(planets: Planet[], positionsAu: number[][]): PlanetBodyField {
-    const f = new PlanetBodyField(makeSharedUniforms());
+    const f = new PlanetBodyField(makePlanetFieldUniforms());
     const ps: PlanetSystem = {
       hostStarIdx: 0,
       planets,

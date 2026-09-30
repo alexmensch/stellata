@@ -65,20 +65,6 @@ describe('StarShardTable mapping', () => {
   });
 });
 
-describe('StarShardTable SID domain', () => {
-  it('single shard answers the catalog column itself — no 390k copy', () => {
-    const cat = makeEmptyCatalog(3);
-    const table = new StarShardTable([catalogShard(cat)]);
-    expect(table.sids()).toBe(cat.sid);
-  });
-
-  it('multi-shard concatenates the per-shard columns in flat order', () => {
-    const { table } = twoShardTable();
-    expect(Array.from(table.sids())).toEqual([7, 8, 9, 900, 901]);
-    expect(table.sids()).toBe(table.sids());
-  });
-});
-
 describe('StarShardTable absolute positions', () => {
   it('reconstructs absolute positions as float64 origin + local', () => {
     const { table } = twoShardTable();

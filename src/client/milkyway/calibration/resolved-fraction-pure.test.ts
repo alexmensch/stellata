@@ -79,7 +79,7 @@ describe('sampling the table', () => {
 
 describe('the shipped table', () => {
   it('was measured on the V ≤ 11 catalogue', () => {
-    expect(RESOLVED_HOLE_CATALOGUE_RECORDS).toBe(983068);
+    expect(RESOLVED_HOLE_CATALOGUE_RECORDS).toBe(979659);
     expect(SHIPPED_RESOLVED_HOLE.values).toBe(RESOLVED_HOLE_VALUES);
   });
 
@@ -92,10 +92,10 @@ describe('the shipped table', () => {
     expect(resolvedLightFraction(15_000, 0)).toBeLessThan(0.001);
   });
 
-  it('resolves 59 % of the plane at 500 pc, 32 % at 1 kpc and 44 % of the pole at 250 pc', () => {
+  it('resolves 59 % of the plane at 500 pc, 32 % at 1 kpc and 43 % of the pole at 250 pc', () => {
     expect(resolvedLightFraction(500, 0)).toBeCloseTo(0.59, 2);
     expect(resolvedLightFraction(1000, 0)).toBeCloseTo(0.32, 2);
-    expect(resolvedLightFraction(250, 1)).toBeCloseTo(0.44, 2);
+    expect(resolvedLightFraction(250, 1)).toBeCloseTo(0.43, 2);
   });
 
   // A hole over 1 makes the band's emissivity negative and its magnitude
@@ -115,13 +115,13 @@ describe('the shipped table', () => {
   // Over the 4.9e-4 round-to-nearest bound because three's converter
   // truncates. Taken on the voxels the texture stores, not the table they
   // are sampled from. What it is worth on a sightline: ../milkyway.test.ts.
-  it('quantises to half-float inside 8.6e-4 relative', () => {
+  it('quantises to half-float inside 9.6e-4 relative', () => {
     let worst = 0;
     for (const v of unresolvedHoleVoxels()) {
       const back = DataUtils.fromHalfFloat(DataUtils.toHalfFloat(v));
       if (v > 0) worst = Math.max(worst, Math.abs(back - v) / v);
     }
-    expect(worst).toBeCloseTo(8.566e-4, 7);
+    expect(worst).toBeCloseTo(9.604e-4, 7);
   });
 });
 

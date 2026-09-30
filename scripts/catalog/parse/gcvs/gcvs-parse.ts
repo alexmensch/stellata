@@ -11,7 +11,7 @@ import {
   splitPipeDelimited,
   VAR_TYPE_UNKNOWN,
 } from '../../record/catalog-pure';
-import { CON_INDEX } from '../constellations';
+import { CON_INDEX } from '../constellations/constellations';
 import type { Star } from '../stars-parse';
 
 export interface VarStarData {

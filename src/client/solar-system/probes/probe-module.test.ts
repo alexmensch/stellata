@@ -18,6 +18,7 @@ import { createProbeKindModule } from './probe-module';
 import { fakeWebGpuSeam } from '../../webgpu/seam-mock';
 import { fakeChromeLineMaterials } from '../../chrome-lines/chrome-lines-mock';
 import { fakeProbeMaterials } from '../materials/solar-system-materials-mock';
+import { sidsOf } from '../../util/sid-resolver/sid-domain-fixture';
 
 const STEP_DAYS = 30;
 const FIRST_JD = tToJdUt(0);
@@ -94,7 +95,7 @@ describe('probe kind module', () => {
     expect(m.displayName(0)).toBe('');
     await m.load('/');
     m.attach(makeCtx());
-    expect(m.sids()).toEqual([]);
+    expect(sidsOf(m.sidDomain(), 1)).toEqual([null]);
     expect(m.searchEntries()).toEqual([]);
     expect(m.pinnable(0)).toBe(false);
     expect(m.field.probeCount()).toBe(0);
@@ -109,7 +110,7 @@ describe('probe kind module', () => {
     expect(layer).not.toBeNull();
 
     expect(m.field.probeCount()).toBe(2);
-    expect(m.sids()).toEqual([SOL_OBJECT_SIDS.pioneer10, SOL_OBJECT_SIDS.voyager1]);
+    expect(sidsOf(m.sidDomain(), 3)).toEqual([SOL_OBJECT_SIDS.pioneer10, SOL_OBJECT_SIDS.voyager1, null]);
     expect(m.searchEntries().map((e) => e.label)).toEqual(['Pioneer 10', 'Voyager 1']);
     expect(m.searchEntries()[0].displayCon).toBe('Probe · Interstellar');
     expect(m.displayName(1)).toBe('Voyager 1');
@@ -149,7 +150,7 @@ describe('probe kind module', () => {
     expect(pick(0, 0, 14)).toBeNull();
   });
 
-  it('setFocalHidden suppresses the marker from the pick surface; -1 restores it', async () => {
+  it('setFocalHidden suppresses the marker from the pick surface; null restores it', async () => {
     stubFetch(['voyager1']);
     const m = createProbeKindModule();
     await m.load('/');
@@ -164,7 +165,7 @@ describe('probe kind module', () => {
     layer.update?.(probeFrameCtx(ctx));
     expect(pick(400, 300, 14)).toBeNull();
 
-    m.setFocalHidden!(-1);
+    m.setFocalHidden!(null);
     layer.update?.(probeFrameCtx(ctx));
     expect(pick(400, 300, 14)?.idx).toBe(0);
   });

@@ -12,7 +12,7 @@ import {
 } from './calibration-ladders-pure';
 import { drawGammaCell } from './gamma-pattern';
 
-export function bindCalibrationOverlay(): ModalHandle {
+export function bindCalibrationOverlay(signal: AbortSignal): ModalHandle {
   const modal = document.getElementById('calibration-modal')!;
 
   // The wedge spans exactly the black-point ladder, so the two sections
@@ -29,7 +29,7 @@ export function bindCalibrationOverlay(): ModalHandle {
 
   const gammaRow = modal.querySelector<HTMLElement>('#calib-gamma');
   const redrawGamma = renderGammaRow(gammaRow);
-  window.addEventListener('resize', redrawGamma);
+  window.addEventListener('resize', redrawGamma, { signal });
 
   const reveal = modal.querySelector<HTMLButtonElement>('#calib-highlight-reveal');
   const highlight = modal.querySelector<HTMLElement>('#calib-highlight');

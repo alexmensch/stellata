@@ -142,7 +142,7 @@ export interface BuildCounts {
   designationConMismatch: number;
   /** Stars whose designation constellation came from their own GCVS
    *  designation — the only nomenclature source the build has left, since the
-   *  manifest carries no editorial `con` cell. See `parse/README.md#positional-constellation-membership`.
+   *  manifest carries no editorial `con` cell. See `parse/constellations/README.md#positional-constellation-membership`.
    * */
   gcvsDesignationCon: number;
   /** Record index of Sol after sort. -1 if Sol is not found in source. */
@@ -672,16 +672,15 @@ export interface BuildCounts {
 
 export type CountDiff =
   | { key: string; status: 'match'; value: number }
-  | {
-      key: string;
-      status: 'mismatch';
-      expected: number;
-      actual: number;
-    };
+  | { key: string; status: 'mismatch'; expected: number; actual: number }
+  | { key: string; status: 'absent-from-snapshot'; actual: number }
+  | { key: string; status: 'absent-from-build'; expected: number };
 
 /** Partition-valued entries (a `Record<tier, number>`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
- *  Pure — no I/O. The caller decides whether mismatches are fatal.
+ *  Walks the union of both sides' rows: a count the build stopped
+ *  producing is as much drift as one the snapshot never had. Rows come in
+ *  the actual object's order, then the snapshot-only ones. Pure — no I/O.
  *
  *  Generic over the count record so any build script's snapshot can use it
  *  (`BuildCounts` here, `OverlayJoinCounts` in `classic-ids/`); the
@@ -690,25 +689,36 @@ export function compareBuildCounts<T extends object>(
   expected: T,
   actual: T,
 ): CountDiff[] {
+  const e = flattenCounts(expected);
+  const a = flattenCounts(actual);
   const diff: CountDiff[] = [];
-  const expectedByKey = expected as Record<string, unknown>;
-  for (const [key, a] of Object.entries(actual as Record<string, unknown>)) {
-    const e = expectedByKey[key];
-    if (typeof a === 'number') {
-      diff.push(compareOne(key, typeof e === 'number' ? e : NaN, a));
-      continue;
-    }
-    const ea = (e ?? {}) as Partial<Record<string, number>>;
-    for (const [bucket, value] of Object.entries(a as Record<string, number>)) {
-      diff.push(compareOne(`${key}.${bucket}`, ea[bucket] ?? NaN, value));
-    }
+  for (const [key, av] of a) {
+    const ev = e.get(key);
+    if (ev === undefined) diff.push({ key, status: 'absent-from-snapshot', actual: av });
+    else if (ev === av) diff.push({ key, status: 'match', value: av });
+    else diff.push({ key, status: 'mismatch', expected: ev, actual: av });
+  }
+  for (const [key, ev] of e) {
+    if (!a.has(key)) diff.push({ key, status: 'absent-from-build', expected: ev });
   }
   return diff;
 }
 
-function compareOne(key: string, expected: number, actual: number): CountDiff {
-  if (actual === expected) return { key, status: 'match', value: actual };
-  return { key, status: 'mismatch', expected, actual };
+function flattenCounts(counts: object): Map<string, number> {
+  const rows = new Map<string, number>();
+  for (const [key, value] of Object.entries(counts as Record<string, unknown>)) {
+    if (typeof value === 'number') {
+      rows.set(key, value);
+      continue;
+    }
+    if (value === null || typeof value !== 'object') {
+      throw new Error(`count ${key} is ${JSON.stringify(value)}, not a number or a partition`);
+    }
+    for (const [bucket, n] of Object.entries(value as Record<string, number>)) {
+      rows.set(`${key}.${bucket}`, n);
+    }
+  }
+  return rows;
 }
 
 /** One-line `bucket=n` rundown of a row partition, zeros included — the
@@ -717,33 +727,49 @@ export function formatPartition(partition: Readonly<Record<string, number>>): st
   return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
 }
 
-/** Only mismatching rows are listed, so a fatal exit doesn't scroll the
+type DriftedRow = Exclude<CountDiff, { status: 'match' }>;
+
+export function driftedRows(diff: CountDiff[]): DriftedRow[] {
+  return diff.filter((d): d is DriftedRow => d.status !== 'match');
+}
+
+/** Only drifted rows are listed, so a fatal exit doesn't scroll the
  *  actionable ones off-screen. */
 export function formatCountDiff(diff: CountDiff[]): string {
-  const mismatches = diff.filter((d) => d.status === 'mismatch');
-  const lines: string[] = [];
-  if (mismatches.length === 0) {
-    lines.push(`build-counts: all ${diff.length} counts match`);
-  } else {
-    lines.push(
-      `build-counts: ${mismatches.length} of ${diff.length} counts differ`,
-    );
-    const width = Math.max(...mismatches.map((m) => m.key.length));
-    for (const m of mismatches) {
-      if (m.status !== 'mismatch') continue;
-      const label = `  ${m.key.padEnd(width)}`;
-      if (Number.isNaN(m.expected)) {
-        lines.push(`${label} absent from snapshot, got ${m.actual}`);
-        continue;
+  const drifted = driftedRows(diff);
+  if (drifted.length === 0) return `build-counts: all ${diff.length} counts match`;
+  const width = Math.max(...drifted.map((d) => d.key.length));
+  const lines = [`build-counts: ${drifted.length} of ${diff.length} counts differ`];
+  for (const d of drifted) {
+    const label = `  ${d.key.padEnd(width)}`;
+    switch (d.status) {
+      case 'absent-from-snapshot':
+        lines.push(`${label} absent from snapshot, got ${d.actual}`);
+        break;
+      case 'absent-from-build':
+        lines.push(`${label} expected ${d.expected}, absent from build`);
+        break;
+      case 'mismatch': {
+        const delta = d.actual - d.expected;
+        const sign = delta > 0 ? '+' : '';
+        lines.push(`${label} expected ${d.expected}, got ${d.actual} (${sign}${delta})`);
+        break;
       }
-      const delta = m.actual - m.expected;
-      const sign = delta > 0 ? '+' : '';
-      lines.push(
-        `${label} expected ${m.expected}, got ${m.actual} (${sign}${delta})`,
-      );
     }
   }
   return lines.join('\n');
+}
+
+/** The `compare` every count snapshot passes to `assertOrUpdateSnapshot`. */
+export function compareCountSnapshot<T extends object>(
+  expected: T,
+  actual: T,
+): { drifted: boolean; report: string } {
+  const diff = compareBuildCounts(expected, actual);
+  return {
+    drifted: driftedRows(diff).length > 0,
+    report: formatCountDiff(diff),
+  };
 }
 
 /** The SIMBAD namespace tallies must exhaust the SIMBAD tier: every record the

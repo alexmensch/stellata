@@ -65,9 +65,6 @@ describe('HD/HIP route-disagreement review', () => {
   });
 });
 
-// The three inputs below ride LFS, so the bare CI `test` job sees pointer
-// stubs and these suites self-skip there. They run smudged in the
-// sid-ledger-guard job, which names this file, and locally.
 const ledgerReadable = lfsContentReadable(LEDGER_PATH);
 const bsc5Readable = lfsContentReadable(BSC5_PATH);
 const spineReadable = lfsContentReadable(SPINE_PATH);
@@ -207,10 +204,10 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
     '24071': '7570-1586-1',    // f Eri B, on its own source
     '138917': '933-1239-1',    // δ Ser B, on its own source
     '200496': '5204-1584-2',   // 12 Aqr B, on its own source
+    '68255': '1381-1641-1',    // ζ¹ Cnc B, on its own source through SIMBAD
   };
   const PARKS: Record<string, string> = {
-    '68255': '1381-1641-1',    // ζ¹ Cnc B, no bound source
-    '213051': '5226-1605-2',   // ζ¹ Aqr, no bound source
+    '213051': '5226-1605-2',   // ζ¹ Aqr, on a Gaia source with no parallax
   };
   // No second Tycho entry names it, so no primary admits it.
   const NO_ROW = ['330122'];
@@ -258,7 +255,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
     expect(freed).toEqual(FREED);
   });
 
-  it('gives three of them a row that builds a record', () => {
+  it('gives four of them a row that builds a record', () => {
     for (const [hd, tyc] of Object.entries(SHIPS)) {
       expect(rowsByHd.get(hd)?.tyc, `HD ${hd}`).toBe(tyc);
       expect(rowsByHd.get(hd)?.sourceId, `HD ${hd} binds a source`).not.toBe('');
@@ -269,10 +266,9 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
   // The ratchet: each of these is a designation that resolved before the
   // correction and resolves nowhere after it. One more is a finding, not
   // drift — say why here and move the number, or give the row a distance.
-  it('leaves three resolving nowhere — two parked, one on no row at all', () => {
+  it('leaves two resolving nowhere — one parked, one on no row at all', () => {
     for (const [hd, tyc] of Object.entries(PARKS)) {
       expect(rowsByHd.get(hd)?.tyc, `HD ${hd}`).toBe(tyc);
-      expect(rowsByHd.get(hd)?.sourceId, `HD ${hd} binds no source`).toBe('');
       expect(parkedReason.get(tyc), `HD ${hd}`).toBe('no_parallax_published');
     }
     for (const hd of NO_ROW) expect(rowsByHd.has(hd), `HD ${hd}`).toBe(false);

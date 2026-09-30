@@ -41,6 +41,8 @@ import {
   type FocusedOrbitSource,
 } from './orbit-frame/orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
+import type { LateState } from '../util/late/late';
+import { HeldOrbitPose } from './orbit-frame/held-pose';
 import {
   DBL_CLICK_DIST_PX_SQ,
   DBL_CLICK_MS,
@@ -242,6 +244,9 @@ export interface AttitudeIndicator {
   tickOrbitFrame(): void;
 }
 
+const ORBIT_PENDING = { status: 'pending' } as const;
+const ORBIT_ABSENT = { status: 'absent' } as const;
+
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
   const host = document.getElementById('attitude');
   if (host === null) return null;
@@ -307,26 +312,32 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     normal: new THREE.Vector3(),
     toCentre: new THREE.Vector3(),
   };
-  let orbitSource: FocusedOrbitSource | null = null;
+  let orbitSource: LateState<FocusedOrbitSource> | null = null;
+  // orbit-frame/README.md#a-pose-held-for-orb
+  const heldPose = new HeldOrbitPose(() => stellata.renderGate.hold());
+  // What the tick last built `orbitFrame` for; NaN so the first read rebuilds.
+  let tickedFocus: Target | null = null;
+  let tickedT = Number.NaN;
 
   /** Which orbit the focus rides, resolved once and held: for a pair that
    *  settles the plane normal, which is a static function of frozen elements
-   *  and has no business being re-derived per frame. Re-asked while null
-   *  because the binaries artifact and the planet kind both attach after a
-   *  focus can be set. */
-  function orbitSourceNow(): FocusedOrbitSource | null {
-    orbitSource ??= resolveFocusedOrbit(stellata, focused);
+   *  and has no business being re-derived per frame. Re-asked until ready
+   *  because the binaries artifact attaches after a focus can be set. */
+  function orbitSourceNow(): LateState<FocusedOrbitSource> {
+    if (orbitSource?.status !== 'ready') orbitSource = resolveFocusedOrbit(stellata, focused);
     return orbitSource;
   }
 
-  /** False when nothing focused rides an orbit the model has elements for,
+  /** Absent when nothing focused rides an orbit the model has elements for,
    *  which is also how ORB stops being offered the moment that stops being
-   *  true. */
-  function refreshOrbitFrame(): boolean {
+   *  true. Pending is not absent: a pair whose artifact is still attaching
+   *  will have an orbit, and an arm restored ahead of it has to survive. */
+  function refreshOrbitFrame(out = orbitFrame): LateState<FocusedOrbitSource>['status'] {
     const source = orbitSourceNow();
-    if (source === null || !focusedOrbitFrom(orbit, source, stellata)) return false;
-    orbitFrameInto(orbitFrame, stellata.camera, orbit.normal, orbit.toCentre);
-    return true;
+    if (source.status !== 'ready') return source.status;
+    if (!focusedOrbitFrom(orbit, source.value, stellata)) return 'absent';
+    orbitFrameInto(out, stellata.camera, orbit.normal, orbit.toCentre);
+    return 'ready';
   }
 
   function selectedFrameKey(): AutoFrameKey {
@@ -338,7 +349,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   function resolveFrame(): ReferenceFrame {
     if (captured !== null) return captured;
-    if (orbitActive && refreshOrbitFrame()) return orbitFrame;
+    if (orbitActive && refreshOrbitFrame() === 'ready') return orbitFrame;
     return frames[selectedFrameKey()];
   }
 
@@ -440,8 +451,18 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  on the drawing path made hiding the UI silently disengage the lock and
    *  then replay the whole accumulated turn as one swing when it came back. */
   function tickOrbitFrame(): void {
-    if (captured !== null || !orbitActive) return;
-    if (!refreshOrbitFrame()) {
+    if (captured !== null || !orbitActive) {
+      heldPose.drop();
+      return;
+    }
+    const status = refreshOrbitFrame();
+    if (status === 'pending') {
+      // Nothing to ride yet; the first ready tick seeds rather than replaying.
+      riding = false;
+      return;
+    }
+    if (status === 'absent') {
+      heldPose.drop();
       orbitActive = false;
       riding = false;
       // Through `refresh`, not just the two fields: the flag would otherwise
@@ -454,6 +475,9 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       return;
     }
     frame = orbitFrame;
+    tickedFocus = focused;
+    tickedT = stellata.getT();
+    if (seatHeldPose()) riding = false;
     const rideable = orbitLocked
       && stellata.focus.getCameraMode() === 'navigate'
       && !stellata.isCameraTransitionActive();
@@ -467,6 +491,18 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // one that is worth a frame, instead of dropping each one.
     if (!carry || rode) copyReferenceFrame(riddenFrame, orbitFrame);
     riding = rideable;
+  }
+
+  function seatHeldPose(): boolean {
+    const camera = stellata.camera;
+    const pivot = stellata.controls.target;
+    const wrote = heldPose.seat(
+      orbitFrame, camera.position, camera.up, pivot, stellata.renderGate.sawUserInput,
+    );
+    if (!wrote) return false;
+    camera.lookAt(pivot);
+    stellata.roll.adoptFromCamera(camera);
+    return true;
   }
 
   function draw() {
@@ -556,7 +592,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   function levelOnOrbit() {
     // ORB is the instrument's frame, and the instrument is navigate-only.
     if (stellata.focus.getCameraMode() === 'observe') return;
-    if (!refreshOrbitFrame()) return;
+    if (refreshOrbitFrame() !== 'ready') return;
     captured = null;
     orbitActive = true;
     refresh();
@@ -599,7 +635,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   function cycleFrame() {
     const source = orbitSourceNow();
-    const hasOrbit = source !== null && focusedOrbitFrom(orbit, source, stellata);
+    const hasOrbit = source.status === 'ready' && focusedOrbitFrom(orbit, source.value, stellata);
     const inputs = focusFrameInputs(stellata, focused);
     const next = nextFrameKey(
       frame.key,
@@ -675,8 +711,26 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // whether the lock can exist here. Ordering is the caller's problem — a
   // restore has to land after the focus, the filter and the camera mode have
   // settled, since each of those clears ORB
-  // (`../util/url-state/README.md#orb-and-the-orbit-lock`).
+  // (`../util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock`).
+
+  // Never `orbitFrame`: the ball is drawn against it, so an off-tick write moves the drawn datum.
+  const portFrame = emptyReferenceFrame();
+  const portFrameReady = { status: 'ready', value: portFrame } as const;
+  const tickedFrameReady = { status: 'ready', value: orbitFrame } as const;
   stellata.setOrbitFramePort({
+    orbitFrame: () => {
+      // The tick's frame, read-only, when it is this frame's: one orbit
+      // evaluation per frame however many readers ask.
+      if (orbitActive && captured === null && tickedFocus === focused
+        && tickedT === stellata.getT()) {
+        return tickedFrameReady;
+      }
+      const status = refreshOrbitFrame(portFrame);
+      if (status === 'ready') return portFrameReady;
+      return status === 'pending' ? ORBIT_PENDING : ORBIT_ABSENT;
+    },
+    holdPose: (offset, up) => heldPose.hold(offset, up),
+    posePending: () => heldPose.pending,
     isArmed: () => orbitActive,
     isLocked: () => orbitLocked,
     restore: (armed, locked) => {

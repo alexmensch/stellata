@@ -75,8 +75,10 @@ scripts/binaries/
                                   columns + per-pair WDS sep/PA/epoch/Δmag +
                                   system-anchor inheritance for tight inner
                                   binaries + SIMBAD standalone augmentation.
-  stage7_counts.py                Build-counts + build-rates snapshot writer
-                                  (mirrors scripts/catalog/build-counts.ts).
+  stage7_counts.py                Build-counts + build-rates snapshots. The
+                                  assert / refresh they share with
+                                  build-runtime-binaries.py is
+                                  scripts/util/snapshot_assert.py.
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
                                   (Cox 2000
                                   (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
@@ -88,6 +90,9 @@ scripts/binaries/
                                   chains via component-letter prefix matching
                                   and writes outer-before-inner. See
                                   README.md#pipeline-at-a-glance, step 3.
+  golden/                         binaries.bin golden test: encode() on a
+                                  committed non-LFS fixture, byte for byte.
+                                  Own README.
   build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
                                   asserts the strongest-priority resolution per
                                   (wds_id, component) against
@@ -413,7 +418,7 @@ four points in the pipeline:
   ORB6 `(wds_id, components)` key that names a clean sub-pair (both
   sides single-component tokens after WDS truncated-form expansion —
   the fixed-width misalignment garbage `"95"` / `"a,Ab"` is filtered)
-  with no WDS row — ~33 pairs, 64 Psc Aa,Ab and Castor Ca,Cb among
+  with no WDS row — ~<!-- count:build-binaries/synthesized_orb6_orphan_pairs -->33<!-- /count --> pairs, 64 Psc Aa,Ab and Castor Ca,Cb among
   them. A blank-components WDS row under the same `(wds_id,
   discoverer)` is the same physical pair and donates its ρ/θ/mags/
   date/notes; otherwise the pair is sub-resolution (ρ = 0.0, no
@@ -445,7 +450,7 @@ four points in the pipeline:
   4's distinct-source gate stops the misattribution). One synthesized
   inner pair per `(wds_id, source_id)`, named one hierarchy level
   down from the deepest carrier token (`A` → `Aa,Ab`, `Aa` →
-  `Aa1,Aa2`) — ~521 pairs. Skipped when the carrier token has no
+  `Aa1,Aa2`) — ~<!-- count:build-binaries/synthesized_nss_inner_pairs -->442<!-- /count --> pairs. Skipped when the carrier token has no
   deeper WDS convention (compound / digit-bearing), the child tokens
   already exist in the system, the NSS row is outside the
   detectability regime, or the elements can never render (missing

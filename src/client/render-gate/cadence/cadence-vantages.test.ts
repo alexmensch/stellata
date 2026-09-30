@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
+import { makePlanetFieldUniforms } from '../../solar-system/planets/planet-field-uniforms-fixture';
 import { SOL_BODIES, getPlanetSystem } from '../../solar-system/planet-system';
 import { KM_PC, R_SUN_PC, SUN_ABSMAG_V } from '../../util/astronomy-constants';
 import { makeCadenceCtx, ACCEPTANCE_PX_PER_RADIAN } from '../../scene/frame-ctx-mock';
@@ -14,13 +15,6 @@ import {
   cadenceSimBudgetS,
   clockFrameDue,
 } from './clock-cadence-pure';
-import type {
-  ChartDiscUniforms,
-  PerceptualDiscUniforms,
-} from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
-import { makeHdrEmitterUniforms, type HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
-import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
-import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 
 /** The one plate scale every number here is quoted against: 900 CSS px of
  *  viewport height at the default 50 deg vertical FOV, 16:9, on a
@@ -29,40 +23,12 @@ const VIEWPORT_H = 900;
 const FOV_Y_DEG = 50;
 const ASPECT = 16 / 9;
 const PIXEL_RATIO = 2;
-const LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 /** 2026-01-01T00:00:00Z. Any epoch works — the rates are geometric — but
  *  a fixed one keeps the pinned values reproducible. */
 const T0 = Date.UTC(2026, 0, 1) / 1000;
 /** One rendered frame's worth of sim time at live rate. */
 const DT = 1;
 
-function makeUniforms(): PerceptualDiscUniforms & ChartDiscUniforms & HdrEmitterUniforms {
-  return {
-    ...makeHdrEmitterUniforms(),
-    uMonochrome: { value: 0 },
-    uChartDiscMaxPx: { value: 28 },
-    uChartDiscMinPx: { value: 1.5 },
-    uChartMagBright: { value: -2 },
-    uLimitMag: { value: LIMIT_MAG },
-    uThresholdMag: { value: LIMIT_MAG },
-    uCullMag: { value: cullMagFor(LIMIT_MAG) },
-    uSizeMin: { value: 2 },
-    uSizeMax: { value: 24 },
-    uSizeSpan: { value: 8 },
-    uSizeKnee: { value: 16 },
-    uVisibleThreshold: { value: 0.2 },
-    uVisibleK: { value: -Math.log(0.2) },
-    uCoreThreshold: { value: 0.4 },
-    uDiscardThreshold: { value: 0.02 },
-    uDistNMin: { value: 2.2 },
-    uDistNMax: { value: 10.0 },
-    uLumBiasMin: { value: 1.0 },
-    uLumBiasMax: { value: 0.6 },
-    uViewport: { value: new THREE.Vector2(VIEWPORT_H * ASPECT, VIEWPORT_H) },
-    uPixelRatio: { value: PIXEL_RATIO },
-    uFovYRad: { value: (FOV_Y_DEG * Math.PI) / 180 },
-  };
-}
 
 const bodyIdx = (name: string): number => {
   const i = SOL_BODIES.findIndex((b) => b.name === name);
@@ -74,7 +40,9 @@ const bodyIdx = (name: string): number => {
  *  so the field holds a genuine one-frame position difference. Returns the
  *  field plus each named body's position at both epochs. */
 async function solAtT0(names: readonly string[]) {
-  const field = new PlanetBodyField(makeUniforms());
+  const field = new PlanetBodyField(makePlanetFieldUniforms({
+    viewportPx: [VIEWPORT_H * ASPECT, VIEWPORT_H], pixelRatio: PIXEL_RATIO, fovYDeg: FOV_Y_DEG,
+  }));
   const ps = await getPlanetSystem(0, 0);
   const camera = new THREE.PerspectiveCamera(FOV_Y_DEG, ASPECT, 1e-12, 1e6);
   field.attachHost(0, ps!, SUN_ABSMAG_V, R_SUN_PC, new THREE.Vector3(), 0, T0 - DT);

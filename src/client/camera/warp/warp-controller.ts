@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
+import type { FloatingOrigin } from '../../frame/floating-origin';
 import type { StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
 import {
@@ -27,6 +28,7 @@ import { WARP_BASE_DIR } from '../timing';
 import { arrivalEaseFn, cameraConfig } from '../camera-config';
 import { recordLastWarp } from './warp-telemetry';
 import { hybridUSeam } from '../arrival/arrival-curves';
+import type { CameraClaim } from '../camera-claim';
 
 // Source→dest separations below this have no reliable travel direction —
 // AB/distPc is float32 noise (coincident catalog baselines / orbit
@@ -77,6 +79,8 @@ export interface WarpControllerDeps {
    *  `dest.chartPlateauDistance(magBright)`. */
   getChartMagBright: () => number;
   focus: FocusOps;
+  claim: CameraClaim;
+  origin: Pick<FloatingOrigin, 'recenterTo'>;
 }
 
 interface WarpState {
@@ -237,13 +241,10 @@ export class WarpController {
     source: FocusTarget,
     dest: FocusTarget,
   ): void {
-    const focus = this.deps.focus;
-    if (this.state || focus.isObserveTransitionActive()) return;
-    focus.cancelUnfocusLerp();
-    focus.cancelFocusLerp();
+    if (!this.deps.claim.claim()) return;
     // Warp launched from OBSERVE: leave cameraMode='observe' for the
     // duration so search-row, mode toggle, and any mode-bound UI don't
-    // flicker through navigate. The animate loop branches off the
+    // flicker through navigate. The CameraStep dispatch branches off the
     // warp slot first, so the cosmetic mode value never reaches
     // ObserveLookPin. uHideFocusIdx stays pinned to the source
     // for the reorient — unhiding it would briefly render the source
@@ -521,7 +522,7 @@ export class WarpController {
       // source/dest). Same recentre + focus mutation the mid-Fly path
       // runs, through the kind-agnostic FocusTarget contract.
       if (dest.anchorInto(this.tmpAbs)) {
-        this.deps.focus.recenterOrigin(this.tmpAbs);
+        this.deps.origin.recenterTo(this.tmpAbs);
       }
       dest.applyFocus();
     }
@@ -566,14 +567,14 @@ export class WarpController {
     if (cbDist2 >= frac * frac * abDist2) return;
     // `anchorInto` overwrites `tmp` from local-frame to absolute-frame.
     if (!state.dest.anchorInto(tmp)) return;
-    const delta = this.deps.focus.recenterOrigin(tmp);
+    const delta = this.deps.origin.recenterTo(tmp);
     if (!delta) return;
     shiftWarpWaypoints(state, delta.x, delta.y, delta.z);
     shiftArrivalWaypoints(state.flyArrival, delta.x, delta.y, delta.z);
     // Float32 residual snap (same shape as setFocus's). The earlier
     // `controls.target.copy(B)` at startWarp set target from a Vector3
     // derived via `_localPositions` (Float32) — the value has ~|B|·1e-7
-    // ULP relative to true B. recenterOrigin then shifts target by a
+    // ULP relative to true B. The recentre then shifts target by a
     // delta computed fresh in float64 from raw catalog reads, leaving
     // target at `(true_B − rounded_B)` which is the ULP residual.
     // lengthSq = ~|B|²·1e-14 fails the 1e-12 pin guard on any non-

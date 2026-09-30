@@ -20,6 +20,9 @@ derivation, and the external checks on all of it — is
 ```
 src/client/constellation-boundaries/
   iau-geometry/                   The pure B1875 geometry, its own README.
+  constellation-boundaries.ts     ConstellationBoundaries — the shell's
+    (+ test)                      `constellationBoundaries` namespace
+                                  (README.md#the-owner).
   constellation-boundary-layer.ts The chart-mode layer (README.md#chart-mode-layer).
     (+ test)
   boundary-artifact-loader.ts     Fetch + validate the shipped artifact.
@@ -40,16 +43,37 @@ runtime consumer reads the built artifact, never the edges:
 
 - **Star assignment** runs at **build time**, through
   `createConstellationAssignment`
-  (`../../../scripts/catalog/parse/constellations.ts`), which binds the
+  (`../../../scripts/catalog/parse/constellations/constellations.ts`), which binds the
   geometry's lookup to the IAU-88 index space. Every record's own
   position resolves into catalog byte 34; the browser reads the answer.
-  See [Positional constellation membership](/scripts/catalog/parse/README.md#positional-constellation-membership).
+  See [Positional constellation membership](/scripts/catalog/parse/constellations/README.md#positional-constellation-membership).
 - **Drawing, labelling and runtime membership** all ride
   `public/constellation-boundaries.json` — arcs, label anchors
   ([Label anchors](#label-anchors)), and the resolved cell grid ([Runtime membership](#runtime-membership)).
   `buildBoundaryArtifact` takes the whole lookup, not just its edges, so
   all three come from **one** decomposition: the same one byte 34 was
   assigned from. `scripts/catalog/boundaries/README.md` owns the wire.
+
+## The owner
+
+`ConstellationBoundaries` (`constellation-boundaries.ts`) is the shell's
+`constellationBoundaries` namespace: the arcs layer, the label anchors and
+the positional namer, all read off one artifact. **The artifact arrives at
+construction.** `main.ts` awaits it before building the shell, so every
+reading exists from the first line that can ask — there is no "not yet"
+state to represent, and no reader takes a `Late`. A `null` artifact
+([Validated at load](#validated-at-load-but-never-fatal)) is final for the session: no arcs,
+`labelAnchors` empty, `constellationOf` null for everything.
+
+`constellationOf(kind, idx)` adds the world offset to the kind's
+local-frame position — the namer takes Sol-centred ICRS — and returns null
+when there is nothing to name: no artifact, Sol at the origin, or no
+resolvable position this frame. Those answer alike because every reader
+treats them alike ([Constellation row](../focus-card/README.md#constellation-row)).
+
+It builds its own scene entry (`static`, [Chart-mode layer](#chart-mode-layer)) and
+holds the `filter` subscription that pushes the magnitude limit, released in
+that entry's `dispose`.
 
 ## Runtime membership
 
@@ -70,8 +94,8 @@ answer a different constellation from byte 34 near one — pinned across a
 sphere-wide sampling grid in `constellation-regions.test.ts`, and
 rejected at load unless both bound arrays ascend.
 
-Which kinds route through `Stellata.constellationOf`, why stars don't,
-and why every answer is Sol-frame: [Constellation row](../focus-card/README.md#constellation-row).
+Which kinds route through `constellationOf` ([The owner](#the-owner)), why
+stars don't, and why every answer is Sol-frame: [Constellation row](../focus-card/README.md#constellation-row).
 
 ## Label anchors
 
@@ -151,10 +175,9 @@ the artifact's quantile table against the live magnitude limit
 visible population reads as misplaced to where **5%** does. Both
 percentiles must be columns of the artifact's own `quantilePcts` — the
 loader rejects an artifact that dropped either rather than silently using
-a neighbouring column. `setMagnitudeLimit` is *pushed* from the shell's
-filter handler (folded into the same `filter` subscription that rebuilds
-the figure), so the interpolation runs once per slider change rather than
-per frame.
+a neighbouring column. `setMagnitudeLimit` is *pushed* from the owner's
+`filter` subscription ([The owner](#the-owner)), so the interpolation runs
+once per slider change rather than per frame.
 
 `solFrameFadeFactor` tests its window as `!(outerPc > innerPc)`, not
 `outerPc <= innerPc`. The negated form is what routes a **NaN** window into
@@ -191,9 +214,8 @@ artifact never reaches the GPU.
 
 **Gates.** A chart-only declutter element, `constellationBoundaries` at
 floor `{ realistic: 'never', chart: 'all' }` (`../scene/declutter/README.md`). That
-floor is the whole visibility answer — the `showConstellation` master toggle
-that used to AND with it is retired. The shell's registry entry ANDs the
-floor with the shared warp gate.
+floor is the whole visibility answer; the owner's registry entry ANDs it
+with the shared warp gate.
 
 **Ink.** `CHART_REFERENCE_INK` (`../chart-mode/chart-palette.ts`), shared
 with the coordinate sphere, at half its weight — and dotted where the grid

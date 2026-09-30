@@ -2,7 +2,7 @@
 // `Bayer/other` cell grammar and IV/27A's ASCII Bayer conventions —
 // emitting structure (glyph + superscript + dc + component) only.
 
-import { CONSTELLATIONS } from '../parse/constellations';
+import { CONSTELLATIONS } from '../parse/constellations/constellations';
 import {
   ASCII_GREEK,
   CONSTELLATION_GENITIVES,

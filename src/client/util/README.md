@@ -237,6 +237,30 @@ build scripts, tests, and shader uniforms.
   24-bit word costs two passes rather than three with no width argument.
   A float key sorts by its bit view only while every value is
   non-negative; that precondition belongs to the caller.
+- `page-teardown.ts` (+ test) — `bindPageTeardown(target, reload)`: runs
+  the release last passed to `hold` once, on the first `pagehide`, and
+  reloads a page the back/forward cache restores after that release, since
+  it comes back with nothing to draw with. `main.ts` holds the booted
+  renderer's `dispose` until the shell exists, then `Stellata.dispose()`.
+  `expose(name, value)` is the only way a value becomes a `window` global:
+  `main.ts` binds it to `DevConsoleGlobals` (`../globals.d.ts`), so only
+  `stellata` and `debug` compile, and `tests/page-teardown-contract.test.ts`
+  fails any other `window` assignment under `src/client`. `pagehide` deletes every exposed name, and
+  drops the held release once it has run. `signal` aborts on that same
+  `pagehide`: a `window` / `document` listener nothing else removes passes
+  it (`../ui/keyboard-shortcuts.ts`, `../camera/warp/warp-button.ts`,
+  `../calibration/calibration-overlay.ts`), and the same test file fails
+  one that does neither.
+  **Why**: Safari keeps part of each reloaded page resident in the same
+  content process until Safari quits
+  ([WebKit bug 325706](https://bugs.webkit.org/show_bug.cgi?id=325706));
+  Chrome frees it. On Stellata the device destroy is the release that
+  measurably shrinks what each reload leaves behind. Clearing the globals
+  made no measurable difference on its own: a heap snapshot showed the old
+  shell held by a natively rooted function, not through `window`. The
+  globals and listeners are released anyway because they are the
+  references the page itself can drop
+  ([Who releases what](../webgpu/README.md#who-releases-what)).
 - `mutable.ts` — `Mutable<T>`, `T` with `readonly` stripped. For an owner
   that rewrites a context in place which its readers see as readonly
   (`FrameCtx` in `stellata.ts`, `CadenceCtx` in
@@ -248,5 +272,5 @@ build scripts, tests, and shader uniforms.
   pending / ready / absent with no nullable accessor.
 - `sid-resolver/` — runtime SID → `{kind, localIndex}` resolution over
   attached artifacts ([§ 8](/docs/sid.md#8-runtime-resolver-b4)).
-- `url-state/` — `?v=` URL wire format (v1/v2/v3) and the address-bar
+- `url-state/` — the share-URL wire format (v4) and the address-bar
   round-trip.

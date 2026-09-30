@@ -3,8 +3,8 @@
 `ChartLabels` — the per-frame engine that fills three SVG layers under
 `#overlay` with proper names, Bayer Greek glyphs, constellation Latin
 names, cloud labels, variable rings and binary wings. It imports only
-`../chart-mode.ts` (context type) and `../chart-disc-pure.ts` from the
-parent; `stellata.ts` is its one consumer.
+`../chart-mode.ts` (context type) from the parent; `stellata.ts` is its
+one consumer.
 
 ## Files
 
@@ -62,13 +62,13 @@ the padded anchor *point*, not the 36 px block.
 discPx/2 + STAR_LABEL_GAP_PX)` so the label's bottom-left corner clears
 the disc edge across the chart-mode magnitude range (faint sub-pixel
 discs keep the floor; the brightest 28 px disc pushes the label out
-to 18 px diagonal). `discPx` comes from `chartDiscPxForAppMag` in
-`chart-disc-pure.ts`, which mirrors the vertex shader's chart-branch
-formula.
+to 18 px diagonal). `discPx` comes from `StarPipeline.chartDiscPxFor`, over
+`../chart-disc-pure.ts`'s mirror of the vertex shader's chart-branch
+formula — the same solve the pick bound takes.
 
 **Constellation names sit at the IAU region's own centre, not at their
 stars.** The anchor is the equal-surface-weight centre of mass of the
-region the boundary layer draws — `Stellata.constellationLabelAnchors`,
+region the boundary layer draws — `stellata.constellationBoundaries.labelAnchors`,
 one per region, off the shipped artifact
 ([Label anchors](../../constellation-boundaries/README.md#label-anchors)) — baked to the
 same Sol-centred sphere as the arcs, so `− worldOffset` is the whole
@@ -222,8 +222,8 @@ All of it is pooled now, the same idiom as the `<text>` / `<circle>` /
 `<line>` element pools, and the pool keys plus the two composed label
 texts are interned per identity rather than minted per tick.
 
-What survives is O(1) per tick — the `getChartDiscParams` bag and the
-`discPxFor` closure over it — plus one attribute string per *moved*
+What survives is O(1) per tick — the `discPxFor` closure (the pipeline
+refills one preallocated params bag per solve) — plus one attribute string per *moved*
 label, from `setNumAttr`'s `toFixed`, which no `setAttribute` caller
 escapes. **So chart mode under a moving camera still shows string
 allocation in a sampling profile.** That residue is the DOM write, not
@@ -300,7 +300,7 @@ stationary camera.
 
 `chart-labels.ts`. The chart label engine's output is purely a
 function of camera pose, filter state, viewport size, and the
-advanced catalog epoch (`stellata.advancedEpochJyr` — time scrubbing
+advanced catalog epoch (`stellata.starFrame.advancedEpochJyr` — time scrubbing
 re-advances star positions with the camera still, and the glyphs
 must follow) — variable pulsation animates on the GPU, the CPU
 labels don't otherwise move. Hash that tuple at the top of `tick()`:

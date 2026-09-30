@@ -2,7 +2,7 @@
 // public/catalog.bin, public/constellations.json, and
 // public/search-index.json. See scripts/catalog/README.md.
 
-import { statSync, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { statSync, existsSync, readFileSync } from 'node:fs';
 import { mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,8 +44,7 @@ import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
-  compareBuildCounts,
-  formatCountDiff,
+  compareCountSnapshot,
   formatPartition,
   spectralSimbadPartitionError,
   type BuildCounts,
@@ -65,8 +64,9 @@ import {
 import {
   CONSTELLATIONS,
   STELLARIUM_SKYCULTURE_JSON as SRC_STELLARIUM,
+  assertFigureVerticesInFirstChunk,
   buildFigureLines,
-} from './parse/constellations';
+} from './parse/constellations/constellations';
 import { writeBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
   parseHipCcdm,
@@ -102,7 +102,6 @@ import { emptyTallyPartition } from '../util/tally';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationInputs,
-  DESIGNATION_CONSTELLATION_INPUT_PATHS,
 } from './classic-ids/apply-designation-constellation';
 import {
   applyStarNames,
@@ -124,7 +123,6 @@ import {
 } from './distance/parallax/simbad-sourced-ledger';
 import {
   MEMBERSHIP_MANIFEST_TSV,
-  READ_STARS_INPUT_PATHS,
   loadReadStarsInputs,
 } from './parse/read-stars-inputs';
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
@@ -138,26 +136,15 @@ import {
   resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
   type SidObject,
 } from '../sid/sid-pure';
+import { loadRegistry, loadStoredEdges } from '../sid/registry-io';
 import {
-  HEAD_PATH,
-  LEDGER_PATH,
-  OVERRIDES_PATH,
-  REINSTATEMENTS_PATH,
-  RETIREMENTS_PATH,
-  loadRegistry,
-  loadStoredEdges,
-} from '../sid/registry-io';
+  SRC_GAIA_HIP_XMATCH, SRC_GCVS, SRC_GCVS_XREF, SRC_HIP_CCDM, SRC_SIMBAD_SAMPLE,
+  catalogInputPaths,
+} from './catalog-inputs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const SRC_GCVS = resolve(ROOT, 'data/gcvs/gcvs5.txt');
-const SRC_GCVS_XREF = resolve(ROOT, 'data/gcvs/crossid.txt');
-// GCVS keys on HIP and HD; this cross-walk is what lets a record carrying
-// only a source_id still resolve a variable-star designation.
-const SRC_GAIA_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
-const SRC_HIP_CCDM = resolve(ROOT, 'data/hipparcos/hip_ccdm.tsv');
-const SRC_SIMBAD_SAMPLE = resolve(ROOT, 'data/simbad/simbad_sample.tsv');
 const PUBLIC_DIR = resolve(ROOT, 'public');
 const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
 const OUT_CON = resolve(ROOT, 'public/constellations.json');
@@ -171,41 +158,6 @@ const EXPECTED_OUTLIERS = resolve(
 
 const CATALOG_STAMP = stampPath('catalog');
 
-function catalogInputPaths(): string[] {
-  // This file is an orchestration shell — the build logic lives across the
-  // scripts/catalog subfolders plus scripts/util and scripts/sid, so any of
-  // them must invalidate the artifact.
-  const scriptFiles: string[] = [];
-  const collectScripts = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const path = resolve(dir, entry.name);
-      if (entry.isDirectory()) {
-        collectScripts(path);
-      } else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')) {
-        scriptFiles.push(path);
-      }
-    }
-  };
-  for (const dir of [__dirname, resolve(__dirname, '../util'), resolve(__dirname, '../sid')]) {
-    collectScripts(dir);
-  }
-  // Every build input: source catalogues, the dust manifest, and the SID
-  // registry (a fresh sid:allocate mint or overrides/retirements edit must
-  // invalidate a catalog.bin written with NO_SID placeholders, or the
-  // documented build → allocate → rebuild bootstrap skips its final step).
-  // Adding a new source is one array entry.
-  return [
-    ...READ_STARS_INPUT_PATHS,
-    ...DESIGNATION_CONSTELLATION_INPUT_PATHS,
-    SRC_STELLARIUM, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
-    SRC_SIMBAD_SAMPLE, MULTIPLES_TSV,
-    LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
-    ...scriptFiles,
-  ];
-}
-
-// Clear a prior build's chunk set so a shrunk chunk count can't strand stale
-// higher-index chunks the manifest no longer lists.
 /** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity). A record that reaches no owned parallax cannot be
  *  placed, so it does not ship — and unlike the low-precision rows, which stay
  *  in the catalogue and are recomputable from it, nothing else records that
@@ -234,6 +186,8 @@ async function writeSimbadSourcedDistances(stars: readonly Star[]): Promise<void
   );
 }
 
+// Clear a prior build's chunk set so a shrunk chunk count can't strand stale
+// higher-index chunks the manifest no longer lists.
 async function removeStaleCatalogChunks(dir: string): Promise<void> {
   for (const name of await readdir(dir)) {
     if (/^catalog\.bin\.\d+$/.test(name)) {
@@ -257,7 +211,7 @@ async function main() {
   // unchanged (the snapshot assert/refresh is unreachable otherwise).
   const forceRebuild =
     process.env.UPDATE_BUILD_COUNTS === '1' || process.env.UPDATE_DISTANCE_OUTLIERS === '1';
-  const inputHashesAtStart = fileHashes(catalogInputPaths());
+  const inputHashesAtStart = fileHashes(await catalogInputPaths());
   if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart)) {
     console.log('catalog.bin is up to date with its inputs; skipping rebuild.');
     return;
@@ -1191,6 +1145,7 @@ async function main() {
   counts.recordsInFirstChunk = recordsInChunkPrefix(
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
+  assertFigureVerticesInFirstChunk(figureLines, counts.recordsInFirstChunk);
   // record/README.md#on-disk-transport-chunking is measured from this line.
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
@@ -1342,13 +1297,7 @@ async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
     envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: EXPECTED_COUNTS,
     actual,
-    compare: (expected, actual) => {
-      const diff = compareBuildCounts(expected, actual);
-      return {
-        drifted: diff.some((d) => d.status === 'mismatch'),
-        report: formatCountDiff(diff),
-      };
-    },
+    compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:catalog',
   });

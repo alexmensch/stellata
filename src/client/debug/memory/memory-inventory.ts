@@ -195,7 +195,7 @@ export function collectMemoryInventory(stellata: Stellata): MemoryInventory {
   const heapRows = typedArrayRows(stellata.catalog, 'catalog');
   heapRows.push({
     label: 'localPositions',
-    bytes: stellata.localPositions.byteLength,
+    bytes: stellata.starFrame.localPositions.byteLength,
     basis: 'array',
     detail: 'epoch-advanced duplicate of catalog.positions in the local frame',
   });

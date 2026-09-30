@@ -94,14 +94,14 @@ SYSTEM rather than the source_id — a secondary routinely carries its own
 source_id or none, so grouping by source_id misses the sibling on exactly the
 resolved pairs this asks about. Promotion can still decline to render a member
 row, so the set is a deliberate **superset** of what ships — 35 withheld
-(34 hd + the 1 hr) across the 34 records whose system names a sibling, of which
+(<!-- count:membership-manifest/labelExtraSiblingRendered.hd -->34<!-- /count --> hd + the <!-- count:membership-manifest/labelExtraSiblingRendered.hr -->1<!-- /count --> hr) across the 34 records whose system names a sibling, of which
 33 render one today.
 
 An alias also clears [The collision guard](#the-collision-guard)'s rule, which the guard itself
 cannot apply — aliases are not display cells, so its tally never sees them.
 Those are withheld to `extra-dropped`; 0 fire today, measured and guarded.
 
-The **68** ambiguous designations `sid:allocate` drops are spine-side component
+The **<!-- count:membership-manifest/sharedDesignations -->68<!-- /count -->** ambiguous designations `sid:allocate` drops are spine-side component
 pairs, unrelated to this list ([Ambiguous designations](../../../sid/README.md#ambiguous-designations-are-dropped-not-assigned)).
 No carried alias is among them, and none keys a ledger row, so
 the additions cannot fuse two same-as classes or move a canonical key.

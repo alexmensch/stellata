@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -53,6 +53,8 @@
     "fetch:ephemerides": "tsx scripts/ephemerides/fetch-planet-elements.ts",
     "validate:simbad": "tsx scripts/catalog/validate/validate-simbad-sample.ts",
     "validate:record-parity": "tsx scripts/catalog/validate/record-parity.ts",
+    "identity:snapshot": "tsx scripts/util/output-identity.ts snapshot",
+    "identity:diff": "tsx scripts/util/output-identity.ts diff",
     "analyse:prefilter": "tsx scripts/dust/prefilter/measure.ts",
     "analyse:prefilter-cost": "tsx scripts/dust/prefilter/cost.ts",
     "analyse:march-taps": "tsx scripts/dust/march-taps/measure.ts",
@@ -81,6 +83,8 @@
     "perf:pin": "tsx scripts/perf/pin.ts",
     "perf:synthetic": "tsx scripts/perf/synthetic-catalog/build-synthetic-catalog.ts",
     "test": "vitest run",
+    "test:py": "python3 scripts/ci/python_tests.py",
+    "test:no-skip": "tsx scripts/ci/vitest-no-skip.ts",
     "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"

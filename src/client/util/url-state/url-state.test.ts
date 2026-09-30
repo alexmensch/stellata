@@ -11,16 +11,21 @@ import {
   varintLen,
   viewPose,
   type DecodedView,
-  type StarRef,
   type IdMaps,
 } from './url-state';
 import type { Stellata } from '../../stellata';
 import type { FocusableProvider, Target } from '../../camera/focus/focus-target';
-import type { OrbitFramePort } from '../../attitude/attitude-pure';
+import type { OrbitFramePort, ReferenceFrame } from '../../attitude/attitude-pure';
+import type { LateState } from '../late/late';
+import { HeldOrbitPose } from '../../attitude/orbit-frame/held-pose';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
-import { SidResolver, arrayDomain } from '../sid-resolver';
+import { SidResolver, arrayDomain, sidColumnIndex, type DomainFill, type SidDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import * as THREE from 'three';
+import { captureOrbitFrame, poseIntoFrame } from '../../attitude/attitude-pure';
+import { ECLIPTIC_NORTH_POLE_ICRS } from '../../solar-system/ephemerides/orbit-rings-layer';
+import { CHOSEN_FIRST_LOAD_LINK } from './golden-links-fixture';
 
 // Controller-namespace stub. `Partial<T>` keeps every member checked
 // against the real signature — `as unknown as T` would not, and stub
@@ -28,7 +33,7 @@ import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 const partialOf = <T,>(o: Partial<T>): T => o as T;
 
 // Round-trips the view through the wire format and returns the decoded
-// view + version. Anything the encoder omits (e.g. default values) reads
+// view. Anything the encoder omits (e.g. default values) reads
 // back as undefined, which is the contract callers downstream rely on.
 function roundtrip(view: DecodedView) {
   const blob = encodeBlob(view);
@@ -51,36 +56,10 @@ function blobBytes(blob: string): number {
   return atob(padded.replace(/-/g, '+').replace(/_/g, '/')).length;
 }
 
-// Build a manually-shaped v1 blob (legacy 32-bit mask, float32 scalars,
-// 4-byte star refs / POI HIPs). Used by the v1 backward-compat block
-// to verify legacy decoders still work.
-function buildV1Blob(mask: number, payload: Uint8Array): string {
-  const ab = new ArrayBuffer(5 + payload.length);
-  const dv = new DataView(ab);
-  dv.setUint8(0, 1); // version
-  dv.setUint32(1, mask >>> 0, true); // 32-bit mask in v1
-  const bytes = new Uint8Array(ab);
-  bytes.set(payload, 5);
-  let s = '';
-  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-// Build a manually-shaped v2 blob (24-bit mask + flat 12-byte vec3
-// fields). Used by the v2 backward-compat block and by the v2→v3
-// auto-upgrade rewrite test.
-function buildV2Blob(mask: number, payload: Uint8Array): string {
-  const ab = new ArrayBuffer(4 + payload.length);
-  const dv = new DataView(ab);
-  dv.setUint8(0, 2); // version
-  dv.setUint8(1, mask & 0xff);
-  dv.setUint8(2, (mask >>> 8) & 0xff);
-  dv.setUint8(3, (mask >>> 16) & 0xff);
-  const bytes = new Uint8Array(ab);
-  bytes.set(payload, 4);
-  let s = '';
-  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+// base64url of raw bytes — for blobs the encoder cannot produce.
+function blobOf(bytes: number[]): string {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 // The `up` wire slot carries the camera's reference axis, whose canonical
@@ -90,10 +69,7 @@ const GN_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
 
-/** RollController's URL legs only. The real `upRollError` measures the
- *  roll off `camera.up` through the quaternion, which this THREE-free
- *  suite deliberately has no camera for; here "level" is `up` sitting on
- *  galactic north, which is what the stub cameras hold when level. */
+/** RollController's URL legs only; "level" is `up` sitting on the pole asked about. */
 function rollStub() {
   return {
     restore: (
@@ -104,10 +80,11 @@ function rollStub() {
       const len = Math.hypot(x, y, z) || 1;
       camera.up.x = x / len; camera.up.y = y / len; camera.up.z = z / len;
     },
-    upRollError: (camera: { up: { x: number; y: number; z: number } }) => {
-      const d = Math.hypot(
-        camera.up.x - GN_UP[0], camera.up.y - GN_UP[1], camera.up.z - GN_UP[2],
-      );
+    upRollError: (
+      camera: { up: { x: number; y: number; z: number } },
+      pole: { x: number; y: number; z: number },
+    ) => {
+      const d = Math.hypot(camera.up.x - pole.x, camera.up.y - pole.y, camera.up.z - pole.z);
       return d < 1e-9 ? 0 : 1;
     },
     adoptFromCamera: () => {},
@@ -122,7 +99,17 @@ function rollStub() {
 /** The attitude instrument's URL seam. `restore` mirrors the instrument's own
  *  rule that a lock cannot exist without ORB, so a test sees what the receiver
  *  would actually end up holding rather than what the blob asked for. */
-function mockOrbitPort(state: { armed: boolean; locked: boolean }): OrbitFramePort {
+interface MockOrbitState {
+  armed: boolean;
+  locked: boolean;
+  /** ORB for the focus; absent when the focus rides no orbit. */
+  frame?: LateState<ReferenceFrame>;
+  /** The instrument's own holder, so a test can run the tick that seats it. */
+  held?: HeldOrbitPose;
+}
+
+function mockOrbitPort(state: MockOrbitState): OrbitFramePort {
+  const held = (state.held ??= new HeldOrbitPose(() => () => {}));
   return {
     isArmed: () => state.armed,
     isLocked: () => state.locked,
@@ -130,7 +117,18 @@ function mockOrbitPort(state: { armed: boolean; locked: boolean }): OrbitFramePo
       state.armed = armed;
       state.locked = armed && locked;
     },
+    orbitFrame: () => state.frame ?? { status: 'absent' },
+    holdPose: (offset, up) => held.hold(offset, up),
+    posePending: () => held.pending,
   };
+}
+
+/** The ORB tick's seat, on a frame where `frame` is current. */
+function tickSeat(stellata: Stellata, state: MockOrbitState, frame: ReferenceFrame): void {
+  state.held?.seat(
+    frame, stellata.camera.position, stellata.camera.up, stellata.controls.target,
+    stellata.renderGate.sawUserInput,
+  );
 }
 
 function mockFocusables(x = 0, y = 0, z = 0) {
@@ -156,19 +154,16 @@ function mockVec3(x = 0, y = 0, z = 0) {
   };
 }
 
-// Fixture catalog: idx 0 = Sol (sid 100); idx 1 = HIP 32349 / sid 101;
-// idx 2 = no-HIP / sid 102; idx 3 = HIP 91262 / sid 103. Two clouds with
-// sids 201/202.
+// Fixture catalog: idx 0 = Sol (sid 100); idx 1..3 = sids 101..103. Two
+// clouds with sids 201/202.
 const SOL_SID = 100;
 const STAR_SIDS = [SOL_SID, 101, 102, 103];
-const STAR_HIPS = [0, 32349, 0, 91262];
 const CLOUD_SIDS = [201, 202];
 
 // A rebuild re-sorts the catalog by absolute magnitude, so every row
 // index moves while the sids ride along. Build-B row → build-A row.
 const REINDEX = [2, 3, 0, 1];
 const REINDEXED_STAR_SIDS = REINDEX.map((a) => STAR_SIDS[a]);
-const REINDEXED_STAR_HIPS = REINDEX.map((a) => STAR_HIPS[a]);
 
 type PlanetTranslation = Pick<IdMaps, 'planetDomainIndexOf' | 'planetTargetIndexOf'>;
 
@@ -190,42 +185,29 @@ function planetTranslation(domainCount: number, flatOffset: number): PlanetTrans
 
 // Fixture IdMaps over a star catalog. `sidResolver` defaults to a settled
 // star-only resolver; pass one to add domains (planet / probe / cloud) or
-// to leave a rostered domain unattached. `hips` is the row→HIP column
-// (0 = no HIP) and seeds both directions of the legacy HIP maps.
+// to leave a rostered domain unattached.
 function makeIdMaps({
   starSids = STAR_SIDS,
-  hips = [],
   sidResolver = makeResolver(starSids),
   planet = NO_PLANET_HOST,
 }: {
   starSids?: number[];
-  hips?: number[];
   sidResolver?: SidResolver;
   planet?: PlanetTranslation;
 } = {}): IdMaps {
-  const indexToHip = new Uint32Array(starSids.length);
-  const hipToIndex = new Map<number, number>();
-  hips.forEach((hip, i) => {
-    if (hip === 0) return;
-    indexToHip[i] = hip;
-    hipToIndex.set(hip, i);
-  });
   return {
-    hipToIndex,
-    indexToHip,
-    starCount: starSids.length,
     solIndex: starSids.indexOf(SOL_SID),
     sidResolver,
     ...planet,
   };
 }
 
-/** The fixture build: 4 stars with HIPs + 2 clouds, both domains settled. */
-function makeFixtureBuild(starSids = STAR_SIDS, hips = STAR_HIPS): IdMaps {
+/** The fixture build: 4 stars + 2 clouds, both domains settled. */
+function makeFixtureBuild(starSids = STAR_SIDS): IdMaps {
   const sidResolver = new SidResolver(['star', 'cloud']);
   sidResolver.attach('star', arrayDomain(starSids));
   sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
-  return makeIdMaps({ starSids, hips, sidResolver });
+  return makeIdMaps({ starSids, sidResolver });
 }
 
 // Mock Stellata that records what the URL layer dispatched onto it —
@@ -242,7 +224,7 @@ function makeStatefulStellata() {
     pois: [] as Target[],
     mode: 'navigate' as 'navigate' | 'observe',
     chart: false,
-    orbit: { armed: false, locked: false },
+    orbit: { armed: false, locked: false } as MockOrbitState,
   };
   const clearFocus = () => {
     state.focusedStar = null;
@@ -274,9 +256,11 @@ function makeStatefulStellata() {
     setCameraFov: () => {},
     getT: () => Date.now() / 1000,
     setT: () => {},
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    getWorldOffset: () => mockVec3() as any,
-    setWorldOffset: () => {},
+    floatingOrigin: partialOf<Stellata['floatingOrigin']>({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      worldOffset: mockVec3() as any,
+      recenterTo: () => null,
+    }),
     focusables: mockFocusables(),
     getOrbitFramePort: () => mockOrbitPort(state.orbit),
     focus: partialOf<Stellata['focus']>({
@@ -327,18 +311,12 @@ function makeStatefulStellata() {
   return { stellata: stub as Stellata, state };
 }
 
-// Decode a blob, apply it, re-encode the resulting live state — the
-// applyFromUrl upgrade path minus the debounce.
+// Decode a blob, apply it, re-encode the resulting live state.
 function migrate(blob: string, idMaps = makeFixtureBuild()) {
   const { stellata, state } = makeStatefulStellata();
-  applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+  applyDecodedView(stellata, decodeBlob(blob), idMaps);
   const re = decodeBlob(encodeBlob(currentStateOf(stellata, idMaps)));
   return { state, re };
-}
-
-/** v1/v2's 3-byte little-endian star ref / POI id. */
-function u24(val: number): number[] {
-  return [val & 0xff, (val >>> 8) & 0xff, (val >>> 16) & 0xff];
 }
 
 describe('url-state', () => {
@@ -351,22 +329,21 @@ describe('url-state', () => {
     });
 
     it('decodes empty blob to empty view at current version', () => {
-      const { view, version } = roundtrip({});
+      const view = roundtrip({});
       expect(view).toEqual({});
-      expect(version).toBe(4);
     });
   });
 
   describe('vec3 fields (cam, tgt, up)', () => {
     it('round-trips cam exactly', () => {
       const cam: [number, number, number] = [1.5, -2.25, 30];
-      const { view } = roundtrip({ cam });
+      const view = roundtrip({ cam });
       expect(view.cam).toEqual(cam);
     });
 
     it('round-trips tgt exactly', () => {
       const tgt: [number, number, number] = [10, 20, 30];
-      const { view } = roundtrip({ tgt });
+      const view = roundtrip({ tgt });
       expect(view.tgt).toEqual(tgt);
     });
 
@@ -375,7 +352,7 @@ describe('url-state', () => {
       // elision test below. Use a tilted up to force the encoder to
       // actually carry components on the wire.
       const up: [number, number, number] = [0.7071, 0.7071, 0];
-      const { view } = roundtrip({ up });
+      const view = roundtrip({ up });
       expect(view.up![0]).toBeCloseTo(0.7071, 4);
       expect(view.up![1]).toBeCloseTo(0.7071, 4);
       expect(view.up![2]).toBe(0);
@@ -387,7 +364,7 @@ describe('url-state', () => {
         tgt: [4, 5, 6],
         up: [0.7071, 0, 0.7071],
       };
-      const { view: out } = roundtrip(view);
+      const out = roundtrip(view);
       expect(out.cam).toEqual([1, 2, 3]);
       expect(out.tgt).toEqual([4, 5, 6]);
       expect(out.up![0]).toBeCloseTo(0.7071, 4);
@@ -406,7 +383,7 @@ describe('url-state', () => {
         cam: [1.85e-6, -2.61e-6, 3.95e-5],
         tgt: [0, 0, 0],
       };
-      const { view: out } = roundtrip(view);
+      const out = roundtrip(view);
       expect(out.worldOffset![0]).toBeCloseTo(51.6, 3);
       expect(out.worldOffset![1]).toBeCloseTo(257, 3);
       expect(out.worldOffset![2]).toBeCloseTo(-37.7, 3);
@@ -431,7 +408,7 @@ describe('url-state', () => {
         cam: [1.85e-6, -2.61e-6, 3.95e-5],
         tgt: [0, 0, 0],
       };
-      const { view: out } = roundtrip(view);
+      const out = roundtrip(view);
       // Anchor round-trips at the float32 precision available at 8.5 kpc.
       // 5e-4 pc absolute → roughly 4 decimals.
       expect(out.worldOffset![0]).toBeCloseTo(8500, 3);
@@ -446,7 +423,7 @@ describe('url-state', () => {
       // v3 sub-mask: components matching the per-key default are
       // omitted, and a vec3 with all components default has isPresent=
       // false → the field doesn't even claim its outer presence bit.
-      const { view } = roundtrip({ up: GN_UP });
+      const view = roundtrip({ up: GN_UP });
       expect(view.up).toBeUndefined();
     });
 
@@ -461,7 +438,7 @@ describe('url-state', () => {
       stellata.camera.up.x = 0;
       stellata.camera.up.y = 1;
       stellata.camera.up.z = 0;
-      const view = decodeBlob(encodeBlob({ cam: [30, 0, 0], tgt: [0, 0, 0] })).view;
+      const view = decodeBlob(encodeBlob({ cam: [30, 0, 0], tgt: [0, 0, 0] }));
       expect(view.up).toBeUndefined();
       applyDecodedView(stellata, view, makeFixtureBuild());
       expect(stellata.camera.up.x).toBeCloseTo(GN_UP[0], 12);
@@ -470,7 +447,7 @@ describe('url-state', () => {
     });
 
     it('elides tgt when it matches the default [0, 0, 0]', () => {
-      const { view } = roundtrip({ tgt: [0, 0, 0] });
+      const view = roundtrip({ tgt: [0, 0, 0] });
       expect(view.tgt).toBeUndefined();
     });
 
@@ -488,7 +465,7 @@ describe('url-state', () => {
       const blob = encodeBlob({ cam: [0, 0, 3.7] });
       expect(blobBytes(blob)).toBe(7);
       expect(blob.length).toBe(10);
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.cam![0]).toBe(0);
       expect(view.cam![1]).toBe(0);
       expect(view.cam![2]).toBeCloseTo(3.7, 5);
@@ -497,22 +474,21 @@ describe('url-state', () => {
     it('emits only the diverging x-component for cam=[5,0,30]', () => {
       // navigate-mode default is [0,0,30]; only x diverges. sub=1, 5
       // bytes payload.
-      const { view } = roundtrip({ cam: [5, 0, 30] });
+      const view = roundtrip({ cam: [5, 0, 30] });
       expect(view.cam).toEqual([5, 0, 30]);
     });
 
     it('uses observe default ([0,0,0]) for cam when mode=observe', () => {
       // mode=observe shifts cam's z-default from 30 to 0. cam=[0,0,30]
       // is *off-default* in observe → sub=4 (z bit), z=30 on the wire.
-      const { view, version } = roundtrip({ cam: [0, 0, 30], mode: 'observe' });
-      expect(version).toBe(4);
+      const view = roundtrip({ cam: [0, 0, 30], mode: 'observe' });
       expect(view.cam).toEqual([0, 0, 30]);
       expect(view.mode).toBe('observe');
     });
 
     it('elides cam in observe mode when it matches the observe default', () => {
       // cam=[0,0,0] matches the observe default — fully elided.
-      const { view } = roundtrip({ cam: [0, 0, 0], mode: 'observe' });
+      const view = roundtrip({ cam: [0, 0, 0], mode: 'observe' });
       expect(view.cam).toBeUndefined();
       expect(view.mode).toBe('observe');
     });
@@ -521,13 +497,13 @@ describe('url-state', () => {
       // Encode cam=[5,0,0] in observe mode: only x diverges from
       // observe default [0,0,0]. sub=1, payload = x. Decoder must fill
       // z=0 (not z=30, the static-table default) once flags reveals
-      // mode=observe — that's the post-pass in decodeV3.
-      const { view } = roundtrip({ cam: [5, 0, 0], mode: 'observe' });
+      // mode=observe — that's the post-pass in decodeBlob.
+      const view = roundtrip({ cam: [5, 0, 0], mode: 'observe' });
       expect(view.cam).toEqual([5, 0, 0]);
     });
 
     it('elides worldOffset when it matches [0, 0, 0]', () => {
-      const { view } = roundtrip({ worldOffset: [0, 0, 0] });
+      const view = roundtrip({ worldOffset: [0, 0, 0] });
       expect(view.worldOffset).toBeUndefined();
     });
 
@@ -540,7 +516,7 @@ describe('url-state', () => {
         cam: [1.85e-6, -2.61e-6, 3.95e-5],
         tgt: [1e-3, 0, 0],
       };
-      const { view: out } = roundtrip(view);
+      const out = roundtrip(view);
       // 1 Mpc anchor: float32 ULP ≈ 0.06 pc absolute → relative precision ~1e-7.
       expect(Math.abs(out.worldOffset![0] - 1e6) / 1e6).toBeLessThan(1e-6);
       // Local cam values are stored as float32s relative to the anchor —
@@ -554,11 +530,11 @@ describe('url-state', () => {
     });
   });
 
-  describe('quantised u8 fields (v2)', () => {
+  describe('quantised u8 fields', () => {
     it('round-trips fov at slider step boundaries', () => {
       // fov: min=10, max=120, step=1 — integer values round-trip exactly
       for (const fov of [10, 30, 60, 90, 120]) {
-        const { view } = roundtrip({ fov });
+        const view = roundtrip({ fov });
         expect(view.fov).toBe(fov);
       }
     });
@@ -566,24 +542,24 @@ describe('url-state', () => {
     it('clamps fov to encoder range without wrapping', () => {
       // 200 is past max (120). It should saturate at 120, not wrap to a
       // wraparound value. Encoder clamp guards this.
-      const { view } = roundtrip({ fov: 200 });
+      const view = roundtrip({ fov: 200 });
       expect(view.fov).toBe(120);
     });
 
     it('clamps fov below min to min', () => {
-      const { view } = roundtrip({ fov: 5 });
+      const view = roundtrip({ fov: 5 });
       expect(view.fov).toBe(10);
     });
 
     it('round-trips ev at 1/3-stop boundaries', () => {
       for (const ev of [-EV_MAX_STOPS, -1, 0, EV_STEP_STOPS, EV_MAX_STOPS]) {
-        const { view } = roundtrip({ ev });
+        const view = roundtrip({ ev });
         expect(view.ev).toBeCloseTo(ev, 6);
       }
     });
 
     it('drops the retired mag field — the instrument owns the limit', () => {
-      const { view } = roundtrip({ mag: 6.5 });
+      const view = roundtrip({ mag: 6.5 });
       expect(view.mag).toBeUndefined();
     });
 
@@ -598,7 +574,7 @@ describe('url-state', () => {
       let s = '';
       for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
       const blob = btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.fov).toBe(45);
       expect(view.dmax).toBe(500);
       expect(view.mag).toBeCloseTo(6.5, 6);
@@ -616,7 +592,7 @@ describe('url-state', () => {
       let s = '';
       for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
       const blob = btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.smin).toBeCloseTo(2.5, 6);
       expect(view.smax).toBeCloseTo(18, 6);
       expect(view.span).toBeCloseTo(8, 6);
@@ -631,44 +607,44 @@ describe('url-state', () => {
 
     it('rounds to nearest step, not floor', () => {
       // 60.4 → 60 (round); 60.6 → 61 (round)
-      expect(roundtrip({ fov: 60.4 }).view.fov).toBe(60);
-      expect(roundtrip({ fov: 60.6 }).view.fov).toBe(61);
+      expect(roundtrip({ fov: 60.4 }).fov).toBe(60);
+      expect(roundtrip({ fov: 60.6 }).fov).toBe(61);
     });
   });
 
   describe('u16 fields (dmin, dmax, spect)', () => {
     it('round-trips dmin and dmax', () => {
-      const { view } = roundtrip({ dmin: 100, dmax: 800 });
+      const view = roundtrip({ dmin: 100, dmax: 800 });
       expect(view.dmin).toBe(100);
       expect(view.dmax).toBe(800);
     });
 
     it('round-trips spectral mask at full 9-bit range', () => {
-      const { view } = roundtrip({ spect: 0b111111111 });
+      const view = roundtrip({ spect: 0b111111111 });
       expect(view.spect).toBe(0b111111111);
     });
 
     it('round-trips zero spectral mask', () => {
-      const { view } = roundtrip({ spect: 0 });
+      const view = roundtrip({ spect: 0 });
       expect(view.spect).toBe(0);
     });
 
     it('round-trips u16 boundary value', () => {
-      const { view } = roundtrip({ dmax: 65535 });
+      const view = roundtrip({ dmax: 65535 });
       expect(view.dmax).toBe(65535);
     });
   });
 
   describe('preset and constellation', () => {
     it('drops the retired preset field', () => {
-      const { view } = roundtrip({ preset: 'binoculars' });
+      const view = roundtrip({ preset: 'binoculars' });
       expect(view.preset).toBeUndefined();
     });
 
     it('round-trips constellation index incl. negative values', () => {
       // con is signed int8 — covers full int8 range
       for (const con of [-128, -1, 0, 50, 87, 127]) {
-        const { view } = roundtrip({ con });
+        const view = roundtrip({ con });
         expect(view.con).toBe(con);
       }
     });
@@ -676,7 +652,7 @@ describe('url-state', () => {
 
   describe('flag byte (packFlags/unpackFlags)', () => {
     it('round-trips a galactic coordinate sphere as FLAG_GRID alone', () => {
-      const { view } = roundtrip({ coordSphere: 'galactic' });
+      const view = roundtrip({ coordSphere: 'galactic' });
       expect(view.coordSphere).toBe('galactic');
     });
 
@@ -684,7 +660,7 @@ describe('url-state', () => {
     // predating the equatorial sphere ignores the unknown mask bit and still
     // shows a sphere. Which means the equatorial blob is strictly longer.
     it('round-trips an equatorial coordinate sphere via presence bit 24', () => {
-      const { view } = roundtrip({ coordSphere: 'equatorial' });
+      const view = roundtrip({ coordSphere: 'equatorial' });
       expect(view.coordSphere).toBe('equatorial');
       expect(encodeBlob({ coordSphere: 'equatorial' }).length)
         .toBeGreaterThan(encodeBlob({ coordSphere: 'galactic' }).length);
@@ -694,7 +670,7 @@ describe('url-state', () => {
     // ecliptic grid existed cannot carry it, and a client predating the bit
     // falls back to the galactic sphere rather than to none.
     it('round-trips an ecliptic coordinate sphere via presence bit 26', () => {
-      const { view } = roundtrip({ coordSphere: 'ecliptic' });
+      const view = roundtrip({ coordSphere: 'ecliptic' });
       expect(view.coordSphere).toBe('ecliptic');
       expect(encodeBlob({ coordSphere: 'ecliptic' }).length)
         .toBeGreaterThan(encodeBlob({ coordSphere: 'galactic' }).length);
@@ -711,45 +687,45 @@ describe('url-state', () => {
     });
 
     it('round-trips showHud', () => {
-      const { view } = roundtrip({ showHud: true });
+      const view = roundtrip({ showHud: true });
       expect(view.showHud).toBe(true);
     });
 
     it('round-trips showLgEmission=false (zero-byte presence bit, default-on elided)', () => {
-      const { view } = roundtrip({ showLgEmission: false });
+      const view = roundtrip({ showLgEmission: false });
       expect(view.showLgEmission).toBe(false);
-      const { view: defaults } = roundtrip({});
+      const defaults = roundtrip({});
       expect(defaults.showLgEmission).toBeUndefined();
     });
 
     it('round-trips unit=pc (ly is the default, so only pc is encoded)', () => {
-      const { view } = roundtrip({ unit: 'pc' });
+      const view = roundtrip({ unit: 'pc' });
       expect(view.unit).toBe('pc');
     });
 
     it('unit=ly is the default and is not encoded', () => {
-      const { view } = roundtrip({ unit: 'ly' });
+      const view = roundtrip({ unit: 'ly' });
       expect(view.unit).toBeUndefined();
     });
 
     it('round-trips mode=observe', () => {
-      const { view } = roundtrip({ mode: 'observe' });
+      const view = roundtrip({ mode: 'observe' });
       expect(view.mode).toBe('observe');
     });
 
     it('round-trips chart only when mode is observe', () => {
       // chart with mode=observe → encoded
-      const { view: a } = roundtrip({ chart: true, mode: 'observe' });
+      const a = roundtrip({ chart: true, mode: 'observe' });
       expect(a.chart).toBe(true);
       expect(a.mode).toBe('observe');
 
       // chart without mode=observe → dropped (chart-mode is observe-gated)
-      const { view: b } = roundtrip({ chart: true });
+      const b = roundtrip({ chart: true });
       expect(b.chart).toBeUndefined();
     });
 
     it('round-trips multiple flags simultaneously', () => {
-      const { view } = roundtrip({
+      const view = roundtrip({
         coordSphere: 'galactic',
         showHud: true,
         mode: 'observe',
@@ -765,7 +741,7 @@ describe('url-state', () => {
     // carries them has to decode without error and land on the declutter
     // floor's answer instead — the same treatment bits 4 / 8 got.
     it('ignores the retired mw / constellation flag bits', () => {
-      const { view } = roundtrip({ coordSphere: 'galactic' });
+      const view = roundtrip({ coordSphere: 'galactic' });
       expect(view).not.toHaveProperty('showMilkyway');
       expect(view).not.toHaveProperty('showConstellation');
     });
@@ -792,19 +768,18 @@ describe('url-state', () => {
 
     it('round-trips focus sids across every LEB128 width', () => {
       for (const id of LEB128_BOUNDARY_SIDS) {
-        const { view, version } = roundtrip({ focus: { kind: 'sid', id } });
-        expect(version).toBe(4);
+        const view = roundtrip({ focus: { kind: 'sid', id } });
         expect(view.focus).toEqual({ kind: 'sid', id });
       }
     });
 
     it('round-trips vector-to (to) sids', () => {
-      const { view } = roundtrip({ to: { kind: 'sid', id: 306055 } });
+      const view = roundtrip({ to: { kind: 'sid', id: 306055 } });
       expect(view.to).toEqual({ kind: 'sid', id: 306055 });
     });
 
     it('round-trips focus and to together', () => {
-      const { view } = roundtrip({
+      const view = roundtrip({
         focus: { kind: 'sid', id: 42 },
         to: { kind: 'sid', id: 327680 },
       });
@@ -820,44 +795,27 @@ describe('url-state', () => {
     });
 
     it("'cleared' focus uses zero-byte sentinel and round-trips", () => {
-      const { view } = roundtrip({ focus: 'cleared' });
+      const view = roundtrip({ focus: 'cleared' });
       expect(view.focus).toBe('cleared');
     });
 
-    it('drops legacy hip/index refs instead of mis-encoding them', () => {
-      // v4 has no hip/index wire form; a legacy StarRef that somehow
-      // reaches the encoder must be omitted, never coerced into a sid.
-      const hipRef: StarRef = { kind: 'hip', id: 32349 };
-      const idxRef: StarRef = { kind: 'index', id: 12345 };
-      expect(roundtrip({ focus: hipRef }).view.focus).toBeUndefined();
-      expect(roundtrip({ to: idxRef }).view.to).toBeUndefined();
-    });
-
-    it('drops legacy cloud/toc indices (bits 16/17 retired in v4)', () => {
-      // Cloud focus rides the universal `focus` sid in v4; the legacy
-      // 1-byte fields decode from old blobs (golden corpus) but never
-      // encode. The retired bits stay unclaimed for deploy overlap.
-      const { view } = roundtrip({ cloud: 42, toc: 7 });
-      expect(view.cloud).toBeUndefined();
-      expect(view.toc).toBeUndefined();
-    });
   });
 
   describe('POI sids (variable-length, v4)', () => {
     it('round-trips a single POI sid', () => {
-      const { view } = roundtrip({ poiSids: [306055] });
+      const view = roundtrip({ poiSids: [306055] });
       expect(view.poiSids).toEqual([306055]);
     });
 
     it('round-trips multiple POI sids in order, mixed LEB128 widths', () => {
       const poiSids = [5, 200, 16384, 327680, 100];
-      const { view } = roundtrip({ poiSids });
+      const view = roundtrip({ poiSids });
       expect(view.poiSids).toEqual(poiSids);
     });
 
     it('truncates POI sids above the 16-entry cap', () => {
       const poiSids = Array.from({ length: 25 }, (_, i) => 1000 + i);
-      const { view } = roundtrip({ poiSids });
+      const view = roundtrip({ poiSids });
       expect(view.poiSids).toHaveLength(16);
       expect(view.poiSids![0]).toBe(1000);
       expect(view.poiSids![15]).toBe(1015);
@@ -865,7 +823,7 @@ describe('url-state', () => {
 
     it('round-trips exactly 16 POI sids (the cap)', () => {
       const poiSids = Array.from({ length: 16 }, (_, i) => 2000 + i);
-      const { view } = roundtrip({ poiSids });
+      const view = roundtrip({ poiSids });
       expect(view.poiSids).toEqual(poiSids);
     });
 
@@ -876,11 +834,6 @@ describe('url-state', () => {
       expect(emptyPois.length).toBe(empty.length);
     });
 
-    it('legacy HIP pois never encode in v4', () => {
-      const { view } = roundtrip({ pois: [32349] });
-      expect(view.pois).toBeUndefined();
-      expect(view.poiSids).toBeUndefined();
-    });
   });
 
   describe('full-state round-trip', () => {
@@ -903,8 +856,7 @@ describe('url-state', () => {
         chart: true,
         poiSids: [100, 200, 300],
       };
-      const { view: out, version } = roundtrip(view);
-      expect(version).toBe(4);
+      const out = roundtrip(view);
       expect(out.cam).toEqual(view.cam);
       // tgt=[0,0,0] matches the per-key default in v3 → elided. Same
       // contract as up=[0,1,0] and worldOffset=[0,0,0]. Receiver
@@ -945,140 +897,15 @@ describe('url-state', () => {
       expect(() => decodeBlob('')).toThrow();
     });
 
-    it('rejects v2 blob too short to contain a presence mask', () => {
-      // Just version byte 0x02, no mask
-      const blob = btoa('\x02').replace(/=+$/, '');
-      expect(() => decodeBlob(blob)).toThrow(/v2 blob too short/);
-    });
-  });
-
-  describe('v1 backward compatibility', () => {
-    // Manually-constructed v1 blobs verify the legacy decoder still
-    // works and reports version=1 so callers can trigger a rewrite.
-
-    it('decodes v1 empty blob and reports version=1', () => {
-      const blob = buildV1Blob(0, new Uint8Array(0));
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(1);
-      expect(view).toEqual({});
-    });
-
-    it('decodes v1 fov as float32 (not quantised)', () => {
-      // v1 bit 3 = fov, 4 bytes f32 LE
-      const payload = new Uint8Array(4);
-      new DataView(payload.buffer).setFloat32(0, 75.5, true);
-      const blob = buildV1Blob(1 << 3, payload);
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(1);
-      expect(view.fov).toBeCloseTo(75.5, 5);
-    });
-
-    it('decodes v1 star ref as 4-byte u32', () => {
-      // v1 bit 14 = focus, 4 bytes u32 LE
-      const FOCUS_HIP_TAG = 0x80000000;
-      const id = 32349;
-      const payload = new Uint8Array(4);
-      new DataView(payload.buffer).setUint32(0, (id | FOCUS_HIP_TAG) >>> 0, true);
-      const blob = buildV1Blob(1 << 14, payload);
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(1);
-      expect(view.focus).toEqual({ kind: 'hip', id: 32349 });
-    });
-
-    it('decodes v1 POI list with 4-byte HIP entries', () => {
-      // v1 bit 19 = pois, 1-byte count + 4 bytes per HIP
-      const hips = [100, 200, 300];
-      const payload = new Uint8Array(1 + hips.length * 4);
-      const dv = new DataView(payload.buffer);
-      dv.setUint8(0, hips.length);
-      for (let i = 0; i < hips.length; i++) {
-        dv.setUint32(1 + i * 4, hips[i] >>> 0, true);
+    it('rejects every retired pre-SID version', () => {
+      for (const version of [1, 2, 3]) {
+        expect(() => decodeBlob(blobOf([version, 0, 0, 0, 0])))
+          .toThrow(`Unsupported view version: ${version}`);
       }
-      const blob = buildV1Blob(1 << 19, payload);
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(1);
-      expect(view.pois).toEqual(hips);
     });
 
-    it('caps v1 POI count at 16 even when blob declares more', () => {
-      // count byte = 25, but only 16 should decode
-      const count = 25;
-      const payload = new Uint8Array(1 + count * 4);
-      const dv = new DataView(payload.buffer);
-      dv.setUint8(0, count);
-      for (let i = 0; i < count; i++) dv.setUint32(1 + i * 4, 1000 + i, true);
-      const blob = buildV1Blob(1 << 19, payload);
-      const { view } = decodeBlob(blob);
-      expect(view.pois).toHaveLength(16);
-    });
-  });
-
-  describe('v2 backward compatibility', () => {
-    // v2 was the prior schema (1-byte version + 24-bit mask + flat
-    // 12-byte vec3 fields). Manually construct v2-shaped blobs to
-    // verify decodeV2 still works after v3 became the default writer.
-
-    it('decodes v2 empty blob and reports version=2', () => {
-      const blob = buildV2Blob(0, new Uint8Array(0));
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(2);
-      expect(view).toEqual({});
-    });
-
-    it('decodes v2 cam as a flat 12-byte float32 vec3', () => {
-      // v2 bit 0 = cam, 12 bytes f32 LE × 3 — no sub-mask.
-      const payload = new Uint8Array(12);
-      const dv = new DataView(payload.buffer);
-      dv.setFloat32(0, 1.5, true);
-      dv.setFloat32(4, -2.25, true);
-      dv.setFloat32(8, 3.7, true);
-      const blob = buildV2Blob(1 << 0, payload);
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(2);
-      expect(view.cam![0]).toBeCloseTo(1.5, 5);
-      expect(view.cam![1]).toBeCloseTo(-2.25, 5);
-      expect(view.cam![2]).toBeCloseTo(3.7, 5);
-    });
-
-    it('decodes v2 fov as quantised u8 (already compressed in v2)', () => {
-      // v2 bit 3 = fov, 1 byte u8 (raw=50 → fov = 10 + 50*1 = 60)
-      const payload = new Uint8Array([50]);
-      const blob = buildV2Blob(1 << 3, payload);
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(2);
-      expect(view.fov).toBe(60);
-    });
-
-    it('decodes v2 star ref as 3-byte u24', () => {
-      // v2 bit 14 = focus, 3 bytes u24 LE; HIP tag = 0x800000
-      const FOCUS_HIP_TAG_V2 = 0x800000;
-      const id = 32349;
-      const tagged = (id | FOCUS_HIP_TAG_V2) >>> 0;
-      const payload = new Uint8Array(3);
-      payload[0] = tagged & 0xff;
-      payload[1] = (tagged >>> 8) & 0xff;
-      payload[2] = (tagged >>> 16) & 0xff;
-      const blob = buildV2Blob(1 << 14, payload);
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(2);
-      expect(view.focus).toEqual({ kind: 'hip', id: 32349 });
-    });
-
-    it('decodes v2 POI list with 3-byte HIP entries', () => {
-      // v2 bit 19 = pois, 1-byte count + 3 bytes per HIP
-      const hips = [100, 200, 300];
-      const payload = new Uint8Array(1 + hips.length * 3);
-      payload[0] = hips.length;
-      for (let i = 0; i < hips.length; i++) {
-        const off = 1 + i * 3;
-        payload[off]     = hips[i]         & 0xff;
-        payload[off + 1] = (hips[i] >>> 8)  & 0xff;
-        payload[off + 2] = (hips[i] >>> 16) & 0xff;
-      }
-      const blob = buildV2Blob(1 << 19, payload);
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(2);
-      expect(view.pois).toEqual(hips);
+    it('rejects a blob too short to contain a presence mask', () => {
+      expect(() => decodeBlob(blobOf([4]))).toThrow(/v4 blob too short/);
     });
   });
 
@@ -1133,8 +960,10 @@ describe('url-state', () => {
         // Live `t` — encoder gates emission on isLive(getT()), so returning
         // wall-clock now keeps the existing assertions at "no t in URL".
         getT: () => Date.now() / 1000,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        getWorldOffset: () => ({ x: wo[0], y: wo[1], z: wo[2] } as any),
+        floatingOrigin: partialOf<Stellata['floatingOrigin']>({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          worldOffset: { x: wo[0], y: wo[1], z: wo[2] } as any,
+        }),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         camera: {
           position: { x: camPos[0], y: camPos[1], z: camPos[2] },
@@ -1304,8 +1133,8 @@ describe('url-state', () => {
     });
 
     it('round-trips both bits through the blob', () => {
-      expect(roundtrip({ orb: true }).view).toMatchObject({ orb: true });
-      const both = roundtrip({ orb: true, orbLock: true }).view;
+      expect(roundtrip({ orb: true })).toMatchObject({ orb: true });
+      const both = roundtrip({ orb: true, orbLock: true });
       expect(both).toMatchObject({ orb: true, orbLock: true });
     });
 
@@ -1322,7 +1151,7 @@ describe('url-state', () => {
     it('restores ORB and the lock onto the instrument', () => {
       const { stellata, state } = makeStatefulStellata();
       applyDecodedView(stellata, { orb: true, orbLock: true }, makeFixtureBuild());
-      expect(state.orbit).toEqual({ armed: true, locked: true });
+      expect(state.orbit).toMatchObject({ armed: true, locked: true });
     });
 
     // A blob is a request. The instrument's own orbitLockShowing still rules,
@@ -1330,7 +1159,7 @@ describe('url-state', () => {
     it('refuses a lock the blob asks for without ORB', () => {
       const { stellata, state } = makeStatefulStellata();
       applyDecodedView(stellata, { orbLock: true }, makeFixtureBuild());
-      expect(state.orbit).toEqual({ armed: false, locked: false });
+      expect(state.orbit).toMatchObject({ armed: false, locked: false });
     });
 
     // Absence is a positive statement: a sky-frame link has to disarm an ORB
@@ -1339,16 +1168,226 @@ describe('url-state', () => {
       const { stellata, state } = makeStatefulStellata();
       state.orbit = { armed: true, locked: true };
       applyDecodedView(stellata, { coordSphere: 'ecliptic' }, makeFixtureBuild());
-      expect(state.orbit).toEqual({ armed: false, locked: false });
+      expect(state.orbit).toMatchObject({ armed: false, locked: false });
     });
 
     // The pre-change corpus has neither bit, so every link in the wild still
     // decodes to its sky frame with no ORB over the top.
     it('leaves a link predating the bits on its sky frame', () => {
-      const { view } = roundtrip({ coordSphere: 'equatorial' });
+      const view = roundtrip({ coordSphere: 'equatorial' });
       expect(view.coordSphere).toBe('equatorial');
       expect(view.orb).toBeUndefined();
       expect(view.orbLock).toBeUndefined();
+    });
+
+    // see orbit-pose/README.md#an-orbit-relative-pose
+    describe('an orbit-relative pose', () => {
+      const DEG = Math.PI / 180;
+      const DAYS = 50;
+      const frameCamera = new THREE.PerspectiveCamera();
+      const eclipticPole = ECLIPTIC_NORTH_POLE_ICRS.clone();
+      const inPlane = new THREE.Vector3(1, 0, 0)
+        .addScaledVector(eclipticPole, -eclipticPole.x).normalize();
+
+      // Earth: the pole stands still and zero longitude turns ~0.9856 deg/day.
+      const earthFrame = (days: number) => captureOrbitFrame(
+        frameCamera,
+        eclipticPole,
+        inPlane.clone().applyAxisAngle(eclipticPole, 0.9856 * DEG * days),
+      );
+      // Luna: 5.15 deg off the ecliptic, the node regressing 0.0529 deg/day, so
+      // the basis turns out from under a model that only tracks longitude.
+      const lunaFrame = (days: number) => {
+        const pole = eclipticPole.clone()
+          .applyAxisAngle(inPlane, 5.15 * DEG)
+          .applyAxisAngle(eclipticPole, -0.0529 * DEG * days);
+        const seed = inPlane.clone().applyAxisAngle(pole, 13.176 * DEG * days);
+        return captureOrbitFrame(frameCamera, pole, seed);
+      };
+      const ready = (frame: ReferenceFrame) => ({ status: 'ready', value: frame } as const);
+
+      const CAM: [number, number, number] = [-1.6e-7, 2.2e-7, 7.7e-8];
+      const UP = new THREE.Vector3(0.44, -0.015, 0.898).normalize();
+
+      function share(frame: ReferenceFrame) {
+        const tx = makeStatefulStellata();
+        tx.state.focusedStar = 1;
+        tx.state.orbit = { armed: true, locked: true, frame: ready(frame) };
+        tx.stellata.camera.position.set(...CAM);
+        tx.stellata.camera.up.set(UP.x, UP.y, UP.z);
+        return encodeBlob(currentStateOf(tx.stellata, makeFixtureBuild()));
+      }
+
+      /** Apply, then run the first ORB tick if `frame` is current. */
+      function open(blob: string, frame: ReferenceFrame | null) {
+        const rx = makeStatefulStellata();
+        rx.state.orbit.frame = frame === null ? { status: 'absent' } : ready(frame);
+        const pending = applyDecodedView(rx.stellata, decodeBlob(blob), makeFixtureBuild());
+        if (frame !== null) tickSeat(rx.stellata, rx.state.orbit, frame);
+        return { ...rx, pending };
+      }
+
+      type Xyz = { x: number; y: number; z: number };
+      function inFrame(cam: Xyz, up: Xyz, frame: ReferenceFrame) {
+        const c = { x: cam.x, y: cam.y, z: cam.z };
+        const u = { x: up.x, y: up.y, z: up.z };
+        poseIntoFrame(c, { x: 0, y: 0, z: 0 }, u, frame);
+        return { cam: c, up: u };
+      }
+
+      function expectSameOrbitPose(
+        a: ReturnType<typeof inFrame>, b: ReturnType<typeof inFrame>,
+      ) {
+        const r = Math.hypot(a.cam.x, a.cam.y, a.cam.z);
+        // float32 on the wire: ~6e-8 of the value.
+        for (const k of ['x', 'y', 'z'] as const) {
+          expect(Math.abs(a.cam[k] - b.cam[k]) / r).toBeLessThan(1e-6);
+          expect(Math.abs(a.up[k] - b.up[k])).toBeLessThan(1e-6);
+        }
+      }
+
+      it.each([['Earth', earthFrame], ['Luna', lunaFrame]] as const)(
+        'lands a locked %s link at the same ORB pose 50 days on',
+        (_name, frameAt) => {
+          const blob = share(frameAt(0));
+          expect(decodeBlob(blob)).toMatchObject({ orb: true, orbLock: true, orbitPose: true });
+
+          const rx = open(blob, frameAt(DAYS));
+          const shared = inFrame({ x: CAM[0], y: CAM[1], z: CAM[2] }, UP, frameAt(0));
+          const landed = inFrame(
+            rx.stellata.camera.position, rx.stellata.camera.up, frameAt(DAYS),
+          );
+          expectSameOrbitPose(landed, shared);
+
+          // And it is NOT where a star-fixed decode would put it.
+          const p = rx.stellata.camera.position;
+          const drift = new THREE.Vector3(...CAM).angleTo(new THREE.Vector3(p.x, p.y, p.z));
+          expect(drift).toBeGreaterThan(10 * DEG);
+        },
+      );
+
+      it('carries the pose star-fixed while ORB is armed but unlocked', () => {
+        const tx = makeStatefulStellata();
+        tx.state.focusedStar = 1;
+        tx.state.orbit = { armed: true, locked: false, frame: ready(earthFrame(0)) };
+        tx.stellata.camera.position.set(...CAM);
+        const view = currentStateOf(tx.stellata, makeFixtureBuild());
+        expect(view.orbitPose).toBeUndefined();
+        expect(view.cam).toEqual(CAM);
+      });
+
+      // Level on ORB is the view L then Shift+L leaves, and the ride holds it
+      // there — so it is the default the slot elides against.
+      it('omits up when orbit-level and restores the receiver\'s ORB pole', () => {
+        const tx = makeStatefulStellata();
+        tx.state.focusedStar = 1;
+        const f0 = earthFrame(0);
+        tx.state.orbit = { armed: true, locked: true, frame: ready(f0) };
+        tx.stellata.camera.position.set(...CAM);
+        tx.stellata.camera.up.set(f0.pole.x, f0.pole.y, f0.pole.z);
+        const view = currentStateOf(tx.stellata, makeFixtureBuild());
+        expect(view.up).toBeUndefined();
+        expect(view.orbitPose).toBe(true);
+
+        const f1 = lunaFrame(DAYS);
+        const rx = open(encodeBlob(view), f1);
+        const up = rx.stellata.camera.up;
+        expect(up.x).toBeCloseTo(f1.pole.x, 12);
+        expect(up.y).toBeCloseTo(f1.pole.y, 12);
+        expect(up.z).toBeCloseTo(f1.pole.z, 12);
+      });
+
+      // A receiver whose focus rides no orbit has no basis to convert through.
+      it('seats the components as ICRS when the receiver has no ORB', () => {
+        const blob = share(earthFrame(0));
+        const wire = decodeBlob(blob).cam!;
+        const rx = open(blob, null);
+        const { x, y, z } = rx.stellata.camera.position;
+        expect([x, y, z]).toEqual(wire);
+      });
+
+      it('only converts with both bits set', () => {
+        const blob = encodeBlob({ ...decodeBlob(share(earthFrame(0))), orbLock: undefined });
+        const rx = open(blob, earthFrame(DAYS));
+        const { x, y, z } = rx.stellata.camera.position;
+        expect([x, y, z]).toEqual(decodeBlob(blob).cam);
+      });
+
+      // Seated by the ORB tick, which runs after every moving field has walked
+      // at this frame's t — orbit-pose/README.md#an-orbit-relative-pose.
+      describe('the pose waits for the tick', () => {
+        it('stands as ICRS until the first tick with ORB current', () => {
+          const blob = share(earthFrame(0));
+          const rx = makeStatefulStellata();
+          rx.state.orbit.frame = { status: 'pending' };
+          const pending = applyDecodedView(rx.stellata, decodeBlob(blob), makeFixtureBuild());
+          expect(pending).not.toBeNull();
+          const { x, y, z } = rx.stellata.camera.position;
+          expect([x, y, z]).toEqual(decodeBlob(blob).cam);
+          expect(rx.stellata.getOrbitFramePort()!.posePending()).toBe(true);
+        });
+
+        it('settles once the tick has seated it', async () => {
+          const rx = open(share(earthFrame(0)), earthFrame(DAYS));
+          await expect(rx.pending).resolves.toBeUndefined();
+          expect(rx.stellata.getOrbitFramePort()!.posePending()).toBe(false);
+        });
+
+        it('leaves a camera the user has taken alone', async () => {
+          const blob = share(earthFrame(0));
+          const rx = makeStatefulStellata();
+          const pending = applyDecodedView(rx.stellata, decodeBlob(blob), makeFixtureBuild());
+          (rx.stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
+          rx.stellata.camera.position.set(42, 43, 44);
+          tickSeat(rx.stellata, rx.state.orbit, earthFrame(DAYS));
+          await pending;
+          const { x, y, z } = rx.stellata.camera.position;
+          expect([x, y, z]).toEqual([42, 43, 44]);
+        });
+
+        it('holds a late focus pending until its pose has seated too', async () => {
+          const sidResolver = new SidResolver(['star', 'cloud']);
+          sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+          const idMaps = makeIdMaps({ sidResolver });
+          const rx = makeStatefulStellata();
+          const pending = applyDecodedView(
+            rx.stellata, decodeBlob(share(earthFrame(0))), idMaps,
+          );
+          let settled = false;
+          void pending!.then(() => { settled = true; });
+
+          sidResolver.attach('star', arrayDomain(STAR_SIDS));
+          await Promise.resolve();
+          expect(settled).toBe(false);
+
+          tickSeat(rx.stellata, rx.state.orbit, earthFrame(DAYS));
+          await pending;
+          expect(settled).toBe(true);
+        });
+      });
+
+      it('costs no bytes over a bit-28 link', () => {
+        const legacy = encodeBlob({ orb: true, orbLock: true });
+        expect(blobBytes(encodeBlob({ orb: true, orbLock: true, orbitPose: true })))
+          .toBe(blobBytes(legacy));
+      });
+
+      // The chosen first-load view, shared before bit 29 existed.
+      it('decodes a bit-28 link from the wild unchanged', () => {
+        const blob = CHOSEN_FIRST_LOAD_LINK;
+        const view = decodeBlob(blob);
+        expect(view).toEqual({
+          cam: [1.379118117483813e-7, 1.876214668072862e-7, 1.656248542758476e-7],
+          up: [-0.4381037950515747, -0.39205607771873474, 0.8089234232902527],
+          showHud: true,
+          focus: { kind: 'sid', id: 327674 },
+          orb: true,
+          orbLock: true,
+        });
+        const rx = open(blob, earthFrame(DAYS));
+        const { x, y, z } = rx.stellata.camera.position;
+        expect([x, y, z]).toEqual(view.cam);
+      });
     });
   });
 
@@ -1363,20 +1402,9 @@ describe('url-state', () => {
       expect(encodeBlob({ coordSphere: 'galactic' }).length).toBeLessThanOrEqual(6);
     });
 
-    it('encodes shorter than v1 would for the same scalar fields', () => {
-      // v2 quantised fov to u8 where v1 spent a float32, and v3 shrank the
-      // mask via LEB128. Four of the five scalars this once exercised
-      // (mag/smin/smax/span) are retired from the encoder, so it now runs
-      // over fov + the three u16 filter scalars: bits 3,5,6,7 → mask 0xe8,
-      // 2 LEB128 bytes; payload 1 + 2 + 2 + 2 = 7.
-      const blob = encodeBlob({ fov: 60, dmin: 100, dmax: 800, spect: 510 });
-      // 1 version + 2 mask + 7 payload = 10 bytes → 14 base64url chars,
-      // against v1's 1 + 4 mask + 16 float32 = 21 bytes / 28 chars.
-      expect(blob.length).toBeLessThanOrEqual(14);
-    });
   });
 
-  describe('LEB128 presence mask (v3)', () => {
+  describe('LEB128 presence mask', () => {
     // Verify the wire-format size for representative mask shapes. The
     // numbers here are the bytes-on-wire after base64url; we infer
     // the underlying byte count via the module-scoped blobBytes helper.
@@ -1408,20 +1436,20 @@ describe('url-state', () => {
       // both groups correctly and the decoder must recover the mask
       // before stepping through fields.
       const view = { cam: [1, 2, 3] as [number, number, number], worldOffset: [10, 20, 30] as [number, number, number] };
-      const { view: out } = roundtrip(view);
+      const out = roundtrip(view);
       expect(out.cam).toEqual([1, 2, 3]);
       expect(out.worldOffset).toEqual([10, 20, 30]);
     });
 
-    it('rejects a v3 blob whose varint mask runs past the buffer end', () => {
-      // Version=3, then a continuation byte (0x80) with no follow-up
-      // — readVarint should throw rather than read past the buffer.
-      const blob = btoa('\x03\x80').replace(/=+$/, '');
+    it('rejects a blob whose varint mask runs past the buffer end', () => {
+      // A continuation byte (0x80) with no follow-up — readVarint should
+      // throw rather than read past the buffer.
+      const blob = blobOf([4, 0x80]);
       expect(() => decodeBlob(blob)).toThrow(/Varint runs past blob end/);
     });
   });
 
-  describe('vec3 sub-mask elision byte budgets (v3)', () => {
+  describe('vec3 sub-mask elision byte budgets', () => {
     // The headline win of v3 is per-component vec3 elision. The cam
     // case is covered by the "emits the headline 10-char" test above;
     // these tests pin the exact byte counts for tgt, up, and
@@ -1434,7 +1462,7 @@ describe('url-state', () => {
       // 1 ver + 1 mask (bit 1) + 1 sub + 4 x = 7 bytes → 10 chars.
       const blob = encodeBlob({ tgt: [5, 0, 0] });
       expect(blobBytes(blob)).toBe(7);
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.tgt).toEqual([5, 0, 0]);
     });
 
@@ -1444,7 +1472,7 @@ describe('url-state', () => {
       const up: [number, number, number] = [1, GN_UP[1], 1];
       const blob = encodeBlob({ up });
       expect(blobBytes(blob)).toBe(11);
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.up).toEqual(up);
     });
 
@@ -1453,7 +1481,7 @@ describe('url-state', () => {
       // group). 1 ver + 3 mask + 1 sub + 4 x = 9 bytes → 12 chars.
       const blob = encodeBlob({ worldOffset: [100, 0, 0] });
       expect(blobBytes(blob)).toBe(9);
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.worldOffset).toEqual([100, 0, 0]);
     });
 
@@ -1461,7 +1489,7 @@ describe('url-state', () => {
       // 1 ver + 3 mask + 1 sub + 8 (x,y) = 13 bytes → 18 chars.
       const blob = encodeBlob({ worldOffset: [100, 200, 0] });
       expect(blobBytes(blob)).toBe(13);
-      const { view } = decodeBlob(blob);
+      const view = decodeBlob(blob);
       expect(view.worldOffset).toEqual([100, 200, 0]);
     });
 
@@ -1469,14 +1497,14 @@ describe('url-state', () => {
       // The wire format uses low 3 bits of the sub-mask for component
       // divergence and reserves bits 3-7 for forward-compat. A hand-
       // edited or future-encoder blob that sets reserved bits should
-      // still decode the low 3 bits correctly. Build a v3 blob with
+      // still decode the low 3 bits correctly. Build a blob with
       // cam sub-mask 0xF9 (binary 11111001 — low bit 0 set for x,
       // y/z clear, high bits 3-7 all set as reserved) and assert cam
       // decodes as [x, default_y, default_z].
       const camX = 7.5;
       const ab = new ArrayBuffer(7);
       const dv = new DataView(ab);
-      dv.setUint8(0, 3);     // version
+      dv.setUint8(0, 4);     // version
       dv.setUint8(1, 0x01);  // LEB128 mask: bit 0 (cam) only
       dv.setUint8(2, 0xF9);  // sub-mask: low bit 0 set + all reserved
       dv.setFloat32(3, camX, true);
@@ -1484,8 +1512,7 @@ describe('url-state', () => {
       let s = '';
       for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
       const blob = btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      const { view, version } = decodeBlob(blob);
-      expect(version).toBe(3);
+      const view = decodeBlob(blob);
       expect(view.cam![0]).toBeCloseTo(camX, 5);
       expect(view.cam![1]).toBe(0);   // navigate-default y
       expect(view.cam![2]).toBe(30);  // navigate-default z
@@ -1501,8 +1528,7 @@ describe('url-state', () => {
 
     it('round-trips a float64 t through encodeBlob/decodeBlob', () => {
       const t = 1234567890.123456;
-      const { view, version } = roundtrip({ t });
-      expect(version).toBe(4);
+      const view = roundtrip({ t });
       expect(view.t).toBe(t);
     });
 
@@ -1525,8 +1551,7 @@ describe('url-state', () => {
     it('round-trips t alongside cam (mixed low + high bits)', () => {
       const t = 9876543210.5;
       const view: DecodedView = { cam: [0, 0, 3.7], t };
-      const { view: out, version } = roundtrip(view);
-      expect(version).toBe(4);
+      const out = roundtrip(view);
       expect(out.cam![2]).toBeCloseTo(3.7, 5);
       expect(out.t).toBe(t);
     });
@@ -1605,199 +1630,22 @@ describe('url-state', () => {
     });
   });
 
-  describe('golden-blob corpus — frozen v1/v2/v3 decoders', () => {
-    // Real `?v=` blobs captured from the shipped coders (v3 via the
-    // production encoder, v1/v2 hand-encoded and validated through the
-    // production decoder at capture time), paired with their exact
-    // decoded views. These pin the FROZEN per-version FIELDS arrays
-    // byte-for-byte: any change that alters how a legacy blob decodes
-    // — a helper edit, a field-shape change leaking across versions —
-    // fails here. Float components are the post-float32 values the
-    // decoder actually produces. NEVER regenerate these entries to
-    // make a failure pass; a failure means legacy decoding broke.
-    const GOLDEN_CORPUS: { version: number; label: string; blob: string; view: DecodedView }[] = [
-      {
-        version: 3,
-        label: 'realistic share: cam + fov + mag + HIP focus + grid',
-        blob: 'A5nAAQcAAEhCAACgwQAAyEIjVQFdfoA',
-        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, coordSphere: 'galactic', focus: { kind: 'hip', id: 32349 } },
-      },
-      {
-        version: 3,
-        label: 'observe + chart + POIs + tilted up',
-        blob: 'A4TAIQOBBDU_gQQ1P2B-ZIEDXX4AfmQBVW0A',
-        view: { up: [0.707099974155426, 0.707099974155426, 0], mode: 'observe', chart: true, focus: { kind: 'hip', id: 91262 }, pois: [32349, 91262, 27989] },
-      },
-      {
-        version: 3,
-        label: 'index focus + HIP to-vector',
-        blob: 'A4CAA0DiAcL_gA',
-        view: { focus: { kind: 'index', id: 123456 }, to: { kind: 'hip', id: 65474 } },
-      },
-      {
-        version: 3,
-        label: 'cloud focus + cloud to-vector',
-        blob: 'A4GADATNzGxADAM',
-        view: { cam: [0, 0, 3.700000047683716], cloud: 12, toc: 3 },
-      },
-      {
-        version: 3,
-        label: 'cleared focus + worldOffset anchor + local cam/tgt',
-        blob: 'A4OAUAeETfg1dScvts2sJTgBAACgQAdmZk5CAICAQ83MFsI',
-        view: { cam: [0.0000018499999896448571, -0.000002609999910418992, 0.00003949999882024713], tgt: [5, 0, 0], focus: 'cleared', worldOffset: [51.599998474121094, 257, -37.70000076293945] },
-      },
-      {
-        version: 3,
-        label: 'pinned t + cam',
-        blob: 'A4GAgAEEzcxsQAAAIMD7GtpB',
-        view: { cam: [0, 0, 3.700000047683716], t: 1751904000.5 },
-      },
-      {
-        version: 3,
-        label: 'kitchen sink scalars + flags',
-        blob: 'A-h_NGQAIAP-AQEpDyAMmg',
-        // The blob still carries the retired mw / constellation flag bits;
-        // the decoder no longer surfaces them. smin/smax/span DO still
-        // decode — FIELDS_V3 is frozen, and its specs are unchanged.
-        view: { fov: 62, dmin: 100, dmax: 800, spect: 510, preset: 'binoculars', con: 41, smin: 2.5, smax: 18, span: 8, showHud: true, unit: 'pc' },
-      },
-      {
-        version: 2,
-        label: 'v2: cam + fov + mag + HIP focus',
-        blob: 'AhlAAAAASEIAAKDBAADIQiNVXX6A',
-        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, focus: { kind: 'hip', id: 32349 } },
-      },
-      {
-        version: 2,
-        label: 'v2: observe + index focus + POIs',
-        blob: 'AgBgCCBA4gEDXX4AfmQBVW0A',
-        view: { mode: 'observe', focus: { kind: 'index', id: 123456 }, pois: [32349, 91262, 27989] },
-      },
-      {
-        version: 2,
-        label: 'v2: cloud focus + toc + worldOffset',
-        blob: 'AgAAEwwDZmZOQgCAgEPNzBbC',
-        view: { cloud: 12, toc: 3, worldOffset: [51.599998474121094, 257, -37.70000076293945] },
-      },
-      {
-        version: 2,
-        label: 'v2: cleared focus + pinned t',
-        blob: 'AgAAJAAAIMD7GtpB',
-        view: { focus: 'cleared', t: 1751904000.5 },
-      },
-      {
-        version: 1,
-        label: 'v1: cam + fov + mag + HIP focus',
-        blob: 'ARlAAAAAAEhCAACgwQAAyEIAADRCAADQQF1-AIA',
-        view: { cam: [50, -20, 100], fov: 45, mag: 6.5, focus: { kind: 'hip', id: 32349 } },
-      },
-      {
-        version: 1,
-        label: 'v1: observe + index focus + cloud + POIs',
-        blob: 'AQBgCQAgQOIBAAcAAmQAAADIAAAA',
-        view: { mode: 'observe', focus: { kind: 'index', id: 123456 }, cloud: 7, pois: [100, 200] },
-      },
-    ];
-
-    for (const entry of GOLDEN_CORPUS) {
-      it(`decodes byte-identically: ${entry.label}`, () => {
-        const { view, version } = decodeBlob(entry.blob);
-        expect(version).toBe(entry.version);
-        expect(view).toEqual(entry.view);
-      });
-    }
-  });
-
-  describe('legacy → v4 migration (decode → apply → re-encode)', () => {
-    // applyFromUrl detects `decoded.version !== SCHEMA_VERSION` and
-    // schedules a debounced writeUrl that re-encodes the *live state*
-    // as v4 — that apply-then-re-encode pair IS the /docs/sid.md#94-migration-semantics--exact-table
-    // migration table. These tests drive it end-to-end over a stateful
-    // mock Stellata: decode a legacy blob, applyDecodedView, then
-    // currentStateOf → encodeBlob and assert the v4 wire.
-
-    it('HIP focus migrates exactly: hip → index → sid', () => {
-      const blob = buildV2Blob(1 << 14, new Uint8Array(u24((32349 | 0x800000) >>> 0)));
-      const { state, re } = migrate(blob);
-      expect(state.focusedStar).toBe(1);
-      expect(re.version).toBe(4);
-      expect(re.view.focus).toEqual({ kind: 'sid', id: 101 });
-    });
-
-    it('unknown HIP focus drops to the default (Sol, omitted)', () => {
-      const blob = buildV2Blob(1 << 14, new Uint8Array(u24((555 | 0x800000) >>> 0)));
-      const { state, re } = migrate(blob);
-      expect(state.focusedStar).toBe(0);
-      expect(re.view.focus).toBeUndefined();
-    });
-
-    it('index focus freezes best-effort to the current-build sid', () => {
-      const blob = buildV2Blob(1 << 14, new Uint8Array(u24(2)));
-      const { state, re } = migrate(blob);
-      expect(state.focusedStar).toBe(2);
-      expect(re.view.focus).toEqual({ kind: 'sid', id: 102 });
-    });
-
-    it('out-of-range index focus drops to the default', () => {
-      const blob = buildV2Blob(1 << 14, new Uint8Array(u24(50)));
-      const { re } = migrate(blob);
-      expect(re.view.focus).toBeUndefined();
-    });
-
-    it('legacy cloud focus + toc fold into universal sid refs', () => {
-      const blob = buildV2Blob((1 << 16) | (1 << 17), new Uint8Array([1, 0]));
-      const { state, re } = migrate(blob);
-      expect(state.focusedCloud).toBe(1);
-      expect(state.vectorToCloud).toBe(0);
-      expect(re.view.focus).toEqual({ kind: 'sid', id: 202 });
-      expect(re.view.to).toEqual({ kind: 'sid', id: 201 });
-      expect(re.view.cloud).toBeUndefined();
-      expect(re.view.toc).toBeUndefined();
-    });
-
-    it('HIP to-vector migrates to a star sid', () => {
-      const blob = buildV2Blob(1 << 15, new Uint8Array(u24((91262 | 0x800000) >>> 0)));
-      const { state, re } = migrate(blob);
-      expect(state.vectorTo).toBe(3);
-      expect(re.view.to).toEqual({ kind: 'sid', id: 103 });
-    });
-
-    it('legacy HIP POIs migrate per entry; unresolvable HIPs drop', () => {
-      // observe flag (bit 5 of the flags byte) + POIs [32349, 91262,
-      // 555]; 555 resolves to nothing in this catalog and drops.
-      const payload = new Uint8Array([
-        1 << 5,
-        3, ...u24(32349), ...u24(91262), ...u24(555),
-      ]);
-      const blob = buildV2Blob((1 << 13) | (1 << 19), payload);
-      const { state, re } = migrate(blob);
-      expect(state.mode).toBe('observe');
-      expect(state.pois).toEqual([{ kind: 'star', idx: 1 }, { kind: 'star', idx: 3 }]);
-      expect(re.view.poiSids).toEqual([101, 103]);
-      expect(re.view.pois).toBeUndefined();
-    });
-
-    it('v1 blobs migrate through the same path', () => {
-      const payload = new Uint8Array(4);
-      new DataView(payload.buffer).setUint32(0, (32349 | 0x80000000) >>> 0, true);
-      const blob = buildV1Blob(1 << 14, payload);
-      const { state, re } = migrate(blob);
-      expect(state.focusedStar).toBe(1);
-      expect(re.view.focus).toEqual({ kind: 'sid', id: 101 });
-    });
+  describe('decode → apply → re-encode', () => {
+    // Drives applyDecodedView over a stateful mock Stellata, then
+    // currentStateOf → encodeBlob, and asserts the wire that comes back.
 
     it('a v4 sid focus applies and re-encodes stably', () => {
       const blob = encodeBlob({ focus: { kind: 'sid', id: 103 } });
       const { state, re } = migrate(blob);
       expect(state.focusedStar).toBe(3);
-      expect(re.view.focus).toEqual({ kind: 'sid', id: 103 });
+      expect(re.focus).toEqual({ kind: 'sid', id: 103 });
     });
 
     it('an unknown v4 sid expires silently, leaving the rest applied', () => {
       const blob = encodeBlob({ focus: { kind: 'sid', id: 999 }, fov: 62 });
       const { state, re } = migrate(blob);
       expect(state.focusedStar).toBe(0); // untouched default
-      expect(re.view.focus).toBeUndefined();
+      expect(re.focus).toBeUndefined();
     });
 
     it('a pending sid applies as a deferred intent when its domain attaches', () => {
@@ -1809,10 +1657,77 @@ describe('url-state', () => {
       const idMaps = makeIdMaps({ sidResolver });
       const { stellata, state } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 202 } });
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      applyDecodedView(stellata, decodeBlob(blob), idMaps);
       expect(state.focusedCloud).toBeNull();
       sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
       expect(state.focusedCloud).toBe(1);
+    });
+
+    describe('a pin that resolves after the link', () => {
+      // Star domain decoded to row 2 of 4: sids 103 (row 3) arrive later.
+      function streamingStars() {
+        let decoded = 2;
+        let fill: DomainFill = 'filling';
+        const listeners = new Set<() => void>();
+        const domain: SidDomain = {
+          localIndexOf: sidColumnIndex(STAR_SIDS, () => decoded),
+          sidOf: (i) => (i >= 0 && i < decoded ? STAR_SIDS[i] : null),
+          fill: () => fill,
+          onGrow: (l) => { listeners.add(l); return () => listeners.delete(l); },
+        };
+        const sidResolver = new SidResolver(['star']);
+        sidResolver.attach('star', domain);
+        const grow = () => { decoded = STAR_SIDS.length; listeners.forEach((l) => l()); };
+        const complete = () => { fill = 'complete'; listeners.forEach((l) => l()); };
+        return { idMaps: makeIdMaps({ sidResolver }), grow, complete };
+      }
+      const star = (idx: number): Target => ({ kind: 'star', idx });
+
+      it('pins a star from a late chunk in the link\'s order', () => {
+        const s = streamingStars();
+        const { stellata, state } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103, 101] })), s.idMaps);
+        expect(state.pois).toEqual([star(1)]);
+        s.grow();
+        expect(state.pois).toEqual([star(3), star(1)]);
+      });
+
+      it('keeps a pending pin on the wire until its chunk lands', () => {
+        const s = streamingStars();
+        const { stellata } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103, 101] })), s.idMaps);
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([101, 103]);
+        s.grow();
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([103, 101]);
+      });
+
+      it('drops a pin nothing carries once the catalogue completes', () => {
+        const s = streamingStars();
+        const { stellata } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [101, 999] })), s.idMaps);
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([101, 999]);
+        s.complete();
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([101]);
+      });
+
+      it('appends to pins the user edited meanwhile, leaving their edit standing', () => {
+        const s = streamingStars();
+        const { stellata, state } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103, 101] })), s.idMaps);
+        state.pois = [star(0)];
+        s.grow();
+        expect(state.pois).toEqual([star(0), star(3)]);
+      });
+
+      it('lets a later link supersede the pending pins of an earlier one', () => {
+        const s = streamingStars();
+        const { stellata, state } = makeStatefulStellata();
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [103] })), s.idMaps);
+        applyDecodedView(stellata, decodeBlob(encodeBlob({ poiSids: [102] })), s.idMaps);
+        s.grow();
+        expect(state.pois).toEqual([star(2)]);
+        expect(currentStateOf(stellata, s.idMaps).poiSids).toEqual([102]);
+      });
     });
 
     it('re-seats the camera when the focus resolves after the pose', () => {
@@ -1828,7 +1743,7 @@ describe('url-state', () => {
       const { stellata } = makeStatefulStellata();
       const CAM: [number, number, number] = [0.08, 9.26, -0.76];
       const blob = encodeBlob({ focus: { kind: 'sid', id: 202 }, cam: CAM });
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      applyDecodedView(stellata, decodeBlob(blob), idMaps);
 
       // Something else moved the camera between the pose and the resolve —
       // standing in for the recentre the real focus performs.
@@ -1850,7 +1765,7 @@ describe('url-state', () => {
       const idMaps = makeIdMaps({ sidResolver });
       const { stellata } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 202 }, cam: [1, 2, 3] });
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      applyDecodedView(stellata, decodeBlob(blob), idMaps);
 
       (stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
       stellata.camera.position.set(42, 43, 44);
@@ -1871,7 +1786,7 @@ describe('url-state', () => {
       const blob = encodeBlob({
         focus: { kind: 'sid', id: 103 }, mode: 'observe', chart: true, tgt: [0, 0, 1],
       });
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      applyDecodedView(stellata, decodeBlob(blob), idMaps);
 
       // Not yet: engaging now would anchor on Sol.
       expect(state.mode).toBe('navigate');
@@ -1896,12 +1811,12 @@ describe('url-state', () => {
         focus: { kind: 'sid', id: 103 }, mode: 'observe', tgt: [0, 0, 1],
         orb: true, orbLock: true,
       });
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      applyDecodedView(stellata, decodeBlob(blob), idMaps);
 
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
 
       expect(state.mode).toBe('observe');
-      expect(state.orbit).toEqual({ armed: true, locked: true });
+      expect(state.orbit).toMatchObject({ armed: true, locked: true });
     });
 
     it('leaves navigate standing when the user took the view before the focus landed', () => {
@@ -1912,7 +1827,7 @@ describe('url-state', () => {
       const blob = encodeBlob({
         focus: { kind: 'sid', id: 103 }, mode: 'observe', chart: true, tgt: [0, 0, 1],
       });
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      applyDecodedView(stellata, decodeBlob(blob), idMaps);
 
       (stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
@@ -1929,13 +1844,13 @@ describe('url-state', () => {
       const idMaps = makeIdMaps({ sidResolver });
       const { stellata } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: STAR_SIDS[1] } });
-      expect(applyDecodedView(stellata, decodeBlob(blob).view, idMaps)).toBeNull();
+      expect(applyDecodedView(stellata, decodeBlob(blob), idMaps)).toBeNull();
     });
 
     it('reports no pending focus for a blob that names none', () => {
       const idMaps = makeIdMaps({});
       const { stellata } = makeStatefulStellata();
-      expect(applyDecodedView(stellata, decodeBlob(encodeBlob({ fov: 62 })).view, idMaps))
+      expect(applyDecodedView(stellata, decodeBlob(encodeBlob({ fov: 62 })), idMaps))
         .toBeNull();
     });
 
@@ -1945,7 +1860,7 @@ describe('url-state', () => {
       const idMaps = makeIdMaps({ sidResolver });
       const { stellata } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 202 } });
-      const pending = applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      const pending = applyDecodedView(stellata, decodeBlob(blob), idMaps);
       expect(pending).not.toBeNull();
 
       let settled = false;
@@ -1964,7 +1879,7 @@ describe('url-state', () => {
       const idMaps = makeIdMaps({ sidResolver, planet: NO_PLANET_HOST });
       const { stellata, state } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 901 } });
-      const pending = applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      const pending = applyDecodedView(stellata, decodeBlob(blob), idMaps);
       expect(pending).not.toBeNull();
 
       sidResolver.attach('planet', arrayDomain([901]));
@@ -1993,7 +1908,7 @@ describe('url-state', () => {
       // Receiver: the sid resolves to domain 2 and translates back to
       // the flat index before the flyTo dispatch.
       const rx = makeStatefulStellata();
-      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)), idMaps);
       expect(rx.state.focusedPlanet).toBe(7);
       expect(rx.state.focusedStar).toBeNull();
     });
@@ -2015,7 +1930,7 @@ describe('url-state', () => {
 
       // No camera params on the wire → the flyTo branch.
       const flyRx = makeStatefulStellata();
-      applyDecodedView(flyRx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      applyDecodedView(flyRx.stellata, decodeBlob(encodeBlob(view)), idMaps);
       expect(flyRx.state.focusedProbe).toBe(1);
       expect(flyRx.state.focusedStar).toBeNull();
 
@@ -2024,7 +1939,7 @@ describe('url-state', () => {
       const snapRx = makeStatefulStellata();
       applyDecodedView(
         snapRx.stellata,
-        decodeBlob(encodeBlob({ ...view, cam: [1, 2, 3] })).view,
+        decodeBlob(encodeBlob({ ...view, cam: [1, 2, 3] })),
         idMaps,
       );
       expect(snapRx.state.focusedProbe).toBe(1);
@@ -2043,7 +1958,7 @@ describe('url-state', () => {
 
       const rx = makeStatefulStellata();
       rx.state.focusedStar = 2;
-      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)), idMaps);
       expect(rx.state.focusedStar).toBe(0);
     });
 
@@ -2051,12 +1966,12 @@ describe('url-state', () => {
       const idMaps = makeIdMaps();
       const snapRx = makeStatefulStellata();
       snapRx.state.focusedStar = 3;
-      applyDecodedView(snapRx.stellata, decodeBlob(encodeBlob({ cam: [4, 5, 6] })).view, idMaps);
+      applyDecodedView(snapRx.stellata, decodeBlob(encodeBlob({ cam: [4, 5, 6] })), idMaps);
       expect(snapRx.state.focusedStar).toBe(0);
 
       const flyRx = makeStatefulStellata();
       flyRx.state.focusedStar = 3;
-      applyDecodedView(flyRx.stellata, decodeBlob(encodeBlob({})).view, idMaps);
+      applyDecodedView(flyRx.stellata, decodeBlob(encodeBlob({})), idMaps);
       expect(flyRx.state.focusedStar).toBe(0);
     });
 
@@ -2069,18 +1984,12 @@ describe('url-state', () => {
       offsetRx.state.focusedCloud = 1;
       applyDecodedView(offsetRx.stellata, { worldOffset: [1, 2, 3], cam: [4, 5, 6] }, idMaps);
       expect(offsetRx.state.focusedStar).toBeNull();
-
-      // A legacy v1-v3 cloud focus lives in `cloud`, not `focus`.
-      const legacyRx = makeStatefulStellata();
-      applyDecodedView(legacyRx.stellata, { cloud: 1, cam: [4, 5, 6] }, idMaps);
-      expect(legacyRx.state.focusedCloud).toBe(1);
-      expect(legacyRx.state.focusedStar).toBeNull();
     });
 
     it('an explicitly cleared focus stays cleared', () => {
       const idMaps = makeIdMaps();
       const rx = makeStatefulStellata();
-      applyDecodedView(rx.stellata, decodeBlob(encodeBlob({ focus: 'cleared' })).view, idMaps);
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob({ focus: 'cleared' })), idMaps);
       expect(rx.state.focusedStar).toBeNull();
     });
 
@@ -2106,7 +2015,7 @@ describe('url-state', () => {
       // Receiver: both kinds restore, planet sid translated back to the
       // flat Target index.
       const rx = makeStatefulStellata();
-      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)).view, idMaps);
+      applyDecodedView(rx.stellata, decodeBlob(encodeBlob(view)), idMaps);
       expect(rx.state.pois).toEqual([
         { kind: 'star', idx: 1 },
         { kind: 'planet', idx: 6 },
@@ -2121,7 +2030,7 @@ describe('url-state', () => {
       const idMaps = makeIdMaps({ sidResolver }); // host never attached
       const { stellata, state } = makeStatefulStellata();
       const blob = encodeBlob({ focus: { kind: 'sid', id: 901 }, mag: 9 });
-      applyDecodedView(stellata, decodeBlob(blob).view, idMaps);
+      applyDecodedView(stellata, decodeBlob(blob), idMaps);
       expect(state.focusedPlanet).toBeNull();
       expect(state.focusedStar).toBe(0); // untouched default
     });
@@ -2134,7 +2043,7 @@ describe('url-state', () => {
     // property SIDs exist for and the reason star refs stopped encoding
     // row indices. Build A shares the link, build B receives it.
     const buildA = () => makeFixtureBuild();
-    const buildB = () => makeFixtureBuild(REINDEXED_STAR_SIDS, REINDEXED_STAR_HIPS);
+    const buildB = () => makeFixtureBuild(REINDEXED_STAR_SIDS);
 
     // Share the live state of a build-A session, as writeUrl would.
     function shareFrom(setup: (s: ReturnType<typeof makeStatefulStellata>['state']) => void) {
@@ -2143,23 +2052,12 @@ describe('url-state', () => {
       return encodeBlob(currentStateOf(tx.stellata, buildA()));
     }
 
-    it('a no-HIP star focus lands on the same star after a re-index', () => {
-      // Row 2 in build A, row 0 in build B — and no HIP, so v1–v3 had
-      // nothing but the row index to encode it with.
+    it('a star focus lands on the same star after a re-index', () => {
+      // Row 2 in build A, row 0 in build B.
       const blob = shareFrom((s) => { s.focusedStar = 2; });
-      expect(decodeBlob(blob).view.focus).toEqual({ kind: 'sid', id: 102 });
+      expect(decodeBlob(blob).focus).toEqual({ kind: 'sid', id: 102 });
       const { state } = migrate(blob, buildB());
       expect(state.focusedStar).toBe(0);
-    });
-
-    it('the legacy index ref it replaced lands on a DIFFERENT star', () => {
-      // Same star, encoded the pre-v4 way: a bare row index. Build B's
-      // row 2 is Sol, so the link silently retargets — the drift the SID
-      // ref removes.
-      const legacy = buildV2Blob(1 << 14, new Uint8Array(u24(2)));
-      const { state } = migrate(legacy, buildB());
-      expect(state.focusedStar).toBe(2);
-      expect(REINDEXED_STAR_SIDS[2]).toBe(SOL_SID);
     });
 
     it('vector-to and POIs survive the same re-index', () => {
@@ -2182,9 +2080,9 @@ describe('url-state', () => {
         s.focusedStar = 2;
         s.pois = [{ kind: 'star', idx: 3 }];
       });
-      const buildC = makeFixtureBuild([SOL_SID, 101, 103], [0, 32349, 91262]);
+      const buildC = makeFixtureBuild([SOL_SID, 101, 103]);
       const { stellata, state } = makeStatefulStellata();
-      applyDecodedView(stellata, decodeBlob(blob).view, buildC);
+      applyDecodedView(stellata, decodeBlob(blob), buildC);
       expect(state.focusedStar).toBe(0); // untouched Sol default
       expect(state.pois).toEqual([{ kind: 'star', idx: 2 }]);
     });
@@ -2209,7 +2107,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     /** ORB / lock as the instrument holds them. Neither is a pose and
      *  neither is FilterState, so a bare 'state' emit is the only thing
      *  that can put them on the wire. */
-    orbit?: { armed: boolean; locked: boolean };
+    orbit?: MockOrbitState;
   } = {}) {
     const orbit = opts.orbit ?? { armed: false, locked: false };
     const state = {
@@ -2237,9 +2135,11 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       setCameraFov: (f) => { state.fov = f; },
       getT: () => state.t,
       setT: (t) => { if (t !== null) state.t = t; },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      getWorldOffset: () => mockVec3() as any,
-      setWorldOffset: () => {},
+      floatingOrigin: partialOf<Stellata['floatingOrigin']>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        worldOffset: mockVec3() as any,
+        recenterTo: () => null,
+      }),
       focusables: mockFocusables(),
       getOrbitFramePort: () => mockOrbitPort(orbit),
       focus: partialOf<Stellata['focus']>({
@@ -2262,6 +2162,8 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
         setMode: (m) => { state.mode = m; },
       }),
       isCameraTransitionActive: () => state.transition,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      renderGate: { sawUserInput: false } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       camera: cam as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2353,6 +2255,23 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       expect(replaceState).not.toHaveBeenCalled();
     });
 
+    it('strips a retired v1–v3 link and reports nothing applied', () => {
+      for (const version of [1, 2, 3]) {
+        for (const url of [
+          `/app/v/${blobOf([version, 1, 4, 0, 0, 0x80, 0x40])}/`,
+          `/v/${blobOf([version, 1, 4, 0, 0, 0x80, 0x40])}/`,
+          `/?v=${blobOf([version, 0])}`,
+        ]) {
+          const { loc } = installUrl(url);
+          const { stellata, state } = makeSyncStellata();
+          expect(applyFromUrl(stellata, syncIdMaps())).toEqual({ applied: false, focusPending: null });
+          expect(loc.pathname).toBe('/app');
+          expect(loc.search).toBe('');
+          expect(state.focusedStar).toBe(0);
+        }
+      }
+    });
+
     it('preserves the fragment while stripping junk (the renderer flag rides it)', () => {
       const { loc } = installUrl('/app/garbage?v=_w#renderer=webgpu');
       const { stellata } = makeSyncStellata();
@@ -2375,7 +2294,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       vi.advanceTimersByTime(1000);
       expect(loc.pathname.startsWith('/app/v/')).toBe(true);
       expect(loc.search).toBe('');
-      expect(decodeBlob(loc.pathname.slice('/app/v/'.length, -1)).view.fov).toBe(90);
+      expect(decodeBlob(loc.pathname.slice('/app/v/'.length, -1)).fov).toBe(90);
     });
 
     // The root-relative path form predates the app's move to /app. The
@@ -2474,8 +2393,78 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       emitState();
       vi.advanceTimersByTime(1000);
       expect(loc.pathname.startsWith('/app/v/')).toBe(true);
-      const { view } = decodeBlob(loc.pathname.split('/')[3]);
+      const view = decodeBlob(loc.pathname.split('/')[3]);
       expect(view).toMatchObject({ orb: true, orbLock: true });
+    });
+
+    // see orbit-pose/README.md#an-orbit-relative-pose
+    it('reads the lock\'s ride as no camera move', () => {
+      const { replaceState } = installUrl('/');
+      const DEG = Math.PI / 180;
+      const pole = new THREE.Vector3(0, -0.3978, 0.9175).normalize();
+      const seed = new THREE.Vector3(1, 0, 0);
+      const cameraForFrame = new THREE.PerspectiveCamera();
+      const frameAt = (deg: number) => captureOrbitFrame(
+        cameraForFrame, pole, seed.clone().applyAxisAngle(pole, deg * DEG),
+      );
+      const orbit = {
+        armed: true,
+        locked: true,
+        frame: { status: 'ready', value: frameAt(0) } as LateState<ReferenceFrame>,
+      };
+      const { stellata, cam, frame } = makeSyncStellata({ orbit });
+      cam.position.set(3, 4, 5);
+      cam.up.set(0, 0, 1);
+      startUrlSync(stellata, syncIdMaps());
+
+      const turn = new THREE.Quaternion().setFromAxisAngle(pole, 5 * DEG);
+      orbit.frame = { status: 'ready', value: frameAt(5) };
+      const p = new THREE.Vector3(cam.position.x, cam.position.y, cam.position.z)
+        .applyQuaternion(turn);
+      const u = new THREE.Vector3(cam.up.x, cam.up.y, cam.up.z).applyQuaternion(turn);
+      cam.position.set(p.x, p.y, p.z);
+      cam.up.set(u.x, u.y, u.z);
+      frame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+    });
+
+    // The first-load view is the case: bare / has to stay bare once the tick
+    // seats Earth's pose, and a link has to stay the link it was.
+    it('reads a held pose seating as the restore, not a camera move', () => {
+      const { replaceState } = installUrl('/');
+      const pole = new THREE.Vector3(0, -0.3978, 0.9175).normalize();
+      const frame = captureOrbitFrame(new THREE.PerspectiveCamera(), pole, new THREE.Vector3(1, 0, 0));
+      const orbit: MockOrbitState = {
+        armed: true, locked: true, frame: { status: 'ready', value: frame },
+      };
+      const { stellata, cam, frame: drawFrame } = makeSyncStellata({ orbit });
+      cam.position.set(3, 4, 5);
+      cam.up.set(0, 0, 1);
+      void stellata.getOrbitFramePort()!.holdPose({ x: -2, y: 1, z: 0.5 }, { x: 0, y: 0, z: 1 });
+      startUrlSync(stellata, syncIdMaps());
+
+      tickSeat(stellata, orbit, frame);
+      drawFrame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+
+      // The next real move still writes.
+      cam.position.set(30, 40, 50);
+      drawFrame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).toHaveBeenCalled();
+    });
+
+    it('writes no URL while a pose waits for its tick', () => {
+      const { replaceState } = installUrl('/');
+      const orbit: MockOrbitState = { armed: true, locked: true };
+      const { stellata, emitState } = makeSyncStellata({ orbit });
+      startUrlSync(stellata, syncIdMaps());
+      void stellata.getOrbitFramePort()!.holdPose({ x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
+      emitState();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
     });
 
     it('never reaches the URL from a still camera without one', () => {
@@ -2507,6 +2496,10 @@ describe('viewPose', () => {
 
   it('takes the observe default for cam, which is the focal origin', () => {
     expect(viewPose({ mode: 'observe' }).cam).toEqual([0, 0, 0]);
+  });
+
+  it('fills an orbit-relative up with the ORB pole', () => {
+    expect(viewPose({ orbitPose: true, orbLock: true }).up).toEqual([0, 0, 1]);
   });
 
   it('carries what the blob does', () => {

@@ -3,10 +3,12 @@
 
 import * as THREE from 'three';
 import type { TrackballControls } from 'three/examples/jsm/controls/TrackballControls.js';
+import type { FloatingOrigin } from '../../frame/floating-origin';
 import type { Catalog } from '../../loaders/catalog-loader';
+import type { StarFrame } from '../../star-pipeline/star-frame/star-frame';
 import type { StellataEventMap } from '../../stellata';
 import type { EventBus } from '../../util/event-bus';
-import type { Late } from '../../util/late/late';
+import { type Late, type LateState, whenReady } from '../../util/late/late';
 import type { AimController } from '../controls/aim-controller';
 import type { RollController } from '../controls/input/roll-controller';
 import type { ObserveControls } from '../observe/observe-controls';
@@ -58,20 +60,14 @@ export function softOrbitFloor(park: (idx: number) => number) {
  *  — under this, the geometric pin is the right answer. */
 export const PIN_ENGAGE_THRESHOLD_SQ_PC = 1e-12;
 
-/** Floating-origin primitive. Implemented by the integration shell,
- *  which owns the camera / orbit-target / scene-layer half of a
- *  recentre and delegates the position-buffer half to `StarFrame`. */
 export interface FrameAnchor {
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null;
-  getWorldOffset(): Readonly<THREE.Vector3>;
-  starLocalPosition(idx: number): THREE.Vector3;
-  starLocalPositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
+  readonly origin: Pick<FloatingOrigin, 'recenterTo' | 'worldOffset'>;
+  readonly stars: Pick<StarFrame, 'localPositionInto' | 'absolutePositionInto'>;
 }
 
 /** Cross-controller seam consumed by WarpController. FocusController
  *  implements it natively (focus, vector slot, cameraMode all live
- *  here); only the frame-anchor methods delegate to the integration
- *  shell via deps. */
+ *  here); only the frame-anchor methods read the frame owners. */
 export interface FocusOps {
   /** FocusTarget describing whichever object is currently focused,
    *  or null if nothing is focused. Source side of a warp. */
@@ -79,27 +75,16 @@ export interface FocusOps {
   /** Build a FocusTarget for `target`, or null when its layer hasn't
    *  loaded or the index is out of range. */
   makeFocusTarget(target: Target): FocusTarget | null;
-  /** Star position in the renderer's local frame. */
-  starLocalPosition(idx: number): THREE.Vector3;
   /** Star's live local position (catalog baseline + orbital perturbation)
    *  in float64, written into `out`. Correct even right after a recentre,
    *  before the walk perturbs the buffer. */
   starLivePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3;
-  /** Shift the floating origin to `newOrigin`, returning the applied
-   *  delta. The returned Vector3 is shared scratch — copy if needed
-   *  beyond the synchronous call. Returns null on no-op. */
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null;
   setFocus(idx: number | null): void;
   /** Clear whichever distance-vector destination is set (any kind) —
    *  warp arrival wipes the slot regardless of the warp's kind. */
   clearVector(): void;
   getFocusedStar(): number | null;
   getFocusedTarget(): Target | null;
-  /** True when an observe enter / exit transition is in flight ('unfocus'
-   *  excluded). startWarp bails so warp doesn't collide. */
-  isObserveTransitionActive(): boolean;
-  cancelFocusLerp(): void;
-  cancelUnfocusLerp(): void;
 }
 
 export interface FocusControllerDeps {
@@ -134,6 +119,12 @@ export type FocalPerturbationInto = (idx: number, out: THREE.Vector3) => boolean
 
 export type CameraMode = 'navigate' | 'observe';
 
+const NO_PLANET_SYSTEM: LateState<PlanetSystem> = { status: 'absent' };
+const PLANET_SYSTEM_PENDING: LateState<PlanetSystem> = { status: 'pending' };
+
+const attachedSystem = (s: LateState<PlanetSystem>): PlanetSystem | null =>
+  whenReady<PlanetSystem, PlanetSystem | null>(s, (ps) => ps, null);
+
 export class FocusController implements FocusOps {
   private readonly deps: FocusControllerDeps;
   // Focused object and distance-vector destination, one Target each.
@@ -142,7 +133,8 @@ export class FocusController implements FocusOps {
   private focused: Target | null = null;
   private vector: Target | null = null;
   private cameraMode: CameraMode = 'navigate';
-  private focusedPlanetSystem: PlanetSystem | null = null;
+  private planetSystemHost: number | null = null;
+  private planetSystem: LateState<PlanetSystem> = NO_PLANET_SYSTEM;
   private planetSystemToken = 0;
   private focusLerpState: FocusLerpState | null = null;
 
@@ -165,7 +157,7 @@ export class FocusController implements FocusOps {
 
   getFocusedStar(): number | null { return this.focusedStar; }
   getFocusedTarget(): Target | null { return this.focused; }
-  getFocusedPlanetSystem(): PlanetSystem | null { return this.focusedPlanetSystem; }
+  getFocusedPlanetSystem(): LateState<PlanetSystem> { return this.planetSystem; }
   isFocusLerpActive(): boolean { return this.focusLerpState !== null; }
 
   getCameraMode(): CameraMode { return this.cameraMode; }
@@ -241,10 +233,9 @@ export class FocusController implements FocusOps {
    *  rule matches the runtime constant exactly. */
   getPinEngageThresholdSq(): number { return PIN_ENGAGE_THRESHOLD_SQ_PC; }
 
-  /** Whether the focused-star pin (uPinFocusToCenter) would engage right
-   *  now, mirroring the per-frame guard in animate(). Read by the pin
-   *  section of the unified debug panel (`debug.panel()`) to display
-   *  live state.
+  /** The star the focused-star pin (uPinFocusToCenter) holds right now,
+   *  null when it is disengaged. Written to the uniform every rendered frame by
+   *  FrameLoop and shown by the pin section of `debug.panel()`.
    *
    *  The warp guard releases when `warp.isRecenteredToDest()` is true:
    *  after the mid-Fly recentre the destination is at
@@ -252,7 +243,7 @@ export class FocusController implements FocusOps {
    *  frame. focus-park lerp stays guarded — that path slerps through a
    *  non-lookAt arc where pin-to-centre would snap the focal star to
    *  NDC origin before the slerp finishes turning into it. */
-  isPinEngaged(): boolean {
+  pinnedStar(): number | null {
     const warp = this.deps.getWarp();
     const focal = this.focusedStar;
     if (
@@ -261,14 +252,15 @@ export class FocusController implements FocusOps {
       || (warp.isActive() && !warp.isRecenteredToDest())
       || this.deps.aim.isActive()
       || this.focusLerpState !== null
-    ) return false;
+    ) return null;
     // Engage iff the orbit target coincides with the focal star's LIVE
     // local position (catalog baseline + orbital perturbation, read from
     // the star buffer). Panning moves target off the star → disengage.
     // For a non-orbiting star the live position is its baseline (local
     // origin under focus), so this reduces to target ≈ origin.
-    const live = this.deps.frameAnchor.starLocalPositionInto(focal, this.tmpLive);
-    return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC;
+    const live = this.deps.frameAnchor.stars.localPositionInto(focal, this.tmpLive);
+    return this.deps.controls.target.distanceToSquared(live) < PIN_ENGAGE_THRESHOLD_SQ_PC
+      ? focal : null;
   }
 
   /** Re-solve the focused object's manual-zoom floor against the current
@@ -296,9 +288,6 @@ export class FocusController implements FocusOps {
 
   // ─── frame anchor + vector slot delegation ─────────────────────────
 
-  starLocalPosition(idx: number): THREE.Vector3 {
-    return this.deps.frameAnchor.starLocalPosition(idx);
-  }
   /** Star `idx`'s live local position in float64: its catalog baseline in
    *  the current floating-origin frame PLUS its orbital perturbation.
    *  Computed from the catalog + worldOffset (not the star buffer), so it
@@ -306,9 +295,8 @@ export class FocusController implements FocusOps {
    *  perturbed the buffer slot — and never double-counts the perturbation.
    *  The one place "where does the focal star actually sit" is answered. */
   starLivePositionInto(idx: number, out: THREE.Vector3): THREE.Vector3 {
-    const wo = this.deps.frameAnchor.getWorldOffset();
-    const p = this.deps.catalog.positions;
-    out.set(p[idx * 3] - wo.x, p[idx * 3 + 1] - wo.y, p[idx * 3 + 2] - wo.z);
+    const { origin, stars } = this.deps.frameAnchor;
+    stars.absolutePositionInto(idx, out).sub(origin.worldOffset);
     const pert = this.deps.focalPerturbation.state();
     // Pending answers the bare baseline: README.md#pin-to-center-upinfocustocenter.
     if (pert.status === 'ready' && pert.value(idx, this.tmpPert)) out.add(this.tmpPert);
@@ -337,9 +325,6 @@ export class FocusController implements FocusOps {
   getFocusedHardTarget(): HardTarget | null {
     const t = this.getFocusedTarget();
     return isHardTarget(t) ? t : null;
-  }
-  recenterOrigin(newOrigin: THREE.Vector3): THREE.Vector3 | null {
-    return this.deps.frameAnchor.recenterOrigin(newOrigin);
   }
 
   // ─── star/cloud focus FSM ──────────────────────────────────────────
@@ -448,10 +433,8 @@ export class FocusController implements FocusOps {
    *  minDistance, planet-system reload). No 'focus' / 'state' event
    *  emit — setFocus fires those when the camera has landed. */
   private recenterFocusToStar(newIdx: number): THREE.Vector3 | null {
-    const p = this.deps.catalog.positions;
-    const delta = this.deps.frameAnchor.recenterOrigin(this.tmpRecenter.set(
-      p[newIdx * 3], p[newIdx * 3 + 1], p[newIdx * 3 + 2],
-    ));
+    const { origin, stars } = this.deps.frameAnchor;
+    const delta = origin.recenterTo(stars.absolutePositionInto(newIdx, this.tmpRecenter));
     this.focused = { kind: 'star', idx: newIdx };
     this.deps.controls.minDistance = this.deps.getFocusables().star.orbitFloor(newIdx);
     this.refreshPlanetSystem(newIdx);
@@ -465,31 +448,40 @@ export class FocusController implements FocusOps {
   // introduces truly async fetches; for Sol the resolve happens on the
   // next microtask, ahead of the next animation frame.
   private refreshPlanetSystem(idx: number | null): void {
+    const { solIndex } = this.deps.catalog;
+    const host = idx !== null && hasPlanets(solIndex, idx) ? idx : null;
+    if (host === this.planetSystemHost) return;
+    this.planetSystemHost = host;
     const token = ++this.planetSystemToken;
-    if (idx === null || !hasPlanets(this.deps.catalog.solIndex, idx)) {
-      if (this.focusedPlanetSystem !== null) {
-        this.focusedPlanetSystem = null;
-        this.deps.bus.emit('planetSystem', null);
-      }
+    if (host === null) {
+      this.setPlanetSystem(NO_PLANET_SYSTEM);
       return;
     }
-    void getPlanetSystem(this.deps.catalog.solIndex, idx).then((ps) => {
-      if (token !== this.planetSystemToken) return;
-      if (this.focusedPlanetSystem === ps) return;
-      this.focusedPlanetSystem = ps;
-      this.deps.bus.emit('planetSystem', ps);
-    });
+    this.setPlanetSystem(PLANET_SYSTEM_PENDING);
+    const settle = (next: LateState<PlanetSystem>) => {
+      if (token === this.planetSystemToken) this.setPlanetSystem(next);
+    };
+    void getPlanetSystem(solIndex, host).then(
+      (ps) => settle(ps === null ? NO_PLANET_SYSTEM : { status: 'ready', value: ps }),
+      () => settle(NO_PLANET_SYSTEM),
+    );
+  }
+
+  private setPlanetSystem(next: LateState<PlanetSystem>): void {
+    const was = attachedSystem(this.planetSystem);
+    this.planetSystem = next;
+    const now = attachedSystem(next);
+    if (now !== was) this.deps.bus.emit('planetSystem', now);
   }
 
   // ─── focus-park lerp (private state, public cancel) ────────────────
 
-  /** Public for WarpController's FocusOps seam: cancel at startWarp
-   *  time so the in-flight lerp doesn't fight the warp claim. */
+  /** Public for the shell's camera claim (`../camera-claim.ts`). */
   cancelFocusLerp(): void {
     this.endFocusLerp();
   }
 
-  /** Public for WarpController's FocusOps seam. */
+  /** Public for the shell's camera claim (`../camera-claim.ts`). */
   cancelUnfocusLerp(): void {
     this.deps.getObserve().cancelUnfocusLerp();
   }
@@ -503,7 +495,7 @@ export class FocusController implements FocusOps {
     shiftArrivalWaypoints(this.focusLerpState, -delta.x, -delta.y, -delta.z);
   }
 
-  /** Per-frame tick. Stellata's animate() dispatches here when
+  /** Per-frame tick. CameraStep dispatches here when
    *  `isFocusLerpActive()` is true. controls.enabled is left true
    *  throughout; the dispatcher routes here instead of controls.update(),
    *  so user drag accumulates in TC without visible effect until the
@@ -689,7 +681,7 @@ export class FocusController implements FocusOps {
     if (this.cameraMode === 'observe') {
       this.exitObserveForFocusChange();
     }
-    this.deps.frameAnchor.recenterOrigin(this.tmpRecenter);
+    this.deps.frameAnchor.origin.recenterTo(this.tmpRecenter);
     this.focused = target;
     this.deps.controls.minDistance = provider.orbitFloor(target.idx);
     this.refreshPlanetSystem(provider.planetSystemHost(target.idx));
@@ -827,8 +819,8 @@ export class FocusController implements FocusOps {
         // fight the lerp's outward motion. After the lerp lands, the
         // controller's finish branch tightens minDistance to minDist.
         this.setFocus(null);
-        // Don't toggle controls.enabled during the lerp. The animate()
-        // dispatcher routes to observe.tick(), which lerps
+        // Don't toggle controls.enabled during the lerp. The CameraStep
+        // dispatch routes to observe.tick(), which lerps
         // camera.position directly and skips controls.update().
         // Disabling explicitly would race the click-to-unfocus event
         // chain (see ObserveTransition.startUnfocusLerp docblock).
@@ -899,6 +891,8 @@ export class FocusController implements FocusOps {
     this.focusLerpState = null;
     this.focused = null;
     this.vector = null;
-    this.focusedPlanetSystem = null;
+    this.planetSystemHost = null;
+    this.planetSystem = NO_PLANET_SYSTEM;
+    this.planetSystemToken++;
   }
 }

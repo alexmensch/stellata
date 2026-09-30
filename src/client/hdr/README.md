@@ -133,12 +133,12 @@ hdr.resolve()              → SummationPass box-averages attachment 2 when
 reduction.measure()        → own targets, then back to the canvas
 ```
 
-The downsample runs inside `resolve()` rather than from `animate()`: it reads
+The downsample runs inside `resolve()` rather than from the frame loop: it reads
 a target only this class knows the layout of, and pairing it with the resolve
 is what stops the two disagreeing about the factor
 (`summation/README.md`).
 
-`bind()` and `resolve()` are called from `stellata.ts` `animate()` and
+`bind()` and `resolve()` are called from the frame loop (`../scene/frame-loop/`) and
 must pair. The local depth pass never touches the render target itself,
 which is exactly why its repaint lands in the same target for free —
 `clearDepth()` in that pass clears the target's depth attachment, not

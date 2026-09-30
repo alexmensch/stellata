@@ -65,6 +65,12 @@ code-comment-rules.test.ts
                          are meant to shrink.
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
+doc-figures.test.ts      Every doc-figure marker in a tracked or untracked
+                         .md or .html resolves to a snapshot number and
+                         quotes it (/scripts/doc-figures/README.md#the-marker),
+                         and the catalogue's size appears nowhere unmarked
+                         outside the shrink-only exemption list
+                         (/scripts/doc-figures/README.md#the-catalogues-size).
 doc-pointer-resolution.test.ts
                          Every `<path>.md#<slug>` pointer in a
                          git-listed file of a kind `SCANNED_KINDS`
@@ -77,10 +83,9 @@ folder-readme-coverage.test.ts
                          docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
 integration-shell-ratchet.test.ts
                          stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands).
-                         Every `Stellata` field is in
-                         COMPOSITION (stays) or AWAITING_EXTRACTION
-                         (shrinks to empty); a field in neither fails, and
-                         so does a listed name the class no longer has.
+                         Every `Stellata` field is on COMPOSITION; a
+                         field off it fails, and so does a listed name
+                         the class no longer has.
                          Parses the class with the TypeScript compiler;
                          arrow-function properties count as methods.
                          Growing COMPOSITION is a review decision, never a
@@ -93,7 +98,7 @@ integration-shell-ratchet.test.ts
                          unless the namespace is built first.
 late-read-contract.test.ts
                          The wave-2 read contract (/src/client/README.md#boot-in-two-waves),
-                         two halves. A `for` loop bounded by `X.count`
+                         four scans. A `for` loop bounded by `X.count`
                          where X's type is assignable to `Catalog` but not
                          to `CompleteCatalog` fails; this half uses the
                          type checker over src/client (~3 s), since a
@@ -103,7 +108,17 @@ late-read-contract.test.ts
                          class it exposes as a readonly namespace field
                          (keyed `namespace.method`), is classified in
                          NULLABLE_SHELL_RETURNS; a late slot there
-                         converts to Late<T> and leaves the list.
+                         converts to Late<T> and leaves the list. Every
+                         src/client class field written `X | null` and
+                         assigned outside its constructor is classified
+                         in late-read-contract-fields.ts, the open defects
+                         citing their beads. And `Catalog.loadedCount` is
+                         read only in loaders/catalog-* and the per-chunk
+                         walkers LOADED_COUNT_READERS lists, pinned by
+                         read count per file. Each scan has a probe case.
+late-read-contract-fields.ts
+                         Not a test — NULLABLE_FIELDS, the field half's
+                         classified list.
 node-import-boundary.test.ts
                          src/client/ ships to a browser, so no module
                          there may import a `node:` builtin or a
@@ -113,6 +128,15 @@ node-import-boundary.test.ts
                          crosses, since it erases before the bundler
                          runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
+page-teardown-contract.test.ts
+                         Source scans behind util/page-teardown.ts's
+                         contract (/src/client/util/README.md): no `window`
+                         assignment under src/client outside `expose`,
+                         and no `window` / `document` listener that
+                         neither passes a `signal` nor is removed in its
+                         own file (parsed with the TypeScript compiler, so
+                         an inline arrow handler's options are still
+                         read). Flag and pass cases for both.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
                          allowed under a fresh marker (including the
@@ -122,6 +146,14 @@ perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          armed or not, and the fail-closed paths — no git
                          checkout, unreadable marker age. The protocol and
                          the escape routes are asserted in the deny reason.
+paper-store-link.test.ts Behavioural pins for scripts/hooks/paper-store-link.sh
+                         over a throwaway repo with real linked worktrees;
+                         /scripts/hooks/README.md#how-paper-store-link-works.
+pr-body-guard.test.ts    Behavioural pins for scripts/hooks/pr-body-guard.sh
+                         over a throwaway repo with a stubbed `gh`, plus the
+                         check that each body-guard workflow calls the
+                         script the hook runs;
+                         /scripts/hooks/README.md#how-pr-body-guard-works.
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
 readme-size.test.ts      450-line cap per folder README — length is a tax
                          on every future session, so the answer over the
@@ -140,8 +172,8 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          rewrite means editing the guard itself with
                          explicit user sign-off. Self-skips where
                          ledger.tsv is an LFS pointer stub (the bare CI
-                         test job); runs for real in the sid-ledger-guard
-                         job and locally.
+                         test job); runs for real in build-catalog's
+                         full vitest and locally.
 site-claims.test.ts      No figure on a public page is a literal: each
                          readout cell must still carry its %VITE_*%
                          substitution rather than a number. Then the
@@ -183,21 +215,6 @@ site-dev-routing.test.ts The dev server's routing table held against the
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.
-star-count-consistency.test.ts
-                         The catalogue's own size, stated once. Rounds the
-                         BUILT header to `PROSE_ROUNDED` (artifact-backed,
-                         so it self-skips unbuilt), scans the corpus for
-                         the superseded figure `MYTHOS` names — digit
-                         separators included, which is how an
-                         underscore-separated literal in a dust-cost
-                         script outlived two count changes — and holds
-                         every size figure on the five user-facing prose
-                         surfaces to that one rounding, `public/llms.txt`
-                         among them since `public/` is gitignored and no
-                         directory root reaches it. The AT-HYG spine's own
-                         row count is a different quantity and stays.
-                         **This entry may not quote either figure: the
-                         scan reads it.**
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
@@ -243,13 +260,19 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
                          resolution and the scanned corpus, shared by
                          doc-pointer-resolution.test.ts and
                          citation-index.test.ts.
+citation-index-pure.ts   Not a test — parsing of data/papers/index.md
+                         entries and manifest.json pins, for
+                         citation-index.test.ts.
+git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
+                         repo's git runner and one-file commit, for suites
+                         that drive a script over real history.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
                          symlinked directories, which public/ carries.
-                         `gitFiles` is git's list (tracked, optionally
-                         untracked-but-not-ignored), for a scan whose
-                         scope is the repo rather than a folder list.
+                         A scan whose scope is the repo rather than a
+                         folder list takes git's list instead,
+                         /scripts/util/README.md#git-files.
                          Also `isProductionTs`, the include predicate the
                          TSL scanners share: a .ts that is neither a test
                          nor an ambient declaration.
@@ -388,7 +411,7 @@ Work every line, then record the findings in the PR body:
 `vitest.config.ts` pins `testTimeout` / `hookTimeout` to **30 s**, not
 vitest's 5 s default. The artifact-backed corpus suites
 (`multi-star-regression`, `known-stars`, `sky-position`) each sweep the
-full 390k-record catalog and its derived buffers, so their tests are
+full <!-- count:build-catalog/recordCount k2 -->980k<!-- /count -->-record catalog and its derived buffers, so their tests are
 seconds long even solo — and their wall time scales with machine load:
 under a full-suite run the slowest sit at 2.5–3.5 s locally, and CI's
 corpus job runs three of those files concurrently on a 2-core runner.

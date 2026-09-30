@@ -29,9 +29,10 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   `gaia_source_id` column, both binding gates' candidates (overlay and
   derivation), and the bound-pair siblings. Input prep, off `build:catalog`.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
-  parsers, space-motion velocity, and Stellarium stick figures. Its
-  `gcvs/` subfolder owns the variable-star parsing and the variability
-  cross-match.
+  parsers and space-motion velocity. Its `gcvs/` subfolder owns the
+  variable-star parsing and the variability cross-match; `constellations/`
+  owns the IAU-88 table, byte 34's positional membership and the
+  Stellarium stick figures.
 - `spectral/` — Morgan-Keenan parsing of SIMBAD `sp_type`, the seven-tier
   spectral resolver, and the Stefan-Boltzmann radius chain. Imports the
   namespace ladder from `catalog-pure.ts`; nothing there imports back.
@@ -82,6 +83,12 @@ scripts/catalog/
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
                                   writes the chunked binary + manifests.
+  catalog-inputs.ts (+ test)      catalogInputPaths — every file the build
+                                  reads, which its content-hash stamp keys:
+                                  the import closure plus sibling snapshots
+                                  (../util/import-closure-pure.ts, the rule
+                                  CI's cache key shares) and each loader's
+                                  exported data paths.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced
@@ -112,8 +119,10 @@ scripts/catalog/
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json. Generic over
-                                  the count record — classic-ids/ pins its
-                                  own snapshot through the same helper.
+                                  the count record: compareCountSnapshot is
+                                  the compare every count snapshot passes
+                                  (consumer list: the snapshot-assert.ts
+                                  entry of ../util/README.md).
 ```
 
 ## SID allocation
@@ -142,8 +151,8 @@ decoding it.
 `scripts/catalog/build-catalog.ts` loads `data/gaia/gaia_dr3_apsis.tsv`
 via `parseGaiaApsisTsv` into a `Map<source_id, ApsisRow>` and writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
-52–79; see [Binary catalog format](record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.4% of records
-match an Apsis row (966,953 of 983,068); 88.0% of the catalogue has a
+52–79; see [Binary catalog format](record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.7% of records
+match an Apsis row (<!-- count:build-catalog/apsisMatched -->967,308<!-- /count --> of <!-- count:build-catalog/recordCount -->979,659<!-- /count -->); 88.3% of the catalogue has a
 non-null Teff in either gspphot or gspspec. The remaining ~12%
 (typically faint Tycho-only stars without high-S/N BP/RP photometry,
 plus hot O/B stars where gspphot doesn't converge) are written as

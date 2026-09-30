@@ -45,7 +45,7 @@ work for a value, method or claim by author and year names it by its label
 and carries `/data/papers/index.md#<key>` in one of the forms the README
 gives. A work with no entry: the diff adds it, with its copy pinned in
 `manifest.json`, or the finding is P1. Exempt: public copy
-(`src/client/index.html`, `public/`, `CITATION.cff`, strings rendered to
+(`src/client/app/index.html`, `public/`, `CITATION.cff`, strings rendered to
 users) and vendored upstream files.
 
 **2. A cited value that departs from its paper without saying so.** When the

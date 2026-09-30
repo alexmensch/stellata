@@ -36,7 +36,7 @@ import { REPO_ROOT } from '../../util/paths';
 import { emptyTallyPartition } from '../../util/tally';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
-import type { ConstellationAssignment } from '../parse/constellations';
+import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';

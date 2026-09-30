@@ -33,11 +33,13 @@ import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
+import { bindPageTeardown } from './util/page-teardown';
+import { fanOut } from './util/fan-out';
 import { resolveBootRoute } from './webgpu/boot-route';
 import type { WebGpuSeam } from './webgpu/seam';
 import { showWebGpuGate } from './webgpu/gate/gate-page';
 import { detectWebGpuSupport } from './webgpu/gate/webgpu-support';
-import { SidResolver, arrayDomain } from './util/sid-resolver';
+import { SidResolver } from './util/sid-resolver';
 import { applyFirstLoadView } from './solar-system/first-load';
 import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
@@ -78,6 +80,8 @@ async function main() {
     return;
   }
 
+  const teardown = bindPageTeardown<DevConsoleGlobals>(window, () => location.reload());
+
   try {
     const kinds = buildKindModules();
     // Started here and awaited past the fetch: the async chunk and the
@@ -88,6 +92,10 @@ async function main() {
     // surface as an unhandled rejection instead of a refused renderer.
     const webgpuBoot: Promise<WebGpuSeam | null> = import('./webgpu/boot-webgpu')
       .then(({ bootWebGpu }) => bootWebGpu(canvas))
+      .then((seam) => {
+        if (seam) teardown.hold(() => seam.renderer.dispose());
+        return seam;
+      })
       .catch((err) => {
         console.warn('WebGPU boot rejected:', err);
         return null;
@@ -118,14 +126,9 @@ async function main() {
       return;
     }
 
-    const stellata = new Stellata({ canvas, catalog, kinds, webgpu });
-    // Dev-console access: `stellata.extinction.setStrength(X)` etc. Handy for
-    // dust debugging and not worth gating behind an env check on a solo
-    // project.
-    window.stellata = stellata;
-    // IAU constellation boundaries — a chart-only declutter element at floor
-    // 'all'; absent artifact = no arcs.
-    if (boundaries) stellata.attachConstellationBoundaries(boundaries);
+    const stellata = new Stellata({ canvas, catalog, kinds, webgpu, boundaries });
+    teardown.hold(() => stellata.dispose());
+    teardown.expose('stellata', stellata);
 
     // Focus-card "Orbiting <host>" breadcrumbs read the same star labels
     // the search corpus shows.
@@ -137,16 +140,6 @@ async function main() {
     // all read it, so settle it first.
     await stellata.kinds.planet.systemsReady;
 
-    // util/url-state/README.md#legacy-hip-refs.
-    const hipToIndex = new Map<number, number>();
-    let hipIndexed = 0;
-    const indexHips = () => {
-      for (; hipIndexed < catalog.loadedCount; hipIndexed++) {
-        const h = catalog.hip[hipIndexed];
-        if (h > 0 && !hipToIndex.has(h)) hipToIndex.set(h, hipIndexed);
-      }
-    };
-    indexHips();
     // Global SID resolver (/docs/sid.md#8-runtime-resolver-b4). `sun` is not in the planet
     // domain — Sol's catalog record carries the same sid, so the star
     // domain claims it (see util/sid-resolver/README.md).
@@ -154,40 +147,16 @@ async function main() {
       ['star', 'planet', 'cloud', 'lg', 'shell', 'probe'],
       catalog.sidSuccessors,
     );
-    // Kind-module domains: sids() is localIndex-ordered with
-    // localIndex = Target idx — except the planet domain, keyed
-    // body-within-host and translated at the URL boundary (idMaps
-    // below). Static lists (planet, shell) attach even when a layer's
-    // artifact is absent — focus/pin then fall through to null via the
-    // empty registry slot.
-    //
-    // The STAR domain attaches now but declares itself STILL FILLING, so a
-    // hit resolves immediately and only a miss stays pending
-    // (util/sid-resolver/README.md#a-domain-that-is-still-filling). That
-    // ordering matters beyond latency: with a focus the encoder elides
-    // `worldOffset`, so the URL's cam/tgt are in the focal star's local
-    // frame — resolving the focus after they are applied puts the camera in
-    // the wrong frame and then recentres out from under it.
+    // The planet domain is keyed body-within-host and translated at the URL
+    // boundary (idMaps below). The star domain attaches still filling
+    // (util/sid-resolver/README.md#a-domain-that-is-still-filling).
     for (const kind of KIND_ROSTER) {
-      const m = kinds[kind];
-      if (!m) continue;
-      const sids = m.sids();
-      if (!sids) { sidResolver.conclude(kind); continue; }
-      sidResolver.attach(kind, kind === 'star'
-        ? arrayDomain(sids, () => catalog.loadedCount)
-        : arrayDomain(sids));
+      const domain = kinds[kind]?.sidDomain();
+      if (domain) sidResolver.attach(kind, domain);
+      else sidResolver.conclude(kind);
     }
-    // Each landing chunk can claim a queued intent, and a still-filling
-    // domain has no attach event of its own to flush on.
-    const offChunk = catalog.onRecordsDecoded(() => {
-      indexHips();
-      sidResolver.refresh();
-    });
 
     const idMaps: IdMaps = {
-      hipToIndex,
-      indexToHip: catalog.hip,
-      starCount: catalog.count,
       solIndex: catalog.solIndex,
       sidResolver,
       // The planet SID domain is keyed planet-within-host with the host
@@ -203,6 +172,8 @@ async function main() {
     };
 
     const debugTools = setupDebug(stellata, idMaps);
+    teardown.hold(() => fanOut('pagehide', [debugTools.dispose, () => stellata.dispose()], (step) => step()));
+    teardown.expose('debug', debugTools);
 
     // Interstellar dust loads in the background — never blocks first paint.
     // Extinction fades in as each voxel chunk lands on the GPU. If the
@@ -247,7 +218,7 @@ async function main() {
     createScaleBar(stellata);
     const attitude = createAttitudeIndicator(stellata);
     if (attitude !== null) stellata.setOrbitFrameTick(attitude.tickOrbitFrame);
-    bindWarpButton(stellata);
+    bindWarpButton(stellata, teardown.signal);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
     // POI labels, etc.) while the focus-park lerp is in flight — same
@@ -259,8 +230,7 @@ async function main() {
 
     // Apply any URL state before starting the URL writer so we don't echo
     // the same params back into history on load. With no `?v=`, fall back
-    // to the canonical first-load view (Sol focus, parked at 5 AU aimed at
-    // the galactic centre, HUD on, no constellation highlight).
+    // to the canonical first-load view (`solar-system/first-load.ts`).
     // Planet-focus refs need the body field's attach table, settled by
     // the kinds.planet.systemsReady await above.
     const { applied, focusPending } = applyFromUrl(stellata, idMaps);
@@ -311,11 +281,24 @@ async function main() {
       },
     });
 
+    // Relation caches bake each system's anchor from its primary's
+    // position, and `relationIndicesInBounds` tests against the full
+    // allocation — so a pair in a late chunk would cache (0,0,0) as its
+    // anchor and project the whole orbit in the wrong frame, silently. Chained
+    // here rather than inline in wave 2, because the cover can be waiting on
+    // it: util/url-state/orbit-pose/README.md#the-tick-seats-it.
+    const binariesAttached = (async () => {
+      await kinds.star.ready;
+      await catalog.whenComplete;
+      await frame();
+      stellata.binaries.attach(binaries);
+    })();
+
     // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
     // chrome comes up now and the loading panel stays on top of a rendering
     // sky rather than in front of a blank one.
     // util/url-state/README.md#a-focus-that-resolves-after-the-pose.
-    if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
+    if (focusPending) await Promise.race([focusPending, binariesAttached]);
     awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
     // Out of the root stacking context and into the instrument stack —
@@ -344,29 +327,18 @@ async function main() {
       aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
       toggleOrbitLock: () => attitude?.toggleOrbitLock(),
       toggleDebugPanel: debugTools.panel,
+      signal: teardown.signal,
       timeScrubber,
     });
 
     // WAVE 2. Everything that needs the COMPLETE record set, or the search
     // index that rides beside it. Each entry here is a correctness
     // requirement, not a tidiness one — see the comment at each call.
-    await kinds.star.ready;
+    // One await for both, or a rejected catalogue leaves the chain's own
+    // rejection unobserved.
+    await Promise.all([kinds.star.ready, binariesAttached]);
     const completeCatalog = await catalog.whenComplete;
     const searchIndex = kinds.star.searchIndex;
-    await frame();
-
-    // The column is full, so the domain now answers `unknown` for a sid
-    // nothing carries instead of holding its intent open forever.
-    offChunk();
-    indexHips();
-    sidResolver.refresh();
-    await frame();
-
-    // Relation caches bake each system's anchor from its primary's
-    // position, and `relationIndicesInBounds` tests against the full
-    // allocation — so a pair in a late chunk would cache (0,0,0) as its
-    // anchor and project the whole orbit in the wrong frame, silently.
-    stellata.binaries.attach(binaries);
     await frame();
 
     // Chart mode bound against this map in wave 1 and holds it by

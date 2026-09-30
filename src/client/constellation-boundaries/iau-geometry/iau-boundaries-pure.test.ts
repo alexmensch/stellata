@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CON_INDEX, readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations';
+import { CON_INDEX, readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
 import { raDecFromUnitVector } from '../../util/equatorial-basis';
 import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../../util/precession';
 import {

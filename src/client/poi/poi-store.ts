@@ -1,7 +1,7 @@
 // Store for user-pinned points of interest — the single source of truth
 // for the pinned-object list. See README.md for the pin semantics.
 
-import { targetsEqual, type Target, type TargetKind } from '../camera/focus/focus-target';
+import { targetListsEqual, targetsEqual, type Target, type TargetKind } from '../camera/focus/focus-target';
 
 // POI cap. Bounds both the in-app pin list and the `?v=` blob's POI
 // payload — one constant so the two can't drift apart.
@@ -76,10 +76,7 @@ export class PoiStore {
       if (next.some((p) => targetsEqual(p, t))) continue;
       next.push({ kind: t.kind, idx: t.idx });
     }
-    if (
-      next.length === this.pois.length &&
-      next.every((v, i) => targetsEqual(v, this.pois[i]))
-    ) return;
+    if (targetListsEqual(next, this.pois)) return;
     this.pois = next;
     this.deps.onChange(this.pois);
   }

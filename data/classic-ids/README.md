@@ -75,12 +75,12 @@ all four; cite the paper per table.
   letter, 2,757 a Flamsteed number — 119 Flamsteed numbers the spine
   carries are not among them (`data/membership/README.md`). Two of those
   rows leave the table as curated corrections (the file list above), so
-  consumers see 2,183 Bayer and 2,755 Flamsteed cells.
+  consumers see <!-- count:wgsn/iv27aBayerCells -->2,183<!-- /count --> Bayer and 2,755 Flamsteed cells.
   `bayer` is IV/27A's own lowercase three-letter form
   (`alf`, `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
   [§ 4](/docs/star-naming.md#4-canonical-designation-forms) stores the Unicode glyph, sourced from the
   IAU WGSN naked-eye catalogue, and demotes this table to the V > 6.5
-  tail; both ASCII conventions are normaliser inputs there. 111 of
+  tail; both ASCII conventions are normaliser inputs there. <!-- count:wgsn/iv27aVariableRejected -->134<!-- /count --> of
   these cells are GCVS-style variable designations (`R And`, `RZ Cas`,
   `V380 Cyg`), not Bayer letters, and the ladder rejects them from the
   Bayer tier. `cst` is the
@@ -88,7 +88,7 @@ all four; cite the paper per table.
   IAU-positional constellation the catalogue assigns per record
   ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - **`bsc5.tsv`** ← VizieR `V/50/catalog`. [Hoffleit 1991](/data/papers/index.md#hoffleit1991),
-  Bright Star Catalogue 5th revised ed. Supplies HR ↔ HD (9,096 of 9,110 rows
+  Bright Star Catalogue 5th revised ed. Supplies HR ↔ HD (9,096 of <!-- count:classic-id-overlay/bsc5Rows -->9,110<!-- /count --> rows
   carry an HD; the 14 HD-less entries are non-stellar — by the table's own
   names novae/SNe, four clusters and M 31, though the ReadMe (l. 35–37)
   calls all 14 "novae or extragalactic objects" — so none needs a route and no record carries one,
@@ -101,7 +101,7 @@ all four; cite the paper per table.
   GJ ↔ Gaia EDR3 source_id ↔ HIP directly plus component letters, which
   is why it beats hand-rolling [Gliese 1991](/data/papers/index.md#gliese1991) from V/70A (CNS3, which [`data/gliese/`](../gliese/README.md) ingests for its
   photometry, not as a cross index).
-  The corrected table holds 5,909 rows (the paper counts 5,931 objects);
+  The corrected table holds <!-- count:classic-id-overlay/cns5Rows -->5,909<!-- /count --> rows (the paper counts 5,931 objects);
   5,237 carry an EDR3 source_id; 1,581 a HIP. **CNS5 is
   volume-limited to 25 pc** — see [Coverage](#coverage--the-overlay-is-a-union-term-not-the-label-authority).
 
@@ -147,8 +147,8 @@ gaia_source_id  hd  hr  hip  gj  bayer  flamsteed
 
 - Cells are `|`-separated lists. Nothing is single-valued by
   construction: a designation naming a catalogue granularity rather than
-  one object attaches to every matching record (7 HDs land on >1 source),
-  and a record can carry several (137 sources carry >1 HD).
+  one object attaches to every matching record (<!-- count:classic-id-overlay/hdOnMultipleSources -->7<!-- /count --> HDs land on >1 source),
+  and a record can carry several (<!-- count:classic-id-overlay/sourcesWithMultipleHd -->136<!-- /count --> sources carry >1 HD).
 - `gj` is a bare CNS5 number with its component letter appended
   (`551C`). The `Gl` vs `GJ` prefix AT-HYG prints is a display choice and
   is deliberately not baked in here.
@@ -157,12 +157,12 @@ gaia_source_id  hd  hr  hip  gj  bayer  flamsteed
 - Rows are sorted by numeric source_id (ids exceed 2^53, so the sort is
   BigInt, matching the astrometry request files).
 
-`hd_hip_route_disagreements.tsv` enumerates the 21 IV/27A rows whose
+`hd_hip_route_disagreements.tsv` enumerates the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> IV/27A rows whose
 HD→TYC→source_id and HIP→source_id routes land on different sources
 (every pair differs only in its low digits — resolved close pairs where
 the two walks pick different components). The HD route is the authority;
 these are a review queue for the parity ledger, not a mechanical
-resolution. All 21 are disposed `no-identity-event` in
+resolution. All <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> are disposed `no-identity-event` in
 `hd_hip_route_disagreements_review.tsv`: in every row one spine record
 holds both designations, so the disagreement is over which component's
 source the walks bound, never over which record the star is
@@ -180,13 +180,16 @@ is not the star. `applyBindingGate`
 `scripts/catalog/parse/stars-parse.ts`, so the two cannot drift on what
 counts as a bad binding:
 
-- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — 410 rows. The
+- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — <!-- count:classic-id-overlay/gateRejectedMag -->410<!-- /count --> rows. The
   canonical case is the G = 20.95 background source beside α Cen B, which
   carried HD 128621 · HR 5460 · HIP 71681 · `alf Cen`.
-- **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — 50 rows. Catches
+- **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — <!-- count:classic-id-overlay/gateRejectedSibling -->50<!-- /count --> rows. Catches
   the similar-brightness sibling that slips the magnitude gate: HD 70492 B's
   source carried HD 70492 · HIP 41098. It keys on a HIP, so it reaches only
-  HIP-bearing rows however far the magnitude arm's evidence widens.
+  HIP-bearing rows however far the magnitude arm's evidence widens. The
+  membership derivation can rescue a row this gate would leave unbound; the
+  overlay, which weighs each source alone, cannot
+  ([A component designation rescues a row the sibling gate leaves unbound](/scripts/catalog/membership/binding/README.md#both-gates-weigh-every-candidate)).
 
 The two counts trade rows as G coverage changes — `reason` is the first gate
 that fired — so their sum, **460**, is the queue's size
@@ -203,15 +206,15 @@ without needing one). `v_via` says which printed tier the rejection rests on —
 218 hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
-routinely land on the *same* wrong source, so α Cen B counted among the 2,637
-route agreements, not the 21 disagreements.
+routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/hdHipRouteAgree -->2,635<!-- /count -->
+route agreements, not the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> disagreements.
 
 **The gate reads the V cascade's three printed tiers**, keyed on designations
 the overlay row itself carries — deliberately not on AT-HYG, which the overlay
-has to outlive. `gateableVia` partitions what it reaches: **hip 99,799**
-(`data/hipparcos/hip_main_vmag.tsv`), **tycho2 254,135** (`VT − 0.090(BT − VT)`
-on a TYC that IV/25 routes to that very source), **gliese 1,053**. Only
-`gateSkippedNoPrintedV` — **2,738** rows — is skipped unweighed.
+has to outlive. `gateableVia` partitions what it reaches: **hip <!-- count:classic-id-overlay/gateableVia.hip -->99,799<!-- /count -->**
+(`data/hipparcos/hip_main_vmag.tsv`), **tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count -->** (`VT − 0.090(BT − VT)`
+on a TYC that IV/25 routes to that very source), **gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->**. Only
+`gateSkippedNoPrintedV` — **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows — is skipped unweighed.
 
 **The two lower tiers are the whole difference between the gates.** Reading
 Hipparcos alone left 257,926 rows unvettable and the label side accepting
@@ -266,23 +269,23 @@ disagreement). `bayer` is no longer scored: the two catalogues' spellings
 (`alf` vs `Alp`) are the naming ladder's gate, so the merge never touches that
 cell.
 
-**14,975 spine rows get no overlay entry at all** — 577 bind no source, and the
+**<!-- count:membership-manifest/labelNoOverlayEntry -->14,981<!-- /count --> spine rows get no overlay entry at all** — <!-- count:membership-manifest/spineRowsWithoutSourceId -->574<!-- /count --> bind no source, and the
 rest bind one that neither best-neighbour walk carries. That population is
 concentrated at the bright end exactly as [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s bright
-tier predicts: **114 of the 178 rows at V ≤ 3 have no overlay row**, Vega,
+tier predicts: **<!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> rows at V ≤ 3 have no overlay row**, Vega,
 Sirius, Procyon and Betelgeuse among them.
 Gaia saturates near G ≈ 3, so the most famous stars in the catalogue are absent
 from a source_id-keyed table by construction, not by a join defect.
 
 Three structural bounds behind the shortfalls:
 
-1. **16,632 of IV/25's 353,330 Tycho ids are absent from
+1. **<!-- count:classic-id-overlay/tycUnresolved -->16,632<!-- /count --> of IV/25's <!-- count:classic-id-overlay/tyc2HdDistinctTyc -->353,330<!-- /count --> Tycho ids are absent from
    `gaiadr3.tycho2tdsc_merge_best_neighbour`.** Any HD whose only route
    is one of those TYCs cannot be keyed. AT-HYG assigned a source_id to
    many of them through merge history we cannot replay — the same
    ~12.6k-row finding the design gate measured on the membership side,
    now visible on the label side.
-2. **The HIP cross-walk holds 99,525 entries against AT-HYG's 117,961
+2. **The HIP cross-walk holds <!-- count:classic-id-overlay/hipXmatchEntries -->99,525<!-- /count --> entries against AT-HYG's 117,961
    HIP-bearing rows.** HIP is a designation, so a HIP the walk omits is a
    label the overlay cannot attach.
 3. **CNS5's 25 pc volume limit** caps the Gliese label: **91% of the ~1.1k
@@ -297,7 +300,7 @@ Three structural bounds behind the shortfalls:
    `labelAgree.gl` / `labelSpineOnly.gl` pair is the only gated number.
 
 `gl`'s flips run high for its size because the comparison scores the COMPONENT
-the two sides name, not the bare number: 13 of the 79 are a swapped component
+the two sides name, not the bare number: 13 of the <!-- count:membership-manifest/labelFlipped.gl -->79<!-- /count --> are a swapped component
 letter CNS5 states on its own Gaia-keyed row
 ([The gl comparison is specificity-aware](/scripts/catalog/classic-ids/label-merge/README.md#the-gl-comparison-is-specificity-aware)).
 

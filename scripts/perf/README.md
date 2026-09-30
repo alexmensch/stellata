@@ -57,7 +57,19 @@ scripts/perf/
                             width/alignment pass.
   perf-section-check.sh     perf-section-guard's check: a render-path diff,
     (+ test)                or a catalogue-membership move over 1 %, needs a
-                            `## Perf` section, every ✗ accepted.
+                            `## Perf` section, every ✗ accepted, and a
+                            table row under a Tier 1 or 2 claim.
+  perf-section-guard.sh     Gathers that check's inputs from git — the files
+    (+ test)                a head ref (default HEAD) changed since its
+                            merge base with a base ref, and the catalogue
+                            record count at that merge base and at the
+                            head — and runs it. A count main moved after
+                            the fork is not the PR's. Called by
+                            perf-section-guard.yml and, before the body
+                            reaches GitHub, scripts/hooks/pr-body-guard.sh.
+                            Its git-driven cases sit in their own file so a
+                            flake under load names which suite it hit
+                            (the check's own file has one open).
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
   diff/                     Two runs differenced: the band and its floor, the

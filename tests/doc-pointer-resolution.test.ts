@@ -15,7 +15,7 @@ import {
   resolveDocPath,
   strayedSectionSigns,
 } from './doc-pointer-pure';
-import { lfsTracked } from './walk-files';
+import { lfsTracked } from '../scripts/util/git-files';
 
 const ROOT = resolve(__dirname, '..');
 

@@ -758,7 +758,7 @@ export function wholeRecordSpan(
 /** Decode one field across a record window into a parallel array — the
  *  bulk counterpart of `readRecordField` for the SoA runtime loader.
  *  Column-at-a-time (one kind dispatch per column, then a tight
- *  constant-getter loop) decodes the 390k-record catalog measurably faster
+ *  constant-getter loop) decodes the full catalog measurably faster
  *  than a per-record pass over every field. */
 export function decodeRecordColumn(
   view: DataView,
@@ -1588,11 +1588,13 @@ function wdsComponentsDisjoint(a: string, b: string): boolean {
  *    from the system's per-component xids (Hipparcos blend entries live
  *    on SIMBAD system-level objects) → the AT-HYG row is the system
  *    record and must key on the primary lineage: scrubbed when the
- *    system's source-bearing primary letter is disjoint from X. */
+ *    system's source-bearing primary letter is disjoint from X, unless
+ *    `rowNamesSource` (/scripts/catalog/membership/binding/README.md#both-gates-weigh-every-candidate). */
 export function isSiblingLetterAttribution(
   sourceId: string,
   hip: number | null,
   xids: SimbadWdsXidIndex | null,
+  rowNamesSource = false,
 ): boolean {
   if (hip === null || xids === null) return false;
   const srcAttrs = xids.bySource.get(sourceId);
@@ -1613,6 +1615,7 @@ export function isSiblingLetterAttribution(
       if (anyRelated && !anyDisjoint) continue;
       if (anyDisjoint && !anyRelated) return true;
     }
+    if (rowNamesSource && hLetters.some((l) => !wdsComponentsDisjoint(l, x))) continue;
     const p = xids.primarySourceLetterByWds.get(wdsId);
     if (p !== undefined && wdsComponentsDisjoint(p, x)) return true;
   }

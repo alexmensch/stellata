@@ -85,8 +85,8 @@ src/client/solar-system/
                                   'planetSystem' change, and builds the
                                   orbit-ring, planet-mesh and cluster
                                   registry entries plus `planetRate`.
-  first-load.ts (+ test)          Canonical no-URL first-load view: 5 AU
-                                  galactic-centre-aimed park.
+  first-load.ts (+ test)          Canonical no-URL first-load view: Earth
+                                  from 8.8 million km, orbit-locked.
 ```
 
 ## Data model
@@ -301,20 +301,36 @@ write ([Camera writes, then camera reads](../scene/README.md#camera-writes-then-
 after both. All three, and the moving-focal ride (`FocalRides`), declare
 `planetRate` — the bodies are what each one draws a view of.
 
+The `'planetSystem'` event is the wiring's one input for the focused system:
+it builds the rings, and the rings entry's per-frame update reads the system
+back off `OrbitRingsLayer.planetSystem()` rather than asking focus a second
+time.
+
 ## First-load default and `minDistance` relaxation
 
 When the URL carries no view state, `first-load.ts` applies a
-canonical `FIRST_LOAD_VIEW`: camera parked at exactly **5 AU** from
-Sol aimed at the galactic centre, with the HUD ring on. Sol stays
-the default focus; no constellation highlight is set so the bulge
-shines through cleanly without an asterism layered over the brightest
-patch of sky. The view carries **no `up` override** — the reference
-axis stays at galactic north, so first paint is galactic-level. The view is applied via `applyDecodedView` from
-`url-state.ts` — the same pipeline used for `?v=` URL restores —
-which keeps the "first interaction is the first URL write" contract
-intact: `startUrlSync` seeds its frame-tracking baseline from the
-live camera state on registration, so the URL stays empty until the
-user actually moves the camera or changes a setting.
+canonical `FIRST_LOAD_VIEW`: **Earth focused from 8.82 million km**,
+127° of orbital longitude round from the Sun and 15.7° above the orbital
+plane, looking back past Earth towards the inner Milky Way (Lupus), with the
+HUD on, the full declutter level, and no constellation highlight.
+
+**ORB is armed with the orbit lock engaged, and the pose is written in ORB**
+([An orbit-relative pose](../util/url-state/orbit-pose/README.md#an-orbit-relative-pose)). That is what makes
+it the same view on every date: a pose fixed against the stars puts the Sun
+inside a 50° field from late October to mid-December and backlights Earth,
+where one held against Earth's orbit keeps the Sun 52° off the view axis and
+Earth 21% lit all year, and a clock scrub carries the camera round with it.
+The components were read off the chosen share link against Earth's orbit at
+2026-09-30T10:13Z; `first-load.test.ts` pins that converting them back at that
+instant lands on the link.
+
+The view is applied via `applyDecodedView` from `url-state.ts` — the same
+pipeline used for `?v=` URL restores — which keeps the "first interaction is
+the first URL write" contract intact: `startUrlSync` seeds its frame-tracking
+baseline from the live camera state on registration, and the lock's ride is
+no camera move on the wire, so the URL stays empty until the user actually
+moves the camera or changes a setting. The Settings panel starts collapsed on
+a first visit ([Per-group collapse](../ui/README.md#per-group-collapse-in-the-settings-panel)).
 
 The Stellata constructor calls `setFocus(catalog.solIndex)` to
 recentre the local frame on Sol but does not park the camera —
@@ -364,8 +380,9 @@ moon at its park distance.
   and already handles this; any new focus path must as well.
 - **Planet-system attach is async.** `getPlanetSystem` is a Promise
   even for Sol (which currently resolves synchronously). Don't assume the
-  system is attached the same frame `setFocus` fires; the renderer
-  handles `planetSystem === null` gracefully.
+  system is attached the same frame `setFocus` fires:
+  `getFocusedPlanetSystem()` is `pending` until it lands, and every
+  reader draws nothing until it is `ready`.
 - **Orbital plane rule for new hosts.** Any new planet-bearing host
   must declare its plane via the orientation quaternion. The default
   for non-Sol hosts is the galactic plane — don't accidentally

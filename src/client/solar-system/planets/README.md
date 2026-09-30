@@ -78,6 +78,8 @@ src/client/solar-system/planets/
                                   (only the round glare draws there).
                                   The label occluder reads it —
                                   ../../occlusion/README.md.
+  planet-field-uniforms-fixture.ts  Test-only: the uniform block a
+                                  PlanetBodyField is built over.
   mesh-crossfade.ts (+ test)      Disc ↔ mesh crossfade band math, pure
                                   (shared shader/CPU contract).
   depth-stamp/                    The main-pass depth pre-stamp: a

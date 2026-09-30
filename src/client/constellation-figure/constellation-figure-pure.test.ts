@@ -1,6 +1,8 @@
+import * as THREE from 'three';
 import { describe, it, expect } from 'vitest';
 import {
   collectFigureSegmentEndpoints,
+  figureAimDirection,
   selectFigures,
   type FigureConstellationLike,
   type FigureSelectionInput,
@@ -117,5 +119,60 @@ describe('selectFigures', () => {
       .not.toBe(sel({ inObserve: true }).signature);
     expect(sel({ observeAnchorStar: 7 }).signature)
       .not.toBe(sel({ observeAnchorStar: 8 }).signature);
+  });
+});
+
+describe('figureAimDirection', () => {
+  const at = (positions: Record<number, [number, number, number]>, from = new THREE.Vector3()) => ({
+    localPositionInto: (idx: number, out: THREE.Vector3) => out.set(...positions[idx]),
+    from,
+    excludeStarIdx: null,
+  });
+  const expectDir = (got: THREE.Vector3 | null, x: number, y: number, z: number) => {
+    const want = new THREE.Vector3(x, y, z).normalize();
+    expect(got).not.toBeNull();
+    expect(got!.x).toBeCloseTo(want.x, 12);
+    expect(got!.y).toBeCloseTo(want.y, 12);
+    expect(got!.z).toBeCloseTo(want.z, 12);
+  };
+
+  it('is null for a figure with no vertex', () => {
+    const inputs = at({});
+    expect(figureAimDirection(undefined, inputs)).toBeNull();
+    expect(figureAimDirection([], inputs)).toBeNull();
+    expect(figureAimDirection([[]], inputs)).toBeNull();
+  });
+
+  it('weights each member once, however far away it is', () => {
+    // A 3D mean of these positions points almost straight up y; the figure as
+    // drawn is centred halfway between the two directions.
+    expectDir(figureAimDirection([[0, 1]], at({ 0: [1, 0, 0], 1: [0, 100, 0] })), 1, 1, 0);
+  });
+
+  it('counts a vertex shared by two polylines once', () => {
+    const positions: Record<number, [number, number, number]> = { 0: [1, 0, 0], 1: [0, 1, 0], 2: [0, 0, 1] };
+    expectDir(figureAimDirection([[0, 1], [1, 2]], at(positions)), 1, 1, 1);
+  });
+
+  it('judges direction from the vantage', () => {
+    const positions: Record<number, [number, number, number]> = { 0: [10, 0, 0], 1: [-10, 0, 0] };
+    expectDir(figureAimDirection([[0, 1]], at(positions, new THREE.Vector3(0, -10, 0))), 0, 1, 0);
+  });
+
+  it('is null when the members surround the vantage symmetrically', () => {
+    expect(figureAimDirection([[0, 1]], at({ 0: [10, 0, 0], 1: [-10, 0, 0] }))).toBeNull();
+  });
+
+  it('skips the observe anchor wherever it sits', () => {
+    // Observing from star 0, which drifted off the exact vantage.
+    const positions: Record<number, [number, number, number]> = { 0: [0, -1e-6, 0], 1: [0, 0, 5] };
+    expectDir(figureAimDirection([[0, 1]], { ...at(positions), excludeStarIdx: 0 }), 0, 0, 1);
+    expect(figureAimDirection([[0, 0]], { ...at(positions), excludeStarIdx: 0 })).toBeNull();
+  });
+
+  it('skips a member at the vantage, which has no direction from there', () => {
+    const positions: Record<number, [number, number, number]> = { 0: [0, 0, 0], 1: [0, 0, 5] };
+    expectDir(figureAimDirection([[0, 1]], at(positions)), 0, 0, 1);
+    expect(figureAimDirection([[0, 0]], at(positions))).toBeNull();
   });
 });

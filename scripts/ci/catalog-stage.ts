@@ -4,33 +4,33 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { build } from 'esbuild';
+import { scriptClosure } from '../util/import-closure';
+import { tsxEntry } from '../util/import-closure-pure';
+import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
+import {
+  type BlobIndex,
+  CATALOG_STAGE,
+  catalogCacheKey,
+  keyedPaths,
+  parseLsFilesStage,
+  withVersionlessPackageJson,
+} from './catalog-stage-pure';
 
-import { REPO_ROOT } from '../util/paths';
-import { CATALOG_STAGE, catalogCacheKey, keyedPaths, parseLsFilesStage, tsxEntry } from './catalog-stage-pure';
-
-async function stageKeyInputs(): Promise<{ index: ReturnType<typeof parseLsFilesStage>; paths: string[] }> {
-  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8'));
-  const { metafile } = await build({
-    entryPoints: CATALOG_STAGE.map((step) => tsxEntry(scripts, step.script)),
-    absWorkingDir: REPO_ROOT,
-    bundle: true,
-    platform: 'node',
-    format: 'esm',
-    packages: 'external',
-    metafile: true,
-    write: false,
-    outdir: 'unwritten',
-    logLevel: 'silent',
-  });
-  const index = parseLsFilesStage(execFileSync('git', ['ls-files', '-s', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' }));
-  return { index, paths: keyedPaths(new Set(Object.keys(metafile.inputs)), index) };
+async function stageKeyInputs(): Promise<{ index: BlobIndex; paths: string[] }> {
+  const closure = await scriptClosure(CATALOG_STAGE.map((step) => step.script));
+  const index = withVersionlessPackageJson(
+    parseLsFilesStage(execFileSync('git', ['ls-files', '-s', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' })),
+    readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'),
+  );
+  return { index, paths: keyedPaths(closure, index) };
 }
 
 function runStage(): void {
+  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'));
   for (const { script, pinned } of CATALOG_STAGE) {
-    console.log(`::group::pnpm run ${script}`);
-    execFileSync('pnpm', ['run', script], { cwd: REPO_ROOT, stdio: 'inherit' });
+    console.log(`::group::${script}`);
+    // `pnpm run` would export npm_package_version, which the cache key excludes.
+    execFileSync('pnpm', ['exec', 'tsx', tsxEntry(scripts, script)], { cwd: REPO_ROOT, stdio: 'inherit' });
     console.log('::endgroup::');
     const diff = spawnSync('git', ['diff', '--exit-code', '--', ...pinned], { cwd: REPO_ROOT, stdio: 'inherit' });
     if (diff.status !== 0) {

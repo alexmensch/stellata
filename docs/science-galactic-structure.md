@@ -111,7 +111,7 @@ which the catalogue is a third of a percent. A single emissivity field
 anchored on the subtracted pole therefore runs a factor of three low
 everywhere else. With the hole taking the resolved share out of both
 sides, the shipped solve is 1.31 mag brighter than that residual at the
-pole and 0.385 mag brighter toward the Galactic centre than
+pole and 0.389 mag brighter toward the Galactic centre than
 [Leinert 1998](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus catalogue at the pole is 0.41 mag over [Leinert 1998](/data/papers/index.md#leinert1998)'s total,
 where band-without-hole plus catalogue was 0.88 over.
 
@@ -750,6 +750,6 @@ and μ Sgr (HIP 89341), both stars Stellarium references that have empty
 position columns in the AT-HYG CSV.
 
 Implementation: `scripts/catalog/build-catalog.ts`; see
-[Stick figures from Stellarium](/scripts/catalog/parse/README.md#stick-figures-from-stellarium) for
+[Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium) for
 the pipeline + missing-HIP policy.
 

@@ -1,4 +1,4 @@
-// Behavioural guard for scripts/hooks/commit-sweep-guard.sh: the commit-time
+// Behavioural guard for scripts/hooks/commit-sweep/commit-sweep-guard.sh: the commit-time
 // README sweep must fire on a stale folder README and must honour the
 // readme-skip opt-out however the commit message reached git.
 
@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-const HOOK = resolve(__dirname, '../scripts/hooks/commit-sweep-guard.sh');
+const HOOK = resolve(__dirname, '../scripts/hooks/commit-sweep/commit-sweep-guard.sh');
 
 const SKIP_REASON = '[readme-skip: every claim in it still holds]';
 
@@ -108,7 +108,7 @@ describe('commit-sweep-guard', () => {
   });
 });
 
-// The comment sweep compiles scripts/hooks/comment-rules.json through Perl
+// The comment sweep compiles scripts/hooks/commit-sweep/comment-rules.json through Perl
 // qr//, while tests/code-comment-rules.test.ts compiles the same strings
 // through JavaScript RegExp. Only a case run through the hook proves the two
 // dialects agree — the two hand-copied sets that preceded that shared file
@@ -214,5 +214,36 @@ export const x = 1;
     write('src/thing/thing.ts', RESTATES);
     git('add', '-A');
     expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(true);
+  });
+});
+
+describe('snapshot-copy sweep', () => {
+  function stageDoc(line: string): void {
+    write('counts/s-expected.json', '{ "rows": 975573, "segments": 781 }\n');
+    write('NOTES.md', '# notes\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'seed');
+    write('NOTES.md', `# notes\n\n${line}\n`);
+    git('add', '-A');
+  }
+
+  it('denies an added line quoting a snapshot count unmarked', () => {
+    stageDoc('the manifest holds 975,573 rows');
+    expect(allowed('git commit -m "notes"')).toBe(false);
+  });
+
+  it('allows the same figure inside a marker', () => {
+    stageDoc('the manifest holds <!-- count:s/rows -->975,573<!-- /count --> rows');
+    expect(allowed('git commit -m "notes"')).toBe(true);
+  });
+
+  it('allows a comma-less equal number with no key name nearby', () => {
+    stageDoc('the sweep takes 781 ms');
+    expect(allowed('git commit -m "notes"')).toBe(true);
+  });
+
+  it('honours the figure-ok opt-out', () => {
+    stageDoc('the manifest held 975,573 rows on 2026-09-01');
+    expect(allowed('git commit -m "notes [figure-ok: a dated measurement]"')).toBe(true);
   });
 });

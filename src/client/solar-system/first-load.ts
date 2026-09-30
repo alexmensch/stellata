@@ -1,30 +1,19 @@
-// Canonical no-URL first-load view: camera parked 5 AU from Sol aimed at
-// the galactic centre, galactic-level, with the HUD on. See
+// Canonical no-URL first-load view: Earth from 8.8 million km, held against its
+// own orbit by the lock. See
 // /src/client/solar-system/README.md#first-load-default-and-mindistance-relaxation.
 
 import { applyDecodedView, type DecodedView, type IdMaps } from '../util/url-state';
-import { AU_PC } from '../util/astronomy-constants';
 import type { Stellata } from '../stellata';
-
-// Sol→galactic-centre camera position from the hand-tuned share URL,
-// renormalised to exactly 5 AU. Sol is at the local origin (focus =
-// Sol = default), so this is a pure object-local cam vector.
-const RAW_CAM: [number, number, number] = [
-  -1.5599102880514693e-6,
-  1.9162944226991385e-5,
-  1.4444859516515862e-5,
-];
-
-const PARK_DIST_PC = 5 * AU_PC;
-
-function rescale(v: [number, number, number], r: number): [number, number, number] {
-  const k = r / Math.hypot(v[0], v[1], v[2]);
-  return [v[0] * k, v[1] * k, v[2] * k];
-}
+import { SOL_OBJECT_SIDS } from './sol-object-sids';
 
 export const FIRST_LOAD_VIEW: DecodedView = {
-  cam: rescale(RAW_CAM, PARK_DIST_PC),
+  focus: { kind: 'sid', id: SOL_OBJECT_SIDS.earth },
+  cam: [-1.655275e-7, -2.197143e-7, 7.73263e-8],
+  up: [0.43949, -0.01501, 0.89812],
   showHud: true,
+  orb: true,
+  orbLock: true,
+  orbitPose: true,
 };
 
 export function applyFirstLoadView(stellata: Stellata, idMaps: IdMaps): void {

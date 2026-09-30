@@ -1,5 +1,4 @@
-// Constellation stick figures as depth-tested WebGL line segments between
-// member stars' local positions. See src/client/constellation-figure/README.md.
+// See README.md#rebuild-vs-refresh.
 
 import * as THREE from 'three';
 import { type Constellation } from '../loaders/catalog-loader';

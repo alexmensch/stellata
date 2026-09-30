@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { SidResolver, arrayDomain, sidColumnError, type SidRuntimeKind } from './sid-resolver';
+import {
+  SidResolver, arrayDomain, sidColumnError, sidColumnIndex,
+  type DomainFill, type SidDomain, type SidRuntimeKind,
+} from './sid-resolver';
 
 const FULL_ROSTER: readonly SidRuntimeKind[] = ['star', 'planet', 'cloud', 'lg'];
 
@@ -247,23 +250,39 @@ describe('a domain that is still filling', () => {
   // Apparent-brightness order, so the prefix is the bright stars.
   const COLUMN = [11, 22, 33, 44];
 
+  function fillingDomain(decoded: number) {
+    const listeners = new Set<() => void>();
+    let fill: DomainFill = 'filling';
+    const domain: SidDomain = {
+      localIndexOf: sidColumnIndex(COLUMN, () => decoded),
+      sidOf: (i) => (i < decoded ? COLUMN[i] : null),
+      fill: () => fill,
+      onGrow: (l) => { listeners.add(l); return () => listeners.delete(l); },
+    };
+    return {
+      domain,
+      listeners,
+      grow(to: number) { decoded = to; listeners.forEach((l) => l()); },
+      complete() { fill = 'complete'; listeners.forEach((l) => l()); },
+    };
+  }
+
   it('resolves a sid in the loaded prefix synchronously', () => {
     // The whole point: a first-chunk star has to resolve DURING
     // applyFromUrl, because the pose restored after it is expressed in the
     // frame focusing recentres to.
-    let loaded = 2;
     const r = new SidResolver(ROSTER);
-    r.attach('star', arrayDomain(COLUMN, () => loaded));
+    r.attach('star', fillingDomain(2).domain);
 
     let applied: number | null = null;
     r.whenResolved(22, (_k, i) => { applied = i; });
     expect(applied).toBe(1);
   });
 
-  it('holds a sid past the prefix pending, then fires it on refresh', () => {
-    let loaded = 2;
+  it('holds a sid past the prefix pending, then fires it when the domain grows', () => {
+    const f = fillingDomain(2);
     const r = new SidResolver(ROSTER);
-    r.attach('star', arrayDomain(COLUMN, () => loaded));
+    r.attach('star', f.domain);
 
     let applied: number | null = null;
     r.whenResolved(44, (_k, i) => { applied = i; });
@@ -271,23 +290,35 @@ describe('a domain that is still filling', () => {
     expect(r.resolve(44)).toEqual({ status: 'pending' });
     expect(applied).toBeNull();
 
-    loaded = 4;
-    r.refresh();
+    f.grow(4);
     expect(applied).toBe(3);
   });
 
-  it('settles a sid nothing carries to unknown once the column completes', () => {
-    let loaded = 2;
+  it('expires an intent nothing carries once the domain completes', () => {
+    const f = fillingDomain(4);
     const r = new SidResolver(ROSTER);
-    r.attach('star', arrayDomain(COLUMN, () => loaded));
+    r.attach('star', f.domain);
+    const apply = vi.fn();
+    r.whenResolved(99, apply);
     expect(r.resolve(99)).toEqual({ status: 'pending' });
 
-    loaded = 4;
     // Otherwise a deep link to a retired sid holds its intent open forever.
+    f.complete();
     expect(r.resolve(99)).toEqual({ status: 'unknown' });
+    f.grow(4);
+    expect(apply).not.toHaveBeenCalled();
   });
 
-  it('treats an absent loadedCount as complete on attach', () => {
+  it('stops listening to a domain it replaces', () => {
+    const f = fillingDomain(2);
+    const r = new SidResolver(ROSTER);
+    r.attach('star', f.domain);
+    expect(f.listeners.size).toBe(1);
+    r.attach('star', arrayDomain(COLUMN));
+    expect(f.listeners.size).toBe(0);
+  });
+
+  it('answers a complete domain\'s miss as unknown on attach', () => {
     const r = new SidResolver(ROSTER);
     r.attach('star', arrayDomain(COLUMN));
     expect(r.resolve(99)).toEqual({ status: 'unknown' });

@@ -475,7 +475,7 @@ export type LgLabelHost = Pick<
 function lgLabelHostOf(stellata: Stellata): LgLabelHost {
   return {
     ...labelHostOf(stellata),
-    getWorldOffset: () => stellata.getWorldOffset(),
+    getWorldOffset: () => stellata.floatingOrigin.worldOffset,
     getMonochrome: () => stellata.getMonochrome(),
     detailPermits: (id) => stellata.declutter.permits(id),
   };

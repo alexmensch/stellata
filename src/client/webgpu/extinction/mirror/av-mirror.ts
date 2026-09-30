@@ -3,52 +3,51 @@
 
 import type { StorageBufferAttribute, WebGPURenderer } from 'three/webgpu';
 
+type InFlight = { readonly status: 'in-flight' };
+
+/** The copy of the buffer's current contents (README.md#the-copys-four-states). */
+type MirrorCopy =
+  | { readonly status: 'unstaged' }
+  | InFlight
+  | { readonly status: 'landed'; readonly values: Float32Array }
+  | { readonly status: 'failed' };
+
+const UNSTAGED: MirrorCopy = { status: 'unstaged' };
+const FAILED: MirrorCopy = { status: 'failed' };
+
 export class AvMirror {
-  private values: Float32Array | null = null;
-  /** The generation the outstanding-or-landed copy belongs to. Holding it
-   *  across the resolve is what makes a pointermove sweep cost one copy
-   *  rather than one per event. */
-  private staged = -1;
-  /** Bumped by every `invalidate`, so a copy issued against a buffer that
-   *  has since been rewritten is dropped rather than answering picks with
-   *  what the GPU no longer holds. */
-  private epoch = 0;
-  private disposed = false;
+  private copy: MirrorCopy = UNSTAGED;
 
   constructor(private readonly renderer: WebGPURenderer) {}
 
+  /** Null is "no answer yet", never "no dust". */
   read(idx: number): number | null {
-    if (this.values === null) return null;
-    return this.values[idx] ?? null;
+    if (this.copy.status !== 'landed') return null;
+    return this.copy.values[idx] ?? null;
   }
 
   /** The buffer this mirrors was rewritten. Call on every dispatch. */
   invalidate(): void {
-    this.values = null;
-    this.epoch++;
+    this.copy = UNSTAGED;
   }
 
-  /** At most one copy per generation, and the caller decides when one is
+  /** At most one copy per invalidate, and the caller decides when one is
    *  worth taking (README.md). */
-  stage(av: StorageBufferAttribute, generation: number): void {
-    if (this.staged === generation) return;
-    this.staged = generation;
-    const epoch = this.epoch;
+  stage(av: StorageBufferAttribute): void {
+    if (this.copy.status !== 'unstaged') return;
+    const inFlight: InFlight = { status: 'in-flight' };
+    this.copy = inFlight;
     this.renderer
       .getArrayBufferAsync(av)
       .then((bytes) => {
-        if (this.disposed || this.epoch !== epoch) return;
-        this.values = new Float32Array(bytes);
+        if (this.copy === inFlight) this.copy = { status: 'landed', values: new Float32Array(bytes) };
       })
       .catch(() => {
-        // Never re-armed: `staged` stands, so a device refusing the map
-        // costs one attempt per generation rather than one per pointer event.
+        if (this.copy === inFlight) this.copy = FAILED;
       });
   }
 
   dispose(): void {
-    this.disposed = true;
-    this.values = null;
-    this.staged = -1;
+    this.copy = UNSTAGED;
   }
 }

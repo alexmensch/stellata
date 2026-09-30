@@ -219,9 +219,11 @@ rows — is taken from the HTML itself, so rewording copy never breaks a test
 and a section the derivation loses still does.
 
 Rounded prose is a different case and is still fine — the "Before you click"
-aside's "around 980,000 records" is held true by
-`tests/star-count-consistency.test.ts`, which reads this folder's pages
-among its prose surfaces. [The star count is never a literal](/docs/authoring-patterns.md#the-star-count-is-never-a-literal).
+aside's rounded record count is held to the snapshot's current rounding by
+`tests/doc-figures.test.ts`. It carries no doc-figure marker, because the
+markdown rendition would pass the marker's HTML comments through literally
+([The catalogue's size](/scripts/doc-figures/README.md#the-catalogues-size)).
+[The star count is never a literal](/docs/authoring-patterns.md#the-star-count-is-never-a-literal).
 
 **The JSON-LD graph shares nodes with the application.** `Person` and
 `WebApplication` carry the same `@id`s and the same `description` string

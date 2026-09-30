@@ -32,7 +32,13 @@ themselves.
   (`local-group/local-group-loader.ts`) is the shape for shape errors. For
   kind modules the rule is enforced rather than trusted — `loadKindModules`
   swallows every non-`critical` rejection (`kinds/README.md`).
+  `main.ts` is also the one caller of `Stellata.dispose()`, through the
+  `pagehide` teardown it binds before boot (`util/page-teardown.ts`), and
+  sets the `window` globals `globals.d.ts` declares only through that
+  teardown's `expose`.
 - `stellata-events.test.ts` — integration-shell event-emission test.
+- `stellata-dispose.test.ts` — every `Stellata.dispose` step still runs
+  after one throws, ending with the webgpu seam, the renderer and the bus.
 - `kinds/` — the `ObjectKindModule` / `KindContext` contracts and the
   kind-module roster: one module per `TargetKind` (all six migrated)
   supplies load/attach + every capability leg, and the shell/boot
@@ -45,10 +51,12 @@ themselves.
   limiting magnitude, plate-scale star sizing) + render knobs and the
   `FilterController` that owns every mutation.
 - `scene/` — the `SceneLayer` contract + registry driving the
-  per-layer update / monochrome / recenter / dispose fan-outs, and the
+  per-layer update / monochrome / recenter / dispose fan-outs, the
   full render stack: which layer wins which pixel, canvas and SVG
-  ([Full render stack](scene/README.md#full-render-stack--front-to-back)).
-- `render-gate/` — the on-demand render gate: `animate()` skips the
+  ([Full render stack](scene/README.md#full-render-stack--front-to-back)),
+  and the `requestAnimationFrame` loop that runs every tick
+  (`scene/frame-loop/`).
+- `render-gate/` — the on-demand render gate: the frame loop skips the
   draw (and the `'frame'` emit) on ticks where nothing invalidated the
   frame. Its README owns the invalidation-source inventory and the
   hold contract.
@@ -167,23 +175,47 @@ Four things follow, and each has cost a defect:
 - **The compiler: a late slot is a `Late<T>`.** It is pending, ready or
   absent, with no nullable accessor, and `observe` is where a reader that
   sampled early rebuilds ([Late values](util/late/README.md)). An artifact
-  that can be missing must be concluded, or its readers wait forever.
+  that can be missing must be concluded, or its readers wait forever. The
+  binaries and dust slots are the shell's instances
+  ([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)).
+  A value `main.ts` has already loaded when it builds the shell is a
+  constructor argument instead, with no pending state at all — the IAU
+  boundary artifact ([The owner](constellation-boundaries/README.md#the-owner)).
 - **A test: `tests/late-read-contract.test.ts`.** It fails a loop bounded by
-  an unbranded catalogue's `count`, and any unclassified `| null` return on
-  the shell's public surface — its own methods and its readonly namespaces'.
+  an unbranded catalogue's `count`, any unclassified `| null` return on
+  the shell's public surface — its own methods and its readonly namespaces'
+  — any unclassified class field written `| null` and assigned after
+  construction, and a read of `Catalog.loadedCount` outside
+  `loaders/catalog-*` and the listed per-chunk walkers. Everyone else asks
+  the catalogue: `isDecodedRecord`, `catalog.complete`, `onRecordsDecoded`.
 - **Review, for what neither reaches.** A one-shot reader can still write a
   fallback into its `pending` branch. The loop scan sees only a literal
   `i < X.count`, so a walk bounded by a column's `.length`, by a count
   copied into a local, or by one passed into a helper gets past it. The
-  nullable scan reads written return types, so an inferred `| null` gets
-  past that.
+  nullable scans read written types, so an inferred `| null` gets past
+  them, and so does a not-yet answered with a legal-looking value in a
+  non-null type.
+
+### Prefix reads correct by construction
+
+Two catalogue-prefix reads are correct by construction rather than by a
+type: the constellation figure and its aim direction
+([The aim direction](constellation-figure/README.md#the-aim-direction)) read figure vertices from
+`starFrame.localPositions` from first paint, and the aim keeps what it read.
+The build fails unless every figure vertex sits in chunk 0 ([Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium)).
+A third prefix read sits outside the shell: the extinction prepass sorts its
+dispatch order over the table it attaches to, which is normally still
+streaming, and re-sorts once on the refresh that completes it
+([What a CACHE owes](webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)), answered inside the pass.
 
 ## Public surface of `Stellata`
 
 The shell exposes its controllers as readonly namespaces rather than
 forwarding to them: `focus`, `warp`, `observe`, `aim`, `roll`, `filters`,
 `exposure`, `adaptation`, `pois`, `input`, `hdr`, `kinds`, `declutter`,
-`solarSystem`, `coordSpheres`, `binaries`, `extinction`, plus the
+`solarSystem`, `coordSpheres`, `binaries`, `extinction`,
+`constellationBoundaries`, `constellationFigure`, `starPipeline`, the frame
+owners `floatingOrigin` and `starFrame`, plus the
 `milkyway` / `hud` layer handles, `chartLabels`, and the debug-scoped
 `localDepthPass` / `reduction` handles (frame-cost levers,
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
@@ -198,24 +230,19 @@ the one split pair (read on `focus`, write on `observe`).
 does something no single controller can. Keep that property when adding
 one: `setCameraFov` (syncs the pixel solid angle to the HDR seam),
 `aimAt` / `aimAlong` / `aimAtConstellation` / `invertView`
-(cross-controller busy gates, shared as `claimCameraForAim` — it reports
+(cross-controller busy gates, shared as `cameraClaim.claim()` — it reports
 whether the camera was free and, only when it was, cancels the focus
 lerps, so every aim takes it the same way),
 `isCameraTransitionActive` (warp ∪ observe), `getT` / `setT`
 (clockJumped fan-out) and `setMonochrome`. A new zero-logic pass-through
 belongs on the controller.
 
-**Forwarders still on the shell leave with their cluster, and so do their
-callers** ([Decomposing the shell](#decomposing-the-shell)). The `attach*` family — `main.ts` calls
-`attachConstellationBoundaries` — moves
-with its row, and `main.ts` calls the new owner through a readonly
-namespace (`stellata.binaries.attach`, `stellata.extinction.attach`). The star-frame reads (`localPositions`, `uniforms`) and the
-`FrameAnchor` methods (`recenterOrigin`, `getWorldOffset`,
-`starLocalPosition`, `starLocalPositionInto`) forward to `starFrame` and
-`floatingOrigin`; with the star render machinery, the focus controller's
-`frameAnchor` dep is built from those two owners directly, and outside
-readers of `stellata.getWorldOffset()` read the floating origin's
-namespace. No extraction leaves a method behind that only forwards.
+**Callers reach an owner, never a forwarder on the shell.** `main.ts`
+reaches a late attachment through its owner's readonly namespace
+(`stellata.binaries.attach`, `stellata.extinction.attach`). Star positions
+and the origin are read off their owners, `stellata.starFrame` and
+`stellata.floatingOrigin`, and the focus controller's `FrameAnchor` is
+those two owners.
 
 **Install seams are the other admissible shape**, and they are not
 pass-throughs: a UI surface built after the shell registers itself here so
@@ -223,69 +250,18 @@ code that only holds a `Stellata` can reach it. `setOrbitFrameTick` (the
 attitude instrument's per-frame ORB re-read, whose *ordering* only the scene
 registry can express) and `setOrbitFramePort` / `getOrbitFramePort` (ORB and
 the orbit lock on the share URL — state no controller owns,
-[ORB and the orbit lock](util/url-state/README.md#orb-and-the-orbit-lock)) are both of that kind.
+[ORB and the orbit lock](util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock)) are both of that kind.
 Each reads through its field every time, so installing after construction
 works exactly as a lazily-attached layer does, and `dispose` clears both.
 
-## Decomposing the shell
+## The shell is wiring only
 
-`stellata.ts` is headed for wiring only — construct, connect, dispose
-(epic `stellata-hhaw.32`). Its fields fall into clusters: fields read and
-written together, plus the methods touching them. Each cluster leaves for
-the named folder with its tests; which fields and methods it takes is its
-bead's description, and the order is the bead graph's (`bd show
-stellata-hhaw.32`), not this table's.
-
-`tests/integration-shell-ratchet.test.ts` is what holds the file to the
-rule: every `Stellata` field is either composition that stays or awaiting
-extraction, a new field in neither fails, and an extraction deletes its
-fields from the awaiting list. **Every bead named in this section leaves
-with the PR that closes it** — a row, a cross-row bullet, a clause — and
-the last extraction (32.15) deletes the section, leaving the ratchet with
-an empty awaiting list.
-
-| Cluster | Target | Bead |
-| --- | --- | --- |
-| Constellations | `constellation-figure/`, `constellation-boundaries/` | `hhaw.32.8` |
-| Star render machinery, incl. star size + pick | `star-pipeline/` | `hhaw.32.13` |
-| Frame loop — last | `scene/frame-loop/` | `hhaw.32.15` |
-
-**Values crossing a row boundary** — whichever row moves first settles the
-interface for both:
-
-- **The binaries rate** — settled as `binaries.rate`, a `(cc) =>
-  CadenceReport` ([The attachment](binaries/README.md#the-attachment)); the star-local-cluster,
-  core-mask and constellation-figure entries take it, and carry it when
-  their rows move.
-
-### Late-attached slots
-
-A cluster holding a value that lands after construction moves it as a
-`Late<T>` ([Boot in two waves](#boot-in-two-waves)), so the constellation
-extraction converts its row's slots as it moves rather than carrying a
-`T | null` twice. The binaries and dust slots have converted
-([binaries](binaries/README.md#the-attachment), [dust](star-pipeline/extinction/README.md#the-attachment)). Clusters holding no late slot do not wait.
-
-| Slot | Lands | Not-ready answer today |
-| --- | --- | --- |
-| Boundary namer + label anchors | after construction; optional artifact | `null` / `[]`, read as "not yet" |
-| Orbit-frame tick + port | after construction | `null` = neither armed nor locked |
-
-Two catalogue-prefix reads also sit in the shell: the constellation figure
-and `aimAtConstellation`'s centroid read figure vertices from
-`localPositions` in wave 1. The figure re-reads every frame, so a vertex
-outside the loaded prefix draws at `(0,0,0)` only until its chunk lands;
-the centroid is read once per aim and keeps whatever it got. Both are safe
-while every vertex sits in chunk 0 — measured on today's build (the
-`lines` indices in `public/constellations.json` against
-`recordsInFirstChunk`): 708 distinct vertices, highest record index
-10,288, chunk 0 ending at 10,411, a margin of 124 records that nothing
-checks yet.
-The build-time assert and the centroid's move onto the contract are 32.8's.
-A third prefix read sits outside the shell: the extinction prepass sorts its
-dispatch order over the table it attaches to, which is normally still
-streaming, and re-sorts once on the refresh that completes it
-([What a CACHE owes](webgpu/extinction/README.md#what-a-cache-owes-that-a-per-frame-prefilter-does-not)), answered inside the pass.
+`stellata.ts` constructs, connects and disposes; state with a tick or a
+lifecycle of its own lives in its subsystem folder
+([AGENTS.md](/AGENTS.md#folder--module-conventions--where-new-code-lands)).
+`tests/integration-shell-ratchet.test.ts` holds it there: every `Stellata`
+field is on its composition list, so a new field fails until it is argued
+onto the list or moved out.
 
 ## Event bus on `Stellata`
 
@@ -403,6 +379,6 @@ order, the anchor policy, the focus/unfocus invariants and the URL
 `worldOffset` field.
 
 The one rule every layer must respect: **projection and camera math read
-`stellata.localPositions`; distance-from-Sol reads `catalog.positions`**
+`stellata.starFrame.localPositions`; distance-from-Sol reads `catalog.positions`**
 (or sums back to absolute in float64). Mixing the two frames is the
 recurring bug this design creates.

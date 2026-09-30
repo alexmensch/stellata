@@ -125,7 +125,7 @@ export function buildPassToggles(
     {
       key: 'coreMask',
       present: () => true,
-      disable: () => flag((on) => stellata.setCoreMaskEnabled(on)),
+      disable: () => flag((on) => stellata.starPipeline.setCoreMaskEnabled(on)),
     },
     {
       key: 'planetDepthStamp',

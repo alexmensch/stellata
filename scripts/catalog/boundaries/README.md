@@ -44,8 +44,8 @@ assume the samples still sit at constant RA / Dec.
 `d` is flat x,y,z triples in arc order, quantised to
 `DIRECTION_DECIMALS = 7` — 1e-7 rad ≈ 0.02″, two orders under the
 arcsecond the round-trip test holds, and roughly half the bytes of full
-float64. 781 arcs → ~10.1k directions, and with the labels and the region
-grid the whole file is ~359 KiB (`boundarySegments` /
+float64. <!-- count:build-catalog/boundarySegments -->781<!-- /count --> arcs → ~<!-- count:build-catalog/boundaryDirections k3 -->10.1k<!-- /count --> directions, and with the labels and the region
+grid the whole file is ~<!-- count:build-catalog/boundaryArtifactKb -->359<!-- /count --> KiB (`boundarySegments` /
 `boundaryDirections` / `boundaryRegionRuns` / `boundaryArtifactKb` in
 build-counts; nowhere near the 25 MiB Workers asset limit, so no
 chunking).
@@ -84,7 +84,7 @@ the inside-the-region assertion are in
 
 `regions` is the resolved cell grid, run-length-coded along RA
 band-major: `runs` is `[cellCount, codeIndex, …]`, and 47,200 cells
-collapse to ~2,960 runs (`boundaryRegionRuns` in build-counts) because
+collapse to ~<!-- count:build-catalog/boundaryRegionRuns sig3 -->2,960<!-- /count --> runs (`boundaryRegionRuns` in build-counts) because
 regions are contiguous blocks of columns. Runs never straddle a band, so
 each band's counts sum to the column count — `validateRegionGridWire`
 checks exactly that, **without allocating the grid**, so the load-time
@@ -163,7 +163,7 @@ sky.
 
 ## Cost
 
-The sweep is one nearest-wall query per shipped record — ~390k against 781
+The sweep is one nearest-wall query per shipped record — ~390k against <!-- count:build-catalog/boundarySegments -->781<!-- /count -->
 arcs. The linear scan (`angularDistanceToNearestEdgeDeg`) would be a
 quarter-billion arc evaluations and minutes of build time, so
 `createIauConstellationLookup` routes through `createNearestEdgeIndex`,
@@ -173,7 +173,7 @@ The whole stage costs under a second.
 
 `writeBoundaryArtifact` takes the lookup rather than building one, and
 passes it whole to `buildBoundaryArtifact`: `loadReadStarsInputs` already
-decomposed the edge set for byte 34 ([Positional constellation membership](../parse/README.md#positional-constellation-membership)),
+decomposed the edge set for byte 34 ([Positional constellation membership](../parse/constellations/README.md#positional-constellation-membership)),
 so the arcs, the label anchors and the shipped
 grid are three readings of that one decomposition — none of them can
 disagree with the membership the catalogue shipped.

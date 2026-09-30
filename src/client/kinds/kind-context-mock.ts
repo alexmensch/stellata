@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
-import type { SharedUniforms } from '../frame/shared-uniforms';
+import { NO_INSTANCE, type SharedUniforms } from '../frame/shared-uniforms';
 import { OccluderSet } from '../occlusion/occluder-set';
 import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import type { KindContext } from './kind-module';
@@ -33,7 +33,7 @@ export function makeKindContext(overrides: Partial<KindContext> = {}): KindConte
     uViewport: { value: new THREE.Vector2(MOCK_VIEWPORT_W, MOCK_VIEWPORT_H) },
     uPixelRatio: { value: 1 },
     uFovYRad: { value: MOCK_FOV_Y_RAD },
-    uHideFocusIdx: { value: -1 },
+    uHideFocusIdx: { value: NO_INSTANCE },
     // The HDR emitter slots ride the shared map by reference in
     // production (/src/client/frame/README.md#shared-uniforms).
     ...makeMockHdrEmitterUniforms(),

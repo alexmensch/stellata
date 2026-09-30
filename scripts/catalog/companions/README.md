@@ -55,7 +55,7 @@ and never reach the anchor's record.
 `companion-promotion.ts` runs BEFORE the record sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-a record the membership manifest admitted. ~16.4k companions promoted
+a record the membership manifest admitted. ~<!-- count:build-catalog/companionPromoted k3 -->14.7k<!-- /count --> companions promoted
 into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
 a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
@@ -145,7 +145,7 @@ Per-row gates and resolution:
   original and `binaries.bin` drew the pair's 468-yr orbit between the two
   copies. The naming authority's component attribution is the independent
   witness: where it already letters the ANCHOR as the row's own component, that
-  record IS the component. Counted `companionAnchorIsComponent` (3: p Eri B,
+  record IS the component. Counted `companionAnchorIsComponent` (<!-- count:build-catalog/companionAnchorIsComponent -->3<!-- /count -->: p Eri B,
   `f Pup C`, `α Psc` B), a ratchet-down metric, since each is a mis-keyed
   multiples.tsv row upstream. The letters themselves are contested — WDS, the
   authority and Gliese disagree per system — so the gate refuses the duplicate
@@ -162,8 +162,8 @@ Per-row gates and resolution:
   (α Her's B, Ba, Bb) as well as siblings re-serving the refusal (WDS
   01425+5000 comp B). Runs **before** the inheritance gates, which would strip
   the borrowed id and leave a synth record at whatever the row states. Counted
-  `companionDroppedParkedRecord` (9); `companionDroppedParkedOwnedFit` is
-  **pinned at 0**, so no refused row carries an owned id on a per-component
+  `companionDroppedParkedRecord` (<!-- count:build-catalog/companionDroppedParkedRecord -->8<!-- /count -->); `companionDroppedParkedOwnedFit` is
+  **pinned at <!-- count:build-catalog/companionDroppedParkedOwnedFit -->0<!-- /count -->**, so no refused row carries an owned id on a per-component
   route and nothing of the component's own is withheld — tolerance and the
   wider-join caveat in [Companion promotion](../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in).
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
@@ -421,7 +421,7 @@ Per-row gates and resolution:
   evolved companions but strictly less wrong than the primary's type;
   curated overrides / SIMBAD per-component types take precedence, and
   no `spectDisplay` is claimed for the estimate. Counted
-  `companionSpectMsFromOwnAbsmag` (~14.5k of 16.4k promoted). Rows
+  `companionSpectMsFromOwnAbsmag` (~<!-- count:build-catalog/companionSpectMsFromOwnAbsmag k3 -->13.4k<!-- /count --> of <!-- count:build-catalog/companionPromoted k3 -->14.7k<!-- /count --> promoted). Rows
   with neither fall back to `SPECTRAL_UNKNOWN`.
 - **HIP inheritance gate.** When the row's HIP equals the primary
   row's HIP, set `hip = null` on the promoted record. Hipparcos
@@ -465,7 +465,7 @@ carries the worked case and imports the same predicate for naming.
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |
-| `conIndex` | per-component | the IAU boundary region the minted position falls in ([Positional constellation membership](../parse/README.md#positional-constellation-membership)) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
+| `conIndex` | per-component | the IAU boundary region the minted position falls in ([Positional constellation membership](../parse/constellations/README.md#positional-constellation-membership)) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
 | `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone ([Two callers, one composer](../naming/README.md#two-callers-one-composer)). |
 | `desigConIndex` | inherited | anchor's designation index — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index ([The designation constellation](../classic-ids/README.md#the-designation-constellation)). |
 | `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise ([Space-motion velocity](../parse/README.md#space-motion-velocity), Pair coherence). Truly anchor-less escapes fall back to zero. |

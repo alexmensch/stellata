@@ -89,9 +89,9 @@ V = G − f(BP−RP)      Riello 2021 (/data/papers/index.md#riello2021), inside
   → curated            Sol alone
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_riello` **366,455** ·
-`printed_hip` **1,585** · `tycho2` **3,784** · `gliese` **20** · `curated`
-**1**, residual `none` **0**.
+Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catalog/vGaiaRiello -->963,375<!-- /count -->** ·
+`printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->189<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
+**<!-- count:build-catalog/vCurated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/vNone -->0<!-- /count -->**.
 
 `resolveVMagnitude` returns the value **and** the tier that produced it, so
 `vVia` routing counts are pinned in build-counts the same way the direction

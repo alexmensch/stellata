@@ -1,8 +1,8 @@
 # Star layer
 
 **The star pipeline**, constructed through
-`WebGpuSeam.attachStarLayer` over the shell's scene (never imported from
-`stellata.ts` — the import boundary in `../README.md`). It carries the
+`WebGpuSeam.attachStarLayer` by `StarPipeline` (`../../star-pipeline/`) over the
+shell's scene, never imported by it — the import boundary in `../README.md`. It carries the
 three depth-honest pipelines of [Early-z](../README.md#early-z--the-star-layers-depth-honest-redesign): D2 glow (no
 depth output), D3 core mask (depth-only, member stamp in the vertex
 stage), and D4 disc (colour only, no depth output either — [The disc
@@ -27,7 +27,7 @@ src/client/webgpu/star/
                                (stride, slots, the interleave).
   star-tables.ts (+ test)      StarTables — the star-indexed storage
                                tables every star stage reads (README.md#star-tables--every-per-star-field-is-a-storage-read), and the per-frame forwarding of
-                               the shell's attribute writes onto them.
+                               the source attributes' writes onto them.
   star-geometry.ts (+ test)    The two quad geometries, corner + index
                                only, each drawn indirect off its tier's
                                args slot.
@@ -58,15 +58,15 @@ src/client/webgpu/star/
                                single↔struct mode swap (../hdr/README.md).
   star-layer.ts (+ test)       StarLayer: tables + compaction + the three
                                meshes into the scene, the local mirror,
-                               the per-frame `update()`, the shell's
-                               core-mask gate, the chart blend swap,
+                               the per-frame `update()`, the
+                               core-mask visibility write, the chart blend swap,
                                dispose.
   star-local-mirror-tsl.ts     The local-depth-pass mirror: the three
     (+ test)                   pipelines' local variants over the shared
                                MirrorSlots geometry, reading the tables
                                by `iSourceIdx` (README.md#the-local-mirror).
   star-sources-mock.ts         StarLayerSources over the zero-filled
-                               StarPipeline mock, and the fake renderer
+                               catalogue mock, and the fake renderer
                                the layer tests dispatch into.
 ```
 
@@ -187,12 +187,12 @@ at its `iSourceIdx`. Two kinds of table:
   slot: 16 B per star, 5.9 MiB at today's count. Built from the
   catalogue and star-frame arrays; never written again.
 - **The forwarded tables** — `iPosition`, `iCompositeSuppress`,
-  `iEclipseDim`, `iSuppressPulsation`. The shell builds them through
+  `iEclipseDim`, `iSuppressPulsation`. `StarPipeline` builds them through
   `../../star-pipeline/star-source-attributes.ts` as plain
   `BufferAttribute`s over its **own live arrays** — nothing instances
   them and no geometry holds them; they carry the version and dirty
   ranges every writer (BinaryOrbitField, EclipsePhotometryField,
-  StarFrame's recentre, the shell's re-attach inits) flags. Each forwarded table is a
+  StarFrame's recentre, `BinariesAttachment`'s re-attach inits) flags. Each forwarded table is a
   `StorageBufferAttribute` **over that attribute's own `Float32Array`**,
   itemSize 1 — no copy, so there is nothing to keep current — and
   `StarTables.syncSources()` forwards the source's `version` and
@@ -211,8 +211,8 @@ Two paths, picked by whether the writer reported three.js update ranges:
   also **clears the source's range list** — no geometry draws the source
   attribute itself, so they would otherwise accumulate to
   `MAX_PARTIAL_RANGES` and collapse into a full upload.
-- **Whole-buffer** — a bare `needsUpdate`, which is what the shell's
-  re-attach inits and a recentre set (through `uploadFull`, so a pending
+- **Whole-buffer** — a bare `needsUpdate`, which is what
+  `BinariesAttachment`'s re-attach inits and a recentre set (through `uploadFull`, so a pending
   range list cannot outrank the full array). Costs the table's whole
   `writeBuffer`: 4.4 MiB for positions, 1.5 MiB per scalar table. A range
   forwarded behind an unconsumed full upload is dropped, since three
@@ -226,7 +226,7 @@ buffer — 4.4 MiB every rendered frame for the position table with the
 hint set. A table upload happens when its version moves and not otherwise.
 
 `EclipsePhotometryField` forces its own first writing flush full,
-because the shell's re-attach fill reaches stars outside the member
+because `BinariesAttachment`'s re-attach fill reaches stars outside the member
 slots it tracks ([Partial re-upload](../../binaries/eclipse/README.md#partial-re-upload))
 — a range list appended before a render consumed that fill
 would strand every untracked star at the previous attach's value.
@@ -247,7 +247,7 @@ why the arithmetic is stated:
 
 The static table's `Float32Array` stays on the JS heap after upload
 (three does not release it); the forwarded tables add none — their
-arrays are the shell's.
+arrays are their writers'.
 
 ### Why no table is itemSize 3
 
@@ -355,7 +355,7 @@ be a second write of a value already in the buffer:
 
 Splitting the draw in two — a depth-writing core plus a depthWrite-off
 halo — also works, but doubles this pass's per-corner cost: a second full
-390k-instance draw running the whole distance / magnitude / pulsation /
+<!-- count:build-catalog/recordCount k2 -->980k<!-- /count -->-instance draw running the whole distance / magnitude / pulsation /
 colour-lookup chain to re-derive varyings the first draw already had.
 Three draws is the count.
 

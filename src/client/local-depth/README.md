@@ -147,7 +147,7 @@ localDepthPass.render(renderer, camera)        // after the main render
   the API just doesn't care.
 - Positions are renderer-local-frame (same floating origin as the
   camera), so brackets are camera-relative distances and the pass is
-  invariant under `recenterOrigin` — no recenter hook needed beyond
+  invariant under a recentre — no recenter hook needed beyond
   what each layer already does.
 
 Live providers:
@@ -214,8 +214,8 @@ intra-body order and orbit lines blend commutatively, argued in
 - **Observe** — `uHideIdx` / `hiddenInstanceIdx` (the observe-anchor
   hide) applies to mirror draws exactly as to main-pass instances.
 - **SVG overlays** — a separate compositing channel, always above
-  WebGL; camera near/far changes don't touch x/y projection, so overlay
-  math is untouched. The constellation figure is now WebGL line geometry
+  the canvas; camera near/far changes don't touch x/y projection, so overlay
+  math is untouched. The constellation figure is line geometry
   in the main pass (`../constellation-figure/README.md`), so the local
   pass's repaint occludes it with a body's true silhouette like any
   background — no mask.

@@ -1,6 +1,36 @@
 // Stick-figure polylines → flat LineSegments endpoint list (two star indices
-// per segment), and the active-set selection driving the rebuild.
-// See README.md.
+// per segment), the active-set selection driving the rebuild, and the aim
+// direction. See README.md.
+
+import * as THREE from 'three';
+import { AIM_DEGENERATE_DIST_PC } from '../camera/controls/aim-controller';
+
+export interface FigureAimInputs {
+  readonly localPositionInto: (idx: number, out: THREE.Vector3) => THREE.Vector3;
+  /** The vantage the figure is seen from. */
+  readonly from: Readonly<THREE.Vector3>;
+  /** The observe anchor: the vantage's own star, which has no direction. */
+  readonly excludeStarIdx: number | null;
+}
+
+/** README.md#the-aim-direction: the mean unit direction from the vantage to each
+ *  distinct vertex. Null when no vertex has a direction from there. */
+export function figureAimDirection(
+  lines: readonly (readonly number[])[] | undefined,
+  inputs: FigureAimInputs,
+): THREE.Vector3 | null {
+  const members = new Set(lines?.flat());
+  const p = new THREE.Vector3();
+  const sum = new THREE.Vector3();
+  for (const idx of members) {
+    if (idx === inputs.excludeStarIdx) continue;
+    inputs.localPositionInto(idx, p).sub(inputs.from);
+    const dist = p.length();
+    if (dist >= AIM_DEGENERATE_DIST_PC) sum.addScaledVector(p, 1 / dist);
+  }
+  const len = sum.length();
+  return len >= AIM_DEGENERATE_DIST_PC ? sum.divideScalar(len) : null;
+}
 
 export interface FigureConstellationLike {
   lines?: number[][];

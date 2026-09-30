@@ -11,8 +11,6 @@ import type { CompleteCatalog } from '../../loaders/catalog-loader';
 import type { LateState } from '../../util/late/late';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import { setNumAttr } from '../../overlays/dirty-attr';
-import { getChartDiscParams } from '../../camera/controls/star-physics';
-import { chartDiscPxForAppMag } from '../chart-disc-pure';
 import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
 import { limitMagOf } from '../../filters/filter-state';
 
@@ -314,7 +312,7 @@ export class ChartLabels {
   // CPU labels and ring glyphs don't move when those inputs are stable.
   // The epoch key matters under time scrubbing: a re-advance moves every
   // star with the camera still, and without it the glyphs freeze while
-  // the WebGL discs walk away. Identity-comparing the state at the top of
+  // the GPU-drawn discs walk away. Identity-comparing the state at the top of
   // tick() lets us drop ~1.6ms / frame of iteration work when the user is
   // sitting idle in chart mode.
   private readonly lastTickCamPos = new THREE.Vector3(NaN, NaN, NaN);
@@ -501,7 +499,7 @@ export class ChartLabels {
     const camera = stellata.camera;
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const positions = stellata.localPositions;
+    const positions = stellata.starFrame.localPositions;
     const cat = stellata.catalog;
 
     // Full-tick skip. Chart-mode SVG output is fully determined by camera
@@ -510,7 +508,7 @@ export class ChartLabels {
     // ~1500 binaries / ~1000 variables and ~hundreds of named stars to
     // discover that nothing moved is the dominant idle cost; skipping the
     // entire body collapses chart.* sections to zero on stationary frames.
-    const epochJyr = stellata.advancedEpochJyr;
+    const epochJyr = stellata.starFrame.advancedEpochJyr;
     // Planet labels track the ephemeris, which moves with the model
     // clock even under a still camera — bucketed at the ephemeris
     // cache's own 60 s granularity so idle frames still skip.
@@ -539,9 +537,7 @@ export class ChartLabels {
     // below (variable rings + binary wings sized off the same px formula
     // the GPU disc uses).
     const limitMag = limitMagOf(f);
-    const discParams = getChartDiscParams(stellata.uniforms);
-    const discPxFor = (mag: number): number =>
-      chartDiscPxForAppMag(mag, discParams, limitMag);
+    const discPxFor = (mag: number): number => stellata.starPipeline.chartDiscPxFor(mag);
 
     // Chart-content detail gates (recomputed on chart entry + V). Planet
     // name labels ride the star-name tier; rings + wings share one element.
@@ -645,8 +641,8 @@ export class ChartLabels {
       }
     }
     if (showConNames) {
-      const worldOffset = stellata.getWorldOffset();
-      for (const anchor of stellata.constellationLabelAnchors) {
+      const worldOffset = stellata.floatingOrigin.worldOffset;
+      for (const anchor of stellata.constellationBoundaries.labelAnchors) {
         const minAppMag = tables.value.conStars.get(anchor.conIndex)?.minAppMag ?? Infinity;
         if (minAppMag > limitMag) continue;
         if (!projectVecInto(

@@ -50,7 +50,7 @@ the ladder's pure decision function is
 `../../../poi/click-ladder-pure.ts`.
 
 The controller sees the rest of the app only through its deps
-closures (busy gates, Target-keyed focus/vector reads, flyTo /
+closures (the shared camera claim, Target-keyed focus/vector reads, flyTo /
 setOrbitTarget / unfocus / togglePoi / aimAt / aimAlong) — it owns
 dispatch order and gesture math, never focus or camera-transition
 state. The observe double-click holds a ray, so it takes `aimAlong`
@@ -178,10 +178,11 @@ third vector behind them.
   rotates `camera.up` by the same quaternion it rotates `_eye` by, then
   `lookAt` reads it, so the roll the user is holding is carried forward frame
   to frame by the library itself. While an **animation** owns the camera
-  instead, nothing transports `up` — so `stellata.ts` re-derives it per
+  instead, nothing transports `up` — so `CameraStep` re-derives it per
   animating frame; [The perpendicular invariant](#the-perpendicular-invariant).
 - **OBSERVE** — `adoptFromCamera(camera)` each frame, ahead of the
-  animation dispatch in `stellata.ts`'s `animate()`: there the quaternion
+  controller dispatch in `CameraStep.advance`
+  ([camera-step/](../../camera-step/README.md)): there the quaternion
   is the authority (a direct-manipulation drag rolls by construction), so
   `camera.up` follows it. That makes the observe→navigate handover a
   no-op — the first navigate `lookAt` reproduces the pose the drag left.
@@ -205,7 +206,7 @@ three.js's `lookAt` falls back to an arbitrary roll. Neither self-repairs —
 TrackballControls preserves whatever angle it inherits, so the view stays
 ill-conditioned until the next `L`.
 
-So the animate loop re-derives `up` on every frame a navigate animation owns
+So `CameraStep` re-derives `up` on every frame a navigate animation owns
 the camera. That is discrete parallel transport — project the rendered up
 into the next image plane — which is what a drag does, so an aim now injects
 no roll of its own instead of spinning the image as its endpoint approaches

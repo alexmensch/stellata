@@ -109,7 +109,7 @@ export function mountRenderWatch(stellata: Stellata, opts: RenderWatchOpts = {})
     flashTimer = window.setTimeout(() => { hud.style.borderColor = '#333'; }, FLASH_MS);
   });
 
-  // Own rAF loop rather than a hook in animate(): it must keep counting on
+  // Own rAF loop rather than a hook in FrameLoop: it must keep counting on
   // the ticks the gate skips, which is what the skip ratio is.
   const countTick = () => {
     if (disposed) return;

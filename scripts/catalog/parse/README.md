@@ -1,8 +1,9 @@
 # Per-row pipeline and reference-catalogue parsing
 
 The membership-manifest row walk (`readStars` in `stars-parse.ts`) and
-everything it resolves per star: space-motion velocity, the GCVS variability
-cross-match, and Stellarium stick figures. Spectral class and physical radius
+everything it resolves per star: space-motion velocity and the GCVS
+variability cross-match. Constellation membership and the stick figures are
+`constellations/`. Spectral class and physical radius
 are resolved here but owned by `../spectral/`. The binary record layout these
 fields land in is [Binary catalog format](../record/README.md#binary-catalog-format-publiccatalogbini--manifest); the
 membership term
@@ -17,7 +18,11 @@ scripts/catalog/parse/
   read-stars-inputs.ts            The manifest path, plus source paths +
                                   loaders for every reference table readStars
                                   consumes, and the input set derived
-                                  artifacts invalidate against. One loader is
+                                  artifacts invalidate against
+                                  (readStarsInputPaths: every file it can
+                                  read, so every dust chunk, and the magnitude
+                                  pull whether or not the magnitude term is
+                                  on). One loader is
                                   a derived index rather than a file read: the
                                   bound-sibling parallaxes the distance
                                   cascade's bottom tier lends, which cross
@@ -37,16 +42,9 @@ scripts/catalog/parse/
   gcvs/                           GCVS variable-star parsing and the
                                   variability cross-match, with its own
                                   README. Read by build-catalog only.
-  constellations.ts (+ test)      The IAU-88 table (CONSTELLATIONS /
-                                  CON_INDEX), the Stellarium source path, the
-                                  two things read out of that file — stick
-                                  figures → constellation line segments +
-                                  public/constellations.json, and
-                                  readIauEdgeRecords → the B1875 IAU boundary
-                                  segments — plus
-                                  createConstellationAssignment, which binds
-                                  the boundary lookup to the table's indices
-                                  (README.md#positional-constellation-membership).
+  constellations/                 The IAU-88 table, byte 34's positional
+                                  membership and the Stellarium stick
+                                  figures, with its own README.
   tsv-stream.ts                   forEachLine — the one line-at-a-time read
                                   over a committed table too large to hold as
                                   one string (README.md#streaming-a-committed-table).
@@ -155,7 +153,7 @@ A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no
 parallax, no V, or no position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
 `data/membership/parked-ledger.tsv` names it. A **drop** (step 5) is a
 reference table disagreeing with the tiers above it — never a membership
-decision — so it is pinned at 0 in `../build-catalog-expected.json` and a
+decision — so it is pinned at <!-- count:build-catalog/droppedTooFar -->0<!-- /count --> in `../build-catalog-expected.json` and a
 non-zero entry fails the build. Parks are pinned too, but at their measured
 counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
 
@@ -215,7 +213,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    special-cased to 0.013 R☉; Wolf-Rayets keep their own ramps (Apsis
    models neither). Clamped to [0.08, 2500] R☉.
 10. **Constellation** — positional, from the resolved xyz
-    ([Positional constellation membership](#positional-constellation-membership)). Nothing here sets the
+    ([Positional constellation membership](constellations/README.md#positional-constellation-membership)). Nothing here sets the
     DESIGNATION's constellation: the manifest carries no editorial `con` cell.
 
 Every cascade tally the walk returns is incremented **after** step 5, so each
@@ -337,111 +335,3 @@ record write per star including the seven `float32` Apsis fields, the
 `uint32` `sid`, the three `float32` velocity components, plus the
 `uint8` multiplicity status. See sections
 below.
-
-## Positional constellation membership
-
-Catalog byte 34 is **positional**: `createConstellationAssignment`
-(`constellations.ts`) resolves the IAU ([Delporte 1930](/data/papers/index.md#delporte1930)) boundary
-region a record's own xyz falls in and maps it onto the `CONSTELLATIONS` index
-space. The geometry — the B1875 precession, the edge decomposition, and
-its self-validating 89-region invariant — is
-`src/client/constellation-boundaries/iau-geometry/README.md`; this module owns only
-the index mapping, and throws at construction if a region names a
-constellation the IAU-88 table doesn't carry.
-
-Two properties follow from the boundaries partitioning the whole sphere:
-
-- **`NO_CONSTELLATION_INDEX` is unreachable for anything with a
-  direction.** Sol sits at the origin and has none, so it is the sole
-  holder — asserted at the record write in `../build-catalog.ts`. Every
-  other record, including the promoted companions that used to inherit
-  the anchor's index (and the ~5.0k whose anchor had none to give),
-  carries a real constellation.
-- **A row needs no catalogue entry to be classified.** The uncatalogued
-  Gaia fill tier resolves on position like everything else.
-
-**The designation's constellation does not come from this walk.** A
-star's *designation* constellation is fixed by nomenclature and diverges from
-position once a boundary moves past a named star: ρ Aql / 67 Aql (HIP 99742) has
-been positionally in **Delphinus** since 1992 and is ρ **Aquilae** permanently.
-The manifest carries no editorial `con` column,
-so the walk leaves `desigConIndex` (search-index `dc`) at
-`NO_CONSTELLATION_INDEX` and three later passes fill it — the IAU WGSN
-designation the naming ladder resolves states its own constellation and wins
-([The designation constellation](../naming/README.md#the-designation-constellation)), else the classic-ID
-label pass fills it from IV/27A keyed on the record's own HD/HIP, else a GCVS
-designation's trailing abbreviation. Cascade, coverage and the GCVS precedence:
-[The designation constellation](../classic-ids/README.md#the-designation-constellation).
-`designationConIndex(dc, c)` in `../record/catalog-pure.ts` is still the single
-statement of which field a Bayer / Flamsteed / GCVS designation reads, and the
-positional `conIndex` is still the last fallback (123 faint Flamsteed-only
-records IV/27A's TAP subset omits).
-
-The population that fallback would silence is not small: 65 search entries carry
-a `dc` today, dominated by Flamsteed numbers assigned under Ptolemaic
-constellations that the [Delporte 1930](/data/papers/index.md#delporte1930) boundaries
-reassigned (15 LMi sits in Ursa Major, 41 Lyn — Intercrus — likewise), plus the
-boundary-straddling promoted companions whose composed names take the anchor's
-designation (Fomalhaut C is α PsA C while sitting in Aquarius).
-
-**A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
-whatever any catalogue column says, so `applyVariability` (`gcvs-parse.ts`)
-sets `desigConIndex` from the designation's trailing abbreviation wherever
-IV/27A left it empty — `gcvsDesignationCon` pins **7,363**. Its authority is
-not a fallback position: the cell it used to correct was untrustworthy both
-ways —
-
-- **Stale** — LT Vul was filed under Sagitta, but sits in Vulpecula *and*
-  is named for it, so designation and boundaries agreed against the cell.
-- **Right on position, wrong on the name** — RY Cen (cell and position
-  both Lupus, named for Centaurus) and EQ Vul (both Lyra, named for
-  Vulpecula) are genuine ρ Aql-shaped movers, and were **invisible** to any
-  check reading the designation constellation off the cell.
-
-Those two plus CM Ind (named for Indus, positionally in Pavo) are the GCVS
-share of the entries `designationConMismatch` pins; the rest come from IV/27A.
-The count itself lives in [Search index](../record/README.md#search-index-publicsearch-indexjson) — it moves
-with the
-record set, so restating it here only goes stale (this line read 65 against a
-pinned 68).
-
-## Stick figures from Stellarium
-
-Classical asterism lines are sourced from Stellarium's modern sky culture
-`index.json` (CC/MIT-compatible, HIP-indexed). The source file is
-committed to `data/stellarium/stellarium-modern-skyculture.json` — it essentially
-never changes, so fetching it at build time each time would be wasted
-work.
-
-Pipeline in `scripts/catalog/build-catalog.ts`:
-
-1. `readStars` reads the manifest's `hip` column into each star record.
-2. After sorting stars by absmag (so record indices are final), a
-   `hipToIndex: Map<number, number>` is built from the post-sort order.
-   Duplicate HIPs (rare — binary companions) keep the brightest entry
-   (first-write wins).
-3. `buildFigureLines(hipToIndex)` walks each Stellarium constellation's
-   `lines` array and resolves every HIP to a record index, producing
-   `Map<conIndex, number[][]>`.
-4. Resolved `lines` are merged into the emitted `constellations.json`
-   alongside `{ code, name }`. A polyline is kept only if ≥2 points
-   survive.
-
-**Reliability rule: any unresolved HIP is a hard build error** — unless
-it's in `KNOWN_MISSING_HIPS`. That map documents HIPs that Stellarium
-references but that build no record, with a human-readable justification
-each. Both entries are on the manifest and both **park**: a parallax exists
-and a skip rule refuses it, so they hold their SIDs and reinstate when Gaia
-DR4 fits the blend (`../distance/parallax/README.md`).
-
-- `5165` (β Phe, HD 6595 — not α Phe, which is Ankaa at HIP 2081) —
-  Phoenix loses most of its figure without this star.
-- `89341` (μ Sgr / Polis) — one Sagittarius polyline degrades from 3
-  points to 2, shape still recognisable.
-
-If a future Stellarium update introduces new references to missing HIPs,
-the build fails until each is explicitly added to
-`KNOWN_MISSING_HIPS` with rationale. Don't relax the check to a soft
-warning — the whole point of using Stellarium's HIP-indexed data (vs.
-fuzzy RA/Dec position matching) is deterministic mapping.
-

@@ -18,7 +18,6 @@ import {
   perceptualAppSizePx,
   perceptualDmEff,
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-pure';
-import type { ChartDiscParams } from '../../chart-mode/chart-disc-pure';
 
 // Screen-fill fraction of the viewport minor axis the manual-zoom orbit
 // floor solves for, and the `uMaxPhysFrac` per-star disc clamp the shader
@@ -39,12 +38,6 @@ export interface StarPhysicsUniforms {
   uSizeKnee: { value: number };
 }
 
-// Subset consumed by getChartDiscParams.
-export interface ChartDiscUniforms {
-  uChartDiscMaxPx: { value: number };
-  uChartDiscMinPx: { value: number };
-  uChartMagBright: { value: number };
-}
 
 // Smaller of the camera's vertical and horizontal FOV in radians. The
 // disc-fill geometry uses the minor axis so the target fraction reads
@@ -347,15 +340,3 @@ export function renderedDiscPxAtPeak(inputs: PeakDiscInputs, idx: number): numbe
   return Math.min(peak, ZOOM_FLOOR_FRACTION * Math.min(viewport.x, viewport.y));
 }
 
-// Chart-mode disc-tuning bag pulled from the shader uniforms. Surfaced
-// for chart-labels.ts so the per-frame label engine reads the same
-// values the chart-mode shader does.
-export function getChartDiscParams(
-  uniforms: ChartDiscUniforms,
-): ChartDiscParams {
-  return {
-    maxPx: uniforms.uChartDiscMaxPx.value,
-    minPx: uniforms.uChartDiscMinPx.value,
-    magBright: uniforms.uChartMagBright.value,
-  };
-}

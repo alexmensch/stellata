@@ -18,8 +18,9 @@ authoring-patterns.md   Stellata's instances of the write-time
                         symmetry, sentinel-init dirty-track, single
                         source of truth for time / camera state), each
                         narrowing its generic rule in code-craft's
-                        write-time patterns, plus the code-comment CI
-                        and the star-count rule. Read before
+                        write-time patterns, plus the code-comment CI,
+                        the star-count rule and the doc-figure marker
+                        rule. Read before
                         adding a bus.on() call, a sibling helper, a
                         sentinel-init dirty-track pattern, or any state
                         struct shifted mid-animation.
@@ -71,8 +72,8 @@ sid.md                  Design gate for the Stellata ID epic:
                         three-layer identity model, designation
                         namespaces, append-only SID ledger + CI guard,
                         Gaia DR-reconciliation procedure with measured
-                        DR2→DR3 churn, v4 URL wire + exact legacy
-                        migration table. Spans scripts/, data/sid/,
+                        DR2→DR3 churn, v4 URL wire (pre-SID formats
+                        retired). Spans scripts/, data/sid/,
                         url-state, and every object-carrying layer.
 pipeline-flowchart.md   Plain-language flowchart + walkthrough of the
                         full data pipeline: which published datasets

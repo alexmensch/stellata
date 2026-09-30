@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
-import { compareBuildCounts, formatCountDiff } from '../build-counts';
+import { compareCountSnapshot } from '../build-counts';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence } from './binding-evidence';
 import { parseBsc5Tsv } from './classic-ids-parse';
@@ -128,13 +128,7 @@ async function main(): Promise<void> {
     envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: EXPECTED_COUNTS,
     actual: joinCounts,
-    compare: (expected, actual) => {
-      const diff = compareBuildCounts(expected, actual);
-      return {
-        drifted: diff.some((d) => d.status === 'mismatch'),
-        report: formatCountDiff(diff),
-      };
-    },
+    compare: compareCountSnapshot,
     failureLabel: 'classic-id-overlay count',
     refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:classic-ids',
   });
