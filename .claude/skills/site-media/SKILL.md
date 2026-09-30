@@ -113,8 +113,8 @@ setting is the user's call.
 
 ## Hand it back
 
-Some inputs cannot be rescued by re-encoding, and re-shooting is cheap now
-that `debug.capture()` makes a take repeatable
+Some inputs cannot be rescued by re-encoding, and re-shooting is cheap:
+`debug.capture()` makes a take repeatable
 (`src/client/debug/capture/README.md`). Say which file, which measurement,
 and what to change:
 
