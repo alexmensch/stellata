@@ -193,6 +193,13 @@ describe('a clip renders as the frame standing in for it', () => {
     );
   });
 
+  it('names it on one line however the label is wrapped in the source', () => {
+    const wrapped = clip.replace('Sol behind Io', 'Sol behind\n                  Io');
+    expect(markdownRendition(page(wrapped), FIGURES)).toContain('![Sol behind Io](');
+    expect(home).not.toMatch(/!\[[^\]]*\n/);
+    expect(home).not.toContain('&#x20;');
+  });
+
   it.each([
     ['poster', ' poster="/site/hero.jpg"', 'no poster'],
     ['aria-label', ' aria-label="Sol behind Io"', 'no aria-label'],

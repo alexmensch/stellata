@@ -14,6 +14,8 @@ import { parseHtml } from './parse-html.ts';
 
 const DROPPED = '.holder, .skip-link';
 
+const collapseWhitespace = (text: string): string => text.replace(/\s+/g, ' ').trim();
+
 /** Closed: a tag outside it throws — README.md#the-markdown-rendition. */
 const VOCABULARY = new Set([
   'a',
@@ -91,6 +93,13 @@ function stillVideos(body: Element): void {
   }
 }
 
+function collapseAlts(body: Element): void {
+  for (const img of selectAll('img', body)) {
+    const alt = img.properties?.alt;
+    if (typeof alt === 'string') img.properties.alt = collapseWhitespace(alt);
+  }
+}
+
 function pruneEmptyLinks(body: Element): void {
   visit(body, 'element', (node, index, parent) => {
     if (node.tagName !== 'a' || parent === undefined || index === undefined) return;
@@ -156,7 +165,7 @@ function textOf(node: Element | null | undefined): string {
   visit(node, 'text', (text: { value: string }) => {
     out += text.value;
   });
-  return out.replace(/\s+/g, ' ').trim();
+  return collapseWhitespace(out);
 }
 
 function metaContent(tree: Root, name: string): string | null {
@@ -192,6 +201,7 @@ export function markdownRendition(source: string, env: NodeJS.ProcessEnv = proce
   stripComments(body);
   prune(body, DROPPED);
   stillVideos(body);
+  collapseAlts(body);
   pruneEmptyLinks(body);
   assertVocabulary(body);
   bulletDefinitions(body);
@@ -209,7 +219,7 @@ export function markdownRendition(source: string, env: NodeJS.ProcessEnv = proce
   const description = metaContent(tree, 'description');
   const preamble = [
     `# ${title}`,
-    ...(description === null ? [] : [`> ${description.replace(/\s+/g, ' ').trim()}`]),
+    ...(description === null ? [] : [`> ${collapseWhitespace(description)}`]),
     `[Read this page as HTML](${canonical})`,
   ];
 
