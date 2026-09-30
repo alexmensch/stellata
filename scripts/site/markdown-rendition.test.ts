@@ -111,6 +111,11 @@ describe('the page’s content survives the derivation', () => {
     expect(home).not.toMatch(/\]\((?!https?:\/\/)/);
   });
 
+  it('resolves links against a <base href> the way the browser does', () => {
+    const rendered = markdownRendition(page('<p><a href="x">X</a></p>', '<base href="/sub/" target="_blank" />'), FIGURES);
+    expect(rendered).toContain('[X](https://stellata.xyz/sub/x)');
+  });
+
   it('resolves the figures the page asks for rather than shipping the token', () => {
     expect(home).not.toContain('VITE_');
     expect(home).toContain(FIGURES.VITE_APP_VERSION);

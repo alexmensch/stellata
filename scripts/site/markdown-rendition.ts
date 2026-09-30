@@ -188,7 +188,8 @@ export function markdownRendition(
   pruneEmptyLinks(body);
   assertVocabulary(body);
   bulletDefinitions(body);
-  absolutise(body, canonical);
+  const baseHref = select('head > base', tree)?.properties?.href;
+  absolutise(body, typeof baseHref === 'string' ? new URL(baseHref, canonical).toString() : canonical);
   shiftHeadings(body);
 
   const mdast = unified()

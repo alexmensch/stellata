@@ -102,7 +102,8 @@ cannot know:
   count — and markdown would otherwise carry them through literally.
 - **Links are absolute**, resolved against the page's own `canonical` — so
   a rendition quoted somewhere else still points back here, and no origin
-  is restated in this file.
+  is restated in this file. A `<base href>` is honoured the way a browser
+  honours it, itself resolved against the canonical.
 - **Definition lists become labelled bullets.** mdast has no definition
   list, so the readout strip would otherwise flatten into one run of text
   with nothing saying which figure belongs to which label.
