@@ -124,9 +124,11 @@ mtime-gated emitter rebuild too. Each run costs a cold catalogue build (about
 six minutes), and a dev server on the same checkout serves nothing meanwhile.
 
 1. On the base commit, `pnpm run identity:snapshot` hashes every output into
-   the gitignored `build/output-identity.json`: each stamp's recorded outputs
-   (the stamp directory's listing, so a new stamped step joins without an
-   edit) plus the unstamped `public/clouds.json` and `public/local-group.json`.
+   the gitignored `build/output-identity.json`: every file under `public/`
+   (the emitters, the `*-sync` mirrors and the committed static assets) plus
+   each stamp's recorded outputs outside it, such as
+   `build/catalog-row-index-map.json`. Both sets are read off disk, so a new
+   step or emitter joins without an edit, and a stray file reads as appeared.
 2. Check out the branch; `pnpm run identity:diff` prints
    `identical: N outputs` and exits 0, or names each changed, appeared and
    vanished file and exits 1.

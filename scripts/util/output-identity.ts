@@ -2,7 +2,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 
 import { STAMP_DIR, fileHashes, readStamp, type FileHashes } from './build-stamp';
 import { diffOutputHashes, formatDifference, isIdentical } from './output-identity-pure';
@@ -10,7 +10,7 @@ import { REPO_ROOT } from './paths';
 
 const SNAPSHOT = resolve(REPO_ROOT, 'build/output-identity.json');
 
-const UNSTAMPED_OUTPUTS = ['public/clouds.json', 'public/local-group.json'];
+const PUBLIC_DIR = resolve(REPO_ROOT, 'public');
 
 function rebuildFromScratch(): void {
   const sh = (cmd: string, args: string[]) =>
@@ -30,9 +30,15 @@ function stampedOutputs(): string[] {
     });
 }
 
+function publicFiles(): string[] {
+  return readdirSync(PUBLIC_DIR, { recursive: true, withFileTypes: true })
+    .filter((e) => e.isFile())
+    .map((e) => relative(REPO_ROOT, join(e.parentPath, e.name)));
+}
+
 function currentHashes(extra: readonly string[] = []): FileHashes {
-  const paths = [...stampedOutputs(), ...UNSTAMPED_OUTPUTS, ...extra];
-  return fileHashes(paths.map((p) => resolve(REPO_ROOT, p)));
+  const paths = new Set([...stampedOutputs(), ...publicFiles(), ...extra]);
+  return fileHashes([...paths].map((p) => resolve(REPO_ROOT, p)));
 }
 
 function snapshot(): number {
