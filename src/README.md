@@ -44,7 +44,8 @@ express, which `worker.ts` does:
   share link is `/app/v/<blob>/` — no such asset exists, and the blob is
   the client's to decode. The Worker probes the assets binding first and
   falls back to the application document on a 404, so a real asset ever
-  emitted under `/app` keeps winning.
+  emitted under `/app` keeps winning. A request naming only non-document
+  types (`image/png`) keeps its 404: it is a missing asset, not a page.
 - **Both legacy share transports 301 onto the canonical form.**
   `/v/<blob>/` is the form shared while the application was the site root;
   `/?v=<blob>` predates that one. Links carrying either sit in places that

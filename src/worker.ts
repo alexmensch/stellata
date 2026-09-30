@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { APP_PATH } from './client/util/url-state/share-path-pure';
-import { MARKDOWN_TYPE, alternateLink, varyWithAccept } from './negotiation-pure';
+import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './negotiation-pure';
 import { negotiatedRendition, route } from './routing-pure';
 
 // Inlined, not imported: README.md#cloudflareworkers-types-leaks-globally.
@@ -30,7 +30,8 @@ export default {
     }
 
     const readable = request.method === 'GET' || request.method === 'HEAD';
-    const rendition = readable ? negotiatedRendition(decided, request.headers.get('accept')) : null;
+    const accept = request.headers.get('accept');
+    const rendition = readable ? negotiatedRendition(decided, accept) : null;
 
     if (rendition !== null) {
       const markdown = await env.ASSETS.fetch(
@@ -60,7 +61,7 @@ export default {
     }
 
     // After the probe, so a real asset under /app keeps winning.
-    if (response.status === 404 && decided.kind === 'app' && readable) {
+    if (response.status === 404 && decided.kind === 'app' && readable && wantsDocument(accept)) {
       return env.ASSETS.fetch(new Request(new URL(APP_PATH, url).toString(), request));
     }
 

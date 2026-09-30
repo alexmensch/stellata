@@ -84,6 +84,14 @@ describe('an unmatched path under /app is application state', () => {
     const { response } = await route('/app/v/AQAA/', { method: 'POST' });
     expect(response.status).toBe(404);
   });
+
+  // An explicit non-document Accept is an asset fetch; answering its miss with
+  // the app's HTML at 200 would hide the missing asset.
+  it('leaves an asset fetch that misses under /app as a 404', async () => {
+    const { response } = await route('/app/missing.png', { headers: { accept: 'image/png' } });
+    expect(response.status).toBe(404);
+    expect(await response.text()).toBe(DOCUMENTS.notFound);
+  });
 });
 
 describe('everything else is served, or really missing', () => {
