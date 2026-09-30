@@ -39,9 +39,10 @@ function lineAt(text: string, index: number): number {
   return line;
 }
 
+const escapeRegExp = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 /** A token's raw text as a source pattern: inside a list item or blockquote the lexer strips each continuation line's indent and `>`. */
-const sourcePattern = (raw: string): RegExp =>
-  new RegExp(raw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\n/g, '\\n[ \\t>]*'), 'g');
+const sourcePattern = (raw: string): RegExp => new RegExp(escapeRegExp(raw).replace(/\n/g, '\\n[ \\t>]*'), 'g');
 
 /** Markdown with every code block and inline code span blanked to spaces, newlines and offsets kept. */
 export function maskCode(markdown: string): string {
@@ -152,6 +153,77 @@ const SIZE_FIGURE = /(?<![\d.,_])\d{3}(?:[,_]\d{3}|k)(?![\d,_]*\d)/g;
 const SIZE_CONTEXT = /\bstars?\b|\brecords?\b|catalog|\binstances?\b|\bpositions?\b/i;
 const WHOLE_MARKER = /<!-- count:\S+?(?: \S+)? -->[^\n]*?<!-- \/count -->/g;
 
+const blankMarkers = (text: string): string => text.replace(WHOLE_MARKER, (m) => ' '.repeat(m.length));
+
+export interface SnapshotLeaf {
+  key: string;
+  leaf: string;
+  value: number;
+}
+
+/** Every numeric leaf a marker could name. A value inside an array is a record in a list, not a count. */
+export function snapshotLeaves(snapshots: Snapshots): SnapshotLeaf[] {
+  const leaves: SnapshotLeaf[] = [];
+  const walk = (node: unknown, path: string[], stem: string): void => {
+    if (typeof node === 'number' && path.length > 0) {
+      leaves.push({ key: `${stem}/${path.join('.')}`, leaf: path[path.length - 1], value: node });
+    } else if (node !== null && typeof node === 'object' && !Array.isArray(node)) {
+      for (const [k, v] of Object.entries(node)) walk(v, [...path, k], stem);
+    }
+  };
+  for (const [stem, json] of snapshots) walk(json, [], stem);
+  return leaves;
+}
+
+/** New-file line numbers a `git diff -U0` adds. */
+export function addedLineNumbers(diff: string): Set<number> {
+  const added = new Set<number>();
+  for (const m of diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)) {
+    const start = Number(m[1]);
+    const count = m[2] === undefined ? 1 : Number(m[2]);
+    for (let i = 0; i < count; i++) added.add(start + i);
+  }
+  return added;
+}
+
+const NUMBER = /(?<![\w.,])\d{1,3}(?:,\d{3})+(?![\d,]*\d)|(?<![\w.,])\d+(?![\w.,]*\d)/g;
+/** Lines either side of a figure searched for its key's leaf name. */
+const KEY_NEIGHBOURHOOD = 3;
+/** Below this, a comma-less value collides with everyday numbers (100 pc, 150°) too often to flag. */
+const KEYED_FLOOR = 100;
+
+export interface FigureCopy {
+  line: number;
+  figure: string;
+  keys: string[];
+}
+
+/** Shape: /scripts/doc-figures/README.md#staged-copies-at-commit-time. Markdown code must already be masked. */
+export function unmarkedSnapshotCopies(
+  scannableText: string,
+  addedLines: ReadonlySet<number>,
+  leaves: readonly SnapshotLeaf[],
+): FigureCopy[] {
+  const byValue = new Map<number, SnapshotLeaf[]>();
+  for (const l of leaves) byValue.set(l.value, [...(byValue.get(l.value) ?? []), l]);
+  const lines = blankMarkers(scannableText).split('\n');
+  const copies: FigureCopy[] = [];
+  for (const n of [...addedLines].sort((a, b) => a - b)) {
+    const text = lines[n - 1];
+    if (text === undefined) continue;
+    const near = lines.slice(Math.max(0, n - 1 - KEY_NEIGHBOURHOOD), n + KEY_NEIGHBOURHOOD).join('\n');
+    for (const m of text.matchAll(NUMBER)) {
+      const value = Number(m[0].replace(/,/g, ''));
+      const matching = byValue.get(value);
+      if (!matching) continue;
+      const grouped = m[0].includes(',');
+      const keyed = value >= KEYED_FLOOR ? matching.filter((l) => new RegExp(`\\b${escapeRegExp(l.leaf)}\\b`).test(near)) : [];
+      if (grouped || keyed.length > 0) copies.push({ line: n, figure: m[0], keys: (keyed.length ? keyed : matching).map((l) => l.key) });
+    }
+  }
+  return copies;
+}
+
 export interface SizeFigure {
   figure: string;
   line: number;
@@ -163,8 +235,7 @@ const figureValue = (figure: string): number =>
 /** Unmarked figures in the catalogue's size range, on a line about stars, records or the catalogue. */
 export function catalogueSizeFigures(scannableText: string, range: readonly [number, number]): SizeFigure[] {
   const found: SizeFigure[] = [];
-  scannableText
-    .replace(WHOLE_MARKER, (m) => ' '.repeat(m.length))
+  blankMarkers(scannableText)
     .split('\n')
     .forEach((text, i) => {
       if (!SIZE_CONTEXT.test(text)) return;

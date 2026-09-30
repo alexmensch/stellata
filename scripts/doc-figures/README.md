@@ -13,7 +13,7 @@ doc-figures-pure.ts        Marker grammar, code masking, key resolution,
                            formatting, and renderFigures (text + snapshots +
                            doc kind → rewritten text, stale figures, problems);
                            the catalogue-size matcher and the exemption
-                           parser. No I/O.
+                           parser; the staged-copy detector. No I/O.
 doc-figures-pure.test.ts   Grammar, masking, resolution, format and size-scan
                            cases.
 catalogue-size-exemptions.txt
@@ -30,6 +30,9 @@ doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
                            scan the rewrite and tests/doc-figures.test.ts share;
                            scanCatalogueSize is the size scan below.
 doc-figures.test.ts        Both listings over a throwaway repo.
+check-staged-figures.ts    The commit-time copy check (below): prints each
+                           unmarked snapshot copy on a staged added line and
+                           exits 1. Run by commit-sweep-guard.sh.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
                            the run exits 1.
@@ -106,12 +109,33 @@ total as its own snapshot key — one build run then produces every figure.
 
 One value per marker. A figure computed from several values — a difference, a
 sum, a percentage, "X of Y" where Y is not itself pinned — stays prose, and the
-pinned values inside the sentence carry their own markers. Nothing checks an
-unmarked number: equal numbers are mostly coincidences (a year, a catalogue
-number, a unit conversion), so a scan for them would fail on noise that moves
-with every snapshot regeneration.
+pinned values inside the sentence carry their own markers.
 
 **After regenerating a snapshot** (`UPDATE_BUILD_COUNTS=1`), run
 `pnpm run docs:figures` and commit the doc changes with it. The run prints each
 figure it moved; a moved figure in a sentence whose reasoning depended on the
 old value still needs a reader.
+
+## Staged copies at commit time
+
+No tree-wide test looks for unmarked copies: equal numbers are mostly
+coincidences (a year, a catalogue number, 100 pc), and a whole-tree scan would
+fail unrelated PRs on noise that moves with every snapshot regeneration. The
+commit-time guard (`scripts/hooks/commit-sweep-guard.sh`, check (d)) reads only
+the lines a commit adds to markdown, so a coincidence never re-fires and needs
+no exception list. `check-staged-figures.ts` runs `unmarkedSnapshotCopies` over
+each staged file, code masked and markers blanked, and flags a figure that
+equals a snapshot leaf when either:
+
+- it carries a thousands comma (`1,977`), or
+- it is 100 or more and a matching key's leaf name sits within 3 lines.
+
+Leaves inside an array are skipped: `build-distance-outliers` lists outlier
+records, and their distances are not counts. On a replay of 400 main-line
+commits this shape was right on 99% of 519 hits and interrupted 82 of the 385
+that touched markdown, one or two for nothing. What it misses, by design:
+comma-less counts under 1,000 with no key name nearby, rounded forms (the
+catalogue's size aside, which [The catalogue's size](#the-catalogues-size) scans
+tree-wide), and a copy already stale, which equals nothing. A hit that is
+history, computed or a coincidence passes with `[figure-ok: <reason>]` in the
+commit message. The guard runs only for commits made through Claude Code.

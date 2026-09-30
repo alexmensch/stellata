@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addedLineNumbers,
   catalogueSizeFigures,
   formatFigure,
   markerlessSizeForms,
@@ -9,6 +10,8 @@ import {
   parseSizeExemptions,
   renderFigures,
   resolveFigure,
+  snapshotLeaves,
+  unmarkedSnapshotCopies,
 } from './doc-figures-pure';
 
 const snapshots = new Map<string, unknown>([
@@ -107,6 +110,59 @@ describe('formatFigure', () => {
     expect(formatFigure(63653, { kind: 'thousands', digits: 2 })).toBe('64k');
     expect(formatFigure(10110, { kind: 'thousands', digits: 3 })).toBe('10.1k');
     expect(formatFigure(1247240, { kind: 'thousands', digits: 3 })).toBe('1,250k');
+  });
+});
+
+describe('snapshotLeaves', () => {
+  it('lists numeric leaves with their key and leaf name, skipping values inside arrays', () => {
+    const leaves = snapshotLeaves(new Map([['s', { rows: 1977, by: { hd_link_gap: 5 }, list: [{ d: 49594 }], name: 'x' }]]));
+    expect(leaves).toEqual([
+      { key: 's/rows', leaf: 'rows', value: 1977 },
+      { key: 's/by.hd_link_gap', leaf: 'hd_link_gap', value: 5 },
+    ]);
+  });
+});
+
+describe('addedLineNumbers', () => {
+  it('reads the new-side range of every hunk', () => {
+    expect([...addedLineNumbers('@@ -1,0 +2,2 @@\n+a\n+b\n@@ -9 +11 @@\n-x\n+y\n@@ -20,3 +22,0 @@\n')]).toEqual([2, 3, 11]);
+  });
+});
+
+describe('unmarkedSnapshotCopies', () => {
+  const leaves = [
+    { key: 'm/rows', leaf: 'rows', value: 975573 },
+    { key: 'b/boundarySegments', leaf: 'boundarySegments', value: 781 },
+    { key: 'b/hundred', leaf: 'hundred', value: 100 },
+    { key: 'm/none', leaf: 'none', value: 1977 },
+  ];
+  const all = (text: string) => new Set(text.split('\n').map((_, i) => i + 1));
+
+  it('flags a comma-grouped copy on an added line, naming its keys', () => {
+    expect(unmarkedSnapshotCopies('the manifest holds 975,573 rows', new Set([1]), leaves)).toEqual([
+      { line: 1, figure: '975,573', keys: ['m/rows'] },
+    ]);
+  });
+
+  it('flags a comma-less copy only when its key name is within three lines', () => {
+    const text = 'the sweep walks 781 arcs\nx\ny\nz\n`boundarySegments` pins it';
+    expect(unmarkedSnapshotCopies(text, new Set([1]), leaves)).toEqual([]);
+    expect(unmarkedSnapshotCopies(text, new Set([2]), leaves)).toEqual([]);
+    expect(unmarkedSnapshotCopies(text.replace('x\n', ''), new Set([1]), leaves)).toEqual([
+      { line: 1, figure: '781', keys: ['b/boundarySegments'] },
+    ]);
+  });
+
+  it('skips unchanged lines, marked figures, identifiers, small values and dates', () => {
+    const text = [
+      'old 975,573 rows',
+      `new ${mark('m/rows', '975,573')} rows`,
+      'PIA975573 and 975573.5',
+      'about 100 pc away',
+      'launched 1977-09-05, nothing pinned',
+    ].join('\n');
+    expect(unmarkedSnapshotCopies(text, new Set([2, 3, 4, 5]), leaves)).toEqual([]);
+    expect(unmarkedSnapshotCopies(text, all(text), leaves)).toEqual([{ line: 1, figure: '975,573', keys: ['m/rows'] }]);
   });
 });
 
