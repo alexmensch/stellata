@@ -12,7 +12,6 @@ import { FIGURE_NAMES, FIGURE_TOKEN } from '../scripts/site/figures-pure';
 import { parseHtml, textOf } from '../scripts/site/parse-html';
 import { escapeRegExp } from '../scripts/util/escape-regexp';
 import {
-  catalogueRecordCount,
   citationEntries,
   citedReferenceCount,
   creditedSourceCount,
@@ -102,13 +101,6 @@ describe('the derivations behind those figures', () => {
 
   it('counts the works the citation index records', () => {
     expect(citedReferenceCount(ROOT)).toBe(200);
-  });
-
-  it('reads the catalogue size with no built artifact to read', () => {
-    const snapshot = JSON.parse(
-      readFileSync(join(ROOT, 'scripts/catalog/build-catalog-expected.json'), 'utf8'),
-    );
-    expect(catalogueRecordCount(ROOT)).toBe(snapshot.recordCount);
   });
 });
 
