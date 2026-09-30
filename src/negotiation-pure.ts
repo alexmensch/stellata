@@ -10,7 +10,6 @@ export function alternateLink(rendition: string): string {
   return `<${rendition}>; rel="alternate"; type="text/markdown"`;
 }
 
-/** A `Vary` value naming `Accept`, keeping whatever the response already varied on. */
 export function varyWithAccept(existing: string | null): string {
   const names = (existing ?? '')
     .split(',')
@@ -21,8 +20,7 @@ export function varyWithAccept(existing: string | null): string {
     : [...names, 'Accept'].join(', ');
 }
 
-/** The q-value a client gave a type by naming it exactly, or null if it did
- *  not name it. Wildcards do not count: `*` is what every client sends. */
+/** Wildcards do not count here: `*` is what every client sends. */
 function namedQuality(accept: string, type: string): number | null {
   for (const entry of accept.split(',')) {
     const [name, ...params] = entry.split(';').map((part) => part.trim());
@@ -37,7 +35,6 @@ function namedQuality(accept: string, type: string): number | null {
   return null;
 }
 
-/** The q-value a type effectively has, wildcards included. */
 function quality(accept: string, type: string): number | null {
   const [group] = type.split('/');
   for (const candidate of [type, `${group}/*`, '*/*']) {
@@ -47,12 +44,6 @@ function quality(accept: string, type: string): number | null {
   return null;
 }
 
-/**
- * Markdown is opt-in: a client gets it only by naming `text/markdown` and not
- * ranking `text/html` above it. A wildcard Accept — curl's default and most
- * agent fetchers' — therefore still gets HTML, which is what the deploy has
- * always answered and what a browser needs.
- */
 export function prefersMarkdown(accept: string | null): boolean {
   if (accept === null) return false;
   const markdown = namedQuality(accept, 'text/markdown');
@@ -61,11 +52,7 @@ export function prefersMarkdown(accept: string | null): boolean {
   return html === null || markdown >= html;
 }
 
-/**
- * Whether a document is the right answer to a request that matched no asset:
- * yes unless the client named only non-document types (`image/png`), since
- * the deploy serves a document whatever an agent or `curl` sends.
- */
+/** For a request that matched no asset. */
 export function wantsDocument(accept: string | null): boolean {
   return accept === null || (quality(accept, 'text/html') ?? 0) > 0 || prefersMarkdown(accept);
 }
