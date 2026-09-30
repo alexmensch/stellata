@@ -325,10 +325,11 @@ async function main() {
     // WAVE 2. Everything that needs the COMPLETE record set, or the search
     // index that rides beside it. Each entry here is a correctness
     // requirement, not a tidiness one — see the comment at each call.
-    await kinds.star.ready;
+    // One await for both, or a rejected catalogue leaves the chain's own
+    // rejection unobserved.
+    await Promise.all([kinds.star.ready, binariesAttached]);
     const completeCatalog = await catalog.whenComplete;
     const searchIndex = kinds.star.searchIndex;
-    await binariesAttached;
     await frame();
 
     // Chart mode bound against this map in wave 1 and holds it by
