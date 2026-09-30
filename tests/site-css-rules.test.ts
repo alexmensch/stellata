@@ -40,7 +40,8 @@ function declarations(css: string): Declaration[] {
   }));
 }
 
-const RULES = declarations(RULES_CSS).filter(({ prop }) => !prop.startsWith('--'));
+/** Custom properties included: a block setting a channel is still a block setting a value. */
+const RULES = declarations(RULES_CSS);
 const TOKENS = new Map(
   [...TOKENS_CSS.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(([, name, value]) => [name, value.trim()]),
 );
@@ -105,6 +106,10 @@ describe('the public stylesheet hardcodes no values', () => {
       ({ value }) => /#[0-9a-fA-F]{3,8}\b/.test(value) || COLOUR_FUNCTION.test(value) || NAMED_COLOUR.test(value),
     );
     expect(literals, `colour literals outside :root: ${shown(literals)}`).toEqual([]);
+  });
+
+  it('keeps every token in the one :root block', () => {
+    expect(CODE.match(/:root\b/g)).toHaveLength(1);
   });
 
   it('mixes every alpha variant in the token block rather than restating one', () => {

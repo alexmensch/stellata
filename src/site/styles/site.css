@@ -57,6 +57,7 @@
   --pill-bg: color-mix(in srgb, var(--bg) 85%, transparent);
   --bg-sunken: #04060d;
 
+  --switcher-items: 2;
   --switcher-item-sight: 20rem;
   --switcher-item-requirement: 15rem;
   --readout-item: 11rem;
@@ -240,7 +241,6 @@ video {
 
 /* --switcher-flip is not a number to tidy — README.md#responsiveness-has-no-breakpoints. */
 .switcher {
-  --switcher-items: 2;
   --switcher-gap: var(--space-l);
   --switcher-threshold: calc(
     var(--switcher-items) * var(--switcher-item) +
