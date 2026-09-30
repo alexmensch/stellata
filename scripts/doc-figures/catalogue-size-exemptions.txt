@@ -1,0 +1,42 @@
+# Catalogue-size-range figures the scan tolerates: <file>\t<figure>\t<reason>.
+# stale        prose reasons from an old catalogue size; rewrite it, mark the size, delete the entry.
+# history      a dated measurement or a past build, true as written.
+# other-count  a figure in the size range that counts something else.
+# Every entry must still match a figure, so the list can only shrink.
+data/gaia/README.md	311,071	stale
+data/gaia/README.md	313,257	stale
+docs/pipeline-flowchart.md	310,939	stale
+docs/pipeline-flowchart.md	313,257	stale
+docs/science-galactic-structure.md	390k	stale
+scripts/catalog/boundaries/README.md	390k	stale
+src/client/milkyway/calibration/README.md	979,659	stale
+src/client/star-pipeline/perceptual-disc/README.md	979,659	stale
+src/client/webgpu/extinction/README.md	983,068	stale
+src/client/webgpu/extinction/README.md	983,296	stale
+src/client/webgpu/star/README.md	388,071	stale
+RELEASING.md	329,657	history
+docs/science-catalog-ingestion.md	390k	history
+docs/sid.md	327,452	history
+docs/sid.md	323,603	history
+scripts/catalog/membership/magnitude-term/README.md	984,957	history
+scripts/catalog/membership/magnitude-term/README.md	983,068	history
+scripts/catalog/membership/magnitude-term/README.md	388,071	history
+scripts/catalog/record/README.md	390k	history
+scripts/perf/pins/README.md	329,657	history
+src/client/debug/frame-cost/passes/README.md	388,071	history
+src/client/debug/memory/README.md	329,657	history
+src/client/loaders/README.md	388,071	history
+src/client/milkyway/calibration/README.md	388k	history
+src/client/util/README.md	983,068	history
+src/client/webgpu/extinction/README.md	388,071	history
+src/client/webgpu/extinction/dispatch-order/README.md	983,068	history
+data/simbad/README.md	376,932	other-count
+scripts/catalog/astrometry-request/README.md	374,932	other-count
+scripts/catalog/membership/magnitude-term/README.md	973,596	other-count
+scripts/catalog/membership/magnitude-term/README.md	595,002	other-count
+scripts/catalog/membership/magnitude-term/README.md	594,998	other-count
+scripts/perf/synthetic-catalog/README.md	312k	other-count
+scripts/perf/synthetic-catalog/README.md	388k	other-count
+scripts/perf/synthetic-catalog/README.md	890k	other-count
+scripts/refresh/README.md	383,056	other-count
+src/client/typeahead/README.md	300k	other-count

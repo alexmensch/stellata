@@ -27,9 +27,10 @@ scripts/hooks/
                            "Session-start hook output". Behaviour pinned
                            by tests/prime-guard.test.ts.
   commit-sweep/            The commit-time guard: README staleness,
-                           forbidden comment patterns and the
-                           restatement sweep, plus the comment-rule set
-                           the vitest scanner shares. Own README.
+                           forbidden comment patterns, the
+                           restatement and snapshot-copy sweeps, plus
+                           the comment-rule set the vitest scanner
+                           shares. Own README.
   pr-body-guard.sh         Blocks `gh pr create|edit --body-file <f>`
                            when <f> would fail release-notes-guard or
                            perf-section-guard in CI, and `gh pr ready`
@@ -350,7 +351,8 @@ Two paths:
    (`rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`).
    For `commit-sweep-guard`: pass `[readme-skip: <reason>]` in the
    commit message (covers the README check; comment violations still
-   block — fix the comments). For `prime-guard`: delete the sentinel
+   block — fix the comments), `[comment-ok: <reason>]` for the
+   restatement sweep, `[figure-ok: <reason>]` for the snapshot-copy sweep. For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked. For `skill-guard`: invoke the
    skill, which is the intended route rather than an escape. For

@@ -1,7 +1,7 @@
 # Stellarium modern sky culture
 
 Two datasets in one file: HIP-indexed polylines for the 88 IAU
-constellation stick figures, and the 781 IAU
+constellation stick figures, and the <!-- count:build-catalog/boundarySegments -->781<!-- /count --> IAU
 ([Delporte 1930](/data/papers/index.md#delporte1930))
 constellation **boundary** segments at equinox B1875.
 
@@ -31,7 +31,7 @@ The file is Stellarium's native `index.json` format.
 **Stick figures.** Per constellation, the `lines` array is a list of
 polylines, each a sequence of HIP integer IDs to be connected in order.
 
-**Boundaries.** The top-level `edges` array holds 781 whitespace-delimited
+**Boundaries.** The top-level `edges` array holds <!-- count:build-catalog/boundarySegments -->781<!-- /count --> whitespace-delimited
 records, `<id>:<id> <M|P>+ ra1 dec1 ra2 dec2 CON1 CON2` — M for a
 meridian (constant RA), P for a parallel (constant Dec), coordinates
 sexagesimal. `edges_epoch` is `B1875` and `edges_source` credits

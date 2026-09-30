@@ -97,6 +97,14 @@ need the same thing — single-use helpers stay with their consumer.
   writes one. Returns a bool where the TS side exits, since the Python
   drivers own their exit.
   Pinned by `snapshot_assert.test.py`.
+- <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
+  git's file list (tracked, optionally untracked-but-not-ignored), for a scan
+  whose scope is the repo rather than a folder list; `presentFiles`, the names
+  that are regular files on disk — git still lists a tracked file deleted but
+  not staged, and a symlink (`CLAUDE.md`) would double its target; and
+  `lfsTracked`, which of those names Git LFS stores. Shared by the repo-meta
+  suites under `tests/` and `doc-figures/`; `git-files.test.ts` pins the
+  deleted, symlinked and untracked cases over a throwaway repo.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
   `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed

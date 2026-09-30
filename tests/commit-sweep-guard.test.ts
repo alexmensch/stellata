@@ -216,3 +216,34 @@ export const x = 1;
     expect(allowed(`git commit -m "a thing ${SKIP_REASON}"`)).toBe(true);
   });
 });
+
+describe('snapshot-copy sweep', () => {
+  function stageDoc(line: string): void {
+    write('counts/s-expected.json', '{ "rows": 975573, "segments": 781 }\n');
+    write('NOTES.md', '# notes\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'seed');
+    write('NOTES.md', `# notes\n\n${line}\n`);
+    git('add', '-A');
+  }
+
+  it('denies an added line quoting a snapshot count unmarked', () => {
+    stageDoc('the manifest holds 975,573 rows');
+    expect(allowed('git commit -m "notes"')).toBe(false);
+  });
+
+  it('allows the same figure inside a marker', () => {
+    stageDoc('the manifest holds <!-- count:s/rows -->975,573<!-- /count --> rows');
+    expect(allowed('git commit -m "notes"')).toBe(true);
+  });
+
+  it('allows a comma-less equal number with no key name nearby', () => {
+    stageDoc('the sweep takes 781 ms');
+    expect(allowed('git commit -m "notes"')).toBe(true);
+  });
+
+  it('honours the figure-ok opt-out', () => {
+    stageDoc('the manifest held 975,573 rows on 2026-09-01');
+    expect(allowed('git commit -m "notes [figure-ok: a dated measurement]"')).toBe(true);
+  });
+});

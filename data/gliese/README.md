@@ -48,7 +48,7 @@ Over all 16 rows the tier serves, `vmag` reproduces the spine's printed `mag`
 cell **exactly** — zero rows differ at the printed precision. That is the
 measurement saying `mag_src=GJ` was a transcription of this catalogue all
 along, so the swap re-sources the value first-hand without moving it. The
-same reduction covers the whole spine: all **3,147** `gl`-bearing spine cells
+same reduction covers the whole spine: all **<!-- count:inherited-spine/nonEmpty.gl -->3,147<!-- /count -->** `gl`-bearing spine cells
 resolve here.
 
 ## The join key
@@ -67,7 +67,7 @@ Where the catalogue resolved a system into components and a record's cell
 names none of them, the bare number answers with the **alphabetically first**
 component, which the pull's `order_by=("Name", "Comp")` makes stable across
 re-pulls rather than a function of row order. 403 numbers are in that shape;
-no spine cell reaches one today (measured over all 3,147 `gl` cells, 2,566 of
+no spine cell reaches one today (measured over all <!-- count:inherited-spine/nonEmpty.gl -->3,147<!-- /count --> `gl` cells, 2,566 of
 them bare), so this decides nothing yet and would need revisiting if the
 magnitude pull widens the cohort.
 

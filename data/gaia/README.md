@@ -124,7 +124,7 @@ magnitude ([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-
 Dust shortens every row of that along a plane sightline, so the bubble is not
 round either. The pulled population is accordingly dominated by distant
 luminous stars rather than by the solar neighbourhood — by naive parallax
-inversion **0.7%** of the 1,247,240 rows lie inside 50 pc and **72%** beyond
+inversion **0.7%** of the <!-- count:membership-manifest/magnitudeTerm.rows -->1,247,240<!-- /count --> rows lie inside 50 pc and **72%** beyond
 500 pc.
 
 **Apparent is forced, not preferred.** Gaia is an apparent-magnitude-limited
@@ -176,19 +176,19 @@ restatement of the cubic:
 
 | | rows |
 |---|---|
-| `V <= 11`, transform applies | **929,929** |
-| `V > 11`, transform applies | 312,475 |
-| no transformed V | 4,836 |
-| | 1,247,240 |
+| `V <= 11`, transform applies | **<!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count -->** |
+| `V > 11`, transform applies | <!-- count:membership-manifest/magnitudeTerm.above_floor -->312,475<!-- /count --> |
+| no transformed V | <!-- count:membership-manifest/magnitudeTerm.no_v -->4,836<!-- /count --> |
+| | <!-- count:membership-manifest/magnitudeTerm.rows -->1,247,240<!-- /count --> |
 
-**929,929, not the 930,562 an ESA TAP count of the same population reports.**
+**<!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count -->, not the 930,562 an ESA TAP count of the same population reports.**
 The difference is exactly the **633** saturated rows that carry an in-range
 colour: `calibratedPhotometry` refuses `G` below
 `GAIA_PHOTOMETRY_SATURATION_G`, and a TAP predicate written as a colour range
 alone does not. The gate is the authority — those 633 are among the brightest
 stars in the sky and reach their V through the printed tier instead.
 
-The 4,836 rows no transform serves, against whether the membership term this
+The <!-- count:membership-manifest/magnitudeTerm.no_v -->4,836<!-- /count --> rows no transform serves, against whether the membership term this
 pull is unioned with ([§ 1](/docs/catalog-driver.md#1-the-driver-model)) already holds them:
 
 | cohort | rows | of those, bound in the manifest |
@@ -212,7 +212,7 @@ printed tier to key on. `V >= G + 0.0268` does not bound them from above, so
 magnitude term's predicate is a bound on V. A source carrying no V satisfies no
 predicate over V, so 925 of these are never candidates — non-selection by the
 term's own definition, not a drop the [§ 6.1](/docs/catalog-driver.md#61-record-parity) no-silent-drops rule speaks to.
-Ledgering them would equally oblige ledgering the 312,475 rows the floor
+Ledgering them would equally oblige ledgering the <!-- count:membership-manifest/magnitudeTerm.above_floor -->312,475<!-- /count --> rows the floor
 excludes. The 18 that are manifest rows *are* candidates and route through the
 existing park: `no_v_magnitude` is "a row placed but unlit ... and a record
 needs both" (`../../scripts/catalog/distance/parallax/parked-ledger.ts`), and 8

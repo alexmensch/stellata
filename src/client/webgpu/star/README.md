@@ -355,7 +355,7 @@ be a second write of a value already in the buffer:
 
 Splitting the draw in two — a depth-writing core plus a depthWrite-off
 halo — also works, but doubles this pass's per-corner cost: a second full
-390k-instance draw running the whole distance / magnitude / pulsation /
+<!-- count:build-catalog/recordCount k2 -->980k<!-- /count -->-instance draw running the whole distance / magnitude / pulsation /
 colour-lookup chain to re-derive varyings the first draw already had.
 Three draws is the count.
 

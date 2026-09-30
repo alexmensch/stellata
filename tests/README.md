@@ -65,6 +65,12 @@ code-comment-rules.test.ts
                          are meant to shrink.
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
+doc-figures.test.ts      Every doc-figure marker in a tracked or untracked
+                         .md or .html resolves to a snapshot number and
+                         quotes it (/scripts/doc-figures/README.md#the-marker),
+                         and the catalogue's size appears nowhere unmarked
+                         outside the shrink-only exemption list
+                         (/scripts/doc-figures/README.md#the-catalogues-size).
 doc-pointer-resolution.test.ts
                          Every `<path>.md#<slug>` pointer in a
                          git-listed file of a kind `SCANNED_KINDS`
@@ -162,21 +168,6 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.
-star-count-consistency.test.ts
-                         The catalogue's own size, stated once. Rounds the
-                         BUILT header to `PROSE_ROUNDED` (artifact-backed,
-                         so it self-skips unbuilt), scans the corpus for
-                         the superseded figure `MYTHOS` names — digit
-                         separators included, which is how an
-                         underscore-separated literal in a dust-cost
-                         script outlived two count changes — and holds
-                         every size figure on the four user-facing prose
-                         surfaces to that one rounding, `public/llms.txt`
-                         among them since `public/` is gitignored and no
-                         directory root reaches it. The AT-HYG spine's own
-                         row count is a different quantity and stays.
-                         **This entry may not quote either figure: the
-                         scan reads it.**
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any
@@ -232,9 +223,9 @@ walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
                          symlinked directories, which public/ carries.
-                         `gitFiles` is git's list (tracked, optionally
-                         untracked-but-not-ignored), for a scan whose
-                         scope is the repo rather than a folder list.
+                         A scan whose scope is the repo rather than a
+                         folder list takes git's list instead,
+                         /scripts/util/README.md#git-files.
                          Also `isProductionTs`, the include predicate the
                          TSL scanners share: a .ts that is neither a test
                          nor an ambient declaration.
@@ -373,7 +364,7 @@ Work every line, then record the findings in the PR body:
 `vitest.config.ts` pins `testTimeout` / `hookTimeout` to **30 s**, not
 vitest's 5 s default. The artifact-backed corpus suites
 (`multi-star-regression`, `known-stars`, `sky-position`) each sweep the
-full 390k-record catalog and its derived buffers, so their tests are
+full <!-- count:build-catalog/recordCount k2 -->980k<!-- /count -->-record catalog and its derived buffers, so their tests are
 seconds long even solo — and their wall time scales with machine load:
 under a full-suite run the slowest sit at 2.5–3.5 s locally, and CI's
 corpus job runs three of those files concurrently on a 2-core runner.

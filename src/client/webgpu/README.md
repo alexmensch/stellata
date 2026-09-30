@@ -289,7 +289,7 @@ carries the argument, what it gives up, and the fallbacks).
 
 **The contract is satisfied by removing writes, never by adding draws.**
 A layer that answers "one program per pass" with a second draw over the
-same 390k instances pays a whole extra per-corner pass for a depth
+same <!-- count:build-catalog/recordCount k2 -->980k<!-- /count --> instances pays a whole extra per-corner pass for a depth
 property a removed write would have bought for nothing. Draw count per
 subsystem is part of the contract, alongside what the pixels look like.
 

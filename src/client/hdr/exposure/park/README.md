@@ -185,6 +185,6 @@ keep probing to notice the scene changing, so its steady-state saving is
 roughly 60 % of the parked-frame figure rather than all of it
 ([These rows price the fully parked frame](../../../debug/frame-cost/passes/README.md#these-rows-price-the-fully-parked-frame-not-the-duty-cycle)).
 Taking the remainder needs the measurement to stay *live* for the
-few emitters that supply the frame mean while the 390k-instance field draw
+few emitters that supply the frame mean while the <!-- count:build-catalog/recordCount k2 -->980k<!-- /count -->-instance field draw
 stops writing at all — `stellata-8cg.34`, which is a different mechanism
 and not a tuning of this one.
