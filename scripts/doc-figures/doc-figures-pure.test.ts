@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { formatFigure, maskCode, parseFormat, parseMarkers, renderFigures, resolveFigure } from './doc-figures-pure';
+import {
+  catalogueSizeFigures,
+  formatFigure,
+  markerlessSizeForms,
+  maskCode,
+  parseFormat,
+  parseMarkers,
+  parseSizeExemptions,
+  renderFigures,
+  resolveFigure,
+} from './doc-figures-pure';
 
 const snapshots = new Map<string, unknown>([
   ['membership-manifest', { rows: 975573, bindingByClass: { none: 1977 }, additionsByReason: { 'admitted:hd_omitted': 5063 } }],
@@ -97,6 +107,47 @@ describe('formatFigure', () => {
     expect(formatFigure(63653, { kind: 'thousands', digits: 2 })).toBe('64k');
     expect(formatFigure(10110, { kind: 'thousands', digits: 3 })).toBe('10.1k');
     expect(formatFigure(1247240, { kind: 'thousands', digits: 3 })).toBe('1,250k');
+  });
+});
+
+describe('catalogueSizeFigures', () => {
+  const range = [300_000, 1_030_000] as const;
+
+  it('finds in-range figures on a line about the catalogue, in every spelling', () => {
+    expect(catalogueSizeFigures('the 390k-star buffer\n~980,000 records\n313_000 stars', range)).toEqual([
+      { figure: '390k', line: 1 },
+      { figure: '980,000', line: 2 },
+      { figure: '313_000', line: 3 },
+    ]);
+  });
+
+  it('skips marked figures, lines with no catalogue word, out-of-range and embedded figures', () => {
+    const text = [
+      `${mark('build-catalog/recordCount', '980k', 'k2')} stars`,
+      '390k fetches',
+      '254,135 stars',
+      '1,247,240 records',
+    ].join('\n');
+    expect(catalogueSizeFigures(text, range)).toEqual([]);
+  });
+});
+
+describe('markerlessSizeForms', () => {
+  it('is the two roundings a marker would render', () => {
+    expect(markerlessSizeForms(979659)).toEqual(['980,000', '980k']);
+  });
+});
+
+describe('parseSizeExemptions', () => {
+  it('reads file, figure and reason, skipping comments and blanks', () => {
+    expect(parseSizeExemptions('# head\n\ndocs/a.md\t390k\tstale\n')).toEqual([
+      { file: 'docs/a.md', figure: '390k', reason: 'stale' },
+    ]);
+  });
+
+  it('refuses a missing or unknown reason', () => {
+    expect(() => parseSizeExemptions('docs/a.md\t390k')).toThrow('size exemption needs');
+    expect(() => parseSizeExemptions('docs/a.md\t390k\tlater')).toThrow('size exemption needs');
   });
 });
 

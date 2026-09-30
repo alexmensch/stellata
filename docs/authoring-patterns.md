@@ -130,12 +130,13 @@ copy is stale from the next build.
   `index.html`). `vite.config.ts` reads that off the built catalogue's
   own header, and it is empty on a checkout with no artifacts — so
   every consumer needs a wording that survives having no number.
-- **Prose cannot read anything**, so it rounds, and
-  `tests/star-count-consistency.test.ts` re-derives the rounding from
-  the header and fails when a refresh moves it.
-- **`313,257` is a different quantity** — AT-HYG's frozen spine rows,
-  documented in `catalog-driver.md`. It is not the number of stars
-  drawn, and the two are not interchangeable.
+- **Prose cannot read anything**, so it rounds through a
+  `build-catalog/recordCount` marker that `pnpm run docs:figures`
+  rewrites; a code comment says "the full catalogue" instead
+  ([The catalogue's size](/scripts/doc-figures/README.md#the-catalogues-size)).
+- **The AT-HYG spine's row count is a different quantity**
+  (`inherited-spine/rows`, documented in `catalog-driver.md`). It is not
+  the number of stars drawn, and the two are not interchangeable.
 
 ### A pinned count is quoted through a marker
 

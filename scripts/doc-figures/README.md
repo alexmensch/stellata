@@ -11,18 +11,24 @@ or when a marked figure disagrees with its snapshot.
 ```
 doc-figures-pure.ts        Marker grammar, code masking, key resolution,
                            formatting, and renderFigures (text + snapshots +
-                           doc kind → rewritten text, stale figures, problems).
-                           No I/O.
-doc-figures-pure.test.ts   Grammar, masking, resolution and format cases.
+                           doc kind → rewritten text, stale figures, problems);
+                           the catalogue-size matcher and the exemption
+                           parser. No I/O.
+doc-figures-pure.test.ts   Grammar, masking, resolution, format and size-scan
+                           cases.
+catalogue-size-exemptions.txt
+                           The size scan's shrink-only exemption list.
 doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
                            a repeated stem throws) and docFiles (every *.md).
                            Both take tracked and untracked-but-not-ignored
                            files, so a snapshot just written by
                            UPDATE_BUILD_COUNTS=1 resolves before its git add,
                            and both list through presentFiles, so a symlink or
-                           a deleted, unstaged file is skipped. scanDocFigures
+                           a deleted, unstaged file is skipped. docFiles takes
+                           *.html too (src/client/index.html). scanDocFigures
                            renders every doc against the snapshots — the one
-                           scan the rewrite and tests/doc-figures.test.ts share.
+                           scan the rewrite and tests/doc-figures.test.ts share;
+                           scanCatalogueSize is the size scan below.
 doc-figures.test.ts        Both listings over a throwaway repo.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
@@ -53,6 +59,32 @@ block, inline code or a mermaid diagram they render literally, so the scan
 skips markdown code entirely (`maskCode`, over the same `marked` lexer the
 doc-pointer suite uses) and a figure there stays unmarked — which is also how
 the grammar line above can show placeholders.
+
+## The catalogue's size
+
+`build-catalog/recordCount` owns it; the build fails when its counts disagree
+with the snapshot, so it is the shipped catalogue's size. Three surfaces:
+
+- **Markdown and HTML** quote it through a marker, usually `k2` (980k) or
+  `sig2` (980,000).
+- **`CITATION.cff` and `public/llms.txt`** cannot hold a marker (a YAML string,
+  a file served verbatim), so `MARKERLESS_SURFACES` lets them quote the
+  current `sig2` / `k2` rounding unmarked, and nothing else.
+- **Code** never quotes it — a comment says "the full catalogue".
+
+`scanCatalogueSize` enforces all three. It reads every tracked text file
+(test fixtures, `research/` and the paper index excluded) for an unmarked
+figure in the catalogue's size range — `inherited-spine/rows` less 5% up to
+`recordCount` plus 5%, the smallest and largest the catalogue has been — on a
+line about stars, records, instances, positions or the catalogue. Markdown code
+is masked as for markers. A hit is an offender unless
+`catalogue-size-exemptions.txt` lists its file and figure with a reason:
+`stale` (prose reasons from an old size and awaits a rewrite), `history` (a
+dated measurement) or `other-count` (an in-range figure counting something
+else). An entry that no longer matches fails too, so the list only shrinks.
+
+Past a million records `k2` renders "1,000k"; that surfaces in the rewrite's
+output, and is the point to add a millions format.
 
 ## What gets a marker
 

@@ -147,3 +147,61 @@ export function renderFigures(text: string, snapshots: Snapshots, kind: DocKind)
   }
   return { rendered: rendered + text.slice(cursor), problems, stale };
 }
+
+const SIZE_FIGURE = /(?<![\d.,_])\d{3}(?:[,_]\d{3}|k)(?![\d,_]*\d)/g;
+const SIZE_CONTEXT = /\bstars?\b|\brecords?\b|catalog|\binstances?\b|\bpositions?\b/i;
+const WHOLE_MARKER = /<!-- count:\S+?(?: \S+)? -->[^\n]*?<!-- \/count -->/g;
+
+export interface SizeFigure {
+  figure: string;
+  line: number;
+}
+
+const figureValue = (figure: string): number =>
+  figure.endsWith('k') ? Number(figure.slice(0, -1)) * 1000 : Number(figure.replace(/[,_]/g, ''));
+
+/** Unmarked figures in the catalogue's size range, on a line about stars, records or the catalogue. */
+export function catalogueSizeFigures(scannableText: string, range: readonly [number, number]): SizeFigure[] {
+  const found: SizeFigure[] = [];
+  scannableText
+    .replace(WHOLE_MARKER, (m) => ' '.repeat(m.length))
+    .split('\n')
+    .forEach((text, i) => {
+      if (!SIZE_CONTEXT.test(text)) return;
+      for (const m of text.matchAll(SIZE_FIGURE)) {
+        const v = figureValue(m[0]);
+        if (v >= range[0] && v <= range[1]) found.push({ figure: m[0], line: i + 1 });
+      }
+    });
+  return found;
+}
+
+/** The only unmarked catalogue sizes a surface that cannot hold a marker may quote. */
+export const markerlessSizeForms = (recordCount: number): string[] => [
+  formatFigure(recordCount, { kind: 'significant', digits: 2 }),
+  formatFigure(recordCount, { kind: 'thousands', digits: 2 }),
+];
+
+export const SIZE_EXEMPTION_REASONS = ['stale', 'history', 'other-count'] as const;
+
+export interface SizeExemption {
+  file: string;
+  figure: string;
+  reason: (typeof SIZE_EXEMPTION_REASONS)[number];
+}
+
+const isReason = (r: string): r is SizeExemption['reason'] => (SIZE_EXEMPTION_REASONS as readonly string[]).includes(r);
+
+/** `<file>\t<figure>\t<reason>` per line; blank lines and `#` lines are skipped. */
+export function parseSizeExemptions(text: string): SizeExemption[] {
+  return text
+    .split('\n')
+    .filter((l) => l.trim() !== '' && !l.startsWith('#'))
+    .map((l) => {
+      const [file, figure, reason] = l.split('\t');
+      if (!file || !figure || reason === undefined || !isReason(reason)) {
+        throw new Error(`size exemption needs <file>\\t<figure>\\t<${SIZE_EXEMPTION_REASONS.join('|')}>: ${l}`);
+      }
+      return { file, figure, reason };
+    });
+}
