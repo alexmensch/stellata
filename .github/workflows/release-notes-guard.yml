@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/release
       - name: Check `## Release notes` section is present and non-empty
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
