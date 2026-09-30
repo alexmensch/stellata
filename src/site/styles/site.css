@@ -86,6 +86,7 @@
   --tracking-caps: 0.22em;
   --tracking-wordmark: 0.34em;
   --weight-medium: 500;
+  --weight-bold: 700;
   --radius-pill: 999px;
   /* The mono face reads larger than the body at the same size. */
   --code-size: 0.95em;
@@ -274,6 +275,7 @@ video {
 }
 .wordmark {
   font-size: var(--step-1);
+  font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-wordmark);
   text-transform: uppercase;
   color: var(--fg);
