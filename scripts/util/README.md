@@ -59,7 +59,7 @@ need the same thing — single-use helpers stay with their consumer.
   build's code inputs. `importClosure(entries)` is every module the entries
   import, read from an esbuild metafile, so a new import joins without anyone
   listing it; `closureWithSiblings(closure, files)` adds every file beside a
-  closure module except `.ts` and `.md`, which is how the `*-expected.json`
+  closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. Shared by the catalogue stamp and
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
   cannot disagree on what the build reads. `trackedFiles()` is the listing the

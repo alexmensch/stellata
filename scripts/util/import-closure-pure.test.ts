@@ -10,6 +10,7 @@ describe('closureWithSiblings', () => {
       'scripts/cat/build-expected.json',
       'scripts/cat/other.ts',
       'scripts/cat/README.md',
+      'scripts/cat/stamp.py',
       'scripts/cat/sub/deep-expected.json',
       'src/client/util/table.tsv',
       'scripts/elsewhere/x-expected.json',

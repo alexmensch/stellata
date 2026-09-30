@@ -2,7 +2,7 @@
 
 import { dirname, extname } from 'node:path';
 
-const UNREAD_SIBLING_EXTENSIONS = new Set(['.ts', '.md']);
+const UNREAD_SIBLING_EXTENSIONS = new Set(['.ts', '.py', '.md']);
 
 /** `closure` plus every file in `files` that sits in a closure module's folder
  *  and is not itself code or prose — the `*-expected.json` snapshots a build
