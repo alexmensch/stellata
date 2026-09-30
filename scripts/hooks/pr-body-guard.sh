@@ -100,8 +100,13 @@ record() {
 - ${guard}: $(printf '%s\n' "$out" | grep '::error::' | sed 's/^::error:://')"
 }
 
-if [ "$skip" = false ]; then record release-notes-guard "$here/../release/release-notes-check.sh" "$body"; fi
-record perf-section-guard "$here/../perf/perf-section-guard.sh" "$body" "origin/${base}"
+root="$(git rev-parse --show-toplevel 2>/dev/null)"
+check() {
+  if [ -n "$root" ] && [ -f "$root/scripts/$1" ]; then echo "$root/scripts/$1"; else echo "$here/../$1"; fi
+}
+
+if [ "$skip" = false ]; then record release-notes-guard "$(check release/release-notes-check.sh)" "$body"; fi
+record perf-section-guard "$(check perf/perf-section-guard.sh)" "$body" "origin/${base}"
 
 [ -z "$failures" ] && exit 0
 

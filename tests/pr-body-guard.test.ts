@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { commitFile, gitIn } from './git-fixture';
 
@@ -181,7 +181,18 @@ describe('CI and the hook run one check each', () => {
   ])('%s calls %s', (workflow, script) => {
     const yml = readFileSync(resolve(__dirname, '../.github/workflows', workflow), 'utf-8');
     expect(yml).toContain(`bash ${script}`);
-    expect(readFileSync(HOOK, 'utf-8')).toContain(script.replace(/^scripts\//, '$here/../'));
+    expect(readFileSync(HOOK, 'utf-8')).toContain(`$(check ${script.replace(/^scripts\//, '')})`);
+  });
+
+  it('runs the copies in the checkout the command runs in, as CI runs the branch copies', () => {
+    for (const script of ['scripts/release/release-notes-check.sh', 'scripts/perf/perf-section-guard.sh']) {
+      mkdirSync(join(repo, dirname(script)), { recursive: true });
+      writeFileSync(join(repo, script), `echo "::error::stub ${script}"; exit 1\n`);
+    }
+    const d = decision(`gh pr create -F ${body(PERF, NOTES)}`);
+    expect(d.denied).toBe(true);
+    expect(d.reason).toContain('stub scripts/release/release-notes-check.sh');
+    expect(d.reason).toContain('stub scripts/perf/perf-section-guard.sh');
   });
 });
 

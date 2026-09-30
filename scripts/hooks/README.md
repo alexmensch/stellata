@@ -242,7 +242,11 @@ without this, a missing section surfaced only as a red CI check on every
 push. The hook runs the **same scripts** the workflows run
 (`scripts/release/release-notes-check.sh`,
 `scripts/perf/perf-section-guard.sh`), so there is no second copy of either
-rule; a test fails when a workflow stops calling its script.
+rule; a test fails when a workflow stops calling its script. They are
+taken from the checkout the command runs in, falling back to the hook's own
+copies only when that checkout has none: hooks load from the main
+checkout, so without that a PR changing a check would be judged locally by
+main's old rule while CI ran the branch's new one.
 
 It mirrors each workflow's triggers rather than the checks alone. The base
 branch and the exempting label are the hook's `ci_base` and `skip_label`,
