@@ -24,13 +24,11 @@ parsec down the forward axis (`../../../camera/observe/README.md`).
 
 **An absolute threshold is wrong at every vantage but one**, and this camera
 reaches lunar orbit and the Local Group in a session ([Camera-anywhere](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)).
-The rule this replaced was `max(1e-9 pc, min(1e-3 pc,
-1 % of magnitude))`, and each term failed somewhere: the 1e-9 pc floor is
-**30,857 km**, so beside the Moon the camera had to travel seven times its
-own distance from the body before the URL was rewritten and a whole orbit
-went unrecorded; the 1e-3 pc encoder band called a 30-billion-km pan
-"default", and called the anchor of every unfocused view inside the solar
-system "Sol", so the receiver rebuilt the pose 1 AU away.
+A 1e-9 pc floor is **30,857 km**: beside the Moon the camera would travel
+seven times its own distance from the body before the URL was rewritten, and
+a whole orbit would go unrecorded. A 1e-3 pc encoder band calls a
+30-billion-km pan "default", and the anchor of every unfocused view inside
+the solar system "Sol", so the receiver would rebuild the pose 1 AU away.
 
 **The pose is measured from the anchor the RECEIVER rebuilds**, not from the
 local origin — `../anchored-pose.ts`'s `anchoredPose`, which both writers read

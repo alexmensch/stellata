@@ -69,7 +69,7 @@ export function poseChanged(
   const dCam = Math.hypot(cam.x - prev[0], cam.y - prev[1], cam.z - prev[2]);
   const dTgt = Math.hypot(tgt.x - prev[3], tgt.y - prev[4], tgt.z - prev[5]);
   // A degenerate radius leaves the move as the only length in play: any motion
-  // counts, stillness still reads as unchanged, and no floor comes back.
+  // counts and stillness reads as unchanged, with no absolute floor.
   const scale = Math.max(orbitRadius(cam, tgt), dCam, dTgt);
   if (scale === 0) return false;
   return dCam > POSE_CHANGE_EPS * scale || dTgt > POSE_CHANGE_EPS * scale;
