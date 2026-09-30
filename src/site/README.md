@@ -324,10 +324,10 @@ A clip's row carries its `debug.capture()` call in an HTML comment beside
 the `<video>`, so a re-shoot replays the same take. Its `end` blob — or
 `start`, for a take that only moves the clock — is the row's link.
 
-Deriving smaller responsive variants and a `srcset` is worth doing once the
-real images are in — a 2400 px JPEG is the largest thing on the page by an
-order of magnitude, and it is the one lever on the page's largest
-contentful paint.
+The page's weight is its clips: each one (0.65–3.3 MB) outweighs any still,
+and its largest contentful paint is the hero's poster, not a sight. Smaller
+responsive variants and a `srcset` for the 2400 px stills trim the
+secondary cost.
 
 ## Pages anticipated but not built
 
