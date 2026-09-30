@@ -32,6 +32,8 @@ themselves.
   sets the `window` globals `globals.d.ts` declares only through that
   teardown's `expose`.
 - `stellata-events.test.ts` — integration-shell event-emission test.
+- `stellata-dispose.test.ts` — every `Stellata.dispose` step still runs
+  after one throws, ending with the webgpu seam, the renderer and the bus.
 - `kinds/` — the `ObjectKindModule` / `KindContext` contracts and the
   kind-module roster: one module per `TargetKind` (all six migrated)
   supplies load/attach + every capability leg, and the shell/boot
