@@ -82,7 +82,7 @@ named in `:root` too, as are the hero's wash and the switcher's flip
 multiplier. Logical properties throughout: `max-inline-size`,
 `border-block-end`, `inset-inline-start`, `text-align: start`. The one
 exception is the sources table's `overflow-x`, because `overflow-inline`
-has no Chromium or WebKit support yet.
+lacks Chromium and WebKit support (checked 2026-09).
 
 One tracking value serves every uppercase label (`--tracking-caps`); the
 visual language is one decision, not one per block.
