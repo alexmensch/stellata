@@ -244,6 +244,9 @@ export interface AttitudeIndicator {
   tickOrbitFrame(): void;
 }
 
+const ORBIT_PENDING = { status: 'pending' } as const;
+const ORBIT_ABSENT = { status: 'absent' } as const;
+
 export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator | null {
   const host = document.getElementById('attitude');
   if (host === null) return null;
@@ -309,17 +312,15 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     normal: new THREE.Vector3(),
     toCentre: new THREE.Vector3(),
   };
-  let orbitSource: FocusedOrbitSource | null = null;
+  let orbitSource: LateState<FocusedOrbitSource> | null = null;
 
   /** Which orbit the focus rides, resolved once and held: for a pair that
    *  settles the plane normal, which is a static function of frozen elements
    *  and has no business being re-derived per frame. Re-asked until ready
    *  because the binaries artifact attaches after a focus can be set. */
   function orbitSourceNow(): LateState<FocusedOrbitSource> {
-    if (orbitSource !== null) return { status: 'ready', value: orbitSource };
-    const source = resolveFocusedOrbit(stellata, focused);
-    if (source.status === 'ready') orbitSource = source.value;
-    return source;
+    if (orbitSource?.status !== 'ready') orbitSource = resolveFocusedOrbit(stellata, focused);
+    return orbitSource;
   }
 
   /** Absent when nothing focused rides an orbit the model has elements for,
@@ -694,7 +695,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   stellata.setOrbitFramePort({
     orbitFrame: () => {
       const status = refreshOrbitFrame(portFrame);
-      return status === 'ready' ? portFrameReady : { status };
+      if (status === 'ready') return portFrameReady;
+      return status === 'pending' ? ORBIT_PENDING : ORBIT_ABSENT;
     },
     orbitSourcesSettled: () => orbitSourcesSettled(stellata),
     isArmed: () => orbitActive,

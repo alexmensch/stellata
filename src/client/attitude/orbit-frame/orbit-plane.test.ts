@@ -939,6 +939,16 @@ describe('focusedOrbitInto', () => {
       expect(focusedOrbitInto(out(), starHarness('pending'), { kind: 'star', idx: PRIMARY }))
         .toBe(false);
     });
+
+    // The instrument re-asks every rendered frame until ready, so a not-ready
+    // answer must not allocate.
+    it('answers pending and absent with shared objects', () => {
+      const pendingStar = { kind: 'star', idx: PRIMARY } as const;
+      expect(resolveFocusedOrbit(starHarness('pending'), pendingStar))
+        .toBe(resolveFocusedOrbit(starHarness('pending'), pendingStar));
+      expect(resolveFocusedOrbit(starHarness(pair()), null))
+        .toBe(resolveFocusedOrbit(starHarness(null), pendingStar));
+    });
   });
 
   describe('orbitSourcesSettled', () => {
