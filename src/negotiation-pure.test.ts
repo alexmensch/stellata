@@ -60,7 +60,7 @@ describe('whether a document is the right answer at all', () => {
 
   // An explicit non-document Accept is an asset fetch, and a miss there is a
   // missing asset rather than a page to render.
-  it.each(['image/png', 'application/json', 'image/avif,image/webp'])(
+  it.each(['image/png', 'application/json', 'image/avif,image/webp', 'text/html;q=0, image/png'])(
     'leaves %s to fall through as an asset miss',
     (accept) => {
       expect(wantsDocument(accept)).toBe(false);

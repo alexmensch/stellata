@@ -63,5 +63,5 @@ export function prefersMarkdown(accept: string | null): boolean {
  * the deploy serves a document whatever an agent or `curl` sends.
  */
 export function wantsDocument(accept: string | null): boolean {
-  return accept === null || quality(accept, 'text/html') !== null || prefersMarkdown(accept);
+  return accept === null || (quality(accept, 'text/html') ?? 0) > 0 || prefersMarkdown(accept);
 }
