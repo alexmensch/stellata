@@ -251,13 +251,15 @@ build scripts, tests, and shader uniforms.
   it (`../ui/keyboard-shortcuts.ts`, `../camera/warp/warp-button.ts`,
   `../calibration/calibration-overlay.ts`), and the same test file fails
   one that does neither.
-  **Why both matter**: WebKit keeps a reloaded page's global object alive
-  in the same content process, and everything reachable from it — a
-  global, a listener on `window` — survives the page. It frees whatever
-  the old page stops referencing: a 128 MB typed array held on `window`
-  costs 128 MB a reload, and 4 MB once `pagehide` clears it. A new global
-  set any other way keeps the whole app resident across every reload
-  until Safari kills the tab for memory
+  **Why**: Safari keeps part of each reloaded page resident in the same
+  content process until Safari quits
+  ([WebKit bug 325706](https://bugs.webkit.org/show_bug.cgi?id=325706));
+  Chrome frees it. On Stellata the device destroy is the release that
+  measurably shrinks what each reload leaves behind. Clearing the globals
+  made no measurable difference on its own: a heap snapshot showed the old
+  shell held by a natively rooted function, not through `window`. The
+  globals and listeners are released anyway because they are the
+  references the page itself can drop
   ([Who releases what](../webgpu/README.md#who-releases-what)).
 - `mutable.ts` — `Mutable<T>`, `T` with `readonly` stripped. For an owner
   that rewrites a context in place which its readers see as readonly
