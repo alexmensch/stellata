@@ -63,6 +63,11 @@ whose sentence reasons from it: other unpinned numbers measured alongside it,
 arithmetic on it (bytes = count × size), or a population the key does not
 count. That prose is rewritten first, then marked.
 
+**Prose never states a computed total beside its pinned parts** ("446 + 1,605
+of 2,051"): each marked part is rewritten on its own and nothing checks the
+relation, so the sentence breaks silently. State the parts only, or pin the
+total as its own snapshot key — one build run then produces every figure.
+
 One value per marker. A figure computed from several values — a difference, a
 sum, a percentage, "X of Y" where Y is not itself pinned — stays prose, and the
 pinned values inside the sentence carry their own markers. Nothing checks an
