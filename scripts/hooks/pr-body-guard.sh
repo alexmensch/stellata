@@ -63,7 +63,7 @@ while [ "$i" -lt "${#args[@]}" ]; do
     --label=* | --add-label=*) added="${added},${a#*=}" ;;
     --remove-label) removed="${removed},${next}"; i=$((i + 1)) ;;
     --remove-label=*) removed="${removed},${a#*=}" ;;
-    -R | --repo | --repo=*) exit 0 ;;
+    -R | --repo | --repo=* | -d | --draft) exit 0 ;;
     # gh's other flags that take a value; their value is not the PR argument.
     -t | --title | -b | --body | -a | --assignee | -r | --reviewer | -m | --milestone | \
       -p | --project | -T | --template | \

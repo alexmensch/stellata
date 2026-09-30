@@ -267,8 +267,13 @@ stops naming the same values:
   uses that branch (or `origin/<branch>`), and `edit` the `headRefOid`
   `gh pr view` reports, so editing one PR from a worktree on another judges
   the right diff. A head this checkout does not hold, or a fork's
-  `owner:branch`, lets the call through rather than judging `HEAD`. A stale `origin/main` reads a wider diff than GitHub
-  will; fetch first if the verdict surprises.
+  `owner:branch`, lets the call through rather than judging `HEAD`. A stale
+  `origin/main` reads a wider diff than GitHub will; fetch first if the
+  verdict surprises.
+- **A draft is not checked.** `gh pr create --draft` / `-d` passes whatever
+  its body: what the gate protects is a PR claiming to be ready when it is
+  not, since that is what goes wrong at landing, and a draft claims nothing.
+  CI still runs both guards on a draft, and a red check there is expected.
 
 **Only a verdict denies.** A check's output carrying `::error::` is a
 failure CI would report, and becomes the deny reason (prefix stripped). Any
@@ -276,12 +281,13 @@ other non-zero exit means the check could not run — no `origin` ref, not a
 git checkout — and the call passes. So does anything the hook cannot read:
 an inline `--body`, `-F -` (stdin), a missing file, an `edit` whose PR
 `gh` cannot view, or a PR in another repository (`-R`/`--repo`, a
-`GH_REPO=` prefix), whose history the local checkout does not hold. The command is split into shell words by the hook itself —
-quotes, backslash escapes and `\`-newline continuations honoured — and stops
-at the first unquoted `;`, `&` or `|`, so a title carrying one is read
-whole. This is a hygiene
-gate with CI behind it, so it fails **open**, like readme-guard and unlike
-perf-guard.
+`GH_REPO=` prefix), whose history the local checkout does not hold. This
+is a hygiene gate with CI behind it, so it fails **open**, like readme-guard
+and unlike perf-guard.
+
+The command is split into shell words by the hook itself — quotes,
+backslash escapes and `\`-newline continuations honoured — and stops at the
+first unquoted `;`, `&` or `|`, so a title carrying one is read whole.
 
 ## How perf-guard fails closed
 
@@ -341,7 +347,8 @@ Two paths:
    block — fix the comments). For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked. For `skill-guard`: invoke the
-   skill, which is the intended route rather than an escape.
+   skill, which is the intended route rather than an escape. For
+   `pr-body-guard`: open the PR as a draft (`gh pr create --draft`).
 2. **Across the session.** Remove the entry from its event's array
    under `.claude/settings.json`'s `hooks`, or
    temporarily move the hook script aside.

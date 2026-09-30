@@ -85,7 +85,7 @@ describe('pr-body-guard', () => {
       `gh pr create -F ${file}`,
       `gh pr create --body-file=${file}`,
       `gh pr create -F${file}`,
-      `gh pr create --body-file "${file}" --draft`,
+      `gh pr create --body-file "${file}" --no-maintainer-edit`,
       `git push -u origin feature && gh pr create -t x -F ${file}`,
       `git push\ngh pr create -F ${file}`,
       `gh pr create \\\n  --title x \\\n  --body-file ${file}`,
@@ -125,6 +125,13 @@ describe('pr-body-guard', () => {
       expect(decision(`gh pr edit 12 --title "x y" -F ${file}`).denied).toBe(false);
       expect(decision(`gh pr edit 12 -F ${file} --remove-label skip-version-bump`).denied).toBe(true);
     });
+  });
+
+  it('lets a draft open unchecked, since a draft is not claiming to be ready', () => {
+    const file = body();
+    expect(decision(`gh pr create --draft -F ${file}`).denied).toBe(false);
+    expect(decision(`gh pr create -F ${file} -d`).denied).toBe(false);
+    expect(decision(`gh pr create -F ${file}`).denied).toBe(true);
   });
 
   it('stands down for a PR into any branch but main, as both workflows do', () => {
