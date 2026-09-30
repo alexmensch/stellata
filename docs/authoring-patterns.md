@@ -137,6 +137,13 @@ copy is stale from the next build.
   documented in `catalog-driver.md`. It is not the number of stars
   drawn, and the two are not interchangeable.
 
+### A pinned count is quoted through a marker
+
+**Trigger: writing into any doc a number that a `*-expected.json` snapshot
+pins.** The snapshot owns it; the doc wraps the figure in a doc-figure marker
+and `pnpm run docs:figures` rewrites it after every regeneration. Grammar,
+formats and what stays prose: [What gets a marker](/scripts/doc-figures/README.md#what-gets-a-marker).
+
 ## Rename + stale-prose sweep
 
 Narrows the write-time pattern "Rename and stale-prose sweep". A move includes

@@ -18,8 +18,9 @@ authoring-patterns.md   Stellata's instances of the write-time
                         symmetry, sentinel-init dirty-track, single
                         source of truth for time / camera state), each
                         narrowing its generic rule in code-craft's
-                        write-time patterns, plus the code-comment CI
-                        and the star-count rule. Read before
+                        write-time patterns, plus the code-comment CI,
+                        the star-count rule and the doc-figure marker
+                        rule. Read before
                         adding a bus.on() call, a sibling helper, a
                         sentinel-init dirty-track pattern, or any state
                         struct shifted mid-animation.

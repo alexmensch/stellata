@@ -86,7 +86,8 @@ need the same thing — single-use helpers stay with their consumer.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
   whose scope is the repo rather than a folder list; and `lfsTracked`, which of
-  those names Git LFS stores. Shared by the repo-meta suites under `tests/`.
+  those names Git LFS stores. Shared by the repo-meta suites under `tests/`
+  and `doc-figures/`.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
   `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed

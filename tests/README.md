@@ -65,6 +65,9 @@ code-comment-rules.test.ts
                          are meant to shrink.
 commit-sweep-guard.test.ts
                          Pins the commit-time doc-sweep hook's contract.
+doc-figures.test.ts      Every doc-figure marker in a tracked or untracked
+                         .md resolves to a snapshot number and quotes it
+                         (/scripts/doc-figures/README.md#the-marker).
 doc-pointer-resolution.test.ts
                          Every `<path>.md#<slug>` pointer in a
                          git-listed file of a kind `SCANNED_KINDS`
