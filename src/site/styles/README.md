@@ -112,8 +112,10 @@ produce `clamp(min, (min − slope·320)/16 rem + slope·100 vw, max)` with
 **Layout never queries the viewport.** This app is looked at on every shape
 of screen, and a page whose layout switches on the *viewport* is wrong for
 every element that isn't the width of the viewport. Three mechanisms carry
-the layout instead, and `tests/site-css-rules.test.ts` fails any width or
-height media query.
+the layout instead, and `tests/site-css-rules.test.ts` fails any size query:
+`@media`, an `@import` condition or `@container`. A container query is the
+escape hatch when no intrinsic mechanism fits, so one that proves necessary
+starts by changing that test.
 
 - **`.flow`** owns all vertical rhythm through one owl selector. An element
   changes the gap *above itself* by setting `--flow-space`, and a container

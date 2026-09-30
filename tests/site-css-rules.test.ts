@@ -73,10 +73,13 @@ function stripVars(value: string): string {
 const shown = (found: Declaration[]): string => found.map((d) => `${d.prop}: ${d.value}`).join(' · ');
 
 describe('the public stylesheet carries no breakpoints', () => {
-  it('never asks how big the viewport is', () => {
-    const conditions = [...CODE.matchAll(/@media\s*([^{]+)\{/g)].map(([, cond]) => cond.trim());
+  it('never switches on a measured size, of the viewport or a container', () => {
+    const conditions = [
+      ...CODE.matchAll(/@(?:media|container)\s*([^{]+)\{/g),
+      ...CODE.matchAll(/@import\s+(?:url\([^)]*\)|'[^']*'|"[^"]*")([^;]*);/g),
+    ].map(([, cond]) => cond.trim());
     const sized = conditions.filter((c) => /\b(width|height|inline-size|block-size|aspect-ratio)\b/.test(c));
-    expect(sized, `viewport-sized media queries: ${sized.join(' · ')}`).toEqual([]);
+    expect(sized, `size queries: ${sized.join(' · ')}`).toEqual([]);
   });
 
   it('sizes no type in an absolute unit, directly or through any chain of tokens', () => {
