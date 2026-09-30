@@ -76,8 +76,7 @@ export interface TimeReadoutDeps {
  *  `getT()` in every mode (chart, warp, observe, free fly), so the current
  *  model time is worth showing throughout. Returns a teardown that stops
  *  the tick — callers swap the readout in and out (the scrubber widget
- *  stops this collapsed readout while it's expanded and shows its own),
- *  and tests / HMR dispose it. */
+ *  stops this collapsed readout while it's expanded and shows its own). */
 export function createTimeReadout({ el, stellata }: TimeReadoutDeps): () => void {
   const tick = () => {
     el.textContent = formatFullTimeReadout(stellata.getT(), true);
