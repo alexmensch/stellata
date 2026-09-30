@@ -43,9 +43,12 @@ application and the marketing page is good for.
 - **Catalogue records** — the built `catalog.bin.0` header, which is the
   only thing that knows. On a checkout that has not run `build:catalog` it
   falls back to `scripts/catalog/build-catalog-expected.json`'s
-  `recordCount`. The two cannot disagree: `build-catalog` refuses to write
-  an artifact whose counts drift from that snapshot without
-  `UPDATE_BUILD_COUNTS=1`. That fallback is what lets a page state an exact
+  `recordCount`. After `build:data` the two cannot disagree: the stamp
+  rebuilds a stale artifact, and `build-catalog` refuses to write one whose
+  counts drift from that snapshot without `UPDATE_BUILD_COUNTS=1`.
+  `build:site` or `vite build` run alone reads whatever artifact is on disk,
+  which in a worktree seeded from another commit can be one the branch's
+  snapshot no longer matches. That fallback is what lets a page state an exact
   figure at all — a value that vanishes on a fresh clone has to be worded
   around, and the wording is what goes stale. The fallback covers an
   **absent** artifact only: one that is present but unreadable stops the

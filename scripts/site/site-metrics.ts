@@ -14,13 +14,7 @@ const APP_DOC = 'src/client/app/index.html';
 
 const COUNT_SNAPSHOT = 'scripts/catalog/build-catalog-expected.json';
 
-/**
- * Records in the shipped catalogue. Read from the built artifact's own
- * header, falling back to the build's committed count snapshot on a checkout
- * that has not run `build:catalog` — the two cannot disagree, because
- * `build-catalog` refuses to write an artifact whose counts drift from that
- * snapshot without `UPDATE_BUILD_COUNTS=1`.
- */
+/** README.md#why-each-count-is-derived-where-it-is. */
 export function catalogueRecordCount(root: string): number {
   let buf: Buffer;
   try {
