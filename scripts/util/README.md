@@ -83,6 +83,10 @@ need the same thing — single-use helpers stay with their consumer.
   writes one. Returns a bool where the TS side exits, since the Python
   drivers own their exit.
   Pinned by `snapshot_assert.test.py`.
+- <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
+  git's file list (tracked, optionally untracked-but-not-ignored), for a scan
+  whose scope is the repo rather than a folder list; and `lfsTracked`, which of
+  those names Git LFS stores. Shared by the repo-meta suites under `tests/`.
 - `horizons-response.ts` — the JPL Horizons endpoint, the two API limits
   (`MAX_LIST_EPOCHS`, `MAX_RANGE_ROWS`), the retrying + paced
   `fetchHorizonsText`, and the header / `$$SOE`-block readers. The typed

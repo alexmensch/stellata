@@ -224,9 +224,9 @@ walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
                          symlinked directories, which public/ carries.
-                         `gitFiles` is git's list (tracked, optionally
-                         untracked-but-not-ignored), for a scan whose
-                         scope is the repo rather than a folder list.
+                         A scan whose scope is the repo rather than a
+                         folder list takes git's list instead,
+                         /scripts/util/README.md#git-files.
                          Also `isProductionTs`, the include predicate the
                          TSL scanners share: a .ts that is neither a test
                          nor an ambient declaration.
