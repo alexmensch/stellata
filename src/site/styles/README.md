@@ -99,11 +99,12 @@ value is a generated `clamp()`; **do not hand-edit one**, and do not
 introduce a size outside the scale — the whole point is that a heading and
 the space above it move together, which a one-off `clamp()` breaks.
 
-Parameters, to regenerate: viewport 320 → 1440px · type base 16 → 20px,
-ratio 1.2 → 1.25, steps −2 … 6 · space base 16 → 20px at multipliers
-0.25 / 0.5 / 0.75 / 1 / 1.5 / 2 / 3 / 4 / 6, plus the one-up pairs the
-page uses. Paste those into utopia.fyi's calculators, or compute
-`clamp(min, (min − slope·320)/16 rem + slope·100 vw, max)` with
+**The `@link` above the token block in `site.css` is the configuration.**
+Its `c=` field reads min viewport, min font, min ratio, max viewport, max
+font, max ratio, positive steps, negative steps; `s=` the space multipliers
+below and above the base, then the pairs the page uses. Open it to
+regenerate, or feed the same numbers to the `utopia` skill's generator; both
+produce `clamp(min, (min − slope·320)/16 rem + slope·100 vw, max)` with
 `slope = (max − min)/1120`.
 
 ## Responsiveness has no breakpoints

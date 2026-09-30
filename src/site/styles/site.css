@@ -5,8 +5,8 @@
 @import '../../design-tokens.css';
 
 /* ── Tokens ─────────────────────────────────────────────────────────── */
-/* Fluid Utopia scales, 320px → 1440px. Generated, not tuned by hand:
-   README.md#the-scales carries the parameters and how to regenerate. */
+/* Generated Utopia scales; regenerate, never hand-edit — README.md#the-scales.
+   @link https://utopia.fyi/space/calculator?c=320,16,1.2,1440,20,1.25,6,2,&s=0.75|0.5|0.25,1.5|2|3|4|6,s-m|l-xl|xl-2xl&g=s,l,xl,12 */
 
 :root {
   --step--2: clamp(0.6944rem, 0.6643rem + 0.1508vw, 0.8rem);
