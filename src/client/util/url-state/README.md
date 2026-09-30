@@ -31,9 +31,11 @@ the path form shared while the application was the site root.
 auto-filter comments carrying a `?…=` link. `pickShareBlob` reports
 either as `legacyTransport`, and on load `applyFromUrl` rewrites both —
 and a superseded schema version — to the canonical path, address-bar only,
-via the same post-apply debounce as routine writes. In production they
-rarely reach the client at all: the Worker 301s each onto the canonical
-form first ([Request routing](/src/README.md#request-routing)).
+via the same post-apply debounce as routine writes. In production the
+Worker 301s a `/v/<blob>/` link onto the canonical path before the client
+sees it, and a `?v=<blob>` link onto `/app?v=<blob>`, still the query form
+— so that rewrite is the only thing that moves a query link onto the path
+([Request routing](/src/README.md#request-routing)).
 
 Production serves `/app/v/<blob>/` through the Worker, which falls back to
 the application document for any unmatched path under `/app`. So a path

@@ -46,10 +46,12 @@ express, which `worker.ts` does:
   falls back to the application document on a 404, so a real asset ever
   emitted under `/app` keeps winning. A request naming only non-document
   types (`image/png`) keeps its 404: it is a missing asset, not a page.
-- **Both legacy share transports 301 onto the canonical form.**
-  `/v/<blob>/` is the form shared while the application was the site root;
-  `/?v=<blob>` predates that one. Links carrying either sit in places that
-  can never be edited, so both are answered forever.
+- **Both legacy share transports 301 onto `/app`.** `/v/<blob>/` is the
+  form shared while the application was the site root, and lands on the
+  canonical `/app/v/<blob>/`; `/?v=<blob>` predates it, and lands on
+  `/app?v=<blob>`, keeping its query transport for the client's own rewrite.
+  Links carrying either sit in places that can never be edited, so both are
+  answered forever.
   `client/util/url-state/share-path-pure.ts` owns the grammar and the
   Worker imports it — a second spelling of `/app` here would break every
   share link silently. Neither rule inspects the blob: it is redirected
