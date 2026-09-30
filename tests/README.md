@@ -122,6 +122,11 @@ node-import-boundary.test.ts
                          crosses, since it erases before the bundler
                          runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
+page-teardown-contract.test.ts
+                         Source scans behind util/page-teardown.ts's
+                         contract (/src/client/util/README.md): no `window`
+                         assignment under src/client outside `expose`,
+                         with flag and pass cases for the pattern.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
                          allowed under a fresh marker (including the

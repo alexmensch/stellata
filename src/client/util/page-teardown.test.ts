@@ -1,11 +1,5 @@
-import { readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { bindPageTeardown } from './page-teardown';
-
-const WINDOW_WRITE =
-  /\bwindow\s*(?:\.\s*[A-Za-z_$][\w$]*|\[[^\]]+\])\s*=(?!=)|\(\s*window\s+as\b[^)]*\)\s*(?:\.\s*[A-Za-z_$][\w$]*|\[[^\]]+\])\s*=(?!=)|(?:Object\.assign|Reflect\.set|Object\.defineProperty)\(\s*window\b/;
 
 function pageshow(persisted: boolean): Event {
   return Object.assign(new Event('pageshow'), { persisted });
@@ -101,35 +95,3 @@ describe('bindPageTeardown', () => {
   });
 });
 
-describe('window globals under src/client', () => {
-  const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-  const sources = readdirSync(root, { recursive: true, encoding: 'utf8' })
-    .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.endsWith('.d.ts'));
-
-  it('scans the client tree', () => {
-    expect(sources).toContain(join('util', 'page-teardown.ts'));
-  });
-
-  it('are assigned only through expose', () => {
-    const writers = sources.filter((f) =>
-      readFileSync(join(root, f), 'utf8').split('\n').some((line) => WINDOW_WRITE.test(line)));
-    expect(writers).toEqual([]);
-  });
-
-  it.each([
-    'window.foo = 1;',
-    "window['foo'] = x;",
-    '(window as unknown as { foo: X }).foo = x;',
-    'Object.assign(window, { foo });',
-  ])('flags %s', (line) => {
-    expect(WINDOW_WRITE.test(line)).toBe(true);
-  });
-
-  it.each([
-    'if (window.foo === 1) {}',
-    'const w = window.innerWidth;',
-    'window.addEventListener("resize", f);',
-  ])('passes %s', (line) => {
-    expect(WINDOW_WRITE.test(line)).toBe(false);
-  });
-});
