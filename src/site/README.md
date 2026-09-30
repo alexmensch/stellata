@@ -185,11 +185,9 @@ In order down the page, and the order is the argument:
 2. **Readout strip** — five figures, three of them substitutions.
 3. <a id="start-exploring"></a>**Start exploring** — the sights,
    [Sights](#sights--the-media-and-the-link-it-carries) below. The section the page is
-   for. Three `.claim` articles sit among them, one claim each: a serious
-   instrument for people who already know the sky · every object from a
-   published catalogue, and the page says which · what the eye would see
-   from any point in the model, no false colour anywhere. Rewriting or
-   moving the copy is expected; dropping one of the three is not.
+   for. Further `.section-head`s inside `.sights` group the rows by scale —
+   the stars, the Solar System, observing from anywhere — without closing
+   the section.
 4. **The record** — the citation table and the four provenance claims.
    Late on purpose: it is the proof, and proof follows the case.
 5. **Before you click** — WebGPU and desktop, two columns, short.
@@ -203,7 +201,8 @@ structure without it.
 **No figure on these pages is a literal.** `scripts/site/site-metrics.ts`
 counts each off the thing it describes and `vite.env.ts` publishes it, so
 the page carries `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
-`%VITE_REFERENCE_COUNT%` and `%VITE_APP_VERSION%` and the build fills them
+`%VITE_REFERENCE_COUNT%`, `%VITE_VERIFIED_REFERENCE_COUNT%` and
+`%VITE_APP_VERSION%` and the build fills them
 in. That module's README is the authority on where each count comes from.
 
 `tests/site-claims.test.ts` holds the pages to it: every readout cell is a
