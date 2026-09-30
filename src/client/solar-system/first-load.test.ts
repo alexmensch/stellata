@@ -4,33 +4,30 @@ import { FIRST_LOAD_VIEW } from './first-load';
 import { encodeBlob, decodeBlob } from '../util/url-state';
 import { poseOutOfFrame } from '../util/url-state/orbit-pose/orbit-pose-pure';
 import { captureOrbitFrame } from '../attitude/attitude-pure';
-import {
-  ECLIPTIC_NORTH_POLE_ICRS,
-  orbitPlaneNormalInto,
-} from './ephemerides/orbit-rings-layer';
-import { SOL_BODIES, getPlanetSystem, solOrbitGeometryAt } from './planet-system';
+import { focusedOrbitInto } from '../attitude/orbit-frame/orbit-plane';
+import { PlanetBodyField } from './planets/planet-body-field';
+import { makePlanetFieldUniforms } from './planets/planet-field-uniforms-fixture';
+import { SOL_BODIES, getPlanetSystem } from './planet-system';
+import type { Stellata } from '../stellata';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
-import { AU_PC, KM_PC } from '../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
 import { CHOSEN_FIRST_LOAD_AT, CHOSEN_FIRST_LOAD_LINK } from '../util/url-state/golden-links-fixture';
 
 const DEG = Math.PI / 180;
 
 
-/** Earth's ORB at `t` as the planet field builds it: Sol's host quaternion
- *  over the ecliptic ephemeris, zero longitude on the Sun. */
+/** Earth's ORB at `t`, through the field and dispatch the receiver runs. */
 async function earthOrbitFrame(t: number) {
+  const field = new PlanetBodyField(makePlanetFieldUniforms());
+  const camera = new THREE.PerspectiveCamera();
+  field.attachHost(0, (await getPlanetSystem(0, 0))!, SUN_ABSMAG_V, R_SUN_PC, new THREE.Vector3(), 0, t);
+  field.update(camera, t, 0);
+  const shell = { kinds: { planet: { field } }, getT: () => t } as unknown as Stellata;
+  const orbit = { normal: new THREE.Vector3(), toCentre: new THREE.Vector3() };
   const earth = SOL_BODIES.findIndex((b) => b.name === 'Earth');
-  const hostQuat = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 0, 1), ECLIPTIC_NORTH_POLE_ICRS,
-  );
-  const normal = orbitPlaneNormalInto(new THREE.Vector3(), solOrbitGeometryAt(t)[earth], hostQuat);
-  const sol = (await getPlanetSystem(0, 0))!;
-  const positions = new Float64Array(SOL_BODIES.length * 3);
-  sol.positionsAt!(t, positions);
-  const toSun = new THREE.Vector3(
-    -positions[earth * 3], -positions[earth * 3 + 1], -positions[earth * 3 + 2],
-  ).applyQuaternion(hostQuat);
-  return captureOrbitFrame(new THREE.PerspectiveCamera(), normal, toSun);
+  expect(focusedOrbitInto(orbit, shell, { kind: 'planet', idx: earth })).toBe(true);
+  field.dispose();
+  return captureOrbitFrame(camera, orbit.normal, orbit.toCentre);
 }
 
 describe('first-load', () => {
