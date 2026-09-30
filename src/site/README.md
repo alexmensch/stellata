@@ -49,7 +49,9 @@ Vite emits each HTML input at **its own path relative to `root`**. So
 `src/site/index.html` lands at `dist/index.html` and is served at `/`,
 while the application's `src/client/app/index.html` lands at
 `dist/app/index.html` and is served at `/app`. The built tree mirrors the
-URL space exactly; no build step and no rewrite reconciles them.
+URL space exactly; no build step and no rewrite reconciles them. Moving a
+document moves its address — the application's included — and nothing
+else decides it.
 
 A new page is therefore: a folder here holding `index.html` (plus its
 README), and one entry in `pages.ts`. `pagePath` derives the URL from the
