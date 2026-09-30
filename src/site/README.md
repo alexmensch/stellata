@@ -90,7 +90,7 @@ is not redirected.
 
 ## The markdown rendition — how an agent reads these pages
 
-Every page here is also served **as markdown**, at its own `.md` path and
+A page with a rendition is also served **as markdown**, at its own `.md` path and
 at its canonical URL to any client whose `Accept` header names
 `text/markdown`. The homepage's is `dist/index.md`, served at `/index.md`.
 
