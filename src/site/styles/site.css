@@ -495,6 +495,8 @@ video {
 .label,
 .sources th {
   font-size: var(--step--2);
+  font-weight: normal;
+  line-height: inherit;
   letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
   color: var(--fg-dim);
@@ -562,7 +564,6 @@ video {
 }
 .sources th {
   padding-block: var(--space-2xs);
-  font-weight: normal;
   border-block-end: var(--rule);
   white-space: nowrap;
 }

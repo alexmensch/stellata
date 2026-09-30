@@ -196,6 +196,8 @@ In order down the page, and the order is the argument:
 4. **Transparent record** — the citation table and the call to action.
    Late on purpose: it is the proof, and proof follows the case.
 5. **System requirements** — WebGPU and device fit, two columns, short.
+   Its `h2` is set as a `.label`, so the section keeps its place in the
+   heading outline without a display heading of its own.
 
 **No section is numbered.** A landing page that numbers its sections reads
 as a specification; the eyebrow label above each `h2` carries the same
