@@ -431,9 +431,6 @@ video {
   text-decoration: none;
   border: var(--rule);
 }
-.sight-media:hover {
-  border-color: var(--accent);
-}
 .sight-media > img,
 .sight-media > video {
   inline-size: 100%;
