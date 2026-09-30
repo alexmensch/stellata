@@ -76,6 +76,10 @@ scripts/hooks/
                            README.md#how-paper-store-link-works.
                            Behaviour pinned by
                            tests/paper-store-link.test.ts.
+  command-match.sh         CMD_START and ENV_PREFIX, the regex pieces that
+                           find a command's start inside a Bash call and
+                           skip `env` / `NAME=value` in front of it. Sourced
+                           by perf-guard.sh.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
                            commit-sweep-guard.sh. The two hand-copied
