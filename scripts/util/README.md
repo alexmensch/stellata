@@ -55,6 +55,9 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/` module the process has imported, so the import statements are
   the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+- `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
+  `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
+  [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from
@@ -109,3 +112,28 @@ need the same thing — single-use helpers stay with their consumer.
   `tests/bundle-content.test.ts` asserts the built tree against the same
   predicates. The single-file copies (`sync-local-bubble.ts`,
   `sync-cloud-surfaces.ts`) are a different shape and stay standalone.
+
+## Proving a restructuring byte-identical
+
+A pipeline restructuring promises unchanged outputs; prove it, don't
+eyeball it. On the base commit with a full `pnpm run build:data`:
+
+1. `pnpm run identity:snapshot` hashes every output into the gitignored
+   `build/output-identity.json`: each stamp's recorded outputs (the stamp
+   directory's listing, so a new stamped step joins without an edit) plus the
+   unstamped `public/clouds.json` and `public/local-group.json`. It refuses
+   an output missing, or one its stamp no longer vouches for.
+2. Check out the branch and rebuild. A stamped step whose inputs changed
+   rebuilds itself; the mtime-gated emitters need a forced run of the whole
+   pnpm script, SID stamp included: `python3 scripts/clouds/build-clouds.py
+   --force`, `tsx scripts/local-group/build-local-group.ts --force`, then
+   `tsx scripts/sid/stamp-sibling-sids.ts clouds` / `local-group`.
+3. `pnpm run identity:diff` prints `identical: N outputs` and exits 0, or
+   names each changed, appeared and vanished file and exits 1.
+
+Quote the `identical` line in the PR body. `data/binaries/multiples.tsv` is
+also committed, so `git diff` shows it field by field; for the catalogue,
+`pnpm run validate:record-parity` gives the field diff keyed by SID.
+`public/binaries.bin` has a golden test besides
+([binaries.bin golden](../binaries/golden/README.md)), which runs in
+`pnpm test` with no build.
