@@ -127,11 +127,9 @@ copy is stale from the next build.
 - **A surface a user reads** takes it live: `catalog.count` once the
   catalogue is loaded (the About modal), or `import.meta.env`
   `.VITE_STAR_COUNT` before it is (the requires-WebGPU gate, both
-  documents, the homepage readout). `scripts/site/site-metrics.ts` reads
-  that off the built catalogue's own header, falling back to the build's
-  committed count snapshot where no artifact exists — so it is always a
-  number, and a surface may state it exactly. The same module publishes
-  the credited-source and cited-reference counts the public pages quote.
+  documents, the homepage readout). It is always a number, so a surface
+  may state it exactly; where it comes from:
+  [Why each count is derived where it is](/scripts/site/README.md#why-each-count-is-derived-where-it-is).
 - **Prose cannot read anything**, so it rounds through a
   `build-catalog/recordCount` marker that `pnpm run docs:figures`
   rewrites; a code comment says "the full catalogue" instead
