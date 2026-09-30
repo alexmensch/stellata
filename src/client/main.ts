@@ -33,6 +33,8 @@ import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
+import { bindPageTeardown } from './util/page-teardown';
+import { fanOut } from './util/fan-out';
 import { resolveBootRoute } from './webgpu/boot-route';
 import type { WebGpuSeam } from './webgpu/seam';
 import { showWebGpuGate } from './webgpu/gate/gate-page';
@@ -78,6 +80,8 @@ async function main() {
     return;
   }
 
+  const teardown = bindPageTeardown<DevConsoleGlobals>(window, () => location.reload());
+
   try {
     const kinds = buildKindModules();
     // Started here and awaited past the fetch: the async chunk and the
@@ -88,6 +92,10 @@ async function main() {
     // surface as an unhandled rejection instead of a refused renderer.
     const webgpuBoot: Promise<WebGpuSeam | null> = import('./webgpu/boot-webgpu')
       .then(({ bootWebGpu }) => bootWebGpu(canvas))
+      .then((seam) => {
+        if (seam) teardown.hold(() => seam.renderer.dispose());
+        return seam;
+      })
       .catch((err) => {
         console.warn('WebGPU boot rejected:', err);
         return null;
@@ -119,10 +127,8 @@ async function main() {
     }
 
     const stellata = new Stellata({ canvas, catalog, kinds, webgpu, boundaries });
-    // Dev-console access: `stellata.extinction.setStrength(X)` etc. Handy for
-    // dust debugging and not worth gating behind an env check on a solo
-    // project.
-    window.stellata = stellata;
+    teardown.hold(() => stellata.dispose());
+    teardown.expose('stellata', stellata);
 
     // Focus-card "Orbiting <host>" breadcrumbs read the same star labels
     // the search corpus shows.
@@ -166,6 +172,8 @@ async function main() {
     };
 
     const debugTools = setupDebug(stellata, idMaps);
+    teardown.hold(() => fanOut('pagehide', [debugTools.dispose, () => stellata.dispose()], (step) => step()));
+    teardown.expose('debug', debugTools);
 
     // Interstellar dust loads in the background — never blocks first paint.
     // Extinction fades in as each voxel chunk lands on the GPU. If the
@@ -210,7 +218,7 @@ async function main() {
     createScaleBar(stellata);
     const attitude = createAttitudeIndicator(stellata);
     if (attitude !== null) stellata.setOrbitFrameTick(attitude.tickOrbitFrame);
-    bindWarpButton(stellata);
+    bindWarpButton(stellata, teardown.signal);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
     // POI labels, etc.) while the focus-park lerp is in flight — same
@@ -307,6 +315,7 @@ async function main() {
       aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
       toggleOrbitLock: () => attitude?.toggleOrbitLock(),
       toggleDebugPanel: debugTools.panel,
+      signal: teardown.signal,
       timeScrubber,
     });
 

@@ -180,6 +180,14 @@ Three tiers, and a new allocation has to pick one:
   shell also holds as its own (`renderer`, `hdr`) and disposes itself, so
   the seam's dispose must NOT touch them — it would double-release.
 
+The whole chain runs on `pagehide` (`../util/page-teardown.ts`), and that
+is the only caller: before the shell exists the release is the renderer's
+own `dispose`, whose device destroy frees every allocation at once.
+`Stellata.dispose` runs its steps through `fanOut` (`../util/fan-out.ts`),
+so a step that throws still leaves the device destroy to run, and the
+failures surface together once every step has; `stellata-dispose.test.ts`
+pins that with a throwing layer teardown.
+
 The renderer boots with `reversedDepthBuffer: true` from day 1 — native
 [0, 1] reversed clip, depth funcs remapped, clear inverted, all
 upstream in three r185 — and `trackTimestamp: true` for the `gpu.frame`

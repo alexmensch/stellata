@@ -2,7 +2,6 @@
 // probe, rAF probe, the priceFrame call. Node-side orchestration is run.ts.
 
 import type { BrowserContext, Page } from 'playwright';
-import type { DebugTools } from '../../src/client/debug/debug';
 import type {
   PriceFrameOptions, PriceFrameRow,
 } from '../../src/client/debug/frame-cost/frame-cost';
@@ -15,10 +14,7 @@ import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';
 import type { Backend } from './scenarios';
 import { settleVerdict, type GateSnapshot } from './settle-pure';
 
-export interface PerfWindow {
-  readonly debug: DebugTools;
-  readonly stellata: Stellata;
-}
+export type PerfWindow = Readonly<Required<DevConsoleGlobals>>;
 
 export class BootError extends Error {}
 export class SettleTimeout extends Error {}
