@@ -83,11 +83,13 @@ therefore carries the camera round with the orbit, as the lock itself would.
 
 The lock is still engaged under the take, and its ride is the second camera
 writer [Writing the pose from `frame`](#writing-the-pose-from-frame-which-is-a-departure) warns of — but the two compose rather than
-fight. A pose written after frame N's draw is in frame N's basis; the ride at
-the top of frame N+1 carries it by exactly the basis's turn since, which lands
-it in frame N+1's. The residue is the ride's own threshold: turns under
-`cadenceVisibleTurnRad` accumulate until one is ridden, so a slow clock can
-over-carry by up to that one visible-turn step.
+fight. A pose written after frame N's draw is in frame N's basis, and the ride
+carries it by the basis's turn since the ride last ran. When that was frame N —
+any clock fast enough to cross the ride threshold every frame — it lands the
+pose in frame N+1's basis. On a slower clock turns under `cadenceVisibleTurnRad`
+accumulate while the take keeps re-writing the pose in the current basis, so
+the frame a ride fires on over-carries by up to one visible-turn step, and the
+take's next write corrects it.
 
 ## The take rides the focal object
 
