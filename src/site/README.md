@@ -118,12 +118,12 @@ Three things follow for anyone editing a page here:
   and nothing else: the emit, the `Accept` answer, the `Link` header and the
   dev server's route at the `.md` path all follow. A page without one simply
   serves HTML to everyone, which is a working state rather than a broken one.
-- **`Accept` now changes what `/` answers**, so both renditions carry
+- **`Accept` decides what a page's URL answers**, so both renditions carry
   `Vary: Accept`. A cache that did not know would serve one to the other.
 
 **Markdown is opt-in by naming the type.** A wildcard `Accept` — curl's
-default, and most agent fetchers' — still gets HTML, because that is what
-the deploy has always answered and what a browser needs. Only a client
+default, and most agent fetchers' — gets HTML, which is what a browser
+needs and what every existing crawler expects. Only a client
 that names `text/markdown`, and does not rank `text/html` above it, gets
 the rendition.
 
