@@ -388,9 +388,6 @@ video {
 
 /* ── Block: section ────────────────────────────────────────────────── */
 
-.section {
-  border-block-start: var(--rule);
-}
 .section[data-tight] {
   --region-space: var(--space-l-xl);
 }
@@ -640,7 +637,6 @@ video {
 
 .footer {
   padding-block: var(--space-m) var(--space-l);
-  border-block-start: var(--rule);
 }
 .footer-version {
   font-variant-numeric: tabular-nums;
