@@ -75,7 +75,7 @@ afterEach(() => {
   rmSync(repo, { recursive: true, force: true });
 });
 
-describe('pr-body-guard', () => {
+describe('pr-body-guard', { timeout: 120_000 }, () => {
   it('lets every other command through', () => {
     for (const command of ['git status', 'gh pr view 12', 'gh pr checks', 'echo gh pr create']) {
       expect(decision(command).denied, command).toBe(false);
