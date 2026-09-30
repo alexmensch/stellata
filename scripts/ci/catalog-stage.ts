@@ -5,13 +5,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { scriptClosure } from '../util/import-closure';
-import { REPO_ROOT } from '../util/paths';
+import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
 import {
   type BlobIndex,
   CATALOG_STAGE,
   catalogCacheKey,
   keyedPaths,
-  PACKAGE_JSON,
   parseLsFilesStage,
   withVersionlessPackageJson,
 } from './catalog-stage-pure';

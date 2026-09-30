@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 
 import { closureWithSiblings } from '../util/import-closure-pure';
+import { PACKAGE_JSON } from '../util/paths';
 
 export interface StageStep {
   script: string;
@@ -22,8 +23,6 @@ export const CATALOG_STAGE: readonly StageStep[] = [
 ];
 
 export const CATALOG_CACHE_KEY_PREFIX = 'catalog-build';
-
-export const PACKAGE_JSON = 'package.json';
 
 const ALWAYS_KEYED_FILES = new Set([
   PACKAGE_JSON,

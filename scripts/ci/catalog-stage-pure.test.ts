@@ -4,13 +4,12 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { tsxEntry } from '../util/import-closure-pure';
-import { REPO_ROOT } from '../util/paths';
+import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
 import {
   CATALOG_CACHE_KEY_PREFIX,
   CATALOG_STAGE,
   catalogCacheKey,
   keyedPaths,
-  PACKAGE_JSON,
   parseLsFilesStage,
   withVersionlessPackageJson,
 } from './catalog-stage-pure';
@@ -31,7 +30,7 @@ describe('parseLsFilesStage', () => {
 describe('keyedPaths', () => {
   const tracked = index([
     'data/sub/input.tsv',
-    'package.json',
+    PACKAGE_JSON,
     'pnpm-lock.yaml',
     'tsconfig.json',
     '.github/workflows/test.yml',
@@ -50,7 +49,7 @@ describe('keyedPaths', () => {
     expect(keyedPaths(new Set(['scripts/cat/build.ts', 'src/client/util/helper.ts']), tracked)).toEqual([
       '.github/workflows/test.yml',
       'data/sub/input.tsv',
-      'package.json',
+      PACKAGE_JSON,
       'pnpm-lock.yaml',
       'scripts/cat/build-expected.json',
       'scripts/cat/build.ts',
@@ -102,7 +101,7 @@ describe('withVersionlessPackageJson', () => {
 });
 
 describe('CATALOG_STAGE', () => {
-  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8'));
+  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'));
 
   it('names only single-entry tsx scripts, so every step is keyed', () => {
     for (const { script } of CATALOG_STAGE) expect(() => tsxEntry(scripts, script)).not.toThrow();
