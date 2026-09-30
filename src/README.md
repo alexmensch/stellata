@@ -34,9 +34,9 @@ Cloudflare Worker entry, browser client, and the public content site.
 
 ## Request routing
 
-The built tree mirrors the URL space: `dist/index.html` is `/`, the public
-homepage; `dist/app/index.html` is `/app`, the application; and every
-artifact and crawler file sits at the root beside them. Cloudflare's
+The built tree mirrors the URL space ([A page's path is its folder](/src/site/README.md#a-pages-path-is-its-folder-and-that-is-what-serves-the-url)):
+`/` is the public homepage, `/app` the application, and every artifact and
+crawler file sits at the root beside them. Cloudflare's
 static-assets layer serves all of that directly. Three things it cannot
 express, which `worker.ts` does:
 

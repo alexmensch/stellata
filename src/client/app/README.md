@@ -6,13 +6,10 @@ index.html   The app's only HTML document. Vite's build input.
 
 ## Why one file has a folder to itself
 
-**Vite emits an HTML input at its own path relative to the config's
-`root`, and that path is the URL it serves at.** `root` is `src/client`,
-so this file emits at `dist/app/index.html` and Cloudflare's static-assets
-layer serves it at `/app`. Move the file and you move the application's
-address — nothing else decides it. `/` is the public homepage
-(`src/site/README.md`), which is why the two documents cannot both sit at
-their build root.
+**This file's path is the application's address:** with `root` at
+`src/client` it emits at `dist/app/index.html` and answers at `/app`
+([A page's path is its folder](/src/site/README.md#a-pages-path-is-its-folder-and-that-is-what-serves-the-url)). `/` is the public homepage,
+which is why the two documents cannot both sit at their build root.
 
 Its siblings stay in the parent folder: `<script src="../main.ts">` and
 `<link href="../styles.css">` climb one level, and Vite rewrites both to
