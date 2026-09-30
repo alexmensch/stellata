@@ -115,6 +115,25 @@ describe('the public stylesheet hardcodes no values', () => {
     expect(literals, `colour literals outside :root: ${shown(literals)}`).toEqual([]);
   });
 
+  // Every word a colour-bearing value may hold besides a token: so a colour
+  // name missing from NAMED_COLOUR still fails.
+  const COLOUR_PROP =
+    /^(color|background(-color|-image)?|border(-(block|inline)(-(start|end))?)?(-color)?|outline(-color)?|(text|box)-shadow|text-decoration(-color)?|caret-color|accent-color|fill|stroke)$/;
+  const COLOURLESS_WORDS = new Set([
+    'transparent', 'currentcolor', 'inherit', 'initial', 'unset', 'none',
+    'solid', 'dashed', 'dotted', 'double', 'underline',
+    'linear-gradient', 'radial-gradient', 'to', 'top', 'bottom', 'left', 'right', 'at', 'circle', 'ellipse',
+  ]);
+
+  it('paints a colour-bearing property only through a token', () => {
+    const offenders = RULES.filter(
+      ({ prop, value }) =>
+        COLOUR_PROP.test(prop) &&
+        (stripVars(value).match(/(?<![\d.])\b[a-z][a-z-]*/gi) ?? []).some((w) => !COLOURLESS_WORDS.has(w.toLowerCase())),
+    );
+    expect(offenders, `colours not from a token: ${shown(offenders)}`).toEqual([]);
+  });
+
   it('keeps every token in the one :root block', () => {
     expect(CODE.match(/:root\b/g)).toHaveLength(1);
   });
