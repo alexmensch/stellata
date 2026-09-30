@@ -1,7 +1,7 @@
 # GCVS 5.1 — General Catalogue of Variable Stars
 
 Periodic-variable amplitudes + periods + cross-IDs. Drives the
-~3.7k variable stars that pulsate in the renderer (sinusoidal
+~<!-- count:build-catalog/variableCount k2 -->3.7k<!-- /count --> variable stars that pulsate in the renderer (sinusoidal
 magnitude modulation + matching disc-radius factor).
 
 ```

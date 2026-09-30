@@ -1,11 +1,11 @@
 # The membership manifest — the primaries-derived membership term
 
 `data/membership/membership-manifest.tsv` is one row per record the frozen
-primaries admit: the spine's 313,257 rows re-keyed on the designations the
+primaries admit: the spine's <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
-([Correcting a merge decision](#correcting-a-merge-decision)), plus the 63,653 records the primaries name
-that AT-HYG's subset never carried — 376,909 rows, and the 598,664 the V <= 11
-magnitude term adds on top (`magnitude-term/README.md`), 975,573 in
+([Correcting a merge decision](#correcting-a-merge-decision)), plus the <!-- count:membership-manifest/additionRows -->63,653<!-- /count --> records the primaries name
+that AT-HYG's subset never carried — 376,909 rows, and the <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> the V <= 11
+magnitude term adds on top (`magnitude-term/README.md`), <!-- count:membership-manifest/rows -->975,573<!-- /count --> in
 all. **`readStars` walks it, and
 membership is exactly these rows less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks**
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
@@ -81,7 +81,7 @@ gaia_source_id  binding  routes  term
 - `routes` names the primary attesting each classical cell
   (`hd:iv25|hip:i239|gl:cns5|tyc:tycho2`), computed by the audit's
   `attestSpineRow` over the merged cells. A cell absent from the list is one
-  no primary publishes — 46 today, the proper names
+  no primary publishes — <!-- count:membership-manifest/unattestedByCell.proper -->46<!-- /count --> today, the proper names
   `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
   Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
@@ -104,7 +104,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: 577 spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/spineRowsWithoutSourceId -->577<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -126,11 +126,11 @@ count snapshot pins what the derivation reached, over every spine row:
 
 | Outcome | Rows | What it is |
 |---|---|---|
-| `bound` | 312,405 | one source survives both gates, with no passing rival |
-| `refused` | 619 | no source binds — a derived refusal, not an absence |
-| `contested` | 231 | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
-| `collision` | 0 | a second row derives the same source; both withheld and queued |
-| `sol` | 1 | |
+| `bound` | <!-- count:membership-manifest/derivationOutcome.bound -->312,405<!-- /count --> | one source survives both gates, with no passing rival |
+| `refused` | <!-- count:membership-manifest/derivationOutcome.refused -->619<!-- /count --> | no source binds — a derived refusal, not an absence |
+| `contested` | <!-- count:membership-manifest/derivationOutcome.contested -->231<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
+| `collision` | <!-- count:membership-manifest/derivationOutcome.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
+| `sol` | <!-- count:membership-manifest/derivationOutcome.sol -->1<!-- /count --> | |
 
 The outcome is a property of the derivation alone, so a count moving is the
 derivation moving. That is what replaced the frozen comparison: `derivedVia`,
@@ -143,7 +143,7 @@ the record's `tyc` / `hip` / `hd` / `gl` cells and restating the derived id it
 was taken over, so a re-pull that moves the derivation re-opens the review
 rather than carrying a stale verdict forward. `keep_source_id` is what the row
 ships: the derived id, any other candidate the queue row lists, an id **no
-committed source proposes at all**, or empty for none. That last case is 36 of
+committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/dispositionAsserted -->36<!-- /count --> of
 the 53 today (`dispositionAsserted`) and is why the file exists — the review
 reached evidence the derivation cannot, and the count is what keeps the number
 of ids resting on it visible.
@@ -164,7 +164,7 @@ proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
 namespace), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Today `bindingDispositions` reads 6 `derived` and 47 `other`. The six
+reach). Today `bindingDispositions` reads <!-- count:membership-manifest/bindingDispositions.derived -->6<!-- /count --> `derived` and <!-- count:membership-manifest/bindingDispositions.other -->47<!-- /count --> `other`. The six
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
 record follows its canonical key onto the primary) and Gl 225.2 A. A kept
 value ships as `reviewed`.
@@ -181,10 +181,10 @@ display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
 lack, and a Flamsteed number neither IV/27A nor WGSN publishes for the star,
 are emptied into `data/membership/label-drops.tsv`: one row per cell, keyed on
 the manifest row as it stands afterwards, under `hd_unattested` or
-`flamsteed_unattested`. Today that is 1 HD — HD 336196 on HIP 90265, where
-I/239 prints HD 336187 — and 119 Flamsteed numbers. Those 119 are real
+`flamsteed_unattested`. Today that is <!-- count:membership-manifest/labelDropsByReason.hd_unattested -->1<!-- /count --> HD — HD 336196 on HIP 90265, where
+I/239 prints HD 336187 — and <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> Flamsteed numbers. Those <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> are real
 designations with no frozen primary behind them: IV/27A is the whole
-3,690-row table (3,688 after its curated corrections) and publishes 2,755
+3,690-row table (<!-- count:classic-id-overlay/crossIndexRows -->3,688<!-- /count --> after its curated corrections) and publishes 2,755
 Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
 (measured 2026-09-06). Attesting them from a frozen SIMBAD identifier pull is
 the open option; until one exists the manifest ships without them and the
@@ -192,7 +192,7 @@ ledger says which.
 
 **No dropped label was keying its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
 of a dropped binding and the reason neither queue writes a SID event. A
-Flamsteed number is not a designation at all, so the 119 cannot move a key. An
+Flamsteed number is not a designation at all, so the <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> cannot move a key. An
 HD can, so the gate states the rule rather than the coincidence: whatever keys
 the row after the drop must already outrank the cell it lost. Dropping the
 display HD promotes the first surviving alias into it, so the cell a record
@@ -204,7 +204,7 @@ The spine states which designations name one star, and that is the one thing no
 primary supplies — so it is also the one thing no other curated file can
 correct. `data/membership/spine-corrections.tsv` is where review says AT-HYG
 merged wrong, keyed on `tyc`/`hip`/`hd`/`gl`, which is unique across all
-313,257 spine rows. Two operations:
+<!-- count:inherited-spine/rows -->313,257<!-- /count --> spine rows. Two operations:
 
 - **`set`** rewrites one cell. It accepts **`tyc` alone**: every other
   identifier the spine states is the label merge's, and a curated exception to
@@ -297,7 +297,7 @@ HD 90034, TYC 1567-2517-2 on HD 166479 without HR 6803, TYC 8374-2988-1 on
 HIP 93538 without HD 176555, each held by a spine record. The record ships; only the label is withheld.
 
 No admitted row keys on a Gaia id alone (`additionGaiaKeyedOnly`), and no
-designation one carries sits on a second row (`sharedDesignations`, 68, every
+designation one carries sits on a second row (`sharedDesignations`, <!-- count:membership-manifest/sharedDesignations -->68<!-- /count -->, every
 one a spine-side `hd:` or `hr:` pair), so `sid:allocate` mints every addition under `hd:` /
 `hip:` / `gl:`. The two counts answer only together: the first says the row has
 a classical designation, the second that the designation is its own.
@@ -359,7 +359,7 @@ arithmetic and label-flips replay:
   `component:` row names a manifest designation and is itself no manifest row.
 - **No addition shares a designation with another record**, which is what says
   each mints on a classical key rather than falling through to its Gaia id.
-  The 68 designations two rows do share are the spine's own — pinned, so a
+  The <!-- count:membership-manifest/sharedDesignations -->68<!-- /count --> designations two rows do share are the spine's own — pinned, so a
   label change that makes a sixty-ninth fails here.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)

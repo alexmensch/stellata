@@ -264,7 +264,7 @@ reconstructs the source buffer byte-for-byte.
 limit). Two things follow from the ramp, and both are the point:
 
 - **Chunk 0 is the first-paint payload.** Measured on today's build:
-  **10,412 records, 717 KB gzipped, ending at apparent V 6.62** — in
+  **<!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records, 717 KB gzipped, ending at apparent V 6.62** — in
   apparent-V order ([Record order](#record-order)) that is the naked-eye sky, and it is
   smaller than every other artifact boot fetches, so the star catalogue
   stops being the thing first paint waits on. `recordsInFirstChunk` in
@@ -276,12 +276,12 @@ limit). Two things follow from the ramp, and both are the point:
   which is a near-constant perceptual step (a magnitude is ~2.5× the count,
   so a doubling is ~0.75 mag). Past the 16 MiB ceiling each chunk is a flat
   ~168k records instead, ~0.3 mag apiece at this density. Measured,
-  cumulative, today's 979,659-record build; the build prints this table's
+  cumulative, today's <!-- count:build-catalog/recordCount -->979,659<!-- /count -->-record build; the build prints this table's
   `records` and `faintest V` columns on every run:
 
   | chunk | raw | gz | cumulative gz | records | faintest V |
   | --- | --- | --- | --- | --- | --- |
-  | 0 | 1 MiB | 717 KB | 717 KB | 10,412 | 6.62 |
+  | 0 | 1 MiB | 717 KB | 717 KB | <!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> | 6.62 |
   | 1 | 2 MiB | 1.48 MB | 2.19 MB | 31,384 | 7.63 |
   | 2 | 4 MiB | 2.93 MB | 5.12 MB | 73,327 | 8.43 |
   | 3 | 8 MiB | 5.77 MB | 10.89 MB | 157,213 | 9.17 |
@@ -289,7 +289,7 @@ limit). Two things follow from the ramp, and both are the point:
   | 5 | 16 MiB | 11.20 MB | 33.42 MB | 492,757 | 10.33 |
   | 6 | 16 MiB | 11.16 MB | 44.59 MB | 660,529 | 10.64 |
   | 7 | 16 MiB | 11.16 MB | 55.75 MB | 828,301 | 10.88 |
-  | 8 | 14.43 MiB | 9.82 MB | 65.57 MB | 979,659 | 32.21 |
+  | 8 | 14.43 MiB | 9.82 MB | 65.57 MB | <!-- count:build-catalog/recordCount -->979,659<!-- /count --> | 32.21 |
 
   The last row's faintest V is an LMC-distance record at the 50 kpc cutoff,
   not a bad sort — the column is each chunk's faintest, so it tracks the
@@ -356,8 +356,8 @@ not display — the manifest's `hd_alt` / `hr_alt` cells
 the raw spectral designation the spectral resolver settled on ("G2 V",
 "M1.5Iab-b", "K0III+K7V", …) for the hover tooltip display. The `g` field carries the GCVS variable-star
 designation (`R CrB`, `VY CMa`, `V0645 Cen`) the cross-match attaches
-(`../parse/gcvs/README.md`). ~15.2k stars are named (`gcvsNamed`), a superset
-of the ~4.6k with a renderable period (`gcvsMatched`): a designation is
+(`../parse/gcvs/README.md`). ~<!-- count:build-catalog/gcvsNamed k3 -->15.2k<!-- /count --> stars are named (`gcvsNamed`), a superset
+of the ~<!-- count:build-catalog/gcvsMatched k2 -->4.6k<!-- /count --> with a renderable period (`gcvsMatched`): a designation is
 attached on name-resolution alone, so aperiodic variables (Proxima =
 V0645 Cen, R CrB, T Tau, novae) are searchable but never pulsate.
 
@@ -377,7 +377,7 @@ Coverage is bounded by what decomposes in `multiples.tsv`
 dropdown's context line; `dc` is the constellation a designation is *named*
 for, and is the one every alias and display label is built against. `dc`
 ships only where the two diverge AND the entry carries a
-constellation-relative designation (`b`/`f`/`gd`/`g`/`cl`) — **69** entries,
+constellation-relative designation (`b`/`f`/`gd`/`g`/`cl`) — **<!-- count:build-catalog/designationConMismatch -->69<!-- /count -->** entries,
 `designationConMismatch` — so the reader's `designationConIndex(dc, c)`
 fallback carries the rest at no wire cost. The cascade behind the field:
 [The designation constellation](../naming/README.md#the-designation-constellation).

@@ -35,8 +35,8 @@ an AT-HYG transcription we cannot re-pull, so [§ 5](/docs/catalog-driver.md#5-p
 retires it. Its 871 `rv_src=OTHER` cells were unattributable even by that
 standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
-Per-tier counts are pinned as `rvGaiaDr3` **266,128** / `rvSimbad` **7,171** /
-`rvNone` **39,958**, the same discipline the direction cascade pins
+Per-tier counts are pinned as `rvGaiaDr3` **<!-- count:build-catalog/rvGaiaDr3 -->266,128<!-- /count -->** / `rvSimbad` **7,171** /
+`rvNone` **<!-- count:build-catalog/rvNone -->39,958<!-- /count -->**, the same discipline the direction cascade pins
 `directionVia` under. The SIMBAD tier is not the printed cell renamed:
 against the 7,126 rows that cell used to cover it drops 689 (562 the pull
 does not reach or holds no usable `rvz_radvel`, 127 the skip rule rejects)
@@ -208,7 +208,7 @@ so it is no better an instrument. Nine of those rows sit on a Gaia row
 stating more than 20 km/s of uncertainty, and their median disagreement is
 4.9 km/s. The one large disagreement in that set (Gaia 7.26 ± 23.94 against
 −148.00) is a 6σ gap in which the older value is the likelier suspect. Nine
-rows against a coarser reference cannot locate a knee, and the ~266k rows the
+rows against a coarser reference cannot locate a knee, and the ~<!-- count:build-catalog/rvGaiaDr3 k3 -->266k<!-- /count --> rows the
 Gaia tier itself supplies score nothing at all.
 
 So the uncertainty is **counted rather than obeyed** — the same treatment
@@ -216,10 +216,10 @@ So the uncertainty is **counted rather than obeyed** — the same treatment
 extreme value can be real, and a filter tuned on nine stars would remove real
 ones. `rvGaiaErrorBands` bands the Gaia tier's rows by stated uncertainty and
 `rvGaiaErrorMaxKmS` pins the largest, so a DR4 pull that shifts the
-distribution has to be reviewed rather than absorbed silently. Today: 183,039
-rows ≤ 1 km/s, 60,595 ≤ 5, 15,026 ≤ 10, 6,128 ≤ 20, **1,340** above 20, and a
-maximum of **39.9433** — under DR3's own publication ceiling of 40, which no
-pulled row reaches. The `none` band is pinned at **0**: the published
+distribution has to be reviewed rather than absorbed silently. Today: <!-- count:build-catalog/rvGaiaErrorBands.le1 -->183,039<!-- /count -->
+rows ≤ 1 km/s, <!-- count:build-catalog/rvGaiaErrorBands.le5 -->60,595<!-- /count --> ≤ 5, <!-- count:build-catalog/rvGaiaErrorBands.le10 -->15,026<!-- /count --> ≤ 10, <!-- count:build-catalog/rvGaiaErrorBands.le20 -->6,128<!-- /count --> ≤ 20, **<!-- count:build-catalog/rvGaiaErrorBands.gt20 -->1,340<!-- /count -->** above 20, and a
+maximum of **<!-- count:build-catalog/rvGaiaErrorMaxKmS -->39.9433<!-- /count -->** — under DR3's own publication ceiling of 40, which no
+pulled row reaches. The `none` band is pinned at **<!-- count:build-catalog/rvGaiaErrorBands.none -->0<!-- /count -->**: the published
 catalogue always pairs an `rv` with an error, so a non-zero count there is an
 upstream schema change, not a tolerable miss.
 

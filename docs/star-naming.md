@@ -43,8 +43,8 @@ implementation's own statement of all three rules.
 
 | Source | Status | Supplies | Citation |
 |---|---|---|---|
-| IAU WGSN `NEC.csv` | **authority** | 377 approved names + 4,971 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (9,297 rows) | IAU Div. C WG on Star Names, 2025-05 |
-| IAU WGSN `wgsnFaints.csv` | **authority** | 132 approved names below V 6.5; its WDS column ships empty | same, 2025-05 |
+| IAU WGSN `NEC.csv` | **authority** | 377 approved names + 4,971 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (<!-- count:wgsn/necRows -->9,297<!-- /count --> rows) | IAU Div. C WG on Star Names, 2025-05 |
+| IAU WGSN `wgsnFaints.csv` | **authority** | <!-- count:wgsn/faintsRows -->132<!-- /count --> approved names below V 6.5; its WDS column ships empty | same, 2025-05 |
 | `IV/27A` cross index | mechanical | Bayer/Flamsteed for the sub-naked-eye tail (`data/classic-ids/`) | [Kostjuk 2002](/data/papers/index.md#kostjuk2002) |
 | `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
@@ -56,7 +56,7 @@ implementation's own statement of all three rules.
 The IAU list is the only source with an approval process. It is also the
 **only in-tree source of Unicode Greek designations**: it ships
 `α Andromedae`, `ϕ Cassiopeiae`, `β 1 Tucanae` directly, covering **1,494 of
-our 1,522 Bayer records** and 2,372 of 2,724 Flamsteed ones. Stellarium's
+our <!-- count:wgsn/membershipBayerRows -->1,522<!-- /count --> Bayer records** and 2,372 of <!-- count:inherited-spine/nonEmpty.flam -->2,724<!-- /count --> Flamsteed ones. Stellarium's
 skyculture file, which `stellata-wgp3`'s description named as the glyph
 source, contains **zero Greek glyphs** — only constellation lines and folk
 names.
@@ -64,7 +64,7 @@ names.
 Two IAU properties beyond the names make it load-bearing:
 
 - **Component attribution.** The authority answers *which* star owns a
-  name rather than leaving it composed: 35 HIP and 229 HD cells inline the
+  name rather than leaving it composed: <!-- count:wgsn/hipComponentCells -->35<!-- /count --> HIP and <!-- count:wgsn/hdComponentCells -->229<!-- /count --> HD cells inline the
   component letter (`HIP 518A`, `62264AB`), and the name itself carries one
   where the IAU approved it. `Acrab` belongs to β Sco **Aa**; AT-HYG hangs
   `Acrab B` on the WDS **C** component. Component-lettered names are not
@@ -83,7 +83,7 @@ Diacritic-folded, over `data/athyg/inherited-spine.tsv`:
 
 | Class | Count | Disposition |
 |---|---|---|
-| IAU-approved | **445** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
+| IAU-approved | **<!-- count:wgsn/membershipProperMatched -->445<!-- /count -->** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
 | discovery / eponymous designation | 21 | designation tier (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`) |
 | IAU name + AT-HYG component letter | 8 | alias only (`Acrab B`, `Cor Caroli B`, `Revati B`, …) |
 | Gould designation | 3 | designation tier (`268 G. Cet`) |
@@ -141,7 +141,7 @@ Display resolution order, first hit wins:
    for α UMa, while atlases and observing lists print `15 UMa` rather than
    `f UMa`. Splitting the tier moves the 550 Latin-letter records off tier 3:
    **313** take a Flamsteed number back and **237** keep their letter, having
-   none to lose to (`namingTierBayerLatin`; the 1,719 Greek records are
+   none to lose to (`namingTierBayerLatin`; the <!-- count:build-catalog/namingTierBayer -->1,719<!-- /count --> Greek records are
    untouched, and `build-catalog-expected.json` is authoritative for all
    three). Below Flamsteed rather than out of the ladder, because Flamsteed
    catalogued only what Greenwich could see — which is what leaves the far
@@ -215,10 +215,10 @@ the estimates this section carried from the gate's probe):
 - SIMBAD-form rows `* kap01 Scl B` (264) carry a component — parse letter,
   index and component, not just the letter.
 - The two files carry 5,031 non-empty cells, 5 of which spell null
-  (literal `null`). The 5,026 classified: 1,724 Bayer · 1,521 Flamsteed ·
-  938 Gould · 615 variable (routed to tier 6, never tier 3) · 132
-  non-stellar dropped (`NGC 129`, `M 31`, `NAME SMC`, clusters) · 95
-  other-catalogue dropped (BD / CD / Gliese / survey ids) · 1 corrupt (a
+  (literal `null`). The 5,026 classified: <!-- count:wgsn/cellBayer -->1,724<!-- /count --> Bayer · <!-- count:wgsn/cellFlamsteed -->1,521<!-- /count --> Flamsteed ·
+  <!-- count:wgsn/cellGould -->938<!-- /count --> Gould · <!-- count:wgsn/cellVariable -->615<!-- /count --> variable (routed to tier 6, never tier 3) · <!-- count:wgsn/cellNonStellar -->132<!-- /count -->
+  non-stellar dropped (`NGC 129`, `M 31`, `NAME SMC`, clusters) · <!-- count:wgsn/cellOtherCatalogue -->95<!-- /count -->
+  other-catalogue dropped (BD / CD / Gliese / survey ids) · <!-- count:wgsn/cellCorrupt -->1<!-- /count --> corrupt (a
   Mathematica artifact on ρ² Ara, whose Bayer arrives via the IV/27A
   tail). NEC alone holds 4,971 of the non-empty cells.
 - A two-capital head is a GCVS designation and is tested before the Greek
@@ -226,7 +226,7 @@ the estimates this section carried from the gate's probe):
   `NU Pav` is the variable HD 189124, and reading it as Greek mints a
   second ν Pav onto it (the Bayer star is HD 169978).
 - Dropping an other-catalogue cell normally costs nothing — the row still
-  keys via HIP/HR/HD. The exception: 53 wgsnFaints names whose only
+  keys via HIP/HR/HD. The exception: <!-- count:wgsn/namesKeyless -->53<!-- /count --> wgsnFaints names whose only
   identifier was that cell (`WASP-32`, `HAT-P-29`), with an empty WDS
   column and, bar one, no spine star within 30″. They name stars the
   catalogue does not carry.
@@ -240,8 +240,8 @@ trailing-period forms (`mu.`, `nu.`, `pi.`), zero-padded indices
 (`alf01`), and **GCVS-style cells rejected** from the Bayer field
 (`R And`, `RZ Cas`, `AR Aur`, `V380 Cyg`) — variable designations tier 6
 already sources from GCVS. Measured over all 2,185 Bayer cells (pinned):
-2,051 parse as Bayer (0 unparsed) · 134 GCVS contaminants rejected. The
-union adds 446 of the 2,051 as the tail; 1,605 are already covered by a
+2,051 parse as Bayer (<!-- count:wgsn/iv27aUnparsed -->0<!-- /count --> unparsed) · <!-- count:wgsn/iv27aVariableRejected -->134<!-- /count --> GCVS contaminants rejected. The
+union adds 446 of the 2,051 as the tail; <!-- count:wgsn/iv27aBayerCovered -->1,605<!-- /count --> are already covered by a
 WGSN designation on the same star.
 
 **Gliese prefix.** Display `GJ <number><component>` uniformly. `Gl` (Gliese
@@ -265,7 +265,7 @@ The dividing line, and the reason the search index does not grow much:
   of a multi-name cell, the full-genitive Latin-Bayer spellings the tier's
   own form does not derive (`p Eridani` against the rendered `p Eri`), and
   a Flamsteed designation displaced when the authority's Bayer names a
-  different constellation (16 Lyn is also ψ¹⁰ Aur). 24 records today.
+  different constellation (16 Lyn is also ψ¹⁰ Aur). <!-- count:build-catalog/namingAliasRecords -->24<!-- /count --> records today.
   Stellarium's 659 folk names are not ingested.
 
 **An alias must have been published outside this repository.** Its purpose
@@ -311,7 +311,7 @@ Two couplings the composer gets right, both latent bugs before it:
   attribute (hover line, focus-card Constellation row, `highlightCon`,
   chart centroids).
 - **One composer, both sides.** `catalog.bin`'s name table carries the
-  authority tiers — 725 records, so first paint has names — and the
+  authority tiers — <!-- count:build-catalog/namingNameTable -->725<!-- /count --> records, so first paint has names — and the
   runtime composes every designation below them off `search-index.json`
   through the same pure function, so the two cannot drift.
 
@@ -378,7 +378,7 @@ Sequencing note: the ladder is independent of the driver swap
 (`stellata-3bsf.4`) — it reads designations, whichever source produced them
 — but its Bayer/Flamsteed tail and every label's spine backstop come from
 `data/athyg/inherited-spine.tsv`, which is why the ingest keys HIP/HR/HD and
-never `gaia_source_id` alone: **115 of the 178 stars at V ≤ 3 have no
+never `gaia_source_id` alone: **<!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->115<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> stars at V ≤ 3 have no
 source_id-keyed overlay row** ([Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority)), and
 those are exactly the stars the authority names.
 

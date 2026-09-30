@@ -45,8 +45,8 @@ unless an override layer replaces it. Counts pin as `dist*`.
 | `gliese_plx` | its own GJ in V/70A | |
 | `simbad_plx` | bibcoded, neither skip rule firing | |
 | `pair_member_parallax` | a bound sibling's clean DR3 fit | |
-| `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | 15 |
-| `curated` | Sol alone | 1 |
+| `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | <!-- count:build-catalog/distGliesePhotometricPlx -->15<!-- /count --> |
+| `curated` | Sol alone | <!-- count:build-catalog/distCurated -->1<!-- /count --> |
 | `none` | — | [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) ledger drop |
 
 **V/70A appears twice, and the order is the whole point.** Its resulting
@@ -58,7 +58,7 @@ unconditionally put an estimate above every bibcoded measurement of the star
 itself, which is what Gl 92.1 / HD 14039 measured — 41.0 mas under `n_plx=r`
 inverted to **24.390 pc**, against SIMBAD's bibcoded 29.9357 ± 0.1389 (S/N 216)
 at **33.405 pc**, ~27% further out. 21 records moved onto a real parallax that
-way. `distGliesePhotometricPlx` ratchets DOWN: each of its 15 is a record
+way. `distGliesePhotometricPlx` ratchets DOWN: each of its <!-- count:build-catalog/distGliesePhotometricPlx -->15<!-- /count --> is a record
 waiting for someone to measure its parallax.
 
 The estimate sits below even the bound-sibling tier, which is the only place the
@@ -116,11 +116,11 @@ which moves with every membership change and so cannot be quoted. Over the
 
 | Count | Today | Why it is not a candidate |
 |---|---|---|
-| `pairMemberParallaxEntries` | **8,268** | kept: anchor-grade, above the floor |
-| `pairMemberSiblingNotAnchorGrade` | 6,683 | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
-| `pairMemberSiblingNoParallax` | 1,174 | Gaia has the source and published none |
-| `pairMemberSiblingBelowSnFloor` | 1 | anchor-grade, inversion undefined |
-| `pairMemberSiblingNoAstrometryRow` | **0** | the pull carries no row for the source at all |
+| `pairMemberParallaxEntries` | **<!-- count:build-catalog/pairMemberParallaxEntries -->8,268<!-- /count -->** | kept: anchor-grade, above the floor |
+| `pairMemberSiblingNotAnchorGrade` | <!-- count:build-catalog/pairMemberSiblingNotAnchorGrade -->6,683<!-- /count --> | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
+| `pairMemberSiblingNoParallax` | <!-- count:build-catalog/pairMemberSiblingNoParallax -->1,174<!-- /count --> | Gaia has the source and published none |
+| `pairMemberSiblingBelowSnFloor` | <!-- count:build-catalog/pairMemberSiblingBelowSnFloor -->1<!-- /count --> | anchor-grade, inversion undefined |
+| `pairMemberSiblingNoAstrometryRow` | **<!-- count:build-catalog/pairMemberSiblingNoAstrometryRow -->0<!-- /count -->** | the pull carries no row for the source at all |
 
 The five are a partition, so the table sums to the dedup's input and a new
 refusal path has to be classified before it can hide in prose. That input
@@ -300,9 +300,9 @@ indexed by the id the pair row names it with.
 
 **Refusing withholds no measurement of the component's own**, and the build
 states that rather than arguing it. Two counts partition the 9:
-`companionDroppedParkedViaGaia5p` is **0** — every refused row routes
+`companionDroppedParkedViaGaia5p` is **<!-- count:build-catalog/companionDroppedParkedViaGaia5p -->0<!-- /count -->** — every refused row routes
 `hip2_long_baseline` (7) or `system_inherited` (2) — and
-`companionDroppedParkedOwnedFit` is **0**, which is the stronger claim and the
+`companionDroppedParkedOwnedFit` is **<!-- count:build-catalog/companionDroppedParkedOwnedFit -->0<!-- /count -->**, which is the stronger claim and the
 pinned one: not one refused row satisfies `hasIndependentFitRoute`, so none
 carries an owned identifier on a per-component route. It asks about the ROUTE,
 not the placement `resolveIndependentAstrometry` builds on it — a measurement

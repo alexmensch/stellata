@@ -157,7 +157,7 @@ map.
 ### Visual doubles, in chart mode
 
 Switch to chart mode while observing from a focused star to see
-the double-star wings glyph. The model resolves ~12,400 doubles via
+the double-star wings glyph. The model resolves ~<!-- count:build-catalog/ccdmResolved sig3 -->12,400<!-- /count --> doubles via
 the Hipparcos CCDM cross-match.
 
 - **Mizar + Alcor (ζ + 80 UMa)** — the classic naked-eye double.
@@ -264,7 +264,7 @@ navigation (orbit, zoom, pan) works the same everywhere.
 ## Known limitations
 
 - **Only ~2,800 variables pulse** — the pulsating types among the
-  ~4,350 cross-matched against GCVS (via Gaia, HIP or HD) with a
+  ~<!-- count:build-catalog/variableCount sig3 -->4,350<!-- /count --> cross-matched against GCVS (via Gaia, HIP or HD) with a
   parseable period and amplitude. Eclipsing binaries carry a period
   but do not pulse. Variables without a cross-reference, or whose GCVS
   entry lacks a parseable period, render as non-variable.

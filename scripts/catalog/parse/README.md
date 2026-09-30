@@ -149,7 +149,7 @@ A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no
 parallax, no V, or no position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
 `data/membership/parked-ledger.tsv` names it. A **drop** (step 5) is a
 reference table disagreeing with the tiers above it — never a membership
-decision — so it is pinned at 0 in `../build-catalog-expected.json` and a
+decision — so it is pinned at <!-- count:build-catalog/droppedTooFar -->0<!-- /count --> in `../build-catalog-expected.json` and a
 non-zero entry fails the build. Parks are pinned too, but at their measured
 counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
 

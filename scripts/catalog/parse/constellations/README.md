@@ -64,7 +64,7 @@ designation (Fomalhaut C is α PsA C while sitting in Aquarius).
 **A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
 whatever any catalogue column says, so `applyVariability` (`../gcvs/gcvs-parse.ts`)
 sets `desigConIndex` from the designation's trailing abbreviation wherever
-IV/27A left it empty — `gcvsDesignationCon` pins **7,363**. Its authority is
+IV/27A left it empty — `gcvsDesignationCon` pins **<!-- count:build-catalog/gcvsDesignationCon -->7,363<!-- /count -->**. Its authority is
 not a fallback position: the cell it used to correct was untrustworthy both
 ways —
 
@@ -128,5 +128,5 @@ centroid from first paint, off the records chunk 0 carries
 later chunk would read an undecoded `(0,0,0)` there. Records are apparent-V
 ordered, so this holds while every figure star is naked-eye bright: measured,
 708 distinct vertices, highest record index 10,289 against a chunk 0 of
-10,412 records.
+<!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records.
 

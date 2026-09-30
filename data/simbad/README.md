@@ -362,14 +362,14 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   adds a field per bead.
 
   **The `pm_bibcode` is a gate, not a label.** The PM rescue cascade
-  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **30** rows the
+  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/pmRescueSimbad -->30<!-- /count -->** rows the
   direction cascade states no motion for, and refuses the pull's PM on
-  **13** more because that bibcode names a Gaia release: on a row whose own
+  **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->13<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
   Gaia solution is 2p, serving Gaia's earlier fit back through this index
   would return the motion DR3 declined to state. Same rule the rv tier
   applies to `rvz_bibcode`, same predicate.
 
-  Direction is the pull's **bottom tier, on 13 rows**, and its coordinates
+  Direction is the pull's **bottom tier, on <!-- count:build-catalog/directionSimbad -->13<!-- /count --> rows**, and its coordinates
   are J2000.0 — measured rather than assumed, since the pull carries no
   epoch column: over the 673 catalogue rows holding both a SIMBAD position
   and a Gaia PM above 500 mas/yr, SIMBAD's position matches the Gaia one

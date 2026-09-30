@@ -415,7 +415,7 @@ four points in the pipeline:
   ORB6 `(wds_id, components)` key that names a clean sub-pair (both
   sides single-component tokens after WDS truncated-form expansion —
   the fixed-width misalignment garbage `"95"` / `"a,Ab"` is filtered)
-  with no WDS row — ~33 pairs, 64 Psc Aa,Ab and Castor Ca,Cb among
+  with no WDS row — ~<!-- count:build-binaries/synthesized_orb6_orphan_pairs -->33<!-- /count --> pairs, 64 Psc Aa,Ab and Castor Ca,Cb among
   them. A blank-components WDS row under the same `(wds_id,
   discoverer)` is the same physical pair and donates its ρ/θ/mags/
   date/notes; otherwise the pair is sub-resolution (ρ = 0.0, no
@@ -447,7 +447,7 @@ four points in the pipeline:
   4's distinct-source gate stops the misattribution). One synthesized
   inner pair per `(wds_id, source_id)`, named one hierarchy level
   down from the deepest carrier token (`A` → `Aa,Ab`, `Aa` →
-  `Aa1,Aa2`) — ~521 pairs. Skipped when the carrier token has no
+  `Aa1,Aa2`) — ~<!-- count:build-binaries/synthesized_nss_inner_pairs -->521<!-- /count --> pairs. Skipped when the carrier token has no
   deeper WDS convention (compound / digit-bearing), the child tokens
   already exist in the system, the NSS row is outside the
   detectability regime, or the elements can never render (missing

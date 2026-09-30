@@ -85,17 +85,17 @@ scripts/catalog/naming/
 
 WGSN is the primary designation source; IV/27A supplies only the Bayer
 tail — a cross-index Bayer row is added only when no WGSN Bayer
-designation already reaches its star by HD or HIP (1,605 covered, 444
+designation already reaches its star by HD or HIP (<!-- count:wgsn/iv27aBayerCovered -->1,605<!-- /count --> covered, <!-- count:wgsn/iv27aBayerAdded -->444<!-- /count -->
 added). IV/27A Flamsteed numbers are **not** unioned: the record build
 already carries `f` via the label merge and `dc` via the
 designation-constellation cascade, and the cross index adds no glyph
 content to them.
 
 Classes that emit no designation row, all pinned: `variable` routes to
-the GCVS tier (tier 6 sources it from GCVS itself — 615 WGSN cells + 134
-IV/27A contaminants), `non_stellar` (clusters / nebulae / galaxies, 132),
-`other_catalogue` (BD / CD / Gliese / survey ids, 95), `corrupt` (the
-ρ² Ara Mathematica artifact, 1).
+the GCVS tier (tier 6 sources it from GCVS itself — <!-- count:wgsn/cellVariable -->615<!-- /count --> WGSN cells + <!-- count:wgsn/iv27aVariableRejected -->134<!-- /count -->
+IV/27A contaminants), `non_stellar` (clusters / nebulae / galaxies, <!-- count:wgsn/cellNonStellar -->132<!-- /count -->),
+`other_catalogue` (BD / CD / Gliese / survey ids, <!-- count:wgsn/cellOtherCatalogue -->95<!-- /count -->), `corrupt` (the
+ρ² Ara Mathematica artifact, <!-- count:wgsn/cellCorrupt -->1<!-- /count -->).
 
 A two-capital head reads as GCVS **before** the Greek lookup, which is
 case-insensitive over the ASCII abbreviations: `NU Pav` is the M6III
@@ -103,11 +103,11 @@ semiregular variable (HD 189124), and reading it as Greek minted a second
 ν Pav onto it (the Bayer star ν Pav is HD 169978).
 
 `other_catalogue` normally costs nothing because the star still keys by
-HIP / HR / HD, with one exception worth knowing: **53 of the 509 approved
+HIP / HR / HD, with one exception worth knowing: **<!-- count:wgsn/namesKeyless -->53<!-- /count --> of the <!-- count:wgsn/namedRows -->509<!-- /count --> approved
 names have no HIP, HR or HD at all** (`namesKeyless`). They are wgsnFaints
 exoplanet hosts whose only identifier is the survey id in the dropped cell
 — `WASP-32`, `HAT-P-29` — and the file's WDS column, which would otherwise
-root them, is empty in every row (`faintsWdsCells`, pinned at 0).
+root them, is empty in every row (`faintsWdsCells`, pinned at <!-- count:wgsn/faintsWdsCells -->0<!-- /count -->).
 Positionally, all but one sit outside the membership manifest entirely, so
 they name stars the catalogue does not carry; the pins are there to catch a
 refresh that changes either fact.
@@ -115,8 +115,8 @@ refresh that changes either fact.
 ## The residual gate
 
 [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s residual, enforced: every manifest `proper` must either match a WGSN name key
-(diacritic-folded, post multi-name-split — 445 of 491 do) or appear in
-the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (46 rows).
+(diacritic-folded, post multi-name-split — <!-- count:wgsn/membershipProperMatched -->445<!-- /count --> of <!-- count:wgsn/membershipPropers -->491<!-- /count --> do) or appear in
+the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (<!-- count:wgsn/membershipProperResiduals -->46<!-- /count --> rows).
 The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
 keyed on a label the classic-ID merge flipped is a stale disposition.
 The build hard-fails on exact set inequality in either direction — the
@@ -126,13 +126,13 @@ the fix is a data-row deletion, never a code edit.
 
 ## Measured coverage
 
-Of the manifest's 1,522 Bayer-bearing rows, the unioned table reaches 1,520
+Of the manifest's <!-- count:wgsn/membershipBayerRows -->1,522<!-- /count --> Bayer-bearing rows, the unioned table reaches <!-- count:wgsn/membershipBayerRowsCovered -->1,520<!-- /count -->
 by HD or HIP. The 2 uncovered are close-pair component rows whose Bayer
 belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
 cell): both drop their own Bayer (`namingBayerDropped`) and take their
 system's designation with their component letter instead, which is what
 the authority's coverage actually asserts. Over the whole record set the
-table reaches **2,033** records, 513 of which the manifest carries no Bayer
+table reaches **<!-- count:build-catalog/namingBayer -->2,033<!-- /count -->** records, <!-- count:build-catalog/namingBayerAdded -->513<!-- /count --> of which the manifest carries no Bayer
 cell for at all.
 
 Three designation rows carry no key at all (`designationsKeyless`):
@@ -162,7 +162,7 @@ row is HD 183914 against the authority's 183913, and the faints hosts
 Kaewkosin and Maru, whose spine rows carry no identifier at all. A record
 whose own `proper` folds to an approved name IS that star, and AT-HYG
 asserting the same string is evidence rather than invention.
-`namingIauNamedByProper` pins it at 3.
+`namingIauNamedByProper` pins it at <!-- count:build-catalog/namingIauNamedByProper -->3<!-- /count -->.
 
 **An ambiguous number is not a key.** The join reads a record's
 single-valued `hd` / `hr` only, never its `hdAlt` / `hrAlt`: an ambiguous
@@ -194,10 +194,10 @@ it, and it carries its own string.
 The authority states which constellation its own designation is named for,
 so `applyStarNames` writes it as the top tier of the cascade the label
 merge started ([The designation constellation](../classic-ids/README.md#the-designation-constellation)),
-covering 2,941 records. One `uint8` serves one designation and the tier
+covering <!-- count:build-catalog/namingDesigConFromWgsn -->2,941<!-- /count --> records. One `uint8` serves one designation and the tier
 that COMPOSES the label owns it, so where the authority's Bayer names a
 different constellation from the record's Flamsteed number — 16 Lyn is
-also ψ¹⁰ Aur, `namingDesigConWgsnConflict` pins 2 — the displaced
+also ψ¹⁰ Aur, `namingDesigConWgsnConflict` pins <!-- count:build-catalog/namingDesigConWgsnConflict -->2<!-- /count --> — the displaced
 Flamsteed form ships as an alias rather than going unsearchable.
 
 ## Two callers, one composer
@@ -240,7 +240,7 @@ never something the renderer should qualify away.
 
 **The build calls it over `Star`; the runtime calls it over `SearchEntry`.**
 `display-names.ts` and `designationSetOfEntry` are the two adapters, and
-`catalog.bin`'s name table carries the NAME tiers alone (725 records) so
+`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/namingNameTable -->725<!-- /count --> records) so
 first paint has names while the runtime composes every designation off
 `search-index.json` through the same function. A BORROWED label carries
 its anchor's tier, so `Sirius B` is a name-table entry too — which is why

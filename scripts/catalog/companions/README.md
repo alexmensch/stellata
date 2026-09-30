@@ -55,7 +55,7 @@ and never reach the anchor's record.
 `companion-promotion.ts` runs BEFORE the record sort. It reads the
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
-a record the membership manifest admitted. ~16.4k companions promoted
+a record the membership manifest admitted. ~<!-- count:build-catalog/companionPromoted k3 -->16.4k<!-- /count --> companions promoted
 into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
 a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
@@ -145,7 +145,7 @@ Per-row gates and resolution:
   original and `binaries.bin` drew the pair's 468-yr orbit between the two
   copies. The naming authority's component attribution is the independent
   witness: where it already letters the ANCHOR as the row's own component, that
-  record IS the component. Counted `companionAnchorIsComponent` (3: p Eri B,
+  record IS the component. Counted `companionAnchorIsComponent` (<!-- count:build-catalog/companionAnchorIsComponent -->3<!-- /count -->: p Eri B,
   `f Pup C`, `α Psc` B), a ratchet-down metric, since each is a mis-keyed
   multiples.tsv row upstream. The letters themselves are contested — WDS, the
   authority and Gliese disagree per system — so the gate refuses the duplicate
@@ -162,8 +162,8 @@ Per-row gates and resolution:
   (α Her's B, Ba, Bb) as well as siblings re-serving the refusal (WDS
   01425+5000 comp B). Runs **before** the inheritance gates, which would strip
   the borrowed id and leave a synth record at whatever the row states. Counted
-  `companionDroppedParkedRecord` (9); `companionDroppedParkedOwnedFit` is
-  **pinned at 0**, so no refused row carries an owned id on a per-component
+  `companionDroppedParkedRecord` (<!-- count:build-catalog/companionDroppedParkedRecord -->9<!-- /count -->); `companionDroppedParkedOwnedFit` is
+  **pinned at <!-- count:build-catalog/companionDroppedParkedOwnedFit -->0<!-- /count -->**, so no refused row carries an owned id on a per-component
   route and nothing of the component's own is withheld — tolerance and the
   wider-join caveat in [Companion promotion](../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in).
 - **Cursor-primary anchor.** findExistingPrimary walks gaia →
@@ -421,7 +421,7 @@ Per-row gates and resolution:
   evolved companions but strictly less wrong than the primary's type;
   curated overrides / SIMBAD per-component types take precedence, and
   no `spectDisplay` is claimed for the estimate. Counted
-  `companionSpectMsFromOwnAbsmag` (~14.5k of 16.4k promoted). Rows
+  `companionSpectMsFromOwnAbsmag` (~<!-- count:build-catalog/companionSpectMsFromOwnAbsmag k3 -->14.5k<!-- /count --> of <!-- count:build-catalog/companionPromoted k3 -->16.4k<!-- /count --> promoted). Rows
   with neither fall back to `SPECTRAL_UNKNOWN`.
 - **HIP inheritance gate.** When the row's HIP equals the primary
   row's HIP, set `hip = null` on the promoted record. Hipparcos

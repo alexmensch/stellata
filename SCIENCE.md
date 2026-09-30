@@ -164,11 +164,11 @@ enough to see it.
   identifier spine — the build never touches the network, and
   component-level cross-IDs churn between queries.
 - **IAU WGSN naked-eye catalogue + faint approved names** (`NEC.csv`,
-  9,297 rows; `wgsnFaints.csv`, 132 rows; 2025-05 release under
+  <!-- count:wgsn/necRows -->9,297<!-- /count --> rows; `wgsnFaints.csv`, <!-- count:wgsn/faintsRows -->132<!-- /count --> rows; 2025-05 release under
   `data/iau-wgsn/`): IAU Division C Working Group on Star Names,
   https://exopla.net/iau-wgsn-catalogs/. Retrieved 2026-08-12, licence
   CC-BY-4.0. The naming AUTHORITY of `docs/star-naming.md`: the only
-  source with an approval process for star names (509 approved names),
+  source with an approval process for star names (<!-- count:wgsn/namedRows -->509<!-- /count --> approved names),
   and the only in-tree source of Unicode Greek Bayer / Flamsteed / Gould
   designations with component attribution. Supersedes the 2022 IAU-CSN
   text file. Normalised + keyed by `pnpm run build:wgsn`
@@ -281,7 +281,7 @@ enough to see it.
   enumerated cohort (the spine rows whose printed cell is non-first-order,
   plus the no-Gaia tier — the one request set still keyed on the spine rather
   than the manifest), keyed `gaia_source_id` → HIP → TYC → GJ, and committed
-  as `data/simbad/simbad_values.tsv` (74,446 rows, ~18 MB, LFS).
+  as `data/simbad/simbad_values.tsv` (<!-- count:build-catalog/simbadValuesEntries -->74,446<!-- /count --> rows, ~18 MB, LFS).
   Refresh: `pnpm run refresh:simbad-values`. Fluxes come from the
   long-format `flux` table rather than the `allfluxes` view, which
   publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in

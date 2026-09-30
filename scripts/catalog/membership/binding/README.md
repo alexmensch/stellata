@@ -58,9 +58,9 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse 317 candidates on G − V and 119 on sibling-letter attribution
+gates refuse <!-- count:membership-manifest/derivedRejected.mag -->317<!-- /count --> candidates on G − V and <!-- count:membership-manifest/derivedRejected.sibling -->119<!-- /count --> on sibling-letter attribution
 (`derivedRejected`); falling off the end is a derived refusal.
-`derivedUngateable` (7) is the rows that reached a candidate with no printed V
+`derivedUngateable` (<!-- count:membership-manifest/derivedUngateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
 under any tier, so nothing could be weighed against it.
 
 **A component designation rescues a row the sibling gate leaves unbound.**
@@ -123,8 +123,8 @@ walk order.
 A missing G is a pass at
 the gate, so `derivationCandidateSourceIds` feeds every source any row could be
 bound to into `../../astrometry-request/` and `derivedWeighedNoGMag` is pinned at
-**0** — a candidate weighed with no pulled row is the request under-covering
-the derivation. `derivedWeighedNullGMag` (77) is Gaia publishing no G for a
+**<!-- count:membership-manifest/derivedWeighedNoGMag -->0<!-- /count -->** — a candidate weighed with no pulled row is the request under-covering
+the derivation. `derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->) is Gaia publishing no G for a
 source it has a row for, which no request can supply.
 
 ## A Gaia id for a bright star is an identity statement, not a data source
