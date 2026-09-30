@@ -21,11 +21,6 @@ import type { WarpController } from '../warp/warp-controller';
 import type { FocusableProvider, FocusableProviders } from './focus-target';
 import { ShellRegistry, type ShellInstance } from '../../fresnel-shell/shell-registry';
 import { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
-import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
-import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
-
-const STUB_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
-
 const planetSystemLoad = vi.hoisted(() => ({ fails: false }));
 vi.mock('../../solar-system/planet-system', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../solar-system/planet-system')>();
@@ -60,7 +55,7 @@ import type { StellataEventMap } from '../../stellata';
 import { EventBus } from '../../util/event-bus';
 import { FOCUS_LERP_MS } from '../timing';
 import { RollController } from '../controls/input/roll-controller';
-import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
+import { makePlanetFieldUniforms } from '../../solar-system/planets/planet-field-uniforms-fixture';
 import { fakeProbeMaterials } from '../../solar-system/materials/solar-system-materials-mock';
 
 interface WarpStub {
@@ -325,31 +320,7 @@ function makeHarness(opts: {
   // Body field stub with no attached hosts — planet-kind paths no-op
   // (planetAt returns null). Tests exercising planet focus construct a
   // real PlanetBodyField instead.
-  const planetField = new PlanetBodyField({
-    ...makeHdrEmitterUniforms(),
-    uMonochrome: { value: 0 },
-    uChartDiscMaxPx: { value: 28 },
-    uChartDiscMinPx: { value: 1.5 },
-    uChartMagBright: { value: -2 },
-    uLimitMag: { value: STUB_LIMIT_MAG },
-    uThresholdMag: { value: STUB_LIMIT_MAG },
-    uCullMag: { value: cullMagFor(STUB_LIMIT_MAG) },
-    uSizeMin: { value: 2 },
-    uSizeMax: { value: 24 },
-    uSizeSpan: { value: 8 },
-    uSizeKnee: { value: 16 },
-    uVisibleThreshold: { value: 0.2 },
-    uVisibleK: { value: -Math.log(0.2) },
-    uCoreThreshold: { value: 0.4 },
-    uDiscardThreshold: { value: 0.02 },
-    uDistNMin: { value: 2.2 },
-    uDistNMax: { value: 10.0 },
-    uLumBiasMin: { value: 1.0 },
-    uLumBiasMax: { value: 0.6 },
-    uViewport: { value: new THREE.Vector2(800, 600) },
-    uPixelRatio: { value: 1 },
-    uFovYRad: { value: (60 * Math.PI) / 180 },
-  });
+  const planetField = new PlanetBodyField(makePlanetFieldUniforms());
 
   // Production recenterTo fans out to every scene layer's recenter
   // hook (the body field included); mirror that so a planet-focus
