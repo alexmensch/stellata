@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # pr-body-guard: PreToolUse hook on Bash. Runs release-notes-guard's and
-# perf-section-guard's checks against `gh pr create|edit --body-file <file>`
-# before the body reaches GitHub. README.md#how-pr-body-guard-works.
+# perf-section-guard's checks on `gh pr create|edit --body-file <file>` and on
+# `gh pr ready`, before GitHub sees them. README.md#how-pr-body-guard-works.
 
 here="$(cd "$(dirname "$0")" && pwd)"
 . "$here/command-match.sh"
@@ -10,10 +10,11 @@ skip_label=skip-version-bump
 input="$(cat)"
 
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // "" | gsub("\\\\\n"; " ")' 2>/dev/null | tr '\n' ';')" || exit 0
-invocation="${CMD_START}${ENV_PREFIX}(command[[:space:]]+)?([^[:space:];&|]*/)?gh[[:space:]]+pr[[:space:]]+(create|edit)([[:space:]]|$)"
+invocation="${CMD_START}${ENV_PREFIX}(command[[:space:]]+)?([^[:space:];&|]*/)?gh[[:space:]]+pr[[:space:]]+(create|edit|ready)([[:space:];&|]|$)"
 [[ "$cmd" =~ $invocation ]] || exit 0
 match="${BASH_REMATCH[0]}"
 sub="${BASH_REMATCH[6]}"
+terminator="${BASH_REMATCH[7]}"
 
 cwd="$(printf '%s' "$input" | jq -r '.cwd // ""' 2>/dev/null)"
 if [ -n "$cwd" ]; then cd "$cwd" 2>/dev/null || exit 0; fi
@@ -42,7 +43,7 @@ split_words() {
   if [ "$inword" = true ]; then args+=("$word"); fi
 }
 
-split_words "${cmd#*"$match"}"
+split_words "${terminator}${cmd#*"$match"}"
 
 [[ "$match" == *GH_REPO=* ]] && exit 0
 
@@ -63,7 +64,7 @@ while [ "$i" -lt "${#args[@]}" ]; do
     --label=* | --add-label=*) added="${added},${a#*=}" ;;
     --remove-label) removed="${removed},${next}"; i=$((i + 1)) ;;
     --remove-label=*) removed="${removed},${a#*=}" ;;
-    -R | --repo | --repo=* | -d | --draft) exit 0 ;;
+    -R | --repo | --repo=* | -d | --draft | --undo) exit 0 ;;
     # gh's other flags that take a value; their value is not the PR argument.
     -t | --title | -b | --body | -a | --assignee | -r | --reviewer | -m | --milestone | \
       -p | --project | -T | --template | \
@@ -74,17 +75,31 @@ while [ "$i" -lt "${#args[@]}" ]; do
   i=$((i + 1))
 done
 
-[ -n "$body" ] && [ "$body" != "-" ] && [ -r "$body" ] || exit 0
+if [ "$sub" != ready ]; then
+  [ -n "$body" ] && [ "$body" != "-" ] && [ -r "$body" ] || exit 0
+  subject="$body"
+  remedy="Fix ${body} and rerun the same command."
+fi
 
 pr_field() { printf '%s' "$view" | jq -r "$1 // empty" 2>/dev/null; }
 
 labels=''
-if [ "$sub" = edit ]; then
-  view="$(gh pr view ${target:+"$target"} --json baseRefName,headRefOid,isDraft,labels 2>/dev/null)" || exit 0
-  [ "$(pr_field .isDraft)" = true ] && exit 0
+if [ "$sub" != create ]; then
+  view="$(gh pr view ${target:+"$target"} --json baseRefName,headRefOid,isDraft,labels,body 2>/dev/null)" || exit 0
+  draft="$(pr_field .isDraft)"
+  if [ "$sub" = edit ] && [ "$draft" = true ]; then exit 0; fi
+  if [ "$sub" = ready ] && [ "$draft" != true ]; then exit 0; fi
   [ -n "$base" ] || base="$(pr_field .baseRefName)"
   head="$(pr_field .headRefOid)"
   labels="$(pr_field '[.labels[].name] | join(",")')"
+fi
+
+if [ "$sub" = ready ]; then
+  body="$(mktemp)"
+  trap 'rm -f "$body"' EXIT
+  pr_field .body > "$body"
+  subject="the body of PR ${target:-for this branch}"
+  remedy="Fix it with gh pr edit ${target:+$target }--body-file <file> (allowed while it is a draft), then rerun."
 fi
 
 if [ -n "$head" ]; then
@@ -123,10 +138,10 @@ record perf-section-guard bash "$(check perf/perf-section-guard.sh)" "$body" "or
 
 [ -z "$failures" ] && exit 0
 
-reason="Refusing gh pr ${sub}: ${body} fails the CI guard it would meet on GitHub.
+reason="Refusing gh pr ${sub}: ${subject} fails the CI guard it would meet on GitHub.
 ${failures}
 
-Fix ${body} and rerun the same command. The checks are the ones CI runs: scripts/release/release-notes-check.ts and scripts/perf/perf-section-guard.sh."
+${remedy} The checks are the ones CI runs: scripts/release/release-notes-check.ts and scripts/perf/perf-section-guard.sh."
 
 jq -n --arg reason "$reason" '{
   hookSpecificOutput: {

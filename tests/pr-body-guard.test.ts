@@ -157,6 +157,41 @@ describe('pr-body-guard', () => {
     expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(true);
   });
 
+  describe('gh pr ready checks the body GitHub holds, since that is the move to ready', () => {
+    it('denies a draft whose body would fail, naming the PR and the fix', () => {
+      ghView({ isDraft: true, body: '## Summary\n\nx\n' });
+      for (const command of ['gh pr ready 12', 'gh pr ready 12; git status', 'git push && gh pr ready 12']) {
+        const d = decision(command);
+        expect(d.denied, command).toBe(true);
+        expect(d.reason).toContain('the body of PR 12');
+        expect(d.reason).toContain('release-notes-guard');
+        expect(d.reason).toContain('perf-section-guard');
+        expect(d.reason).toContain('gh pr edit 12 --body-file');
+      }
+    });
+
+    it('passes a draft whose body conforms, and reads the PR of the branch when none is named', () => {
+      ghView({ isDraft: true, body: ['## Summary\n\nx\n', PERF, NOTES].join('\n') });
+      expect(decision('gh pr ready 12').denied).toBe(false);
+      ghView({ isDraft: true, body: '## Summary\n\nx\n' });
+      expect(decision('gh pr ready').denied).toBe(true);
+    });
+
+    it('honours the labels and base of the PR as the other paths do', () => {
+      ghView({ isDraft: true, labels: ['skip-version-bump'], body: PERF });
+      expect(decision('gh pr ready 12').denied).toBe(false);
+      ghView({ isDraft: true, base: 'stack-base', body: '' });
+      expect(decision('gh pr ready 12').denied).toBe(false);
+    });
+
+    it('lets --undo and an already-ready PR through', () => {
+      ghView({ isDraft: true, body: '' });
+      expect(decision('gh pr ready 12 --undo').denied).toBe(false);
+      ghView({ isDraft: false, body: '' });
+      expect(decision('gh pr ready 12').denied).toBe(false);
+    });
+  });
+
   it('stands down for a PR into any branch but main, as both workflows do', () => {
     const file = body();
     expect(decision(`gh pr create -B stack-base -F ${file}`).denied).toBe(false);

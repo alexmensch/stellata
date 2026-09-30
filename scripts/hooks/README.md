@@ -32,7 +32,8 @@ scripts/hooks/
                            the vitest scanner shares. Own README.
   pr-body-guard.sh         Blocks `gh pr create|edit --body-file <f>`
                            when <f> would fail release-notes-guard or
-                           perf-section-guard in CI, quoting the CI
+                           perf-section-guard in CI, and `gh pr ready`
+                           when the draft's body would, quoting the CI
                            error — README.md#how-pr-body-guard-works.
                            Behaviour pinned by
                            tests/pr-body-guard.test.ts.
@@ -270,11 +271,15 @@ stops naming the same values:
   `owner:branch`, lets the call through rather than judging `HEAD`. A stale
   `origin/main` reads a wider diff than GitHub will; fetch first if the
   verdict surprises.
-- **A draft is not checked.** `gh pr create --draft` / `-d`, and `edit` of
-  a PR `gh pr view` reports as a draft, pass whatever the body: what the
-  gate protects is a PR claiming to be ready when it is not, since that is
-  what goes wrong at landing, and a draft claims nothing. CI still runs both
-  guards on a draft, and a red check there is expected.
+- **A draft is not checked; becoming ready is.** `gh pr create --draft` /
+  `-d`, and `edit` of a PR `gh pr view` reports as a draft, pass whatever
+  the body: what the gate protects is a PR claiming to be ready when it is
+  not, since that is what goes wrong at landing, and a draft claims nothing.
+  CI still runs both guards on a draft, and a red check there is expected.
+  `gh pr ready [<N>]` is the claim, so it runs both checks on the body
+  GitHub holds (read through `gh pr view`, with the PR's base, head and
+  labels) and is refused on a failure, pointing at `gh pr edit --body-file`.
+  `--undo`, and `ready` on a PR that is not a draft, pass.
 
 **Only a verdict denies.** A check's output carrying `::error::` is a
 failure CI would report, and becomes the deny reason (prefix stripped). Any
