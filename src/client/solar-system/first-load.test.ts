@@ -10,7 +10,7 @@ import {
 } from './ephemerides/orbit-rings-layer';
 import { SOL_BODIES, getPlanetSystem, solOrbitGeometryAt } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
-import { KM_PC } from '../util/astronomy-constants';
+import { AU_PC, KM_PC } from '../util/astronomy-constants';
 import { CHOSEN_FIRST_LOAD_AT, CHOSEN_FIRST_LOAD_LINK } from '../util/url-state/golden-links-fixture';
 
 const DEG = Math.PI / 180;
@@ -49,6 +49,18 @@ describe('first-load', () => {
       expect(Math.round(r / KM_PC / 1e4) / 100).toBe(8.82);
       expect(Math.atan2(y, x) / DEG).toBeCloseTo(-126.99, 2);
       expect(Math.asin(z / r) / DEG).toBeCloseTo(15.7, 2);
+    });
+
+    // ORB puts the Sun on +x a Sun–Earth distance out, so both follow from the
+    // components alone, on any date.
+    it('keeps the Sun 52 deg off the view axis and Earth 21% lit', () => {
+      const cam = new THREE.Vector3(...FIRST_LOAD_VIEW.cam!);
+      const sun = new THREE.Vector3(AU_PC, 0, 0);
+      const viewAxis = cam.clone().negate();
+      const sunOffAxis = viewAxis.angleTo(sun.clone().sub(cam)) / DEG;
+      const phase = cam.angleTo(sun);
+      expect(Math.round(sunOffAxis)).toBe(52);
+      expect(Math.round(((1 + Math.cos(phase)) / 2) * 100)).toBe(21);
     });
 
     it('keeps the full declutter level and the HUD, with no constellation', () => {
