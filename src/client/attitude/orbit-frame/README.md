@@ -244,7 +244,7 @@ source it disarms through `refresh` rather than by writing the two fields, so
 the flag cannot sit on ORB over a ball that has fallen back to the sky frame.
 A PENDING source is held armed and unridden instead, and the first ready tick
 seeds the ride; disarming there would drop every ORB link to a pair at first
-paint, since binaries attach in the boot's second wave.
+paint, since binaries attach only after the complete catalogue.
 
 **Whether the lock exists at all is `orbitLockShowing`, and there is exactly
 one copy of it.** Three conditions, each an absence the user can see: ORB is
