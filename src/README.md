@@ -25,7 +25,7 @@ Cloudflare Worker entry, browser client, and the public content site.
 - `client/` — browser app, served at `/app`. Built by `vite.config.ts`;
   `client/app/README.md` is why that path and not `/`.
 - `site/` — the public content pages, the homepage at `/` among them.
-  Authored HTML with no JavaScript, built by `vite.site.config.ts` into
+  Authored HTML with one progressive-enhancement script, built by `vite.site.config.ts` into
   the same `dist/` **after** the app build, which is the pass that empties
   it. Its README owns the seam.
 - `design-tokens.css` — the palette and typeface every surface paints
