@@ -180,6 +180,10 @@ In order down the page, and the order is the argument:
    scrim, and that is the one repair this hero may not have. Grade the
    media darker, or move the copy.
 
+   The hero's poster is the page's largest contentful paint, so the head
+   preloads it at high priority. A new hero clip changes that `<link
+   rel="preload">`'s `href` along with the `<video>`'s `poster`.
+
    The one overlay that stays is `.hero-media::after`, and it is a
    different thing doing a different job: a gradient to the page ground
    climbing `--hero-fade` from the bottom edge, so the frame dissolves into
