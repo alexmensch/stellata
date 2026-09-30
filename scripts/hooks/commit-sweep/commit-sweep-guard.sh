@@ -254,8 +254,8 @@ fi
 # a checkout without tsx or without the script lets the commit through, as a
 # hygiene guard should.
 copies=""
-figure_check="$(dirname "$0")/../doc-figures/check-staged-figures.ts"
-tsx_bin="$(dirname "$0")/../../node_modules/.bin/tsx"
+figure_check="$(dirname "$0")/../../doc-figures/check-staged-figures.ts"
+tsx_bin="$(dirname "$0")/../../../node_modules/.bin/tsx"
 if [ "$figure_ok" = 0 ] && [ -f "$figure_check" ] && [ -x "$tsx_bin" ] \
   && git -C "$toplevel" diff --cached --name-only -- '*.md' | grep -q .; then
   set +e
