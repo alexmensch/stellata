@@ -5,8 +5,12 @@ import * as THREE from 'three';
 import type { Stellata } from '../../stellata';
 import type { Target } from '../../camera/focus/focus-target';
 import { starOrbitNormalIcrs } from '../../binaries/orbit-relation-cache';
+import type { LateState } from '../../util/late/late';
 
 const systemXyz = { x: 0, y: 0, z: 0 };
+
+const PENDING = { status: 'pending' } as const;
+const ABSENT = { status: 'absent' } as const;
 
 export interface FocusedOrbit {
   /** Unit ICRS normal — the orbit's angular-momentum direction. */
@@ -34,10 +38,12 @@ export type FocusedOrbitSource =
     readonly normal: THREE.Vector3;
   };
 
-/** Resolve which orbit the focused object rides, or null when it rides none
- *  the model has elements for. Cheap to retry: a caller holding the answer
- *  across frames should re-ask while it is null, since the binaries artifact
- *  and the planet kind both attach after a focus can be set.
+/** Resolve which orbit the focused object rides. **Pending** only while the
+ *  binaries artifact has yet to settle and the focus is a star — the one
+ *  answer that can still change for a standing focus, and the one a caller
+ *  must not read as "no orbit". Cheap to retry: a caller holding the answer
+ *  across frames should re-ask until it is ready. The planet kind attaches
+ *  before any focus can name a body, so its absence is final.
  *
  *  Never route a body through `orbitalPlaneNormalFor`: it answers per HOST
  *  STAR, so every solar-system object would come back on the ecliptic while
@@ -45,31 +51,35 @@ export type FocusedOrbitSource =
 export function resolveFocusedOrbit(
   stellata: Stellata,
   target: Target | null,
-): FocusedOrbitSource | null {
-  if (target === null) return null;
+): LateState<FocusedOrbitSource> {
+  if (target === null) return ABSENT;
   if (target.kind === 'planet') {
     return stellata.kinds.planet?.field === undefined
-      ? null
-      : { kind: 'planet', bodyIdx: target.idx };
+      ? ABSENT
+      : { status: 'ready', value: { kind: 'planet', bodyIdx: target.idx } };
   }
-  if (target.kind !== 'star') return null;
+  if (target.kind !== 'star') return ABSENT;
   const late = stellata.binaries.data.state();
-  if (late.status !== 'ready') return null;
+  if (late.status === 'pending') return PENDING;
+  if (late.status === 'absent') return ABSENT;
   const binaries = late.value;
   const pos = stellata.catalog.positions;
   const base = target.idx * 3;
-  if (base < 0 || base + 2 >= pos.length) return null;
+  if (base < 0 || base + 2 >= pos.length) return ABSENT;
   systemXyz.x = pos[base];
   systemXyz.y = pos[base + 1];
   systemXyz.z = pos[base + 2];
   const plane = starOrbitNormalIcrs(binaries, target.idx, systemXyz);
-  if (plane === null) return null;
+  if (plane === null) return ABSENT;
   const r = binaries.relations[plane.relationIdx];
   return {
-    kind: 'pair',
-    starIdx: target.idx,
-    partnerIdx: r.primaryIdx === target.idx ? r.secondaryIdx : r.primaryIdx,
-    normal: new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z).normalize(),
+    status: 'ready',
+    value: {
+      kind: 'pair',
+      starIdx: target.idx,
+      partnerIdx: r.primaryIdx === target.idx ? r.secondaryIdx : r.primaryIdx,
+      normal: new THREE.Vector3(plane.normal.x, plane.normal.y, plane.normal.z).normalize(),
+    },
   };
 }
 
@@ -111,5 +121,5 @@ export function focusedOrbitInto(
   target: Target | null,
 ): boolean {
   const source = resolveFocusedOrbit(stellata, target);
-  return source !== null && focusedOrbitFrom(out, source, stellata);
+  return source.status === 'ready' && focusedOrbitFrom(out, source.value, stellata);
 }

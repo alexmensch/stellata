@@ -52,6 +52,7 @@ import {
 } from './orbit-plane';
 import type { Stellata } from '../../stellata';
 import { lateAbsent, lateReady } from '../../util/late/late-fixture';
+import { LateCell } from '../../util/late/late';
 
 const DEG = Math.PI / 180;
 const J2000_T = 0;
@@ -757,13 +758,15 @@ describe('focusedOrbitInto', () => {
     return a;
   };
 
-  const starHarness = (binaries: BinariesData | null) => {
+  const starHarness = (binaries: BinariesData | null | 'pending') => {
     const positions = new Float32Array(30);
     for (const idx of [PRIMARY, SECONDARY]) positions[idx * 3 + 2] = 30;
+    const data = binaries === 'pending' ? new LateCell<BinariesData>()
+      : binaries === null ? lateAbsent() : lateReady(binaries);
     return {
       kinds: {},
       getT: () => 0,
-      binaries: { data: binaries === null ? lateAbsent() : lateReady(binaries) },
+      binaries: { data },
       catalog: { positions },
       starFrame: { localPositions: localPositions() },
     } as unknown as Stellata;
@@ -868,7 +871,9 @@ describe('focusedOrbitInto', () => {
     it('carries a pair its plane normal, matching the one-shot exactly', () => {
       const s = starHarness(pair());
       const target = { kind: 'star', idx: PRIMARY } as const;
-      const source = resolveFocusedOrbit(s, target)!;
+      const resolved = resolveFocusedOrbit(s, target);
+      if (resolved.status !== 'ready') throw new Error('pair must resolve');
+      const source = resolved.value;
       expect(source.kind).toBe('pair');
       const oneShot = out();
       focusedOrbitInto(oneShot, s, target);
@@ -881,7 +886,9 @@ describe('focusedOrbitInto', () => {
     // an answer that could not change.
     it('holds that normal while the members move', () => {
       const s = starHarness(pair());
-      const source = resolveFocusedOrbit(s, { kind: 'star', idx: PRIMARY })!;
+      const resolved = resolveFocusedOrbit(s, { kind: 'star', idx: PRIMARY });
+      if (resolved.status !== 'ready') throw new Error('pair must resolve');
+      const source = resolved.value;
       expect(source.kind).toBe('pair');
       const before = out();
       expect(focusedOrbitFrom(before, source, s)).toBe(true);
@@ -912,15 +919,24 @@ describe('focusedOrbitInto', () => {
       };
       const s = { kinds: { planet: { field } }, getT: () => 0 } as unknown as Stellata;
       const source = resolveFocusedOrbit(s, { kind: 'planet', idx: 3 });
-      expect(source).toEqual({ kind: 'planet', bodyIdx: 3 });
+      expect(source).toEqual({ status: 'ready', value: { kind: 'planet', bodyIdx: 3 } });
     });
 
     it('declines a source for a focus that rides no orbit', () => {
-      expect(resolveFocusedOrbit(starHarness(pair()), null)).toBeNull();
+      const absent = { status: 'absent' };
+      expect(resolveFocusedOrbit(starHarness(pair()), null)).toEqual(absent);
       expect(resolveFocusedOrbit(starHarness(null), { kind: 'star', idx: PRIMARY }))
-        .toBeNull();
+        .toEqual(absent);
       expect(resolveFocusedOrbit(starHarness(pair()), { kind: 'probe', idx: 0 }))
-        .toBeNull();
+        .toEqual(absent);
+    });
+
+    // see README.md#what-each-frame-re-reads-and-what-it-must-not
+    it('answers pending for a star while the binaries artifact is still attaching', () => {
+      expect(resolveFocusedOrbit(starHarness('pending'), { kind: 'star', idx: PRIMARY }))
+        .toEqual({ status: 'pending' });
+      expect(focusedOrbitInto(out(), starHarness('pending'), { kind: 'star', idx: PRIMARY }))
+        .toBe(false);
     });
   });
 

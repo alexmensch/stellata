@@ -96,10 +96,11 @@ runs once per focus and `focusedOrbitFrom` runs per frame:
   function of `t` ([Every other moon](../../solar-system/ephemerides/README.md#every-other-moon)).
   The source carries only the body index and `t` reaches the field
   every frame.
-- **The source is re-asked while it is null.** Both the binaries artifact and
-  the planet kind attach after a focus can be set, so a resolve that failed
-  has to be retried rather than cached as "no orbit" for the life of the
-  focus.
+- **The source is re-asked until it is ready, and pending is not absent.**
+  The binaries artifact attaches only after the complete catalogue, so a
+  star focused before then answers `pending` — `resolveFocusedOrbit` returns
+  a `LateState` for exactly this — and is retried rather than cached as "no
+  orbit" for the life of the focus.
 
 ## The lock
 
@@ -235,9 +236,12 @@ across a restore, which is applying the blob it would ask to rewrite.
 **A restore arms optimistically**, without the orbit-availability check the
 flag and the gesture both make: a source can still be attaching when the blob
 lands, so refusing then would drop a legitimate ORB. `tickOrbitFrame` is
-therefore what makes an arm with nothing behind it visible — it disarms
-through `refresh` rather than by writing the two fields, so the flag cannot
-sit on ORB over a ball that has fallen back to the sky frame.
+therefore what makes an arm with nothing behind it visible — on an ABSENT
+source it disarms through `refresh` rather than by writing the two fields, so
+the flag cannot sit on ORB over a ball that has fallen back to the sky frame.
+A PENDING source is held armed and unridden instead, and the first ready tick
+seeds the ride; disarming there would drop every ORB link to a pair at first
+paint, since binaries attach in the boot's second wave.
 
 **Whether the lock exists at all is `orbitLockShowing`, and there is exactly
 one copy of it.** Three conditions, each an absence the user can see: ORB is

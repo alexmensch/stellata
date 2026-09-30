@@ -41,6 +41,7 @@ import {
   type FocusedOrbitSource,
 } from './orbit-frame/orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
+import type { LateState } from '../util/late/late';
 import {
   DBL_CLICK_DIST_PX_SQ,
   DBL_CLICK_MS,
@@ -311,22 +312,25 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   /** Which orbit the focus rides, resolved once and held: for a pair that
    *  settles the plane normal, which is a static function of frozen elements
-   *  and has no business being re-derived per frame. Re-asked while null
-   *  because the binaries artifact and the planet kind both attach after a
-   *  focus can be set. */
-  function orbitSourceNow(): FocusedOrbitSource | null {
-    orbitSource ??= resolveFocusedOrbit(stellata, focused);
-    return orbitSource;
+   *  and has no business being re-derived per frame. Re-asked until ready
+   *  because the binaries artifact attaches after a focus can be set. */
+  function orbitSourceNow(): LateState<FocusedOrbitSource> {
+    if (orbitSource !== null) return { status: 'ready', value: orbitSource };
+    const source = resolveFocusedOrbit(stellata, focused);
+    if (source.status === 'ready') orbitSource = source.value;
+    return source;
   }
 
-  /** False when nothing focused rides an orbit the model has elements for,
+  /** Absent when nothing focused rides an orbit the model has elements for,
    *  which is also how ORB stops being offered the moment that stops being
-   *  true. */
-  function refreshOrbitFrame(): boolean {
+   *  true. Pending is not absent: a pair whose artifact is still attaching
+   *  will have an orbit, and an arm restored ahead of it has to survive. */
+  function refreshOrbitFrame(): LateState<FocusedOrbitSource>['status'] {
     const source = orbitSourceNow();
-    if (source === null || !focusedOrbitFrom(orbit, source, stellata)) return false;
+    if (source.status !== 'ready') return source.status;
+    if (!focusedOrbitFrom(orbit, source.value, stellata)) return 'absent';
     orbitFrameInto(orbitFrame, stellata.camera, orbit.normal, orbit.toCentre);
-    return true;
+    return 'ready';
   }
 
   function selectedFrameKey(): AutoFrameKey {
@@ -338,7 +342,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   function resolveFrame(): ReferenceFrame {
     if (captured !== null) return captured;
-    if (orbitActive && refreshOrbitFrame()) return orbitFrame;
+    if (orbitActive && refreshOrbitFrame() === 'ready') return orbitFrame;
     return frames[selectedFrameKey()];
   }
 
@@ -441,7 +445,13 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  then replay the whole accumulated turn as one swing when it came back. */
   function tickOrbitFrame(): void {
     if (captured !== null || !orbitActive) return;
-    if (!refreshOrbitFrame()) {
+    const status = refreshOrbitFrame();
+    if (status === 'pending') {
+      // Nothing to ride yet; the first ready tick seeds rather than replaying.
+      riding = false;
+      return;
+    }
+    if (status === 'absent') {
       orbitActive = false;
       riding = false;
       // Through `refresh`, not just the two fields: the flag would otherwise
@@ -556,7 +566,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   function levelOnOrbit() {
     // ORB is the instrument's frame, and the instrument is navigate-only.
     if (stellata.focus.getCameraMode() === 'observe') return;
-    if (!refreshOrbitFrame()) return;
+    if (refreshOrbitFrame() !== 'ready') return;
     captured = null;
     orbitActive = true;
     refresh();
@@ -599,7 +609,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
 
   function cycleFrame() {
     const source = orbitSourceNow();
-    const hasOrbit = source !== null && focusedOrbitFrom(orbit, source, stellata);
+    const hasOrbit = source.status === 'ready' && focusedOrbitFrom(orbit, source.value, stellata);
     const inputs = focusFrameInputs(stellata, focused);
     const next = nextFrameKey(
       frame.key,
