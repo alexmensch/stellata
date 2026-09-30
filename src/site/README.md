@@ -196,6 +196,11 @@ In order down the page, and the order is the argument:
 as a specification; the eyebrow label above each `h2` carries the same
 structure without it.
 
+**Every link opens in a new tab** — the head's `<base target="_blank">` —
+**except those within the site**, which carry `target="_self"`: the app and
+its views, the wordmark, the skip link. A new link to `/…` or `#…` needs the
+attribute; `tests/site-claims.test.ts` fails it otherwise.
+
 ## Numbers in copy
 
 **No figure on these pages is a literal.** `scripts/site/site-metrics.ts`

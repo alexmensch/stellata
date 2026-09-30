@@ -116,6 +116,19 @@ describe('the derivations behind those figures', () => {
   });
 });
 
+// <base target="_blank"> opens every link in a new tab; a link within the site
+// opts back into the same one.
+describe('links open in a new tab unless they stay on the site', () => {
+  it('defaults every link to a new tab', () => {
+    expect(select('head > base', HOME)?.properties?.target).toBe('_blank');
+  });
+
+  it.each(selectAll('a[href]', HOME).map((a) => [String(a.properties?.href), a]))('%s', (href, a) => {
+    const sameTab = (a as Element).properties?.target === '_self';
+    expect(sameTab).toBe(/^[/#]/.test(href as string));
+  });
+});
+
 // "Zucker 2020 & 2021" names two works.
 const AUTHOR_YEARS = /(\p{Lu}[\p{L}'’-]+(?: \p{Lu}[\p{L}'’-]+)*) (\d{4}[a-z]?(?: & \d{4}[a-z]?)*)\b/gu;
 
