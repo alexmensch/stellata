@@ -654,8 +654,8 @@ Required repository secrets:
 
 ## After a release
 
-- Verify `https://stellata.xyz` serves the new version (visible at
-  the bottom-right of the About modal).
+- Verify `https://stellata.xyz` serves the new version (visible in the
+  homepage footer, and at the bottom-right of the About modal at `/app`).
 - Bump `package.json` on the next PR to the version that release
   will carry.
 
