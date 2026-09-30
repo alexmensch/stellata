@@ -127,10 +127,10 @@ the deploy has always answered and what a browser needs. Only a client
 that names `text/markdown`, and does not rank `text/html` above it, gets
 the rendition.
 
-## No JavaScript, by rule
+## Complete without script, by rule
 
-These pages ship no script beyond [One script](#one-script). It is what keeps them
-instant, indexable without rendering, and readable on the browsers the
+These pages depend on no JavaScript, and ship none beyond [One script](#one-script),
+which only enhances. That is what keeps them instant, indexable without rendering, and readable on the browsers the
 application itself turns away — someone whose browser has no WebGPU still
 gets the whole case for the project. A page that needs interaction is a
 signal to ask whether it wants to be part of the app instead.
