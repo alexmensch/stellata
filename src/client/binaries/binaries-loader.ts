@@ -177,8 +177,8 @@ export function parseBinaries(buf: ArrayBuffer): BinariesData {
 
 /**
  * Fetch binaries.bin and parse it. Returns null when the file is
- * absent (404, network error, or the dev server's HTML5 fallback —
- * detected by the magic-byte mismatch) so the renderer can fall through
+ * absent (404 or network error) or is some other payload (the magic-byte
+ * mismatch) so the renderer can fall through
  * to a "no orbital animation, static placements only" path. Throws
  * `BinariesParseError` only on a present-but-malformed payload whose
  * header magic IS `BIN1` — version mismatch or truncated tail — since
