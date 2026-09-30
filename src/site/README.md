@@ -232,6 +232,22 @@ application described twice rather than two applications. Edit either node
 and edit both. The `WebApplication.url` is `/app`; its `@id` keeps the
 bare-root form, because an `@id` is an identifier rather than an address.
 
+### The JSON-LD citation list
+
+The `WebPage` node's `citation` array is **half authored, half built.** The
+page carries only the credited sources that are not cited works — software,
+web tables, mission pages — which the citation index does not hold. At
+build time, and in `pnpm run dev`, `scripts/site/json-ld-citations.ts`
+appends one `CreativeWork` per `data/papers/index.md` entry after them:
+title, the label's year, the DOI as `identifier`, every other link as
+`sameAs`. A cited work is therefore never written here; add it to the index
+and it appears. **Every generated field is read from the index as written,
+never inferred** — which is why the type is `CreativeWork`, true of every
+entry, and why a field the index does not hold (a full author list, a work
+type) joins the output only once the index carries it.
+`scripts/site/json-ld-citations-pure.test.ts` fails a hand entry that
+duplicates an index work.
+
 ## Sights — the media, and the link it carries
 
 Each sight in [Start exploring](#start-exploring) is one `.sight`: a picture (or a short

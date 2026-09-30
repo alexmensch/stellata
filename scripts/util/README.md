@@ -7,8 +7,10 @@ shared with `tests/` rather than with a second pipeline, and that is the
 bar: repo plumbing with several callers, not a build helper with one.
 
 - `citation-index-pure.ts` — the parser for `data/papers/index.md`
-  entries and `manifest.json` pins. Read by `site/site-metrics.ts`, whose
-  reference count is the index's entry count, and by
+  entries (key, label, title, reference line, copy, notes, claims rows)
+  and `manifest.json` pins. Read by `site/site-metrics.ts`, whose
+  reference counts come off the entries, by `site/json-ld-citations.ts`,
+  which publishes each entry to the homepage's JSON-LD, and by
   `tests/citation-index.test.ts`, which holds the index to its rules
   ([Cited papers](/data/papers/README.md#what-enforces-it)).
 

@@ -13,6 +13,9 @@ export interface IndexEntry {
   key: string;
   line: number;
   label: string;
+  title: string;
+  /** The line under the heading: venue, identifiers, links. */
+  reference: string;
   copy: string;
   notes: string[];
   rows: ClaimRow[];
@@ -26,8 +29,9 @@ export interface PinnedCopy {
 }
 
 const ANCHOR = /^<a id="([^"]+)"><\/a>$/;
-const HEADING = /^### (.+?) — /;
+const HEADING = /^### (.+?) — (.+)$/;
 const COPY = /^- \*\*Copy:\*\* (.*)$/;
+const REFERENCE = /^(?!### |- \*\*|\| )\S/;
 const NOTE = /^- \*\*Note:\*\* (.*)$/;
 const NOT_HELD = /^(not held|unobtainable)\b/;
 const TABLE_ROW = /^\| (?!Claim \|)/;
@@ -38,9 +42,13 @@ export function parseIndex(markdown: string): IndexEntry[] {
   const lines = markdown.split('\n');
   lines.forEach((text, i) => {
     const anchor = ANCHOR.exec(text);
-    if (anchor) entries.push({ key: anchor[1], line: i + 1, label: HEADING.exec(lines[i + 1] ?? '')?.[1] ?? '', copy: '', notes: [], rows: [] });
+    if (anchor) {
+      const heading = HEADING.exec(lines[i + 1] ?? '');
+      entries.push({ key: anchor[1], line: i + 1, label: heading?.[1] ?? '', title: heading?.[2] ?? '', reference: '', copy: '', notes: [], rows: [] });
+    }
     const entry = entries[entries.length - 1];
     if (!entry || anchor) return;
+    if (entry.reference === '' && entry.copy === '' && REFERENCE.test(text)) entry.reference = text;
     const copy = COPY.exec(text);
     if (copy) entry.copy = copy[1];
     const note = NOTE.exec(text);

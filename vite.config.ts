@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
+import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { publishBuildEnv } from './vite.env.ts';
 import { documentRoutingInDev } from './vite.site-dev.ts';
 
@@ -10,7 +11,7 @@ export default defineConfig(() => ({
   // Drop it and Vite's fallback serves the homepage for every path.
   // src/site/README.md#reading-it-in-dev.
   appType: 'custom' as const,
-  plugins: [documentRoutingInDev(import.meta.dirname)],
+  plugins: [documentRoutingInDev(import.meta.dirname), indexCitations(import.meta.dirname)],
   root: resolve(import.meta.dirname, 'src/client'),
   publicDir: resolve(import.meta.dirname, 'public'),
   build: {

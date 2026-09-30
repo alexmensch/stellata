@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
 import { publishBuildEnv } from './vite.env.ts';
@@ -30,7 +31,7 @@ function markdownRenditions(): Plugin {
 
 export default defineConfig(() => ({
   base: '/',
-  plugins: [markdownRenditions()],
+  plugins: [indexCitations(import.meta.dirname), markdownRenditions()],
   root: SITE_DIR,
   // Both of these belong to the app pass, which runs first. Reversing
   // either wipes dist/ — src/site/README.md#the-build-seam.
