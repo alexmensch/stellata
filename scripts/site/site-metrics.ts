@@ -59,10 +59,3 @@ export function citationEntries(root: string): IndexEntry[] {
 export function citedReferenceCount(root: string): number {
   return citationEntries(root).length;
 }
-
-/** Cited works whose every claim was quoted from a held copy of the work. */
-export function verifiedReferenceCount(root: string): number {
-  return citationEntries(root).filter(
-    (entry) => entry.rows.length > 0 && entry.rows.every((row) => row.status === 'verified'),
-  ).length;
-}

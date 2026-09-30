@@ -9,8 +9,6 @@ interface ImportMetaEnv {
   readonly VITE_SOURCE_COUNT: string;
   /** Works in the citation index, `data/papers/index.md`. */
   readonly VITE_REFERENCE_COUNT: string;
-  /** Index works whose every claim was quoted from a held copy. */
-  readonly VITE_VERIFIED_REFERENCE_COUNT: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

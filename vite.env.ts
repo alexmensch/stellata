@@ -6,7 +6,6 @@ import {
   catalogueRecordCount,
   citedReferenceCount,
   creditedSourceCount,
-  verifiedReferenceCount,
 } from './scripts/site/site-metrics.ts';
 
 /**
@@ -20,5 +19,4 @@ export function publishBuildEnv(root: string): void {
   process.env.VITE_STAR_COUNT = catalogueRecordCount(root).toLocaleString('en-US');
   process.env.VITE_SOURCE_COUNT = String(creditedSourceCount(root));
   process.env.VITE_REFERENCE_COUNT = String(citedReferenceCount(root));
-  process.env.VITE_VERIFIED_REFERENCE_COUNT = String(verifiedReferenceCount(root));
 }

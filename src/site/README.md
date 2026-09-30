@@ -206,8 +206,7 @@ attribute; `tests/site-claims.test.ts` fails it otherwise.
 **No figure on these pages is a literal.** `scripts/site/site-metrics.ts`
 counts each off the thing it describes and `vite.env.ts` publishes it, so
 the page carries `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
-`%VITE_REFERENCE_COUNT%`, `%VITE_VERIFIED_REFERENCE_COUNT%` and
-`%VITE_APP_VERSION%` and the build fills them
+`%VITE_REFERENCE_COUNT%` and `%VITE_APP_VERSION%` and the build fills them
 in. That module's README is the authority on where each count comes from.
 
 `tests/site-claims.test.ts` holds the pages to it: every readout cell is a
