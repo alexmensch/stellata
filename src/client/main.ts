@@ -230,8 +230,7 @@ async function main() {
 
     // Apply any URL state before starting the URL writer so we don't echo
     // the same params back into history on load. With no `?v=`, fall back
-    // to the canonical first-load view (Sol focus, parked at 5 AU aimed at
-    // the galactic centre, HUD on, no constellation highlight).
+    // to the canonical first-load view (`solar-system/first-load.ts`).
     // Planet-focus refs need the body field's attach table, settled by
     // the kinds.planet.systemsReady await above.
     const { applied, focusPending } = applyFromUrl(stellata, idMaps);
@@ -282,11 +281,24 @@ async function main() {
       },
     });
 
+    // Relation caches bake each system's anchor from its primary's
+    // position, and `relationIndicesInBounds` tests against the full
+    // allocation — so a pair in a late chunk would cache (0,0,0) as its
+    // anchor and project the whole orbit in the wrong frame, silently. Chained
+    // here rather than inline in wave 2, because the cover can be waiting on
+    // it: util/url-state/orbit-pose/README.md#the-tick-seats-it.
+    const binariesAttached = (async () => {
+      await kinds.star.ready;
+      await catalog.whenComplete;
+      await frame();
+      stellata.binaries.attach(binaries);
+    })();
+
     // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
     // chrome comes up now and the loading panel stays on top of a rendering
     // sky rather than in front of a blank one.
     // util/url-state/README.md#a-focus-that-resolves-after-the-pose.
-    if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
+    if (focusPending) await Promise.race([focusPending, binariesAttached]);
     awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
     // Out of the root stacking context and into the instrument stack —
@@ -322,16 +334,11 @@ async function main() {
     // WAVE 2. Everything that needs the COMPLETE record set, or the search
     // index that rides beside it. Each entry here is a correctness
     // requirement, not a tidiness one — see the comment at each call.
-    await kinds.star.ready;
+    // One await for both, or a rejected catalogue leaves the chain's own
+    // rejection unobserved.
+    await Promise.all([kinds.star.ready, binariesAttached]);
     const completeCatalog = await catalog.whenComplete;
     const searchIndex = kinds.star.searchIndex;
-    await frame();
-
-    // Relation caches bake each system's anchor from its primary's
-    // position, and `relationIndicesInBounds` tests against the full
-    // allocation — so a pair in a late chunk would cache (0,0,0) as its
-    // anchor and project the whole orbit in the wrong frame, silently.
-    stellata.binaries.attach(binaries);
     await frame();
 
     // Chart mode bound against this map in wave 1 and holds it by

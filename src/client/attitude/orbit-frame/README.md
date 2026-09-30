@@ -14,11 +14,14 @@ orbit-plane.ts (+ test)  The focused object's own orbit — plane normal and
                          `resolveFocusedOrbit` once per focus,
                          `focusedOrbitFrom` per rendered frame
                          (README.md#what-each-frame-re-reads-and-what-it-must-not).
+held-pose.ts (+ test)    A pose in ORB components waiting for the tick to
+                         seat it (README.md#a-pose-held-for-orb).
 ```
 
-Nothing here imports from the parent folder: the dispatch reaches the
-solar-system and binary subsystems directly, and the frame it feeds is built
-one level up.
+`orbit-plane.ts` imports nothing from the parent folder: the dispatch reaches
+the solar-system and binary subsystems directly, and the frame it feeds is
+built one level up. `held-pose.ts` takes only the frame maths from
+`../attitude-pure.ts`.
 
 ## Capturing it
 
@@ -76,6 +79,11 @@ Two consequences anything touching this has to honour:
   the 27 rows. Doing that per frame reinstates exactly the cost the ring
   layer's visibility gate exists to skip
   ([Orbit rings](../../solar-system/ephemerides/README.md#orbit-rings)).
+  **Other readers take the tick's frame, not a second evaluation.**
+  `OrbitFramePort.orbitFrame()` hands back the tick's own frame while it was
+  built for this focus at this `t`, and rebuilds only off-tick (a restore, a
+  debounced URL write). The URL change detector reads it every frame the
+  lock rides.
 
 ## What each frame re-reads, and what it must not
 
@@ -96,10 +104,11 @@ runs once per focus and `focusedOrbitFrom` runs per frame:
   function of `t` ([Every other moon](../../solar-system/ephemerides/README.md#every-other-moon)).
   The source carries only the body index and `t` reaches the field
   every frame.
-- **The source is re-asked while it is null.** Both the binaries artifact and
-  the planet kind attach after a focus can be set, so a resolve that failed
-  has to be retried rather than cached as "no orbit" for the life of the
-  focus.
+- **The source is re-asked until it is ready, and pending is not absent.**
+  The binaries artifact attaches only after the complete catalogue, so a
+  star focused before then answers `pending` — `resolveFocusedOrbit` returns
+  a `LateState` for exactly this — and is retried rather than cached as "no
+  orbit" for the life of the focus.
 
 ## The lock
 
@@ -221,10 +230,13 @@ needs more. They are the instrument's own state rather than
 `filter.coordSphere`, so they reach it through `OrbitFramePort`
 (`../attitude-pure.ts`), and a restore has to land after the focus, the
 filter and the camera mode have settled, since each of those disarms ORB:
-[ORB and the orbit lock](../../util/url-state/README.md#orb-and-the-orbit-lock) owns the ordering
+[ORB and the orbit lock](../../util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock) owns the ordering
 and the compatibility argument. A restore goes through the same two fields
 the flag writes and then lets `refresh` apply the rule below, so a link
-cannot arm a lock the receiver would refuse.
+cannot arm a lock the receiver would refuse. A locked link also writes its
+pose in ORB rather than against the stars, so it lands holding the same
+attitude to the orbit on whatever date it is opened
+([An orbit-relative pose](../../util/url-state/orbit-pose/README.md#an-orbit-relative-pose)).
 
 **`refresh` is also where the pair is published to the URL**, on change and
 through `Stellata.notifyOrbitFrameChanged()` — not from the gestures, because
@@ -235,9 +247,12 @@ across a restore, which is applying the blob it would ask to rewrite.
 **A restore arms optimistically**, without the orbit-availability check the
 flag and the gesture both make: a source can still be attaching when the blob
 lands, so refusing then would drop a legitimate ORB. `tickOrbitFrame` is
-therefore what makes an arm with nothing behind it visible — it disarms
-through `refresh` rather than by writing the two fields, so the flag cannot
-sit on ORB over a ball that has fallen back to the sky frame.
+therefore what makes an arm with nothing behind it visible — on an ABSENT
+source it disarms through `refresh` rather than by writing the two fields, so
+the flag cannot sit on ORB over a ball that has fallen back to the sky frame.
+A PENDING source is held armed and unridden instead, and the first ready tick
+seeds the ride; disarming there would drop every ORB link to a pair at first
+paint, since binaries attach only after the complete catalogue.
 
 **Whether the lock exists at all is `orbitLockShowing`, and there is exactly
 one copy of it.** Three conditions, each an absence the user can see: ORB is
@@ -303,3 +318,24 @@ samples come back near-parallel.
 Retrograde orbits keep their sense. Triton's normal points south of the
 ecliptic and levelling on it inverts the view, because that is where its
 angular momentum points.
+
+## A pose held for ORB
+
+A share link with the lock engaged carries its pose in ORB components
+([The tick seats it](../../util/url-state/orbit-pose/README.md#the-tick-seats-it)), and
+`HeldOrbitPose` is where that pose waits. `tickOrbitFrame` seats it on the
+first tick whose ORB refresh is ready — about `controls.target`, the pivot
+the ride turns round — then re-derives the quaternion exactly as the ride
+does, and seeds the ride from that frame so the next turn is measured from
+the seated pose.
+
+- **A pending source keeps it waiting**, and an absent one — or a disarm, a
+  datum, a focus change — drops it unseated. Either way the promise the
+  codec returned to boot settles.
+- **It holds the render gate open while it waits** (`renderGate.hold()`),
+  since only a drawn frame runs the tick; an idle gate would otherwise leave
+  the pose, and the loading cover over it, waiting for an unrelated redraw.
+- **User input declines it** (`renderGate.sawUserInput`), the same veto a
+  late focus honours: a view the user has taken is theirs.
+- **A second hold supersedes the first**, which settles unseated.
+

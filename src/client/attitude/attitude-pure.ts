@@ -18,6 +18,7 @@ import type {
 } from '../galactic/coord-spheres/coord-sphere';
 import type { TargetKind } from '../camera/focus/focus-target';
 import type { CameraMode } from '../camera/focus/focus-controller';
+import type { LateState } from '../util/late/late';
 
 export type ReferenceFrameKey =
   | DrawnCoordSphereFrame
@@ -292,6 +293,11 @@ export interface OrbitFramePort {
   isArmed(): boolean;
   isLocked(): boolean;
   restore(armed: boolean, locked: boolean): void;
+  /** Overwritten by the next call: read it now or copy it. */
+  orbitFrame(): LateState<ReferenceFrame>;
+  /** `offset` is `cam − tgt`; both in ORB components. */
+  holdPose(offset: Readonly<MutableVec3>, up: Readonly<MutableVec3>): Promise<void>;
+  posePending(): boolean;
 }
 
 const FRAME_LABELS: Record<AutoFrameKey, string> = {
@@ -480,4 +486,51 @@ export function ballBasisInto(
     projectInto(basisY, frame.pole, 1),
     projectInto(basisZ, frame.east, -1),
   );
+}
+
+export interface MutableVec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+type ReadonlyVec3 = Readonly<MutableVec3>;
+
+/** A pose's offset from its pivot, and its up, into `frame`'s components
+ *  (zero longitude, east, pole) in place. `tgt` stays ICRS. */
+export function poseIntoFrame(
+  cam: MutableVec3, tgt: ReadonlyVec3, up: MutableVec3, frame: ReferenceFrame,
+): void {
+  intoFrame(cam, tgt, frame);
+  intoFrame(up, ORIGIN, frame);
+}
+
+/** The inverse of `poseIntoFrame`, in place. */
+export function poseOutOfFrame(
+  cam: MutableVec3, tgt: ReadonlyVec3, up: MutableVec3, frame: ReferenceFrame,
+): void {
+  outOfFrame(cam, tgt, frame);
+  outOfFrame(up, ORIGIN, frame);
+}
+
+const ORIGIN: ReadonlyVec3 = { x: 0, y: 0, z: 0 };
+
+function intoFrame(v: MutableVec3, about: ReadonlyVec3, frame: ReferenceFrame): void {
+  const ox = v.x - about.x;
+  const oy = v.y - about.y;
+  const oz = v.z - about.z;
+  const { zeroLon: a, east: b, pole: c } = frame;
+  v.x = about.x + ox * a.x + oy * a.y + oz * a.z;
+  v.y = about.y + ox * b.x + oy * b.y + oz * b.z;
+  v.z = about.z + ox * c.x + oy * c.y + oz * c.z;
+}
+
+function outOfFrame(v: MutableVec3, about: ReadonlyVec3, frame: ReferenceFrame): void {
+  const c0 = v.x - about.x;
+  const c1 = v.y - about.y;
+  const c2 = v.z - about.z;
+  const { zeroLon: a, east: b, pole: c } = frame;
+  v.x = about.x + c0 * a.x + c1 * b.x + c2 * c.x;
+  v.y = about.y + c0 * a.y + c1 * b.y + c2 * c.y;
+  v.z = about.z + c0 * a.z + c1 * b.z + c2 * c.z;
 }

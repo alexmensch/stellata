@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "6.0.6",
+  "version": "6.1.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -74,7 +74,6 @@
     "build:seed": "bash scripts/build-seed.sh",
     "dev": "pnpm run build:data && vite",
     "check:asset-sizes": "tsx scripts/release/check-asset-sizes.ts",
-    "docs:figures": "tsx scripts/doc-figures/rewrite-doc-figures.ts",
     "deploy": "pnpm run build && pnpm run check:asset-sizes && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "perf": "tsx scripts/perf/run.ts",

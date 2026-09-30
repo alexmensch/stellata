@@ -8,6 +8,7 @@ import {
   frameMismatch,
   lerpPose,
   planClock,
+  poseOutOfOrbit,
   slerpUnit,
   takeFrameAt,
 } from './capture-pure';
@@ -165,6 +166,43 @@ describe('frameMismatch', () => {
 
   it('reads an absent focus as the default rather than as unfocused', () => {
     expect(frameMismatch({}, { focus: 'cleared' })).toMatch(/focus differs/);
+  });
+
+  it('refuses a locked link paired with a star-fixed one', () => {
+    const locked: DecodedView = { orbLock: true, orbitPose: true };
+    expect(frameMismatch(locked, {})).toMatch(/ORB/);
+    expect(frameMismatch(locked, locked)).toBeNull();
+  });
+});
+
+describe('poseOutOfOrbit', () => {
+  // A frame whose basis is the ICRS axes permuted, so the conversion is exact.
+  const frame = {
+    key: 'orbit', label: 'ORB',
+    zeroLon: new THREE.Vector3(0, 1, 0),
+    east: new THREE.Vector3(0, 0, 1),
+    pole: new THREE.Vector3(1, 0, 0),
+  } as const;
+  const pose = (): CapturePose => ({
+    cam: new THREE.Vector3(1, 2, 3),
+    tgt: new THREE.Vector3(1, 0, 0),
+    up: new THREE.Vector3(0, 0, 1),
+    fov: 40,
+  });
+
+  it('rotates the offset from the pivot and the up out of the frame', () => {
+    const out = poseOutOfOrbit(pose(), { ...frame }, pose());
+    // offset (0, 2, 3) in ORB → 0·zeroLon + 2·east + 3·pole = (3, 0, 2).
+    expect(out.cam.toArray()).toEqual([4, 0, 2]);
+    expect(out.tgt.toArray()).toEqual([1, 0, 0]);
+    expect(out.up.toArray()).toEqual([1, 0, 0]);
+    expect(out.fov).toBe(40);
+  });
+
+  it('leaves the pose it read untouched', () => {
+    const src = pose();
+    poseOutOfOrbit(src, { ...frame }, pose());
+    expect(src.cam.toArray()).toEqual([1, 2, 3]);
   });
 });
 

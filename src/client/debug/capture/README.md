@@ -70,6 +70,27 @@ mode whose pose is an orientation rather than a position and a target.
 Travel between two different objects is what warp is for. To shoot one, put
 the warp in the take's subject rather than in its camera track.
 
+A locked link against a star-fixed one is refused for the same reason: one
+pose is in ORB components and the other in ICRS
+([An orbit-relative pose](../../util/url-state/orbit-pose/README.md#an-orbit-relative-pose)).
+
+## A locked take rides the orbit
+
+A pair of locked links carries both poses in ORB, so the take **interpolates
+in ORB components** and converts each frame's pose to ICRS through ORB as it
+stands that frame (`poseOutOfOrbit`). A clock running under the take
+therefore carries the camera round with the orbit, as the lock itself would.
+
+The lock is still engaged under the take, and its ride is the second camera
+writer [Writing the pose from `frame`](#writing-the-pose-from-frame-which-is-a-departure) warns of — but the two compose rather than
+fight. A pose written after frame N's draw is in frame N's basis, and the ride
+carries it by the basis's turn since the ride last ran. When that was frame N —
+any clock fast enough to cross the ride threshold every frame — it lands the
+pose in frame N+1's basis. On a slower clock turns under `cadenceVisibleTurnRad`
+accumulate while the take keeps re-writing the pose in the current basis, so
+the frame a ride fires on over-carries by up to one visible-turn step, and the
+take's next write corrects it.
+
 ## The take rides the focal object
 
 A hard focus — star, planet, probe — puts the floating origin *on* the object,
@@ -191,9 +212,10 @@ fan-out, so every layer in a recorded frame agrees with the camera that frame
 was drawn with. The take is one interpolation step behind wall time and nothing
 else is behind the take.
 
-What would change that is a second writer. A take that has to interleave with
-per-frame camera work owned elsewhere wants a sequencing registry entry, at
-which point this section is the thing to delete.
+What would change that is a second writer. The orbit lock's ride is one, and
+composes with a locked take ([A locked take rides the orbit](#a-locked-take-rides-the-orbit)); a take that
+has to interleave with any other per-frame camera work wants a sequencing
+registry entry, at which point this section is the thing to delete.
 
 ## Pacing
 

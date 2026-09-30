@@ -10,6 +10,7 @@ export const NULLABLE_FIELDS: Readonly<Record<string, string>> = {
   'BinaryOrbitField.focalChainIdx': CACHE,
   'BinaryOrbitField.lastFocalIdx': CACHE,
   'EclipsePhotometryField.lastNowMs': CACHE,
+  'HeldOrbitPose.held': IN_FLIGHT,
   'AimController.navigate': IN_FLIGHT,
   'AimController.observe': IN_FLIGHT,
   'InputController.pointerDownAt': IN_FLIGHT,

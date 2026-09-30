@@ -909,7 +909,7 @@ export class Stellata {
 
   private orbitFramePort: OrbitFramePort | null = null;
 
-  /** util/url-state/README.md#orb-and-the-orbit-lock */
+  /** util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock */
   setOrbitFramePort(port: OrbitFramePort): void {
     this.orbitFramePort = port;
   }
