@@ -34,6 +34,7 @@ import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { bindPageTeardown } from './util/page-teardown';
+import { fanOut } from './util/fan-out';
 import { resolveBootRoute } from './webgpu/boot-route';
 import type { WebGpuSeam } from './webgpu/seam';
 import { showWebGpuGate } from './webgpu/gate/gate-page';
@@ -171,6 +172,7 @@ async function main() {
     };
 
     const debugTools = setupDebug(stellata, idMaps);
+    teardown.hold(() => fanOut('pagehide', [debugTools.dispose, () => stellata.dispose()], (step) => step()));
     teardown.expose('debug', debugTools);
 
     // Interstellar dust loads in the background — never blocks first paint.

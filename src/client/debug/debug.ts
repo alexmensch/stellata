@@ -31,6 +31,7 @@ import {
   encodeBlob,
 } from '../util/url-state';
 import { shareBlobFrom } from '../util/url-state/share-path-pure';
+import { fanOut } from '../util/fan-out';
 import { type CaptureOptions, type CaptureRun, runCapture } from './capture/capture';
 import {
   formatSurvivorReport, readSurvivorReport, type SurvivorReport,
@@ -68,6 +69,9 @@ export interface DebugTools {
    *  args, on demand — never on the render path
    *  (`../webgpu/star/compaction/README.md#reading-the-counts-back`). */
   survivors(): Promise<SurvivorReport | null>;
+  /** Close the panel and the render-watch HUD; the pagehide release runs it
+   *  before `Stellata.dispose()`. */
+  dispose(): void;
 }
 
 /** Visibility gate wires both ways: collapse → setVisible(false),
@@ -113,6 +117,12 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     closeRenderWatch = mountRenderWatch(stellata, {
       onClose: () => { closeRenderWatch = null; },
     });
+  };
+
+  const stopRenderWatch = () => {
+    const dispose = closeRenderWatch;
+    closeRenderWatch = null;
+    dispose?.();
   };
 
   const togglePanel = () => {
@@ -174,9 +184,7 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
     },
     renderWatch: () => {
       if (closeRenderWatch !== null) {
-        const dispose = closeRenderWatch;
-        closeRenderWatch = null;
-        dispose();
+        stopRenderWatch();
         return;
       }
       openRenderWatch();
@@ -186,6 +194,9 @@ export function setupDebug(stellata: Stellata, idMaps: IdMaps): DebugTools {
           + 'every tick renders. Close it (debug.panel()) to observe idling.',
         );
       }
+    },
+    dispose: () => {
+      fanOut('debug.dispose', [closePanel, stopRenderWatch], (step) => step());
     },
   };
 
