@@ -22,8 +22,7 @@ import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
 } from './pose-change-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
-import { poseOutOfFrame, type ReferenceFrame } from '../../attitude/attitude-pure';
-import { ORB_LEVEL_UP, orbitFrameNow, wirePose } from './orbit-pose/orbit-pose';
+import { ORB_LEVEL_UP, holdOrbitPose, wirePose } from './orbit-pose/orbit-pose';
 import type {
   CoordSphereFrame,
   DrawnCoordSphereFrame,
@@ -91,7 +90,7 @@ export function viewPose(view: DecodedView): ViewPose {
   return {
     cam: view.cam ?? defaultCamForMode(view.mode),
     tgt: view.tgt ?? DEFAULT_TGT,
-    up: view.up ?? (view.orbitPose ? ORB_LEVEL_UP : DEFAULT_UP),
+    up: view.up ?? (holdsOrbitPose(view) ? ORB_LEVEL_UP : DEFAULT_UP),
     fov: view.fov !== undefined && view.fov > 0 ? view.fov : DEFAULT_FOV,
   };
 }
@@ -852,14 +851,6 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
     view.up = [u.x, u.y, u.z];
   }
   if (orbitFrame !== null) view.orbitPose = true;
-  // Until it seats, the live pose is the stand-in, not the link's.
-  const pending = pendingOrbitPoses.get(stellata);
-  if (pending !== undefined && !stellata.renderGate.sawUserInput) {
-    view.cam = pending.cam;
-    view.tgt = pending.tgt;
-    view.up = pending.up;
-    view.orbitPose = true;
-  }
 
   // ORB and its lock live on the instrument rather than in filter.coordSphere,
   // so they reach the wire through the port and nowhere else. Both are single
@@ -913,57 +904,33 @@ function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | u
 
 // The one route into focus for every decoded blob — README.md, the
 // applyFocusTarget bullet.
+/** The frame-relative half of the pose — `cam` and `tgt`, where the blob
+ *  carries them. True when either landed. */
+function seatPose(stellata: Stellata, view: DecodedView): boolean {
+  if (view.cam) stellata.camera.position.set(...view.cam);
+  if (view.tgt) stellata.controls.target.set(...view.tgt);
+  return view.cam !== undefined || view.tgt !== undefined;
+}
+
 /** Re-seat the camera in a local frame that only existed once a deferred
  *  focus recentred the origin. Only the frame-relative part of the pose —
  *  everything else in the restore is absolute and already correct. */
 function reapplyPose(stellata: Stellata, view: DecodedView): void {
-  const pose = seatedPose(view, view.orbitPose ? orbitFrameNow(stellata) : null);
-  if (view.orbitPose) stellata.roll.restore(stellata.camera, ...pose.up);
-  if (pose.cam) stellata.camera.position.set(...pose.cam);
-  if (pose.tgt) stellata.controls.target.set(...pose.tgt);
-  if (view.orbitPose || pose.cam || pose.tgt) {
-    stellata.controls.update();
-    stellata.roll.adoptFromCamera(stellata.camera);
-  }
+  if (!seatPose(stellata, view)) return;
+  stellata.controls.update();
+  stellata.roll.adoptFromCamera(stellata.camera);
 }
 
-type Vec3Tuple = [number, number, number];
-
-/** The pose slots a blob seats, in the receiver's ICRS. */
-interface SeatedPose {
-  cam?: Vec3Tuple;
-  tgt?: Vec3Tuple;
-  up: Vec3Tuple;
+/** Both bits, or the components are read as ICRS. */
+export function holdsOrbitPose(view: DecodedView): boolean {
+  return view.orbitPose === true && view.orbLock === true;
 }
 
 // see orbit-pose/README.md#an-orbit-relative-pose
-function seatedPose(view: DecodedView, frame: ReferenceFrame | null): SeatedPose {
-  const filled = viewPose(view);
-  if (!view.orbitPose || frame === null) {
-    return { cam: view.cam, tgt: view.tgt, up: filled.up };
-  }
-  const cam = { x: filled.cam[0], y: filled.cam[1], z: filled.cam[2] };
-  const tgt = { x: filled.tgt[0], y: filled.tgt[1], z: filled.tgt[2] };
-  const up = { x: filled.up[0], y: filled.up[1], z: filled.up[2] };
-  poseOutOfFrame(cam, tgt, up, frame);
-  return { cam: [cam.x, cam.y, cam.z], tgt: view.tgt, up: [up.x, up.y, up.z] };
-}
-
-/** A link's orbit-relative pose still waiting on its focus's ORB, keyed by
- *  shell. orbit-pose/README.md#a-pair-whose-orbit-attaches-late */
-const pendingOrbitPoses = new WeakMap<Stellata, DecodedView>();
-
-/** Null unless the focus's ORB is still pending; then it settles once the
- *  pose has re-seated, or declined to. */
-function reseatWhenOrbitReady(stellata: Stellata, view: DecodedView): Promise<void> | null {
-  const port = stellata.getOrbitFramePort();
-  if (!view.orbitPose || port === null || port.orbitFrame().status !== 'pending') return null;
-  pendingOrbitPoses.set(stellata, view);
-  return port.orbitSourcesSettled().then(() => {
-    if (pendingOrbitPoses.get(stellata) !== view) return;
-    pendingOrbitPoses.delete(stellata);
-    if (!stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
-  });
+function holdViewOrbitPose(stellata: Stellata, view: DecodedView): Promise<void> | null {
+  if (!holdsOrbitPose(view)) return null;
+  const { cam, tgt, up } = viewPose(view);
+  return holdOrbitPose(stellata, cam, tgt, up);
 }
 
 function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): void {
@@ -1004,7 +971,6 @@ export function applyDecodedView(
   idMaps: IdMaps,
 ): Promise<void> | null {
   if (view.unit) setUnit(view.unit);
-  pendingOrbitPoses.delete(stellata);
 
   // Declutter level — applied before the filter patch below; drives
   // SceneDeclutter's pushes (default 'all' omitted, so this only fires for
@@ -1102,7 +1068,7 @@ export function applyDecodedView(
           // Last: a sid whose domain attaches after this function returns fires
           // its 'focus' event then, and the mode change above disarms ORB too.
           restoreOrbitFrame(stellata, view);
-          const orbitPending = deferred ? reseatWhenOrbitReady(stellata, view) : null;
+          const orbitPending = deferred ? holdViewOrbitPose(stellata, view) : null;
           if (orbitPending !== null) {
             void orbitPending.then(() => settle?.());
             return;
@@ -1143,20 +1109,7 @@ export function applyDecodedView(
     controlsDirty = true;
   }
 
-  // A pending focus has no ORB yet: its callback seats the converted pose.
-  const pose = seatedPose(
-    view, view.orbitPose && focusPending === null ? orbitFrameNow(stellata) : null,
-  );
-  // Restored above as a raw axis for the focus legs; only ICRS now.
-  if (view.orbitPose) stellata.roll.restore(stellata.camera, ...pose.up);
-  if (pose.cam) {
-    stellata.camera.position.set(...pose.cam);
-    controlsDirty = true;
-  }
-  if (pose.tgt) {
-    stellata.controls.target.set(...pose.tgt);
-    controlsDirty = true;
-  }
+  if (seatPose(stellata, view)) controlsDirty = true;
   if (controlsDirty) {
     stellata.controls.update();
     // The restored `up` arrived as an axis, ahead of the position and target
@@ -1181,7 +1134,7 @@ export function applyDecodedView(
   // one case that lands after this returns; `restore` is idempotent.
   restoreOrbitFrame(stellata, view);
 
-  return focusPending ?? reseatWhenOrbitReady(stellata, view);
+  return focusPending ?? holdViewOrbitPose(stellata, view);
 }
 
 /** A link's pins, one slot per sid in the link's order. */
@@ -1245,6 +1198,8 @@ function replacePathKeepHash(path: string): void {
 }
 
 function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
+  // orbit-pose/README.md#an-orbit-relative-pose — the live pose is a stand-in.
+  if (stellata.getOrbitFramePort()?.posePending()) return;
   const view = currentStateOf(stellata, idMaps);
   // Single computePresence pass — the mask gates the path segment itself
   // and is also passed to encodeBlobWithMask so the encoder doesn't

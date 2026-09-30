@@ -100,33 +100,42 @@ star-fixed `cam` and decodes exactly as it always did; the golden test in
 `../url-state.test.ts` pins one. Its receiver engages the lock over the pose it
 seated, so the next write re-encodes it with bit 29.
 
-**The conversion runs after the focus lands**, because ORB is a property of
-the focus: `applyDecodedView` converts once a synchronous focus has applied,
-and the deferred-focus callback converts in its re-seat
-([A focus that resolves after the pose](../README.md#a-focus-that-resolves-after-the-pose)).
-A focus with no ORB behind it seats the components as ICRS — nothing is
-drawn to hold the pose against, and `restore` refuses the lock there too.
+**A bit-29 pose is read only with bit 28 set too** (`holdsOrbitPose`). The
+encoder never writes one without the other, and a blob that does is read as
+ICRS rather than converted through an orbit no lock will hold.
 
-## A pair whose orbit attaches late
+## The tick seats it
 
-**A binary star's ORB does not exist until binaries.bin attaches, and that is
-after the complete catalogue** — so a locked link to Algol resolves its focus
-at once and still has no basis to convert through. `orbitFrame()` answers
-`pending` there, distinct from absent, and the restore:
+**The codec never converts an orbit-relative pose; the instrument's ORB tick
+does.** ORB is only right once every moving field has walked at the frame's
+`t` — the body field's positions, a pair's slots — and a restore runs before
+any of that: a pinned `t` has just been set and nothing has walked at it yet,
+and a pair's slots hold their baked placement until the first walk after
+binaries.bin attaches. Converting there reads a plausible, wrong frame. The
+tick runs after those walks and before any camera reader
+([The lock](../../../attitude/orbit-frame/README.md#the-lock)), so it is the one place ORB is known
+current.
+
+So the restore:
 
 - **seats the components as ICRS for now**, so the camera stands somewhere
-  valid under the cover;
-- **re-seats through ORB when `orbitSourcesSettled()` does**, unless the user
-  has touched the view since (`renderGate.sawUserInput`, the same veto as a
-  late focus);
-- **keeps writing the link's own pose to the URL until then** — the live pose
-  is the stand-in, so a write in the window would otherwise publish it as
-  the link;
+  valid;
+- **hands the pose to the instrument** (`holdOrbitPose` → `OrbitFramePort.holdPose`,
+  `cam − tgt` and `up` as ORB components) once the focus has landed —
+  synchronously, or from the deferred-focus callback
+  ([A focus that resolves after the pose](../README.md#a-focus-that-resolves-after-the-pose));
 - **returns the wait to boot as the pending promise**, and the full-bleed cover
-  holds on it. Boot therefore attaches binaries on a chain of its own rather
-  than inline in wave 2, which would otherwise wait on the cover waiting on it.
+  holds on it. For a planet that is one frame; for a binary star it is until
+  binaries.bin attaches, after the complete catalogue — which is why boot
+  attaches binaries on a chain of its own rather than inline in wave 2, which
+  would otherwise wait on the cover waiting on it.
 
-A later `applyDecodedView` supersedes a wait that has not settled. The
-instrument holds a pending ORB armed and unridden
-(`../../../attitude/orbit-frame/README.md`), so the lock is still engaged when
-the pose seats.
+**No URL is written while a pose is held** (`writeUrl` checks
+`posePending()`): the live pose is the stand-in, and the address bar already
+holds the link. Seating it moves the camera, which the change detector then
+writes as usual.
+
+The holder, its render-gate hold and the user-input veto are
+[A pose held for ORB](../../../attitude/orbit-frame/README.md#a-pose-held-for-orb). A focus with no ORB
+behind it drops the pose unseated, leaving the components as ICRS — nothing
+is drawn to hold it against.

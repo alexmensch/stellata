@@ -295,8 +295,9 @@ export interface OrbitFramePort {
   restore(armed: boolean, locked: boolean): void;
   /** Overwritten by the next call: read it now or copy it. */
   orbitFrame(): LateState<ReferenceFrame>;
-  /** Settles once `orbitFrame` can no longer answer pending. */
-  orbitSourcesSettled(): Promise<void>;
+  /** `offset` is `cam − tgt`; both in ORB components. */
+  holdPose(offset: Readonly<MutableVec3>, up: Readonly<MutableVec3>): Promise<void>;
+  posePending(): boolean;
 }
 
 const FRAME_LABELS: Record<AutoFrameKey, string> = {

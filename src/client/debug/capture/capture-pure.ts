@@ -2,7 +2,7 @@
 // `debug.capture()`. See README.md.
 
 import * as THREE from 'three';
-import type { DecodedView, ViewPose } from '../../util/url-state';
+import { holdsOrbitPose, type DecodedView, type ViewPose } from '../../util/url-state';
 import { poseOutOfFrame, type ReferenceFrame } from '../../attitude/attitude-pure';
 
 export type EaseName = 'smooth' | 'linear';
@@ -123,7 +123,7 @@ export function frameMismatch(start: DecodedView, end: DecodedView): string | nu
     return `worldOffset differs (${offsetKey(start)} → ${offsetKey(end)}): the `
       + 'two poses sit in different local frames';
   }
-  if ((start.orbitPose === true) !== (end.orbitPose === true)) {
+  if (holdsOrbitPose(start) !== holdsOrbitPose(end)) {
     return 'one blob holds its pose in ORB (a locked link) and the other against '
       + 'the stars. Re-share the end view with the orbit lock set the same way';
   }

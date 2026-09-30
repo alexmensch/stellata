@@ -379,9 +379,9 @@ that wait, and boot races the two for exactly that reason. At the complete
 catalogue a focus that has not landed never will, and holding the cover that
 long is what boot did before it painted progressively at all — so the worst
 case is the old behaviour, not a black screen forever. The same promise also
-holds for a locked pose on a pair whose orbit has not attached yet
-([A pair whose orbit attaches late](orbit-pose/README.md#a-pair-whose-orbit-attaches-late)), which is why the race
-is against the attach rather than the catalogue alone.
+holds for a locked pose until the ORB tick has seated it, which for a pair
+waits on binaries.bin ([The tick seats it](orbit-pose/README.md#the-tick-seats-it)), so the race is
+against the attach rather than the catalogue alone.
 
 ## A pin that resolves after the link
 

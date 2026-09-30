@@ -14,11 +14,14 @@ orbit-plane.ts (+ test)  The focused object's own orbit — plane normal and
                          `resolveFocusedOrbit` once per focus,
                          `focusedOrbitFrom` per rendered frame
                          (README.md#what-each-frame-re-reads-and-what-it-must-not).
+held-pose.ts (+ test)    A pose in ORB components waiting for the tick to
+                         seat it (README.md#a-pose-held-for-orb).
 ```
 
-Nothing here imports from the parent folder: the dispatch reaches the
-solar-system and binary subsystems directly, and the frame it feeds is built
-one level up.
+`orbit-plane.ts` imports nothing from the parent folder: the dispatch reaches
+the solar-system and binary subsystems directly, and the frame it feeds is
+built one level up. `held-pose.ts` takes only the frame maths from
+`../attitude-pure.ts`.
 
 ## Capturing it
 
@@ -310,3 +313,24 @@ samples come back near-parallel.
 Retrograde orbits keep their sense. Triton's normal points south of the
 ecliptic and levelling on it inverts the view, because that is where its
 angular momentum points.
+
+## A pose held for ORB
+
+A share link with the lock engaged carries its pose in ORB components
+([The tick seats it](../../util/url-state/orbit-pose/README.md#the-tick-seats-it)), and
+`HeldOrbitPose` is where that pose waits. `tickOrbitFrame` seats it on the
+first tick whose ORB refresh is ready — about `controls.target`, the pivot
+the ride turns round — then re-derives the quaternion exactly as the ride
+does, and seeds the ride from that frame so the next turn is measured from
+the seated pose.
+
+- **A pending source keeps it waiting**, and an absent one — or a disarm, a
+  datum, a focus change — drops it unseated. Either way the promise the
+  codec returned to boot settles.
+- **It holds the render gate open while it waits** (`renderGate.hold()`),
+  since only a drawn frame runs the tick; an idle gate would otherwise leave
+  the pose, and the loading cover over it, waiting for an unrelated redraw.
+- **User input declines it** (`renderGate.sawUserInput`), the same veto a
+  late focus honours: a view the user has taken is theirs.
+- **A second hold supersedes the first**, which settles unseated.
+

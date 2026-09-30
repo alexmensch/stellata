@@ -169,8 +169,9 @@ describe('frameMismatch', () => {
   });
 
   it('refuses a locked link paired with a star-fixed one', () => {
-    expect(frameMismatch({ orbitPose: true }, {})).toMatch(/ORB/);
-    expect(frameMismatch({ orbitPose: true }, { orbitPose: true })).toBeNull();
+    const locked: DecodedView = { orbLock: true, orbitPose: true };
+    expect(frameMismatch(locked, {})).toMatch(/ORB/);
+    expect(frameMismatch(locked, locked)).toBeNull();
   });
 });
 

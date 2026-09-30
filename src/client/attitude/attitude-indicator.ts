@@ -36,13 +36,13 @@ import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
 import {
   focusedOrbitFrom,
-  orbitSourcesSettled,
   resolveFocusedOrbit,
   type FocusedOrbit,
   type FocusedOrbitSource,
 } from './orbit-frame/orbit-plane';
 import type { Target } from '../camera/focus/focus-target';
 import type { LateState } from '../util/late/late';
+import { HeldOrbitPose } from './orbit-frame/held-pose';
 import {
   DBL_CLICK_DIST_PX_SQ,
   DBL_CLICK_MS,
@@ -313,6 +313,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     toCentre: new THREE.Vector3(),
   };
   let orbitSource: LateState<FocusedOrbitSource> | null = null;
+  // orbit-frame/README.md#a-pose-held-for-orb
+  const heldPose = new HeldOrbitPose(() => stellata.renderGate.hold());
 
   /** Which orbit the focus rides, resolved once and held: for a pair that
    *  settles the plane normal, which is a static function of frozen elements
@@ -446,7 +448,10 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  on the drawing path made hiding the UI silently disengage the lock and
    *  then replay the whole accumulated turn as one swing when it came back. */
   function tickOrbitFrame(): void {
-    if (captured !== null || !orbitActive) return;
+    if (captured !== null || !orbitActive) {
+      heldPose.drop();
+      return;
+    }
     const status = refreshOrbitFrame();
     if (status === 'pending') {
       // Nothing to ride yet; the first ready tick seeds rather than replaying.
@@ -454,6 +459,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       return;
     }
     if (status === 'absent') {
+      heldPose.drop();
       orbitActive = false;
       riding = false;
       // Through `refresh`, not just the two fields: the flag would otherwise
@@ -466,6 +472,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       return;
     }
     frame = orbitFrame;
+    if (seatHeldPose()) riding = false;
     const rideable = orbitLocked
       && stellata.focus.getCameraMode() === 'navigate'
       && !stellata.isCameraTransitionActive();
@@ -479,6 +486,18 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
     // one that is worth a frame, instead of dropping each one.
     if (!carry || rode) copyReferenceFrame(riddenFrame, orbitFrame);
     riding = rideable;
+  }
+
+  function seatHeldPose(): boolean {
+    const camera = stellata.camera;
+    const pivot = stellata.controls.target;
+    const wrote = heldPose.seat(
+      orbitFrame, camera.position, camera.up, pivot, stellata.renderGate.sawUserInput,
+    );
+    if (!wrote) return false;
+    camera.lookAt(pivot);
+    stellata.roll.adoptFromCamera(camera);
+    return true;
   }
 
   function draw() {
@@ -698,7 +717,8 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       if (status === 'ready') return portFrameReady;
       return status === 'pending' ? ORBIT_PENDING : ORBIT_ABSENT;
     },
-    orbitSourcesSettled: () => orbitSourcesSettled(stellata),
+    holdPose: (offset, up) => heldPose.hold(offset, up),
+    posePending: () => heldPose.pending,
     isArmed: () => orbitActive,
     isLocked: () => orbitLocked,
     restore: (armed, locked) => {

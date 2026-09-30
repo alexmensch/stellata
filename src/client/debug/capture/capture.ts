@@ -8,6 +8,7 @@ import {
   type IdMaps,
   applyDecodedView,
   decodeBlob,
+  holdsOrbitPose,
   viewPose,
 } from '../../util/url-state';
 import { orbitFrameNow } from '../../util/url-state/orbit-pose/orbit-pose';
@@ -150,7 +151,7 @@ export function runCapture(
 
     // README.md#a-locked-take-rides-the-orbit
     const icrsPose = (pose: CapturePose): CapturePose => {
-      const orbit = startView.orbitPose ? orbitFrameNow(stellata) : null;
+      const orbit = holdsOrbitPose(startView) ? orbitFrameNow(stellata) : null;
       return orbit === null ? pose : poseOutOfOrbit(pose, orbit, outOfOrbit);
     };
 

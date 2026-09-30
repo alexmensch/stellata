@@ -278,7 +278,7 @@ async function main() {
     // allocation — so a pair in a late chunk would cache (0,0,0) as its
     // anchor and project the whole orbit in the wrong frame, silently. Chained
     // here rather than inline in wave 2, because the cover can be waiting on
-    // it: util/url-state/orbit-pose/README.md#a-pair-whose-orbit-attaches-late.
+    // it: util/url-state/orbit-pose/README.md#the-tick-seats-it.
     const binariesAttached = (async () => {
       await kinds.star.ready;
       await catalog.whenComplete;

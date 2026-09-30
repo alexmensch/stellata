@@ -11,6 +11,21 @@ import { anchoredPose } from '../anchored-pose';
 // own components is +z.
 export const ORB_LEVEL_UP: [number, number, number] = [0, 0, 1];
 
+// see README.md#the-tick-seats-it
+export function holdOrbitPose(
+  stellata: Stellata,
+  cam: readonly [number, number, number],
+  tgt: readonly [number, number, number],
+  up: readonly [number, number, number],
+): Promise<void> | null {
+  const port = stellata.getOrbitFramePort();
+  if (port === null) return null;
+  return port.holdPose(
+    { x: cam[0] - tgt[0], y: cam[1] - tgt[1], z: cam[2] - tgt[2] },
+    { x: up[0], y: up[1], z: up[2] },
+  );
+}
+
 /** ORB for the focus as it stands now, or null when there is none to read. */
 export function orbitFrameNow(stellata: Stellata): ReferenceFrame | null {
   const read = stellata.getOrbitFramePort()?.orbitFrame();

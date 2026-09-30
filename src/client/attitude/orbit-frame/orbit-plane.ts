@@ -83,20 +83,6 @@ export function resolveFocusedOrbit(
   };
 }
 
-/** Settles once no focus can still answer pending — when the binaries
- *  artifact lands or is known never to. */
-export function orbitSourcesSettled(stellata: Stellata): Promise<void> {
-  const data = stellata.binaries.data;
-  return new Promise((resolve) => {
-    let unsubscribe: (() => void) | undefined;
-    unsubscribe = data.observe(() => {
-      resolve();
-      unsubscribe?.();
-    });
-    if (data.state().status !== 'pending') unsubscribe();
-  });
-}
-
 /** Fill `out` from an already-resolved source, or false when the positions it
  *  needs will not resolve — an object whose artifact has not attached answers
  *  false rather than a stale point. This is the per-rendered-frame half. */
