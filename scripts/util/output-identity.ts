@@ -74,5 +74,10 @@ if (mode === 'diff' && !existsSync(SNAPSHOT)) {
   console.error('no build/output-identity.json; run pnpm run identity:snapshot first');
   process.exit(1);
 }
-rebuildFromScratch();
-process.exit(mode === 'snapshot' ? snapshot() : diff());
+try {
+  rebuildFromScratch();
+  process.exit(mode === 'snapshot' ? snapshot() : diff());
+} catch (err) {
+  console.error((err as Error).message);
+  process.exit(1);
+}
