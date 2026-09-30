@@ -55,7 +55,7 @@ describe('the dev server answers the deploy’s routing table', () => {
   it('301s both legacy share transports onto the canonical form', () => {
     expect(devRoute('/v/AQAA/', '')).toEqual({ kind: 'redirect', to: '/app/v/AQAA/' });
     expect(devRoute('/v/AQAA', '')).toEqual({ kind: 'redirect', to: '/app/v/AQAA' });
-    expect(devRoute('/', '?v=AQAA')).toEqual({ kind: 'redirect', to: '/app/?v=AQAA' });
+    expect(devRoute('/', '?v=AQAA')).toEqual({ kind: 'redirect', to: '/app?v=AQAA' });
   });
 
   // The redirect never parses the blob, so schema version and decodability

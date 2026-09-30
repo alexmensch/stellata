@@ -125,7 +125,7 @@ describe('legacyShareRedirect', () => {
   });
 
   it('moves a legacy ?v= query off the homepage and onto the app', () => {
-    expect(legacyShareRedirect('/', '?v=AQAA')).toBe('/app/?v=AQAA');
+    expect(legacyShareRedirect('/', '?v=AQAA')).toBe('/app?v=AQAA');
   });
 
   it.each([

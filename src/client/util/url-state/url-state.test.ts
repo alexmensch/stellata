@@ -2241,7 +2241,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     });
 
     it('strips a stray/undecodable ?v= query', () => {
-      const { loc } = installUrl('/app/?v=_w');
+      const { loc } = installUrl('/app?v=_w');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
       expect(loc.pathname).toBe('/app');

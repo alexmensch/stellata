@@ -98,7 +98,7 @@ export function legacyShareRedirect(pathname: string, search: string): string | 
     return APP_PATH + pathname + search;
   }
   if (pathname === '/' && new URLSearchParams(search).has(SHARE_PARAM)) {
-    return `${APP_PATH}/${search}`;
+    return APP_PATH + search;
   }
   return null;
 }

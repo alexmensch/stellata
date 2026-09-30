@@ -55,7 +55,7 @@ describe('legacy share transports redirect onto the canonical form', () => {
   it('301s a legacy ?v= query off the homepage and onto the app', async () => {
     const { response } = await route('/?v=AQAA');
     expect(response.status).toBe(301);
-    expect(response.headers.get('location')).toBe('https://stellata.xyz/app/?v=AQAA');
+    expect(response.headers.get('location')).toBe('https://stellata.xyz/app?v=AQAA');
   });
 
   // Permanent, not temporary: the canonical form is what should end up
