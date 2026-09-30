@@ -1211,13 +1211,7 @@ function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   }
 }
 
-// Nothing decodable in the URL (a stray query, or a share path whose blob
-// won't decode) → strip the address bar back to the app's own bare path.
-// The document was served for an unmatched path under /app (src/worker.ts);
-// this is the client half that keeps the bar off junk the user can't act
-// on, rather than leaving that path sitting there. It must NOT reset to
-// `/` — that is the public homepage, and resetting there would throw the
-// user out of the app over a typo.
+// README.md#transport--canonical-path-vs-legacy-query.
 function resetJunkUrl(): void {
   if (location.pathname !== APP_PATH || location.search !== '') {
     replacePathKeepHash(APP_PATH);
@@ -1225,10 +1219,8 @@ function resetJunkUrl(): void {
 }
 
 export interface AppliedUrl {
-  /** A state blob was present and applied — from the canonical
-   *  `/app/v/<blob>/` path or either legacy transport. False sends the
-   *  caller to the first-load view, including for a blob that will not
-   *  decode. */
+  /** False sends the caller to the first-load view, including for a blob
+   *  that will not decode. */
   applied: boolean;
   /** README.md#a-focus-that-resolves-after-the-pose. */
   focusPending: Promise<void> | null;
@@ -1249,10 +1241,8 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
     return { applied: false, focusPending: null };
   }
   const focusPending = applyDecodedView(stellata, decoded, idMaps);
-  // A link on either legacy transport is rewritten to the canonical path,
-  // address-bar only; already-posted `?v=` and root-relative `/v/` links
-  // keep decoding forever. Deferred past the state events the apply itself
-  // fires, which would otherwise schedule their own write on top.
+  // Deferred past the state events the apply itself fires, which would
+  // otherwise schedule their own write on top.
   if (legacyTransport) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
