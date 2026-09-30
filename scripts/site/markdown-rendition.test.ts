@@ -8,13 +8,14 @@ import { select, selectAll } from 'hast-util-select';
 import { describe, expect, it } from 'vitest';
 
 import { escapeRegExp } from '../util/escape-regexp';
+import { type Figures, substituteFigures } from './figures-pure';
 import { markdownRendition } from './markdown-rendition';
 import { parseHtml, textOf } from './parse-html';
 
 const ROOT = resolve(__dirname, '../..');
 const HOME = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');
 
-const FIGURES: Record<string, string> = {
+const FIGURES: Figures = {
   VITE_STAR_COUNT: '388,068',
   VITE_SOURCE_COUNT: '34',
   VITE_REFERENCE_COUNT: '108',
@@ -22,7 +23,7 @@ const FIGURES: Record<string, string> = {
 };
 
 const home = markdownRendition(HOME, FIGURES);
-const tree = parseHtml(HOME.replace(/%(VITE_[A-Z_]+)%/g, (_, name: string) => FIGURES[name]));
+const tree = parseHtml(substituteFigures(HOME, FIGURES, 'src/site/index.html'));
 const SCAFFOLDING = new Set(selectAll('.holder, .holder *, .skip-link, .skip-link *', tree));
 
 /** Markdown with its inline syntax stripped, so it compares against an element's text. */
