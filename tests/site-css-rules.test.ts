@@ -84,7 +84,7 @@ describe('the public stylesheet carries no breakpoints', () => {
   it('declares every type size as a scale step', () => {
     const offenders = RULES.filter(
       ({ prop, value }) =>
-        prop === 'font-size' && !/^var\(--step-|^var\(--code-size\)$|^inherit$/.test(value),
+        prop === 'font-size' && !/^var\(--step-|^inherit$/.test(value),
     );
     expect(offenders, `off-scale font sizes: ${shown(offenders)}`).toEqual([]);
   });

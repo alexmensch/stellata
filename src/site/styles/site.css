@@ -86,8 +86,6 @@
   --tracking-wordmark: 0.34em;
   --weight-medium: 500;
   --radius-pill: 999px;
-  /* The mono face reads larger than the body at the same size. */
-  --code-size: 0.95em;
   --sources-name-min: 15ch;
 }
 
@@ -190,13 +188,6 @@ a:hover {
 }
 a:where(:hover) {
   color: var(--accent);
-}
-
-code {
-  font-family: inherit;
-  font-size: var(--code-size);
-  color: var(--accent);
-  overflow-wrap: anywhere;
 }
 
 ::selection {
