@@ -1,7 +1,8 @@
 // CI's cached catalogue build stage: its steps, the tracked files it can depend on, and their cache key.
 
 import { createHash } from 'node:crypto';
-import { dirname, extname } from 'node:path';
+
+import { closureWithSiblings } from '../util/import-closure-pure';
 
 export interface StageStep {
   script: string;
@@ -29,7 +30,6 @@ const ALWAYS_KEYED_FILES = new Set([
   '.github/workflows/test.yml',
 ]);
 const ALWAYS_KEYED_DIRS = ['data/', 'scripts/ci/'];
-const UNREAD_SIBLING_EXTENSIONS = new Set(['.ts', '.md']);
 
 export type BlobIndex = ReadonlyMap<string, string>;
 
@@ -59,13 +59,12 @@ export function keyedPaths(closure: ReadonlySet<string>, index: BlobIndex): stri
   if (untracked.length > 0) {
     throw new Error(`catalogue build imports untracked files: ${untracked.join(', ')}`);
   }
-  const closureDirs = new Set([...closure].map(dirname));
+  const code = new Set(closureWithSiblings(closure, index.keys()));
   return [...index.keys()]
     .filter((path) =>
-      closure.has(path)
+      code.has(path)
       || ALWAYS_KEYED_FILES.has(path)
-      || ALWAYS_KEYED_DIRS.some((dir) => path.startsWith(dir))
-      || (closureDirs.has(dirname(path)) && !UNREAD_SIBLING_EXTENSIONS.has(extname(path))))
+      || ALWAYS_KEYED_DIRS.some((dir) => path.startsWith(dir)))
     .sort();
 }
 
