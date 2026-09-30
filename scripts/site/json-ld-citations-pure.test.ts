@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import type { IndexEntry } from '../util/citation-index-pure';
-import { citedWork, withIndexCitations } from './json-ld-citations-pure';
+import { JSON_LD_BLOCK, citedWork, withIndexCitations } from './json-ld-citations-pure';
 import { citationEntries } from './site-metrics';
 
 const ROOT = resolve(__dirname, '../..');
@@ -16,7 +16,9 @@ function entry(fields: Partial<IndexEntry>): IndexEntry {
 type Node = { citation?: Record<string, unknown>[]; '@graph'?: Node[] };
 
 function citations(html: string): Record<string, unknown>[] {
-  const body = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)![1];
+  const [block] = [...html.matchAll(JSON_LD_BLOCK)];
+  if (block === undefined) throw new Error('no ld+json block');
+  const body = block[2];
   const graph = JSON.parse(body) as Node;
   return (graph['@graph'] ?? [graph]).flatMap((node) => node.citation ?? []);
 }
@@ -74,6 +76,11 @@ describe('withIndexCitations', () => {
     expect(citations(withIndexCitations(citing, [entry({ title: 'Indexed' })]))).toEqual([
       expect.objectContaining({ name: 'Indexed' }),
     ]);
+  });
+
+  it('finds a block whose script tag carries other attributes', () => {
+    const html = `<script id="ld" type="application/ld+json" nonce="n">${JSON.stringify({ '@graph': [{ citation: [] }] })}</script>`;
+    expect(citations(withIndexCitations(html, [entry({ title: 'Indexed' })])).map((work) => work.name)).toEqual(['Indexed']);
   });
 
   it('keeps a title from closing the script element', () => {

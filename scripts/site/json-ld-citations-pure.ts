@@ -14,7 +14,7 @@ export interface CitedWork {
 const LINK = /\[[^\]]*\]\(((?:[^()\s]|\([^()\s]*\))+)\)/g;
 const DOI = 'https://doi.org/';
 const LABEL_YEAR = / (\d{4})[a-z]?$/;
-const JSON_LD = /(<script type="application\/ld\+json">)([\s\S]*?)(<\/script>)/g;
+export const JSON_LD_BLOCK = /(<script\b[^>]*\btype="application\/ld\+json"[^>]*>)([\s\S]*?)(<\/script>)/g;
 
 export function citedWork(entry: IndexEntry): CitedWork {
   const year = LABEL_YEAR.exec(entry.label)?.[1];
@@ -39,7 +39,7 @@ interface JsonLdNode {
 /** A page with no JSON-LD `citation` array comes back unchanged; more than one is an error. */
 export function withIndexCitations(html: string, entries: IndexEntry[]): string {
   let citing = 0;
-  const out = html.replace(JSON_LD, (block, open: string, body: string, close: string) => {
+  const out = html.replace(JSON_LD_BLOCK, (block, open: string, body: string, close: string) => {
     const graph = JSON.parse(body) as JsonLdNode;
     const nodes = (graph['@graph'] ?? [graph]).filter((node) => Array.isArray(node.citation));
     if (nodes.length === 0) return block;
