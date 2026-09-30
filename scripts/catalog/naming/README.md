@@ -63,6 +63,8 @@ scripts/catalog/naming/
                                 tiers, aliases and designation
                                 constellation. Also loads the curated
                                 override table (`data/naming/`).
+                                STAR_NAMING_INPUT_PATHS lists all four
+                                files it reads, for the catalogue stamp.
   star-naming-pure.ts (+ test)  THE COMPOSER. The ladder, the component
                                 rules, the wire adapter. Imported by the
                                 build AND by the runtime

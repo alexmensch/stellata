@@ -18,7 +18,10 @@ scripts/catalog/parse/
   read-stars-inputs.ts            The manifest path, plus source paths +
                                   loaders for every reference table readStars
                                   consumes, and the input set derived
-                                  artifacts invalidate against. One loader is
+                                  artifacts invalidate against
+                                  (readStarsInputPaths: every dust chunk, and
+                                  the magnitude pull while the magnitude term
+                                  is on). One loader is
                                   a derived index rather than a file read: the
                                   bound-sibling parallaxes the distance
                                   cascade's bottom tier lends, which cross

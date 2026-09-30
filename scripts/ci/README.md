@@ -64,7 +64,9 @@ the Node version:
 - the TypeScript import closure of each entry, read from an esbuild
   metafile, so a new import is keyed without anyone listing it;
 - every tracked file beside a closure module except `.ts` and `.md` — the
-  build reads its `*-expected.json` count snapshots by path, not by import;
+  build reads its `*-expected.json` count snapshots by path, not by import.
+  These two are `../util/import-closure.ts`, which the local catalogue stamp
+  keys too;
 - all of `data/`, `package.json`, `pnpm-lock.yaml`, `tsconfig.json`,
   `test.yml` and this folder.
 

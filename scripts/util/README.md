@@ -55,6 +55,15 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/` module the process has imported, so the import statements are
   the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+- `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
+  build's code inputs. `importClosure(entries)` is every module the entries
+  import, read from an esbuild metafile, so a new import joins without anyone
+  listing it; `closureWithSiblings(closure, files)` adds every file beside a
+  closure module except `.ts` and `.md`, which is how the `*-expected.json`
+  snapshots a build reads by path get keyed. Shared by the catalogue stamp and
+  CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
+  cannot disagree on what the build reads. `trackedFiles()` is the listing the
+  stamp passes as `files`.
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from
