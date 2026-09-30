@@ -19,9 +19,11 @@ routes = [
 [assets]
 directory = "./dist"
 binding = "ASSETS"
-# Not "single-page-application", which serves the homepage for a share
-# link — src/README.md § Request routing.
+# All three keys are load-bearing for share links — src/README.md
+# § Request routing.
 not_found_handling = "404-page"
+html_handling = "drop-trailing-slash"
+run_worker_first = ["/", "/v", "/v/*", "/app", "/app/*"]
 
 # [observability] top-level: `head_sampling_rate` MUST stay defined
 # even with enabled = false, otherwise the nested sub-sections below
