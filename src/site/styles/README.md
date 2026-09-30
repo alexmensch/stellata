@@ -171,5 +171,5 @@ row-reverse` on even rows puts the media right when there is room, and a
 reversed row that wraps still stacks in DOM order — so the media never
 lands *under* its own caption on a phone. That property is why the
 alternation needs no query. It counts sights only (`:nth-child(even of
-.sight)`), so a claim or plate placed between two sights leaves the sides
+.sight)`), so the `.section-head`s grouping the sights leave the sides
 alternating.
