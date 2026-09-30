@@ -10,6 +10,11 @@ Cloudflare Worker entry, browser client, and the public content site.
   `.github/workflows/` (see its README).
 - `worker.test.ts` — the routing table against a stubbed assets binding,
   so the rules below are checked without a `wrangler dev`.
+- `worker-assets-layer.test.ts` — the same rules behind Cloudflare's real
+  assets layer: wrangler's local runtime booted from `wrangler.toml` over a
+  fixture build, with a browser's navigation header. It is what fails when a
+  `[assets]` key below is dropped; skips only where that runtime cannot
+  start.
 - `negotiation-pure.ts` — which rendition of a page an `Accept` header
   asks for, and the headers that advertise it; which pages have one is
   `site/pages.ts`'s. Imported by
@@ -70,8 +75,9 @@ the deploy, and nobody sees it until someone pastes a real URL.
 that matches an asset (`/` is `dist/index.html`) never reaches the Worker,
 and a browser navigation (`Sec-Fetch-Mode: navigate`) to a path matching
 none is handed the 404 page without the Worker running either. Drop a
-pattern and its rule stops firing for real browsers while `curl` and the
-unit suite still pass.
+pattern and its rule stops firing for real browsers while `curl` and
+`worker.test.ts` still pass — `worker-assets-layer.test.ts` is the suite
+that catches it.
 
 **`html_handling` is `"drop-trailing-slash"`**, so a folder's
 `index.html` answers at the bare path: `/app`, never `/app/`. Under the

@@ -1,0 +1,133 @@
+// README.md#the-three-assets-keys-the-rules-depend-on.
+
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { request, type IncomingHttpHeaders } from 'node:http';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
+import { afterAll, describe, expect, it } from 'vitest';
+import { unstable_startWorker } from 'wrangler';
+
+import { APP_PATH, SHARE_PARAM, buildSharePath } from './client/util/url-state/share-path-pure';
+
+const BUILT: Record<string, string> = {
+  'index.html': 'the homepage',
+  'index.md': '# the homepage, as markdown',
+  'app/index.html': 'the application document',
+  'app/real-asset.txt': 'a real asset under /app',
+  '404.html': 'the 404 page',
+};
+
+const BLOB = 'AQAA';
+
+/** What a browser sends on a top-level navigation — the header that makes the
+ *  assets layer answer an unmatched path without running the Worker. */
+const NAVIGATE = { 'sec-fetch-mode': 'navigate', accept: 'text/html' };
+
+const dist = mkdtempSync(join(tmpdir(), 'stellata-assets-'));
+for (const [path, body] of Object.entries(BUILT)) {
+  mkdirSync(dirname(join(dist, path)), { recursive: true });
+  writeFileSync(join(dist, path), body);
+}
+
+async function start() {
+  try {
+    const started = await unstable_startWorker({
+      config: resolve(__dirname, '../wrangler.toml'),
+      assets: dist,
+      dev: { server: { port: 0 }, inspector: false, persist: false, watch: false, logLevel: 'none' },
+    });
+    await started.ready;
+    return started;
+  } catch {
+    return null;
+  }
+}
+
+const worker = await start();
+
+afterAll(async () => {
+  await worker?.dispose();
+  rmSync(dist, { recursive: true, force: true });
+});
+
+interface Answer {
+  status: number;
+  location: string | null;
+  headers: IncomingHttpHeaders;
+  body: string;
+}
+
+/** Over a raw socket: `fetch` drops `Sec-Fetch-*`, which is the header under test. */
+async function navigate(path: string, headers: Record<string, string> = NAVIGATE): Promise<Answer> {
+  const base = await worker!.url;
+  return new Promise((done, fail) => {
+    const req = request(new URL(path, base), { headers }, (res) => {
+      let body = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk: string) => (body += chunk));
+      res.on('end', () =>
+        done({ status: res.statusCode!, location: res.headers.location ?? null, headers: res.headers, body }),
+      );
+    });
+    req.on('error', fail);
+    req.end();
+  });
+}
+
+function pathOf(location: string | null): string {
+  const url = new URL(location!, 'http://any');
+  return url.pathname + url.search;
+}
+
+// Skips only where wrangler's local runtime cannot start on this machine.
+describe.skipIf(worker === null)('behind the real assets layer', () => {
+  it('serves the application document for a share link a browser opens', async () => {
+    const { status, body } = await navigate(buildSharePath(BLOB));
+    expect(status).toBe(200);
+    expect(body).toBe(BUILT['app/index.html']);
+  });
+
+  it('serves the application at its bare path, not a redirect to a slash', async () => {
+    const { status, body } = await navigate(APP_PATH);
+    expect(status).toBe(200);
+    expect(body).toBe(BUILT['app/index.html']);
+  });
+
+  it('lets a real asset under /app win over the fallback', async () => {
+    const { body } = await navigate(`${APP_PATH}/real-asset.txt`);
+    expect(body).toBe(BUILT['app/real-asset.txt']);
+  });
+
+  it('301s a root-relative share link a browser opens', async () => {
+    const { status, location } = await navigate(`/v/${BLOB}/`);
+    expect(status).toBe(301);
+    expect(pathOf(location)).toBe(buildSharePath(BLOB));
+  });
+
+  it('301s a legacy query link off the homepage', async () => {
+    const { status, location } = await navigate(`/?${SHARE_PARAM}=${BLOB}`);
+    expect(status).toBe(301);
+    expect(pathOf(location)).toBe(`${APP_PATH}?${SHARE_PARAM}=${BLOB}`);
+  });
+
+  it('serves the markdown rendition at the root to a client that names it', async () => {
+    const { status, headers, body } = await navigate('/', { accept: 'text/markdown' });
+    expect(status).toBe(200);
+    expect(headers['content-type']).toMatch(/^text\/markdown/);
+    expect(headers.vary).toMatch(/\bAccept\b/);
+    expect(body).toBe(BUILT['index.md']);
+  });
+
+  it('advertises the rendition on the HTML homepage', async () => {
+    const { headers, body } = await navigate('/');
+    expect(body).toBe(BUILT['index.html']);
+    expect(headers.link).toMatch(/rel="alternate"/);
+    expect(headers.vary).toMatch(/\bAccept\b/);
+  });
+
+  it('answers a junk path with the 404 page at a 404', async () => {
+    const { status, body } = await navigate('/nonsense');
+    expect(status).toBe(404);
+    expect(body).toBe(BUILT['404.html']);
+  });
+});
