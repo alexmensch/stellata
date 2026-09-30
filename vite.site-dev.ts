@@ -6,42 +6,13 @@ import { dirname, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
 
 import { markdownRendition as renderMarkdown } from './scripts/site/markdown-rendition.ts';
-import { legacyShareRedirect, ownedByApp } from './src/client/util/url-state/share-path-pure.ts';
-import {
-  MARKDOWN_TYPE,
-  alternateLink,
-  markdownRendition,
-  prefersMarkdown,
-  varyWithAccept,
-  wantsDocument,
-} from './src/negotiation-pure.ts';
-import { NOT_FOUND_SOURCE, pageAt, pageRenderedAt, type SitePage } from './src/site/pages.ts';
+import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './src/negotiation-pure.ts';
+import { negotiatedRendition, route as decide, type Route } from './src/routing-pure.ts';
+import { NOT_FOUND_SOURCE } from './src/site/pages.ts';
 
 function varyOnAccept(res: ServerResponse): void {
   const current = res.getHeader('Vary');
   res.setHeader('Vary', varyWithAccept(current === undefined ? null : [current].flat().join(', ')));
-}
-
-export type DevRoute =
-  | { kind: 'redirect'; to: string }
-  | { kind: 'app' }
-  | { kind: 'page'; page: SitePage }
-  | { kind: 'rendition'; page: SitePage }
-  | { kind: 'notFound' };
-
-/**
- * The rules `src/worker.ts` answers in production, in its order, plus the
- * rendition files the deploy serves as plain assets.
- */
-export function devRoute(pathname: string, search: string): DevRoute {
-  const legacy = legacyShareRedirect(pathname, search);
-  if (legacy !== null) return { kind: 'redirect', to: legacy };
-  if (ownedByApp(pathname)) return { kind: 'app' };
-  const page = pageAt(pathname);
-  if (page !== null) return { kind: 'page', page };
-  const rendered = pageRenderedAt(pathname);
-  if (rendered !== null) return { kind: 'rendition', page: rendered };
-  return { kind: 'notFound' };
 }
 
 interface Document {
@@ -71,7 +42,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
     status,
     site: true,
   });
-  const documentFor = (route: Exclude<DevRoute, { kind: 'redirect' }>): Document => {
+  const documentFor = (route: Exclude<Route, { kind: 'redirect' }>): Document => {
     switch (route.kind) {
       case 'app':
         return appDocument;
@@ -103,7 +74,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             return;
           }
           const [pathname, query] = (req.url ?? '/').split('?');
-          const route = devRoute(pathname, query === undefined ? '' : `?${query}`);
+          const route = decide(pathname, query === undefined ? '' : `?${query}`);
 
           // Answered ahead of the Accept gate, matching the Worker.
           if (route.kind === 'redirect') {
@@ -119,16 +90,16 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
           }
 
           const { file, base, status, site } = documentFor(route);
-          const rendition = markdownRendition(pathname);
+          const advertised = route.kind === 'page' ? route.rendition : null;
 
           try {
             const raw = await readFile(file, 'utf8');
 
             // The derivation the build uses, so an edit shows without one.
-            if (route.kind === 'rendition' || (rendition !== null && prefersMarkdown(accept))) {
+            if (route.kind === 'rendition' || negotiatedRendition(route, accept) !== null) {
               res.statusCode = status;
               res.setHeader('Content-Type', MARKDOWN_TYPE);
-              if (rendition !== null) varyOnAccept(res);
+              if (advertised !== null) varyOnAccept(res);
               res.end(renderMarkdown(raw));
               return;
             }
@@ -144,8 +115,8 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
             );
             res.statusCode = status;
             res.setHeader('Content-Type', 'text/html; charset=utf-8');
-            if (rendition !== null) {
-              res.setHeader('Link', alternateLink(rendition));
+            if (advertised !== null) {
+              res.setHeader('Link', alternateLink(advertised));
               varyOnAccept(res);
             }
             res.end(html);

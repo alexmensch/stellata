@@ -1,19 +1,27 @@
 // The dev server's routing table, held against the one `src/worker.ts`
-// answers in production. `src/worker.test.ts` pins the deploy side; this
-// pins that `pnpm run dev` cannot drift from it.
+// answers in production: both run `src/routing-cases-fixture.ts`.
 
 import { describe, expect, it } from 'vitest';
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { publishBuildEnv } from '../vite.env';
-import { devRoute, documentRoutingInDev } from '../vite.site-dev';
+import { ROUTING_CASES, type ServedDocument } from '../src/routing-cases-fixture';
+import { buildFigures, publishBuildEnv } from '../vite.env';
+import { documentRoutingInDev } from '../vite.site-dev';
 
 const ROOT = resolve(__dirname, '..');
-const HOME_TITLE = /<title>[^<]*<\/title>/.exec(
-  readFileSync(resolve(ROOT, 'src/site/index.html'), 'utf8'),
-)![0];
+const titleOf = (source: string) =>
+  /<title>[^<]*<\/title>/.exec(readFileSync(resolve(ROOT, source), 'utf8'))![0];
+const HOME_TITLE = titleOf('src/site/index.html');
+
+/** What identifies each served document in the dev server's real output. */
+const IDENTIFIED_BY: Record<ServedDocument, (body: string) => boolean> = {
+  app: (body) => body.includes('<canvas'),
+  homepage: (body) => body.includes(HOME_TITLE),
+  rendition: (body) => body.startsWith('# '),
+  notFound: (body) => body.includes(titleOf('src/site/404.html')),
+};
 
 interface Server {
   handler: (req: never, res: never, next: never) => unknown;
@@ -25,7 +33,7 @@ interface Server {
 function start(): Server {
   // `vite.config.ts` does this at config load, which is what puts the
   // figures the rendition resolves into the dev server's environment.
-  publishBuildEnv(ROOT);
+  publishBuildEnv(buildFigures(ROOT));
   const registered: ((req: never, res: never, next: never) => unknown)[] = [];
   const watched: string[] = [];
   const changed: ((file: string) => void)[] = [];
@@ -51,86 +59,56 @@ function start(): Server {
   };
 }
 
+interface Answer {
+  status: number;
+  headers: Record<string, string>;
+  body: string;
+  fellThrough: boolean;
+}
+
+const { handler } = start();
+
+async function fetchPath(path: string, accept?: string, method = 'GET'): Promise<Answer> {
+  const answer: Answer = { status: 200, headers: {}, body: '', fellThrough: false };
+  const res = {
+    set statusCode(code: number) {
+      answer.status = code;
+    },
+    get statusCode() {
+      return answer.status;
+    },
+    setHeader(name: string, value: string) {
+      answer.headers[name.toLowerCase()] = value;
+    },
+    getHeader(name: string) {
+      return answer.headers[name.toLowerCase()];
+    },
+    end(body?: string) {
+      answer.body = body ?? '';
+    },
+  };
+  const req = { method, url: path, originalUrl: path, headers: { accept } };
+  await handler(req as never, res as never, ((err?: Error) => {
+    if (err !== undefined) throw err;
+    answer.fellThrough = true;
+  }) as never);
+  return answer;
+}
+
 describe('the dev server answers the deploy’s routing table', () => {
-  it('301s both legacy share transports onto the canonical form', () => {
-    expect(devRoute('/v/AQAA/', '')).toEqual({ kind: 'redirect', to: '/app/v/AQAA/' });
-    expect(devRoute('/v/AQAA', '')).toEqual({ kind: 'redirect', to: '/app/v/AQAA' });
-    expect(devRoute('/', '?v=AQAA')).toEqual({ kind: 'redirect', to: '/app?v=AQAA' });
+  it.each(ROUTING_CASES)('answers $pathname $search', async ({ pathname, search, answer }) => {
+    const served = await fetchPath(pathname + search, 'text/html');
+    if ('redirect' in answer) {
+      expect(served.status).toBe(301);
+      expect(served.headers.location).toBe(answer.redirect);
+    } else {
+      expect(served.status).toBe(answer.document === 'notFound' ? 404 : 200);
+      expect(IDENTIFIED_BY[answer.document](served.body)).toBe(true);
+    }
   });
-
-  // The redirect never parses the blob, so schema version and decodability
-  // are irrelevant to it — a v1 link and an unreadable one both land on the
-  // app, which strips the bar itself.
-  it('redirects a blob it cannot read', () => {
-    expect(devRoute('/v/not!valid/', '')).toEqual({ kind: 'redirect', to: '/app/v/not!valid/' });
-  });
-
-  it.each(['/app', '/app/', '/app/v/AQAA/', '/app/anything'])(
-    'serves the application document for %s',
-    (pathname) => {
-      expect(devRoute(pathname, '')).toEqual({ kind: 'app' });
-    },
-  );
-
-  it('serves the homepage for the root alone', () => {
-    expect(devRoute('/', '')).toMatchObject({ kind: 'page', page: { source: 'index.html' } });
-    expect(devRoute('/', '?utm=x')).toMatchObject({ kind: 'page', page: { source: 'index.html' } });
-  });
-
-  it('serves a rendition at its own path, as the deploy serves the asset', () => {
-    expect(devRoute('/index.md', '')).toMatchObject({
-      kind: 'rendition',
-      page: { source: 'index.html' },
-    });
-  });
-
-  it.each(['/nonsense', '/science', '/vintage', '/apple'])(
-    'serves the 404 page for %s',
-    (pathname) => {
-      expect(devRoute(pathname, '')).toEqual({ kind: 'notFound' });
-    },
-  );
 });
 
-// `devRoute` decides the path; these drive the middleware that answers it,
-// which is where the Accept header comes in.
 describe('the middleware answers whatever the client accepts', () => {
-  interface Answer {
-    status: number;
-    headers: Record<string, string>;
-    body: string;
-    fellThrough: boolean;
-  }
-
-  const { handler } = start();
-
-  async function fetchPath(path: string, accept?: string): Promise<Answer> {
-    const answer: Answer = { status: 200, headers: {}, body: '', fellThrough: false };
-    const res = {
-      set statusCode(code: number) {
-        answer.status = code;
-      },
-      get statusCode() {
-        return answer.status;
-      },
-      setHeader(name: string, value: string) {
-        answer.headers[name.toLowerCase()] = value;
-      },
-      getHeader(name: string) {
-        return answer.headers[name.toLowerCase()];
-      },
-      end(body?: string) {
-        answer.body = body ?? '';
-      },
-    };
-    const req = { method: 'GET', url: path, originalUrl: path, headers: { accept } };
-    await handler(req as never, res as never, ((err?: Error) => {
-      if (err !== undefined) throw err;
-      answer.fellThrough = true;
-    }) as never);
-    return answer;
-  }
-
   it.each([
     ['*/*', 'a wildcard, as curl and most agent fetchers send'],
     [undefined, 'no Accept header at all'],

@@ -15,11 +15,13 @@ Cloudflare Worker entry, browser client, and the public content site.
   fixture build, with a browser's navigation header. It is what fails when a
   `[assets]` key below is dropped; skips only where that runtime cannot
   start.
+- `routing-pure.ts` (+ test) — what a request path is (redirect, the app,
+  a page, a rendition, a miss) before any asset is consulted; the decision
+  `worker.ts` and `../vite.site-dev.ts` both interpret. Its cases live in
+  `routing-cases-fixture.ts`.
 - `negotiation-pure.ts` — which rendition of a page an `Accept` header
   asks for, and the headers that advertise it; which pages have one is
-  `site/pages.ts`'s. Imported by
-  `worker.ts` and by `../vite.site-dev.ts`, so the deploy and the dev
-  server cannot answer differently.
+  `site/pages.ts`'s.
 - `client/` — browser app, served at `/app`. Built by `vite.config.ts`;
   `client/app/README.md` is why that path and not `/`.
 - `site/` — the public content pages, the homepage at `/` among them.
@@ -62,9 +64,11 @@ express, which `worker.ts` does:
   cache would serve one to the other; and a rendition that is somehow
   absent falls through to the HTML rather than 404ing the page.
 
-**`vite.site-dev.ts` answers this same table**, in this same order, off
-the same import — `devRoute` is its whole routing decision and
-`tests/site-dev-routing.test.ts` pins it beside `worker.test.ts`. A dev
+**`routing-pure.ts`'s `route` is the one decision**, and `worker.ts` and
+`vite.site-dev.ts` are two interpreters of it: the deploy answers through
+the assets binding, the dev server off the source files.
+`routing-cases-fixture.ts` is the table as request → answer, and `route`,
+`worker.test.ts` and `tests/site-dev-routing.test.ts` all run it. A dev
 server that restates a rule instead answers a share link differently from
 the deploy, and nobody sees it until someone pastes a real URL.
 

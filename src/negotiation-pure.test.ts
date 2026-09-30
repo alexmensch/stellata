@@ -4,26 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  alternateLink,
-  markdownRendition,
-  prefersMarkdown,
-  varyWithAccept,
-  wantsDocument,
-} from './negotiation-pure';
-
-describe('a page’s markdown sibling', () => {
-  it('sits beside the document it renders', () => {
-    expect(markdownRendition('/')).toBe('/index.md');
-  });
-
-  it.each(['/app', '/app/v/AQAA/', '/index.md', '/science', '/catalog.bin.0'])(
-    'is absent for %s',
-    (pathname) => {
-      expect(markdownRendition(pathname)).toBeNull();
-    },
-  );
-});
+import { alternateLink, prefersMarkdown, varyWithAccept, wantsDocument } from './negotiation-pure';
 
 describe('markdown is opt-in, by naming the type', () => {
   it.each([

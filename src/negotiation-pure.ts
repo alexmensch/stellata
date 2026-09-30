@@ -1,18 +1,10 @@
 // Copyright (C) 2026 Alex Marshall
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Which rendition of a page a client asked for. `worker.ts` and
- *  `../vite.site-dev.ts` both decide it here. README.md#request-routing. */
-
-import { pageAt, renditionPath } from './site/pages';
+/** Which rendition of a page a client asked for, and the headers that
+ *  advertise it. README.md#request-routing. */
 
 export const MARKDOWN_TYPE = 'text/markdown; charset=utf-8';
-
-/** A page's markdown sibling, or null for a path that has none. */
-export function markdownRendition(pathname: string): string | null {
-  const page = pageAt(pathname);
-  return page === null ? null : renditionPath(page);
-}
 
 export function alternateLink(rendition: string): string {
   return `<${rendition}>; rel="alternate"; type="text/markdown"`;

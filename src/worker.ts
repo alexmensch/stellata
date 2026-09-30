@@ -1,14 +1,9 @@
 // Copyright (C) 2026 Alex Marshall
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { APP_PATH, legacyShareRedirect, ownedByApp } from './client/util/url-state/share-path-pure';
-import {
-  MARKDOWN_TYPE,
-  alternateLink,
-  markdownRendition,
-  prefersMarkdown,
-  varyWithAccept,
-} from './negotiation-pure';
+import { APP_PATH } from './client/util/url-state/share-path-pure';
+import { MARKDOWN_TYPE, alternateLink, varyWithAccept } from './negotiation-pure';
+import { negotiatedRendition, route } from './routing-pure';
 
 // Inlined, not imported: README.md#cloudflareworkers-types-leaks-globally.
 interface Fetcher {
@@ -28,16 +23,16 @@ function withHeaders(response: Response, edit: (headers: Headers) => void): Resp
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const decided = route(url.pathname, url.search);
 
-    const legacy = legacyShareRedirect(url.pathname, url.search);
-    if (legacy !== null) {
-      return Response.redirect(new URL(legacy, url).toString(), 301);
+    if (decided.kind === 'redirect') {
+      return Response.redirect(new URL(decided.to, url).toString(), 301);
     }
 
     const readable = request.method === 'GET' || request.method === 'HEAD';
-    const rendition = markdownRendition(url.pathname);
+    const rendition = readable ? negotiatedRendition(decided, request.headers.get('accept')) : null;
 
-    if (rendition !== null && readable && prefersMarkdown(request.headers.get('accept'))) {
+    if (rendition !== null) {
       const markdown = await env.ASSETS.fetch(
         new Request(new URL(rendition, url).toString(), request),
       );
@@ -51,9 +46,10 @@ export default {
 
     const response = await env.ASSETS.fetch(request);
 
-    if (rendition !== null && response.status === 200) {
+    if (decided.kind === 'page' && decided.rendition !== null && response.status === 200) {
+      const advertised = decided.rendition;
       return withHeaders(response, (headers) => {
-        headers.set('link', alternateLink(rendition));
+        headers.set('link', alternateLink(advertised));
         headers.set('vary', varyWithAccept(headers.get('vary')));
       });
     }
@@ -64,7 +60,7 @@ export default {
     }
 
     // After the probe, so a real asset under /app keeps winning.
-    if (response.status === 404 && ownedByApp(url.pathname) && readable) {
+    if (response.status === 404 && decided.kind === 'app' && readable) {
       return env.ASSETS.fetch(new Request(new URL(APP_PATH, url).toString(), request));
     }
 
