@@ -98,8 +98,12 @@ black rather than a bare pixel-format conversion:
 ```bash
 ffmpeg -y -f lavfi -i color=c=black:s=<padw>x<h> -i in.png \
   -filter_complex "[0][1]overlay=<offx>:0:shortest=1,scale=2400:1350:flags=lanczos,format=yuv420p" \
-  -frames:v 1 -q:v 3 out.jpg
+  -update 1 -frames:v 1 -q:v 3 out.jpg
 ```
+
+`scale=2400:1350` upscales a narrower source without complaint, so check
+the source width first (`ffprobe -v error -show_entries stream=width -of
+csv=p=0 in.png`). Below 2400 px is a re-shoot, not a resize.
 
 Verify before committing: dimensions, `profile=High`, `pix_fmt=yuv420p`,
 duration under 5 s, and no audio stream.
