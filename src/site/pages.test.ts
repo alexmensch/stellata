@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { unstable_readConfig } from 'wrangler';
 
 import {
   NOT_FOUND_SOURCE,
@@ -18,6 +19,13 @@ describe('a page answers at its folder', () => {
     ['science/index.html', '/science'],
   ])('%s serves at %s', (source, path) => {
     expect(pagePath({ source, hasRendition: false })).toBe(path);
+  });
+
+  // servedPath spells paths the way this setting serves them; under the
+  // default, /science would be a redirect to /science/ and match no page.
+  it('matches the html_handling the deploy configures', () => {
+    const config = unstable_readConfig({ config: resolve(__dirname, '../../wrangler.toml') });
+    expect(config.assets?.html_handling).toBe('drop-trailing-slash');
   });
 
   it('answers a non-index document at its name, without the extension', () => {
