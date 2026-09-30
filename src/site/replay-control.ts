@@ -1,6 +1,12 @@
 /** Shows a replay button whenever its clip is stopped, and replays the clip once on a press. */
 
 export const REPLAY_GLYPH = '↻';
+export const REPLAY_NAME = 'Replay clip';
+
+/** Names each button after its clip, so a list of buttons tells them apart. */
+export function replayLabel(clipLabel: string | null): string {
+  return clipLabel === null ? REPLAY_NAME : `${REPLAY_NAME}: ${clipLabel}`;
+}
 
 export interface ReplayableClip extends EventTarget {
   readonly ended: boolean;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { attachReplay, type Focusable, type ReplayButton, type ReplayableClip } from './replay-control';
+import { REPLAY_NAME, attachReplay, replayLabel, type Focusable, type ReplayButton, type ReplayableClip } from './replay-control';
 
 class FakeClip extends EventTarget implements ReplayableClip {
   ended = false;
@@ -143,5 +143,15 @@ describe('attachReplay', () => {
     clip.finish();
     button.press();
     expect(media.focused).toBe(false);
+  });
+});
+
+describe('replayLabel', () => {
+  it('names the button after the clip it replays', () => {
+    expect(replayLabel('Orion deforming')).toBe(`${REPLAY_NAME}: Orion deforming`);
+  });
+
+  it('keeps a bare name for a clip with no label of its own', () => {
+    expect(replayLabel(null)).toBe(REPLAY_NAME);
   });
 });
