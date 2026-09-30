@@ -302,8 +302,12 @@ To land a real capture:
    ```html
    <video src="/site/<name>.mp4" poster="/site/<name>.jpg"
           aria-label="…" width="…" height="…"
-          autoplay muted playsinline></video>
+          autoplay muted playsinline
+          disableremoteplayback disablepictureinpicture></video>
    ```
+
+   The last two keep the browser from drawing its own cast or
+   picture-in-picture button over a clip that has no controls.
 
    Four of those are load-bearing. `muted` and `playsinline` are what any
    browser requires before it will start a clip unasked, and iOS needs the
