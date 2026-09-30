@@ -57,7 +57,6 @@
   --pill-bg: color-mix(in srgb, var(--bg) 85%, transparent);
   --bg-sunken: #04060d;
 
-  --switcher-item: 16rem;
   --switcher-item-sight: 20rem;
   --switcher-item-requirement: 15rem;
   --readout-item: 11rem;
