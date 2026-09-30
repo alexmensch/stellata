@@ -14,9 +14,23 @@ let stubs: string;
 
 const git = (...args: string[]) => gitIn(repo)(...args);
 
-/** `gh pr view` answers with this base, head commit and labels as JSON. */
-function ghView(base: string, labels: readonly string[] = [], head = git('rev-parse', 'HEAD').stdout.trim()): void {
-  const view = { baseRefName: base, headRefOid: head, labels: labels.map((name) => ({ name })) };
+interface PrView {
+  readonly base?: string;
+  readonly labels?: readonly string[];
+  readonly head?: string;
+  readonly isDraft?: boolean;
+  readonly body?: string;
+}
+
+/** `gh pr view` answers with this PR as JSON; the head defaults to the checkout's. */
+function ghView({ base = 'main', labels = [], head, isDraft = false, body = '' }: PrView = {}): void {
+  const view = {
+    baseRefName: base,
+    headRefOid: head ?? git('rev-parse', 'HEAD').stdout.trim(),
+    labels: labels.map((name) => ({ name })),
+    isDraft,
+    body,
+  };
   writeFileSync(join(stubs, 'view.json'), JSON.stringify(view));
   writeFileSync(join(stubs, 'gh'), `#!/bin/sh\ncat '${join(stubs, 'view.json')}'\n`);
   chmodSync(join(stubs, 'gh'), 0o755);
@@ -119,10 +133,10 @@ describe('pr-body-guard', () => {
 
     it('on edit, from the labels the PR already carries', () => {
       const file = body(PERF);
-      ghView('main', ['docs']);
+      ghView({ labels: ['docs'] });
       expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(true);
       expect(decision(`gh pr edit 12 -F ${file} --add-label skip-version-bump`).denied).toBe(false);
-      ghView('main', ['skip-version-bump']);
+      ghView({ labels: ['skip-version-bump'] });
       expect(decision(`gh pr edit 12 --title "x y" -F ${file}`).denied).toBe(false);
       expect(decision(`gh pr edit 12 -F ${file} --remove-label skip-version-bump`).denied).toBe(true);
     });
@@ -135,10 +149,18 @@ describe('pr-body-guard', () => {
     expect(decision(`gh pr create -F ${file}`).denied).toBe(true);
   });
 
+  it('lets an edit to a draft PR through, and checks one that is ready', () => {
+    const file = body();
+    ghView({ isDraft: true });
+    expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(false);
+    ghView({ isDraft: false });
+    expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(true);
+  });
+
   it('stands down for a PR into any branch but main, as both workflows do', () => {
     const file = body();
     expect(decision(`gh pr create -B stack-base -F ${file}`).denied).toBe(false);
-    ghView('stack-base');
+    ghView({ base: 'stack-base' });
     expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(false);
     expect(decision(`gh pr edit 12 -F ${file} --base main`).denied).toBe(true);
   });
@@ -152,11 +174,11 @@ describe('pr-body-guard', () => {
 
     it('on edit, from the head commit gh reports', () => {
       const file = body(NOTES);
-      ghView('main', [], git('rev-parse', PR_HEAD).stdout.trim());
+      ghView({ head: git('rev-parse', PR_HEAD).stdout.trim() });
       const d = decision(`gh pr edit 12 -F ${file}`);
       expect(d.denied).toBe(true);
       expect(d.reason).toContain('src/client/milkyway/band.ts');
-      ghView('main');
+      ghView();
       expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(false);
     });
 
@@ -173,7 +195,7 @@ describe('pr-body-guard', () => {
       git('checkout', '-q', PR_HEAD);
       const file = body(NOTES);
       expect(decision(`gh pr create -F ${file}`).denied).toBe(true);
-      ghView('main', [], 'deadbeef'.repeat(5));
+      ghView({ head: 'deadbeef'.repeat(5) });
       expect(decision(`gh pr edit 12 -F ${file}`).denied).toBe(false);
       expect(decision(`gh pr create -H nowhere -F ${file}`).denied).toBe(false);
       expect(decision(`gh pr create -H someone:${PR_HEAD} -F ${file}`).denied).toBe(false);

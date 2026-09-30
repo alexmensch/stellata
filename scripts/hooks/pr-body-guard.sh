@@ -80,7 +80,8 @@ pr_field() { printf '%s' "$view" | jq -r "$1 // empty" 2>/dev/null; }
 
 labels=''
 if [ "$sub" = edit ]; then
-  view="$(gh pr view ${target:+"$target"} --json baseRefName,headRefOid,labels 2>/dev/null)" || exit 0
+  view="$(gh pr view ${target:+"$target"} --json baseRefName,headRefOid,isDraft,labels 2>/dev/null)" || exit 0
+  [ "$(pr_field .isDraft)" = true ] && exit 0
   [ -n "$base" ] || base="$(pr_field .baseRefName)"
   head="$(pr_field .headRefOid)"
   labels="$(pr_field '[.labels[].name] | join(",")')"

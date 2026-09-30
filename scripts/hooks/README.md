@@ -270,10 +270,11 @@ stops naming the same values:
   `owner:branch`, lets the call through rather than judging `HEAD`. A stale
   `origin/main` reads a wider diff than GitHub will; fetch first if the
   verdict surprises.
-- **A draft is not checked.** `gh pr create --draft` / `-d` passes whatever
-  its body: what the gate protects is a PR claiming to be ready when it is
-  not, since that is what goes wrong at landing, and a draft claims nothing.
-  CI still runs both guards on a draft, and a red check there is expected.
+- **A draft is not checked.** `gh pr create --draft` / `-d`, and `edit` of
+  a PR `gh pr view` reports as a draft, pass whatever the body: what the
+  gate protects is a PR claiming to be ready when it is not, since that is
+  what goes wrong at landing, and a draft claims nothing. CI still runs both
+  guards on a draft, and a red check there is expected.
 
 **Only a verdict denies.** A check's output carrying `::error::` is a
 failure CI would report, and becomes the deny reason (prefix stripped). Any
