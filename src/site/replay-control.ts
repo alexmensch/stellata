@@ -10,9 +10,15 @@ export interface ReplayableClip extends EventTarget {
 
 export interface ReplayButton extends EventTarget {
   hidden: boolean;
+  matches(selectors: string): boolean;
 }
 
-export function attachReplay(clip: ReplayableClip, button: ReplayButton): void {
+export interface Focusable {
+  focus(): void;
+}
+
+/** `refocus` takes the focus a press would otherwise drop, since the pressed button hides. */
+export function attachReplay(clip: ReplayableClip, button: ReplayButton, refocus: Focusable): void {
   const show = (): void => {
     button.hidden = false;
   };
@@ -24,6 +30,7 @@ export function attachReplay(clip: ReplayableClip, button: ReplayButton): void {
   clip.addEventListener('pause', show);
   clip.addEventListener('ended', show);
   button.addEventListener('click', () => {
+    if (button.matches(':focus')) refocus.focus();
     hide();
     // play() on an ended clip restarts it from 0 itself. Seeking first races
     // that restart in Safari: play fires before the seek paints, and the clip

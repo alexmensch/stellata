@@ -156,6 +156,8 @@ The button shows whenever the clip is stopped — ended, paused, or refused
 autoplay, which a browser in a power-saving mode does silently and which
 only a rejected `play()` reports. A press replays the clip once from the
 start, so the [Sights](#sights--the-media-and-the-link-it-carries) rule of no `loop` and under five seconds still holds.
+The button hides as it is pressed, so a press that held keyboard focus hands
+it to the media anchor rather than dropping it to the page.
 
 A second script is a decision to take explicitly, not a precedent this one
 sets.

@@ -16,5 +16,5 @@ for (const video of document.querySelectorAll<HTMLVideoElement>('video[data-repl
 
   media.replaceWith(frame);
   frame.append(media, button);
-  attachReplay(video, button);
+  attachReplay(video, button, media);
 }
