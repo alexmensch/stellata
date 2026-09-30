@@ -689,7 +689,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // settled, since each of those clears ORB
   // (`../util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock`).
 
-  // Never `orbitFrame`: the tick rides from that one between frames.
+  // Never `orbitFrame`: the ball is drawn against it, so an off-tick write moves the drawn datum.
   const portFrame = emptyReferenceFrame();
   const portFrameReady = { status: 'ready', value: portFrame } as const;
   stellata.setOrbitFramePort({
