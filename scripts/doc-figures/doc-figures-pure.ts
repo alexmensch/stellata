@@ -48,22 +48,19 @@ export function parseFormat(token: string | undefined): FigureFormat | null {
 export function parseMarkers(text: string): { markers: FigureMarker[]; problems: string[] } {
   const markers: FigureMarker[] = [];
   const problems: string[] = [];
+  const opens = [...text.matchAll(OPEN)];
   let consumed = 0;
-  for (const open of text.matchAll(OPEN)) {
+  for (const [i, open] of opens.entries()) {
     const at = open.index;
     const line = lineAt(text, at);
-    if (at < consumed) {
-      problems.push(`line ${line}: marker opens inside another marker's figure`);
-      continue;
-    }
     const strayClose = text.slice(consumed, at).indexOf(CLOSE);
     if (strayClose !== -1) problems.push(`line ${lineAt(text, consumed + strayClose)}: ${CLOSE} with no open marker`);
     const bodyStart = at + open[0].length;
     const bodyEnd = text.indexOf(CLOSE, bodyStart);
     const format = parseFormat(open[2]);
-    if (bodyEnd === -1) {
+    if (bodyEnd === -1 || bodyEnd > (opens[i + 1]?.index ?? Infinity)) {
       problems.push(`line ${line}: count:${open[1]} is never closed`);
-      consumed = text.length;
+      consumed = bodyStart;
       continue;
     }
     consumed = bodyEnd + CLOSE.length;

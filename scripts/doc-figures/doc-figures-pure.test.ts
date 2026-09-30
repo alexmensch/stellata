@@ -33,6 +33,12 @@ describe('parseMarkers', () => {
     expect(parseMarkers('<!-- count:a/b -->1\n2<!-- /count -->').problems).toEqual(['line 1: count:a/b spans a line break']);
     expect(parseMarkers(mark('a/b', '1', 'sig0')).problems).toEqual(["line 1: count:a/b has unknown format 'sig0'"]);
   });
+
+  it('reports a missing close once, and still reads the markers after it', () => {
+    const { markers, problems } = parseMarkers(`<!-- count:a/b -->1 then ${mark('c/d', '2')} and ${mark('e/f', '3')}`);
+    expect(problems).toEqual(['line 1: count:a/b is never closed']);
+    expect(markers.map((m) => m.key)).toEqual(['c/d', 'e/f']);
+  });
 });
 
 describe('parseFormat', () => {
