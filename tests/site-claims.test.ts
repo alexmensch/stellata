@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseSharePath } from '../src/client/util/url-state/share-path-pure';
 import { decodeBlob } from '../src/client/util/url-state/url-state';
+import { FIGURE_NAMES, FIGURE_TOKEN } from '../scripts/site/figures-pure';
 import { parseHtml, textOf } from '../scripts/site/parse-html';
 import { escapeRegExp } from '../scripts/util/escape-regexp';
 import {
@@ -16,12 +17,19 @@ import {
   citedReferenceCount,
   creditedSourceCount,
 } from '../scripts/site/site-metrics';
+import { NOT_FOUND_SOURCE, SITE_PAGES } from '../src/site/pages';
+import { buildFigures } from '../vite.env';
 
 const ROOT = resolve(__dirname, '..');
 const HOME_SOURCE = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');
 const HOME = parseHtml(HOME_SOURCE);
 const NOT_FOUND = parseHtml(readFileSync(join(ROOT, 'src/site/404.html'), 'utf8'));
-const TOKEN = /^%VITE_[A-Z_]+%$/;
+const TOKEN = new RegExp(`^%(?:${FIGURE_NAMES.join('|')})%$`);
+const FIGURES = buildFigures(ROOT);
+const DOCUMENTS = [
+  ...[...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) => `src/site/${source}`),
+  'src/client/app/index.html',
+];
 
 describe('the pages ask for their figures rather than quoting them', () => {
   const cells = selectAll('.readout-value', HOME);
@@ -36,12 +44,17 @@ describe('the pages ask for their figures rather than quoting them', () => {
   });
 
   it.each([
-    ['catalogue size', catalogueRecordCount(ROOT).toLocaleString('en-US')],
-    ['credited source count', String(creditedSourceCount(ROOT))],
-    ['reference count', String(citedReferenceCount(ROOT))],
+    ['catalogue size', FIGURES.VITE_STAR_COUNT],
+    ['credited source count', FIGURES.VITE_SOURCE_COUNT],
+    ['reference count', FIGURES.VITE_REFERENCE_COUNT],
   ])('never states the %s as a literal', (_, figure) => {
     const body = textOf(select('body', HOME));
     expect(body).not.toMatch(new RegExp(`(^|[^\\d,.])${escapeRegExp(figure)}($|[^\\d,])`));
+  });
+
+  it.each(DOCUMENTS)('%s asks only for figures the build publishes', (document) => {
+    const names = [...readFileSync(join(ROOT, document), 'utf8').matchAll(FIGURE_TOKEN)].map((m) => m[1]);
+    expect(names.filter((name) => !(FIGURE_NAMES as readonly string[]).includes(name))).toEqual([]);
   });
 
   it.each([
