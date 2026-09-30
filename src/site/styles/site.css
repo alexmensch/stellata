@@ -283,13 +283,18 @@ video {
 
 /* ── Block: banner ─────────────────────────────────────────────────── */
 
+/* The masthead takes the first row and the hero spans both, so the imagery
+   runs under the masthead while the copy, in the second row, cannot. */
 .banner {
-  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+.banner > * {
+  grid-column: 1;
 }
 .masthead[data-overlay] {
-  position: absolute;
-  inset-block-start: 0;
-  inset-inline: 0;
+  grid-row: 1;
+  position: relative;
   z-index: var(--layer-masthead);
   border-block-end: none;
   text-shadow: var(--text-halo);
@@ -298,13 +303,16 @@ video {
 /* ── Block: hero ───────────────────────────────────────────────────── */
 
 .hero {
+  grid-row: 1 / -1;
   display: grid;
+  grid-template-rows: subgrid;
   min-block-size: var(--hero-min);
 }
 .hero > * {
-  grid-area: 1 / 1;
+  grid-column: 1;
 }
 .hero-media {
+  grid-row: 1 / -1;
   position: relative;
   display: grid;
   align-content: start;
@@ -330,6 +338,7 @@ video {
    sibling paints beneath it whatever the DOM order. Being later in the DOM
    is then what puts the copy on top, so it needs no z-index. */
 .hero-copy {
+  grid-row: 2;
   position: relative;
   align-self: end;
   padding-block: var(--space-xl) var(--space-l-xl);
