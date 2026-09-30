@@ -47,7 +47,7 @@ export function creditedSourceCount(root: string): number {
   return credits.length;
 }
 
-function citationEntries(root: string): IndexEntry[] {
+export function citationEntries(root: string): IndexEntry[] {
   const entries = parseIndex(readFileSync(join(root, CITATION_INDEX), 'utf8'));
   if (entries.length === 0) {
     throw new Error(`site metrics: no entries found in ${CITATION_INDEX}`);

@@ -13,6 +13,7 @@ import { parseHtml } from '../scripts/site/parse-html';
 import { escapeRegExp } from '../scripts/util/escape-regexp';
 import {
   catalogueRecordCount,
+  citationEntries,
   citedReferenceCount,
   creditedSourceCount,
   verifiedReferenceCount,
@@ -112,6 +113,26 @@ describe('the derivations behind those figures', () => {
     );
     expect(catalogueRecordCount('/nonexistent-root')).toBe(snapshot.recordCount);
     expect(catalogueRecordCount(ROOT)).toBe(snapshot.recordCount);
+  });
+});
+
+// "Zucker 2020 & 2021" names two works.
+const AUTHOR_YEARS = /(\p{Lu}[\p{L}'’-]+(?: \p{Lu}[\p{L}'’-]+)*) (\d{4}[a-z]?(?: & \d{4}[a-z]?)*)\b/gu;
+
+describe('every author-year the sources table names', () => {
+  const labels = new Set(citationEntries(ROOT).map((entry) => entry.label));
+  const named = selectAll('table.sources tbody tr', HOME).flatMap((row) =>
+    [...textOf(selectAll('td', row)[2]).matchAll(AUTHOR_YEARS)].flatMap(([, author, years]) =>
+      years.split(' & ').map((year) => `${author} ${year}`),
+    ),
+  );
+
+  it('names at least one', () => {
+    expect(named.length).toBeGreaterThan(0);
+  });
+
+  it.each(named)('%s is a citation-index label', (label) => {
+    expect(labels.has(label)).toBe(true);
   });
 });
 

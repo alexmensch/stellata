@@ -208,7 +208,8 @@ in. That module's README is the authority on where each count comes from.
 `tests/site-claims.test.ts` holds the pages to it: every readout cell is a
 substitution unless it carries **`data-literal`**, no counted figure appears
 anywhere in the page's text as a literal, the subsystem table sums to the
-credited total, and the derivations have not collapsed. `data-literal` is
+credited total, every author-year it names is a citation-index label
+(`/data/papers/README.md`), and the derivations have not collapsed. `data-literal` is
 for a figure nothing in the repo can count — today the model's measured
 radius and its clock clamp, both stated in `../../README.md`.
 
