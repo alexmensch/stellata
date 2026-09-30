@@ -15,8 +15,7 @@ permissions:
 # `deploy.yml` extracts that section and uses it as the GitHub release
 # notes for the version this PR ships, so an empty section means an
 # empty release page. Pure metadata PRs (`skip-version-bump` label)
-# don't ship a release and are exempt. The check is
-# scripts/release/release-notes-check.sh.
+# don't ship a release and are exempt.
 
 jobs:
   release-notes-guard:

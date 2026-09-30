@@ -15,8 +15,7 @@ permissions:
 # claim. CI has no GPU, so this checks the section,
 # not the numbers — the runner produces those on the developer's machine.
 # Rules: /RELEASING.md#perf-pin; the check itself is
-# scripts/perf/perf-section-check.sh so it can be tested, and
-# scripts/perf/perf-section-guard.sh gathers its inputs from git.
+# scripts/perf/perf-section-check.sh so it can be tested.
 
 jobs:
   perf-section-guard:
