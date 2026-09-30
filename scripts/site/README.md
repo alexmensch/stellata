@@ -77,6 +77,9 @@ cannot know:
   exist. An anchor left empty by that drop goes too, because a sight's
   picture *is* its link and `[](url)` is noise. Once a capture lands, the
   `<img>` keeps its anchor.
+- **HTML comments are dropped.** They are the page's authoring layer — the
+  capture recipe behind each sight, the doc-figure markers around a quoted
+  count — and markdown would otherwise carry them through literally.
 - **Links are absolute**, resolved against the page's own `canonical` — so
   a rendition quoted somewhere else still points back here, and no origin
   is restated in this file.

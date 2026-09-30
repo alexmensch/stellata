@@ -154,6 +154,16 @@ describe('authoring scaffolding is dropped', () => {
     expect(home).not.toContain('[](');
   });
 
+  it('drops HTML comments and keeps the text around them', () => {
+    const rendered = markdownRendition(
+      page('<p>Around <!-- count:build-catalog/recordCount sig2 -->980,000<!-- /count --> records.</p>'),
+      FIGURES,
+    );
+    expect(rendered).toContain('Around 980,000 records.');
+    expect(rendered).not.toContain('<!--');
+    expect(home).not.toContain('<!--');
+  });
+
   it('keeps a media anchor once it wraps a real capture', () => {
     const rendered = markdownRendition(
       page('<a href="/app/v/AQAA/"><img src="/site/hero.jpg" alt="The local neighbourhood" /></a>'),

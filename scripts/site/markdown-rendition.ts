@@ -62,6 +62,14 @@ function prune(body: Element, selector: string): void {
   });
 }
 
+function stripComments(body: Element): void {
+  visit(body, 'comment', (_node, index, parent) => {
+    if (parent === undefined || index === undefined) return;
+    parent.children.splice(index, 1);
+    return [SKIP, index];
+  });
+}
+
 /**
  * Runs BEFORE pruneEmptyLinks: a sight's media anchor wrapping only a
  * `<video>` reads as empty until the video has become an `<img>`, and would
@@ -181,6 +189,7 @@ export function markdownRendition(source: string, env: NodeJS.ProcessEnv = proce
   const body = select('body', tree);
   if (body == null) throw new Error('markdown rendition: the page has no <body>');
 
+  stripComments(body);
   prune(body, DROPPED);
   stillVideos(body);
   pruneEmptyLinks(body);
