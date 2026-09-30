@@ -234,8 +234,11 @@ The markdown rendition drops the marker's comments.
 `WebApplication` carry the same `@id`s and the same `description` string
 here as in `src/client/app/index.html`, so a crawler resolves one
 application described twice rather than two applications. Edit either node
-and edit both. The `WebApplication.url` is `/app`; its `@id` keeps the
-bare-root form, because an `@id` is an identifier rather than an address.
+and edit both, in the same change. The `WebApplication.url` is `/app`; its
+`@id` keeps the bare-root form (`https://stellata.xyz/#webapp`), because an
+`@id` is an identifier rather than an address — it need not equal the
+node's `url`, and changing it would break the association for anything
+that already recorded it.
 
 ### The JSON-LD citation list
 
