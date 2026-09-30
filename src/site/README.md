@@ -120,7 +120,9 @@ Three things follow for anyone editing a page here:
 - **A rendition is `hasRendition: true` on the page's `pages.ts` entry**,
   and nothing else: the emit, the `Accept` answer, the `Link` header and the
   dev server's route at the `.md` path all follow. A page without one simply
-  serves HTML to everyone, which is a working state rather than a broken one.
+  serves HTML to everyone, which is a working state rather than a broken one,
+  and a rendition missing from the build falls through to the HTML rather
+  than 404ing the page.
 - **`Accept` decides what a page's URL answers**, so both renditions carry
   `Vary: Accept`. A cache that did not know would serve one to the other.
 
