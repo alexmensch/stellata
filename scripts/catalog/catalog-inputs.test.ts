@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../util/paths';
 import { catalogInputPaths } from './catalog-inputs';
-import { MAGNITUDE_FLOOR_V } from './membership/magnitude-term/magnitude-term-pure';
 
 const abs = (path: string): string => resolve(REPO_ROOT, path);
 
@@ -25,7 +24,7 @@ describe('catalogInputPaths', () => {
     expect(inputs).toContain(abs('data/naming/name_overrides.tsv'));
     expect(inputs).toContain(abs('data/iau-wgsn/wgsn_names.tsv'));
     expect(inputs).toContain(abs('data/dust/chunk_0_0_0.bin'));
-    expect(inputs.has(abs('data/gaia/gaia_dr3_magnitude_pull.tsv'))).toBe(MAGNITUDE_FLOOR_V !== null);
+    expect(inputs).toContain(abs('data/gaia/gaia_dr3_magnitude_pull.tsv'));
   });
 
   it('leaves out the build steps it does not run', () => {
