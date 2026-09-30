@@ -9,8 +9,9 @@ json-ld-citations.ts   The Vite plugin appending every citation-index work to
                        /src/site/README.md#the-json-ld-citation-list.
 markdown-rendition.ts  A page's markdown rendition, derived from the page's
                        own HTML. Emitted as `dist/index.md`.
-parse-html.ts          The one HTML parse site-metrics.ts and
-                       markdown-rendition.ts read a page through.
+parse-html.ts          The one HTML parse site-metrics.ts, markdown-rendition.ts
+                       and the site suites read a page through, and `textOf`,
+                       an element's text whitespace-collapsed.
 ```
 
 All three are derivations rather than pipelines, and all exist so that

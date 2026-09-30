@@ -10,11 +10,9 @@ import remarkStringify from 'remark-stringify';
 import { unified } from 'unified';
 import { SKIP, visit } from 'unist-util-visit';
 
-import { parseHtml } from './parse-html.ts';
+import { collapseWhitespace, parseHtml, textOf } from './parse-html.ts';
 
 const DROPPED = '.holder, .skip-link';
-
-const collapseWhitespace = (text: string): string => text.replace(/\s+/g, ' ').trim();
 
 /** Closed: a tag outside it throws — README.md#the-markdown-rendition. */
 const VOCABULARY = new Set([
@@ -157,15 +155,6 @@ function assertVocabulary(body: Element): void {
         'decide what it means in markdown and add it to VOCABULARY',
     );
   }
-}
-
-function textOf(node: Element | null | undefined): string {
-  if (node == null) return '';
-  let out = '';
-  visit(node, 'text', (text: { value: string }) => {
-    out += text.value;
-  });
-  return collapseWhitespace(out);
 }
 
 function metaContent(tree: Root, name: string): string | null {

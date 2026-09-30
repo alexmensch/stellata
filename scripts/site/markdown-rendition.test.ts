@@ -3,14 +3,13 @@
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { Element, Root } from 'hast';
+import type { Element } from 'hast';
 import { select, selectAll } from 'hast-util-select';
-import { visit } from 'unist-util-visit';
 import { describe, expect, it } from 'vitest';
 
 import { escapeRegExp } from '../util/escape-regexp';
 import { markdownRendition } from './markdown-rendition';
-import { parseHtml } from './parse-html';
+import { parseHtml, textOf } from './parse-html';
 
 const ROOT = resolve(__dirname, '../..');
 const HOME = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');
@@ -25,15 +24,6 @@ const FIGURES: Record<string, string> = {
 const home = markdownRendition(HOME, FIGURES);
 const tree = parseHtml(HOME.replace(/%(VITE_[A-Z_]+)%/g, (_, name: string) => FIGURES[name]));
 const SCAFFOLDING = new Set(selectAll('.holder, .holder *, .skip-link, .skip-link *', tree));
-
-function textOf(node: Element | Root | null | undefined): string {
-  if (node == null) return '';
-  let out = '';
-  visit(node, 'text', (text: { value: string }) => {
-    out += text.value;
-  });
-  return out.replace(/\s+/g, ' ').trim();
-}
 
 /** Markdown with its inline syntax stripped, so it compares against an element's text. */
 function plain(markdown: string): string {

@@ -4,12 +4,11 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Element } from 'hast';
 import { select, selectAll } from 'hast-util-select';
-import { visit } from 'unist-util-visit';
 import { describe, expect, it } from 'vitest';
 
 import { parseSharePath } from '../src/client/util/url-state/share-path-pure';
 import { decodeBlob } from '../src/client/util/url-state/url-state';
-import { parseHtml } from '../scripts/site/parse-html';
+import { parseHtml, textOf } from '../scripts/site/parse-html';
 import { escapeRegExp } from '../scripts/util/escape-regexp';
 import {
   catalogueRecordCount,
@@ -23,15 +22,6 @@ const HOME_SOURCE = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');
 const HOME = parseHtml(HOME_SOURCE);
 const NOT_FOUND = parseHtml(readFileSync(join(ROOT, 'src/site/404.html'), 'utf8'));
 const TOKEN = /^%VITE_[A-Z_]+%$/;
-
-function textOf(node: Element | null | undefined): string {
-  if (node == null) return '';
-  let out = '';
-  visit(node, 'text', (text: { value: string }) => {
-    out += text.value;
-  });
-  return out.replace(/\s+/g, ' ').trim();
-}
 
 describe('the pages ask for their figures rather than quoting them', () => {
   const cells = selectAll('.readout-value', HOME);
