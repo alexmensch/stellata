@@ -12,14 +12,8 @@ export interface Vec3Like {
  * The smallest pose change that counts, as a ratio of the pose's own scale —
  * an angle in radians for a rotation and a fraction of the camera-to-target
  * distance for a translation, which are one number because `|Δcam| / r` is the
- * angle the move subtends at the orbit target.
- *
- * Any threshold carrying a length is wrong at all but one vantage, and the
- * camera reaches both lunar orbit and the Local Group in a session. Two bounds
- * fix this one: below ~1e-3 the round-trip error is sub-pixel on any display,
- * and it must stay well above the float32 wire's own 6e-8 resolution or a
- * settled camera would rewrite the URL forever.
- * See `README.md#what-counts-as-a-camera-move`.
+ * angle the move subtends at the orbit target. Its bounds:
+ * `README.md#what-counts-as-a-camera-move`.
  */
 export const POSE_CHANGE_EPS = 1e-4;
 
