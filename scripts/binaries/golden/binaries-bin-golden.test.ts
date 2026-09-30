@@ -55,11 +55,8 @@ function encodeFixture(scratch: string): Encoded {
 }
 
 function fieldAt(recordOffset: number): string {
-  let name = 'reserved';
-  for (const [field, offset] of Object.entries(RECORD_LAYOUT)) {
-    if (offset <= recordOffset) name = field;
-  }
-  return name;
+  return Object.entries(RECORD_LAYOUT).reduce((best, entry) =>
+    entry[1] <= recordOffset && entry[1] > best[1] ? entry : best)[0];
 }
 
 function describeFirstDifference(actual: Buffer, golden: Buffer): string | null {
