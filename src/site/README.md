@@ -330,8 +330,8 @@ contentful paint.
 
 ## Pages anticipated but not built
 
-The masthead nav is the slot for them. Today its "Science" and "Cite" links
-point at GitHub; each becomes a local page when one exists.
+The masthead nav is the slot for them; it links only the app. The footer's
+"Science" link points at `SCIENCE.md` on GitHub until `/science` exists.
 
 - `/science` — the cited data-source record as a web surface rather than
   `SCIENCE.md` on GitHub. Tracked as `stellata-2h0e.3`.
