@@ -52,6 +52,9 @@ cross-script policy and pointers.
   vantages and prints the differential table. Clocks only, never a
   pixel; launches only past the operator's `.perf-go` marker
   (`hooks/perf-guard.sh`). Not part of `pnpm test` or the build.
+- `doc-figures/` — counts quoted in docs, generated from the committed
+  `*-expected.json` snapshots (`pnpm run docs:figures`). Run it after any
+  snapshot regeneration. Not part of the build.
 - `hooks/` — Claude Code guard hooks (PreToolUse / SessionStart).
 - `ci/` — helpers only `.github/workflows/` runs: the catalogue build
   cache's key.

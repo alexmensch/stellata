@@ -36,7 +36,9 @@ scripts/hooks/
                            tests/code-comment-rules.test.ts), and/or
                            when a staged comment block restates
                            markdown prose the same commit adds
-                           — README.md#the-restatement-sweep.
+                           — README.md#the-restatement-sweep — and/or
+                           when an added markdown line quotes a snapshot
+                           count without a doc-figure marker.
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
   perf-guard.sh            Two independent gates on Bash / Write / Edit /
@@ -277,6 +279,13 @@ matched commit:
 
 3. **Restatement sweep.** [The restatement sweep](#the-restatement-sweep) below.
 
+4. **Snapshot-copy sweep.** When the commit stages markdown, runs
+   `scripts/doc-figures/check-staged-figures.ts` (through the checkout's own
+   `node_modules/.bin/tsx`) over the added lines; the shape and why it reads
+   only added lines are [Staged copies at commit time](/scripts/doc-figures/README.md#staged-copies-at-commit-time).
+   `[figure-ok: <reason>]` opts out. Fails open: no tsx, no script, or an
+   exit other than 1 lets the commit through.
+
 Any check fires a `permissionDecision: "deny"` with a per-finding
 breakdown and the relevant [Code comments](/AGENTS.md#code-comments--what-ci-enforces-here) substitution.
 
@@ -394,7 +403,8 @@ Two paths:
    (`rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`).
    For `commit-sweep-guard`: pass `[readme-skip: <reason>]` in the
    commit message (covers the README check; comment violations still
-   block — fix the comments). For `prime-guard`: delete the sentinel
+   block — fix the comments), `[comment-ok: <reason>]` for the
+   restatement sweep, `[figure-ok: <reason>]` for the snapshot-copy sweep. For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked. For `skill-guard`: invoke the
    skill, which is the intended route rather than an escape.

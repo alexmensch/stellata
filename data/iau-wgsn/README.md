@@ -62,7 +62,7 @@ the per-class counts, `wgsn-expected.json` pins them:
   contains four commas, so a naive split shifts that row's keys.
 - `_`, `~`, `-` and a literal `null` (5 Virgo rows) all spell null.
 - One corrupt `Bayer/other` cell: a Mathematica formula artifact on
-  HIP 83057 (ρ² Ara). Classified `corrupt`, count pinned at 1; the star's
+  HIP 83057 (ρ² Ara). Classified `corrupt`, count pinned at <!-- count:wgsn/cellCorrupt -->1<!-- /count -->; the star's
   Bayer designation arrives via the IV/27A tail instead.
 - `82 G. Eri[3]` carries a footnote marker; stripped.
 - Gould numbered Serpens' halves separately (`4 G. Ser Cap` ≠
@@ -70,8 +70,8 @@ the per-class counts, `wgsn-expected.json` pins them:
   own column.
 - `LO Hya (25 G. Hya)`: a GCVS form with the real designation in the
   parenthetical — the parenthetical wins, GCVS already sources the outer.
-- Both key columns inline a component letter on close pairs: 229 `HD`
-  cells (`224782A`, and 3 two-letter `62264AB`) and 35 `HIP` cells
+- Both key columns inline a component letter on close pairs: <!-- count:wgsn/hdComponentCells -->229<!-- /count --> `HD`
+  cells (`224782A`, and 3 two-letter `62264AB`) and <!-- count:wgsn/hipComponentCells -->35<!-- /count --> `HIP` cells
   (`HIP 518A`), split into `hd` / `hip` + their component. A key shape
   that is neither this nor a null spelling fails the build rather than
   nulling the row.

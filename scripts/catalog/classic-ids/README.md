@@ -187,12 +187,12 @@ is a pass either way and only one of the causes is fixable:
 
 | Count | Today | Meaning |
 |---|---|---|
-| `gateSkippedNoGMag` | **0** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
-| `gateSkippedNullGMag` | 112 | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
+| `gateSkippedNoGMag` | **<!-- count:classic-id-overlay/gateSkippedNoGMag -->0<!-- /count -->** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
+| `gateSkippedNullGMag` | <!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count --> | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
 `gateableVia` partitions the rows the gate could weigh by which tier supplied
-their V — **hip 99,799 · tycho2 254,135 · gliese 1,053** — and
-`gateSkippedNoPrintedV` is what is left: **2,738** rows no printed tier reaches
+their V — **hip <!-- count:classic-id-overlay/gateableVia.hip -->99,799<!-- /count --> · tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count --> · gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->** — and
+`gateSkippedNoPrintedV` is what is left: **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows no printed tier reaches
 at all. `bindingCandidateSourceIds` applies the same reach, so the request and
 the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
@@ -285,7 +285,7 @@ Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
 The 123 rows it misses are faint Flamsteed-only records absent from IV/27A's
 TAP subset; they ride the positional fallback.
 
-**GCVS fills the field only where IV/27A left it empty** (7,363 records). On the
+**GCVS fills the field only where IV/27A left it empty** (<!-- count:build-catalog/gcvsDesignationCon -->7,929<!-- /count --> records). On the
 8 where the two disagree the star carries a Bayer/Flamsteed designation and a
 variable name in different constellations (HD 104337 is Crater's Flamsteed star
 and Corvus's TY): one `uint8` serves one of them, and IV/27A wins because its
@@ -307,7 +307,7 @@ constellation out of the designation string and loses only its expanded alias
 - **`gate*`** — rows dropped per gate, `gateableVia` per printed tier, and
   `gateSkippedNoPrintedV`, the population no tier reaches and so unvettable.
   That last one is the count to watch alongside `../membership/`'s
-  `spineBrightRowsWithoutOverlayEntry` — 114 of the 178 rows the printed-V
+  `spineBrightRowsWithoutOverlayEntry` — <!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> rows the printed-V
   cascade puts at V <= 3 — which is where the known-unfixed mis-bindings live.
 
 The merge's own counts are [What the merge compares values on](label-merge/README.md#what-the-merge-compares-values-on).
