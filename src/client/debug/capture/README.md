@@ -139,8 +139,8 @@ Equal time per decade is equal time per octave of apparent size.
 
 The default ease is the quintic smootherstep the arrival profile lands on
 ([Profile](/src/client/camera/arrival/README.md#profile) there), which has zero velocity *and* zero acceleration at both
-ends: the camera is genuinely still on the first and last frames, which is
-what makes a loop cut cleanly.
+ends: the camera is genuinely still on the first and last frames, so a clip
+opens cleanly and settles on the frame its poster shows.
 
 ## What the clock does
 
