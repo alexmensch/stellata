@@ -222,10 +222,13 @@ needs more. They are the instrument's own state rather than
 `filter.coordSphere`, so they reach it through `OrbitFramePort`
 (`../attitude-pure.ts`), and a restore has to land after the focus, the
 filter and the camera mode have settled, since each of those disarms ORB:
-[ORB and the orbit lock](../../util/url-state/README.md#orb-and-the-orbit-lock) owns the ordering
+[ORB and the orbit lock](../../util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock) owns the ordering
 and the compatibility argument. A restore goes through the same two fields
 the flag writes and then lets `refresh` apply the rule below, so a link
-cannot arm a lock the receiver would refuse.
+cannot arm a lock the receiver would refuse. A locked link also writes its
+pose in ORB rather than against the stars, so it lands holding the same
+attitude to the orbit on whatever date it is opened
+([An orbit-relative pose](../../util/url-state/orbit-pose/README.md#an-orbit-relative-pose)).
 
 **`refresh` is also where the pair is published to the URL**, on change and
 through `Stellata.notifyOrbitFrameChanged()` — not from the gestures, because

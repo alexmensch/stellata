@@ -18,6 +18,7 @@ import type {
 } from '../galactic/coord-spheres/coord-sphere';
 import type { TargetKind } from '../camera/focus/focus-target';
 import type { CameraMode } from '../camera/focus/focus-controller';
+import type { LateState } from '../util/late/late';
 
 export type ReferenceFrameKey =
   | DrawnCoordSphereFrame
@@ -292,6 +293,8 @@ export interface OrbitFramePort {
   isArmed(): boolean;
   isLocked(): boolean;
   restore(armed: boolean, locked: boolean): void;
+  /** Overwritten by the next call: read it now or copy it. */
+  orbitFrame(): LateState<ReferenceFrame>;
 }
 
 const FRAME_LABELS: Record<AutoFrameKey, string> = {

@@ -22,6 +22,8 @@ import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
 } from './pose-change-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import type { ReferenceFrame } from '../../attitude/attitude-pure';
+import { poseIntoFrame, poseOutOfFrame } from './orbit-pose/orbit-pose-pure';
 import type {
   CoordSphereFrame,
   DrawnCoordSphereFrame,
@@ -55,6 +57,9 @@ const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
 const DEFAULT_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
+// An orbit-relative pose omits `up` when level on ORB instead, and its pole in
+// ORB's own components is +z.
+const ORB_LEVEL_UP: [number, number, number] = [0, 0, 1];
 // Roll off galactic level under which the `up` field is omitted, and the
 // receiver reproduces it from DEFAULT_UP instead. Far above the float noise
 // of the projection and far below any roll a gesture can hold, so only a
@@ -89,7 +94,7 @@ export function viewPose(view: DecodedView): ViewPose {
   return {
     cam: view.cam ?? defaultCamForMode(view.mode),
     tgt: view.tgt ?? DEFAULT_TGT,
-    up: view.up ?? DEFAULT_UP,
+    up: view.up ?? (view.orbitPose ? ORB_LEVEL_UP : DEFAULT_UP),
     fov: view.fov !== undefined && view.fov > 0 ? view.fov : DEFAULT_FOV,
   };
 }
@@ -188,6 +193,9 @@ export interface DecodedView {
   /** The orbit lock engaged. ORB-only, and the receiver's own
    *  `orbitLockShowing` rule still decides whether it can exist. */
   orbLock?: boolean;
+  /** `cam − tgt` and `up` are ORB components, not ICRS. Set only with
+   *  `orbLock` — orbit-pose/README.md#an-orbit-relative-pose. */
+  orbitPose?: boolean;
   /** Pinned points-of-interest as SIDs, any camera mode. SIDs
    *  survive catalog rebuilds by construction. Hard-capped at
    *  POI_MAX_COUNT to bound the blob. */
@@ -506,7 +514,7 @@ function lgEmissionDisabledField(bit: number): FieldSpec {
 // A boolean whose presence bit IS the value: set means true, absent means the
 // default. Zero payload, so it costs nothing but the mask bit — which is what
 // the flags byte being full leaves as the cheap way to add one.
-function boolBitField(bit: number, key: 'orb' | 'orbLock'): FieldSpec {
+function boolBitField(bit: number, key: 'orb' | 'orbLock' | 'orbitPose'): FieldSpec {
   return {
     bit, key, ...fixed(0),
     isPresent: v => v[key] === true,
@@ -649,6 +657,7 @@ const FIELDS_V4: FieldSpec[] = [
   coordSphereFrameField(26, 'ecliptic'),
   boolBitField(27, 'orb'),
   boolBitField(28, 'orbLock'),
+  boolBitField(29, 'orbitPose'),
 ];
 
 function packFlags(v: DecodedView): number {
@@ -813,8 +822,8 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
 
   const c = encodeCam;
   const t = encodeTgt;
-  anchoredPose(stellata, focused, c, t);
-  const u = stellata.camera.up;
+  const u = encodeUp;
+  const orbitFrame = wirePose(stellata, focused, c, t, u);
   // README.md#what-counts-as-a-camera-move owns every gate below — each a
   // fraction of the orbit radius, none a distance.
   //
@@ -841,10 +850,11 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   if (view.worldOffset || divergesFromDefault(t, DEFAULT_TGT, scale)) {
     view.tgt = [t.x, t.y, t.z];
   }
-  if (Math.abs(stellata.roll.upRollError(stellata.camera, GALACTIC_NORTH_POLE_ICRS))
-    > LEVEL_UP_EPS_RAD) {
+  const levelPole = orbitFrame?.pole ?? GALACTIC_NORTH_POLE_ICRS;
+  if (Math.abs(stellata.roll.upRollError(stellata.camera, levelPole)) > LEVEL_UP_EPS_RAD) {
     view.up = [u.x, u.y, u.z];
   }
+  if (orbitFrame !== null) view.orbitPose = true;
 
   // ORB and its lock live on the instrument rather than in filter.coordSphere,
   // so they reach the wire through the port and nowhere else. Both are single
@@ -902,9 +912,42 @@ function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | u
  *  focus recentred the origin. Only the frame-relative part of the pose —
  *  everything else in the restore is absolute and already correct. */
 function reapplyPose(stellata: Stellata, view: DecodedView): void {
-  if (view.cam) stellata.camera.position.set(view.cam[0], view.cam[1], view.cam[2]);
-  if (view.tgt) stellata.controls.target.set(view.tgt[0], view.tgt[1], view.tgt[2]);
-  if (view.cam || view.tgt) stellata.controls.update();
+  const pose = seatedPose(view, view.orbitPose ? orbitFrameNow(stellata) : null);
+  if (view.orbitPose) stellata.roll.restore(stellata.camera, ...pose.up);
+  if (pose.cam) stellata.camera.position.set(...pose.cam);
+  if (pose.tgt) stellata.controls.target.set(...pose.tgt);
+  if (view.orbitPose || pose.cam || pose.tgt) {
+    stellata.controls.update();
+    stellata.roll.adoptFromCamera(stellata.camera);
+  }
+}
+
+type Vec3Tuple = [number, number, number];
+
+/** The pose slots a blob seats, in the receiver's ICRS. */
+interface SeatedPose {
+  cam?: Vec3Tuple;
+  tgt?: Vec3Tuple;
+  up: Vec3Tuple;
+}
+
+// see orbit-pose/README.md#an-orbit-relative-pose
+function seatedPose(view: DecodedView, frame: ReferenceFrame | null): SeatedPose {
+  const filled = viewPose(view);
+  if (!view.orbitPose || frame === null) {
+    return { cam: view.cam, tgt: view.tgt, up: filled.up };
+  }
+  const cam = { x: filled.cam[0], y: filled.cam[1], z: filled.cam[2] };
+  const tgt = { x: filled.tgt[0], y: filled.tgt[1], z: filled.tgt[2] };
+  const up = { x: filled.up[0], y: filled.up[1], z: filled.up[2] };
+  poseOutOfFrame(cam, tgt, up, frame);
+  return { cam: [cam.x, cam.y, cam.z], tgt: view.tgt, up: [up.x, up.y, up.z] };
+}
+
+/** ORB for the focus as it stands now, or null when there is none to read. */
+function orbitFrameNow(stellata: Stellata): ReferenceFrame | null {
+  const read = stellata.getOrbitFramePort()?.orbitFrame();
+  return read?.status === 'ready' ? read.value : null;
 }
 
 function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): void {
@@ -988,7 +1031,7 @@ export function applyDecodedView(
   // whatever pose this session last held: at boot that is the pole projected
   // into the DEFAULT view axis, which renders level from that vantage and no
   // other. A level share from +X came back rolled 66 degrees.
-  const up = view.up ?? DEFAULT_UP;
+  const up = viewPose(view).up;
   stellata.roll.restore(stellata.camera, up[0], up[1], up[2]);
   controlsDirty = true;
 
@@ -1078,12 +1121,18 @@ export function applyDecodedView(
     controlsDirty = true;
   }
 
-  if (view.cam) {
-    stellata.camera.position.set(view.cam[0], view.cam[1], view.cam[2]);
+  // A pending focus has no ORB yet: its callback seats the converted pose.
+  const pose = seatedPose(
+    view, view.orbitPose && focusPending === null ? orbitFrameNow(stellata) : null,
+  );
+  // Restored above as a raw axis for the focus legs; only ICRS now.
+  if (view.orbitPose) stellata.roll.restore(stellata.camera, ...pose.up);
+  if (pose.cam) {
+    stellata.camera.position.set(...pose.cam);
     controlsDirty = true;
   }
-  if (view.tgt) {
-    stellata.controls.target.set(view.tgt[0], view.tgt[1], view.tgt[2]);
+  if (pose.tgt) {
+    stellata.controls.target.set(...pose.tgt);
     controlsDirty = true;
   }
   if (controlsDirty) {
@@ -1235,8 +1284,10 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
 const anchorScratch = new THREE.Vector3();
 const frameCam = new THREE.Vector3();
 const frameTgt = new THREE.Vector3();
+const frameUp = new THREE.Vector3();
 const encodeCam = new THREE.Vector3();
 const encodeTgt = new THREE.Vector3();
+const encodeUp = new THREE.Vector3();
 
 /**
  * cam and tgt as the wire means them: relative to the anchor the RECEIVER
@@ -1271,6 +1322,22 @@ function anchoredPose(
   outTgt.sub(anchorScratch);
 }
 
+/** The frame the pose was written in, or null for ICRS.
+ *  orbit-pose/README.md#an-orbit-relative-pose */
+function wirePose(
+  stellata: Stellata,
+  focused: Target | null,
+  outCam: THREE.Vector3,
+  outTgt: THREE.Vector3,
+  outUp: THREE.Vector3,
+): ReferenceFrame | null {
+  anchoredPose(stellata, focused, outCam, outTgt);
+  outUp.copy(stellata.camera.up);
+  const frame = stellata.getOrbitFramePort()?.isLocked() ? orbitFrameNow(stellata) : null;
+  if (frame !== null) poseIntoFrame(outCam, outTgt, outUp, frame);
+  return frame;
+}
+
 function snapshotCam(out: Float64Array, c: Vec3Like, t: Vec3Like, u: Vec3Like): void {
   out[0] = c.x; out[1] = c.y; out[2] = c.z;
   out[3] = t.x; out[4] = t.y; out[5] = t.z;
@@ -1297,8 +1364,8 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
   // applyFromUrl/applyFirstLoadView just applied) until the user
   // actually moves the camera, scrubs time, or changes a setting.
   const lastCam = new Float64Array(9);
-  anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
-  snapshotCam(lastCam, frameCam, frameTgt, stellata.camera.up);
+  wirePose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt, frameUp);
+  snapshotCam(lastCam, frameCam, frameTgt, frameUp);
   let lastT = persistedT(stellata);
 
   const schedule = () => {
@@ -1327,13 +1394,12 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
       changed = true;
     }
 
-    anchoredPose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt);
-    const u = stellata.camera.up;
+    wirePose(stellata, stellata.focus.getFocusedTarget(), frameCam, frameTgt, frameUp);
     // Steady-state path: one scale-free comparison against the snapshot
     // (`pose-change-pure.ts`). No allocations on the no-change path — this
     // used to be 10+ string allocations per frame from a toFixed(3)×9 hash.
-    if (poseChanged(lastCam, frameCam, frameTgt, u)) {
-      snapshotCam(lastCam, frameCam, frameTgt, u);
+    if (poseChanged(lastCam, frameCam, frameTgt, frameUp)) {
+      snapshotCam(lastCam, frameCam, frameTgt, frameUp);
       changed = true;
     }
 

@@ -325,11 +325,11 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
    *  which is also how ORB stops being offered the moment that stops being
    *  true. Pending is not absent: a pair whose artifact is still attaching
    *  will have an orbit, and an arm restored ahead of it has to survive. */
-  function refreshOrbitFrame(): LateState<FocusedOrbitSource>['status'] {
+  function refreshOrbitFrame(out = orbitFrame): LateState<FocusedOrbitSource>['status'] {
     const source = orbitSourceNow();
     if (source.status !== 'ready') return source.status;
     if (!focusedOrbitFrom(orbit, source.value, stellata)) return 'absent';
-    orbitFrameInto(orbitFrame, stellata.camera, orbit.normal, orbit.toCentre);
+    orbitFrameInto(out, stellata.camera, orbit.normal, orbit.toCentre);
     return 'ready';
   }
 
@@ -685,8 +685,16 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
   // whether the lock can exist here. Ordering is the caller's problem — a
   // restore has to land after the focus, the filter and the camera mode have
   // settled, since each of those clears ORB
-  // (`../util/url-state/README.md#orb-and-the-orbit-lock`).
+  // (`../util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock`).
+
+  // Never `orbitFrame`: the tick rides from that one between frames.
+  const portFrame = emptyReferenceFrame();
+  const portFrameReady = { status: 'ready', value: portFrame } as const;
   stellata.setOrbitFramePort({
+    orbitFrame: () => {
+      const status = refreshOrbitFrame(portFrame);
+      return status === 'ready' ? portFrameReady : { status };
+    },
     isArmed: () => orbitActive,
     isLocked: () => orbitLocked,
     restore: (armed, locked) => {
