@@ -273,11 +273,6 @@ async function main() {
       },
     });
 
-    // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
-    // chrome comes up now and the loading panel stays on top of a rendering
-    // sky rather than in front of a blank one.
-    // util/url-state/README.md#a-focus-that-resolves-after-the-pose.
-    //
     // Relation caches bake each system's anchor from its primary's
     // position, and `relationIndicesInBounds` tests against the full
     // allocation — so a pair in a late chunk would cache (0,0,0) as its
@@ -290,6 +285,11 @@ async function main() {
       await frame();
       stellata.binaries.attach(binaries);
     })();
+
+    // FIRST PAINT. The scene is live on the catalogue's first chunk, so the
+    // chrome comes up now and the loading panel stays on top of a rendering
+    // sky rather than in front of a blank one.
+    // util/url-state/README.md#a-focus-that-resolves-after-the-pose.
     if (focusPending) await Promise.race([focusPending, binariesAttached]);
     awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
