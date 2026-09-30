@@ -79,14 +79,17 @@ describe('the public stylesheet carries no breakpoints', () => {
     expect(sized, `viewport-sized media queries: ${sized.join(' · ')}`).toEqual([]);
   });
 
-  it('sizes no type in pixels, directly or through a token', () => {
+  it('sizes no type in an absolute unit, directly or through any chain of tokens', () => {
     const typeProps = new Set(['font', 'font-size', 'line-height']);
-    const pxType = RULES.filter(({ prop, value }) => {
-      if (!typeProps.has(prop)) return false;
-      const referenced = [...value.matchAll(/var\((--[\w-]+)/g)].map(([, name]) => TOKENS.get(name) ?? '');
-      return [value, ...referenced].some((v) => /\d(px|pt)\b/.test(v));
-    });
-    expect(pxType, `pixel type: ${shown(pxType)}`).toEqual([]);
+    const resolved = (value: string, seen: ReadonlySet<string> = new Set()): string =>
+      [...value.matchAll(/var\((--[\w-]+)/g)]
+        .filter(([, name]) => !seen.has(name))
+        .map(([, name]) => resolved(TOKENS.get(name) ?? '', new Set([...seen, name])))
+        .reduce((all, next) => `${all} ${next}`, value);
+    const absoluteType = RULES.filter(
+      ({ prop, value }) => typeProps.has(prop) && /\d(px|pt|pc|cm|mm|in|Q)\b/.test(resolved(value)),
+    );
+    expect(absoluteType, `absolute-unit type: ${shown(absoluteType)}`).toEqual([]);
   });
 
   it('declares every type size as a scale step', () => {
