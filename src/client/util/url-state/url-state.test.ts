@@ -103,6 +103,8 @@ function mockOrbitPort(state: {
   locked: boolean;
   /** ORB for the focus; absent when the focus rides no orbit. */
   frame?: LateState<ReferenceFrame>;
+  /** When a pending `frame` stops being pending. */
+  settled?: Promise<void>;
 }): OrbitFramePort {
   return {
     isArmed: () => state.armed,
@@ -112,6 +114,7 @@ function mockOrbitPort(state: {
       state.locked = armed && locked;
     },
     orbitFrame: () => state.frame ?? { status: 'absent' },
+    orbitSourcesSettled: () => state.settled ?? Promise.resolve(),
   };
 }
 
@@ -212,6 +215,7 @@ function makeStatefulStellata() {
       armed: boolean;
       locked: boolean;
       frame?: LateState<ReferenceFrame>;
+      settled?: Promise<void>;
     },
   };
   const clearFocus = () => {
@@ -1290,6 +1294,76 @@ describe('url-state', () => {
         const rx = open(blob, null);
         const { x, y, z } = rx.stellata.camera.position;
         expect([x, y, z]).toEqual(wire);
+      });
+
+      // see orbit-pose/README.md#a-pair-whose-orbit-attaches-late
+      describe('a pair whose orbit attaches late', () => {
+        function pendingOrbit() {
+          let land: () => void = () => {};
+          const settled = new Promise<void>((r) => { land = r; });
+          return { settled, land };
+        }
+
+        function openPending(blob: string, idMaps = makeFixtureBuild()) {
+          const rx = makeStatefulStellata();
+          const orbit = pendingOrbit();
+          rx.state.orbit.frame = { status: 'pending' };
+          rx.state.orbit.settled = orbit.settled;
+          const pending = applyDecodedView(rx.stellata, decodeBlob(blob), idMaps);
+          const attach = async (frame: ReferenceFrame) => {
+            rx.state.orbit.frame = ready(frame);
+            orbit.land();
+            await pending;
+          };
+          return { rx, pending, attach };
+        }
+
+        it('re-seats the pose through ORB once the pair attaches', async () => {
+          const blob = share(earthFrame(0));
+          const { rx, pending, attach } = openPending(blob);
+          expect(pending).not.toBeNull();
+          await attach(earthFrame(DAYS));
+          const landed = inFrame(
+            rx.stellata.camera.position, rx.stellata.camera.up, earthFrame(DAYS),
+          );
+          expectSameOrbitPose(landed, inFrame({ x: CAM[0], y: CAM[1], z: CAM[2] }, UP, earthFrame(0)));
+        });
+
+        // The live pose is the stand-in, so a write in the window re-encodes the link.
+        it('keeps writing the link\'s own pose until it seats', () => {
+          const blob = share(earthFrame(0));
+          const { rx } = openPending(blob);
+          const wire = decodeBlob(blob);
+          const re = currentStateOf(rx.stellata, makeFixtureBuild());
+          expect(re).toMatchObject({ cam: wire.cam, up: wire.up, orbitPose: true });
+        });
+
+        it('leaves a camera the user has taken alone', async () => {
+          const blob = share(earthFrame(0));
+          const { rx, attach } = openPending(blob);
+          (rx.stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
+          rx.stellata.camera.position.set(42, 43, 44);
+          await attach(earthFrame(DAYS));
+          const { x, y, z } = rx.stellata.camera.position;
+          expect([x, y, z]).toEqual([42, 43, 44]);
+        });
+
+        it('holds a late focus pending until its pose has seated too', async () => {
+          const sidResolver = new SidResolver(['star', 'cloud']);
+          sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+          const idMaps = makeIdMaps({ sidResolver });
+          const blob = share(earthFrame(0));
+          const { pending, attach } = openPending(blob, idMaps);
+          let settled = false;
+          void pending!.then(() => { settled = true; });
+
+          sidResolver.attach('star', arrayDomain(STAR_SIDS));
+          await Promise.resolve();
+          expect(settled).toBe(false);
+
+          await attach(earthFrame(DAYS));
+          expect(settled).toBe(true);
+        });
       });
 
       it('costs no bytes over a bit-28 link', () => {

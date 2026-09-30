@@ -47,6 +47,7 @@ import { cadenceVisibleTurnRad } from '../../render-gate/cadence/clock-cadence-p
 import {
   focusedOrbitFrom,
   focusedOrbitInto,
+  orbitSourcesSettled,
   resolveFocusedOrbit,
   type FocusedOrbit,
 } from './orbit-plane';
@@ -937,6 +938,28 @@ describe('focusedOrbitInto', () => {
         .toEqual({ status: 'pending' });
       expect(focusedOrbitInto(out(), starHarness('pending'), { kind: 'star', idx: PRIMARY }))
         .toBe(false);
+    });
+  });
+
+  describe('orbitSourcesSettled', () => {
+    const harness = (data: LateCell<BinariesData>) =>
+      ({ binaries: { data } }) as unknown as Stellata;
+
+    it('settles when the binaries artifact lands, not before', async () => {
+      const cell = new LateCell<BinariesData>();
+      let settled = false;
+      void orbitSourcesSettled(harness(cell)).then(() => { settled = true; });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      cell.land(pair());
+      await Promise.resolve();
+      expect(settled).toBe(true);
+    });
+
+    it('settles at once when the artifact is already known never to land', async () => {
+      const cell = new LateCell<BinariesData>();
+      cell.conclude();
+      await expect(orbitSourcesSettled(harness(cell))).resolves.toBeUndefined();
     });
   });
 

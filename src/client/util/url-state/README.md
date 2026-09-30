@@ -368,12 +368,15 @@ that lands — including one that lands and then translates to nothing, like
 a planet whose host body field never attached. A sid that never resolves
 never fires the callback at all: `flushIntents` drops an intent that has
 gone `unknown` without calling it, so nothing on this side settles the
-promise. `kinds.star.ready` is not a belt-and-braces backstop, it is the
-*only* thing that ends that wait, and boot races the two for exactly that
-reason. At the complete catalogue a focus that has not landed never will,
-and holding the cover that long is what boot did before it painted
-progressively at all — so the worst case is the old behaviour, not a black
-screen forever.
+promise. The binaries attach, which follows the complete catalogue by a
+frame, is not a belt-and-braces backstop, it is the *only* thing that ends
+that wait, and boot races the two for exactly that reason. At the complete
+catalogue a focus that has not landed never will, and holding the cover that
+long is what boot did before it painted progressively at all — so the worst
+case is the old behaviour, not a black screen forever. The same promise also
+holds for a locked pose on a pair whose orbit has not attached yet
+([A pair whose orbit attaches late](orbit-pose/README.md#a-pair-whose-orbit-attaches-late)), which is why the race
+is against the attach rather than the catalogue alone.
 
 ## A pin that resolves after the link
 

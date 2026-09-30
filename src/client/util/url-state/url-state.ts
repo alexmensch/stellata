@@ -855,6 +855,14 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
     view.up = [u.x, u.y, u.z];
   }
   if (orbitFrame !== null) view.orbitPose = true;
+  // Until it seats, the live pose is the stand-in, not the link's.
+  const pending = pendingOrbitPoses.get(stellata);
+  if (pending !== undefined && !stellata.renderGate.sawUserInput) {
+    view.cam = pending.cam;
+    view.tgt = pending.tgt;
+    view.up = pending.up;
+    view.orbitPose = true;
+  }
 
   // ORB and its lock live on the instrument rather than in filter.coordSphere,
   // so they reach the wire through the port and nowhere else. Both are single
@@ -944,6 +952,23 @@ function seatedPose(view: DecodedView, frame: ReferenceFrame | null): SeatedPose
   return { cam: [cam.x, cam.y, cam.z], tgt: view.tgt, up: [up.x, up.y, up.z] };
 }
 
+/** A link's orbit-relative pose still waiting on its focus's ORB, keyed by
+ *  shell. orbit-pose/README.md#a-pair-whose-orbit-attaches-late */
+const pendingOrbitPoses = new WeakMap<Stellata, DecodedView>();
+
+/** Null unless the focus's ORB is still pending; then it settles once the
+ *  pose has re-seated, or declined to. */
+function reseatWhenOrbitReady(stellata: Stellata, view: DecodedView): Promise<void> | null {
+  const port = stellata.getOrbitFramePort();
+  if (!view.orbitPose || port === null || port.orbitFrame().status !== 'pending') return null;
+  pendingOrbitPoses.set(stellata, view);
+  return port.orbitSourcesSettled().then(() => {
+    if (pendingOrbitPoses.get(stellata) !== view) return;
+    pendingOrbitPoses.delete(stellata);
+    if (!stellata.renderGate.sawUserInput) reapplyPose(stellata, view);
+  });
+}
+
 /** ORB for the focus as it stands now, or null when there is none to read. */
 function orbitFrameNow(stellata: Stellata): ReferenceFrame | null {
   const read = stellata.getOrbitFramePort()?.orbitFrame();
@@ -988,6 +1013,7 @@ export function applyDecodedView(
   idMaps: IdMaps,
 ): Promise<void> | null {
   if (view.unit) setUnit(view.unit);
+  pendingOrbitPoses.delete(stellata);
 
   // Declutter level — applied before the filter patch below; drives
   // SceneDeclutter's pushes (default 'all' omitted, so this only fires for
@@ -1085,6 +1111,11 @@ export function applyDecodedView(
           // Last: a sid whose domain attaches after this function returns fires
           // its 'focus' event then, and the mode change above disarms ORB too.
           restoreOrbitFrame(stellata, view);
+          const orbitPending = deferred ? reseatWhenOrbitReady(stellata, view) : null;
+          if (orbitPending !== null) {
+            void orbitPending.then(() => settle?.());
+            return;
+          }
         }
         settle?.();
       });
@@ -1159,7 +1190,7 @@ export function applyDecodedView(
   // one case that lands after this returns; `restore` is idempotent.
   restoreOrbitFrame(stellata, view);
 
-  return focusPending;
+  return focusPending ?? reseatWhenOrbitReady(stellata, view);
 }
 
 /** A link's pins, one slot per sid in the link's order. */

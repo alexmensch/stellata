@@ -36,6 +36,7 @@ import { focusFrameInputs } from './focus-frame';
 import { coordSphereNorthPole } from '../galactic/coord-spheres/coord-sphere-frames';
 import {
   focusedOrbitFrom,
+  orbitSourcesSettled,
   resolveFocusedOrbit,
   type FocusedOrbit,
   type FocusedOrbitSource,
@@ -695,6 +696,7 @@ export function createAttitudeIndicator(stellata: Stellata): AttitudeIndicator |
       const status = refreshOrbitFrame(portFrame);
       return status === 'ready' ? portFrameReady : { status };
     },
+    orbitSourcesSettled: () => orbitSourcesSettled(stellata),
     isArmed: () => orbitActive,
     isLocked: () => orbitLocked,
     restore: (armed, locked) => {

@@ -278,7 +278,20 @@ async function main() {
     // chrome comes up now and the loading panel stays on top of a rendering
     // sky rather than in front of a blank one.
     // util/url-state/README.md#a-focus-that-resolves-after-the-pose.
-    if (focusPending) await Promise.race([focusPending, kinds.star.ready]);
+    //
+    // Relation caches bake each system's anchor from its primary's
+    // position, and `relationIndicesInBounds` tests against the full
+    // allocation — so a pair in a late chunk would cache (0,0,0) as its
+    // anchor and project the whole orbit in the wrong frame, silently. Chained
+    // here rather than inline in wave 2, because the cover can be waiting on
+    // it: util/url-state/orbit-pose/README.md#a-pair-whose-orbit-attaches-late.
+    const binariesAttached = (async () => {
+      await kinds.star.ready;
+      await catalog.whenComplete;
+      await frame();
+      stellata.binaries.attach(binaries);
+    })();
+    if (focusPending) await Promise.race([focusPending, binariesAttached]);
     awaitingFocus = false;
     await new Promise((r) => requestAnimationFrame(r));
     // Out of the root stacking context and into the instrument stack —
@@ -316,13 +329,7 @@ async function main() {
     await kinds.star.ready;
     const completeCatalog = await catalog.whenComplete;
     const searchIndex = kinds.star.searchIndex;
-    await frame();
-
-    // Relation caches bake each system's anchor from its primary's
-    // position, and `relationIndicesInBounds` tests against the full
-    // allocation — so a pair in a late chunk would cache (0,0,0) as its
-    // anchor and project the whole orbit in the wrong frame, silently.
-    stellata.binaries.attach(binaries);
+    await binariesAttached;
     await frame();
 
     // Chart mode bound against this map in wave 1 and holds it by

@@ -104,3 +104,27 @@ and the deferred-focus callback converts in its re-seat
 ([A focus that resolves after the pose](../README.md#a-focus-that-resolves-after-the-pose)).
 A focus with no ORB behind it seats the components as ICRS — nothing is
 drawn to hold the pose against, and `restore` refuses the lock there too.
+
+## A pair whose orbit attaches late
+
+**A binary star's ORB does not exist until binaries.bin attaches, and that is
+after the complete catalogue** — so a locked link to Algol resolves its focus
+at once and still has no basis to convert through. `orbitFrame()` answers
+`pending` there, distinct from absent, and the restore:
+
+- **seats the components as ICRS for now**, so the camera stands somewhere
+  valid under the cover;
+- **re-seats through ORB when `orbitSourcesSettled()` does**, unless the user
+  has touched the view since (`renderGate.sawUserInput`, the same veto as a
+  late focus);
+- **keeps writing the link's own pose to the URL until then** — the live pose
+  is the stand-in, so a write in the window would otherwise publish it as
+  the link;
+- **returns the wait to boot as the pending promise**, and the full-bleed cover
+  holds on it. Boot therefore attaches binaries on a chain of its own rather
+  than inline in wave 2, which would otherwise wait on the cover waiting on it.
+
+A later `applyDecodedView` supersedes a wait that has not settled. The
+instrument holds a pending ORB armed and unridden
+(`../../../attitude/orbit-frame/README.md`), so the lock is still engaged when
+the pose seats.
