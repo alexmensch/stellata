@@ -13,10 +13,12 @@ function entry(fields: Partial<IndexEntry>): IndexEntry {
   return { key: 'k', line: 1, label: 'Author 2000', title: 'A title', reference: '', copy: '', notes: [], rows: [], ...fields };
 }
 
+type Node = { citation?: Record<string, unknown>[]; '@graph'?: Node[] };
+
 function citations(html: string): Record<string, unknown>[] {
   const body = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)![1];
-  const graph = JSON.parse(body) as { '@graph': { citation?: Record<string, unknown>[] }[] };
-  return graph['@graph'].flatMap((node) => node.citation ?? []);
+  const graph = JSON.parse(body) as Node;
+  return (graph['@graph'] ?? [graph]).flatMap((node) => node.citation ?? []);
 }
 
 describe('citedWork', () => {
@@ -63,6 +65,15 @@ describe('withIndexCitations', () => {
   it('leaves a page without a citation array untouched', () => {
     const html = '<script type="application/ld+json">{"@graph":[{"@type":"Person"}]}</script>';
     expect(withIndexCitations(html, [entry({})])).toBe(html);
+  });
+
+  it('reads a single-node block with no @graph', () => {
+    const lone = '<script type="application/ld+json">{"@type":"WebPage"}</script>';
+    expect(withIndexCitations(lone, [entry({})])).toBe(lone);
+    const citing = `<script type="application/ld+json">${JSON.stringify({ '@type': 'WebPage', citation: [] })}</script>`;
+    expect(citations(withIndexCitations(citing, [entry({ title: 'Indexed' })]))).toEqual([
+      expect.objectContaining({ name: 'Indexed' }),
+    ]);
   });
 
   it('keeps a title from closing the script element', () => {

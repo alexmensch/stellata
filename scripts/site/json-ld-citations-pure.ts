@@ -31,16 +31,17 @@ export function citedWork(entry: IndexEntry): CitedWork {
   };
 }
 
-interface Graph {
-  '@graph': { citation?: unknown[] }[];
+interface JsonLdNode {
+  citation?: unknown[];
+  '@graph'?: JsonLdNode[];
 }
 
 /** A page with no JSON-LD `citation` array comes back unchanged; more than one is an error. */
 export function withIndexCitations(html: string, entries: IndexEntry[]): string {
   let citing = 0;
   const out = html.replace(JSON_LD, (block, open: string, body: string, close: string) => {
-    const graph = JSON.parse(body) as Graph;
-    const nodes = graph['@graph'].filter((node) => Array.isArray(node.citation));
+    const graph = JSON.parse(body) as JsonLdNode;
+    const nodes = (graph['@graph'] ?? [graph]).filter((node) => Array.isArray(node.citation));
     if (nodes.length === 0) return block;
     citing += nodes.length;
     nodes[0].citation!.push(...entries.map(citedWork));
