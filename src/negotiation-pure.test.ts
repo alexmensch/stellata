@@ -25,6 +25,9 @@ describe('markdown is opt-in, by naming the type', () => {
     ['text/plain', 'a client that wants plain text'],
     ['text/html, text/markdown;q=0.5', 'a client that ranks HTML above markdown'],
     ['text/markdown;q=0', 'a client that refuses markdown outright'],
+    ['text/markdown;Q=0', 'a refusal with the parameter name upper-cased'],
+    ['text/markdown; q = 0', 'a refusal with space around the equals sign'],
+    ['text/markdown;q=abc', 'a weight that is not a number'],
   ])('answers HTML to %s (%s)', (accept) => {
     expect(prefersMarkdown(accept)).toBe(false);
   });

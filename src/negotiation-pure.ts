@@ -27,8 +27,12 @@ function namedQuality(accept: string, type: string): number | null {
   for (const entry of accept.split(',')) {
     const [name, ...params] = entry.split(';').map((part) => part.trim());
     if (name.toLowerCase() !== type) continue;
-    const q = params.find((p) => p.startsWith('q='));
-    return q === undefined ? 1 : Number(q.slice(2));
+    const q = params
+      .map((param) => param.split('=').map((part) => part.trim()))
+      .find(([key]) => key.toLowerCase() === 'q');
+    if (q === undefined) return 1;
+    const value = Number(q[1]);
+    if (q[1] !== '' && Number.isFinite(value)) return value;
   }
   return null;
 }
