@@ -56,7 +56,8 @@ README), and one entry in `pages.ts`. `pagePath` derives the URL from the
 source path the same way Vite's emit does, so the two cannot disagree.
 
 **Routing that the tree cannot express lives in the Worker**, not here:
-the legacy share-link redirects and the app's unmatched-path fallback.
+the legacy share-link redirects, the app's unmatched-path fallback and the
+markdown negotiation.
 [Request routing](/src/README.md#request-routing) is the authority, including why
 `wrangler.toml`'s `not_found_handling` is `"404-page"`.
 
