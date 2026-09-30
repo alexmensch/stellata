@@ -35,6 +35,14 @@ function edit(filePath: string): Decision {
   return run({ tool_name: 'Edit', tool_input: { file_path: filePath } });
 }
 
+function read(filePath: string): Decision {
+  return run({ tool_name: 'Read', tool_input: { file_path: filePath } });
+}
+
+function grep(path: string): Decision {
+  return run({ tool_name: 'Grep', tool_input: { path } });
+}
+
 function skill(name: string): Decision {
   return run({ tool_name: 'Skill', tool_input: { skill: name } });
 }
@@ -90,14 +98,18 @@ describe('skill-guard / cube-css', () => {
   });
 
   it('gates a Read of a stylesheet, and a Grep into one', () => {
-    expect(run({ tool_name: 'Read', tool_input: { file_path: '/repo/src/site/site.css' } }).allowed)
-      .toBe(false);
-    expect(run({ tool_name: 'Grep', tool_input: { path: '/repo/src/site/site.css' } }).allowed)
-      .toBe(false);
+    expect(read('/repo/src/site/site.css').allowed).toBe(false);
+    expect(grep('/repo/src/site/site.css').allowed).toBe(false);
+  });
+
+  it('allows the Read and Grep once the skill has been invoked', () => {
+    expect(skill('cube-css').allowed).toBe(true);
+    expect(read('/repo/src/site/site.css').allowed).toBe(true);
+    expect(grep('/repo/src/site/site.css').allowed).toBe(true);
   });
 
   it('passes a Grep over a directory', () => {
-    expect(run({ tool_name: 'Grep', tool_input: { path: '/repo/src/site' } }).allowed).toBe(true);
+    expect(grep('/repo/src/site').allowed).toBe(true);
   });
 
   it('passes a payload carrying no path at all', () => {
@@ -126,8 +138,8 @@ describe('skill-guard / code-craft', () => {
 
   it('passes a Read or Grep of code before the skill is invoked', () => {
     for (const path of CODE_FILES) {
-      expect(run({ tool_name: 'Read', tool_input: { file_path: path } }).allowed, path).toBe(true);
-      expect(run({ tool_name: 'Grep', tool_input: { path } }).allowed, path).toBe(true);
+      expect(read(path).allowed, path).toBe(true);
+      expect(grep(path).allowed, path).toBe(true);
     }
   });
 
