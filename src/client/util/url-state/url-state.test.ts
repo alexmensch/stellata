@@ -25,6 +25,7 @@ import * as THREE from 'three';
 import { captureOrbitFrame } from '../../attitude/attitude-pure';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../solar-system/ephemerides/orbit-rings-layer';
 import { poseIntoFrame } from './orbit-pose/orbit-pose-pure';
+import { CHOSEN_FIRST_LOAD_LINK } from './golden-links-fixture';
 
 // Controller-namespace stub. `Partial<T>` keeps every member checked
 // against the real signature — `as unknown as T` would not, and stub
@@ -1374,7 +1375,7 @@ describe('url-state', () => {
 
       // The chosen first-load view, shared before bit 29 existed.
       it('decodes a bit-28 link from the wild unchanged', () => {
-        const blob = 'BIXAgcABB-kUFDT_dEk0ndYxNAckT-C-k7vIvpsVTz8C-v8T';
+        const blob = CHOSEN_FIRST_LOAD_LINK;
         const view = decodeBlob(blob);
         expect(view).toEqual({
           cam: [1.379118117483813e-7, 1.876214668072862e-7, 1.656248542758476e-7],

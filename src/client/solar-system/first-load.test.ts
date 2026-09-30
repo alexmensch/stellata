@@ -11,13 +11,10 @@ import {
 import { SOL_BODIES, getPlanetSystem, solOrbitGeometryAt } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
 import { KM_PC } from '../util/astronomy-constants';
+import { CHOSEN_FIRST_LOAD_AT, CHOSEN_FIRST_LOAD_LINK } from '../util/url-state/golden-links-fixture';
 
 const DEG = Math.PI / 180;
 
-/** The view this pose was chosen from, shared before bit 29 existed: its cam
- *  and up are ICRS, measured at `CAPTURED_AT`. */
-const CHOSEN_LINK = 'BIXAgcABB-kUFDT_dEk0ndYxNAckT-C-k7vIvpsVTz8C-v8T';
-const CAPTURED_AT = Date.UTC(2026, 8, 30, 10, 13) / 1000;
 
 /** Earth's ORB at `t` as the planet field builds it: Sol's host quaternion
  *  over the ecliptic ephemeris, zero longitude on the Sun. */
@@ -73,12 +70,12 @@ describe('first-load', () => {
 
     // see README.md#first-load-default-and-mindistance-relaxation
     it('reproduces the chosen link at the instant it was shared', async () => {
-      const frame = await earthOrbitFrame(CAPTURED_AT);
+      const frame = await earthOrbitFrame(CHOSEN_FIRST_LOAD_AT);
       const cam = new THREE.Vector3(...FIRST_LOAD_VIEW.cam!);
       const up = new THREE.Vector3(...FIRST_LOAD_VIEW.up!);
       poseOutOfFrame(cam, { x: 0, y: 0, z: 0 }, up, frame);
 
-      const chosen = decodeBlob(CHOSEN_LINK);
+      const chosen = decodeBlob(CHOSEN_FIRST_LOAD_LINK);
       const chosenCam = new THREE.Vector3(...chosen.cam!);
       const chosenUp = new THREE.Vector3(...chosen.up!);
       expect(cam.angleTo(chosenCam) / DEG).toBeLessThan(0.01);
