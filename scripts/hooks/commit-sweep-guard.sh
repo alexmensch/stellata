@@ -17,7 +17,11 @@
 #  (c) a comment block the commit adds restates markdown prose the same
 #      commit adds — the "README written minutes earlier" failure named
 #      in /docs/authoring-patterns.md#code-comment-hygiene. Opt out with
-#      `[comment-ok: <reason>]`.
+#      `[comment-ok: <reason>]`;
+#
+#  (d) a line the commit adds to markdown quotes a snapshot count without a
+#      doc-figure marker — /scripts/doc-figures/README.md#staged-copies-at-commit-time.
+#      Opt out with `[figure-ok: <reason>]`.
 #
 # Scope is `git diff --cached`: -a / --all commits aren't fully
 # inspected. Most commits go through `git add <files> && git commit`,
@@ -86,6 +90,11 @@ fi
 comment_ok=0
 if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[comment-ok:[^]]*\]'; then
   comment_ok=1
+fi
+
+figure_ok=0
+if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[figure-ok:[^]]*\]'; then
+  figure_ok=1
 fi
 
 # README staleness check.
@@ -241,7 +250,22 @@ if [ "$comment_ok" = 0 ]; then
   rm -f "$md_file"
 fi
 
-if [ -z "$stale" ] && [ -z "$violations" ] && [ -z "$restate" ]; then
+# Snapshot-copy sweep. The detector is TypeScript beside the marker grammar;
+# a checkout without tsx or without the script lets the commit through, as a
+# hygiene guard should.
+copies=""
+figure_check="$(dirname "$0")/../doc-figures/check-staged-figures.ts"
+tsx_bin="$(dirname "$0")/../../node_modules/.bin/tsx"
+if [ "$figure_ok" = 0 ] && [ -f "$figure_check" ] && [ -x "$tsx_bin" ] \
+  && git -C "$toplevel" diff --cached --name-only -- '*.md' | grep -q .; then
+  set +e
+  copies="$("$tsx_bin" "$figure_check" "$toplevel" 2>/dev/null)"
+  status=$?
+  set -e
+  [ "$status" = 1 ] || copies=""
+fi
+
+if [ -z "$stale" ] && [ -z "$violations" ] && [ -z "$restate" ] && [ -z "$copies" ]; then
   exit 0
 fi
 
@@ -263,6 +287,12 @@ if [ -n "$restate" ]; then
   reason+=$'\n\nComment blocks that repeat prose this same commit adds (/docs/authoring-patterns.md#code-comment-hygiene — "a comment restating README content written minutes earlier is the dominant failure mode"):\n'
   reason+="$restate"$'\n'
   reason+=$'\nFix: cut the block to a one-line pointer at the section that now carries it (`// see <path>.md#<slug>`). The prose is already written; a second copy rots. If the comment genuinely says something the prose does not, add `[comment-ok: <reason>]` to the commit message — visible in the PR for review.'
+fi
+
+if [ -n "$copies" ]; then
+  reason+=$'\n\nAdded markdown lines quote a snapshot count without a doc-figure marker (/scripts/doc-figures/README.md#what-gets-a-marker):\n'
+  reason+="$copies"$'\n'
+  reason+=$'\nFix: wrap each figure as `<!-- count:<key> -->N<!-- /count -->`, picking the key the sentence means from those listed, then `pnpm run docs:figures`. History, a computed figure or a coincidence stays unmarked: add `[figure-ok: <reason>]` to the commit message — visible in the PR for review.'
 fi
 
 jq -n --arg reason "$reason" '{

@@ -758,7 +758,7 @@ export function wholeRecordSpan(
 /** Decode one field across a record window into a parallel array — the
  *  bulk counterpart of `readRecordField` for the SoA runtime loader.
  *  Column-at-a-time (one kind dispatch per column, then a tight
- *  constant-getter loop) decodes the 390k-record catalog measurably faster
+ *  constant-getter loop) decodes the full catalog measurably faster
  *  than a per-record pass over every field. */
 export function decodeRecordColumn(
   view: DataView,
