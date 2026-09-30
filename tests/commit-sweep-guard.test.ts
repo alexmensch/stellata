@@ -1,4 +1,4 @@
-// Behavioural guard for scripts/hooks/commit-sweep-guard.sh: the commit-time
+// Behavioural guard for scripts/hooks/commit-sweep/commit-sweep-guard.sh: the commit-time
 // README sweep must fire on a stale folder README and must honour the
 // readme-skip opt-out however the commit message reached git.
 
@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-const HOOK = resolve(__dirname, '../scripts/hooks/commit-sweep-guard.sh');
+const HOOK = resolve(__dirname, '../scripts/hooks/commit-sweep/commit-sweep-guard.sh');
 
 const SKIP_REASON = '[readme-skip: every claim in it still holds]';
 
@@ -108,7 +108,7 @@ describe('commit-sweep-guard', () => {
   });
 });
 
-// The comment sweep compiles scripts/hooks/comment-rules.json through Perl
+// The comment sweep compiles scripts/hooks/commit-sweep/comment-rules.json through Perl
 // qr//, while tests/code-comment-rules.test.ts compiles the same strings
 // through JavaScript RegExp. Only a case run through the hook proves the two
 // dialects agree — the two hand-copied sets that preceded that shared file

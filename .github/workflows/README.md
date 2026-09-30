@@ -33,6 +33,7 @@ objects instead of pulling ~600 MB from the LFS store every push.
 CI check on every PR. Fails the PR if the `## Release notes` block in
 the PR body is empty (HTML comments don't count). Skipped on PRs
 labelled `skip-version-bump`. See `RELEASING.md` for the block format.
+The check is `scripts/release/release-notes-check.ts`, run by plain `node`, tested in vitest.
 
 ## `perf-section-guard.yml`
 
@@ -52,11 +53,16 @@ whenever the diff does either of:
   drift apart — they have to agree, or a change under the trigger would
   ship a pin that refuses every row.
 
-The check is `scripts/perf/perf-section-check.sh`, tested in vitest; CI has
+The check is `scripts/perf/perf-section-check.sh`, run through
+`scripts/perf/perf-section-guard.sh`, which reads the changed files and
+both record counts from git; both tested in vitest. CI has
 no GPU, so it checks the section, never the numbers. The exempt list is
 stated once, in `RELEASING.md`, and a test fails when the script drifts from
 it. Counts unreadable on either side leave that half of the trigger silent —
 the comparison-time refusal is the backstop.
+
+Both body guards also run locally, before `gh pr create|edit --body-file`
+sends the body: [How pr-body-guard works](/scripts/hooks/README.md#how-pr-body-guard-works).
 
 ## `version-guard.yml`
 

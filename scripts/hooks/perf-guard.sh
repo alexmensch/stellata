@@ -24,6 +24,7 @@ deny() {
 trap 'deny "Refusing: perf-guard.sh failed unexpectedly near line ${LINENO}. Fix the hook rather than working around it."' ERR
 
 . "$(dirname "$0")/../perf/arming/perf-go-lib.sh"
+. "$(dirname "$0")/command-match.sh"
 
 input="$(cat)"
 tool="$(printf '%s' "$input" | jq -r '.tool_name // ""')"
@@ -70,8 +71,6 @@ ${marker_rule}
 ${protocol}"
 fi
 
-CMD_START='(^|[;&|(][[:space:]]*)'
-ENV_PREFIX='(env[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*'
 RUN_PATH='(\./)?scripts/perf/run(\.ts)?([[:space:]]|$|[;&|)])'
 VIA_RUNNER="(pnpm[[:space:]]+(exec|dlx)[[:space:]]+)?(tsx|node|npx|bunx?|deno|pnpx)([[:space:]]+[^[:space:];&|]+)*[[:space:]]+${RUN_PATH}"
 VIA_PKG='(pnpm|npm|yarn|bun)([[:space:]]+[^[:space:];&|]+)*[[:space:]]+perf([[:space:]]|$|[;&|)])'

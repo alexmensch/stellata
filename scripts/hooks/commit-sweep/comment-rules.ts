@@ -23,7 +23,7 @@ function field(entry: object, key: 'name' | 'pattern' | 'flags'): string {
 
 export function loadCommentRules(root: string): CommentRule[] {
   const parsed: unknown = JSON.parse(
-    readFileSync(join(root, 'scripts/hooks/comment-rules.json'), 'utf8'),
+    readFileSync(join(root, 'scripts/hooks/commit-sweep/comment-rules.json'), 'utf8'),
   );
   if (parsed === null || typeof parsed !== 'object' || !('patterns' in parsed)) {
     throw new Error('comment-rules.json: expected an object with "patterns"');

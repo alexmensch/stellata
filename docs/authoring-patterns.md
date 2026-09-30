@@ -92,7 +92,7 @@ When the test fails:
 
 A comment restating README content written minutes earlier is the dominant
 failure mode. When the prose lands in the same commit, `commit-sweep-guard`
-denies it — [The restatement sweep](/scripts/hooks/README.md#the-restatement-sweep).
+denies it — [The restatement sweep](/scripts/hooks/commit-sweep/README.md#the-restatement-sweep).
 Prose from an earlier commit is invisible to it, and that case is caught by
 write order:
 

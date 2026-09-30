@@ -22,25 +22,16 @@ jobs:
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-version-bump') }}
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/release
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
       - name: Check `## Release notes` section is present and non-empty
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
         run: |
           set -euo pipefail
-          if [ -z "${PR_BODY:-}" ]; then
-            echo "::error::PR body is empty. Use the PR template — the '## Release notes' section is required."
-            exit 1
-          fi
-          section=$(printf '%s\n' "$PR_BODY" | awk '
-            /^## Release notes[[:space:]]*$/ { capture=1; next }
-            /^## / && capture { exit }
-            capture { print }
-          ')
-          # Strip HTML comments so leftover template scaffolding doesn't
-          # count as content.
-          stripped=$(printf '%s' "$section" | perl -0777 -pe 's/<!--.*?-->//gs')
-          if ! printf '%s' "$stripped" | grep -qE '[^[:space:]]'; then
-            echo "::error::PR body must include a non-empty '## Release notes' section (HTML comments don't count). Add bullets describing user-visible changes — they will appear on the GitHub release page for this version. Or attach the 'skip-version-bump' label for metadata-only PRs."
-            exit 1
-          fi
-          echo "Release notes section present and non-empty."
+          printf '%s\n' "${PR_BODY:-}" > "$RUNNER_TEMP/body.md"
+          node scripts/release/release-notes-check.ts "$RUNNER_TEMP/body.md"

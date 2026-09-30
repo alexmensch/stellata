@@ -149,6 +149,11 @@ perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
 paper-store-link.test.ts Behavioural pins for scripts/hooks/paper-store-link.sh
                          over a throwaway repo with real linked worktrees;
                          /scripts/hooks/README.md#how-paper-store-link-works.
+pr-body-guard.test.ts    Behavioural pins for scripts/hooks/pr-body-guard.sh
+                         over a throwaway repo with a stubbed `gh`, plus the
+                         check that each body-guard workflow calls the
+                         script the hook runs;
+                         /scripts/hooks/README.md#how-pr-body-guard-works.
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
 readme-size.test.ts      450-line cap per folder README — length is a tax
                          on every future session, so the answer over the
@@ -220,6 +225,9 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
 citation-index-pure.ts   Not a test — parsing of data/papers/index.md
                          entries and manifest.json pins, for
                          citation-index.test.ts.
+git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
+                         repo's git runner and one-file commit, for suites
+                         that drive a script over real history.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
