@@ -39,10 +39,10 @@ comparator — and it is what matches the ordering
 ## Request and record build name the same set by construction
 
 **374,932 source_ids** over the 376,909 `term = primaries` manifest rows; the
-1,977 rows carrying none are the no-Gaia tier. The `term = magnitude` rows are
+<!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> rows carrying none are the no-Gaia tier. The `term = magnitude` rows are
 not requested: their astrometry is the magnitude pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
-and requesting them would re-pull 598,664 rows that file already holds. The row total is pinned as `rows` in
+and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> rows that file already holds. The row total is pinned as `rows` in
 `../membership/membership-manifest-expected.json`; the split is a walk over
 `data/membership/membership-manifest.tsv`'s own `gaia_source_id` column, and
 every id in it is distinct.
@@ -121,7 +121,7 @@ shared with the overlay build so the two cannot drift, and
 rather than leaving it to inspection. It is the gate's own reach restated on
 the request side, so it widened with the gate: a source is a candidate where
 any of the V cascade's three printed tiers answers for it, which is nearly the
-whole overlay — only the 2,738 rows no tier reaches are skipped, because
+whole overlay — only the <!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count --> rows no tier reaches are skipped, because
 without a printed V a `G` decides nothing.
 
 The gate's contribution therefore reads the same tables the derivation's does,
@@ -144,8 +144,8 @@ One pulled row is no longer requested: HD 2094 B's source, which only the
 spine's uncorrected TYC reached ([Correcting a merge decision](../membership/README.md#correcting-a-merge-decision)) and which ships as
 a magnitude-term row on the magnitude pull's own astrometry. The next re-pull
 drops it.
-What no request can fix is `gateSkippedNullGMag` (112) and
-`derivedWeighedNullGMag` (77): sources Gaia has a row for and publishes no
+What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count -->) and
+`derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
 
 ## What the pulled set feeds

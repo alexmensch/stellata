@@ -92,7 +92,7 @@ When the test fails:
 
 A comment restating README content written minutes earlier is the dominant
 failure mode. When the prose lands in the same commit, `commit-sweep-guard`
-denies it — [The restatement sweep](/scripts/hooks/README.md#the-restatement-sweep).
+denies it — [The restatement sweep](/scripts/hooks/commit-sweep/README.md#the-restatement-sweep).
 Prose from an earlier commit is invisible to it, and that case is caught by
 write order:
 
@@ -130,12 +130,20 @@ copy is stale from the next build.
   `index.html`). `vite.config.ts` reads that off the built catalogue's
   own header, and it is empty on a checkout with no artifacts — so
   every consumer needs a wording that survives having no number.
-- **Prose cannot read anything**, so it rounds, and
-  `tests/star-count-consistency.test.ts` re-derives the rounding from
-  the header and fails when a refresh moves it.
-- **`313,257` is a different quantity** — AT-HYG's frozen spine rows,
-  documented in `catalog-driver.md`. It is not the number of stars
-  drawn, and the two are not interchangeable.
+- **Prose cannot read anything**, so it rounds through a
+  `build-catalog/recordCount` marker that `pnpm run docs:figures`
+  rewrites; a code comment says "the full catalogue" instead
+  ([The catalogue's size](/scripts/doc-figures/README.md#the-catalogues-size)).
+- **The AT-HYG spine's row count is a different quantity**
+  (`inherited-spine/rows`, documented in `catalog-driver.md`). It is not
+  the number of stars drawn, and the two are not interchangeable.
+
+### A pinned count is quoted through a marker
+
+**Trigger: writing into any doc a number that a `*-expected.json` snapshot
+pins.** The snapshot owns it; the doc wraps the figure in a doc-figure marker
+and `pnpm run docs:figures` rewrites it after every regeneration. Grammar,
+formats and what stays prose: [What gets a marker](/scripts/doc-figures/README.md#what-gets-a-marker).
 
 ## Rename + stale-prose sweep
 

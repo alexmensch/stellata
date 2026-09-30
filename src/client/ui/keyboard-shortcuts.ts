@@ -41,6 +41,8 @@ export interface KeyboardShortcutsDeps {
   aimAtFrameOrigin: (opposite: boolean) => void;
   /** Engage or release the orbit lock — the 8-ball's padlock chip. */
   toggleOrbitLock: () => void;
+  /** Removes the window listeners on pagehide (`util/page-teardown.ts`). */
+  signal: AbortSignal;
 }
 
 export function bindKeyboardShortcuts(
@@ -48,7 +50,7 @@ export function bindKeyboardShortcuts(
   deps: KeyboardShortcutsDeps,
 ) {
   const help = bindHelpModal();
-  const calibration = bindCalibrationOverlay();
+  const calibration = bindCalibrationOverlay(deps.signal);
 
   // The "go" picker reuses the topbar's existing `#topbar-search` widget —
   // whatever inputs `bindSearch` puts there (Focus / To / Location) are
@@ -263,7 +265,7 @@ export function bindKeyboardShortcuts(
         e.preventDefault();
         break;
     }
-  }, { capture: true });
+  }, { capture: true, signal: deps.signal });
 }
 
 function cycleCoordSphere(stellata: Stellata) {

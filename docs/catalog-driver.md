@@ -63,11 +63,11 @@ identity. The authoritative source per identifier:
 | Source | CDS/ESA id | Rows (TAP) | Supplies | Citation |
 |---|---|---|---|---|
 | Tycho-2→DR3 cross-walk | `gaiadr3.tycho2tdsc_merge_best_neighbour` | 2,518,330 (in-tree) | TYC → `gaia_source_id` | already `data/gaia/gaia_dr3_tyc_xmatch.tsv` |
-| HIP→DR3 cross-walk | `gaiadr3.hipparcos2_best_neighbour` | 99,525 (in-tree) | HIP → `gaia_source_id` | already `data/gaia/gaia_dr3_hip_xmatch.tsv` |
-| Tycho-2 HD identifications | `IV/25/tyc2_hd` | 353,527 | HD ↔ TYC (with `n_HD`/`n_TYC` ambiguity flags) | [Fabricius 2002a](/data/papers/index.md#fabricius2002a) |
+| HIP→DR3 cross-walk | `gaiadr3.hipparcos2_best_neighbour` | <!-- count:classic-id-overlay/hipXmatchEntries -->99,525<!-- /count --> (in-tree) | HIP → `gaia_source_id` | already `data/gaia/gaia_dr3_hip_xmatch.tsv` |
+| Tycho-2 HD identifications | `IV/25/tyc2_hd` | <!-- count:classic-id-overlay/tyc2HdRows -->353,527<!-- /count --> | HD ↔ TYC (with `n_HD`/`n_TYC` ambiguity flags) | [Fabricius 2002a](/data/papers/index.md#fabricius2002a) |
 | Cross index | `IV/27A/catalog` | 3,690 | Bayer + Flamsteed ↔ HD/HIP | [Kostjuk 2002](/data/papers/index.md#kostjuk2002) |
-| Bright Star Catalogue 5th rev. | `V/50/catalog` | 9,110 (9,096 with HD) | HR ↔ HD | [Hoffleit 1991](/data/papers/index.md#hoffleit1991) |
-| CNS5 | `J/A+A/670/A19/cns5` | 5,909 (VizieR table as corrected 2023-12-13; the paper counts 5,931 objects) | GJ ↔ Gaia EDR3 source_id ↔ HIP, component letters | [Golovin 2023](/data/papers/index.md#golovin2023) |
+| Bright Star Catalogue 5th rev. | `V/50/catalog` | <!-- count:classic-id-overlay/bsc5Rows -->9,110<!-- /count --> (9,096 with HD) | HR ↔ HD | [Hoffleit 1991](/data/papers/index.md#hoffleit1991) |
+| CNS5 | `J/A+A/670/A19/cns5` | <!-- count:classic-id-overlay/cns5Rows -->5,909<!-- /count --> (VizieR table as corrected 2023-12-13; the paper counts 5,931 objects) | GJ ↔ Gaia EDR3 source_id ↔ HIP, component letters | [Golovin 2023](/data/papers/index.md#golovin2023) |
 | Hipparcos main (V slice) | `I/239/hip_main` | 118,218 | printed Johnson V (`Vmag`) for the bright/printed tier | [ESA 1997](/data/papers/index.md#esa1997) |
 
 Caveats verified at the gate:
@@ -77,7 +77,7 @@ Caveats verified at the gate:
   V/50, HD via IV/25, HIP natively. It is the Bayer/Flamsteed source
   for the **V > 6.5 tail only**: the naming gate adopted the IAU
   WGSN naked-eye catalogue as the primary designation source, since it
-  ships the Greek glyph natively and covers 1,494 of our 1,522 Bayer
+  ships the Greek glyph natively and covers 1,494 of our <!-- count:wgsn/membershipBayerRows -->1,522<!-- /count --> Bayer
   records ([§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)). IV/27A's own ASCII conventions
   and its 111 GCVS-style contaminants are normaliser inputs there,
   never a stored form.
@@ -99,7 +99,7 @@ Caveats verified at the gate:
 The frozen files landed in `data/classic-ids/` (plus the `I/239` V slice
 in `data/hipparcos/`), joined into a source_id-keyed overlay by
 `pnpm run build:classic-ids`. **The overlay covers 62–96% of AT-HYG's
-labels per identifier and has no row at all for 115 of the 178 stars at
+labels per identifier and has no row at all for <!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> stars at
 V ≤ 3** — Gaia saturates near G ≈ 3, so a source_id-keyed table
 structurally cannot carry Vega, Sirius or Betelgeuse. The spine backstop
 in [§ 1](#1-the-driver-model) is therefore load-bearing for a double-digit fraction of every
@@ -112,7 +112,7 @@ Per-identifier figures and the three structural bounds behind them:
 
 One committed TSV (`data/athyg/inherited-spine.tsv`, LFS), generated
 **once** by a one-shot script from the final AT-HYG-driven build plus
-the AT-HYG CSV, then frozen. **313,257 rows**, one per AT-HYG-derived
+the AT-HYG CSV, then frozen. **<!-- count:inherited-spine/rows -->313,257<!-- /count --> rows**, one per AT-HYG-derived
 record (shipped 2026-07-28; `scripts/catalog/spine/`):
 
 ```
@@ -180,7 +180,7 @@ below and nothing else: characterising AT-HYG's own defect needs AT-HYG's own
 file, and the instrument is off the `build:catalog` path, so this does not
 put the CSV back in the input set [§ 3](#3-the-inherited-spine) removed it from.
 
-**Record residual: zero.** Every one of the 313,257 rows carries at least
+**Record residual: zero.** Every one of the <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows carries at least
 one classical designation a primary publishes — hd 293,326 in IV/25 + 1 in
 I/239's own HD column · hip 117,652 in I/239 · hr 9,013 in V/50 · gl 1,994 in
 CNS5 + 1,153 in V/70A · Bayer 1,522 via IV/27A · Flamsteed 2,596 via IV/27A +
@@ -188,7 +188,7 @@ CNS5 + 1,153 in V/70A · Bayer 1,522 via IV/27A · Flamsteed 2,596 via IV/27A +
 proper 445 WGSN + Sol. No record exists on AT-HYG's authority alone, so the
 retirement is a re-keying, not a rescue. That also settles the Gliese
 question the retirement raised: **no** `gl` cell is unsourced,
-CNS5 and V/70A between them carrying all 3,147, including the 1,396 in the
+CNS5 and V/70A between them carrying all <!-- count:inherited-spine/nonEmpty.gl -->3,147<!-- /count -->, including the 1,396 in the
 `GJ 3xxx` / `4xxx` / `9xxx` supplement bands.
 
 Three **label** residuals remain, 167 rows in all, one unsourced cell each:
@@ -260,7 +260,7 @@ carries a HIP, HD, HR or GJ, so none is SID-keyed on its Gaia id and no
 outcome here moves a canonical key. The remaining 1,370 rows carry no
 `gaia_source_id` at all, and split on whether a raw walk would supply one:
 **233** where one would and **1,137** no walk reaches. With Sol that accounts
-for all 313,257. **233 is the walk-only figure**: the manifest no longer copies
+for all <!-- count:inherited-spine/rows -->313,257<!-- /count -->. **233 is the walk-only figure**: the manifest no longer copies
 the column but derives it, and the derivation's fourth source — SIMBAD's
 frozen cross-IDs — takes the fills to 940 ungated and 791 through both gates,
 leaving 576 derived refusals that ship designation-keyed on the [§ 5](#5-per-field-cascades-and-rescue-tiers) tiers. The
@@ -271,7 +271,7 @@ identity bullet, which measures the frozen column.
 **Additions: the primaries admit ~64k records the spine lacks, and 55,008 of
 them are one upstream defect.** Every figure in this paragraph is counted per
 primary, before the grouping and admission *The rule* below applies; what ships
-is 63,653 records, and that paragraph reconciles the two. IV/25 numbers
+is <!-- count:membership-manifest/additionRows -->63,653<!-- /count --> records, and that paragraph reconciles the two. IV/25 numbers
 **60,344** Tycho-2 stars no
 spine row carries (a further 394 HD numbers, on 393 TYCs, land on existing
 records). AT-HYG's version notes take HD "from HYG if known, otherwise
@@ -327,8 +327,8 @@ answers to** — a designation on two records keys no SID ([§ 4.1](/docs/sid.md
 so attaching one another record holds would cost that record its key. The claim
 set is the spine's after the label merge and grows as each group is admitted,
 so an earlier addition blocks a later one exactly as a spine row does. That
-lands **63,653** records — `hd_link_gap` 54,813 · `hd_omitted` 5,063 ·
-`hip_omitted` 425 · `cns5_census` 3,352 — and ledgers **465** groups as
+lands **<!-- count:membership-manifest/additionRows -->63,653<!-- /count -->** records — `hd_link_gap` <!-- count:membership-manifest/additionsByReason.admitted:hd_link_gap -->54,813<!-- /count --> · `hd_omitted` <!-- count:membership-manifest/additionsByReason.admitted:hd_omitted -->5,063<!-- /count --> ·
+`hip_omitted` <!-- count:membership-manifest/additionsByReason.admitted:hip_omitted -->425<!-- /count --> · `cns5_census` <!-- count:membership-manifest/additionsByReason.admitted:cns5_census -->3,352<!-- /count --> — and ledgers **<!-- count:membership-manifest/componentRows -->465<!-- /count -->** groups as
 `component:<anchor>`, not as records. They are not the ~90 bright-double
 secondaries above, which reach the manifest as HD-addition records or as second
 HD numbers on spine TYCs: five are the second of such a pair with neither
@@ -345,10 +345,10 @@ parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
 as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
 on the manifest's `binding` column, four classes: `crosswalk_gated`
-358,464 (a TYC, HIP or CNS5 candidate through the gates) ·
-`simbad_corroborated` 16,415 (SIMBAD's source for the record's own
-designation, through the gates) · `reviewed` 53 (a disposition row's value) ·
-`none` 1,977 (derived refusals, Sol, and additions the derivation cannot
+<!-- count:membership-manifest/bindingByClass.crosswalk_gated -->358,465<!-- /count --> (a TYC, HIP or CNS5 candidate through the gates) ·
+`simbad_corroborated` <!-- count:membership-manifest/bindingByClass.simbad_corroborated -->16,414<!-- /count --> (SIMBAD's source for the record's own
+designation, through the gates) · `reviewed` <!-- count:membership-manifest/bindingByClass.reviewed -->53<!-- /count --> (a disposition row's value) ·
+`none` <!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> (derived refusals, Sol, and additions the derivation cannot
 bind) — spine rows and additions through the one derivation. The review queue is
 `data/membership/binding-review.tsv` with its dispositions beside it, 53
 rows. The swap itself was 63,672 mints,
@@ -363,7 +363,7 @@ because it snapshots a build that no longer exists; the primaries-derived
 membership is a pure function of committed inputs, so it can be, and that
 is what replaces the byte guard with a regenerate-and-diff. The swap emits a
 committed **membership manifest** (`data/membership/membership-manifest.tsv`,
-376,909 rows = 313,257 spine less the one folded + 63,653 admitted) — one
+376,909 rows = <!-- count:membership-manifest/spineRows -->313,257<!-- /count --> spine less the one folded + <!-- count:membership-manifest/additionRows -->63,653<!-- /count --> admitted) — one
 row per admitted record: admitting designations, route, source_id and its
 provenance class — regenerated in CI and diffed like
 `classic_id_overlay.tsv`. Those four counts are `rows` / `spineRows` /
@@ -434,12 +434,12 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 
 | Column | Readers today | Owned replacement | Child |
 |---|---|---|---|
-| `tyc` `hip` `hd` `hr` `gl` | `build:membership` — the merge decision, the correction key (`spine-corrections.tsv`), and the label merge's backstop where the overlay asserts nothing (hip 18,593 · hd 12,751 · hr 1,700 · gl 1,227 rows, `labelSpineOnly`); gate (i) through `spineDesignations`; `parity-ledger.test.ts` (the 21 HD/HIP route-disagreement pairs, the HD-less HRs); `build:astrometry-request` (spine TYCs narrow the cross-walk; the derivation's candidates) | the link graph above, seeded one row per Tycho-2 star / I/239 HIP / CNS5 entry the way the additions already are ([The additions](/scripts/catalog/membership/README.md#the-additions)), the 136 carried on evidenced rows of the generalised correction table | `stellata-hooj.17.2` |
-| `flam` | merge backstop (694 rows); 2,604 attested, 120 not, 119 dropped to `label-drops.tsv` | IV/27A + WGSN by HD/HIP already attest the rest. The 119 are a **source** question: a frozen SIMBAD identifier pull (`* NN Con`) attests them, or the drop ledger freezes as a committed record — the spine gone, nothing regenerates it | `stellata-hooj.17.4` |
-| `bayer` | copied to the manifest; naming reads it as two counters only (`namingBayerAdded` 515, `namingBayerDropped` 2) | WGSN ∪ IV/27A by HR/HD/HIP resolves 1,520 of 1,522 and the 2 drop by design ([Measured coverage](/scripts/catalog/naming/README.md#measured-coverage)): the manifest column goes, the counters re-pin on the authority | `stellata-hooj.17.3` |
-| `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (3 records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the 46 disposed names (26 display, 20 alias); `build:wgsn`'s [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual gate | Sol → the generator emits its one row. 445 → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. 46 by class: 8 component-letter compose by borrowing ([§ 3](/docs/star-naming.md#3-the-ladder)); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
-| `gaia_source_id` | **none — `17.6` landed.** `derivationOutcome` replaced `derivedVsFrozen`; `differs` / `unreached` collapsed into `bound` / `refused`; the disposition file dropped its `frozen_source_id` column and became a standing overlay keyed on the record, authoritative wherever it keys; the collision keeper rule withholds from both rows | `derivedVia` / `bindingByClass` / `derivationOutcome` / the review counts, plus `dispositionAsserted` — the 36 ids no committed source proposes, shipping on a cited basis | `stellata-hooj.17.6` ✓ |
-| `mag` | **none — `17.6` landed.** `spineBrightRows` / `spineBrightRowsWithoutOverlayEntry` re-keyed onto the printed-V cascade the binding gate already weighs each row against, reproducing 178 / 114 exactly (Sol named directly, having no gate evidence) | — | `stellata-hooj.17.6` ✓ |
+| `tyc` `hip` `hd` `hr` `gl` | `build:membership` — the merge decision, the correction key (`spine-corrections.tsv`), and the label merge's backstop where the overlay asserts nothing (hip <!-- count:membership-manifest/labelSpineOnly.hip -->18,593<!-- /count --> · hd <!-- count:membership-manifest/labelSpineOnly.hd -->12,750<!-- /count --> · hr <!-- count:membership-manifest/labelSpineOnly.hr -->1,699<!-- /count --> · gl <!-- count:membership-manifest/labelSpineOnly.gl -->1,226<!-- /count --> rows, `labelSpineOnly`); gate (i) through `spineDesignations`; `parity-ledger.test.ts` (the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> HD/HIP route-disagreement pairs, the HD-less HRs); `build:astrometry-request` (spine TYCs narrow the cross-walk; the derivation's candidates) | the link graph above, seeded one row per Tycho-2 star / I/239 HIP / CNS5 entry the way the additions already are ([The additions](/scripts/catalog/membership/README.md#the-additions)), the 136 carried on evidenced rows of the generalised correction table | `stellata-hooj.17.2` |
+| `flam` | merge backstop (<!-- count:membership-manifest/labelSpineOnly.flam -->693<!-- /count --> rows); 2,604 attested, 120 not, <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> dropped to `label-drops.tsv` | IV/27A + WGSN by HD/HIP already attest the rest. The <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> are a **source** question: a frozen SIMBAD identifier pull (`* NN Con`) attests them, or the drop ledger freezes as a committed record — the spine gone, nothing regenerates it | `stellata-hooj.17.4` |
+| `bayer` | copied to the manifest; naming reads it as two counters only (`namingBayerAdded` <!-- count:build-catalog/namingBayerAdded -->519<!-- /count -->, `namingBayerDropped` <!-- count:build-catalog/namingBayerDropped -->2<!-- /count -->) | WGSN ∪ IV/27A by HR/HD/HIP resolves <!-- count:wgsn/membershipBayerRowsCovered -->1,520<!-- /count --> of <!-- count:wgsn/membershipBayerRows -->1,522<!-- /count --> and the 2 drop by design ([Measured coverage](/scripts/catalog/naming/README.md#measured-coverage)): the manifest column goes, the counters re-pin on the authority | `stellata-hooj.17.3` |
+| `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (<!-- count:build-catalog/namingIauNamedByProper -->3<!-- /count --> records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the <!-- count:wgsn/membershipProperResiduals -->46<!-- /count --> disposed names (26 display, 20 alias); `build:wgsn`'s [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual gate | Sol → the generator emits its one row. <!-- count:wgsn/membershipProperMatched -->445<!-- /count --> → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. <!-- count:wgsn/membershipProperResiduals -->46<!-- /count --> by class: 8 component-letter compose by borrowing ([§ 3](/docs/star-naming.md#3-the-ladder)); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
+| `gaia_source_id` | **none — `17.6` landed.** `derivationOutcome` replaced `derivedVsFrozen`; `differs` / `unreached` collapsed into `bound` / `refused`; the disposition file dropped its `frozen_source_id` column and became a standing overlay keyed on the record, authoritative wherever it keys; the collision keeper rule withholds from both rows | `derivedVia` / `bindingByClass` / `derivationOutcome` / the review counts, plus `dispositionAsserted` — the <!-- count:membership-manifest/dispositionAsserted -->36<!-- /count --> ids no committed source proposes, shipping on a cited basis | `stellata-hooj.17.6` ✓ |
+| `mag` | **none — `17.6` landed.** `spineBrightRows` / `spineBrightRowsWithoutOverlayEntry` re-keyed onto the printed-V cascade the binding gate already weighs each row against, reproducing <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> / <!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> exactly (Sol named directly, having no gate evidence) | — | `stellata-hooj.17.6` ✓ |
 | `ra` `dec` `dist` `ci` `spect` `rv` `pm_ra` `pm_dec`, six `*_src` | none | none | `stellata-hooj.17.7` |
 
 **Per consumer.**
@@ -454,7 +454,7 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 | `audit:spine-primaries`, `audit:spine-associations` | the retirement's measurement | retire with the file: attestation already ships as the manifest's `routes`, and admission is the generator's own | 17.7 |
 | `inherited-spine-guard.test.ts`, `stale_gaia_source_ids.tsv` | the frozen artifact's integrity; the DR2 queue | retire. The queue's live facts already read out of the `simbad_dr2_object` dispositions, whose evidence names each DR2 id outright rather than pointing at the file (`17.6`); the guard and the file go with the artifact | 17.6 ✓ / 17.7 |
 | manifest `bayer` / `proper` → `readStars` → naming | see the two column rows | see the two column rows | 17.3 |
-| prose: [§ 3](#3-the-inherited-spine), `data/athyg/`, `data/membership/`, `data/classic-ids/` [Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority), `SCIENCE.md`, `README.md`, `docs/star-naming.md`, `docs/science-catalog-ingestion.md`, `tests/star-count-consistency.test.ts`'s `313,257` pin | | the sweep | 17.7 |
+| prose: [§ 3](#3-the-inherited-spine), `data/athyg/`, `data/membership/`, `data/classic-ids/` [Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority), `SCIENCE.md`, `README.md`, `docs/star-naming.md`, `docs/science-catalog-ingestion.md`, the doc-figure catalogue-size scan's lower bound (`inherited-spine/rows`) | | the sweep | 17.7 |
 
 **The order.** Each step leaves the spine with strictly fewer readers and
 is held by the gates that remain:
@@ -483,8 +483,8 @@ step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-t
 paragraph enumerates. `17.6` moved none of them, as predicted. Labels: `17.2`
 moves at most the 136 cells above, each
 re-attested by the positional witness, corrected with evidence, or on a
-ledger row; `17.3` changes no displayed name among the 445 + Sol and the 46
-each land on a naming-parity row; `17.4` adds 119 Flamsteed labels if the
+ledger row; `17.3` changes no displayed name among the <!-- count:wgsn/membershipProperMatched -->445<!-- /count --> + Sol and the <!-- count:wgsn/membershipProperResiduals -->46<!-- /count -->
+each land on a naming-parity row; `17.4` adds <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> Flamsteed labels if the
 SIMBAD pull is adopted, else none. Identity: at most the Gl 863.1A split and
 a review outcome on ξ UMa's shared HIP; none from `17.6`, `17.5`, `17.7`.
 Bindings: none — `17.6` restated the verdicts and moved no id, confirmed on a
@@ -493,7 +493,7 @@ and the frozen-relative verdict names. Pins still to retire with the file:
 `spineRows`, `spineRowsFolded`, the byte pin, both audits' counts.
 
 **The residual curation file — one or three.** Neither: no new file of the
-167-row shape. The 1 HD is disposed. The 119 Flamsteed numbers and the 26
+167-row shape. The 1 HD is disposed. The <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> Flamsteed numbers and the 26
 displayed proper strings are a source question, answered once by a frozen
 SIMBAD identifier pull — `* NN Con`, `NAME …` and the discovery-catalogue
 idents, the shape `simbad_sptype.tsv`'s cross-IDs already take. The 8
@@ -548,7 +548,7 @@ designation names a catalogue granularity, not one object. The overlay
 attaches the label to every matching record; search dispatch resolves
 to the brightest; such designations key no SID ledger row. Counts
 pinned in build-counts (394 IV/25 rows flag `n_HD` > 1, 16 `n_TYC` > 1;
-after the join 137 sources carry >1 HD and 7 HDs land on >1 source).
+after the join <!-- count:classic-id-overlay/sourcesWithMultipleHd -->136<!-- /count --> sources carry >1 HD and <!-- count:classic-id-overlay/hdOnMultipleSources -->7<!-- /count --> HDs land on >1 source).
 
 **Precedence:** mechanical overlay wins over spine designations on
 disagreement — surfacing AT-HYG's cross-ID errors is the accuracy
@@ -716,7 +716,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   2. The tier that does reach them is **Gliese `V/70A`**, the first-order
      catalogue `mag_src=GJ` was transcribing all along: over all 16 rows
      its `Vmag` reproduces the printed cell **exactly**, zero rows
-     differing, and all 3,147 `gl`-bearing spine cells resolve in it.
+     differing, and all <!-- count:inherited-spine/nonEmpty.gl -->3,147<!-- /count --> `gl`-bearing spine cells resolve in it.
      Retiring the printed cell therefore costs no record and moves no
      value. Detail: `data/gliese/README.md`.
 
@@ -800,7 +800,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   differ per star and per coordinate**, on every one of the 40
   mean-solution rows, so each coordinate advances over its own baseline.
 - **distance** — SHIPPED (`stellata-3bsf.28`). `distVia` is pinned over
-  all 313,257 spine rows: `bailer_jones` **310,070** · `lmc_kinematic`
+  all <!-- count:inherited-spine/rows -->313,257<!-- /count --> spine rows: `bailer_jones` **310,070** · `lmc_kinematic`
   **54** · `gaia_dr3_inversion` **175** · `hip2_parallax` **2,502** ·
   `cns5_plx` **16** · `gliese_plx` **40** · `simbad_plx` **93** ·
   `pair_member_parallax` **8** · `curated` **1** · `none` **298**.

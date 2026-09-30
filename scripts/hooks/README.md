@@ -3,7 +3,7 @@
 Harness hooks for Claude Code, registered in `.claude/settings.json`. Claude
 Code's settings file watcher applies a registration change mid-session, so a
 session that adds or edits a hook here is governed by it from the next call.
-Each hook reads its payload as JSON on stdin. The five guards are PreToolUse /
+Each hook reads its payload as JSON on stdin. The six guards are PreToolUse /
 SessionStart hooks answering with a `permissionDecision`; paper-store-link
 answers nothing and acts only on the filesystem. The review
 design-pass reminder lives at user level, in the code-standards bundle
@@ -26,19 +26,18 @@ scripts/hooks/
                            file is Read. Enforces ~/.claude/CLAUDE.md's
                            "Session-start hook output". Behaviour pinned
                            by tests/prime-guard.test.ts.
-  commit-sweep-guard.sh    Blocks `git commit` Bash calls when the
-                           staged tree touches a guarded folder
-                           without updating its README.md (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit
-                           trigger 4 — "At commit
-                           time, update"), when the staged diff
-                           introduces forbidden code-comment
-                           patterns (same set as
-                           tests/code-comment-rules.test.ts), and/or
-                           when a staged comment block restates
-                           markdown prose the same commit adds
-                           — README.md#the-restatement-sweep.
+  commit-sweep/            The commit-time guard: README staleness,
+                           forbidden comment patterns, the
+                           restatement and snapshot-copy sweeps, plus
+                           the comment-rule set the vitest scanner
+                           shares. Own README.
+  pr-body-guard.sh         Blocks `gh pr create|edit --body-file <f>`
+                           when <f> would fail release-notes-guard or
+                           perf-section-guard in CI, and `gh pr ready`
+                           when the draft's body would, quoting the CI
+                           error — README.md#how-pr-body-guard-works.
                            Behaviour pinned by
-                           tests/commit-sweep-guard.test.ts.
+                           tests/pr-body-guard.test.ts.
   perf-guard.sh            Two independent gates on Bash / Write / Edit /
                            NotebookEdit: any tool call that names the
                            `.perf-go` arm marker is denied outright, and a
@@ -70,12 +69,10 @@ scripts/hooks/
                            README.md#how-paper-store-link-works.
                            Behaviour pinned by
                            tests/paper-store-link.test.ts.
-  comment-rules.json       The forbidden comment patterns, once. Read
-                           by tests/code-comment-rules.test.ts and by
-                           commit-sweep-guard.sh. The two hand-copied
-                           sets that preceded it had already drifted
-                           apart.
-  comment-rules.ts         Typed reader for that file.
+  command-match.sh         CMD_START and ENV_PREFIX, the regex pieces that
+                           find a command's start inside a Bash call and
+                           skip `env` / `NAME=value` in front of it. Sourced
+                           by perf-guard.sh and pr-body-guard.sh.
 ```
 
 ## How readme-guard works
@@ -239,105 +236,65 @@ one does not, the skill can be invoked and the marker still never appears,
 so the deny message says to create it and stop invoking — a loop being the
 failure mode a gate armed by another tool call invites.
 
-## How commit-sweep-guard works
+## How pr-body-guard works
 
-`PreToolUse` on `Bash`. Filters down to `git commit ...` invocations
-(handles `git -C <path> commit` and rejects subcommands like
-`git commit-tree`); other Bash calls pass straight through. For a
-matched commit:
+`PreToolUse` on `Bash`. The two body guards judge only the PR body and the
+branch's diff, so both can run before the body leaves the machine — and
+without this, a missing section surfaced only as a red CI check on every
+push. The hook runs the **same scripts** the workflows run
+(`scripts/release/release-notes-check.ts`,
+`scripts/perf/perf-section-guard.sh`), so there is no second copy of either
+rule; a test fails when a workflow stops calling its script. They are
+taken from the checkout the command runs in, falling back to the hook's own
+copies only when that checkout has none: hooks load from the main
+checkout, so without that a PR changing a check would be judged locally by
+main's old rule while CI ran the branch's new one.
 
-1. **README staleness.** Walks the `git diff --cached --name-only`
-   set. For each modified non-README under `src/`, `scripts/`,
-   `data/`, `docs/`, finds the closest folder containing a
-   `README.md` and reports if that README is missing from the staged
-   set. Suppressed when the commit command string contains
-   `[readme-skip: <reason>]` — works for both `-m "msg [readme-skip:
-   …]"` and HEREDOC-style messages, since both put the literal text
-   in the command. The skip-tag scan flattens newlines to spaces
-   before matching so a multi-line reason inside the brackets still
-   counts — without that, a HEREDOC message that wraps the bracketed
-   reason was silently ignored (`[^]]*` doesn't span newlines under
-   line-mode `grep -E`).
+It mirrors each workflow's triggers rather than the checks alone. The base
+branch and the exempting label are the hook's `ci_base` and `skip_label`,
+and a test fails when a workflow's `branches:` filter or label condition
+stops naming the same values:
 
-   **`-F` / `--file` / `--body-file` message files are read too**, and
-   have to be: the command string then carries only a path, so a tag
-   inside the file is invisible to a grep over the command. That is
-   the *only* route a worktree-isolated session has for a long message
-   — the worktree guard rejects `$( )` substitution and heredoc commit
-   bodies — so without this the opt-out was unusable precisely where
-   it was needed. A named file that is missing or unreadable is
-   skipped rather than fatal, and only the first 64KB is scanned.
+- **Base `main` only**, both workflows' `branches:` filter. `-B/--base`
+  decides; otherwise `create` resolves it as gh does — the current branch's
+  `gh-merge-base` git config, else the default branch — and `edit` asks
+  `gh pr view` for the PR's current base.
+- **`skip-version-bump` exempts the release notes.** The label set is what
+  the PR will carry after this call: `-l/--label`/`--add-label` add,
+  `--remove-label` removes, and on `edit` the PR's existing labels (again
+  from `gh pr view`) start the set.
+- **The diff is the PR's head against its merge base with
+  `origin/<base>`**, files and record count alike, as CI reads the PR. The
+  head is the checkout's `HEAD` on a bare `create`; `create -H <branch>`
+  uses that branch (or `origin/<branch>`), and `edit` the `headRefOid`
+  `gh pr view` reports, so editing one PR from a worktree on another judges
+  the right diff. A head this checkout does not hold, or a fork's
+  `owner:branch`, lets the call through rather than judging `HEAD`. A stale
+  `origin/main` reads a wider diff than GitHub will; fetch first if the
+  verdict surprises.
+- **A draft is not checked; becoming ready is.** `gh pr create --draft` /
+  `-d`, and `edit` of a PR `gh pr view` reports as a draft, pass whatever
+  the body: what the gate protects is a PR claiming to be ready when it is
+  not, since that is what goes wrong at landing, and a draft claims nothing.
+  CI still runs both guards on a draft, and a red check there is expected.
+  `gh pr ready [<N>]` is the claim, so it runs both checks on the body
+  GitHub holds (read through `gh pr view`, with the PR's base, head and
+  labels) and is refused on a failure, pointing at `gh pr edit --body-file`.
+  `--undo`, and `ready` on a PR that is not a draft, pass.
 
-2. **Comment-rule sweep.** Runs `git diff --cached -U0` filtered to
-   added lines (`^\+`, excluding `+++` headers) against the same
-   forbidden-pattern set `tests/code-comment-rules.test.ts` uses —
-   bead-IDs, bead-relative time refs, memory wikilinks, PR
-   references. Scoped to NEW content so pre-existing legacy
-   violations don't block unrelated commits.
+**Only a verdict denies.** A check's output carrying `::error::` is a
+failure CI would report, and becomes the deny reason (prefix stripped). Any
+other non-zero exit means the check could not run — no `origin` ref, not a
+git checkout — and the call passes. So does anything the hook cannot read:
+an inline `--body`, `-F -` (stdin), a missing file, an `edit` whose PR
+`gh` cannot view, or a PR in another repository (`-R`/`--repo`, a
+`GH_REPO=` prefix), whose history the local checkout does not hold. This
+is a hygiene gate with CI behind it, so it fails **open**, like readme-guard
+and unlike perf-guard.
 
-3. **Restatement sweep.** [The restatement sweep](#the-restatement-sweep) below.
-
-Any check fires a `permissionDecision: "deny"` with a per-finding
-breakdown and the relevant [Code comments](/AGENTS.md#code-comments--what-ci-enforces-here) substitution.
-
-## The restatement sweep
-
-[Code-comment hygiene](/docs/authoring-patterns.md#code-comment-hygiene) calls a comment
-restating README content written minutes earlier **the dominant failure
-mode**, and says CI cannot catch it. That is true of prose written in an
-earlier PR and false of the case the sentence actually describes: prose
-arriving in the *same commit* is in the staged diff, next to the comment.
-So this sweep compares the two halves of one commit.
-
-**It compares vocabulary, not phrasing**, because exact wording rarely
-survives the move from prose into a comment — a paraphrase is still a
-restatement. For each contiguous block of added comment lines it takes the
-distinct content words (stopwords and short tokens dropped, trailing `s`
-normalised so "pages" meets "page") and measures what share of them appear
-in markdown the same commit adds. Two lines minimum, twelve distinct words
-minimum, half of them shared, and the block is reported.
-
-Those floors are what keep a **pointer** legal: `// see
-/src/client/webgpu/tsl/README.md#interleaved-gradient-noise` is one line
-and a handful of words, so it never reaches the test however much
-vocabulary it shares. That is the shape the deny message asks for.
-
-`[comment-ok: <reason>]` in the commit message opts out, and is visible in
-the PR the way `[readme-skip:]` is. It exists because vocabulary overlap is
-evidence rather than proof: a long comment carrying a genuine invariant
-about the subject its README also describes can reach the threshold
-honestly.
-
-Known limit: a comment committed **apart** from the prose it restates is
-invisible to this. The README-staleness check above is what makes the two
-usually land together, and that coupling does not cover root-level files,
-which no folder README is charged for.
-
-Scope caveat: `-a` / `--all` commits aren't fully inspected; only
-already-staged files are checked. The standard `git add <files> &&
-git commit` flow Claude uses is covered correctly.
-
-## The trailing-slash exemption
-
-`stellata-perf/2` (the perf runner's schema string) and
-`.claude/skills/stellata-perf/` are not bead IDs, and nothing about their
-*shape* says so: the epic-slug window is 3–5 characters with no digit
-required, which `perf` fits exactly as `cns`, `dch`, `uadc` and `hhaw` do.
-The discriminator is what follows. **No bead ID is ever followed by `/`; a
-path or a namespace always is** — so the `stellata-` pattern ends `(?!/)`.
-
-Two things that look like holes and are not. A bead ID buried mid-path
-(`notes/stellata-8cg.49/summary.md`) is still caught, because the pattern
-backtracks off the `.49` and matches the bare `stellata-8cg` in front of the
-`.`, which is followed by a dot rather than a slash. And the exemption is
-deliberately **prefix-form only** — the bare `<epic>.NN` pattern below it
-keeps no such escape, because a bare slug needs the dotted number to match at
-all and no namespace in this tree wears one.
-
-The residual is a bead ID written with a trailing slash (`stellata-cns/`),
-which is not a shape anyone writes. The alternative considered and rejected
-was renaming the schema to `stellata/perf/1`: that clears one linter and puts
-the string beyond reach of everyone who greps for the project prefix.
+The command is split into shell words by the hook itself — quotes,
+backslash escapes and `\`-newline continuations honoured — and stops at the
+first unquoted `;`, `&` or `|`, so a title carrying one is read whole.
 
 ## How perf-guard fails closed
 
@@ -394,10 +351,12 @@ Two paths:
    (`rm ${TMPDIR:-/tmp}/claude-readme-guard/seen-$PPID.txt`).
    For `commit-sweep-guard`: pass `[readme-skip: <reason>]` in the
    commit message (covers the README check; comment violations still
-   block — fix the comments). For `prime-guard`: delete the sentinel
+   block — fix the comments), `[comment-ok: <reason>]` for the
+   restatement sweep, `[figure-ok: <reason>]` for the snapshot-copy sweep. For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
    the `rm` isn't itself blocked. For `skill-guard`: invoke the
-   skill, which is the intended route rather than an escape.
+   skill, which is the intended route rather than an escape. For
+   `pr-body-guard`: open the PR as a draft (`gh pr create --draft`).
 2. **Across the session.** Remove the entry from its event's array
    under `.claude/settings.json`'s `hooks`, or
    temporarily move the hook script aside.

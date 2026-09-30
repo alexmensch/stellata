@@ -63,6 +63,7 @@ import { SolarSystemWiring } from './solar-system/solar-system-wiring';
 import { VirtualClock } from './solar-system/time/time';
 import { CAMERA_NEAR_PC } from './camera/timing';
 import { EventBus } from './util/event-bus';
+import { fanOut } from './util/fan-out';
 import {
   DEFAULT_FILTER,
   DEFAULT_FOV,
@@ -948,31 +949,35 @@ export class Stellata {
   }
 
   dispose() {
-    this.frameLoop.dispose();
-    this.observeLookPin.invalidate();
-    window.removeEventListener('resize', this.onResize);
-    this.renderGate.dispose();
-    this.cameraStep.dispose();
-    this.cadence.dispose();
-    this.input.dispose();
-    this.observeControls.disable();
-    this.orbitFrameTick = null;
-    this.orbitFramePort = null;
-    this.aim.dispose();
-    this.warp.dispose();
-    this.observe.dispose();
-    this.focus.dispose();
-    this.controls.dispose();
-    this.extinction.dispose();
-    this.starPipeline.dispose();
-    this.layers.disposeAll();
-    this.floatingOrigin.dispose();
-    this.localDepthPass.dispose();
-    this.hdr.dispose();
-    // After every layer (they hand texture slots back to it), before the
-    // renderer (the releases need a live device).
-    this.webgpu.dispose();
-    this.renderer.dispose();
-    this.bus.clear();
+    fanOut('dispose', [
+      () => this.frameLoop.dispose(),
+      () => this.observeLookPin.invalidate(),
+      () => window.removeEventListener('resize', this.onResize),
+      () => this.renderGate.dispose(),
+      () => this.cameraStep.dispose(),
+      () => this.cadence.dispose(),
+      () => this.input.dispose(),
+      () => this.observeControls.disable(),
+      () => {
+        this.orbitFrameTick = null;
+        this.orbitFramePort = null;
+      },
+      () => this.aim.dispose(),
+      () => this.warp.dispose(),
+      () => this.observe.dispose(),
+      () => this.focus.dispose(),
+      () => this.controls.dispose(),
+      () => this.extinction.dispose(),
+      () => this.starPipeline.dispose(),
+      () => this.layers.disposeAll(),
+      () => this.floatingOrigin.dispose(),
+      () => this.localDepthPass.dispose(),
+      () => this.hdr.dispose(),
+      // After every layer (they hand texture slots back to it), before the
+      // renderer (the releases need a live device).
+      () => this.webgpu.dispose(),
+      () => this.renderer.dispose(),
+      () => this.bus.clear(),
+    ], (step) => step());
   }
 }
