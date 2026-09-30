@@ -274,7 +274,7 @@ describe('the filled call to action inverts the outlined one', () => {
 describe('the public stylesheet uses logical properties', () => {
   // overflow-x: the one exception, /src/site/styles/README.md#house-style.
   const PHYSICAL =
-    /^(width|height|(min|max)-(width|height)|top|right|bottom|left|inset|float|clear|overflow-y|(margin|padding|border)-(top|right|bottom|left)(-[a-z]+)?)$/;
+    /^(width|height|(min|max)-(width|height)|top|right|bottom|left|inset|float|clear|overflow-y|overscroll-behavior-[xy]|(scroll-)?(margin|padding)-(top|right|bottom|left)|border-(top|right|bottom|left)(-[a-z-]+)?)$/;
 
   it('declares no physical box property', () => {
     const found = RULES.filter(({ prop }) => PHYSICAL.test(prop));
