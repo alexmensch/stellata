@@ -354,8 +354,9 @@ It mirrors each workflow's triggers rather than the checks alone:
 failure CI would report, and becomes the deny reason (prefix stripped). Any
 other non-zero exit means the check could not run — no `origin` ref, not a
 git checkout — and the call passes. So does anything the hook cannot read:
-an inline `--body`, `-F -` (stdin), a missing file, or an `edit` whose PR
-`gh` cannot view. The command is split into shell words by the hook itself —
+an inline `--body`, `-F -` (stdin), a missing file, an `edit` whose PR
+`gh` cannot view, or a PR in another repository (`-R`/`--repo`, a
+`GH_REPO=` prefix), whose history the local checkout does not hold. The command is split into shell words by the hook itself —
 quotes, backslash escapes and `\`-newline continuations honoured — and stops
 at the first unquoted `;`, `&` or `|`, so a title carrying one is read
 whole. This is a hygiene

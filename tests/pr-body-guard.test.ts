@@ -143,6 +143,17 @@ describe('pr-body-guard', () => {
       }
     });
 
+    it('a PR in another repository, whose history this checkout does not hold', () => {
+      const file = body();
+      for (const command of [
+        `gh pr create -R someone/fork -F ${file}`,
+        `gh pr create --repo=someone/fork -F ${file}`,
+        `GH_REPO=someone/fork gh pr create -F ${file}`,
+      ]) {
+        expect(decision(command).denied, command).toBe(false);
+      }
+    });
+
     it('no origin ref to diff against', () => {
       git('update-ref', '-d', 'refs/remotes/origin/main');
       expect(decision(`gh pr create --label skip-version-bump -F ${body()}`).denied).toBe(false);

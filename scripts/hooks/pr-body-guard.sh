@@ -42,6 +42,8 @@ split_words() {
 
 split_words "${cmd#*"$match"}"
 
+[[ "$match" == *GH_REPO=* ]] && exit 0
+
 body='' base='' target='' added='' removed=''
 i=0
 while [ "$i" -lt "${#args[@]}" ]; do
@@ -57,9 +59,10 @@ while [ "$i" -lt "${#args[@]}" ]; do
     --label=* | --add-label=*) added="${added},${a#*=}" ;;
     --remove-label) removed="${removed},${next}"; i=$((i + 1)) ;;
     --remove-label=*) removed="${removed},${a#*=}" ;;
+    -R | --repo | --repo=*) exit 0 ;;
     # gh's other flags that take a value; their value is not the PR argument.
     -t | --title | -b | --body | -a | --assignee | -r | --reviewer | -m | --milestone | \
-      -p | --project | -H | --head | -T | --template | -R | --repo | \
+      -p | --project | -H | --head | -T | --template | \
       --add-* | --remove-assignee | --remove-reviewer | --remove-project) i=$((i + 1)) ;;
     -*) ;;
     *) [ -z "$target" ] && target="$a" ;;
