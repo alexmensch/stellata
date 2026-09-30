@@ -35,11 +35,8 @@ three and the app into separate vendor chunks leaves both halves near
 
 ## In dev, this document answers at `/app`
 
-`pnpm run dev` serves it at **`http://localhost:5173/app`** — and serves
-the public homepage at `/` and the 404 page for anything else, so one
-server answers the deploy's whole URL space. `vite.site-dev.ts` is the
-dev-only plugin doing that; [Reading it in dev](/src/site/README.md#reading-it-in-dev) is the
-reference.
+**`http://localhost:5173/app`** under `pnpm run dev`; [Reading it in dev](/src/site/README.md#reading-it-in-dev)
+owns how one dev server answers the deploy's whole URL space.
 
 Artifacts are unaffected: `publicDir` still serves `public/` at the dev
 root, so `BASE_URL`-relative fetches resolve exactly as in production.
