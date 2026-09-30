@@ -158,6 +158,31 @@ describe('a client that asks for markdown gets the page’s rendition', () => {
     expect(await response.text()).toBe(DOCUMENTS.homepage);
   });
 
+  // A revalidation is the same answer: a markdown client's 304 must not fall
+  // through to a 200 of HTML, and a 304 carries the Vary its 200 would.
+  describe('on a conditional request', () => {
+    const revalidating = (fresh: string) =>
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname;
+        return path === fresh
+          ? new Response(null, { status: 304 })
+          : new Response(path === '/' ? DOCUMENTS.homepage : DOCUMENTS.rendition, { status: 200 });
+      });
+
+    it('answers a markdown client’s fresh copy with a 304, not the HTML', async () => {
+      const response = await worker.fetch(get('/', MARKDOWN), { ASSETS: { fetch: revalidating('/index.md') } });
+      expect(response.status).toBe(304);
+      expect(response.headers.get('vary')).toMatch(/\bAccept\b/);
+    });
+
+    it('keeps Vary and Link on a browser’s 304', async () => {
+      const response = await worker.fetch(get('/', BROWSER), { ASSETS: { fetch: revalidating('/') } });
+      expect(response.status).toBe(304);
+      expect(response.headers.get('vary')).toMatch(/\bAccept\b/);
+      expect(response.headers.get('link')).toMatch(/rel="alternate"/);
+    });
+  });
+
   it('leaves a legacy share link redirecting, whatever it asked for', async () => {
     const { response } = await route('/v/AQAA/', MARKDOWN);
     expect(response.status).toBe(301);

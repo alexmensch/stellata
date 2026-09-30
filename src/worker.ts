@@ -14,6 +14,11 @@ interface Env {
   ASSETS: Fetcher;
 }
 
+/** A 304 is the same answer revalidated, and carries the same Vary. */
+function served(response: Response): boolean {
+  return response.status === 200 || response.status === 304;
+}
+
 function withHeaders(response: Response, edit: (headers: Headers) => void): Response {
   const headers = new Headers(response.headers);
   edit(headers);
@@ -38,7 +43,7 @@ export default {
       const markdown = await env.ASSETS.fetch(
         new Request(new URL(rendition, url).toString(), request),
       );
-      if (markdown.status === 200) {
+      if (served(markdown)) {
         return withHeaders(markdown, (headers) => {
           headers.set('content-type', MARKDOWN_TYPE);
           headers.set('vary', varyWithAccept(headers.get('vary')));
@@ -48,7 +53,7 @@ export default {
 
     const response = await env.ASSETS.fetch(request);
 
-    if (decided.kind === 'page' && decided.rendition !== null && response.status === 200) {
+    if (decided.kind === 'page' && decided.rendition !== null && served(response)) {
       const advertised = decided.rendition;
       return withHeaders(response, (headers) => {
         headers.set('link', alternateLink(advertised));
