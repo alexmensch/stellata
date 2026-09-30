@@ -108,10 +108,11 @@ page uses. Paste those into utopia.fyi's calculators, or compute
 
 ## Responsiveness has no breakpoints
 
-There is not one `@media (min-width: …)` rule in the file, deliberately:
-this app is looked at on every shape of screen, and a page whose layout
-switches on the *viewport* is wrong for every element that isn't the width
-of the viewport. Three mechanisms replace them.
+**Layout never queries the viewport.** This app is looked at on every shape
+of screen, and a page whose layout switches on the *viewport* is wrong for
+every element that isn't the width of the viewport. Three mechanisms carry
+the layout instead, and `tests/site-css-rules.test.ts` fails any width or
+height media query.
 
 - **`.flow`** owns all vertical rhythm through one owl selector. An element
   changes the gap *above itself* by setting `--flow-space`, and a container
