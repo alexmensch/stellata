@@ -39,6 +39,12 @@ describe('parseMarkers', () => {
     expect(problems).toEqual(['line 1: count:a/b is never closed']);
     expect(markers.map((m) => m.key)).toEqual(['c/d', 'e/f']);
   });
+
+  it('reads a nested open as the outer marker never closing', () => {
+    const { markers, problems } = parseMarkers(`<!-- count:a/b -->${mark('c/d', '2')}`);
+    expect(problems).toEqual(['line 1: count:a/b is never closed']);
+    expect(markers.map((m) => m.key)).toEqual(['c/d']);
+  });
 });
 
 describe('parseFormat', () => {
@@ -90,6 +96,7 @@ describe('formatFigure', () => {
     expect(formatFigure(16414, { kind: 'thousands', digits: 3 })).toBe('16.4k');
     expect(formatFigure(63653, { kind: 'thousands', digits: 2 })).toBe('64k');
     expect(formatFigure(10110, { kind: 'thousands', digits: 3 })).toBe('10.1k');
+    expect(formatFigure(1247240, { kind: 'thousands', digits: 3 })).toBe('1,250k');
   });
 });
 
