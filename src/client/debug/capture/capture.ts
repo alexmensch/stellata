@@ -8,6 +8,7 @@ import {
   type IdMaps,
   applyDecodedView,
   decodeBlob,
+  orbitFrameNow,
   viewPose,
 } from '../../util/url-state';
 import { shareBlobFrom } from '../../util/url-state/share-path-pure';
@@ -22,6 +23,7 @@ import {
   frameMismatch,
   lerpPose,
   planClock,
+  poseOutOfOrbit,
   takeFrameAt,
 } from './capture-pure';
 
@@ -98,6 +100,9 @@ export function runCapture(
   const ridden: CapturePose = {
     cam: new THREE.Vector3(), tgt: new THREE.Vector3(), up: new THREE.Vector3(), fov: from.fov,
   };
+  const outOfOrbit: CapturePose = {
+    cam: new THREE.Vector3(), tgt: new THREE.Vector3(), up: new THREE.Vector3(), fov: from.fov,
+  };
   const anchor = new THREE.Vector3();
 
   cancelActive?.();
@@ -143,8 +148,14 @@ export function runCapture(
       return resolved ? anchor : anchor.set(0, 0, 0);
     };
 
+    // README.md#a-locked-take-rides-the-orbit
+    const icrsPose = (pose: CapturePose): CapturePose => {
+      const orbit = startView.orbitPose ? orbitFrameNow(stellata) : null;
+      return orbit === null ? pose : poseOutOfOrbit(pose, orbit, outOfOrbit);
+    };
+
     const writePose = (pose: CapturePose) => {
-      const p = anchorPose(pose, focalAnchor(), ridden);
+      const p = anchorPose(icrsPose(pose), focalAnchor(), ridden);
       stellata.camera.position.copy(p.cam);
       stellata.controls.target.copy(p.tgt);
       stellata.camera.up.copy(p.up);

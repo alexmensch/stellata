@@ -970,7 +970,7 @@ function reseatWhenOrbitReady(stellata: Stellata, view: DecodedView): Promise<vo
 }
 
 /** ORB for the focus as it stands now, or null when there is none to read. */
-function orbitFrameNow(stellata: Stellata): ReferenceFrame | null {
+export function orbitFrameNow(stellata: Stellata): ReferenceFrame | null {
   const read = stellata.getOrbitFramePort()?.orbitFrame();
   return read?.status === 'ready' ? read.value : null;
 }
