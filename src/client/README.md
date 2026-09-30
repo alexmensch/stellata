@@ -24,9 +24,9 @@ themselves.
   `Promise.all`** — the star catalog, whose absence leaves nothing to
   render, and whose rejection the surrounding catch turns into the error
   screen. Every other loader that rejects blanks the whole app, so an
-  optional artifact must resolve null instead — on a 404, which absence
-  now really is ([Request routing](../README.md#request-routing)), and on a parse error,
-  which still catches a present-but-truncated one.
+  optional artifact must resolve null instead — on a 404 (a missing
+  artifact is one, [Request routing](../README.md#request-routing)), and on a parse error (a
+  present-but-truncated one).
   `solar-system/probes/probe-loader.ts` is the pattern to copy;
   warn-then-null on a present-but-invalid artifact
   (`local-group/local-group-loader.ts`) is the shape for shape errors. For
