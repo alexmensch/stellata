@@ -7,7 +7,6 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { ROUTING_CASES, type ServedDocument } from '../src/routing-cases-fixture';
-import { buildFigures, publishBuildEnv } from '../vite.env';
 import { documentRoutingInDev } from '../vite.site-dev';
 
 const ROOT = resolve(__dirname, '..');
@@ -31,9 +30,6 @@ interface Server {
 }
 
 function start(): Server {
-  // `vite.config.ts` does this at config load, which is what puts the
-  // figures the rendition resolves into the dev server's environment.
-  publishBuildEnv(buildFigures(ROOT));
   const registered: ((req: never, res: never, next: never) => unknown)[] = [];
   const watched: string[] = [];
   const changed: ((file: string) => void)[] = [];
