@@ -15,6 +15,7 @@ import {
   catalogueRecordCount,
   citedReferenceCount,
   creditedSourceCount,
+  verifiedReferenceCount,
 } from '../scripts/site/site-metrics';
 
 const ROOT = resolve(__dirname, '..');
@@ -48,6 +49,7 @@ describe('the pages ask for their figures rather than quoting them', () => {
     ['catalogue size', catalogueRecordCount(ROOT).toLocaleString('en-US')],
     ['credited source count', String(creditedSourceCount(ROOT))],
     ['reference count', String(citedReferenceCount(ROOT))],
+    ['verified reference count', String(verifiedReferenceCount(ROOT))],
   ])('never states the %s as a literal', (_, figure) => {
     const body = textOf(select('body', HOME));
     expect(body).not.toMatch(new RegExp(`(^|[^\\d,.])${escapeRegExp(figure)}($|[^\\d,])`));
@@ -98,6 +100,10 @@ describe('the derivations behind those figures', () => {
 
   it('counts the works the citation index records', () => {
     expect(citedReferenceCount(ROOT)).toBe(200);
+  });
+
+  it('counts the works every claim of which was quoted from a held copy', () => {
+    expect(verifiedReferenceCount(ROOT)).toBe(190);
   });
 
   it('reads the catalogue size with no built artifact to read', () => {

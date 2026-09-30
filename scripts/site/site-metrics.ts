@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { selectAll } from 'hast-util-select';
 
 import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
-import { parseIndex } from '../util/citation-index-pure.ts';
+import { type IndexEntry, parseIndex } from '../util/citation-index-pure.ts';
 import { parseHtml } from './parse-html.ts';
 
 const CITATION_INDEX = 'data/papers/index.md';
@@ -47,11 +47,22 @@ export function creditedSourceCount(root: string): number {
   return credits.length;
 }
 
-/** Every cited work has one entry in the citation index. */
-export function citedReferenceCount(root: string): number {
+function citationEntries(root: string): IndexEntry[] {
   const entries = parseIndex(readFileSync(join(root, CITATION_INDEX), 'utf8'));
   if (entries.length === 0) {
     throw new Error(`site metrics: no entries found in ${CITATION_INDEX}`);
   }
-  return entries.length;
+  return entries;
+}
+
+/** Every cited work has one entry in the citation index. */
+export function citedReferenceCount(root: string): number {
+  return citationEntries(root).length;
+}
+
+/** Cited works whose every claim was quoted from a held copy of the work. */
+export function verifiedReferenceCount(root: string): number {
+  return citationEntries(root).filter(
+    (entry) => entry.rows.length > 0 && entry.rows.every((row) => row.status === 'verified'),
+  ).length;
 }

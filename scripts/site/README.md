@@ -1,8 +1,9 @@
 # What the public pages are derived from
 
 ```
-site-metrics.ts        Counts the catalogue records, the credited sources
-                       and the cited references off the things themselves.
+site-metrics.ts        Counts the catalogue records, the credited sources,
+                       the cited references and the verified ones off the
+                       things themselves.
 markdown-rendition.ts  A page's markdown rendition, derived from the page's
                        own HTML. Emitted as `dist/index.md`.
 parse-html.ts          The one HTML parse both of the above read a page
@@ -17,7 +18,7 @@ something a page states is never *also* written down by hand.
 `site-metrics.ts` is read at **config load** by `vite.env.ts`, which
 publishes each count as a `VITE_` value, and Vite substitutes those into
 the pages as `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
-`%VITE_REFERENCE_COUNT%`. So a figure on the homepage is a lookup, not a
+`%VITE_REFERENCE_COUNT%`, `%VITE_VERIFIED_REFERENCE_COUNT%`. So a figure on the homepage is a lookup, not a
 literal — which is the one thing a monorepo holding the model, the
 application and the marketing page is good for.
 
@@ -45,6 +46,11 @@ application and the marketing page is good for.
   cites, one entry each, and `tests/citation-index.test.ts` fails a citation
   that points anywhere else, so the entry count is the record's size, not
   an estimate of it. An index with no entries stops the build.
+- **Verified references** — the same entries, counting those with at least
+  one claims row and every row `verified`: each claim quoted from a held
+  copy of the work, on the page it names
+  ([An entry records the paper, never the codebase](/data/papers/README.md#an-entry-records-the-paper-never-the-codebase)).
+  The remainder are `unverified` until a copy can be read.
 
 ## The markdown rendition
 

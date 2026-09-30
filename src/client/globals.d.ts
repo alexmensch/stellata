@@ -7,9 +7,10 @@ interface ImportMetaEnv {
   readonly VITE_STAR_COUNT: string;
   /** Sources credited in the application's own Credits tab. */
   readonly VITE_SOURCE_COUNT: string;
-  /** Distinct multi-author citations across the modelling record — a floor
-   *  on it, never a measure. */
+  /** Works in the citation index, `data/papers/index.md`. */
   readonly VITE_REFERENCE_COUNT: string;
+  /** Index works whose every claim was quoted from a held copy. */
+  readonly VITE_VERIFIED_REFERENCE_COUNT: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;
