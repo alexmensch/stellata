@@ -157,9 +157,15 @@ height media query.
   start` and figures `align-self: center`, so a label hugs the top of its
   row and a figure sits centred in a row another cell's wrapped figure made
   taller. The consequence to know: a subgridded axis takes its gutter from
-  the **parent**, which here is the 1px hairline, so the label carries the
+  the **parent**, which here has none, so the label carries the
   separation below itself as `padding-block-end` and not a `gap` on the
   cell. Restoring that `gap` looks tidier and silently closes the space.
+
+  **The hairlines are borders, split between the strip and its cells**: the
+  strip draws its start edges and each cell its end edges, so no line is
+  drawn twice and a last row the cells do not fill shows the page ground.
+  The alternative that looks simpler, a `--border` background showing
+  through a 1px `gap`, paints every unfilled slot as a solid slab.
 
   **`dd` is in the global reset for this strip's sake.** The UA stylesheet
   indents a `dd` by 40px, which on an 11rem cell puts a short figure near

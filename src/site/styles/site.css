@@ -362,9 +362,8 @@ video {
     auto-fit,
     minmax(min(var(--readout-item), 100%), 1fr)
   );
-  gap: var(--hairline);
-  background: var(--border);
-  border: var(--rule);
+  border-block-start: var(--rule);
+  border-inline-start: var(--rule);
 }
 /* No row gap on the cell: README.md#responsiveness-has-no-breakpoints. */
 .readout-cell {
@@ -373,7 +372,8 @@ video {
   grid-template-rows: subgrid;
   padding-block: var(--space-xs) var(--space-s);
   padding-inline: var(--space-s);
-  background: var(--bg);
+  border-block-end: var(--rule);
+  border-inline-end: var(--rule);
 }
 .readout-cell dt {
   align-self: start;
