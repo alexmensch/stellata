@@ -218,7 +218,7 @@ async function main() {
     createScaleBar(stellata);
     const attitude = createAttitudeIndicator(stellata);
     if (attitude !== null) stellata.setOrbitFrameTick(attitude.tickOrbitFrame);
-    bindWarpButton(stellata);
+    bindWarpButton(stellata, teardown.signal);
     bindModeToggle(stellata);
     // Hide the #overlay SVG (HUD arrows, focus ring, distance vector,
     // POI labels, etc.) while the focus-park lerp is in flight — same
@@ -315,6 +315,7 @@ async function main() {
       aimAtFrameOrigin: (opposite) => attitude?.aimAtFrameOrigin(opposite),
       toggleOrbitLock: () => attitude?.toggleOrbitLock(),
       toggleDebugPanel: debugTools.panel,
+      signal: teardown.signal,
       timeScrubber,
     });
 

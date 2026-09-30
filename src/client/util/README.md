@@ -246,7 +246,11 @@ build scripts, tests, and shader uniforms.
   `main.ts` binds it to `DevConsoleGlobals` (`../globals.d.ts`), so only
   `stellata` and `debug` compile, and `tests/page-teardown-contract.test.ts`
   fails any other `window` assignment under `src/client`. `pagehide` deletes every exposed name, and
-  drops the held release once it has run.
+  drops the held release once it has run. `signal` aborts on that same
+  `pagehide`: a `window` / `document` listener nothing else removes passes
+  it (`../ui/keyboard-shortcuts.ts`, `../camera/warp/warp-button.ts`,
+  `../calibration/calibration-overlay.ts`), and the same test file fails
+  one that does neither.
   **Why both matter**: WebKit keeps a reloaded page's global object alive
   in the same content process, and everything reachable from it — a
   global, a listener on `window` — survives the page. It frees whatever

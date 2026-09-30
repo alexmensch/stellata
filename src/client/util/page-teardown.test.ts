@@ -43,6 +43,17 @@ describe('bindPageTeardown', () => {
     expect(release).toHaveBeenCalledTimes(1);
   });
 
+  it('aborts its listener signal on pagehide', () => {
+    const { target, teardown } = make();
+    const listener = vi.fn();
+    target.addEventListener('ping', listener, { signal: teardown.signal });
+    expect(teardown.signal.aborted).toBe(false);
+    target.dispatchEvent(new Event('pagehide'));
+    expect(teardown.signal.aborted).toBe(true);
+    target.dispatchEvent(new Event('ping'));
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('runs the held release on pagehide', () => {
     const { target, teardown } = make();
     const release = vi.fn();

@@ -1,6 +1,8 @@
 /** Page-lifetime teardown: the GPU holder's release and the dev-console globals (util/README.md). */
 
 export interface PageTeardown<N> {
+  /** Aborts on the first `pagehide`; pass it to every listener nothing else removes. */
+  readonly signal: AbortSignal;
   hold(release: () => void): void;
   expose<K extends keyof N>(name: K, value: N[K]): void;
 }
@@ -13,9 +15,11 @@ export function bindPageTeardown<N extends object>(
   let release: (() => void) | null = null;
   let released = false;
   const exposed = new Set<keyof N>();
+  const listeners = new AbortController();
   target.addEventListener('pagehide', () => {
     for (const name of exposed) Reflect.deleteProperty(globals, name);
     exposed.clear();
+    listeners.abort();
     if (released || release === null) return;
     released = true;
     // WebKit keeps a reloaded page's global alive, and this listener with it.
@@ -27,6 +31,7 @@ export function bindPageTeardown<N extends object>(
     if (released && (event as PageTransitionEvent).persisted) reload();
   });
   return {
+    signal: listeners.signal,
     hold(next) {
       release = next;
     },
