@@ -33,6 +33,7 @@ objects instead of pulling ~600 MB from the LFS store every push.
 CI check on every PR. Fails the PR if the `## Release notes` block in
 the PR body is empty (HTML comments don't count). Skipped on PRs
 labelled `skip-version-bump`. See `RELEASING.md` for the block format.
+The check is `scripts/release/release-notes-check.sh`, tested in vitest.
 
 ## `perf-section-guard.yml`
 
