@@ -2222,16 +2222,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       expect(loc.pathname).toBe('/app');
     });
 
-    // `/` is the public homepage. Resetting there would throw the user out
-    // of the application over a typo in a share link.
-    it('never resets to the site root', () => {
-      const { loc } = installUrl('/app/v/_w/');
-      const { stellata } = makeSyncStellata();
-      applyFromUrl(stellata, syncIdMaps());
-      expect(loc.pathname).not.toBe('/');
-    });
-
-    it('strips a share path whose blob will not decode', () => {
+    it('strips a share path whose blob will not decode to the app, never the site root', () => {
       // Single byte 0xFF → version 255, an unknown schema decodeBlob rejects.
       const { loc } = installUrl('/app/v/_w/');
       const { stellata } = makeSyncStellata();
