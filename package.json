@@ -53,6 +53,8 @@
     "fetch:ephemerides": "tsx scripts/ephemerides/fetch-planet-elements.ts",
     "validate:simbad": "tsx scripts/catalog/validate/validate-simbad-sample.ts",
     "validate:record-parity": "tsx scripts/catalog/validate/record-parity.ts",
+    "identity:snapshot": "tsx scripts/util/output-identity.ts snapshot",
+    "identity:diff": "tsx scripts/util/output-identity.ts diff",
     "analyse:prefilter": "tsx scripts/dust/prefilter/measure.ts",
     "analyse:prefilter-cost": "tsx scripts/dust/prefilter/cost.ts",
     "analyse:march-taps": "tsx scripts/dust/march-taps/measure.ts",
