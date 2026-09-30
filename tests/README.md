@@ -174,16 +174,12 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in build-catalog's
                          full vitest and locally.
-site-claims.test.ts      No figure on a public page is a literal: each
-                         readout cell must still carry its %VITE_*%
-                         substitution rather than a number. Then the
-                         derivations behind them
-                         (scripts/site/site-metrics.ts) — the credited
-                         source count pinned, the per-subsystem table
-                         still summing to it, and the reference scan
-                         bounded both ways, since a pattern that matches
-                         nothing and one that matches ordinary prose fail
-                         in opposite directions.
+site-claims.test.ts      The homepage against what it states: figures are
+                         published tokens, never literals · every saved-view
+                         link decodes · the source and reference counts
+                         pinned, the subsystem table summing to the first ·
+                         only on-site links stay in the tab · every
+                         author-year a citation-index label.
                          /src/site/README.md#numbers-in-copy.
 site-css-rules.test.ts   The public stylesheet answers to its container and
                          to the reader's font size, never to a viewport
