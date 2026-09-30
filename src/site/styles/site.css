@@ -547,7 +547,6 @@ video {
 .aside,
 .claim p,
 .sight-copy p,
-.spec-list li,
 .requirement p,
 .footer {
   font-size: var(--step--1);
@@ -620,27 +619,6 @@ video {
   font-variant-numeric: tabular-nums;
   text-align: end;
   white-space: nowrap;
-}
-
-/* ── Block: spec list ──────────────────────────────────────────────── */
-
-.spec-list {
-  padding: 0;
-  list-style: none;
-}
-.spec-list li {
-  padding-block: var(--space-xs);
-  line-height: var(--leading-snug);
-}
-.spec-list li + li {
-  border-block-start: var(--rule);
-}
-.spec-list li:first-child {
-  padding-block-start: 0;
-}
-.spec-list b {
-  font-weight: var(--weight-medium);
-  color: var(--fg);
 }
 
 /* ── Block: requirement ────────────────────────────────────────────── */
