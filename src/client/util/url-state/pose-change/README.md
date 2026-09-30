@@ -33,7 +33,7 @@ went unrecorded; the 1e-3 pc encoder band called a 30-billion-km pan
 system "Sol", so the receiver rebuilt the pose 1 AU away.
 
 **The pose is measured from the anchor the RECEIVER rebuilds**, not from the
-local origin — `../url-state.ts`'s `anchoredPose`, which both writers read
+local origin — `../anchored-pose.ts`'s `anchoredPose`, which both writers read
 so they cannot disagree about what has moved. A hard focus recentres the
 origin onto the object at apply time, while the sender's own recentre fires
 only once the camera has drifted 16× the eye distance

@@ -54,7 +54,7 @@ export function divergesFromDefault(
  *
  * Pass pose vectors measured from the anchor the receiver rebuilds, not raw
  * local ones — a translation of both is motion here, and under a focal ride
- * that is motion the viewer cannot see (`url-state.ts` anchoredPose).
+ * that is motion the viewer cannot see (`../anchored-pose.ts`).
  */
 export function poseChanged(
   prev: Readonly<Float64Array>,

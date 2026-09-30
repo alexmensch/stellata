@@ -79,7 +79,7 @@ describe('poseChanged — one rule at every vantage', () => {
 
   // A translation of the whole pose IS a change here — the caller is what
   // makes a focal ride invisible, by handing in pose vectors already measured
-  // from the focal object (`url-state.ts` anchoredPose). Left to this module
+  // from the focal object (`../anchored-pose.ts`). Left to this module
   // it would read as motion, which is right for free flight and would be
   // per-frame URL churn for a ride.
   it('reads a translation of the whole pose as a change', () => {
