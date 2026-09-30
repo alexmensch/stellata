@@ -15,7 +15,9 @@ doc-figures-pure.ts        Marker grammar, key resolution, formatting, and
 doc-figures-pure.test.ts   Grammar, resolution and format cases.
 doc-figures.ts             loadSnapshots (every tracked *-expected.json, keyed
                            by stem; a repeated stem throws) and docFiles (tracked
-                           and untracked-but-not-ignored *.md, symlinks out).
+                           and untracked-but-not-ignored *.md). Both list
+                           through presentFiles, so a symlink or a deleted,
+                           unstaged file is skipped.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
                            the run exits 1.

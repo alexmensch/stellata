@@ -1,10 +1,10 @@
 // Extraction and resolution for `<path>.md#<slug>` doc pointers — the
 // codebase's wiki links. Grammar and scope: /tests/README.md#doc-pointer-resolution.
-import { existsSync, lstatSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { basename, extname, join, relative } from 'node:path';
 import GithubSlugger from 'github-slugger';
 import { Lexer, type Token, walkTokens } from 'marked';
-import { gitFiles, lfsTracked } from '../scripts/util/git-files';
+import { gitFiles, lfsTracked, presentFiles } from '../scripts/util/git-files';
 
 export interface DocPointer {
   citedPath: string;
@@ -76,8 +76,8 @@ export function pointerCorpus(root: string): string[] {
     (name) => SCANNED_KINDS.includes(kindOf(name)) && !UNSCANNED.includes(name),
   );
   const lfs = lfsTracked(root, names);
-  return names
-    .filter((name) => !lfs.has(name))
-    .map((name) => join(root, name))
-    .filter((path) => existsSync(path) && !lstatSync(path).isSymbolicLink());
+  return presentFiles(
+    root,
+    names.filter((name) => !lfs.has(name)),
+  ).map((name) => join(root, name));
 }

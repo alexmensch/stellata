@@ -1,5 +1,7 @@
 // Git's view of the tree: the file list, and which of those files Git LFS stores.
 import { execFileSync } from 'node:child_process';
+import { existsSync, lstatSync } from 'node:fs';
+import { join } from 'node:path';
 
 export function gitFiles(
   root: string,
@@ -11,6 +13,14 @@ export function gitFiles(
   return execFileSync('git', [...args, '--', ...pathspecs], { cwd: root, encoding: 'utf8' })
     .split('\0')
     .filter((name) => name !== '');
+}
+
+/** The names that are regular files on disk: git still lists a tracked file deleted but not staged, and a symlink would double its target. */
+export function presentFiles(root: string, names: string[]): string[] {
+  return names.filter((name) => {
+    const path = join(root, name);
+    return existsSync(path) && !lstatSync(path).isSymbolicLink();
+  });
 }
 
 export function lfsTracked(root: string, names: string[]): Set<string> {
