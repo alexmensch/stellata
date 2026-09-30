@@ -20,8 +20,9 @@ parse-html.ts          The one HTML parse site-metrics.ts, markdown-rendition.ts
                        an element's text whitespace-collapsed.
 ```
 
-All three are derivations rather than pipelines, and all exist so that
-something a page states is never *also* written down by hand.
+Each is a derivation rather than a pipeline (parse-html.ts and
+figures-pure.ts are what they share), and each exists so that something a
+page states is never *also* written down by hand.
 
 ## The figures
 
