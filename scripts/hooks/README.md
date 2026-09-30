@@ -240,7 +240,7 @@ failure mode a gate armed by another tool call invites.
 branch's diff, so both can run before the body leaves the machine — and
 without this, a missing section surfaced only as a red CI check on every
 push. The hook runs the **same scripts** the workflows run
-(`scripts/release/release-notes-check.sh`,
+(`scripts/release/release-notes-check.ts`,
 `scripts/perf/perf-section-guard.sh`), so there is no second copy of either
 rule; a test fails when a workflow stops calling its script. They are
 taken from the checkout the command runs in, falling back to the hook's own

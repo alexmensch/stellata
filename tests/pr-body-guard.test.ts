@@ -213,23 +213,27 @@ describe('pr-body-guard', () => {
 
 describe('CI and the hook run one check each', () => {
   it.each([
-    ['release-notes-guard.yml', 'scripts/release/release-notes-check.sh'],
-    ['perf-section-guard.yml', 'scripts/perf/perf-section-guard.sh'],
-  ])('%s calls %s', (workflow, script) => {
+    ['release-notes-guard.yml', 'node', 'scripts/release/release-notes-check.ts'],
+    ['perf-section-guard.yml', 'bash', 'scripts/perf/perf-section-guard.sh'],
+  ])('%s calls %s %s, as the hook does', (workflow, runner, script) => {
     const yml = readFileSync(resolve(__dirname, '../.github/workflows', workflow), 'utf-8');
-    expect(yml).toContain(`bash ${script}`);
-    expect(readFileSync(HOOK, 'utf-8')).toContain(`$(check ${script.replace(/^scripts\//, '')})`);
+    expect(yml).toContain(`${runner} ${script}`);
+    expect(readFileSync(HOOK, 'utf-8')).toContain(`${runner} "$(check ${script.replace(/^scripts\//, '')})"`);
   });
 
   it('runs the copies in the checkout the command runs in, as CI runs the branch copies', () => {
-    for (const script of ['scripts/release/release-notes-check.sh', 'scripts/perf/perf-section-guard.sh']) {
+    const stubs = {
+      'scripts/release/release-notes-check.ts': 'console.log("::error::stub notes"); process.exit(1);\n',
+      'scripts/perf/perf-section-guard.sh': 'echo "::error::stub perf"; exit 1\n',
+    };
+    for (const [script, content] of Object.entries(stubs)) {
       mkdirSync(join(repo, dirname(script)), { recursive: true });
-      writeFileSync(join(repo, script), `echo "::error::stub ${script}"; exit 1\n`);
+      writeFileSync(join(repo, script), content);
     }
     const d = decision(`gh pr create -F ${body(PERF, NOTES)}`);
     expect(d.denied).toBe(true);
-    expect(d.reason).toContain('stub scripts/release/release-notes-check.sh');
-    expect(d.reason).toContain('stub scripts/perf/perf-section-guard.sh');
+    expect(d.reason).toContain('stub notes');
+    expect(d.reason).toContain('stub perf');
   });
 });
 

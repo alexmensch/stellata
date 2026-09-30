@@ -17,11 +17,14 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   near-limit (over
   `ASSET_WARN_FRACTION`, 80 %). The catalogue chunk plan's test imports
   the same ceiling.
-- `release-notes-check.sh` (+ test) — `release-notes-guard.yml`'s check:
-  given a PR body file, fails unless its `## Release notes` section has
-  content once HTML comments are stripped. A second parser of the section
-  `extractReleaseNotes()` reads; the test fails when the two disagree on
-  what counts.
+- `release-notes-check.ts` (+ test) — `release-notes-guard.yml`'s check:
+  `node release-notes-check.ts <body-file>` fails unless
+  `extractReleaseNotes()` finds the `## Release notes` section non-empty,
+  so the guard and the deploy cannot disagree on what counts. Run by plain
+  `node` (built-in TypeScript support, Node 24 in CI), which is why it and
+  `release-plan-pure.ts` must import no package and no path that needs a
+  bundler — the job checks out `scripts/release` alone and installs nothing.
+  The test holds both to `node:` builtins and `./sibling.ts` imports.
 - `check-asset-sizes.ts` — `pnpm run check:asset-sizes`. Walks `dist/`,
   prints the largest files, emits GitHub `::warning::` / `::error::`
   annotations and exits 1 on any oversize file. Run by `test.yml`'s

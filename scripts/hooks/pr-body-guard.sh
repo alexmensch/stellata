@@ -104,7 +104,7 @@ failures=''
 record() {
   local guard="$1" out
   shift
-  out="$(bash "$@" 2>&1)" && return 0
+  out="$("$@" 2>&1)" && return 0
   printf '%s' "$out" | grep -q '::error::' || return 0
   failures="${failures}
 - ${guard}: $(printf '%s\n' "$out" | grep '::error::' | sed 's/^::error:://')"
@@ -115,15 +115,15 @@ check() {
   if [ -n "$root" ] && [ -f "$root/scripts/$1" ]; then echo "$root/scripts/$1"; else echo "$here/../$1"; fi
 }
 
-if [ "$skip" = false ]; then record release-notes-guard "$(check release/release-notes-check.sh)" "$body"; fi
-record perf-section-guard "$(check perf/perf-section-guard.sh)" "$body" "origin/${base}" ${head:+"$head"}
+if [ "$skip" = false ]; then record release-notes-guard node "$(check release/release-notes-check.ts)" "$body"; fi
+record perf-section-guard bash "$(check perf/perf-section-guard.sh)" "$body" "origin/${base}" ${head:+"$head"}
 
 [ -z "$failures" ] && exit 0
 
 reason="Refusing gh pr ${sub}: ${body} fails the CI guard it would meet on GitHub.
 ${failures}
 
-Fix ${body} and rerun the same command. The checks are the ones CI runs: scripts/release/release-notes-check.sh and scripts/perf/perf-section-guard.sh."
+Fix ${body} and rerun the same command. The checks are the ones CI runs: scripts/release/release-notes-check.ts and scripts/perf/perf-section-guard.sh."
 
 jq -n --arg reason "$reason" '{
   hookSpecificOutput: {
