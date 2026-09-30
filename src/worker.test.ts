@@ -69,6 +69,11 @@ describe('legacy share transports redirect onto the canonical form', () => {
     expect(response.status).toBe(301);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('redirects only a GET or HEAD, as the dev server does', async () => {
+    expect((await route('/v/AQAA/', { method: 'HEAD' })).response.status).toBe(301);
+    expect((await route('/v/AQAA/', { method: 'POST' })).response.status).toBe(404);
+  });
 });
 
 describe('an unmatched path under /app is application state', () => {

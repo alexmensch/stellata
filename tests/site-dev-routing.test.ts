@@ -173,6 +173,11 @@ describe('the middleware answers whatever the client accepts', () => {
     expect(answer.fellThrough).toBe(true);
   });
 
+  it('redirects only a GET or HEAD, as the Worker does', async () => {
+    expect((await fetchPath('/v/AQAA/', 'text/html', 'HEAD')).status).toBe(301);
+    expect((await fetchPath('/v/AQAA/', 'text/html', 'POST')).fellThrough).toBe(true);
+  });
+
   it('301s a legacy share link whatever the client accepts', async () => {
     const answer = await fetchPath('/v/AQAA/', 'text/markdown');
     expect(answer.status).toBe(301);

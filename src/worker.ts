@@ -25,11 +25,12 @@ export default {
     const url = new URL(request.url);
     const decided = route(url.pathname, url.search);
 
-    if (decided.kind === 'redirect') {
+    const readable = request.method === 'GET' || request.method === 'HEAD';
+
+    if (decided.kind === 'redirect' && readable) {
       return Response.redirect(new URL(decided.to, url).toString(), 301);
     }
 
-    const readable = request.method === 'GET' || request.method === 'HEAD';
     const accept = request.headers.get('accept');
     const rendition = readable ? negotiatedRendition(decided, accept) : null;
 
