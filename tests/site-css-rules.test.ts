@@ -212,15 +212,42 @@ describe('the public stylesheet caps line length once', () => {
 });
 
 describe('the public stylesheet keeps the CUBE cascade order', () => {
-  it('emits utilities after every block', () => {
+  it('emits tokens, global, compositions, blocks and utilities in that order', () => {
+    const tokens = CSS.indexOf('── Tokens');
+    const global = CSS.indexOf('── Global');
     const composition = CSS.indexOf('── Composition');
     const lastBlock = CSS.lastIndexOf('── Block:');
     const utilities = CSS.indexOf('── Utilities');
+    expect(tokens, 'no Tokens section').toBeGreaterThan(-1);
+    expect(global, 'no Global section').toBeGreaterThan(-1);
     expect(composition, 'no Composition section').toBeGreaterThan(-1);
     expect(lastBlock, 'no Block sections').toBeGreaterThan(-1);
     expect(utilities, 'no Utilities section').toBeGreaterThan(-1);
+    expect(tokens).toBeLessThan(global);
+    expect(global).toBeLessThan(composition);
     expect(composition).toBeLessThan(lastBlock);
     expect(lastBlock).toBeLessThan(utilities);
+  });
+
+  it('keeps every bare element rule in the global layer', () => {
+    const topLevelParts = (selector: string): string[] => {
+      const parts: string[] = [];
+      let depth = 0;
+      let start = 0;
+      for (let i = 0; i < selector.length; i += 1) {
+        if (selector[i] === '(') depth += 1;
+        else if (selector[i] === ')') depth -= 1;
+        else if (selector[i] === ',' && depth === 0) {
+          parts.push(selector.slice(start, i));
+          start = i + 1;
+        }
+      }
+      return [...parts, selector.slice(start)].map((part) => part.trim());
+    };
+    const late = [...sliceAt(LAYERED, '── Composition').after.replace(/\/\*── [A-Za-z]+\*\//g, '').matchAll(/([^{}]+)\{/g)]
+      .flatMap(([, selector]) => topLevelParts(selector))
+      .filter((part) => /^([a-z][a-z0-9]*\b|\*|:)/.test(part));
+    expect(late, `element rules after the global layer: ${late.join(' · ')}`).toEqual([]);
   });
 
   // A block restating the global margin reset cascades after .flow and
