@@ -341,5 +341,5 @@ The masthead nav is the slot for them; it links only the app. The footer's
 
 `/sid/NNNNN` per-object pages (`stellata-2bt4`) want this same seam, with
 one difference worth knowing before designing it: those pages are generated
-per object, so they need a build step that writes inputs rather than a
-hand-maintained `input` map.
+per object, so they need a build step that generates their `pages.ts`
+entries rather than one hand-written entry each.
