@@ -245,7 +245,7 @@ code that only holds a `Stellata` can reach it. `setOrbitFrameTick` (the
 attitude instrument's per-frame ORB re-read, whose *ordering* only the scene
 registry can express) and `setOrbitFramePort` / `getOrbitFramePort` (ORB and
 the orbit lock on the share URL — state no controller owns,
-[ORB and the orbit lock](util/url-state/README.md#orb-and-the-orbit-lock)) are both of that kind.
+[ORB and the orbit lock](util/url-state/orbit-pose/README.md#orb-and-the-orbit-lock)) are both of that kind.
 Each reads through its field every time, so installing after construction
 works exactly as a lazily-attached layer does, and `dispose` clears both.
 

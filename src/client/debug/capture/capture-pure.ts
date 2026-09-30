@@ -2,7 +2,8 @@
 // `debug.capture()`. See README.md.
 
 import * as THREE from 'three';
-import type { DecodedView, ViewPose } from '../../util/url-state';
+import { holdsOrbitPose, type DecodedView, type ViewPose } from '../../util/url-state';
+import { poseOutOfFrame, type ReferenceFrame } from '../../attitude/attitude-pure';
 
 export type EaseName = 'smooth' | 'linear';
 
@@ -39,6 +40,19 @@ export function anchorPose(
   out.tgt.addVectors(pose.tgt, anchor);
   out.up.copy(pose.up);
   out.fov = pose.fov;
+  return out;
+}
+
+/** A pose read off an orbit-relative blob, taken out of ORB into `out`.
+ *  README.md#a-locked-take-rides-the-orbit */
+export function poseOutOfOrbit(
+  pose: CapturePose, frame: ReferenceFrame, out: CapturePose,
+): CapturePose {
+  out.cam.copy(pose.cam);
+  out.tgt.copy(pose.tgt);
+  out.up.copy(pose.up);
+  out.fov = pose.fov;
+  poseOutOfFrame(out.cam, out.tgt, out.up, frame);
   return out;
 }
 
@@ -108,6 +122,10 @@ export function frameMismatch(start: DecodedView, end: DecodedView): string | nu
   if (offsetKey(start) !== offsetKey(end)) {
     return `worldOffset differs (${offsetKey(start)} → ${offsetKey(end)}): the `
       + 'two poses sit in different local frames';
+  }
+  if (holdsOrbitPose(start) !== holdsOrbitPose(end)) {
+    return 'one blob holds its pose in ORB (a locked link) and the other against '
+      + 'the stars. Re-share the end view with the orbit lock set the same way';
   }
   return null;
 }

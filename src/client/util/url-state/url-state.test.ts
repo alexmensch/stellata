@@ -15,11 +15,17 @@ import {
 } from './url-state';
 import type { Stellata } from '../../stellata';
 import type { FocusableProvider, Target } from '../../camera/focus/focus-target';
-import type { OrbitFramePort } from '../../attitude/attitude-pure';
+import type { OrbitFramePort, ReferenceFrame } from '../../attitude/attitude-pure';
+import type { LateState } from '../late/late';
+import { HeldOrbitPose } from '../../attitude/orbit-frame/held-pose';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 import { SidResolver, arrayDomain, sidColumnIndex, type DomainFill, type SidDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import * as THREE from 'three';
+import { captureOrbitFrame, poseIntoFrame } from '../../attitude/attitude-pure';
+import { ECLIPTIC_NORTH_POLE_ICRS } from '../../solar-system/ephemerides/orbit-rings-layer';
+import { CHOSEN_FIRST_LOAD_LINK } from './golden-links-fixture';
 
 // Controller-namespace stub. `Partial<T>` keeps every member checked
 // against the real signature — `as unknown as T` would not, and stub
@@ -63,10 +69,7 @@ const GN_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
 
-/** RollController's URL legs only. The real `upRollError` measures the
- *  roll off `camera.up` through the quaternion, which this THREE-free
- *  suite deliberately has no camera for; here "level" is `up` sitting on
- *  galactic north, which is what the stub cameras hold when level. */
+/** RollController's URL legs only; "level" is `up` sitting on the pole asked about. */
 function rollStub() {
   return {
     restore: (
@@ -77,10 +80,11 @@ function rollStub() {
       const len = Math.hypot(x, y, z) || 1;
       camera.up.x = x / len; camera.up.y = y / len; camera.up.z = z / len;
     },
-    upRollError: (camera: { up: { x: number; y: number; z: number } }) => {
-      const d = Math.hypot(
-        camera.up.x - GN_UP[0], camera.up.y - GN_UP[1], camera.up.z - GN_UP[2],
-      );
+    upRollError: (
+      camera: { up: { x: number; y: number; z: number } },
+      pole: { x: number; y: number; z: number },
+    ) => {
+      const d = Math.hypot(camera.up.x - pole.x, camera.up.y - pole.y, camera.up.z - pole.z);
       return d < 1e-9 ? 0 : 1;
     },
     adoptFromCamera: () => {},
@@ -95,7 +99,17 @@ function rollStub() {
 /** The attitude instrument's URL seam. `restore` mirrors the instrument's own
  *  rule that a lock cannot exist without ORB, so a test sees what the receiver
  *  would actually end up holding rather than what the blob asked for. */
-function mockOrbitPort(state: { armed: boolean; locked: boolean }): OrbitFramePort {
+interface MockOrbitState {
+  armed: boolean;
+  locked: boolean;
+  /** ORB for the focus; absent when the focus rides no orbit. */
+  frame?: LateState<ReferenceFrame>;
+  /** The instrument's own holder, so a test can run the tick that seats it. */
+  held?: HeldOrbitPose;
+}
+
+function mockOrbitPort(state: MockOrbitState): OrbitFramePort {
+  const held = (state.held ??= new HeldOrbitPose(() => () => {}));
   return {
     isArmed: () => state.armed,
     isLocked: () => state.locked,
@@ -103,7 +117,18 @@ function mockOrbitPort(state: { armed: boolean; locked: boolean }): OrbitFramePo
       state.armed = armed;
       state.locked = armed && locked;
     },
+    orbitFrame: () => state.frame ?? { status: 'absent' },
+    holdPose: (offset, up) => held.hold(offset, up),
+    posePending: () => held.pending,
   };
+}
+
+/** The ORB tick's seat, on a frame where `frame` is current. */
+function tickSeat(stellata: Stellata, state: MockOrbitState, frame: ReferenceFrame): void {
+  state.held?.seat(
+    frame, stellata.camera.position, stellata.camera.up, stellata.controls.target,
+    stellata.renderGate.sawUserInput,
+  );
 }
 
 function mockFocusables(x = 0, y = 0, z = 0) {
@@ -199,7 +224,7 @@ function makeStatefulStellata() {
     pois: [] as Target[],
     mode: 'navigate' as 'navigate' | 'observe',
     chart: false,
-    orbit: { armed: false, locked: false },
+    orbit: { armed: false, locked: false } as MockOrbitState,
   };
   const clearFocus = () => {
     state.focusedStar = null;
@@ -1126,7 +1151,7 @@ describe('url-state', () => {
     it('restores ORB and the lock onto the instrument', () => {
       const { stellata, state } = makeStatefulStellata();
       applyDecodedView(stellata, { orb: true, orbLock: true }, makeFixtureBuild());
-      expect(state.orbit).toEqual({ armed: true, locked: true });
+      expect(state.orbit).toMatchObject({ armed: true, locked: true });
     });
 
     // A blob is a request. The instrument's own orbitLockShowing still rules,
@@ -1134,7 +1159,7 @@ describe('url-state', () => {
     it('refuses a lock the blob asks for without ORB', () => {
       const { stellata, state } = makeStatefulStellata();
       applyDecodedView(stellata, { orbLock: true }, makeFixtureBuild());
-      expect(state.orbit).toEqual({ armed: false, locked: false });
+      expect(state.orbit).toMatchObject({ armed: false, locked: false });
     });
 
     // Absence is a positive statement: a sky-frame link has to disarm an ORB
@@ -1143,7 +1168,7 @@ describe('url-state', () => {
       const { stellata, state } = makeStatefulStellata();
       state.orbit = { armed: true, locked: true };
       applyDecodedView(stellata, { coordSphere: 'ecliptic' }, makeFixtureBuild());
-      expect(state.orbit).toEqual({ armed: false, locked: false });
+      expect(state.orbit).toMatchObject({ armed: false, locked: false });
     });
 
     // The pre-change corpus has neither bit, so every link in the wild still
@@ -1153,6 +1178,216 @@ describe('url-state', () => {
       expect(view.coordSphere).toBe('equatorial');
       expect(view.orb).toBeUndefined();
       expect(view.orbLock).toBeUndefined();
+    });
+
+    // see orbit-pose/README.md#an-orbit-relative-pose
+    describe('an orbit-relative pose', () => {
+      const DEG = Math.PI / 180;
+      const DAYS = 50;
+      const frameCamera = new THREE.PerspectiveCamera();
+      const eclipticPole = ECLIPTIC_NORTH_POLE_ICRS.clone();
+      const inPlane = new THREE.Vector3(1, 0, 0)
+        .addScaledVector(eclipticPole, -eclipticPole.x).normalize();
+
+      // Earth: the pole stands still and zero longitude turns ~0.9856 deg/day.
+      const earthFrame = (days: number) => captureOrbitFrame(
+        frameCamera,
+        eclipticPole,
+        inPlane.clone().applyAxisAngle(eclipticPole, 0.9856 * DEG * days),
+      );
+      // Luna: 5.15 deg off the ecliptic, the node regressing 0.0529 deg/day, so
+      // the basis turns out from under a model that only tracks longitude.
+      const lunaFrame = (days: number) => {
+        const pole = eclipticPole.clone()
+          .applyAxisAngle(inPlane, 5.15 * DEG)
+          .applyAxisAngle(eclipticPole, -0.0529 * DEG * days);
+        const seed = inPlane.clone().applyAxisAngle(pole, 13.176 * DEG * days);
+        return captureOrbitFrame(frameCamera, pole, seed);
+      };
+      const ready = (frame: ReferenceFrame) => ({ status: 'ready', value: frame } as const);
+
+      const CAM: [number, number, number] = [-1.6e-7, 2.2e-7, 7.7e-8];
+      const UP = new THREE.Vector3(0.44, -0.015, 0.898).normalize();
+
+      function share(frame: ReferenceFrame) {
+        const tx = makeStatefulStellata();
+        tx.state.focusedStar = 1;
+        tx.state.orbit = { armed: true, locked: true, frame: ready(frame) };
+        tx.stellata.camera.position.set(...CAM);
+        tx.stellata.camera.up.set(UP.x, UP.y, UP.z);
+        return encodeBlob(currentStateOf(tx.stellata, makeFixtureBuild()));
+      }
+
+      /** Apply, then run the first ORB tick if `frame` is current. */
+      function open(blob: string, frame: ReferenceFrame | null) {
+        const rx = makeStatefulStellata();
+        rx.state.orbit.frame = frame === null ? { status: 'absent' } : ready(frame);
+        const pending = applyDecodedView(rx.stellata, decodeBlob(blob), makeFixtureBuild());
+        if (frame !== null) tickSeat(rx.stellata, rx.state.orbit, frame);
+        return { ...rx, pending };
+      }
+
+      type Xyz = { x: number; y: number; z: number };
+      function inFrame(cam: Xyz, up: Xyz, frame: ReferenceFrame) {
+        const c = { x: cam.x, y: cam.y, z: cam.z };
+        const u = { x: up.x, y: up.y, z: up.z };
+        poseIntoFrame(c, { x: 0, y: 0, z: 0 }, u, frame);
+        return { cam: c, up: u };
+      }
+
+      function expectSameOrbitPose(
+        a: ReturnType<typeof inFrame>, b: ReturnType<typeof inFrame>,
+      ) {
+        const r = Math.hypot(a.cam.x, a.cam.y, a.cam.z);
+        // float32 on the wire: ~6e-8 of the value.
+        for (const k of ['x', 'y', 'z'] as const) {
+          expect(Math.abs(a.cam[k] - b.cam[k]) / r).toBeLessThan(1e-6);
+          expect(Math.abs(a.up[k] - b.up[k])).toBeLessThan(1e-6);
+        }
+      }
+
+      it.each([['Earth', earthFrame], ['Luna', lunaFrame]] as const)(
+        'lands a locked %s link at the same ORB pose 50 days on',
+        (_name, frameAt) => {
+          const blob = share(frameAt(0));
+          expect(decodeBlob(blob)).toMatchObject({ orb: true, orbLock: true, orbitPose: true });
+
+          const rx = open(blob, frameAt(DAYS));
+          const shared = inFrame({ x: CAM[0], y: CAM[1], z: CAM[2] }, UP, frameAt(0));
+          const landed = inFrame(
+            rx.stellata.camera.position, rx.stellata.camera.up, frameAt(DAYS),
+          );
+          expectSameOrbitPose(landed, shared);
+
+          // And it is NOT where a star-fixed decode would put it.
+          const p = rx.stellata.camera.position;
+          const drift = new THREE.Vector3(...CAM).angleTo(new THREE.Vector3(p.x, p.y, p.z));
+          expect(drift).toBeGreaterThan(10 * DEG);
+        },
+      );
+
+      it('carries the pose star-fixed while ORB is armed but unlocked', () => {
+        const tx = makeStatefulStellata();
+        tx.state.focusedStar = 1;
+        tx.state.orbit = { armed: true, locked: false, frame: ready(earthFrame(0)) };
+        tx.stellata.camera.position.set(...CAM);
+        const view = currentStateOf(tx.stellata, makeFixtureBuild());
+        expect(view.orbitPose).toBeUndefined();
+        expect(view.cam).toEqual(CAM);
+      });
+
+      // Level on ORB is the view L then Shift+L leaves, and the ride holds it
+      // there — so it is the default the slot elides against.
+      it('omits up when orbit-level and restores the receiver\'s ORB pole', () => {
+        const tx = makeStatefulStellata();
+        tx.state.focusedStar = 1;
+        const f0 = earthFrame(0);
+        tx.state.orbit = { armed: true, locked: true, frame: ready(f0) };
+        tx.stellata.camera.position.set(...CAM);
+        tx.stellata.camera.up.set(f0.pole.x, f0.pole.y, f0.pole.z);
+        const view = currentStateOf(tx.stellata, makeFixtureBuild());
+        expect(view.up).toBeUndefined();
+        expect(view.orbitPose).toBe(true);
+
+        const f1 = lunaFrame(DAYS);
+        const rx = open(encodeBlob(view), f1);
+        const up = rx.stellata.camera.up;
+        expect(up.x).toBeCloseTo(f1.pole.x, 12);
+        expect(up.y).toBeCloseTo(f1.pole.y, 12);
+        expect(up.z).toBeCloseTo(f1.pole.z, 12);
+      });
+
+      // A receiver whose focus rides no orbit has no basis to convert through.
+      it('seats the components as ICRS when the receiver has no ORB', () => {
+        const blob = share(earthFrame(0));
+        const wire = decodeBlob(blob).cam!;
+        const rx = open(blob, null);
+        const { x, y, z } = rx.stellata.camera.position;
+        expect([x, y, z]).toEqual(wire);
+      });
+
+      it('only converts with both bits set', () => {
+        const blob = encodeBlob({ ...decodeBlob(share(earthFrame(0))), orbLock: undefined });
+        const rx = open(blob, earthFrame(DAYS));
+        const { x, y, z } = rx.stellata.camera.position;
+        expect([x, y, z]).toEqual(decodeBlob(blob).cam);
+      });
+
+      // Seated by the ORB tick, which runs after every moving field has walked
+      // at this frame's t — orbit-pose/README.md#an-orbit-relative-pose.
+      describe('the pose waits for the tick', () => {
+        it('stands as ICRS until the first tick with ORB current', () => {
+          const blob = share(earthFrame(0));
+          const rx = makeStatefulStellata();
+          rx.state.orbit.frame = { status: 'pending' };
+          const pending = applyDecodedView(rx.stellata, decodeBlob(blob), makeFixtureBuild());
+          expect(pending).not.toBeNull();
+          const { x, y, z } = rx.stellata.camera.position;
+          expect([x, y, z]).toEqual(decodeBlob(blob).cam);
+          expect(rx.stellata.getOrbitFramePort()!.posePending()).toBe(true);
+        });
+
+        it('settles once the tick has seated it', async () => {
+          const rx = open(share(earthFrame(0)), earthFrame(DAYS));
+          await expect(rx.pending).resolves.toBeUndefined();
+          expect(rx.stellata.getOrbitFramePort()!.posePending()).toBe(false);
+        });
+
+        it('leaves a camera the user has taken alone', async () => {
+          const blob = share(earthFrame(0));
+          const rx = makeStatefulStellata();
+          const pending = applyDecodedView(rx.stellata, decodeBlob(blob), makeFixtureBuild());
+          (rx.stellata.renderGate as { sawUserInput: boolean }).sawUserInput = true;
+          rx.stellata.camera.position.set(42, 43, 44);
+          tickSeat(rx.stellata, rx.state.orbit, earthFrame(DAYS));
+          await pending;
+          const { x, y, z } = rx.stellata.camera.position;
+          expect([x, y, z]).toEqual([42, 43, 44]);
+        });
+
+        it('holds a late focus pending until its pose has seated too', async () => {
+          const sidResolver = new SidResolver(['star', 'cloud']);
+          sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+          const idMaps = makeIdMaps({ sidResolver });
+          const rx = makeStatefulStellata();
+          const pending = applyDecodedView(
+            rx.stellata, decodeBlob(share(earthFrame(0))), idMaps,
+          );
+          let settled = false;
+          void pending!.then(() => { settled = true; });
+
+          sidResolver.attach('star', arrayDomain(STAR_SIDS));
+          await Promise.resolve();
+          expect(settled).toBe(false);
+
+          tickSeat(rx.stellata, rx.state.orbit, earthFrame(DAYS));
+          await pending;
+          expect(settled).toBe(true);
+        });
+      });
+
+      it('costs no bytes over a bit-28 link', () => {
+        const legacy = encodeBlob({ orb: true, orbLock: true });
+        expect(blobBytes(encodeBlob({ orb: true, orbLock: true, orbitPose: true })))
+          .toBe(blobBytes(legacy));
+      });
+
+      // The chosen first-load view, shared before bit 29 existed.
+      it('decodes a bit-28 link from the wild unchanged', () => {
+        const blob = CHOSEN_FIRST_LOAD_LINK;
+        const view = decodeBlob(blob);
+        expect(view).toEqual({
+          cam: [1.379118117483813e-7, 1.876214668072862e-7, 1.656248542758476e-7],
+          up: [-0.4381037950515747, -0.39205607771873474, 0.8089234232902527],
+          showHud: true,
+          focus: { kind: 'sid', id: 327674 },
+          orb: true,
+          orbLock: true,
+        });
+        const rx = open(blob, earthFrame(DAYS));
+        const { x, y, z } = rx.stellata.camera.position;
+        expect([x, y, z]).toEqual(view.cam);
+      });
     });
   });
 
@@ -1581,7 +1816,7 @@ describe('url-state', () => {
       sidResolver.attach('star', arrayDomain(STAR_SIDS));
 
       expect(state.mode).toBe('observe');
-      expect(state.orbit).toEqual({ armed: true, locked: true });
+      expect(state.orbit).toMatchObject({ armed: true, locked: true });
     });
 
     it('leaves navigate standing when the user took the view before the focus landed', () => {
@@ -1872,7 +2107,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     /** ORB / lock as the instrument holds them. Neither is a pose and
      *  neither is FilterState, so a bare 'state' emit is the only thing
      *  that can put them on the wire. */
-    orbit?: { armed: boolean; locked: boolean };
+    orbit?: MockOrbitState;
   } = {}) {
     const orbit = opts.orbit ?? { armed: false, locked: false };
     const state = {
@@ -1927,6 +2162,8 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
         setMode: (m) => { state.mode = m; },
       }),
       isCameraTransitionActive: () => state.transition,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      renderGate: { sawUserInput: false } as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       camera: cam as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2133,6 +2370,76 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       expect(view).toMatchObject({ orb: true, orbLock: true });
     });
 
+    // see orbit-pose/README.md#an-orbit-relative-pose
+    it('reads the lock\'s ride as no camera move', () => {
+      const { replaceState } = installUrl('/');
+      const DEG = Math.PI / 180;
+      const pole = new THREE.Vector3(0, -0.3978, 0.9175).normalize();
+      const seed = new THREE.Vector3(1, 0, 0);
+      const cameraForFrame = new THREE.PerspectiveCamera();
+      const frameAt = (deg: number) => captureOrbitFrame(
+        cameraForFrame, pole, seed.clone().applyAxisAngle(pole, deg * DEG),
+      );
+      const orbit = {
+        armed: true,
+        locked: true,
+        frame: { status: 'ready', value: frameAt(0) } as LateState<ReferenceFrame>,
+      };
+      const { stellata, cam, frame } = makeSyncStellata({ orbit });
+      cam.position.set(3, 4, 5);
+      cam.up.set(0, 0, 1);
+      startUrlSync(stellata, syncIdMaps());
+
+      const turn = new THREE.Quaternion().setFromAxisAngle(pole, 5 * DEG);
+      orbit.frame = { status: 'ready', value: frameAt(5) };
+      const p = new THREE.Vector3(cam.position.x, cam.position.y, cam.position.z)
+        .applyQuaternion(turn);
+      const u = new THREE.Vector3(cam.up.x, cam.up.y, cam.up.z).applyQuaternion(turn);
+      cam.position.set(p.x, p.y, p.z);
+      cam.up.set(u.x, u.y, u.z);
+      frame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+    });
+
+    // The first-load view is the case: bare / has to stay bare once the tick
+    // seats Earth's pose, and a link has to stay the link it was.
+    it('reads a held pose seating as the restore, not a camera move', () => {
+      const { replaceState } = installUrl('/');
+      const pole = new THREE.Vector3(0, -0.3978, 0.9175).normalize();
+      const frame = captureOrbitFrame(new THREE.PerspectiveCamera(), pole, new THREE.Vector3(1, 0, 0));
+      const orbit: MockOrbitState = {
+        armed: true, locked: true, frame: { status: 'ready', value: frame },
+      };
+      const { stellata, cam, frame: drawFrame } = makeSyncStellata({ orbit });
+      cam.position.set(3, 4, 5);
+      cam.up.set(0, 0, 1);
+      void stellata.getOrbitFramePort()!.holdPose({ x: -2, y: 1, z: 0.5 }, { x: 0, y: 0, z: 1 });
+      startUrlSync(stellata, syncIdMaps());
+
+      tickSeat(stellata, orbit, frame);
+      drawFrame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+
+      // The next real move still writes.
+      cam.position.set(30, 40, 50);
+      drawFrame();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).toHaveBeenCalled();
+    });
+
+    it('writes no URL while a pose waits for its tick', () => {
+      const { replaceState } = installUrl('/');
+      const orbit: MockOrbitState = { armed: true, locked: true };
+      const { stellata, emitState } = makeSyncStellata({ orbit });
+      startUrlSync(stellata, syncIdMaps());
+      void stellata.getOrbitFramePort()!.holdPose({ x: 1, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
+      emitState();
+      vi.advanceTimersByTime(1000);
+      expect(replaceState).not.toHaveBeenCalled();
+    });
+
     it('never reaches the URL from a still camera without one', () => {
       const { replaceState } = installUrl('/');
       const { stellata, frame } = makeSyncStellata({
@@ -2162,6 +2469,10 @@ describe('viewPose', () => {
 
   it('takes the observe default for cam, which is the focal origin', () => {
     expect(viewPose({ mode: 'observe' }).cam).toEqual([0, 0, 0]);
+  });
+
+  it('fills an orbit-relative up with the ORB pole', () => {
+    expect(viewPose({ orbitPose: true, orbLock: true }).up).toEqual([0, 0, 1]);
   });
 
   it('carries what the blob does', () => {
