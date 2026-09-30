@@ -60,14 +60,16 @@ scripts/perf/
                             `## Perf` section, every ✗ accepted, and a
                             table row under a Tier 1 or 2 claim.
   perf-section-guard.sh     Gathers that check's inputs from git — the files
-                            a head ref (default HEAD) changed since its
+    (+ test)                a head ref (default HEAD) changed since its
                             merge base with a base ref, and the catalogue
                             record count at that merge base and at the
-                            head — and runs it. A count
-                            main moved after the fork is not the PR's. Called by
+                            head — and runs it. A count main moved after
+                            the fork is not the PR's. Called by
                             perf-section-guard.yml and, before the body
-                            reaches GitHub, scripts/hooks/pr-body-guard.sh;
-                            tested beside the check.
+                            reaches GitHub, scripts/hooks/pr-body-guard.sh.
+                            Its git-driven cases sit in their own file so a
+                            flake under load names which suite it hit
+                            (the check's own file has one open).
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
   diff/                     Two runs differenced: the band and its floor, the
