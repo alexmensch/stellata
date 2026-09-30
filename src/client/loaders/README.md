@@ -291,8 +291,9 @@ writing one chunk's bytes inside the volume.
 
 **`loadDustManifest` answers null for any manifest a `DustField` cannot be
 built from**, warning when it parsed but is the wrong shape
-(`dustManifestError`), silently when it is missing or not JSON — the
-single-page fallback serves index.html at 200 for a missing file. So
+(`dustManifestError`), silently when it is missing — a real 404
+([Request routing](/src/README.md#request-routing)) — or present but not
+JSON. So
 `DustField`'s constructor never sees a malformed manifest, and `main.ts`
 concludes the extinction slot on every failure rather than leaving it
 pending behind a rejection.
