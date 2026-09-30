@@ -5,7 +5,7 @@ import type { ServerResponse } from 'node:http';
 import { dirname, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
 
-import { markdownRendition as renderMarkdown } from './scripts/site/markdown-rendition.ts';
+import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './src/negotiation-pure.ts';
 import { negotiatedRendition, route as decide, type Route } from './src/routing-pure.ts';
 import { NOT_FOUND_SOURCE } from './src/site/pages.ts';
@@ -101,7 +101,7 @@ export function documentRoutingInDev(repoRoot: string): Plugin {
               res.statusCode = status;
               res.setHeader('Content-Type', MARKDOWN_TYPE);
               if (advertised !== null) varyOnAccept(res);
-              res.end(renderMarkdown(raw));
+              res.end(markdownRendition(raw));
               return;
             }
 
