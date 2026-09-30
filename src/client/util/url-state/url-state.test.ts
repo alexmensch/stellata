@@ -22,9 +22,8 @@ import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 import { SidResolver, arrayDomain, sidColumnIndex, type DomainFill, type SidDomain } from '../sid-resolver';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import * as THREE from 'three';
-import { captureOrbitFrame } from '../../attitude/attitude-pure';
+import { captureOrbitFrame, poseIntoFrame } from '../../attitude/attitude-pure';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../solar-system/ephemerides/orbit-rings-layer';
-import { poseIntoFrame } from './orbit-pose/orbit-pose-pure';
 import { CHOSEN_FIRST_LOAD_LINK } from './golden-links-fixture';
 
 // Controller-namespace stub. `Partial<T>` keeps every member checked

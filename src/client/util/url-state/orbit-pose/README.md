@@ -1,17 +1,19 @@
 # ORB on the wire
 
 How a share link carries the attitude instrument's ORB frame, the orbit lock
-over it, and a camera pose held relative to the orbit. The codec stays one
-level up — bits 27–29 in `FIELDS_V4`, `wirePose`, `seatedPose` and
-`restoreOrbitFrame`, all in `../url-state.ts` — and this README is the
-authority on those fields; `../README.md` owns the rest of the wire format.
+over it, and a camera pose held relative to the orbit. The ORB reads live
+here; the field table (bits 27–29 in `FIELDS_V4`) and the restore ordering
+stay in `../url-state.ts`, and this README is the authority on both.
+`../README.md` owns the rest of the wire format.
 
 ## Files
 
 ```
-orbit-pose-pure.ts (+ test)  A pose's camera offset from its pivot, and its
-                             up, carried between ICRS and a reference
-                             frame's own components.
+orbit-pose.ts                ORB for the current focus as the codec reads
+                             it, and `wirePose`, the pose as both URL writers
+                             put it on the wire. The conversion itself is
+                             `poseIntoFrame` / `poseOutOfFrame` in
+                             `../../../attitude/attitude-pure.ts`.
 ```
 
 ## ORB and the orbit lock

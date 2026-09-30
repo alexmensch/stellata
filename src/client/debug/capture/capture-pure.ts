@@ -3,8 +3,7 @@
 
 import * as THREE from 'three';
 import type { DecodedView, ViewPose } from '../../util/url-state';
-import type { ReferenceFrame } from '../../attitude/attitude-pure';
-import { poseOutOfFrame } from '../../util/url-state/orbit-pose/orbit-pose-pure';
+import { poseOutOfFrame, type ReferenceFrame } from '../../attitude/attitude-pure';
 
 export type EaseName = 'smooth' | 'linear';
 

@@ -54,6 +54,9 @@ src/client/util/url-state/
                                   per-frame write trigger and the encoder's
                                   cam / tgt / worldOffset elision. See
                                   README.md#what-counts-as-a-camera-move.
+  anchored-pose.ts                cam and tgt measured from the anchor the
+                                  receiver rebuilds. See
+                                  README.md#what-counts-as-a-camera-move.
   golden-links-fixture.ts         Test-only: real share links whose
                                   decoding the suites pin.
   orbit-pose/                     ORB, the orbit lock, and a pose held

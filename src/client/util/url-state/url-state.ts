@@ -22,8 +22,8 @@ import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
 } from './pose-change-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
-import type { ReferenceFrame } from '../../attitude/attitude-pure';
-import { poseIntoFrame, poseOutOfFrame } from './orbit-pose/orbit-pose-pure';
+import { poseOutOfFrame, type ReferenceFrame } from '../../attitude/attitude-pure';
+import { ORB_LEVEL_UP, orbitFrameNow, wirePose } from './orbit-pose/orbit-pose';
 import type {
   CoordSphereFrame,
   DrawnCoordSphereFrame,
@@ -57,9 +57,6 @@ const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
 const DEFAULT_UP: [number, number, number] = [
   GALACTIC_NORTH_POLE_ICRS.x, GALACTIC_NORTH_POLE_ICRS.y, GALACTIC_NORTH_POLE_ICRS.z,
 ];
-// An orbit-relative pose omits `up` when level on ORB instead, and its pole in
-// ORB's own components is +z.
-const ORB_LEVEL_UP: [number, number, number] = [0, 0, 1];
 // Roll off galactic level under which the `up` field is omitted, and the
 // receiver reproduces it from DEFAULT_UP instead. Far above the float noise
 // of the projection and far below any roll a gesture can hold, so only a
@@ -969,12 +966,6 @@ function reseatWhenOrbitReady(stellata: Stellata, view: DecodedView): Promise<vo
   });
 }
 
-/** ORB for the focus as it stands now, or null when there is none to read. */
-export function orbitFrameNow(stellata: Stellata): ReferenceFrame | null {
-  const read = stellata.getOrbitFramePort()?.orbitFrame();
-  return read?.status === 'ready' ? read.value : null;
-}
-
 function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): void {
   if (snap) stellata.focus.setOrbitTarget(target);
   else stellata.focus.flyTo(target, { animate: false });
@@ -1312,62 +1303,12 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
 //   [0..2] camera.position, [3..5] controls.target, [6..8] reference up
 // Single source of truth for that layout so seed and per-frame update
 // can't drift apart on index.
-const anchorScratch = new THREE.Vector3();
 const frameCam = new THREE.Vector3();
 const frameTgt = new THREE.Vector3();
 const frameUp = new THREE.Vector3();
 const encodeCam = new THREE.Vector3();
 const encodeTgt = new THREE.Vector3();
 const encodeUp = new THREE.Vector3();
-
-/**
- * cam and tgt as the wire means them: relative to the anchor the RECEIVER
- * re-establishes, which for a hard focus is the focal object itself
- * (`applyDecodedView` recentres onto it before either lands).
- *
- * The sender's own origin recentres only once the camera has drifted 16× the
- * eye distance (`../../camera/focus/focal-ride/focal-ride-pure.ts`), and between two of
- * those the moving-focal ride translates camera and target together every
- * frame. Raw local values therefore drift out of any frame the receiver
- * rebuilds — up to 16 eye distances of pose error — while carrying motion the
- * viewer cannot see, which on a scale-relative change detector is unbounded
- * URL churn. Subtracting the anchor removes both at once.
- *
- * Both writers read this, so the change detector and the encoder cannot
- * disagree about what has moved. A pose left un-anchored — no focus, a
- * soft-kind one, or a source that will not resolve — is one the receiver
- * rebuilds from `worldOffset` instead, which `currentStateOf` emits on
- * exactly the complement of this test.
- */
-function anchoredPose(
-  stellata: Stellata,
-  focused: Target | null,
-  outCam: THREE.Vector3,
-  outTgt: THREE.Vector3,
-): void {
-  outCam.copy(stellata.camera.position);
-  outTgt.copy(stellata.controls.target);
-  if (!isHardTarget(focused)) return;
-  if (!stellata.focusables[focused.kind].localPositionInto(focused.idx, anchorScratch)) return;
-  outCam.sub(anchorScratch);
-  outTgt.sub(anchorScratch);
-}
-
-/** The frame the pose was written in, or null for ICRS.
- *  orbit-pose/README.md#an-orbit-relative-pose */
-function wirePose(
-  stellata: Stellata,
-  focused: Target | null,
-  outCam: THREE.Vector3,
-  outTgt: THREE.Vector3,
-  outUp: THREE.Vector3,
-): ReferenceFrame | null {
-  anchoredPose(stellata, focused, outCam, outTgt);
-  outUp.copy(stellata.camera.up);
-  const frame = stellata.getOrbitFramePort()?.isLocked() ? orbitFrameNow(stellata) : null;
-  if (frame !== null) poseIntoFrame(outCam, outTgt, outUp, frame);
-  return frame;
-}
 
 function snapshotCam(out: Float64Array, c: Vec3Like, t: Vec3Like, u: Vec3Like): void {
   out[0] = c.x; out[1] = c.y; out[2] = c.z;

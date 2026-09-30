@@ -8,9 +8,9 @@ import {
   type IdMaps,
   applyDecodedView,
   decodeBlob,
-  orbitFrameNow,
   viewPose,
 } from '../../util/url-state';
+import { orbitFrameNow } from '../../util/url-state/orbit-pose/orbit-pose';
 import { shareBlobFrom } from '../../util/url-state/share-path-pure';
 import { parseJumpEntry } from '../../solar-system/time/time';
 import {
