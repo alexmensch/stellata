@@ -28,9 +28,10 @@ exposure-cut anchor back to NaN, the hold count to zero, the
 `sawUserInput` latch to false. The cadence's own
 state resets in `ClockCadence.dispose()` ([The controller](cadence/README.md#the-controller)).
 A hold released *after* that zeroing floors at 0
-rather than going negative: `Stellata.dispose()` does not close an open
-debug panel, so its release outlives the gate, and a negative count
-would silently make the next `hold()` a no-op.
+rather than going negative: the pagehide release closes the debug panel
+before `Stellata.dispose()`, but a `debug.priceFrame()` sweep in flight
+releases its hold only when its awaited dwell ends, after the gate is gone,
+and a negative count would silently make the next `hold()` a no-op.
 
 ## The decision, in priority order
 

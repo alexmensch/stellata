@@ -7,7 +7,7 @@ import type { Stellata } from '../../stellata';
 // uses a muted ghost style so it doesn't fight the rest of the chrome.
 // Also toggles a body class while a warp is in flight so overlays can
 // hide themselves via CSS.
-export function bindWarpButton(stellata: Stellata) {
+export function bindWarpButton(stellata: Stellata, signal: AbortSignal) {
   const btn = document.getElementById('warp-btn') as HTMLButtonElement;
 
   const render = () => {
@@ -44,7 +44,7 @@ export function bindWarpButton(stellata: Stellata) {
         triggerWarp();
       }
     }
-  });
+  }, { signal });
 
   stellata.on('warp', (active) => {
     document.body.classList.toggle('warping', active);

@@ -7,8 +7,13 @@ look first when something feels slow.
 
 ```
 src/client/debug/
-  debug.ts                        Dev console handle (`window.debug`
-                                  surface). Owns the panel-open path.
+  debug.ts                        Dev console handle (the `window.debug`
+                                  surface; `main.ts` exposes it through
+                                  `util/page-teardown.ts`). Owns the
+                                  panel-open path, and `dispose()`, which
+                                  closes the panel and the render-watch
+                                  HUD; the pagehide release runs it
+                                  before `Stellata.dispose()`.
   debug-panel.ts                  Unified debug panel chrome (drag
                                   handle, collapsible sections, slider /
                                   colour helpers). `makeMonoReadout` is

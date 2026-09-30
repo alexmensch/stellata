@@ -10,8 +10,9 @@ interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-// Dev-console handle for ad-hoc tweaks (see main.ts). Declared here so
-// the assignment doesn't need an `as unknown` cast at the call site.
-interface Window {
+// Dev-console handles, set and cleared through util/page-teardown.ts.
+interface DevConsoleGlobals {
   stellata: import('./stellata').Stellata;
+  debug: import('./debug/debug').DebugTools;
 }
+interface Window extends Partial<DevConsoleGlobals> {}
