@@ -242,14 +242,15 @@ video {
 /* --switcher-flip is not a number to tidy — README.md#responsiveness-has-no-breakpoints. */
 .switcher {
   --switcher-items: 2;
+  --switcher-gap: var(--space-l);
   --switcher-threshold: calc(
     var(--switcher-items) * var(--switcher-item) +
-      (var(--switcher-items) - 1) * var(--switcher-space, var(--space-l))
+      (var(--switcher-items) - 1) * var(--switcher-gap)
   );
 
   display: flex;
   flex-wrap: wrap;
-  gap: var(--switcher-space, var(--space-l));
+  gap: var(--switcher-gap);
 }
 .switcher > * {
   flex-grow: 1;
