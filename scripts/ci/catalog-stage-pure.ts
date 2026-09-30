@@ -33,14 +33,6 @@ const ALWAYS_KEYED_DIRS = ['data/', 'scripts/ci/'];
 
 export type BlobIndex = ReadonlyMap<string, string>;
 
-export function tsxEntry(scripts: Readonly<Record<string, string>>, name: string): string {
-  const match = scripts[name]?.match(/^tsx (\S+\.ts)$/);
-  if (!match) {
-    throw new Error(`package.json script ${name} must be exactly "tsx <file>.ts", got ${JSON.stringify(scripts[name])}`);
-  }
-  return match[1];
-}
-
 /** `git ls-files -s -z` output → path → blob id. */
 export function parseLsFilesStage(out: string): BlobIndex {
   const blobs = new Map<string, string>();

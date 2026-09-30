@@ -1,15 +1,19 @@
-// The esbuild import closure of TypeScript entry points, and the tracked-file listing beside it. See README.md.
+// The esbuild import closure of package.json build scripts, and the tracked-file listing beside it. See README.md.
 
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { build } from 'esbuild';
 
+import { tsxEntry } from './import-closure-pure';
 import { REPO_ROOT } from './paths';
 
-/** Repo-relative path of every module the entries import, the entries included. */
-export async function importClosure(entries: readonly string[]): Promise<Set<string>> {
+/** Repo-relative path of every module the named package.json scripts import, their entries included. */
+export async function scriptClosure(scriptNames: readonly string[]): Promise<Set<string>> {
+  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8'));
   const { metafile } = await build({
-    entryPoints: [...entries],
+    entryPoints: scriptNames.map((name) => tsxEntry(scripts, name)),
     absWorkingDir: REPO_ROOT,
     bundle: true,
     platform: 'node',

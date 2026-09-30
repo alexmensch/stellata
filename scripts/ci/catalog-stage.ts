@@ -1,16 +1,13 @@
 // CI's catalogue build stage: `key` prints its cache key, `paths` the keyed files, `run` builds and diff-gates it.
 
 import { execFileSync, spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
-import { importClosure } from '../util/import-closure';
+import { scriptClosure } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
-import { CATALOG_STAGE, catalogCacheKey, keyedPaths, parseLsFilesStage, tsxEntry } from './catalog-stage-pure';
+import { CATALOG_STAGE, catalogCacheKey, keyedPaths, parseLsFilesStage } from './catalog-stage-pure';
 
 async function stageKeyInputs(): Promise<{ index: ReturnType<typeof parseLsFilesStage>; paths: string[] }> {
-  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8'));
-  const closure = await importClosure(CATALOG_STAGE.map((step) => tsxEntry(scripts, step.script)));
+  const closure = await scriptClosure(CATALOG_STAGE.map((step) => step.script));
   const index = parseLsFilesStage(execFileSync('git', ['ls-files', '-s', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' }));
   return { index, paths: keyedPaths(closure, index) };
 }

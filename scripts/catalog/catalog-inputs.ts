@@ -3,7 +3,7 @@
 import { resolve } from 'node:path';
 
 import { closureWithSiblings } from '../util/import-closure-pure';
-import { importClosure, trackedFiles } from '../util/import-closure';
+import { scriptClosure, trackedFiles } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import {
   HEAD_PATH, LEDGER_PATH, OVERRIDES_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
@@ -13,8 +13,6 @@ import { MULTIPLES_TSV } from './companions/companion-promotion';
 import { STAR_NAMING_INPUT_PATHS } from './naming/apply-star-names';
 import { STELLARIUM_SKYCULTURE_JSON } from './parse/constellations/constellations';
 import { readStarsInputPaths } from './parse/read-stars-inputs';
-
-export const CATALOG_BUILD_ENTRY = 'scripts/catalog/build-catalog.ts';
 
 export const SRC_GCVS = resolve(REPO_ROOT, 'data/gcvs/gcvs5.txt');
 export const SRC_GCVS_XREF = resolve(REPO_ROOT, 'data/gcvs/crossid.txt');
@@ -26,7 +24,7 @@ export const SRC_SIMBAD_SAMPLE = resolve(REPO_ROOT, 'data/simbad/simbad_sample.t
 
 /** Absolute paths. */
 export async function catalogInputPaths(): Promise<string[]> {
-  const code = closureWithSiblings(await importClosure([CATALOG_BUILD_ENTRY]), trackedFiles());
+  const code = closureWithSiblings(await scriptClosure(['build:catalog']), trackedFiles());
   return [
     ...readStarsInputPaths(),
     ...DESIGNATION_CONSTELLATION_INPUT_PATHS,

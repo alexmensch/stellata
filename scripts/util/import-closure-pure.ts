@@ -4,6 +4,14 @@ import { dirname, extname } from 'node:path';
 
 const UNREAD_SIBLING_EXTENSIONS = new Set(['.ts', '.py', '.md']);
 
+export function tsxEntry(scripts: Readonly<Record<string, string>>, name: string): string {
+  const match = scripts[name]?.match(/^tsx (\S+\.ts)$/);
+  if (!match) {
+    throw new Error(`package.json script ${name} must be exactly "tsx <file>.ts", got ${JSON.stringify(scripts[name])}`);
+  }
+  return match[1];
+}
+
 /** `closure` plus every file in `files` that sits in a closure module's folder
  *  and is not itself code or prose — the `*-expected.json` snapshots a build
  *  reads by path rather than by import. Repo-relative paths, sorted. */

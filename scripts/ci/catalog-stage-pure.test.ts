@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { tsxEntry } from '../util/import-closure-pure';
 import { REPO_ROOT } from '../util/paths';
 import {
   CATALOG_CACHE_KEY_PREFIX,
@@ -10,22 +11,10 @@ import {
   catalogCacheKey,
   keyedPaths,
   parseLsFilesStage,
-  tsxEntry,
 } from './catalog-stage-pure';
 
 const index = (paths: string[], blob = 'b0'): Map<string, string> =>
   new Map(paths.map((p) => [p, blob]));
-
-describe('tsxEntry', () => {
-  it('reads the entry of a single tsx script', () => {
-    expect(tsxEntry({ 'build:x': 'tsx scripts/x/build-x.ts' }, 'build:x')).toBe('scripts/x/build-x.ts');
-  });
-
-  it('refuses a chained or missing script rather than keying half of it', () => {
-    expect(() => tsxEntry({ 'build:x': 'tsx a.ts && tsx b.ts' }, 'build:x')).toThrow(/build:x/);
-    expect(() => tsxEntry({}, 'build:y')).toThrow(/build:y/);
-  });
-});
 
 describe('parseLsFilesStage', () => {
   it('maps each path, spaces included, to its blob id', () => {
