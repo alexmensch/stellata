@@ -276,7 +276,9 @@ tracks filling them.
 
 To land a real capture:
 
-1. Take the shot from the running app at 2400 px wide or more.
+1. Take the shot from the running app at 2400 px wide or more, in a 16:9
+   window. Every slot is 16:9: a still ships as a 2400×1350 JPEG, a clip at
+   1920×1080.
 2. Save it under `public/site/` as the filename the holder names.
    `public/` is the app pass's `publicDir`, so the file is served at
    `/site/<name>` with no build step. Commit it — the SEO assets in
@@ -310,7 +312,7 @@ To land a real capture:
    that. A clip that plays once and holds its last frame needs no control
    to comply. A looping hero would need one and has nowhere to put it.
 
-   Encode 1920×1080 H.264 High, `yuv420p`, no audio track, `-movflags
+   Encode 1920×1080 at 30 fps, H.264 High, `yuv420p`, no audio track, `-movflags
    +faststart`, and the poster is the clip's **last** frame so the still
    and the frame it settles on agree. **CRF around 17, not the usual 21.**
    These scenes are near-black gradients — a dust lane, a Milky Way band —

@@ -26,18 +26,10 @@ it — [Hand it back](#hand-it-back).
 
 ## The target
 
-| | clips | stills |
-|---|---|---|
-| dimensions | 1920×1080 | 2400×1350 |
-| aspect | 16:9, always | 16:9, always |
-| codec | H.264 High, `yuv420p` | JPEG |
-| rate | 30 fps | — |
-| runtime | **under** 5 s | — |
-| audio | none | — |
-| poster | `<name>.jpg`, the clip's **last** frame | — |
-
-Shoot at 2400 px wide or more, **in a 16:9 window**. A 16:9 source needs no
-crop decision at all, which is the cheapest way to make all of this go away.
+Dimensions, aspect, codec, frame rate, runtime and poster are all
+[Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries)'s. The one procedural consequence: a source shot in a
+16:9 window needs no crop decision at all, which is the cheapest way to
+make everything below go away.
 
 ## Measure before you crop — never decide from one frame
 
@@ -114,13 +106,10 @@ duration under 5 s, and no audio stream.
 
 ## Expect a dense starfield to be large
 
-CRF 17 on a starfield in motion runs several times the cost of a smooth
-gradient — thousands of moving point-stars defeat temporal prediction, and
-relaxing to CRF 23 only halves it while crushing faint stars into flicker.
-A sight clip several times the hero's size is the content, not a mistake.
-Report the number rather than quietly raising CRF: the setting is pinned in
-[Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries) for a reason, and relaxing it is the user's
-call.
+A starfield clip runs several times the hero's size ([Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries)).
+Report the number rather than quietly raising CRF: relaxing to CRF 23 only
+halves it while crushing faint stars into flicker, and relaxing the pinned
+setting is the user's call.
 
 ## Hand it back
 
