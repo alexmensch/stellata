@@ -286,9 +286,10 @@ To land a real capture:
    `/site/<name>` with no build step. Commit it — the SEO assets in
    `public/` (`og-image.jpg`, the icons) are committed the same way.
 3. Replace the `<div class="holder">…</div>` with
-   `<img src="/site/<name>" alt="…" width="…" height="…" />`. Real
-   `width`/`height` attributes matter — they reserve the space and keep
-   the page's layout shift at zero. `.sight-media` already carries the
+   `<img src="/site/<name>" loading="lazy" decoding="async" alt="…"
+   width="…" height="…" />`. Real `width`/`height` attributes matter —
+   they reserve the space and keep the page's layout shift at zero. `lazy`
+   keeps a sight's still from competing with the hero's poster at load. `.sight-media` already carries the
    hairline border, and `.sight-media > img` the full-width rule.
 
    **A clip goes in the same slot**, and `.hero-media > video` /
