@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   HEADER_SIZE, RECORD_LAYOUT, RECORD_SIZE, parseBinaries,
@@ -39,10 +39,12 @@ stats = brb.encode(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))
 Path(sys.argv[4]).write_text(json.dumps(dataclasses.asdict(stats)))
 `;
 
-const scratch = mkdtempSync(join(tmpdir(), 'binaries-golden-'));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+interface Encoded {
+  readonly bytes: Buffer;
+  readonly stats: unknown;
+}
 
-function encodeFixture(): { bytes: Buffer; stats: unknown } {
+function encodeFixture(scratch: string): Encoded {
   const out = join(scratch, 'binaries.bin');
   const statsOut = join(scratch, 'stats.json');
   execFileSync(
@@ -75,20 +77,26 @@ function describeFirstDifference(actual: Buffer, golden: Buffer): string | null 
 }
 
 describe('binaries.bin golden', () => {
-  const { bytes: actual, stats } = encodeFixture();
+  let scratch: string;
+  let encoded: Encoded;
+  beforeAll(() => {
+    scratch = mkdtempSync(join(tmpdir(), 'binaries-golden-'));
+    encoded = encodeFixture(scratch);
+  });
+  afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
   it('the fixture exercises every WriteStats counter', () => {
-    expect(stats).toEqual(EXPECTED_STATS);
+    expect(encoded.stats).toEqual(EXPECTED_STATS);
     for (const count of Object.values(EXPECTED_STATS)) expect(count).toBeGreaterThan(0);
   });
 
   it('the encoder reproduces the committed golden byte for byte', () => {
-    if (process.env[UPDATE_ENV_VAR] === '1') writeFileSync(GOLDEN, actual);
+    if (process.env[UPDATE_ENV_VAR] === '1') writeFileSync(GOLDEN, encoded.bytes);
     expect(
       existsSync(GOLDEN),
       `${GOLDEN} missing; write it with ${UPDATE_ENV_VAR}=1 pnpm test scripts/binaries/golden`,
     ).toBe(true);
-    const difference = describeFirstDifference(actual, readFileSync(GOLDEN));
+    const difference = describeFirstDifference(encoded.bytes, readFileSync(GOLDEN));
     expect(
       difference,
       `re-baseline with ${UPDATE_ENV_VAR}=1 only when the change is meant to alter binaries.bin`,
