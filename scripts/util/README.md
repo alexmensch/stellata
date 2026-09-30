@@ -116,20 +116,20 @@ need the same thing — single-use helpers stay with their consumer.
 ## Proving a restructuring byte-identical
 
 A pipeline restructuring promises unchanged outputs; prove it, don't
-eyeball it. On the base commit with a full `pnpm run build:data`:
+eyeball it. Both commands first rebuild everything from scratch: they delete
+the gitignored files under `public/` and every stamp, then run
+`pnpm run build:data`. A stamp's input list can miss a file the step reads, so
+a skipped step proves nothing; a missing output is what makes every
+mtime-gated emitter rebuild too. Each run costs a cold catalogue build (about
+six minutes), and a dev server on the same checkout serves nothing meanwhile.
 
-1. `pnpm run identity:snapshot` hashes every output into the gitignored
-   `build/output-identity.json`: each stamp's recorded outputs (the stamp
-   directory's listing, so a new stamped step joins without an edit) plus the
-   unstamped `public/clouds.json` and `public/local-group.json`. It refuses
-   an output missing, or one its stamp no longer vouches for.
-2. Check out the branch and rebuild. A stamped step whose inputs changed
-   rebuilds itself; the mtime-gated emitters need a forced run of the whole
-   pnpm script, SID stamp included: `python3 scripts/clouds/build-clouds.py
-   --force`, `tsx scripts/local-group/build-local-group.ts --force`, then
-   `tsx scripts/sid/stamp-sibling-sids.ts clouds` / `local-group`.
-3. `pnpm run identity:diff` prints `identical: N outputs` and exits 0, or
-   names each changed, appeared and vanished file and exits 1.
+1. On the base commit, `pnpm run identity:snapshot` hashes every output into
+   the gitignored `build/output-identity.json`: each stamp's recorded outputs
+   (the stamp directory's listing, so a new stamped step joins without an
+   edit) plus the unstamped `public/clouds.json` and `public/local-group.json`.
+2. Check out the branch; `pnpm run identity:diff` prints
+   `identical: N outputs` and exits 0, or names each changed, appeared and
+   vanished file and exits 1.
 
 Quote the `identical` line in the PR body. `data/binaries/multiples.tsv` is
 also committed, so `git diff` shows it field by field; for the catalogue,
