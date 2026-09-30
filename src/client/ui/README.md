@@ -146,8 +146,10 @@ that they are not already at.
 Two layers of collapse: a panel as a whole (top-level — key
 `stellata.panel-collapsed` for Settings, `stellata.instruments-collapsed` for
 Instruments) and each `<section class="group" data-group="...">`
-independently (key `stellata.group-collapsed.<name>`). Both default to
-expanded; both persist to `localStorage`. `bindGroups` walks every
+independently (key `stellata.group-collapsed.<name>`). Settings starts
+collapsed, so a first visit opens on the scene; Instruments and every section
+start expanded. All of them persist to `localStorage`, and a stored choice
+wins over the default. `bindGroups` walks every
 `.group[data-group]` in the document, so a section in either panel is wired by
 existing. Wired in `panel-layout.ts`, whose
 exported `bindCollapse` helper carries the header-click pattern with

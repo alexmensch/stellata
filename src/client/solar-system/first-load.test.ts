@@ -1,64 +1,94 @@
 import { describe, it, expect } from 'vitest';
+import * as THREE from 'three';
 import { FIRST_LOAD_VIEW } from './first-load';
 import { encodeBlob, decodeBlob } from '../util/url-state';
-import { AU_PC } from '../util/astronomy-constants';
+import { poseOutOfFrame } from '../util/url-state/orbit-pose/orbit-pose-pure';
+import { captureOrbitFrame } from '../attitude/attitude-pure';
+import {
+  ECLIPTIC_NORTH_POLE_ICRS,
+  orbitPlaneNormalInto,
+} from './ephemerides/orbit-rings-layer';
+import { SOL_BODIES, getPlanetSystem, solOrbitGeometryAt } from './planet-system';
+import { SOL_OBJECT_SIDS } from './sol-object-sids';
+import { KM_PC } from '../util/astronomy-constants';
+
+const DEG = Math.PI / 180;
+
+/** The view this pose was chosen from, shared before bit 29 existed: its cam
+ *  and up are ICRS, measured at `CAPTURED_AT`. */
+const CHOSEN_LINK = 'BIXAgcABB-kUFDT_dEk0ndYxNAckT-C-k7vIvpsVTz8C-v8T';
+const CAPTURED_AT = Date.UTC(2026, 8, 30, 10, 13) / 1000;
+
+/** Earth's ORB at `t` as the planet field builds it: Sol's host quaternion
+ *  over the ecliptic ephemeris, zero longitude on the Sun. */
+async function earthOrbitFrame(t: number) {
+  const earth = SOL_BODIES.findIndex((b) => b.name === 'Earth');
+  const hostQuat = new THREE.Quaternion().setFromUnitVectors(
+    new THREE.Vector3(0, 0, 1), ECLIPTIC_NORTH_POLE_ICRS,
+  );
+  const normal = orbitPlaneNormalInto(new THREE.Vector3(), solOrbitGeometryAt(t)[earth], hostQuat);
+  const sol = (await getPlanetSystem(0, 0))!;
+  const positions = new Float64Array(SOL_BODIES.length * 3);
+  sol.positionsAt!(t, positions);
+  const toSun = new THREE.Vector3(
+    -positions[earth * 3], -positions[earth * 3 + 1], -positions[earth * 3 + 2],
+  ).applyQuaternion(hostQuat);
+  return captureOrbitFrame(new THREE.PerspectiveCamera(), normal, toSun);
+}
 
 describe('first-load', () => {
   describe('FIRST_LOAD_VIEW', () => {
-    it('parks the camera at exactly 5 AU from Sol', () => {
-      const cam = FIRST_LOAD_VIEW.cam!;
-      const r = Math.hypot(cam[0], cam[1], cam[2]);
-      expect(r).toBeCloseTo(5 * AU_PC, 14);
+    it('focuses Earth', () => {
+      expect(FIRST_LOAD_VIEW.focus).toEqual({ kind: 'sid', id: SOL_OBJECT_SIDS.earth });
     });
 
-    it('preserves the hand-tuned direction toward the galactic centre', () => {
-      // The share URL the user picked encoded these (unnormalised) cam
-      // components. Renormalising to 5 AU must not change their
-      // direction beyond float precision.
-      const RAW = [-1.5599102880514693e-6, 1.9162944226991385e-5, 1.4444859516515862e-5];
-      const rawLen = Math.hypot(...RAW);
-      const cam = FIRST_LOAD_VIEW.cam!;
-      const camLen = Math.hypot(cam[0], cam[1], cam[2]);
-      for (let i = 0; i < 3; i++) {
-        expect(cam[i] / camLen).toBeCloseTo(RAW[i] / rawLen, 12);
-      }
+    it('arms ORB with the lock and holds the pose against the orbit', () => {
+      expect(FIRST_LOAD_VIEW).toMatchObject({ orb: true, orbLock: true, orbitPose: true });
     });
 
-    it('carries no up override, so the galactic plane renders level', () => {
-      // Omitting the slot leaves the reference axis at galactic north,
-      // the canonical default the encoder elides against.
-      expect(FIRST_LOAD_VIEW.up).toBeUndefined();
+    it('sits 8.82 million km out, 127 deg round from the Sun and 15.7 deg above the plane', () => {
+      const [x, y, z] = FIRST_LOAD_VIEW.cam!;
+      const r = Math.hypot(x, y, z);
+      expect(Math.round(r / KM_PC / 1e4) / 100).toBe(8.82);
+      expect(Math.atan2(y, x) / DEG).toBeCloseTo(-126.99, 2);
+      expect(Math.asin(z / r) / DEG).toBeCloseTo(15.7, 2);
     });
 
-    it('does not highlight any constellation', () => {
-      // Was Orion in an earlier draft; user dropped the highlight to
-      // keep the first-paint screen quieter.
+    it('keeps the full declutter level and the HUD, with no constellation', () => {
+      expect(FIRST_LOAD_VIEW.detailLevel).toBeUndefined();
+      expect(FIRST_LOAD_VIEW.showHud).toBe(true);
       expect(FIRST_LOAD_VIEW.con).toBeUndefined();
     });
 
-    it('turns on the HUD', () => {
-      expect(FIRST_LOAD_VIEW.showHud).toBe(true);
-    });
-
-    it('leaves focus implicit so receiver defaults to Sol', () => {
-      // The encoder treats `focus === undefined` as the canonical Sol
-      // default; emitting a Sol focus would bloat the blob and break
-      // the "default state has no `?v=`" contract for unrelated state.
-      expect(FIRST_LOAD_VIEW.focus).toBeUndefined();
-    });
-
     it('round-trips through the wire format', () => {
-      // Belt-and-suspenders: the constant must decode to itself when
-      // pushed through the same encoder/decoder applyFromUrl uses.
-      const blob = encodeBlob(FIRST_LOAD_VIEW);
-      const view = decodeBlob(blob);
-      expect(view.con).toBe(FIRST_LOAD_VIEW.con);
-      expect(view.showHud).toBe(true);
-      const cam = view.cam!;
-      // cam encodes as 3 × Float32; ULP at this magnitude (~2e-5 pc) is
-      // ~1e-12, so a sub-pc round-trip diff is the float32 floor, not a
-      // semantic mismatch. 11 decimals matches the encoder precision.
-      expect(Math.hypot(cam[0], cam[1], cam[2])).toBeCloseTo(5 * AU_PC, 11);
+      const view = decodeBlob(encodeBlob(FIRST_LOAD_VIEW));
+      expect(view).toMatchObject({
+        focus: FIRST_LOAD_VIEW.focus, showHud: true, orb: true, orbLock: true, orbitPose: true,
+      });
+      for (let i = 0; i < 3; i++) {
+        expect(view.cam![i]).toBeCloseTo(FIRST_LOAD_VIEW.cam![i], 13);
+        expect(view.up![i]).toBeCloseTo(FIRST_LOAD_VIEW.up![i], 6);
+      }
+    });
+
+    // see README.md#first-load-default-and-mindistance-relaxation
+    it('reproduces the chosen link at the instant it was shared', async () => {
+      const frame = await earthOrbitFrame(CAPTURED_AT);
+      const cam = new THREE.Vector3(...FIRST_LOAD_VIEW.cam!);
+      const up = new THREE.Vector3(...FIRST_LOAD_VIEW.up!);
+      poseOutOfFrame(cam, { x: 0, y: 0, z: 0 }, up, frame);
+
+      const chosen = decodeBlob(CHOSEN_LINK);
+      const chosenCam = new THREE.Vector3(...chosen.cam!);
+      const chosenUp = new THREE.Vector3(...chosen.up!);
+      expect(cam.angleTo(chosenCam) / DEG).toBeLessThan(0.01);
+      expect(cam.length() / chosenCam.length()).toBeCloseTo(1, 5);
+      // `up` is re-projected against the view axis on seating, so it is the
+      // roll about that axis that has to agree.
+      const axis = chosenCam.clone().normalize();
+      const roll = up.clone().projectOnPlane(axis)
+        .angleTo(chosenUp.clone().projectOnPlane(axis));
+      expect(roll / DEG).toBeLessThan(0.01);
     });
   });
 });

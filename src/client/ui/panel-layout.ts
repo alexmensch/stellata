@@ -51,17 +51,17 @@ export function bindPanelLayout() {
 }
 
 const TOP_LEVEL_PANELS = [
-  { id: 'panel', storageKey: PANEL_KEY, ariaSubject: 'settings' },
+  { id: 'panel', storageKey: PANEL_KEY, ariaSubject: 'settings', initialCollapsed: true },
   { id: 'instruments', storageKey: INSTRUMENTS_KEY, ariaSubject: 'instruments' },
 ];
 
 function bindTopLevel() {
-  for (const { id, storageKey, ariaSubject } of TOP_LEVEL_PANELS) {
+  for (const { id, storageKey, ariaSubject, initialCollapsed } of TOP_LEVEL_PANELS) {
     const container = document.getElementById(id);
     const header = document.getElementById(`${id}-header`);
     const toggle = document.getElementById(`${id}-toggle`) as HTMLButtonElement | null;
     if (!container || !header || !toggle) continue;
-    bindCollapse({ container, header, toggle, storageKey, ariaSubject });
+    bindCollapse({ container, header, toggle, storageKey, ariaSubject, initialCollapsed });
   }
 }
 

@@ -222,8 +222,7 @@ async function main() {
 
     // Apply any URL state before starting the URL writer so we don't echo
     // the same params back into history on load. With no `?v=`, fall back
-    // to the canonical first-load view (Sol focus, parked at 5 AU aimed at
-    // the galactic centre, HUD on, no constellation highlight).
+    // to the canonical first-load view (`solar-system/first-load.ts`).
     // Planet-focus refs need the body field's attach table, settled by
     // the kinds.planet.systemsReady await above.
     const { applied, focusPending } = applyFromUrl(stellata, idMaps);
