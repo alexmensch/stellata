@@ -141,7 +141,7 @@ Display resolution order, first hit wins:
    for α UMa, while atlases and observing lists print `15 UMa` rather than
    `f UMa`. Splitting the tier moves the 550 Latin-letter records off tier 3:
    **313** take a Flamsteed number back and **237** keep their letter, having
-   none to lose to (`namingTierBayerLatin`; the <!-- count:build-catalog/namingTierBayer -->1,719<!-- /count --> Greek records are
+   none to lose to (`namingTierBayerLatin`; the <!-- count:build-catalog/namingTierBayer -->1,710<!-- /count --> Greek records are
    untouched, and `build-catalog-expected.json` is authoritative for all
    three). Below Flamsteed rather than out of the ladder, because Flamsteed
    catalogued only what Greenwich could see — which is what leaves the far
@@ -311,7 +311,7 @@ Two couplings the composer gets right, both latent bugs before it:
   attribute (hover line, focus-card Constellation row, `highlightCon`,
   chart centroids).
 - **One composer, both sides.** `catalog.bin`'s name table carries the
-  authority tiers — <!-- count:build-catalog/namingNameTable -->725<!-- /count --> records, so first paint has names — and the
+  authority tiers — <!-- count:build-catalog/namingNameTable -->726<!-- /count --> records, so first paint has names — and the
   runtime composes every designation below them off `search-index.json`
   through the same pure function, so the two cannot drift.
 
@@ -378,7 +378,7 @@ Sequencing note: the ladder is independent of the driver swap
 (`stellata-3bsf.4`) — it reads designations, whichever source produced them
 — but its Bayer/Flamsteed tail and every label's spine backstop come from
 `data/athyg/inherited-spine.tsv`, which is why the ingest keys HIP/HR/HD and
-never `gaia_source_id` alone: **<!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->115<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> stars at V ≤ 3 have no
+never `gaia_source_id` alone: **<!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> stars at V ≤ 3 have no
 source_id-keyed overlay row** ([Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority)), and
 those are exactly the stars the authority names.
 

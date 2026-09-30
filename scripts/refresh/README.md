@@ -166,7 +166,7 @@ shortfall is what is pinned:
 | Count | Pin | What a move means |
 |---|---|---|
 | `bjEligibleNotPulled` | **<!-- count:build-catalog/bjEligibleNotPulled -->0<!-- /count -->** | an eligible row has its own DR3 parallax, so [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) publishes a posterior for it; an absence is only ever this request set drifting |
-| `apsisSourcesUnpulled` | reviewed residual | **<!-- count:build-catalog/apsisSourcesUnpulled -->484<!-- /count -->**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but <!-- count:build-catalog/apsisSourcesUnpulled -->484<!-- /count --> of them; that remainder plus genuine upstream absence is what the pin now holds |
+| `apsisSourcesUnpulled` | reviewed residual | **<!-- count:build-catalog/apsisSourcesUnpulled -->485<!-- /count -->**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but <!-- count:build-catalog/apsisSourcesUnpulled -->485<!-- /count --> of them; that remainder plus genuine upstream absence is what the pin now holds |
 | `gspcSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue; its request is the exported union, which does cover pair members |
 | `gateSkippedNoGMag` · `derivedWeighedNoGMag` | **0** | the original instance of this rule, on the two binding gates ([The request is a union](/scripts/catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)) |
 

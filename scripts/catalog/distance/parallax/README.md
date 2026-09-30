@@ -45,7 +45,7 @@ unless an override layer replaces it. Counts pin as `dist*`.
 | `gliese_plx` | its own GJ in V/70A | |
 | `simbad_plx` | bibcoded, neither skip rule firing | |
 | `pair_member_parallax` | a bound sibling's clean DR3 fit | |
-| `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | <!-- count:build-catalog/distGliesePhotometricPlx -->15<!-- /count --> |
+| `gliese_photometric_plx` | V/70A's colour/spectral estimate — not astrometry | <!-- count:build-catalog/distGliesePhotometricPlx -->16<!-- /count --> |
 | `curated` | Sol alone | <!-- count:build-catalog/distCurated -->1<!-- /count --> |
 | `none` | — | [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) ledger drop |
 
@@ -58,7 +58,7 @@ unconditionally put an estimate above every bibcoded measurement of the star
 itself, which is what Gl 92.1 / HD 14039 measured — 41.0 mas under `n_plx=r`
 inverted to **24.390 pc**, against SIMBAD's bibcoded 29.9357 ± 0.1389 (S/N 216)
 at **33.405 pc**, ~27% further out. 21 records moved onto a real parallax that
-way. `distGliesePhotometricPlx` ratchets DOWN: each of its <!-- count:build-catalog/distGliesePhotometricPlx -->15<!-- /count --> is a record
+way. `distGliesePhotometricPlx` ratchets DOWN: each of its <!-- count:build-catalog/distGliesePhotometricPlx -->16<!-- /count --> is a record
 waiting for someone to measure its parallax.
 
 The estimate sits below even the bound-sibling tier, which is the only place the

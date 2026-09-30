@@ -80,7 +80,7 @@ all four; cite the paper per table.
   (`alf`, `kap`), **not** AT-HYG's (`Alp`) — and neither is canonical:
   [§ 4](/docs/star-naming.md#4-canonical-designation-forms) stores the Unicode glyph, sourced from the
   IAU WGSN naked-eye catalogue, and demotes this table to the V > 6.5
-  tail; both ASCII conventions are normaliser inputs there. <!-- count:wgsn/iv27aVariableRejected -->111<!-- /count --> of
+  tail; both ASCII conventions are normaliser inputs there. <!-- count:wgsn/iv27aVariableRejected -->134<!-- /count --> of
   these cells are GCVS-style variable designations (`R And`, `RZ Cas`,
   `V380 Cyg`), not Bayer letters, and the ladder rejects them from the
   Bayer tier. `cst` is the
@@ -148,7 +148,7 @@ gaia_source_id  hd  hr  hip  gj  bayer  flamsteed
 - Cells are `|`-separated lists. Nothing is single-valued by
   construction: a designation naming a catalogue granularity rather than
   one object attaches to every matching record (<!-- count:classic-id-overlay/hdOnMultipleSources -->7<!-- /count --> HDs land on >1 source),
-  and a record can carry several (<!-- count:classic-id-overlay/sourcesWithMultipleHd -->137<!-- /count --> sources carry >1 HD).
+  and a record can carry several (<!-- count:classic-id-overlay/sourcesWithMultipleHd -->136<!-- /count --> sources carry >1 HD).
 - `gj` is a bare CNS5 number with its component letter appended
   (`551C`). The `Gl` vs `GJ` prefix AT-HYG prints is a display choice and
   is deliberately not baked in here.
@@ -206,7 +206,7 @@ without needing one). `v_via` says which printed tier the rejection rests on —
 218 hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
-routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/hdHipRouteAgree -->2,637<!-- /count -->
+routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/hdHipRouteAgree -->2,635<!-- /count -->
 route agreements, not the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> disagreements.
 
 **The gate reads the V cascade's three printed tiers**, keyed on designations
@@ -269,7 +269,7 @@ disagreement). `bayer` is no longer scored: the two catalogues' spellings
 (`alf` vs `Alp`) are the naming ladder's gate, so the merge never touches that
 cell.
 
-**<!-- count:membership-manifest/labelNoOverlayEntry -->14,975<!-- /count --> spine rows get no overlay entry at all** — <!-- count:membership-manifest/spineRowsWithoutSourceId -->577<!-- /count --> bind no source, and the
+**<!-- count:membership-manifest/labelNoOverlayEntry -->14,981<!-- /count --> spine rows get no overlay entry at all** — <!-- count:membership-manifest/spineRowsWithoutSourceId -->574<!-- /count --> bind no source, and the
 rest bind one that neither best-neighbour walk carries. That population is
 concentrated at the bright end exactly as [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s bright
 tier predicts: **<!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> rows at V ≤ 3 have no overlay row**, Vega,

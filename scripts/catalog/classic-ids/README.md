@@ -285,7 +285,7 @@ Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
 The 123 rows it misses are faint Flamsteed-only records absent from IV/27A's
 TAP subset; they ride the positional fallback.
 
-**GCVS fills the field only where IV/27A left it empty** (<!-- count:build-catalog/gcvsDesignationCon -->7,363<!-- /count --> records). On the
+**GCVS fills the field only where IV/27A left it empty** (<!-- count:build-catalog/gcvsDesignationCon -->7,929<!-- /count --> records). On the
 8 where the two disagree the star carries a Bayer/Flamsteed designation and a
 variable name in different constellations (HD 104337 is Crater's Flamsteed star
 and Corvus's TY): one `uint8` serves one of them, and IV/27A wins because its

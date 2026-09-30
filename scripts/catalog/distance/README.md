@@ -78,13 +78,13 @@ same trust cascade the binaries pipeline implements in
 
 | Route | Gate | Rows |
 | --- | --- | --- |
-| `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry_catalog.tsv`, J2016.0) and non-null parallax. Also the fall-through for 2p position-only rows with no HIP2 cover. | ~<!-- count:build-catalog/directionGaia5p k4 -->300.5k<!-- /count --> |
-| `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~<!-- count:build-catalog/directionGaiaNssSystemic k3 -->10.0k<!-- /count --> |
-| `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~<!-- count:build-catalog/directionHip2Saturated k2 -->2.5k<!-- /count --> |
-| `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~<!-- count:build-catalog/directionHip2PmDiscrepant -->138<!-- /count --> |
-| `tycho2` | No Gaia astrometry row AND no HIP2 row, but the record carries a TYC. Tycho-2's **mean** position (`ra_mdeg`/`de_mdeg`), which the catalogue states at J2000. | <!-- count:build-catalog/directionTycho2 -->41<!-- /count --> |
-| `cns5` | The above, with no TYC but a `gl` CNS5 carries. CNS5's own coordinates, advanced from the row's own `pos_epoch`. | <!-- count:build-catalog/directionCns5 -->4<!-- /count --> |
-| `simbad` | The bottom tier: SIMBAD's bibcoded J2000 coordinates advanced 16 yr on its own bibcoded PM. Gl 863.1A is the corpus exemplar, and the tier's worst mover at 1372 mas/yr. | <!-- count:build-catalog/directionSimbad -->13<!-- /count --> |
+| `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry_catalog.tsv`, J2016.0) and non-null parallax. Also the fall-through for 2p position-only rows with no HIP2 cover. | ~<!-- count:build-catalog/directionGaia5p k4 -->930.2k<!-- /count --> |
+| `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~<!-- count:build-catalog/directionGaiaNssSystemic k3 -->32.1k<!-- /count --> |
+| `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~<!-- count:build-catalog/directionHip2Saturated k2 -->2.3k<!-- /count --> |
+| `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~<!-- count:build-catalog/directionHip2PmDiscrepant -->148<!-- /count --> |
+| `tycho2` | No Gaia astrometry row AND no HIP2 row, but the record carries a TYC. Tycho-2's **mean** position (`ra_mdeg`/`de_mdeg`), which the catalogue states at J2000. | <!-- count:build-catalog/directionTycho2 -->80<!-- /count --> |
+| `cns5` | The above, with no TYC but a `gl` CNS5 carries. CNS5's own coordinates, advanced from the row's own `pos_epoch`. | <!-- count:build-catalog/directionCns5 -->2<!-- /count --> |
+| `simbad` | The bottom tier: SIMBAD's bibcoded J2000 coordinates advanced 16 yr on its own bibcoded PM. Gl 863.1A is the corpus exemplar, and the tier's worst mover at 1372 mas/yr. | <!-- count:build-catalog/directionSimbad -->94<!-- /count --> |
 | `curated` | Sol alone — it carries no identifier any tier above can key on. The vector is arbitrary and unobservable: Sol's distance is zero, so the walk multiplies it to the origin whatever it points at. | <!-- count:build-catalog/directionCurated -->1<!-- /count --> |
 
 Epoch propagation advances the measured unit vector to the
@@ -119,7 +119,7 @@ reading one motion ([The proper-motion rescue cascade](#the-proper-motion-rescue
 | `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
 | `hip2_*` | J1991.25 |
 | `tycho2` | J2000 — **measured**: over the 1,145 mean-solution rows with a Gaia-grade SIMBAD place above 100 mas/yr, propagating from J2000 lands a median 0.061″ from it against 1.817″ propagating from `ep_ra`/`ep_de`, whose 1967.77–1991.74 spread is the size of the error that buys |
-| `tycho2`, `pflag='X'` rows | J1991.25 — no mean solution exists, so the observed `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, and advances this position like any other. <!-- count:build-catalog/directionTycho2FromIcrs -->3<!-- /count --> of the <!-- count:build-catalog/directionTycho2 -->41<!-- /count -->, pinned `directionTycho2FromIcrs` |
+| `tycho2`, `pflag='X'` rows | J1991.25 — no mean solution exists, so the observed `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, and advances this position like any other. <!-- count:build-catalog/directionTycho2FromIcrs -->8<!-- /count --> of the <!-- count:build-catalog/directionTycho2 -->80<!-- /count -->, pinned `directionTycho2FromIcrs` |
 | `cns5` | the row's own `pos_epoch` (2016.0 on 5,244 rows, 2000.0 on 406, 1991.25 on 138, 2015.5 on 36, 2016.55 on 3) |
 | `simbad` | J2000.0 — **measured, not assumed**: over the 673 catalogue rows carrying both a SIMBAD position and a Gaia PM above 500 mas/yr, SIMBAD's position matches the Gaia one back-propagated to J2000 to a median 0.000″, and not one row is closer to J2016 |
 
@@ -151,7 +151,7 @@ bites where a SIMBAD tier and a SIMBAD-based validator meet the same
 field, and no validator reads a position: `simbad_sample.tsv` carries
 `ra` / `dec` / `pmra` / `pmdec` columns, but `validate-simbad-sample.ts`
 compares distance alone and the build-time regression check compares a
-parallax-derived distance. So the <!-- count:build-catalog/directionSimbad -->13<!-- /count --> simbad-tier rows verify themselves
+parallax-derived distance. So the <!-- count:build-catalog/directionSimbad -->94<!-- /count --> simbad-tier rows verify themselves
 against nothing. That changes when the distance cascade takes its own
 SIMBAD tier, under validators that do check distance.
 
@@ -367,7 +367,7 @@ Constants in `../record/catalog-pure.ts`:
 of the PM gate so `readStars` can count cone-membership candidates
 (`lmcCandidates` in `build-catalog-expected.json`) separately from
 PM-passing overrides (`lmcOverridden`). At `V ≤ 11` it fires for **<!-- count:build-catalog/lmcOverridden -->111<!-- /count -->
-of <!-- count:build-catalog/lmcCandidates -->14,625<!-- /count -->** cone candidates; most of the rest fail the PM tolerance (MW
+of <!-- count:build-catalog/lmcCandidates -->14,552<!-- /count -->** cone candidates; most of the rest fail the PM tolerance (MW
 halo / runaway stars whose PMs sit far from the LMC bulk centroid).
 
 **The PM gate is not a membership test, and the cone is crowded**, so

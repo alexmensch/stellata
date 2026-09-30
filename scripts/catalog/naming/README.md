@@ -132,7 +132,7 @@ belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
 cell): both drop their own Bayer (`namingBayerDropped`) and take their
 system's designation with their component letter instead, which is what
 the authority's coverage actually asserts. Over the whole record set the
-table reaches **<!-- count:build-catalog/namingBayer -->2,033<!-- /count -->** records, <!-- count:build-catalog/namingBayerAdded -->513<!-- /count --> of which the manifest carries no Bayer
+table reaches **<!-- count:build-catalog/namingBayer -->2,039<!-- /count -->** records, <!-- count:build-catalog/namingBayerAdded -->519<!-- /count --> of which the manifest carries no Bayer
 cell for at all.
 
 Three designation rows carry no key at all (`designationsKeyless`):
@@ -194,7 +194,7 @@ it, and it carries its own string.
 The authority states which constellation its own designation is named for,
 so `applyStarNames` writes it as the top tier of the cascade the label
 merge started ([The designation constellation](../classic-ids/README.md#the-designation-constellation)),
-covering <!-- count:build-catalog/namingDesigConFromWgsn -->2,941<!-- /count --> records. One `uint8` serves one designation and the tier
+covering <!-- count:build-catalog/namingDesigConFromWgsn -->2,975<!-- /count --> records. One `uint8` serves one designation and the tier
 that COMPOSES the label owns it, so where the authority's Bayer names a
 different constellation from the record's Flamsteed number — 16 Lyn is
 also ψ¹⁰ Aur, `namingDesigConWgsnConflict` pins <!-- count:build-catalog/namingDesigConWgsnConflict -->2<!-- /count --> — the displaced
@@ -240,7 +240,7 @@ never something the renderer should qualify away.
 
 **The build calls it over `Star`; the runtime calls it over `SearchEntry`.**
 `display-names.ts` and `designationSetOfEntry` are the two adapters, and
-`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/namingNameTable -->725<!-- /count --> records) so
+`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/namingNameTable -->726<!-- /count --> records) so
 first paint has names while the runtime composes every designation off
 `search-index.json` through the same function. A BORROWED label carries
 its anchor's tier, so `Sirius B` is a name-table entry too — which is why

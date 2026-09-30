@@ -61,7 +61,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
   ([Which tiers give a system blend](/scripts/catalog/photometry/README.md#which-tiers-give-a-system-blend--vtierissystemblend)).
 - **Role**: the printed tier of two cascades ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
   `Vmag` serves the V-magnitude cascade for rows whose Gaia photometry is
-  missing or outside the [Riello 2021](/data/papers/index.md#riello2021) transform's validity range — <!-- count:build-catalog/vPrintedHip -->2,174<!-- /count -->
+  missing or outside the [Riello 2021](/data/papers/index.md#riello2021) transform's validity range — <!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->
   records in the current build. `B-V` serves the ci cascade below the
   synthetic-photometry tier, and is the only **measured** colour reaching
   the rows with no Gaia source at all.

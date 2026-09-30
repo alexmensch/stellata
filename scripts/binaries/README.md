@@ -447,7 +447,7 @@ four points in the pipeline:
   4's distinct-source gate stops the misattribution). One synthesized
   inner pair per `(wds_id, source_id)`, named one hierarchy level
   down from the deepest carrier token (`A` → `Aa,Ab`, `Aa` →
-  `Aa1,Aa2`) — ~<!-- count:build-binaries/synthesized_nss_inner_pairs -->521<!-- /count --> pairs. Skipped when the carrier token has no
+  `Aa1,Aa2`) — ~<!-- count:build-binaries/synthesized_nss_inner_pairs -->442<!-- /count --> pairs. Skipped when the carrier token has no
   deeper WDS convention (compound / digit-bearing), the child tokens
   already exist in the system, the NSS row is outside the
   detectability regime, or the elements can never render (missing

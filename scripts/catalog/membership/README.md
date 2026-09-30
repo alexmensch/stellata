@@ -104,7 +104,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/spineRowsWithoutSourceId -->577<!-- /count --> spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/spineRowsWithoutSourceId -->574<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -126,8 +126,8 @@ count snapshot pins what the derivation reached, over every spine row:
 
 | Outcome | Rows | What it is |
 |---|---|---|
-| `bound` | <!-- count:membership-manifest/derivationOutcome.bound -->312,405<!-- /count --> | one source survives both gates, with no passing rival |
-| `refused` | <!-- count:membership-manifest/derivationOutcome.refused -->619<!-- /count --> | no source binds — a derived refusal, not an absence |
+| `bound` | <!-- count:membership-manifest/derivationOutcome.bound -->312,408<!-- /count --> | one source survives both gates, with no passing rival |
+| `refused` | <!-- count:membership-manifest/derivationOutcome.refused -->616<!-- /count --> | no source binds — a derived refusal, not an absence |
 | `contested` | <!-- count:membership-manifest/derivationOutcome.contested -->231<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/derivationOutcome.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/derivationOutcome.sol -->1<!-- /count --> | |

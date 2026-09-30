@@ -206,7 +206,7 @@ republish; a re-pull is warranted only when the request set moves.
   components Tycho-2 merged into their pair, which carry a TYC that reaches no
   row of its own ([The request set](#the-request-set--manifest--iv25), [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - The same parse feeds the **PM rescue cascade**
-  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **<!-- count:build-catalog/pmRescueTycho2 -->64<!-- /count -->** rows.
+  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **<!-- count:build-catalog/pmRescueTycho2 -->71<!-- /count -->** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion
   to, and Tycho-2 is the tier admitted without a bibcode check, because a
   1997 publication cannot be Gaia's own reduction returning. A `pflag='P'` row
