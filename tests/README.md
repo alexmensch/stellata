@@ -184,22 +184,10 @@ site-claims.test.ts      The homepage against what it states: figures are
 site-css-rules.test.ts   The public stylesheet answers to its container and
                          to the reader's font size, never to a viewport
                          measurement, and paints nothing it has not
-                         tokenised. Eleven assertions in four groups: no
-                         width/height media query, no pixel type size, every
-                         font-size a Utopia scale step, every grid minimum
-                         guarded by min() · no colour literal outside :root,
-                         every space a scale step, every leading/tracking/
-                         weight/radius a token · the CUBE cascade order
-                         (compositions → blocks → utilities) with every
-                         utility declaration !important · no physical box
-                         property and no text-align: left/right. A bespoke
-                         clamp() is the drift the scale-step rules catch —
-                         it breaks the property that a heading and the space
-                         above it move together; an unguarded minmax() is
-                         the one that overflows at the 32px root WCAG
-                         1.4.4's 200% text resize implies. Scans the file
-                         with comments stripped, so prose naming a property
-                         cannot register as CSS.
+                         tokenised. Groups: breakpoints · hardcoded values ·
+                         measure · cascade order · the filled pill · logical
+                         properties. Scans the file with comments stripped,
+                         so prose naming a property cannot register as CSS.
                          /src/site/styles/README.md#house-style,
                          /src/site/styles/README.md#responsiveness-has-no-breakpoints.
 site-dev-routing.test.ts The dev server's routing table held against the
