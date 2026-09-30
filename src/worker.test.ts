@@ -137,12 +137,6 @@ describe('a client that asks for markdown gets the page’s rendition', () => {
     expect(response.headers.get('vary')).toMatch(/\bAccept\b/);
   });
 
-  it('types the rendition as markdown when fetched by its own path', async () => {
-    const { response } = await route('/index.md');
-    expect(await response.text()).toBe(DOCUMENTS.rendition);
-    expect(response.headers.get('content-type')).toBe('text/markdown; charset=utf-8');
-  });
-
   // The application is a script that renders a canvas; there is no rendition
   // of it to serve, and answering with the homepage's would be a lie.
   it.each(['/app', '/app/v/AQAA/'])('has none to offer for %s', async (path) => {

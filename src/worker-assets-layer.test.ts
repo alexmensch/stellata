@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { unstable_startWorker } from 'wrangler';
 
 import { APP_PATH, SHARE_PARAM, buildSharePath } from './client/util/url-state/share-path-pure';
+import { MARKDOWN_TYPE } from './negotiation-pure';
 
 const BUILT: Record<string, string> = {
   'index.html': 'the homepage',
@@ -115,6 +116,13 @@ describe.skipIf(worker === null)('behind the real assets layer', () => {
     expect(status).toBe(200);
     expect(headers['content-type']).toMatch(/^text\/markdown/);
     expect(headers.vary).toMatch(/\bAccept\b/);
+    expect(body).toBe(BUILT['index.md']);
+  });
+
+  it('types the rendition as markdown at its own path, without the Worker', async () => {
+    const { status, headers, body } = await navigate('/index.md', { accept: '*/*' });
+    expect(status).toBe(200);
+    expect(headers['content-type']).toBe(MARKDOWN_TYPE);
     expect(body).toBe(BUILT['index.md']);
   });
 

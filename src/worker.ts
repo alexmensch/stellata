@@ -61,11 +61,6 @@ export default {
       });
     }
 
-    // The assets layer's type for `.md` is not one it promises.
-    if (url.pathname.endsWith('.md') && response.status === 200) {
-      return withHeaders(response, (headers) => headers.set('content-type', MARKDOWN_TYPE));
-    }
-
     // After the probe, so a real asset under /app keeps winning.
     if (response.status === 404 && decided.kind === 'app' && readable && wantsDocument(accept)) {
       return env.ASSETS.fetch(new Request(new URL(APP_PATH, url).toString(), request));
