@@ -52,10 +52,10 @@ cross-script policy and pointers.
   vantages and prints the differential table. Clocks only, never a
   pixel; launches only past the operator's `.perf-go` marker
   (`hooks/perf-guard.sh`). Not part of `pnpm test` or the build.
-- `site/` — the figures the public pages quote, counted off the
-  catalogue, the application's Credits tab and the modelling record.
-  Writes no artifact: `vite.env.ts` reads it at config load and Vite
-  substitutes each count into the HTML.
+- `site/` — what the public pages are derived from: the figures they
+  quote (read by `vite.env.ts` at config load), the markdown rendition
+  the site pass emits as `dist/index.md`, and the plugin that appends the
+  citation index to a page's JSON-LD (`site/README.md`).
 - `doc-figures/` — counts quoted in docs, generated from the committed
   `*-expected.json` snapshots (`pnpm run docs:figures`). Run it after any
   snapshot regeneration. Not part of the build.
