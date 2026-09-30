@@ -34,7 +34,6 @@
 
   --measure: 62ch;
   --measure-micro: 26ch;
-  --measure-compact: 34ch;
   --measure-short: 40ch;
   --measure-medium: 46ch;
   --measure-lead: 54ch;
@@ -395,16 +394,6 @@ video {
   max-inline-size: var(--measure-short);
 }
 
-/* ── Block: claim ──────────────────────────────────────────────────── */
-
-.claim {
-  padding-block-start: var(--space-m);
-  border-block-start: var(--rule);
-}
-.claim h3 {
-  max-inline-size: var(--measure-compact);
-}
-
 /* ── Block: sight ──────────────────────────────────────────────────── */
 
 .sights > * {
@@ -541,7 +530,6 @@ video {
 }
 
 .aside,
-.claim p,
 .sight-copy p,
 .requirement p,
 .footer {
