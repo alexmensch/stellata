@@ -6,7 +6,7 @@
 here="$(cd "$(dirname "$0")" && pwd)"
 input="$(cat)"
 
-cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""' 2>/dev/null | tr '\n' ';')" || exit 0
+cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // "" | gsub("\\\\\n"; " ")' 2>/dev/null | tr '\n' ';')" || exit 0
 invocation='(^|[;&|(][[:space:]]*)gh[[:space:]]+pr[[:space:]]+(create|edit)([[:space:]]|$)'
 [[ "$cmd" =~ $invocation ]] || exit 0
 match="${BASH_REMATCH[0]}"
@@ -15,10 +15,31 @@ sub="${BASH_REMATCH[2]}"
 cwd="$(printf '%s' "$input" | jq -r '.cwd // ""' 2>/dev/null)"
 if [ -n "$cwd" ]; then cd "$cwd" 2>/dev/null || exit 0; fi
 
-rest="${cmd#*"$match"}"
-rest="${rest%%[;&|]*}"
-args=()
-while IFS= read -r tok; do args+=("$tok"); done < <(printf '%s' "$rest" | xargs printf '%s\n' 2>/dev/null)
+# Shell words of $1 up to its first unquoted ; & or |, into args.
+split_words() {
+  local s="$1" c word='' inword=false quote='' n=0
+  args=()
+  while [ "$n" -lt "${#s}" ]; do
+    c="${s:$n:1}"
+    n=$((n + 1))
+    if [ -n "$quote" ]; then
+      if [ "$c" = "$quote" ]; then quote=''
+      elif [ "$c" = '\' ] && [ "$quote" = '"' ]; then word="${word}${s:$n:1}"; n=$((n + 1))
+      else word="${word}${c}"; fi
+      continue
+    fi
+    case "$c" in
+      \" | \') quote="$c"; inword=true ;;
+      \\) word="${word}${s:$n:1}"; n=$((n + 1)); inword=true ;;
+      ' ' | $'\t') if [ "$inword" = true ]; then args+=("$word"); fi; word=''; inword=false ;;
+      ';' | '&' | '|') break ;;
+      *) word="${word}${c}"; inword=true ;;
+    esac
+  done
+  if [ "$inword" = true ]; then args+=("$word"); fi
+}
+
+split_words "${cmd#*"$match"}"
 
 body='' base='' target='' added='' removed=''
 i=0

@@ -88,6 +88,10 @@ describe('pr-body-guard', () => {
       `gh pr create --body-file "${file}" --draft`,
       `git push -u origin feature && gh pr create -t x -F ${file}`,
       `git push\ngh pr create -F ${file}`,
+      `gh pr create \\\n  --title x \\\n  --body-file ${file}`,
+      `gh pr create --title "Glow & band; halo | rim" --body-file ${file}`,
+      `gh pr create --title 'Glow & band' -F ${file}; git status`,
+      `gh pr create -F ${file}&& git status`,
     ]) {
       expect(decision(command).denied, command).toBe(true);
     }
