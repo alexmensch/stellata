@@ -92,6 +92,10 @@ describe('pr-body-guard', () => {
       `gh pr create --title "Glow & band; halo | rim" --body-file ${file}`,
       `gh pr create --title 'Glow & band' -F ${file}; git status`,
       `gh pr create -F ${file}&& git status`,
+      `GH_PROMPT_DISABLED=1 gh pr create -F ${file}`,
+      `env NO_COLOR=1 gh pr create -F ${file}`,
+      `command gh pr create -F ${file}`,
+      `/opt/homebrew/bin/gh pr create -F ${file}`,
     ]) {
       expect(decision(command).denied, command).toBe(true);
     }

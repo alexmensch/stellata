@@ -79,7 +79,7 @@ scripts/hooks/
   command-match.sh         CMD_START and ENV_PREFIX, the regex pieces that
                            find a command's start inside a Bash call and
                            skip `env` / `NAME=value` in front of it. Sourced
-                           by perf-guard.sh.
+                           by perf-guard.sh and pr-body-guard.sh.
   comment-rules.json       The forbidden comment patterns, once. Read
                            by tests/code-comment-rules.test.ts and by
                            commit-sweep-guard.sh. The two hand-copied

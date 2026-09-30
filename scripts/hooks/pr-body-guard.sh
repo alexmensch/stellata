@@ -4,13 +4,14 @@
 # before the body reaches GitHub. README.md#how-pr-body-guard-works.
 
 here="$(cd "$(dirname "$0")" && pwd)"
+. "$here/command-match.sh"
 input="$(cat)"
 
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // "" | gsub("\\\\\n"; " ")' 2>/dev/null | tr '\n' ';')" || exit 0
-invocation='(^|[;&|(][[:space:]]*)gh[[:space:]]+pr[[:space:]]+(create|edit)([[:space:]]|$)'
+invocation="${CMD_START}${ENV_PREFIX}(command[[:space:]]+)?([^[:space:];&|]*/)?gh[[:space:]]+pr[[:space:]]+(create|edit)([[:space:]]|$)"
 [[ "$cmd" =~ $invocation ]] || exit 0
 match="${BASH_REMATCH[0]}"
-sub="${BASH_REMATCH[2]}"
+sub="${BASH_REMATCH[6]}"
 
 cwd="$(printf '%s' "$input" | jq -r '.cwd // ""' 2>/dev/null)"
 if [ -n "$cwd" ]; then cd "$cwd" 2>/dev/null || exit 0; fi
