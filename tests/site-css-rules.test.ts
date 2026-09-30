@@ -101,6 +101,29 @@ describe('the public stylesheet carries no breakpoints', () => {
     const unguarded = [...CODE.matchAll(/minmax\(\s*(?!min\()([^,]+),/g)].map(([m]) => m);
     expect(unguarded, `minmax() without min(): ${unguarded.join(' · ')}`).toEqual([]);
   });
+
+  it('sizes no grid column by a length the container cannot shrink', () => {
+    const withoutGuards = (value: string): string => {
+      let out = value;
+      for (let at = out.search(/\bmin\(/); at >= 0; at = out.search(/\bmin\(/)) {
+        let depth = 0;
+        let end = at + 3;
+        for (; end < out.length; end += 1) {
+          if (out[end] === '(') depth += 1;
+          else if (out[end] === ')' && (depth -= 1) === 0) break;
+        }
+        const inner = out.slice(at, end + 1);
+        out = out.slice(0, at) + (/,\s*100%\)$/.test(inner) ? '' : inner.replace('min(', 'unguarded(')) + out.slice(end + 1);
+      }
+      return out;
+    };
+    const fixed = RULES.filter(
+      ({ prop, value }) =>
+        /^grid(-template)?(-columns)?$|^grid-auto-columns$/.test(prop) &&
+        /var\(|\d(?!fr\b)/.test(withoutGuards(value).replace(/\b1fr\b/g, '')),
+    );
+    expect(fixed, `grid columns that overflow a narrow container: ${shown(fixed)}`).toEqual([]);
+  });
 });
 
 describe('the public stylesheet hardcodes no values', () => {
