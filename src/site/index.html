@@ -546,8 +546,8 @@
       <section class="[ section ] [ region ]" id="sources">
         <div class="[ flow ] [ wrapper ]">
           <div class="[ section-head ] [ flow ]">
-            <span class="label" data-accent>The record</span>
-            <h2>The citation record is the product.</h2>
+            <span class="label" data-accent>Transparent record</span>
+            <h2>Grounded in the latest scientific data and research</h2>
           </div>
           <p>
             %VITE_SOURCE_COUNT% catalogues and datasets are credited inside
@@ -645,45 +645,12 @@
             </table>
           </div>
 
-          <ul class="spec-list" role="list">
-            <li>
-              <b>The limitations are published too.</b> Roughly 2,800 stars
-              pulse, because those are the pulsating variables that
-              cross-match to a catalogued period; the rest render steady. Emission and
-              reflection nebulae are not modelled. The list is maintained in
-              the repository next to the feature list, not buried.
-            </li>
-            <li>
-              <b>It is citable.</b> Every release since v3.44.2 is archived
-              on Zenodo with its own DOI, and the repository carries a
-              <code>CITATION.cff</code> so a reference manager can read it.
-              The concept DOI
-              <a href="https://doi.org/10.5281/zenodo.22392528">10.5281/zenodo.22392528</a>
-              always resolves to the current release.
-            </li>
-            <li>
-              <b>It is inspectable.</b> The whole thing is AGPL-3.0 source.
-              If you doubt a number, the pipeline that produced it is
-              readable, and so is the reasoning:
-              <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">SCIENCE.md</a>
-              carries the sources, the formulas and the modelling
-              decisions.
-            </li>
-            <li>
-              <b>It is one person's spare time.</b> Bug reports and
-              suggestions are welcome in the issue tracker; outside pull
-              requests are not being taken. Sponsorship, if the thing is
-              useful to you, is
-              <a href="https://github.com/sponsors/alexmensch">warmly welcomed</a>.
-            </li>
-          </ul>
-
           <div class="cluster">
             <a class="pill" data-primary href="/app">Open the model</a>
             <span class="aside">
-              or read
-              <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">the science notes</a>
-              first.
+              or dive into
+              <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">
+              the science</a> behind Stellata
             </span>
           </div>
         </div>
@@ -691,33 +658,37 @@
 
       <section class="[ section ] [ region ]" id="requirements" data-tight>
         <div class="[ flow ] [ wrapper ]">
-          <span class="label" data-accent>Before you click</span>
+          <span class="label" data-accent>System requirements</span>
           <div class="[ requirements ] [ switcher ]">
             <div class="[ requirement ] [ flow ]">
               <h3>WebGPU is required</h3>
               <p>
-                Chrome and Edge 113+, Safari 26+ (macOS Tahoe, iOS and
-                iPadOS 26), Firefox 141+ on Windows and Apple-silicon
-                macOS, Chrome for Android 121+ on Android 12+. A browser
-                without it gets a page saying so rather than a blank
-                canvas.
+                WebGPU is the latest rendering standard and gives browsers
+                direct access to on-device GPUs.
+              </p>
+              <p>
+                <strong>Supported browsers:</strong>
+                Chrome and Edge 113+ on Windows, macOS and ChromeOS (Linux
+                from 144, depending on the graphics card), Safari 26+ (macOS
+                Tahoe, iOS and iPadOS 26+), Firefox 141+ on Windows and 147+
+                on Macs with Apple silicon, Chrome for Android 121+ on most
+                Android 12+ devices.
               </p>
             </div>
             <div class="[ requirement ] [ flow ]">
-              <h3>Desktop, for now</h3>
+              <h3>Built for devices with a view</h3>
               <p>
-                It loads and renders on a phone, but the interface is built
-                around a keyboard and a pointer, and the small-screen
-                layout is still to come. Two-finger rotate works on touch
-                and on Safari's trackpad gesture.
+                Stellata loads and renders on any device, but is intended
+                for a desktop or tablet. The expansive views and interface
+                are built around using a keyboard and a pointer. A small-screen
+                interface is planned for the future and not available yet.
+              </p>
+              <p>
+                Two-finger rotation and pinch gestures work on touch devices
+                and with a trackpad on Safari.
               </p>
             </div>
           </div>
-          <p class="aside">
-            Around <!-- count:build-catalog/recordCount sig2 -->980,000<!-- /count --> records stream in brightest first: the naked-eye
-            sky draws within moments, and the faint stars fill in over the
-            seconds after.
-          </p>
         </div>
       </section>
     </main>
@@ -730,10 +701,10 @@
           <a href="https://alxm.me" rel="author">Alex Marshall</a>
         </span>
         <span class="cluster">
+          <a href="https://doi.org/10.5281/zenodo.22392528">DOI Citation</a>
           <a href="https://github.com/alexmensch/stellata">GitHub</a>
-          <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">SCIENCE.md</a>
-          <a href="https://doi.org/10.5281/zenodo.22392528">Zenodo DOI</a>
-          <a href="/app">The model</a>
+          <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">Science</a>
+          <a href="https://github.com/sponsors/alexmensch">Sponsorship</a>
         </span>
       </div>
     </footer>

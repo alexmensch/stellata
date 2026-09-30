@@ -188,9 +188,9 @@ In order down the page, and the order is the argument:
    for. Further `.section-head`s inside `.sights` group the rows by scale —
    the stars, the Solar System, observing from anywhere — without closing
    the section.
-4. **The record** — the citation table and the four provenance claims.
+4. **Transparent record** — the citation table and the call to action.
    Late on purpose: it is the proof, and proof follows the case.
-5. **Before you click** — WebGPU and desktop, two columns, short.
+5. **System requirements** — WebGPU and device fit, two columns, short.
 
 **No section is numbered.** A landing page that numbers its sections reads
 as a specification; the eyebrow label above each `h2` carries the same
@@ -218,10 +218,10 @@ the homepage's content — its headings, paragraphs, readout cells, table
 rows — is taken from the HTML itself, so rewording copy never breaks a test
 and a section the derivation loses still does.
 
-Rounded prose is a different case and is still fine — the "Before you click"
-aside's rounded record count is a doc-figure marker, which
+A figure a build snapshot pins, rather than one `vite.env.ts` publishes, is a
+doc-figure marker instead — the binary-orbit sight's pair count — which
 `pnpm run docs:figures` rewrites and `tests/doc-figures.test.ts` holds to the
-snapshot ([The catalogue's size](/scripts/doc-figures/README.md#the-catalogues-size)).
+snapshot ([What gets a marker](/scripts/doc-figures/README.md#what-gets-a-marker)).
 The markdown rendition drops the marker's comments.
 [The star count is never a literal](/docs/authoring-patterns.md#the-star-count-is-never-a-literal).
 
