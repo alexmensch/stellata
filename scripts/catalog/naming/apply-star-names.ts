@@ -21,7 +21,15 @@ import {
 } from './wgsn-index-pure';
 
 const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
+const WGSN_NAMES = resolve(DATA, 'wgsn_names.tsv');
+const WGSN_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
+const PROPER_DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
 const OVERRIDES = resolve(REPO_ROOT, 'data/naming/name_overrides.tsv');
+
+/** Every file loadStarNamingInputs and loadNameOverrides read. */
+export const STAR_NAMING_INPUT_PATHS: readonly string[] = [
+  WGSN_NAMES, WGSN_DESIGNATIONS, PROPER_DISPOSITIONS, OVERRIDES,
+];
 
 export interface StarNamingInputs {
   names: WgsnNameRow[];
@@ -31,13 +39,9 @@ export interface StarNamingInputs {
 
 export function loadStarNamingInputs(): StarNamingInputs {
   return {
-    names: parseWgsnNamesTsv(readFileSync(resolve(DATA, 'wgsn_names.tsv'), 'utf8')),
-    designations: parseWgsnDesignationsTsv(
-      readFileSync(resolve(DATA, 'wgsn_designations.tsv'), 'utf8'),
-    ),
-    dispositions: parseProperDispositionsTsv(
-      readFileSync(resolve(DATA, 'athyg_proper_dispositions.tsv'), 'utf8'),
-    ),
+    names: parseWgsnNamesTsv(readFileSync(WGSN_NAMES, 'utf8')),
+    designations: parseWgsnDesignationsTsv(readFileSync(WGSN_DESIGNATIONS, 'utf8')),
+    dispositions: parseProperDispositionsTsv(readFileSync(PROPER_DISPOSITIONS, 'utf8')),
   };
 }
 

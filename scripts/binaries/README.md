@@ -90,6 +90,9 @@ scripts/binaries/
                                   chains via component-letter prefix matching
                                   and writes outer-before-inner. See
                                   README.md#pipeline-at-a-glance, step 3.
+  golden/                         binaries.bin golden test: encode() on a
+                                  committed non-LFS fixture, byte for byte.
+                                  Own README.
   build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
                                   asserts the strongest-priority resolution per
                                   (wds_id, component) against

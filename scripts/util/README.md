@@ -55,6 +55,20 @@ need the same thing — single-use helpers stay with their consumer.
   `scripts/` module the process has imported, so the import statements are
   the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+- `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
+  build's code inputs. `scriptClosure(names)` is every module the named
+  `package.json` scripts import, read from an esbuild metafile, so a new
+  import joins without anyone listing it; `tsxEntry` holds each such script
+  to exactly `tsx <file>.ts`, so `package.json` is the one place an entry is
+  named; `closureWithSiblings(closure, files)` adds every file beside a
+  closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
+  snapshots a build reads by path get keyed. Shared by the catalogue stamp and
+  CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
+  cannot disagree on what the build reads. `trackedFiles()` is the listing the
+  stamp passes as `files`.
+- `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
+  `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
+  [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
 - `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from
@@ -117,3 +131,30 @@ need the same thing — single-use helpers stay with their consumer.
   `tests/bundle-content.test.ts` asserts the built tree against the same
   predicates. The single-file copies (`sync-local-bubble.ts`,
   `sync-cloud-surfaces.ts`) are a different shape and stay standalone.
+
+## Proving a restructuring byte-identical
+
+A pipeline restructuring promises unchanged outputs; prove it, don't
+eyeball it. Both commands first rebuild everything from scratch: they delete
+the gitignored files under `public/` and every stamp, then run
+`pnpm run build:data`. A stamp's input list can miss a file the step reads, so
+a skipped step proves nothing; a missing output is what makes every
+mtime-gated emitter rebuild too. Each run costs a cold catalogue build (about
+six minutes), and a dev server on the same checkout serves nothing meanwhile.
+
+1. On the base commit, `pnpm run identity:snapshot` hashes every output into
+   the gitignored `build/output-identity.json`: every file under `public/`
+   (the emitters, the `*-sync` mirrors and the committed static assets) plus
+   each stamp's recorded outputs outside it, such as
+   `build/catalog-row-index-map.json`. Both sets are read off disk, so a new
+   step or emitter joins without an edit, and a stray file reads as appeared.
+2. Check out the branch; `pnpm run identity:diff` prints
+   `identical: N outputs` and exits 0, or names each changed, appeared and
+   vanished file and exits 1.
+
+Quote the `identical` line in the PR body. `data/binaries/multiples.tsv` is
+also committed, so `git diff` shows it field by field; for the catalogue,
+`pnpm run validate:record-parity` gives the field diff keyed by SID.
+`public/binaries.bin` has a golden test besides
+([binaries.bin golden](../binaries/golden/README.md)), which runs in
+`pnpm test` with no build.

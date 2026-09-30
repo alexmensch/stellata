@@ -83,6 +83,12 @@ scripts/catalog/
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
                                   writes the chunked binary + manifests.
+  catalog-inputs.ts (+ test)      catalogInputPaths — every file the build
+                                  reads, which its content-hash stamp keys:
+                                  the import closure plus sibling snapshots
+                                  (../util/import-closure-pure.ts, the rule
+                                  CI's cache key shares) and each loader's
+                                  exported data paths.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced

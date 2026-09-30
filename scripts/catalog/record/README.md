@@ -327,11 +327,10 @@ the pure comparator + formatter and has its own vitest coverage; the
 assert-or-rewrite side is `../util/snapshot-assert.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
-snapshot. `catalogInputPaths` walks `scripts/catalog/` recursively plus `scripts/util/` and
-`scripts/sid/`, so editing any build module invalidates the artifact — with no
-exclusions: `classic-ids/` used to be skipped as a one-shot generator and is now
-the label layer, `membership/` is in because `parse/` imports its codec, and
-so is `validate/`.
+snapshot. The stamp's code inputs are the build's import closure plus the
+non-code files beside it (`../catalog-inputs.ts`), so editing any module the
+build imports — `src/client/` ones included — or either snapshot invalidates
+the artifact.
 
 ## Search index (`public/search-index.json`)
 
