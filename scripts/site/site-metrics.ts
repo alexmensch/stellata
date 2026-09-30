@@ -12,10 +12,7 @@ import { parseHtml } from './parse-html.ts';
 const CITATION_INDEX = 'data/papers/index.md';
 const APP_DOC = 'src/client/app/index.html';
 
-// Resolved from this module rather than from the caller's root: the snapshot
-// is source, committed beside the build that writes it, where `public/` is a
-// generated tree whose location a worktree can move.
-const COUNT_SNAPSHOT = join(import.meta.dirname, '../catalog/build-catalog-expected.json');
+const COUNT_SNAPSHOT = 'scripts/catalog/build-catalog-expected.json';
 
 /**
  * Records in the shipped catalogue. Read from the built artifact's own
@@ -30,10 +27,18 @@ export function catalogueRecordCount(root: string): number {
     buf = readFileSync(join(root, 'public', catalogChunkFilename(0)));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
-    return JSON.parse(readFileSync(COUNT_SNAPSHOT, 'utf8')).recordCount;
+    return snapshotRecordCount(root);
   }
   const bytes = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
   return readCatalogHeader(bytes as ArrayBuffer).count;
+}
+
+function snapshotRecordCount(root: string): number {
+  const { recordCount } = JSON.parse(readFileSync(join(root, COUNT_SNAPSHOT), 'utf8')) as { recordCount?: unknown };
+  if (!Number.isInteger(recordCount) || (recordCount as number) <= 0) {
+    throw new Error(`site metrics: ${COUNT_SNAPSHOT} states no recordCount`);
+  }
+  return recordCount as number;
 }
 
 /** Every credited source in the application's Credits tab is one `<div>`

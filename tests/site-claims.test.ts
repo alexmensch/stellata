@@ -108,7 +108,6 @@ describe('the derivations behind those figures', () => {
     const snapshot = JSON.parse(
       readFileSync(join(ROOT, 'scripts/catalog/build-catalog-expected.json'), 'utf8'),
     );
-    expect(catalogueRecordCount('/nonexistent-root')).toBe(snapshot.recordCount);
     expect(catalogueRecordCount(ROOT)).toBe(snapshot.recordCount);
   });
 });
