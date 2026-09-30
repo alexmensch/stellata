@@ -447,18 +447,7 @@ video {
   letter-spacing: var(--tracking-cta);
 }
 
-/* ── Block: plate ──────────────────────────────────────────────────── */
-
-.plate img {
-  border: var(--rule);
-}
-.plate-caption {
-  --flow-space: var(--space-2xs);
-
-  font-size: var(--step--2);
-  line-height: var(--leading-snug);
-  color: var(--fg-dim);
-}
+/* ── Block: holder ─────────────────────────────────────────────────── */
 
 /* Sized by min-block-size rather than aspect-ratio: a ratio box clips its
    own instructions at narrow widths, and a real <img width height> brings
