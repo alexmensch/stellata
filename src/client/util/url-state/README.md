@@ -70,7 +70,7 @@ src/client/util/url-state/
                                   cam / tgt / worldOffset elision. Own README.
   anchored-pose.ts                cam and tgt measured from the anchor the
                                   receiver rebuilds. See
-                                  README.md#what-counts-as-a-camera-move.
+                                  pose-change/README.md#what-counts-as-a-camera-move.
   golden-links-fixture.ts         Test-only: real share links whose
                                   decoding the suites pin.
   orbit-pose/                     ORB, the orbit lock, and a pose held
