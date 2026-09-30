@@ -62,7 +62,9 @@ scripts/perf/
   perf-section-guard.sh     Gathers that check's inputs from git — the files
                             HEAD changed since a base ref and the catalogue
                             record count on each — and runs it. Called by
-                            perf-section-guard.yml; tested beside the check.
+                            perf-section-guard.yml and, before the body
+                            reaches GitHub, scripts/hooks/pr-body-guard.sh;
+                            tested beside the check.
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
   diff/                     Two runs differenced: the band and its floor, the

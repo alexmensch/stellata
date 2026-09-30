@@ -61,6 +61,9 @@ stated once, in `RELEASING.md`, and a test fails when the script drifts from
 it. Counts unreadable on either side leave that half of the trigger silent —
 the comparison-time refusal is the backstop.
 
+Both body guards also run locally, before `gh pr create|edit --body-file`
+sends the body: [How pr-body-guard works](/scripts/hooks/README.md#how-pr-body-guard-works).
+
 ## `version-guard.yml`
 
 CI check on every PR. Fails the PR if `package.json#version` was bumped

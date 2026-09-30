@@ -3,7 +3,7 @@
 Harness hooks for Claude Code, registered in `.claude/settings.json`. Claude
 Code's settings file watcher applies a registration change mid-session, so a
 session that adds or edits a hook here is governed by it from the next call.
-Each hook reads its payload as JSON on stdin. The five guards are PreToolUse /
+Each hook reads its payload as JSON on stdin. The six guards are PreToolUse /
 SessionStart hooks answering with a `permissionDecision`; paper-store-link
 answers nothing and acts only on the filesystem. The review
 design-pass reminder lives at user level, in the code-standards bundle
@@ -39,6 +39,12 @@ scripts/hooks/
                            — README.md#the-restatement-sweep.
                            Behaviour pinned by
                            tests/commit-sweep-guard.test.ts.
+  pr-body-guard.sh         Blocks `gh pr create|edit --body-file <f>`
+                           when <f> would fail release-notes-guard or
+                           perf-section-guard in CI, quoting the CI
+                           error — README.md#how-pr-body-guard-works.
+                           Behaviour pinned by
+                           tests/pr-body-guard.test.ts.
   perf-guard.sh            Two independent gates on Bash / Write / Edit /
                            NotebookEdit: any tool call that names the
                            `.perf-go` arm marker is denied outright, and a
@@ -316,6 +322,38 @@ which no folder README is charged for.
 Scope caveat: `-a` / `--all` commits aren't fully inspected; only
 already-staged files are checked. The standard `git add <files> &&
 git commit` flow Claude uses is covered correctly.
+
+## How pr-body-guard works
+
+`PreToolUse` on `Bash`. The two body guards judge only the PR body and the
+branch's diff, so both can run before the body leaves the machine — and
+without this, a missing section surfaced only as a red CI check on every
+push. The hook runs the **same scripts** the workflows run
+(`scripts/release/release-notes-check.sh`,
+`scripts/perf/perf-section-guard.sh`), so there is no second copy of either
+rule; a test fails when a workflow stops calling its script.
+
+It mirrors each workflow's triggers rather than the checks alone:
+
+- **Base `main` only**, both workflows' `branches:` filter. `-B/--base`
+  decides; otherwise `create` means the default branch and `edit` asks
+  `gh pr view` for the PR's current base.
+- **`skip-version-bump` exempts the release notes.** The label set is what
+  the PR will carry after this call: `-l/--label`/`--add-label` add,
+  `--remove-label` removes, and on `edit` the PR's existing labels (again
+  from `gh pr view`) start the set.
+- **The diff is the checkout's `HEAD` against `origin/<base>`**, three-dot,
+  as CI reads the PR. A stale `origin/main` reads a wider diff than GitHub
+  will; fetch first if the verdict surprises.
+
+**Only a verdict denies.** A check's output carrying `::error::` is a
+failure CI would report, and becomes the deny reason (prefix stripped). Any
+other non-zero exit means the check could not run — no `origin` ref, not a
+git checkout — and the call passes. So does anything the hook cannot read:
+an inline `--body`, `-F -` (stdin), a missing file, an `edit` whose PR `gh`
+cannot view, or a command line `xargs` cannot tokenise. This is a hygiene
+gate with CI behind it, so it fails **open**, like readme-guard and unlike
+perf-guard.
 
 ## The trailing-slash exemption
 
