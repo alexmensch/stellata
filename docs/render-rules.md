@@ -243,7 +243,7 @@ an addition to it is a pipeline giving up early-z.
 skipping a pixel's shading when it is already known to be hidden — for the
 *whole* pipeline, not the branch that needed it, and WGSL has no
 conservative-depth qualifier. A layer that answers "one program per pass"
-with a second draw over the same 390k instances pays a whole extra
+with a second draw over the same <!-- count:build-catalog/recordCount k2 -->980k<!-- /count --> instances pays a whole extra
 per-corner pass for what a removed write buys for nothing.
 
 **The one addition the rule does not refuse: a depth-only draw that BUYS

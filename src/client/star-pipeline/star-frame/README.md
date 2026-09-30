@@ -89,7 +89,7 @@ first write takes the branch rather than eliding it.
 owns the `iPosition` attribute's re-upload flag and reaches
 `BinaryOrbitField`'s baseline invalidation through `BinariesAttachment`.
 
-**One rewrite per frame.** Rewriting the 390k-star local buffer costs
+**One rewrite per frame.** Rewriting the <!-- count:build-catalog/recordCount k2 -->980k<!-- /count -->-star local buffer costs
 a full pass plus a GPU re-upload, and two of them can be provoked in
 the same frame: a fast time-scrub crosses an epoch bucket while a hard
 focus has drifted past `FOCAL_ORIGIN_DRIFT_RATIO`, so the epoch
@@ -167,7 +167,7 @@ star or a faster mover widens them, and nothing narrows them.
 `star-frame.ts`. The core depth-mask gate (`shouldEnableCoreMask`) and
 the star local-depth membership scan both need "which stars sit
 within `dThresh` pc of the camera?" The original implementation
-scanned all 390k positions every frame in every mode.
+scanned all <!-- count:build-catalog/recordCount k2 -->980k<!-- /count --> positions every frame in every mode.
 
 Build-time setup: sort the indices by distance from Sol once; store
 the sorted index and parallel distances as `Uint32Array` +

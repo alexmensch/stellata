@@ -23,7 +23,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
 
 ## Highlights
 
-- **Everything is rendered live, from where you are.** Nearly 980,000
+- **Everything is rendered live, from where you are.** Nearly <!-- count:build-catalog/recordCount sig2 -->980,000<!-- /count -->
   real stars and objects — planets and moons, multiple-star systems,
   the volumetric Milky Way, the Local Group dwarf galaxies, and the 3D
   dust between them continually re-render against the current camera
@@ -191,7 +191,7 @@ anchor. From there:
 
 ### Watch the dust shape the sky
 
-Set the magnitude limit to "All" (showing all ~980,000 stars) and
+Set the magnitude limit to "All" (showing all ~<!-- count:build-catalog/recordCount sig2 -->980,000<!-- /count --> stars) and
 pull the camera out to ~3 kpc from Sol, then orbit around. The
 [Edenhofer 2024](/data/papers/index.md#edenhofer2024) 3D dust grid is real volumetric structure, not an
 analytical shell — as you move, extinction patterns paint
