@@ -20,16 +20,26 @@ describe('bindPageTeardown', () => {
     const handle = {};
     teardown.expose('handle', handle);
     expect(target.handle).toBe(handle);
-    teardown.hold(vi.fn());
     target.dispatchEvent(new Event('pagehide'));
     expect('handle' in target).toBe(false);
   });
 
-  it('deletes exposed globals when nothing was held to release', () => {
-    const { target, teardown } = make();
+  it('deletes exposed globals and never re-runs a release that throws', () => {
+    const listeners = new Map<string, (event: Event) => void>();
+    const target = {
+      addEventListener: (type: string, listener: (event: Event) => void) => listeners.set(type, listener),
+    } as unknown as Global;
+    const teardown = bindPageTeardown(target, vi.fn());
+    const release = vi.fn(() => {
+      throw new Error('dispose failed');
+    });
     teardown.expose('handle', {});
-    target.dispatchEvent(new Event('pagehide'));
+    teardown.hold(release);
+    const pagehide = listeners.get('pagehide')!;
+    expect(() => pagehide(new Event('pagehide'))).toThrow('dispose failed');
+    expect(() => pagehide(new Event('pagehide'))).not.toThrow();
     expect('handle' in target).toBe(false);
+    expect(release).toHaveBeenCalledTimes(1);
   });
 
   it('runs the held release on pagehide', () => {
