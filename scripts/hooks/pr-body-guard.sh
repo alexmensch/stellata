@@ -61,8 +61,6 @@ skip=false
 if { has_label "$labels" || has_label "$added"; } && ! has_label "$removed"; then skip=true; fi
 
 failures=''
-# Only a verdict denies. A check that fails without one could not run (no
-# origin ref, no git), and CI stays the backstop for that.
 record() {
   local guard="$1" out
   shift
