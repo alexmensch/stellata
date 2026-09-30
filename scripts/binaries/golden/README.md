@@ -24,7 +24,7 @@ restructuring of it can prove it writes the same `public/binaries.bin`.
 
 The fixtures are frozen inputs, never regenerated: the golden pins the
 encoder, not the current data. When a change is meant to alter the bytes,
-re-baseline with `UPDATE_BINARIES_GOLDEN=1 pnpm vitest run
-scripts/binaries/golden` and say so in the commit. A missing golden fails;
+re-baseline with `UPDATE_BINARIES_GOLDEN=1` (the failing test prints
+the full command) and say so in the commit. A missing golden fails;
 the env var is the only writer. When the encoder moves to TypeScript, the
 test drives the TS encoder on the same fixtures against the same golden.

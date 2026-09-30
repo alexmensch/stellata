@@ -16,6 +16,7 @@ const FIXTURE_MULTIPLES = join(HERE, 'fixture-multiples.tsv');
 const FIXTURE_ROW_INDEX_MAP = join(HERE, 'fixture-row-index-map.json');
 const GOLDEN = join(HERE, 'binaries.golden.bin');
 const UPDATE_ENV_VAR = 'UPDATE_BINARIES_GOLDEN';
+const UPDATE_COMMAND = `${UPDATE_ENV_VAR}=1 pnpm vitest run scripts/binaries/golden`;
 const EXPECTED_STATS = {
   pairs_total: 85,
   pairs_emitted: 54,
@@ -91,12 +92,12 @@ describe('binaries.bin golden', () => {
     if (process.env[UPDATE_ENV_VAR] === '1') writeFileSync(GOLDEN, encoded.bytes);
     expect(
       existsSync(GOLDEN),
-      `${GOLDEN} missing; write it with ${UPDATE_ENV_VAR}=1 pnpm test scripts/binaries/golden`,
+      `${GOLDEN} missing; write it with ${UPDATE_COMMAND}`,
     ).toBe(true);
     const difference = describeFirstDifference(encoded.bytes, readFileSync(GOLDEN));
     expect(
       difference,
-      `re-baseline with ${UPDATE_ENV_VAR}=1 only when the change is meant to alter binaries.bin`,
+      `re-baseline with ${UPDATE_COMMAND} only when the change is meant to alter binaries.bin`,
     ).toBeNull();
   });
 
