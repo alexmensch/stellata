@@ -59,13 +59,9 @@ express, which `worker.ts` does:
   is what makes the transport's reach and the decoder's reach the same
   thing (v1 onward, `client/util/url-state/README.md`).
 - **A client that names `text/markdown` gets the page's markdown
-  rendition.** `/` answers with `dist/index.md` — cheaper to read, and
-  read verbatim where an HTML fetch is re-summarised by whatever converted
-  it. `negotiation-pure.ts` owns the rule and [The markdown rendition](site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages) owns the why. Three consequences worth knowing:
-  a wildcard `Accept` still gets HTML, so no browser or existing crawler
-  changes behaviour; both renditions carry `Vary: Accept`, without which a
-  cache would serve one to the other; and a rendition that is somehow
-  absent falls through to the HTML rather than 404ing the page.
+  rendition** — `/` answers with `dist/index.md`. `negotiation-pure.ts`
+  owns the `Accept` rule; [The markdown rendition](site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages) owns the why and
+  what follows from it.
 
 **`routing-pure.ts`'s `route` is the one decision**, and `worker.ts` and
 `vite.site-dev.ts` are two interpreters of it: the deploy answers through
