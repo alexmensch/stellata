@@ -55,11 +55,11 @@ scripts/hooks/
                            scripts/perf/arming/README.md owns the
                            design. Behaviour pinned by
                            tests/perf-guard.test.ts.
-  skill-guard.sh           Blocks Write / Edit / NotebookEdit against a
-                           file a rule names until that rule's skill has
-                           been invoked this session; a Skill call naming
-                           it arms the session. Rules: *.css → cube-css,
-                           Read / Grep gated too; code
+  skill-guard.sh           Blocks Write / Edit / NotebookEdit (and, for
+                           *.css, Read / Grep) against a file a rule names
+                           until that rule's skill has been invoked this
+                           session; a Skill call naming it arms the
+                           session. Rules: *.css → cube-css; code
                            (ts/tsx/js/mjs/cjs/py/sh/wgsl/glsl) →
                            code-craft.
                            Behaviour pinned by tests/skill-guard.test.ts.
@@ -193,16 +193,16 @@ self-checking against it.
 ## How skill-guard works
 
 Same shape as readme-guard, keyed on a skill instead of a folder. The rule
-table is one `case` on the edited path; each arm names the skill and what it
-carries (quoted in the denial), so a new gate is one arm. State is one
-marker per skill at
+table is one `case` on the target path; each arm names the skill, what it
+carries (quoted in the denial) and whether it gates reads, so a new gate is
+one arm. State is one marker per skill at
 `${TMPDIR:-/tmp}/claude-skill-guard/<skill>-${GUARD_SESSION:-$PPID}`, so a
-session arms once per skill and edits freely after.
+session arms once per skill and works freely after.
 
-The hook sits on `Skill` as well as the edit tools, and that is the whole
+The hook sits on `Skill` as well as the tools it gates, and that is the whole
 mechanism: every `Skill` call touches the marker for the name it invokes —
 the part after any directory-scoped or plugin prefix — and passes through.
-Only then does an edit a rule claims find its skill's marker and go ahead;
+Only then does a call a rule claims find its skill's marker and go ahead;
 without it the call is denied with the skill named. Arming every invoked
 name rather than only the guarded ones keeps the rule table the single list
 of which skills gate anything.
