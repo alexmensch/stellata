@@ -94,6 +94,12 @@ describe.skipIf(worker === null)('behind the real assets layer', () => {
     expect(body).toBe(BUILT['app/index.html']);
   });
 
+  it('redirects the slashed application path to the bare one', async () => {
+    const { status, location } = await navigate(`${APP_PATH}/`);
+    expect(status).toBe(307);
+    expect(pathOf(location)).toBe(APP_PATH);
+  });
+
   it('lets a real asset under /app win over the fallback', async () => {
     const { body } = await navigate(`${APP_PATH}/real-asset.txt`);
     expect(body).toBe(BUILT['app/real-asset.txt']);

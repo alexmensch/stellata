@@ -33,9 +33,13 @@ const DOCUMENT_SOURCES = [
   `${APP_PATH.slice(1)}/index.html`,
 ];
 
+/** A document's file path, or its served path with a trailing slash. */
 function documentAlias(pathname: string): string | null {
-  const source = DOCUMENT_SOURCES.find((candidate) => `/${candidate}` === pathname);
-  return source === undefined ? null : servedPath(source);
+  for (const source of DOCUMENT_SOURCES) {
+    const served = servedPath(source);
+    if (pathname === `/${source}` || (served !== '/' && pathname === `${served}/`)) return served;
+  }
+  return null;
 }
 
 export function route(pathname: string, search: string): Route {

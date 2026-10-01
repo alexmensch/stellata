@@ -19,7 +19,7 @@ export const ROUTING_CASES: readonly RoutingCase[] = [
   { pathname: '/', search: '?v=AQAA', kind: 'redirect', answer: { redirect: '/app/v/AQAA/', status: 301 } },
   { pathname: '/', search: '?v=not!valid', kind: 'redirect', answer: { redirect: '/app?v=not!valid', status: 301 } },
   { pathname: '/app', search: '', kind: 'app', answer: { document: 'app' } },
-  { pathname: '/app/', search: '', kind: 'app', answer: { document: 'app' } },
+  { pathname: '/app/', search: '', kind: 'redirect', answer: { redirect: '/app', status: 307 } },
   { pathname: '/app/v/AQAA/', search: '', kind: 'app', answer: { document: 'app' } },
   { pathname: '/app/whatever/comes/next', search: '', kind: 'app', answer: { document: 'app' } },
   { pathname: '/', search: '', kind: 'page', answer: { document: 'homepage' } },
