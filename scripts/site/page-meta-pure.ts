@@ -2,6 +2,7 @@
 
 import { select } from 'hast-util-select';
 
+import { JSON_LD_BLOCK } from './json-ld-citations-pure.ts';
 import { collapseWhitespace, parseHtml, textOf } from './parse-html.ts';
 
 export interface PageMeta {
@@ -35,6 +36,22 @@ export function substitutePageMeta(
     if (name === 'DESCRIPTION') return encode(meta.description);
     throw new Error(`${where}: ${raw} names neither %PAGE_TITLE% nor %PAGE_DESCRIPTION%`);
   });
+}
+
+const ATTRIBUTE_ESCAPES: Record<string, string> = { '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' };
+const asAttribute = (value: string): string => value.replace(/[&"<>]/g, (c) => ATTRIBUTE_ESCAPES[c]);
+const asJsonString = (value: string): string => JSON.stringify(value).slice(1, -1).replace(/</g, '\\u003c');
+
+export function fillPageMeta(html: string, where: string): string {
+  const meta = pageMeta(html, where);
+  let out = '';
+  let at = 0;
+  for (const block of html.matchAll(JSON_LD_BLOCK)) {
+    out += substitutePageMeta(html.slice(at, block.index), meta, where, asAttribute);
+    out += substitutePageMeta(block[0], meta, where, asJsonString);
+    at = block.index + block[0].length;
+  }
+  return out + substitutePageMeta(html.slice(at), meta, where, asAttribute);
 }
 
 export function llmsTxt(template: string, homeHtml: string): string {

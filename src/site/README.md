@@ -268,6 +268,13 @@ snapshot ([What gets a marker](/scripts/doc-figures/README.md#what-gets-a-marker
 The markdown rendition drops the marker's comments.
 [The star count is never a literal](/docs/authoring-patterns.md#the-star-count-is-never-a-literal).
 
+**A page's `<title>` and meta description are its only copy of either.**
+`og:title`, `twitter:title`, `og:description`, `twitter:description` and the
+`WebPage` node's `name` and `description` are `%PAGE_TITLE%` /
+`%PAGE_DESCRIPTION%`, filled at build and in dev
+([The page meta](/scripts/site/README.md#the-page-meta)). Retitle the page in
+`<title>`; a page in `pages.ts` without both stops the build.
+
 **The JSON-LD graph shares nodes with the application.** `Person` and
 `WebApplication` carry the same `@id`s and the same `description` string
 here as in `src/client/app/index.html`, so a crawler resolves one

@@ -1,10 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { select } from 'hast-util-select';
 import { describe, expect, it } from 'vitest';
 
 import { pageAt } from '../../src/site/pages';
 import { builtLlmsTxt } from './llms-txt';
-import { pageMeta, substitutePageMeta } from './page-meta-pure';
+import { JSON_LD_BLOCK } from './json-ld-citations-pure';
+import { fillPageMeta, pageMeta, substitutePageMeta } from './page-meta-pure';
+import { parseHtml } from './parse-html';
 
 const SITE_DIR = resolve(__dirname, '../../src/site');
 const HOME = readFileSync(resolve(SITE_DIR, pageAt('/')!.source), 'utf8');
@@ -39,6 +42,52 @@ describe('substitutePageMeta', () => {
 
   it('refuses a token naming neither', () => {
     expect(() => substitutePageMeta('%PAGE_AUTHOR%', meta, 'p')).toThrow(/%PAGE_AUTHOR% names neither/);
+  });
+});
+
+describe('fillPageMeta', () => {
+  const page = head(
+    '<title>Stars &amp; "dust" &lt;3</title><meta name="description" content="D" />' +
+      '<meta property="og:title" content="%PAGE_TITLE%" />' +
+      '<script type="application/ld+json">{"name":"%PAGE_TITLE%"}</script>',
+  );
+  const filled = fillPageMeta(page, 'p');
+
+  it('fills an attribute as an attribute value', () => {
+    expect(filled).toContain('<meta property="og:title" content="Stars &amp; &quot;dust&quot; &lt;3" />');
+  });
+
+  it('fills JSON-LD as JSON string content, so the block still parses', () => {
+    const [block] = [...filled.matchAll(JSON_LD_BLOCK)];
+    expect(JSON.parse(block[2])).toEqual({ name: 'Stars & "dust" <3' });
+    expect(block[2]).not.toContain('<3');
+  });
+});
+
+describe('the homepage states its title and description once', () => {
+  const RESTATEMENTS: [string, 'title' | 'description'][] = [
+    ['meta[property="og:title"]', 'title'],
+    ['meta[name="twitter:title"]', 'title'],
+    ['meta[property="og:description"]', 'description'],
+    ['meta[name="twitter:description"]', 'description'],
+  ];
+  const meta = pageMeta(HOME, 'home');
+  const source = parseHtml(HOME);
+  const filled = fillPageMeta(HOME, 'home');
+  const built = parseHtml(filled);
+  const webPage = (html: string) =>
+    [...html.matchAll(JSON_LD_BLOCK)]
+      .flatMap((block) => (JSON.parse(block[2]) as { '@graph': Record<string, string>[] })['@graph'])
+      .find((node) => node['@type'] === 'WebPage')!;
+
+  it.each(RESTATEMENTS)('%s asks for the %s rather than restating it', (selector, field) => {
+    expect(select(selector, source)?.properties?.content).toBe(`%PAGE_${field.toUpperCase()}%`);
+    expect(select(selector, built)?.properties?.content).toBe(meta[field]);
+  });
+
+  it('names and describes the WebPage node from the same two', () => {
+    expect(webPage(HOME)).toMatchObject({ name: '%PAGE_TITLE%', description: '%PAGE_DESCRIPTION%' });
+    expect(webPage(filled)).toMatchObject({ name: meta.title, description: meta.description });
   });
 });
 

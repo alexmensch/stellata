@@ -11,6 +11,7 @@ import { unified } from 'unified';
 import { SKIP, visit } from 'unist-util-visit';
 
 import { substituteFigures } from './figures-pure.ts';
+import { pageMeta } from './page-meta-pure.ts';
 import { collapseWhitespace, parseHtml, textOf } from './parse-html.ts';
 
 const DROPPED = '.holder, .skip-link';
@@ -158,12 +159,6 @@ function assertVocabulary(body: Element): void {
   }
 }
 
-function metaContent(tree: Root, name: string): string | null {
-  const meta = select(`meta[name="${name}"]`, tree);
-  const content = meta?.properties?.content;
-  return typeof content === 'string' ? content : null;
-}
-
 export function markdownRendition(
   source: string,
   figures: Readonly<Record<string, string | undefined>> = process.env,
@@ -175,8 +170,7 @@ export function markdownRendition(
   if (typeof canonical !== 'string') {
     throw new Error('markdown rendition: the page states no canonical URL');
   }
-  const title = textOf(select('title', tree));
-  if (title === '') throw new Error('markdown rendition: the page has no <title>');
+  const { title, description } = pageMeta(html, 'markdown rendition');
 
   const body = select('body', tree);
   if (body == null) throw new Error('markdown rendition: the page has no <body>');
@@ -200,10 +194,9 @@ export function markdownRendition(
     .use(remarkStringify, { bullet: '-', emphasis: '*', strong: '*', fences: true })
     .stringify(mdast as never);
 
-  const description = metaContent(tree, 'description');
   const preamble = [
     `# ${title}`,
-    ...(description === null ? [] : [`> ${collapseWhitespace(description)}`]),
+    `> ${description}`,
     `[Read this page as HTML](${canonical})`,
   ];
 

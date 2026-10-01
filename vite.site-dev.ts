@@ -7,6 +7,7 @@ import type { Plugin } from 'vite';
 
 import { LLMS_TXT_PATH, builtLlmsTxt } from './scripts/site/llms-txt.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
+import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
 import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './src/negotiation-pure.ts';
 import { canonicalLink, negotiatedRendition, route as decide, type Route } from './src/routing-pure.ts';
 import { NOT_FOUND_SOURCE } from './src/site/pages.ts';
@@ -105,7 +106,8 @@ export function documentRoutingInDev(repoRoot: string, figures: Figures): Plugin
           const advertised = route.kind === 'page' ? route.rendition : null;
 
           try {
-            const raw = await readFile(file, 'utf8');
+            const source = await readFile(file, 'utf8');
+            const raw = route.kind === 'page' ? fillPageMeta(source, file) : source;
 
             // The derivation the build uses, so an edit shows without one.
             if (route.kind === 'rendition' || negotiatedRendition(route, accept) !== null) {

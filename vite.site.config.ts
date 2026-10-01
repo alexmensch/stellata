@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { LLMS_TXT_PATH, builtLlmsTxt } from './scripts/site/llms-txt.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
+import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
 import { buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
@@ -11,6 +12,18 @@ const figures = buildFigures(import.meta.dirname);
 publishBuildEnv(figures);
 
 const SITE_DIR = resolve(import.meta.dirname, 'src/site');
+
+const ROSTER_FILES = new Set(SITE_PAGES.map((page) => resolve(SITE_DIR, page.source)));
+
+function pageMetaFill(): Plugin {
+  return {
+    name: 'stellata:page-meta',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html, ctx) => (ROSTER_FILES.has(ctx.filename) ? fillPageMeta(html, ctx.filename) : html),
+    },
+  };
+}
 
 /** src/site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages. */
 function markdownRenditions(): Plugin {
@@ -34,7 +47,12 @@ function markdownRenditions(): Plugin {
 
 export default defineConfig(() => ({
   base: '/',
-  plugins: [figureSubstitution(figures), indexCitations(import.meta.dirname), markdownRenditions()],
+  plugins: [
+    figureSubstitution(figures),
+    pageMetaFill(),
+    indexCitations(import.meta.dirname),
+    markdownRenditions(),
+  ],
   root: SITE_DIR,
   // Both of these belong to the app pass, which runs first. Reversing
   // either wipes dist/ — src/site/README.md#the-build-seam.

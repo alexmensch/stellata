@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 
 import { APP_DOCUMENT_MARKER, ROUTING_CASES, documentIdentifiers } from '../src/routing-cases-fixture';
 import { builtLlmsTxt } from '../scripts/site/llms-txt';
+import { pageMeta } from '../scripts/site/page-meta-pure';
 import { buildFigures } from '../vite.env';
 import { documentRoutingInDev } from '../vite.site-dev';
 
@@ -123,6 +124,12 @@ describe('the middleware answers whatever the client accepts', () => {
     expect(body).toContain(`href="/@fs${siteDir}/styles/site.css"`);
     expect(body).toContain(`src="/@fs${siteDir}/replay.ts"`);
     expect(body).not.toMatch(/(src|href)="\.\//);
+  });
+
+  it('fills the homepage’s restated title and description, as the build does', async () => {
+    const { body } = await fetchPath('/', 'text/html');
+    expect(body).not.toContain('%PAGE_');
+    expect(body).toContain(`<meta property="og:title" content="${pageMeta(body, 'dev').title}" />`);
   });
 
   it('serves the built llms.txt, as the deploy serves its asset', async () => {

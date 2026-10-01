@@ -72,8 +72,15 @@ literal.
 
 ## The page meta
 
-A page's `<title>` and `<meta name="description">` are written once.
-`page-meta-pure.ts` reads them; a page missing either stops the build.
+A page's `<title>` and `<meta name="description">` are written once; every
+restatement of them is a `%PAGE_TITLE%` or `%PAGE_DESCRIPTION%` token.
+`fillPageMeta` fills each token in the encoding its place needs — an
+attribute value in the markup, JSON string content inside an `ld+json`
+block — and refuses any other `%PAGE_…%` name. The site pass applies it to
+every page in `src/site/pages.ts` (`pageMetaFill` in `vite.site.config.ts`,
+a `pre` hook) and `vite.site-dev.ts` to every page it serves; the 404 page
+is outside the roster and states its own. A roster page missing either
+source stops the build.
 
 ## llms.txt
 
