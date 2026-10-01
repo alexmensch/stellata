@@ -313,7 +313,8 @@ To land a real capture:
 2. Save it under `public/site/` as the filename the holder names.
    `public/` is the app pass's `publicDir`, so the file is served at
    `/site/<name>` with no build step. Commit it — the SEO assets in
-   `public/` (`og-image.jpg`, the icons) are committed the same way.
+   `public/` (`og-image.jpg`, the icons) are committed the same way, and a
+   clip rides Git LFS (`.gitattributes`).
 3. Replace the `<div class="holder">…</div>` with
    `<img src="/site/<name>" srcset="…" sizes="…" loading="lazy"
    decoding="async" alt="…" width="…" height="…" />`, with the `srcset`
@@ -354,12 +355,14 @@ To land a real capture:
 
    Encode 1920×1080 at 30 fps, H.264 High, `yuv420p`, no audio track, `-movflags
    +faststart`, and the poster is the clip's **last** frame so the still
-   and the frame it settles on agree. **CRF around 17, not the usual 21.**
-   These scenes are near-black gradients — a dust lane, a Milky Way band —
-   and that is the content H.264 blocks up first, visibly, while costing
-   little to encode well: the hero's 4.2 s is 632 kB at 17. A starfield in
-   motion costs several times a gradient at the same CRF, which is the
-   content rather than a mistake.
+   and the frame it settles on agree. **CRF 20, encoded from the source
+   capture** — never from a shipped clip, whose loss a second encode only
+   compounds. These scenes are near-black gradients — a dust lane, a Milky
+   Way band — and that is the content H.264 blocks up first, visibly; 26
+   visibly blurs the eclipse's ground texture. The hero's 4.3 s is 317 kB
+   at 20. A
+   starfield in motion costs several times a gradient at the same CRF,
+   which is the content rather than a mistake.
 
    The **`site-media` skill** carries the procedure this spec implies: what
    to measure before cropping (delivered frame rate, and content bounds
