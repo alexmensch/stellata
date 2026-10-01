@@ -45,6 +45,7 @@
   --rule-strong: var(--hairline) solid var(--border-strong);
   --cluster-space-tight: var(--space-2xs) var(--space-m);
   --underline-offset: 3px;
+  --focus-width: 2px;
   --focus-offset: 3px;
   /* In em, so the halo grows with the type it backs rather than thinning
      out under a display heading. */
@@ -198,7 +199,7 @@ a:not([target='_self'])::after {
 }
 
 :focus-visible {
-  outline: var(--hairline) solid var(--accent);
+  outline: var(--focus-width) solid var(--accent);
   outline-offset: var(--focus-offset);
 }
 
