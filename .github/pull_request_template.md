@@ -45,6 +45,9 @@ This section is consolidated into the GitHub release for the version
 this PR ships. The `release-notes-guard` workflow fails the PR if
 this section is empty (after stripping HTML comments).
 
+Describe only main-before vs main-after, never a change refined
+within this PR: /RELEASING.md#what-the-notes-describe.
+
 Write user-facing prose, not implementation detail. Suggested
 shape — drop sub-sections that don't apply, add ones that do:
 

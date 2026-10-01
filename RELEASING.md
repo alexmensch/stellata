@@ -21,6 +21,13 @@ The PR template (`.github/pull_request_template.md`) carries a
 version this PR ships — sub-headings for *Summary*, *New features*,
 *Bugfixes*, and *Changes* (drop ones that don't apply).
 
+<a id="what-the-notes-describe"></a>**The notes describe the difference between `main` before the merge and
+`main` after it** — what a user of the previous release would notice.
+Never a change made and then refined inside the PR: a bug introduced and
+fixed on the branch is not a bugfix, and an iteration on a feature that
+never shipped is not a change. A feature new in this release is one *New
+features* entry in its final form, however many rounds it took.
+
 The `release-notes-guard` workflow
 (`.github/workflows/release-notes-guard.yml`) fails any PR whose
 body lacks a non-empty `## Release notes` section (HTML comments are
