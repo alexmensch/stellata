@@ -2,7 +2,7 @@
 
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { Element } from 'hast';
+import type { Element, Root } from 'hast';
 import { select, selectAll } from 'hast-util-select';
 import { describe, expect, it } from 'vitest';
 
@@ -96,6 +96,30 @@ describe('every sight clip waits to be seen', () => {
     const { autoPlay, preload } = (video as Element).properties ?? {};
     expect(autoPlay).toBeUndefined();
     expect(preload).toBe('none');
+  });
+});
+
+// /src/site/README.md#sights--the-media-and-the-link-it-carries.
+describe('every sight links where its take ends', () => {
+  const commentsIn = (node: Element | Root): string[] =>
+    node.children.flatMap((child) =>
+      child.type === 'comment' ? [child.value] : child.type === 'element' ? commentsIn(child) : [],
+    );
+  const sights = selectAll('.sight', HOME);
+
+  it('has at least one sight', () => {
+    expect(sights.length).toBeGreaterThan(0);
+  });
+
+  it.each(sights.map((sight) => [textOf(select('h3', sight)), sight]))('%s', (_, sight) => {
+    const hrefs = selectAll('a[href]', sight as Element).map((a) => String(a.properties?.href));
+    expect(hrefs).toHaveLength(2);
+    expect(new Set(hrefs).size).toBe(1);
+    const take = commentsIn(sight as Element).find((comment) => comment.includes('debug.capture('));
+    if (take === undefined) return;
+    const pose = /\bend:\s*'([^']+)'/.exec(take) ?? /\bstart:\s*'([^']+)'/.exec(take);
+    expect(pose).not.toBeNull();
+    expect(parseSharePath(hrefs[0])).toBe(pose![1]);
   });
 });
 
