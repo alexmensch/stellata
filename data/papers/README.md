@@ -50,9 +50,11 @@ heading and reference line are published as written.
 
 Outside the rule:
 
-- **Public copy** — `src/client/app/index.html`, `public/`, `CITATION.cff` and
-  strings rendered to users keep their visible DOI links until the index is
-  published as a page they can link to.
+- **Public copy** — `src/client/app/index.html`, `src/site/`, `public/`,
+  `CITATION.cff` and strings rendered to users keep their visible DOI links
+  until the index is published as a page they can link to. This list is the
+  one authority on what counts as public copy, and `PUBLIC_COPY` in
+  `tests/citation-index.test.ts` mirrors it.
 - **Data provenance** — dataset DOIs (Zenodo, Dataverse, VizieR dataset DOIs)
   and the URLs a file was downloaded from. They say where bytes came from, not
   which paper backs a claim.
