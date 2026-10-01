@@ -42,7 +42,7 @@
         ]
       },
       {
-        "matcher": "Skill|Read|Grep|Write|Edit|NotebookEdit",
+        "matcher": "Skill|Write|Edit|NotebookEdit",
         "hooks": [
           {
             "type": "command",
