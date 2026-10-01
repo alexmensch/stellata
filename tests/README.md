@@ -183,6 +183,7 @@ site-claims.test.ts      The homepage against what it states: figures are
                          only on-site links stay in the tab, on both pages ·
                          the 404 page's masthead and footer are the
                          homepage's ·
+                         theme-color and the manifest colours are --bg ·
                          every author-year a citation-index label.
                          /src/site/README.md#numbers-in-copy.
 site-css-rules.test.ts   The public stylesheet answers to its container and

@@ -183,6 +183,25 @@ describe('the 404 page wears the homepage\'s masthead and footer', () => {
   });
 });
 
+// HTML and JSON cannot read a CSS token, so each restates it.
+describe('the browser chrome takes the page ground from the token file', () => {
+  const ground = /--bg:\s*(#[0-9a-fA-F]{6})\s*;/.exec(readFileSync(join(ROOT, 'src/design-tokens.css'), 'utf8'))?.[1];
+  const manifest = JSON.parse(readFileSync(join(ROOT, 'public/manifest.webmanifest'), 'utf8')) as Record<string, unknown>;
+
+  it('finds --bg', () => {
+    expect(ground).toBeDefined();
+  });
+
+  it.each([
+    ['homepage theme-color', select('meta[name="theme-color"]', HOME)?.properties?.content],
+    ['404 theme-color', select('meta[name="theme-color"]', NOT_FOUND)?.properties?.content],
+    ['manifest theme_color', manifest.theme_color],
+    ['manifest background_color', manifest.background_color],
+  ])('%s', (_, colour) => {
+    expect(colour).toBe(ground);
+  });
+});
+
 // "Zucker 2020 & 2021" names two works.
 const AUTHOR_YEARS = /(\p{Lu}[\p{L}'’-]+(?: \p{Lu}[\p{L}'’-]+)*) (\d{4}[a-z]?(?: & \d{4}[a-z]?)*)\b/gu;
 
