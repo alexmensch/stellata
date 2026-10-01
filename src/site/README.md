@@ -20,7 +20,8 @@ pages.ts     The page roster (+ test): each page's source and whether it has
              from it.
 styles/      site.css, every page's stylesheet, and its README.
 replay.ts    The homepage's one script, README.md#one-script. Wires
-             replay-control.ts (+ test) onto every video[data-replay].
+             replay-control.ts (+ test) onto every video[data-replay];
+             replay.test.ts runs it over a happy-dom page.
 ```
 
 ## The build seam
