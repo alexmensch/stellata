@@ -12,7 +12,7 @@ description: >
 # Site media — captures into sight slots
 
 [Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries) owns the contract and every *why* behind it:
-the encode settings, CRF 17 rather than the usual 21, no `loop`, the
+the encode settings and CRF, no `loop`, the
 five-second ceiling, the poster being the clip's last frame. Read it once
 per session before encoding. This file is the **procedure** — what to
 measure before touching a file, and the commands that follow.
@@ -30,6 +30,15 @@ Dimensions, aspect, codec, frame rate, runtime and poster are all
 [Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries)'s. The one procedural consequence: a source shot in a
 16:9 window needs no crop decision at all, which is the cheapest way to
 make everything below go away.
+
+## Encode only from the source capture
+
+Every encode reads the original capture (the `.mov` off the machine), never
+a shipped `public/site/*.mp4`. Re-encoding a lossy file stacks a second
+generation of loss on the first, and no setting buys it back. A setting
+change, a crop or a re-trim with no source on disk means asking for the
+source — never a re-encode of the shipped clip. Delete the source once its
+encode is committed; the repo keeps only the shipped file.
 
 ## Measure before you crop — never decide from one frame
 
@@ -74,7 +83,7 @@ to a stop, so its last fraction of a second is motionless and free to lose.
 ```bash
 ffmpeg -y -i in.mov -t 4.95 \
   -vf "crop=<w>:<h>:<x>:<y>,scale=1920:1080:flags=lanczos" \
-  -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 17 -preset slow \
+  -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 20 -preset slow \
   -an -movflags +faststart -r 30 out.mp4
 ```
 
@@ -111,9 +120,10 @@ duration under 5 s, and no audio stream.
 ## Expect a dense starfield to be large
 
 A starfield clip runs several times the hero's size ([Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries)).
-Report the number rather than quietly raising CRF: relaxing to CRF 23 only
-halves it while crushing faint stars into flicker, and relaxing the pinned
-setting is the user's call.
+Report the number rather than quietly raising CRF: the pinned setting is
+the user's call. Measured on the eclipse and binary-orbit takes, CRF 20 is
+about 0.6× the bytes of 17 and 23 about 0.4×, with no difference visible
+side by side at 2× zoom.
 
 ## Hand it back
 
