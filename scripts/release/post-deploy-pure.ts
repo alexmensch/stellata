@@ -1,6 +1,9 @@
 /** The post-deploy check's verdicts, each a failure message or null. README.md#the-post-deploy-check. */
 
+import { select, selectAll } from 'hast-util-select';
+
 import { MAGIC, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
+import { parseHtml, textOf } from '../util/parse-html.ts';
 import type { RoutingCase, ServedDocument } from '../../src/routing-cases-fixture.ts';
 import { locationPath, type RawAnswer } from './raw-get.ts';
 
@@ -28,12 +31,10 @@ export function judgeCase(
 
 /** The app document's module entry, as its build emitted it. */
 export function entryScriptOf(html: string): string | null {
-  for (const [tag] of html.matchAll(/<script\b[^>]*>/g)) {
-    if (!/\btype="module"/.test(tag)) continue;
-    const src = /\bsrc="([^"]+)"/.exec(tag);
-    if (src !== null) return src[1];
-  }
-  return null;
+  const entry = selectAll('script[src]', parseHtml(html)).find(
+    (script) => String(script.properties.type).toLowerCase() === 'module',
+  );
+  return entry === undefined ? null : String(entry.properties.src);
 }
 
 export function judgeEntryScript(answer: RawAnswer): Verdict {
@@ -54,7 +55,8 @@ export function judgeCatalogue(answer: RawAnswer): Verdict {
 }
 
 export function footerVersionOf(html: string): string | null {
-  return /<span class="footer-version">v([^<]+)<\/span>/.exec(html)?.[1] ?? null;
+  const shown = select('.footer-version', parseHtml(html));
+  return shown === undefined ? null : textOf(shown).replace(/^v/, '');
 }
 
 export function judgeFooterVersion(html: string, version: string): Verdict {

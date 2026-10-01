@@ -62,6 +62,11 @@ describe('the entry script', () => {
     expect(entryScriptOf('<script src="/x.js"></script><script src="/assets/b.js" type="module">')).toBe('/assets/b.js');
   });
 
+  it('reads it whatever the case of the tag, attribute names and type', () => {
+    expect(entryScriptOf('<SCRIPT TYPE="Module" SRC="/assets/c.js"></SCRIPT>')).toBe('/assets/c.js');
+    expect(entryScriptOf("<script type=module src='/assets/d.js'></script>")).toBe('/assets/d.js');
+  });
+
   it('answers null for a document with no module script', () => {
     expect(entryScriptOf('<script type="application/ld+json">{}</script>')).toBeNull();
   });
@@ -101,6 +106,11 @@ describe('the footer version', () => {
 
   it('reads the version the footer shows', () => {
     expect(footerVersionOf(footer('6.0.0'))).toBe('6.0.0');
+  });
+
+  it('reads it whatever else the span carries', () => {
+    expect(footerVersionOf('<SPAN data-x="1" CLASS="dim footer-version">v7.0.0</SPAN>')).toBe('7.0.0');
+    expect(footerVersionOf('<footer>no version</footer>')).toBeNull();
   });
 
   it('passes the version being deployed and fails an older one', () => {
