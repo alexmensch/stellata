@@ -1,7 +1,6 @@
 // README.md#the-three-assets-keys-the-rules-depend-on.
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { request, type IncomingHttpHeaders } from 'node:http';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -9,6 +8,7 @@ import { unstable_startWorker } from 'wrangler';
 
 import { APP_PATH, SHARE_PARAM, buildSharePath } from './client/util/url-state/share-path-pure';
 import { MARKDOWN_TYPE } from './negotiation-pure';
+import { NAVIGATE, locationPath as pathOf, rawGet } from '../scripts/release/raw-get';
 
 const BUILT: Record<string, string> = {
   'index.html': 'the homepage',
@@ -19,10 +19,6 @@ const BUILT: Record<string, string> = {
 };
 
 const BLOB = 'AQAA';
-
-/** What a browser sends on a top-level navigation — the header that makes the
- *  assets layer answer an unmatched path without running the Worker. */
-const NAVIGATE = { 'sec-fetch-mode': 'navigate', accept: 'text/html' };
 
 const dist = mkdtempSync(join(tmpdir(), 'stellata-assets-'));
 for (const [path, body] of Object.entries(BUILT)) {
@@ -51,33 +47,9 @@ afterAll(async () => {
   rmSync(dist, { recursive: true, force: true });
 });
 
-interface Answer {
-  status: number;
-  location: string | null;
-  headers: IncomingHttpHeaders;
-  body: string;
-}
-
-/** Over a raw socket: `fetch` drops `Sec-Fetch-*`, which is the header under test. */
-async function navigate(path: string, headers: Record<string, string> = NAVIGATE): Promise<Answer> {
-  const base = await worker!.url;
-  return new Promise((done, fail) => {
-    const req = request(new URL(path, base), { headers }, (res) => {
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk: string) => (body += chunk));
-      res.on('end', () =>
-        done({ status: res.statusCode!, location: res.headers.location ?? null, headers: res.headers, body }),
-      );
-    });
-    req.on('error', fail);
-    req.end();
-  });
-}
-
-function pathOf(location: string | null): string {
-  const url = new URL(location!, 'http://any');
-  return url.pathname + url.search;
+async function navigate(path: string, headers: Readonly<Record<string, string>> = NAVIGATE) {
+  const answer = await rawGet(new URL(path, await worker!.url), headers);
+  return { ...answer, body: answer.body.toString('utf8') };
 }
 
 // Skips only where wrangler's local runtime cannot start on this machine.

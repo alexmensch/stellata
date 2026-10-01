@@ -3,25 +3,14 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { ROUTING_CASES, type ServedDocument } from '../src/routing-cases-fixture';
+import { APP_DOCUMENT_MARKER, ROUTING_CASES, documentIdentifiers } from '../src/routing-cases-fixture';
 import { buildFigures } from '../vite.env';
 import { documentRoutingInDev } from '../vite.site-dev';
 
 const ROOT = resolve(__dirname, '..');
-const titleOf = (source: string) =>
-  /<title>[^<]*<\/title>/.exec(readFileSync(resolve(ROOT, source), 'utf8'))![0];
-const HOME_TITLE = titleOf('src/site/index.html');
-
-/** What identifies each served document in the dev server's real output. */
-const IDENTIFIED_BY: Record<ServedDocument, (body: string) => boolean> = {
-  app: (body) => body.includes('<canvas'),
-  homepage: (body) => body.includes(HOME_TITLE),
-  rendition: (body) => body.startsWith('# '),
-  notFound: (body) => body.includes(titleOf('src/site/404.html')),
-};
+const IDENTIFIED_BY = documentIdentifiers(ROOT);
 
 interface Server {
   handler: (req: never, res: never, next: never) => unknown;
@@ -113,7 +102,7 @@ describe('the middleware answers whatever the client accepts', () => {
     const answer = await fetchPath('/', accept);
     expect(answer.status).toBe(200);
     expect(answer.fellThrough).toBe(false);
-    expect(answer.body).toContain(HOME_TITLE);
+    expect(IDENTIFIED_BY.homepage(answer.body)).toBe(true);
   });
 
   it('routes every file beside a site page through the filesystem', async () => {
@@ -127,7 +116,7 @@ describe('the middleware answers whatever the client accepts', () => {
   it('serves the application document to a wildcard Accept too', async () => {
     const answer = await fetchPath('/app', '*/*');
     expect(answer.status).toBe(200);
-    expect(answer.body).toContain('<canvas');
+    expect(answer.body).toContain(APP_DOCUMENT_MARKER);
   });
 
   it('serves the markdown rendition to a client that asks for it', async () => {

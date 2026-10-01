@@ -25,6 +25,11 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   `release-plan-pure.ts` must import no package and no path that needs a
   bundler — the job checks out `scripts/release` alone and installs nothing.
   The test holds both to `node:` builtins and `./sibling.ts` imports.
+- `post-deploy-check.ts` — `deploy.yml`'s step after `wrangler deploy`:
+  [The post-deploy check](#the-post-deploy-check). Its verdicts are
+  `post-deploy-pure.ts` (+ test).
+- `raw-get.ts` — a GET over a raw socket, shared with
+  `src/worker-assets-layer.test.ts`.
 - `check-asset-sizes.ts` — `pnpm run check:asset-sizes`. Walks `dist/`,
   prints the largest files, emits GitHub `::warning::` / `::error::`
   annotations and exits 1 on any oversize file. Run by `test.yml`'s
@@ -47,6 +52,31 @@ production, versus what each version shipped.
 
 `--first-parent` keeps the walk on `main`'s own line, so a merge
 commit's incoming branch never contributes phantom version changes.
+
+## The post-deploy check
+
+**The live site has to answer as this checkout says it should**, and a
+failure fails the deploy job ahead of tagging, so a deploy that answers
+wrongly is never released. Against `https://stellata.xyz` (`SITE_ORIGIN`;
+a first argument overrides it), it asserts:
+
+- every case in `src/routing-cases-fixture.ts`, replayed as a browser
+  navigation — the same table `route`, the Worker and the dev server run,
+  so production cannot drift from it unseen;
+- `/app` is the application document (`APP_DOCUMENT_MARKER`) and its module
+  entry script answers 200 as JavaScript — the miss a 404 fallback page
+  would otherwise hide;
+- `catalog.bin.0` answers with the catalogue's own header, read by the
+  catalogue's reader, so an HTML body or a stale binary fails;
+- the homepage footer shows `package.json`'s version, the one being
+  deployed.
+
+**Requests go over a raw socket** (`raw-get.ts`), because `fetch` drops the
+`Sec-Fetch-Mode` header the share-link routing depends on. **The whole
+check retries** — twelve runs five seconds apart — because the edge takes a
+few seconds to serve a new deploy; only the last run's failures are
+reported. It is never run by hand against production as a test: its pure
+half has the suite, and a dry run points it at a local origin.
 
 ## Invariants
 
