@@ -83,6 +83,17 @@ describe('withIndexCitations', () => {
     expect(citations(withIndexCitations(html, [entry({ title: 'Indexed' })])).map((work) => work.name)).toEqual(['Indexed']);
   });
 
+  it('finds a block whatever the case of its tags and the quoting of its type', () => {
+    const graph = JSON.stringify({ '@graph': [{ citation: [] }] });
+    for (const html of [
+      `<SCRIPT TYPE="application/ld+json">${graph}</SCRIPT >`,
+      `<script type='application/ld+json'>${graph}</script>`,
+      `<script type=application/ld+json>${graph}</script>`,
+    ]) {
+      expect(citations(withIndexCitations(html, [entry({ title: 'Indexed' })])).map((work) => work.name)).toEqual(['Indexed']);
+    }
+  });
+
   it('keeps a title from closing the script element', () => {
     const out = withIndexCitations(page([]), [entry({ title: '</script><b>' })]);
     expect(out.match(/<\/script>/g)).toHaveLength(1);

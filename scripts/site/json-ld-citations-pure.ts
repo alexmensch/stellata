@@ -14,7 +14,7 @@ export interface CitedWork {
 const LINK = /\[[^\]]*\]\(((?:[^()\s]|\([^()\s]*\))+)\)/g;
 const DOI = 'https://doi.org/';
 const LABEL_YEAR = / (\d{4})[a-z]?$/;
-export const JSON_LD_BLOCK = /(<script\b[^>]*\btype="application\/ld\+json"[^>]*>)([\s\S]*?)(<\/script>)/g;
+export const JSON_LD_BLOCK = /(<script\b[^>]*\btype=["']?application\/ld\+json["']?[^>]*>)([\s\S]*?)(<\/script\s*>)/gi;
 
 export function citedWork(entry: IndexEntry): CitedWork {
   const year = LABEL_YEAR.exec(entry.label)?.[1];
