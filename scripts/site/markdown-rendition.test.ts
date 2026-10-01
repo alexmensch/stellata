@@ -67,10 +67,19 @@ describe('the rendition opens the way an agent client expects', () => {
     expect(home).toContain(`[Read this page as HTML](${String(canonical)})`);
   });
 
+  const eyebrowOf = new Map(
+    selectAll('.section-head', tree).map((head) => [select(':is(h1, h2, h3, h4)', head), select('.label', head)]),
+  );
+
   // The title takes h1, so the hero heading has to move under it or the
   // document has two roots and an agent reads two documents.
-  it.each(content('body :is(h1, h2, h3, h4)').map((h) => [h.tagName, textOf(h)]))(
-    'shifts <%s> %j down a level',
+  it.each(
+    content('body :is(h1, h2, h3, h4)').map((h) => {
+      const eyebrow = eyebrowOf.get(h);
+      return [h.tagName, eyebrow == null ? textOf(h) : `${textOf(eyebrow)}: ${textOf(h)}`];
+    }),
+  )(
+    'shifts <%s> %j down a level, its eyebrow folded in',
     (tag, text) => {
       const hashes = '#'.repeat(Number(tag.slice(1)) + 1);
       const headings = home.split('\n').filter((line) => line.startsWith(`${hashes} `));
@@ -123,6 +132,45 @@ describe('the page’s content survives the derivation', () => {
 
   it('refuses to render a figure it has no value for', () => {
     expect(() => markdownRendition(HOME, {})).toThrow(/publishBuildEnv did not run/);
+  });
+});
+
+describe('the page’s visual grouping reads as lines', () => {
+  it('folds an eyebrow label into the heading it sits over', () => {
+    const rendered = markdownRendition(
+      page('<div class="section-head"><span class="label">The record</span><h2>Grounded</h2></div>'),
+      FIGURES,
+    );
+    expect(rendered).toContain('### The record: Grounded');
+    expect(rendered).not.toMatch(/^The record$/m);
+  });
+
+  it('refuses a section head with no heading in it', () => {
+    expect(() => markdownRendition(page('<div class="section-head"><span class="label">L</span></div>'), FIGURES)).toThrow(
+      /\.section-head carries no heading/,
+    );
+  });
+
+  it('puts a call to action and its note on lines of their own', () => {
+    const rendered = markdownRendition(
+      page('<div class="cluster"><a href="/app">Launch</a> <span class="aside">No install</span></div>'),
+      FIGURES,
+    );
+    expect(rendered).toContain('[Launch](https://stellata.xyz/app)\n\nNo install');
+  });
+
+  it('joins the footer’s links with a middle dot', () => {
+    const rendered = markdownRendition(
+      page('<footer><span class="cluster"><a href="/a">A</a>\n<a href="/b">B</a> <a href="/c">C</a></span></footer>'),
+      FIGURES,
+    );
+    expect(rendered).toContain('[A](https://stellata.xyz/a) · [B](https://stellata.xyz/b) · [C](https://stellata.xyz/c)');
+  });
+
+  it('leaves no eyebrow standing alone on the homepage', () => {
+    for (const label of selectAll('.section-head .label', tree)) {
+      expect(home).not.toMatch(new RegExp(`^${escapeRegExp(textOf(label))}$`, 'm'));
+    }
   });
 });
 

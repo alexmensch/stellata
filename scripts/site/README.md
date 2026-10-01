@@ -130,6 +130,15 @@ cannot know:
   a rendition quoted somewhere else still points back here, and no origin
   is restated in this file. A `<base href>` is honoured the way a browser
   honours it, itself resolved against the canonical.
+- **An eyebrow folds into its heading.** A `.section-head`'s `.label` is
+  the heading's prefix — `## Label: Heading` — rather than a line of its
+  own that an agent would read as body copy; a `.section-head` with no
+  heading stops the build.
+- **A cluster is laid out as lines.** Each phrasing item of a `.cluster`
+  (a call to action and its note, the masthead's links) is its own
+  paragraph, so a button and the sentence beside it never run together. In
+  the `footer`, a cluster's items join with ` · ` instead, one line of
+  credits and links.
 - **Definition lists become labelled bullets.** mdast has no definition
   list, so the readout strip would otherwise flatten into one run of text
   with nothing saying which figure belongs to which label.

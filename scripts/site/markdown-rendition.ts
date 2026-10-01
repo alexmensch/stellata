@@ -109,6 +109,36 @@ function pruneEmptyLinks(body: Element): void {
   });
 }
 
+const HEADING = ':is(h1, h2, h3, h4)';
+
+function foldEyebrows(body: Element): void {
+  for (const head of selectAll('.section-head', body)) {
+    const heading = select(HEADING, head);
+    if (heading == null) throw new Error('markdown rendition: a .section-head carries no heading');
+    const label = select(`.label:not(${HEADING})`, head);
+    if (label == null) continue;
+    heading.children = [{ type: 'text', value: `${textOf(label)}: ` }, ...heading.children];
+    prune(head, `.label:not(${HEADING})`);
+  }
+}
+
+const elementsOf = (node: Element): Element[] =>
+  node.children.filter((child): child is Element => child.type === 'element');
+
+const PHRASING = new Set(['a', 'span', 'b', 'i', 'em', 'strong', 'code', 'img']);
+
+function lineClusters(body: Element): void {
+  const footed = new Set(selectAll('footer .cluster', body));
+  for (const cluster of selectAll('.cluster', body)) {
+    const items = elementsOf(cluster);
+    cluster.children = footed.has(cluster)
+      ? items.flatMap((item, i): ElementContent[] => (i === 0 ? [item] : [{ type: 'text', value: ' · ' }, item]))
+      : items.map((item) =>
+          PHRASING.has(item.tagName) ? { type: 'element', tagName: 'p', properties: {}, children: [item] } : item,
+        );
+  }
+}
+
 function absolutise(body: Element, origin: string): void {
   visit(body, 'element', (node: Element) => {
     for (const key of ['href', 'src']) {
@@ -180,6 +210,8 @@ export function markdownRendition(
   stillVideos(body);
   collapseAlts(body);
   pruneEmptyLinks(body);
+  foldEyebrows(body);
+  lineClusters(body);
   assertVocabulary(body);
   bulletDefinitions(body);
   const baseHref = select('head > base', tree)?.properties?.href;
