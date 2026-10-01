@@ -178,7 +178,8 @@ site-claims.test.ts      The homepage against what it states: figures are
                          published tokens, never literals · every saved-view
                          link decodes, and each sight's two anchors share
                          its take's end view · no sight clip autoplays or
-                         preloads · the source and reference counts
+                         preloads · every still's srcset widths exist ·
+                         the source and reference counts
                          pinned, the subsystem table summing to the first ·
                          only on-site links stay in the tab, on both pages ·
                          the 404 page's masthead and footer are the

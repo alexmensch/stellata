@@ -309,8 +309,9 @@ To land a real capture:
    `/site/<name>` with no build step. Commit it — the SEO assets in
    `public/` (`og-image.jpg`, the icons) are committed the same way.
 3. Replace the `<div class="holder">…</div>` with
-   `<img src="/site/<name>" loading="lazy" decoding="async" alt="…"
-   width="…" height="…" />`. Real `width`/`height` attributes matter —
+   `<img src="/site/<name>" srcset="…" sizes="…" loading="lazy"
+   decoding="async" alt="…" width="…" height="…" />`, with the `srcset`
+   and `sizes` described below the steps. Real `width`/`height` attributes matter —
    they reserve the space and keep the page's layout shift at zero. `lazy`
    keeps a sight's still from competing with the hero's poster at load. `.sight-media` already carries the
    hairline border, and `.sight-media > img` the full-width rule.
@@ -372,9 +373,16 @@ link is not that blob.
 
 The page's weight is its clips: each one (0.65–3.3 MB) outweighs any still,
 which is why only the hero's loads with the page and each sight's waits until
-it is seen. Its largest contentful paint is the hero's poster, not a sight. Smaller
-responsive variants and a `srcset` for the 2400 px stills trim the
-secondary cost.
+it is seen. Its largest contentful paint is the hero's poster, not a sight.
+
+**A still ships at four widths** — `<name>-800.jpg`, `-1200`, `-1600` and
+the 2400 px original — scaled from the original with the `site-media`
+skill's still command at `scale=<w>:-2`, and offered through `srcset` with
+`sizes="(min-width: 46rem) 38rem, 100vw"`. That `sizes` is a fetch hint, not
+layout, and it restates the sight switcher's geometry: below about 46rem of
+viewport the row stacks and the media takes the column; above it, the media
+is at most about 38rem wide beside its copy. Change `--switcher-item-sight`
+or the column and re-derive both numbers.
 
 ## Pages anticipated but not built
 

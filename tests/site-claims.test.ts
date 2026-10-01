@@ -1,6 +1,6 @@
 // /src/site/README.md#numbers-in-copy.
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Element, Root } from 'hast';
 import { select, selectAll } from 'hast-util-select';
@@ -120,6 +120,24 @@ describe('every sight links where its take ends', () => {
     const pose = /\bend:\s*'([^']+)'/.exec(take) ?? /\bstart:\s*'([^']+)'/.exec(take);
     expect(pose).not.toBeNull();
     expect(parseSharePath(hrefs[0])).toBe(pose![1]);
+  });
+});
+
+describe('every still offers the widths it names', () => {
+  const stills = selectAll('.sight-media img', HOME);
+
+  it('has at least one still', () => {
+    expect(stills.length).toBeGreaterThan(0);
+  });
+
+  it.each(stills.map((img) => [String(img.properties?.src), img]))('%s', (_, img) => {
+    const candidates = String((img as Element).properties?.srcSet ?? '')
+      .split(',')
+      .map((candidate) => candidate.trim().split(/\s+/)[0])
+      .filter((url) => url !== '');
+    expect(candidates.length).toBeGreaterThan(1);
+    expect((img as Element).properties?.sizes).toBeDefined();
+    for (const url of candidates) expect(existsSync(join(ROOT, 'public', url))).toBe(true);
   });
 });
 
