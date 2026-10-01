@@ -14,7 +14,7 @@ import { substituteFigures } from './figures-pure.ts';
 import { pageMeta } from './page-meta-pure.ts';
 import { collapseWhitespace, parseHtml, textOf } from './parse-html.ts';
 
-const DROPPED = '.holder, .skip-link';
+const DROPPED = '.skip-link';
 
 /** Closed: a tag outside it throws — README.md#the-markdown-rendition. */
 const VOCABULARY = new Set([
@@ -72,11 +72,6 @@ function stripComments(body: Element): void {
   });
 }
 
-/**
- * Runs BEFORE pruneEmptyLinks: a sight's media anchor wrapping only a
- * `<video>` reads as empty until the video has become an `<img>`, and would
- * be dropped with the link the sight is for.
- */
 function stillVideos(body: Element): void {
   for (const video of selectAll('video', body)) {
     const poster = video.properties?.poster;
@@ -98,15 +93,6 @@ function collapseAlts(body: Element): void {
     const alt = img.properties?.alt;
     if (typeof alt === 'string') img.properties.alt = collapseWhitespace(alt);
   }
-}
-
-function pruneEmptyLinks(body: Element): void {
-  visit(body, 'element', (node, index, parent) => {
-    if (node.tagName !== 'a' || parent === undefined || index === undefined) return;
-    if (textOf(node) !== '' || select('img', node) != null) return;
-    parent.children.splice(index, 1);
-    return [SKIP, index];
-  });
 }
 
 const HEADING = ':is(h1, h2, h3, h4)';
@@ -209,7 +195,6 @@ export function markdownRendition(
   prune(body, DROPPED);
   stillVideos(body);
   collapseAlts(body);
-  pruneEmptyLinks(body);
   foldEyebrows(body);
   lineClusters(body);
   assertVocabulary(body);

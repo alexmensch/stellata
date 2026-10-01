@@ -57,8 +57,8 @@ app's chrome is the reference: near-black ground, monospace throughout, 1px
 hairline borders, square corners, small uppercase wide-tracked labels, one
 cyan accent. The site scales that up to reading sizes — it does not add a
 second visual language. A colour belonging to both surfaces goes in the
-token file; one belonging only here (`--bg-sunken`) goes in this file's own
-`:root` block, as the scales and measures do.
+token file; one belonging only here goes in this file's own `:root` block,
+as the scales and measures do.
 
 **Alpha variants are mixed, not restated.** Every halo and wash is a
 `color-mix(in srgb, var(--token) N%, transparent)`, so the hex for the

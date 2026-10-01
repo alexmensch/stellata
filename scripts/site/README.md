@@ -126,12 +126,8 @@ cannot know:
   heading and its meta description the summary blockquote, which is
   `llms.txt`'s shape and what agent clients already read. Body headings
   shift down a level so the document has a single root.
-- **Scaffolding is dropped** — `.holder` and `.skip-link`. A holder is the
-  dashed box naming a capture still to be taken; an agent quoting the page
-  today would otherwise read back the filenames of pictures that do not
-  exist. An anchor left empty by that drop goes too, because a sight's
-  picture *is* its link and `[](url)` is noise. Once a capture lands, the
-  `<img>` keeps its anchor.
+- **The skip link is dropped** — `.skip-link` jumps past the masthead of a
+  page an agent reads top to bottom anyway.
 - **HTML comments are dropped.** They are the page's authoring layer — the
   capture recipe behind each sight, the doc-figure markers around a quoted
   count — and markdown would otherwise carry them through literally.

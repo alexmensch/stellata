@@ -24,7 +24,7 @@ const FIGURES: Figures = {
 
 const home = markdownRendition(HOME, FIGURES);
 const tree = parseHtml(substituteFigures(HOME, FIGURES, 'src/site/index.html'));
-const SCAFFOLDING = new Set(selectAll('.holder, .holder *, .skip-link, .skip-link *', tree));
+const SCAFFOLDING = new Set(selectAll('.skip-link, .skip-link *', tree));
 
 /** Markdown with its inline syntax stripped, so it compares against an element's text. */
 function plain(markdown: string): string {
@@ -175,27 +175,9 @@ describe('the page’s visual grouping reads as lines', () => {
 });
 
 describe('authoring scaffolding is dropped', () => {
-  it('drops a capture holder and everything it names', () => {
-    const rendered = markdownRendition(
-      page('<div class="holder"><p>Save it as <code>hero.jpg</code></p></div><p>Kept.</p>'),
-      FIGURES,
-    );
-    expect(rendered).not.toContain('hero.jpg');
-    expect(rendered).toContain('Kept.');
-  });
-
   it('drops the skip link', () => {
     const rendered = markdownRendition(page('<a class="skip-link" href="#main">Skip</a><p>Kept.</p>'), FIGURES);
     expect(rendered).not.toContain('Skip');
-  });
-
-  it('drops an anchor left with nothing in it', () => {
-    const rendered = markdownRendition(
-      page('<a href="/app/v/AQAA/"><div class="holder">Capture</div></a><p>Kept.</p>'),
-      FIGURES,
-    );
-    expect(rendered).not.toContain('[](');
-    expect(home).not.toContain('[](');
   });
 
   it('drops HTML comments and keeps the text around them', () => {
@@ -229,8 +211,6 @@ describe('a clip renders as the frame standing in for it', () => {
     );
   });
 
-  // The anchor reads as empty while its only child is a <video>, so the
-  // order of the two passes decides whether a sight keeps its link.
   it('keeps the media anchor a sight wraps it in', () => {
     expect(markdownRendition(page(`<a href="/app/v/AQAA/">${clip}</a>`), FIGURES)).toContain(
       '[![Sol behind Io](https://stellata.xyz/site/hero.jpg)](https://stellata.xyz/app/v/AQAA/)',

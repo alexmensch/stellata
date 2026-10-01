@@ -310,22 +310,18 @@ take the capture, then copy the address bar — which is what makes the
 image and the URL incapable of disagreeing. Deriving a share URL separately
 from the shot is the failure this shape exists to prevent.
 
-A slot not yet filled holds a **`.holder`**: a dashed hairline box naming
-what to capture and the filename to save it as. The dashed border is
-deliberate — an empty styled box would ship unnoticed. `stellata-2h0e.8`
-tracks filling them.
-
-To land a real capture:
+To add a sight, or re-shoot one:
 
 1. Take the shot from the running app at 2400 px wide or more, in a 16:9
    window. Every slot is 16:9: a still ships as a 2400×1350 JPEG, a clip at
    1920×1080.
-2. Save it under `public/site/` as the filename the holder names.
+2. Save it under `public/site/` as `ex-<topic>.jpg` (a clip as
+   `ex-<topic>.mp4` beside its poster).
    `public/` is the app pass's `publicDir`, so the file is served at
    `/site/<name>` with no build step. Commit it — the SEO assets in
    `public/` (`og-image.jpg`, the icons) are committed the same way, and a
    clip rides Git LFS (`.gitattributes`).
-3. Replace the `<div class="holder">…</div>` with
+3. Put it in the row's `.sight-media` anchor as
    `<img src="/site/<name>" srcset="…" sizes="…" loading="lazy"
    decoding="async" alt="…" width="…" height="…" />`, with the `srcset`
    and `sizes` described below the steps. Real `width`/`height` attributes matter —

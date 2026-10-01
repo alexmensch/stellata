@@ -56,7 +56,6 @@
   --wash-accent-faint: color-mix(in srgb, var(--accent) 5%, transparent);
   --selection-bg: color-mix(in srgb, var(--accent) 22%, transparent);
   --pill-bg: color-mix(in srgb, var(--bg) 85%, transparent);
-  --bg-sunken: #04060d;
 
   --switcher-items: 2;
   --switcher-item-sight: 20rem;
@@ -70,7 +69,6 @@
   --hero-min: clamp(30rem, 82svh, 48rem);
   --hero-fade: 30%;
   --notfound-min: min(62svh, 35rem);
-  --holder-min: clamp(11rem, 24vw, 17rem);
 
   --layer-masthead: 1;
   --layer-skip-link: 2;
@@ -449,28 +447,6 @@ video {
 }
 .sight-go {
   letter-spacing: var(--tracking-cta);
-}
-
-/* ── Block: holder ─────────────────────────────────────────────────── */
-
-/* Sized by min-block-size rather than aspect-ratio: a ratio box clips its
-   own instructions at narrow widths, and a real <img width height> brings
-   its own ratio when it lands. */
-.holder {
-  display: grid;
-  align-content: center;
-  gap: var(--space-2xs);
-  min-block-size: var(--holder-min);
-  padding: var(--space-s);
-  border: var(--hairline) dashed var(--border-strong);
-  background: var(--bg-sunken);
-  font-size: var(--step--2);
-  line-height: var(--leading-snug);
-  color: var(--fg-dim);
-}
-.holder b {
-  font-weight: var(--weight-medium);
-  color: var(--fg);
 }
 
 /* ── Block: pill ───────────────────────────────────────────────────── */
