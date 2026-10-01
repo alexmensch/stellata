@@ -87,6 +87,12 @@ Vite's own SPA fallback rewrites an unmatched path to `/index.html` before
 any plugin middleware runs, so every wrong URL — and `/app` itself — would
 serve the homepage.
 
+**The app's own dev server and `build:client` depend on the site's
+inputs**, because that config publishes the page figures and builds the
+JSON-LD citation list for the homepage it serves: a citation index the
+parser rejects, or a Credits edit that empties its selector, stops the app
+too, though the app shows neither figure.
+
 `pnpm run dev:site` still serves this folder alone on port 5174, rooted
 here, for iterating on a page without the app's build chain in front of it.
 Three things differ from production there, which is why it is the secondary
