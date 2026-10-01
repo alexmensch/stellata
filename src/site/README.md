@@ -359,7 +359,10 @@ To land a real capture:
    across every frame rather than one), when to pad instead of crop, and
    when a capture has to be re-shot rather than rescued.
 4. Put the address bar's URL on **both** anchors in that row — the media
-   and the `.sight-go` line.
+   and the `.sight-go` line. The media anchor carries `tabindex="-1"`: the
+   pointer can take either, while the keyboard stops once per sight, on the
+   text link that names where it goes, in the same order on the rows whose
+   media sits on the right.
 
 A clip's row carries its `debug.capture()` call in an HTML comment beside
 the `<video>`, so a re-shoot replays the same take. Its `end` blob — or
