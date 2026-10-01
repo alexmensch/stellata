@@ -6,11 +6,15 @@ import {
   NOT_FOUND_SOURCE,
   SITE_PAGES,
   pageAt,
+  pagePath,
   pageRenderedAt,
   renditionPath,
   servedPath,
   type SitePage,
 } from './site/pages';
+
+/** Where every canonical URL points, whichever host served the request. */
+export const SITE_ORIGIN = 'https://stellata.xyz';
 
 /** A legacy share link moves for good; a document's file path is only an alias, as the assets layer answers it. */
 export type RedirectStatus = 301 | 307;
@@ -46,6 +50,11 @@ export function route(pathname: string, search: string): Route {
   if (rendered !== null) return { kind: 'rendition', page: rendered };
   if (pathname === servedPath(NOT_FOUND_SOURCE)) return { kind: 'notFoundPage' };
   return { kind: 'notFound' };
+}
+
+/** Names the HTML page a markdown answer renders, so the rendition is never indexed as a page of its own. */
+export function canonicalLink(page: SitePage): string {
+  return `<${new URL(pagePath(page), SITE_ORIGIN).href}>; rel="canonical"`;
 }
 
 /** The rendition a page request is answered with instead of its HTML, or null. */

@@ -119,11 +119,20 @@ describe.skipIf(worker === null)('behind the real assets layer', () => {
     expect(body).toBe(BUILT['index.md']);
   });
 
-  it('types the rendition as markdown at its own path, without the Worker', async () => {
+  it('types the rendition as markdown at its own path', async () => {
     const { status, headers, body } = await navigate('/index.md', { accept: '*/*' });
     expect(status).toBe(200);
     expect(headers['content-type']).toBe(MARKDOWN_TYPE);
     expect(body).toBe(BUILT['index.md']);
+  });
+
+  it.each([
+    ['/', { accept: 'text/markdown' }],
+    ['/index.md', { accept: '*/*' }],
+  ])('names the homepage as canonical on the rendition at %s', async (path, headers) => {
+    const link = /^<([^>]+)>; rel="canonical"$/.exec(String((await navigate(path, headers)).headers.link));
+    // The local proxy rewrites the origin to its own; worker.test.ts pins it.
+    expect(pathOf(link?.[1] ?? null)).toBe('/');
   });
 
   it('advertises the rendition on the HTML homepage', async () => {

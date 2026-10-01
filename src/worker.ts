@@ -3,7 +3,7 @@
 
 import { APP_PATH } from './client/util/url-state/share-path-pure';
 import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './negotiation-pure';
-import { negotiatedRendition, route } from './routing-pure';
+import { canonicalLink, negotiatedRendition, route } from './routing-pure';
 
 // Inlined, not imported: README.md#cloudflareworkers-types-leaks-globally.
 interface Fetcher {
@@ -43,10 +43,12 @@ export default {
       const markdown = await env.ASSETS.fetch(
         new Request(new URL(rendition, url).toString(), request),
       );
-      if (served(markdown)) {
+      if (decided.kind === 'page' && served(markdown)) {
+        const { page } = decided;
         return withHeaders(markdown, (headers) => {
           headers.set('content-type', MARKDOWN_TYPE);
           headers.set('vary', varyWithAccept(headers.get('vary')));
+          headers.set('link', canonicalLink(page));
         });
       }
     }
@@ -59,6 +61,11 @@ export default {
         headers.set('link', alternateLink(advertised));
         headers.set('vary', varyWithAccept(headers.get('vary')));
       });
+    }
+
+    if (decided.kind === 'rendition' && served(response)) {
+      const { page } = decided;
+      return withHeaders(response, (headers) => headers.set('link', canonicalLink(page)));
     }
 
     // After the probe, so a real asset under /app keeps winning.

@@ -123,6 +123,11 @@ describe('a client that asks for markdown gets the page’s rendition', () => {
     expect(response.headers.get('content-type')).toBe('text/markdown; charset=utf-8');
   });
 
+  it.each(['/', '/index.md'])('names the HTML page as canonical on the rendition at %s', async (path) => {
+    const { response } = await route(path, MARKDOWN);
+    expect(response.headers.get('link')).toBe('<https://stellata.xyz/>; rel="canonical"');
+  });
+
   it('tells every cache in between that Accept decided it', async () => {
     const { response } = await route('/', MARKDOWN);
     expect(response.headers.get('vary')).toMatch(/\bAccept\b/);

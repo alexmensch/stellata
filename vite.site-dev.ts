@@ -7,7 +7,7 @@ import type { Plugin } from 'vite';
 
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './src/negotiation-pure.ts';
-import { negotiatedRendition, route as decide, type Route } from './src/routing-pure.ts';
+import { canonicalLink, negotiatedRendition, route as decide, type Route } from './src/routing-pure.ts';
 import { NOT_FOUND_SOURCE } from './src/site/pages.ts';
 import type { Figures } from './scripts/site/figures-pure.ts';
 
@@ -101,6 +101,9 @@ export function documentRoutingInDev(repoRoot: string, figures: Figures): Plugin
             if (route.kind === 'rendition' || negotiatedRendition(route, accept) !== null) {
               res.statusCode = status;
               res.setHeader('Content-Type', MARKDOWN_TYPE);
+              if (route.kind === 'page' || route.kind === 'rendition') {
+                res.setHeader('Link', canonicalLink(route.page));
+              }
               if (advertised !== null) varyOnAccept(res);
               res.end(markdownRendition(raw, figures));
               return;

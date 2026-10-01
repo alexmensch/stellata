@@ -62,7 +62,9 @@ express, which `worker.ts` does:
 - **A client that names `text/markdown` gets the page's markdown
   rendition** — `/` answers with `dist/index.md`. `negotiation-pure.ts`
   owns the `Accept` rule; [The markdown rendition](site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages) owns the why and
-  what follows from it.
+  what follows from it. Both markdown answers, there and at `/index.md`,
+  carry `Link: <https://stellata.xyz/>; rel="canonical"`, so a crawler
+  following the advertised alternate indexes the page rather than a copy.
 
 **`routing-pure.ts`'s `route` is the one decision**, and `worker.ts` and
 `vite.site-dev.ts` are two interpreters of it: the deploy answers through
@@ -74,9 +76,9 @@ the deploy, and nobody sees it until someone pastes a real URL.
 
 ### The three `[assets]` keys the rules depend on
 
-**`run_worker_first` names every path a rule above answers** — `/`, `/v`,
-`/v/*`, `/app`, `/app/*` — plus `/404`, where the 404 page is itself an
-asset and would otherwise answer 200. By default the assets layer answers first: a path
+**`run_worker_first` names every path a rule above answers** — `/`,
+`/index.md`, `/v`, `/v/*`, `/app`, `/app/*` — plus `/404`, where the 404
+page is itself an asset and would otherwise answer 200. By default the assets layer answers first: a path
 that matches an asset (`/` is `dist/index.html`) never reaches the Worker,
 and a browser navigation (`Sec-Fetch-Mode: navigate`) to a path matching
 none is handed the 404 page without the Worker running either. Drop a

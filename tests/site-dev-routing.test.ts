@@ -138,6 +138,14 @@ describe('the middleware answers whatever the client accepts', () => {
     expect(answer.body).not.toContain('<h1');
   });
 
+  it.each([
+    ['/', 'text/markdown'],
+    ['/index.md', '*/*'],
+  ])('names the homepage as canonical on the rendition at %s', async (path, accept) => {
+    const answer = await fetchPath(path, accept);
+    expect(answer.headers.link).toBe('<https://stellata.xyz/>; rel="canonical"');
+  });
+
   it('serves the rendition the HTML answer advertises', async () => {
     const answer = await fetchPath('/index.md', '*/*');
     expect(answer.status).toBe(200);
