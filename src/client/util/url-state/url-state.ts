@@ -13,6 +13,7 @@ type LegacyPresetName = 'naked-eye' | 'binoculars' | 'all';
 import { type DetailLevel, DETAIL_LEVELS, DETAIL_RANK } from '../../scene/declutter/scene-elements';
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
+import { BOOT_CAMERA_POS_PC } from '../../camera/timing';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
@@ -46,7 +47,7 @@ const SCHEMA_VERSION = 4;
 const SCALAR_EPS = 1e-3;
 
 // Default values that the encoder uses to decide whether to omit a field.
-const DEFAULT_CAM: [number, number, number] = [0, 0, 30];
+const DEFAULT_CAM: [number, number, number] = [...BOOT_CAMERA_POS_PC];
 const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
 // The `up` slot carries `camera.up` (/src/client/camera/controls/input/README.md#roll-authority).
 // A galactic-LEVEL camera omits the field, and the receiver's own
@@ -892,24 +893,16 @@ function targetIdxOf(idMaps: IdMaps, kind: TargetKind, localIndex: number): numb
   return kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
 }
 
-// Single source of truth for "park the camera at the mode's default
-// pose" — used by the worldOffset branch (after origin recentre, before
-// any explicit cam/tgt overrides) and the observe-enter branch (when no
-// explicit cam came on the wire). Both routed through `defaultCamForMode`
-// so the cam-omission invariant lives in one place.
-function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | undefined): void {
-  const d = defaultCamForMode(mode);
-  stellata.camera.position.set(d[0], d[1], d[2]);
-}
-
 // The one route into focus for every decoded blob — README.md, the
 // applyFocusTarget bullet.
 /** The frame-relative half of the pose — `cam` and `tgt`, where the blob
- *  carries them. True when either landed. */
+ *  carries them, and OBSERVE's elided `cam` as the focal origin it stands for.
+ *  True when either landed. */
 function seatPose(stellata: Stellata, view: DecodedView): boolean {
-  if (view.cam) stellata.camera.position.set(...view.cam);
+  const cam = view.cam ?? (view.mode === 'observe' ? defaultCamForMode(view.mode) : undefined);
+  if (cam) stellata.camera.position.set(...cam);
   if (view.tgt) stellata.controls.target.set(...view.tgt);
-  return view.cam !== undefined || view.tgt !== undefined;
+  return cam !== undefined || view.tgt !== undefined;
 }
 
 /** Re-seat the camera in a local frame that only existed once a deferred
@@ -938,20 +931,13 @@ function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): vo
   else stellata.focus.flyTo(target, { animate: false });
 }
 
-/** OBSERVE's enter leg plus the chart flag it gates. The origin pre-snap
- *  precedes `controls.update()` so `lookAt` resolves the quaternion from the
- *  focal origin, not the orbit position the focus left; `setMode` preserves it
- *  when it pins position again. Exactly one of its two call sites runs it: the
- *  deferred focus callback while a focus is pending, the synchronous tail
- *  otherwise. */
+/** OBSERVE's enter leg plus the chart flag it gates. `setMode` keeps the
+ *  quaternion the seated pose resolved. Exactly one of its two call sites runs
+ *  it: the deferred focus callback while a focus is pending, the synchronous
+ *  tail otherwise. */
 function restoreObserve(stellata: Stellata, view: DecodedView): void {
   if (view.mode !== 'observe') return;
   if (!isHardTarget(stellata.focus.getFocusedTarget())) return;
-  if (view.cam === undefined) {
-    setCameraToDefault(stellata, 'observe');
-    stellata.controls.update();
-    stellata.roll.adoptFromCamera(stellata.camera);
-  }
   stellata.observe.setMode('observe', { animate: false });
   if (view.chart) stellata.filters.setFilter({ chart: true });
 }
@@ -962,7 +948,8 @@ function restoreObserve(stellata: Stellata, view: DecodedView): void {
 //     explicit overrides layer on top
 //   - up before focus/orbit, since focusStar/setOrbitTarget call
 //     controls.update() which reads camera.up
-//   - cam/tgt overwrite whatever focusStar/setOrbitTarget computed
+//   - cam/tgt overwrite whatever focusStar/setOrbitTarget computed, all of
+//     it before the one update + adopt — README.md, the seat-the-whole-pose bullet
 //   - mode last, because the observe snap reads the camera quaternion
 //     just set by controls.update(position, target, up)
 export function applyDecodedView(
@@ -1104,7 +1091,7 @@ export function applyDecodedView(
   // junk position. view.cam / view.tgt below override when present.
   if (view.worldOffset) {
     stellata.floatingOrigin.recenterTo(new THREE.Vector3(...view.worldOffset));
-    setCameraToDefault(stellata, view.mode);
+    stellata.camera.position.set(...defaultCamForMode(view.mode));
     stellata.controls.target.set(DEFAULT_TGT[0], DEFAULT_TGT[1], DEFAULT_TGT[2]);
     controlsDirty = true;
   }

@@ -25,7 +25,9 @@ import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import * as THREE from 'three';
 import { captureOrbitFrame, poseIntoFrame } from '../../attitude/attitude-pure';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../solar-system/ephemerides/orbit-rings-layer';
-import { CHOSEN_FIRST_LOAD_LINK } from './golden-links-fixture';
+import { CHOSEN_FIRST_LOAD_LINK, SOL_OBSERVE_LINKS } from './golden-links-fixture';
+import { RollController } from '../../camera/controls/input/roll-controller';
+import { BOOT_CAMERA_POS_PC } from '../../camera/timing';
 
 // Controller-namespace stub. `Partial<T>` keeps every member checked
 // against the real signature — `as unknown as T` would not, and stub
@@ -2471,6 +2473,55 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       expect(replaceState).not.toHaveBeenCalled();
     });
   });
+});
+
+// A real camera, the real roll legs, and TrackballControls' input-free
+// update(): every one of those is a no-op stub in makeStatefulStellata,
+// which is what hides the order the restore projects `up` in.
+describe('an OBSERVE link restored from the boot camera', () => {
+  function withRealCamera() {
+    const { stellata, state } = makeStatefulStellata();
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(...BOOT_CAMERA_POS_PC);
+    const target = new THREE.Vector3();
+    camera.lookAt(target);
+    Object.assign(stellata, {
+      camera,
+      roll: new RollController(),
+      controls: { target, update: () => camera.lookAt(target) },
+    });
+    return { stellata, state, camera };
+  }
+
+  function expectPose(camera: THREE.PerspectiveCamera, view: DecodedView) {
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const screenUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    const look = new THREE.Vector3(...view.tgt!).sub(camera.position);
+    expect(forward.angleTo(look)).toBeLessThan(1e-6);
+    expect(screenUp.angleTo(new THREE.Vector3(...view.up!))).toBeLessThan(1e-6);
+  }
+
+  it.each(Object.entries(SOL_OBSERVE_LINKS))('lands the roll %s carries', (_name, blob) => {
+    const { stellata, state, camera } = withRealCamera();
+    const view = decodeBlob(blob);
+    applyDecodedView(stellata, view, makeFixtureBuild());
+    expect(state.mode).toBe('observe');
+    expectPose(camera, view);
+  });
+
+  it.each(Object.entries(SOL_OBSERVE_LINKS))(
+    'lands the roll %s carries when its focus resolves late',
+    (_name, blob) => {
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      const { stellata, state, camera } = withRealCamera();
+      const view: DecodedView = { ...decodeBlob(blob), focus: { kind: 'sid', id: 103 } };
+      applyDecodedView(stellata, view, makeIdMaps({ sidResolver }));
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      expect(state.mode).toBe('observe');
+      expectPose(camera, view);
+    },
+  );
 });
 
 describe('viewPose', () => {

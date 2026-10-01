@@ -54,6 +54,8 @@ export const CAMERA_NEAR_PC = 1e-12;
 // keeps Math.log10 / division well-defined at the singular point.
 export const DCAM_LOG_FLOOR_PC = 1e-30;
 
+export const BOOT_CAMERA_POS_PC: readonly [number, number, number] = [0, 0, 30];
+
 // Arbitrary reference axis for the warp reorient slerp. Any fixed unit
 // vector works — `setFromUnitVectors(WARP_BASE_DIR, dir)` produces a
 // quaternion rotating this vector to `dir`, and slerp between two such

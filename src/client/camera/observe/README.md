@@ -340,9 +340,11 @@ microradians and smear as a star anchor's do. When exoplanet hosts land,
 the star-kind answer has to resolve through the host — here, in
 `observeAnchorOf`, so every line layer inherits it.
 
-**URL state:** the OBSERVE-mode flag round-trips through the `?v=`
-blob (flags-byte bit 5), applied after camera params +
-`controls.update()` so the saved pose lands first. The URL writer's
+**URL state:** the OBSERVE-mode flag round-trips through the share
+blob (flags-byte bit 5), applied after the whole pose — the elided `cam`
+seated at the focal origin included — has gone through one
+`controls.update()` and adopt, so the saved pose and its roll land first
+([the restore order](../../util/url-state/README.md#url-state)). The URL writer's
 debounced frame hook skips writes during
 `isCameraTransitionActive()` — covers warp, observe enter/exit, and
 the navigate-mode unfocus lerp (a7d.2.6) so transient mid-lerp poses
@@ -369,7 +371,7 @@ single and fires a **double-click** instead.
 
 POIs persist across observe ↔ navigate transitions — one shared list
 for both modes (`src/client/poi/README.md`) — and round-trip through
-the `?v=` blob in any camera mode, encoded as SIDs at bit 19.
+the share blob in any camera mode, encoded as SIDs at bit 19.
 
 ## ObserveTransition kinds
 

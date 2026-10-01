@@ -210,8 +210,17 @@ bit order, so mode isn't known until the field loop completes).
   call `controls.update()`, which reads it — so it lands as a raw axis and
   the `lookAt` inside that update projects it. One `adoptFromCamera` after
   the final update puts `up` back on the perpendicular invariant.
-- `mode=observe` is applied **after** camera params + `controls.update()`
-  so the saved pose lands first; the receiver then
+- **Seat the whole pose, then update and adopt once; never project `up`
+  against a view axis the blob did not carry.** `adoptFromCamera` keeps only
+  the part of `up` perpendicular to the axis it finds, so an adopt against
+  any other axis discards roll that no later `lookAt` can recover. `seatPose`
+  therefore seats OBSERVE's elided `cam` as the focal origin it stands for,
+  alongside `tgt`, ahead of that update — on the synchronous path and the
+  late-focus re-seat alike. An observe link adopted from the boot camera
+  instead came back rolled by up to 65°; the homepage sights in
+  `golden-links-fixture.ts` pin it against a real camera and `RollController`.
+- `mode=observe` is applied **after** the pose is seated and adopted, so
+  the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
   a hard-kind focus (star / planet / probe) exists. Default-omitted
   (navigate). **That anchor test cannot answer while a focus is pending**:
