@@ -20,13 +20,10 @@ page-meta-pure.ts      A page's `<title>` and meta description, and the
                        (+ test).
 llms-txt.ts            `/llms.txt`, built from `src/site/llms.txt`.
 shipped-html-pure.ts   What the site build removes from a page (+ test).
-parse-html.ts          The one HTML parse site-metrics.ts, markdown-rendition.ts
-                       and the site suites read a page through, and `textOf`,
-                       an element's text whitespace-collapsed.
 ```
 
-Each is a derivation rather than a pipeline (parse-html.ts and
-figures-pure.ts are what they share), and each exists so that something a
+Each is a derivation rather than a pipeline (figures-pure.ts and
+`../util/parse-html.ts` are what they share), and each exists so that something a
 page states is never *also* written down by hand.
 
 ## The figures

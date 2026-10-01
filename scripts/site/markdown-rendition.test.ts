@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 import { escapeRegExp } from '../util/escape-regexp';
 import { type Figures, substituteFigures } from './figures-pure';
 import { markdownRendition } from './markdown-rendition';
-import { parseHtml, textOf } from './parse-html';
+import { parseHtml, textOf } from '../util/parse-html';
 
 const ROOT = resolve(__dirname, '../..');
 const HOME = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');

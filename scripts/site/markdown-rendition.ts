@@ -12,7 +12,7 @@ import { SKIP, visit } from 'unist-util-visit';
 
 import { substituteFigures } from './figures-pure.ts';
 import { pageMeta } from './page-meta-pure.ts';
-import { collapseWhitespace, parseHtml, textOf } from './parse-html.ts';
+import { collapseWhitespace, parseHtml, textOf } from '../util/parse-html.ts';
 
 const DROPPED = '.skip-link';
 

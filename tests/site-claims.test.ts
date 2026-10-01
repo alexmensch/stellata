@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { parseSharePath } from '../src/client/util/url-state/share-path-pure';
 import { decodeBlob } from '../src/client/util/url-state/url-state';
 import { FIGURE_NAMES, FIGURE_TOKEN } from '../scripts/site/figures-pure';
-import { parseHtml, textOf } from '../scripts/site/parse-html';
+import { parseHtml, textOf } from '../scripts/util/parse-html';
 import { escapeRegExp } from '../scripts/util/escape-regexp';
 import {
   citationEntries,

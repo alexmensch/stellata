@@ -7,7 +7,7 @@ import { selectAll } from 'hast-util-select';
 
 import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
 import { type IndexEntry, parseIndex } from '../util/citation-index-pure.ts';
-import { parseHtml } from './parse-html.ts';
+import { parseHtml } from '../util/parse-html.ts';
 
 const CITATION_INDEX = 'data/papers/index.md';
 const APP_DOC = 'src/client/app/index.html';

@@ -3,7 +3,7 @@
 import { select } from 'hast-util-select';
 
 import { JSON_LD_BLOCK } from './json-ld-citations-pure.ts';
-import { collapseWhitespace, parseHtml, textOf } from './parse-html.ts';
+import { collapseWhitespace, parseHtml, textOf } from '../util/parse-html.ts';
 
 export interface PageMeta {
   readonly title: string;

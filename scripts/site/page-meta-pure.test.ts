@@ -7,7 +7,7 @@ import { pageAt } from '../../src/site/pages';
 import { builtLlmsTxt } from './llms-txt';
 import { JSON_LD_BLOCK } from './json-ld-citations-pure';
 import { fillPageMeta, pageMeta, substitutePageMeta } from './page-meta-pure';
-import { parseHtml } from './parse-html';
+import { parseHtml } from '../util/parse-html';
 
 const SITE_DIR = resolve(__dirname, '../../src/site');
 const HOME = readFileSync(resolve(SITE_DIR, pageAt('/')!.source), 'utf8');

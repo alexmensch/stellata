@@ -12,6 +12,11 @@ same thing — single-use helpers stay with their consumer.
   `tests/citation-index.test.ts`, which holds the index to its rules
   ([Cited papers](/data/papers/README.md#what-enforces-it)).
 
+- `parse-html.ts` — the one HTML parse (`parseHtml`, a HAST tree from
+  `rehype-parse`) and `textOf`, an element's text whitespace-collapsed.
+  Every reader of a page goes through it rather than a pattern: the
+  `site/` derivations and the site suites.
+
 - `escape-regexp.ts` (+ test) — `escapeRegExp(text)`, text made literal
   inside a `RegExp` source, backslash included. Every pattern built from
   page text or a figure goes through it — `citation-index-pure.ts`'s page
