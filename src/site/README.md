@@ -388,7 +388,9 @@ A clip's row carries its `debug.capture()` call in an HTML comment beside
 the `<video>`, so a re-shoot replays the same take. Its `end` blob — or
 `start`, for a take that only moves the clock — is the row's link, and
 `tests/site-claims.test.ts` fails a row whose two anchors disagree or whose
-link is not that blob.
+link is not that blob. The site build strips these comments from what ships
+([What ships](/scripts/site/README.md#what-ships)); the source and the dev
+server keep them.
 
 The page's weight is its clips: each one (0.65–3.3 MB) outweighs any still,
 which is why only the hero's loads with the page and each sight's waits until

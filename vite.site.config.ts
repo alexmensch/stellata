@@ -5,6 +5,7 @@ import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { LLMS_TXT_PATH, builtLlmsTxt } from './scripts/site/llms-txt.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
+import { withoutCaptureComments } from './scripts/site/shipped-html-pure.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
 import { buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
@@ -23,6 +24,10 @@ function pageMetaFill(): Plugin {
       handler: (html, ctx) => (ROSTER_FILES.has(ctx.filename) ? fillPageMeta(html, ctx.filename) : html),
     },
   };
+}
+
+function captureCommentStrip(): Plugin {
+  return { name: 'stellata:capture-comments', apply: 'build', transformIndexHtml: withoutCaptureComments };
 }
 
 /** src/site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages. */
@@ -50,6 +55,7 @@ export default defineConfig(() => ({
   plugins: [
     figureSubstitution(figures),
     pageMetaFill(),
+    captureCommentStrip(),
     indexCitations(import.meta.dirname),
     markdownRenditions(),
   ],

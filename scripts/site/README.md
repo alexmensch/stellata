@@ -19,6 +19,7 @@ page-meta-pure.ts      A page's `<title>` and meta description, and the
                        `%PAGE_TITLE%` / `%PAGE_DESCRIPTION%` substitution
                        (+ test).
 llms-txt.ts            `/llms.txt`, built from `src/site/llms.txt`.
+shipped-html-pure.ts   What the site build removes from a page (+ test).
 parse-html.ts          The one HTML parse site-metrics.ts, markdown-rendition.ts
                        and the site suites read a page through, and `textOf`,
                        an element's text whitespace-collapsed.
@@ -91,6 +92,14 @@ describes itself to an agent, and the summary cannot drift from it. The
 site pass emits it as `dist/llms.txt`, a static asset; `pnpm run dev`
 serves the same derivation at `/llms.txt` (`vite.site-dev.ts`).
 `page-meta-pure.test.ts` holds the built summary to the page's description.
+
+## What ships
+
+The site build drops a page's `debug.capture()` comments: they are the
+recipe for re-shooting a sight's clip, authoring for this repo rather than
+anything a visitor's browser needs. The source keeps them, and so does the
+dev server, so `tests/site-claims.test.ts` and the capture procedure read
+them there. Every other comment ships, the doc-figure markers among them.
 
 ## The markdown rendition
 
