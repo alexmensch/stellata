@@ -13,7 +13,7 @@ themselves.
   what makes the application answer at `/app` rather than `/`; that
   README owns the `<head>`'s SEO surface and the `<noscript>` fallback.
   The referenced static assets
-  (`og-image.jpg`, icons, `robots.txt`, `llms.txt`, `sitemap.xml`,
+  (`og-image.jpg`, icons, `robots.txt`, `sitemap.xml`,
   `manifest.webmanifest`) live in `public/`. **`styles.css` does not own
   the palette** — it `@import`s `src/design-tokens.css`, shared with the
   public site (`src/site/README.md`), and keeps only the app-specific

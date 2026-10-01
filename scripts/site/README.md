@@ -15,6 +15,10 @@ json-ld-citations.ts   The Vite plugin appending every citation-index work to
                        /src/site/README.md#the-json-ld-citation-list.
 markdown-rendition.ts  A page's markdown rendition, derived from the page's
                        own HTML. Emitted as `dist/index.md`.
+page-meta-pure.ts      A page's `<title>` and meta description, and the
+                       `%PAGE_TITLE%` / `%PAGE_DESCRIPTION%` substitution
+                       (+ test).
+llms-txt.ts            `/llms.txt`, built from `src/site/llms.txt`.
 parse-html.ts          The one HTML parse site-metrics.ts, markdown-rendition.ts
                        and the site suites read a page through, and `textOf`,
                        an element's text whitespace-collapsed.
@@ -65,6 +69,21 @@ literal.
   cites, one entry each, and `tests/citation-index.test.ts` fails a citation
   that points anywhere else, so the entry count is the record's size, not
   an estimate of it. An index with no entries stops the build.
+
+## The page meta
+
+A page's `<title>` and `<meta name="description">` are written once.
+`page-meta-pure.ts` reads them; a page missing either stops the build.
+
+## llms.txt
+
+`/llms.txt` is built, not committed: `src/site/llms.txt` is a template of
+links, and its `> ` summary is `%PAGE_DESCRIPTION%`, filled with the
+homepage's meta description. So the homepage is the one place the project
+describes itself to an agent, and the summary cannot drift from it. The
+site pass emits it as `dist/llms.txt`, a static asset; `pnpm run dev`
+serves the same derivation at `/llms.txt` (`vite.site-dev.ts`).
+`page-meta-pure.test.ts` holds the built summary to the page's description.
 
 ## The markdown rendition
 

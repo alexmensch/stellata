@@ -16,8 +16,11 @@ index.html   The homepage, served at /. Documented below. Its markdown
              noindex and is not in the sitemap. Wears the homepage's
              masthead and footer, copied by hand and held identical by
              tests/site-claims.test.ts until a generator owns them.
+llms.txt     The template `/llms.txt` is built from: links only, its summary
+             filled with this homepage's meta description at build time and
+             in dev (/scripts/site/README.md#llmstxt).
 pages.ts     The page roster (+ test): each page's source and whether it has
-             a rendition. The build inputs, the rendition emit, the
+             a rendition, and the llms.txt template's name. The build inputs, the rendition emit, the
              Worker's negotiation and the dev server's routes all derive
              from it.
 styles/      site.css, every page's stylesheet, and its README.
@@ -112,7 +115,7 @@ converts it to markdown itself. What it loses doing that is **the
 wording**. The converter's own summariser paraphrases, where a rendition
 is read close to verbatim, at roughly a third of the bytes. It is not the
 lever for being *recommended* by an answer engine — crawlability, the
-JSON-LD graph, `public/llms.txt` and inbound links are that — it is the
+JSON-LD graph, `/llms.txt` and inbound links are that — it is the
 lever for being **quoted correctly** once one has the URL.
 
 **The rendition is derived from the page, never authored beside it.**

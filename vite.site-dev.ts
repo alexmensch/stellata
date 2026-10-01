@@ -5,6 +5,7 @@ import type { ServerResponse } from 'node:http';
 import { dirname, resolve, sep } from 'node:path';
 import type { Plugin } from 'vite';
 
+import { LLMS_TXT_PATH, builtLlmsTxt } from './scripts/site/llms-txt.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { MARKDOWN_TYPE, alternateLink, varyWithAccept, wantsDocument } from './src/negotiation-pure.ts';
 import { canonicalLink, negotiatedRendition, route as decide, type Route } from './src/routing-pure.ts';
@@ -66,6 +67,15 @@ export function documentRoutingInDev(repoRoot: string, figures: Figures): Plugin
         if (file.startsWith(siteDir + sep) && file.endsWith('.html')) {
           server.hot.send({ type: 'full-reload', path: '*' });
         }
+      });
+
+      server.middlewares.use((req, res, next) => {
+        if ((req.method !== 'GET' && req.method !== 'HEAD') || new URL(req.url ?? '/', 'http://dev').pathname !== LLMS_TXT_PATH) {
+          next();
+          return;
+        }
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.end(builtLlmsTxt(siteDir));
       });
 
       // Post-hook: runs after Vite's own middlewares, so only documents reach it.

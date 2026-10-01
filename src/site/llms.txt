@@ -1,0 +1,13 @@
+# Stellata
+
+> %PAGE_DESCRIPTION%
+
+## Links
+
+- [Stellata](https://stellata.xyz/): the homepage.
+- [Stellata as markdown](https://stellata.xyz/index.md): the homepage as markdown, derived from it at build time; `https://stellata.xyz/` serves it to a client whose `Accept` header names `text/markdown`.
+- [The model](https://stellata.xyz/app): the WebGPU application.
+- [Source on GitHub](https://github.com/alexmensch/stellata)
+- [SCIENCE.md](https://github.com/alexmensch/stellata/blob/main/SCIENCE.md): data sources, modelling notes and scope.
+- [10.5281/zenodo.22392528](https://doi.org/10.5281/zenodo.22392528): the concept DOI to cite, resolving to the latest release.
+- [Licence: AGPL-3.0-only](https://github.com/alexmensch/stellata/blob/main/LICENSE)

@@ -24,8 +24,8 @@ const MIRRORED_FOLDERS: Array<[string, (name: string) => boolean]> = [
   ['ephemerides', isPlanetElementPublicAsset],
 ];
 const FORBIDDEN_EXTENSIONS = ['.md', '.txt', '.py', '.ts'];
-// Committed .txt assets that are meant to ship (crawler + AI-agent signals).
-const ALLOWED_SHIPPED = new Set(['robots.txt', 'llms.txt']);
+// Committed .txt assets that are meant to ship (crawler signals).
+const ALLOWED_SHIPPED = new Set(['robots.txt']);
 
 describe.skipIf(!existsSync(PUBLIC_DIR))('deployed bundle content (public/)', () => {
   it('contains no source-tree file types', () => {

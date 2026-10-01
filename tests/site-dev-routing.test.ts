@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 
 import { APP_DOCUMENT_MARKER, ROUTING_CASES, documentIdentifiers } from '../src/routing-cases-fixture';
+import { builtLlmsTxt } from '../scripts/site/llms-txt';
 import { buildFigures } from '../vite.env';
 import { documentRoutingInDev } from '../vite.site-dev';
 
@@ -37,8 +38,19 @@ function start(): Server {
     hot: { send: (payload: { type: string }) => sent.push(payload) },
   } as never) as () => void;
   post();
+  const handler = async (req: never, res: never, next: (err?: Error) => void): Promise<void> => {
+    for (const middleware of registered) {
+      let passed = false;
+      await middleware(req, res, ((err?: Error) => {
+        if (err !== undefined) throw err;
+        passed = true;
+      }) as never);
+      if (!passed) return;
+    }
+    next();
+  };
   return {
-    handler: registered[0],
+    handler: handler as Server['handler'],
     watched,
     change: (file) => changed.forEach((fn) => fn(file)),
     sent,
@@ -111,6 +123,13 @@ describe('the middleware answers whatever the client accepts', () => {
     expect(body).toContain(`href="/@fs${siteDir}/styles/site.css"`);
     expect(body).toContain(`src="/@fs${siteDir}/replay.ts"`);
     expect(body).not.toMatch(/(src|href)="\.\//);
+  });
+
+  it('serves the built llms.txt, as the deploy serves its asset', async () => {
+    const answer = await fetchPath('/llms.txt', '*/*');
+    expect(answer.fellThrough).toBe(false);
+    expect(answer.headers['content-type']).toBe('text/plain; charset=utf-8');
+    expect(answer.body).toBe(builtLlmsTxt(resolve(ROOT, 'src/site')));
   });
 
   it('serves the application document to a wildcard Accept too', async () => {

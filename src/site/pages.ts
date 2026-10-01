@@ -11,6 +11,9 @@ export const SITE_PAGES: readonly SitePage[] = [{ source: 'index.html', hasRendi
 /** Served with a 404 status for every unmatched path, and at its own path too. */
 export const NOT_FOUND_SOURCE = '404.html';
 
+/** The template `/llms.txt` is built from; its summary is the homepage's meta description. */
+export const LLMS_TXT_SOURCE = 'llms.txt';
+
 /** Where a built HTML file answers under `html_handling = "drop-trailing-slash"`. */
 export function servedPath(source: string): string {
   return `/${source.replace(/(^|\/)index\.html$/, '').replace(/\.html$/, '')}`;

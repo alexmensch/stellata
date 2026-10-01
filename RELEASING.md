@@ -509,7 +509,7 @@ DOI come out of it:
 
 - **Concept DOI** — `10.5281/zenodo.22392528`. Version-independent,
   always resolves to the newest release. This is the one to quote:
-  README badge, README [Licence](README.md#licence), `public/llms.txt`, `CITATION.cff`.
+  README badge, README [Licence](README.md#licence), `src/site/llms.txt`, `CITATION.cff`.
 - **Version DOI** — one per release, cites that exact snapshot.
   v3.44.2, the first archived release, is `10.5281/zenodo.22392529`.
 
