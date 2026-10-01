@@ -159,6 +159,30 @@ describe.each([
   });
 });
 
+// Hand-kept on both pages until a static-site generator owns the chrome;
+// `aria-current` is the one per-page state it may differ by.
+describe('the 404 page wears the homepage\'s masthead and footer', () => {
+  const shape = (node: Element | Root): string =>
+    node.children
+      .map((child) => {
+        if (child.type === 'text') return child.value.replace(/\s+/g, ' ');
+        if (child.type !== 'element') return '';
+        const { ariaCurrent: _, ...props } = child.properties ?? {};
+        return `<${child.tagName} ${JSON.stringify(props)}>${shape(child)}</${child.tagName}>`;
+      })
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  it.each(['header.masthead', 'footer.footer'])('%s', (selector) => {
+    const home = select(selector, HOME);
+    const notFound = select(selector, NOT_FOUND);
+    expect(home).not.toBeNull();
+    expect(notFound).not.toBeNull();
+    expect(shape(notFound!)).toBe(shape(home!));
+  });
+});
+
 // "Zucker 2020 & 2021" names two works.
 const AUTHOR_YEARS = /(\p{Lu}[\p{L}'’-]+(?: \p{Lu}[\p{L}'’-]+)*) (\d{4}[a-z]?(?: & \d{4}[a-z]?)*)\b/gu;
 

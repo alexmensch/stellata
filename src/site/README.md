@@ -13,7 +13,9 @@ index.html   The homepage, served at /. Documented below. Its markdown
 404.html     Served for every unmatched path — by Cloudflare's
              not_found_handling = "404-page" (wrangler.toml) in production,
              and by the dev server's document routing locally. Carries
-             noindex and is not in the sitemap.
+             noindex and is not in the sitemap. Wears the homepage's
+             masthead and footer, copied by hand and held identical by
+             tests/site-claims.test.ts until a generator owns them.
 pages.ts     The page roster (+ test): each page's source and whether it has
              a rendition. The build inputs, the rendition emit, the
              Worker's negotiation and the dev server's routes all derive

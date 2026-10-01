@@ -181,6 +181,8 @@ site-claims.test.ts      The homepage against what it states: figures are
                          preloads · the source and reference counts
                          pinned, the subsystem table summing to the first ·
                          only on-site links stay in the tab, on both pages ·
+                         the 404 page's masthead and footer are the
+                         homepage's ·
                          every author-year a citation-index label.
                          /src/site/README.md#numbers-in-copy.
 site-css-rules.test.ts   The public stylesheet answers to its container and
