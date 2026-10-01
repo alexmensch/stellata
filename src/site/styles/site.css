@@ -189,6 +189,9 @@ a:hover {
 a:where(:hover) {
   color: var(--accent);
 }
+a:not([target='_self'])::after {
+  content: '' / ' (opens in new tab)';
+}
 
 ::selection {
   background: var(--selection-bg);

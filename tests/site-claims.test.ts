@@ -145,12 +145,15 @@ describe('the derivations behind those figures', () => {
 
 // <base target="_blank"> opens every link in a new tab; a link within the site
 // opts back into the same one.
-describe('links open in a new tab unless they stay on the site', () => {
+describe.each([
+  ['homepage', HOME],
+  ['404 page', NOT_FOUND],
+])('links on the %s open in a new tab unless they stay on the site', (_, page) => {
   it('defaults every link to a new tab', () => {
-    expect(select('head > base', HOME)?.properties?.target).toBe('_blank');
+    expect(select('head > base', page)?.properties?.target).toBe('_blank');
   });
 
-  it.each(selectAll('a[href]', HOME).map((a) => [String(a.properties?.href), a]))('%s', (href, a) => {
+  it.each(selectAll('a[href]', page).map((a) => [String(a.properties?.href), a]))('%s', (href, a) => {
     const sameTab = (a as Element).properties?.target === '_self';
     expect(sameTab).toBe(/^[/#]/.test(href as string));
   });

@@ -220,10 +220,14 @@ In order down the page, and the order is the argument:
 as a specification; the eyebrow label above each `h2` carries the same
 structure without it.
 
-**Every link opens in a new tab** — the head's `<base target="_blank">` —
-**except those within the site**, which carry `target="_self"`: the app and
-its views, the wordmark, the skip link. A new link to `/…` or `#…` needs the
-attribute; `tests/site-claims.test.ts` fails it otherwise.
+**Every link opens in a new tab** — the head's `<base target="_blank">`, on
+both pages — **except those within the site**, which carry
+`target="_self"`: the app and its views, the wordmark, the skip link. A new
+link to `/…` or `#…` needs the attribute; `tests/site-claims.test.ts` fails
+it otherwise, on either page. **Each new-tab link announces it**: the global
+`a:not([target='_self'])::after` gives it the hidden text "(opens in new
+tab)", which a screen reader reads and the page does not show, so no link
+needs markup of its own for it.
 
 ## Numbers in copy
 

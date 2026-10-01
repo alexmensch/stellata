@@ -214,6 +214,13 @@ describe('the public stylesheet caps line length once', () => {
   });
 });
 
+// /src/site/README.md#the-homepages-shape — the new-tab default is announced.
+describe('every link that opens a new tab says so', () => {
+  it('gives each one hidden text a screen reader announces', () => {
+    expect(CODE).toMatch(/a:not\(\[target='_self'\]\)::after\s*\{[^}]*content:\s*''\s*\/\s*' \(opens in new tab\)'/);
+  });
+});
+
 describe('the public stylesheet keeps the CUBE cascade order', () => {
   it('emits tokens, global, compositions, blocks and utilities in that order', () => {
     const tokens = CSS.indexOf('── Tokens');

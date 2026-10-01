@@ -180,16 +180,17 @@ site-claims.test.ts      The homepage against what it states: figures are
                          its take's end view · no sight clip autoplays or
                          preloads · the source and reference counts
                          pinned, the subsystem table summing to the first ·
-                         only on-site links stay in the tab · every
-                         author-year a citation-index label.
+                         only on-site links stay in the tab, on both pages ·
+                         every author-year a citation-index label.
                          /src/site/README.md#numbers-in-copy.
 site-css-rules.test.ts   The public stylesheet answers to its container and
                          to the reader's font size, never to a viewport
                          measurement, and paints nothing it has not
                          tokenised. Groups: breakpoints · hardcoded values ·
-                         measure · cascade order · the filled pill · logical
-                         properties. Scans the file with comments stripped,
-                         so prose naming a property cannot register as CSS.
+                         measure · new-tab announcement · cascade order · the
+                         filled pill · logical properties. Scans the file
+                         with comments stripped, so prose naming a property
+                         cannot register as CSS.
                          /src/site/styles/README.md#house-style,
                          /src/site/styles/README.md#responsiveness-has-no-breakpoints.
 site-dev-routing.test.ts The dev server's routing table held against the
