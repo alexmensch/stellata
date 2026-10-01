@@ -46,18 +46,19 @@ express, which `worker.ts` does:
   falls back to the application document on a 404, so a real asset ever
   emitted under `/app` keeps winning. A request naming only non-document
   types (`image/png`) keeps its 404: it is a missing asset, not a page.
-- **Both legacy share transports 301 onto `/app`.** `/v/<blob>/` is the
-  form shared while the application was the site root, and lands on the
-  canonical `/app/v/<blob>/`; `/?v=<blob>` predates it, and lands on
-  `/app?v=<blob>`, keeping its query transport for the client's own rewrite.
-  Links carrying either sit in places that can never be edited, so both are
-  answered forever.
+- **Both legacy share transports 301 onto the canonical `/app/v/<blob>/`.**
+  `/v/<blob>/` is the form shared while the application was the site root;
+  `/?v=<blob>` predates it, and its parameter becomes the path segment, the
+  rest of the query kept. Links carrying either sit in places that can never
+  be edited, so both are answered forever.
   `client/util/url-state/share-path-pure.ts` owns the grammar and the
   Worker imports it — a second spelling of `/app` here would break every
-  share link silently. Neither rule inspects the blob: it is redirected
+  share link silently. Neither rule decodes the blob: it is redirected
   whatever schema version it carries and whether or not it decodes, which
   is what makes the transport's reach and the decoder's reach the same
-  thing (v1 onward, `client/util/url-state/README.md`).
+  thing (v1 onward, `client/util/url-state/README.md`). A `?v=` value
+  outside the blob alphabet cannot be a path segment, so it lands on
+  `/app?v=…` instead, where the app strips the junk itself.
 - **A client that names `text/markdown` gets the page's markdown
   rendition** — `/` answers with `dist/index.md`. `negotiation-pure.ts`
   owns the `Accept` rule; [The markdown rendition](site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages) owns the why and

@@ -124,8 +124,16 @@ describe('legacyShareRedirect', () => {
     expect(legacyShareRedirect('/v', '')).toBe('/app/v');
   });
 
-  it('moves a legacy ?v= query off the homepage and onto the app', () => {
-    expect(legacyShareRedirect('/', '?v=AQAA')).toBe('/app?v=AQAA');
+  it('moves a legacy ?v= query straight onto the canonical path', () => {
+    expect(legacyShareRedirect('/', '?v=AQAA')).toBe('/app/v/AQAA/');
+  });
+
+  it('keeps the rest of the query beside the moved blob', () => {
+    expect(legacyShareRedirect('/', '?utm=x&v=AQAA&ref=y')).toBe('/app/v/AQAA/?utm=x&ref=y');
+  });
+
+  it.each(['?v=not!valid', '?v=a%2Fb', '?v='])('lands %s on the app as a query', (search) => {
+    expect(legacyShareRedirect('/', search)).toBe(`/app${search}`);
   });
 
   it.each([

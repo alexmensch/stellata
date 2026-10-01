@@ -84,21 +84,17 @@ export function shareBlobFrom(input: string): string | null {
   return BARE_BLOB_RE.test(afterParam) ? afterParam : null;
 }
 
-/**
- * Where a request carrying a legacy transport belongs, or null when it
- * carries none. The Worker answers with a 301 so the canonical form is what
- * gets bookmarked and re-shared; the client's own rewrite then handles a
- * legacy link that reached it some other way.
- *
- * The blob is not parsed out and rebuilt — an undecodable one still has to
- * land on the app, which strips the bar itself (README.md#transport--canonical-path-vs-legacy-query).
- */
+/** Where a legacy transport belongs, or null. /src/README.md#request-routing. */
 export function legacyShareRedirect(pathname: string, search: string): string | null {
   if (isUnder(pathname, SHARE_SEGMENT)) {
     return APP_PATH + pathname + search;
   }
-  if (pathname === '/' && new URLSearchParams(search).has(SHARE_PARAM)) {
-    return APP_PATH + search;
-  }
-  return null;
+  if (pathname !== '/') return null;
+  const params = new URLSearchParams(search);
+  const blob = params.get(SHARE_PARAM);
+  if (blob === null) return null;
+  if (!BARE_BLOB_RE.test(blob)) return APP_PATH + search;
+  params.delete(SHARE_PARAM);
+  const rest = params.toString();
+  return buildSharePath(blob) + (rest === '' ? '' : `?${rest}`);
 }

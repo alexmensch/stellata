@@ -108,7 +108,7 @@ describe.skipIf(worker === null)('behind the real assets layer', () => {
   it('301s a legacy query link off the homepage', async () => {
     const { status, location } = await navigate(`/?${SHARE_PARAM}=${BLOB}`);
     expect(status).toBe(301);
-    expect(pathOf(location)).toBe(`${APP_PATH}?${SHARE_PARAM}=${BLOB}`);
+    expect(pathOf(location)).toBe(buildSharePath(BLOB));
   });
 
   it('serves the markdown rendition at the root to a client that names it', async () => {
