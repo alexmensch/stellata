@@ -39,9 +39,10 @@ cross-script policy and pointers.
   [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
   `src/client/milkyway/calibration/`. Not part of the build.
-- `release/` — `deploy.yml`'s release step: plans and cuts one tag +
-  GitHub release per version bump in a pushed range (a merged stack is
-  one push carrying several). Not part of `pnpm run build`.
+- `release/` — `deploy.yml`'s release steps: checks the live site after
+  `wrangler deploy`, then plans and cuts one tag + GitHub release per
+  version bump in a pushed range (a merged stack is one push carrying
+  several). Not part of `pnpm run build`.
 - `sid/` — SID registry tools: `sid:allocate` (the only writer of
   `data/sid/ledger.tsv`), DR-churn risk-set export, DR reconciliation
   classifier, and `sid:stamp` (stamps sids onto clouds.json /
