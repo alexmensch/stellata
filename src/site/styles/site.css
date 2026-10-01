@@ -276,8 +276,6 @@ video {
   color: var(--accent);
 }
 .masthead nav {
-  --cluster-align: baseline;
-  --cluster-space: var(--cluster-space-tight);
   --link-color: var(--fg-dim);
 
   font-size: var(--step--1);
