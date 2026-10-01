@@ -1,4 +1,4 @@
-/** Build-time figures every Vite config publishes, so app and site read one set. */
+/** What both Vite configs share: the build target and the figures they publish, so app and site read one set. */
 
 import type { Plugin } from 'vite';
 import { type Figures, substituteFigures } from './scripts/site/figures-pure.ts';
@@ -8,6 +8,8 @@ import {
   citedReferenceCount,
   creditedSourceCount,
 } from './scripts/site/site-metrics.ts';
+
+export const BUILD_TARGET = 'es2022';
 
 export function buildFigures(root: string): Figures {
   return {

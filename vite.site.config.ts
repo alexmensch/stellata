@@ -7,7 +7,7 @@ import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
 import { withoutCaptureComments } from './scripts/site/shipped-html-pure.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
-import { buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
+import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
 const figures = buildFigures(import.meta.dirname);
 publishBuildEnv(figures);
@@ -66,7 +66,7 @@ export default defineConfig(() => ({
   build: {
     outDir: resolve(import.meta.dirname, 'dist'),
     emptyOutDir: false,
-    target: 'es2020',
+    target: BUILD_TARGET,
     rollupOptions: {
       input: [...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) =>
         resolve(SITE_DIR, source),

@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import { indexCitations } from './scripts/site/json-ld-citations.ts';
-import { buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
+import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 import { documentRoutingInDev } from './vite.site-dev.ts';
 
 const figures = buildFigures(import.meta.dirname);
@@ -22,7 +22,7 @@ export default defineConfig(() => ({
   build: {
     outDir: resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
-    target: 'es2022',
+    target: BUILD_TARGET,
     // src/client/app/README.md#the-chunk-size-limit-is-raised-not-chased.
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
