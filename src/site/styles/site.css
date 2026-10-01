@@ -506,7 +506,7 @@ video {
 }
 .label,
 .sources th {
-  font-size: var(--step--2);
+  font-size: var(--step--1);
   font-weight: normal;
   line-height: inherit;
   letter-spacing: var(--tracking-caps);
