@@ -123,6 +123,16 @@ describe('attachReplay', () => {
     expect(button.hidden).toBe(false);
   });
 
+  it('plays an offered clip from the start on a press', () => {
+    const clip = new FakeClip();
+    const button = new FakeButton();
+    attachReplay(clip, button, new FakeMedia()).offer();
+    button.press();
+    expect(clip.plays).toBe(1);
+    expect(clip.currentTime).toBe(0);
+    expect(button.hidden).toBe(true);
+  });
+
   it('offers the button over a clip that has not played, without playing it', () => {
     const clip = new FakeClip();
     const button = new FakeButton();

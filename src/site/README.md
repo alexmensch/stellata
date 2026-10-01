@@ -167,19 +167,23 @@ screen — so a clip below the fold costs no bytes until it is seen, and plays
 where the reader can see it. Without script, every sight shows its poster.
 `tests/site-claims.test.ts` fails a `data-replay` clip that autoplays or
 preloads. **Under `prefers-reduced-motion: reduce` nothing plays on its
-own:** the script strips the hero's `autoplay` and reloads it onto its
-poster, and offers each sight's replay button instead of starting it.
+own:** the script strips the hero's `autoplay`, reloads it onto its
+poster and gives it a replay button — the only time the hero carries one —
+and offers each sight's button instead of starting the clip.
 
-The script wraps the media anchor in a `.replay-frame` and puts the button
-beside the anchor, never inside it, since a button inside a link is invalid
-and would follow the link.
+Where a link holds the clip, the script wraps it in a `.replay-frame` and
+puts the button beside the link, never inside it, since a button inside a
+link is invalid and would follow the link. The hero has no link, so its
+button goes inside `.hero-media`, which the button's `--layer-replay` keeps
+above the hero's bottom fade.
 
 The button shows whenever the clip is stopped — ended, paused, or refused a
 start, which a browser in a power-saving mode does silently and which only
 a rejected `play()` reports. A press replays the clip once from the
 start, so the [Sights](#sights--the-media-and-the-link-it-carries) rule of no `loop` and under five seconds still holds.
 The button hides as it is pressed, so a press that held keyboard focus hands
-it to the media anchor rather than dropping it to the page.
+it to the media link — or to `.hero-media`, made focusable for it — rather
+than dropping it to the page.
 
 A second script is a decision to take explicitly, not a precedent this one
 sets.

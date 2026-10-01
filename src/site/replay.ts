@@ -1,5 +1,5 @@
-/** The homepage's one script: each `video[data-replay]` starts when first seen and gets a replay button.
-    /src/site/README.md#one-script. */
+/** The homepage's one script: each `video[data-replay]` starts when first seen and gets a replay button,
+    as the hero does under reduced motion. /src/site/README.md#one-script. */
 
 import { REPLAY_GLYPH, attachReplay, replayLabel, type ReplayControl } from './replay-control';
 
@@ -7,10 +7,35 @@ const SEEN_FRACTION = 0.5;
 
 const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** A replay button on `video`: beside the link around it, else inside its (positioned) parent. */
+function mountReplay(video: HTMLVideoElement): ReplayControl | null {
+  const link = video.closest('a');
+  const host = link ?? video.parentElement;
+  if (host === null) return null;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'replay';
+  button.textContent = REPLAY_GLYPH;
+  button.setAttribute('aria-label', replayLabel(video.getAttribute('aria-label')));
+
+  if (link === null) {
+    host.tabIndex = -1;
+    host.append(button);
+  } else {
+    const frame = document.createElement('div');
+    frame.className = 'replay-frame';
+    link.replaceWith(frame);
+    frame.append(link, button);
+  }
+  return attachReplay(video, button, host);
+}
+
 if (calm) {
   for (const video of document.querySelectorAll<HTMLVideoElement>('video[autoplay]')) {
     video.removeAttribute('autoplay');
     video.load();
+    mountReplay(video)?.offer();
   }
 }
 
@@ -27,20 +52,8 @@ const seen = new IntersectionObserver(
 );
 
 for (const video of document.querySelectorAll<HTMLVideoElement>('video[data-replay]')) {
-  const media = video.parentElement;
-  if (media === null) continue;
-
-  const frame = document.createElement('div');
-  frame.className = 'replay-frame';
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'replay';
-  button.textContent = REPLAY_GLYPH;
-  button.setAttribute('aria-label', replayLabel(video.getAttribute('aria-label')));
-
-  media.replaceWith(frame);
-  frame.append(media, button);
-  const control = attachReplay(video, button, media);
+  const control = mountReplay(video);
+  if (control === null) continue;
   if (calm) {
     control.offer();
   } else {

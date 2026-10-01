@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 import { replayLabel } from './replay-control';
 
 const PAGE = `
-  <section class="hero"><video id="hero" autoplay muted></video></section>
+  <div class="hero-media" id="hero-media"><video id="hero" autoplay muted aria-label="Sol behind Io"></video></div>
   <a class="sight-media" id="media" href="/app/v/AQAA/">
     <video id="clip" data-replay preload="none" aria-label="Orion deforming"></video>
   </a>
@@ -83,6 +83,21 @@ describe('replay.ts on the page', () => {
     FakeObserver.last?.reveal(clip);
     expect(play).toHaveBeenCalledTimes(1);
     expect(FakeObserver.last?.observed.has(clip)).toBe(false);
+  });
+
+  it('gives the hero no button by default', async () => {
+    await runScript(false);
+    expect(byId('hero-media').querySelector('button')).toBeNull();
+    expect(byId<HTMLVideoElement>('hero').hasAttribute('autoplay')).toBe(true);
+  });
+
+  it('under reduced motion gives the hero a button inside its frame, there being no link', async () => {
+    await runScript(true);
+    const button = byId('hero-media').querySelector('button');
+    expect(button?.hidden).toBe(false);
+    expect(button?.getAttribute('aria-label')).toBe(replayLabel('Sol behind Io'));
+    expect(byId('hero-media').tabIndex).toBe(-1);
+    expect(document.querySelectorAll('button')).toHaveLength(2);
   });
 
   it('under reduced motion plays nothing and offers the button', async () => {

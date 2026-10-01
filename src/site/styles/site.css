@@ -71,6 +71,7 @@
   --notfound-min: min(62svh, 35rem);
 
   --layer-masthead: 1;
+  --layer-replay: 1;
   --layer-skip-link: 2;
 
   --leading-body: 1.6;
@@ -426,8 +427,10 @@ video {
 .replay-frame {
   position: relative;
 }
+/* Layered so the hero's bottom fade, painted after it, cannot dim it. */
 .replay {
   position: absolute;
+  z-index: var(--layer-replay);
   inset-block-end: var(--space-2xs);
   inset-inline-end: var(--space-2xs);
   padding: var(--space-3xs);
