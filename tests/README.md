@@ -176,7 +176,8 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          full vitest and locally.
 site-claims.test.ts      The homepage against what it states: figures are
                          published tokens, never literals · every saved-view
-                         link decodes · the source and reference counts
+                         link decodes · no sight clip autoplays or
+                         preloads · the source and reference counts
                          pinned, the subsystem table summing to the first ·
                          only on-site links stay in the tab · every
                          author-year a citation-index label.

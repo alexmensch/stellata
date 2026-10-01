@@ -106,19 +106,27 @@ describe('attachReplay', () => {
     expect(button.hidden).toBe(false);
   });
 
-  it('appears when the browser refuses to autoplay', async () => {
+  it('plays nothing until started, then plays once', () => {
+    const clip = new FakeClip();
+    const control = attachReplay(clip, new FakeButton(), new FakeMedia());
+    expect(clip.plays).toBe(0);
+    control.start();
+    expect(clip.plays).toBe(1);
+  });
+
+  it('brings the button back when the browser refuses a start', async () => {
     const clip = new FakeClip(1);
     const button = new FakeButton();
-    attachReplay(clip, button, new FakeMedia());
+    attachReplay(clip, button, new FakeMedia()).start();
+    expect(button.hidden).toBe(true);
     await settle();
     expect(button.hidden).toBe(false);
   });
 
-  it('appears at once for a clip that ended before the script ran, without replaying it', () => {
+  it('offers the button over a clip that has not played, without playing it', () => {
     const clip = new FakeClip();
-    clip.ended = true;
     const button = new FakeButton();
-    attachReplay(clip, button, new FakeMedia());
+    attachReplay(clip, button, new FakeMedia()).offer();
     expect(button.hidden).toBe(false);
     expect(clip.plays).toBe(0);
   });

@@ -23,13 +23,26 @@ export interface Focusable {
   focus(): void;
 }
 
+export interface ReplayControl {
+  /** Plays the clip from where it stands; a refusal brings the button back. */
+  start(): void;
+  /** Shows the button over a clip that has not played, for a reader who starts it. */
+  offer(): void;
+}
+
 /** `refocus` takes the focus a press would otherwise drop, since the pressed button hides. */
-export function attachReplay(clip: ReplayableClip, button: ReplayButton, refocus: Focusable): void {
+export function attachReplay(clip: ReplayableClip, button: ReplayButton, refocus: Focusable): ReplayControl {
   const show = (): void => {
     button.hidden = false;
   };
   const hide = (): void => {
     button.hidden = true;
+  };
+  // Autoplay refused (a power-saving mode, a site setting) fires no event;
+  // the rejected play() is the only report of it.
+  const start = (): void => {
+    hide();
+    clip.play().catch(show);
   };
   hide();
   clip.addEventListener('play', hide);
@@ -37,16 +50,11 @@ export function attachReplay(clip: ReplayableClip, button: ReplayButton, refocus
   clip.addEventListener('ended', show);
   button.addEventListener('click', () => {
     if (button.matches(':focus')) refocus.focus();
-    hide();
     // play() on an ended clip restarts it from 0 itself. Seeking first races
     // that restart in Safari: play fires before the seek paints, and the clip
     // sits frozen on its last frame until it "ends" again.
     if (!clip.ended) clip.currentTime = 0;
-    clip.play().catch(show);
+    start();
   });
-
-  // Autoplay refused (a power-saving mode, a site setting) fires no event;
-  // the rejected play() is the only report of it.
-  if (clip.ended) show();
-  else clip.play().catch(show);
+  return { start, offer: show };
 }

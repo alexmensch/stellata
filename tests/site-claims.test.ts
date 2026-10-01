@@ -84,6 +84,21 @@ describe('every view the homepage links to', () => {
   });
 });
 
+// /src/site/README.md#one-script.
+describe('every sight clip waits to be seen', () => {
+  const clips = selectAll('video[data-replay]', HOME);
+
+  it('has at least one', () => {
+    expect(clips.length).toBeGreaterThan(0);
+  });
+
+  it.each(clips.map((video) => [String(video.properties?.src), video]))('%s', (_, video) => {
+    const { autoPlay, preload } = (video as Element).properties ?? {};
+    expect(autoPlay).toBeUndefined();
+    expect(preload).toBe('none');
+  });
+});
+
 describe('the derivations behind those figures', () => {
   it('counts the sources the application credits', () => {
     expect(creditedSourceCount(ROOT)).toBe(34);

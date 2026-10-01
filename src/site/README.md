@@ -142,19 +142,29 @@ signal to ask whether it wants to be part of the app instead.
 
 ### One script
 
-The exception is the sights' replay control, and it is shaped so the rule
-still holds for everything else: **the page without it is the complete
-page.** `replay.ts` builds each button itself, so a browser that runs no
-script shows no dead control, and nothing on the page waits on it.
+The exception is the sights' clips — when each starts, and its replay
+control — and it is shaped so the rule still holds for everything else:
+**the page without it is the complete page.** `replay.ts` builds each
+button itself, so a browser that runs no script shows no dead control, and
+nothing on the page waits on it.
 
-A clip opts in with a valueless **`data-replay`** on its `<video>`; the
-hero does not carry it. The script wraps the media anchor in a
-`.replay-frame` and puts the button beside the anchor, never inside it,
-since a button inside a link is invalid and would follow the link.
+**Only the hero autoplays.** A sight clip opts in with a valueless
+**`data-replay`** on its `<video>`, carries `preload="none"` and no
+`autoplay`, and the script starts it the first time half of it is on
+screen — so a clip below the fold costs no bytes until it is seen, and plays
+where the reader can see it. Without script, every sight shows its poster.
+`tests/site-claims.test.ts` fails a `data-replay` clip that autoplays or
+preloads. **Under `prefers-reduced-motion: reduce` nothing plays on its
+own:** the script strips the hero's `autoplay` and reloads it onto its
+poster, and offers each sight's replay button instead of starting it.
 
-The button shows whenever the clip is stopped — ended, paused, or refused
-autoplay, which a browser in a power-saving mode does silently and which
-only a rejected `play()` reports. A press replays the clip once from the
+The script wraps the media anchor in a `.replay-frame` and puts the button
+beside the anchor, never inside it, since a button inside a link is invalid
+and would follow the link.
+
+The button shows whenever the clip is stopped — ended, paused, or refused a
+start, which a browser in a power-saving mode does silently and which only
+a rejected `play()` reports. A press replays the clip once from the
 start, so the [Sights](#sights--the-media-and-the-link-it-carries) rule of no `loop` and under five seconds still holds.
 The button hides as it is pressed, so a press that held keyboard focus hands
 it to the media anchor rather than dropping it to the page.
@@ -304,18 +314,21 @@ To land a real capture:
    ```html
    <video src="/site/<name>.mp4" poster="/site/<name>.jpg"
           aria-label="…" width="…" height="…"
-          autoplay muted playsinline
+          preload="none" muted playsinline data-replay
           disableremoteplayback disablepictureinpicture></video>
    ```
 
    The last two keep the browser from drawing its own cast or
    picture-in-picture button over a clip that has no controls.
 
-   Four of those are load-bearing. `muted` and `playsinline` are what any
-   browser requires before it will start a clip unasked, and iOS needs the
-   second even so. `poster` is the frame that carries the page's largest
-   contentful paint and the one a browser refusing to autoplay shows
-   instead — so it is a real still, saved beside the clip. `aria-label` is
+   `preload="none"` and `data-replay` are what let the script start the
+   clip when it is seen ([One script](#one-script)); the hero alone carries
+   `autoplay` instead. Four more are load-bearing. `muted` and `playsinline`
+   are what any browser requires before it will start a clip unasked, and
+   iOS needs the second even so. `poster` is the frame shown until the clip
+   starts, and the one a browser refusing to start it shows instead — the
+   hero's is the page's largest contentful paint — so it is a real still,
+   saved beside the clip. `aria-label` is
    the clip's accessible name. The rendition **stops the build** on a clip
    missing the poster or the label (`scripts/site/README.md`).
 
@@ -346,7 +359,8 @@ the `<video>`, so a re-shoot replays the same take. Its `end` blob — or
 `start`, for a take that only moves the clock — is the row's link.
 
 The page's weight is its clips: each one (0.65–3.3 MB) outweighs any still,
-and its largest contentful paint is the hero's poster, not a sight. Smaller
+which is why only the hero's loads with the page and each sight's waits until
+it is seen. Its largest contentful paint is the hero's poster, not a sight. Smaller
 responsive variants and a `srcset` for the 2400 px stills trim the
 secondary cost.
 
