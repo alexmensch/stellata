@@ -39,9 +39,10 @@ cross-script policy and pointers.
   [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
   `src/client/milkyway/calibration/`. Not part of the build.
-- `release/` — `deploy.yml`'s release step: plans and cuts one tag +
-  GitHub release per version bump in a pushed range (a merged stack is
-  one push carrying several). Not part of `pnpm run build`.
+- `release/` — `deploy.yml`'s release steps: checks the live site after
+  `wrangler deploy`, then plans and cuts one tag + GitHub release per
+  version bump in a pushed range (a merged stack is one push carrying
+  several). Not part of `pnpm run build`.
 - `sid/` — SID registry tools: `sid:allocate` (the only writer of
   `data/sid/ledger.tsv`), DR-churn risk-set export, DR reconciliation
   classifier, and `sid:stamp` (stamps sids onto clouds.json /
@@ -52,6 +53,10 @@ cross-script policy and pointers.
   vantages and prints the differential table. Clocks only, never a
   pixel; launches only past the operator's `.perf-go` marker
   (`hooks/perf-guard.sh`). Not part of `pnpm test` or the build.
+- `site/` — what the public pages are derived from: the figures they
+  quote (read by `vite.env.ts` at config load), the markdown rendition
+  the site pass emits as `dist/index.md`, and the plugin that appends the
+  citation index to a page's JSON-LD (`site/README.md`).
 - `doc-figures/` — counts quoted in docs, generated from the committed
   `*-expected.json` snapshots (`pnpm run docs:figures`). Run it after any
   snapshot regeneration. Not part of the build.

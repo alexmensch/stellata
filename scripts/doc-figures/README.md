@@ -25,7 +25,7 @@ doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
                            UPDATE_BUILD_COUNTS=1 resolves before its git add,
                            and both list through presentFiles, so a symlink or
                            a deleted, unstaged file is skipped. docFiles takes
-                           *.html too (src/client/index.html). scanDocFigures
+                           *.html too (src/client/app/index.html). scanDocFigures
                            renders every doc against the snapshots — the one
                            scan the rewrite and tests/doc-figures.test.ts share;
                            scanCatalogueSize is the size scan below.
@@ -70,9 +70,9 @@ with the snapshot, so it is the shipped catalogue's size. Three surfaces:
 
 - **Markdown and HTML** quote it through a marker, usually `k2` (980k) or
   `sig2` (980,000).
-- **`CITATION.cff` and `public/llms.txt`** cannot hold a marker (a YAML string,
-  a file served verbatim), so `MARKERLESS_SURFACES` lets them quote the
-  current `sig2` / `k2` rounding unmarked, and nothing else.
+- **`CITATION.cff`** cannot hold a marker (a YAML string), so
+  `MARKERLESS_SURFACES` lets it quote the current `sig2` / `k2` rounding
+  unmarked, and nothing else.
 - **Code** never quotes it — a comment says "the full catalogue".
 
 `scanCatalogueSize` enforces all three. It reads every tracked text file

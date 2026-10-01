@@ -126,10 +126,10 @@ copy is stale from the next build.
 
 - **A surface a user reads** takes it live: `catalog.count` once the
   catalogue is loaded (the About modal), or `import.meta.env`
-  `.VITE_STAR_COUNT` before it is (the requires-WebGPU gate,
-  `index.html`). `vite.config.ts` reads that off the built catalogue's
-  own header, and it is empty on a checkout with no artifacts — so
-  every consumer needs a wording that survives having no number.
+  `.VITE_STAR_COUNT` before it is (the requires-WebGPU gate, both
+  documents, the homepage readout). It is always a number, so a surface
+  may state it exactly; where it comes from:
+  [Why each count is derived where it is](/scripts/site/README.md#why-each-count-is-derived-where-it-is).
 - **Prose cannot read anything**, so it rounds through a
   `build-catalog/recordCount` marker that `pnpm run docs:figures`
   rewrites; a code comment says "the full catalogue" instead
@@ -156,8 +156,8 @@ moving a README section into a new folder (the [Folder READMEs](/AGENTS.md#folde
   [Folder READMEs](/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit) is the read/update protocol and this
   section its commit-time leg — plus `docs/*.md`, `SCIENCE.md`, `AGENTS.md`
   and `RELEASING.md`.
-- `RELEASING.md` classifies version bumps: a user-visible behaviour change is
-  at minimum a minor bump even if the diff is small.
+- A rename that changes behaviour a user sees is a version bump:
+  [Version policy](/RELEASING.md#version-policy) decides which.
 - Numerical examples to recompute are arcseconds, AU and decimal precision.
 - **Pointers are checked; the basename search is not.** Cite a section as
   `<path>.md#<slug>` — a markdown link in `.md`, the bare token in code —

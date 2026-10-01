@@ -5,7 +5,7 @@ import {
   orbitRadius,
   poseChanged,
 } from './pose-change-pure';
-import { AU_PC, KM_PC } from '../astronomy-constants';
+import { AU_PC, KM_PC } from '../../astronomy-constants';
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 
@@ -57,17 +57,12 @@ describe('poseChanged — one rule at every vantage', () => {
     expect(poseChanged(prev, v(0, 0, r * 1.001), v(0, 0, 0), v(0, 1, 0))).toBe(true);
   });
 
-  // The defect this replaces: at the Moon the old absolute floor was 1e-9 pc
-  // = 30,857 km, seven times the camera's whole distance from the body, so a
-  // complete circuit never wrote the URL once.
-  it('records a full circuit of the Moon that the absolute floor swallowed', () => {
+  it('records a full circuit of the Moon, which an absolute floor would swallow', () => {
     const r = 4322 * KM_PC;
     const prev = parked(r);
     const quarterTurn = orbited(r, Math.PI / 2);
     expect(orbitRadius(quarterTurn, v(0, 0, 0))).toBeCloseTo(r, 20);
     expect(poseChanged(prev, quarterTurn, v(0, 0, 0), v(0, 1, 0))).toBe(true);
-    // 38° was the reported round-trip error; it is now four thousand times
-    // the threshold rather than under it.
     expect(poseChanged(prev, orbited(r, (38 * Math.PI) / 180), v(0, 0, 0), v(0, 1, 0)))
       .toBe(true);
   });
@@ -79,7 +74,7 @@ describe('poseChanged — one rule at every vantage', () => {
 
   // A translation of the whole pose IS a change here — the caller is what
   // makes a focal ride invisible, by handing in pose vectors already measured
-  // from the focal object (`url-state.ts` anchoredPose). Left to this module
+  // from the focal object (`../anchored-pose.ts`). Left to this module
   // it would read as motion, which is right for free flight and would be
   // per-frame URL churn for a ride.
   it('reads a translation of the whole pose as a change', () => {
@@ -100,9 +95,9 @@ describe('poseChanged — one rule at every vantage', () => {
       v(Math.sin(still), Math.cos(still), 0))).toBe(false);
   });
 
-  // No floor comes back: with cam ON the target there is no radius, so the
-  // move is its own scale and any motion counts — while stillness still reads
-  // as unchanged rather than as a divide by zero.
+  // With cam ON the target there is no radius, so the move is its own scale
+  // and any motion counts — while stillness reads as unchanged rather than
+  // as a divide by zero.
   it('answers a degenerate radius without a floor', () => {
     const zero = snapshot([0, 0, 0], [0, 0, 0], POLE);
     expect(poseChanged(zero, v(0, 0, 0), v(0, 0, 0), v(0, 1, 0))).toBe(false);
@@ -117,20 +112,14 @@ describe('divergesFromDefault — the encoder gate on the same scale', () => {
     expect(divergesFromDefault(v(0, 0, 0), DEFAULT_TGT, r)).toBe(false);
   });
 
-  // The second half of the same defect: a pan near the Moon moved the target
-  // by hundreds of km and the absolute 1e-3 pc band called it default, so the
-  // shared view came back re-centred on the body.
-  it('encodes a 500 km pan at the Moon that the absolute band elided', () => {
+  it('encodes a 500 km pan at the Moon, which an absolute band would elide', () => {
     const r = 4322 * KM_PC;
     const pan = v(500 * KM_PC, 0, 0);
     expect(divergesFromDefault(pan, DEFAULT_TGT, r)).toBe(true);
     expect(Math.abs(pan.x)).toBeLessThan(1e-3);
   });
 
-  // And the third: nothing focused inside the solar system left worldOffset
-  // within the old band of Sol, so the anchor never reached the wire and the
-  // receiver rebuilt the pose 1 AU away, inside the Sun.
-  it('encodes an Earth-distance anchor the absolute band read as Sol', () => {
+  it('encodes an Earth-distance anchor, which an absolute band would read as Sol', () => {
     const r = 4322 * KM_PC;
     const anchor = v(AU_PC, 0, 0);
     expect(divergesFromDefault(anchor, [0, 0, 0], r)).toBe(true);

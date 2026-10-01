@@ -16,10 +16,11 @@ here. Theoretical predictions and conjectured structures are excluded. The
 model's scope is bounded by what has been observed, currently enclosing
 a volume up to 6.5 million light years from our solar system.
 
-Try it at **[https://stellata.xyz](https://stellata.xyz)**.
+Try it at **[https://stellata.xyz](https://stellata.xyz)**, or open the
+model directly at **[stellata.xyz/app](https://stellata.xyz/app)**.
 
 ![Stellata — hero view](docs/screenshots/hero.png)
-<!-- view-url: https://stellata.xyz/?v=BIWEIgeSiYo3GAWyOXD4hDkH7eeAPeZqWj7Qlnk_TPbKDwGH1xI -->
+<!-- view-url: https://stellata.xyz/app/v/BIWEIgeSiYo3GAWyOXD4hDkH7eeAPeZqWj7Qlnk_TPbKDwGH1xI/ -->
 
 ## Highlights
 
@@ -74,7 +75,7 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
   variable-star rings.
 
 ![Stellata — chart mode](docs/screenshots/chart-mode.png)
-<!-- view-url: https://stellata.xyz/?v=BJbEoAQHthJ4Pautez9BzDA-B6R7ob4MQ6w9Q_pxP1o7YQGH1xIB -->
+<!-- view-url: https://stellata.xyz/app/v/BJbEoAQHthJ4Pautez9BzDA-B6R7ob4MQ6w9Q_pxP1o7YQGH1xIB/ -->
 
 - **Navigate, observe, warp.** Orbit any star (navigate), or land on
   it and look at the sky from its location (observe). Pick a second star
@@ -82,7 +83,8 @@ Try it at **[https://stellata.xyz](https://stellata.xyz)**.
   between the two stars with full physical scaling.
 
 - **Shareable views.** All settings plus camera pose pack into the
-  current URL, so any view can be bookmarked and shared.
+  current URL — `/app/v/<blob>/` — so any view can be bookmarked and
+  shared.
 
 ## Grounded in published science
 

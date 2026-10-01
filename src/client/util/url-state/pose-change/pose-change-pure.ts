@@ -12,21 +12,15 @@ export interface Vec3Like {
  * The smallest pose change that counts, as a ratio of the pose's own scale —
  * an angle in radians for a rotation and a fraction of the camera-to-target
  * distance for a translation, which are one number because `|Δcam| / r` is the
- * angle the move subtends at the orbit target.
- *
- * Any threshold carrying a length is wrong at all but one vantage, and the
- * camera reaches both lunar orbit and the Local Group in a session. Two bounds
- * fix this one: below ~1e-3 the round-trip error is sub-pixel on any display,
- * and it must stay well above the float32 wire's own 6e-8 resolution or a
- * settled camera would rewrite the URL forever.
- * See `README.md#what-counts-as-a-camera-move`.
+ * angle the move subtends at the orbit target. Its bounds:
+ * `README.md#what-counts-as-a-camera-move`.
  */
 export const POSE_CHANGE_EPS = 1e-4;
 
 /** The pose's only intrinsic length: camera to orbit target. Every threshold
  *  here is a fraction of it. OBSERVE has no orbit pivot but still carries one
  *  — the serialised look pin a parsec down the forward axis
- *  (`../../camera/observe/README.md`) — so this is non-zero in both modes. */
+ *  (`../../../camera/observe/README.md`) — so this is non-zero in both modes. */
 export function orbitRadius(cam: Vec3Like, tgt: Vec3Like): number {
   return Math.hypot(cam.x - tgt.x, cam.y - tgt.y, cam.z - tgt.z);
 }
@@ -54,7 +48,7 @@ export function divergesFromDefault(
  *
  * Pass pose vectors measured from the anchor the receiver rebuilds, not raw
  * local ones — a translation of both is motion here, and under a focal ride
- * that is motion the viewer cannot see (`url-state.ts` anchoredPose).
+ * that is motion the viewer cannot see (`../anchored-pose.ts`).
  */
 export function poseChanged(
   prev: Readonly<Float64Array>,
@@ -69,7 +63,7 @@ export function poseChanged(
   const dCam = Math.hypot(cam.x - prev[0], cam.y - prev[1], cam.z - prev[2]);
   const dTgt = Math.hypot(tgt.x - prev[3], tgt.y - prev[4], tgt.z - prev[5]);
   // A degenerate radius leaves the move as the only length in play: any motion
-  // counts, stillness still reads as unchanged, and no floor comes back.
+  // counts and stillness reads as unchanged, with no absolute floor.
   const scale = Math.max(orbitRadius(cam, tgt), dCam, dTgt);
   if (scale === 0) return false;
   return dCam > POSE_CHANGE_EPS * scale || dTgt > POSE_CHANGE_EPS * scale;

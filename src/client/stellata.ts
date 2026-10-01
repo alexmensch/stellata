@@ -61,7 +61,7 @@ import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemWiring } from './solar-system/solar-system-wiring';
 import { VirtualClock } from './solar-system/time/time';
-import { CAMERA_NEAR_PC } from './camera/timing';
+import { BOOT_CAMERA_POS_PC, CAMERA_NEAR_PC } from './camera/timing';
 import { EventBus } from './util/event-bus';
 import { fanOut } from './util/fan-out';
 import {
@@ -243,7 +243,7 @@ export class Stellata {
       CAMERA_NEAR_PC,
       CAMERA_FAR_PC,
     );
-    this.camera.position.set(0, 0, 30);
+    this.camera.position.set(...BOOT_CAMERA_POS_PC);
     this.roll.levelTo(this.camera, GALACTIC_NORTH_POLE_ICRS);
     this.cadence = new ClockCadence({
       camera: this.camera,

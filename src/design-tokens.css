@@ -1,0 +1,13 @@
+/* The palette and typeface both surfaces paint from — the app's chrome and
+   the public site. */
+
+:root {
+  --bg: #070912;
+  --bg-2: #0b1020;
+  --fg: #e6edf7;
+  --fg-dim: #8a94a8;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.18);
+  --accent: #7dd3fc;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", "Fira Code", Menlo, Consolas, monospace;
+}

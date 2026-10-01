@@ -1,8 +1,29 @@
 # Util — shared build-script helpers
 
 Cross-pipeline helpers that don't belong to any single per-pipeline
-folder. New entries land here only when at least two build scripts
-need the same thing — single-use helpers stay with their consumer.
+folder. New entries land here only when at least two consumers need the
+same thing — single-use helpers stay with their consumer.
+
+- `citation-index-pure.ts` — the parser for `data/papers/index.md`
+  entries (key, label, title, reference line, copy, notes, claims rows)
+  and `manifest.json` pins. Read by `site/site-metrics.ts`, whose
+  reference counts come off the entries, by `site/json-ld-citations.ts`,
+  which publishes each entry to the homepage's JSON-LD, and by
+  `tests/citation-index.test.ts`, which holds the index to its rules
+  ([Cited papers](/data/papers/README.md#what-enforces-it)).
+
+- `parse-html.ts` — the one HTML parse (`parseHtml`, a HAST tree from
+  `rehype-parse`) and `textOf`, an element's text whitespace-collapsed.
+  Every reader of a page goes through it rather than a pattern: the
+  `site/` derivations, `release/post-deploy-pure.ts` reading the live
+  pages, and the site suites.
+
+- `escape-regexp.ts` (+ test) — `escapeRegExp(text)`, text made literal
+  inside a `RegExp` source, backslash included. Every pattern built from
+  page text or a figure goes through it — `citation-index-pure.ts`'s page
+  locators, `doc-figures/doc-figures-pure.ts`'s source and key patterns,
+  the site suites; a hand-rolled character class beside it is the defect
+  CodeQL's `js/incomplete-sanitization` flags.
 
 - `astronomy_constants.py` — Python mirror of
   `src/client/util/astronomy-constants.ts`. `J2000_JD`,

@@ -1,5 +1,7 @@
 // Parsing for data/papers/index.md entries and manifest.json copies. Rules: /data/papers/README.md#cited-papers.
 
+import { escapeRegExp } from './escape-regexp.ts';
+
 export interface ClaimRow {
   line: number;
   claim: string;
@@ -13,6 +15,9 @@ export interface IndexEntry {
   key: string;
   line: number;
   label: string;
+  title: string;
+  /** The line under the heading: venue, identifiers, links. */
+  reference: string;
   copy: string;
   notes: string[];
   rows: ClaimRow[];
@@ -26,8 +31,9 @@ export interface PinnedCopy {
 }
 
 const ANCHOR = /^<a id="([^"]+)"><\/a>$/;
-const HEADING = /^### (.+?) — /;
+const HEADING = /^### (.+?) — (.+)$/;
 const COPY = /^- \*\*Copy:\*\* (.*)$/;
+const REFERENCE = /^(?!### |- \*\*|\| )\S/;
 const NOTE = /^- \*\*Note:\*\* (.*)$/;
 const NOT_HELD = /^(not held|unobtainable)\b/;
 const TABLE_ROW = /^\| (?!Claim \|)/;
@@ -38,9 +44,13 @@ export function parseIndex(markdown: string): IndexEntry[] {
   const lines = markdown.split('\n');
   lines.forEach((text, i) => {
     const anchor = ANCHOR.exec(text);
-    if (anchor) entries.push({ key: anchor[1], line: i + 1, label: HEADING.exec(lines[i + 1] ?? '')?.[1] ?? '', copy: '', notes: [], rows: [] });
+    if (anchor) {
+      const heading = HEADING.exec(lines[i + 1] ?? '');
+      entries.push({ key: anchor[1], line: i + 1, label: heading?.[1] ?? '', title: heading?.[2] ?? '', reference: '', copy: '', notes: [], rows: [] });
+    }
     const entry = entries[entries.length - 1];
     if (!entry || anchor) return;
+    if (entry.reference === '' && entry.copy === '' && REFERENCE.test(text)) entry.reference = text;
     const copy = COPY.exec(text);
     if (copy) entry.copy = copy[1];
     const note = NOTE.exec(text);
@@ -197,8 +207,6 @@ export function lineText(text: string): CopyText {
 
 export const unpaginatedText = (text: string): CopyText => ({ kind: 'unpaginated', flat: matchable(text) });
 
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
-
 const printsPage = ({ edge }: PreparedPage, token: string): boolean =>
   new RegExp(`(?<![\\w.])${escapeRegExp(token)}(?![\\w])`).test(edge);
 
@@ -222,7 +230,7 @@ export function passageDefect(row: ClaimRow, copy: CopyText): string | null {
     if (missing !== undefined) return notInCopy(missing);
     const wanted = lineLocators(row.page);
     if (!wanted.size) return `no line locator for a ReadMe copy: "${row.page}"`;
-    const hits = offsets(copy.flat, fragments[0]).map((at) => copy.lineStarts.findLastIndex((start) => start <= at) + 1);
+    const hits = offsets(copy.flat, fragments[0]).map((at) => copy.lineStarts.filter((start) => start <= at).length);
     return hits.some((n) => wanted.has(n)) ? null : `"${row.page}", but the passage is at l. ${hits.slice(0, 3).join(', ')}`;
   }
   const pagesWith = (fragment: string): number[] => [

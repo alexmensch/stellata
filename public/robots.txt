@@ -1,48 +1,9 @@
 # Stellata — https://stellata.xyz
-# Full crawl access for classic search engines and AI/LLM crawlers.
+# One group for every crawler: a crawler with a group of its own reads only
+# that group, so a named group would hide the Content-Signal line from it.
 
 User-agent: *
-Allow: /
-
-# Classic search
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: DuckDuckBot
-Allow: /
-
-User-agent: Applebot
-Allow: /
-
-# AI / LLM crawlers — opt in to citation and answer-engine indexing
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: Claude-Web
-Allow: /
-
-User-agent: GPTBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: OAI-SearchBot
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: Perplexity-User
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: Applebot-Extended
+Content-Signal: search=yes,ai-input=yes,ai-train=no
 Allow: /
 
 Sitemap: https://stellata.xyz/sitemap.xml

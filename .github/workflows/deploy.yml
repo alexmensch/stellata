@@ -104,6 +104,10 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # Ahead of tagging, so a deploy that answers wrongly is never released.
+      - name: Post-deploy check
+        run: pnpm exec tsx scripts/release/post-deploy-check.ts
+
       - name: Tag and release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

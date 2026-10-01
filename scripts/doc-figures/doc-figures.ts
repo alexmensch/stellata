@@ -21,7 +21,7 @@ const SPINE_ROWS_KEY = 'inherited-spine/rows';
 const SIZE_RANGE_SLACK = 0.05;
 
 /** Surfaces a marker cannot sit in (YAML strings, a plain-text file served as is): their catalogue size must equal the current rounding. */
-export const MARKERLESS_SURFACES = ['CITATION.cff', 'public/llms.txt'];
+export const MARKERLESS_SURFACES = ['CITATION.cff'];
 
 export const SIZE_EXEMPTIONS_FILE = 'scripts/doc-figures/catalogue-size-exemptions.txt';
 const SIZE_SCAN_KINDS = ['.md', '.html', '.ts', '.js', '.py', '.css', '.cff', '.txt'];

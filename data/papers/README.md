@@ -41,15 +41,20 @@ in markdown; `Zucker 2020 (/data/papers/index.md#zucker2020)` — or
 docstring or data file. The label is the entry heading's text before the dash:
 the first author's surname and the year, never co-authors or "et al.", with a
 letter (`Tomasko 2008a`, `2008b`) only where two entries would otherwise share
-one. The full author list, journal, volume, DOI, arXiv ID, bibcode and
-identifier URLs live only in the entry; the citing text adds just the in-paper
-locator that explains the claim (Table A1, eq. 2, Sect. 2.7).
+one. The title, journal, volume, DOI, arXiv ID, bibcode and identifier URLs
+live only in the entry; the citing text adds just the in-paper locator that
+explains the claim (Table A1, eq. 2, Sect. 2.7). The homepage's JSON-LD
+citation list is built from the entries
+([The JSON-LD citation list](/src/site/README.md#the-json-ld-citation-list)), so an entry's
+heading and reference line are published as written.
 
 Outside the rule:
 
-- **Public copy** — `src/client/index.html`, `public/`, `CITATION.cff` and
-  strings rendered to users keep their visible DOI links until the index is
-  published as a page they can link to.
+- **Public copy** — `src/client/app/index.html`, `src/site/`, `public/`,
+  `CITATION.cff` and strings rendered to users keep their visible DOI links
+  until the index is published as a page they can link to. This list is the
+  one authority on what counts as public copy, and `PUBLIC_COPY` in
+  `tests/citation-index.test.ts` mirrors it.
 - **Data provenance** — dataset DOIs (Zenodo, Dataverse, VizieR dataset DOIs)
   and the URLs a file was downloaded from. They say where bytes came from, not
   which paper backs a claim.

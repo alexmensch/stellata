@@ -1,0 +1,79 @@
+import { defineConfig, type Plugin } from 'vite';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { indexCitations } from './scripts/site/json-ld-citations.ts';
+import { LLMS_TXT_PATH, builtLlmsTxt } from './scripts/site/llms-txt.ts';
+import { markdownRendition } from './scripts/site/markdown-rendition.ts';
+import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
+import { withoutCaptureComments } from './scripts/site/shipped-html-pure.ts';
+import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
+import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
+
+const figures = buildFigures(import.meta.dirname);
+publishBuildEnv(figures);
+
+const SITE_DIR = resolve(import.meta.dirname, 'src/site');
+
+const ROSTER_FILES = new Set(SITE_PAGES.map((page) => resolve(SITE_DIR, page.source)));
+
+function pageMetaFill(): Plugin {
+  return {
+    name: 'stellata:page-meta',
+    transformIndexHtml: {
+      order: 'pre',
+      handler: (html, ctx) => (ROSTER_FILES.has(ctx.filename) ? fillPageMeta(html, ctx.filename) : html),
+    },
+  };
+}
+
+function captureCommentStrip(): Plugin {
+  return { name: 'stellata:capture-comments', apply: 'build', transformIndexHtml: withoutCaptureComments };
+}
+
+/** src/site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages. */
+function markdownRenditions(): Plugin {
+  return {
+    name: 'stellata:markdown-renditions',
+    apply: 'build',
+    generateBundle() {
+      for (const page of SITE_PAGES) {
+        const rendition = renditionPath(page);
+        if (rendition === null) continue;
+        this.emitFile({
+          type: 'asset',
+          fileName: rendition.slice(1),
+          source: markdownRendition(readFileSync(resolve(SITE_DIR, page.source), 'utf8'), figures),
+        });
+      }
+      this.emitFile({ type: 'asset', fileName: LLMS_TXT_PATH.slice(1), source: builtLlmsTxt(SITE_DIR) });
+    },
+  };
+}
+
+export default defineConfig(() => ({
+  base: '/',
+  plugins: [
+    figureSubstitution(figures),
+    pageMetaFill(),
+    captureCommentStrip(),
+    indexCitations(import.meta.dirname),
+    markdownRenditions(),
+  ],
+  root: SITE_DIR,
+  // Both of these belong to the app pass, which runs first. Reversing
+  // either wipes dist/ — src/site/README.md#the-build-seam.
+  publicDir: false,
+  build: {
+    outDir: resolve(import.meta.dirname, 'dist'),
+    emptyOutDir: false,
+    target: BUILD_TARGET,
+    rollupOptions: {
+      input: [...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) =>
+        resolve(SITE_DIR, source),
+      ),
+    },
+  },
+  server: {
+    port: 5174,
+  },
+}));

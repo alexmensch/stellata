@@ -13,14 +13,15 @@ type LegacyPresetName = 'naked-eye' | 'binoculars' | 'all';
 import { type DetailLevel, DETAIL_LEVELS, DETAIL_RANK } from '../../scene/declutter/scene-elements';
 import { POI_MAX_COUNT } from '../../poi/poi-store';
 import { sliderToDist, distToSlider, SLIDER_STEPS } from '../../camera/controls/controls';
+import { BOOT_CAMERA_POS_PC } from '../../camera/timing';
 import { setUnit, getUnit, onUnitChange } from '../../ui/distance-util';
 import { isLive } from '../../solar-system/time/time';
 import type { SidResolver } from '../sid-resolver';
 import { isHardTarget, targetListsEqual, type Target, type TargetKind } from '../../camera/focus/focus-target';
-import { buildSharePath, pickShareBlob } from './share-path-pure';
+import { APP_PATH, buildSharePath, pickShareBlob } from './share-path-pure';
 import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
-} from './pose-change-pure';
+} from './pose-change/pose-change-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import { ORB_LEVEL_UP, holdOrbitPose, wirePose } from './orbit-pose/orbit-pose';
 import type {
@@ -42,11 +43,11 @@ const DEBOUNCE_MS = 1000;
 const SCHEMA_VERSION = 4;
 // Quantised-scalar slots only — `fov` in degrees and `ev` in stops, each far
 // coarser than this. Pose vectors carry no absolute threshold at all; they go
-// through `pose-change-pure.ts`.
+// through `pose-change/pose-change-pure.ts`.
 const SCALAR_EPS = 1e-3;
 
 // Default values that the encoder uses to decide whether to omit a field.
-const DEFAULT_CAM: [number, number, number] = [0, 0, 30];
+const DEFAULT_CAM: [number, number, number] = [...BOOT_CAMERA_POS_PC];
 const DEFAULT_TGT: [number, number, number] = [0, 0, 0];
 // The `up` slot carries `camera.up` (/src/client/camera/controls/input/README.md#roll-authority).
 // A galactic-LEVEL camera omits the field, and the receiver's own
@@ -820,8 +821,8 @@ export function currentStateOf(stellata: Stellata, idMaps: IdMaps): DecodedView 
   const t = encodeTgt;
   const u = encodeUp;
   const orbitFrame = wirePose(stellata, focused, c, t, u);
-  // README.md#what-counts-as-a-camera-move owns every gate below — each a
-  // fraction of the orbit radius, none a distance.
+  // pose-change/README.md#what-counts-as-a-camera-move owns every gate
+  // below — each a fraction of the orbit radius, none a distance.
   //
   // Don't collapse this to one predicate: vec3SubMaskField.isPresent re-checks at
   // strict equality, and that inner layer is what keeps sub-µpc floating-origin
@@ -892,24 +893,16 @@ function targetIdxOf(idMaps: IdMaps, kind: TargetKind, localIndex: number): numb
   return kind === 'planet' ? idMaps.planetTargetIndexOf(localIndex) : localIndex;
 }
 
-// Single source of truth for "park the camera at the mode's default
-// pose" — used by the worldOffset branch (after origin recentre, before
-// any explicit cam/tgt overrides) and the observe-enter branch (when no
-// explicit cam came on the wire). Both routed through `defaultCamForMode`
-// so the cam-omission invariant lives in one place.
-function setCameraToDefault(stellata: Stellata, mode: 'navigate' | 'observe' | undefined): void {
-  const d = defaultCamForMode(mode);
-  stellata.camera.position.set(d[0], d[1], d[2]);
-}
-
 // The one route into focus for every decoded blob — README.md, the
 // applyFocusTarget bullet.
 /** The frame-relative half of the pose — `cam` and `tgt`, where the blob
- *  carries them. True when either landed. */
+ *  carries them, and OBSERVE's elided `cam` as the focal origin it stands for.
+ *  True when either landed. */
 function seatPose(stellata: Stellata, view: DecodedView): boolean {
-  if (view.cam) stellata.camera.position.set(...view.cam);
+  const cam = view.cam ?? (view.mode === 'observe' ? defaultCamForMode(view.mode) : undefined);
+  if (cam) stellata.camera.position.set(...cam);
   if (view.tgt) stellata.controls.target.set(...view.tgt);
-  return view.cam !== undefined || view.tgt !== undefined;
+  return cam !== undefined || view.tgt !== undefined;
 }
 
 /** Re-seat the camera in a local frame that only existed once a deferred
@@ -938,20 +931,13 @@ function applyFocusTarget(stellata: Stellata, target: Target, snap: boolean): vo
   else stellata.focus.flyTo(target, { animate: false });
 }
 
-/** OBSERVE's enter leg plus the chart flag it gates. The origin pre-snap
- *  precedes `controls.update()` so `lookAt` resolves the quaternion from the
- *  focal origin, not the orbit position the focus left; `setMode` preserves it
- *  when it pins position again. Exactly one of its two call sites runs it: the
- *  deferred focus callback while a focus is pending, the synchronous tail
- *  otherwise. */
+/** OBSERVE's enter leg plus the chart flag it gates. `setMode` keeps the
+ *  quaternion the seated pose resolved. Exactly one of its two call sites runs
+ *  it: the deferred focus callback while a focus is pending, the synchronous
+ *  tail otherwise. */
 function restoreObserve(stellata: Stellata, view: DecodedView): void {
   if (view.mode !== 'observe') return;
   if (!isHardTarget(stellata.focus.getFocusedTarget())) return;
-  if (view.cam === undefined) {
-    setCameraToDefault(stellata, 'observe');
-    stellata.controls.update();
-    stellata.roll.adoptFromCamera(stellata.camera);
-  }
   stellata.observe.setMode('observe', { animate: false });
   if (view.chart) stellata.filters.setFilter({ chart: true });
 }
@@ -962,7 +948,8 @@ function restoreObserve(stellata: Stellata, view: DecodedView): void {
 //     explicit overrides layer on top
 //   - up before focus/orbit, since focusStar/setOrbitTarget call
 //     controls.update() which reads camera.up
-//   - cam/tgt overwrite whatever focusStar/setOrbitTarget computed
+//   - cam/tgt overwrite whatever focusStar/setOrbitTarget computed, all of
+//     it before the one update + adopt — README.md, the seat-the-whole-pose bullet
 //   - mode last, because the observe snap reads the camera quaternion
 //     just set by controls.update(position, target, up)
 export function applyDecodedView(
@@ -1104,7 +1091,7 @@ export function applyDecodedView(
   // junk position. view.cam / view.tgt below override when present.
   if (view.worldOffset) {
     stellata.floatingOrigin.recenterTo(new THREE.Vector3(...view.worldOffset));
-    setCameraToDefault(stellata, view.mode);
+    stellata.camera.position.set(...defaultCamForMode(view.mode));
     stellata.controls.target.set(DEFAULT_TGT[0], DEFAULT_TGT[1], DEFAULT_TGT[2]);
     controlsDirty = true;
   }
@@ -1205,20 +1192,16 @@ function writeUrl(stellata: Stellata, idMaps: IdMaps): void {
   // and is also passed to encodeBlobWithMask so the encoder doesn't
   // re-walk FIELDS_V4.
   const mask = computePresence(view);
-  const path = mask === 0 ? '/' : buildSharePath(encodeBlobWithMask(view, mask));
+  const path = mask === 0 ? APP_PATH : buildSharePath(encodeBlobWithMask(view, mask));
   if (path !== location.pathname + location.search) {
     replacePathKeepHash(path);
   }
 }
 
-// Nothing decodable in the URL (bogus path, stray query, or a `/v/<blob>/`
-// whose blob won't decode) → strip the address bar back to bare `/`. The
-// SPA not_found_handling already served index.html for any path; this is
-// the client half that keeps the bar off junk the user can't act on,
-// rather than leaving the unmatched path sitting there.
+// README.md#transport--canonical-path-vs-legacy-query.
 function resetJunkUrl(): void {
-  if (location.pathname !== '/' || location.search !== '') {
-    replacePathKeepHash('/');
+  if (location.pathname !== APP_PATH || location.search !== '') {
+    replacePathKeepHash(APP_PATH);
   }
 }
 
@@ -1231,7 +1214,7 @@ export interface AppliedUrl {
 }
 
 export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
-  const { blob, legacyQueryForm } = pickShareBlob(location.pathname, location.search);
+  const { blob, legacyTransport } = pickShareBlob(location.pathname, location.search);
   if (!blob) {
     resetJunkUrl();
     return { applied: false, focusPending: null };
@@ -1247,7 +1230,7 @@ export function applyFromUrl(stellata: Stellata, idMaps: IdMaps): AppliedUrl {
   const focusPending = applyDecodedView(stellata, decoded, idMaps);
   // Deferred past the state events the apply itself fires, which would
   // otherwise schedule their own write on top.
-  if (legacyQueryForm) {
+  if (legacyTransport) {
     setTimeout(() => writeUrl(stellata, idMaps), DEBOUNCE_MS);
   }
   return { applied: true, focusPending };
@@ -1335,8 +1318,8 @@ export function startUrlSync(stellata: Stellata, idMaps: IdMaps): void {
       return;
     }
     // Steady-state path: one scale-free comparison against the snapshot
-    // (`pose-change-pure.ts`). No allocations on the no-change path — this
-    // used to be 10+ string allocations per frame from a toFixed(3)×9 hash.
+    // (`pose-change/pose-change-pure.ts`). No allocations on the no-change
+    // path: this runs every frame.
     if (poseChanged(lastCam, frameCam, frameTgt, frameUp)) {
       snapshotCam(lastCam, frameCam, frameTgt, frameUp);
       changed = true;

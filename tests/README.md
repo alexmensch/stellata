@@ -174,6 +174,35 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in build-catalog's
                          full vitest and locally.
+site-claims.test.ts      The homepage against what it states: figures are
+                         published tokens, never literals · every saved-view
+                         link decodes, and each sight's two anchors share
+                         its take's end view · no sight clip autoplays or
+                         preloads · every still's srcset widths exist ·
+                         the source and reference counts
+                         pinned, the subsystem table summing to the first ·
+                         only on-site links stay in the tab, on both pages ·
+                         the 404 page's masthead and footer are the
+                         homepage's ·
+                         theme-color and the manifest colours are --bg ·
+                         every author-year a citation-index label.
+                         /src/site/README.md#numbers-in-copy.
+site-css-rules.test.ts   The public stylesheet answers to its container and
+                         to the reader's font size, never to a viewport
+                         measurement, and paints nothing it has not
+                         tokenised. Groups: breakpoints · hardcoded values ·
+                         measure · new-tab announcement · cascade order · the
+                         filled pill · logical properties. Scans the file
+                         with comments stripped, so prose naming a property
+                         cannot register as CSS.
+                         /src/site/styles/README.md#house-style,
+                         /src/site/styles/README.md#responsiveness-has-no-breakpoints.
+site-dev-routing.test.ts The dev server's routing table held against the
+                         deploy's: both legacy share transports 301,
+                         /app/** gets the application document, the root
+                         gets the homepage, everything else 404s. Pairs
+                         with src/worker.test.ts, which pins the same
+                         table on the production side.
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.
@@ -221,9 +250,6 @@ webgpu-import-boundary.test.ts
 doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
                          resolution and the scanned corpus, shared by
                          doc-pointer-resolution.test.ts and
-                         citation-index.test.ts.
-citation-index-pure.ts   Not a test — parsing of data/papers/index.md
-                         entries and manifest.json pins, for
                          citation-index.test.ts.
 git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
                          repo's git runner and one-file commit, for suites

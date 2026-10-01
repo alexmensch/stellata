@@ -21,10 +21,10 @@ orbit-pose.ts                ORB for the current focus as the codec reads
 **ORB is not a `coordSphere` value.** The sky frames (galactic / ecliptic /
 equatorial) are what that field carries; ORB — the focused object's own
 orbital plane — and the orbit lock over it are held by the attitude
-instrument itself (`../../../attitude/orbit-frame/README.md`). So a view with
-ORB armed used to encode whichever sky frame was selected *before* ORB was
-picked, and the lock encoded nothing at all: the link came back reading
-against the wrong datum, with the camera no longer riding the orbit.
+instrument itself (`../../../attitude/orbit-frame/README.md`). Encoded through
+`coordSphere` alone, a view with ORB armed would carry whichever sky frame
+was selected *before* ORB, and the lock nothing at all: the link would come
+back reading against the wrong datum, with the camera off the orbit.
 
 Both ride **zero-payload presence bits** — 27 (ORB armed) and 28 (lock
 engaged) — because each is reconstructible from the focus the blob already
@@ -83,7 +83,7 @@ cost is no bytes at all, since 28 already opened the mask group.
 `controls.target`, so the wire does the same: `cam` becomes `tgt` plus the
 offset's ORB components, `tgt` stays anchored ICRS, and `up` is ORB
 components. `|cam − tgt|` survives, which keeps every scale-relative test in
-`../pose-change-pure.ts` — the move threshold and the default elision — true
+`../pose-change/pose-change-pure.ts` — the move threshold and the default elision — true
 of the rotated pose unchanged.
 
 **Level means level on ORB.** A bit-29 link omits `up` when the view is level
@@ -134,7 +134,7 @@ So the restore:
 checks `posePending()`; the change detector re-baselines on the frame a hold
 ends). The live pose is the stand-in, the address bar already holds the link,
 and the seat is the restore's own move rather than the user's — which is what
-keeps a bare `/` first load at `/`.
+keeps a bare `/app` first load at `/app`.
 
 The holder, its render-gate hold and the user-input veto are
 [A pose held for ORB](../../../attitude/orbit-frame/README.md#a-pose-held-for-orb). A focus with no ORB

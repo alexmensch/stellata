@@ -5,7 +5,8 @@ number of seconds, with the simulation clock under the take, and holds the
 render gate open for the length of it. It exists so a video of the model is
 a *take* — re-shoot it after a copy tweak, a palette change or a renderer
 change and get the same move back — rather than a mouse flight nobody can
-reproduce. The marketing site's sight slots are what it feeds.
+reproduce. The homepage's sight slots ([Sights](/src/site/README.md#sights--the-media-and-the-link-it-carries)) are
+what it feeds.
 
 ## Files in this area
 
@@ -138,8 +139,8 @@ Equal time per decade is equal time per octave of apparent size.
 
 The default ease is the quintic smootherstep the arrival profile lands on
 ([Profile](/src/client/camera/arrival/README.md#profile) there), which has zero velocity *and* zero acceleration at both
-ends: the camera is genuinely still on the first and last frames, which is
-what makes a loop cut cleanly.
+ends: the camera is genuinely still on the first and last frames, so a clip
+opens cleanly and settles on the frame its poster shows.
 
 ## What the clock does
 

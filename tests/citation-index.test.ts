@@ -21,7 +21,7 @@ import {
   STATUSES,
   uncitedIdentifiers,
   unpaginatedText,
-} from './citation-index-pure';
+} from '../scripts/util/citation-index-pure';
 import { extractPointers, pointerCorpus, resolveDocPath } from './doc-pointer-pure';
 
 const ROOT = resolve(__dirname, '..');
@@ -30,7 +30,7 @@ const INDEX = join(PAPERS, 'index.md');
 const STORE = join(PAPERS, 'pdf');
 const ROOTED_INDEX = '/data/papers/index.md';
 const IN_CI = Boolean(process.env.CI);
-const PUBLIC_COPY = ['public/', 'src/client/index.html', 'CITATION.cff'];
+const PUBLIC_COPY = ['public/', 'src/client/app/index.html', 'src/site/', 'CITATION.cff'];
 const DATA_TABLE = /^data\/.*\.(tsv|csv)$/;
 
 const entries = parseIndex(readFileSync(INDEX, 'utf-8'));

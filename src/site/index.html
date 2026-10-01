@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base target="_blank" />
+    <title>Stellata: Explore the universe in 3D</title>
+
+    <meta
+      name="description"
+      content="An open 3D model of the universe you can move through, built entirely from published astronomical science and measurements, as your eye would see it."
+    />
+    <link rel="canonical" href="https://stellata.xyz/" />
+    <link rel="alternate" type="text/markdown" href="/index.md" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="author" content="Alex Marshall" />
+    <meta name="theme-color" content="#070912" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Stellata" />
+    <meta property="og:title" content="%PAGE_TITLE%" />
+    <meta property="og:description" content="%PAGE_DESCRIPTION%" />
+    <meta property="og:url" content="https://stellata.xyz/" />
+    <meta property="og:image" content="https://stellata.xyz/og-image.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Stellata: a science-based 3D model of the universe, rendered as your eyes would see it." />
+    <meta property="og:locale" content="en_GB" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="%PAGE_TITLE%" />
+    <meta name="twitter:description" content="%PAGE_DESCRIPTION%" />
+    <meta name="twitter:image" content="https://stellata.xyz/og-image.jpg" />
+    <meta name="twitter:image:alt" content="Stellata: a science-based 3D model of the universe, rendered as your eyes would see it." />
+
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <link rel="stylesheet" href="./styles/site.css" />
+    <link rel="preload" as="image" href="/site/hero.jpg" fetchpriority="high" />
+    <script type="module" src="./replay.ts"></script>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Person",
+            "@id": "https://alxm.me/#person",
+            "name": "Alex Marshall",
+            "url": "https://alxm.me",
+            "sameAs": [
+              "https://github.com/alexmensch",
+              "https://www.linkedin.com/in/awmars"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://stellata.xyz/#website",
+            "name": "Stellata",
+            "url": "https://stellata.xyz/",
+            "inLanguage": "en",
+            "publisher": { "@id": "https://alxm.me/#person" }
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://stellata.xyz/#webapp",
+            "name": "Stellata",
+            "alternateName": "Stellata Star Catalog",
+            "url": "https://stellata.xyz/app",
+            "image": "https://stellata.xyz/og-image.jpg",
+            "description": "A 3D model of the real universe in your browser: planets, stars, dust and galaxies in true colour, exactly as your eyes would see them. Nothing invented.",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Any (WebGPU-capable browser)",
+            "browserRequirements": "Requires WebGPU",
+            "inLanguage": "en",
+            "isAccessibleForFree": true,
+            "author": { "@id": "https://alxm.me/#person" },
+            "creator": { "@id": "https://alxm.me/#person" },
+            "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://stellata.xyz/#webpage",
+            "url": "https://stellata.xyz/",
+            "name": "%PAGE_TITLE%",
+            "description": "%PAGE_DESCRIPTION%",
+            "inLanguage": "en",
+            "isPartOf": { "@id": "https://stellata.xyz/#website" },
+            "about": { "@id": "https://stellata.xyz/#webapp" },
+            "mainEntity": { "@id": "https://stellata.xyz/#webapp" },
+            "primaryImageOfPage": "https://stellata.xyz/og-image.jpg",
+            "citation": [
+              {
+                "@type": "SoftwareSourceCode",
+                "name": "Stellarium (constellation lines)",
+                "author": "The Stellarium developers",
+                "url": "https://github.com/Stellarium/stellarium"
+              },
+              {
+                "@type": "Dataset",
+                "name": "IAU Catalog of Star Names",
+                "author": "IAU Division C Working Group on Star Names",
+                "datePublished": "2025",
+                "url": "https://exopla.net/iau-wgsn-catalogs/"
+              },
+              {
+                "@type": "Dataset",
+                "name": "Sixth Catalog of Orbits of Visual Binary Stars (ORB6)",
+                "author": "U.S. Naval Observatory",
+                "url": "https://www.astro.gsu.edu/wds/orb6.html"
+              },
+              {
+                "@type": "Dataset",
+                "name": "Planetary Satellite Mean Elements",
+                "author": "JPL Solar System Dynamics",
+                "url": "https://ssd.jpl.nasa.gov/sats/elem/"
+              },
+              {
+                "@type": "Dataset",
+                "name": "NASA Planetary Fact Sheets",
+                "author": "NASA Space Science Data Coordinated Archive",
+                "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/"
+              },
+              {
+                "@type": "Dataset",
+                "name": "Voyager 1 and 2 heliopause crossings",
+                "author": "NASA / JPL",
+                "url": "https://science.nasa.gov/mission/voyager/"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main" target="_self">Skip to content</a>
+
+    <div class="banner">
+      <header class="masthead" data-overlay>
+        <div class="[ cluster ] [ wrapper ]" data-state="repel">
+          <a class="wordmark" href="/" target="_self" aria-current="page">Stellata</a>
+          <nav class="cluster" aria-label="Primary">
+            <a href="/app" target="_self">Launch the model&nbsp;<span aria-hidden="true">→</span></a>
+          </nav>
+        </div>
+      </header>
+
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="hero-media">
+          <video
+            src="/site/hero.mp4"
+            poster="/site/hero.jpg"
+            aria-label="Sol passing behind Io and Jupiter, the exposure recovering onto the Milky Way behind them"
+            width="1920"
+            height="1080"
+            autoplay
+            muted
+            playsinline
+            disableremoteplayback
+            disablepictureinpicture
+          ></video>
+        </div>
+        <div class="hero-copy">
+          <div class="[ flow ] [ wrapper ]">
+            <h1 id="hero-heading">A model of the universe anchored in science</h1>
+            <p class="lead">
+              Explore %VITE_STAR_COUNT% astronomical objects in 3D, all positioned
+              and drawn according to the latest astrometric data.
+            </p>
+            <p class="lead">
+              True colour, real-time HDR rendering simulates your eyes' perception
+              from every vantage.
+            </p>
+            <div class="cluster">
+              <a class="pill" data-primary href="/app" target="_self">Launch Stellata</a>
+              <span class="aside">
+                Runs in your browser, no installation required
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <main id="main">
+      <div class="[ readout-band ] [ region ] [ wrapper ]">
+        <dl class="readout">
+          <div class="readout-cell">
+            <dt class="label">Catalogued objects</dt>
+            <dd class="readout-value">%VITE_STAR_COUNT%</dd>
+          </div>
+          <div class="readout-cell">
+            <dt class="label">Sources credited</dt>
+            <dd class="readout-value">%VITE_SOURCE_COUNT%</dd>
+          </div>
+          <div class="readout-cell">
+            <dt class="label">Works cited</dt>
+            <dd class="readout-value">%VITE_REFERENCE_COUNT%</dd>
+          </div>
+          <div class="readout-cell">
+            <dt class="label">Modelled radius</dt>
+            <dd class="readout-value" data-literal>6.5 Mly</dd>
+          </div>
+          <div class="readout-cell">
+            <dt class="label">Clock range</dt>
+            <dd class="readout-value" data-literal>3000 BCE – 3000 CE</dd>
+          </div>
+        </dl>
+      </div>
+
+      <section class="[ section ] [ region ]" id="sights">
+        <div class="[ flow ] [ wrapper ]">
+          <div class="[ section-head ] [ flow ]">
+            <span class="label" data-accent>Start exploring</span>
+            <h2>Witness the scale of the stars in motion</h2>
+          </div>
+
+          <div class="[ sights ] [ flow ]">
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" tabindex="-1" href="/app/v/BIWEgAQHz7_JQIDAGMKDz_FAB7zmU79w3tK8XX4PPzsB/" target="_self">
+                <video
+                  src="/site/ex-orion.mp4"
+                  poster="/site/ex-orion.jpg"
+                  aria-label="Orion's constellation lines deforming as the camera moves"
+                  width="1920"
+                  height="1080"
+                  preload="none"
+                  muted
+                  playsinline
+                  disableremoteplayback
+                  disablepictureinpicture
+                  data-replay
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIWEgAQHtKHgvT5cBL807v-9BzVEVb8u8DE9OiwNPzsB',
+                  end: 'BIWEgAQHz7_JQIDAGMKDz_FAB7zmU79w3tK8XX4PPzsB',
+                  seconds: 5
+                });
+                -->
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>See what Orion looks like 100 light-years away</h3>
+                <p>
+                  All constellation lines are drawn from Earth's viewpoint,
+                  and these shapes deform quickly with a retreat of just a
+                  few light-years. Watch constellation shapes shift to reveal
+                  the vast differences in distances and brightnesses that make
+                  up the asterisms we're familiar with in our night sky.
+                </p>
+                <p class="sight-go"><a href="/app/v/BIWEgAQHz7_JQIDAGMKDz_FAB7zmU79w3tK8XX4PPzsB/" target="_self">Travel between stars <span aria-hidden="true">→</span></a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" tabindex="-1" href="/app/v/BIWAgwQHzzTNvvcnMj81e9i-B5XuFL_VLxo-xZ5MP8dGp4MDAA/" target="_self">
+                <video
+                  src="/site/ex-albireo.mp4"
+                  poster="/site/ex-albireo.jpg"
+                  aria-label="Albireo and Albireo B revealed as an optical double as the camera moves from Sol's sightline"
+                  width="1920"
+                  height="1080"
+                  preload="none"
+                  muted
+                  playsinline
+                  disableremoteplayback
+                  disablepictureinpicture
+                  data-replay
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIWAgwQHh94lwe8XxkHStmPBByyDGb8kt0c-N7BGP8dGp4MDAA',
+                  end:   'BIWAgwQHzzTNvvcnMj81e9i-B5XuFL_VLxo-xZ5MP8dGp4MDAA',
+                  seconds: 5,
+                });
+                -->
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>A famous double that isn't one</h3>
+                <p>
+                  Albireo appears as a gold-and-blue coloured binary pair
+                  visible through a small telescope. Seen in 3D, this optical
+                  double splits into two stars separated by over 30 light
+                  years, far too distant to be bound in an orbit. This
+                  beautiful colour pairing is a chance alignment seen from
+                  Earth, and the true separation can only be seen in simulation.
+                </p>
+                <p class="sight-go"><a href="/app/v/BIWAgwQHzzTNvvcnMj81e9i-B5XuFL_VLxo-xZ5MP8dGp4MDAA/" target="_self">Explore the separation <span aria-hidden="true">→</span></a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" tabindex="-1" href="/app/v/BIXAAQdQ6145nqDYOsm0mDkHvxd5vwD7Hj40xi6-AY2MDA/" target="_self">
+                <video
+                  src="/site/ex-binary-orbit.mp4"
+                  poster="/site/ex-binary-orbit.jpg"
+                  aria-label="Starting with the tight orbit of Castor B/Bb, the camera zooms out to show the Castor A/B ~460 year orbit"
+                  width="1920"
+                  height="1080"
+                  preload="none"
+                  muted
+                  playsinline
+                  disableremoteplayback
+                  disablepictureinpicture
+                  data-replay
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIXAAQdJcxw1Q42MNWgtWLQH4cdfv-7L5z6LCDS-AY2MDA',
+                  end: 'BIXAAQdQ6145nqDYOsm0mDkHvxd5vwD7Hj40xi6-AY2MDA',
+                  seconds: 5,
+                  rate: 65536
+                });
+                -->
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Live orbits for thousands of binary star systems</h3>
+                <p>
+                <!-- count:build-runtime-binaries/pairs_with_inclination -->2,888<!-- /count --> binary pairs are in the catalogue with published
+                orbits. Period, eccentricity and inclination come from
+                observation, and separation is either measured or derived
+                from Kepler's laws where no orbit has been observed visually.
+                View any measured system both
+                live and under time acceleration to see the 3D dynamics of
+                multiple star systems visible to the naked eye like Castor,
+                Algol, and Alula Australis.
+                </p>
+                <p class="sight-go"><a href="/app/v/BIXAAQdQ6145nqDYOsm0mDkHvxd5vwD7Hj40xi6-AY2MDA/" target="_self">Watch stellar orbits <span aria-hidden="true">→</span></a></p>
+              </div>
+            </article>
+
+            <div class="[ section-head ] [ flow ]">
+              <span class="label" data-accent>The local area</span>
+              <h2>Explore the dynamics of the Solar System</h2>
+            </div>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" tabindex="-1" href="/app/v/BIWAgQQHn90oshorATKikPgxB6goPDsW_zC_C_Q4P_3_EwA/" target="_self">
+                <video
+                  src="/site/ex-solar-system.mp4"
+                  poster="/site/ex-solar-system.jpg"
+                  aria-label="Flying in from outside the solar system into Saturn"
+                  width="1920"
+                  height="1080"
+                  preload="none"
+                  muted
+                  playsinline
+                  disableremoteplayback
+                  disablepictureinpicture
+                  data-replay
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIWAAQfRvL657WYqOYKgpDgHadeHvi2dVL9Yvvo-_f8T',
+                  end: 'BIWAgQQHn90oshorATKikPgxB6goPDsW_zC_C_Q4P_3_EwA',
+                  rate: 1024,
+                  seconds: 4
+                });
+                -->
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Sol's system at the current instant</h3>
+                <p>
+                  All eight planets and Pluto sit at their real-time
+                  positions, including all major moons, atmospheres,
+                  axial tilt and rotation. The clock indicates the current
+                  moment in the simulation and can be accelerated and scrubbed
+                  anywhere from 3000 BCE to 3000 CE.
+                </p>
+                <p class="sight-go"><a href="/app/v/BIWAgQQHn90oshorATKikPgxB6goPDsW_zC_C_Q4P_3_EwA/" target="_self">Visit Sol's planets <span aria-hidden="true">→</span></a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" tabindex="-1" href="/app/v/BAUHAhmZO_nPDjvvHP06B9YsTLxq6CW_2u9CPw/" target="_self">
+                <video
+                  src="/site/ex-heliopause.mp4"
+                  poster="/site/ex-heliopause.jpg"
+                  aria-label="Flying out from Sol to see the heliopause depicted"
+                  width="1920"
+                  height="1080"
+                  preload="none"
+                  muted
+                  playsinline
+                  disableremoteplayback
+                  disablepictureinpicture
+                  data-replay
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BAUHIoD_Nilko7Ya6eW2B4ho277P0WO_VfYfPg',
+                  end: 'BAUHAhmZO_nPDjvvHP06B9YsTLxq6CW_2u9CPw',
+                  seconds: 5
+                });
+                -->
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>See the edge of the Sun's influence, shaped by the interstellar
+                medium</h3>
+                <p>
+                  The heliopause, a teardrop-shaped boundary around the Sun,
+                  marks the equilibrium point between its stellar energy and
+                  interstellar space. NASA's Voyager 1 and 2 probes measured it
+                  as they left our Solar System, crossing its outer edge in
+                  2012 and 2018 respectively.
+                </p>
+                <p class="sight-go"><a href="/app/v/BAUHAhmZO_nPDjvvHP06B9YsTLxq6CW_2u9CPw/" target="_self">Explore its shape <span aria-hidden="true">→</span></a></p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" tabindex="-1" href="/app/v/BIXAgQ0HPAoAsPlsDjBNQ3kvB0rSUz7Knmu-DnBzPwH6_xPC-V62ERTbQQA/" target="_self">
+                <video
+                  src="/site/ex-eclipse.mp4"
+                  poster="/site/ex-eclipse.jpg"
+                  aria-label="The August 2027 total solar eclipse's path shown crossing over the Earth's surface"
+                  width="1920"
+                  height="1080"
+                  preload="none"
+                  muted
+                  playsinline
+                  disableremoteplayback
+                  disablepictureinpicture
+                  data-replay
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIXAgQ0HPAoAsPlsDjBNQ3kvB0rSUz7Knmu-DnBzPwH6_xPC-V62ERTbQQA',
+                  startTime: 'JD 2461619.844142',
+                  endTime: 'JD 2461619.983990',
+                  seconds: 5
+                });
+                -->
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Experience a solar eclipse from Earth's orbit</h3>
+                <p>
+                  Watch the Moon's shadow race across the surface of the Earth
+                  during a solar eclipse or watch the Sun disappear behind the
+                  Moon. Use the time scrubber to experience any eclipse within
+                  the last 5,000 years. Try looking up a lunar eclipse, too!
+                </p>
+                <p class="sight-go"><a href="/app/v/BIXAgQ0HPAoAsPlsDjBNQ3kvB0rSUz7Knmu-DnBzPwH6_xPC-V62ERTbQQA/" target="_self">Find celestial alignment <span aria-hidden="true">→</span></a></p>
+              </div>
+            </article>
+
+            <div class="[ section-head ] [ flow ]">
+              <span class="label" data-accent>Observe from anywhere</span>
+              <h2>Accurate charts and the night sky from any location</h2>
+            </div>
+
+            <article class="[ sight ] [ switcher ]">
+              <a
+                class="sight-media" tabindex="-1"
+                href="/app/v/BIbEgCEHhy39Pe3mW7_EYf6-B1MYsD38ovq-MiReP0whLA5d0xcU20E/"
+               target="_self">
+                <img
+                  src="/site/ex-observe.jpg"
+                  srcset="/site/ex-observe-800.jpg 800w, /site/ex-observe-1200.jpg 1200w, /site/ex-observe-1600.jpg 1600w, /site/ex-observe.jpg 2400w"
+                  sizes="(min-width: 46rem) 38rem, 100vw"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Sagittarius shown in view from Sol with the grid lines of the ecliptic superimposed"
+                  width="2400"
+                  height="1350"
+                />
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>View the night sky from any star or planet</h3>
+                <p>
+                  Use Observe mode to see the night sky as it appears from any
+                  star, moon, or planet in the catalogue. Stars appear at their
+                  local brightness, colour, position, and size according to your
+                  viewing location. See what Orion looks like from Tau Ceti,
+                  Vega, Aldebaran or Polaris.
+                </p>
+                <p class="sight-go">
+                  <a href="/app/v/BIbEgCEHhy39Pe3mW7_EYf6-B1MYsD38ovq-MiReP0whLA5d0xcU20E/" target="_self">Stargaze from alien worlds <span aria-hidden="true">→</span></a>
+                </p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a
+                class="sight-media" tabindex="-1"
+                href="/app/v/BIbEgCEHWWDcPaFXfj_yXhW9ByKUzz76uim8aABqPzthLA5d0xcU20E/"
+               target="_self">
+                <img
+                  src="/site/ex-chart-mode.jpg"
+                  srcset="/site/ex-chart-mode-800.jpg 800w, /site/ex-chart-mode-1200.jpg 1200w, /site/ex-chart-mode-1600.jpg 1600w, /site/ex-chart-mode.jpg 2400w"
+                  sizes="(min-width: 46rem) 38rem, 100vw"
+                  loading="lazy"
+                  decoding="async"
+                  alt="Orion shown in chart mode as seen from Sol"
+                  width="2400"
+                  height="1350"
+                />
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>The same catalogue drawn as a printed chart</h3>
+                <p>
+                  Chart mode renders the sky as it would be set in a paper
+                  atlas from any location you're observing from, whether
+                  Earth or another star. Variable and binary stars are marked
+                  on the chart alongside molecular clouds, constellations, and
+                  your chosen celestial sphere grid reference.
+                </p>
+                <p class="sight-go">
+                  <a href="/app/v/BIbEgCEHWWDcPaFXfj_yXhW9ByKUzz76uim8aABqPzthLA5d0xcU20E/" target="_self">See it in dynamic print <span aria-hidden="true">→</span></a>
+                </p>
+              </div>
+            </article>
+
+            <article class="[ sight ] [ switcher ]">
+              <a class="sight-media" tabindex="-1" href="/app/v/BIXAgAQHiCxyQVmpNcSrabjDB2xffr9Ndgo9dOjbvQIA/" target="_self">
+                <video
+                  src="/site/ex-dust-rendering.mp4"
+                  poster="/site/ex-dust-rendering.jpg"
+                  aria-label="Flying through molecular clouds as they dim and redden the stars behind them"
+                  width="1920"
+                  height="1080"
+                  preload="none"
+                  muted
+                  playsinline
+                  disableremoteplayback
+                  disablepictureinpicture
+                  data-replay
+                ></video>
+                <!--
+                await debug.capture({
+                  start: 'BIXAgAQHM3EXRMXGA8Tg0FlEB4s1NL-EJTW_i0B7PQIA',
+                  end: 'BIXAgAQHiCxyQVmpNcSrabjDB2xffr9Ndgo9dOjbvQIA',
+                  seconds: 5
+                });
+                -->
+              </a>
+              <div class="[ sight-copy ] [ flow ]">
+                <h3>Visualise the dust between the stars</h3>
+                <p>
+                  Invisible to the naked eye, sparse but massive dust clouds
+                  dim and redden the light from distant stars. Both named
+                  molecular clouds and analytical dust volumes are incorporated
+                  into the model volume, accurately showing what you would
+                  see and how individual stars would appear from any vantage
+                  you're viewing from.
+                </p>
+                <p class="sight-go"><a href="/app/v/BIXAgAQHiCxyQVmpNcSrabjDB2xffr9Ndgo9dOjbvQIA/" target="_self">Fly through the dust <span aria-hidden="true">→</span></a></p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="[ section ] [ region ]" id="sources">
+        <div class="[ flow ] [ wrapper ]">
+          <div class="[ section-head ] [ flow ]">
+            <span class="label" data-accent>Transparent record</span>
+            <h2 id="sources-heading">Grounded in the latest scientific data and research</h2>
+          </div>
+          <p>
+            Stellata's model is built from %VITE_SOURCE_COUNT% catalogues
+            and datasets ranging from historical observations through to the latest
+            data from Gaia and Hipparcos. Beyond catalogue placement, the
+            modelling record cites %VITE_REFERENCE_COUNT% published works,
+            each held in a detailed
+            <a href="https://github.com/alexmensch/stellata/blob/main/data/papers/index.md">citation index</a>
+            with the precise claims that each is cited for.
+          </p>
+          <p>
+            Every formula, calibration, deliberate simplification, and choice is
+            written down and attributed, always moving towards the highest
+            fidelity model based on current data. Where a value departs
+            from the paper it cites, the codebase gives both values and
+            states why.
+          </p>
+
+          <div class="table-scroll" tabindex="0" role="region" aria-labelledby="sources-heading">
+            <table class="sources">
+              <thead>
+                <tr>
+                  <th scope="col">Subsystem</th>
+                  <th scope="col">Sources</th>
+                  <th scope="col">Principal authorities</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Stars</td>
+                  <td>12</td>
+                  <td>
+                    Gaia DR3 · Tycho-2 · Hipparcos · CNS5 · Bright Star
+                    Catalogue · Bailer-Jones 2021 geometric distances ·
+                    GCVS 5.1 · the IAU Working Group on Star Names
+                  </td>
+                </tr>
+                <tr>
+                  <td>Double &amp; multiple stars</td>
+                  <td>4</td>
+                  <td>
+                    Washington Double Star Catalog · Sixth Orbit Catalog ·
+                    Tokovinin 2018 Multiple Star Catalog · the Hipparcos
+                    CCDM component register
+                  </td>
+                </tr>
+                <tr>
+                  <td>Milky Way band</td>
+                  <td>6</td>
+                  <td>
+                    Bland-Hawthorn 2016 · Leinert 1998
+                    diffuse night-sky brightness · Drimmel 2001 · Cardelli
+                    1989 extinction law
+                  </td>
+                </tr>
+                <tr>
+                  <td>Interstellar medium</td>
+                  <td>3</td>
+                  <td>
+                    Edenhofer 2024 3D dust map · Zucker 2020 &amp; 2021
+                    molecular clouds · Zucker 2022 Local Bubble surface
+                  </td>
+                </tr>
+                <tr>
+                  <td>Planets &amp; moons</td>
+                  <td>5</td>
+                  <td>
+                    Standish 1992 planetary elements (JPL) · JPL Solar
+                    System Dynamics moon elements · NASA planetary
+                    fact sheets · Archinal 2018 (IAU
+                    WGCCRE) rotation and pole ·
+                    Mallama 2017 albedos and phase curves
+                  </td>
+                </tr>
+                <tr>
+                  <td>Heliopause</td>
+                  <td>2</td>
+                  <td>
+                    Voyager 1 &amp; 2 boundary crossings, IBEX and Cassini
+                    heliotail estimates · McComas 2015 IBEX interstellar
+                    inflow direction
+                  </td>
+                </tr>
+                <tr>
+                  <td>Nearby galaxies</td>
+                  <td>2</td>
+                  <td>
+                    McConnachie 2012 · Pace 2025 Local Volume Database,
+                    with structural detail for the Magellanic Clouds, M31,
+                    M33 and Sagittarius from the primary literature
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="cluster">
+            <a class="pill" data-primary href="/app" target="_self">Open the model</a>
+            <span class="aside">
+              or dive into
+              <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">
+              the science</a> behind Stellata
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="[ section ] [ region ]" id="requirements" aria-labelledby="requirements-heading" data-tight>
+        <div class="[ flow ] [ wrapper ]">
+          <h2 class="label" id="requirements-heading" data-accent>System requirements</h2>
+          <div class="[ requirements ] [ switcher ]">
+            <div class="[ requirement ] [ flow ]">
+              <h3>WebGPU is required</h3>
+              <p>
+                WebGPU is the latest rendering standard and gives browsers
+                direct access to on-device GPUs. Runs best on Chrome.
+              </p>
+              <p>
+                <strong>Browser support:</strong>
+                Chrome and Edge 113+ on Windows, macOS and ChromeOS (Linux
+                from 144, depending on the graphics card), Safari 26+ (macOS
+                Tahoe, iOS and iPadOS 26+), Firefox 141+ on Windows and 147+
+                on Macs with Apple silicon, Chrome for Android 121+ on most
+                Android 12+ devices.
+              </p>
+            </div>
+            <div class="[ requirement ] [ flow ]">
+              <h3>Built for devices with a view</h3>
+              <p>
+                Stellata loads and renders on any device, but is intended
+                for a desktop or tablet. The expansive views and interface
+                are built around using a keyboard and a pointer. A small-screen
+                interface is planned for the future and not available yet.
+              </p>
+              <p>
+                Two-finger rotation and pinch gestures work on touch devices
+                and with a trackpad on Safari.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="[ cluster ] [ wrapper ]" data-state="repel">
+        <span>
+          Stellata <span class="footer-version">v%VITE_APP_VERSION%</span> ·
+          AGPL-3.0 · built by
+          <a href="https://alxm.me" rel="author">Alex Marshall</a>
+        </span>
+        <span class="cluster">
+          <a href="https://doi.org/10.5281/zenodo.22392528">DOI Citation</a>
+          <a href="https://github.com/alexmensch/stellata">GitHub</a>
+          <a href="https://github.com/alexmensch/stellata/blob/main/SCIENCE.md">Science</a>
+          <a href="https://github.com/sponsors/alexmensch">Sponsorship</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

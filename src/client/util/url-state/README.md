@@ -11,23 +11,40 @@ for the format and the `FIELDS_V4` table.
 
 ## Transport — canonical path vs. legacy query
 
-The blob rides a **`/v/<blob>/` path segment** (canonical). base64url's
-alphabet (`A-Za-z0-9-_`) has no `/`, so it drops into one segment with
-no escaping; the trailing slash is optional on parse. A fully-default
-state has no segment at all — the URL is bare `/`.
+The blob rides a **`/app/v/<blob>/` path segment** (canonical).
+base64url's alphabet (`A-Za-z0-9-_`) has no `/`, so it drops into one
+segment with no escaping; the trailing slash is optional on parse. A
+fully-default state has no segment at all — the URL is bare `/app`.
 
-The **legacy `?v=<blob>` query form** is decoded forever: old shared
-links are baked into YouTube comments and can never break. On load,
-`applyFromUrl` rewrites a legacy query-form link to the canonical path
-(address-bar only, via the same post-apply debounce as routine writes). The query form was retired
-because platforms auto-filter comments carrying a `?…=` link.
+**`/app` is not decoration on the path, and `share-path-pure.ts` owns
+it.** `/` is the public marketing homepage (`src/site/README.md`), so
+every part of this module builds and parses under the application's own
+prefix. Everything outside it takes the prefix from here rather than
+restating it — `src/routing-pure.ts` (`ownedByApp`, `legacyShareRedirect`),
+`src/worker.ts` (`APP_PATH`) and the perf runner's `scenarios.ts`
+(`buildSharePath`): a second spelling breaks share links with no error
+anywhere.
 
-Production serves `/v/<blob>/` via `wrangler.toml`'s `[assets]
-not_found_handling = "single-page-application"` (any unmatched path →
-`index.html`, 200); see `src/README.md`. Because that serves `index.html`
-for *any* path, `applyFromUrl` strips the address bar back to bare `/`
-when the URL carries nothing decodable — a bogus path, a stray query, or
-a `/v/<blob>/` whose blob won't decode — so the bar never lingers on junk.
+**Two legacy transports are decoded forever**, because links carrying
+them are baked into YouTube comments and can never break. `/v/<blob>/` is
+the path form shared while the application was the site root.
+`?v=<blob>` is the query form that preceded it, retired because platforms
+auto-filter comments carrying a `?…=` link. `pickShareBlob` reports
+either as `legacyTransport`, and on load `applyFromUrl` rewrites both —
+and a superseded schema version — to the canonical path, address-bar only,
+via the same post-apply debounce as routine writes. In production they
+rarely reach the client: the Worker 301s both onto the canonical path
+first ([Request routing](/src/README.md#request-routing)), and the rewrite
+covers a legacy link that arrives some other way.
+
+Production serves `/app/v/<blob>/` through the Worker, which falls back to
+the application document for any unmatched path under `/app`. So a path
+that got there is one the app was asked to interpret, and `applyFromUrl`
+strips the address bar back to bare **`/app`** when it carries nothing
+decodable — a bogus sub-path, a stray query, or a blob that won't decode —
+so the bar never lingers on junk. **The reset target is `/app`, never
+`/`**: resetting to the site root would throw the user out of the
+application and onto the homepage over a typo.
 A pre-SID v1–v3 blob is one that won't decode: those formats are retired,
 so such a link lands at the first-load view with its param stripped.
 
@@ -43,20 +60,19 @@ outside the blob (it can't apply without a reload).
 
 ```
 src/client/util/url-state/
-  share-path-pure.ts (+ test)     build / parse the /v/<blob>/ path form.
+  share-path-pure.ts (+ test)     build / parse the /app/v/<blob>/ path form.
                                   Pure string helpers, split out so the
                                   path regex is unit-testable without
                                   url-state.ts's location/history writes.
                                   `shareBlobFrom` is the paste-tolerant
                                   reader over all three transports that the
                                   console helpers take their blob from.
-  pose-change-pure.ts (+ test)    the one scale-free test behind both the
+  pose-change/                    the one scale-free test behind both the
                                   per-frame write trigger and the encoder's
-                                  cam / tgt / worldOffset elision. See
-                                  README.md#what-counts-as-a-camera-move.
+                                  cam / tgt / worldOffset elision. Own README.
   anchored-pose.ts                cam and tgt measured from the anchor the
                                   receiver rebuilds. See
-                                  README.md#what-counts-as-a-camera-move.
+                                  pose-change/README.md#what-counts-as-a-camera-move.
   golden-links-fixture.ts         Test-only: real share links whose
                                   decoding the suites pin.
   orbit-pose/                     ORB, the orbit lock, and a pose held
@@ -134,7 +150,7 @@ bit order, so mode isn't known until the field loop completes).
 - Default-compression: a field is encoded only when its value differs
   from the canonical default. Encoder pre-computes the presence mask
   in one walk, then writes only the bytes for set bits. Default state
-  produces no blob at all (bare `/`).
+  produces no blob at all (bare `/app`).
 - Focus is encoded as the object's SID, which survives any catalog
   reordering for every object. Sol is the canonical default focus and is
   encoded by *omitting* the field; "explicitly unfocused" uses a
@@ -142,7 +158,7 @@ bit order, so mode isn't known until the field loop completes).
   specific object / cleared) stay unambiguous.
 - **An absent `focus` is a positive statement, and the receiver owes the
   rebuild.** A hard focus is also what elides `worldOffset` ([`worldOffset`
-  below](#worldoffset-carries-the-frame)), so a blob carrying neither field is asserting the default frame —
+  below](pose-change/README.md#worldoffset-carries-the-frame)), so a blob carrying neither field is asserting the default frame —
   origin on Sol — and `applyDecodedView` re-establishes it before writing
   `cam` / `tgt`. A blob that states its frame some other way (an explicit
   `worldOffset`) is left alone so nothing recentres twice. On a page load this changes nothing, because catalog
@@ -194,8 +210,17 @@ bit order, so mode isn't known until the field loop completes).
   call `controls.update()`, which reads it — so it lands as a raw axis and
   the `lookAt` inside that update projects it. One `adoptFromCamera` after
   the final update puts `up` back on the perpendicular invariant.
-- `mode=observe` is applied **after** camera params + `controls.update()`
-  so the saved pose lands first; the receiver then
+- **Seat the whole pose, then update and adopt once; never project `up`
+  against a view axis the blob did not carry.** `adoptFromCamera` keeps only
+  the part of `up` perpendicular to the axis it finds, so an adopt against
+  any other axis discards roll that no later `lookAt` can recover. `seatPose`
+  therefore seats OBSERVE's elided `cam` as the focal origin it stands for,
+  alongside `tgt`, ahead of that update — on the synchronous path and the
+  late-focus re-seat alike. An observe link adopted from the boot camera
+  instead came back rolled by up to 65°; the homepage sights in
+  `golden-links-fixture.ts` pin it against a real camera and `RollController`.
+- `mode=observe` is applied **after** the pose is seated and adopted, so
+  the saved pose lands first; the receiver then
   `setCameraMode('observe', { animate: false })` if the bit is set and
   a hard-kind focus (star / planet / probe) exists. Default-omitted
   (navigate). **That anchor test cannot answer while a focus is pending**:
@@ -246,59 +271,16 @@ limit and the trim applies on top.
 `worldOffset` (bit 20, sub-masked vec3 Float32) serialises only when nothing
 is focused AND the anchor is far enough from Sol to move the pose — see
 [URL round-trip](/src/client/frame/README.md#url-round-trip) for the precision-anchor
-semantics that make this round-trip safe, and [What counts as a camera move](#what-counts-as-a-camera-move)
+semantics that make this round-trip safe, and
+[What counts as a camera move](pose-change/README.md#what-counts-as-a-camera-move)
 for "far enough".
 
 ## What counts as a camera move
 
-Every threshold on a pose vector — the per-frame write trigger and the
-encoder's cam / tgt / worldOffset elision alike — is **a fraction of the
-orbit radius `|cam − tgt|`, never a distance**. `pose-change-pure.ts` owns
-the rule and the one constant, `POSE_CHANGE_EPS`.
+A fraction of the orbit radius, never a distance — for the write trigger and
+the encoder's elision alike. `pose-change/README.md` owns the rule.
 
-The rule is angular and metric at once, which is why it needs no cases:
-`|Δcam| / r` IS the angle the move subtends at the orbit target, so an orbit
-gesture and a dolly land on the same test. Pan and OBSERVE's look-around
-land in `tgt` against the same radius; roll moves neither point and is read
-off `camera.up`, a unit axis whose delta is the roll angle itself. OBSERVE
-has no orbit pivot but still carries a radius — the serialised look pin a
-parsec down the forward axis (`../../camera/observe/README.md`).
-
-**An absolute threshold is wrong at every vantage but one**, and this camera
-reaches lunar orbit and the Local Group in a session ([Camera-anywhere](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)).
-The rule this replaced was `max(1e-9 pc, min(1e-3 pc,
-1 % of magnitude))`, and each term failed somewhere: the 1e-9 pc floor is
-**30,857 km**, so beside the Moon the camera had to travel seven times its
-own distance from the body before the URL was rewritten and a whole orbit
-went unrecorded; the 1e-3 pc encoder band called a 30-billion-km pan
-"default", and called the anchor of every unfocused view inside the solar
-system "Sol", so the receiver rebuilt the pose 1 AU away.
-
-**The pose is measured from the anchor the RECEIVER rebuilds**, not from the
-local origin — `url-state.ts`'s `anchoredPose`, which both writers read so
-they cannot disagree about what has moved. A hard focus recentres the origin
-onto the object at apply time, while the sender's own recentre fires only
-once the camera has drifted 16× the eye distance
-(`../../camera/focus/focal-ride/focal-ride-pure.ts`). Between two of those the
-moving-focal ride carries camera and target along with the object: raw local
-values drift out of any frame the receiver reconstructs, and they carry
-motion the viewer cannot see, which under a scale-relative trigger is
-unbounded URL churn against a *trailing* debounce — that is, no URL write at
-all. Subtracting the anchor removes both.
-
-<a id="worldoffset-carries-the-frame"></a>**Where no anchor is subtracted, `worldOffset` carries the frame instead**, and
-the encoder gates that field on the exact complement of this test rather than
-on a second rule of its own. Three cases leave the pose un-anchored: nothing
-focused, a source that will not resolve, and a **soft-kind focus** — only a
-hard kind recentres the origin (`../../camera/focus/focus-target.ts`
-`KIND_TRAITS`), so a cloud, an LG object or a shell can be focused with the
-frame still sitting on whatever was focused before it.
-
-Two bounds fix the constant: below ~1e-3 the round-trip error is sub-pixel
-on any display, and it has to stay well clear of the float32 wire's own
-6e-8 resolution or a settled camera would rewrite the URL forever. Its
-tests pin the behaviour at five vantages spanning ten orders of magnitude,
-which is the property that matters — not the value.
+## Extending and inspecting the wire
 
 <a id="adding-a-field"></a>**Adding a field.** Claim the next free presence bit in `FIELDS_V4`,
 declare its type and bytes, and add encode/decode logic in

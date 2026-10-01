@@ -21,6 +21,13 @@ The PR template (`.github/pull_request_template.md`) carries a
 version this PR ships — sub-headings for *Summary*, *New features*,
 *Bugfixes*, and *Changes* (drop ones that don't apply).
 
+<a id="what-the-notes-describe"></a>**The notes describe the difference between `main` before the merge and
+`main` after it** — what a user of the previous release would notice.
+Never a change made and then refined inside the PR: a bug introduced and
+fixed on the branch is not a bugfix, and an iteration on a feature that
+never shipped is not a change. A feature new in this release is one *New
+features* entry in its final form, however many rounds it took.
+
 The `release-notes-guard` workflow
 (`.github/workflows/release-notes-guard.yml`) fails any PR whose
 body lacks a non-empty `## Release notes` section (HTML comments are
@@ -502,7 +509,7 @@ DOI come out of it:
 
 - **Concept DOI** — `10.5281/zenodo.22392528`. Version-independent,
   always resolves to the newest release. This is the one to quote:
-  README badge, README [Licence](README.md#licence), `public/llms.txt`, `CITATION.cff`.
+  README badge, README [Licence](README.md#licence), `src/site/llms.txt`, `CITATION.cff`.
 - **Version DOI** — one per release, cites that exact snapshot.
   v3.44.2, the first archived release, is `10.5281/zenodo.22392529`.
 
@@ -654,8 +661,8 @@ Required repository secrets:
 
 ## After a release
 
-- Verify `https://stellata.xyz` serves the new version (visible at
-  the bottom-right of the About modal).
+- Verify `https://stellata.xyz` serves the new version (visible in the
+  homepage footer, and at the bottom-right of the About modal at `/app`).
 - Bump `package.json` on the next PR to the version that release
   will carry.
 

@@ -18,7 +18,7 @@ body:
     attributes:
       label: Stellata URL
       description: Copy the URL from your address bar at the moment the bug appeared. This usually contains the camera pose and all settings.
-      placeholder: https://stellata.xyz/?v=...
+      placeholder: https://stellata.xyz/app/v/...
     validations:
       required: true
 

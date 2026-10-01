@@ -34,7 +34,9 @@ and so does `camera-claim.ts` (+ test), the one
 `timing.ts` is the single source of truth for camera-wide constants:
 `CAMERA_LERP_MS`, `WARP_*_MS`, `AIM_*_MS`, `OBSERVE_TRANSITION_MS`,
 `FOV_MIN_DEG` / `FOV_MAX_DEG`, `CAMERA_NEAR_PC`, `DCAM_LOG_FLOOR_PC`,
-`WARP_BASE_DIR`. Imported by every subsystem so phase boundaries stay
+`WARP_BASE_DIR`, and `BOOT_CAMERA_POS_PC` — where the camera stands before
+any focus, link or first-load view moves it, which is also the URL codec's
+navigate `cam` default. Imported by every subsystem so phase boundaries stay
 aligned across controllers.
 
 `depth-range.test.ts` pins the near/far configuration — a numeric

@@ -25,7 +25,9 @@ import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
 import * as THREE from 'three';
 import { captureOrbitFrame, poseIntoFrame } from '../../attitude/attitude-pure';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../solar-system/ephemerides/orbit-rings-layer';
-import { CHOSEN_FIRST_LOAD_LINK } from './golden-links-fixture';
+import { CHOSEN_FIRST_LOAD_LINK, SOL_OBSERVE_LINKS } from './golden-links-fixture';
+import { RollController } from '../../camera/controls/input/roll-controller';
+import { BOOT_CAMERA_POS_PC } from '../../camera/timing';
 
 // Controller-namespace stub. `Partial<T>` keeps every member checked
 // against the real signature — `as unknown as T` would not, and stub
@@ -2214,33 +2216,33 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
   afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
   describe('applyFromUrl junk reset', () => {
-    it('strips a bogus non-share path back to bare /', () => {
-      const { loc, replaceState } = installUrl('/garbage');
+    it("strips a bogus non-share path back to the app's bare path", () => {
+      const { loc, replaceState } = installUrl('/app/garbage');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
-      expect(replaceState).toHaveBeenCalledWith(null, '', '/');
-      expect(loc.pathname).toBe('/');
+      expect(replaceState).toHaveBeenCalledWith(null, '', '/app');
+      expect(loc.pathname).toBe('/app');
     });
 
-    it('strips a /v/<blob>/ whose blob will not decode', () => {
+    it('strips a share path whose blob will not decode to the app, never the site root', () => {
       // Single byte 0xFF → version 255, an unknown schema decodeBlob rejects.
-      const { loc } = installUrl('/v/_w/');
+      const { loc } = installUrl('/app/v/_w/');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
-      expect(loc.pathname).toBe('/');
+      expect(loc.pathname).toBe('/app');
       expect(loc.search).toBe('');
     });
 
     it('strips a stray/undecodable ?v= query', () => {
-      const { loc } = installUrl('/?v=_w');
+      const { loc } = installUrl('/app?v=_w');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
-      expect(loc.pathname).toBe('/');
+      expect(loc.pathname).toBe('/app');
       expect(loc.search).toBe('');
     });
 
-    it('leaves a clean / untouched (no history write)', () => {
-      const { replaceState } = installUrl('/');
+    it('leaves a clean /app untouched (no history write)', () => {
+      const { replaceState } = installUrl('/app');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
       expect(replaceState).not.toHaveBeenCalled();
@@ -2248,11 +2250,15 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
 
     it('strips a retired v1–v3 link and reports nothing applied', () => {
       for (const version of [1, 2, 3]) {
-        for (const url of [`/v/${blobOf([version, 1, 4, 0, 0, 0x80, 0x40])}/`, `/?v=${blobOf([version, 0])}`]) {
+        for (const url of [
+          `/app/v/${blobOf([version, 1, 4, 0, 0, 0x80, 0x40])}/`,
+          `/v/${blobOf([version, 1, 4, 0, 0, 0x80, 0x40])}/`,
+          `/?v=${blobOf([version, 0])}`,
+        ]) {
           const { loc } = installUrl(url);
           const { stellata, state } = makeSyncStellata();
           expect(applyFromUrl(stellata, syncIdMaps())).toEqual({ applied: false, focusPending: null });
-          expect(loc.pathname).toBe('/');
+          expect(loc.pathname).toBe('/app');
           expect(loc.search).toBe('');
           expect(state.focusedStar).toBe(0);
         }
@@ -2260,16 +2266,16 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     });
 
     it('preserves the fragment while stripping junk (the renderer flag rides it)', () => {
-      const { loc } = installUrl('/garbage?v=_w#renderer=webgpu');
+      const { loc } = installUrl('/app/garbage?v=_w#renderer=webgpu');
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(false);
-      expect(loc.pathname).toBe('/');
+      expect(loc.pathname).toBe('/app');
       expect(loc.search).toBe('');
       expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
 
-  describe('legacy ?v= → canonical /v/<blob>/ rewrite', () => {
+  describe('legacy transports → canonical /app/v/<blob>/ rewrite', () => {
     it('rewrites a current-schema query link to the path form after the debounce', () => {
       const blob = encodeBlob({ fov: 90 }); // non-default (DEFAULT_FOV = 50)
       const { loc, replaceState } = installUrl(`/?v=${blob}`);
@@ -2279,9 +2285,23 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       // Address-bar rewrite is deferred to the shared debounce window.
       expect(replaceState).not.toHaveBeenCalled();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
       expect(loc.search).toBe('');
-      expect(decodeBlob(loc.pathname.slice(3, -1)).fov).toBe(90);
+      expect(decodeBlob(loc.pathname.slice('/app/v/'.length, -1)).fov).toBe(90);
+    });
+
+    // The root-relative path form predates the app's move to /app. The
+    // Worker 301s it, and this is the client half for one that arrives
+    // some other way.
+    it('rewrites a root-relative /v/<blob>/ link to the app path', () => {
+      const blob = encodeBlob({ fov: 90 });
+      const { loc, replaceState } = installUrl(`/v/${blob}/`);
+      const { stellata, state } = makeSyncStellata();
+      expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(true);
+      expect(state.fov).toBe(90);
+      expect(replaceState).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1000);
+      expect(loc.pathname).toBe(`/app/v/${blob}/`);
     });
 
     it('carries the fragment through the query→path rewrite', () => {
@@ -2290,24 +2310,24 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       const { stellata } = makeSyncStellata();
       expect(applyFromUrl(stellata, syncIdMaps()).applied).toBe(true);
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
       expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
 
   describe('startUrlSync pinned-t detector (4bq1)', () => {
-    it('writes a /v/<blob>/ when time is scrubbed on a still camera', () => {
-      const { loc } = installUrl('/');
+    it('writes an /app/v/<blob>/ when time is scrubbed on a still camera', () => {
+      const { loc } = installUrl('/app');
       const { stellata, state, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       state.t = scrubbedT();        // scrub without moving the camera
       frame();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
     });
 
     it('does not write while the live clock advances (t stays live)', () => {
-      const { replaceState } = installUrl('/');
+      const { replaceState } = installUrl('/app');
       const { stellata, state, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       state.t = liveT();            // still within the 1 s live tolerance
@@ -2317,7 +2337,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     });
 
     it('does not write scrubbed time while a camera transition is active', () => {
-      const { replaceState } = installUrl('/');
+      const { replaceState } = installUrl('/app');
       const { stellata, state, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       state.transition = true;
@@ -2328,23 +2348,23 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     });
 
     it('still writes on a camera move (detector refactor intact)', () => {
-      const { loc } = installUrl('/');
+      const { loc } = installUrl('/app');
       const { stellata, cam, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       cam.position.set(0, 0, 0);    // off the [0,0,30] navigate default
       frame();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
     });
 
     it('a routine state write keeps the fragment in the address bar', () => {
-      const { loc } = installUrl('/#renderer=webgpu');
+      const { loc } = installUrl('/app#renderer=webgpu');
       const { stellata, cam, frame } = makeSyncStellata();
       startUrlSync(stellata, syncIdMaps());
       cam.position.set(0, 0, 0);
       frame();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
       expect(loc.hash).toBe('#renderer=webgpu');
     });
   });
@@ -2358,15 +2378,15 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
   // the last thing a user touches, did not.
   describe('startUrlSync — instrument state needs its own write trigger', () => {
     it('writes ORB and the lock on a bare state emit, camera still', () => {
-      const { loc } = installUrl('/');
+      const { loc } = installUrl('/app');
       const { stellata, emitState } = makeSyncStellata({
         orbit: { armed: true, locked: true },
       });
       startUrlSync(stellata, syncIdMaps());
       emitState();
       vi.advanceTimersByTime(1000);
-      expect(loc.pathname.startsWith('/v/')).toBe(true);
-      const view = decodeBlob(loc.pathname.split('/')[2]);
+      expect(loc.pathname.startsWith('/app/v/')).toBe(true);
+      const view = decodeBlob(loc.pathname.split('/')[3]);
       expect(view).toMatchObject({ orb: true, orbLock: true });
     });
 
@@ -2441,7 +2461,7 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
     });
 
     it('never reaches the URL from a still camera without one', () => {
-      const { replaceState } = installUrl('/');
+      const { replaceState } = installUrl('/app');
       const { stellata, frame } = makeSyncStellata({
         orbit: { armed: true, locked: true },
       });
@@ -2453,6 +2473,55 @@ describe('address-bar transport (applyFromUrl / writeUrl / startUrlSync)', () =>
       expect(replaceState).not.toHaveBeenCalled();
     });
   });
+});
+
+// A real camera, the real roll legs, and TrackballControls' input-free
+// update(): every one of those is a no-op stub in makeStatefulStellata,
+// which is what hides the order the restore projects `up` in.
+describe('an OBSERVE link restored from the boot camera', () => {
+  function withRealCamera() {
+    const { stellata, state } = makeStatefulStellata();
+    const camera = new THREE.PerspectiveCamera();
+    camera.position.set(...BOOT_CAMERA_POS_PC);
+    const target = new THREE.Vector3();
+    camera.lookAt(target);
+    Object.assign(stellata, {
+      camera,
+      roll: new RollController(),
+      controls: { target, update: () => camera.lookAt(target) },
+    });
+    return { stellata, state, camera };
+  }
+
+  function expectPose(camera: THREE.PerspectiveCamera, view: DecodedView) {
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    const screenUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+    const look = new THREE.Vector3(...view.tgt!).sub(camera.position);
+    expect(forward.angleTo(look)).toBeLessThan(1e-6);
+    expect(screenUp.angleTo(new THREE.Vector3(...view.up!))).toBeLessThan(1e-6);
+  }
+
+  it.each(Object.entries(SOL_OBSERVE_LINKS))('lands the roll %s carries', (_name, blob) => {
+    const { stellata, state, camera } = withRealCamera();
+    const view = decodeBlob(blob);
+    applyDecodedView(stellata, view, makeFixtureBuild());
+    expect(state.mode).toBe('observe');
+    expectPose(camera, view);
+  });
+
+  it.each(Object.entries(SOL_OBSERVE_LINKS))(
+    'lands the roll %s carries when its focus resolves late',
+    (_name, blob) => {
+      const sidResolver = new SidResolver(['star', 'cloud']);
+      sidResolver.attach('cloud', arrayDomain(CLOUD_SIDS));
+      const { stellata, state, camera } = withRealCamera();
+      const view: DecodedView = { ...decodeBlob(blob), focus: { kind: 'sid', id: 103 } };
+      applyDecodedView(stellata, view, makeIdMaps({ sidResolver }));
+      sidResolver.attach('star', arrayDomain(STAR_SIDS));
+      expect(state.mode).toBe('observe');
+      expectPose(camera, view);
+    },
+  );
 });
 
 describe('viewPose', () => {
