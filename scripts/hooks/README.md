@@ -252,8 +252,8 @@ main's old rule while CI ran the branch's new one.
 
 It mirrors each workflow's triggers rather than the checks alone. The base
 branch and the exempting label are the hook's `ci_base` and `skip_label`,
-and a test fails when a workflow's `branches:` filter or label condition
-stops naming the same values:
+and a test fails when a workflow's `branches:` filter, or the label match
+in `.github/actions/skip-version-bump`, stops naming the same values:
 
 - **Base `main` only**, both workflows' `branches:` filter. `-B/--base`
   decides; otherwise `create` resolves it as gh does — the current branch's
