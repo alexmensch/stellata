@@ -77,6 +77,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
       - run: python3 scripts/binaries/build-binaries.py --force
       - run: |
           git diff --exit-code -- data/binaries/multiples.tsv \
@@ -95,6 +98,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
       - run: python3 scripts/binaries/build-binaries-spotcheck.py
 
   build-catalog:
@@ -107,6 +113,9 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/lfs-cache
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
