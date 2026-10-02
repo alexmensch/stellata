@@ -28,6 +28,11 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
 - `post-deploy-check.ts` — `deploy.yml`'s step after `wrangler deploy`:
   [The post-deploy check](#the-post-deploy-check). Its verdicts are
   `post-deploy-pure.ts` (+ test).
+- `version-upload.ts` — `deploy.yml`'s step after `wrangler versions
+  upload`: reads wrangler's output file (`WRANGLER_OUTPUT_FILE_PATH`) and
+  sets the step outputs `version_id` and `preview_url`. The parse is
+  `version-upload-pure.ts` (+ test), which throws rather than hand on an
+  empty ID or URL.
 - `raw-get.ts` — a GET over a raw socket, shared with
   `src/worker-assets-layer.test.ts`.
 - `check-asset-sizes.ts` — `pnpm run check:asset-sizes`. Walks `dist/`,
