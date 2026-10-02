@@ -80,7 +80,9 @@ a first argument overrides it), it asserts:
 `Sec-Fetch-Mode` header the share-link routing depends on. **The whole
 check retries** — twelve runs five seconds apart — because the edge takes a
 few seconds to serve a new deploy; only the last run's failures are
-reported. It is never run by hand against production as a test: its pure
+reported, followed by the first failing answer's status and its
+`cf-mitigated` / `server` / `cf-ray` headers (`EDGE_HEADERS`), which tell a
+Cloudflare block or challenge from the Worker's own answer. It is never run by hand against production as a test: its pure
 half has the suite, and a dry run points it at a local origin.
 
 ## Invariants

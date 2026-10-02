@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { BINARY_VERSION, HEADER_LAYOUT, HEADER_SIZE, MAGIC } from '../catalog/record/catalog-pure';
 import { ROUTING_CASES, documentIdentifiers, type RoutingCase } from '../../src/routing-cases-fixture';
 import {
+  EDGE_HEADERS,
+  edgeDiagnosticsOf,
   entryScriptOf,
+  failureReport,
   footerVersionOf,
   judgeCase,
   judgeCatalogue,
@@ -121,16 +124,43 @@ describe('the footer version', () => {
 
 describe('untilPassing', () => {
   const plan = { attempts: 3, waitMs: 5, sleep: vi.fn(async () => {}) };
+  const judged = (verdict: string | null) => ({ verdict, answer: answer(200) });
 
   it('stops at the first clean run', async () => {
-    const run = vi.fn().mockResolvedValueOnce(['stale']).mockResolvedValueOnce([null]);
+    const run = vi.fn().mockResolvedValueOnce([judged('stale')]).mockResolvedValueOnce([judged(null)]);
     expect(await untilPassing(run, plan)).toEqual([]);
     expect(run).toHaveBeenCalledTimes(2);
   });
 
   it('reports the last run’s failures once the attempts are spent', async () => {
-    const run = vi.fn().mockResolvedValue(['still stale', null]);
-    expect(await untilPassing(run, { ...plan, sleep: vi.fn(async () => {}) })).toEqual(['still stale']);
+    const run = vi.fn().mockResolvedValue([judged('still stale'), judged(null)]);
+    expect(await untilPassing(run, { ...plan, sleep: vi.fn(async () => {}) })).toEqual([judged('still stale')]);
     expect(run).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('failureReport', () => {
+  const blocked = answer(403, 'Just a moment…', { 'cf-mitigated': 'challenge', server: 'cloudflare', 'cf-ray': '8a1b-LHR' });
+
+  it('follows the failures with the first answered one’s status and edge headers', () => {
+    const report = failureReport([
+      { verdict: 'request failed: ECONNRESET', answer: null },
+      { verdict: '/: expected 200, got 403', answer: blocked },
+      { verdict: '/app: expected 200, got 500', answer: answer(500) },
+    ]);
+    expect(report).toEqual([
+      'request failed: ECONNRESET',
+      '/: expected 200, got 403',
+      '/app: expected 200, got 500',
+      'first failing answer: status 403 · cf-mitigated: challenge · server: cloudflare · cf-ray: 8a1b-LHR',
+    ]);
+  });
+
+  it('marks an edge header the answer lacks', () => {
+    expect(edgeDiagnosticsOf(answer(500))).toBe(`status 500 · ${EDGE_HEADERS.map((name) => `${name}: absent`).join(' · ')}`);
+  });
+
+  it('adds no diagnostics when no request got an answer', () => {
+    expect(failureReport([{ verdict: 'request failed: ENOTFOUND', answer: null }])).toEqual(['request failed: ENOTFOUND']);
   });
 });
