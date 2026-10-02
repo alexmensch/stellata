@@ -319,11 +319,15 @@ describe('the hook triggers where the workflows do', () => {
     expect(action).toContain(`.name == "${hookValue('skip_label')}"`);
   });
 
-  it.each(['release-notes-guard.yml', 'version-guard.yml'])('%s gates every check step on the skip action', (name) => {
+  it.each(['release-notes-guard.yml', 'version-guard.yml'])('%s gates every step after the skip action on it', (name) => {
     const yml = workflow(name);
-    expect(yml).toContain('uses: ./.github/actions/skip-version-bump');
     expect(yml).not.toContain('github.event.pull_request.labels');
-    const gated = yml.match(/if: steps\.skip\.outputs\.skip != 'true'/g) ?? [];
-    expect(gated.length).toBe(name === 'release-notes-guard.yml' ? 2 : 1);
+    const steps = yml.split(/^ {6}- /m).slice(1);
+    const skip = steps.findIndex((step) => /^ *uses: \.\/\.github\/actions\/skip-version-bump$/m.test(step));
+    expect(skip, 'no step uses the skip-version-bump action').toBeGreaterThanOrEqual(0);
+    expect(steps[skip]).toMatch(/^ *id: skip$/m);
+    const after = steps.slice(skip + 1);
+    expect(after.length).toBeGreaterThan(0);
+    for (const step of after) expect(step).toMatch(/^ *if: steps\.skip\.outputs\.skip != 'true'$/m);
   });
 });
