@@ -68,11 +68,11 @@ version's workers.dev preview URL, and only on a pass moves production to
 it (`wrangler versions deploy`). A failure fails the job with the previous
 version still live and nothing tagged. The preview URL sits outside the
 `stellata.xyz` zone, so the zone's bot and firewall rules, which can
-refuse requests from the GitHub runner's datacenter IPs, do not apply. The origin is the
-first argument, required: the preview URL in `deploy.yml`, a local origin
-for a dry run. The Worker never reads the request's host, and redirects are judged by path
-and query alone (`locationPath`), so every origin answers alike. It
-asserts:
+refuse requests from the GitHub runner's datacenter IPs, do not apply.
+The origin is the first argument, required: the preview URL in
+`deploy.yml`, a local origin for a dry run. The Worker never reads the
+request's host, and redirects are judged by path and query alone
+(`locationPath`), so every origin answers alike. It asserts:
 
 - every case in `src/routing-cases-fixture.ts`, replayed as a browser
   navigation — the same table `route`, the Worker and the dev server run,
@@ -96,8 +96,9 @@ check retries** — twelve runs five seconds apart — because the edge takes a
 few seconds to serve a new deploy; only the last run's failures are
 reported, followed by the first failing answer's status and its
 `cf-mitigated` / `server` / `cf-ray` headers (`EDGE_HEADERS`), which tell a
-Cloudflare block or challenge from the Worker's own answer. It is never run by hand against production as a test: its pure
-half has the suite, and a dry run points it at a local origin.
+Cloudflare block or challenge from the Worker's own answer. It is never
+run by hand against production as a test: its pure half has the suite,
+and a dry run points it at a local origin.
 
 ## Invariants
 
