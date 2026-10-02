@@ -645,7 +645,9 @@ On every push to `main`, `deploy.yml`:
    are enabled on the Worker, which `wrangler triggers deploy` sets from
    `wrangler.toml`'s `preview_urls = true`; if they are off, the job fails
    at the upload and a local `pnpm exec wrangler triggers deploy` turns
-   them on. Detail:
+   them on. If `triggers deploy` fails, the new version is already live
+   but untagged: re-run the job (it re-uploads, re-checks and re-deploys)
+   or cut the tag by [Manual release](#manual-release-fallback). Detail:
    [The post-deploy check](scripts/release/README.md#the-post-deploy-check).
 4. Runs `scripts/release/cut-releases.ts`, which walks the pushed range
    and, for each commit whose version differs from its predecessor's,
