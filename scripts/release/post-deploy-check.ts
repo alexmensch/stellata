@@ -1,4 +1,4 @@
-/** `deploy.yml`'s last gate: the live site answers as this checkout says it should. README.md#the-post-deploy-check. */
+/** `deploy.yml`'s gate before traffic moves: the uploaded version answers as this checkout says it should. README.md#the-post-deploy-check. */
 
 import { resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
