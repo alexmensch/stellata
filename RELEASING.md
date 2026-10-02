@@ -6,9 +6,10 @@ from a `## Release notes` section in the merging PR's body. There is
 no separate `CHANGELOG.md`.
 
 Releases are cut automatically by `.github/workflows/deploy.yml`:
-a push to `main` that changes `package.json#version` triggers a build
-and a `wrangler deploy` at HEAD, then a `v<version>` tag and a GitHub
-release for **each** bumped commit in the push. PRs that bump the
+a push to `main` that changes `package.json#version` triggers a build,
+a checked upload and deploy of that version at HEAD, then a
+`v<version>` tag and a GitHub release for **each** bumped commit in the
+push. PRs that bump the
 version therefore release on merge — including every PR in a merged
 stack, which lands as several commits in one push. The work below is
 mostly about getting the bump *and the release notes section* right on
