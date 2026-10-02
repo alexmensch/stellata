@@ -629,7 +629,10 @@ fix PR hits the same block.
   triggering event: `gh pr create --label` attaches it after the `opened`
   event fires, so that event's payload has no label, and a re-run replays
   the same payload. `release-notes-guard` reads the PR body live for the
-  same reason, so a re-run judges the body as it is now.
+  same reason, so a re-run judges the body as it is now. The live read
+  relies on runner startup (seconds) outlasting the label attach (about
+  one second after `opened`): a run that queried inside that gap would
+  fail, and a push or label toggle re-runs it.
 
 ## What the deploy workflow does
 
