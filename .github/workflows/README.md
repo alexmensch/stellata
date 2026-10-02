@@ -12,7 +12,7 @@ the version (`wrangler versions upload`), checks it on its preview URL,
 then moves traffic to it (`wrangler versions deploy`) and applies
 `wrangler.toml`'s routes and custom domain (`wrangler triggers deploy`).
 A failed check leaves the previous version live
-([The post-deploy check](/scripts/release/README.md#the-post-deploy-check)).
+([The pre-traffic check](/scripts/release/README.md#the-pre-traffic-check)).
 Then it hands off to `scripts/release/cut-releases.ts`, which cuts a tag
 and a GitHub release for **every** commit in the pushed range whose
 `package.json#version` differs from its predecessor — each carrying the

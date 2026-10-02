@@ -14,7 +14,7 @@ import {
   judgeEntryScript,
   judgeFooterVersion,
   untilPassing,
-} from './post-deploy-pure';
+} from './pre-traffic-check-pure';
 import type { RawAnswer } from './raw-get';
 
 const identifies = documentIdentifiers(resolve(__dirname, '../..'));

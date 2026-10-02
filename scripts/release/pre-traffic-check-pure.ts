@@ -1,4 +1,4 @@
-/** The post-deploy check's verdicts, each a failure message or null. README.md#the-post-deploy-check. */
+/** The pre-traffic check's verdicts, each a failure message or null. README.md#the-pre-traffic-check. */
 
 import { select, selectAll } from 'hast-util-select';
 

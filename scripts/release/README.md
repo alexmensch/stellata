@@ -25,10 +25,10 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   `release-plan-pure.ts` must import no package and no path that needs a
   bundler — the job checks out `scripts/release` alone and installs nothing.
   The test holds both to `node:` builtins and `./sibling.ts` imports.
-- `post-deploy-check.ts` — `deploy.yml`'s step between `wrangler versions
+- `pre-traffic-check.ts` — `deploy.yml`'s step between `wrangler versions
   upload` and `wrangler versions deploy`:
-  [The post-deploy check](#the-post-deploy-check). Its verdicts are
-  `post-deploy-pure.ts` (+ test).
+  [The pre-traffic check](#the-pre-traffic-check). Its verdicts are
+  `pre-traffic-check-pure.ts` (+ test).
 - `version-upload.ts` — `deploy.yml`'s step after `wrangler versions
   upload`: reads wrangler's output file (`WRANGLER_OUTPUT_FILE_PATH`) and
   sets the step outputs `version_id` and `preview_url`. The parse is
@@ -59,7 +59,7 @@ production, versus what each version shipped.
 `--first-parent` keeps the walk on `main`'s own line, so a merge
 commit's incoming branch never contributes phantom version changes.
 
-## The post-deploy check
+## The pre-traffic check
 
 **The uploaded version has to answer as this checkout says it should
 before it takes traffic.** `deploy.yml` uploads the version without

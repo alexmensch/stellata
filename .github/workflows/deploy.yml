@@ -109,10 +109,10 @@ jobs:
           pnpm exec wrangler versions upload --message "$GITHUB_SHA"
           pnpm exec tsx scripts/release/version-upload.ts "$WRANGLER_OUTPUT_FILE_PATH"
 
-      - name: Post-deploy check
+      - name: Pre-traffic check
         env:
           PREVIEW_URL: ${{ steps.upload.outputs.preview_url }}
-        run: pnpm exec tsx scripts/release/post-deploy-check.ts "$PREVIEW_URL"
+        run: pnpm exec tsx scripts/release/pre-traffic-check.ts "$PREVIEW_URL"
 
       # triggers deploy applies wrangler.toml's routes, custom domain and
       # preview_urls, which neither versions command does.

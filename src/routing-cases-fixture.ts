@@ -1,4 +1,4 @@
-/** The routing table as request → answer, for the suites and the post-deploy check. README.md#request-routing. */
+/** The routing table as request → answer, for the suites and the pre-traffic check. README.md#request-routing. */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

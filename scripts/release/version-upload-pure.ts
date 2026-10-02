@@ -1,4 +1,4 @@
-/** The uploaded version's ID and preview URL, read from wrangler's output file. README.md#the-post-deploy-check. */
+/** The uploaded version's ID and preview URL, read from wrangler's output file. README.md#the-pre-traffic-check. */
 
 export interface UploadedVersion {
   versionId: string;

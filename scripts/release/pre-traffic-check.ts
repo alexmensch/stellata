@@ -1,4 +1,4 @@
-/** `deploy.yml`'s gate before traffic moves: the uploaded version answers as this checkout says it should. README.md#the-post-deploy-check. */
+/** `deploy.yml`'s gate before traffic moves: the uploaded version answers as this checkout says it should. README.md#the-pre-traffic-check. */
 
 import { resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
@@ -17,12 +17,12 @@ import {
   untilPassing,
   type Judged,
   type Verdict,
-} from './post-deploy-pure.ts';
+} from './pre-traffic-check-pure.ts';
 import { rawGet, type RawAnswer } from './raw-get.ts';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const origin = process.argv[2];
-if (origin === undefined) throw new Error('usage: post-deploy-check.ts <origin>');
+if (origin === undefined) throw new Error('usage: pre-traffic-check.ts <origin>');
 const version = appVersion(ROOT);
 const identifies = documentIdentifiers(ROOT);
 const at = (path: string) => new URL(path, origin);
@@ -63,7 +63,7 @@ const failures = await untilPassing(async () => {
 }, { attempts: 12, waitMs: 5_000, sleep });
 
 if (failures.length > 0) {
-  for (const line of failureReport(failures)) console.error(`::error::post-deploy: ${line}`);
+  for (const line of failureReport(failures)) console.error(`::error::pre-traffic-check: ${line}`);
   process.exit(1);
 }
-console.log(`post-deploy: ${origin} answers as v${version} should`);
+console.log(`pre-traffic-check: ${origin} answers as v${version} should`);

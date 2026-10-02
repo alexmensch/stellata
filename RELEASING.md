@@ -638,7 +638,7 @@ On every push to `main`, `deploy.yml`:
    and `pnpm run build` (binaries + catalog + binaries-runtime +
    clouds + local-group + dust-sync + client).
 3. Deploys to Cloudflare once, at HEAD, in three steps: `wrangler
-   versions upload` (no traffic), the post-deploy check against that
+   versions upload` (no traffic), the pre-traffic check against that
    version's preview URL, then `wrangler versions deploy` and `wrangler
    triggers deploy`. A failed check stops the job with the previous
    version still live. The upload has a preview URL only while previews
@@ -648,7 +648,7 @@ On every push to `main`, `deploy.yml`:
    them on. If `triggers deploy` fails, the new version is already live
    but untagged: re-run the job (it re-uploads, re-checks and re-deploys)
    or cut the tag by [Manual release](#manual-release-fallback). Detail:
-   [The post-deploy check](scripts/release/README.md#the-post-deploy-check).
+   [The pre-traffic check](scripts/release/README.md#the-pre-traffic-check).
 4. Runs `scripts/release/cut-releases.ts`, which walks the pushed range
    and, for each commit whose version differs from its predecessor's,
    pushes a `v<version>` tag at that commit and creates its release
