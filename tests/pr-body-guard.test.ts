@@ -319,6 +319,12 @@ describe('the hook triggers where the workflows do', () => {
     expect(action).toContain(`.name == "${hookValue('skip_label')}"`);
   });
 
+  it('release-notes-guard.yml judges the live PR body, not the event payload’s', () => {
+    const yml = workflow('release-notes-guard.yml');
+    expect(yml).not.toContain('github.event.pull_request.body');
+    expect(yml).toContain('gh pr view "$PR" --repo "$REPO" --json body -q .body');
+  });
+
   it.each(['release-notes-guard.yml', 'version-guard.yml'])('%s gates every step after the skip action on it', (name) => {
     const yml = workflow(name);
     expect(yml).not.toContain('github.event.pull_request.labels');

@@ -44,7 +44,8 @@ list ([why](/RELEASING.md#merge-gating)).
 ## `release-notes-guard.yml`
 
 CI check on every PR. Fails the PR if the `## Release notes` block in
-the PR body is empty (HTML comments don't count). Exempt under
+the PR body is empty (HTML comments don't count); the body is read live
+from the PR, never the event payload. Exempt under
 [the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
 See `RELEASING.md` for the block format.
 The check is `scripts/release/release-notes-check.ts`, run by plain `node`, tested in vitest.

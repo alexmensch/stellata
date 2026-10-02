@@ -35,8 +35,10 @@ jobs:
       - name: Check `## Release notes` section is present and non-empty
         if: steps.skip.outputs.skip != 'true'
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          printf '%s\n' "${PR_BODY:-}" > "$RUNNER_TEMP/body.md"
+          gh pr view "$PR" --repo "$REPO" --json body -q .body > "$RUNNER_TEMP/body.md"
           node scripts/release/release-notes-check.ts "$RUNNER_TEMP/body.md"

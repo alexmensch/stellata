@@ -628,7 +628,8 @@ fix PR hits the same block.
   pass with their check steps skipped. They never read the label from the
   triggering event: `gh pr create --label` attaches it after the `opened`
   event fires, so that event's payload has no label, and a re-run replays
-  the same payload.
+  the same payload. `release-notes-guard` reads the PR body live for the
+  same reason, so a re-run judges the body as it is now.
 
 ## What the deploy workflow does
 
