@@ -100,8 +100,10 @@ fan-out of jobs beyond the bare checks:
   `test` job has no LFS content, so data-dependent suites self-skip
   there and run for real in the jobs below.
 - `python-tests` — every `scripts/**/*.test.py`, failing on any skip
-  ([Python suites](/scripts/ci/README.md#python-suites)). Its Python, and
-  `deploy.yml`'s, is the minor version in the repo-root `.python-version`.
+  ([Python suites](/scripts/ci/README.md#python-suites)). Every job that
+  runs Python — this one, `build-binaries`, `spotcheck`, `build-catalog`
+  and `deploy.yml`'s — sets it up from the repo-root `.python-version`,
+  never the runner image's `python3`, so an image upgrade cannot move it.
 - `build-binaries` / `spotcheck` — rebuild `multiples.tsv` and assert it
   matches the committed artifact; resolve Stage 2 against the curated
   ground-truth corpus.
