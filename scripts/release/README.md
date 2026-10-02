@@ -1,7 +1,7 @@
 # Release cutting
 
-Turns a push to `main` into GitHub releases, and gates the size of what
-the deploy uploads. Release cutting is invoked by
+Turns a push to `main` into GitHub releases, and gates the size and the
+behaviour of what the deploy uploads. Release cutting is invoked by
 `.github/workflows/deploy.yml` after a successful Cloudflare deploy;
 also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
 
@@ -25,7 +25,8 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   `release-plan-pure.ts` must import no package and no path that needs a
   bundler — the job checks out `scripts/release` alone and installs nothing.
   The test holds both to `node:` builtins and `./sibling.ts` imports.
-- `post-deploy-check.ts` — `deploy.yml`'s step after `wrangler deploy`:
+- `post-deploy-check.ts` — `deploy.yml`'s step between `wrangler versions
+  upload` and `wrangler versions deploy`:
   [The post-deploy check](#the-post-deploy-check). Its verdicts are
   `post-deploy-pure.ts` (+ test).
 - `version-upload.ts` — `deploy.yml`'s step after `wrangler versions
@@ -60,10 +61,18 @@ commit's incoming branch never contributes phantom version changes.
 
 ## The post-deploy check
 
-**The live site has to answer as this checkout says it should**, and a
-failure fails the deploy job ahead of tagging, so a deploy that answers
-wrongly is never released. Against `https://stellata.xyz` (`SITE_ORIGIN`;
-a first argument overrides it), it asserts:
+**The uploaded version has to answer as this checkout says it should
+before it takes traffic.** `deploy.yml` uploads the version without
+deploying it (`wrangler versions upload`), runs this check against the
+version's workers.dev preview URL, and only on a pass moves production to
+it (`wrangler versions deploy`). A failure fails the job with the previous
+version still live and nothing tagged. The preview URL sits outside the
+`stellata.xyz` zone, so the zone's bot and firewall rules, which can
+refuse requests from the GitHub runner's datacenter IPs, do not apply. The origin is the
+first argument, defaulting to `https://stellata.xyz` (`SITE_ORIGIN`). The
+Worker never reads the request's host, and redirects are judged by path
+and query alone (`locationPath`), so every origin answers alike. It
+asserts:
 
 - every case in `src/routing-cases-fixture.ts`, replayed as a browser
   navigation — the same table `route`, the Worker and the dev server run,

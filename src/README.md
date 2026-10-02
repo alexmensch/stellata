@@ -19,7 +19,7 @@ Cloudflare Worker entry, browser client, and the public content site.
   a page, a rendition, a miss) before any asset is consulted; the decision
   `worker.ts` and `../vite.site-dev.ts` both interpret. Its cases live in
   `routing-cases-fixture.ts`, which the deploy's post-deploy check also
-  replays against production ([The post-deploy check](/scripts/release/README.md#the-post-deploy-check)).
+  replays against each uploaded version before it takes traffic ([The post-deploy check](/scripts/release/README.md#the-post-deploy-check)).
 - `negotiation-pure.ts` — which rendition of a page an `Accept` header
   asks for, and the headers that advertise it; which pages have one is
   `site/pages.ts`'s.

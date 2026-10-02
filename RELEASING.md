@@ -636,8 +636,16 @@ On every push to `main`, `deploy.yml`:
 2. Checks out with LFS, sets up Node 24 + Python 3, runs `pnpm install --frozen-lockfile`
    and `pnpm run build` (binaries + catalog + binaries-runtime +
    clouds + local-group + dust-sync + client).
-3. Deploys to Cloudflare via `cloudflare/wrangler-action@v4` — once,
-   at HEAD.
+3. Deploys to Cloudflare once, at HEAD, in three steps: `wrangler
+   versions upload` (no traffic), the post-deploy check against that
+   version's preview URL, then `wrangler versions deploy` and `wrangler
+   triggers deploy`. A failed check stops the job with the previous
+   version still live. The upload has a preview URL only while previews
+   are enabled on the Worker, which `wrangler triggers deploy` sets from
+   `wrangler.toml`'s `preview_urls = true`; if they are off, the job fails
+   at the upload and a local `pnpm exec wrangler triggers deploy` turns
+   them on. Detail:
+   [The post-deploy check](scripts/release/README.md#the-post-deploy-check).
 4. Runs `scripts/release/cut-releases.ts`, which walks the pushed range
    and, for each commit whose version differs from its predecessor's,
    pushes a `v<version>` tag at that commit and creates its release
