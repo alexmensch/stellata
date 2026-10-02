@@ -98,8 +98,6 @@ jobs:
 
       - run: pnpm run check:asset-sizes
 
-      # Uploaded, checked on its preview URL, and only then given traffic:
-      # a version that answers wrongly never reaches stellata.xyz.
       - name: Upload version
         id: upload
         env:
