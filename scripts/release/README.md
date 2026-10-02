@@ -69,8 +69,8 @@ it (`wrangler versions deploy`). A failure fails the job with the previous
 version still live and nothing tagged. The preview URL sits outside the
 `stellata.xyz` zone, so the zone's bot and firewall rules, which can
 refuse requests from the GitHub runner's datacenter IPs, do not apply. The origin is the
-first argument, defaulting to `https://stellata.xyz` (`SITE_ORIGIN`). The
-Worker never reads the request's host, and redirects are judged by path
+first argument, required: the preview URL in `deploy.yml`, a local origin
+for a dry run. The Worker never reads the request's host, and redirects are judged by path
 and query alone (`locationPath`), so every origin answers alike. It
 asserts:
 

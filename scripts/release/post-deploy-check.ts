@@ -7,7 +7,6 @@ import { catalogChunkFilename } from '../catalog/record/catalog-pure.ts';
 import { appVersion } from '../site/site-metrics.ts';
 import { APP_PATH } from '../../src/client/util/url-state/share-path-pure.ts';
 import { ROUTING_CASES, documentIdentifiers } from '../../src/routing-cases-fixture.ts';
-import { SITE_ORIGIN } from '../../src/routing-pure.ts';
 import {
   entryScriptOf,
   failureReport,
@@ -22,7 +21,8 @@ import {
 import { rawGet, type RawAnswer } from './raw-get.ts';
 
 const ROOT = resolve(import.meta.dirname, '../..');
-const origin = process.argv[2] ?? SITE_ORIGIN;
+const origin = process.argv[2];
+if (origin === undefined) throw new Error('usage: post-deploy-check.ts <origin>');
 const version = appVersion(ROOT);
 const identifies = documentIdentifiers(ROOT);
 const at = (path: string) => new URL(path, origin);
