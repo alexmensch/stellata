@@ -36,8 +36,10 @@ objects instead of pulling ~600 MB from the LFS store every push.
 ## `release-notes-guard.yml`
 
 CI check on every PR. Fails the PR if the `## Release notes` block in
-the PR body is empty (HTML comments don't count). Skipped on PRs
-labelled `skip-version-bump`. See `RELEASING.md` for the block format.
+the PR body is empty (HTML comments don't count). Passes without checking
+on PRs labelled `skip-version-bump`, as `version-guard` does: both read the
+label live through the `.github/actions/skip-version-bump` composite action
+([why](/RELEASING.md#merge-gating)). See `RELEASING.md` for the block format.
 The check is `scripts/release/release-notes-check.ts`, run by plain `node`, tested in vitest.
 
 ## `perf-section-guard.yml`

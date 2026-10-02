@@ -622,10 +622,13 @@ fix PR hits the same block.
   display names plus `version-guard`, `release-notes-guard` and
   `perf-section-guard` — enumerate it live rather than trusting a
   written-down list.
-- **A job skipped by its own `if:` still satisfies a required context.**
-  `version-guard` and `release-notes-guard` both stand down under
-  `skip-version-bump` and report `skipping`, which GitHub counts as
-  met — so requiring a label-exempt guard does not wedge metadata PRs.
+- **The label exemption is read live, from the PR.** `version-guard` and
+  `release-notes-guard` ask for the PR's current labels when they run
+  (`.github/actions/skip-version-bump`) and, under `skip-version-bump`,
+  pass with their check steps skipped. They never read the label from the
+  triggering event: `gh pr create --label` attaches it after the `opened`
+  event fires, so that event's payload has no label, and a re-run replays
+  the same payload.
 
 ## What the deploy workflow does
 

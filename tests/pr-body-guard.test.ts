@@ -314,8 +314,16 @@ describe('the hook triggers where the workflows do', () => {
     expect(workflow(name)).toMatch(new RegExp(`^\\s+branches: \\[${hookValue('ci_base')}\\]$`, 'm'));
   });
 
-  it('release-notes-guard.yml skips on the label the hook exempts', () => {
-    expect(workflow('release-notes-guard.yml')).toContain(
-      `contains(github.event.pull_request.labels.*.name, '${hookValue('skip_label')}')`);
+  it('the skip action reads the label the hook exempts', () => {
+    const action = readFileSync(resolve(__dirname, '../.github/actions/skip-version-bump/action.yml'), 'utf-8');
+    expect(action).toContain(`.name == "${hookValue('skip_label')}"`);
+  });
+
+  it.each(['release-notes-guard.yml', 'version-guard.yml'])('%s gates every check step on the skip action', (name) => {
+    const yml = workflow(name);
+    expect(yml).toContain('uses: ./.github/actions/skip-version-bump');
+    expect(yml).not.toContain('github.event.pull_request.labels');
+    const gated = yml.match(/if: steps\.skip\.outputs\.skip != 'true'/g) ?? [];
+    expect(gated.length).toBe(name === 'release-notes-guard.yml' ? 2 : 1);
   });
 });
