@@ -116,7 +116,7 @@ fan-out of jobs beyond the bare checks:
     `pnpm run check:asset-sizes` over
     `dist/`: fails on any file past Cloudflare Workers' 25 MiB per-asset
     limit, warns past 80 % of it. `deploy.yml` runs the same check before
-    `wrangler deploy`.
+    `wrangler versions upload`.
 
   Each check gates on `build:layers`, not on the others, so all report
   when one fails. They share the build's runner rather than downloading its
