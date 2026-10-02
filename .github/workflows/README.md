@@ -33,13 +33,20 @@ composite action (same as the data-consuming jobs in `test.yml`)
 rather than an `lfs: true` checkout, so a deploy reuses the cached
 objects instead of pulling ~600 MB from the LFS store every push.
 
+## The `skip-version-bump` exemption
+
+`release-notes-guard` and `version-guard` pass without checking on a PR
+labelled `skip-version-bump`. Both ask the PR for its current labels
+through the `.github/actions/skip-version-bump` composite action and gate
+every step after it on the answer — never the triggering event's label
+list ([why](/RELEASING.md#merge-gating)).
+
 ## `release-notes-guard.yml`
 
 CI check on every PR. Fails the PR if the `## Release notes` block in
-the PR body is empty (HTML comments don't count). Passes without checking
-on PRs labelled `skip-version-bump`, as `version-guard` does: both read the
-label live through the `.github/actions/skip-version-bump` composite action
-([why](/RELEASING.md#merge-gating)). See `RELEASING.md` for the block format.
+the PR body is empty (HTML comments don't count). Exempt under
+[the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
+See `RELEASING.md` for the block format.
 The check is `scripts/release/release-notes-check.ts`, run by plain `node`, tested in vitest.
 
 ## `perf-section-guard.yml`
@@ -76,7 +83,8 @@ sends the body: [How pr-body-guard works](/scripts/hooks/README.md#how-pr-body-g
 CI check on every PR. Fails the PR if `package.json#version` was bumped
 inconsistently with the PR's contents — pure-docs PRs need
 `skip-version-bump`; user-visible behaviour PRs need a bump. See
-[Version policy](/RELEASING.md#version-policy).
+[Version policy](/RELEASING.md#version-policy). Exempt under
+[the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
 
 ## `test.yml`
 
