@@ -1,11 +1,13 @@
 name = "stellata"
 main = "src/worker.ts"
-# Bump deliberately when you need new runtime features; `wrangler deploy`
-# logs that it's overriding whatever the dashboard has.
+# Bump deliberately when you need new runtime features.
 compatibility_date = "2026-04-22"
 # Smart placement co-locates the Worker with its dominant downstream
 # (Cloudflare's edge in our case — pure static-assets passthrough).
 placement = { mode = "smart" }
+# deploy.yml checks each uploaded version on its preview URL before it
+# takes traffic; with this false the upload has no URL and the deploy fails.
+preview_urls = true
 
 # custom_domain = true makes wrangler auto-register the proxied DNS
 # record for stellata.xyz at the apex. The zone must already exist in

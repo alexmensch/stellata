@@ -39,8 +39,9 @@ cross-script policy and pointers.
   [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
   `src/client/milkyway/calibration/`. Not part of the build.
-- `release/` — `deploy.yml`'s release steps: checks the live site after
-  `wrangler deploy`, then plans and cuts one tag + GitHub release per
+- `release/` — `deploy.yml`'s release steps: checks each uploaded version
+  on its preview URL before it takes traffic, then plans and cuts one tag
+  + GitHub release per
   version bump in a pushed range (a merged stack is one push carrying
   several). Not part of `pnpm run build`.
 - `sid/` — SID registry tools: `sid:allocate` (the only writer of
@@ -75,8 +76,8 @@ cross-script policy and pointers.
 
 ## What ships
 
-Vite copies every file in `public/` into `dist/`, and `wrangler deploy`
-uploads all of `dist/`. So `public/` holds only what the client fetches.
+Vite copies every file in `public/` into `dist/`, and the deploy uploads
+all of `dist/`. So `public/` holds only what the client fetches.
 A hand-off between build stages that no client code reads —
 `catalog-row-index-map.json`, `binding-integrity-verdicts.tsv` — goes in
 the gitignored `build/` instead, where it costs no deploy bytes and

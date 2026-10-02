@@ -1,7 +1,7 @@
 # Release cutting
 
-Turns a push to `main` into GitHub releases, and gates the size of what
-the deploy uploads. Release cutting is invoked by
+Turns a push to `main` into GitHub releases, and gates the size and the
+behaviour of what the deploy uploads. Release cutting is invoked by
 `.github/workflows/deploy.yml` after a successful Cloudflare deploy;
 also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
 
@@ -25,15 +25,21 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   `release-plan-pure.ts` must import no package and no path that needs a
   bundler — the job checks out `scripts/release` alone and installs nothing.
   The test holds both to `node:` builtins and `./sibling.ts` imports.
-- `post-deploy-check.ts` — `deploy.yml`'s step after `wrangler deploy`:
-  [The post-deploy check](#the-post-deploy-check). Its verdicts are
-  `post-deploy-pure.ts` (+ test).
+- `pre-traffic-check.ts` — `deploy.yml`'s step between `wrangler versions
+  upload` and `wrangler versions deploy`:
+  [The pre-traffic check](#the-pre-traffic-check). Its verdicts are
+  `pre-traffic-check-pure.ts` (+ test).
+- `version-upload.ts` — `deploy.yml`'s step after `wrangler versions
+  upload`: reads wrangler's output file (`WRANGLER_OUTPUT_FILE_PATH`) and
+  sets the step outputs `version_id` and `preview_url`. The parse is
+  `version-upload-pure.ts` (+ test), which throws rather than hand on an
+  empty ID or URL.
 - `raw-get.ts` — a GET over a raw socket, shared with
   `src/worker-assets-layer.test.ts`.
 - `check-asset-sizes.ts` — `pnpm run check:asset-sizes`. Walks `dist/`,
   prints the largest files, emits GitHub `::warning::` / `::error::`
   annotations and exits 1 on any oversize file. Run by `test.yml`'s
-  `Deploy asset sizes` step, by `deploy.yml` before `wrangler deploy`, and
+  `Deploy asset sizes` step, by `deploy.yml` before `wrangler versions upload`, and
   by `pnpm run deploy`.
 
 ## One deploy, N releases
@@ -53,16 +59,25 @@ production, versus what each version shipped.
 `--first-parent` keeps the walk on `main`'s own line, so a merge
 commit's incoming branch never contributes phantom version changes.
 
-## The post-deploy check
+## The pre-traffic check
 
-**The live site has to answer as this checkout says it should**, and a
-failure fails the deploy job ahead of tagging, so a deploy that answers
-wrongly is never released. Against `https://stellata.xyz` (`SITE_ORIGIN`;
-a first argument overrides it), it asserts:
+**The uploaded version has to answer as this checkout says it should
+before it takes traffic.** `deploy.yml` uploads the version without
+deploying it (`wrangler versions upload`), runs this check against the
+version's workers.dev preview URL, and only on a pass moves production to
+it (`wrangler versions deploy`). A failure fails the job with the previous
+version still live and nothing tagged. The preview URL sits outside the
+`stellata.xyz` zone, so the zone's bot and firewall rules, which can
+refuse requests from the GitHub runner's datacenter IPs, do not apply.
+The origin is the first argument, required: the preview URL in
+`deploy.yml`, a local origin for a dry run. The Worker never reads the
+request's host, and redirects are judged by path and query alone
+(`locationPath`), so every origin answers alike. It asserts:
 
 - every case in `src/routing-cases-fixture.ts`, replayed as a browser
   navigation — the same table `route`, the Worker and the dev server run,
-  so production cannot drift from it unseen;
+  so the deployed Worker and its static files cannot drift from it
+  unseen;
 - `/app` is the application document (`APP_DOCUMENT_MARKER`) and its module
   entry script answers 200 as JavaScript — the miss a 404 fallback page
   would otherwise hide;
@@ -71,12 +86,20 @@ a first argument overrides it), it asserts:
 - the homepage footer shows `package.json`'s version, the one being
   deployed.
 
+What the `stellata.xyz` zone adds on top — its own rules, caching and the
+custom-domain binding — is outside the check;
+[After a release](/RELEASING.md#after-a-release) is the manual look at it.
+
 **Requests go over a raw socket** (`raw-get.ts`), because `fetch` drops the
 `Sec-Fetch-Mode` header the share-link routing depends on. **The whole
 check retries** — twelve runs five seconds apart — because the edge takes a
 few seconds to serve a new deploy; only the last run's failures are
-reported. It is never run by hand against production as a test: its pure
-half has the suite, and a dry run points it at a local origin.
+reported, followed by the first failing answer's status and its
+`cf-mitigated` / `server` / `cf-ray` headers (`EDGE_HEADERS`), which tell a
+Cloudflare block or challenge from the Worker's own answer. It is never
+run by hand against production as a test: its pure half has the suite,
+and a dry run points it at a local origin or at an uploaded version's
+preview URL.
 
 ## Invariants
 

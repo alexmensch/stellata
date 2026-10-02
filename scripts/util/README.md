@@ -15,7 +15,7 @@ same thing — single-use helpers stay with their consumer.
 - `parse-html.ts` — the one HTML parse (`parseHtml`, a HAST tree from
   `rehype-parse`) and `textOf`, an element's text whitespace-collapsed.
   Every reader of a page goes through it rather than a pattern: the
-  `site/` derivations, `release/post-deploy-pure.ts` reading the live
+  `site/` derivations, `release/pre-traffic-check-pure.ts` reading the deployed
   pages, and the site suites.
 
 - `escape-regexp.ts` (+ test) — `escapeRegExp(text)`, text made literal

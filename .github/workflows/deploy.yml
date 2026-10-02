@@ -98,15 +98,33 @@ jobs:
 
       - run: pnpm run check:asset-sizes
 
-      - name: Deploy to Cloudflare
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Upload version
+        id: upload
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler versions upload --message "$GITHUB_SHA"
+          pnpm exec tsx scripts/release/version-upload.ts "$WRANGLER_OUTPUT_FILE_PATH"
 
-      # Ahead of tagging, so a deploy that answers wrongly is never released.
-      - name: Post-deploy check
-        run: pnpm exec tsx scripts/release/post-deploy-check.ts
+      - name: Pre-traffic check
+        env:
+          PREVIEW_URL: ${{ steps.upload.outputs.preview_url }}
+        run: pnpm exec tsx scripts/release/pre-traffic-check.ts "$PREVIEW_URL"
+
+      # triggers deploy applies wrangler.toml's routes, custom domain and
+      # preview_urls, which neither versions command does.
+      - name: Deploy checked version
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VERSION_ID: ${{ steps.upload.outputs.version_id }}
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler versions deploy "$VERSION_ID@100%" --message "$GITHUB_SHA" --yes
+          pnpm exec wrangler triggers deploy
 
       - name: Tag and release
         env:

@@ -7,8 +7,13 @@ file's inline comments.
 
 ## `deploy.yml`
 
-Runs on push to `main`. Builds + `wrangler deploy`s **once, at HEAD**,
-then hands off to `scripts/release/cut-releases.ts`, which cuts a tag
+Runs on push to `main`. Builds and deploys **once, at HEAD**: uploads
+the version (`wrangler versions upload`), checks it on its preview URL,
+then moves traffic to it (`wrangler versions deploy`) and applies
+`wrangler.toml`'s routes and custom domain (`wrangler triggers deploy`).
+A failed check leaves the previous version live
+([The pre-traffic check](/scripts/release/README.md#the-pre-traffic-check)).
+Then it hands off to `scripts/release/cut-releases.ts`, which cuts a tag
 and a GitHub release for **every** commit in the pushed range whose
 `package.json#version` differs from its predecessor — each carrying the
 `## Release notes` block from its own PR body, in place of the flat
@@ -111,7 +116,7 @@ fan-out of jobs beyond the bare checks:
     `pnpm run check:asset-sizes` over
     `dist/`: fails on any file past Cloudflare Workers' 25 MiB per-asset
     limit, warns past 80 % of it. `deploy.yml` runs the same check before
-    `wrangler deploy`.
+    `wrangler versions upload`.
 
   Each check gates on `build:layers`, not on the others, so all report
   when one fails. They share the build's runner rather than downloading its

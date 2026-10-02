@@ -1,4 +1,4 @@
-/** The post-deploy check's verdicts, each a failure message or null. README.md#the-post-deploy-check. */
+/** The pre-traffic check's verdicts, each a failure message or null. README.md#the-pre-traffic-check. */
 
 import { select, selectAll } from 'hast-util-select';
 
@@ -64,6 +64,27 @@ export function judgeFooterVersion(html: string, version: string): Verdict {
   return shown === version ? null : `homepage footer: expected v${version}, shows ${shown === null ? 'none' : `v${shown}`}`;
 }
 
+export interface Judged {
+  verdict: Verdict;
+  answer: RawAnswer | null;
+}
+
+export type Failure = Judged & { verdict: string };
+
+export const EDGE_HEADERS = ['cf-mitigated', 'server', 'cf-ray'] as const;
+
+export function edgeDiagnosticsOf(answer: RawAnswer): string {
+  const headers = EDGE_HEADERS.map((name) => `${name}: ${answer.headers[name] ?? 'absent'}`);
+  return [`status ${answer.status}`, ...headers].join(' · ');
+}
+
+export function failureReport(failures: readonly Failure[]): string[] {
+  const lines = failures.map((failure) => failure.verdict);
+  const answer = failures.find((failure) => failure.answer !== null)?.answer;
+  if (answer) lines.push(`first failing answer: ${edgeDiagnosticsOf(answer)}`);
+  return lines;
+}
+
 export interface RetryPlan {
   attempts: number;
   waitMs: number;
@@ -71,10 +92,10 @@ export interface RetryPlan {
 }
 
 /** Re-runs the whole check until it passes or the attempts run out; the edge takes a few seconds to see a deploy. */
-export async function untilPassing(run: () => Promise<Verdict[]>, plan: RetryPlan): Promise<string[]> {
-  let failures: string[] = [];
+export async function untilPassing(run: () => Promise<Judged[]>, plan: RetryPlan): Promise<Failure[]> {
+  let failures: Failure[] = [];
   for (let attempt = 1; attempt <= plan.attempts; attempt++) {
-    failures = (await run()).filter((verdict): verdict is string => verdict !== null);
+    failures = (await run()).filter((judged): judged is Failure => judged.verdict !== null);
     if (failures.length === 0) return [];
     if (attempt < plan.attempts) await plan.sleep(plan.waitMs);
   }
