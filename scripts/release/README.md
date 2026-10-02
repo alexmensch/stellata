@@ -76,7 +76,8 @@ asserts:
 
 - every case in `src/routing-cases-fixture.ts`, replayed as a browser
   navigation — the same table `route`, the Worker and the dev server run,
-  so production cannot drift from it unseen;
+  so the deployed Worker and its static files cannot drift from it
+  unseen;
 - `/app` is the application document (`APP_DOCUMENT_MARKER`) and its module
   entry script answers 200 as JavaScript — the miss a 404 fallback page
   would otherwise hide;
@@ -84,6 +85,10 @@ asserts:
   catalogue's reader, so an HTML body or a stale binary fails;
 - the homepage footer shows `package.json`'s version, the one being
   deployed.
+
+What the `stellata.xyz` zone adds on top — its own rules, caching and the
+custom-domain binding — is outside the check;
+[After a release](/RELEASING.md#after-a-release) is the manual look at it.
 
 **Requests go over a raw socket** (`raw-get.ts`), because `fetch` drops the
 `Sec-Fetch-Mode` header the share-link routing depends on. **The whole
