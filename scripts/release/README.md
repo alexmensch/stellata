@@ -98,7 +98,8 @@ reported, followed by the first failing answer's status and its
 `cf-mitigated` / `server` / `cf-ray` headers (`EDGE_HEADERS`), which tell a
 Cloudflare block or challenge from the Worker's own answer. It is never
 run by hand against production as a test: its pure half has the suite,
-and a dry run points it at a local origin.
+and a dry run points it at a local origin or at an uploaded version's
+preview URL.
 
 ## Invariants
 
