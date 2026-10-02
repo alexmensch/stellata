@@ -3,14 +3,12 @@ name: version-guard
 on:
   pull_request:
     branches: [main]
-    # `labeled` / `unlabeled` so the job-level `if:` skip re-evaluates
-    # when `skip-version-bump` is attached after PR creation (e.g. via
-    # `gh pr create --label`, which applies the label after the `opened`
-    # event has already fired with an empty label set).
+    # `labeled` / `unlabeled` so the check re-runs when the label changes.
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
+  pull-requests: read
 
 # Asserts the PR's `package.json#version` is strictly greater than the
 # base branch's version (per RELEASING.md's per-PR bump policy) and is
@@ -21,14 +19,21 @@ permissions:
 
 jobs:
   version-guard:
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-version-bump') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          sparse-checkout: .github/actions/skip-version-bump
+
+      - id: skip
+        uses: ./.github/actions/skip-version-bump
+
+      - name: Fetch full history and tags
+        if: steps.skip.outputs.skip != 'true'
+        run: git fetch --unshallow --tags origin '+refs/heads/*:refs/remotes/origin/*'
 
       - name: Compare PR version against base + tags
+        if: steps.skip.outputs.skip != 'true'
         env:
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: |

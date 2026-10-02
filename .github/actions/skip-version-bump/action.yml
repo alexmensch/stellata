@@ -1,0 +1,22 @@
+name: skip-version-bump
+description: Whether the PR carries the skip-version-bump label, read live from the PR rather than from the triggering event's payload.
+
+outputs:
+  skip:
+    description: "'true' when the label is on the PR now, else 'false'"
+    value: ${{ steps.labels.outputs.skip }}
+
+runs:
+  using: composite
+  steps:
+    - id: labels
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        skip=$(gh pr view "$PR" --repo "$REPO" --json labels -q 'any(.labels[]; .name == "skip-version-bump")')
+        echo "skip=$skip" >> "$GITHUB_OUTPUT"
+        if [ "$skip" = true ]; then echo "skip-version-bump is on this PR: guard skipped."; fi
