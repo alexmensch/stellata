@@ -145,6 +145,9 @@ body.scene-live .loading-inner {
  * without this the HTML `hidden` attribute silently does nothing. */
 [hidden] { display: none !important; }
 
+/* `!important` outranks the inline `cursor` the debug panels set. */
+html.idle-cursor, html.idle-cursor * { cursor: none !important; }
+
 /* Top-right stack — Navigate (search) + Settings panel share one flex
  * column. Browser handles wrapping/shrinking; no JS layout. */
 .ui-top {

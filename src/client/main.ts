@@ -32,6 +32,7 @@ import { maybeShowMobileAdvisory } from './modals/mobile-advisory';
 import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
+import { bindFullscreenWakeLock, bindIdleCursor } from './ui/presence/presence';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { bindPageTeardown } from './util/page-teardown';
 import { fanOut } from './util/fan-out';
@@ -81,6 +82,8 @@ async function main() {
   }
 
   const teardown = bindPageTeardown<DevConsoleGlobals>(window, () => location.reload());
+  bindIdleCursor(teardown.signal);
+  bindFullscreenWakeLock(teardown.signal);
 
   try {
     const kinds = buildKindModules();

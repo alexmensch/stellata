@@ -395,7 +395,8 @@ there is no in-app affordance. Esc handling is left entirely to the browser: the
 Fullscreen API reserves Esc for the exit and the exit is not cancelable
 by page code, so any attempt to layer app behaviour under a
 fullscreen-active Esc is unreliable (some browsers don't even dispatch
-the keydown for the exiting keystroke).
+the keydown for the exiting keystroke). The screen wake lock held while
+fullscreen, and idle-cursor hiding, are `presence/` ([its README](presence/README.md)).
 
 ## Hide-controls toggle
 
