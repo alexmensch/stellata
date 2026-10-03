@@ -305,6 +305,13 @@ type) joins the output only once the index carries it.
 `scripts/site/json-ld-citations-pure.test.ts` fails a hand entry that
 duplicates an index work.
 
+**Every citation is a `CreativeWork` or `SoftwareSourceCode`, a cited
+catalogue included.** Google reads a `Dataset` node, nested in a citation or
+not, as a dataset this page publishes, and holds it to Dataset-search rules
+— `description` required, `creator` and `license` expected — which a
+citation of someone else's table cannot honestly fill. The homepage suite in
+`json-ld-citations-pure.test.ts` fails a citation of any other type.
+
 ## Sights — the media, and the link it carries
 
 Each sight in [Start exploring](#start-exploring) is one `.sight`: a picture (or a short
