@@ -1,6 +1,6 @@
 // Hides the cursor after IDLE_CURSOR_MS without pointer activity.
 
-export const IDLE_CURSOR_CLASS = 'idle-cursor';
+export const IDLE_CURSOR_ATTR = 'data-idle-cursor';
 export const IDLE_CURSOR_MS = 2000;
 
 export function bindIdleCursor(signal: AbortSignal): void {
@@ -10,9 +10,9 @@ export function bindIdleCursor(signal: AbortSignal): void {
   let lastY = Number.NaN;
 
   const wake = () => {
-    root.classList.remove(IDLE_CURSOR_CLASS);
+    root.removeAttribute(IDLE_CURSOR_ATTR);
     clearTimeout(timer);
-    timer = setTimeout(() => root.classList.add(IDLE_CURSOR_CLASS), IDLE_CURSOR_MS);
+    timer = setTimeout(() => root.setAttribute(IDLE_CURSOR_ATTR, ''), IDLE_CURSOR_MS);
   };
 
   window.addEventListener('pointermove', (e) => {
@@ -25,7 +25,7 @@ export function bindIdleCursor(signal: AbortSignal): void {
   window.addEventListener('pointerdown', wake, { capture: true, passive: true, signal });
   signal.addEventListener('abort', () => {
     clearTimeout(timer);
-    root.classList.remove(IDLE_CURSOR_CLASS);
+    root.removeAttribute(IDLE_CURSOR_ATTR);
   }, { once: true });
   wake();
 }

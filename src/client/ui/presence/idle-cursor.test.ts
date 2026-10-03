@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { IDLE_CURSOR_CLASS, IDLE_CURSOR_MS, bindIdleCursor } from './idle-cursor';
+import { IDLE_CURSOR_ATTR, IDLE_CURSOR_MS, bindIdleCursor } from './idle-cursor';
 
-const isIdle = () => document.documentElement.classList.contains(IDLE_CURSOR_CLASS);
+const isIdle = () => document.documentElement.hasAttribute(IDLE_CURSOR_ATTR);
 
 const move = (x: number, y: number) =>
   window.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y }));
@@ -63,7 +63,7 @@ describe('bindIdleCursor', () => {
     expect(isIdle()).toBe(false);
   });
 
-  it('clears the class and stops the timer on teardown', () => {
+  it('clears the attribute and stops the timer on teardown', () => {
     vi.advanceTimersByTime(IDLE_CURSOR_MS);
     controller.abort();
     expect(isIdle()).toBe(false);

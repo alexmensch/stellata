@@ -8,9 +8,10 @@ and releases the lock.
 
 ## Idle cursor
 
-`bindIdleCursor` adds `html.idle-cursor` after `IDLE_CURSOR_MS` (2 s)
-without pointer activity, everywhere in the app and in or out of
-fullscreen. `styles.css` turns that class into `cursor: none !important` on
+`bindIdleCursor` sets `data-idle-cursor` on `<html>` after `IDLE_CURSOR_MS`
+(2 s) without pointer activity, everywhere in the app and in or out of
+fullscreen — a state flag on the root, the same shape as
+`body[data-controls-hidden]`. `styles.css` turns it into `cursor: none !important` on
 `<html>` and every descendant; the `!important` is what beats the inline
 `cursor` the debug panels write.
 
@@ -25,7 +26,7 @@ fullscreen. `styles.css` turns that class into `cursor: none !important` on
 - Keyboard input is not activity: the cursor stays hidden while flying with
   the keys.
 - **Only the cursor hides.** The `#controls-restore-btn` label and the star
-  tooltip keep their own rules; nothing else keys on `idle-cursor`.
+  tooltip keep their own rules; nothing else keys on `data-idle-cursor`.
 
 ## Fullscreen wake lock
 

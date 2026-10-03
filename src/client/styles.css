@@ -146,7 +146,7 @@ body.scene-live .loading-inner {
 [hidden] { display: none !important; }
 
 /* `!important` outranks the inline `cursor` the debug panels set. */
-html.idle-cursor, html.idle-cursor * { cursor: none !important; }
+:root[data-idle-cursor], :root[data-idle-cursor] * { cursor: none !important; }
 
 /* Top-right stack — Navigate (search) + Settings panel share one flex
  * column. Browser handles wrapping/shrinking; no JS layout. */
