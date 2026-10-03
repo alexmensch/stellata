@@ -11,7 +11,7 @@ describe('bindIdleCursor', () => {
   let controller: AbortController;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'performance'] });
     controller = new AbortController();
     bindIdleCursor(controller.signal);
   });
@@ -61,6 +61,35 @@ describe('bindIdleCursor', () => {
     document.body.dispatchEvent(new PointerEvent('pointermove', { clientX: 5, clientY: 5, bubbles: true }));
     document.body.removeEventListener('pointermove', stop);
     expect(isIdle()).toBe(false);
+  });
+
+  it('hides IDLE_CURSOR_MS after the last of a run of moves', () => {
+    vi.advanceTimersByTime(IDLE_CURSOR_MS / 2);
+    move(1, 1);
+    vi.advanceTimersByTime(IDLE_CURSOR_MS - 1);
+    expect(isIdle()).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(isIdle()).toBe(true);
+  });
+
+  it('touches the root and the timer queue only on a shown/hidden flip', () => {
+    const root = document.documentElement;
+    const writes = [vi.spyOn(root, 'setAttribute'), vi.spyOn(root, 'removeAttribute')];
+    const arms = vi.spyOn(globalThis, 'setTimeout');
+    const written = () => writes.reduce((n, s) => n + s.mock.calls.length, 0);
+    const step = 16;
+    for (let t = 0; t < IDLE_CURSOR_MS * 2; t += step) {
+      move(t, t);
+      vi.advanceTimersByTime(step);
+    }
+    expect(written()).toBe(0);
+    expect(arms).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(IDLE_CURSOR_MS);
+    expect(written()).toBe(1);
+    move(1, 2);
+    move(3, 4);
+    expect(written()).toBe(2);
+    expect(vi.getTimerCount()).toBe(1);
   });
 
   it('clears the attribute and stops the timer on teardown', () => {

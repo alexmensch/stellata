@@ -3,16 +3,34 @@
 export const IDLE_CURSOR_ATTR = 'data-idle-cursor';
 export const IDLE_CURSOR_MS = 2000;
 
+type CursorState =
+  | { readonly kind: 'shown'; readonly timer: ReturnType<typeof setTimeout> }
+  | { readonly kind: 'hidden' };
+
 export function bindIdleCursor(signal: AbortSignal): void {
   const root = document.documentElement;
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastActivity = performance.now();
   let lastX = Number.NaN;
   let lastY = Number.NaN;
 
-  const wake = () => {
+  const showFor = (ms: number): CursorState => ({ kind: 'shown', timer: setTimeout(expire, ms) });
+  let state = showFor(IDLE_CURSOR_MS);
+
+  function expire(): void {
+    const remaining = lastActivity + IDLE_CURSOR_MS - performance.now();
+    if (remaining > 0) {
+      state = showFor(remaining);
+      return;
+    }
+    state = { kind: 'hidden' };
+    root.setAttribute(IDLE_CURSOR_ATTR, '');
+  }
+
+  const activity = () => {
+    lastActivity = performance.now();
+    if (state.kind === 'shown') return;
     root.removeAttribute(IDLE_CURSOR_ATTR);
-    clearTimeout(timer);
-    timer = setTimeout(() => root.setAttribute(IDLE_CURSOR_ATTR, ''), IDLE_CURSOR_MS);
+    state = showFor(IDLE_CURSOR_MS);
   };
 
   window.addEventListener('pointermove', (e) => {
@@ -20,12 +38,11 @@ export function bindIdleCursor(signal: AbortSignal): void {
     if (e.clientX === lastX && e.clientY === lastY) return;
     lastX = e.clientX;
     lastY = e.clientY;
-    wake();
+    activity();
   }, { capture: true, passive: true, signal });
-  window.addEventListener('pointerdown', wake, { capture: true, passive: true, signal });
+  window.addEventListener('pointerdown', activity, { capture: true, passive: true, signal });
   signal.addEventListener('abort', () => {
-    clearTimeout(timer);
-    root.removeAttribute(IDLE_CURSOR_ATTR);
+    if (state.kind === 'shown') clearTimeout(state.timer);
+    else root.removeAttribute(IDLE_CURSOR_ATTR);
   }, { once: true });
-  wake();
 }

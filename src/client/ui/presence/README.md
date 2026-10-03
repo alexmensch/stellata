@@ -21,6 +21,12 @@ fullscreen — a state flag on the root, the same shape as
   animating scene and the hover tooltip do constantly — so a move matching
   the last recorded `clientX`/`clientY` is ignored. The last position starts
   as `NaN`, so the first real move always counts.
+- **The root is written only on a flip.** State is `shown` (one timer
+  armed) or `hidden` (none). Activity while shown only records
+  `performance.now()`; the timer, on firing, re-arms for whatever is left
+  of the 2 s since the last activity, or hides. A steadily moving mouse
+  therefore costs one timestamp per event and one timer per 2 s, and the
+  `:root[data-idle-cursor] *` restyle runs twice per idle cycle.
 - Both listeners sit on `window` in the capture phase, so a canvas or
   panel handler that stops propagation cannot hide activity from it.
 - Keyboard input is not activity: the cursor stays hidden while flying with
