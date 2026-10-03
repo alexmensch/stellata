@@ -2,7 +2,8 @@
 
 The right-side settings panel, layout containers, keyboard shortcuts,
 exposure / FOV / exaggeration / theme controls, scale bar, and CSS
-gotchas.
+gotchas. Idle-cursor hiding and the fullscreen wake lock are
+[`presence/`](presence/README.md).
 
 ## Keyboard shortcuts
 
@@ -395,7 +396,8 @@ there is no in-app affordance. Esc handling is left entirely to the browser: the
 Fullscreen API reserves Esc for the exit and the exit is not cancelable
 by page code, so any attempt to layer app behaviour under a
 fullscreen-active Esc is unreliable (some browsers don't even dispatch
-the keydown for the exiting keystroke).
+the keydown for the exiting keystroke). The screen wake lock held while
+fullscreen is [`presence/`](presence/README.md#fullscreen-wake-lock).
 
 ## Hide-controls toggle
 

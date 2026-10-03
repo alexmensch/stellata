@@ -32,6 +32,8 @@ import { maybeShowMobileAdvisory } from './modals/mobile-advisory';
 import { bindBrandModals } from './modals/brand-modal';
 import { bindKeyboardShortcuts } from './ui/keyboard-shortcuts';
 import { bindControlsHideToggle } from './ui/controls-hidden';
+import { bindIdleCursor } from './ui/presence/idle-cursor';
+import { bindFullscreenWakeLock } from './ui/presence/fullscreen-wake-lock';
 import { applyFromUrl, startUrlSync, type IdMaps } from './util/url-state';
 import { bindPageTeardown } from './util/page-teardown';
 import { fanOut } from './util/fan-out';
@@ -128,6 +130,8 @@ async function main() {
 
     const stellata = new Stellata({ canvas, catalog, kinds, webgpu, boundaries });
     teardown.hold(() => stellata.dispose());
+    bindIdleCursor(teardown.signal);
+    bindFullscreenWakeLock(teardown.signal);
     teardown.expose('stellata', stellata);
 
     // Focus-card "Orbiting <host>" breadcrumbs read the same star labels
