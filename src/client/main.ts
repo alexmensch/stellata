@@ -83,8 +83,6 @@ async function main() {
   }
 
   const teardown = bindPageTeardown<DevConsoleGlobals>(window, () => location.reload());
-  bindIdleCursor(teardown.signal);
-  bindFullscreenWakeLock(teardown.signal);
 
   try {
     const kinds = buildKindModules();
@@ -132,6 +130,8 @@ async function main() {
 
     const stellata = new Stellata({ canvas, catalog, kinds, webgpu, boundaries });
     teardown.hold(() => stellata.dispose());
+    bindIdleCursor(teardown.signal);
+    bindFullscreenWakeLock(teardown.signal);
     teardown.expose('stellata', stellata);
 
     // Focus-card "Orbiting <host>" breadcrumbs read the same star labels

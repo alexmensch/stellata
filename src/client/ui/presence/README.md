@@ -1,10 +1,13 @@
 # Presence
 
 Two behaviours keyed on whether someone is actively at the screen, one
-module each: `idle-cursor.ts` and `fullscreen-wake-lock.ts` (+ tests). Both are bound in `main.ts` straight after the page
-teardown exists, before boot, and take its `signal` — so they run on the
-loading screen too, and `pagehide` removes every listener, clears the timer
-and releases the lock.
+module each: `idle-cursor.ts` and `fullscreen-wake-lock.ts` (+ tests). Both are bound in `main.ts` straight after the
+shell's `teardown.hold(...)` and take the teardown's `signal`, so
+`pagehide` removes every listener, clears the timer and releases the lock.
+**Bind after a `hold`, never before:** a page restored from the
+back/forward cache is reloaded only when something was held, so listeners
+bound earlier and aborted by a `pagehide` mid-boot stay dead in the
+restored page ([`page-teardown.ts`](../../util/README.md)).
 
 ## Idle cursor
 
