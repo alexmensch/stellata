@@ -1,4 +1,4 @@
-// See ./README.md.
+// Hides the cursor after pointer idle; holds a screen wake lock while fullscreen.
 
 export const IDLE_CURSOR_CLASS = 'idle-cursor';
 export const IDLE_CURSOR_MS = 2000;
@@ -15,8 +15,8 @@ export function bindIdleCursor(signal: AbortSignal): void {
     timer = setTimeout(() => root.classList.add(IDLE_CURSOR_CLASS), IDLE_CURSOR_MS);
   };
 
-  // see README.md#idle-cursor
   window.addEventListener('pointermove', (e) => {
+    // see README.md#idle-cursor
     if (e.clientX === lastX && e.clientY === lastY) return;
     lastX = e.clientX;
     lastY = e.clientY;
