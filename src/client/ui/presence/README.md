@@ -1,7 +1,7 @@
 # Presence
 
-Two behaviours keyed on whether someone is actively at the screen:
-`presence.ts` (+ test). Both are bound in `main.ts` straight after the page
+Two behaviours keyed on whether someone is actively at the screen, one
+module each: `idle-cursor.ts` and `fullscreen-wake-lock.ts` (+ tests). Both are bound in `main.ts` straight after the page
 teardown exists, before boot, and take its `signal` — so they run on the
 loading screen too, and `pagehide` removes every listener, clears the timer
 and releases the lock.
