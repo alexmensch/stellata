@@ -305,6 +305,13 @@ type) joins the output only once the index carries it.
 `scripts/site/json-ld-citations-pure.test.ts` fails a hand entry that
 duplicates an index work.
 
+**No entry is a `Dataset`, even a cited catalogue.** Google reads any
+`Dataset` node in a page as a dataset that page publishes, and holds it to
+Dataset-search rules — `description` required, `creator` and `license`
+expected — which a citation of someone else's table cannot honestly fill.
+A hand entry is `CreativeWork` (or `SoftwareSourceCode`); the same test
+fails a `Dataset` anywhere in the built graph.
+
 ## Sights — the media, and the link it carries
 
 Each sight in [Start exploring](#start-exploring) is one `.sight`: a picture (or a short

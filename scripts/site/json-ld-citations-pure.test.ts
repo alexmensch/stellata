@@ -126,6 +126,11 @@ describe('the homepage', () => {
     expect(built.slice(hand.length).map((work) => work.name)).toEqual(entries.map((e) => e.title));
   });
 
+  it('types no node Dataset', () => {
+    const [block] = [...withIndexCitations(HOME, entries).matchAll(JSON_LD_BLOCK)];
+    expect(block[2]).not.toMatch(/"@type":\s*"Dataset"/);
+  });
+
   it('gives every DOI-bearing entry its DOI', () => {
     const withDoi = entries.filter((e) => e.reference.includes('](https://doi.org/'));
     expect(built.filter((work) => typeof work.identifier === 'string' && work.identifier.startsWith('https://doi.org/'))).toHaveLength(
