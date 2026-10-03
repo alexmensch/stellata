@@ -126,9 +126,11 @@ describe('the homepage', () => {
     expect(built.slice(hand.length).map((work) => work.name)).toEqual(entries.map((e) => e.title));
   });
 
-  it('types no node Dataset', () => {
-    const [block] = [...withIndexCitations(HOME, entries).matchAll(JSON_LD_BLOCK)];
-    expect(block[2]).not.toMatch(/"@type":\s*"Dataset"/);
+  it('types every citation as a citable work', () => {
+    const citable = new Set(['CreativeWork', 'SoftwareSourceCode']);
+    for (const work of built) {
+      expect([work['@type']].flat().filter((type) => !citable.has(type as string)), work.name as string).toEqual([]);
+    }
   });
 
   it('gives every DOI-bearing entry its DOI', () => {
