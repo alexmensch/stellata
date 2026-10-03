@@ -59,6 +59,15 @@ describe('bindIdleCursor', () => {
     expect(isIdle()).toBe(false);
   });
 
+  it('sees activity whose propagation a target handler stops', () => {
+    const stop = (e: Event) => e.stopPropagation();
+    document.body.addEventListener('pointermove', stop);
+    vi.advanceTimersByTime(IDLE_CURSOR_MS);
+    document.body.dispatchEvent(new PointerEvent('pointermove', { clientX: 5, clientY: 5, bubbles: true }));
+    document.body.removeEventListener('pointermove', stop);
+    expect(isIdle()).toBe(false);
+  });
+
   it('clears the class and stops the timer on teardown', () => {
     vi.advanceTimersByTime(IDLE_CURSOR_MS);
     controller.abort();
