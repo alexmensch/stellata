@@ -22,6 +22,11 @@ export function bindFullscreenWakeLock(signal: AbortSignal): void {
     sentinel.release().catch(() => {});
   };
 
+  const reconcile = () => {
+    if (wanted()) void acquire();
+    else release();
+  };
+
   const acquire = async () => {
     if (state.kind !== 'released') return;
     state = { kind: 'requesting' };
@@ -33,15 +38,12 @@ export function bindFullscreenWakeLock(signal: AbortSignal): void {
       return;
     }
     sentinel.addEventListener('release', () => {
-      if (state.kind === 'held' && state.sentinel === sentinel) state = RELEASED;
+      if (state.kind !== 'held' || state.sentinel !== sentinel) return;
+      state = RELEASED;
+      reconcile();
     }, { once: true });
     state = { kind: 'held', sentinel };
     if (!wanted()) release();
-  };
-
-  const reconcile = () => {
-    if (wanted()) void acquire();
-    else release();
   };
 
   document.addEventListener('fullscreenchange', reconcile, { signal });

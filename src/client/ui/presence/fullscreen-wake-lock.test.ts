@@ -110,6 +110,25 @@ describe('bindFullscreenWakeLock', () => {
     expect(held()).toHaveLength(1);
   });
 
+  it('re-requests a lock the browser drops while fullscreen and visible', async () => {
+    bindFullscreenWakeLock(controller.signal);
+    setFullscreen(true);
+    await flush();
+    await sentinels[0]!.release();
+    await flush();
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(held()).toHaveLength(1);
+  });
+
+  it('does not re-request after releasing its own lock', async () => {
+    bindFullscreenWakeLock(controller.signal);
+    setFullscreen(true);
+    await flush();
+    setFullscreen(false);
+    await flush();
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
   it('does not re-acquire on visibility when not fullscreen', async () => {
     bindFullscreenWakeLock(controller.signal);
     setVisibility('hidden');

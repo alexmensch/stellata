@@ -44,11 +44,17 @@ is `../fullscreen.ts`, which knows nothing of this.
 
 - **Best-effort.** Feature-detected with `'wakeLock' in navigator`; a
   refused request (battery saver, Low Power Mode, an insecure context) is
-  swallowed and retried on the next fullscreen entry or visibility return.
+  swallowed and retried on the next fullscreen entry or visibility return;
+  a refusal fires no `release`, so it cannot loop.
   Needs a secure context: HTTPS or `localhost`.
 - **Lock state is `released | requesting | held`**, never a nullable
   sentinel: a request still in flight blocks a second one, and a lock
   granted after fullscreen already exited is released on arrival.
-- The browser auto-releases the lock when the page is hidden; the
-  sentinel's `release` event returns the state to `released`, and the
-  `visibilitychange` back to visible re-acquires it if still fullscreen.
+- **`reconcile` is the one place that decides whether the lock is
+  wanted**, and every edge runs it: `fullscreenchange`,
+  `visibilitychange`, and the sentinel's own `release` event. So a lock
+  the browser drops while the page is still fullscreen and visible is
+  re-requested at once, and one dropped because the page went hidden
+  comes back on the `visibilitychange` to visible. A lock this module
+  releases itself never re-enters: `release()` moves the state off `held`
+  before the event fires.
