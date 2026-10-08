@@ -32,10 +32,7 @@ import {
   RELIEF_ELEV_SPAN_M,
   reliefHorizonUniform,
 } from './surface-relief/surface-relief-pure';
-import {
-  pickHdrEmitterUniforms,
-  type HdrEmitterUniforms,
-} from '../../hdr/hdr-emitter-uniforms';
+import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import {
   phaseAngleFor,
@@ -249,10 +246,7 @@ export class PlanetMeshLayer {
 
   private readonly field: PlanetBodyField;
   private readonly textureBaseUrl: string;
-  /** The seam's slots by reference — read per frame for the pixel solid
-   *  angle, and spread into every material so the inline-operator branch
-   *  tracks `HdrPipeline`. Never `uExposure` — emission/README.md. */
-  private readonly hdr: HdrEmitterUniforms;
+  private readonly uOmegaPxArcsec2: THREE.IUniform<number>;
   private readonly uPixelRatio: THREE.IUniform<number> | undefined;
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
@@ -302,7 +296,7 @@ export class PlanetMeshLayer {
   constructor(
     field: PlanetBodyField,
     textureBaseUrl: string,
-    hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
+    hdr: Pick<HdrEmitterUniforms, 'uOmegaPxArcsec2'> & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: (reason: string) => void,
     materials: (placeholder: THREE.Texture) => SolarSystemMaterials,
     upload: WebGpuSeam['uploadTexture'],
@@ -313,7 +307,7 @@ export class PlanetMeshLayer {
     this.textureBaseUrl = textureBaseUrl;
     this.requestRender = requestRender;
     this.limits = limits;
-    this.hdr = pickHdrEmitterUniforms(hdr);
+    this.uOmegaPxArcsec2 = hdr.uOmegaPxArcsec2;
     this.uPixelRatio = hdr.uPixelRatio;
     this.group = new THREE.Group();
     this.group.name = 'planet-meshes';
@@ -511,7 +505,7 @@ export class PlanetMeshLayer {
       // display encoding fell back to a full-brightness 1.
       const texState = this.colourState(planet);
       const hostAbsmag = hasSun ? (this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0) : 0;
-      const omegaPx = this.hdr.uOmegaPxArcsec2.value;
+      const omegaPx = this.uOmegaPxArcsec2.value;
       const airlightL = hasSun
         ? hostIrradianceLuminance(omegaPx, hostAbsmag, dHpPc)
         : 0;
