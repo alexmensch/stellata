@@ -26,13 +26,9 @@ is no per-layer brightness encoding left, and no multiplier on either:
 ([Reflected glare](../../../webgpu/solar-system/README.md#reflected-glare--a-planet-reads-exactly-like-a-star)).
 
 **The CPU scalars are at unit exposure; the graphs multiply `uExposure`.**
-`uSurfaceLuminance` and `uAirlightLuminance` are computed in the scene layer
-fan-out, which runs *before* the frame's adaptation writes `uExposure`
-([The tick](../../../scene/frame-loop/README.md#the-tick)) — so a value baked
-there is a frame stale. The mesh would then draw at last frame's exposure
-while the reduction rescales its statistic by this frame's, misreporting the
-lit surface by exactly the step the cut just took. Under a warp, which snaps
-the cut to every landing, that mis-pairing feeds back and the disc strobes.
+`uSurfaceLuminance` and `uAirlightLuminance` are computed in the layer
+fan-out, where `uExposure` is still last frame's — why that matters is
+[Measure at the base exposure](../../../hdr/exposure/reduction/README.md#measure-at-the-base-exposure-not-the-live-one).
 `planet-mesh-layer.test.ts` pins both halves: the slots ignore the live
 exposure, and every surface graph reads it.
 

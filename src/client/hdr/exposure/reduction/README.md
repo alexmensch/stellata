@@ -189,6 +189,14 @@ frame it describes.
 With that division the measurement is invariant to `dm` and there is no
 loop. The one remaining nonlinearity is `LUMA_CEIL`.
 
+**That holds only if every statistic writer scales by the GPU `uExposure`.**
+The uniform syncs after `ExposureFrameStep.measure` writes it, so the frame
+renders with exactly the scalar captured here. A CPU copy taken in the layer
+fan-out runs before that write and is a frame stale: the writer draws at last
+frame's exposure, the division uses this frame's, and the reading is wrong by
+exactly the step the cut just took — which moves the next cut, which moves
+the next reading. Under a warp's snapped slew that rings as a strobing disc.
+
 **The `LUMA_CEIL` clamp is fine, and this is why.** The flux channel
 clamps at 4096 before the write, so a wide-open frame containing Sol reads
 a lower bound rather than the truth. A lower bound can only under-cut, so
