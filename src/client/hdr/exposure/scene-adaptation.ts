@@ -79,9 +79,9 @@ export class SceneAdaptation {
    * magnitudes. Chart measures nothing and reports no cut; before the first
    * landing the cut slews toward none. `nowMs` is
    * wall-clock — the slew limit is a render filter, not sim time, so a
-   * time-warped frame must not slew faster; warp itself snaps.
+   * time-warped frame must not slew faster.
    */
-  measure(chart: boolean, nowMs: number, warpActive: boolean): number {
+  measure(chart: boolean, nowMs: number): number {
     if (this.held) return this.dm;
     if (chart) return this.reset();
     perfMark('adaptation');
@@ -99,7 +99,7 @@ export class SceneAdaptation {
       landed.coverage = reduced.coverage;
     }
     const branches = this.branches(this.measured);
-    const blend = warpActive ? 1 : dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
+    const blend = dimBlendFactor(nowMs, this.lastNowMs, this.slewTauS);
     this.lastNowMs = nowMs;
     this.dm = slewDm(this.dm, branches === null ? 0 : branches.dm, blend);
     if (landedFresh && branches !== null) {

@@ -59,9 +59,9 @@ export class ExposureFrameStep {
   }
 
   /** The returned park verdict is `reduce`'s argument on this same frame. */
-  measure(nowMs: number, warpActive: boolean): boolean {
+  measure(nowMs: number): boolean {
     const { adaptation, exposure, hdr } = this.deps;
-    const appliedDm = adaptation.measure(this.deps.isChart(), nowMs, warpActive);
+    const appliedDm = adaptation.measure(this.deps.isChart(), nowMs);
     exposure.setAdaptation(appliedDm);
     const parked = adaptation.isMeasurementParked();
     hdr.setStatisticWritesParked(parked);

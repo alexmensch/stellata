@@ -294,8 +294,11 @@ slew faster. Three things this has to get right:
 
 - **It filters `dm`, in magnitudes**, so the ramp is a constant number of
   stops per second whatever the frame's absolute level.
-- **Warp snaps** (`blend = 1`). The camera is somewhere else by the next
-  frame, so ramping from the old scene's cut is just a flash.
+- **It runs on every frame, a warp's included.** A warp flight is a
+  continuous approach that lands a deeper measurement every few frames;
+  only the filter turns those landings into one ramp, as a focus-park
+  approach gets. Snapping to each one reads as visible stepping. The
+  frame-step takes no warp flag, so no branch can bypass it.
 - **It settles — by parking the APPLIED cut, never by returning the
   measurement.** Inside `ADAPT_SLEW_SETTLE_MAG` the applied value holds
   bit-identical until the measurement drifts a full band away; a park
@@ -364,7 +367,7 @@ all gone; what replaces them is GPU work on half the frames.
 three calls at three points of the frame loop's tick:
 
 - `frameExposure()` — above the gate, every tick, for `FrameCtx.exposure`.
-- `measure(nowMs, warpActive)` — after the layer fan-out, before the first
+- `measure(nowMs)` — after the layer fan-out, before the first
   draw: `SceneAdaptation.measure` → `setAdaptation` → the statistic-write
   park, and the applied cut handed to `RenderGate.noteExposureCut`, which
   owns the wake ([The decision, in priority order](../../render-gate/README.md#the-decision-in-priority-order)).

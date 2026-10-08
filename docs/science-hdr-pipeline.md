@@ -516,8 +516,9 @@ body crossing the frame edge, an occluder clearing, a resolved surface
 crossing the coverage ramp. Filtering the applied value
 rather than the measurement keeps the model's claim intact — the
 measurement is still instantaneous best-case — while stopping a
-one-frame geometry change from reading as a flash. Warp bypasses it,
-since the camera is somewhere else by the next frame.
+one-frame geometry change from reading as a flash. A warp rides it like
+any other camera move: its flight lands a deeper measurement every few
+frames, and only the filter turns those landings into one continuous ramp.
 
 **The statistic is the area-weighted mean linear luminance over the
 viewport** — retinal illuminance across the attended region:
@@ -1499,7 +1500,7 @@ writes share bandwidth, so the pair's own share is not the difference
 applied cut holds bit-identical inside the slew's settle band, so a verdict
 that is a function of it cannot chatter on quantiser noise, and a real slew
 moves it in whole magnitudes. No skip while `warpActive` — the band is the
-warp's realism payoff and a warp snaps the measurement. No skip without a
+warp's realism payoff. No skip without a
 landed statistic (rule 2 needs `L̄`) and none in chart (the seam is off).
 
 **`FrameCtx` gains `exposure`, nullable**: live `uExposure`, the base
