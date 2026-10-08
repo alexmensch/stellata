@@ -62,6 +62,14 @@ Below the gate — rendered frames only:
     ([gpu-timing/](../../debug/gpu-timing/README.md)).
 14. The `'frame'` emit, then the next tick is scheduled.
 
+**Anything written after step 8 is last frame's to the fan-out.**
+`uExposure` (step 10) and the camera's `matrixWorldInverse` (refreshed
+inside step 12's render) both read one frame stale from a layer's `update`.
+A layer needing either reads it on the GPU — the uniform node syncs after
+step 10 — or derives a fresh copy itself, as `PlanetMeshLayer` does for the
+view matrix. A baked stale exposure is a feedback loop, not a lag
+([Measure at the base exposure](../../hdr/exposure/reduction/README.md#measure-at-the-base-exposure-not-the-live-one)).
+
 The perf HUD's sections (`frame.total`, `controls.update`, `pre-render`,
 `star.compaction`, `submit.*`, `frame.handlers`) bracket these steps
 ([debug/](../../debug/README.md)).
