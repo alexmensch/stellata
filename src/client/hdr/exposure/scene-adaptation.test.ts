@@ -68,7 +68,7 @@ const SETTLED_MS = (SETTLE_FRAMES - 1) * SETTLE_STEP_MS;
 function settle(adaptation: SceneAdaptation, chart = false): number {
   let dm = 0;
   for (let i = 0; i < SETTLE_FRAMES; i++) {
-    dm = adaptation.measure(chart, i * SETTLE_STEP_MS, false);
+    dm = adaptation.measure(chart, i * SETTLE_STEP_MS);
   }
   return dm;
 }
@@ -100,12 +100,12 @@ describe('SceneAdaptation', () => {
   it('rewrites one statistic and one tuning in place across landings', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    adaptation.measure(false, 0, false);
+    adaptation.measure(false, 0);
     const statistic = adaptation.getLandedStatistic();
     const tuning = adaptation.getTuning();
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     whitePoint *= 2;
-    adaptation.measure(false, 16, false);
+    adaptation.measure(false, 16);
     expect(adaptation.getLandedStatistic()).toBe(statistic);
     expect(statistic!.meanL).toBeCloseTo(1e4 * L_ADAPT, 6);
     expect(adaptation.getTuning()).toBe(tuning);
@@ -132,7 +132,7 @@ describe('SceneAdaptation', () => {
       discL: L_ADAPT * (cutExposure / BASE_EXPOSURE),
       renderExposure: cutExposure,
     };
-    expect(adaptation.measure(false, 0, false)).toBe(0);
+    expect(adaptation.measure(false, 0)).toBe(0);
     expect(adaptation.getLandedStatistic()!.meanL).toBeCloseTo(L_ADAPT, 9);
     expect(adaptation.getLandedStatistic()!.discL).toBeCloseTo(L_ADAPT, 9);
     expect(adaptation.getLandedStatistic()!.coverage).toBe(0.3);
@@ -163,7 +163,7 @@ describe('SceneAdaptation', () => {
     expect(settle(adaptation)).toBe(0);
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     const settled = target();
-    const first = adaptation.measure(false, SETTLED_MS + 16, false);
+    const first = adaptation.measure(false, SETTLED_MS + 16);
     expect(first).toBeLessThan(0);
     expect(first).toBeGreaterThan(settled);
     expectSettled(settle(adaptation), settled);
@@ -186,31 +186,41 @@ describe('SceneAdaptation', () => {
     let parked = 0;
     for (let i = 0; i < 50; i++) {
       reduced = wobble(i);
-      parked = adaptation.measure(false, SETTLED_MS + SETTLE_STEP_MS * (i + 1), false);
+      parked = adaptation.measure(false, SETTLED_MS + SETTLE_STEP_MS * (i + 1));
     }
     for (let i = 50; i < 70; i++) {
       reduced = wobble(i);
-      expect(adaptation.measure(false, SETTLED_MS + SETTLE_STEP_MS * (i + 1), false))
+      expect(adaptation.measure(false, SETTLED_MS + SETTLE_STEP_MS * (i + 1)))
         .toBe(parked);
     }
   });
 
-  it('snaps under warp instead of ramping from the old scene', () => {
+  it('moves at most one frame of slew per frame while landings arrive one in four', () => {
     const adaptation = makeAdaptation();
-    reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    adaptation.measure(false, 0, false);
-    expect(adaptation.measure(false, 16, true)).toBeCloseTo(target(), 9);
+    reduced = frame(L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+    expect(settle(adaptation)).toBe(0);
+    const share = 1 - Math.exp(-SETTLE_STEP_MS / 1000 / ADAPT_SLEW_TAU_S);
+    let applied = 0;
+    for (let i = 0; i < 40; i++) {
+      if (i % 4 === 0) {
+        reduced = frame(10 ** (i / 8) * 100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
+      }
+      const next = adaptation.measure(false, SETTLED_MS + SETTLE_STEP_MS * (i + 1));
+      const measured = adaptation.branches()!.dm;
+      expect(Math.abs(next - applied)).toBeLessThanOrEqual(share * Math.abs(measured - applied) + 1e-9);
+      applied = next;
+    }
   });
 
   it('measures nothing in chart mode, and re-enters the scene snapped', () => {
     const adaptation = makeAdaptation();
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     settle(adaptation);
-    expect(adaptation.measure(true, 1e6, false)).toBe(0);
+    expect(adaptation.measure(true, 1e6)).toBe(0);
     expect(adaptation.getLandedStatistic()).toBeNull();
     // lastNowMs dropped with the reset, so the first scene frame back is a
     // full blend rather than a ramp up from chart's zero cut.
-    expect(adaptation.measure(false, 1e6 + 16, false)).toBeCloseTo(target(), 9);
+    expect(adaptation.measure(false, 1e6 + 16)).toBeCloseTo(target(), 9);
   });
 
   it('holds the cut against a changed measurement, and outranks chart', () => {
@@ -225,14 +235,14 @@ describe('SceneAdaptation', () => {
 
     adaptation.setHeld(true);
     reduced = frame(1e6 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    expect(adaptation.measure(false, SETTLED_MS + 16, false)).toBe(pinned);
-    expect(adaptation.measure(true, SETTLED_MS + 32, false)).toBe(pinned);
+    expect(adaptation.measure(false, SETTLED_MS + 16)).toBe(pinned);
+    expect(adaptation.measure(true, SETTLED_MS + 32)).toBe(pinned);
     expect(adaptation.getLandedStatistic()!.meanL).toBeCloseTo(100 * L_ADAPT, 6);
 
     // Released, the next frame snaps to the live measurement rather than
     // ramping from a cut that is now stale by the whole hold.
     adaptation.setHeld(false);
-    const snapped = adaptation.measure(false, SETTLED_MS + 48, false);
+    const snapped = adaptation.measure(false, SETTLED_MS + 48);
     expect(snapped).toBeCloseTo(adaptation.branches()!.dm, 9);
     expect(snapped).toBeLessThan(pinned);
   });
@@ -243,7 +253,7 @@ describe('SceneAdaptation', () => {
     settle(adaptation);
     const atDefault = adaptation.getLandedStatistic()!.meanL;
     base = exposureForMagLimit(12.8);
-    adaptation.measure(false, 1e6, false);
+    adaptation.measure(false, 1e6);
     expect(adaptation.getLandedStatistic()!.meanL / atDefault)
       .toBeCloseTo(exposureForMagLimit(12.8) / BASE_EXPOSURE, 6);
   });
@@ -262,7 +272,7 @@ describe('SceneAdaptation — the measurement park', () => {
 
   let now = 0;
   const step = (adaptation: SceneAdaptation) =>
-    adaptation.measure(false, (now += 16), false);
+    adaptation.measure(false, (now += 16));
 
   function parkIt(adaptation: SceneAdaptation): void {
     for (let i = 0; i < ADAPT_PARK_SETTLED_LANDINGS; i++) {
@@ -350,7 +360,7 @@ describe('SceneAdaptation — the measurement park', () => {
    *  same object and land nothing. */
   function settleAtFloor(adaptation: SceneAdaptation): void {
     reduced = floorLanding();
-    for (let i = 0; i < 200; i++) adaptation.measure(false, (now += SETTLE_STEP_MS), false);
+    for (let i = 0; i < 200; i++) adaptation.measure(false, (now += SETTLE_STEP_MS));
   }
 
   function landFloorFrames(adaptation: SceneAdaptation, n: number): void {
@@ -429,7 +439,7 @@ describe('SceneAdaptation — the measurement park', () => {
   it('clears the park on chart entry', () => {
     const adaptation = makeAdaptation();
     parkIt(adaptation);
-    adaptation.measure(true, (now += 16), false);
+    adaptation.measure(true, (now += 16));
     expect(adaptation.getParkPhase()).toBe('active');
   });
 
@@ -473,7 +483,7 @@ describe('SceneAdaptation — the panel overrides', () => {
     const adaptation = makeAdaptation();
     reduced = frame(100 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
     adaptation.setLAdapt(2 * L_ADAPT);
-    adaptation.measure(false, 0, false);
+    adaptation.measure(false, 0);
     expect(adaptation.branches()!.dm).toBe(adaptation.getDm());
   });
 
@@ -501,8 +511,8 @@ describe('SceneAdaptation — the panel overrides', () => {
     expect(settle(fast)).toBe(0);
     expect(settle(slow)).toBe(0);
     reduced = frame(1e4 * L_ADAPT / POINT_COVERAGE, POINT_COVERAGE);
-    const fastStep = fast.measure(false, SETTLED_MS + 16, false);
-    const slowStep = slow.measure(false, SETTLED_MS + 16, false);
+    const fastStep = fast.measure(false, SETTLED_MS + 16);
+    const slowStep = slow.measure(false, SETTLED_MS + 16);
     expect(slowStep).toBeLessThan(0);
     expect(fastStep).toBeLessThan(slowStep);
   });

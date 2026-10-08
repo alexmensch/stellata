@@ -8,8 +8,9 @@ approach. `../README.md` owns the two layers that read these scalars;
 ```
 src/client/solar-system/planets/emission/
   mesh-surface-pure.ts (+ test)   Mirrored limb constants, the disc-mean
-                                  normalisers, and the two per-body
-                                  luminance scalars the mesh shader reads.
+                                  normalisers, and the two unit-exposure
+                                  luminance scalars the mesh, ring and
+                                  shell graphs read.
 ```
 
 The day map's own mean linear luminance is no longer measured here: it is
@@ -24,6 +25,13 @@ the point-source rule, the mesh through the surface-brightness rule. There
 is no per-layer brightness encoding left, and no multiplier on either:
 `uExposure` is the one exposure
 ([Reflected glare](../../../webgpu/solar-system/README.md#reflected-glare--a-planet-reads-exactly-like-a-star)).
+
+<a id="unit-exposure"></a>**The CPU scalars are at unit exposure; the graphs multiply `uExposure`.**
+`uSurfaceLuminance` and `uAirlightLuminance` are computed in the layer
+fan-out, where `uExposure` is still last frame's — why that matters is
+[Measure at the base exposure](../../../hdr/exposure/reduction/README.md#measure-at-the-base-exposure-not-the-live-one).
+`planet-mesh-layer.test.ts` pins both halves: the slots ignore the live
+exposure, and every surface graph reads it.
 
 **The mesh anchor is a closed form.** A body's mean disc surface
 brightness drops both its radius and the viewer distance, because they

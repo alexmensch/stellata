@@ -28,6 +28,12 @@ import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 const read = (name: string) =>
   readTslSource(new URL(name, import.meta.url));
 
+const SURFACES = [
+  { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts' },
+  { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts' },
+  { label: 'atmosphere shell', src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts' },
+];
+
 const acceptUpload = (_texture: THREE.Texture, settled: (uploaded: boolean) => void) =>
   settled(true);
 
@@ -39,12 +45,6 @@ const acceptUpload = (_texture: THREE.Texture, settled: (uploaded: boolean) => v
 // back on top of it — visible on a planet's night side, a shadowed ring
 // section and the atmosphere limb, exactly where the surface is dim.
 describe('the planet surfaces occlude the diffuse attachment', () => {
-  const SURFACES = [
-    { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts' },
-    { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts' },
-    { label: 'atmosphere shell', src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts' },
-  ];
-
   // One blend equation runs over every attachment, so black at the
   // fragment's own alpha dims attachment 2 by exactly the opacity
   // attachment 0 was composited with. A DIFFERENT alpha would occlude the
@@ -637,72 +637,93 @@ describe('every mesh texture slot has a release site', () => {
   }
 });
 
-describe('the ring annulus phase scalar', () => {
-  /** A lit Saturn with its ring strip resolved, so updateRing runs whole. */
-  function litHarness(camera: THREE.Vector3) {
-    const saturn = SOL_BODIES.find((b) => b.name === 'Saturn')!;
-    const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
-    vi.spyOn(THREE.ImageBitmapLoader.prototype, 'load').mockImplementation(
-      ((url: string, onLoad: (bitmap: unknown) => void) => {
-        loads.push({ url, onLoad });
-      }) as never,
-    );
-    // Saturn on +x at 9.5 AU, host at the local origin.
-    const planetPos = new THREE.Vector3(9.5 * AU_PC, 0, 0);
-    const field = {
-      drawn: true,
-      monochrome: false,
-      liveInstanceCount: 1,
-      hiddenInstanceIdx: null as number | null,
-      planetAt: () => saturn,
-      planetLocalPositionInto: (_i: number, out: THREE.Vector3) => {
-        out.copy(planetPos);
-        return true;
-      },
-      physicalPlanetSizePx: () => 600,
-      hostPlanetOf: () => ({ hostStarIdx: 0, planetIdx: 0 }),
-      getHostLocalPositionInto: (_h: number, out: THREE.Vector3) => {
-        out.set(0, 0, 0);
-        return true;
-      },
-      hostAbsmagOf: () => 4.83,
-      hostRadiusOf: () => R_SUN_PC,
-      hostOrientationOf: () => new THREE.Quaternion(),
-      getAttachedPlanetSystem: () => ({ hostStarIdx: 0, planets: [saturn] }),
-      eclipseDimForInstance: () => 1,
-    } as unknown as PlanetBodyField;
-    const ringSurfaces: EmitterMaterial[] = [];
-    const layer = new PlanetMeshLayer(
-      field,
-      '/',
-      { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } },
-      () => {},
-      () => {
-        const materials = fakeSolarSystemMaterials();
-        return {
-          ...materials,
-          planetRings() {
-            const surface = materials.planetRings();
-            ringSurfaces.push(surface);
-            return surface;
-          },
-        };
-      },
-      acceptUpload,
-    );
-    const cam = new THREE.PerspectiveCamera();
-    cam.position.copy(camera);
-    cam.updateMatrixWorld(true);
-    layer.update(cam, 0);
-    // Land every pending map, the ring strip included, then draw again.
-    for (const pending of loads.splice(0)) {
-      pending.onLoad({ width: 2048, height: 1024, close: vi.fn() });
-    }
-    layer.update(cam, 0);
-    const ring = layer.group.getObjectByName('planet-rings') as THREE.Mesh | undefined;
-    return { layer, ring, ringSlots: () => ringSurfaces.at(-1)!.uniforms, planetPos };
+/** A lit body (Saturn by default, its ring strip resolved so updateRing
+ *  runs whole) at 9.5 AU on +x, host at the local origin. */
+function litHarness(camera: THREE.Vector3, exposure?: number, bodyName = 'Saturn') {
+  const body = SOL_BODIES.find((b) => b.name === bodyName)!;
+  const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
+  vi.spyOn(THREE.ImageBitmapLoader.prototype, 'load').mockImplementation(
+    ((url: string, onLoad: (bitmap: unknown) => void) => {
+      loads.push({ url, onLoad });
+    }) as never,
+  );
+  const planetPos = new THREE.Vector3(9.5 * AU_PC, 0, 0);
+  const field = {
+    drawn: true,
+    monochrome: false,
+    liveInstanceCount: 1,
+    hiddenInstanceIdx: null as number | null,
+    planetAt: () => body,
+    planetLocalPositionInto: (_i: number, out: THREE.Vector3) => {
+      out.copy(planetPos);
+      return true;
+    },
+    physicalPlanetSizePx: () => 600,
+    hostPlanetOf: () => ({ hostStarIdx: 0, planetIdx: 0 }),
+    getHostLocalPositionInto: (_h: number, out: THREE.Vector3) => {
+      out.set(0, 0, 0);
+      return true;
+    },
+    hostAbsmagOf: () => 4.83,
+    hostRadiusOf: () => R_SUN_PC,
+    hostOrientationOf: () => new THREE.Quaternion(),
+    getAttachedPlanetSystem: () => ({ hostStarIdx: 0, planets: [body] }),
+    eclipseDimForInstance: () => 1,
+  } as unknown as PlanetBodyField;
+  const ringSurfaces: EmitterMaterial[] = [];
+  const meshSurfaces: EmitterMaterial[] = [];
+  const atmoSurfaces: EmitterMaterial[] = [];
+  const hdr = { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } };
+  if (exposure !== undefined) hdr.uExposure.value = exposure;
+  const layer = new PlanetMeshLayer(
+    field,
+    '/',
+    hdr,
+    () => {},
+    () => {
+      const materials = fakeSolarSystemMaterials();
+      return {
+        ...materials,
+        planetMesh() {
+          const surface = materials.planetMesh();
+          meshSurfaces.push(surface);
+          return surface;
+        },
+        planetRings() {
+          const surface = materials.planetRings();
+          ringSurfaces.push(surface);
+          return surface;
+        },
+        planetAtmosphere() {
+          const surface = materials.planetAtmosphere();
+          atmoSurfaces.push(surface);
+          return surface;
+        },
+      };
+    },
+    acceptUpload,
+  );
+  const cam = new THREE.PerspectiveCamera();
+  cam.position.copy(camera);
+  cam.updateMatrixWorld(true);
+  layer.update(cam, 0);
+  // Land every pending map, the ring strip included, then draw again.
+  for (const pending of loads.splice(0)) {
+    pending.onLoad({ width: 2048, height: 1024, close: vi.fn() });
   }
+  layer.update(cam, 0);
+  const ring = layer.group.getObjectByName('planet-rings') as THREE.Mesh | undefined;
+  return {
+    layer,
+    ring,
+    ringSlots: () => ringSurfaces.at(-1)!.uniforms,
+    meshSlots: () => meshSurfaces.at(-1)!.uniforms,
+    atmoSlots: () => atmoSurfaces.at(-1)?.uniforms,
+    planetPos,
+  };
+}
 
+describe('the ring annulus phase scalar', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -742,5 +763,45 @@ describe('the ring annulus phase scalar', () => {
     const justOff = scaleAt(0.02);
     expect(justOff).toBeLessThan(0.95);
     expect(justOff).toBeGreaterThan(0.85);
+  });
+});
+
+describe('the luminance slots carry no exposure', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('is the same at any live exposure', () => {
+    // Saturn reaches the ring annulus; Venus, the atmosphere shell.
+    const slotsAt = (exposure: number, bodyName: string) => {
+      const h = litHarness(new THREE.Vector3(1 * AU_PC, 0.1 * AU_PC, 0), exposure, bodyName);
+      const mesh = h.meshSlots();
+      const values = [
+        mesh.uSurfaceLuminance.value,
+        mesh.uAirlightLuminance.value,
+        bodyName === 'Saturn'
+          ? h.ringSlots().uAirlightLuminance.value
+          : h.atmoSlots()!.uAirlightLuminance.value,
+      ];
+      h.layer.dispose();
+      vi.restoreAllMocks();
+      return values;
+    };
+    for (const bodyName of ['Saturn', 'Venus']) {
+      const atOne = slotsAt(1, bodyName);
+      expect(atOne.every((v) => v > 0), bodyName).toBe(true);
+      expect(slotsAt(1e-3, bodyName), bodyName).toEqual(atOne);
+    }
+  });
+
+  it('is scaled by the shared uExposure in every surface graph', () => {
+    for (const { label, src: path } of SURFACES) {
+      const src = read(path);
+      const viaHelper = src.match(/exposedLuminanceTsl\([^;]*?,\s*u\.uExposure\)/g) ?? [];
+      const anywhere = src.match(/u\.uExposure/g) ?? [];
+      expect(viaHelper.length, label).toBeGreaterThan(0);
+      expect(anywhere.length, `${label} reads uExposure outside the helper`)
+        .toBe(viaHelper.length);
+    }
   });
 });

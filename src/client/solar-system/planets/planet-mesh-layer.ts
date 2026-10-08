@@ -32,10 +32,7 @@ import {
   RELIEF_ELEV_SPAN_M,
   reliefHorizonUniform,
 } from './surface-relief/surface-relief-pure';
-import {
-  pickHdrEmitterUniforms,
-  type HdrEmitterUniforms,
-} from '../../hdr/hdr-emitter-uniforms';
+import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
 import {
   phaseAngleFor,
@@ -178,6 +175,8 @@ interface MeshEntry {
   /** Present iff the body has an atmosphere; shared by the mesh disc
    *  airlight and the shell limb halo. */
   atmoBase?: AtmoBase;
+  /** The `frame` this entry last drew in; any other value hides it. */
+  shownFrame: number;
 }
 
 const RELIEF_SUFFIX = '-normal';
@@ -249,10 +248,7 @@ export class PlanetMeshLayer {
 
   private readonly field: PlanetBodyField;
   private readonly textureBaseUrl: string;
-  /** The seam's slots by reference — read per frame for the live exposure
-   *  and pixel solid angle, and spread into every material so the
-   *  inline-operator branch tracks `HdrPipeline`. */
-  private readonly hdr: HdrEmitterUniforms;
+  private readonly uOmegaPxArcsec2: THREE.IUniform<number>;
   private readonly uPixelRatio: THREE.IUniform<number> | undefined;
   private readonly geometry: THREE.SphereGeometry;
   private readonly placeholder: THREE.DataTexture;
@@ -302,7 +298,7 @@ export class PlanetMeshLayer {
   constructor(
     field: PlanetBodyField,
     textureBaseUrl: string,
-    hdr: HdrEmitterUniforms & { uPixelRatio?: THREE.IUniform<number> },
+    hdr: Pick<HdrEmitterUniforms, 'uOmegaPxArcsec2'> & { uPixelRatio?: THREE.IUniform<number> },
     requestRender: (reason: string) => void,
     materials: (placeholder: THREE.Texture) => SolarSystemMaterials,
     upload: WebGpuSeam['uploadTexture'],
@@ -313,7 +309,7 @@ export class PlanetMeshLayer {
     this.textureBaseUrl = textureBaseUrl;
     this.requestRender = requestRender;
     this.limits = limits;
-    this.hdr = pickHdrEmitterUniforms(hdr);
+    this.uOmegaPxArcsec2 = hdr.uOmegaPxArcsec2;
     this.uPixelRatio = hdr.uPixelRatio;
     this.group = new THREE.Group();
     this.group.name = 'planet-meshes';
@@ -431,7 +427,6 @@ export class PlanetMeshLayer {
     camera.updateMatrixWorld();
     this.viewInverse.copy(camera.matrixWorld).invert();
 
-    const shown = new Set<number>();
     const n = this.field.liveInstanceCount;
     for (let idx = 0; idx < n; idx++) {
       if (idx === this.field.hiddenInstanceIdx) continue;
@@ -466,7 +461,7 @@ export class PlanetMeshLayer {
       if (fade <= 0) continue;
 
       const entry = this.entries.get(idx) ?? this.createEntry(idx, planet);
-      shown.add(idx);
+      entry.shownFrame = this.frame;
       const { mesh, material } = entry;
       mesh.visible = true;
       mesh.position.copy(this.tmpPlanet);
@@ -511,14 +506,13 @@ export class PlanetMeshLayer {
       // display encoding fell back to a full-brightness 1.
       const texState = this.colourState(planet);
       const hostAbsmag = hasSun ? (this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0) : 0;
-      const exposure = this.hdr.uExposure.value;
-      const omegaPx = this.hdr.uOmegaPxArcsec2.value;
+      const omegaPx = this.uOmegaPxArcsec2.value;
       const airlightL = hasSun
-        ? hostIrradianceLuminance(exposure, omegaPx, hostAbsmag, dHpPc)
+        ? hostIrradianceLuminance(omegaPx, hostAbsmag, dHpPc)
         : 0;
       const surfaceL = hasSun
         ? meshSurfaceLuminance(
-            exposure, omegaPx, hostAbsmag, dHpPc, planet.albedo,
+            omegaPx, hostAbsmag, dHpPc, planet.albedo,
             this.baseMeanLuminance(planet, texState),
             entry.atmoBase?.discMeans,
           )
@@ -626,8 +620,8 @@ export class PlanetMeshLayer {
       }
     }
 
-    for (const [idx, entry] of this.entries) {
-      if (!shown.has(idx)) {
+    for (const entry of this.entries.values()) {
+      if (entry.shownFrame !== this.frame) {
         entry.mesh.visible = false;
         entry.stamp.visible = false;
         if (entry.ring) entry.ring.mesh.visible = false;
@@ -1001,7 +995,7 @@ export class PlanetMeshLayer {
   }
 
   /** Pose the limb-halo shell on the body and feed it the shared scatter
-   *  uniforms plus its view-space sun direction, exposure, and fade. */
+   *  uniforms plus its view-space sun direction, airlight, and fade. */
   private updateAtmosphere(
     atmo: AtmosphereEntry,
     base: AtmoBase,
@@ -1052,6 +1046,7 @@ export class PlanetMeshLayer {
     );
     const entry: MeshEntry = {
       mesh, material, stamp, boundRadiusPc, radiusPc, slotFallbacks,
+      shownFrame: this.frame,
     };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {

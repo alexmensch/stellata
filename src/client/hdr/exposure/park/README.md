@@ -144,7 +144,7 @@ is where the win is.
   pin happened to land on (`../../../debug/frame-cost/README.md`).
 - **Chart's reset clears the park** with the rest of the statistic state.
   Warp needs nothing of its own: a parked warp probes on the interval and
-  the unpark snaps, as any warp-frame measurement does.
+  the unpark slews from the parked cut, as any other unpark does.
 
 **The wake latency is counted in frames, so it stretches with the frame's
 own cost** — ~160 ms at 60 fps, ~1 s at 10 fps, and frames slow as the
@@ -161,9 +161,10 @@ pin carries no weight at all until the disc reaches `ADAPT_DOT_COVERAGE`
 not govern alone until 6.85 %, a factor 2.8 in camera distance further
 in. No free-fly approach crosses a band that wide inside the interval
 plus the one frame the probe waits for. The exception is a warp, which
-covers the whole band in one jump and whose landing SNAPS the slew rather
-than ramping it ([Adaptation](../README.md#adaptation--the-frame-measures-itself)), so a late probe there is a
-one-frame flash on arrival rather than a sustained over-bright scene.
+can cross the whole band between two probes; the late landing then ramps
+in over `ADAPT_SLEW_TAU_S` like any other
+([Adaptation](../README.md#adaptation--the-frame-measures-itself)), so the arrival reads as a brief
+over-bright moment easing down rather than a flash.
 
 ## The lever
 

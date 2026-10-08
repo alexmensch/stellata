@@ -151,7 +151,7 @@ export class FrameLoop {
     });
     // After the fan-out and before the first draw, so measurement and frame
     // are never one frame apart.
-    const measurementParked = d.exposureFrame.measure(nowMs, this.frameCtx.warpActive);
+    const measurementParked = d.exposureFrame.measure(nowMs);
     perfMeasure('pre-render');
     perfMark('submit.main');
     d.hdr.bind();

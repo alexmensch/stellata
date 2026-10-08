@@ -3,13 +3,12 @@
 // Physics: ../../solar-system/planets/README.md.
 
 import {
-  If, Loop, atan, clamp, cross, dot, float, floor, fract, length, max, min,
+  If, Loop, atan, clamp, cross, dot, float, floor, fract, length, max,
   mix, normalView, positionView, screenCoordinate, select, smoothstep, step,
   uv, vec2, vec3, vec4,
 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import type { Node } from 'three/webgpu';
-import { LUMA_CEIL } from '../../hdr/emission/emission-pure';
 import { MAX_SHADOW_CASTERS } from '../../solar-system/planets/body-shadow-pure';
 import {
   LIMB_EXP, LIMB_FLOOR,
@@ -17,7 +16,9 @@ import {
 import {
   HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, RELIEF_POLE_EPS, SKY_VIEW_RANGE,
 } from '../../solar-system/planets/surface-relief/surface-relief-pure';
-import { maskedStatisticTexelTsl, occluderTexelTsl } from '../emission-tsl';
+import {
+  exposedLuminanceTsl, maskedStatisticTexelTsl, occluderTexelTsl,
+} from '../emission-tsl';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
@@ -229,7 +230,7 @@ export function buildPlanetMeshMaterial(
         .add(march.inscatter.mul(p.uSunColour).mul(p.uAirlightLuminance)));
     });
 
-    col.assign(min(col, vec3(LUMA_CEIL)));
+    col.assign(exposedLuminanceTsl(col, u.uExposure));
     // True surface brightness, and the alpha mirrors attachment 0's so the
     // LOD crossfade composites both attachments alike. The mask cuts at the
     // geometric terminator because that is where the disc mean the exposure

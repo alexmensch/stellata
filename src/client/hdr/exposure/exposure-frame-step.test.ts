@@ -78,24 +78,24 @@ describe('ExposureFrameStep.measure', () => {
     const h = harness();
     h.setDm(-2.5);
     h.setParked(true);
-    expect(h.step.measure(1000, true)).toBe(true);
-    expect(h.adaptation.measure).toHaveBeenCalledWith(false, 1000, true);
+    expect(h.step.measure(1000)).toBe(true);
+    expect(h.adaptation.measure).toHaveBeenCalledWith(false, 1000);
     expect(h.exposure.setAdaptation).toHaveBeenCalledWith(-2.5);
     expect(h.hdr.setStatisticWritesParked).toHaveBeenCalledWith(true);
   });
 
   it('passes chart through to the adaptation', () => {
     const h = harness({ chart: true });
-    h.step.measure(0, false);
-    expect(h.adaptation.measure).toHaveBeenCalledWith(true, 0, false);
+    h.step.measure(0);
+    expect(h.adaptation.measure).toHaveBeenCalledWith(true, 0);
   });
 
   it('reports every applied cut to the gate', () => {
     const h = harness();
     h.setDm(-1);
-    h.step.measure(0, false);
+    h.step.measure(0);
     h.setDm(-1.5);
-    h.step.measure(16, false);
+    h.step.measure(16);
     expect(h.noteExposureCut.mock.calls).toEqual([[-1], [-1.5]]);
   });
 });

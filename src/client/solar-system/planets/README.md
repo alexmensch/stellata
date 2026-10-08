@@ -352,15 +352,16 @@ crossfade.
     separately ([Two disc means](emission/README.md#two-disc-means-divide-out)).
   - `uSurfaceLuminance` (`mesh-surface-pure.ts:meshSurfaceLuminance`) —
     the body's **true mean surface brightness** in the scene-wide HDR
-    unit, pre-divided by the disc means of everything the shader
-    multiplies on top ([Physical-luminance emission](#physical-luminance-emission)) and, for an
+    unit at unit exposure (the graph applies `uExposure` —
+    [Unit exposure](emission/README.md#unit-exposure)), pre-divided by
+    the disc means of everything the shader multiplies on top ([Physical-luminance emission](#physical-luminance-emission)) and, for an
     atmospheric body, less the share of that flux its airlight already
     supplies ([Flux bookkeeping](../atmosphere/README.md#flux-bookkeeping)). Surface-only: the
     reflected glare is the star-perceptual point (driven by appMag,
     above), so this shades the mesh, not the glare. Body-kind-agnostic —
     planets, moons, and future lit bodies all read the one scalar.
   - `uAirlightLuminance` (`hostIrradianceLuminance`) — host irradiance on
-    the same scale, carrying no surface albedo. Scattered sunlight rides
+    the same unit-exposure scale, carrying no surface albedo. Scattered sunlight rides
     it: the disc airlight, the atmosphere shell, and the ring annulus
     (whose strip RGB supplies its own reflectance). Splitting it from
     `uSurfaceLuminance` is what fixes the airlight-to-surface and
