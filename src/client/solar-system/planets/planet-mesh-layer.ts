@@ -994,7 +994,7 @@ export class PlanetMeshLayer {
   }
 
   /** Pose the limb-halo shell on the body and feed it the shared scatter
-   *  uniforms plus its view-space sun direction, exposure, and fade. */
+   *  uniforms plus its view-space sun direction, airlight, and fade. */
   private updateAtmosphere(
     atmo: AtmosphereEntry,
     base: AtmoBase,
