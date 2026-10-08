@@ -28,6 +28,12 @@ import { DEPTH_MASK_RENDER_ORDER } from '../../scene/render-order';
 const read = (name: string) =>
   readTslSource(new URL(name, import.meta.url));
 
+const SURFACES = [
+  { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts' },
+  { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts' },
+  { label: 'atmosphere shell', src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts' },
+];
+
 const acceptUpload = (_texture: THREE.Texture, settled: (uploaded: boolean) => void) =>
   settled(true);
 
@@ -39,12 +45,6 @@ const acceptUpload = (_texture: THREE.Texture, settled: (uploaded: boolean) => v
 // back on top of it — visible on a planet's night side, a shadowed ring
 // section and the atmosphere limb, exactly where the surface is dim.
 describe('the planet surfaces occlude the diffuse attachment', () => {
-  const SURFACES = [
-    { label: 'body mesh', src: '../../webgpu/solar-system/planet-mesh-tsl.ts' },
-    { label: 'ring annulus', src: '../../webgpu/solar-system/planet-rings-tsl.ts' },
-    { label: 'atmosphere shell', src: '../../webgpu/solar-system/planet-atmosphere-tsl.ts' },
-  ];
-
   // One blend equation runs over every attachment, so black at the
   // fragment's own alpha dims attachment 2 by exactly the opacity
   // attachment 0 was composited with. A DIFFERENT alpha would occlude the
@@ -783,12 +783,8 @@ describe('the luminance slots carry no exposure', () => {
   });
 
   it('is scaled by the shared uExposure in every surface graph', () => {
-    for (const file of [
-      '../../webgpu/solar-system/planet-mesh-tsl.ts',
-      '../../webgpu/solar-system/planet-rings-tsl.ts',
-      '../../webgpu/solar-system/planet-atmosphere-tsl.ts',
-    ]) {
-      expect(read(file), file).toMatch(/\.mul\(u\.uExposure\)/);
+    for (const { label, src } of SURFACES) {
+      expect(read(src), label).toMatch(/\.mul\(u\.uExposure\)/);
     }
   });
 });
