@@ -45,15 +45,14 @@ export function lambertLimbDiscMean(limbFloor: number, limbExp: number): number 
  *  extended source (`../../../hdr/emission/README.md#unit--what-an-emitting-layer-writes`) — the same
  *  factor that
  *  dims a resolved disc's peak under the point-source rule, which is what
- *  keeps mesh and glare continuous at any FOV. */
+ *  keeps mesh and glare continuous at any FOV. At unit exposure — README.md. */
 export function hostIrradianceLuminance(
-  exposure: number,
   omegaPxArcsec2: number,
   hostAbsmag: number,
   dHpPc: number,
 ): number {
   const irradiance = luminanceForMagnitude(
-    exposure,
+    1,
     hostIrradianceMagnitude(hostAbsmag, dHpPc),
   );
   return irradiance * omegaPxArcsec2 * ARCSEC_TO_RAD * ARCSEC_TO_RAD;
@@ -96,9 +95,10 @@ export function hostIrradianceLuminance(
  * whose disc IS its haze) clamps to zero: the model says the haze is brighter
  * than the body, and that is a per-body optical-depth error to read off the
  * clamp, not something to hide by scaling the airlight.
+ *
+ * At unit exposure, like `hostIrradianceLuminance`.
  */
 export function meshSurfaceLuminance(
-  exposure: number,
   omegaPxArcsec2: number,
   hostAbsmag: number,
   dHpPc: number,
@@ -107,7 +107,7 @@ export function meshSurfaceLuminance(
   atmo?: AtmoDiscMeans,
 ): number {
   const meanL = surfaceBrightnessLuminance(
-    exposure,
+    1,
     bodySurfaceBrightnessMagArcsec2(hostAbsmag, dHpPc, albedo),
     omegaPxArcsec2,
   );

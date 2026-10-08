@@ -79,7 +79,7 @@ export function buildPlanetRingsMaterial(
     const light = mix(RING_BACKLIT_TRANSMIT, 1.0, sameSide).mul(lit).mul(p.uRingPhaseScale);
 
     const col = min(
-      strip.rgb.mul(light).mul(p.uAirlightLuminance).mul(INV_PI),
+      strip.rgb.mul(light).mul(p.uAirlightLuminance).mul(u.uExposure).mul(INV_PI),
       vec3(LUMA_CEIL)).toVar();
     const ringL = dot(col, lumaWeightsTsl());
     const alpha = strip.a.mul(p.uFade).toVar();

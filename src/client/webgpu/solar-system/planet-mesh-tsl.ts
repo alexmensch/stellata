@@ -229,7 +229,7 @@ export function buildPlanetMeshMaterial(
         .add(march.inscatter.mul(p.uSunColour).mul(p.uAirlightLuminance)));
     });
 
-    col.assign(min(col, vec3(LUMA_CEIL)));
+    col.assign(min(col.mul(u.uExposure), vec3(LUMA_CEIL)));
     // True surface brightness, and the alpha mirrors attachment 0's so the
     // LOD crossfade composites both attachments alike. The mask cuts at the
     // geometric terminator because that is where the disc mean the exposure

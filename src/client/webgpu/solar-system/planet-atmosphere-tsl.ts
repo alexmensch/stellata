@@ -90,7 +90,7 @@ export function buildPlanetAtmosphereMaterial(
       // premultiplies it — the crossfade is a compositing weight, not part
       // of the light the operator sees.
       col.assign(min(
-        march.inscatter.mul(p.uSunColour).mul(p.uAirlightLuminance),
+        march.inscatter.mul(p.uSunColour).mul(p.uAirlightLuminance).mul(u.uExposure),
         vec3(LUMA_CEIL)));
       airL.assign(dot(col, lumaWeightsTsl()).mul(p.uFade));
       // Alpha = medium opacity along the chord (1 − luminance

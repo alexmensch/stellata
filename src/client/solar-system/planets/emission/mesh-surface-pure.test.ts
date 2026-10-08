@@ -47,22 +47,21 @@ describe('hostIrradianceLuminance', () => {
   const omegaPx = 8836; // ~94 arcsec/px, the display-luminance band reference pixel (/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance)
 
   it('falls as 1/d² in host distance', () => {
-    const at1 = hostIrradianceLuminance(BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC);
-    const at10 = hostIrradianceLuminance(BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, 10 * AU_PC);
+    const at1 = hostIrradianceLuminance(omegaPx, SUN_ABSMAG_V, AU_PC);
+    const at10 = hostIrradianceLuminance(omegaPx, SUN_ABSMAG_V, 10 * AU_PC);
     expect(at1 / at10).toBeCloseTo(100, 6);
   });
 
-  it('scales linearly with exposure and with pixel solid angle', () => {
-    const base = hostIrradianceLuminance(1, omegaPx, SUN_ABSMAG_V, AU_PC);
-    expect(hostIrradianceLuminance(3, omegaPx, SUN_ABSMAG_V, AU_PC)).toBeCloseTo(3 * base, 6);
-    expect(hostIrradianceLuminance(1, 2 * omegaPx, SUN_ABSMAG_V, AU_PC))
+  it('scales linearly with pixel solid angle', () => {
+    const base = hostIrradianceLuminance(omegaPx, SUN_ABSMAG_V, AU_PC);
+    expect(hostIrradianceLuminance(2 * omegaPx, SUN_ABSMAG_V, AU_PC))
       .toBeCloseTo(2 * base, 6);
   });
 
   it('is the unit-albedo Lambertian surface: π× a p=1 disc mean', () => {
     const s = bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, AU_PC, 1);
-    expect(hostIrradianceLuminance(BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC))
-      .toBeCloseTo(Math.PI * surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, s, omegaPx), 6);
+    expect(hostIrradianceLuminance(omegaPx, SUN_ABSMAG_V, AU_PC))
+      .toBeCloseTo(Math.PI * surfaceBrightnessLuminance(1, s, omegaPx), 6);
   });
 });
 
@@ -77,11 +76,11 @@ describe('meshSurfaceLuminance', () => {
     // flux with no other symptom.
     const baseMean = 0.25;
     const scalar = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, baseMean,
+      omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, baseMean,
     );
     const shadingMean = lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP);
     const meanL = surfaceBrightnessLuminance(
-      BASE_EPOCH_EXPOSURE,
+      1,
       bodySurfaceBrightnessMagArcsec2(SUN_ABSMAG_V, AU_PC, moon.albedo),
       omegaPx,
     );
@@ -108,8 +107,8 @@ describe('meshSurfaceLuminance', () => {
     );
     const glarePeak = pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, m, rPhysPx);
     expect(glarePeak).toBeLessThan(LUMA_CEIL);
-    const meshMean = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPxUnclipped, SUN_ABSMAG_V, AU_PC, moon.albedo, 1,
+    const meshMean = BASE_EPOCH_EXPOSURE * meshSurfaceLuminance(
+      omegaPxUnclipped, SUN_ABSMAG_V, AU_PC, moon.albedo, 1,
     ) * lambertLimbDiscMean(LIMB_FLOOR, LIMB_EXP);
 
     // Relative, not absolute: the two sides reach the same number through
@@ -124,10 +123,10 @@ describe('meshSurfaceLuminance', () => {
     // emits is invariant, which is what makes the texture arriving
     // mid-approach flux-neutral instead of a brightness pop.
     const dim = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.1,
+      omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.1,
     );
     const bright = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.4,
+      omegaPx, SUN_ABSMAG_V, AU_PC, moon.albedo, 0.4,
     );
     expect(dim * 0.1).toBeCloseTo(bright * 0.4, 12);
   });
@@ -147,11 +146,11 @@ describe('meshSurfaceLuminance', () => {
     const baseMean = 0.25;
     const albedo = 0.43;
     const surface = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean,
+      omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean,
       { surface: 2 / 3, sky: 0, airlight: 0 },
     );
     const airlight = hostIrradianceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC,
+      omegaPx, SUN_ABSMAG_V, AU_PC,
     );
     expect((surface * baseMean * (2 / 3)) / airlight).toBeCloseTo(albedo / Math.PI, 12);
   });
@@ -168,10 +167,10 @@ describe('meshSurfaceLuminance', () => {
     const baseMean = 0.25;
     const albedo = 0.43;
     const surface = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean, atmo,
+      omegaPx, SUN_ABSMAG_V, AU_PC, albedo, baseMean, atmo,
     );
     const airlight = hostIrradianceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC,
+      omegaPx, SUN_ABSMAG_V, AU_PC,
     );
     const emitted =
       surface * baseMean * (atmo.surface + atmo.sky) + airlight * atmo.airlight;
@@ -187,16 +186,16 @@ describe('meshSurfaceLuminance', () => {
     // calibrated quantity — ../../atmosphere/README.md#flux-bookkeeping.
     const titanish = { surface: 0.0062, sky: 0.0016, airlight: 0.0796 };
     expect(meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.22, 1, titanish,
+      omegaPx, SUN_ABSMAG_V, AU_PC, 0.22, 1, titanish,
     )).toBe(0);
   });
 
   it('drops the limb term for atmospheric bodies (the scattering governs it)', () => {
     const airless = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1,
+      omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1,
     );
     const atmospheric = meshSurfaceLuminance(
-      BASE_EPOCH_EXPOSURE, omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1,
+      omegaPx, SUN_ABSMAG_V, AU_PC, 0.3, 1,
       { surface: 2 / 3, sky: 0, airlight: 0 },
     );
     expect(airless / atmospheric)

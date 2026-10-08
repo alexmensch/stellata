@@ -249,9 +249,9 @@ export class PlanetMeshLayer {
 
   private readonly field: PlanetBodyField;
   private readonly textureBaseUrl: string;
-  /** The seam's slots by reference — read per frame for the live exposure
-   *  and pixel solid angle, and spread into every material so the
-   *  inline-operator branch tracks `HdrPipeline`. */
+  /** The seam's slots by reference — read per frame for the pixel solid
+   *  angle, and spread into every material so the inline-operator branch
+   *  tracks `HdrPipeline`. Never `uExposure` — emission/README.md. */
   private readonly hdr: HdrEmitterUniforms;
   private readonly uPixelRatio: THREE.IUniform<number> | undefined;
   private readonly geometry: THREE.SphereGeometry;
@@ -511,14 +511,13 @@ export class PlanetMeshLayer {
       // display encoding fell back to a full-brightness 1.
       const texState = this.colourState(planet);
       const hostAbsmag = hasSun ? (this.field.hostAbsmagOf(hp!.hostStarIdx) ?? 0) : 0;
-      const exposure = this.hdr.uExposure.value;
       const omegaPx = this.hdr.uOmegaPxArcsec2.value;
       const airlightL = hasSun
-        ? hostIrradianceLuminance(exposure, omegaPx, hostAbsmag, dHpPc)
+        ? hostIrradianceLuminance(omegaPx, hostAbsmag, dHpPc)
         : 0;
       const surfaceL = hasSun
         ? meshSurfaceLuminance(
-            exposure, omegaPx, hostAbsmag, dHpPc, planet.albedo,
+            omegaPx, hostAbsmag, dHpPc, planet.albedo,
             this.baseMeanLuminance(planet, texState),
             entry.atmoBase?.discMeans,
           )
