@@ -3,16 +3,17 @@
 // Physics: ../../solar-system/planets/rings/README.md.
 
 import {
-  clamp, dot, float, length, max, min, mix, positionGeometry, select,
+  clamp, dot, float, length, max, mix, positionGeometry, select,
   smoothstep, step, varying, vec2, vec3, vec4,
 } from 'three/tsl';
 import { DoubleSide, NodeMaterial } from 'three/webgpu';
 import type { Node } from 'three/webgpu';
-import { LUMA_CEIL } from '../../hdr/emission/emission-pure';
 import {
   RING_BACKLIT_TRANSMIT, RING_SHADOW_FLOOR,
 } from '../../solar-system/planets/rings/ring-photometry-pure';
-import { maskedStatisticTexelTsl, occluderTexelTsl } from '../emission-tsl';
+import {
+  exposedLuminanceTsl, maskedStatisticTexelTsl, occluderTexelTsl,
+} from '../emission-tsl';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
@@ -78,9 +79,8 @@ export function buildPlanetRingsMaterial(
     const sameSide = step(0.0, p.uSunDirLocal.z.mul(p.uCamPosLocal.z));
     const light = mix(RING_BACKLIT_TRANSMIT, 1.0, sameSide).mul(lit).mul(p.uRingPhaseScale);
 
-    const col = min(
-      strip.rgb.mul(light).mul(p.uAirlightLuminance).mul(u.uExposure).mul(INV_PI),
-      vec3(LUMA_CEIL)).toVar();
+    const col = exposedLuminanceTsl(
+      strip.rgb.mul(light).mul(p.uAirlightLuminance).mul(INV_PI), u.uExposure).toVar();
     const ringL = dot(col, lumaWeightsTsl());
     const alpha = strip.a.mul(p.uFade).toVar();
     // Undithered — the annulus alpha-blends over the body mesh, so a pixel

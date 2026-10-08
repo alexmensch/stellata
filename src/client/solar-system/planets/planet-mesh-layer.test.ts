@@ -795,8 +795,13 @@ describe('the luminance slots carry no exposure', () => {
   });
 
   it('is scaled by the shared uExposure in every surface graph', () => {
-    for (const { label, src } of SURFACES) {
-      expect(read(src), label).toMatch(/\.mul\(u\.uExposure\)/);
+    for (const { label, src: path } of SURFACES) {
+      const src = read(path);
+      const viaHelper = src.match(/exposedLuminanceTsl\([^;]*?,\s*u\.uExposure\)/g) ?? [];
+      const anywhere = src.match(/u\.uExposure/g) ?? [];
+      expect(viaHelper.length, label).toBeGreaterThan(0);
+      expect(anywhere.length, `${label} reads uExposure outside the helper`)
+        .toBe(viaHelper.length);
     }
   });
 });

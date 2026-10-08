@@ -2,7 +2,7 @@
 // and statistic-texel rules, over emission-pure's constants. Contracts:
 // ../hdr/emission/README.md#unit--what-an-emitting-layer-writes ../hdr/attachments/README.md#the-unit.
 
-import { Fn, clamp, dot, float, log2, max, min, pow, sqrt, vec4 } from 'three/tsl';
+import { Fn, clamp, dot, float, log2, max, min, pow, sqrt, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
 import { FOOTPRINT_SQRT12, LUMA_CEIL, MAG_PER_STOP } from '../hdr/emission/emission-pure';
@@ -26,6 +26,13 @@ export const luminanceForMagTsl = /* @__PURE__ */ Fn(
 export const surfaceBrightnessLuminanceTsl = /* @__PURE__ */ Fn(
   ([exposure, magPerArcsec2, omegaArcsec2]: [NF, NF, NF]) =>
     luminanceForMagTsl(exposure, magPerArcsec2).mul(omegaArcsec2),
+);
+
+/** A unit-exposure colour scaled by its exposure-carrying gain, then
+ *  clamped at the ceiling — gain first, so a clamped read stays the lower
+ *  bound the adaptation loop closes from above. */
+export const exposedLuminanceTsl = /* @__PURE__ */ Fn(
+  ([colour, gain]: [N3, NF]) => min(colour.mul(gain), vec3(LUMA_CEIL)),
 );
 
 /** CSS px per radian recovered from the pixel solid angle — the inverse of

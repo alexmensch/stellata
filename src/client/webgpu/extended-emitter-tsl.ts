@@ -2,12 +2,13 @@
 // extended-source emitter shares — column → gain → all three attachments,
 // and the inline operator off-target. ../hdr/emission/README.md#unit--what-an-emitting-layer-writes.
 
-import { Fn, If, dot, min, vec3, vec4 } from 'three/tsl';
+import { Fn, If, dot, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { LUMA_CEIL } from '../hdr/emission/emission-pure';
 import { LUMA_WEIGHTS } from '../hdr/tonemap/tonemap-pure';
 import type { EmitterOutputs } from './hdr/mrt-material';
-import { statisticTexelTsl, surfaceBrightnessLuminanceTsl } from './emission-tsl';
+import {
+  exposedLuminanceTsl, statisticTexelTsl, surfaceBrightnessLuminanceTsl,
+} from './emission-tsl';
 import { tonemapUnditheredTsl } from './tonemap-tsl';
 
 type NF = Node<'float'>;
@@ -18,9 +19,8 @@ type N3 = Node<'vec3'>;
  *  CALLER clamps the product — which is what this is. */
 export const gainedColumnTsl = /* @__PURE__ */ Fn(
   ([column, exposure, magPerArcsec2, omegaArcsec2]: [N3, NF, NF, NF]) =>
-    min(
-      column.mul(surfaceBrightnessLuminanceTsl(exposure, magPerArcsec2, omegaArcsec2)),
-      vec3(LUMA_CEIL)),
+    exposedLuminanceTsl(
+      column, surfaceBrightnessLuminanceTsl(exposure, magPerArcsec2, omegaArcsec2)),
 );
 
 export interface ExtendedEmitterInputs {

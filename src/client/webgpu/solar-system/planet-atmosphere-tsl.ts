@@ -6,11 +6,12 @@ import {
   AddEquation, CustomBlending, NodeMaterial, OneFactor, OneMinusSrcAlphaFactor,
 } from 'three/webgpu';
 import {
-  Discard, If, dot, float, max, min, normalView, screenCoordinate, select,
+  Discard, If, dot, float, max, normalView, screenCoordinate, select,
   vec3, vec4,
 } from 'three/tsl';
-import { LUMA_CEIL } from '../../hdr/emission/emission-pure';
-import { maskedStatisticTexelTsl, occluderTexelTsl } from '../emission-tsl';
+import {
+  exposedLuminanceTsl, maskedStatisticTexelTsl, occluderTexelTsl,
+} from '../emission-tsl';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
@@ -89,9 +90,8 @@ export function buildPlanetAtmosphereMaterial(
       // The operator runs on the airlight radiance, before uFade
       // premultiplies it — the crossfade is a compositing weight, not part
       // of the light the operator sees.
-      col.assign(min(
-        march.inscatter.mul(p.uSunColour).mul(p.uAirlightLuminance).mul(u.uExposure),
-        vec3(LUMA_CEIL)));
+      col.assign(exposedLuminanceTsl(
+        march.inscatter.mul(p.uSunColour).mul(p.uAirlightLuminance), u.uExposure));
       airL.assign(dot(col, lumaWeightsTsl()).mul(p.uFade));
       // Alpha = medium opacity along the chord (1 − luminance
       // transmittance), so the premultiplied-over shell occludes the

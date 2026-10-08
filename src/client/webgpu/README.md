@@ -56,7 +56,11 @@ src/client/webgpu/
                                     constants.
   emission-tsl.ts                   TSL mirror of the emission unit's
                                     point-source peak, flux-peak,
-                                    statistic and occluder texel rules.
+                                    statistic and occluder texel rules,
+                                    and exposedLuminanceTsl — gain, then
+                                    the LUMA_CEIL clamp — that the planet
+                                    surfaces and the extended-source tail
+                                    share.
   perceptual-disc-tsl.ts            The perceptual disc kernel (dM knee,
                                     √Δm size, exponent, profile). Shared
                                     by the star field and the planet
