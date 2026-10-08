@@ -25,7 +25,7 @@ is no per-layer brightness encoding left, and no multiplier on either:
 `uExposure` is the one exposure
 ([Reflected glare](../../../webgpu/solar-system/README.md#reflected-glare--a-planet-reads-exactly-like-a-star)).
 
-**The CPU scalars are at unit exposure; the graphs multiply `uExposure`.**
+<a id="unit-exposure"></a>**The CPU scalars are at unit exposure; the graphs multiply `uExposure`.**
 `uSurfaceLuminance` and `uAirlightLuminance` are computed in the layer
 fan-out, where `uExposure` is still last frame's — why that matters is
 [Measure at the base exposure](../../../hdr/exposure/reduction/README.md#measure-at-the-base-exposure-not-the-live-one).
