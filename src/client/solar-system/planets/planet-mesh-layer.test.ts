@@ -637,23 +637,23 @@ describe('every mesh texture slot has a release site', () => {
   }
 });
 
-/** A lit Saturn with its ring strip resolved, so updateRing runs whole. */
-function litHarness(camera: THREE.Vector3, exposure?: number) {
-  const saturn = SOL_BODIES.find((b) => b.name === 'Saturn')!;
+/** A lit body (Saturn by default, its ring strip resolved so updateRing
+ *  runs whole) at 9.5 AU on +x, host at the local origin. */
+function litHarness(camera: THREE.Vector3, exposure?: number, bodyName = 'Saturn') {
+  const body = SOL_BODIES.find((b) => b.name === bodyName)!;
   const loads: { url: string; onLoad: (bitmap: unknown) => void }[] = [];
   vi.spyOn(THREE.ImageBitmapLoader.prototype, 'load').mockImplementation(
     ((url: string, onLoad: (bitmap: unknown) => void) => {
       loads.push({ url, onLoad });
     }) as never,
   );
-  // Saturn on +x at 9.5 AU, host at the local origin.
   const planetPos = new THREE.Vector3(9.5 * AU_PC, 0, 0);
   const field = {
     drawn: true,
     monochrome: false,
     liveInstanceCount: 1,
     hiddenInstanceIdx: null as number | null,
-    planetAt: () => saturn,
+    planetAt: () => body,
     planetLocalPositionInto: (_i: number, out: THREE.Vector3) => {
       out.copy(planetPos);
       return true;
@@ -667,11 +667,12 @@ function litHarness(camera: THREE.Vector3, exposure?: number) {
     hostAbsmagOf: () => 4.83,
     hostRadiusOf: () => R_SUN_PC,
     hostOrientationOf: () => new THREE.Quaternion(),
-    getAttachedPlanetSystem: () => ({ hostStarIdx: 0, planets: [saturn] }),
+    getAttachedPlanetSystem: () => ({ hostStarIdx: 0, planets: [body] }),
     eclipseDimForInstance: () => 1,
   } as unknown as PlanetBodyField;
   const ringSurfaces: EmitterMaterial[] = [];
   const meshSurfaces: EmitterMaterial[] = [];
+  const atmoSurfaces: EmitterMaterial[] = [];
   const hdr = { ...makeMockHdrEmitterUniforms(), uPixelRatio: { value: 1 } };
   if (exposure !== undefined) hdr.uExposure.value = exposure;
   const layer = new PlanetMeshLayer(
@@ -693,6 +694,11 @@ function litHarness(camera: THREE.Vector3, exposure?: number) {
           ringSurfaces.push(surface);
           return surface;
         },
+        planetAtmosphere() {
+          const surface = materials.planetAtmosphere();
+          atmoSurfaces.push(surface);
+          return surface;
+        },
       };
     },
     acceptUpload,
@@ -712,6 +718,7 @@ function litHarness(camera: THREE.Vector3, exposure?: number) {
     ring,
     ringSlots: () => ringSurfaces.at(-1)!.uniforms,
     meshSlots: () => meshSurfaces.at(-1)!.uniforms,
+    atmoSlots: () => atmoSurfaces.at(-1)?.uniforms,
     planetPos,
   };
 }
@@ -765,21 +772,26 @@ describe('the luminance slots carry no exposure', () => {
   });
 
   it('is the same at any live exposure', () => {
-    const slotsAt = (exposure: number) => {
-      const h = litHarness(new THREE.Vector3(1 * AU_PC, 0.1 * AU_PC, 0), exposure);
+    // Saturn reaches the ring annulus; Venus, the atmosphere shell.
+    const slotsAt = (exposure: number, bodyName: string) => {
+      const h = litHarness(new THREE.Vector3(1 * AU_PC, 0.1 * AU_PC, 0), exposure, bodyName);
       const mesh = h.meshSlots();
       const values = [
         mesh.uSurfaceLuminance.value,
         mesh.uAirlightLuminance.value,
-        h.ringSlots().uAirlightLuminance.value,
+        bodyName === 'Saturn'
+          ? h.ringSlots().uAirlightLuminance.value
+          : h.atmoSlots()!.uAirlightLuminance.value,
       ];
       h.layer.dispose();
       vi.restoreAllMocks();
       return values;
     };
-    const atOne = slotsAt(1);
-    expect(atOne.every((v) => v > 0)).toBe(true);
-    expect(slotsAt(1e-3)).toEqual(atOne);
+    for (const bodyName of ['Saturn', 'Venus']) {
+      const atOne = slotsAt(1, bodyName);
+      expect(atOne.every((v) => v > 0), bodyName).toBe(true);
+      expect(slotsAt(1e-3, bodyName), bodyName).toEqual(atOne);
+    }
   });
 
   it('is scaled by the shared uExposure in every surface graph', () => {
