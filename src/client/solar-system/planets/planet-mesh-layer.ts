@@ -175,6 +175,8 @@ interface MeshEntry {
   /** Present iff the body has an atmosphere; shared by the mesh disc
    *  airlight and the shell limb halo. */
   atmoBase?: AtmoBase;
+  /** The `frame` this entry last drew in; any other value hides it. */
+  shownFrame: number;
 }
 
 const RELIEF_SUFFIX = '-normal';
@@ -425,7 +427,6 @@ export class PlanetMeshLayer {
     camera.updateMatrixWorld();
     this.viewInverse.copy(camera.matrixWorld).invert();
 
-    const shown = new Set<number>();
     const n = this.field.liveInstanceCount;
     for (let idx = 0; idx < n; idx++) {
       if (idx === this.field.hiddenInstanceIdx) continue;
@@ -460,7 +461,7 @@ export class PlanetMeshLayer {
       if (fade <= 0) continue;
 
       const entry = this.entries.get(idx) ?? this.createEntry(idx, planet);
-      shown.add(idx);
+      entry.shownFrame = this.frame;
       const { mesh, material } = entry;
       mesh.visible = true;
       mesh.position.copy(this.tmpPlanet);
@@ -619,8 +620,8 @@ export class PlanetMeshLayer {
       }
     }
 
-    for (const [idx, entry] of this.entries) {
-      if (!shown.has(idx)) {
+    for (const entry of this.entries.values()) {
+      if (entry.shownFrame !== this.frame) {
         entry.mesh.visible = false;
         entry.stamp.visible = false;
         if (entry.ring) entry.ring.mesh.visible = false;
@@ -1045,6 +1046,7 @@ export class PlanetMeshLayer {
     );
     const entry: MeshEntry = {
       mesh, material, stamp, boundRadiusPc, radiusPc, slotFallbacks,
+      shownFrame: this.frame,
     };
     if (planet.rings) entry.ring = this.createRing(planet, planet.rings);
     if (planet.atmosphere) {
