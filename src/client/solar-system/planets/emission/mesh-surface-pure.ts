@@ -45,7 +45,7 @@ export function lambertLimbDiscMean(limbFloor: number, limbExp: number): number 
  *  extended source (`../../../hdr/emission/README.md#unit--what-an-emitting-layer-writes`) — the same
  *  factor that
  *  dims a resolved disc's peak under the point-source rule, which is what
- *  keeps mesh and glare continuous at any FOV. At unit exposure — README.md. */
+ *  keeps mesh and glare continuous at any FOV. At unit exposure — README.md#unit-exposure. */
 export function hostIrradianceLuminance(
   omegaPxArcsec2: number,
   hostAbsmag: number,

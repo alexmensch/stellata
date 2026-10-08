@@ -8,8 +8,9 @@ approach. `../README.md` owns the two layers that read these scalars;
 ```
 src/client/solar-system/planets/emission/
   mesh-surface-pure.ts (+ test)   Mirrored limb constants, the disc-mean
-                                  normalisers, and the two per-body
-                                  luminance scalars the mesh shader reads.
+                                  normalisers, and the two unit-exposure
+                                  luminance scalars the mesh, ring and
+                                  shell graphs read.
 ```
 
 The day map's own mean linear luminance is no longer measured here: it is
