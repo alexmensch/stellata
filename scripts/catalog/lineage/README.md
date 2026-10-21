@@ -80,8 +80,11 @@ changed means the set of rows under one key differs.
   The committed code list is generated from those declarations and checked
   by CI, never hand-edited.
 - An entry carries the code, its stage, its declared effect (removal and
-  re-bind codes: retire, park or merge), a one-line description, and the
-  version that first shipped it.
+  re-bind codes: retire, park or merge), a one-line description, the
+  version that first shipped it, and its status — `live`, `retired` (with
+  the version that retired it) or `historical`, declared beside the code as
+  a closed union. Historical codes carry legacy causes and are never mapped
+  onto live ones.
 - Codes are added and marked retired, never edited or reused. A behaviour
   change — the rule now picks different records — mints a new code; a fix
   that leaves the picked set unchanged keeps its code.
