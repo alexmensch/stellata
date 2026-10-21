@@ -72,6 +72,10 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 - `spine/` — AT-HYG's merge decisions, frozen: `data/athyg/inherited-spine.tsv`,
   its codec and byte guard. Read by `build:membership` and the manifest gate,
   never by `build:catalog`.
+- `lineage/` — record lineage: every stage's per-record decision with its
+  reason code and cited source rows, keyed on the record's origin source
+  row; the trace command, the run-to-run diff, and the committed ledgers as
+  views of it.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 

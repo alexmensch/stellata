@@ -247,6 +247,10 @@ point of reinstating rather than minting: identity is continuous
 across a presence gap. Never reinstate a sid whose object came back
 under a *different* identity; that is a bridge/merge ([§ 5](#5-synthetic-key-churn-wds-re-subdivision), [§ 6.1](#61-procedure)).
 
+Settled 2026-10-21: both files migrate into an allocation-written
+`data/sid/events.tsv` under historical reason codes, with this counting
+rule carried over ([SID events](/scripts/catalog/lineage/README.md#sid-events)).
+
 `data/sid/ledger-head.json` (regular git, tiny) pins the frozen
 state: `{ "rows": N, "max_sid": M, "sha256": "…" }` for the ledger
 and the same triple for retirements and reinstatements. It is

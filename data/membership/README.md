@@ -1,11 +1,12 @@
 # Membership manifest — the primaries-derived record set
 
 Pipeline-derived, like `../binaries/multiples.tsv`: written by
-`pnpm run build:membership` (`scripts/catalog/membership/`), regenerated and
-diffed in CI, never hand-edited. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
+`pnpm run build:membership` (`scripts/catalog/membership/`; `parked-ledger.tsv`
+by `build:catalog`), regenerated and diffed in CI, never hand-edited — except
+the two files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 
 ```
-membership-manifest.tsv  ~64 MB, LFS. One row per admitted record: final
+membership-manifest.tsv  LFS. One row per admitted record: final
                          labels (hd/hd_alt/hr/hr_alt/hip/gl/flam, the spine's
                          bayer/proper), gaia_source_id with its binding class,
                          the primary attesting each cell, and `term` — which
@@ -13,14 +14,14 @@ membership-manifest.tsv  ~64 MB, LFS. One row per admitted record: final
                          the row. 975,573 rows: 376,909 `primaries` and
                          598,664 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
-additions-ledger.tsv     ~3.6 MB, LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the
+additions-ledger.tsv     LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the
                          primaries admit that the spine lacked: one row per
                          group, keyed on the same five identifier cells as
                          parked-ledger.tsv, under the
                          closed reason enum (admitted:hd_link_gap ·
                          admitted:hd_omitted · admitted:hip_omitted ·
                          admitted:cns5_census · component:<anchor>).
-parked-ledger.tsv        ~282 KB, regular git. The /docs/catalog-driver.md#61-record-parity ledger for manifest
+parked-ledger.tsv        Regular git. The /docs/catalog-driver.md#61-record-parity ledger for manifest
                          rows that build no record: no owned parallax, no V, or
                          no position. Same five identifier cells as
                          additions-ledger.tsv, under the closed reason enum
@@ -30,7 +31,7 @@ parked-ledger.tsv        ~282 KB, regular git. The /docs/catalog-driver.md#61-re
                          record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
-binding-review.tsv       ~60 KB, regular git. The 280 spine rows the derivation
+binding-review.tsv       Regular git. The 280 spine rows the derivation
                          cannot settle alone or a review already settled —
                          contested · collision · disposed — with every
                          source's candidate, the gate rejections, the printed V
@@ -39,7 +40,7 @@ binding-review.tsv       ~60 KB, regular git. The 280 spine rows the derivation
                          being queued is a flag, not a withhold.
                          Pipeline-derived.
 binding-review-dispositions.tsv
-                         ~16 KB, regular git. Hand-curated, and AUTHORITATIVE
+                         Regular git. Hand-curated, and AUTHORITATIVE
                          wherever it keys a record: tyc/hip/hd/gl cells, the
                          derived id the review was taken over, the id the row
                          ships (keep_source_id: the derived id, a listed
@@ -52,7 +53,7 @@ binding-review-dispositions.tsv
                          only the cited basis stands behind
                          (dispositionAsserted). A kept value rides the manifest
                          as binding=reviewed.
-spine-corrections.tsv    ~4 KB, regular git. Hand-curated: where review found
+spine-corrections.tsv    Regular git. Hand-curated: where review found
                          AT-HYG's MERGE DECISION wrong, which no other curated
                          file covers. Keyed on tyc/hip/hd/gl, one row per
                          correction, under `set` (rewrite one cell — `tyc`
@@ -61,7 +62,7 @@ spine-corrections.tsv    ~4 KB, regular git. Hand-curated: where review found
                          `value` names it). 2 rows. Every field is checked and
                          a fold's survivor must answer to everything the folded
                          row did (/scripts/catalog/membership/README.md#correcting-a-merge-decision).
-label-drops.tsv          ~7 KB, regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
+label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
                          flamsteed_unattested (119) · hd_unattested (1).

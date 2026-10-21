@@ -124,7 +124,11 @@ checkout last built from, the dev server starts without rebuilding; when they
 differ (main checkout built from an older commit, a pipeline change on the
 branch), the stamp mismatches and the step rebuilds. Only stamped outputs
 belong in that list: an mtime-gated step reads any fresh copy as up to date,
-whatever it was built from. A worktree made any other way
+whatever it was built from. The one other kind allowed is a diff baseline
+that no step reads to decide whether to rebuild and that records what it was
+built from — `build/lineage/`, whose header the lineage diff checks against
+the merge-base ([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)).
+A worktree made any other way
 (`git worktree add`) builds from scratch.
 
 The private paper-store link is not in that list — the harness's copy skips
