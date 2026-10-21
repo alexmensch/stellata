@@ -32,7 +32,7 @@ hd_hip_route_disagreements_review.tsv
                                    scripts/catalog/classic-ids/
                                    parity-ledger.test.ts — a re-pull that
                                    grows the queue fails until reviewed.
-rejected_bindings.tsv              460 rows. Pipeline-derived review queue —
+rejected_bindings.tsv              Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (README.md#the-binding-gate).
 label_flips.tsv                    Pipeline-derived, and by
