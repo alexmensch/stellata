@@ -102,7 +102,9 @@ which designation), minted, merged (into which SID, survivor by
 the upstream decision that removed or re-bound its record, joined on the
 origin key.
 
-Allocation is the sole writer of `data/sid/events.tsv` — `sid`, date, event
+Allocation is the sole writer of `data/sid/events.tsv`, apart from the
+one-time migration of the legacy retirement files
+([below](#committed-ledgers-become-views)) — `sid`, date, event
 (`mint`|`retire`|`reinstate`|`merge`), code, params, successor, build
 version — append-only and guarded like the ledger. Events follow from the
 declared effect of the upstream code:
