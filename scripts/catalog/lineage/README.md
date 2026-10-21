@@ -104,7 +104,7 @@ changed means the set of rows under one key differs.
 
 SID allocation is a lineage stage. Per object it records resolved (through
 which designation), minted, merged (into which SID, survivor by
-[docs/sid.md § 4.3](/docs/sid.md#43-ledger--datasidledgertsv)) or orphaned. An orphan inherits its cause from
+`docs/sid.md` [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)) or orphaned. An orphan inherits its cause from
 the upstream decision that removed or re-bound its record, joined on the
 origin key.
 
@@ -206,5 +206,5 @@ tests: `binding-review-dispositions.tsv`, `spine-corrections.tsv`,
 historical codes, one per distinct legacy cause, and both files are deleted
 in that PR. Retired state is still decided by counting retire against
 reinstate rows per SID. The migration needs the one-time edit to the ledger
-guard that [docs/sid.md § 4.5](/docs/sid.md#45-ci-guard) reserves for owner
+guard that `docs/sid.md` [§ 4.5](/docs/sid.md#45-ci-guard) reserves for owner
 sign-off; the owner gave it on 2026-10-21 by choosing this migration.
