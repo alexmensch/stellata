@@ -72,6 +72,10 @@ Every stage writes the same envelope:
   row mapping fails typecheck.
 - A refused alternative is a row of its own, never a nested list, so a
   choice diffs line by line.
+- A stage writes a row for every record, including one it does not act on:
+  `<stage>.not-applicable`, a variant of the stage's outcome union. A
+  missing row then always means the record left that stage, never a silent
+  pass-through; identical-code rows cost almost nothing compressed.
 - SID, record index and designations live on the identity row only; the
   build version lives in a per-build header file. Repeating them on every
   stage row roughly doubles each stage file.
