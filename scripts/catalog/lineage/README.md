@@ -87,7 +87,9 @@ changed means the set of rows under one key differs.
   onto live ones.
 - Codes are added and marked retired, never edited or reused. A behaviour
   change — the rule now picks different records — mints a new code; a fix
-  that leaves the picked set unchanged keeps its code.
+  that leaves the picked set unchanged keeps its code. CI diffs the
+  generated list against its merge-base copy and fails if any code there is
+  missing, renamed, or has a changed stage, effect or description.
 
 ## SID events
 
