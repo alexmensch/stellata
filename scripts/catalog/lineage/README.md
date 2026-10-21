@@ -63,8 +63,8 @@ Every stage writes the same envelope:
 `{ source, row }`: `source` is the source's declaration constant (the
 `defineSource` constant the typed input boundary introduces) and
 `row` is that source's typed row key — never a path string. Licence is a
-property of the source constant, so filtering evidence by licence for a
-public surface is a join on `source`.
+property of the source constant, so filtering a row's citations — its key
+and its evidence — by licence for a public surface is a join on `source`.
 
 Its text form is `<source>:<row>`. Every lineage file sorts by the byte
 order of that text form, then `role`, `code`, `params`, through one
