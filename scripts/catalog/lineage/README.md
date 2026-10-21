@@ -24,8 +24,11 @@ source row that founded the record.
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
 
 Record index and SID are attributes, never keys. One **identity row** per
-record carries them once known (index after the apparent-V sort, SID from
-allocation), with the record's designations.
+record carries: the origin key, the record index (after the apparent-V
+sort), the SID (from allocation), the manifest's current five-cell tuple
+(`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`, with the bound Gaia id), and the
+full designation set. The ledger views and trace take their key columns
+from this row only, never re-deriving them.
 
 The manifest's five-cell tuple (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`) is
 not the key: it changes exactly when a binding or label decision changes, so
