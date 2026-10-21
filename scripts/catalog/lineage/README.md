@@ -127,7 +127,8 @@ build's lineage.
 `build/lineage/<stage>.tsv.gz`: gzip level 1, sorted by key, every record at
 every stage, no reduced-detail mode.
 
-Measured on 1M synthetic rows of this shape: 67 MB plain, 13.6 MB compressed
+Measured once (2026-10-21, a throwaway probe; the pinned budget supersedes
+it) on 1M synthetic rows of this shape: 67 MB plain, 13.6 MB compressed
 in 0.2 s per stage — about 200 MB and a few seconds for fifteen stages. With
 `build/lineage.previous/` a checkout holds about twice that, and each new
 worktree copies one more build's worth in. The
