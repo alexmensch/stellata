@@ -104,11 +104,19 @@ origin key.
 
 Allocation is the sole writer of `data/sid/events.tsv` — `sid`, date, event
 (`mint`|`retire`|`reinstate`|`merge`), code, params, successor, build
-version — append-only and guarded like the ledger. It writes retire,
-reinstate and merge events from the declared effect of the upstream code.
+version — append-only and guarded like the ledger. Events follow from the
+declared effect of the upstream code:
+
+| Cause | Event |
+|---|---|
+| a new object | `mint`, coded by the route that admitted the record |
+| upstream effect `retire` | `retire` |
+| upstream effect `merge` | `merge`, with the successor SID |
+| upstream effect `park` | none: the SID stays in the ledger, absent from this build ([§ 4.4](/docs/sid.md#44-allocation)) |
+| a retired class reappears | `reinstate` |
 
 Fail closed: an orphan whose cause has no code, or whose upstream decision
-is not in that build's lineage, fails the build. CI checks every event row's
+is not in that build's lineage, fails `sid:allocate` and `sid:check`. CI checks every event row's
 code is in the list, declares that effect, and matches a decision in the
 build's lineage.
 
