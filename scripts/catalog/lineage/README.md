@@ -188,7 +188,10 @@ added, removed and changed.
    `lookupByName`; designations normalise through `sid-pure.ts`'s
    namespaces; a SID resolves through the ledger.
 2. Find the origin keys whose identity rows carry that designation. Parked
-   and dropped records have lineage rows too, so they are found.
+   and dropped records have lineage rows too, so they are found. Also find
+   every row that names it in `params` or `evidence` — a source a gate
+   weighed and refused, or only cited, sits on no identity row. A full scan
+   of the stage files, a few seconds, so no index is kept.
 3. Widen to the same-as class, and to retired SIDs and their successors,
    through allocation's rows.
 4. Print every stage's rows for those keys in stage order.
