@@ -35,7 +35,7 @@ hd_hip_route_disagreements_review.tsv
 rejected_bindings.tsv              460 rows. Pipeline-derived review queue —
                                    the bindings the gate dropped
                                    (README.md#the-binding-gate).
-label_flips.tsv                    736 rows. Pipeline-derived, and by
+label_flips.tsv                    748 rows. Pipeline-derived, and by
                                    `build:membership` rather than by this
                                    folder's build — that is where the merge
                                    runs. EVERY departure of the shipped labels

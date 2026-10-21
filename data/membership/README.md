@@ -2,7 +2,8 @@
 
 Pipeline-derived, like `../binaries/multiples.tsv`: written by
 `pnpm run build:membership` (`scripts/catalog/membership/`), regenerated and
-diffed in CI, never hand-edited. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
+diffed in CI, never hand-edited — except the two files marked hand-curated
+below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 
 ```
 membership-manifest.tsv  ~64 MB, LFS. One row per admitted record: final
