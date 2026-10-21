@@ -28,7 +28,9 @@ record carries: the origin key, the record index (after the apparent-V
 sort), the SID (from allocation), the manifest's current five-cell tuple
 (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`, with the bound Gaia id), and the
 full designation set. The ledger views and trace take their key columns
-from this row only, never re-deriving them.
+from this row only, never re-deriving them. A parked or dropped record
+never gets an index or a SID: both columns are a tagged variant, a value or
+`none` with the reason code that removed the record, never an empty cell.
 
 The manifest's five-cell tuple (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`) is
 not the key: it changes exactly when a binding or label decision changes, so
