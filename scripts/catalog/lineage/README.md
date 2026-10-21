@@ -165,9 +165,15 @@ current `<stage>.tsv.gz` replaces `build/lineage.previous/<stage>.tsv.gz` in
 the same emitArtifacts commit that renames the stage's new file into place.
 A stage that fails, is skipped by its content-hash stamp, or does not run
 (a standalone `build:membership`, a separate `sid:allocate`) leaves both its
-copies untouched. A fresh
-worktree is seeded with main's `build/lineage/` (`.worktreeinclude`), so its
-first build diffs against main. `--against <dir>` overrides the baseline. A
+copies untouched.
+
+A fresh worktree is seeded with the main checkout's last `build/lineage/`
+(`.worktreeinclude`), which may come from an older commit. So the per-build
+header file records, per stage, the commit and the content hash of the
+inputs that stage was built from, and the diff refuses a baseline whose
+commit is not the branch's merge-base with main. The refusal names the
+baseline's commit and how to get a matching one; an explicit flag accepts
+it anyway. `--against <dir>` overrides the baseline. A
 stage diff is a merge-join of two files sorted by that one comparator: keys
 added, removed and changed.
 
