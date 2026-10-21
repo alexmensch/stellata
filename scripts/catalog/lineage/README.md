@@ -65,6 +65,12 @@ Every stage writes the same envelope:
 property of the source constant, so filtering evidence by licence for a
 public surface is a join on `source`.
 
+Its text form is `<source>:<row>`. Every lineage file sorts by the byte
+order of that text form, then `role`, `code`, `params`, through one
+comparator the writer and the diff both import — never a numeric sort, so
+Gaia ids above 2^53 order the same everywhere. A key's rows diff as a set:
+changed means the set of rows under one key differs.
+
 ## Reason codes — closed, append-only, generated
 
 - One code per outcome-producing branch: two records with one code were
@@ -122,8 +128,8 @@ A stage that fails, is skipped by its content-hash stamp, or does not run
 copies untouched. A fresh
 worktree is seeded with main's `build/lineage/` (`.worktreeinclude`), so its
 first build diffs against main. `--against <dir>` overrides the baseline. A
-stage diff is a merge-join of two key-sorted files: rows added, removed and
-changed, per key.
+stage diff is a merge-join of two files sorted by that one comparator: keys
+added, removed and changed.
 
 ## Trace
 
