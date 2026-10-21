@@ -90,6 +90,9 @@ changed means the set of rows under one key differs.
   that leaves the picked set unchanged keeps its code. CI diffs the
   generated list against its merge-base copy and fails if any code there is
   missing, renamed, or has a changed stage, effect or description.
+- No placeholder codes. A stage gets its real codes before any change
+  orphans a SID through it; an `*.unrecorded` code would be written into
+  append-only `events.tsv` for good.
 
 ## SID events
 
