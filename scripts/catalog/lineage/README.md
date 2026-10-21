@@ -60,7 +60,8 @@ Every stage writes the same envelope:
 
 ### SourceRowRef
 
-`{ source, row }`: `source` is the source's `defineSource` constant and
+`{ source, row }`: `source` is the source's declaration constant (the
+`defineSource` constant the typed input boundary introduces) and
 `row` is that source's typed row key — never a path string. Licence is a
 property of the source constant, so filtering evidence by licence for a
 public surface is a join on `source`.
@@ -168,8 +169,10 @@ added, removed and changed.
 ## Cross-stage joins
 
 Every join is on the origin key, never a re-derivation. The binaries
-`Binding` provenance carries a component's `(system_id, comp)` and its HIP,
-which is what the membership change report joins a re-bound row onto.
+`Binding` provenance type must carry a component's `(system_id, comp)` and
+its HIP, which is what the membership change report joins a re-bound row
+onto; until that type lands, the join reads `multiples.tsv`'s existing
+columns.
 
 ## Committed ledgers become views
 
