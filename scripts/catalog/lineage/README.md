@@ -98,7 +98,7 @@ changed means the set of rows under one key differs.
 
 SID allocation is a lineage stage. Per object it records resolved (through
 which designation), minted, merged (into which SID, survivor by
-[docs/sid.md](/docs/sid.md)) or orphaned. An orphan inherits its cause from
+[docs/sid.md § 4.3](/docs/sid.md#43-ledger--datasidledgertsv)) or orphaned. An orphan inherits its cause from
 the upstream decision that removed or re-bound its record, joined on the
 origin key.
 
