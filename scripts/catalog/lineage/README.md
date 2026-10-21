@@ -114,8 +114,12 @@ below; the derivation itself is a build artifact, regenerated every build.
 
 ## Run-to-run diff
 
-Each build moves `build/lineage/` to `build/lineage.previous/` before
-writing, so the baseline is the last build in this checkout. A fresh
+The baseline is the last build in this checkout, kept per stage: a stage's
+current `<stage>.tsv.gz` replaces `build/lineage.previous/<stage>.tsv.gz` in
+the same emitArtifacts commit that renames the stage's new file into place.
+A stage that fails, is skipped by its content-hash stamp, or does not run
+(a standalone `build:membership`, a separate `sid:allocate`) leaves both its
+copies untouched. A fresh
 worktree is seeded with main's `build/lineage/` (`.worktreeinclude`), so its
 first build diffs against main. `--against <dir>` overrides the baseline. A
 stage diff is a merge-join of two key-sorted files: rows added, removed and
