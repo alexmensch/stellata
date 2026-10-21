@@ -184,6 +184,11 @@ it anyway. `--against <dir>` overrides the baseline. A
 stage diff is a merge-join of two files sorted by that one comparator: keys
 added, removed and changed.
 
+Every stage diff writes `build/lineage-diff/<stage>.tsv` — outside
+`build/lineage/`, so a worktree's seed never carries another checkout's
+diff; the membership change report is the first. A PR whose build leaves a non-empty diff puts
+that diff's summary in its PR body.
+
 ## Trace
 
 `pnpm run trace <name | designation | sid | gaia id>`:
