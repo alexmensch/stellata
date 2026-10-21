@@ -132,7 +132,7 @@ in 0.2 s per stage — about 200 MB and a few seconds for fifteen stages. With
 `build/lineage.previous/` a checkout holds about twice that, and each new
 worktree copies one more build's worth in. The
 bulk is Gaia ids, which no format compresses much: Parquet with zstd came to
-11.5 MB in 1.2 s, not worth five times the write cost and the loss of
+11.5 MB in 1.2 s, not worth six times the write cost and the loss of
 `zgrep`. The real stages' write time and disk are pinned as a budget.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
