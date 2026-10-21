@@ -98,6 +98,9 @@ changed means the set of rows under one key differs.
 - Each stage declares its codes in its own module as `stage.rule-branch`.
   The committed code list is generated from those declarations and checked
   by CI, never hand-edited.
+- A Python stage, with no compiler to force the mapping, declares its codes
+  in a small data file beside it that the generator also reads, and a
+  Python test checks that every outcome value it can emit maps to a row.
 - An entry carries the code, its stage, its declared effect (removal and
   re-bind codes: retire, park or merge), a one-line description, the
   version that first shipped it, and its status — `live`, `retired` (with
