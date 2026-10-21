@@ -128,7 +128,9 @@ build's lineage.
 every stage, no reduced-detail mode.
 
 Measured on 1M synthetic rows of this shape: 67 MB plain, 13.6 MB compressed
-in 0.2 s per stage — about 200 MB and a few seconds for fifteen stages. The
+in 0.2 s per stage — about 200 MB and a few seconds for fifteen stages. With
+`build/lineage.previous/` a checkout holds about twice that, and each new
+worktree copies one more build's worth in. The
 bulk is Gaia ids, which no format compresses much: Parquet with zstd came to
 11.5 MB in 1.2 s, not worth five times the write cost and the loss of
 `zgrep`. The real stages' write time and disk are pinned as a budget.
