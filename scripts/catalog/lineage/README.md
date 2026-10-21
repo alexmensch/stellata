@@ -18,10 +18,23 @@ source row that founded the record.
 
 | Record founded by | Origin key |
 |---|---|
-| a spine row | the spine's row key |
+| a spine row | its line number in the frozen `data/athyg/inherited-spine.tsv` |
 | an addition group | the group anchor's source row; the other members are evidence |
 | a magnitude-term row | its Gaia DR3 `source_id` |
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
+
+The spine's line number is stable because the file is frozen and
+byte-guarded, and it covers Sol, whose identifier cells are empty; its
+identifier cells are not the key, since a curated correction can rewrite
+`tyc`. The lineage core proves the key unique and identical across two
+builds before anything relies on it, and keeps that as a regression test.
+
+Retiring the spine re-founds each spine record on a first-order catalogue
+row, so its origin key changes while the star does not. That PR writes a
+one-time map from spine line to new origin key — every line maps to
+exactly one new key or a ledgered drop, checked by a test — and the diff
+applies it across that transition, so those records diff as a changed
+source rather than a deletion and an addition, and no SID event follows.
 
 Record index and SID are attributes, never keys. One **identity row** per
 record carries: the origin key, the record index (after the apparent-V
