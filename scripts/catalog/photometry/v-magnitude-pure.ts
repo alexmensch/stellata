@@ -41,6 +41,10 @@ export const TYCHO2_BT_MINUS_VT_MAX = 2.0;
 export const PRINTED_V_TIERS = ['printed_hip', 'tycho2', 'gliese'] as const;
 export type PrintedVVia = (typeof PRINTED_V_TIERS)[number];
 
+export function isPrintedVVia(via: string | null): via is PrintedVVia {
+  return (PRINTED_V_TIERS as readonly (string | null)[]).includes(via);
+}
+
 export const V_VIA_VALUES = ['gaia_riello', ...PRINTED_V_TIERS, 'curated', 'none'] as const;
 export type VVia = (typeof V_VIA_VALUES)[number];
 
@@ -198,5 +202,5 @@ export function resolveVMagnitude(
  *  Subtracting a companion's flux from a record double-counts unless gated on
  *  this — ../companions/README.md#anchor-flux-conservation-post-pass. */
 export function vTierIsSystemBlend(via: VVia | null): boolean {
-  return (PRINTED_V_TIERS as readonly (VVia | null)[]).includes(via);
+  return isPrintedVVia(via);
 }
