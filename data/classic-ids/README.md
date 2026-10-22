@@ -203,7 +203,7 @@ scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`
 a blank `hip` is a row no HIP reaches at all, a blank `designations` means the
 HIP was the row's only label, and a blank `g_mag` means the sibling gate fired
 without needing one). `v_via` says which printed tier the rejection rests on —
-218 hip · 165 tycho2 · 27 gliese on the magnitude arm.
+218 printed_hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
 routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/hdHipRouteAgree -->2,635<!-- /count -->
@@ -211,7 +211,7 @@ route agreements, not the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21
 
 **The gate reads the V cascade's three printed tiers**, keyed on designations
 the overlay row itself carries — deliberately not on AT-HYG, which the overlay
-has to outlive. `gateableVia` partitions what it reaches: **hip <!-- count:classic-id-overlay/gateableVia.hip -->99,799<!-- /count -->**
+has to outlive. `gateableVia` partitions what it reaches: **hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count -->**
 (`data/hipparcos/hip_main_vmag.tsv`), **tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count -->** (`VT − 0.090(BT − VT)`
 on a TYC that IV/25 routes to that very source), **gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->**. Only
 `gateSkippedNoPrintedV` — **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows — is skipped unweighed.

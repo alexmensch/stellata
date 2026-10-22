@@ -163,7 +163,7 @@ describe('applyBindingGate', () => {
       sourceId: TOLIMAN_BAD_SRC,
       hip: TOLIMAN_HIP,
       vMag: 1.33,
-      vVia: 'hip',
+      vVia: 'printed_hip',
       gMag: 20.95,
       reason: 'mag',
       designations: 'HD 128621 · HR 5460 · alf Cen',
@@ -299,7 +299,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     );
     expect(rejected).toHaveLength(1);
     expect(rejected[0]).toMatchObject({ hip: 0, vMag: 1.33, vVia: 'tycho2', reason: 'mag' });
-    expect(gateableVia).toEqual({ hip: 0, tycho2: 1, gliese: 0 });
+    expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 1, gliese: 0 });
     expect(overlay.has(BAD_SRC)).toBe(false);
   });
 
@@ -310,7 +310,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       new Map([[BAD_SRC, [TYC]]]),
     );
     expect(rejected[0]).toMatchObject({ vVia: 'gliese', reason: 'mag' });
-    expect(gateableVia).toEqual({ hip: 0, tycho2: 0, gliese: 1 });
+    expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 0, gliese: 1 });
   });
 
   it('prefers Tycho-2 over Gliese, as the V cascade orders them', () => {
@@ -359,7 +359,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     );
     expect(rejected).toHaveLength(0);
     expect(skippedNoPrintedV).toBe(1);
-    expect(gateableVia).toEqual({ hip: 0, tycho2: 0, gliese: 0 });
+    expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 0, gliese: 0 });
   });
 
   // The sibling arm keys on a HIP, so a row with none must reach
@@ -404,7 +404,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       ),
       new Map([[viaTycho2, ['a-1-1']]]),
     );
-    expect(gateableVia).toEqual({ hip: 1, tycho2: 1, gliese: 1 });
+    expect(gateableVia).toEqual({ printed_hip: 1, tycho2: 1, gliese: 1 });
     expect(skippedNoPrintedV).toBe(1);
   });
 });

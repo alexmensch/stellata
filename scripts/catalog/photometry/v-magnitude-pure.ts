@@ -135,7 +135,7 @@ export function resolveVMagnitude(
 
 /** Where the printed V a binding gate weighs against came from — the same
  *  printed tiers, in the same order, as the cascade above. */
-export type GateVVia = 'hip' | 'tycho2' | 'gliese';
+export type GateVVia = Extract<VVia, 'printed_hip' | 'tycho2' | 'gliese'>;
 
 export interface PrintedV {
   vMag: number;

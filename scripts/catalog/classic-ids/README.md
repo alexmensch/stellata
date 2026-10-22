@@ -191,7 +191,7 @@ is a pass either way and only one of the causes is fixable:
 | `gateSkippedNullGMag` | <!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count --> | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
 `gateableVia` partitions the rows the gate could weigh by which tier supplied
-their V — **hip <!-- count:classic-id-overlay/gateableVia.hip -->99,799<!-- /count --> · tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count --> · gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->** — and
+their V — **hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count --> · tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count --> · gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->** — and
 `gateSkippedNoPrintedV` is what is left: **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows no printed tier reaches
 at all. `bindingCandidateSourceIds` applies the same reach, so the request and
 the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.

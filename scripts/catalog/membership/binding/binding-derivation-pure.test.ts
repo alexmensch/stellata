@@ -245,7 +245,7 @@ describe('deriveBinding', () => {
     expect(rowGateEvidence({ tyc: '', hip: '', gl: 'GJ 4285' }, evidence, below, simbad))
       .toMatchObject({ vMag: 5.0, vVia: 'gliese' });
     expect(rowGateEvidence({ tyc: '1-1-1', hip: '50', gl: '' }, evidence, below, simbad))
-      .toMatchObject({ vMag: 5.0, vVia: 'hip' });
+      .toMatchObject({ vMag: 5.0, vVia: 'printed_hip' });
   });
 });
 

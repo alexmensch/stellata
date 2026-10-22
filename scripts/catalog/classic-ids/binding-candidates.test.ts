@@ -113,7 +113,7 @@ describe('bindingCandidateSourceIds', () => {
     const { counts } = buildClassicIdOverlay(overlayInput(gMags));
     const candidates = bindingCandidateSourceIds(evidence());
 
-    expect(counts.gateableVia).toEqual({ hip: 2, tycho2: 1, gliese: 1 });
+    expect(counts.gateableVia).toEqual({ printed_hip: 2, tycho2: 1, gliese: 1 });
     expect(gMags.asked.size).toBeGreaterThan(0);
     for (const sourceId of gMags.asked) expect(candidates.has(sourceId)).toBe(true);
   });

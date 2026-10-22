@@ -177,7 +177,7 @@ export function rowGateEvidence(
   const hip = parseIntOrNull(row.hip);
   const tycWitness = row.tyc === '' ? null : simbad.byTyc.get(row.tyc) ?? null;
   const hipV = hip === null ? null : evidence.vMagOfHip(hip);
-  if (hipV !== null) return { hip, vMag: hipV, vVia: 'hip', tycWitness, evidence };
+  if (hipV !== null) return { hip, vMag: hipV, vVia: 'printed_hip', tycWitness, evidence };
   const below = printedVBelowHip(row);
   return { hip, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, tycWitness, evidence };
 }

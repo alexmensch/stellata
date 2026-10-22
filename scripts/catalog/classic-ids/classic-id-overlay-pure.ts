@@ -137,12 +137,12 @@ export function applyBindingGate(
   let skippedNoPrintedV = 0;
   let skippedNoGMag = 0;
   let skippedNullGMag = 0;
-  const gateableVia: Record<GateVVia, number> = { hip: 0, tycho2: 0, gliese: 0 };
+  const gateableVia: Record<GateVVia, number> = { printed_hip: 0, tycho2: 0, gliese: 0 };
   for (const [sourceId, entry] of overlay) {
     // A row carrying several HIPs is a blend; saturation is a property of the
     // brightest of them, so that is the V the gate has to answer for.
     let vMag: number | null = null;
-    let vVia: GateVVia = 'hip';
+    let vVia: GateVVia = 'printed_hip';
     let hip = 0;
     for (const candidate of entry.hip) {
       const v = evidence.vMagOfHip(candidate);
@@ -166,7 +166,7 @@ export function applyBindingGate(
       vVia = below.vVia;
       gateableVia[below.vVia]++;
     } else {
-      gateableVia.hip++;
+      gateableVia.printed_hip++;
     }
     if (evidence.gMagOf(sourceId) === null) {
       if (evidence.hasPulledRow(sourceId)) skippedNullGMag++;
