@@ -50,8 +50,9 @@ scripts/catalog/naming/
                                 rests on. `membershipProperKey` is the one
                                 place the gate's join key is built.
   build-wgsn-tables.ts          Orchestrator: read, normalise, delegate
-                                the joins, write the two derived tables,
-                                pin the counts.
+                                the joins, and emit the two derived
+                                tables through emitArtifacts once the
+                                count snapshot passes.
   wgsn-expected.json            Pinned count snapshot
                                 (UPDATE_BUILD_COUNTS=1 refreshes).
   wgsn-index-pure.ts (+ test)   The record-side join: readers for the two

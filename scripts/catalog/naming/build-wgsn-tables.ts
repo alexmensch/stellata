@@ -2,13 +2,14 @@
 // files, unions the IV/27A Bayer tail, verifies the AT-HYG proper
 // dispositions, and pins the counts. `pnpm run build:wgsn`. See README.md.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { readCrossIndexTable } from '../classic-ids/cross-index';
 import { parseIntOrNull } from '../parse/stars-parse';
 import { REPO_ROOT } from '../../util/paths';
-import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
+import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
+import { snapshotCheck } from '../../util/snapshot-assert';
 import { compareCountSnapshot } from '../build-counts';
 import { parseNecCsv, parseWgsnFaintsCsv } from './wgsn-parse-pure';
 import {
@@ -35,6 +36,8 @@ const OUT_NAMES = resolve(DATA, 'wgsn_names.tsv');
 const OUT_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
 const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
+
+export const WGSN_OUTPUTS = declareOutputs([OUT_NAMES, OUT_DESIGNATIONS]);
 
 export interface WgsnCounts {
   necRows: number;
@@ -183,18 +186,18 @@ async function main(): Promise<void> {
 
   const { sorted, duplicateRows } = sortDesignations(designations);
 
-  writeFileSync(OUT_NAMES, [
+  const namesTsv = [
     'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id',
     ...nameLines,
-  ].join('\n') + '\n');
-  writeFileSync(OUT_DESIGNATIONS, [
+  ].join('\n') + '\n';
+  const designationsTsv = [
     'kind\tletter\tsup\tnum\tdc\thalf\tcomponent\thip\thr\thd\tsource',
     ...sorted.map((d) => [
       d.kind, cellStr(d.letter), cellStr(d.sup), cellStr(d.num), d.dc,
       cellStr(d.half), cellStr(d.component), cellStr(d.hip), cellStr(d.hr),
       cellStr(d.hd), d.source,
     ].join('\t')),
-  ].join('\n') + '\n');
+  ].join('\n') + '\n';
 
   const counts: WgsnCounts = {
     necRows: nec.length,
@@ -232,16 +235,20 @@ async function main(): Promise<void> {
     membershipBayerRowsCovered,
   };
 
+  emitArtifacts({
+    outputs: WGSN_OUTPUTS,
+    files: new Map([[OUT_NAMES, namesTsv], [OUT_DESIGNATIONS, designationsTsv]]),
+    checks: [snapshotCheck<WgsnCounts>({
+      envVar: 'UPDATE_BUILD_COUNTS',
+      snapshotPath: SNAPSHOT,
+      actual: counts,
+      compare: compareCountSnapshot,
+      failureLabel: 'WGSN table counts',
+      refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:wgsn',
+    })],
+  });
   console.log(`wgsn_names.tsv: ${nameLines.length} rows`);
   console.log(`wgsn_designations.tsv: ${designations.length} rows`);
-  await assertOrUpdateSnapshot<WgsnCounts>({
-    envVar: 'UPDATE_BUILD_COUNTS',
-    snapshotPath: SNAPSHOT,
-    actual: counts,
-    compare: compareCountSnapshot,
-    failureLabel: 'WGSN table counts',
-    refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:wgsn',
-  });
 }
 
 main().catch((err) => {
