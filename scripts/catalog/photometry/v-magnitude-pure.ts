@@ -7,6 +7,7 @@ import {
   type GaiaPhotometry,
 } from './gaia-photometry-pure';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse';
+import { printedByHip } from './hip-photometry-parse';
 import type { Tycho2Row } from '../tycho2-parse';
 
 /** Riello 2021 (/data/papers/index.md#riello2021) App. C,
@@ -132,7 +133,7 @@ export function printedVLookups(
   gliese: GlieseIndex,
 ): PrintedVLookups {
   return {
-    printed_hip: (hip) => hipVMag.get(hip) ?? null,
+    printed_hip: (hip) => printedByHip(hipVMag, hip),
     tycho2: (tyc) => {
       const row = tycho2.get(tyc);
       return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;

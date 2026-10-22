@@ -25,7 +25,7 @@ export interface HipPhotometryTables {
  *  HIP or the slice has no such row. Both cascades key their printed tier
  *  this way, and both want the two misses to look alike. */
 export function printedByHip(
-  table: Map<number, number>,
+  table: ReadonlyMap<number, number>,
   hip: number | null,
 ): number | null {
   return hip === null ? null : table.get(hip) ?? null;
