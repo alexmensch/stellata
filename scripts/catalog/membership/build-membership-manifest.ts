@@ -2,11 +2,12 @@
 // the record-parity additions ledger (/docs/catalog-driver.md#61-record-parity) and the binding review queue, plus the label
 // merge's review queue. See README.md.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
-import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
+import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
+import { snapshotCheck } from '../../util/snapshot-assert';
 import { compareCountSnapshot } from '../build-counts';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
@@ -54,12 +55,11 @@ const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
 const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
 const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
 
-function writeArtifact(repoRelative: string, text: string): void {
-  const path = resolve(ROOT, repoRelative);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, text);
-  console.log(`wrote ${repoRelative}`);
-}
+const OUTPUT_FILES = [
+  LABEL_FLIPS_FILE, MEMBERSHIP_MANIFEST_FILE, ADDITIONS_LEDGER_FILE, BINDING_REVIEW_FILE, LABEL_DROPS_FILE,
+] as const;
+
+export const MEMBERSHIP_OUTPUTS = declareOutputs(OUTPUT_FILES.map((f) => resolve(ROOT, f)));
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the
  *  merge's own counts — the same walk that decides what the manifest ships. */
@@ -119,12 +119,6 @@ async function main(): Promise<void> {
     },
   });
 
-  writeArtifact(LABEL_FLIPS_FILE, labelFlipsTsv(result.flips));
-  writeArtifact(MEMBERSHIP_MANIFEST_FILE, serializeManifest(result.rows));
-  writeArtifact(ADDITIONS_LEDGER_FILE, serializeLedger(result.ledger));
-  writeArtifact(BINDING_REVIEW_FILE, serializeBindingReview(result.bindingReview));
-  writeArtifact(LABEL_DROPS_FILE, serializeLabelDrops(result.labelDrops));
-
   const c = result.counts;
   console.log(
     `manifest: ${c.rows} rows — ${c.spineRows} from the spine, ${c.additionRows} admitted ` +
@@ -169,14 +163,26 @@ async function main(): Promise<void> {
   );
   reportLabelCoverage(c);
 
-  await assertOrUpdateSnapshot<MembershipCounts>({
-    envVar: 'UPDATE_BUILD_COUNTS',
-    snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
-    actual: c,
-    compare: compareCountSnapshot,
-    failureLabel: 'membership-manifest count',
-    refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:membership',
+  const text: Record<(typeof OUTPUT_FILES)[number], string> = {
+    [LABEL_FLIPS_FILE]: labelFlipsTsv(result.flips),
+    [MEMBERSHIP_MANIFEST_FILE]: serializeManifest(result.rows),
+    [ADDITIONS_LEDGER_FILE]: serializeLedger(result.ledger),
+    [BINDING_REVIEW_FILE]: serializeBindingReview(result.bindingReview),
+    [LABEL_DROPS_FILE]: serializeLabelDrops(result.labelDrops),
+  };
+  emitArtifacts({
+    outputs: MEMBERSHIP_OUTPUTS,
+    files: new Map(OUTPUT_FILES.map((f) => [resolve(ROOT, f), text[f]])),
+    checks: [snapshotCheck<MembershipCounts>({
+      envVar: 'UPDATE_BUILD_COUNTS',
+      snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
+      actual: c,
+      compare: compareCountSnapshot,
+      failureLabel: 'membership-manifest count',
+      refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:membership',
+    })],
   });
+  for (const f of OUTPUT_FILES) console.log(`wrote ${f}`);
 }
 
 main().catch((err: unknown) => {
