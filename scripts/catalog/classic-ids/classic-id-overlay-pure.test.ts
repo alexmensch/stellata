@@ -16,7 +16,7 @@ import {
   type OverlayInput,
 } from './classic-id-overlay-pure';
 import { cns5Row } from './cns5-fixture';
-import { parseSimbadWdsXidsTsv } from '../record/catalog-pure';
+import { GAIA_BINDING_G_MINUS_V_REJECT_MAG, parseSimbadWdsXidsTsv } from '../record/catalog-pure';
 import {
   NO_PRINTED_V,
   printedVOf,
@@ -149,6 +149,14 @@ describe('weighBinding', () => {
 
   it('passes a candidate consistent with the printed V', () => {
     expect(weighBinding('777', { hip: null, printedV: printedAt(1.58) }, evidence))
+      .toEqual({ kind: 'pass' });
+  });
+
+  it('passes a candidate exactly at the threshold — the gate rejects only past it', () => {
+    const atThreshold = bindingEvidence(
+      new Map([['edge', 1.5 + GAIA_BINDING_G_MINUS_V_REJECT_MAG]]), null, NO_PRINTED_V,
+    );
+    expect(weighBinding('edge', { hip: null, printedV: printedAt(1.5) }, atThreshold))
       .toEqual({ kind: 'pass' });
   });
 

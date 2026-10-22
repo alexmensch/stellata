@@ -179,7 +179,7 @@ is not the star. `applyBindingGate`
 `weighBinding` gates the membership derivation binds every record through,
 so the two cannot drift on what counts as a bad binding:
 
-- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — <!-- count:classic-id-overlay/gateRejectedMag -->410<!-- /count --> rows. The
+- **G − V > 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — <!-- count:classic-id-overlay/gateRejectedMag -->410<!-- /count --> rows. The
   canonical case is the G = 20.95 background source beside α Cen B, which
   carried HD 128621 · HR 5460 · HIP 71681 · `alf Cen`.
 - **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — <!-- count:classic-id-overlay/gateRejectedSibling -->50<!-- /count --> rows. Catches
