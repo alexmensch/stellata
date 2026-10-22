@@ -3,10 +3,11 @@
 // idempotency, and the LVDB-refresh protocol.
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
+
+import { declareOutputs, emitArtifacts } from '../util/emit-artifacts';
 import {
   applyAliasMeta,
   buildOrientationQuat,
@@ -32,6 +33,8 @@ const SRC_CSV = resolve(ROOT, 'data/local-group/lvdb-snapshot.csv');
 const SRC_OVERRIDES = resolve(ROOT, 'data/local-group/overrides.tsv');
 const SRC_ALIASES = resolve(ROOT, 'data/local-group/aliases.tsv');
 const OUT = resolve(ROOT, 'public/local-group.json');
+
+export const LOCAL_GROUP_OUTPUTS = declareOutputs([OUT]);
 
 /** Coerces strings to numbers / null per LVDB convention ("" = missing
  *  for numeric cols). */
@@ -391,13 +394,15 @@ async function main(): Promise<void> {
   // byte-identical artifacts.
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-  await mkdir(dirname(OUT), { recursive: true });
   const payload = {
     version: 2,
     count: objects.length,
     objects: objects.map(toJsonObject),
   };
-  await writeFile(OUT, JSON.stringify(payload, null, 0) + '\n');
+  emitArtifacts({
+    outputs: LOCAL_GROUP_OUTPUTS,
+    files: new Map([[OUT, JSON.stringify(payload, null, 0) + '\n']]),
+  });
 
   console.log(
     `wrote ${OUT.replace(ROOT + '/', '')} ` +
