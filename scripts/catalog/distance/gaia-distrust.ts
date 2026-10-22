@@ -55,22 +55,29 @@ function isHipparcos2Bibcode(bibcode: string): boolean {
   return bibcode === '2007A&A...474..653V';
 }
 
-/** A publication a first-order tier refused outright on this record. */
-export type RefusedPublication = 'hipparcos2';
+/** A publication refused on this record: a Gaia release, where the record's
+ *  own fit is 2p, or Hipparcos-2, where the S/N floor refused it. */
+export type RefusedPublication = 'gaia_release' | 'hipparcos2';
 
-export const NO_REFUSED_PUBLICATIONS: ReadonlySet<RefusedPublication> = new Set();
+const CITES: Record<RefusedPublication, (bibcode: string) => boolean> = {
+  gaia_release: isGaiaCatalogueBibcode,
+  hipparcos2: isHipparcos2Bibcode,
+};
 
-/** What a cascade has refused on this record by the time a courier is
- *  reached. `gaiaIs2p` is Gaia's own refusal — `gaiaRowIs2p` of the record. */
-export interface Refusals {
-  gaiaIs2p: boolean;
-  refusedPublications: ReadonlySet<RefusedPublication>;
+const GAIA_RELEASE_REFUSED: ReadonlySet<RefusedPublication> = new Set(['gaia_release']);
+const NOTHING_REFUSED: ReadonlySet<RefusedPublication> = new Set();
+
+/** What the record's own Gaia fit refuses: its release, when the fit is 2p. */
+export function gaiaRefusals(gaiaIs2p: boolean): ReadonlySet<RefusedPublication> {
+  return gaiaIs2p ? GAIA_RELEASE_REFUSED : NOTHING_REFUSED;
 }
 
 /** A courier may not re-serve a value attributed to a publication a tier above
  *  it already refused — the one rule behind every skip
  *  (parallax/README.md#the-skip-rules--one-principle-two-publications). */
-export function refusedBy(bibcode: string, { gaiaIs2p, refusedPublications }: Refusals): boolean {
-  return (gaiaIs2p && isGaiaCatalogueBibcode(bibcode))
-    || (refusedPublications.has('hipparcos2') && isHipparcos2Bibcode(bibcode));
+export function refusedBy(bibcode: string, refused: ReadonlySet<RefusedPublication>): boolean {
+  for (const publication of refused) {
+    if (CITES[publication](bibcode)) return true;
+  }
+  return false;
 }
