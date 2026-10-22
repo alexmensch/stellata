@@ -2,7 +2,7 @@
 // Gliese V/70A → bibcoded SIMBAD → curated, with the two skip rules. See
 // README.md.
 
-import { isGaiaCatalogueBibcode, isHipparcos2Bibcode } from '../gaia-distrust';
+import { gaiaRefusals, refusedBy, type RefusedPublication } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
@@ -138,7 +138,7 @@ export function resolveParallax(
   };
 
   const refusedPlxMas: number[] = [];
-  let hip2Refused = false;
+  const refused = new Set<RefusedPublication>(gaiaRefusals(gaiaIs2p));
 
   /** V/70A's two tiers differ only in which kind of parallax they take, so one
    *  form serves both and the cascade order below states the ranking. */
@@ -166,13 +166,12 @@ export function resolveParallax(
     if (!belowParallaxSnFloor(hip2.plxMas, hip2.plxErrorMas)) {
       return hit({ mas: hip2.plxMas, errMas: hip2.plxErrorMas }, 'hip2_parallax');
     }
-    hip2Refused = true;
+    refused.add('hipparcos2');
     refusedPlxMas.push(hip2.plxMas);
   }
 
   if (cns5 !== null && usable(cns5.mas)) {
-    if (!(gaiaIs2p && isGaiaCatalogueBibcode(cns5.bibcode))
-        && !belowParallaxSnFloor(cns5.mas, cns5.errMas)) {
+    if (!refusedBy(cns5.bibcode, refused) && !belowParallaxSnFloor(cns5.mas, cns5.errMas)) {
       return hit(cns5, 'cns5_plx');
     }
     refusedPlxMas.push(cns5.mas);
@@ -182,9 +181,7 @@ export function resolveParallax(
   if (trigonometric !== null) return trigonometric;
 
   if (simbad !== null && usable(simbad.mas)) {
-    const laundered = (gaiaIs2p && isGaiaCatalogueBibcode(simbad.bibcode))
-      || (hip2Refused && isHipparcos2Bibcode(simbad.bibcode));
-    if (!laundered && !belowParallaxSnFloor(simbad.mas, simbad.errMas)) {
+    if (!refusedBy(simbad.bibcode, refused) && !belowParallaxSnFloor(simbad.mas, simbad.errMas)) {
       return hit(simbad, 'simbad_plx');
     }
     refusedPlxMas.push(simbad.mas);

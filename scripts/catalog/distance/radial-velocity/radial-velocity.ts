@@ -9,6 +9,8 @@ import {
   gaiaHas5pSolution,
   gaiaRowIs2p,
   isGaiaCatalogueBibcode,
+  gaiaRefusals,
+  refusedBy,
 } from '../gaia-distrust';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
 
@@ -104,8 +106,8 @@ export function resolveRadialVelocity(
   if (gaia !== null && gaiaHas5pSolution(gaia) && gaia.radialVelocityKmS !== null) {
     return { ...none, rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
   }
-  if (gaiaRowIs2p(gaia)
-      && simbad !== null && isGaiaCatalogueBibcode(simbad.bibcode)) {
+  if (simbad !== null
+      && refusedBy(simbad.bibcode, gaiaRefusals(gaiaRowIs2p(gaia)))) {
     return { ...none, gaiaBibcodeSkipped: true };
   }
   if (simbad !== null) {

@@ -383,9 +383,9 @@ arithmetic and label-flips replay:
 derived **once, here** — `binding` says on what basis — and re-deriving it in
 the walk would decide it a second time, against whatever reference tables the
 walk happened to load. A changed source_id changes the record's designation
-set, hence its SID. `resolveGaiaSourceId` therefore has no caller on the
-`build:catalog` path; it survives for this generator and the classic-ID
-overlay's gate.
+set, hence its SID. `weighBinding` therefore has no caller on the
+`build:catalog` path; this generator and the classic-ID overlay's gate are
+its two.
 
 The same holds for the classical cells: they are FINAL, the merge having run in
 the generator, so the record build applies no label pass to them

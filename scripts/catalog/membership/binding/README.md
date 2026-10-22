@@ -8,9 +8,23 @@ completes is [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--
 
 ```
 scripts/catalog/membership/binding/
+  binding-gate-pure.ts (+ test) The binding gate both the derivation and
+                                ../../classic-ids/' overlay weigh a candidate
+                                through: `BindingEvidence`, the G − V threshold
+                                (pinned against scripts/binaries/indices.py),
+                                SIMBAD's WDS cross-ID index and the
+                                sibling-letter check over it, and
+                                `weighBinding`'s verdict. Pure.
+  binding-evidence.ts           Loads the gate's own evidence — G per source
+                                and SIMBAD's WDS component cross-IDs — and
+                                `loadHipVMag`. The printed-V lookups come from
+                                the calling build, over the tables it already
+                                parsed: build:membership's primaries tables,
+                                build:classic-ids' `loadTycho2` / `loadGliese`
+                                (../../spine/primaries-tables.ts).
   binding-derivation-pure.ts    The four candidate sources, the consensus
     (+ test)                    ranking, both gates through
-                                resolveGaiaSourceId, and the candidate set the
+                                weighBinding, and the candidate set the
                                 astrometry request has to cover. Pure, and
                                 imports nothing from the manifest —
                                 `../../spine/` and
@@ -47,13 +61,20 @@ above.
 ## Both gates weigh every candidate
 
 **Every** candidate goes through **both binding gates by calling
-`resolveGaiaSourceId`** — the one call `applyBindingGate` makes on the label
-side, so the two cannot drift on what counts as a bad binding — and the first
-that passes wins. The magnitude gate weighs G
+`weighBinding`** (`binding-gate-pure.ts`) — the one call
+`applyBindingGate` makes on the label side, so the two cannot drift on what
+counts as a bad binding — and the first that binds wins. The verdict carries
+each arm separately: the magnitude arm's outcome (`consistent`, `rejected`, or
+why it could not weigh — `no_printed_v` / `no_pulled_row` / `null_g`) and
+whether the sibling arm, which needs neither a G nor a V, refused. A candidate
+binds unless one arm refused it, and the coverage counts read the magnitude
+outcome whatever the sibling arm said, so a refusal never hides a gap in the
+pull. The magnitude gate weighs G
 against the record's **printed V in the V cascade's own tier order**:
 Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC, else
-Gliese's `Vmag` on its GJ cell — the last two through `printedVLookups`, the
-one bundle both gates read them by ([The V cascade](../../photometry/README.md#the-v-cascade)).
+Gliese's `Vmag` on its GJ cell — all three through `printedV` over the
+evidence's `printedVLookups`, the one walk and bundle both gates read them by
+([The V cascade](../../photometry/README.md#the-v-cascade)).
 The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
@@ -61,7 +82,8 @@ below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
 gates refuse <!-- count:membership-manifest/derivedRejected.mag -->317<!-- /count --> candidates on G − V and <!-- count:membership-manifest/derivedRejected.sibling -->116<!-- /count --> on sibling-letter attribution
 (`derivedRejected`); falling off the end is a derived refusal.
 `derivedUngateable` (<!-- count:membership-manifest/derivedUngateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
-under any tier, so nothing could be weighed against it.
+under any tier, so only the sibling arm weighs its candidates — the same
+`unweighable: 'no_printed_v'` the overlay gate reaches.
 
 **A component designation rescues a row the sibling gate leaves unbound.**
 Where SIMBAD puts the row's HIP on both components, the gate reads the row as

@@ -14,8 +14,9 @@ that sit *above* this cascade; this file owns which parallax they override.
 scripts/catalog/distance/parallax/
   parallax-cascade.ts (+ test)  The cascade, its tier enum, the two precision
                                 constants, and the `DistVia → BuildCounts` key
-                                map. Imports both skip predicates from
-                                ../gaia-distrust.
+                                map. Its skip rules are `refusedBy` from
+                                ../gaia-distrust, fed the publications the
+                                tiers above refused.
   pair-member-parallax.ts       The `pair_member_parallax` index: multiples.tsv
     (+ test)                    pair rows × the DR3 astrometry table, per WDS
                                 root. Built once before the walk, in
@@ -212,6 +213,11 @@ parallax cascade is where the general shape became visible.
   stripped of the error bar the refusal was based on — measured at **574**
   records matching to the digit. HIP 37 is the shape: HIP2 states 2.62 ± 2.55
   mas, SIMBAD serves 2.62.
+
+Both rules are one call, `refusedBy`, at every courier tier — CNS5 as well as
+SIMBAD, so CNS5's 192 van Leeuwen-cited parallaxes are held to the second rule
+too. None of them reaches a record whose HIP2 the floor refused, so the CNS5
+arm refuses nothing on today's inputs.
 
 **A SIMBAD-sourced distance is excluded from SIMBAD-based validation**, which
 is [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s validation-independence rule reaching this field for the first time —

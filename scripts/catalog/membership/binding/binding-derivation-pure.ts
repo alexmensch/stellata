@@ -2,13 +2,16 @@
 // two-source consensus first, each candidate through both binding gates.
 // See README.md.
 
+import { normaliseGjKey } from '../../record/catalog-pure';
+import { printedV } from '../../photometry/v-magnitude-pure';
 import {
   isSiblingLetterAttribution,
-  normaliseGjKey,
-  resolveGaiaSourceId,
-} from '../../record/catalog-pure';
-import type { GateVVia, PrintedV } from '../../photometry/v-magnitude-pure';
-import type { BindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
+  rejectionOf,
+  weighBinding,
+  type BindingEvidence,
+  type GateReason,
+  type GateRow,
+} from './binding-gate-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
 import { parseIntOrNull } from '../../parse/corpus-tsv';
 import {
@@ -130,8 +133,6 @@ export function rankCandidates(candidates: BindingCandidates): RankedCandidate[]
 
 export type DerivedBindingClass = 'crosswalk_gated' | 'simbad_corroborated' | 'none';
 
-export type GateReason = 'mag' | 'sibling';
-
 export interface RejectedCandidate extends RankedCandidate {
   reason: GateReason;
 }
@@ -143,8 +144,7 @@ export interface DerivedBinding {
   ranked: RankedCandidate[];
   rejected: RejectedCandidate[];
   /** The row carries a printed V, so the magnitude gate could weigh its
-   *  candidates. Without one every candidate passes unweighed, exactly as
-   *  `applyBindingGate` skips such overlay rows. */
+   *  candidates. */
   gateable: boolean;
   /** Candidates weighed with no row in the astrometry pull — the request
    *  under-covering the derivation; pinned at zero. */
@@ -153,33 +153,29 @@ export interface DerivedBinding {
   weighedNullGMag: number;
 }
 
-/** The evidence a row's candidates are weighed against: the row's own HIP, its
+/** The evidence a row's candidates are weighed against: the row's own HIP and
  *  printed V, the source SIMBAD files its own TYC under, plus the shared
  *  per-source tables. */
-export interface RowGateEvidence {
-  hip: number | null;
-  vMag: number | null;
-  vVia: GateVVia | null;
+export interface RowGateEvidence extends GateRow {
   /** The component witness — null where SIMBAD files the TYC under no source
    *  or under two (README.md#both-gates-weigh-every-candidate). */
   tycWitness: string | null;
   evidence: BindingEvidence;
 }
 
-/** `printedVBelowHip` supplies the V cascade's lower printed tiers — Tycho-2 on
- *  the row's TYC, then Gliese on its GJ — for a row with no Hipparcos V. */
 export function rowGateEvidence(
   row: BindingCells,
   evidence: BindingEvidence,
-  printedVBelowHip: (row: BindingCells) => PrintedV | null,
   simbad: SimbadSourceIndex,
 ): RowGateEvidence {
   const hip = parseIntOrNull(row.hip);
   const tycWitness = row.tyc === '' ? null : simbad.byTyc.get(row.tyc) ?? null;
-  const hipV = hip === null ? null : evidence.vMagOfHip(hip);
-  if (hipV !== null) return { hip, vMag: hipV, vVia: 'hip', tycWitness, evidence };
-  const below = printedVBelowHip(row);
-  return { hip, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, tycWitness, evidence };
+  const printed = printedV({
+    printed_hip: hip === null ? [] : [hip],
+    tycho2: row.tyc === '' ? [] : [row.tyc],
+    gliese: row.gl === '' ? [] : [row.gl],
+  }, evidence.printedV);
+  return { hip, printedV: printed, tycWitness, evidence };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {
@@ -188,30 +184,27 @@ export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingCla
 }
 
 /** Weighs **every** ranked candidate, the winner's losing rivals included,
- *  through the same `resolveGaiaSourceId` call `applyBindingGate` makes; the
- *  component witness is the one verdict the overlay does not share. Nothing
- *  passing is a derived refusal. */
+ *  through `weighBinding`, as `applyBindingGate` does; the component witness is
+ *  the one verdict the overlay does not share. Nothing binding is a derived
+ *  refusal. */
 export function deriveBinding(
   candidates: BindingCandidates,
   gate: RowGateEvidence,
 ): DerivedBinding {
   const ranked = rankCandidates(candidates);
   const rejected: RejectedCandidate[] = [];
-  const gateable = gate.vMag !== null;
+  const gateable = gate.printedV !== null;
   let weighedNoGMag = 0;
   let weighedNullGMag = 0;
   let winner: RankedCandidate | null = null;
   const { evidence } = gate;
   for (const candidate of ranked) {
-    if (gateable && evidence.gMagOf(candidate.sourceId) === null) {
-      if (evidence.hasPulledRow(candidate.sourceId)) weighedNullGMag++;
-      else weighedNoGMag++;
-    }
-    const verdict = resolveGaiaSourceId(
-      candidate.sourceId, gate.hip, null, gate.vMag, evidence.gMagOf, evidence.wdsXids,
-    );
-    if (verdict.gaiaSourceId === null) {
-      rejected.push({ ...candidate, reason: verdict.magRejected ? 'mag' : 'sibling' });
+    const verdict = weighBinding(candidate.sourceId, gate, evidence);
+    if (verdict.magnitude === 'null_g') weighedNullGMag++;
+    if (verdict.magnitude === 'no_pulled_row') weighedNoGMag++;
+    const reason = rejectionOf(verdict);
+    if (reason !== null) {
+      rejected.push({ ...candidate, reason });
     } else if (winner === null) {
       winner = candidate;
     }

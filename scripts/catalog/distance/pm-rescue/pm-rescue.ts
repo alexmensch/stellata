@@ -2,7 +2,7 @@
 // → CNS5 by GJ → bibcoded SIMBAD, with the Gaia-bibcode skip rule. See
 // README.md.
 
-import { isGaiaCatalogueBibcode } from '../gaia-distrust';
+import { gaiaRefusals, refusedBy } from '../gaia-distrust';
 import type { VelocityVia } from '../direction-cascade';
 import type { Tycho2Row } from '../../tycho2-parse';
 import type { CitedProperMotion } from '../../cited-proper-motion';
@@ -67,10 +67,11 @@ export function resolvePmRescue(
   if (tycho2 !== null && tycho2.pmRaMasyr !== null && tycho2.pmDecMasyr !== null) {
     return { pmRaMasyr: tycho2.pmRaMasyr, pmDecMasyr: tycho2.pmDecMasyr, via: 'tycho2' };
   }
+  const refused = gaiaRefusals(gaiaIs2p);
   let skipped = false;
   for (const [via, cited] of [['cns5', cns5], ['simbad', simbad]] as const) {
     if (cited === null) continue;
-    if (gaiaIs2p && isGaiaCatalogueBibcode(cited.bibcode)) {
+    if (refusedBy(cited.bibcode, refused)) {
       skipped = true;
       continue;
     }

@@ -11,9 +11,9 @@ supply a PM alongside their own position are [Direction resolution](../README.md
 scripts/catalog/distance/pm-rescue/
   pm-rescue.ts (+ test)   The cascade, its route enum, and the map crediting
                           each route to the `velocityVia` bucket for the
-                          catalogue it reached. Imports `isGaiaCatalogueBibcode`
-                          from ../gaia-distrust — the same predicate the rv
-                          cascade's skip rule turns on.
+                          catalogue it reached. Imports `refusedBy` from
+                          ../gaia-distrust — the same rule the rv and
+                          parallax cascades' skips call.
 ```
 
 ## What reaches it, and where it goes

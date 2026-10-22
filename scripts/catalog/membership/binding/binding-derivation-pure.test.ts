@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseSimbadWdsXidsTsv } from '../../record/catalog-pure';
-import { bindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
+import { bindingEvidence, parseSimbadWdsXidsTsv } from './binding-gate-pure';
 import { cns5Row } from '../../classic-ids/cns5-fixture';
 import { indexCns5, type BindingTables, type SimbadXids } from '../../spine/primaries-audit-pure';
 import {
@@ -15,7 +14,7 @@ import {
   simbadCandidate,
   type BindingCandidates,
 } from './binding-derivation-pure';
-import { NO_PRINTED_V_BELOW_HIP } from '../../photometry/photometry-fixture';
+import { printedVOf } from '../../photometry/photometry-fixture';
 
 const simbadBySourceId = new Map<string, SimbadXids>([
   ['100', { hip: 10, tyc: '1-1-1', gj: null }],
@@ -128,27 +127,38 @@ const WDS_XIDS = parseSimbadWdsXidsTsv([
 describe('deriveBinding', () => {
   const gMag = new Map([['a', 12.0], ['b', 5.05], ['c', 5.1]]);
   const evidence = bindingEvidence(
-    gMag, new Map([[50, 5.0]]), WDS_XIDS, NO_PRINTED_V_BELOW_HIP,
+    gMag,
+    WDS_XIDS,
+    printedVOf({ hip: new Map([[50, 5.0]]) }),
     new Set([...gMag.keys(), 'nullg']),
   );
 
   it('weighs candidates in rank order and falls through on a magnitude rejection', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, () => null, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     const d = deriveBinding(candidates({ tyc: 'a', hip: 'b', simbad: 'c' }), gate);
     expect(d).toMatchObject({ sourceId: 'b', via: ['hip'], binding: 'crosswalk_gated', gateable: true });
     expect(d.rejected).toEqual([{ sourceId: 'a', via: ['tyc'], reason: 'mag' }]);
   });
 
   it('refuses the sibling component\'s source on the WDS letters and falls through', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, () => null, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     const d = deriveBinding(candidates({ hip: '501', simbad: 'c' }), gate);
     expect(d.sourceId).toBe('c');
     expect(d.binding).toBe('simbad_corroborated');
     expect(d.rejected).toEqual([{ sourceId: '501', via: ['hip'], reason: 'sibling' }]);
   });
 
+  // 501 is outside the pull as well as sibling-refused: the zero-pinned
+  // coverage alarm still has to see it.
+  it('counts an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const d = deriveBinding(candidates({ hip: '501' }), gate);
+    expect(d.rejected.map((r) => r.reason)).toEqual(['sibling']);
+    expect(d.weighedNoGMag).toBe(1);
+  });
+
   it('derives a refusal where every candidate is rejected, and where there is none', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, () => null, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     expect(deriveBinding(candidates({ tyc: 'a' }), gate))
       .toMatchObject({ sourceId: null, via: [], binding: 'none' });
     expect(deriveBinding(candidates({}), gate)).toMatchObject({ sourceId: null, ranked: [], rejected: [] });
@@ -158,7 +168,7 @@ describe('deriveBinding', () => {
   // no pulled row is the request under-covering the derivation, a pulled row
   // with no G is Gaia publishing none.
   it('counts candidates it weighed without a G, by cause, and passes them', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, () => null, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     expect(deriveBinding(candidates({ tyc: 'unpulled' }), gate))
       .toMatchObject({ sourceId: 'unpulled', weighedNoGMag: 1, weighedNullGMag: 0 });
     expect(deriveBinding(candidates({ tyc: 'nullg' }), gate))
@@ -171,7 +181,7 @@ describe('deriveBinding', () => {
   // reads as a passing runner-up and the row queues a `contested` verdict on a
   // verdict never taken.
   it('weighs the candidates behind the winner too, so a rival it refuses is not a runner-up', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, () => null, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     const d = deriveBinding(candidates({ hip: 'b', simbad: 'a' }), gate);
     expect(d.sourceId).toBe('b');
     expect(d.rejected).toEqual([{ sourceId: 'a', via: ['simbad'], reason: 'mag' }]);
@@ -185,7 +195,9 @@ describe('deriveBinding', () => {
       '00002+0000\tB\t601\t60',
     ].join('\n'));
     const witnessed = bindingEvidence(
-      new Map([['600', 5.0], ['601', 5.2]]), new Map([[60, 5.0]]), xids, NO_PRINTED_V_BELOW_HIP,
+      new Map([['600', 5.0], ['601', 5.2]]),
+      xids,
+      printedVOf({ hip: new Map([[60, 5.0]]) }),
     );
     const witnessIndex = indexSimbadSources(new Map([
       ['601', { hip: null, tyc: '6-6-1', gj: null }],
@@ -194,7 +206,7 @@ describe('deriveBinding', () => {
       ['702', { hip: null, tyc: '8-8-1', gj: null }],
     ]));
     const gate = rowGateEvidence(
-      { tyc: '6-6-1', hip: '60', gl: '' }, witnessed, () => null, witnessIndex,
+      { tyc: '6-6-1', hip: '60', gl: '' }, witnessed, witnessIndex,
     );
 
     it('rescues a row whose only candidate SIMBAD indexes its own TYC under (53 Aqr B)', () => {
@@ -210,22 +222,22 @@ describe('deriveBinding', () => {
 
     it('does not rescue on a TYC SIMBAD indexes under another source', () => {
       const other = rowGateEvidence(
-        { tyc: '7-7-1', hip: '60', gl: '' }, witnessed, () => null, witnessIndex,
+        { tyc: '7-7-1', hip: '60', gl: '' }, witnessed, witnessIndex,
       );
       expect(deriveBinding(candidates({ simbad: '601' }), other).sourceId).toBeNull();
     });
 
     it('takes no witness from a TYC two SIMBAD objects claim', () => {
       const contested = rowGateEvidence(
-        { tyc: '8-8-1', hip: '60', gl: '' }, witnessed, () => null, witnessIndex,
+        { tyc: '8-8-1', hip: '60', gl: '' }, witnessed, witnessIndex,
       );
       expect(contested.tycWitness).toBeNull();
     });
   });
 
   it('cannot weigh a row with no printed V, and says so', () => {
-    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, () => null, simbad);
-    expect(gate).toMatchObject({ vMag: null, vVia: null });
+    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, simbad);
+    expect(gate.printedV).toBeNull();
     expect(deriveBinding(candidates({ tyc: 'a' }), gate))
       .toMatchObject({ sourceId: 'a', gateable: false, weighedNoGMag: 0 });
   });
@@ -235,17 +247,17 @@ describe('deriveBinding', () => {
   // too, which is where a best-neighbour walk landing on a faint neighbour has
   // no HIP to be caught by.
   it('weighs against the lower printed tiers where the row carries no Hipparcos V', () => {
-    const below = (row: { tyc: string; gl: string }) => (row.tyc === '1-1-1'
-      ? { vMag: 5.0, vVia: 'tycho2' as const }
-      : row.gl === 'GJ 4285' ? { vMag: 5.0, vVia: 'gliese' as const } : null);
-    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, below, simbad);
-    expect(gate).toMatchObject({ vMag: 5.0, vVia: 'tycho2' });
+    const lower = bindingEvidence(gMag, WDS_XIDS, printedVOf({
+      hip: new Map([[50, 5.0]]), tycho2: { '1-1-1': 5.0 }, gliese: { 'GJ 4285': 5.0 },
+    }));
+    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, lower, simbad);
+    expect(gate.printedV).toMatchObject({ vMag: 5.0, vVia: 'tycho2' });
     expect(deriveBinding(candidates({ tyc: 'a', simbad: 'c' }), gate))
       .toMatchObject({ sourceId: 'c', gateable: true });
-    expect(rowGateEvidence({ tyc: '', hip: '', gl: 'GJ 4285' }, evidence, below, simbad))
+    expect(rowGateEvidence({ tyc: '', hip: '', gl: 'GJ 4285' }, lower, simbad).printedV)
       .toMatchObject({ vMag: 5.0, vVia: 'gliese' });
-    expect(rowGateEvidence({ tyc: '1-1-1', hip: '50', gl: '' }, evidence, below, simbad))
-      .toMatchObject({ vMag: 5.0, vVia: 'hip' });
+    expect(rowGateEvidence({ tyc: '1-1-1', hip: '50', gl: '' }, lower, simbad).printedV)
+      .toMatchObject({ vMag: 5.0, vVia: 'printed_hip' });
   });
 });
 

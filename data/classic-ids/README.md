@@ -176,11 +176,10 @@ HIP can land on a resolvable companion or a background source — and the
 overlay would then assert that star's classic designations on a source that
 is not the star. `applyBindingGate`
 (`scripts/catalog/classic-ids/classic-id-overlay-pure.ts`) runs the SAME
-`resolveGaiaSourceId` gates the record build applies in
-`scripts/catalog/parse/stars-parse.ts`, so the two cannot drift on what
-counts as a bad binding:
+`weighBinding` gates the membership derivation binds every record through,
+so the two cannot drift on what counts as a bad binding:
 
-- **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — <!-- count:classic-id-overlay/gateRejectedMag -->410<!-- /count --> rows. The
+- **G − V > 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — <!-- count:classic-id-overlay/gateRejectedMag -->410<!-- /count --> rows. The
   canonical case is the G = 20.95 background source beside α Cen B, which
   carried HD 128621 · HR 5460 · HIP 71681 · `alf Cen`.
 - **Sibling-letter attribution** (SIMBAD WDS cross-IDs) — <!-- count:classic-id-overlay/gateRejectedSibling -->50<!-- /count --> rows. Catches
@@ -201,9 +200,10 @@ labels ride the inherited spine exactly as they do for a record the build
 scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`
 (`gaia_source_id`, `hip`, `v_mag`, `v_via`, `g_mag`, `reason`, `designations`;
 a blank `hip` is a row no HIP reaches at all, a blank `designations` means the
-HIP was the row's only label, and a blank `g_mag` means the sibling gate fired
-without needing one). `v_via` says which printed tier the rejection rests on —
-218 hip · 165 tycho2 · 27 gliese on the magnitude arm.
+HIP was the row's only label, a blank `g_mag` means the sibling gate fired
+without needing one, and a blank `v_mag` / `v_via` is a sibling refusal of a
+row no printed tier reaches). `v_via` says which printed tier the rejection rests on —
+218 printed_hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
 routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/hdHipRouteAgree -->2,635<!-- /count -->
@@ -211,10 +211,12 @@ route agreements, not the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21
 
 **The gate reads the V cascade's three printed tiers**, keyed on designations
 the overlay row itself carries — deliberately not on AT-HYG, which the overlay
-has to outlive. `gateableVia` partitions what it reaches: **hip <!-- count:classic-id-overlay/gateableVia.hip -->99,799<!-- /count -->**
+has to outlive. `gateableVia` partitions what it reaches: **printed_hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count -->**
 (`data/hipparcos/hip_main_vmag.tsv`), **tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count -->** (`VT − 0.090(BT − VT)`
 on a TYC that IV/25 routes to that very source), **gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->**. Only
-`gateSkippedNoPrintedV` — **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows — is skipped unweighed.
+`gateSkippedNoPrintedV` — **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows — has no V to hold G against;
+the sibling arm, which keys on a HIP, still weighs it, as it does on the
+record side.
 
 **The two lower tiers are the whole difference between the gates.** Reading
 Hipparcos alone left 257,926 rows unvettable and the label side accepting
@@ -315,9 +317,10 @@ alone, and why the parity gate (`stellata-cns.7`) checks the union.
 
 `scripts/catalog/classic-ids/build-classic-id-overlay.ts` reads the four frozen
 tables plus `data/gaia/gaia_dr3_{tyc,hip}_xmatch.tsv` and the gate's evidence
-(`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G,
-`data/hipparcos/hip_main_vmag.tsv` for printed V,
-`data/simbad/simbad_wds_xids.tsv` for component attribution). The three
+(`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G; the printed V's three tiers,
+`data/hipparcos/hip_main_vmag.tsv`, `data/tycho2/tycho2_{main,suppl1}.tsv` and
+`data/gliese/gliese_v70a.tsv`; `data/simbad/simbad_wds_xids.tsv` for component
+attribution — `scripts/catalog/membership/binding/binding-evidence.ts` loads them). The
 evidence files are **required, not optional** — without them the join would key
 labels on sources the record build refuses, so a missing one hard-fails rather
 than degrading.

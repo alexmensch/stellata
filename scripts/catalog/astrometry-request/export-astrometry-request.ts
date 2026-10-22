@@ -6,10 +6,10 @@ import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
 import {
-  bindingCandidateSourceIds,
-  loadBindingCandidateInputs,
-} from '../classic-ids/binding-candidates';
-import { HIP_VMAG_HINT, SRC_HIP_VMAG } from '../classic-ids/binding-evidence';
+  joinOverlayCandidates,
+  magnitudeWeighableSourceIds,
+} from '../classic-ids/classic-id-overlay-pure';
+import { loadHipVMag } from '../membership/binding/binding-evidence';
 import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
@@ -25,7 +25,6 @@ import {
   parseSpineCorrectionsTsv,
 } from '../membership/membership-manifest-pure';
 import { isMagnitudeTermRow } from '../membership/magnitude-term/magnitude-term-pure';
-import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
@@ -50,7 +49,7 @@ async function main(): Promise<void> {
   }
   const membership = ids.size;
 
-  const { vmag: hipVMag } = parseHipPhotometryTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
+  const hipVMag = loadHipVMag();
 
   // One table load for both contributions: the gate's Tycho-2 / Gliese arms
   // read the same tables the derivation's do, and the TYC cross-walk has to
@@ -61,13 +60,17 @@ async function main(): Promise<void> {
   ));
   const tables = await loadPrimaryTables(kept.map((r) => r.tyc).filter((t) => t !== ''));
 
-  const candidates = bindingCandidateSourceIds({
-    inputs: loadBindingCandidateInputs(),
-    hipVMag,
-    printedV: printedVLookups(tables.tycho2, tables.gliese),
-    tycToSource: tables.tycToSource,
-    tyc2Hd: tables.iv25,
-  });
+  const candidates = magnitudeWeighableSourceIds(
+    joinOverlayCandidates({
+      tyc2Hd: tables.iv25,
+      crossIndex: tables.iv27a,
+      bsc5: tables.v50,
+      cns5: tables.cns5,
+      tycToSource: tables.tycToSource,
+      hipToSource: tables.hipToSource,
+    }),
+    printedVLookups(hipVMag, tables.tycho2, tables.gliese),
+  );
   for (const id of candidates) ids.add(id);
   const afterGate = ids.size;
 

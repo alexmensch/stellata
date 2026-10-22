@@ -85,8 +85,9 @@ import {
   type SimbadValueIndex,
 } from '../simbad/simbad-values-parse';
 import {
+  printedV,
+  printedVLookups,
   resolveVMagnitude,
-  tycho2VMagnitude,
   V_VIA_VALUES,
   type VVia,
 } from '../photometry/v-magnitude-pure';
@@ -429,6 +430,7 @@ export function readStars(
   let spectralByGspspec = 0;
   let spectralFallback = 0;
 
+  const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   for (const row of rows) {
     total++;
     const hip = parseIntOrNull(row.hip);
@@ -468,8 +470,6 @@ export function readStars(
 
     const proper = nonEmpty(row.proper);
     const isSol = proper === SOL_PROPER_NAME;
-    // One lookup serves both cascades that read this row: the direction tier
-    // takes its position and PM, the V cascade its BT/VT.
     const tycho2Row = simbadKeys.tyc !== null
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
@@ -517,16 +517,12 @@ export function readStars(
     // transform → printed HIP V → Tycho-2's reduced VT →
     // Gliese's printed Vmag → curated. See ../photometry/README.md. A row no
     // tier lights parks like one no tier places: a record needs both.
-    const tychoV = tycho2VMagnitude(
-      tycho2Row?.btMag ?? null, tycho2Row?.vtMag ?? null,
-    );
-    const vRes = resolveVMagnitude(
-      gaiaRow,
-      printedByHip(hipVMag, hip),
-      tychoV.v,
-      glieseRow?.vMag ?? null,
-      isSol ? SOL_APPARENT_V_MAGNITUDE : null,
-    );
+    const printed = printedV({
+      printed_hip: hip === null ? [] : [hip],
+      tycho2: simbadKeys.tyc === null ? [] : [simbadKeys.tyc],
+      gliese: simbadKeys.gl === null ? [] : [simbadKeys.gl],
+    }, printedVLookup);
+    const vRes = resolveVMagnitude(gaiaRow, printed, isSol ? SOL_APPARENT_V_MAGNITUDE : null);
     if (vRes.v === null) {
       park('no_v_magnitude');
       continue;
@@ -632,7 +628,9 @@ export function readStars(
     }
     if (pmRescue !== null) pmRescueVia[pmRescue.via]++;
     vVia[vRes.via]++;
-    if (vRes.via === 'tycho2' && tychoV.outsideRange) vTycho2OutsideBtVtRange++;
+    if (vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange) {
+      vTycho2OutsideBtVtRange++;
+    }
 
     // absmag derives from that V and the distance the whole override stack
     // settled on — except for Sol, which sits at distance zero where the

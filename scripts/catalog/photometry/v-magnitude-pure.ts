@@ -7,6 +7,7 @@ import {
   type GaiaPhotometry,
 } from './gaia-photometry-pure';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse';
+import { printedByHip } from './hip-photometry-parse';
 import type { Tycho2Row } from '../tycho2-parse';
 
 /** Riello 2021 (/data/papers/index.md#riello2021) App. C,
@@ -35,14 +36,17 @@ export const TYCHO2_V_FROM_VT_COEFF = 0.090;
 export const TYCHO2_BT_MINUS_VT_MIN = -0.25;
 export const TYCHO2_BT_MINUS_VT_MAX = 2.0;
 
-export const V_VIA_VALUES = [
-  'gaia_riello',
-  'printed_hip',
-  'tycho2',
-  'gliese',
-  'curated',
-  'none',
-] as const;
+/** The cascade's printed tiers, in cascade order — the one statement of that
+ *  order. Each publishes one magnitude per catalogue entry, which is why every
+ *  one of them is a system blend (`vTierIsSystemBlend`). */
+export const PRINTED_V_TIERS = ['printed_hip', 'tycho2', 'gliese'] as const;
+export type PrintedVVia = (typeof PRINTED_V_TIERS)[number];
+
+export function isPrintedVVia(via: string | null): via is PrintedVVia {
+  return (PRINTED_V_TIERS as readonly (string | null)[]).includes(via);
+}
+
+export const V_VIA_VALUES = ['gaia_riello', ...PRINTED_V_TIERS, 'curated', 'none'] as const;
 export type VVia = (typeof V_VIA_VALUES)[number];
 
 export interface VMagnitudeResolution {
@@ -100,30 +104,98 @@ export function tycho2VMagnitude(
   };
 }
 
-/** V through the cascade: Riello-transformed Gaia photometry, else the printed
- *  Hipparcos V, else Tycho-2's reduced `VT`, else Gliese's printed `Vmag`,
- *  else curated. Tier rationale — why the bright tier is a condition rather
- *  than a magnitude cut, and why there is no SIMBAD tier — in README.md#the-v-cascade.
- * */
+/** What each printed tier is keyed on: a HIP, a TYC, a GJ cell. */
+interface PrintedVKey {
+  printed_hip: number;
+  tycho2: string;
+  gliese: string;
+}
+
+/** Every printed tier bound to its parsed table. One bundle covering all three,
+ *  because a site supplying only some of them silently narrows a binding gate
+ *  to evidence the other side can still see (`/docs/catalog-driver.md#4-how-hd-reaches-gaia`). */
+export type PrintedVLookups = {
+  readonly [V in PrintedVVia]: (key: PrintedVKey[V]) => PrintedVAnswer[V] | null;
+};
+
+/** What a tier answers for one key. Tycho-2's reduction also says whether
+ *  BT − VT sat outside the published range, which only that tier can know. */
+interface PrintedVAnswer {
+  printed_hip: { vMag: number };
+  tycho2: { vMag: number; outsideRange: boolean };
+  gliese: { vMag: number };
+}
+
+/** The keys a row offers each printed tier. */
+export type PrintedVKeys = { readonly [V in PrintedVVia]: Iterable<PrintedVKey[V]> };
+
+/** The printed V a row resolved to, the tier that supplied it, and the key
+ *  that tier answered on. */
+export type PrintedV = {
+  [V in PrintedVVia]: { vVia: V; key: PrintedVKey[V] } & PrintedVAnswer[V];
+}[PrintedVVia];
+
+export function printedVLookups(
+  hipVMag: ReadonlyMap<number, number>,
+  tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag'>>,
+  gliese: GlieseIndex,
+): PrintedVLookups {
+  const answer = (vMag: number | null) => (vMag === null ? null : { vMag });
+  return {
+    printed_hip: (hip) => answer(printedByHip(hipVMag, hip)),
+    tycho2: (tyc) => {
+      const row = tycho2.get(tyc);
+      if (row === undefined) return null;
+      const { v, outsideRange } = tycho2VMagnitude(row.btMag, row.vtMag);
+      return v === null ? null : { vMag: v, outsideRange };
+    },
+    gliese: (gj) => answer(lookupGliese(gliese, gj)?.vMag ?? null),
+  };
+}
+
+function brightestOnTier<V extends PrintedVVia>(
+  vVia: V, keys: PrintedVKeys, lookups: PrintedVLookups,
+): PrintedV | null {
+  let best: (PrintedVAnswer[V] & { key: PrintedVKey[V] }) | null = null;
+  for (const key of keys[vVia]) {
+    const a = lookups[vVia](key);
+    if (a !== null && Number.isFinite(a.vMag) && (best === null || a.vMag < best.vMag)) {
+      best = { ...a, key };
+    }
+  }
+  return best === null ? null : ({ vVia, ...best } as PrintedV);
+}
+
+/** The first printed tier that answers for any of a row's keys, in
+ *  `PRINTED_V_TIERS` order — the V cascade's printed tiers and both binding
+ *  gates read a printed V through this alone.
+ *
+ *  **Lists, not cells.** A spine row states one key per tier, but an overlay
+ *  entry is keyed on a Gaia source that several HIPs or Tycho entries may route
+ *  to, and the brightest of them is the one saturation is a property of. */
+export function printedV(keys: PrintedVKeys, lookups: PrintedVLookups): PrintedV | null {
+  for (const vVia of PRINTED_V_TIERS) {
+    const found = brightestOnTier(vVia, keys, lookups);
+    if (found !== null) return found;
+  }
+  return null;
+}
+
+/** V through the cascade: Riello-transformed Gaia photometry, else the
+ *  printed V `printedV` resolved, else curated. Tier rationale — why the bright
+ *  tier is a condition rather than a magnitude cut, and why there is no SIMBAD
+ *  tier — in README.md#the-v-cascade. */
 export function resolveVMagnitude(
   photometry: GaiaPhotometry | null,
-  printedV: number | null,
-  tychoV: number | null,
-  glieseV: number | null,
+  printed: PrintedV | null,
   curatedV: number | null = null,
 ): VMagnitudeResolution {
   const transformed = rielloVMagnitude(photometry);
   if (transformed !== null) {
     return { v: transformed, via: 'gaia_riello' };
   }
-  if (printedV !== null && Number.isFinite(printedV)) {
-    return { v: printedV, via: 'printed_hip' };
-  }
-  if (tychoV !== null && Number.isFinite(tychoV)) {
-    return { v: tychoV, via: 'tycho2' };
-  }
-  if (glieseV !== null && Number.isFinite(glieseV)) {
-    return { v: glieseV, via: 'gliese' };
+  if (printed !== null) {
+    return { v: printed.vMag, via: printed.vVia };
   }
   // Sol only: it carries no identifier any tier above can key on, and V is a
   // membership gate. See `SOL_APPARENT_V_MAGNITUDE`.
@@ -133,76 +205,14 @@ export function resolveVMagnitude(
   return { v: null, via: 'none' };
 }
 
-/** Where the printed V a binding gate weighs against came from — the same
- *  printed tiers, in the same order, as the cascade above. */
-export type GateVVia = 'hip' | 'tycho2' | 'gliese';
-
-export interface PrintedV {
-  vMag: number;
-  vVia: GateVVia;
-}
-
-/** The two lower printed tiers bound to their parsed tables. One bundle rather
- *  than a loose callback pair, because four call sites weigh the same two tiers
- *  and a site supplying only one of them silently narrows a binding gate to
- *  evidence the other side can still see (`/docs/catalog-driver.md#4-how-hd-reaches-gaia`). */
-export interface PrintedVLookups {
-  tycho2VOfTyc: (tyc: string) => number | null;
-  glieseVOfGj: (gj: string) => number | null;
-}
-
-export function printedVLookups(
-  tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag'>>,
-  gliese: GlieseIndex,
-): PrintedVLookups {
-  return {
-    tycho2VOfTyc: (tyc) => {
-      const row = tycho2.get(tyc);
-      return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;
-    },
-    glieseVOfGj: (gj) => lookupGliese(gliese, gj)?.vMag ?? null,
-  };
-}
-
-/** The cascade's printed tiers BELOW Hipparcos, for a row a Hipparcos V does
- *  not reach: Tycho-2 on the row's Tycho entries, then Gliese on its GJ cells.
- *  Both binding gates weigh their candidates against this, so the record side
- *  and the label side cannot drift on what evidence is reachable
- *  (`/docs/catalog-driver.md#4-how-hd-reaches-gaia`).
- *
- *  **Lists, not cells.** A spine row states one TYC and one GJ, but an overlay
- *  entry is keyed on a Gaia source IV/25 may route several Tycho entries to,
- *  and the brightest of them is the one saturation is a property of — the same
- *  rule `applyBindingGate` applies across a row's HIPs. */
-export function printedVBelowHip(
-  tycs: Iterable<string>,
-  gjs: Iterable<string>,
-  lookups: PrintedVLookups,
-): PrintedV | null {
-  for (const [keys, lookup, vVia] of [
-    [tycs, lookups.tycho2VOfTyc, 'tycho2'],
-    [gjs, lookups.glieseVOfGj, 'gliese'],
-  ] as const) {
-    let brightest: number | null = null;
-    for (const key of keys) {
-      const v = lookup(key);
-      if (v !== null && Number.isFinite(v) && (brightest === null || v < brightest)) {
-        brightest = v;
-      }
-    }
-    if (brightest !== null) return { vMag: brightest, vVia };
-  }
-  return null;
-}
-
 /** Whether a V from this tier is the whole SYSTEM's blended magnitude — every
  *  component the source catalogue failed to resolve, summed into one value.
- *  True for the three printed tiers; `null` is a record no cascade ran on (a
+ *  True for the printed tiers; `null` is a record no cascade ran on (a
  *  minted companion), per-component by construction. Which tiers blend and
  *  why: README.md#which-tiers-give-a-system-blend--vtierissystemblend.
  *
  *  Subtracting a companion's flux from a record double-counts unless gated on
  *  this — ../companions/README.md#anchor-flux-conservation-post-pass. */
 export function vTierIsSystemBlend(via: VVia | null): boolean {
-  return via === 'printed_hip' || via === 'tycho2' || via === 'gliese';
+  return isPrintedVVia(via);
 }

@@ -6,9 +6,9 @@ import { resolve } from 'node:path';
 import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { compareCountSnapshot } from '../build-counts';
 import { loadClassicIdCrossWalks } from './binding-candidates';
-import { loadBindingEvidence } from './binding-evidence';
-import { parseBsc5Tsv } from './classic-ids-parse';
-import { readCrossIndexTable } from './cross-index';
+import { loadBindingEvidence, loadHipVMag } from '../membership/binding/binding-evidence';
+import { printedVLookups } from '../photometry/v-magnitude-pure';
+import { loadGliese, loadTycho2 } from '../spine/primaries-tables';
 import {
   OVERLAY_VALUE_SEPARATOR,
   buildClassicIdOverlay,
@@ -18,12 +18,8 @@ import {
   type HdHipRouteDisagreement,
   type RejectedBinding,
 } from './classic-id-overlay-pure';
-import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
+import { REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
-
-const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
-
-const CDS_HINT = 'refresh the CDS inputs with `pnpm run refresh:classic-ids`.';
 
 const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OUT_DISAGREEMENTS = resolve(
@@ -51,17 +47,22 @@ function writeDisagreements(rows: readonly HdHipRouteDisagreement[]): void {
   );
 }
 
+function compareHipNullsFirst(a: number | null, b: number | null): number {
+  if (a === null || b === null) return (a === null ? 0 : 1) - (b === null ? 0 : 1);
+  return a - b;
+}
+
 function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
   writeTsv(
     OUT_REJECTED,
     'gaia_source_id\thip\tv_mag\tv_via\tg_mag\treason\tdesignations',
     [...rows]
-      .sort((a, b) => a.hip - b.hip || compareSourceIdsNumeric(a.sourceId, b.sourceId))
+      .sort((a, b) => compareHipNullsFirst(a.hip, b.hip) || compareSourceIdsNumeric(a.sourceId, b.sourceId))
       .map((r) => [
         r.sourceId,
-        r.hip === 0 ? '' : r.hip,
-        r.vMag.toFixed(3),
-        r.vVia,
+        r.hip ?? '',
+        r.printedV?.vMag.toFixed(3) ?? '',
+        r.printedV?.vVia ?? '',
         r.gMag === null ? '' : r.gMag.toFixed(3),
         r.reason,
         r.designations,
@@ -85,7 +86,7 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
     `binding gate: dropped ${counts.gateRejectedMag} rows on G−V, ` +
       `${counts.gateRejectedSibling} on sibling-letter attribution; ` +
       `${counts.gateSkippedNoPrintedV} rows carry no printed V under any tier ` +
-      `and cannot be vetted (gateable via hip ${counts.gateableVia.hip}, ` +
+      `and bind on the sibling arm alone (gateable via printed_hip ${counts.gateableVia.printed_hip}, ` +
       `tycho2 ${counts.gateableVia.tycho2}, gliese ${counts.gateableVia.gliese}); ` +
       `${counts.gateSkippedNoGMag} gateable rows are absent ` +
       `from the astrometry pull (must be 0 — the request under-covers the ` +
@@ -94,27 +95,15 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
 }
 
 async function main(): Promise<void> {
-  const crossIndex = readCrossIndexTable();
-  const bsc5 = parseBsc5Tsv(readRequired(SRC_BSC5, CDS_HINT));
-
-  const { evidence } = loadBindingEvidence();
-
-  const { tyc2Hd, cns5, tycToSource, hipToSource } = await loadClassicIdCrossWalks();
-
+  const { evidence } = loadBindingEvidence(
+    printedVLookups(loadHipVMag(), loadTycho2(), loadGliese()),
+  );
   const {
     overlay,
     counts: joinCounts,
     disagreements,
     rejectedBindings,
-  } = buildClassicIdOverlay({
-    tyc2Hd,
-    crossIndex,
-    bsc5,
-    cns5,
-    tycToSource,
-    hipToSource,
-    evidence,
-  });
+  } = buildClassicIdOverlay({ ...await loadClassicIdCrossWalks(), evidence });
 
   writeFileSync(OUT_OVERLAY, serializeOverlay(overlay));
   writeDisagreements(disagreements);

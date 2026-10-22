@@ -50,17 +50,34 @@ export function isGaiaCatalogueBibcode(bibcode: string): boolean {
   return GAIA_CATALOGUE_BIBCODES.has(bibcode);
 }
 
-/** Whether a bibcode names the Hipparcos re-reduction — van Leeuwen 2007
- *  (/data/papers/index.md#vanleeuwen2007), the publication the HIP2 tier itself
- *  reads.
- *
- *  This exists because the skip rule generalises past Gaia. A courier serving a
- *  value attributed to the very publication a first-order tier above it already
- *  weighed and refused is laundering that refusal, whatever the publication is.
- *  For a HIP-bearing record SIMBAD's parallax usually IS van Leeuwen's, so
- *  without this the parallax cascade's precision gate refuses a value and then
- *  re-admits the identical number one tier down, stripped of the error bar the
- *  refusal was based on — measured at 574 records, matching to the digit. */
-export function isHipparcos2Bibcode(bibcode: string | null): boolean {
+/** van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), the publication the HIP2 tier reads. */
+function isHipparcos2Bibcode(bibcode: string): boolean {
   return bibcode === '2007A&A...474..653V';
+}
+
+/** A publication refused on this record: a Gaia release, where the record's
+ *  own fit is 2p, or Hipparcos-2, where the S/N floor refused it. */
+export type RefusedPublication = 'gaia_release' | 'hipparcos2';
+
+const CITES: Record<RefusedPublication, (bibcode: string) => boolean> = {
+  gaia_release: isGaiaCatalogueBibcode,
+  hipparcos2: isHipparcos2Bibcode,
+};
+
+const GAIA_RELEASE_REFUSED: ReadonlySet<RefusedPublication> = new Set(['gaia_release']);
+const NOTHING_REFUSED: ReadonlySet<RefusedPublication> = new Set();
+
+/** What the record's own Gaia fit refuses: its release, when the fit is 2p. */
+export function gaiaRefusals(gaiaIs2p: boolean): ReadonlySet<RefusedPublication> {
+  return gaiaIs2p ? GAIA_RELEASE_REFUSED : NOTHING_REFUSED;
+}
+
+/** A courier may not re-serve a value attributed to a publication a tier above
+ *  it already refused — the one rule behind every skip
+ *  (parallax/README.md#the-skip-rules--one-principle-two-publications). */
+export function refusedBy(bibcode: string, refused: ReadonlySet<RefusedPublication>): boolean {
+  for (const publication of refused) {
+    if (CITES[publication](bibcode)) return true;
+  }
+  return false;
 }

@@ -27,8 +27,8 @@ scripts/catalog/astrometry-request/
 Each non-membership contribution lives with the consumer that defines it, not
 here
 — this folder decides what to *request*, not what a route may propose:
-`bindingCandidateSourceIds` in `../classic-ids/binding-candidates.ts`,
-`derivationCandidateSourceIds` in `../membership/binding-derivation-pure.ts`,
+`magnitudeWeighableSourceIds` in `../classic-ids/classic-id-overlay-pure.ts`,
+`derivationCandidateSourceIds` in `../membership/binding/binding-derivation-pure.ts`,
 and `pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`.
 
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
@@ -62,8 +62,8 @@ different sets, so the request is the union of all four:
 | Contribution | Ids | Consumer |
 |---|---|---|
 | the manifest's `gaia_source_id` column, primaries rows | 374,932 | the record build: direction / rv / V / ci cascades |
-| `../classic-ids/`' binding-gate candidates | 354,987, +1,119 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 375,976, +198 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
+| `../classic-ids/`' binding-gate candidates | 354,987, +1,118 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
+| `../membership/`' binding-derivation candidates | 375,976, +199 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
 | `multiples.tsv`' kept-physical pair members | 16,108, +6,807 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
 
 `build:astrometry-request` prints every figure in this table — each
@@ -106,8 +106,8 @@ definition).
 breaks the gate.** The gate vets a *candidate* — whatever source a cross-walk
 names for a designation — and the whole reason it exists is that a
 candidate is frequently NOT the star, so candidates are routinely not
-membership rows. With no `phot_g_mean_mag` for one, `resolveGaiaSourceId`'s
-magnitude check has nothing to compare and **passes by default**: rejections
+membership rows. With no `phot_g_mean_mag` for one, `weighBinding`'s
+magnitude check has nothing to compare and **binds it unweighed**: rejections
 become silent acceptances. Measured on a membership-only request at the time
 the fault was found: `gateRejectedMag` 102 → **0** and
 `rejected_bindings.tsv` 187 → 101 rows. The extra bindings key sources that
@@ -115,12 +115,13 @@ are not records, so nothing shipped moved — which is what made it a *latent*
 fault, and why it is fixed rather than pinned: a source that becomes a record
 is one whose binding was never vetted.
 
-`bindingCandidateSourceIds` (`../classic-ids/binding-candidates.ts`) is
-shared with the overlay build so the two cannot drift, and
-`binding-candidates.test.ts` pins the correspondence against a built overlay
-rather than leaving it to inspection. It is the gate's own reach restated on
-the request side, so it widened with the gate: a source is a candidate where
-any of the V cascade's three printed tiers answers for it, which is nearly the
+The contribution is the overlay join's own candidates —
+`joinOverlayCandidates`, the step that needs no evidence — narrowed by
+`magnitudeWeighableSourceIds` through the gate's own `printedV` walk
+(`../classic-ids/classic-id-overlay-pure.ts`), so the request and the gate
+agree by construction rather than by a test holding two copies in step. A
+source is a candidate where any of the V cascade's three printed tiers answers
+for it, which is nearly the
 whole overlay — only the <!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count --> rows no tier reaches are skipped, because
 without a printed V a `G` decides nothing.
 

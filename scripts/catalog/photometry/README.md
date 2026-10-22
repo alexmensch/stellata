@@ -16,18 +16,17 @@ scripts/catalog/photometry/
                                  evaluator. Pure.
   v-magnitude-pure.ts (+ test)   Riello 2021 (/data/papers/index.md#riello2021)
                                  G−V relation, the gated
-                                 transform over it, the three-tier V
-                                 cascade, which tiers yield a system blend,
-                                 and `printedVBelowHip` — the cascade's two
-                                 printed tiers under Hipparcos, which BOTH
-                                 binding gates weigh a candidate against so
-                                 the record side and the label side cannot
-                                 drift on reachable evidence. Those two
-                                 arrive as one `printedVLookups` bundle,
-                                 built here from the parsed Tycho-2 and
-                                 Gliese tables: four call sites weigh the
-                                 same pair, and a loose callback per site is
-                                 how they drift. Pure.
+                                 transform over it, the V cascade, which
+                                 tiers yield a system blend, and
+                                 `PRINTED_V_TIERS` — the printed tiers' order,
+                                 stated once. `printedV` walks it for the
+                                 cascade AND for both binding gates, so the
+                                 record side and the label side cannot drift
+                                 on reachable evidence; every tier arrives in
+                                 one `printedVLookups` bundle built from the
+                                 parsed HIP, Tycho-2 and Gliese tables, since
+                                 a site supplying only some of them narrows a
+                                 gate silently. Pure.
   colour-index-pure.ts (+ test)  Table 5.9 G−B relation, B−V as the
                                  difference of the two relations, the
                                  synthetic tier's measured colour bound, and
@@ -38,23 +37,22 @@ scripts/catalog/photometry/
                                  validated-range flag.
   hip-photometry-parse.ts        data/hipparcos/hip_main_vmag.tsv → HIP →
     (+ test)                     printed Johnson V and B−V, as two maps off
-                                 one walk, plus `printedByHip` — the lookup
-                                 both cascades key their printed tier
-                                 through. Four consumers, disjoint by column:
-                                 the V cascade's bright tier, ../classic-ids/'s
-                                 binding gate and ../astrometry-request/ (which
-                                 narrows the gate's candidates by it) all take
-                                 V; the ci cascade takes B−V.
+                                 one walk, plus `printedByHip` — the one
+                                 HIP-keyed read of either. The ci cascade
+                                 calls it for B−V; V reaches its readers (the
+                                 V cascade, both binding gates, the
+                                 astrometry request) as `printedVLookups`'s
+                                 `printed_hip` tier, which calls it too.
   photometry-fixture.ts          Test-only GaiaPhotometry builders, plus
-                                 `printedVOf` / `NO_PRINTED_V_BELOW_HIP` —
+                                 `printedVOf` / `NO_PRINTED_V` —
                                  a `printedVLookups` over literal maps. A
                                  module, not an export from a test file: all
                                  three suites here build these rows, both
                                  relations are functions of BP−RP alone so
-                                 `atColour` belongs with them, and four
-                                 suites across ../classic-ids/ and
-                                 ../membership/ weigh a binding candidate
-                                 against the printed pair.
+                                 `atColour` belongs with them, and suites in
+                                 ../classic-ids/ and ../membership/ weigh a
+                                 binding candidate against the printed
+                                 tiers.
 ```
 
 ## The published relations
@@ -331,8 +329,8 @@ failure and capping the tier there would hand the faintest stars to the
 
 Three joined rows sit at G > 15 against a bright printed V (|ΔV| up to 19.7).
 Those are cross-walk mis-bindings, not photometry, and never reach this
-cascade: the `resolveGaiaSourceId` gates scrubbed them when the inherited
-spine was frozen, and the record build reads the surviving binding off the
+cascade: the binding gates (`weighBinding`) refuse them in the manifest
+generator, and the record build reads the surviving binding off the
 manifest column rather than re-deciding it ([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived);
 [The binding gate](/data/classic-ids/README.md#the-binding-gate)
 for the same gate on the label side).

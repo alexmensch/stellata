@@ -25,7 +25,7 @@
   "gateRejectedSibling": 50,
   "gateSkippedNoPrintedV": 2738,
   "gateableVia": {
-    "hip": 99799,
+    "printed_hip": 99799,
     "tycho2": 254135,
     "gliese": 1053
   },

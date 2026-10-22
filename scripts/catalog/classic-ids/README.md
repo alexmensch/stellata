@@ -33,24 +33,11 @@ scripts/catalog/classic-ids/
                                   evidence tables, writes the overlay and its
                                   two gate queues, and asserts the count
                                   snapshot.
-  binding-candidates.ts (+ test)  The cross-walk loaders, and the source_ids
-                                  the gate can weigh — shared with
-                                  ../astrometry-request/, which pulls a G for
-                                  every one (README.md#the-gates-evidence-has-to-be-pulled). `BindingCandidateEvidence` states
-                                  every table the walk reads and defaults
-                                  none: a partial bundle would narrow the set
-                                  to the HIP tier while the gate kept weighing
-                                  three. The test derives its expectation from
-                                  the source_ids a built overlay's gate ASKED
-                                  a G for, so a change to what makes a row
-                                  gateable fails rather than silently
-                                  shrinking the request.
-  binding-evidence.ts             Loads the gate's evidence tables — G per
-                                  source, the V cascade's three printed tiers
-                                  (Hipparcos, Tycho-2, Gliese), SIMBAD's WDS
-                                  component cross-IDs — for this build and for
-                                  ../membership/, whose derivation weighs its
-                                  candidates through the same gates.
+  binding-candidates.ts           `loadClassicIdCrossWalks`, every table the
+                                  overlay join reads, as one `OverlayWalks`.
+                                  ../astrometry-request/ runs the same join
+                                  off the primaries tables it already holds
+                                  (README.md#the-gates-evidence-has-to-be-pulled).
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers, plus the
                                   curated IV/27A corrections and their
                                   application. The gate's
@@ -76,9 +63,13 @@ scripts/catalog/classic-ids/
                                   A module, not a test-file export: four suites
                                   across two folders build these, so a new
                                   column lands in one place.
-  classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
-    (+ test)                      the overlay TSV codec (both directions).
-                                  Pure.
+  classic-id-overlay-pure.ts      The join (`joinOverlayCandidates`, which
+    (+ test)                      reads no evidence), the binding gate, its
+                                  counts, and the overlay TSV codec (both
+                                  directions). The gate itself — evidence,
+                                  thresholds, `weighBinding` — is
+                                  ../membership/binding/'s; this module
+                                  imports it. Pure.
   cross-index.ts                  IV/27A as every consumer reads it: the
                                   frozen table with
                                   cross_index_corrections.tsv applied
@@ -135,9 +126,9 @@ TYC (audit 2026-07-27), so the HIP route is a cross-check: on a disagreement
 the HD route keeps the label and the row queues (`data/classic-ids/README.md`).
 
 **Every route above is an unvetted best-neighbour walk, so the assembled
-overlay is then gated** — `applyBindingGate` re-runs the record build's own
-`resolveGaiaSourceId` checks and drops any row whose source_id is not the
-star its designations name (460 rows today). It runs BEFORE the counts, so
+overlay is then gated** — `applyBindingGate` weighs each row through
+`weighBinding`, the membership derivation's own gates, and drops any row whose
+source_id is not the star its designations name (460 rows today). It runs BEFORE the counts, so
 every `overlay*` count and `hdOnMultipleSources` describe the artifact while
 the route counters above stay pre-gate and keep describing upstream
 reachability. Rationale, the two canonical cases, and the bound on the
@@ -149,9 +140,9 @@ The magnitude check compares a candidate's `phot_g_mean_mag` against the row's
 printed V, taken in **the V cascade's own tier order** — Hipparcos on the
 brightest of the row's HIPs, else Tycho-2's `VT − 0.090(BT − VT)` on the Tycho
 entries IV/25 routes to this source, else Gliese on its GJ cells
-([The V cascade](../photometry/README.md#the-v-cascade)). One helper, `printedVBelowHip`,
-serves both binding gates over one `printedVLookups` bundle — a loose callback
-pair is how a call site supplies half the evidence — because
+([The V cascade](../photometry/README.md#the-v-cascade)). One walk, `printedV`, serves the V cascade and both binding gates over one
+`printedVLookups` bundle — a loose callback per tier is how a call site
+supplies part of the evidence — because
 [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) says the label
 side and the record side must not drift on what counts as a bad binding — and
 until the lower two tiers landed here they drifted on evidence *reach*, with
@@ -178,9 +169,9 @@ counts trade rows without any binding changing verdict.
 **The sibling-letter arm keys on a HIP and the magnitude arm does not**, so
 widening the V evidence widened only the second: `gateRejectedSibling` holds
 at 50 across the change while `gateRejectedMag` went 218 → 410. A row with no
-HIP passes `null` to `resolveGaiaSourceId`, exactly as the record side passes
-its own empty cell — passing `0` instead applies a gate here that the
-derivation does not apply there, and read 692 rejections rather than 50.
+HIP passes `null` to `weighBinding`, as the record side does, and the sibling
+arm reads `null` as nothing to key on; any number, `0` included, is looked up
+as a HIP and can reach the system-primary fallback.
 
 **Two counts say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:
@@ -191,12 +182,15 @@ is a pass either way and only one of the causes is fixable:
 | `gateSkippedNullGMag` | <!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count --> | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
 `gateableVia` partitions the rows the gate could weigh by which tier supplied
-their V — **hip <!-- count:classic-id-overlay/gateableVia.hip -->99,799<!-- /count --> · tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count --> · gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->** — and
+their V — **printed_hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count --> · tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count --> · gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->** — and
 `gateSkippedNoPrintedV` is what is left: **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows no printed tier reaches
-at all. `bindingCandidateSourceIds` applies the same reach, so the request and
-the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
+at all, whether or not the sibling arm then refused them, so the partition
+always sums to the rows weighed. None of them carries a HIP, so that arm has
+nothing to key on there today. The request reads the same join and the same
+walk (`magnitudeWeighableSourceIds`), so it and the gate agree by construction
+and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
-same `resolveGaiaSourceId` call, with its own candidate contribution to the
+same `weighBinding` call, with its own candidate contribution to the
 request and its own zero-pin ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
 
 **An ambiguous designation attaches to every matching record** ([§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia)) —
