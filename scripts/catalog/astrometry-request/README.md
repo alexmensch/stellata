@@ -15,7 +15,8 @@ scripts/catalog/astrometry-request/
   export-astrometry-request.ts    The generator. Streams the membership
                                   manifest through iterManifestTsv for the
                                   membership half, adds both gates' candidates
-                                  and the bound-pair siblings, sorts, writes.
+                                  and the bound-pair siblings, sorts, and
+                                  emits the request through emitArtifacts.
   export-astrometry-request-pure.ts
     (+ test)                      sortSourceIdsNumeric — the BigInt sort.
                                   Also imported by ../classic-ids/ and

@@ -1,7 +1,6 @@
 // Emit data/gaia/gaia_catalog_source_id_request.tsv — every Gaia source the
 // build needs a row for: the membership manifest's bindings, both gates'
 // candidates, bound-pair siblings. See README.md.
-import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
@@ -29,10 +28,13 @@ import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
+import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 
 const SRC_MANIFEST = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
 const OUT = resolve(ROOT, 'data/gaia/gaia_catalog_source_id_request.tsv');
+
+export const ASTROMETRY_REQUEST_OUTPUTS = declareOutputs([OUT]);
 
 const MANIFEST_HINT = 'run `pnpm run build:membership`, or `git lfs pull` if it is an LFS stub.';
 const CORRECTIONS_HINT = 'it is committed and hand-curated (../membership/README.md#correcting-a-merge-decision).';
@@ -85,7 +87,10 @@ async function main(): Promise<void> {
   for (const id of siblings) ids.add(id);
 
   const sorted = sortSourceIdsNumeric(ids);
-  writeFileSync(OUT, `gaia_source_id\n${sorted.join('\n')}\n`);
+  emitArtifacts({
+    outputs: ASTROMETRY_REQUEST_OUTPUTS,
+    files: new Map([[OUT, `gaia_source_id\n${sorted.join('\n')}\n`]]),
+  });
   console.log(
     `manifest primaries rows: ${rows} → ${membership} source_ids (${withoutSourceId} carry none; the magnitude term reads its own pull)`,
   );
