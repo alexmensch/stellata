@@ -33,18 +33,11 @@ scripts/catalog/classic-ids/
                                   evidence tables, writes the overlay and its
                                   two gate queues, and asserts the count
                                   snapshot.
-  binding-candidates.ts (+ test)  The cross-walk loaders, and the source_ids
-                                  the gate can weigh — shared with
-                                  ../astrometry-request/, which pulls a G for
-                                  every one (README.md#the-gates-evidence-has-to-be-pulled). `BindingCandidateEvidence` states
-                                  every table the walk reads and defaults
-                                  none: a partial bundle would narrow the set
-                                  to the HIP tier while the gate kept weighing
-                                  three. The test derives its expectation from
-                                  the source_ids a built overlay's gate ASKED
-                                  a G for, so a change to what makes a row
-                                  gateable fails rather than silently
-                                  shrinking the request.
+  binding-candidates.ts           The loaders for every table the overlay
+                                  join reads, shared with
+                                  ../astrometry-request/, which runs the join
+                                  itself to pull a G for each source the gate
+                                  can weigh (README.md#the-gates-evidence-has-to-be-pulled).
   binding-evidence.ts             Loads the gate's evidence tables — G per
                                   source, the V cascade's three printed tiers
                                   (Hipparcos, Tycho-2, Gliese), SIMBAD's WDS
@@ -76,8 +69,10 @@ scripts/catalog/classic-ids/
                                   A module, not a test-file export: four suites
                                   across two folders build these, so a new
                                   column lands in one place.
-  classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
-    (+ test)                      the overlay TSV codec (both directions).
+  classic-id-overlay-pure.ts      The join (`joinOverlayCandidates`, which
+    (+ test)                      reads no evidence), the binding gate, its
+                                  counts, and the overlay TSV codec (both
+                                  directions).
                                   `weighBinding`, the verdict both gates
                                   call, lives here beside the evidence it
                                   reads; ../membership/binding/ imports it.
@@ -197,8 +192,9 @@ is a pass either way and only one of the causes is fixable:
 their V — **hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count --> · tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count --> · gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->** — and
 `gateSkippedNoPrintedV` is what is left: **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows no printed tier reaches
 at all and the sibling arm passed. None of them carries a HIP, so that arm has
-nothing to key on there today. `bindingCandidateSourceIds` applies the same reach, so the request and
-the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
+nothing to key on there today. The request reads the same join and the same
+walk (`magnitudeWeighableSourceIds`), so it and the gate agree by construction
+and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
 same `weighBinding` call, with its own candidate contribution to the
 request and its own zero-pin ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).

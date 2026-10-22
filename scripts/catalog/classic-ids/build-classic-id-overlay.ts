@@ -5,10 +5,8 @@ import { resolve } from 'node:path';
 
 import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { compareCountSnapshot } from '../build-counts';
-import { loadClassicIdCrossWalks } from './binding-candidates';
+import { loadClassicIdCrossWalks, loadDesignationTables } from './binding-candidates';
 import { loadBindingEvidence } from './binding-evidence';
-import { parseBsc5Tsv } from './classic-ids-parse';
-import { readCrossIndexTable } from './cross-index';
 import {
   OVERLAY_VALUE_SEPARATOR,
   buildClassicIdOverlay,
@@ -18,12 +16,8 @@ import {
   type HdHipRouteDisagreement,
   type RejectedBinding,
 } from './classic-id-overlay-pure';
-import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
+import { REPO_ROOT as ROOT } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
-
-const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
-
-const CDS_HINT = 'refresh the CDS inputs with `pnpm run refresh:classic-ids`.';
 
 const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OUT_DISAGREEMENTS = resolve(
@@ -94,9 +88,7 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
 }
 
 async function main(): Promise<void> {
-  const crossIndex = readCrossIndexTable();
-  const bsc5 = parseBsc5Tsv(readRequired(SRC_BSC5, CDS_HINT));
-
+  const { crossIndex, bsc5 } = loadDesignationTables();
   const { evidence } = loadBindingEvidence();
 
   const { tyc2Hd, cns5, tycToSource, hipToSource } = await loadClassicIdCrossWalks();

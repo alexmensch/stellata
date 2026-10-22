@@ -5,10 +5,11 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
+import { loadBindingCandidateInputs, loadDesignationTables } from '../classic-ids/binding-candidates';
 import {
-  bindingCandidateSourceIds,
-  loadBindingCandidateInputs,
-} from '../classic-ids/binding-candidates';
+  joinOverlayCandidates,
+  magnitudeWeighableSourceIds,
+} from '../classic-ids/classic-id-overlay-pure';
 import { HIP_VMAG_HINT, SRC_HIP_VMAG } from '../classic-ids/binding-evidence';
 import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
@@ -61,12 +62,15 @@ async function main(): Promise<void> {
   ));
   const tables = await loadPrimaryTables(kept.map((r) => r.tyc).filter((t) => t !== ''));
 
-  const candidates = bindingCandidateSourceIds({
-    inputs: loadBindingCandidateInputs(),
-    printedV: printedVLookups(hipVMag, tables.tycho2, tables.gliese),
-    tycToSource: tables.tycToSource,
-    tyc2Hd: tables.iv25,
-  });
+  const candidates = magnitudeWeighableSourceIds(
+    joinOverlayCandidates({
+      ...loadBindingCandidateInputs(),
+      ...loadDesignationTables(),
+      tyc2Hd: tables.iv25,
+      tycToSource: tables.tycToSource,
+    }),
+    printedVLookups(hipVMag, tables.tycho2, tables.gliese),
+  );
   for (const id of candidates) ids.add(id);
   const afterGate = ids.size;
 

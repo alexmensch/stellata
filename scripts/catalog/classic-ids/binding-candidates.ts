@@ -1,18 +1,19 @@
-// The Gaia sources the classic-ID routes can propose — the binding gate's
-// candidate set, and the astrometry request's second contribution.
+// Loaders for the tables the classic-ID overlay join reads.
 // See README.md#the-gates-evidence-has-to-be-pulled.
 
 import { resolve } from 'node:path';
 
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
-import type { PrintedVLookups } from '../photometry/v-magnitude-pure';
-import { parseCns5Tsv, parseTyc2HdTsv, type Cns5Row } from './classic-ids-parse';
+import { parseBsc5Tsv, parseCns5Tsv, parseTyc2HdTsv, type Cns5Row } from './classic-ids-parse';
+import { readCrossIndexTable } from './cross-index';
+import type { OverlayWalks } from './classic-id-overlay-pure';
 import { readRequired, requireExists, REPO_ROOT as ROOT } from '../../util/paths';
 
 export const SRC_TYC2_HD = resolve(ROOT, 'data/classic-ids/tyc2_hd.tsv');
 export const SRC_CNS5 = resolve(ROOT, 'data/classic-ids/cns5.tsv');
 export const SRC_TYC_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_tyc_xmatch.tsv');
 export const SRC_HIP_XMATCH = resolve(ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
+const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
 
 const CDS_HINT = 'refresh the CDS inputs with `pnpm run refresh:classic-ids`.';
 const XMATCH_HINT = 'refresh the cross-walk with `pnpm run refresh:gaia-hip` / `refresh:gaia-tyc`.';
@@ -51,58 +52,11 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
   return { ...loadBindingCandidateInputs(), tyc2Hd, tycToSource };
 }
 
-/** Every table the candidate walk reads. All fields required: a partial bundle
- *  narrows the set to the HIP tier while the gate keeps weighing three, which is
- *  the silent-acceptance fault below with the pull no longer covering it. */
-export interface BindingCandidateEvidence {
-  inputs: BindingCandidateInputs;
-  printedV: PrintedVLookups;
-  /** Narrowed to the Tycho ids IV/25 mentions, as the overlay join's is. */
-  tycToSource: ReadonlyMap<string, string>;
-  tyc2Hd: readonly { tyc: string }[];
-}
-
-/** The source_ids the binding gate can actually weigh, and therefore the ones
- *  the astrometry pull has to carry a `phot_g_mean_mag` for.
- *
- *  **These are candidates, not members** — a route resolves a designation to
- *  whatever source the cross-walk names, which is frequently not a catalogue
- *  record and is exactly the case the gate exists to refuse. So the set is NOT
- *  a subset of the spine's column, and a pull covering only the spine leaves
- *  the gate with nothing to weigh, where it passes by default instead of
- *  rejecting.
- *
- *  **The set is the gate's own reach, restated on the request side**, so it
- *  widens exactly when the gate does: a source is a candidate where any of the
- *  V cascade's three printed tiers answers for it — a HIP the cross-walk or a
- *  CNS5 row gives it, a Tycho entry IV/25 routes to it, or a CNS5 GJ cell. Only
- *  a source no tier reaches is skipped (`gateSkippedNoPrintedV`), because
- *  without a printed V a `G` decides nothing.
- *
- *  Drifting from either producer re-opens the silent-acceptance fault, so the
- *  correspondence is pinned two ways: `binding-candidates.test.ts` walks a
- *  built overlay and asserts every source the gate weighed is in here, and
- *  `gateSkippedNoGMag` pins at zero on the real build.
- */
-export function bindingCandidateSourceIds(
-  { inputs, printedV, tycToSource, tyc2Hd }: BindingCandidateEvidence,
-): Set<string> {
-  const ids = new Set<string>();
-  for (const [hip, sourceId] of inputs.hipToSource) {
-    if (printedV.printed_hip(hip) !== null) ids.add(sourceId);
-  }
-  for (const row of inputs.cns5) {
-    if (row.gaiaSourceId === null) continue;
-    if (row.hip !== null && printedV.printed_hip(row.hip) !== null) ids.add(row.gaiaSourceId);
-    else if (printedV.gliese(`${row.gj}${row.gjComp ?? ''}`) !== null) {
-      ids.add(row.gaiaSourceId);
-    }
-  }
-  for (const row of tyc2Hd) {
-    const sourceId = tycToSource.get(row.tyc);
-    if (sourceId !== undefined && printedV.tycho2(row.tyc) !== null) {
-      ids.add(sourceId);
-    }
-  }
-  return ids;
+/** IV/27A (corrections applied) and V/50: the two designation tables the join
+ *  hangs labels off, which route no source of their own. */
+export function loadDesignationTables(): Pick<OverlayWalks, 'crossIndex' | 'bsc5'> {
+  return {
+    crossIndex: readCrossIndexTable(),
+    bsc5: parseBsc5Tsv(readRequired(SRC_BSC5, CDS_HINT)),
+  };
 }

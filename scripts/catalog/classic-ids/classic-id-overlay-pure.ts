@@ -12,6 +12,7 @@ import {
   PRINTED_V_TIERS,
   printedV,
   type PrintedV,
+  type PrintedVKeys,
   type PrintedVLookups,
   type PrintedVVia,
 } from '../photometry/v-magnitude-pure';
@@ -45,13 +46,17 @@ export interface OverlayEntry {
 
 export type ClassicIdOverlay = Map<string, OverlayEntry>;
 
-export interface OverlayInput {
+/** The frozen tables and cross-walks the join reads — no gate evidence. */
+export interface OverlayWalks {
   tyc2Hd: readonly Tyc2HdRow[];
   crossIndex: readonly CrossIndexRow[];
   bsc5: readonly Bsc5Row[];
   cns5: readonly Cns5Row[];
   tycToSource: ReadonlyMap<string, string>;
   hipToSource: ReadonlyMap<number, string>;
+}
+
+export interface OverlayInput extends OverlayWalks {
   evidence: BindingEvidence;
 }
 
@@ -169,6 +174,12 @@ function designationSummary(entry: OverlayEntry): string {
  *  gate's own coverage alarms, split by cause
  *  (`../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`;
  *  `../photometry/README.md#the-v-cascade`). */
+function gateKeys(
+  sourceId: string, entry: OverlayEntry, tycsBySource: ReadonlyMap<string, readonly string[]>,
+): PrintedVKeys {
+  return { printed_hip: entry.hip, tycho2: tycsBySource.get(sourceId) ?? [], gliese: entry.gj };
+}
+
 export function applyBindingGate(
   overlay: ClassicIdOverlay,
   evidence: BindingEvidence,
@@ -186,10 +197,7 @@ export function applyBindingGate(
   let skippedNullGMag = 0;
   const gateableVia = emptyTallyPartition(PRINTED_V_TIERS);
   for (const [sourceId, entry] of overlay) {
-    const printed = printedV(
-      { printed_hip: entry.hip, tycho2: tycsBySource.get(sourceId) ?? [], gliese: entry.gj },
-      evidence.printedV,
-    );
+    const printed = printedV(gateKeys(sourceId, entry, tycsBySource), evidence.printedV);
     if (printed !== null) gateableVia[printed.vVia]++;
     // The sibling gate keys on a HIP rather than on the V: the one the V came
     // from, else the entry's first.
@@ -308,15 +316,34 @@ function addValue<T>(list: T[], value: T): void {
   if (!list.includes(value)) list.push(value);
 }
 
-export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
-  const { tyc2Hd, crossIndex, bsc5, cns5, tycToSource, hipToSource, evidence } = input;
+/** The overlay's counts that describe upstream reachability: what the routes
+ *  reach before any gate weighs a row. */
+type OverlayRouteCounts = Pick<OverlayJoinCounts,
+  | 'tyc2HdRows' | 'tyc2HdDistinctTyc' | 'tyc2HdAmbiguousRows' | 'tycResolvedToSource'
+  | 'tycUnresolved' | 'crossIndexRows' | 'bsc5Rows' | 'cns5Rows' | 'hipXmatchEntries'
+  | 'hdHipRouteAgree' | 'hdHipRouteDisagree' | 'hdHipRouteHipOnly'
+  | 'crossIndexBayerUnkeyed' | 'crossIndexFlamsteedUnkeyed' | 'bsc5HrUnkeyed'
+  | 'cns5GjUnkeyed' | 'cns5GjViaHip'>;
+
+/** Every source a route proposes, with the designations each would carry —
+ *  the gate's candidates, before any evidence weighs them. */
+export interface OverlayCandidates {
+  overlay: ClassicIdOverlay;
+  /** The Tycho entries IV/25 routes to each source, for the gate's Tycho-2 V
+   *  tier: the walk holds both ends here and the overlay carries no TYC cell. */
+  tycsBySource: Map<string, string[]>;
+  hdToSources: Map<number, string[]>;
+  disagreements: HdHipRouteDisagreement[];
+  routeCounts: OverlayRouteCounts;
+}
+
+export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
+  const { tyc2Hd, crossIndex, bsc5, cns5, tycToSource, hipToSource } = walks;
   const overlay: ClassicIdOverlay = new Map();
 
   // HD → TYC → source_id is the primary route: every HD-bearing AT-HYG row
   // also carries a TYC, so no HD needs the HIP route as an authority.
   const hdToSources = new Map<number, string[]>();
-  // The Tycho entries IV/25 routes to each source, for the gate's Tycho-2 V
-  // tier: the walk holds both ends here and the overlay carries no TYC cell.
   const tycsBySource = new Map<string, string[]>();
   const distinctTyc = new Set<string>();
   const resolvedTyc = new Set<string>();
@@ -413,10 +440,52 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
     entry.flamsteed.sort();
   }
 
+  return {
+    overlay,
+    tycsBySource,
+    hdToSources,
+    disagreements,
+    routeCounts: {
+      tyc2HdRows: tyc2Hd.length,
+      tyc2HdDistinctTyc: distinctTyc.size,
+      tyc2HdAmbiguousRows: ambiguousRows,
+      tycResolvedToSource: resolvedTyc.size,
+      tycUnresolved: distinctTyc.size - resolvedTyc.size,
+      crossIndexRows: crossIndex.length,
+      bsc5Rows: bsc5.length,
+      cns5Rows: cns5.length,
+      hipXmatchEntries: hipToSource.size,
+      hdHipRouteAgree: hipRouteAgree,
+      hdHipRouteDisagree: disagreements.length,
+      hdHipRouteHipOnly: hipRouteHipOnly,
+      crossIndexBayerUnkeyed: bayerUnkeyed,
+      crossIndexFlamsteedUnkeyed: flamsteedUnkeyed,
+      bsc5HrUnkeyed: hrUnkeyed,
+      cns5GjUnkeyed: gjUnkeyed,
+      cns5GjViaHip: gjViaHip,
+    },
+  };
+}
+
+/** See README.md#the-gates-evidence-has-to-be-pulled. */
+export function magnitudeWeighableSourceIds(
+  { overlay, tycsBySource }: Pick<OverlayCandidates, 'overlay' | 'tycsBySource'>,
+  lookups: PrintedVLookups,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const [sourceId, entry] of overlay) {
+    if (printedV(gateKeys(sourceId, entry, tycsBySource), lookups) !== null) ids.add(sourceId);
+  }
+  return ids;
+}
+
+export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
+  const { overlay, tycsBySource, hdToSources, disagreements, routeCounts } =
+    joinOverlayCandidates(input);
+
   // Gate before counting, so every overlay* count describes the artifact
-  // rather than the pre-vetting routing. The route counters above keep
-  // describing upstream reachability and are deliberately left pre-gate.
-  const gate = applyBindingGate(overlay, evidence, tycsBySource);
+  // rather than the pre-vetting routing; routeCounts stay pre-gate.
+  const gate = applyBindingGate(overlay, input.evidence, tycsBySource);
   for (const [hd, sources] of hdToSources) {
     const kept = sources.filter((s) => overlay.has(s));
     if (kept.length === sources.length) continue;
@@ -440,15 +509,7 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
     disagreements,
     rejectedBindings: gate.rejected,
     counts: {
-      tyc2HdRows: tyc2Hd.length,
-      tyc2HdDistinctTyc: distinctTyc.size,
-      tyc2HdAmbiguousRows: ambiguousRows,
-      tycResolvedToSource: resolvedTyc.size,
-      tycUnresolved: distinctTyc.size - resolvedTyc.size,
-      crossIndexRows: crossIndex.length,
-      bsc5Rows: bsc5.length,
-      cns5Rows: cns5.length,
-      hipXmatchEntries: hipToSource.size,
+      ...routeCounts,
 
       overlayRows: overlay.size,
       overlayHd: withValues((e) => e.hd),
@@ -471,16 +532,6 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
       gateableVia: gate.gateableVia,
       gateSkippedNoGMag: gate.skippedNoGMag,
       gateSkippedNullGMag: gate.skippedNullGMag,
-
-      hdHipRouteAgree: hipRouteAgree,
-      hdHipRouteDisagree: disagreements.length,
-      hdHipRouteHipOnly: hipRouteHipOnly,
-
-      crossIndexBayerUnkeyed: bayerUnkeyed,
-      crossIndexFlamsteedUnkeyed: flamsteedUnkeyed,
-      bsc5HrUnkeyed: hrUnkeyed,
-      cns5GjUnkeyed: gjUnkeyed,
-      cns5GjViaHip: gjViaHip,
     },
   };
 }

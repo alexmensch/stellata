@@ -7,6 +7,8 @@ import {
   glieseCellKey,
   glieseComponent,
   glieseNumber,
+  joinOverlayCandidates,
+  magnitudeWeighableSourceIds,
   parseOverlayTsv,
   serializeOverlay,
   weighBinding,
@@ -557,5 +559,48 @@ describe('parseOverlayTsv', () => {
   it('rejects a header that is not the column list byte for byte', () => {
     expect(() => parseOverlayTsv('gaia_source_id\thd\n1\t2\n'))
       .toThrow(/header/);
+  });
+});
+
+describe('magnitudeWeighableSourceIds', () => {
+  const HIP_SRC = '111111111111111111';
+  const TYC_ONLY_SRC = '222222222222222222';
+  const CNS5_SRC = '333333333333333333';
+  const GLIESE_SRC = '444444444444444444';
+  const UNWEIGHABLE_SRC = '555555555555555555';
+
+  // Every tier at once, so the set has to discriminate between them: one source
+  // reached by HIP, one only by TYC→HD but carrying a Tycho-2 V, one by a CNS5
+  // row's own source_id and HIP, one by its GJ cell alone, and one no printed
+  // tier answers for.
+  const walks = {
+    tyc2Hd: [
+      { tyc: '1-1-1', hd: 111, nHd: 1, nTyc: 1 },
+      { tyc: '2-2-2', hd: 222, nHd: 1, nTyc: 1 },
+    ],
+    crossIndex: [],
+    bsc5: [],
+    cns5: [
+      cns5Row({ gj: '9998', hip: 30, gaiaSourceId: CNS5_SRC }),
+      cns5Row({ gj: '9999', hip: null, gaiaSourceId: GLIESE_SRC }),
+    ],
+    tycToSource: new Map([['1-1-1', TYC_ONLY_SRC], ['2-2-2', UNWEIGHABLE_SRC]]),
+    hipToSource: new Map([[10, HIP_SRC]]),
+  };
+  const lookups = printedVOf({
+    hip: new Map([[10, 5.0], [30, 6.0]]), tycho2: { '1-1-1': 7.0 }, gliese: { 9999: 8.0 },
+  });
+
+  it('takes every source a printed tier answers for, and none other', () => {
+    expect([...magnitudeWeighableSourceIds(joinOverlayCandidates(walks), lookups)].sort())
+      .toEqual([HIP_SRC, TYC_ONLY_SRC, CNS5_SRC, GLIESE_SRC].sort());
+  });
+
+  // The request carries a G exactly where the gate can hold one against a V:
+  // every other row the gate weighs, it weighs on the sibling arm alone.
+  it('is the set the gate weighs on the magnitude arm', () => {
+    const { counts } = buildClassicIdOverlay({ ...walks, evidence: bindingEvidence(new Map(), null, lookups) });
+    expect(counts.gateableVia).toEqual({ printed_hip: 2, tycho2: 1, gliese: 1 });
+    expect(counts.gateSkippedNoPrintedV).toBe(1);
   });
 });
