@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseSimbadWdsXidsTsv } from '../../record/catalog-pure';
-import { bindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
+import { bindingEvidence, parseSimbadWdsXidsTsv } from './binding-gate-pure';
 import { cns5Row } from '../../classic-ids/cns5-fixture';
 import { indexCns5, type BindingTables, type SimbadXids } from '../../spine/primaries-audit-pure';
 import {

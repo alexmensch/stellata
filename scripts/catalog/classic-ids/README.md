@@ -38,12 +38,6 @@ scripts/catalog/classic-ids/
                                   ../astrometry-request/ runs the same join
                                   off the primaries tables it already holds
                                   (README.md#the-gates-evidence-has-to-be-pulled).
-  binding-evidence.ts             Loads the gate's evidence tables — G per
-                                  source, the V cascade's three printed tiers
-                                  (Hipparcos, Tycho-2, Gliese), SIMBAD's WDS
-                                  component cross-IDs — for this build and for
-                                  ../membership/, whose derivation weighs its
-                                  candidates through the same gates.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers, plus the
                                   curated IV/27A corrections and their
                                   application. The gate's
@@ -72,11 +66,10 @@ scripts/catalog/classic-ids/
   classic-id-overlay-pure.ts      The join (`joinOverlayCandidates`, which
     (+ test)                      reads no evidence), the binding gate, its
                                   counts, and the overlay TSV codec (both
-                                  directions).
-                                  `weighBinding`, the verdict both gates
-                                  call, lives here beside the evidence it
-                                  reads; ../membership/binding/ imports it.
-                                  Pure.
+                                  directions). The gate itself — evidence,
+                                  thresholds, `weighBinding` — is
+                                  ../membership/binding/'s; this module
+                                  imports it. Pure.
   cross-index.ts                  IV/27A as every consumer reads it: the
                                   frozen table with
                                   cross_index_corrections.tsv applied

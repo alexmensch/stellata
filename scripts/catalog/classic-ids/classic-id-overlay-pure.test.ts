@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 
 import {
   applyBindingGate,
-  bindingEvidence,
   buildClassicIdOverlay,
   glieseCellKey,
   glieseComponent,
@@ -11,12 +10,11 @@ import {
   magnitudeWeighableSourceIds,
   parseOverlayTsv,
   serializeOverlay,
-  weighBinding,
   type ClassicIdOverlay,
   type OverlayInput,
 } from './classic-id-overlay-pure';
 import { cns5Row } from './cns5-fixture';
-import { GAIA_BINDING_G_MINUS_V_REJECT_MAG, parseSimbadWdsXidsTsv } from '../record/catalog-pure';
+import { bindingEvidence } from '../membership/binding/binding-gate-pure';
 import {
   NO_PRINTED_V,
   printedVOf,
@@ -131,66 +129,6 @@ describe('buildClassicIdOverlay', () => {
       }),
     );
     expect(counts.cns5GjUnkeyed).toBe(1);
-  });
-});
-
-describe('weighBinding', () => {
-  // Toliman's wrong binding: a G 20.95 background source on α Cen B's V 1.33.
-  const TOLIMAN_BAD_SRC = '5877748442128924544';
-  const evidence = bindingEvidence(
-    new Map([[TOLIMAN_BAD_SRC, 20.95], ['777', 1.6]]), null, NO_PRINTED_V, new Set(['nullg']),
-  );
-  const printedAt = (vMag: number) => ({ vVia: 'printed_hip' as const, vMag, key: 1 });
-
-  it('rejects a candidate fainter in G than the printed V beyond the gate', () => {
-    expect(weighBinding(TOLIMAN_BAD_SRC, { hip: null, printedV: printedAt(1.33) }, evidence))
-      .toEqual({ kind: 'reject', reason: 'mag' });
-  });
-
-  it('passes a candidate consistent with the printed V', () => {
-    expect(weighBinding('777', { hip: null, printedV: printedAt(1.58) }, evidence))
-      .toEqual({ kind: 'pass' });
-  });
-
-  it('passes a candidate exactly at the threshold — the gate rejects only past it', () => {
-    const atThreshold = bindingEvidence(
-      new Map([['edge', 1.5 + GAIA_BINDING_G_MINUS_V_REJECT_MAG]]), null, NO_PRINTED_V,
-    );
-    expect(weighBinding('edge', { hip: null, printedV: printedAt(1.5) }, atThreshold))
-      .toEqual({ kind: 'pass' });
-  });
-
-  it('names why it could not weigh a candidate, and binds it', () => {
-    expect(weighBinding(TOLIMAN_BAD_SRC, { hip: null, printedV: null }, evidence))
-      .toEqual({ kind: 'unweighable', reason: 'no_printed_v' });
-    expect(weighBinding('unpulled', { hip: null, printedV: printedAt(5) }, evidence))
-      .toEqual({ kind: 'unweighable', reason: 'no_pulled_row' });
-    expect(weighBinding('nullg', { hip: null, printedV: printedAt(5) }, evidence))
-      .toEqual({ kind: 'unweighable', reason: 'null_g' });
-  });
-
-  // μ Dra: HIP 83608 is filed under B's letter, and the source belongs to A
-  // alone. The sibling arm keys on the HIP, so it needs neither a G nor a V,
-  // and outranks every unweighable reason.
-  describe('the sibling-letter arm', () => {
-    const xids = parseSimbadWdsXidsTsv([
-      'wds_id\tcomponent\tgaia_source_id\thip',
-      '17053+5428\tA\t1420101696285626624\t',
-      '17053+5428\tB\t\t83608',
-    ].join('\n'));
-    const sibling = bindingEvidence(new Map(), xids, NO_PRINTED_V);
-
-    it('refuses a source another letter owns, weighable or not', () => {
-      for (const printedV of [printedAt(5), null]) {
-        expect(weighBinding('1420101696285626624', { hip: 83608, printedV }, sibling))
-          .toEqual({ kind: 'reject', reason: 'sibling' });
-      }
-    });
-
-    it('is inert on a row with no HIP', () => {
-      expect(weighBinding('1420101696285626624', { hip: null, printedV: null }, sibling))
-        .toEqual({ kind: 'unweighable', reason: 'no_printed_v' });
-    });
   });
 });
 

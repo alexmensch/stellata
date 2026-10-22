@@ -8,7 +8,7 @@ import { dirname, resolve } from 'node:path';
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 import { compareCountSnapshot } from '../build-counts';
-import { loadBindingEvidence } from '../classic-ids/binding-evidence';
+import { loadBindingEvidence } from './binding/binding-evidence';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
   BRIGHT_TIER_MAG_CEILING,

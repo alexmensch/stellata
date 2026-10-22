@@ -9,7 +9,7 @@ import {
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
-import { HIP_VMAG_HINT, SRC_HIP_VMAG } from '../classic-ids/binding-evidence';
+import { HIP_VMAG_HINT, SRC_HIP_VMAG } from '../membership/binding/binding-evidence';
 import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {

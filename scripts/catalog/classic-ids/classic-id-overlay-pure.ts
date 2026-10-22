@@ -3,10 +3,10 @@
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import {
-  GAIA_BINDING_G_MINUS_V_REJECT_MAG,
-  isSiblingLetterAttribution,
-  type SimbadWdsXidIndex,
-} from '../record/catalog-pure';
+  weighBinding,
+  type BindingEvidence,
+  type GateReason,
+} from '../membership/binding/binding-gate-pure';
 import { emptyTallyPartition } from '../../util/tally';
 import {
   PRINTED_V_TIERS,
@@ -58,83 +58,6 @@ export interface OverlayWalks {
 
 export interface OverlayInput extends OverlayWalks {
   evidence: BindingEvidence;
-}
-
-/** Per-source photometry the binding gate below needs. `gMagOf` is Gaia's
- *  own G for the candidate source; `printedV` the V cascade's printed tiers,
- *  so both gates weigh a row on the evidence the record side reaches
- *  (`../photometry/README.md#the-v-cascade`). Both cross-walks feeding this
- *  join are best-neighbour tables, so an unvetted row can assert that a
- *  saturated star's designations belong to the faint companion Gaia actually
- *  fitted. */
-export interface BindingEvidence {
-  gMagOf: (sourceId: string) => number | null;
-  /** A missing G is a PASS at the gate either way, so the two causes have to
-   *  be told apart: no row means the request under-covers the candidate set
-   *  and is fixable there, while a row with a null `phot_g_mean_mag` is a
-   *  source Gaia publishes no G for and no request can supply. */
-  hasPulledRow: (sourceId: string) => boolean;
-  printedV: PrintedVLookups;
-  wdsXids: SimbadWdsXidIndex | null;
-}
-
-export function bindingEvidence(
-  sourceGMag: ReadonlyMap<string, number>,
-  wdsXids: SimbadWdsXidIndex | null,
-  printedV: PrintedVLookups,
-  pulledSourceIds: ReadonlySet<string> | ReadonlyMap<string, unknown> | null = null,
-): BindingEvidence {
-  return {
-    gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
-    hasPulledRow: (sourceId) => (pulledSourceIds ?? sourceGMag).has(sourceId),
-    printedV,
-    wdsXids,
-  };
-}
-
-export type GateReason = 'mag' | 'sibling';
-
-/** Why a candidate's G could not be held against a printed V: the row has no
- *  printed V, the astrometry pull returned no row for the source (the request
- *  under-covering its candidates), or Gaia publishes no G for it. */
-export type Unweighable = 'no_printed_v' | 'no_pulled_row' | 'null_g';
-
-/** One gate verdict on one candidate. `unweighable` binds, as `pass` does —
- *  the magnitude arm could not run, and nothing refused it. */
-export type BindingVerdict =
-  | { kind: 'pass' }
-  | { kind: 'reject'; reason: GateReason }
-  | { kind: 'unweighable'; reason: Unweighable };
-
-/** What a candidate is weighed against: the HIP the sibling gate keys on and
- *  the printed V the magnitude gate compares G with. */
-export interface GateRow {
-  hip: number | null;
-  printedV: PrintedV | null;
-}
-
-/** Both binding gates, the one weighing the overlay join and the membership
- *  derivation share. The magnitude arm runs first and its reason wins, so a
- *  candidate it cannot weigh still faces the sibling-letter arm, which outranks
- *  every unweighable reason. */
-export function weighBinding(
-  sourceId: string, row: GateRow, evidence: BindingEvidence,
-): BindingVerdict {
-  let unweighable: Unweighable | null = null;
-  if (row.printedV === null) {
-    unweighable = 'no_printed_v';
-  } else {
-    const g = evidence.gMagOf(sourceId);
-    if (g === null) {
-      unweighable = evidence.hasPulledRow(sourceId) ? 'null_g' : 'no_pulled_row';
-    } else if (g - row.printedV.vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG) {
-      return { kind: 'reject', reason: 'mag' };
-    }
-  }
-  if (isSiblingLetterAttribution(sourceId, row.hip, evidence.wdsXids)) {
-    return { kind: 'reject', reason: 'sibling' };
-  }
-  return unweighable === null ? { kind: 'pass' } : { kind: 'unweighable', reason: unweighable };
 }
 
 /** An overlay row dropped because the source_id it keys is not the star its

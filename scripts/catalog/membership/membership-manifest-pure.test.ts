@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  bindingEvidence,
   type ClassicIdOverlay,
   type OverlayEntry,
 } from '../classic-ids/classic-id-overlay-pure';
@@ -9,6 +8,7 @@ import { parseGlieseTsv } from '../gliese-parse';
 import { SPINE_COLUMNS, spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryTables } from '../spine/primaries-audit-pure';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
+import { bindingEvidence } from './binding/binding-gate-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import {
   ADDITION_REASONS,

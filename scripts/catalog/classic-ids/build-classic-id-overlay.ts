@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { compareCountSnapshot } from '../build-counts';
 import { loadClassicIdCrossWalks } from './binding-candidates';
-import { loadBindingEvidence } from './binding-evidence';
+import { loadBindingEvidence } from '../membership/binding/binding-evidence';
 import {
   OVERLAY_VALUE_SEPARATOR,
   buildClassicIdOverlay,

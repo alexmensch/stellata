@@ -1,20 +1,19 @@
 // Loads the binding gate's evidence tables — Gaia G per source, the V
 // cascade's three printed tiers, SIMBAD's WDS component cross-IDs.
-// See README.md#the-gates-evidence-has-to-be-pulled.
+// See ../../classic-ids/README.md#the-gates-evidence-has-to-be-pulled.
 
 import { resolve } from 'node:path';
 
-import { parseSimbadWdsXidsTsv } from '../record/catalog-pure';
 import {
   parseGaiaAstrometryCatalogTsv,
   type GaiaAstrometryCatalogRow,
-} from '../distance/direction-cascade';
-import { parseGlieseTsv } from '../gliese-parse';
-import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
-import { printedVLookups } from '../photometry/v-magnitude-pure';
-import { parseTycho2Tsvs } from '../tycho2-parse';
-import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
-import { bindingEvidence, type BindingEvidence } from './classic-id-overlay-pure';
+} from '../../distance/direction-cascade';
+import { parseGlieseTsv } from '../../gliese-parse';
+import { parseHipPhotometryTsv } from '../../photometry/hip-photometry-parse';
+import { printedVLookups } from '../../photometry/v-magnitude-pure';
+import { parseTycho2Tsvs } from '../../tycho2-parse';
+import { readRequired, REPO_ROOT as ROOT } from '../../../util/paths';
+import { bindingEvidence, parseSimbadWdsXidsTsv, type BindingEvidence } from './binding-gate-pure';
 
 export const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 export const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');

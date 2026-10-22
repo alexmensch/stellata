@@ -8,6 +8,17 @@ completes is [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--
 
 ```
 scripts/catalog/membership/binding/
+  binding-gate-pure.ts (+ test) The binding gate both the derivation and
+                                ../../classic-ids/' overlay weigh a candidate
+                                through: `BindingEvidence`, the G − V threshold
+                                (pinned against scripts/binaries/indices.py),
+                                SIMBAD's WDS cross-ID index and the
+                                sibling-letter check over it, and
+                                `weighBinding`'s verdict. Pure.
+  binding-evidence.ts           Loads the gate's evidence tables — G per
+                                source, the V cascade's three printed tiers,
+                                SIMBAD's WDS component cross-IDs — for both
+                                builds that weigh through it.
   binding-derivation-pure.ts    The four candidate sources, the consensus
     (+ test)                    ranking, both gates through
                                 weighBinding, and the candidate set the
@@ -47,7 +58,7 @@ above.
 ## Both gates weigh every candidate
 
 **Every** candidate goes through **both binding gates by calling
-`weighBinding`** (`../../classic-ids/classic-id-overlay-pure.ts`) — the one call
+`weighBinding`** (`binding-gate-pure.ts`) — the one call
 `applyBindingGate` makes on the label side, so the two cannot drift on what
 counts as a bad binding — and the first that binds wins. The verdict is
 `pass`, `reject` (`mag` / `sibling`), or `unweighable` (`no_printed_v` /

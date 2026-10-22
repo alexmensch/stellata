@@ -2,14 +2,15 @@
 // two-source consensus first, each candidate through both binding gates.
 // See README.md.
 
-import { isSiblingLetterAttribution, normaliseGjKey } from '../../record/catalog-pure';
+import { normaliseGjKey } from '../../record/catalog-pure';
 import { printedV } from '../../photometry/v-magnitude-pure';
 import {
+  isSiblingLetterAttribution,
   weighBinding,
   type BindingEvidence,
   type GateReason,
   type GateRow,
-} from '../../classic-ids/classic-id-overlay-pure';
+} from './binding-gate-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
 import { parseIntOrNull } from '../../parse/corpus-tsv';
 import {

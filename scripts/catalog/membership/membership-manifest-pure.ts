@@ -6,9 +6,9 @@ import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../re
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,
-  type BindingEvidence,
   type ClassicIdOverlay,
 } from '../classic-ids/classic-id-overlay-pure';
+import type { BindingEvidence } from './binding/binding-gate-pure';
 import {
   BINDING_SOURCES,
   bindingCandidates,
