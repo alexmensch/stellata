@@ -316,9 +316,10 @@ alone, and why the parity gate (`stellata-cns.7`) checks the union.
 
 `scripts/catalog/classic-ids/build-classic-id-overlay.ts` reads the four frozen
 tables plus `data/gaia/gaia_dr3_{tyc,hip}_xmatch.tsv` and the gate's evidence
-(`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G,
-`data/hipparcos/hip_main_vmag.tsv` for printed V,
-`data/simbad/simbad_wds_xids.tsv` for component attribution). The three
+(`data/gaia/gaia_dr3_astrometry_catalog.tsv` for G; the printed V's three tiers,
+`data/hipparcos/hip_main_vmag.tsv`, `data/tycho2/tycho2_{main,suppl1}.tsv` and
+`data/gliese/gliese_v70a.tsv`; `data/simbad/simbad_wds_xids.tsv` for component
+attribution — `scripts/catalog/classic-ids/binding-evidence.ts` loads them). The
 evidence files are **required, not optional** — without them the join would key
 labels on sources the record build refuses, so a missing one hard-fails rather
 than degrading.
