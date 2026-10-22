@@ -37,13 +37,12 @@ scripts/catalog/photometry/
                                  validated-range flag.
   hip-photometry-parse.ts        data/hipparcos/hip_main_vmag.tsv → HIP →
     (+ test)                     printed Johnson V and B−V, as two maps off
-                                 one walk, plus `printedByHip` — the lookup
-                                 both cascades key their printed tier
-                                 through. Four consumers, disjoint by column:
-                                 the V cascade's bright tier, ../classic-ids/'s
-                                 binding gate and ../astrometry-request/ (which
-                                 narrows the gate's candidates by it) all take
-                                 V; the ci cascade takes B−V.
+                                 one walk, plus `printedByHip` — the one
+                                 HIP-keyed read of either. The ci cascade
+                                 calls it for B−V; V reaches its readers (the
+                                 V cascade, both binding gates, the
+                                 astrometry request) as `printedVLookups`'s
+                                 `printed_hip` tier, which calls it too.
   photometry-fixture.ts          Test-only GaiaPhotometry builders, plus
                                  `printedVOf` / `NO_PRINTED_V` —
                                  a `printedVLookups` over literal maps. A
