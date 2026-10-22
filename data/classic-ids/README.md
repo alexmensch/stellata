@@ -210,7 +210,7 @@ route agreements, not the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21
 
 **The gate reads the V cascade's three printed tiers**, keyed on designations
 the overlay row itself carries — deliberately not on AT-HYG, which the overlay
-has to outlive. `gateableVia` partitions what it reaches: **hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count -->**
+has to outlive. `gateableVia` partitions what it reaches: **printed_hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count -->**
 (`data/hipparcos/hip_main_vmag.tsv`), **tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count -->** (`VT − 0.090(BT − VT)`
 on a TYC that IV/25 routes to that very source), **gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->**. Only
 `gateSkippedNoPrintedV` — **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows — has no V to hold G against;
