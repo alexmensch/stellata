@@ -22,8 +22,7 @@ export function atColour(bpMinusRp: number): GaiaPhotometry {
 export const NO_PRINTED_V: PrintedVLookups = printedVOf({});
 
 /** Printed V by HIP, reduced Tycho-2 V by TYC and Gliese V by GJ cell, as the
- *  parsed tables would answer. Four suites across three folders weigh a
- *  candidate against these. */
+ *  parsed tables would answer. */
 export function printedVOf({ hip = new Map(), tycho2 = {}, gliese = {} }: {
   hip?: ReadonlyMap<number, number>;
   tycho2?: Readonly<Record<string, number>>;

@@ -49,10 +49,10 @@ scripts/catalog/photometry/
                                  module, not an export from a test file: all
                                  three suites here build these rows, both
                                  relations are functions of BP−RP alone so
-                                 `atColour` belongs with them, and four
-                                 suites across ../classic-ids/ and
-                                 ../membership/ weigh a binding candidate
-                                 against the printed pair.
+                                 `atColour` belongs with them, and suites in
+                                 ../classic-ids/ and ../membership/ weigh a
+                                 binding candidate against the printed
+                                 tiers.
 ```
 
 ## The published relations
