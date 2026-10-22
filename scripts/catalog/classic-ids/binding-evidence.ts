@@ -53,7 +53,7 @@ export function loadBindingEvidence(): LoadedBindingEvidence {
   }
   return {
     evidence: bindingEvidence(
-      sourceGMag, hipVMag, wdsXids, printedVLookups(tycho2, gliese), gaiaAstrometry,
+      sourceGMag, wdsXids, printedVLookups(hipVMag, tycho2, gliese), gaiaAstrometry,
     ),
     gaiaAstrometry,
     hipVMag,

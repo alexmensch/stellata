@@ -3,10 +3,12 @@
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../record/catalog-pure';
+import { emptyTallyPartition } from '../../util/tally';
 import {
-  printedVBelowHip,
-  type GateVVia,
+  PRINTED_V_TIERS,
+  printedV,
   type PrintedVLookups,
+  type PrintedVVia,
 } from '../photometry/v-magnitude-pure';
 /** No cell is single-valued by construction: a designation naming a
  *  catalogue granularity rather than one object attaches to every matching
@@ -49,10 +51,12 @@ export interface OverlayInput {
 }
 
 /** Per-source photometry the binding gate below needs. `gMagOf` is Gaia's
- *  own G for the candidate source; `vMagOfHip` is the printed Hipparcos V
- *  of a HIP the overlay row claims. Both cross-walks feeding this join are
- *  best-neighbour tables, so an unvetted row can assert that a saturated
- *  star's designations belong to the faint companion Gaia actually fitted. */
+ *  own G for the candidate source; `printedV` the V cascade's printed tiers,
+ *  so both gates weigh a row on the evidence the record side reaches
+ *  (`../photometry/README.md#the-v-cascade`). Both cross-walks feeding this
+ *  join are best-neighbour tables, so an unvetted row can assert that a
+ *  saturated star's designations belong to the faint companion Gaia actually
+ *  fitted. */
 export interface BindingEvidence {
   gMagOf: (sourceId: string) => number | null;
   /** A missing G is a PASS at the gate either way, so the two causes have to
@@ -60,17 +64,12 @@ export interface BindingEvidence {
    *  and is fixable there, while a row with a null `phot_g_mean_mag` is a
    *  source Gaia publishes no G for and no request can supply. */
   hasPulledRow: (sourceId: string) => boolean;
-  vMagOfHip: (hip: number) => number | null;
-  /** The V cascade's tiers below Hipparcos, so both gates weigh a row with no
-   *  Hipparcos V on the same evidence the record side reaches
-   *  (`../photometry/README.md#the-v-cascade`). */
   printedV: PrintedVLookups;
   wdsXids: SimbadWdsXidIndex | null;
 }
 
 export function bindingEvidence(
   sourceGMag: ReadonlyMap<string, number>,
-  hipVMag: ReadonlyMap<number, number>,
   wdsXids: SimbadWdsXidIndex | null,
   printedV: PrintedVLookups,
   pulledSourceIds: ReadonlySet<string> | ReadonlyMap<string, unknown> | null = null,
@@ -78,7 +77,6 @@ export function bindingEvidence(
   return {
     gMagOf: (sourceId) => sourceGMag.get(sourceId) ?? null,
     hasPulledRow: (sourceId) => (pulledSourceIds ?? sourceGMag).has(sourceId),
-    vMagOfHip: (hip) => hipVMag.get(hip) ?? null,
     printedV,
     wdsXids,
   };
@@ -95,7 +93,7 @@ export interface RejectedBinding {
   vMag: number;
   /** Which printed tier supplied `vMag`, so a reviewer can see whether the
    *  rejection rests on Hipparcos or on one of the tiers below it. */
-  vVia: GateVVia;
+  vVia: PrintedVVia;
   gMag: number | null;
   reason: 'mag' | 'sibling';
   designations: string;
@@ -131,43 +129,27 @@ export function applyBindingGate(
   skippedNoPrintedV: number;
   skippedNoGMag: number;
   skippedNullGMag: number;
-  gateableVia: Record<GateVVia, number>;
+  gateableVia: Record<PrintedVVia, number>;
 } {
   const rejected: RejectedBinding[] = [];
   let skippedNoPrintedV = 0;
   let skippedNoGMag = 0;
   let skippedNullGMag = 0;
-  const gateableVia: Record<GateVVia, number> = { printed_hip: 0, tycho2: 0, gliese: 0 };
+  const gateableVia = emptyTallyPartition(PRINTED_V_TIERS);
   for (const [sourceId, entry] of overlay) {
-    // A row carrying several HIPs is a blend; saturation is a property of the
-    // brightest of them, so that is the V the gate has to answer for.
-    let vMag: number | null = null;
-    let vVia: GateVVia = 'printed_hip';
-    let hip = 0;
-    for (const candidate of entry.hip) {
-      const v = evidence.vMagOfHip(candidate);
-      if (v !== null && (vMag === null || v < vMag)) {
-        vMag = v;
-        hip = candidate;
-      }
+    const printed = printedV(
+      { printed_hip: entry.hip, tycho2: tycsBySource.get(sourceId) ?? [], gliese: entry.gj },
+      evidence.printedV,
+    );
+    if (printed === null) {
+      skippedNoPrintedV++;
+      continue;
     }
-    if (vMag === null) {
-      // No printed V under any HIP, but the entry may still carry one, and the
-      // sibling gate keys on a HIP rather than on the V.
-      hip = entry.hip[0] ?? 0;
-      const below = printedVBelowHip(
-        tycsBySource.get(sourceId) ?? [], entry.gj, evidence.printedV,
-      );
-      if (below === null) {
-        skippedNoPrintedV++;
-        continue;
-      }
-      vMag = below.vMag;
-      vVia = below.vVia;
-      gateableVia[below.vVia]++;
-    } else {
-      gateableVia.printed_hip++;
-    }
+    // The sibling gate keys on a HIP rather than on the V: the one the V came
+    // from, else the entry's first.
+    const hip = printed.vVia === 'printed_hip' ? printed.key : entry.hip[0] ?? 0;
+    const { vMag, vVia } = printed;
+    gateableVia[vVia]++;
     if (evidence.gMagOf(sourceId) === null) {
       if (evidence.hasPulledRow(sourceId)) skippedNullGMag++;
       else skippedNoGMag++;
@@ -240,7 +222,7 @@ export interface OverlayJoinCounts {
   gateRejectedMag: number;
   gateRejectedSibling: number;
   gateSkippedNoPrintedV: number;
-  gateableVia: Record<GateVVia, number>;
+  gateableVia: Record<PrintedVVia, number>;
   /** Gateable rows the astrometry pull returned no row for — silently accepted,
    *  not refused. Pinned at zero: the request is a union precisely so that this
    *  stays empty, and a non-zero value is the pull under-covering the

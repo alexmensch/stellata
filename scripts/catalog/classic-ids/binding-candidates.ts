@@ -56,7 +56,6 @@ export async function loadClassicIdCrossWalks(): Promise<ClassicIdCrossWalks> {
  *  the silent-acceptance fault below with the pull no longer covering it. */
 export interface BindingCandidateEvidence {
   inputs: BindingCandidateInputs;
-  hipVMag: ReadonlyMap<number, number>;
   printedV: PrintedVLookups;
   /** Narrowed to the Tycho ids IV/25 mentions, as the overlay join's is. */
   tycToSource: ReadonlyMap<string, string>;
@@ -86,22 +85,22 @@ export interface BindingCandidateEvidence {
  *  `gateSkippedNoGMag` pins at zero on the real build.
  */
 export function bindingCandidateSourceIds(
-  { inputs, hipVMag, printedV, tycToSource, tyc2Hd }: BindingCandidateEvidence,
+  { inputs, printedV, tycToSource, tyc2Hd }: BindingCandidateEvidence,
 ): Set<string> {
   const ids = new Set<string>();
   for (const [hip, sourceId] of inputs.hipToSource) {
-    if (hipVMag.has(hip)) ids.add(sourceId);
+    if (printedV.printed_hip(hip) !== null) ids.add(sourceId);
   }
   for (const row of inputs.cns5) {
     if (row.gaiaSourceId === null) continue;
-    if (row.hip !== null && hipVMag.has(row.hip)) ids.add(row.gaiaSourceId);
-    else if (printedV.glieseVOfGj(`${row.gj}${row.gjComp ?? ''}`) !== null) {
+    if (row.hip !== null && printedV.printed_hip(row.hip) !== null) ids.add(row.gaiaSourceId);
+    else if (printedV.gliese(`${row.gj}${row.gjComp ?? ''}`) !== null) {
       ids.add(row.gaiaSourceId);
     }
   }
   for (const row of tyc2Hd) {
     const sourceId = tycToSource.get(row.tyc);
-    if (sourceId !== undefined && printedV.tycho2VOfTyc(row.tyc) !== null) {
+    if (sourceId !== undefined && printedV.tycho2(row.tyc) !== null) {
       ids.add(sourceId);
     }
   }

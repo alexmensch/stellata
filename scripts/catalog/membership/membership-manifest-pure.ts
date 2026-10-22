@@ -32,11 +32,6 @@ import {
 } from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { dataRows, parseIntOrNull } from '../parse/corpus-tsv';
-import {
-  printedVBelowHip,
-  printedVLookups,
-  type PrintedV,
-} from '../photometry/v-magnitude-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -751,12 +746,8 @@ type RowDeriver =(row: BindingCells) => { derived: DerivedBinding; gate: RowGate
 /** The one derivation every primaries row — spine or addition — binds through. */
 function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence): RowDeriver {
   const simbad = indexSimbadSources(tables.simbadBySourceId);
-  const printedV = printedVLookups(tables.tycho2, tables.gliese);
-  const belowHip = (row: BindingCells): PrintedV | null => printedVBelowHip(
-    row.tyc === '' ? [] : [row.tyc], row.gl === '' ? [] : [row.gl], printedV,
-  );
   return (row) => {
-    const gate = rowGateEvidence(row, evidence, belowHip, simbad);
+    const gate = rowGateEvidence(row, evidence, simbad);
     return { derived: deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate), gate };
   };
 }

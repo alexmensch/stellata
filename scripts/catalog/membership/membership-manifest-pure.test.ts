@@ -8,6 +8,7 @@ import {
 import { parseGlieseTsv } from '../gliese-parse';
 import { SPINE_COLUMNS, spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryTables } from '../spine/primaries-audit-pure';
+import { printedVLookups } from '../photometry/v-magnitude-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import {
   ADDITION_REASONS,
@@ -34,7 +35,6 @@ import {
   type ManifestRow,
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
-import { NO_PRINTED_V_BELOW_HIP } from '../photometry/photometry-fixture';
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -174,16 +174,29 @@ const overlay: ClassicIdOverlay = new Map([
   ['1313', entry({ hd: [82] })],
 ]);
 
+/** The gates read every printed tier off the evidence, so it is built from the
+ *  same tables a case passes: a case adding a Tycho-2 star adds its V too. */
+function gateEvidence(
+  t: PrimaryTables,
+  gMag: ReadonlyMap<string, number> = new Map([['777', 14.0]]),
+  hipVMag: ReadonlyMap<number, number> = new Map(),
+  pulled: ReadonlySet<string> | null = new Set(['888', '6060', '777']),
+) {
+  return bindingEvidence(gMag, null, printedVLookups(hipVMag, t.tycho2, t.gliese), pulled);
+}
+
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
-  evidence: bindingEvidence(
-    new Map([['777', 14.0]]), new Map(), null, NO_PRINTED_V_BELOW_HIP, new Set(['888', '6060', '777']),
-  ),
+  evidence: gateEvidence(tables),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   magnitudeTerm: null,
   publishesGaiaParallax: (_sourceId: string) => true,
 };
+function withTables(t: PrimaryTables) {
+  return { ...input, tables: t, evidence: gateEvidence(t) };
+}
+
 const result = buildMembership(input);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
 
@@ -332,10 +345,7 @@ describe('buildMembership — the spine side', () => {
         hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
       },
-      evidence: bindingEvidence(
-        new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null,
-        NO_PRINTED_V_BELOW_HIP,
-      ),
+      evidence: gateEvidence(tables, new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null),
     });
     expect(settled.rows.find((r) => r.hip === '70'))
       .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
@@ -370,10 +380,7 @@ describe('buildMembership — the spine side', () => {
         tycToSource: new Map([...tables.tycToSource, ['6-6-1', '6061']]),
         hipToSource: new Map([...tables.hipToSource, [60, '6062']]),
       },
-      evidence: bindingEvidence(
-        new Map([['6061', 12.0], ['6062', 5.1], ['333', 8.5]]), new Map([[60, 5.0]]), null,
-        NO_PRINTED_V_BELOW_HIP,
-      ),
+      evidence: gateEvidence(tables, new Map([['6061', 12.0], ['6062', 5.1], ['333', 8.5]]), new Map([[60, 5.0]]), null),
     });
     expect(gated.rows.find((r) => r.tyc === '6-6-1'))
       .toMatchObject({ gaia_source_id: '6062', binding: 'crosswalk_gated' });
@@ -387,15 +394,14 @@ describe('buildMembership — the spine side', () => {
   // the frozen cell this row would reach no overlay entry at all.
   it('labels a bound row from the source it derived', () => {
     const filled = buildMembership({
-      ...input,
-      spine: [...spine, spineRow({ tyc: '4-4-1', hd: '400' })],
-      tables: {
+      ...withTables({
         ...tables,
         iv25: [...tables.iv25, { tyc: '4-4-1', hd: 400, nHd: 1, nTyc: 1 }],
         hipI239: new Set([...tables.hipI239, 44]),
         tycho2: new Map([...tables.tycho2, ['4-4-1', tycho2(11)]]),
         tycToSource: new Map([...tables.tycToSource, ['4-4-1', '1616']]),
-      },
+      }),
+      spine: [...spine, spineRow({ tyc: '4-4-1', hd: '400' })],
       overlay: new Map([...overlay, ['1616', entry({ hd: [400], hip: [44] })]]),
     });
     expect(filled.rows.find((r) => r.tyc === '4-4-1'))
@@ -656,14 +662,13 @@ describe('buildMembership — the additions', () => {
 
   it('gives a designation both groups bind to the one whose source has a parallax (HD 86269)', () => {
     const pair = (publishesGaiaParallax: (sourceId: string) => boolean) => buildMembership({
-      ...input,
-      publishesGaiaParallax,
-      tables: {
+      ...withTables({
         ...tables,
         iv25: [...tables.iv25, { tyc: '6-1-1', hd: 90, nHd: 1, nTyc: 2 }, { tyc: '6-2-1', hd: 90, nHd: 1, nTyc: 2 }],
         tycho2: new Map([...tables.tycho2, ['6-1-1', tycho2(9)], ['6-2-1', tycho2(9)]]),
         tycToSource: new Map([...tables.tycToSource, ['6-1-1', '6101'], ['6-2-1', '6201']]),
-      },
+      }),
+      publishesGaiaParallax,
     });
     const holder = (r: ReturnType<typeof pair>) => r.rows.find((row) => row.hd === '90')?.tyc;
     expect(holder(pair((id) => id !== '6101'))).toBe('6-2-1');
@@ -706,13 +711,12 @@ describe('buildMembership — the additions', () => {
 
   it('binds an addition through SIMBAD and dedupes the magnitude term against it', () => {
     const viaSimbad = buildMembership({
-      ...input,
-      tables: {
+      ...withTables({
         ...tables,
         iv25: [...tables.iv25, { tyc: '5-5-1', hd: 500, nHd: 1, nTyc: 1 }],
         tycho2: new Map([...tables.tycho2, ['5-5-1', tycho2(9)]]),
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['5050', { hip: null, tyc: '5-5-1', gj: null }]]),
-      },
+      }),
       magnitudeTerm: {
         keptSourceIds: new Set(['5050', '777']),
         counts: { rows: 2, kept: 2, above_floor: 0, no_v: 0 },
@@ -728,14 +732,13 @@ describe('buildMembership — the additions', () => {
 
   it('groups a HIP item with the TYC item whose derived source it shares', () => {
     const oneStar = buildMembership({
-      ...input,
-      tables: {
+      ...withTables({
         ...tables,
         iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
         hipI239: new Set([...tables.hipI239, 61]),
         tycho2: new Map([...tables.tycho2, ['5-6-1', tycho2(9)]]),
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
-      },
+      }),
     });
     expect(oneStar.rows.filter((r) => r.gaia_source_id === '5151'))
       .toEqual([expect.objectContaining({ tyc: '5-6-1', hd: '501', hip: '61' })]);
@@ -746,28 +749,26 @@ describe('buildMembership — the additions', () => {
   // no pulled row; the HIP item has no printed V to weigh it against.
   it('counts an unpulled candidate in the item derivations that group, not only the group\'s', () => {
     const oneStar = buildMembership({
-      ...input,
-      tables: {
+      ...withTables({
         ...tables,
         iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
         hipI239: new Set([...tables.hipI239, 61]),
         tycho2: new Map([...tables.tycho2, ['5-6-1', { ...tycho2(9), btMag: 9.2 }]]),
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
-      },
+      }),
     });
     expect(oneStar.counts.additionWeighedNoGMag - result.counts.additionWeighedNoGMag).toBe(2);
   });
 
   it('counts an admitted addition whose winner has a passing runner-up as contested', () => {
     const twoSources = buildMembership({
-      ...input,
-      tables: {
+      ...withTables({
         ...tables,
         iv25: [...tables.iv25, { tyc: '5-7-1', hd: 502, nHd: 1, nTyc: 1 }],
         tycho2: new Map([...tables.tycho2, ['5-7-1', tycho2(9)]]),
         tycToSource: new Map([...tables.tycToSource, ['5-7-1', '5171']]),
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['5172', { hip: null, tyc: '5-7-1', gj: null }]]),
-      },
+      }),
     });
     expect(twoSources.rows.find((r) => r.tyc === '5-7-1')?.gaia_source_id).toBe('5171');
     expect(twoSources.counts.additionContested - result.counts.additionContested).toBe(1);
@@ -807,7 +808,7 @@ describe('a group holding two items of one cohort', () => {
       tycho2: new Map([...tables.tycho2,
         ['4-1-1', tycho2(11, 60)], ['4-2-1', tycho2(11, 60)]]),
     };
-    expect(() => buildMembership({ ...input, tables: twoTycsOneHip }))
+    expect(() => buildMembership(withTables(twoTycsOneHip)))
       .toThrow(/2 hd items \(tyc:4-1-1, tyc:4-2-1\)/);
   });
 });

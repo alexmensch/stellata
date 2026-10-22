@@ -17,21 +17,21 @@ export function atColour(bpMinusRp: number): GaiaPhotometry {
   return { gMag: 10, bpMag: 10 + bpMinusRp, rpMag: 10 };
 }
 
-/** Spelled out rather than defaulted, so a suite asserting HIP-tier behaviour
- *  says that both lower tiers are silent instead of inheriting it. */
-export const NO_PRINTED_V_BELOW_HIP: PrintedVLookups = {
-  tycho2VOfTyc: () => null,
-  glieseVOfGj: () => null,
-};
+/** Every printed tier silent, spelled out so a suite says so instead of
+ *  inheriting it. */
+export const NO_PRINTED_V: PrintedVLookups = printedVOf({});
 
-/** Reduced Tycho-2 V by TYC and Gliese V by GJ cell, as the parsed tables would
- *  answer. Four suites across three folders weigh a candidate against these. */
-export function printedVOf(
-  tycho2: Readonly<Record<string, number>>,
-  gliese: Readonly<Record<string, number>> = {},
-): PrintedVLookups {
+/** Printed V by HIP, reduced Tycho-2 V by TYC and Gliese V by GJ cell, as the
+ *  parsed tables would answer. Four suites across three folders weigh a
+ *  candidate against these. */
+export function printedVOf({ hip = new Map(), tycho2 = {}, gliese = {} }: {
+  hip?: ReadonlyMap<number, number>;
+  tycho2?: Readonly<Record<string, number>>;
+  gliese?: Readonly<Record<string, number>>;
+}): PrintedVLookups {
   return {
-    tycho2VOfTyc: (tyc) => tycho2[tyc] ?? null,
-    glieseVOfGj: (gj) => gliese[gj] ?? null,
+    printed_hip: (h) => hip.get(h) ?? null,
+    tycho2: (tyc) => tycho2[tyc] ?? null,
+    gliese: (gj) => gliese[gj] ?? null,
   };
 }

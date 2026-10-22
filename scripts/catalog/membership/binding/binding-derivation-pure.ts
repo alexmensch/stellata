@@ -7,7 +7,7 @@ import {
   normaliseGjKey,
   resolveGaiaSourceId,
 } from '../../record/catalog-pure';
-import type { GateVVia, PrintedV } from '../../photometry/v-magnitude-pure';
+import { printedV, type PrintedVVia } from '../../photometry/v-magnitude-pure';
 import type { BindingEvidence } from '../../classic-ids/classic-id-overlay-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
 import { parseIntOrNull } from '../../parse/corpus-tsv';
@@ -159,27 +159,26 @@ export interface DerivedBinding {
 export interface RowGateEvidence {
   hip: number | null;
   vMag: number | null;
-  vVia: GateVVia | null;
+  vVia: PrintedVVia | null;
   /** The component witness — null where SIMBAD files the TYC under no source
    *  or under two (README.md#both-gates-weigh-every-candidate). */
   tycWitness: string | null;
   evidence: BindingEvidence;
 }
 
-/** `printedVBelowHip` supplies the V cascade's lower printed tiers — Tycho-2 on
- *  the row's TYC, then Gliese on its GJ — for a row with no Hipparcos V. */
 export function rowGateEvidence(
   row: BindingCells,
   evidence: BindingEvidence,
-  printedVBelowHip: (row: BindingCells) => PrintedV | null,
   simbad: SimbadSourceIndex,
 ): RowGateEvidence {
   const hip = parseIntOrNull(row.hip);
   const tycWitness = row.tyc === '' ? null : simbad.byTyc.get(row.tyc) ?? null;
-  const hipV = hip === null ? null : evidence.vMagOfHip(hip);
-  if (hipV !== null) return { hip, vMag: hipV, vVia: 'printed_hip', tycWitness, evidence };
-  const below = printedVBelowHip(row);
-  return { hip, vMag: below?.vMag ?? null, vVia: below?.vVia ?? null, tycWitness, evidence };
+  const printed = printedV({
+    printed_hip: hip === null ? [] : [hip],
+    tycho2: row.tyc === '' ? [] : [row.tyc],
+    gliese: row.gl === '' ? [] : [row.gl],
+  }, evidence.printedV);
+  return { hip, vMag: printed?.vMag ?? null, vVia: printed?.vVia ?? null, tycWitness, evidence };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {

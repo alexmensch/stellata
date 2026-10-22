@@ -16,18 +16,17 @@ scripts/catalog/photometry/
                                  evaluator. Pure.
   v-magnitude-pure.ts (+ test)   Riello 2021 (/data/papers/index.md#riello2021)
                                  G−V relation, the gated
-                                 transform over it, the three-tier V
-                                 cascade, which tiers yield a system blend,
-                                 and `printedVBelowHip` — the cascade's two
-                                 printed tiers under Hipparcos, which BOTH
-                                 binding gates weigh a candidate against so
-                                 the record side and the label side cannot
-                                 drift on reachable evidence. Those two
-                                 arrive as one `printedVLookups` bundle,
-                                 built here from the parsed Tycho-2 and
-                                 Gliese tables: four call sites weigh the
-                                 same pair, and a loose callback per site is
-                                 how they drift. Pure.
+                                 transform over it, the V cascade, which
+                                 tiers yield a system blend, and
+                                 `PRINTED_V_TIERS` — the printed tiers' order,
+                                 stated once. `printedV` walks it for the
+                                 cascade AND for both binding gates, so the
+                                 record side and the label side cannot drift
+                                 on reachable evidence; every tier arrives in
+                                 one `printedVLookups` bundle built from the
+                                 parsed HIP, Tycho-2 and Gliese tables, since
+                                 a site supplying only some of them narrows a
+                                 gate silently. Pure.
   colour-index-pure.ts (+ test)  Table 5.9 G−B relation, B−V as the
                                  difference of the two relations, the
                                  synthetic tier's measured colour bound, and
@@ -46,7 +45,7 @@ scripts/catalog/photometry/
                                  narrows the gate's candidates by it) all take
                                  V; the ci cascade takes B−V.
   photometry-fixture.ts          Test-only GaiaPhotometry builders, plus
-                                 `printedVOf` / `NO_PRINTED_V_BELOW_HIP` —
+                                 `printedVOf` / `NO_PRINTED_V` —
                                  a `printedVLookups` over literal maps. A
                                  module, not an export from a test file: all
                                  three suites here build these rows, both

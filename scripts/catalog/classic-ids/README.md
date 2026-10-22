@@ -149,9 +149,9 @@ The magnitude check compares a candidate's `phot_g_mean_mag` against the row's
 printed V, taken in **the V cascade's own tier order** — Hipparcos on the
 brightest of the row's HIPs, else Tycho-2's `VT − 0.090(BT − VT)` on the Tycho
 entries IV/25 routes to this source, else Gliese on its GJ cells
-([The V cascade](../photometry/README.md#the-v-cascade)). One helper, `printedVBelowHip`,
-serves both binding gates over one `printedVLookups` bundle — a loose callback
-pair is how a call site supplies half the evidence — because
+([The V cascade](../photometry/README.md#the-v-cascade)). One walk, `printedV`, serves the V cascade and both binding gates over one
+`printedVLookups` bundle — a loose callback per tier is how a call site
+supplies part of the evidence — because
 [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) says the label
 side and the record side must not drift on what counts as a bad binding — and
 until the lower two tiers landed here they drifted on evidence *reach*, with

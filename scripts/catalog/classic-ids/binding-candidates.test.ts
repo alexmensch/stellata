@@ -23,7 +23,7 @@ const UNGATEABLE_TYC = '2-2-2';
  *  by a CNS5 row's own source_id, one reachable by its GJ cell alone, and one
  *  no printed tier answers for. */
 const HIP_VMAG = new Map([[10, 5.0], [30, 6.0]]);
-const PRINTED_V = printedVOf({ [IV25_TYC]: 7.0 }, { 9999: 8.0 });
+const PRINTED_V = printedVOf({ hip: HIP_VMAG, tycho2: { [IV25_TYC]: 7.0 }, gliese: { 9999: 8.0 } });
 
 const TYC2_HD = [
   { tyc: IV25_TYC, hd: 111, nHd: 1, nTyc: 1 },
@@ -48,7 +48,6 @@ function walks() {
 function evidence(): BindingCandidateEvidence {
   return {
     inputs: walks(),
-    hipVMag: HIP_VMAG,
     printedV: PRINTED_V,
     tycToSource: TYC_TO_SOURCE,
     tyc2Hd: TYC2_HD,
@@ -75,7 +74,7 @@ function overlayInput(gMags: Map<string, number>): OverlayInput {
     bsc5: [],
     ...walks(),
     tycToSource: TYC_TO_SOURCE,
-    evidence: bindingEvidence(gMags, HIP_VMAG, null, PRINTED_V),
+    evidence: bindingEvidence(gMags, null, PRINTED_V),
   };
 }
 

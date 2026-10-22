@@ -63,8 +63,7 @@ async function main(): Promise<void> {
 
   const candidates = bindingCandidateSourceIds({
     inputs: loadBindingCandidateInputs(),
-    hipVMag,
-    printedV: printedVLookups(tables.tycho2, tables.gliese),
+    printedV: printedVLookups(hipVMag, tables.tycho2, tables.gliese),
     tycToSource: tables.tycToSource,
     tyc2Hd: tables.iv25,
   });

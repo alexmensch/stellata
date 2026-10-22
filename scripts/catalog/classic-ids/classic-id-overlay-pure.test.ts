@@ -14,7 +14,7 @@ import {
 } from './classic-id-overlay-pure';
 import { cns5Row } from './cns5-fixture';
 import {
-  NO_PRINTED_V_BELOW_HIP,
+  NO_PRINTED_V,
   printedVOf,
 } from '../photometry/photometry-fixture';
 
@@ -24,7 +24,7 @@ const SIRIUS_SRC = '2947050466531873024';
 /** No printed V and no G, so every row is unvettable and the gate is inert —
  *  the baseline for the join assertions below. Gate behaviour gets its own
  *  block with real photometry. */
-const NO_EVIDENCE = bindingEvidence(new Map(), new Map(), null, NO_PRINTED_V_BELOW_HIP);
+const NO_EVIDENCE = bindingEvidence(new Map(), null, NO_PRINTED_V);
 
 function input(overrides: Partial<OverlayInput> = {}): OverlayInput {
   return {
@@ -146,9 +146,8 @@ describe('applyBindingGate', () => {
       hipToSource: new Map([[TOLIMAN_HIP, TOLIMAN_BAD_SRC]]),
       evidence: evidenceOverride ?? bindingEvidence(
         new Map([[TOLIMAN_BAD_SRC, 20.95]]),
-        new Map([[TOLIMAN_HIP, 1.33]]),
         null,
-        NO_PRINTED_V_BELOW_HIP,
+        printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
       ),
     }));
   }
@@ -173,9 +172,8 @@ describe('applyBindingGate', () => {
   it('keeps the row when the bound source matches the star it names', () => {
     const { overlay, counts } = tolimanOverlay(bindingEvidence(
       new Map([[TOLIMAN_BAD_SRC, 1.7]]),
-      new Map([[TOLIMAN_HIP, 1.33]]),
       null,
-      NO_PRINTED_V_BELOW_HIP,
+      printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
     ));
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
     expect(counts.gateRejectedMag).toBe(0);
@@ -197,9 +195,8 @@ describe('applyBindingGate', () => {
       hipToSource: new Map([[7, good], [8, bad]]),
       evidence: bindingEvidence(
         new Map([[good, 5.1], [bad, 19.0]]),
-        new Map([[7, 5.0], [8, 5.0]]),
         null,
-        NO_PRINTED_V_BELOW_HIP,
+        printedVOf({ hip: new Map([[7, 5.0], [8, 5.0]]) }),
       ),
     }));
     expect(counts.gateRejectedMag).toBe(1);
@@ -210,9 +207,8 @@ describe('applyBindingGate', () => {
   it('counts a row with no printed V as unvettable rather than passing it', () => {
     const { counts } = tolimanOverlay(bindingEvidence(
       new Map([[TOLIMAN_BAD_SRC, 20.95]]),
-      new Map(),
       null,
-      NO_PRINTED_V_BELOW_HIP,
+      NO_PRINTED_V,
     ));
     expect(counts.gateRejectedMag).toBe(0);
     expect(counts.gateSkippedNoPrintedV).toBe(1);
@@ -226,9 +222,8 @@ describe('applyBindingGate', () => {
   it('counts a candidate absent from the pull as silently accepted, not rejected', () => {
     const { overlay, counts } = tolimanOverlay(bindingEvidence(
       new Map(),
-      new Map([[TOLIMAN_HIP, 1.33]]),
       null,
-      NO_PRINTED_V_BELOW_HIP,
+      printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
     ));
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
     expect(counts.gateRejectedMag).toBe(0);
@@ -243,9 +238,8 @@ describe('applyBindingGate', () => {
   it('separates a pulled row with a null G from one the pull never returned', () => {
     const { counts } = tolimanOverlay(bindingEvidence(
       new Map(),
-      new Map([[TOLIMAN_HIP, 1.33]]),
       null,
-      NO_PRINTED_V_BELOW_HIP,
+      printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
       new Set([TOLIMAN_BAD_SRC]),
     ));
     expect(counts.gateSkippedNoGMag).toBe(0);
@@ -262,13 +256,12 @@ describe('applyBindingGate', () => {
     }]]);
     const { rejected } = applyBindingGate(overlay, bindingEvidence(
       new Map([[src, 5.9]]),
-      new Map([[hip, 5.7]]),
       {
         bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
         byHip: new Map([[hip, [{ wdsId: '08236-2439', component: 'A' }]]]),
         primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
       },
-      NO_PRINTED_V_BELOW_HIP,
+      printedVOf({ hip: new Map([[hip, 5.7]]) }),
     ), new Map());
     expect(rejected).toHaveLength(1);
     expect(rejected[0].reason).toBe('sibling');
@@ -294,7 +287,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     const overlay = hdOnlyOverlay();
     const { rejected, gateableVia } = applyBindingGate(
       overlay,
-      bindingEvidence(new Map([[BAD_SRC, 20.95]]), new Map(), null, printedVOf({ [TYC]: 1.33 })),
+      bindingEvidence(new Map([[BAD_SRC, 20.95]]), null, printedVOf({ tycho2: { [TYC]: 1.33 } })),
       new Map([[BAD_SRC, [TYC]]]),
     );
     expect(rejected).toHaveLength(1);
@@ -306,7 +299,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
   it('falls to Gliese only where no Tycho entry answers', () => {
     const { rejected, gateableVia } = applyBindingGate(
       hdOnlyOverlay(),
-      bindingEvidence(new Map([[BAD_SRC, 20.95]]), new Map(), null, printedVOf({}, { 9848: 1.33 })),
+      bindingEvidence(new Map([[BAD_SRC, 20.95]]), null, printedVOf({ gliese: { 9848: 1.33 } })),
       new Map([[BAD_SRC, [TYC]]]),
     );
     expect(rejected[0]).toMatchObject({ vVia: 'gliese', reason: 'mag' });
@@ -317,8 +310,9 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     const { rejected } = applyBindingGate(
       hdOnlyOverlay(),
       bindingEvidence(
-        new Map([[BAD_SRC, 20.95]]), new Map(), null,
-        printedVOf({ [TYC]: 1.33 }, { 9848: 9.9 }),
+        new Map([[BAD_SRC, 20.95]]),
+        null,
+        printedVOf({ tycho2: { [TYC]: 1.33 }, gliese: { 9848: 9.9 } }),
       ),
       new Map([[BAD_SRC, [TYC]]]),
     );
@@ -331,8 +325,9 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     const { rejected } = applyBindingGate(
       hdOnlyOverlay(),
       bindingEvidence(
-        new Map([[BAD_SRC, 20.95]]), new Map(), null,
-        printedVOf({ [TYC]: 8.4, '9007-5849-2': 1.33 }),
+        new Map([[BAD_SRC, 20.95]]),
+        null,
+        printedVOf({ tycho2: { [TYC]: 8.4, '9007-5849-2': 1.33 } }),
       ),
       new Map([[BAD_SRC, [TYC, '9007-5849-2']]]),
     );
@@ -343,7 +338,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     const overlay = hdOnlyOverlay();
     const { rejected, gateableVia } = applyBindingGate(
       overlay,
-      bindingEvidence(new Map([[BAD_SRC, 1.7]]), new Map(), null, printedVOf({ [TYC]: 1.33 })),
+      bindingEvidence(new Map([[BAD_SRC, 1.7]]), null, printedVOf({ tycho2: { [TYC]: 1.33 } })),
       new Map([[BAD_SRC, [TYC]]]),
     );
     expect(rejected).toHaveLength(0);
@@ -354,7 +349,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
   it('leaves a row no tier reaches unvettable rather than passing it silently', () => {
     const { rejected, skippedNoPrintedV, gateableVia } = applyBindingGate(
       hdOnlyOverlay(),
-      bindingEvidence(new Map([[BAD_SRC, 20.95]]), new Map(), null, NO_PRINTED_V_BELOW_HIP),
+      bindingEvidence(new Map([[BAD_SRC, 20.95]]), null, NO_PRINTED_V),
       new Map([[BAD_SRC, [TYC]]]),
     );
     expect(rejected).toHaveLength(0);
@@ -371,12 +366,13 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     const { rejected } = applyBindingGate(
       overlay,
       bindingEvidence(
-        new Map([[BAD_SRC, 1.7]]), new Map(), {
+        new Map([[BAD_SRC, 1.7]]),
+        {
           bySource: new Map([[BAD_SRC, [{ wdsId: '08236-2439', component: 'B' }]]]),
           byHip: new Map([[0, [{ wdsId: '08236-2439', component: 'A' }]]]),
           primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
         },
-        printedVOf({ [TYC]: 1.33 }),
+        printedVOf({ tycho2: { [TYC]: 1.33 } }),
       ),
       new Map([[BAD_SRC, [TYC]]]),
     );
@@ -399,8 +395,9 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
         ['444444444444444444', entry([], [])],
       ]),
       bindingEvidence(
-        new Map(), new Map([[7, 5.0]]), null,
-        printedVOf({ 'a-1-1': 5.0 }, { 9848: 5.0 }),
+        new Map(),
+        null,
+        printedVOf({ hip: new Map([[7, 5.0]]), tycho2: { 'a-1-1': 5.0 }, gliese: { 9848: 5.0 } }),
       ),
       new Map([[viaTycho2, ['a-1-1']]]),
     );

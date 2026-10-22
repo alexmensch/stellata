@@ -85,6 +85,8 @@ import {
   type SimbadValueIndex,
 } from '../simbad/simbad-values-parse';
 import {
+  printedV,
+  printedVLookups,
   resolveVMagnitude,
   tycho2VMagnitude,
   V_VIA_VALUES,
@@ -429,6 +431,7 @@ export function readStars(
   let spectralByGspspec = 0;
   let spectralFallback = 0;
 
+  const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   for (const row of rows) {
     total++;
     const hip = parseIntOrNull(row.hip);
@@ -522,9 +525,11 @@ export function readStars(
     );
     const vRes = resolveVMagnitude(
       gaiaRow,
-      printedByHip(hipVMag, hip),
-      tychoV.v,
-      glieseRow?.vMag ?? null,
+      printedV({
+        printed_hip: hip === null ? [] : [hip],
+        tycho2: simbadKeys.tyc === null ? [] : [simbadKeys.tyc],
+        gliese: simbadKeys.gl === null ? [] : [simbadKeys.gl],
+      }, printedVLookup),
       isSol ? SOL_APPARENT_V_MAGNITUDE : null,
     );
     if (vRes.v === null) {
