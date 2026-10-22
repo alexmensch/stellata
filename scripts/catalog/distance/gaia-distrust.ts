@@ -50,18 +50,8 @@ export function isGaiaCatalogueBibcode(bibcode: string): boolean {
   return GAIA_CATALOGUE_BIBCODES.has(bibcode);
 }
 
-/** Whether a bibcode names the Hipparcos re-reduction — van Leeuwen 2007
- *  (/data/papers/index.md#vanleeuwen2007), the publication the HIP2 tier itself
- *  reads.
- *
- *  This exists because the skip rule generalises past Gaia. A courier serving a
- *  value attributed to the very publication a first-order tier above it already
- *  weighed and refused is laundering that refusal, whatever the publication is.
- *  For a HIP-bearing record SIMBAD's parallax usually IS van Leeuwen's, so
- *  without this the parallax cascade's precision gate refuses a value and then
- *  re-admits the identical number one tier down, stripped of the error bar the
- *  refusal was based on — measured at 574 records, matching to the digit. */
-export function isHipparcos2Bibcode(bibcode: string): boolean {
+/** van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), the publication the HIP2 tier reads. */
+function isHipparcos2Bibcode(bibcode: string): boolean {
   return bibcode === '2007A&A...474..653V';
 }
 
@@ -79,7 +69,7 @@ export interface Refusals {
 
 /** A courier may not re-serve a value attributed to a publication a tier above
  *  it already refused — the one rule behind every skip
- *  (../distance/parallax/README.md#the-skip-rules--one-principle-two-publications). */
+ *  (parallax/README.md#the-skip-rules--one-principle-two-publications). */
 export function refusedBy(bibcode: string, { gaiaIs2p, refusedPublications }: Refusals): boolean {
   return (gaiaIs2p && isGaiaCatalogueBibcode(bibcode))
     || (refusedPublications.has('hipparcos2') && isHipparcos2Bibcode(bibcode));
