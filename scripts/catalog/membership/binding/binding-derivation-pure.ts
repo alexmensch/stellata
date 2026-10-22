@@ -6,6 +6,7 @@ import { normaliseGjKey } from '../../record/catalog-pure';
 import { printedV } from '../../photometry/v-magnitude-pure';
 import {
   isSiblingLetterAttribution,
+  rejectionOf,
   weighBinding,
   type BindingEvidence,
   type GateReason,
@@ -199,10 +200,11 @@ export function deriveBinding(
   const { evidence } = gate;
   for (const candidate of ranked) {
     const verdict = weighBinding(candidate.sourceId, gate, evidence);
-    if (verdict.kind === 'unweighable' && verdict.reason === 'null_g') weighedNullGMag++;
-    if (verdict.kind === 'unweighable' && verdict.reason === 'no_pulled_row') weighedNoGMag++;
-    if (verdict.kind === 'reject') {
-      rejected.push({ ...candidate, reason: verdict.reason });
+    if (verdict.magnitude === 'null_g') weighedNullGMag++;
+    if (verdict.magnitude === 'no_pulled_row') weighedNoGMag++;
+    const reason = rejectionOf(verdict);
+    if (reason !== null) {
+      rejected.push({ ...candidate, reason });
     } else if (winner === null) {
       winner = candidate;
     }

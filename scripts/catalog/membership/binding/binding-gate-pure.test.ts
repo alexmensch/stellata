@@ -7,6 +7,7 @@ import {
   bindingEvidence,
   isSiblingLetterAttribution,
   parseSimbadWdsXidsTsv,
+  rejectionOf,
   weighBinding,
 } from './binding-gate-pure';
 import { NO_PRINTED_V } from '../../photometry/photometry-fixture';
@@ -20,35 +21,39 @@ describe('weighBinding', () => {
   const printedAt = (vMag: number) => ({ vVia: 'printed_hip' as const, vMag, key: 1 });
 
   it('rejects a candidate fainter in G than the printed V beyond the gate', () => {
-    expect(weighBinding(TOLIMAN_BAD_SRC, { hip: null, printedV: printedAt(1.33) }, evidence))
-      .toEqual({ kind: 'reject', reason: 'mag' });
+    const v = weighBinding(TOLIMAN_BAD_SRC, { hip: null, printedV: printedAt(1.33) }, evidence);
+    expect(v).toEqual({ magnitude: 'rejected', siblingRefused: false });
+    expect(rejectionOf(v)).toBe('mag');
   });
 
-  it('passes a candidate consistent with the printed V', () => {
-    expect(weighBinding('777', { hip: null, printedV: printedAt(1.58) }, evidence))
-      .toEqual({ kind: 'pass' });
+  it('binds a candidate consistent with the printed V', () => {
+    const v = weighBinding('777', { hip: null, printedV: printedAt(1.58) }, evidence);
+    expect(v).toEqual({ magnitude: 'consistent', siblingRefused: false });
+    expect(rejectionOf(v)).toBeNull();
   });
 
-  it('passes a candidate exactly at the threshold — the gate rejects only past it', () => {
+  it('binds a candidate exactly at the threshold — the gate rejects only past it', () => {
     const atThreshold = bindingEvidence(
       new Map([['edge', 1.5 + GAIA_BINDING_G_MINUS_V_REJECT_MAG]]), null, NO_PRINTED_V,
     );
-    expect(weighBinding('edge', { hip: null, printedV: printedAt(1.5) }, atThreshold))
-      .toEqual({ kind: 'pass' });
+    expect(weighBinding('edge', { hip: null, printedV: printedAt(1.5) }, atThreshold).magnitude)
+      .toBe('consistent');
   });
 
   it('names why it could not weigh a candidate, and binds it', () => {
-    expect(weighBinding(TOLIMAN_BAD_SRC, { hip: null, printedV: null }, evidence))
-      .toEqual({ kind: 'unweighable', reason: 'no_printed_v' });
-    expect(weighBinding('unpulled', { hip: null, printedV: printedAt(5) }, evidence))
-      .toEqual({ kind: 'unweighable', reason: 'no_pulled_row' });
-    expect(weighBinding('nullg', { hip: null, printedV: printedAt(5) }, evidence))
-      .toEqual({ kind: 'unweighable', reason: 'null_g' });
+    for (const [sourceId, printedV, why] of [
+      [TOLIMAN_BAD_SRC, null, 'no_printed_v'],
+      ['unpulled', printedAt(5), 'no_pulled_row'],
+      ['nullg', printedAt(5), 'null_g'],
+    ] as const) {
+      const v = weighBinding(sourceId, { hip: null, printedV }, evidence);
+      expect(v).toEqual({ magnitude: why, siblingRefused: false });
+      expect(rejectionOf(v)).toBeNull();
+    }
   });
 
   // μ Dra: HIP 83608 is filed under B's letter, and the source belongs to A
-  // alone. The sibling arm keys on the HIP, so it needs neither a G nor a V,
-  // and outranks every unweighable reason.
+  // alone. The sibling arm keys on the HIP, so it needs neither a G nor a V.
   describe('the sibling-letter arm', () => {
     const xids = parseSimbadWdsXidsTsv([
       'wds_id\tcomponent\tgaia_source_id\thip',
@@ -57,16 +62,17 @@ describe('weighBinding', () => {
     ].join('\n'));
     const sibling = bindingEvidence(new Map(), xids, NO_PRINTED_V);
 
-    it('refuses a source another letter owns, weighable or not', () => {
-      for (const printedV of [printedAt(5), null]) {
-        expect(weighBinding('1420101696285626624', { hip: 83608, printedV }, sibling))
-          .toEqual({ kind: 'reject', reason: 'sibling' });
+    it('refuses a source another letter owns, and still reports the magnitude arm', () => {
+      for (const [printedV, magnitude] of [[printedAt(5), 'no_pulled_row'], [null, 'no_printed_v']] as const) {
+        const v = weighBinding('1420101696285626624', { hip: 83608, printedV }, sibling);
+        expect(v).toEqual({ magnitude, siblingRefused: true });
+        expect(rejectionOf(v)).toBe('sibling');
       }
     });
 
     it('is inert on a row with no HIP', () => {
-      expect(weighBinding('1420101696285626624', { hip: null, printedV: null }, sibling))
-        .toEqual({ kind: 'unweighable', reason: 'no_printed_v' });
+      expect(weighBinding('1420101696285626624', { hip: null, printedV: null }, sibling).siblingRefused)
+        .toBe(false);
     });
   });
 });

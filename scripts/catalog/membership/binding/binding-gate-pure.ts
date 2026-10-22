@@ -175,12 +175,22 @@ export type GateReason = 'mag' | 'sibling';
  *  under-covering its candidates), or Gaia publishes no G for it. */
 export type Unweighable = 'no_printed_v' | 'no_pulled_row' | 'null_g';
 
-/** One gate verdict on one candidate. `unweighable` binds, as `pass` does —
- *  the magnitude arm could not run, and nothing refused it. */
-export type BindingVerdict =
-  | { kind: 'pass' }
-  | { kind: 'reject'; reason: GateReason }
-  | { kind: 'unweighable'; reason: Unweighable };
+/** How the magnitude arm went: G held against the printed V and consistent,
+ *  held and refused, or not weighable and why. */
+export type MagnitudeOutcome = 'consistent' | 'rejected' | Unweighable;
+
+/** `siblingRefused` is false on a magnitude rejection: the sibling arm does
+ *  not run then. */
+export interface BindingVerdict {
+  magnitude: MagnitudeOutcome;
+  siblingRefused: boolean;
+}
+
+/** The gate that refused the candidate, or null where it binds. */
+export function rejectionOf({ magnitude, siblingRefused }: BindingVerdict): GateReason | null {
+  if (magnitude === 'rejected') return 'mag';
+  return siblingRefused ? 'sibling' : null;
+}
 
 /** What a candidate is weighed against: the HIP the sibling gate keys on and
  *  the printed V the magnitude gate compares G with. */
@@ -190,25 +200,21 @@ export interface GateRow {
 }
 
 /** Both binding gates, the one weighing the overlay join and the membership
- *  derivation share. The magnitude arm runs first and its reason wins, so a
- *  candidate it cannot weigh still faces the sibling-letter arm, which outranks
- *  every unweighable reason. */
+ *  derivation share. */
 export function weighBinding(
   sourceId: string, row: GateRow, evidence: BindingEvidence,
 ): BindingVerdict {
-  let unweighable: Unweighable | null = null;
-  if (row.printedV === null) {
-    unweighable = 'no_printed_v';
-  } else {
-    const g = evidence.gMagOf(sourceId);
-    if (g === null) {
-      unweighable = evidence.hasPulledRow(sourceId) ? 'null_g' : 'no_pulled_row';
-    } else if (g - row.printedV.vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG) {
-      return { kind: 'reject', reason: 'mag' };
-    }
-  }
-  if (isSiblingLetterAttribution(sourceId, row.hip, evidence.wdsXids)) {
-    return { kind: 'reject', reason: 'sibling' };
-  }
-  return unweighable === null ? { kind: 'pass' } : { kind: 'unweighable', reason: unweighable };
+  const magnitude = magnitudeOutcome(sourceId, row.printedV, evidence);
+  const siblingRefused = magnitude !== 'rejected'
+    && isSiblingLetterAttribution(sourceId, row.hip, evidence.wdsXids);
+  return { magnitude, siblingRefused };
+}
+
+function magnitudeOutcome(
+  sourceId: string, printedV: PrintedV | null, evidence: BindingEvidence,
+): MagnitudeOutcome {
+  if (printedV === null) return 'no_printed_v';
+  const g = evidence.gMagOf(sourceId);
+  if (g === null) return evidence.hasPulledRow(sourceId) ? 'null_g' : 'no_pulled_row';
+  return g - printedV.vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG ? 'rejected' : 'consistent';
 }

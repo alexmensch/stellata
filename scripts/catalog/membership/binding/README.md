@@ -60,10 +60,13 @@ above.
 **Every** candidate goes through **both binding gates by calling
 `weighBinding`** (`binding-gate-pure.ts`) — the one call
 `applyBindingGate` makes on the label side, so the two cannot drift on what
-counts as a bad binding — and the first that binds wins. The verdict is
-`pass`, `reject` (`mag` / `sibling`), or `unweighable` (`no_printed_v` /
-`no_pulled_row` / `null_g`), which binds: the magnitude arm could not run, and
-the sibling arm, which needs neither a G nor a V, still refuses. The magnitude gate weighs G
+counts as a bad binding — and the first that binds wins. The verdict carries
+each arm separately: the magnitude arm's outcome (`consistent`, `rejected`, or
+why it could not weigh — `no_printed_v` / `no_pulled_row` / `null_g`) and
+whether the sibling arm, which needs neither a G nor a V, refused. A candidate
+binds unless one arm refused it, and the coverage counts read the magnitude
+outcome whatever the sibling arm said, so a refusal never hides a gap in the
+pull. The magnitude gate weighs G
 against the record's **printed V in the V cascade's own tier order**:
 Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC, else
 Gliese's `Vmag` on its GJ cell — all three through `printedV` over the

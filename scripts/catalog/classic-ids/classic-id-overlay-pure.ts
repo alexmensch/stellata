@@ -3,6 +3,7 @@
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import {
+  rejectionOf,
   weighBinding,
   type BindingEvidence,
   type GateReason,
@@ -124,18 +125,17 @@ export function applyBindingGate(
     // from, else the entry's first.
     const hip = printed?.vVia === 'printed_hip' ? printed.key : entry.hip[0] ?? null;
     const verdict = weighBinding(sourceId, { hip, printedV: printed }, evidence);
-    if (verdict.kind === 'unweighable') {
-      if (verdict.reason === 'no_printed_v') skippedNoPrintedV++;
-      else if (verdict.reason === 'null_g') skippedNullGMag++;
-      else skippedNoGMag++;
-    }
-    if (verdict.kind !== 'reject') continue;
+    if (verdict.magnitude === 'no_printed_v') skippedNoPrintedV++;
+    else if (verdict.magnitude === 'null_g') skippedNullGMag++;
+    else if (verdict.magnitude === 'no_pulled_row') skippedNoGMag++;
+    const reason = rejectionOf(verdict);
+    if (reason === null) continue;
     rejected.push({
       sourceId,
       hip,
       printedV: printed,
       gMag: evidence.gMagOf(sourceId),
-      reason: verdict.reason,
+      reason,
       designations: designationSummary(entry),
     });
   }

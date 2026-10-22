@@ -148,6 +148,15 @@ describe('deriveBinding', () => {
     expect(d.rejected).toEqual([{ sourceId: '501', via: ['hip'], reason: 'sibling' }]);
   });
 
+  // 501 is outside the pull as well as sibling-refused: the zero-pinned
+  // coverage alarm still has to see it.
+  it('counts an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const d = deriveBinding(candidates({ hip: '501' }), gate);
+    expect(d.rejected.map((r) => r.reason)).toEqual(['sibling']);
+    expect(d.weighedNoGMag).toBe(1);
+  });
+
   it('derives a refusal where every candidate is rejected, and where there is none', () => {
     const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     expect(deriveBinding(candidates({ tyc: 'a' }), gate))

@@ -289,8 +289,29 @@ describe('applyBindingGate', () => {
     expect(rejected).toEqual([expect.objectContaining({
       hip, printedV: null, reason: 'sibling',
     })]);
-    expect(skippedNoPrintedV).toBe(0);
+    expect(skippedNoPrintedV).toBe(1);
     expect(overlay.has(src)).toBe(false);
+  });
+
+  // gateSkippedNoGMag is the zero-pinned alarm that the pull stopped covering
+  // a candidate; a sibling refusal of the same candidate must not hide it.
+  it('counts an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
+    const src = '663434291018997248';
+    const hip = 41098;
+    const overlay = new Map([[src, {
+      hd: [70492], hr: [], hip: [hip], gj: [], bayer: [], flamsteed: [],
+    }]]);
+    const { rejected, skippedNoGMag } = applyBindingGate(overlay, bindingEvidence(
+      new Map(),
+      {
+        bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
+        byHip: new Map([[hip, [{ wdsId: '08236-2439', component: 'A' }]]]),
+        primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
+      },
+      printedVOf({ hip: new Map([[hip, 5.7]]) }),
+    ), new Map());
+    expect(rejected.map((r) => r.reason)).toEqual(['sibling']);
+    expect(skippedNoGMag).toBe(1);
   });
 });
 
