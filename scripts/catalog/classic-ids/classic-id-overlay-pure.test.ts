@@ -217,8 +217,7 @@ describe('applyBindingGate', () => {
     expect(rejectedBindings).toEqual([{
       sourceId: TOLIMAN_BAD_SRC,
       hip: TOLIMAN_HIP,
-      vMag: 1.33,
-      vVia: 'printed_hip',
+      printedV: { vVia: 'printed_hip', vMag: 1.33, key: TOLIMAN_HIP },
       gMag: 20.95,
       reason: 'mag',
       designations: 'HD 128621 · HR 5460 · alf Cen',
@@ -342,7 +341,7 @@ describe('applyBindingGate', () => {
       NO_PRINTED_V,
     ), new Map());
     expect(rejected).toEqual([expect.objectContaining({
-      hip, vMag: null, vVia: null, reason: 'sibling',
+      hip, printedV: null, reason: 'sibling',
     })]);
     expect(skippedNoPrintedV).toBe(0);
     expect(overlay.has(src)).toBe(false);
@@ -371,7 +370,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       new Map([[BAD_SRC, [TYC]]]),
     );
     expect(rejected).toHaveLength(1);
-    expect(rejected[0]).toMatchObject({ hip: null, vMag: 1.33, vVia: 'tycho2', reason: 'mag' });
+    expect(rejected[0]).toMatchObject({ hip: null, printedV: { vMag: 1.33, vVia: 'tycho2' }, reason: 'mag' });
     expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 1, gliese: 0 });
     expect(overlay.has(BAD_SRC)).toBe(false);
   });
@@ -382,7 +381,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       bindingEvidence(new Map([[BAD_SRC, 20.95]]), null, printedVOf({ gliese: { 9848: 1.33 } })),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected[0]).toMatchObject({ vVia: 'gliese', reason: 'mag' });
+    expect(rejected[0]).toMatchObject({ printedV: { vVia: 'gliese' }, reason: 'mag' });
     expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 0, gliese: 1 });
   });
 
@@ -396,7 +395,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       ),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected[0]).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
+    expect(rejected[0].printedV).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
   });
 
   it('takes the brightest of the Tycho entries IV/25 routes to one source', () => {
@@ -411,7 +410,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       ),
       new Map([[BAD_SRC, [TYC, '9007-5849-2']]]),
     );
-    expect(rejected[0]).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
+    expect(rejected[0].printedV).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
   });
 
   it('keeps a no-HIP row whose Tycho-2 V agrees with its G', () => {

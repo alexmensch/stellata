@@ -144,11 +144,9 @@ export interface RejectedBinding {
   sourceId: string;
   /** Null where the row carries no HIP at all. */
   hip: number | null;
-  /** Null on a sibling refusal of a row no printed tier reaches. */
-  vMag: number | null;
-  /** Which printed tier supplied `vMag`, so a reviewer can see whether the
-   *  rejection rests on Hipparcos or on one of the tiers below it. */
-  vVia: PrintedVVia | null;
+  /** Null on a sibling refusal of a row no printed tier reaches. Its tier says
+   *  whether a rejection rests on Hipparcos or on one of the tiers below it. */
+  printedV: PrintedV | null;
   gMag: number | null;
   reason: GateReason;
   designations: string;
@@ -212,8 +210,7 @@ export function applyBindingGate(
     rejected.push({
       sourceId,
       hip,
-      vMag: printed?.vMag ?? null,
-      vVia: printed?.vVia ?? null,
+      printedV: printed,
       gMag: evidence.gMagOf(sourceId),
       reason: verdict.reason,
       designations: designationSummary(entry),

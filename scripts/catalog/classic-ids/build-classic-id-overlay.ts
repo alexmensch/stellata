@@ -54,8 +54,8 @@ function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
       .map((r) => [
         r.sourceId,
         r.hip ?? '',
-        r.vMag === null ? '' : r.vMag.toFixed(3),
-        r.vVia ?? '',
+        r.printedV?.vMag.toFixed(3) ?? '',
+        r.printedV?.vVia ?? '',
         r.gMag === null ? '' : r.gMag.toFixed(3),
         r.reason,
         r.designations,
