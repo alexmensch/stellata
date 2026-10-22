@@ -357,7 +357,7 @@ def compute_system_anchors(
 _GeomAdj = dict[str, dict[str, tuple[float, float, float | None]]]
 
 
-def _anchor_token_rank(tok: str) -> tuple[int, int, str]:
+def _anchor_token_rank(tok: str) -> tuple[str, int, str]:
     """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``:
     top-level letter first, then depth, then alphabetical — so the letter
     these offsets chain from is the one promotion resolves as the WDS-root
