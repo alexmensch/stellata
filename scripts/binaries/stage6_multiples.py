@@ -358,10 +358,11 @@ _GeomAdj = dict[str, dict[str, tuple[float, float, float | None]]]
 
 
 def _anchor_token_rank(tok: str) -> tuple[int, int, str]:
-    """Mirror of companion-promotion.ts ``isMoreCanonicalAnchor``: ``A``
-    first, then shortest, then alphabetical — so the letter these offsets
-    chain from is the same one promotion resolves as the WDS-root anchor."""
-    return (0 if tok == "A" else 1, len(tok), tok)
+    """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``:
+    top-level letter first, then depth, then alphabetical — so the letter
+    these offsets chain from is the one promotion resolves as the WDS-root
+    anchor. Change both."""
+    return (tok[:1], len(tok), tok)
 
 
 def _proxy_endpoints(tok: str) -> list[str]:
