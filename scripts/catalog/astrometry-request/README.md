@@ -28,7 +28,7 @@ Each non-membership contribution lives with the consumer that defines it, not
 here
 — this folder decides what to *request*, not what a route may propose:
 `magnitudeWeighableSourceIds` in `../classic-ids/classic-id-overlay-pure.ts`,
-`derivationCandidateSourceIds` in `../membership/binding-derivation-pure.ts`,
+`derivationCandidateSourceIds` in `../membership/binding/binding-derivation-pure.ts`,
 and `pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`.
 
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
