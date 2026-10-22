@@ -55,7 +55,9 @@ dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
 stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
-                          pnpm run sid:stamp). See README.md#sibling-artifact-stamping.
+                          pnpm run sid:stamp). Every named target resolves
+                          before one emitArtifacts call lands them all.
+                          See README.md#sibling-artifact-stamping.
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind per sibling) + siblingArtifactObjects, shared
                           by allocate (minting) and the stamp (resolving) so

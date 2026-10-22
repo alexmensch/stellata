@@ -1,9 +1,10 @@
 // Stamp frozen Stellata IDs onto clouds.json / local-group.json from the
 // committed ledger, after their emitters run. See /scripts/sid/README.md#sibling-artifact-stamping.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { declareOutputs, emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import { resolveSids } from './sid-pure';
 import { loadRegistry } from './registry-io';
@@ -14,8 +15,14 @@ import {
   type SiblingItem,
 } from './sibling-artifacts';
 
-function stamp(spec: SiblingArtifactSpec): void {
-  const path = resolve(ROOT, 'public', spec.file);
+const artifactPath = (spec: SiblingArtifactSpec): string => resolve(ROOT, 'public', spec.file);
+
+const stampOutputs = (specs: readonly SiblingArtifactSpec[]) => declareOutputs(specs.map(artifactPath));
+
+export const SID_STAMP_OUTPUTS = stampOutputs(Object.values(SIBLING_ARTIFACTS));
+
+function stamped(spec: SiblingArtifactSpec): string {
+  const path = artifactPath(spec);
   if (!existsSync(path)) {
     console.error(`sid:stamp: missing ${path}\n  run ${spec.buildHint} first`);
     process.exit(1);
@@ -49,8 +56,8 @@ function stamp(spec: SiblingArtifactSpec): void {
   items.forEach((o, i) => {
     (o as { sid?: number }).sid = objectSids[i];
   });
-  writeFileSync(path, JSON.stringify(payload) + '\n');
   console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file}`);
+  return JSON.stringify(payload) + '\n';
 }
 
 const targets = process.argv.slice(2);
@@ -70,4 +77,7 @@ const specs = targets.includes('all')
       }
       return spec;
     });
-for (const spec of specs) stamp(spec);
+emitArtifacts({
+  outputs: stampOutputs(specs),
+  files: new Map(specs.map((spec) => [artifactPath(spec), stamped(spec)])),
+});
