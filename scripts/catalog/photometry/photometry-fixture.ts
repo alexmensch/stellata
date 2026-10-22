@@ -28,9 +28,10 @@ export function printedVOf({ hip = new Map(), tycho2 = {}, gliese = {} }: {
   tycho2?: Readonly<Record<string, number>>;
   gliese?: Readonly<Record<string, number>>;
 }): PrintedVLookups {
+  const answer = (vMag: number | undefined) => (vMag === undefined ? null : { vMag });
   return {
-    printed_hip: (h) => hip.get(h) ?? null,
-    tycho2: (tyc) => tycho2[tyc] ?? null,
-    gliese: (gj) => gliese[gj] ?? null,
+    printed_hip: (h) => answer(hip.get(h)),
+    tycho2: (tyc) => (tycho2[tyc] === undefined ? null : { vMag: tycho2[tyc], outsideRange: false }),
+    gliese: (gj) => answer(gliese[gj]),
   };
 }

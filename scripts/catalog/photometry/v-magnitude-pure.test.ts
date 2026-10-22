@@ -195,7 +195,7 @@ describe('printedV', () => {
     expect(printedV(keys([1], ['a-1-1'], ['914']), LOOKUPS))
       .toEqual({ vVia: 'printed_hip', vMag: 6.0, key: 1 });
     expect(printedV(keys([99], ['a-1-1'], ['914']), LOOKUPS))
-      .toEqual({ vVia: 'tycho2', vMag: 7.0, key: 'a-1-1' });
+      .toEqual({ vVia: 'tycho2', vMag: 7.0, key: 'a-1-1', outsideRange: false });
     expect(printedV(keys([], ['nope-1-1'], ['914']), LOOKUPS))
       .toEqual({ vVia: 'gliese', vMag: 9.0, key: '914' });
   });
@@ -207,7 +207,7 @@ describe('printedV', () => {
     expect(printedV(keys([1, 2], [], []), LOOKUPS))
       .toEqual({ vVia: 'printed_hip', vMag: 4.0, key: 2 });
     expect(printedV(keys([], ['a-1-2', 'a-1-1'], []), LOOKUPS))
-      .toEqual({ vVia: 'tycho2', vMag: 5.5, key: 'a-1-2' });
+      .toEqual({ vVia: 'tycho2', vMag: 5.5, key: 'a-1-2', outsideRange: false });
   });
 
   it('is null where no tier answers', () => {
@@ -234,10 +234,22 @@ describe('printedVLookups', () => {
       new Map([['a-1-1', { btMag: 9.5, vtMag: 8.9 }]]),
       { byKey: new Map(), rowCount: 0 },
     );
-    expect(lookups.printed_hip(7)).toBe(3.1);
+    expect(lookups.printed_hip(7)).toEqual({ vMag: 3.1 });
     expect(lookups.printed_hip(8)).toBeNull();
-    expect(lookups.tycho2('a-1-1')).toBeCloseTo(tycho2VMagnitude(9.5, 8.9).v!, 12);
+    expect(lookups.tycho2('a-1-1')?.vMag).toBeCloseTo(tycho2VMagnitude(9.5, 8.9).v!, 12);
     expect(lookups.tycho2('missing')).toBeNull();
+  });
+
+  // The counter reads the flag off the answer that supplied the V, so it
+  // cannot describe a different Tycho-2 row than the one the cascade used.
+  it('carries the BT−VT range verdict on the Tycho-2 answer', () => {
+    const lookups = printedVLookups(
+      new Map(),
+      new Map([['in-1-1', { btMag: 9.5, vtMag: 8.9 }], ['out-1-1', { btMag: 12.0, vtMag: 8.9 }]]),
+      { byKey: new Map(), rowCount: 0 },
+    );
+    expect(lookups.tycho2('in-1-1')?.outsideRange).toBe(false);
+    expect(lookups.tycho2('out-1-1')?.outsideRange).toBe(true);
   });
 
   it('reads the Gliese arm through lookupGliese, not by the printed name', () => {
@@ -250,8 +262,8 @@ describe('printedVLookups', () => {
       } as never]]),
       rowCount: 1,
     });
-    expect(lookups.gliese('Gl 914')).toBe(9.0);
-    expect(lookups.gliese('GJ 914B')).toBe(9.0);
+    expect(lookups.gliese('Gl 914')).toEqual({ vMag: 9.0 });
+    expect(lookups.gliese('GJ 914B')).toEqual({ vMag: 9.0 });
     expect(lookups.gliese('Gl 915')).toBeNull();
   });
 });

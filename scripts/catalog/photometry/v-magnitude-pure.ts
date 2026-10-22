@@ -115,8 +115,16 @@ interface PrintedVKey {
  *  because a site supplying only some of them silently narrows a binding gate
  *  to evidence the other side can still see (`/docs/catalog-driver.md#4-how-hd-reaches-gaia`). */
 export type PrintedVLookups = {
-  readonly [V in PrintedVVia]: (key: PrintedVKey[V]) => number | null;
+  readonly [V in PrintedVVia]: (key: PrintedVKey[V]) => PrintedVAnswer[V] | null;
 };
+
+/** What a tier answers for one key. Tycho-2's reduction also says whether
+ *  BT − VT sat outside the published range, which only that tier can know. */
+interface PrintedVAnswer {
+  printed_hip: { vMag: number };
+  tycho2: { vMag: number; outsideRange: boolean };
+  gliese: { vMag: number };
+}
 
 /** The keys a row offers each printed tier. */
 export type PrintedVKeys = { readonly [V in PrintedVVia]: Iterable<PrintedVKey[V]> };
@@ -124,7 +132,7 @@ export type PrintedVKeys = { readonly [V in PrintedVVia]: Iterable<PrintedVKey[V
 /** The printed V a row resolved to, the tier that supplied it, and the key
  *  that tier answered on. */
 export type PrintedV = {
-  [V in PrintedVVia]: { vVia: V; vMag: number; key: PrintedVKey[V] };
+  [V in PrintedVVia]: { vVia: V; key: PrintedVKey[V] } & PrintedVAnswer[V];
 }[PrintedVVia];
 
 export function printedVLookups(
@@ -132,24 +140,27 @@ export function printedVLookups(
   tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag'>>,
   gliese: GlieseIndex,
 ): PrintedVLookups {
+  const answer = (vMag: number | null) => (vMag === null ? null : { vMag });
   return {
-    printed_hip: (hip) => printedByHip(hipVMag, hip),
+    printed_hip: (hip) => answer(printedByHip(hipVMag, hip)),
     tycho2: (tyc) => {
       const row = tycho2.get(tyc);
-      return row === undefined ? null : tycho2VMagnitude(row.btMag, row.vtMag).v;
+      if (row === undefined) return null;
+      const { v, outsideRange } = tycho2VMagnitude(row.btMag, row.vtMag);
+      return v === null ? null : { vMag: v, outsideRange };
     },
-    gliese: (gj) => lookupGliese(gliese, gj)?.vMag ?? null,
+    gliese: (gj) => answer(lookupGliese(gliese, gj)?.vMag ?? null),
   };
 }
 
 function brightestOnTier<V extends PrintedVVia>(
   vVia: V, keys: PrintedVKeys, lookups: PrintedVLookups,
 ): PrintedV | null {
-  let best: { vMag: number; key: PrintedVKey[V] } | null = null;
+  let best: (PrintedVAnswer[V] & { key: PrintedVKey[V] }) | null = null;
   for (const key of keys[vVia]) {
-    const v = lookups[vVia](key);
-    if (v !== null && Number.isFinite(v) && (best === null || v < best.vMag)) {
-      best = { vMag: v, key };
+    const a = lookups[vVia](key);
+    if (a !== null && Number.isFinite(a.vMag) && (best === null || a.vMag < best.vMag)) {
+      best = { ...a, key };
     }
   }
   return best === null ? null : ({ vVia, ...best } as PrintedV);
