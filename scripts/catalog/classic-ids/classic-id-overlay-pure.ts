@@ -139,10 +139,11 @@ export interface RejectedBinding {
   sourceId: string;
   /** Null where the row carries no HIP at all. */
   hip: number | null;
-  vMag: number;
+  /** Null on a sibling refusal of a row no printed tier reaches. */
+  vMag: number | null;
   /** Which printed tier supplied `vMag`, so a reviewer can see whether the
    *  rejection rests on Hipparcos or on one of the tiers below it. */
-  vVia: PrintedVVia;
+  vVia: PrintedVVia | null;
   gMag: number | null;
   reason: GateReason;
   designations: string;
@@ -189,25 +190,22 @@ export function applyBindingGate(
       { printed_hip: entry.hip, tycho2: tycsBySource.get(sourceId) ?? [], gliese: entry.gj },
       evidence.printedV,
     );
-    if (printed === null) {
-      skippedNoPrintedV++;
-      continue;
-    }
-    gateableVia[printed.vVia]++;
+    if (printed !== null) gateableVia[printed.vVia]++;
     // The sibling gate keys on a HIP rather than on the V: the one the V came
     // from, else the entry's first.
-    const hip = printed.vVia === 'printed_hip' ? printed.key : entry.hip[0] ?? null;
+    const hip = printed?.vVia === 'printed_hip' ? printed.key : entry.hip[0] ?? null;
     const verdict = weighBinding(sourceId, { hip, printedV: printed }, evidence);
     if (verdict.kind === 'unweighable') {
-      if (verdict.reason === 'null_g') skippedNullGMag++;
+      if (verdict.reason === 'no_printed_v') skippedNoPrintedV++;
+      else if (verdict.reason === 'null_g') skippedNullGMag++;
       else skippedNoGMag++;
     }
     if (verdict.kind !== 'reject') continue;
     rejected.push({
       sourceId,
       hip,
-      vMag: printed.vMag,
-      vVia: printed.vVia,
+      vMag: printed?.vMag ?? null,
+      vVia: printed?.vVia ?? null,
       gMag: evidence.gMagOf(sourceId),
       reason: verdict.reason,
       designations: designationSummary(entry),

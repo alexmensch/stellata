@@ -65,7 +65,8 @@ below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
 gates refuse <!-- count:membership-manifest/derivedRejected.mag -->317<!-- /count --> candidates on G − V and <!-- count:membership-manifest/derivedRejected.sibling -->116<!-- /count --> on sibling-letter attribution
 (`derivedRejected`); falling off the end is a derived refusal.
 `derivedUngateable` (<!-- count:membership-manifest/derivedUngateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
-under any tier, so nothing could be weighed against it.
+under any tier, so only the sibling arm weighs its candidates — the same
+`unweighable: 'no_printed_v'` the overlay gate reaches.
 
 **A component designation rescues a row the sibling gate leaves unbound.**
 Where SIMBAD puts the row's HIP on both components, the gate reads the row as

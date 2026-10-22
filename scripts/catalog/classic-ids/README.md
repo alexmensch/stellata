@@ -196,7 +196,8 @@ is a pass either way and only one of the causes is fixable:
 `gateableVia` partitions the rows the gate could weigh by which tier supplied
 their V — **hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,799<!-- /count --> · tycho2 <!-- count:classic-id-overlay/gateableVia.tycho2 -->254,135<!-- /count --> · gliese <!-- count:classic-id-overlay/gateableVia.gliese -->1,053<!-- /count -->** — and
 `gateSkippedNoPrintedV` is what is left: **<!-- count:classic-id-overlay/gateSkippedNoPrintedV -->2,738<!-- /count -->** rows no printed tier reaches
-at all. `bindingCandidateSourceIds` applies the same reach, so the request and
+at all and the sibling arm passed. None of them carries a HIP, so that arm has
+nothing to key on there today. `bindingCandidateSourceIds` applies the same reach, so the request and
 the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
 same `weighBinding` call, with its own candidate contribution to the

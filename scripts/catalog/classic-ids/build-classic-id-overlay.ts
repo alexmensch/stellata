@@ -60,8 +60,8 @@ function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
       .map((r) => [
         r.sourceId,
         r.hip ?? '',
-        r.vMag.toFixed(3),
-        r.vVia,
+        r.vMag === null ? '' : r.vMag.toFixed(3),
+        r.vVia ?? '',
         r.gMag === null ? '' : r.gMag.toFixed(3),
         r.reason,
         r.designations,
@@ -85,7 +85,7 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
     `binding gate: dropped ${counts.gateRejectedMag} rows on G−V, ` +
       `${counts.gateRejectedSibling} on sibling-letter attribution; ` +
       `${counts.gateSkippedNoPrintedV} rows carry no printed V under any tier ` +
-      `and cannot be vetted (gateable via printed_hip ${counts.gateableVia.printed_hip}, ` +
+      `and bind on the sibling arm alone (gateable via printed_hip ${counts.gateableVia.printed_hip}, ` +
       `tycho2 ${counts.gateableVia.tycho2}, gliese ${counts.gateableVia.gliese}); ` +
       `${counts.gateSkippedNoGMag} gateable rows are absent ` +
       `from the astrometry pull (must be 0 — the request under-covers the ` +

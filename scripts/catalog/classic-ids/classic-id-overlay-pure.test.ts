@@ -321,6 +321,30 @@ describe('applyBindingGate', () => {
     expect(rejected[0].reason).toBe('sibling');
     expect(overlay.has(src)).toBe(false);
   });
+
+  // No printed V disarms only the magnitude arm, exactly as on the record
+  // side: the sibling arm keys on the HIP and still refuses.
+  it('refuses a sibling on a row no printed tier reaches, as the derivation does', () => {
+    const src = '663434291018997248';
+    const hip = 41098;
+    const overlay = new Map([[src, {
+      hd: [70492], hr: [], hip: [hip], gj: [], bayer: [], flamsteed: [],
+    }]]);
+    const { rejected, skippedNoPrintedV } = applyBindingGate(overlay, bindingEvidence(
+      new Map([[src, 5.9]]),
+      {
+        bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
+        byHip: new Map([[hip, [{ wdsId: '08236-2439', component: 'A' }]]]),
+        primarySourceLetterByWds: new Map([['08236-2439', 'B']]),
+      },
+      NO_PRINTED_V,
+    ), new Map());
+    expect(rejected).toEqual([expect.objectContaining({
+      hip, vMag: null, vVia: null, reason: 'sibling',
+    })]);
+    expect(skippedNoPrintedV).toBe(0);
+    expect(overlay.has(src)).toBe(false);
+  });
 });
 
 // The two printed tiers under Hipparcos, which the HIP-only gate could not
