@@ -130,6 +130,16 @@ export async function loadBindingTables(keepTycs: ReadonlySet<string>): Promise<
   };
 }
 
+export function loadTycho2(): ReturnType<typeof parseTycho2Tsvs> {
+  return parseTycho2Tsvs(
+    readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
+  );
+}
+
+export function loadGliese(): ReturnType<typeof parseGlieseTsv> {
+  return parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT));
+}
+
 /** `keepTycs` narrows the 2.5 M-row TYC cross-walk to the Tycho ids the caller
  *  will look up — IV/25's plus the spine's. */
 export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<PrimaryTables> {
@@ -142,14 +152,12 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     iv25,
     v50: parseBsc5Tsv(readRequired(SRC_BSC5, LFS_HINT)),
     iv27a: readCrossIndexTable(),
-    gliese: parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT)),
+    gliese: loadGliese(),
     hipI239: i239.hip,
     hdI239: i239.hd,
     i239HipHd: i239.hipHd,
     hip2: readIntColumn(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv', 'hip'),
     wgsn: readWgsn(),
-    tycho2: parseTycho2Tsvs(
-      readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
-    ),
+    tycho2: loadTycho2(),
   };
 }

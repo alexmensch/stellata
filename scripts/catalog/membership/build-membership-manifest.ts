@@ -8,7 +8,8 @@ import { dirname, resolve } from 'node:path';
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
 import { compareCountSnapshot } from '../build-counts';
-import { loadBindingEvidence } from './binding/binding-evidence';
+import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
+import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
   BRIGHT_TIER_MAG_CEILING,
@@ -91,7 +92,9 @@ async function main(): Promise<void> {
   const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const overridesPath = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
-  const { evidence, gaiaAstrometry } = loadBindingEvidence();
+  const { evidence, gaiaAstrometry } = loadBindingEvidence(
+    printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
+  );
   const result = buildMembership({
     spine,
     tables,

@@ -9,7 +9,7 @@ import {
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
-import { HIP_VMAG_HINT, SRC_HIP_VMAG } from '../membership/binding/binding-evidence';
+import { loadHipVMag } from '../membership/binding/binding-evidence';
 import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
@@ -25,7 +25,6 @@ import {
   parseSpineCorrectionsTsv,
 } from '../membership/membership-manifest-pure';
 import { isMagnitudeTermRow } from '../membership/magnitude-term/magnitude-term-pure';
-import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
@@ -50,7 +49,7 @@ async function main(): Promise<void> {
   }
   const membership = ids.size;
 
-  const { vmag: hipVMag } = parseHipPhotometryTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
+  const hipVMag = loadHipVMag();
 
   // One table load for both contributions: the gate's Tycho-2 / Gliese arms
   // read the same tables the derivation's do, and the TYC cross-walk has to

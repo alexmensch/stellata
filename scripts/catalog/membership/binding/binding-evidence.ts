@@ -8,53 +8,38 @@ import {
   parseGaiaAstrometryCatalogTsv,
   type GaiaAstrometryCatalogRow,
 } from '../../distance/direction-cascade';
-import { parseGlieseTsv } from '../../gliese-parse';
 import { parseHipPhotometryTsv } from '../../photometry/hip-photometry-parse';
-import { printedVLookups } from '../../photometry/v-magnitude-pure';
-import { parseTycho2Tsvs } from '../../tycho2-parse';
+import type { PrintedVLookups } from '../../photometry/v-magnitude-pure';
 import { readRequired, REPO_ROOT as ROOT } from '../../../util/paths';
 import { bindingEvidence, parseSimbadWdsXidsTsv, type BindingEvidence } from './binding-gate-pure';
 
 export const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
 export const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 export const SRC_SIMBAD_WDS_XIDS = resolve(ROOT, 'data/simbad/simbad_wds_xids.tsv');
-export const SRC_GLIESE = resolve(ROOT, 'data/gliese/gliese_v70a.tsv');
-export const SRC_TYCHO2_MAIN = resolve(ROOT, 'data/tycho2/tycho2_main.tsv');
-export const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
 
 const ASTROMETRY_HINT = 'run `pnpm run refresh:gaia-astrometry-catalog`.';
-export const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
+const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
 const SIMBAD_HINT = 'run `python3 scripts/refresh/refresh-simbad-wds-xids.py`.';
-const LFS_HINT = 'run `git lfs pull`.';
 
-export interface LoadedBindingEvidence {
-  evidence: BindingEvidence;
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
-  hipVMag: Map<number, number>;
+export function loadHipVMag(): Map<number, number> {
+  return parseHipPhotometryTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT)).vmag;
 }
 
-/** Every table is required: without them a join would key labels, or a manifest
- *  a binding, on sources the record build refuses, so a missing one hard-fails
- *  rather than degrading. */
-export function loadBindingEvidence(): LoadedBindingEvidence {
+/** The printed-V lookups come from the caller, built over the tables it
+ *  already parsed, so a build reads each printed table once. Every other
+ *  table is required: without it a join would key labels, or a manifest a
+ *  binding, on sources the record build refuses. */
+export function loadBindingEvidence(printedV: PrintedVLookups): {
+  evidence: BindingEvidence;
+  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+} {
   const gaiaAstrometry = parseGaiaAstrometryCatalogTsv(
     readRequired(SRC_GAIA_ASTROMETRY, ASTROMETRY_HINT),
   );
-  const { vmag: hipVMag } = parseHipPhotometryTsv(readRequired(SRC_HIP_VMAG, HIP_VMAG_HINT));
   const wdsXids = parseSimbadWdsXidsTsv(readRequired(SRC_SIMBAD_WDS_XIDS, SIMBAD_HINT));
-  const tycho2 = parseTycho2Tsvs(
-    readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
-  );
-  const gliese = parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT));
   const sourceGMag = new Map<string, number>();
   for (const [sourceId, row] of gaiaAstrometry) {
     if (row.gMag !== null) sourceGMag.set(sourceId, row.gMag);
   }
-  return {
-    evidence: bindingEvidence(
-      sourceGMag, wdsXids, printedVLookups(hipVMag, tycho2, gliese), gaiaAstrometry,
-    ),
-    gaiaAstrometry,
-    hipVMag,
-  };
+  return { evidence: bindingEvidence(sourceGMag, wdsXids, printedV, gaiaAstrometry), gaiaAstrometry };
 }
