@@ -1245,7 +1245,7 @@ interface SystemAnchor {
 }
 
 /** Pick the more-canonical of two pair primaries sharing a WDS root: the
- *  top-level letter decides, then depth, then alphabetical order. Used by
+ *  top-level letter decides, then token length, then alphabetical order. Used by
  *  buildWdsRootAnchors when several cursors map to one WDS root (40 Eri has
  *  A,BC / AC / BC / BD / BE rows all sharing `04153-0739`; we want A as the
  *  system anchor, not B), and by `record-index/`'s naming anchor.
@@ -1255,7 +1255,7 @@ interface SystemAnchor {
  *  15 Mon's `06410+0954` also carries EP, FG, FO, GO, JI and MN, and resolved
  *  to E = HD 261938. A deeper cursor inside the A branch is still the A
  *  branch, and "A" itself no longer needs a case of its own: it wins its own
- *  branch on depth and every other branch on the letter.
+ *  branch on length and every other branch on the letter.
  *
  *  `scripts/binaries/stage6_multiples.py` `_anchor_token_rank` is its Python
  *  twin, so Stage 6's anchor offsets chain from this anchor; change both. */

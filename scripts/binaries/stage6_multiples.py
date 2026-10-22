@@ -359,7 +359,7 @@ _GeomAdj = dict[str, dict[str, tuple[float, float, float | None]]]
 
 def _anchor_token_rank(tok: str) -> tuple[str, int, str]:
     """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``:
-    top-level letter first, then depth, then alphabetical — so the letter
+    top-level letter first, then token length, then alphabetical — so the letter
     these offsets chain from is the one promotion resolves as the WDS-root
     anchor. Change both."""
     return (tok[:1], len(tok), tok)
