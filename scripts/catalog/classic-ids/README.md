@@ -176,9 +176,9 @@ counts trade rows without any binding changing verdict.
 **The sibling-letter arm keys on a HIP and the magnitude arm does not**, so
 widening the V evidence widened only the second: `gateRejectedSibling` holds
 at 50 across the change while `gateRejectedMag` went 218 → 410. A row with no
-HIP passes `null` to `weighBinding`, exactly as the record side passes
-its own empty cell — passing `0` instead applies a gate here that the
-derivation does not apply there, and read 692 rejections rather than 50.
+HIP passes `null` to `weighBinding`, as the record side does, and the sibling
+arm reads `null` as nothing to key on; any number, `0` included, is looked up
+as a HIP and can reach the system-primary fallback.
 
 **Two counts say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:

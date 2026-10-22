@@ -444,10 +444,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
     expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 0, gliese: 0 });
   });
 
-  // The sibling arm keys on a HIP, so a row with none must reach
-  // `weighBinding` as null and short-circuit it. Passing 0 instead applies a
-  // gate here that the record side does not
-  // (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
+  // The sibling arm reads only null as "no HIP"; any number is looked up.
   it('passes a missing HIP through as null, so the sibling arm cannot fire on it', () => {
     const overlay = hdOnlyOverlay();
     const { rejected } = applyBindingGate(
