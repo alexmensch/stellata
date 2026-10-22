@@ -45,12 +45,17 @@ function writeDisagreements(rows: readonly HdHipRouteDisagreement[]): void {
   );
 }
 
+function compareHipNullsFirst(a: number | null, b: number | null): number {
+  if (a === null || b === null) return (a === null ? 0 : 1) - (b === null ? 0 : 1);
+  return a - b;
+}
+
 function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
   writeTsv(
     OUT_REJECTED,
     'gaia_source_id\thip\tv_mag\tv_via\tg_mag\treason\tdesignations',
     [...rows]
-      .sort((a, b) => (a.hip ?? 0) - (b.hip ?? 0) || compareSourceIdsNumeric(a.sourceId, b.sourceId))
+      .sort((a, b) => compareHipNullsFirst(a.hip, b.hip) || compareSourceIdsNumeric(a.sourceId, b.sourceId))
       .map((r) => [
         r.sourceId,
         r.hip ?? '',
