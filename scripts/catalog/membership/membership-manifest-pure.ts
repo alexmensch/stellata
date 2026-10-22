@@ -800,8 +800,8 @@ function bindingReviewRow(
     derived_via: derived.via.join('+'),
     candidates: joinValues(candidates),
     rejected: joinValues(derived.rejected.map((r) => `${r.sourceId}:${r.reason}`)),
-    v_mag: magCell(gate.vMag),
-    v_via: gate.vVia ?? '',
+    v_mag: magCell(gate.printedV?.vMag ?? null),
+    v_via: gate.printedV?.vVia ?? '',
     derived_g: gOf(derived.sourceId),
     derived_simbad: xidsOf(derived.sourceId),
   };
@@ -1340,7 +1340,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     // Sol derives no binding, so it carries no gate evidence of its own.
     const mag = kept[i].proper === SOL_PROPER_NAME
       ? SOL_APPARENT_V_MAGNITUDE
-      : spineBindings[i].gate?.vMag ?? null;
+      : spineBindings[i].gate?.printedV?.vMag ?? null;
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       spineBrightRows++;
       if (noEntry) spineBrightRowsWithoutOverlayEntry++;

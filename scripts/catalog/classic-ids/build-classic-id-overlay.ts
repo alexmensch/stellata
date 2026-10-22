@@ -56,10 +56,10 @@ function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
     OUT_REJECTED,
     'gaia_source_id\thip\tv_mag\tv_via\tg_mag\treason\tdesignations',
     [...rows]
-      .sort((a, b) => a.hip - b.hip || compareSourceIdsNumeric(a.sourceId, b.sourceId))
+      .sort((a, b) => (a.hip ?? 0) - (b.hip ?? 0) || compareSourceIdsNumeric(a.sourceId, b.sourceId))
       .map((r) => [
         r.sourceId,
-        r.hip === 0 ? '' : r.hip,
+        r.hip ?? '',
         r.vMag.toFixed(3),
         r.vVia,
         r.gMag === null ? '' : r.gMag.toFixed(3),

@@ -229,7 +229,7 @@ describe('deriveBinding', () => {
 
   it('cannot weigh a row with no printed V, and says so', () => {
     const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, simbad);
-    expect(gate).toMatchObject({ vMag: null, vVia: null });
+    expect(gate.printedV).toBeNull();
     expect(deriveBinding(candidates({ tyc: 'a' }), gate))
       .toMatchObject({ sourceId: 'a', gateable: false, weighedNoGMag: 0 });
   });
@@ -243,12 +243,12 @@ describe('deriveBinding', () => {
       hip: new Map([[50, 5.0]]), tycho2: { '1-1-1': 5.0 }, gliese: { 'GJ 4285': 5.0 },
     }));
     const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, lower, simbad);
-    expect(gate).toMatchObject({ vMag: 5.0, vVia: 'tycho2' });
+    expect(gate.printedV).toMatchObject({ vMag: 5.0, vVia: 'tycho2' });
     expect(deriveBinding(candidates({ tyc: 'a', simbad: 'c' }), gate))
       .toMatchObject({ sourceId: 'c', gateable: true });
-    expect(rowGateEvidence({ tyc: '', hip: '', gl: 'GJ 4285' }, lower, simbad))
+    expect(rowGateEvidence({ tyc: '', hip: '', gl: 'GJ 4285' }, lower, simbad).printedV)
       .toMatchObject({ vMag: 5.0, vVia: 'gliese' });
-    expect(rowGateEvidence({ tyc: '1-1-1', hip: '50', gl: '' }, lower, simbad))
+    expect(rowGateEvidence({ tyc: '1-1-1', hip: '50', gl: '' }, lower, simbad).printedV)
       .toMatchObject({ vMag: 5.0, vVia: 'printed_hip' });
   });
 });

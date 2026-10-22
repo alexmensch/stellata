@@ -330,8 +330,8 @@ failure and capping the tier there would hand the faintest stars to the
 
 Three joined rows sit at G > 15 against a bright printed V (|ΔV| up to 19.7).
 Those are cross-walk mis-bindings, not photometry, and never reach this
-cascade: the `resolveGaiaSourceId` gates scrubbed them when the inherited
-spine was frozen, and the record build reads the surviving binding off the
+cascade: the binding gates (`weighBinding`) refuse them in the manifest
+generator, and the record build reads the surviving binding off the
 manifest column rather than re-deciding it ([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived);
 [The binding gate](/data/classic-ids/README.md#the-binding-gate)
 for the same gate on the label side).

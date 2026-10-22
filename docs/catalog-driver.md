@@ -533,9 +533,9 @@ best-neighbour tables and routinely land on the *same* wrong source for a
 saturated star, so a mis-binding shows up as an agreement: the G = 20.95
 background source beside α Cen B agreed on both routes while carrying
 HD 128621 · HR 5460 · HIP 71681 · `alf Cen`. The assembled overlay is
-therefore gated through the record build's own `resolveGaiaSourceId` checks
-(G − V ≥ 1.0, sibling-letter attribution) before any count is taken, and
-268 rows are dropped to `data/classic-ids/rejected_bindings.tsv`. **A
+therefore gated through `weighBinding`, the membership derivation's own
+gates (G − V ≥ 1.0, sibling-letter attribution), before any count is taken,
+and the rows it refuses are dropped to `data/classic-ids/rejected_bindings.tsv`. **A
 consumer keying labels off the overlay inherits this gate for free; one that
 derives bindings from the raw cross-walks must apply it** — the membership
 generator does, through the same call

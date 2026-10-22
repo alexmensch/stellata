@@ -1622,65 +1622,6 @@ export function isSiblingLetterAttribution(
   return false;
 }
 
-/** Resolve an AT-HYG row's Gaia DR3 source_id, falling back to a
- *  HIP→Gaia cross-walk when the AT-HYG `gaia` column is blank.
- *  Precedence: AT-HYG native > HIP cross-walk; returns null when
- *  neither source has a hit. Gaia-saturated bright binaries (Sirius,
- *  Vega, Procyon, Polaris, Betelgeuse, …) are absent from BOTH
- *  AT-HYG.gaia AND Gaia's `hipparcos2_best_neighbour` cross-walk for
- *  the same physical reason (Gaia's 5-parameter fit fails on
- *  saturated sources), and therefore remain null here. They are
- *  resolved instead through the build-binaries.py pipeline writing
- *  data/binaries/multiples.tsv.
- *
- *  When `vMag` and `gMagOf` are supplied, each candidate binding is
- *  vetted against the magnitude gate above; when `wdsXids` is supplied,
- *  each is also vetted against the sibling-letter gate. A rejected
- *  native cell still falls through to the cross-walk (itself vetted).
- *  `magRejected` / `siblingRejected` report that at least one candidate
- *  was scrubbed by the respective gate. */
-export function resolveGaiaSourceId(
-  gaiaSourceId: string | null,
-  hip: number | null,
-  hipToGaia: Map<number, string> | null,
-  vMag: number | null = null,
-  gMagOf: ((sourceId: string) => number | null) | null = null,
-  wdsXids: SimbadWdsXidIndex | null = null,
-): {
-  gaiaSourceId: string | null;
-  backfilled: boolean;
-  magRejected: boolean;
-  siblingRejected: boolean;
-} {
-  let magRejected = false;
-  let siblingRejected = false;
-  const passes = (id: string): boolean => {
-    if (vMag !== null && gMagOf !== null) {
-      const g = gMagOf(id);
-      if (g !== null && g - vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG) {
-        magRejected = true;
-        return false;
-      }
-    }
-    if (isSiblingLetterAttribution(id, hip, wdsXids)) {
-      siblingRejected = true;
-      return false;
-    }
-    return true;
-  };
-  if (gaiaSourceId && passes(gaiaSourceId)) {
-    return { gaiaSourceId, backfilled: false, magRejected, siblingRejected };
-  }
-  if (hip === null || hip <= 0 || !hipToGaia) {
-    return { gaiaSourceId: null, backfilled: false, magRejected, siblingRejected };
-  }
-  const hit = hipToGaia.get(hip);
-  if (hit && passes(hit)) {
-    return { gaiaSourceId: hit, backfilled: true, magRejected, siblingRejected };
-  }
-  return { gaiaSourceId: null, backfilled: false, magRejected, siblingRejected };
-}
-
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any

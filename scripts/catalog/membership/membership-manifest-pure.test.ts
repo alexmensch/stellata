@@ -367,7 +367,7 @@ describe('buildMembership — the spine side', () => {
     expect(colliding.counts.derivationOutcome.collision).toBe(2);
   });
 
-  // Both gates run through the one `resolveGaiaSourceId` the overlay gate calls:
+  // Both gates run through the one `weighBinding` the overlay gate calls:
   // a candidate whose G sits more than a magnitude below the printed V is not
   // the star, and the derivation falls through to the next source.
   it('refuses a candidate the magnitude gate rejects and falls through', () => {

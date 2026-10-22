@@ -10,7 +10,7 @@ completes is [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--
 scripts/catalog/membership/binding/
   binding-derivation-pure.ts    The four candidate sources, the consensus
     (+ test)                    ranking, both gates through
-                                resolveGaiaSourceId, and the candidate set the
+                                weighBinding, and the candidate set the
                                 astrometry request has to cover. Pure, and
                                 imports nothing from the manifest —
                                 `../../spine/` and
@@ -47,9 +47,12 @@ above.
 ## Both gates weigh every candidate
 
 **Every** candidate goes through **both binding gates by calling
-`resolveGaiaSourceId`** — the one call `applyBindingGate` makes on the label
-side, so the two cannot drift on what counts as a bad binding — and the first
-that passes wins. The magnitude gate weighs G
+`weighBinding`** (`../../classic-ids/classic-id-overlay-pure.ts`) — the one call
+`applyBindingGate` makes on the label side, so the two cannot drift on what
+counts as a bad binding — and the first that binds wins. The verdict is
+`pass`, `reject` (`mag` / `sibling`), or `unweighable` (`no_printed_v` /
+`no_pulled_row` / `null_g`), which binds: the magnitude arm could not run, and
+the sibling arm, which needs neither a G nor a V, still refuses. The magnitude gate weighs G
 against the record's **printed V in the V cascade's own tier order**:
 Hipparcos on its HIP, else Tycho-2's `VT − 0.090(BT − VT)` on its TYC, else
 Gliese's `Vmag` on its GJ cell — all three through `printedV` over the

@@ -95,7 +95,6 @@ import {
   apparentToAbsoluteMagnitude,
   applyBailerJonesOverride,
   isBailerJonesEligible,
-  resolveGaiaSourceId,
   parseGaiaSourceIdStr,
   parseSimbadWdsXidsTsv,
   isSiblingLetterAttribution,
@@ -1577,123 +1576,7 @@ describe('catalog-pure / parseGaiaSourceIdStr', () => {
   });
 });
 
-describe('catalog-pure / resolveGaiaSourceId', () => {
-  const map = new Map<number, string>([
-    [2, '2341871673090078592'],
-    [3, '2881742980523997824'],
-  ]);
-
-  it('returns the manifest source_id untouched (precedence over cross-walk)', () => {
-    expect(resolveGaiaSourceId('999', 2, map)).toEqual({
-      gaiaSourceId: '999',
-      backfilled: false,
-      magRejected: false,
-      siblingRejected: false,
-    });
-  });
-
-  it('backfills from HIP cross-walk when the manifest gaia cell is null', () => {
-    expect(resolveGaiaSourceId(null, 2, map)).toEqual({
-      gaiaSourceId: '2341871673090078592',
-      backfilled: true,
-      magRejected: false,
-      siblingRejected: false,
-    });
-  });
-
-  it('returns null when HIP is absent (no cross-walk key available)', () => {
-    expect(resolveGaiaSourceId(null, null, map)).toEqual({
-      gaiaSourceId: null,
-      backfilled: false,
-      magRejected: false,
-      siblingRejected: false,
-    });
-  });
-
-  it('returns null when HIP is not in the cross-walk (Gaia-saturated bright stars)', () => {
-    // Sirius (HIP 32349), Vega (91262), Procyon (37279) etc. are absent
-    // from `hipparcos2_best_neighbour` — they stay unresolved here.
-    expect(resolveGaiaSourceId(null, 32349, map)).toEqual({
-      gaiaSourceId: null,
-      backfilled: false,
-      magRejected: false,
-      siblingRejected: false,
-    });
-  });
-
-  it('returns null when the HIP cross-walk itself is null (build without xmatch file)', () => {
-    expect(resolveGaiaSourceId(null, 2, null)).toEqual({
-      gaiaSourceId: null,
-      backfilled: false,
-      magRejected: false,
-      siblingRejected: false,
-    });
-  });
-
-  it('rejects non-positive HIP values', () => {
-    expect(resolveGaiaSourceId(null, 0, map)).toEqual({
-      gaiaSourceId: null,
-      backfilled: false,
-      magRejected: false,
-      siblingRejected: false,
-    });
-    expect(resolveGaiaSourceId(null, -1, map)).toEqual({
-      gaiaSourceId: null,
-      backfilled: false,
-      magRejected: false,
-      siblingRejected: false,
-    });
-  });
-});
-
-describe('catalog-pure / resolveGaiaSourceId magnitude gate', () => {
-  const gMags = new Map<string, number>([
-    ['5877748442128924544', 20.95], // Toliman's wrong background binding
-    ['777', 1.6],
-  ]);
-  const gMagOf = (id: string) => gMags.get(id) ?? null;
-
-  it('scrubs a native binding fainter in G than V beyond the gate (Toliman)', () => {
-    expect(
-      resolveGaiaSourceId('5877748442128924544', null, null, 1.33, gMagOf),
-    ).toEqual({ gaiaSourceId: null, backfilled: false, magRejected: true, siblingRejected: false });
-  });
-
-  it('keeps a native binding consistent with V', () => {
-    expect(resolveGaiaSourceId('777', null, null, 1.58, gMagOf)).toEqual({
-      gaiaSourceId: '777', backfilled: false, magRejected: false,
-      siblingRejected: false,
-    });
-  });
-
-  it('scrubs a cross-walk hit that fails the gate', () => {
-    const xmap = new Map<number, string>([[71681, '5877748442128924544']]);
-    expect(resolveGaiaSourceId(null, 71681, xmap, 1.33, gMagOf)).toEqual({
-      gaiaSourceId: null, backfilled: false, magRejected: true,
-      siblingRejected: false,
-    });
-  });
-
-  it('falls through from a rejected native cell to a passing cross-walk hit', () => {
-    const xmap = new Map<number, string>([[1, '777']]);
-    expect(
-      resolveGaiaSourceId('5877748442128924544', 1, xmap, 1.58, gMagOf),
-    ).toEqual({ gaiaSourceId: '777', backfilled: true, magRejected: true, siblingRejected: false });
-  });
-
-  it('passes ungated without a G magnitude or a V magnitude', () => {
-    expect(resolveGaiaSourceId('12345', null, null, 1.0, gMagOf)).toEqual({
-      gaiaSourceId: '12345', backfilled: false, magRejected: false,
-      siblingRejected: false,
-    });
-    expect(
-      resolveGaiaSourceId('5877748442128924544', null, null, null, gMagOf),
-    ).toEqual({
-      gaiaSourceId: '5877748442128924544', backfilled: false, magRejected: false,
-      siblingRejected: false,
-    });
-  });
-
+describe('catalog-pure / GAIA_BINDING_G_MINUS_V_REJECT_MAG', () => {
   it('matches the binaries pipeline threshold (scripts/binaries/indices.py)', () => {
     const py = readFileSync(resolve(__dirname, '../../binaries/indices.py'), 'utf8');
     const m = py.match(/^GAIA_BINDING_G_MINUS_V_REJECT_MAG\s*=\s*([\d.]+)/m);
@@ -1799,22 +1682,6 @@ describe('catalog-pure / sibling-letter attribution gate', () => {
   it('is inert without a HIP or without the xids index', () => {
     expect(isSiblingLetterAttribution('1420101696285626624', null, xids)).toBe(false);
     expect(isSiblingLetterAttribution('1420101696285626624', 83608, null)).toBe(false);
-  });
-
-  it('resolveGaiaSourceId scrubs the native cell AND the cross-walk candidate', () => {
-    const xmap = new Map<number, string>([[83608, '1420101696285626624']]);
-    expect(
-      resolveGaiaSourceId('1420101696285626624', 83608, xmap, null, null, xids),
-    ).toEqual({
-      gaiaSourceId: null, backfilled: false, magRejected: false,
-      siblingRejected: true,
-    });
-    expect(
-      resolveGaiaSourceId('663434291018997248', 41098, null, null, null, xids),
-    ).toEqual({
-      gaiaSourceId: null, backfilled: false, magRejected: false,
-      siblingRejected: true,
-    });
   });
 });
 

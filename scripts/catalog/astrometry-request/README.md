@@ -106,8 +106,8 @@ definition).
 breaks the gate.** The gate vets a *candidate* — whatever source a cross-walk
 names for a designation — and the whole reason it exists is that a
 candidate is frequently NOT the star, so candidates are routinely not
-membership rows. With no `phot_g_mean_mag` for one, `resolveGaiaSourceId`'s
-magnitude check has nothing to compare and **passes by default**: rejections
+membership rows. With no `phot_g_mean_mag` for one, `weighBinding`'s
+magnitude check has nothing to compare and **binds it unweighed**: rejections
 become silent acceptances. Measured on a membership-only request at the time
 the fault was found: `gateRejectedMag` 102 → **0** and
 `rejected_bindings.tsv` 187 → 101 rows. The extra bindings key sources that

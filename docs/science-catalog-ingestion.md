@@ -196,9 +196,7 @@ subset are genuine DR3 sources that [Bailer-Jones 2021](/data/papers/index.md#ba
 (2-parameter position-only solutions, which have no DR3 parallax to
 invert — the paper covers every EDR3 source that has one), and none of the alternative source_ids recoverable through
 the HIP or Tycho-2 cross-walks appear in B-J either. The empty-`gaia`
-AT-HYG rows recover ~190 source_ids via the HIP cross-walk (now wired
-into `resolveGaiaSourceId` — the `gaiaSourceIdBackfilled` build count)
-— worth having for cross-match keying, but zero of those unlock a B-J
+AT-HYG rows recover ~190 source_ids via the HIP cross-walk — worth having for cross-match keying, but zero of those unlock a B-J
 posterior. Coverage next improves with Gaia DR4 and a B-J-successor
 republication, not with more cross-walk work.
 

@@ -78,6 +78,9 @@ scripts/catalog/classic-ids/
                                   column lands in one place.
   classic-id-overlay-pure.ts      The join, the binding gate, its counts, and
     (+ test)                      the overlay TSV codec (both directions).
+                                  `weighBinding`, the verdict both gates
+                                  call, lives here beside the evidence it
+                                  reads; ../membership/binding/ imports it.
                                   Pure.
   cross-index.ts                  IV/27A as every consumer reads it: the
                                   frozen table with
@@ -135,9 +138,9 @@ TYC (audit 2026-07-27), so the HIP route is a cross-check: on a disagreement
 the HD route keeps the label and the row queues (`data/classic-ids/README.md`).
 
 **Every route above is an unvetted best-neighbour walk, so the assembled
-overlay is then gated** — `applyBindingGate` re-runs the record build's own
-`resolveGaiaSourceId` checks and drops any row whose source_id is not the
-star its designations name (460 rows today). It runs BEFORE the counts, so
+overlay is then gated** — `applyBindingGate` weighs each row through
+`weighBinding`, the membership derivation's own gates, and drops any row whose
+source_id is not the star its designations name (460 rows today). It runs BEFORE the counts, so
 every `overlay*` count and `hdOnMultipleSources` describe the artifact while
 the route counters above stay pre-gate and keep describing upstream
 reachability. Rationale, the two canonical cases, and the bound on the
@@ -178,7 +181,7 @@ counts trade rows without any binding changing verdict.
 **The sibling-letter arm keys on a HIP and the magnitude arm does not**, so
 widening the V evidence widened only the second: `gateRejectedSibling` holds
 at 50 across the change while `gateRejectedMag` went 218 → 410. A row with no
-HIP passes `null` to `resolveGaiaSourceId`, exactly as the record side passes
+HIP passes `null` to `weighBinding`, exactly as the record side passes
 its own empty cell — passing `0` instead applies a gate here that the
 derivation does not apply there, and read 692 rejections rather than 50.
 
@@ -196,7 +199,7 @@ their V — **hip <!-- count:classic-id-overlay/gateableVia.printed_hip -->99,79
 at all. `bindingCandidateSourceIds` applies the same reach, so the request and
 the gate agree by construction and `gateSkippedNoGMag` stays pinnable at zero.
 The membership derivation runs the same checks on the record side through the
-same `resolveGaiaSourceId` call, with its own candidate contribution to the
+same `weighBinding` call, with its own candidate contribution to the
 request and its own zero-pin ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
 
 **An ambiguous designation attaches to every matching record** ([§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia)) —

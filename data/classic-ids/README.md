@@ -176,9 +176,8 @@ HIP can land on a resolvable companion or a background source — and the
 overlay would then assert that star's classic designations on a source that
 is not the star. `applyBindingGate`
 (`scripts/catalog/classic-ids/classic-id-overlay-pure.ts`) runs the SAME
-`resolveGaiaSourceId` gates the record build applies in
-`scripts/catalog/parse/stars-parse.ts`, so the two cannot drift on what
-counts as a bad binding:
+`weighBinding` gates the membership derivation binds every record through,
+so the two cannot drift on what counts as a bad binding:
 
 - **G − V ≥ 1.0 mag** (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) — <!-- count:classic-id-overlay/gateRejectedMag -->410<!-- /count --> rows. The
   canonical case is the G = 20.95 background source beside α Cen B, which

@@ -2,11 +2,16 @@
 // Routes, ambiguity policy and precedence: /docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
 import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
-import { resolveGaiaSourceId, type SimbadWdsXidIndex } from '../record/catalog-pure';
+import {
+  GAIA_BINDING_G_MINUS_V_REJECT_MAG,
+  isSiblingLetterAttribution,
+  type SimbadWdsXidIndex,
+} from '../record/catalog-pure';
 import { emptyTallyPartition } from '../../util/tally';
 import {
   PRINTED_V_TIERS,
   printedV,
+  type PrintedV,
   type PrintedVLookups,
   type PrintedVVia,
 } from '../photometry/v-magnitude-pure';
@@ -82,20 +87,64 @@ export function bindingEvidence(
   };
 }
 
+export type GateReason = 'mag' | 'sibling';
+
+/** Why a candidate's G could not be held against a printed V: the row has no
+ *  printed V, the astrometry pull returned no row for the source (the request
+ *  under-covering its candidates), or Gaia publishes no G for it. */
+export type Unweighable = 'no_printed_v' | 'no_pulled_row' | 'null_g';
+
+/** One gate verdict on one candidate. `unweighable` binds, as `pass` does —
+ *  the magnitude arm could not run, and nothing refused it. */
+export type BindingVerdict =
+  | { kind: 'pass' }
+  | { kind: 'reject'; reason: GateReason }
+  | { kind: 'unweighable'; reason: Unweighable };
+
+/** What a candidate is weighed against: the HIP the sibling gate keys on and
+ *  the printed V the magnitude gate compares G with. */
+export interface GateRow {
+  hip: number | null;
+  printedV: PrintedV | null;
+}
+
+/** Both binding gates, the one weighing the overlay join and the membership
+ *  derivation share. The magnitude arm runs first and its reason wins, so a
+ *  candidate it cannot weigh still faces the sibling-letter arm, which outranks
+ *  every unweighable reason. */
+export function weighBinding(
+  sourceId: string, row: GateRow, evidence: BindingEvidence,
+): BindingVerdict {
+  let unweighable: Unweighable | null = null;
+  if (row.printedV === null) {
+    unweighable = 'no_printed_v';
+  } else {
+    const g = evidence.gMagOf(sourceId);
+    if (g === null) {
+      unweighable = evidence.hasPulledRow(sourceId) ? 'null_g' : 'no_pulled_row';
+    } else if (g - row.printedV.vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG) {
+      return { kind: 'reject', reason: 'mag' };
+    }
+  }
+  if (isSiblingLetterAttribution(sourceId, row.hip, evidence.wdsXids)) {
+    return { kind: 'reject', reason: 'sibling' };
+  }
+  return unweighable === null ? { kind: 'pass' } : { kind: 'unweighable', reason: unweighable };
+}
+
 /** An overlay row dropped because the source_id it keys is not the star its
  *  designations name. Emitted to `data/classic-ids/rejected_bindings.tsv` so
  *  the parity ledger can review what the gate removed. */
 export interface RejectedBinding {
   sourceId: string;
-  /** 0 where the row carries no HIP at all — the population the Tycho-2 and
-   *  Gliese V tiers made gateable, which the HIP-only gate skipped. */
-  hip: number;
+  /** Null where the row carries no HIP at all. */
+  hip: number | null;
   vMag: number;
   /** Which printed tier supplied `vMag`, so a reviewer can see whether the
    *  rejection rests on Hipparcos or on one of the tiers below it. */
   vVia: PrintedVVia;
   gMag: number | null;
-  reason: 'mag' | 'sibling';
+  reason: GateReason;
   designations: string;
 }
 
@@ -109,15 +158,14 @@ function designationSummary(entry: OverlayEntry): string {
   return parts.join(' · ');
 }
 
-/** Runs the SAME `resolveGaiaSourceId` gates `stars-parse.ts` applies, never
- *  a second implementation of them. Dropping the WHOLE row rather than just
- *  its `hip` cell is the point: both walks routinely land on the same wrong
- *  source, so if the source is not the star then every designation keyed on
- *  it is misattributed, and the labels ride the inherited spine instead.
+/** Weighs every overlay row through `weighBinding`, the derivation's own
+ *  gates. Dropping the WHOLE row rather than just its `hip` cell is the point:
+ *  both walks routinely land on the same wrong source, so if the source is not
+ *  the star then every designation keyed on it is misattributed, and the
+ *  labels ride the inherited spine instead.
  *
- *  A gateable row with no `G` is NOT a rejection — `resolveGaiaSourceId`
- *  passes a candidate it cannot weigh — so both no-G counts are the gate's
- *  own coverage alarms, split by cause
+ *  An unweighable row binds rather than drops, so the two no-G counts are the
+ *  gate's own coverage alarms, split by cause
  *  (`../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`;
  *  `../photometry/README.md#the-v-cascade`). */
 export function applyBindingGate(
@@ -145,30 +193,23 @@ export function applyBindingGate(
       skippedNoPrintedV++;
       continue;
     }
+    gateableVia[printed.vVia]++;
     // The sibling gate keys on a HIP rather than on the V: the one the V came
     // from, else the entry's first.
-    const hip = printed.vVia === 'printed_hip' ? printed.key : entry.hip[0] ?? 0;
-    const { vMag, vVia } = printed;
-    gateableVia[vVia]++;
-    if (evidence.gMagOf(sourceId) === null) {
-      if (evidence.hasPulledRow(sourceId)) skippedNullGMag++;
+    const hip = printed.vVia === 'printed_hip' ? printed.key : entry.hip[0] ?? null;
+    const verdict = weighBinding(sourceId, { hip, printedV: printed }, evidence);
+    if (verdict.kind === 'unweighable') {
+      if (verdict.reason === 'null_g') skippedNullGMag++;
       else skippedNoGMag++;
     }
-    // `null`, not 0, where the entry carries no HIP: the record side passes
-    // its own null cell and `isSiblingLetterAttribution` short-circuits on it,
-    // so a 0 here would apply a gate to the label side that the record side
-    // does not (/docs/catalog-driver.md#4-how-hd-reaches-gaia — the two must not drift).
-    const verdict = resolveGaiaSourceId(
-      sourceId, hip === 0 ? null : hip, null, vMag, evidence.gMagOf, evidence.wdsXids,
-    );
-    if (verdict.gaiaSourceId !== null) continue;
+    if (verdict.kind !== 'reject') continue;
     rejected.push({
       sourceId,
       hip,
-      vMag,
-      vVia,
+      vMag: printed.vMag,
+      vVia: printed.vVia,
       gMag: evidence.gMagOf(sourceId),
-      reason: verdict.magRejected ? 'mag' : 'sibling',
+      reason: verdict.reason,
       designations: designationSummary(entry),
     });
   }
