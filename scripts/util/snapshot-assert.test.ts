@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { assertOrUpdateSnapshot, type SnapshotAssertion } from './snapshot-assert';
+import { assertOrUpdateSnapshot, snapshotCheck, type SnapshotAssertion } from './snapshot-assert';
 
 const ENV = 'SNAPSHOT_ASSERT_TEST_UPDATE';
 
@@ -68,5 +68,24 @@ describe('assertOrUpdateSnapshot', () => {
     process.env[ENV] = '1';
     await assertOrUpdateSnapshot(spec({ n: 2 }));
     expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ n: 2 });
+  });
+
+  describe('snapshotCheck', () => {
+    it('answers pass, fail and refresh without touching the file', () => {
+      writeFileSync(path, JSON.stringify({ n: 1 }));
+      expect(snapshotCheck(spec({ n: 1 })).kind).toBe('pass');
+      expect(snapshotCheck(spec({ n: 2 })).kind).toBe('fail');
+      process.env[ENV] = '1';
+      expect(snapshotCheck(spec({ n: 2 }))).toEqual({
+        kind: 'refresh', path, text: `${JSON.stringify({ n: 2 }, null, 2)}\n`,
+      });
+      expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ n: 1 });
+    });
+
+    it('fails on a missing snapshot without the update flag', () => {
+      const check = snapshotCheck(spec({ n: 1 }));
+      expect(check.kind).toBe('fail');
+      expect(check.kind === 'fail' && check.message).toContain(`${ENV}=1 build`);
+    });
   });
 });
