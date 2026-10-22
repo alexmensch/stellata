@@ -33,6 +33,7 @@ import {
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
   CATALOG_MANIFEST_FILENAME,
+  CATALOG_CHUNK_FILENAME,
   catalogChunkFilename,
   planCatalogChunks,
   recordsInChunkPrefix,
@@ -67,7 +68,7 @@ import {
   assertFigureVerticesInFirstChunk,
   buildFigureLines,
 } from './parse/constellations/constellations';
-import { writeBoundaryArtifact } from './boundaries/build-boundaries-artifact';
+import { renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
   parseHipCcdm,
   applyDoublesFlag,
@@ -190,7 +191,7 @@ async function writeSimbadSourcedDistances(stars: readonly Star[]): Promise<void
 // higher-index chunks the manifest no longer lists.
 async function removeStaleCatalogChunks(dir: string): Promise<void> {
   for (const name of await readdir(dir)) {
-    if (/^catalog\.bin\.\d+$/.test(name)) {
+    if (CATALOG_CHUNK_FILENAME.test(name)) {
       await unlink(resolve(dir, name));
     }
   }
@@ -1182,9 +1183,8 @@ async function main() {
   // the fade-quantile table. The quantiles are keyed to apparent magnitude
   // and measured over the shipped population, so this runs against the same
   // `stars` the binary was written from.
-  const boundaries = await writeBoundaryArtifact(
-    OUT_BOUNDARIES, stars, conAssignment.lookup,
-  );
+  const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
+  await writeFile(OUT_BOUNDARIES, boundaries.json);
   counts.boundarySegments = boundaries.segments;
   counts.boundaryDirections = boundaries.directions;
   counts.boundaryRegionRuns = boundaries.regionRuns;

@@ -306,7 +306,8 @@ of reinstatements) so the runtime SID resolver can follow merge-type
 retirements without an extra fetch; omitted while empty.
 
 The chunk-plan / filename / assembly helpers (`planCatalogChunks`,
-`catalogChunkFilename`, `assembleCatalogChunks`, `CatalogManifest`) live
+`catalogChunkFilename` and the `CATALOG_CHUNK_FILENAME` pattern it matches,
+`assembleCatalogChunks`, `CatalogManifest`) live
 in `catalog-pure.ts` and are the single reassembly contract shared by
 all three consumers: the writer (`../build-catalog.ts`), the runtime loader
 (`src/client/loaders/catalog-loader.ts`, fetch), and the Node test/verify

@@ -1,7 +1,5 @@
-// Writes public/constellation-boundaries.json for the chart-mode boundary
+// Renders public/constellation-boundaries.json for the chart-mode boundary
 // layer. See README.md.
-
-import { writeFile } from 'node:fs/promises';
 
 import type {
   IauConstellationLookup,
@@ -26,6 +24,7 @@ export interface BoundaryFadeStar {
 }
 
 export interface BoundaryArtifactReport {
+  json: string;
   segments: number;
   directions: number;
   regionRuns: number;
@@ -54,16 +53,15 @@ export function collectFadeSamples(
   return samples;
 }
 
-export async function writeBoundaryArtifact(
-  outPath: string,
+export function renderBoundaryArtifact(
   stars: readonly BoundaryFadeStar[],
   lookup: IauConstellationLookup,
-): Promise<BoundaryArtifactReport> {
+): BoundaryArtifactReport {
   const samples = collectFadeSamples(stars, lookup.distanceToNearestEdgeDeg);
   const artifact = buildBoundaryArtifact(lookup, samples);
   const json = JSON.stringify(artifact) + '\n';
-  await writeFile(outPath, json);
   return {
+    json,
     segments: artifact.segments.length,
     directions: countDirections(artifact.segments),
     regionRuns: artifact.regions.runs.length / 2,
