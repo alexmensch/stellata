@@ -200,8 +200,9 @@ labels ride the inherited spine exactly as they do for a record the build
 scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`
 (`gaia_source_id`, `hip`, `v_mag`, `v_via`, `g_mag`, `reason`, `designations`;
 a blank `hip` is a row no HIP reaches at all, a blank `designations` means the
-HIP was the row's only label, and a blank `g_mag` means the sibling gate fired
-without needing one). `v_via` says which printed tier the rejection rests on —
+HIP was the row's only label, a blank `g_mag` means the sibling gate fired
+without needing one, and a blank `v_mag` / `v_via` is a sibling refusal of a
+row no printed tier reaches). `v_via` says which printed tier the rejection rests on —
 218 printed_hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
