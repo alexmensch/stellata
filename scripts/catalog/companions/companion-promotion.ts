@@ -1255,7 +1255,10 @@ interface SystemAnchor {
  *  15 Mon's `06410+0954` also carries EP, FG, FO, GO, JI and MN, and resolved
  *  to E = HD 261938. A deeper cursor inside the A branch is still the A
  *  branch, and "A" itself no longer needs a case of its own: it wins its own
- *  branch on depth and every other branch on the letter. */
+ *  branch on depth and every other branch on the letter.
+ *
+ *  `scripts/binaries/stage6_multiples.py` `_anchor_token_rank` is its Python
+ *  twin, so Stage 6's anchor offsets chain from this anchor; change both. */
 export function isMoreCanonicalAnchor(
   candidateComp: string,
   incumbentComp: string,
