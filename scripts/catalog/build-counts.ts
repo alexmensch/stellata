@@ -760,7 +760,7 @@ export function formatCountDiff(diff: CountDiff[]): string {
   return lines.join('\n');
 }
 
-/** The `compare` every count snapshot passes to `assertOrUpdateSnapshot`. */
+/** The `compare` every count snapshot passes to `snapshotCheck`. */
 export function compareCountSnapshot<T extends object>(
   expected: T,
   actual: T,

@@ -119,9 +119,7 @@ same thing — single-use helpers stay with their consumer.
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's
   env var is `1`. It writes nothing itself. A missing snapshot fails too: a
   deleted `*-expected.json` must fail, not re-baseline itself, so the env var
-  is the only way any snapshot is written, a new one included.
-  `assertOrUpdateSnapshot(spec)` applies that check directly, writing the
-  refresh or exiting non-zero on a fail. Used by `build-catalog.ts` (build counts
+  is the only way any snapshot is written, a new one included. Used by `build-catalog.ts` (build counts
   under `UPDATE_BUILD_COUNTS`, distance outliers under
   `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
   WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass

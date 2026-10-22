@@ -1,6 +1,5 @@
 // Count-snapshot checks. See scripts/util/README.md (snapshot-assert.ts entry).
 import { existsSync, readFileSync } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
 
 import type { Check } from './emit-artifacts';
 
@@ -47,21 +46,4 @@ export function snapshotCheck<T>(opts: SnapshotAssertion<T>): Check {
           + `refresh the snapshot with: ${opts.refreshCommand}`,
       }
     : { kind: 'pass', report };
-}
-
-/** Exits the process non-zero on drift or on a missing snapshot. */
-export async function assertOrUpdateSnapshot<T>(
-  opts: SnapshotAssertion<T>,
-): Promise<void> {
-  const check = snapshotCheck(opts);
-  if (check.kind === 'refresh') {
-    await writeFile(check.path, check.text);
-    console.log(`Updated ${check.path}`);
-    return;
-  }
-  if (check.report !== undefined) console.log(check.report);
-  if (check.kind === 'fail') {
-    console.error(check.message);
-    process.exit(1);
-  }
 }
