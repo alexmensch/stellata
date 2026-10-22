@@ -559,11 +559,12 @@ describe('magnitudeWeighableSourceIds', () => {
       .toEqual([HIP_SRC, TYC_ONLY_SRC, CNS5_SRC, GLIESE_SRC].sort());
   });
 
-  // The request carries a G exactly where the gate can hold one against a V:
-  // every other row the gate weighs, it weighs on the sibling arm alone.
-  it('is the set the gate weighs on the magnitude arm', () => {
-    const { counts } = buildClassicIdOverlay({ ...walks, evidence: bindingEvidence(new Map(), null, lookups) });
-    expect(counts.gateableVia).toEqual({ printed_hip: 2, tycho2: 1, gliese: 1 });
-    expect(counts.gateSkippedNoPrintedV).toBe(1);
+  it('is the set of sources the gate held a G against', () => {
+    const candidates = joinOverlayCandidates(walks);
+    const { magnitudeWeighed } = applyBindingGate(
+      new Map(candidates.overlay), bindingEvidence(new Map(), null, lookups), candidates.tycsBySource,
+    );
+    expect([...magnitudeWeighableSourceIds(joinOverlayCandidates(walks), lookups)].sort())
+      .toEqual([...magnitudeWeighed].sort());
   });
 });

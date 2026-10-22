@@ -112,8 +112,12 @@ export function applyBindingGate(
   skippedNoGMag: number;
   skippedNullGMag: number;
   gateableVia: Record<PrintedVVia, number>;
+  /** The sources the magnitude arm reached a printed V for — what the
+   *  astrometry request has to carry a G for. */
+  magnitudeWeighed: Set<string>;
 } {
   const rejected: RejectedBinding[] = [];
+  const magnitudeWeighed = new Set<string>();
   let skippedNoPrintedV = 0;
   let skippedNoGMag = 0;
   let skippedNullGMag = 0;
@@ -125,6 +129,7 @@ export function applyBindingGate(
     // from, else the entry's first.
     const hip = printed?.vVia === 'printed_hip' ? printed.key : entry.hip[0] ?? null;
     const verdict = weighBinding(sourceId, { hip, printedV: printed }, evidence);
+    if (verdict.magnitude !== 'no_printed_v') magnitudeWeighed.add(sourceId);
     if (verdict.magnitude === 'no_printed_v') skippedNoPrintedV++;
     else if (verdict.magnitude === 'null_g') skippedNullGMag++;
     else if (verdict.magnitude === 'no_pulled_row') skippedNoGMag++;
@@ -140,7 +145,7 @@ export function applyBindingGate(
     });
   }
   for (const r of rejected) overlay.delete(r.sourceId);
-  return { rejected, skippedNoPrintedV, skippedNoGMag, skippedNullGMag, gateableVia };
+  return { rejected, skippedNoPrintedV, skippedNoGMag, skippedNullGMag, gateableVia, magnitudeWeighed };
 }
 
 /** An IV/27A row whose HD→TYC→source_id route and HIP→source_id route
