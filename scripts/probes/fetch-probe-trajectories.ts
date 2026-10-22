@@ -2,9 +2,9 @@
 // adaptive grid and writes data/probes/{id}.json. Manual + infrequent
 // (`pnpm run fetch:probes`); README.md#adaptive-grid.
 
-import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { declareOutputs, emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 
@@ -35,6 +35,12 @@ import {
 } from './probe-trajectory-schema';
 
 const OUT_DIR = resolve(REPO_ROOT, 'data/probes');
+
+const probePath = (probe: ProbeMission): string => resolve(OUT_DIR, probeTrajectoryFilename(probe.id));
+
+const probeOutputs = (roster: readonly ProbeMission[]) => declareOutputs(roster.map(probePath));
+
+export const PROBE_OUTPUTS = probeOutputs(PROBE_MISSIONS);
 
 /** Last epoch the JPL spacecraft SPKs cover; all five reach it. */
 const STOP_TIME = '2050-01-01';
@@ -182,7 +188,7 @@ async function verify(samples: SampleSet, emitted: VectorRow[]): Promise<Verific
   return result;
 }
 
-async function fetchProbe(probe: ProbeMission, retrievedUtc: string): Promise<void> {
+async function fetchProbe(probe: ProbeMission, retrievedUtc: string): Promise<string> {
   console.log(`  ${probe.label}`);
   const samples = new SampleSet(probe);
   const { startMu, stopMu } = await fetchSpanEndpoints(
@@ -237,7 +243,6 @@ async function fetchProbe(probe: ProbeMission, retrievedUtc: string): Promise<vo
     ]),
   };
 
-  writeFileSync(resolve(OUT_DIR, probeTrajectoryFilename(probe.id)), serializeRowFile(file));
   const spanDays = jdOfMicrodays(endMu - startMu);
   console.log(
     `    ${samples.requests} requests, ${samples.fetched} epochs fetched → ` +
@@ -252,6 +257,7 @@ async function fetchProbe(probe: ProbeMission, retrievedUtc: string): Promise<vo
         `across the ${(jdOfMicrodays(MIN_STEP_MICRODAYS) * 86400).toFixed(0)} s sampling floor`,
     );
   }
+  return serializeRowFile(file);
 }
 
 function shortestGapDays(rows: VectorRow[]): number {
@@ -261,7 +267,6 @@ function shortestGapDays(rows: VectorRow[]): number {
 }
 
 async function main(): Promise<void> {
-  mkdirSync(OUT_DIR, { recursive: true });
   const retrievedUtc = new Date().toISOString();
   console.log(
     `Chord tolerance ${CHORD_TOLERANCE_AU} AU, base step ` +
@@ -271,7 +276,9 @@ async function main(): Promise<void> {
   const only = new Set(process.argv.slice(2));
   const roster = only.size === 0 ? PROBE_MISSIONS : PROBE_MISSIONS.filter((p) => only.has(p.id));
   if (roster.length === 0) throw new Error(`No roster probe matches ${[...only].join(', ')}`);
-  for (const probe of roster) await fetchProbe(probe, retrievedUtc);
+  const files = new Map<string, string>();
+  for (const probe of roster) files.set(probePath(probe), await fetchProbe(probe, retrievedUtc));
+  emitArtifacts({ outputs: probeOutputs(roster), files });
 }
 
 main().catch((err) => {
