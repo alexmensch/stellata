@@ -13,8 +13,8 @@ scripts/catalog/distance/radial-velocity/
   radial-velocity.ts (+ test)   The cascade, the error banding, and the
                                 ceiling test that rejects a nonphysical radial
                                 term on its own. Imports `gaiaHas5pSolution`,
-                                `gaiaRowIs2p` and `isGaiaCatalogueBibcode` from
-                                ../gaia-distrust and the sanity ceiling from
+                                `gaiaRowIs2p`, `isGaiaCatalogueBibcode` and
+                                `refusedBy` from ../gaia-distrust and the sanity ceiling from
                                 ../direction-cascade, so the radial and
                                 tangential terms distrust a row for the same
                                 reason and by the same predicates.

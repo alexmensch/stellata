@@ -14,8 +14,9 @@ that sit *above* this cascade; this file owns which parallax they override.
 scripts/catalog/distance/parallax/
   parallax-cascade.ts (+ test)  The cascade, its tier enum, the two precision
                                 constants, and the `DistVia → BuildCounts` key
-                                map. Imports both skip predicates from
-                                ../gaia-distrust.
+                                map. Its skip rules are `refusedBy` from
+                                ../gaia-distrust, fed the publications the
+                                tiers above refused.
   pair-member-parallax.ts       The `pair_member_parallax` index: multiples.tsv
     (+ test)                    pair rows × the DR3 astrometry table, per WDS
                                 root. Built once before the walk, in

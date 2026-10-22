@@ -61,6 +61,26 @@ export function isGaiaCatalogueBibcode(bibcode: string): boolean {
  *  without this the parallax cascade's precision gate refuses a value and then
  *  re-admits the identical number one tier down, stripped of the error bar the
  *  refusal was based on — measured at 574 records, matching to the digit. */
-export function isHipparcos2Bibcode(bibcode: string | null): boolean {
+export function isHipparcos2Bibcode(bibcode: string): boolean {
   return bibcode === '2007A&A...474..653V';
+}
+
+/** A publication a first-order tier refused outright on this record. */
+export type RefusedPublication = 'hipparcos2';
+
+export const NO_REFUSED_PUBLICATIONS: ReadonlySet<RefusedPublication> = new Set();
+
+/** What a cascade has refused on this record by the time a courier is
+ *  reached. `gaiaIs2p` is Gaia's own refusal — `gaiaRowIs2p` of the record. */
+export interface Refusals {
+  gaiaIs2p: boolean;
+  refusedPublications: ReadonlySet<RefusedPublication>;
+}
+
+/** A courier may not re-serve a value attributed to a publication a tier above
+ *  it already refused — the one rule behind every skip
+ *  (../distance/parallax/README.md#the-skip-rules--one-principle-two-publications). */
+export function refusedBy(bibcode: string, { gaiaIs2p, refusedPublications }: Refusals): boolean {
+  return (gaiaIs2p && isGaiaCatalogueBibcode(bibcode))
+    || (refusedPublications.has('hipparcos2') && isHipparcos2Bibcode(bibcode));
 }
