@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { compareCountSnapshot } from '../build-counts';
-import { loadClassicIdCrossWalks, loadDesignationTables } from './binding-candidates';
+import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence } from './binding-evidence';
 import {
   OVERLAY_VALUE_SEPARATOR,
@@ -88,25 +88,13 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
 }
 
 async function main(): Promise<void> {
-  const { crossIndex, bsc5 } = loadDesignationTables();
   const { evidence } = loadBindingEvidence();
-
-  const { tyc2Hd, cns5, tycToSource, hipToSource } = await loadClassicIdCrossWalks();
-
   const {
     overlay,
     counts: joinCounts,
     disagreements,
     rejectedBindings,
-  } = buildClassicIdOverlay({
-    tyc2Hd,
-    crossIndex,
-    bsc5,
-    cns5,
-    tycToSource,
-    hipToSource,
-    evidence,
-  });
+  } = buildClassicIdOverlay({ ...await loadClassicIdCrossWalks(), evidence });
 
   writeFileSync(OUT_OVERLAY, serializeOverlay(overlay));
   writeDisagreements(disagreements);

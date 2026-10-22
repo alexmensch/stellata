@@ -33,11 +33,11 @@ scripts/catalog/classic-ids/
                                   evidence tables, writes the overlay and its
                                   two gate queues, and asserts the count
                                   snapshot.
-  binding-candidates.ts           The loaders for every table the overlay
-                                  join reads, shared with
-                                  ../astrometry-request/, which runs the join
-                                  itself to pull a G for each source the gate
-                                  can weigh (README.md#the-gates-evidence-has-to-be-pulled).
+  binding-candidates.ts           `loadClassicIdCrossWalks`, every table the
+                                  overlay join reads, as one `OverlayWalks`.
+                                  ../astrometry-request/ runs the same join
+                                  off the primaries tables it already holds
+                                  (README.md#the-gates-evidence-has-to-be-pulled).
   binding-evidence.ts             Loads the gate's evidence tables — G per
                                   source, the V cascade's three printed tiers
                                   (Hipparcos, Tycho-2, Gliese), SIMBAD's WDS

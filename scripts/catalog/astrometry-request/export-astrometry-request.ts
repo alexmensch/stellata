@@ -5,7 +5,6 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
-import { loadBindingCandidateInputs, loadDesignationTables } from '../classic-ids/binding-candidates';
 import {
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
@@ -64,10 +63,12 @@ async function main(): Promise<void> {
 
   const candidates = magnitudeWeighableSourceIds(
     joinOverlayCandidates({
-      ...loadBindingCandidateInputs(),
-      ...loadDesignationTables(),
       tyc2Hd: tables.iv25,
+      crossIndex: tables.iv27a,
+      bsc5: tables.v50,
+      cns5: tables.cns5,
       tycToSource: tables.tycToSource,
+      hipToSource: tables.hipToSource,
     }),
     printedVLookups(hipVMag, tables.tycho2, tables.gliese),
   );
