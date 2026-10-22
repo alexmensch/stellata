@@ -214,6 +214,11 @@ parallax cascade is where the general shape became visible.
   records matching to the digit. HIP 37 is the shape: HIP2 states 2.62 ± 2.55
   mas, SIMBAD serves 2.62.
 
+Both rules are one call, `refusedBy`, at every courier tier — CNS5 as well as
+SIMBAD, so CNS5's 192 van Leeuwen-cited parallaxes are held to the second rule
+too. None of them reaches a record whose HIP2 the floor refused, so the CNS5
+arm refuses nothing on today's inputs.
+
 **A SIMBAD-sourced distance is excluded from SIMBAD-based validation**, which
 is [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s validation-independence rule reaching this field for the first time —
 no earlier cascade had a SIMBAD tier under a validator that checks the same
