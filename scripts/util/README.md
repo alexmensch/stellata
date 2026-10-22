@@ -98,6 +98,22 @@ same thing — single-use helpers stay with their consumer.
   cannot tally onto an absent key — `undefined + 1` is NaN, which
   reaches the pinned count snapshot as a hole instead of a drift
   failure. `tally.test.ts` pins all four cascades' key coverage.
+- `emit-artifacts.ts` (+ test) — `emitArtifacts({outputs, files, checks,
+  stamp})`, the one way a TypeScript pipeline step writes its outputs. Every
+  check is already a verdict when it arrives; any `fail` refuses the whole
+  emission before a byte is written. Otherwise each file is staged at
+  `<path>.staged` beside its target, so the rename stays on one filesystem,
+  and only once every file is staged are they renamed into place. A crash or
+  failed check therefore leaves every prior output byte-identical. A
+  `.staged` file a killed run left behind is swept by the next run of that
+  step. `outputs` is the step's
+  `declareOutputs(files, families)` constant: what is emitted must equal the
+  declared `files` exactly, plus any members of a declared family (a directory
+  plus a name pattern, the catalogue's transport chunks). Family members a run
+  does not emit are deleted once the new set has landed. A `refresh` check
+  (a snapshot under its update flag) stages its own baseline with the outputs.
+  `stamp`, when given, is written last over exactly the emitted files, so a
+  stamp's outputs and the declaration cannot disagree.
 - `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
   script's computed snapshot against its committed JSON, or rewrite the
   JSON when the spec's env var is `1`. Exits non-zero on drift, and on a
