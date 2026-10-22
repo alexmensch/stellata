@@ -31,8 +31,6 @@ import {
   writeCatalogHeader,
   NAME_TABLE_PADDING,
   NAME_LENGTH_PREFIX_BYTES,
-  CATALOG_MANIFEST_FILENAME,
-  CATALOG_CHUNK_FILENAME,
   catalogChunkFilename,
   planCatalogChunks,
   recordsInChunkPrefix,
@@ -130,9 +128,15 @@ import { REPO_ROOT as ROOT } from '../util/paths';
 import {
   clearStamp, fileHashes, stampIsCurrent, stampPath,
 } from '../util/build-stamp';
-import { DEFAULT_ROW_INDEX_MAP } from './catalog-lookup';
 import {
-  declareOutputs, emitArtifacts, type ArtifactContents, type Check,
+  DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
+  DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
+} from './catalog-lookup';
+import {
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES, OUT_PARKED, OUT_SIMBAD_SOURCED,
+} from './catalog-outputs';
+import {
+  emitArtifacts, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-assert';
 import {
@@ -148,11 +152,6 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const PUBLIC_DIR = resolve(ROOT, 'public');
-const OUT_MANIFEST = resolve(PUBLIC_DIR, CATALOG_MANIFEST_FILENAME);
-const OUT_CON = resolve(ROOT, 'public/constellations.json');
-const OUT_SEARCH = resolve(ROOT, 'public/search-index.json');
-const OUT_BOUNDARIES = resolve(ROOT, 'public/constellation-boundaries.json');
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
   __dirname,
@@ -160,16 +159,6 @@ const EXPECTED_OUTLIERS = resolve(
 );
 
 const CATALOG_STAMP = stampPath('catalog');
-const OUT_PARKED = resolve(ROOT, PARKED_LEDGER_FILE);
-const OUT_SIMBAD_SOURCED = resolve(ROOT, SIMBAD_SOURCED_DISTANCES_FILE);
-
-export const CATALOG_OUTPUTS = declareOutputs(
-  [
-    OUT_MANIFEST, OUT_CON, OUT_BOUNDARIES, OUT_SEARCH, DEFAULT_ROW_INDEX_MAP,
-    OUT_PARKED, OUT_SIMBAD_SOURCED,
-  ],
-  [{ dir: PUBLIC_DIR, member: CATALOG_CHUNK_FILENAME }],
-);
 
 /** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity). A record that reaches no owned parallax cannot be
  *  placed, so it does not ship — and unlike the low-precision rows, which stay
@@ -1162,7 +1151,7 @@ async function main() {
   let chunkOff = 0;
   for (let i = 0; i < chunkBytes.length; i++) {
     files.set(
-      resolve(PUBLIC_DIR, catalogChunkFilename(i)),
+      resolve(CATALOG_CHUNK_DIR, catalogChunkFilename(i)),
       new Uint8Array(out, chunkOff, chunkBytes[i]),
     );
     chunkOff += chunkBytes[i];

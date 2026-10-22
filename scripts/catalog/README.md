@@ -98,6 +98,14 @@ scripts/catalog/
                                   (../util/import-closure-pure.ts, the rule
                                   CI's cache key shares) and each loader's
                                   exported data paths.
+  catalog-outputs.ts (+ test)     CATALOG_OUTPUTS — every file the build
+                                  writes, as its emitArtifacts declaration
+                                  (../util/README.md): the public/ sidecars,
+                                  the row-index map, the two committed
+                                  ledgers, and the transport chunks as a
+                                  family. Side-effect free, so a reader can
+                                  import the declaration without running
+                                  the build.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced
