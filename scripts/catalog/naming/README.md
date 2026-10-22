@@ -77,8 +77,9 @@ scripts/catalog/naming/
                                 which hard-fails on an unmatched SID.
   naming-parity-pure.ts         Ledger codec + the record-identity key and
                                 the shared label resolver.
-  build-naming-parity.ts        Refreshes the ledger from the built
-                                artifacts.
+  build-naming-parity.ts        Refreshes the ledger and the duplicate
+                                list from the built artifacts, both in
+                                one emitArtifacts call.
   naming-parity.test.ts         The /docs/star-naming.md#8-parity--the-gate-on-any-naming-change gate over the built artifacts.
   naming-parity.tsv             The display-change enumeration.
   naming-duplicates.tsv         Duplicate composed labels — data findings.

@@ -1,9 +1,10 @@
 // Refreshes the naming parity ledger from the built artifacts.
 // `pnpm run build:naming-parity`. See README.md#the-parity-ledger.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
 import { REPO_ROOT } from '../../util/paths';
 import {
   DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
@@ -25,6 +26,9 @@ import {
 
 const PARITY = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-parity.tsv');
 const DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
+
+export const NAMING_PARITY_OUTPUTS = declareOutputs([PARITY, DUPLICATES]);
+
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf8')) as T;
 }
@@ -79,7 +83,6 @@ function main(): void {
     });
   }
   const changed = rows.filter((r) => r.old !== r.new);
-  writeFileSync(PARITY, formatParityLedger(changed));
 
   const claimants = new Map<string, string[]>();
   for (const [key, label] of labelByKey) {
@@ -92,7 +95,13 @@ function main(): void {
   for (const [label, ks] of claimants) {
     if (ks.length > 1) duplicates.push({ label, keys: ks.sort() });
   }
-  writeFileSync(DUPLICATES, formatDuplicateLedger(duplicates));
+  emitArtifacts({
+    outputs: NAMING_PARITY_OUTPUTS,
+    files: new Map([
+      [PARITY, formatParityLedger(changed)],
+      [DUPLICATES, formatDuplicateLedger(duplicates)],
+    ]),
+  });
 
   console.log(
     `naming-parity.tsv: ${changed.length} of ${rows.length} frozen pre-ladder ` +
