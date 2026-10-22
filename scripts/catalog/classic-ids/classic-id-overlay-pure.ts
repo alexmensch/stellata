@@ -164,6 +164,12 @@ function designationSummary(entry: OverlayEntry): string {
   return parts.join(' · ');
 }
 
+function gateKeys(
+  sourceId: string, entry: OverlayEntry, tycsBySource: ReadonlyMap<string, readonly string[]>,
+): PrintedVKeys {
+  return { printed_hip: entry.hip, tycho2: tycsBySource.get(sourceId) ?? [], gliese: entry.gj };
+}
+
 /** Weighs every overlay row through `weighBinding`, the derivation's own
  *  gates. Dropping the WHOLE row rather than just its `hip` cell is the point:
  *  both walks routinely land on the same wrong source, so if the source is not
@@ -174,12 +180,6 @@ function designationSummary(entry: OverlayEntry): string {
  *  gate's own coverage alarms, split by cause
  *  (`../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`;
  *  `../photometry/README.md#the-v-cascade`). */
-function gateKeys(
-  sourceId: string, entry: OverlayEntry, tycsBySource: ReadonlyMap<string, readonly string[]>,
-): PrintedVKeys {
-  return { printed_hip: entry.hip, tycho2: tycsBySource.get(sourceId) ?? [], gliese: entry.gj };
-}
-
 export function applyBindingGate(
   overlay: ClassicIdOverlay,
   evidence: BindingEvidence,
