@@ -1,6 +1,5 @@
 // Emit data/classic-ids/classic_id_overlay.tsv — the source_id-keyed classic
 // designation overlay. See README.md.
-import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
@@ -19,7 +18,8 @@ import {
   type RejectedBinding,
 } from './classic-id-overlay-pure';
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
+import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
+import { snapshotCheck } from '../../util/snapshot-assert';
 
 const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OUT_DISAGREEMENTS = resolve(
@@ -32,14 +32,15 @@ const EXPECTED_COUNTS = resolve(
   'scripts/catalog/classic-ids/classic-id-overlay-expected.json',
 );
 
-function writeTsv(path: string, header: string, rows: readonly string[]): void {
-  writeFileSync(path, `${[header, ...rows].join('\n')}\n`);
+export const CLASSIC_ID_OUTPUTS = declareOutputs([OUT_OVERLAY, OUT_DISAGREEMENTS, OUT_REJECTED]);
+
+function tsv(header: string, rows: readonly string[]): string {
+  return `${[header, ...rows].join('\n')}\n`;
 }
 
-function writeDisagreements(rows: readonly HdHipRouteDisagreement[]): void {
+function disagreementsTsv(rows: readonly HdHipRouteDisagreement[]): string {
   const sep = OVERLAY_VALUE_SEPARATOR;
-  writeTsv(
-    OUT_DISAGREEMENTS,
+  return tsv(
     'hd\thip\thd_route_source_ids\thip_route_source_id',
     [...rows]
       .sort((a, b) => a.hd - b.hd)
@@ -52,9 +53,8 @@ function compareHipNullsFirst(a: number | null, b: number | null): number {
   return a - b;
 }
 
-function writeRejectedBindings(rows: readonly RejectedBinding[]): void {
-  writeTsv(
-    OUT_REJECTED,
+function rejectedBindingsTsv(rows: readonly RejectedBinding[]): string {
+  return tsv(
     'gaia_source_id\thip\tv_mag\tv_via\tg_mag\treason\tdesignations',
     [...rows]
       .sort((a, b) => compareHipNullsFirst(a.hip, b.hip) || compareSourceIdsNumeric(a.sourceId, b.sourceId))
@@ -105,22 +105,26 @@ async function main(): Promise<void> {
     rejectedBindings,
   } = buildClassicIdOverlay({ ...await loadClassicIdCrossWalks(), evidence });
 
-  writeFileSync(OUT_OVERLAY, serializeOverlay(overlay));
-  writeDisagreements(disagreements);
-  writeRejectedBindings(rejectedBindings);
   logOverlay(overlay, joinCounts);
+  emitArtifacts({
+    outputs: CLASSIC_ID_OUTPUTS,
+    files: new Map([
+      [OUT_OVERLAY, serializeOverlay(overlay)],
+      [OUT_DISAGREEMENTS, disagreementsTsv(disagreements)],
+      [OUT_REJECTED, rejectedBindingsTsv(rejectedBindings)],
+    ]),
+    checks: [snapshotCheck<OverlayJoinCounts>({
+      envVar: 'UPDATE_BUILD_COUNTS',
+      snapshotPath: EXPECTED_COUNTS,
+      actual: joinCounts,
+      compare: compareCountSnapshot,
+      failureLabel: 'classic-id-overlay count',
+      refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:classic-ids',
+    })],
+  });
   console.log(`wrote ${OUT_OVERLAY}`);
   console.log(`wrote ${OUT_DISAGREEMENTS} (${disagreements.length} rows)`);
   console.log(`wrote ${OUT_REJECTED} (${rejectedBindings.length} rows)`);
-
-  await assertOrUpdateSnapshot<OverlayJoinCounts>({
-    envVar: 'UPDATE_BUILD_COUNTS',
-    snapshotPath: EXPECTED_COUNTS,
-    actual: joinCounts,
-    compare: compareCountSnapshot,
-    failureLabel: 'classic-id-overlay count',
-    refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:classic-ids',
-  });
 }
 
 main().catch((err) => {

@@ -30,9 +30,10 @@ Two entry points, and they split cleanly: **this build joins the overlay,
 scripts/catalog/classic-ids/
   build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables,
                                   both Gaia cross-walks and the gate's three
-                                  evidence tables, writes the overlay and its
-                                  two gate queues, and asserts the count
-                                  snapshot.
+                                  evidence tables, and emits the overlay and
+                                  its two gate queues through emitArtifacts,
+                                  so a drifted count snapshot lands none of
+                                  the three.
   binding-candidates.ts           `loadClassicIdCrossWalks`, every table the
                                   overlay join reads, as one `OverlayWalks`.
                                   ../astrometry-request/ runs the same join
