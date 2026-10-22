@@ -12,6 +12,7 @@ import {
   DEFAULT_CONSTELLATIONS_JSON,
   readCatalogBuffer,
 } from '../../../../scripts/catalog/catalog-lookup';
+import buildCatalogExpected from '../../../../scripts/catalog/build-catalog-expected.json';
 import { peakAmplitudeFactor } from '../../camera/controls/star-geometry';
 import { DEFAULT_INSTRUMENT, STAR_RENDER_DEFAULTS, starPxSizes } from '../../filters/filter-state';
 import { parseBinary, type Catalog } from '../../loaders/catalog-loader';
@@ -41,9 +42,9 @@ describe.skipIf(skip)('the physical-size elision over the built catalog', () => 
     catalog = parseBinary(ab, JSON.parse(conText), JSON.parse(manifestText).sidSuccessors);
   }, 120000);
 
-  it('admits 162 of 979,656 records at a Sol vantage, and gates the rest', () => {
+  it('admits 162 records at a Sol vantage, and gates the rest', () => {
     const { window, inside } = measure();
-    expect(catalog.count).toBe(979656);
+    expect(catalog.count).toBe(buildCatalogExpected.recordCount);
     expect(window).toBeCloseTo(7.1211, 4);
     expect(inside).toBe(162);
   });
