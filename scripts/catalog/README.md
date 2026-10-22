@@ -86,7 +86,12 @@ scripts/catalog/
   build-catalog.ts                Orchestrator. Reads every reference
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
-                                  writes the chunked binary + manifests.
+                                  emits the chunked binary, manifests and
+                                  both committed ledgers through
+                                  emitArtifacts once its two snapshot
+                                  checks pass. On a SID error it lands them
+                                  with no checks and then fails
+                                  ([SID allocation](#sid-allocation)).
   catalog-inputs.ts (+ test)      catalogInputPaths — every file the build
                                   reads, which its content-hash stamp keys:
                                   the import closure plus sibling snapshots

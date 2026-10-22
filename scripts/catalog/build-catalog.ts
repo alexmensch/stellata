@@ -2,8 +2,7 @@
 // public/catalog.bin, public/constellations.json, and
 // public/search-index.json. See scripts/catalog/README.md.
 
-import { statSync, existsSync, readFileSync } from 'node:fs';
-import { mkdir, writeFile, readdir, unlink } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -129,10 +128,13 @@ import {
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
-  clearStamp, fileHashes, stampIsCurrent, stampPath, writeStamp,
+  clearStamp, fileHashes, stampIsCurrent, stampPath,
 } from '../util/build-stamp';
 import { DEFAULT_ROW_INDEX_MAP } from './catalog-lookup';
-import { assertOrUpdateSnapshot } from '../util/snapshot-assert';
+import {
+  declareOutputs, emitArtifacts, type ArtifactContents, type Check,
+} from '../util/emit-artifacts';
+import { snapshotCheck } from '../util/snapshot-assert';
 import {
   resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
   type SidObject,
@@ -158,43 +160,39 @@ const EXPECTED_OUTLIERS = resolve(
 );
 
 const CATALOG_STAMP = stampPath('catalog');
+const OUT_PARKED = resolve(ROOT, PARKED_LEDGER_FILE);
+const OUT_SIMBAD_SOURCED = resolve(ROOT, SIMBAD_SOURCED_DISTANCES_FILE);
+
+export const CATALOG_OUTPUTS = declareOutputs(
+  [
+    OUT_MANIFEST, OUT_CON, OUT_BOUNDARIES, OUT_SEARCH, DEFAULT_ROW_INDEX_MAP,
+    OUT_PARKED, OUT_SIMBAD_SOURCED,
+  ],
+  [{ dir: PUBLIC_DIR, member: CATALOG_CHUNK_FILENAME }],
+);
 
 /** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity). A record that reaches no owned parallax cannot be
  *  placed, so it does not ship — and unlike the low-precision rows, which stay
  *  in the catalogue and are recomputable from it, nothing else records that
  *  these existed. Committed so the set is diffable: a refresh that moves it is
  *  a membership change, and Gaia DR4 should empty most of it. */
-async function writeParkedRecords(parked: readonly ParkedRecord[]): Promise<void> {
-  const path = resolve(ROOT, PARKED_LEDGER_FILE);
-  await writeFile(path, formatParkedRecordsTsv(parked));
+function parkedRecordsTsv(parked: readonly ParkedRecord[]): string {
   console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER_FILE}`);
+  return formatParkedRecordsTsv(parked);
 }
 
 /** Validation independence (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers), made checkable: a record whose distance came
  *  from the SIMBAD tier cannot be verified against SIMBAD's own parallax, so
  *  the sample validator needs to know which records those are. It reads
  *  catalog.bin, which carries no `distVia`, hence the file. */
-async function writeSimbadSourcedDistances(stars: readonly Star[]): Promise<void> {
+function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
   const rows = stars
     .filter((s) => s.distVia === 'simbad_plx')
     .map((s) => ({ gaiaSourceId: s.gaiaSourceId, hip: s.hip }));
-  await writeFile(
-    resolve(ROOT, SIMBAD_SOURCED_DISTANCES_FILE),
-    formatSimbadSourcedDistancesTsv(rows),
-  );
   console.log(
     `  SIMBAD-sourced distances: ${rows.length} → ${SIMBAD_SOURCED_DISTANCES_FILE}`,
   );
-}
-
-// Clear a prior build's chunk set so a shrunk chunk count can't strand stale
-// higher-index chunks the manifest no longer lists.
-async function removeStaleCatalogChunks(dir: string): Promise<void> {
-  for (const name of await readdir(dir)) {
-    if (CATALOG_CHUNK_FILENAME.test(name)) {
-      await unlink(resolve(dir, name));
-    }
-  }
+  return formatSimbadSourcedDistancesTsv(rows);
 }
 
 async function main() {
@@ -218,6 +216,7 @@ async function main() {
     return;
   }
   clearStamp(CATALOG_STAMP);
+  const files = new Map<string, ArtifactContents>();
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
@@ -546,8 +545,8 @@ async function main() {
       + ' (ship, biased inversion — revisit at Gaia DR4)',
     );
   }
-  await writeParkedRecords(stats.parked);
-  await writeSimbadSourcedDistances(stars);
+  files.set(OUT_PARKED, parkedRecordsTsv(stats.parked));
+  files.set(OUT_SIMBAD_SOURCED, simbadSourcedDistancesTsv(stars));
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
   counts.droppedTooFar = stats.dropped.tooFar;
@@ -1137,8 +1136,6 @@ async function main() {
     throw new Error(`Size mismatch: wrote ${off}, expected ${totalLength}`);
   }
 
-  await mkdir(PUBLIC_DIR, { recursive: true });
-  await removeStaleCatalogChunks(PUBLIC_DIR);
   const chunkBytes = planCatalogChunks(totalLength);
   // What first paint actually gets. Pinned because it is the number the
   // progressive load's whole latency argument rests on, and it moves with
@@ -1164,34 +1161,34 @@ async function main() {
   };
   let chunkOff = 0;
   for (let i = 0; i < chunkBytes.length; i++) {
-    await writeFile(
+    files.set(
       resolve(PUBLIC_DIR, catalogChunkFilename(i)),
-      Buffer.from(out, chunkOff, chunkBytes[i]),
+      new Uint8Array(out, chunkOff, chunkBytes[i]),
     );
     chunkOff += chunkBytes[i];
   }
-  await writeFile(OUT_MANIFEST, JSON.stringify(manifest) + '\n');
+  files.set(OUT_MANIFEST, JSON.stringify(manifest) + '\n');
 
   // Constellations JSON (unchanged from v1 format).
   const constellationsOut = CONSTELLATIONS.map((c, idx) => {
     const lines = figureLines.get(idx);
     return lines ? { ...c, lines } : { ...c };
   });
-  await writeFile(OUT_CON, JSON.stringify(constellationsOut) + '\n');
+  files.set(OUT_CON, JSON.stringify(constellationsOut) + '\n');
 
   // Boundary polylines, region label anchors, the runtime membership grid and
   // the fade-quantile table. The quantiles are keyed to apparent magnitude
   // and measured over the shipped population, so this runs against the same
   // `stars` the binary was written from.
   const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
-  await writeFile(OUT_BOUNDARIES, boundaries.json);
+  files.set(OUT_BOUNDARIES, boundaries.json);
   counts.boundarySegments = boundaries.segments;
   counts.boundaryDirections = boundaries.directions;
   counts.boundaryRegionRuns = boundaries.regionRuns;
   counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
   const fade = boundaries.artifact.fade;
   console.log(
-    `Wrote ${OUT_BOUNDARIES} (${boundaries.segments} arcs, `
+    `Built ${OUT_BOUNDARIES} (${boundaries.segments} arcs, `
       + `${boundaries.directions} directions, `
       + `${boundaries.artifact.labels.length} labels, `
       + `${boundaries.regionRuns} region runs, `
@@ -1209,7 +1206,8 @@ async function main() {
     const entry = buildSearchEntry(stars[i], i, componentDesignations.get(i));
     if (entry) searchEntries.push(entry);
   }
-  await writeFile(OUT_SEARCH, JSON.stringify(searchEntries) + '\n');
+  const searchJson = JSON.stringify(searchEntries) + '\n';
+  files.set(OUT_SEARCH, searchJson);
 
   // Catalog row-index map sidecar — lets the runtime binaries loader
   // resolve a multiples.tsv row's identifier to a catalog.bin record
@@ -1217,10 +1215,9 @@ async function main() {
   // source_id (decimal string, since source_ids exceed 2^53), HIP, and
   // synthetic identifier (`synth-<wds_id>-<comp>` for promoted companions
   // that carry no real ID — Algol Ab). Built once above, after the sort.
-  await mkdir(dirname(DEFAULT_ROW_INDEX_MAP), { recursive: true });
-  await writeFile(DEFAULT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
+  files.set(DEFAULT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
   console.log(
-    `Wrote ${DEFAULT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
+    `Row-index map ${DEFAULT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
       `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
   );
@@ -1231,14 +1228,14 @@ async function main() {
   );
   const mb = (totalLength / 1024 / 1024).toFixed(2);
   console.log(
-    `Wrote ${chunkBytes.length} catalog chunk(s) + ${OUT_MANIFEST} ` +
+    `Built ${chunkBytes.length} catalog chunk(s) + ${OUT_MANIFEST} ` +
       `(${mb} MB, ${stars.length} records, v${BINARY_VERSION})`,
   );
   console.log(
-    `Wrote ${OUT_CON} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
+    `Built ${OUT_CON} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
   );
-  const searchMb = (statSync(OUT_SEARCH).size / 1024 / 1024).toFixed(2);
-  console.log(`Wrote ${OUT_SEARCH} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
+  const searchMb = (Buffer.byteLength(searchJson) / 1024 / 1024).toFixed(2);
+  console.log(`Built ${OUT_SEARCH} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
   if (solIndex >= 0) {
     console.log(
       `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,
@@ -1272,6 +1269,7 @@ async function main() {
   console.log(`SID: ${sidResolved} / ${stars.length} records resolved to a ledger SID`);
   if (sidResolution.errors.length > 0) {
     const preview = sidResolution.errors.slice(0, 10);
+    emitArtifacts({ outputs: CATALOG_OUTPUTS, files });
     console.error(
       `\nSID resolution failed for ${sidResolution.errors.length} record(s):\n  ` +
         preview.join('\n  ') +
@@ -1284,16 +1282,16 @@ async function main() {
     process.exit(1);
   }
 
-  await assertOrUpdateBuildCounts(counts);
-  await assertOrUpdateDistanceOutliers(stars);
-  writeStamp(CATALOG_STAMP, inputHashesAtStart, [
-    ...chunkBytes.map((_, i) => resolve(PUBLIC_DIR, catalogChunkFilename(i))),
-    OUT_MANIFEST, OUT_CON, OUT_BOUNDARIES, OUT_SEARCH, DEFAULT_ROW_INDEX_MAP,
-  ]);
+  emitArtifacts({
+    outputs: CATALOG_OUTPUTS,
+    files,
+    checks: [buildCountsCheck(counts), distanceOutliersCheck(stars)],
+    stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
+  });
 }
 
-async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
-  await assertOrUpdateSnapshot<BuildCounts>({
+function buildCountsCheck(actual: BuildCounts): Check {
+  return snapshotCheck<BuildCounts>({
     envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: EXPECTED_COUNTS,
     actual,
@@ -1305,7 +1303,7 @@ async function assertOrUpdateBuildCounts(actual: BuildCounts): Promise<void> {
 
 // Missing simbad_sample.tsv is a hard fail — the file is committed (LFS)
 // and absence indicates a broken working tree.
-async function assertOrUpdateDistanceOutliers(stars: readonly Star[]): Promise<void> {
+function distanceOutliersCheck(stars: readonly Star[]): Check {
   if (!existsSync(SRC_SIMBAD_SAMPLE)) {
     console.error(
       `Missing ${SRC_SIMBAD_SAMPLE} — committed SIMBAD sample is unavailable.\n` +
@@ -1321,7 +1319,7 @@ async function assertOrUpdateDistanceOutliers(stars: readonly Star[]): Promise<v
       `SIMBAD outliers=${report.simbad.length}`,
   );
 
-  await assertOrUpdateSnapshot<RegressionReport>({
+  return snapshotCheck<RegressionReport>({
     envVar: 'UPDATE_DISTANCE_OUTLIERS',
     snapshotPath: EXPECTED_OUTLIERS,
     actual: report,
