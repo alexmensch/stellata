@@ -166,9 +166,9 @@ gaia:2020756347270442496	HD 338936 B	V491 Vul B	no
 gaia:2034581091125010048	HIP 97292 B	NSV 24882 B	no
 gaia:2042453731769556224	HIP 93798 B	NSV 11742 B	no
 gaia:2056885783959438848	HIP 101313 B	NSV 25172 B	no
-gaia:2059076148570916736	HIP 99002 B		no
-gaia:2059076247346551936	HIP 99005 G		no
-gaia:2059076251666502016	HIP 99005 H		no
+gaia:2059076148570916736	HIP 99002 B		absent
+gaia:2059076247346551936	HIP 99005 G		absent
+gaia:2059076251666502016	HIP 99005 H		absent
 gaia:2059236196250418688	HD 191611 D	NSV 12850 D	no
 gaia:2059372363870220928	Eta Cyg B	η Cyg B	yes
 gaia:2059742207798573184	HIP 98446	NSV 24965 B	yes
@@ -439,7 +439,7 @@ gaia:3006953161378468864	Bet Mon C	β Mon C	yes
 gaia:3006953165674563200	Bet Mon B	β Mon B	yes
 gaia:3017360799155290368	V361 Ori	θ² Ori Ca	yes
 gaia:3017360833515044480	The-2 Ori B	θ² Ori B	no
-gaia:3017361104086334080	The-1 Ori Ta		no
+gaia:3017361104086334080	The-1 Ori Ta		absent
 gaia:3017364063330465152	θ¹ Ori	θ¹ Ori D	no
 gaia:3017364063330718080	The-1 Ori C	θ¹ Ori C	no
 gaia:3017364063331140224	The-1 Ori F		no
@@ -524,7 +524,7 @@ gaia:3216486439450208000	Sig Ori Ca	σ Ori Ca	yes
 gaia:3216486443742786048	Sig Ori AB	σ Ori Aa	no
 gaia:3216486478101981056	Sig Ori E	σ Ori E	yes
 gaia:3216486478101982592	Sig Ori D	σ Ori D	yes
-gaia:3216489536118543104	HD 294271 B		no
+gaia:3216489536118543104	HD 294271 B		absent
 gaia:3216489776637339136	HD 294271	σ Ori F	yes
 gaia:3217181128932991104	HIP 26020 B	NSV 02131 B	no
 gaia:3222447961427178240	HIP 26481	NSV 02478 B	yes
@@ -540,7 +540,7 @@ gaia:3247959139453146752	HIP 16779	105 G. Eri	yes
 gaia:3250458054506860544	HIP 17950	134 G. Eri	yes
 gaia:3250458054506860672	HIP 17950 B	134 G. Eri B	no
 gaia:3250477261599098752	HIP 17086	112 G. Eri	yes
-gaia:3250796360489324672	HIP 16933 C		no
+gaia:3250796360489324672	HIP 16933 C		absent
 gaia:3250796566647753984	HIP 16933	134 G. Eri E	yes
 gaia:3251413255231535104	HIP 17120	14 G. Tau	yes
 gaia:3253028059854845312	HIP 18591 C	HIP 18583 C	no
@@ -1016,7 +1016,7 @@ gaia:4393265392168829056	Onkaria	GJ 1214	yes
 gaia:4395236472918967680	NSV 21108	97 G. Oph	yes
 gaia:4404771472112825088	NSV 20531	43 G. Ser Cap	yes
 gaia:4405625380337801472	HIP 79522	45 G. Ser Cap	yes
-gaia:4407056429077527296	HIP 79730 B		no
+gaia:4407056429077527296	HIP 79730 B		absent
 gaia:4413182426830873984	HIP 79120	41 G. Ser Cap	yes
 gaia:4414849698772235136	HIP 75101	10 G. Ser Cap	yes
 gaia:4418659162965297408	HIP 74901	6 G. Ser Cap	yes
@@ -1605,9 +1605,9 @@ gaia:5832716294133739648	HIP 77927 D	NSV 07310 D	no
 gaia:583286146827230592	HIP 44315	90 G. Hya	yes
 gaia:5835124121463456896	HIP 79932 J	S Nor J	no
 gaia:5835692225477389568	Iot-1 Nor C	ι¹ Nor C	no
-gaia:5836666560185012352	HIP 58520 D		no
+gaia:5836666560185012352	HIP 58520 D		absent
 gaia:5836666564476158336	Eps Cha C	ε Cha C	yes
-gaia:5836666564480769280	HIP 58520 E		no
+gaia:5836666564480769280	HIP 58520 E		absent
 gaia:5838154100636182016	HIP 59151	λ Cha	yes
 gaia:5845487808846539776	Eta Mus B	η Mus B	yes
 gaia:5845487911944804864	Eta Mus C	η Mus C	yes
@@ -2068,7 +2068,7 @@ hip:34922	L 2 Pup	L² Pup	yes
 hip:37096	HIP 37096	f Pup C	yes
 hip:64375	NSV 19645	342 G. Hya	yes
 hip:7463	τ Scl	τ Scl A	yes
-hip:83608	μ Dra		no
+hip:83608	μ Dra		absent
 hip:93825	γ CrA	γ¹ CrA	yes
 synth:synth-00046+4206-Aa2	HIP 365 Aa2	NSV 15012 Aa2	no
 synth:synth-00046+4206-Ab	HIP 365 Ab	NSV 15012 Ab	no
@@ -2155,7 +2155,7 @@ synth:synth-01332+6041-D	HIP 7232 D	NSV 00542 D	no
 synth:synth-01350-2955-B	HIP 7372 B	BB Scl B	no
 synth:synth-01361-2954-B	Tau Scl B	τ Scl B	yes
 synth:synth-01376-0924-B	HIP 7580 B	170 G. Cet B	no
-synth:synth-01398-5612-B	p Eridani B		no
+synth:synth-01398-5612-B	p Eridani B		absent
 synth:synth-01406+0846-B	HIP 7819 B	124 G. Psc B	no
 synth:synth-01414-7909-Ab	Tau-1 Hyi Ab	τ¹ Hyi Ab	no
 synth:synth-01414-7909-B	Tau-1 Hyi B	τ¹ Hyi B	no
@@ -2434,13 +2434,13 @@ synth:synth-05353-0523-Qb	The-1 Ori Qb		no
 synth:synth-05353-0523-Xb	The-1 Ori Xb		no
 synth:synth-05353-0523-Yb	The-1 Ori Yb		no
 synth:synth-05353-0523-Zb	The-1 Ori Zb		no
-synth:synth-05353-0524-Cb	The-1 Ori Cb		no
-synth:synth-05353-0524-Hb	The-1 Ori Hb		no
-synth:synth-05353-0524-Ib	The-1 Ori Ib		no
-synth:synth-05353-0524-K	The-1 Ori K		no
-synth:synth-05353-0524-Ob	The-1 Ori Ob		no
-synth:synth-05353-0524-Sb	The-1 Ori Sb		no
-synth:synth-05353-0524-Tb	The-1 Ori Tb		no
+synth:synth-05353-0524-Cb	The-1 Ori Cb		absent
+synth:synth-05353-0524-Hb	The-1 Ori Hb		absent
+synth:synth-05353-0524-Ib	The-1 Ori Ib		absent
+synth:synth-05353-0524-K	The-1 Ori K		absent
+synth:synth-05353-0524-Ob	The-1 Ori Ob		absent
+synth:synth-05353-0524-Sb	The-1 Ori Sb		absent
+synth:synth-05353-0524-Tb	The-1 Ori Tb		absent
 synth:synth-05354-0525-Aa2	The-2 Ori Aa2	θ² Ori Aa2	no
 synth:synth-05354-0525-Ab	The-2 Ori Ab	θ² Ori Ab	no
 synth:synth-05354-0525-Bb	The-2 Ori Bb	θ² Ori Bb	no
@@ -2454,7 +2454,7 @@ synth:synth-05365-0643-B	HIP 26327 B	V380 Ori B	no
 synth:synth-05369-4758-Bb	HIP 26369 Bb	UY Pic Bb	no
 synth:synth-05369-4758-C	HIP 26373 C	UY Pic C	no
 synth:synth-05379+0058-Ab	HIP 26476 Ab	NSV 02478 Ab	no
-synth:synth-05386-0233-F	HD 294271 F		no
+synth:synth-05386-0233-F	HD 294271 F		absent
 synth:synth-05387-0236-Ab	Sig Ori Ab	σ Ori Ab	yes
 synth:synth-05387-0236-B	Sig Ori B	σ Ori B	yes
 synth:synth-05387-0236-Cb	Sig Ori Cb	σ Ori Cb	yes
@@ -2531,7 +2531,7 @@ synth:synth-06380-6132-B	HIP 31711 B	AK Pic B	no
 synth:synth-06392-2634-Cb	HIP 31821 Cb	V356 CMa Cb	no
 synth:synth-06405-0331-B	HIP 31942 B	NSV 17029 B	no
 synth:synth-06410+0954-I	HD 261938 I	15 Mon I	no
-synth:synth-06410+0954-J	HD 261938 J		no
+synth:synth-06410+0954-J	HD 261938 J		absent
 synth:synth-06460-6624-C	HIP 32414 C	NSV 17197 C	no
 synth:synth-06460-6624-D	HIP 32414 D	NSV 17197 D	no
 synth:synth-06467+0822-B	HIP 32475 B	V839 Mon B	no
@@ -2547,7 +2547,7 @@ synth:synth-06573-3530-B	HIP 33451 B	NSV 17255 B	no
 synth:synth-06573-4929-B	HIP 33455 B	NSV 17261 B	no
 synth:synth-06577-4118-Ab	HIP 33487 Ab	V358 Pup Ab	no
 synth:synth-06579-4417-B	HIP 33499 B	NSV 03321 B	no
-synth:synth-06583-3525-D	HIP 33543 D		no
+synth:synth-06583-3525-D	HIP 33543 D		absent
 synth:synth-06584-1300-B	HIP 33560 B	NSV 03315 B	no
 synth:synth-06584-3407-B	HIP 33558 B	t Pup B	no
 synth:synth-06592+1843-B	HD 267347 B	NSV 03319 B	no
@@ -2604,7 +2604,7 @@ synth:synth-07366-1429-Fb	HD 60998 Fb		no
 synth:synth-07366-1429-O	HD 60998 O		no
 synth:synth-07366-1429-Q	HD 60998 Q		no
 synth:synth-07366-1429-S	HD 60998 S		no
-synth:synth-07374-3458-C	HIP 37096 C		no
+synth:synth-07374-3458-C	HIP 37096 C		absent
 synth:synth-07380-3208-B	HIP 37145 B	NSV 03669 B	no
 synth:synth-07400-0336-C	HIP 37349 C	V869 Mon C	no
 synth:synth-07400-0336-Ib	HIP 36985 Ib	V869 Mon Ib	no
@@ -2756,7 +2756,7 @@ synth:synth-10444-6000-Ab	HIP 52526 Ab		no
 synth:synth-10444-6000-Ab2	HIP 52526 Ab2		no
 synth:synth-10444-6000-Ac	HIP 52526 Ac		no
 synth:synth-10444-6000-Ad	HIP 52526 Ad		no
-synth:synth-10444-6000-D	HIP 52526 D		no
+synth:synth-10444-6000-D	HIP 52526 D		absent
 synth:synth-10446+0530-B	HIP 52547 B	NSV 04955 B	no
 synth:synth-10448-5934-B	HIP 52558 B	NSV 18509 B	no
 synth:synth-10468-4925-B	Mu Vel B	μ Vel B	yes
@@ -2823,7 +2823,7 @@ synth:synth-11585-7754-B	HIP 58400 B	DW Cha B	no
 synth:synth-11596-7813-Ab	Eps Cha Ab	ε Cha Ab	yes
 synth:synth-11596-7813-B	Eps Cha B	ε Cha B	yes
 synth:synth-11596-7813-Cb	Eps Cha Cb	ε Cha Cb	yes
-synth:synth-12001-7812-F	HIP 58520 F		no
+synth:synth-12001-7812-F	HIP 58520 F		absent
 synth:synth-12006+6911-B	HIP 58567 B	OR Dra B	no
 synth:synth-12061-3258-Bb	HIP 59021 Bb	NSV 19201 Bb	no
 synth:synth-12081+5528-Bb	HIP 59180 Bb	HIP 59176 Bb	no
@@ -3402,7 +3402,7 @@ synth:synth-19597+3359-C	HIP 98411 C	V482 Cyg C	no
 synth:synth-19598-0957-B	HIP 98416 B	100 G. Aql B	no
 synth:synth-20001+1737-D	HIP 98443 D	NSV 12668 D	no
 synth:synth-20051+2039-D	HD 190606 D	X Sge D	no
-synth:synth-20060+3547-Ab	HIP 99002 Ab		no
+synth:synth-20060+3547-Ab	HIP 99002 Ab		absent
 synth:synth-20086-4618-Bb	HIP 99245 Bb	HIP 99233 Bb	no
 synth:synth-20086-4618-D	HIP 99245 D	HIP 99233 D	no
 synth:synth-20094+3630-J	HD 191611 J	NSV 12850 J	no
@@ -3414,7 +3414,7 @@ synth:synth-20111-5731-B	HIP 99453 B	NSV 25020 B	no
 synth:synth-20119+3612-C	HIP 99525 C	V1042 Cyg C	no
 synth:synth-20123+3205-Bb	HIP 99566 Bb	HIP 99564 Bb	no
 synth:synth-20136+4644-Ab	31 Cyg Ab	ο¹ Cyg Ab	yes
-synth:synth-20136+4644-H	31 Cyg H		no
+synth:synth-20136+4644-H	31 Cyg H		absent
 synth:synth-20136+4644-J	31 Cyg J	ο¹ Cyg J	yes
 synth:synth-20136+4644-K	31 Cyg K	ο¹ Cyg K	yes
 synth:synth-20141-0450-B	HIP 99720 B	V1477 Aql B	no

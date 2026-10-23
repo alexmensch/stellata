@@ -73,13 +73,18 @@ function main(): void {
     rows.push({
       key,
       old: oldLabel,
-      new: labelByKey.get(key) ?? '',
-      resolves: idx !== undefined
-        && labelResolvesTo(searchIndex, byLabel, normalizeGlKey, oldLabel, idx),
+      record: idx === undefined
+        ? { present: false }
+        : {
+          present: true,
+          new: labelByKey.get(key) ?? '',
+          resolves: labelResolvesTo(searchIndex, byLabel, normalizeGlKey, oldLabel, idx),
+        },
     });
   }
-  const changed = rows.filter((r) => r.old !== r.new);
+  const changed = rows.filter((r) => !r.record.present || r.old !== r.record.new);
   writeFileSync(PARITY, formatParityLedger(changed));
+  const present = changed.flatMap((r) => (r.record.present ? [r.record] : []));
 
   const claimants = new Map<string, string[]>();
   for (const [key, label] of labelByKey) {
@@ -97,8 +102,9 @@ function main(): void {
   console.log(
     `naming-parity.tsv: ${changed.length} of ${rows.length} frozen pre-ladder ` +
       `labels still differ ` +
-      `(${changed.filter((r) => r.new === '').length} now unlabelled, ` +
-      `${changed.filter((r) => !r.resolves).length} whose old label no longer ` +
+      `(${changed.length - present.length} no longer in the catalogue, ` +
+      `${present.filter((r) => r.new === '').length} now unlabelled, ` +
+      `${present.filter((r) => !r.resolves).length} whose old label no longer ` +
       `resolves)`,
   );
   console.log(`naming-duplicates.tsv: ${duplicates.length} duplicate label(s)`);

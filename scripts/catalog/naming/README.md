@@ -75,7 +75,7 @@ scripts/catalog/naming/
                                 `proper`. Also the curated override's join,
                                 which hard-fails on an unmatched SID.
   naming-parity-pure.ts         Ledger codec + the record-identity key and
-                                the shared label resolver.
+    (+ test)                    the shared label resolver.
   build-naming-parity.ts        Refreshes the ledger from the built
                                 artifacts.
   naming-parity.test.ts         The /docs/star-naming.md#8-parity--the-gate-on-any-naming-change gate over the built artifacts.
@@ -263,8 +263,10 @@ for exactly that reason.
   runtime binaries loader resolves records through), `old`, `new`, and
   `resolves`. The `old` column is FROZEN: it is the string a user could
   have typed, and `resolves` records whether it still reaches that record.
-  3,694 changes, 78 of them records that now display the runtime's
-  identifier fallback.
+  A record the catalogue no longer carries reads `resolves = absent` with
+  an empty `new`; an empty `new` on a `yes` / `no` row is a record that now
+  displays the runtime's identifier fallback. 3,680 changes: 26 absent
+  records, 74 fallbacks.
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
   upstream, and `../companions/multi-star-regression.test.ts` additionally
@@ -273,11 +275,11 @@ for exactly that reason.
 The gate is stated over strings with EXTERNAL provenance — every name the
 authority approves and every name the manifest carries must reach a record.
 A string the build composed itself has no external existence, so [§ 5](/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) lets
-it disappear with the composition that made it; 1,986 do, and the ledger's
+it disappear with the composition that made it; 1,955 do, and the ledger's
 `resolves` column is where each one is reviewable.
 
 `pnpm run build:naming-parity` refreshes `new`, `resolves` and the
-duplicate list from the built artifacts. `key` and `old` carry forward from
+duplicate list from the built artifacts, and prints the figures above. `key` and `old` carry forward from
 the committed file; `NAMING_PARITY_SEED=<key/old TSV>` re-seeds them, which
 is what a deliberate wholesale naming change needs and nothing else should
 touch.
