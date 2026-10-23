@@ -719,8 +719,10 @@ when neither Δmag path applies.
 
 `anchor_sep_arcsec` / `anchor_pa_deg` carry each component's best WDS
 offset from the SYSTEM ANCHOR letter (the most canonical kept-pair
-primary token, matching the WDS-root anchor companion promotion
-resolves), composed by `compute_anchor_offsets` over a BFS of the
+primary token, in the same order companion promotion ranks its WDS-root
+anchor — but promotion ranks only primaries it resolves to a catalogue
+record, so where the top-ranked primary has no identifier the two
+anchors differ), composed by `compute_anchor_offsets` over a BFS of the
 system's pair geometry. A direct measured anchor→component edge
 (kept, then Stage-5-rejected) wins over any composed chain — a
 blended member sits within measurement error of the anchor, so a
