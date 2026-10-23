@@ -1258,8 +1258,8 @@ interface SystemAnchor {
  *  branch on length and every other branch on the letter.
  *
  *  `scripts/binaries/stage6_multiples.py` `_anchor_token_rank` is its Python
- *  twin on order only; change both. Candidates differ: see README.md
- *  § Promoted-companion field inheritance. */
+ *  twin on order only; change both. Candidates differ: see
+ *  README.md#promoted-companion-field-inheritance. */
 export function isMoreCanonicalAnchor(
   candidateComp: string,
   incumbentComp: string,
