@@ -124,7 +124,7 @@ import {
   loadReadStarsInputs,
 } from './parse/read-stars-inputs';
 import { readGaiaHipXmatch } from './parse/gaia-xmatch';
-import { REPO_ROOT as ROOT } from '../util/paths';
+import { REPO_ROOT as ROOT, requireExists } from '../util/paths';
 import {
   clearStamp, fileHashes, stampIsCurrent, stampPath,
 } from '../util/build-stamp';
@@ -193,6 +193,7 @@ async function main() {
     console.error(`Stellarium sky culture JSON not found: ${SRC_STELLARIUM}`);
     process.exit(1);
   }
+  requireExists(SRC_SIMBAD_SAMPLE, 'it is committed (LFS); absence means a broken working tree.');
 
   sweepStaged(CATALOG_OUTPUTS);
   // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
@@ -1299,16 +1300,7 @@ function buildCountsCheck(actual: BuildCounts): Check {
   });
 }
 
-// Missing simbad_sample.tsv is a hard fail — the file is committed (LFS)
-// and absence indicates a broken working tree.
 function distanceOutliersCheck(stars: readonly Star[]): Check {
-  if (!existsSync(SRC_SIMBAD_SAMPLE)) {
-    console.error(
-      `Missing ${SRC_SIMBAD_SAMPLE} — committed SIMBAD sample is unavailable.\n` +
-        `Confirm git LFS is pulled (\`git lfs pull\`) and the file is present.`,
-    );
-    process.exit(1);
-  }
   const simbadSample = parseSimbadSampleTsv(readFileSync(SRC_SIMBAD_SAMPLE, 'utf8'));
   const report = buildRegressionReport(stars, simbadSample);
   console.log(
