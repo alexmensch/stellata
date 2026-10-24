@@ -75,6 +75,12 @@ scripts/binaries/
                                   columns + per-pair WDS sep/PA/epoch/Δmag +
                                   system-anchor inheritance for tight inner
                                   binaries + SIMBAD standalone augmentation.
+  anchor_offsets.py               compute_anchor_offsets: each component's
+                                  offset from its system's anchor letter,
+                                  with the sub-letter photocentre link.
+                                  See Stage 6 below.
+  wds_pair_photometry.py          A pair row's magnitudes (WDS, else MSC)
+                                  and their Δmag.
   stage7_counts.py                Build-counts + build-rates snapshots. The
                                   assert / refresh they share with
                                   build-runtime-binaries.py is
