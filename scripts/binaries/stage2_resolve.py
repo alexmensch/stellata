@@ -9,6 +9,7 @@ import math
 import re
 from collections import deque
 from collections.abc import Callable, Iterable, Iterator
+from typing import TypeVar
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -1669,21 +1670,36 @@ def _canonical_token(primary_tok: str, comp: ResolvedComponent) -> str:
     return expand_wds_truncated_secondary(primary_tok, comp.component)
 
 
+_E = TypeVar("_E")
+
+
+def add_newest_edge(
+    adj: dict[str, dict[str, _E]],
+    a: str, b: str,
+    forward: _E, backward: _E, epoch: float | None,
+    epoch_of: Callable[[_E], float | None],
+) -> None:
+    """Register an edge both ways, keeping the most recent measurement when
+    the same token pair recurs across discoverers."""
+    for src, dst, edge in ((a, b, forward), (b, a, backward)):
+        nbrs = adj.setdefault(src, {})
+        existing = nbrs.get(dst)
+        if existing is not None:
+            old_epoch = epoch_of(existing)
+            if not (epoch is not None and (old_epoch is None or epoch >= old_epoch)):
+                continue
+        nbrs[dst] = edge
+
+
 def _add_edge(
     adj: dict[str, dict[str, tuple[float, float, float | None]]],
     a: str, b: str,
     e_arcsec: float, n_arcsec: float, epoch: float | None,
 ) -> None:
-    """Register a bidirectional geometry edge, keeping the most-recent
-    measurement when the same token pair recurs across discoverers."""
-    for src, dst, ee, nn in ((a, b, e_arcsec, n_arcsec), (b, a, -e_arcsec, -n_arcsec)):
-        nbrs = adj.setdefault(src, {})
-        existing = nbrs.get(dst)
-        if existing is not None:
-            old_epoch = existing[2]
-            if not (epoch is not None and (old_epoch is None or epoch >= old_epoch)):
-                continue
-        nbrs[dst] = (ee, nn, epoch)
+    add_newest_edge(
+        adj, a, b, (e_arcsec, n_arcsec, epoch), (-e_arcsec, -n_arcsec, epoch),
+        epoch, lambda edge: edge[2],
+    )
 
 
 def build_system_contexts(

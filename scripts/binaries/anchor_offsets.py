@@ -19,6 +19,7 @@ from .parsers import WdsPair
 from .stage2_resolve import (
     ResolvedComponent,
     _add_edge,
+    add_newest_edge,
     iter_decomposing_pair_components,
 )
 from .stage5_optical import OpticalClassification
@@ -85,21 +86,11 @@ SiblingAdj = dict[str, dict[str, SiblingEdge]]
 def add_sibling_edge(
     adj: SiblingAdj, a: str, b: str, edge: SiblingEdge,
 ) -> None:
-    """Bidirectional, keeping the most recent measurement per token pair
-    as ``_add_edge`` does."""
     reverse = SiblingEdge(
         -edge.east, -edge.north,
         -edge.dmag if edge.dmag is not None else None, edge.epoch,
     )
-    for src, dst, e in ((a, b, edge), (b, a, reverse)):
-        nbrs = adj.setdefault(src, {})
-        existing = nbrs.get(dst)
-        if existing is not None and not (
-            e.epoch is not None
-            and (existing.epoch is None or e.epoch >= existing.epoch)
-        ):
-            continue
-        nbrs[dst] = e
+    add_newest_edge(adj, a, b, edge, reverse, edge.epoch, lambda e: e.epoch)
 
 
 def _sibling_edge(
