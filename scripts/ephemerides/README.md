@@ -28,8 +28,9 @@ This folder owns the scripts.
   narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`).
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
-  `data/ephemerides/{id}.json` through `emitArtifacts`; if any table misses
-  its accuracy bound, none of them lands and it exits non-zero. See
+  `data/ephemerides/{id}.json` through `emitEach` (`../util/README.md`): a
+  table that misses its accuracy bound never lands, every table that holds
+  does, and the run exits non-zero naming the misses. See
   [Cadence](#cadence).
 - `sync-ephemerides.ts` (+ `-pure.ts`) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on

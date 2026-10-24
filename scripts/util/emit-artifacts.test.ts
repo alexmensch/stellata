@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fileHashes, readStamp, stampIsCurrent } from './build-stamp';
 import {
-  EmissionRefused, declareOutputs, emitArtifacts, type Check,
+  EmissionRefused, declareOutputs, emitArtifacts, emitEach, type Check,
 } from './emit-artifacts';
 import { STAGING_SUFFIX } from './staged-write';
 
@@ -137,5 +137,16 @@ describe('emitArtifacts', () => {
       stamp: { path: stampFile, inputs: fileHashes([snapshot]) },
     });
     expect(stampIsCurrent(stampFile, fileHashes([snapshot]))).toBe(true);
+  });
+
+  it('emitEach lands every target that verifies and refuses the rest, after trying all', async () => {
+    mkdirSync(join(dir, 'out'));
+    writeFileSync(b, 'old b');
+    const produce = async (key: 'a' | 'b') => (key === 'a'
+      ? { contents: 'new a' }
+      : { contents: 'new b', checks: [{ kind: 'fail', message: 'b over budget' } as const] });
+    await expect(emitEach(both(), ['b', 'a'], produce)).rejects.toThrow(/refused b/);
+    expect(readFileSync(a, 'utf8')).toBe('new a');
+    expect(readFileSync(b, 'utf8')).toBe('old b');
   });
 });

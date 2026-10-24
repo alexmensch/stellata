@@ -36,9 +36,10 @@ frame/unit facts, and the mission-date caveats live in
   narrowed to one or more probe ids (`pnpm run fetch:probes voyager1`).
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
-  `data/probes/{id}.json` for every probe it fetched, in one
-  `emitArtifacts` call once all of them have verified, so a probe that fails
-  leaves every committed file as it was.
+  `data/probes/{id}.json` through `emitEach` (`../util/README.md`): each
+  probe lands as soon as it verifies, so one that fails to fetch or verify
+  is reported and leaves only its own file as it was, and the run exits
+  non-zero naming it.
 - `sync-probes.ts` (+ `-pure.ts`, test) — mirrors the committed JSONs
   to `public/probes/` (gitignored) via `scripts/util/mirror-to-public.ts`
   on every `pnpm run dev` / `build`, so CI and deploy never touch the

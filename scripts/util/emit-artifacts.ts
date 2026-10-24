@@ -153,6 +153,26 @@ export function emitArtifacts<K extends string>(
   }
 }
 
+export async function emitEach<K extends string>(
+  outputs: DeclaredOutputs<K>,
+  keys: readonly K[],
+  produce: (key: K) => Promise<{ contents: ArtifactContents; checks?: readonly Check[] }>,
+): Promise<void> {
+  const refused: K[] = [];
+  for (const key of keys) {
+    try {
+      const { contents, checks } = await produce(key);
+      emitArtifacts({ outputs, only: [key], files: { [key]: contents } as Record<K, ArtifactContents>, checks });
+    } catch (err) {
+      console.error(`${key}: ${err instanceof Error ? err.message : String(err)}`);
+      refused.push(key);
+    }
+  }
+  if (refused.length > 0) {
+    throw new EmissionRefused(`refused ${refused.join(', ')}; every other target landed`);
+  }
+}
+
 /** A refreshed snapshot that the step also reads would otherwise leave the
  *  stamp holding its pre-refresh hash and force the next run to rebuild. */
 function rehashRefreshed(inputs: FileHashes, refreshes: readonly { path: string }[]): FileHashes {

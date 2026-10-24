@@ -2,7 +2,7 @@
 // adaptive grid and writes data/probes/{id}.json. Manual + infrequent
 // (`pnpm run fetch:probes`); README.md#adaptive-grid.
 
-import { emitArtifacts } from '../util/emit-artifacts';
+import { emitEach } from '../util/emit-artifacts';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 
 import {
@@ -266,9 +266,10 @@ async function main(): Promise<void> {
   const only = new Set(process.argv.slice(2));
   const roster = only.size === 0 ? PROBE_MISSIONS : PROBE_MISSIONS.filter((p) => only.has(p.id));
   if (roster.length === 0) throw new Error(`No roster probe matches ${[...only].join(', ')}`);
-  const files: Record<string, string> = {};
-  for (const probe of roster) files[probe.id] = await fetchProbe(probe, retrievedUtc);
-  emitArtifacts({ outputs: PROBE_OUTPUTS, only: roster.map((p) => p.id), files });
+  const byId = new Map<string, ProbeMission>(roster.map((p) => [p.id, p]));
+  await emitEach(PROBE_OUTPUTS, [...byId.keys()], async (id) => ({
+    contents: await fetchProbe(byId.get(id)!, retrievedUtc),
+  }));
 }
 
 main().catch((err) => {

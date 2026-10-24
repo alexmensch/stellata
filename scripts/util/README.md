@@ -128,6 +128,11 @@ same thing — single-use helpers stay with their consumer.
   is usually one of the stamp's inputs too (the `*-expected.json` beside the
   build's modules), so its input hash is re-read after the refresh lands; the
   next run then skips instead of rebuilding for its own refresh.
+  `emitEach(outputs, keys, produce)` is the per-target form, for steps whose
+  files are each read on their own (the two Horizons fetchers): every target
+  that produces and passes its checks lands by itself, a failing one is
+  reported and skipped, and the run throws naming the refused targets once
+  all have been tried.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's
