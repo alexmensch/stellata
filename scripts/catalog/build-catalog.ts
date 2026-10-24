@@ -39,7 +39,9 @@ import {
 } from './record/catalog-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
-import { orbitChainExemption, physicalOverlaps } from './companions/overlap-gate-pure';
+import {
+  orbitChainExemption, overlapLabel, physicalOverlaps,
+} from './companions/overlap-gate-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareCountSnapshot,
@@ -904,10 +906,9 @@ async function main() {
       orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
     );
     counts.physicalOverlaps = overlaps.length;
-    const recordTag = (s: Star) => s.syntheticId ?? s.gaiaSourceId ?? `hip ${s.hip}`;
     console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
     for (const [a, b] of overlaps) {
-      console.log(`    ${recordTag(stars[a])} | ${recordTag(stars[b])}`);
+      console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
     }
 
     componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);

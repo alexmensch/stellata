@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { R_SUN_PC } from '../../../src/client/util/astronomy-constants';
 import {
   orbitChainExemption,
+  overlapLabel,
   physicalOverlaps,
   type OverlapRecord,
 } from './overlap-gate-pure';
@@ -66,5 +67,20 @@ describe('orbitChainExemption', () => {
     const records = [star(5), star(5), star(5), star(5)];
     expect(physicalOverlaps(records, orbitChainExemption([[0, 1], [2, 3]])))
       .toEqual([[0, 2], [0, 3], [1, 2], [1, 3]]);
+  });
+});
+
+describe('overlapLabel', () => {
+  const rec = { syntheticId: null, gaiaSourceId: null, hip: null };
+
+  it('names a record by its strongest identifier', () => {
+    expect(overlapLabel({ ...rec, syntheticId: 'synth-W1-B', gaiaSourceId: 'g1' }, 7))
+      .toBe('synth-W1-B');
+    expect(overlapLabel({ ...rec, gaiaSourceId: 'g1', hip: 9 }, 7)).toBe('gaia g1');
+    expect(overlapLabel({ ...rec, hip: 9 }, 7)).toBe('hip 9');
+  });
+
+  it('falls back to the record index when no identifier is carried', () => {
+    expect(overlapLabel(rec, 7)).toBe('record 7');
   });
 });

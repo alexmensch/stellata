@@ -67,3 +67,16 @@ export function physicalOverlaps(
   }
   return out.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
 }
+
+export interface OverlapLabelled {
+  syntheticId: string | null;
+  gaiaSourceId: string | null;
+  hip: number | null;
+}
+
+export function overlapLabel(record: OverlapLabelled, index: number): string {
+  if (record.syntheticId !== null) return record.syntheticId;
+  if (record.gaiaSourceId !== null) return `gaia ${record.gaiaSourceId}`;
+  if (record.hip !== null) return `hip ${record.hip}`;
+  return `record ${index}`;
+}
