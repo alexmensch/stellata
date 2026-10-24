@@ -1,9 +1,9 @@
-// Count-snapshot checks. See scripts/util/README.md (snapshot-assert.ts entry).
+// Snapshot checks for emitArtifacts. See scripts/util/README.md (snapshot-check.ts entry).
 import { existsSync, readFileSync } from 'node:fs';
 
 import type { Check } from './emit-artifacts';
 
-export interface SnapshotAssertion<T> {
+export interface SnapshotCheckSpec<T> {
   /** Set to '1' to rewrite the snapshot instead of asserting against it. */
   envVar: string;
   snapshotPath: string;
@@ -17,7 +17,7 @@ export interface SnapshotAssertion<T> {
 }
 
 /** A missing snapshot fails: only the env var writes one. */
-export function snapshotCheck<T>(opts: SnapshotAssertion<T>): Check {
+export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
   const expected = existsSync(opts.snapshotPath)
     ? (JSON.parse(readFileSync(opts.snapshotPath, 'utf8')) as T)
     : null;

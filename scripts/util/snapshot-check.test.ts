@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { snapshotCheck, type SnapshotAssertion } from './snapshot-assert';
+import { snapshotCheck, type SnapshotCheckSpec } from './snapshot-check';
 
 const ENV = 'SNAPSHOT_ASSERT_TEST_UPDATE';
 
@@ -12,7 +12,7 @@ describe('snapshotCheck', () => {
   let path: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'snapshot-assert-'));
+    dir = mkdtempSync(join(tmpdir(), 'snapshot-check-'));
     path = join(dir, 'expected.json');
   });
 
@@ -21,7 +21,7 @@ describe('snapshotCheck', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  function spec(actual: { n: number }): SnapshotAssertion<{ n: number }> {
+  function spec(actual: { n: number }): SnapshotCheckSpec<{ n: number }> {
     return {
       envVar: ENV,
       snapshotPath: path,

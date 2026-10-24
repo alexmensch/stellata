@@ -9,7 +9,7 @@ import { readCrossIndexTable } from '../classic-ids/cross-index';
 import { parseIntOrNull } from '../parse/stars-parse';
 import { REPO_ROOT } from '../../util/paths';
 import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
-import { snapshotCheck } from '../../util/snapshot-assert';
+import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
 import { parseNecCsv, parseWgsnFaintsCsv } from './wgsn-parse-pure';
 import {

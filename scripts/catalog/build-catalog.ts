@@ -138,7 +138,7 @@ import {
 import {
   emitArtifacts, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
-import { snapshotCheck } from '../util/snapshot-assert';
+import { snapshotCheck } from '../util/snapshot-check';
 import {
   resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
   type SidObject,

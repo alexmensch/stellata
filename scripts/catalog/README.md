@@ -138,7 +138,7 @@ scripts/catalog/
                                   build-catalog-expected.json. Generic over
                                   the count record: compareCountSnapshot is
                                   the compare every count snapshot passes
-                                  (consumer list: the snapshot-assert.ts
+                                  (consumer list: the snapshot-check.ts
                                   entry of ../util/README.md).
 ```
 

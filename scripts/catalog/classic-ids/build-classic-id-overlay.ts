@@ -19,7 +19,7 @@ import {
 } from './classic-id-overlay-pure';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
-import { snapshotCheck } from '../../util/snapshot-assert';
+import { snapshotCheck } from '../../util/snapshot-check';
 
 const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OUT_DISAGREEMENTS = resolve(

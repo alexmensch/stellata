@@ -293,7 +293,7 @@ constellation out of the designation string and loses only its expanded alias
 `classic-id-overlay-expected.json` pins the counts through the same
 `compareCountSnapshot` / `UPDATE_BUILD_COUNTS` machinery
 `build-catalog.ts` uses (`snapshotCheck` in
-`../../util/snapshot-assert.ts`). Three groups:
+`../../util/snapshot-check.ts`). Three groups:
 
 - **Input + route sizes** — upstream row counts, how many Tycho ids
   resolve, the HIP-route agree / disagree / HIP-only split. Pre-gate.

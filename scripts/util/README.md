@@ -114,7 +114,7 @@ same thing — single-use helpers stay with their consumer.
   (a snapshot under its update flag) stages its own baseline with the outputs.
   `stamp`, when given, is written last over exactly the emitted files, so a
   stamp's outputs and the declaration cannot disagree.
-- `snapshot-assert.ts` — `snapshotCheck(spec)`: a build script's computed
+- `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's
   env var is `1`. It writes nothing itself. A missing snapshot fails too: a
@@ -124,7 +124,7 @@ same thing — single-use helpers stay with their consumer.
   `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
   WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
-  `snapshot-assert.test.ts` pins the missing-snapshot case.
+  `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - `snapshot_assert.py` — the Python sibling, for the two binaries steps
   (`build-binaries.py`'s counts, `build-runtime-binaries.py`'s pair
   counts; `binaries/stage7_counts.py` builds its rates snapshot on the same

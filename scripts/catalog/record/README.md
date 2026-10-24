@@ -327,7 +327,7 @@ deliberate change refreshes the snapshot with
 exits non-zero with a per-key diff and leaves `public/`, `build/` and the
 committed ledgers as they were. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage; the
-check-or-rewrite side is `snapshotCheck` in `../../util/snapshot-assert.ts`.
+check-or-rewrite side is `snapshotCheck` in `../../util/snapshot-check.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
 snapshot. The stamp's code inputs are the build's import closure plus the

@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
-import { snapshotCheck } from '../../util/snapshot-assert';
+import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';

@@ -1,5 +1,5 @@
 """Snapshot assert / refresh for the Python build steps' count and rate
-JSONs — sibling of snapshot-assert.ts. See scripts/util/README.md."""
+JSONs — sibling of snapshot-check.ts. See scripts/util/README.md."""
 
 from __future__ import annotations
 
