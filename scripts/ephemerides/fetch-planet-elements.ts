@@ -41,10 +41,9 @@ const OUT_DIR = resolve(REPO_ROOT, 'data/ephemerides');
 
 const tablePath = (target: PlanetElementTarget): string => resolve(OUT_DIR, `${target.id}.json`);
 
-const tableOutputs = (targets: readonly PlanetElementTarget[]) =>
-  declareOutputs(Object.fromEntries(targets.map((t) => [t.id, tablePath(t)])));
-
-export const ELEMENT_TABLE_OUTPUTS = tableOutputs(ELEMENT_TARGETS);
+export const ELEMENT_TABLE_OUTPUTS = declareOutputs(
+  Object.fromEntries(ELEMENT_TARGETS.map((t) => [t.id, tablePath(t)])),
+);
 
 /** Significant digits kept per emitted element, down from Horizons' 16. The
  *  binding column is the unwrapped mean longitude: it reaches ~3e5 degrees at
@@ -233,4 +232,4 @@ for (const target of targets) {
   files[target.id] = text;
   checks.push(check);
 }
-emitArtifacts({ outputs: tableOutputs(targets), files, checks });
+emitArtifacts({ outputs: ELEMENT_TABLE_OUTPUTS, only: targets.map((t): string => t.id), files, checks });

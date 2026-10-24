@@ -41,9 +41,8 @@ export type Check =
 
 export type ArtifactContents = string | Uint8Array;
 
-export interface Emission<K extends string> {
+interface EmissionBase<K extends string> {
   readonly outputs: DeclaredOutputs<K>;
-  readonly files: Readonly<Record<NoInfer<K>, ArtifactContents>>;
   /** Family members, keyed by absolute path. */
   readonly members?: ReadonlyMap<string, ArtifactContents>;
   readonly checks?: readonly Check[];
@@ -51,19 +50,36 @@ export interface Emission<K extends string> {
   readonly stamp?: { readonly path: string; readonly inputs: FileHashes };
 }
 
+export interface Emission<K extends string> extends EmissionBase<K> {
+  readonly files: Readonly<Record<NoInfer<K>, ArtifactContents>>;
+}
+
+/** A run asked for some of the step's targets: it emits exactly `only`. */
+export interface NarrowedEmission<K extends string, E extends K> extends EmissionBase<K> {
+  readonly only: readonly E[];
+  readonly files: Readonly<Record<E, ArtifactContents>>;
+}
+
 export class EmissionRefused extends Error {
   override name = 'EmissionRefused';
 }
 
-function assertDeclared(outputs: DeclaredOutputs, keys: readonly string[], members: readonly string[]): void {
-  const declared = Object.keys(outputs.files);
+function assertDeclared(
+  outputs: DeclaredOutputs,
+  expected: readonly string[],
+  keys: readonly string[],
+  members: readonly string[],
+): void {
   const undeclared = [
+    ...expected.filter((k) => !(k in outputs.files)),
     ...keys.filter((k) => !(k in outputs.files)),
     ...members.filter((p) => !outputs.families.some(
       (f) => dirname(p) === f.dir && f.member.test(basename(p)),
     )),
   ];
-  const unemitted = declared.filter((k) => !keys.includes(k));
+  const unemitted = expected.filter((k) => !keys.includes(k));
+  const unasked = keys.filter((k) => k in outputs.files && !expected.includes(k));
+  undeclared.push(...unasked);
   if (undeclared.length > 0 || unemitted.length > 0) {
     throw new Error(
       'emitArtifacts: emitted files must equal the declared outputs'
@@ -88,11 +104,16 @@ function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[]): void {
   }
 }
 
-export function emitArtifacts<K extends string>(emission: Emission<K>): void {
+export function emitArtifacts<K extends string>(emission: Emission<K>): void;
+export function emitArtifacts<K extends string, E extends K>(emission: NarrowedEmission<K, E>): void;
+export function emitArtifacts<K extends string>(
+  emission: Emission<K> | NarrowedEmission<K, K>,
+): void {
   const { outputs, checks = [], stamp } = emission;
   const keyed = Object.entries<ArtifactContents>(emission.files);
   const members = [...(emission.members ?? new Map())].map(([p, c]) => [resolve(p), c] as const);
-  assertDeclared(outputs, keyed.map(([k]) => k), members.map(([p]) => p));
+  const expected = 'only' in emission ? emission.only : Object.keys(outputs.files);
+  assertDeclared(outputs, expected, keyed.map(([k]) => k), members.map(([p]) => p));
   const files = new Map<string, ArtifactContents>([
     ...keyed.map(([k, c]) => [outputs.files[k as K], c] as const),
     ...members,

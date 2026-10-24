@@ -80,6 +80,21 @@ describe('emitArtifacts', () => {
     expect(existsSync(stray)).toBe(false);
   });
 
+  it('a narrowed run emits exactly its subset and sweeps leftovers across the whole declaration', () => {
+    mkdirSync(join(dir, 'out'));
+    writeFileSync(b, 'old b');
+    writeFileSync(b + STAGING_SUFFIX, 'stale');
+    emitArtifacts({ outputs: both(), only: ['a'], files: { a: 'new a' } });
+    expect(readFileSync(a, 'utf8')).toBe('new a');
+    expect(readFileSync(b, 'utf8')).toBe('old b');
+    expect(existsSync(b + STAGING_SUFFIX)).toBe(false);
+    expect(() => emitArtifacts({ outputs: both(), only: ['a'], files: { a: 'x', b: 'y' } as { a: string } }))
+      .toThrow(/undeclared: b/);
+    // @ts-expect-error a subset must sit inside the declaration
+    expect(() => emitArtifacts({ outputs: both(), only: ['z'], files: { z: 'x' } }))
+      .toThrow(/undeclared: z/);
+  });
+
   it('replaces a family wholesale: members not emitted go, non-members stay', () => {
     const chunks = join(dir, 'chunks');
     mkdirSync(chunks);

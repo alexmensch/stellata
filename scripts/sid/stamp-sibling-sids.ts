@@ -17,10 +17,9 @@ import {
 
 const artifactPath = (spec: SiblingArtifactSpec): string => resolve(ROOT, 'public', spec.file);
 
-const stampOutputs = (names: readonly string[]) =>
-  declareOutputs(Object.fromEntries(names.map((n) => [n, artifactPath(SIBLING_ARTIFACTS[n])])));
-
-export const SID_STAMP_OUTPUTS = stampOutputs(Object.keys(SIBLING_ARTIFACTS));
+export const SID_STAMP_OUTPUTS = declareOutputs(Object.fromEntries(
+  Object.entries(SIBLING_ARTIFACTS).map(([name, spec]) => [name, artifactPath(spec)]),
+));
 
 function stamped(spec: SiblingArtifactSpec): string {
   const path = artifactPath(spec);
@@ -76,6 +75,7 @@ for (const t of names) {
   }
 }
 emitArtifacts({
-  outputs: stampOutputs(names),
+  outputs: SID_STAMP_OUTPUTS,
+  only: names,
   files: Object.fromEntries(names.map((n) => [n, stamped(SIBLING_ARTIFACTS[n])])),
 });

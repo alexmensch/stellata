@@ -38,10 +38,9 @@ const OUT_DIR = resolve(REPO_ROOT, 'data/probes');
 
 const probePath = (probe: ProbeMission): string => resolve(OUT_DIR, probeTrajectoryFilename(probe.id));
 
-const probeOutputs = (roster: readonly ProbeMission[]) =>
-  declareOutputs(Object.fromEntries(roster.map((p) => [p.id, probePath(p)])));
-
-export const PROBE_OUTPUTS = probeOutputs(PROBE_MISSIONS);
+export const PROBE_OUTPUTS = declareOutputs(
+  Object.fromEntries(PROBE_MISSIONS.map((p) => [p.id, probePath(p)])),
+);
 
 /** Last epoch the JPL spacecraft SPKs cover; all five reach it. */
 const STOP_TIME = '2050-01-01';
@@ -279,7 +278,7 @@ async function main(): Promise<void> {
   if (roster.length === 0) throw new Error(`No roster probe matches ${[...only].join(', ')}`);
   const files: Record<string, string> = {};
   for (const probe of roster) files[probe.id] = await fetchProbe(probe, retrievedUtc);
-  emitArtifacts({ outputs: probeOutputs(roster), files });
+  emitArtifacts({ outputs: PROBE_OUTPUTS, only: roster.map((p) => p.id), files });
 }
 
 main().catch((err) => {

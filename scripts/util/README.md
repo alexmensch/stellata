@@ -117,7 +117,11 @@ same thing — single-use helpers stay with their consumer.
   missing or extra key is a compile error. Family members (a directory plus a
   name pattern — the catalogue's transport chunks) arrive separately in
   `members`, by path, and must match a declared family. Family members a run
-  does not emit are deleted once the new set has landed. A `refresh` check
+  does not emit are deleted once the new set has landed. A step that can be
+  told to do only some targets (`fetch:ephemerides saturn`, `sid:stamp
+  clouds`) still passes its one full declaration, plus `only`: the run must
+  emit exactly those keys, and the leftover sweep still covers every declared
+  path. A `refresh` check
   (a snapshot under its update flag) stages its own baseline with the outputs.
   `stamp`, when given, is written last over exactly the emitted files, so a
   stamp's outputs and the declaration cannot disagree. A refreshed snapshot
