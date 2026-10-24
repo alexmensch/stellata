@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { R_SUN_PC } from '../../../src/client/util/astronomy-constants';
 import {
-  orbitHierarchyExemption,
+  orbitChainExemption,
   physicalOverlaps,
   type OverlapRecord,
 } from './overlap-gate-pure';
@@ -36,20 +36,30 @@ describe('physicalOverlaps', () => {
   });
 });
 
-describe('orbitHierarchyExemption', () => {
+describe('orbitChainExemption', () => {
   it('exempts a collocated pair a renderable orbit animates apart', () => {
-    expect(physicalOverlaps([star(5), star(5)], orbitHierarchyExemption([[1, 0]])))
+    expect(physicalOverlaps([star(5), star(5)], orbitChainExemption([[1, 0]])))
       .toEqual([]);
   });
 
-  it('exempts only the orbit hierarchy, not a third star on the same spot', () => {
-    expect(physicalOverlaps([star(5), star(5), star(5)], orbitHierarchyExemption([[0, 1]])))
+  it('exempts only the orbit pair, not a third star on the same spot', () => {
+    expect(physicalOverlaps([star(5), star(5), star(5)], orbitChainExemption([[0, 1]])))
       .toEqual([[0, 2], [1, 2]]);
+  });
+
+  it('exempts a chain of orbits, ancestor against descendant', () => {
+    expect(physicalOverlaps([star(5), star(5), star(5)], orbitChainExemption([[0, 1], [1, 2]])))
+      .toEqual([]);
+  });
+
+  it('flags two siblings of one primary on one spot', () => {
+    expect(physicalOverlaps([star(5), star(5), star(5)], orbitChainExemption([[0, 1], [0, 2]])))
+      .toEqual([[1, 2]]);
   });
 
   it('flags members of two separate hierarchies on one spot', () => {
     const records = [star(5), star(5), star(5), star(5)];
-    expect(physicalOverlaps(records, orbitHierarchyExemption([[0, 1], [2, 3]])))
+    expect(physicalOverlaps(records, orbitChainExemption([[0, 1], [2, 3]])))
       .toEqual([[0, 2], [0, 3], [1, 2], [1, 3]]);
   });
 });

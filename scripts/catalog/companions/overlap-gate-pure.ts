@@ -12,21 +12,27 @@ export interface OverlapRecord {
 
 export type OverlapExemption = (a: number, b: number) => boolean;
 
-export function orbitHierarchyExemption(
+/** The exemption rule: README.md#overlap-gate. */
+export function orbitChainExemption(
   relations: ReadonlyArray<readonly [number, number]>,
 ): OverlapExemption {
-  const parent = new Map<number, number>();
-  const find = (r: number): number => {
-    let root = r;
-    for (let p = parent.get(root); p !== undefined && p !== root; p = parent.get(root)) root = p;
-    return root;
-  };
-  for (const [a, b] of relations) {
-    const ra = find(a);
-    const rb = find(b);
-    if (ra !== rb) parent.set(ra, rb);
+  const children = new Map<number, number[]>();
+  for (const [p, c] of relations) {
+    const list = children.get(p);
+    if (list) list.push(c); else children.set(p, [c]);
   }
-  return (a, b) => find(a) === find(b);
+  const descends = (from: number, to: number): boolean => {
+    const seen = new Set<number>([from]);
+    const stack = [from];
+    while (stack.length > 0) {
+      for (const c of children.get(stack.pop() as number) ?? []) {
+        if (c === to) return true;
+        if (!seen.has(c)) { seen.add(c); stack.push(c); }
+      }
+    }
+    return false;
+  };
+  return (a, b) => descends(a, b) || descends(b, a);
 }
 
 /** Index pairs `[i, j]`, `i < j`, of records drawn inside one another. */

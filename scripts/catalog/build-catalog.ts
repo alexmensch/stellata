@@ -39,7 +39,7 @@ import {
 } from './record/catalog-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
-import { orbitHierarchyExemption, physicalOverlaps } from './companions/overlap-gate-pure';
+import { orbitChainExemption, physicalOverlaps } from './companions/overlap-gate-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareCountSnapshot,
@@ -901,11 +901,11 @@ async function main() {
 
     const overlaps = physicalOverlaps(
       stars,
-      orbitHierarchyExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
+      orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
     );
     counts.companionPhysicalOverlaps = overlaps.length;
     const recordTag = (s: Star) => s.syntheticId ?? s.gaiaSourceId ?? `hip ${s.hip}`;
-    console.log(`  physical overlaps outside an orbit hierarchy: ${overlaps.length}`);
+    console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
     for (const [a, b] of overlaps) {
       console.log(`    ${recordTag(stars[a])} | ${recordTag(stars[b])}`);
     }
