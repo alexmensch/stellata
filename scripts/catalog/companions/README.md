@@ -487,7 +487,10 @@ companion never gets one without the other.
 Which cursor primary is the ROOT's is `isMoreCanonicalAnchor`: top-level
 letter first, then token length, then alphabetical order — so a root whose only
 A-branch cursor is Aa,Ab still takes its position and velocity from the A
-branch. Only cursor primaries `findExistingPrimary` resolves compete, while
+branch. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
+carries the worked case and imports the same predicate for naming.
+
+Only cursor primaries `findExistingPrimary` resolves compete, while
 Stage 6 chains `anchor_sep_arcsec` / `anchor_pa_deg` from the top kept
 primary whatever its identifiers, and names that letter in `anchor_comp`.
 So every read of a Stage 6 offset goes through `rebasedAnchorOffset`
@@ -496,8 +499,7 @@ from the row's — or refuses, leaving the row offset-less, when Stage 6
 reached the promotion anchor from no measured geometry. It also refuses the
 chaining letter's own row: that letter outranks every resolvable primary, so
 it reaches promotion only with no identifier bound, and the catalogue usually
-holds its star unlinked — placing it would mint a twin of that record. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
-carries the worked case and imports the same predicate for naming.
+holds its star unlinked — placing it would mint a twin of that record.
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |
