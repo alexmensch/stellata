@@ -56,6 +56,7 @@ from scripts.binaries.stage6_multiples import (  # noqa: E402
     ballesteros_bv_from_teff,
     build_multiples_rows,
     build_standalone_rows,
+    AnchorOffsets,
     compute_anchor_offsets,
     photocentre_offsets,
     _add_sibling_edge,
@@ -719,6 +720,7 @@ class SepPaEpochPropagationTests(unittest.TestCase):
             emitted_keys=set(),
             system_anchors={},
             indices=_indices_with_astrometry(),
+            anchor_offsets=AnchorOffsets({}, {}),
         )
         # No anchor + no Gaia astrometry → position-less row, but the row
         # still emits (orbit_role=standalone, position cells empty). All
@@ -819,8 +821,30 @@ class PhotometryViaTests(unittest.TestCase):
             emitted_keys=set(),
             system_anchors={},
             indices=_indices_with_astrometry(),
+            anchor_offsets=AnchorOffsets({}, {}),
         )
         self.assertEqual(rows[0].photometry_via, PHOTOMETRY_VIA_NONE)
+
+    def test_standalone_rows_carry_their_system_anchor_letter(self) -> None:
+        simbad_xids = {
+            ("99999+9999", "X"): SimbadWdsXid(
+                simbad_oid=42, simbad_main_id="SIMBAD-X",
+                gaia_source_id=None, hip=None,
+            ),
+        }
+        rows = build_standalone_rows(
+            simbad_xids=simbad_xids,
+            emitted_keys=set(),
+            system_anchors={},
+            indices=_indices_with_astrometry(),
+            anchor_offsets=AnchorOffsets(
+                {"99999+9999": "Aa"}, {("99999+9999", "X"): (12.0, 30.0)},
+            ),
+        )
+        self.assertEqual(
+            (rows[0].anchor_comp, rows[0].anchor_sep_arcsec, rows[0].anchor_pa_deg),
+            ("Aa", 12.0, 30.0),
+        )
 
 
 class GaiaPhotometryAbsmagTests(unittest.TestCase):
@@ -1469,7 +1493,7 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
             classifications.append(OpticalClassification(
                 kept, "wds_notes_kept" if kept else "wds_notes_rejected",
             ))
-        return compute_anchor_offsets(pairs, comps, classifications, None)
+        return compute_anchor_offsets(pairs, comps, classifications, None).offsets
 
     def _assert_offset_en(
         self, out: dict[tuple[str, str], tuple[float, float]], tok: str,
@@ -1636,6 +1660,19 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
     def test_system_with_no_kept_pairs_emits_nothing(self) -> None:
         out = self._offsets([("AB", 5.0, 90.0, False)])
         self.assertEqual(out, {})
+
+    def test_records_the_letter_each_system_chains_from(self) -> None:
+        pairs, comps, classifications = [], [], []
+        for wds_id, components, kept in (
+            ("WDS-1", "Aa,Ab", True), ("WDS-1", "BC", True),
+            ("WDS-2", "AB", False),
+        ):
+            p, c = self._pair_with_comps(components, 1.0, 0.0, wds_id=wds_id)
+            pairs.append(p)
+            comps.extend(c)
+            classifications.append(OpticalClassification(kept, "wds_notes_kept"))
+        result = compute_anchor_offsets(pairs, comps, classifications, None)
+        self.assertEqual(result.anchor_by_system, {"WDS-1": "Aa"})
 
 
 class PhotocentreOffsetsTests(unittest.TestCase):

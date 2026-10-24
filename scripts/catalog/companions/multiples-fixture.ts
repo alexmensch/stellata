@@ -31,6 +31,7 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     dmag: null,
     anchorSepArcsec: null,
     anchorPaDeg: null,
+    anchorComp: null,
     magPri: null,
     magSec: null,
     ...overrides,

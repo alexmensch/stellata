@@ -25,6 +25,10 @@ scripts/catalog/companions/
     (+ test)                      sort so promoted records take the same
                                   final indexing as everything else. Names
                                   `MULTIPLES_TSV`.
+  anchor-offset-pure.ts (+ test)  rebasedAnchorOffset: a row's Stage 6
+                                  offset re-based onto promotion's WDS-root
+                                  anchor, or null where Stage 6 reached
+                                  either from no measured geometry.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -237,7 +241,8 @@ Per-row gates and resolution:
   per-component astrometry when Stage 3 supplied a real independent fit
   (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
   anchor's); (2) project the row's Stage-6 `anchor_sep_arcsec` /
-  `anchor_pa_deg` off the WDS-root anchor star — the per-component
+  `anchor_pa_deg` off the WDS-root anchor star, re-based from Stage 6's
+  `anchor_comp` onto that star (below) — the per-component
   offset BFS-composed over kept, Stage-5-rejected, and
   compound-photocentre pair geometry (40 Eri B lands at the A,BC
   compound proxy; Acrux B at the rejected AB row's 3.5″/114°).
@@ -462,8 +467,14 @@ letter first, then token length, then alphabetical order — so a root whose onl
 A-branch cursor is Aa,Ab still takes its position and velocity from the A
 branch. Only cursor primaries `findExistingPrimary` resolves compete, while
 Stage 6 chains `anchor_sep_arcsec` / `anchor_pa_deg` from the top kept
-primary whatever its identifiers, so a root whose top primary has no
-identifier reads offsets measured from a different letter. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
+primary whatever its identifiers, and names that letter in `anchor_comp`.
+So every read of a Stage 6 offset goes through `rebasedAnchorOffset`
+(`anchor-offset-pure.ts`), which subtracts the promotion anchor's own offset
+from the row's — or refuses, leaving the row offset-less, when Stage 6
+reached the promotion anchor from no measured geometry. It also refuses the
+chaining letter's own row: that letter outranks every resolvable primary, so
+it reaches promotion only with no identifier bound, and the catalogue usually
+holds its star unlinked — placing it would mint a twin of that record. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
 carries the worked case and imports the same predicate for naming.
 
 | Field(s) | Origin | Source |

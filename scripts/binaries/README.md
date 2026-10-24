@@ -662,7 +662,7 @@ photometry_via, a_via,
 orbit_role,
 P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
 sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag,
-anchor_sep_arcsec, anchor_pa_deg, mag_pri, mag_sec
+anchor_sep_arcsec, anchor_pa_deg, anchor_comp, mag_pri, mag_sec
 ```
 
 `x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
@@ -718,12 +718,15 @@ member's brightness on its own WDS magnitude at the system distance
 when neither Δmag path applies.
 
 `anchor_sep_arcsec` / `anchor_pa_deg` carry each component's best WDS
-offset from the SYSTEM ANCHOR letter (the most canonical kept-pair
-primary token, in the same order companion promotion ranks its WDS-root
-anchor — but promotion ranks only primaries it resolves to a catalogue
-record, so where the top-ranked primary has no identifier the two
-anchors differ), composed by `compute_anchor_offsets` over a BFS of the
-system's pair geometry. A direct measured anchor→component edge
+offset from the SYSTEM ANCHOR letter, which `anchor_comp` names on every
+row of the system (blank only where the system has no kept pair). The
+letter is the most canonical kept-pair primary token, in the same order
+companion promotion ranks its WDS-root anchor — but promotion ranks only
+primaries it resolves to a catalogue record, so where the top-ranked
+primary has no identifier the two anchors differ, and promotion re-bases
+every offset onto its own anchor through `anchor_comp`. The offsets are
+composed by `compute_anchor_offsets` over a BFS of the system's pair
+geometry. A direct measured anchor→component edge
 (kept, then Stage-5-rejected) wins over any composed chain — a
 blended member sits within measurement error of the anchor, so a
 chain through a distant third star cancels to ~zero (Acrux: AC ∘ CB

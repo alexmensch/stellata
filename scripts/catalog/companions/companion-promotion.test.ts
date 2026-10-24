@@ -65,7 +65,7 @@ describe('parseMultiplesTsv', () => {
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
-      'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
+      'anchor_sep_arcsec','anchor_pa_deg','anchor_comp','mag_pri','mag_sec',
     ].join('\t');
     const body = [
       'WDS-X-AB','A','12345','1234567890123456','48915',
@@ -75,7 +75,7 @@ describe('parseMultiplesTsv', () => {
       '365.25','2451545.0','0.1','1.0','0.5','0.6','0.7',
       '0.5','10.0',
       '7.123','265.45','2458850.0','0.85',
-      '3.500','114.00','1.25','1.55',
+      '3.500','114.00','Aa','1.25','1.55',
     ].join('\t');
     const rows = parseMultiplesTsv(`${header}\n${body}\n`);
     expect(rows).toHaveLength(1);
@@ -94,6 +94,7 @@ describe('parseMultiplesTsv', () => {
     expect(r.dmag).toBe(0.85);
     expect(r.anchorSepArcsec).toBe(3.5);
     expect(r.anchorPaDeg).toBe(114.0);
+    expect(r.anchorComp).toBe('Aa');
     expect(r.magPri).toBe(1.25);
     expect(r.magSec).toBe(1.55);
   });
@@ -107,7 +108,7 @@ describe('parseMultiplesTsv', () => {
       'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
       'q','dist_pc',
       'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
-      'anchor_sep_arcsec','anchor_pa_deg','mag_pri','mag_sec',
+      'anchor_sep_arcsec','anchor_pa_deg','anchor_comp','mag_pri','mag_sec',
     ].join('\t');
     const body = [
       'WDS-X-AB','B','','','',
@@ -117,7 +118,7 @@ describe('parseMultiplesTsv', () => {
       '','','','','','','',
       '','',
       '','','','',
-      '','','','',
+      '','','','','',
     ].join('\t');
     const rows = parseMultiplesTsv(`${header}\n${body}\n`);
     expect(rows[0].hip).toBeNull();
@@ -125,6 +126,7 @@ describe('parseMultiplesTsv', () => {
     expect(rows[0].x_pc).toBeNull();
     expect(rows[0].absmag).toBeNull();
     expect(rows[0].dmag).toBeNull();
+    expect(rows[0].anchorComp).toBeNull();
   });
 
   it('throws when a required column is missing from the header', () => {
@@ -2343,7 +2345,7 @@ describe('promoteCompanions', () => {
       x: 2.191467, y: 4.455210, z: -0.668480,
     });
     const rows: MultiplesTsvRow[] = [
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2351,7 +2353,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'BC',
         gaiaSourceId: null, hip: null,  // compound — no own identifier
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2360,7 +2362,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-AC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2368,7 +2370,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-AC', comp: 'C',
         gaiaSourceId: '3195919254111314816', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2377,7 +2379,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'B',
         gaiaSourceId: '3195919254111315712', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2387,7 +2389,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
         anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'C',
         gaiaSourceId: '3195919254111314816', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2431,7 +2433,7 @@ describe('promoteCompanions', () => {
       x: 2.191467, y: 4.455210, z: -0.668480,
     });
     const rows: MultiplesTsvRow[] = [
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2439,7 +2441,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'BC',
         gaiaSourceId: null, hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2448,7 +2450,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-AC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2456,7 +2458,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'B',
         gaiaSourceId: '3195919254111315712', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2466,7 +2468,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
         anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'C',
         gaiaSourceId: '3195919254111314816', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2475,7 +2477,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BD', comp: 'B',
         gaiaSourceId: '3195919254111315712', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2485,7 +2487,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 521.0, paDeg: 29.0, sepPaEpochJd: 2457389.0, dmag: 3.09,
         anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BD', comp: 'D',
         gaiaSourceId: '3196027418567684992', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2523,14 +2525,14 @@ describe('promoteCompanions', () => {
       vVia: 'printed_hip',  // Gaia-saturated, so its V is the printed blend
     });
     const rows: MultiplesTsvRow[] = [
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '12266-6306-AC', comp: 'A', hip: 60718,
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
         absmag: -3.77, name: 'Acrux', source: 'athyg',
         astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
         sepArcsec: 90.1, paDeg: 202.0, dmag: 3.2,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '12266-6306-AC', comp: 'C',
         gaiaSourceId: '6053767428923528064',
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
@@ -2539,7 +2541,7 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 90.1, paDeg: 202.0, dmag: 3.2,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '12266-6306-BC', comp: 'B', hip: 60718,
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
         absmag: -3.77, ci: -0.2, spect: 'B1V',
@@ -2549,7 +2551,7 @@ describe('promoteCompanions', () => {
         anchorSepArcsec: 3.5, anchorPaDeg: 114.0,
         magPri: 1.55, magSec: 4.8,
       }),
-      multiplesRow({
+      multiplesRow({ anchorComp: 'A',
         systemId: '12266-6306-BC', comp: 'C',
         gaiaSourceId: '6053767428923528064',
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
@@ -2585,6 +2587,59 @@ describe('promoteCompanions', () => {
     // C minted once (AC cursor); the BC duplicate dedups.
     expect(newStars.filter(s => s.gaiaSourceId === '6053767428923528064'))
       .toHaveLength(1);
+  });
+
+  // 00101+3825 shape: Stage 6 chains every offset from A, which carries no
+  // identifier, so promotion anchors on D instead.
+  function idlessAnchorRoot(dOffset: { sep: number; pa: number } | null): MultiplesTsvRow[] {
+    const root = { anchorComp: 'A', x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
+      astrometryVia: 'system_inherited', absmag: 8.0, magPri: 9.0, magSec: 10.0 };
+    return [
+      multiplesRow({ ...root, systemId: '00101+3825-AE', comp: 'A', orbitRole: 'primary',
+        sepArcsec: 30.0, paDeg: 10.0 }),
+      multiplesRow({ ...root, systemId: '00101+3825-AE', comp: 'E', orbitRole: 'secondary',
+        sepArcsec: 30.0, paDeg: 10.0, anchorSepArcsec: 30.0, anchorPaDeg: 10.0 }),
+      multiplesRow({ ...root, systemId: '00101+3825-DF', comp: 'D', hip: 823,
+        orbitRole: 'primary', sepArcsec: 5.0, paDeg: 0.0,
+        anchorSepArcsec: dOffset?.sep ?? null, anchorPaDeg: dOffset?.pa ?? null }),
+      multiplesRow({ ...root, systemId: '00101+3825-DF', comp: 'F', orbitRole: 'secondary',
+        sepArcsec: 5.0, paDeg: 0.0 }),
+      multiplesRow({ ...root, systemId: '00101+3825-HI', comp: 'H', orbitRole: 'primary',
+        sepArcsec: 4.0, paDeg: 90.0, anchorSepArcsec: 42.1, anchorPaDeg: 269.0 }),
+      multiplesRow({ ...root, systemId: '00101+3825-HI', comp: 'I', orbitRole: 'secondary',
+        sepArcsec: 4.0, paDeg: 90.0 }),
+    ];
+  }
+
+  it('re-bases a pair-row primary onto the resolvable anchor Stage 6 did not chain from', () => {
+    const d: Star = makeStar({ hip: 823, absmag: 8.0, x: 100, y: 0, z: 0 });
+    const { newStars } = promoteCompanions(
+      idlessAnchorRoot({ sep: 55.5, pa: 259.0 }), [d], CON_ASSIGNMENT,
+    );
+    const h = newStars.find(s => s.syntheticId === 'synth-00101+3825-H');
+    expect(h).toBeDefined();
+    if (!h) return;
+    const rad = Math.PI / 180;
+    const east = 42.1 * Math.sin(269 * rad) - 55.5 * Math.sin(259 * rad);
+    const north = 42.1 * Math.cos(269 * rad) - 55.5 * Math.cos(259 * rad);
+    const expected = projectFromSepPa(
+      d.x, d.y, d.z, Math.hypot(east, north),
+      ((Math.atan2(east, north) / rad) + 360) % 360,
+    );
+    expect(h.x).toBeCloseTo(expected?.x ?? NaN, 12);
+    expect(h.y).toBeCloseTo(expected?.y ?? NaN, 12);
+    expect(h.z).toBeCloseTo(expected?.z ?? NaN, 12);
+    expect(newStars.map(s => s.syntheticId)).not.toContain('synth-00101+3825-A');
+  });
+
+  it('refuses the offset when promotion\'s anchor is unreached from Stage 6\'s letter', () => {
+    const d: Star = makeStar({ hip: 823, absmag: 8.0, x: 100, y: 0, z: 0 });
+    const { newStars, stats } = promoteCompanions(
+      idlessAnchorRoot(null), [d], CON_ASSIGNMENT,
+    );
+    expect(newStars.map(s => s.syntheticId)).not.toContain('synth-00101+3825-H');
+    expect(newStars.map(s => s.syntheticId)).not.toContain('synth-00101+3825-A');
+    expect(stats.droppedCollocatedPrimary).toBe(2);
   });
 
   it('keeps the blended anchor hit when the disjoint primary has no honest placement', () => {

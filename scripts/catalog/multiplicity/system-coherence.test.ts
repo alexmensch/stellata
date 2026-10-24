@@ -31,7 +31,7 @@ function pairRow(
     pDays: null, tJd: null, e: null, aAU: null, iRad: null,
     omegaRad: null, q: null,
     sepArcsec: null, paDeg: null, sepPaEpochJd: null, dmag: null,
-    anchorSepArcsec: null, anchorPaDeg: null, magPri: null, magSec: null,
+    anchorSepArcsec: null, anchorPaDeg: null, anchorComp: null, magPri: null, magSec: null,
     ...overrides,
   };
 }

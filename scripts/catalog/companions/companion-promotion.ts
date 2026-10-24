@@ -40,6 +40,7 @@ import type { ConstellationAssignment } from '../parse/constellations/constellat
 import type { Star } from '../parse/stars-parse';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
+import { rebasedAnchorOffset } from './anchor-offset-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
@@ -90,12 +91,11 @@ export interface MultiplesTsvRow {
   paDeg: number | null;
   sepPaEpochJd: number | null;
   dmag: number | null;
-  /** Stage 6's per-component offset from the system anchor letter (BFS
-   *  over kept → Stage-5-rejected → compound-proxy WDS geometry). Feeds
-   *  the pair-row-primary escape's projection off the WDS-root anchor;
-   *  null when no geometry chain reaches the component. */
+  /** Read only through `rebasedAnchorOffset`
+   *  (README.md#promoted-companion-field-inheritance). */
   anchorSepArcsec: number | null;
   anchorPaDeg: number | null;
+  anchorComp: string | null;
   /** The pair row's published WDS apparent magnitudes (a row's OWN mag
    *  is magPri when it is the pair primary, magSec when secondary).
    *  Feeds the wds_mag absmag path. */
@@ -217,6 +217,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     dmag: col('dmag'),
     anchorSepArcsec: col('anchor_sep_arcsec'),
     anchorPaDeg: col('anchor_pa_deg'),
+    anchorComp: col('anchor_comp'),
     magPri: col('mag_pri'),
     magSec: col('mag_sec'),
   };
@@ -258,6 +259,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       dmag: parseFloatOrNull(cells[idx.dmag]),
       anchorSepArcsec: parseFloatOrNull(cells[idx.anchorSepArcsec]),
       anchorPaDeg: parseFloatOrNull(cells[idx.anchorPaDeg]),
+      anchorComp: nonEmpty(cells[idx.anchorComp]),
       magPri: parseFloatOrNull(cells[idx.magPri]),
       magSec: parseFloatOrNull(cells[idx.magSec]),
     });
@@ -1079,7 +1081,7 @@ export function componentDepth(comp: string): number {
  *  escape heads its own sub-pair, so its `mag_pri` IS the member's light and its
  *  offset from the anchor is the Stage-6 root composition rather than the row's
  *  own sep. */
-function anchorDimGeometry(row: MultiplesTsvRow, anchorComp: string): {
+function anchorDimGeometry(row: MultiplesTsvRow, anchorRow: MultiplesTsvRow): {
   memberWdsMag: number | null;
   anchorWdsMag: number | null;
   anchorDepth: number;
@@ -1089,8 +1091,10 @@ function anchorDimGeometry(row: MultiplesTsvRow, anchorComp: string): {
   return {
     memberWdsMag: isPairRowPrimary ? row.magPri : row.magSec,
     anchorWdsMag: isPairRowPrimary ? null : row.magPri,
-    anchorDepth: componentDepth(anchorComp),
-    sepArcsec: isPairRowPrimary ? row.anchorSepArcsec : row.sepArcsec,
+    anchorDepth: componentDepth(anchorRow.comp),
+    sepArcsec: isPairRowPrimary
+      ? rebasedAnchorOffset(row, anchorRow)?.sepArcsec ?? null
+      : row.sepArcsec,
   };
 }
 
@@ -1441,7 +1445,7 @@ function registerExistingMemberForAnchorDim(
     // is already a record has its own measured magnitude AND a published
     // separation, so the fit and the separation bound can both judge it.
     structural: false,
-    ...anchorDimGeometry(row, anchorPrimaryRow.comp),
+    ...anchorDimGeometry(row, anchorPrimaryRow),
     av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
   });
 }
@@ -1884,7 +1888,7 @@ function promoteRow(
       source: imputed.source as 'wds_mag' | 'dmag_imputed' | 'own',
       dmag: row.dmag,
       structural: idsInheritedFromAnchor,
-      ...anchorDimGeometry(row, anchorPrimaryRow.comp),
+      ...anchorDimGeometry(row, anchorPrimaryRow),
       av,
     });
   }
@@ -2467,18 +2471,18 @@ function tryPromoteCursorPrimary(
   let position = resolveIndependentAstrometry(
     primary, anchor.primaryRow.gaiaSourceId, anchor.primaryRow.hip,
   );
-  if (position === null
-      && primary.anchorSepArcsec !== null && primary.anchorSepArcsec > 0
-      && primary.anchorPaDeg !== null) {
+  const offset = position === null
+    ? rebasedAnchorOffset(primary, anchor.primaryRow) : null;
+  if (offset !== null) {
     if (projectionBeyondTidalLimit(
-      anchor.star.x, anchor.star.y, anchor.star.z, primary.anchorSepArcsec,
+      anchor.star.x, anchor.star.y, anchor.star.z, offset.sepArcsec,
     )) {
       stats.droppedBeyondTidalLimit++;
       return null;
     }
     position = projectFromSepPa(
       anchor.star.x, anchor.star.y, anchor.star.z,
-      primary.anchorSepArcsec, primary.anchorPaDeg,
+      offset.sepArcsec, offset.paDeg,
     );
   }
   if (position === null) {

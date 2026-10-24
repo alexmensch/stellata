@@ -81,7 +81,7 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "i_rad", "omega_rad", "Omega_rad",
     "q", "dist_pc",
     "sep_arcsec", "pa_deg", "sep_pa_epoch_jd", "dmag",
-    "anchor_sep_arcsec", "anchor_pa_deg",
+    "anchor_sep_arcsec", "anchor_pa_deg", "anchor_comp",
     "mag_pri", "mag_sec",
 )
 
@@ -264,11 +264,10 @@ class MultiplesRow:
     # multiples row inherited the primary's AT-HYG entry. ``None`` when
     # either WDS magnitude is missing — promotion drops the row.
     dmag: float | None
-    # This component's best WDS offset from the SYSTEM ANCHOR letter
-    # (see compute_anchor_offsets). ``None`` when no geometry chain
-    # reaches the component, or the component IS the anchor.
+    # See README.md#stage-6--multiplestsv-emit, the anchor columns.
     anchor_sep_arcsec: float | None = None
     anchor_pa_deg: float | None = None
+    anchor_comp: str | None = None
     # The pair row's published WDS apparent magnitudes, populated on
     # both component rows (a row's OWN mag is mag_pri when it is the
     # pair primary, mag_sec when it is the secondary). Promotion's
@@ -377,7 +376,8 @@ def _anchor_token_rank(tok: str) -> tuple[str, int, str]:
     top-level letter first, then token length, then alphabetical. Change
     both. Same order, different candidates: promotion ranks only primaries
     it resolves to a catalogue record, so where the top one has no
-    identifier the offsets chain from a letter promotion does not anchor on."""
+    identifier the offsets chain from a letter promotion does not anchor
+    on, and promotion re-bases them through ``anchor_comp``."""
     return (tok[:1], len(tok), tok)
 
 
@@ -492,14 +492,24 @@ def photocentre_offsets(adj: _SiblingAdj) -> dict[str, tuple[float, float]]:
     return {t: (pc_e - e, pc_n - n) for t, (e, n) in pos.items()}
 
 
+@dataclass(frozen=True)
+class AnchorOffsets:
+    """The letter each system's offsets chain from, and every reached
+    component's ``(sep_arcsec, pa_deg)`` from it."""
+
+    anchor_by_system: dict[str, str]
+    offsets: dict[tuple[str, str], tuple[float, float]]
+
+
 def compute_anchor_offsets(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],
     classifications: list[OpticalClassification],
     msc: MscLookup | None,
-) -> dict[tuple[str, str], tuple[float, float]]:
+) -> AnchorOffsets:
     """Per-component ``(sep_arcsec, pa_deg)`` offset from the system
-    anchor letter, keyed ``(wds_id, canonical token)``.
+    anchor letter, keyed ``(wds_id, canonical token)``, with that letter
+    per ``wds_id``.
 
     Offsets compose WDS (ρ, θ) tangent-plane vectors from three edge
     tiers: kept (Stage-5-physical) pair rows; Stage-5-REJECTED pair
@@ -577,8 +587,10 @@ def compute_anchor_offsets(
                     _add_edge(proxy_adj, a, b, e, n, epoch)
 
     out: dict[tuple[str, str], tuple[float, float]] = {}
+    anchor_by_system: dict[str, str] = {}
     for wds_id, primary_tokens in kept_primary_tokens.items():
         anchor = min(primary_tokens, key=_anchor_token_rank)
+        anchor_by_system[wds_id] = anchor
         links: _GeomAdj = {}
         tok = anchor
         parent = parent_component_token(anchor) if is_component_token(anchor) else None
@@ -610,7 +622,7 @@ def compute_anchor_offsets(
         for tok, (e, n) in offsets.items():
             pa = math.degrees(math.atan2(e, n)) % 360.0
             out[(wds_id, tok)] = (math.hypot(e, n), pa)
-    return out
+    return AnchorOffsets(anchor_by_system, out)
 
 
 def compute_pair_masses(
@@ -1153,9 +1165,7 @@ def build_multiples_rows(
         for row, tok in (
             (primary_row, primary.component), (secondary_row, s_tok),
         ):
-            offset = anchor_offsets.get((pair.wds_id, tok))
-            if offset is not None:
-                row.anchor_sep_arcsec, row.anchor_pa_deg = offset
+            _apply_anchor_offset(row, pair.wds_id, tok, anchor_offsets)
         out.append(primary_row)
         out.append(secondary_row)
         emitted_keys.add((pair.wds_id, primary.component))
@@ -1172,12 +1182,21 @@ def build_multiples_rows(
     return out
 
 
+def _apply_anchor_offset(
+    row: MultiplesRow, wds_id: str, tok: str, anchor_offsets: AnchorOffsets,
+) -> None:
+    row.anchor_comp = anchor_offsets.anchor_by_system.get(wds_id)
+    offset = anchor_offsets.offsets.get((wds_id, tok))
+    if offset is not None:
+        row.anchor_sep_arcsec, row.anchor_pa_deg = offset
+
+
 def build_standalone_rows(
     simbad_xids: dict[tuple[str, str], SimbadWdsXid],
     emitted_keys: set[tuple[str, str]],
     system_anchors: dict[str, SystemAnchor],
     indices: IdentifierIndices,
-    anchor_offsets: dict[tuple[str, str], tuple[float, float]] | None = None,
+    anchor_offsets: AnchorOffsets,
 ) -> list[MultiplesRow]:
     """For every (wds_id, component) SIMBAD has a cross-ID for that
     isn't already in ``emitted_keys`` (from the pair walk), emit a
@@ -1204,9 +1223,8 @@ def build_standalone_rows(
         )
         astrometry_via = _astrometry_via(synth_ast, inherited)
         spect, spect_via = _resolve_spect(wds_id, component, None, indices)
-        offset = (anchor_offsets or {}).get((wds_id, component))
 
-        out.append(MultiplesRow(
+        row = MultiplesRow(
             system_id=_system_id_for_standalone(wds_id, component),
             comp=component,
             hip=xid.hip,
@@ -1231,9 +1249,9 @@ def build_standalone_rows(
             dist_pc=position[3] if position is not None else None,
             sep_arcsec=None, pa_deg=None, sep_pa_epoch_jd=None,
             dmag=None,
-            anchor_sep_arcsec=offset[0] if offset is not None else None,
-            anchor_pa_deg=offset[1] if offset is not None else None,
-        ))
+        )
+        _apply_anchor_offset(row, wds_id, component, anchor_offsets)
+        out.append(row)
     return out
 
 
@@ -1294,6 +1312,7 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 _fmt_float(r.dmag, 4),
                 _fmt_float(r.anchor_sep_arcsec, 3),
                 _fmt_float(r.anchor_pa_deg, 2),
+                r.anchor_comp or "",
                 _fmt_float(r.mag_pri, 2),
                 _fmt_float(r.mag_sec, 2),
             )) + "\n")
