@@ -444,8 +444,11 @@ Per-row gates and resolution:
   there. A pair inside one connected set of renderable-orbit pairs is exempt:
   the runtime draws each member of that hierarchy from its own elements, so a
   bit-identical bake there is the deliberate sub-resolution placement above.
-  `promoteCompanions` returns those pairs (`orbitPairs`), the same ones the
-  systemic-velocity pass reconciles. Counted `companionPhysicalOverlaps`
+  Those pairs come from the runtime's own pairing after the record sort —
+  `renderableOrbitRelations` in `record-index/`, the wings pass's resolution
+  (writer's `resolve_idx`, both synth retries, the parent re-home) filtered to
+  renderable orbits — never from promotion's cursor walk, which records a pair
+  before its parent is minted. Counted `companionPhysicalOverlaps`
   (<!-- count:build-catalog/companionPhysicalOverlaps -->33<!-- /count -->), a ratchet-down metric: 15 are a blend record
   minted beside its own sub-letter (B with Bb), 18 a sub-letter collocated on
   a record with no orbit between them; the build log lists each pair.

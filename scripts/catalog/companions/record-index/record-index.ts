@@ -9,6 +9,7 @@ import {
   canonicalCompLetter,
   composeSyntheticId,
   groupBySystem,
+  hasRenderableOrbit,
   isMoreCanonicalAnchor,
   parentComponentToken,
   wdsRootOf,
@@ -250,6 +251,19 @@ function renderedCursors(
     out.push({ root, primaryIdx, secondaries });
   }
   return out;
+}
+
+/** Every rendered pair whose row carries a renderable orbit, as (primary,
+ *  secondary) record indices: the pairs binaries.bin draws apart from the
+ *  elements alone. */
+export function renderableOrbitRelations(
+  rows: MultiplesTsvRow[],
+  rowIndexMap: CatalogRowIndexMap,
+): Array<[number, number]> {
+  return renderedCursors([...groupBySystem(rows).values()], rowIndexMap)
+    .flatMap(({ primaryIdx, secondaries }) => secondaries
+      .filter(({ row }) => hasRenderableOrbit(row))
+      .map(({ idx }): [number, number] => [primaryIdx, idx]));
 }
 
 /** OR FLAG_BINARY_PRIMARY (chart-mode wings) onto the anchor of every

@@ -39,7 +39,7 @@ import {
 } from './record/catalog-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
-import { physicalOverlaps } from './companions/overlap-gate-pure';
+import { orbitHierarchyExemption, physicalOverlaps } from './companions/overlap-gate-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareCountSnapshot,
@@ -81,6 +81,7 @@ import {
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
+  renderableOrbitRelations,
   wingRenderablePrimaries,
   type ComponentDesignation,
 } from './companions/record-index/record-index';
@@ -689,16 +690,11 @@ async function main() {
       coherence.memberAnchorPrecisionVetoed;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
-    const { newStars, stats: ps, orbitPairs } = promoteCompanions(
+    const { newStars, stats: ps } = promoteCompanions(
       multiplesRows, stars, conAssignment, dustGrid,
       parkedRefusals(stats.parked), directions.gaiaAstrometry, synthGaiaBridges,
     );
     for (const ns of newStars) stars.push(ns);
-    const overlaps = physicalOverlaps(stars, orbitPairs);
-    counts.companionPhysicalOverlaps = overlaps.length;
-    const recordTag = (s: Star) => s.syntheticId ?? s.gaiaSourceId ?? `hip ${s.hip}`;
-    console.log(`  physical overlaps outside an orbit hierarchy: ${overlaps.length}`);
-    for (const [a, b] of overlaps) console.log(`    ${recordTag(a)} | ${recordTag(b)}`);
     console.log(
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
         `(${ps.promotedSynthetic} via synthetic ID); ` +
@@ -902,6 +898,17 @@ async function main() {
     console.log(
       `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
     );
+
+    const overlaps = physicalOverlaps(
+      stars,
+      orbitHierarchyExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
+    );
+    counts.companionPhysicalOverlaps = overlaps.length;
+    const recordTag = (s: Star) => s.syntheticId ?? s.gaiaSourceId ?? `hip ${s.hip}`;
+    console.log(`  physical overlaps outside an orbit hierarchy: ${overlaps.length}`);
+    for (const [a, b] of overlaps) {
+      console.log(`    ${recordTag(stars[a])} | ${recordTag(stars[b])}`);
+    }
 
     componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
     counts.componentDesignations = componentDesignations.size;
