@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { rebasedAnchorOffset, type AnchorOffsetRow } from './anchor-offset-pure';
+import {
+  parseStage6Offset, rebasedAnchorOffset, type AnchorOffsetRow,
+} from './anchor-offset-pure';
 
 function row(
   comp: string,
@@ -7,7 +9,7 @@ function row(
   pa: number | null,
   anchorComp: string | null = 'A',
 ): AnchorOffsetRow {
-  return { comp, anchorComp, anchorSepArcsec: sep, anchorPaDeg: pa };
+  return { comp, anchorComp, anchorOffset: parseStage6Offset(comp, anchorComp, sep, pa) };
 }
 
 function eastNorth(o: { sepArcsec: number; paDeg: number } | null): [number, number] {
@@ -15,6 +17,25 @@ function eastNorth(o: { sepArcsec: number; paDeg: number } | null): [number, num
   const pa = (o.paDeg * Math.PI) / 180;
   return [o.sepArcsec * Math.sin(pa), o.sepArcsec * Math.cos(pa)];
 }
+
+describe('parseStage6Offset', () => {
+  it('reads the chaining letter\'s own row as the origin', () => {
+    expect(parseStage6Offset('Aa', 'Aa', null, null)).toEqual({ kind: 'origin' });
+  });
+
+  it('reads blank cells under an anchor as unreached', () => {
+    expect(parseStage6Offset('E', 'A', null, null)).toEqual({ kind: 'unreached' });
+  });
+
+  it('refuses half an offset', () => {
+    expect(() => parseStage6Offset('E', 'A', 5, null)).toThrow(/half an anchor offset/);
+  });
+
+  it('refuses an offset with no anchor to measure it from', () => {
+    expect(() => parseStage6Offset('E', null, 5, 90)).toThrow(/no anchor/);
+    expect(() => parseStage6Offset('A', 'A', 5, 90)).toThrow(/no anchor/);
+  });
+});
 
 describe('rebasedAnchorOffset', () => {
   it('keeps the Stage 6 offset when promotion anchors on the same letter', () => {

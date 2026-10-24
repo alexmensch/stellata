@@ -40,7 +40,9 @@ import type { ConstellationAssignment } from '../parse/constellations/constellat
 import type { Star } from '../parse/stars-parse';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
-import { rebasedAnchorOffset, tangentOffset } from './anchor-offset-pure';
+import {
+  parseStage6Offset, rebasedAnchorOffset, tangentOffset, type Stage6Offset,
+} from './anchor-offset-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
@@ -91,11 +93,9 @@ export interface MultiplesTsvRow {
   paDeg: number | null;
   sepPaEpochJd: number | null;
   dmag: number | null;
-  /** Read only through `rebasedAnchorOffset`
-   *  (README.md#promoted-companion-field-inheritance). */
-  anchorSepArcsec: number | null;
-  anchorPaDeg: number | null;
+  /** README.md#promoted-companion-field-inheritance. */
   anchorComp: string | null;
+  anchorOffset: Stage6Offset;
   /** The pair row's published WDS apparent magnitudes (a row's OWN mag
    *  is magPri when it is the pair primary, magSec when secondary).
    *  Feeds the wds_mag absmag path. */
@@ -228,6 +228,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     if (!line.trim()) continue;
     const cells = line.split('\t');
     const role = cells[idx.orbitRole] as OrbitRole;
+    const anchorComp = nonEmpty(cells[idx.anchorComp]);
     rows.push({
       systemId: cells[idx.systemId],
       comp: cells[idx.comp],
@@ -257,9 +258,12 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       paDeg: parseFloatOrNull(cells[idx.paDeg]),
       sepPaEpochJd: parseFloatOrNull(cells[idx.sepPaEpochJd]),
       dmag: parseFloatOrNull(cells[idx.dmag]),
-      anchorSepArcsec: parseFloatOrNull(cells[idx.anchorSepArcsec]),
-      anchorPaDeg: parseFloatOrNull(cells[idx.anchorPaDeg]),
-      anchorComp: nonEmpty(cells[idx.anchorComp]),
+      anchorComp,
+      anchorOffset: parseStage6Offset(
+        cells[idx.comp], anchorComp,
+        parseFloatOrNull(cells[idx.anchorSepArcsec]),
+        parseFloatOrNull(cells[idx.anchorPaDeg]),
+      ),
       magPri: parseFloatOrNull(cells[idx.magPri]),
       magSec: parseFloatOrNull(cells[idx.magSec]),
     });

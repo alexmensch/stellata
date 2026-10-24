@@ -2,11 +2,16 @@
 // A module rather than a .test.ts export — see README.md#files-in-this-area.
 
 import type { MultiplesTsvRow } from './companion-promotion';
+import { parseStage6Offset } from './anchor-offset-pure';
 
+/** `anchorOffset` defaults to what the parse boundary gives the row's own
+ *  `comp` / `anchorComp` with blank offset cells. */
 export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow {
+  const comp = overrides.comp ?? 'B';
+  const anchorComp = overrides.anchorComp ?? null;
   return {
     systemId: 'WDS-1-AB',
-    comp: 'B',
+    comp,
     hip: null,
     gaiaSourceId: null,
     x_pc: 100, y_pc: 0, z_pc: 0,
@@ -29,9 +34,8 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     paDeg: null,
     sepPaEpochJd: null,
     dmag: null,
-    anchorSepArcsec: null,
-    anchorPaDeg: null,
-    anchorComp: null,
+    anchorComp,
+    anchorOffset: parseStage6Offset(comp, anchorComp, null, null),
     magPri: null,
     magSec: null,
     ...overrides,

@@ -4,8 +4,7 @@
 export interface AnchorOffsetRow {
   comp: string;
   anchorComp: string | null;
-  anchorSepArcsec: number | null;
-  anchorPaDeg: number | null;
+  anchorOffset: Stage6Offset;
 }
 
 export interface SepPa {
@@ -30,18 +29,33 @@ export function sepPaOf({ east, north }: TangentOffset): SepPa {
   };
 }
 
-type Stage6Offset =
+export type Stage6Offset =
   | { kind: 'origin' }
-  | { kind: 'offset'; east: number; north: number }
+  | { kind: 'offset'; offset: TangentOffset }
   | { kind: 'unreached' };
 
-function stage6Offset(row: AnchorOffsetRow): Stage6Offset {
-  if (row.anchorComp === null) return { kind: 'unreached' };
-  if (row.comp === row.anchorComp) return { kind: 'origin' };
-  if (row.anchorSepArcsec === null || row.anchorPaDeg === null) {
-    return { kind: 'unreached' };
+/** The multiples.tsv parse boundary for the anchor columns: the row that is
+ *  Stage 6's chaining letter, a reached row, or an unreached one. */
+export function parseStage6Offset(
+  comp: string,
+  anchorComp: string | null,
+  sepArcsec: number | null,
+  paDeg: number | null,
+): Stage6Offset {
+  const blank = sepArcsec === null && paDeg === null;
+  if (anchorComp === null || comp === anchorComp) {
+    if (!blank) {
+      throw new Error(
+        `multiples.tsv row ${comp} carries an anchor offset with no anchor to measure it from`,
+      );
+    }
+    return anchorComp === null ? { kind: 'unreached' } : { kind: 'origin' };
   }
-  return { kind: 'offset', ...tangentOffset(row.anchorSepArcsec, row.anchorPaDeg) };
+  if (blank) return { kind: 'unreached' };
+  if (sepArcsec === null || paDeg === null) {
+    throw new Error(`multiples.tsv row ${comp} carries half an anchor offset`);
+  }
+  return { kind: 'offset', offset: tangentOffset(sepArcsec, paDeg) };
 }
 
 export function rebasedAnchorOffset(
@@ -54,11 +68,12 @@ export function rebasedAnchorOffset(
       + `${row.anchorComp}, ${anchorRow.comp} from ${anchorRow.anchorComp}`,
     );
   }
-  const own = stage6Offset(row);
-  const anchor = stage6Offset(anchorRow);
+  const own = row.anchorOffset;
+  const anchor = anchorRow.anchorOffset;
   if (own.kind !== 'offset' || anchor.kind === 'unreached') return null;
-  const east = own.east - (anchor.kind === 'offset' ? anchor.east : 0);
-  const north = own.north - (anchor.kind === 'offset' ? anchor.north : 0);
+  const base = anchor.kind === 'offset' ? anchor.offset : { east: 0, north: 0 };
+  const east = own.offset.east - base.east;
+  const north = own.offset.north - base.north;
   const rebased = sepPaOf({ east, north });
   return rebased.sepArcsec > 0 ? rebased : null;
 }

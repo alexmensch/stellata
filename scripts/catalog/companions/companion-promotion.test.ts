@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { tangentOffset, type Stage6Offset } from './anchor-offset-pure';
 import {
   ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
   canonicalCompLetter,
@@ -41,6 +42,9 @@ import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 // coordinates, so a positional assertion (Sirius B in Canis Major) is a
 // genuine check rather than an echo of what the test injected.
 const CON_ASSIGNMENT = createConstellationAssignment();
+
+const reached = (sepArcsec: number, paDeg: number): Stage6Offset =>
+  ({ kind: 'offset', offset: tangentOffset(sepArcsec, paDeg) });
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
@@ -92,8 +96,7 @@ describe('parseMultiplesTsv', () => {
     expect(r.sepArcsec).toBe(7.123);
     expect(r.paDeg).toBe(265.45);
     expect(r.dmag).toBe(0.85);
-    expect(r.anchorSepArcsec).toBe(3.5);
-    expect(r.anchorPaDeg).toBe(114.0);
+    expect(r.anchorOffset).toEqual({ kind: 'offset', offset: tangentOffset(3.5, 114.0) });
     expect(r.anchorComp).toBe('Aa');
     expect(r.magPri).toBe(1.25);
     expect(r.magSec).toBe(1.55);
@@ -2387,7 +2390,7 @@ describe('promoteCompanions', () => {
         photometryVia: 'none', spectVia: 'simbad', name: '',
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
-        anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
+        anchorOffset: reached(83.2, 108.0),
       }),
       multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'C',
@@ -2466,7 +2469,7 @@ describe('promoteCompanions', () => {
         photometryVia: 'athyg_own', name: '',
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
-        anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
+        anchorOffset: reached(83.2, 108.0),
       }),
       multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'C',
@@ -2485,7 +2488,7 @@ describe('promoteCompanions', () => {
         photometryVia: 'athyg_own', name: '',
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 521.0, paDeg: 29.0, sepPaEpochJd: 2457389.0, dmag: 3.09,
-        anchorSepArcsec: 83.2, anchorPaDeg: 108.0,
+        anchorOffset: reached(83.2, 108.0),
       }),
       multiplesRow({ anchorComp: 'A',
         systemId: '04153-0739-BD', comp: 'D',
@@ -2548,7 +2551,7 @@ describe('promoteCompanions', () => {
         photometryVia: 'athyg_own', spectVia: 'simbad',
         astrometryVia: 'system_inherited', orbitRole: 'primary',
         sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
-        anchorSepArcsec: 3.5, anchorPaDeg: 114.0,
+        anchorOffset: reached(3.5, 114.0),
         magPri: 1.55, magSec: 4.8,
       }),
       multiplesRow({ anchorComp: 'A',
@@ -2598,14 +2601,14 @@ describe('promoteCompanions', () => {
       multiplesRow({ ...root, systemId: '00101+3825-AE', comp: 'A', orbitRole: 'primary',
         sepArcsec: 30.0, paDeg: 10.0 }),
       multiplesRow({ ...root, systemId: '00101+3825-AE', comp: 'E', orbitRole: 'secondary',
-        sepArcsec: 30.0, paDeg: 10.0, anchorSepArcsec: 30.0, anchorPaDeg: 10.0 }),
+        sepArcsec: 30.0, paDeg: 10.0, anchorOffset: reached(30.0, 10.0) }),
       multiplesRow({ ...root, systemId: '00101+3825-DF', comp: 'D', hip: 823,
         orbitRole: 'primary', sepArcsec: 5.0, paDeg: 0.0,
-        anchorSepArcsec: dOffset?.sep ?? null, anchorPaDeg: dOffset?.pa ?? null }),
+        anchorOffset: dOffset ? reached(dOffset.sep, dOffset.pa) : { kind: 'unreached' } }),
       multiplesRow({ ...root, systemId: '00101+3825-DF', comp: 'F', orbitRole: 'secondary',
         sepArcsec: 5.0, paDeg: 0.0 }),
       multiplesRow({ ...root, systemId: '00101+3825-HI', comp: 'H', orbitRole: 'primary',
-        sepArcsec: 4.0, paDeg: 90.0, anchorSepArcsec: 42.1, anchorPaDeg: 269.0 }),
+        sepArcsec: 4.0, paDeg: 90.0, anchorOffset: reached(42.1, 269.0) }),
       multiplesRow({ ...root, systemId: '00101+3825-HI', comp: 'I', orbitRole: 'secondary',
         sepArcsec: 4.0, paDeg: 90.0 }),
     ];
@@ -2637,7 +2640,7 @@ describe('promoteCompanions', () => {
       hip: 823, absmag: 3.0, x: 100, y: 0, z: 0, vVia: 'printed_hip',
     });
     const rows = idlessAnchorRoot({ sep: 6.0, pa: 180.0 }).map((r) =>
-      r.comp === 'H' ? { ...r, anchorSepArcsec: 5.0, anchorPaDeg: 0.0 } : r);
+      r.comp === 'H' ? { ...r, anchorOffset: reached(5.0, 0.0) } : r);
     const { stats } = promoteCompanions(rows, [d], CON_ASSIGNMENT);
     expect(stats.blendDimMembersBeyondSeparation).toBe(1);
   });
