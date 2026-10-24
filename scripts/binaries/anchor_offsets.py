@@ -32,12 +32,8 @@ _GeomAdj = dict[str, dict[str, tuple[float, float, float | None]]]
 
 
 def anchor_token_rank(tok: str) -> tuple[str, int, str]:
-    """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``:
-    top-level letter first, then token length, then alphabetical. Change
-    both. Same order, different candidates: promotion ranks only primaries
-    it resolves to a catalogue record, so where the top one has no
-    identifier the offsets chain from a letter promotion does not anchor
-    on, and promotion re-bases them through ``anchor_comp``."""
+    """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``,
+    same order: change both. Candidates differ: README.md#stage-6--multiplestsv-emit."""
     return (tok[:1], len(tok), tok)
 
 
@@ -109,10 +105,7 @@ def _sibling_edge(
 
 def photocentre_offsets(adj: SiblingAdj) -> dict[str, tuple[float, float]]:
     """Each sibling's (E, N) arcsec offset to the parent letter's
-    photocentre — the flux-weighted mean position of the siblings the
-    ``adj`` geometry reaches from the most canonical one. Flux ratios
-    compose along the same chain from each row's own Δm; a sibling whose
-    chain carries no Δm weighs nothing (its light was never measured)."""
+    photocentre: README.md#stage-6--multiplestsv-emit."""
     ref = min(adj, key=anchor_token_rank)
     pos: dict[str, tuple[float, float]] = {ref: (0.0, 0.0)}
     flux: dict[str, float | None] = {ref: 1.0}
@@ -151,41 +144,8 @@ def compute_anchor_offsets(
     classifications: list[OpticalClassification],
     msc: MscLookup | None,
 ) -> AnchorOffsets:
-    """Per-component ``(sep_arcsec, pa_deg)`` offset from the system
-    anchor letter, keyed ``(wds_id, canonical token)``, with that letter
-    per ``wds_id``.
-
-    Offsets compose WDS (ρ, θ) tangent-plane vectors from three edge
-    tiers: kept (Stage-5-physical) pair rows; Stage-5-REJECTED pair
-    rows (a sep+PA measurement is real astrometry regardless of
-    boundness classification — the pair stays dropped, only its
-    geometry is consulted: Acrux AB, whose WDS ``U`` flag rejects the
-    pair while B remains a V≈1.6 star with no other measured
-    position); and compound photocentre proxies (a row with a
-    multi-letter side lends its vector to each constituent letter —
-    ``A,BC`` places B and C at the BC photocentre).
-
-    Every tier also links a sub-letter anchor to each ancestor letter
-    (Aa1 → Aa → A) at the siblings' photocentre (``photocentre_offsets``),
-    the point a WDS row naming the parent measured from; kept and
-    rejected sibling rows both count, since a blend's light is optical
-    whatever its boundness. An unmeasured sibling separation is zero, and
-    a ρ > 0 row with no θ places nothing. Only the anchor's own chain is
-    linked: any other sub-letter (Ca under C) stays unreached, because
-    where its parent is a record carrying the blend, placing the
-    sub-letter beside it would draw that light twice.
-
-    Preference per component: a DIRECT measured anchor→component edge
-    (kept, then rejected) beats any composed chain — a blended member
-    sits within measurement error of the anchor, so a chain through a
-    distant third star cancels to ~zero and buries the direct
-    measurement (Acrux: AC ∘ CB ≡ 0 vs the honest AB 3.5″). Chains
-    then fill in tier order (kept → +rejected → +proxy); zero-length
-    results fall through to the next tier.
-
-    The anchor letter is the most canonical kept-pair primary token.
-    The anchor itself is absent from the map, as is any unreachable
-    component (blank columns downstream)."""
+    """Each reached component's offset from its system's anchor letter:
+    README.md#stage-6--multiplestsv-emit."""
     kept: dict[str, _GeomAdj] = {}
     rejected: dict[str, _GeomAdj] = {}
     proxy: dict[str, _GeomAdj] = {}
