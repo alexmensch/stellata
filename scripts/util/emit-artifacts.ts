@@ -3,7 +3,7 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
-import { writeStamp, type FileHashes } from './build-stamp';
+import { fileHashes, writeStamp, type FileHashes } from './build-stamp';
 import {
   STAGING_SUFFIX, discardStaged, landStaged, writeStaged,
 } from './staged-write';
@@ -120,5 +120,16 @@ export function emitArtifacts(emission: Emission): void {
     }
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);
-  if (stamp) writeStamp(stamp.path, stamp.inputs, [...files.keys()]);
+  if (stamp) {
+    writeStamp(stamp.path, rehashRefreshed(stamp.inputs, refreshes), [...files.keys()]);
+  }
+}
+
+/** A refreshed snapshot that the step also reads would otherwise leave the
+ *  stamp holding its pre-refresh hash and force the next run to rebuild. */
+function rehashRefreshed(inputs: FileHashes, refreshes: readonly { path: string }[]): FileHashes {
+  const refreshed = fileHashes(refreshes.map((r) => resolve(r.path)));
+  return Object.fromEntries(
+    Object.entries(inputs).map(([p, h]) => [p, p in refreshed ? refreshed[p] : h]),
+  );
 }

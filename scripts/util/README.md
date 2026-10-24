@@ -118,7 +118,10 @@ same thing — single-use helpers stay with their consumer.
   does not emit are deleted once the new set has landed. A `refresh` check
   (a snapshot under its update flag) stages its own baseline with the outputs.
   `stamp`, when given, is written last over exactly the emitted files, so a
-  stamp's outputs and the declaration cannot disagree.
+  stamp's outputs and the declaration cannot disagree. A refreshed snapshot
+  is usually one of the stamp's inputs too (the `*-expected.json` beside the
+  build's modules), so its input hash is re-read after the refresh lands; the
+  next run then skips instead of rebuilding for its own refresh.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's

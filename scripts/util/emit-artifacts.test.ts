@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { readStamp } from './build-stamp';
+import { fileHashes, readStamp, stampIsCurrent } from './build-stamp';
 import {
   EmissionRefused, declareOutputs, emitArtifacts, type Check,
 } from './emit-artifacts';
@@ -106,5 +106,18 @@ describe('emitArtifacts', () => {
     expect(recorded).toHaveLength(2);
     expect(recorded[0]).toMatch(/a\.txt$/);
     expect(recorded[1]).toMatch(/out\/b\.txt$/);
+  });
+
+  it('records a refreshed snapshot the step reads at its new hash, so the stamp stays current', () => {
+    const snapshot = join(dir, 'expected.json');
+    const stampFile = join(dir, 'stamps', 'step.json');
+    writeFileSync(snapshot, '{"n":1}\n');
+    emitArtifacts({
+      outputs: both(),
+      files: files(),
+      checks: [{ kind: 'refresh', path: snapshot, text: '{"n":2}\n' }],
+      stamp: { path: stampFile, inputs: fileHashes([snapshot]) },
+    });
+    expect(stampIsCurrent(stampFile, fileHashes([snapshot]))).toBe(true);
   });
 });
