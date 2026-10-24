@@ -13,6 +13,23 @@ export interface SepPa {
   paDeg: number;
 }
 
+export interface TangentOffset {
+  east: number;
+  north: number;
+}
+
+export function tangentOffset(sepArcsec: number, paDeg: number): TangentOffset {
+  const pa = paDeg * (Math.PI / 180);
+  return { east: sepArcsec * Math.sin(pa), north: sepArcsec * Math.cos(pa) };
+}
+
+export function sepPaOf({ east, north }: TangentOffset): SepPa {
+  return {
+    sepArcsec: Math.hypot(east, north),
+    paDeg: ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360,
+  };
+}
+
 type Stage6Offset =
   | { kind: 'origin' }
   | { kind: 'offset'; east: number; north: number }
@@ -24,12 +41,7 @@ function stage6Offset(row: AnchorOffsetRow): Stage6Offset {
   if (row.anchorSepArcsec === null || row.anchorPaDeg === null) {
     return { kind: 'unreached' };
   }
-  const pa = row.anchorPaDeg * (Math.PI / 180);
-  return {
-    kind: 'offset',
-    east: row.anchorSepArcsec * Math.sin(pa),
-    north: row.anchorSepArcsec * Math.cos(pa),
-  };
+  return { kind: 'offset', ...tangentOffset(row.anchorSepArcsec, row.anchorPaDeg) };
 }
 
 export function rebasedAnchorOffset(
@@ -47,8 +59,6 @@ export function rebasedAnchorOffset(
   if (own.kind !== 'offset' || anchor.kind === 'unreached') return null;
   const east = own.east - (anchor.kind === 'offset' ? anchor.east : 0);
   const north = own.north - (anchor.kind === 'offset' ? anchor.north : 0);
-  const sepArcsec = Math.hypot(east, north);
-  if (!(sepArcsec > 0)) return null;
-  const paDeg = ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360;
-  return { sepArcsec, paDeg };
+  const rebased = sepPaOf({ east, north });
+  return rebased.sepArcsec > 0 ? rebased : null;
 }

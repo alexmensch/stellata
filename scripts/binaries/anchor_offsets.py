@@ -20,6 +20,8 @@ from .stage2_resolve import (
     ResolvedComponent,
     _add_edge,
     add_newest_edge,
+    pair_epoch,
+    pair_vector,
     iter_decomposing_pair_components,
 )
 from .stage5_optical import OpticalClassification
@@ -96,19 +98,13 @@ def add_sibling_edge(
 def _sibling_edge(
     pair: WdsPair, p_tok: str, s_tok: str, msc: MscLookup | None,
 ) -> SiblingEdge | None:
-    rho, theta = pair.rho_last, pair.theta_last
-    if rho is not None and rho > 0.0 and theta is None:
-        return None
-    if rho is None or rho <= 0.0:
-        east = north = 0.0
-    else:
-        theta_rad = math.radians(theta)
-        east, north = rho * math.sin(theta_rad), rho * math.cos(theta_rad)
+    vector = pair_vector(pair)
+    if vector is None:
+        if pair.rho_last is not None and pair.rho_last > 0.0:
+            return None
+        vector = (0.0, 0.0)
     mag_pri, mag_sec = pair_magnitudes(pair, p_tok, s_tok, msc)
-    return SiblingEdge(
-        east, north, wds_dmag(mag_pri, mag_sec),
-        float(pair.date_last) if pair.date_last is not None else None,
-    )
+    return SiblingEdge(*vector, wds_dmag(mag_pri, mag_sec), pair_epoch(pair))
 
 
 def photocentre_offsets(adj: SiblingAdj) -> dict[str, tuple[float, float]]:
@@ -215,15 +211,11 @@ def compute_anchor_offsets(
                     siblings.setdefault((pair.wds_id, parent), {}),
                     p_tok, s_tok, sibling_edge,
                 )
-        if (
-            pair.rho_last is None or pair.rho_last <= 0.0
-            or pair.theta_last is None
-        ):
+        vector = pair_vector(pair)
+        if vector is None:
             continue
-        theta_rad = math.radians(pair.theta_last)
-        e = pair.rho_last * math.sin(theta_rad)
-        n = pair.rho_last * math.cos(theta_rad)
-        epoch = float(pair.date_last) if pair.date_last is not None else None
+        e, n = vector
+        epoch = pair_epoch(pair)
         tier = kept if is_kept else rejected
         _add_edge(tier.setdefault(pair.wds_id, {}), p_tok, s_tok, e, n, epoch)
         p_ends = _proxy_endpoints(p_tok)

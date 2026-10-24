@@ -40,7 +40,7 @@ import type { ConstellationAssignment } from '../parse/constellations/constellat
 import type { Star } from '../parse/stars-parse';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
-import { rebasedAnchorOffset } from './anchor-offset-pure';
+import { rebasedAnchorOffset, tangentOffset } from './anchor-offset-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
@@ -298,10 +298,9 @@ export function projectFromSepPa(
   const at = equatorialTangentBasisAt(primaryX, primaryY, primaryZ);
   if (at === null) return null;
   const { basis: { east, north }, rPc: distPc } = at;
-  const paRad = paDeg * (Math.PI / 180.0);
-  const sepRad = sepArcsec * ARCSEC_TO_RAD;
-  const offsetN = sepRad * Math.cos(paRad);  // north component (rad)
-  const offsetE = sepRad * Math.sin(paRad);  // east component (rad)
+  const offset = tangentOffset(sepArcsec, paDeg);
+  const offsetN = offset.north * ARCSEC_TO_RAD;
+  const offsetE = offset.east * ARCSEC_TO_RAD;
   // Small-angle: linear in parsecs at the primary's distance.
   const cx = primaryX + (offsetN * north.x + offsetE * east.x) * distPc;
   const cy = primaryY + (offsetN * north.y + offsetE * east.y) * distPc;

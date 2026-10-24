@@ -1670,6 +1670,19 @@ def _canonical_token(primary_tok: str, comp: ResolvedComponent) -> str:
     return expand_wds_truncated_secondary(primary_tok, comp.component)
 
 
+def pair_vector(pair: WdsPair) -> tuple[float, float] | None:
+    """The secondary's (E, N) arcsec from the primary, or None without a
+    measured ρ > 0 and θ."""
+    if pair.rho_last is None or pair.rho_last <= 0.0 or pair.theta_last is None:
+        return None
+    theta_rad = math.radians(pair.theta_last)
+    return pair.rho_last * math.sin(theta_rad), pair.rho_last * math.cos(theta_rad)
+
+
+def pair_epoch(pair: WdsPair) -> float | None:
+    return float(pair.date_last) if pair.date_last is not None else None
+
+
 _E = TypeVar("_E")
 
 
@@ -1732,16 +1745,9 @@ def build_system_contexts(
                 ctx.token_sources.setdefault(tok, set()).add(comp.gaia_source_id)
             if mag is not None and mag < ctx.token_mag.get(tok, math.inf):
                 ctx.token_mag[tok] = mag
-        if (
-            pair.rho_last is not None
-            and pair.theta_last is not None
-            and pair.rho_last > 0.0
-        ):
-            theta_rad = math.radians(pair.theta_last)
-            e = pair.rho_last * math.sin(theta_rad)
-            n = pair.rho_last * math.cos(theta_rad)
-            epoch = float(pair.date_last) if pair.date_last is not None else None
-            _add_edge(ctx.adj, p_tok, s_tok, e, n, epoch)
+        vector = pair_vector(pair)
+        if vector is not None:
+            _add_edge(ctx.adj, p_tok, s_tok, *vector, pair_epoch(pair))
     return systems
 
 
