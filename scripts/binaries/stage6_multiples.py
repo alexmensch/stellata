@@ -866,12 +866,11 @@ def build_multiples_rows(
             primary.component, secondary.component,
         )
         mags = pair_magnitudes(pair, primary.component, s_tok, indices.msc)
-        if mags != (pair.mag_pri, pair.mag_sec):
-            vmag_pri, vmag_sec = mags
+        if mags.source == "msc":
             for row in (primary_row, secondary_row):
-                row.mag_pri = vmag_pri
-                row.mag_sec = vmag_sec
-                row.dmag = wds_dmag(vmag_pri, vmag_sec)
+                row.mag_pri = mags.mag_pri
+                row.mag_sec = mags.mag_sec
+                row.dmag = wds_dmag(mags.mag_pri, mags.mag_sec)
             if msc_mag_fills is not None:
                 msc_mag_fills.append(f"{pair.wds_id}{pair.components}")
         finalize_renderable_elements(primary_row, secondary_row, orbit)

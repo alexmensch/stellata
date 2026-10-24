@@ -103,8 +103,8 @@ def _sibling_edge(
         if measured_wider or overflowed:
             return None
         vector = (0.0, 0.0)
-    mag_pri, mag_sec = pair_magnitudes(pair, p_tok, s_tok, msc)
-    return SiblingEdge(*vector, wds_dmag(mag_pri, mag_sec), pair_epoch(pair))
+    mags = pair_magnitudes(pair, p_tok, s_tok, msc)
+    return SiblingEdge(*vector, wds_dmag(mags.mag_pri, mags.mag_sec), pair_epoch(pair))
 
 
 _V = TypeVar("_V")

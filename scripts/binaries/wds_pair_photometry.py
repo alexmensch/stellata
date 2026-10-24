@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import Literal
+
 from .msc_map import MscLookup
 from .parsers import WdsPair
 
@@ -19,13 +22,20 @@ def wds_dmag(mag_pri: float | None, mag_sec: float | None) -> float | None:
     return mag_sec - mag_pri
 
 
+@dataclass(frozen=True)
+class PairMagnitudes:
+    mag_pri: float | None
+    mag_sec: float | None
+    source: Literal["wds", "msc"]
+
+
 def pair_magnitudes(
     pair: WdsPair, p_tok: str, s_tok: str, msc: MscLookup | None,
-) -> tuple[float | None, float | None]:
-    """The pair row's ``(mag_pri, mag_sec)``: WDS's own, else the MSC's
-    pair-side V when WDS prints neither."""
+) -> PairMagnitudes:
+    """The pair row's magnitudes: WDS's own, else the MSC's pair-side V when
+    WDS prints neither."""
     if pair.mag_pri is None and pair.mag_sec is None and msc is not None:
         filled = msc.pair_mags.get((pair.wds_id, (p_tok, s_tok)))
         if filled is not None:
-            return filled
-    return pair.mag_pri, pair.mag_sec
+            return PairMagnitudes(*filled, "msc")
+    return PairMagnitudes(pair.mag_pri, pair.mag_sec, "wds")
