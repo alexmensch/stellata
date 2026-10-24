@@ -1,6 +1,5 @@
-// Orchestrator for the catalog build pipeline — writes
-// public/catalog.bin, public/constellations.json, and
-// public/search-index.json. See scripts/catalog/README.md.
+// Orchestrator for the catalog build; emits CATALOG_OUTPUTS (catalog-outputs.ts).
+// See scripts/catalog/README.md.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
