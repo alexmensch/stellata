@@ -357,11 +357,13 @@ def compute_system_anchors(
 _GeomAdj = dict[str, dict[str, tuple[float, float, float | None]]]
 
 
-def _anchor_token_rank(tok: str) -> tuple[int, int, str]:
-    """Mirror of companion-promotion.ts ``isMoreCanonicalAnchor``: ``A``
-    first, then shortest, then alphabetical — so the letter these offsets
-    chain from is the same one promotion resolves as the WDS-root anchor."""
-    return (0 if tok == "A" else 1, len(tok), tok)
+def _anchor_token_rank(tok: str) -> tuple[str, int, str]:
+    """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``:
+    top-level letter first, then token length, then alphabetical. Change
+    both. Same order, different candidates: promotion ranks only primaries
+    it resolves to a catalogue record, so where the top one has no
+    identifier the offsets chain from a letter promotion does not anchor on."""
+    return (tok[:1], len(tok), tok)
 
 
 def _proxy_endpoints(tok: str) -> list[str]:

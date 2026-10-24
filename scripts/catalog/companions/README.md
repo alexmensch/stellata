@@ -458,9 +458,12 @@ class). Both inherited fields below resolve that same anchor, so a
 companion never gets one without the other.
 
 Which cursor primary is the ROOT's is `isMoreCanonicalAnchor`: top-level
-letter first, then depth, then alphabetical order — so a root whose only
+letter first, then token length, then alphabetical order — so a root whose only
 A-branch cursor is Aa,Ab still takes its position and velocity from the A
-branch. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
+branch. Only cursor primaries `findExistingPrimary` resolves compete, while
+Stage 6 chains `anchor_sep_arcsec` / `anchor_pa_deg` from the top kept
+primary whatever its identifiers, so a root whose top primary has no
+identifier reads offsets measured from a different letter. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
 carries the worked case and imports the same predicate for naming.
 
 | Field(s) | Origin | Source |

@@ -119,7 +119,7 @@ primary composed that root's E as "θ¹ Ori E" — colliding with the real
 name before they were written:
 
 - **The top-level letter decides which cursor primary is the anchor**,
-  then depth. Comparing whole comps by length put "Aa" below every
+  then token length. Comparing whole comps by length put "Aa" below every
   single-letter branch, so 15 Mon's root (`06410+0954`, whose only
   A-branch cursor is Aa,Ab) anchored on its E component and every letter
   in it composed against HD 261938. Promotion's `isMoreCanonicalAnchor`

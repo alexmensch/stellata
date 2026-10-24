@@ -1554,6 +1554,16 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
         self.assertAlmostEqual(out[("WDS-1", "C")][0], 5.0)
         self.assertAlmostEqual(out[("WDS-1", "D")][0], 10.0)
 
+    def test_anchor_picks_aa_over_b_as_promotion_does(self) -> None:
+        out = self._offsets([
+            ("Aa,Ab", 1.0, 0.0, True),
+            ("BC", 5.0, 90.0, True),
+            ("Aa,B", 20.0, 90.0, True),
+        ])
+        self.assertNotIn(("WDS-1", "Aa"), out)
+        self.assertAlmostEqual(out[("WDS-1", "B")][0], 20.0)
+        self.assertAlmostEqual(out[("WDS-1", "C")][0], 25.0)
+
     def test_sub_resolution_rows_contribute_no_edge(self) -> None:
         out = self._offsets([
             ("AB", 5.0, 90.0, True),

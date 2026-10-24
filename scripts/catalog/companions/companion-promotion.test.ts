@@ -2741,6 +2741,11 @@ describe('isMoreCanonicalAnchor', () => {
     expect(isMoreCanonicalAnchor('A', 'A')).toBe(false);
   });
 
+  it('picks Aa over B, as stage6_multiples.py _anchor_token_rank does', () => {
+    expect(isMoreCanonicalAnchor('Aa', 'B')).toBe(true);
+    expect(isMoreCanonicalAnchor('B', 'Aa')).toBe(false);
+  });
+
   it('is the predicate the naming anchor uses', () => {
     // record-index/ imports this one rather than keeping a twin: both want
     // the branch the root is named for.
