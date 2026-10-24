@@ -136,7 +136,7 @@ import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES,
 } from './catalog-outputs';
 import {
-  emitArtifacts, type ArtifactContents, type Check,
+  emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
 import {
@@ -194,6 +194,7 @@ async function main() {
     process.exit(1);
   }
 
+  sweepStaged(CATALOG_OUTPUTS);
   // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
   // of a full build, so they must force one even when the sources are
   // unchanged (the snapshot assert/refresh is unreachable otherwise).

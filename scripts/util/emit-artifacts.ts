@@ -93,7 +93,7 @@ function familyEntries(family: OutputFamily): string[] {
   return existsSync(family.dir) ? readdirSync(family.dir) : [];
 }
 
-function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[]): void {
+export function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[] = []): void {
   for (const p of [...Object.values<string>(outputs.files), ...extra]) discardStaged(p);
   for (const family of outputs.families) {
     for (const name of familyEntries(family)) {

@@ -26,8 +26,10 @@ artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
                          less than it reads. Self-skips on fresh clones
                          and LFS pointer stubs.
 bundle-content.test.ts   Deployed-bundle guard: no source-tree file
-                         types (.md/.txt/.py/.ts) under public/; dust
-                         assets restricted to the sync allowlist.
+                         types (.md/.txt/.py/.ts) under public/, no
+                         `.staged` output a killed build left in public/
+                         or dist/; dust assets restricted to the sync
+                         allowlist.
                          Self-skips when public/ is unbuilt.
 cadence-layer-declarations.test.ts
                          Source scan over the SHIPPED scene-layer

@@ -111,7 +111,11 @@ same thing — single-use helpers stay with their consumer.
   and only once every file is staged are they renamed into place. A crash or
   failed check therefore leaves every prior output byte-identical. A
   `.staged` file a killed run left behind is swept by the next run of that
-  step. `outputs` is the step's
+  step; a step with a skip gate (`build:catalog`'s stamp, `build:local-group`'s
+  mtime check) calls `sweepStaged` before the gate, since a skipped run never
+  reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
+  copies it wholesale, and `tests/bundle-content.test.ts` fails on any
+  `*.staged` file under `public/` or `dist/`. `outputs` is the step's
   `declareOutputs({key: path, …}, families)` constant, the one place each
   path is written; an emission supplies only contents, keyed the same, so a
   missing or extra key is a compile error. Family members (a directory plus a

@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 
-import { emitArtifacts } from '../util/emit-artifacts';
+import { emitArtifacts, sweepStaged } from '../util/emit-artifacts';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import {
   applyAliasMeta,
@@ -298,6 +298,7 @@ function isUpToDate(): boolean {
 }
 
 async function main(): Promise<void> {
+  sweepStaged(LOCAL_GROUP_OUTPUTS);
   const force = process.argv.includes('--force');
   if (!force && isUpToDate()) {
     console.log('local-group.json up to date — skipping (use --force to rebuild)');
