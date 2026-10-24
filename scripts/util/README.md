@@ -109,8 +109,12 @@ same thing — single-use helpers stay with their consumer.
   check is already a verdict when it arrives; any `fail` refuses the whole
   emission before a byte is written. Otherwise each file is staged at
   `<path>.staged` beside its target, so the rename stays on one filesystem,
-  and only once every file is staged are they renamed into place. A crash or
-  failed check therefore leaves every prior output byte-identical. A
+  and only once every file is staged are they renamed into place. A failed
+  check, or a crash before the rename phase, therefore leaves every prior
+  output byte-identical. The rename phase itself is atomic per file, not per
+  set: a crash mid-rename (or mid family-delete) leaves new and old files
+  mixed, which only a stamped step detects (its stamp was cleared and is not
+  yet rewritten, so it reruns). A
   `.staged` file a killed run left behind is swept by the next run of that
   step; a step with a skip gate (`build:catalog`'s stamp, `build:local-group`'s
   mtime check) calls `sweepStaged` before the gate, since a skipped run never
