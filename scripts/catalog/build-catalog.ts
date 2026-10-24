@@ -135,7 +135,7 @@ import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES,
 } from './catalog-outputs';
 import {
-  emitArtifacts, sweepStaged, type ArtifactContents, type Check,
+  emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
 import {
@@ -1325,7 +1325,4 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
   });
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runStep(main);

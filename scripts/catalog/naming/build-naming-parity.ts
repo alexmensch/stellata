@@ -3,7 +3,7 @@
 
 import { readFileSync } from 'node:fs';
 
-import { emitArtifacts } from '../../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import {
   DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
 } from '../catalog-lookup';
@@ -109,4 +109,4 @@ function main(): void {
   console.log(`naming-duplicates.tsv: ${duplicates.length} duplicate label(s)`);
 }
 
-main();
+runStep(main);

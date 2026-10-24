@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from '../catalog/astrometry-request/export-astrometry-request-pure';
-import { emitArtifacts } from '../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
 import {
@@ -49,4 +49,4 @@ function main(): void {
   console.log(`wrote ${DR_RISK_SET_OUTPUTS.files.request} (${sorted.length} gaia_*-keyed ledger rows at risk)`);
 }
 
-main();
+runStep(main);

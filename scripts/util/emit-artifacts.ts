@@ -173,6 +173,13 @@ export async function emitEach<K extends string>(
   }
 }
 
+export function runStep(main: () => void | Promise<void>): void {
+  Promise.resolve().then(main).catch((err: unknown) => {
+    console.error(err instanceof EmissionRefused ? err.message : err);
+    process.exit(1);
+  });
+}
+
 /** A refreshed snapshot that the step also reads would otherwise leave the
  *  stamp holding its pre-refresh hash and force the next run to rebuild. */
 function rehashRefreshed(inputs: FileHashes, refreshes: readonly { path: string }[]): FileHashes {

@@ -2,7 +2,7 @@
 // grid, verifies the reconstruction off-grid, and writes
 // data/ephemerides/{id}.json. See README.md#cadence.
 
-import { emitEach, type Check } from '../util/emit-artifacts';
+import { emitEach, runStep, type Check } from '../util/emit-artifacts';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 import { fetchHorizonsText, rangeChunks } from '../util/horizons-response';
 import {
@@ -210,14 +210,18 @@ async function buildTarget(target: PlanetElementTarget): Promise<{ text: string;
   };
 }
 
-const only = new Set(process.argv.slice(2));
-const targets = only.size === 0
-  ? ELEMENT_TARGETS
-  : ELEMENT_TARGETS.filter((t) => only.has(t.id));
-if (targets.length === 0) throw new Error(`No such planet: ${[...only].join(', ')}`);
+async function main(): Promise<void> {
+  const only = new Set(process.argv.slice(2));
+  const targets = only.size === 0
+    ? ELEMENT_TARGETS
+    : ELEMENT_TARGETS.filter((t) => only.has(t.id));
+  if (targets.length === 0) throw new Error(`No such planet: ${[...only].join(', ')}`);
 
-const byId = new Map<string, PlanetElementTarget>(targets.map((t) => [t.id, t]));
-await emitEach(ELEMENT_TABLE_OUTPUTS, [...byId.keys()], async (id) => {
-  const { text, check } = await buildTarget(byId.get(id)!);
-  return { contents: text, checks: [check] };
-});
+  const byId = new Map<string, PlanetElementTarget>(targets.map((t) => [t.id, t]));
+  await emitEach(ELEMENT_TABLE_OUTPUTS, [...byId.keys()], async (id) => {
+    const { text, check } = await buildTarget(byId.get(id)!);
+    return { contents: text, checks: [check] };
+  });
+}
+
+runStep(main);

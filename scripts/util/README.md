@@ -137,6 +137,9 @@ same thing — single-use helpers stay with their consumer.
   that produces and passes its checks lands by itself, a failing one is
   reported and skipped, and the run throws naming the refused targets once
   all have been tried.
+  `runStep(main)` is every step's entry point: a refused emission has
+  already printed its failed checks, so it exits 1 with one line and no
+  stack; any other error keeps its stack.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's

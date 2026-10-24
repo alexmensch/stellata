@@ -18,7 +18,7 @@ import {
   type RejectedBinding,
 } from './classic-id-overlay-pure';
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { emitArtifacts } from '../../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 
@@ -123,7 +123,4 @@ async function main(): Promise<void> {
   console.log(`wrote ${OUT_REJECTED} (${rejectedBindings.length} rows)`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+runStep(main);

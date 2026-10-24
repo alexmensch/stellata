@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
-import { emitArtifacts } from '../../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -174,7 +174,4 @@ async function main(): Promise<void> {
   for (const f of Object.values(MEMBERSHIP_OUTPUTS.files)) console.log(`wrote ${f}`);
 }
 
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});
+runStep(main);

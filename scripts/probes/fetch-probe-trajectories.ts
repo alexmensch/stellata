@@ -2,7 +2,7 @@
 // adaptive grid and writes data/probes/{id}.json. Manual + infrequent
 // (`pnpm run fetch:probes`); README.md#adaptive-grid.
 
-import { emitEach } from '../util/emit-artifacts';
+import { emitEach, runStep } from '../util/emit-artifacts';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 
 import {
@@ -272,7 +272,4 @@ async function main(): Promise<void> {
   }));
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+runStep(main);

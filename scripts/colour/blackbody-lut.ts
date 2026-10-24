@@ -11,7 +11,7 @@
 // See /docs/science-stellar-modelling.md#star-colour-calibration and
 // /research/star-spectral-rendition/README.md#tier-1--replace-citocolor-with-blackbody--srgb-lut-ship-standalone.
 
-import { emitArtifacts } from '../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { LUT_OUTPUTS } from './blackbody-lut-outputs';
 
 import {
@@ -119,6 +119,4 @@ function main(): void {
 }
 
 const isCli = import.meta.url === `file://${process.argv[1]}`;
-if (isCli) {
-  main();
-}
+if (isCli) runStep(main);

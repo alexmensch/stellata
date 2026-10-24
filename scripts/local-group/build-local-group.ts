@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 
-import { emitArtifacts, sweepStaged } from '../util/emit-artifacts';
+import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import {
   applyAliasMeta,
@@ -419,8 +419,5 @@ async function main(): Promise<void> {
 // Run as a script. ESM doesn't have require.main; gate on the entry-point
 // path being our own filename instead.
 if (process.argv[1] && resolve(process.argv[1]) === __filename) {
-  main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  runStep(main);
 }

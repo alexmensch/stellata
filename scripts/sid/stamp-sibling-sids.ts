@@ -3,7 +3,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 
-import { emitArtifacts } from '../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { resolveSids } from './sid-pure';
 import { loadRegistry } from './registry-io';
 import {
@@ -54,22 +54,26 @@ function stamped(name: string): string {
   return JSON.stringify(payload) + '\n';
 }
 
-const targets = process.argv.slice(2);
-if (targets.length === 0) {
-  console.error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
-  process.exit(1);
-}
-const names = targets.includes('all') ? Object.keys(SIBLING_ARTIFACTS) : targets;
-for (const t of names) {
-  if (!SIBLING_ARTIFACTS[t]) {
-    console.error(
-      `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
-    );
+function main(): void {
+  const targets = process.argv.slice(2);
+  if (targets.length === 0) {
+    console.error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
     process.exit(1);
   }
+  const names = targets.includes('all') ? Object.keys(SIBLING_ARTIFACTS) : targets;
+  for (const t of names) {
+    if (!SIBLING_ARTIFACTS[t]) {
+      console.error(
+        `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
+      );
+      process.exit(1);
+    }
+  }
+  emitArtifacts({
+    outputs: SID_STAMP_OUTPUTS,
+    only: names,
+    files: Object.fromEntries(names.map((n) => [n, stamped(n)])),
+  });
 }
-emitArtifacts({
-  outputs: SID_STAMP_OUTPUTS,
-  only: names,
-  files: Object.fromEntries(names.map((n) => [n, stamped(n)])),
-});
+
+runStep(main);

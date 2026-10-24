@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { emitArtifacts } from '../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { REPO_ROOT as ROOT, isLfsPointer } from '../util/paths';
 import { DR_RECONCILE_OUTPUTS } from './dr-reconcile-outputs';
 import {
@@ -100,4 +100,4 @@ function main(): void {
   );
 }
 
-main();
+runStep(main);

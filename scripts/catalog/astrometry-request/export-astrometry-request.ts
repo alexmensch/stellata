@@ -29,7 +29,7 @@ import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
-import { emitArtifacts } from '../../util/emit-artifacts';
+import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 
 const SRC_MANIFEST = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
@@ -108,7 +108,4 @@ async function main(): Promise<void> {
   console.log(`wrote ${OUT} (${sorted.length} source_ids)`);
 }
 
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});
+runStep(main);
