@@ -2,11 +2,13 @@
 // non-retired ledger rows whose canonical key is gaia_*-namespaced, as the
 // request TSV a refresh:gaia-*-neighbourhood pull reads. /docs/sid.md#61-procedure.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from '../catalog/astrometry-request/export-astrometry-request-pure';
+import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT as ROOT } from '../util/paths';
+import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
 import {
   REINSTATEMENTS_HEADER,
   effectiveRetirements,
@@ -19,11 +21,8 @@ import {
 const LEDGER_PATH = resolve(ROOT, 'data/sid/ledger.tsv');
 const RETIREMENTS_PATH = resolve(ROOT, 'data/sid/retirements.tsv');
 const REINSTATEMENTS_PATH = resolve(ROOT, 'data/sid/reinstatements.tsv');
-const DEFAULT_OUT = resolve(ROOT, 'data/gaia/gaia_dr2_neighbourhood_request.tsv');
 
 function main(): void {
-  const outArg = process.argv.find((a) => a.startsWith('--out='));
-  const out = outArg ? resolve(outArg.slice('--out='.length)) : DEFAULT_OUT;
   if (!existsSync(LEDGER_PATH)) {
     console.error(`sid:risk-set: ${LEDGER_PATH} missing — run pnpm run sid:allocate first`);
     process.exit(1);
@@ -43,8 +42,11 @@ function main(): void {
     if (ns.startsWith('gaia_')) ids.add(key);
   }
   const sorted = sortSourceIdsNumeric(ids);
-  writeFileSync(out, `gaia_source_id\n${sorted.join('\n')}\n`);
-  console.log(`wrote ${out} (${sorted.length} gaia_*-keyed ledger rows at risk)`);
+  emitArtifacts({
+    outputs: DR_RISK_SET_OUTPUTS,
+    files: { request: `gaia_source_id\n${sorted.join('\n')}\n` },
+  });
+  console.log(`wrote ${DR_RISK_SET_OUTPUTS.files.request} (${sorted.length} gaia_*-keyed ledger rows at risk)`);
 }
 
 main();
