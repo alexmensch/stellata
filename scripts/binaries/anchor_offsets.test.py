@@ -192,6 +192,14 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
         self.assertNotIn(("WDS-1", "Ba"), out)
         self.assertNotIn(("WDS-1", "Bb"), out)
 
+    def test_component_reached_only_at_zero_is_written_as_zero(self) -> None:
+        out = self._offsets(
+            [("Aa,Ab", 0.0, None, True), ("AE", 100.0, 90.0, False)],
+            mags={"Aa,Ab": (4.0, 6.0)},
+        )
+        self.assertEqual(out[("WDS-1", "A")], (0.0, 0.0))
+        self._assert_offset_en(out, "E", 100.0, 0.0)
+
     def test_parent_row_reaches_outer_star_from_sub_letter_anchor(self) -> None:
         # 15 Mon shape: the anchor is Aa and A's own rows are rejected, so
         # E is reached through the Aa → A photocentre link.

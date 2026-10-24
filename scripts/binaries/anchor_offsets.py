@@ -214,12 +214,14 @@ def compute_anchor_offsets(
         g1 = _merged_adj(rejected.get(wds_id, {}), g0)
         g2 = _merged_adj(proxy.get(wds_id, {}), g1)
         offsets: dict[str, tuple[float, float]] = {}
+        reached_at_zero: set[str] = set()
 
         def _accumulate(candidates: dict[str, tuple[float, float]]) -> None:
             for tok, (e, n) in candidates.items():
                 if tok == anchor or tok in offsets:
                     continue
                 if math.hypot(e, n) <= 0.0:
+                    reached_at_zero.add(tok)
                     continue
                 offsets[tok] = (e, n)
 
@@ -230,6 +232,8 @@ def compute_anchor_offsets(
         for graph in (g0, g1, g2):  # composed chains fill the rest
             _accumulate(_bfs_all_offsets(graph, anchor))
 
+        for tok in reached_at_zero - offsets.keys():
+            offsets[tok] = (0.0, 0.0)
         for tok, (e, n) in offsets.items():
             pa = math.degrees(math.atan2(e, n)) % 360.0
             out[(wds_id, tok)] = (math.hypot(e, n), pa)

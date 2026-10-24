@@ -41,6 +41,12 @@ describe('rebasedAnchorOffset', () => {
     expect(rebasedAnchorOffset(row('B', 12.6, 245), row('Ca', null, null))).toBeNull();
   });
 
+  it('keeps the row\'s own offset when the anchor was reached at exactly zero', () => {
+    const out = rebasedAnchorOffset(row('E', 100, 90), row('Aa', 0, 0));
+    expect(out?.sepArcsec).toBeCloseTo(100, 9);
+    expect(out?.paDeg).toBeCloseTo(90, 9);
+  });
+
   it('refuses when the row is unreached', () => {
     expect(rebasedAnchorOffset(row('E', null, null), row('A', null, null))).toBeNull();
   });

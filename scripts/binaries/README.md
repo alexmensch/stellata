@@ -755,7 +755,10 @@ puts A on Aa; an unmeasured sibling separation (ρ = 0 / none) is zero.
 Measured against Gaia DR3 over the inner pairs wider than 1″, WDS
 outer rows split between the photocentre and Aa itself, at most 0.97″
 apart; the photocentre is the one rule for every separation. Blank
-when no chain reaches the component. Consumed
+only when no chain reaches the component; one reached solely at zero
+offset (an unresolved sibling, or A on Aa when Ab's light is unmeasured)
+is written `0.000` / `0.00`, so a reader can tell "same place" from "no
+measurement". Consumed
 by companion promotion's pair-row-primary escape (see
 [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 
