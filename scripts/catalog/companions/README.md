@@ -441,7 +441,8 @@ Per-row gates and resolution:
 - <a id="overlap-gate"></a>**Overlap gate.** After promotion, build-catalog
   counts every pair of records whose centres sit closer than the sum of their
   physical radii — a star drawn inside another, whatever placement rule put it
-  there. A pair is exempt only when a chain of renderable orbits fixes their
+  there — at the 32-bit positions `catalog.bin` ships, where two records the
+  build keeps 1 AU apart at 1 kpc collapse onto one point. A pair is exempt only when a chain of renderable orbits fixes their
   relative position — one record an ancestor of the other along (primary,
   secondary) relations — since the runtime then draws them apart from the
   elements, and a bit-identical bake there is the deliberate sub-resolution

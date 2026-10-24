@@ -35,7 +35,8 @@ export function orbitChainExemption(
   return (a, b) => descends(a, b) || descends(b, a);
 }
 
-/** Index pairs `[i, j]`, `i < j`, of records drawn inside one another. */
+/** Index pairs `[i, j]`, `i < j`, of records drawn inside one another at the
+ *  32-bit positions catalog.bin ships. */
 export function physicalOverlaps(
   records: readonly OverlapRecord[],
   exempt: OverlapExemption,
@@ -45,12 +46,16 @@ export function physicalOverlaps(
     if (r.physicalRadius > maxRadius) maxRadius = r.physicalRadius;
   }
   const maxReach = 2 * maxRadius * R_SUN_PC;
-  const order = Array.from(records.keys()).sort((i, j) => records[i].x - records[j].x);
+  const shipped = records.map((r) => ({
+    x: Math.fround(r.x), y: Math.fround(r.y), z: Math.fround(r.z),
+    physicalRadius: r.physicalRadius,
+  }));
+  const order = Array.from(shipped.keys()).sort((i, j) => shipped[i].x - shipped[j].x);
   const out: Array<[number, number]> = [];
   for (let s = 0; s < order.length; s++) {
-    const a = records[order[s]];
+    const a = shipped[order[s]];
     for (let t = s + 1; t < order.length; t++) {
-      const b = records[order[t]];
+      const b = shipped[order[t]];
       if (b.x - a.x >= maxReach) break;
       const reach = (a.physicalRadius + b.physicalRadius) * R_SUN_PC;
       if (Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) >= reach) continue;

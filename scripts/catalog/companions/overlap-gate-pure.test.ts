@@ -30,6 +30,11 @@ describe('physicalOverlaps', () => {
       .toEqual([[0, 1]]);
   });
 
+  it('judges the 32-bit positions catalog.bin ships, not the build\'s 64-bit ones', () => {
+    const oneAuPc = 1 / 206264.806;
+    expect(physicalOverlaps([star(1000), star(1000 + oneAuPc)], none)).toEqual([[0, 1]]);
+  });
+
   it('returns index pairs in record order whatever the sweep order', () => {
     expect(physicalOverlaps([star(3 * R_SUN_PC), star(2.5 * R_SUN_PC)], none))
       .toEqual([[0, 1]]);
