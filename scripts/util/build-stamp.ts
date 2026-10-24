@@ -2,12 +2,12 @@
 
 import { createHash } from 'node:crypto';
 import {
-  closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync,
-  writeFileSync,
+  closeSync, existsSync, openSync, readFileSync, readSync, rmSync,
 } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 
 import { REPO_ROOT } from './paths';
+import { discardStaged, landStaged, writeStaged } from './staged-write';
 
 export const STAMP_DIR = resolve(REPO_ROOT, 'build/stamps');
 
@@ -79,6 +79,7 @@ export function stampIsCurrent(stamp: string, inputs: FileHashes): boolean {
  *  leaves no stamp vouching for its partial outputs. */
 export function clearStamp(stamp: string): void {
   rmSync(stamp, { force: true });
+  discardStaged(stamp);
 }
 
 export function writeStamp(stamp: string, inputs: FileHashes, outputs: readonly string[]): void {
@@ -87,8 +88,6 @@ export function writeStamp(stamp: string, inputs: FileHashes, outputs: readonly 
   if (outputs.length === 0 || missing.length > 0) {
     throw new Error(`writeStamp(${stamp}): outputs missing or none given: ${missing.join(', ')}`);
   }
-  mkdirSync(dirname(stamp), { recursive: true });
-  const tmp = `${stamp}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify({ inputs, outputs: outputHashes }, null, 2)}\n`);
-  renameSync(tmp, stamp);
+  writeStaged(stamp, `${JSON.stringify({ inputs, outputs: outputHashes }, null, 2)}\n`);
+  landStaged(stamp);
 }

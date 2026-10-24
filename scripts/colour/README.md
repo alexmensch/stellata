@@ -12,7 +12,8 @@ colour index to a peak-normalised linear triplet.
 `blackbody-lut.ts` — quantises that chain into a 256-entry
 **linear-sRGB** lookup table indexed by B–V over [-0.4, 2.0]. Output:
 `src/client/star-pipeline/blackbody-lut-data.ts` (committed;
-AUTO-GENERATED — `pnpm run build:lut` to regenerate on drift).
+AUTO-GENERATED — `pnpm run build:lut` to regenerate on drift), written
+through `emitArtifacts` (`../util/README.md`), declared in `blackbody-lut-outputs.ts`.
 Byte-signature pinned by `blackbody-lut.test.ts`.
 
 ## Linear storage, peak-normalised

@@ -306,25 +306,28 @@ of reinstatements) so the runtime SID resolver can follow merge-type
 retirements without an extra fetch; omitted while empty.
 
 The chunk-plan / filename / assembly helpers (`planCatalogChunks`,
-`catalogChunkFilename`, `assembleCatalogChunks`, `CatalogManifest`) live
+`catalogChunkFilename` and the `CATALOG_CHUNK_FILENAME` pattern it matches,
+`assembleCatalogChunks`, `CatalogManifest`) live
 in `catalog-pure.ts` and are the single reassembly contract shared by
 all three consumers: the writer (`../build-catalog.ts`), the runtime loader
 (`src/client/loaders/catalog-loader.ts`, fetch), and the Node test/verify
-reader (`../catalog-lookup.ts` `readCatalogBuffer`, fs). The build removes a
-prior run's chunks first so a shrunk chunk count can't strand stale
-files, and the skip gate / all Node consumers key off the manifest, not a
-monolithic `catalog.bin`. Byte-identical reassembly is pinned in
+reader (`../catalog-lookup.ts` `readCatalogBuffer`, fs). The chunks are a
+declared output family of `build:catalog` (`../../util/emit-artifacts.ts`):
+once the new set has landed, any chunk it does not include is deleted, so a
+shrunk chunk count can't strand stale files. The skip gate and all Node
+consumers key off the manifest, not a monolithic `catalog.bin`. Byte-identical reassembly is pinned in
 `src/client/loaders/catalog-loader.test.ts`.
 
 The build script also asserts every headline count (record count, GCVS
 xrefs, binary inference output, CCDM doubles, name-table entries,
 search-index entries, etc.) against
-`scripts/catalog/build-catalog-expected.json` at the end of each run. A
-deliberate change refreshes the manifest with
+`scripts/catalog/build-catalog-expected.json` before any output lands. A
+deliberate change refreshes the snapshot with
 `UPDATE_BUILD_COUNTS=1 pnpm run build:catalog`; an unintended drift
-exits non-zero with a per-key diff. `scripts/catalog/build-counts.ts` carries
+exits non-zero with a per-key diff and leaves `public/`, `build/` and the
+committed ledgers as they were. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage; the
-assert-or-rewrite side is `../util/snapshot-assert.ts`.
+check-or-rewrite side is `snapshotCheck` in `../../util/snapshot-check.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
 snapshot. The stamp's code inputs are the build's import closure plus the

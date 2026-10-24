@@ -31,11 +31,16 @@ scripts/catalog/membership/
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
                                   multiples.tsv and the review dispositions,
-                                  writes
-                                  data/membership/ plus the label merge's
-                                  queue (data/classic-ids/label_flips.tsv),
-                                  and pins
-                                  membership-manifest-expected.json.
+                                  and emits data/membership/ plus the label
+                                  merge's queue
+                                  (data/classic-ids/label_flips.tsv) through
+                                  emitArtifacts: all five land, or none
+                                  does, and only once
+                                  membership-manifest-expected.json passes.
+  membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — the five files the
+                                  generator writes, as its emitArtifacts
+                                  declaration (../../util/README.md).
+                                  Side-effect free.
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
                                   over the COMMITTED artifacts. LFS-gated.

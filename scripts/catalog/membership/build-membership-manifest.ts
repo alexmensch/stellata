@@ -2,11 +2,13 @@
 // the record-parity additions ledger (/docs/catalog-driver.md#61-record-parity) and the binding review queue, plus the label
 // merge's review queue. See README.md.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
-import { assertOrUpdateSnapshot } from '../../util/snapshot-assert';
+import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
+import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
@@ -18,7 +20,6 @@ import {
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   LABEL_FIELDS,
-  LABEL_FLIPS_FILE,
   labelFlipsTsv,
   parseLabelOverridesTsv,
 } from '../classic-ids/label-merge/label-merge-pure';
@@ -32,12 +33,8 @@ import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import {
-  ADDITIONS_LEDGER_FILE,
   BINDING_DISPOSITIONS_FILE,
-  BINDING_REVIEW_FILE,
-  LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
-  MEMBERSHIP_MANIFEST_FILE,
   SPINE_CORRECTIONS_FILE,
   buildMembership,
   parseBindingDispositionsTsv,
@@ -53,13 +50,6 @@ const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
 const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
 const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
-
-function writeArtifact(repoRelative: string, text: string): void {
-  const path = resolve(ROOT, repoRelative);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, text);
-  console.log(`wrote ${repoRelative}`);
-}
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the
  *  merge's own counts — the same walk that decides what the manifest ships. */
@@ -119,12 +109,6 @@ async function main(): Promise<void> {
     },
   });
 
-  writeArtifact(LABEL_FLIPS_FILE, labelFlipsTsv(result.flips));
-  writeArtifact(MEMBERSHIP_MANIFEST_FILE, serializeManifest(result.rows));
-  writeArtifact(ADDITIONS_LEDGER_FILE, serializeLedger(result.ledger));
-  writeArtifact(BINDING_REVIEW_FILE, serializeBindingReview(result.bindingReview));
-  writeArtifact(LABEL_DROPS_FILE, serializeLabelDrops(result.labelDrops));
-
   const c = result.counts;
   console.log(
     `manifest: ${c.rows} rows — ${c.spineRows} from the spine, ${c.additionRows} admitted ` +
@@ -169,17 +153,25 @@ async function main(): Promise<void> {
   );
   reportLabelCoverage(c);
 
-  await assertOrUpdateSnapshot<MembershipCounts>({
-    envVar: 'UPDATE_BUILD_COUNTS',
-    snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
-    actual: c,
-    compare: compareCountSnapshot,
-    failureLabel: 'membership-manifest count',
-    refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:membership',
+  emitArtifacts({
+    outputs: MEMBERSHIP_OUTPUTS,
+    files: {
+      labelFlips: labelFlipsTsv(result.flips),
+      manifest: serializeManifest(result.rows),
+      additions: serializeLedger(result.ledger),
+      bindingReview: serializeBindingReview(result.bindingReview),
+      labelDrops: serializeLabelDrops(result.labelDrops),
+    },
+    checks: [snapshotCheck<MembershipCounts>({
+      envVar: 'UPDATE_BUILD_COUNTS',
+      snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
+      actual: c,
+      compare: compareCountSnapshot,
+      failureLabel: 'membership-manifest count',
+      refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:membership',
+    })],
   });
+  for (const f of Object.values(MEMBERSHIP_OUTPUTS.files)) console.log(`wrote ${f}`);
 }
 
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});
+runStep(main);

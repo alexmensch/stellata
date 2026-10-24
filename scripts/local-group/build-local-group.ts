@@ -3,10 +3,12 @@
 // idempotency, and the LVDB-refresh protocol.
 
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
+
+import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
+import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import {
   applyAliasMeta,
   buildOrientationQuat,
@@ -31,7 +33,7 @@ const ROOT = resolve(__dirname, '..', '..');
 const SRC_CSV = resolve(ROOT, 'data/local-group/lvdb-snapshot.csv');
 const SRC_OVERRIDES = resolve(ROOT, 'data/local-group/overrides.tsv');
 const SRC_ALIASES = resolve(ROOT, 'data/local-group/aliases.tsv');
-const OUT = resolve(ROOT, 'public/local-group.json');
+const OUT = LOCAL_GROUP_OUTPUTS.files.localGroup;
 
 /** Coerces strings to numbers / null per LVDB convention ("" = missing
  *  for numeric cols). */
@@ -296,6 +298,7 @@ function isUpToDate(): boolean {
 }
 
 async function main(): Promise<void> {
+  sweepStaged(LOCAL_GROUP_OUTPUTS);
   const force = process.argv.includes('--force');
   if (!force && isUpToDate()) {
     console.log('local-group.json up to date — skipping (use --force to rebuild)');
@@ -391,13 +394,15 @@ async function main(): Promise<void> {
   // byte-identical artifacts.
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-  await mkdir(dirname(OUT), { recursive: true });
   const payload = {
     version: 2,
     count: objects.length,
     objects: objects.map(toJsonObject),
   };
-  await writeFile(OUT, JSON.stringify(payload, null, 0) + '\n');
+  emitArtifacts({
+    outputs: LOCAL_GROUP_OUTPUTS,
+    files: { localGroup: JSON.stringify(payload, null, 0) + '\n' },
+  });
 
   console.log(
     `wrote ${OUT.replace(ROOT + '/', '')} ` +
@@ -414,8 +419,5 @@ async function main(): Promise<void> {
 // Run as a script. ESM doesn't have require.main; gate on the entry-point
 // path being our own filename instead.
 if (process.argv[1] && resolve(process.argv[1]) === __filename) {
-  main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  runStep(main);
 }

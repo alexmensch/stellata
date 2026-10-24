@@ -19,6 +19,7 @@ import {
   NO_GAIA_SOURCE_ID,
   RECORD_SIZE,
   assembleCatalogChunks,
+  CATALOG_CHUNK_FILENAME,
   catalogChunkFilename,
   planCatalogChunks,
   readCatalogHeader,
@@ -348,7 +349,7 @@ function main(): void {
 
   if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
   for (const f of readdirSync(outDir)) {
-    if (/^catalog\.bin\.\d+$/.test(f)) rmSync(join(outDir, f));
+    if (CATALOG_CHUNK_FILENAME.test(f)) rmSync(join(outDir, f));
   }
   const plan = planCatalogChunks(outBytes);
   let at = 0;

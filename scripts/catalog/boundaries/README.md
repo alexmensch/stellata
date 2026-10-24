@@ -19,9 +19,10 @@ scripts/catalog/boundaries/
                                   misplacement-offset formula, and the fade
                                   quantiles. Pure.
   build-boundaries-artifact.ts    Sweeps the shipped star population for fade
-                                  samples and writes the JSON. Called from
+                                  samples and renders the JSON. Called from
                                   ../build-catalog.ts, which hands it the
-                                  lookup (README.md#cost).
+                                  lookup (README.md#cost) and writes the
+                                  result with its other outputs.
   boundary-artifact-fixture.ts    Test-only: the smallest artifact that clears
                                   the load-time validator.
 ```
@@ -171,7 +172,7 @@ which prunes on a declination-band lower bound. Exact, not approximate,
 and pinned against the linear scan across a sphere-wide sampling grid.
 The whole stage costs under a second.
 
-`writeBoundaryArtifact` takes the lookup rather than building one, and
+`renderBoundaryArtifact` takes the lookup rather than building one, and
 passes it whole to `buildBoundaryArtifact`: `loadReadStarsInputs` already
 decomposed the edge set for byte 34 ([Positional constellation membership](../parse/constellations/README.md#positional-constellation-membership)),
 so the arcs, the label anchors and the shipped

@@ -2,10 +2,7 @@
 // grid, verifies the reconstruction off-grid, and writes
 // data/ephemerides/{id}.json. See README.md#cadence.
 
-import { mkdirSync, statSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-import { REPO_ROOT } from '../util/paths';
+import { emitEach, runStep, type Check } from '../util/emit-artifacts';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 import { fetchHorizonsText, rangeChunks } from '../util/horizons-response';
 import {
@@ -36,8 +33,8 @@ import {
   ELEMENT_COLUMNS,
   type PlanetElementTableFile,
 } from './planet-element-schema';
+import { ELEMENT_TABLE_OUTPUTS } from './planet-element-outputs';
 
-const OUT_DIR = resolve(REPO_ROOT, 'data/ephemerides');
 
 /** Significant digits kept per emitted element, down from Horizons' 16. The
  *  binding column is the unwrapped mean longitude: it reaches ~3e5 degrees at
@@ -171,7 +168,7 @@ function reconstructionErrorAu(
   return worst;
 }
 
-async function buildTarget(target: PlanetElementTarget): Promise<boolean> {
+async function buildTarget(target: PlanetElementTarget): Promise<{ text: string; check: Check }> {
   const epochs = tableEpochs(target.stepDays);
   const { header, rows } = await fetchElementRows(target, epochs);
   const file: PlanetElementTableFile = {
@@ -196,9 +193,8 @@ async function buildTarget(target: PlanetElementTarget): Promise<boolean> {
   const onGrid = reconstructionErrorAu(file, await fetchTruthPositions(target, epochs));
   const offGrid = reconstructionErrorAu(file, await fetchTruthPositions(target, midpoints));
 
-  const path = resolve(OUT_DIR, `${target.id}.json`);
-  writeFileSync(path, serializeRowFile(file));
-  const kb = Math.round(statSync(path).size / 1024);
+  const text = serializeRowFile(file);
+  const kb = Math.round(Buffer.byteLength(text) / 1024);
   const holds = offGrid <= POSITION_TOLERANCE_AU;
   console.log(
     `${target.id.padEnd(8)} ${String(target.stepDays).padStart(3)} d  ` +
@@ -206,21 +202,26 @@ async function buildTarget(target: PlanetElementTarget): Promise<boolean> {
     `on-grid ${onGrid.toExponential(2)}  midpoint ${offGrid.toExponential(2)} AU  ` +
     `${holds ? 'holds' : 'OVER BUDGET'}`,
   );
-  return holds;
+  return {
+    text,
+    check: holds
+      ? { kind: 'pass' }
+      : { kind: 'fail', message: `${target.id}: midpoint miss over ${POSITION_TOLERANCE_AU} AU — tighten its stepDays.` },
+  };
 }
 
-const only = new Set(process.argv.slice(2));
-const targets = only.size === 0
-  ? ELEMENT_TARGETS
-  : ELEMENT_TARGETS.filter((t) => only.has(t.id));
-if (targets.length === 0) throw new Error(`No such planet: ${[...only].join(', ')}`);
+async function main(): Promise<void> {
+  const only = new Set(process.argv.slice(2));
+  const targets = only.size === 0
+    ? ELEMENT_TARGETS
+    : ELEMENT_TARGETS.filter((t) => only.has(t.id));
+  if (targets.length === 0) throw new Error(`No such planet: ${[...only].join(', ')}`);
 
-mkdirSync(OUT_DIR, { recursive: true });
-let allHold = true;
-for (const target of targets) {
-  allHold = (await buildTarget(target)) && allHold;
+  const byId = new Map<string, PlanetElementTarget>(targets.map((t) => [t.id, t]));
+  await emitEach(ELEMENT_TABLE_OUTPUTS, [...byId.keys()], async (id) => {
+    const { text, check } = await buildTarget(byId.get(id)!);
+    return { contents: text, checks: [check] };
+  });
 }
-if (!allHold) {
-  console.error(`\nSome tables exceed ${POSITION_TOLERANCE_AU} AU — tighten their stepDays.`);
-  process.exitCode = 1;
-}
+
+runStep(main);

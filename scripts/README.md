@@ -100,7 +100,10 @@ beside it, the same set CI's cache key reads
 ([The catalogue build cache](ci/README.md#the-catalogue-build-cache)) — and skips when that set matches `build/stamps/<step>.json` and
 every output the stamp recorded still hashes the same. The stamp is cleared
 before the build writes anything and rewritten only once the build's snapshot
-asserts pass, so a failed or interrupted build always reruns. Hashing the
+asserts pass, so a failed or interrupted build always reruns. For
+`build:catalog` the stamp's outputs are exactly the set `emitArtifacts` landed
+([`util/README.md`](util/README.md)), the committed `parked-ledger.tsv` and
+`simbad_sourced_distances.tsv` included. Hashing the
 ~1.1 GB input set plus ~100 MB of outputs costs about a second on a warm page
 cache. Helpers: `util/build-stamp.ts`,
 `util/build_stamp.py`.

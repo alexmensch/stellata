@@ -69,7 +69,8 @@ same thing — single-use helpers stay with their consumer.
   and re-hashes the recorded outputs (`changedSince`), so an output rewritten
   by anything other than this build — an older commit's build, a write
   through a symlink, a partial copy — reads as stale. `clearStamp` runs
-  before a build writes, `writeStamp` after its asserts pass, refusing a
+  before a build writes, `writeStamp` after its asserts pass (for a TS step,
+  `emitArtifacts` calls it last, over the emitted set), refusing a
   missing output and landing the stamp by rename, so a stamp on disk is whole
   or absent; an unparseable one still reads as no stamp. The Python sibling serves the two binaries steps and writes
   the same JSON shape, which `tests/artifact-freshness.test.ts` reads from the
@@ -98,17 +99,63 @@ same thing — single-use helpers stay with their consumer.
   cannot tally onto an absent key — `undefined + 1` is NaN, which
   reaches the pinned count snapshot as a hole instead of a drift
   failure. `tally.test.ts` pins all four cascades' key coverage.
-- `snapshot-assert.ts` — `assertOrUpdateSnapshot(spec)`: compare a build
-  script's computed snapshot against its committed JSON, or rewrite the
-  JSON when the spec's env var is `1`. Exits non-zero on drift, and on a
-  missing snapshot too: a deleted `*-expected.json` must fail, not
-  re-baseline itself, so the env var is the only way any snapshot is
-  written, a new one included. Used by `build-catalog.ts` (build counts
+- `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
+  `<path>.staged` beside its target (same filesystem, so the rename is
+  atomic), `landStaged` renames it over the target, and `discardStaged` removes
+  a leftover. `writeStamp` and `emitArtifacts` are its two callers, and
+  `clearStamp` discards a stamp's leftover too.
+- `emit-artifacts.ts` (+ test) — `emitArtifacts({outputs, files, checks,
+  stamp})`, the one way a TypeScript pipeline step writes its outputs. Every
+  check is already a verdict when it arrives; any `fail` refuses the whole
+  emission before a byte is written. Otherwise each file is staged at
+  `<path>.staged` beside its target, so the rename stays on one filesystem,
+  and only once every file is staged are they renamed into place. A failed
+  check, or a crash before the rename phase, therefore leaves every prior
+  output byte-identical. The rename phase itself is atomic per file, not per
+  set: a crash mid-rename (or mid family-delete) leaves new and old files
+  mixed, which only a stamped step detects (its stamp was cleared and is not
+  yet rewritten, so it reruns). A
+  `.staged` file a killed run left behind is swept by the next run of that
+  step; a step with a skip gate (`build:catalog`'s stamp, `build:local-group`'s
+  mtime check) calls `sweepStaged` before the gate, since a skipped run never
+  reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
+  copies it wholesale, and `tests/bundle-content.test.ts` fails on any
+  `*.staged` file under `public/` or `dist/`. `outputs` is the step's
+  `declareOutputs({key: path, …}, families)` constant, the one place each
+  path is written; an emission supplies only contents, keyed the same, so a
+  missing or extra key is a compile error. Family members (a directory plus a
+  name pattern — the catalogue's transport chunks) arrive separately in
+  `members`, by path, and must match a declared family. Family members a run
+  does not emit are deleted once the new set has landed. A step that can be
+  told to do only some targets (`fetch:ephemerides saturn`, `sid:stamp
+  clouds`) still passes its one full declaration, plus `only`: the run must
+  emit exactly those keys, and the leftover sweep still covers every declared
+  path. A `refresh` check
+  (a snapshot under its update flag) stages its own baseline with the outputs.
+  `stamp`, when given, is written last over exactly the emitted files, so a
+  stamp's outputs and the declaration cannot disagree. A refreshed snapshot
+  is usually one of the stamp's inputs too (the `*-expected.json` beside the
+  build's modules), so its input hash is re-read after the refresh lands; the
+  next run then skips instead of rebuilding for its own refresh.
+  `emitEach(outputs, keys, produce)` is the per-target form, for steps whose
+  files are each read on their own (the two Horizons fetchers): every target
+  that produces and passes its checks lands by itself, a failing one is
+  reported and skipped, and the run throws naming the refused targets once
+  all have been tried.
+  `runStep(main)` is every step's entry point: a refused emission has
+  already printed its failed checks, so it exits 1 with one line and no
+  stack; any other error keeps its stack.
+- `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
+  snapshot against its committed JSON, answered as an `emitArtifacts`
+  check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's
+  env var is `1`. It writes nothing itself. A missing snapshot fails too: a
+  deleted `*-expected.json` must fail, not re-baseline itself, so the env var
+  is the only way any snapshot is written, a new one included. Used by `build-catalog.ts` (build counts
   under `UPDATE_BUILD_COUNTS`, distance outliers under
   `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
   WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
-  `snapshot-assert.test.ts` pins the missing-snapshot case.
+  `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - `snapshot_assert.py` — the Python sibling, for the two binaries steps
   (`build-binaries.py`'s counts, `build-runtime-binaries.py`'s pair
   counts; `binaries/stage7_counts.py` builds its rates snapshot on the same
@@ -116,7 +163,7 @@ same thing — single-use helpers stay with their consumer.
   step imports, so the runtime step reaching this through `stage7_counts`
   would restamp `binaries.bin` on every pipeline-stage edit. Same rule
   on a missing snapshot: it fails, and only `UPDATE_BUILD_COUNTS=1`
-  writes one. Returns a bool where the TS side exits, since the Python
+  writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit.
   Pinned by `snapshot_assert.test.py`.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,

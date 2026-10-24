@@ -450,6 +450,8 @@ export function catalogChunkFilename(index: number): string {
   return `catalog.bin.${index}`;
 }
 
+export const CATALOG_CHUNK_FILENAME = /^catalog\.bin\.\d+$/;
+
 /** Split a total byte length into sequential per-chunk lengths, doubling
  *  from `firstBytes` up to a `targetBytes` ceiling. A zero-length buffer
  *  yields one empty chunk so the manifest always carries ≥1 entry. */

@@ -11,9 +11,8 @@
 // See /docs/science-stellar-modelling.md#star-colour-calibration and
 // /research/star-spectral-rendition/README.md#tier-1--replace-citocolor-with-blackbody--srgb-lut-ship-standalone.
 
-import { writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
+import { emitArtifacts, runStep } from '../util/emit-artifacts';
+import { LUT_OUTPUTS } from './blackbody-lut-outputs';
 
 import {
   BV_MAX,
@@ -111,15 +110,13 @@ ${formatBytesAsLines(bytes)}
 `;
 }
 
-async function main(): Promise<void> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const out = resolve(here, '..', '..', 'src/client/star-pipeline/blackbody-lut-data.ts');
+const OUT = LUT_OUTPUTS.files.lut;
+
+function main(): void {
   const bytes = buildLut();
-  await writeFile(out, renderModule(bytes));
-  console.log(`Wrote ${out} (${bytes.length} LUT bytes)`);
+  emitArtifacts({ outputs: LUT_OUTPUTS, files: { lut: renderModule(bytes) } });
+  console.log(`Wrote ${OUT} (${bytes.length} LUT bytes)`);
 }
 
 const isCli = import.meta.url === `file://${process.argv[1]}`;
-if (isCli) {
-  void main();
-}
+if (isCli) runStep(main);

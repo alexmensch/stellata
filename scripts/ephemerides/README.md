@@ -7,6 +7,9 @@ provenance, units, and the measured accuracy table live in
 [Horizons element tables](/src/client/solar-system/ephemerides/README.md#horizons-element-tables).
 This folder owns the scripts.
 
+- `planet-element-outputs.ts` — `ELEMENT_TABLE_OUTPUTS`, one
+  `data/ephemerides/{id}.json` per target, as `fetch:ephemerides`'
+  `emitArtifacts` declaration (`../util/README.md`). Side-effect free.
 - `planet-element-roster.ts` — the nine targets, their sample cadence, and the
   window every table spans (`TABLE_JD_START` / `TABLE_JD_END`,
   `POSITION_TOLERANCE_AU`). The authoring source; editing a cadence needs a
@@ -25,8 +28,10 @@ This folder owns the scripts.
   narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`).
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
-  `data/ephemerides/{id}.json` and exits non-zero if any table misses its
-  accuracy bound. See [Cadence](#cadence).
+  `data/ephemerides/{id}.json` through `emitEach` (`../util/README.md`): a
+  table that misses its accuracy bound never lands, every table that holds
+  does, and the run exits non-zero naming the misses. See
+  [Cadence](#cadence).
 - `sync-ephemerides.ts` (+ `-pure.ts`) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on
   every `pnpm run dev` / `build`, so CI and deploy never touch the network.

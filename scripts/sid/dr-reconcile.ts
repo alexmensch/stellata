@@ -1,11 +1,13 @@
 // `pnpm run sid:dr-reconcile` — classify a Gaia DR transition's cross-match
-// pull per /docs/sid.md#61-procedure and emit the churn report; --bridges-out writes
-// the carried-1:1 bridge edges for review. See scripts/sid/README.md.
+// pull per /docs/sid.md#61-procedure and emit the churn report, plus the carried-1:1
+// bridge edges for review. See scripts/sid/README.md.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { REPO_ROOT as ROOT, isLfsPointer } from '../util/paths';
+import { DR_RECONCILE_OUTPUTS } from './dr-reconcile-outputs';
 import {
   ACCEPT_MAS,
   MAG_REVIEW_DELTA,
@@ -21,7 +23,6 @@ interface CliArgs {
   candidateCol: string;
   riskNs: string;
   candidateNs: string;
-  bridgesOut: string | null;
 }
 
 function parseArgs(argv: string[]): CliArgs {
@@ -36,7 +37,6 @@ function parseArgs(argv: string[]): CliArgs {
     candidateCol: get('candidate-col', 'dr2_source_id'),
     riskNs: get('risk-ns', 'gaia_dr3'),
     candidateNs: get('candidate-ns', 'gaia_dr2'),
-    bridgesOut: argv.find((a) => a.startsWith('--bridges-out='))?.slice('--bridges-out='.length) ?? null,
   };
 }
 
@@ -91,14 +91,13 @@ function main(): void {
     for (const id of c.droppedNearMiss) console.log(line(id));
   }
 
-  if (args.bridgesOut) {
-    const out = resolve(args.bridgesOut);
-    const body = c.carried
-      .map((m) => `${args.riskNs}:${m.riskId}\t${args.candidateNs}:${m.candidateId}\tcarried 1:1 @ ${m.angularDistanceMas} mas`)
-      .join('\n');
-    writeFileSync(out, `a\tb\tnote\n${body}\n`);
-    console.log(`wrote ${out} (${c.carried.length} bridge edges — human review before commit)`);
-  }
+  const body = c.carried
+    .map((m) => `${args.riskNs}:${m.riskId}\t${args.candidateNs}:${m.candidateId}\tcarried 1:1 @ ${m.angularDistanceMas} mas`)
+    .join('\n');
+  emitArtifacts({ outputs: DR_RECONCILE_OUTPUTS, files: { bridges: `a\tb\tnote\n${body}\n` } });
+  console.log(
+    `wrote ${DR_RECONCILE_OUTPUTS.files.bridges} (${c.carried.length} bridge edges — human review before commit)`,
+  );
 }
 
-main();
+runStep(main);

@@ -28,7 +28,8 @@ Reads two committed source files under `data/local-group/`:
   optional `canonical` name promotion) merged into each object's `name` /
   `type` / `aliases` output fields; unmatched rows fail the build.
 
-Emits `public/local-group.json` with one entry per renderable object
+Emits `public/local-group.json` through `emitArtifacts`
+(`../util/README.md`; the declaration is `local-group-outputs.ts`), with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
 `LgObject` type in `build-local-group-pure.ts`; the client loader at
 `src/client/local-group/local-group-loader.ts` mirrors it 1:1.

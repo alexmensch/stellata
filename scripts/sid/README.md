@@ -43,11 +43,14 @@ allocate.ts               pnpm run sid:allocate — the ONLY writer of
 export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the neighbourhood-pull request TSV (/docs/sid.md#61-procedure
-                          step 1). --out=<path> to write elsewhere.
+                          step 1), through emitArtifacts at the path
+                          dr-risk-set-outputs.ts declares.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
-                          DR transition (/docs/sid.md#61-procedure classes); --bridges-out
-                          writes carried-1:1 same-as edges for human
-                          review. Defaults replay the committed DR2→DR3
+                          DR transition (/docs/sid.md#61-procedure classes),
+                          plus the carried-1:1 same-as edges for human
+                          review in build/sid/dr-reconcile-bridges.tsv
+                          (dr-reconcile-outputs.ts; gitignored, a draft for
+                          sameas-overrides.tsv, never committed itself). Defaults replay the committed DR2→DR3
                           dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
@@ -55,7 +58,14 @@ dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
 stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
-                          pnpm run sid:stamp). See README.md#sibling-artifact-stamping.
+                          pnpm run sid:stamp). Every named target resolves
+                          before one emitArtifacts call lands them all.
+                          See README.md#sibling-artifact-stamping.
+sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: the sibling artifacts sid:stamp
+                          rewrites in place, as its emitArtifacts declaration
+                          (../util/README.md). Side-effect free. The same
+                          paths are their emitters' outputs too; the stamp
+                          is an in-place transform after them.
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind per sibling) + siblingArtifactObjects, shared
                           by allocate (minting) and the stamp (resolving) so

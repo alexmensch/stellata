@@ -30,9 +30,14 @@ Two entry points, and they split cleanly: **this build joins the overlay,
 scripts/catalog/classic-ids/
   build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables,
                                   both Gaia cross-walks and the gate's three
-                                  evidence tables, writes the overlay and its
-                                  two gate queues, and asserts the count
-                                  snapshot.
+                                  evidence tables, and emits the overlay and
+                                  its two gate queues through emitArtifacts,
+                                  so a drifted count snapshot lands none of
+                                  the three.
+  classic-id-overlay-outputs.ts   CLASSIC_ID_OUTPUTS — the overlay and its
+                                  two gate queues as the build's
+                                  emitArtifacts declaration
+                                  (../../util/README.md). Side-effect free.
   binding-candidates.ts           `loadClassicIdCrossWalks`, every table the
                                   overlay join reads, as one `OverlayWalks`.
                                   ../astrometry-request/ runs the same join
@@ -291,8 +296,8 @@ constellation out of the designation string and loses only its expanded alias
 
 `classic-id-overlay-expected.json` pins the counts through the same
 `compareCountSnapshot` / `UPDATE_BUILD_COUNTS` machinery
-`build-catalog.ts` uses (`assertOrUpdateSnapshot` in
-`../../util/snapshot-assert.ts`). Three groups:
+`build-catalog.ts` uses (`snapshotCheck` in
+`../../util/snapshot-check.ts`). Three groups:
 
 - **Input + route sizes** — upstream row counts, how many Tycho ids
   resolve, the HIP-route agree / disagree / HIP-only split. Pre-gate.

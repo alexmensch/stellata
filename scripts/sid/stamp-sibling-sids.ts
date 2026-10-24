@@ -1,21 +1,22 @@
 // Stamp frozen Stellata IDs onto clouds.json / local-group.json from the
 // committed ledger, after their emitters run. See /scripts/sid/README.md#sibling-artifact-stamping.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 
-import { REPO_ROOT as ROOT } from '../util/paths';
+import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { resolveSids } from './sid-pure';
 import { loadRegistry } from './registry-io';
 import {
   SIBLING_ARTIFACTS,
   siblingArtifactObjects,
-  type SiblingArtifactSpec,
   type SiblingItem,
 } from './sibling-artifacts';
+import { SID_STAMP_OUTPUTS } from './sibling-stamp-outputs';
 
-function stamp(spec: SiblingArtifactSpec): void {
-  const path = resolve(ROOT, 'public', spec.file);
+
+function stamped(name: string): string {
+  const spec = SIBLING_ARTIFACTS[name];
+  const path = SID_STAMP_OUTPUTS.files[name];
   if (!existsSync(path)) {
     console.error(`sid:stamp: missing ${path}\n  run ${spec.buildHint} first`);
     process.exit(1);
@@ -49,25 +50,30 @@ function stamp(spec: SiblingArtifactSpec): void {
   items.forEach((o, i) => {
     (o as { sid?: number }).sid = objectSids[i];
   });
-  writeFileSync(path, JSON.stringify(payload) + '\n');
   console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file}`);
+  return JSON.stringify(payload) + '\n';
 }
 
-const targets = process.argv.slice(2);
-if (targets.length === 0) {
-  console.error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
-  process.exit(1);
+function main(): void {
+  const targets = process.argv.slice(2);
+  if (targets.length === 0) {
+    console.error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
+    process.exit(1);
+  }
+  const names = targets.includes('all') ? Object.keys(SIBLING_ARTIFACTS) : targets;
+  for (const t of names) {
+    if (!SIBLING_ARTIFACTS[t]) {
+      console.error(
+        `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
+      );
+      process.exit(1);
+    }
+  }
+  emitArtifacts({
+    outputs: SID_STAMP_OUTPUTS,
+    only: names,
+    files: Object.fromEntries(names.map((n) => [n, stamped(n)])),
+  });
 }
-const specs = targets.includes('all')
-  ? Object.values(SIBLING_ARTIFACTS)
-  : targets.map((t) => {
-      const spec = SIBLING_ARTIFACTS[t];
-      if (!spec) {
-        console.error(
-          `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
-        );
-        process.exit(1);
-      }
-      return spec;
-    });
-for (const spec of specs) stamp(spec);
+
+runStep(main);

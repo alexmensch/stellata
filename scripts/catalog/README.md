@@ -86,13 +86,26 @@ scripts/catalog/
   build-catalog.ts                Orchestrator. Reads every reference
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
-                                  writes the chunked binary + manifests.
+                                  emits the chunked binary, manifests and
+                                  both committed ledgers through
+                                  emitArtifacts once its two snapshot
+                                  checks pass. On a SID error it lands them
+                                  with no checks and then fails
+                                  ([SID allocation](#sid-allocation)).
   catalog-inputs.ts (+ test)      catalogInputPaths — every file the build
                                   reads, which its content-hash stamp keys:
                                   the import closure plus sibling snapshots
                                   (../util/import-closure-pure.ts, the rule
                                   CI's cache key shares) and each loader's
                                   exported data paths.
+  catalog-outputs.ts (+ test)     CATALOG_OUTPUTS — every file the build
+                                  writes, as its emitArtifacts declaration
+                                  (../util/README.md): the public/ sidecars,
+                                  the row-index map, the two committed
+                                  ledgers, and the transport chunks as a
+                                  family. Side-effect free, so a reader can
+                                  import the declaration without running
+                                  the build.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced
@@ -125,7 +138,7 @@ scripts/catalog/
                                   build-catalog-expected.json. Generic over
                                   the count record: compareCountSnapshot is
                                   the compare every count snapshot passes
-                                  (consumer list: the snapshot-assert.ts
+                                  (consumer list: the snapshot-check.ts
                                   entry of ../util/README.md).
 ```
 

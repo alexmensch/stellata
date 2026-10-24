@@ -50,8 +50,12 @@ scripts/catalog/naming/
                                 rests on. `membershipProperKey` is the one
                                 place the gate's join key is built.
   build-wgsn-tables.ts          Orchestrator: read, normalise, delegate
-                                the joins, write the two derived tables,
-                                pin the counts.
+                                the joins, and emit the two derived
+                                tables through emitArtifacts once the
+                                count snapshot passes.
+  wgsn-tables-outputs.ts        WGSN_OUTPUTS — the two derived tables as
+                                build:wgsn's emitArtifacts declaration
+                                (../../util/README.md). Side-effect free.
   wgsn-expected.json            Pinned count snapshot
                                 (UPDATE_BUILD_COUNTS=1 refreshes).
   wgsn-index-pure.ts (+ test)   The record-side join: readers for the two
@@ -76,8 +80,12 @@ scripts/catalog/naming/
                                 which hard-fails on an unmatched SID.
   naming-parity-pure.ts         Ledger codec + the record-identity key and
     (+ test)                    the shared label resolver.
-  build-naming-parity.ts        Refreshes the ledger from the built
-                                artifacts.
+  build-naming-parity.ts        Refreshes the ledger and the duplicate
+                                list from the built artifacts, both in
+                                one emitArtifacts call.
+  naming-parity-outputs.ts      NAMING_PARITY_OUTPUTS — the ledger and the
+                                duplicate list, as build:naming-parity's
+                                emitArtifacts declaration. Side-effect free.
   naming-parity.test.ts         The /docs/star-naming.md#8-parity--the-gate-on-any-naming-change gate over the built artifacts.
   naming-parity.tsv             The display-change enumeration.
   naming-duplicates.tsv         Duplicate composed labels — data findings.

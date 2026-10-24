@@ -13,8 +13,10 @@ import { isDustPublicAsset } from '../scripts/dust/sync-dust-pure';
 import { isPlanetElementPublicAsset } from '../scripts/ephemerides/sync-ephemerides-pure';
 import { isProbePublicAsset } from '../scripts/probes/sync-probes-pure';
 import { isTexturePublicAsset } from '../scripts/textures/sync-textures-pure';
+import { STAGING_SUFFIX } from '../scripts/util/staged-write';
 
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
+const DIST_DIR = resolve(__dirname, '..', 'dist');
 // One row per mirrored folder; the predicate is the same one
 // scripts/util/mirror-to-public.ts syncs and purges with.
 const MIRRORED_FOLDERS: Array<[string, (name: string) => boolean]> = [
@@ -34,6 +36,14 @@ describe.skipIf(!existsSync(PUBLIC_DIR))('deployed bundle content (public/)', ()
         FORBIDDEN_EXTENSIONS.some((ext) => p.endsWith(ext)) &&
         !ALLOWED_SHIPPED.has(basename(p)),
     );
+    expect(offenders).toEqual([]);
+  });
+
+  it('holds no staged output a killed build left behind, in public/ or dist/', () => {
+    const offenders = [PUBLIC_DIR, DIST_DIR]
+      .filter((d) => existsSync(d))
+      .flatMap((d) => [...walkFiles(d)])
+      .filter((p) => p.endsWith(STAGING_SUFFIX));
     expect(offenders).toEqual([]);
   });
 
