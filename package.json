@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "7.1.3",
+  "version": "7.1.4",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -76,6 +76,7 @@
     "dev": "pnpm run build:data && vite",
     "dev:site": "vite --config vite.site.config.ts",
     "check:asset-sizes": "tsx scripts/release/check-asset-sizes.ts",
+    "docs:figures": "tsx scripts/doc-figures/rewrite-doc-figures.ts",
     "deploy": "pnpm run build && pnpm run check:asset-sizes && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "perf": "tsx scripts/perf/run.ts",

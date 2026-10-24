@@ -76,9 +76,16 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     // Display changes are enumerated (/docs/star-naming.md#82-display-changes-are-enumerated), not counted. Reviewed once,
     // then pinned — a drift here means a record's label moved without the
     // ledger being refreshed (`pnpm run build:naming-parity`).
+    const describe_ = (label: string | undefined) =>
+      (label === undefined ? 'absent' : `"${label}"`);
     const drifted = parity
-      .filter((row) => (labelByKey.get(row.key) ?? '') !== row.new)
-      .map((row) => `${row.key}: ledger "${row.new}", built "${labelByKey.get(row.key) ?? ''}"`);
+      .filter((row) => {
+        const built = labelByKey.get(row.key);
+        return row.record.present ? built !== row.record.new : built !== undefined;
+      })
+      .map((row) => `${row.key}: ledger ${
+        describe_(row.record.present ? row.record.new : undefined)}, built ${
+        describe_(labelByKey.get(row.key))}`);
     expect(drifted.slice(0, 20)).toEqual([]);
   });
 
@@ -89,7 +96,9 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     const enumerated = new Set(parity.map((row) => row.key));
     const missing: string[] = [];
     for (const row of parity) {
-      if (row.old === row.new) missing.push(`${row.key}: unchanged row in the ledger`);
+      if (row.record.present && row.old === row.record.new) {
+        missing.push(`${row.key}: unchanged row in the ledger`);
+      }
     }
     expect(missing.slice(0, 20)).toEqual([]);
     expect(enumerated.size).toBe(parity.length);
@@ -130,10 +139,10 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     const drifted: string[] = [];
     for (const row of parity) {
       const entry = entryByKey.get(row.key);
-      const resolves = entry !== undefined
-        && labelResolvesTo(index, byLabel, normalizeGlKey, row.old, entry.i);
-      if (resolves !== row.resolves) {
-        drifted.push(`${row.key}: "${row.old}" resolves=${resolves}, pinned ${row.resolves}`);
+      if (!row.record.present || entry === undefined) continue;
+      const resolves = labelResolvesTo(index, byLabel, normalizeGlKey, row.old, entry.i);
+      if (resolves !== row.record.resolves) {
+        drifted.push(`${row.key}: "${row.old}" resolves=${resolves}, pinned ${row.record.resolves}`);
       }
     }
     expect(drifted.slice(0, 30)).toEqual([]);

@@ -10,7 +10,6 @@ docs/pipeline-flowchart.md	313,257	stale
 docs/science-galactic-structure.md	390k	stale
 scripts/catalog/boundaries/README.md	390k	stale
 src/client/milkyway/calibration/README.md	979,659	stale
-src/client/star-pipeline/perceptual-disc/README.md	979,659	stale
 src/client/webgpu/extinction/README.md	983,068	stale
 src/client/webgpu/extinction/README.md	983,296	stale
 src/client/webgpu/star/README.md	388,071	stale

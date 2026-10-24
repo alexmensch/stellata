@@ -22,24 +22,32 @@ export function ledgerKeys(map: RowIndexMap): Map<number, string> {
   return out;
 }
 
+export type ParityRecord =
+  | {
+    present: true;
+    /** The label the ladder composes. Empty where the record now displays
+     *  the runtime's `Gaia DR3` / `SID #` last resort. */
+    new: string;
+    /** Whether `old` still resolves THIS record through the search corpus.
+     *  The searchability rule (/docs/star-naming.md#81-searchability-never-regresses) makes that the hard invariant for a string with external
+     *  provenance — a published name or a designation the structure
+     *  re-derives. A `false` row is only legitimate where the build composed
+     *  the string itself, which the alias rule (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) says has no external existence and
+     *  disappears with the composition that made it. */
+    resolves: boolean;
+  }
+  | { present: false };
+
 export interface ParityRow {
   key: string;
   /** The label this record displayed before the naming ladder landed.
    *  FROZEN: it is the string a user could have typed. */
   old: string;
-  /** The label the ladder composes. Empty where the record now displays
-   *  the runtime's `Gaia DR3` / `SID #` last resort. */
-  new: string;
-  /** Whether `old` still resolves THIS record through the search corpus.
-   *  The searchability rule (/docs/star-naming.md#81-searchability-never-regresses) makes that the hard invariant for a string with external
-   *  provenance — a published name or a designation the structure
-   *  re-derives. A `false` row is only legitimate where the build composed
-   *  the string itself, which the alias rule (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) says has no external existence and
-   *  disappears with the composition that made it. */
-  resolves: boolean;
+  record: ParityRecord;
 }
 
 const PARITY_HEADER = 'key\told\tnew\tresolves';
+const ABSENT = 'absent';
 
 export function parseParityLedger(text: string): ParityRow[] {
   const lines = text.split('\n').filter((l) => l.trim() !== '');
@@ -48,15 +56,27 @@ export function parseParityLedger(text: string): ParityRow[] {
   }
   return lines.slice(1).map((line) => {
     const [key, old, next = '', resolves = ''] = line.split('\t');
-    return { key, old, new: next, resolves: resolves === 'yes' };
+    if (resolves === ABSENT) {
+      if (next !== '') throw new Error(`naming-parity.tsv ${key}: an absent record composes no label`);
+      return { key, old, record: { present: false } };
+    }
+    if (resolves !== 'yes' && resolves !== 'no') {
+      throw new Error(`naming-parity.tsv ${key}: resolves must be yes, no or ${ABSENT}`);
+    }
+    return { key, old, record: { present: true, new: next, resolves: resolves === 'yes' } };
   });
+}
+
+function formatRecord(record: ParityRecord): string {
+  if (!record.present) return `\t${ABSENT}`;
+  return `${record.new}\t${record.resolves ? 'yes' : 'no'}`;
 }
 
 export function formatParityLedger(rows: readonly ParityRow[]): string {
   const sorted = [...rows].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   return [
     PARITY_HEADER,
-    ...sorted.map((r) => `${r.key}\t${r.old}\t${r.new}\t${r.resolves ? 'yes' : 'no'}`),
+    ...sorted.map((r) => `${r.key}\t${r.old}\t${formatRecord(r.record)}`),
   ].join('\n') + '\n';
 }
 
