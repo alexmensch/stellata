@@ -30,8 +30,8 @@ describe('emitArtifacts', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  const both = () => declareOutputs([a, b]);
-  const files = () => new Map([[a, 'new a'], [b, 'new b']]);
+  const both = () => declareOutputs({ a, b });
+  const files = () => ({ a: 'new a', b: 'new b' });
 
   it('lands every output and leaves no staged file behind', () => {
     emitArtifacts({ outputs: both(), files: files() });
@@ -55,8 +55,8 @@ describe('emitArtifacts', () => {
     writeFileSync(blocker, '');
     const c = join(blocker, 'c.txt');
     expect(() => emitArtifacts({
-      outputs: declareOutputs([a, c]),
-      files: new Map([[a, 'new a'], [c, 'new c']]),
+      outputs: declareOutputs({ a, c }),
+      files: { a: 'new a', c: 'new c' },
     })).toThrow();
     expect(readFileSync(a, 'utf8')).toBe('old a');
     expect(existsSync(a + STAGING_SUFFIX)).toBe(false);
@@ -64,16 +64,18 @@ describe('emitArtifacts', () => {
 
   it('sweeps a staged file a killed run left behind', () => {
     writeFileSync(a + STAGING_SUFFIX, 'stale');
-    emitArtifacts({ outputs: declareOutputs([a]), files: new Map([[a, 'new a']]) });
+    emitArtifacts({ outputs: declareOutputs({ a }), files: { a: 'new a' } });
     expect(existsSync(a + STAGING_SUFFIX)).toBe(false);
   });
 
   it('refuses an undeclared file and a declared one left out, before writing', () => {
     const stray = join(dir, 'stray.txt');
-    expect(() => emitArtifacts({ outputs: declareOutputs([a]), files: new Map([[a, 'x'], [stray, 'x']]) }))
+    const chunks = declareOutputs({ a }, [{ dir, member: /^chunk-\d+$/ }]);
+    expect(() => emitArtifacts({ outputs: chunks, files: { a: 'x' }, members: new Map([[stray, 'x']]) }))
       .toThrow(/undeclared: .*stray\.txt/);
-    expect(() => emitArtifacts({ outputs: both(), files: new Map([[a, 'x']]) }))
-      .toThrow(/declared, not emitted: .*b\.txt/);
+    // @ts-expect-error the compiler refuses a declared key left out
+    expect(() => emitArtifacts({ outputs: both(), files: { a: 'x' } }))
+      .toThrow(/declared, not emitted: b/);
     expect(readFileSync(a, 'utf8')).toBe('old a');
     expect(existsSync(stray)).toBe(false);
   });
@@ -83,8 +85,9 @@ describe('emitArtifacts', () => {
     mkdirSync(chunks);
     for (const n of ['chunk-0', 'chunk-1', 'chunk-2', 'README']) writeFileSync(join(chunks, n), 'old');
     emitArtifacts({
-      outputs: declareOutputs([], [{ dir: chunks, member: /^chunk-\d+$/ }]),
-      files: new Map([[join(chunks, 'chunk-0'), 'fresh 0'], [join(chunks, 'chunk-1'), 'fresh 1']]),
+      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/ }]),
+      files: {},
+      members: new Map([[join(chunks, 'chunk-0'), 'fresh 0'], [join(chunks, 'chunk-1'), 'fresh 1']]),
     });
     expect(readdirSync(chunks).sort()).toEqual(['README', 'chunk-0', 'chunk-1']);
     expect(readFileSync(join(chunks, 'chunk-1'), 'utf8')).toBe('fresh 1');

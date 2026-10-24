@@ -17,9 +17,10 @@ import {
 
 const artifactPath = (spec: SiblingArtifactSpec): string => resolve(ROOT, 'public', spec.file);
 
-const stampOutputs = (specs: readonly SiblingArtifactSpec[]) => declareOutputs(specs.map(artifactPath));
+const stampOutputs = (names: readonly string[]) =>
+  declareOutputs(Object.fromEntries(names.map((n) => [n, artifactPath(SIBLING_ARTIFACTS[n])])));
 
-export const SID_STAMP_OUTPUTS = stampOutputs(Object.values(SIBLING_ARTIFACTS));
+export const SID_STAMP_OUTPUTS = stampOutputs(Object.keys(SIBLING_ARTIFACTS));
 
 function stamped(spec: SiblingArtifactSpec): string {
   const path = artifactPath(spec);
@@ -65,19 +66,16 @@ if (targets.length === 0) {
   console.error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
   process.exit(1);
 }
-const specs = targets.includes('all')
-  ? Object.values(SIBLING_ARTIFACTS)
-  : targets.map((t) => {
-      const spec = SIBLING_ARTIFACTS[t];
-      if (!spec) {
-        console.error(
-          `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
-        );
-        process.exit(1);
-      }
-      return spec;
-    });
+const names = targets.includes('all') ? Object.keys(SIBLING_ARTIFACTS) : targets;
+for (const t of names) {
+  if (!SIBLING_ARTIFACTS[t]) {
+    console.error(
+      `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
+    );
+    process.exit(1);
+  }
+}
 emitArtifacts({
-  outputs: stampOutputs(specs),
-  files: new Map(specs.map((spec) => [artifactPath(spec), stamped(spec)])),
+  outputs: stampOutputs(names),
+  files: Object.fromEntries(names.map((n) => [n, stamped(SIBLING_ARTIFACTS[n])])),
 });

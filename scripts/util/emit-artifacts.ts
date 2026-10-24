@@ -15,17 +15,19 @@ export interface OutputFamily {
   readonly member: RegExp;
 }
 
-export interface DeclaredOutputs {
-  readonly files: readonly string[];
+export interface DeclaredOutputs<K extends string = string> {
+  readonly files: Readonly<Record<K, string>>;
   readonly families: readonly OutputFamily[];
 }
 
-export function declareOutputs(
-  files: readonly string[],
+export function declareOutputs<K extends string>(
+  files: Record<K, string>,
   families: readonly OutputFamily[] = [],
-): DeclaredOutputs {
+): DeclaredOutputs<K> {
   return {
-    files: files.map((f) => resolve(f)),
+    files: Object.fromEntries(
+      Object.entries<string>(files).map(([k, p]) => [k, resolve(p)]),
+    ) as Record<K, string>,
     families: families.map((f) => ({ dir: resolve(f.dir), member: f.member })),
   };
 }
@@ -39,9 +41,11 @@ export type Check =
 
 export type ArtifactContents = string | Uint8Array;
 
-export interface Emission {
-  readonly outputs: DeclaredOutputs;
-  readonly files: ReadonlyMap<string, ArtifactContents>;
+export interface Emission<K extends string> {
+  readonly outputs: DeclaredOutputs<K>;
+  readonly files: Readonly<Record<NoInfer<K>, ArtifactContents>>;
+  /** Family members, keyed by absolute path. */
+  readonly members?: ReadonlyMap<string, ArtifactContents>;
   readonly checks?: readonly Check[];
   /** Written last, over exactly the emitted files. */
   readonly stamp?: { readonly path: string; readonly inputs: FileHashes };
@@ -51,17 +55,15 @@ export class EmissionRefused extends Error {
   override name = 'EmissionRefused';
 }
 
-function familyOf(outputs: DeclaredOutputs, path: string): OutputFamily | undefined {
-  return outputs.families.find(
-    (f) => dirname(path) === f.dir && f.member.test(basename(path)),
-  );
-}
-
-function assertDeclared(outputs: DeclaredOutputs, paths: readonly string[]): void {
-  const declared = new Set(outputs.files);
-  const undeclared = paths.filter((p) => !declared.has(p) && familyOf(outputs, p) === undefined);
-  const emitted = new Set(paths);
-  const unemitted = outputs.files.filter((p) => !emitted.has(p));
+function assertDeclared(outputs: DeclaredOutputs, keys: readonly string[], members: readonly string[]): void {
+  const declared = Object.keys(outputs.files);
+  const undeclared = [
+    ...keys.filter((k) => !(k in outputs.files)),
+    ...members.filter((p) => !outputs.families.some(
+      (f) => dirname(p) === f.dir && f.member.test(basename(p)),
+    )),
+  ];
+  const unemitted = declared.filter((k) => !keys.includes(k));
   if (undeclared.length > 0 || unemitted.length > 0) {
     throw new Error(
       'emitArtifacts: emitted files must equal the declared outputs'
@@ -76,7 +78,7 @@ function familyEntries(family: OutputFamily): string[] {
 }
 
 function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[]): void {
-  for (const p of [...outputs.files, ...extra]) discardStaged(p);
+  for (const p of [...Object.values<string>(outputs.files), ...extra]) discardStaged(p);
   for (const family of outputs.families) {
     for (const name of familyEntries(family)) {
       if (name.endsWith(STAGING_SUFFIX) && family.member.test(name.slice(0, -STAGING_SUFFIX.length))) {
@@ -86,10 +88,15 @@ function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[]): void {
   }
 }
 
-export function emitArtifacts(emission: Emission): void {
+export function emitArtifacts<K extends string>(emission: Emission<K>): void {
   const { outputs, checks = [], stamp } = emission;
-  const files = new Map([...emission.files].map(([p, c]) => [resolve(p), c] as const));
-  assertDeclared(outputs, [...files.keys()]);
+  const keyed = Object.entries<ArtifactContents>(emission.files);
+  const members = [...(emission.members ?? new Map())].map(([p, c]) => [resolve(p), c] as const);
+  assertDeclared(outputs, keyed.map(([k]) => k), members.map(([p]) => p));
+  const files = new Map<string, ArtifactContents>([
+    ...keyed.map(([k, c]) => [outputs.files[k as K], c] as const),
+    ...members,
+  ]);
 
   for (const check of checks) {
     if (check.kind !== 'refresh' && check.report) console.log(check.report);

@@ -41,7 +41,8 @@ const OUT_DIR = resolve(REPO_ROOT, 'data/ephemerides');
 
 const tablePath = (target: PlanetElementTarget): string => resolve(OUT_DIR, `${target.id}.json`);
 
-const tableOutputs = (targets: readonly PlanetElementTarget[]) => declareOutputs(targets.map(tablePath));
+const tableOutputs = (targets: readonly PlanetElementTarget[]) =>
+  declareOutputs(Object.fromEntries(targets.map((t) => [t.id, tablePath(t)])));
 
 export const ELEMENT_TABLE_OUTPUTS = tableOutputs(ELEMENT_TARGETS);
 
@@ -225,11 +226,11 @@ const targets = only.size === 0
   : ELEMENT_TARGETS.filter((t) => only.has(t.id));
 if (targets.length === 0) throw new Error(`No such planet: ${[...only].join(', ')}`);
 
-const files = new Map<string, string>();
+const files: Record<string, string> = {};
 const checks: Check[] = [];
 for (const target of targets) {
   const { text, check } = await buildTarget(target);
-  files.set(tablePath(target), text);
+  files[target.id] = text;
   checks.push(check);
 }
 emitArtifacts({ outputs: tableOutputs(targets), files, checks });

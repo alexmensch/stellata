@@ -38,7 +38,8 @@ const OUT_DIR = resolve(REPO_ROOT, 'data/probes');
 
 const probePath = (probe: ProbeMission): string => resolve(OUT_DIR, probeTrajectoryFilename(probe.id));
 
-const probeOutputs = (roster: readonly ProbeMission[]) => declareOutputs(roster.map(probePath));
+const probeOutputs = (roster: readonly ProbeMission[]) =>
+  declareOutputs(Object.fromEntries(roster.map((p) => [p.id, probePath(p)])));
 
 export const PROBE_OUTPUTS = probeOutputs(PROBE_MISSIONS);
 
@@ -276,8 +277,8 @@ async function main(): Promise<void> {
   const only = new Set(process.argv.slice(2));
   const roster = only.size === 0 ? PROBE_MISSIONS : PROBE_MISSIONS.filter((p) => only.has(p.id));
   if (roster.length === 0) throw new Error(`No roster probe matches ${[...only].join(', ')}`);
-  const files = new Map<string, string>();
-  for (const probe of roster) files.set(probePath(probe), await fetchProbe(probe, retrievedUtc));
+  const files: Record<string, string> = {};
+  for (const probe of roster) files[probe.id] = await fetchProbe(probe, retrievedUtc);
   emitArtifacts({ outputs: probeOutputs(roster), files });
 }
 

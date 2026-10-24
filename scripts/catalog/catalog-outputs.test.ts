@@ -9,7 +9,7 @@ const repoRelative = (p: string) => relative(REPO_ROOT, p);
 
 describe('CATALOG_OUTPUTS', () => {
   it('declares the committed ledgers, so the catalogue stamp records them', () => {
-    expect(CATALOG_OUTPUTS.files.map(repoRelative)).toEqual(expect.arrayContaining([
+    expect(Object.values(CATALOG_OUTPUTS.files).map(repoRelative)).toEqual(expect.arrayContaining([
       'data/membership/parked-ledger.tsv',
       'data/athyg/simbad_sourced_distances.tsv',
     ]));

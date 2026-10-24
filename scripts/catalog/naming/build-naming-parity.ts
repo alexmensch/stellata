@@ -27,7 +27,7 @@ import {
 const PARITY = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-parity.tsv');
 const DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
 
-export const NAMING_PARITY_OUTPUTS = declareOutputs([PARITY, DUPLICATES]);
+export const NAMING_PARITY_OUTPUTS = declareOutputs({ parity: PARITY, duplicates: DUPLICATES });
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf8')) as T;
@@ -97,10 +97,10 @@ function main(): void {
   }
   emitArtifacts({
     outputs: NAMING_PARITY_OUTPUTS,
-    files: new Map([
-      [PARITY, formatParityLedger(changed)],
-      [DUPLICATES, formatDuplicateLedger(duplicates)],
-    ]),
+    files: {
+      parity: formatParityLedger(changed),
+      duplicates: formatDuplicateLedger(duplicates),
+    },
   });
 
   console.log(

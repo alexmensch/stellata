@@ -32,7 +32,9 @@ const EXPECTED_COUNTS = resolve(
   'scripts/catalog/classic-ids/classic-id-overlay-expected.json',
 );
 
-export const CLASSIC_ID_OUTPUTS = declareOutputs([OUT_OVERLAY, OUT_DISAGREEMENTS, OUT_REJECTED]);
+export const CLASSIC_ID_OUTPUTS = declareOutputs({
+  overlay: OUT_OVERLAY, disagreements: OUT_DISAGREEMENTS, rejected: OUT_REJECTED,
+});
 
 function tsv(header: string, rows: readonly string[]): string {
   return `${[header, ...rows].join('\n')}\n`;
@@ -108,11 +110,11 @@ async function main(): Promise<void> {
   logOverlay(overlay, joinCounts);
   emitArtifacts({
     outputs: CLASSIC_ID_OUTPUTS,
-    files: new Map([
-      [OUT_OVERLAY, serializeOverlay(overlay)],
-      [OUT_DISAGREEMENTS, disagreementsTsv(disagreements)],
-      [OUT_REJECTED, rejectedBindingsTsv(rejectedBindings)],
-    ]),
+    files: {
+      overlay: serializeOverlay(overlay),
+      disagreements: disagreementsTsv(disagreements),
+      rejected: rejectedBindingsTsv(rejectedBindings),
+    },
     checks: [snapshotCheck<OverlayJoinCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: EXPECTED_COUNTS,

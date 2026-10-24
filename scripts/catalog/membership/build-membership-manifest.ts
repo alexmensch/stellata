@@ -55,11 +55,13 @@ const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
 const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
 const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
 
-const OUTPUT_FILES = [
-  LABEL_FLIPS_FILE, MEMBERSHIP_MANIFEST_FILE, ADDITIONS_LEDGER_FILE, BINDING_REVIEW_FILE, LABEL_DROPS_FILE,
-] as const;
-
-export const MEMBERSHIP_OUTPUTS = declareOutputs(OUTPUT_FILES.map((f) => resolve(ROOT, f)));
+export const MEMBERSHIP_OUTPUTS = declareOutputs({
+  labelFlips: resolve(ROOT, LABEL_FLIPS_FILE),
+  manifest: resolve(ROOT, MEMBERSHIP_MANIFEST_FILE),
+  additions: resolve(ROOT, ADDITIONS_LEDGER_FILE),
+  bindingReview: resolve(ROOT, BINDING_REVIEW_FILE),
+  labelDrops: resolve(ROOT, LABEL_DROPS_FILE),
+});
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the
  *  merge's own counts — the same walk that decides what the manifest ships. */
@@ -163,16 +165,15 @@ async function main(): Promise<void> {
   );
   reportLabelCoverage(c);
 
-  const text: Record<(typeof OUTPUT_FILES)[number], string> = {
-    [LABEL_FLIPS_FILE]: labelFlipsTsv(result.flips),
-    [MEMBERSHIP_MANIFEST_FILE]: serializeManifest(result.rows),
-    [ADDITIONS_LEDGER_FILE]: serializeLedger(result.ledger),
-    [BINDING_REVIEW_FILE]: serializeBindingReview(result.bindingReview),
-    [LABEL_DROPS_FILE]: serializeLabelDrops(result.labelDrops),
-  };
   emitArtifacts({
     outputs: MEMBERSHIP_OUTPUTS,
-    files: new Map(OUTPUT_FILES.map((f) => [resolve(ROOT, f), text[f]])),
+    files: {
+      labelFlips: labelFlipsTsv(result.flips),
+      manifest: serializeManifest(result.rows),
+      additions: serializeLedger(result.ledger),
+      bindingReview: serializeBindingReview(result.bindingReview),
+      labelDrops: serializeLabelDrops(result.labelDrops),
+    },
     checks: [snapshotCheck<MembershipCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
@@ -182,7 +183,7 @@ async function main(): Promise<void> {
       refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:membership',
     })],
   });
-  for (const f of OUTPUT_FILES) console.log(`wrote ${f}`);
+  for (const f of Object.values(MEMBERSHIP_OUTPUTS.files)) console.log(`wrote ${f}`);
 }
 
 main().catch((err: unknown) => {

@@ -112,9 +112,11 @@ same thing — single-use helpers stay with their consumer.
   failed check therefore leaves every prior output byte-identical. A
   `.staged` file a killed run left behind is swept by the next run of that
   step. `outputs` is the step's
-  `declareOutputs(files, families)` constant: what is emitted must equal the
-  declared `files` exactly, plus any members of a declared family (a directory
-  plus a name pattern, the catalogue's transport chunks). Family members a run
+  `declareOutputs({key: path, …}, families)` constant, the one place each
+  path is written; an emission supplies only contents, keyed the same, so a
+  missing or extra key is a compile error. Family members (a directory plus a
+  name pattern — the catalogue's transport chunks) arrive separately in
+  `members`, by path, and must match a declared family. Family members a run
   does not emit are deleted once the new set has landed. A `refresh` check
   (a snapshot under its update flag) stages its own baseline with the outputs.
   `stamp`, when given, is written last over exactly the emitted files, so a

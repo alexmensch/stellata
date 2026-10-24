@@ -13,13 +13,16 @@ import { CATALOG_CHUNK_FILENAME } from './record/catalog-pure';
 
 export const CATALOG_CHUNK_DIR = dirname(DEFAULT_CATALOG_MANIFEST);
 export const OUT_BOUNDARIES = resolve(REPO_ROOT, 'public/constellation-boundaries.json');
-export const OUT_PARKED = resolve(REPO_ROOT, PARKED_LEDGER_FILE);
-export const OUT_SIMBAD_SOURCED = resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE);
 
 export const CATALOG_OUTPUTS = declareOutputs(
-  [
-    DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, OUT_BOUNDARIES, DEFAULT_SEARCH_INDEX,
-    DEFAULT_ROW_INDEX_MAP, OUT_PARKED, OUT_SIMBAD_SOURCED,
-  ],
+  {
+    manifest: DEFAULT_CATALOG_MANIFEST,
+    constellations: DEFAULT_CONSTELLATIONS_JSON,
+    boundaries: OUT_BOUNDARIES,
+    searchIndex: DEFAULT_SEARCH_INDEX,
+    rowIndexMap: DEFAULT_ROW_INDEX_MAP,
+    parkedLedger: resolve(REPO_ROOT, PARKED_LEDGER_FILE),
+    simbadSourcedDistances: resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE),
+  },
   [{ dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME }],
 );

@@ -37,7 +37,7 @@ const OUT_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
 const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
-export const WGSN_OUTPUTS = declareOutputs([OUT_NAMES, OUT_DESIGNATIONS]);
+export const WGSN_OUTPUTS = declareOutputs({ names: OUT_NAMES, designations: OUT_DESIGNATIONS });
 
 export interface WgsnCounts {
   necRows: number;
@@ -237,7 +237,7 @@ async function main(): Promise<void> {
 
   emitArtifacts({
     outputs: WGSN_OUTPUTS,
-    files: new Map([[OUT_NAMES, namesTsv], [OUT_DESIGNATIONS, designationsTsv]]),
+    files: { names: namesTsv, designations: designationsTsv },
     checks: [snapshotCheck<WgsnCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: SNAPSHOT,

@@ -116,11 +116,11 @@ const OUT = resolve(
   dirname(fileURLToPath(import.meta.url)), '..', '..', 'src/client/star-pipeline/blackbody-lut-data.ts',
 );
 
-export const LUT_OUTPUTS = declareOutputs([OUT]);
+export const LUT_OUTPUTS = declareOutputs({ lut: OUT });
 
 function main(): void {
   const bytes = buildLut();
-  emitArtifacts({ outputs: LUT_OUTPUTS, files: new Map([[OUT, renderModule(bytes)]]) });
+  emitArtifacts({ outputs: LUT_OUTPUTS, files: { lut: renderModule(bytes) } });
   console.log(`Wrote ${OUT} (${bytes.length} LUT bytes)`);
 }
 

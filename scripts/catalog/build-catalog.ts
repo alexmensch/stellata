@@ -133,7 +133,7 @@ import {
   DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
 } from './catalog-lookup';
 import {
-  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES, OUT_PARKED, OUT_SIMBAD_SOURCED,
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES,
 } from './catalog-outputs';
 import {
   emitArtifacts, type ArtifactContents, type Check,
@@ -205,7 +205,6 @@ async function main() {
     return;
   }
   clearStamp(CATALOG_STAMP);
-  const files = new Map<string, ArtifactContents>();
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
@@ -534,8 +533,8 @@ async function main() {
       + ' (ship, biased inversion — revisit at Gaia DR4)',
     );
   }
-  files.set(OUT_PARKED, parkedRecordsTsv(stats.parked));
-  files.set(OUT_SIMBAD_SOURCED, simbadSourcedDistancesTsv(stars));
+  const parkedLedger = parkedRecordsTsv(stats.parked);
+  const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
   counts.droppedTooFar = stats.dropped.tooFar;
@@ -1148,29 +1147,29 @@ async function main() {
     totalBytes: totalLength,
     ...(sidSuccessors.length > 0 ? { sidSuccessors } : {}),
   };
+  const chunks = new Map<string, ArtifactContents>();
   let chunkOff = 0;
   for (let i = 0; i < chunkBytes.length; i++) {
-    files.set(
+    chunks.set(
       resolve(CATALOG_CHUNK_DIR, catalogChunkFilename(i)),
       new Uint8Array(out, chunkOff, chunkBytes[i]),
     );
     chunkOff += chunkBytes[i];
   }
-  files.set(OUT_MANIFEST, JSON.stringify(manifest) + '\n');
+  const manifestJson = JSON.stringify(manifest) + '\n';
 
   // Constellations JSON (unchanged from v1 format).
   const constellationsOut = CONSTELLATIONS.map((c, idx) => {
     const lines = figureLines.get(idx);
     return lines ? { ...c, lines } : { ...c };
   });
-  files.set(OUT_CON, JSON.stringify(constellationsOut) + '\n');
+  const constellationsJson = JSON.stringify(constellationsOut) + '\n';
 
   // Boundary polylines, region label anchors, the runtime membership grid and
   // the fade-quantile table. The quantiles are keyed to apparent magnitude
   // and measured over the shipped population, so this runs against the same
   // `stars` the binary was written from.
   const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
-  files.set(OUT_BOUNDARIES, boundaries.json);
   counts.boundarySegments = boundaries.segments;
   counts.boundaryDirections = boundaries.directions;
   counts.boundaryRegionRuns = boundaries.regionRuns;
@@ -1196,7 +1195,6 @@ async function main() {
     if (entry) searchEntries.push(entry);
   }
   const searchJson = JSON.stringify(searchEntries) + '\n';
-  files.set(OUT_SEARCH, searchJson);
 
   // Catalog row-index map sidecar — lets the runtime binaries loader
   // resolve a multiples.tsv row's identifier to a catalog.bin record
@@ -1204,7 +1202,7 @@ async function main() {
   // source_id (decimal string, since source_ids exceed 2^53), HIP, and
   // synthetic identifier (`synth-<wds_id>-<comp>` for promoted companions
   // that carry no real ID — Algol Ab). Built once above, after the sort.
-  files.set(DEFAULT_ROW_INDEX_MAP, JSON.stringify(rowIndexMap) + '\n');
+  const rowIndexMapJson = JSON.stringify(rowIndexMap) + '\n';
   console.log(
     `Row-index map ${DEFAULT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
@@ -1254,11 +1252,20 @@ async function main() {
     );
   }
 
+  const files = {
+    manifest: manifestJson,
+    constellations: constellationsJson,
+    boundaries: boundaries.json,
+    searchIndex: searchJson,
+    rowIndexMap: rowIndexMapJson,
+    parkedLedger,
+    simbadSourcedDistances,
+  };
   const sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
   console.log(`SID: ${sidResolved} / ${stars.length} records resolved to a ledger SID`);
   if (sidResolution.errors.length > 0) {
     const preview = sidResolution.errors.slice(0, 10);
-    emitArtifacts({ outputs: CATALOG_OUTPUTS, files });
+    emitArtifacts({ outputs: CATALOG_OUTPUTS, files, members: chunks });
     console.error(
       `\nSID resolution failed for ${sidResolution.errors.length} record(s):\n  ` +
         preview.join('\n  ') +
@@ -1274,6 +1281,7 @@ async function main() {
   emitArtifacts({
     outputs: CATALOG_OUTPUTS,
     files,
+    members: chunks,
     checks: [buildCountsCheck(counts), distanceOutliersCheck(stars)],
     stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
   });

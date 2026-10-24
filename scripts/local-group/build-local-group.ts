@@ -34,7 +34,7 @@ const SRC_OVERRIDES = resolve(ROOT, 'data/local-group/overrides.tsv');
 const SRC_ALIASES = resolve(ROOT, 'data/local-group/aliases.tsv');
 const OUT = resolve(ROOT, 'public/local-group.json');
 
-export const LOCAL_GROUP_OUTPUTS = declareOutputs([OUT]);
+export const LOCAL_GROUP_OUTPUTS = declareOutputs({ localGroup: OUT });
 
 /** Coerces strings to numbers / null per LVDB convention ("" = missing
  *  for numeric cols). */
@@ -401,7 +401,7 @@ async function main(): Promise<void> {
   };
   emitArtifacts({
     outputs: LOCAL_GROUP_OUTPUTS,
-    files: new Map([[OUT, JSON.stringify(payload, null, 0) + '\n']]),
+    files: { localGroup: JSON.stringify(payload, null, 0) + '\n' },
   });
 
   console.log(
