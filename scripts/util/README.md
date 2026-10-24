@@ -69,7 +69,8 @@ same thing — single-use helpers stay with their consumer.
   and re-hashes the recorded outputs (`changedSince`), so an output rewritten
   by anything other than this build — an older commit's build, a write
   through a symlink, a partial copy — reads as stale. `clearStamp` runs
-  before a build writes, `writeStamp` after its asserts pass, refusing a
+  before a build writes, `writeStamp` after its asserts pass (for a TS step,
+  `emitArtifacts` calls it last, over the emitted set), refusing a
   missing output and landing the stamp by rename, so a stamp on disk is whole
   or absent; an unparseable one still reads as no stamp. The Python sibling serves the two binaries steps and writes
   the same JSON shape, which `tests/artifact-freshness.test.ts` reads from the
@@ -158,7 +159,7 @@ same thing — single-use helpers stay with their consumer.
   step imports, so the runtime step reaching this through `stage7_counts`
   would restamp `binaries.bin` on every pipeline-stage edit. Same rule
   on a missing snapshot: it fails, and only `UPDATE_BUILD_COUNTS=1`
-  writes one. Returns a bool where the TS side exits, since the Python
+  writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit.
   Pinned by `snapshot_assert.test.py`.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
