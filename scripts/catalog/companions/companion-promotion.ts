@@ -1925,7 +1925,14 @@ export function promoteCompanions(
   parked: ParkedRefusals = emptyParkedRefusals(),
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow> = new Map(),
   synthGaiaBridges: Map<string, string> = new Map(),
-): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
+): {
+  newStars: Star[];
+  stats: PromotionStats;
+  groups: Map<string, PairCursor>;
+  /** Every renderable-orbit pair this build resolved, as its two records:
+   *  the pairs the runtime draws apart from the elements alone. */
+  orbitPairs: Array<[Star, Star]>;
+} {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
   const groups = groupBySystem(multiplesRows);
@@ -2428,7 +2435,13 @@ export function promoteCompanions(
     );
     stats.blendDimmedAnchors++;
   }
-  return { newStars, stats, groups };
+  const orbitPairs: Array<[Star, Star]> = [];
+  for (const g of systemicGroups.values()) {
+    for (const { pIdx, sIdx } of g.pairs) {
+      orbitPairs.push([getStarAt(pIdx), getStarAt(sIdx)]);
+    }
+  }
+  return { newStars, stats, groups, orbitPairs };
 }
 
 function lookupPromoted(

@@ -29,6 +29,10 @@ scripts/catalog/companions/
                                   offset re-based onto promotion's WDS-root
                                   anchor, or null where Stage 6 reached
                                   either from no measured geometry.
+  overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
+                                  the sum of their radii, less those inside
+                                  one renderable-orbit hierarchy. See
+                                  Overlap gate below.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -434,6 +438,17 @@ Per-row gates and resolution:
   brighter component; inheriting it would collide with the
   primary in every HIP-keyed lookup (url-state's `refFromIndex`
   notably).
+- <a id="overlap-gate"></a>**Overlap gate.** After promotion, build-catalog
+  counts every pair of records whose centres sit closer than the sum of their
+  physical radii — a star drawn inside another, whatever placement rule put it
+  there. A pair inside one connected set of renderable-orbit pairs is exempt:
+  the runtime draws each member of that hierarchy from its own elements, so a
+  bit-identical bake there is the deliberate sub-resolution placement above.
+  `promoteCompanions` returns those pairs (`orbitPairs`), the same ones the
+  systemic-velocity pass reconciles. Counted `companionPhysicalOverlaps`
+  (<!-- count:build-catalog/companionPhysicalOverlaps -->33<!-- /count -->), a ratchet-down metric: 15 are a blend record
+  minted beside its own sub-letter (B with Bb), 18 a sub-letter collocated on
+  a record with no orbit between them; the build log lists each pair.
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
 record lacks own gaia/hip and is addressed exclusively through a

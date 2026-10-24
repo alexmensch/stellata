@@ -345,6 +345,8 @@ export interface BuildCounts {
   /** Existing blend-coordinate double entries repositioned in
    *  place by companion promotion (ξ UMa B class). */
   companionRepositionedCollocatedDouble: number;
+  /** companions/README.md#overlap-gate. */
+  companionPhysicalOverlaps: number;
   /** Promoted companions whose own IAU-positional constellation differs from
    *  their anchor's — a pair wide enough to straddle a boundary, which
    *  inheriting the anchor's index used to hide. */

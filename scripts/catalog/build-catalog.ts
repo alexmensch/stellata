@@ -39,6 +39,7 @@ import {
 } from './record/catalog-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
+import { physicalOverlaps } from './companions/overlap-gate-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareCountSnapshot,
@@ -344,6 +345,7 @@ async function main() {
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
     companionRepositionedCollocatedDouble: 0,
+    companionPhysicalOverlaps: 0,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
@@ -687,11 +689,16 @@ async function main() {
       coherence.memberAnchorPrecisionVetoed;
     console.log('Promoting binary companions from multiples.tsv...');
     const tProm = Date.now();
-    const { newStars, stats: ps } = promoteCompanions(
+    const { newStars, stats: ps, orbitPairs } = promoteCompanions(
       multiplesRows, stars, conAssignment, dustGrid,
       parkedRefusals(stats.parked), directions.gaiaAstrometry, synthGaiaBridges,
     );
     for (const ns of newStars) stars.push(ns);
+    const overlaps = physicalOverlaps(stars, orbitPairs);
+    counts.companionPhysicalOverlaps = overlaps.length;
+    const recordTag = (s: Star) => s.syntheticId ?? s.gaiaSourceId ?? `hip ${s.hip}`;
+    console.log(`  physical overlaps outside an orbit hierarchy: ${overlaps.length}`);
+    for (const [a, b] of overlaps) console.log(`    ${recordTag(a)} | ${recordTag(b)}`);
     console.log(
       `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
         `(${ps.promotedSynthetic} via synthetic ID); ` +
