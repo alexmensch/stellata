@@ -314,6 +314,16 @@ class PhotocentreOffsetsTests(unittest.TestCase):
         self.assertAlmostEqual(out["Aa"][1], 0.5)
         self.assertAlmostEqual(out["Ab"][0], -1.0)
 
+    def test_measured_ratios_set_weights_whatever_the_walk_order(self) -> None:
+        out = photocentre_offsets(self._adj([
+            ("Aa", "Ab", 1.0, 0.0, None),
+            ("Aa", "Ac", 0.0, 1.0, 0.0),
+            ("Ab", "Ac", -1.0, 1.0, 0.0),
+        ]))
+        third = 1.0 / 3.0
+        self.assertAlmostEqual(out["Aa"][0], third)
+        self.assertAlmostEqual(out["Aa"][1], third)
+
     def test_flux_ratio_composes_along_a_chain(self) -> None:
         out = photocentre_offsets(self._adj([
             ("Ba", "Bb", 1.0, 0.0, 0.0),

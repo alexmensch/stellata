@@ -743,7 +743,8 @@ measurement is real astrometry regardless of boundness
 classification. Every tier also links a sub-letter anchor to each
 ancestor letter (Aa1 → Aa → A) at the siblings' **photocentre** — the
 flux-weighted mean of the sibling positions, weights composed from
-each sibling row's own Δm — because a row naming the parent was
+each sibling row's own Δm along rows that measured one, starting at
+the most canonical sibling, so walk order never changes the weights — because a row naming the parent was
 measured off the blend's light centre. So a root anchored on Aa still
 reaches everything hung off A (15 Mon J, 31 Cyg H, Matar H). Only the
 anchor's chain links: a sub-letter elsewhere (Ca under C) stays

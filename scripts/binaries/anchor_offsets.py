@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import math
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TypeVar
 
 from .component_tokens import (
     expand_wds_truncated_secondary,
@@ -105,26 +107,33 @@ def _sibling_edge(
     return SiblingEdge(*vector, wds_dmag(mag_pri, mag_sec), pair_epoch(pair))
 
 
+_V = TypeVar("_V")
+
+
+def _walk(
+    adj: SiblingAdj, start: str, origin: _V,
+    step: Callable[[_V, SiblingEdge], _V],
+) -> dict[str, _V]:
+    out = {start: origin}
+    queue: deque[str] = deque([start])
+    while queue:
+        tok = queue.popleft()
+        for nbr, edge in sorted(adj.get(tok, {}).items()):
+            if nbr not in out:
+                out[nbr] = step(out[tok], edge)
+                queue.append(nbr)
+    return out
+
+
 def photocentre_offsets(adj: SiblingAdj) -> dict[str, tuple[float, float]]:
     """Each sibling's (E, N) arcsec offset to the parent letter's
     photocentre: README.md#stage-6--multiplestsv-emit."""
     ref = min(adj, key=anchor_token_rank)
-    pos: dict[str, tuple[float, float]] = {ref: (0.0, 0.0)}
-    flux: dict[str, float | None] = {ref: 1.0}
-    queue: deque[str] = deque([ref])
-    while queue:
-        tok = queue.popleft()
-        for nbr, edge in sorted(adj.get(tok, {}).items()):
-            if nbr in pos:
-                continue
-            pos[nbr] = (pos[tok][0] + edge.east, pos[tok][1] + edge.north)
-            f = flux[tok]
-            flux[nbr] = (
-                f * 10.0 ** (-0.4 * edge.dmag)
-                if f is not None and edge.dmag is not None else None
-            )
-            queue.append(nbr)
-    weights = {t: f for t, f in flux.items() if f is not None}
+    pos = _walk(adj, ref, (0.0, 0.0), lambda p, e: (p[0] + e.east, p[1] + e.north))
+    weights = _walk(
+        {t: {n: e for n, e in nbrs.items() if e.dmag is not None} for t, nbrs in adj.items()},
+        ref, 1.0, lambda f, e: f * 10.0 ** (-0.4 * e.dmag),
+    )
     total = sum(weights.values())
     pc_e = sum(w * pos[t][0] for t, w in weights.items()) / total
     pc_n = sum(w * pos[t][1] for t, w in weights.items()) / total
