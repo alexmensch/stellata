@@ -43,8 +43,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       happy-dom:
-        specifier: ^20.14.5
-        version: 20.14.6
+        specifier: ^21.0.4
+        version: 21.0.4
       hast-util-select:
         specifier: ^6.0.4
         version: 6.0.4
@@ -83,7 +83,7 @@ importers:
         version: 8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15)
       vitest:
         specifier: ^4.1.5
-        version: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(happy-dom@20.14.6)(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15))
+        version: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(happy-dom@21.0.4)(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15))
       wrangler:
         specifier: ^4.84.1
         version: 4.151.3(@cloudflare/workers-types@4.20260702.1)(@types/node@20.19.43)
@@ -849,8 +849,8 @@ packages:
   github-slugger@2.0.0:
     resolution: {integrity: sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw==}
 
-  happy-dom@20.14.6:
-    resolution: {integrity: sha512-5DDsf4QmEIlRL6NkCv/fxSjYHHkZceL/IaYQdJc2h3G7DRTEai++VTjbfL0LB9geW2VrA3+vrjF3Efx+OTtX0Q==}
+  happy-dom@21.0.4:
+    resolution: {integrity: sha512-tFm+GaLBgo6o0awHnvHaNoraVo27qJ+2tZEtZ+cIa08hXbeitrxAJajLI05hsUy/2/YTKcUjQYzHe5mCcraLBw==}
     engines: {node: '>=20.0.0'}
 
   has-flag@4.0.0:
@@ -1877,7 +1877,7 @@ snapshots:
       obug: 2.2.1
       std-env: 4.3.0
       tinyrainbow: 3.2.0
-      vitest: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(happy-dom@20.14.6)(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15))
+      vitest: 4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(happy-dom@21.0.4)(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15))
 
   '@vitest/expect@4.1.12':
     dependencies:
@@ -2043,7 +2043,7 @@ snapshots:
 
   github-slugger@2.0.0: {}
 
-  happy-dom@20.14.6:
+  happy-dom@21.0.4:
     dependencies:
       '@types/node': 20.19.43
       '@types/whatwg-mimetype': 3.0.2
@@ -2871,7 +2871,7 @@ snapshots:
       fsevents: 2.3.3
       tsx: 4.23.15
 
-  vitest@4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(happy-dom@20.14.6)(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15)):
+  vitest@4.1.12(@types/node@20.19.43)(@vitest/coverage-v8@4.1.12)(happy-dom@21.0.4)(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15)):
     dependencies:
       '@vitest/expect': 4.1.12
       '@vitest/mocker': 4.1.12(vite@8.3.4(@types/node@20.19.43)(esbuild@0.28.2)(tsx@4.23.15))
@@ -2896,7 +2896,7 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.19.43
       '@vitest/coverage-v8': 4.1.12(vitest@4.1.12)
-      happy-dom: 20.14.6
+      happy-dom: 21.0.4
     transitivePeerDependencies:
       - msw
 
