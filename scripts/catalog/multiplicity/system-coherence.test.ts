@@ -12,6 +12,7 @@ import type {
 } from '../distance/direction-cascade';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
+import { multiplesRow } from '../companions/multiples-fixture';
 
 function star(overrides: Partial<Star>): Star {
   return makeStar({
@@ -22,18 +23,11 @@ function star(overrides: Partial<Star>): Star {
 function pairRow(
   overrides: Partial<MultiplesTsvRow> & { systemId: string; comp: string },
 ): MultiplesTsvRow {
-  return {
-    hip: null, gaiaSourceId: null,
+  return multiplesRow({
     x_pc: null, y_pc: null, z_pc: null, absmag: null, ci: null,
-    spect: '', name: '', source: 'athyg',
-    astrometryVia: 'gaia_5p', spectVia: 'none', photometryVia: 'none',
-    orbitRole: 'primary', distPc: null,
-    pDays: null, tJd: null, e: null, aAU: null, iRad: null,
-    omegaRad: null, q: null,
-    sepArcsec: null, paDeg: null, sepPaEpochJd: null, dmag: null,
-    anchorComp: null, anchorOffset: { kind: 'unreached' }, magPri: null, magSec: null,
+    source: 'athyg', photometryVia: 'none', orbitRole: 'primary', distPc: null,
     ...overrides,
-  };
+  });
 }
 
 function gaiaRow(
