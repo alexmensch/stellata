@@ -98,6 +98,11 @@ same thing — single-use helpers stay with their consumer.
   cannot tally onto an absent key — `undefined + 1` is NaN, which
   reaches the pinned count snapshot as a hole instead of a drift
   failure. `tally.test.ts` pins all four cascades' key coverage.
+- `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
+  `<path>.staged` beside its target (same filesystem, so the rename is
+  atomic), `landStaged` renames it over the target, and `discardStaged` removes
+  a leftover. `writeStamp` and `emitArtifacts` are its two callers, and
+  `clearStamp` discards a stamp's leftover too.
 - `emit-artifacts.ts` (+ test) — `emitArtifacts({outputs, files, checks,
   stamp})`, the one way a TypeScript pipeline step writes its outputs. Every
   check is already a verdict when it arrives; any `fail` refuses the whole

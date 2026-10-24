@@ -7,8 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { readStamp } from './build-stamp';
 import {
-  EmissionRefused, STAGING_SUFFIX, declareOutputs, emitArtifacts, type Check,
+  EmissionRefused, declareOutputs, emitArtifacts, type Check,
 } from './emit-artifacts';
+import { STAGING_SUFFIX } from './staged-write';
 
 describe('emitArtifacts', () => {
   let dir: string;

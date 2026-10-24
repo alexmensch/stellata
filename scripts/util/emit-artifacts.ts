@@ -1,9 +1,12 @@
 // Writes a pipeline step's outputs. See README.md (emit-artifacts.ts entry).
 
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
 import { writeStamp, type FileHashes } from './build-stamp';
+import {
+  STAGING_SUFFIX, discardStaged, landStaged, writeStaged,
+} from './staged-write';
 
 /** Outputs whose member set is whatever one run emits: members a run does not
  *  emit are deleted once the new set has landed. */
@@ -48,8 +51,6 @@ export class EmissionRefused extends Error {
   override name = 'EmissionRefused';
 }
 
-export const STAGING_SUFFIX = '.staged';
-
 function familyOf(outputs: DeclaredOutputs, path: string): OutputFamily | undefined {
   return outputs.families.find(
     (f) => dirname(path) === f.dir && f.member.test(basename(path)),
@@ -75,7 +76,7 @@ function familyEntries(family: OutputFamily): string[] {
 }
 
 function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[]): void {
-  for (const p of [...outputs.files, ...extra]) rmSync(p + STAGING_SUFFIX, { force: true });
+  for (const p of [...outputs.files, ...extra]) discardStaged(p);
   for (const family of outputs.families) {
     for (const name of familyEntries(family)) {
       if (name.endsWith(STAGING_SUFFIX) && family.member.test(name.slice(0, -STAGING_SUFFIX.length))) {
@@ -105,15 +106,12 @@ export function emitArtifacts(emission: Emission): void {
   sweepStaged(outputs, [...staged.keys()]);
 
   try {
-    for (const [path, contents] of staged) {
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path + STAGING_SUFFIX, contents);
-    }
+    for (const [path, contents] of staged) writeStaged(path, contents);
   } catch (err) {
     sweepStaged(outputs, [...staged.keys()]);
     throw err;
   }
-  for (const path of staged.keys()) renameSync(path + STAGING_SUFFIX, path);
+  for (const path of staged.keys()) landStaged(path);
 
   for (const family of outputs.families) {
     for (const name of familyEntries(family)) {
