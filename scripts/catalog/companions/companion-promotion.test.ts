@@ -2348,7 +2348,8 @@ describe('promoteCompanions', () => {
       x: 2.191467, y: 4.455210, z: -0.668480,
     });
     const rows: MultiplesTsvRow[] = [
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2356,7 +2357,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'BC',
         gaiaSourceId: null, hip: null,  // compound — no own identifier
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2365,7 +2367,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-AC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2373,7 +2376,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-AC', comp: 'C',
         gaiaSourceId: '3195919254111314816', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2382,7 +2386,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'B',
         gaiaSourceId: '3195919254111315712', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2392,7 +2397,8 @@ describe('promoteCompanions', () => {
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
         anchorOffset: reached(83.2, 108.0),
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'C',
         gaiaSourceId: '3195919254111314816', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2436,7 +2442,8 @@ describe('promoteCompanions', () => {
       x: 2.191467, y: 4.455210, z: -0.668480,
     });
     const rows: MultiplesTsvRow[] = [
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2444,7 +2451,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-A,BC', comp: 'BC',
         gaiaSourceId: null, hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2453,7 +2461,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 83.2, paDeg: 108.0, sepPaEpochJd: 2460311.0, dmag: 5.7,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-AC', comp: 'A',
         gaiaSourceId: '3195919528989223040', hip: 19849,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2461,7 +2470,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'gaia_5p', orbitRole: 'primary',
         sepArcsec: 77.9, paDeg: 98.0, sepPaEpochJd: 2460311.0, dmag: 6.74,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'B',
         gaiaSourceId: '3195919254111315712', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2471,7 +2481,8 @@ describe('promoteCompanions', () => {
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
         anchorOffset: reached(83.2, 108.0),
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-BC', comp: 'C',
         gaiaSourceId: '3195919254111314816', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2480,7 +2491,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-BD', comp: 'B',
         gaiaSourceId: '3195919254111315712', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2490,7 +2502,8 @@ describe('promoteCompanions', () => {
         sepArcsec: 521.0, paDeg: 29.0, sepPaEpochJd: 2457389.0, dmag: 3.09,
         anchorOffset: reached(83.2, 108.0),
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '04153-0739-BD', comp: 'D',
         gaiaSourceId: '3196027418567684992', hip: null,
         x_pc: 2.191467, y_pc: 4.455210, z_pc: -0.668480, distPc: 5.0,
@@ -2528,14 +2541,16 @@ describe('promoteCompanions', () => {
       vVia: 'printed_hip',  // Gaia-saturated, so its V is the printed blend
     });
     const rows: MultiplesTsvRow[] = [
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '12266-6306-AC', comp: 'A', hip: 60718,
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
         absmag: -3.77, name: 'Acrux', source: 'athyg',
         astrometryVia: 'hip2_long_baseline', orbitRole: 'primary',
         sepArcsec: 90.1, paDeg: 202.0, dmag: 3.2,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '12266-6306-AC', comp: 'C',
         gaiaSourceId: '6053767428923528064',
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
@@ -2544,7 +2559,8 @@ describe('promoteCompanions', () => {
         astrometryVia: 'system_inherited', orbitRole: 'secondary',
         sepArcsec: 90.1, paDeg: 202.0, dmag: 3.2,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '12266-6306-BC', comp: 'B', hip: 60718,
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
         absmag: -3.77, ci: -0.2, spect: 'B1V',
@@ -2554,7 +2570,8 @@ describe('promoteCompanions', () => {
         anchorOffset: reached(3.5, 114.0),
         magPri: 1.55, magSec: 4.8,
       }),
-      multiplesRow({ anchorComp: 'A',
+      multiplesRow({
+        anchorComp: 'A',
         systemId: '12266-6306-BC', comp: 'C',
         gaiaSourceId: '6053767428923528064',
         x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
