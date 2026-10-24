@@ -56,3 +56,4 @@ gl:Gl_231.3	gl:GJ_9211	CNS5 renumbers this Gliese-supplement entry into the GJ 9
 synth:11175-5906-C	synth:11175-5906-B	HD 98278 BC: the HIP 55149 record now binds component A, so the collocated B and C pair rows promote as one record under B; the same promoted object the C key named (same physical BC pair)
 gl:GJ_3196A	gl:GJ_3196B	CNS5 letters LP 711-43 component B of the pair it shares with GJ 3197 (= WDS J03037-1251A) where AT-HYG letters it A; both designations name the one star, whose sibling carries its own GJ number, and gl: is its only canonical key
 gl:GJ_4378A	gl:GJ_4378B	CNS5 letters LP 704-15 component B of the pair it shares with GJ 4379 where AT-HYG and WDS letter it A; both designations name the one star, whose sibling carries its own GJ number, and gl: is its only canonical key
+synth:17564+1820-A	hip:87823	component A of 17564+1820 is the HIP 87823 record; the synth A twin was minted off the BA row while B had no anchor offset (same physical star)

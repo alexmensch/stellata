@@ -250,7 +250,7 @@ never something the renderer should qualify away.
 
 **The build calls it over `Star`; the runtime calls it over `SearchEntry`.**
 `display-names.ts` and `designationSetOfEntry` are the two adapters, and
-`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/namingNameTable -->725<!-- /count --> records) so
+`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/namingNameTable -->729<!-- /count --> records) so
 first paint has names while the runtime composes every designation off
 `search-index.json` through the same function. A BORROWED label carries
 its anchor's tier, so `Sirius B` is a name-table entry too — which is why
