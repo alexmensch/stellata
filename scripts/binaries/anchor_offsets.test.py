@@ -234,6 +234,25 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
         )
         self._assert_offset_en(out, "E", 100.0, 0.25 + 1.0)
 
+    def test_sibling_row_with_rho_but_no_theta_places_nothing(self) -> None:
+        out = self._offsets([
+            ("Aa,Ab", 1.0, None, True),
+            ("AE", 100.0, 90.0, False),
+        ])
+        self._assert_offset_en(out, "E", 100.0, 0.0)
+        self.assertNotIn(("WDS-1", "Ab"), out)
+
+    def test_sibling_row_wider_than_the_wds_field_places_nothing(self) -> None:
+        out = self._offsets(
+            [
+                ("Aa,Ab", None, 0.0, True),
+                ("Aa,Ac", 1.0, 0.0, False),
+                ("AE", 100.0, 90.0, False),
+            ],
+            mags={"Aa,Ab": (4.0, 4.0), "Aa,Ac": (4.0, 4.0)},
+        )
+        self._assert_offset_en(out, "E", 100.0, 0.5)
+
     def test_system_with_no_kept_pairs_emits_nothing(self) -> None:
         out = self._offsets([("AB", 5.0, 90.0, False)])
         self.assertEqual(out, {})

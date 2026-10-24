@@ -96,7 +96,9 @@ def _sibling_edge(
 ) -> SiblingEdge | None:
     vector = pair_vector(pair)
     if vector is None:
-        if pair.rho_last is not None and pair.rho_last > 0.0:
+        measured_wider = pair.rho_last is not None and pair.rho_last > 0.0
+        overflowed = pair.rho_last is None and pair.theta_last is not None
+        if measured_wider or overflowed:
             return None
         vector = (0.0, 0.0)
     mag_pri, mag_sec = pair_magnitudes(pair, p_tok, s_tok, msc)
