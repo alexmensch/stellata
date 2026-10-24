@@ -14,8 +14,11 @@ from .parsers import (
     AthygRow, GaiaAstrometryRow, SimbadWdsXid, WdsPair,
 )
 from .indices import IdentifierIndices
+from .msc_map import MscLookup
 from .component_tokens import (
     expand_wds_truncated_secondary,
+    is_component_token,
+    parent_component_token,
     token_letters,
 )
 from .stage2_resolve import (
@@ -100,6 +103,18 @@ def wds_dmag(mag_pri: float | None, mag_sec: float | None) -> float | None:
 # epoch (start of that calendar year) — sub-day precision is irrelevant
 # because the sep/PA columns drive a static placement, not a time-
 # resolved propagation.
+
+
+def pair_magnitudes(
+    pair: WdsPair, p_tok: str, s_tok: str, msc: MscLookup | None,
+) -> tuple[float | None, float | None]:
+    """The pair row's ``(mag_pri, mag_sec)``: WDS's own, else the MSC's
+    pair-side V when WDS prints neither."""
+    if pair.mag_pri is None and pair.mag_sec is None and msc is not None:
+        filled = msc.pair_mags.get((pair.wds_id, (p_tok, s_tok)))
+        if filled is not None:
+            return filled
+    return pair.mag_pri, pair.mag_sec
 
 
 def wds_year_to_jd(year: int | None) -> float | None:
@@ -399,10 +414,89 @@ def _bfs_all_offsets(
     return out
 
 
+@dataclass(frozen=True)
+class _SiblingEdge:
+    east: float
+    north: float
+    dmag: float | None
+    epoch: float | None
+
+
+_SiblingAdj = dict[str, dict[str, _SiblingEdge]]
+
+
+def _add_sibling_edge(
+    adj: _SiblingAdj, a: str, b: str, edge: _SiblingEdge,
+) -> None:
+    """Bidirectional, keeping the most recent measurement per token pair
+    as ``_add_edge`` does."""
+    reverse = _SiblingEdge(
+        -edge.east, -edge.north,
+        -edge.dmag if edge.dmag is not None else None, edge.epoch,
+    )
+    for src, dst, e in ((a, b, edge), (b, a, reverse)):
+        nbrs = adj.setdefault(src, {})
+        existing = nbrs.get(dst)
+        if existing is not None and not (
+            e.epoch is not None
+            and (existing.epoch is None or e.epoch >= existing.epoch)
+        ):
+            continue
+        nbrs[dst] = e
+
+
+def _sibling_edge(
+    pair: WdsPair, p_tok: str, s_tok: str, msc: MscLookup | None,
+) -> _SiblingEdge | None:
+    rho, theta = pair.rho_last, pair.theta_last
+    if rho is not None and rho > 0.0 and theta is None:
+        return None
+    if rho is None or rho <= 0.0:
+        east = north = 0.0
+    else:
+        theta_rad = math.radians(theta)
+        east, north = rho * math.sin(theta_rad), rho * math.cos(theta_rad)
+    mag_pri, mag_sec = pair_magnitudes(pair, p_tok, s_tok, msc)
+    return _SiblingEdge(
+        east, north, wds_dmag(mag_pri, mag_sec),
+        float(pair.date_last) if pair.date_last is not None else None,
+    )
+
+
+def photocentre_offsets(adj: _SiblingAdj) -> dict[str, tuple[float, float]]:
+    """Each sibling's (E, N) arcsec offset to the parent letter's
+    photocentre — the flux-weighted mean position of the siblings the
+    ``adj`` geometry reaches from the most canonical one. Flux ratios
+    compose along the same chain from each row's own Δm; a sibling whose
+    chain carries no Δm weighs nothing (its light was never measured)."""
+    ref = min(adj, key=_anchor_token_rank)
+    pos: dict[str, tuple[float, float]] = {ref: (0.0, 0.0)}
+    flux: dict[str, float | None] = {ref: 1.0}
+    queue: deque[str] = deque([ref])
+    while queue:
+        tok = queue.popleft()
+        for nbr, edge in sorted(adj.get(tok, {}).items()):
+            if nbr in pos:
+                continue
+            pos[nbr] = (pos[tok][0] + edge.east, pos[tok][1] + edge.north)
+            f = flux[tok]
+            flux[nbr] = (
+                f * 10.0 ** (-0.4 * edge.dmag)
+                if f is not None and edge.dmag is not None else None
+            )
+            queue.append(nbr)
+    weights = {t: f for t, f in flux.items() if f is not None}
+    total = sum(weights.values())
+    pc_e = sum(w * pos[t][0] for t, w in weights.items()) / total
+    pc_n = sum(w * pos[t][1] for t, w in weights.items()) / total
+    return {t: (pc_e - e, pc_n - n) for t, (e, n) in pos.items()}
+
+
 def compute_anchor_offsets(
     pairs: list[WdsPair],
     components: list[ResolvedComponent],
     classifications: list[OpticalClassification],
+    msc: MscLookup | None,
 ) -> dict[tuple[str, str], tuple[float, float]]:
     """Per-component ``(sep_arcsec, pa_deg)`` offset from the system
     anchor letter, keyed ``(wds_id, canonical token)``.
@@ -416,6 +510,16 @@ def compute_anchor_offsets(
     position); and compound photocentre proxies (a row with a
     multi-letter side lends its vector to each constituent letter —
     ``A,BC`` places B and C at the BC photocentre).
+
+    Every tier also links a sub-letter anchor to each ancestor letter
+    (Aa1 → Aa → A) at the siblings' photocentre (``photocentre_offsets``),
+    the point a WDS row naming the parent measured from; kept and
+    rejected sibling rows both count, since a blend's light is optical
+    whatever its boundness. An unmeasured sibling separation is zero, and
+    a ρ > 0 row with no θ places nothing. Only the anchor's own chain is
+    linked: any other sub-letter (Ca under C) stays unreached, because
+    where its parent is a record carrying the blend, placing the
+    sub-letter beside it would draw that light twice.
 
     Preference per component: a DIRECT measured anchor→component edge
     (kept, then rejected) beats any composed chain — a blended member
@@ -431,6 +535,7 @@ def compute_anchor_offsets(
     kept: dict[str, _GeomAdj] = {}
     rejected: dict[str, _GeomAdj] = {}
     proxy: dict[str, _GeomAdj] = {}
+    siblings: dict[tuple[str, str], _SiblingAdj] = {}
     kept_primary_tokens: dict[str, set[str]] = {}
     for j, (pair, primary, secondary) in enumerate(
         iter_decomposing_pair_components(pairs, components),
@@ -440,6 +545,18 @@ def compute_anchor_offsets(
         s_tok = expand_wds_truncated_secondary(p_tok, secondary.component)
         if is_kept:
             kept_primary_tokens.setdefault(pair.wds_id, set()).add(p_tok)
+        parent = parent_component_token(p_tok)
+        if (
+            parent is not None
+            and parent == parent_component_token(s_tok)
+            and is_component_token(p_tok) and is_component_token(s_tok)
+        ):
+            sibling_edge = _sibling_edge(pair, p_tok, s_tok, msc)
+            if sibling_edge is not None:
+                _add_sibling_edge(
+                    siblings.setdefault((pair.wds_id, parent), {}),
+                    p_tok, s_tok, sibling_edge,
+                )
         if (
             pair.rho_last is None or pair.rho_last <= 0.0
             or pair.theta_last is None
@@ -462,7 +579,15 @@ def compute_anchor_offsets(
     out: dict[tuple[str, str], tuple[float, float]] = {}
     for wds_id, primary_tokens in kept_primary_tokens.items():
         anchor = min(primary_tokens, key=_anchor_token_rank)
-        g0 = kept.get(wds_id, {})
+        links: _GeomAdj = {}
+        tok = anchor
+        parent = parent_component_token(anchor) if is_component_token(anchor) else None
+        while parent is not None:
+            adj = siblings.get((wds_id, parent))
+            e, n = photocentre_offsets(adj).get(tok, (0.0, 0.0)) if adj else (0.0, 0.0)
+            _add_edge(links, tok, parent, e, n, None)
+            tok, parent = parent, parent_component_token(parent)
+        g0 = _merged_adj(links, kept.get(wds_id, {}))
         g1 = _merged_adj(rejected.get(wds_id, {}), g0)
         g2 = _merged_adj(proxy.get(wds_id, {}), g1)
         offsets: dict[str, tuple[float, float]] = {}
@@ -967,7 +1092,9 @@ def build_multiples_rows(
 
     if system_anchors is None:
         system_anchors = compute_system_anchors(pairs, components, astrometry)
-    anchor_offsets = compute_anchor_offsets(pairs, components, classifications)
+    anchor_offsets = compute_anchor_offsets(
+        pairs, components, classifications, indices.msc,
+    )
 
     out: list[MultiplesRow] = []
     emitted_keys: set[tuple[str, str]] = set()
@@ -1013,21 +1140,15 @@ def build_multiples_rows(
         s_tok = expand_wds_truncated_secondary(
             primary.component, secondary.component,
         )
-        if (
-            indices.msc is not None
-            and pair.mag_pri is None and pair.mag_sec is None
-        ):
-            msc_mags = indices.msc.pair_mags.get(
-                (pair.wds_id, (primary.component, s_tok)),
-            )
-            if msc_mags is not None:
-                vmag_pri, vmag_sec = msc_mags
-                for row in (primary_row, secondary_row):
-                    row.mag_pri = vmag_pri
-                    row.mag_sec = vmag_sec
-                    row.dmag = wds_dmag(vmag_pri, vmag_sec)
-                if msc_mag_fills is not None:
-                    msc_mag_fills.append(f"{pair.wds_id}{pair.components}")
+        mags = pair_magnitudes(pair, primary.component, s_tok, indices.msc)
+        if mags != (pair.mag_pri, pair.mag_sec):
+            vmag_pri, vmag_sec = mags
+            for row in (primary_row, secondary_row):
+                row.mag_pri = vmag_pri
+                row.mag_sec = vmag_sec
+                row.dmag = wds_dmag(vmag_pri, vmag_sec)
+            if msc_mag_fills is not None:
+                msc_mag_fills.append(f"{pair.wds_id}{pair.components}")
         finalize_renderable_elements(primary_row, secondary_row, orbit)
         for row, tok in (
             (primary_row, primary.component), (secondary_row, s_tok),

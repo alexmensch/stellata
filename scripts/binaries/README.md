@@ -731,7 +731,21 @@ chain through a distant third star cancels to ~zero (Acrux: AC ∘ CB
 kept → +rejected → +compound-photocentre-proxy. Rejected rows
 contribute geometry only — the pair itself stays dropped; a sep+PA
 measurement is real astrometry regardless of boundness
-classification. Blank when no chain reaches the component. Consumed
+classification. Every tier also links a sub-letter anchor to each
+ancestor letter (Aa1 → Aa → A) at the siblings' **photocentre** — the
+flux-weighted mean of the sibling positions, weights composed from
+each sibling row's own Δm — because a row naming the parent was
+measured off the blend's light centre. So a root anchored on Aa still
+reaches everything hung off A (15 Mon J, 31 Cyg H, Matar H). Only the
+anchor's chain links: a sub-letter elsewhere (Ca under C) stays
+unreached, since where C is a record carrying the blend, an offset for
+Ca would let promotion place it beside its own light. A sibling
+whose light no row measured weighs nothing, so a missing Ab magnitude
+puts A on Aa; an unmeasured sibling separation (ρ = 0 / none) is zero.
+Measured against Gaia DR3 over the inner pairs wider than 1″, WDS
+outer rows split between the photocentre and Aa itself, at most 0.97″
+apart; the photocentre is the one rule for every separation. Blank
+when no chain reaches the component. Consumed
 by companion promotion's pair-row-primary escape (see
 [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 
