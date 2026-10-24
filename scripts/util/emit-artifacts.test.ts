@@ -149,4 +149,42 @@ describe('emitArtifacts', () => {
     expect(readFileSync(a, 'utf8')).toBe('new a');
     expect(readFileSync(b, 'utf8')).toBe('old b');
   });
+
+  it('sweeps a family member a killed run left staged', () => {
+    const chunks = join(dir, 'chunks');
+    mkdirSync(chunks);
+    writeFileSync(join(chunks, `chunk-3${STAGING_SUFFIX}`), 'stale');
+    writeFileSync(join(chunks, `README${STAGING_SUFFIX}`), 'not a member');
+    emitArtifacts({
+      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/ }]),
+      files: {},
+      members: new Map([[join(chunks, 'chunk-0'), 'fresh 0']]),
+    });
+    expect(readdirSync(chunks).sort()).toEqual([`README${STAGING_SUFFIX}`, 'chunk-0']);
+  });
+
+  it('lands no refreshed baseline when another check fails', () => {
+    const snapshot = join(dir, 'expected.json');
+    writeFileSync(snapshot, '{"n":1}\n');
+    expect(() => emitArtifacts({
+      outputs: both(),
+      files: files(),
+      checks: [
+        { kind: 'refresh', path: snapshot, text: '{"n":2}\n' },
+        { kind: 'fail', message: 'outliers drifted' },
+      ],
+    })).toThrow(EmissionRefused);
+    expect(readFileSync(snapshot, 'utf8')).toBe('{"n":1}\n');
+    expect(existsSync(snapshot + STAGING_SUFFIX)).toBe(false);
+  });
+
+  it('logs every pass and fail report before deciding', () => {
+    expect(() => emitArtifacts({
+      outputs: both(),
+      files: files(),
+      checks: [{ kind: 'pass', report: 'counts match' }, { kind: 'fail', report: 'key x: 1 -> 2', message: 'drift' }],
+    })).toThrow(EmissionRefused);
+    expect(console.log).toHaveBeenCalledWith('counts match');
+    expect(console.log).toHaveBeenCalledWith('key x: 1 -> 2');
+  });
 });
