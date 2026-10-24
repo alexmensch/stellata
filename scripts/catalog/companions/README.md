@@ -25,14 +25,16 @@ scripts/catalog/companions/
     (+ test)                      sort so promoted records take the same
                                   final indexing as everything else. Names
                                   `MULTIPLES_TSV`.
-  anchor-offset-pure.ts (+ test)  rebasedAnchorOffset: a row's Stage 6
-                                  offset re-based onto promotion's WDS-root
-                                  anchor, or null where Stage 6 reached
-                                  either from no measured geometry.
+  anchor-offset-pure.ts (+ test)  parseStage6Offset (the anchor columns'
+                                  parse boundary) and rebasedAnchorOffset: a
+                                  row's Stage 6 offset re-based onto
+                                  promotion's WDS-root anchor, or null where
+                                  Stage 6 reached either from no measured
+                                  geometry, the two coincide, or the row is
+                                  the chaining letter itself.
   overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
-                                  the sum of their radii, less those inside
-                                  one renderable-orbit hierarchy. See
-                                  Overlap gate below.
+                                  the sum of their radii, less those an orbit
+                                  chain separates. See Overlap gate below.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -438,24 +440,6 @@ Per-row gates and resolution:
   brighter component; inheriting it would collide with the
   primary in every HIP-keyed lookup (url-state's `refFromIndex`
   notably).
-- <a id="overlap-gate"></a>**Overlap gate.** After promotion, build-catalog
-  counts every pair of records whose centres sit closer than the sum of their
-  physical radii — a star drawn inside another, whatever placement rule put it
-  there — at the 32-bit positions `catalog.bin` ships, where two records the
-  build keeps 1 AU apart at 1 kpc collapse onto one point. A pair is exempt only when a chain of renderable orbits fixes their
-  relative position — one record an ancestor of the other along (primary,
-  secondary) relations — since the runtime then draws them apart from the
-  elements, and a bit-identical bake there is the deliberate sub-resolution
-  placement above. Two siblings of one primary are not exempt: each moves on
-  its own orbit, and nothing keeps them apart.
-  Those pairs come from the runtime's own pairing after the record sort —
-  `renderableOrbitRelations` in `record-index/`, the wings pass's resolution
-  (writer's `resolve_idx`, both synth retries, the parent re-home) filtered to
-  renderable orbits — never from promotion's cursor walk, which records a pair
-  before its parent is minted. Counted `physicalOverlaps`
-  (<!-- count:build-catalog/physicalOverlaps -->33<!-- /count -->), a ratchet-down metric: 15 are a blend record
-  minted beside its own sub-letter (B with Bb), 18 a sub-letter collocated on
-  a record with no orbit between them; the build log lists each pair.
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
 record lacks own gaia/hip and is addressed exclusively through a
@@ -469,6 +453,28 @@ nothing in this file reads back from it.
 The Tier A regression corpus in `known-stars.tsv` pins Sirius B's
 record specifically (addressed by gaia_source_id, no HIP) as a
 stand-in for the broader category.
+
+#### Overlap gate
+
+After the record sort, build-catalog counts every pair of records whose
+centres sit closer than the sum of their physical radii — a star drawn inside
+another, whatever placement rule put it there — at the 32-bit positions
+`catalog.bin` ships, where two records the build keeps 1 AU apart at 1 kpc
+collapse onto one point. The check is catalogue-wide, not companion-only.
+
+A pair is exempt only when a chain of renderable orbits fixes their relative
+position — one record an ancestor of the other along (primary, secondary)
+relations — since the runtime then draws them apart from the elements, and a
+bit-identical bake there is the deliberate sub-resolution placement above. Two
+siblings of one primary are not exempt: each moves on its own orbit, and
+nothing keeps them apart. The relations come from the runtime's own pairing —
+`renderableOrbitRelations` in `record-index/`, the wings pass's resolution
+(writer's `resolve_idx`, both synth retries, the parent re-home) filtered to
+renderable orbits — never from promotion's cursor walk, which records a pair
+before its parent is minted.
+
+Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->33<!-- /count -->), a ratchet-down metric; the
+build log names each pair.
 
 #### Promoted-companion field inheritance
 
