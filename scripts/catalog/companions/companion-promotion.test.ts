@@ -2632,6 +2632,16 @@ describe('promoteCompanions', () => {
     expect(newStars.map(s => s.syntheticId)).not.toContain('synth-00101+3825-A');
   });
 
+  it('judges a re-based escape member\'s blend separation on the re-based offset', () => {
+    const d: Star = makeStar({
+      hip: 823, absmag: 3.0, x: 100, y: 0, z: 0, vVia: 'printed_hip',
+    });
+    const rows = idlessAnchorRoot({ sep: 6.0, pa: 180.0 }).map((r) =>
+      r.comp === 'H' ? { ...r, anchorSepArcsec: 5.0, anchorPaDeg: 0.0 } : r);
+    const { stats } = promoteCompanions(rows, [d], CON_ASSIGNMENT);
+    expect(stats.blendDimMembersBeyondSeparation).toBe(1);
+  });
+
   it('refuses the offset when promotion\'s anchor is unreached from Stage 6\'s letter', () => {
     const d: Star = makeStar({ hip: 823, absmag: 8.0, x: 100, y: 0, z: 0 });
     const { newStars, stats } = promoteCompanions(
