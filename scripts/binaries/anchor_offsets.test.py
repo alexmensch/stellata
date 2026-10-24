@@ -15,6 +15,7 @@ from scripts.binaries.anchor_offsets import (  # noqa: E402
     compute_anchor_offsets,
     photocentre_offsets,
 )
+from scripts.binaries.msc_map import MscLookup  # noqa: E402
 from scripts.binaries.parsers import WdsPair  # noqa: E402
 from scripts.binaries.stage2_resolve import (  # noqa: E402
     ResolvedComponent,
@@ -58,6 +59,7 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
         self,
         specs: list[tuple[str, float | None, float | None, bool]],
         mags: dict[str, tuple[float | None, float | None]] | None = None,
+        msc: MscLookup | None = None,
     ) -> dict[tuple[str, str], tuple[float, float]]:
         pairs, comps, classifications = [], [], []
         for components, rho, theta, kept in specs:
@@ -70,7 +72,7 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
             classifications.append(OpticalClassification(
                 kept, "wds_notes_kept" if kept else "wds_notes_rejected",
             ))
-        return compute_anchor_offsets(pairs, comps, classifications, None).offsets
+        return compute_anchor_offsets(pairs, comps, classifications, msc).offsets
 
     def _assert_offset_en(
         self, out: dict[tuple[str, str], tuple[float, float]], tok: str,
@@ -250,6 +252,16 @@ class ComputeAnchorOffsetsTests(unittest.TestCase):
                 ("AE", 100.0, 90.0, False),
             ],
             mags={"Aa,Ab": (4.0, 4.0), "Aa,Ac": (4.0, 4.0)},
+        )
+        self._assert_offset_en(out, "E", 100.0, 0.5)
+
+    def test_msc_magnitudes_weight_the_photocentre_when_wds_prints_none(self) -> None:
+        msc = MscLookup()
+        msc.pair_mags[("WDS-1", ("Aa", "Ab"))] = (4.0, 4.0)
+        out = self._offsets(
+            [("Aa,Ab", 1.0, 0.0, True), ("AE", 100.0, 90.0, False)],
+            mags={"Aa,Ab": (None, None)},
+            msc=msc,
         )
         self._assert_offset_en(out, "E", 100.0, 0.5)
 
