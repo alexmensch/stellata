@@ -11,10 +11,8 @@
 // See /docs/science-stellar-modelling.md#star-colour-calibration and
 // /research/star-spectral-rendition/README.md#tier-1--replace-citocolor-with-blackbody--srgb-lut-ship-standalone.
 
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-
-import { declareOutputs, emitArtifacts } from '../util/emit-artifacts';
+import { emitArtifacts } from '../util/emit-artifacts';
+import { LUT_OUTPUTS } from './blackbody-lut-outputs';
 
 import {
   BV_MAX,
@@ -112,11 +110,7 @@ ${formatBytesAsLines(bytes)}
 `;
 }
 
-const OUT = resolve(
-  dirname(fileURLToPath(import.meta.url)), '..', '..', 'src/client/star-pipeline/blackbody-lut-data.ts',
-);
-
-export const LUT_OUTPUTS = declareOutputs({ lut: OUT });
+const OUT = LUT_OUTPUTS.files.lut;
 
 function main(): void {
   const bytes = buildLut();

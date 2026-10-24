@@ -2,10 +2,8 @@
 // `pnpm run build:naming-parity`. See README.md#the-parity-ledger.
 
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
-import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
-import { REPO_ROOT } from '../../util/paths';
+import { emitArtifacts } from '../../util/emit-artifacts';
 import {
   DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
 } from '../catalog-lookup';
@@ -23,11 +21,9 @@ import {
   type ParityRow,
   type RowIndexMap,
 } from './naming-parity-pure';
+import { NAMING_PARITY_OUTPUTS } from './naming-parity-outputs';
 
-const PARITY = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-parity.tsv');
-const DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
-
-export const NAMING_PARITY_OUTPUTS = declareOutputs({ parity: PARITY, duplicates: DUPLICATES });
+const PARITY = NAMING_PARITY_OUTPUTS.files.parity;
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf8')) as T;

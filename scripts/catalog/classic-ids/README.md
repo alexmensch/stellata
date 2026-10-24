@@ -34,6 +34,10 @@ scripts/catalog/classic-ids/
                                   its two gate queues through emitArtifacts,
                                   so a drifted count snapshot lands none of
                                   the three.
+  classic-id-overlay-outputs.ts   CLASSIC_ID_OUTPUTS — the overlay and its
+                                  two gate queues as the build's
+                                  emitArtifacts declaration
+                                  (../../util/README.md). Side-effect free.
   binding-candidates.ts           `loadClassicIdCrossWalks`, every table the
                                   overlay join reads, as one `OverlayWalks`.
                                   ../astrometry-request/ runs the same join

@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 import { readCrossIndexTable } from '../classic-ids/cross-index';
 import { parseIntOrNull } from '../parse/stars-parse';
 import { REPO_ROOT } from '../../util/paths';
-import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
 import { parseNecCsv, parseWgsnFaintsCsv } from './wgsn-parse-pure';
@@ -27,17 +27,14 @@ import {
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
+import { WGSN_OUTPUTS } from './wgsn-tables-outputs';
 
 const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
 const NEC_CSV = resolve(DATA, 'NEC.csv');
 const FAINTS_CSV = resolve(DATA, 'wgsnFaints.csv');
 const DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
-const OUT_NAMES = resolve(DATA, 'wgsn_names.tsv');
-const OUT_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
 const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
-
-export const WGSN_OUTPUTS = declareOutputs({ names: OUT_NAMES, designations: OUT_DESIGNATIONS });
 
 export interface WgsnCounts {
   necRows: number;

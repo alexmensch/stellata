@@ -37,6 +37,10 @@ scripts/catalog/membership/
                                   emitArtifacts: all five land, or none
                                   does, and only once
                                   membership-manifest-expected.json passes.
+  membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — the five files the
+                                  generator writes, as its emitArtifacts
+                                  declaration (../../util/README.md).
+                                  Side-effect free.
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
                                   over the COMMITTED artifacts. LFS-gated.

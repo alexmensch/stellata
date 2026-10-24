@@ -6,7 +6,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
-import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
+import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
@@ -19,7 +20,6 @@ import {
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   LABEL_FIELDS,
-  LABEL_FLIPS_FILE,
   labelFlipsTsv,
   parseLabelOverridesTsv,
 } from '../classic-ids/label-merge/label-merge-pure';
@@ -33,12 +33,8 @@ import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import {
-  ADDITIONS_LEDGER_FILE,
   BINDING_DISPOSITIONS_FILE,
-  BINDING_REVIEW_FILE,
-  LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
-  MEMBERSHIP_MANIFEST_FILE,
   SPINE_CORRECTIONS_FILE,
   buildMembership,
   parseBindingDispositionsTsv,
@@ -54,14 +50,6 @@ const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
 const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
 const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
-
-export const MEMBERSHIP_OUTPUTS = declareOutputs({
-  labelFlips: resolve(ROOT, LABEL_FLIPS_FILE),
-  manifest: resolve(ROOT, MEMBERSHIP_MANIFEST_FILE),
-  additions: resolve(ROOT, ADDITIONS_LEDGER_FILE),
-  bindingReview: resolve(ROOT, BINDING_REVIEW_FILE),
-  labelDrops: resolve(ROOT, LABEL_DROPS_FILE),
-});
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the
  *  merge's own counts — the same walk that decides what the manifest ships. */

@@ -2,27 +2,21 @@
 // committed ledger, after their emitters run. See /scripts/sid/README.md#sibling-artifact-stamping.
 
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
-import { declareOutputs, emitArtifacts } from '../util/emit-artifacts';
-import { REPO_ROOT as ROOT } from '../util/paths';
+import { emitArtifacts } from '../util/emit-artifacts';
 import { resolveSids } from './sid-pure';
 import { loadRegistry } from './registry-io';
 import {
   SIBLING_ARTIFACTS,
   siblingArtifactObjects,
-  type SiblingArtifactSpec,
   type SiblingItem,
 } from './sibling-artifacts';
+import { SID_STAMP_OUTPUTS } from './sibling-stamp-outputs';
 
-const artifactPath = (spec: SiblingArtifactSpec): string => resolve(ROOT, 'public', spec.file);
 
-export const SID_STAMP_OUTPUTS = declareOutputs(Object.fromEntries(
-  Object.entries(SIBLING_ARTIFACTS).map(([name, spec]) => [name, artifactPath(spec)]),
-));
-
-function stamped(spec: SiblingArtifactSpec): string {
-  const path = artifactPath(spec);
+function stamped(name: string): string {
+  const spec = SIBLING_ARTIFACTS[name];
+  const path = SID_STAMP_OUTPUTS.files[name];
   if (!existsSync(path)) {
     console.error(`sid:stamp: missing ${path}\n  run ${spec.buildHint} first`);
     process.exit(1);
@@ -77,5 +71,5 @@ for (const t of names) {
 emitArtifacts({
   outputs: SID_STAMP_OUTPUTS,
   only: names,
-  files: Object.fromEntries(names.map((n) => [n, stamped(SIBLING_ARTIFACTS[n])])),
+  files: Object.fromEntries(names.map((n) => [n, stamped(n)])),
 });

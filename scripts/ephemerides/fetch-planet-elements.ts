@@ -2,10 +2,7 @@
 // grid, verifies the reconstruction off-grid, and writes
 // data/ephemerides/{id}.json. See README.md#cadence.
 
-import { resolve } from 'node:path';
-
-import { declareOutputs, emitArtifacts, type Check } from '../util/emit-artifacts';
-import { REPO_ROOT } from '../util/paths';
+import { emitArtifacts, type Check } from '../util/emit-artifacts';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 import { fetchHorizonsText, rangeChunks } from '../util/horizons-response';
 import {
@@ -36,14 +33,8 @@ import {
   ELEMENT_COLUMNS,
   type PlanetElementTableFile,
 } from './planet-element-schema';
+import { ELEMENT_TABLE_OUTPUTS } from './planet-element-outputs';
 
-const OUT_DIR = resolve(REPO_ROOT, 'data/ephemerides');
-
-const tablePath = (target: PlanetElementTarget): string => resolve(OUT_DIR, `${target.id}.json`);
-
-export const ELEMENT_TABLE_OUTPUTS = declareOutputs(
-  Object.fromEntries(ELEMENT_TARGETS.map((t) => [t.id, tablePath(t)])),
-);
 
 /** Significant digits kept per emitted element, down from Horizons' 16. The
  *  binding column is the unwrapped mean longitude: it reaches ~3e5 degrees at

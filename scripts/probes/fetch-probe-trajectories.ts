@@ -2,10 +2,7 @@
 // adaptive grid and writes data/probes/{id}.json. Manual + infrequent
 // (`pnpm run fetch:probes`); README.md#adaptive-grid.
 
-import { resolve } from 'node:path';
-
-import { declareOutputs, emitArtifacts } from '../util/emit-artifacts';
-import { REPO_ROOT } from '../util/paths';
+import { emitArtifacts } from '../util/emit-artifacts';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 
 import {
@@ -28,19 +25,12 @@ import {
 } from './horizons-client';
 import type { HorizonsVectorsHeader } from './horizons-vectors';
 import { PROBE_MISSIONS, type ProbeMission } from './probe-roster';
-import { probeTrajectoryFilename } from './sync-probes-pure';
+import { PROBE_OUTPUTS } from './probe-trajectory-outputs';
 import {
   PROBE_SAMPLE_COLUMNS,
   type ProbeTrajectoryFile,
 } from './probe-trajectory-schema';
 
-const OUT_DIR = resolve(REPO_ROOT, 'data/probes');
-
-const probePath = (probe: ProbeMission): string => resolve(OUT_DIR, probeTrajectoryFilename(probe.id));
-
-export const PROBE_OUTPUTS = declareOutputs(
-  Object.fromEntries(PROBE_MISSIONS.map((p) => [p.id, probePath(p)])),
-);
 
 /** Last epoch the JPL spacecraft SPKs cover; all five reach it. */
 const STOP_TIME = '2050-01-01';

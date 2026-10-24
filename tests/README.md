@@ -206,6 +206,12 @@ site-dev-routing.test.ts The dev server's routing table held against the
 skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
                          one describe per skill gate (cube-css, code-craft);
                          /scripts/hooks/README.md#how-skill-guard-works.
+step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
+                         declaration (the *-outputs.ts modules), so one
+                         that runs its step on import fails here; pins
+                         every declared path inside the repo and one
+                         producer per path, sid:stamp's in-place rewrite
+                         of local-group.json the one exception.
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any

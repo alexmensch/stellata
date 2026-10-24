@@ -17,6 +17,10 @@ scripts/catalog/astrometry-request/
                                   membership half, adds both gates' candidates
                                   and the bound-pair siblings, sorts, and
                                   emits the request through emitArtifacts.
+  astrometry-request-outputs.ts   ASTROMETRY_REQUEST_OUTPUTS — the request
+                                  file as the generator's emitArtifacts
+                                  declaration (../../util/README.md).
+                                  Side-effect free.
   export-astrometry-request-pure.ts
     (+ test)                      sortSourceIdsNumeric — the BigInt sort.
                                   Also imported by ../classic-ids/ and

@@ -18,23 +18,17 @@ import {
   type RejectedBinding,
 } from './classic-id-overlay-pure';
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { declareOutputs, emitArtifacts } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
+import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 
-const OUT_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
-const OUT_DISAGREEMENTS = resolve(
-  ROOT,
-  'data/classic-ids/hd_hip_route_disagreements.tsv',
-);
-const OUT_REJECTED = resolve(ROOT, 'data/classic-ids/rejected_bindings.tsv');
+const {
+  overlay: OUT_OVERLAY, disagreements: OUT_DISAGREEMENTS, rejected: OUT_REJECTED,
+} = CLASSIC_ID_OUTPUTS.files;
 const EXPECTED_COUNTS = resolve(
   ROOT,
   'scripts/catalog/classic-ids/classic-id-overlay-expected.json',
 );
-
-export const CLASSIC_ID_OUTPUTS = declareOutputs({
-  overlay: OUT_OVERLAY, disagreements: OUT_DISAGREEMENTS, rejected: OUT_REJECTED,
-});
 
 function tsv(header: string, rows: readonly string[]): string {
   return `${[header, ...rows].join('\n')}\n`;

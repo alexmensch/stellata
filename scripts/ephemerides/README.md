@@ -7,6 +7,9 @@ provenance, units, and the measured accuracy table live in
 [Horizons element tables](/src/client/solar-system/ephemerides/README.md#horizons-element-tables).
 This folder owns the scripts.
 
+- `planet-element-outputs.ts` — `ELEMENT_TABLE_OUTPUTS`, one
+  `data/ephemerides/{id}.json` per target, as `fetch:ephemerides`'
+  `emitArtifacts` declaration (`../util/README.md`). Side-effect free.
 - `planet-element-roster.ts` — the nine targets, their sample cadence, and the
   window every table spans (`TABLE_JD_START` / `TABLE_JD_END`,
   `POSITION_TOLERANCE_AU`). The authoring source; editing a cadence needs a

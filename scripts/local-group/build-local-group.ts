@@ -7,7 +7,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 
-import { declareOutputs, emitArtifacts } from '../util/emit-artifacts';
+import { emitArtifacts } from '../util/emit-artifacts';
+import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import {
   applyAliasMeta,
   buildOrientationQuat,
@@ -32,9 +33,7 @@ const ROOT = resolve(__dirname, '..', '..');
 const SRC_CSV = resolve(ROOT, 'data/local-group/lvdb-snapshot.csv');
 const SRC_OVERRIDES = resolve(ROOT, 'data/local-group/overrides.tsv');
 const SRC_ALIASES = resolve(ROOT, 'data/local-group/aliases.tsv');
-const OUT = resolve(ROOT, 'public/local-group.json');
-
-export const LOCAL_GROUP_OUTPUTS = declareOutputs({ localGroup: OUT });
+const OUT = LOCAL_GROUP_OUTPUTS.files.localGroup;
 
 /** Coerces strings to numbers / null per LVDB convention ("" = missing
  *  for numeric cols). */

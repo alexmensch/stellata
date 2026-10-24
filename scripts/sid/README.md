@@ -58,6 +58,11 @@ stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           pnpm run sid:stamp). Every named target resolves
                           before one emitArtifacts call lands them all.
                           See README.md#sibling-artifact-stamping.
+sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: the sibling artifacts sid:stamp
+                          rewrites in place, as its emitArtifacts declaration
+                          (../util/README.md). Side-effect free. The same
+                          paths are their emitters' outputs too; the stamp
+                          is an in-place transform after them.
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind per sibling) + siblingArtifactObjects, shared
                           by allocate (minting) and the stamp (resolving) so

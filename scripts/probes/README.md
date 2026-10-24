@@ -4,6 +4,9 @@ Fetch + sync for the five Sun-escape probes. Data contract, provenance,
 frame/unit facts, and the mission-date caveats live in
 `data/probes/README.md`; this folder owns the scripts.
 
+- `probe-trajectory-outputs.ts` — `PROBE_OUTPUTS`, one
+  `data/probes/{id}.json` per roster probe, as `fetch:probes`'
+  `emitArtifacts` declaration (`../util/README.md`). Side-effect free.
 - `probe-roster.ts` — the five `ProbeMission` rows: Horizons target id,
   SPK start epoch, launch instant, last contact, focus-card mission
   line. The authoring source for every hand-curated mission fact;
