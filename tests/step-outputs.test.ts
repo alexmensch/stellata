@@ -13,6 +13,7 @@ import { LUT_OUTPUTS } from '../scripts/colour/blackbody-lut-outputs';
 import { ELEMENT_TABLE_OUTPUTS } from '../scripts/ephemerides/planet-element-outputs';
 import { LOCAL_GROUP_OUTPUTS } from '../scripts/local-group/local-group-outputs';
 import { PROBE_OUTPUTS } from '../scripts/probes/probe-trajectory-outputs';
+import { DR_RECONCILE_OUTPUTS } from '../scripts/sid/dr-reconcile-outputs';
 import { DR_RISK_SET_OUTPUTS } from '../scripts/sid/dr-risk-set-outputs';
 import { SID_STAMP_OUTPUTS } from '../scripts/sid/sibling-stamp-outputs';
 import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
@@ -29,6 +30,7 @@ const STEPS: Record<string, DeclaredOutputs> = {
   'build:lut': LUT_OUTPUTS,
   'sid:stamp': SID_STAMP_OUTPUTS,
   'sid:risk-set': DR_RISK_SET_OUTPUTS,
+  'sid:dr-reconcile': DR_RECONCILE_OUTPUTS,
   'fetch:probes': PROBE_OUTPUTS,
   'fetch:ephemerides': ELEMENT_TABLE_OUTPUTS,
 };

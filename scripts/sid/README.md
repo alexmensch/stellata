@@ -46,9 +46,11 @@ export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           step 1), through emitArtifacts at the path
                           dr-risk-set-outputs.ts declares.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
-                          DR transition (/docs/sid.md#61-procedure classes); --bridges-out
-                          writes carried-1:1 same-as edges for human
-                          review. Defaults replay the committed DR2→DR3
+                          DR transition (/docs/sid.md#61-procedure classes),
+                          plus the carried-1:1 same-as edges for human
+                          review in build/sid/dr-reconcile-bridges.tsv
+                          (dr-reconcile-outputs.ts; gitignored, a draft for
+                          sameas-overrides.tsv, never committed itself). Defaults replay the committed DR2→DR3
                           dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
