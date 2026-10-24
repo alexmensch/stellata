@@ -452,8 +452,8 @@ Per-row gates and resolution:
   `renderableOrbitRelations` in `record-index/`, the wings pass's resolution
   (writer's `resolve_idx`, both synth retries, the parent re-home) filtered to
   renderable orbits — never from promotion's cursor walk, which records a pair
-  before its parent is minted. Counted `companionPhysicalOverlaps`
-  (<!-- count:build-catalog/companionPhysicalOverlaps -->33<!-- /count -->), a ratchet-down metric: 15 are a blend record
+  before its parent is minted. Counted `physicalOverlaps`
+  (<!-- count:build-catalog/physicalOverlaps -->33<!-- /count -->), a ratchet-down metric: 15 are a blend record
   minted beside its own sub-letter (B with Bb), 18 a sub-letter collocated on
   a record with no orbit between them; the build log lists each pair.
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and

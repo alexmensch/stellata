@@ -154,7 +154,7 @@
   "companionBlendDimBeyondSeparation": 3915,
   "companionBlendDimMisfit": 836,
   "companionRepositionedCollocatedDouble": 0,
-  "companionPhysicalOverlaps": 33,
+  "physicalOverlaps": 33,
   "companionConstellationSplitFromAnchor": 7,
   "companionExistingDesigConFromAnchor": 226,
   "companionExistingMemberRecurated": {

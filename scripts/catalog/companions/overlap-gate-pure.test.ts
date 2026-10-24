@@ -17,7 +17,7 @@ describe('physicalOverlaps', () => {
     expect(physicalOverlaps([star(0), star(1.5 * R_SUN_PC)], none)).toEqual([[0, 1]]);
   });
 
-  it('flags a bit-identical pair', () => {
+  it('flags two unrelated records on one spot', () => {
     expect(physicalOverlaps([star(5), star(5)], none)).toEqual([[0, 1]]);
   });
 

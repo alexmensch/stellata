@@ -346,7 +346,7 @@ async function main() {
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
     companionRepositionedCollocatedDouble: 0,
-    companionPhysicalOverlaps: 0,
+    physicalOverlaps: 0,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
@@ -903,7 +903,7 @@ async function main() {
       stars,
       orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
     );
-    counts.companionPhysicalOverlaps = overlaps.length;
+    counts.physicalOverlaps = overlaps.length;
     const recordTag = (s: Star) => s.syntheticId ?? s.gaiaSourceId ?? `hip ${s.hip}`;
     console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
     for (const [a, b] of overlaps) {
