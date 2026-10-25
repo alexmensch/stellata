@@ -473,7 +473,7 @@ nothing keeps them apart. The relations come from the runtime's own pairing —
 renderable orbits — never from promotion's cursor walk, which records a pair
 before its parent is minted.
 
-Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->33<!-- /count -->), a ratchet-down metric; the
+Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->93<!-- /count -->), a ratchet-down metric; the
 build log names each pair.
 
 #### Promoted-companion field inheritance
