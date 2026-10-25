@@ -13,6 +13,7 @@ import { multiplesRow } from '../multiples-fixture';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
+  renderableOrbitRelations,
   wingRenderablePrimaries,
   type CatalogRowIndexMap,
 } from './record-index';
@@ -222,6 +223,41 @@ describe('wingRenderablePrimaries', () => {
     ];
     expect(wing(rows, [a])).toBe(0);
     expect(isWinged(a)).toBe(false);
+  });
+});
+
+describe('renderableOrbitRelations', () => {
+  const ORBIT = { pDays: 276.4, tJd: 2451545.0, e: 0.277, aAU: 0.97, omegaRad: 0.5, q: 0.5 };
+
+  it('pairs a sub-letter orbit through the parent record its primary resolves to', () => {
+    // 02291+2252: Ba carries B's Gaia source, so it resolves onto the B record;
+    // Bb is the synth slot. binaries.bin animates B against Bb.
+    const a = makeStar({ gaiaSourceId: 'gA' });
+    const b = makeStar({ gaiaSourceId: 'gB', hip: 11572 });
+    const bb = makeStar({ syntheticId: 'synth-02291+2252-Bb' });
+    const rows = [
+      multiplesRow({ systemId: '02291+2252-AB', comp: 'A', gaiaSourceId: 'gA', orbitRole: 'primary' }),
+      multiplesRow({ systemId: '02291+2252-AB', comp: 'B', gaiaSourceId: 'gB', hip: 11572 }),
+      multiplesRow({
+        systemId: '02291+2252-Ba,Bb', comp: 'Ba', gaiaSourceId: 'gB', hip: 11572,
+        orbitRole: 'primary', ...ORBIT,
+      }),
+      multiplesRow({
+        systemId: '02291+2252-Ba,Bb', comp: 'Bb', gaiaSourceId: 'gB', hip: 11572, ...ORBIT,
+      }),
+    ];
+    expect(renderableOrbitRelations(rows, buildCatalogRowIndexMap([a, b, bb])))
+      .toEqual([[1, 2]]);
+  });
+
+  it('leaves out a rendered pair with no renderable orbit', () => {
+    const a = makeStar({ hip: 100 });
+    const b = makeStar({ hip: 200 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200 }),
+    ];
+    expect(renderableOrbitRelations(rows, buildCatalogRowIndexMap([a, b]))).toEqual([]);
   });
 });
 

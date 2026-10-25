@@ -40,6 +40,9 @@ import {
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
+  orbitChainExemption, overlapLabel, physicalOverlaps,
+} from './companions/overlap-gate-pure';
+import {
   BUILD_COUNTS_EXPECTED_FILE,
   compareCountSnapshot,
   formatPartition,
@@ -80,6 +83,7 @@ import {
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
+  renderableOrbitRelations,
   wingRenderablePrimaries,
   type ComponentDesignation,
 } from './companions/record-index/record-index';
@@ -344,6 +348,7 @@ async function main() {
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
     companionRepositionedCollocatedDouble: 0,
+    physicalOverlaps: 0,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
@@ -895,6 +900,16 @@ async function main() {
     console.log(
       `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
     );
+
+    const overlaps = physicalOverlaps(
+      stars,
+      orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
+    );
+    counts.physicalOverlaps = overlaps.length;
+    console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
+    for (const [a, b] of overlaps) {
+      console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
+    }
 
     componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
     counts.componentDesignations = componentDesignations.size;

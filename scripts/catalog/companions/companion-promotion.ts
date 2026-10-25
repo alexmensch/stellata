@@ -40,6 +40,9 @@ import type { ConstellationAssignment } from '../parse/constellations/constellat
 import type { Star } from '../parse/stars-parse';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
+import {
+  parseStage6Offset, rebasedAnchorOffset, tangentOffset, type Stage6Offset,
+} from './anchor-offset-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
@@ -90,12 +93,9 @@ export interface MultiplesTsvRow {
   paDeg: number | null;
   sepPaEpochJd: number | null;
   dmag: number | null;
-  /** Stage 6's per-component offset from the system anchor letter (BFS
-   *  over kept → Stage-5-rejected → compound-proxy WDS geometry). Feeds
-   *  the pair-row-primary escape's projection off the WDS-root anchor;
-   *  null when no geometry chain reaches the component. */
-  anchorSepArcsec: number | null;
-  anchorPaDeg: number | null;
+  /** README.md#promoted-companion-field-inheritance. */
+  anchorComp: string | null;
+  anchorOffset: Stage6Offset;
   /** The pair row's published WDS apparent magnitudes (a row's OWN mag
    *  is magPri when it is the pair primary, magSec when secondary).
    *  Feeds the wds_mag absmag path. */
@@ -217,6 +217,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     dmag: col('dmag'),
     anchorSepArcsec: col('anchor_sep_arcsec'),
     anchorPaDeg: col('anchor_pa_deg'),
+    anchorComp: col('anchor_comp'),
     magPri: col('mag_pri'),
     magSec: col('mag_sec'),
   };
@@ -227,6 +228,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
     if (!line.trim()) continue;
     const cells = line.split('\t');
     const role = cells[idx.orbitRole] as OrbitRole;
+    const anchorComp = nonEmpty(cells[idx.anchorComp]);
     rows.push({
       systemId: cells[idx.systemId],
       comp: cells[idx.comp],
@@ -256,8 +258,12 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
       paDeg: parseFloatOrNull(cells[idx.paDeg]),
       sepPaEpochJd: parseFloatOrNull(cells[idx.sepPaEpochJd]),
       dmag: parseFloatOrNull(cells[idx.dmag]),
-      anchorSepArcsec: parseFloatOrNull(cells[idx.anchorSepArcsec]),
-      anchorPaDeg: parseFloatOrNull(cells[idx.anchorPaDeg]),
+      anchorComp,
+      anchorOffset: parseStage6Offset(
+        cells[idx.comp], anchorComp,
+        parseFloatOrNull(cells[idx.anchorSepArcsec]),
+        parseFloatOrNull(cells[idx.anchorPaDeg]),
+      ),
       magPri: parseFloatOrNull(cells[idx.magPri]),
       magSec: parseFloatOrNull(cells[idx.magSec]),
     });
@@ -296,10 +302,9 @@ export function projectFromSepPa(
   const at = equatorialTangentBasisAt(primaryX, primaryY, primaryZ);
   if (at === null) return null;
   const { basis: { east, north }, rPc: distPc } = at;
-  const paRad = paDeg * (Math.PI / 180.0);
-  const sepRad = sepArcsec * ARCSEC_TO_RAD;
-  const offsetN = sepRad * Math.cos(paRad);  // north component (rad)
-  const offsetE = sepRad * Math.sin(paRad);  // east component (rad)
+  const offset = tangentOffset(sepArcsec, paDeg);
+  const offsetN = offset.north * ARCSEC_TO_RAD;
+  const offsetE = offset.east * ARCSEC_TO_RAD;
   // Small-angle: linear in parsecs at the primary's distance.
   const cx = primaryX + (offsetN * north.x + offsetE * east.x) * distPc;
   const cy = primaryY + (offsetN * north.y + offsetE * east.y) * distPc;
@@ -1079,7 +1084,7 @@ export function componentDepth(comp: string): number {
  *  escape heads its own sub-pair, so its `mag_pri` IS the member's light and its
  *  offset from the anchor is the Stage-6 root composition rather than the row's
  *  own sep. */
-function anchorDimGeometry(row: MultiplesTsvRow, anchorComp: string): {
+function anchorDimGeometry(row: MultiplesTsvRow, anchorRow: MultiplesTsvRow): {
   memberWdsMag: number | null;
   anchorWdsMag: number | null;
   anchorDepth: number;
@@ -1089,8 +1094,10 @@ function anchorDimGeometry(row: MultiplesTsvRow, anchorComp: string): {
   return {
     memberWdsMag: isPairRowPrimary ? row.magPri : row.magSec,
     anchorWdsMag: isPairRowPrimary ? null : row.magPri,
-    anchorDepth: componentDepth(anchorComp),
-    sepArcsec: isPairRowPrimary ? row.anchorSepArcsec : row.sepArcsec,
+    anchorDepth: componentDepth(anchorRow.comp),
+    sepArcsec: isPairRowPrimary
+      ? rebasedAnchorOffset(row, anchorRow)?.sepArcsec ?? null
+      : row.sepArcsec,
   };
 }
 
@@ -1441,7 +1448,7 @@ function registerExistingMemberForAnchorDim(
     // is already a record has its own measured magnitude AND a published
     // separation, so the fit and the separation bound can both judge it.
     structural: false,
-    ...anchorDimGeometry(row, anchorPrimaryRow.comp),
+    ...anchorDimGeometry(row, anchorPrimaryRow),
     av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
   });
 }
@@ -1884,7 +1891,7 @@ function promoteRow(
       source: imputed.source as 'wds_mag' | 'dmag_imputed' | 'own',
       dmag: row.dmag,
       structural: idsInheritedFromAnchor,
-      ...anchorDimGeometry(row, anchorPrimaryRow.comp),
+      ...anchorDimGeometry(row, anchorPrimaryRow),
       av,
     });
   }
@@ -2467,18 +2474,18 @@ function tryPromoteCursorPrimary(
   let position = resolveIndependentAstrometry(
     primary, anchor.primaryRow.gaiaSourceId, anchor.primaryRow.hip,
   );
-  if (position === null
-      && primary.anchorSepArcsec !== null && primary.anchorSepArcsec > 0
-      && primary.anchorPaDeg !== null) {
+  const offset = position === null
+    ? rebasedAnchorOffset(primary, anchor.primaryRow) : null;
+  if (offset !== null) {
     if (projectionBeyondTidalLimit(
-      anchor.star.x, anchor.star.y, anchor.star.z, primary.anchorSepArcsec,
+      anchor.star.x, anchor.star.y, anchor.star.z, offset.sepArcsec,
     )) {
       stats.droppedBeyondTidalLimit++;
       return null;
     }
     position = projectFromSepPa(
       anchor.star.x, anchor.star.y, anchor.star.z,
-      primary.anchorSepArcsec, primary.anchorPaDeg,
+      offset.sepArcsec, offset.paDeg,
     );
   }
   if (position === null) {

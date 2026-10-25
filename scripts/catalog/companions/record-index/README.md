@@ -14,6 +14,8 @@ scripts/catalog/companions/record-index/
   record-index.ts (+ test)   buildCatalogRowIndexMap (the sidecar),
                              resolvePairComponents (the resolution both
                              passes share), wingRenderablePrimaries,
+                             renderableOrbitRelations (the overlap gate's
+                             exemption, ../README.md#overlap-gate),
                              buildComponentDesignations.
 ```
 

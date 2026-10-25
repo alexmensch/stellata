@@ -25,6 +25,16 @@ scripts/catalog/companions/
     (+ test)                      sort so promoted records take the same
                                   final indexing as everything else. Names
                                   `MULTIPLES_TSV`.
+  anchor-offset-pure.ts (+ test)  parseStage6Offset (the anchor columns'
+                                  parse boundary) and rebasedAnchorOffset: a
+                                  row's Stage 6 offset re-based onto
+                                  promotion's WDS-root anchor, or null where
+                                  Stage 6 reached either from no measured
+                                  geometry, the two coincide, or the row is
+                                  the chaining letter itself.
+  overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
+                                  the sum of their radii, less those an orbit
+                                  chain separates. See Overlap gate below.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -237,7 +247,8 @@ Per-row gates and resolution:
   per-component astrometry when Stage 3 supplied a real independent fit
   (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
   anchor's); (2) project the row's Stage-6 `anchor_sep_arcsec` /
-  `anchor_pa_deg` off the WDS-root anchor star — the per-component
+  `anchor_pa_deg` off the WDS-root anchor star, re-based from Stage 6's
+  `anchor_comp` onto that star (below) — the per-component
   offset BFS-composed over kept, Stage-5-rejected, and
   compound-photocentre pair geometry (40 Eri B lands at the A,BC
   compound proxy; Acrux B at the rejected AB row's 3.5″/114°).
@@ -443,6 +454,28 @@ The Tier A regression corpus in `known-stars.tsv` pins Sirius B's
 record specifically (addressed by gaia_source_id, no HIP) as a
 stand-in for the broader category.
 
+#### Overlap gate
+
+After the record sort, build-catalog counts every pair of records whose
+centres sit closer than the sum of their physical radii — a star drawn inside
+another, whatever placement rule put it there — at the 32-bit positions
+`catalog.bin` ships, where two records the build keeps 1 AU apart at 1 kpc
+collapse onto one point. The check is catalogue-wide, not companion-only.
+
+A pair is exempt only when a chain of renderable orbits fixes their relative
+position — one record an ancestor of the other along (primary, secondary)
+relations — since the runtime then draws them apart from the elements, and a
+bit-identical bake there is the deliberate sub-resolution placement above. Two
+siblings of one primary are not exempt: each moves on its own orbit, and
+nothing keeps them apart. The relations come from the runtime's own pairing —
+`renderableOrbitRelations` in `record-index/`, the wings pass's resolution
+(writer's `resolve_idx`, both synth retries, the parent re-home) filtered to
+renderable orbits — never from promotion's cursor walk, which records a pair
+before its parent is minted.
+
+Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->93<!-- /count -->), a ratchet-down metric; the
+build log names each pair.
+
 #### Promoted-companion field inheritance
 
 Every field of a minted companion record is one of: **inherited**
@@ -460,11 +493,19 @@ companion never gets one without the other.
 Which cursor primary is the ROOT's is `isMoreCanonicalAnchor`: top-level
 letter first, then token length, then alphabetical order — so a root whose only
 A-branch cursor is Aa,Ab still takes its position and velocity from the A
-branch. Only cursor primaries `findExistingPrimary` resolves compete, while
-Stage 6 chains `anchor_sep_arcsec` / `anchor_pa_deg` from the top kept
-primary whatever its identifiers, so a root whose top primary has no
-identifier reads offsets measured from a different letter. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
+branch. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
 carries the worked case and imports the same predicate for naming.
+
+Only cursor primaries `findExistingPrimary` resolves compete, while
+Stage 6 chains `anchor_sep_arcsec` / `anchor_pa_deg` from the top kept
+primary whatever its identifiers, and names that letter in `anchor_comp`.
+So every read of a Stage 6 offset goes through `rebasedAnchorOffset`
+(`anchor-offset-pure.ts`), which subtracts the promotion anchor's own offset
+from the row's — or refuses, leaving the row offset-less, when Stage 6
+reached the promotion anchor from no measured geometry. It also refuses the
+chaining letter's own row: that letter outranks every resolvable primary, so
+it reaches promotion only with no identifier bound, and the catalogue usually
+holds its star unlinked — placing it would mint a twin of that record.
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |

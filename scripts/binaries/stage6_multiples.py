@@ -6,7 +6,6 @@ Column order is ``MULTIPLES_TSV_COLUMNS``.
 from __future__ import annotations
 
 import math
-from collections import deque
 from dataclasses import dataclass, fields
 from pathlib import Path
 
@@ -14,13 +13,10 @@ from .parsers import (
     AthygRow, GaiaAstrometryRow, SimbadWdsXid, WdsPair,
 )
 from .indices import IdentifierIndices
-from .component_tokens import (
-    expand_wds_truncated_secondary,
-    token_letters,
-)
+from .anchor_offsets import AnchorOffsets, compute_anchor_offsets
+from .component_tokens import expand_wds_truncated_secondary
 from .stage2_resolve import (
     ResolvedComponent,
-    _add_edge,
     _propagate_position,
     _spherical_to_unit_vec,
     iter_decomposing_pair_components,
@@ -44,6 +40,7 @@ from .mass_estimate import (
     mass_from_spectral_class,
     mass_ratio_from_components,
 )
+from .wds_pair_photometry import pair_magnitudes, wds_dmag
 from scripts.util.astronomy_constants import J2000_JD, DAYS_PER_JULIAN_YEAR
 
 
@@ -78,21 +75,9 @@ MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
     "i_rad", "omega_rad", "Omega_rad",
     "q", "dist_pc",
     "sep_arcsec", "pa_deg", "sep_pa_epoch_jd", "dmag",
-    "anchor_sep_arcsec", "anchor_pa_deg",
+    "anchor_sep_arcsec", "anchor_pa_deg", "anchor_comp",
     "mag_pri", "mag_sec",
 )
-
-
-def wds_dmag(mag_pri: float | None, mag_sec: float | None) -> float | None:
-    """``mag_sec − mag_pri`` from a WDS pair row, or ``None`` when
-    either magnitude is missing. Survives intact through the V/absolute-
-    mag transform — both components sit at the same distance, so an
-    apparent Δmag equals the absolute Δmag. Companion promotion uses
-    this to impute the secondary's absmag when the row inherits the
-    primary's AT-HYG absmag."""
-    if mag_pri is None or mag_sec is None:
-        return None
-    return mag_sec - mag_pri
 
 
 # WDS publishes ``date_last`` as a 4-digit year of the last reported
@@ -249,11 +234,10 @@ class MultiplesRow:
     # multiples row inherited the primary's AT-HYG entry. ``None`` when
     # either WDS magnitude is missing — promotion drops the row.
     dmag: float | None
-    # This component's best WDS offset from the SYSTEM ANCHOR letter
-    # (see compute_anchor_offsets). ``None`` when no geometry chain
-    # reaches the component, or the component IS the anchor.
+    # See README.md#stage-6--multiplestsv-emit, the anchor columns.
     anchor_sep_arcsec: float | None = None
     anchor_pa_deg: float | None = None
+    anchor_comp: str | None = None
     # The pair row's published WDS apparent magnitudes, populated on
     # both component rows (a row's OWN mag is mag_pri when it is the
     # pair primary, mag_sec when it is the secondary). Promotion's
@@ -352,140 +336,6 @@ def compute_system_anchors(
     return first_astrometry_field_per_system(
         pairs, components, astrometry, _position_pc,
     )
-
-
-_GeomAdj = dict[str, dict[str, tuple[float, float, float | None]]]
-
-
-def _anchor_token_rank(tok: str) -> tuple[str, int, str]:
-    """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``:
-    top-level letter first, then token length, then alphabetical. Change
-    both. Same order, different candidates: promotion ranks only primaries
-    it resolves to a catalogue record, so where the top one has no
-    identifier the offsets chain from a letter promotion does not anchor on."""
-    return (tok[:1], len(tok), tok)
-
-
-def _proxy_endpoints(tok: str) -> list[str]:
-    """A compound token's constituent letters (``"BC" → [B, C]``), or the
-    token itself for single-component forms."""
-    letters = token_letters(tok)
-    return sorted(letters) if len(letters) >= 2 else [tok]
-
-
-def _merged_adj(base: _GeomAdj, overlay: _GeomAdj) -> _GeomAdj:
-    """Edge-union of two adjacency tiers; ``overlay`` wins on collisions."""
-    out: _GeomAdj = {tok: dict(nbrs) for tok, nbrs in base.items()}
-    for tok, nbrs in overlay.items():
-        out.setdefault(tok, {}).update(nbrs)
-    return out
-
-
-def _bfs_all_offsets(
-    adj: _GeomAdj, start: str,
-) -> dict[str, tuple[float, float]]:
-    """Composed tangent-plane offset (E, N) arcsec of every token
-    reachable from ``start``, over shortest-hop chains."""
-    out: dict[str, tuple[float, float]] = {start: (0.0, 0.0)}
-    queue: deque[str] = deque([start])
-    while queue:
-        tok = queue.popleft()
-        e, n = out[tok]
-        for nbr, (de, dn, _epoch) in adj.get(tok, {}).items():
-            if nbr in out:
-                continue
-            out[nbr] = (e + de, n + dn)
-            queue.append(nbr)
-    return out
-
-
-def compute_anchor_offsets(
-    pairs: list[WdsPair],
-    components: list[ResolvedComponent],
-    classifications: list[OpticalClassification],
-) -> dict[tuple[str, str], tuple[float, float]]:
-    """Per-component ``(sep_arcsec, pa_deg)`` offset from the system
-    anchor letter, keyed ``(wds_id, canonical token)``.
-
-    Offsets compose WDS (ρ, θ) tangent-plane vectors from three edge
-    tiers: kept (Stage-5-physical) pair rows; Stage-5-REJECTED pair
-    rows (a sep+PA measurement is real astrometry regardless of
-    boundness classification — the pair stays dropped, only its
-    geometry is consulted: Acrux AB, whose WDS ``U`` flag rejects the
-    pair while B remains a V≈1.6 star with no other measured
-    position); and compound photocentre proxies (a row with a
-    multi-letter side lends its vector to each constituent letter —
-    ``A,BC`` places B and C at the BC photocentre).
-
-    Preference per component: a DIRECT measured anchor→component edge
-    (kept, then rejected) beats any composed chain — a blended member
-    sits within measurement error of the anchor, so a chain through a
-    distant third star cancels to ~zero and buries the direct
-    measurement (Acrux: AC ∘ CB ≡ 0 vs the honest AB 3.5″). Chains
-    then fill in tier order (kept → +rejected → +proxy); zero-length
-    results fall through to the next tier.
-
-    The anchor letter is the most canonical kept-pair primary token.
-    The anchor itself is absent from the map, as is any unreachable
-    component (blank columns downstream)."""
-    kept: dict[str, _GeomAdj] = {}
-    rejected: dict[str, _GeomAdj] = {}
-    proxy: dict[str, _GeomAdj] = {}
-    kept_primary_tokens: dict[str, set[str]] = {}
-    for j, (pair, primary, secondary) in enumerate(
-        iter_decomposing_pair_components(pairs, components),
-    ):
-        is_kept = classifications[j].is_physical
-        p_tok = primary.component
-        s_tok = expand_wds_truncated_secondary(p_tok, secondary.component)
-        if is_kept:
-            kept_primary_tokens.setdefault(pair.wds_id, set()).add(p_tok)
-        if (
-            pair.rho_last is None or pair.rho_last <= 0.0
-            or pair.theta_last is None
-        ):
-            continue
-        theta_rad = math.radians(pair.theta_last)
-        e = pair.rho_last * math.sin(theta_rad)
-        n = pair.rho_last * math.cos(theta_rad)
-        epoch = float(pair.date_last) if pair.date_last is not None else None
-        tier = kept if is_kept else rejected
-        _add_edge(tier.setdefault(pair.wds_id, {}), p_tok, s_tok, e, n, epoch)
-        p_ends = _proxy_endpoints(p_tok)
-        s_ends = _proxy_endpoints(s_tok)
-        if len(p_ends) > 1 or len(s_ends) > 1:
-            proxy_adj = proxy.setdefault(pair.wds_id, {})
-            for a in p_ends:
-                for b in s_ends:
-                    _add_edge(proxy_adj, a, b, e, n, epoch)
-
-    out: dict[tuple[str, str], tuple[float, float]] = {}
-    for wds_id, primary_tokens in kept_primary_tokens.items():
-        anchor = min(primary_tokens, key=_anchor_token_rank)
-        g0 = kept.get(wds_id, {})
-        g1 = _merged_adj(rejected.get(wds_id, {}), g0)
-        g2 = _merged_adj(proxy.get(wds_id, {}), g1)
-        offsets: dict[str, tuple[float, float]] = {}
-
-        def _accumulate(candidates: dict[str, tuple[float, float]]) -> None:
-            for tok, (e, n) in candidates.items():
-                if tok == anchor or tok in offsets:
-                    continue
-                if math.hypot(e, n) <= 0.0:
-                    continue
-                offsets[tok] = (e, n)
-
-        for graph in (g0, g1):  # direct measured edges, kept first
-            _accumulate({
-                tok: (e, n) for tok, (e, n, _ep) in graph.get(anchor, {}).items()
-            })
-        for graph in (g0, g1, g2):  # composed chains fill the rest
-            _accumulate(_bfs_all_offsets(graph, anchor))
-
-        for tok, (e, n) in offsets.items():
-            pa = math.degrees(math.atan2(e, n)) % 360.0
-            out[(wds_id, tok)] = (math.hypot(e, n), pa)
-    return out
 
 
 def compute_pair_masses(
@@ -967,7 +817,9 @@ def build_multiples_rows(
 
     if system_anchors is None:
         system_anchors = compute_system_anchors(pairs, components, astrometry)
-    anchor_offsets = compute_anchor_offsets(pairs, components, classifications)
+    anchor_offsets = compute_anchor_offsets(
+        pairs, components, classifications, indices.msc,
+    )
 
     out: list[MultiplesRow] = []
     emitted_keys: set[tuple[str, str]] = set()
@@ -1013,28 +865,19 @@ def build_multiples_rows(
         s_tok = expand_wds_truncated_secondary(
             primary.component, secondary.component,
         )
-        if (
-            indices.msc is not None
-            and pair.mag_pri is None and pair.mag_sec is None
-        ):
-            msc_mags = indices.msc.pair_mags.get(
-                (pair.wds_id, (primary.component, s_tok)),
-            )
-            if msc_mags is not None:
-                vmag_pri, vmag_sec = msc_mags
-                for row in (primary_row, secondary_row):
-                    row.mag_pri = vmag_pri
-                    row.mag_sec = vmag_sec
-                    row.dmag = wds_dmag(vmag_pri, vmag_sec)
-                if msc_mag_fills is not None:
-                    msc_mag_fills.append(f"{pair.wds_id}{pair.components}")
+        mags = pair_magnitudes(pair, primary.component, s_tok, indices.msc)
+        if mags.source == "msc":
+            for row in (primary_row, secondary_row):
+                row.mag_pri = mags.mag_pri
+                row.mag_sec = mags.mag_sec
+                row.dmag = wds_dmag(mags.mag_pri, mags.mag_sec)
+            if msc_mag_fills is not None:
+                msc_mag_fills.append(f"{pair.wds_id}{pair.components}")
         finalize_renderable_elements(primary_row, secondary_row, orbit)
         for row, tok in (
             (primary_row, primary.component), (secondary_row, s_tok),
         ):
-            offset = anchor_offsets.get((pair.wds_id, tok))
-            if offset is not None:
-                row.anchor_sep_arcsec, row.anchor_pa_deg = offset
+            _apply_anchor_offset(row, pair.wds_id, tok, anchor_offsets)
         out.append(primary_row)
         out.append(secondary_row)
         emitted_keys.add((pair.wds_id, primary.component))
@@ -1051,12 +894,21 @@ def build_multiples_rows(
     return out
 
 
+def _apply_anchor_offset(
+    row: MultiplesRow, wds_id: str, tok: str, anchor_offsets: AnchorOffsets,
+) -> None:
+    row.anchor_comp = anchor_offsets.anchor_by_system.get(wds_id)
+    offset = anchor_offsets.offsets.get((wds_id, tok))
+    if offset is not None:
+        row.anchor_sep_arcsec, row.anchor_pa_deg = offset
+
+
 def build_standalone_rows(
     simbad_xids: dict[tuple[str, str], SimbadWdsXid],
     emitted_keys: set[tuple[str, str]],
     system_anchors: dict[str, SystemAnchor],
     indices: IdentifierIndices,
-    anchor_offsets: dict[tuple[str, str], tuple[float, float]] | None = None,
+    anchor_offsets: AnchorOffsets,
 ) -> list[MultiplesRow]:
     """For every (wds_id, component) SIMBAD has a cross-ID for that
     isn't already in ``emitted_keys`` (from the pair walk), emit a
@@ -1083,9 +935,8 @@ def build_standalone_rows(
         )
         astrometry_via = _astrometry_via(synth_ast, inherited)
         spect, spect_via = _resolve_spect(wds_id, component, None, indices)
-        offset = (anchor_offsets or {}).get((wds_id, component))
 
-        out.append(MultiplesRow(
+        row = MultiplesRow(
             system_id=_system_id_for_standalone(wds_id, component),
             comp=component,
             hip=xid.hip,
@@ -1110,9 +961,9 @@ def build_standalone_rows(
             dist_pc=position[3] if position is not None else None,
             sep_arcsec=None, pa_deg=None, sep_pa_epoch_jd=None,
             dmag=None,
-            anchor_sep_arcsec=offset[0] if offset is not None else None,
-            anchor_pa_deg=offset[1] if offset is not None else None,
-        ))
+        )
+        _apply_anchor_offset(row, wds_id, component, anchor_offsets)
+        out.append(row)
     return out
 
 
@@ -1173,6 +1024,7 @@ def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
                 _fmt_float(r.dmag, 4),
                 _fmt_float(r.anchor_sep_arcsec, 3),
                 _fmt_float(r.anchor_pa_deg, 2),
+                r.anchor_comp or "",
                 _fmt_float(r.mag_pri, 2),
                 _fmt_float(r.mag_sec, 2),
             )) + "\n")

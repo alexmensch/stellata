@@ -2531,7 +2531,7 @@ synth:synth-06380-6132-B	HIP 31711 B	AK Pic B	no
 synth:synth-06392-2634-Cb	HIP 31821 Cb	V356 CMa Cb	no
 synth:synth-06405-0331-B	HIP 31942 B	NSV 17029 B	no
 synth:synth-06410+0954-I	HD 261938 I	15 Mon I	no
-synth:synth-06410+0954-J	HD 261938 J		absent
+synth:synth-06410+0954-J	HD 261938 J	15 Mon J	no
 synth:synth-06460-6624-C	HIP 32414 C	NSV 17197 C	no
 synth:synth-06460-6624-D	HIP 32414 D	NSV 17197 D	no
 synth:synth-06467+0822-B	HIP 32475 B	V839 Mon B	no
@@ -3414,7 +3414,7 @@ synth:synth-20111-5731-B	HIP 99453 B	NSV 25020 B	no
 synth:synth-20119+3612-C	HIP 99525 C	V1042 Cyg C	no
 synth:synth-20123+3205-Bb	HIP 99566 Bb	HIP 99564 Bb	no
 synth:synth-20136+4644-Ab	31 Cyg Ab	ο¹ Cyg Ab	yes
-synth:synth-20136+4644-H	31 Cyg H		absent
+synth:synth-20136+4644-H	31 Cyg H	ο¹ Cyg H	yes
 synth:synth-20136+4644-J	31 Cyg J	ο¹ Cyg J	yes
 synth:synth-20136+4644-K	31 Cyg K	ο¹ Cyg K	yes
 synth:synth-20141-0450-B	HIP 99720 B	V1477 Aql B	no

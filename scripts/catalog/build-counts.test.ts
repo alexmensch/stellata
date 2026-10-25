@@ -114,6 +114,7 @@ function baseCounts(): BuildCounts {
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
     companionRepositionedCollocatedDouble: 1,
+    physicalOverlaps: 1,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),

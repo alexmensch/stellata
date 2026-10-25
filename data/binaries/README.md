@@ -51,18 +51,8 @@ spot_check_ground_truth.tsv     SIMBAD-verified expected Stage 2
 ## Schema
 
 Canonical column order is `MULTIPLES_TSV_COLUMNS` in
-[`scripts/binaries/stage6_multiples.py`](../../scripts/binaries/README.md):
-
-```
-system_id, comp, hip, gaia_source_id,
-x_pc, y_pc, z_pc, absmag, ci, spect, name,
-source, regime,
-resolve_via, astrometry_via, orbit_via, spect_via,
-photometry_via, a_via,
-orbit_role,
-P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
-sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag
-```
+`scripts/binaries/stage6_multiples.py`, the one owner; each column is
+described in [Stage 6](../../scripts/binaries/README.md#stage-6--multiplestsv-emit).
 
 Per-component provenance columns (`resolve_via`, `astrometry_via`,
 `orbit_via`, `spect_via`, `photometry_via`, `a_via`) name which
