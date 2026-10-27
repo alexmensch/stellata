@@ -146,8 +146,10 @@ write more than one file (classic-ids four, Tycho-2 two).
    - A manual step is checked, never run.
 3. Exit non-zero if any manual step was stale, naming each command.
 
-- **Lock**: one per step, `build/locks/<step>`. Two runs of one step
-  serialise. `build-seed.sh` keeps only its newest-run-wins rule and relies on
+- **Lock**: one per step, an operating-system file lock (`flock`) on
+  `build/locks/<step>`, so the kernel releases it when the holding process
+  exits, crashed or not; the file left behind is never itself the lock. Two
+  runs of one step serialise. `build-seed.sh` keeps only its newest-run-wins rule and relies on
   the lock for the rest, so a plain build or `dev` beside a seed run can no
   longer interleave writes to `public/catalog.bin.*`.
 - **`--force`** reaches every `build` step the run selects, uniformly. It
