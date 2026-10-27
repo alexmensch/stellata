@@ -130,7 +130,9 @@ The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
 without a network call: a TypeScript pull exports it, and a Python pull prints
-it under `--describe`.
+it under `--describe`. The describe path imports the standard library only,
+since every build runs it and a worktree has no refresh virtualenv; a test
+runs each pull's `--describe` under `python3 -I -S`.
 
 Manual-step stamps are committed because frozen data needs a committed record
 of what produced it; `build/` is gitignored. One file per step, since several
