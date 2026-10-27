@@ -60,9 +60,16 @@ What each step **declares** and what the runner **derives**:
 | order | derived: B runs after A when B reads a file A declares | declared as `after: [steps]`, checked after each run |
 
 A `defineArtifact` is both the writer's output and the readers' source, so
-`multiples.tsv` is registered once. Over-inclusion is safe for freshness: a
-module reached through the closure whose source a step never opens costs a
-spurious rebuild, never a stale skip.
+`multiples.tsv` is registered once.
+
+**Reachable must mean read.** A source reached through the closure but never
+opened is not harmless: besides a spurious rebuild it adds a false ordering
+edge, which can make a false cycle or skip a step behind a stale pull it never
+reads. (Today `build:wgsn` reaches the manifest's path through a parse helper
+in the manifest module, and `build:catalog`'s parked-ledger path besides.) So
+each `defineSource` / `defineArtifact` lives in a leaf module that only code
+reading that file through its typed reader imports, and a test over each
+step's closure holds every reached source to a call of its reader.
 
 **A recorded input set is sound for code and data alike.** A Python step
 that starts reading a new module or file does so because some file it
