@@ -45,8 +45,8 @@ deliberate act; a branch build never appends to the ledger.
 One entry per step: `name`, `kind`, `entry` (the file the step runs) and,
 for a manual step, `command` (what the stop message prints). `package.json`
 keeps one-line targets that call the runner (`build:data` →
-`run.ts data`); it no longer names step entry files, so `import-closure.ts`'s
-`tsxEntry` reads `steps.ts` instead.
+`run.ts data`); it no longer names step entry files, so
+`import-closure-pure.ts`'s `tsxEntry` reads `steps.ts` instead.
 
 What each step **declares** and what the runner **derives**:
 
