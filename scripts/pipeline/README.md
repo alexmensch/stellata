@@ -139,9 +139,17 @@ Hashing costs about a second per gigabyte on a warm page cache. Every mtime
 gate goes: `build:clouds`, `build:local-group`, the mirrors and
 `refresh_lib.is_up_to_date`.
 
-A **pull's stamp** adds three fields: the query hash (the ADQL text or URL
-template, with batch values excluded, plus the service that answered), and the
-upstream release. Its inputs are the request rows and the data files it read.
+A **pull's stamp** adds three fields:
+
+- **query hash**, compared: the ADQL text or URL template, batch values
+  excluded, plus the declared service list (primary and fallbacks), so
+  changing which services a pull may use stales it;
+- **answering service**, recorded only: Gaia pulls fall back from ESA to ARI,
+  and which one answered is known only after the pull;
+- **upstream release**, recorded only: no network call can read it at check
+  time.
+
+Its inputs are the request rows and the data files it read.
 The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
