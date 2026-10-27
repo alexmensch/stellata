@@ -189,7 +189,11 @@ Hand-kept lists become derivations over the table:
 - **Bootstrap.** One commit writes `data/stamps/<step>.json` for every pull
   and baker from today's request files, data inputs and the query text in
   today's code, adopting today's committed outputs as fresh. The zero-pinned
-  shortfall counts already vouch for the request-scoped pulls. A baker's first
+  shortfall counts vouch for Bailer-Jones (`bjEligibleNotPulled`) and the
+  astrometry catalogue's gate candidates (`gateSkippedNoGMag`,
+  `derivedWeighedNoGMag`); Apsis and GSPC carry residual pins, which cannot
+  show a stale request, and the SIMBAD, Tycho-2, binaries-astrometry and DR2
+  neighbourhood pulls carry none, so those are adopted unverified. A baker's first
   record takes its inputs from today's hand list; its next run replaces them
   with the recorded set.
 - **Order.** Runner core, then the stamped steps and the four generators, then
