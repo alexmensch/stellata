@@ -25,7 +25,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 | Kind | Runner runs it? | Record | Stale when | Today |
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
-| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, or its query moved | every `refresh:*`, both `fetch:*` |
+| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*` |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
 | `allocate` | never | the SID ledger itself | the built catalogue holds a record the ledger has no SID for | `sid:allocate` |
 
