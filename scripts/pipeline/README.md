@@ -210,7 +210,8 @@ Hand-kept lists become derivations over the table:
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
   stamp is read.
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
-  mirrors, 4 CI-only generators, about 20 pulls, 6 bakers and the allocator.
+  mirrors, 3 CI-only generators and 1 that runs nowhere, about 20 pulls, 6
+  bakers and the allocator.
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.
 - **Q7, copies.** The two stamp helpers stay one per language with one JSON
