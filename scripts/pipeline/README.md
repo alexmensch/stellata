@@ -155,6 +155,12 @@ not its bytes: the SIMBAD pulls read the whole manifest to derive their keys,
 so the record holds the hash of the derived request list, and an edit that
 leaves the list unchanged leaves the pull fresh. The list is computed with no
 network call, under `--describe`.
+
+A bake follows the same rule. `cloud-surfaces` reads `public/clouds.json`
+only for the geometry it traces (positions and extents), so its record holds
+the hash of that projection: an SID or name change in `clouds.json` leaves it
+fresh, a geometry change stops the build. The bake record is the only owner
+of that fact.
 The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
@@ -229,8 +235,6 @@ Hand-kept lists become derivations over the table:
 - `.worktreeinclude` may list only the `build` steps' stamped outputs, their
   stamp files and `build/lineage/`; a test checks it against the table.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
-- `cloud-surfaces.bin` records the hash of the `clouds.json` geometry it
-  traced, and a test compares it with the current file.
 - `resolved-hole-table.ts`'s record count is tested against
   `build-catalog-expected.json`'s `recordCount`.
 
