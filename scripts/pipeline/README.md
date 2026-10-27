@@ -27,7 +27,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
 | `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*` |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
-| `allocate` | never | the SID ledger itself | the built catalogue holds a record the ledger has no SID for | `sid:allocate` |
+| `allocate` | never | the SID ledger itself | `allocate.ts --check` finds a record to mint or an orphaned synthetic key | `sid:allocate` |
 
 A step the runner never runs is a **manual** step. When one is stale, the
 runner skips every step that reads its outputs (transitively), still builds
@@ -39,8 +39,12 @@ rebuild.
 the whole built catalogue: a hash would call it stale after every catalogue
 change, whether or not a new record needs an SID. A predicate keeps no
 record, so `allocate` is the one manual step with no `data/stamps/` file.
-Minting an SID stays a deliberate act; a branch build never appends to the
-ledger.
+The predicate is `allocate.ts --check`'s own walk, the one owner of SID
+health: `build:catalog` lands its artifacts and stamp with a record lacking an
+SID rather than failing, and the allocate check then stops the run with one
+message per cause — `pnpm run sid:allocate` for a record to mint, the same-as
+bridge or retirement for an orphaned synthetic key. Minting an SID stays a
+deliberate act; a branch build never appends to the ledger.
 
 ## The step table — `steps.ts`
 
