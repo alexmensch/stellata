@@ -25,7 +25,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 | Kind | Runner runs it? | Record | Stale when | Today |
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
-| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*` |
+| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*`, the two `dustmaps` datasets |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
 | `allocate` | never | the SID ledger itself | `allocate.ts --check` finds a record to mint or an orphaned synthetic key | `sid:allocate` |
 
@@ -161,6 +161,13 @@ only for the geometry it traces (positions and extents), so its record holds
 the hash of that projection: an SID or name change in `clouds.json` leaves it
 fresh, a geometry change stops the build. The bake record is the only owner
 of that fact.
+
+An **external dataset** a baker reads from outside the repo is a pull of its
+own, whose query is the dataset's identity and version: the Edenhofer 2023
+dust map behind `dust` and the Edenhofer 2024 posterior behind
+`cloud-surfaces`, both fetched by the `dustmaps` library into its own cache.
+The audit hook records repo files only, so without that pull a new map
+version would never stale either bake.
 The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
