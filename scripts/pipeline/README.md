@@ -156,13 +156,15 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 1. Load and validate the table.
 2. Walk the steps the targets reach, in derived order.
-   - A `build` step whose inputs include a stale manual step's output
-     (transitively) is skipped.
+   - A `build` step whose inputs include the output of a stale manual step or
+     a failed step (transitively) is skipped. A step fails when it crashes,
+     a check refuses its emission, or its post-run declaration check fails.
    - Any other `build` step: take its lock, then check its stamp, then run or
      skip, then release. Taking the lock before the check is what lets a run
      that waited see the fresh stamp and skip.
    - A manual step is checked, never run.
-3. Exit non-zero if any manual step was stale, naming each command.
+3. Exit non-zero if any manual step was stale or any step failed, naming each
+   stale step's command and each failure.
 
 - **Lock**: one per step, an operating-system file lock (`flock`) on
   `build/locks/<step>`, so the kernel releases it when the holding process
@@ -241,8 +243,9 @@ Hand-kept lists become derivations over the table:
   (Python). Data inputs: the source constants (TS) or the run record (Python).
   Freshness: the stamp. Force and snapshot updating: two runner flags.
   Committed-output verification: one runner mode.
-- **Q2, wrong states.** Stale, fresh, unchecked-because-upstream-stale and
-  never-built are distinct verdicts; a missing stamp is never read as fresh.
+- **Q2, wrong states.** Fresh, stale, failed and skipped-behind-a-stale-or-
+  failed-step are the variants of one verdict union the runner matches on
+  exhaustively; a missing stamp reads as stale, never fresh.
   `allocate`'s verdict is a value the runner matches on, not an exit code.
 - **Q3, when it is true.** A stamp is written only after the step's checks
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
