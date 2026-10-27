@@ -176,8 +176,8 @@ Hand-kept lists become derivations over the table:
 
 - `tests/artifact-freshness.test.ts` iterates every stamp in `build/stamps/`
   and `data/stamps/`.
-- `.worktreeinclude` is checked against the `build` steps' stamped outputs,
-  plus the paper-store link and `build/lineage/`.
+- `.worktreeinclude` may list only the `build` steps' stamped outputs, their
+  stamp files and `build/lineage/`; a test checks it against the table.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `cloud-surfaces.bin` records the hash of the `clouds.json` geometry it
   traced, and a test compares it with the current file.
