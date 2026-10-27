@@ -72,7 +72,11 @@ never sees it. A Python step probes existence only through the stamp helper,
 which records the probe.
 
 **A Python step's declarations cannot drift silently.** The audit hook also
-records every file the process opens for writing. After a Python step runs,
+records what the process writes: the target of every `os.rename` /
+`os.replace` (so a temp-then-rename write counts as its target, not its temp
+file) and every path opened for writing, less the step's own stamp. A count
+snapshot the step rewrites under `--update-snapshots` is named in its own
+table field, never an output and never an ordering edge. After a Python step runs,
 the runner fails the run when a recorded write is not a declared output, or
 when a recorded input that another step declares as output is not covered by
 `after` (directly or transitively). The two binaries steps are the only
