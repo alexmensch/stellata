@@ -106,11 +106,16 @@ The runner rejects the table, before running anything, when:
   constant it needs moves into one (`catalog-outputs.ts` imports the parked
   and SIMBAD-sourced ledger paths from their non-pure modules today).
 
-A manual step sits in the derived order by its inputs: it is checked once the
-`build` steps that write them have run, so a pull is judged against the
-request the run just rebuilt. Its outputs are not ordering edges: they are
-committed, so a reader treats them as frozen inputs. That is why a loop
-through a pull never reaches the cycle check (next section).
+A manual step sits in the derived order like any other: it is checked once
+the `build` steps that write its inputs have run, so a pull is judged against
+the request the run just rebuilt, and its readers run only after that check,
+so a stale pull is caught before anything builds on it. The one exception is
+an edge from a manual step's output that would close a loop. Those back edges
+are dropped, and they are exactly the kept loops (next section), which the
+runner lists at load. In a kept loop the reader builds first and the pull's
+check then stops the run; the reader's stamp already holds the old pull
+output's hash, so it rebuilds once the pull is re-run. The cycle check
+therefore never sees a loop through a manual step.
 
 ## Freshness — one mechanism
 
