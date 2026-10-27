@@ -180,7 +180,7 @@ that writes it. Measured 2026-10-27.
 | Loop | Disposition |
 |---|---|
 | manifest → `build:wgsn` → WGSN tables → `build:membership` | Broken. `build:wgsn` reads the manifest only for its proper-name residual gate and three counts; those move to the membership gate test. Outputs unchanged. |
-| manifest → astrometry request → astrometry pull → `build:membership` | Broken. The request's manifest leg adds exactly 30 ids beyond the candidate legs, all of them `keep_source_id`s in `binding-review-dispositions.tsv`; the request reads that file instead. Request byte-identical. |
+| manifest → astrometry request → astrometry pull → `build:membership` | Broken. The request's manifest leg adds exactly 30 ids beyond the candidate legs, all of them `keep_source_id`s in `binding-review-dispositions.tsv`; the request reads that file instead. Request byte-identical. That coverage now holds by measurement, so the membership gate test asserts every manifest `gaia_source_id` is in the request (a test may read the manifest; a step may not). |
 | … → astrometry pull → `build:classic-ids` → overlay → `build:membership` | Broken by the row above. |
 | manifest → `refresh:tycho2` → Tycho-2 → `build:membership` | Broken. Every manifest TYC is a spine-after-corrections or IV/25 TYC, and the spine adds none beyond the manifest and IV/25; the request keys on those. Request byte-identical. |
 | `simbad_sptype` → `build:binaries` → `multiples.tsv` → `build:membership` → manifest → `simbad_sptype` | Broken. Binaries reads only the WDS leg, which the manifest never moves; that leg becomes its own pull and file. |
