@@ -99,8 +99,12 @@ The runner rejects the table, before running anything, when:
 - the derived order among `build` steps has a cycle;
 - a `build` step's declared output is a symlink on disk (the "never symlink
   `public/`" rule becomes this check);
-- a step's outputs module has side effects on import (each `*_OUTPUTS`
-  constant moves to a sibling module or its entry guards `main`).
+- a step's outputs module imports anything beyond `util/emit-artifacts`,
+  `util/paths` and `*-pure` modules, checked over its import closure. That is
+  what makes it side-effect-free to import, which no check can test directly;
+  each `*_OUTPUTS` constant moves to such a sibling module, and a path
+  constant it needs moves into one (`catalog-outputs.ts` imports the parked
+  and SIMBAD-sourced ledger paths from their non-pure modules today).
 
 A manual step sits in the derived order by its inputs: it is checked once the
 `build` steps that write them have run, so a pull is judged against the
