@@ -64,6 +64,9 @@ cross-script policy and pointers.
 - `hooks/` — Claude Code guard hooks (PreToolUse / SessionStart).
 - `ci/` — helpers only `.github/workflows/` runs: the catalogue build
   cache's key.
+- `pipeline/` — the step table and runner design: one model of which step
+  writes which file, in what order, and when each is stale. The sections
+  below describe today's gates until the runner replaces them.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the
