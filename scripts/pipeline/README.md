@@ -11,6 +11,7 @@ or a pull depends on is a **step**. Report and draft writers
 (`sid:dr-reconcile`, `identity:snapshot`) are excluded by name, and a test
 holds every `declareOutputs` constant under `scripts/` to an entry in
 `steps.ts` or that list.
+
 A step's outputs are declared once, its inputs are derived, and the order of
 steps follows from which step reads which file. The runner runs the steps it
 may run, checks the ones it may not, and decides freshness the same way for
@@ -65,7 +66,7 @@ What each step **declares** and what the runner **derives**:
 
 | Fact | TypeScript step | Python step |
 |---|---|---|
-| outputs | its `declareOutputs` constant, exported from a side-effect-free module (`catalog/catalog-outputs.ts` is the shape) | declared in the table entry, checked against the run's recorded writes |
+| outputs | its `declareOutputs` constant, exported from a side-effect-free module (see Load-time rules) | declared in the table entry, checked against the run's recorded writes |
 | code inputs | the esbuild import closure plus siblings (`util/import-closure.ts`), computed before the run | every `scripts/` module the process loaded, recorded during the run (`build_stamp.py`) |
 | data inputs | the `defineSource` / `defineArtifact` constants reachable in that closure (the input-boundary design: typed readers, then source declarations) | every repo file the process opened for reading, recorded through Python's audit hook |
 | order | derived: B runs after A when B reads a file A declares | declared as `after: [steps]`, checked after each run |
