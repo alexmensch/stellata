@@ -194,7 +194,8 @@ Hand-kept lists become derivations over the table:
   with the recorded set.
 - **Order.** Runner core, then the stamped steps and the four generators, then
   the mtime steps and mirrors (after clouds and local-group set SIDs in their
-  own records, so no step rewrites another's output), then CI's
+  own records, so no step rewrites another's output, and after clouds' port
+  to TypeScript, so it reaches the runner as a TypeScript step), then CI's
   `--verify-committed`, then the derived checks. The four loop breaks ship
   with the slice that moves their step.
 
