@@ -66,10 +66,17 @@ spurious rebuild, never a stale skip.
 
 **A recorded input set is sound for code and data alike.** A Python step
 that starts reading a new module or file does so because some file it
-already read changed, and that change makes it stale. One hole: a read that
-only probes existence (`Path.exists()`) opens nothing, so the audit hook
-never sees it. A Python step probes existence only through the stamp helper,
-which records the probe.
+already read changed, and that change makes it stale. Two reads open no file,
+so they need their own record:
+
+- **Directory listings** (`os.listdir`, `os.scandir`, `glob.glob`, which
+  `iterdir` and `Path.glob` go through) are audit events too; each is recorded
+  as an input keyed by the directory, hashed over its sorted names, so a file
+  added to a scanned folder stales the step.
+- **Existence probes** (`Path.exists()`, `os.path.exists`) raise no audit
+  event. A Python step probes existence only through the stamp helper, which
+  records the probe; a test over the Python step modules fails on any other
+  probe.
 
 **A Python step's declarations cannot drift silently.** The audit hook also
 records what the process writes: the target of every `os.rename` /
