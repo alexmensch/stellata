@@ -149,7 +149,12 @@ A **pull's stamp** adds three fields:
 - **upstream release**, recorded only: no network call can read it at check
   time.
 
-Its inputs are the request rows and the data files it read.
+Its inputs are the request rows and the data files it read. A file the pull
+reads only to work out what to ask for counts through the request it yields,
+not its bytes: the SIMBAD pulls read the whole manifest to derive their keys,
+so the record holds the hash of the derived request list, and an edit that
+leaves the list unchanged leaves the pull fresh. The list is computed with no
+network call, under `--describe`.
 The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
