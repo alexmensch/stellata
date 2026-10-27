@@ -205,10 +205,13 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 - **Lock**: one per step, an operating-system file lock (`flock`) on
   `build/locks/<step>`, so the kernel releases it when the holding process
-  exits, crashed or not; the file left behind is never itself the lock. Two
-  runs of one step serialise. `build-seed.sh` keeps only its newest-run-wins rule and relies on
-  the lock for the rest, so a plain build or `dev` beside a seed run can no
-  longer interleave writes to `public/catalog.bin.*`.
+  exits, crashed or not; the file left behind is never itself the lock. A
+  running step holds its own lock exclusive and a shared lock on each step
+  that writes its inputs, so two runs of one step serialise, and a reader in
+  one run never sees a half-replaced set (the catalogue's chunks renamed one
+  by one) from a writer in another. `build-seed.sh` keeps only its
+  newest-run-wins rule and relies on the locks for the rest, so a plain build
+  or `dev` beside a seed run can no longer interleave with it.
 - **`--force`** reaches every `build` step the run selects, uniformly. It
   never runs a manual step.
 - **`--update-snapshots`** is the one way a count snapshot is rewritten. It
