@@ -37,8 +37,10 @@ rebuild.
 
 `allocate` is gated on a predicate rather than a hash because its input is
 the whole built catalogue: a hash would call it stale after every catalogue
-change, whether or not a new record needs an SID. Minting an SID stays a
-deliberate act; a branch build never appends to the ledger.
+change, whether or not a new record needs an SID. A predicate keeps no
+record, so `allocate` is the one manual step with no `data/stamps/` file.
+Minting an SID stays a deliberate act; a branch build never appends to the
+ledger.
 
 ## The step table — `steps.ts`
 
