@@ -53,7 +53,10 @@ deliberate act; a branch build never appends to the ledger.
 ## The step table — `steps.ts`
 
 One entry per step: `name`, `kind`, `entry` (the file the step runs) and,
-for a manual step, `command` (what the stop message prints). `package.json`
+for a manual step, `command` (what the stop message prints). A command is
+always a `package.json` script, checked by a test, so the three pulls with no
+target today (`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`,
+`refresh-msc.py`) gain one. `package.json`
 keeps one-line targets that call the runner (`build:data` →
 `run.ts data`); it no longer names step entry files, so
 `import-closure-pure.ts`'s `tsxEntry` reads `steps.ts` instead.
@@ -283,8 +286,10 @@ Hand-kept lists become derivations over the table:
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
   stamp is read.
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
-  mirrors, 3 CI-only generators and 1 that runs nowhere, about 20 pulls, 6
-  bakers and the allocator.
+  mirrors, 3 CI-only generators and 1 that runs nowhere, 24 pulls (19
+  `refresh:*` targets, 3 untargeted scripts, 2 `fetch:*`; 25 after the
+  `simbad_sptype` split, plus the two `dustmaps` datasets), 6 bakers and the
+  allocator.
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.
 - **Q7, copies.** The two stamp helpers stay one per language with one JSON
