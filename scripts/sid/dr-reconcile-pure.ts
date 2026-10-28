@@ -2,6 +2,7 @@
 // carried / contested / dropped classes, shared-candidate grouping, and
 // the Δmag review flag. Procedure and measured dry run: /docs/sid.md#6-gaia-data-release-reconciliation.
 
+import type { Declared } from '../util/sources/source';
 import { readTable } from '../util/tsv/table-pure';
 
 /** Acceptance radius for a cross-match candidate (/docs/sid.md#61-procedure). */
@@ -10,12 +11,6 @@ export const ACCEPT_MAS = 400;
 /** |Δmag| beyond which an accepted 1:1 match is flagged for review —
  *  a same-position much-brighter source is a possible mis-match. */
 export const MAG_REVIEW_DELTA = 1;
-
-/** The frozen DR2→DR3 dry-run pair (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07), repo-relative. */
-export const DR2_DRY_RUN = {
-  request: 'data/gaia/gaia_dr2_neighbourhood_request.tsv',
-  neighbourhood: 'data/gaia/gaia_dr2_neighbourhood.tsv',
-} as const;
 
 export interface NeighbourhoodRow {
   riskId: bigint;
@@ -58,8 +53,8 @@ export interface DrClassification {
   distanceQuantiles: { p50: number; p90: number; p99: number; max: number };
 }
 
-export function readRiskIds(text: string, file: string, hint: string): bigint[] {
-  const spec = { file, columns: ['gaia_source_id'], hint };
+export function readRiskIds(text: string, from: Declared): bigint[] {
+  const spec = { ...from, columns: ['gaia_source_id'] };
   return [...readTable(spec, text)].map((row) => BigInt(row.requiredSourceId('gaia_source_id')));
 }
 
@@ -67,13 +62,9 @@ export function readNeighbourhoodRows(
   text: string,
   riskCol: string,
   candidateCol: string,
-  file: string,
+  from: Declared,
 ): NeighbourhoodRow[] {
-  const spec = {
-    file,
-    columns: [riskCol, candidateCol, 'angular_distance', 'magnitude_difference'],
-    hint: 'Re-pull it per /docs/sid.md#61-procedure.',
-  };
+  const spec = { ...from, columns: [riskCol, candidateCol, 'angular_distance', 'magnitude_difference'] };
   return [...readTable(spec, text)].map((row) => ({
     riskId: BigInt(row.requiredSourceId(riskCol)),
     candidateId: BigInt(row.requiredSourceId(candidateCol)),

@@ -1,12 +1,9 @@
 // Printed Johnson V and B−V per HIP from the I/239/hip_main slice. See README.md.
 
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { readTable } from '../../util/tsv/table-pure';
 
-const HIP_PHOTOMETRY = {
-  file: 'data/hipparcos/hip_main_vmag.tsv',
-  columns: ['hip', 'vmag', 'bv'] as const,
-  hint: 'Re-run `pnpm run refresh:hip-vmag`.',
-} satisfies TableSpec<string>;
+const HIP_PHOTOMETRY_COLUMNS = ['hip', 'vmag', 'bv', 'hd'] as const;
 
 /** The two HIP-keyed printed values, as separate maps rather than one map of
  *  pairs: their consumers are disjoint, and 1,281 rows carry a V with no B−V,
@@ -23,6 +20,11 @@ export interface HipPhotometryTables {
   /** HIP → printed Johnson B−V, the ci cascade's tier below the synthetic
    *  photometry. */
   bv: Map<number, number>;
+  /** Every HIP and HD the slice publishes, and its HIP → HD pairing (the last
+   *  row wins): the primaries audit's I/239 attestation. */
+  hips: Set<number>;
+  hds: Set<number>;
+  hdByHip: Map<number, number>;
 }
 
 /** One printed value for a record's own HIP, `null` where the record has no
@@ -36,16 +38,23 @@ export function printedByHip(
 }
 
 /** `data/hipparcos/hip_main_vmag.tsv` → the two printed-photometry tables. */
-export function parseHipPhotometryTsv(text: string): HipPhotometryTables {
+export function parseHipPhotometryTsv(text: string, from: Declared): HipPhotometryTables {
   const vmag = new Map<number, number>();
   const bv = new Map<number, number>();
-  for (const row of readTable(HIP_PHOTOMETRY, text)) {
+  const hips = new Set<number>();
+  const hds = new Set<number>();
+  const hdByHip = new Map<number, number>();
+  for (const row of readTable({ ...from, columns: HIP_PHOTOMETRY_COLUMNS }, text)) {
     const hip = row.int('hip');
+    const hd = row.int('hd');
+    if (hip !== null) hips.add(hip);
+    if (hd !== null) hds.add(hd);
+    if (hip !== null && hd !== null) hdByHip.set(hip, hd);
     if (hip === null || hip <= 0) continue;
     const v = row.float('vmag');
     if (v !== null && !vmag.has(hip)) vmag.set(hip, v);
     const colour = row.float('bv');
     if (colour !== null && !bv.has(hip)) bv.set(hip, colour);
   }
-  return { vmag, bv };
+  return { vmag, bv, hips, hds, hdByHip };
 }

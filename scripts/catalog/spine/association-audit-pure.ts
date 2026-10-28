@@ -5,8 +5,9 @@ import { lookupGliese } from '../gliese-parse';
 import { normaliseGjKey } from '../record/catalog-pure';
 import type { SpineRow } from './inherited-spine-pure';
 import {
-  bareGjKey, cns5RowFor, indexCns5, type PrimaryTables, type SimbadXids,
+  bareGjKey, cns5RowFor, indexCns5, type PrimaryTables,
 } from './primaries-audit-pure';
+import type { SimbadXids } from '../spectral/spectral-resolve';
 
 export type KeyCell = 'tyc' | 'hip' | 'hd' | 'hr' | 'gl';
 export const KEY_CELLS: readonly KeyCell[] = ['tyc', 'hip', 'hd', 'hr', 'gl'];

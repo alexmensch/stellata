@@ -2,13 +2,15 @@ import { describe, it, expect } from 'vitest';
 
 import { parseGaiaHipXmatchTsv, parseGaiaTycXmatchTsv } from './gaia-xmatch';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
   it('parses a minimal TSV with header + one row', () => {
     const text = [
       'hip\tgaia_source_id\tangular_distance\tnumber_of_neighbours\txm_flag',
       '2\t2341871673090078592\t0.043826\t1\t8',
     ].join('\n');
-    const m = parseGaiaHipXmatchTsv(text);
+    const m = parseGaiaHipXmatchTsv(text, FROM);
     expect(m.size).toBe(1);
     expect(m.get(2)).toBe('2341871673090078592');
   });
@@ -19,7 +21,7 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
       'hip\tgaia_source_id\tangular_distance',
       '12345\t9876543210123456789\t0.001',
     ].join('\n');
-    const m = parseGaiaHipXmatchTsv(text);
+    const m = parseGaiaHipXmatchTsv(text, FROM);
     expect(m.get(12345)).toBe('9876543210123456789');
   });
 
@@ -30,7 +32,7 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
       '5\t222\t0.050',
       '5\t333\t0.200',
     ].join('\n');
-    const m = parseGaiaHipXmatchTsv(text);
+    const m = parseGaiaHipXmatchTsv(text, FROM);
     expect(m.get(5)).toBe('222');
   });
 
@@ -40,7 +42,7 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
       '7\t111\t',
       '7\t222\t0.100',
     ].join('\n');
-    const m = parseGaiaHipXmatchTsv(text);
+    const m = parseGaiaHipXmatchTsv(text, FROM);
     expect(m.get(7)).toBe('222');
   });
 
@@ -52,14 +54,14 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
       '0\t555\t0.1',
       '10\t777\t0.1',
     ].join('\n');
-    const m = parseGaiaHipXmatchTsv(text);
+    const m = parseGaiaHipXmatchTsv(text, FROM);
     expect(m.size).toBe(1);
     expect(m.get(10)).toBe('777');
   });
 
   it('throws on a gaia_source_id that is not digits, naming the line', () => {
     const text = 'hip\tgaia_source_id\tangular_distance\n9\tnot-a-number\t0.1\n';
-    expect(() => parseGaiaHipXmatchTsv(text)).toThrow(/:2: gaia_source_id: "not-a-number" is not a source_id/);
+    expect(() => parseGaiaHipXmatchTsv(text, FROM)).toThrow(/:2: gaia_source_id: "not-a-number" is not a source_id/);
   });
 
   it('skips partial-numeric hip and all-zero gaia_source_id', () => {
@@ -69,26 +71,26 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
       '13\t000\t0.1', // all-zero gaia_source_id is the "none" sentinel
       '14\t222\t0.1',
     ].join('\n');
-    const m = parseGaiaHipXmatchTsv(text);
+    const m = parseGaiaHipXmatchTsv(text, FROM);
     expect(m.size).toBe(1);
     expect(m.get(14)).toBe('222');
   });
 
   it('returns an empty map for a header-only file', () => {
     const text = 'hip\tgaia_source_id\tangular_distance';
-    expect(parseGaiaHipXmatchTsv(text).size).toBe(0);
+    expect(parseGaiaHipXmatchTsv(text, FROM).size).toBe(0);
   });
 
   it('throws if a required column is missing from the header', () => {
     const text = ['hip\tangular_distance', '2\t0.04'].join('\n');
-    expect(() => parseGaiaHipXmatchTsv(text)).toThrow(/gaia_source_id/);
+    expect(() => parseGaiaHipXmatchTsv(text, FROM)).toThrow(/gaia_source_id/);
   });
 
   it('throws on an empty file rather than reporting zero entries', () => {
     // A truncated or unsmudged-LFS input must not read as "the cross-walk
     // has no rows" — that would silently zero every HIP backfill.
-    expect(() => parseGaiaHipXmatchTsv('')).toThrow(/no header row/);
-    expect(() => parseGaiaHipXmatchTsv('\n\n')).toThrow(/no header row/);
+    expect(() => parseGaiaHipXmatchTsv('', FROM)).toThrow(/no header row/);
+    expect(() => parseGaiaHipXmatchTsv('\n\n', FROM)).toThrow(/no header row/);
   });
 });
 
@@ -103,22 +105,22 @@ describe('gaia-xmatch / parseGaiaTycXmatchTsv', () => {
   ].join('\n');
 
   it('keys on the unpadded tyc string and keeps the nearest match', () => {
-    const m = parseGaiaTycXmatchTsv(TEXT);
+    const m = parseGaiaTycXmatchTsv(TEXT, FROM);
     expect(m.get('1-381-1')).toBe('222');
     expect(m.get('3105-2070-1')).toBe('333');
   });
 
   it('skips empty tyc and the all-zero gaia_source_id sentinel', () => {
-    expect(parseGaiaTycXmatchTsv(TEXT).size).toBe(2);
+    expect(parseGaiaTycXmatchTsv(TEXT, FROM).size).toBe(2);
   });
 
   it('admits only the keep set, so the 2.5 M-row table stays a small map', () => {
-    const m = parseGaiaTycXmatchTsv(TEXT, new Set(['3105-2070-1']));
+    const m = parseGaiaTycXmatchTsv(TEXT, FROM, new Set(['3105-2070-1']));
     expect([...m.keys()]).toEqual(['3105-2070-1']);
   });
 
   it('throws if a required column is missing from the header', () => {
-    expect(() => parseGaiaTycXmatchTsv('tyc\tangular_distance\n1-1-1\t0.1')).toThrow(
+    expect(() => parseGaiaTycXmatchTsv('tyc\tangular_distance\n1-1-1\t0.1', FROM)).toThrow(
       /gaia_source_id/,
     );
   });

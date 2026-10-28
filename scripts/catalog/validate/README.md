@@ -17,6 +17,8 @@ scripts/catalog/validate/
                                   sample and writes
                                   docs/validation-residuals.md. Excludes the
                                   records whose distance came from SIMBAD.
+  simbad-sample-source.ts         SIMBAD_SAMPLE, the sample declared
+                                  (../../util/sources/).
   simbad-sample-parse.ts (+ test) Parser for data/simbad/simbad_sample.tsv.
   known-stars.test.ts             Tier-A corpus: named stars pinned against
   known-stars.tsv                 public/catalog.bin, plus the exact-set
@@ -109,7 +111,7 @@ Three tiers, all snapshot-pinned:
   reads identically across the two builds. A `BuildCounts` entry is
   either a scalar or a per-tier partition (`emptyTallyPartition`); the latter
   diffs as one `parent.bucket` row per bucket, so a single drifting population
-  names itself ([Override-layer authoring discipline](../distance/README.md#override-layer-authoring-discipline)).
+  names itself ([Override-layer authoring discipline](../distance/refinement/README.md#override-layer-authoring-discipline)).
 - **Tier C — SIMBAD random sample.**
   `scripts/catalog/validate/validate-simbad-sample.ts` cross-checks the built
   `public/catalog.bin` against a stratified random 10k SIMBAD sample
@@ -118,6 +120,7 @@ Three tiers, all snapshot-pinned:
   of the same cross-check. **Both skip a record whose distance the SIMBAD
   tier supplied** — `data/athyg/simbad_sourced_distances.tsv` names them,
   since this harness reads `catalog.bin` and cannot see a build-time tier.
+  The list is a required input: without it no record would be excluded.
   Their residual is zero by construction, so including them would report
   agreement nothing measured ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers), validation
   independence). Counted in the report as an exclusion rather than folded

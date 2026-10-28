@@ -13,30 +13,52 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
                           allocation (/docs/sid.md#41-same-as-equivalence-graph, /docs/sid.md#44-allocation), per-record designation
                           extraction (starDesignations) + read-only
                           resolution (resolveSids, mint = error),
-                          readers for every registry file (readTable in
+                          parsers for every registry file, each taking
+                          the declared file it reads (readTable in
                           exact mode, which also owns the LF / final-
                           newline / no-blank-line layout the head hash
-                          relies on; the hash reads each row's rawLine
-                          from the same walk), head snapshot + append-only checks (/docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard).
-                          Tests import its constants — never redefine
-                          them.
-ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, with
-                          SID_KINDS. Every registry file reads a sid as
-                          TableRow.id (../util/tsv/README.md). The test
-                          round-trips the committed ledger byte for byte.
+                          relies on; a RegistryFile keeps each row's
+                          rawLine from the same walk for the hash), head snapshot + append-only checks (/docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard).
+                          Imports no declaration, so its many importers
+                          reach no registry file through it. Tests import
+                          its constants — never redefine them.
+ledger-pure.ts            ledger.tsv's row shape, SID_KINDS and cell
+                          encoding, apart from its declaration.
+ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, plus
+                          ledgerFile. Every
+                          registry file reads a sid as TableRow.id
+                          (../util/tsv/README.md). The test round-trips
+                          the committed ledger byte for byte.
+registry-source.ts        RETIREMENTS, REINSTATEMENTS — the hand-appended
+                          registry files, declared (../util/sources/).
+sameas-source.ts          SAMEAS_OVERRIDES and SAMEAS_BRIDGES: the curated
+                          edges, and data/sid/bridges/ as a folder source
+                          whose *.tsv files are its members, so a new
+                          bridge changes a reader's input set.
+object-mints-source.ts    SOL_OBJECTS, SHELL_OBJECTS — the sol: / shell:
+                          mint lists, declared.
+stored-edges.ts           loadStoredEdges: overrides plus bridges, the
+                          stored half of the same-as graph. Its own module,
+                          so a reader of edges alone reaches no other
+                          registry file.
 catalog-designations.ts   Designation set per BUILT catalog record, from
                           catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by allocate and
                           the inherited spine's parity gate.
-registry-io.ts            Filesystem access to the committed registry:
-                          canonical data/sid/ paths, loadStoredEdges, and
-                          loadRegistry (validated read; throws
-                          LedgerUnavailableError on an LFS-stub ledger).
-                          Shared by allocate, build-catalog, and the stamp.
+registry-io.ts            loadRegistry: the ledger, retirements,
+                          reinstatements and stored edges, structurally
+                          validated, for a read-only consumer. Every file
+                          is required; a suite that may meet an LFS-stub
+                          ledger gates on isReadable(LEDGER) itself.
+                          Shared by build-catalog and the stamp.
+allocate-outputs.ts       ALLOCATE_OUTPUTS: what sid:allocate writes, the
+                          ledger and ledger-head.json, declared;
+                          tests/step-outputs.test.ts holds it.
 allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           ledger.tsv, appending each mint as one
                           LEDGER.encodeLine line and never rewriting a
-                          committed one (+ retirements bootstrap +
-                          ledger-head.json). Reads the BUILT artifacts:
+                          committed one (+ ledger-head.json). The ledger,
+                          retirements and reinstatements are required
+                          inputs. Reads the BUILT artifacts:
                           catalog manifest/chunks, search-index.json,
                           catalog-row-index-map.json, clouds.json,
                           local-group.json, data/sid/sol-objects.tsv,
@@ -59,21 +81,28 @@ export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           hand at a DR transition, never by the build:
                           no step reads its output. Never the
                           committed DR2 request: that one is frozen as
-                          half of the dry-run pair (DR2_DRY_RUN), and
+                          half of the dry-run pair
+                          (dr2-neighbourhood-source.ts), and
                           tests/step-outputs.test.ts fails if any step's
                           declared outputs cover either file.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human
                           review in build/sid/dr-reconcile-bridges.tsv
-                          (dr-reconcile-outputs.ts; gitignored, a draft for
-                          sameas-overrides.tsv, never committed itself). Defaults replay the committed DR2→DR3
-                          dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
+                          (dr-reconcile-outputs.ts; gitignored, a draft
+                          reviewed and committed as
+                          data/sid/bridges/<from>_<to>.tsv, never
+                          committed itself). Defaults replay the committed DR2→DR3
+                          dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07):
+                          dr2-neighbourhood-source.ts declares that pair.
+                          --request= (a fresh sid:risk-set export) /
+                          --neighbourhood= declare another transition's
+                          files through the same module's
+                          riskRequestSource / neighbourhoodSource, so
+                          each file kind has one parse.
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
-                          here, and DR2_DRY_RUN: the frozen dry-run
-                          pair's paths, read by dr-reconcile.ts and the
-                          replay test.
+                          here.
 stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
@@ -98,9 +127,9 @@ for real in `build-catalog`, checked out with the full history its
 merge-base check reads, and locally.
 
 The LFS-stub predicates themselves (`isLfsPointer`, `isLfsPointerFile`,
-and `lfsContentReadable`, the present-and-smudged gate a `skipIf` takes)
-live in `scripts/util/paths.ts`, not here — see that folder's README for
-why.
+and `lfsContentReadable`) live in `scripts/util/paths.ts`, not here — see
+that folder's README for why; a suite gating on a declared file takes
+`isReadable(declared)` (`scripts/util/sources/`).
 
 ## Designation extraction — where each namespace comes from
 

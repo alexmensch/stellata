@@ -4,7 +4,7 @@ import {
   compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, tableLineReader, textCell, type TableSpec,
 } from './table-pure';
 
-const SPEC: TableSpec<'id' | 'v'> = { file: 'data/t.tsv', columns: ['id', 'v'], hint: 'Re-run x.' };
+const SPEC: TableSpec<'id' | 'v'> = { file: 'fixture/t.tsv', columns: ['id', 'v'], hint: 'Re-run x.' };
 
 describe('cells', () => {
   it('reads empty as null and trims', () => {
@@ -78,13 +78,13 @@ describe('readTable', () => {
   });
 
   it('throws on a missing column and on an empty file', () => {
-    expect(() => [...readTable(SPEC, 'id\nA\n')]).toThrow('data/t.tsv is missing required columns: v. Re-run x.');
-    expect(() => [...readTable(SPEC, '')]).toThrow('data/t.tsv has no header row: expected columns id, v. Re-run x.');
+    expect(() => [...readTable(SPEC, 'id\nA\n')]).toThrow('fixture/t.tsv is missing required columns: v. Re-run x.');
+    expect(() => [...readTable(SPEC, '')]).toThrow('fixture/t.tsv has no header row: expected columns id, v. Re-run x.');
     expect(() => [...readTable(SPEC, '\n\n')]).toThrow(/has no header row/);
   });
 
   it('throws on a requested column the header names twice, and ignores other repeats', () => {
-    expect(() => [...readTable(SPEC, 'id\tv\tid\nA\t1\tB\n')]).toThrow('data/t.tsv header names id more than once. Re-run x.');
+    expect(() => [...readTable(SPEC, 'id\tv\tid\nA\t1\tB\n')]).toThrow('fixture/t.tsv header names id more than once. Re-run x.');
     const spec = { ...SPEC, columns: ['id'] as const, optional: ['v'] as const };
     expect(() => [...readTable(spec, 'v\tid\tv\n1\tA\t2\n')]).toThrow(/header names v more than once/);
     expect([...readTable(SPEC, 'x\tid\tx\tv\n0\tA\t0\t1\n')][0].raw('id')).toBe('A');
@@ -106,7 +106,7 @@ describe('readTable', () => {
     const text = '# preamble\n#\nid\tv\n# note\nA\t1\n  # indented\nB\t1x\n';
     const rows = [...readTable(spec, text)];
     expect(rows.map((r) => [r.raw('id'), r.line])).toEqual([['A', 5], ['B', 7]]);
-    expect(() => rows[1].float('v')).toThrow('data/t.tsv:7: v: "1x" is not a decimal number. Re-run x.');
+    expect(() => rows[1].float('v')).toThrow('fixture/t.tsv:7: v: "1x" is not a decimal number. Re-run x.');
     expect(() => [...readTable(spec, '# only a comment\n')]).toThrow(/has no header row/);
   });
 
@@ -117,7 +117,7 @@ describe('readTable', () => {
 
   it('names file, line and column on a malformed cell', () => {
     const [, row] = readTable(SPEC, 'id\tv\nA\t1\nB\t1x\n');
-    expect(() => row.float('v')).toThrow('data/t.tsv:3: v: "1x" is not a decimal number. Re-run x.');
+    expect(() => row.float('v')).toThrow('fixture/t.tsv:3: v: "1x" is not a decimal number. Re-run x.');
   });
 
   it('checks an exact table byte for byte', () => {
@@ -129,10 +129,10 @@ describe('readTable', () => {
 
   it('holds an exact table to its layout: LF only, no blank line, a final newline', () => {
     const exact = { ...SPEC, exact: true };
-    expect(() => [...readTable(exact, 'id\tv\r\nA\t1\r\n')]).toThrow('data/t.tsv:1: CR line ending. Re-run x.');
-    expect(() => [...readTable(exact, 'id\tv\nA\t1\r\n')]).toThrow(/data\/t\.tsv:2: CR line ending/);
-    expect(() => [...readTable(exact, 'id\tv\nA\t1\n\nB\t2\n')]).toThrow('data/t.tsv:3: blank line. Re-run x.');
-    expect(() => [...readTable(exact, 'id\tv\nA\t1')]).toThrow('data/t.tsv: missing final newline. Re-run x.');
+    expect(() => [...readTable(exact, 'id\tv\r\nA\t1\r\n')]).toThrow('fixture/t.tsv:1: CR line ending. Re-run x.');
+    expect(() => [...readTable(exact, 'id\tv\nA\t1\r\n')]).toThrow(/fixture\/t\.tsv:2: CR line ending/);
+    expect(() => [...readTable(exact, 'id\tv\nA\t1\n\nB\t2\n')]).toThrow('fixture/t.tsv:3: blank line. Re-run x.');
+    expect(() => [...readTable(exact, 'id\tv\nA\t1')]).toThrow('fixture/t.tsv: missing final newline. Re-run x.');
     expect([...readTable(SPEC, 'id\tv\r\nA\t1\r\n\nB\t2')].map((r) => r.raw('id'))).toEqual(['A', 'B']);
   });
 
@@ -146,21 +146,21 @@ describe('readTable', () => {
     expect(row.sourceId('id')).toBe('4295806720123456789');
     expect(row.requiredSourceId('id')).toBe('4295806720123456789');
     expect(row.sourceId('v')).toBeNull();
-    expect(() => row.requiredSourceId('v')).toThrow('data/t.tsv:2: v: is empty. Re-run x.');
+    expect(() => row.requiredSourceId('v')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
     const [bad] = readTable(SPEC, 'id\tv\n-12\t1e3\n');
-    expect(() => bad.sourceId('id')).toThrow('data/t.tsv:2: id: "-12" is not a source_id. Re-run x.');
+    expect(() => bad.sourceId('id')).toThrow('fixture/t.tsv:2: id: "-12" is not a source_id. Re-run x.');
     expect(() => bad.requiredSourceId('v')).toThrow(/v: "1e3" is not a source_id/);
     const [list] = readTable(SPEC, 'id\tv\n12|34\t12||34\n');
     expect(list.sourceIdList('id', '|')).toEqual(['12', '34']);
-    expect(() => list.sourceIdList('v', '|')).toThrow('data/t.tsv:2: v: is empty. Re-run x.');
+    expect(() => list.sourceIdList('v', '|')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
   });
 
   it('names file, line and column on a bad identifier', () => {
     const [row] = readTable(SPEC, 'id\tv\n07\t1||2\n');
-    expect(() => row.id('id')).toThrow('data/t.tsv:2: id: "07" is not an identifier. Re-run x.');
-    expect(() => row.idList('v', '|')).toThrow(/data\/t\.tsv:2: v: "1\|\|2" has an empty element/);
+    expect(() => row.id('id')).toThrow('fixture/t.tsv:2: id: "07" is not an identifier. Re-run x.');
+    expect(() => row.idList('v', '|')).toThrow(/fixture\/t\.tsv:2: v: "1\|\|2" has an empty element/);
     const [empty] = readTable(SPEC, 'id\tv\n\t3|4\n');
-    expect(() => empty.requiredId('id')).toThrow('data/t.tsv:2: id: is empty. Re-run x.');
+    expect(() => empty.requiredId('id')).toThrow('fixture/t.tsv:2: id: is empty. Re-run x.');
     expect(empty.idList('v', '|')).toEqual([3, 4]);
   });
 
@@ -183,6 +183,6 @@ describe('tableLineReader', () => {
   it('finish throws when no header was fed', () => {
     const feed = tableLineReader(SPEC, () => {});
     feed('');
-    expect(() => feed.finish()).toThrow('data/t.tsv has no header row: expected columns id, v. Re-run x.');
+    expect(() => feed.finish()).toThrow('fixture/t.tsv has no header row: expected columns id, v. Re-run x.');
   });
 });

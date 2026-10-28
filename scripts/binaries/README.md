@@ -82,6 +82,9 @@ scripts/binaries/
                                   side. Its test round-trips the committed
                                   file byte for byte, which is what holds it
                                   to the Python writer until Stage 6 ports.
+                                  Its rowKey cites a row by
+                                  (system_id, comp) for lineage
+                                  (../util/sources/README.md#sourcerowref).
   anchor_offsets.py               compute_anchor_offsets: each component's
                                   offset from its system's anchor letter,
                                   with the sub-letter photocentre link.

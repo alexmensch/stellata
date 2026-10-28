@@ -1,13 +1,10 @@
 // Entry point of the tap sweep — README.md#what-it-measures.
 
-import { resolve } from 'node:path';
-
 import { loadCatalog } from '../../catalog/catalog-lookup';
-import { loadDustGrid } from '../../catalog/distance/dust/dust-deextinction';
+import { DUST_GRID } from '../../catalog/distance/dust/dust-grid-source';
 import {
   avAlongSegment, sampleEncodedAt, type DustGrid,
 } from '../../catalog/distance/dust/dust-deextinction-pure';
-import { REPO_ROOT } from '../../util/paths';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../src/client/galactic/galactic-coords';
 import {
   DUST_TAPS_MAX,
@@ -100,7 +97,7 @@ function argInt(flag: string, fallback: number): number {
 }
 
 async function run(): Promise<void> {
-  const grid = loadDustGrid(resolve(REPO_ROOT, 'data/dust'));
+  const grid = DUST_GRID.read();
   const p = paramsOf(grid);
   const sample = (u: number, v: number, w: number) => sampleEncodedAt(grid, u, v, w);
   const catalog = await loadCatalog();

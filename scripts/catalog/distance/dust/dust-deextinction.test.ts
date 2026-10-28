@@ -1,25 +1,23 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { tmpdir } from 'node:os';
-import { loadDustGrid } from './dust-deextinction';
+import { describe, it, expect } from 'vitest';
+import { assembleDustGrid, type DustManifest } from './dust-deextinction';
 
 // 2³ grid split into 1³ chunks (8 chunks) so the chunk-placement mapping
 // is exercised: each chunk carries a single voxel whose value encodes its
 // (ix, iy, iz) index.
-function writeFixture(dir: string): void {
-  const chunks: Array<{ ix: number; iy: number; iz: number; file: string; bytes: number }> = [];
+function fixture(): { manifest: DustManifest; files: Map<string, Uint8Array> } {
+  const files = new Map<string, Uint8Array>();
+  const chunks: DustManifest['chunks'] = [];
   for (let ix = 0; ix < 2; ix++) {
     for (let iy = 0; iy < 2; iy++) {
       for (let iz = 0; iz < 2; iz++) {
         const file = `chunk_${ix}_${iy}_${iz}.bin`;
         const value = ix * 4 + iy * 2 + iz; // distinct per chunk
-        writeFileSync(resolve(dir, file), Buffer.from([value]));
+        files.set(file, Uint8Array.from([value]));
         chunks.push({ ix, iy, iz, file, bytes: 1 });
       }
     }
   }
-  const manifest = {
+  const manifest: DustManifest = {
     gridSize: 2,
     chunkSize: 1,
     boundsPc: [-100, 100],
@@ -29,19 +27,13 @@ function writeFixture(dir: string): void {
     avPerDensityPerPc: 2.742,
     chunks,
   };
-  writeFileSync(resolve(dir, 'manifest.json'), JSON.stringify(manifest));
+  return { manifest, files };
 }
 
-describe('loadDustGrid', () => {
-  let dir: string;
-  beforeAll(() => {
-    dir = mkdtempSync(resolve(tmpdir(), 'dust-fixture-'));
-    writeFixture(dir);
-  });
-  afterAll(() => rmSync(dir, { recursive: true, force: true }));
-
+describe('assembleDustGrid', () => {
   it('assembles chunks into an x-fastest global grid', () => {
-    const grid = loadDustGrid(dir);
+    const { manifest, files } = fixture();
+    const grid = assembleDustGrid(manifest, (f) => files.get(f)!);
     expect(grid.gridSize).toBe(2);
     expect(grid.boundsHalfPc).toBe(100);
     expect(grid.avPerDensityPc).toBe(2.742);
@@ -55,11 +47,5 @@ describe('loadDustGrid', () => {
         }
       }
     }
-  });
-
-  it('hard-fails when the manifest is absent', () => {
-    const empty = mkdtempSync(resolve(tmpdir(), 'dust-empty-'));
-    expect(() => loadDustGrid(empty)).toThrow(/manifest not found/);
-    rmSync(empty, { recursive: true, force: true });
   });
 });

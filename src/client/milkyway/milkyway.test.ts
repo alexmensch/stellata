@@ -43,7 +43,7 @@ import {
 } from './column/milkyway-column-pure';
 import { R0_PC } from '../galactic/galactic-coords';
 import { ABSOLUTE_MAGNITUDE_DISTANCE_PC } from '../hdr/emission/density0-solver-pure';
-import { parseOverrides } from '../../../scripts/local-group/build-local-group';
+import { LG_OVERRIDES } from '../../../scripts/local-group/local-group-source';
 import {
   BULGE_COLOUR_INDEX_BV,
   BULGE_TO_TOTAL_LIGHT_V,
@@ -387,12 +387,7 @@ describe('MilkyWay luminosity solve', () => {
   // rather than silently invalidating it. Re-run with the hole's share of
   // the band's light taken out.
   it('orders the Galaxy from M31 against M31 from Sol', () => {
-    const row = parseOverrides(
-      readFileSync(
-        fileURLToPath(new URL('../../../data/local-group/overrides.tsv', import.meta.url)),
-        'utf-8',
-      ),
-    ).find((o) => o.name === 'M31');
+    const row = LG_OVERRIDES.read().find((o) => o.name === 'M31');
     if (row?.distanceKpc === undefined || row.mV === undefined) {
       throw new Error('M31 row in overrides.tsv is missing distance or m_V');
     }

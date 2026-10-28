@@ -37,11 +37,11 @@ the composition lives in one place rather than at each call site.
 which is what lets a browser consumer have membership from the shipped
 grid alone — [Runtime membership](../README.md#runtime-membership).
 
-The edge records are read from the committed Stellarium file by
-`readIauEdgeRecords` (`../../../../scripts/catalog/parse/constellations/constellations.ts`),
+The edge records are read from the committed Stellarium file through
+`STELLARIUM` (`../../../../scripts/catalog/parse/constellations/stellarium-source.ts`),
 a `readFileSync` against `data/`, which is not served: **nothing in the
 browser may call it.** Importing this module from a browser file is fine
-for the pure geometry; reaching for `readIauEdgeRecords` from one is how
+for the pure geometry; reaching for `STELLARIUM.read()` from one is how
 the edge set ends up parsed in the browser from a file that isn't
 deployed.
 

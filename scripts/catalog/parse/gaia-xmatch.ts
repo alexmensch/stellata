@@ -1,18 +1,14 @@
 // Gaia DR3 best-neighbour cross-walks (HIP, TYC) bridging classical catalog
 // IDs onto gaia_source_id anchors. Many-to-one collisions keep the
 // nearest match.
-import { readFileSync } from 'node:fs';
-
+import type { Declared, SourceInput } from '../../util/sources/source';
 import { tableLineReader, type TableRow } from '../../util/tsv/table-pure';
-import { forEachLine } from './tsv-stream';
 
 const GAIA_COL = 'gaia_source_id';
 const ANG_COL = 'angular_distance';
 
 /** `parseKey` returning null drops the row. */
 interface BestNeighbourSpec<K> {
-  readonly file: string;
-  readonly hint: string;
   readonly keyColumn: string;
   readonly parseKey: (raw: string) => K | null;
 }
@@ -21,8 +17,6 @@ interface BestNeighbourSpec<K> {
 // partial-numeric hip ("12abc") can't slip through and diverge from the
 // Python parser (parity pinned in gaia-hip-xmatch-parity.test.ts).
 const HIP_SPEC: BestNeighbourSpec<number> = {
-  file: 'data/gaia/gaia_dr3_hip_xmatch.tsv',
-  hint: 'Re-run `pnpm run refresh:gaia-hip`.',
   keyColumn: 'hip',
   parseKey: (raw) => {
     if (!/^\d+$/.test(raw)) return null;
@@ -35,8 +29,6 @@ const HIP_SPEC: BestNeighbourSpec<number> = {
 // parse_gaia_tyc_xmatch accepts any non-empty cell, and narrowing here
 // would drop rows the binaries pipeline still resolves.
 const TYC_SPEC: BestNeighbourSpec<string> = {
-  file: 'data/gaia/gaia_dr3_tyc_xmatch.tsv',
-  hint: 'Re-run `pnpm run refresh:gaia-tyc`.',
   keyColumn: 'tyc',
   parseKey: (raw) => (raw.length > 0 ? raw : null),
 };
@@ -46,6 +38,7 @@ const TYC_SPEC: BestNeighbourSpec<string> = {
  *  the TYC table is 2.5 M rows read for a ~350 k-row join. */
 function bestNeighbourAccumulator<K>(
   spec: BestNeighbourSpec<K>,
+  from: Declared,
   keep?: ReadonlySet<K>,
 ) {
   const best = new Map<K, { ang: number; src: string }>();
@@ -63,7 +56,7 @@ function bestNeighbourAccumulator<K>(
   };
 
   const read = tableLineReader(
-    { file: spec.file, columns: [spec.keyColumn, GAIA_COL], optional: [ANG_COL], hint: spec.hint },
+    { ...from, columns: [spec.keyColumn, GAIA_COL], optional: [ANG_COL] },
     fold,
   );
 
@@ -81,43 +74,33 @@ function bestNeighbourAccumulator<K>(
 function parseBestNeighbourTsv<K>(
   text: string,
   spec: BestNeighbourSpec<K>,
+  from: Declared,
   keep?: ReadonlySet<K>,
 ): Map<K, string> {
-  const acc = bestNeighbourAccumulator(spec, keep);
+  const acc = bestNeighbourAccumulator(spec, from, keep);
   for (const line of text.split(/\r?\n/)) acc.line(line);
   return acc.result();
 }
 
-async function readBestNeighbourStreamed<K>(
-  path: string,
-  spec: BestNeighbourSpec<K>,
-  keep?: ReadonlySet<K>,
-): Promise<Map<K, string>> {
-  const acc = bestNeighbourAccumulator(spec, keep);
-  await forEachLine(path, acc.line);
-  return acc.result();
-}
-
-export function parseGaiaHipXmatchTsv(text: string): Map<number, string> {
-  return parseBestNeighbourTsv(text, HIP_SPEC);
-}
-
-export function readGaiaHipXmatch(path: string): Map<number, string> {
-  return parseBestNeighbourTsv(readFileSync(path, 'utf8'), HIP_SPEC);
+export function parseGaiaHipXmatchTsv(text: string, from: Declared): Map<number, string> {
+  return parseBestNeighbourTsv(text, HIP_SPEC, from);
 }
 
 export function parseGaiaTycXmatchTsv(
   text: string,
+  from: Declared,
   keep?: ReadonlySet<string>,
 ): Map<string, string> {
-  return parseBestNeighbourTsv(text, TYC_SPEC, keep);
+  return parseBestNeighbourTsv(text, TYC_SPEC, from, keep);
 }
 
 /** Streamed because gaia_dr3_tyc_xmatch.tsv is ~106 MB — reading it as one
  *  string peaks near a gigabyte alongside the join's own maps. */
-export function readGaiaTycXmatch(
-  path: string,
+export async function streamGaiaTycXmatch(
+  input: SourceInput,
   keep?: ReadonlySet<string>,
 ): Promise<Map<string, string>> {
-  return readBestNeighbourStreamed(path, TYC_SPEC, keep);
+  const acc = bestNeighbourAccumulator(TYC_SPEC, input, keep);
+  await input.lines(acc.line);
+  return acc.result();
 }

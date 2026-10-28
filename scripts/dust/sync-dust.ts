@@ -1,14 +1,9 @@
 // Mirrors data/dust/ (LFS-tracked source of truth) → public/dust/
 // (gitignored) so Vite + the Cloudflare static-asset build serve the
-// voxel chunks. Missing data/dust/ is not an error — dust is optional.
+// voxel chunks.
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 
-import { isDustPublicAsset } from './sync-dust-pure';
+import { DUST_MIRROR } from './dust-mirror-source';
 
-mirrorDataFolder({
-  srcDir: 'data/dust',
-  dstDir: 'public/dust',
-  isPublicAsset: isDustPublicAsset,
-  label: 'dust',
-});
+mirrorDataFolder(DUST_MIRROR.read(), { dstDir: 'public/dust', label: 'dust' });

@@ -14,17 +14,18 @@ import { resolve } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../scripts/util/paths';
+import { REPO_ROOT } from '../scripts/util/paths';
+import { isReadable } from '../scripts/util/sources/source';
 import { changedSince, readStamp, stampPath } from '../scripts/util/build-stamp';
 import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-lookup';
+import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
 
-const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
 const BINARIES_BIN_STAMP = stampPath('binaries-bin');
 const REBUILD = 'pnpm run build:binaries-runtime';
 
 const catalogBuilt = existsSync(DEFAULT_CATALOG_MANIFEST);
-const skip = !catalogBuilt || !lfsContentReadable(MULTIPLES_TSV);
+const skip = !catalogBuilt || !isReadable(MULTIPLES_TSV);
 
 describe.skipIf(skip)('built-artifact coherence (public/ + build/)', () => {
   it('binaries.bin exists whenever the catalog has been built', () => {

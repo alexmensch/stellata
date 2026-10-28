@@ -1,10 +1,8 @@
-// Node-side reader for the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) voxel chunks in
-// data/dust/, plus the cascade's analytic tier — the two dust sources the sweep reads.
-// Grid geometry and the log-window decode come from the manifest beside the chunks.
+// The sweep's two dust tiers, measured and analytic. See README.md.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import * as THREE from 'three';
+import { DUST_GRID } from '../../catalog/distance/dust/dust-grid-source';
+import type { DustGrid } from '../../catalog/distance/dust/dust-deextinction-pure';
 import { GAL_TO_ICRS, R0_PC } from '../../../src/client/galactic/galactic-coords';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,
@@ -14,12 +12,11 @@ import {
 
 export interface DustParams {
   readonly gridSize: number;
-  readonly chunkSize: number;
-  readonly chunksPerAxis: number;
   readonly boundsHalfPc: number;
   readonly voxelPc: number;
   readonly densityMin: number;
-  readonly densityMax: number;
+  /** ln(densityMax / densityMin): the u8-log window's width. */
+  readonly logRatio: number;
   readonly avPerDensityPerPc: number;
 }
 
@@ -39,59 +36,26 @@ export function coverageRadiusPc(params: DustParams): number {
   return params.boundsHalfPc;
 }
 
-export function loadDustParams(root: string): DustParams {
-  const manifest = JSON.parse(
-    readFileSync(resolve(root, 'data/dust/manifest.json'), 'utf8'),
-  ) as {
-    gridSize: number;
-    chunkSize: number;
-    chunksPerAxis: number;
-    boundsPc: [number, number];
-    voxelSizePc: number;
-    densityMin: number;
-    densityMax: number;
-    avPerDensityPerPc: number;
-  };
+function dustParamsOf(grid: DustGrid): DustParams {
   return {
-    gridSize: manifest.gridSize,
-    chunkSize: manifest.chunkSize,
-    chunksPerAxis: manifest.chunksPerAxis,
-    boundsHalfPc: manifest.boundsPc[1],
-    voxelPc: manifest.voxelSizePc,
-    densityMin: manifest.densityMin,
-    densityMax: manifest.densityMax,
-    avPerDensityPerPc: manifest.avPerDensityPerPc,
+    gridSize: grid.gridSize,
+    boundsHalfPc: grid.boundsHalfPc,
+    voxelPc: grid.voxelSizePc,
+    densityMin: grid.densityMin,
+    logRatio: grid.logRatio,
+    avPerDensityPerPc: grid.avPerDensityPc,
   };
 }
 
 export function makeDustField(params: DustParams, voxels: Uint8Array): DustField {
   const decode = new Float64Array(256);
-  const ratio = params.densityMax / params.densityMin;
-  for (let i = 0; i < 256; i++) decode[i] = params.densityMin * Math.pow(ratio, i / 255);
+  for (let i = 0; i < 256; i++) decode[i] = params.densityMin * Math.exp((params.logRatio * i) / 255);
   return { params, voxels, decode };
 }
 
-export function loadDustField(root: string): DustField {
-  const params = loadDustParams(root);
-  const { gridSize: n, chunkSize: c, chunksPerAxis: nc } = params;
-  const voxels = new Uint8Array(n * n * n);
-  for (let ix = 0; ix < nc; ix++) {
-    for (let iy = 0; iy < nc; iy++) {
-      for (let iz = 0; iz < nc; iz++) {
-        const buf = readFileSync(resolve(root, `data/dust/chunk_${ix}_${iy}_${iz}.bin`));
-        for (let lz = 0; lz < c; lz++) {
-          const gz = iz * c + lz;
-          for (let ly = 0; ly < c; ly++) {
-            const gy = iy * c + ly;
-            const src = (lz * c + ly) * c;
-            const dst = (gz * n + gy) * n + ix * c;
-            for (let lx = 0; lx < c; lx++) voxels[dst + lx] = buf[src + lx];
-          }
-        }
-      }
-    }
-  }
-  return makeDustField(params, voxels);
+export function loadDustField(): DustField {
+  const grid = DUST_GRID.read();
+  return makeDustField(dustParamsOf(grid), grid.data);
 }
 
 /**

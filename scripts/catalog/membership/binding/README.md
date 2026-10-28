@@ -15,13 +15,14 @@ scripts/catalog/membership/binding/
                                 SIMBAD's WDS cross-ID index and the
                                 sibling-letter check over it, and
                                 `weighBinding`'s verdict. Pure.
+  simbad-wds-xids-source.ts     SIMBAD_WDS_XIDS, declared
+                                (../../../util/sources/).
   binding-evidence.ts           Loads the gate's own evidence — G per source
                                 and SIMBAD's WDS component cross-IDs — and
                                 `loadHipVMag`. The printed-V lookups come from
                                 the calling build, over the tables it already
                                 parsed: build:membership's primaries tables,
-                                build:classic-ids' `loadTycho2` / `loadGliese`
-                                (../../spine/primaries-tables.ts).
+                                build:classic-ids' `TYCHO2` / `GLIESE` reads.
   binding-derivation-pure.ts    The four candidate sources, the consensus
     (+ test)                    ranking, both gates through
                                 weighBinding, and the candidate set the

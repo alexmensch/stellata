@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { makeFrameExposure } from '../../scene/frame-ctx-mock';
 import type { LgEmission, LgObject } from '../local-group-loader';
@@ -32,7 +30,7 @@ import {
   type SersicComponent,
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
-import { parseOverrides } from '../../../../scripts/local-group/build-local-group';
+import { LG_OVERRIDES } from '../../../../scripts/local-group/local-group-source';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../../hdr/emission/emission-pure';
 import {
   OLD_SPHEROID_COLOR_RGB,
@@ -342,14 +340,7 @@ describe('population tints', () => {
   // The solve is only honest while it splits the light the same way the
   // flux solve does, and that split lives in the build's input table.
   it('solves against the B/T the emission solver actually uses', () => {
-    const row = parseOverrides(
-      readFileSync(
-        fileURLToPath(
-          new URL('../../../../data/local-group/overrides.tsv', import.meta.url),
-        ),
-        'utf-8',
-      ),
-    ).find((o) => o.name === 'M31');
+    const row = LG_OVERRIDES.read().find((o) => o.name === 'M31');
     expect(row?.bulgeToTotal).toBe(M31_BULGE_TO_TOTAL_LIGHT);
   });
 

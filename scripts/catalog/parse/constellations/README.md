@@ -8,12 +8,14 @@ membership, and the Stellarium stick figures in `public/constellations.json`.
 
 ```
 scripts/catalog/parse/constellations/
-  constellations.ts (+ test)      CONSTELLATIONS / CON_INDEX, the Stellarium
-                                  source path and its two readings (stick
-                                  figures, readIauEdgeRecords), the chunk-0
-                                  figure assert, and
+  constellations.ts (+ test)      CONSTELLATIONS / CON_INDEX, the two
+                                  readings of the Stellarium sky culture
+                                  (stick figures, iauEdgeRecords), the
+                                  chunk-0 figure assert, and
                                   createConstellationAssignment, which binds
                                   the boundary lookup to the table's indices.
+  stellarium-source.ts            STELLARIUM, the sky culture's declaration
+                                  (../../../util/sources/).
 ```
 
 ## Positional constellation membership

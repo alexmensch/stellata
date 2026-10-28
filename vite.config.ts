@@ -4,7 +4,7 @@ import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 import { documentRoutingInDev } from './vite.site-dev.ts';
 
-const figures = buildFigures(import.meta.dirname);
+const figures = buildFigures();
 publishBuildEnv(figures);
 
 export default defineConfig(() => ({
@@ -15,7 +15,7 @@ export default defineConfig(() => ({
   plugins: [
     figureSubstitution(figures),
     documentRoutingInDev(import.meta.dirname, figures),
-    indexCitations(import.meta.dirname),
+    indexCitations(),
   ],
   root: resolve(import.meta.dirname, 'src/client'),
   publicDir: resolve(import.meta.dirname, 'public'),

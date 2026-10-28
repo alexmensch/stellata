@@ -32,7 +32,8 @@ This folder owns the scripts.
   table that misses its accuracy bound never lands, every table that holds
   does, and the run exits non-zero naming the misses. See
   [Cadence](#cadence).
-- `sync-ephemerides.ts` (+ `-pure.ts`) — mirrors the committed JSONs to
+- `sync-ephemerides.ts` (+ `-pure.ts`, and `ephemerides-mirror-source.ts`
+  declaring the folder) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on
   every `pnpm run dev` / `build`, so CI and deploy never touch the network.
   The allowlist predicate keeps this README out of the deployed bundle;

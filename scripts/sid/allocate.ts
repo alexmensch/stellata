@@ -13,32 +13,27 @@ import {
 import { FLAG_IS_SOL, type SearchEntry } from '../catalog/record/catalog-pure';
 import { catalogRecordDesignations } from './catalog-designations';
 import { REPO_ROOT as ROOT } from '../util/paths';
+import { artifactText } from '../util/sources/source';
 import { readTable } from '../util/tsv/table-pure';
-import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../binaries/multiples-tsv';
-import { LEDGER } from './ledger-tsv';
+import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
+import { ALLOCATE_OUTPUTS } from './allocate-outputs';
+import { LEDGER, ledgerFile } from './ledger-tsv';
+import { SHELL_OBJECTS, SOL_OBJECTS } from './object-mints-source';
+import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
+import { loadStoredEdges } from './stored-edges';
 import {
-  LEDGER_HEADER,
-  REINSTATEMENTS_HEADER,
-  RETIREMENTS_HEADER,
   allocate,
   computeLedgerHead,
   parseDesignation,
-  parseReinstatementsTsv,
-  parseRetirementsTsv,
-  parseSolObjectsTsv,
-  parseShellObjectsTsv,
   validateLedger,
   validateReinstatements,
   validateRetirements,
   type SidObject,
 } from './sid-pure';
-import {
-  HEAD_PATH, LEDGER_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
-  SOL_OBJECTS_PATH, SHELL_OBJECTS_PATH, loadStoredEdges,
-} from './registry-io';
 import { SIBLING_ARTIFACTS, siblingArtifactObjects, type SiblingItem } from './sibling-artifacts';
 
 const PUBLIC_DIR = resolve(ROOT, 'public');
+const { ledger: LEDGER_PATH, head: HEAD_PATH } = ALLOCATE_OUTPUTS.files;
 
 function requireFile(path: string, hint: string): string {
   if (!existsSync(path)) {
@@ -80,7 +75,7 @@ async function collectObjects(): Promise<{ objects: SidObject[]; starCount: numb
     objects.push(...siblingArtifactObjects(spec, payload[spec.arrayKey]));
   }
 
-  const solRows = parseSolObjectsTsv(requireFile(SOL_OBJECTS_PATH, 'committed under data/sid/'));
+  const solRows = SOL_OBJECTS.read();
   const sun = solRows.find((r) => r.key === 'sun');
   if (!sun || sun.kind !== 'star') {
     console.error(`sid:allocate: sol-objects.tsv must carry "sun" with kind star`);
@@ -93,9 +88,7 @@ async function collectObjects(): Promise<{ objects: SidObject[]; starCount: numb
     objects.push({ designations: [`sol:${row.key}`], kind: row.kind, label: `sol ${row.key}` });
   }
 
-  const shellRows = parseShellObjectsTsv(
-    requireFile(SHELL_OBJECTS_PATH, 'committed under data/sid/'),
-  );
+  const shellRows = SHELL_OBJECTS.read();
   for (const row of shellRows) {
     objects.push({ designations: [`shell:${row.key}`], kind: row.kind, label: `shell ${row.key}` });
   }
@@ -110,14 +103,12 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
     pa: string;
   }
   const rowsByWds = new Map<string, PairRow[]>();
-  if (existsSync(MULTIPLES_TSV_PATH)) {
-    for (const r of readTable(MULTIPLES_TSV.table, readFileSync(MULTIPLES_TSV_PATH, 'utf-8'))) {
-      const system = r.raw('system_id');
-      const row = { comp: r.raw('comp'), sep: r.raw('sep_arcsec'), pa: r.raw('pa_deg') };
-      const list = rowsByWds.get(system);
-      if (list) list.push(row);
-      else rowsByWds.set(system, [row]);
-    }
+  for (const r of readTable(MULTIPLES_TSV.table, artifactText(MULTIPLES_TSV))) {
+    const system = r.raw('system_id');
+    const row = { comp: r.raw('comp'), sep: r.raw('sep_arcsec'), pa: r.raw('pa_deg') };
+    const list = rowsByWds.get(system);
+    if (list) list.push(row);
+    else rowsByWds.set(system, [row]);
   }
   const lines: string[] = [];
   for (const key of orphanKeys) {
@@ -148,18 +139,11 @@ async function main(): Promise<void> {
   const { objects, starCount } = await collectObjects();
   const storedEdges = loadStoredEdges();
 
-  const ledgerText = existsSync(LEDGER_PATH)
-    ? readFileSync(LEDGER_PATH, 'utf-8')
-    : `${LEDGER_HEADER}\n`;
-  const retirementsText = existsSync(RETIREMENTS_PATH)
-    ? readFileSync(RETIREMENTS_PATH, 'utf-8')
-    : `${RETIREMENTS_HEADER}\n`;
-  const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
-    ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
-    : `${REINSTATEMENTS_HEADER}\n`;
-  const ledger = LEDGER.parse(ledgerText);
-  const retirements = parseRetirementsTsv(retirementsText);
-  const reinstatements = parseReinstatementsTsv(reinstatementsText);
+  const ledger = ledgerFile(artifactText(LEDGER)).rows;
+  const retirementsFile = RETIREMENTS.read();
+  const reinstatementsFile = REINSTATEMENTS.read();
+  const retirements = retirementsFile.rows;
+  const reinstatements = reinstatementsFile.rows;
   const structural = [
     ...validateLedger(ledger),
     ...validateRetirements(retirements, ledger, reinstatements),
@@ -267,15 +251,10 @@ async function main(): Promise<void> {
 
   if (result.minted.length > 0) {
     const appended = result.minted.map((row) => `${LEDGER.encodeLine(row)}\n`).join('');
-    if (existsSync(LEDGER_PATH)) appendFileSync(LEDGER_PATH, appended);
-    else writeFileSync(LEDGER_PATH, ledgerText + appended);
+    appendFileSync(LEDGER_PATH, appended);
   }
-  if (!existsSync(RETIREMENTS_PATH)) writeFileSync(RETIREMENTS_PATH, retirementsText);
-  if (!existsSync(REINSTATEMENTS_PATH)) writeFileSync(REINSTATEMENTS_PATH, reinstatementsText);
 
-  const head = computeLedgerHead(
-    readFileSync(LEDGER_PATH, 'utf-8'), retirementsText, reinstatementsText,
-  );
+  const head = computeLedgerHead(ledgerFile(artifactText(LEDGER)), retirementsFile, reinstatementsFile);
   const headJson = `${JSON.stringify(head, null, 2)}\n`;
   if (!existsSync(HEAD_PATH) || readFileSync(HEAD_PATH, 'utf-8') !== headJson) {
     writeFileSync(HEAD_PATH, headJson);

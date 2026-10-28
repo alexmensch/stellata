@@ -85,7 +85,7 @@ export interface BuildCounts {
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
   /** The shortfall between those two, **pinned at zero** — the pull-staleness
-   *  gate. distance/README.md#scope-derived-pulls--why-the-zero-pin-is-here owns the rule and
+   *  gate. distance/refinement/README.md#scope-derived-pulls--why-the-zero-pin-is-here owns the rule and
    *  why the numerator above cannot serve as one. */
   bjEligibleNotPulled: number;
   /** Records carrying a source_id the committed Apsis / GSPC pull holds no row
@@ -102,7 +102,7 @@ export interface BuildCounts {
    *  (/data/papers/index.md#pietrzynski2019) eclipsing-binary distance. */
   lmcOverridden: number;
   /** Cone + PM matches the snap refuses on their own parallax, split by the
-   *  tier they keep. See distance/README.md#layer-2--lmc-kinematic-override. */
+   *  tier they keep. See distance/refinement/README.md#layer-2--lmc-kinematic-override. */
   lmcParallaxRefusedByDistVia: Record<DistVia, number>;
   /** lmcOverridden split by the distance tier the snap displaced — B-J's
    *  posterior or the raw inversion on most rows; the split states which

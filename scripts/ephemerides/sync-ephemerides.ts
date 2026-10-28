@@ -1,14 +1,8 @@
 // Mirrors data/ephemerides/ (committed element tables) → public/ephemerides/
-// (gitignored) so Vite + the Cloudflare static-asset build serve them. A missing source
-// folder is not an error — the runtime falls back to Standish 1992 (/data/papers/index.md#standish1992).
+// (gitignored) so Vite + the Cloudflare static-asset build serve them.
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 
-import { isPlanetElementPublicAsset } from './sync-ephemerides-pure';
+import { EPHEMERIDES_MIRROR } from './ephemerides-mirror-source';
 
-mirrorDataFolder({
-  srcDir: 'data/ephemerides',
-  dstDir: 'public/ephemerides',
-  isPublicAsset: isPlanetElementPublicAsset,
-  label: 'planet element table',
-});
+mirrorDataFolder(EPHEMERIDES_MIRROR.read(), { dstDir: 'public/ephemerides', label: 'planet element table' });

@@ -20,12 +20,15 @@ scripts/catalog/distance/dust/
                                   `sampleDensityAt`); and the shared `R_V`.
                                   Imported by ../../parse/, ../../companions/
                                   and scripts/dust/march-taps/.
-  dust-deextinction.ts (+ test)   `loadDustGrid` assembles data/dust/
+  dust-deextinction.ts (+ test)   `assembleDustGrid` assembles data/dust/
                                   (manifest + 64 chunks) into one flat grid;
                                   decode constants come from the manifest,
-                                  never redefined. `dustGridInputPaths` is
-                                  the manifest plus the chunks it lists, for
-                                  the catalogue stamp.
+                                  never redefined.
+  dust-grid-source.ts             DUST_GRID, the grid's declaration
+                                  (../../../util/sources/): the manifest, with
+                                  every chunk it lists as a member, so a
+                                  missing chunk fails the read and every
+                                  chunk is a stamp input.
 ```
 
 ## Why the build subtracts
@@ -61,9 +64,8 @@ within the cube, vantages get physically consistent re-lighting.
   ci ([Ballesteros 2012](/data/papers/index.md#ballesteros2012) / solar fallback) are left
   untouched; observed-photometry
   absmag and the row's own observed ci get the subtraction.
-- **Dust data absent at build → HARD FAIL** (`loadDustGrid` throws). The
-  Bailer-Jones soft-continue precedent does not apply: a soft-continue
-  would ship extincted absmags into a runtime that assumes de-extincted,
+- **Dust data absent at build → HARD FAIL** (`DUST_GRID.read()` throws, as
+  every declared source does). A soft-continue would ship extincted absmags into a runtime that assumes de-extincted,
   silently reintroducing the double-count.
 - Beyond the 1.25 kpc cube the runtime raymarch adds ≈0, so distant
   dusty sightlines stay single-counted (extinction embedded in absmag,

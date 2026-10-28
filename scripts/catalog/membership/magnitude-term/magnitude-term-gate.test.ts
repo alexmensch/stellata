@@ -6,11 +6,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership-manifest-tsv';
-import {
-  MAGNITUDE_PULL_TSV,
-  readMagnitudeTerm,
-  readMagnitudeTermAstrometry,
-} from './magnitude-term';
+import { MAGNITUDE_PULL } from './magnitude-pull-source';
+import { readMagnitudeTerm, readMagnitudeTermAstrometry } from './magnitude-term';
 import {
   magnitudeTermNewcomers,
   type MagnitudeTermSelection,
@@ -21,7 +18,7 @@ import {
 const GATE_FLOOR_V = 11;
 
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
-const readable = [MAGNITUDE_PULL_TSV, MANIFEST_PATH].every(lfsContentReadable);
+const readable = [resolve(REPO_ROOT, MAGNITUDE_PULL.file), MANIFEST_PATH].every(lfsContentReadable);
 
 describe.skipIf(!readable)('the floor over the committed pull', () => {
   let selection: MagnitudeTermSelection;

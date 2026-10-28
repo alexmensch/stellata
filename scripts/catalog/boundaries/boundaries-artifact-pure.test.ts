@@ -4,7 +4,8 @@ import {
   createIauConstellationLookup,
   parseIauEdges,
 } from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
-import { readIauEdgeRecords } from '../parse/constellations/constellations';
+import { iauEdgeRecords } from '../parse/constellations/constellations';
+import { STELLARIUM } from '../parse/constellations/stellarium-source';
 import {
   DIRECTION_DECIMALS,
   FADE_MIN_SAMPLES,
@@ -71,7 +72,7 @@ describe('boundary segment wire shape', () => {
 });
 
 describe('region grid wire', () => {
-  const real = createIauConstellationLookup(readIauEdgeRecords()).grid;
+  const real = createIauConstellationLookup(iauEdgeRecords(STELLARIUM.read())).grid;
 
   it('round-trips the real grid through the run-length encoding', () => {
     const wire = encodeRegionGrid(real);

@@ -176,6 +176,18 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          ledger.tsv is an LFS pointer stub (the bare CI
                          test job); runs for real in build-catalog's
                          full vitest and locally.
+source-declarations.test.ts
+                         Every TypeScript pipeline step's (build:*,
+                         fetch:*, sid:allocate, sid:risk-set; every tsx
+                         entry of a chained script, and a step-named script
+                         it cannot classify fails) import closure reads
+                         each declared source and artifact it reaches
+                         (/scripts/util/sources/README.md#reached-means-read);
+                         a data/ path literal sits only in a declaring or
+                         outputs module, across scripts/, src/, tests/ and
+                         vite*.ts (named DATA_PATH_SPELLERS excepted);
+                         defineSource / defineArtifact only
+                         in a *-source.ts / *-tsv.ts module.
 site-claims.test.ts      The homepage against what it states: figures are
                          published tokens, never literals · every saved-view
                          link decodes, and each sight's two anchors share
@@ -215,7 +227,7 @@ step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          producer per path, sid:stamp's in-place rewrite
                          of local-group.json the one exception; no file
                          or family may cover the frozen DR2 dry-run pair
-                         (DR2_DRY_RUN, scripts/sid/dr-reconcile-pure.ts).
+                         (scripts/sid/dr2-neighbourhood-source.ts).
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any

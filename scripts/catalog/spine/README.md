@@ -34,11 +34,15 @@ behind it, are [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membe
 
 ```
 scripts/catalog/spine/
-  inherited-spine-pure.ts         Column layout, row assembly, TSV codec,
-    (+ test)                      per-column counts, and the designation
-                                  recovery (spineDesignations). Pure, and off
-                                  the build:catalog path entirely.
-                                  INHERITED_SPINE is its codec: `rows`
+  inherited-spine-pure.ts         Column layout, row assembly, per-column
+    (+ test)                      counts, and the designation recovery
+                                  (spineDesignations). Pure, and off the
+                                  build:catalog path entirely.
+  inherited-spine-tsv.ts          INHERITED_SPINE, the codec, in a leaf of
+                                  its own so a module needing only the
+                                  layout does not reach the file. Its row
+                                  key is the physical line number (lineage's
+                                  spine origin key). `rows`
                                   streams for a single pass (the parity
                                   ledger's replay); `parse` materialises for
                                   the callers
@@ -63,7 +67,13 @@ scripts/catalog/spine/
                                   and ../membership/ both measure against —
                                   one table set for both instruments — plus
                                   the gl: ↔ gl: bridges of
-                                  data/sid/sameas-overrides.tsv.
+                                  data/sid/sameas-overrides.tsv. Every table
+                                  comes through the declaration the record
+                                  build reads too (HIP2, HIP_PHOTOMETRY for
+                                  I/239, TYC2_HD, BSC5, SIMBAD_SPTYPE's
+                                  cross-IDs, …), so one file has one parse.
+  athyg-classic-ids-source.ts     AT-HYG's classic-ID CSV, declared: the
+                                  hd / hyg cells the primaries audit tallies.
   association-audit-pure.ts       Per row, whether the primaries' own
     (+ test)                      cross-references connect every identifier
                                   it carries (README.md#the-association-audit).
@@ -149,7 +159,8 @@ consequence of the V-tier move: three records ship as unsplit blends.
 Six rows carry a Gaia **DR2** id in the column the pipeline reads as DR3,
 so the 5p pull has no row for them however the request is composed. They
 are enumerated with their DR3 status in
-`data/athyg/stale_gaia_source_ids.tsv`, and three assertions here keep that
+`data/athyg/stale_gaia_source_ids.tsv` (`STALE_GAIA_SOURCE_IDS`,
+`stale-gaia-source-ids-source.ts`), and three assertions here keep that
 queue honest: it is exactly the spine's unpublished source_ids, every one
 of them reaches the SIMBAD values pull, and no successor id it names is
 itself a spine cell — which would put two records on one SIMBAD row and

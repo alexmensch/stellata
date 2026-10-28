@@ -13,6 +13,12 @@ scripts/catalog/spectral/
                                   ESP-ELS letter enum, the `SpectralInfo`
                                   shape both produce, and the hover-display
                                   string. No catalogue joins — pure parsing.
+  simbad-sptype-source.ts         SIMBAD_SPTYPE, the pull declared
+                                  (../../util/sources/). One parse yields the
+                                  spectral index and each source_id's
+                                  hip / tyc / gj cross-IDs, which the binding
+                                  derivation and the spine audits read; a
+                                  repeated source_id fails it.
   spectral-resolve.ts (+ test)    The seven-tier resolver and the SIMBAD
                                   sp_type index it walks. The one file here
                                   that reaches back to `../record/catalog-pure.ts`,

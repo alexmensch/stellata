@@ -16,13 +16,12 @@ import {
   namespaceRank,
   parseDesignation,
   effectiveRetirements,
-  parseReinstatementsTsv,
-  parseRetirementsTsv,
+  reinstatementsFile,
+  retirementsFile,
   parseSameasTsv,
   parseSolObjectsTsv,
   resolveSids,
   sidSuccessorPairs,
-  registryLines,
   starDesignations,
   validateLedger,
   validateReinstatements,
@@ -31,7 +30,7 @@ import {
   type RetirementRow,
   type SidObject,
 } from './sid-pure';
-import { LEDGER } from './ledger-tsv';
+import { LEDGER, ledgerFile } from './ledger-tsv';
 
 describe('designation grammar', () => {
   it('accepts namespace:key with no whitespace', () => {
@@ -95,6 +94,10 @@ describe('canonical-key ladder', () => {
   });
 });
 
+const T = { file: 't.tsv', hint: 'h' };
+const retirementsRows = (text: string) => retirementsFile(text, T).rows;
+const reinstatementsRows = (text: string) => reinstatementsFile(text, T).rows;
+
 describe('TSV codecs', () => {
   const ledgerText = `${LEDGER_HEADER}\n1\thip:32349\tstar\t2026-07-10\n2\tcloud:orion-a\tcloud\t2026-07-10\n`;
 
@@ -114,12 +117,12 @@ describe('TSV codecs', () => {
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n+1\thip:1\tstar\t2026-07-10\n`)).toThrow(/sid: "\+1" is not an identifier/);
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tstar\n`)).toThrow(/expected 4/);
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tcomet\t2026-07-10\n`)).toThrow(/kind/);
-    expect(() => parseRetirementsTsv(`${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t03a\n`))
+    expect(() => retirementsRows(`${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t03a\n`))
       .toThrow(/successor_sid/);
   });
 
   it('parses retirements with and without successor', () => {
-    const rows = parseRetirementsTsv(
+    const rows = retirementsRows(
       `${RETIREMENTS_HEADER}\n5\t2026-07-10\tmerged into 3\t3\n7\t2026-07-10\tdissolved\t\n`,
     );
     expect(rows[0].successorSid).toBe(3);
@@ -127,32 +130,32 @@ describe('TSV codecs', () => {
   });
 
   it('parses same-as edges and validates both designations', () => {
-    expect(parseSameasTsv(`${SAMEAS_HEADER}\nhip:1\tgaia_dr3:2\tnote\n`, 't')).toEqual([
+    expect(parseSameasTsv(`${SAMEAS_HEADER}\nhip:1\tgaia_dr3:2\tnote\n`, T)).toEqual([
       { a: 'hip:1', b: 'gaia_dr3:2' },
     ]);
-    expect(() => parseSameasTsv(`${SAMEAS_HEADER}\nhip:1\tbad key\t\n`, 't')).toThrow();
+    expect(() => parseSameasTsv(`${SAMEAS_HEADER}\nhip:1\tbad key\t\n`, T)).toThrow();
   });
 
   it('parses sol-objects rows', () => {
-    expect(parseSolObjectsTsv('key\tkind\nsun\tstar\npluto\tplanet\n')).toEqual([
+    expect(parseSolObjectsTsv('key\tkind\nsun\tstar\npluto\tplanet\n', T)).toEqual([
       { key: 'sun', kind: 'star' },
       { key: 'pluto', kind: 'planet' },
     ]);
-    expect(() => parseSolObjectsTsv('key\tkind\nsun\tcomet\n')).toThrow(/kind: "comet"/);
+    expect(() => parseSolObjectsTsv('key\tkind\nsun\tcomet\n', T)).toThrow(/kind: "comet"/);
   });
 
   it('every registry file refuses CR line endings, a missing final newline, a blank line and a foreign header', () => {
     const ok = `${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t\n`;
-    expect(parseRetirementsTsv(ok)).toHaveLength(1);
-    expect(() => parseRetirementsTsv(ok.replace(/\n/g, '\r\n'))).toThrow(/CR line ending/);
-    expect(() => parseRetirementsTsv(ok.slice(0, -1))).toThrow(/missing final newline/);
-    expect(() => parseRetirementsTsv(`${RETIREMENTS_HEADER}\n\n5\t2026-07-10\tx\t\n`)).toThrow(/:2: blank line/);
+    expect(retirementsRows(ok)).toHaveLength(1);
+    expect(() => retirementsRows(ok.replace(/\n/g, '\r\n'))).toThrow(/CR line ending/);
+    expect(() => retirementsRows(ok.slice(0, -1))).toThrow(/missing final newline/);
+    expect(() => retirementsRows(`${RETIREMENTS_HEADER}\n\n5\t2026-07-10\tx\t\n`)).toThrow(/:2: blank line/);
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10`)).toThrow(/missing final newline/);
-    expect(() => parseSolObjectsTsv('kind\tkey\n')).toThrow(/header mismatch/);
+    expect(() => parseSolObjectsTsv('kind\tkey\n', T)).toThrow(/header mismatch/);
   });
 
-  it('registryLines yields each data row as written', () => {
-    expect(registryLines(LEDGER.table, `${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n`))
+  it('a registry file carries each data row as written', () => {
+    expect(ledgerFile(`${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n`).lines)
       .toEqual(['1\thip:1\tstar\t2026-07-10']);
   });
 });
@@ -253,11 +256,12 @@ describe('sidSuccessorPairs', () => {
 });
 
 describe('head snapshot + append-only', () => {
+  const noReinstatements = reinstatementsFile(`${REINSTATEMENTS_HEADER}\n`, T);
   const ledgerText = `${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n2\thd:2\tstar\t2026-07-10\n`;
   const emptyRetirements = `${RETIREMENTS_HEADER}\n`;
 
   it('computes the head triple for all three files', () => {
-    const head = computeLedgerHead(ledgerText, emptyRetirements);
+    const head = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(emptyRetirements, T), noReinstatements);
     expect(head.ledger.rows).toBe(2);
     expect(head.ledger.max_sid).toBe(2);
     expect(head.retirements).toEqual({
@@ -267,28 +271,28 @@ describe('head snapshot + append-only', () => {
     });
     expect(head.reinstatements).toEqual(head.retirements);
     const withRein = computeLedgerHead(
-      ledgerText, emptyRetirements,
-      `${REINSTATEMENTS_HEADER}\n1\t2026-07-12\tcame back\n`,
+      ledgerFile(ledgerText), retirementsFile(emptyRetirements, T),
+      reinstatementsFile(`${REINSTATEMENTS_HEADER}\n1\t2026-07-12\tcame back\n`, T),
     );
     expect(withRein.reinstatements!.rows).toBe(1);
     expect(withRein.reinstatements!.max_sid).toBe(1);
   });
 
   it('parses reinstatement rows', () => {
-    const rows = parseReinstatementsTsv(
+    const rows = reinstatementsRows(
       `${REINSTATEMENTS_HEADER}\n5\t2026-07-12\tobject reappeared\n`,
     );
     expect(rows).toEqual([{ sid: 5, reinstated: '2026-07-12', reason: 'object reappeared' }]);
   });
 
   it('accepts pure appends with ascending sids', () => {
-    const base = computeLedgerHead(ledgerText, emptyRetirements).ledger;
+    const base = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(emptyRetirements, T), noReinstatements).ledger;
     const lines = ['1\thip:1\tstar\t2026-07-10', '2\thd:2\tstar\t2026-07-10', '3\tgl:Gl_1\tstar\t2026-07-11'];
     expect(checkAppendOnly(base, lines, 'ledger.tsv', { newSidsPastBaseMax: true })).toEqual([]);
   });
 
   it('rejects prefix edits, deletions, and sid counter rollback', () => {
-    const base = computeLedgerHead(ledgerText, emptyRetirements).ledger;
+    const base = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(emptyRetirements, T), noReinstatements).ledger;
     const edited = ['1\thip:1\tstar\t2026-07-10', '2\thd:999\tstar\t2026-07-10'];
     expect(checkAppendOnly(base, edited, 'ledger.tsv', { newSidsPastBaseMax: true })[0]).toMatch(
       /frozen prefix/,
@@ -304,7 +308,7 @@ describe('head snapshot + append-only', () => {
 
   it('allows a new retirement of an old sid (no sid-monotonicity there)', () => {
     const retText = `${RETIREMENTS_HEADER}\n9\t2026-07-10\tmerged\t3\n`;
-    const base = computeLedgerHead(ledgerText, retText).retirements;
+    const base = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(retText, T), noReinstatements).retirements;
     const lines = ['9\t2026-07-10\tmerged\t3', '2\t2026-07-11\tdissolved\t'];
     expect(checkAppendOnly(base, lines, 'retirements.tsv', { newSidsPastBaseMax: false })).toEqual(
       [],

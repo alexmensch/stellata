@@ -5,7 +5,7 @@ import { CON_INDEX } from '../../parse/constellations/constellations';
 import type {
   ClassicIdOverlay,
   OverlayEntry,
-} from '../classic-id-overlay-tsv';
+} from '../classic-id-overlay-pure';
 import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
@@ -22,6 +22,7 @@ import {
   LABEL_FLIPS,
 } from './label-flips-tsv';
 
+const OVERRIDES_FROM = { file: 'classic_id_overrides.tsv', hint: 'h' };
 const SRC_A = '4911306239828325632';
 const SRC_B = '4911306239828325760';
 
@@ -343,7 +344,7 @@ describe('mergeClassicIdLabels', () => {
     const overrides = parseLabelOverridesTsv(
       'gaia_source_id\tfield\tvalue\n'
       + `${SRC_A}\thd\t99999\n`
-      + `${SRC_B}\thr\t\n`,
+      + `${SRC_B}\thr\t\n`, OVERRIDES_FROM,
     );
     const { counts, flips } = merge(records, new Map([
       [SRC_A, entry({ hd: [4083] })],
@@ -360,15 +361,15 @@ describe('mergeClassicIdLabels', () => {
   it('refuses a row missing its source or its field, and skips only a comment', () => {
     const header = 'gaia_source_id\tfield\tvalue\n';
     for (const row of [`\thd\t5\n`, `${SRC_A}\t\t5\n`]) {
-      expect(() => parseLabelOverridesTsv(header + row))
+      expect(() => parseLabelOverridesTsv(header + row, OVERRIDES_FROM))
         .toThrow(/classic_id_overrides\.tsv:2: states no gaia_source_id \/ field pair/);
     }
-    expect(parseLabelOverridesTsv(`${header}# ${SRC_A}\thd\t5\n`).size).toBe(0);
+    expect(parseLabelOverridesTsv(`${header}# ${SRC_A}\thd\t5\n`, OVERRIDES_FROM).size).toBe(0);
   });
 
   it('rejects an override naming an identifier the merge does not own', () => {
     expect(() => parseLabelOverridesTsv(
-      `gaia_source_id\tfield\tvalue\n${SRC_A}\tbayer\talf\n`,
+      `gaia_source_id\tfield\tvalue\n${SRC_A}\tbayer\talf\n`, OVERRIDES_FROM,
     )).toThrow(/classic_id_overrides\.tsv:2: field: "bayer" is not one of hip \| hd \| hr \| gl \| flam/);
   });
 });

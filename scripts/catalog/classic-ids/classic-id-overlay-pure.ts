@@ -1,7 +1,6 @@
 // The source_id-keyed classic-ID overlay join and its coverage counts.
 // Routes, ambiguity policy and precedence: /docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
-import type { ClassicIdOverlay, OverlayEntry } from './classic-id-overlay-tsv';
 import type { HdHipRouteDisagreement } from './route-disagreements-tsv';
 import {
   rejectionOf,
@@ -18,6 +17,27 @@ import {
   type PrintedVLookups,
   type PrintedVVia,
 } from '../photometry/v-magnitude-pure';
+
+/** No cell is single-valued by construction: a designation naming a
+ *  catalogue granularity rather than one object attaches to every matching
+ *  record, and a record can carry several. */
+export const OVERLAY_VALUE_SEPARATOR = '|';
+
+/** Every classic designation the frozen joins attach to one Gaia DR3
+ *  source. `gj` is a bare CNS5 number with its component letter appended
+ *  ("551C"); `bayer` / `flamsteed` carry IV/27A's constellation
+ *  ("alf Lyr", "3 Lyr"). Each list is sorted and deduplicated. */
+export interface OverlayEntry {
+  hd: number[];
+  hr: number[];
+  hip: number[];
+  gj: string[];
+  bayer: string[];
+  flamsteed: string[];
+}
+
+export type ClassicIdOverlay = Map<string, OverlayEntry>;
+
 /** The frozen tables and cross-walks the join reads — no gate evidence. */
 export interface OverlayWalks {
   tyc2Hd: readonly Tyc2HdRow[];

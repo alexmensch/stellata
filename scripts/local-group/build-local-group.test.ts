@@ -2,12 +2,11 @@
 // TSV parser plus an integration test that reads the committed LVDB
 // CSV and pins display-name routing for every renderable name.
 
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, expect, it } from 'vitest';
-import { parseAliases, parseLvdb, parseOverrides } from './build-local-group';
+import { parseAliases, parseLvdb, parseOverrides } from './local-group-parse';
+import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
+import { openDeclared } from '../util/sources/source';
 import {
   applyAliasMeta,
   buildStandaloneOverride,
@@ -29,7 +28,7 @@ describe('parseOverrides', () => {
 
   it('parses an LVDB-merge row (6 columns) with empty trailing position fields', () => {
     const tsv = `${HEADER}\nLMC\t4500\t4500\t1000\tdisc:i=32,pa=135\t10.1088/0004-637X/781/2/121\n`;
-    const rows = parseOverrides(tsv);
+    const rows = parseOverrides(tsv, LG_OVERRIDES);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual({
       name: 'LMC',
@@ -40,7 +39,7 @@ describe('parseOverrides', () => {
 
   it('parses a standalone row (9 columns) with full ra/dec/distance', () => {
     const tsv = `${HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\t10.3847/1538-4357/aae8e7\t10.6847\t41.2687\t776\n`;
-    const rows = parseOverrides(tsv);
+    const rows = parseOverrides(tsv, LG_OVERRIDES);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toEqual({
       name: 'M31',
@@ -54,7 +53,7 @@ describe('parseOverrides', () => {
 
   it('accepts a 9-column row with all three optional fields empty (still an LVDB-merge row)', () => {
     const tsv = `${HEADER}\nSMC\t3730\t4960\t6000\tlos\t10.1088/0004-637X/744/2/128\t\t\t\n`;
-    const rows = parseOverrides(tsv);
+    const rows = parseOverrides(tsv, LG_OVERRIDES);
     expect(rows).toHaveLength(1);
     expect(rows[0].raDeg).toBeUndefined();
     expect(rows[0].decDeg).toBeUndefined();
@@ -64,25 +63,25 @@ describe('parseOverrides', () => {
   it('throws when the standalone position is partially populated', () => {
     // ra + dec set but distance empty — half-set is a config error.
     const tsv = `${HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\tx\t10.6847\t41.2687\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates standalone position/);
+    expect(() => parseOverrides(tsv, LG_OVERRIDES)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates standalone position/);
   });
 
   it('skips comment lines and blank lines', () => {
     const tsv = `# comment\n# another\n\n${HEADER}\n# inline comment\nLMC\t4500\t4500\t1000\tlos\tx\n`;
-    expect(parseOverrides(tsv)).toHaveLength(1);
+    expect(parseOverrides(tsv, LG_OVERRIDES)).toHaveLength(1);
   });
 
   it('throws on a header missing a required column', () => {
-    expect(() => parseOverrides('name\tfoo\tbar\n'))
+    expect(() => parseOverrides('name\tfoo\tbar\n', LG_OVERRIDES))
       .toThrow(/overrides\.tsv is missing required columns: a_pc, b_pc, c_pc, orient, source/);
     expect(() =>
-      parseOverrides('name\ta_pc\tb_pc\tc_pc\torient\twrong\n'),
+      parseOverrides('name\ta_pc\tb_pc\tc_pc\torient\twrong\n', LG_OVERRIDES),
     ).toThrow(/missing required columns: source/);
   });
 
   it('parses the emission columns by header name (LMC-shaped disc row)', () => {
     const tsv = `${FULL_HEADER}\nLMC\t4500\t4500\t1000\tdisc:i=32,pa=135\tx\t\t\t\t\tdisc\t\t1500\t\t\t\t10.1086/323099\t\n`;
-    const rows = parseOverrides(tsv);
+    const rows = parseOverrides(tsv, LG_OVERRIDES);
     expect(rows).toHaveLength(1);
     expect(rows[0].profile).toBe('disc');
     expect(rows[0].rdPc).toBe(1500);
@@ -94,7 +93,7 @@ describe('parseOverrides', () => {
 
   it('parses a full standalone disc+bulge row (M31-shaped)', () => {
     const tsv = `${FULL_HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\tx\t10.6847\t41.2687\t776\t3.44\tdisc\t\t5300\t0.31\t1000\t2.2\ty\t#ffd9b0\n`;
-    const rows = parseOverrides(tsv);
+    const rows = parseOverrides(tsv, LG_OVERRIDES);
     expect(rows[0].mV).toBe(3.44);
     expect(rows[0].profile).toBe('disc');
     expect(rows[0].rdPc).toBe(5300);
@@ -106,17 +105,17 @@ describe('parseOverrides', () => {
 
   it('throws when the bulge trio is partially populated', () => {
     const tsv = `${FULL_HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\tx\t10.6847\t41.2687\t776\t3.44\tdisc\t\t5300\t0.31\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates the bulge/);
+    expect(() => parseOverrides(tsv, LG_OVERRIDES)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates the bulge/);
   });
 
   it('throws on an unrecognised profile value', () => {
     const tsv = `${FULL_HEADER}\nX\t1\t1\t1\tlos\tx\t\t\t\t\tspiral\t\t\t\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: profile: "spiral" is not one of \(empty\) \| disc \| sersic/);
+    expect(() => parseOverrides(tsv, LG_OVERRIDES)).toThrow(/^data\/local-group\/overrides\.tsv:2: profile: "spiral" is not one of \(empty\) \| disc \| sersic/);
   });
 
   it('throws on a non-numeric value in a numeric emission column', () => {
     const tsv = `${FULL_HEADER}\nX\t1\t1\t1\tlos\tx\t\t\t\tbright\t\t\t\t\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/overrides\.tsv:2: m_v: "bright" is not a decimal number/);
+    expect(() => parseOverrides(tsv, LG_OVERRIDES)).toThrow(/overrides\.tsv:2: m_v: "bright" is not a decimal number/);
   });
 });
 
@@ -125,9 +124,7 @@ describe('LVDB-band display-name coverage', () => {
   // that introduces a name the renderer would mis-suffix surfaces here
   // rather than only at build-output review time. Reading committed
   // data follows the pattern in src/client/stellata-events.test.ts.
-  const here = dirname(fileURLToPath(import.meta.url));
-  const csvPath = join(here, '..', '..', 'data', 'local-group', 'lvdb-snapshot.csv');
-  const lvdb = parseLvdb(readFileSync(csvPath, 'utf8'));
+  const lvdb = LVDB.read();
   const renderable = filterForRendering(lvdb);
 
   // Every renderable name that legitimately falls to the default
@@ -202,11 +199,9 @@ describe('LVDB-band display-name coverage', () => {
 });
 
 describe('emission over the committed catalog', () => {
-  const here = dirname(fileURLToPath(import.meta.url));
-  const dataDir = join(here, '..', '..', 'data', 'local-group');
-  const csvText = readFileSync(join(dataDir, 'lvdb-snapshot.csv'), 'utf8');
+  const csvText = openDeclared(LVDB).text();
   const lvdb = parseLvdb(csvText);
-  const overrides = parseOverrides(readFileSync(join(dataDir, 'overrides.tsv'), 'utf8'));
+  const overrides = LG_OVERRIDES.read();
   const overrideByName = new Map(overrides.map((o) => [o.name, o]));
   const renderable = filterForRendering(lvdb);
 
@@ -321,44 +316,38 @@ describe('parseAliases + type/alias plumbing', () => {
 
   it('parses rows, splitting the |-separated alias list', () => {
     const tsv = `${HEADER}M31\tSpiral galaxy\tAndromeda Galaxy|NGC 224\nFornax\tDwarf spheroidal\t\n`;
-    expect(parseAliases(tsv)).toEqual([
+    expect(parseAliases(tsv, LG_ALIASES)).toEqual([
       { name: 'M31', type: 'Spiral galaxy', aliases: ['Andromeda Galaxy', 'NGC 224'] },
       { name: 'Fornax', type: 'Dwarf spheroidal', aliases: [] },
     ]);
   });
   it('reads the canonical promotion, and omits the key when the column is blank', () => {
     const tsv = `${HEADER}M31\tSpiral galaxy\tAndromeda Galaxy|NGC 224\tAndromeda Galaxy\n`;
-    expect(parseAliases(tsv)[0].canonical).toBe('Andromeda Galaxy');
-    expect(parseAliases(`${HEADER}M31\tSpiral galaxy\tNGC 224\t\n`)[0])
+    expect(parseAliases(tsv, LG_ALIASES)[0].canonical).toBe('Andromeda Galaxy');
+    expect(parseAliases(`${HEADER}M31\tSpiral galaxy\tNGC 224\t\n`, LG_ALIASES)[0])
       .not.toHaveProperty('canonical');
   });
   it('throws on a malformed header or empty type', () => {
-    expect(() => parseAliases('name\twrong\taliases\tcanonical\nX\tY\t\n'))
+    expect(() => parseAliases('name\twrong\taliases\tcanonical\nX\tY\t\n', LG_ALIASES))
       .toThrow(/missing required columns: type/);
     // The pre-canonical 3-column header no longer parses — a stale TSV
     // would silently ship un-promoted names.
-    expect(() => parseAliases('name\ttype\taliases\nX\tY\t\n'))
+    expect(() => parseAliases('name\ttype\taliases\nX\tY\t\n', LG_ALIASES))
       .toThrow(/missing required columns: canonical/);
-    expect(() => parseAliases(`${HEADER}X\t\t\n`)).toThrow(/empty type/);
+    expect(() => parseAliases(`${HEADER}X\t\t\n`, LG_ALIASES)).toThrow(/empty type/);
   });
   it('throws when a promotion names a designation the row does not list', () => {
-    expect(() => parseAliases(`${HEADER}M31\tSpiral galaxy\tNGC 224\tAndromeda Galaxy\n`))
+    expect(() => parseAliases(`${HEADER}M31\tSpiral galaxy\tNGC 224\tAndromeda Galaxy\n`, LG_ALIASES))
       .toThrow(/not one of its aliases/);
   });
   it('normalises designations on the way in, so column spellings need not match', () => {
-    const rows = parseAliases(`${HEADER}NGC 205\tDwarf elliptical\tMessier 110|NGC221\tM 110\n`);
+    const rows = parseAliases(`${HEADER}NGC 205\tDwarf elliptical\tMessier 110|NGC221\tM 110\n`, LG_ALIASES);
     expect(rows[0].aliases).toEqual(['M110', 'NGC 221']);
     expect(rows[0].canonical).toBe('M110');
   });
   it('curated rows all match rendered objects (no orphans in the committed TSV)', () => {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const aliasRows = parseAliases(
-      readFileSync(join(here, '..', '..', 'data', 'local-group', 'aliases.tsv'), 'utf8'),
-    );
-    const csvPath = join(here, '..', '..', 'data', 'local-group', 'lvdb-snapshot.csv');
-    const names = new Set(
-      filterForRendering(parseLvdb(readFileSync(csvPath, 'utf8'))).map((r) => r.name),
-    );
+    const aliasRows = LG_ALIASES.read();
+    const names = new Set(filterForRendering(LVDB.read()).map((r) => r.name));
     names.add('M31');
     names.add('M33');
     const orphans = aliasRows.filter((a) => !names.has(a.name));
@@ -366,10 +355,7 @@ describe('parseAliases + type/alias plumbing', () => {
     expect(aliasRows.length).toBe(27);
   });
   it('the committed promotions resolve to their proper names + conventional aliases', () => {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const rows = parseAliases(
-      readFileSync(join(here, '..', '..', 'data', 'local-group', 'aliases.tsv'), 'utf8'),
-    );
+    const rows = LG_ALIASES.read();
     const promoted = (key: string, derived: string) => {
       const row = rows.find((r) => r.name === key);
       if (!row) throw new Error(`no aliases.tsv row for '${key}'`);

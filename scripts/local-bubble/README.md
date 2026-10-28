@@ -8,9 +8,11 @@ of the Local Bubble's dust wall, consumed by `src/client/local-bubble/`.
 
 The Python build needs numpy/astropy/healpy, so — like the dust grid — it
 runs **offline** and its output is **committed** (LFS). The deploy build
-never runs it: `build:local-bubble-sync` (`sync-local-bubble.ts`, in the
+never runs it: `build:local-bubble-sync` (`sync-local-bubble.ts`, reading
+through `local-bubble-source.ts`, in the
 `pnpm run build` chain) just copies `data/local-bubble/local-bubble.bin` →
-`public/local-bubble.bin`. Regenerate offline and commit the result:
+`public/local-bubble.bin`, and fails when the binary is missing or an
+unsmudged LFS pointer. Regenerate offline and commit the result:
 
 ```
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/local-bubble/requirements.txt

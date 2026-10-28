@@ -2,32 +2,23 @@
 // — the first-order tier under HIP2 in the direction, PM and V cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers).
 // See data/tycho2/README.md.
 
-import { readTable, type TableSpec } from '../util/tsv/table-pure';
-
-const REFRESH_HINT = 'Re-run `pnpm run refresh:tycho2`.';
+import type { Declared } from '../util/sources/source';
+import { readTable } from '../util/tsv/table-pure';
 
 /** `pflag='P'` on the main table: the mean solution is an unresolved double's
  *  photocentre rather than one star's place. */
 const MAIN_PFLAG_PHOTOCENTRE = 'P';
 
-const MAIN = {
-  file: 'data/tycho2/tycho2_main.tsv',
-  columns: [
+const MAIN_COLUMNS = [
     'tyc1', 'tyc2', 'tyc3', 'pflag',
     'ra_mdeg', 'de_mdeg', 'pm_ra', 'pm_de',
     'ra_icrs', 'de_icrs', 'bt_mag', 'vt_mag', 'hip',
-  ] as const,
-  hint: REFRESH_HINT,
-} satisfies TableSpec<string>;
+  ] as const;
 
-const SUPPL1 = {
-  file: 'data/tycho2/tycho2_suppl1.tsv',
-  columns: [
+const SUPPL1_COLUMNS = [
     'tyc1', 'tyc2', 'tyc3',
     'ra_icrs', 'de_icrs', 'pm_ra', 'pm_de', 'bt_mag', 'vt_mag', 'hip',
-  ] as const,
-  hint: REFRESH_HINT,
-} satisfies TableSpec<string>;
+  ] as const;
 
 /** The epoch `ra_mdeg` / `de_mdeg` is stated at.
  *
@@ -98,10 +89,13 @@ function icrsPosition(
 /** Index both Tycho-2 tables on the full `TYC1-TYC2-TYC3` identifier. The main
  *  table wins where both carry one — /data/tycho2/README.md#the-two-tables-overlap-on-254-tycs.
  * */
-export function parseTycho2Tsvs(mainText: string, suppl1Text: string): Map<string, Tycho2Row> {
+export function parseTycho2Tsvs(
+  main: { text: string; from: Declared },
+  suppl1: { text: string; from: Declared },
+): Map<string, Tycho2Row> {
   const out = new Map<string, Tycho2Row>();
 
-  for (const row of readTable(MAIN, mainText)) {
+  for (const row of readTable({ ...main.from, columns: MAIN_COLUMNS }, main.text)) {
     const position = meanPosition(
       row.float('ra_mdeg'), row.float('de_mdeg'),
     ) ?? icrsPosition(
@@ -121,7 +115,7 @@ export function parseTycho2Tsvs(mainText: string, suppl1Text: string): Map<strin
 
   // Supplement 1 carries Tycho-1 and Hipparcos stars at an observed position
   // only, and states no photocentre flag.
-  for (const row of readTable(SUPPL1, suppl1Text)) {
+  for (const row of readTable({ ...suppl1.from, columns: SUPPL1_COLUMNS }, suppl1.text)) {
     const key = tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3'));
     if (out.has(key)) continue;
     const position = icrsPosition(

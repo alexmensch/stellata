@@ -52,7 +52,7 @@ describe('node import boundary', () => {
   // The boundary is only worth anything while something actually sits on the
   // far side of it; without this the suite passes by scanning nothing.
   it('the fixture it exempts is real and does read the filesystem', () => {
-    const fixture = join(CLIENT, 'local-group', 'emission', 'lg-catalog-fixture.ts');
+    const fixture = join(CLIENT, 'webgpu', 'tsl', 'tsl-source-fixture.ts');
     expect(violationsInSource(readFileSync(fixture, 'utf8')).length).toBeGreaterThan(0);
   });
 });

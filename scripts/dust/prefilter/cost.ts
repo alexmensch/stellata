@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { coverageRadiusPc, loadDustParams, type DustParams } from './dust-grid';
+import { coverageRadiusPc, loadDustField, type DustParams } from './dust-grid';
 import { REPO_ROOT } from '../../util/paths';
 import { BUILD_COUNTS_EXPECTED_FILE, type BuildCounts } from '../../catalog/build-counts';
 import { allSkyCells, frustumCells, frustumSr, screenGridOverhead } from './cost-pure';
@@ -96,7 +96,7 @@ function reportMipped(grid: Grid, params: DustParams, fillStepPc: number): void 
 }
 
 function run(): void {
-  const params = loadDustParams(process.cwd());
+  const { params } = loadDustField();
   const coverage = coverageRadiusPc(params);
   const fillStepPc = params.voxelPc / PINNED_FILL_STEPS_PER_VOXEL;
   /** Every sightline from Sol crosses the full radius. */

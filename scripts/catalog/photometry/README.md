@@ -32,6 +32,8 @@ scripts/catalog/photometry/
                                  synthetic tier's measured colour bound, and
                                  the five-tier ci cascade with its
                                  observed-vs-intrinsic verdict. Pure.
+  gspc-source.ts                 GAIA_GSPC and HIP_PHOTOMETRY, the two
+  hip-photometry-source.ts       tables declared (../../util/sources/).
   gspc-parse.ts (+ test)         data/gaia/gaia_dr3_gspc.tsv → source_id →
                                  synthetic Johnson B−V + the archive's
                                  validated-range flag.
@@ -43,6 +45,10 @@ scripts/catalog/photometry/
                                  V cascade, both binding gates, the
                                  astrometry request) as `printedVLookups`'s
                                  `printed_hip` tier, which calls it too.
+                                 The same walk lists every HIP and HD the
+                                 slice publishes and its HIP → HD pairing,
+                                 which ../spine/primaries-tables.ts reads as
+                                 I/239: one parse for both readers.
   photometry-fixture.ts          Test-only GaiaPhotometry builders, plus
                                  `printedVOf` / `NO_PRINTED_V` —
                                  a `printedVLookups` over literal maps. A

@@ -1,6 +1,7 @@
 // See README.md#both-gates-weigh-every-candidate.
 
-import { readTable, type TableSpec } from '../../../util/tsv/table-pure';
+import type { Declared } from '../../../util/sources/source';
+import { readTable } from '../../../util/tsv/table-pure';
 import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pure';
 
 /** Magnitude-consistency gate for Gaia source bindings, shared with the
@@ -33,20 +34,16 @@ export interface SimbadWdsXidIndex {
   primarySourceLetterByWds: Map<string, string>;
 }
 
-const SIMBAD_WDS_XIDS = {
-  file: 'data/simbad/simbad_wds_xids.tsv',
-  columns: ['wds_id', 'component', 'gaia_source_id', 'hip'] as const,
-  hint: 'Re-run scripts/refresh/refresh-simbad-wds-xids.py.',
-} satisfies TableSpec<string>;
+const SIMBAD_WDS_XIDS_COLUMNS = ['wds_id', 'component', 'gaia_source_id', 'hip'] as const;
 
 /** Parse data/simbad/simbad_wds_xids.tsv (refresh-simbad-wds-xids.py)
  *  into per-source and per-HIP WDS-component attribution maps. Source
  *  ids stay strings — they exceed Number.MAX_SAFE_INTEGER. */
-export function parseSimbadWdsXidsTsv(text: string): SimbadWdsXidIndex {
+export function parseSimbadWdsXidsTsv(text: string, from: Declared): SimbadWdsXidIndex {
   const bySource = new Map<string, WdsComponentAttribution[]>();
   const byHip = new Map<number, WdsComponentAttribution[]>();
   const primarySourceLetterByWds = new Map<string, string>();
-  for (const row of readTable(SIMBAD_WDS_XIDS, text)) {
+  for (const row of readTable({ ...from, columns: SIMBAD_WDS_XIDS_COLUMNS }, text)) {
     const wdsId = row.text('wds_id');
     const component = row.text('component');
     if (wdsId === null || component === null) continue;

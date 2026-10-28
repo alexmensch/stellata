@@ -1,17 +1,16 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../util/paths';
 import {
   ACCEPT_MAS,
-  DR2_DRY_RUN,
   MAG_REVIEW_DELTA,
   classifyDrTransition,
   readNeighbourhoodRows,
   readRiskIds,
   type NeighbourhoodRow,
 } from './dr-reconcile-pure';
+import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from './dr2-neighbourhood-source';
+import { isReadable } from '../util/sources/source';
+
 describe('classifyDrTransition', () => {
   const row = (
     riskId: bigint,
@@ -62,15 +61,19 @@ describe('classifyDrTransition', () => {
   });
 });
 
+const R = { file: 'r.tsv', hint: 'h' };
+const N = { file: 'n.tsv', hint: 'h' };
+
 describe('readRiskIds', () => {
   it('reads the request column as source_ids, naming file and line on a bad one', () => {
-    expect(readRiskIds('gaia_source_id\n12\n34\n', 'r.tsv', 'Fix it.')).toEqual([12n, 34n]);
-    expect(() => readRiskIds('gaia_source_id\n12\n\t\n-3\n', 'r.tsv', 'Fix it.')).toThrow(/^r\.tsv:4: gaia_source_id: "-3" is not a source_id/);
-    expect(() => readRiskIds('source_id\n12\n', 'r.tsv', 'Fix it.')).toThrow(/r\.tsv is missing required columns: gaia_source_id/);
+    expect(readRiskIds('gaia_source_id\n12\n34\n', R)).toEqual([12n, 34n]);
+    expect(() => readRiskIds('gaia_source_id\n12\n\t\n-3\n', R)).toThrow(/^r\.tsv:4: gaia_source_id: "-3" is not a source_id/);
+    expect(() => readRiskIds('source_id\n12\n', R)).toThrow(/r\.tsv is missing required columns: gaia_source_id/);
   });
 
   it("ends each error with the caller's recovery hint", () => {
-    expect(() => readRiskIds('source_id\n12\n', 'r.tsv', 'Restore it from git.')).toThrow(/\. Restore it from git\.$/);
+    expect(() => readRiskIds('source_id\n12\n', { file: 'r.tsv', hint: 'Restore it from git.' }))
+      .toThrow(/\. Restore it from git\.$/);
   });
 });
 
@@ -78,14 +81,14 @@ describe('readNeighbourhoodRows', () => {
   const header = 'dr3_source_id\tdr2_source_id\tangular_distance\tmagnitude_difference';
 
   it('reads both id columns as source_ids', () => {
-    expect(readNeighbourhoodRows(`${header}\n12\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+    expect(readNeighbourhoodRows(`${header}\n12\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', N))
       .toEqual([{ riskId: 12n, candidateId: 34n, angularDistanceMas: 1.5, magnitudeDifference: null }]);
   });
 
   it('names file, line and column on an id that is not a source_id', () => {
-    expect(() => readNeighbourhoodRows(`${header}\n12\t\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+    expect(() => readNeighbourhoodRows(`${header}\n12\t\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', N))
       .toThrow(/^n\.tsv:2: dr2_source_id: is empty/);
-    expect(() => readNeighbourhoodRows(`${header}\n1e3\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+    expect(() => readNeighbourhoodRows(`${header}\n1e3\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', N))
       .toThrow(/^n\.tsv:2: dr3_source_id: "1e3" is not a source_id/);
   });
 });
@@ -94,19 +97,13 @@ describe('readNeighbourhoodRows', () => {
 // committed request + neighbourhood snapshots. Self-skips where those LFS
 // files are pointer stubs (the bare CI test job); runs in the
 // SID-ledger-guard job and locally.
-const REQUEST = resolve(REPO_ROOT, DR2_DRY_RUN.request);
-const NEIGHBOURHOOD = resolve(REPO_ROOT, DR2_DRY_RUN.neighbourhood);
-const available = lfsContentReadable(REQUEST) && lfsContentReadable(NEIGHBOURHOOD);
+const available = [DR2_NEIGHBOURHOOD_REQUEST, DR2_NEIGHBOURHOOD]
+  .every((src) => isReadable(src));
 
 describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
   it('reproduces the /docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07 classification exactly', () => {
-    const riskIds = readRiskIds(readFileSync(REQUEST, 'utf-8'), DR2_DRY_RUN.request, 'Restore it from git.');
-    const rows = readNeighbourhoodRows(
-      readFileSync(NEIGHBOURHOOD, 'utf-8'),
-      'dr3_source_id',
-      'dr2_source_id',
-      DR2_DRY_RUN.neighbourhood,
-    );
+    const riskIds = DR2_NEIGHBOURHOOD_REQUEST.read();
+    const rows = DR2_NEIGHBOURHOOD.read('dr3_source_id', 'dr2_source_id');
     expect(riskIds).toHaveLength(5085);
     expect(rows).toHaveLength(5912);
 

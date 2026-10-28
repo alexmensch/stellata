@@ -450,7 +450,7 @@ tier reaches is a ledgered [§ 6.1](catalog-driver.md#61-record-parity) drop rat
 printed cell. The tier order, the two precision constants, and why
 the residual drops rather than degrading are
 `scripts/catalog/distance/parallax/README.md`; the override stack is
-[Multi-layer distance refinement](/scripts/catalog/distance/README.md#multi-layer-distance-refinement).
+[Multi-layer distance refinement](/scripts/catalog/distance/refinement/README.md#multi-layer-distance-refinement).
 Every row's xyz is `direction × distance` computed
 in float64 and written float32; the stored `x0/y0/z0` columns are
 no longer consumed. Both build pipelines derive every shared star

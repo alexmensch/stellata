@@ -6,6 +6,8 @@ import {
   parseSimbadValuesTsv,
 } from './simbad-values-parse';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 const HEADER = [
   'simbad_oid', 'rvz_radvel', 'rvz_type', 'rvz_qual', 'rvz_bibcode',
   'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
@@ -32,7 +34,7 @@ describe('parseSimbadValuesTsv', () => {
     const index = parseSimbadValuesTsv(tsv(row({
       rv: '-8.6', bibcode: '1953GCRV..C......0W',
       hip: '104417', sourceId: '1872008813630353024', tyc: '3168-56-1', gj: '9728 A',
-    })));
+    })), FROM);
     expect(index.rowCount).toBe(1);
     for (const keys of [
       { ...NO_KEYS, sourceId: '1872008813630353024' },
@@ -48,7 +50,7 @@ describe('parseSimbadValuesTsv', () => {
   // The pull drops the whole quantity where its bibcode is empty, so this
   // guards a re-pulled file rather than the committed one.
   it('drops an unbibcoded rv', () => {
-    const index = parseSimbadValuesTsv(tsv(row({ rv: '12.5', hip: '1' })));
+    const index = parseSimbadValuesTsv(tsv(row({ rv: '12.5', hip: '1' })), FROM);
     expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 1 })?.rv).toBeNull();
   });
 
@@ -57,21 +59,21 @@ describe('parseSimbadValuesTsv', () => {
   it('drops a value rvz_type does not call a velocity', () => {
     const index = parseSimbadValuesTsv(tsv(row({
       rv: '243878.87', type: 'z', bibcode: '2009ApJS..182..543A', hip: '2',
-    })));
+    })), FROM);
     expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 2 })?.rv).toBeNull();
   });
 
   it('keeps a genuine zero', () => {
-    const index = parseSimbadValuesTsv(tsv(row({ rv: '0', bibcode: 'X', hip: '3' })));
+    const index = parseSimbadValuesTsv(tsv(row({ rv: '0', bibcode: 'X', hip: '3' })), FROM);
     expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 3 })?.rv?.kmS).toBe(0);
   });
 
   // The cascade takes `kmS` as finite without re-testing it, so the parser is
   // where a malformed cell has to stop the read.
   it('throws on a value no number parses out of', () => {
-    expect(() => parseSimbadValuesTsv(tsv(row({ rv: '~', bibcode: 'X', hip: '4' }))))
-      .toThrow(/simbad_values\.tsv:2: rvz_radvel: "~" is not a decimal number/);
-    expect(() => parseSimbadValuesTsv(tsv(row({ rv: 'NaN', bibcode: 'X', hip: '5' }))))
+    expect(() => parseSimbadValuesTsv(tsv(row({ rv: '~', bibcode: 'X', hip: '4' })), FROM))
+      .toThrow(/fixture\.tsv:2: rvz_radvel: "~" is not a decimal number/);
+    expect(() => parseSimbadValuesTsv(tsv(row({ rv: 'NaN', bibcode: 'X', hip: '5' })), FROM))
       .toThrow(/rvz_radvel: "NaN" is not a decimal number/);
   });
 
@@ -81,7 +83,7 @@ describe('parseSimbadValuesTsv', () => {
     const index = parseSimbadValuesTsv(tsv(
       row({ oid: '1', rv: '5', bibcode: 'X', hip: '6' }),
       row({ oid: '2', rv: '6', bibcode: 'Y' }),
-    ));
+    ), FROM);
     expect(index.rowCount).toBe(2);
     expect(index.byHip.size).toBe(1);
   });
@@ -92,11 +94,11 @@ describe('parseSimbadValuesTsv', () => {
     expect(() => parseSimbadValuesTsv(tsv(
       row({ oid: '1', hip: '7' }),
       row({ oid: '2', hip: '7' }),
-    ))).toThrow(/two rows keyed hip=7/);
+    ), FROM)).toThrow(/two rows keyed hip=7/);
   });
 
   it('throws on a file missing a column rather than reading zero rows', () => {
-    expect(() => parseSimbadValuesTsv('simbad_oid\thip\n1\t2\n'))
+    expect(() => parseSimbadValuesTsv('simbad_oid\thip\n1\t2\n', FROM))
       .toThrow(/missing required columns/);
   });
 });
@@ -107,7 +109,7 @@ describe('lookupSimbadValues', () => {
     row({ oid: '2', rv: '2', bibcode: 'B', hip: '22' }),
     row({ oid: '3', rv: '3', bibcode: 'C', tyc: '1-2-1' }),
     row({ oid: '4', rv: '4', bibcode: 'D', gj: '165 A' }),
-  ));
+  ), FROM);
 
   it('prefers source_id over every designation namespace', () => {
     expect(lookupSimbadValues(index, {
