@@ -6,7 +6,9 @@ holds the pure helpers (RA/Dec→ICRS, orient → quaternion, override
 merge, standalone-row builder, display-name + catalog-designation
 rules, distance filter, emission assembly);
 `emission-geometry-pure.ts` holds the Sérsic deprojection and each
-family's truncated-volume integral. The quadrature and the ρ₀ solve
+family's truncated-volume integral. `local-group-source.ts` declares the
+three inputs (`../util/sources/`) and `local-group-parse.ts` holds their
+parsers. The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
 `src/client/hdr/emission/density0-solver-pure.ts` — a build script
 importing from the client is the established direction, and the reverse
@@ -43,7 +45,7 @@ hard-fails the stamp until `pnpm run sid:allocate` mints it; a rename needs
 a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
 Idempotent — exits early if `public/local-group.json` is newer than
-the script and both source files. Run via
+the script and every declared input. Run via
 `pnpm run build:local-group`. No live fetches at build time; refresh
 of the LVDB snapshot is a manual `curl` of
 `raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv`

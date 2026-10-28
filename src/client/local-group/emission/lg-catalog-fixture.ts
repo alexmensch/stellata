@@ -1,10 +1,7 @@
 // The shipped Local Group catalogue assembled from data/ the way
 // build-local-group.ts does, for the emission suites (no public/ artifact).
 
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parseLvdb, parseOverrides } from '../../../../scripts/local-group/build-local-group';
+import { LG_OVERRIDES, LVDB } from '../../../../scripts/local-group/local-group-source';
 import {
   buildStandaloneOverride,
   filterForRendering,
@@ -14,10 +11,8 @@ import {
 
 export type { BuildLgObject };
 
-const here = dirname(fileURLToPath(import.meta.url));
-const dataDir = join(here, '..', '..', '..', '..', 'data', 'local-group');
-const lvdb = parseLvdb(readFileSync(join(dataDir, 'lvdb-snapshot.csv'), 'utf8'));
-export const overrides = parseOverrides(readFileSync(join(dataDir, 'overrides.tsv'), 'utf8'));
+const lvdb = LVDB.read();
+export const overrides = LG_OVERRIDES.read();
 const overrideByName = new Map(overrides.map((o) => [o.name, o]));
 const renderable = filterForRendering(lvdb);
 
