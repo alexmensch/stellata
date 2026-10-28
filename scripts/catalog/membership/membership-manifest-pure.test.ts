@@ -851,7 +851,7 @@ describe('codecs', () => {
     const parsed = parseBindingDispositionsTsv(row('888\ttycho2_position\tsep 0.1"'));
     expect(parsed.get(HD40_KEY)).toEqual(disposition({ evidence: 'sep 0.1"' }));
     expect(() => parseBindingDispositionsTsv(row('888\tguesswork\tx'))).toThrow(/basis/);
-    expect(() => parseBindingDispositionsTsv(row('keep\ttycho2_position\tx'))).toThrow(/not an integer/);
+    expect(() => parseBindingDispositionsTsv(row('keep\ttycho2_position\tx'))).toThrow(/keep_source_id: "keep" is not a source_id/);
     expect(() => parseBindingDispositionsTsv(row('888\ttycho2_position\t'))).toThrow(/evidence/);
     expect(() => parseBindingDispositionsTsv(
       `${row('888\ttycho2_position\tx')}9-8-1\t\t40\t\t\t\ttycho2_position\ty\n`,

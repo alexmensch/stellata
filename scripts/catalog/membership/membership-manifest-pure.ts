@@ -429,9 +429,7 @@ export function parseBindingDispositionsTsv(text: string): Map<string, BindingDi
   for (const row of readTable(BINDING_DISPOSITIONS_TABLE, text)) {
     const cells = row.cells();
     const key = bindingReviewKey(cells);
-    for (const column of ['derived_source_id', 'keep_source_id'] as const) {
-      if (!/^\d*$/.test(cells[column])) row.fail(`${column} "${cells[column]}" is not an integer`);
-    }
+    for (const column of ['derived_source_id', 'keep_source_id'] as const) row.sourceId(column);
     if (out.has(key)) row.fail(`duplicate record ${key}`);
     if (cells.evidence.trim() === '') row.fail(`row ${key} states no evidence`);
     out.set(key, { ...cells, basis: row.oneOf('basis', BINDING_DISPOSITION_BASES) });
