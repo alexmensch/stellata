@@ -17,9 +17,8 @@ scripts/catalog/record/
   catalog-pure.ts (+ test)        The v10 binary layout and its codec, the
                                   chunk plan, the SearchEntry wire shape, the
                                   aliased-id index the runtime dispatches
-                                  search on, the override math the distance
-                                  stack applies (`../distance/README.md`), and
-                                  the SIMBAD namespace ladder both SIMBAD pulls
+                                  search on, and the SIMBAD namespace ladder
+                                  both SIMBAD pulls
                                   index and join through
                                   (`../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`).
                                   Pure.

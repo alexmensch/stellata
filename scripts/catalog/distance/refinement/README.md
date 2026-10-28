@@ -12,15 +12,17 @@ scripts/catalog/distance/refinement/
   bailer-jones-source.ts (+ test) BAILER_JONES, Layer 1's posteriors
                                   declared (../../../util/sources/), with
                                   their parse.
+  distance-overrides-pure.ts      Layers 1 and 2's algebra: Bailer-Jones
+    (+ test)                      eligibility and lookup, the LMC cone,
+                                  kinematic gates and constants.
   distance-regression-check.ts    Post-build check that no override layer
     (+ test)                      moved a star further than its budget,
                                   pinned by
                                   build-distance-outliers-expected.json.
 ```
 
-Layers 2 and 3 have no module here: their helpers and constants live in
-`../../record/catalog-pure.ts` and `../../parse/stars-parse.ts`, and this
-README is their authority.
+Layer 3's cutoff, `MAX_DIST_PC`, lives in `../../parse/stars-parse.ts`, which
+runs the stack; this README is its authority.
 
 Every star's final distance is the output of an ordered three-layer
 stack run inside `readStars` (`scripts/catalog/parse/stars-parse.ts`). The
@@ -61,8 +63,8 @@ the new distance but lights it at the old one, breaking the disc/glow
 size chain in the renderer. Position is assembled afterwards as
 `direction × dist` ([Direction resolution](../README.md#direction-resolution)), so the overrides carry
 no xyz. Both override helpers (`applyBailerJonesOverride`,
-`applyLmcKinematicOverride`) live in `../../record/catalog-pure.ts` so the algebra
-is testable in isolation (`../../record/catalog-pure.test.ts`).
+`applyLmcKinematicOverride`) live in `distance-overrides-pure.ts` so the algebra
+is testable in isolation (`distance-overrides-pure.test.ts`).
 
 **Every `apply*Override` evaluates its own full eligibility.** B-J
 self-gates on its map lookup; the LMC layer checks its own sky cone as
@@ -171,7 +173,7 @@ motion and snaps their distance to the eclipsing-binary anchor in
 [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) (49.59 kpc, shipped as 49.594; the extra digit has
 no recorded source, an open decision, `stellata-uadc.69.32`).
 
-Constants in `../../record/catalog-pure.ts`:
+Constants in `distance-overrides-pure.ts`:
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -216,7 +218,7 @@ carry Gaia source_ids that B-J's map covers, so Layer 1 fires on
 them first with a mis-anchored intermediate distance. If Layer 2 ran
 first, Layer 1 would clobber its snap back to that intermediate
 value. The codepath in `readStars` enforces this by sequencing the
-calls; the regression test `../../record/catalog-pure.test.ts` pins the LMC
+calls; the regression test `distance-overrides-pure.test.ts` pins the LMC
 constants and the override math.
 
 ## Layer 3 — MAX_DIST_PC bounded-scope cutoff
@@ -232,7 +234,7 @@ for the framing rationale.
 
 Every kinematic-override target distance must satisfy
 `dist < MAX_DIST_PC` or its entire population is silently dropped at
-this cut; `../../record/catalog-pure.test.ts` pins `LMC_DISTANCE_PC <
+this cut; `distance-overrides-pure.test.ts` pins `LMC_DISTANCE_PC <
 MAX_DIST_PC` (406 pc of margin today). A future SMC layer (~62 kpc) must raise the
 cutoff in the same change.
 
