@@ -6,10 +6,16 @@ import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { LABEL_FLIPS_FILE } from '../classic-ids/label-merge/label-merge-pure';
 import {
-  ADDITIONS_LEDGER_FILE,
-  BINDING_REVIEW_FILE,
-  LABEL_DROPS_FILE,
 } from './membership-manifest-pure';
+import {
+  ADDITIONS_LEDGER_FILE,
+} from './additions-ledger-tsv';
+import {
+  BINDING_REVIEW_FILE,
+} from './binding-review-tsv';
+import {
+  LABEL_DROPS_FILE,
+} from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST_FILE } from './membership-manifest-tsv';
 
 export const MEMBERSHIP_OUTPUTS = declareOutputs({

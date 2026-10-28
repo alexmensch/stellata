@@ -38,11 +38,17 @@ import {
   buildMembership,
   parseBindingDispositionsTsv,
   parseSpineCorrectionsTsv,
-  serializeBindingReview,
-  serializeLabelDrops,
-  serializeLedger,
   type MembershipCounts,
 } from './membership-manifest-pure';
+import {
+  ADDITIONS_LEDGER,
+} from './additions-ledger-tsv';
+import {
+  BINDING_REVIEW,
+} from './binding-review-tsv';
+import {
+  LABEL_DROPS,
+} from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 
 const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
@@ -157,9 +163,9 @@ async function main(): Promise<void> {
     files: {
       labelFlips: labelFlipsTsv(result.flips),
       manifest: MEMBERSHIP_MANIFEST.serialize(result.rows),
-      additions: serializeLedger(result.ledger),
-      bindingReview: serializeBindingReview(result.bindingReview),
-      labelDrops: serializeLabelDrops(result.labelDrops),
+      additions: ADDITIONS_LEDGER.serialize(result.ledger),
+      bindingReview: BINDING_REVIEW.serialize(result.bindingReview),
+      labelDrops: LABEL_DROPS.serialize(result.labelDrops),
     },
     checks: [snapshotCheck<MembershipCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',

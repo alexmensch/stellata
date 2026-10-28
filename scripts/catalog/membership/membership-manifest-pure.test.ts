@@ -13,23 +13,26 @@ import type { Tycho2Row } from '../tycho2-parse';
 import {
   ADDITION_REASONS,
   COMPONENT_REASON_PREFIX,
-  bindingReviewKey,
   additionItemCells,
   buildMembership,
   manifestKey,
   matchSpineToManifest,
   parseBindingDispositionsTsv,
-  parseLabelDropsTsv,
-  parseLedgerTsv,
-  parseBindingReviewTsv,
   parseSpineCorrectionsTsv,
   SPINE_CORRECTION_COLUMNS,
-  serializeBindingReview,
-  serializeLabelDrops,
-  serializeLedger,
   type BindingDispositionRow,
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
+import {
+  ADDITIONS_LEDGER,
+} from './additions-ledger-tsv';
+import {
+  bindingReviewKey,
+  BINDING_REVIEW,
+} from './binding-review-tsv';
+import {
+  LABEL_DROPS,
+} from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
@@ -818,12 +821,12 @@ describe('a group holding two items of one cohort', () => {
 describe('codecs', () => {
   it('round-trips the manifest, the ledger, the review queue and the label drops', () => {
     expect(MEMBERSHIP_MANIFEST.parse(MEMBERSHIP_MANIFEST.serialize(result.rows))).toEqual(result.rows);
-    expect(parseBindingReviewTsv(serializeBindingReview(result.bindingReview)))
+    expect(BINDING_REVIEW.parse(BINDING_REVIEW.serialize(result.bindingReview)))
       .toEqual(result.bindingReview);
-    const ledger = parseLedgerTsv(serializeLedger(result.ledger));
+    const ledger = ADDITIONS_LEDGER.parse(ADDITIONS_LEDGER.serialize(result.ledger));
     expect(ledger).toHaveLength(result.ledger.length);
     expect(new Set(ledger.map(parkedRecordKey))).toEqual(new Set(result.ledger.map(parkedRecordKey)));
-    const drops = parseLabelDropsTsv(serializeLabelDrops(result.labelDrops));
+    const drops = LABEL_DROPS.parse(LABEL_DROPS.serialize(result.labelDrops));
     expect(new Set(drops.map((d) => JSON.stringify(d))))
       .toEqual(new Set(result.labelDrops.map((d) => JSON.stringify(d))));
   });
@@ -837,9 +840,9 @@ describe('codecs', () => {
   // a genuinely empty cell.
   it('refuses a row that does not carry every column', () => {
     const ledger = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'].join('\t')}\n`;
-    expect(() => parseLedgerTsv(`${ledger}1-1-1\t\t\n`)).toThrow(/3 cells, expected 6/);
+    expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\t\t\n`)).toThrow(/3 cells, expected 6/);
     const drops = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason'].join('\t')}\n`;
-    expect(() => parseLabelDropsTsv(`${drops}1-1-1\t\t\n`)).toThrow(/3 cells, expected 8/);
+    expect(() => LABEL_DROPS.parse(`${drops}1-1-1\t\t\n`)).toThrow(/3 cells, expected 8/);
   });
 
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {
@@ -858,8 +861,8 @@ describe('codecs', () => {
   it('is deterministic across a re-run', () => {
     const again = buildMembership(input);
     expect(MEMBERSHIP_MANIFEST.serialize(again.rows)).toBe(MEMBERSHIP_MANIFEST.serialize(result.rows));
-    expect(serializeLedger(again.ledger)).toBe(serializeLedger(result.ledger));
-    expect(serializeLabelDrops(again.labelDrops)).toBe(serializeLabelDrops(result.labelDrops));
+    expect(ADDITIONS_LEDGER.serialize(again.ledger)).toBe(ADDITIONS_LEDGER.serialize(result.ledger));
+    expect(LABEL_DROPS.serialize(again.labelDrops)).toBe(LABEL_DROPS.serialize(result.labelDrops));
   });
 });
 

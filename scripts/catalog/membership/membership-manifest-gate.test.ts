@@ -33,27 +33,33 @@ import {
   type SpineRow,
 } from '../spine/inherited-spine-pure';
 import {
-  ADDITIONS_LEDGER_FILE,
   ADDITION_REASONS,
   BINDING_DISPOSITIONS_FILE,
-  BINDING_REVIEW_FILE,
   COMPONENT_REASON_PREFIX,
-  LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
   SPINE_CORRECTIONS_FILE,
   applySpineCorrections,
-  bindingReviewKey,
   manifestKey,
   matchSpineToManifest,
   parseBindingDispositionsTsv,
-  parseBindingReviewTsv,
-  parseLabelDropsTsv,
   parseSpineCorrectionsTsv,
-  parseLedgerTsv,
   type SpineFold,
   type MembershipCounts,
   type SpineMatch,
 } from './membership-manifest-pure';
+import {
+  ADDITIONS_LEDGER_FILE,
+  ADDITIONS_LEDGER,
+} from './additions-ledger-tsv';
+import {
+  BINDING_REVIEW_FILE,
+  bindingReviewKey,
+  BINDING_REVIEW,
+} from './binding-review-tsv';
+import {
+  LABEL_DROPS_FILE,
+  LABEL_DROPS,
+} from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
   MEMBERSHIP_MANIFEST_FILE,
@@ -66,7 +72,7 @@ const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
 const CORRECTIONS_PATH = resolve(REPO_ROOT, SPINE_CORRECTIONS_FILE);
 
-const queue = parseBindingReviewTsv(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
+const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
 const dispositions = parseBindingDispositionsTsv(
   readFileSync(resolve(REPO_ROOT, BINDING_DISPOSITIONS_FILE), 'utf-8'),
 );
@@ -168,7 +174,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // under a closed reason, and every ledger row is one of those — or a
   // `component:` row naming the manifest record it resolved onto.
   it('(ii) ledgers every addition, and nothing else, under the record-parity enum', () => {
-    const ledger = parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8'));
+    const ledger = ADDITIONS_LEDGER.parse(readFileSync(LEDGER_PATH, 'utf-8'));
     const admitted = ledger.filter((l) => !l.reason.startsWith(COMPONENT_REASON_PREFIX));
     const components = ledger.filter((l) => l.reason.startsWith(COMPONENT_REASON_PREFIX));
 
@@ -258,7 +264,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // Label parity (/docs/catalog-driver.md#62-label-parity): every spine label the manifest leaves out is on the label ledger,
   // keyed on the manifest row it left, under a closed reason.
   it('ledgers every dropped spine label onto its manifest row', () => {
-    const drops = parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
+    const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
     const manifestKeys = new Set(manifest.map(manifestKey));
     for (const d of drops) {
       expect(manifestKeys.has(parkedRecordKey(d)), `label drop keys a manifest row: ${parkedRecordKey(d)}`).toBe(true);
@@ -276,7 +282,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // This is the rule: whatever keys the row now already outranked the cell it
   // lost, so the drop cannot have moved a canonical key.
   it('drops no label that was keying its record', () => {
-    const drops = parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
+    const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
     const byKey = new Map(manifest.map((r) => [manifestKey(r), r]));
     const moved: string[] = [];
     for (const d of drops) {
