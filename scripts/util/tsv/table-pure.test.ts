@@ -90,6 +90,12 @@ describe('readTable', () => {
     expect([...readTable(SPEC, 'x\tid\tx\tv\n0\tA\t0\t1\n')][0].raw('id')).toBe('A');
   });
 
+  it('yields no rows from a header alone, with or without a final newline', () => {
+    expect([...readTable(SPEC, 'id\tv\n')]).toEqual([]);
+    expect([...readTable(SPEC, 'v\tid')]).toEqual([]);
+    expect([...readTable({ ...SPEC, exact: true }, 'id\tv\n')]).toEqual([]);
+  });
+
   it('skips blank lines before the header', () => {
     const rows = [...readTable(SPEC, '\n  \nid\tv\nA\t1\n')];
     expect(rows.map((r) => [r.raw('id'), r.line])).toEqual([['A', 4]]);

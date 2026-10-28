@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { defineArtifact } from './artifact-pure';
+import { defineArtifact, nullableCell } from './artifact-pure';
 import { firstDifferingLine } from './committed-round-trip';
 
 interface Rec { key: string; n: number | null }
@@ -11,7 +11,7 @@ const artifact = (order: 'by-line' | 'as-given' | ((a: Rec, b: Rec) => number)) 
   hint: 'Re-run y.',
   order,
   decode: (row): Rec => ({ key: row.raw('key'), n: row.int('n') }),
-  encode: (r) => ({ key: r.key, n: r.n === null ? '' : String(r.n) }),
+  encode: (r) => ({ key: r.key, n: nullableCell(r.n) }),
 });
 
 const RECS: Rec[] = [{ key: 'b', n: 2 }, { key: 'a', n: null }];
