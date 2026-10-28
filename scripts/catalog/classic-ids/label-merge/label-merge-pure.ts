@@ -253,15 +253,10 @@ const CLASSIC_ID_OVERRIDES = {
 
 export function parseLabelOverridesTsv(text: string): LabelOverrides {
   const out: LabelOverrides = new Map();
-  const known = new Set<string>(LABEL_FIELDS);
   for (const row of readTable(CLASSIC_ID_OVERRIDES, text)) {
     const sourceId = row.text('gaia_source_id');
-    const field = row.text('field');
-    if (sourceId === null || field === null) continue;
-    if (!known.has(field)) {
-      row.fail(`"${field}" is not a merged identifier (${LABEL_FIELDS.join(', ')})`);
-    }
-    out.set(overrideKey(sourceId, field as LabelField), row.text('value'));
+    if (sourceId === null || row.text('field') === null) continue;
+    out.set(overrideKey(sourceId, row.oneOf('field', LABEL_FIELDS)), row.text('value'));
   }
   return out;
 }

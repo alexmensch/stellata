@@ -360,7 +360,7 @@ describe('mergeClassicIdLabels', () => {
   it('rejects an override naming an identifier the merge does not own', () => {
     expect(() => parseLabelOverridesTsv(
       `gaia_source_id\tfield\tvalue\n${SRC_A}\tbayer\talf\n`,
-    )).toThrow(/not a merged identifier/);
+    )).toThrow(/classic_id_overrides\.tsv:2: field: "bayer" is not one of hip \| hd \| hr \| gl \| flam/);
   });
 });
 
