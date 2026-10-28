@@ -12,6 +12,7 @@ import {
   readRiskIds,
   type NeighbourhoodRow,
 } from './dr-reconcile-pure';
+import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
 
 describe('classifyDrTransition', () => {
   const row = (
@@ -91,6 +92,13 @@ describe('readNeighbourhoodRows', () => {
 // committed request + neighbourhood snapshots. Self-skips where those LFS
 // files are pointer stubs (the bare CI test job); runs in the
 // SID-ledger-guard job and locally.
+describe('DR2_DRY_RUN', () => {
+  it('is no step output, so a build never rewrites the frozen pair', () => {
+    const declared = Object.values(DR_RISK_SET_OUTPUTS.files);
+    for (const path of Object.values(DR2_DRY_RUN)) expect(declared).not.toContain(resolve(REPO_ROOT, path));
+  });
+});
+
 const REQUEST = resolve(REPO_ROOT, DR2_DRY_RUN.request);
 const NEIGHBOURHOOD = resolve(REPO_ROOT, DR2_DRY_RUN.neighbourhood);
 const available = lfsContentReadable(REQUEST) && lfsContentReadable(NEIGHBOURHOOD);

@@ -59,7 +59,7 @@ export interface DrClassification {
 }
 
 export function readRiskIds(text: string, file: string): bigint[] {
-  const spec = { file, columns: ['gaia_source_id'], hint: 'Re-run `pnpm run sid:risk-set`.' };
+  const spec = { file, columns: ['gaia_source_id'], hint: `Re-export with \`pnpm run sid:risk-set\`, or restore ${DR2_DRY_RUN.request} from git.` };
   return [...readTable(spec, text)].map((row) => BigInt(row.requiredSourceId('gaia_source_id')));
 }
 

@@ -29,7 +29,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 
 | Kind | Runner runs it? | Record | Stale when | Today |
 |---|---|---|---|---|
-| `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors, `sid:risk-set` (the DR2-neighbourhood pull's request) |
+| `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors, `sid:risk-set` (the next DR transition's neighbourhood request, in `build/sid/`; the DR2 pull's committed request is frozen data, no step's output) |
 | `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*`, the two `dustmaps` datasets |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
 | `allocate` | never | the SID ledger itself | `allocate.ts --check` finds a record to mint or an orphaned synthetic key | `sid:allocate` |
